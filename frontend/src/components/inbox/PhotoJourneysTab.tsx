@@ -10,7 +10,11 @@ import type { PhotoJourney } from "../../types/photoJourney";
 import Button from "../ui/Button";
 import EmptyState from "../ui/EmptyState";
 
-import { acceptPhotoJourney } from "./acceptPhotoJourney";
+import {
+  createFromPhotoJourney,
+  linkPhotoJourney,
+  type PhotoJourneyCreated,
+} from "./acceptPhotoJourney";
 import PhotoJourneyCard from "./PhotoJourneyCard";
 import { photoJourneyLabel } from "./photoJourneyLabel";
 
@@ -33,13 +37,25 @@ import { photoJourneyLabel } from "./photoJourneyLabel";
  * purpose, and a demo visitor therefore sees "no library connected" rather than
  * a button that answers `scanned: false`. An account with no connection gets the
  * sentence and a way to Settings instead — never a scan that must fail.
+ *
+ * That question is only asked once the tab is OPEN. The page mounts this
+ * section with the inbox so the tab label can carry a count, which makes the
+ * list fetch the price of the label — but the connection status is read by
+ * nothing until somebody looks at the panel, and firing it on every inbox visit
+ * spends a request on a screen nobody is looking at.
  */
 
 export default function PhotoJourneysTab({
   onPendingCount,
+  active = true,
 }: {
   /** Reports how many suggestions are pending, for the tab label above. */
   onPendingCount?: (count: number) => void;
+  /**
+   * Whether the tab is the one on screen. Defaults to true so a caller that
+   * renders the panel alone gets the whole thing.
+   */
+  active?: boolean;
 } = {}): JSX.Element {
   const { t } = useTranslation(["dataQuality", "common"]);
   const addToast = useToastStore((state) => state.addToast);
@@ -47,11 +63,33 @@ export default function PhotoJourneysTab({
   const [journeys, setJourneys] = useState<PhotoJourney[]>([]);
   const [loading, setLoading] = useState(true);
   const [scanning, setScanning] = useState(false);
-  const [busyId, setBusyId] = useState<string | null>(null);
+  // A SET, not one id: with a single `busyId`, answering row B while row A was
+  // still in flight re-enabled A's buttons — and A's buttons do the thing that
+  // must not be done twice.
+  const [busyIds, setBusyIds] = useState<ReadonlySet<string>>(new Set());
+  /**
+   * What a click already created for a row, kept until the row is gone.
+   *
+   * The failure this exists for: `POST /trips` succeeded, the `PATCH` did not.
+   * The row is still pending and the trip is already in the journal, so a
+   * retry must NOT create a second one — it re-sends the link and nothing else.
+   * Keyed by row id because two rows can be mid-answer at once.
+   */
+  const [createdByRow, setCreatedByRow] = useState<Record<string, PhotoJourneyCreated>>({});
   // `null` until the question has been asked — neither "connected" nor "not
   // connected", so the tab offers neither the scan nor the "connect it first"
   // sentence while it does not know.
   const [hasImmich, setHasImmich] = useState<boolean | null>(null);
+
+  const markBusy = useCallback((id: string, busy: boolean): void => {
+    // A new Set per change: mutating the held one would not re-render.
+    setBusyIds((current) => {
+      const next = new Set(current);
+      if (busy) next.add(id);
+      else next.delete(id);
+      return next;
+    });
+  }, []);
 
   const load = useCallback(async () => {
     try {
@@ -72,6 +110,9 @@ export default function PhotoJourneysTab({
   }, [load]);
 
   useEffect(() => {
+    // Only once the panel is on screen, and only once: `hasImmich` is the
+    // answer, so a second visit to the tab does not ask again.
+    if (!active || hasImmich !== null) return;
     let cancelled = false;
     void (async () => {
       try {
@@ -87,7 +128,7 @@ export default function PhotoJourneysTab({
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [active, hasImmich]);
 
   const handleScan = async (): Promise<void> => {
     try {
@@ -116,23 +157,60 @@ export default function PhotoJourneysTab({
     }
   };
 
+  /**
+   * "Yes, this happened" — create, then link, and keep the two apart.
+   *
+   * A retry after a failed link re-uses what the first click created. Without
+   * that, the second click created a second trip and the first message had
+   * already said nothing was created: the row was still pending, because only
+   * the PATCH had failed.
+   */
   const handleAccept = async (journey: PhotoJourney): Promise<void> => {
+    markBusy(journey.id, true);
+    let created = createdByRow[journey.id];
     try {
-      setBusyId(journey.id);
-      const created = await acceptPhotoJourney(journey, photoJourneyLabel(journey));
-      addToast("success", t(`dataQuality:inbox.photoJourneys.messages.accepted.${created}`));
+      if (created === undefined) {
+        const made = await createFromPhotoJourney(journey, photoJourneyLabel(journey));
+        created = made;
+        // Recorded BEFORE the link is attempted — that is the whole point.
+        setCreatedByRow((current) => ({ ...current, [journey.id]: made }));
+      }
+    } catch (error) {
+      logger.error("Failed to create from a photo journey:", error);
+      addToast("error", t("dataQuality:inbox.photoJourneys.errors.acceptFailed"));
+      markBusy(journey.id, false);
+      return;
+    }
+
+    try {
+      await linkPhotoJourney(journey.id, created);
+      addToast("success", t(`dataQuality:inbox.photoJourneys.messages.accepted.${created.kind}`));
+      // The row is answered and about to leave the list; its created entry goes
+      // with it. A copy, then a delete on the copy — the held state is not
+      // touched.
+      setCreatedByRow((current) => {
+        const next = { ...current };
+        delete next[journey.id];
+        return next;
+      });
       await load();
     } catch (error) {
-      logger.error("Failed to accept a photo journey:", error);
-      addToast("error", t("dataQuality:inbox.photoJourneys.errors.acceptFailed"));
+      logger.error("Failed to mark a photo journey accepted:", error);
+      addToast(
+        "error",
+        created.kind === "none"
+          ? t("dataQuality:inbox.photoJourneys.errors.acceptFailed")
+          : // Names what DOES exist now, and that a retry only links it.
+            t(`dataQuality:inbox.photoJourneys.errors.acceptLinkFailed.${created.kind}`)
+      );
     } finally {
-      setBusyId(null);
+      markBusy(journey.id, false);
     }
   };
 
   const handleDismiss = async (journey: PhotoJourney): Promise<void> => {
     try {
-      setBusyId(journey.id);
+      markBusy(journey.id, true);
       await photoJourneysApi.dismiss(journey.id);
       addToast("success", t("dataQuality:inbox.photoJourneys.messages.dismissed"));
       await load();
@@ -140,7 +218,7 @@ export default function PhotoJourneysTab({
       logger.error("Failed to dismiss a photo journey:", error);
       addToast("error", t("dataQuality:inbox.photoJourneys.errors.dismissFailed"));
     } finally {
-      setBusyId(null);
+      markBusy(journey.id, false);
     }
   };
 
@@ -219,7 +297,7 @@ export default function PhotoJourneysTab({
               key={journey.id}
               journey={journey}
               label={photoJourneyLabel(journey)}
-              busy={busyId === journey.id}
+              busy={busyIds.has(journey.id)}
               onAccept={() => void handleAccept(journey)}
               onDismiss={() => void handleDismiss(journey)}
             />

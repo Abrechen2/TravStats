@@ -94,7 +94,7 @@ function makeJourney(over: Partial<PhotoJourney> = {}): PhotoJourney {
   };
 }
 
-async function renderTab(rows: PhotoJourney[], hasAccess = true): Promise<void> {
+async function renderTab(rows: PhotoJourney[], hasAccess = true, active = true): Promise<void> {
   vi.mocked(photoJourneysApi.list).mockResolvedValue(rows);
   vi.mocked(immichApi.getSettings).mockResolvedValue({
     baseUrl: hasAccess ? "https://immich.example" : null,
@@ -106,11 +106,14 @@ async function renderTab(rows: PhotoJourney[], hasAccess = true): Promise<void> 
   });
   render(
     <MemoryRouter>
-      <PhotoJourneysTab />
+      <PhotoJourneysTab active={active} />
     </MemoryRouter>
   );
   await waitFor(() => expect(photoJourneysApi.list).toHaveBeenCalledWith("pending"));
 }
+
+const ACCEPT = "dataQuality:inbox.photoJourneys.actions.accept";
+const DISMISS = "dataQuality:inbox.photoJourneys.actions.dismiss";
 
 describe("PhotoJourneysTab", () => {
   beforeEach(() => {
@@ -253,5 +256,77 @@ describe("PhotoJourneysTab", () => {
         "dataQuality:inbox.photoJourneys.errors.loadFailed"
       )
     );
+  });
+  it("keeps what it created when only the PATCH fails, and a retry creates nothing more", async () => {
+    // The dangerous half-state: POST /trips succeeded, PATCH did not. The row is
+    // still pending with a trip already in the journal, so a second click must
+    // link that trip rather than book a second holiday.
+    vi.mocked(tripsApi.create).mockResolvedValue({ id: "trip-9" } as never);
+    vi.mocked(photoJourneysApi.accept).mockRejectedValue(new Error("gateway"));
+    await renderTab([makeJourney()]);
+
+    await userEvent.click(screen.getByRole("button", { name: ACCEPT }));
+
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith(
+        "error",
+        // Names what EXISTS now, not "nothing was created".
+        "dataQuality:inbox.photoJourneys.errors.acceptLinkFailed.trip"
+      )
+    );
+
+    vi.mocked(photoJourneysApi.accept).mockResolvedValue(undefined);
+    await userEvent.click(screen.getByRole("button", { name: ACCEPT }));
+
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith(
+        "success",
+        "dataQuality:inbox.photoJourneys.messages.accepted.trip"
+      )
+    );
+    expect(tripsApi.create).toHaveBeenCalledTimes(1);
+    expect(photoJourneysApi.accept).toHaveBeenCalledTimes(2);
+    expect(photoJourneysApi.accept).toHaveBeenLastCalledWith("journey-1", {
+      createdTripId: "trip-9",
+    });
+  });
+
+  it("asks for the Immich status only once the tab is the one on screen", async () => {
+    await renderTab([makeJourney()], true, false);
+
+    // The list runs either way — the tab label's count is what the page mounts
+    // this section for. The connection status is read by the panel alone.
+    expect(photoJourneysApi.list).toHaveBeenCalledTimes(1);
+    expect(immichApi.getSettings).not.toHaveBeenCalled();
+  });
+
+  it("keeps each row's buttons disabled on its OWN answer, not on a sibling's", async () => {
+    // One `busyId` for the whole tab meant answering B re-enabled A while A was
+    // still in flight — and A's button is the one that must not fire twice.
+    let releaseCreate: (() => void) | undefined;
+    vi.mocked(tripsApi.create).mockImplementation(
+      () =>
+        new Promise((resolve) => {
+          releaseCreate = () => resolve({ id: "trip-9" } as never);
+        })
+    );
+    vi.mocked(photoJourneysApi.dismiss).mockResolvedValue(undefined);
+    await renderTab([makeJourney(), makeJourney({ id: "journey-2" })]);
+
+    const acceptA = screen.getAllByRole("button", { name: ACCEPT })[0];
+    await userEvent.click(acceptA);
+    await userEvent.click(screen.getAllByRole("button", { name: DISMISS })[1]);
+
+    await waitFor(() => expect(photoJourneysApi.dismiss).toHaveBeenCalledWith("journey-2"));
+    // B is answered and A is not, so A stays shut.
+    expect(screen.getAllByRole("button", { name: ACCEPT })[0]).toBeDisabled();
+
+    releaseCreate?.();
+    await waitFor(() =>
+      expect(photoJourneysApi.accept).toHaveBeenCalledWith("journey-1", {
+        createdTripId: "trip-9",
+      })
+    );
+    await waitFor(() => expect(screen.getAllByRole("button", { name: ACCEPT })[0]).toBeEnabled());
   });
 });

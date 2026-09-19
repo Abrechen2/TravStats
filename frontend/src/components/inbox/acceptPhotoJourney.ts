@@ -3,61 +3,76 @@ import { createVisit } from "../../lib/api/places";
 import { tripsApi } from "../../lib/api/trips";
 import type { PhotoJourney } from "../../types/photoJourney";
 
+import { photoJourneyPlan } from "./photoJourneyPlan";
+
 /**
- * What "yes, this happened" does — and what it deliberately does not do.
+ * Accepting a finding, in TWO steps that the caller must be able to tell apart.
  *
  * `PATCH /photo-journeys/:id` records the answer and LINKS what the client
  * created; it creates nothing itself, because a suggestion becoming travel is
  * "a separate, deliberate act through the normal trip endpoints". Clicking
- * accept in the inbox is that act, so this is where it happens — once, rather
- * than inline in a card that also draws thumbnails.
+ * accept in the inbox is that act. What the act is per reading lives in
+ * `photoJourneyPlan.ts`, so the card's promise and this cannot disagree.
  *
- * One reading, one creation, and only where the row fully names it:
+ * The steps are separate functions rather than one `accept()` because the
+ * INTERESTING failure is between them: the create succeeds and the PATCH then
+ * fails. One function could only report "accept failed", and the row would stay
+ * pending with a trip already in the journal — so a second click created a
+ * SECOND trip, and the toast said nothing had been created at all. The caller
+ * therefore keeps what step one returned, retries only step two, and says which
+ * of the two failed.
  *
- * - **`trip`** — the row carries a span and a place name, which is a whole
- *   trip. `POST /trips` with exactly those, then the row points at it.
- * - **`place`** — the row carries the own place and the day. That is a visit,
- *   and `POST /places/:id/visits` needs nothing else.
- * - **`stay`** — recorded as answered, and NOTHING is created. A `LodgingStay`
- *   hangs off a `Lodging`; a stay finding names an own *Place* ("the own place
- *   that gives the nights a name") and no lodging at all. Creating a stay would
- *   mean inventing the hotel, and recording the nights as a place visit instead
- *   would quietly create a different thing than the card offered. So the answer
- *   is kept and the card says what was kept — abstention is a result.
- *
- * Order matters: create first, PATCH second. A row marked accepted whose
- * creation then failed is a question the user can never be asked again, while a
- * trip created without the row being marked leaves the question open and the
- * trip visible — the recoverable failure of the two.
+ * Step one first, always: a row marked accepted whose creation then failed is a
+ * question that can never be asked again, while a trip created without the row
+ * being marked leaves both visible.
  */
 
-/** What the accept created, for the message the user gets. */
-export type PhotoJourneyCreation = "trip" | "placeVisit" | "none";
+/** What step one created, and the id step two links. */
+export type PhotoJourneyCreated =
+  | { kind: "trip"; id: string }
+  | { kind: "placeVisit"; id: string }
+  /** The plan created nothing; step two only records the answer. */
+  | { kind: "none" };
 
-export async function acceptPhotoJourney(
+export async function createFromPhotoJourney(
   journey: PhotoJourney,
   /** The name for a trip, already localized by the caller. */
   tripName: string
-): Promise<PhotoJourneyCreation> {
-  if (journey.kind === "trip") {
+): Promise<PhotoJourneyCreated> {
+  const plan = photoJourneyPlan(journey);
+
+  if (plan === "trip") {
     const trip = await tripsApi.create({
       name: tripName,
       startDate: journey.startDate,
       endDate: journey.endDate,
     });
-    await photoJourneysApi.accept(journey.id, { createdTripId: trip.id });
-    return "trip";
+    return { kind: "trip", id: trip.id };
   }
 
-  // `placeId` is non-null for a `place` finding by construction, but the column
-  // is nullable and a row whose place was deleted since the scan would arrive
-  // without one. Answering it is still right; inventing a place is not.
-  if (journey.kind === "place" && journey.placeId) {
+  // The second half of the condition is what `photoJourneyPlan` already
+  // decided; it is repeated to narrow the nullable column rather than assert it
+  // away, and a plan that disagreed would create nothing instead of throwing.
+  if (plan === "placeVisit" && journey.placeId) {
     const visit = await createVisit(journey.placeId, { visitedAt: journey.startDate });
-    await photoJourneysApi.accept(journey.id, { createdPlaceVisitId: visit.id });
-    return "placeVisit";
+    return { kind: "placeVisit", id: visit.id };
   }
 
-  await photoJourneysApi.accept(journey.id);
-  return "none";
+  return { kind: "none" };
+}
+
+/** Step two: record the answer, pointing at whatever step one made. */
+export async function linkPhotoJourney(
+  journeyId: string,
+  created: PhotoJourneyCreated
+): Promise<void> {
+  if (created.kind === "trip") {
+    await photoJourneysApi.accept(journeyId, { createdTripId: created.id });
+    return;
+  }
+  if (created.kind === "placeVisit") {
+    await photoJourneysApi.accept(journeyId, { createdPlaceVisitId: created.id });
+    return;
+  }
+  await photoJourneysApi.accept(journeyId);
 }

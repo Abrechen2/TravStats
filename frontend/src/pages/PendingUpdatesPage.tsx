@@ -431,11 +431,13 @@ export default function PendingUpdatesPage(): JSX.Element {
 
         {/* Mounted like the review section above, and for the same reason: the
             tab label's count comes from the tab's own load, so it would stay
-            blank until somebody opened it. Two indexed GETs on own rows. Last
-            in the DOM because it is last in the strip. */}
+            blank until somebody opened it. Last in the DOM because it is last
+            in the strip. `active` is what keeps the rest of the tab's fetching
+            — the Immich connection status — off an inbox visit that never opens
+            it; the list is the price of the count and runs either way. */}
         {photoJourneysVisible && (
           <div hidden={tab !== "photos"}>
-            <PhotoJourneysTab onPendingCount={reportJourneys} />
+            <PhotoJourneysTab onPendingCount={reportJourneys} active={tab === "photos"} />
           </div>
         )}
 

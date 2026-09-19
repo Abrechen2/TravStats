@@ -4,6 +4,8 @@ import { photoJourneyPreviewUrl } from "../../lib/api/photoJourneys";
 import type { PhotoJourney } from "../../types/photoJourney";
 import Button from "../ui/Button";
 
+import { photoJourneyPlan } from "./photoJourneyPlan";
+
 /**
  * One suggested journey: when, where, how many photographs — and the two
  * answers.
@@ -116,11 +118,13 @@ export default function PhotoJourneyCard({
         </div>
       )}
 
-      {/* What accepting will do, permanently rather than in a tooltip: the
-          three readings create three different things, and one of them creates
-          nothing at all. That only matters at the moment of clicking. */}
+      {/* What accepting will do, permanently rather than in a tooltip, and read
+          from `photoJourneyPlan` — the same rule the act uses. Keyed on the row
+          KIND, this line promised a visit for a `place` finding whose place had
+          since been deleted, while the code correctly created nothing: one rule,
+          two derivations, so one of them was wrong. */}
       <p className="t-caption mt-3">
-        {t(`dataQuality:inbox.photoJourneys.creates.${journey.kind}`)}
+        {t(`dataQuality:inbox.photoJourneys.creates.${photoJourneyPlan(journey)}`)}
       </p>
 
       <div className="mt-3 flex flex-wrap gap-2">
