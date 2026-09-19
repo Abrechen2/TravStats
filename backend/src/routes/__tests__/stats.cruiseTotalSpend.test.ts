@@ -37,16 +37,27 @@ describe("GET /api/v1/stats/cruise — totalSpendBase", () => {
     return res.body.totalSpendBase as SpendBase;
   };
 
+  interface EvidenceEntry {
+    id: string;
+    contribution: number;
+    subtitle: { key: string; values?: Record<string, unknown> } | null;
+  }
+
   /** What the evidence panel answers for the same key, on the same rows. */
   const fetchEvidence = async (): Promise<{
     value: number | null;
     unattributed: Array<{ count: number; reason: string }>;
+    entries: EvidenceEntry[];
   }> => {
     const res = await request(app)
       .get("/api/v1/evidence/metric/cruiseTotalSpend")
       .set("Cookie", cookie);
     expect(res.status).toBe(200);
-    return { value: res.body.measure.value, unattributed: res.body.unattributed };
+    return {
+      value: res.body.measure.value,
+      unattributed: res.body.unattributed,
+      entries: res.body.entries as EvidenceEntry[],
+    };
   };
 
   const addCruise = async (data: {
@@ -112,6 +123,81 @@ describe("GET /api/v1/stats/cruise — totalSpendBase", () => {
     const spend = await fetchSpend();
     expect(spend).toEqual({ value: 2030.5, excludedCount: 1, currency: "EUR" });
     expect((await fetchEvidence()).value).toBe(2030.5);
+  });
+
+  /**
+   * The case the beta drew a dash for on 2026-09-19: every cruise priced in
+   * the account's own currency, none of them carrying a snapshot, because they
+   * were written before the column existed. If this passes only on rows some
+   * backfill has touched, the figure is not a figure.
+   */
+  it("counts a cruise priced in the base currency although it has no snapshot", async () => {
+    await addCruise({ routeName: "Ostsee ohne Kurs", price: 1200, currency: "EUR" });
+    await addCruise({ routeName: "Norwegen ohne Kurs", price: 800, currency: "EUR" });
+
+    expect(await fetchSpend()).toEqual({ value: 2000, excludedCount: 0, currency: "EUR" });
+
+    // The panel reads the same predicate, so neither cruise may be listed as
+    // unconverted — the tile's zero exclusions and the panel's row list are
+    // the same sentence told twice.
+    const evidence = await fetchEvidence();
+    expect(evidence.value).toBe(2000);
+    expect(evidence.entries.map((e) => e.contribution).sort((a, b) => a - b)).toEqual([800, 1200]);
+    expect(evidence.entries.filter((e) => e.subtitle !== null)).toEqual([]);
+  });
+
+  /**
+   * The other half of the shortcut: it applies to the currency the price is
+   * IN, never to the absence of a snapshot as such. A dollar price with no
+   * rate is still money this sum cannot speak.
+   */
+  it("still excludes a foreign-currency cruise that has no snapshot", async () => {
+    await addCruise({ routeName: "Heimisch", price: 500, currency: "EUR" });
+    await addCruise({ routeName: "Karibik ohne Kurs", price: 900, currency: "USD" });
+
+    expect(await fetchSpend()).toEqual({ value: 500, excludedCount: 1, currency: "EUR" });
+
+    const evidence = await fetchEvidence();
+    const unconverted = evidence.entries.filter((e) => e.subtitle !== null);
+    expect(unconverted).toHaveLength(1);
+    expect(unconverted[0].subtitle).toEqual({
+      key: "evidence.subtitle.notConverted",
+      values: { amount: 900, currency: "USD" },
+    });
+  });
+
+  /** A foreign price still needs its snapshot, and is counted AT it. */
+  it("counts a foreign-currency cruise at its snapshot, not at its price", async () => {
+    await addCruise({
+      routeName: "Karibik",
+      price: 900,
+      currency: "USD",
+      priceBase: 830.5,
+      fxBaseCurrency: "EUR",
+    });
+
+    expect(await fetchSpend()).toEqual({ value: 830.5, excludedCount: 0, currency: "EUR" });
+  });
+
+  /**
+   * Price beats snapshot where the price is already home.
+   *
+   * An account that moved its base currency to USD and back to EUR carries
+   * EUR cruises whose snapshot reads USD. The snapshot is the stale reading
+   * there; the price is not, and reaching for the snapshot first would exclude
+   * a cruise denominated in the very currency being summed.
+   */
+  it("counts a base-currency cruise at its own price although the snapshot is stale", async () => {
+    await addCruise({
+      routeName: "Hin und zurueck",
+      price: 1000,
+      currency: "EUR",
+      priceBase: 1080,
+      fxBaseCurrency: "USD",
+    });
+
+    expect(await fetchSpend()).toEqual({ value: 1000, excludedCount: 0, currency: "EUR" });
+    expect((await fetchEvidence()).value).toBe(1000);
   });
 
   it("excludes a snapshot taken in a base currency the account has left", async () => {
