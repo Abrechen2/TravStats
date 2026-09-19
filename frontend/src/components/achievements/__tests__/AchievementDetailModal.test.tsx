@@ -216,3 +216,37 @@ describe("ACHIEVEMENT_EVIDENCE_KEY", () => {
     expect(unknown).toEqual([]);
   });
 });
+
+/**
+ * Review, 2026-09-19: the table had mapped the `countries` rule to
+ * `flightCountriesVisitedCount`, and the two count different things -- the
+ * rule folds each airport's country through `toCountryCode` and drops the
+ * catalogue's placeholder codes, the resolver counts the raw strings. The
+ * panel compares the tile's figure against the one it measures and calls a
+ * difference "recomputed", so a wrong mapping does not fail quietly: it
+ * raises an alarm about nothing, on the reader's own screen.
+ */
+describe("the rules this table deliberately leaves out", () => {
+  it("does not map `countries`, whose two sides count differently", () => {
+    expect(ACHIEVEMENT_EVIDENCE_KEY).not.toHaveProperty("countries");
+  });
+
+  it("renders the honest sentence for a countries achievement", () => {
+    renderModal(
+      <AchievementDetailModal
+        achievement={{
+          ...base,
+          code: "COUNTRY_COLLECTOR",
+          requirementType: "countries",
+          isUnlocked: false,
+        }}
+        onClose={() => {}}
+      />
+    );
+
+    expect(screen.getByTestId("achievement-detail-no-evidence")).toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "achievements:progress.evidence.trigger" })
+    ).not.toBeInTheDocument();
+  });
+});

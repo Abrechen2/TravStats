@@ -41,10 +41,19 @@ export const ACHIEVEMENT_EVIDENCE_KEY: Record<string, string> = {
   // corresponding resolvers do.
   flights_count: "flightCount",
   distance_km: "distanceKmTotal",
-  countries: "flightCountriesVisitedCount",
   airlines: "airlineCount",
   airports: "airportsVisitedCount",
   continents: "continentsVisitedCount",
+  // `countries` is ABSENT, and that is the second condition above doing its
+  // job. The rule folds each airport's country through `toCountryCode` and
+  // drops the catalogue's placeholder codes ("ZZ", "XZ" -- they name no
+  // country); `resolveFlightCountriesVisitedCount` counts the catalogue's raw
+  // `country` strings. The two therefore disagree on any account whose
+  // catalogue carries a placeholder or two spellings of one country, and the
+  // panel would report that disagreement as "the figure has since been
+  // recomputed" -- an alarm about nothing, on the reader's own screen
+  // (review, 2026-09-19). Mapping it needs the two to be reconciled first,
+  // which is a change to the RESOLVER and not a line in this table.
 
   // Cruises
   cruises_count: "cruiseCount",
