@@ -243,16 +243,16 @@ describe("SettingsPage — one route per group", () => {
     expect(await screen.findByRole("region", { name: SECTION_LABEL_KEY.profile })).toBeTruthy();
   });
 
-  // The tester could never open "Über TravStats" — the last section's
-  // scrollMarginTop target sits past the end of the scrollable document, so
-  // it can never reach the top of the viewport and the IntersectionObserver
-  // never marks it active. jsdom does not lay out or scroll, so this only
-  // pins that the spacer renders; the actual reachability needs a browser
-  // (see task-1-report.md).
-  it("renders a scroll-tail spacer after the last section, so it can reach scrollMarginTop", async () => {
+  // The page used to end in a spacer roughly one viewport tall, so the last
+  // section could reach the top of the viewport and its menu entry could
+  // become active at all. The tester saw it as a screenful of nothing under
+  // the last card, and noted it only bit when the last section was SHORT.
+  // `useSectionInView` carries the rule now — at the bottom of the document
+  // the last section is the active one — so the spacer has no job left.
+  it("ends with the last section, with no empty scroll tail under it", async () => {
     renderAt("/settings/account");
     await screen.findByRole("region", { name: SECTION_LABEL_KEY.profile });
-    expect(document.querySelector('[data-testid="settings-scroll-tail"]')).toBeInTheDocument();
+    expect(document.querySelector('[data-testid="settings-scroll-tail"]')).toBeNull();
   });
 });
 
