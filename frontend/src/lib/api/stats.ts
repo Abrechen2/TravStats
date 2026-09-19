@@ -16,6 +16,27 @@ import type {
 import { api } from "./client";
 import type { SummaryParams, SummaryResponse, TimeseriesParams, TimeseriesResponse } from "./types";
 
+/**
+ * The sections `GET /stats/page` can compose, and the shape of each — every
+ * one the response type of the endpoint it is named after, so a section and
+ * its endpoint cannot be typed differently here either.
+ *
+ * MIRRORS `backend/src/schemas/statsPage.ts`; change both together.
+ */
+export interface StatsPageSections {
+  fun: FunStats;
+  business: BusinessStats;
+  unique: UniqueStats;
+  airports: AirportStats;
+  seats: SeatStats;
+  countries: CountryStatsResponse;
+  airlines: AirlineRankingResponse;
+  aircraft: AircraftRankingResponse;
+  punctuality: PunctualityStats;
+}
+
+export type StatsPageSection = keyof StatsPageSections;
+
 // Stats API
 export const statsApi = {
   /**
@@ -47,6 +68,28 @@ export const statsApi = {
     const { data } = await api.get<TravelAccountResponse>("/stats/travel-account");
     return data;
   },
+  /**
+   * Several sections, from ONE pass over the flight table (forgejo#49).
+   *
+   * Measured on this page before the endpoint existed: the flight tab issued
+   * twelve `/stats/*` requests and the server answered them with fifteen scans
+   * of the flight table, thirteen over the identical population. Nine of those
+   * requests share one load, and this is how they ask for it.
+   *
+   * The nine per-section endpoints are still served and are still what a
+   * client wanting ONE figure should call — the Companion does, and so does
+   * the evidence panel. Each section here is identical to its own endpoint's
+   * body, which a backend test asserts by fetching both.
+   */
+  getStatsPage: async <S extends StatsPageSection>(
+    include: readonly S[]
+  ): Promise<Pick<StatsPageSections, S>> => {
+    const { data } = await api.get<Pick<StatsPageSections, S>>("/stats/page", {
+      params: { include: include.join(",") },
+    });
+    return data;
+  },
+
   getSummary: async (params?: SummaryParams): Promise<SummaryResponse> => {
     const { data } = await api.get<SummaryResponse>("/stats/summary", { params });
     return data;

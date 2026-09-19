@@ -20,6 +20,7 @@ import "./tourIndex";
 import "./companions";
 import "./airports";
 import "./stats";
+import "./statsPage";
 import "./parsing";
 import "./tokens";
 import "./diagnostics";

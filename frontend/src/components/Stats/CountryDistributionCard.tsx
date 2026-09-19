@@ -1,30 +1,30 @@
-import { useState, useEffect } from "react";
-import { statsApi } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
-import type { CountryStat } from "../../types";
-import { logger } from "../../lib/logger";
+import type { CountryStatsResponse } from "../../types";
 import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
 
 const MAX_ROWS = 15;
 
-export default function CountryDistributionCard(): JSX.Element {
+export interface CountryDistributionCardProps {
+  /**
+   * The country distribution, loaded by the page (forgejo#49). This card and
+   * `useDomainStats` each fetched `/stats/countries` separately, so the flight
+   * tab asked the same question twice per load; the page now reads it once,
+   * from `/stats/page`. `undefined` means the load has not finished.
+   */
+  countries: CountryStatsResponse | undefined;
+}
+
+export default function CountryDistributionCard({
+  countries: data,
+}: CountryDistributionCardProps): JSX.Element {
   const { t } = useTranslation("stats");
-  const [countries, setCountries] = useState<CountryStat[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    statsApi
-      .getCountryStats()
-      .then((data) => setCountries(data.countries.slice(0, MAX_ROWS)))
-      .catch((err) => logger.error("Failed to load country stats:", err))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
+  if (!data) {
     return <p className="text-sm text-gray-500">{t("stats:countryDist.loading")}</p>;
   }
 
+  const countries = data.countries.slice(0, MAX_ROWS);
   if (countries.length === 0) {
     return <p className="text-sm text-gray-500">{t("stats:countryDist.noData")}</p>;
   }

@@ -5,14 +5,7 @@ import type { SummaryStats } from "../lib/api";
 import AppShell from "../components/ui/AppShell";
 import FlightCalendar from "../components/FlightCalendar";
 import YearHeatmap from "../components/YearHeatmap";
-import type {
-  AirportStats,
-  Flight,
-  FunStats,
-  BusinessStats,
-  UniqueStats,
-  SeatStats,
-} from "../types";
+import type { Flight } from "../types";
 import { API_LIMITS } from "../lib/constants";
 import { isCountableFlight } from "../shared/flightCounting";
 import { getFlightDuration, measureFlightMinutes } from "../lib/flightDuration";
@@ -67,6 +60,7 @@ import { logger } from "../lib/logger";
 import { GlobeLoader } from "../components/GlobeLoader";
 import { useMinLoadingState } from "../hooks/useMinLoadingState";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { useStatsPageSections } from "../lib/stats/useStatsPageSections";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { resolveStatsTab, visibleStatsTabs } from "./statsTabAccess";
 import type { DomainKey } from "../shared/domains";
@@ -79,11 +73,11 @@ export default function AdvancedStatsPage(): JSX.Element {
   const [flights, setFlights] = useState<Flight[]>([]);
   const [loading, setLoading] = useState(true);
   const showLoader = useMinLoadingState(loading, 2000);
-  const [funStats, setFunStats] = useState<FunStats | null>(null);
-  const [businessStats, setBusinessStats] = useState<BusinessStats | null>(null);
-  const [uniqueStats, setUniqueStats] = useState<UniqueStats | null>(null);
-  const [airportStats, setAirportStats] = useState<AirportStats | null>(null);
-  const [seatStats, setSeatStats] = useState<SeatStats | null>(null);
+  // Nine sections, ONE request (forgejo#49). These were nine `statsApi.get*`
+  // calls — five here and four inside the cards below — which the server
+  // answered with nine more passes over the flight table; it answers this with
+  // one. `lib/stats/useStatsPageSections.ts` carries the measurement.
+  const { sections: pageSections } = useStatsPageSections();
   const [achievementSummary, setAchievementSummary] = useState<AchievementSummary | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -251,43 +245,13 @@ export default function AdvancedStatsPage(): JSX.Element {
       // back to a great-circle estimate for DATE_ONLY rows so duration aggregates stay sane.
       setFlights(allFlights.filter(isCountableFlight));
 
-      const [fun, business, unique, airports, seat, achievements] = await Promise.all([
-        statsApi.getFunStats().catch((err) => {
-          logger.error("Failed to load fun stats:", err);
-          return null;
-        }),
-        statsApi.getBusinessStats().catch((err) => {
-          logger.error("Failed to load business stats:", err);
-          return null;
-        }),
-        statsApi.getUniqueStats().catch((err) => {
-          logger.error("Failed to load unique stats:", err);
-          return null;
-        }),
-        statsApi.getAirportStats().catch((err) => {
-          logger.error("Failed to load airport stats:", err);
-          return null;
-        }),
-        statsApi.getSeatStats().catch((err) => {
-          logger.error("Failed to load seat stats:", err);
-          return null;
-        }),
-        achievementsApi.getAll().catch((err) => {
-          logger.error("Failed to load achievement summary:", err);
-          return null;
-        }),
-      ]);
-
-      if (fun) setFunStats(fun);
-      if (business) setBusinessStats(business);
-      if (unique) {
-        logger.debug("Loaded unique stats:", unique);
-        setUniqueStats(unique);
-      } else {
-        logger.warn("Unique stats are null or failed to load");
-      }
-      if (airports) setAirportStats(airports);
-      if (seat) setSeatStats(seat);
+      // The five flight-stats requests that used to sit here are one section
+      // each of `useStatsPageSections` above. What is left is the achievement
+      // summary, which reads a different table entirely.
+      const achievements = await achievementsApi.getAll().catch((err) => {
+        logger.error("Failed to load achievement summary:", err);
+        return null;
+      });
       if (achievements) setAchievementSummary(achievements.summary);
     } catch (error) {
       logger.error("Failed to load flights:", error);
@@ -739,31 +703,41 @@ export default function AdvancedStatsPage(): JSX.Element {
               )}
 
               {/* Punctuality (#2) — self-fetching, hides without a delay sample */}
-              {sections.isVisible("punctuality") && <PunctualitySection />}
-
-              {/* Fun Statistics */}
-              {sections.isVisible("fun") && funStats && <StatsFunSection funStats={funStats} />}
-
-              {/* Business Statistics */}
-              {sections.isVisible("business") && features.enableCostTracking && businessStats && (
-                <StatsBusinessSection businessStats={businessStats} />
+              {sections.isVisible("punctuality") && (
+                <PunctualitySection stats={pageSections.punctuality} />
               )}
 
+              {/* Fun Statistics */}
+              {sections.isVisible("fun") && pageSections.fun && (
+                <StatsFunSection funStats={pageSections.fun} />
+              )}
+
+              {/* Business Statistics */}
+              {sections.isVisible("business") &&
+                features.enableCostTracking &&
+                pageSections.business && (
+                  <StatsBusinessSection businessStats={pageSections.business} />
+                )}
+
               {/* Unique Statistics */}
-              {sections.isVisible("unique") && <StatsUniqueSection uniqueStats={uniqueStats} />}
+              {sections.isVisible("unique") && (
+                <StatsUniqueSection uniqueStats={pageSections.unique ?? null} />
+              )}
 
               {/* Airport Statistics */}
               {sections.isVisible("airports") && (
-                <StatsAirportsSection airportStats={airportStats} />
+                <StatsAirportsSection airportStats={pageSections.airports ?? null} />
               )}
 
               {/* Seat Statistics */}
-              {sections.isVisible("seats") && <StatsSeatSection seatStats={seatStats} />}
+              {sections.isVisible("seats") && (
+                <StatsSeatSection seatStats={pageSections.seats ?? null} />
+              )}
 
               {/* Airline Loyalty Ranking */}
               {sections.isVisible("airlines") && (
                 <div className="mt-8 bg-(--bg-elevated) rounded-xl shadow-sm p-6">
-                  <AirlineRankingCard />
+                  <AirlineRankingCard airlines={pageSections.airlines} />
                 </div>
               )}
 
@@ -771,14 +745,14 @@ export default function AdvancedStatsPage(): JSX.Element {
                   flight has a tail number on file (AeroDataBox-enriched). */}
               {sections.isVisible("aircraft") && (
                 <div className="mt-6 bg-(--bg-elevated) rounded-xl shadow-sm p-6">
-                  <AircraftRankingCard />
+                  <AircraftRankingCard aircraft={pageSections.aircraft} />
                 </div>
               )}
 
               {/* Country Distribution */}
               {sections.isVisible("countries") && (
                 <div className="mt-6 bg-(--bg-elevated) rounded-xl shadow-sm p-6">
-                  <CountryDistributionCard />
+                  <CountryDistributionCard countries={pageSections.countries} />
                 </div>
               )}
             </>

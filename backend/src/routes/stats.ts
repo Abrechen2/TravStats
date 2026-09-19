@@ -1,5 +1,6 @@
 import { Router, Response, NextFunction } from "express";
 import aircraftStatsRouter from "./stats/aircraft";
+import statsPageRouter from "./stats/page";
 import {
   CountryCodeParamSchema,
   DateRangeQuerySchema,
@@ -15,16 +16,6 @@ import { getCachedAirports } from "../services/airportCache";
 import type { AirportData } from "../services/airportLookup";
 import { buildFlightNetwork } from "../services/stats/network";
 import { computePunctuality } from "../services/punctualityStats";
-// Response shapes: the spec and these handlers describe one thing, not two
-// (forgejo#52). The prose that used to sit on these interfaces moved with them,
-// so a consumer reading the spec gets the same caveats.
-import type {
-  SeatStats,
-  AirlineRankingItem,
-  AirlineRankingResponse,
-  CountryStat,
-  CountryStatsResponse,
-} from "../schemas/statsFlights";
 import { Prisma } from "@prisma/client";
 import {
   calculateFunStats,
@@ -34,11 +25,8 @@ import {
 } from "../utils/statsCalculator";
 import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from "../utils/cruiseStats";
 import { calculateLodgingStats } from "../utils/lodgingStats";
-import { normalizeHistory } from "../utils/homeAirport";
-import type { SettingsDataJson } from "./settings/types";
 import logger from "../utils/logger";
-import { localWallClockOf, type FlightTimeSemantics } from "../utils/timezone";
-import { normalizeCountrySet } from "../shared/countryEvidence";
+import { localWallClockOf } from "../utils/timezone";
 import { withDepartureClock } from "../services/stats/departureClock";
 import { loadPassport } from "../services/stats/passportLoader";
 import { buildWhere, computeSummary } from "../services/stats/summary";
@@ -49,8 +37,6 @@ import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/ti
 import { buildTravelRecords } from "../services/stats/records";
 import { enrichFlightsWithAirportFacts } from "../services/flightAirportFacts";
 import { countableFlightWhere } from "../shared/flightCounting";
-import { airlineResolvers } from "../utils/airlineNormalize";
-import { groupAirlines } from "../shared/airlineNormalize";
 import {
   resolveWindow,
   bucketSeries,
@@ -67,6 +53,12 @@ import { loadLodgingStatsData } from "../services/stats/lodgingStatsData";
 import { buildTripAccount } from "../services/stats/tripAccount";
 import { getBaseCurrency } from "../services/fx/snapshot";
 import { statsEtag } from "../middleware/statsEtag";
+// Folds shared with the composing `GET /stats/page` (forgejo#49): one home per
+// figure, so the two surfaces cannot answer the same question differently.
+import { computeSeatStats } from "../services/stats/seatStats";
+import { computeCountryStats, isoCodes } from "../services/stats/countryStats";
+import { computeAirlineRanking } from "../services/stats/airlineRanking";
+import { loadHomeAirportHistory } from "../services/stats/homeAirportHistory";
 
 const router = Router();
 
@@ -706,15 +698,7 @@ router.get(
       });
 
       // Load home airport history so layovers exclude returns to home-at-that-date.
-      const homeSettings = await prisma.userSettings.findUnique({
-        where: { userId },
-        select: { data: true },
-      });
-      const historyData =
-        homeSettings?.data && typeof homeSettings.data === "object"
-          ? (homeSettings.data as SettingsDataJson).homeAirportHistory
-          : undefined;
-      const homeHistory = normalizeHistory(historyData);
+      const homeHistory = await loadHomeAirportHistory(userId);
 
       // Calculate unique stats with error handling - continue even if airport data fails
       let uniqueStats;
@@ -814,15 +798,7 @@ router.get(
         },
       });
 
-      const homeSettings = await prisma.userSettings.findUnique({
-        where: { userId },
-        select: { data: true },
-      });
-      const historyData =
-        homeSettings?.data && typeof homeSettings.data === "object"
-          ? (homeSettings.data as SettingsDataJson).homeAirportHistory
-          : undefined;
-      const homeHistory = normalizeHistory(historyData);
+      const homeHistory = await loadHomeAirportHistory(userId);
 
       const stats = await calculateAirportStats(await withDepartureClock(flights), homeHistory);
       res.json(stats);
@@ -1076,106 +1052,7 @@ router.get("/seats", async (req: AuthRequest, res: Response, next: NextFunction)
       },
     });
 
-    const seatRegex = /^(\d+)([A-Z]+)$/i;
-    const seatCounts: Record<string, number> = {};
-
-    let windowCount = 0;
-    let middleCount = 0;
-    let aisleCount = 0;
-    let unknownCount = 0;
-    let noSeatCount = 0;
-    let frontCount = 0;
-    let middleZoneCount = 0;
-    let backCount = 0;
-    let rowTotal = 0;
-    let rowCountWithNumber = 0;
-    const seatClassDistribution: Record<string, number> = {};
-
-    for (const flight of flights) {
-      // Count seat class distribution
-      if (flight.seatClass) {
-        seatClassDistribution[flight.seatClass] =
-          (seatClassDistribution[flight.seatClass] ?? 0) + 1;
-      }
-
-      if (!flight.seatNumber) {
-        noSeatCount++;
-        continue;
-      }
-
-      // Count seat occurrences for mostCommonSeat
-      const normalizedSeat = flight.seatNumber.toUpperCase();
-      seatCounts[normalizedSeat] = (seatCounts[normalizedSeat] ?? 0) + 1;
-
-      const match = seatRegex.exec(flight.seatNumber);
-      if (!match) {
-        unknownCount++;
-        continue;
-      }
-
-      const rowNumber = parseInt(match[1], 10);
-      const letters = match[2].toUpperCase();
-      const lastLetter = letters[letters.length - 1];
-
-      // Row zone classification
-      rowTotal += rowNumber;
-      rowCountWithNumber++;
-
-      if (rowNumber >= 1 && rowNumber <= 10) {
-        frontCount++;
-      } else if (rowNumber >= 11 && rowNumber <= 25) {
-        middleZoneCount++;
-      } else {
-        backCount++;
-      }
-
-      // Position classification by last letter
-      // Covers narrow-body (A-F: 3+3) and wide-body (A-K: 3+4+3) layouts:
-      //   Window: A, F, K
-      //   Middle: B, E, H, J (wide-body center section)
-      //   Aisle:  C, D, G (narrow/wide-body aisle seats)
-      if (lastLetter === "A" || lastLetter === "F" || lastLetter === "K") {
-        windowCount++;
-      } else if (
-        lastLetter === "B" ||
-        lastLetter === "E" ||
-        lastLetter === "H" ||
-        lastLetter === "J"
-      ) {
-        middleCount++;
-      } else if (lastLetter === "C" || lastLetter === "D" || lastLetter === "G") {
-        aisleCount++;
-      } else {
-        unknownCount++;
-      }
-    }
-
-    // Most common seat
-    let mostCommonSeat: string | null = null;
-    let maxSeatCount = 0;
-    for (const [seat, count] of Object.entries(seatCounts)) {
-      if (count > maxSeatCount) {
-        maxSeatCount = count;
-        mostCommonSeat = seat;
-      }
-    }
-
-    const result: SeatStats = {
-      windowCount,
-      middleCount,
-      aisleCount,
-      unknownCount,
-      noSeatCount,
-      frontCount,
-      middleZoneCount,
-      backCount,
-      mostCommonSeat,
-      seatClassDistribution,
-      avgRowNumber:
-        rowCountWithNumber > 0 ? Math.round((rowTotal / rowCountWithNumber) * 10) / 10 : null,
-    };
-
-    res.json(result);
+    res.json(computeSeatStats(flights));
   } catch (error) {
     next(error);
   }
@@ -1205,41 +1082,20 @@ router.get(
         }),
       ]);
 
-      // Same airline = same CODE, not same spelling (forgejo#81): "SWISS" and
-      // "Swiss" are one carrier once either row's code is known, and the
-      // catalogue names the group. The rule lives in shared/airlineNormalize.ts
-      // and every client surface uses the same one.
-      // A row without an airline is NOT an airline. It used to be folded in
-      // under the label "Unknown", which could top the loyalty ranking on an
-      // account with many imported rows — and it sat in the percentage
-      // denominator too, quietly diluting every real airline's share. Such rows
-      // are excluded from both, and reported separately so the ranking can say
-      // what it is silent about.
-      const { groups, withoutAirline: flightsWithoutAirline } = groupAirlines(
-        airlineCounts.map((row) => ({
-          airline: row.airline,
-          airlineIata: row.airlineIata,
-          airlineIcao: row.airlineIcao,
-          count: row._count,
-        })),
-        airlineResolvers
+      // The fold lives in `services/stats/airlineRanking.ts`, shared with the
+      // composing `GET /stats/page`, which reaches it from the rows it already
+      // holds instead of from these two aggregates.
+      res.json(
+        computeAirlineRanking(
+          airlineCounts.map((row) => ({
+            airline: row.airline,
+            airlineIata: row.airlineIata,
+            airlineIcao: row.airlineIcao,
+            count: row._count,
+          })),
+          total
+        )
       );
-      const attributedTotal = total - flightsWithoutAirline;
-
-      const airlines: AirlineRankingItem[] = groups.map((g) => ({
-        airline: g.label,
-        count: g.count,
-        percentage: attributedTotal > 0 ? Math.round((g.count / attributedTotal) * 1000) / 10 : 0,
-        key: g.key, // Canonical identity, always present; evidence addresses this row by it.
-        ...(g.iata ? { iata: g.iata } : {}),
-      }));
-
-      const response: AirlineRankingResponse = {
-        airlines,
-        total: attributedTotal,
-        flightsWithoutAirline,
-      };
-      res.json(response);
     } catch (error) {
       next(error);
     }
@@ -1247,27 +1103,6 @@ router.get(
 );
 
 // ─── Country Distribution ─────────────────────────────────────────────────────
-
-/**
- * Fold a set of country names/codes into sorted, deduplicated ISO alpha-2.
- * Unresolvable entries are dropped: they cannot be deduplicated against the
- * other catalogue, so keeping them would reintroduce the double count this
- * exists to remove.
- *
- * The join is `shared/countryEvidence.ts`'s, not a local one. This used to call
- * the English-only `isoCountryCode` alone, which is the same half-resolution
- * that gave `countryDetail.ts` a country row whose drill-down could not name
- * the record behind it. Reading BOTH resolvers is strictly more generous —
- * measured over the whole airport and port catalogue no code changed and none
- * was lost — and it stops a two-character non-Latin string ("日本") being
- * published as if it were a country code.
- *
- * These are LISTS, and they stay lists: the counting threshold of design §3.2
- * moves the passport headline and nothing here.
- */
-function isoCodes(values: Iterable<string>): string[] {
-  return [...normalizeCountrySet(values)].sort();
-}
 
 // GET /api/v1/stats/countries — visited-country distribution (both flight ends)
 router.get(
@@ -1288,76 +1123,7 @@ router.get(
         },
       });
 
-      const airportCodes = new Set<string>();
-      for (const f of flights) {
-        if (f.depIata) airportCodes.add(f.depIata);
-        else if (f.depIcao) airportCodes.add(f.depIcao);
-        if (f.arrIata) airportCodes.add(f.arrIata);
-        else if (f.arrIcao) airportCodes.add(f.arrIcao);
-      }
-
-      const airportMap = await getCachedAirports([...airportCodes]);
-
-      const countryCounts = new Map<string, number>();
-      const countriesByYear = new Map<number, Set<string>>();
-      for (const f of flights) {
-        // BOTH ends count. This used to read the departure only, so a single
-        // FRA -> LHR reported "Länder besucht: 1" and the United Kingdom
-        // appeared nowhere — the KPI says VISITED, and landing somewhere is
-        // the clearest way to visit it (#233).
-        const depCode = f.depIata ?? f.depIcao;
-        const arrCode = f.arrIata ?? f.arrIcao;
-        const depAirport = depCode ? airportMap.get(depCode) : undefined;
-        const arrAirport = arrCode ? airportMap.get(arrCode) : undefined;
-
-        // A Set per flight, so a domestic leg is ONE visit to that country
-        // rather than two. Across flights the counts still accumulate, which
-        // keeps `countries` usable as a ranking.
-        const touched = new Set<string>();
-        touched.add(depAirport?.country ?? "Unknown");
-        // Only when an arrival airport is actually on file — otherwise an
-        // incomplete row would invent a second "Unknown" visit.
-        if (arrCode) touched.add(arrAirport?.country ?? "Unknown");
-
-        for (const country of touched) {
-          countryCounts.set(country, (countryCounts.get(country) ?? 0) + 1);
-        }
-
-        // An undated flight cannot be attributed to a year. It stays in the
-        // lifetime tally rather than being guessed into the current one.
-        if (!f.departureTime) continue;
-        // The timezone lives on the airport, not the flight — same source the
-        // flight list uses to derive depTimezone. Both endpoints land in the
-        // DEPARTURE year: a red-eye that lands after midnight is still one
-        // journey, and splitting its two ends across two years would count a
-        // country as visited in a year the traveller never flew.
-        const year = localWallClockOf(
-          f.departureTime,
-          depAirport?.timezone ?? null,
-          f.depTimeSemantics as FlightTimeSemantics
-        ).year;
-        if (!Number.isFinite(year)) continue;
-        const bucket = countriesByYear.get(year) ?? new Set<string>();
-        for (const country of touched) bucket.add(country);
-        countriesByYear.set(year, bucket);
-      }
-
-      const countries: CountryStat[] = [...countryCounts.entries()]
-        .map(([country, count]) => ({ country, count }))
-        .sort((a, b) => b.count - a.count);
-
-      const byYear: Record<string, string[]> = {};
-      for (const [year, set] of countriesByYear) {
-        byYear[String(year)] = isoCodes(set);
-      }
-
-      const response: CountryStatsResponse = {
-        countries,
-        total: flights.length,
-        countriesIso: isoCodes(countryCounts.keys()),
-        byYear,
-      };
-      res.json(response);
+      res.json(await computeCountryStats(flights));
     } catch (error) {
       next(error);
     }
@@ -1534,6 +1300,11 @@ router.get(
 // The three aircraft rankings live in `stats/aircraft` — mounted HERE rather
 // than at the end of the file so route-matching order is exactly what it was.
 router.use(aircraftStatsRouter);
+
+// The composing endpoint (forgejo#49). Mounted on this router so it inherits
+// `authenticate` and `statsEtag` above; it answers eleven of this file's
+// endpoints from ONE flight scan where the page previously paid thirteen.
+router.use(statsPageRouter);
 
 // GET /api/v1/stats/punctuality — actual-vs-scheduled aggregates (#2).
 // Reads the stored per-flight delayMinutes captured since 2.5; no new lookups.

@@ -1,32 +1,26 @@
-import { useEffect, useState } from "react";
 import type { JSX } from "react";
-import { statsApi, type PunctualityStats } from "../../lib/api/stats";
-import { logger } from "../../lib/logger";
+import type { PunctualityStats } from "../../lib/api/stats";
 import { useTranslation } from "../../hooks/useTranslation";
 import EvidenceTrigger from "./EvidenceTrigger";
+
+export interface PunctualitySectionProps {
+  /**
+   * The delay aggregates, loaded by the page (forgejo#49) — this section used
+   * to fetch `/stats/punctuality` itself, and is now one section of
+   * `/stats/page`. `undefined` means the load has not finished, which renders
+   * nothing, exactly as an unfinished fetch did.
+   */
+  stats: PunctualityStats | undefined;
+}
 
 /**
  * Punctuality (#2): 2.5 recorded a delay per flight; this is the first place
  * that summarises it — average delay, on-time rate, and the best/worst airline
- * and worst route. Self-fetching and self-hiding: renders nothing until there
- * is a delay sample, so a logbook without delay data shows no empty panel.
+ * and worst route. Self-HIDING: renders nothing until there is a delay sample,
+ * so a logbook without delay data shows no empty panel.
  */
-export default function PunctualitySection(): JSX.Element | null {
+export default function PunctualitySection({ stats }: PunctualitySectionProps): JSX.Element | null {
   const { t } = useTranslation(["stats"]);
-  const [stats, setStats] = useState<PunctualityStats | null>(null);
-
-  useEffect(() => {
-    let cancelled = false;
-    statsApi
-      .getPunctuality()
-      .then((s) => {
-        if (!cancelled) setStats(s);
-      })
-      .catch((err) => logger.error("Failed to load punctuality stats", err));
-    return () => {
-      cancelled = true;
-    };
-  }, []);
 
   if (!stats || stats.sampleSize === 0) return null;
 
