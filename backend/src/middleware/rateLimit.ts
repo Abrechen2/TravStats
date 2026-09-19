@@ -1,6 +1,7 @@
 import { Request, Response } from "express";
 import rateLimit, { ipKeyGenerator } from "express-rate-limit";
 import { RATE_LIMITS } from "../config/constants";
+import type { ApiErrorCode } from "./errorHandler";
 
 /**
  * Rate-limit bucket key.
@@ -284,7 +285,7 @@ function humanRateLimitHandler(message: string) {
       : undefined;
     res.status(429).json({
       error: message,
-      code: "RATE_LIMITED",
+      code: "RATE_LIMITED" satisfies ApiErrorCode,
       ...(retryAfterSeconds !== undefined ? { retryAfterSeconds } : {}),
     });
   };
