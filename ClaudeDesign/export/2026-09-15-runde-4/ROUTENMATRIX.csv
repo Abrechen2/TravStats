@@ -1,0 +1,57 @@
+Route;Familie;Datei;Desktop gestaltet;Mobil gestaltet;Unterseiten und Overlays erfasst;Zustände gestaltet;Prototyp bedienbar;Bestehendes Produktverhalten;Neue Implementierung nötig;Anmerkung
+/setup;Zugang;Einrichtung.dc.html;ja;ja;3 Schritte, Abschluss;Standard, Laden (Erstellen…);ja;bestehend;–;Instanz-Einstellungen im Setup laut setup.json
+/login;Zugang;Anmelden.dc.html;ja;ja;2FA, Passkey, Passwort vergessen (SMTP/kein SMTP);Standard, Laden, Fehler (SMTP fehlt);ja;bestehend;–;
+/register;Zugang;Registrieren.dc.html;ja;ja;Einladungscode, geschlossen;Standard, Fehler, Registrierung geschlossen;ja;bestehend;–;
+/reset-password;Zugang;Passwort.dc.html;ja;ja;Link abgelaufen;Standard, Erfolg, Fehler;ja;bestehend;–;
+/change-password;Zugang;Passwort.dc.html#erzwungen;ja;ja;erzwungener Wechsel;Standard, Stärkeanzeige, Fehler;ja;bestehend;–;
+/2fa;Zugang;Anmelden.dc.html (Schritt 2);ja;ja;Wiederherstellungscode;Standard, Gerät merken;ja;bestehend;–;
+/;Zugang;→ Dashboard.dc.html;–;–;Weiterleitung;–;ja;bestehend;–;Fallback auf Startseite laut Einstellung
+/dashboard;Dashboard & Karten;Dashboard.dc.html;ja;ja;Panels (6, klappbar), Seitenleiste, Bottom-Sheet, Zeitachse;Standard, Bereich deaktiviert, Laden, Fehler;ja;teils;Sheet-Zustände, Modus pro Tab in URL;Globus-Spezifikation: Globus.dc.html
+/dashboard/:tab;Dashboard & Karten;Dashboard.dc.html (Tabs);ja;ja;Modus pro Bereich, Sichtbarkeit, Legende;wie oben;ja;teils;Modus ↔ URL-Vertrag offen (§C); gestrichelte Bögen im Renderer;Kartenfarben Variante 2 = Standard (Owner 15.09.)
+/flights;Logbuch;Logbuch Fluege.dc.html;ja;ja;Spalten, Dichte, Filter aktiv/×/Zurücksetzen, Suche;Standard, leer, keine Treffer, Laden, Fehler, Beta aus;ja;teils;Mehrfach-Filter im Backend (Query-Param), Flaggen-API;D-02 umgesetzt: ListRow < 640
+/flights/:id;Eintragsdetails;Flug Detail.dc.html;ja;ja;Bearbeiten (Dialog), Duplizieren, Löschen, Belege, Tags, Mitreisende;Standard, Plan/Ist, Vorläufig;ja;teils;Tags/Mitreisende-Backend, Statistik-Vorschau-API;
+/cruises;Logbuch;Logbuch Domaenen.dc.html#cruise;ja;ja;Tabelle ↔ Karten;Standard, leer;ja;bestehend;–;Gleiche Zeilenfamilie wie Flüge (Vergleich §1)
+/cruises/:id;Eintragsdetails;Kreuzfahrt Detail.dc.html;ja;ja;Hafenfolge, Stops-Editor (Dialog), Flüge der Buchung;Standard, unaufgelöster Hafen;ja;teils;Hafen-Auflösung-Endpoint;
+/lodging;Logbuch;Logbuch Domaenen.dc.html#hotel;ja;ja;Häuser ↔ Aufenthalte;Standard, leer;ja;bestehend;–;
+/lodging/:id;Eintragsdetails;Unterkunft Detail.dc.html;ja;ja;Aufenthalte, Bewertungen, Ausgaben, Tags, Mitreisende;Standard;ja;teils;Tags/Companions-Backend;
+/lodging/chains/:id;Eintragsdetails;Kette Detail.dc.html;ja;ja;Häuser der Kette;Standard;ja;bestehend;–;
+/places;Logbuch;Logbuch Domaenen.dc.html#poi;ja;ja;Besucht/Merkliste;Standard, leer, Beta aus;ja;bestehend;–;Beta-Gate poiDomain
+/places/:id;Eintragsdetails;Ort Detail.dc.html;ja;ja;Besuche, Listen, Tags, Mitreisende;Standard;ja;teils;Tags/Companions-Backend;
+/places/lists;Sammlungen;Ortslisten.dc.html;ja;ja;Liste anlegen (10 Farben, Symbol);Standard, leer;ja;bestehend;–;
+/places/lists/:id;Sammlungen;Liste Detail.dc.html;ja;ja;Ort hinzufügen, Reihenfolge, Löschen;Standard, leer, kein Treffer;ja;bestehend;–;
+/places/checklists/:key;Sammlungen;Checkliste.dc.html;ja;ja;Abhaken, Folgen;Standard;ja;teils;Abhaken legt Ort an (Endpoint);
+/trips;Reisen & Touren;Reisen.dc.html;ja;ja;Karten ↔ Tabelle, Gruppierungs-Vorschlag, Reise anlegen;Standard, leer;ja;teils;Gruppierungs-Vorschlag (Heuristik serverseitig);
+/trips/:id;Reisen & Touren;Reise Detail.dc.html;ja;ja;Übersicht, Timeline, Journal, Karte, Galerie, Logistik, Touren, Löschen-Dialog;Standard, Beta aus (Touren);ja;teils;Journal-Backend, Touren (Beta tourRoutes);Löschen: Reise als Klammer vs. Einträge
+/trips/:id/route/:routeId;Reisen & Touren;Touren-Editor.dc.html · Routeneditor.dc.html;ja;teils;Etappen, Routing, GPX/Dawarich;Standard, Luftlinie/berechnet/aus Spur;ja;teils;Routing-Anbieter, Dawarich-Import;Mobil: nur Ansicht, Bearbeiten Desktop
+/achievements;Statistik & Rückblick;Erfolge.dc.html;ja;ja;Kategorien, Stufen;Standard;ja;bestehend;–;Unter Statistik (Owner 15.09.); Mehr › Sammlungen
+/achievements/:id;Statistik & Rückblick;Erfolg Detail.dc.html;ja;ja;Regel, zählende Einträge;Standard;ja;bestehend;–;nicht als Route im Referenzbranch — Overlay/Anker
+/stats;Statistik & Rückblick;Statistik.dc.html;ja;ja;Gesamt · Flüge (13 Abschnitte, ausblendbar) · Kreuzfahrten (cruiseSection) · Unterkünfte (money/quality/geo/rhythm/loyalty/records) · Orte (Kategorie/Land/Stadt/Rhythmus/Bewertung/Checklisten/Kurioses) · Zertifikat;Standard, leer;ja;bestehend;–;?tab=flight|cruise|lodging|poi
+/stats/leaderboard;Statistik & Rückblick;Bestenliste.dc.html;ja;ja;–;Standard;ja;bestehend;–;
+/review/:year;Statistik & Rückblick;Jahresrueckblick.dc.html;ja;ja;Jahr wählen, Bild teilen (PNG serverseitig), Drucken;Standard, erzeugt…, bereit;ja;–;NEU: /api/v1/review/:year + /image (PNG 1200×630);Beschlossen, noch zu implementieren
+/passport;Statistik & Rückblick;Reisepass v2.dc.html;ja;ja;Zählschwelle, Belege pro Land, Stempel;Standard, geändert-Hinweis;ja;teils;Zählschwelle serverseitig persistieren;D-04: mobile Länderzeilen + Kurzaussage
+/passport/print;Statistik & Rückblick;Druckansicht.dc.html;ja;–;Reisepass + Zertifikat;Standard;ja;teils;Zertifikat auf paper/paperText vereinheitlichen;Druck A4
+/aircraft/:registration;Eintragsdetails;Flugzeug.dc.html;ja;ja;Flüge mit Maschine, Hulls;Standard;ja;bestehend;–;
+/settings;Einstellungen;Einstellungen v3.dc.html;ja;ja;Allgemein/Flug/Kreuzfahrt/Unterkünfte, Konto/Darstellung/Daten/Dienste;Standard, leer, Laden, Fehler, Speicherstatus;ja;bestehend;–;D-05: Alltag vor Technik
+/settings/:group;Einstellungen;Einstellungen v3.dc.html (Tabs = /settings/account|flight|cruise|lodging);ja;ja;Gruppen als Routen + Sektionsanker;wie oben;ja;–;NEU: Router-Routen pro Gruppe;Beschlossen 15.09. — in 2.7
+/settings/account/devices;Einstellungen;Einstellungen v3.dc.html#geraete;ja;ja;QR-Kopplung, Warten, verbunden;Standard, wartet, verbunden, abgelaufen;ja;teils;Kopplungs-Endpoint (Beta devicePairing);
+/design;Design;Design Primitives.dc.html;ja;ja;–;–;ja;nur Dev-Build;–;
+/admin;Administration;Admin v2.dc.html;ja;teils;Benutzer, Einladungen, Instanz, Dienste, Parser, Backups, SMTP, Stammdaten-Editor;Standard, Gefahrenzone;ja;bestehend;–;Rolle Admin, 403 sonst
+/parser;Werkzeuge;Parser.dc.html;ja;teils;Annotieren, Templates, Community, Logs;Standard, Beta;ja;bestehend;–;Beta-Register
+/import;Werkzeuge;Import-Logbuch.dc.html;ja;ja;Quelldatei, Log, erneut parsen;Standard, leer;ja;–;NEU: Import-Log-Endpoint;
+/pending-updates;Posteingang;Posteingang.dc.html (Tab Flug-Updates);ja;ja;Diff, Anwenden/Bearbeiten/Ablehnen;Standard, leer;ja;bestehend;–;
+/inbox;Posteingang;Posteingang.dc.html;ja;ja;Zu prüfen, Passt so/korrigieren;wird geladen, nichts zu prüfen, Fehler, Rückfrage;ja;bestehend;–;§B Zustände
+/search (⌘K);Globaler Rahmen;Suche.dc.html;ja;ja;Scopes, Tastatur ?;Standard, keine Treffer;ja;–;NEU: Such-Endpoint über Domänen;§7.3
+/companions;Eintragsdetails;Mitreisende.dc.html;ja;ja;Zusammenführen, Filter;Standard;ja;–;NEU: Companions-Backend (Owner: 4 Domänen);
+/tags;Eintragsdetails;Tags.dc.html;ja;ja;Wolke, Vorschlag;Standard;ja;–;NEU: Tags-Backend;
+/403;Zugang;Nicht gefunden.dc.html#403;ja;ja;–;Standard;ja;bestehend;–;
+*;Zugang;Nicht gefunden.dc.html;ja;ja;–;Standard;ja;bestehend;–;
+Overlay: Hinzufügen;Erfassen;Hinzufuegen.dc.html;ja;ja;E-Mail/PDF · Text · von Hand · 4 Domänen;Standard, Fehler am Feld;ja;bestehend;–;
+Overlay: Import-Vorschau;Erfassen;Dialoge.dc.html#import;ja;ja;Vertrauen pro Feld, Duplikat, Reise;Standard, unsicher;ja;teils;Statistik-Vorschau nur mit API-Vertrag;§B, Mehrfachbuchung Hotel offen
+Overlay: Reise zuordnen;Erfassen;Dialoge.dc.html#trip;ja;ja;Vorschläge, neu, keine;Standard;ja;teils;Vorschlags-Heuristik;
+Overlay: Flug bearbeiten;Eintragsdetails;Dialoge.dc.html#flight;ja;ja;Duplikat-Hinweis, Auswirkungen;Standard, Fehler;ja;bestehend;–;§A
+Overlay: Bestätigen;Alle;Dialoge.dc.html#confirm;ja;ja;–;Standard;ja;bestehend;–;Danger nur hier
+Overlay: Stops-Editor;Eintragsdetails;Dialoge.dc.html#stops;ja;ja;drei Stopp-Zustände;Standard, unaufgelöst;ja;bestehend;–;
+Overlay: Was ist neu;Globaler Rahmen;Dialoge.dc.html#whatsnew;ja;ja;Beta-Plakette;Standard;ja;bestehend;–;
+Overlay: Erfolg freigeschaltet;Statistik & Rückblick;Dialoge.dc.html#achievement;ja;ja;1 von n;Standard;ja;bestehend;–;
+Overlay: Bild-Viewer;Reisen & Touren;Dialoge.dc.html#viewer;ja;ja;Pfeile, Esc;Standard;ja;bestehend;–;
+Overlay: Toast;Alle;Dialoge.dc.html;ja;ja;Rückgängig;Erfolg;ja;bestehend;–;Fehler nie als Toast

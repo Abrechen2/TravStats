@@ -1,0 +1,120 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+  <div data-screen-label="12b Routeneditor" style="position:relative;flex:1;min-height:max(560px,calc(100vh - 56px));background:#07090c;overflow:hidden">
+    <div style="position:absolute;inset:0;background:radial-gradient(circle at 55% 45%,#1a1f26 0%,#0b0d10 70%);background-image:repeating-linear-gradient(135deg,rgba(231,227,220,0.03) 0 6px,transparent 6px 16px),radial-gradient(circle at 55% 45%,#1a1f26 0%,#0b0d10 70%)"></div>
+    <svg viewBox="0 0 1000 600" preserveAspectRatio="xMidYMid meet" style="position:absolute;inset:0;width:100%;height:100%">
+      <path d="M 380 400 C 460 330, 520 330, 580 280" fill="none" stroke="#4aa6b0" stroke-width="3" stroke-opacity="0.5"/>
+      <path d="M 580 280 C 660 240, 760 250, 880 190" fill="none" stroke="#f0a947" stroke-width="4"/>
+      <sc-for list="{{ handles }}" as="h" hint-placeholder-count="4"><circle cx="{{ h.x }}" cy="{{ h.y }}" r="{{ h.r }}" fill="{{ h.fill }}" stroke="{{ h.stroke }}" stroke-width="2" onClick="{{ h.onClick }}" style="cursor:{{ h.cursor }}"><title>{{ h.title }}</title></circle></sc-for>
+      <circle cx="380" cy="400" r="7" fill="#101317" stroke="#4aa6b0" stroke-width="3"/><circle cx="580" cy="280" r="7" fill="#101317" stroke="#f0a947" stroke-width="3"/><circle cx="880" cy="190" r="7" fill="#101317" stroke="#f0a947" stroke-width="3"/>
+      <text x="368" y="430" fill="#e7e3dc" font-size="13" font-family="Hanken Grotesk" font-weight="600">Seward</text><text x="565" y="312" fill="#f4ece0" font-size="13" font-family="Hanken Grotesk" font-weight="700">Juneau</text><text x="860" y="175" fill="#f4ece0" font-size="13" font-family="Hanken Grotesk" font-weight="700">Skagway</text>
+    </svg>
+    <!-- Toolbar -->
+    <div style="position:absolute;left:24px;top:20px;bottom:24px;display:flex;flex-direction:column;gap:8px;width:280px">
+      <div style="background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:10px;flex-shrink:0">
+        <div style="display:flex;justify-content:space-between;align-items:center;gap:8px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px;padding:0">Route bearbeiten</span><span style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:#6fa0d6;background:rgba(111,160,214,0.12);border:1px solid rgba(111,160,214,0.45);white-space:nowrap">von Hand korrigiert</span></div>
+        <div style="font-size:14px;font-weight:700;color:#f4ece0">Norwegian Bliss · Alaska</div>
+        <div style="font-size:12px;color:rgba(231,227,220,0.6)">Etappe <span style="color:#f4ece0;font-weight:600">Juneau → Skagway</span> · {{ handleCount }} Wegpunkte · Endpunkte nicht verschiebbar</div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap;padding-top:8px;border-top:1px solid rgba(231,227,220,0.12)"><span style="font-size:11px;color:rgba(231,227,220,0.6);width:100%">Werkzeug</span><sc-for list="{{ tools }}" as="t" hint-placeholder-count="2"><button onClick="{{ t.onClick }}" style="height:32px;padding:0 12px;border-radius:999px;border:1px solid {{ t.border }};background:{{ t.bg }};color:{{ t.color }};font-weight:600;font-size:12px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease;white-space:nowrap">{{ t.label }}</button></sc-for></div>
+        <div style="display:flex;gap:6px;flex-wrap:wrap"><button onClick="{{ undo }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:36px;font-size:13px;padding:0 12px" style-hover="background:rgba(231,227,220,0.04)">Rückgängig</button><button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:36px;font-size:13px;padding:0 12px;opacity:0.5" style-hover="background:rgba(231,227,220,0.04)">Wiederholen</button><button onClick="{{ simplify }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:36px;font-size:13px;padding:0 12px" style-hover="background:rgba(231,227,220,0.04)">Vereinfachen</button></div>
+        <sc-if value="{{ hasSel }}" hint-placeholder-val="{{ false }}"><button onClick="{{ removeSel }}" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:36px;font-size:13px;border-color:rgba(230,90,79,0.45);color:#e65a4f" style-hover="background:rgba(230,90,79,0.12)"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-trash-2"></use></svg>Ausgewählte löschen ({{ selCount }})</button></sc-if>
+        <button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:36px;font-size:13px" style-hover="background:rgba(231,227,220,0.04)">Wieder automatisch</button>
+        <div style="font-size:11px;color:rgba(231,227,220,0.6);text-wrap:pretty;padding-top:8px;border-top:1px solid rgba(231,227,220,0.12)">{{ hint }}</div>
+      </div>
+      <div style="background:#101317;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:14px;display:flex;flex-direction:column;gap:6px;min-height:0;overflow:auto;scrollbar-width:thin;scrollbar-color:rgba(231,227,220,0.25) transparent"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px;padding:0">Etappen</span><sc-for list="{{ legs }}" as="l" hint-placeholder-count="5"><button onClick="{{ l.onClick }}" style="display:flex;align-items:center;justify-content:space-between;gap:8px;height:36px;padding:0 10px;border-radius:10px;background:{{ l.bg }};border:none;color:{{ l.color }};font-size:13px;font-weight:600;cursor:pointer;text-align:left" style-hover="background:rgba(231,227,220,0.06)"><span>{{ l.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">{{ l.meta }}</span></button></sc-for></div>
+    </div>
+    <div style="position:absolute;right:24px;bottom:24px;display:flex;gap:8px"><a href="Kreuzfahrt Detail.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;text-decoration:none;background:#101317" style-hover="background:#14181d;text-decoration:none">Abbrechen</a><a href="Kreuzfahrt Detail.dc.html" style="height:46px;padding:0 18px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-check"></use></svg>Speichern</a></div>
+  </div>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, menu: null, tool: 'Auswählen', pts: [[660, 252], [740, 244], [810, 232]], sel: {}, leg: 1, hist: [] };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); }
+  renderVals() {
+    const S = this.state.S; if (!S) return { hint: '', handleCount: '' }; const T = S.T; const st = this.state; const set = p => this.setState(p);
+    const selCount = Object.values(st.sel).filter(Boolean).length;
+    return { ...S.navModel('logbook', st, set), stop: e => e.stopPropagation(),
+      handles: st.pts.map(([x, y], i) => ({ x, y, r: st.sel[i] ? 9 : 7, fill: st.sel[i] ? '#f0a947' : '#101317', stroke: '#f0a947', cursor: st.tool === 'Auswählen' ? 'pointer' : 'grab', title: 'Wegpunkt ' + (i + 1), onClick: () => st.tool === 'Auswählen' && set(s => ({ sel: { ...s.sel, [i]: !s.sel[i] } })) })),
+      handleCount: st.pts.length, tools: ['Karte bewegen', 'Auswählen'].map(t => ({ label: t, onClick: () => set({ tool: t }), bg: st.tool === t ? T.accent : 'transparent', color: st.tool === t ? T.bg : T.text, border: st.tool === t ? T.accent : 'rgba(231,227,220,0.18)' })),
+      hasSel: selCount > 0, selCount, removeSel: () => set(s => ({ hist: [...s.hist, s.pts], pts: s.pts.filter((_, i) => !s.sel[i]), sel: {} })),
+      undo: () => set(s => s.hist.length ? { pts: s.hist[s.hist.length - 1], hist: s.hist.slice(0, -1), sel: {} } : {}), simplify: () => set(s => ({ hist: [...s.hist, s.pts], pts: s.pts.filter((_, i) => i % 2 === 0), sel: {} })),
+      legs: ['Seward → Juneau', 'Juneau → Skagway', 'Skagway → Ketchikan', 'Ketchikan → Vancouver'].map((l, i) => ({ label: l, meta: i === 1 ? 'offen' : i === 0 ? 'automatisch' : 'automatisch', onClick: () => set({ leg: i }), bg: st.leg === i ? 'rgba(231,227,220,0.06)' : 'transparent', color: st.leg === i ? T.textBright : T.muted })),
+      hint: st.tool === 'Auswählen' ? 'Wegpunkte antippen zum Auswählen · Doppelklick auf die Linie fügt einen Wegpunkt hinzu' : 'Ziehen bewegt die Karte · Etappe auf der Karte antippen zum Bearbeiten' };
+  }
+}
+</script>
+</body>
+</html>

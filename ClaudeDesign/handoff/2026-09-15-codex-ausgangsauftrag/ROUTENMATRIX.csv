@@ -1,0 +1,36 @@
+﻿Route;Quelle;Desktop gestaltet;Mobil gestaltet;Unterseiten und Overlays erfasst;Zust?nde gestaltet;Prototyp erreichbar;Neue Implementierung n?tig;Anmerkung
+/setup;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/login;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/register;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/reset-password;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/change-password;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/2fa;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Weiterleitung/Fallback: Verhalten ber?cksichtigen
+/dashboard;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/dashboard/:tab;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/flights;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/flights/:id;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/cruises;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/cruises/:id;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/lodging;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/places;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/places/lists;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/places/lists/:id;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/places/checklists/:key;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/places/:id;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/lodging/:id;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/lodging/chains/:id;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/trips;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/trips/:id;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/trips/:id/route/:routeId;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/achievements;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/stats;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/settings;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/settings/:group;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/design;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Nur Entwicklungsbuild
+/admin;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/parser;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/pending-updates;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/aircraft/:registration;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+/passport;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Unteransichten und Overlays erg?nzen
+*;dev/design-system @ 51ea0549;offen;offen;offen;offen;offen;zu pr?fen;Weiterleitung/Fallback: Verhalten ber?cksichtigen

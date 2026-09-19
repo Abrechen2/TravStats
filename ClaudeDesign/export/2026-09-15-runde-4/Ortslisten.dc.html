@@ -1,0 +1,160 @@
+<!DOCTYPE html>
+<html>
+<head>
+<meta charset="utf-8">
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="icon" type="image/svg+xml" href="assets/favicon.svg">
+<script src="./support.js"></script>
+</head>
+<body>
+<x-dc>
+<helmet>
+<meta name="viewport" content="width=device-width, initial-scale=1">
+<link rel="preconnect" href="https://fonts.googleapis.com">
+<link href="https://fonts.googleapis.com/css2?family=Hanken+Grotesk:wght@400;500;600;700;800&family=IBM+Plex+Mono:wght@400;500;600&family=Newsreader:ital,wght@1,400;1,500&display=swap" rel="stylesheet">
+<style>
+html,body{margin:0;padding:0;background:#07090c;color:#e7e3dc;font-family:"Hanken Grotesk",system-ui,sans-serif;font-size:14px;line-height:1.45;-webkit-font-smoothing:antialiased}
+*{box-sizing:border-box}
+a{color:#f0a947;text-decoration:none}a:hover{color:#f6bd66;text-decoration:underline}
+button,input,select{font-family:inherit}
+button:focus-visible,input:focus-visible,select:focus-visible,a:focus-visible{outline:none;box-shadow:0 0 0 3px rgba(240,169,71,.18)}
+
+/* motion tokens (§7.11): fast 120ms · base 200ms · enter 260ms ease-out — reduced-motion nullt alles */
+@keyframes ts-enter{from{opacity:0;transform:translateY(12px)}to{opacity:1;transform:none}}
+@keyframes ts-fade{from{opacity:0}to{opacity:1}}
+@keyframes ts-sheet{from{transform:translateY(100%)}to{transform:none}}
+@keyframes ts-menu{from{opacity:0;transform:translateY(-6px) scale(.98)}to{opacity:1;transform:none}}
+@keyframes ts-stamp{0%{opacity:0;transform:scale(1.18) rotate(var(--rot,0deg))}70%{opacity:1;transform:scale(.97) rotate(var(--rot,0deg))}100%{transform:scale(1) rotate(var(--rot,0deg))}}
+@keyframes ts-pulse{0%,100%{opacity:.55}50%{opacity:1}}
+@keyframes ts-rotate{to{transform:rotate(360deg)}}
+@keyframes ts-rise{from{opacity:0;transform:translateY(6px)}to{opacity:1;transform:none}}
+@media (prefers-reduced-motion:reduce){*{animation:none!important;transition:none!important}}
+</style>
+</helmet>
+
+<div onClick="{{ closeMenus }}" style="min-height:100vh;background:#0b0d10;display:flex;flex-direction:column">
+  <header data-screen-label="AppShell" style="position:sticky;top:0;z-index:20;height:56px;background:#0b0d10;border-bottom:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;padding:0 24px;gap:20px">
+    <a href="Dashboard.dc.html" style="font-weight:800;font-size:18px;letter-spacing:-0.3px;color:#f4ece0;display:flex;align-items:center;gap:10px;text-decoration:none;flex-shrink:0" style-hover="text-decoration:none;color:#f4ece0"><img src="assets/logo.png" alt="" width="24" height="28" style="display:block;width:24px;height:28px;flex-shrink:0">TravStats</a>
+    <nav style="display:{{ navDisplay }};gap:2px;flex:1;min-width:0;overflow:auto;height:56px;align-items:stretch;scrollbar-width:none">
+      <sc-for list="{{ navPrimary }}" as="n" hint-placeholder-count="4">
+        <a href="{{ n.href }}" style="display:flex;align-items:center;height:56px;padding:0 12px;color:{{ n.color }};font-weight:{{ n.weight }};font-size:14px;text-decoration:none;white-space:nowrap;box-shadow:inset 0 -2px 0 {{ n.bar }};transition:box-shadow 200ms ease,color 120ms ease" style-hover="text-decoration:none;color:#f4ece0">{{ n.label }}</a>
+      </sc-for>
+    </nav>
+    <span style="flex:1;display:{{ narrow }}"></span><div style="display:flex;align-items:center;gap:8px;flex-shrink:0">
+      <a href="Suche.dc.html" title="Schnellsuche · ⌘ K" style="height:44px;padding:0 12px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;gap:8px;color:rgba(231,227,220,0.6);text-decoration:none;font-size:13px" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-search"></use></svg><span style="display:{{ navDisplay }};align-items:center;gap:8px">Suchen<span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;padding:1px 5px;border-radius:5px;border:1px solid rgba(231,227,220,0.18)">⌘K</span></span></a>
+      <a href="Posteingang.dc.html" title="Posteingang" style="width:44px;height:44px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);display:flex;align-items:center;justify-content:center;color:#e7e3dc;position:relative" style-hover="background:#14181d;color:#f4ece0;text-decoration:none"><svg width="20" height="20" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round"><use href="#i-inbox"></use></svg><span style="position:absolute;top:9px;right:9px;width:8px;height:8px;border-radius:999px;background:#d8952f;box-shadow:0 0 0 2px #101317"></span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleMore }}" style="height:44px;padding:0 10px 0 14px;border-radius:14px;background:#101317;border:1px solid rgba(231,227,220,0.12);color:#e7e3dc;font-weight:600;font-size:14px;cursor:pointer;display:flex;align-items:center;gap:6px" style-hover="background:#14181d;color:#f4ece0">Mehr<svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.45)"><use href="#i-chevron-down"></use></svg></button>
+        <sc-if value="{{ moreOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:300px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:8px;z-index:30">
+            <sc-for list="{{ moreGroups }}" as="g" hint-placeholder-count="2">
+              <div style="display:flex;flex-direction:column;gap:2px">
+                <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:8px 12px 4px">{{ g.group }}</div>
+                <sc-for list="{{ g.items }}" as="i" hint-placeholder-count="3">
+                  <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none;background:{{ i.bg }}" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="flex:1;font-size:14px;font-weight:600">{{ i.label }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;color:{{ i.metaColor }}">{{ i.meta }}</span></a>
+                </sc-for>
+              </div>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+      <a href="Hinzufuegen.dc.html" title="Hinzufügen" style="height:44px;padding:{{ addPad }};border-radius:12px;background:#f0a947;color:#0b0d10;font-weight:700;font-size:14px;display:inline-flex;align-items:center;gap:6px;text-decoration:none;white-space:nowrap" style-hover="background:#f6bd66;text-decoration:none;color:#0b0d10" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="2" stroke-linecap="round" stroke-linejoin="round"><use href="#i-plus"></use></svg><span style="display:{{ addLabelDisplay }}">Hinzufügen</span></a>
+      <div style="position:relative">
+        <button onClick="{{ toggleProfile }}" title="Konto" style="width:44px;height:44px;border-radius:14px;background:#1a1f26;border:1px solid rgba(231,227,220,0.12);color:#f4ece0;font-weight:800;font-size:14px;cursor:pointer;display:flex;align-items:center;justify-content:center" style-hover="background:#14181d">D</button>
+        <sc-if value="{{ profileOpen }}" hint-placeholder-val="{{ false }}">
+          <div onClick="{{ stop }}" style="position:absolute;right:0;top:52px;width:240px;background:#101317;animation:ts-menu 200ms ease-out;transform-origin:top right;border:1px solid rgba(231,227,220,0.12);border-radius:16px;box-shadow:0 14px 30px rgba(0,0,0,0.5);padding:8px;display:flex;flex-direction:column;gap:2px;z-index:30">
+            <div style="padding:10px 12px 8px;display:flex;flex-direction:column;gap:2px"><span style="font-size:14px;font-weight:700">demo</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">demo@travstats.de · 2.7.0-dev</span></div>
+            <sc-for list="{{ profileItems }}" as="i" hint-placeholder-count="4">
+              <a href="{{ i.href }}" style="display:flex;align-items:center;gap:12px;height:44px;padding:0 12px;border-radius:12px;color:#e7e3dc;text-decoration:none" style-hover="background:rgba(231,227,220,0.06);text-decoration:none;color:#f4ece0"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="color:rgba(231,227,220,0.6)"><use href="{{ i.iconHref }}"></use></svg><span style="font-size:14px;font-weight:600">{{ i.label }}</span></a>
+            </sc-for>
+          </div>
+        </sc-if>
+      </div>
+    </div>
+  </header>
+
+  <main data-screen-label="21 Listen" style="max-width:1200px;width:100%;margin:0 auto;padding:24px 24px 80px;display:grid;grid-template-columns:{{ cols }};gap:28px;align-items:start">
+    <div style="display:flex;flex-direction:column;gap:14px;min-width:0">
+      <div style="display:flex;flex-wrap:wrap;align-items:flex-end;justify-content:space-between;gap:14px"><div style="display:flex;flex-direction:column;gap:6px"><div style="display:flex;align-items:center;gap:10px;flex-wrap:wrap"><h1 style="margin:0;font-size:26px;font-weight:800;color:#f4ece0;line-height:1.15">Listen</h1><span title="{{ beta_poiDomain.hint }}" style="display:inline-flex;align-items:center;height:22px;padding:0 10px;border-radius:999px;font-size:11px;font-weight:700;text-transform:uppercase;letter-spacing:0.6px;transition:color 200ms ease,background 200ms ease,border-color 200ms ease;color:#d8952f;background:rgba(216,149,47,0.12);border:1px dashed rgba(216,149,47,0.45);white-space:nowrap">Beta</span></div><div style="font-size:12px;color:rgba(231,227,220,0.6)">Eigene Gruppierungen und mitgelieferte Checklisten. Eine Liste gruppiert Orte, die du schon erfasst hast.</div></div><div style="display:flex;gap:10px;flex-wrap:wrap"><button style="height:46px;padding:0 18px;border-radius:12px;border:none;background:#f0a947;color:#0b0d10;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px" style-hover="background:#f6bd66" style-active="background:#d8952f"><svg width="18" height="18" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-plus"></use></svg>Liste</button></div></div>
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Eigene Listen</div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ ownLists }}" as="l" hint-placeholder-count="4">
+          <button onClick="{{ l.onClick }}" style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;border-color:{{ l.border }};padding:16px 18px;display:flex;align-items:center;gap:14px;text-align:left;color:#e7e3dc;cursor:pointer;width:100%" style-hover="border-color:rgba(231,227,220,0.3)">
+            <span style="width:38px;height:38px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;flex-shrink:0;font-size:18px;position:relative">{{ l.symbol }}<span style="position:absolute;right:-3px;bottom:-3px;width:12px;height:12px;border-radius:999px;background:{{ l.iconColor }};border:2px solid #14181d"></span></span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+              <span style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><span style="font-size:15px;font-weight:700;color:#f4ece0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.name }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6);font-variant-numeric:tabular-nums;white-space:nowrap">{{ l.progress }}</span></span>
+              <span style="height:4px;border-radius:999px;background:#101317;overflow:hidden;display:block"><span style="display:block;height:100%;width:{{ l.pct }};background:{{ l.barColor }};border-radius:999px"></span></span>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+      <div style="display:flex;justify-content:space-between;align-items:baseline;gap:10px;flex-wrap:wrap;padding-top:8px"><div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:11px;font-weight:500;letter-spacing:0.12em;text-transform:uppercase;color:rgba(231,227,220,0.6);padding:0 4px">Mitgelieferte Checklisten</div><span style="font-size:12px;color:rgba(231,227,220,0.6)">Folgen → abhaken</span></div>
+      <div style="display:flex;flex-direction:column;gap:8px">
+        <sc-for list="{{ curated }}" as="l" hint-placeholder-count="3">
+          <button onClick="{{ l.onClick }}" style="background:#14181d;border:1px solid {{ l.border }};border-radius:16px;padding:16px 18px;display:flex;align-items:center;gap:14px;text-align:left;color:#e7e3dc;cursor:pointer;width:100%;opacity:{{ l.opacity }}" style-hover="border-color:rgba(231,227,220,0.3)">
+            <span style="width:38px;height:38px;border-radius:14px;background:#1a1f26;display:flex;align-items:center;justify-content:center;font-size:18px">{{ l.symbol }}</span>
+            <span style="flex:1;min-width:0;display:flex;flex-direction:column;gap:6px">
+              <span style="display:flex;justify-content:space-between;gap:10px;align-items:baseline"><span style="font-size:15px;font-weight:700;color:#f4ece0;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ l.name }}</span><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6);white-space:nowrap">{{ l.progress }}</span></span>
+              <sc-if value="{{ l.followed }}" hint-placeholder-val="{{ true }}"><span style="height:4px;border-radius:999px;background:#101317;overflow:hidden;display:block"><span style="display:block;height:100%;width:{{ l.pct }};background:{{ l.barColor }};border-radius:999px"></span></span></sc-if>
+              <sc-if value="{{ l.notFollowed }}" hint-placeholder-val="{{ false }}"><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ l.counts }} · <span style="color:#f0a947;font-weight:600">Folgen</span></span></sc-if>
+            </span>
+          </button>
+        </sc-for>
+      </div>
+    </div>
+
+    <section style="background:#14181d;border:1px solid rgba(231,227,220,0.12);border-radius:16px;padding:20px;display:flex;flex-direction:column;gap:16px;min-width:0">
+      <div style="display:flex;justify-content:space-between;gap:12px;align-items:flex-start;flex-wrap:wrap">
+        <div style="display:flex;flex-direction:column;gap:4px;min-width:0"><span style="font-size:20px;font-weight:800;color:#f4ece0">{{ sel.name }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6);text-wrap:pretty">{{ sel.desc }}</span></div>
+        <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-if value="{{ sel.own }}" hint-placeholder-val="{{ true }}"><a href="Liste Detail.dc.html" style="text-decoration:none;height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:14px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0"><use href="#i-plus"></use></svg>Listen-Detail öffnen</a></sc-if><sc-if value="{{ sel.curated }}" hint-placeholder-val="{{ false }}"><a href="Checkliste.dc.html" style="height:40px;padding:0 14px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:14px;white-space:nowrap;display:inline-flex;align-items:center;gap:8px;text-decoration:none" style-hover="background:rgba(231,227,220,0.04);text-decoration:none">Checkliste öffnen</a><button onClick="{{ sel.toggleFollow }}" title="Wenn du nicht mehr folgst, bleiben alle abgehakten Orte in deinem Logbuch — mit Datum, Notiz und Fotos." style="height:40px;padding:0 14px;border-radius:12px;border:1px solid {{ sel.followBorder }};background:{{ sel.followBg }};color:{{ sel.followColor }};font-weight:700;font-size:14px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px">{{ sel.followLabel }}</button></sc-if><button style="height:46px;padding:0 18px;border-radius:12px;border:1px solid rgba(231,227,220,0.18);background:transparent;color:#e7e3dc;font-weight:700;font-size:16px;white-space:nowrap;cursor:pointer;display:inline-flex;align-items:center;gap:8px;height:40px;font-size:14px" style-hover="background:rgba(231,227,220,0.04);color:#f4ece0"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-map"></use></svg>Auf Karte</button></div>
+      </div>
+      <div style="display:grid;grid-template-columns:repeat(auto-fit,minmax(120px,1fr));gap:10px">
+        <sc-for list="{{ sel.kpis }}" as="k" hint-placeholder-count="3"><div style="background:#101317;border-radius:12px;padding:12px 14px;display:flex;flex-direction:column;gap:2px"><span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:22px;font-weight:600;color:#f4ece0;font-variant-numeric:tabular-nums;line-height:1">{{ k.v }}</span><span style="font-size:11px;color:rgba(231,227,220,0.6)">{{ k.l }}</span></div></sc-for>
+      </div>
+      <div style="display:flex;gap:8px;flex-wrap:wrap"><sc-for list="{{ filters }}" as="f" hint-placeholder-count="3"><button onClick="{{ f.onClick }}" style="height:34px;padding:0 14px;border-radius:999px;border:1px solid {{ f.border }};background:{{ f.bg }};color:{{ f.color }};font-weight:600;font-size:13px;cursor:pointer;transition:background 120ms ease,border-color 120ms ease,color 120ms ease" style-hover="border-color:rgba(231,227,220,0.3)">{{ f.label }}</button></sc-for></div>
+      <div style="display:flex;flex-direction:column">
+        <sc-for list="{{ places }}" as="p" hint-placeholder-count="8">
+          <div style="display:grid;grid-template-columns:24px minmax(0,1fr) auto auto;align-items:center;gap:12px;min-height:52px;padding:6px 0;border-bottom:1px solid rgba(231,227,220,0.12);opacity:{{ p.opacity }}">
+            <span style="width:22px;height:22px;border-radius:999px;border:1.5px {{ p.ringStyle }} {{ p.ring }};display:flex;align-items:center;justify-content:center;color:{{ p.ring }}"><sc-if value="{{ p.done }}" hint-placeholder-val="{{ true }}"><svg width="14" height="14" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-check"></use></svg></sc-if></span>
+            <span style="display:flex;flex-direction:column;gap:1px;min-width:0"><span style="font-size:14px;font-weight:600;white-space:nowrap;overflow:hidden;text-overflow:ellipsis">{{ p.name }}</span><span style="font-size:12px;color:rgba(231,227,220,0.6)">{{ p.sub }}</span></span>
+            <span style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:12px;color:rgba(231,227,220,0.6);white-space:nowrap">{{ p.when }}</span>
+            <a href="Ort Detail.dc.html" title="Zum Eintrag" style="width:34px;height:34px;border-radius:12px;display:flex;align-items:center;justify-content:center;color:rgba(231,227,220,0.45)" style-hover="background:rgba(231,227,220,0.06);color:#f4ece0;text-decoration:none"><svg width="16" height="16" viewBox="0 0 24 24" fill="none" stroke="currentColor" stroke-width="1.8" stroke-linecap="round" stroke-linejoin="round" style="flex-shrink:0;color:currentColor"><use href="#i-chevron-right"></use></svg></a>
+          </div>
+        </sc-for>
+      </div>
+      <div style="font-family:'IBM Plex Mono',ui-monospace,monospace;font-size:10px;color:rgba(231,227,220,0.6)">{{ footer }}</div>
+    </section>
+  </main>
+</div>
+</x-dc>
+<script type="text/x-dc" data-dc-script>
+class Component extends DCLogic {
+  state = { S: null, menu: null, sel: 0, filter: 'Alle', narrow: false, follow: {} };
+  componentDidMount() { import(new URL('ts-shared.js', location.href).href).then(S => { S.mountSprite(); this._un = S.watchNarrow(this); this.setState({ S }); }); this._r = () => this.setState({ narrow: window.innerWidth < 900 }); window.addEventListener('resize', this._r); this._r(); }
+  componentWillUnmount() { window.removeEventListener('resize', this._r); }
+  renderVals() {
+    const S = this.state.S; if (!S) return {};
+    const set = p => this.setState(p); const T = S.T; const st = this.state;
+    const L = [
+      { own: true, symbol: '🍟', name: 'Maccis weltweit', desc: 'Jeder McDonald’s, in dem ich war — ja, wirklich.', color: T.accent, places: [['McDonald’s Shibuya Center-Gai','Tokio · JP',1,'2018-05'],['McDonald’s Times Square','New York · US',1,'2017-09'],['McDonald’s Reeperbahn','Hamburg · DE',1,'2015-03'],['McDonald’s Rovaniemi','Finnland · nördlichster Europas',0,'']], total: 4, done: 3 },
+      { own: true, symbol: '⚽', name: 'Stadien Bundesliga', desc: 'Alle 18 Spielstätten der Saison 2026/27.', color: T.chart[1], places: [['Volksparkstadion','Hamburg',1,'2015-03'],['Signal Iduna Park','Dortmund',1,'2018-11'],['Allianz Arena','München',1,'2023-04'],['Weserstadion','Bremen',0,''],['Europa-Park Stadion','Freiburg',0,'']], total: 18, done: 7 },
+      { own: true, symbol: '⭐', name: 'Michelin-Sterne', desc: 'Restaurants mit mindestens einem Stern, besucht oder geplant.', color: T.chart[3], places: [['The Table','Hamburg',1,'2024-12'],['Tantris','München',0,''],['Noma','Kopenhagen · DK',0,'']], total: 12, done: 4 },
+      { own: true, symbol: '', name: 'Wunschliste 2027', desc: 'Lose Sammlung ohne Ziel — Ortsname auf der Karte.', color: T.muted, places: [['Kyoto','JP',0,''],['Patagonien','AR / CL',0,''],['Färöer','DK',0,'']], total: 9, done: 0 },
+      { curated: true, symbol: '🏛️', name: 'UNESCO-Welterbe Europa', desc: 'Mitgelieferte Checkliste · 47 Stätten. Abgehakte Orte landen in deinem Logbuch.', color: T.good, followed: true, places: [['Kölner Dom','Köln · DE',1,'2019-05'],['Alhambra','Granada · ES',1,'2016-08'],['Akropolis','Athen · GR',1,'2017-06'],['Schloss Neuschwanstein','Schwangau · DE',0,''],['Meteora','Thessalien · GR',0,''],['Mont-Saint-Michel','Normandie · FR',0,''],['Plitvicer Seen','Kroatien',1,'2022-09'],['Alt-Brügge','Brügge · BE',0,'']], total: 47, done: 19, counts: '47 Orte · 19 besucht · 21 Länder' },
+      { curated: true, symbol: '🗼', name: 'Wahrzeichen der Welt', desc: 'Mitgelieferte Checkliste · 100 Wahrzeichen.', color: T.good, followed: true, places: [['Eiffelturm','Paris · FR',1,'2016-04'],['Tafelberg','Kapstadt · ZA',1,'2025-03'],['Christus-Statue','Rio · BR',1,'2026-02'],['Taj Mahal','Agra · IN',0,'']], total: 100, done: 23, counts: '100 Orte · 23 besucht · 58 Länder' },
+      { curated: true, symbol: '🎢', name: 'Freizeitparks Europa', desc: 'Mitgelieferte Checkliste · 30 Parks. Noch nicht gefolgt.', color: T.good, followed: false, places: [['Europa-Park','Rust · DE',0,''],['Efteling','Kaatsheuvel · NL',0,''],['Disneyland Paris','Marne-la-Vallée · FR',0,'']], total: 30, done: 0, counts: '30 Orte · 0 besucht · 9 Länder' },
+    ].map((l, i) => ({ ...l, followed: l.curated ? (st.follow[i] === undefined ? l.followed : st.follow[i]) : true }));
+    const sel = L[st.sel];
+    const chip = (label) => ({ label, onClick: () => set({ filter: label }), bg: st.filter === label ? T.accent : 'transparent', color: st.filter === label ? T.bg : T.text, border: st.filter === label ? T.accent : 'rgba(231,227,220,0.18)' });
+    const places = sel.places.filter(p => st.filter === 'Alle' || (st.filter === 'Besucht' || st.filter === 'Abgehakt') === !!p[2]).map(([name, sub, done, when]) => ({ name, sub, done: !!done, when: done ? when : 'offen', opacity: done ? 1 : 0.7, ring: done ? sel.color : 'rgba(231,227,220,0.3)', ringStyle: done ? 'solid' : 'dashed' }));
+    return { beta_poiDomain: S.betaPill('poiDomain'), ...S.navModel('lists', st, set), stop: e => e.stopPropagation(), cols: st.narrow ? 'minmax(0,1fr)' : 'minmax(280px,380px) minmax(0,1fr)',
+      ownLists: L.map((l, i) => ({ ...l, i })).filter(l => l.own).map(l => ({ name: l.name, symbol: l.symbol || '📍', iconColor: l.color, progress: l.done + ' / ' + l.total, pct: Math.round(l.done / l.total * 100) + '%', barColor: l.color, border: l.i === st.sel ? T.accent : 'rgba(231,227,220,0.12)', onClick: () => set({ sel: l.i, filter: 'Alle' }) })),
+      curated: L.map((l, i) => ({ ...l, i })).filter(l => l.curated).map(l => ({ name: l.name, symbol: l.symbol, counts: l.counts, followed: l.followed, notFollowed: !l.followed, opacity: l.followed ? 1 : 0.7, progress: l.followed ? l.done + ' von ' + l.total + ' abgehakt' : '', pct: Math.round(l.done / l.total * 100) + '%', barColor: l.color, border: l.i === st.sel ? T.accent : 'rgba(231,227,220,0.12)', onClick: () => set({ sel: l.i, filter: 'Alle' }) })),
+      sel: { name: sel.name, desc: sel.desc, own: !!sel.own, curated: !!sel.curated, followLabel: sel.followed ? 'Nicht mehr folgen' : 'Folgen', followBg: sel.followed ? 'transparent' : T.accent, followColor: sel.followed ? T.text : T.bg, followBorder: sel.followed ? 'rgba(231,227,220,0.18)' : T.accent, toggleFollow: () => set(s => ({ follow: { ...s.follow, [st.sel]: !sel.followed } })), kpis: [{ v: sel.done + ' / ' + sel.total, l: 'besucht' }, { v: Math.round(sel.done / sel.total * 100) + ' %', l: 'Fortschritt' }, { v: sel.total - sel.done, l: 'offen' }] },
+      filters: ['Alle', sel.curated ? 'Abgehakt' : 'Besucht', 'Offen'].map(chip), places,
+      footer: places.length + ' von ' + sel.places.length + ' Orten angezeigt · ' + (sel.curated ? 'Checkliste · Abhaken legt den Ort mit Datum in dein Logbuch' : 'eigene Liste · Reihenfolge per Pfeilen änderbar') };
+  }
+}
+</script>
+</body>
+</html>
