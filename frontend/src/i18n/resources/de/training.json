@@ -152,8 +152,9 @@
     "trainingStarted": "Training gestartet!"
   },
   "annotation": {
-    "title": "Email Annotation",
-    "description": "Wähle zuerst einen Flug aus, dann markiere relevante Textpassagen und weise ihnen Labels zu",
+    "title": "Dokument annotieren",
+    "descriptionFlight": "Wähle zuerst einen Flug aus, dann markiere relevante Textpassagen und weise ihnen Labels zu",
+    "descriptionOther": "Markiere die relevanten Textpassagen und weise ihnen Labels zu",
     "selectFlight": "Flug für Annotation auswählen",
     "cancelDrawing": "Zeichnen abbrechen (ESC)",
     "drawingInstructions": "Zeichne eine Box. Drücke ESC oder klicke \"Abbrechen\" zum Abbrechen.",
@@ -167,7 +168,31 @@
     "drawBoundingBoxes": "Zeichne Bounding Boxes um relevante Bereiche",
     "saving": "Speichern...",
     "saveOnly": "Nur speichern",
-    "saveAndTrain": "Speichern & Trainieren"
+    "saveAndTrain": "Speichern & Trainieren",
+    "groundTruth": {
+      "title": "Flugdaten (Referenzwerte)",
+      "flight": "Flug {{index}}",
+      "addFlight": "+ Flug hinzufügen",
+      "remove": "Entfernen",
+      "fields": {
+        "flightNumber": "Flugnummer",
+        "airline": "Fluggesellschaft",
+        "aircraft": "Flugzeugtyp",
+        "departureCode": "Abflug-Code",
+        "arrivalCode": "Ankunfts-Code",
+        "departureDate": "Abflugdatum",
+        "departureTime": "Abflugzeit",
+        "arrivalDate": "Ankunftsdatum",
+        "arrivalTime": "Ankunftszeit",
+        "seat": "Sitzplatz",
+        "seatClass": "Sitzklasse",
+        "terminal": "Terminal",
+        "gate": "Gate",
+        "boardingGroup": "Boarding-Gruppe",
+        "pnr": "PNR / Buchungsreferenz",
+        "ticketNumber": "Ticketnummer"
+      }
+    }
   },
   "preview": {
     "title": "Training-Daten Vorschau",

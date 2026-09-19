@@ -366,7 +366,9 @@ export default function EmailAnnotation({
   if (loading) {
     return (
       <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
-        <h2 className="text-xl font-semibold text-(--text-primary) mb-4">Email Annotation</h2>
+        <h2 className="text-xl font-semibold text-(--text-primary) mb-4">
+          {t("training:annotation.title")}
+        </h2>
         <p className="text-sm text-(--text-muted)">{t("training:annotation.emailTextLoading")}</p>
       </div>
     );
@@ -446,7 +448,17 @@ export default function EmailAnnotation({
       <h2 className="text-xl font-semibold text-(--text-primary) mb-4">
         {t("training:annotation.title")}
       </h2>
-      <p className="text-sm text-(--text-muted) mb-4">{t("training:annotation.description")}</p>
+      {/* The instruction has to know what kind of document this is. It told
+          the reader of a hotel confirmation to "choose a flight first" — there
+          is no flight to choose, and no flight picker on screen for a
+          non-flight sample (beta audit 2026-09-19, unlisted finding 2). */}
+      <p className="text-sm text-(--text-muted) mb-4">
+        {t(
+          isFlight
+            ? "training:annotation.descriptionFlight"
+            : "training:annotation.descriptionOther"
+        )}
+      </p>
 
       <div className="space-y-4">
         {/* Flug-Auswahl vor dem Labeln — a flight mail is the only one that

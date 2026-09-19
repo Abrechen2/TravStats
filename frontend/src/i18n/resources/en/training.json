@@ -152,8 +152,9 @@
     "trainingStarted": "Training started!"
   },
   "annotation": {
-    "title": "Email Annotation",
-    "description": "First select a flight, then mark relevant text passages and assign labels to them",
+    "title": "Annotate document",
+    "descriptionFlight": "First select a flight, then mark relevant text passages and assign labels to them",
+    "descriptionOther": "Mark the relevant text passages and assign labels to them",
     "selectFlight": "Select flight for annotation",
     "cancelDrawing": "Cancel drawing (ESC)",
     "drawingInstructions": "Draw a box. Press ESC or click \"Cancel\" to cancel.",
@@ -167,7 +168,31 @@
     "drawBoundingBoxes": "Draw bounding boxes around relevant areas",
     "saving": "Saving...",
     "saveOnly": "Save only",
-    "saveAndTrain": "Save & Train"
+    "saveAndTrain": "Save & Train",
+    "groundTruth": {
+      "title": "Flight data (ground truth)",
+      "flight": "Flight {{index}}",
+      "addFlight": "+ Add flight",
+      "remove": "Remove",
+      "fields": {
+        "flightNumber": "Flight Number",
+        "airline": "Airline",
+        "aircraft": "Aircraft Type",
+        "departureCode": "Departure Code",
+        "arrivalCode": "Arrival Code",
+        "departureDate": "Departure Date",
+        "departureTime": "Departure Time",
+        "arrivalDate": "Arrival Date",
+        "arrivalTime": "Arrival Time",
+        "seat": "Seat",
+        "seatClass": "Seat Class",
+        "terminal": "Terminal",
+        "gate": "Gate",
+        "boardingGroup": "Boarding Group",
+        "pnr": "PNR / Booking Reference",
+        "ticketNumber": "Ticket Number"
+      }
+    }
   },
   "preview": {
     "title": "Training Data Preview",
