@@ -5,6 +5,13 @@
  *
  * Nothing checks that the two sides agree — each has its own test asserting the
  * same truth table, which is a convention, not a guard. Change both together.
+ *
+ * First consumer, 2026-09-19: `components/Stats/CruiseStatsSection.tsx`, which
+ * folds the cruise LIST for the money block and has to answer for the same
+ * population `GET /stats/cruise` does. It was written against the backend rule
+ * before anything on this side asked the question, and an unused mirror is a
+ * mirror nobody notices has drifted — so a second consumer is welcome, and a
+ * copy of `["flown", "historical"]` anywhere in this tree is not.
  */
 
 /** The statuses that mean "this cruise actually sailed". */

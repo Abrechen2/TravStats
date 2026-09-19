@@ -4,6 +4,7 @@ import { normalizeCountrySet } from "../../shared/countryEvidence";
 import { calculateCruiseStats, type CruiseStats } from "../../utils/cruiseStats";
 import { getBaseCurrency } from "../fx/snapshot";
 import { loadCruiseStatsData, type CruiseStatsRow } from "../stats/cruiseStatsData";
+import { cruiseBaseAmount, cruiseTotalSpendBase, isPricedCruise } from "../stats/cruiseSpendBase";
 import type { PagingParams } from "./paging";
 import { cruiseEvidenceEntry } from "./entryMappersDomains";
 import { domainDistinctEvidence, domainSumEvidence, readYearScope } from "./domainMeasureResponse";
@@ -323,22 +324,21 @@ export async function resolveCruiseCompanionCount(
 /**
  * What the cruises cost, in the account's CURRENT base currency.
  *
- * The client fold deliberately produces no such total — `CruiseMoneySection`
- * reports each currency on its own line and says in as many words that it will
- * not add them, because 300 EUR plus 400 USD printed as 700 is the defect #267
- * described for flights. What makes a total honest here is the FX snapshot
- * `Cruise` gained in Task 10 (`price_base` / `fx_base_currency`), which the
- * fold does not read: the rule below is `services/trip/tripCostSuperlative.ts`'s,
- * one domain narrower.
+ * The arithmetic is `services/stats/cruiseSpendBase.ts`'s, which is also what
+ * `GET /stats/cruise` puts on the tab's money tile as `totalSpendBase`. Both
+ * surfaces therefore read ONE rule rather than two spellings of it; the
+ * per-currency rows beside that tile stay per-currency, because 300 EUR plus
+ * 400 USD printed as 700 is the defect #267 described for flights and what
+ * makes a total honest is the FX snapshot `Cruise` gained in Task 10
+ * (`price_base` / `fx_base_currency`), not the fact that both fields are
+ * numbers.
  *
- * A snapshot in a STALE base currency counts as no snapshot at all. The stored
- * number is real, but it is real in a currency this sum is no longer being
- * computed in — adding it would be the very defect the snapshot exists to
- * prevent, one level down. Such a cruise stays in the list contributing 0,
- * with a subtitle naming the amount that could not be converted, rather than
- * disappearing: `unattributed` counts UNITS of the measure, and nobody knows
- * how many base-currency units an unconvertible price is worth, so a count of
- * CRUISES there would be added to a total of MONEY by `assertSumInvariant`.
+ * What this file adds on top of that rule is the per-cruise view. An
+ * unconvertible cruise stays in the list contributing 0, with a subtitle
+ * naming the amount that could not be converted, rather than disappearing:
+ * `unattributed` counts UNITS of the measure, and nobody knows how many
+ * base-currency units an unconvertible price is worth, so a count of CRUISES
+ * there would be added to a total of MONEY by `assertSumInvariant`.
  *
  * `value` is null — with a reason, as `businessTotalCost` answers the same
  * case — when no cruise reached the base currency at all. A zero would claim
@@ -356,11 +356,9 @@ export async function resolveCruiseTotalSpend(
     getBaseCurrency(userId),
   ]);
 
-  // A null or zero price is "no price", matching the fold's own
-  // `typeof price === "number" && price > 0` and `bookingCost.sumByCurrency`.
-  const priced = rows.filter((row) => row.price !== null && row.price > 0);
-  const baseOf = (row: CruiseStatsRow): number | null =>
-    row.priceBase !== null && row.fxBaseCurrency === baseCurrency ? row.priceBase : null;
+  const spend = cruiseTotalSpendBase(rows, baseCurrency);
+  const priced = rows.filter(isPricedCruise);
+  const baseOf = (row: CruiseStatsRow): number | null => cruiseBaseAmount(row, baseCurrency);
 
   const entries = priced.map((row) => {
     const base = baseOf(row);
@@ -376,26 +374,26 @@ export async function resolveCruiseTotalSpend(
     });
   });
 
-  const contributing = priced.filter((row) => baseOf(row) !== null);
-  const total = contributing.reduce((sum, row) => sum + baseOf(row)!, 0);
   // Every scoped cruise that gave the total nothing — unconvertible or never
   // priced. It is what the abstention would have to EXPLAIN, and a bucket that
   // explains nothing must never ship: `{count: 0}` reads as "0 units have no
   // row to name", which is the same sentence as saying nothing at all while
-  // still satisfying `requireReasonForNull`.
-  const explained = rows.length - contributing.length;
-  // The surface abstains outright here: `CruiseMoneySection` renders NOTHING
-  // when no cruise carries a price, rather than drawing a zero. So does this.
-  // With no cruise in scope at all there is nothing to abstain about — 0 is
-  // then the honest figure and the bucket stays empty.
-  const abstains = contributing.length === 0 && explained > 0;
+  // still satisfying `requireReasonForNull`. It is deliberately WIDER than the
+  // tile's `excludedCount`, which counts only cruises that had a price to
+  // exclude.
+  const explained = rows.length - priced.filter((row) => baseOf(row) !== null).length;
+  // The surface abstains outright here: the money tile draws "—" rather than a
+  // zero when nothing converted. So does this. With no cruise in scope at all
+  // there is nothing to abstain about — 0 is then the honest figure and the
+  // bucket stays empty.
+  const abstains = spend.value === null;
   return domainSumEvidence({
     key,
     unit: "currency",
     scope,
     page,
     entries,
-    value: abstains ? null : total,
+    value: spend.value,
     round: (n) => Math.round(n * 100) / 100,
     // None of the three closed `UnattributedReason`s names "every price is
     // unconvertible" exactly; `notPerEntry` is the nearest fit and is used

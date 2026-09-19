@@ -3,6 +3,8 @@ import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { formatCurrency } from "../../../lib/units";
 import type { CruiseStatsDetail } from "../../../lib/stats/cruiseStatsDetail";
+import type { CruiseTotalSpendBase } from "../../../lib/api/stats";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
 
@@ -10,6 +12,23 @@ interface Props {
   detail: CruiseStatsDetail;
   accent: string;
   locale: string;
+}
+
+/**
+ * The money section alone needs the rollup as well as the rows: its one summed
+ * figure is computed on the server, and the tile that shows it opens the
+ * evidence panel for the population the section is currently showing.
+ */
+interface MoneyProps extends Props {
+  /** Absent when the backend does not answer for it — the tile is then not drawn. */
+  totalSpendBase?: CruiseTotalSpendBase;
+  /**
+   * Priced cruises in scope that have NOT sailed, and are therefore in none of
+   * the figures here. Named on screen when there are any; 0 prints nothing,
+   * because a note explaining an exclusion that did not happen is noise.
+   */
+  bookedPricedCount: number;
+  scope: EvidenceScopeParams;
 }
 
 const MONTH_KEYS = [
@@ -165,16 +184,34 @@ export function CruiseRhythmSection({ detail, accent }: Props): JSX.Element | nu
 }
 
 /**
- * What the cruises cost, per currency.
+ * What the cruises cost: per currency, and once in the base currency.
  *
- * NEVER ONE TOTAL. A cruise carries a price and a currency and no FX snapshot —
- * unlike a flight or a lodging stay, which both store the rate they were
- * converted at. Adding 300 EUR to 400 USD and printing 700 is the defect issue
- * #267 described for flights, and having the number to hand is not a reason to
- * reproduce it. Each currency gets its own line; a per-night average only
- * exists inside one.
+ * THE ROWS ARE NEVER SUMMED. Adding 300 EUR to 400 USD and printing 700 is the
+ * defect issue #267 described for flights, and the rows here have nothing but a
+ * price and a currency to add — so each currency keeps its own line, and a
+ * per-night average only exists inside one.
+ *
+ * ONE POPULATION, and it is the server's: cruises that SAILED. The rows, the
+ * coverage line and the tile all answer for the same set, because a booked
+ * cruise's price in the rows beside a total that ignored it read as a broken
+ * total rather than as two different questions. What the filter withholds is
+ * named under the rows instead of vanishing.
+ *
+ * The tile below them is a different figure arrived at a different way. It
+ * comes from the SERVER (`totalSpendBase` on `GET /stats/cruise`), which reads
+ * the FX snapshot every cruise has carried since Task 10 and adds only the
+ * amounts recorded in today's base currency. A cruise whose price nothing
+ * converted is counted out loud rather than converted at a guessed rate or
+ * quietly dropped, and when nothing converts at all the tile abstains with a
+ * dash instead of claiming the sailing was free.
  */
-export function CruiseMoneySection({ detail, accent }: Props): JSX.Element | null {
+export function CruiseMoneySection({
+  detail,
+  accent,
+  totalSpendBase,
+  bookedPricedCount,
+  scope,
+}: MoneyProps): JSX.Element | null {
   const { t } = useTranslation(["cruise", "common"]);
 
   if (detail.spendByCurrency.length === 0) return null;
@@ -205,12 +242,50 @@ export function CruiseMoneySection({ detail, accent }: Props): JSX.Element | nul
         emptyLabel={t("cruise:stats.money.none")}
       />
 
+      {totalSpendBase && (
+        <div className="mt-6">
+          <StatCard
+            accent={accent}
+            valueSize="md"
+            title={t("cruise:stats.money.baseTotal")}
+            value={
+              totalSpendBase.value !== null
+                ? formatCurrency(totalSpendBase.value, totalSpendBase.currency)
+                : "—"
+            }
+            description={
+              totalSpendBase.value !== null
+                ? t("cruise:stats.money.baseTotalDesc", { currency: totalSpendBase.currency })
+                : t("cruise:stats.money.baseTotalNone", { currency: totalSpendBase.currency })
+            }
+            footnote={
+              totalSpendBase.excludedCount > 0
+                ? t("cruise:stats.money.baseTotalExcluded", {
+                    count: totalSpendBase.excludedCount,
+                  })
+                : undefined
+            }
+            evidence={{
+              kind: "metric",
+              key: "cruiseTotalSpend",
+              scope,
+              renderedValue: totalSpendBase.value,
+            }}
+          />
+        </div>
+      )}
+
       <p className="mt-3 text-xs" style={{ color: "var(--text-muted)" }}>
         {t("cruise:stats.money.coverage", {
           priced: detail.pricedCruises,
           total: detail.pricedCruises + detail.unpricedCruises,
         })}
       </p>
+      {bookedPricedCount > 0 && (
+        <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
+          {t("cruise:stats.money.bookedNotCounted", { count: bookedPricedCount })}
+        </p>
+      )}
       {detail.spendByCurrency.length > 1 && (
         <p className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
           {t("cruise:stats.money.noTotalNote")}
