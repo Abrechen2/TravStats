@@ -16,8 +16,7 @@ import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../hooks/usePlacesVisible";
 import { useTranslation } from "../hooks/useTranslation";
 import type { Booking, Trip, TripJournalEntry, TripStop } from "../types";
-import ConfirmModal from "../components/Training/ConfirmModal";
-import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import TripDeleteConfirm from "../components/Trips/TripDeleteConfirm";
 import AppShell from "../components/ui/AppShell";
 import TripModal from "../components/Trips/TripModal";
 import TripHead from "../components/Trips/TripHead";
@@ -228,19 +227,15 @@ export default function TripDetailPage(): JSX.Element {
         />
       )}
 
-      {/* The old sentence named two of the three survivors and none of the
-          losses. Deleting a trip cascades its PHOTOS — real files on disk —
-          plus its stops and companions, and said nothing about any of them.
-          That was the most expensive silence among the six dialogs. */}
-      <ConfirmModal
+      {/* Extracted (components/Trips/TripDeleteConfirm.tsx) because the
+          sentence now needs the document COUNT, and this file is frozen at its
+          current length by the size ratchet. */}
+      <TripDeleteConfirm
         isOpen={confirmDelete}
+        tripId={trip.id}
+        tripName={trip.name}
         onClose={() => setConfirmDelete(false)}
         onConfirm={() => void handleDelete()}
-        title={t("trips:deleteTripConfirmTitle")}
-        message={t("trips:deleteTripConfirm", { name: trip.name })}
-        confirmText={t("trips:deleteTrip")}
-        cancelText={t("trips:modal.cancel")}
-        confirmButtonClass={DELETE_BUTTON_CLASS}
       />
     </AppShell>
   );
