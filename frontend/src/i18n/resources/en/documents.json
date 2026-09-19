@@ -13,6 +13,8 @@
   "removeLabel": "Remove {{name}}",
   "deleteTitle": "Remove document?",
   "deleteMessage": "“{{name}}” will be deleted permanently. The entry itself stays.",
+  "deleteCascadeNote_one": "Plus 1 document, deleted with it.",
+  "deleteCascadeNote_other": "Plus {{count}} documents, deleted with it.",
   "format": {
     "image": "Image",
     "pdf": "PDF",

@@ -15,6 +15,7 @@ import { StarRating } from "../components/lodging/StarRating";
 import { LodgingPhotoSection } from "../components/lodging/LodgingPhotoSection";
 import { StayEditor } from "../components/lodging/StayEditor";
 import { ChainNameLink } from "../components/lodging/ChainNameLink";
+import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { deleteLodging, deleteStay, getLodging, listMemberships } from "../lib/api/lodging";
 import { tripsApi } from "../lib/api";
@@ -32,7 +33,7 @@ import {
 import { logger } from "../lib/logger";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import ConfirmModal from "../components/Training/ConfirmModal";
-import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { deriveStayMembership } from "../shared/membershipDerivation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
@@ -82,6 +83,14 @@ export default function LodgingDetailPage(): JSX.Element {
   // while no question is open. Holding the stay itself (not just its id) is
   // what lets the confirmation name the dates it is about.
   const [confirmingStayDelete, setConfirmingStayDelete] = useState<LodgingStay | null>(null);
+  /**
+   * Asked only while the stay's confirmation is opening. The page already
+   * mounts a documents section for the HOUSE; this is the STAY's own folder,
+   * which nothing on the page has counted.
+   */
+  const stayDocumentCount = useDocumentCount(
+    confirmingStayDelete ? { type: "lodgingStay", id: confirmingStayDelete.id } : null
+  );
   const [deletingStay, setDeletingStay] = useState<boolean>(false);
   /**
    * The header figures no longer describe the list below them.
@@ -241,9 +250,15 @@ export default function LodgingDetailPage(): JSX.Element {
           period,
           nights: t("lodging:field.nightsCount", { count: stayNights(stay) }),
         });
-    return stay.receiptUrl === null
-      ? body
-      : `${body}\n${t("lodging:stay.confirmDelete.receiptNote")}`;
+    const withReceipt =
+      stay.receiptUrl === null ? body : `${body}\n${t("lodging:stay.confirmDelete.receiptNote")}`;
+    // Finding 6 of the write-path audit (2026-09-19): the note above covers
+    // the LEGACY single `receiptUrl` only, while `Document.lodgingStayId`
+    // cascades too (`onDelete: Cascade`, proven live by
+    // `backend/src/__tests__/integrity/cascades.integrity.test.ts`). The two
+    // are different things — one file the cost block links to, versus the
+    // whole folder — so both lines stand.
+    return withDocumentNote(withReceipt, t, stayDocumentCount);
   };
 
   if (loading) {

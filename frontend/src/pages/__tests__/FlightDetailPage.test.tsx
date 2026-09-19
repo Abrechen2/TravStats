@@ -5,6 +5,7 @@
  */
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import type { Flight } from "../../types";
 
@@ -15,6 +16,13 @@ const getByIdMock = vi.fn();
 // this surface mounts it — here it would only be a request reaching the
 // network, which the setup refuses (forgejo#110).
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
+
+// The delete dialog counts the kept originals that cascade with the flight.
+// The section above is stubbed out, so this mock serves the COUNT only.
+const listForEntryMock = vi.fn();
+vi.mock("../../lib/api/documents", () => ({
+  documentsApi: { listForEntry: (...args: unknown[]) => listForEntryMock(...args) },
+}));
 
 vi.mock("../../lib/api", () => ({
   flightsApi: {
@@ -63,6 +71,8 @@ function renderPage() {
 describe("FlightDetailPage", () => {
   beforeEach(() => {
     getByIdMock.mockReset();
+    listForEntryMock.mockReset();
+    listForEntryMock.mockResolvedValue([]);
   });
 
   it("shows the fields the table has no column for", async () => {
@@ -115,5 +125,72 @@ describe("FlightDetailPage", () => {
     const alert = await screen.findByRole("alert");
     expect(alert.textContent).toBe("flights:detail.notFound");
     expect(screen.queryByRole("button", { name: "common:buttons.retry" })).not.toBeInTheDocument();
+  });
+  /**
+   * Finding 3 of the write-path audit (2026-09-19): deleting a flight takes
+   * its documents with it — `onDelete: Cascade`, measured against the live
+   * database by `backend/src/__tests__/integrity/cascades.integrity.test.ts` —
+   * and the dialog said nothing about them.
+   */
+  it("names the documents that cascade with the flight", async () => {
+    getByIdMock.mockResolvedValue(makeFlight());
+    listForEntryMock.mockResolvedValue([{ id: "d1" }, { id: "d2" }]);
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+
+    const dialog = await screen.findByTestId("confirm-modal");
+    await waitFor(() => expect(dialog.textContent).toContain("documents:deleteCascadeNote"));
+    expect(listForEntryMock).toHaveBeenCalledWith({ type: "flight", id: "f1" });
+  });
+
+  it("counts nothing until the dialog is opening", async () => {
+    getByIdMock.mockResolvedValue(makeFlight());
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
+    // A reader who never reaches for the delete button pays for no request.
+    expect(listForEntryMock).not.toHaveBeenCalled();
+  });
+
+  it("opens at once and adds the line when the count arrives", async () => {
+    let settle: (rows: { id: string }[]) => void = () => {};
+    listForEntryMock.mockReturnValue(
+      new Promise<{ id: string }[]>((resolve) => {
+        settle = resolve;
+      })
+    );
+    getByIdMock.mockResolvedValue(makeFlight());
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+
+    // The question is on screen before the count is: a warning is worth
+    // adding to a dialog, never worth delaying it.
+    const dialog = await screen.findByTestId("confirm-modal");
+    expect(dialog.textContent).toContain("flights:table.deleteConfirm.message");
+    expect(dialog.textContent).not.toContain("documents:deleteCascadeNote");
+
+    settle([{ id: "d1" }]);
+    await waitFor(() => expect(dialog.textContent).toContain("documents:deleteCascadeNote"));
+  });
+
+  it("keeps the base sentence when the count cannot be had", async () => {
+    getByIdMock.mockResolvedValue(makeFlight());
+    listForEntryMock.mockRejectedValue(new Error("Network Error"));
+    const user = userEvent.setup();
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText(/LH2462/)).toBeInTheDocument());
+    await user.click(screen.getByRole("button", { name: "common:buttons.delete" }));
+
+    const dialog = await screen.findByTestId("confirm-modal");
+    await waitFor(() => expect(listForEntryMock).toHaveBeenCalled());
+    expect(dialog.textContent).toContain("flights:table.deleteConfirm.message");
+    expect(dialog.textContent).not.toContain("documents:deleteCascadeNote");
   });
 });
