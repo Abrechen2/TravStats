@@ -10,9 +10,11 @@ export interface CountryDistributionCardProps {
    * The country distribution, loaded by the page (forgejo#49). This card and
    * `useDomainStats` each fetched `/stats/countries` separately, so the flight
    * tab asked the same question twice per load; the page now reads it once,
-   * from `/stats/page`. `undefined` means the load has not finished.
+   * from `/stats/page`. Three states — see the note on `AirlineRankingCard`:
+   * `undefined` is in flight, `null` is a load that finished and brought
+   * nothing.
    */
-  countries: CountryStatsResponse | undefined;
+  countries: CountryStatsResponse | null | undefined;
 }
 
 export default function CountryDistributionCard({
@@ -20,11 +22,11 @@ export default function CountryDistributionCard({
 }: CountryDistributionCardProps): JSX.Element {
   const { t } = useTranslation("stats");
 
-  if (!data) {
+  if (data === undefined) {
     return <p className="text-sm text-gray-500">{t("stats:countryDist.loading")}</p>;
   }
 
-  const countries = data.countries.slice(0, MAX_ROWS);
+  const countries = data === null ? [] : data.countries.slice(0, MAX_ROWS);
   if (countries.length === 0) {
     return <p className="text-sm text-gray-500">{t("stats:countryDist.noData")}</p>;
   }

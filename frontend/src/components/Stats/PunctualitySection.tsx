@@ -7,10 +7,13 @@ export interface PunctualitySectionProps {
   /**
    * The delay aggregates, loaded by the page (forgejo#49) — this section used
    * to fetch `/stats/punctuality` itself, and is now one section of
-   * `/stats/page`. `undefined` means the load has not finished, which renders
-   * nothing, exactly as an unfinished fetch did.
+   * `/stats/page`.
+   *
+   * `undefined` (in flight) and `null` (the shared load failed) both render
+   * nothing, which is also what no delay sample renders — so unlike the three
+   * ranking cards this section needs no separate message: it has never had one.
    */
-  stats: PunctualityStats | undefined;
+  stats: PunctualityStats | null | undefined;
 }
 
 /**

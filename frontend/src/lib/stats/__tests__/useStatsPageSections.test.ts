@@ -3,12 +3,14 @@
  *
  * The assertion that matters is the count, and it is made against the HTTP
  * client rather than against `statsApi`: a hook that called
- * `statsApi.getFunStats()` and eight friends would satisfy a mock of
- * `getStatsPage` and still issue nine requests.
+ * nine per-section getters would satisfy a mock of `getStatsPage` and still
+ * issue nine requests. (Those getters have since been deleted — see the note in
+ * `lib/api/stats.ts` — but the endpoints they called are all still served, so
+ * the assertion is still about behaviour, not about what exists.)
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { renderHook, waitFor } from "@testing-library/react";
+import { act, renderHook, waitFor } from "@testing-library/react";
 
 import { FLIGHT_TAB_SECTIONS, useStatsPageSections } from "../useStatsPageSections";
 
@@ -80,6 +82,34 @@ describe("useStatsPageSections", () => {
     const { result } = renderHook(() => useStatsPageSections());
     await waitFor(() => expect(result.current.loading).toBe(false));
     expect(result.current.error).toBe("boom");
-    expect(result.current.sections).toEqual({});
+  });
+
+  // The first cut left the sections ABSENT on failure, which a card cannot tell
+  // apart from a request still in flight — so nine cards read "loading" forever
+  // and nothing on the page said why.
+  it("hands every section `null` on failure, never absent", async () => {
+    get.mockRejectedValue(new Error("boom"));
+    const { result } = renderHook(() => useStatsPageSections());
+    await waitFor(() => expect(result.current.loading).toBe(false));
+
+    for (const section of FLIGHT_TAB_SECTIONS) {
+      expect(result.current.sections[section]).toBeNull();
+    }
+    // `null`, not `undefined`: the distinction IS the fix.
+    expect(Object.keys(result.current.sections).sort()).toEqual([...FLIGHT_TAB_SECTIONS].sort());
+  });
+
+  it("retries the one request, and clears the error when the retry lands", async () => {
+    get.mockRejectedValueOnce(new Error("boom"));
+    const { result } = renderHook(() => useStatsPageSections());
+    await waitFor(() => expect(result.current.error).toBe("boom"));
+
+    get.mockResolvedValue({ data: PAYLOAD });
+    act(() => result.current.reload());
+
+    await waitFor(() => expect(result.current.error).toBeNull());
+    expect(result.current.sections).toEqual(PAYLOAD);
+    // Two requests, not nine and not eighteen: one per attempt.
+    expect(get).toHaveBeenCalledTimes(2);
   });
 });

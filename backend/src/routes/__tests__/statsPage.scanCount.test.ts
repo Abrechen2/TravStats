@@ -200,6 +200,17 @@ describe("GET /api/v1/stats/page — one scan instead of thirteen", () => {
     expect(res.status).toBe(400);
   });
 
+  // The endpoint takes NO date range: four of its nine sections have none on
+  // their own endpoint, so a range would narrow five and leave four at all
+  // time. Stripping the parameter would let a caller believe it had scoped the
+  // answer — hence `.strict()`.
+  it("rejects a date range rather than ignoring it", async () => {
+    const res = await request(app)
+      .get("/api/v1/stats/page?include=seats&fromDate=2026-01-01")
+      .set("Cookie", cookie);
+    expect(res.status).toBe(400);
+  });
+
   it("rejects an empty include rather than composing everything", async () => {
     expect((await request(app).get("/api/v1/stats/page").set("Cookie", cookie)).status).toBe(400);
     expect(

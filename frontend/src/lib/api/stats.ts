@@ -107,57 +107,20 @@ export const statsApi = {
     return data;
   },
 
-  getFunStats: async (filters?: { fromDate?: string; toDate?: string }): Promise<FunStats> => {
-    const { data } = await api.get<FunStats>("/stats/fun", { params: filters });
-    return data;
-  },
-
-  getBusinessStats: async (filters?: {
-    fromDate?: string;
-    toDate?: string;
-  }): Promise<BusinessStats> => {
-    const { data } = await api.get<BusinessStats>("/stats/business", {
-      params: filters,
-    });
-    return data;
-  },
-
-  getUniqueStats: async (filters?: {
-    fromDate?: string;
-    toDate?: string;
-  }): Promise<UniqueStats> => {
-    const { data } = await api.get<UniqueStats>("/stats/unique", {
-      params: filters,
-    });
-    return data;
-  },
-
-  getAirportStats: async (filters?: {
-    fromDate?: string;
-    toDate?: string;
-  }): Promise<AirportStats> => {
-    const { data } = await api.get<AirportStats>("/stats/airports", {
-      params: filters,
-    });
-    return data;
-  },
-
-  getSeatStats: async (filters?: { fromDate?: string; toDate?: string }): Promise<SeatStats> => {
-    const { data } = await api.get<SeatStats>("/stats/seats", {
-      params: filters,
-    });
-    return data;
-  },
-
-  getAirlineRanking: async (): Promise<AirlineRankingResponse> => {
-    const { data } = await api.get<AirlineRankingResponse>("/stats/airlines");
-    return data;
-  },
-
   getCountryStats: async (): Promise<CountryStatsResponse> => {
     const { data } = await api.get<CountryStatsResponse>("/stats/countries");
     return data;
   },
+
+  // The eight one-line wrappers for /stats/fun, /business, /unique, /airports,
+  // /seats, /airlines, /aircraft and /punctuality were DELETED with forgejo#49:
+  // the statistics page reads all nine of those sections through
+  // `getStatsPage` in one request, and nothing else in this app called them.
+  // The ENDPOINTS are all still served — the Companion reads them and the
+  // evidence panel cross-checks against them — so a future consumer adds the
+  // wrapper it needs rather than finding eight unused ones. `getCountryStats`
+  // below stayed for the same reason in reverse: `useDomainStats` still calls it
+  // on every tab.
 
   /** `year` scopes to cruises that STARTED in it; omitted, the lifetime view. */
   getCruiseStats: async (params?: { year?: number }): Promise<CruiseStatsResponse> => {
@@ -169,23 +132,10 @@ export const statsApi = {
     return data;
   },
 
-  getAircraftRanking: async (): Promise<AircraftRankingResponse> => {
-    const { data } = await api.get<AircraftRankingResponse>("/stats/aircraft");
-    return data;
-  },
-
   getAircraftProfile: async (registration: string): Promise<AircraftProfileResponse> => {
     const { data } = await api.get<AircraftProfileResponse>(
       `/stats/aircraft/${encodeURIComponent(registration)}`
     );
-    return data;
-  },
-
-  getPunctuality: async (filters?: {
-    fromDate?: string;
-    toDate?: string;
-  }): Promise<PunctualityStats> => {
-    const { data } = await api.get<PunctualityStats>("/stats/punctuality", { params: filters });
     return data;
   },
 };

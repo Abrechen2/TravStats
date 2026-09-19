@@ -31,6 +31,44 @@ const PER_ENDPOINT_URLS: Record<StatsPageSection, string> = {
   punctuality: "/api/v1/stats/punctuality",
 };
 
+/**
+ * A TOTAL order over the two sections that sort on `count` alone.
+ *
+ * `computeCountryStats` and `computeAircraftRanking` order by count and nothing
+ * else, so rows with EQUAL counts come out in whatever order Postgres returned
+ * them — and the two surfaces here run two separate queries. The published
+ * ordering is deliberately left as it is: adding a tie-break to the endpoints
+ * would change what existing clients see, for a reason unrelated to this
+ * change. So the COMPARISON imposes the second key instead, on both sides
+ * alike, and what it then proves is that the two surfaces hold the same rows.
+ */
+function byCountThenName<T extends { count: number }>(rows: T[], name: (row: T) => string): T[] {
+  return [...rows].sort((a, b) => b.count - a.count || name(a).localeCompare(name(b)));
+}
+
+interface CountedCountry {
+  country: string;
+  count: number;
+}
+interface CountedHull {
+  registration: string;
+  count: number;
+}
+
+/** One section's body, with any count-only ordering made total. */
+function totallyOrdered(section: StatsPageSection, body: unknown): unknown {
+  if (body === null || typeof body !== "object") return body;
+  if (section === "countries") {
+    const b = body as { countries: CountedCountry[] };
+    return { ...b, countries: byCountThenName(b.countries, (r) => r.country) };
+  }
+  if (section === "aircraft") {
+    const b = body as { aircraft: CountedHull[] };
+    return { ...b, aircraft: byCountThenName(b.aircraft, (r) => r.registration) };
+  }
+  return body;
+}
+
 describe("GET /api/v1/stats/page — each section equals its own endpoint", () => {
   let cookie: string;
   let userId: string;
@@ -201,7 +239,9 @@ describe("GET /api/v1/stats/page — each section equals its own endpoint", () =
     const direct = await request(app).get(PER_ENDPOINT_URLS[section]).set("Cookie", cookie);
     expect(composed.status).toBe(200);
     expect(direct.status).toBe(200);
-    expect(composed.body[section]).toEqual(direct.body);
+    expect(totallyOrdered(section, composed.body[section])).toEqual(
+      totallyOrdered(section, direct.body)
+    );
   });
 
   it("asking for all nine at once gives what asking for each alone gives", async () => {
@@ -213,8 +253,26 @@ describe("GET /api/v1/stats/page — each section equals its own endpoint", () =
     // A section must not be affected by its neighbours sharing its rows.
     for (const section of STATS_PAGE_SECTIONS) {
       const direct = await request(app).get(PER_ENDPOINT_URLS[section]).set("Cookie", cookie);
-      expect(composed.body[section]).toEqual(direct.body);
+      expect(totallyOrdered(section, composed.body[section])).toEqual(
+        totallyOrdered(section, direct.body)
+      );
     }
+  });
+
+  it("orders countries identically once both sides are totally ordered", async () => {
+    const composed = await request(app)
+      .get("/api/v1/stats/page?include=countries")
+      .set("Cookie", cookie);
+    const direct = await request(app).get(PER_ENDPOINT_URLS.countries).set("Cookie", cookie);
+    expect(composed.status).toBe(200);
+    expect(direct.status).toBe(200);
+
+    expect(totallyOrdered("countries", composed.body.countries)).toEqual(
+      totallyOrdered("countries", direct.body)
+    );
+    // The tie is real, so the guard above is not vacuous.
+    const counts = (direct.body.countries as CountedCountry[]).map((r) => r.count);
+    expect(new Set(counts).size).toBeLessThan(counts.length);
   });
 
   it("excludes the scheduled flight from both surfaces alike", async () => {

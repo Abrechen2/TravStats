@@ -42,6 +42,7 @@ import StatsFunSection from "../components/Stats/StatsFunSection";
 import StatsBusinessSection from "../components/Stats/StatsBusinessSection";
 import { useSectionVisibility } from "../hooks/useSectionVisibility";
 import PunctualitySection from "../components/Stats/PunctualitySection";
+import StatsSectionsLoadError from "../components/Stats/StatsSectionsLoadError";
 import StatsUniqueSection from "../components/Stats/StatsUniqueSection";
 import StatsAirportsSection from "../components/Stats/StatsAirportsSection";
 import StatsSeatSection from "../components/Stats/StatsSeatSection";
@@ -77,7 +78,11 @@ export default function AdvancedStatsPage(): JSX.Element {
   // calls — five here and four inside the cards below — which the server
   // answered with nine more passes over the flight table; it answers this with
   // one. `lib/stats/useStatsPageSections.ts` carries the measurement.
-  const { sections: pageSections } = useStatsPageSections();
+  const {
+    sections: pageSections,
+    error: pageSectionsError,
+    reload: reloadPageSections,
+  } = useStatsPageSections();
   const [achievementSummary, setAchievementSummary] = useState<AchievementSummary | null>(null);
   const [showCertificate, setShowCertificate] = useState(false);
   const [generatingPdf, setGeneratingPdf] = useState(false);
@@ -702,7 +707,15 @@ export default function AdvancedStatsPage(): JSX.Element {
                 />
               )}
 
-              {/* Punctuality (#2) — self-fetching, hides without a delay sample */}
+              {/* The ONE composed request failed (forgejo#49) — said once, here,
+                  rather than nine times or not at all. The sections below then
+                  show their empty state rather than a spinner, because the hook
+                  hands each of them `null` on failure. */}
+              {pageSectionsError !== null && (
+                <StatsSectionsLoadError onRetry={reloadPageSections} />
+              )}
+
+              {/* Punctuality (#2) — hides itself without a delay sample */}
               {sections.isVisible("punctuality") && (
                 <PunctualitySection stats={pageSections.punctuality} />
               )}

@@ -62,9 +62,16 @@ export const RoutesQuerySchema = z.object({
  * off. An unknown name is a 400 rather than a silently absent section — a
  * typo'd `include` must not read as "that section has no data".
  */
-export const StatsPageQuerySchema = z.object({
-  include: z
-    .string()
-    .transform((raw) => raw.split(",").map((s) => s.trim()))
-    .pipe(z.array(z.enum(STATS_PAGE_SECTIONS)).min(1)),
-});
+export const StatsPageQuerySchema = z
+  .object({
+    include: z
+      .string()
+      .transform((raw) => raw.split(",").map((s) => s.trim()))
+      .pipe(z.array(z.enum(STATS_PAGE_SECTIONS)).min(1)),
+  })
+  // `.strict()`, so `?fromDate=…` is a 400 rather than silently ignored. This
+  // endpoint takes NO date range on purpose — four of its nine sections have
+  // none on their own endpoint, so a range would narrow five and leave four at
+  // all time. A stripped parameter would let a caller believe it had scoped the
+  // answer; the refusal is the honest reply.
+  .strict();

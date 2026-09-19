@@ -6,10 +6,11 @@ const MAX_ROWS = 10;
 
 export interface AircraftRankingCardProps {
   /**
-   * The hull ranking, loaded by the page (forgejo#49) — see the note on
-   * `AirlineRankingCard`. `undefined` means the load has not finished.
+   * The hull ranking, loaded by the page (forgejo#49) — see the three-state
+   * note on `AirlineRankingCard`: `undefined` is in flight, `null` is a load
+   * that finished and brought nothing.
    */
-  aircraft: AircraftRankingResponse | undefined;
+  aircraft: AircraftRankingResponse | null | undefined;
 }
 
 export default function AircraftRankingCard({
@@ -17,11 +18,11 @@ export default function AircraftRankingCard({
 }: AircraftRankingCardProps): JSX.Element {
   const { t } = useTranslation("stats");
 
-  if (!data) {
+  if (data === undefined) {
     return <p className="text-sm text-gray-500">{t("stats:aircraftRanking.loading")}</p>;
   }
 
-  const aircraft = data.aircraft.slice(0, MAX_ROWS);
+  const aircraft = data === null ? [] : data.aircraft.slice(0, MAX_ROWS);
   if (aircraft.length === 0) {
     return (
       <div className="space-y-2">

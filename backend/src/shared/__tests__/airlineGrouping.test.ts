@@ -65,4 +65,40 @@ describe("groupAirlines", () => {
     ]);
     expect(withoutAirline).toBe(4);
   });
+  // forgejo#49: the same groups reach this function from two places — the
+  // `/stats/airlines` route via a Prisma `groupBy`, and `/stats/page` from the
+  // loaded rows — and those arrive in different orders. A label picked by
+  // frequency alone therefore depended on the feed order whenever two spellings
+  // were equally common, so one carrier had two names depending on which
+  // endpoint drew it. The tie-break is alphabetical.
+  it("names an equally-spelled group the same way whichever order the rows arrive in", () => {
+    const rows = [
+      { airline: "Zephyr Air", count: 2 },
+      { airline: "Aero Zephyr", count: 2 },
+    ];
+    const forward = groupAirlines(rows, catalogue);
+    const reversed = groupAirlines([...rows].reverse(), catalogue);
+
+    // TWO groups here, one per spelling: neither is in the catalogue, so each
+    // keys on its own normalised name. What is being pinned is the ORDER, which
+    // `groups.sort` already tie-breaks on the label; the case below pins the
+    // label of a single group, which is where the new tie-break bites.
+    expect(forward.groups.map((g) => g.label)).toEqual(["Aero Zephyr", "Zephyr Air"]);
+    expect(reversed.groups.map((g) => g.label)).toEqual(forward.groups.map((g) => g.label));
+  });
+
+  it("picks the alphabetically first of two equally common spellings of ONE carrier", () => {
+    // Both rows carry the same code, so they are ONE group whose label falls
+    // back to a spelling — the catalogue below does not name "ZZ".
+    const rows = [
+      { airline: "Zephyr Air", airlineIata: "ZZ", count: 2 },
+      { airline: "Aero Zephyr", airlineIata: "ZZ", count: 2 },
+    ];
+    const forward = groupAirlines(rows, catalogue);
+    const reversed = groupAirlines([...rows].reverse(), catalogue);
+
+    expect(forward.groups).toHaveLength(1);
+    expect(forward.groups[0].label).toBe("Aero Zephyr");
+    expect(reversed.groups[0].label).toBe("Aero Zephyr");
+  });
 });

@@ -18,7 +18,7 @@
  * was partly wrong without saying so. `error` lets the page say it once.
  */
 
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 
 import { statsApi, type StatsPageSection, type StatsPageSections } from "../api/stats";
 import { logger } from "../logger";
@@ -38,32 +38,69 @@ export const FLIGHT_TAB_SECTIONS = [
 
 export type FlightTabSection = (typeof FLIGHT_TAB_SECTIONS)[number];
 
+/**
+ * The sections, in the three states a shared load has.
+ *
+ * `undefined` — the one request is still in flight.
+ * `null`      — it finished and brought nothing, because it FAILED. A section
+ *               renders its empty state; the page says why, once.
+ * a value     — the section.
+ *
+ * The middle state is the whole point and was missing at first: nine sections
+ * share one request, so a single 500 left all nine absent — which a card could
+ * not tell apart from "still loading", and nine cards said "loading" forever.
+ * The hook decides this, not the page, because the hook is what knows the
+ * request failed.
+ */
+export type StatsPageSectionValues = Partial<{
+  [K in FlightTabSection]: StatsPageSections[K] | null;
+}>;
+
 export interface UseStatsPageSectionsResult {
-  /**
-   * Each section, or `undefined` until the one request lands. Deliberately not
-   * `null`: a section reads `undefined` as "not loaded yet" and `null` would
-   * have to mean the same thing in a second way.
-   */
-  sections: Partial<Pick<StatsPageSections, FlightTabSection>>;
+  sections: StatsPageSectionValues;
   loading: boolean;
   /** The message, when the single request failed. */
   error: string | null;
+  /**
+   * Try the one request again.
+   *
+   * Exposed because ONE failure now costs nine sections: without a retry the
+   * only way back is a full page reload, which throws away the flight list,
+   * the summary and the timeseries that all succeeded.
+   */
+  reload: () => void;
 }
 
 export function useStatsPageSections(): UseStatsPageSectionsResult {
-  const [sections, setSections] = useState<Partial<Pick<StatsPageSections, FlightTabSection>>>({});
+  const [sections, setSections] = useState<StatsPageSectionValues>({});
   const [loading, setLoading] = useState(true);
   const [error, setError] = useState<string | null>(null);
+  // Bumped by `reload`, which is what re-runs the effect. A counter rather than
+  // a function called directly, so the effect keeps its own cancellation and a
+  // retry fired twice cannot land two answers out of order.
+  const [attempt, setAttempt] = useState(0);
+
+  const reload = useCallback(() => setAttempt((n) => n + 1), []);
 
   useEffect(() => {
     let cancelled = false;
+    setLoading(true);
+    setError(null);
     void (async () => {
       try {
         const data = await statsApi.getStatsPage(FLIGHT_TAB_SECTIONS);
         if (!cancelled) setSections(data);
       } catch (err) {
         logger.error("Failed to load the composed statistics sections", err);
-        if (!cancelled) setError(err instanceof Error ? err.message : "Unknown error");
+        if (!cancelled) {
+          setError(err instanceof Error ? err.message : "Unknown error");
+          // Every requested section becomes `null`, not absent. Absent reads as
+          // "still loading" to a section, which is how a failed load showed
+          // nine cards spinning with no explanation anywhere.
+          setSections(
+            Object.fromEntries(FLIGHT_TAB_SECTIONS.map((s) => [s, null])) as StatsPageSectionValues
+          );
+        }
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -71,7 +108,7 @@ export function useStatsPageSections(): UseStatsPageSectionsResult {
     return () => {
       cancelled = true;
     };
-  }, []);
+  }, [attempt]);
 
-  return { sections, loading, error };
+  return { sections, loading, error, reload };
 }

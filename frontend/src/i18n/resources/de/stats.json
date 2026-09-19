@@ -218,6 +218,10 @@
       "west_africa": "Westafrika"
     }
   },
+  "page": {
+    "loadError": "Diese Statistiken konnten nicht geladen werden.",
+    "retry": "Erneut versuchen"
+  },
   "title": "Erweiterte Statistiken",
   "welcome": "Willkommen, {{username}}!",
   "logout": "Abmelden",
