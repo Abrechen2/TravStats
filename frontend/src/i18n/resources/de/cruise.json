@@ -284,6 +284,10 @@
       "cabinTypes": "Kabinenarten",
       "noCabins": "Keine Kabinenart hinterlegt.",
       "companions": "Mitreisende",
+      "companionsTotalLabel": "Mitreisende insgesamt",
+      "companionsTotalAfter": " Mitreisende, pro Fahrt gezählt",
+      "companionsTotalAfter_one": " Mitreisender, pro Fahrt gezählt",
+      "companionsTotalAfter_other": " Mitreisende, pro Fahrt gezählt",
       "noCompanions": "Keine Mitreisenden erfasst.",
       "more": "+ {{count}} weitere"
     }

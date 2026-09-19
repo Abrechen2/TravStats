@@ -53,10 +53,12 @@ const visit = (visitedAt: string | null) => ({ id: `v-${visitedAt ?? "undated"}`
  * contract between a tile and the panel and a tile wired to the wrong key
  * looks identical to a correct one until it is clicked.
  *
- * `placeCitiesCount` and `placeWishlistCount` are absent on purpose: both
- * render inside another card's DESCRIPTION, and a card opens one panel.
- * They are served and reachable by URL; splitting a card in two is a decision
- * about this surface rather than a wiring one.
+ * `placeCitiesCount` and `placeWishlistCount` used to be absent: both render
+ * inside another card's DESCRIPTION, and a card opens one panel. The owner
+ * ruled on 2026-09-19 that the NUMBER inside a description becomes its own
+ * inline trigger while the rest of the sentence stays text, so both are wired
+ * now. The wishlist one only in the lifetime view — a year holds no wishlist,
+ * so that card draws no description at all under a year.
  */
 /** `MemoryRouter` never touches `window.location`, so the search string has to be read from inside it. */
 function LocationProbe({ onChange }: { onChange: (search: string) => void }): null {
@@ -71,7 +73,7 @@ describe("PoiStatsSection evidence wiring", () => {
     listCuratedMock.mockReset().mockResolvedValue([]);
   });
 
-  it("wires the four served tiles of the lifetime view", async () => {
+  it("wires the four served tiles of the lifetime view, and the two numbers inside their sentences", async () => {
     listPlacesMock.mockResolvedValue([
       place({ id: "p1", name: "Kolosseum", visits: [visit("2023-04-01")] as never }),
     ]);
@@ -97,7 +99,15 @@ describe("PoiStatsSection evidence wiring", () => {
       keys.push(raw.slice(raw.indexOf(":") + 1));
     }
     expect(keys.sort()).toEqual(
-      ["placeCountriesCount", "placeListCount", "placeVisitCount", "placesVisitedCount"].sort()
+      [
+        "placeCountriesCount",
+        "placeListCount",
+        "placeVisitCount",
+        "placesVisitedCount",
+        // The two figures that live inside another card's sentence.
+        "placeCitiesCount",
+        "placeWishlistCount",
+      ].sort()
     );
     expect(keys.every((key) => EVIDENCE_MEASURES[key]?.servedIn === 1)).toBe(true);
   });
@@ -127,8 +137,13 @@ describe("PoiStatsSection", () => {
     });
     const card = screen.getByText("places:stats.visitedPlaces").closest("div")?.parentElement;
     expect(card?.textContent).toContain("1");
-    // And the wishlist entry is reported as such rather than vanishing.
-    expect(screen.getByText(/places:stats.visitedPlacesDesc/)).toBeInTheDocument();
+    // And the wishlist entry is reported as such rather than vanishing. The
+    // sentence is three nodes since 2026-09-19 — text, the number as a
+    // trigger, text — so it is the TAIL that identifies it.
+    expect(screen.getByText(/places:stats.wishlistAfter/)).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "places:stats.wishlistLabel" })).toHaveTextContent(
+      "1"
+    );
   });
 
   it("counts an undated visit and says it has no date", async () => {
@@ -221,7 +236,13 @@ describe("PoiStatsSection under the page's period", () => {
     );
     await screen.findByText("places:stats.visitedPlaces");
     expect(screen.queryByText("places:stats.lists")).not.toBeInTheDocument();
-    expect(screen.queryByText(/places:stats.visitedPlacesDesc/)).not.toBeInTheDocument();
+    // `visitedPlacesDesc` used to name this line and no longer exists, which
+    // made the assertion pass without measuring anything. The line is now a
+    // tail plus a trigger, and both have to be gone.
+    expect(screen.queryByText(/places:stats.wishlistAfter/)).not.toBeInTheDocument();
+    expect(
+      screen.queryByRole("button", { name: "places:stats.wishlistLabel" })
+    ).not.toBeInTheDocument();
   });
 
   it("sets the year against the compare year", async () => {

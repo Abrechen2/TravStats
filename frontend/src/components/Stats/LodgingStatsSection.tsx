@@ -115,8 +115,17 @@ export default function LodgingStatsSection({
             label: t("stats:sections.countries"),
             current: stats.countriesCount,
             previous: previous.countriesCount,
+            // The only row here whose measure a resolver answers for. Stays,
+            // nights and houses are the three cells the strip below omits
+            // precisely BECAUSE this strip shows them, and those three already
+            // carry their triggers there — a second trigger for the same
+            // number in the same view is two places to keep honest.
+            evidenceKey: "lodgingCountriesCount",
           },
         ]}
+        // The strip is only drawn with a year chosen, so the scope it sends is
+        // never the tab's `allTime` default.
+        evidence={{ scope: { period: "year", year: shown.year } }}
       />
     ) : null;
 
@@ -171,7 +180,7 @@ export default function LodgingStatsSection({
           Object.keys(stats.spendBaseByCurrency ?? {}).length > 0) && (
           <LodgingCurrencyBreakdown stats={stats} variant="inline" />
         )}
-      {show("money") && <LodgingMoneySection stats={stats} />}
+      {show("money") && <LodgingMoneySection stats={stats} evidenceScope={evidenceScope} />}
       {show("quality") && <LodgingQualitySection stats={stats} />}
       {show("geo") && <LodgingGeoSection stats={stats} evidenceScope={evidenceScope} />}
       {show("rhythm") && <LodgingRhythmSection stats={stats} evidenceScope={evidenceScope} />}

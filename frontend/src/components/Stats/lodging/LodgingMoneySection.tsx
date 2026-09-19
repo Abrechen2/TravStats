@@ -5,6 +5,8 @@ import { formatCurrency } from "../../../lib/units";
 import { countryName } from "../../../lib/countryFlag";
 import type { LodgingPriceGroup, LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
+import EvidenceNumber from "../EvidenceNumber";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList, { type RankedRow } from "./RankedBarList";
 
 const LODGING_ACCENT = "var(--domain-lodging, #d4778f)";
@@ -12,6 +14,14 @@ const LIST_LIMIT = 6;
 
 interface Props {
   stats: LodgingStats;
+  /**
+   * The population these figures were measured over, present only where the
+   * award-nights count may open the evidence panel. The statistics page passes
+   * it; anywhere without a chosen period the number stays plain text, because a
+   * panel opened from there would answer for a period the screen never showed —
+   * the same rule `LodgingStatStrip` follows.
+   */
+  evidenceScope?: EvidenceScopeParams;
 }
 
 /**
@@ -25,7 +35,7 @@ interface Props {
  * describe. An average over four of ninety stays looks exactly like an average
  * over ninety unless the screen says otherwise.
  */
-export default function LodgingMoneySection({ stats }: Props): JSX.Element {
+export default function LodgingMoneySection({ stats, evidenceScope }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "stats"]);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const { price } = stats;
@@ -132,7 +142,27 @@ export default function LodgingMoneySection({ stats }: Props): JSX.Element {
             valueSize="md"
             title={t("lodging:stats.money.awardValue")}
             value={price.awardNightsValue !== null ? money(price.awardNightsValue) : "—"}
-            description={t("lodging:stats.money.awardValueDesc", { count: stats.awardNights })}
+            // The card's own number is the VALUE; the nights it was computed
+            // over sit in the sentence below it. Splitting the sentence at the
+            // number rather than making the whole line a button is what keeps
+            // "23 nights you paid nothing for" a sentence and the 23 a measure.
+            description={
+              <>
+                {evidenceScope ? (
+                  <EvidenceNumber
+                    evidenceKey="lodgingAwardNightsCount"
+                    scope={evidenceScope}
+                    renderedValue={stats.awardNights}
+                    label={t("lodging:stats.money.awardNightsLabel")}
+                  >
+                    {stats.awardNights}
+                  </EvidenceNumber>
+                ) : (
+                  stats.awardNights
+                )}
+                {t("lodging:stats.money.awardNightsAfter", { count: stats.awardNights })}
+              </>
+            }
             footnote={t("lodging:stats.money.awardValueFootnote")}
           />
         </div>

@@ -1,5 +1,9 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+// The comparison strip's countries figure is an `EvidenceTrigger` since
+// 2026-09-19, and a trigger reads the URL - so the section needs a router
+// even in the cases below, which stop at the empty-year branch.
+import { MemoryRouter } from "react-router-dom";
 import type { LodgingStats } from "../../../types/lodging";
 
 const getLodgingStats = vi.hoisted(() => vi.fn());
@@ -28,7 +32,9 @@ describe("LodgingStatsSection under the page's period", () => {
   it("asks the server for the chosen year", async () => {
     getLodgingStats.mockResolvedValue(empty());
     render(
-      <LodgingStatsSection scope={{ year: 2026, compareYear: null }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: 2026, compareYear: null }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     await screen.findByText("stats:period.emptyYear");
     expect(getLodgingStats).toHaveBeenCalledTimes(1);
@@ -38,7 +44,9 @@ describe("LodgingStatsSection under the page's period", () => {
   it("asks for the lifetime view when no year is chosen", async () => {
     getLodgingStats.mockResolvedValue(empty());
     render(
-      <LodgingStatsSection scope={{ year: null, compareYear: null }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: null, compareYear: null }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     await screen.findByText("lodging:list.empty");
     expect(getLodgingStats).toHaveBeenCalledWith(undefined);
@@ -49,7 +57,9 @@ describe("LodgingStatsSection under the page's period", () => {
     // would be false, and going by the house count would draw an empty tab.
     getLodgingStats.mockResolvedValue(empty({ lodgingsCount: 4 }));
     render(
-      <LodgingStatsSection scope={{ year: 2026, compareYear: null }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: 2026, compareYear: null }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     expect(await screen.findByText("stats:period.emptyYear")).toBeInTheDocument();
     expect(screen.queryByText("lodging:list.empty")).not.toBeInTheDocument();
@@ -60,7 +70,9 @@ describe("LodgingStatsSection under the page's period", () => {
       params?.year === 2025 ? empty({ staysCount: 3, totalNights: 9 }) : empty()
     );
     render(
-      <LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     // Either key: the strip says "vs 2025" for a year that is over and
     // "vs. the whole of 2025" while 2026 is still running (see
@@ -88,14 +100,18 @@ describe("LodgingStatsSection while the next year loads", () => {
     });
 
     const { rerender, container } = render(
-      <LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     // The strip prints the compare year raw beside each previous figure.
     expect((await screen.findAllByText(/\(2025\)/)).length).toBeGreaterThan(0);
     expect(container.querySelector("[aria-busy='true']")).toBeNull();
 
     rerender(
-      <LodgingStatsSection scope={{ year: 2026, compareYear: 2024 }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: 2026, compareYear: 2024 }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     // 2025's figures are still on screen, so the strip must still say 2025.
     expect(screen.queryAllByText(/\(2024\)/)).toHaveLength(0);
