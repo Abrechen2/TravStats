@@ -13,6 +13,8 @@
   "removeLabel": "{{name}} entfernen",
   "deleteTitle": "Dokument entfernen?",
   "deleteMessage": "„{{name}}“ wird dauerhaft gelöscht. Der Eintrag selbst bleibt bestehen.",
+  "deleteCascadeNote_one": "Dazu 1 Dokument, das mit gelöscht wird.",
+  "deleteCascadeNote_other": "Dazu {{count}} Dokumente, die mit gelöscht werden.",
   "format": {
     "image": "Bild",
     "pdf": "PDF",
