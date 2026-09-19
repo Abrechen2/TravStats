@@ -3,6 +3,7 @@ import type { EvidenceEntry, EvidenceResponse } from "../../schemas/evidence";
 import { classifyStay, type LodgingCountState } from "../../shared/lodgingCounting";
 import { classifyLodging } from "../../shared/lodgingCounting";
 import { resolveStayTiming, type StayTiming } from "../../shared/lodgingTiming";
+import { lodgingBaseAmount } from "../../shared/lodgingSpendBase";
 import { lodgingSpendNothingConverted } from "../../shared/lodgingSpendConverted";
 import {
   calculateLodgingStats,
@@ -195,10 +196,10 @@ export async function resolveLodgingSpendTotal(
   const priced = visited(stays).filter(
     (stay) => stay.data.totalPrice !== null || stay.data.totalPriceBase !== null
   );
-  const baseOf = (stay: StayView): number | null =>
-    stay.data.totalPriceBase !== null && stay.data.fxBaseCurrency === baseCurrency
-      ? stay.data.totalPriceBase
-      : null;
+  // The same function the tile's own total is summed with
+  // (`shared/lodgingSpendBase.ts`), per row. A second spelling here would let
+  // the panel list a stay as unconverted that the figure above it counted.
+  const baseOf = (stay: StayView): number | null => lodgingBaseAmount(stay.data, baseCurrency);
 
   const entries = priced.map((stay) => {
     const base = baseOf(stay);

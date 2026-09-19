@@ -291,7 +291,7 @@ export default function LodgingDetailPage(): JSX.Element {
   // (forgejo#82; the list cell had the same defect).
   const counted = countedStays(lodging.stays);
   const priced = hasAnyPrice(counted);
-  const unconvertedCount = countUnconvertedStays(counted);
+  const unconvertedCount = countUnconvertedStays(counted, baseCurrency);
   // Every priced stay unconverted means the base-currency sum is empty, not
   // zero: "0 €" beside a stay that cost 780 $ is the B12 defect again.
   // `aggregatesStale` withholds all four server-side figures at once: the

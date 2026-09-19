@@ -29,6 +29,15 @@ const stay = (o: Partial<LodgingStayData>): LodgingStayData => ({
   ratingRoom: null,
   ratingBreakfast: null,
   ratingService: null,
+  // A stay priced in the base currency has `totalPrice === totalPriceBase` by
+  // construction: `convertToBase` short-circuits an identical currency pair at
+  // rate 1, so no row the app can write has the two disagree. Keeping them in
+  // step here matters because `lodgingBaseAmount` reads the OWN price first for
+  // such a stay — a fixture that overrode only the snapshot would silently
+  // measure this helper's default instead of the amount the test named.
+  ...(o.totalPriceBase !== undefined && o.totalPrice === undefined
+    ? { totalPrice: o.totalPriceBase }
+    : {}),
   ...o,
 });
 
@@ -74,11 +83,59 @@ describe("lodging price statistics", () => {
   it("leaves out a stay snapshotted under a different base currency", () => {
     const p = price([
       stay({ totalPriceBase: 200 }),
-      stay({ lodgingId: "l2", totalPriceBase: 9999, fxBaseCurrency: "USD" }),
+      // Pounds, converted back when the account's base was USD. A real
+      // number in a currency this average does not speak — and the own-price
+      // shortcut cannot rescue it either, because the price is not in euros.
+      stay({
+        lodgingId: "l2",
+        currency: "GBP",
+        totalPrice: 8000,
+        totalPriceBase: 9999,
+        fxBaseCurrency: "USD",
+      }),
     ]);
     expect(p.avgPricePerNight).toBe(100);
     expect(p.pricedStays).toBe(1);
     expect(p.unpricedStays).toBe(1);
+  });
+
+  /**
+   * A per-night price needs an amount in the base currency, not a snapshot.
+   * A stay entered before the FX columns shipped has the first and not the
+   * second, and excluding it left the average computed over whatever fraction
+   * of the logbook happened to be new.
+   */
+  it("prices a stay that is already in the base currency and carries no snapshot", () => {
+    const p = price([
+      stay({ currency: "EUR", totalPrice: 200, totalPriceBase: null, fxBaseCurrency: null }),
+    ]);
+    expect(p.avgPricePerNight).toBe(100);
+    expect(p.pricedStays).toBe(1);
+    expect(p.unpricedStays).toBe(0);
+  });
+
+  it("leaves out a FOREIGN stay that carries no snapshot", () => {
+    const p = price([
+      stay({ currency: "EUR", totalPrice: 200, totalPriceBase: null, fxBaseCurrency: null }),
+      stay({
+        lodgingId: "l2",
+        currency: "USD",
+        totalPrice: 900,
+        totalPriceBase: null,
+        fxBaseCurrency: null,
+      }),
+    ]);
+    expect(p.avgPricePerNight).toBe(100);
+    expect(p.pricedStays).toBe(1);
+    expect(p.unpricedStays).toBe(1);
+  });
+
+  it("prices a base-currency stay at its own price although the snapshot is stale", () => {
+    const p = price([
+      stay({ currency: "EUR", totalPrice: 200, totalPriceBase: 9999, fxBaseCurrency: "USD" }),
+    ]);
+    expect(p.avgPricePerNight).toBe(100);
+    expect(p.unpricedStays).toBe(0);
   });
 
   it("does not count an unpriced stay as a gap — it was never a money question", () => {
