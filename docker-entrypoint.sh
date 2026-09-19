@@ -555,10 +555,17 @@ fi
 # Only run if migrations were successful
 if [ "$MIGRATION_SUCCESS" = "true" ] && [ "$CREATE_DEMO_USER" = "true" ]; then
     echo "[entrypoint] Creating demo user with sample data..."
+    # A non-zero exit here does NOT stop the boot: `set -e` is suspended for
+    # the condition of an `if`, and nothing below re-reads the status. That is
+    # deliberate and is what makes the seeder's refusal safe — since the
+    # data-integrity audit of 2026-09-19 it refuses outright when a user named
+    # `demo` exists that is not the demo account, rather than resetting that
+    # person's password and deleting their rows. The instance then boots
+    # WITHOUT a demo account, which is the correct outcome.
     if npm run seed:demo 2>&1; then
         echo "[entrypoint] ✅ Demo user created successfully"
     else
-        echo "[entrypoint] ⚠️  Demo user already exists or creation failed"
+        echo "[entrypoint] ⚠️  Demo seed did not run — see the output above for the reason (refused, or failed). Continuing without it."
     fi
 elif [ "$CREATE_DEMO_USER" = "true" ]; then
     echo "[entrypoint] ⚠️  Skipping demo user creation - migrations were not successful"

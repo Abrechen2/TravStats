@@ -5,7 +5,11 @@ import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { takeUserCountLock } from "../../utils/userCountLock";
 import { hashPassword } from "../../utils/password";
-import { adminCreateUserSchema, adminResetPasswordSchema } from "../../schemas/auth";
+import {
+  adminCreateUserSchema,
+  adminResetPasswordSchema,
+  isReservedUsername,
+} from "../../schemas/auth";
 import { sendAdminPasswordResetEmail } from "../../services/emailService";
 import { SMTP_CONFIG_ID } from "./smtp";
 import logger from "../../utils/logger";
@@ -21,6 +25,17 @@ const router = Router();
 router.post("/users", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const payload = adminCreateUserSchema.parse(req.body);
+
+    // The same reservation the register form applies — an admin PAT is the
+    // other way an account is created, and the demo seeder cannot tell the two
+    // apart afterwards (data-integrity audit 2026-09-19, finding 1).
+    if (isReservedUsername(payload.username)) {
+      throw new AppError(
+        `The username "${payload.username}" is reserved by this instance`,
+        400,
+        "USERNAME_RESERVED"
+      );
+    }
 
     const existing = await prisma.user.findUnique({ where: { username: payload.username } });
     if (existing) throw new AppError("Username already exists", 400);

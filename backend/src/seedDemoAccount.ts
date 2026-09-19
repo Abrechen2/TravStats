@@ -962,6 +962,30 @@ export async function ensureUser(): Promise<string> {
   const existing = await prisma.user.findUnique({
     where: { username: DEMO_USERNAME },
   });
+  if (existing && !existing.isDemo) {
+    // The account this seeder resets is identified by its NAME alone, and a
+    // name is not a claim of ownership. `utils/sharedDemo.ts` already says so
+    // in as many words — "`demo` without the flag is a user who happened to
+    // pick the name on their own instance" — but nothing held the seeder to
+    // it, and the seeder is the one path that empties an account without a
+    // click.
+    //
+    // Measured by the data-integrity audit of 2026-09-19 (finding 1) against a
+    // real row with `isDemo: false`, a private password hash and a first name:
+    // one boot with CREATE_DEMO_USER=true published that person's login as
+    // demo/demo123, removed their passkeys, recovery codes, API tokens and
+    // two-factor secret, nulled their name and birthdate, and deleted their
+    // rows from thirty tables. Nothing about the run was reversible and
+    // nothing about it was visible in the UI afterwards.
+    //
+    // So the flag decides, not the name. A refusal costs an instance its demo
+    // account until the admin renames the real user; not refusing costs that
+    // user everything they had.
+    throw new Error(
+      `A user named "${DEMO_USERNAME}" exists and is not the demo account — refusing to reseed. ` +
+        `Rename that account (or delete it) before enabling CREATE_DEMO_USER.`
+    );
+  }
   if (existing) {
     // Restore the account itself BEFORE its data. The route guards should
     // already refuse a credential/2FA/token change on the demo account

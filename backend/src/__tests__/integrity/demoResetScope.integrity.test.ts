@@ -6,10 +6,12 @@
  * wholesale without a click):
  *
  *  1. Does it delete ONLY the shared demo user's rows?  (scope)
- *  2. WHICH account does it pick?  `ensureUser()` looks the account up by
- *     `username = "demo"` alone. It never asks whether the row it found is the
- *     seeded demo account (`isDemo`), and no reserved-username list stops a real
- *     person from registering that name.
+ *  2. WHICH account does it pick?  `ensureUser()` used to look the account up
+ *     by `username = "demo"` alone — it never asked whether the row it found
+ *     was the seeded demo account (`isDemo`), and no reserved-username list
+ *     stopped a real person from registering that name. Since the fix of
+ *     2026-09-19 the flag decides: an account named `demo` that is not flagged
+ *     is REFUSED, and `RESERVED_USERNAMES` keeps the collision from arising.
  *
  * The test creates its own throwaway `demo` user and deletes it again, so it
  * leaves the shared 5437 database exactly as it found it.
@@ -133,14 +135,11 @@ beforeAll(async () => {
   if (existingDemo) {
     demoId = existingDemo.id;
   } else {
-    // Deliberately NOT a demo account: a real person who registered the name.
+    // A genuine demo account — the flag is what the seeder goes by since the
+    // 2026-09-19 fix. Test 4 below turns the flag off again to play the part
+    // of a real person who registered the name.
     const created = await prisma.user.create({
-      data: {
-        username: DEMO_USERNAME,
-        passwordHash: "a-real-persons-hash",
-        isDemo: false,
-        firstName: "Real",
-      },
+      data: { username: DEMO_USERNAME, passwordHash: "seeded-demo-hash", isDemo: true },
     });
     demoId = created.id;
     await seedContentFor(demoId, `${TAG}-demo`);
@@ -193,14 +192,39 @@ describe("the demo reset (ensureUser -> wipeDemoUser)", () => {
     ).not.toBeNull();
   });
 
-  it("picked an account that was NOT a demo account, and took it over", async () => {
-    // The finding: no `isDemo` check, no reserved-username list. The row this
-    // test created had `isDemo: false`, a private password hash and a first
-    // name — after the reset it is the public shared login.
+  it("REFUSES an account named demo that is not the demo account, and keeps every row of it", async () => {
+    // The finding (audit 2026-09-19, finding 1): `ensureUser()` looked the
+    // account up by username alone. A real person who had registered the name
+    // `demo` lost their password to demo123, their passkeys, recovery codes,
+    // API tokens and 2FA secret, their first name and birthdate, and their
+    // rows in thirty tables — on one boot with CREATE_DEMO_USER=true.
+    //
+    // The flag decides now. This test plays that person: the same row, with
+    // `isDemo` off, a private hash and a name.
+    await prisma.user.update({
+      where: { id: demoId },
+      data: { isDemo: false, passwordHash: "a-real-persons-hash", firstName: "Real" },
+    });
+    await seedContentFor(demoId, `${TAG}-real`);
+    const before = await countsFor(demoId);
+    expect(before.flights).toBe(1);
+
+    await expect(ensureUser()).rejects.toThrow(/refusing to reseed/i);
+
     const after = await prisma.user.findUniqueOrThrow({ where: { id: demoId } });
-    expect(after.isDemo).toBe(true);
-    expect(after.passwordHash).not.toBe("a-real-persons-hash");
-    expect(after.firstName).toBeNull();
+    expect(after.isDemo).toBe(false);
+    expect(after.passwordHash).toBe("a-real-persons-hash");
+    expect(after.firstName).toBe("Real");
+    expect(await countsFor(demoId)).toEqual(before);
+
+    // Hand the row back as a demo account for the test that follows, and
+    // empty it again — through the seeder, which is the thing under test.
+    await prisma.user.update({
+      where: { id: demoId },
+      data: { isDemo: true, firstName: null },
+    });
+    await ensureUser();
+    expect((await countsFor(demoId)).flights).toBe(0);
   });
 
   it("does NOT clear the reset account's PasswordResetRequest (a gap, low harm)", async () => {

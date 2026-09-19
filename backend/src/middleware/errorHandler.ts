@@ -31,7 +31,11 @@ export type ApiErrorCode =
   | "DUPLICATE"
   /** A workshop template was activated before its preview had run — the
    *  parser page turns this into "run the preview", not a generic toast. */
-  | "PREVIEW_REQUIRED";
+  | "PREVIEW_REQUIRED"
+  /** The requested username is reserved by the system — see
+   *  `schemas/auth.ts` `RESERVED_USERNAMES`. The register form turns this
+   *  into its own sentence, in the reader's language. */
+  | "USERNAME_RESERVED";
 
 interface AuthRequest extends Request {
   user?: {

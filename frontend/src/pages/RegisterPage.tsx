@@ -65,6 +65,7 @@ export default function RegisterPage(): JSX.Element {
           status?: number;
           data?: {
             error?: string;
+            code?: string;
             details?: Array<{ field?: string; message?: string }>;
           };
         };
@@ -75,6 +76,14 @@ export default function RegisterPage(): JSX.Element {
       // and the submit is where the instance finally says no.
       if (errorObj.response?.status === 403) {
         setError(t("register.disabled"));
+        return;
+      }
+      // The instance keeps a small list of names it means itself — today only
+      // `demo`, which the demo seeder resets on every boot. The backend sends
+      // a code precisely so this sentence can be written here, in the reader's
+      // language, instead of its English prose landing in a German page.
+      if (errorObj.response?.data?.code === "USERNAME_RESERVED") {
+        setError(t("register.usernameReserved"));
         return;
       }
       // Prefer the specific Zod validation message over the generic
