@@ -77,6 +77,38 @@ export const cruiseStatsResponseSchema = z.object({
   hasDatelineCrossing: z.boolean(),
   hasBirthdayAtSea: z.boolean(),
   hasNewYearsAtSea: z.boolean(),
+
+  totalSpendBase: z
+    .object({
+      value: z
+        .number()
+        .nullable()
+        .openapi({
+          description:
+            "Base-currency sum over the cruises whose FX snapshot was taken in " +
+            "that same currency. null — never 0 — when no cruise in scope could " +
+            "be converted: a zero would claim the sailing was free.",
+        }),
+      excludedCount: z
+        .number()
+        .int()
+        .openapi({
+          description:
+            "Cruises that carry a price but no snapshot in the current base " +
+            "currency, and so contributed nothing. A cruise with no price at all " +
+            "is not counted here — nothing was withheld from the total.",
+        }),
+      currency: z.string().openapi({
+        description: "The account's base currency, which `value` is denominated in.",
+      }),
+    })
+    .openapi({
+      description:
+        "The one cruise money figure that is a single number. The tab reports " +
+        "each currency on its own line beside it; this is the converted total, " +
+        "computed by `services/stats/cruiseSpendBase.ts` — the same rule the " +
+        "evidence panel answers `metric:cruiseTotalSpend` with.",
+    }),
 });
 
 export type CruiseStatsResponse = z.infer<typeof cruiseStatsResponseSchema>;

@@ -272,7 +272,12 @@
       "cruisesCount_one": "{{count}} cruise",
       "none": "No cruise has a price recorded.",
       "coverage": "From {{priced}} of {{total}} cruises with a recorded price.",
-      "noTotalNote": "No single total on purpose: a cruise stores a price and a currency but no exchange rate. Adding amounts in different currencies would produce a figure nobody ever paid."
+      "baseTotal": "Total in base currency",
+      "baseTotalDesc": "Added up at the rates recorded with each booking, in {{currency}}.",
+      "baseTotalNone": "None of these cruises has a rate to {{currency}} recorded — hence no total rather than a zero.",
+      "baseTotalExcluded_one": "{{count}} cruise without a rate is not included",
+      "baseTotalExcluded_other": "{{count}} cruises without a rate are not included",
+      "noTotalNote": "The rows above stay in their own currency: a cruise stores a price and a currency, and simply adding amounts in different currencies would produce a figure nobody ever paid. The total below converts at the recorded rates instead, and names what it had to leave out."
     },
     "fun": {
       "title": "Curiosities",

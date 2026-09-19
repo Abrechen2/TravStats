@@ -199,4 +199,24 @@ export interface CruiseStatsResponse {
   hasDatelineCrossing: boolean;
   hasBirthdayAtSea: boolean;
   hasNewYearsAtSea: boolean;
+  /** The base-currency total behind the money section's one summed figure.
+   *  Optional so an older backend still parses — without it the tile is not
+   *  drawn at all, which is the honest answer when nobody computed it. */
+  totalSpendBase?: CruiseTotalSpendBase;
+}
+
+/**
+ * The converted cruise total, as `GET /stats/cruise` answers it.
+ *
+ * Computed on the server by `services/stats/cruiseSpendBase.ts`, the same rule
+ * the evidence panel answers `metric:cruiseTotalSpend` with. It is NOT folded
+ * on the client: the cruise rows carry a price and a currency, and the FX
+ * snapshot that makes a sum honest lives on columns the rows endpoint does not
+ * expose. `value` is null — never 0 — when nothing in scope could be
+ * converted, and `excludedCount` names how many priced cruises stayed out.
+ */
+export interface CruiseTotalSpendBase {
+  value: number | null;
+  excludedCount: number;
+  currency: string;
 }

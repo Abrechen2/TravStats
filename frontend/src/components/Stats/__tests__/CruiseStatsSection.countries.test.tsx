@@ -74,12 +74,14 @@ function LocationProbe({ onChange }: { onChange: (search: string) => void }): nu
  * contract between a tile and the panel and a tile wired to the wrong key
  * looks identical to a correct one until it is clicked.
  *
- * Two served cruise measures are deliberately absent. `cruiseTotalSpend` has
- * no tile at all: `CruiseMoneySection` reports each currency on its own line
- * and says in as many words that it will not add them, so a single total there
- * would contradict the section it sat in. `cruiseCompanionCount` is the total
- * of a ranked list and has no card of its own either. Both are served and
- * reachable by `?evidence=metric:<key>`.
+ * Two served cruise measures are deliberately absent from THIS list.
+ * `cruiseTotalSpend` does have a tile now — the base-currency total in
+ * `CruiseMoneySection` — but that whole section renders only once a cruise
+ * carries a price, and `cruiseApi.list()` answers with no rows here. Its own
+ * suite (`cruise/__tests__/CruiseMoneySection.test.tsx`) covers it against
+ * rows that do. `cruiseCompanionCount` is the total of a ranked list and has
+ * no card of its own at all. Both are served and reachable by
+ * `?evidence=metric:<key>`.
  */
 describe("CruiseStatsSection evidence wiring", () => {
   beforeEach(() => {

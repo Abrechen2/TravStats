@@ -366,7 +366,15 @@ export default function CruiseStatsSection({
       )}
 
       {show("rhythm") && <CruiseRhythmSection detail={detail} accent={accent} locale={locale} />}
-      {show("money") && <CruiseMoneySection detail={detail} accent={accent} locale={locale} />}
+      {show("money") && (
+        <CruiseMoneySection
+          detail={detail}
+          accent={accent}
+          locale={locale}
+          totalSpendBase={stats.totalSpendBase}
+          scope={evidenceScope}
+        />
+      )}
       {show("fun") && <CruiseFunSection detail={detail} accent={accent} locale={locale} />}
     </div>
   );
