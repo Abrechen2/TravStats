@@ -398,3 +398,44 @@ describe("EvidencePanel", () => {
     expect(document.activeElement).toBe(opener);
   });
 });
+
+/**
+ * Auditor 3, 2026-09-19: `?evidence=<kind>:<key>` exists so a link to the
+ * panel can be shared -- "A shared link opens the panel" is the reason
+ * `useEvidence.ts` gives for putting the state in the URL at all -- and
+ * nothing on screen said so. A share mechanism nobody is told about is not
+ * one.
+ */
+describe("EvidencePanel: sharing the panel", () => {
+  const writeText = vi.fn();
+
+  beforeEach(() => {
+    writeText.mockReset().mockResolvedValue(undefined);
+    Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  });
+
+  it("copies the address of the panel the reader is looking at", async () => {
+    vi.mocked(evidenceApi.get).mockResolvedValue(response());
+    renderPanel(["/stats?evidence=ranking%3Aairline%3ALH"]);
+    await screen.findByRole("dialog");
+
+    await userEvent.click(screen.getByRole("button", { name: "evidence:panel.copyLink" }));
+
+    expect(writeText).toHaveBeenCalledWith(window.location.href);
+    expect(await screen.findByText("evidence:panel.copied")).toBeInTheDocument();
+  });
+
+  it("says so when the copy fails instead of claiming it worked", async () => {
+    writeText.mockRejectedValue(new Error("denied"));
+    // The legacy fallback in `lib/clipboard` also has to fail for the promise
+    // to reject -- jsdom has no `execCommand`, so it does.
+    vi.mocked(evidenceApi.get).mockResolvedValue(response());
+    renderPanel(["/stats?evidence=ranking%3Aairline%3ALH"]);
+    await screen.findByRole("dialog");
+
+    await userEvent.click(screen.getByRole("button", { name: "evidence:panel.copyLink" }));
+
+    expect(await screen.findByText("evidence:panel.copyFailed")).toBeInTheDocument();
+  });
+});

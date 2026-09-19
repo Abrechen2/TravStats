@@ -1,5 +1,6 @@
-import type { JSX } from "react";
+import { useState, type JSX } from "react";
 import Modal from "../Modal";
+import { copyToClipboard } from "../../lib/clipboard";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useSettingsStore } from "../../store/settingsStore";
 import type { EvidenceScope, UnattributedReason } from "../../shared/evidence";
@@ -51,8 +52,26 @@ export default function EvidencePanel({
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const { isOpen, close, response, entries, loading, error, hasMore, loadMore, renderedValue } =
     useEvidence(scope);
+  const [copyState, setCopyState] = useState<"idle" | "done" | "failed">("idle");
 
   if (!isOpen) return null;
+
+  /**
+   * The panel's open state lives in `?evidence=<kind>:<key>` precisely so a
+   * link to it can be shared ("A shared link opens the panel", useEvidence.ts)
+   * -- and nothing on screen said so, so nobody could use it (auditor 3,
+   * 2026-09-19). `location.href` rather than a rebuilt URL: what is copied is
+   * then exactly what the reader is looking at, scope parameters included.
+   *
+   * Through `lib/clipboard`, not `navigator.clipboard` directly: a typical
+   * TravStats instance is reached over plain HTTP on a LAN, where the modern
+   * API does not exist at all.
+   */
+  const copyLink = (): void => {
+    copyToClipboard(window.location.href)
+      .then(() => setCopyState("done"))
+      .catch(() => setCopyState("failed"));
+  };
 
   const measure = response?.measure ?? null;
   // The title follows the STATE, in the same three-way split the body below
@@ -145,6 +164,21 @@ export default function EvidencePanel({
         )
       }
     >
+      <div className="mb-3 flex justify-end">
+        <button
+          type="button"
+          onClick={copyLink}
+          className="rounded-sm px-2 py-1 text-xs font-medium"
+          style={{ color: "var(--accent)" }}
+        >
+          {copyState === "done"
+            ? t("evidence:panel.copied")
+            : copyState === "failed"
+              ? t("evidence:panel.copyFailed")
+              : t("evidence:panel.copyLink")}
+        </button>
+      </div>
+
       <div className="mb-3">
         {measure && (
           <>
