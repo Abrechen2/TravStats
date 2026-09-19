@@ -10,6 +10,11 @@ vi.mock("../../../hooks/useBetaFeatures", () => ({
   useBetaFeatures: () => ({ betaFeaturesEnabled: true, isFeatureVisible: () => true }),
 }));
 
+// Whether the instance has a text model. A box rather than a boolean: the
+// factory closes over it once, and these cases need to flip it.
+const llmState = vi.hoisted(() => ({ current: true as boolean | null }));
+vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => llmState.current }));
+
 const demoState = vi.hoisted(() => ({ shared: false }));
 vi.mock("../../../hooks/useIsDemoAccount", () => ({
   useIsDemoAccount: () => demoState.shared,
@@ -93,5 +98,63 @@ describe("TripSummaryPanel — the shared demo account is offered no generation"
     demoState.shared = false;
     render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
     expect(screen.getByText("trips:summary.generateButton")).toBeInTheDocument();
+  });
+});
+
+/**
+ * Auditor 3, 2026-09-19: the card offered "Zusammenfassung erstellen" on an
+ * instance with no model configured. The honest sentence existed already --
+ * as the 503 branch of `generate` -- and arrived as a toast AFTER the click
+ * instead of instead of the button.
+ */
+describe("TripSummaryPanel — an instance with no model", () => {
+  beforeEach(() => {
+    summarize.mockReset();
+    demoState.shared = false;
+  });
+
+  afterEach(() => {
+    llmState.current = true;
+  });
+
+  it("says what is missing and who fixes it, instead of offering the button", () => {
+    llmState.current = false;
+    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
+
+    expect(screen.getByTestId("trip-summary-unavailable").textContent).toContain(
+      "trips:summary.unavailable"
+    );
+    expect(screen.queryByText("trips:summary.generateButton")).not.toBeInTheDocument();
+  });
+
+  it("offers the button where a model IS configured — the case above is not vacuous", () => {
+    llmState.current = true;
+    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
+
+    expect(screen.getByText("trips:summary.generateButton")).toBeInTheDocument();
+    expect(screen.queryByTestId("trip-summary-unavailable")).not.toBeInTheDocument();
+  });
+
+  /**
+   * A cold load spends one request not knowing. Drawing "no AI service" for
+   * that moment on an instance that has one would tell the reader the
+   * opposite of the truth, so the unknown state keeps the button.
+   */
+  it("keeps the button while the answer is still outstanding", () => {
+    llmState.current = null;
+    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
+
+    expect(screen.getByText("trips:summary.generateButton")).toBeInTheDocument();
+    expect(screen.queryByTestId("trip-summary-unavailable")).not.toBeInTheDocument();
+  });
+
+  it("still says nothing at all to the shared demo, which is refused for another reason", () => {
+    llmState.current = false;
+    demoState.shared = true;
+    const { container } = render(
+      <TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />
+    );
+
+    expect(container).toBeEmptyDOMElement();
   });
 });

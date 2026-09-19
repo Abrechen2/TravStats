@@ -6,6 +6,11 @@ import type { Trip } from "../../../types";
 vi.mock("../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ isEnabled: () => true }),
 }));
+// TripOverview renders the summary card, which asks the instance whether it
+// has a text model at all (`GET /parser-capabilities`). The network guard
+// fails any test that lets that request out (forgejo#110).
+vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => true }));
+
 vi.mock("../../../hooks/useBetaFeatures", () => ({
   useBetaFeatures: () => ({ isFeatureVisible: () => false }),
 }));

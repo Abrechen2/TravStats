@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
+import { useHasLlm } from "../../hooks/useHasLlm";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Trip } from "../../types";
 
@@ -38,6 +39,19 @@ export function TripSummaryPanel({
 }): JSX.Element | null {
   const addToast = useToastStore((s) => s.addToast);
   const isSharedDemo = useIsDemoAccount();
+  /**
+   * Whether this instance HAS a text model, asked before the button is drawn
+   * (auditor 3, 2026-09-19). The card offered "Zusammenfassung erstellen" on
+   * an instance with none, and the only way to find that out was to press it
+   * and read a toast -- the honest sentence existed already, as the 503
+   * branch of `generate`, and arrived after the click instead of instead of
+   * it.
+   *
+   * `null` means "not answered yet" and deliberately keeps the button: a
+   * cold load spends one request there, and showing "no AI service" for that
+   * moment on an instance that has one is the worse of the two errors.
+   */
+  const hasLlm = useHasLlm();
   const [generating, setGenerating] = useState(false);
 
   /**
@@ -55,7 +69,7 @@ export function TripSummaryPanel({
    * is noise. A summary that already exists is still shown below — it is
    * content, not a control.
    */
-  const canGenerate = !isSharedDemo;
+  const canGenerate = !isSharedDemo && hasLlm !== false;
 
   const generate = async (): Promise<void> => {
     setGenerating(true);
@@ -75,6 +89,34 @@ export function TripSummaryPanel({
   };
 
   if (!trip.summary) {
+    /**
+     * An instance with no model configured gets the sentence, not silence and
+     * not a button: "KI-Dienst nicht erreichbar. Ollama richtet der Admin
+     * unter Admin → Parser ein." names the thing to do and who does it. The
+     * shared demo still gets nothing at all -- that refusal is about the
+     * account, it repeats on all fourteen demo trips, and it is noise.
+     */
+    if (hasLlm === false && !isSharedDemo) {
+      return (
+        <div
+          className="rounded-xl p-4"
+          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
+          data-testid="trip-summary-unavailable"
+        >
+          <div
+            className="text-[10px] uppercase tracking-wide flex items-center gap-1.5 mb-1"
+            style={{ color: "var(--text-muted)" }}
+          >
+            <span aria-hidden>✨</span>
+            {t("trips:summary.title")}
+          </div>
+          <div className="text-sm" style={{ color: "var(--text-muted)" }}>
+            {t("trips:summary.unavailable")}
+          </div>
+        </div>
+      );
+    }
+
     // Nothing to show and nothing to offer — render no card at all rather
     // than an empty placeholder.
     if (!canGenerate) return null;
