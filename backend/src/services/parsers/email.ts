@@ -16,13 +16,24 @@ import { applyUserTemplate } from "./userTemplates/engine";
 import { TemplateParser } from "./text/templateParser";
 import { getParserOrder } from "../parserSettings";
 
+/**
+ * The whole mail as one string — subject, body, HTML.
+ *
+ * Shared with the evidence gate on purpose: a candidate is judged against the
+ * same document the fields were backfilled from, so "the mail says nothing
+ * about a booking" means the same thing in both places.
+ */
+function combinedSource(subject: string, text: string, html?: string): string {
+  return `${subject}\n${text || ""}\n${html || ""}`;
+}
+
 async function applyEmailRegexPostProcessing(
   flights: ParsedBooking[],
   subject: string,
   text: string,
   html?: string
 ): Promise<ParsedBooking[]> {
-  const combinedText = `${subject}\n${text || ""}\n${html || ""}`;
+  const combinedText = combinedSource(subject, text, html);
   const regexData = extractFlightDataFromText(combinedText.toUpperCase());
 
   const withFields = flights.map((flight) => {
@@ -116,6 +127,11 @@ export async function parseEmail(
   const fromAddress = fromMatch ? fromMatch[1].trim() : "";
   const cleanedText = cleanEmailBody(text);
 
+  // The document every candidate is judged against, built from the CLEANED
+  // body: that is what the providers read, so the gate and the provider see
+  // the same mail. Built once here because all four exits below need it.
+  const evidenceSource = combinedSource(subject, cleanedText, html);
+
   if (shouldLog) {
     log.info({
       operation: "parse_email_start",
@@ -154,7 +170,11 @@ export async function parseEmail(
           "[Parser Factory] User-derived template matched (confidence >=80%)"
         );
         return {
-          flights: keepOnlyFlightsWithEvidence(userResults as ParsedBooking[], "regex"),
+          flights: keepOnlyFlightsWithEvidence(
+            userResults as ParsedBooking[],
+            "regex",
+            evidenceSource
+          ),
           provider: "regex" as const,
           fallbackUsed: false,
         };
@@ -196,7 +216,7 @@ export async function parseEmail(
             "[Parser Factory] Ollama succeeded — skipping templates"
           );
           return {
-            flights: keepOnlyFlightsWithEvidence(finalFlights, "ollama"),
+            flights: keepOnlyFlightsWithEvidence(finalFlights, "ollama", evidenceSource),
             provider: "ollama" as const,
             fallbackUsed: false,
           };
@@ -234,7 +254,7 @@ export async function parseEmail(
         "[Parser Factory] Template parser matched with sufficient confidence"
       );
       return {
-        flights: keepOnlyFlightsWithEvidence(templateResults, "regex"),
+        flights: keepOnlyFlightsWithEvidence(templateResults, "regex", evidenceSource),
         provider: "regex" as const,
         fallbackUsed: false,
       };
@@ -326,7 +346,7 @@ export async function parseEmail(
       }
 
       return {
-        flights: keepOnlyFlightsWithEvidence(finalFlights, finalProvider),
+        flights: keepOnlyFlightsWithEvidence(finalFlights, finalProvider, evidenceSource),
         provider: finalProvider,
         fallbackUsed: finalFallbackUsed,
       };
