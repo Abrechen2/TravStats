@@ -29,6 +29,7 @@ const cruiseStats: DomainStats = {
   totalDistanceKm: 28_400,
   countries: ["IT", "ES", "FR"],
   yearlyEvents: { 2023: 4, 2024: 8 },
+  dailyEvents: { "2023-05-02": 4, "2024-05-02": 8 },
   yearlyActiveDays: { 2023: 28, 2024: 56 },
   monthlyActiveDays: {},
   dailyActiveDays: {},
@@ -63,6 +64,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     expect(screen.getByText(/comingSoon|noDataYet/i)).toBeInTheDocument();
@@ -77,6 +79,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     expect(screen.getByText(/comingSoon|noDataYet/i)).toBeInTheDocument();
@@ -90,6 +93,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     // The suite's language is English (src/__tests__/setup.ts), so the
@@ -124,6 +128,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     expect(screen.getByText("486 stats:overviewCard.unit.km")).toBeInTheDocument();
@@ -139,6 +144,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={2005}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     expect(screen.getByRole("link")).toHaveAttribute("href", "/stats?tab=cruise&year=2005");
@@ -152,6 +158,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     expect(screen.getByText("AIDA")).toBeInTheDocument();
@@ -166,6 +173,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     // The fake `t` returns the key, so seeing the KEY is the proof the badge
@@ -186,6 +194,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={2024}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     expect(screen.getByText("stats:overviewCard.yearScopedCount")).toBeInTheDocument();
@@ -200,6 +209,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     expect(screen.getByText("stats:overviewCard.lifetimeCount")).toBeInTheDocument();
@@ -214,6 +224,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={2024}
         compareYear={2023}
         compareEnabled={true}
+        comparison={null}
       />
     );
     expect(screen.getByText(/yearFilter\.vs/)).toBeInTheDocument();
@@ -229,6 +240,7 @@ describe("DomainSummaryCard", () => {
           selectedYear={year}
           compareYear={null}
           compareEnabled={false}
+          comparison={null}
         />
       );
     };
@@ -276,6 +288,7 @@ describe("DomainSummaryCard", () => {
         selectedYear={null}
         compareYear={null}
         compareEnabled={false}
+        comparison={null}
       />
     );
     expect(screen.getByText("places:categories.viewpoint")).toBeInTheDocument();

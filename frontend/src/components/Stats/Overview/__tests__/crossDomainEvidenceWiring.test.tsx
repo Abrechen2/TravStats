@@ -69,6 +69,7 @@ const lifetime = (
     selectedYear={null}
     compareYear={null}
     compareEnabled={false}
+    comparisonKind="fullYear"
     achievements={null}
     foldedDomains={["flight", "cruise"]}
   />
@@ -101,6 +102,7 @@ describe("the cross-domain KPI tiles open the measures they render", () => {
           selectedYear={2024}
           compareYear={null}
           compareEnabled={false}
+          comparisonKind="fullYear"
           achievements={null}
           foldedDomains={["flight", "poi"]}
         />

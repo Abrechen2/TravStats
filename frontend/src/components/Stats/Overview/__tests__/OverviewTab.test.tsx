@@ -29,6 +29,11 @@ const render = (ui: ReactElement): ReturnType<typeof rtlRender> =>
 
 function flightStats(yearlyEvents: Record<number, number>): DomainStatsMap {
   const yearlyActiveDays = { ...yearlyEvents };
+  // One day per year carries that year's whole tally — enough for the
+  // comparison window to have something to cut, and it sums to yearlyEvents.
+  const dailyEvents = Object.fromEntries(
+    Object.entries(yearlyEvents).map(([year, count]) => [`${year}-06-15`, count])
+  );
   return {
     flight: {
       domain: "flight",
@@ -37,6 +42,7 @@ function flightStats(yearlyEvents: Record<number, number>): DomainStatsMap {
       totalEvents: Object.values(yearlyEvents).reduce((a, b) => a + b, 0),
       countries: ["DE"],
       yearlyEvents,
+      dailyEvents,
       yearlyActiveDays,
       monthlyActiveDays: {},
       dailyActiveDays: {},

@@ -13,6 +13,7 @@ import { visibleStatsTabs } from "../../../pages/statsTabAccess";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { StatsPeriod } from "../useStatsPeriod";
 import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
+import { comparisonWindow, type ComparisonKind } from "../../../lib/stats/comparisonWindow";
 import { aggregate, collectYears, foldedDomains } from "./aggregate";
 import CrossDomainKpis from "./CrossDomainKpis";
 import CrossDomainActivityChart from "./CrossDomainActivityChart";
@@ -64,13 +65,20 @@ export default function OverviewTab({
   // chip switched off hides a series, it does not take a year off the page.
   const years = useMemo(() => collectYears(stats, visible), [stats, visible]);
 
-  const agg = aggregate(stats, visible, selectedYear);
+  // A year that is still running is set against the SAME span of the compare
+  // year, not against twelve months of it — see `comparisonWindow`. The window
+  // is resolved once here and handed to both sides of the comparison and to
+  // every label that names it, so the number and the words can never describe
+  // different spans.
+  const comparison = selectedYear === null ? null : comparisonWindow(selectedYear);
+  const comparisonKind: ComparisonKind = comparison?.kind ?? "fullYear";
+  const agg = aggregate(stats, visible, selectedYear, comparison);
   // The evidence scope names the population the KPI numbers describe, which
   // is what the fold READ — not the chip state (see `foldedDomains`).
   const folded = useMemo(() => foldedDomains(stats, visible), [stats, visible]);
   const prevAgg =
     compareEnabled && selectedYear !== null && compareYear !== null
-      ? aggregate(stats, visible, compareYear)
+      ? aggregate(stats, visible, compareYear, comparison)
       : null;
   const heatmapYear = selectedYear ?? years[years.length - 1] ?? new Date().getFullYear();
 
@@ -88,7 +96,7 @@ export default function OverviewTab({
         <section>
           <SectionHeader
             label={t("stats:overview.kpisLabel")}
-            hint={kpiScopeHint(selectedYear, compareYear, compareEnabled, t)}
+            hint={kpiScopeHint(selectedYear, compareYear, compareEnabled, comparisonKind, t)}
           />
           <CrossDomainKpis
             agg={agg}
@@ -96,6 +104,7 @@ export default function OverviewTab({
             selectedYear={selectedYear}
             compareYear={compareYear}
             compareEnabled={compareEnabled}
+            comparisonKind={comparisonKind}
             achievements={achievements}
             foldedDomains={folded}
           />
@@ -150,6 +159,7 @@ export default function OverviewTab({
                 selectedYear={selectedYear}
                 compareYear={compareYear}
                 compareEnabled={compareEnabled}
+                comparison={comparison}
               />
             ))}
           </div>
@@ -190,10 +200,16 @@ function kpiScopeHint(
   selectedYear: number | null,
   compareYear: number | null,
   compareEnabled: boolean,
+  kind: ComparisonKind,
   t: (key: string, opts?: Record<string, unknown>) => string
 ): string {
   if (selectedYear === null) return t("stats:overview.scopeLifetime");
   if (compareEnabled && compareYear !== null)
-    return t("stats:overview.scopeCompare", { year: selectedYear, compare: compareYear });
+    return t(
+      kind === "samePeriod"
+        ? "stats:overview.scopeCompareSamePeriod"
+        : "stats:overview.scopeCompare",
+      { year: selectedYear, compare: compareYear }
+    );
   return t("stats:overview.scopeYear", { year: selectedYear });
 }

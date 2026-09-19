@@ -3,6 +3,7 @@ import { adaptFlight } from "../flightStatsAdapter";
 import { adaptCruise } from "../cruiseStatsAdapter";
 import { adaptLodging } from "../lodgingStatsAdapter";
 import { adaptPoi } from "../poiStatsAdapter";
+import type { DomainStats } from "../types";
 import type { Flight } from "../../../../types";
 import type { CruiseStatsResponse } from "../../../api/stats";
 import type { Cruise } from "../../../../types/cruise";
@@ -563,5 +564,73 @@ describe("summaryByYear", () => {
     expect(stats.summaryByYear[2024].headlineKpis[0].value).toBe(2);
     expect(stats.summaryByYear[2025].headlineKpis[0].value).toBe(5);
     expect(stats.summaryByYear[2025].headlineKpis[1].value).toBe(1);
+  });
+});
+
+// `eventsInWindow` (lib/stats/comparisonWindow.ts) adds `dailyEvents` up for a
+// year that is still running and reads `yearlyEvents` for one that is over.
+// The two therefore have to agree, or the same account would report different
+// totals on 31 December and on 1 January. Nothing else checks it, so this does.
+function expectDailyEventsSumToYearly(stats: DomainStats): void {
+  if (!stats.hasData) throw new Error("expected data");
+  const perYear: Record<number, number> = {};
+  for (const [dayKey, count] of Object.entries(stats.dailyEvents)) {
+    const year = Number(dayKey.slice(0, 4));
+    perYear[year] = (perYear[year] ?? 0) + count;
+  }
+  expect(perYear).toEqual(stats.yearlyEvents);
+}
+
+describe("dailyEvents agrees with yearlyEvents", () => {
+  it("holds for flights across two years", () => {
+    expectDailyEventsSumToYearly(
+      adaptFlight({
+        flights: [
+          makeFlight({ id: "a", departureTime: "2024-03-15T10:00:00Z" }),
+          makeFlight({ id: "b", departureTime: "2024-03-15T18:00:00Z" }),
+          makeFlight({ id: "c", departureTime: "2025-01-02T06:00:00Z" }),
+          // Undated: counted in neither index, exactly as before.
+          makeFlight({ id: "d", departureTime: null }),
+        ],
+        countries: ["DE"],
+      })
+    );
+  });
+
+  it("holds for a cruise that spans a year boundary", () => {
+    expectDailyEventsSumToYearly(
+      adaptCruise({
+        stats: { ...baseStats, cruisesCount: 2 },
+        cruises: [
+          makeCruise({ id: "c1", startDate: "2023-12-30", endDate: "2024-01-02" }),
+          makeCruise({ id: "c2", startDate: "2024-06-01", endDate: "2024-06-03" }),
+        ],
+      })
+    );
+  });
+
+  it("holds for stays, which count on check-in", () => {
+    expectDailyEventsSumToYearly(
+      adaptLodging({
+        stats: { ...baseLodgingStats, staysCount: 2 },
+        lodgings: [
+          makeLodging({
+            visited: true,
+            stays: [
+              makeLodgingStay({
+                id: "s1",
+                checkIn: "2024-06-01T00:00:00.000Z",
+                checkOut: "2024-06-03T00:00:00.000Z",
+              }),
+              makeLodgingStay({
+                id: "s2",
+                checkIn: "2024-12-31T00:00:00.000Z",
+                checkOut: "2025-01-04T00:00:00.000Z",
+              }),
+            ],
+          }),
+        ],
+      })
+    );
   });
 });

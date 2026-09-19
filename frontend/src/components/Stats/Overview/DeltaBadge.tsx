@@ -1,14 +1,26 @@
 // Small inline pill that shows year-over-year delta with an arrow + percent.
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
+import type { ComparisonKind } from "../../../lib/stats/comparisonWindow";
 import type { DeltaInfo } from "./aggregate";
 
 interface Props {
   d: DeltaInfo | null;
   compareYear: number | null;
+  /**
+   * Which span the number behind this pill was measured over. The label has to
+   * travel with it: a same-period delta under "ggü. 2025" would be a second,
+   * quieter lie than the unequal comparison it replaced — the reader would
+   * take it for the whole year and it is eight months.
+   */
+  kind?: ComparisonKind;
 }
 
-export default function DeltaBadge({ d, compareYear }: Props): JSX.Element | null {
+export default function DeltaBadge({
+  d,
+  compareYear,
+  kind = "fullYear",
+}: Props): JSX.Element | null {
   const { t } = useTranslation(["stats"]);
   if (!d || compareYear === null) return null;
   const arrow = d.sign === "up" ? "↑" : d.sign === "down" ? "↓" : "→";
@@ -35,7 +47,9 @@ export default function DeltaBadge({ d, compareYear }: Props): JSX.Element | nul
         </span>
       )}
       <span style={{ color: "var(--text-muted)", fontWeight: 400 }}>
-        {t("stats:yearFilter.vs", { year: compareYear })}
+        {t(kind === "samePeriod" ? "stats:yearFilter.vsSamePeriod" : "stats:yearFilter.vs", {
+          year: compareYear,
+        })}
       </span>
     </span>
   );

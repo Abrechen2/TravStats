@@ -62,7 +62,11 @@ describe("LodgingStatsSection under the page's period", () => {
     render(
       <LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
     );
-    expect(await screen.findByText("stats:yearFilter.vs")).toBeInTheDocument();
+    // Either key: the strip says "vs 2025" for a year that is over and
+    // "vs. the whole of 2025" while 2026 is still running (see
+    // `lib/stats/comparisonWindow.ts`). What this test is about is that it
+    // compares at all, so it must not pin the wall clock.
+    expect(await screen.findByText(/^stats:yearFilter\.vs/)).toBeInTheDocument();
     expect(getLodgingStats).toHaveBeenCalledWith({ year: 2025 });
     expect(screen.getByText("stats:period.emptyYear")).toBeInTheDocument();
   });

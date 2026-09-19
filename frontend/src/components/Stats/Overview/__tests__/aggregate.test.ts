@@ -19,6 +19,9 @@ const flightStats = {
   countries: ["DE", "US", "JP"],
   countriesByYear: { 2023: ["DE", "JP"], 2024: ["DE", "US"] },
   yearlyEvents: { 2023: 4, 2024: 6 },
+  // The same tally by day — it sums per year to `yearlyEvents`, which is
+  // the contract `eventsInWindow` relies on.
+  dailyEvents: { "2023-06-01": 4, "2024-03-15": 6 },
   yearlyActiveDays: { 2023: 4, 2024: 6 },
   monthlyActiveDays: { "2023-06": 2, "2024-03": 3 },
   dailyActiveDays: { "2023-06-01": 1, "2024-03-15": 1 },
@@ -38,6 +41,7 @@ const cruiseStats = {
   countries: ["IT", "ES", "DE"],
   countriesByYear: { 2024: ["IT", "DE"], 2025: ["ES"] },
   yearlyEvents: { 2024: 2, 2025: 1 },
+  dailyEvents: { "2024-06-10": 2, "2025-03-04": 1 },
   yearlyActiveDays: { 2024: 14, 2025: 7 },
   monthlyActiveDays: { "2024-06": 14, "2025-03": 7 },
   dailyActiveDays: { "2024-06-10": 1, "2024-06-11": 1 },

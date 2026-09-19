@@ -27,6 +27,7 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
   const yearlyEvents: Record<number, number> = {};
   const yearlyActiveDays: Record<number, number> = {};
   const monthlyActiveDays: Record<string, number> = {};
+  const dailyEvents: Record<string, number> = {};
   const dailyActiveDays: Record<string, number> = {};
   const weekdayEvents: Record<number, number> = {};
   // Same airline = same code (forgejo#81) — the rule the server's ranking uses.
@@ -53,6 +54,8 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
         const ymKey = clock.date.slice(0, 7);
         const ymdKey = clock.date;
         yearlyEvents[year] = (yearlyEvents[year] ?? 0) + 1;
+        // The same tally, keyed by the day, so a comparison can end on one.
+        dailyEvents[ymdKey] = (dailyEvents[ymdKey] ?? 0) + 1;
         weekdayEvents[clock.weekday] = (weekdayEvents[clock.weekday] ?? 0) + 1;
         // Active-day buckets are boolean per (domain, day); multiple
         // flights on the same day still equal 1 active day.
@@ -116,6 +119,7 @@ export function adaptFlight(input: FlightAdapterInput): DomainStats {
     countriesByYear,
     summaryByYear,
     yearlyEvents,
+    dailyEvents,
     yearlyActiveDays,
     monthlyActiveDays,
     dailyActiveDays,

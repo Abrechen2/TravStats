@@ -9,6 +9,7 @@ import { withYear } from "../../../lib/stats/periodUrl";
 import { STATS_TAB_ARRIVAL } from "../../../lib/stats/statsTabArrival";
 import { DOMAINS, type DomainKey } from "../../../shared/domains";
 import type { DomainKpi, DomainStats } from "../../../lib/stats/domain-stats";
+import { eventsInWindow, type ComparisonWindow } from "../../../lib/stats/comparisonWindow";
 import { useTranslation } from "../../../hooks/useTranslation";
 import DeltaBadge from "./DeltaBadge";
 import { delta, isWithData } from "./aggregate";
@@ -22,6 +23,13 @@ interface Props {
   selectedYear: number | null;
   compareYear: number | null;
   compareEnabled: boolean;
+  /**
+   * The comparison window from the tab. This card's count and the KPI strip's
+   * are the same events read two ways; if only one of them were cut, the card
+   * would contradict the strip above it for every reader whose year is still
+   * running.
+   */
+  comparison: ComparisonWindow | null;
 }
 
 export default function DomainSummaryCard({
@@ -30,6 +38,7 @@ export default function DomainSummaryCard({
   selectedYear,
   compareYear,
   compareEnabled,
+  comparison,
 }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["stats", "common", "places"]);
   // The reader's language decides the thousands separator, not the machine's:
@@ -85,9 +94,10 @@ export default function DomainSummaryCard({
     );
   }
 
-  const yearScopedCount = selectedYear !== null ? (stats.yearlyEvents[selectedYear] ?? 0) : null;
+  const yearScopedCount =
+    selectedYear !== null ? eventsInWindow(stats, selectedYear, comparison) : null;
   const compareCount =
-    compareEnabled && compareYear !== null ? (stats.yearlyEvents[compareYear] ?? 0) : null;
+    compareEnabled && compareYear !== null ? eventsInWindow(stats, compareYear, comparison) : null;
   const cardDelta =
     yearScopedCount !== null && compareCount !== null ? delta(yearScopedCount, compareCount) : null;
 
@@ -133,7 +143,9 @@ export default function DomainSummaryCard({
                   })
                 : t("stats:overviewCard.lifetimeCount", { count: stats.totalEvents })}
             </div>
-            {cardDelta && <DeltaBadge d={cardDelta} compareYear={compareYear} />}
+            {cardDelta && (
+              <DeltaBadge d={cardDelta} compareYear={compareYear} kind={comparison?.kind} />
+            )}
           </div>
         </div>
         {/* A router link carrying the year: a plain href reloaded the page and

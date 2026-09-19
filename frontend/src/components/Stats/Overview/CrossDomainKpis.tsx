@@ -6,6 +6,7 @@ import type { AchievementSummary } from "../../../types";
 import { DOMAINS, type DomainKey } from "../../../shared/domains";
 import type { EvidenceDomain } from "../../../shared/evidence";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
+import type { ComparisonKind } from "../../../lib/stats/comparisonWindow";
 import { useTranslation } from "../../../hooks/useTranslation";
 import DeltaBadge from "./DeltaBadge";
 import EvidenceTrigger from "../EvidenceTrigger";
@@ -17,6 +18,8 @@ interface Props {
   selectedYear: number | null;
   compareYear: number | null;
   compareEnabled: boolean;
+  /** Which span the deltas measure — see `lib/stats/comparisonWindow.ts`. */
+  comparisonKind: ComparisonKind;
   achievements: AchievementSummary | null;
   /** The domains the fold actually read — `foldedDomains`, never the raw chip state. */
   foldedDomains: DomainKey[];
@@ -40,6 +43,7 @@ export default function CrossDomainKpis({
   selectedYear,
   compareYear,
   compareEnabled,
+  comparisonKind,
   achievements,
   foldedDomains,
 }: Props): JSX.Element {
@@ -54,7 +58,11 @@ export default function CrossDomainKpis({
     .join(" · ");
 
   // The population these three numbers were measured over: the period the bar
-  // is showing AND the chips that are on. These are the only measures in the
+  // is showing AND the chips that are on. It is deliberately NOT narrowed when
+  // the delta is a same-period one: the panel explains the current year's whole
+  // population, which is what the tile's own figure counts. The delta is a
+  // separate, labelled comparison beside it — narrowing the scope to match the
+  // delta would make the panel answer a question the big number never asked. These are the only measures in the
   // registry whose scope carries `domains`, which is why the tile has to send
   // it — an all-time, all-domain default would answer a different question.
   const scope: EvidenceScopeParams = {
@@ -81,7 +89,15 @@ export default function CrossDomainKpis({
     {
       label: t("stats:overviewKpis.countries"),
       value: agg.countriesCount,
-      delta: showDelta && prevAgg ? delta(agg.countriesCount, prevAgg.countriesCount) : null,
+      // No country delta while the window is a same-period one. The country
+      // index is keyed by YEAR and three of the four domains get it from the
+      // server, so it cannot be cut at today; the only delta available here is
+      // eight months against twelve, which is the comparison this window
+      // exists to stop publishing. A value that cannot be derived is absent.
+      delta:
+        showDelta && prevAgg && comparisonKind === "fullYear"
+          ? delta(agg.countriesCount, prevAgg.countriesCount)
+          : null,
       evidenceKey: "crossDomainCountryCount",
     },
     {
@@ -128,7 +144,7 @@ export default function CrossDomainKpis({
               {typeof c.value === "number" ? c.value.toLocaleString(locale) : c.value}
             </p>
             <h3 className="t-caption">{c.label}</h3>
-            {c.delta && <DeltaBadge d={c.delta} compareYear={compareYear} />}
+            {c.delta && <DeltaBadge d={c.delta} compareYear={compareYear} kind={comparisonKind} />}
             {c.hint && <p className="t-caption">{c.hint}</p>}
           </>
         );

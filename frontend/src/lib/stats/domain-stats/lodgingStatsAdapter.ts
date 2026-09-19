@@ -8,6 +8,7 @@
 // response doesn't carry day-level granularity).
 import type { Lodging, LodgingStats } from "../../../types/lodging";
 import { classifyLodging, classifyStay } from "../../../shared/lodgingCounting";
+import { crossDomainDayKey } from "../../../shared/crossDomainCounting";
 import type { DomainStats, YearSummary } from "./types";
 import { bucket, topFive } from "./yearSummary";
 import { toYearKeyed } from "./yearKeyed";
@@ -27,6 +28,7 @@ export function adaptLodging(input: LodgingAdapterInput): DomainStats {
   const yearlyEvents: Record<number, number> = {};
   const yearlyActiveDays: Record<number, number> = {};
   const monthlyActiveDays: Record<string, number> = {};
+  const dailyEvents: Record<string, number> = {};
   const dailyActiveDays: Record<string, number> = {};
   const weekdayEvents: Record<number, number> = {};
   const chainCounts = new Map<string, number>();
@@ -63,6 +65,13 @@ export function adaptLodging(input: LodgingAdapterInput): DomainStats {
 
       const startYear = checkIn.getUTCFullYear();
       yearlyEvents[startYear] = (yearlyEvents[startYear] ?? 0) + 1;
+      // Keyed on the check-in day — the same day the year tally counts it in.
+      const checkInKey = crossDomainDayKey(
+        startYear,
+        checkIn.getUTCMonth() + 1,
+        checkIn.getUTCDate()
+      );
+      dailyEvents[checkInKey] = (dailyEvents[checkInKey] ?? 0) + 1;
       weekdayEvents[checkIn.getUTCDay()] = (weekdayEvents[checkIn.getUTCDay()] ?? 0) + 1;
 
       if (lodging.chain?.name) {
@@ -119,6 +128,7 @@ export function adaptLodging(input: LodgingAdapterInput): DomainStats {
     countriesByYear: toYearKeyed(stats.countriesByYear),
     summaryByYear,
     yearlyEvents,
+    dailyEvents,
     yearlyActiveDays,
     monthlyActiveDays,
     dailyActiveDays,

@@ -5,6 +5,7 @@ import type { DomainStats, YearSummary } from "./types";
 import { bucket, topFive } from "./yearSummary";
 import { toYearKeyed } from "./yearKeyed";
 import { isCountableCruise } from "../../../shared/cruiseCounting";
+import { crossDomainDayKey } from "../../../shared/crossDomainCounting";
 
 export interface CruiseAdapterInput {
   stats: CruiseStatsResponse;
@@ -47,6 +48,7 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
   const yearlyEvents: Record<number, number> = {};
   const yearlyActiveDays: Record<number, number> = {};
   const monthlyActiveDays: Record<string, number> = {};
+  const dailyEvents: Record<string, number> = {};
   const dailyActiveDays: Record<string, number> = {};
   const weekdayEvents: Record<number, number> = {};
   // Distance comes only from the lifetime rollup, so a year shows what the
@@ -63,6 +65,10 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
 
     const startYear = start.getFullYear();
     yearlyEvents[startYear] = (yearlyEvents[startYear] ?? 0) + 1;
+    // Keyed on the START day, exactly as the year tally is: a cruise is one
+    // event in the year it began, so it is one event on the day it began.
+    const startKey = crossDomainDayKey(startYear, start.getMonth() + 1, start.getDate());
+    dailyEvents[startKey] = (dailyEvents[startKey] ?? 0) + 1;
     const y = bucket(perYear, startYear, () => ({
       nights: 0,
       seaDays: 0,
@@ -138,6 +144,7 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
     countriesByYear: toYearKeyed(stats.countriesByYear),
     summaryByYear,
     yearlyEvents,
+    dailyEvents,
     yearlyActiveDays,
     monthlyActiveDays,
     dailyActiveDays,

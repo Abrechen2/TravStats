@@ -248,12 +248,16 @@
     "scopeHint": "unabhängig vom Jahres-Filter oben",
     "flightTimeEstimatedNote": "davon {{hours}} h geschätzt — {{count}} Flüge ohne Uhrzeiten",
     "noPricesRecorded_one": "Kein Preis erfasst — {{count}} Flug ohne Preis",
-    "noPricesRecorded_other": "Kein Preis erfasst — {{count}} Flüge ohne Preis"
+    "noPricesRecorded_other": "Kein Preis erfasst — {{count}} Flüge ohne Preis",
+    "scopeCompareSamePeriod": "Jahr {{year}} vs. gleicher Zeitraum {{compare}}"
   },
   "noStatsAvailable": "Keine Statistiken verfügbar",
   "yearFilter": {
     "vs": "ggü. {{year}}",
-    "scopeLabel": "── Jahr {{year}} ──"
+    "scopeLabel": "── Jahr {{year}} ──",
+    "vsSamePeriod": "ggü. gleichem Zeitraum {{year}}",
+    "vsFullYear": "ggü. ganzem Jahr {{year}}",
+    "partialYearNote": "{{year}} läuft noch — hier steht ein angefangenes Jahr gegen ein ganzes"
   },
   "byStatus": {
     "title": "Nach Status"

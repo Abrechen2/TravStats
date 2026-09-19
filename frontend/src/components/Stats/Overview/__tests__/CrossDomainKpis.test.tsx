@@ -28,6 +28,7 @@ describe("CrossDomainKpis", () => {
           selectedYear={null}
           compareYear={null}
           compareEnabled={false}
+          comparisonKind="fullYear"
           achievements={null}
           foldedDomains={["flight", "cruise"]}
         />
@@ -47,6 +48,7 @@ describe("CrossDomainKpis", () => {
           selectedYear={null}
           compareYear={null}
           compareEnabled={false}
+          comparisonKind="fullYear"
           achievements={null}
           foldedDomains={["flight", "cruise"]}
         />
@@ -65,6 +67,7 @@ describe("CrossDomainKpis", () => {
           selectedYear={2024}
           compareYear={2023}
           compareEnabled={false}
+          comparisonKind="fullYear"
           achievements={null}
           foldedDomains={["flight", "cruise"]}
         />
@@ -82,6 +85,7 @@ describe("CrossDomainKpis", () => {
           selectedYear={2024}
           compareYear={2023}
           compareEnabled={true}
+          comparisonKind="fullYear"
           achievements={null}
           foldedDomains={["flight", "cruise"]}
         />
@@ -89,6 +93,64 @@ describe("CrossDomainKpis", () => {
     );
     const ggBadges = screen.getAllByText(/yearFilter\.vs/);
     expect(ggBadges.length).toBeGreaterThan(0);
+  });
+
+  // A same-period delta under "ggü. 2023" would be a second, quieter lie than
+  // the unequal comparison it replaces: the reader would take eight months for
+  // a year. The label travels with the number.
+  it("names the same period in the label when the year is still running", () => {
+    render(
+      <MemoryRouter>
+        <CrossDomainKpis
+          agg={baseAgg}
+          prevAgg={prevAgg}
+          selectedYear={2024}
+          compareYear={2023}
+          compareEnabled={true}
+          comparisonKind="samePeriod"
+          achievements={null}
+          foldedDomains={["flight", "cruise"]}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getAllByText(/yearFilter\.vsSamePeriod/).length).toBe(2);
+    expect(screen.queryByText(/yearFilter\.vs_/)).not.toBeInTheDocument();
+  });
+
+  // The country index is year-keyed and mostly server-sent, so there is no day
+  // to cut it on. Withholding the delta is the rule this codebase already has:
+  // a value that cannot be derived is absent, never a wrong one.
+  it("withholds the country delta under a same-period window", () => {
+    const { rerender } = render(
+      <MemoryRouter>
+        <CrossDomainKpis
+          agg={baseAgg}
+          prevAgg={prevAgg}
+          selectedYear={2024}
+          compareYear={2023}
+          compareEnabled={true}
+          comparisonKind="fullYear"
+          achievements={null}
+          foldedDomains={["flight", "cruise"]}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getAllByText(/yearFilter\.vs/).length).toBe(3);
+    rerender(
+      <MemoryRouter>
+        <CrossDomainKpis
+          agg={baseAgg}
+          prevAgg={prevAgg}
+          selectedYear={2024}
+          compareYear={2023}
+          compareEnabled={true}
+          comparisonKind="samePeriod"
+          achievements={null}
+          foldedDomains={["flight", "cruise"]}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.getAllByText(/yearFilter\.vs/).length).toBe(2);
   });
 
   it("renders achievements card with unlocked count when summary present", () => {
@@ -100,6 +162,7 @@ describe("CrossDomainKpis", () => {
           selectedYear={null}
           compareYear={null}
           compareEnabled={false}
+          comparisonKind="fullYear"
           achievements={{
             totalAchievements: 100,
             unlockedAchievements: 73,
@@ -122,6 +185,7 @@ describe("CrossDomainKpis", () => {
           selectedYear={null}
           compareYear={null}
           compareEnabled={false}
+          comparisonKind="fullYear"
           achievements={null}
           foldedDomains={["flight", "cruise"]}
         />

@@ -40,6 +40,7 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
   const yearlyEvents: Record<number, number> = {};
   const yearlyActiveDays: Record<number, number> = {};
   const monthlyActiveDays: Record<string, number> = {};
+  const dailyEvents: Record<string, number> = {};
   const dailyActiveDays: Record<string, number> = {};
   const weekdayEvents: Record<number, number> = {};
   const countriesByYear: Record<number, Set<string>> = {};
@@ -69,6 +70,7 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
       const ymd = `${year}-${month}-${day}`;
 
       yearlyEvents[year] = (yearlyEvents[year] ?? 0) + 1;
+      dailyEvents[ymd] = (dailyEvents[ymd] ?? 0) + 1;
       // A place visited twice in a year is one place of that year.
       bucket(placesByYear, year, () => new Map<string, string>()).set(place.id, place.category);
       weekdayEvents[at.getUTCDay()] = (weekdayEvents[at.getUTCDay()] ?? 0) + 1;
@@ -129,6 +131,7 @@ export function adaptPoi(input?: PoiAdapterInput): DomainStats {
     ),
     summaryByYear,
     yearlyEvents,
+    dailyEvents,
     yearlyActiveDays,
     monthlyActiveDays,
     dailyActiveDays,

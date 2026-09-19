@@ -90,6 +90,19 @@ export type DomainStats =
       /** Card figures per year — see `YearSummary`. */
       summaryByYear: Record<number, YearSummary>;
       yearlyEvents: Record<number, number>;
+      /**
+       * `YYYY-MM-DD` -> how many events this domain counts on that day, keyed
+       * on the day the event is COUNTED in (its start), so it sums per year to
+       * exactly `yearlyEvents`. It exists so the overview can compare a year
+       * that is still running against the same span of another one rather than
+       * against twelve months of it — see `lib/stats/comparisonWindow.ts`.
+       *
+       * Required, not optional: a domain that could not name its days would
+       * hand the comparison a full year while its neighbours handed a partial
+       * one, which is the defect this index was added to end. An undated event
+       * appears here as little as it appears in `yearlyEvents`.
+       */
+      dailyEvents: Record<string, number>;
       yearlyActiveDays: Record<number, number>;
       monthlyActiveDays: Record<string, number>;
       /** YYYY-MM-DD -> 1 when this domain had any activity on that

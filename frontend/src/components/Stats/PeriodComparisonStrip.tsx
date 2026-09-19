@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { comparisonWindow } from "../../lib/stats/comparisonWindow";
 import TrendDelta from "./TrendDelta";
 
 export interface ComparisonRow {
@@ -27,10 +28,19 @@ interface Props {
  *
  * Only counts go in. A money figure needs to say which currency and how much
  * went unpriced, and a percentage of a currency mix is not a trend.
+ *
+ * These rows are per-year totals the SERVER computed, so — unlike the Gesamt
+ * tab, which folds day-keyed adapters and can cut them at today — this strip
+ * cannot narrow a still-running year to the same span of the compare year.
+ * What it can do is stop presenting the comparison as like-for-like: it asks
+ * the same `comparisonWindow` whether the year is over and says "vs. the whole
+ * of 2025" rather than "vs 2025" when it is not, with the reason underneath.
+ * Narrowing the numbers themselves needs the endpoints to accept a date range.
  */
 export default function PeriodComparisonStrip({ year, compareYear, rows }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["stats"]);
   const grouped = new Intl.NumberFormat(i18n.language.startsWith("de") ? "de-DE" : "en-GB");
+  const partialYear = comparisonWindow(year).kind === "samePeriod";
   return (
     <section aria-label={t("stats:yearFilter.scopeLabel", { year })}>
       <div
@@ -44,9 +54,16 @@ export default function PeriodComparisonStrip({ year, compareYear, rows }: Props
           {t("stats:yearFilter.scopeLabel", { year })}
         </span>
         <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {t("stats:yearFilter.vs", { year: compareYear })}
+          {t(partialYear ? "stats:yearFilter.vsFullYear" : "stats:yearFilter.vs", {
+            year: compareYear,
+          })}
         </span>
       </div>
+      {partialYear && (
+        <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
+          {t("stats:yearFilter.partialYearNote", { year })}
+        </p>
+      )}
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {rows.map((row) => {
           const format = row.format ?? ((n: number): string => grouped.format(n));
