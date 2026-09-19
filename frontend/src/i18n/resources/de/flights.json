@@ -8,9 +8,9 @@
     "searching": "Suche...",
     "departure": "Abflug",
     "arrival": "Ankunft",
-    "from": "Von *",
-    "to": "Nach *",
-    "departureDate": "Abflugdatum *",
+    "from": "Von",
+    "to": "Nach",
+    "departureDate": "Abflugdatum",
     "departureTime": "Abflugzeit",
     "arrivalDate": "Ankunftsdatum",
     "arrivalTime": "Ankunftszeit",
@@ -151,8 +151,8 @@
     "tagsHint": "Durch Kommas getrennte Tags zum Filtern.",
     "loadingScanner": "Scanner wird geladen...",
     "noFlightsInEmail": "Keine Flüge in der E-Mail gefunden.",
-    "departureAirportCode": "Abflughafen (IATA) *",
-    "arrivalAirportCode": "Ankunftsflughafen (IATA) *",
+    "departureAirportCode": "Abflughafen (IATA)",
+    "arrivalAirportCode": "Ankunftsflughafen (IATA)",
     "duplicate": {
       "title": "Flug existiert bereits",
       "message": "Flug {{flightNumber}} ({{route}}) existiert für diesen Tag bereits.",
@@ -318,9 +318,7 @@
     "tripNone": "Keiner Reise zugeordnet",
     "tripHint": "Verlinkt diesen Flug mit einer manuell angelegten Reise. Reisen werden im Flüge-Tab erstellt.",
     "tripAssignedToast": "Reise-Zuordnung aktualisiert",
-    "tripAssignFailed": "Reise-Zuordnung fehlgeschlagen — andere Änderungen wurden gespeichert",
-    "routeFrom": "Von",
-    "routeTo": "Nach"
+    "tripAssignFailed": "Reise-Zuordnung fehlgeschlagen — andere Änderungen wurden gespeichert"
   },
   "quickActions": {
     "showOnMap": "Auf Karte zeigen",

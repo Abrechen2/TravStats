@@ -79,7 +79,6 @@
     "components/Admin/ParserSettings.tsx",
     "components/Admin/SmtpManager.tsx",
     "components/Admin/UserManagement.tsx",
-    "components/AirportAutocomplete.tsx",
     "components/AirportSeedingBanner.tsx",
     "components/BoardingPassScanner.tsx",
     "components/ChangeDiffView.tsx",

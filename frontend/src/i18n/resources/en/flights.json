@@ -8,9 +8,9 @@
     "searching": "Searching...",
     "departure": "Departure",
     "arrival": "Arrival",
-    "from": "From *",
-    "to": "To *",
-    "departureDate": "Departure Date *",
+    "from": "From",
+    "to": "To",
+    "departureDate": "Departure Date",
     "departureTime": "Departure Time",
     "arrivalDate": "Arrival Date",
     "arrivalTime": "Arrival Time",
@@ -151,8 +151,8 @@
     "tagsHint": "Comma-separated tags for filtering.",
     "loadingScanner": "Loading scanner...",
     "noFlightsInEmail": "No flights found in the email.",
-    "departureAirportCode": "Departure airport (IATA) *",
-    "arrivalAirportCode": "Arrival airport (IATA) *",
+    "departureAirportCode": "Departure airport (IATA)",
+    "arrivalAirportCode": "Arrival airport (IATA)",
     "duplicate": {
       "title": "Flight Already Exists",
       "message": "Flight {{flightNumber}} ({{route}}) already exists for this day.",
@@ -318,9 +318,7 @@
     "tripNone": "Not assigned to a trip",
     "tripHint": "Links this flight to a manually-created trip. Trips are created in the Flights tab.",
     "tripAssignedToast": "Trip assignment updated",
-    "tripAssignFailed": "Trip assignment failed — other changes were saved",
-    "routeFrom": "From",
-    "routeTo": "To"
+    "tripAssignFailed": "Trip assignment failed — other changes were saved"
   },
   "quickActions": {
     "showOnMap": "Show on map",
