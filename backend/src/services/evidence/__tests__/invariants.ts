@@ -119,25 +119,31 @@ export function assertSumInvariant(res: EvidenceResponse, round: (n: number) => 
   // contributions of 0.6 still fail a `value` of 2 under `Math.round`,
   // because 2 rounds to 2 and 1.2 rounds to 1.
   //
-  // The unattributed term is counted, exactly as `assertDistinctInvariant`
-  // already counts it. It was absent here until task 7b-2, and the
-  // asymmetry made `notPerEntry` — "derived across the whole set, no
-  // per-row decomposition", which is a SUM's failure mode and no
-  // `distinct` measure's — unreachable for every `sum` measure in the
-  // registry: any resolver naming it had to report `value: null` and claim
-  // a derivable figure could not be derived. `travelAccountHomeNights` is
-  // that case: the nights away are subtracted from the year and the
-  // remainder was slept at home, with no row that could ever be listed.
-  // This admits a resolver that dumps its whole total into `unattributed`,
-  // which is a real loss — the cross-check against the surface's own
-  // endpoint is what catches that, as it is for every other population
-  // question (see the note above).
-  const unattributed = sum(res.unattributed.map((u) => u.count));
+  // ONE unattributed reason closes the gap, and it is `notPerEntry`. That
+  // reason alone declares "the total is real and no entry owns any of it" —
+  // "derived across the whole set, no per-row decomposition", which is a
+  // SUM's failure mode and no `distinct` measure's. Until task 7b-2 there
+  // was no term here at all, which made it unreachable for every `sum` key
+  // in the registry: a resolver naming it had to report `value: null` and so
+  // claim a derivable figure could not be derived.
+  // `travelAccountHomeNights` is that case — the nights away are subtracted
+  // from the year and the remainder was slept at home, with no row that
+  // could ever be listed.
+  //
+  // The other reasons are counts of ROWS, not of units of the measure:
+  // `entryRemoved` says a row is gone, `locationHistoryOnly` that a country
+  // was proved by a track. Letting either close an arithmetic gap would let
+  // "three flights were deleted" pay for three missing kilometres, which is
+  // a category error and would hide a genuinely wrong total behind a true
+  // sentence. They stay REPORTED and uncounted, exactly as they are today.
+  const unattributed = sum(
+    res.unattributed.filter((u) => u.reason === "notPerEntry").map((u) => u.count)
+  );
   const total = round(returnedContribution + (res.omitted.contribution ?? 0) + unattributed);
   const expected = round(res.measure.value);
   if (total !== expected) {
     throw new Error(
-      `sum invariant failed: round(${returnedContribution} returned + ${res.omitted.contribution ?? 0} omitted + ${unattributed} unattributed) = ${total}, expected round(${res.measure.value}) = ${expected}`
+      `sum invariant failed: round(${returnedContribution} returned + ${res.omitted.contribution ?? 0} omitted + ${unattributed} notPerEntry) = ${total}, expected round(${res.measure.value}) = ${expected}`
     );
   }
 }

@@ -136,6 +136,36 @@ describe("assertSumInvariant", () => {
     expect(() => assertSumInvariant(res, round)).not.toThrow();
   });
 
+  /**
+   * `notPerEntry` is the ONLY reason that may close the gap. The other two
+   * count ROWS — `entryRemoved` says a row is gone, `locationHistoryOnly`
+   * that a country was proved by a track — and neither is a unit of the
+   * measure. Letting them settle the arithmetic would let "three flights
+   * were deleted" pay for three missing kilometres: a wrong total hidden
+   * behind a true sentence.
+   */
+  it("refuses to let a row count close the gap, however true the reason is", () => {
+    const res = response({
+      measure: measure({ aggregation: "sum", value: 8 }),
+      entries: [entry({ id: "a", contribution: 5 })],
+      returned: 1,
+      omitted: { count: 0, contribution: 0 },
+      unattributed: [{ count: 3, reason: "entryRemoved" }],
+    });
+    expect(() => assertSumInvariant(res, round)).toThrow(/sum invariant failed/);
+  });
+
+  it("accepts the same gap when the reason is notPerEntry", () => {
+    const res = response({
+      measure: measure({ aggregation: "sum", value: 8 }),
+      entries: [entry({ id: "a", contribution: 5 })],
+      returned: 1,
+      omitted: { count: 0, contribution: 0 },
+      unattributed: [{ count: 3, reason: "notPerEntry" }],
+    });
+    expect(() => assertSumInvariant(res, round)).not.toThrow();
+  });
+
   it("still fails when the unattributed bucket does not close the gap", () => {
     const res = response({
       measure: measure({ aggregation: "sum", value: 310 }),

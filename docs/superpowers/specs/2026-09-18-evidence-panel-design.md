@@ -86,7 +86,7 @@ about it, depends on how the number was aggregated:
 
 | Aggregation | Example | What an entry is | Invariant |
 |---|---|---|---|
-| `sum` | total distance, nights | a row with a RAW, unrounded contribution | `round(Σ returned + Σ omitted + Σ unattributed) === value`, at the same rounding step the surface uses |
+| `sum` | total distance, nights | a row with a RAW, unrounded contribution | `round(Σ returned + Σ omitted + Σ unattributed[notPerEntry]) === value`, at the same rounding step the surface uses |
 | `distinct` | countries, unique airports, active days | a row plus the **unit it witnesses** (`credits: string[]`) | `|distinct(credits ∪ omitted credits)| + unattributedUnits === value` |
 | `extremum` | longest flight, longest layover | the **witnesses** — one row, or two for a layover | recomputing the measure over the witnesses reproduces `value` |
 | `ratio` | an airline's share | the rows of the numerator, with the denominator stated | `numerator / denominator === value`, both returned |
@@ -97,15 +97,24 @@ about it, depends on how the number was aggregated:
 common shape on these two pages. A bare scalar per row cannot say that five
 flights witness one country; `credits` can.
 
-The `sum` row's `Σ unattributed` term was added on 2026-09-19 (task 7b-2).
-Without it the two rows disagreed for no stated reason, and the consequence
-was concrete: `notPerEntry` — "derived across the set, no per-row
+The `sum` row's term for `unattributed[notPerEntry]` was added on 2026-09-19
+(task 7b-2). Without it the two rows disagreed for no stated reason, and the
+consequence was concrete: `notPerEntry` — "derived across the set, no per-row
 decomposition" — describes a `sum` and no `distinct` measure in the registry,
 yet only `distinct` could report it. `travelAccountHomeNights` is the case
 that found it: the nights away are subtracted from the year and the remainder
 was slept at home, so the figure is derived and no row will ever name it. The
 alternative was `value: null`, which would have claimed a derivable number
 could not be derived.
+
+**`notPerEntry` ALONE closes a `sum`'s gap** — the term is narrow on purpose,
+and was narrowed in review after landing wide. The other two reasons count
+ROWS rather than units of the measure: `entryRemoved` says a row is gone,
+`locationHistoryOnly` that a country was proved by a track. Letting either
+settle the arithmetic would let "three flights were deleted" pay for three
+missing kilometres — a wrong total hidden behind a true sentence. They are
+reported and not counted. `distinct` needs no such distinction, because there
+every unattributed bucket already counts UNITS.
 
 ## The contract
 

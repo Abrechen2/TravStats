@@ -284,10 +284,17 @@ describe("GET /api/v1/evidence/metric/... — the cross-domain KPI strip", () =>
   });
 
   /**
-   * The population guard. `foldCrossDomain` is the module `aggregate()`
-   * folds with, so running it here over the fixture's own contributions
-   * compares each measure against the arithmetic the TILE performs — not
-   * against a literal, and not against a second copy written for the test.
+   * This binds the fold ARITHMETIC and nothing else: that events ADD while
+   * countries and days UNION, through the very module `aggregate()` folds
+   * with. It would catch a resolver that summed the day tallies instead of
+   * unioning their keys — and it did, when that mutation was run.
+   *
+   * It is NOT a population guard, and calling it one would be a misreading
+   * worth more than the test. Its `DomainContribution` literals are written
+   * BY HAND from the fixture, so a resolver that read the wrong rows and a
+   * literal written to match it would agree here and both be wrong. What
+   * carries the population is the per-measure assertions above, each of
+   * which names the rows it expects — as the file header says.
    */
   it("all three measures equal what the strip's own fold produces", () => {
     const totals = foldCrossDomain([

@@ -213,10 +213,15 @@ export async function resolveTravelAccountHomeNights(
 }
 
 /**
- * The four combinations of "what else claimed this night". The entry's own
+ * The six combinations of "what else claimed these nights". The entry's own
  * bucket is implied by its domain, so the key names only the OTHERS — a
- * sentence the reader can act on ("also booked as a hotel") rather than a
+ * sentence the reader can act on ("also booked as a stay") rather than a
  * bare "contested". Sorted so `sea+hotel` and `hotel+sea` are one key.
+ *
+ * Each takes a `count`, because a row is credited once for ALL its contested
+ * nights and a stay overlapping a cruise for a week is not "this night". The
+ * German and English strings carry `_one`/`_other`, which is what `count`
+ * selects between.
  */
 const CONTESTED_WITH_KEY: Record<string, string> = {
   hotel: "evidence.travelAccount.contestedWith.hotel",
@@ -248,8 +253,12 @@ export async function resolveTravelAccountContestedNights(
   const contested = nights.filter((night) => night.contested);
   const contributionById = shareNights(contested, claimantsOfAnyBucket);
 
-  // Which OTHER buckets a row met across all its contested nights.
+  // Which OTHER buckets a row met, and over HOW MANY nights it met them. The
+  // count is nights, not the row's contribution: a stay that shared two
+  // nights with a cruise says "2 nights", while its contribution is 1 because
+  // each of those nights was split with the cruise.
   const othersById = new Map<string, Set<NightSource>>();
+  const contestedNightsById = new Map<string, number>();
   for (const night of contested) {
     for (const source of SOURCES) {
       for (const id of night.claims[source] ?? []) {
@@ -258,13 +267,14 @@ export async function resolveTravelAccountContestedNights(
           if (other !== source && night.claims[other]) others.add(other);
         }
         othersById.set(id, others);
+        contestedNightsById.set(id, (contestedNightsById.get(id) ?? 0) + 1);
       }
     }
   }
   const subtitleOf = (id: string): EvidenceEntry["subtitle"] => {
     const others = [...(othersById.get(id) ?? [])].sort().join(",");
     const key = CONTESTED_WITH_KEY[others];
-    return key ? { key } : null;
+    return key ? { key, values: { count: contestedNightsById.get(id) ?? 0 } } : null;
   };
 
   // One pass per bucket, and no row can appear in two: `contributionById`

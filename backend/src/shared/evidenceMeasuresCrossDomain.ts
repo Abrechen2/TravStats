@@ -8,8 +8,16 @@
  */
 import type { MeasureSpec } from "./evidenceMeasures";
 
-const TRAVEL_ACCOUNT_CALCULATOR =
+// One endpoint, TWO calculators. `/stats/travel-account` answers with both
+// `account` (the night buckets) and `trips` (the per-trip rollup), and they
+// are built by different pure functions. Naming only the first for all twelve
+// sent a reader of the four trip entries to a file that does not compute
+// them.
+const TRAVEL_ACCOUNT_NIGHTS_CALCULATOR =
   "GET /stats/travel-account (services/stats/travelAccount.ts buildTravelAccount)";
+
+const TRAVEL_ACCOUNT_TRIPS_CALCULATOR =
+  "GET /stats/travel-account (services/stats/tripAccount.ts buildTripAccount)";
 
 export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
   // ── CrossDomainKpis ──
@@ -59,7 +67,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     unit: "nights",
     scopes: ["allTime"],
     surface: "TravelAccountSection",
-    calculator: TRAVEL_ACCOUNT_CALCULATOR,
+    calculator: TRAVEL_ACCOUNT_NIGHTS_CALCULATOR,
     servedIn: 1,
   },
   travelAccountSeaNights: {
@@ -67,7 +75,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     unit: "nights",
     scopes: ["allTime"],
     surface: "TravelAccountSection",
-    calculator: TRAVEL_ACCOUNT_CALCULATOR,
+    calculator: TRAVEL_ACCOUNT_NIGHTS_CALCULATOR,
     servedIn: 1,
   },
   travelAccountAirNights: {
@@ -75,7 +83,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     unit: "nights",
     scopes: ["allTime"],
     surface: "TravelAccountSection",
-    calculator: TRAVEL_ACCOUNT_CALCULATOR,
+    calculator: TRAVEL_ACCOUNT_NIGHTS_CALCULATOR,
     servedIn: 1,
   },
   travelAccountHomeNights: {
@@ -83,7 +91,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     unit: "nights",
     scopes: ["allTime"],
     surface: "TravelAccountSection",
-    calculator: TRAVEL_ACCOUNT_CALCULATOR,
+    calculator: TRAVEL_ACCOUNT_NIGHTS_CALCULATOR,
     servedIn: 1,
   },
   travelAccountContestedNights: {
@@ -91,7 +99,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     unit: "nights",
     scopes: ["allTime"],
     surface: "TravelAccountSection",
-    calculator: TRAVEL_ACCOUNT_CALCULATOR,
+    calculator: TRAVEL_ACCOUNT_NIGHTS_CALCULATOR,
     servedIn: 1,
   },
   travelAccountFullyCoveredTripCount: {
@@ -99,7 +107,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     unit: "trips",
     scopes: ["allTime"],
     surface: "TravelAccountSection",
-    calculator: TRAVEL_ACCOUNT_CALCULATOR,
+    calculator: TRAVEL_ACCOUNT_TRIPS_CALCULATOR,
     servedIn: 1,
   },
   travelAccountTripsWithDatesCount: {
@@ -107,7 +115,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     unit: "trips",
     scopes: ["allTime"],
     surface: "TravelAccountSection",
-    calculator: TRAVEL_ACCOUNT_CALCULATOR,
+    calculator: TRAVEL_ACCOUNT_TRIPS_CALCULATOR,
     servedIn: 1,
   },
   travelAccountUncoveredDayCount: {
@@ -115,7 +123,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     unit: "days",
     scopes: ["allTime"],
     surface: "TravelAccountSection",
-    calculator: TRAVEL_ACCOUNT_CALCULATOR,
+    calculator: TRAVEL_ACCOUNT_TRIPS_CALCULATOR,
     servedIn: 1,
   },
   travelAccountAvgTripDays: {
@@ -123,7 +131,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     unit: "days",
     scopes: ["allTime"],
     surface: "TravelAccountSection",
-    calculator: TRAVEL_ACCOUNT_CALCULATOR,
+    calculator: TRAVEL_ACCOUNT_TRIPS_CALCULATOR,
     servedIn: 2,
   },
   travelAccountLongestTripDays: {
@@ -131,7 +139,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     unit: "days",
     scopes: ["allTime"],
     surface: "TravelAccountSection",
-    calculator: TRAVEL_ACCOUNT_CALCULATOR,
+    calculator: TRAVEL_ACCOUNT_TRIPS_CALCULATOR,
     servedIn: 2,
   },
   travelAccountJournalEntryCount: {
@@ -139,7 +147,7 @@ export const CROSS_DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     unit: "entries",
     scopes: ["allTime"],
     surface: "TravelAccountSection",
-    calculator: TRAVEL_ACCOUNT_CALCULATOR,
+    calculator: TRAVEL_ACCOUNT_TRIPS_CALCULATOR,
     servedIn: 1,
   },
 };
