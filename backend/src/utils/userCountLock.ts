@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { DbTransaction } from "../db";
 
 /**
  * One lock for every decision that rests on "how many users exist".
@@ -26,7 +26,7 @@ const USER_COUNT_LOCK_KEY = 8314207733n;
 
 /** Minimal shape: a Prisma client or an interactive transaction client. */
 type RawCapable = {
-  $executeRaw: Prisma.TransactionClient["$executeRaw"];
+  $executeRaw: DbTransaction["$executeRaw"];
 };
 
 /**

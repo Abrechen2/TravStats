@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../prisma";
 
 import "../services/openapi/paths";
 import { buildOpenApiDocument } from "../services/openapi/registry";

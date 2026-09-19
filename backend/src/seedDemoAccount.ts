@@ -26,7 +26,7 @@
  */
 
 import { randomUUID } from "crypto";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "./prisma";
 import { prisma } from "./db";
 import { hashPassword } from "./utils/password";
 import { DEMO_USERNAME } from "./utils/sharedDemo";

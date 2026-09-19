@@ -199,3 +199,11 @@ test-samples/boarding-passes/
 # viewer. Keep the evidence, drop the byproduct.
 docs/audit-*/block*-e2e-artifacts/
 docs/audit-*/block*-e2e-production-artifacts/
+
+# Prisma 7's generated client. `prisma-client` (the generator that replaced
+# `prisma-client-js`) emits plain TypeScript to a required `output` path
+# instead of writing into node_modules, so the client now looks like source
+# and has to be excluded explicitly. It is rebuilt from schema.prisma by
+# `prisma generate`, which `postinstall` and the Docker build both run —
+# committing 6.9 MB of it would only give the schema a second, staler home.
+backend/src/generated/

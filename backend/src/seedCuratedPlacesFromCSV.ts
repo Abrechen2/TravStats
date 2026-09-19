@@ -1,7 +1,7 @@
 import fs from "fs";
 import path from "path";
 import { parse } from "csv-parse/sync";
-import type { CuratedList, CuratedPlace } from "@prisma/client";
+import type { CuratedList, CuratedPlace } from "./prisma";
 import { prisma } from "./db";
 import logger from "./utils/logger";
 

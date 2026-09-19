@@ -2,7 +2,7 @@ import multer from "multer";
 import path from "path";
 import fs from "fs";
 import crypto from "crypto";
-import { PrismaClient } from "@prisma/client";
+import type { Db } from "../db";
 import logger from "../utils/logger";
 import { FILE_LIMITS, CLEANUP } from "../config/constants";
 
@@ -130,7 +130,7 @@ export function deleteReceiptFile(filename: string): void {
  * Clean up old receipt files (older than retention period with no database reference)
  * This should be run periodically (e.g., daily cron job)
  */
-export async function cleanupOldReceipts(prisma: PrismaClient): Promise<number> {
+export async function cleanupOldReceipts(prisma: Db): Promise<number> {
   const files = fs.readdirSync(UPLOAD_DIR);
   const retentionMs = CLEANUP.RECEIPT_RETENTION_DAYS * 24 * 60 * 60 * 1000;
   const cutoffTime = Date.now() - retentionMs;

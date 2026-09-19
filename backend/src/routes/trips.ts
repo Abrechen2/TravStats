@@ -1,7 +1,7 @@
 import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { prisma } from "../db";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../prisma";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { isSharedDemoUser, rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";

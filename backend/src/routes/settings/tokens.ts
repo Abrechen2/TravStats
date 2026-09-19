@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from "express";
-import type { ApiToken } from "@prisma/client";
+import type { ApiToken } from "../../prisma";
 
 import { AppError } from "../../middleware/errorHandler";
 import { AuthRequest } from "../../middleware/auth";

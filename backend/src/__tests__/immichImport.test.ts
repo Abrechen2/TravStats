@@ -1,7 +1,7 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 import { Readable } from "stream";
 import { pipeline } from "stream/promises";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../prisma";
 import { FILE_LIMITS } from "../config/constants";
 
 const jobUpsert = jest.fn();

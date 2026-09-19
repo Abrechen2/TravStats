@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../prisma";
 import { appVersion } from "../utils/version";
 import { z } from "zod";
 import { prisma } from "../db";

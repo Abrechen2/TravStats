@@ -1,6 +1,6 @@
-import { PrismaClient } from "@prisma/client";
-
-const prisma = new PrismaClient();
+import { PrismaClient } from "../src/prisma";
+import { createPrismaClient } from "../src/prismaClient";
+const prisma = createPrismaClient();
 
 async function main() {
   const username = process.argv[2];

@@ -11,7 +11,7 @@
  * NEVER run against a production DB. The DATABASE_URL gate in CLAUDE.local.md
  * (localhost:5433/flights_dev) is the operator's responsibility.
  */
-import { Prisma } from "@prisma/client";
+import { Prisma } from "./prisma";
 import { prisma } from "./db";
 import { seedDemoUser } from "./seedDemoUser";
 import { loadPools, seedCruises } from "./seedDemoAccount";

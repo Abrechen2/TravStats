@@ -31,7 +31,7 @@
  * quietly serving a different population under the same section name.
  */
 
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma";
 
 import { prisma } from "../../db";
 import { countableFlightWhere } from "../../shared/flightCounting";

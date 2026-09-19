@@ -1,5 +1,5 @@
-import { PrismaClient } from "@prisma/client";
-
+import { PrismaClient } from "./src/prisma";
+import { createPrismaClient } from "./src/prismaClient";
 /**
  * One reachable database, or one clear sentence — never a thousand assertions.
  *
@@ -113,7 +113,7 @@ export default async function globalSetup(): Promise<void> {
 
   assertDatabaseIsExpendable(url);
 
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
   try {
     await prisma.$queryRaw`SELECT 1`;
   } catch (error) {

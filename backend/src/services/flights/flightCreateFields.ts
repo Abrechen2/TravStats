@@ -1,4 +1,4 @@
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma";
 
 import { extendedFlightCreateFields, type ExtendedFlightInput } from "./extendedFlightFields";
 

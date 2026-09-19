@@ -12,7 +12,7 @@
 import { prisma } from "../db";
 import { checkAndUpdateFlightsForUser } from "../services/flightAutoUpdate";
 import { lookupFlightDetails } from "../services/flightLookup";
-import { Flight } from "@prisma/client";
+import { Flight } from "../prisma";
 
 jest.mock("../services/flightLookup", () => ({
   ...jest.requireActual("../services/flightLookup"),

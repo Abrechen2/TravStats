@@ -1,4 +1,4 @@
-import type { Prisma } from "@prisma/client";
+import type { DbTransaction } from "../../db";
 
 /**
  * Everything hanging off a trip has to survive that trip being merged away.
@@ -30,7 +30,7 @@ import type { Prisma } from "@prisma/client";
  *
  * Manual photos (`immichAssetId = null`) never collide and always move.
  */
-export type TripTx = Prisma.TransactionClient;
+export type TripTx = DbTransaction;
 
 /**
  * Move linked Immich albums onto the target, folding duplicates into the

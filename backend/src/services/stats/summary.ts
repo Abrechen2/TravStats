@@ -9,7 +9,7 @@
  * it, which is why it cannot live inside either.
  */
 
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma";
 
 import { prisma } from "../../db";
 import { calculateDistance } from "../../utils/geo";

@@ -1,5 +1,5 @@
 import { prisma } from "../../../db";
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../../../prisma";
 import type { TemplateFingerprint, TemplatePatterns } from "./types";
 import logger from "../../../utils/logger";
 

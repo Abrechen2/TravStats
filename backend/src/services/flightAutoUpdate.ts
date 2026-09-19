@@ -5,7 +5,7 @@
  * and creates pending updates for user review.
  */
 
-import { PrismaClient, Flight, Prisma } from "@prisma/client";
+import { PrismaClient, Flight, Prisma } from "../prisma";
 import { lookupFlightDetails, FlightLookupResult } from "./flightLookup";
 import { prisma } from "../db";
 import logger from "../utils/logger";

@@ -5,10 +5,10 @@
  * Defaults: admin / admin123
  */
 
-import { PrismaClient } from "@prisma/client";
+import { createPrismaClient } from "../prismaClient";
 import bcrypt from "bcrypt";
 
-const prisma = new PrismaClient();
+const prisma = createPrismaClient();
 const SALT_ROUNDS = 10;
 
 async function createAdmin() {

@@ -12,7 +12,7 @@
  * 232-row import doesn't mean deleting hotels by hand.
  */
 import { prisma } from "../db";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../prisma";
 
 const USERNAME = "lodging-import-schema-test";
 

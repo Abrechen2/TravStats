@@ -20,7 +20,7 @@
  * offered either, since dissolving it cascades that section away.
  */
 
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../prisma";
 import { prisma } from "../db";
 import { linkRowsFor, resolveCompanions } from "./companionService";
 import { AppError } from "../middleware/errorHandler";

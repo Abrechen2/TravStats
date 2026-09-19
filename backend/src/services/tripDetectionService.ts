@@ -40,7 +40,7 @@
  * import iterations that left empty trips behind.
  */
 
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import { TRIP_COLORS } from "../schemas/trip";
 import { calculateDistance } from "../utils/geo";

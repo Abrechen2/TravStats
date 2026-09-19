@@ -1,5 +1,5 @@
 import { Router, Request, Response, NextFunction } from "express";
-import type { User } from "@prisma/client";
+import type { User } from "../prisma";
 import { takeUserCountLock } from "../utils/userCountLock";
 import crypto from "crypto";
 import { prisma } from "../db";

@@ -1,4 +1,4 @@
-import type { Port, Ship } from "@prisma/client";
+import type { Port, Ship } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import type { CruiseInput } from "../schemas/cruise";

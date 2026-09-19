@@ -1,6 +1,6 @@
 import path from "path";
 
-import type { Document, Prisma } from "@prisma/client";
+import type { Document, Prisma } from "../../prisma";
 
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";

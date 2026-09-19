@@ -7,7 +7,7 @@
  * what totals — and none of it is routing.
  */
 
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma";
 
 import { classifyStay } from "../../shared/lodgingCounting";
 import { resolveStayTiming } from "../../shared/lodgingTiming";

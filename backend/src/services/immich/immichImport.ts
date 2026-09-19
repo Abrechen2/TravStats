@@ -14,7 +14,7 @@ import fs from "fs";
 import path from "path";
 import { Transform } from "stream";
 import { pipeline } from "stream/promises";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { FILE_LIMITS } from "../../config/constants";
 import { deleteTripPhotoFile, getTripPhotoDir } from "../../middleware/upload";

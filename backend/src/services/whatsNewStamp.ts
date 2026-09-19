@@ -1,4 +1,5 @@
-import type { Prisma, PrismaClient } from "@prisma/client";
+import type { Prisma } from "../prisma";
+import type { Db, DbTransaction } from "../db";
 import { appVersion } from "../utils/version";
 import logger from "../utils/logger";
 
@@ -19,10 +20,7 @@ import logger from "../utils/logger";
  * Never throws. A missing stamp costs one unnecessary modal; a failed signup
  * costs the account.
  */
-export async function stampWhatsNewSeen(
-  db: PrismaClient | Prisma.TransactionClient,
-  userId: string
-): Promise<void> {
+export async function stampWhatsNewSeen(db: Db | DbTransaction, userId: string): Promise<void> {
   try {
     // The flag lives INSIDE the `data` JSON blob, not in a column of its own —
     // `settingsSchema` validates it, Prisma never sees it by name.

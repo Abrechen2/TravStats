@@ -3,7 +3,7 @@ import * as path from "path";
 import archiver from "archiver";
 import { prisma } from "../db";
 import logger from "../utils/logger";
-import { Backup } from "@prisma/client";
+import { Backup } from "../prisma";
 import {
   BACKUP_BASE_DIR,
   RETENTION_DAYS,

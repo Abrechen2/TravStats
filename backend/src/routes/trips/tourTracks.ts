@@ -1,6 +1,6 @@
 import { Router, Request, Response, NextFunction } from "express";
 import multer from "multer";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma";
 import { z } from "zod";
 
 import { prisma } from "../../db";

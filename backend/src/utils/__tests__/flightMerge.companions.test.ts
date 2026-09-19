@@ -1,4 +1,4 @@
-import type { Flight } from "@prisma/client";
+import type { Flight } from "../../prisma";
 
 import { createFlightSchema } from "../../schemas/flight";
 import { buildFlightMergePatch } from "../flightMerge";

@@ -17,6 +17,11 @@ package-lock.json
 # Generated, and compared byte for byte against their generator. Formatting
 # them would turn the next regeneration into a diff, or a guard red.
 frontend/src/lib/generated/
+# The Prisma 7 client, emitted by `prisma generate` into a path the generator
+# requires. It is gitignored, so Prettier would only ever reformat a file the
+# next `generate` overwrites — and `--check` on a tree where it has not been
+# generated yet is a red run for a file that does not exist.
+backend/src/generated/
 frontend/src/theme/tokens.css
 frontend/src/theme/tokens.ts
 

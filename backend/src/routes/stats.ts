@@ -16,7 +16,7 @@ import { getCachedAirports } from "../services/airportCache";
 import type { AirportData } from "../services/airportLookup";
 import { buildFlightNetwork } from "../services/stats/network";
 import { computePunctuality } from "../services/punctualityStats";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../prisma";
 import {
   calculateFunStats,
   calculateBusinessStats,

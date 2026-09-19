@@ -4,7 +4,7 @@ import {
   calculateChanges,
   checkAndUpdateFlightsForUser,
 } from "../services/flightAutoUpdate";
-import { Flight } from "@prisma/client";
+import { Flight } from "../prisma";
 
 describe("Flight Auto-Update Service", () => {
   let userId: string;

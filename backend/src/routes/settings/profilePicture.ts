@@ -2,7 +2,7 @@ import { Router, Response, NextFunction, Request } from "express";
 import multer from "multer";
 import path from "path";
 import fs from "fs";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma";
 import { AuthRequest } from "../../middleware/auth";
 import {
   uploadProfilePicture,

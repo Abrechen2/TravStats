@@ -38,7 +38,8 @@
  *   Add --dry-run to preview without writing.
  */
 
-import { PrismaClient } from "@prisma/client";
+import { PrismaClient } from "../src/prisma";
+import { createPrismaClient } from "../src/prismaClient";
 import { resolveAirlineCodes } from "../src/utils/airlineNormalize";
 
 interface Args {
@@ -145,7 +146,7 @@ async function passDateOnlyCount(prisma: PrismaClient): Promise<PassBResult> {
 
 async function main() {
   const args = parseArgs(process.argv.slice(2));
-  const prisma = new PrismaClient();
+  const prisma = createPrismaClient();
 
   console.log(
     `[backfill-rc4] mode=${args.dryRun ? "dry-run" : "apply"} batchSize=${args.batchSize}`

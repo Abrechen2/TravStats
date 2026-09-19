@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from "express";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";

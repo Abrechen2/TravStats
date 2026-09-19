@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from "express";
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { rejectDemoQuota } from "../middleware/demoGuard";
@@ -118,7 +118,7 @@ interface FlightUpdateData extends ExtendedFlightInput {
   eventLabel?: string | null;
   patternLat?: number | null;
   patternLon?: number | null;
-  specialData?: Prisma.InputJsonValue | Prisma.NullTypes.JsonNull;
+  specialData?: Prisma.InputJsonValue | typeof Prisma.JsonNull; // Prisma 7: NullTypes is a value, not a namespace of types
   // Boarding pass / email import fields — written on POST, must also be
   // updatable via PUT. Their absence here was a silent-drop bug.
   seatNumber?: string | null;

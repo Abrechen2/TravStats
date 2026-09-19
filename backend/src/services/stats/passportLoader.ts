@@ -14,7 +14,7 @@
  * (`visited: false` is a bookmark, not a visit) is named where it is made.
  */
 
-import type { Prisma } from "@prisma/client";
+import type { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { getCachedAirports } from "../airportCache";
 import { countableFlightWhere } from "../../shared/flightCounting";

@@ -10,7 +10,7 @@
  * typed. See `services/trip/tripCostSuperlative.ts`.
  */
 
-import { Prisma } from "@prisma/client";
+import { Prisma } from "../../prisma";
 
 export const TRIPS_LIST_INCLUDE = {
   _count: {

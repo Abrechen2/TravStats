@@ -16,10 +16,11 @@
  * `openapi.modelColumns.test.ts` pins that every column appears.
  */
 
-import { Prisma } from "@prisma/client";
+import type { Prisma } from "../../prisma";
 import { z } from "zod";
+import { prismaModelFields, type PrismaModelField } from "./prismaDatamodel";
 
-function columnType(field: Prisma.DMMF.Field): z.ZodTypeAny {
+function columnType(field: PrismaModelField): z.ZodTypeAny {
   const base: z.ZodTypeAny =
     field.type === "String"
       ? z.string()
@@ -38,10 +39,8 @@ function columnType(field: Prisma.DMMF.Field): z.ZodTypeAny {
 
 /** Every scalar column of `model`, typed and nullable as the schema declares it. */
 export function prismaColumns(model: Prisma.ModelName): Record<string, z.ZodTypeAny> {
-  const found = Prisma.dmmf.datamodel.models.find((m) => m.name === model);
-  if (!found) throw new Error(`prismaColumns: no Prisma model named ${model}`);
   return Object.fromEntries(
-    found.fields
+    prismaModelFields(model)
       .filter((field) => field.kind !== "object")
       .map((field) => [field.name, columnType(field)])
   );

@@ -1,7 +1,7 @@
 // Achievement dispatch + per-type helpers. Extracted from `achievements.ts`
 // so the orchestrator module stays under CLAUDE.md's 800-line limit.
 
-import type { Achievement } from "@prisma/client";
+import type { Achievement } from "../prisma";
 import { calculateDistance } from "./geo";
 import type { FlightData, UserStats } from "./achievementStats";
 
