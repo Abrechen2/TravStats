@@ -42,8 +42,11 @@ test.describe("Authentication Flow", () => {
     await page.fill("input#password", "wrongpassword");
     await page.click('button[type="submit"]');
 
+    // Since forgejo#88 #3 the form maps the backend's INVALID_CREDENTIALS code
+    // to "Benutzername oder Passwort ist falsch." — "falsch" joins the list;
+    // the first CI run on b8b2d7f5 failed here with the old words only.
     await expect(
-      page.locator("text=/fehlgeschlagen|ungültig|failed|invalid/i").first()
+      page.locator("text=/fehlgeschlagen|ungültig|falsch|failed|invalid|wrong/i").first()
     ).toBeVisible({ timeout: 5000 });
     await expect(page).toHaveURL(/.*login/);
   });

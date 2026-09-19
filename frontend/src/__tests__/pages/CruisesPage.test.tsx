@@ -42,6 +42,12 @@ vi.mock("../../store/toastStore", () => ({
 const mockNavigate = vi.fn();
 import { MemoryRouter } from "react-router-dom";
 
+// Measured 2026-09-19: this page's paged-rows case renders in about a second
+// on a developer machine and past Vitest's 5 s default on the CI runner under
+// coverage instrumentation — the merge dbcda8d2 went red on exactly that.
+// A hang is still caught at 20 s; a slow render is not a wrong render.
+vi.setConfig({ testTimeout: 20_000 });
+
 vi.mock("react-router-dom", async () => {
   const actual = await vi.importActual<typeof import("react-router-dom")>("react-router-dom");
   return { ...actual, useNavigate: () => mockNavigate };

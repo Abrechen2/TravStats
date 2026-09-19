@@ -36,6 +36,12 @@ vi.unmock("../../store/settingsStore");
 import PlacesListPage from "../PlacesListPage";
 import { useSettingsStore } from "../../store/settingsStore";
 
+// Measured 2026-09-19: this page's paged-rows case renders in about a second
+// on a developer machine and past Vitest's 5 s default on the CI runner under
+// coverage instrumentation — the merge dbcda8d2 went red on exactly that.
+// A hang is still caught at 20 s; a slow render is not a wrong render.
+vi.setConfig({ testTimeout: 20_000 });
+
 function makePlace(overrides: Partial<Place> & Pick<Place, "id" | "name">): Place {
   return {
     category: "landmark",
