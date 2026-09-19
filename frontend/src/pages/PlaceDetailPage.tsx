@@ -265,8 +265,12 @@ export default function PlaceDetailPage(): JSX.Element {
       {!isPlanned && <VisitPhotoStrip visitId={v.id} photos={v.photos ?? []} />}
       {/* Same reasoning, same place: the API files documents against the VISIT
           (`/places/visits/:id/documents`), so a ticket belongs to the day it
-          was used rather than to the place that is always there. */}
-      {!isPlanned && <DocumentsSection entry={{ type: "placeVisit", id: v.id }} layout="inline" />}
+          was used rather than to the place that is always there.
+          NOT guarded by `isPlanned`, unlike the photographs above: a ticket
+          exists BEFORE the day it is used, and that is the commonest reason
+          to keep one at all. The photo strip is guarded because a picture of
+          a visit that has not happened is not a thing. */}
+      <DocumentsSection entry={{ type: "placeVisit", id: v.id }} layout="inline" />
     </li>
   );
 

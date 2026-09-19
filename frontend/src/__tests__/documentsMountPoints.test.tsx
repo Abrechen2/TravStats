@@ -252,12 +252,23 @@ describe("the documents section is mounted on every entry the API serves", () =>
       lat: 50.9661,
       lon: 10.3064,
       visited: true,
-      visits: [{ id: "visit-1", placeId: "p1", visitedAt: "2026-05-01T00:00:00.000Z" }],
+      visits: [
+        { id: "visit-1", placeId: "p1", visitedAt: "2026-05-01T00:00:00.000Z" },
+        // A visit still ahead. A ticket exists BEFORE the day it is used, and
+        // the backend accepts one against a planned visit, so hiding the
+        // section here would refuse the commonest case there is.
+        { id: "visit-2", placeId: "p1", visitedAt: "2099-05-01T00:00:00.000Z" },
+      ],
       // The catalogue place is always there; the ticket belongs to the day.
     } as unknown as Awaited<ReturnType<typeof getPlace>>);
 
     routed("/places/:id", "/places/p1", <PlaceDetailPage />);
-    await waitFor(() => expect(mounted).toEqual([{ type: "placeVisit", id: "visit-1" }]));
+    await waitFor(() =>
+      expect(mounted).toEqual([
+        { type: "placeVisit", id: "visit-1" },
+        { type: "placeVisit", id: "visit-2" },
+      ])
+    );
   });
 
   it("files a trip's documents against the trip — /trips/:id/documents", async () => {

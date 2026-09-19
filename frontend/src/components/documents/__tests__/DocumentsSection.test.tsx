@@ -215,6 +215,55 @@ describe("DocumentsSection", () => {
 });
 
 /**
+ * The inline form, which a place detail page draws once per VISIT.
+ *
+ * Eager, it cost one list request and one empty sentence per visit: a place
+ * with six visits asked six times and printed "Noch keine Dokumente an diesem
+ * Eintrag." six times under six headings. It opens on demand instead — and
+ * carries no count, because a count is the very request being deferred.
+ */
+describe("DocumentsSection — the inline form on a visit row", () => {
+  beforeEach(() => {
+    isDemoMock.current = false;
+    documentsApiMock.listForEntry.mockReset().mockResolvedValue([]);
+    documentsApiMock.limits.mockReset().mockResolvedValue(LIMITS);
+    documentsApiMock.upload.mockReset();
+    documentsApiMock.remove.mockReset();
+  });
+
+  it("asks for nothing until a visit's documents are actually opened", async () => {
+    for (const id of ["visit-1", "visit-2", "visit-3"]) {
+      render(<DocumentsSection entry={{ type: "placeVisit", id }} layout="inline" />);
+    }
+    await waitFor(() => expect(screen.getAllByRole("button")).toHaveLength(3));
+    expect(documentsApiMock.listForEntry).not.toHaveBeenCalled();
+    expect(documentsApiMock.limits).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getAllByRole("button")[1]);
+
+    await waitFor(() => expect(documentsApiMock.listForEntry).toHaveBeenCalledTimes(1));
+    expect(documentsApiMock.listForEntry).toHaveBeenCalledWith({
+      type: "placeVisit",
+      id: "visit-2",
+    });
+  });
+
+  it("leaves the size limits to the full form — a row has no space for them", async () => {
+    render(<DocumentsSection entry={{ type: "placeVisit", id: "visit-1" }} layout="inline" />);
+    fireEvent.click(screen.getByRole("button"));
+
+    expect(await screen.findByText("documents:empty")).toBeInTheDocument();
+    expect(screen.getByTestId("documents-file-input")).toBeInTheDocument();
+    expect(screen.queryByText("documents:limitHint")).toBeNull();
+  });
+
+  it("opens straight away in the card form, which stands alone on a page", async () => {
+    render(<DocumentsSection entry={FLIGHT} />);
+    await waitFor(() => expect(documentsApiMock.listForEntry).toHaveBeenCalledTimes(1));
+  });
+});
+
+/**
  * `issuedOn` is a DATE, not an instant — the day printed on the bill. Read as
  * an instant it is UTC midnight, and every viewer west of Greenwich is shown
  * the day before. Same rule and same fix as `Stats/RecordsSection.tsx`.

@@ -71,6 +71,16 @@ export default function DocumentsSection({ entry, layout = "card" }: Props): JSX
   const isSharedDemo = useIsDemoAccount();
   const inputRef = useRef<HTMLInputElement>(null);
 
+  /**
+   * Whether the list has been asked for at all.
+   *
+   * A card stands alone on a detail page and opens with it. The inline form is
+   * drawn once per VISIT, and a place with six visits meant six list requests
+   * and six empty sentences before anyone had shown an interest in any of
+   * them — so it waits for the reader to ask. Deliberately NO count on the
+   * closed affordance: a count is the very request being deferred.
+   */
+  const [open, setOpen] = useState<boolean>(layout === "card");
   const [documents, setDocuments] = useState<TravelDocument[]>([]);
   const [loadFailed, setLoadFailed] = useState(false);
   const [limits, setLimits] = useState<DocumentLimits | null>(null);
@@ -98,19 +108,20 @@ export default function DocumentsSection({ entry, layout = "card" }: Props): JSX
   }, [entryType, entryId]);
 
   useEffect(() => {
+    if (!open) return;
     void reload();
-  }, [reload]);
+  }, [open, reload]);
 
   useEffect(() => {
     // The demo account may not upload at all, so the limits it would be
     // measured against are a request nobody reads.
-    if (isSharedDemo) return;
+    if (!open || isSharedDemo) return;
     documentsApi.limits().then(setLimits, (err: unknown) => {
       // An older server answers 404 here. Not an error on screen: without the
       // numbers the upload simply goes out unchecked and the server decides.
       logger.warn({ err }, "DocumentsSection: limits unavailable");
     });
-  }, [isSharedDemo]);
+  }, [open, isSharedDemo]);
 
   const handleUpload = useCallback(
     async (file: File | undefined): Promise<void> => {
@@ -267,7 +278,7 @@ export default function DocumentsSection({ entry, layout = "card" }: Props): JSX
               onChange={(e) => void handleUpload(e.target.files?.[0])}
             />
           </label>
-          {limits && (
+          {limits && layout === "card" && (
             <span className="t-caption">
               {t("documents:limitHint", {
                 image: formatBytes(limits.image),
@@ -298,8 +309,23 @@ export default function DocumentsSection({ entry, layout = "card" }: Props): JSX
   if (layout === "inline") {
     return (
       <div className="mt-2 flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
-        <span className="t-caption">{t("documents:title")}</span>
-        {body}
+        <button
+          type="button"
+          onClick={() => setOpen((value) => !value)}
+          aria-expanded={open}
+          className="t-caption flex w-fit items-center"
+          style={{
+            gap: "var(--ts-space-xs)",
+            background: "none",
+            border: "none",
+            padding: 0,
+            cursor: "pointer",
+          }}
+        >
+          <Icon name={open ? "chevron-down" : "chevron-right"} size={14} />
+          {t("documents:title")}
+        </button>
+        {open ? body : null}
       </div>
     );
   }

@@ -8,7 +8,6 @@
   "tooLarge": "Die Datei ist größer als die erlaubten {{limit}}.",
   "uploadFailed": "Die Datei konnte nicht hochgeladen werden.",
   "deleteFailed": "Das Dokument konnte nicht entfernt werden.",
-  "open": "Öffnen",
   "openLabel": "{{name}} öffnen",
   "remove": "Entfernen",
   "removeLabel": "{{name}} entfernen",
