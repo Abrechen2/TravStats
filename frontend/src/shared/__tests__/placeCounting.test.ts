@@ -12,6 +12,8 @@ import {
   countCompletedVisits,
   countVisitedPlaces,
   countPlaceCountries,
+  visitCountsForYear,
+  visitYear,
 } from "../placeCounting";
 
 const PAST = "2020-05-01T10:00:00.000Z";
@@ -74,5 +76,42 @@ describe("the totals are unmoved by the new state", () => {
     expect(
       countCompletedVisits([{ visitedAt: PAST }, { visitedAt: FUTURE }, { visitedAt: null }])
     ).toBe(2);
+  });
+});
+
+/**
+ * The year rule, added in task 7b-3 when it moved here out of
+ * `lib/stats/periodScope.ts` so the evidence panel could cut the same rows the
+ * places tab does. Its backend mirror asserts the same table.
+ */
+describe("visitYear", () => {
+  it("reads the year in UTC, as every other domain's window does", () => {
+    // 23:30 on New Year's Eve UTC is already the next year in Berlin.
+    expect(visitYear({ visitedAt: "2024-12-31T23:30:00.000Z" })).toBe(2024);
+  });
+
+  it("has no year for an undated or unreadable visit", () => {
+    expect(visitYear({ visitedAt: null })).toBeNull();
+    expect(visitYear({ visitedAt: "not a date" })).toBeNull();
+  });
+});
+
+describe("visitCountsForYear", () => {
+  const NOW = new Date("2026-01-01T00:00:00.000Z");
+
+  it("keeps a dated visit that happened, in its own year and no other", () => {
+    expect(visitCountsForYear({ visitedAt: PAST }, 2020, NOW)).toBe(true);
+    expect(visitCountsForYear({ visitedAt: PAST }, 2021, NOW)).toBe(false);
+  });
+
+  it("refuses an undated visit every year, although it counts in the total", () => {
+    expect(classifyVisit({ visitedAt: null }, NOW)).toBe("visited");
+    expect(visitCountsForYear({ visitedAt: null }, 2020, NOW)).toBe(false);
+  });
+
+  it("refuses a visit dated later this year, so a year cannot run ahead", () => {
+    const later = "2026-09-01T00:00:00.000Z";
+    expect(visitYear({ visitedAt: later })).toBe(2026);
+    expect(visitCountsForYear({ visitedAt: later }, 2026, NOW)).toBe(false);
   });
 });

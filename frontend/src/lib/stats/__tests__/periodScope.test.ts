@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { cruisesStartedIn, placesVisitedIn } from "../periodScope";
+import { visitCountsForYear } from "../../../shared/placeCounting";
 import type { Cruise } from "../../../types/cruise";
 import type { Place, PlaceVisit } from "../../../types/place";
 
@@ -64,5 +65,39 @@ describe("placesVisitedIn", () => {
   it("does not count a visit dated later this year", () => {
     const rows = [place("soon", true, [visit("a", "2026-09-01T10:00:00Z")])];
     expect(placesVisitedIn(rows, 2026, NOW)).toEqual([]);
+  });
+});
+
+/**
+ * The year window is `shared/placeCounting.ts`'s rule, not this module's — it
+ * moved there in task 7b-3 so the evidence panel could cut the same rows the
+ * same way. This pins the fold to the mirror: a `placesVisitedIn` that stopped
+ * calling it, or a `visitCountsForYear` that changed underneath, would show up
+ * here as a disagreement rather than as a panel quietly naming a visit the tab
+ * never counted.
+ */
+describe("placesVisitedIn answers exactly what the shared rule says", () => {
+  it("keeps precisely the visits visitCountsForYear keeps", () => {
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    const visits = [
+      visit("in", "2024-06-01T00:00:00.000Z"),
+      visit("other-year", "2025-06-01T00:00:00.000Z"),
+      visit("undated", null),
+      visit("future", "2099-06-01T00:00:00.000Z"),
+    ];
+    const rows = [place("p", true, visits)];
+
+    const kept = placesVisitedIn(rows, 2024, now)[0]?.visits.map((v) => v.id) ?? [];
+    const expected = visits.filter((v) => visitCountsForYear(v, 2024, now)).map((v) => v.id);
+    expect(kept).toEqual(expected);
+    // Stated as a literal too, so the assertion above cannot pass vacuously
+    // when both sides agree on the empty set.
+    expect(kept).toEqual(["in"]);
+  });
+
+  it("drops a place whose only visits the rule rejects", () => {
+    const now = new Date("2026-01-01T00:00:00.000Z");
+    const rows = [place("p", true, [visit("undated", null)])];
+    expect(placesVisitedIn(rows, 2024, now)).toEqual([]);
   });
 });

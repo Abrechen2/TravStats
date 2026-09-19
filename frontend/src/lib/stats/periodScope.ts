@@ -1,4 +1,4 @@
-import { classifyPlace, classifyVisit } from "../../shared/placeCounting";
+import { classifyPlace, visitCountsForYear } from "../../shared/placeCounting";
 import type { Cruise } from "../../types/cruise";
 import type { Place } from "../../types/place";
 
@@ -50,9 +50,11 @@ export function placesVisitedIn(
     .filter((place) => classifyPlace(place) === "visited")
     .map((place) => ({
       ...place,
-      visits: place.visits.filter(
-        (visit) => utcYear(visit.visitedAt) === year && classifyVisit(visit, now) === "visited"
-      ),
+      // The rule itself lives in `shared/placeCounting.ts`, which the backend
+      // mirrors — the evidence panel cuts the same rows to the same year, and
+      // a second copy of a year window is how a panel comes to name a visit
+      // this tab never counted.
+      visits: place.visits.filter((visit) => visitCountsForYear(visit, year, now)),
     }))
     .filter((place) => place.visits.length > 0);
 }

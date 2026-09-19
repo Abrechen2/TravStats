@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
-import { MemoryRouter } from "react-router-dom";
+import { render, screen, waitFor, act } from "@testing-library/react";
+import { MemoryRouter, useLocation } from "react-router-dom";
+import { EVIDENCE_MEASURES } from "../../../shared/evidenceMeasures";
 import type { CruiseStatsResponse } from "../../../lib/api/stats";
 
 /**
@@ -60,6 +61,73 @@ const base = {
   hasBirthdayAtSea: false,
   hasNewYearsAtSea: false,
 } as unknown as CruiseStatsResponse;
+
+/** `MemoryRouter` never touches `window.location`, so the search string has to be read from inside it. */
+function LocationProbe({ onChange }: { onChange: (search: string) => void }): null {
+  onChange(useLocation().search);
+  return null;
+}
+
+/**
+ * Which tiles open the evidence panel, and under which key — read from the URL
+ * the tile itself writes, because `?evidence=metric:<key>` is the whole
+ * contract between a tile and the panel and a tile wired to the wrong key
+ * looks identical to a correct one until it is clicked.
+ *
+ * Two served cruise measures are deliberately absent. `cruiseTotalSpend` has
+ * no tile at all: `CruiseMoneySection` reports each currency on its own line
+ * and says in as many words that it will not add them, so a single total there
+ * would contradict the section it sat in. `cruiseCompanionCount` is the total
+ * of a ranked list and has no card of its own either. Both are served and
+ * reachable by `?evidence=metric:<key>`.
+ */
+describe("CruiseStatsSection evidence wiring", () => {
+  beforeEach(() => {
+    api.getCruiseStats.mockReset();
+  });
+
+  it("wires the eight tiles whose measures release 1 serves", async () => {
+    api.getCruiseStats.mockResolvedValue(base);
+    let search = "";
+    render(
+      <MemoryRouter>
+        <CruiseStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
+        <LocationProbe
+          onChange={(next) => {
+            search = next;
+          }}
+        />
+      </MemoryRouter>
+    );
+    await screen.findByText("stats:cruiseSection.countries");
+
+    const keys: string[] = [];
+    for (const trigger of screen.getAllByRole("button")) {
+      await act(async () => {
+        trigger.click();
+      });
+      const raw = new URLSearchParams(search).get("evidence") ?? "";
+      keys.push(raw.slice(raw.indexOf(":") + 1));
+    }
+    expect(keys.sort()).toEqual(
+      [
+        "cruiseCount",
+        "cruiseCountriesCount",
+        "cruiseDistanceKmTotal",
+        "cruiseLinesUniqueCount",
+        "cruisePortsUniqueCount",
+        "cruiseSeaDaysTotal",
+        "cruiseShipsUniqueCount",
+        "cruiseTotalDays",
+      ].sort()
+    );
+    expect(keys.every((key) => EVIDENCE_MEASURES[key]?.servedIn === 1)).toBe(true);
+    // The ratio, extremum and sequence tiles beside them stay plain: release 1
+    // serves neither kind, and a trigger there is a pointer cursor on a 404.
+    expect(keys).not.toContain("cruiseAvgPortsPerCruise");
+    expect(keys).not.toContain("cruiseLongestLegKm");
+  });
+});
 
 describe("CruiseStatsSection countries tile", () => {
   beforeEach(() => {

@@ -89,6 +89,14 @@ import {
   resolveLodgingContinentsCount,
 } from "./metricEvidenceLodging";
 import {
+  resolvePlacesVisitedCount,
+  resolvePlaceVisitCount,
+  resolvePlaceCountriesCount,
+  resolvePlaceCitiesCount,
+  resolvePlaceListCount,
+  resolvePlaceWishlistCount,
+} from "./metricEvidencePlaces";
+import {
   resolveCrossDomainEventCount,
   resolveCrossDomainCountryCount,
   resolveCrossDomainActiveDayCount,
@@ -192,6 +200,12 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   lodgingsUniqueCount: resolveLodgingsUniqueCount,
   lodgingCountriesCount: resolveLodgingCountriesCount,
   lodgingContinentsCount: resolveLodgingContinentsCount,
+  placesVisitedCount: resolvePlacesVisitedCount,
+  placeVisitCount: resolvePlaceVisitCount,
+  placeCountriesCount: resolvePlaceCountriesCount,
+  placeCitiesCount: resolvePlaceCitiesCount,
+  placeListCount: resolvePlaceListCount,
+  placeWishlistCount: resolvePlaceWishlistCount,
 };
 
 /**

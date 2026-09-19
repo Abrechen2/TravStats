@@ -1,5 +1,8 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
+import { act } from "@testing-library/react";
+import { EVIDENCE_MEASURES } from "../../../shared/evidenceMeasures";
 import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter, useLocation } from "react-router-dom";
 
 import type { Place } from "../../../types/place";
 
@@ -44,6 +47,62 @@ const place = (over: Partial<Place> & { id: string; name: string }): Place =>
 
 const visit = (visitedAt: string | null) => ({ id: `v-${visitedAt ?? "undated"}`, visitedAt });
 
+/**
+ * Which tiles open the evidence panel, and under which key — read from the URL
+ * the tile itself writes, because `?evidence=metric:<key>` is the whole
+ * contract between a tile and the panel and a tile wired to the wrong key
+ * looks identical to a correct one until it is clicked.
+ *
+ * `placeCitiesCount` and `placeWishlistCount` are absent on purpose: both
+ * render inside another card's DESCRIPTION, and a card opens one panel.
+ * They are served and reachable by URL; splitting a card in two is a decision
+ * about this surface rather than a wiring one.
+ */
+/** `MemoryRouter` never touches `window.location`, so the search string has to be read from inside it. */
+function LocationProbe({ onChange }: { onChange: (search: string) => void }): null {
+  onChange(useLocation().search);
+  return null;
+}
+
+describe("PoiStatsSection evidence wiring", () => {
+  beforeEach(() => {
+    listPlacesMock.mockReset();
+    listPlaceListsMock.mockReset().mockResolvedValue([{ id: "l1", name: "Maccis" }]);
+    listCuratedMock.mockReset().mockResolvedValue([]);
+  });
+
+  it("wires the four served tiles of the lifetime view", async () => {
+    listPlacesMock.mockResolvedValue([
+      place({ id: "p1", name: "Kolosseum", visits: [visit("2023-04-01")] as never }),
+    ]);
+    let search = "";
+    render(
+      <MemoryRouter>
+        <PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
+        <LocationProbe
+          onChange={(next) => {
+            search = next;
+          }}
+        />
+      </MemoryRouter>
+    );
+    await screen.findByText("places:stats.visitedPlaces");
+
+    const keys: string[] = [];
+    for (const trigger of screen.getAllByRole("button")) {
+      await act(async () => {
+        trigger.click();
+      });
+      const raw = new URLSearchParams(search).get("evidence") ?? "";
+      keys.push(raw.slice(raw.indexOf(":") + 1));
+    }
+    expect(keys.sort()).toEqual(
+      ["placeCountriesCount", "placeListCount", "placeVisitCount", "placesVisitedCount"].sort()
+    );
+    expect(keys.every((key) => EVIDENCE_MEASURES[key]?.servedIn === 1)).toBe(true);
+  });
+});
+
 describe("PoiStatsSection", () => {
   beforeEach(() => {
     listPlacesMock.mockReset();
@@ -57,7 +116,11 @@ describe("PoiStatsSection", () => {
       place({ id: "p2", name: "Sagrada Família", visited: false, visits: [] as never }),
     ]);
 
-    render(<PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />);
+    render(
+      <MemoryRouter>
+        <PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(screen.getByText("places:stats.visitedPlaces")).toBeInTheDocument();
@@ -77,7 +140,11 @@ describe("PoiStatsSection", () => {
       }),
     ]);
 
-    render(<PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />);
+    render(
+      <MemoryRouter>
+        <PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(screen.getByText("places:stats.visits")).toBeInTheDocument();
@@ -92,7 +159,11 @@ describe("PoiStatsSection", () => {
   it("says it could not load rather than showing zeros", async () => {
     listPlacesMock.mockRejectedValue(new Error("network"));
 
-    render(<PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />);
+    render(
+      <MemoryRouter>
+        <PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(screen.getByText("places:list.loadError")).toBeInTheDocument();
@@ -103,7 +174,11 @@ describe("PoiStatsSection", () => {
   it("invites a first visit when there is nothing yet", async () => {
     listPlacesMock.mockResolvedValue([]);
 
-    render(<PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />);
+    render(
+      <MemoryRouter>
+        <PoiStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
 
     await waitFor(() => {
       expect(screen.getByText("places:stats.empty")).toBeInTheDocument();
@@ -126,7 +201,11 @@ describe("PoiStatsSection under the page's period", () => {
 
   it("counts only the places visited in the chosen year", async () => {
     listPlacesMock.mockResolvedValue(twoYears);
-    render(<PoiStatsSection scope={{ year: 2023, compareYear: null }} visibility={ALL_VISIBLE} />);
+    render(
+      <MemoryRouter>
+        <PoiStatsSection scope={{ year: 2023, compareYear: null }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
     const title = await screen.findByText("places:stats.visitedPlaces");
     // The value itself, not the card's container: that is the whole grid, and
     // "1" is also the country count — this assertion passed with no scoping.
@@ -135,7 +214,11 @@ describe("PoiStatsSection under the page's period", () => {
 
   it("leaves lists and the wishlist line out of a year, since they have no date", async () => {
     listPlacesMock.mockResolvedValue(twoYears);
-    render(<PoiStatsSection scope={{ year: 2024, compareYear: null }} visibility={ALL_VISIBLE} />);
+    render(
+      <MemoryRouter>
+        <PoiStatsSection scope={{ year: 2024, compareYear: null }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
     await screen.findByText("places:stats.visitedPlaces");
     expect(screen.queryByText("places:stats.lists")).not.toBeInTheDocument();
     expect(screen.queryByText(/places:stats.visitedPlacesDesc/)).not.toBeInTheDocument();
@@ -143,13 +226,21 @@ describe("PoiStatsSection under the page's period", () => {
 
   it("sets the year against the compare year", async () => {
     listPlacesMock.mockResolvedValue(twoYears);
-    render(<PoiStatsSection scope={{ year: 2024, compareYear: 2023 }} visibility={ALL_VISIBLE} />);
+    render(
+      <MemoryRouter>
+        <PoiStatsSection scope={{ year: 2024, compareYear: 2023 }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
     expect(await screen.findByText("stats:yearFilter.vs")).toBeInTheDocument();
   });
 
   it("names the year when nothing was visited in it", async () => {
     listPlacesMock.mockResolvedValue(twoYears);
-    render(<PoiStatsSection scope={{ year: 2019, compareYear: null }} visibility={ALL_VISIBLE} />);
+    render(
+      <MemoryRouter>
+        <PoiStatsSection scope={{ year: 2019, compareYear: null }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
     expect(await screen.findByText("stats:period.emptyYear")).toBeInTheDocument();
     expect(screen.queryByText("places:stats.empty")).not.toBeInTheDocument();
   });
@@ -166,7 +257,11 @@ describe("PoiStatsSection hides the blocks the reader switched off", () => {
     listPlacesMock.mockResolvedValue([
       place({ id: "p1", name: "Kolosseum", visits: [visit("2023-04-01")] as never }),
     ]);
-    render(<PoiStatsSection scope={LIFETIME} visibility={hiding("rankings")} />);
+    render(
+      <MemoryRouter>
+        <PoiStatsSection scope={LIFETIME} visibility={hiding("rankings")} />
+      </MemoryRouter>
+    );
     expect(await screen.findByText("places:stats.visitedPlaces")).toBeInTheDocument();
     expect(screen.queryByText("places:stats.byCategory")).not.toBeInTheDocument();
   });
@@ -175,7 +270,11 @@ describe("PoiStatsSection hides the blocks the reader switched off", () => {
     listPlacesMock.mockResolvedValue([
       place({ id: "p1", name: "Kolosseum", visits: [visit("2023-04-01")] as never }),
     ]);
-    render(<PoiStatsSection scope={LIFETIME} visibility={hiding("kpis")} />);
+    render(
+      <MemoryRouter>
+        <PoiStatsSection scope={LIFETIME} visibility={hiding("kpis")} />
+      </MemoryRouter>
+    );
     expect(await screen.findByText("places:stats.byCategory")).toBeInTheDocument();
     expect(screen.queryByText("places:stats.visitedPlaces")).not.toBeInTheDocument();
   });

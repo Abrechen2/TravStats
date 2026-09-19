@@ -61,6 +61,43 @@ export function classifyVisit(visit: CountableVisit, now: Date = new Date()): Pl
 }
 
 /**
+ * The UTC year a visit falls in, or null when it carries no readable date.
+ *
+ * UTC, never local: the year an event belongs to is decided the same way for
+ * every domain (`utils/stats/domainYear.ts` for the server rollups,
+ * `Overview/aggregate.ts` for the cross-domain strip), and a browser west of
+ * UTC reading a New Year's Eve visit locally would file it in the other year
+ * than the overview beside it.
+ */
+export function visitYear(visit: CountableVisit): number | null {
+  const at = toDate(visit.visitedAt);
+  return at === null ? null : at.getUTCFullYear();
+}
+
+/**
+ * Whether a visit counts FOR a given year: it happened, and it happened then.
+ *
+ * Both halves matter and they are different questions. `classifyVisit` keeps
+ * an UNDATED visit — it happened, the user just cannot say when — and that is
+ * exactly the visit a year may not claim. A visit dated later this year is
+ * `planned` and belongs to no year at all yet, so the year view cannot run
+ * ahead of the lifetime one.
+ *
+ * This rule lived only in `frontend/src/lib/stats/periodScope.ts` until task
+ * 7b-3, where the statistics tab cut its own rows to the year because there is
+ * no places rollup to ask. The evidence panel has to cut the same rows the
+ * same way, and a second copy of a year window is how a panel comes to name a
+ * visit the tile never counted.
+ */
+export function visitCountsForYear(
+  visit: CountableVisit,
+  year: number,
+  now: Date = new Date()
+): boolean {
+  return visitYear(visit) === year && classifyVisit(visit, now) === "visited";
+}
+
+/**
  * Whether a place belongs in "Orte besucht".
  *
  * Reads `Place.visited` alone and does NOT require a visit row, because the

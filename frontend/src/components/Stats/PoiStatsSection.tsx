@@ -19,6 +19,7 @@ import PoiQualitySection from "./poi/PoiQualitySection";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
 import type { PeriodScope } from "./useStatsPeriod";
 import type { SectionVisibility } from "../../hooks/useSectionVisibility";
+import type { EvidenceScopeParams } from "../evidence/useEvidence";
 import { placesVisitedIn } from "../../lib/stats/periodScope";
 
 /**
@@ -160,6 +161,14 @@ export default function PoiStatsSection({
     );
   }
 
+  // The population these tiles show: the period strip's own state. `allTime`
+  // is the tab's DEFAULT, not an edge case — which is why the registry lists
+  // it beside `year` (corrected in task 7b-3). The lists tile is the one
+  // exception and is drawn only in the lifetime view, which is why its
+  // measure stays `allTime`-only and answers 400 for a year.
+  const evidenceScope: EvidenceScopeParams =
+    year === null ? { period: "allTime" } : { period: "year", year };
+
   const locale = i18n.language === "de" ? "de-DE" : "en-GB";
 
   const regionNames =
@@ -218,6 +227,12 @@ export default function PoiStatsSection({
             valueSize="md"
             title={t("places:stats.visitedPlaces")}
             value={detail.visitedPlaces.length}
+            evidence={{
+              kind: "metric",
+              key: "placesVisitedCount",
+              scope: evidenceScope,
+              renderedValue: detail.visitedPlaces.length,
+            }}
             // A year holds no wishlist — it would always read "0 more".
             description={
               year === null
@@ -230,6 +245,12 @@ export default function PoiStatsSection({
             valueSize="md"
             title={t("places:stats.visits")}
             value={stats.totalEvents ?? 0}
+            evidence={{
+              kind: "metric",
+              key: "placeVisitCount",
+              scope: evidenceScope,
+              renderedValue: stats.totalEvents ?? 0,
+            }}
             description={
               // Three states, because two of them read wrong as one. A place can
               // be marked visited without a dated visit — the detail page says so
@@ -252,7 +273,17 @@ export default function PoiStatsSection({
             valueSize="md"
             title={t("places:stats.countries")}
             value={detail.countries.size}
+            // The card's own number is the COUNTRIES; the cities figure sits in
+            // its description, and a card opens one panel. `placeCitiesCount`
+            // is served and addressable by URL, and splitting this card in two
+            // is a decision about this surface rather than a wiring one.
             description={t("places:stats.citiesDesc", { count: detail.cities.size })}
+            evidence={{
+              kind: "metric",
+              key: "placeCountriesCount",
+              scope: evidenceScope,
+              renderedValue: detail.countries.size,
+            }}
           />
           {year === null && (
             <StatCard
@@ -260,6 +291,14 @@ export default function PoiStatsSection({
               valueSize="md"
               title={t("places:stats.lists")}
               value={lists.length}
+              // Only drawn in the lifetime view, which is the scope the measure
+              // accepts — a list is what the user KEEPS and belongs to no year.
+              evidence={{
+                kind: "metric",
+                key: "placeListCount",
+                scope: { period: "allTime" },
+                renderedValue: lists.length,
+              }}
               description={t("places:stats.listsDesc", {
                 own: ownLists.length,
                 checklists: lists.length - ownLists.length,
