@@ -1,4 +1,4 @@
-import { useState, type JSX } from "react";
+import { useEffect, useState, type JSX } from "react";
 import Modal from "../Modal";
 import { copyToClipboard } from "../../lib/clipboard";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -50,9 +50,33 @@ export default function EvidencePanel({
 }): JSX.Element | null {
   const { t, i18n } = useTranslation(["evidence", "common"]);
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
-  const { isOpen, close, response, entries, loading, error, hasMore, loadMore, renderedValue } =
-    useEvidence(scope);
+  const {
+    isOpen,
+    kind,
+    key,
+    close,
+    response,
+    entries,
+    loading,
+    error,
+    hasMore,
+    loadMore,
+    renderedValue,
+  } = useEvidence(scope);
   const [copyState, setCopyState] = useState<"idle" | "done" | "failed">("idle");
+
+  /**
+   * "Kopiert" belongs to one copy, of one address. The panel is a singleton
+   * that every tile reuses, so without this the label stayed on "Kopiert"
+   * after the reader closed it and opened a different measure -- claiming a
+   * link they never copied was on their clipboard (review, 2026-09-19).
+   *
+   * Keyed on the closing as well as the measure: a reopen of the SAME key
+   * is a new visit too.
+   */
+  useEffect(() => {
+    setCopyState("idle");
+  }, [isOpen, kind, key]);
 
   if (!isOpen) return null;
 
