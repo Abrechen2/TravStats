@@ -4,6 +4,7 @@ import { AppError } from "./errorHandler";
 import { JWT_SECRET } from "../utils/jwtSecret";
 import { prisma } from "../db";
 import { securityLogger } from "../utils/logger";
+import { isSharedDemoAccount } from "../utils/sharedDemo";
 import {
   ApiTokenScope,
   looksLikeApiToken,
@@ -23,6 +24,20 @@ export interface AuthRequest extends Request {
     id: string;
     scope: ApiTokenScope;
   };
+  /**
+   * Is this the SHARED demo account — `isDemo` AND the published username?
+   *
+   * Settled here because the row is already in hand: `authenticate` loads the
+   * user to check `isActive` and the session epoch, so the two extra columns
+   * cost nothing, and a middleware that asks the question later would have to
+   * go back to the database. `middleware/rateLimit.ts` needs the answer
+   * SYNCHRONOUSLY — a key generator runs per request and cannot await a query
+   * without paying for one on every limited route.
+   *
+   * `utils/sharedDemo.ts` owns the predicate itself; this is only where the
+   * answer is carried. Undefined on an unauthenticated request.
+   */
+  isSharedDemo?: boolean;
 }
 
 /**
@@ -69,7 +84,9 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
 
     const user = await prisma.user.findUnique({
       where: { id: decoded.userId },
-      select: { id: true, isActive: true, sessionEpoch: true },
+      // `isDemo` and `username` are here for `req.isSharedDemo` below, not for
+      // the checks in this function — see the field's own note.
+      select: { id: true, isActive: true, sessionEpoch: true, isDemo: true, username: true },
     });
 
     if (!user) {
@@ -134,6 +151,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
     }
 
     req.userId = decoded.userId;
+    req.isSharedDemo = isSharedDemoAccount(user);
     next();
   } catch (error) {
     if (error instanceof jwt.JsonWebTokenError) {
@@ -183,7 +201,7 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
   const lookup = tokenLookupHash(plaintext);
   const token = await prisma.apiToken.findUnique({
     where: { lookupHash: lookup },
-    include: { user: { select: { id: true, isActive: true } } },
+    include: { user: { select: { id: true, isActive: true, isDemo: true, username: true } } },
   });
 
   if (!token) {
@@ -246,6 +264,7 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
 
   req.userId = token.userId;
   req.apiToken = { id: token.id, scope: token.scope as ApiTokenScope };
+  req.isSharedDemo = isSharedDemoAccount(token.user);
 
   // Bump last-used metadata fire-and-forget. A failure here MUST NOT
   // reject the request; this is just bookkeeping for the user's "are
