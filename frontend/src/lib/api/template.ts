@@ -1,5 +1,5 @@
 import { api } from "./client";
-import type { TemplateStatusResult, UserTemplateItem } from "./types";
+import type { TemplatePreviewResult, TemplateStatusResult, UserTemplateItem } from "./types";
 
 // Utility function: Calculate distance between two coordinates using Haversine formula
 export const calculateDistance = (
@@ -41,6 +41,17 @@ export const parserTemplatesApi = {
   getById: async (id: string): Promise<UserTemplateItem> => {
     const res = await api.get<{ template: UserTemplateItem }>(`/parser-templates/${id}`);
     return res.data.template;
+  },
+  /**
+   * Run a derived template before trusting it — forgejo#124 phase 6.
+   *
+   * Against the sample it came from AND a held-out one, through the real
+   * engine. `setStatus("active")` is refused with 409 `PREVIEW_REQUIRED`
+   * until this has answered `canActivate`.
+   */
+  preview: async (id: string): Promise<TemplatePreviewResult> => {
+    const res = await api.post<TemplatePreviewResult>(`/parser-templates/${id}/preview`);
+    return res.data;
   },
   setStatus: async (id: string, status: "active" | "disabled" | "pending"): Promise<void> => {
     await api.patch(`/parser-templates/${id}`, { status });

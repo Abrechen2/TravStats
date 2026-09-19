@@ -13,6 +13,7 @@ import { SMTP_CONFIG_ID } from "./admin/smtp";
 import { sendPasswordResetEmail } from "../services/emailService";
 import { getInstanceSettings } from "../services/instanceSettingsService";
 import { isSharedDemoAccount } from "../utils/sharedDemo";
+import { recordPasswordResetRequest } from "../services/passwordResetRequestService";
 import logger from "../utils/logger";
 
 const router = Router();
@@ -74,6 +75,45 @@ router.post(
 
       const user = await prisma.user.findUnique({ where: { username } });
 
+      // Read unconditionally, before the branch below cares whether the user
+      // exists: the answer is a property of the INSTANCE, not of the account,
+      // and reading it only for known usernames made the handler's work — and
+      // so its timing — depend on whether the name was real.
+      const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
+      const mailEnabled = !!config?.enabled;
+
+      // No mail delivery, but a real account: tell an administrator instead of
+      // telling nobody (forgejo#88, point 2). Before this, the dialog said
+      // "contact an administrator" and the administrator never heard that
+      // anyone had.
+      //
+      // This is the one unauthenticated write on the route, and it is bounded
+      // by construction: `PasswordResetRequest.userId` is unique, so a repeat
+      // is an UPDATE, and a username that matches no account writes nothing —
+      // the table can never hold more rows than there are users, whatever is
+      // thrown at it. The existing `passwordResetLimiter` still guards the
+      // door; no new one is needed, because no new door was opened.
+      //
+      // The upsert runs only for a real account, so the handler does measurably
+      // more work for a name that exists — measured and accepted, 2026-09-19.
+      // It is no worse than the SMTP path above, which does an UPDATE and an
+      // SMTP send on the same condition, and `passwordResetLimiter` bounds how
+      // often the difference can be sampled. Closing it would mean a decoy
+      // write, which is a worse thing to have in the tree than a millisecond.
+      //
+      // The shared demo account is deliberately NOT excluded here. What the
+      // SMTP branch refuses it is a reset LINK sent to a stale address; an
+      // administrator reading a row and deciding for themselves is not that.
+      // An instance that hosts the demo has an admin who can ignore it.
+      if (user && user.isActive && !mailEnabled) {
+        await recordPasswordResetRequest(user.id);
+        logger.info({
+          operation: "password_reset_request_recorded",
+          message: "Password reset requested on an instance without mail delivery",
+          context: { userId: user.id },
+        });
+      }
+
       // The shared demo account never gets a reset link. Its login is
       // published, so whoever asks for one is not its owner — and whoever
       // received it would set a password of their own and lock every other
@@ -85,9 +125,7 @@ router.post(
       // purpose: a distinct refusal would be an enumeration oracle, and there
       // is nothing to hide about an account whose name is on the login page.
       if (user && user.isActive && user.notificationEmail && !isSharedDemoAccount(user)) {
-        const config = await prisma.smtpConfig.findUnique({ where: { id: SMTP_CONFIG_ID } });
-
-        if (config?.enabled) {
+        if (mailEnabled) {
           const plainToken = crypto.randomBytes(32).toString("hex");
           const hashedToken = hashToken(plainToken);
           const expiry = new Date(Date.now() + 30 * 60 * 1000); // 30 min

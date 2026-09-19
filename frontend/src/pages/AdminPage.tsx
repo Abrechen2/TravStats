@@ -566,6 +566,10 @@ export default function AdminPage(): JSX.Element {
     onDeleteUser: handleDeleteUser,
     onToggleUserActive: handleToggleUserActive,
     onResetTwoFactor: handleResetTwoFactor,
+    // `?user=` — a link that meant one account, not the table. Read here
+    // beside `?tab=`/`?section=`, which is where this page already keeps its
+    // URL reading, and never written back: it is a pointer, not state.
+    highlightUserId: searchParams.get("user"),
     invitations,
     invitationStatusFilter,
     onInvitationStatusFilterChange: setInvitationStatusFilter,

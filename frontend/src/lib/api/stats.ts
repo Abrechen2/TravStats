@@ -1,5 +1,7 @@
 import type { TravelAccountResponse } from "../../types/travelAccount";
 import type { CountryDetail, Passport } from "../../types/passport";
+import type { TravelRecord, TravelRecordsResponse } from "../../types/travelRecords";
+import type { Wrapped } from "../../types/wrapped";
 import type {
   AircraftProfileResponse,
   AircraftRankingResponse,
@@ -61,6 +63,38 @@ export const statsApi = {
    */
   getCountryDetail: async (code: string): Promise<CountryDetail> => {
     const { data } = await api.get<CountryDetail>(`/stats/countries/${encodeURIComponent(code)}`);
+    return data;
+  },
+
+  /**
+   * The seven travel records, derived server-side (forgejo#41).
+   *
+   * The envelope is unwrapped HERE and nowhere else. `/stats/records` is one
+   * of the twelve `{success, data}` leaks the response-shape ratchet records,
+   * and a screen that had to know which of the two shapes its endpoint speaks
+   * is a screen that will eventually guess wrong.
+   */
+  getRecords: async (): Promise<TravelRecord[]> => {
+    const { data } = await api.get<TravelRecordsResponse>("/stats/records");
+    return data.data.records;
+  },
+
+  /**
+   * The year in review (forgejo#42).
+   *
+   * Omitting `year` is not the same as passing the current one: without it the
+   * server answers about the latest year that HAS anything in it, read off the
+   * data rather than off the wall clock. The page relies on that for its first
+   * load and only sends a year once the reader picks one.
+   *
+   * 404 when the account has no countable activity in any year at all — there
+   * is no story, and `classifyLoadFailure` lets the page tell that apart from
+   * a load that failed.
+   */
+  getWrapped: async (year?: number): Promise<Wrapped> => {
+    const { data } = await api.get<Wrapped>("/stats/wrapped", {
+      params: year === undefined ? undefined : { year },
+    });
     return data;
   },
 
@@ -199,4 +233,24 @@ export interface CruiseStatsResponse {
   hasDatelineCrossing: boolean;
   hasBirthdayAtSea: boolean;
   hasNewYearsAtSea: boolean;
+  /** The base-currency total behind the money section's one summed figure.
+   *  Optional so an older backend still parses — without it the tile is not
+   *  drawn at all, which is the honest answer when nobody computed it. */
+  totalSpendBase?: CruiseTotalSpendBase;
+}
+
+/**
+ * The converted cruise total, as `GET /stats/cruise` answers it.
+ *
+ * Computed on the server by `services/stats/cruiseSpendBase.ts`, the same rule
+ * the evidence panel answers `metric:cruiseTotalSpend` with. It is NOT folded
+ * on the client: the cruise rows carry a price and a currency, and the FX
+ * snapshot that makes a sum honest lives on columns the rows endpoint does not
+ * expose. `value` is null — never 0 — when nothing in scope could be
+ * converted, and `excludedCount` names how many priced cruises stayed out.
+ */
+export interface CruiseTotalSpendBase {
+  value: number | null;
+  excludedCount: number;
+  currency: string;
 }

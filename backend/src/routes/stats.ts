@@ -49,6 +49,7 @@ import { readYearQuery } from "../utils/stats/domainYear";
 import { buildTravelAccount } from "../services/stats/travelAccount";
 import { loadTravelAccountData } from "../services/stats/travelAccountData";
 import { loadCruiseStatsData } from "../services/stats/cruiseStatsData";
+import { buildCruiseTabResponse } from "../services/stats/cruiseTabResponse";
 import { loadLodgingStatsData } from "../services/stats/lodgingStatsData";
 import { buildTripAccount } from "../services/stats/tripAccount";
 import { getBaseCurrency } from "../services/fx/snapshot";
@@ -56,7 +57,7 @@ import { statsEtag } from "../middleware/statsEtag";
 // Folds shared with the composing `GET /stats/page` (forgejo#49): one home per
 // figure, so the two surfaces cannot answer the same question differently.
 import { computeSeatStats } from "../services/stats/seatStats";
-import { computeCountryStats, isoCodes } from "../services/stats/countryStats";
+import { computeCountryStats } from "../services/stats/countryStats";
 import { computeAirlineRanking } from "../services/stats/airlineRanking";
 import { loadHomeAirportHistory } from "../services/stats/homeAirportHistory";
 
@@ -1158,6 +1159,7 @@ router.get(
       // `services/stats/cruiseStatsData.ts` for why this is not inline.
       const { rows: cruiseRows, userBirthday } = await loadCruiseStatsData(userId, year);
       const cruiseStatsInput: CruiseStatsInput[] = cruiseRows.map((r) => r.input);
+      const baseCurrency = await getBaseCurrency(userId);
 
       // Defensive parity with the flight stats endpoints: a calculation
       // error on one malformed cruise must not 500 the whole tab — fall
@@ -1174,64 +1176,7 @@ router.get(
         stats = calculateCruiseStats([], userBirthday);
       }
 
-      res.json({
-        // Counts + ladders
-        cruisesCount: stats.cruisesCount,
-        cruisePortsUnique: stats.cruisePortsUnique,
-        cruisePortsSingleMax: stats.cruisePortsSingleMax,
-        cruiseShipsUnique: stats.cruiseShipsUnique,
-        cruiseLinesUnique: stats.cruiseLinesUnique,
-        cruiseLineLoyaltyMax: stats.cruiseLineLoyaltyMax,
-        // Ranked by how often they were sailed, ties alphabetical. The
-        // cross-domain tile slices the first five and labels them "Top", so a
-        // purely alphabetical list put AIDA and Costa there for their
-        // initials rather than for having been sailed.
-        cruiseLines: Array.from(stats.cruiseLines).sort((a, b) => {
-          const diff = (stats.cruiseLineCounts[b] ?? 0) - (stats.cruiseLineCounts[a] ?? 0);
-          return diff !== 0 ? diff : a.localeCompare(b);
-        }),
-        resolvedPortCalls: stats.resolvedPortCalls,
-        seaDays: stats.seaDays,
-        seaDaysStreak: stats.seaDaysStreak,
-        // Regions + countries (lists already in API; counts derived
-        // client-side)
-        regions: Array.from(stats.regions).sort(),
-        regionVisitCounts: stats.regionVisitCounts,
-        // Display vocabulary: English names, rendered as-is in the cruise
-        // tab's country tag cloud. Do NOT switch these to codes.
-        countries: Array.from(stats.countries).sort(),
-        // Counting vocabulary: ISO alpha-2, so the cross-domain KPI can union
-        // these with the airport catalogue's codes without counting "Germany"
-        // and "DE" as two countries. Ports whose name does not resolve are
-        // dropped from the COUNT rather than counted under their raw name —
-        // an unresolvable name cannot be deduplicated against anything.
-        countriesIso: isoCodes(stats.countries),
-        // Year-scoped counterpart — see the CruiseStats doc comment. Keyed by
-        // the cruise's start year so the overview's "countries visited" tile
-        // can answer for a selected year instead of showing the lifetime set
-        // with a delta on top that could only ever read zero.
-        countriesByYear: Object.fromEntries(
-          [...stats.countriesByYear.entries()].map(([year, set]) => [String(year), isoCodes(set)])
-        ),
-        // Distance metrics (added 2026-04-25 with the schematic-routes
-        // pipeline; long-overdue exposure to the stats UI)
-        totalDistanceKm: Math.round(stats.totalDistanceKm),
-        longestLegKm: Math.round(stats.longestLegKm),
-        // Trip-shape derivations
-        totalPortCalls: stats.totalPortCalls,
-        totalCruiseDays: stats.totalCruiseDays,
-        // Cabin / deck signals
-        hasBalconyCabin: stats.hasBalconyCabin,
-        hasSuiteCabin: stats.hasSuiteCabin,
-        maxDeck: stats.maxDeck,
-        // Achievement-style flags
-        hasCanalTransit: stats.hasCanalTransit,
-        hasPolar: stats.hasPolar,
-        hasColdWater: stats.hasColdWater,
-        hasDatelineCrossing: stats.hasDatelineCrossing,
-        hasBirthdayAtSea: stats.hasBirthdayAtSea,
-        hasNewYearsAtSea: stats.hasNewYearsAtSea,
-      });
+      res.json(buildCruiseTabResponse(stats, cruiseRows, baseCurrency));
     } catch (error) {
       next(error);
     }

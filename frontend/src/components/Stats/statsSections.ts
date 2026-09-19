@@ -24,6 +24,7 @@ export const FLIGHT_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "calendar", label: t("stats:calendar.title") },
   { key: "distance", label: t("stats:sections.distance") },
   { key: "breakdown", label: t("stats:sections.breakdown") },
+  { key: "records", label: t("stats:sections.records") },
   { key: "punctuality", label: t("stats:sections.punctuality") },
   { key: "fun", label: t("stats:sections.fun") },
   { key: "business", label: t("stats:sections.business") },

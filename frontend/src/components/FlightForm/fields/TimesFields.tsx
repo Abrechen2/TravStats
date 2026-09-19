@@ -1,4 +1,5 @@
 import { useTranslation } from "../../../hooks/useTranslation";
+import { RequiredMark } from "../requiredFields";
 import CopyActionButton from "../CopyActionButton";
 import HelpIcon from "../../Help/HelpIcon";
 
@@ -78,6 +79,17 @@ interface TimesFieldsProps {
    *  flight status is a derived pill rather than a picker. */
   actualValue?: ActualTimesFieldsValue;
   onActualChange?: (value: ActualTimesFieldsValue) => void;
+  /**
+   * Mark the four SCHEDULED fields as required — an asterisk in the label and
+   * `aria-required` on the input (forgejo#88, point 9).
+   *
+   * Opt-in because the edit modal renders this too, and there the four are
+   * already filled: an asterisk on a field that has a value states a rule
+   * nobody is about to break. The create form passes it; the edit form does
+   * not. The ACTUAL pair is never marked either way — it is optional by
+   * design, and a half-filled pair is refused by `canSubmit`, not by a star.
+   */
+  markRequired?: boolean;
 }
 
 /** Parse a "YYYY-MM-DD" + "HH:mm" pair into an offset-free millisecond
@@ -107,6 +119,7 @@ export default function TimesFields({
   help,
   actualValue,
   onActualChange,
+  markRequired = false,
 }: TimesFieldsProps): JSX.Element {
   const { t } = useTranslation(["flights"]);
 
@@ -200,7 +213,7 @@ export default function TimesFields({
         <div>
           <div className="flex items-center gap-2">
             <label className="label" htmlFor={depDateId}>
-              {t("flights:form.departureDate")}
+              {t("flights:form.departureDate")} {markRequired && <RequiredMark />}
             </label>
             {help?.depDate && (
               <HelpIcon
@@ -214,6 +227,7 @@ export default function TimesFields({
             id={depDateId}
             type="date"
             className="input"
+            aria-required={markRequired || undefined}
             value={value.depDate}
             onChange={(e) => onChange({ ...value, depDate: e.target.value })}
           />
@@ -221,7 +235,7 @@ export default function TimesFields({
         <div>
           <div className="flex items-center gap-2">
             <label className="label" htmlFor={depTimeId}>
-              {t("flights:form.departureTime")}
+              {t("flights:form.departureTime")} {markRequired && <RequiredMark />}
             </label>
             {help?.depTime && (
               <HelpIcon
@@ -235,6 +249,7 @@ export default function TimesFields({
             id={depTimeId}
             type="time"
             className="input"
+            aria-required={markRequired || undefined}
             value={value.depTime}
             onChange={(e) => onChange({ ...value, depTime: e.target.value })}
           />
@@ -248,7 +263,7 @@ export default function TimesFields({
             counts in TimesFields.test.tsx before this was split out. */}
           <div className="flex items-center gap-2">
             <label className="label" htmlFor={arrDateId}>
-              {t("flights:form.arrivalDate")}
+              {t("flights:form.arrivalDate")} {markRequired && <RequiredMark />}
             </label>
             {help?.arrDate && (
               <HelpIcon
@@ -268,6 +283,7 @@ export default function TimesFields({
             id={arrDateId}
             type="date"
             className="input"
+            aria-required={markRequired || undefined}
             value={value.arrDate}
             onChange={(e) => onChange({ ...value, arrDate: e.target.value })}
           />
@@ -282,7 +298,7 @@ export default function TimesFields({
         <div>
           <div className="flex items-center gap-2">
             <label className="label" htmlFor={arrTimeId}>
-              {t("flights:form.arrivalTime")}
+              {t("flights:form.arrivalTime")} {markRequired && <RequiredMark />}
             </label>
             {help?.arrTime && (
               <HelpIcon
@@ -308,6 +324,7 @@ export default function TimesFields({
             id={arrTimeId}
             type="time"
             className="input"
+            aria-required={markRequired || undefined}
             value={value.arrTime}
             onChange={(e) => onChange({ ...value, arrTime: e.target.value })}
           />

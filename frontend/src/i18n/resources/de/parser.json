@@ -46,5 +46,114 @@
       "loaded": "{{count}} Templates geladen · tägliches Auto-Update aus GitHub",
       "adminOnly": "Aktualisieren kann nur ein Admin. Der tägliche Auto-Update läuft trotzdem."
     }
+  },
+  "domains": {
+    "flight": "Flug",
+    "lodging": "Unterkunft",
+    "cruise": "Kreuzfahrt",
+    "place": "Ort"
+  },
+  "labelGroups": {
+    "flight": "Flug",
+    "route": "Strecke",
+    "boarding": "Boarding",
+    "booking": "Buchung",
+    "property": "Unterkunft",
+    "stay": "Aufenthalt",
+    "place": "Adresse",
+    "money": "Preis",
+    "ship": "Schiff",
+    "voyage": "Reise",
+    "cabin": "Kabine"
+  },
+  "labels": {
+    "flight": {
+      "flightNumber": "Flugnummer",
+      "airline": "Fluggesellschaft",
+      "aircraft": "Flugzeugtyp",
+      "departureCode": "Abflug-Code",
+      "arrivalCode": "Ankunfts-Code",
+      "departureDate": "Abflugdatum",
+      "departureTime": "Abflugzeit",
+      "arrivalDate": "Ankunftsdatum",
+      "arrivalTime": "Ankunftszeit",
+      "seat": "Sitzplatz",
+      "seatClass": "Buchungsklasse",
+      "terminal": "Terminal",
+      "gate": "Gate",
+      "boardingGroup": "Boarding-Gruppe",
+      "pnr": "Buchungscode",
+      "ticketNumber": "Ticketnummer"
+    },
+    "lodging": {
+      "hotelName": "Name der Unterkunft",
+      "roomCategory": "Zimmerkategorie",
+      "checkIn": "Anreise",
+      "checkOut": "Abreise",
+      "guests": "Gäste",
+      "address": "Adresse",
+      "postcode": "Postleitzahl",
+      "city": "Stadt",
+      "country": "Land",
+      "totalPrice": "Gesamtpreis",
+      "pricePerNight": "Preis pro Nacht",
+      "currency": "Währung",
+      "confirmationNumber": "Buchungsnummer"
+    },
+    "cruise": {
+      "shipName": "Schiff",
+      "cruiseLine": "Reederei",
+      "routeName": "Routenname",
+      "startDate": "Einschiffung",
+      "endDate": "Ausschiffung",
+      "departurePortName": "Starthafen",
+      "arrivalPortName": "Zielhafen",
+      "cabinNumber": "Kabinennummer",
+      "cabinType": "Kabinentyp",
+      "deck": "Deck",
+      "price": "Preis",
+      "currency": "Währung",
+      "bookingReference": "Buchungsnummer"
+    },
+    "place": {
+      "name": "Name",
+      "category": "Kategorie",
+      "address": "Adresse",
+      "city": "Stadt",
+      "country": "Land",
+      "visitedAt": "Besuchsdatum",
+      "notes": "Notiz"
+    }
+  },
+  "workshop": {
+    "domainTitle": "Art des Dokuments",
+    "domainDetected": "Erkannt als {{domain}}. Stimmt das nicht, wähle hier die richtige Art.",
+    "domainOverridden": "Erkannt war {{domain}} — du hast das geändert.",
+    "labelSelect": "Feld für die markierte Stelle",
+    "markedFields": "Markierte Felder",
+    "markedNothing": "Noch nichts markiert.",
+    "derivedBanner": "Template abgeleitet. Prüfe es unter „Meine Templates“ mit der Vorschau, bevor du es aktivierst.",
+    "dismiss": "Ausblenden"
+  },
+  "derivation": {
+    "cannot": {
+      "cruiseNeedsRepeatingBlocks": "Für Kreuzfahrten kann noch kein Template abgeleitet werden: eine Hafenliste ist eine wiederkehrende Reihe, und der Lesekopf dafür fehlt noch. Deine Markierungen werden trotzdem gespeichert.",
+      "noPlaceDocumentReader": "Für Orte gibt es noch keinen Dokument-Leser, also entsteht hier kein Template. Deine Markierungen werden trotzdem gespeichert.",
+      "lodgingNeedsNameAndDates": "Zu wenig markiert: ohne Name der Unterkunft, Anreise und Abreise ist es kein Aufenthalt, und ein Template ohne diese drei würde Vorschläge machen, die niemand prüfen kann.",
+      "lodgingDateNotUnderstood": "Das Datumsformat in dieser Mail wird noch nicht gelesen (Monatsnamen ja, rein numerisch wie 10.03.2026 nein). Ein Template darauf würde jede Mail dieses Absenders ablehnen.",
+      "noDistinguishingMarker": "Nichts in dieser Mail benennt den Absender — nur diese eine Buchung. Ein Template ohne Absender-Merkmal würde auf jede Unterkunfts-Mail passen.",
+      "notDerivable": "Für diese Art von Dokument leitet die Werkstatt kein Template ab."
+    }
+  },
+  "preview": {
+    "run": "Vorschau",
+    "ownSample": "Eigenes Beispiel",
+    "heldOutSample": "Zurückgehaltenes Beispiel",
+    "noSecondSample": "Kein zweites Beispiel dieser Art vorhanden. Annotiere eine weitere Mail desselben Absenders, um zu sehen, ob das Template auch sie liest.",
+    "readNothing": "Hier würde das Template nichts lesen.",
+    "canActivate": "Das Template liest sein eigenes Beispiel — es kann aktiviert werden.",
+    "cannotActivate": "Das Template liest nicht einmal sein eigenes Beispiel. Aktivieren würde nichts bringen.",
+    "requiredFirst": "Erst die Vorschau laufen lassen — ein Template wird nicht aktiviert, bevor es einmal gelesen hat.",
+    "failed": "Vorschau konnte nicht ausgeführt werden."
   }
 }

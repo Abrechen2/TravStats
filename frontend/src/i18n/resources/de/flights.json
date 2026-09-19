@@ -164,7 +164,15 @@
       "mergedNoChange": "Keine neuen Felder zu ergänzen"
     },
     "alreadyImported": "Dieser Flug war schon eingelesen — es wurde nichts doppelt angelegt.",
-    "flightNumberRequired": "Gib zuerst eine Flugnummer ein, zum Beispiel LH400."
+    "flightNumberRequired": "Gib zuerst eine Flugnummer ein, zum Beispiel LH400.",
+    "requiredLegend": "* Pflichtfeld",
+    "sections": {
+      "core": "Route, Zeiten & Airline",
+      "priceAndSeat": "Preis, Klasse & Sitzplatz",
+      "aircraft": "Flugzeug, Terminal & Gate",
+      "booking": "Buchung, Reise & Notizen",
+      "filledIn": "ausgefüllt"
+    }
   },
   "list": {
     "title": "Flüge",

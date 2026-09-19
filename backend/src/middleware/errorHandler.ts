@@ -24,7 +24,14 @@ export interface ApiError extends Error {
  * `error` field rather than in `code`.
  */
 export type ApiErrorCode =
-  "INVALID_CREDENTIALS" | "ACCOUNT_DEACTIVATED" | "RATE_LIMITED" | "DB_UNAVAILABLE" | "DUPLICATE";
+  | "INVALID_CREDENTIALS"
+  | "ACCOUNT_DEACTIVATED"
+  | "RATE_LIMITED"
+  | "DB_UNAVAILABLE"
+  | "DUPLICATE"
+  /** A workshop template was activated before its preview had run — the
+   *  parser page turns this into "run the preview", not a generic toast. */
+  | "PREVIEW_REQUIRED";
 
 interface AuthRequest extends Request {
   user?: {
