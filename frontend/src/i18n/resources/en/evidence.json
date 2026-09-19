@@ -3,6 +3,7 @@
     "close": "Close",
     "loading": "Loading evidence …",
     "loadError": "The evidence could not be loaded.",
+    "errorTitle": "Evidence",
     "abstention": "This figure cannot currently be determined.",
     "empty": "No entries.",
     "loadMore": "Load more",

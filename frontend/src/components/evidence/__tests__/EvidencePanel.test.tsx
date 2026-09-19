@@ -2,9 +2,11 @@ import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useSearchParams } from "react-router-dom";
+import { AxiosError, AxiosHeaders } from "axios";
 import EvidencePanel from "../EvidencePanel";
 import { useEvidenceOpenStore } from "../evidenceOpenStore";
 import { evidenceApi } from "../../../lib/api/evidence";
+import { logger } from "../../../lib/logger";
 import type { EvidenceResponse } from "../../../shared/evidence";
 
 afterEach(cleanup);
@@ -291,6 +293,42 @@ describe("EvidencePanel", () => {
     expect(
       screen.queryByRole("button", { name: "evidence:panel.loadMore" })
     ).not.toBeInTheDocument();
+  });
+
+  /**
+   * The header must not contradict the only line under it. All three of these
+   * were reachable in the browser on 2026-09-19 and all three read "Beleg wird
+   * geladen …" over "Die Belege konnten nicht geladen werden.", because the
+   * title branched on the measure alone and a failed fetch has none.
+   *
+   * The statuses are the real ones the endpoint answers — 501 for a release-2
+   * kind, 404 for a key it does not serve, 400 for a scope a resolver refuses
+   * — rather than one generic rejection, because it is the URL shapes that
+   * were observed, not a single code path.
+   */
+  it.each([
+    ["achievement, not served until release 2", "achievement%3Ax", 501],
+    ["a ranking key the server does not serve", "ranking%3Aairline%3A", 404],
+    ["a measure whose scope is refused", "metric%3AplaceListCount", 400],
+  ])("the title stops saying 'loading' once %s fails", async (_case, param, status) => {
+    // `logger.error` shouts into the run for any non-404; the panel's own
+    // behaviour is what is under test, not its logging.
+    const logged = vi.spyOn(logger, "error").mockImplementation(() => {});
+    vi.mocked(evidenceApi.get).mockRejectedValue(
+      new AxiosError("failed", undefined, undefined, undefined, {
+        status,
+        data: {},
+        statusText: "",
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      })
+    );
+
+    renderPanel([`/stats?evidence=${param}`]);
+
+    await screen.findByText("evidence:panel.loadError");
+    expect(await screen.findByRole("dialog")).toHaveAccessibleName("evidence:panel.errorTitle");
+    logged.mockRestore();
   });
 
   it("Escape closes the panel and returns focus to whatever opened it", async () => {

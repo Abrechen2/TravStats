@@ -55,7 +55,19 @@ export default function EvidencePanel({
   if (!isOpen) return null;
 
   const measure = response?.measure ?? null;
-  const title = measure ? composeI18nText(measure.label, t) : t("evidence:panel.loading");
+  // The title follows the STATE, in the same three-way split the body below
+  // uses. It used to be "measure's label, else loading", which left "Beleg
+  // wird geladen …" standing over "Die Belege konnten nicht geladen werden."
+  // — a header that contradicted the only line under it, on every 404, 501 and
+  // 400 the panel can reach (browser pass, 2026-09-19). A measure whose label
+  // is already known (a load-more that failed) keeps it; nothing else can be
+  // said, so the generic noun is said instead.
+  const failed = !loading && error !== null;
+  const title = measure
+    ? composeI18nText(measure.label, t)
+    : failed
+      ? t("evidence:panel.errorTitle")
+      : t("evidence:panel.loading");
   const valueText = measure ? formatMeasureValue(measure, t, i18n.language, baseCurrency) : null;
   const showAbstention = measure !== null && measure.value === null;
   const showEmpty =
@@ -157,9 +169,7 @@ export default function EvidencePanel({
       {loading && entries.length === 0 && (
         <p style={{ color: "var(--text-muted)" }}>{t("common:loading.default")}</p>
       )}
-      {!loading && error && (
-        <p style={{ color: "var(--text-muted)" }}>{t("evidence:panel.loadError")}</p>
-      )}
+      {failed && <p style={{ color: "var(--text-muted)" }}>{t("evidence:panel.loadError")}</p>}
       {showEmpty && <p style={{ color: "var(--text-muted)" }}>{t("evidence:panel.empty")}</p>}
 
       {entries.length > 0 && measure && (

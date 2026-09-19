@@ -3,6 +3,7 @@
     "close": "Schließen",
     "loading": "Beleg wird geladen …",
     "loadError": "Die Belege konnten nicht geladen werden.",
+    "errorTitle": "Beleg",
     "abstention": "Diese Zahl lässt sich derzeit nicht ermitteln.",
     "empty": "Keine Einträge.",
     "loadMore": "Weitere laden",
