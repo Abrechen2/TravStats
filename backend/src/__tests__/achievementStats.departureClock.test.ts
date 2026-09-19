@@ -80,7 +80,12 @@ beforeAll(() => {
 });
 
 afterAll(() => {
-  process.env.TZ = originalTz;
+  // `process.env.TZ = undefined` writes the STRING "undefined", which Node
+  // cannot parse as a zone and falls back to UTC for — so this file would have
+  // silently moved every suite that ran after it off the machine's clock.
+  // Deleting is the only way to restore "was not set".
+  if (originalTz === undefined) delete process.env.TZ;
+  else process.env.TZ = originalTz;
 });
 
 /** Run the engine with the process clock set to `tz`. */
