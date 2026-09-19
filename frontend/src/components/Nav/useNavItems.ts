@@ -140,10 +140,14 @@ export function useNavItems(): {
             // Same condition, and for the same reason: the year in review is
             // built from flights, and an entry leading to a page that explains
             // why it is empty is worse than no entry.
+            //
+            // `/wrapped`, not `/stats/wrapped`: `isPathActive` marks a parent
+            // active for its children, so the nested path highlighted the
+            // Statistik entry alongside this leaf.
             {
               kind: "leaf" as const,
               id: "wrapped",
-              path: "/stats/wrapped",
+              path: "/wrapped",
               label: t("stats:wrapped.title"),
               icon: "sparkles" as const,
             },

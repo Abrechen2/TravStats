@@ -2,7 +2,7 @@ import { describe, it, expect, vi } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 
 /**
- * `/stats/wrapped` really resolves to the year in review.
+ * `/wrapped` really resolves to the year in review.
  *
  * A page can be finished, exported and translated and still be unreachable,
  * and every other test in this directory renders the component directly — so
@@ -79,11 +79,11 @@ vi.unmock("../../store/settingsStore");
 
 import App from "../../App";
 
-describe("the /stats/wrapped route", () => {
+describe("the /wrapped route", () => {
   it("resolves to the year in review, through the app's own router", async () => {
     // `App` mounts a BrowserRouter, which reads the real location — so the
     // URL is set here rather than handed to a MemoryRouter.
-    window.history.pushState({}, "", "/stats/wrapped");
+    window.history.pushState({}, "", "/wrapped");
 
     render(<App />);
 

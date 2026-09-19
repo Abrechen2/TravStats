@@ -55,9 +55,9 @@ const wrapped = (over: Partial<Wrapped> = {}): Wrapped => ({
 
 const renderAtRoute = (): ReturnType<typeof render> =>
   render(
-    <MemoryRouter initialEntries={["/stats/wrapped"]}>
+    <MemoryRouter initialEntries={["/wrapped"]}>
       <Routes>
-        <Route path="/stats/wrapped" element={<WrappedPage />} />
+        <Route path="/wrapped" element={<WrappedPage />} />
       </Routes>
     </MemoryRouter>
   );
@@ -69,7 +69,7 @@ describe("WrappedPage", () => {
     domains.cruise = true;
   });
 
-  it("is reachable at /stats/wrapped and asks for no year on the first load", async () => {
+  it("is reachable at /wrapped and asks for no year on the first load", async () => {
     getWrappedMock.mockResolvedValue(wrapped());
     renderAtRoute();
 

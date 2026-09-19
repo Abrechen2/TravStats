@@ -531,11 +531,16 @@ function AppContent() {
                 path="/passport"
                 element={isAuthenticated ? <PassportPage /> : <Navigate to="/login" />}
               />
-              {/* Beside the passport, not under `/stats`: both are a reading
-                  of the whole logbook rather than a tab of the statistics
-                  page, and the navigation lists them together. */}
+              {/* Beside the passport, NOT under `/stats` — and the navigation
+                  is the reason it is a top-level path rather than a tidy one.
+                  `isPathActive` marks a parent active for its children, so
+                  `/stats/wrapped` lit up the Statistik entry AND this leaf at
+                  the same time: two destinations highlighted, one of them the
+                  page the reader was not on. Both pages are a reading of the
+                  whole logbook rather than a tab of the statistics page, so
+                  the flat path is also the truer one. */}
               <Route
-                path="/stats/wrapped"
+                path="/wrapped"
                 element={isAuthenticated ? <WrappedPage /> : <Navigate to="/login" />}
               />
               <Route

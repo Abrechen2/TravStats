@@ -108,15 +108,15 @@ describe("useNavItems — Mehr › Sammlungen", () => {
   it("offers the year in review whenever flights are on", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
     const collections = section(run().more, "collections");
-    expect(collections.map((i) => i.path)).toContain("/stats/wrapped");
+    expect(collections.map((i) => i.path)).toContain("/wrapped");
     // Beside the passport, not at the far end of the list.
     const paths = collections.map((i) => i.path);
-    expect(paths.indexOf("/stats/wrapped")).toBe(paths.indexOf("/passport") + 1);
+    expect(paths.indexOf("/wrapped")).toBe(paths.indexOf("/passport") + 1);
   });
 
   it("omits the year in review when flights are off", () => {
     useSettingsStore.setState({ enabledDomains: ["cruise"], betaFeaturesEnabled: true });
-    expect(section(run().more, "collections").map((i) => i.path)).not.toContain("/stats/wrapped");
+    expect(section(run().more, "collections").map((i) => i.path)).not.toContain("/wrapped");
   });
 
   it("offers Ortslisten while places are visible", () => {
