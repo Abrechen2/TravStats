@@ -201,6 +201,10 @@
     "message": "This page doesn't exist or has moved.",
     "back": "Back to dashboard"
   },
+  "adminOnly": {
+    "title": "Administrators only",
+    "body": "This area is reserved for whoever administers this instance. Your account does not have the rights for it — ask an administrator if you need them."
+  },
   "currencySelect": {
     "label": "Currency",
     "search": "Search currency …",

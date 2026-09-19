@@ -32,6 +32,8 @@ const PlaceListsPage = lazy(() => import("./pages/PlaceListsPage"));
 const PlaceListDetailPage = lazy(() => import("./pages/PlaceListDetailPage"));
 const CuratedChecklistPage = lazy(() => import("./pages/CuratedChecklistPage"));
 import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
+import NavigationBar from "./components/NavigationBar";
+import { AdminOnlyNotice } from "./components/AdminOnlyNotice";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
@@ -482,10 +484,20 @@ function AppContent() {
               <Route
                 path="/admin"
                 element={
-                  isAuthenticated && user?.isAdmin ? (
+                  !isAuthenticated ? (
+                    <Navigate to="/login" />
+                  ) : user?.isAdmin ? (
                     <AdminPage />
                   ) : (
-                    <Navigate to={isAuthenticated ? "/" : "/login"} />
+                    // A signed-in reader who is not an admin used to be bounced
+                    // to the dashboard without a word, so an admin link from a
+                    // changelog or a forum post looked like a broken address
+                    // (forgejo#88 finding 7). The API's 403 is right; this is
+                    // the UI finally saying the same thing.
+                    <>
+                      <NavigationBar />
+                      <AdminOnlyNotice />
+                    </>
                   )
                 }
               />
