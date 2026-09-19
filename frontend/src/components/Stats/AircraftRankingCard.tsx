@@ -1,29 +1,28 @@
-import { useState, useEffect } from "react";
 import { Link } from "react-router-dom";
-import { statsApi } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
-import type { AircraftRankingItem } from "../../types";
-import { logger } from "../../lib/logger";
+import type { AircraftRankingResponse } from "../../types/aircraft";
 
 const MAX_ROWS = 10;
 
-export default function AircraftRankingCard(): JSX.Element {
+export interface AircraftRankingCardProps {
+  /**
+   * The hull ranking, loaded by the page (forgejo#49) — see the three-state
+   * note on `AirlineRankingCard`: `undefined` is in flight, `null` is a load
+   * that finished and brought nothing.
+   */
+  aircraft: AircraftRankingResponse | null | undefined;
+}
+
+export default function AircraftRankingCard({
+  aircraft: data,
+}: AircraftRankingCardProps): JSX.Element {
   const { t } = useTranslation("stats");
-  const [aircraft, setAircraft] = useState<AircraftRankingItem[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    statsApi
-      .getAircraftRanking()
-      .then((data) => setAircraft(data.aircraft.slice(0, MAX_ROWS)))
-      .catch((err) => logger.error("Failed to load aircraft ranking:", err))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
+  if (data === undefined) {
     return <p className="text-sm text-gray-500">{t("stats:aircraftRanking.loading")}</p>;
   }
 
+  const aircraft = data === null ? [] : data.aircraft.slice(0, MAX_ROWS);
   if (aircraft.length === 0) {
     return (
       <div className="space-y-2">

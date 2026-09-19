@@ -16,6 +16,27 @@ import type {
 import { api } from "./client";
 import type { SummaryParams, SummaryResponse, TimeseriesParams, TimeseriesResponse } from "./types";
 
+/**
+ * The sections `GET /stats/page` can compose, and the shape of each — every
+ * one the response type of the endpoint it is named after, so a section and
+ * its endpoint cannot be typed differently here either.
+ *
+ * MIRRORS `backend/src/schemas/statsPage.ts`; change both together.
+ */
+export interface StatsPageSections {
+  fun: FunStats;
+  business: BusinessStats;
+  unique: UniqueStats;
+  airports: AirportStats;
+  seats: SeatStats;
+  countries: CountryStatsResponse;
+  airlines: AirlineRankingResponse;
+  aircraft: AircraftRankingResponse;
+  punctuality: PunctualityStats;
+}
+
+export type StatsPageSection = keyof StatsPageSections;
+
 // Stats API
 export const statsApi = {
   /**
@@ -47,6 +68,28 @@ export const statsApi = {
     const { data } = await api.get<TravelAccountResponse>("/stats/travel-account");
     return data;
   },
+  /**
+   * Several sections, from ONE pass over the flight table (forgejo#49).
+   *
+   * Measured on this page before the endpoint existed: the flight tab issued
+   * twelve `/stats/*` requests and the server answered them with fifteen scans
+   * of the flight table, thirteen over the identical population. Nine of those
+   * requests share one load, and this is how they ask for it.
+   *
+   * The nine per-section endpoints are still served and are still what a
+   * client wanting ONE figure should call — the Companion does, and so does
+   * the evidence panel. Each section here is identical to its own endpoint's
+   * body, which a backend test asserts by fetching both.
+   */
+  getStatsPage: async <S extends StatsPageSection>(
+    include: readonly S[]
+  ): Promise<Pick<StatsPageSections, S>> => {
+    const { data } = await api.get<Pick<StatsPageSections, S>>("/stats/page", {
+      params: { include: include.join(",") },
+    });
+    return data;
+  },
+
   getSummary: async (params?: SummaryParams): Promise<SummaryResponse> => {
     const { data } = await api.get<SummaryResponse>("/stats/summary", { params });
     return data;
@@ -64,57 +107,20 @@ export const statsApi = {
     return data;
   },
 
-  getFunStats: async (filters?: { fromDate?: string; toDate?: string }): Promise<FunStats> => {
-    const { data } = await api.get<FunStats>("/stats/fun", { params: filters });
-    return data;
-  },
-
-  getBusinessStats: async (filters?: {
-    fromDate?: string;
-    toDate?: string;
-  }): Promise<BusinessStats> => {
-    const { data } = await api.get<BusinessStats>("/stats/business", {
-      params: filters,
-    });
-    return data;
-  },
-
-  getUniqueStats: async (filters?: {
-    fromDate?: string;
-    toDate?: string;
-  }): Promise<UniqueStats> => {
-    const { data } = await api.get<UniqueStats>("/stats/unique", {
-      params: filters,
-    });
-    return data;
-  },
-
-  getAirportStats: async (filters?: {
-    fromDate?: string;
-    toDate?: string;
-  }): Promise<AirportStats> => {
-    const { data } = await api.get<AirportStats>("/stats/airports", {
-      params: filters,
-    });
-    return data;
-  },
-
-  getSeatStats: async (filters?: { fromDate?: string; toDate?: string }): Promise<SeatStats> => {
-    const { data } = await api.get<SeatStats>("/stats/seats", {
-      params: filters,
-    });
-    return data;
-  },
-
-  getAirlineRanking: async (): Promise<AirlineRankingResponse> => {
-    const { data } = await api.get<AirlineRankingResponse>("/stats/airlines");
-    return data;
-  },
-
   getCountryStats: async (): Promise<CountryStatsResponse> => {
     const { data } = await api.get<CountryStatsResponse>("/stats/countries");
     return data;
   },
+
+  // The eight one-line wrappers for /stats/fun, /business, /unique, /airports,
+  // /seats, /airlines, /aircraft and /punctuality were DELETED with forgejo#49:
+  // the statistics page reads all nine of those sections through
+  // `getStatsPage` in one request, and nothing else in this app called them.
+  // The ENDPOINTS are all still served — the Companion reads them and the
+  // evidence panel cross-checks against them — so a future consumer adds the
+  // wrapper it needs rather than finding eight unused ones. `getCountryStats`
+  // below stayed for the same reason in reverse: `useDomainStats` still calls it
+  // on every tab.
 
   /** `year` scopes to cruises that STARTED in it; omitted, the lifetime view. */
   getCruiseStats: async (params?: { year?: number }): Promise<CruiseStatsResponse> => {
@@ -126,23 +132,10 @@ export const statsApi = {
     return data;
   },
 
-  getAircraftRanking: async (): Promise<AircraftRankingResponse> => {
-    const { data } = await api.get<AircraftRankingResponse>("/stats/aircraft");
-    return data;
-  },
-
   getAircraftProfile: async (registration: string): Promise<AircraftProfileResponse> => {
     const { data } = await api.get<AircraftProfileResponse>(
       `/stats/aircraft/${encodeURIComponent(registration)}`
     );
-    return data;
-  },
-
-  getPunctuality: async (filters?: {
-    fromDate?: string;
-    toDate?: string;
-  }): Promise<PunctualityStats> => {
-    const { data } = await api.get<PunctualityStats>("/stats/punctuality", { params: filters });
     return data;
   },
 };

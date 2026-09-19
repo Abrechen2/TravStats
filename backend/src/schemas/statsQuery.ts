@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { STATS_PAGE_SECTIONS } from "./statsPage";
 
 /**
  * The query and path parameters the `/stats` routes accept.
@@ -51,3 +52,26 @@ export const TimeseriesQuerySchema = z.object({
 export const RoutesQuerySchema = z.object({
   limit: z.coerce.number().int().positive().optional(),
 });
+
+/**
+ * `GET /stats/page` — which sections to compose (forgejo#49).
+ *
+ * A comma-separated list, and a REQUIRED one: there is no server-side default
+ * set, because what the statistics page draws depends on the reader's own
+ * section visibility, and a default would compute sections they have switched
+ * off. An unknown name is a 400 rather than a silently absent section — a
+ * typo'd `include` must not read as "that section has no data".
+ */
+export const StatsPageQuerySchema = z
+  .object({
+    include: z
+      .string()
+      .transform((raw) => raw.split(",").map((s) => s.trim()))
+      .pipe(z.array(z.enum(STATS_PAGE_SECTIONS)).min(1)),
+  })
+  // `.strict()`, so `?fromDate=…` is a 400 rather than silently ignored. This
+  // endpoint takes NO date range on purpose — four of its nine sections have
+  // none on their own endpoint, so a range would narrow five and leave four at
+  // all time. A stripped parameter would let a caller believe it had scoped the
+  // answer; the refusal is the honest reply.
+  .strict();

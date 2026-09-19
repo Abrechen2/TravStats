@@ -22,13 +22,12 @@ import { countableFlightWhere } from "../../shared/flightCounting";
 // (forgejo#52).
 import type {
   AircraftTypeItem,
-  AircraftRankingItem,
   AircraftTypesResponse,
-  AircraftRankingResponse,
   AircraftProfileResponse,
   AircraftProfileFlight,
 } from "../../schemas/statsAircraft";
 import { calculateDistance } from "../../utils/geo";
+import { computeAircraftRanking } from "../../services/stats/aircraftRanking";
 
 const router = Router();
 
@@ -101,41 +100,10 @@ router.get(
         },
       });
 
-      const buckets = new Map<string, AircraftRankingItem>();
-      for (const f of flights) {
-        const reg = f.aircraftRegistration!;
-        const dist = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
-        const isoDate = f.departureTime ? f.departureTime.toISOString() : null;
-        const existing = buckets.get(reg);
-        if (existing) {
-          existing.count += 1;
-          existing.totalDistanceKm += dist;
-          if (!existing.airline && f.airline) existing.airline = f.airline;
-          if (!existing.aircraft && f.aircraft) existing.aircraft = f.aircraft;
-          if (isoDate) {
-            if (!existing.firstFlightDate || isoDate < existing.firstFlightDate) {
-              existing.firstFlightDate = isoDate;
-            }
-            if (!existing.lastFlightDate || isoDate > existing.lastFlightDate) {
-              existing.lastFlightDate = isoDate;
-            }
-          }
-        } else {
-          buckets.set(reg, {
-            registration: reg,
-            count: 1,
-            airline: f.airline ?? null,
-            aircraft: f.aircraft ?? null,
-            totalDistanceKm: dist,
-            firstFlightDate: isoDate,
-            lastFlightDate: isoDate,
-          });
-        }
-      }
-
-      const aircraft = Array.from(buckets.values()).sort((a, b) => b.count - a.count);
-      const response: AircraftRankingResponse = { aircraft, total: aircraft.length };
-      res.json(response);
+      // The fold lives in `services/stats/aircraftRanking.ts`, shared with the
+      // composing `GET /stats/page` (forgejo#49) — which reaches it from the
+      // countable rows it already holds, this route's predicate being a subset.
+      res.json(computeAircraftRanking(flights));
     } catch (error) {
       next(error);
     }

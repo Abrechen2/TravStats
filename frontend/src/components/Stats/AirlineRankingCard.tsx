@@ -1,30 +1,35 @@
-import { useState, useEffect } from "react";
-import { statsApi } from "../../lib/api";
 import { useTranslation } from "../../hooks/useTranslation";
-import type { AirlineRankingItem } from "../../types";
-import { logger } from "../../lib/logger";
+import type { AirlineRankingResponse } from "../../types";
 import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
 
 const MAX_ROWS = 10;
 
-export default function AirlineRankingCard(): JSX.Element {
+export interface AirlineRankingCardProps {
+  /**
+   * The ranking, loaded by the page (forgejo#49). This card used to fetch
+   * `/stats/airlines` itself, which was one of twelve requests the statistics
+   * page issued for one load; it is now one section of `/stats/page`, which
+   * answers nine of them from a single pass over the flight table.
+   *
+   * Three states, because the failure of one shared request must not read as
+   * nine sections still loading: `undefined` is in flight, `null` is "the load
+   * finished and brought nothing" (the page says why, once, above), and a value
+   * is the ranking.
+   */
+  airlines: AirlineRankingResponse | null | undefined;
+}
+
+export default function AirlineRankingCard({
+  airlines: data,
+}: AirlineRankingCardProps): JSX.Element {
   const { t } = useTranslation("stats");
-  const [airlines, setAirlines] = useState<AirlineRankingItem[]>([]);
-  const [loading, setLoading] = useState(true);
 
-  useEffect(() => {
-    statsApi
-      .getAirlineRanking()
-      .then((data) => setAirlines(data.airlines.slice(0, MAX_ROWS)))
-      .catch((err) => logger.error("Failed to load airline ranking:", err))
-      .finally(() => setLoading(false));
-  }, []);
-
-  if (loading) {
+  if (data === undefined) {
     return <p className="text-sm text-gray-500">{t("stats:airlineRanking.loading")}</p>;
   }
 
+  const airlines = data === null ? [] : data.airlines.slice(0, MAX_ROWS);
   if (airlines.length === 0) {
     return <p className="text-sm text-gray-500">{t("stats:airlineRanking.noData")}</p>;
   }

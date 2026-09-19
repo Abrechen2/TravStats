@@ -153,7 +153,16 @@ export function groupAirlines(
   for (const [key, entry] of acc.entries()) {
     const iata = key.startsWith("iata:") ? key.slice(5) : null;
     const catalogueName = iata ? resolvers.nameForIata(iata) : null;
-    const mostFrequent = [...entry.spellings.entries()].sort((a, b) => b[1] - a[1])[0]?.[0];
+    // Frequency, then ALPHABETICAL. The tie-break is not cosmetic: the same
+    // groups are fed in from two places — `/stats/airlines` from a Prisma
+    // `groupBy`, `/stats/page` from the loaded rows — and those arrive in
+    // different orders. Without the second key, two equally common spellings of
+    // a carrier the catalogue cannot name gave the two surfaces two different
+    // LABELS for one group, which is a value on screen that changes depending
+    // on which endpoint drew it.
+    const mostFrequent = [...entry.spellings.entries()].sort(
+      (a, b) => b[1] - a[1] || a[0].localeCompare(b[0])
+    )[0]?.[0];
     groups.push({
       key,
       iata,
