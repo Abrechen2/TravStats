@@ -1,6 +1,7 @@
 import type { UniqueStats } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import StatCard from "./StatCard";
+import DualFigureCard from "./DualFigureCard";
 import { formatDate } from "../../lib/displayFormat";
 
 interface StatsUniqueSectionProps {
@@ -13,13 +14,14 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
    * All-time, like every measure registered for this surface — the section is
    * built from the full countable set and carries no year filter of its own.
    *
-   * Two served tiles are deliberately NOT wired: the east/west balance and
-   * the international/domestic split each render TWO numbers in one card
-   * ("12E / 8W"), and a card opens one panel. Both pairs of keys are served
-   * and addressable; giving one card two triggers means splitting its big
-   * number into two buttons, which is a design decision about this surface
-   * and not a wiring one. Every other unwired tile here is an `extremum`,
-   * `ratio`, `boolean` or `sequence` measure that release 1 does not serve.
+   * The east/west balance and the international/domestic split each render
+   * TWO served numbers in one card ("12E / 8W"), and a `StatCard` opens ONE
+   * panel — so both stayed unwired until the owner ruled on 2026-09-19 that
+   * the cards should be split. They are `DualFigureCard`s now: one card, two
+   * triggers, the slash between them plain text. The RATIO beside each pair
+   * stays untouched — it is in the description, and `ratio` is not a kind
+   * release 1 serves. Every other unwired tile here is an `extremum`,
+   * `ratio`, `boolean` or `sequence` measure for the same reason.
    */
   const allTime = { period: "allTime" as const };
 
@@ -147,10 +149,24 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
             />
           )}
           {uniqueStats.eastWestBalance && (
-            <StatCard
+            <DualFigureCard
               title={t("stats:unique.eastWestBalance")}
-              valueSize="sm"
-              value={`${uniqueStats.eastWestBalance.eastward}E / ${uniqueStats.eastWestBalance.westward}W`}
+              first={{
+                kind: "metric",
+                evidenceKey: "eastwardFlightCount",
+                scope: allTime,
+                renderedValue: uniqueStats.eastWestBalance.eastward,
+                display: `${uniqueStats.eastWestBalance.eastward}E`,
+                label: t("stats:unique.eastWestBalanceEast"),
+              }}
+              second={{
+                kind: "metric",
+                evidenceKey: "westwardFlightCount",
+                scope: allTime,
+                renderedValue: uniqueStats.eastWestBalance.westward,
+                display: `${uniqueStats.eastWestBalance.westward}W`,
+                label: t("stats:unique.eastWestBalanceWest"),
+              }}
               description={t("stats:unique.eastWestBalanceDesc", {
                 eastward: uniqueStats.eastWestBalance.eastward,
                 westward: uniqueStats.eastWestBalance.westward,
@@ -198,10 +214,24 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
             />
           )}
           {uniqueStats.internationalVsDomestic && (
-            <StatCard
+            <DualFigureCard
               title={t("stats:unique.internationalVsDomestic")}
-              valueSize="sm"
-              value={`${uniqueStats.internationalVsDomestic.international}I / ${uniqueStats.internationalVsDomestic.domestic}D`}
+              first={{
+                kind: "metric",
+                evidenceKey: "internationalFlightCount",
+                scope: allTime,
+                renderedValue: uniqueStats.internationalVsDomestic.international,
+                display: `${uniqueStats.internationalVsDomestic.international}I`,
+                label: t("stats:unique.internationalVsDomesticInternational"),
+              }}
+              second={{
+                kind: "metric",
+                evidenceKey: "domesticFlightCount",
+                scope: allTime,
+                renderedValue: uniqueStats.internationalVsDomestic.domestic,
+                display: `${uniqueStats.internationalVsDomestic.domestic}D`,
+                label: t("stats:unique.internationalVsDomesticDomestic"),
+              }}
               description={t("stats:unique.internationalVsDomesticDesc", {
                 international: uniqueStats.internationalVsDomestic.international,
                 domestic: uniqueStats.internationalVsDomestic.domestic,

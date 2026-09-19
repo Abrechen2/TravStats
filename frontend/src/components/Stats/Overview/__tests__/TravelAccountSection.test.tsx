@@ -111,8 +111,19 @@ describe("TravelAccountSection", () => {
   it("shows how many trips are fully covered against how many have dates", async () => {
     getTravelAccount.mockResolvedValue(response());
     render(withRouter());
+    // Since 2026-09-19 the pair is two triggers with a plain slash between
+    // them, not the single string "3 / 4" — so each figure is looked up by
+    // the name it announces rather than by the concatenation.
+    const covered = await screen.findByRole("button", {
+      name: "stats:travelAccount.tripsCoveredFully",
+    });
+    const withDates = screen.getByRole("button", {
+      name: "stats:travelAccount.tripsCoveredWithDates",
+    });
+    expect(covered).toHaveTextContent("3");
+    expect(withDates).toHaveTextContent("4");
     await waitFor(() => {
-      expect(screen.getByText("3 / 4")).toBeTruthy();
+      expect(screen.getByText("stats:travelAccount.tripsCoveredDesc")).toBeTruthy();
     });
   });
 });
