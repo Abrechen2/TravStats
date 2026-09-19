@@ -91,32 +91,46 @@ export default function LodgingStatsSection({
       <PeriodComparisonStrip
         year={shown.year}
         compareYear={shown.compareYear}
+        // Every row carries its key, and none of them duplicates a trigger:
+        // whenever this strip is drawn, `LodgingStatStrip` below is told to
+        // `omit` exactly stays, nights and houses, so these ARE the only
+        // places those three figures appear. The comment here used to claim
+        // the opposite — that the strip below still carried them — which left
+        // three served measures opening nothing in the one view where the
+        // year-over-year comparison is shown.
         rows={[
           {
             key: "stays",
             label: t("dashboard:lodgingTab.stats.stays"),
             current: stats.staysCount,
             previous: previous.staysCount,
+            evidenceKey: "lodgingStaysCount",
           },
           {
             key: "nights",
             label: t("dashboard:lodgingTab.stats.nights"),
             current: stats.totalNights,
             previous: previous.totalNights,
+            evidenceKey: "lodgingNightsTotal",
           },
           {
             key: "houses",
             label: t("dashboard:lodgingTab.stats.hotels"),
             current: stats.lodgingsCount,
             previous: previous.lodgingsCount,
+            evidenceKey: "lodgingsUniqueCount",
           },
           {
             key: "countries",
             label: t("stats:sections.countries"),
             current: stats.countriesCount,
             previous: previous.countriesCount,
+            evidenceKey: "lodgingCountriesCount",
           },
         ]}
+        // The strip is only drawn with a year chosen, so the scope it sends is
+        // never the tab's `allTime` default.
+        evidence={{ scope: { period: "year", year: shown.year } }}
       />
     ) : null;
 
@@ -171,7 +185,7 @@ export default function LodgingStatsSection({
           Object.keys(stats.spendBaseByCurrency ?? {}).length > 0) && (
           <LodgingCurrencyBreakdown stats={stats} variant="inline" />
         )}
-      {show("money") && <LodgingMoneySection stats={stats} />}
+      {show("money") && <LodgingMoneySection stats={stats} evidenceScope={evidenceScope} />}
       {show("quality") && <LodgingQualitySection stats={stats} />}
       {show("geo") && <LodgingGeoSection stats={stats} evidenceScope={evidenceScope} />}
       {show("rhythm") && <LodgingRhythmSection stats={stats} evidenceScope={evidenceScope} />}

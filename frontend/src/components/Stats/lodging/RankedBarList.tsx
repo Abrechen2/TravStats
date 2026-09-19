@@ -33,6 +33,15 @@ interface Props {
    * sitting in the component.
    */
   moreLabel?: (hidden: number) => string;
+  /**
+   * One line under the title, for what the list adds up to. A ranked list has
+   * no figure of its own, so a measure that IS that total — the cruise
+   * companions, whose rows sum to exactly what its resolver answers — had
+   * nowhere on screen to be opened from. This is that place; the caller
+   * renders it, including any trigger, because only the caller knows what the
+   * sum means.
+   */
+  total?: ReactNode;
 }
 
 /**
@@ -52,6 +61,7 @@ export default function RankedBarList({
   emptyLabel,
   limit,
   moreLabel,
+  total,
 }: Props): JSX.Element {
   const { t } = useTranslation(["common"]);
   const [expanded, setExpanded] = useState(false);
@@ -68,9 +78,17 @@ export default function RankedBarList({
         color: "var(--text-primary)",
       }}
     >
-      <h3 className="mb-3 text-sm font-medium" style={{ color: "var(--text-muted)" }}>
+      <h3
+        className={`text-sm font-medium ${total ? "mb-1" : "mb-3"}`}
+        style={{ color: "var(--text-muted)" }}
+      >
         {title}
       </h3>
+      {total && (
+        <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>
+          {total}
+        </p>
+      )}
 
       {shown.length === 0 ? (
         <p className="text-sm" style={{ color: "var(--text-muted)" }}>

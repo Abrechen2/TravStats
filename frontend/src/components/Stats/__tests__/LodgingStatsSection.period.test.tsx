@@ -1,12 +1,23 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, act } from "@testing-library/react";
+// Every figure in the comparison strip is an `EvidenceTrigger` since
+// 2026-09-19, and a trigger reads the URL - so the section needs a router
+// even in the cases below, which stop at the empty-year branch.
+import { MemoryRouter, useLocation } from "react-router-dom";
+import { EVIDENCE_MEASURES } from "../../../shared/evidenceMeasures";
 import type { LodgingStats } from "../../../types/lodging";
+
+/** `MemoryRouter` never touches `window.location`, so the search string has to be read from inside it. */
+function LocationProbe({ onChange }: { onChange: (search: string) => void }): null {
+  onChange(useLocation().search);
+  return null;
+}
 
 const getLodgingStats = vi.hoisted(() => vi.fn());
 vi.mock("../../../lib/api/lodging", () => ({ getLodgingStats }));
 
 import LodgingStatsSection from "../LodgingStatsSection";
-import { ALL_VISIBLE } from "./sectionVisibilityStub";
+import { ALL_VISIBLE, hiding } from "./sectionVisibilityStub";
 
 /**
  * Owner review 2026-09-15: the overview said "no stays in 2026" while this tab
@@ -28,7 +39,9 @@ describe("LodgingStatsSection under the page's period", () => {
   it("asks the server for the chosen year", async () => {
     getLodgingStats.mockResolvedValue(empty());
     render(
-      <LodgingStatsSection scope={{ year: 2026, compareYear: null }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: 2026, compareYear: null }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     await screen.findByText("stats:period.emptyYear");
     expect(getLodgingStats).toHaveBeenCalledTimes(1);
@@ -38,7 +51,9 @@ describe("LodgingStatsSection under the page's period", () => {
   it("asks for the lifetime view when no year is chosen", async () => {
     getLodgingStats.mockResolvedValue(empty());
     render(
-      <LodgingStatsSection scope={{ year: null, compareYear: null }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: null, compareYear: null }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     await screen.findByText("lodging:list.empty");
     expect(getLodgingStats).toHaveBeenCalledWith(undefined);
@@ -49,7 +64,9 @@ describe("LodgingStatsSection under the page's period", () => {
     // would be false, and going by the house count would draw an empty tab.
     getLodgingStats.mockResolvedValue(empty({ lodgingsCount: 4 }));
     render(
-      <LodgingStatsSection scope={{ year: 2026, compareYear: null }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: 2026, compareYear: null }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     expect(await screen.findByText("stats:period.emptyYear")).toBeInTheDocument();
     expect(screen.queryByText("lodging:list.empty")).not.toBeInTheDocument();
@@ -60,7 +77,9 @@ describe("LodgingStatsSection under the page's period", () => {
       params?.year === 2025 ? empty({ staysCount: 3, totalNights: 9 }) : empty()
     );
     render(
-      <LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     // Either key: the strip says "vs 2025" for a year that is over and
     // "vs. the whole of 2025" while 2026 is still running (see
@@ -88,14 +107,18 @@ describe("LodgingStatsSection while the next year loads", () => {
     });
 
     const { rerender, container } = render(
-      <LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     // The strip prints the compare year raw beside each previous figure.
     expect((await screen.findAllByText(/\(2025\)/)).length).toBeGreaterThan(0);
     expect(container.querySelector("[aria-busy='true']")).toBeNull();
 
     rerender(
-      <LodgingStatsSection scope={{ year: 2026, compareYear: 2024 }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: 2026, compareYear: 2024 }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     // 2025's figures are still on screen, so the strip must still say 2025.
     expect(screen.queryAllByText(/\(2024\)/)).toHaveLength(0);
@@ -105,5 +128,96 @@ describe("LodgingStatsSection while the next year loads", () => {
     resolve2024(empty({ totalNights: 4 }));
     await waitFor(() => expect(screen.getAllByText(/\(2024\)/).length).toBeGreaterThan(0));
     expect(container.querySelector("[aria-busy='true']")).toBeNull();
+  });
+});
+
+/**
+ * Whenever the comparison strip is drawn, `LodgingStatStrip` below it is told
+ * to `omit` stays, nights and houses — so these four cells are the ONLY place
+ * those figures appear in the year-over-year view. Three of them carried no
+ * trigger until 2026-09-19, behind a comment claiming the strip below still
+ * had them; this is what makes that claim measurable rather than prose.
+ */
+describe("the comparison strip's own figures", () => {
+  beforeEach(() => {
+    getLodgingStats.mockReset();
+  });
+
+  /**
+   * Every block below the strip is hidden, so the only buttons on screen are
+   * the four cells under test. It also keeps the fixture honest: the eight
+   * sections each want a fully populated rollup, and padding one out to make
+   * them render would measure the padding rather than the strip.
+   */
+  const STRIP_ONLY = hiding("kpis", "money", "quality", "geo", "rhythm", "loyalty", "records");
+
+  it("opens a different served measure from each of its four cells", async () => {
+    // Non-zero stays, or the section returns the empty-year branch before it
+    // reaches the strip.
+    getLodgingStats.mockImplementation((params?: { year?: number }) =>
+      Promise.resolve(
+        empty({
+          staysCount: params?.year === 2025 ? 3 : 9,
+          totalNights: 21,
+          lodgingsCount: 5,
+          countriesCount: 3,
+        })
+      )
+    );
+    let search = "";
+    render(
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={STRIP_ONLY} />
+        <LocationProbe
+          onChange={(next) => {
+            search = next;
+          }}
+        />
+      </MemoryRouter>
+    );
+    await screen.findByText("dashboard:lodgingTab.stats.stays");
+
+    const keys: string[] = [];
+    for (const cell of ["stays", "nights", "hotels"]) {
+      const trigger = screen.getByRole("button", { name: `dashboard:lodgingTab.stats.${cell}` });
+      await act(async () => {
+        trigger.click();
+      });
+      keys.push(new URLSearchParams(search).get("evidence") ?? "");
+    }
+    await act(async () => {
+      screen.getByRole("button", { name: "stats:sections.countries" }).click();
+    });
+    keys.push(new URLSearchParams(search).get("evidence") ?? "");
+
+    expect(keys).toEqual([
+      "metric:lodgingStaysCount",
+      "metric:lodgingNightsTotal",
+      "metric:lodgingsUniqueCount",
+      "metric:lodgingCountriesCount",
+    ]);
+    // Every one is a registered measure release 1 actually serves — a key set
+    // alone would not notice a plausible name nothing answers for.
+    expect(
+      keys.filter((raw) => EVIDENCE_MEASURES[raw.slice(raw.indexOf(":") + 1)]?.servedIn !== 1)
+    ).toEqual([]);
+  });
+
+  it("sends the strip's own year as the scope, not the tab's lifetime default", async () => {
+    getLodgingStats.mockResolvedValue(
+      empty({ staysCount: 9, totalNights: 21, lodgingsCount: 5, countriesCount: 3 })
+    );
+    const { useEvidenceOpenStore } = await import("../../evidence/evidenceOpenStore");
+    render(
+      <MemoryRouter>
+        <LodgingStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={STRIP_ONLY} />
+      </MemoryRouter>
+    );
+    await screen.findByText("dashboard:lodgingTab.stats.nights");
+    await act(async () => {
+      screen.getByRole("button", { name: "dashboard:lodgingTab.stats.nights" }).click();
+    });
+    expect(useEvidenceOpenStore.getState().scope).toEqual({ period: "year", year: 2026 });
+    expect(useEvidenceOpenStore.getState().renderedValue).toBe(21);
   });
 });

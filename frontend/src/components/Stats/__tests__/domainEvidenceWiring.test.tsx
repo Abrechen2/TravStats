@@ -16,6 +16,11 @@ import { LodgingStatStrip } from "../../Dashboard/tabs/lodging/LodgingStatStrip"
 import LodgingGeoSection from "../lodging/LodgingGeoSection";
 import LodgingRhythmSection from "../lodging/LodgingRhythmSection";
 import LodgingRecordsSection from "../lodging/LodgingRecordsSection";
+import LodgingMoneySection from "../lodging/LodgingMoneySection";
+import PeriodComparisonStrip from "../PeriodComparisonStrip";
+import { CruiseFunSection } from "../cruise/CruiseDetailSections";
+import type { CruiseStatsDetail } from "../../../lib/stats/cruiseStatsDetail";
+import { expectNoNestedTriggers } from "./noNestedTriggers";
 
 /**
  * Which tiles on the cruise, lodging and places surfaces open the evidence
@@ -220,5 +225,159 @@ describe("the lodging tiles open the measures they render", () => {
     });
     expect(useEvidenceOpenStore.getState().scope).toEqual({ period: "year", year: 2024 });
     expect(useEvidenceOpenStore.getState().renderedValue).toBe(19);
+  });
+});
+
+/**
+ * The figures the owner ruled on for 2026-09-19 that do NOT sit in a tile of
+ * their own: a number inside another card's sentence, and a figure in the
+ * period strip. Both are conditional on a scope for the same reason the
+ * strip above is — without one, the number stays prose.
+ */
+describe("the numbers inside a sentence, and the strip's own figures", () => {
+  it("the money section opens the award NIGHTS from inside the value card's sentence", async () => {
+    expect(
+      await keysOpenedBy(<LodgingMoneySection stats={lodgingStats} evidenceScope={SCOPE} />)
+    ).toEqual(["lodgingAwardNightsCount"]);
+  });
+
+  it("the same section opens nothing where no period was chosen", async () => {
+    cleanup();
+    render(
+      <MemoryRouter>
+        <LodgingMoneySection stats={lodgingStats} />
+      </MemoryRouter>
+    );
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    // And the sentence still reads whole — the tail is there either way.
+    expect(screen.getByText(/lodging:stats.money.awardNightsAfter/)).toBeInTheDocument();
+  });
+
+  it("a strip figure opens its measure, and the rows without one stay prose", async () => {
+    const rows = [
+      { key: "stays", label: "Stays", current: 9, previous: 7 },
+      {
+        key: "countries",
+        label: "Countries",
+        current: 3,
+        previous: 2,
+        evidenceKey: "lodgingCountriesCount",
+      },
+    ];
+    expect(
+      await keysOpenedBy(
+        <PeriodComparisonStrip
+          year={2024}
+          compareYear={2023}
+          rows={rows}
+          evidence={{ scope: SCOPE }}
+        />
+      )
+    ).toEqual(["lodgingCountriesCount"]);
+  });
+
+  it("the same strip opens nothing without a scope, however many rows name a key", async () => {
+    cleanup();
+    render(
+      <MemoryRouter>
+        <PeriodComparisonStrip
+          year={2024}
+          compareYear={2023}
+          rows={[
+            {
+              key: "countries",
+              label: "Countries",
+              current: 3,
+              previous: 2,
+              evidenceKey: "lodgingCountriesCount",
+            },
+          ]}
+        />
+      </MemoryRouter>
+    );
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(screen.getByText("3")).toBeInTheDocument();
+  });
+
+  /**
+   * A ranked list has no figure of its own, so the companions total — which is
+   * exactly what the resolver sums — is drawn as a line under the title. Two
+   * sailings with the same person are two mentions there and one bar reading
+   * "2" below, which is the same arithmetic at two grains.
+   */
+  it("the cruise companions total opens its measure and counts per sailing", async () => {
+    const detail = {
+      first: null,
+      mostPorts: null,
+      highestDeck: null,
+      onTrips: 0,
+      cabinTypes: new Map<string, number>(),
+      companions: new Map([
+        ["Ada", 2],
+        ["Grace", 1],
+      ]),
+    } as unknown as CruiseStatsDetail;
+    cleanup();
+    let search = "";
+    render(
+      <MemoryRouter>
+        <CruiseFunSection detail={detail} accent="#5ec2b2" locale="de" evidenceScope={SCOPE} />
+        <LocationProbe
+          onChange={(next) => {
+            search = next;
+          }}
+        />
+      </MemoryRouter>
+    );
+    const total = screen.getByRole("button", { name: "cruise:stats.fun.companionsTotalLabel" });
+    expect(total).toHaveTextContent("3");
+    await act(async () => {
+      total.click();
+    });
+    expect(new URLSearchParams(search).get("evidence")).toBe("metric:cruiseCompanionCount");
+  });
+
+  it("the same section leaves the total as prose where no period was chosen", async () => {
+    cleanup();
+    const detail = {
+      first: null,
+      mostPorts: null,
+      highestDeck: null,
+      onTrips: 0,
+      cabinTypes: new Map<string, number>(),
+      companions: new Map([["Ada", 2]]),
+    } as unknown as CruiseStatsDetail;
+    render(
+      <MemoryRouter>
+        <CruiseFunSection detail={detail} accent="#5ec2b2" locale="de" />
+      </MemoryRouter>
+    );
+    expect(screen.queryAllByRole("button")).toHaveLength(0);
+    expect(screen.getByText(/cruise:stats.fun.companionsTotalAfter/)).toBeInTheDocument();
+  });
+
+  it("nests no trigger inside another, on either surface", async () => {
+    cleanup();
+    const detail = {
+      first: null,
+      mostPorts: null,
+      highestDeck: null,
+      onTrips: 0,
+      cabinTypes: new Map<string, number>(),
+      companions: new Map([["Ada", 2]]),
+    } as unknown as CruiseStatsDetail;
+    const money = render(
+      <MemoryRouter>
+        <LodgingMoneySection stats={lodgingStats} evidenceScope={SCOPE} />
+      </MemoryRouter>
+    );
+    expectNoNestedTriggers(money.container);
+    cleanup();
+    const cruise = render(
+      <MemoryRouter>
+        <CruiseFunSection detail={detail} accent="#5ec2b2" locale="de" evidenceScope={SCOPE} />
+      </MemoryRouter>
+    );
+    expectNoNestedTriggers(cruise.container);
   });
 });

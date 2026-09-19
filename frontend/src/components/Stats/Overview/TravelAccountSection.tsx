@@ -5,6 +5,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { logger } from "../../../lib/logger";
 import type { TravelAccountResponse, TravelAccountYear } from "../../../types/travelAccount";
 import StatCard from "../StatCard";
+import DualFigureCard from "../DualFigureCard";
 
 /** One colour per bucket — the domain tokens, plus a muted one for home. */
 const BUCKETS = [
@@ -95,24 +96,35 @@ export default function TravelAccountSection(): JSX.Element | null {
       </div>
 
       {/*
-        Two of these four open the evidence panel (task 7b-2). The other two
-        do not, and both abstentions are deliberate:
-        `tripsCovered` renders TWO numbers in one card ("3 / 5") and a card
-        opens ONE panel — splitting its figure into two inline buttons is a
-        decision about this surface, not a wiring one, so
-        `travelAccountFullyCoveredTripCount` and
-        `travelAccountTripsWithDatesCount` stay served but unwired, exactly as
-        the east/west pair on the unique tab does. `avgTripDays` is a `ratio`,
-        which release 1 does not serve at all.
-        The five NIGHT measures are served too and have no tile here to open
-        them: this section draws its nights as per-year bars, and there is no
-        all-time night figure on screen to attach a trigger to.
+        Three of these four open the evidence panel. `tripsCovered` renders
+        TWO numbers in one card ("3 / 5") and a `StatCard` opens ONE panel, so
+        its two keys stayed unwired until the owner ruled on 2026-09-19 that
+        the card should be split — it is a `DualFigureCard` now, one card with
+        a trigger per figure. `avgTripDays` is a `ratio`, which release 1 does
+        not serve at all.
+        The five NIGHT measures are served too and still have no tile here to
+        open them: this section draws its nights as per-year bars, and a bar is
+        not a number. There is no all-time night figure on screen to attach a
+        trigger to, so all five stay reachable by `?evidence=metric:<key>` only.
       */}
       <div className="mt-8 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
-        <StatCard
+        <DualFigureCard
           valueSize="md"
           title={t("stats:travelAccount.tripsCovered")}
-          value={`${trips.fullyCoveredTrips} / ${trips.tripsWithDates}`}
+          first={{
+            kind: "metric",
+            evidenceKey: "travelAccountFullyCoveredTripCount",
+            renderedValue: trips.fullyCoveredTrips,
+            display: trips.fullyCoveredTrips,
+            label: t("stats:travelAccount.tripsCoveredFully"),
+          }}
+          second={{
+            kind: "metric",
+            evidenceKey: "travelAccountTripsWithDatesCount",
+            renderedValue: trips.tripsWithDates,
+            display: trips.tripsWithDates,
+            label: t("stats:travelAccount.tripsCoveredWithDates"),
+          }}
           description={t("stats:travelAccount.tripsCoveredDesc")}
         />
         <StatCard

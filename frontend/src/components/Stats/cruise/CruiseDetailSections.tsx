@@ -6,6 +6,7 @@ import type { CruiseStatsDetail } from "../../../lib/stats/cruiseStatsDetail";
 import type { CruiseTotalSpendBase } from "../../../lib/api/stats";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import StatCard from "../StatCard";
+import EvidenceNumber from "../EvidenceNumber";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
 
 interface Props {
@@ -29,6 +30,17 @@ interface MoneyProps extends Props {
    */
   bookedPricedCount: number;
   scope: EvidenceScopeParams;
+}
+
+/**
+ * The fun section takes a scope too, and takes it OPTIONALLY — unlike the
+ * money section above, which is only ever drawn from the statistics tab. This
+ * one renders wherever the fold does, and without a period the companions
+ * total stays plain text rather than opening a panel scoped to a year the
+ * screen never showed.
+ */
+interface FunProps extends Props {
+  evidenceScope?: EvidenceScopeParams;
 }
 
 const MONTH_KEYS = [
@@ -296,7 +308,12 @@ export function CruiseMoneySection({
 }
 
 /** Firsts, records and the odd detail — the cruise counterpart to the flight fun block. */
-export function CruiseFunSection({ detail, accent, locale }: Props): JSX.Element | null {
+export function CruiseFunSection({
+  detail,
+  accent,
+  locale,
+  evidenceScope,
+}: FunProps): JSX.Element | null {
   const { t } = useTranslation(["cruise", "common"]);
 
   const cards: JSX.Element[] = [];
@@ -371,6 +388,15 @@ export function CruiseFunSection({ detail, accent, locale }: Props): JSX.Element
       value: String(count),
     }));
 
+  /**
+   * What the rows ADD UP TO, which is exactly what `resolveCruiseCompanionCount`
+   * answers: it sums `companions.length` per cruise, so somebody who sailed
+   * twice counts twice. That is why the copy says "per sailing" rather than
+   * letting the figure be read as a number of people — the ranked list below
+   * already says how many people there are.
+   */
+  const companionMentions = [...detail.companions.values()].reduce((sum, n) => sum + n, 0);
+
   if (cards.length === 0 && cabinRows.length === 0 && companionRows.length === 0) return null;
 
   return (
@@ -401,6 +427,23 @@ export function CruiseFunSection({ detail, accent, locale }: Props): JSX.Element
               emptyLabel={t("cruise:stats.fun.noCompanions")}
               limit={8}
               moreLabel={(hidden) => t("cruise:stats.fun.more", { count: hidden })}
+              total={
+                <>
+                  {evidenceScope ? (
+                    <EvidenceNumber
+                      evidenceKey="cruiseCompanionCount"
+                      scope={evidenceScope}
+                      renderedValue={companionMentions}
+                      label={t("cruise:stats.fun.companionsTotalLabel")}
+                    >
+                      {companionMentions}
+                    </EvidenceNumber>
+                  ) : (
+                    companionMentions
+                  )}
+                  {t("cruise:stats.fun.companionsTotalAfter", { count: companionMentions })}
+                </>
+              }
             />
           )}
         </div>

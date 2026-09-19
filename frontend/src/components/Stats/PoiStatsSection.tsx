@@ -12,6 +12,7 @@ import { logger } from "../../lib/logger";
 import type { Place } from "../../types/place";
 import type { CuratedListSummary, PlaceList } from "../../types/placeList";
 import StatCard from "./StatCard";
+import EvidenceNumber from "./EvidenceNumber";
 import RankedBarList, { type RankedRow } from "./lodging/RankedBarList";
 import PoiRhythmSection from "./poi/PoiRhythmSection";
 import PoiFunSection from "./poi/PoiFunSection";
@@ -233,11 +234,25 @@ export default function PoiStatsSection({
               scope: evidenceScope,
               renderedValue: detail.visitedPlaces.length,
             }}
-            // A year holds no wishlist — it would always read "0 more".
+            descriptionHasOwnTrigger={year === null}
+            // A year holds no wishlist — it would always read "0 more". Where
+            // it IS drawn, the count is its own trigger: `placeWishlistCount`
+            // is a served measure that happens to live inside another card's
+            // sentence, and only the NUMBER is the measure.
             description={
-              year === null
-                ? t("places:stats.visitedPlacesDesc", { wishlist: detail.wishlistCount })
-                : undefined
+              year === null ? (
+                <>
+                  <EvidenceNumber
+                    evidenceKey="placeWishlistCount"
+                    scope={{ period: "allTime" }}
+                    renderedValue={detail.wishlistCount}
+                    label={t("places:stats.wishlistLabel")}
+                  >
+                    {detail.wishlistCount}
+                  </EvidenceNumber>
+                  {t("places:stats.wishlistAfter", { count: detail.wishlistCount })}
+                </>
+              ) : undefined
             }
           />
           <StatCard
@@ -273,11 +288,24 @@ export default function PoiStatsSection({
             valueSize="md"
             title={t("places:stats.countries")}
             value={detail.countries.size}
-            // The card's own number is the COUNTRIES; the cities figure sits in
-            // its description, and a card opens one panel. `placeCitiesCount`
-            // is served and addressable by URL, and splitting this card in two
-            // is a decision about this surface rather than a wiring one.
-            description={t("places:stats.citiesDesc", { count: detail.cities.size })}
+            descriptionHasOwnTrigger
+            // The card's own number is the COUNTRIES; the cities figure sits
+            // in its description and opens `placeCitiesCount` on its own, so
+            // the sentence stays a sentence and each number answers for itself.
+            description={
+              <>
+                {t("places:stats.citiesBefore")}
+                <EvidenceNumber
+                  evidenceKey="placeCitiesCount"
+                  scope={evidenceScope}
+                  renderedValue={detail.cities.size}
+                  label={t("places:stats.citiesLabel")}
+                >
+                  {detail.cities.size}
+                </EvidenceNumber>
+                {t("places:stats.citiesAfter", { count: detail.cities.size })}
+              </>
+            }
             evidence={{
               kind: "metric",
               key: "placeCountriesCount",
