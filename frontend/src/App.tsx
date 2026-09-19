@@ -52,6 +52,7 @@ const ParserPage = lazy(() => import("./pages/ParserPage"));
 const PendingUpdatesPage = lazy(() => import("./pages/PendingUpdatesPage"));
 const AircraftPage = lazy(() => import("./pages/AircraftPage"));
 const PassportPage = lazy(() => import("./pages/PassportPage"));
+const WrappedPage = lazy(() => import("./pages/WrappedPage"));
 const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const ForceChangePasswordPage = lazy(() => import("./pages/ForceChangePasswordPage"));
 const TwoFactorChallengePage = lazy(() => import("./pages/TwoFactorChallengePage"));
@@ -529,6 +530,13 @@ function AppContent() {
               <Route
                 path="/passport"
                 element={isAuthenticated ? <PassportPage /> : <Navigate to="/login" />}
+              />
+              {/* Beside the passport, not under `/stats`: both are a reading
+                  of the whole logbook rather than a tab of the statistics
+                  page, and the navigation lists them together. */}
+              <Route
+                path="/stats/wrapped"
+                element={isAuthenticated ? <WrappedPage /> : <Navigate to="/login" />}
               />
               <Route
                 path="*"

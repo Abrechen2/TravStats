@@ -75,7 +75,14 @@ export function useNavItems(): {
   primary: NavNode[];
   more: NavSection[];
 } {
-  const { t } = useTranslation(["dashboard", "common", "trips", "passport", "dataQuality"]);
+  const { t } = useTranslation([
+    "dashboard",
+    "common",
+    "trips",
+    "passport",
+    "dataQuality",
+    "stats",
+  ]);
   const user = useAuthStore((s) => s.user);
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
@@ -129,6 +136,16 @@ export function useNavItems(): {
               path: "/passport",
               label: t("passport:title"),
               icon: "book-open" as const,
+            },
+            // Same condition, and for the same reason: the year in review is
+            // built from flights, and an entry leading to a page that explains
+            // why it is empty is worse than no entry.
+            {
+              kind: "leaf" as const,
+              id: "wrapped",
+              path: "/stats/wrapped",
+              label: t("stats:wrapped.title"),
+              icon: "sparkles" as const,
             },
           ]
         : []),
