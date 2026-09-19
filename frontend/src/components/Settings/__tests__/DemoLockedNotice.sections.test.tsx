@@ -41,6 +41,8 @@ import ApiTokensSection from "../ApiTokensSection";
 import PasskeySection from "../PasskeySection";
 import NotificationsSection from "../NotificationsSection";
 import ProfileSection from "../ProfileSection";
+import DisplaySection from "../DisplaySection";
+import UnitsSection from "../UnitsSection";
 
 // Each case's locked control: the button the section offers a normal
 // account, and which the demo account must never see.
@@ -183,5 +185,66 @@ describe("ProfileSection on the demo account", () => {
     expect(screen.getByLabelText("settings:profile.firstName")).toBeInTheDocument();
     expect(screen.getByLabelText("settings:profile.birthdate")).toBeInTheDocument();
     expect(screen.queryByText("settings:demoLocked")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Beta audit 2026-09-19, unlisted finding 1: the display and units cards were
+ * the two that said NOTHING. Every control was live, the PUT came back 403,
+ * the toast said "Speichern fehlgeschlagen" -- and the change was applied
+ * locally and survived a reload. The store rolls it back now; these cards say
+ * beforehand that it will not stick.
+ */
+describe("the display and units cards on the demo account", () => {
+  const display = {
+    language: "de" as const,
+    timezone: "Europe/Berlin",
+    dateFormat: "DD.MM.YYYY" as const,
+    timeFormat: "24h" as const,
+    theme: "dark" as const,
+  };
+  const units = { distanceUnit: "kilometers" as const, currency: "EUR" };
+
+  const renderDisplay = (): void => {
+    render(<DisplaySection display={display} onSetDisplay={() => {}} />);
+  };
+  const renderUnits = (): void => {
+    render(
+      <UnitsSection
+        units={units}
+        onSetUnits={() => {}}
+        baseCurrency="EUR"
+        onSetBaseCurrency={() => {}}
+      />
+    );
+  };
+
+  it("says the display settings are locked, and disables them", () => {
+    isDemoMock.current = true;
+    renderDisplay();
+    expect(screen.getByText("settings:demoLocked")).toBeInTheDocument();
+    expect(screen.getByLabelText("settings:display.timezone")).toBeDisabled();
+    expect(screen.getByRole("radiogroup", { name: "settings:display.dateFormat" })).toHaveAttribute(
+      "aria-disabled",
+      "true"
+    );
+  });
+
+  it("says the units are locked, and disables them", () => {
+    isDemoMock.current = true;
+    renderUnits();
+    expect(screen.getByText("settings:demoLocked")).toBeInTheDocument();
+    expect(screen.getByRole("radiogroup", { name: "settings:units.distance" })).toHaveAttribute(
+      "aria-disabled",
+      "true"
+    );
+  });
+
+  it("leaves both cards alone for a normal account -- the cases above are not vacuous", () => {
+    isDemoMock.current = false;
+    renderDisplay();
+    renderUnits();
+    expect(screen.queryByText("settings:demoLocked")).not.toBeInTheDocument();
+    expect(screen.getByLabelText("settings:display.timezone")).toBeEnabled();
   });
 });

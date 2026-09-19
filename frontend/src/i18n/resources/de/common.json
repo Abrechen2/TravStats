@@ -229,8 +229,8 @@
   "support": {
     "donate": "Spenden",
     "donateAria": "Über PayPal spenden",
-    "star": "Stern",
-    "starAria": "Auf GitHub einen Stern geben"
+    "star": "Projekt auf GitHub",
+    "starAria": "Das Projekt auf GitHub ansehen"
   },
   "filters": {
     "more": "Filter",
