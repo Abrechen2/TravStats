@@ -660,13 +660,69 @@ registry.registerPath({
   responses: { 200: { description: "Template" }, 404: notFound },
 });
 
+/** One side of a workshop preview: which sample, and what it read from it. */
+const previewSide = z.object({
+  sampleId: z.string().uuid(),
+  filename: z.string().nullable(),
+  result: z.object({
+    matched: z.boolean(),
+    fields: z.array(z.object({ name: z.string(), value: z.string() })),
+    confidence: z.number().nullable(),
+  }),
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/parser-templates/{id}/preview",
+  summary: "Run a derived template before activating it",
+  description:
+    "Runs the template against the sample it was derived from AND a held-out sample of the same domain, and names the fields it would read. Activation refuses a template whose preview has not run, or whose patterns changed since it did.",
+  tags: parseTag,
+  request: { params: z.object({ id: z.string() }) },
+  responses: {
+    200: {
+      description: "What the template would read",
+      content: {
+        "application/json": {
+          schema: z.object({
+            templateId: z.string().uuid(),
+            domain: z.enum(["flight", "lodging", "cruise", "place"]),
+            own: previewSide.nullable().describe("The sample the template was derived from"),
+            heldOut: previewSide
+              .nullable()
+              .describe("A second sample of the same domain, never seen by the derivation"),
+            heldOutReason: z
+              .literal("noSecondSample")
+              .nullable()
+              .describe("Why there is no held-out side, when there is none"),
+            canActivate: z
+              .boolean()
+              .describe("False until the template reads its own sample; activation refuses"),
+            previewOf: z
+              .string()
+              .describe("The template version this proof was made against — see PATCH"),
+          }),
+        },
+      },
+    },
+    404: notFound,
+  },
+});
+
 registry.registerPath({
   method: "patch",
   path: "/parser-templates/{id}",
   summary: "Update a template",
+  description:
+    "Activating requires a passing preview from `POST /parser-templates/{id}/preview`; without one the answer is 409 `PREVIEW_REQUIRED`.",
   tags: parseTag,
   request: { params: z.object({ id: z.string() }) },
-  responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },
+  responses: {
+    200: { description: "Updated" },
+    400: badInput,
+    404: notFound,
+    409: { description: "Not previewed", content: errorContent },
+  },
 });
 
 registry.registerPath({

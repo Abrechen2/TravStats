@@ -11,6 +11,8 @@ import { documentSectionFor, parseAmount, reconcileTotalPrice } from "./document
 import { getAdminParserSettings, getParserOrder } from "../parserSettings";
 import { LODGING_TEMPLATES } from "./templates/builtins";
 import { applyLodgingTemplate } from "./templates/engine";
+import { loadActiveLodgingTemplates } from "../parsers/userTemplates/lodgingTemplates";
+import type { LodgingTemplate } from "./templates/types";
 import { LODGING_TYPES } from "../../schemas/lodging";
 import { isCurrencyCode } from "../../shared/currencies";
 import { isSharedDemoUser } from "../../utils/sharedDemo";
@@ -418,6 +420,17 @@ export async function parseLodgingBookingText(
    *  before. */
   userId?: string
 ): Promise<LodgingParseResult> {
+  /**
+   * The caller's own workshop templates, read once before the chain runs.
+   *
+   * forgejo#124 phase 6. They are the same declarative specs as the built-ins
+   * and run through the same engine — the only difference is who wrote them,
+   * and the fact that they are loaded from the database, which is why this
+   * lookup cannot live inside the synchronous `readTemplate` below.
+   */
+  const userTemplates: LodgingTemplate[] =
+    userId === undefined ? [] : await loadActiveLodgingTemplates(userId);
+
   const readTemplate = (): ParsedLodgingBooking | null => {
     const subject = firstLineAsSubject(text);
     if (isBookingComConfirmation(undefined, text)) {
@@ -429,6 +442,15 @@ export async function parseLodgingBookingText(
     // Hilton and two travelclick properties, which read as NOTHING before
     // 2026-09-17 on an instance without an LLM (forgejo#122).
     for (const template of LODGING_TEMPLATES) {
+      const hit = applyLodgingTemplate(template, subject ?? "", text);
+      if (hit) return hit;
+    }
+    // Personal templates come LAST, deliberately. The plan's rule is
+    // "per-user before community, but only when proven" (§7), and what is
+    // proven here is thin: one preview against two of the user's own mails.
+    // A built-in reader is measured against the whole corpus, so it keeps the
+    // first look until a user template has a stronger claim than a preview.
+    for (const template of userTemplates) {
       const hit = applyLodgingTemplate(template, subject ?? "", text);
       if (hit) return hit;
     }
