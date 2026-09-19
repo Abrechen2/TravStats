@@ -4,6 +4,7 @@ import { MemoryRouter, useLocation } from "react-router-dom";
 import type { JSX } from "react";
 import type { FunStats, UniqueStats } from "../../../types";
 import { EVIDENCE_MEASURES } from "../../../shared/evidenceMeasures";
+import { expectNoNestedTriggers } from "./noNestedTriggers";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
@@ -126,7 +127,7 @@ describe("the fun and unique tiles open the measures they render", () => {
     );
   });
 
-  it("StatsUniqueSection wires its eleven single-number tiles", async () => {
+  it("StatsUniqueSection wires its eleven single-number tiles and both split cards", async () => {
     const keys = await keysOpenedBy(<StatsUniqueSection uniqueStats={uniqueStats} />);
     expect(keys).toEqual(
       [
@@ -141,14 +142,36 @@ describe("the fun and unique tiles open the measures they render", () => {
         "sameDayFlightCount",
         "timeTravelFlightCount",
         "tropicsFlightCount",
+        // The east/west and international/domestic cards render TWO numbers
+        // each. They were unwired until the owner ruled on 2026-09-19 that a
+        // two-figure card gets a trigger per figure; these four assertions used
+        // to read `not.toContain`.
+        "eastwardFlightCount",
+        "westwardFlightCount",
+        "internationalFlightCount",
+        "domesticFlightCount",
       ].sort()
     );
-    // The east/west and international/domestic cards render TWO numbers each
-    // and stay unwired on purpose — a card opens one panel, and splitting
-    // its big number into two buttons is a design decision about this
-    // surface. Their four keys ARE served and addressable by URL.
-    expect(keys).not.toContain("eastwardFlightCount");
-    expect(keys).not.toContain("internationalFlightCount");
+  });
+
+  /**
+   * The failure a key-set assertion cannot see: both figures of one card
+   * wired to the SAME key. The set would still contain both keys — one from
+   * each card — and every button would still open a panel.
+   */
+  it("opens a DIFFERENT measure from each figure of a split card", async () => {
+    const keys = await keysOpenedBy(<StatsUniqueSection uniqueStats={uniqueStats} />);
+    expect(new Set(keys).size).toBe(keys.length);
+  });
+
+  it("nests no trigger inside another", async () => {
+    cleanup();
+    const { container } = render(
+      <MemoryRouter>
+        <StatsUniqueSection uniqueStats={uniqueStats} />
+      </MemoryRouter>
+    );
+    expectNoNestedTriggers(container);
   });
 
   it("every key these surfaces open is a registered measure that release 1 serves", async () => {

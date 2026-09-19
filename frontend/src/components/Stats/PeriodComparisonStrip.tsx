@@ -2,6 +2,8 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { comparisonWindow } from "../../lib/stats/comparisonWindow";
 import TrendDelta from "./TrendDelta";
+import EvidenceTrigger from "./EvidenceTrigger";
+import type { EvidenceScopeParams } from "../evidence/useEvidence";
 
 export interface ComparisonRow {
   key: string;
@@ -10,12 +12,33 @@ export interface ComparisonRow {
   previous: number;
   /** Renders a figure; plain grouped digits when omitted. */
   format?: (value: number) => string;
+  /**
+   * Present only where a RESOLVER answers for this row's CURRENT figure. A
+   * strip figure is a number like any other — it became a trigger the same way
+   * a tile did (owner, 2026-09-19). The compare year's figure beside it stays
+   * plain: it is the same measure over a different population, and the panel
+   * would answer for the year the strip is scoped to, not the one printed
+   * under it.
+   */
+  evidenceKey?: string;
+}
+
+interface StripEvidence {
+  /** The population the CURRENT figures were measured over — the strip's own year. */
+  scope: EvidenceScopeParams;
 }
 
 interface Props {
   year: number;
   compareYear: number;
   rows: ComparisonRow[];
+  /**
+   * Omitted, every figure stays plain text however many rows name a key —
+   * the same rule `LodgingStatStrip` follows, and for the same reason: a
+   * trigger without a scope opens a panel measuring a population this strip
+   * never showed.
+   */
+  evidence?: StripEvidence;
 }
 
 /**
@@ -37,7 +60,12 @@ interface Props {
  * of 2025" rather than "vs 2025" when it is not, with the reason underneath.
  * Narrowing the numbers themselves needs the endpoints to accept a date range.
  */
-export default function PeriodComparisonStrip({ year, compareYear, rows }: Props): JSX.Element {
+export default function PeriodComparisonStrip({
+  year,
+  compareYear,
+  rows,
+  evidence,
+}: Props): JSX.Element {
   const { t, i18n } = useTranslation(["stats"]);
   const grouped = new Intl.NumberFormat(i18n.language.startsWith("de") ? "de-DE" : "en-GB");
   // Both years, because the compare year can be the LATER one: 2025 against
@@ -69,6 +97,8 @@ export default function PeriodComparisonStrip({ year, compareYear, rows }: Props
       <div className="grid grid-cols-2 lg:grid-cols-4 gap-4">
         {rows.map((row) => {
           const format = row.format ?? ((n: number): string => grouped.format(n));
+          const figureClass = "text-2xl font-bold font-mono";
+          const figureStyle = { color: "var(--text-primary)" };
           return (
             <div
               key={row.key}
@@ -79,12 +109,28 @@ export default function PeriodComparisonStrip({ year, compareYear, rows }: Props
                 {row.label}
               </h3>
               <div className="mt-1 flex flex-wrap items-end gap-2">
-                <p
-                  className="text-2xl font-bold font-mono"
-                  style={{ color: "var(--text-primary)" }}
-                >
-                  {format(row.current)}
-                </p>
+                {evidence && row.evidenceKey ? (
+                  // Tailwind's preflight zeroes a button's border and
+                  // background, so the figure keeps its look and gains a
+                  // keyboard-operable trigger. `width: auto` undoes
+                  // `EvidenceTrigger`'s own 100 % reset, which would push the
+                  // delta beside it onto the next line.
+                  <EvidenceTrigger
+                    kind="metric"
+                    evidenceKey={row.evidenceKey}
+                    scope={evidence.scope}
+                    renderedValue={row.current}
+                    label={row.label}
+                    className={figureClass}
+                    style={{ ...figureStyle, display: "inline-block", width: "auto" }}
+                  >
+                    {format(row.current)}
+                  </EvidenceTrigger>
+                ) : (
+                  <p className={figureClass} style={figureStyle}>
+                    {format(row.current)}
+                  </p>
+                )}
                 <TrendDelta current={row.current} previous={row.previous} />
               </div>
               <p className="text-xs mt-1 font-mono" style={{ color: "var(--text-muted)" }}>

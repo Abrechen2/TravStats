@@ -390,7 +390,21 @@ export default function CruiseStatsSection({
           scope={evidenceScope}
         />
       )}
-      {show("fun") && <CruiseFunSection detail={detail} accent={accent} locale={locale} />}
+      {/*
+        The FULL scoped fold, not `moneyDetail`: the companions total under the
+        ranked list counts everyone who came along, and a booked cruise is part
+        of the logbook even though its price is not money anyone has spent.
+        Handing the money section's filtered fold to this one would make the
+        total disagree with the bars beneath it.
+      */}
+      {show("fun") && (
+        <CruiseFunSection
+          detail={detail}
+          accent={accent}
+          locale={locale}
+          evidenceScope={evidenceScope}
+        />
+      )}
     </div>
   );
 }

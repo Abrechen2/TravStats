@@ -10,6 +10,7 @@ vi.mock("../../../../lib/api/stats", () => ({
 }));
 
 import TravelAccountSection from "../TravelAccountSection";
+import { expectNoNestedTriggers } from "../../__tests__/noNestedTriggers";
 
 /**
  * Which travel-account tiles open the evidence panel (task 7b-2), read from
@@ -17,22 +18,21 @@ import TravelAccountSection from "../TravelAccountSection";
  * contract between a tile and the panel, so one wired to the wrong key looks
  * identical to a correct one until it is clicked.
  *
- * Seven of this section's nine served keys are deliberately NOT wired, and
- * the absences are asserted so the state stays a decision rather than an
- * oversight:
+ * Five of this section's nine served keys are deliberately NOT wired, and the
+ * absences are asserted so the state stays a decision rather than an
+ * oversight: **the five night keys** (`hotel`, `sea`, `air`, `home`,
+ * `contested`). The section draws nights as PER-YEAR bars with a legend, and
+ * a bar is not a number — there is no all-time night figure on screen to
+ * attach a trigger to, and all five are registered `allTime`. `contested` is
+ * the near miss, rendering as a count inside the subtitle prose; it is the one
+ * candidate should this section ever gain a lifetime figure. All five remain
+ * reachable by `?evidence=metric:<key>`.
  *
- *  - **The five night keys** (`hotel`, `sea`, `air`, `home`, `contested`).
- *    The section draws nights as PER-YEAR bars with a legend. There is no
- *    all-time night figure on screen to attach a trigger to, and all five are
- *    registered `allTime`. `contested` is the near miss — it renders as a
- *    count inside the subtitle prose — but turning a sentence fragment into a
- *    button is a decision about this surface, not a wiring one.
- *  - **`travelAccountFullyCoveredTripCount` + `travelAccountTripsWithDatesCount`.**
- *    One card, two numbers ("3 / 4"), and a `StatCard` opens ONE panel. The
- *    same ruling the east/west and international/domestic pairs got on the
- *    unique tab, for the same reason.
- *
- * All seven remain served and reachable by `?evidence=metric:<key>`.
+ * `travelAccountFullyCoveredTripCount` + `travelAccountTripsWithDatesCount`
+ * used to be a sixth and seventh — one card, two numbers ("3 / 4"), and a
+ * `StatCard` opens ONE panel. The owner ruled on 2026-09-19 that such a card
+ * is split instead, so both are wired now and the assertion that named them
+ * reads the other way round.
  */
 
 const response = (): TravelAccountResponse => ({
@@ -98,9 +98,14 @@ describe("the travel-account tiles open the measures they render", () => {
     getTravelAccount.mockResolvedValue(response());
   });
 
-  it("wires exactly the two single-number trip cards", async () => {
+  it("wires the two single-number trip cards and both figures of the coverage card", async () => {
     expect(await keysOpened()).toEqual(
-      ["travelAccountJournalEntryCount", "travelAccountUncoveredDayCount"].sort()
+      [
+        "travelAccountJournalEntryCount",
+        "travelAccountUncoveredDayCount",
+        "travelAccountFullyCoveredTripCount",
+        "travelAccountTripsWithDatesCount",
+      ].sort()
     );
   });
 
@@ -117,12 +122,29 @@ describe("the travel-account tiles open the measures they render", () => {
     }
   });
 
-  it("leaves the two-number coverage card unwired — a card opens ONE panel", async () => {
+  /**
+   * The coverage card's two figures are the measure the card is ABOUT — "3 of
+   * 4 trips". Wiring both to the same key would keep the key set above green
+   * while making the second figure a lie, so the pair is asserted as a pair.
+   */
+  it("opens a different measure from each figure of the coverage card", async () => {
     const keys = await keysOpened();
-    expect(keys).not.toContain("travelAccountFullyCoveredTripCount");
-    expect(keys).not.toContain("travelAccountTripsWithDatesCount");
+    expect(keys).toContain("travelAccountFullyCoveredTripCount");
+    expect(keys).toContain("travelAccountTripsWithDatesCount");
+    expect(new Set(keys).size).toBe(keys.length);
     // `avgTripDays` is a `ratio`, which release 1 does not serve at all.
     expect(keys).not.toContain("travelAccountAvgTripDays");
+  });
+
+  it("nests no trigger inside another", async () => {
+    cleanup();
+    const { container } = render(
+      <MemoryRouter>
+        <TravelAccountSection />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(screen.getAllByRole("button").length).toBeGreaterThan(0));
+    expectNoNestedTriggers(container);
   });
 
   it("every key this section opens is a registered measure that release 1 serves", async () => {
