@@ -16,7 +16,7 @@ import {
   type TravelDocument,
 } from "../../lib/api/documents";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
-import { useDisplayFormat } from "../../lib/displayFormat";
+import { useDisplayFormat, type DisplayFormatter } from "../../lib/displayFormat";
 import { formatBytes } from "../../lib/fileSize";
 import { logger } from "../../lib/logger";
 import { DOCUMENT_FORMAT_ICON, exceededDocumentLimit } from "./documentDisplay";
@@ -49,6 +49,22 @@ interface Props {
  * That one field is the "Beleg" the cost block links to; this is the whole
  * folder, and the two answer different questions.
  */
+/**
+ * The date a row prints: the day written on the document, or failing that the
+ * day it was kept.
+ *
+ * `issuedOn` is date-only ("2026-09-18") — a DATE, not an instant. Read as one
+ * it is UTC midnight, and every viewer west of Greenwich sees the day before
+ * the one on the bill. `createdAt` is a real timestamp and belongs in the
+ * viewer's own zone, so the two are NOT formatted the same way. Same rule and
+ * same fix as `Stats/RecordsSection.tsx`.
+ */
+function issuedOrCreated(document: TravelDocument, format: DisplayFormatter): string {
+  return document.issuedOn
+    ? format.date(`${document.issuedOn}T00:00:00Z`, { timeZone: "UTC" })
+    : format.date(document.createdAt);
+}
+
 export default function DocumentsSection({ entry, layout = "card" }: Props): JSX.Element {
   const { t } = useTranslation(["documents", "common"]);
   const format = useDisplayFormat();
@@ -202,7 +218,7 @@ export default function DocumentsSection({ entry, layout = "card" }: Props): JSX
                 {[
                   doc.kind ? t(`documents:kind.${doc.kind}`) : t(`documents:format.${doc.format}`),
                   formatBytes(doc.sizeBytes),
-                  format.date(doc.issuedOn ?? doc.createdAt),
+                  issuedOrCreated(doc, format),
                 ].join(" · ")}
               </span>
               {!locked && (

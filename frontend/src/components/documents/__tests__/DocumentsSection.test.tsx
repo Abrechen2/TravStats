@@ -1,4 +1,4 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, afterAll, beforeAll, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 
 import type { TravelDocument } from "../../../lib/api/documents";
@@ -211,5 +211,51 @@ describe("DocumentsSection", () => {
 
     await waitFor(() => expect(screen.queryByText("LH2462.pdf")).toBeNull());
     expect(screen.queryByText("documents:tooLarge")).toBeNull();
+  });
+});
+
+/**
+ * `issuedOn` is a DATE, not an instant — the day printed on the bill. Read as
+ * an instant it is UTC midnight, and every viewer west of Greenwich is shown
+ * the day before. Same rule and same fix as `Stats/RecordsSection.tsx`.
+ */
+describe("DocumentsSection — the day written on the document", () => {
+  let originalTz: string | undefined;
+
+  beforeAll(() => {
+    originalTz = process.env.TZ;
+    // A UTC-NEGATIVE zone is what makes the defect observable at all, and it
+    // must not depend on the zone the machine running this happens to be in.
+    process.env.TZ = "America/Los_Angeles";
+  });
+
+  afterAll(() => {
+    process.env.TZ = originalTz;
+  });
+
+  beforeEach(() => {
+    isDemoMock.current = false;
+    documentsApiMock.listForEntry.mockReset().mockResolvedValue([]);
+    documentsApiMock.limits.mockReset().mockResolvedValue(LIMITS);
+    documentsApiMock.upload.mockReset();
+    documentsApiMock.remove.mockReset();
+  });
+
+  it("prints the issue date itself, not the day before it", async () => {
+    documentsApiMock.listForEntry.mockResolvedValue([makeDocument({ issuedOn: "2026-09-18" })]);
+    render(<DocumentsSection entry={FLIGHT} />);
+
+    expect(await screen.findByText(/18\.09\.2026/)).toBeInTheDocument();
+    expect(screen.queryByText(/17\.09\.2026/)).toBeNull();
+  });
+
+  it("still reads an undated document's createdAt as the instant it is", async () => {
+    // Not a date-only string: a timestamp belongs in the viewer's own zone.
+    documentsApiMock.listForEntry.mockResolvedValue([
+      makeDocument({ issuedOn: null, createdAt: "2026-09-18T20:00:00.000Z" }),
+    ]);
+    render(<DocumentsSection entry={FLIGHT} />);
+
+    expect(await screen.findByText(/18\.09\.2026/)).toBeInTheDocument();
   });
 });
