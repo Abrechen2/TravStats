@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList from "./RankedBarList";
 
 const LODGING_ACCENT = "var(--domain-lodging, #d4778f)";
@@ -12,6 +13,14 @@ const SEASON_KEYS = ["winter", "spring", "summer", "autumn"] as const;
 
 interface Props {
   stats: LodgingStats;
+  /**
+   * The population the numbers on this surface were measured over, present
+   * only where a tile may open the evidence panel. The statistics page passes
+   * it; the dashboard map tab and the lodging list page do not, and their
+   * cards stay plain — a trigger there would open a panel scoped to a period
+   * that screen never shows.
+   */
+  evidenceScope?: EvidenceScopeParams;
 }
 
 /**
@@ -26,7 +35,7 @@ interface Props {
  * would put two conventions in one payload. The rotation belongs where the
  * week is read, which is here.
  */
-export default function LodgingRhythmSection({ stats }: Props): JSX.Element {
+export default function LodgingRhythmSection({ stats, evidenceScope }: Props): JSX.Element {
   const { t } = useTranslation(["lodging"]);
   const { rhythm } = stats;
 
@@ -79,6 +88,16 @@ export default function LodgingRhythmSection({ stats }: Props): JSX.Element {
           valueSize="md"
           title={t("lodging:stats.rhythm.nightsAway")}
           value={rhythm.nightsAway}
+          evidence={
+            evidenceScope
+              ? {
+                  kind: "metric",
+                  key: "lodgingNightsAwayTotal",
+                  scope: evidenceScope,
+                  renderedValue: rhythm.nightsAway,
+                }
+              : undefined
+          }
           description={t("lodging:stats.rhythm.nightsAwayDesc")}
           // Only worth saying when it differs — otherwise it is noise under
           // every single account that never double-booked.

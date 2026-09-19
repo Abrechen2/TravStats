@@ -77,6 +77,18 @@ import {
   resolveCruiseTotalSpend,
 } from "./metricEvidenceCruise";
 import {
+  resolveLodgingStaysCount,
+  resolveLodgingNightsTotal,
+  resolveLodgingSpendTotal,
+  resolveLodgingAwardNightsCount,
+  resolveLodgingNightsAwayTotal,
+  resolveLodgingOneNightStayCount,
+  resolveLodgingPerfectStayCount,
+  resolveLodgingsUniqueCount,
+  resolveLodgingCountriesCount,
+  resolveLodgingContinentsCount,
+} from "./metricEvidenceLodging";
+import {
   resolveCrossDomainEventCount,
   resolveCrossDomainCountryCount,
   resolveCrossDomainActiveDayCount,
@@ -170,6 +182,16 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   cruiseCountriesCount: resolveCruiseCountriesCount,
   cruiseCompanionCount: resolveCruiseCompanionCount,
   cruiseTotalSpend: resolveCruiseTotalSpend,
+  lodgingStaysCount: resolveLodgingStaysCount,
+  lodgingNightsTotal: resolveLodgingNightsTotal,
+  lodgingSpendTotal: resolveLodgingSpendTotal,
+  lodgingAwardNightsCount: resolveLodgingAwardNightsCount,
+  lodgingNightsAwayTotal: resolveLodgingNightsAwayTotal,
+  lodgingOneNightStayCount: resolveLodgingOneNightStayCount,
+  lodgingPerfectStayCount: resolveLodgingPerfectStayCount,
+  lodgingsUniqueCount: resolveLodgingsUniqueCount,
+  lodgingCountriesCount: resolveLodgingCountriesCount,
+  lodgingContinentsCount: resolveLodgingContinentsCount,
 };
 
 /**

@@ -3,6 +3,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { countryName } from "../../../lib/countryFlag";
 import type { LodgingPlace, LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList from "./RankedBarList";
 
 const LODGING_ACCENT = "var(--domain-lodging, #d4778f)";
@@ -10,6 +11,14 @@ const LIST_LIMIT = 8;
 
 interface Props {
   stats: LodgingStats;
+  /**
+   * The population the numbers on this surface were measured over, present
+   * only where a tile may open the evidence panel. The statistics page passes
+   * it; the dashboard map tab and the lodging list page do not, and their
+   * cards stay plain — a trigger there would open a panel scoped to a period
+   * that screen never shows.
+   */
+  evidenceScope?: EvidenceScopeParams;
 }
 
 /** "52.5164° N" — the hemisphere letter reads faster than a minus sign. */
@@ -33,7 +42,7 @@ function placeLabel(place: LodgingPlace): string {
  * describe only the located stays, and a screen that omits how many were left
  * out presents a partial answer as a complete one.
  */
-export default function LodgingGeoSection({ stats }: Props): JSX.Element {
+export default function LodgingGeoSection({ stats, evidenceScope }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["lodging"]);
   const { geo } = stats;
   const locale = i18n.language.startsWith("en") ? "en" : "de";
@@ -55,6 +64,16 @@ export default function LodgingGeoSection({ stats }: Props): JSX.Element {
           valueSize="md"
           title={t("lodging:stats.geo.continents")}
           value={geo.continentsCount}
+          evidence={
+            evidenceScope
+              ? {
+                  kind: "metric",
+                  key: "lodgingContinentsCount",
+                  scope: evidenceScope,
+                  renderedValue: geo.continentsCount,
+                }
+              : undefined
+          }
           description={geo.continents.join(" · ") || t("lodging:stats.geo.noContinents")}
         />
         <StatCard

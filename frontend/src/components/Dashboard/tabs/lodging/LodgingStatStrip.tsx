@@ -4,6 +4,8 @@ import { useSettingsStore } from "../../../../store/settingsStore";
 import { formatCurrency } from "../../../../lib/units";
 import { otherCurrencySpend } from "../../../../lib/lodgingFormat";
 import type { LodgingStats } from "../../../../types/lodging";
+import type { EvidenceScopeParams } from "../../../evidence/useEvidence";
+import EvidenceTrigger from "../../../Stats/EvidenceTrigger";
 import { lodgingSpendNothingConverted } from "../../../../lib/lodgingSpendConverted";
 
 export type LodgingStatStripVariant = "overlay" | "inline";
@@ -23,6 +25,14 @@ interface LodgingStatStripProps {
    * same three numbers twice in a row read as a mistake (CT106 audit B12).
    */
   omit?: readonly string[];
+  /**
+   * The population these numbers were measured over, present only where a
+   * cell may open the evidence panel. The statistics page passes it; the
+   * dashboard map tab and the lodging list page do not, and their cells stay
+   * plain `<div>`s — a trigger there would open a panel scoped to a period
+   * that screen never shows.
+   */
+  evidenceScope?: EvidenceScopeParams;
 }
 
 const OVERLAY_CELL_STYLE: CSSProperties = {
@@ -51,6 +61,7 @@ export function LodgingStatStrip({
   stats,
   variant = "overlay",
   omit = [],
+  evidenceScope,
 }: LodgingStatStripProps): JSX.Element {
   const { t } = useTranslation(["dashboard", "lodging"]);
   // `spendBaseTotal` is computed by the backend in the user's actual base
@@ -87,21 +98,37 @@ export function LodgingStatStrip({
 
   const nothingConverted = lodgingSpendNothingConverted(stats);
 
-  const cells: { key: string; value: string; label: string; sub?: string | null }[] = [
+  // `evidenceKey` is present only where a RESOLVER answers for the figure.
+  // `chains` and `rating` are absent on purpose: the first is unregistered
+  // and the second is a `ratio`, and release 1 serves neither.
+  const cells: {
+    key: string;
+    value: string;
+    label: string;
+    sub?: string | null;
+    evidenceKey?: string;
+    renderedValue?: number | null;
+  }[] = [
     {
       key: "hotels",
       value: String(stats.lodgingsCount),
       label: t("dashboard:lodgingTab.stats.hotels", { count: stats.lodgingsCount }),
+      evidenceKey: "lodgingsUniqueCount",
+      renderedValue: stats.lodgingsCount,
     },
     {
       key: "stays",
       value: String(stats.staysCount),
       label: t("dashboard:lodgingTab.stats.stays", { count: stats.staysCount }),
+      evidenceKey: "lodgingStaysCount",
+      renderedValue: stats.staysCount,
     },
     {
       key: "nights",
       value: String(stats.totalNights),
       label: t("dashboard:lodgingTab.stats.nights", { count: stats.totalNights }),
+      evidenceKey: "lodgingNightsTotal",
+      renderedValue: stats.totalNights,
     },
     {
       key: "chains",
@@ -118,12 +145,18 @@ export function LodgingStatStrip({
           value: "—",
           label: t("dashboard:lodgingTab.stats.spend"),
           sub: spendSub ?? t("lodging:stats.money.noPrices"),
+          evidenceKey: "lodgingSpendTotal",
+          // A dash is not a zero: the panel is told there is no figure to
+          // compare against, which is the same thing this cell is saying.
+          renderedValue: null,
         }
       : {
           key: "spend",
           value: formatCurrency(stats.spendBaseTotal, baseCurrency),
           label: t("dashboard:lodgingTab.stats.spend"),
           sub: spendSub,
+          evidenceKey: "lodgingSpendTotal",
+          renderedValue: stats.spendBaseTotal,
         },
     { key: "rating", value: ratingLabel, label: t("dashboard:lodgingTab.stats.rating") },
   ];
@@ -159,37 +192,61 @@ export function LodgingStatStrip({
     <div style={containerStyle} data-testid="lodging-stat-strip" data-variant={variant}>
       {cells
         .filter((cell) => !omit.includes(cell.key))
-        .map((cell) => (
-          <div key={cell.key} style={cellStyle}>
-            <strong
-              style={{
-                fontSize: valueFontSize,
-                color: "var(--text-primary)",
-                fontVariantNumeric: "tabular-nums",
-              }}
-            >
-              {cell.value}
-            </strong>
-            <span
-              style={{
-                fontSize: 10,
-                textTransform: "uppercase",
-                letterSpacing: "0.04em",
-                color: "var(--text-muted)",
-              }}
-            >
-              {cell.label}
-            </span>
-            {cell.sub && (
-              <span
-                data-testid="lodging-stat-strip-spend-sub"
-                style={{ fontSize: 10, color: "var(--fx,#6ab7d8)", marginTop: 1 }}
+        .map((cell) => {
+          const body = (
+            <>
+              <strong
+                style={{
+                  fontSize: valueFontSize,
+                  color: "var(--text-primary)",
+                  fontVariantNumeric: "tabular-nums",
+                }}
               >
-                {cell.sub}
+                {cell.value}
+              </strong>
+              <span
+                style={{
+                  fontSize: 10,
+                  textTransform: "uppercase",
+                  letterSpacing: "0.04em",
+                  color: "var(--text-muted)",
+                }}
+              >
+                {cell.label}
               </span>
-            )}
-          </div>
-        ))}
+              {cell.sub && (
+                <span
+                  data-testid="lodging-stat-strip-spend-sub"
+                  style={{ fontSize: 10, color: "var(--fx,#6ab7d8)", marginTop: 1 }}
+                >
+                  {cell.sub}
+                </span>
+              )}
+            </>
+          );
+          if (!evidenceScope || !cell.evidenceKey) {
+            return (
+              <div key={cell.key} style={cellStyle}>
+                {body}
+              </div>
+            );
+          }
+          // Tailwind's preflight zeroes a button's border and background, so
+          // the cell keeps its layout and gains a keyboard-operable trigger.
+          return (
+            <EvidenceTrigger
+              key={cell.key}
+              kind="metric"
+              evidenceKey={cell.evidenceKey}
+              scope={evidenceScope}
+              renderedValue={cell.renderedValue ?? null}
+              label={cell.label}
+              style={cellStyle}
+            >
+              {body}
+            </EvidenceTrigger>
+          );
+        })}
     </div>
   );
 }

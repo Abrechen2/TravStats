@@ -4,10 +4,19 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import type { LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList, { type RankedRow } from "./RankedBarList";
 
 interface Props {
   stats: LodgingStats;
+  /**
+   * The population the numbers on this surface were measured over, present
+   * only where a tile may open the evidence panel. The statistics page passes
+   * it; the dashboard map tab and the lodging list page do not, and their
+   * cards stay plain — a trigger there would open a panel scoped to a period
+   * that screen never shows.
+   */
+  evidenceScope?: EvidenceScopeParams;
 }
 
 const LIST_LIMIT = 8;
@@ -25,7 +34,7 @@ const LIST_LIMIT = 8;
  * longest single stay, how often one hotel was returned to, the stays that were
  * flawless and the ones that were endured.
  */
-export default function LodgingRecordsSection({ stats }: Props): JSX.Element | null {
+export default function LodgingRecordsSection({ stats, evidenceScope }: Props): JSX.Element | null {
   const { t } = useTranslation(["lodging", "common"]);
   const { colorOf } = useDomainColors();
   const accent = colorOf("lodging");
@@ -82,6 +91,16 @@ export default function LodgingRecordsSection({ stats }: Props): JSX.Element | n
         valueSize="md"
         title={t("lodging:stats.records.perfectStays")}
         value={stats.perfectStays}
+        evidence={
+          evidenceScope
+            ? {
+                kind: "metric",
+                key: "lodgingPerfectStayCount",
+                scope: evidenceScope,
+                renderedValue: stats.perfectStays,
+              }
+            : undefined
+        }
         description={t("lodging:stats.records.perfectStaysDesc", {
           endured: stats.enduredStays,
         })}
@@ -97,6 +116,16 @@ export default function LodgingRecordsSection({ stats }: Props): JSX.Element | n
         valueSize="md"
         title={t("lodging:stats.records.oneNighters")}
         value={stats.oneNightStays}
+        evidence={
+          evidenceScope
+            ? {
+                kind: "metric",
+                key: "lodgingOneNightStayCount",
+                scope: evidenceScope,
+                renderedValue: stats.oneNightStays,
+              }
+            : undefined
+        }
         description={t("lodging:stats.records.oneNightersDesc", {
           total: stats.staysCount,
         })}

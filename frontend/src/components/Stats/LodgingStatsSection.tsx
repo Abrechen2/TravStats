@@ -15,6 +15,7 @@ import LodgingRecordsSection from "./lodging/LodgingRecordsSection";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
 import { dimWhile, sameScope, type PeriodScope } from "./useStatsPeriod";
 import type { SectionVisibility } from "../../hooks/useSectionVisibility";
+import type { EvidenceScopeParams } from "../evidence/useEvidence";
 
 /**
  * The lodging numbers, on the statistics page where numbers belong.
@@ -134,6 +135,12 @@ export default function LodgingStatsSection({
     );
   }
 
+  // The population these tiles show: the period strip's own state.
+  // `allTime` is the tab's DEFAULT, not an edge case — which is why the
+  // registry lists it beside `year` (corrected in task 7b-3).
+  const evidenceScope: EvidenceScopeParams =
+    shown.year === null ? { period: "allTime" } : { period: "year", year: shown.year };
+
   const show = visibility.isVisible;
 
   return (
@@ -154,6 +161,7 @@ export default function LodgingStatsSection({
           stats={stats}
           variant="inline"
           omit={comparison ? ["stays", "nights", "hotels"] : []}
+          evidenceScope={evidenceScope}
         />
       )}
       {/* A breakdown of currencies nobody paid in is an empty card; the money
@@ -165,10 +173,10 @@ export default function LodgingStatsSection({
         )}
       {show("money") && <LodgingMoneySection stats={stats} />}
       {show("quality") && <LodgingQualitySection stats={stats} />}
-      {show("geo") && <LodgingGeoSection stats={stats} />}
-      {show("rhythm") && <LodgingRhythmSection stats={stats} />}
+      {show("geo") && <LodgingGeoSection stats={stats} evidenceScope={evidenceScope} />}
+      {show("rhythm") && <LodgingRhythmSection stats={stats} evidenceScope={evidenceScope} />}
       {show("loyalty") && <LodgingLoyaltySection stats={stats} />}
-      {show("records") && <LodgingRecordsSection stats={stats} />}
+      {show("records") && <LodgingRecordsSection stats={stats} evidenceScope={evidenceScope} />}
     </div>
   );
 }
