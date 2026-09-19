@@ -54,7 +54,7 @@ const csvBatch: ImportBatchSummary = {
   source: "csv",
   fileName: "places.csv",
   createdAt: "2026-07-01T00:00:00.000Z",
-  counts: { lodgings: 2, stays: 3, flights: 0, cruises: 0 },
+  counts: { lodgings: 2, stays: 3, flights: 0, cruises: 0, places: 0 },
 };
 
 const emailBatch: ImportBatchSummary = {
@@ -63,7 +63,7 @@ const emailBatch: ImportBatchSummary = {
   source: "email",
   fileName: null,
   createdAt: "2026-06-15T00:00:00.000Z",
-  counts: { lodgings: 1, stays: 1, flights: 0, cruises: 0 },
+  counts: { lodgings: 1, stays: 1, flights: 0, cruises: 0, places: 0 },
 };
 
 // The reason this component was touched at all: a flight logbook import used
@@ -75,7 +75,7 @@ const flightBatch: ImportBatchSummary = {
   source: "csv",
   fileName: "logbook.csv",
   createdAt: "2026-08-01T00:00:00.000Z",
-  counts: { lodgings: 0, stays: 0, flights: 160, cruises: 0 },
+  counts: { lodgings: 0, stays: 0, flights: 160, cruises: 0, places: 0 },
 };
 
 function renderList(
@@ -277,7 +277,7 @@ describe("ImportLogSection", () => {
       source: "csv",
       fileName: "logbook.csv",
       createdAt: "2026-08-14T21:03:00.000Z",
-      counts: { lodgings: 0, stays: 0, flights: 2, cruises: 0 },
+      counts: { lodgings: 0, stays: 0, flights: 2, cruises: 0, places: 0 },
     };
 
     beforeEach(() => {
@@ -360,6 +360,66 @@ describe("ImportLogSection", () => {
       await userEvent.click(toggle);
       await screen.findByText("LH100");
       expect(toggle).toHaveAttribute("aria-expanded", "true");
+    });
+  });
+
+  /**
+   * Data-integrity audit 2026-09-19, finding 5.
+   *
+   * Every domain's dialog showed the LODGING arm's promise — "only what this
+   * import created is deleted; hand-added stays survive, their house stays".
+   * That is true of `revertLodgingImportBatch` and of nothing else: the
+   * flight, cruise and POI arms are an unconditional `deleteMany` scoped to
+   * the batch, so an edited row goes and its documents cascade with it.
+   */
+  describe("what the undo dialog promises, per domain", () => {
+    const cruiseBatch: ImportBatchSummary = {
+      id: "batch-c",
+      domain: "cruise",
+      source: "csv",
+      fileName: "cruises.csv",
+      createdAt: "2026-08-02T00:00:00.000Z",
+      counts: { lodgings: 0, stays: 0, flights: 0, cruises: 4, places: 0 },
+    };
+    const poiBatch: ImportBatchSummary = {
+      id: "batch-p",
+      domain: "poi",
+      source: "csv",
+      fileName: "pois.csv",
+      createdAt: "2026-08-03T00:00:00.000Z",
+      counts: { lodgings: 0, stays: 0, flights: 0, cruises: 0, places: 7 },
+    };
+
+    it.each([
+      ["flight", flightBatch, 160],
+      ["cruise", cruiseBatch, 4],
+      ["poi", poiBatch, 7],
+    ])("warns a %s import that everything goes, with the count", async (_name, batch, count) => {
+      vi.mocked(listImportBatches).mockResolvedValue([batch]);
+      renderList();
+      await screen.findByText(new RegExp(batch.fileName as string));
+      await userEvent.click(screen.getByTestId(`batch-revert-${batch.id}`));
+      await screen.findByRole("dialog");
+
+      expect(
+        screen.getByText(`settings:import.log.confirm.message(count:${count})`)
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/lodging:import\.batches\.confirmMessage/)).not.toBeInTheDocument();
+    });
+
+    it("keeps the lodging arm's own sentence, because it is the one that is true", async () => {
+      vi.mocked(listImportBatches).mockResolvedValue([csvBatch]);
+      renderList();
+      await screen.findByText(/places\.csv/);
+      await userEvent.click(screen.getByTestId("batch-revert-batch-1"));
+      await screen.findByRole("dialog");
+
+      // The mocked `t` renders its options, so the count the component passes
+      // is visible here: 2 houses + 3 stays.
+      expect(
+        screen.getByText("lodging:import.batches.confirmMessage(count:5)")
+      ).toBeInTheDocument();
+      expect(screen.queryByText(/settings:import\.log\.confirm\.message/)).not.toBeInTheDocument();
     });
   });
 });
