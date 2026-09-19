@@ -70,7 +70,24 @@ describe("documentsApi", () => {
     expect(sent.get("file")).toBe(file);
     // The format is deliberately NOT sent: the server decides from the bytes.
     expect(sent.get("format")).toBeNull();
-    expect(config?.headers?.["Content-Type"]).toBe("multipart/form-data");
+    // And no Content-Type of our own. A multipart type without a boundary is
+    // an unparsable request; axios scrubs ours in a browser and hands the job
+    // to the platform (helpers/resolveConfig.js), so writing one here asserts
+    // a header that never reaches the wire — and breaks the upload anywhere
+    // that scrubbing does not happen.
+    expect(config?.headers).toBeUndefined();
+  });
+
+  it("gives a 10 MB document longer than the shared 10-second timeout", async () => {
+    vi.mocked(api.post).mockResolvedValue({ data: { success: true, data: boardingPass } });
+    const file = new File(["x"], "bill.pdf", { type: "application/pdf" });
+    await documentsApi.upload({ entry: { type: "flight", id: "f1" }, file });
+
+    // The shared instance is set up for reads. A 10 MB scan on a domestic
+    // uplink outruns that, and the request the browser abandons is one the
+    // server has already stored — so the user sees a failure and a duplicate
+    // on the next try.
+    expect(vi.mocked(api.post).mock.calls[0][2]?.timeout).toBe(120_000);
   });
 
   it("asks for the limits once and serves every later caller from that answer", async () => {

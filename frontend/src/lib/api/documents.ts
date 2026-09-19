@@ -104,6 +104,18 @@ export interface UploadDocumentInput {
 }
 
 /**
+ * How long a document upload may take, overriding the shared instance's 10 s.
+ *
+ * That default is set up for reads. A 10 MB scan — the largest the server
+ * accepts for an image or a PDF — outruns it on any domestic uplink, and the
+ * request the browser abandons is one the server has already stored: the user
+ * sees a failure, tries again, and the second send is deduplicated by sha256
+ * into the same document. So the visible result was an error message over a
+ * file that had in fact arrived.
+ */
+const DOCUMENT_UPLOAD_TIMEOUT_MS = 120_000;
+
+/**
  * The limits are instance constants, so one answer serves every section on the
  * page. Without the cache a place with six visits asked six times for the same
  * five numbers. A rejection is NOT kept: a failed probe must be retryable.
@@ -138,8 +150,13 @@ export const documentsApi = {
     if (issuedOn) form.append("issuedOn", issuedOn);
     // No explicit `format`: the server decides from the BYTES and treats a
     // declaration as a hint, so sending our guess could only ever disagree.
+    //
+    // No Content-Type either. A multipart type without a boundary is an
+    // unparsable request; the platform writes the real one, and axios scrubs
+    // anything we put there first (helpers/resolveConfig.js) — so a hand-set
+    // header is either ignored or wrong, never right.
     const { data } = await api.post<Envelope<TravelDocument>>("/documents", form, {
-      headers: { "Content-Type": "multipart/form-data" },
+      timeout: DOCUMENT_UPLOAD_TIMEOUT_MS,
     });
     return data.data;
   },
