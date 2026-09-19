@@ -20,13 +20,14 @@ import DetailSection from "../components/ui/DetailSection";
 import PeopleList from "../components/ui/PeopleList";
 import { Icon } from "../components/ui/Icon";
 import Button from "../components/ui/Button";
+import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { formatDateInTimezone } from "../lib/dateUtils";
 import { formatAmount } from "../lib/units";
 import { useToastStore } from "../store/toastStore";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
-import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
 
@@ -49,6 +50,13 @@ export default function CruiseDetailPage(): JSX.Element {
   const [reloadKey, setReloadKey] = useState<number>(0);
   const [editing, setEditing] = useState<boolean>(false);
   const [confirmingDelete, setConfirmingDelete] = useState<boolean>(false);
+  /**
+   * Asked only while the confirmation is opening — `null` keeps the hook
+   * silent, so reading a cruise costs the same requests it always did.
+   */
+  const documentCount = useDocumentCount(
+    confirmingDelete && cruise ? { type: "cruise", id: cruise.id } : null
+  );
   const [deleting, setDeleting] = useState<boolean>(false);
   const addToast = useToastStore((s) => s.addToast);
 
@@ -311,14 +319,22 @@ export default function CruiseDetailPage(): JSX.Element {
         onConfirm={() => void handleDelete()}
         isLoading={deleting}
         title={t("detail.deleteConfirmTitle")}
-        message={countedDeleteMessage(
+        // Finding 3 of the write-path audit (2026-09-19): the booking
+        // confirmation filed with a cruise cascades with it (`onDelete:
+        // Cascade`, proven live by
+        // `backend/src/__tests__/integrity/cascades.integrity.test.ts`).
+        message={withDocumentNote(
+          countedDeleteMessage(
+            t,
+            {
+              counted: "cruise:detail.deleteConfirmMessage",
+              empty: "cruise:detail.deleteConfirmMessageNoStops",
+            },
+            cruise.ship?.name ?? cruise.shipNameOverride ?? t("list.unnamedShip"),
+            countPortCalls(cruise)
+          ),
           t,
-          {
-            counted: "cruise:detail.deleteConfirmMessage",
-            empty: "cruise:detail.deleteConfirmMessageNoStops",
-          },
-          cruise.ship?.name ?? cruise.shipNameOverride ?? t("list.unnamedShip"),
-          countPortCalls(cruise)
+          documentCount
         )}
         confirmText={t("detail.deleteConfirm")}
         cancelText={t("detail.deleteCancel")}
