@@ -179,6 +179,58 @@ export function senderAnchorFromSubject(subject: string): string | null {
   return distinctive ? cleaned : null;
 }
 
+/**
+ * Fields whose value belongs to the PLACE and not to the booking.
+ *
+ * Only these may be read by their own line. The distinction is the whole of
+ * the rule's safety: a hotel writes its own name the same way in every
+ * confirmation it sends, so a line carrying that name reads the next mail
+ * correctly; a check-in date is different in every mail, and a rule built out
+ * of one booking's date would read nothing from the next — a template that
+ * matches and extracts nothing, which is the failure `required` exists
+ * against (plan §7).
+ */
+const LINE_ANCHORABLE: ReadonlySet<keyof LodgingFieldRules> = new Set([
+  "hotelName",
+  "address",
+  "city",
+  "postcode",
+  "country",
+]);
+
+/**
+ * A rule for a value with NO label in front of it: the line is the marker.
+ *
+ * `labelContextOf` answers null when nothing precedes the value — the hotel's
+ * own name on a letterhead line, which is exactly what a user marks first.
+ * The field was simply skipped, and the derivation then refused with
+ * "nothing marked but a name is not a stay" for an annotation whose name WAS
+ * marked. The reason was wrong, which is worse than the refusal (beta audit
+ * 2026-09-19, NOT FIXED 5a).
+ *
+ * The value stays LITERAL, and only its whitespace is generalised. A
+ * shape-generalised line (`^Hotel[^\r\n]{0,60}$`) would also claim "Hotel
+ * bewerten" two lines further down and report it as the hotel's name — a
+ * plausible wrong value, which costs more here than no value at all. Literal
+ * is narrow on purpose: it reads the next mail from THIS property, and
+ * nothing else.
+ *
+ * Returns null when the pattern cannot find its own value back — a mark that
+ * covers only part of the line, say. Better an honest refusal now than a
+ * template the preview has to catch.
+ */
+function lineAnchoredRule(
+  label: keyof LodgingFieldRules,
+  value: string,
+  transform: TransformName,
+  fullText: string
+): FieldRule | null {
+  if (!LINE_ANCHORABLE.has(label)) return null;
+  const pattern = `^[ \\t]*(${escapeRegex(value).replace(/\s+/g, "\\s+")})[ \\t]*$`;
+  if (!new RegExp(pattern, "im").test(fullText)) return null;
+  return { patterns: [pattern], flags: "im", transform };
+}
+
 export interface LodgingDerivationInput {
   /** `lodging:user:<trainingDataId>` — the registry key this template gets. */
   id: string;
@@ -213,7 +265,11 @@ export function deriveLodgingTemplate(input: LodgingDerivationInput): LodgingDer
     }
 
     const context = labelContextOf(fullText, selection.start);
-    if (context === null) continue;
+    if (context === null) {
+      const lineRule = lineAnchoredRule(label, value, transform, fullText);
+      if (lineRule) fields[label] = lineRule;
+      continue;
+    }
     if (!labelLines.includes(context.label)) labelLines.push(context.label);
 
     // A value that starts its own line is read by walking down from the label
