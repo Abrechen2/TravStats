@@ -428,7 +428,7 @@ export default function EmailAnnotation({
 
   // Render text with visual highlights for annotations
   const renderTextWithHighlights = () => {
-    if (!displayText) return "Kein Text verfügbar";
+    if (!displayText) return t("training:annotation.noText");
 
     // Sort annotations by start position
     const sortedAnnotations = [...annotations].sort((a, b) => a.start - b.start);
@@ -553,8 +553,15 @@ export default function EmailAnnotation({
             className="sticky top-0 z-10 p-4 bg-blue-50 rounded-lg border-2 border-blue-500 shadow-lg"
           >
             <p className="text-sm font-medium text-(--text-primary) mb-2">
-              Ausgewählter Text: &quot;{displayText.substring(selectedText.start, selectedText.end)}
-              &quot;
+              {/* The TRIMMED value, resolved through the same helper the mark
+                  itself is built with. The preview showed the raw selection,
+                  so a drag that caught the newline in front of a value offered
+                  to label something the stored mark would not contain — two
+                  answers to one question, which is what `markFromSelection`
+                  exists to end. */}
+              {t("training:annotation.selectedText", {
+                value: markFromSelection(displayText, selectedText)?.text ?? "",
+              })}
             </p>
             {isFlight && (
               <p className="text-xs text-(--text-muted) mb-2">
@@ -608,7 +615,9 @@ export default function EmailAnnotation({
         {/* Email Text Display */}
         <div>
           <div className="flex items-center justify-between mb-2">
-            <label className="block text-sm font-medium text-(--text-primary)">Email Text</label>
+            <label className="block text-sm font-medium text-(--text-primary)">
+              {t("training:annotation.emailText")}
+            </label>
             {/* Locked once anything is marked: the marks point into the text
                 on screen, and that text is what gets saved. Switching the
                 filter under them would move every offset off its value — the
@@ -678,7 +687,9 @@ export default function EmailAnnotation({
 
         {/* Tags */}
         <div className="mb-6">
-          <label className="block text-sm font-medium text-(--text-primary) mb-2">Tags</label>
+          <label className="block text-sm font-medium text-(--text-primary) mb-2">
+            {t("training:annotation.tags")}
+          </label>
           <div className="flex gap-2 mb-2">
             <input
               type="text"
