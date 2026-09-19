@@ -20,7 +20,13 @@ const achievement = registry.register(
   z
     .object({
       ...prismaColumns("Achievement"),
-      isUnlocked: z.boolean().describe("Progress has reached the requirement"),
+      isUnlocked: z
+        .boolean()
+        .describe(
+          "Earned: progress reached the requirement, or it was earned before — a badge is " +
+            "never taken back. `progress` may therefore be below the requirement on a badge " +
+            "that is held, because progress is a live measurement."
+        ),
       isRetired: z
         .boolean()
         .describe(

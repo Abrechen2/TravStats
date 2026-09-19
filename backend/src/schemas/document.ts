@@ -114,6 +114,22 @@ export const unfiledDocumentDtoSchema = documentDtoSchema.extend({
     ),
 });
 
+/**
+ * The unfiled list AND the number of days it is about, in one answer.
+ *
+ * The copy on screen names that number ("otherwise they are deleted 30 days
+ * after…"), and a number written into a locale file is a number that goes on
+ * saying 30 after someone changes `UNLINKED_TTL_DAYS`. There is one source of
+ * truth for it, and this is how it reaches the browser.
+ */
+export const unfiledDocumentsResponseSchema = z.object({
+  ttlDays: z
+    .number()
+    .int()
+    .describe("Days an unfiled document is kept after it became unfiled (UNLINKED_TTL_DAYS)"),
+  documents: z.array(unfiledDocumentDtoSchema),
+});
+
 export const documentLimitsSchema = z.object(
   Object.fromEntries(DOCUMENT_FORMATS.map((f) => [f, z.number().int()])) as Record<
     (typeof DOCUMENT_FORMATS)[number],

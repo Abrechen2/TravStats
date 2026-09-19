@@ -14,14 +14,16 @@ import {
   documentLimitsSchema,
   documentUploadFieldsObject,
   unfiledDocumentDtoSchema,
+  unfiledDocumentsResponseSchema,
   updateDocumentSchema,
 } from "../../../schemas/document";
 import { ENTRY_TYPES, type EntryType } from "../../documents/documentFormats";
 
 const documentDto = registry.register("Document", documentDtoSchema.openapi("Document"));
-const unfiledDocumentDto = registry.register(
-  "UnfiledDocument",
-  unfiledDocumentDtoSchema.openapi("UnfiledDocument")
+registry.register("UnfiledDocument", unfiledDocumentDtoSchema.openapi("UnfiledDocument"));
+const unfiledDocuments = registry.register(
+  "UnfiledDocuments",
+  unfiledDocumentsResponseSchema.openapi("UnfiledDocuments")
 );
 const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.literal(true), data });
 const json = <T extends z.ZodTypeAny>(schema: T) => ({ "application/json": { schema } });
@@ -55,12 +57,13 @@ registry.registerPath({
     "unfiled document is removed — row and file — thirty days after it BECAME unfiled, not " +
     "after it was uploaded, so unfiling an old document gives it the full thirty days. The " +
     "endpoint exists so that deletion is announced before it happens; the inbox's review tab " +
-    "lists these.",
+    "lists these. `ttlDays` is that thirty, sent rather than assumed, because the sentence on " +
+    "screen names it.",
   tags,
   responses: {
     200: {
-      description: "Unfiled documents, newest first",
-      content: json(envelope(z.array(unfiledDocumentDto))),
+      description: "Unfiled documents, newest first, with the TTL they are subject to",
+      content: json(envelope(unfiledDocuments)),
     },
   },
 });

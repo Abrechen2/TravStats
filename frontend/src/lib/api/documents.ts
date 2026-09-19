@@ -74,6 +74,18 @@ export interface UnfiledDocument extends TravelDocument {
   deletesAt: string | null;
 }
 
+/**
+ * The list plus the number of days it is about.
+ *
+ * `ttlDays` is sent rather than written into the locale files: the sentence on
+ * screen names the number, and a "30" typed into two JSON files is a 30 that
+ * goes on being shown after `UNLINKED_TTL_DAYS` changes.
+ */
+export interface UnfiledDocuments {
+  ttlDays: number;
+  documents: UnfiledDocument[];
+}
+
 /** Bytes, per format. */
 export type DocumentLimits = Record<DocumentFormat, number>;
 
@@ -144,9 +156,9 @@ export const documentsApi = {
     return data.data;
   },
 
-  /** The caller's own unfiled uploads, newest first. */
-  listUnfiled: async (): Promise<UnfiledDocument[]> => {
-    const { data } = await api.get<Envelope<UnfiledDocument[]>>("/documents/unfiled");
+  /** The caller's own unfiled uploads, newest first, with the TTL they face. */
+  listUnfiled: async (): Promise<UnfiledDocuments> => {
+    const { data } = await api.get<Envelope<UnfiledDocuments>>("/documents/unfiled");
     return data.data;
   },
 

@@ -27,6 +27,13 @@ interface UnfiledDto {
   entry: unknown;
 }
 
+interface UnfiledBody {
+  data: { ttlDays: number; documents: UnfiledDto[] };
+}
+
+/** The endpoint answers the list AND the TTL it is about. */
+const unfiledOf = (body: unknown): UnfiledDto[] => (body as UnfiledBody).data.documents;
+
 describe("GET /documents/unfiled", () => {
   const stamp = Date.now();
   let ownerId: string;
@@ -92,14 +99,17 @@ describe("GET /documents/unfiled", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
-    const ids = (res.body.data as UnfiledDto[]).map((d) => d.id);
+    // The number the screen's sentence names, sent rather than assumed — a
+    // hardcoded "30" in two locale files is a 30 that outlives the constant.
+    expect(res.body.data.ttlDays).toBe(UNLINKED_TTL_DAYS);
+    const ids = unfiledOf(res.body).map((d) => d.id);
     expect(ids).toContain(loose);
     // Filed with a flight, so it is not going anywhere.
     expect(ids).not.toContain(filed);
     // Somebody else's, so it is none of this caller's business.
     expect(ids).not.toContain(strangers);
 
-    const row = (res.body.data as UnfiledDto[]).find((d) => d.id === loose)!;
+    const row = unfiledOf(res.body).find((d) => d.id === loose)!;
     expect(row.entry).toBeNull();
     expect(row.displayName).toBe("loose-one.pdf");
     // Measured from `unlinkedAt`, which for a freshly uploaded document is the
@@ -120,7 +130,7 @@ describe("GET /documents/unfiled", () => {
     const id = await upload(ownerCookie, "about-to-be-filed");
 
     const before = await request(app).get("/api/v1/documents/unfiled").set("Cookie", ownerCookie);
-    expect((before.body.data as UnfiledDto[]).map((d) => d.id)).toContain(id);
+    expect(unfiledOf(before.body).map((d) => d.id)).toContain(id);
 
     await request(app)
       .patch(`/api/v1/documents/${id}`)
@@ -129,7 +139,7 @@ describe("GET /documents/unfiled", () => {
       .expect(200);
 
     const after = await request(app).get("/api/v1/documents/unfiled").set("Cookie", ownerCookie);
-    expect((after.body.data as UnfiledDto[]).map((d) => d.id)).not.toContain(id);
+    expect(unfiledOf(after.body).map((d) => d.id)).not.toContain(id);
   });
 
   it("restarts the clock when an OLD document is unfiled", async () => {
@@ -150,7 +160,7 @@ describe("GET /documents/unfiled", () => {
       .expect(200);
 
     const res = await request(app).get("/api/v1/documents/unfiled").set("Cookie", ownerCookie);
-    const row = (res.body.data as UnfiledDto[]).find((d) => d.id === id)!;
+    const row = unfiledOf(res.body).find((d) => d.id === id)!;
 
     // Uploaded two months ago, and still has its full thirty days.
     expect(new Date(row.createdAt).getTime()).toBeLessThan(longAgo.getTime() + 60_000);

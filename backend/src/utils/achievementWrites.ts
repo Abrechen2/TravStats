@@ -94,11 +94,17 @@ export function planAchievementWrites(
     // it may not take a badge away.
     const wasHeld = isAchievementHeld(existing, achievement.requirement);
 
-    // Every achievement is re-evaluated on every run, unlocked ones included.
-    // This used to `continue` on an already-unlocked achievement, which meant a
-    // badge granted from data that was later corrected or deleted could never be
-    // taken back. It also meant a scoring bug (the Arctic being classified as
-    // Antarctica, say) stayed rewarded forever even after the bug was fixed.
+    // Every achievement is re-evaluated on every run, held ones included. It
+    // used to `continue` on an already-unlocked one, so the MEASURE behind a
+    // badge could never be corrected: a scoring bug (the Arctic classified as
+    // Antarctica, say) went on showing its inflated number long after the bug
+    // was fixed, and a progress bar that had lost its flights stayed full.
+    //
+    // What re-evaluation may change is the number. Since 2026-09-19 it may not
+    // change the badge: `unlockedAt` is never cleared, and a measure that has
+    // fallen below its requirement is reported, not acted on. The original
+    // wording here said a badge "could never be taken back" as if that were the
+    // defect; taking one back is the defect.
     const { isUnlocked, progress } = checkAchievement(achievement, stats, flights);
 
     if (isUnlocked) {

@@ -1,7 +1,7 @@
 import { useCallback, useEffect, useState } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
-import { documentsApi, documentFileUrl, type UnfiledDocument } from "../../lib/api/documents";
+import { documentsApi, documentFileUrl, type UnfiledDocuments } from "../../lib/api/documents";
 import { formatDate } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
 import { Card } from "../ui/Card";
@@ -29,16 +29,16 @@ import { Card } from "../ui/Card";
  */
 export default function UnfiledDocumentsSection(): JSX.Element | null {
   const { t } = useTranslation(["dataQuality", "common"]);
-  const [documents, setDocuments] = useState<UnfiledDocument[]>([]);
+  const [unfiled, setUnfiled] = useState<UnfiledDocuments>({ ttlDays: 0, documents: [] });
 
   const load = useCallback(async (): Promise<void> => {
     try {
-      setDocuments(await documentsApi.listUnfiled());
+      setUnfiled(await documentsApi.listUnfiled());
     } catch (error) {
       // An older server has no such route, and a reader who came here for
       // their own questions should not get a toast about it.
       logger.warn("Failed to load unfiled documents:", error);
-      setDocuments([]);
+      setUnfiled({ ttlDays: 0, documents: [] });
     }
   }, []);
 
@@ -46,6 +46,7 @@ export default function UnfiledDocumentsSection(): JSX.Element | null {
     void load();
   }, [load]);
 
+  const documents = unfiled.documents;
   if (documents.length === 0) return null;
 
   return (
@@ -57,7 +58,10 @@ export default function UnfiledDocumentsSection(): JSX.Element | null {
         {t("dataQuality:unfiledDocuments.title")}
       </h3>
       <p className="t-caption" style={{ marginTop: "var(--ts-space-xs)" }}>
-        {t("dataQuality:unfiledDocuments.description")}
+        {/* The number of days comes from the server, not from the locale file:
+            the sentence names it, and a hand-written "30" would go on saying 30
+            in both languages after UNLINKED_TTL_DAYS changed. */}
+        {t("dataQuality:unfiledDocuments.description", { days: unfiled.ttlDays })}
       </p>
 
       <ul

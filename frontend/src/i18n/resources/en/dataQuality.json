@@ -160,7 +160,7 @@
   },
   "unfiledDocuments": {
     "title": "Documents filed with nothing",
-    "description": "These uploads do not belong to an entry yet. File them with a flight, cruise, stay, place or trip — otherwise they are deleted, file and all, 30 days after they were uploaded.",
+    "description": "These uploads do not belong to an entry. File them with a flight, cruise, stay, place or trip — otherwise they are deleted, file and all, {{days}} days after they came to belong to nothing.",
     "uploaded": "Uploaded on",
     "deletesOn": "Will be deleted on",
     "open": "Open"

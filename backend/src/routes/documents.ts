@@ -16,6 +16,7 @@ import {
   getOwnDocument,
   listDocumentsForEntry,
   listUnfiledDocuments,
+  UNLINKED_TTL_DAYS,
   toDocumentDto,
   toUnfiledDocumentDto,
   updateDocument,
@@ -108,7 +109,13 @@ router.get(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const documents = await listUnfiledDocuments(req.userId!);
-      res.json({ success: true, data: documents.map(toUnfiledDocumentDto) });
+      // `ttlDays` rides along because the sentence on screen names it. A number
+      // typed into a locale file would go on saying 30 after someone changed
+      // the constant, in both languages, silently.
+      res.json({
+        success: true,
+        data: { ttlDays: UNLINKED_TTL_DAYS, documents: documents.map(toUnfiledDocumentDto) },
+      });
     } catch (error) {
       next(error);
     }

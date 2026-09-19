@@ -2,7 +2,11 @@ import { describe, expect, it, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 
 import UnfiledDocumentsSection from "../UnfiledDocumentsSection";
-import { documentsApi, type UnfiledDocument } from "../../../lib/api/documents";
+import {
+  documentsApi,
+  type UnfiledDocument,
+  type UnfiledDocuments,
+} from "../../../lib/api/documents";
 
 /**
  * The announcement the document sweep never made.
@@ -46,13 +50,18 @@ function unfiled(overrides: Partial<UnfiledDocument> = {}): UnfiledDocument {
   } as UnfiledDocument;
 }
 
+/** The endpoint sends the TTL with the list — see `UnfiledDocuments`. */
+function listOf(...documents: UnfiledDocument[]): UnfiledDocuments {
+  return { ttlDays: 30, documents };
+}
+
 describe("UnfiledDocumentsSection", () => {
   beforeEach(() => {
     vi.mocked(documentsApi.listUnfiled).mockReset();
   });
 
   it("names each document and the date it will be deleted", async () => {
-    vi.mocked(documentsApi.listUnfiled).mockResolvedValue([unfiled()]);
+    vi.mocked(documentsApi.listUnfiled).mockResolvedValue(listOf(unfiled()));
 
     render(<UnfiledDocumentsSection />);
 
@@ -70,7 +79,7 @@ describe("UnfiledDocumentsSection", () => {
   });
 
   it("links at the file so the user can see what is about to go", async () => {
-    vi.mocked(documentsApi.listUnfiled).mockResolvedValue([unfiled()]);
+    vi.mocked(documentsApi.listUnfiled).mockResolvedValue(listOf(unfiled()));
 
     render(<UnfiledDocumentsSection />);
 
@@ -81,7 +90,7 @@ describe("UnfiledDocumentsSection", () => {
   });
 
   it("renders nothing when everything is filed", async () => {
-    vi.mocked(documentsApi.listUnfiled).mockResolvedValue([]);
+    vi.mocked(documentsApi.listUnfiled).mockResolvedValue(listOf());
 
     const { container } = render(<UnfiledDocumentsSection />);
 
