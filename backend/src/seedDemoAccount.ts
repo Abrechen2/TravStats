@@ -28,7 +28,7 @@
 import { randomUUID } from "crypto";
 import { Prisma } from "./prisma";
 import { prisma } from "./db";
-import { hashPassword } from "./utils/password";
+import { hashPassword, comparePassword } from "./utils/password";
 import { DEMO_USERNAME } from "./utils/sharedDemo";
 import { appVersion } from "./utils/version";
 import { checkAndUpdateAchievements } from "./utils/achievements";
@@ -974,12 +974,14 @@ export async function ensureUser(): Promise<string> {
     where: { username: DEMO_USERNAME },
   });
   if (existing && !existing.isDemo) {
-    // The account this seeder resets is identified by its NAME alone, and a
-    // name is not a claim of ownership. `utils/sharedDemo.ts` already says so
-    // in as many words — "`demo` without the flag is a user who happened to
-    // pick the name on their own instance" — but nothing held the seeder to
-    // it, and the seeder is the one path that empties an account without a
-    // click.
+    // An unflagged row named `demo` is one of two things, and they must not be
+    // treated alike.
+    //
+    // It is the built-in demo account created by a pre-2.5.0 version, which
+    // wrote no `isDemo` at all — or it is a real person who happened to pick
+    // the name on their own instance. `utils/sharedDemo.ts` already states the
+    // difference ("`demo` without the flag is a user who happened to pick the
+    // name"), and nothing held the seeder to it: it reset whatever it found.
     //
     // Measured by the data-integrity audit of 2026-09-19 (finding 1) against a
     // real row with `isDemo: false`, a private password hash and a first name:
@@ -989,13 +991,21 @@ export async function ensureUser(): Promise<string> {
     // rows from thirty tables. Nothing about the run was reversible and
     // nothing about it was visible in the UI afterwards.
     //
-    // So the flag decides, not the name. A refusal costs an instance its demo
-    // account until the admin renames the real user; not refusing costs that
-    // user everything they had.
-    throw new Error(
-      `A user named "${DEMO_USERNAME}" exists and is not the demo account — refusing to reseed. ` +
-        `Rename that account (or delete it) before enabling CREATE_DEMO_USER.`
-    );
+    // The PASSWORD tells the two apart, and `scripts/backfillDemoFlag.ts`
+    // already answers the same question the same way — "the account is
+    // identified by its seeded password, not by its name alone". A legacy demo
+    // row still carries `demo123`, so it is healed and reseeded exactly as
+    // before; a real person's account carries something else, and the seeder
+    // refuses rather than reseeding it. One bcrypt compare, only on a boot
+    // that finds an unflagged `demo` at all.
+    const isLegacyDemoRow = await comparePassword(DEMO_PASSWORD, existing.passwordHash);
+    if (!isLegacyDemoRow) {
+      throw new Error(
+        `A user named "${DEMO_USERNAME}" exists, is not flagged as the demo account, and does ` +
+          `not carry the seeded demo password — refusing to reseed. Rename that account (or ` +
+          `delete it) before enabling CREATE_DEMO_USER.`
+      );
+    }
   }
   if (existing) {
     // Restore the account itself BEFORE its data. The route guards should
