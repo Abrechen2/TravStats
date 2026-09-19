@@ -147,10 +147,51 @@ const GENERIC_SUBJECT_WORDS = new Set([
   "nr",
   "number",
   "nummer",
+  // The grammar a booking engine wraps the nouns in. Without these,
+  // "Ihre Reservierung wurde bestätigt" kept "wurde" and "bestätigt" and read
+  // as a NAME — so every property on the same engine derived a template
+  // anchored on the same sentence, and the first one to arrive claimed the
+  // others' mail. The noun forms were already here; leaving the participle
+  // out blocked "Bestätigung" and admitted "bestätigt", which is the same
+  // word.
+  "wurde",
+  "wird",
+  "ist",
+  "war",
+  "hier",
+  "mail",
+  "email",
+  "bestaetigt",
+  "bestätigt",
+  "reserviert",
 ]);
 
 const normaliseToken = (token: string): string =>
   token.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+
+/**
+ * The one word on a label line that NAMES the field.
+ *
+ * A "label line" is whatever stood before the value — `labelContextOf` looks
+ * back up to 80 characters, so it is a line, not a word. A sender that prints
+ * its own name on every line hands over "Seehotel Adler – Anreise:", and
+ * treating the whole of that as this document's vocabulary excluded the BRAND
+ * from the subject anchor: "Ihre Reservierung im Seehotel Adler wurde
+ * bestätigt" then abstained with `noDistinguishingMarker` for a sender that
+ * names itself twice over.
+ *
+ * So: everything up to the first separator is the label proper, and the LAST
+ * word of it is the field name — a brand sits in FRONT of the field name, not
+ * behind it. One word and not two, deliberately: "Seehotel Adler – Anreise:"
+ * would give up "Adler" on the second, which is the bug again one word along.
+ * A hyphenated field name survives, because `normaliseToken` folds
+ * "Check-in" to "checkin".
+ */
+function fieldNameToken(label: string): string {
+  const beforeValue = label.split(/[:=]/)[0];
+  const words = beforeValue.split(/[^\p{L}\p{N}-]+/u).filter((word) => word.length > 0);
+  return normaliseToken(words[words.length - 1] ?? "");
+}
 
 /**
  * A brand token from the subject — or nothing.
@@ -162,7 +203,18 @@ const normaliseToken = (token: string): string =>
  * one this returns null and the caller abstains with `noDistinguishingMarker`
  * rather than shipping a template that claims other senders' mail.
  */
-export function senderAnchorFromSubject(subject: string): string | null {
+export function senderAnchorFromSubject(
+  subject: string,
+  /**
+   * This sender's own label lines. The word each of them NAMES ITS FIELD with
+   * is this document's vocabulary, not its author: "Ihre Anreise steht bevor"
+   * is a subject built out of the words the body prints beside every value,
+   * and an anchor made of one would claim any sender that labels its fields
+   * the same way — which is most of them. Only that word is excluded; see
+   * `fieldNameToken` for why the rest of the line must not be.
+   */
+  labelLines: readonly string[] = []
+): string | null {
   const cleaned = subject
     .replace(/\d{1,2}[.\-/]\d{1,2}[.\-/]\d{2,4}/g, " ")
     .replace(/\b\d{1,2}\s+\p{L}+\s+\d{4}\b/gu, " ")
@@ -172,11 +224,74 @@ export function senderAnchorFromSubject(subject: string): string | null {
     .trim();
   if (cleaned.length < 5) return null;
 
+  const labelWords = new Set(labelLines.map(fieldNameToken).filter((token) => token.length > 0));
   const distinctive = cleaned
     .split(" ")
     .map(normaliseToken)
-    .some((token) => token.length >= 3 && !GENERIC_SUBJECT_WORDS.has(token));
+    .some(
+      (token) => token.length >= 3 && !GENERIC_SUBJECT_WORDS.has(token) && !labelWords.has(token)
+    );
   return distinctive ? cleaned : null;
+}
+
+/**
+ * Fields whose value belongs to the PLACE and not to the booking.
+ *
+ * Only these may be read by their own line. The distinction is the whole of
+ * the rule's safety: a hotel writes its own name the same way in every
+ * confirmation it sends, so a line carrying that name reads the next mail
+ * correctly; a check-in date is different in every mail, and a rule built out
+ * of one booking's date would read nothing from the next — a template that
+ * matches and extracts nothing, which is the failure `required` exists
+ * against (plan §7).
+ */
+const LINE_ANCHORABLE: ReadonlySet<keyof LodgingFieldRules> = new Set([
+  "hotelName",
+  "address",
+  "city",
+  "postcode",
+  "country",
+]);
+
+/**
+ * A rule for a value with NO label in front of it: the line is the marker.
+ *
+ * `labelContextOf` answers null when nothing precedes the value — the hotel's
+ * own name on a letterhead line, which is exactly what a user marks first.
+ * The field was simply skipped, and the derivation then refused with
+ * "nothing marked but a name is not a stay" for an annotation whose name WAS
+ * marked. The reason was wrong, which is worse than the refusal (beta audit
+ * 2026-09-19, NOT FIXED 5a).
+ *
+ * The value stays LITERAL, and only its whitespace is generalised. A
+ * shape-generalised line (`^Hotel[^\r\n]{0,60}$`) would also claim "Hotel
+ * bewerten" two lines further down and report it as the hotel's name — a
+ * plausible wrong value, which costs more here than no value at all. Literal
+ * is narrow on purpose: it reads the next mail from THIS property, and
+ * nothing else.
+ *
+ * Returns null when the pattern cannot find its own value back — a mark that
+ * covers only part of the line, say. Better an honest refusal now than a
+ * template the preview has to catch.
+ */
+function lineAnchoredRule(
+  label: keyof LodgingFieldRules,
+  value: string,
+  transform: TransformName,
+  fullText: string
+): FieldRule | null {
+  if (!LINE_ANCHORABLE.has(label)) return null;
+  // A value that spans a line break is not a line, so it cannot be one's
+  // marker. `\s+` matched the break as readily as a space under `m`, so a
+  // wrapped letterhead ("Hotel Seeblick" / "Garni") produced a rule whose
+  // capture reached into the next line — the one thing every capture class in
+  // this file is shaped to prevent. `[ \t]+` keeps the generalisation to what
+  // a sender may really reflow, and the refusal below is the honest answer to
+  // the rest.
+  if (/[\r\n]/.test(value)) return null;
+  const pattern = `^[ \\t]*(${escapeRegex(value).replace(/[ \t]+/g, "[ \\t]+")})[ \\t]*$`;
+  if (!new RegExp(pattern, "im").test(fullText)) return null;
+  return { patterns: [pattern], flags: "im", transform };
 }
 
 export interface LodgingDerivationInput {
@@ -213,7 +328,11 @@ export function deriveLodgingTemplate(input: LodgingDerivationInput): LodgingDer
     }
 
     const context = labelContextOf(fullText, selection.start);
-    if (context === null) continue;
+    if (context === null) {
+      const lineRule = lineAnchoredRule(label, value, transform, fullText);
+      if (lineRule) fields[label] = lineRule;
+      continue;
+    }
     if (!labelLines.includes(context.label)) labelLines.push(context.label);
 
     // A value that starts its own line is read by walking down from the label
@@ -235,9 +354,16 @@ export function deriveLodgingTemplate(input: LodgingDerivationInput): LodgingDer
   }
 
   const anchors: string[] = [];
-  const subjectAnchor = senderAnchorFromSubject(input.subject);
+  const subjectAnchor = senderAnchorFromSubject(input.subject, labelLines);
   if (subjectAnchor) anchors.push(subjectAnchor);
-  if (input.senderDomain && fullText.toLowerCase().includes(input.senderDomain.toLowerCase())) {
+  // An anchor is only an anchor where the reader will look for it, and
+  // `applyLodgingTemplate` searches the subject and the body joined by a
+  // newline. Checking the body alone dropped a domain that only the subject
+  // names, and — worse — would have let a domain through that the engine
+  // could never find, now that the subject is read from a column rather than
+  // out of the text.
+  const haystack = [input.subject, fullText].join("\n").toLowerCase();
+  if (input.senderDomain && haystack.includes(input.senderDomain.toLowerCase())) {
     anchors.push(input.senderDomain);
   }
   if (anchors.length === 0) {

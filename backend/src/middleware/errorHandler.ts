@@ -31,7 +31,11 @@ export type ApiErrorCode =
   | "DUPLICATE"
   /** A workshop template was activated before its preview had run — the
    *  parser page turns this into "run the preview", not a generic toast. */
-  | "PREVIEW_REQUIRED";
+  | "PREVIEW_REQUIRED"
+  /** A training annotation whose offsets do not cut their own value out of
+   *  the text being saved. The two used to be allowed to disagree, which
+   *  corrupted every derivation built on it in silence. */
+  | "ANNOTATION_TEXT_MISMATCH";
 
 interface AuthRequest extends Request {
   user?: {

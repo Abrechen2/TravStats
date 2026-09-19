@@ -175,6 +175,118 @@ describe("a user-derived lodging template", () => {
     expect(derived.template.match.anchors[0]).toContain("Beispiel");
   });
 
+  describe("a subject that is only the booking engine's grammar", () => {
+    /**
+     * Review of `fix/workshop-lodging-derivation`, finding 2.
+     *
+     * "Ihre Reservierung wurde bestätigt" is the subject a booking engine
+     * sends for EVERY property on it. It survived `GENERIC_SUBJECT_WORDS`
+     * because the list held the nouns and not the grammar around them, so the
+     * first property to derive a template claimed every other property's mail
+     * — and proposed ITS fields for them, which is the plausible wrong value
+     * that costs most.
+     */
+    const engineMail = (): string =>
+      [
+        "Unterkunft: Hotel Beispiel Nürnberg",
+        "Anreise: 10. März 2026",
+        "Abreise: 12. März 2026",
+      ].join("\n");
+
+    const derive = (subject: string) => {
+      const text = engineMail();
+      return deriveLodgingTemplate({
+        ...input,
+        senderDomain: undefined,
+        subject,
+        fullText: text,
+        selections: [
+          select(text, "Hotel Beispiel Nürnberg", "hotelName"),
+          select(text, "10. März 2026", "checkIn"),
+          select(text, "12. März 2026", "checkOut"),
+        ],
+      });
+    };
+
+    it("is not a name, so nothing is derived from it", () => {
+      expect(derive("Ihre Reservierung wurde bestätigt")).toEqual({
+        ok: false,
+        refusal: "noDistinguishingMarker",
+      });
+    });
+
+    it("is not a name even when the sender's own labels supply the only odd word", () => {
+      // "Anreise" is this sender's label for a field. A subject built out of
+      // the words the body already prints beside its values describes the
+      // FORM, not the author.
+      expect(derive("Ihre Unterkunft und Anreise")).toEqual({
+        ok: false,
+        refusal: "noDistinguishingMarker",
+      });
+    });
+
+    it("still takes a real brand out of the same shape of subject", () => {
+      const derived = derive("Ihre Reservierung im Seehotel wurde bestätigt");
+      expect(derived.ok).toBe(true);
+      if (!derived.ok) return;
+      expect(derived.template.match.anchors[0]).toContain("Seehotel");
+    });
+
+    it("keeps the brand a sender prints in FRONT of its own field names", () => {
+      // Re-review of `fix/workshop-lodging-derivation`, finding 2. The
+      // exclusion set was built from the whole label LINE, and
+      // `labelContextOf` looks back up to 80 characters — so a sender that
+      // writes its name on every line put its own brand into the set, and a
+      // subject naming that brand twice over abstained. A brand sits in front
+      // of the field name; only the field name is vocabulary.
+      const branded = [
+        "Seehotel Adler – Unterkunft: Seehotel Adler Nürnberg",
+        "Seehotel Adler – Anreise: 10. März 2026",
+        "Seehotel Adler – Abreise: 12. März 2026",
+      ].join("\n");
+      const derived = deriveLodgingTemplate({
+        ...input,
+        senderDomain: undefined,
+        subject: "Ihre Reservierung im Seehotel Adler wurde bestätigt",
+        fullText: branded,
+        selections: [
+          select(branded, "Seehotel Adler Nürnberg", "hotelName"),
+          select(branded, "10. März 2026", "checkIn"),
+          select(branded, "12. März 2026", "checkOut"),
+        ],
+      });
+      if (!derived.ok) throw new Error(`expected a template, got ${derived.refusal}`);
+      expect(derived.template.match.anchors[0]).toContain("Seehotel Adler");
+      // And it reads the mail it came from, so the anchor is not the only
+      // thing that survived the change.
+      const read = applyLodgingTemplate(
+        derived.template,
+        "Ihre Reservierung im Seehotel Adler wurde bestätigt",
+        branded
+      );
+      expect(read?.hotelName).toBe("Seehotel Adler Nürnberg");
+      expect(read?.checkIn).toBe("2026-03-10");
+    });
+
+    it("lets a known sender domain carry a template a generic subject cannot", () => {
+      const text = engineMail();
+      const withDomain = deriveLodgingTemplate({
+        ...input,
+        subject: "Ihre Reservierung wurde bestätigt",
+        senderDomain: "hotel-beispiel.test",
+        fullText: [text, "Hotel Beispiel, hotel-beispiel.test"].join("\n"),
+        selections: [
+          select(text, "Hotel Beispiel Nürnberg", "hotelName"),
+          select(text, "10. März 2026", "checkIn"),
+          select(text, "12. März 2026", "checkOut"),
+        ],
+      });
+      expect(withDomain.ok).toBe(true);
+      if (!withDomain.ok) return;
+      expect(withDomain.template.match.anchors).toEqual(["hotel-beispiel.test"]);
+    });
+  });
+
   it("ignores a mark carrying another domain's label", () => {
     const derived = deriveLodgingTemplate({
       ...input,
@@ -184,6 +296,129 @@ describe("a user-derived lodging template", () => {
     if (!derived.ok) return;
     // Not stored as a lodging rule under a name the engine will never read.
     expect(Object.keys(derived.template.fields)).not.toContain("flightNumber");
+  });
+
+  describe("a name with no label in front of it", () => {
+    /**
+     * The letterhead case, and the one the beta audit hit (2026-09-19, NOT
+     * FIXED 5a): the hotel's name on a line of its own at the top of the mail,
+     * with nothing before it. `labelContextOf` answers null there, the field
+     * was skipped, and the derivation then refused with "too little marked —
+     * without a name, an arrival and a departure it is not a stay", for an
+     * annotation whose name WAS marked. A wrong reason sends the user back to
+     * mark something that is already marked.
+     */
+    const LETTERHEAD = [
+      "Hotel Seeblick Garni",
+      "",
+      "Anreise: 10. März 2026",
+      "Abreise: 12. März 2026",
+    ].join("\n");
+
+    const LETTERHEAD_SUBJECT = "Ihre Buchung im Hotel Seeblick";
+
+    const letterheadInput = {
+      ...input,
+      subject: LETTERHEAD_SUBJECT,
+      senderDomain: undefined,
+      fullText: LETTERHEAD,
+      selections: [
+        // Offset 0 — nothing precedes it, in the text or in the 80 characters
+        // `labelContextOf` looks back over.
+        { start: 0, end: 20, text: "Hotel Seeblick Garni", label: "hotelName" },
+        select(LETTERHEAD, "10. März 2026", "checkIn"),
+        select(LETTERHEAD, "12. März 2026", "checkOut"),
+      ],
+    };
+
+    it("is read by its own line instead of being dropped", () => {
+      const derived = deriveLodgingTemplate(letterheadInput);
+      if (!derived.ok) throw new Error(`expected a template, got ${derived.refusal}`);
+      const rule = derived.template.fields.hotelName;
+      expect(rule?.stacked).toBeUndefined();
+      expect(rule?.patterns?.[0]).toBe("^[ \\t]*(Hotel[ \\t]+Seeblick[ \\t]+Garni)[ \\t]*$");
+      expect(rule?.flags).toBe("im");
+    });
+
+    it("reads the name back out of the mail it came from", () => {
+      const derived = deriveLodgingTemplate(letterheadInput);
+      if (!derived.ok) throw new Error(`expected a template, got ${derived.refusal}`);
+      const read = applyLodgingTemplate(derived.template, LETTERHEAD_SUBJECT, LETTERHEAD);
+      expect(read?.hotelName).toBe("Hotel Seeblick Garni");
+      expect(read?.checkIn).toBe("2026-03-10");
+    });
+
+    it("reads a second mail from the same property", () => {
+      // The property is the same, so its letterhead is — which is why the
+      // value stays literal rather than being generalised into a shape that
+      // would also claim the next line beginning with "Hotel".
+      const derived = deriveLodgingTemplate(letterheadInput);
+      if (!derived.ok) throw new Error(`expected a template, got ${derived.refusal}`);
+      const second = LETTERHEAD.replace("10. März 2026", "4. Mai 2026").replace(
+        "12. März 2026",
+        "7. Mai 2026"
+      );
+      const read = applyLodgingTemplate(derived.template, LETTERHEAD_SUBJECT, second);
+      expect(read?.hotelName).toBe("Hotel Seeblick Garni");
+      expect(read?.checkIn).toBe("2026-05-04");
+      expect(read?.checkOut).toBe("2026-05-07");
+    });
+
+    it("refuses a letterhead the sender wrapped across two lines", () => {
+      // Review of `fix/workshop-lodging-derivation`, finding 3. `\s+`
+      // matched the line break as readily as a space under `m`, so the rule
+      // captured across it — the one thing every capture class in this file
+      // is shaped to prevent. A value that spans a break is not a line, and
+      // cannot be one's marker; the refusal is the honest answer.
+      const value = "Hotel Seeblick\nGarni";
+      const wrapped = [value, "Anreise: 10. März 2026", "Abreise: 12. März 2026"].join("\n");
+      const derived = deriveLodgingTemplate({
+        ...letterheadInput,
+        fullText: wrapped,
+        selections: [
+          { start: 0, end: value.length, text: value, label: "hotelName" },
+          select(wrapped, "10. März 2026", "checkIn"),
+          select(wrapped, "12. März 2026", "checkOut"),
+        ],
+      });
+      expect(derived).toEqual({ ok: false, refusal: "lodgingNeedsNameAndDates" });
+    });
+
+    it("generalises the spacing a sender may reflow, and nothing more", () => {
+      const derived = deriveLodgingTemplate(letterheadInput);
+      if (!derived.ok) throw new Error(`expected a template, got ${derived.refusal}`);
+      const respaced = LETTERHEAD.replace("Hotel Seeblick Garni", "Hotel  Seeblick\tGarni");
+      expect(applyLodgingTemplate(derived.template, LETTERHEAD_SUBJECT, respaced)?.hotelName).toBe(
+        "Hotel Seeblick Garni"
+      );
+    });
+
+    it("still prefers the label when the sender printed one above the name", () => {
+      // The other half of the same mail shape, and the more common one: the
+      // name on its own line UNDER "Unterkunft:". That must keep being a
+      // stacked read — the engine walks down from the label, which is what
+      // copes with the blank line a sender puts between the two.
+      const labelled = [
+        "Unterkunft:",
+        "Hotel Seeblick Garni",
+        "Anreise: 10. März 2026",
+        "Abreise: 12. März 2026",
+      ].join("\n");
+      const derived = deriveLodgingTemplate({
+        ...letterheadInput,
+        fullText: labelled,
+        selections: [
+          select(labelled, "Hotel Seeblick Garni", "hotelName"),
+          select(labelled, "10. März 2026", "checkIn"),
+          select(labelled, "12. März 2026", "checkOut"),
+        ],
+      });
+      if (!derived.ok) throw new Error(`expected a template, got ${derived.refusal}`);
+      expect(derived.template.fields.hotelName?.stacked).toBe("Unterkunft:");
+      expect(derived.template.fields.hotelName?.patterns).toBeUndefined();
+      const read = applyLodgingTemplate(derived.template, LETTERHEAD_SUBJECT, labelled);
+      expect(read?.hotelName).toBe("Hotel Seeblick Garni");
+    });
   });
 
   it("abstains when the date format is one no transform understands", () => {

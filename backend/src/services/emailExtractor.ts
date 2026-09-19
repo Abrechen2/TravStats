@@ -1,6 +1,7 @@
 import MsgReader from "@kenjiuno/msgreader";
 import { parse as parseHtml } from "node-html-parser";
 import logger from "../utils/logger";
+import { senderAddressIn } from "./parsers/userTemplates/sampleHeaders";
 
 /**
  * Email Extractor Service
@@ -13,6 +14,17 @@ export interface ExtractedEmail {
   subject: string;
   text: string;
   html?: string;
+  /**
+   * The sender's address, where the format carries it.
+   *
+   * `text` is the BODY — this reader drops the header block, and the parser
+   * chain never wanted it back. The template workshop does: a sender domain
+   * is one of the two things a derived template can anchor on, and with the
+   * headers gone every browser upload abstained for want of one (beta audit
+   * 2026-09-19, NOT FIXED 5). Absent for plain text and for any message whose
+   * header is unreadable.
+   */
+  from?: string;
   /**
    * When the message itself was sent, if the format carries it.
    *
@@ -75,6 +87,12 @@ function extractFromMsg(buffer: Buffer): ExtractedEmail {
       text: body,
       html: bodyHtml,
       sentAt,
+      // `senderSmtpAddress` first: `senderEmail` carries an Exchange
+      // distinguished name (`/O=…/CN=…`) for internal senders, which names no
+      // domain at all.
+      ...(fileData.senderSmtpAddress || fileData.senderEmail
+        ? { from: (fileData.senderSmtpAddress || fileData.senderEmail) as string }
+        : {}),
     };
   } catch (error) {
     logger.error({ error }, "[Email Extractor] Failed to extract .msg file");
@@ -92,6 +110,7 @@ function extractFromEml(content: string): ExtractedEmail {
     // Simple EML parser - extract subject and body
     const lines = content.split("\n");
     let subject = "";
+    let from: string | undefined;
     let sentAt: Date | undefined;
     let bodyStartIndex = 0;
     let inHeaders = true;
@@ -110,6 +129,13 @@ function extractFromEml(content: string): ExtractedEmail {
 
         if (line.toLowerCase().startsWith("subject:")) {
           subject = line.substring(8).trim();
+        }
+
+        // Only the bare address, never the display name: a template anchors on
+        // the DOMAIN, and "Hotel Seeblick Garni <res@…>" would otherwise have
+        // to be unwrapped again by every reader downstream.
+        if (line.toLowerCase().startsWith("from:")) {
+          from = from ?? senderAddressIn(line) ?? undefined;
         }
 
         // `Date:` only at the start of a line, so a `Delivery-Date:` or a
@@ -153,6 +179,7 @@ function extractFromEml(content: string): ExtractedEmail {
       text,
       html,
       sentAt,
+      ...(from ? { from } : {}),
     };
   } catch (error) {
     logger.error({ error }, "[Email Extractor] Failed to extract .eml file");
