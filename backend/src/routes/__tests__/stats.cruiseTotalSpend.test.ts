@@ -147,6 +147,28 @@ describe("GET /api/v1/stats/cruise — totalSpendBase", () => {
   });
 
   /**
+   * A NULL currency column reads as EUR, the column's own default.
+   *
+   * Not a convenience: the evidence panel already prints such a row's
+   * subtitle as `row.currency ?? "EUR"`, so comparing the raw column made one
+   * panel label the amount "EUR" and exclude it for not being EUR, in the
+   * same breath. `Cruise.currency` is `String? @default("EUR")` and the API
+   * schema cannot deliver null, so a stored NULL is somebody having written
+   * null rather than a denomination nobody knows.
+   */
+  it("counts a priced cruise whose currency column is null", async () => {
+    await addCruise({ routeName: "Ohne Waehrung", price: 750, currency: null });
+
+    expect(await fetchSpend()).toEqual({ value: 750, excludedCount: 0, currency: "EUR" });
+
+    // And the panel agrees, rather than listing it as unconverted under the
+    // very label it was excluded for not matching.
+    const evidence = await fetchEvidence();
+    expect(evidence.value).toBe(750);
+    expect(evidence.entries.filter((e) => e.subtitle !== null)).toEqual([]);
+  });
+
+  /**
    * The other half of the shortcut: it applies to the currency the price is
    * IN, never to the absence of a snapshot as such. A dollar price with no
    * rate is still money this sum cannot speak.

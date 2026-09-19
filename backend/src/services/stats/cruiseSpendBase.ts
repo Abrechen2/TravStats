@@ -78,9 +78,17 @@ export function isPricedCruise(row: CruiseStatsRow): row is CruiseStatsRow & { p
  * currency. An account that moved its base currency and moved back carries
  * exactly such rows, and the snapshot is the stale reading there — the price
  * is not.
+ *
+ * A missing `currency` reads as EUR, and the reason is a contradiction rather
+ * than a convenience: `metricEvidenceCruise.ts` already prints such a row's
+ * subtitle as `row.currency ?? "EUR"`, so comparing the raw column here made
+ * ONE panel label an amount "EUR" and exclude it for not being EUR. The
+ * column is `String? @default("EUR")` and the API schema cannot deliver null,
+ * so a stored NULL is somebody having written null — not an unknown
+ * denomination this sum would be guessing at.
  */
 export function cruiseBaseAmount(row: CruiseStatsRow, baseCurrency: string): number | null {
-  if (isPricedCruise(row) && row.currency === baseCurrency) return row.price;
+  if (isPricedCruise(row) && (row.currency ?? "EUR") === baseCurrency) return row.price;
   return row.priceBase !== null && row.fxBaseCurrency === baseCurrency ? row.priceBase : null;
 }
 
