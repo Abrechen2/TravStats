@@ -14,6 +14,7 @@ import type { SpecialType } from "../components/specialFlights/specialTypeMeta";
 import FlightEditModal from "../components/FlightEditModal";
 import SpecialFlightModal from "../components/SpecialFlightModal";
 import ConfirmModal from "../components/Training/ConfirmModal";
+import DocumentsSection from "../components/documents/DocumentsSection";
 import FlightStatusCell from "../components/flightsTable/FlightStatusCell";
 import { useTranslation } from "../hooks/useTranslation";
 import { flightsApi, tripsApi } from "../lib/api";
@@ -316,6 +317,10 @@ export default function FlightDetailPage(): JSX.Element {
               { label: t("flights:form.fees"), value: money(flight.fees), mono: true },
             ]}
           />
+
+          {/* Beside the costs, not instead of the receipt above them: the
+              "Beleg" is the one file the price links to, this is the folder. */}
+          <DocumentsSection entry={{ type: "flight", id: flight.id }} />
         </div>
 
         <aside className="flex flex-col gap-6 md:col-span-2">
