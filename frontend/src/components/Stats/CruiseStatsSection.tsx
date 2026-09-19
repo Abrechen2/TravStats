@@ -16,6 +16,8 @@ import { useSettingsStore } from "../../store/settingsStore";
 import { cruisesStartedIn } from "../../lib/stats/periodScope";
 import PeriodComparisonStrip from "./PeriodComparisonStrip";
 import { dimWhile, sameScope, type PeriodScope } from "./useStatsPeriod";
+import EvidenceTrigger from "./EvidenceTrigger";
+import type { EvidenceScopeParams } from "../evidence/useEvidence";
 import type { SectionVisibility } from "../../hooks/useSectionVisibility";
 
 type TFunction = (key: string, options?: Record<string, unknown>) => string;
@@ -208,19 +210,49 @@ export default function CruiseStatsSection({
       ? Math.round(((identifiableCalls - stats.cruisePortsUnique) / identifiableCalls) * 100)
       : 0;
 
-  const heroKpis: Array<{ label: string; value: string | number }> = [
-    { label: t("stats:cruiseSection.count"), value: stats.cruisesCount },
+  // The population these tiles show: the period strip's own state. `allTime`
+  // is the tab's DEFAULT, not an edge case — which is why the registry lists
+  // it beside `year` (corrected in task 7b-3).
+  const evidenceScope: EvidenceScopeParams =
+    shown.year === null ? { period: "allTime" } : { period: "year", year: shown.year };
+
+  const heroKpis: Kpi[] = [
+    {
+      label: t("stats:cruiseSection.count"),
+      value: stats.cruisesCount,
+      evidence: { key: "cruiseCount", renderedValue: stats.cruisesCount },
+    },
     {
       label: t("stats:cruiseSection.totalDistance"),
       // Was a hardcoded "km". The flight sections have always honoured
       // Einheiten & Formate, so a user on miles got miles for flights and
       // kilometres for cruises on the same page.
       value: `${formatNumber(convertDistance(stats.totalDistanceKm, distanceUnit))} ${distanceLabel}`,
+      // The measure's unit is KILOMETRES, so the panel is handed the figure
+      // before the display conversion — a reader on miles would otherwise be
+      // told the number had moved on every open.
+      evidence: { key: "cruiseDistanceKmTotal", renderedValue: stats.totalDistanceKm },
     },
-    { label: t("stats:cruiseSection.seaDays"), value: stats.seaDays },
-    { label: t("stats:cruiseSection.ports"), value: stats.cruisePortsUnique },
-    { label: t("stats:cruiseSection.ships"), value: stats.cruiseShipsUnique },
-    { label: t("stats:cruiseSection.lines"), value: stats.cruiseLinesUnique },
+    {
+      label: t("stats:cruiseSection.seaDays"),
+      value: stats.seaDays,
+      evidence: { key: "cruiseSeaDaysTotal", renderedValue: stats.seaDays },
+    },
+    {
+      label: t("stats:cruiseSection.ports"),
+      value: stats.cruisePortsUnique,
+      evidence: { key: "cruisePortsUniqueCount", renderedValue: stats.cruisePortsUnique },
+    },
+    {
+      label: t("stats:cruiseSection.ships"),
+      value: stats.cruiseShipsUnique,
+      evidence: { key: "cruiseShipsUniqueCount", renderedValue: stats.cruiseShipsUnique },
+    },
+    {
+      label: t("stats:cruiseSection.lines"),
+      value: stats.cruiseLinesUnique,
+      evidence: { key: "cruiseLinesUniqueCount", renderedValue: stats.cruiseLinesUnique },
+    },
     { label: t("stats:cruiseSection.avgPortsPerCruise"), value: avgPortsPerCruise.toFixed(1) },
     {
       label: t("stats:cruiseSection.longestLeg"),
@@ -231,12 +263,16 @@ export default function CruiseStatsSection({
     },
   ];
 
-  const depthKpis: Array<{ label: string; value: string | number }> = [
+  const depthKpis: Kpi[] = [
     { label: t("stats:cruiseSection.maxPortsSingle"), value: stats.cruisePortsSingleMax },
     { label: t("stats:cruiseSection.lineLoyaltyMax"), value: stats.cruiseLineLoyaltyMax },
     { label: t("stats:cruiseSection.seaDaysStreak"), value: stats.seaDaysStreak },
     { label: t("stats:cruiseSection.maxDeck"), value: stats.maxDeck > 0 ? stats.maxDeck : "—" },
-    { label: t("stats:cruiseSection.totalDays"), value: stats.totalCruiseDays },
+    {
+      label: t("stats:cruiseSection.totalDays"),
+      value: stats.totalCruiseDays,
+      evidence: { key: "cruiseTotalDays", renderedValue: stats.totalCruiseDays },
+    },
     { label: t("stats:cruiseSection.revisitRate"), value: `${revisitRatePct}%` },
     // Count the ISO-folded set, not the raw names: the port catalogue carries
     // both "United States" and "United States of America", so counting names
@@ -245,6 +281,10 @@ export default function CruiseStatsSection({
     {
       label: t("stats:cruiseSection.countries"),
       value: (stats.countriesIso ?? stats.countries).length,
+      evidence: {
+        key: "cruiseCountriesCount",
+        renderedValue: (stats.countriesIso ?? stats.countries).length,
+      },
     },
   ];
 
@@ -260,7 +300,7 @@ export default function CruiseStatsSection({
       {comparison}
 
       {/* 1) Hero KPI grid */}
-      {show("kpis") && <KpiGrid kpis={heroKpis} />}
+      {show("kpis") && <KpiGrid kpis={heroKpis} scope={evidenceScope} />}
 
       {/* 2) Region bar chart + sea/port donut */}
       {show("regions") && (
@@ -283,7 +323,7 @@ export default function CruiseStatsSection({
       )}
 
       {/* 3) Depth & loyalty */}
-      {show("depth") && <KpiGrid kpis={depthKpis} compact />}
+      {show("depth") && <KpiGrid kpis={depthKpis} scope={evidenceScope} compact />}
 
       {/* 4) Tag clouds */}
       {show("tags") && stats.cruiseLines.length > 0 && (
@@ -332,32 +372,79 @@ export default function CruiseStatsSection({
   );
 }
 
+/**
+ * One tile. `evidence` is present only where a RESOLVER answers for the
+ * figure, never on the strength of the registry alone — that field records
+ * what release 1 INTENDS to serve, and a tile wired to an unserved key ships
+ * a pointer cursor over a 404.
+ *
+ * Seven tiles here carry none on purpose: the average ports per cruise, the
+ * longest leg, the most ports on one trip, the line-loyalty maximum, the
+ * sea-day streak, the deepest deck and the revisit rate are `ratio`,
+ * `extremum` or `sequence` measures, and release 1 serves no kind but `sum`
+ * and `distinct`.
+ */
+interface Kpi {
+  label: string;
+  value: string | number;
+  evidence?: { key: string; renderedValue: number | null };
+}
+
 function KpiGrid({
   kpis,
+  scope,
   compact = false,
 }: {
-  kpis: Array<{ label: string; value: string | number }>;
+  kpis: Kpi[];
+  scope: EvidenceScopeParams;
   compact?: boolean;
 }): JSX.Element {
   return (
     <div className="grid grid-cols-2 md:grid-cols-4 lg:grid-cols-4 gap-4">
-      {kpis.map((kpi) => (
-        <div
-          key={kpi.label}
-          className="rounded-lg shadow-sm p-4"
-          style={{ background: "var(--bg-surface)", border: "1px solid var(--color-border)" }}
-        >
-          <h3 className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
-            {kpi.label}
-          </h3>
-          <p
-            className={`${compact ? "text-xl" : "text-2xl"} font-bold mt-1 font-mono`}
-            style={{ color: "var(--text-primary)" }}
+      {kpis.map((kpi) => {
+        // Tailwind's preflight zeroes a button's border and background, so the
+        // same className renders identically as a `<button>`: the card keeps
+        // its layout and gains a keyboard-operable trigger.
+        const className = "rounded-lg shadow-sm p-4";
+        const style = {
+          background: "var(--bg-surface)",
+          border: "1px solid var(--color-border)",
+        };
+        const body = (
+          <>
+            <h3 className="text-xs font-medium" style={{ color: "var(--text-muted)" }}>
+              {kpi.label}
+            </h3>
+            <p
+              className={`${compact ? "text-xl" : "text-2xl"} font-bold mt-1 font-mono`}
+              style={{ color: "var(--text-primary)" }}
+            >
+              {kpi.value}
+            </p>
+          </>
+        );
+        if (!kpi.evidence) {
+          return (
+            <div key={kpi.label} className={className} style={style}>
+              {body}
+            </div>
+          );
+        }
+        return (
+          <EvidenceTrigger
+            key={kpi.label}
+            kind="metric"
+            evidenceKey={kpi.evidence.key}
+            scope={scope}
+            renderedValue={kpi.evidence.renderedValue}
+            label={kpi.label}
+            className={className}
+            style={style}
           >
-            {kpi.value}
-          </p>
-        </div>
-      ))}
+            {body}
+          </EvidenceTrigger>
+        );
+      })}
     </div>
   );
 }

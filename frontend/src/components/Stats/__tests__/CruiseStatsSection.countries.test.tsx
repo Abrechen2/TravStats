@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 import type { CruiseStatsResponse } from "../../../lib/api/stats";
 
 /**
@@ -67,7 +68,11 @@ describe("CruiseStatsSection countries tile", () => {
 
   it("counts the folded set, so a catalogue duplicate is not a second country", async () => {
     api.getCruiseStats.mockResolvedValue(base);
-    render(<CruiseStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />);
+    render(
+      <MemoryRouter>
+        <CruiseStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
     // 2 (DE, US) — not 3, which counting the raw names would give.
     const tile = await screen.findByText("stats:cruiseSection.countries");
     expect(tile.parentElement?.textContent).toContain("2");
@@ -75,13 +80,21 @@ describe("CruiseStatsSection countries tile", () => {
 
   it("still lists the full names in the tag cloud", async () => {
     api.getCruiseStats.mockResolvedValue(base);
-    render(<CruiseStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />);
+    render(
+      <MemoryRouter>
+        <CruiseStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
     expect(await screen.findByText("United States of America")).toBeInTheDocument();
   });
 
   it("falls back to the names when an older backend sends no folded list", async () => {
     api.getCruiseStats.mockResolvedValue({ ...base, countriesIso: undefined });
-    render(<CruiseStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />);
+    render(
+      <MemoryRouter>
+        <CruiseStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
     const tile = await screen.findByText("stats:cruiseSection.countries");
     expect(tile.parentElement?.textContent).toContain("3");
   });
@@ -97,7 +110,9 @@ describe("CruiseStatsSection under the page's period", () => {
   it("asks the server for the chosen year, and for nothing else", async () => {
     api.getCruiseStats.mockResolvedValue(base);
     render(
-      <CruiseStatsSection scope={{ year: 2024, compareYear: null }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <CruiseStatsSection scope={{ year: 2024, compareYear: null }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     await screen.findByText("stats:cruiseSection.countries");
     expect(api.getCruiseStats).toHaveBeenCalledTimes(1);
@@ -106,7 +121,11 @@ describe("CruiseStatsSection under the page's period", () => {
 
   it("asks for the lifetime view when no year is chosen", async () => {
     api.getCruiseStats.mockResolvedValue(base);
-    render(<CruiseStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />);
+    render(
+      <MemoryRouter>
+        <CruiseStatsSection scope={LIFETIME} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
+    );
     await screen.findByText("stats:cruiseSection.countries");
     expect(api.getCruiseStats).toHaveBeenCalledWith(undefined);
   });
@@ -116,7 +135,9 @@ describe("CruiseStatsSection under the page's period", () => {
       params?.year === 2023 ? { ...base, cruisesCount: 1 } : base
     );
     render(
-      <CruiseStatsSection scope={{ year: 2024, compareYear: 2023 }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <CruiseStatsSection scope={{ year: 2024, compareYear: 2023 }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     expect(await screen.findByText("stats:yearFilter.vs")).toBeInTheDocument();
     expect(api.getCruiseStats).toHaveBeenCalledWith({ year: 2023 });
@@ -125,7 +146,9 @@ describe("CruiseStatsSection under the page's period", () => {
   it("names the year when it had no cruise, instead of inviting a first one", async () => {
     api.getCruiseStats.mockResolvedValue({ ...base, cruisesCount: 0 });
     render(
-      <CruiseStatsSection scope={{ year: 2019, compareYear: null }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <CruiseStatsSection scope={{ year: 2019, compareYear: null }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     expect(await screen.findByText("stats:period.emptyYear")).toBeInTheDocument();
     expect(screen.queryByText("stats:cruiseSection.emptyTitle")).not.toBeInTheDocument();
@@ -141,7 +164,11 @@ describe("CruiseStatsSection hides the blocks the reader switched off", () => {
 
   it("drops a hidden block and keeps the rest", async () => {
     api.getCruiseStats.mockResolvedValue(base);
-    render(<CruiseStatsSection scope={LIFETIME} visibility={hiding("regions", "tags")} />);
+    render(
+      <MemoryRouter>
+        <CruiseStatsSection scope={LIFETIME} visibility={hiding("regions", "tags")} />
+      </MemoryRouter>
+    );
     // The depth grid still draws, so the section did render.
     expect(await screen.findByText("stats:cruiseSection.countries")).toBeInTheDocument();
     expect(screen.queryByText("stats:cruiseSection.regionsHeading")).not.toBeInTheDocument();
@@ -164,12 +191,16 @@ describe("CruiseStatsSection while the next year loads", () => {
     );
 
     const { rerender, container } = render(
-      <CruiseStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <CruiseStatsSection scope={{ year: 2026, compareYear: 2025 }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     expect((await screen.findAllByText(/\(2025\)/)).length).toBeGreaterThan(0);
 
     rerender(
-      <CruiseStatsSection scope={{ year: 2026, compareYear: 2024 }} visibility={ALL_VISIBLE} />
+      <MemoryRouter>
+        <CruiseStatsSection scope={{ year: 2026, compareYear: 2024 }} visibility={ALL_VISIBLE} />
+      </MemoryRouter>
     );
     expect(screen.queryAllByText(/\(2024\)/)).toHaveLength(0);
     expect(container.querySelector("[aria-busy='true']")).not.toBeNull();

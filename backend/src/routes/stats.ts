@@ -33,12 +33,7 @@ import {
   calculateAirportStats,
 } from "../utils/statsCalculator";
 import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from "../utils/cruiseStats";
-import {
-  calculateLodgingStats,
-  type LodgingStayData,
-  type LodgingRecord,
-} from "../utils/lodgingStats";
-import { buildMembershipContext, resolveStayProgramme } from "../services/lodging/stayMembership";
+import { calculateLodgingStats } from "../utils/lodgingStats";
 import { normalizeHistory } from "../utils/homeAirport";
 import type { SettingsDataJson } from "./settings/types";
 import logger from "../utils/logger";
@@ -64,10 +59,11 @@ import {
   withinWindow,
   type DatedRow,
 } from "../utils/stats/timeseries";
-import { readYearQuery, scopeLodgingsToStays, startedIn } from "../utils/stats/domainYear";
-import { lodgingCountryKey } from "../utils/stats/lodgingCountryKey";
+import { readYearQuery } from "../utils/stats/domainYear";
 import { buildTravelAccount } from "../services/stats/travelAccount";
 import { loadTravelAccountData } from "../services/stats/travelAccountData";
+import { loadCruiseStatsData } from "../services/stats/cruiseStatsData";
+import { loadLodgingStatsData } from "../services/stats/lodgingStatsData";
 import { buildTripAccount } from "../services/stats/tripAccount";
 import { getBaseCurrency } from "../services/fx/snapshot";
 import { statsEtag } from "../middleware/statsEtag";
@@ -1392,62 +1388,10 @@ router.get(
       const year = readYearQuery(req.query, res);
       if (year === null) return;
 
-      const [user, cruises] = await Promise.all([
-        prisma.user.findUnique({ where: { id: userId }, select: { birthdate: true } }),
-        prisma.cruise.findMany({
-          where: { userId, ...countableFlightWhere(), ...startedIn("startDate", year) },
-          include: {
-            stops: { include: { port: true } },
-            legs: { orderBy: { ordinal: "asc" }, select: { distanceKm: true } },
-            departurePort: true,
-            arrivalPort: true,
-          },
-        }),
-      ]);
-
-      const cruiseStatsInput: CruiseStatsInput[] = cruises.map((c) => ({
-        id: c.id,
-        shipId: c.shipId,
-        cruiseLine: c.cruiseLine,
-        cabinType: c.cabinType,
-        deck: c.deck,
-        startDate: c.startDate,
-        endDate: c.endDate,
-        stops: c.stops.map((s) => ({
-          portId: s.portId,
-          port: s.port
-            ? {
-                id: s.port.id,
-                name: s.port.name,
-                city: s.port.city,
-                country: s.port.country,
-                region: s.port.region,
-                unlocode: s.port.unlocode,
-                lat: s.port.lat,
-                lon: s.port.lon,
-                timezone: s.port.timezone,
-                isUserAdded: s.port.isUserAdded,
-              }
-            : null,
-          dayNumber: s.dayNumber,
-          isAtSea: s.isAtSea,
-          arrivalTime: s.arrivalTime,
-          departureTime: s.departureTime,
-          unresolvedPortName: s.unresolvedPortName,
-        })),
-        departurePort: c.departurePort,
-        arrivalPort: c.arrivalPort,
-        legDistancesKm: c.legs.map((l) => l.distanceKm),
-      }));
-
-      // calculateCruiseStats expects the birthday as {month, day} for the
-      // birthday-at-sea flag; pass undefined when the user has none set.
-      // Date#getMonth() returns 0-11; rangeContainsMonthDay expects 1-12.
-      // Without the +1, January birthdays would match nothing and every
-      // other birthday would be off by one month — found by Codex audit.
-      const userBirthday = user?.birthdate
-        ? { month: user.birthdate.getMonth() + 1, day: user.birthdate.getDate() }
-        : undefined;
+      // One loader for the tab and for the evidence panel — see
+      // `services/stats/cruiseStatsData.ts` for why this is not inline.
+      const { rows: cruiseRows, userBirthday } = await loadCruiseStatsData(userId, year);
+      const cruiseStatsInput: CruiseStatsInput[] = cruiseRows.map((r) => r.input);
 
       // Defensive parity with the flight stats endpoints: a calculation
       // error on one malformed cruise must not 500 the whole tab — fall
@@ -1551,82 +1495,13 @@ router.get(
       const year = readYearQuery(req.query, res);
       if (year === null) return;
 
-      const [stays, lodgings, settings, memberships] = await Promise.all([
-        prisma.lodgingStay.findMany({
-          where: { userId, ...startedIn("checkIn", year) },
-          // The chain is joined for its NAME: the price and rating rankings
-          // are read by a human, and a chain id is not a label.
-          include: { lodging: { include: { chain: true } } },
-        }),
-        // Every lodging the user HAS, including ones with no stay yet — a
-        // hotel added but never checked into must still count toward
-        // lodgingsCount/chainsUnique (owner decision, finding 1).
-        //
-        // Loaded UNFILTERED on purpose: `visited === false` rows are needed
-        // here, not to be counted as visits but to be counted as bookmarks
-        // (`notedLodgingsCount`). Filtering them out in the query would make
-        // that figure unreachable without a second round-trip.
-        prisma.lodging.findMany({ where: { userId } }),
-        // Current base currency — spendBaseTotal is filtered against it so a
-        // stay snapshotted under an OLDER base currency never gets silently
-        // added under the current one's label (finding 2).
-        prisma.userSettings.findUnique({
-          where: { userId },
-          select: { baseCurrency: true },
-        }),
-        // Which card covered which stay is DERIVED, not stored: a membership
-        // attached to a chain covers every stay at that chain without the user
-        // restating it per stay. The link tables are what make that derivable.
-        prisma.lodgingMembership.findMany({
-          where: { userId },
-          include: { chains: true, lodgings: true },
-        }),
-      ]);
-      const baseCurrency = settings?.baseCurrency ?? "EUR";
-      const membershipContext = buildMembershipContext(memberships);
-      const lodgingRecords: LodgingRecord[] = scopeLodgingsToStays(lodgings, stays, year).map(
-        (l) => ({
-          id: l.id,
-          chainId: l.chainId,
-          type: l.type,
-          country: lodgingCountryKey(l),
-          city: l.city,
-          visited: l.visited,
-        })
-      );
-
-      const stayData: LodgingStayData[] = stays.map((s) => {
-        const programme = resolveStayProgramme(s, s.lodging.chainId, membershipContext);
-        return {
-          lodgingId: s.lodgingId,
-          lodgingName: s.lodging.name,
-          type: s.lodging.type,
-          country: lodgingCountryKey(s.lodging),
-          city: s.lodging.city,
-          chainId: s.lodging.chainId,
-          chainName: s.lodging.chain?.name ?? null,
-          stars: s.lodging.stars,
-          lat: s.lodging.lat,
-          lon: s.lodging.lon,
-          checkIn: s.checkIn,
-          checkOut: s.checkOut,
-          datePrecision: s.datePrecision,
-          nights: s.nights,
-          status: s.status,
-          totalPriceBase: s.totalPriceBase,
-          fxBaseCurrency: s.fxBaseCurrency,
-          currency: s.currency,
-          totalPrice: s.totalPrice,
-          board: s.board,
-          isAwardStay: s.isAwardStay,
-          ratingOverall: s.ratingOverall,
-          ratingRoom: s.ratingRoom,
-          ratingBreakfast: s.ratingBreakfast,
-          ratingService: s.ratingService,
-          programName: programme.programName,
-          membershipTier: programme.tier,
-        };
-      });
+      // One loader for the tab and for the evidence panel — see
+      // `services/stats/lodgingStatsData.ts` for why this is not inline.
+      const {
+        stays: stayData,
+        lodgingRecords,
+        baseCurrency,
+      } = await loadLodgingStatsData(userId, year);
 
       // Defensive parity with the cruise/flight stats endpoints: a
       // calculation error on one malformed stay must not 500 the whole

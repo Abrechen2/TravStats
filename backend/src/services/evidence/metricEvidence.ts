@@ -65,6 +65,18 @@ import {
   resolveTravelAccountJournalEntryCount,
 } from "./metricEvidenceTravelAccount";
 import {
+  resolveCruiseCount,
+  resolveCruiseDistanceKmTotal,
+  resolveCruiseSeaDaysTotal,
+  resolveCruiseTotalDays,
+  resolveCruisePortsUniqueCount,
+  resolveCruiseShipsUniqueCount,
+  resolveCruiseLinesUniqueCount,
+  resolveCruiseCountriesCount,
+  resolveCruiseCompanionCount,
+  resolveCruiseTotalSpend,
+} from "./metricEvidenceCruise";
+import {
   resolveCrossDomainEventCount,
   resolveCrossDomainCountryCount,
   resolveCrossDomainActiveDayCount,
@@ -82,9 +94,12 @@ import {
  * `evidenceMeasuresFlightCore.ts`'s own measures (every `sum`/`distinct` key
  * on that surface, Task 7), the twenty-two `sum`/`distinct` keys of
  * `evidenceMeasuresFlightFun.ts` (Task 7b-1) and all twelve `sum`/`distinct`
- * measures of `evidenceMeasuresCrossDomain.ts` (Task 7b-2) — fifty-two in
- * all. Nothing yet from `evidenceMeasuresDomains.ts`; see task-7-report.md,
- * task-7b-1-report.md and task-7b-2-report.md for served vs. outstanding.
+ * measures of `evidenceMeasuresCrossDomain.ts` (Task 7b-2), and the
+ * twenty-six cruise, lodging and places measures of
+ * `evidenceMeasuresDomains.ts` (Task 7b-3) — seventy-eight in all, which is
+ * every `servedIn: 1` entry in the registry. See task-7-report.md,
+ * task-7b-1-report.md, task-7b-2-report.md and task-7b-3-report.md for what
+ * each family mirrors and which served keys are deliberately unwired.
  */
 type MetricResolver = (
   userId: string,
@@ -145,6 +160,16 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   crossDomainEventCount: resolveCrossDomainEventCount,
   crossDomainCountryCount: resolveCrossDomainCountryCount,
   crossDomainActiveDayCount: resolveCrossDomainActiveDayCount,
+  cruiseCount: resolveCruiseCount,
+  cruiseDistanceKmTotal: resolveCruiseDistanceKmTotal,
+  cruiseSeaDaysTotal: resolveCruiseSeaDaysTotal,
+  cruiseTotalDays: resolveCruiseTotalDays,
+  cruisePortsUniqueCount: resolveCruisePortsUniqueCount,
+  cruiseShipsUniqueCount: resolveCruiseShipsUniqueCount,
+  cruiseLinesUniqueCount: resolveCruiseLinesUniqueCount,
+  cruiseCountriesCount: resolveCruiseCountriesCount,
+  cruiseCompanionCount: resolveCruiseCompanionCount,
+  cruiseTotalSpend: resolveCruiseTotalSpend,
 };
 
 /**

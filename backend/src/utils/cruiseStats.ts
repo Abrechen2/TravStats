@@ -57,6 +57,14 @@ export interface CruiseData {
 export interface CruiseStats {
   cruisesCount: number;
   cruisePortsUnique: number;
+  /**
+   * The catalogue port ids behind `cruisePortsUnique`, exposed the way
+   * `cruiseLines`, `regions` and `countries` already are. The size alone
+   * cannot say WHICH ports a cruise called at, and the evidence panel has to
+   * name them; deriving them a second time from the same stops would be a
+   * second copy of the effective-sequence rule this loop owns.
+   */
+  ports: Set<number>;
   cruisePortsSingleMax: number;
   cruiseShipsUnique: number;
   cruiseLines: Set<string>;
@@ -333,6 +341,7 @@ export function calculateCruiseStats(
   return {
     cruisesCount: cruises.length,
     cruisePortsUnique: portIds.size,
+    ports: portIds,
     cruisePortsSingleMax,
     cruiseShipsUnique: shipIds.size,
     cruiseLines,
