@@ -9,6 +9,12 @@ import { StayStatusPill } from "./StayStatusPill";
 interface LodgingStayCardProps {
   stay: LodgingStay;
   onEdit?: (stay: LodgingStay) => void;
+  /**
+   * Asks the CALLER to start the deletion — it owns the confirmation, so a
+   * stay is never removed by the click that mentions it. Omitted where the
+   * card is read-only.
+   */
+  onDelete?: (stay: LodgingStay) => void;
   /** Resolved from `stay.tripId` by the caller (a stay only stores the id).
    * Undefined when unresolved/not linked — the pill is skipped either way. */
   tripName?: string;
@@ -38,6 +44,7 @@ interface LodgingStayCardProps {
 export function LodgingStayCard({
   stay,
   onEdit,
+  onDelete,
   tripName,
   membershipName,
   membershipSource,
@@ -138,6 +145,20 @@ export function LodgingStayCard({
             className="text-xs text-[var(--accent)] hover:underline"
           >
             {t("common:buttons.edit")}
+          </button>
+        )}
+        {/* Quieter than the edit link beside it, and never a red primary: a
+            danger-weighted button repeated down a list reads as the row's
+            purpose. The red belongs to the confirmation, which is where the
+            consequence is actually stated. */}
+        {onDelete && (
+          <button
+            type="button"
+            data-testid={`stay-delete-${stay.id}`}
+            onClick={() => onDelete(stay)}
+            className="text-xs text-[var(--text-muted)] hover:text-[var(--danger)] hover:underline"
+          >
+            {t("common:buttons.delete")}
           </button>
         )}
       </div>

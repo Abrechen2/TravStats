@@ -207,6 +207,16 @@
     "matchedExisting": "Bereits vorhanden — „{{name}}“ zugeordnet",
     "addError": "Kette konnte nicht angelegt werden"
   },
+  "stay": {
+    "confirmDelete": {
+      "title": "Aufenthalt löschen?",
+      "body": "Der Aufenthalt {{period}} ({{nights}}) wird dauerhaft gelöscht. Die Unterkunft und eine verknüpfte Reise bleiben erhalten.",
+      "bodyUnknownLength": "Der Aufenthalt {{period}} wird dauerhaft gelöscht. Die Unterkunft und eine verknüpfte Reise bleiben erhalten.",
+      "receiptNote": "Der hinterlegte Beleg wird mit gelöscht."
+    },
+    "deleted": "Aufenthalt gelöscht",
+    "deleteError": "Aufenthalt konnte nicht gelöscht werden"
+  },
   "stayEditor": {
     "addStay": "Aufenthalt hinzufügen",
     "createTitle": "Neuer Aufenthalt",

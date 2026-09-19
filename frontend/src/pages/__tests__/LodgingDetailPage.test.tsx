@@ -6,18 +6,34 @@ import type { Lodging, LodgingMembership, LodgingStay } from "../../types/lodgin
 
 const getLodgingMock = vi.fn();
 const deleteLodgingMock = vi.fn();
+const deleteStayMock = vi.fn();
 const listMembershipsMock = vi.fn();
 const tripsGetAllMock = vi.fn();
 
 vi.mock("../../lib/api/lodging", () => ({
   getLodging: (...args: unknown[]) => getLodgingMock(...args),
   deleteLodging: (...args: unknown[]) => deleteLodgingMock(...args),
+  deleteStay: (...args: unknown[]) => deleteStayMock(...args),
   listMemberships: () => listMembershipsMock(),
   // The photo section asks for the house's photographs on mount. Without
   // this the mock module has no such export, vitest prints an error per
   // render and the section is never exercised (forgejo#110).
   listLodgingPhotos: () => Promise.resolve([]),
+  // The stay editor is opened by one test below (the second entry point into
+  // the deletion). It imports these three from the same module; a missing
+  // export is `undefined is not a function` the moment the FX preview runs.
+  createStay: () => Promise.resolve(null),
+  updateStay: () => Promise.resolve(null),
+  getFxPreview: () => Promise.resolve(null),
 }));
+
+// Same reason as in StayEditor's own suite: the currency picker asks the server
+// which currencies were used recently, and the network guard in
+// src/__tests__/setup.ts fails any test that lets it.
+vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/hooks/useRecentCurrencies")>();
+  return { ...actual, useRecentCurrencies: () => [] };
+});
 
 vi.mock("../../lib/api", () => ({
   tripsApi: { getAll: () => tripsGetAllMock() },
@@ -42,6 +58,7 @@ vi.unmock("../../store/settingsStore");
 // Imported after the mocks above so the module graph picks them up.
 import LodgingDetailPage from "../LodgingDetailPage";
 import { useSettingsStore } from "../../store/settingsStore";
+import { useToastStore } from "../../store/toastStore";
 
 const baseStay: LodgingStay = {
   id: "stay-1",
@@ -132,10 +149,13 @@ describe("LodgingDetailPage", () => {
   beforeEach(() => {
     getLodgingMock.mockReset();
     deleteLodgingMock.mockReset();
+    deleteStayMock.mockReset();
+    deleteStayMock.mockResolvedValue(undefined);
     listMembershipsMock.mockReset();
     tripsGetAllMock.mockReset();
     listMembershipsMock.mockResolvedValue([]);
     tripsGetAllMock.mockResolvedValue([]);
+    useToastStore.setState({ toasts: [] });
     useSettingsStore.setState({
       baseCurrency: "EUR",
       units: { distanceUnit: "kilometers" },
@@ -546,5 +566,149 @@ describe("LodgingDetailPage", () => {
     expect(box.className).toMatch(/overflow-y-auto/);
     expect(box.className).toMatch(/max-h-/);
     expect(within(box).getAllByText("common:buttons.edit")).toHaveLength(30);
+  });
+
+  /**
+   * Deleting a stay (owner, 2026-09-19: "es fehlt die Möglichkeit, Aufenthalte
+   * in Unterkünften zu löschen").
+   *
+   * The route and the API client both existed and nothing called them. These
+   * tests walk the whole way through — click, confirm, request, reload — for
+   * two reasons: a card button that opens nothing looks identical to one that
+   * works, and `ConfirmModal`'s own overlay once swallowed every click on its
+   * buttons while LOOKING confirmed (2.6.0-rc.9 UAT). jsdom does no
+   * hit-testing, so it cannot prove paint order; what it does prove is that
+   * the confirm button is reachable, enabled, and that clicking it is the only
+   * thing that issues the request.
+   */
+  it("deletes a stay only after the confirmation, then reloads the lodging", async () => {
+    const secondStay: LodgingStay = { ...baseStay, id: "stay-2" };
+    getLodgingMock
+      .mockResolvedValueOnce(makeLodging({}, [baseStay, secondStay]))
+      // What the server answers after the delete — the aggregates come with it.
+      .mockResolvedValueOnce(makeLodging({ stayCount: 1, nights: 1 }, [secondStay]));
+    const user = userEvent.setup();
+
+    renderDetailPage();
+
+    await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-delete-stay-1"));
+
+    const dialog = await screen.findByRole("dialog");
+    // The i18n stub returns the bare key, so the assertion is WHICH key was
+    // chosen: the dated form, not the unknown-length one.
+    expect(within(dialog).getByText(/lodging:stay\.confirmDelete\.body/)).toBeInTheDocument();
+    expect(deleteStayMock).not.toHaveBeenCalled();
+
+    const confirm = within(dialog).getByRole("button", { name: "common:buttons.delete" });
+    expect(confirm).toBeEnabled();
+    await user.click(confirm);
+
+    await waitFor(() => {
+      expect(deleteStayMock).toHaveBeenCalledWith("lodging-1", "stay-1");
+    });
+    // The card is gone and the reload happened — a client-side splice alone
+    // would leave the header counting a stay that no longer exists.
+    await waitFor(() => {
+      expect(screen.queryByTestId("stay-card-stay-1")).not.toBeInTheDocument();
+    });
+    expect(getLodgingMock).toHaveBeenCalledTimes(2);
+    expect(screen.getByTestId("stay-card-stay-2")).toBeInTheDocument();
+  });
+
+  it("keeps the stay when the confirmation is cancelled", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging({}, [baseStay]));
+    const user = userEvent.setup();
+
+    renderDetailPage();
+
+    await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-delete-stay-1"));
+
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "common:buttons.cancel" }));
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(deleteStayMock).not.toHaveBeenCalled();
+    expect(screen.getByTestId("stay-card-stay-1")).toBeInTheDocument();
+  });
+
+  it("keeps the row when the delete fails, and says so", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging({}, [baseStay]));
+    deleteStayMock.mockRejectedValue(new Error("500"));
+    const user = userEvent.setup();
+
+    renderDetailPage();
+
+    await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-delete-stay-1"));
+    const dialog = await screen.findByRole("dialog");
+    await user.click(within(dialog).getByRole("button", { name: "common:buttons.delete" }));
+
+    await waitFor(() => {
+      expect(deleteStayMock).toHaveBeenCalledTimes(1);
+    });
+    // The row survives, and nothing was reloaded — a failed delete must not
+    // look like a successful one.
+    expect(screen.getByTestId("stay-card-stay-1")).toBeInTheDocument();
+    expect(getLodgingMock).toHaveBeenCalledTimes(1);
+    expect(useToastStore.getState().toasts.some((toast) => toast.type === "error")).toBe(true);
+  });
+
+  /**
+   * The second entry point, and the same path.
+   *
+   * A stay open in the editor is the other place a reader decides it should
+   * not exist. Both routes lead to the one confirmation and the one request —
+   * and the editor closes afterwards, because it is showing a stay the server
+   * no longer has.
+   */
+  it("deletes from the stay editor's footer through the same confirmation", async () => {
+    getLodgingMock
+      .mockResolvedValueOnce(makeLodging({}, [baseStay]))
+      .mockResolvedValueOnce(makeLodging({ stayCount: 0, nights: 0 }, []));
+    const user = userEvent.setup();
+
+    renderDetailPage();
+
+    await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("stay-edit-stay-1"));
+
+    const deleteInEditor = await screen.findByTestId("stay-editor-delete");
+    await user.click(deleteInEditor);
+
+    // By test id, not by role: the stay editor draws its own `role="dialog"`
+    // overlay, so two are open at this moment. That is also the stacking
+    // question the 2.6.0-rc.9 defect was about — both scrims are z-index 50,
+    // and the confirmation wins only because it portals to the end of
+    // <body>, after the page. jsdom cannot paint, so this asserts the reason
+    // rather than the result.
+    const scrim = await screen.findByTestId("confirm-modal");
+    expect(scrim.parentElement).toBe(document.body);
+    expect(document.body.lastElementChild).toBe(scrim);
+
+    await user.click(within(scrim).getByRole("button", { name: "common:buttons.delete" }));
+
+    await waitFor(() => {
+      expect(deleteStayMock).toHaveBeenCalledWith("lodging-1", "stay-1");
+    });
+    await waitFor(() => {
+      expect(screen.queryByTestId("stay-editor-delete")).not.toBeInTheDocument();
+    });
+  });
+
+  it("offers no delete in the editor while a stay is being created", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging({}, [baseStay]));
+    const user = userEvent.setup();
+
+    renderDetailPage();
+
+    await screen.findByTestId("stay-card-stay-1");
+    await user.click(screen.getByTestId("lodging-add-stay-button"));
+
+    // The editor is open …
+    expect(await screen.findByTestId("stay-editor-save")).toBeInTheDocument();
+    // … and has nothing to delete.
+    expect(screen.queryByTestId("stay-editor-delete")).not.toBeInTheDocument();
   });
 });

@@ -207,6 +207,16 @@
     "matchedExisting": "Already exists — matched to “{{name}}”",
     "addError": "Could not create chain"
   },
+  "stay": {
+    "confirmDelete": {
+      "title": "Delete stay?",
+      "body": "The stay {{period}} ({{nights}}) will be permanently deleted. The lodging and any linked trip remain.",
+      "bodyUnknownLength": "The stay {{period}} will be permanently deleted. The lodging and any linked trip remain.",
+      "receiptNote": "The receipt filed with it is deleted too."
+    },
+    "deleted": "Stay deleted",
+    "deleteError": "Stay could not be deleted"
+  },
   "stayEditor": {
     "addStay": "Add stay",
     "createTitle": "New stay",

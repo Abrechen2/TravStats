@@ -11,6 +11,7 @@ import ReceiptUpload from "../ReceiptUpload";
 import { AmenityChipsInput } from "./AmenityChipsInput";
 import { Field } from "../ui/Field";
 import { StayEditorSection } from "./StayEditorSection";
+import { StayEditorNotesSection } from "./StayEditorNotesSection";
 import { StayEditorRatingsSection } from "./StayEditorRatingsSection";
 import { StayEditorPriceSection } from "./StayEditorPriceSection";
 import { derivePricePerNight } from "../../lib/lodgingFormat";
@@ -43,6 +44,13 @@ interface StayEditorProps {
   stay?: LodgingStay | null;
   onClose: () => void;
   onSaved: (saved: LodgingStay) => void | Promise<void>;
+  /**
+   * Hands the deletion back to the caller, which owns the confirmation and the
+   * request — one deletion path, two entry points (a stay card and this
+   * footer). Offered only for a stay that exists; a create form has nothing to
+   * delete, so the caller simply omits it.
+   */
+  onRequestDelete?: () => void;
 }
 
 const BOARD_TYPES: BoardType[] = ["none", "breakfast", "half", "full", "all_inclusive"];
@@ -100,6 +108,7 @@ export function StayEditor({
   stay,
   onClose,
   onSaved,
+  onRequestDelete,
 }: StayEditorProps): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common"]);
   const fid = useId();
@@ -722,38 +731,16 @@ export function StayEditor({
             />
           </StayEditorSection>
 
-          <StayEditorSection title={t("lodging:stayEditor.notesSection")}>
-            {/* The confirmation says HOW MANY people it covered; it names the
-                booker, never the companion. So point at the field rather than
-                filling it. Threshold is more than ONE person — the booking that
-                prompted this covered two, and a threshold of three would have
-                left exactly that case silent. Disappears as soon as a name is
-                typed: a hint that stays after it has been acted on is nagging. */}
-            {stay?.guests != null && stay.guests > 1 && companionsInput.trim().length === 0 && (
-              <p data-testid="companions-hint" className="mb-2 text-xs text-[var(--warning)]">
-                {t("lodging:stayEditor.companionsHint", { count: stay.guests })}
-              </p>
-            )}
-            <Field label={t("lodging:field.companions")} htmlFor={`${fid}-companions`}>
-              <input
-                id={`${fid}-companions`}
-                className={INPUT_CLASS}
-                value={companionsInput}
-                onChange={(e): void => setCompanionsInput(e.target.value)}
-              />
-            </Field>
-            <div className="mt-3">
-              <Field label={t("lodging:field.notes")} htmlFor={`${fid}-notes`}>
-                <textarea
-                  id={`${fid}-notes`}
-                  rows={3}
-                  className={INPUT_CLASS}
-                  value={notes}
-                  onChange={(e): void => setNotes(e.target.value)}
-                />
-              </Field>
-            </div>
-          </StayEditorSection>
+          <StayEditorNotesSection
+            guests={stay?.guests ?? null}
+            companions={companionsInput}
+            onCompanionsChange={setCompanionsInput}
+            notes={notes}
+            onNotesChange={setNotes}
+            fieldIdPrefix={fid}
+            t={t}
+            inputClassName={INPUT_CLASS}
+          />
 
           {error !== null && (
             <div
@@ -766,6 +753,20 @@ export function StayEditor({
         </div>
 
         <div className="sticky bottom-0 flex justify-end gap-2 border-t border-[var(--color-border)] bg-[var(--bg-base)] px-6 py-4">
+          {/* Left of the pair, and outlined rather than filled: it sits in the
+              same row as Save without competing with it. The caller asks the
+              question — this button only opens it. */}
+          {onRequestDelete && (
+            <button
+              type="button"
+              data-testid="stay-editor-delete"
+              onClick={onRequestDelete}
+              disabled={saving}
+              className="mr-auto rounded-md border border-[var(--danger)]/50 px-4 py-2 text-sm text-[var(--danger)] hover:bg-[var(--danger)]/10 disabled:opacity-50"
+            >
+              {t("common:buttons.delete")}
+            </button>
+          )}
           <button
             type="button"
             onClick={onClose}
