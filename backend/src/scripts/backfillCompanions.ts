@@ -167,9 +167,17 @@ async function backfillFlights(
 
       flight.companions.forEach(recordSpelling);
       const resolved = await resolveCompanions(userId, flight.companions);
-      await prisma.flightCompanion.deleteMany({ where: { flightId: flight.id } });
-      if (resolved.length > 0) {
-        const result = await prisma.flightCompanion.createMany({
+      // Delete-then-create in ONE transaction. Separately, a createMany that
+      // failed — a lost connection, a constraint, the process being stopped —
+      // left the record with NO links at all, having just removed the ones it
+      // was about to replace (2026-09-19 integrity audit, finding 5). The next
+      // boot repairs it, which is why nobody had seen it happen; "self-healing
+      // on the next boot" is not the same as "never wrong in between", and the
+      // in-between is when someone opens the page.
+      const written = await prisma.$transaction(async (tx) => {
+        await tx.flightCompanion.deleteMany({ where: { flightId: flight.id } });
+        if (resolved.length === 0) return 0;
+        const result = await tx.flightCompanion.createMany({
           data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
             flightId: flight.id,
             companionId: row.companionId,
@@ -177,8 +185,9 @@ async function backfillFlights(
           })),
           skipDuplicates: true,
         });
-        links += result.count;
-      }
+        return result.count;
+      });
+      links += written;
     }
 
     cursor = flights[flights.length - 1].id;
@@ -217,9 +226,11 @@ async function backfillTrips(
 
       trip.companions.forEach(recordSpelling);
       const resolved = await resolveCompanions(userId, trip.companions);
-      await prisma.tripCompanion.deleteMany({ where: { tripId: trip.id } });
-      if (resolved.length > 0) {
-        const result = await prisma.tripCompanion.createMany({
+      // One transaction, as in `backfillFlights` and for the same reason.
+      const written = await prisma.$transaction(async (tx) => {
+        await tx.tripCompanion.deleteMany({ where: { tripId: trip.id } });
+        if (resolved.length === 0) return 0;
+        const result = await tx.tripCompanion.createMany({
           data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
             tripId: trip.id,
             companionId: row.companionId,
@@ -227,8 +238,9 @@ async function backfillTrips(
           })),
           skipDuplicates: true,
         });
-        links += result.count;
-      }
+        return result.count;
+      });
+      links += written;
     }
 
     cursor = trips[trips.length - 1].id;
@@ -267,9 +279,11 @@ async function backfillCruises(
 
       cruise.companions.forEach(recordSpelling);
       const resolved = await resolveCompanions(userId, cruise.companions);
-      await prisma.cruiseCompanion.deleteMany({ where: { cruiseId: cruise.id } });
-      if (resolved.length > 0) {
-        const result = await prisma.cruiseCompanion.createMany({
+      // One transaction, as in `backfillFlights` and for the same reason.
+      const written = await prisma.$transaction(async (tx) => {
+        await tx.cruiseCompanion.deleteMany({ where: { cruiseId: cruise.id } });
+        if (resolved.length === 0) return 0;
+        const result = await tx.cruiseCompanion.createMany({
           data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
             cruiseId: cruise.id,
             companionId: row.companionId,
@@ -277,8 +291,9 @@ async function backfillCruises(
           })),
           skipDuplicates: true,
         });
-        links += result.count;
-      }
+        return result.count;
+      });
+      links += written;
     }
 
     cursor = cruises[cruises.length - 1].id;
