@@ -10,8 +10,12 @@ vi.mock("../../../hooks/useTranslation", () => ({
 }));
 
 import UserMenu from "../UserMenu";
+import { resetInstallPrompt } from "../../../lib/installPrompt";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  resetInstallPrompt();
+});
 
 const user = { username: "akuenzel", firstName: "Alex", lastName: "Künzel" };
 
@@ -76,5 +80,25 @@ describe("UserMenu — installing the app", () => {
     expect(
       screen.queryByRole("menuitem", { name: "dashboard:installApp" })
     ).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Review, 2026-09-19: the listener lived in the menu's own effect, so the
+ * entry appeared only when the menu happened to mount before the browser
+ * fired. `beforeinstallprompt` fires once and early — on a cold load it is
+ * long gone by the time anyone opens the account menu. It is caught at module
+ * scope now (`lib/installPrompt.ts`, imported from `main.tsx`).
+ */
+describe("UserMenu — an offer made before anything mounted", () => {
+  it("still has the entry when the browser offered first", async () => {
+    const prompt = vi.fn().mockResolvedValue(undefined);
+    // No component on screen yet: exactly the cold-load order.
+    fireInstallOffer(prompt);
+
+    openMenu();
+
+    fireEvent.click(await screen.findByRole("menuitem", { name: "dashboard:installApp" }));
+    expect(prompt).toHaveBeenCalledTimes(1);
   });
 });
