@@ -10,6 +10,7 @@ import {
 } from "./types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { filterEmailText } from "../../lib/filterEmailText";
+import { markFromSelection, type TextMark } from "./marks";
 import type { TemplateDerivation } from "../../lib/api/types";
 import AnnotationLabelSelect from "./AnnotationLabelSelect";
 import FlightGroundTruth from "./FlightGroundTruth";
@@ -49,14 +50,10 @@ export default function EmailAnnotation({
     label: string;
     flightIndex?: number;
   } | null>(null);
-  const [annotations, setAnnotations] = useState<
-    Array<{ start: number; end: number; text: string; label: string; flightIndex?: number }>
-  >([]);
+  const [annotations, setAnnotations] = useState<TextMark[]>([]);
   const [flights, setFlights] = useState<Flight[]>([{}]);
   const [selectedFlightIndex, setSelectedFlightIndex] = useState<number>(0); // Flug-Auswahl vor dem Labeln
-  const [annotationHistory, setAnnotationHistory] = useState<
-    Array<Array<{ start: number; end: number; text: string; label: string; flightIndex?: number }>>
-  >([]);
+  const [annotationHistory, setAnnotationHistory] = useState<TextMark[][]>([]);
   const [flightHistory, setFlightHistory] = useState<Flight[][]>([]);
   const [tags, setTags] = useState<string[]>([]);
   const [tagInput, setTagInput] = useState("");
@@ -80,15 +77,13 @@ export default function EmailAnnotation({
             setEmailText(showFiltered ? filtered : annotationsData.fullText);
           }
           if (Array.isArray(annotationsData.textSelections)) {
-            setAnnotations(
-              annotationsData.textSelections as Array<{
-                start: number;
-                end: number;
-                text: string;
-                label: string;
-                flightIndex?: number;
-              }>
-            );
+            const stored = annotationsData.textSelections as TextMark[];
+            setAnnotations(stored);
+            // Marks already exist, and they point into the text as it was
+            // SAVED. Filtering that text again for display would move every
+            // highlight off its value — and the second save would then store
+            // a third version. Show exactly what was stored.
+            if (stored.length > 0) setShowFiltered(false);
           }
         }
 
@@ -194,22 +189,23 @@ export default function EmailAnnotation({
 
   const handleSaveAnnotation = () => {
     if (selectedText && selectedText.label && selectedText.label !== "") {
-      const text = displayText.substring(selectedText.start, selectedText.end).trim();
       const flightIndex = selectedText.flightIndex ?? selectedFlightIndex;
+      // The offsets move with the trim. They did not, so a selection that
+      // caught the newline in front of a value stored a value its own offsets
+      // did not point at, and `labelContextOf` then read the line above.
+      const mark = markFromSelection(displayText, { ...selectedText, flightIndex });
+      if (!mark) {
+        setSelectedText(null);
+        return;
+      }
+      const text = mark.text;
 
       // Save current state to history for undo
       setAnnotationHistory([...annotationHistory, annotations]);
       setFlightHistory([...flightHistory, flights]);
 
       // Annotation hinzufügen
-      setAnnotations([
-        ...annotations,
-        {
-          ...selectedText,
-          text,
-          flightIndex,
-        },
-      ]);
+      setAnnotations([...annotations, mark]);
 
       // Automatisch Groundtruth ausfüllen. Only the flight domain has a
       // second form to fill: elsewhere the annotation is the ground truth.
@@ -308,9 +304,17 @@ export default function EmailAnnotation({
   const handleSave = async (): Promise<void> => {
     setSaving(true);
     try {
+      // The text that was MARKED against, never a freshly filtered copy of
+      // it. This saved `filterEmailText(originalEmailText)` whatever was on
+      // screen, so with the filter switched off every offset was measured in
+      // one document and stored against another — and nothing said so, because
+      // a shifted offset still yields a template, just one built on the wrong
+      // label. `filtered` records which fassung it is; the annotate route
+      // refuses the payload outright if the two ever disagree again.
       const annotationData = {
         type: "email",
-        fullText: filterEmailText(originalEmailText),
+        fullText: displayText,
+        filtered: showFiltered,
         textSelections: annotations,
       };
 
@@ -548,15 +552,27 @@ export default function EmailAnnotation({
         <div>
           <div className="flex items-center justify-between mb-2">
             <label className="block text-sm font-medium text-(--text-primary)">Email Text</label>
-            <label className="flex items-center gap-2 cursor-pointer">
+            {/* Locked once anything is marked: the marks point into the text
+                on screen, and that text is what gets saved. Switching the
+                filter under them would move every offset off its value — the
+                defect this whole change is about, one level up. */}
+            <label
+              className={`flex items-center gap-2 ${
+                annotations.length > 0 ? "cursor-not-allowed" : "cursor-pointer"
+              }`}
+              title={annotations.length > 0 ? t("training:annotation.filterLocked") : undefined}
+            >
               <input
                 type="checkbox"
                 checked={showFiltered}
+                disabled={annotations.length > 0}
                 onChange={(e) => setShowFiltered(e.target.checked)}
                 className="rounded-sm border-border text-blue-600 focus:ring-blue-500"
               />
               <span className="text-sm text-(--text-muted)">
-                {t("training:annotation.showFiltered")}
+                {annotations.length > 0
+                  ? t("training:annotation.filterLocked")
+                  : t("training:annotation.showFiltered")}
               </span>
             </label>
           </div>

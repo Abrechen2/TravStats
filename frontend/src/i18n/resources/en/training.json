@@ -160,6 +160,7 @@
     "drawingInstructions": "Draw a box. Press ESC or click \"Cancel\" to cancel.",
     "selectLabel": "Select label...",
     "showFiltered": "Show filtered",
+    "filterLocked": "The text stays as marked — the marks point into exactly this version",
     "imageLoading": "Loading image...",
     "emailTextLoading": "Loading email text...",
     "changeLabelForSelected": "Change label for selected box",

@@ -203,6 +203,44 @@ function sampleIdentity(extracted: ExtractedEmail, fullText: string): SampleIden
   };
 }
 
+/**
+ * The label of the first mark whose offsets do not cut its own value out of
+ * the text being stored — or null when they all do.
+ *
+ * This is the guard that would have made the defect visible. The annotation
+ * view measured `start`/`end` against the text ON SCREEN and then stored a
+ * freshly filtered copy of the original, so with the filter switched off the
+ * offsets described one document and the stored text was another. Nothing
+ * failed: `labelContextOf` simply read the label of whatever line the shifted
+ * offset landed in, and the workshop derived a template anchored on the wrong
+ * words. A wrong template is worse than none, because its output is a
+ * proposal a human accepts by habit.
+ *
+ * A mark with no usable offsets is skipped rather than refused: the check is
+ * about the two representations DISAGREEING, and a payload that carries no
+ * second representation has nothing to disagree with.
+ */
+function misalignedMark(annotations: Record<string, unknown>): string | null {
+  const fullText = annotations.fullText;
+  const selections = annotations.textSelections;
+  if (typeof fullText !== "string" || !Array.isArray(selections)) return null;
+  for (const selection of selections) {
+    if (typeof selection !== "object" || selection === null) continue;
+    const mark = selection as Record<string, unknown>;
+    if (
+      typeof mark.start !== "number" ||
+      typeof mark.end !== "number" ||
+      typeof mark.text !== "string"
+    ) {
+      continue;
+    }
+    if (fullText.slice(mark.start, mark.end) !== mark.text) {
+      return typeof mark.label === "string" ? mark.label : "";
+    }
+  }
+  return null;
+}
+
 function classifyUpload(type: string, fullText: string): WorkshopDomain {
   if (type !== "email" || fullText.length === 0) return "flight";
   const detected = scoreDocument(fullText).domain;
@@ -401,6 +439,15 @@ router.post("/:id/annotate", async (req: AuthRequest, res: Response, next: NextF
       if (!isLabelOfDomain(effectiveDomain, label)) {
         throw new AppError(`"${label}" is not a ${effectiveDomain} field`, 400);
       }
+    }
+
+    const misaligned = misalignedMark(annotations);
+    if (misaligned !== null) {
+      throw new AppError(
+        `The mark for "${misaligned}" does not match the text being saved`,
+        400,
+        "ANNOTATION_TEXT_MISMATCH"
+      );
     }
 
     await prisma.trainingData.update({

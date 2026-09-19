@@ -160,6 +160,7 @@
     "drawingInstructions": "Zeichne eine Box. Drücke ESC oder klicke \"Abbrechen\" zum Abbrechen.",
     "selectLabel": "Label wählen...",
     "showFiltered": "Gefiltert anzeigen",
+    "filterLocked": "Text bleibt wie markiert — die Markierungen zeigen auf genau diese Fassung",
     "imageLoading": "Bild wird geladen...",
     "emailTextLoading": "Email Text wird geladen...",
     "changeLabelForSelected": "Label für ausgewählte Box ändern",
