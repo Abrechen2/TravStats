@@ -8,6 +8,7 @@ import type {
 } from "../../lodging/templates/types";
 import type { AnnotationSelection } from "./annotations";
 import { escapeRegex, labelContextOf } from "./annotations";
+import { isLabelOfDomain } from "../../../shared/annotationLabels";
 
 /**
  * Turn a user's annotated hotel confirmation into a declarative lodging
@@ -87,12 +88,79 @@ function captureFor(transform: TransformName): string {
 }
 
 /**
- * The subject, stripped of what belongs to ONE booking.
+ * Words a confirmation subject shares with every other confirmation subject.
  *
- * Same idea as `extractFingerprint`'s subject cleaning on the flight side, and
- * for the same reason: a subject carrying this stay's dates and reference
- * identifies the booking, not the sender, so a template anchored on it would
- * match exactly one mail — the one it was derived from.
+ * Not a stop-list for tidiness: an anchor built out of these is an anchor that
+ * matches the competition. "Ihre Buchungsbestätigung" is the subject Booking.com,
+ * a Pension and a chain hotel all send, so a personal template anchored on it
+ * claims the next hotel mail that arrives and proposes THIS sender's fields
+ * for it — plan §7 verbatim ("'Your reservation' is a subject a dozen chains
+ * share"), and a plausible wrong value is the failure that costs most.
+ */
+const GENERIC_SUBJECT_WORDS = new Set([
+  "ihre",
+  "deine",
+  "your",
+  "die",
+  "der",
+  "das",
+  "the",
+  "for",
+  "fuer",
+  "für",
+  "und",
+  "and",
+  "von",
+  "from",
+  "bei",
+  "at",
+  "in",
+  "buchung",
+  "buchungen",
+  "buchungsbestaetigung",
+  "buchungsbestätigung",
+  "bestaetigung",
+  "bestätigung",
+  "reservierung",
+  "reservierungsbestaetigung",
+  "reservierungsbestätigung",
+  "booking",
+  "bookings",
+  "confirmation",
+  "confirmed",
+  "reservation",
+  "receipt",
+  "voucher",
+  "hotel",
+  "unterkunft",
+  "aufenthalt",
+  "stay",
+  "nacht",
+  "naechte",
+  "nächte",
+  "night",
+  "nights",
+  "details",
+  "info",
+  "information",
+  "no",
+  "nr",
+  "number",
+  "nummer",
+]);
+
+const normaliseToken = (token: string): string =>
+  token.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
+
+/**
+ * A brand token from the subject — or nothing.
+ *
+ * The subject is first stripped of what belongs to ONE booking (dates and
+ * references identify the stay, not the sender, so a template anchored on
+ * them matches exactly one mail). What is left is then required to contain a
+ * word that is NOT in the generic list above: a name, in other words. Without
+ * one this returns null and the caller abstains with `noDistinguishingMarker`
+ * rather than shipping a template that claims other senders' mail.
  */
 export function senderAnchorFromSubject(subject: string): string | null {
   const cleaned = subject
@@ -102,7 +170,13 @@ export function senderAnchorFromSubject(subject: string): string | null {
     .replace(/[#|:_]+/g, " ")
     .replace(/\s+/g, " ")
     .trim();
-  return cleaned.length >= 5 ? cleaned : null;
+  if (cleaned.length < 5) return null;
+
+  const distinctive = cleaned
+    .split(" ")
+    .map(normaliseToken)
+    .some((token) => token.length >= 3 && !GENERIC_SUBJECT_WORDS.has(token));
+  return distinctive ? cleaned : null;
 }
 
 export interface LodgingDerivationInput {
@@ -122,6 +196,11 @@ export function deriveLodgingTemplate(input: LodgingDerivationInput): LodgingDer
   let dateRefused = false;
 
   for (const selection of selections) {
+    // The route refuses a foreign label at the boundary
+    // (`routes/training.ts`); this is the second lock, because a cast alone
+    // would make `fields["gate"]` a lodging rule the engine then ignores in
+    // silence.
+    if (!isLabelOfDomain("lodging", selection.label)) continue;
     const label = selection.label as keyof LodgingFieldRules;
     if (fields[label]) continue; // First annotation of a field wins.
     const value = selection.text.trim();

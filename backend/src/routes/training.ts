@@ -21,6 +21,7 @@ import { extractEmailFromFile } from "../services/emailExtractor";
 import { scoreDocument } from "../services/parsing/documentDomain";
 import {
   WORKSHOP_DOMAINS,
+  isLabelOfDomain,
   isWorkshopDomain,
   type WorkshopDomain,
 } from "../shared/annotationLabels";
@@ -108,6 +109,19 @@ const annotateSchema = z.object({
  * this always has an answer; being wrong is cheap because the annotation step
  * shows it and lets the user change it.
  */
+/** Every label the marks carry, whatever else the annotation blob holds. */
+function annotatedLabels(annotations: Record<string, unknown>): string[] {
+  const selections = annotations.textSelections;
+  if (!Array.isArray(selections)) return [];
+  return selections
+    .map((selection) =>
+      typeof selection === "object" && selection !== null
+        ? (selection as Record<string, unknown>).label
+        : undefined
+    )
+    .filter((label): label is string => typeof label === "string" && label.length > 0);
+}
+
 function classifyUpload(type: string, fullText: string): WorkshopDomain {
   if (type !== "email" || fullText.length === 0) return "flight";
   const detected = scoreDocument(fullText).domain;
@@ -236,6 +250,18 @@ router.post("/:id/annotate", async (req: AuthRequest, res: Response, next: NextF
       where: { id: req.params.id, userId },
     });
     if (!record) throw new AppError("Training data not found", 404);
+
+    // A label belongs to a domain, and a mark carrying another domain's label
+    // is not something to store and reason about later: the deriver would
+    // read `checkIn` out of a flight sample as a lodging field, or drop a
+    // flight label from a hotel sample silently. Refused here, at the
+    // boundary, in the vocabulary `shared/annotationLabels.ts` owns.
+    const effectiveDomain = domain ?? (isWorkshopDomain(record.domain) ? record.domain : "flight");
+    for (const label of annotatedLabels(annotations)) {
+      if (!isLabelOfDomain(effectiveDomain, label)) {
+        throw new AppError(`"${label}" is not a ${effectiveDomain} field`, 400);
+      }
+    }
 
     await prisma.trainingData.update({
       where: { id: record.id },

@@ -1,3 +1,4 @@
+import { createHash } from "node:crypto";
 import { Router, Response, NextFunction } from "express";
 import type { ParserTemplate } from "@prisma/client";
 import { z } from "zod";
@@ -64,18 +65,49 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
 /**
  * What a preview run recorded, kept on the template's own `stats`.
  *
- * `previewOf` is the template's `updatedAt` at the moment it was run. A
- * re-derivation writes new patterns and a new timestamp, so a stale proof
- * stops counting on its own rather than having to be found and deleted —
- * the same idea as an ETag, and for the same reason: the thing that was
- * proven is the BYTES, not the row.
+ * `patternsHash` is what the proof is ABOUT: the extraction rules that were
+ * run, not the row they were stored in. A re-derivation writes new patterns
+ * and the old proof stops counting on its own, without having to be found and
+ * deleted — the same idea as an ETag.
+ *
+ * It was `updatedAt` first, which was wrong in both directions, and the
+ * second one is the dangerous one: a preview between two derivations would
+ * have restored the timestamp it read (the write-back that kept the proof
+ * "fresh"), so patterns nobody ever previewed could be activated. And every
+ * unrelated write — a disable, a re-enable — invalidated a proof although the
+ * rules had not changed. The rules are the thing; hash the rules.
  */
 interface PreviewRecord {
   at: string;
-  previewOf: string;
+  patternsHash: string;
   passed: boolean;
   ownSampleId: string;
   heldOutSampleId: string | null;
+}
+
+/**
+ * A stable fingerprint of a template's extraction rules.
+ *
+ * Keys are sorted recursively before hashing: `patterns` is a JSON column,
+ * and a re-derivation that produces identical rules in a different key order
+ * must not read as a change — that would invalidate a proof for nothing and
+ * train the user to click through the preview.
+ */
+function patternsHash(patterns: unknown): string {
+  const canonical = (value: unknown): unknown => {
+    if (Array.isArray(value)) return value.map(canonical);
+    if (typeof value === "object" && value !== null) {
+      return Object.fromEntries(
+        Object.entries(value as Record<string, unknown>)
+          .sort(([a], [b]) => a.localeCompare(b))
+          .map(([key, entry]) => [key, canonical(entry)])
+      );
+    }
+    return value;
+  };
+  return createHash("sha256")
+    .update(JSON.stringify(canonical(patterns) ?? null))
+    .digest("hex");
 }
 
 interface StoredStats {
@@ -107,14 +139,28 @@ function domainOf(row: ParserTemplate): TemplateDomain {
   return isWorkshopDomain(row.domain) ? row.domain : "flight";
 }
 
-/** The text of a training sample, as the parsers would see it. */
-function sampleText(annotations: unknown): { subject: string; body: string } | null {
+/**
+ * The text of a training sample, as the parsers would see it.
+ *
+ * The From address travels with it because a flight fingerprint is a
+ * statement about the SENDER: without it the preview would run a template the
+ * real parse would have declined, and a held-out mail from somebody else
+ * would read as proof that the template generalises.
+ */
+function sampleText(
+  annotations: unknown
+): { subject: string; body: string; fromAddress: string } | null {
   if (typeof annotations !== "object" || annotations === null) return null;
   const ann = annotations as Record<string, unknown>;
   const fullText = typeof ann.fullText === "string" ? ann.fullText : "";
   if (fullText.length === 0) return null;
   const subjectMatch = /^Subject:\s*(.+)$/im.exec(fullText);
-  return { subject: subjectMatch ? subjectMatch[1].trim() : "", body: fullText };
+  const fromMatch = /^From:\s*(?:.*?<)?([^\s<>]+@[^\s<>]+?)>?\s*$/im.exec(fullText);
+  return {
+    subject: subjectMatch ? subjectMatch[1].trim() : "",
+    body: fullText,
+    fromAddress: fromMatch ? fromMatch[1].trim() : "",
+  };
 }
 
 interface PreviewSide {
@@ -150,7 +196,13 @@ router.post("/:id/preview", async (req: AuthRequest, res: Response, next: NextFu
         ? {
             sampleId: own.id,
             filename: null,
-            result: previewTemplate(domain, asUserTemplate, ownText.subject, ownText.body),
+            result: previewTemplate(
+              domain,
+              asUserTemplate,
+              ownText.subject,
+              ownText.body,
+              ownText.fromAddress
+            ),
           }
         : null;
 
@@ -168,7 +220,13 @@ router.post("/:id/preview", async (req: AuthRequest, res: Response, next: NextFu
         ? {
             sampleId: heldOutRow.id,
             filename: null,
-            result: previewTemplate(domain, asUserTemplate, heldOutText.subject, heldOutText.body),
+            result: previewTemplate(
+              domain,
+              asUserTemplate,
+              heldOutText.subject,
+              heldOutText.body,
+              heldOutText.fromAddress
+            ),
           }
         : null;
 
@@ -176,7 +234,10 @@ router.post("/:id/preview", async (req: AuthRequest, res: Response, next: NextFu
 
     const record: PreviewRecord = {
       at: new Date().toISOString(),
-      previewOf: template.updatedAt.toISOString(),
+      // The rules that were RUN, hashed. Nothing about the row: this write
+      // moves `updatedAt` and that is fine, because the proof no longer
+      // depends on it.
+      patternsHash: patternsHash(template.patterns),
       passed,
       ownSampleId: ownSide?.sampleId ?? "",
       heldOutSampleId: heldOutSide?.sampleId ?? null,
@@ -184,14 +245,7 @@ router.post("/:id/preview", async (req: AuthRequest, res: Response, next: NextFu
     const stats = { ...readStats(template.stats), preview: record };
     await prisma.parserTemplate.update({
       where: { id: template.id },
-      data: {
-        stats: stats as unknown as object,
-        // `updatedAt` is `@updatedAt`, so this write would otherwise move the
-        // very timestamp the proof names, and the template would be stale the
-        // instant it was proven. Holding it is what makes `previewOf` mean
-        // "these bytes" rather than "some earlier bytes".
-        updatedAt: template.updatedAt,
-      },
+      data: { stats: stats as unknown as object },
     });
 
     logger.info(
@@ -207,7 +261,8 @@ router.post("/:id/preview", async (req: AuthRequest, res: Response, next: NextFu
       /** Why there is no held-out side, when there is none. */
       heldOutReason: heldOutSide ? null : "noSecondSample",
       canActivate: passed,
-      previewOf: record.previewOf,
+      /** The rules this proof is about — see the activation gate below. */
+      patternsHash: record.patternsHash,
     });
   } catch (error) {
     next(error);
@@ -233,7 +288,10 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     // OFF cannot produce a wrong value — so only the way in is guarded.
     if (status === "active") {
       const preview = readStats(existing.stats).preview;
-      const fresh = preview?.previewOf === existing.updatedAt.toISOString();
+      // The rules that are about to go live against the rules that were
+      // proven. A re-derivation between the preview and this call changes the
+      // hash, and the answer is the same as never having previewed at all.
+      const fresh = preview?.patternsHash === patternsHash(existing.patterns);
       if (!preview?.passed || !fresh) {
         throw new AppError(
           preview && !fresh

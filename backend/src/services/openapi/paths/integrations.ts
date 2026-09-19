@@ -698,9 +698,11 @@ registry.registerPath({
             canActivate: z
               .boolean()
               .describe("False until the template reads its own sample; activation refuses"),
-            previewOf: z
+            patternsHash: z
               .string()
-              .describe("The template version this proof was made against — see PATCH"),
+              .describe(
+                "Fingerprint of the extraction rules this proof was made against. Re-deriving the template changes it, and activation is refused again — see PATCH."
+              ),
           }),
         },
       },

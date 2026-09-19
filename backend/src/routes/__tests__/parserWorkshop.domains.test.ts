@@ -73,6 +73,8 @@ describe("the template workshop, for every domain", () => {
   let token: string;
   let demoUserId: string;
   let demoToken: string;
+  /** Did THIS suite create the shared demo row? Only then may it delete it. */
+  let demoIsOurs = false;
 
   beforeAll(async () => {
     const user = await prisma.user.create({
@@ -83,6 +85,7 @@ describe("the template workshop, for every domain", () => {
     // `isSharedDemoUser` is the flag AND the published username — see
     // `utils/sharedDemo.ts` for why the flag alone is the wrong question.
     const existingDemo = await prisma.user.findUnique({ where: { username: "demo" } });
+    demoIsOurs = existingDemo === null;
     const demo =
       existingDemo ??
       (await prisma.user.create({
@@ -96,6 +99,11 @@ describe("the template workshop, for every domain", () => {
     await prisma.parserTemplate.deleteMany({ where: { userId: { in: [userId, demoUserId] } } });
     await prisma.trainingData.deleteMany({ where: { userId: { in: [userId, demoUserId] } } });
     await prisma.user.delete({ where: { id: userId } });
+    // A suite that leaves a shared `demo` account behind changes what every
+    // later suite measures — `isSharedDemoUser` is a question about THIS
+    // username. Removed only when this suite is what put it there; a dev
+    // database that already had one keeps it.
+    if (demoIsOurs) await prisma.user.delete({ where: { id: demoUserId } });
   });
 
   it("derives a LODGING template from a lodging sample, and leaves it pending", async () => {
@@ -158,6 +166,79 @@ describe("the template workshop, for every domain", () => {
       .send({ status: "active" });
     expect(allowed.status).toBe(200);
     expect(allowed.body.status).toBe("active");
+  });
+
+  it("voids the proof when the template is re-derived after its preview", async () => {
+    const template = await prisma.parserTemplate.findFirst({
+      where: { userId, domain: "lodging" },
+    });
+    const id = template!.id;
+    // It is active from the test above — the proof held for the patterns that
+    // were previewed. Now the user annotates the sample again (a second tab,
+    // a corrected mark) and the rules change underneath the proof.
+    await prisma.parserTemplate.update({
+      where: { id },
+      data: {
+        status: "pending",
+        patterns: {
+          ...(template!.patterns as Record<string, unknown>),
+          id: "lodging:user:re-derived",
+        } as unknown as object,
+      },
+    });
+
+    const refused = await request(app)
+      .patch(`/api/v1/parser-templates/${id}`)
+      .set("Cookie", [`auth_token=${token}`])
+      .send({ status: "active" });
+    expect(refused.status).toBe(409);
+    expect(refused.body.code).toBe("PREVIEW_REQUIRED");
+
+    // An UNRELATED write must not void it, which the `updatedAt` key did:
+    // previewing again and then disabling/re-enabling has to work.
+    await request(app)
+      .post(`/api/v1/parser-templates/${id}/preview`)
+      .set("Cookie", [`auth_token=${token}`]);
+    await request(app)
+      .patch(`/api/v1/parser-templates/${id}`)
+      .set("Cookie", [`auth_token=${token}`])
+      .send({ status: "disabled" });
+    const reactivated = await request(app)
+      .patch(`/api/v1/parser-templates/${id}`)
+      .set("Cookie", [`auth_token=${token}`])
+      .send({ status: "active" });
+    expect(reactivated.status).toBe(200);
+  });
+
+  it("refuses a mark labelled for another domain", async () => {
+    const sample = await prisma.trainingData.create({
+      data: {
+        userId,
+        type: "email",
+        domain: "lodging",
+        originalFile: `/dev/null/label-${Date.now()}`,
+        annotations: { fullText: SOURCE } as unknown as object,
+        extractedData: [] as unknown as object,
+        status: "pending",
+      },
+    });
+
+    const refused = await request(app)
+      .post(`/api/v1/training/${sample.id}/annotate`)
+      .set("Cookie", [`auth_token=${token}`])
+      .send({
+        annotations: {
+          fullText: SOURCE,
+          // A flight label on a hotel sample. Stored, it would become a
+          // lodging rule under a name the engine never reads — or worse, a
+          // rule read as the wrong field.
+          textSelections: [{ start: 0, end: 5, text: "Pension", label: "flightNumber" }],
+        },
+        extractedData: [],
+      });
+
+    expect(refused.status).toBe(400);
+    expect(refused.body.error).toContain("flightNumber");
   });
 
   it("is used by the lodging parser, and is invisible to the flight parser", async () => {

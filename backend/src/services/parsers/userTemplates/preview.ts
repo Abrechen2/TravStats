@@ -1,5 +1,6 @@
 import { applyLodgingTemplate } from "../../lodging/templates/engine";
 import { applyUserTemplate } from "./engine";
+import { matchesFingerprint } from "./matcher";
 import { parseLodgingSpec } from "./lodgingTemplates";
 import type { TemplateDomain, UserTemplate } from "./types";
 
@@ -55,9 +56,18 @@ export function previewTemplate(
   domain: TemplateDomain,
   template: UserTemplate,
   subject: string,
-  body: string
+  body: string,
+  /** The address the sample came from, where one is known. */
+  fromAddress = ""
 ): TemplatePreview {
   if (domain === "flight") {
+    // The fingerprint FIRST, exactly as `parsers/email.ts` asks it: the
+    // parser never applies a template whose fingerprint does not match, so a
+    // preview that skipped this would report fields the real parse would
+    // never read — a held-out mail from another sender would look like proof
+    // the template generalises. The lodging side has always gone through
+    // `templateMatches` for the same reason.
+    if (!matchesFingerprint(template.fingerprint, fromAddress, subject, body)) return EMPTY;
     const results = applyUserTemplate(template, subject, body);
     const first = results[0];
     if (!first) return EMPTY;

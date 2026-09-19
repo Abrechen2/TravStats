@@ -132,6 +132,60 @@ describe("a user-derived lodging template", () => {
     expect(derived).toEqual({ ok: false, refusal: "lodgingNeedsNameAndDates" });
   });
 
+  it("refuses a subject that names no sender, even with everything else marked", () => {
+    // "Ihre Buchungsbestätigung" is the subject Booking.com, a Pension and a
+    // chain hotel all send (plan §7: "'Your reservation' is a subject a dozen
+    // chains share"). With no From line to fall back on there is nothing that
+    // identifies this sender, and a template anchored on the generic words
+    // would claim the next hotel mail that arrives.
+    const anonymous = SOURCE.split("\n")
+      .filter((line) => !line.startsWith("From:"))
+      .join("\n");
+    const derived = deriveLodgingTemplate({
+      ...input,
+      senderDomain: undefined,
+      fullText: anonymous,
+      selections: [
+        select(anonymous, "Hotel Beispiel Nürnberg", "hotelName"),
+        select(anonymous, "10. März 2026", "checkIn"),
+        select(anonymous, "12. März 2026", "checkOut"),
+      ],
+    });
+    expect(derived).toEqual({ ok: false, refusal: "noDistinguishingMarker" });
+  });
+
+  it("accepts a subject that carries a brand name", () => {
+    const branded = SOURCE.replace(
+      "Subject: Ihre Buchungsbestätigung",
+      "Subject: Ihre Buchung im Hotel Beispiel"
+    );
+    const derived = deriveLodgingTemplate({
+      ...input,
+      senderDomain: undefined,
+      subject: "Ihre Buchung im Hotel Beispiel",
+      fullText: branded,
+      selections: [
+        select(branded, "Hotel Beispiel Nürnberg", "hotelName"),
+        select(branded, "10. März 2026", "checkIn"),
+        select(branded, "12. März 2026", "checkOut"),
+      ],
+    });
+    expect(derived.ok).toBe(true);
+    if (!derived.ok) return;
+    expect(derived.template.match.anchors[0]).toContain("Beispiel");
+  });
+
+  it("ignores a mark carrying another domain's label", () => {
+    const derived = deriveLodgingTemplate({
+      ...input,
+      selections: [...annotations, select(SOURCE, "Hotel Beispiel", "flightNumber")],
+    });
+    expect(derived.ok).toBe(true);
+    if (!derived.ok) return;
+    // Not stored as a lodging rule under a name the engine will never read.
+    expect(Object.keys(derived.template.fields)).not.toContain("flightNumber");
+  });
+
   it("abstains when the date format is one no transform understands", () => {
     // "10.03.2026" — neither `parseGermanDate` (month names only) nor
     // `parseEnglishDate` reads it, so a template built on it would match
