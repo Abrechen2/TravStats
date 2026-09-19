@@ -323,5 +323,6 @@
     "inHours_one": "in {{count}} Std.",
     "inHours_other": "in {{count}} Std.",
     "today": "heute"
-  }
+  },
+  "installApp": "Als App installieren"
 }

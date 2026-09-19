@@ -323,5 +323,6 @@
     "inHours_one": "in {{count}} h",
     "inHours_other": "in {{count}} h",
     "today": "today"
-  }
+  },
+  "installApp": "Install as app"
 }
