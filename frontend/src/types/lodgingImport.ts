@@ -11,6 +11,7 @@
 // with neither `lodging` nor `lodgingName` — the frontend only mirrors the
 // resulting shape, it does not re-validate it.
 
+import type { LodgingDatePrecision } from "../shared/lodgingTiming";
 import type { BoardType, LodgingCurrency, LodgingType } from "./lodging";
 
 export type LodgingImportSource = "csv" | "email" | "pdf";
@@ -117,13 +118,15 @@ export interface LodgingStayChange {
  *
  * `datePrecision` travels with the dates because they are written through
  * `formatStayPeriod`, which must not print a range for a stay recorded as
- * "July 2011". `nights` is null where the record cannot say. `href` is the
- * LODGING's page: a stay has no page of its own.
+ * "July 2011". It is the RESOLVED precision — the server normalises a stored
+ * value the dates contradict — so it is one of the four real ones, never an
+ * arbitrary string. `nights` is null where the record cannot say. `href` is
+ * the LODGING's page: a stay has no page of its own.
  */
 export interface LodgingImportMatchedStay {
   checkIn: string | null;
   checkOut: string | null;
-  datePrecision: string;
+  datePrecision: LodgingDatePrecision;
   nights: number | null;
   href: string;
 }

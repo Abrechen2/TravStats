@@ -584,6 +584,47 @@ describe("LodgingImportPreviewModal — rejecting a guessed match", () => {
     expect(committed[0].lodging?.name).toBe("Synthetic Other Building");
   });
 
+  /**
+   * Rejecting the guess must take the DESCRIBED stay with it.
+   *
+   * `matchedStay` is what keeps the hint line open (`hasHints`) and what names
+   * a stay inside the matched house. Leaving it behind on a row that no longer
+   * claims that house would point the reader at a stay in a building they just
+   * said this is not. Unreachable through today's classifier — a heuristic
+   * lodging match never carries a stay match — which is exactly why it is
+   * pinned rather than left to the next rule that changes.
+   */
+  it("clears the described stay along with the rest of the match", () => {
+    const withStay: LodgingImportPreviewRow[] = [
+      {
+        ...guessed[0],
+        matchedStayId: "stay-9",
+        matchedStay: {
+          checkIn: "2026-05-01",
+          checkOut: "2026-05-03",
+          datePrecision: "DAY",
+          nights: 2,
+          href: "/lodging/annex-one-id",
+        },
+      },
+    ];
+    render(
+      <LodgingImportPreviewModal
+        rows={withStay}
+        summary={guessedSummary}
+        onCommit={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId("lodging-import-matched-stay-4")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("lodging-import-reject-match-4"));
+
+    expect(screen.queryByTestId("lodging-import-matched-stay-4")).toBeNull();
+    // And with nothing left to say, the hint line itself is gone.
+    expect(screen.queryByTestId("lodging-import-create-anyway-4")).toBeNull();
+  });
+
   it("offers no rejection for a PROVEN match", () => {
     render(
       <LodgingImportPreviewModal

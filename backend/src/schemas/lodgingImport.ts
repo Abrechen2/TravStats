@@ -1,5 +1,6 @@
 import { z } from "./zod";
 import { BOARD_TYPES, currencyField, LODGING_TYPES, MAX_STAY_SPAN_NIGHTS } from "./lodging";
+import type { LodgingDatePrecision } from "../shared/lodgingTiming";
 
 /**
  * Shared import-candidate contract for the lodging import pipeline (see
@@ -233,15 +234,18 @@ export interface LodgingStayChange {
  *
  * `datePrecision` travels with the dates because the frontend writes them
  * through `formatStayPeriod`, which must not print "01.07.2011 – 01.07.2011"
- * for a stay recorded as "July 2011". `nights` is null when nothing in the
- * record says — never 0, which reads as a same-day stay somebody measured.
+ * for a stay recorded as "July 2011". It is the RESOLVED precision, not the
+ * raw column: `resolveStayTiming` normalises a stored "DAY" on a stay that has
+ * no dates left down to "NONE", so the wire can only carry one of the four
+ * real values. `nights` is null when nothing in the record says — never 0,
+ * which reads as a same-day stay somebody measured.
  * `href` targets the LODGING: a stay has no page of its own, the same contract
  * `stayEvidenceEntry` states.
  */
 export interface LodgingImportMatchedStay {
   checkIn: string | null;
   checkOut: string | null;
-  datePrecision: string;
+  datePrecision: LodgingDatePrecision;
   nights: number | null;
   href: string;
 }
@@ -304,9 +308,20 @@ export const commitRowSchema = z.object({
   action: z.enum(["create", "skip", "update"]),
   matchedLodgingId: z.string().uuid().nullable().optional(),
   /**
-   * The stay an `update` row patches. Client-supplied like
-   * `matchedLodgingId`, so the commit re-checks ownership: `LodgingStay`
-   * carries its own `userId` and a plain id lookup proves only existence.
+   * The stored stay this row was matched against — it means a different thing
+   * per action, and both are deliberate.
+   *
+   * On an `update` it is the stay to PATCH. On a `create` it is the stay the
+   * new one is deliberately created BESIDE ("Anlegen trotzdem"): the commit
+   * needs it because the incoming `externalRef` belongs to that stay and
+   * `@@unique([userId, externalRef])` cannot hold it twice — without the id
+   * the create hit that index and was counted as a silent skip. A `skip` row
+   * asks for nothing and sends nothing.
+   *
+   * Client-supplied like `matchedLodgingId`, so the commit re-checks
+   * ownership either way: `LodgingStay` carries its own `userId` and a plain
+   * id lookup proves only existence. An id that is not the caller's fails an
+   * `update` outright and changes nothing at all on a `create`.
    */
   matchedStayId: z.string().uuid().nullable().optional(),
   lodging: lodgingCandidateFieldsSchema.nullable(),

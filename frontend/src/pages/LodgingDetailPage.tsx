@@ -38,6 +38,10 @@ import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
 import type { Lodging, LodgingMembership, LodgingStay } from "../types/lodging";
 
+/** What a figure reads as when it cannot be stated. The same dash the spend
+ *  card already prints for an unconvertible total. */
+const UNKNOWN_FIGURE = "—";
+
 export default function LodgingDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
@@ -79,6 +83,18 @@ export default function LodgingDetailPage(): JSX.Element {
   // what lets the confirmation name the dates it is about.
   const [confirmingStayDelete, setConfirmingStayDelete] = useState<LodgingStay | null>(null);
   const [deletingStay, setDeletingStay] = useState<boolean>(false);
+  /**
+   * The header figures no longer describe the list below them.
+   *
+   * Set when a stay was deleted but the reload that recomputes the aggregates
+   * failed: the row is gone locally while `stayCount`, `nights`,
+   * `overallRating` and `totalSpendBase` still count it. A wrong number
+   * presented as data is worse than no number, so the strip shows "—" until
+   * the next successful load clears this. The flag lives here rather than in
+   * the four fields because the wire type cannot hold "unknown" — they are
+   * plain numbers shared with the list and the stats cells.
+   */
+  const [aggregatesStale, setAggregatesStale] = useState<boolean>(false);
   // Name lookup for the stay cards' trip pill — a stay only stores `tripId`,
   // never the display name, so this page resolves it once against the
   // user's full trip list (small, already-fetched-elsewhere; no per-stay
@@ -99,7 +115,10 @@ export default function LodgingDetailPage(): JSX.Element {
       setFailure(null);
       try {
         const data = await getLodging(id);
-        if (!cancelled) setLodging(data);
+        if (!cancelled) {
+          setLodging(data);
+          setAggregatesStale(false);
+        }
       } catch (err: unknown) {
         logger.error("LodgingDetailPage: failed to load lodging", err);
         if (!cancelled) setFailure(classifyLoadFailure(err));
@@ -189,13 +208,19 @@ export default function LodgingDetailPage(): JSX.Element {
     // stay.
     try {
       setLodging(await getLodging(lodging.id));
+      setAggregatesStale(false);
     } catch (err: unknown) {
       logger.error("LodgingDetailPage: reload after stay delete failed", err);
       // The stay IS deleted; dropping it locally is closer to the truth than
-      // leaving a row the server no longer has.
+      // leaving a row the server no longer has. The aggregates cannot be
+      // mended the same way — they are computed server-side over the whole
+      // house — so they are WITHHELD rather than left counting a stay that
+      // is not in the list any more.
       setLodging((prev) =>
         prev === null ? prev : { ...prev, stays: prev.stays.filter((s) => s.id !== stay.id) }
       );
+      setAggregatesStale(true);
+      addToast("error", t("lodging:stay.refreshFailed"));
     }
   };
 
@@ -269,8 +294,14 @@ export default function LodgingDetailPage(): JSX.Element {
   const unconvertedCount = countUnconvertedStays(counted);
   // Every priced stay unconverted means the base-currency sum is empty, not
   // zero: "0 €" beside a stay that cost 780 $ is the B12 defect again.
+  // `aggregatesStale` withholds all four server-side figures at once: the
+  // spend sum, its per-night derivation and the rating average are exactly as
+  // stale as the counts, and showing three while hiding one would be the same
+  // lie in a quieter voice.
   const baseKnown =
-    priced && unconvertedCount < counted.filter((s) => s.totalPrice !== null).length;
+    !aggregatesStale &&
+    priced &&
+    unconvertedCount < counted.filter((s) => s.totalPrice !== null).length;
   const avgPerNight = lodging.nights > 0 ? lodging.totalSpendBase / lodging.nights : null;
   const originalSpend = singleOriginalCurrencySpend(counted, baseCurrency);
   const categoryRatings = averageRatingsByCategory(lodging.stays);
@@ -284,9 +315,17 @@ export default function LodgingDetailPage(): JSX.Element {
     ),
   ].filter(Boolean);
   const kpis: DetailKpi[] = [
-    { key: "stays", value: lodging.stayCount, label: t("lodging:detail.stays") },
-    { key: "nights", value: lodging.nights, label: t("lodging:detail.nights") },
-    ...(lodging.overallRating !== null
+    {
+      key: "stays",
+      value: aggregatesStale ? UNKNOWN_FIGURE : lodging.stayCount,
+      label: t("lodging:detail.stays"),
+    },
+    {
+      key: "nights",
+      value: aggregatesStale ? UNKNOWN_FIGURE : lodging.nights,
+      label: t("lodging:detail.nights"),
+    },
+    ...(!aggregatesStale && lodging.overallRating !== null
       ? [
           {
             key: "rating",

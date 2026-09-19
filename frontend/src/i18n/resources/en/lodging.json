@@ -215,6 +215,7 @@
       "receiptNote": "The receipt filed with it is deleted too."
     },
     "deleted": "Stay deleted",
+    "refreshFailed": "Stay deleted — the figures could not be refreshed.",
     "deleteError": "Stay could not be deleted"
   },
   "stayEditor": {
@@ -282,7 +283,7 @@
     "matchedStayAt": "Existing stay:",
     "openMatchedStay": "Open the existing stay in a new tab",
     "createAnyway": "Create anyway",
-    "createAnywayHint": "Creates a second stay. The booking reference stays with the existing one.",
+    "createAnywayHint": "Creates a second stay for the same booking. The duplicate check keeps pointing at the existing one; the booking reference then appears on both.",
     "rejectMatch": "Not the same hotel — create new",
     "fields": {
       "name": "Name",
@@ -307,7 +308,6 @@
       "ratingOverall": "Overall rating",
       "bookingReference": "Booking reference",
       "notes": "Notes",
-      "hints": "Hints",
       "action": "Action"
     },
     "actions": {

@@ -504,10 +504,15 @@ function PreviewRowLine({ row, onChange, t, language }: PreviewRowLineProps): JS
                   onClick={(): void =>
                     // Rejecting the guess makes this an ordinary unmatched row:
                     // the fields unlock, and `create` then creates a NEW house.
+                    // Every trace of the match goes, `matchedStay` included —
+                    // a described stay left behind would keep the hint line
+                    // open (`hasHints`) and name a stay in a house this row no
+                    // longer claims to be.
                     onChange(sourceRowIndex, {
                       matchedLodgingId: null,
                       matchedLodgingName: null,
                       matchedStayId: null,
+                      matchedStay: null,
                       dedupeHint: "none",
                     })
                   }

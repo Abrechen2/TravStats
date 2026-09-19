@@ -207,7 +207,10 @@ function describeStay(stay: ExistingStay): LodgingImportMatchedStay {
   return {
     checkIn: stay.checkIn ? dayKey(stay.checkIn) : null,
     checkOut: stay.checkOut ? dayKey(stay.checkOut) : null,
-    datePrecision: stay.datePrecision,
+    // The RESOLVED precision, not the raw column: a row whose dates were
+    // cleared without its precision being updated still says "DAY", and the
+    // wire must not carry a claim the dates contradict.
+    datePrecision: timing.precision,
     nights: timing.nightsKnown ? timing.nights : null,
     href: `/lodging/${stay.lodgingId}`,
   };
