@@ -26,6 +26,7 @@ import {
   findGroup,
   gateOfSection,
   groupOfSection,
+  isAdminOnlySection,
   isGeneralGroup,
   type SettingsSectionId,
 } from "./Settings/settingsModel";
@@ -82,7 +83,9 @@ export default function SettingsPage(): JSX.Element {
       const gate = gateOfSection(id);
       if (gate && !isFeatureVisible(gate) && deepLinked !== id) return false;
       // Renders null for non-admins, so an index entry would lead to nothing.
-      if (id === "lodgingPreferences" && !isAdmin) return false;
+      // Unlike a beta gate this is NOT lifted by a URL naming the section: a
+      // gate hides something unfinished, this is a permission.
+      if (isAdminOnlySection(id) && !isAdmin) return false;
       return true;
     },
     [isFeatureVisible, deepLinked, isAdmin]
@@ -114,6 +117,17 @@ export default function SettingsPage(): JSX.Element {
   }, [group, isGeneral, sections, isShown, t]);
 
   const inView = useSectionInView(sections, "settings");
+
+  /**
+   * A URL named a section this account may not see.
+   *
+   * `/settings?tab=lodging&section=lodgingPreferences` is a real link out of a
+   * changelog, and for a normal account the section it names is simply absent
+   * from the page it lands on — so the reader is left comparing the address
+   * with the screen and finding nothing (forgejo#88 finding 11). The rest of
+   * the group is genuinely theirs, so this explains rather than redirects.
+   */
+  const deepLinkedAdminOnly = deepLinked !== null && isAdminOnlySection(deepLinked) && !isAdmin;
 
   const routeLabel = group
     ? isGeneral
@@ -221,6 +235,22 @@ export default function SettingsPage(): JSX.Element {
               onJump={jump}
             />
           </div>
+
+          {deepLinkedAdminOnly && (
+            <p
+              role="status"
+              className="t-caption"
+              style={{
+                padding: "12px 16px",
+                borderRadius: "var(--ts-radius-card)",
+                background: "var(--ts-surface2)",
+                border: "1px solid var(--ts-border)",
+                color: "var(--ts-text)",
+              }}
+            >
+              {t("settings:deepLink.adminOnlySection")}
+            </p>
+          )}
 
           {/* Each section is a landmark with the id its old `?section=` link
               used. The name is an aria-label: the section draws its own

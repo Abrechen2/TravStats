@@ -141,6 +141,25 @@ export function isGeneralGroup(id: SettingsGroupId): boolean {
   return (GENERAL_GROUP_IDS as readonly string[]).includes(id);
 }
 
+/**
+ * Sections only an admin may see, because they configure the INSTANCE rather
+ * than the account — `lodgingPreferences` holds the shared chain catalogue.
+ *
+ * Kept here beside the group table rather than as a condition inside the page,
+ * so the page can also ASK the question. A deep link naming one of these used
+ * to land on a surface that simply did not contain it, with nothing said
+ * (forgejo#88 finding 11); answering that needs the rule to be readable, not
+ * just applied.
+ *
+ * Unlike a beta gate, this is NOT overridable by naming the section in a URL.
+ * A gate hides something unfinished from everyone; this is a permission.
+ */
+export const ADMIN_ONLY_SECTIONS: readonly SettingsSectionId[] = ["lodgingPreferences"];
+
+export function isAdminOnlySection(section: string): boolean {
+  return (ADMIN_ONLY_SECTIONS as readonly string[]).includes(section);
+}
+
 /** The beta key hiding a section, whichever group declares it. */
 export function gateOfSection(section: SettingsSectionId): BetaFeatureKey | undefined {
   for (const group of SETTINGS_GROUPS) {

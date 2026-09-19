@@ -108,6 +108,15 @@ vi.mock("../../components/Settings/RoutingProviderSection", () => ({
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-bar-stub" />,
 }));
+// The two lodging sections each load their own data on mount. These cases are
+// about which sections the PAGE decides to draw, not about what the cards show.
+vi.mock("../../components/Settings/GeocoderSettingsCard", () => ({
+  default: ({ isAdmin: cardIsAdmin }: { isAdmin: boolean }) =>
+    cardIsAdmin ? <div data-testid="geocoder-card" /> : null,
+}));
+vi.mock("../../components/Settings/MembershipsSection", () => ({
+  default: () => <div data-testid="memberships-section" />,
+}));
 
 // Flipped per test — the admin surface is what these cases are about.
 let isAdmin = false;
@@ -213,5 +222,57 @@ describe("SettingsPage — the settings/admin boundary", () => {
   it("states the scope of the surface, so a same-named admin entry is distinguishable", async () => {
     renderAt("/settings");
     expect(await screen.findByText("settings:scopeHint")).toBeTruthy();
+  });
+
+  /**
+   * forgejo#88 finding 11.
+   *
+   * `/settings?tab=lodging&section=lodgingPreferences` is a real link out of a
+   * changelog. It redirects correctly to the lodging page, and the page still
+   * draws the rest of the group — but for a normal account the section the
+   * ADDRESS names is simply not there, and nothing said so. The reader was left
+   * comparing the URL with the screen and finding nothing.
+   *
+   * Explained, not redirected: the rest of that page is genuinely theirs.
+   */
+  const LODGING_DEEP_LINK = "/settings?tab=lodging&section=lodgingPreferences";
+  const ADMIN_ONLY_HINT = "settings:deepLink.adminOnlySection";
+
+  it("says why a deep-linked admin-only section is not on the page", async () => {
+    useSettingsStore.setState({
+      betaFeaturesEnabled: false,
+      enabledDomains: ["flight", "lodging"],
+    });
+    renderAt(LODGING_DEEP_LINK);
+
+    expect(await screen.findByText(ADMIN_ONLY_HINT)).toBeTruthy();
+    // The section itself stays out — this is a permission, not a beta gate,
+    // so naming it in a URL does not lift it.
+    expect(
+      screen.queryByRole("region", { name: "settings:lodgingPreferences.geocoder.title" })
+    ).toBeNull();
+    // And the rest of the group is still drawn.
+    expect(screen.getByRole("region", { name: "settings:memberships.title" })).toBeTruthy();
+  });
+
+  it("says nothing of the sort to an admin, who can see the section", async () => {
+    isAdmin = true;
+    useSettingsStore.setState({
+      betaFeaturesEnabled: false,
+      enabledDomains: ["flight", "lodging"],
+    });
+    renderAt(LODGING_DEEP_LINK);
+
+    expect(
+      await screen.findByRole("region", { name: "settings:lodgingPreferences.geocoder.title" })
+    ).toBeTruthy();
+    expect(screen.queryByText(ADMIN_ONLY_HINT)).toBeNull();
+  });
+
+  it("stays quiet on a deep link to a section everyone may see", async () => {
+    renderAt("/settings?section=profile");
+
+    await screen.findByRole("region", { name: "settings:profile.title" });
+    expect(screen.queryByText(ADMIN_ONLY_HINT)).toBeNull();
   });
 });
