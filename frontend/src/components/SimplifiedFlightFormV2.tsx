@@ -149,11 +149,16 @@ export default function SimplifiedFlightFormV2({
           </div>
         )}
 
-        {form.step === "complete" && (!form.departure || !form.arrival) && (
-          <div className="mt-2 rounded-sm border px-4 py-3 text-sm" style={ERROR_STYLE}>
-            {t("errors:missingAirports")}
-          </div>
-        )}
+        {/* There was a SECOND banner here, derived from state rather than from
+            a refused save: `step === "complete" && no airports`. Measured in
+            the browser on the public beta (2.7.0-beta.8): skipping the search
+            put the user on the manual step with "Bitte waehle Start- und
+            Zielflughafen aus" already in red, before a single field had been
+            touched — because entering that step IS the condition it tested.
+            The same fact is now carried by the asterisks and the disabled
+            button's title, which describe the field instead of accusing the
+            user; what is left above is `form.error`, which only a refused
+            submit sets. */}
 
         <form id={formId} ref={formRef} onSubmit={handleSubmitWithFocus} className="space-y-6 pt-2">
           {form.step === "input" && (

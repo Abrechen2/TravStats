@@ -5,6 +5,7 @@ import type { FlightInput, ParsedBooking } from "../types";
 import { type Airport, airportsApi } from "../lib/api";
 import { useSettingsStore } from "../store/settingsStore";
 import { useTranslation } from "../hooks/useTranslation";
+import { RequiredMark } from "./FlightForm/requiredFields";
 import { filterEmailText } from "../lib/filterEmailText";
 import { getAirlineFromFlightNumber } from "../lib/airlineUtils";
 import AirportAutocomplete from "./AirportAutocomplete";
@@ -433,7 +434,7 @@ export default function FlightReviewModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-(--text-primary) mb-2">
-                {t("flights:form.flightNumber")} *
+                {t("flights:form.flightNumber")} <RequiredMark />
                 <InferredBadge
                   show={isInferred("flightNumber", initialData.inferredFields)}
                   hint={t("flights:review.inferredHint")}
@@ -507,7 +508,7 @@ export default function FlightReviewModal({
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
               <label className="block text-sm font-medium text-(--text-primary) mb-2">
-                {t("flights:form.departureTime")} *
+                {t("flights:form.departureTime")} <RequiredMark />
                 <InferredBadge
                   show={isInferred("departureTime", initialData.inferredFields)}
                   hint={t("flights:review.inferredDateHint")}
@@ -524,7 +525,7 @@ export default function FlightReviewModal({
 
             <div>
               <label className="block text-sm font-medium text-(--text-primary) mb-2">
-                {t("flights:form.arrivalTime")} *
+                {t("flights:form.arrivalTime")} <RequiredMark />
                 <InferredBadge
                   show={isInferred("arrivalTime", initialData.inferredFields)}
                   hint={t("flights:review.inferredDateHint")}

@@ -30,10 +30,12 @@ interface RouteFieldsProps {
  *  view, which would block saving any OTHER field on that flight until the
  *  user re-picks an airport they never actually needed to touch.
  *
- *  Labels use the edit-only `flights:edit.routeFrom`/`routeTo` keys, NOT the
- *  create form's `flights:form.from`/`form.to` — those bake a "*"
- *  required-marker into the translated string, which would be a false claim
- *  here now that `required` is gone. See RouteFields.i18n.test.ts.
+ *  Labels share the create form's `flights:form.from`/`form.to`. They used to
+ *  need an edit-only duplicate (`flights:edit.routeFrom`/`routeTo`) because
+ *  the shared strings baked a "*" into the copy, which would have been a
+ *  false claim here now that `required` is gone. The asterisk moved into
+ *  `<RequiredMark />` at the use site, so one label serves both forms again
+ *  and the duplicate pair is gone with it.
  *
  *  KNOWN GAP, recorded deliberately rather than fixed: if the user types
  *  something that doesn't match any airport and leaves the field, the typed
@@ -62,7 +64,7 @@ export default function RouteFields({
   return (
     <div className="grid grid-cols-2 gap-4">
       <div>
-        <label className="label">{t("flights:edit.routeFrom")}</label>
+        <label className="label">{t("flights:form.from")}</label>
         <AirportAutocomplete
           value={departure}
           onChange={onDepartureChange}
@@ -71,7 +73,7 @@ export default function RouteFields({
         />
       </div>
       <div>
-        <label className="label">{t("flights:edit.routeTo")}</label>
+        <label className="label">{t("flights:form.to")}</label>
         <AirportAutocomplete
           value={arrival}
           onChange={onArrivalChange}

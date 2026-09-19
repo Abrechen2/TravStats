@@ -83,15 +83,17 @@ describe("RouteFields", () => {
     expect(onArrivalChange).not.toHaveBeenCalled();
   });
 
-  // Review follow-up #1: the labels must come from the edit-only,
-  // non-asterisk key pair (flights:edit.routeFrom/routeTo) — NOT the create
-  // form's flights:form.from/form.to, whose translated strings bake a "*"
-  // required-marker directly into the text. RouteFields dropped the
-  // `required` attribute (see its own docblock), so a baked-in asterisk
-  // would now be a false claim. `t` is mocked as identity above, so the
-  // rendered text IS the key itself.
-  it("labels the pickers with the non-required edit-form keys, not the create form's", () => {
-    render(
+  // The labels are the create form's own `flights:form.from`/`form.to`, and
+  // they carry NO required marker: RouteFields dropped the `required`
+  // attribute (see its own docblock), so a mark here would be a false claim.
+  // This used to need an edit-only duplicate key pair, because the shared
+  // strings baked a "*" into the copy — measured on the public beta
+  // (2.7.0-beta.8) rendering as "Von * *" wherever <RequiredMark /> was used
+  // as well. The mark now belongs to the use site, so the duplicate is gone
+  // and this test pins the half that matters: shared label, no mark.
+  // `t` is mocked as identity above, so the rendered text IS the key itself.
+  it("labels the pickers with the shared route keys and marks neither as required", () => {
+    const { container } = render(
       <RouteFields
         departure={null}
         arrival={null}
@@ -99,9 +101,10 @@ describe("RouteFields", () => {
         onArrivalChange={() => {}}
       />
     );
-    expect(screen.getByText("flights:edit.routeFrom")).toBeInTheDocument();
-    expect(screen.getByText("flights:edit.routeTo")).toBeInTheDocument();
-    expect(screen.queryByText("flights:form.from")).not.toBeInTheDocument();
-    expect(screen.queryByText("flights:form.to")).not.toBeInTheDocument();
+    expect(screen.getByText("flights:form.from")).toBeInTheDocument();
+    expect(screen.getByText("flights:form.to")).toBeInTheDocument();
+    for (const label of Array.from(container.querySelectorAll("label"))) {
+      expect(label.textContent).not.toContain("*");
+    }
   });
 });
