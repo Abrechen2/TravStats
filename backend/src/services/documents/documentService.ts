@@ -90,8 +90,48 @@ const FORMAT_HINT_MIME: Partial<Record<DocumentFormat, string>> = {
  */
 export const ORPHAN_GRACE_MS = 60 * 60 * 1000;
 
-/** Unfiled uploads older than this are removed by the sweep. */
-export const UNLINKED_TTL_DAYS = 7;
+/**
+ * Unfiled uploads older than this are removed by the sweep.
+ *
+ * It was 7, and nothing anywhere said so — not a locale string, not a screen.
+ * A boarding pass uploaded from the Companion and never filed simply stopped
+ * existing, row and bytes, a week later (2026-09-19 integrity audit, finding
+ * 4). Thirty days is the owner's number, and the deletion is now announced:
+ * `GET /documents/unfiled` carries `deletesAt`, and the inbox's review tab
+ * lists every unfiled document with the date it goes.
+ *
+ * Change this and the date on screen follows, because both read
+ * `unfiledDeletesAt`.
+ */
+export const UNLINKED_TTL_DAYS = 30;
+
+/** When an unfiled document uploaded at `createdAt` will be swept. */
+export function unfiledDeletesAt(createdAt: Date): Date {
+  return new Date(createdAt.getTime() + UNLINKED_TTL_DAYS * 24 * 60 * 60 * 1000);
+}
+
+/**
+ * How many unfiled documents one request may list. A bound, not a page: the
+ * block this feeds is a warning, and a user with more than fifty unfiled
+ * uploads has a filing problem the list cannot solve by being longer.
+ */
+export const UNFILED_LIST_LIMIT = 50;
+
+/**
+ * A user's own unfiled documents, newest first, each with the date it will be
+ * removed. The counterpart of the sweep: nothing may be deleted here that the
+ * user was not first shown.
+ */
+export async function listUnfiledDocuments(
+  userId: string,
+  limit: number = UNFILED_LIST_LIMIT
+): Promise<Document[]> {
+  return prisma.document.findMany({
+    where: { userId, ...NO_OWNER },
+    orderBy: [{ createdAt: "desc" }, { id: "desc" }],
+    take: limit,
+  });
+}
 
 const NO_OWNER: Prisma.DocumentWhereInput = {
   flightId: null,
@@ -518,6 +558,14 @@ export interface DocumentDto {
   createdAt: string;
   linkedAt: string | null;
   url: string;
+}
+
+/** `toDocumentDto` plus the date the sweep will take it. */
+export function toUnfiledDocumentDto(document: Document): DocumentDto & { deletesAt: string } {
+  return {
+    ...toDocumentDto(document),
+    deletesAt: unfiledDeletesAt(document.createdAt).toISOString(),
+  };
 }
 
 export function toDocumentDto(document: Document): DocumentDto {

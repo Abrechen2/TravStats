@@ -98,6 +98,15 @@ export const documentDtoSchema = z.object({
   url: z.string(),
 });
 
+/**
+ * An unfiled document, as `GET /documents/unfiled` lists it. The extra field is
+ * the whole point of the endpoint: a document with no entry is deleted after
+ * UNLINKED_TTL_DAYS, and until 2026-09-19 nothing told anybody that.
+ */
+export const unfiledDocumentDtoSchema = documentDtoSchema.extend({
+  deletesAt: z.string().describe("ISO instant at which the sweep will remove this document"),
+});
+
 export const documentLimitsSchema = z.object(
   Object.fromEntries(DOCUMENT_FORMATS.map((f) => [f, z.number().int()])) as Record<
     (typeof DOCUMENT_FORMATS)[number],

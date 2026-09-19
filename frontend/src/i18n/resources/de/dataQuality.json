@@ -157,5 +157,12 @@
     "markHandled": "Erledigt",
     "handled": "Anfrage als erledigt markiert.",
     "handleFailed": "Die Anfrage konnte nicht als erledigt markiert werden."
+  },
+  "unfiledDocuments": {
+    "title": "Nicht zugeordnete Dokumente",
+    "description": "Diese Uploads gehören noch zu keinem Eintrag. Ordne sie einem Flug, einer Kreuzfahrt, einer Unterkunft, einem Ort oder einer Reise zu — sonst werden sie 30 Tage nach dem Hochladen gelöscht, samt Datei.",
+    "uploaded": "Hochgeladen am",
+    "deletesOn": "Wird gelöscht am",
+    "open": "Öffnen"
   }
 }

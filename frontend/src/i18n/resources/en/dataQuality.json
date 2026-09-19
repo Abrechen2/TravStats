@@ -157,5 +157,12 @@
     "markHandled": "Done",
     "handled": "Request marked as handled.",
     "handleFailed": "The request could not be marked as handled."
+  },
+  "unfiledDocuments": {
+    "title": "Documents filed with nothing",
+    "description": "These uploads do not belong to an entry yet. File them with a flight, cruise, stay, place or trip — otherwise they are deleted, file and all, 30 days after they were uploaded.",
+    "uploaded": "Uploaded on",
+    "deletesOn": "Will be deleted on",
+    "open": "Open"
   }
 }

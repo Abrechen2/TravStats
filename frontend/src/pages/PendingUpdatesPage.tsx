@@ -38,6 +38,7 @@ import StatisticsImpactPreview from "../components/StatisticsImpactPreview";
 import DataQualityFlagsSection from "../components/DataQuality/DataQualityFlagsSection";
 import PhotoJourneysTab from "../components/inbox/PhotoJourneysTab";
 import PasswordResetRequestsSection from "../components/inbox/PasswordResetRequestsSection";
+import UnfiledDocumentsSection from "../components/inbox/UnfiledDocumentsSection";
 import { usePhotoJourneysVisible } from "../components/inbox/usePhotoJourneysVisible";
 import { GlobeLoader } from "../components/GlobeLoader";
 import { useMinLoadingState } from "../hooks/useMinLoadingState";
@@ -298,6 +299,12 @@ export default function PendingUpdatesPage(): JSX.Element {
               because somebody is locked out of the instance while it is
               there, which outranks a disagreement between two dates. */}
           <PasswordResetRequestsSection />
+          {/* The reader's own files, and the one block here with a deadline on
+              it: an unfiled upload is deleted thirty days after it arrived.
+              Below the lockout, above the record questions — a document that
+              expires next month is more urgent than two dates disagreeing, and
+              less urgent than somebody unable to log in. */}
+          <UnfiledDocumentsSection />
           <DataQualityFlagsSection onOpenCount={reportOpen} />
         </div>
 

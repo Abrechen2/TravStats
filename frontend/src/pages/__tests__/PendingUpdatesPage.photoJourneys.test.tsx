@@ -33,6 +33,11 @@ vi.mock("../../components/NavigationBar", () => ({
 vi.mock("../../components/DataQuality/DataQualityFlagsSection", () => ({
   default: () => <div data-testid="flags-section-stub" />,
 }));
+// Same reason: the unfiled-documents block asks for its own list on mount.
+// It has its own tests; these are about the tabs.
+vi.mock("../../components/inbox/UnfiledDocumentsSection", () => ({
+  default: () => <div data-testid="unfiled-documents-stub" />,
+}));
 // The flight-updates tab shows it while loading; in jsdom its canvas prints a
 // "getContext is not implemented" stack per render and says nothing about tabs.
 vi.mock("../../components/GlobeLoader", () => ({

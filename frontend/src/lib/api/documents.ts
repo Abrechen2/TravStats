@@ -58,6 +58,18 @@ export interface TravelDocument {
   url: string;
 }
 
+/**
+ * An unfiled document, as `GET /documents/unfiled` lists it.
+ *
+ * `deletesAt` is the date the server's hourly sweep will remove it, row and
+ * bytes. It is the reason the endpoint exists: the sweep used to be silent, so
+ * an upload that was never filed vanished after a week without anyone being
+ * told (2026-09-19 integrity audit, finding 4).
+ */
+export interface UnfiledDocument extends TravelDocument {
+  deletesAt: string;
+}
+
 /** Bytes, per format. */
 export type DocumentLimits = Record<DocumentFormat, number>;
 
@@ -125,6 +137,12 @@ let limitsRequest: Promise<DocumentLimits> | null = null;
 export const documentsApi = {
   listForEntry: async (entry: DocumentEntryRef): Promise<TravelDocument[]> => {
     const { data } = await api.get<Envelope<TravelDocument[]>>(documentListPath(entry));
+    return data.data;
+  },
+
+  /** The caller's own unfiled uploads, newest first. */
+  listUnfiled: async (): Promise<UnfiledDocument[]> => {
+    const { data } = await api.get<Envelope<UnfiledDocument[]>>("/documents/unfiled");
     return data.data;
   },
 
