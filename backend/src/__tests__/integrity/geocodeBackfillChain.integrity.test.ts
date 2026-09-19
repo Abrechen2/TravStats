@@ -138,6 +138,23 @@ describe("the geocode backfill's position write", () => {
     expect(after.chainId).toBeNull();
   });
 
+  it("matches the catalogue chain regardless of case", async () => {
+    // `lodgingImportCommit.ts` `resolveChainId` matches a chain name
+    // case-insensitively, and says why: "'hilton' and 'Hilton' both exist as
+    // separate rows". A case-sensitive lookup here would give the same hotel a
+    // brand when it arrived by CSV and none when the geocoder found it.
+    const row = await prisma.lodging.create({
+      data: { userId, name: `${TAG}-cased-chain`, type: "hotel" },
+    });
+    googleAnswers(`  ${`${TAG}-Chain`.toUpperCase()}  `);
+
+    const result = await backfillMissingCoordinates(userId);
+
+    expect(result.filled).toBe(1);
+    const after = await prisma.lodging.findUniqueOrThrow({ where: { id: row.id } });
+    expect(after.chainId).toBe(chainId);
+  });
+
   it("never overwrites a chain the row already has", async () => {
     const other = await prisma.lodgingChain.create({
       data: { name: `${TAG}-Other`, isUserAdded: true },

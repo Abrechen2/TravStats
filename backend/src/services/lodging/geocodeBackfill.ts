@@ -337,10 +337,19 @@ export async function backfillMissingCoordinates(
         // A chain the catalogue does not know is simply not written: the
         // position is the point of this pass, and an unknown chain name is not
         // a reason to store nothing.
+        //
+        // Matched case-insensitively, and trimmed, because
+        // `lodgingImportCommit.ts` `resolveChainId` already answers the same
+        // question that way — it says why: "'hilton' and 'Hilton' both exist
+        // as separate rows". A case-SENSITIVE lookup here would drop the chain
+        // for a name the import would have matched, so the same hotel would
+        // carry a brand when it arrived by CSV and none when the geocoder
+        // found it. One question, one answer.
         let resolvedChainId: number | null = null;
-        if (coords.chainName && row.chainId === null) {
-          const chain = await prisma.lodgingChain.findUnique({
-            where: { name: coords.chainName },
+        const chainName = coords.chainName?.trim();
+        if (chainName && row.chainId === null) {
+          const chain = await prisma.lodgingChain.findFirst({
+            where: { name: { equals: chainName, mode: "insensitive" } },
             select: { id: true },
           });
           resolvedChainId = chain?.id ?? null;
