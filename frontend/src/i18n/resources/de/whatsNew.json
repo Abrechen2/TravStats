@@ -7,7 +7,7 @@
     "v270": {
       "design": {
         "title": "Ein Erscheinungsbild für Web und App",
-        "body": "TravStats sieht jetzt aus wie die Companion-App: dieselben Farben, Abstände und Schriften, eine Seitenüberschrift je Seite, ein Dunkelmodus, der aus den Farbtokens kommt statt aus Sonderregeln. Die Einstellungen sind nach Gruppen aufgeteilt, jede mit eigener Adresse, und der Admin-Bereich ist eine eigene Seite neben ihnen — kein Untermenü mehr."
+        "body": "TravStats sieht jetzt aus wie die Companion-App: dieselben Farben, Abstände und Schriften, eine Seitenüberschrift je Seite, ein Dunkelmodus, der aus den Farbtokens kommt statt aus Sonderregeln. Die Einstellungen sind nach Gruppen aufgeteilt: Flüge, Kreuzfahrten und Unterkünfte haben je eine eigene Adresse, Konto, Darstellung, Daten und Dienste sind Abschnitte auf der Allgemein-Seite. Der Admin-Bereich ist eine eigene Seite daneben — kein Untermenü mehr."
       },
       "evidence": {
         "title": "Jede Zahl zeigt, woraus sie besteht",
@@ -23,11 +23,11 @@
       },
       "placesPassport": {
         "title": "Orte und Reisepass sind fertig",
-        "body": "Orte sind ein vollwertiger Bereich mit Listen, Checklisten und dem Import gespeicherter Google-Maps-Listen; der Reisepass zeigt die Länder mit ihren Belegen. Beides stand seit 2.6 hinter dem Beta-Schalter und ist jetzt einfach da — ebenso die eigene Farbe je Bereich, die eine gewöhnliche Einstellung geworden ist."
+        "body": "Orte sind ein vollwertiger Bereich mit Listen, Checklisten und einem CSV-Import, der auch einen Google-Takeout-Export aufnimmt; der Reisepass zeigt die Länder mit ihren Belegen. Beides stand seit 2.6 hinter dem Beta-Schalter und ist jetzt einfach da — ebenso die eigene Farbe je Bereich, die eine gewöhnliche Einstellung geworden ist."
       },
       "toursAndSummary": {
         "title": "Touren, KI-Zusammenfassung und Dawarich sind freigegeben",
-        "body": "Eine Reise kann gewandert, gefahren oder geradelt sein: Touren stehen als Abschnitte im Reisejournal, mit Routeneditor. Die KI-Zusammenfassung einer Reise nennt nur noch, was in den Daten steht — kein erfundenes Hotel, kein Satz über fehlende Tage. Die Standorthistorie aus Dawarich zählt als Beleg für ein Land."
+        "body": "Eine Reise kann gewandert, gefahren oder geradelt sein: Touren haben einen eigenen Reiter auf der Reise, mit Routeneditor. Die KI-Zusammenfassung einer Reise nennt nur noch, was in den Daten steht — kein erfundenes Hotel, kein Satz über fehlende Tage. Die Standorthistorie aus Dawarich zählt als Beleg für ein Land."
       },
       "inbox": {
         "title": "Posteingang mit Reitern, Logbuch blättert, App auf dem Startbildschirm",
