@@ -1,6 +1,7 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
+import { MemoryRouter } from "react-router-dom";
 
 import type { Achievement } from "../../types";
 
@@ -75,7 +76,13 @@ describe("AchievementsPage — a card that looks clickable is clickable (#330)",
 
   it("opens the detail dialog on a click, and the card is a control", async () => {
     const { default: AchievementsPage } = await import("../../pages/AchievementsPage");
-    render(<AchievementsPage />);
+    // A Router is required since the page gained the evidence panel: the
+    // panel's open state lives in `?evidence=` (useEvidence.ts).
+    render(
+      <MemoryRouter>
+        <AchievementsPage />
+      </MemoryRouter>
+    );
 
     await screen.findByText("achievements:codes.FIRST_FLIGHT.name");
     const cards = screen.getAllByRole("button", { name: /FIRST_FLIGHT/ });
@@ -88,7 +95,13 @@ describe("AchievementsPage — a card that looks clickable is clickable (#330)",
 
   it("opens on Enter too — a div that only answers a mouse is half a control", async () => {
     const { default: AchievementsPage } = await import("../../pages/AchievementsPage");
-    render(<AchievementsPage />);
+    // A Router is required since the page gained the evidence panel: the
+    // panel's open state lives in `?evidence=` (useEvidence.ts).
+    render(
+      <MemoryRouter>
+        <AchievementsPage />
+      </MemoryRouter>
+    );
 
     await screen.findByText("achievements:codes.FIRST_FLIGHT.name");
     const card = screen.getAllByRole("button", { name: /FIRST_FLIGHT/ })[0];
