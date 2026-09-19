@@ -1,7 +1,7 @@
 import { isPlausibleCoordinate } from "../../shared/geo/coordinates";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { prisma } from "../../db";
-import type { Prisma } from "../../prisma";
+import { Prisma } from "../../prisma";
 import { anyNonLatin, hasNonLatinScript } from "../../shared/geo/latinScript";
 import logger from "../../utils/logger";
 import { geocodeAddress, reverseGeocode } from "../geo/nominatim";
@@ -11,6 +11,26 @@ import { findLodgingPlace } from "../geo/googlePlaces";
 
 /** A guardrail, not a policy: a single pass never walks more than this many rows. */
 export const MAX_BACKFILL_ROWS = 500;
+
+/**
+ * Did the database refuse the statement, as opposed to a provider not
+ * answering?
+ *
+ * The five Prisma error classes mean a query this code built was wrong, or the
+ * connection is gone — our side either way. Everything else reaching the
+ * per-row catch below is the outside world: a timeout, a 429, a body that did
+ * not parse. They deserve different log levels, and finding 2 is what happens
+ * when they do not get them.
+ */
+export function isDatabaseError(err: unknown): boolean {
+  return (
+    err instanceof Prisma.PrismaClientKnownRequestError ||
+    err instanceof Prisma.PrismaClientUnknownRequestError ||
+    err instanceof Prisma.PrismaClientValidationError ||
+    err instanceof Prisma.PrismaClientInitializationError ||
+    err instanceof Prisma.PrismaClientRustPanicError
+  );
+}
 
 export interface BackfillResult {
   attempted: number;
@@ -298,6 +318,33 @@ export async function backfillMissingCoordinates(
           );
           continue;
         }
+        // Resolve the chain to an ID here, BEFORE the write, and never inside
+        // it. The write below is an `updateMany`, whose argument type is
+        // `LodgingUpdateManyMutationInput` — it carries the scalar `chainId`
+        // and no `chain` relation at all, so the nested `connect` this used to
+        // build was an unknown argument and the whole statement threw.
+        //
+        // Nothing caught it, in two senses. `tsc` does not reach a
+        // conditionally spread object literal with its excess-property check,
+        // so the tree was clean; and the per-row `catch` below turned the
+        // throw into one `warn` line and moved to the next row. The cost fell
+        // on exactly the rows the geocoder did BEST on: a Google answer that
+        // identified a chain, for a house that had none yet, lost its chain
+        // AND its coordinates AND its city, and — since `geocodeAttemptedAt`
+        // is stamped before the lookup — went to the back of the queue to fail
+        // the same way for ever (data-integrity audit 2026-09-19, finding 2).
+        //
+        // A chain the catalogue does not know is simply not written: the
+        // position is the point of this pass, and an unknown chain name is not
+        // a reason to store nothing.
+        let resolvedChainId: number | null = null;
+        if (coords.chainName && row.chainId === null) {
+          const chain = await prisma.lodgingChain.findUnique({
+            where: { name: coords.chainName },
+            select: { id: true },
+          });
+          resolvedChainId = chain?.id ?? null;
+        }
         // CONDITIONAL on the row still lacking a position. A geocode takes
         // seconds; in that window the user may have dropped a pin themselves,
         // and writing over it would lose a deliberate choice to a lookup that
@@ -324,9 +371,7 @@ export async function backfillMissingCoordinates(
             ...(coords.address && !row.address ? { address: coords.address } : {}),
             // A chain is only ever ADDED, never changed: the user may have
             // corrected it, and an independent house must stay independent.
-            ...(coords.chainName && row.chainId === null
-              ? { chain: { connect: { name: coords.chainName } } }
-              : {}),
+            ...(resolvedChainId !== null ? { chainId: resolvedChainId } : {}),
           },
         });
         if (written.count === 0) {
@@ -338,14 +383,23 @@ export async function backfillMissingCoordinates(
         }
         filled++;
       } catch (err) {
-        logger.warn(
-          {
-            operation: "lodging_geocode_backfill_row_failed",
-            lodgingId: row.id,
-            err: err instanceof Error ? err.message : String(err),
-          },
-          "Geocode backfill row failed — continuing"
-        );
+        // A geocoder that times out and a query the database cannot execute
+        // are not the same event, and logging both at `warn` is what let
+        // finding 2 run unnoticed: every Google-resolved chain hotel threw on
+        // every pass, and the line it produced was indistinguishable from the
+        // provider being slow. A Prisma error is OURS — a malformed argument,
+        // a constraint, a schema the code disagrees with — so it is an
+        // `error`, and it names the row so the next person can look at it.
+        const context = {
+          operation: "lodging_geocode_backfill_row_failed",
+          lodgingId: row.id,
+          err: err instanceof Error ? err.message : String(err),
+        };
+        if (isDatabaseError(err)) {
+          logger.error(context, "Geocode backfill row failed to WRITE — this is a defect");
+        } else {
+          logger.warn(context, "Geocode backfill row failed — continuing");
+        }
       }
     }
 
