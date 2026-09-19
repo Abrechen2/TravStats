@@ -21,14 +21,6 @@ async function refreshDbQueryLoggingFlag(): Promise<void> {
   }
 }
 
-if (process.env.NODE_ENV !== "test") {
-  void refreshDbQueryLoggingFlag();
-  dbQueryLoggingTimer = setInterval(() => {
-    void refreshDbQueryLoggingFlag();
-  }, 30_000);
-  dbQueryLoggingTimer.unref();
-}
-
 // Exported so update endpoints can flip the flag immediately rather than
 // waiting up to 30s for the next refresh.
 export function setDbQueryLoggingEnabled(enabled: boolean): void {
@@ -239,3 +231,23 @@ export type DbTransaction = Omit<
   Db,
   "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
 >;
+
+/**
+ * Start the refresh loop LAST, and never above `prisma`.
+ *
+ * `shouldLogDatabaseQueries()` reads `adminSettings` through this very module,
+ * so `loggingConfig` and `db` form a cycle. Under CommonJS that resolves
+ * lazily and is fine — as long as `prisma` is already assigned when the first
+ * call happens. It was, while the client was built at the top of the file;
+ * moving the export below the extension broke it, and a production boot logged
+ * "Cannot read properties of undefined (reading 'adminSettings')" on every
+ * process that loaded this module. The `catch` hid the consequence, not the
+ * noise.
+ */
+if (process.env.NODE_ENV !== "test") {
+  void refreshDbQueryLoggingFlag();
+  dbQueryLoggingTimer = setInterval(() => {
+    void refreshDbQueryLoggingFlag();
+  }, 30_000);
+  dbQueryLoggingTimer.unref();
+}
