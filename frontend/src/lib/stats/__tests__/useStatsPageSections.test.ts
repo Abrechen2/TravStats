@@ -104,11 +104,14 @@ describe("useStatsPageSections", () => {
     const { result } = renderHook(() => useStatsPageSections());
     await waitFor(() => expect(result.current.error).toBe("boom"));
 
-    get.mockResolvedValue({ data: PAYLOAD });
     act(() => result.current.reload());
 
-    await waitFor(() => expect(result.current.error).toBeNull());
-    expect(result.current.sections).toEqual(PAYLOAD);
+    // Waiting on `error` alone would be a race, and was one: the effect clears
+    // it SYNCHRONOUSLY on re-run, before the request it then fires has
+    // answered. So wait for the thing that only the answer can produce.
+    await waitFor(() => expect(result.current.sections).toEqual(PAYLOAD));
+    expect(result.current.error).toBeNull();
+    expect(result.current.loading).toBe(false);
     // Two requests, not nine and not eighteen: one per attempt.
     expect(get).toHaveBeenCalledTimes(2);
   });
