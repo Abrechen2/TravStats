@@ -10,6 +10,7 @@
  * three stays and "4.2" from ninety are different claims, and a screen that
  * cannot tell them apart will present the first as if it were the second.
  */
+import { lodgingBaseAmount } from "../../shared/lodgingSpendBase";
 import type {
   LodgingRatingGroup,
   LodgingRatingStats,
@@ -141,14 +142,24 @@ export function computeRatingStats(
   };
 }
 
-/** Same three conditions as `money.ts` — converted, current base, at least one night. */
+/**
+ * Rating per base-currency unit needs an AMOUNT in the base currency, and
+ * `lodgingBaseAmount` is the one place that decides which stays have one —
+ * the same function `money.ts` prices a night with, and the rollup sums
+ * `spendBaseTotal` from.
+ *
+ * It was three inline conditions here, with a comment asserting parity with
+ * `money.ts` rather than sharing its code, and the assertion stopped being
+ * true the moment that file learned the own-currency shortcut: a pre-FX euro
+ * logbook then drew a populated "price per night" and an EMPTY "best value"
+ * on the same page, from the same stays. A comment is not a mechanism.
+ */
 function comparablePricePerNight(
   stay: LodgingStayData,
   nights: number,
   currentBaseCurrency: string
 ): number | null {
   if (nights <= 0) return null;
-  if (stay.totalPriceBase === null) return null;
-  if (stay.fxBaseCurrency !== currentBaseCurrency) return null;
-  return stay.totalPriceBase / nights;
+  const base = lodgingBaseAmount(stay, currentBaseCurrency);
+  return base === null ? null : base / nights;
 }

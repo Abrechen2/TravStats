@@ -1,5 +1,6 @@
 import { formatCurrency } from "./units";
 import { classifyStay, type LodgingCountState } from "../shared/lodgingCounting";
+import { isUnconvertedSpend, type LodgingStayFx } from "../shared/lodgingSpendBase";
 import type { LodgingType } from "../types/lodging";
 import { formatDate } from "./displayFormat";
 
@@ -413,10 +414,18 @@ export function averageRatingsByCategory(
  * the three-state design exists.
  *
  * A stay with NO price is not counted — it is not missing from the total,
- * it simply has nothing to contribute.
+ * it simply has nothing to contribute. Neither is a stay priced in the base
+ * currency but carrying no FX snapshot: it needs no rate, so the backend
+ * counts it, and a footnote naming it would describe a row that IS in the
+ * figure above. `shared/lodgingSpendBase.ts` decides, on both sides.
+ *
+ * `baseCurrency` used to be absent here, which is exactly how the predicate
+ * drifted from the backend's: this side asked only whether a snapshot
+ * existed, and could not have asked anything else.
  */
 export function countUnconvertedStays(
-  stays: readonly { totalPrice: number | null; totalPriceBase: number | null }[]
+  stays: readonly LodgingStayFx[],
+  baseCurrency: string
 ): number {
-  return stays.filter((s) => s.totalPrice !== null && s.totalPriceBase === null).length;
+  return stays.filter((s) => isUnconvertedSpend(s, baseCurrency)).length;
 }

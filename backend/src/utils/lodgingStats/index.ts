@@ -16,6 +16,7 @@ import {
   classifyStay,
   type LodgingCountState,
 } from "../../shared/lodgingCounting";
+import { isUnconvertedSpend, lodgingBaseAmount } from "../../shared/lodgingSpendBase";
 import { resolveStayTiming, type StayTiming } from "../../shared/lodgingTiming";
 import { computeGeoStats } from "./geography";
 import { computeLoyaltyStats } from "./loyalty";
@@ -131,10 +132,26 @@ export function calculateLodgingStats(
     if (stay.currency && stay.totalPrice !== null) {
       spendByCurrency[stay.currency] = (spendByCurrency[stay.currency] ?? 0) + stay.totalPrice;
     }
-    if (stay.totalPriceBase !== null && stay.fxBaseCurrency !== null) {
+    // Three outcomes, in this order. The amount that reaches TODAY's base
+    // currency — by being priced in it, or by a snapshot taken in it — is
+    // booked under that currency; `shared/lodgingSpendBase.ts` owns which.
+    // Failing that, a snapshot taken under some OTHER base currency still
+    // belongs in the breakdown, under the currency it was converted into.
+    // Only a price that reached neither is unconverted.
+    //
+    // The order matters for the stay that has both: priced in the base
+    // currency AND snapshotted under an older one. Booking it under the old
+    // currency, as this did before the own-currency branch existed, hid a
+    // home-currency amount behind a "converted under a currency you have
+    // left" hint.
+    const baseAmount = lodgingBaseAmount(stay, currentBaseCurrency);
+    if (baseAmount !== null) {
+      spendBaseByCurrency[currentBaseCurrency] =
+        (spendBaseByCurrency[currentBaseCurrency] ?? 0) + baseAmount;
+    } else if (stay.totalPriceBase !== null && stay.fxBaseCurrency !== null) {
       spendBaseByCurrency[stay.fxBaseCurrency] =
         (spendBaseByCurrency[stay.fxBaseCurrency] ?? 0) + stay.totalPriceBase;
-    } else if (stay.totalPrice !== null) {
+    } else if (isUnconvertedSpend(stay, currentBaseCurrency)) {
       // Priced, but nothing converted it — the amount exists and is shown on
       // the stay, it just cannot be part of any base-currency sum.
       spendUnconvertedStays += 1;

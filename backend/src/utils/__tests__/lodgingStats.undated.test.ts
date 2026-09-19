@@ -38,6 +38,15 @@ const stay = (o: Partial<LodgingStayData>): LodgingStayData => ({
   ratingService: null,
   programName: null,
   membershipTier: null,
+  // A stay priced in the base currency has `totalPrice === totalPriceBase` by
+  // construction: `convertToBase` short-circuits an identical currency pair at
+  // rate 1, so no row the app can write has the two disagree. Keeping them in
+  // step here matters because `lodgingBaseAmount` reads the OWN price first for
+  // such a stay — a fixture that overrode only the snapshot would silently
+  // measure this helper's default instead of the amount the test named.
+  ...(o.totalPriceBase !== undefined && o.totalPrice === undefined
+    ? { totalPrice: o.totalPriceBase }
+    : {}),
   ...o,
 });
 

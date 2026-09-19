@@ -101,10 +101,11 @@ export interface LodgingPricedNight {
 }
 
 /**
- * Money, all in the user's CURRENT base currency and all from the subset of
- * stays whose FX snapshot matches it — the same slice `spendBaseTotal` sums.
- * A stay converted under an older base currency, or never converted at all,
- * contributes to `unpricedStays` instead of quietly skewing an average.
+ * Money, all in the user's CURRENT base currency and all from the stays that
+ * reach it — `shared/lodgingSpendBase.ts` decides which, the same rule
+ * `spendBaseTotal` sums and `ratings.bestValue` divides by. A stay converted
+ * under an older base currency, or never converted at all, contributes to
+ * `unpricedStays` instead of quietly skewing an average.
  */
 export interface LodgingPriceStats {
   avgPricePerNight: number | null;
@@ -113,7 +114,12 @@ export interface LodgingPriceStats {
   /** Nights behind the two figures above. */
   pricedNights: number;
   pricedStays: number;
-  /** Stays with a price that could not be compared — no conversion, or an older base currency. */
+  /**
+   * Stays with a price that could not be COMPARED — no amount in the current
+   * base currency, or no night to divide it by. Wider than the rollup's
+   * `spendUnconvertedStays`, which counts neither a same-day stay nor one
+   * converted under an older base currency.
+   */
   unpricedStays: number;
   cheapestNight: LodgingPricedNight | null;
   dearestNight: LodgingPricedNight | null;
@@ -197,30 +203,45 @@ export interface LodgingStats {
    */
   countriesByYear: Record<string, string[]>;
   /**
-   * Sum of totalPriceBase, but ONLY for stays whose `fxBaseCurrency` matches
-   * the CURRENT base currency passed into `calculateLodgingStats` — a stay
-   * snapshotted before the user switched their base currency keeps its OLD
-   * fxBaseCurrency forever (the snapshot is never recalculated), so it must
-   * never be silently added under the new currency's label (finding 2).
+   * Spend in the CURRENT base currency passed into `calculateLodgingStats`.
+   *
+   * A stay reaches it two ways, and `shared/lodgingSpendBase.ts` owns which:
+   * by being PRICED in it — its own price counts, with no FX snapshot asked
+   * for, which is what keeps every stay entered before those columns existed
+   * inside this figure — or by a snapshot TAKEN in it. A stay snapshotted
+   * before the user switched base currency keeps its old `fxBaseCurrency`
+   * forever (the snapshot is never recalculated), so it must never be
+   * silently added under the new currency's label (finding 2); it is reported
+   * by `spendBaseByCurrency` instead.
    */
   spendBaseTotal: number;
   /** Original amounts grouped by their original currency — not a conversion. */
   spendByCurrency: Record<string, number>;
   /**
-   * How many stays carry a price that no provider could convert, and are
-   * therefore absent from `spendBaseTotal`.
+   * How many stays carry a price that reached no base-currency sum at all,
+   * and are therefore absent from `spendBaseTotal`: a FOREIGN price that
+   * nothing converted.
    *
-   * The same rule the stay list uses (`countUnconvertedStays`): a price with
-   * no `totalPriceBase` at all. A stay converted under an OLDER base currency
-   * is NOT counted here — it has a rate, it is simply reported by
-   * `spendBaseByCurrency` instead, and counting it twice would put the same
-   * stay behind two different hints.
+   * `isUnconvertedSpend` in `shared/lodgingSpendBase.ts` is the rule, and the
+   * stay list asks the same function through its own mirror of that file
+   * (`countUnconvertedStays`). Two stays are deliberately NOT counted here. A
+   * stay priced in the base currency needs no rate, so it is in the total and
+   * naming it would describe a row the figure already holds — that is the
+   * defect this rule was extracted to end. A stay converted under an OLDER
+   * base currency HAS a rate and is reported by `spendBaseByCurrency`;
+   * counting it twice would put one stay behind two different hints.
    *
    * A total that silently omits rows reads exactly like a complete one, which
    * is why this number is computed here rather than left to each screen.
    */
   spendUnconvertedStays: number;
-  /** Every totalPriceBase amount grouped by the currency it was snapshotted into — the full picture behind spendBaseTotal's single current-base slice. */
+  /**
+   * Every converted amount under the currency it is an amount IN — the full
+   * picture behind `spendBaseTotal`'s single current-base slice. What reaches
+   * the CURRENT base currency sits under its key (by own price or by
+   * snapshot); what carries only a snapshot from an older base currency keeps
+   * that older key.
+   */
   spendBaseByCurrency: Record<string, number>;
   awardNights: number;
   /**

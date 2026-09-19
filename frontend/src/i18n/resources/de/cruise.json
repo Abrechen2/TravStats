@@ -275,11 +275,11 @@
       "bookedNotCounted_one": "{{count}} gebuchte Kreuzfahrt nicht gezählt",
       "bookedNotCounted_other": "{{count}} gebuchte Kreuzfahrten nicht gezählt",
       "baseTotal": "Gesamt in Basiswährung",
-      "baseTotalDesc": "Summiert über die bei der Buchung gespeicherten Kurse, in {{currency}}.",
+      "baseTotalDesc": "Summiert in {{currency}} — Beträge in dieser Währung unverändert, andere über den bei der Buchung gespeicherten Kurs.",
       "baseTotalNone": "Zu keiner dieser Kreuzfahrten ist ein Kurs nach {{currency}} gespeichert — deshalb keine Summe statt einer Null.",
-      "baseTotalExcluded_one": "{{count}} Kreuzfahrt ohne Kurs nicht enthalten",
-      "baseTotalExcluded_other": "{{count}} Kreuzfahrten ohne Kurs nicht enthalten",
-      "noTotalNote": "Die Zeilen oben bleiben in ihrer eigenen Währung: eine Kreuzfahrt speichert Preis und Währung, und Beträge verschiedener Währungen einfach zu addieren ergäbe eine Zahl, die niemand je bezahlt hat. Die Summe darunter rechnet stattdessen mit den gespeicherten Kursen und nennt, was sie auslassen musste."
+      "baseTotalExcluded_one": "{{count}} Kreuzfahrt in Fremdwährung ohne Kurs nicht enthalten",
+      "baseTotalExcluded_other": "{{count}} Kreuzfahrten in Fremdwährung ohne Kurs nicht enthalten",
+      "noTotalNote": "Die Zeilen oben bleiben in ihrer eigenen Währung: eine Kreuzfahrt speichert Preis und Währung, und Beträge verschiedener Währungen einfach zu addieren ergäbe eine Zahl, die niemand je bezahlt hat. Die Summe darunter rechnet stattdessen alles in die Basiswährung um — Beträge, die schon darin stehen, unverändert, alle anderen über den gespeicherten Kurs — und nennt, was sie auslassen musste."
     },
     "fun": {
       "title": "Kurioses",

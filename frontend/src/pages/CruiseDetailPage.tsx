@@ -25,6 +25,7 @@ import { formatDateInTimezone } from "../lib/dateUtils";
 import { formatAmount } from "../lib/units";
 import { useToastStore } from "../store/toastStore";
 import ConfirmModal from "../components/Training/ConfirmModal";
+import DocumentsSection from "../components/documents/DocumentsSection";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
@@ -240,6 +241,8 @@ export default function CruiseDetailPage(): JSX.Element {
               { label: t("field.bookingReference"), value: cruise.bookingReference, mono: true },
             ]}
           />
+
+          <DocumentsSection entry={{ type: "cruise", id: cruise.id }} />
         </div>
 
         <aside className="flex flex-col gap-6 md:col-span-2">

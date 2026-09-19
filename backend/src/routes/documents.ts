@@ -189,6 +189,17 @@ router.get(
 router.patch(
   "/documents/:id",
   authenticate,
+  // The same guard `POST /documents` carries, for the same reason and in the
+  // same place — above everything that reads the request.
+  //
+  // It was on the upload alone, and PATCH and DELETE were left to ownership:
+  // the shared demo account can own no document, so `updateDocument` and
+  // `deleteDocument` would not find one to touch. That is true and it is not
+  // a boundary — it holds because of what the data happens to contain, not
+  // because of what the route decides, and it stops holding the moment a
+  // restored dump, a seed, or a reassignment gives the demo account a
+  // document. Beta API audit of 2026-09-19, unlisted finding 4.
+  rejectDemo,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
@@ -209,6 +220,8 @@ router.patch(
 router.delete(
   "/documents/:id",
   authenticate,
+  // As on PATCH above — the guard is the boundary, ownership is not.
+  rejectDemo,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {

@@ -31,7 +31,8 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: {}, ready: true }),
 }));
 
-import ImmichAlbumPicker, { formatBytes } from "../ImmichAlbumPicker";
+import ImmichAlbumPicker from "../ImmichAlbumPicker";
+import { formatBytes } from "../../../lib/fileSize";
 
 const ALBUMS = [
   {

@@ -61,7 +61,7 @@ export function LodgingSpendCell({
   // a genuinely free night (an award stay entered as 0) converts fine and its
   // total is honestly zero.
   const pricedCount = counted.filter((s) => s.totalPrice !== null).length;
-  const unconverted = countUnconvertedStays(counted);
+  const unconverted = countUnconvertedStays(counted, baseCurrency);
   const nothingConverted = unconverted === pricedCount;
   // Some converted, some not: the figure below is real but incomplete, and
   // saying so is the same rule the detail page and the stat strip follow.

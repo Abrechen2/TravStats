@@ -16,6 +16,12 @@ const getByIdMock = vi.fn();
 // test that lets that request out (forgejo#110).
 vi.mock("../../hooks/useHasLlm", () => ({ useHasLlm: () => true }));
 
+// The documents section fetches its entry's kept originals on mount. It has
+// its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
+// this surface mounts it — here it would only be a request reaching the
+// network, which the setup refuses (forgejo#110).
+vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
+
 vi.mock("../../lib/api", () => ({
   tripsApi: {
     getById: (...args: unknown[]) => getByIdMock(...args),
