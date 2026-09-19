@@ -51,7 +51,17 @@
   },
   "progress": {
     "label": "Progress",
-    "unlocked": "Unlocked on {{date}}"
+    "unlocked": "Unlocked on {{date}}",
+    "units": {
+      "km": "km",
+      "hours": "h",
+      "days": "days",
+      "nights": "nights"
+    },
+    "evidence": {
+      "trigger": "The entries behind it",
+      "none": "There is no itemised list for this rule yet."
+    }
   },
   "alerts": {
     "unlocked": "You unlocked {{count}} new achievement(s)!",

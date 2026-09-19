@@ -6,6 +6,8 @@ import HelpIcon from "../Help/HelpIcon";
 import { ECB_CURRENCIES } from "../../shared/currencies";
 import { Segmented } from "../ui/Segmented";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
+import DemoLockedNotice from "./DemoLockedNotice";
+import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 
 interface UnitsSectionProps {
   units: UnitsSettings;
@@ -36,6 +38,9 @@ export default function UnitsSection({
   onSetBaseCurrency,
 }: UnitsSectionProps): JSX.Element {
   const { t } = useTranslation(["settings", "lodging"]);
+  // Same 403 as the display card, and the same silent local write before the
+  // beta audit of 2026-09-19.
+  const isDemo = useIsDemoAccount();
 
   return (
     <SectionCard>
@@ -43,6 +48,7 @@ export default function UnitsSection({
         title={t("settings:units.title")}
         description={t("settings:units.description")}
       />
+      {isDemo && <DemoLockedNotice />}
       <SettingRows>
         <SettingRow
           title={t("settings:units.distance")}
@@ -57,6 +63,7 @@ export default function UnitsSection({
                 name: t(`settings:units.options.${value}`),
               }))}
               onChange={(distanceUnit) => onSetUnits({ distanceUnit })}
+              disabled={isDemo}
             />
           }
         />
@@ -80,6 +87,7 @@ export default function UnitsSection({
               value={baseCurrency}
               onChange={onSetBaseCurrency}
               restrictTo={ECB_CURRENCIES}
+              disabled={isDemo}
             />
           }
         />

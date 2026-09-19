@@ -26,7 +26,10 @@
       "unattributedLocationHistoryOnly": "{{count}} nur durch den Standortverlauf belegt",
       "unattributedEntryRemoved": "{{count}} deren Eintrag inzwischen gelöscht wurde",
       "unattributedNotPerEntry": "{{count}} lassen sich nicht auf einzelne Einträge aufteilen"
-    }
+    },
+    "copyLink": "Link kopieren",
+    "copied": "Kopiert",
+    "copyFailed": "Kopieren fehlgeschlagen"
   },
   "entry": {
     "contribution": "trägt {{value}} bei",

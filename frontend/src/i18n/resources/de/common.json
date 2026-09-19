@@ -229,13 +229,14 @@
   "support": {
     "donate": "Spenden",
     "donateAria": "Über PayPal spenden",
-    "star": "Stern",
-    "starAria": "Auf GitHub einen Stern geben"
+    "star": "Projekt auf GitHub",
+    "starAria": "Das Projekt auf GitHub ansehen"
   },
   "filters": {
     "more": "Filter",
     "reset": "Filter zurücksetzen",
-    "showing": "{{count}} angezeigt",
+    "matching_one": "1 trifft zu",
+    "matching_other": "{{count}} treffen zu",
     "noMatch": "Nichts passt zu deinen Filtern",
     "filtered": "gefiltert"
   },

@@ -487,7 +487,10 @@ export default function PlacesListPage(): JSX.Element {
           resultLabel={
             loading || loadError
               ? ""
-              : t("places:list.resultCount", { shown: filtered.length, total: rows.length })
+              : // `count`, not `shown`: i18next picks the plural form off
+                // `count` and nothing else, and "1 von 95 treffen zu" is what
+                // a bespoke variable name bought (review, 2026-09-19).
+                t("places:list.resultCount", { count: filtered.length, total: rows.length })
           }
         />
 

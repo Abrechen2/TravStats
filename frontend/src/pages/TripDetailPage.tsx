@@ -21,8 +21,6 @@ import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import AppShell from "../components/ui/AppShell";
 import TripModal from "../components/Trips/TripModal";
 import TripHead from "../components/Trips/TripHead";
-import Pill from "../components/ui/Pill";
-import { token } from "../components/ui/tokens";
 import TripOverview from "../components/Trips/TripOverview";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import JournalViewModal from "../components/Trips/JournalViewModal";
@@ -254,7 +252,10 @@ interface TabBarProps {
   t: ReturnType<typeof useTranslation>["t"];
 }
 
-function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
+/** Exported for its own test: the "tours" tab kept a hard-coded "Beta" pill
+ *  long after the gate came off (auditor 3, 2026-09-19), and a badge no
+ *  registry entry backs is one nothing can ever take away. */
+export function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
   // Every tab is offered. "tours" was the last one behind the instance beta
   // flag, and the owner released it on 2026-09-18.
   const visibleTabs = TABS;
@@ -284,7 +285,6 @@ function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
             }}
           >
             {t(`trips:detail.tabs.${key}`)}
-            {key === "tours" && <Pill color={token("accent")}>Beta</Pill>}
           </button>
         );
       })}

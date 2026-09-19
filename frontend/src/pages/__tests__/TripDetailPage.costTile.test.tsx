@@ -13,6 +13,11 @@ import type { Trip } from "../../types";
  */
 const getByIdMock = vi.fn();
 
+// The page renders the summary card, which asks the instance whether it has a
+// text model at all (`GET /parser-capabilities`). The network guard fails any
+// test that lets that request out (forgejo#110).
+vi.mock("../../hooks/useHasLlm", () => ({ useHasLlm: () => true }));
+
 // The documents section fetches its entry's kept originals on mount. It has
 // its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
 // this surface mounts it — here it would only be a request reaching the

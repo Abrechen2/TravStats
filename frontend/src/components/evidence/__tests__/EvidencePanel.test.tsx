@@ -1,4 +1,5 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import type { JSX } from "react";
 import { render, screen, waitFor, cleanup } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, useSearchParams } from "react-router-dom";
@@ -396,5 +397,132 @@ describe("EvidencePanel", () => {
     await userEvent.keyboard("{Escape}");
     await waitFor(() => expect(screen.queryByRole("dialog")).not.toBeInTheDocument());
     expect(document.activeElement).toBe(opener);
+  });
+});
+
+/**
+ * Auditor 3, 2026-09-19: `?evidence=<kind>:<key>` exists so a link to the
+ * panel can be shared -- "A shared link opens the panel" is the reason
+ * `useEvidence.ts` gives for putting the state in the URL at all -- and
+ * nothing on screen said so. A share mechanism nobody is told about is not
+ * one.
+ */
+describe("EvidencePanel: sharing the panel", () => {
+  const writeText = vi.fn();
+
+  beforeEach(() => {
+    writeText.mockReset().mockResolvedValue(undefined);
+    Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  });
+
+  it("copies the address of the panel the reader is looking at", async () => {
+    vi.mocked(evidenceApi.get).mockResolvedValue(response());
+    renderPanel(["/stats?evidence=ranking%3Aairline%3ALH"]);
+    await screen.findByRole("dialog");
+
+    await userEvent.click(screen.getByRole("button", { name: "evidence:panel.copyLink" }));
+
+    expect(writeText).toHaveBeenCalledWith(window.location.href);
+    expect(await screen.findByText("evidence:panel.copied")).toBeInTheDocument();
+  });
+
+  it("says so when the copy fails instead of claiming it worked", async () => {
+    writeText.mockRejectedValue(new Error("denied"));
+    // The legacy fallback in `lib/clipboard` also has to fail for the promise
+    // to reject -- jsdom has no `execCommand`, so it does.
+    vi.mocked(evidenceApi.get).mockResolvedValue(response());
+    renderPanel(["/stats?evidence=ranking%3Aairline%3ALH"]);
+    await screen.findByRole("dialog");
+
+    await userEvent.click(screen.getByRole("button", { name: "evidence:panel.copyLink" }));
+
+    expect(await screen.findByText("evidence:panel.copyFailed")).toBeInTheDocument();
+  });
+});
+
+/**
+ * Review, 2026-09-19: "Kopiert" belongs to one copy, of one address. The
+ * panel is a singleton every tile reuses, so the confirmation stayed put --
+ * a reader who closed it and opened a different measure was told a link they
+ * never copied was on their clipboard.
+ */
+/**
+ * The panel plus the three things a reader can do around it: open another
+ * measure, close it, open it again. All through `?evidence=`, because that is
+ * where the panel's open state actually lives.
+ */
+function PanelWithSwitch(): JSX.Element {
+  const [, setSearchParams] = useSearchParams();
+  return (
+    <>
+      <button
+        data-testid="switch-measure"
+        onClick={() => setSearchParams({ evidence: "metric:flightCount" })}
+      >
+        switch
+      </button>
+      <button data-testid="close-panel" onClick={() => setSearchParams({})}>
+        close
+      </button>
+      <button
+        data-testid="reopen-panel"
+        onClick={() => setSearchParams({ evidence: "ranking:airline:LH" })}
+      >
+        reopen
+      </button>
+      <EvidencePanel />
+    </>
+  );
+}
+
+describe("EvidencePanel: the copy confirmation is about one visit", () => {
+  const writeText = vi.fn();
+
+  beforeEach(() => {
+    writeText.mockReset().mockResolvedValue(undefined);
+    Object.defineProperty(window, "isSecureContext", { value: true, configurable: true });
+    Object.defineProperty(navigator, "clipboard", { value: { writeText }, configurable: true });
+  });
+
+  it("is gone again on the next measure", async () => {
+    vi.mocked(evidenceApi.get).mockResolvedValue(response());
+    const view = render(
+      <MemoryRouter initialEntries={["/stats?evidence=ranking%3Aairline%3ALH"]}>
+        <PanelWithSwitch />
+      </MemoryRouter>
+    );
+    await screen.findByRole("dialog");
+
+    await userEvent.click(screen.getByRole("button", { name: "evidence:panel.copyLink" }));
+    expect(await screen.findByText("evidence:panel.copied")).toBeInTheDocument();
+
+    // Same panel, different measure — what the reader reaches by clicking a
+    // second tile without closing anything.
+    await userEvent.click(screen.getByTestId("switch-measure"));
+
+    expect(await screen.findByText("evidence:panel.copyLink")).toBeInTheDocument();
+    expect(screen.queryByText("evidence:panel.copied")).not.toBeInTheDocument();
+    view.unmount();
+  });
+
+  it("is gone again after the panel has been closed and reopened", async () => {
+    vi.mocked(evidenceApi.get).mockResolvedValue(response());
+    render(
+      <MemoryRouter initialEntries={["/stats?evidence=ranking%3Aairline%3ALH"]}>
+        <PanelWithSwitch />
+      </MemoryRouter>
+    );
+    await screen.findByRole("dialog");
+
+    await userEvent.click(screen.getByRole("button", { name: "evidence:panel.copyLink" }));
+    expect(await screen.findByText("evidence:panel.copied")).toBeInTheDocument();
+
+    await userEvent.click(screen.getByTestId("close-panel"));
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByTestId("reopen-panel"));
+
+    expect(await screen.findByText("evidence:panel.copyLink")).toBeInTheDocument();
+    expect(screen.queryByText("evidence:panel.copied")).not.toBeInTheDocument();
   });
 });

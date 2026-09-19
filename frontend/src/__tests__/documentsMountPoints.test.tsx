@@ -58,6 +58,11 @@ vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
 vi.mock("../hooks/usePlacesVisible", () => ({
   usePlacesAccess: () => ({ visible: true, loading: false }),
 }));
+// The trip surface renders the summary card, which since f52c3657 asks the
+// instance whether it has a text model at all (`GET /parser-capabilities`).
+// Landed here by a clean merge, not by a conflict: neither side's text
+// overlapped, so only running the suite showed it.
+vi.mock("../hooks/useHasLlm", () => ({ useHasLlm: () => true }));
 vi.mock("../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ isEnabled: () => true }),
 }));

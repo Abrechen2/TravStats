@@ -1,6 +1,7 @@
 import { useState, useRef } from "react";
 import { uploadsApi, API_URL } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
+import { apiErrorCode, apiErrorMessage, DEMO_FORBIDDEN_CODE } from "../lib/apiError";
 
 interface ReceiptUploadProps {
   currentReceiptUrl?: string | null;
@@ -13,7 +14,7 @@ export default function ReceiptUpload({
   onUploadSuccess,
   onDelete,
 }: ReceiptUploadProps): JSX.Element {
-  const { t } = useTranslation(["flights", "common", "errors"]);
+  const { t } = useTranslation(["flights", "common", "errors", "settings"]);
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState("");
@@ -43,8 +44,16 @@ export default function ReceiptUpload({
       onUploadSuccess(receiptUrl);
       setUploadProgress(0);
     } catch (err: unknown) {
-      const errorObj = err as { response?: { data?: { error?: string } } };
-      setError(errorObj.response?.data?.error || t("flights:receipt.uploadFailed"));
+      // It read `response.data.error` -- the machine CODE -- so the shared
+      // demo was shown a red "DEMO_ACCOUNT_FORBIDDEN" (auditor 3,
+      // 2026-09-19). The code belongs in the condition below, never on
+      // screen; the sentence it maps to is the one the settings cards already
+      // use, and the server's own `message` covers every other case.
+      setError(
+        apiErrorCode(err) === DEMO_FORBIDDEN_CODE
+          ? t("settings:demoLocked")
+          : (apiErrorMessage(err) ?? t("flights:receipt.uploadFailed"))
+      );
     } finally {
       setUploading(false);
     }

@@ -10,6 +10,9 @@ import "./index.css";
 import "maplibre-gl/dist/maplibre-gl.css";
 // Must run before any map mounts — see the file for the silent failure it prevents.
 import "./lib/maplibreWorker";
+// Must run before React does: `beforeinstallprompt` fires once and early, and
+// a listener registered when a component mounts never hears it.
+import "./lib/installPrompt";
 // MapLibre 6 removed `map.transform`, which @deck.gl/mapbox reads every frame.
 // See the file for what it restores and when to delete it.
 import { installMapLibreTransformBridge } from "./lib/maplibreTransformBridge";

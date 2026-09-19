@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import { countUniquePorts, countUnresolvedPorts } from "./cruisePorts";
 import { formatAmount } from "../../lib/units";
+import { useDisplayFormat } from "../../lib/displayFormat";
 import { TableRow, type TableColumn } from "../ui/Table";
 
 export type CruiseColumnId =
@@ -42,13 +43,17 @@ export const CRUISE_COLUMN_LAYOUT: Record<
   actions: { min: 88, align: "end" },
 };
 
-const fmtDate = (iso: string | null): string => {
-  if (!iso) return "—";
-  return new Date(iso).toISOString().slice(0, 10);
-};
-
 export function CruiseRow({ cruise, onOpen, actions, columns }: Props): JSX.Element {
   const { t } = useTranslation("cruise");
+  // Through the settings formatter, like the flight list and the cruise's own
+  // detail page. This row printed `new Date(iso).toISOString().slice(0, 10)` —
+  // a raw ISO day no setting reached, so a reader on TT.MM.JJJJ got
+  // "2027-03-11 – 2027-03-18" here and "11.03.2027" everywhere else (beta
+  // audit 2026-09-19, Alex 10). UTC stays: the value is a calendar day, not an
+  // instant, and the viewer's own zone would move a sailing by a day.
+  const display = useDisplayFormat();
+  const fmtDate = (iso: string | null): string =>
+    iso ? display.date(iso, { timeZone: "UTC" }) : "—";
   const portsCount = countUniquePorts(cruise);
   const unresolvedCount = countUnresolvedPorts(cruise);
   const displayLine = cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—";

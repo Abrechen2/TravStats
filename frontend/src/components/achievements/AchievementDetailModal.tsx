@@ -3,6 +3,10 @@ import type { JSX } from "react";
 import Modal from "../Modal";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatDate } from "../../lib/displayFormat";
+import { localeForLanguage } from "../../lib/units";
+import EvidenceTrigger from "../Stats/EvidenceTrigger";
+import { evidenceKeyForRule } from "./achievementEvidenceKey";
+import { progressUnitForRule } from "./achievementProgressUnit";
 import type { Achievement } from "../../types";
 
 /**
@@ -12,16 +16,19 @@ import type { Achievement } from "../../types";
  * while nothing was clickable — a tester clicked and nothing happened. The
  * owner's call (2026-09-11) was to keep the affordance and make it true, and
  * the scope (2026-09-17) is what this shows: the badge, the progress, and the
- * date it was unlocked. Deliberately NOT which flights or stays earned it —
- * the engine stores `progress` and `requirement`, not the rows behind them, so
- * naming them here would be a claim this dialog cannot back.
+ * date it was unlocked.
  *
- * That is a statement about the data, not a verdict on the feature, and it has
- * a date on it: the evidence endpoint is being built on `dev/design-system`
- * (confirmed by that session on 2026-09-18). When it lands, showing what
- * earned an achievement is a WIRING job in here, not a new surface — pass the
- * rows in and render them below the progress. Whoever does it should not read
- * the paragraph above as a decision against it.
+ * Since the beta audit of 2026-09-19 it also shows the ENTRIES behind the
+ * statistic, which the public #330 comment promised and this dialog did not
+ * have. `kind=achievement` still answers 501 (release 2), but most rules do
+ * not need it: "Absolviere 10 Flüge" counts the flights `flightCount` already
+ * lists. `achievementEvidenceKey.ts` is that join, and it is deliberately
+ * partial — a rule with no served measure says so in one sentence rather than
+ * drawing a trigger over a 404.
+ *
+ * The progress fraction is formatted in the reader's locale, with the rule's
+ * unit where it has one: `495456 / 500000` read as neither a distance nor a
+ * number (audit finding, unlisted 4).
  *
  * A hidden achievement that is still locked stays hidden in here too. The
  * grid draws it as "???" on purpose; a dialog that spelled it out would be a
@@ -40,7 +47,7 @@ export default function AchievementDetailModal({
   achievement: Achievement | null;
   onClose: () => void;
 }): JSX.Element | null {
-  const { t } = useTranslation(["achievements", "common"]);
+  const { t, i18n } = useTranslation(["achievements", "common"]);
   if (!achievement) return null;
 
   const isMystery = Boolean(achievement.isHidden) && !achievement.isUnlocked;
@@ -62,6 +69,19 @@ export default function AchievementDetailModal({
   const percentage =
     achievement.progressPercentage ??
     (requirement > 0 ? Math.min(100, Math.round((progress / requirement) * 100)) : 0);
+
+  // `localeForLanguage` rather than `toLocaleString()` with no argument: the
+  // browser/OS locale is not the language the page is in, and units.ts owns
+  // that rule for every other number on the site.
+  const locale = localeForLanguage(i18n.language);
+  const unitKey = progressUnitForRule(achievement.requirementType);
+  const unit = unitKey ? ` ${t(`achievements:progress.units.${unitKey}`)}` : "";
+  const progressText = `${progress.toLocaleString(locale)} / ${requirement.toLocaleString(locale)}${unit}`;
+
+  // A hidden achievement keeps its secret here too — naming the statistic
+  // behind it, or listing the entries, would spell out what the grid draws as
+  // "???" on purpose.
+  const evidenceKey = isMystery ? null : evidenceKeyForRule(achievement.requirementType);
 
   return (
     <Modal
@@ -120,7 +140,7 @@ export default function AchievementDetailModal({
             <div className="flex justify-between text-sm">
               <span style={{ color: "var(--text-muted)" }}>{t("achievements:progress.label")}</span>
               <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                {progress} / {requirement}
+                {progressText}
               </span>
             </div>
             <div className="h-2 w-full rounded-full" style={{ background: "var(--bg-muted)" }}>
@@ -131,6 +151,28 @@ export default function AchievementDetailModal({
             </div>
           </div>
         )}
+
+        {!isMystery &&
+          (evidenceKey ? (
+            <EvidenceTrigger
+              kind="metric"
+              evidenceKey={evidenceKey}
+              renderedValue={achievement.progress ?? null}
+              label={t("achievements:progress.evidence.trigger")}
+              className="text-sm underline"
+              style={{ color: "var(--accent)" }}
+            >
+              {t("achievements:progress.evidence.trigger")}
+            </EvidenceTrigger>
+          ) : (
+            <p
+              className="text-xs"
+              style={{ color: "var(--text-muted)" }}
+              data-testid="achievement-detail-no-evidence"
+            >
+              {t("achievements:progress.evidence.none")}
+            </p>
+          ))}
       </div>
     </Modal>
   );

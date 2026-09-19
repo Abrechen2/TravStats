@@ -26,6 +26,7 @@ vi.mock("../../lib/logger", () => ({
 
 import { useAuthStore } from "../authStore";
 import { useDashboardCountsStore } from "../dashboardCountsStore";
+import { rememberQuotaRefused, wasQuotaRefused } from "../../lib/bulkRefreshRefusal";
 
 function seedCounts(): void {
   useDashboardCountsStore
@@ -78,5 +79,42 @@ describe("authStore: an account switch resets dashboardCountsStore (Critical, re
 
     expect(useDashboardCountsStore.getState().counts.flight).toBe(0);
     expect(useDashboardCountsStore.getState().countsLoaded).toBe(false);
+  });
+});
+
+/**
+ * The same failure mode, found in review on 2026-09-19 one module along: the
+ * bulk-refresh card remembers that the server refused THIS account's quota,
+ * and that memory must not survive the account switch either. It sat in
+ * `sessionStorage`, which no SPA navigation clears.
+ */
+describe("authStore: an account switch forgets the bulk-refresh refusal", () => {
+  beforeEach(() => window.sessionStorage.clear());
+
+  it("clearSession forgets it", () => {
+    rememberQuotaRefused("user-a");
+    expect(wasQuotaRefused("user-a")).toBe(true);
+
+    useAuthStore.getState().clearSession();
+
+    expect(wasQuotaRefused("user-a")).toBe(false);
+  });
+
+  it("logout forgets it once the API call settles", async () => {
+    mocks.logout.mockResolvedValue(undefined);
+    rememberQuotaRefused("user-a");
+
+    await useAuthStore.getState().logout();
+
+    expect(wasQuotaRefused("user-a")).toBe(false);
+  });
+
+  it("forgets it even when the logout request fails", async () => {
+    mocks.logout.mockRejectedValue(new Error("offline"));
+    rememberQuotaRefused("user-a");
+
+    await useAuthStore.getState().logout();
+
+    expect(wasQuotaRefused("user-a")).toBe(false);
   });
 });

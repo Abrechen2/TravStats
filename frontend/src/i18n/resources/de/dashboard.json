@@ -193,7 +193,8 @@
       "lodging": "Unterkünfte",
       "poi": "Orte",
       "tour": "Touren"
-    }
+    },
+    "disabledHint": "Bereich deaktiviert — Einstellungen → Bereiche"
   },
   "addPicker": {
     "button": "Hinzufügen",
@@ -322,5 +323,6 @@
     "inHours_one": "in {{count}} Std.",
     "inHours_other": "in {{count}} Std.",
     "today": "heute"
-  }
+  },
+  "installApp": "Als App installieren"
 }

@@ -7,7 +7,7 @@
     "v270": {
       "design": {
         "title": "One look for web and app",
-        "body": "TravStats now looks like the Companion app: the same colours, spacing and type, one heading per page, a dark mode that comes from the colour tokens instead of special rules. Settings are split into groups, each with its own address, and the admin area is a page of its own beside them — no longer a submenu."
+        "body": "TravStats now looks like the Companion app: the same colours, spacing and type, one heading per page, a dark mode that comes from the colour tokens instead of special rules. Settings are split into groups: flights, cruises and lodging each have an address of their own, while account, display, data and services are sections on the general page. The admin area is a page of its own beside them — no longer a submenu."
       },
       "evidence": {
         "title": "Every number shows what it is made of",
@@ -23,11 +23,11 @@
       },
       "placesPassport": {
         "title": "Places and the passport are finished",
-        "body": "Places are a full domain with lists, checklists and the import of saved Google Maps lists; the passport shows countries with their evidence. Both sat behind the beta switch since 2.6 and are simply there now — as is the colour per domain, which has become an ordinary setting."
+        "body": "Places are a full domain with lists, checklists and a CSV import that also takes a Google Takeout export; the passport shows countries with their evidence. Both sat behind the beta switch since 2.6 and are simply there now — as is the colour per domain, which has become an ordinary setting."
       },
       "toursAndSummary": {
         "title": "Tours, the AI summary and Dawarich are released",
-        "body": "A trip can be walked, driven or cycled: tours appear as legs in the trip journal, with a route editor. The AI summary of a trip now names only what the data holds — no invented hotel, no sentence about missing days. Location history from Dawarich counts as evidence for a country."
+        "body": "A trip can be walked, driven or cycled: tours have a tab of their own on the trip, with a route editor. The AI summary of a trip now names only what the data holds — no invented hotel, no sentence about missing days. Location history from Dawarich counts as evidence for a country."
       },
       "inbox": {
         "title": "Inbox with tabs, a logbook that pages, the app on your home screen",

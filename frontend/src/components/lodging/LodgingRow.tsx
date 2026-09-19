@@ -10,7 +10,7 @@ import { lodgingLifecycleStatus } from "./lodgingLifecycle";
 import { hasOtherBaseCurrencySpend, LodgingSpendCell } from "./LodgingSpendCell";
 import { lodgingTypeIcon } from "../../lib/lodgingFormat";
 import { FlagImg, resolveCountryCode } from "../../lib/countryFlag";
-import { formatIsoDate } from "../../lib/dateUtils";
+import { useDisplayFormat } from "../../lib/displayFormat";
 import { latestStayDayOf } from "../../lib/lodgingLatestStay";
 import { RowActionButton, RowActions } from "../table/RowActionButton";
 import { TableRow, type TableColumn } from "../ui/Table";
@@ -78,6 +78,11 @@ export function LodgingRow({
   columns,
 }: Props): JSX.Element {
   const { t } = useTranslation(["lodging", "common"]);
+  // The newest stay's day, in the format the reader chose. It was
+  // `formatIsoDate(day, "UTC")` — a raw ISO day no setting reached — while the
+  // lodging DETAIL page already obeyed TT.MM.JJJJ (beta audit 2026-09-19,
+  // Alex 10). UTC stays: a check-in is a calendar day, not an instant.
+  const display = useDisplayFormat();
   // The hotel's own date: newest stay, planned ones included — the same helper
   // the activity sidebar uses, so the two cannot drift apart.
   const day = latestStayDayOf(l);
@@ -128,7 +133,7 @@ export function LodgingRow({
         <LodgingStatusTag lodging={l} />
       </span>
     ),
-    lastStay: day ? formatIsoDate(day, "UTC") : "—",
+    lastStay: day ? display.date(day, { timeZone: "UTC" }) : "—",
     stays: l.stayCount,
     nights: l.nights,
     rating: <StarRating value={l.overallRating} />,
