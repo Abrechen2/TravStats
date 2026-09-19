@@ -1,10 +1,10 @@
-import { Navigate } from "react-router-dom";
 import type { JSX, ReactNode } from "react";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import type { DomainKey } from "../shared/domains";
 import NavigationBar from "./NavigationBar";
+import { DomainDisabledNotice } from "./Dashboard/tabs/DomainDisabledNotice";
 
 /**
  * Route guard for a domain page — three states, not two.
@@ -21,8 +21,8 @@ import NavigationBar from "./NavigationBar";
  * beside it names the same bug. This is that guard generalised, so the four
  * domains stop answering the question differently.
  *
- * POI keeps its own guard because its answer also depends on the beta flag —
- * a second unknown with its own pending state.
+ * POI keeps its own guard because its answer is reached differently, but it
+ * refuses the same way — see `places/PlacesRouteGuard`.
  */
 export function DomainRouteGuard({
   domain,
@@ -46,7 +46,18 @@ export function DomainRouteGuard({
     );
   }
 
-  if (!isEnabled(domain)) return <Navigate to="/" replace />;
+  // Not a redirect. The reader followed a link here; bouncing them to the
+  // dashboard left them unable to tell a wrong address from a switched-off
+  // area (forgejo#88 finding 6). This is the same card the dashboard tab for
+  // a disabled domain already showed, and it carries the way to turn it on.
+  if (!isEnabled(domain)) {
+    return (
+      <>
+        <NavigationBar />
+        <DomainDisabledNotice domain={domain} />
+      </>
+    );
+  }
 
   return <>{children}</>;
 }
