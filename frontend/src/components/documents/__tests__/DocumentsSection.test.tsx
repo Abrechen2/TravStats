@@ -175,5 +175,41 @@ describe("DocumentsSection", () => {
 
     expect(await screen.findByText("documents:loadFailed")).toBeInTheDocument();
     expect(screen.queryByText("documents:empty")).toBeNull();
+    // ... and draws no empty list under the error either. An empty <ul> below
+    // a failure reads as "the server answered, there is nothing", which is the
+    // one thing the error line exists to deny.
+    expect(screen.queryByRole("list")).toBeNull();
+  });
+
+  it("closes the dialog when the delete fails, and keeps the row it did not remove", async () => {
+    documentsApiMock.listForEntry.mockResolvedValue([makeDocument()]);
+    documentsApiMock.remove.mockRejectedValue(new Error("boom"));
+    render(<DocumentsSection entry={FLIGHT} />);
+
+    fireEvent.click(await screen.findByRole("button", { name: "documents:removeLabel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "common:buttons.delete" }));
+
+    expect(await screen.findByText("documents:deleteFailed")).toBeInTheDocument();
+    // The dialog used to stay open over the message, so the failure was
+    // readable only behind a modal that looked like it was still working.
+    await waitFor(() => expect(screen.queryByText("documents:deleteMessage")).toBeNull());
+    expect(screen.getByText("LH2462.pdf")).toBeInTheDocument();
+  });
+
+  it("clears a stale message once something works", async () => {
+    documentsApiMock.listForEntry.mockResolvedValue([makeDocument()]);
+    render(<DocumentsSection entry={FLIGHT} />);
+    await screen.findByText("documents:limitHint");
+
+    const huge = new File(["x"], "scan.eml", { type: "message/rfc822" });
+    Object.defineProperty(huge, "size", { value: 3 * 1024 * 1024 });
+    fireEvent.change(screen.getByTestId("documents-file-input"), { target: { files: [huge] } });
+    expect(await screen.findByText("documents:tooLarge")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: "documents:removeLabel" }));
+    fireEvent.click(await screen.findByRole("button", { name: "common:buttons.delete" }));
+
+    await waitFor(() => expect(screen.queryByText("LH2462.pdf")).toBeNull());
+    expect(screen.queryByText("documents:tooLarge")).toBeNull();
   });
 });

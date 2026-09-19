@@ -136,16 +136,20 @@ export default function DocumentsSection({ entry, layout = "card" }: Props): JSX
     try {
       await documentsApi.remove(id);
       setDocuments((prev) => prev.filter((doc) => doc.id !== id));
-      setPendingDelete(null);
+      setError(null);
     } catch (err: unknown) {
       if (isDemoForbidden(err)) {
         setDemoRefused(true);
-        setPendingDelete(null);
       } else {
         logger.error({ err, id }, "DocumentsSection: delete failed");
         setError(t("documents:deleteFailed"));
       }
     } finally {
+      // The question has been answered either way, so the dialog closes either
+      // way. Leaving it open on a failure hid the message behind a modal that
+      // still looked busy, and the only way out was the cancel button — which
+      // reads as "the delete was cancelled" when it was refused.
+      setPendingDelete(null);
       setBusy(false);
     }
   }, [pendingDelete, t]);
@@ -160,8 +164,14 @@ export default function DocumentsSection({ entry, layout = "card" }: Props): JSX
         </p>
       )}
 
-      {documents.length === 0 && !loadFailed ? (
-        <p className="t-caption">{t("documents:empty")}</p>
+      {/* Three states, not two. A failed load is neither "here they are" nor
+          "there are none": the list is drawn only when there IS one, and the
+          empty sentence only when the server actually said so. The else-branch
+          alone used to draw an empty <ul> under the error line. */}
+      {documents.length === 0 ? (
+        loadFailed ? null : (
+          <p className="t-caption">{t("documents:empty")}</p>
+        )
       ) : (
         <ul className="flex flex-col" style={{ gap: "var(--ts-space-sm)" }}>
           {documents.map((doc) => (
