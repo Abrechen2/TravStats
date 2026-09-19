@@ -25,7 +25,14 @@
 // bar shows, and a number that could only ever rise would be a lie about the
 // data. Holding is the union: the measure is met NOW, or it was met ONCE.
 
-/** The parts of a `UserAchievement` row that decide held-ness. */
+/**
+ * The parts of a `UserAchievement` row that decide held-ness.
+ *
+ * `unlockedAt` is REQUIRED, and deliberately not optional: a Prisma `select`
+ * that forgets the column must fail to compile here rather than hand this
+ * function an `undefined` it would have to guess about. The leaderboard's
+ * `select` is exactly that risk — it lists its columns by hand.
+ */
 export interface HeldInput {
   progress: number;
   unlockedAt: Date | null;
@@ -46,8 +53,15 @@ export interface HeldInput {
  * What this cannot do is give back a badge the old revoke path already emptied:
  * such a row lost its date AND sits below its requirement, and nothing in the
  * table remembers it. Those come back when the measure does.
+ *
+ * `!= null`, not `!== null`. A row that never carried the column at all —
+ * a `select` that left it out, or a stub in a test — arrives with `undefined`,
+ * and a strict comparison reads that as a date and hands out the badge.
+ * Measured the day this rule shipped: `routes/achievements.rank.test.ts` stubs
+ * its rows without the column, and a locked 9000-point badge was counted,
+ * putting the user two rungs up the rank ladder. A missing date is not a date.
  */
 export function isAchievementHeld(row: HeldInput | null | undefined, requirement: number): boolean {
   if (!row) return false;
-  return row.progress >= requirement || row.unlockedAt !== null;
+  return row.progress >= requirement || row.unlockedAt != null;
 }

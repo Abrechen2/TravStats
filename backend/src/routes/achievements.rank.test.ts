@@ -68,9 +68,11 @@ describe("GET /api/v1/achievements — rank in the summary", () => {
     const locked = achievement("a2", 9000);
     mockAchievementFindMany.mockResolvedValue([unlocked, locked]);
     mockUserAchievementFindMany.mockResolvedValue([
-      { achievementId: "a1", progress: 1, achievement: unlocked },
-      // in progress, not unlocked — its points must not count toward the rank
-      { achievementId: "a2", progress: 0, achievement: locked },
+      { achievementId: "a1", progress: 1, unlockedAt: new Date(), achievement: unlocked },
+      // in progress, not unlocked — its points must not count toward the rank.
+      // `unlockedAt: null` is not decoration: held-ness reads that column now
+      // (utils/achievementHeld.ts), so a stub without it describes no real row.
+      { achievementId: "a2", progress: 0, unlockedAt: null, achievement: locked },
     ]);
 
     const res = await request(app).get("/api/v1/achievements");
@@ -86,7 +88,7 @@ describe("GET /api/v1/achievements — rank in the summary", () => {
     const top = achievement("a1", 12_000);
     mockAchievementFindMany.mockResolvedValue([top]);
     mockUserAchievementFindMany.mockResolvedValue([
-      { achievementId: "a1", progress: 1, achievement: top },
+      { achievementId: "a1", progress: 1, unlockedAt: new Date(), achievement: top },
     ]);
 
     const res = await request(app).get("/api/v1/achievements");
@@ -99,7 +101,7 @@ describe("GET /api/v1/achievements — rank in the summary", () => {
     const a1 = achievement("a1", 100);
     mockAchievementFindMany.mockResolvedValue([a1, achievement("a2", 50)]);
     mockUserAchievementFindMany.mockResolvedValue([
-      { achievementId: "a1", progress: 1, achievement: a1 },
+      { achievementId: "a1", progress: 1, unlockedAt: new Date(), achievement: a1 },
     ]);
 
     const res = await request(app).get("/api/v1/achievements");
