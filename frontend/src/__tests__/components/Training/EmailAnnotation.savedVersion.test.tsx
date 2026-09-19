@@ -78,6 +78,29 @@ describe("EmailAnnotation — the version a sample was saved as", () => {
     expect(document.body.textContent).toContain("reservierung@hotel-seeblick.test");
   });
 
+  it("does not filter a legacy save that has no marks and no version", async () => {
+    // Re-review of `fix/workshop-lodging-derivation`: a sample saved before
+    // `filtered` existed carries `textSelections` and nothing else, so the
+    // flag alone could not tell it from a fresh upload and it was filtered a
+    // second time. Which KEYS the blob holds is the answer; the number of
+    // marks is not. `TrainingData.status` cannot answer it either — the
+    // annotate route never writes that column, so a saved sample is still
+    // "pending".
+    vi.mocked(api.trainingApi.getById).mockResolvedValue(
+      sample({ type: "email", fullText: STORED, textSelections: [] })
+    );
+    render(
+      <EmailAnnotation
+        trainingDataId="td1"
+        domain="lodging"
+        onComplete={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    await waitFor(() => screen.getByText("training:annotation.saveOnly"));
+    expect(document.body.textContent).toContain(GREETING);
+  });
+
   it("still filters a fresh upload, which was never saved and carries no version", async () => {
     vi.mocked(api.trainingApi.getById).mockResolvedValue(
       sample({ type: "email", fullText: STORED })

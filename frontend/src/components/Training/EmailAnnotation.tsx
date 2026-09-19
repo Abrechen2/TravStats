@@ -99,22 +99,30 @@ export default function EmailAnnotation({
             } else {
               setAnnotations(stored);
             }
-            // Marks already exist, and they point into the text as it was
-            // SAVED. Filtering that text again for display would move every
-            // highlight off its value — and the second save would then store
-            // a third version. Show exactly what was stored.
-            if (stored.length > 0) setShowFiltered(false);
           }
-          // `filtered` says which version the stored text IS — it is written
-          // on every save, and until now nothing read it back. A saved sample
-          // is therefore shown as it was saved, whether or not anything is
-          // marked: running the filter over an already-filtered document is a
-          // SECOND pass, and this one is not idempotent (its greeting rules
-          // are anchored at the start of a line, so a pass can expose a line
-          // the next pass then removes). A sample saved deliberately
-          // unfiltered keeps its headers on screen for the same reason: that
-          // was the reader's choice, and re-filtering would quietly undo it.
-          if (typeof annotationsData.filtered === "boolean") setShowFiltered(false);
+          // Has this sample been SAVED before? Then its text is shown as it
+          // was stored, marked or not.
+          //
+          // Running the filter over an already-filtered document is a SECOND
+          // pass, and it is not idempotent — the greeting rules are anchored
+          // at the start of a line, so one pass can expose a line the next
+          // pass then removes. A sample saved deliberately unfiltered loses
+          // its headers the same way, which quietly undoes the reader's own
+          // choice. And where there are marks, the text they were measured
+          // against is the only text they fit.
+          //
+          // The question is answered by which KEYS the annotation blob holds,
+          // not by how many marks it has: an upload writes `{fullText}` alone,
+          // every save writes `textSelections` (empty array included) and,
+          // since this branch, `filtered`. A legacy save with nothing marked
+          // has the first and not the second, and was being filtered again.
+          //
+          // `TrainingData.status` cannot answer it: the annotate route never
+          // writes that column (`routes/training.ts` — it is set to "pending"
+          // at upload and next changed by the training job), so a saved sample
+          // is still "pending".
+          const wasSaved = "textSelections" in annotationsData || "filtered" in annotationsData;
+          if (wasSaved) setShowFiltered(false);
         }
 
         if (
