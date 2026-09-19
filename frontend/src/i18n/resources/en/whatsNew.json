@@ -4,6 +4,40 @@
   "dismiss": "Got it",
   "betaBadge": "Beta",
   "entries": {
+    "v270": {
+      "design": {
+        "title": "One look for web and app",
+        "body": "TravStats now looks like the Companion app: the same colours, spacing and type, one heading per page, a dark mode that comes from the colour tokens instead of special rules. Settings are split into groups, each with its own address, and the admin area is a page of its own beside them — no longer a submenu."
+      },
+      "evidence": {
+        "title": "Every number shows what it is made of",
+        "body": "Click a figure or a row in a ranking and a panel lists the entries that produced it — flights, cruises, stays, places — with each entry's share. What cannot be attributed is said rather than dropped: a total without an exchange rate stays empty and names the reason. The panel can be shared as a link."
+      },
+      "yearCompare": {
+        "title": "The running year compares fairly",
+        "body": "A part year used to stand against a whole one and read like a collapse in September. The running year is now compared with the same span of the previous year, and the label says so. Where a figure comes from the server per year, it honestly says “vs. the full year”. The comparison moves for everyone whose year is still running."
+      },
+      "documents": {
+        "title": "Documents and receipts have a home",
+        "body": "Boarding passes, hotel invoices and booking confirmations now live as documents on the entry they belong to, and a receipt is attached to what it proves. TravStats reads every document it knows — a photographed invoice, a boarding pass through its barcode, a Booking.com mail through a fixed template — and files it instead of leaving it lying around."
+      },
+      "placesPassport": {
+        "title": "Places and the passport are finished",
+        "body": "Places are a full domain with lists, checklists and the import of saved Google Maps lists; the passport shows countries with their evidence. Both sat behind the beta switch since 2.6 and are simply there now — as is the colour per domain, which has become an ordinary setting."
+      },
+      "toursAndSummary": {
+        "title": "Tours, the AI summary and Dawarich are released",
+        "body": "A trip can be walked, driven or cycled: tours appear as legs in the trip journal, with a route editor. The AI summary of a trip now names only what the data holds — no invented hotel, no sentence about missing days. Location history from Dawarich counts as evidence for a country."
+      },
+      "inbox": {
+        "title": "Inbox with tabs, a logbook that pages, the app on your home screen",
+        "body": "The inbox sorts flight updates, open questions and suggestions into tabs with status counts. The logbook shows one page instead of every row while the summary strip still counts everything. And TravStats can be installed as a web app — an icon on the home screen, without the browser frame."
+      },
+      "beta": {
+        "title": "Only app pairing is still beta",
+        "body": "Everything that sat behind the beta switch in 2.6 is finished in 2.7 — except one thing: pairing with the TravStats Companion app. Pairing itself works; what is unfinished is the app. Its registry entry says when it comes back."
+      }
+    },
     "v260": {
       "countries": {
         "title": "Countries count by evidence, not by landing",

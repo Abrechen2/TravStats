@@ -4,6 +4,40 @@
   "dismiss": "Verstanden",
   "betaBadge": "Beta",
   "entries": {
+    "v270": {
+      "design": {
+        "title": "Ein Erscheinungsbild für Web und App",
+        "body": "TravStats sieht jetzt aus wie die Companion-App: dieselben Farben, Abstände und Schriften, eine Seitenüberschrift je Seite, ein Dunkelmodus, der aus den Farbtokens kommt statt aus Sonderregeln. Die Einstellungen sind nach Gruppen aufgeteilt, jede mit eigener Adresse, und der Admin-Bereich ist eine eigene Seite neben ihnen — kein Untermenü mehr."
+      },
+      "evidence": {
+        "title": "Jede Zahl zeigt, woraus sie besteht",
+        "body": "Klick auf eine Kennzahl oder eine Zeile in einer Rangliste, und ein Panel listet die Einträge, die sie ergeben haben — Flüge, Kreuzfahrten, Aufenthalte, Orte —, mit dem Beitrag jedes Eintrags. Was sich nicht zuordnen lässt, wird gesagt statt weggelassen: eine Summe ohne Kurs bleibt leer und nennt den Grund. Das Panel lässt sich als Link teilen."
+      },
+      "yearCompare": {
+        "title": "Das laufende Jahr vergleicht sich fair",
+        "body": "Bisher stand ein angefangenes Jahr gegen ein ganzes und las sich im September wie ein Einbruch. Jetzt wird das laufende Jahr mit demselben Zeitraum des Vorjahres verglichen, und die Beschriftung sagt es. Wo eine Zahl vom Server pro Jahr kommt, steht ehrlich „ggü. ganzem Jahr“. Die Vergleichszahl bewegt sich für alle, deren Jahr noch läuft."
+      },
+      "documents": {
+        "title": "Dokumente und Belege haben einen Ort",
+        "body": "Bordkarten, Hotelrechnungen und Buchungsbestätigungen liegen jetzt als Dokumente am Eintrag, zu dem sie gehören, und ein Beleg hängt an dem, was er belegt. TravStats liest jedes Dokument, das es kennt, selbst — eine fotografierte Rechnung, eine Bordkarte über ihren Strichcode, eine Booking.com-Mail über eine feste Vorlage — und legt es ab, statt es liegen zu lassen."
+      },
+      "placesPassport": {
+        "title": "Orte und Reisepass sind fertig",
+        "body": "Orte sind ein vollwertiger Bereich mit Listen, Checklisten und dem Import gespeicherter Google-Maps-Listen; der Reisepass zeigt die Länder mit ihren Belegen. Beides stand seit 2.6 hinter dem Beta-Schalter und ist jetzt einfach da — ebenso die eigene Farbe je Bereich, die eine gewöhnliche Einstellung geworden ist."
+      },
+      "toursAndSummary": {
+        "title": "Touren, KI-Zusammenfassung und Dawarich sind freigegeben",
+        "body": "Eine Reise kann gewandert, gefahren oder geradelt sein: Touren stehen als Abschnitte im Reisejournal, mit Routeneditor. Die KI-Zusammenfassung einer Reise nennt nur noch, was in den Daten steht — kein erfundenes Hotel, kein Satz über fehlende Tage. Die Standorthistorie aus Dawarich zählt als Beleg für ein Land."
+      },
+      "inbox": {
+        "title": "Posteingang mit Reitern, Logbuch blättert, App auf dem Startbildschirm",
+        "body": "Der Posteingang sortiert Flug-Updates, offene Fragen und Vorschläge in Reiter mit Statuszählern. Das Logbuch zeigt eine Seite statt aller Zeilen, die Summenleiste zählt trotzdem alles. Und TravStats lässt sich als Web-App installieren — ein Symbol auf dem Startbildschirm, ohne Browserrahmen."
+      },
+      "beta": {
+        "title": "Nur noch die App-Kopplung ist Beta",
+        "body": "Alles, was in 2.6 hinter dem Beta-Schalter lag, ist in 2.7 fertig — bis auf eines: die Kopplung mit der TravStats-Companion-App. Das Koppeln selbst funktioniert; unfertig ist die App. Der Eintrag im Register sagt, wann er zurückkommt."
+      }
+    },
     "v260": {
       "countries": {
         "title": "Länder zählen nach Beleg, nicht nach Landung",
