@@ -10,7 +10,7 @@
  * Step UIs live in FlightForm/FlightLookupStep, FlightSelectStep, FlightCompleteStep
  */
 
-import { useId } from "react";
+import { useId, useRef } from "react";
 import { useTranslation } from "../hooks/useTranslation";
 import Modal from "./Modal";
 
@@ -19,6 +19,7 @@ import FlightLookupStep from "./FlightForm/FlightLookupStep";
 import FlightSelectStep from "./FlightForm/FlightSelectStep";
 import FlightCompleteStep from "./FlightForm/FlightCompleteStep";
 import { useFlightForm, type FlightSubmitOptions } from "./FlightForm/useFlightForm";
+import { focusFirstMissingRequired } from "./FlightForm/requiredFields";
 
 import type { Flight, FlightInput, UserAchievement } from "../types";
 
@@ -45,6 +46,30 @@ export default function SimplifiedFlightFormV2({
   const form = useFlightForm(onSubmit, onCancel, onBatchComplete);
   // The footer's submit button sits outside the <form>; `form={id}` ties it back.
   const formId = useId();
+  const formRef = useRef<HTMLFormElement>(null);
+
+  /**
+   * A refused save puts the cursor in the first field that is missing
+   * (forgejo#88, point 9).
+   *
+   * The refusal itself is `useFlightForm`'s — it answers with one sentence at
+   * the top of the dialog that names no field, which on a form this long means
+   * the user scrolls looking for what is empty. Focusing is not a second
+   * validation: `canSubmit` is the same guard the hook is about to apply, and
+   * when it holds nothing is focused and the submit runs untouched.
+   *
+   * **Only the form's own submit needs this, and that is not an oversight.**
+   * Both footer buttons are `disabled` while `canSubmit` is false, so neither
+   * can reach a refusal; what can is Enter in any input, which submits the
+   * `<form>` past the disabled buttons entirely. That is also the user who
+   * needs it most — they never looked at the button, so the greyed-out state
+   * told them nothing. `useFlightForm` guards its handlers for exactly the
+   * same reason ("canSubmit only greys out the button").
+   */
+  const handleSubmitWithFocus = (e: React.FormEvent): void => {
+    if (!form.canSubmit) focusFirstMissingRequired(formRef.current);
+    void form.handleSubmit(e);
+  };
 
   // Theme classes (dark-only — see TravStatsWeb/brand/BRAND.md §1.1)
   const textClass = "text-white";
@@ -130,7 +155,7 @@ export default function SimplifiedFlightFormV2({
           </div>
         )}
 
-        <form id={formId} onSubmit={form.handleSubmit} className="space-y-6 pt-2">
+        <form id={formId} ref={formRef} onSubmit={handleSubmitWithFocus} className="space-y-6 pt-2">
           {form.step === "input" && (
             <FlightLookupStep
               flightNumber={form.flightNumber}

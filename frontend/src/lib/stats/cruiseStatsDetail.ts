@@ -6,15 +6,20 @@
  * is anything about WHEN a cruise happened, what it cost, or which of them was
  * the first. Those live on the cruise row itself, and this derives them.
  *
- * MONEY IS REPORTED PER CURRENCY AND NEVER SUMMED ACROSS ONE.
+ * MONEY IS REPORTED PER CURRENCY AND NEVER SUMMED ACROSS ONE **HERE**.
  *
- * A cruise carries `price` and `currency` and nothing else: unlike a flight or
- * a lodging stay it has no FX snapshot — no `priceBase`, no `fxRate`, no
- * `fxBaseCurrency`. Adding 300 EUR to 400 USD and printing 700 is precisely
- * the defect issue #267 described for flights, and reproducing it here because
- * the field happens to be a number would be worse than showing nothing. So
- * each currency is reported on its own line, and a per-night average only
- * exists inside one currency.
+ * What this fold has to work with is `price` and `currency`. Adding 300 EUR to
+ * 400 USD and printing 700 is precisely the defect issue #267 described for
+ * flights, and reproducing it because the field happens to be a number would be
+ * worse than showing nothing. So each currency is reported on its own line, and
+ * a per-night average only exists inside one currency.
+ *
+ * A cruise DOES carry an FX snapshot (`priceBase` / `fxBaseCurrency`, Task 10),
+ * so an honest base-currency total is possible — but not from these rows and
+ * not by this fold. It is computed on the server, arrives as `totalSpendBase`
+ * on `GET /stats/cruise`, and is the one figure the money section shows as a
+ * single number. This file stays out of it on purpose: two places converting
+ * money is two rules.
  *
  * Every cruise that has a duration is counted for it; a cruise with no dates
  * contributes to the counts and to nothing that needs a day. Same rule the
@@ -64,6 +69,20 @@ export interface CruiseStatsDetail {
 
 const MONTHS = 12;
 const DAY_MS = 86_400_000;
+
+/**
+ * Whether a cruise has a price worth counting.
+ *
+ * Exported because the money block needs the SAME answer outside the fold, to
+ * say how many BOOKED cruises its rows leave out; the backend spells the same
+ * rule in `services/stats/cruiseSpendBase.ts`. A null or zero price is "no
+ * price", never a free voyage.
+ */
+export function isPricedCruise<T extends { price: number | null }>(
+  cruise: T
+): cruise is T & { price: number } {
+  return typeof cruise.price === "number" && cruise.price > 0;
+}
 
 /** Nights between two dates, or null when either is missing or unreadable. */
 export function nightsBetween(start: string | null, end: string | null): number | null {
@@ -122,7 +141,7 @@ export function deriveCruiseStats(cruises: readonly Cruise[]): CruiseStatsDetail
       mostPorts = { cruise, ports };
     }
 
-    if (typeof cruise.price === "number" && cruise.price > 0) {
+    if (isPricedCruise(cruise)) {
       pricedCruises += 1;
       const currency = cruise.currency ?? "EUR";
       const row = spend.get(currency) ?? { currency, total: 0, cruises: 0, nights: 0 };

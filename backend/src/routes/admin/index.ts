@@ -13,6 +13,7 @@ import instanceSettingsRouter from "./instanceSettings";
 import immichAdminRouter from "./immich";
 import dawarichAdminRouter from "./dawarich";
 import usageStatsRouter from "./usageStats";
+import passwordResetRequestsRouter from "./passwordResetRequests";
 
 const router = Router();
 
@@ -49,5 +50,6 @@ router.use("/", instanceSettingsRouter);
 router.use("/immich", immichAdminRouter);
 router.use("/dawarich", dawarichAdminRouter);
 router.use("/", usageStatsRouter);
+router.use("/", passwordResetRequestsRouter);
 
 export default router;

@@ -1,22 +1,22 @@
 import HelpIcon from "../Help/HelpIcon";
 import AirportAutocomplete from "../AirportAutocomplete";
-import CompanionsField from "./fields/CompanionsField";
 import HistoricalDateFields from "./fields/HistoricalDateFields";
 import TimesFields, { type ActualTimesFieldsValue } from "./fields/TimesFields";
-import CatalogueCombobox, {
-  searchAirlineOptions,
-  searchAircraftOptions,
-} from "./fields/CatalogueCombobox";
-import BookingFields from "./fields/BookingFields";
+import CatalogueCombobox, { searchAirlineOptions } from "./fields/CatalogueCombobox";
 import { useTranslation } from "../../hooks/useTranslation";
 import { calculateDistance } from "../../lib/geo";
 import type { Airport } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { estimateArrivalFromDeparture } from "../../lib/timeEstimation";
-import CostFields, { type CostFieldsValue } from "./fields/CostFields";
-import TripSelectField from "./fields/TripSelectField";
+import { type CostFieldsValue } from "./fields/CostFields";
 import StatusField from "./fields/StatusField";
 import { useSettingsStore } from "../../store/settingsStore";
+import FlightFormSection from "./FlightFormSection";
+import { RequiredMark } from "./requiredFields";
+import AircraftSection from "./sections/AircraftSection";
+import BookingAndNotesSection from "./sections/BookingAndNotesSection";
+import PriceAndSeatSection from "./sections/PriceAndSeatSection";
+import { countValue, priceSummaryValue, summaryLine } from "./sections/sectionSummaries";
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -236,6 +236,58 @@ export default function FlightCompleteStep({
     setActualArrivalTime?.(next.actualArrTime);
   };
 
+  /**
+   * What each folded group is hiding, in one line — see `sectionSummaries`.
+   *
+   * Computed here rather than inside each section because the section
+   * components render only when OPEN-ish content is wanted, while the summary
+   * is what the closed header shows; keeping both in the parent means one
+   * place decides what "filled in" means for a given field.
+   */
+  /**
+   * The core group is open by default, but it can be folded — by the user, or
+   * by a session that remembers one — and a folded group that says nothing is
+   * exactly what the summaries exist to prevent. It is also the group a
+   * refused save unfolds, so its header is what the user sees a moment before
+   * the cursor lands.
+   */
+  const coreSummary = summaryLine([
+    {
+      label: t("flights:form.from"),
+      value: departure?.iata ?? departure?.name ?? "",
+    },
+    {
+      label: t("flights:form.to"),
+      value: arrival?.iata ?? arrival?.name ?? "",
+    },
+    { label: t("flights:form.departureDate"), value: departureDate },
+    { label: t("flights:form.airline"), value: airline },
+  ]);
+
+  const priceAndSeatSummary = summaryLine([
+    { label: t("flights:form.price"), value: priceSummaryValue(cost.price, cost.currency) },
+    { label: t("flights:form.seat"), value: seatNumber },
+    {
+      label: t("flights:form.seatClass"),
+      value: seatClass ? t(`flights:seatClass.${seatClass}`) : "",
+    },
+    { label: t("flights:form.category"), value: category ? t(`flights:category.${category}`) : "" },
+  ]);
+
+  const aircraftSummary = summaryLine([
+    { label: t("flights:form.aircraft"), value: aircraft },
+    { label: t("flights:form.terminal"), value: terminal },
+    { label: t("flights:form.gate"), value: gate },
+  ]);
+
+  const bookingSummary = summaryLine([
+    { label: t("flights:form.bookingReference"), value: bookingReference },
+    { label: t("flights:form.ticketNumber"), value: ticketNumber },
+    { label: t("flights:form.tags"), value: countValue(tags) },
+    { label: t("flights:form.companions"), value: countValue(companions) },
+    { label: t("flights:form.notes"), value: notes ? t("flights:form.sections.filledIn") : "" },
+  ]);
+
   const handleEstimateArrival = (): void => {
     if (!departure || !arrival || !departureDate || !departureTime) return;
     const result = estimateArrivalFromDeparture({
@@ -319,345 +371,263 @@ export default function FlightCompleteStep({
         </div>
       )}
 
-      {/* Airports */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <label className={`label ${textClass}`}>{t("flights:form.from")}</label>
-            <HelpIcon content={t("flights:form.help.departureAirport")} position="top" />
+      {/* Kern — route, times and airline, open by default (forgejo#88, point
+          9). The three groups below it are folded: this is the part without
+          which there is no flight to record. */}
+      <FlightFormSection
+        id="core"
+        title={t("flights:form.sections.core")}
+        summary={coreSummary}
+        defaultOpen
+      >
+        <div className="space-y-6">
+          {/* Airports */}
+          <div className="grid grid-cols-2 gap-4">
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <label className={`label ${textClass}`}>
+                  {t("flights:form.from")} <RequiredMark />
+                </label>
+                <HelpIcon content={t("flights:form.help.departureAirport")} position="top" />
+              </div>
+              <AirportAutocomplete
+                value={departure}
+                onChange={setDeparture}
+                label=""
+                placeholder={t("flights:form.placeholders.departureAirport")}
+                required
+              />
+            </div>
+            <div>
+              <div className="flex items-center gap-2 mb-1">
+                <label className={`label ${textClass}`}>
+                  {t("flights:form.to")} <RequiredMark />
+                </label>
+                <HelpIcon content={t("flights:form.help.arrivalAirport")} position="top" />
+              </div>
+              <AirportAutocomplete
+                value={arrival}
+                onChange={setArrival}
+                label=""
+                placeholder={t("flights:form.placeholders.arrivalAirport")}
+                required
+              />
+            </div>
           </div>
-          <AirportAutocomplete
-            value={departure}
-            onChange={setDeparture}
-            label=""
-            placeholder={t("flights:form.placeholders.departureAirport")}
-            required
-          />
-        </div>
-        <div>
-          <div className="flex items-center gap-2 mb-1">
-            <label className={`label ${textClass}`}>{t("flights:form.to")}</label>
-            <HelpIcon content={t("flights:form.help.arrivalAirport")} position="top" />
+
+          {/* Historical flight checkbox */}
+          <div>
+            <label className="flex items-center gap-2 cursor-pointer">
+              <input
+                type="checkbox"
+                checked={status === "historical"}
+                onChange={(e) => {
+                  if (e.target.checked) {
+                    setStatus("historical");
+                    setTimeEstimationWarning(null);
+                  } else {
+                    if (departureDate && new Date(departureDate) < new Date()) setStatus("flown");
+                    else setStatus("scheduled");
+                  }
+                }}
+                className="rounded-sm"
+              />
+              <span className={`text-sm ${textClass}`}>{t("flights:historicalCheckbox")}</span>
+            </label>
+            {status === "historical" && (
+              <p className={`text-xs mt-1 ml-6 ${mutedTextClass}`}>{t("flights:historicalHint")}</p>
+            )}
           </div>
-          <AirportAutocomplete
-            value={arrival}
-            onChange={setArrival}
-            label=""
-            placeholder={t("flights:form.placeholders.arrivalAirport")}
-            required
-          />
-        </div>
-      </div>
 
-      {/* Historical flight checkbox */}
-      <div>
-        <label className="flex items-center gap-2 cursor-pointer">
-          <input
-            type="checkbox"
-            checked={status === "historical"}
-            onChange={(e) => {
-              if (e.target.checked) {
-                setStatus("historical");
-                setTimeEstimationWarning(null);
-              } else {
-                if (departureDate && new Date(departureDate) < new Date()) setStatus("flown");
-                else setStatus("scheduled");
-              }
-            }}
-            className="rounded-sm"
-          />
-          <span className={`text-sm ${textClass}`}>{t("flights:historicalCheckbox")}</span>
-        </label>
-        {status === "historical" && (
-          <p className={`text-xs mt-1 ml-6 ${mutedTextClass}`}>{t("flights:historicalHint")}</p>
-        )}
-      </div>
-
-      {/* Date & Time — full inputs for normal flights, year/month/day for
+          {/* Date & Time — full inputs for normal flights, year/month/day for
           historical. Shared with the edit modal via HistoricalDateFields. */}
-      {status === "historical" ? (
-        <HistoricalDateFields
-          value={departureDate}
-          onChange={(next) => {
-            setDepartureDate(next);
-            setArrivalDate(next);
+          {status === "historical" ? (
+            <HistoricalDateFields
+              value={departureDate}
+              onChange={(next) => {
+                setDepartureDate(next);
+                setArrivalDate(next);
+              }}
+              labelClassName={textClass}
+              inputClassName={sizedInputClass}
+            />
+          ) : (
+            <TimesFields
+              value={{
+                depDate: departureDate,
+                depTime: departureTime,
+                arrDate: arrivalDate,
+                arrTime: arrivalTime,
+              }}
+              onChange={(next) => {
+                // Create-only extra, kept here rather than inside TimesFields
+                // (which the edit form also renders and must not gain this):
+                // when the user picks a NEW departure date and the arrival date
+                // hasn't caught up yet (empty or still before it), nudge arrival
+                // forward with it. `next.arrDate` still equals the pre-change
+                // arrival date whenever the user edited the departure date input
+                // specifically (TimesFields only touches the field that changed),
+                // so comparing it here is equivalent to the pre-swap inline
+                // `onChange` that did this same check against `arrivalDate`.
+                const depDateChanged = next.depDate !== departureDate;
+                const arrivalNeedsToCatchUp = !next.arrDate || next.arrDate < next.depDate;
+                setDepartureDate(next.depDate);
+                setDepartureTime(next.depTime);
+                setArrivalDate(
+                  depDateChanged && arrivalNeedsToCatchUp ? next.depDate : next.arrDate
+                );
+                setArrivalTime(next.arrTime);
+              }}
+              onEstimateArrival={handleEstimateArrival}
+              canEstimateArrival={canEstimateArrival}
+              // Names the actual blocker when the calculator is disabled. Missing
+              // airports takes priority over a missing departure time — matches
+              // the pre-swap three-way tooltip this create form used to render
+              // inline before TimesFields only had the generic "no departure
+              // time" message (built for the edit form, which reaches this
+              // screen with airports already set).
+              estimateDisabledHint={
+                !departure || !arrival ? t("flights:form.estimateNoAirports") : undefined
+              }
+              help={{
+                depDate: { content: t("flights:form.help.departureDate") },
+                depTime: {
+                  content: t("flights:form.help.departureTime"),
+                  expandedContent: t("flights:form.help.departureTimeExpanded"),
+                },
+                arrDate: { content: t("flights:form.help.arrivalDate") },
+                arrTime: {
+                  content: t("flights:form.help.arrivalTime"),
+                  expandedContent: t("flights:form.help.arrivalTimeExpanded"),
+                },
+              }}
+              actualValue={actualTimesValue}
+              onActualChange={handleActualTimesChange}
+              markRequired
+            />
+          )}
+
+          {/* Additional Fields */}
+          <div className="grid grid-cols-4 gap-4">
+            <div>
+              <label className={`label ${textClass}`}>{t("flights:form.airline")}</label>
+              <CatalogueCombobox
+                value={airline}
+                onChange={setAirline}
+                search={searchAirlineOptions}
+                placeholder={t("flights:form.placeholders.airline")}
+                inputClassName={sizedInputClass}
+              />
+            </div>
+            <div>
+              <label className={`label ${textClass}`}>{t("flights:form.operatingAirline")}</label>
+              <CatalogueCombobox
+                value={operatingAirline}
+                onChange={setOperatingAirline}
+                search={searchAirlineOptions}
+                placeholder={t("flights:form.placeholders.operatingAirline")}
+                inputClassName={sizedInputClass}
+              />
+            </div>
+            <div>
+              <label className={`label ${textClass}`}>{t("flights:form.flightNumber")}</label>
+              <input
+                type="text"
+                value={flightNumber}
+                onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
+                className={`input ${sizedInputClass}`}
+                placeholder={t("flights:form.placeholders.flightNumber")}
+                maxLength={10}
+              />
+            </div>
+            <StatusField status={status} onStatusChange={setStatus} labelClassName={textClass} />
+          </div>
+        </div>
+      </FlightFormSection>
+
+      {/* The three folded groups. Each closed header names what is filled in,
+          so the fold can never be the reason a price is forgotten. */}
+      <FlightFormSection
+        id="priceAndSeat"
+        title={t("flights:form.sections.priceAndSeat")}
+        summary={priceAndSeatSummary}
+      >
+        <PriceAndSeatSection
+          seatNumber={seatNumber}
+          boardingGroup={boardingGroup}
+          seatClass={seatClass}
+          category={category}
+          setSeatNumber={setSeatNumber}
+          setBoardingGroup={setBoardingGroup}
+          setSeatClass={setSeatClass}
+          setCategory={setCategory}
+          cost={cost}
+          onCostChange={onCostChange}
+          showCostBreakdown={features.enableCostTracking}
+          priceHelp={{
+            content: t("flights:form.help.price"),
+            expandedContent: t("flights:form.help.price"),
           }}
           labelClassName={textClass}
           inputClassName={sizedInputClass}
         />
-      ) : (
-        <TimesFields
-          value={{
-            depDate: departureDate,
-            depTime: departureTime,
-            arrDate: arrivalDate,
-            arrTime: arrivalTime,
-          }}
-          onChange={(next) => {
-            // Create-only extra, kept here rather than inside TimesFields
-            // (which the edit form also renders and must not gain this):
-            // when the user picks a NEW departure date and the arrival date
-            // hasn't caught up yet (empty or still before it), nudge arrival
-            // forward with it. `next.arrDate` still equals the pre-change
-            // arrival date whenever the user edited the departure date input
-            // specifically (TimesFields only touches the field that changed),
-            // so comparing it here is equivalent to the pre-swap inline
-            // `onChange` that did this same check against `arrivalDate`.
-            const depDateChanged = next.depDate !== departureDate;
-            const arrivalNeedsToCatchUp = !next.arrDate || next.arrDate < next.depDate;
-            setDepartureDate(next.depDate);
-            setDepartureTime(next.depTime);
-            setArrivalDate(depDateChanged && arrivalNeedsToCatchUp ? next.depDate : next.arrDate);
-            setArrivalTime(next.arrTime);
-          }}
-          onEstimateArrival={handleEstimateArrival}
-          canEstimateArrival={canEstimateArrival}
-          // Names the actual blocker when the calculator is disabled. Missing
-          // airports takes priority over a missing departure time — matches
-          // the pre-swap three-way tooltip this create form used to render
-          // inline before TimesFields only had the generic "no departure
-          // time" message (built for the edit form, which reaches this
-          // screen with airports already set).
-          estimateDisabledHint={
-            !departure || !arrival ? t("flights:form.estimateNoAirports") : undefined
-          }
-          help={{
-            depDate: { content: t("flights:form.help.departureDate") },
-            depTime: {
-              content: t("flights:form.help.departureTime"),
-              expandedContent: t("flights:form.help.departureTimeExpanded"),
-            },
-            arrDate: { content: t("flights:form.help.arrivalDate") },
-            arrTime: {
-              content: t("flights:form.help.arrivalTime"),
-              expandedContent: t("flights:form.help.arrivalTimeExpanded"),
-            },
-          }}
-          actualValue={actualTimesValue}
-          onActualChange={handleActualTimesChange}
+      </FlightFormSection>
+
+      <FlightFormSection
+        id="aircraft"
+        title={t("flights:form.sections.aircraft")}
+        summary={aircraftSummary}
+      >
+        <AircraftSection
+          aircraft={aircraft}
+          terminal={terminal}
+          gate={gate}
+          setAircraft={setAircraft}
+          setTerminal={setTerminal}
+          setGate={setGate}
+          labelClassName={textClass}
+          inputClassName={sizedInputClass}
         />
-      )}
+      </FlightFormSection>
 
-      {/* Additional Fields */}
-      <div className="grid grid-cols-4 gap-4">
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.airline")}</label>
-          <CatalogueCombobox
-            value={airline}
-            onChange={setAirline}
-            search={searchAirlineOptions}
-            placeholder={t("flights:form.placeholders.airline")}
-            inputClassName={sizedInputClass}
-          />
-        </div>
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.operatingAirline")}</label>
-          <CatalogueCombobox
-            value={operatingAirline}
-            onChange={setOperatingAirline}
-            search={searchAirlineOptions}
-            placeholder={t("flights:form.placeholders.operatingAirline")}
-            inputClassName={sizedInputClass}
-          />
-        </div>
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.flightNumber")}</label>
-          <input
-            type="text"
-            value={flightNumber}
-            onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
-            className={`input ${sizedInputClass}`}
-            placeholder={t("flights:form.placeholders.flightNumber")}
-            maxLength={10}
-          />
-        </div>
-        <StatusField status={status} onStatusChange={setStatus} labelClassName={textClass} />
-      </div>
-
-      {/* Equipment / Gate / Seat / Category */}
-      <div className="grid grid-cols-2 gap-4">
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.aircraft")}</label>
-          <CatalogueCombobox
-            value={aircraft}
-            onChange={setAircraft}
-            search={searchAircraftOptions}
-            placeholder={t("flights:form.placeholders.aircraft")}
-            inputClassName={sizedInputClass}
-          />
-        </div>
-        <div className="grid grid-cols-2 gap-3">
-          <div>
-            <label className={`label ${textClass}`}>{t("flights:form.terminal")}</label>
-            <input
-              type="text"
-              value={terminal}
-              onChange={(e) => setTerminal(e.target.value)}
-              className={`input ${sizedInputClass}`}
-              placeholder={t("flights:form.placeholders.terminal")}
-            />
-          </div>
-          <div>
-            <label className={`label ${textClass}`}>{t("flights:form.gate")}</label>
-            <input
-              type="text"
-              value={gate}
-              onChange={(e) => setGate(e.target.value)}
-              className={`input ${sizedInputClass}`}
-              placeholder={t("flights:form.placeholders.gate")}
-            />
-          </div>
-        </div>
-      </div>
-
-      <div className="grid grid-cols-4 gap-4">
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.seat")}</label>
-          <input
-            type="text"
-            value={seatNumber}
-            onChange={(e) => setSeatNumber(e.target.value.toUpperCase())}
-            className={`input ${sizedInputClass}`}
-            placeholder={t("flights:form.placeholders.seat")}
-          />
-        </div>
-        <div>
-          {/* #199 — the edit modal had this all along; the create form
-              dropped a parser-provided boarding group on the way in. */}
-          <label className={`label ${textClass}`}>{t("flights:form.boardingGroup")}</label>
-          <input
-            type="text"
-            value={boardingGroup}
-            onChange={(e) => setBoardingGroup(e.target.value)}
-            className={`input ${sizedInputClass}`}
-            placeholder={t("flights:form.placeholders.boardingGroup")}
-            maxLength={20}
-          />
-        </div>
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.seatClass")}</label>
-          <select
-            value={seatClass}
-            onChange={(e) =>
-              setSeatClass(
-                e.target.value as "" | "economy" | "premium_economy" | "business" | "first"
-              )
-            }
-            className={`input ${sizedInputClass}`}
-          >
-            <option value="">{t("common:labels.optional")}</option>
-            <option value="economy">{t("flights:seatClass.economy")}</option>
-            <option value="premium_economy">{t("flights:seatClass.premium_economy")}</option>
-            <option value="business">{t("flights:seatClass.business")}</option>
-            <option value="first">{t("flights:seatClass.first")}</option>
-          </select>
-        </div>
-        <div>
-          <label className={`label ${textClass}`}>{t("flights:form.category")}</label>
-          <select
-            value={category}
-            onChange={(e) =>
-              setCategory(e.target.value as "" | "business" | "private" | "vacation")
-            }
-            className={`input ${sizedInputClass}`}
-          >
-            <option value="">{t("common:labels.optional")}</option>
-            <option value="business">{t("flights:category.business")}</option>
-            <option value="private">{t("flights:category.private")}</option>
-            <option value="vacation">{t("flights:category.vacation")}</option>
-          </select>
-        </div>
-      </div>
-
-      {/* Cost (#192, #199) — shared with the edit modal; the tax/fee
-          breakdown stays behind cost tracking (details in CostFields). */}
-      <CostFields
-        value={cost}
-        onChange={onCostChange}
-        showBreakdown={features.enableCostTracking}
-        priceHelp={{
-          content: t("flights:form.help.price"),
-          expandedContent: t("flights:form.help.price"),
-        }}
-        labelClassName={textClass}
-        inputClassName={sizedInputClass}
-      />
-
-      {/* Booking (#197, #199) — shared with the edit modal */}
-      <BookingFields
-        value={{
-          bookingReference,
-          ticketNumber,
-          bookingClassLetter: bookingClassLetter ?? "",
-          baggageAllowance: baggageAllowance ?? "",
-          frequentFlyerNumber: frequentFlyerNumber ?? "",
-        }}
-        onChange={(v) => {
-          setBookingReference(v.bookingReference);
-          setTicketNumber(v.ticketNumber);
-          setBookingClassLetter(v.bookingClassLetter);
-          setBaggageAllowance(v.baggageAllowance);
-          setFrequentFlyerNumber(v.frequentFlyerNumber);
-        }}
-        labelClassName={textClass}
-        inputClassName={sizedInputClass}
-      />
-
-      {/* Trip (#199) — the assignment runs after the create, see
-          useFlightForm.maybeAssignTrip */}
-      <TripSelectField
-        value={tripId}
-        onChange={setTripId}
-        labelClassName={textClass}
-        inputClassName={sizedInputClass}
-      />
-
-      {/* Tags */}
-      <div>
-        <label className={`label ${textClass} flex items-center gap-2`}>
-          {t("flights:form.tags")}
-          <HelpIcon
-            content={t("flights:form.help.tags")}
-            expandedContent={t("flights:form.help.tagsExpanded")}
-            position="top"
-          />
-        </label>
-        <input
-          type="text"
-          value={tags.join(", ")}
-          onChange={(e) =>
-            setTags(
-              e.target.value
-                .split(",")
-                .map((tag) => tag.trim())
-                .filter(Boolean)
-            )
-          }
-          className={`input ${sizedInputClass}`}
-          placeholder={t("flights:form.placeholders.tags")}
+      <FlightFormSection
+        id="booking"
+        title={t("flights:form.sections.booking")}
+        summary={bookingSummary}
+      >
+        <BookingAndNotesSection
+          booking={{
+            bookingReference,
+            ticketNumber,
+            bookingClassLetter: bookingClassLetter ?? "",
+            baggageAllowance: baggageAllowance ?? "",
+            frequentFlyerNumber: frequentFlyerNumber ?? "",
+          }}
+          onBookingChange={(v) => {
+            setBookingReference(v.bookingReference);
+            setTicketNumber(v.ticketNumber);
+            setBookingClassLetter(v.bookingClassLetter);
+            setBaggageAllowance(v.baggageAllowance);
+            setFrequentFlyerNumber(v.frequentFlyerNumber);
+          }}
+          tripId={tripId}
+          setTripId={setTripId}
+          tags={tags}
+          setTags={setTags}
+          companions={companions}
+          setCompanions={setCompanions}
+          coPassengers={coPassengers}
+          notes={notes}
+          setNotes={setNotes}
+          labelClassName={textClass}
+          mutedTextClassName={mutedTextClass}
+          inputClassName={sizedInputClass}
         />
-        <p className={`text-xs ${mutedTextClass} mt-1`}>{t("flights:form.tagsHint")}</p>
-      </div>
+      </FlightFormSection>
 
-      {/* Travel Companions */}
-      <CompanionsField
-        companions={companions}
-        onCompanionsChange={setCompanions}
-        coPassengers={coPassengers}
-        labelClassName={textClass}
-      />
-
-      {/* Notes */}
-      <div>
-        <label className={`label ${textClass}`}>{t("flights:form.notes")}</label>
-        <textarea
-          value={notes}
-          onChange={(e) => setNotes(e.target.value)}
-          className={`input ${sizedInputClass}`}
-          rows={3}
-          placeholder={t("flights:form.placeholders.notes")}
-        />
-      </div>
+      {/* The legend the asterisks refer to. Below the fields rather than above
+          them: it explains a mark the reader has already met. */}
+      <p className={`text-xs ${mutedTextClass}`}>{t("flights:form.requiredLegend")}</p>
     </div>
   );
 }

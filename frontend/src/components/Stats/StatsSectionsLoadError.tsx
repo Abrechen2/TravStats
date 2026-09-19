@@ -18,10 +18,21 @@ import { useTranslation } from "../../hooks/useTranslation";
  */
 export interface StatsSectionsLoadErrorProps {
   onRetry: () => void;
+  /**
+   * What failed, when the caller can say something more useful than "these
+   * statistics". The year in review names the YEAR whose load failed, because
+   * its retry re-asks for one specific thing and "could not be loaded" beside
+   * a year picker leaves the reader guessing which year that was.
+   *
+   * Defaults to the composed-load sentence, so the statistics page is
+   * unchanged.
+   */
+  message?: string;
 }
 
 export default function StatsSectionsLoadError({
   onRetry,
+  message,
 }: StatsSectionsLoadErrorProps): JSX.Element {
   const { t } = useTranslation(["stats"]);
 
@@ -36,7 +47,7 @@ export default function StatsSectionsLoadError({
       }}
     >
       <p className="text-sm">
-        {t("stats:page.loadError")}{" "}
+        {message ?? t("stats:page.loadError")}{" "}
         <button
           type="button"
           onClick={onRetry}

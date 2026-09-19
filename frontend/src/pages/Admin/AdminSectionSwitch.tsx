@@ -61,6 +61,8 @@ export interface AdminSectionSwitchProps {
   // users
   onToggleUserActive: (userId: string) => void;
   onResetTwoFactor: (userId: string) => void;
+  /** `?user=` — the account a deep link into user management meant. */
+  highlightUserId?: string | null;
 
   // invitations
   invitations: Invitation[];
@@ -148,6 +150,7 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
           onToggleUserActive={props.onToggleUserActive}
           onDeleteUser={props.onDeleteUser}
           onResetTwoFactor={props.onResetTwoFactor}
+          highlightUserId={props.highlightUserId}
         />
       );
 

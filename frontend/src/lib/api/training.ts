@@ -2,6 +2,7 @@ import type { ParseLogStats, PromoteCorrectionsResult } from "../../types";
 
 import { api } from "./client";
 import type { TrainingAnnotationResult, TrainingDataEntry, TrainingUploadResult } from "./types";
+import type { WorkshopDomain } from "../../shared/annotationLabels";
 
 // Training API
 export const trainingApi = {
@@ -20,12 +21,15 @@ export const trainingApi = {
     id: string,
     annotations: Record<string, unknown>,
     extractedData: Record<string, unknown>[],
-    tags?: string[]
+    tags?: string[],
+    /** The user's correction to the classifier — forgejo#124 phase 6. */
+    domain?: WorkshopDomain
   ): Promise<TrainingAnnotationResult> => {
     const { data } = await api.post<TrainingAnnotationResult>(`/training/${id}/annotate`, {
       annotations,
       extractedData,
       tags: tags || [],
+      ...(domain ? { domain } : {}),
     });
     return data;
   },

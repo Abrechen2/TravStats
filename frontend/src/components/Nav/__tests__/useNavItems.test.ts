@@ -102,6 +102,23 @@ describe("useNavItems — Mehr › Sammlungen", () => {
     expect(section(run().more, "collections").map((i) => i.path)).not.toContain("/passport");
   });
 
+  // Dein Jahr (forgejo#53) sits beside the passport, under the same condition:
+  // it is built from flights, so an entry leading to a page that explains why
+  // it is empty is worse than no entry.
+  it("offers the year in review whenever flights are on", () => {
+    useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: false });
+    const collections = section(run().more, "collections");
+    expect(collections.map((i) => i.path)).toContain("/wrapped");
+    // Beside the passport, not at the far end of the list.
+    const paths = collections.map((i) => i.path);
+    expect(paths.indexOf("/wrapped")).toBe(paths.indexOf("/passport") + 1);
+  });
+
+  it("omits the year in review when flights are off", () => {
+    useSettingsStore.setState({ enabledDomains: ["cruise"], betaFeaturesEnabled: true });
+    expect(section(run().more, "collections").map((i) => i.path)).not.toContain("/wrapped");
+  });
+
   it("offers Ortslisten while places are visible", () => {
     useSettingsStore.setState({ enabledDomains: ["flight", "poi"] });
     expect(section(run().more, "collections").map((i) => i.path)).toContain("/places/lists");

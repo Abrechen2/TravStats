@@ -148,5 +148,14 @@
       "stored": "Gespeichertes Land",
       "fromCoordinates": "Land laut Koordinaten"
     }
+  },
+  "passwordResets": {
+    "title": "Passwort-Zurücksetzen angefragt",
+    "description": "Diese Instanz kann keine E-Mails senden. Wer sein Passwort vergessen hat, landet deshalb hier statt in einem Postfach.",
+    "row": "Passwort-Zurücksetzen angefragt: {{username}}, {{when}}",
+    "openUser": "Benutzer öffnen",
+    "markHandled": "Erledigt",
+    "handled": "Anfrage als erledigt markiert.",
+    "handleFailed": "Die Anfrage konnte nicht als erledigt markiert werden."
   }
 }

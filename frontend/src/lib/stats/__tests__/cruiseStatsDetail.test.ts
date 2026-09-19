@@ -39,9 +39,11 @@ const stop = (isAtSea: boolean) => ({ portId: null, dayNumber: 1, isAtSea });
 
 describe("deriveCruiseStats", () => {
   it("never adds two currencies together", () => {
-    // The whole reason this module reports per currency: a cruise carries a
-    // price and a currency and no FX snapshot, so 300 EUR + 400 USD has no
-    // honest sum. Printing 700 is the defect #267 described for flights.
+    // The whole reason this module reports per currency: all THIS fold has is
+    // a price and a currency, so 300 EUR + 400 USD has no honest sum here.
+    // Printing 700 is the defect #267 described for flights. (A cruise does
+    // carry an FX snapshot since task 10, and the base-currency total the
+    // money section shows is computed from it on the SERVER — not here.)
     const d = deriveCruiseStats([
       cruise({ id: "c1", price: 300, currency: "EUR" }),
       cruise({ id: "c2", price: 400, currency: "USD" }),

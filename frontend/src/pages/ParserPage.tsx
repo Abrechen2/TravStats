@@ -9,6 +9,9 @@ import BoardingPassAnnotation from "../components/Training/BoardingPassAnnotatio
 import ParseLogStats from "../components/Training/ParseLogStats";
 import TemplateStatusView from "../components/TemplateStatusView";
 import MyTemplates from "../components/Parser/MyTemplates";
+import DomainPicker from "../components/Parser/DomainPicker";
+import type { WorkshopDomain } from "../shared/annotationLabels";
+import type { TemplateDerivation } from "../lib/api/types";
 import { useToastStore } from "../store/toastStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { Icon } from "../components/ui/Icon";
@@ -20,22 +23,46 @@ export default function ParserPage(): JSX.Element {
   const user = useAuthStore((s) => s.user);
   const addToast = useToastStore((state) => state.addToast);
   const [activeTab, setActiveTab] = useState<Tab>("annotate");
-  const [uploadedFile, setUploadedFile] = useState<{ id: string; type: string } | null>(null);
+  const [uploadedFile, setUploadedFile] = useState<{
+    id: string;
+    type: string;
+    /** What the classifier said, kept so the picker can mark an override. */
+    detected: WorkshopDomain;
+  } | null>(null);
+  /** The domain the annotation is FOR — the classifier's answer until the
+   *  user corrects it (forgejo#124 phase 6). */
+  const [domain, setDomain] = useState<WorkshopDomain>("flight");
   const emailFileInputRef = useRef<HTMLInputElement>(null);
   const boardingPassFileInputRef = useRef<HTMLInputElement>(null);
 
   const handleFileUpload = async (file: File, type: "email" | "boarding_pass"): Promise<void> => {
     try {
       const result = await trainingApi.upload(file, type);
-      setUploadedFile({ id: result.id, type: result.type });
+      // A boarding pass is a flight by construction; only mail is classified,
+      // and an older server that sends no domain keeps the old behaviour.
+      const detected = result.domain ?? "flight";
+      setUploadedFile({ id: result.id, type: result.type, detected });
+      setDomain(detected);
     } catch (error) {
       logger.error({ err: error }, "ParserPage: upload failed");
       addToast("error", t("parser:annotate.uploadError"));
     }
   };
 
-  const handleAnnotationComplete = (): void => {
+  /**
+   * What the workshop made of the annotation, kept HERE.
+   *
+   * The annotation view is unmounted by the same handler that receives this,
+   * so a banner it owned would be mounted and dropped in one batch — measured
+   * on the abstention note, which the user never saw: they landed on "My
+   * templates" with no template and no reason, the silent nothing the
+   * abstention exists to end (forgejo#124 phase 6).
+   */
+  const [derivation, setDerivation] = useState<TemplateDerivation | null>(null);
+
+  const handleAnnotationComplete = (outcome?: TemplateDerivation): void => {
     setUploadedFile(null);
+    setDerivation(outcome ?? null);
     setActiveTab("my-templates");
   };
 
@@ -81,6 +108,35 @@ export default function ParserPage(): JSX.Element {
             );
           })}
         </div>
+
+        {/* What the workshop made of the last annotation. It outlives the
+            annotation view on purpose — see `derivation` above. */}
+        {derivation && derivation.status !== "failed" && (
+          <div
+            role="status"
+            className="mb-6 p-4 flex items-start justify-between gap-4"
+            style={{
+              background: "var(--ts-surface)",
+              border: "1px solid var(--ts-border)",
+              borderRadius: "var(--ts-radius-card)",
+              color: derivation.status === "derived" ? "var(--ts-text)" : "var(--warning)",
+            }}
+          >
+            <p className="text-sm">
+              {derivation.status === "derived"
+                ? t("parser:workshop.derivedBanner")
+                : t(`parser:derivation.cannot.${derivation.reason}`)}
+            </p>
+            <button
+              type="button"
+              onClick={() => setDerivation(null)}
+              className="text-sm shrink-0"
+              style={{ color: "var(--ts-muted)" }}
+            >
+              {t("parser:workshop.dismiss")}
+            </button>
+          </div>
+        )}
 
         {/* Tab: Annotieren */}
         {activeTab === "annotate" && (
@@ -164,11 +220,19 @@ export default function ParserPage(): JSX.Element {
                   </button>
                 </div>
                 {uploadedFile.type === "email" ? (
-                  <EmailAnnotation
-                    trainingDataId={uploadedFile.id}
-                    onComplete={handleAnnotationComplete}
-                    onCancel={handleCancel}
-                  />
+                  <div className="space-y-4">
+                    <DomainPicker
+                      value={domain}
+                      detected={uploadedFile.detected}
+                      onChange={setDomain}
+                    />
+                    <EmailAnnotation
+                      trainingDataId={uploadedFile.id}
+                      domain={domain}
+                      onComplete={handleAnnotationComplete}
+                      onCancel={handleCancel}
+                    />
+                  </div>
                 ) : (
                   <BoardingPassAnnotation
                     trainingDataId={uploadedFile.id}

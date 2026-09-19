@@ -1,4 +1,4 @@
-import { useState, type ReactNode } from "react";
+import { useEffect, useRef, useState, type ReactNode } from "react";
 import { formatIsoDate } from "../../lib/dateUtils";
 import { statusPillStyle } from "../table/statusPillStyle";
 import { Icon } from "../ui/Icon";
@@ -15,6 +15,15 @@ interface UserManagementProps {
   onToggleUserActive: (userId: string) => void;
   onDeleteUser: (userId: string) => void;
   onResetTwoFactor: (userId: string) => void;
+  /**
+   * `?user=` off the admin page — the account a link INTO this table meant
+   * (forgejo#88, point 2: the inbox row for a password-reset request).
+   *
+   * Passed in rather than read from the URL here: this component is rendered
+   * outside a Router in its own tests, and a `useSearchParams` call would make
+   * a table of users depend on routing to render at all.
+   */
+  highlightUserId?: string | null;
 }
 
 export default function UserManagement({
@@ -22,6 +31,7 @@ export default function UserManagement({
   onToggleUserActive,
   onDeleteUser,
   onResetTwoFactor,
+  highlightUserId = null,
 }: UserManagementProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const currentUserId = useAuthStore((s) => s.user?.id);
@@ -36,6 +46,21 @@ export default function UserManagement({
     id: string;
     username: string;
   } | null>(null);
+
+  /**
+   * The table has no search box, so "open the admin at that user" would
+   * otherwise mean "open a list and find them yourself". The row is scrolled
+   * into view and outlined; nothing is pre-selected, because the actions here
+   * are destructive enough that arriving with one armed would be wrong.
+   */
+  const highlightRef = useRef<HTMLTableRowElement>(null);
+
+  useEffect(() => {
+    if (!highlightUserId) return;
+    // The row may not be mounted yet when a deep link opens the page; the
+    // effect re-runs when `users` arrives, which is when the ref is there.
+    highlightRef.current?.scrollIntoView({ block: "center" });
+  }, [highlightUserId, users]);
 
   return (
     <div className="space-y-4">
@@ -77,7 +102,16 @@ export default function UserManagement({
           </thead>
           <tbody className="divide-y divide-[var(--ts-border)]">
             {users.map((user) => (
-              <tr key={user.id}>
+              <tr
+                key={user.id}
+                ref={user.id === highlightUserId ? highlightRef : undefined}
+                data-highlighted={user.id === highlightUserId ? "true" : undefined}
+                style={
+                  user.id === highlightUserId
+                    ? { boxShadow: "inset 2px 0 0 var(--ts-accent)" }
+                    : undefined
+                }
+              >
                 <td className="px-5 py-3">
                   <div className="flex items-center gap-3">
                     <span

@@ -68,18 +68,36 @@ describe("extractFingerprint", () => {
 });
 
 describe("deriveTemplateFromAnnotation", () => {
-  it("returns undefined when training data has no annotations", async () => {
+  it("fails, and says so, when there is no training data", async () => {
     (prisma.trainingData.findUnique as jest.Mock).mockResolvedValueOnce(null);
     const result = await deriveTemplateFromAnnotation("non-existent-id", "user1");
-    expect(result).toBeUndefined();
+    // An outcome, not `undefined`: the caller renders the reason, which is
+    // the whole point of phase 6's abstention vocabulary.
+    expect(result).toEqual({ status: "failed", reason: "noAnnotations" });
   });
 
-  it("returns undefined when annotations have no textSelections", async () => {
+  it("fails when the annotations carry no selections", async () => {
     (prisma.trainingData.findUnique as jest.Mock).mockResolvedValueOnce({
       id: "td1",
+      domain: "flight",
       annotations: { fullText: "", textSelections: [] },
     });
     const result = await deriveTemplateFromAnnotation("td1", "user1");
-    expect(result).toBeUndefined();
+    expect(result).toEqual({ status: "failed", reason: "noAnnotations" });
+  });
+
+  it("abstains for a domain no reader can run, and writes nothing", async () => {
+    (prisma.trainingData.findUnique as jest.Mock).mockResolvedValueOnce({
+      id: "td2",
+      domain: "place",
+      annotations: { fullText: "Trattoria da Enzo", textSelections: [] },
+    });
+    const result = await deriveTemplateFromAnnotation("td2", "user1");
+    expect(result).toEqual({
+      status: "abstained",
+      domain: "place",
+      reason: "noPlaceDocumentReader",
+    });
+    expect(prisma.parserTemplate.create).not.toHaveBeenCalled();
   });
 });

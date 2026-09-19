@@ -12,6 +12,7 @@
     "admin/logging.ts",
     "admin/parseLogs.ts",
     "admin/parserSettings.ts",
+    "admin/passwordResetRequests.ts",
     "admin/smtp.ts",
     "admin/system.ts",
     "admin/usageStats.ts",

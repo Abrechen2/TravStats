@@ -29,8 +29,13 @@ export function convertDistance(km: number, unit: DistanceUnit): number {
  * Map a UI language code to the BCP-47 locale used for number formatting.
  * Keeps the active i18n language as the source of truth so a user who
  * switched to English sees thousands separators with commas, not dots.
+ *
+ * Exported so screens that format a number `Intl` handles but this module has
+ * no helper for — a latitude, a count of days — resolve the locale from the
+ * SAME rule rather than writing a second one. Two rules is how one page came
+ * to print "de-DE" numbers beside "en-GB" ones.
  */
-function localeForLanguage(language: string | undefined): string {
+export function localeForLanguage(language: string | undefined): string {
   if (!language) return "en-US";
   const lower = language.toLowerCase();
   if (lower.startsWith("de")) return "de-DE";

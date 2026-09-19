@@ -1,7 +1,8 @@
 import { useEffect, useState } from "react";
 import { statsApi, type CruiseStatsResponse } from "../../lib/api/stats";
 import { cruiseApi } from "../../lib/api/cruise";
-import { deriveCruiseStats } from "../../lib/stats/cruiseStatsDetail";
+import { deriveCruiseStats, isPricedCruise } from "../../lib/stats/cruiseStatsDetail";
+import { isCountableCruise } from "../../shared/cruiseCounting";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import {
   CruiseRhythmSection,
@@ -288,9 +289,22 @@ export default function CruiseStatsSection({
     },
   ];
 
-  const detail = deriveCruiseStats(
-    shown.year === null ? cruises : cruisesStartedIn(cruises, shown.year)
-  );
+  const scopedCruises = shown.year === null ? cruises : cruisesStartedIn(cruises, shown.year);
+  const detail = deriveCruiseStats(scopedCruises);
+  // The money block answers for ONE population, and it is the server's:
+  // `totalSpendBase` counts sailed cruises only. Folding the unfiltered list
+  // beside it put a booked cruise's price in the per-currency rows and in the
+  // coverage line while the total next to them ignored it — an account whose
+  // only priced cruise was a booking read "9.000 EUR" over "Gesamt: 0 €".
+  // The calendar and the fun blocks keep the full list on purpose: they are
+  // about the logbook, not about money that has been spent.
+  const sailedCruises = scopedCruises.filter(isCountableCruise);
+  const moneyDetail = deriveCruiseStats(sailedCruises);
+  // What that filter withheld, counted so the section can SAY it rather than
+  // leaving a reader to wonder where a price went. Zero of them prints nothing.
+  const bookedPricedCount = scopedCruises.filter(
+    (cruise) => !isCountableCruise(cruise) && isPricedCruise(cruise)
+  ).length;
   const accent = colorOf("cruise");
   const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
   const show = visibility.isVisible;
@@ -366,7 +380,23 @@ export default function CruiseStatsSection({
       )}
 
       {show("rhythm") && <CruiseRhythmSection detail={detail} accent={accent} locale={locale} />}
-      {show("money") && <CruiseMoneySection detail={detail} accent={accent} locale={locale} />}
+      {show("money") && (
+        <CruiseMoneySection
+          detail={moneyDetail}
+          accent={accent}
+          locale={locale}
+          totalSpendBase={stats.totalSpendBase}
+          bookedPricedCount={bookedPricedCount}
+          scope={evidenceScope}
+        />
+      )}
+      {/*
+        The FULL scoped fold, not `moneyDetail`: the companions total under the
+        ranked list counts everyone who came along, and a booked cruise is part
+        of the logbook even though its price is not money anyone has spent.
+        Handing the money section's filtered fold to this one would make the
+        total disagree with the bars beneath it.
+      */}
       {show("fun") && (
         <CruiseFunSection
           detail={detail}

@@ -28,10 +28,12 @@ import {
  * POPULATION rests on the per-key literals, which is why each of them names a
  * cruise rather than a number.
  *
- * `cruiseTotalSpend` and `cruiseCompanionCount` are absent from the
- * cross-check on purpose: neither figure exists on `/stats/cruise` at all —
- * the first is a base-currency total the client fold refuses to compute, the
- * second is the total of a ranked list. Their literals stand alone and say so.
+ * `cruiseCompanionCount` is absent from the cross-check on purpose: that
+ * figure exists nowhere on `/stats/cruise` — it is the total of a ranked list
+ * the client folds from the cruise rows. Its literals stand alone and say so.
+ * `cruiseTotalSpend` used to be absent for the same reason and no longer is:
+ * the tab grew a base-currency total tile, and the endpoint answers for it as
+ * `totalSpendBase`, so the two are held together below.
  *
  * The fixture, all of it user A's:
  *   - MEIN SCHIFF (ship 1, line AIDA), 1–5 March 2024: Hamburg, a sea day,
@@ -104,6 +106,7 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
     cruiseShipsUnique: number;
     cruiseLinesUnique: number;
     countriesIso: string[];
+    totalSpendBase: { value: number | null; excludedCount: number; currency: string };
   }
   let cruiseStats: CruiseTabStats;
 
@@ -423,6 +426,32 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
       values: { amount: 500, currency: "USD" },
     });
     assertSumInvariant(res, (n) => Math.round(n * 100) / 100);
+  });
+
+  /**
+   * The tile and the panel, on the same rows.
+   *
+   * The money tile reads `totalSpendBase` off `/stats/cruise` and the panel
+   * answers `metric:cruiseTotalSpend`; both call
+   * `services/stats/cruiseSpendBase.ts`, which is the point of that file. What
+   * this binds is that neither surface re-spells the predicate: a tile that
+   * counted the booked cruise, read a different base currency or quietly
+   * converted the dollar one would diverge here.
+   *
+   * The exclusion count is checked against the ENTRIES rather than against
+   * `unattributed`, which stays empty while anything converts: one euro cruise
+   * in, one dollar cruise listed at zero with a `notConverted` subtitle, one
+   * excluded.
+   */
+  it("cruiseTotalSpend equals the totalSpendBase the tab renders, exclusions and all", () => {
+    const res = answer("cruiseTotalSpend");
+    expect(cruiseStats.totalSpendBase.value).toBe(res.measure.value);
+    expect(cruiseStats.totalSpendBase.currency).toBe("EUR");
+    const notConverted = res.entries.filter(
+      (e) => e.subtitle?.key === "evidence.subtitle.notConverted"
+    );
+    expect(cruiseStats.totalSpendBase.excludedCount).toBe(notConverted.length);
+    expect(notConverted.map((e) => e.id)).toEqual([cruise2025]);
   });
 
   /** A year is a population, and the 2025 cruise is not in 2024's. */

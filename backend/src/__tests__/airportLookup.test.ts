@@ -49,12 +49,24 @@ describe("Airport Lookup", () => {
     });
 
     it("should return null for non-existent airport", async () => {
-      // Use a code that definitely doesn't exist
-      const airport = await findOrCreateAirport("XXX999");
+      // An unknown code falls through to airport-data.com and then to the
+      // 12 MB OurAirports CSV. Unstubbed, this test really downloaded both,
+      // and on 2026-09-19 the download alone exceeded Jest's 5 s budget on
+      // the CI runner (run 35450182454). The behaviour under test is "no
+      // source knows the code, so the answer is null" — the sources are
+      // stubbed to fail so the test measures that and nothing about the net.
+      const realFetch = global.fetch;
+      global.fetch = jest
+        .fn()
+        .mockRejectedValue(new Error("network disabled in test")) as unknown as typeof fetch;
+      try {
+        const airport = await findOrCreateAirport("XXX999");
 
-      // Should return null or handle gracefully
-      // (depending on implementation, might try external API)
-      expect(airport).toBeDefined(); // Might return null or attempt external lookup
+        expect(global.fetch).toHaveBeenCalled();
+        expect(airport).toBeNull();
+      } finally {
+        global.fetch = realFetch;
+      }
     });
   });
 
