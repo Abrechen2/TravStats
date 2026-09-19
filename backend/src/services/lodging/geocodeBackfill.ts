@@ -448,14 +448,72 @@ export async function completeMissingAddresses(
         // "Lëtzebuerg" is Latin and stays untouched.
         const gone = (v: string | null): boolean => !v?.trim() || hasNonLatinScript(v);
 
-        const data: { address?: string; city?: string; country?: string } = {};
-        if (gone(row.address) && parts.address) data.address = parts.address;
-        if (gone(row.city) && parts.city) data.city = parts.city;
-        if (gone(row.country) && parts.country) data.country = parts.country;
-        if (Object.keys(data).length === 0) continue;
+        // One guarded write PER FIELD, each conditional on the field still
+        // holding exactly what this pass read before it asked the geocoder.
+        //
+        // It was a single unconditional `update`, and a reverse geocode takes
+        // seconds — the 2026-09-19 integrity audit typed
+        // `USER-TYPED-DO-NOT-OVERWRITE` into a lodging's address inside that
+        // window and got "Spandauer Straße" back. The forward pass has had the
+        // guard since AUD-062; the reverse one did not.
+        //
+        // Compare-and-swap rather than `address: null`, because "missing" here
+        // also means "unreadable": the pass deliberately replaces 東京都, and a
+        // null-only guard would silently drop that. Matching the value it read
+        // refuses both ways — a user who typed something, and a user who fixed
+        // the script themselves.
+        //
+        // Per field rather than one combined WHERE: a user correcting the city
+        // must not also cost this row its missing country.
+        const writes: Array<{
+          field: "address" | "city" | "country";
+          where: Prisma.LodgingWhereInput;
+          data: Prisma.LodgingUpdateManyMutationInput;
+        }> = [];
+        if (gone(row.address) && parts.address) {
+          writes.push({
+            field: "address",
+            where: { id: row.id, address: row.address },
+            data: { address: parts.address },
+          });
+        }
+        if (gone(row.city) && parts.city) {
+          writes.push({
+            field: "city",
+            where: { id: row.id, city: row.city },
+            data: { city: parts.city },
+          });
+        }
+        if (gone(row.country) && parts.country) {
+          writes.push({
+            field: "country",
+            where: { id: row.id, country: row.country },
+            data: { country: parts.country },
+          });
+        }
+        if (writes.length === 0) continue;
 
-        await prisma.lodging.update({ where: { id: row.id }, data });
-        filled++;
+        let wrote = 0;
+        const superseded: string[] = [];
+        for (const write of writes) {
+          const result = await prisma.lodging.updateMany({
+            where: write.where,
+            data: write.data,
+          });
+          if (result.count === 0) superseded.push(write.field);
+          else wrote++;
+        }
+        if (superseded.length > 0) {
+          logger.info(
+            {
+              operation: "lodging_address_backfill_superseded",
+              lodgingId: row.id,
+              fields: superseded,
+            },
+            "fields changed while the geocoder was working — left alone"
+          );
+        }
+        if (wrote > 0) filled++;
       } catch (err) {
         logger.warn(
           {
