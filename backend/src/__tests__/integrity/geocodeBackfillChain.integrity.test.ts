@@ -1,5 +1,5 @@
 /**
- * Auditor I2, data-integrity audit 2026-09-19 — finding 2, and its fix.
+ * Data-integrity audit 2026-09-19, finding 2 — and its fix.
  *
  * `services/lodging/geocodeBackfill.ts` wrote the geocoder's answer with
  * `prisma.lodging.updateMany({ where: { id, lat: null, lon: null }, data: {
@@ -19,19 +19,52 @@
  * already stamped, so it went to the back of the queue and failed the same way
  * next time.
  *
- * The fix resolves the chain to an id BEFORE the write and passes the scalar.
- * Test 2 below pins the write the service builds now; test 3 pins that an
- * unknown chain name costs the row nothing but its chain. Test 4 pins the
- * shape that used to be built, and that it would still throw — the reason
- * this cannot come back by accident is that nothing type-checks it, so
- * something has to.
+ * These cases drive the REAL `backfillMissingCoordinates`, with the three
+ * geocoder tiers stubbed, and read the row back. An earlier version asserted
+ * against a local copy of the write — which is no guard at all: reverting the
+ * service would have left it green.
  */
 import { prisma } from "../../db";
-import { isDatabaseError } from "../../services/lodging/geocodeBackfill";
+
+jest.mock("../../services/geo/photon", () => ({ searchPlaces: jest.fn() }));
+jest.mock("../../services/geo/nominatim", () => ({
+  geocodeAddress: jest.fn(),
+  reverseGeocode: jest.fn(),
+}));
+jest.mock("../../services/geo/googlePlaces", () => ({
+  findLodgingPlace: jest.fn(),
+  isGooglePlacesConfigured: jest.fn(),
+}));
+
+import { searchPlaces } from "../../services/geo/photon";
+import { geocodeAddress } from "../../services/geo/nominatim";
+import { findLodgingPlace } from "../../services/geo/googlePlaces";
+import { backfillMissingCoordinates } from "../../services/lodging/geocodeBackfill";
 
 const TAG = `i2geo-${Date.now()}`;
 let userId = "";
 let chainId = 0;
+
+/**
+ * The Google tier is the only one that reports a chain, so it is the one that
+ * reaches the branch under test. Photon and Nominatim answer nothing, exactly
+ * as they do for a house neither of them knows.
+ */
+function googleAnswers(chainName: string | null): void {
+  jest.mocked(searchPlaces).mockResolvedValue([]);
+  jest.mocked(geocodeAddress).mockResolvedValue(null);
+  jest.mocked(findLodgingPlace).mockResolvedValue({
+    lat: 48.1,
+    lon: 11.6,
+    type: "hotel",
+    name: "Whatever Google calls it",
+    city: "München",
+    country: "Germany",
+    address: "Musterstraße 1",
+    chainName,
+    countryCode: "DE",
+  });
+}
 
 beforeAll(async () => {
   const user = await prisma.user.create({
@@ -44,6 +77,10 @@ beforeAll(async () => {
   chainId = chain.id;
 });
 
+beforeEach(() => {
+  jest.clearAllMocks();
+});
+
 afterAll(async () => {
   await prisma.lodging.deleteMany({ where: { userId } });
   await prisma.user.deleteMany({ where: { username: { startsWith: TAG } } });
@@ -51,50 +88,33 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
-/**
- * The write the service performs, with the chain already resolved to an id —
- * byte-for-byte the shape `geocodeBackfill.ts` builds since the fix.
- */
-async function writePosition(lodgingId: string, resolvedChainId: number | null) {
-  return prisma.lodging.updateMany({
-    where: { id: lodgingId, lat: null, lon: null },
-    data: {
-      lat: 48.1,
-      lon: 11.6,
-      city: "München",
-      ...(resolvedChainId !== null ? { chainId: resolvedChainId } : {}),
-    },
-  });
-}
-
 describe("the geocode backfill's position write", () => {
-  it("stores the position when the geocoder named NO chain (the control)", async () => {
+  it("stores the position when the geocoder names NO chain (the control)", async () => {
     const row = await prisma.lodging.create({
       data: { userId, name: `${TAG}-no-chain`, type: "hotel" },
     });
+    googleAnswers(null);
 
-    const written = await writePosition(row.id, null);
+    const result = await backfillMissingCoordinates(userId);
 
-    expect(written.count).toBe(1);
+    expect(result.filled).toBe(1);
     const after = await prisma.lodging.findUniqueOrThrow({ where: { id: row.id } });
     expect(after.lat).toBeCloseTo(48.1);
+    expect(after.lon).toBeCloseTo(11.6);
+    expect(after.chainId).toBeNull();
   });
 
-  it("stores the position AND the chain when the geocoder named one the catalogue knows", async () => {
+  it("stores the position AND the chain when the geocoder names one the catalogue knows", async () => {
+    // The defect's own case: before the fix this row came back with lat, lon,
+    // city and chain all still null, because the write threw as a whole.
     const row = await prisma.lodging.create({
       data: { userId, name: `${TAG}-with-chain`, type: "hotel" },
     });
+    googleAnswers(`${TAG}-Chain`);
 
-    // What the service now does first: name -> id, outside the write.
-    const chain = await prisma.lodgingChain.findUnique({
-      where: { name: `${TAG}-Chain` },
-      select: { id: true },
-    });
-    expect(chain).not.toBeNull();
+    const result = await backfillMissingCoordinates(userId);
 
-    const written = await writePosition(row.id, chain?.id ?? null);
-
-    expect(written.count).toBe(1);
+    expect(result.filled).toBe(1);
     const after = await prisma.lodging.findUniqueOrThrow({ where: { id: row.id } });
     expect(after.lat).toBeCloseTo(48.1);
     expect(after.lon).toBeCloseTo(11.6);
@@ -106,50 +126,31 @@ describe("the geocode backfill's position write", () => {
     const row = await prisma.lodging.create({
       data: { userId, name: `${TAG}-unknown-chain`, type: "hotel" },
     });
+    googleAnswers(`${TAG}-no-such-chain`);
 
-    const chain = await prisma.lodgingChain.findUnique({
-      where: { name: `${TAG}-no-such-chain` },
-      select: { id: true },
-    });
-    expect(chain).toBeNull();
-
-    const written = await writePosition(row.id, chain?.id ?? null);
+    const result = await backfillMissingCoordinates(userId);
 
     // The position is the point of the pass. An unknown chain name is not a
     // reason to store nothing — which is precisely what the defect did.
-    expect(written.count).toBe(1);
+    expect(result.filled).toBe(1);
     const after = await prisma.lodging.findUniqueOrThrow({ where: { id: row.id } });
     expect(after.lat).toBeCloseTo(48.1);
     expect(after.chainId).toBeNull();
   });
 
-  it("the OLD shape still throws — and the throw is recognised as ours, not the geocoder's", async () => {
+  it("never overwrites a chain the row already has", async () => {
+    const other = await prisma.lodgingChain.create({
+      data: { name: `${TAG}-Other`, isUserAdded: true },
+    });
     const row = await prisma.lodging.create({
-      data: { userId, name: `${TAG}-old-shape`, type: "hotel" },
+      data: { userId, name: `${TAG}-owned-chain`, type: "hotel", chainId: other.id },
     });
+    googleAnswers(`${TAG}-Chain`);
 
-    const write = prisma.lodging.updateMany({
-      where: { id: row.id, lat: null, lon: null },
-      data: {
-        lat: 48.1,
-        lon: 11.6,
-        city: "München",
-        ...({ chain: { connect: { name: `${TAG}-Chain` } } } as unknown as object),
-      },
-    });
-
-    const err = await write.then(
-      () => null,
-      (e: unknown) => e
-    );
-    expect(err).not.toBeNull();
-    expect(String(err)).toMatch(/[Uu]nknown argument `chain`/);
-    // The second half of the fix: the per-row catch logs this at `error`, not
-    // `warn`. Logging it as a transient miss is what let the defect run.
-    expect(isDatabaseError(err)).toBe(true);
-    expect(isDatabaseError(new Error("fetch failed"))).toBe(false);
+    await backfillMissingCoordinates(userId);
 
     const after = await prisma.lodging.findUniqueOrThrow({ where: { id: row.id } });
-    expect(after.lat).toBeNull();
+    expect(after.lat).toBeCloseTo(48.1);
+    expect(after.chainId).toBe(other.id);
   });
 });
