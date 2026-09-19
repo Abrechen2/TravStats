@@ -170,6 +170,30 @@ const normaliseToken = (token: string): string =>
   token.toLowerCase().replace(/[^\p{L}\p{N}]/gu, "");
 
 /**
+ * The one word on a label line that NAMES the field.
+ *
+ * A "label line" is whatever stood before the value — `labelContextOf` looks
+ * back up to 80 characters, so it is a line, not a word. A sender that prints
+ * its own name on every line hands over "Seehotel Adler – Anreise:", and
+ * treating the whole of that as this document's vocabulary excluded the BRAND
+ * from the subject anchor: "Ihre Reservierung im Seehotel Adler wurde
+ * bestätigt" then abstained with `noDistinguishingMarker` for a sender that
+ * names itself twice over.
+ *
+ * So: everything up to the first separator is the label proper, and the LAST
+ * word of it is the field name — a brand sits in FRONT of the field name, not
+ * behind it. One word and not two, deliberately: "Seehotel Adler – Anreise:"
+ * would give up "Adler" on the second, which is the bug again one word along.
+ * A hyphenated field name survives, because `normaliseToken` folds
+ * "Check-in" to "checkin".
+ */
+function fieldNameToken(label: string): string {
+  const beforeValue = label.split(/[:=]/)[0];
+  const words = beforeValue.split(/[^\p{L}\p{N}-]+/u).filter((word) => word.length > 0);
+  return normaliseToken(words[words.length - 1] ?? "");
+}
+
+/**
  * A brand token from the subject — or nothing.
  *
  * The subject is first stripped of what belongs to ONE booking (dates and
@@ -182,11 +206,12 @@ const normaliseToken = (token: string): string =>
 export function senderAnchorFromSubject(
   subject: string,
   /**
-   * This sender's own label lines. A word that appears among them is this
-   * document's VOCABULARY, not its author: "Ihre Anreise steht bevor" is a
-   * subject built out of the same words the body prints beside every value,
+   * This sender's own label lines. The word each of them NAMES ITS FIELD with
+   * is this document's vocabulary, not its author: "Ihre Anreise steht bevor"
+   * is a subject built out of the words the body prints beside every value,
    * and an anchor made of one would claim any sender that labels its fields
-   * the same way — which is most of them.
+   * the same way — which is most of them. Only that word is excluded; see
+   * `fieldNameToken` for why the rest of the line must not be.
    */
   labelLines: readonly string[] = []
 ): string | null {
@@ -199,9 +224,7 @@ export function senderAnchorFromSubject(
     .trim();
   if (cleaned.length < 5) return null;
 
-  const labelWords = new Set(
-    labelLines.flatMap((line) => line.split(/[^\p{L}\p{N}]+/u).map(normaliseToken))
-  );
+  const labelWords = new Set(labelLines.map(fieldNameToken).filter((token) => token.length > 0));
   const distinctive = cleaned
     .split(" ")
     .map(normaliseToken)

@@ -232,6 +232,42 @@ describe("a user-derived lodging template", () => {
       expect(derived.template.match.anchors[0]).toContain("Seehotel");
     });
 
+    it("keeps the brand a sender prints in FRONT of its own field names", () => {
+      // Re-review of `fix/workshop-lodging-derivation`, finding 2. The
+      // exclusion set was built from the whole label LINE, and
+      // `labelContextOf` looks back up to 80 characters — so a sender that
+      // writes its name on every line put its own brand into the set, and a
+      // subject naming that brand twice over abstained. A brand sits in front
+      // of the field name; only the field name is vocabulary.
+      const branded = [
+        "Seehotel Adler – Unterkunft: Seehotel Adler Nürnberg",
+        "Seehotel Adler – Anreise: 10. März 2026",
+        "Seehotel Adler – Abreise: 12. März 2026",
+      ].join("\n");
+      const derived = deriveLodgingTemplate({
+        ...input,
+        senderDomain: undefined,
+        subject: "Ihre Reservierung im Seehotel Adler wurde bestätigt",
+        fullText: branded,
+        selections: [
+          select(branded, "Seehotel Adler Nürnberg", "hotelName"),
+          select(branded, "10. März 2026", "checkIn"),
+          select(branded, "12. März 2026", "checkOut"),
+        ],
+      });
+      if (!derived.ok) throw new Error(`expected a template, got ${derived.refusal}`);
+      expect(derived.template.match.anchors[0]).toContain("Seehotel Adler");
+      // And it reads the mail it came from, so the anchor is not the only
+      // thing that survived the change.
+      const read = applyLodgingTemplate(
+        derived.template,
+        "Ihre Reservierung im Seehotel Adler wurde bestätigt",
+        branded
+      );
+      expect(read?.hotelName).toBe("Seehotel Adler Nürnberg");
+      expect(read?.checkIn).toBe("2026-03-10");
+    });
+
     it("lets a known sender domain carry a template a generic subject cannot", () => {
       const text = engineMail();
       const withDomain = deriveLodgingTemplate({
