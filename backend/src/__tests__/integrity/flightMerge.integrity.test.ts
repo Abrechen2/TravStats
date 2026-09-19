@@ -1,5 +1,5 @@
 /**
- * Auditor I2, data-integrity audit 2026-09-19 — NOT COMMITTED.
+ * Data-integrity audit 2026-09-19 — what a merge is allowed to overwrite.
  *
  * `POST /flights?merge=true` is the one write path that folds an incoming
  * document into a row the user may have curated by hand. The claim in

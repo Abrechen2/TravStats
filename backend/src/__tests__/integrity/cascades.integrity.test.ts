@@ -1,10 +1,9 @@
 /**
- * Auditor I2, data-integrity audit 2026-09-19 — NOT COMMITTED.
- *
- * What a single confirmed delete actually takes with it, measured against the
- * live foreign keys rather than read off `schema.prisma`. The schema and the
- * database can disagree (a hand-written migration, a `prisma db push` on a dev
- * box); only the database decides what is lost.
+ * Data-integrity audit 2026-09-19 — what a single confirmed delete actually
+ * takes with it, measured against the live foreign keys rather than read off
+ * `schema.prisma`. The schema and the database can disagree (a hand-written
+ * migration, a `prisma db push` on a dev box); only the database decides what
+ * is lost.
  *
  * The delete routes themselves are one `prisma.<model>.delete()` each, so the
  * cascade IS the behaviour — see routes/trips.ts:617, routes/cruises.ts:744,

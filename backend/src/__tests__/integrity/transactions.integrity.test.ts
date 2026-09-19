@@ -1,7 +1,6 @@
 /**
- * Auditor I2, data-integrity audit 2026-09-19 — NOT COMMITTED.
- *
- * Does a transaction still roll back under the Prisma 7 pg driver adapter?
+ * Data-integrity audit 2026-09-19 — does a transaction still roll back under
+ * the Prisma 7 pg driver adapter?
  *
  * Prisma 7 is Rust-free: `$transaction` is executed by `@prisma/adapter-pg`
  * against a `pg.Pool` connection rather than by the query engine. A rollback
