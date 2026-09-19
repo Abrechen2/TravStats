@@ -20,6 +20,14 @@ describe("backfillCompanions", () => {
   });
 
   afterAll(async () => {
+    // Belt and braces for the injected-failure case below: its `finally` drops
+    // this constraint, but a `finally` only runs if the block was entered. A
+    // constraint left behind refuses every INSERT into flight_companions for
+    // the rest of the run, and the failures would land in whichever suite came
+    // next — a long way from the file that caused them.
+    await prisma.$executeRawUnsafe(
+      "ALTER TABLE flight_companions DROP CONSTRAINT IF EXISTS tmp_refuse_inserts"
+    );
     await prisma.flightCompanion.deleteMany();
     await prisma.tripCompanion.deleteMany();
     await prisma.cruiseCompanion.deleteMany();
