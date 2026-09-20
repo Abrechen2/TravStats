@@ -14,7 +14,6 @@ export interface NavLeaf {
   icon?: IconName;
   badge?: number;
   warn?: boolean;
-  betaBadge?: boolean;
 }
 
 export interface NavGroup {
