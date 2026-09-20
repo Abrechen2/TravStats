@@ -24,15 +24,21 @@
 import type { MapLayerColors } from "../../types/mapTheme";
 
 /**
- * The airport dot's colour: the user's marker override if they set one, else
- * the map theme's own.
+ * The airport dot's colour: the user's marker override, else the map theme's
+ * own, else a literal.
  *
- * One line, and it lived inline in `routesLayer.ts` with a third fallback —
- * a literal amber — behind the theme. The trip map (`Trips/tripMapColors.ts`)
- * needs the same answer, and a second copy of a three-step fallback is a
- * second chance to get the order wrong. The literal is gone with it: the
- * theme always carries an `airportDot`, so the fallback protected against
- * nothing and only hid a missing theme.
+ * THREE steps, and all three are live. It lived inline in `routesLayer.ts`
+ * and moved here because the trip map (`Trips/tripMapColors.ts`) needs the
+ * same answer, and a second copy of a three-step fallback is a second chance
+ * to get the order wrong.
+ *
+ * An earlier version of this comment claimed the literal had been deleted
+ * because "the theme always carries an airportDot". The theme does — but
+ * `themeColors` is OPTIONAL in `createRoutesLayers`, and callers pass nothing
+ * (every routes-layer test does). Without the literal those calls reach
+ * `getFillColor` with `undefined`, which deck.gl draws black. The step is a
+ * guard against an absent theme, not against an incomplete one, and
+ * `markerDotStyle.test.ts` exercises it.
  */
 export function resolveAirportDotColor(
   markerColor: [number, number, number] | null | undefined,
@@ -41,9 +47,9 @@ export function resolveAirportDotColor(
   return markerColor ?? themeColors?.airportDot ?? MAP_FALLBACK_AIRPORT_DOT;
 }
 
-/** Only reachable when a caller passes no theme at all. The one production
- *  caller that can (`routesLayer`'s optional `themeColors`) is always given
- *  one by `DeckGLMap`. */
+/** Used when a caller passes no theme at all. Deliberately equal to
+ *  `MAP_LAYER_COLORS.*.airportDot` — both themes agree on it — so a themeless
+ *  caller and a themed one draw the same dot rather than two ambers. */
 const MAP_FALLBACK_AIRPORT_DOT: [number, number, number] = [240, 169, 71];
 
 /** Base dot radius in metres — identical for airports and ports. */
