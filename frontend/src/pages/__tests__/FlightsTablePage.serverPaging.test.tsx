@@ -239,6 +239,24 @@ describe("FlightsTablePage — server-side paging", () => {
   });
 });
 
+/**
+ * Source scans, and they are the SECOND line — not the guard.
+ *
+ * What actually holds this page to one-page fetching are the behavioural
+ * cases above: "asks for ONE page", which fails the moment a loop reappears,
+ * and "page 2 at 25 rows asks for limit 25 and offset 25", which fails the
+ * moment a page size stops reaching the query. Those read the requests, so
+ * they cannot be satisfied by code that merely looks right.
+ *
+ * These three read the file's text, which ages badly in a known way
+ * (`feedback_source_scanning_guard_ages`): rename `flights`, move the slice
+ * into a helper, or write `.slice (` and they go quiet while passing. They
+ * earn their place as a cheap tripwire for the shape of a regression — a
+ * reviewer reintroducing `displayedFlights` gets told immediately, by name —
+ * and for nothing more. If one of them ever has to be loosened to pass, the
+ * question is whether the behavioural case above still covers it; if it does,
+ * delete the scan rather than weaken it.
+ */
 describe("FlightsTablePage — nothing is filtered or sliced in the browser", () => {
   const source = readFileSync(resolve(__dirname, "../FlightsTablePage.tsx"), "utf-8");
 
