@@ -654,20 +654,33 @@ export default function TripMap({
     // constructor is where deck.gl reads the projection. Flip the two and the
     // overlay caches mercator and never re-detects globe: the basemap becomes
     // a sphere while the trip stays a flat strip pasted over it.
+    const projApi = map as unknown as {
+      setProjection?: (p: { type: string }) => void;
+      setSky?: (sky?: unknown) => void;
+    };
     try {
-      const projApi = map as unknown as {
-        setProjection?: (p: { type: string }) => void;
-        setSky?: (sky?: unknown) => void;
-      };
       projApi.setProjection?.({ type: next });
+    } catch (err) {
+      // The projection itself did not take, so nothing below should pretend
+      // it did: leave React on the projection MapLibre is still showing.
+      logger.warn("TripMap: projection toggle failed", err);
+      return;
+    }
+    try {
       // A globe without a sky has a hard black edge where the horizon should
       // be; a flat map has no horizon at all, so the sky comes off again.
       projApi.setSky?.(next === "globe" ? DARK_SKY : undefined);
-      setProjection(next);
-      fitTrip(next, 600);
     } catch (err) {
-      logger.warn("TripMap: projection toggle failed", err);
+      // Its OWN try, and deliberately non-fatal. A style source may not
+      // support a sky, and a missing horizon is cosmetic — but while this
+      // shared one try with the line below, a throw left MapLibre on the
+      // globe and React on mercator, so the overlay stayed non-interleaved
+      // and the data detached into a flat strip. That is the very bug this
+      // toggle was fixed for, re-entered through the error path.
+      logger.warn("TripMap: setSky failed", err);
     }
+    setProjection(next);
+    fitTrip(next, 600);
   }, [projection, fitTrip]);
 
   const empty = bboxPoints.length === 0;

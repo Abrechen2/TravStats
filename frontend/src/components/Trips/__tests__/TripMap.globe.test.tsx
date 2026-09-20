@@ -30,6 +30,9 @@ import type { Trip } from "../../../types";
  */
 
 interface CapturedOverlay {
+  /** The live instance, so a test can call the handlers TripMap pushes
+   *  through `setProps` on every render. */
+  overlay: { props: { onClick?: (info: unknown) => void } };
   props: { layers: Layer[]; interleaved?: boolean };
   controlOptions: unknown;
   /** How many `setProjection` calls had already happened when this overlay
@@ -39,14 +42,23 @@ interface CapturedOverlay {
 
 const { captured, mapCalls } = vi.hoisted(() => ({
   captured: [] as CapturedOverlay[],
-  mapCalls: { setProjection: [] as unknown[], setSky: [] as unknown[], fitBounds: 0 },
+  mapCalls: {
+    setProjection: [] as unknown[],
+    setSky: [] as unknown[],
+    fitBounds: [] as Array<{ maxZoom?: number }>,
+    flyTo: [] as Array<{ zoom?: number }>,
+    skyThrows: false,
+  },
 }));
 
 vi.mock("react-map-gl/maplibre", async () => {
   const ReactMod = await import("react");
   const fakeMap = {
     setProjection: (p: unknown) => mapCalls.setProjection.push(p),
-    setSky: (s: unknown) => mapCalls.setSky.push(s),
+    setSky: (s: unknown) => {
+      mapCalls.setSky.push(s);
+      if (mapCalls.skyThrows) throw new Error("this style has no sky");
+    },
     on: () => {},
     off: () => {},
     once: () => {},
@@ -54,10 +66,12 @@ vi.mock("react-map-gl/maplibre", async () => {
     getCenter: () => ({ lng: 0, lat: 0 }),
     getCanvas: () => ({ style: {} }),
     getContainer: () => document.createElement("div"),
-    fitBounds: () => {
-      mapCalls.fitBounds += 1;
+    fitBounds: (_bounds: unknown, opts?: { maxZoom?: number }) => {
+      mapCalls.fitBounds.push(opts ?? {});
     },
-    flyTo: () => {},
+    flyTo: (opts?: { zoom?: number }) => {
+      mapCalls.flyTo.push(opts ?? {});
+    },
     easeTo: () => {},
     project: () => ({ x: 0, y: 0 }),
   };
@@ -94,16 +108,17 @@ vi.mock("react-map-gl/maplibre", async () => {
 
 vi.mock("@deck.gl/mapbox", () => {
   class MockMapboxOverlay {
-    props: { layers: Layer[]; interleaved?: boolean };
+    props: { layers: Layer[]; interleaved?: boolean; onClick?: (info: unknown) => void };
     constructor(props: { layers: Layer[]; interleaved?: boolean }) {
       this.props = props;
       captured.push({
+        overlay: this,
         props,
         controlOptions: undefined,
         projectionCallsBefore: mapCalls.setProjection.length,
       });
     }
-    setProps(next: { layers: Layer[] }): void {
+    setProps(next: Record<string, unknown>): void {
       this.props = { ...this.props, ...next };
     }
   }
@@ -146,7 +161,9 @@ beforeEach(() => {
   captured.length = 0;
   mapCalls.setProjection.length = 0;
   mapCalls.setSky.length = 0;
-  mapCalls.fitBounds = 0;
+  mapCalls.fitBounds.length = 0;
+  mapCalls.flyTo.length = 0;
+  mapCalls.skyThrows = false;
   window.localStorage.clear();
 });
 
@@ -201,10 +218,31 @@ describe("TripMap: the globe toggle mounts the overlay the way the globe needs i
 
   it("refits the trip so the globe fills the frame instead of opening at street zoom", async () => {
     render(<TripMap trip={trip} />);
-    await waitFor(() => expect(mapCalls.fitBounds).toBeGreaterThan(0));
-    const before = mapCalls.fitBounds;
+    await waitFor(() => expect(mapCalls.fitBounds.length).toBeGreaterThan(0));
+    const before = mapCalls.fitBounds.length;
     await toggleToGlobe();
-    await waitFor(() => expect(mapCalls.fitBounds).toBeGreaterThan(before));
+    await waitFor(() => expect(mapCalls.fitBounds.length).toBeGreaterThan(before));
+    expect(mapCalls.fitBounds[mapCalls.fitBounds.length - 1].maxZoom).toBe(3);
+  });
+
+  it("does not let a failing setSky leave React and MapLibre disagreeing", async () => {
+    // `setSky` is wrapped because a style source may not support a sky. It sat
+    // INSIDE the same try as the React state update though, so a throw left
+    // MapLibre in globe projection — `setProjection` had already run — while
+    // React still believed mercator, and the overlay stayed non-interleaved.
+    // That is the original bug, reported as a warning and then hidden.
+    render(<TripMap trip={trip} />);
+    await waitFor(() => expect(captured.length).toBeGreaterThan(0));
+    mapCalls.skyThrows = true;
+
+    await toggleToGlobe();
+
+    expect(mapCalls.setProjection).toContainEqual({ type: "globe" });
+    await waitFor(() => expect(captured.length).toBeGreaterThan(1));
+    expect(
+      captured[captured.length - 1].props.interleaved,
+      "MapLibre is on the globe; the overlay must be too"
+    ).toBe(true);
   });
 
   it("draws the flight as a path, not an ArcLayer, once the globe is on", async () => {
