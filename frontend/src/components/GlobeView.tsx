@@ -34,6 +34,8 @@ import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 import { loadGlobeChrome, saveGlobeChrome } from "./map/globeChrome";
 import { useFlightColorStore } from "../store/flightColorStore";
+import { useLodgingColorStore } from "../store/lodgingColorStore";
+import { usePlaceColorStore } from "../store/placeColorStore";
 import { useMapCameraStore } from "../store/mapCameraStore";
 
 // Base marker radius (px) a size preset scales. off → 0 (hidden).
@@ -51,6 +53,10 @@ import { STYLE_OPTIONS } from "./Globe/globeStyles";
 import type { GeoJSONFeature } from "../types";
 import { isCountableFlight } from "../shared/flightCounting";
 import type { Cruise } from "../types/cruise";
+import type { Lodging } from "../types/lodging";
+import type { Place } from "../types/place";
+import type { Rgb } from "../lib/cruiseColor";
+import type { PlaceLabelList } from "../lib/placeLabel";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { resolveCruiseArcColor } from "../lib/cruiseColor";
 import { useCruiseColorStore } from "../store/cruiseColorStore";
@@ -113,6 +119,41 @@ interface GlobeViewProps {
    * layer list below, never a second overlay.
    */
   extraLayers?: Layer[];
+  /**
+   * Lodgings to pin, already filtered by the caller — the globe half of
+   * MapContainer3D's `lodgingsOverride`.
+   *
+   * Measured on main (2026-09-20): MapContainer3D dropped this prop, and five
+   * others beside it, the moment the mode was globe. The comment there said
+   * "pins are flat-map only for now"; what it meant in use was that
+   * `/dashboard/lodging?mode=globe` drew an empty sphere while its own sidebar
+   * listed 31 hotels, and the Alle tab's legend named Unterkünfte the globe
+   * never drew.
+   */
+  lodgings?: readonly Lodging[];
+  /**
+   * Fired by the pinned card's "open" CTA — the globe's counterpart of the
+   * flat map's pin click. It is deliberately NOT called on the click itself:
+   * the Alle tab's handler navigates to the place page, and a click that
+   * yanked the user off the globe would make the card it just opened
+   * unreachable. Same trade the flight arc and the cruise path already make
+   * with `onFlightOpen` / `onCruiseOpen`.
+   */
+  onLodgingOpen?: (lodgingId: string) => void;
+  /** Places to pin, on the same terms as `lodgings`. */
+  places?: readonly Place[];
+  /** Fired by the pinned card's "open" CTA for a place. */
+  onPlaceOpen?: (placeId: string) => void;
+  /** Place id → its list's colour, for the `list` colour mode. */
+  placeListColors?: ReadonlyMap<string, Rgb>;
+  /** Place id → its list's label default, for the symbol labels. */
+  placeListLabels?: ReadonlyMap<string, PlaceLabelList>;
+  /** Lodging marker-size multiplier, owned and persisted by MapContainer3D. */
+  lodgingMarkerSize?: number;
+  onLodgingMarkerSizeChange?: (size: number) => void;
+  /** Place marker-size multiplier, owned and persisted by MapContainer3D. */
+  placeMarkerSize?: number;
+  onPlaceMarkerSizeChange?: (size: number) => void;
 }
 
 // Auto-rotate behaviour.
@@ -178,6 +219,11 @@ export default function GlobeView({
   minRouteCount = 1,
   appearanceDomains = ["flight", "cruise"],
   extraLayers = [],
+  lodgings = [],
+  places = [],
+  placeListColors,
+  lodgingMarkerSize = 1,
+  placeMarkerSize = 1,
 }: GlobeViewProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -248,6 +294,11 @@ export default function GlobeView({
   const [cruiseMarkerSize, setCruiseMarkerSize] = useState<number>(
     () => loadMapAppearance().cruiseMarkerSize ?? 1
   );
+  // Lodging + place appearance. Colour is store state for the same reason the
+  // flight and cruise colours are: the flat map, both panels, the legend and
+  // this renderer all read one config, so a pin and its swatch cannot drift.
+  const lodgingColorConfig = useLodgingColorStore((s) => s.config);
+  const placeColorConfig = usePlaceColorStore((s) => s.config);
   // Style-level overlays (relief hillshade + basemap place names).
   const [showTerrain, setShowTerrain] = useState<boolean>(
     () => loadMapAppearance().showTerrain ?? false
@@ -1190,6 +1241,13 @@ export default function GlobeView({
         portColor: portColor ?? DEFAULT_PORT_COLOR,
         airportRadius: GLOBE_MARKER_BASE_PX * flightMarkerSize,
         portRadius: GLOBE_MARKER_BASE_PX * cruiseMarkerSize,
+        lodgings,
+        lodgingColors: lodgingColorConfig,
+        lodgingRadius: GLOBE_MARKER_BASE_PX * lodgingMarkerSize,
+        places,
+        placeColors: placeColorConfig,
+        placeListColors,
+        placeRadius: GLOBE_MARKER_BASE_PX * placeMarkerSize,
         nightCells: nightCellsData,
         showNight,
       }),
@@ -1222,6 +1280,13 @@ export default function GlobeView({
       portColor,
       flightMarkerSize,
       cruiseMarkerSize,
+      lodgings,
+      lodgingColorConfig,
+      lodgingMarkerSize,
+      places,
+      placeColorConfig,
+      placeListColors,
+      placeMarkerSize,
       nightCellsData,
       showNight,
     ]
