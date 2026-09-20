@@ -346,6 +346,32 @@ for (const surface of surfaces) {
       expect(flyTo).toHaveBeenCalled();
     });
 
+    /**
+     * Closing the card has to let go of the selection too. The globe's
+     * `onClose` only cleared its own `pinned` state, so the store still held
+     * the row: selecting THE SAME row again set the same object reference, the
+     * selector returned the same value, nothing re-rendered, the effect never
+     * re-ran, and the card never came back. The reader had to pick a different
+     * entry and come back to reach it again.
+     */
+    it("reopens the card when the same row is selected again after a close", async () => {
+      surface.render();
+      const L = lodging();
+
+      act(() => useLodgingSelectionStore.getState().setSelection(L));
+      await settle();
+      expect(cardProps.length).toBeGreaterThan(0);
+
+      await act(async () => {
+        (cardProps[cardProps.length - 1].onClose as () => void)();
+      });
+      cardProps.length = 0;
+
+      act(() => useLodgingSelectionStore.getState().setSelection(L));
+      await settle();
+      expect(cardProps.length).toBeGreaterThan(0);
+    });
+
     it("a lodging with no resolved location opens no card and moves no camera", async () => {
       surface.render();
       flyTo.mockClear();

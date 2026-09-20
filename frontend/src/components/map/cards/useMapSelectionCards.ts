@@ -11,7 +11,7 @@
 // a property of the projection. What IS per-renderer stays a parameter: how to
 // move the camera, and whether an emptied selection clears the card.
 
-import { useEffect, useMemo } from "react";
+import { useCallback, useEffect, useMemo } from "react";
 import type { GeoJSONFeature } from "../../../types";
 import { useFlightSelectionStore } from "../../../store/flightSelectionStore";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
@@ -112,6 +112,15 @@ export interface MapSelectionCardsOptions {
 
 export interface MapSelectionCards {
   /**
+   * Let go of all four selections.
+   *
+   * What the card's close button has to do as well as hiding itself. Hiding
+   * alone left the store holding the row, so selecting THE SAME row again set
+   * the same object reference — same value from the selector, no re-render, no
+   * effect, no card. The reader had to pick something else and come back.
+   */
+  clearSelections: () => void;
+  /**
    * What the card should read its route, stats and flight list from.
    *
    * The /geo set the map is drawing, PLUS any selected row it does not carry.
@@ -135,6 +144,18 @@ export function useMapSelectionCards({
   const selectedCruise = useCruiseSelectionStore((s) => s.selectedCruise);
   const selectedLodging = useLodgingSelectionStore((s) => s.selectedLodging);
   const selectedPlace = usePlaceSelectionStore((s) => s.selectedPlace);
+
+  const clearFlights = useFlightSelectionStore((s) => s.clearSelection);
+  const clearCruise = useCruiseSelectionStore((s) => s.clearSelection);
+  const clearLodging = useLodgingSelectionStore((s) => s.clearSelection);
+  const clearPlace = usePlaceSelectionStore((s) => s.clearSelection);
+
+  const clearSelections = useCallback((): void => {
+    clearFlights();
+    clearCruise();
+    clearLodging();
+    clearPlace();
+  }, [clearFlights, clearCruise, clearLodging, clearPlace]);
 
   const cardFlights = useMemo(
     () => withSelectedFlights(flights, selectedFlights),
@@ -222,5 +243,5 @@ export function useMapSelectionCards({
     focus(next.anchorLngLat);
   }, [selectedPlace, focus, setPinned, clearOnEmpty]);
 
-  return { cardFlights };
+  return { cardFlights, clearSelections };
 }

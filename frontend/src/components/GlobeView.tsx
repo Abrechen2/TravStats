@@ -952,7 +952,7 @@ export default function GlobeView({
     [flightColorConfig]
   );
 
-  const { cardFlights } = useMapSelectionCards({
+  const { cardFlights, clearSelections } = useMapSelectionCards({
     flights,
     flightColor: flightCardColor,
     focus: focusOnGlobe,
@@ -1498,7 +1498,12 @@ export default function GlobeView({
               pinned={pinned}
               flights={cardFlights}
               cruises={cruises ?? []}
-              onClose={() => setPinned(null)}
+              // Letting go of the selection is half of closing: see
+              // `clearSelections` for the reopen this fixes.
+              onClose={() => {
+                setPinned(null);
+                clearSelections();
+              }}
               onFlightOpen={onFlightOpen}
               onCruiseOpen={onCruiseOpen}
               onLodgingOpen={onLodgingOpen}
