@@ -1,4 +1,10 @@
-import { ArcLayer } from "@deck.gl/layers";
+import { ArcLayer, PathLayer } from "@deck.gl/layers";
+import {
+  calculateDistance,
+  getArcPeakAltitudeMeters,
+  getArcSteps,
+  greatCircleWaypoints,
+} from "../../Globe/arcUtils";
 import type { Layer } from "@deck.gl/core";
 import { createCruiseArcsLayer, createCruiseArrowsLayer } from "../../layers/cruiseArcsLayer";
 import type { CruiseColorConfig } from "../../../lib/cruiseColor";
@@ -64,6 +70,32 @@ export function groupByTripId(
 // ---------------------------------------------------------------------------
 // Flight arc geometry extraction
 // ---------------------------------------------------------------------------
+
+/** Amber, so a flight leg reads apart from the cruise sky-blue beside it. */
+const JOURNEY_FLIGHT_COLOR: [number, number, number, number] = [245, 158, 11, 220];
+
+interface JourneyFlightPath {
+  path: [number, number, number][];
+}
+
+/**
+ * The same great circle the globe's own arcs ride, at the same altitude rule:
+ * the peak scales with the leg, and BOTH ends sit on the surface — an arc that
+ * starts in the air is not an arc.
+ */
+function toGreatCirclePath(row: FlightArcRow): JourneyFlightPath {
+  const from: [number, number] = [row.sourceLon, row.sourceLat];
+  const to: [number, number] = [row.targetLon, row.targetLat];
+  const distanceKm = calculateDistance(row.sourceLat, row.sourceLon, row.targetLat, row.targetLon);
+  return {
+    path: greatCircleWaypoints(
+      from,
+      to,
+      getArcPeakAltitudeMeters(distanceKm),
+      getArcSteps(distanceKm, false)
+    ),
+  };
+}
 
 interface FlightArcRow {
   sourceLon: number;
@@ -159,21 +191,45 @@ export function buildJourneyLayers(
     if (arrowsLayer !== null) layers.push(arrowsLayer);
   }
 
-  // Flight legs (ArcLayer, amber to distinguish from cruise sky-blue)
+  // Flight legs, amber to distinguish them from the cruise sky-blue.
+  //
+  // TWO layer types for one thing, because the two projections cannot draw
+  // the same one. An `ArcLayer` computes its bow in its own vertex shader
+  // from source and target in COMMON space, which MapLibre's globe projection
+  // does not give it — which is why the globe's own flight arcs are a
+  // `PathLayer` of pre-tessellated great-circle waypoints carrying a
+  // z-altitude (`Globe/buildGlobeLayers.ts`), and never an ArcLayer.
+  //
+  // The Reise view drew NOTHING on the globe until this split (browser
+  // verification, beta.12): the data was there, the layer was there, and the
+  // globe simply could not render it. The flat map keeps the ArcLayer it has
+  // always drawn.
   if (trip.flights.length > 0) {
     const rows = trip.flights.map(flightToArcRow).filter((r): r is FlightArcRow => r !== null);
 
     if (rows.length > 0) {
       layers.push(
-        new ArcLayer<FlightArcRow>({
-          id: "journey-flight-arcs",
-          data: rows,
-          getSourcePosition: (d) => [d.sourceLon, d.sourceLat],
-          getTargetPosition: (d) => [d.targetLon, d.targetLat],
-          getSourceColor: [245, 158, 11, 220],
-          getTargetColor: [245, 158, 11, 220],
-          getWidth: 2,
-        })
+        altitudeM > 0
+          ? new PathLayer<JourneyFlightPath>({
+              id: "journey-flight-arcs",
+              data: rows.map(toGreatCirclePath),
+              getPath: (d) => d.path,
+              getColor: JOURNEY_FLIGHT_COLOR,
+              getWidth: 2,
+              widthUnits: "pixels",
+              widthMinPixels: 1,
+              capRounded: true,
+              jointRounded: true,
+            })
+          : new ArcLayer<FlightArcRow>({
+              id: "journey-flight-arcs",
+              data: rows,
+              getSourcePosition: (d) => [d.sourceLon, d.sourceLat],
+              getTargetPosition: (d) => [d.targetLon, d.targetLat],
+              getSourceColor: JOURNEY_FLIGHT_COLOR,
+              getTargetColor: JOURNEY_FLIGHT_COLOR,
+              getWidth: 2,
+            })
       );
     }
   }
