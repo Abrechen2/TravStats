@@ -152,7 +152,11 @@ export function PoiTab(): JSX.Element {
     <div style={{ position: "absolute", inset: 0 }}>
       <MapContainer3D
         flights={[]}
-        visMode="routes"
+        // `globe` is the same data on a sphere — the pins, their colours and
+        // their labels all come from the same places either way (LodgingTab
+        // makes the identical call). The heatmap has no globe form, so it
+        // keeps the flat map.
+        visMode={mode === "globe" ? "globe" : "routes"}
         extraLayers={layers}
         placesOverride={mode === "heatmap" ? undefined : visiblePlaces}
         onPlaceClick={handlePinClick}
@@ -189,10 +193,14 @@ export function PoiTab(): JSX.Element {
         }}
       />
 
-      {/* Colour-mode + legend. Both derive from the SAME store the pin layer
-          resolves through, which is what makes a swatch and a pin unable to
-          disagree (CLAUDE.md, map colour modes). */}
-      {mode === "markers" && places.length > 0 && (
+      {/* List filter + legend. The legend derives from the SAME store the pin
+          layer resolves through, which is what makes a swatch and a pin unable
+          to disagree (CLAUDE.md, map colour modes). Shown in globe mode too:
+          the sphere draws the same pins in the same colours, and a filter that
+          vanished with the projection would be the kind of asymmetry this
+          whole change exists to remove. Only the heat map has no pins to
+          explain. */}
+      {mode !== "heatmap" && places.length > 0 && (
         <div
           style={{
             position: "absolute",

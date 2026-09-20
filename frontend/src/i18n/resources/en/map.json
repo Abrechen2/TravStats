@@ -238,7 +238,10 @@
       "embark": "Embark",
       "debark": "Debark",
       "openCruise": "Open cruise",
-      "durationHours": "{{h}} h {{m}} min"
+      "durationHours": "{{h}} h {{m}} min",
+      "nights": "Nights",
+      "openLodging": "Open lodging",
+      "openPlace": "Open place"
     },
     "timeSlider": {
       "title": "Timeline",

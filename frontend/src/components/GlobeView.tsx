@@ -7,23 +7,14 @@ import {
   type EarthOcclusionExtensionProps,
 } from "./Globe/EarthOcclusionExtension";
 import {
-  ANTIPODAL_DISTANCE_KM,
   LITE_AUTO_ARC_THRESHOLD,
   LITE_AUTO_CRUISE_THRESHOLD,
   calculateDistance,
-  createRouteKey,
-  endpointIdentity,
   getArcPeakAltitudeMeters,
   getArcSteps,
   greatCircleWaypoints,
 } from "./Globe/arcUtils";
-import {
-  HEAT_HEX,
-  calculateHeatmapThresholds,
-  getHeatmapColor,
-  getQuartile,
-  type Quartile,
-} from "./Globe/heatmapUtils";
+import { HEAT_HEX, getQuartile, type Quartile } from "./Globe/heatmapUtils";
 import {
   buildGlobeLayers,
   DEFAULT_AIRPORT_COLOR,
@@ -34,6 +25,11 @@ import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 import { loadGlobeChrome, saveGlobeChrome } from "./map/globeChrome";
 import { useFlightColorStore } from "../store/flightColorStore";
+import { LODGING_COLOR } from "../lib/lodgingColor";
+import { PLACE_COLOR } from "../lib/placeColor";
+import { rgbCss } from "../lib/flightColor";
+import { useLodgingColorStore } from "../store/lodgingColorStore";
+import { usePlaceColorStore } from "../store/placeColorStore";
 import { useMapCameraStore } from "../store/mapCameraStore";
 
 // Base marker radius (px) a size preset scales. off → 0 (hidden).
@@ -43,14 +39,21 @@ import { HoverTooltip, type HoverTooltipApi } from "./Globe/HoverTooltip";
 import { PinnedCard } from "./Globe/PinnedCard";
 import { PinnedCardBoundary } from "./Globe/PinnedCardBoundary";
 import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
-import { toPortLabel } from "./map/portLabel";
 import { applyMapOverlays } from "./Globe/mapOverlays";
+import { buildAirportPoints, buildPortPoints } from "./Globe/globePointData";
+import { buildGlobeArcData } from "./Globe/globeArcData";
+import { lodgingLabelPoints, placeLabelPoints } from "./Globe/globePinLabels";
+import { createMarkerTooltip } from "./map/markerTooltip";
 import { GlobeControlPanel, type StyleId, type LiteMode } from "./Globe/GlobeControlPanel";
 import type { ArcDatum, CruisePathDatum, GlobePinned, PointDatum } from "./Globe/globeLayerTypes";
 import { STYLE_OPTIONS } from "./Globe/globeStyles";
 import type { GeoJSONFeature } from "../types";
 import { isCountableFlight } from "../shared/flightCounting";
 import type { Cruise } from "../types/cruise";
+import type { Lodging } from "../types/lodging";
+import type { Place } from "../types/place";
+import type { Rgb } from "../lib/cruiseColor";
+import type { PlaceLabelList, PlaceLabelSource } from "../lib/placeLabel";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { resolveCruiseArcColor } from "../lib/cruiseColor";
 import { useCruiseColorStore } from "../store/cruiseColorStore";
@@ -60,7 +63,6 @@ import { flagImgHtml, countryName } from "../lib/countryFlag";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTimeSliderStore } from "../store/timeSliderStore";
 import { GlobeTimeHistogram } from "./Globe/GlobeTimeHistogram";
-import { isCountableCruise } from "../shared/cruiseCounting";
 import {
   computeCruiseLegDates,
   computeTimeRange,
@@ -114,6 +116,41 @@ interface GlobeViewProps {
    * layer list below, never a second overlay.
    */
   extraLayers?: Layer[];
+  /**
+   * Lodgings to pin, already filtered by the caller — the globe half of
+   * MapContainer3D's `lodgingsOverride`.
+   *
+   * Measured on main (2026-09-20): MapContainer3D dropped this prop, and five
+   * others beside it, the moment the mode was globe. The comment there said
+   * "pins are flat-map only for now"; what it meant in use was that
+   * `/dashboard/lodging?mode=globe` drew an empty sphere while its own sidebar
+   * listed 31 hotels, and the Alle tab's legend named Unterkünfte the globe
+   * never drew.
+   */
+  lodgings?: readonly Lodging[];
+  /**
+   * Fired by the pinned card's "open" CTA — the globe's counterpart of the
+   * flat map's pin click. It is deliberately NOT called on the click itself:
+   * the Alle tab's handler navigates to the place page, and a click that
+   * yanked the user off the globe would make the card it just opened
+   * unreachable. Same trade the flight arc and the cruise path already make
+   * with `onFlightOpen` / `onCruiseOpen`.
+   */
+  onLodgingOpen?: (lodgingId: string) => void;
+  /** Places to pin, on the same terms as `lodgings`. */
+  places?: readonly Place[];
+  /** Fired by the pinned card's "open" CTA for a place. */
+  onPlaceOpen?: (placeId: string) => void;
+  /** Place id → its list's colour, for the `list` colour mode. */
+  placeListColors?: ReadonlyMap<string, Rgb>;
+  /** Place id → its list's label default, for the symbol labels. */
+  placeListLabels?: ReadonlyMap<string, PlaceLabelList>;
+  /** Lodging marker-size multiplier, owned and persisted by MapContainer3D. */
+  lodgingMarkerSize?: number;
+  onLodgingMarkerSizeChange?: (size: number) => void;
+  /** Place marker-size multiplier, owned and persisted by MapContainer3D. */
+  placeMarkerSize?: number;
+  onPlaceMarkerSizeChange?: (size: number) => void;
 }
 
 // Auto-rotate behaviour.
@@ -137,6 +174,21 @@ function formatTooltipDate(iso: string, _locale: string): string {
 interface DeckOverlayProps {
   layers: Layer[];
   onHover: (info: PickingInfo) => void;
+}
+
+/**
+ * The ring that pulses on the marker a pinned card belongs to. Only the four
+ * SINGLE-POINT kinds get one — an arc or a cruise path is pinned somewhere
+ * along a line, where a ring would mark a spot the user did not click.
+ * Lodging and place read their domain colour rather than a literal, so the
+ * ring cannot disagree with the pin it surrounds.
+ */
+function pulseColor(kind: GlobePinned["kind"]): string | null {
+  if (kind === "airport") return "#f0a947";
+  if (kind === "port") return "#6fa0d6";
+  if (kind === "lodging") return rgbCss(LODGING_COLOR);
+  if (kind === "place") return rgbCss(PLACE_COLOR);
+  return null;
 }
 
 function DeckGLOverlay({ layers, onHover }: DeckOverlayProps): null {
@@ -179,6 +231,16 @@ export default function GlobeView({
   minRouteCount = 1,
   appearanceDomains = ["flight", "cruise"],
   extraLayers = [],
+  lodgings = [],
+  onLodgingOpen,
+  places = [],
+  onPlaceOpen,
+  placeListColors,
+  placeListLabels,
+  lodgingMarkerSize = 1,
+  onLodgingMarkerSizeChange,
+  placeMarkerSize = 1,
+  onPlaceMarkerSizeChange,
 }: GlobeViewProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -249,6 +311,21 @@ export default function GlobeView({
   const [cruiseMarkerSize, setCruiseMarkerSize] = useState<number>(
     () => loadMapAppearance().cruiseMarkerSize ?? 1
   );
+  // Lodging + place appearance. Colour is store state for the same reason the
+  // flight and cruise colours are: the flat map, both panels, the legend and
+  // this renderer all read one config, so a pin and its swatch cannot drift.
+  const lodgingColorConfig = useLodgingColorStore((s) => s.config);
+  const setLodgingColorMode = useLodgingColorStore((s) => s.setMode);
+  const setLodgingColor = useLodgingColorStore((s) => s.setColor);
+  const placeColorConfig = usePlaceColorStore((s) => s.config);
+  const setPlaceColorMode = usePlaceColorStore((s) => s.setMode);
+  const setPlaceColor = usePlaceColorStore((s) => s.setColor);
+  // Whether a place pill says its name or its list's symbol. The flat map owns
+  // the same setting (DeckGLMap), persisted in the shared mapAppearance blob,
+  // so flipping it on one map is already flipped on the other.
+  const [placeLabelSource, setPlaceLabelSource] = useState<PlaceLabelSource>(
+    () => loadMapAppearance().placeLabelSource ?? "list"
+  );
   // Style-level overlays (relief hillshade + basemap place names).
   const [showTerrain, setShowTerrain] = useState<boolean>(
     () => loadMapAppearance().showTerrain ?? false
@@ -270,6 +347,7 @@ export default function GlobeView({
       showTerrain,
       showPlaceLabels,
       labelsMode,
+      placeLabelSource,
     });
   }, [
     styleId,
@@ -282,6 +360,7 @@ export default function GlobeView({
     showTerrain,
     showPlaceLabels,
     labelsMode,
+    placeLabelSource,
   ]);
 
   // Mirror the overlay toggles into refs so the `style.load` re-apply
@@ -632,206 +711,15 @@ export default function GlobeView({
   }, [autoRotate]);
 
   // Aggregate flights into city-pair routes with count + heatmap colour.
-  const { arcsData, antipodalArcs, heatmapThresholds } = useMemo(() => {
-    interface RouteAcc {
-      count: number;
-      from: [number, number];
-      to: [number, number];
-      flightIds: string[];
-      departure: { iata?: string; name?: string };
-      arrival: { iata?: string; name?: string };
-      weak: boolean;
-      // Route carries at least one scheduled flight / at least one
-      // flight that's actually been flown (i.e. status !== 'scheduled').
-      // Mirrors routesLayer.ts's RouteRecord — combined, these two flags
-      // simplify to a "past" vs. "scheduled" two-tone bucket: a route is
-      // "scheduled" only when EVERY flight on it is still scheduled.
-      hasUpcoming: boolean;
-      hasPastFlown: boolean;
-      // Status-aware split of `count`, same predicate as routesLayer.ts's
-      // RouteRecord — flown = status 'flown'|'historical', scheduled =
-      // status 'scheduled'. Threaded through to ArcDatum for the hover
-      // tooltip's two-part label.
-      flownCount: number;
-      scheduledCount: number;
-    }
-    const routes = new Map<string, RouteAcc>();
-    for (const flight of filteredFlights) {
-      const coords = flight.geometry?.coordinates;
-      if (!coords || coords.length < 2) continue;
-      const start = coords[0];
-      const end = coords[coords.length - 1];
-      if (
-        ![start[0], start[1], end[0], end[1]].every(Number.isFinite) ||
-        (start[0] === 0 && start[1] === 0) ||
-        (end[0] === 0 && end[1] === 0)
-      ) {
-        continue;
-      }
-      const dep = flight.properties?.departureAirport;
-      const arr = flight.properties?.arrivalAirport;
-      const depKey = endpointIdentity(dep?.iata, start[0], start[1]);
-      const arrKey = endpointIdentity(arr?.iata, end[0], end[1]);
-      // Weak when either endpoint had no IATA — endpointIdentity then
-      // falls back to a coord-rounded sentinel. This may collapse
-      // multiple flights that were similar-but-not-identical routes.
-      const flightWeak = !dep?.iata || !arr?.iata;
-      const isScheduled = flight.properties?.status === "scheduled";
-      // Same predicate as routesLayer.ts's aggregateAllRoutes — literally so
-      // now: both read shared/flightCounting, which is also what the server
-      // counts by. "Flown" covers 'historical' too (a route already travelled
-      // either way).
-      const isFlown = isCountableFlight(flight.properties);
-      const key = createRouteKey(depKey, arrKey);
-      const existing = routes.get(key);
-      if (existing) {
-        existing.count++;
-        existing.flightIds.push(flight.properties.id);
-        if (flightWeak) existing.weak = true;
-        if (isScheduled) existing.hasUpcoming = true;
-        if (!isScheduled) existing.hasPastFlown = true;
-        if (isScheduled) existing.scheduledCount += 1;
-        if (isFlown) existing.flownCount += 1;
-      } else {
-        routes.set(key, {
-          count: 1,
-          from: [start[0], start[1]],
-          to: [end[0], end[1]],
-          flightIds: [flight.properties.id],
-          departure: dep ?? {},
-          arrival: arr ?? {},
-          weak: flightWeak,
-          hasUpcoming: isScheduled,
-          hasPastFlown: !isScheduled,
-          flownCount: isFlown ? 1 : 0,
-          scheduledCount: isScheduled ? 1 : 0,
-        });
-      }
-    }
-    const counts = Array.from(routes.values()).map((r) => r.count);
-    const thresholds = calculateHeatmapThresholds(counts);
-    const arcs: ArcDatum[] = [];
-    const antipodals: ArcDatum[] = [];
-    for (const r of routes.values()) {
-      if (r.count < minRouteCount) continue;
-      const distanceKm = calculateDistance(r.from[1], r.from[0], r.to[1], r.to[0]);
-      // Antipodal pairs (e.g. SYD↔TFS, ~19 900 km) have a degenerate
-      // great circle: the slerp picks an arbitrary polar path. Render
-      // them as a flat surface line at altitude 0 so the route still
-      // appears visually, but without the polar-ring artifact a high-
-      // altitude arc would produce.
-      const quartile = getQuartile(r.count, thresholds);
-      // Pure-scheduled (never flown) → "scheduled"; everything else
-      // (historical-only, mixed, regular past-only) collapses to "past" —
-      // mirrors routesLayer.ts's pureScheduled collapsing rule exactly.
-      const status: ArcDatum["status"] = r.hasUpcoming && !r.hasPastFlown ? "scheduled" : "past";
-      if (distanceKm >= ANTIPODAL_DISTANCE_KM) {
-        antipodals.push({
-          from: r.from,
-          to: r.to,
-          waypoints: greatCircleWaypoints(r.from, r.to, 0, getArcSteps(distanceKm, lite)),
-          count: r.count,
-          flightIds: r.flightIds,
-          departure: r.departure,
-          arrival: r.arrival,
-          color: getHeatmapColor(r.count, thresholds),
-          quartile,
-          weak: r.weak,
-          status,
-          flownCount: r.flownCount,
-          scheduledCount: r.scheduledCount,
-        });
-        continue;
-      }
-      const peakAltitudeM = getArcPeakAltitudeMeters(distanceKm) * altitudeFactor;
-      arcs.push({
-        from: r.from,
-        to: r.to,
-        waypoints: greatCircleWaypoints(r.from, r.to, peakAltitudeM, getArcSteps(distanceKm, lite)),
-        count: r.count,
-        flightIds: r.flightIds,
-        departure: r.departure,
-        arrival: r.arrival,
-        color: getHeatmapColor(r.count, thresholds),
-        quartile,
-        weak: r.weak,
-        status,
-        flownCount: r.flownCount,
-        scheduledCount: r.scheduledCount,
-      });
-    }
-    return { arcsData: arcs, antipodalArcs: antipodals, heatmapThresholds: thresholds };
-  }, [filteredFlights, minRouteCount, lite, altitudeFactor]);
+  const { arcsData, antipodalArcs, heatmapThresholds } = useMemo(
+    () => buildGlobeArcData(filteredFlights, minRouteCount, lite, altitudeFactor),
+    [filteredFlights, minRouteCount, lite, altitudeFactor]
+  );
 
-  const airportPoints = useMemo<PointDatum[]>(() => {
-    const seen = new Map<string, PointDatum>();
-    const bumpLastVisit = (cur: PointDatum, candidate: string | undefined): string | undefined => {
-      if (!candidate) return cur.lastVisit;
-      if (!cur.lastVisit || candidate > cur.lastVisit) return candidate;
-      return cur.lastVisit;
-    };
-    for (const flight of filteredFlights) {
-      const coords = flight.geometry?.coordinates;
-      if (!coords || coords.length < 2) continue;
-      const dep = flight.properties?.departureAirport;
-      const arr = flight.properties?.arrivalAirport;
-      const start = coords[0];
-      const end = coords[coords.length - 1];
-      // A scheduled flight is a future flight — it must never bump
-      // "last visit" into the future. `size` stays all-status (its label
-      // is neutral); only the visit timestamp is status-gated (mirrors
-      // routesLayer.ts's buildAirportPoints).
-      const departureTime =
-        flight.properties?.status !== "scheduled"
-          ? (flight.properties?.departureTime ?? undefined)
-          : undefined;
-      if (dep?.iata && Number.isFinite(start[0]) && Number.isFinite(start[1])) {
-        const key = dep.iata;
-        const cur = seen.get(key);
-        if (cur) {
-          seen.set(key, {
-            ...cur,
-            size: cur.size + 1,
-            lastVisit: bumpLastVisit(cur, departureTime),
-          });
-        } else {
-          seen.set(key, {
-            position: [start[0], start[1]],
-            size: 1,
-            iata: dep.iata,
-            name: dep.name ?? dep.iata,
-            icao: dep.icao,
-            city: dep.city ?? undefined,
-            country: dep.country ?? undefined,
-            lastVisit: departureTime,
-          });
-        }
-      }
-      if (arr?.iata && Number.isFinite(end[0]) && Number.isFinite(end[1])) {
-        const key = arr.iata;
-        const cur = seen.get(key);
-        if (cur) {
-          seen.set(key, {
-            ...cur,
-            size: cur.size + 1,
-            lastVisit: bumpLastVisit(cur, departureTime),
-          });
-        } else {
-          seen.set(key, {
-            position: [end[0], end[1]],
-            size: 1,
-            iata: arr.iata,
-            name: arr.name ?? arr.iata,
-            icao: arr.icao,
-            city: arr.city ?? undefined,
-            country: arr.country ?? undefined,
-            lastVisit: departureTime,
-          });
-        }
-      }
-    }
-    return Array.from(seen.values());
-  }, [filteredFlights]);
+  const airportPoints = useMemo<PointDatum[]>(
+    () => buildAirportPoints(filteredFlights),
+    [filteredFlights]
+  );
   // FeatureCollection per cruise. Same source as the 2D map.
   const [cruiseGeometry, setCruiseGeometry] = useState<Map<string, CruiseRouteFeatureCollection>>(
     () => new Map()
@@ -1004,72 +892,16 @@ export default function GlobeView({
     sliderFilterEnd,
   ]);
 
-  const portPoints = useMemo<PointDatum[]>(() => {
-    const seen = new Map<number, PointDatum>();
-    for (const c of cruises) {
-      // Only a sailed cruise's port calls count as a visit — the rule lives in
-      // shared/cruiseCounting.ts, so it no longer drifts from the layer's copy.
-      if (!isCountableCruise(c)) continue;
-      const legs = cruiseLegDatesByCruise.get(c.id) ?? [];
-      // A port is "visited" at the ARRIVAL date of the leg ending there
-      // (or at startDate for the first port of the cruise).
-      const portVisitDate = new Map<number, Date>();
-      const startDate = c.startDate ? new Date(c.startDate) : null;
-      const firstPortStop = c.stops.find((s) => !s.isAtSea && s.port);
-      if (firstPortStop?.port && startDate) {
-        portVisitDate.set(firstPortStop.port.id, startDate);
-      }
-      for (const ld of legs) portVisitDate.set(ld.toPortId, ld.endDate);
-
-      for (const stop of c.stops) {
-        if (stop.isAtSea || !stop.port) continue;
-        const port = stop.port;
-        const visit = portVisitDate.get(port.id);
-
-        if (sliderMode === "live" && sliderCurrent) {
-          if (!visit || visit.getTime() > sliderCurrent.getTime()) continue;
-        } else if (sliderMode === "filter" && sliderFilterStart && sliderFilterEnd) {
-          if (
-            !visit ||
-            visit.getTime() < sliderFilterStart.getTime() ||
-            visit.getTime() > sliderFilterEnd.getTime()
-          ) {
-            continue;
-          }
-        }
-
-        const visitIso = visit ? visit.toISOString() : undefined;
-        const cur = seen.get(port.id);
-        if (cur) {
-          const nextLast =
-            visitIso && (!cur.lastVisit || visitIso > cur.lastVisit) ? visitIso : cur.lastVisit;
-          seen.set(port.id, { ...cur, size: cur.size + 1, lastVisit: nextLast });
-        } else {
-          seen.set(port.id, {
-            position: [port.lon, port.lat],
-            size: 1,
-            iata: port.unlocode ?? port.name,
-            name: port.name,
-            city: port.city ?? undefined,
-            // On-map pill shows the readable port name, not the raw
-            // UN/LOCODE (the tooltip still surfaces the code via `iata`).
-            label: toPortLabel(port.name),
-            // Flag from the LOCODE country prefix (only when it's a real code).
-            country: port.unlocode ? port.unlocode.slice(0, 2) : undefined,
-            lastVisit: visitIso,
-          });
-        }
-      }
-    }
-    return Array.from(seen.values());
-  }, [
-    cruises,
-    cruiseLegDatesByCruise,
-    sliderMode,
-    sliderCurrent,
-    sliderFilterStart,
-    sliderFilterEnd,
-  ]);
+  const portPoints = useMemo<PointDatum[]>(
+    () =>
+      buildPortPoints(cruises, cruiseLegDatesByCruise, {
+        mode: sliderMode,
+        current: sliderCurrent,
+        filterStart: sliderFilterStart,
+        filterEnd: sliderFilterEnd,
+      }),
+    [cruises, cruiseLegDatesByCruise, sliderMode, sliderCurrent, sliderFilterStart, sliderFilterEnd]
+  );
 
   // Live-mode head marker: in live slider mode, find the single most
   // recent flight (latest departureDate) and isolate its great-circle
@@ -1286,6 +1118,47 @@ export default function GlobeView({
     }
   }, []);
 
+  // Hover on a lodging or place pin goes through the flat map's own tooltip
+  // renderer, which already keys on the layer id (markerTooltip.ts) — a second
+  // renderer for the same datum is a second thing that can disagree.
+  const markerTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
+  const onPinHover = useCallback(
+    (info: PickingInfo): void => {
+      const rendered = info.object ? markerTooltip(info) : null;
+      if (rendered && info.x != null && info.y != null) {
+        tooltipRef.current?.show({ html: rendered.html, x: info.x, y: info.y });
+      } else {
+        tooltipRef.current?.hide();
+      }
+    },
+    [markerTooltip]
+  );
+
+  // Pin labels for the HTML overlay. deck.gl billboard text does not render
+  // under the globe projection at all (see GlobeLabelsOverlay), so this is the
+  // only route a hotel or place name has onto the sphere.
+  const pinLabels = useMemo(
+    () => [
+      ...lodgingLabelPoints(lodgings, lodgingColorConfig),
+      ...placeLabelPoints(
+        places,
+        placeColorConfig,
+        placeListColors,
+        placeListLabels,
+        placeLabelSource
+      ),
+    ],
+    [
+      lodgings,
+      lodgingColorConfig,
+      places,
+      placeColorConfig,
+      placeListColors,
+      placeListLabels,
+      placeLabelSource,
+    ]
+  );
+
   const layers = useMemo<Layer[]>(
     () => [
       ...buildGlobeLayers({
@@ -1312,6 +1185,14 @@ export default function GlobeView({
         portColor: portColor ?? DEFAULT_PORT_COLOR,
         airportRadius: GLOBE_MARKER_BASE_PX * flightMarkerSize,
         portRadius: GLOBE_MARKER_BASE_PX * cruiseMarkerSize,
+        lodgings,
+        lodgingColors: lodgingColorConfig,
+        lodgingRadius: GLOBE_MARKER_BASE_PX * lodgingMarkerSize,
+        places,
+        placeColors: placeColorConfig,
+        placeListColors,
+        placeRadius: GLOBE_MARKER_BASE_PX * placeMarkerSize,
+        onPinHover,
         nightCells: nightCellsData,
         showNight,
       }),
@@ -1344,6 +1225,14 @@ export default function GlobeView({
       portColor,
       flightMarkerSize,
       cruiseMarkerSize,
+      lodgings,
+      lodgingColorConfig,
+      lodgingMarkerSize,
+      places,
+      placeColorConfig,
+      placeListColors,
+      placeMarkerSize,
+      onPinHover,
       nightCellsData,
       showNight,
     ]
@@ -1531,6 +1420,25 @@ export default function GlobeView({
             markerSize: cruiseMarkerSize,
             onMarkerSizeChange: setCruiseMarkerSize,
           }}
+          lodgingAppearance={{
+            markerSize: lodgingMarkerSize,
+            // The size lives in MapContainer3D, which persists it — a tab that
+            // renders the globe without threading the setter gets a slider it
+            // cannot move, so it gets no setter and the section still reads.
+            onMarkerSizeChange: onLodgingMarkerSizeChange ?? (() => {}),
+            colorConfig: lodgingColorConfig,
+            onColorModeChange: setLodgingColorMode,
+            onColorChange: setLodgingColor,
+          }}
+          placeAppearance={{
+            colorConfig: placeColorConfig,
+            onColorModeChange: setPlaceColorMode,
+            onColorChange: setPlaceColor,
+            markerSize: placeMarkerSize,
+            onMarkerSizeChange: onPlaceMarkerSizeChange ?? (() => {}),
+            labelSource: placeLabelSource,
+            onLabelSourceChange: setPlaceLabelSource,
+          }}
         />
       </div>
 
@@ -1601,6 +1509,7 @@ export default function GlobeView({
         mapReady={mapReady}
         airports={airportPoints}
         ports={portPoints}
+        extras={pinLabels}
         mode={labelsMode}
       />
 
@@ -1613,28 +1522,25 @@ export default function GlobeView({
       {/* Pulse ring on the selected marker (airports + ports). Drawn under
           the pinned card, non-interactive; reduced-motion shows a static
           ring. Colour follows the domain. */}
-      {pinned &&
-        (pinned.kind === "airport" || pinned.kind === "port") &&
-        popupScreenPos &&
-        popupScreenPos.visible && (
-          <div
-            className="pointer-events-none absolute z-20"
-            style={{ left: popupScreenPos.x, top: popupScreenPos.y }}
-          >
-            {[0, 0.6].map((delay) => (
-              <span
-                key={delay}
-                className="map-pulse-ring"
-                style={
-                  {
-                    "--pulse-color": pinned.kind === "port" ? "#6fa0d6" : "#f0a947",
-                    animationDelay: `${delay}s`,
-                  } as CSSProperties
-                }
-              />
-            ))}
-          </div>
-        )}
+      {pinned && pulseColor(pinned.kind) && popupScreenPos && popupScreenPos.visible && (
+        <div
+          className="pointer-events-none absolute z-20"
+          style={{ left: popupScreenPos.x, top: popupScreenPos.y }}
+        >
+          {[0, 0.6].map((delay) => (
+            <span
+              key={delay}
+              className="map-pulse-ring"
+              style={
+                {
+                  "--pulse-color": pulseColor(pinned.kind),
+                  animationDelay: `${delay}s`,
+                } as CSSProperties
+              }
+            />
+          ))}
+        </div>
+      )}
 
       {pinned && popupScreenPos && popupScreenPos.visible && (
         <div
@@ -1653,6 +1559,8 @@ export default function GlobeView({
               onClose={() => setPinned(null)}
               onFlightOpen={onFlightOpen}
               onCruiseOpen={onCruiseOpen}
+              onLodgingOpen={onLodgingOpen}
+              onPlaceOpen={onPlaceOpen}
             />
           </PinnedCardBoundary>
         </div>

@@ -88,8 +88,12 @@ interface MapContainer3DProps {
    * yet, so the pin layer only ever renders what the caller passes here.
    * Undefined (the default) means "no lodging layer at all", so tabs that
    * don't pass it (flight/cruise tabs) are unaffected. Lodgings without
-   * both `lat` and `lon` are silently skipped by `buildLodgingPins`.
-   * Globe mode doesn't render this yet — pins are flat-map only for now.
+   * both `lat` and `lon` are silently skipped by the pin builders.
+   *
+   * Reaches BOTH map engines since 2026-09-20. It reached DeckGLMap only
+   * before that, behind a comment reading "pins are flat-map only for now" —
+   * which in use meant `/dashboard/lodging?mode=globe` drew an empty sphere
+   * beside a sidebar listing 31 hotels.
    */
   lodgingsOverride?: Lodging[];
   /**
@@ -99,13 +103,17 @@ interface MapContainer3DProps {
    * lives there and not here). Undefined means pins render but aren't
    * clickable — the callers that don't pass `lodgingsOverride` don't have
    * any pins to click anyway.
+   *
+   * On the globe the same handler is the pinned card's "open" CTA rather
+   * than the click itself (GlobeView's `onLodgingOpen`), exactly as
+   * `onFlightOpen` and `onCruiseOpen` already work there.
    */
   onLodgingClick?: (lodgingId: string) => void;
   /**
-   * Places to render as pins. Threaded straight through to DeckGLMap, which
-   * builds the layer for the same reason it builds the lodging one — it owns
-   * the zoom/labelsMode state the layer needs. Callers that don't pass it get
-   * no place layer.
+   * Places to render as pins. Threaded to DeckGLMap, which builds the flat
+   * layer for the same reason it builds the lodging one — it owns the
+   * zoom/labelsMode state the layer needs — and to GlobeView, which builds
+   * its own. Callers that don't pass it get no place layer on either.
    */
   placesOverride?: readonly Place[];
   /** Fired when a place pin is clicked — receives the place id. */
@@ -265,6 +273,16 @@ export default function MapContainer3D({
               minRouteCount={minRouteCount}
               appearanceDomains={appearanceDomains}
               extraLayers={extraLayers}
+              lodgings={lodgingsOverride}
+              onLodgingOpen={onLodgingClick}
+              places={placesOverride}
+              onPlaceOpen={onPlaceClick}
+              placeListColors={placeListColors}
+              placeListLabels={placeListLabels}
+              lodgingMarkerSize={lodgingMarkerSize}
+              onLodgingMarkerSizeChange={setLodgingMarkerSize}
+              placeMarkerSize={placeMarkerSize}
+              onPlaceMarkerSizeChange={setPlaceMarkerSize}
             />
           </Suspense>
         ) : (

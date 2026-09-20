@@ -5,6 +5,8 @@
 import type { Quartile } from "./heatmapUtils";
 import type { Rgb } from "../../lib/cruiseColor";
 import type { CruiseStatus } from "../../types/cruise";
+import type { Lodging } from "../../types/lodging";
+import type { Place } from "../../types/place";
 
 export interface ArcDatum {
   from: [number, number];
@@ -108,12 +110,19 @@ export interface TooltipState {
 }
 
 // `anchorLngLat` is where the popup tail points on the globe surface:
-// - airport/port: the marker's own [lng, lat]
+// - airport/port/lodging/place: the marker's own [lng, lat]
 // - arc/cruise: PickingInfo.coordinate from the click event, so the
 //   popup attaches to where the user actually tapped the line, not to
 //   an aggregated midpoint
+//
+// Lodging and place carry the DOMAIN ROW itself rather than a reduced datum,
+// unlike the four above. There is nothing to aggregate — one pin is one
+// hotel — so a second shape would only be a copy of `Lodging` that could fall
+// behind it.
 export type GlobePinned =
   | { kind: "arc"; data: ArcDatum; anchorLngLat: [number, number] }
   | { kind: "airport"; data: PointDatum; anchorLngLat: [number, number] }
   | { kind: "port"; data: PointDatum; anchorLngLat: [number, number] }
-  | { kind: "cruise"; data: CruisePathDatum; anchorLngLat: [number, number] };
+  | { kind: "cruise"; data: CruisePathDatum; anchorLngLat: [number, number] }
+  | { kind: "lodging"; data: Lodging; anchorLngLat: [number, number] }
+  | { kind: "place"; data: Place; anchorLngLat: [number, number] };
