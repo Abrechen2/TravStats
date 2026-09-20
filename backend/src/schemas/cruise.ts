@@ -1,9 +1,24 @@
 import { z } from "./zod";
 import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
+import { CRUISE_SORT_FIELDS } from "../shared/cruiseListOrder";
 
 const CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
 const STATUSES = ["scheduled", "flown", "cancelled", "historical"] as const;
+
+/**
+ * What the list can be FILTERED to — one value wider than what it can be
+ * written to.
+ *
+ * `in_progress` is derived from the dates and stored by the write path and
+ * the nightly sweep (spec 2026-07-17-status-from-dates); a client never sends
+ * it, so it has no business in the write enum. It is a real stored value
+ * though, and the logbook's status dropdown has offered it since
+ * "#status-from-dates" — while the filter ran in the browser that cost
+ * nothing, and the moment it reaches the server an unlisted value is a 400 on
+ * a dropdown entry the app itself drew.
+ */
+export const CRUISE_QUERY_STATUSES = [...STATUSES, "in_progress"] as const;
 
 // "" and null both mean "clear" on the wire; undefined means "don't change"
 // on update. The old empty->undefined transform made clearing impossible:
@@ -146,14 +161,47 @@ export const updateCruiseSchema = partialForUpdate(baseCruiseSchema).refine(
 );
 
 export const cruiseQuerySchema = z.object({
-  status: z.union([z.enum(STATUSES), z.array(z.enum(STATUSES))]).optional(),
+  status: z
+    .union([z.enum(CRUISE_QUERY_STATUSES), z.array(z.enum(CRUISE_QUERY_STATUSES))])
+    .optional(),
+  /** Exact match on the `cruise_line` COLUMN. For the dropdown, see `shipLine`. */
   cruiseLine: z.union([z.string(), z.array(z.string())]).optional(),
+  /**
+   * The line a cruise BELONGS to — its own `cruiseLine`, or its ship's when
+   * it has none. That is the rule the row cell draws and the filter dropdown
+   * lists, and `cruiseLine` above is not it: a sailing whose line is known
+   * only through its ship appears in the dropdown and matches nothing.
+   */
+  shipLine: z.string().max(200).optional(),
+  /**
+   * Free text over the columns a cruise row shows: ship, line, route name,
+   * booking reference, and the NAMES of the departure, arrival and called-at
+   * ports — including a port the importer could not match to the catalogue.
+   *
+   * Wider than the search it replaces, which matched ship and line only
+   * because those were the two strings the browser had in hand.
+   */
+  q: z.string().trim().min(1).max(100).optional(),
+  /**
+   * Calendar year and month of the SAILING'S START, read in UTC.
+   *
+   * `startDate` is a calendar day carried at UTC midnight, not an instant —
+   * `CruiseRow` formats the cell with `timeZone: "UTC"` and says why ("the
+   * viewer's own zone would move a sailing by a day"), and `/stats` buckets
+   * the cruise series on the stored value unchanged. This is deliberately NOT
+   * the flights rule: a flight departure has a clock and an airport, so its
+   * day is the airport's; a sailing date has neither, and applying the
+   * embarkation port's zone to midnight UTC would move it back a day for
+   * every port west of Greenwich.
+   */
   year: z.coerce.number().int().min(1900).max(2200).optional(),
+  month: z.coerce.number().int().min(1).max(12).optional(),
   region: z.string().optional(),
   tripId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
-  sort: z.enum(["date", "ship", "line", "ports", "status"]).optional(),
+  sort: z.enum(CRUISE_SORT_FIELDS).default("date"),
+  order: z.enum(["asc", "desc"]).default("desc"),
 });
 
 export type CruiseInput = z.infer<typeof baseCruiseSchema>;
