@@ -60,16 +60,23 @@ describe("WhatsNewModal", () => {
     );
   });
 
-  it("renders the extraSlot when provided", () => {
-    render(
-      <WhatsNewModal isOpen entry={entry} onClose={vi.fn()} extraSlot={<p>consent card</p>} />
-    );
-    expect(screen.getByText("consent card")).toBeInTheDocument();
-  });
-
-  it("omits the slot region entirely when not provided", () => {
+  /**
+   * Owner decision 2026-09-20, from the beta audit of 2026-09-19: this dialog
+   * is dismissed reflexively, so the telemetry consent that used to sit at the
+   * bottom of it was being answered by a click that meant "close the release
+   * notes". It is its own step now — nothing here asks a question.
+   */
+  it("carries no consent block and no slot to put one in", () => {
     render(<WhatsNewModal isOpen entry={entry} onClose={vi.fn()} />);
     expect(screen.queryByTestId("whats-new-extra-slot")).not.toBeInTheDocument();
+    expect(screen.queryByText(/usageStats:consent/)).not.toBeInTheDocument();
+    // The two answers, by their accessible names — the shape the card had.
+    expect(screen.queryByRole("button", { name: /consent\.accept/ })).not.toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /consent\.decline/ })).not.toBeInTheDocument();
+    // Only the dismiss button and the header ×.
+    expect(
+      screen.getAllByRole("button").map((b) => b.getAttribute("aria-label") ?? b.textContent)
+    ).toEqual(["common:buttons.close", "whatsNew:dismiss"]);
   });
 
   it("calls onClose from the dismiss button", async () => {

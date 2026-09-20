@@ -124,14 +124,7 @@ export default function NavDropdown(props: NavDropdownProps | ExternalDropdownPr
                       background: childActive ? "var(--ts-tile)" : "transparent",
                     }}
                   >
-                    <span className="flex items-center gap-1.5">
-                      {child.label}
-                      {child.betaBadge && (
-                        <span className="inline-flex items-center rounded-sm px-1 py-0.5 text-[10px] font-medium leading-none ring-1 ring-inset text-(--warning) bg-(--warning)/10 ring-(--warning)/25">
-                          Beta
-                        </span>
-                      )}
-                    </span>
+                    <span className="flex items-center gap-1.5">{child.label}</span>
                     {(child.badge ?? 0) > 0 && (
                       <span
                         className="text-xs font-bold rounded-full h-4 min-w-4 px-0.5 flex items-center justify-center"

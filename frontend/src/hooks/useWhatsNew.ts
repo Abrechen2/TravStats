@@ -6,6 +6,16 @@ import { logger } from "../lib/logger";
 interface UseWhatsNewResult {
   entry: WhatsNewEntry | null;
   shouldShow: boolean;
+  /**
+   * True once the check below has settled, whichever way it went.
+   *
+   * The telemetry consent step waits for this (owner decision 2026-09-20).
+   * Without it the two checks race: `shouldShow` is also false while the
+   * version request is still in flight, so an instance that DOES have release
+   * highlights would flash the consent dialog first and have it replaced a
+   * moment later — the opposite of "after the what's-new is dismissed".
+   */
+  checked: boolean;
   dismiss: () => Promise<void>;
 }
 
@@ -21,11 +31,13 @@ interface UseWhatsNewResult {
 export function useWhatsNew(isAuthenticated: boolean): UseWhatsNewResult {
   const [entry, setEntry] = useState<WhatsNewEntry | null>(null);
   const [shouldShow, setShouldShow] = useState(false);
+  const [checked, setChecked] = useState(false);
 
   useEffect(() => {
     if (!isAuthenticated) {
       setEntry(null);
       setShouldShow(false);
+      setChecked(false);
       return;
     }
     let cancelled = false;
@@ -49,12 +61,17 @@ export function useWhatsNew(isAuthenticated: boolean): UseWhatsNewResult {
         if (!match || (seen && compareVersions(seen, match.version) >= 0)) {
           setEntry(null);
           setShouldShow(false);
+          setChecked(true);
           return;
         }
         setEntry(match);
         setShouldShow(true);
+        setChecked(true);
       } catch (error) {
-        if (!cancelled) setShouldShow(false);
+        if (!cancelled) {
+          setShouldShow(false);
+          setChecked(true);
+        }
         logger.debug("whats-new check failed", error);
       }
     };
@@ -77,5 +94,5 @@ export function useWhatsNew(isAuthenticated: boolean): UseWhatsNewResult {
     }
   }, [entry]);
 
-  return { entry, shouldShow, dismiss };
+  return { entry, shouldShow, checked, dismiss };
 }

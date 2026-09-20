@@ -2,6 +2,14 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
+> **Superseded in one point, 2026-09-20.** The `extraSlot` this plan built is
+> gone: the telemetry consent it was built to carry is its own dialog now
+> (`components/UsageStatsConsentDialog.tsx`, timed by
+> `hooks/useTelemetryConsentStep.ts`), because the beta audit of 2026-09-19
+> found that a question at the bottom of release notes gets closed rather than
+> answered. The rest of this plan is as-built. See §4 of
+> `docs/superpowers/specs/2026-07-10-anonymous-usage-stats-design.md`.
+
 **Goal:** Show authenticated users a dismissible "What's new in vX.Y.Z" modal once per version bump, with an `extraSlot` that a later plan fills with the usage-stats consent card.
 
 **Architecture:** A hand-authored content module lists highlights per version. A hook compares the running backend version (from the existing `GET /api/v1/version`) against a `whatsNewSeenVersion` key stored in the user's existing `UserSettings.data` JSON blob. A presentational modal renders the highlights plus an optional `extraSlot` child. No Prisma migration.

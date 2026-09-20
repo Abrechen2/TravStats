@@ -1,21 +1,29 @@
 import Modal from "./Modal";
-import type { ReactNode } from "react";
 import { useTranslation } from "../hooks/useTranslation";
 import type { WhatsNewEntry } from "../content/whatsNew";
 
+/**
+ * The release highlights, and nothing else.
+ *
+ * Until 2026-09-20 this modal carried an `extraSlot` whose only occupant was
+ * the instance-wide telemetry consent card. The beta audit of 2026-09-19 found
+ * that arrangement to be the defect: this dialog is dismissed reflexively —
+ * people close release notes without reading them — so a consent question
+ * riding along at the bottom was answered by a dismissal that meant nothing.
+ * The owner ruled on 2026-09-20 that consent gets a step of its own, shown
+ * after this one is gone (`hooks/useTelemetryConsentStep.ts`). Do not add a
+ * slot back: whatever would go in it has the same problem.
+ */
 interface WhatsNewModalProps {
   isOpen: boolean;
   entry: WhatsNewEntry | null;
   onClose: () => void;
-  /** Rendered below the highlights. The usage-stats consent card passes through here. */
-  extraSlot?: ReactNode;
 }
 
 export default function WhatsNewModal({
   isOpen,
   entry,
   onClose,
-  extraSlot,
 }: WhatsNewModalProps): JSX.Element | null {
   const { t } = useTranslation(["whatsNew", "common"]);
 
@@ -68,8 +76,6 @@ export default function WhatsNewModal({
             </li>
           ))}
         </ul>
-
-        {extraSlot ? <div data-testid="whats-new-extra-slot">{extraSlot}</div> : null}
       </div>
     </Modal>
   );

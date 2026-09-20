@@ -1,7 +1,5 @@
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
-import Pill from "../ui/Pill";
-import { token } from "../ui/tokens";
 import { Switch } from "../ui/Field";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
 
@@ -53,10 +51,17 @@ export default function EnrichmentSection({
 
   return (
     <SectionCard>
+      {/* No badge. This section wore a "Beta" pill that named no gate: the
+          registry in `config/betaFeatures.ts` has never carried a key for
+          historical enrichment, so nothing was ever hidden behind it and
+          nothing would have un-hidden it. Found in the beta audit of
+          2026-09-19; the owner ruled it off on 2026-09-20. A badge without a
+          gate behind it is exactly what design decision no. 10 of 2026-09-05
+          forbids — it tells the user a feature is provisional when the code
+          treats it as shipped. */}
       <SectionTitle
         title={t("settings:historicalEnrichment.title")}
         description={t("settings:historicalEnrichment.description")}
-        badge={<Pill color={token("accent")}>Beta</Pill>}
       />
       <SettingRows>
         <Switch

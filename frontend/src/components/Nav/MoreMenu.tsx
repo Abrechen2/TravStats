@@ -3,8 +3,6 @@ import { Link, useLocation } from "react-router-dom";
 import { useClickOutside } from "../../hooks/useClickOutside";
 import { useTranslation } from "../../hooks/useTranslation";
 import { Icon } from "../ui/Icon";
-import Pill from "../ui/Pill";
-import { token } from "../ui/tokens";
 import { isPathActive, type NavNode, type NavSection } from "./useNavItems";
 
 interface MoreMenuProps {
@@ -128,7 +126,6 @@ export default function MoreMenu({
                     <span className="flex items-center gap-2">
                       {item.icon && <Icon name={item.icon} size={16} />}
                       {item.label}
-                      {item.betaBadge && <Pill color={token("accent")}>Beta</Pill>}
                     </span>
                     {(item.badge ?? 0) > 0 && (
                       <span

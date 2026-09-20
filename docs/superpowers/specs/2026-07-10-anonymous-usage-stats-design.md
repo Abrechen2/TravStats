@@ -29,7 +29,8 @@ This is unrelated to the per-user in-app statistics pages, which are unaffected.
 
 **Goals**
 - Opt-in only, default off, transparent, GDPR-clean, trivially revocable.
-- Ask new installs (setup wizard) **and existing installs** (What's-New modal).
+- Ask new installs (setup wizard) **and existing installs** (a consent step of
+  its own — see §4; it lived inside the What's-New modal until 2026-09-20).
 - Minimal anonymous payload. No PII, no paths, no travel details, no keys, no
   stored IP.
 - Public dashboard with two headline numbers — active installs and total
@@ -86,9 +87,20 @@ fingerprint.
 ### Consent surfaces
 
 1. **`SetupPage`** — a Yes/No step during first boot.
-2. **`WhatsNewModal`** — a consent card passed through the modal's `extraSlot`,
-   shown once to existing installs at their next update. Answering persists, so it
-   never re-prompts. Admin users only; non-admins see the modal without the card.
+2. **`UsageStatsConsentDialog`** — a step of its own, shown once to existing
+   installs at their next update. Answering persists, so it never re-prompts.
+   Admin users only, because the consent is instance-wide.
+
+   **Amended 2026-09-20 (owner decision).** This was a consent card passed
+   through `WhatsNewModal`'s `extraSlot`. The beta audit of 2026-09-19 recorded
+   that arrangement as a finding: release notes are dismissed reflexively, so
+   the question was regularly closed by a click that meant "close the release
+   notes", and a dismissal is not an answer. It is now its own dialog, shown
+   AFTER the what's-new is dismissed — or on its own where there is no
+   what's-new to show. `hooks/useTelemetryConsentStep.ts` owns that timing and
+   waits for the what's-new check to SETTLE rather than merely to be closed,
+   because both of its flags read false while the check is still in flight.
+   The `extraSlot` is gone and must not come back.
 3. **`AdminPage` → General** — a permanent toggle flipping `granted` ⇄ `denied`.
 
 Every surface links "Was wird gesendet?" to the docs page. DE primary, EN mirrored,
@@ -312,7 +324,8 @@ right shape here.
 - 180-day retention purge.
 
 **Frontend**
-- Consent card renders in `SetupPage` and in `WhatsNewModal`'s `extraSlot`.
+- Consent card renders in `SetupPage` and in `UsageStatsConsentDialog`
+  (it was `WhatsNewModal`'s `extraSlot` until 2026-09-20).
 - The card is hidden from non-admin users.
 - Admin toggle round-trips and triggers the DELETE on withdrawal.
 - Both DE and EN i18n keys resolve.

@@ -13,6 +13,13 @@ interface UsageStatsConsentCardProps {
    * "setup": no session yet — the parent sends the choice with setupApi.initialize.
    */
   variant?: "modal" | "setup";
+  /**
+   * Off when the surrounding dialog already carries the same words as its
+   * accessible name — `UsageStatsConsentDialog` since 2026-09-20. Two headings
+   * reading "Anonyme Nutzungsstatistik" one under the other is not a heading
+   * level, it is an echo.
+   */
+  showHeading?: boolean;
 }
 
 /**
@@ -23,6 +30,7 @@ interface UsageStatsConsentCardProps {
 export default function UsageStatsConsentCard({
   onDecided,
   variant = "modal",
+  showHeading = true,
 }: UsageStatsConsentCardProps): JSX.Element {
   const { t } = useTranslation(["usageStats"]);
   const addToast = useToastStore((s) => s.addToast);
@@ -55,9 +63,11 @@ export default function UsageStatsConsentCard({
       className="rounded-md p-4 flex flex-col gap-3"
       style={{ border: "1px solid var(--color-border)", background: "var(--bg-elevated)" }}
     >
-      <h3 className="font-medium" style={{ color: "var(--text-primary)" }}>
-        {t("usageStats:consent.title")}
-      </h3>
+      {showHeading && (
+        <h3 className="font-medium" style={{ color: "var(--text-primary)" }}>
+          {t("usageStats:consent.title")}
+        </h3>
+      )}
       <p className="text-sm" style={{ color: "var(--text-muted)" }}>
         {t("usageStats:consent.body")}
       </p>

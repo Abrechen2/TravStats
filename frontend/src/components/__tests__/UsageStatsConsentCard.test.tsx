@@ -80,6 +80,23 @@ describe("UsageStatsConsentCard", () => {
     expect(screen.getByRole("button", { name: "usageStats:consent.decline" })).toBeInTheDocument();
   });
 
+  it("carries its own heading by default — the setup step has no other title", () => {
+    render(<UsageStatsConsentCard />);
+    expect(screen.getByRole("heading", { name: "usageStats:consent.title" })).toBeInTheDocument();
+  });
+
+  /**
+   * `UsageStatsConsentDialog` (owner decision 2026-09-20) puts the same words
+   * on the dialog itself. Repeating them inside the body is an echo.
+   */
+  it("drops the heading when the surrounding dialog already carries it", () => {
+    render(<UsageStatsConsentCard showHeading={false} />);
+    expect(screen.queryByRole("heading", { name: "usageStats:consent.title" })).toBeNull();
+    // The question itself must still be there — only the duplicate title goes.
+    expect(screen.getByText("usageStats:consent.body")).toBeInTheDocument();
+    expect(screen.getByRole("button", { name: "usageStats:consent.accept" })).toBeInTheDocument();
+  });
+
   it("in setup variant it defers the API call to the parent", async () => {
     const onDecided = vi.fn();
     render(<UsageStatsConsentCard variant="setup" onDecided={onDecided} />);

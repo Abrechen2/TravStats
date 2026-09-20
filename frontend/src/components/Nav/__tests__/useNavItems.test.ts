@@ -167,13 +167,20 @@ describe("useNavItems — Mehr › Werkzeuge", () => {
    * the sample set, and they were. So it is offered to admins whatever the
    * instance beta switch says, and carries no badge — a badge without a gate
    * behind it is the thing owner decision no. 10 of 2026-09-05 forbids.
+   *
+   * This used to read `expect(tools[0].betaBadge).toBeUndefined()`. The field
+   * was removed from `NavLeaf` on 2026-09-20 (owner ruling, beta audit of
+   * 2026-09-19): nothing in the tree ever set it, so the two renderers that
+   * read it drew a badge that could not appear, and an optional flag nobody
+   * assigns is an invitation to assign it. The assertion is kept in the shape
+   * it can still have — the nav item carries no badge field at all.
    */
   it("offers Parser to admins while the instance beta switch is on, without a badge", () => {
     authState.user = { isAdmin: true };
     useSettingsStore.setState({ enabledDomains: ["flight"], betaFeaturesEnabled: true });
     const tools = section(run().more, "tools");
     expect(tools.map((c) => c.path)).toEqual(["/parser"]);
-    expect(tools[0].betaBadge).toBeUndefined();
+    expect(Object.keys(tools[0])).not.toContain("betaBadge");
   });
 
   it("offers Parser to admins with the switch OFF too — there is no gate any more", () => {
