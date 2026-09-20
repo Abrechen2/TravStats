@@ -216,6 +216,63 @@ describe("listSql — the SQL restatement answers what the shared rules answer",
         checkOut: day("2021-10-02"),
         datePrecision: "DAY",
       },
+      // ONE-ENDED, past. `GREATEST` skips the NULL and the TypeScript coalesces
+      // start and end to the same date, so both must read "over". Writing the
+      // predicate as COALESCE(check_out, check_in) instead would agree here and
+      // disagree on the row below — which is why both are in the fixture.
+      {
+        userId,
+        lodgingId,
+        status: "completed",
+        checkIn: day("2018-06-01"),
+        checkOut: null,
+        datePrecision: "DAY",
+        nights: 2,
+        totalPrice: 150,
+        currency: "EUR",
+      },
+      // ONE-ENDED the other way, and ahead of NOW: only a check-out is known.
+      {
+        userId,
+        lodgingId,
+        status: "completed",
+        checkIn: null,
+        checkOut: day("2028-04-10"),
+        datePrecision: "DAY",
+        nights: 1,
+        totalPrice: 90,
+        currency: "EUR",
+      },
+      // YEAR precision: "some time in 2017, four nights". Its dates span the
+      // whole year, and differencing them would claim 364.
+      {
+        userId,
+        lodgingId,
+        status: "completed",
+        checkIn: day("2017-01-01"),
+        checkOut: day("2017-12-31"),
+        datePrecision: "YEAR",
+        nights: 4,
+        totalPrice: 320,
+        currency: "EUR",
+        ratingOverall: 4.5,
+      },
+      // An award night entered as 0 is a stay that honestly cost nothing —
+      // `isPricedStay` says 0 IS a price. A `?? 0`-shaped SQL branch would
+      // agree by accident; a NULLIF or a `> 0` guard would drop it and the two
+      // sides would still both read zero, which is why the rating is here too.
+      {
+        userId,
+        lodgingId,
+        status: "completed",
+        checkIn: day("2020-02-01"),
+        checkOut: day("2020-02-03"),
+        datePrecision: "DAY",
+        isAwardStay: true,
+        totalPrice: 0,
+        currency: "EUR",
+        ratingOverall: 3.5,
+      },
     ];
     for (const stay of stays) await prisma.lodgingStay.create({ data: stay });
   });
