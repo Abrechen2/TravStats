@@ -9,9 +9,18 @@
 import type { GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
 import { isCountableCruise } from "../../../shared/cruiseCounting";
+import { isCountableFlight } from "../../../shared/flightCounting";
 
 export interface AirportCardStats {
   totalVisits: number;
+  /**
+   * Kilometres actually covered through this airport. Only flown/historical
+   * legs count — a scheduled flight has not covered any distance yet. Carried
+   * over from the flat map's `AirportTooltip`, which the shared card replaced
+   * on 2026-09-20; dropping it would have lost the one number that card had
+   * and the globe's did not.
+   */
+  totalKm: number;
   lastVisitDate: string | null;
   longestRoute: { iata: string; km: number } | null;
   topAirline: string | null;
@@ -102,8 +111,14 @@ export function getAirportStats(flights: GeoJSONFeature[], iata: string): Airpor
     }
   }
 
+  let totalKm = 0;
+  for (const f of touched) {
+    if (isCountableFlight(f.properties)) totalKm += f.properties.distance ?? 0;
+  }
+
   return {
     totalVisits: visitedOnly.length,
+    totalKm,
     lastVisitDate: maxDate(visitedOnly.map((f) => f.properties.departureTime)),
     longestRoute,
     topAirline: modeOf(touched.map((f) => f.properties.airline)),

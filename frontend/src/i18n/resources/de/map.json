@@ -241,7 +241,8 @@
       "durationHours": "{{h}} h {{m}} min",
       "openFlight": "Flug öffnen",
       "details": "Details",
-      "event": "Ereignis"
+      "event": "Ereignis",
+      "distance": "Strecke"
     },
     "timeSlider": {
       "title": "Zeitachse",

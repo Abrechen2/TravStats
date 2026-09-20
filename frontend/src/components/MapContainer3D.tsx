@@ -32,11 +32,12 @@ interface MapContainer3DProps {
   onFlightClick?: (flightId: string) => void;
   onRouteClick?: (flightIds: string[]) => void;
   onEdit?: (flight: Flight) => void;
-  /** Globe-only: fires when the pinned-card "Open last flight" CTA is
-      clicked — should open the flight (modal or detail page). */
+  /** Fires when the pinned card's "Open last flight" action is used — should
+      open the flight (modal or detail page). Reaches BOTH renderers since the
+      owner's 2026-09-20 ruling gave the flat map the same card. */
   onFlightOpen?: (flightId: string) => void;
-  /** Globe-only: fires when the pinned-card "Open cruise" CTA is
-      clicked — should navigate to the cruise detail page. */
+  /** Fires when the pinned card's "Open cruise" action is used — should
+      navigate to the cruise detail page. Both renderers, same reason. */
   onCruiseOpen?: (cruiseId: string) => void;
   visMode: MapMode;
   minRouteCount?: number;
@@ -275,6 +276,8 @@ export default function MapContainer3D({
             onFlightClick={onFlightClick}
             onRouteClick={onRouteClick}
             onEdit={onEdit}
+            onFlightOpen={onFlightOpen}
+            onCruiseOpen={onCruiseOpen}
             visMode={visMode}
             minRouteCount={minRouteCount}
             onResetTrip={onResetTrip}

@@ -241,7 +241,8 @@
       "durationHours": "{{h}} h {{m}} min",
       "openFlight": "Open flight",
       "details": "Details",
-      "event": "Event"
+      "event": "Event",
+      "distance": "Distance"
     },
     "timeSlider": {
       "title": "Timeline",

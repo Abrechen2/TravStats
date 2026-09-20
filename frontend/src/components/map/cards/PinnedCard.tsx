@@ -347,6 +347,9 @@ function AirportBody({
         {stats.totalVisits} {t("map:globe.flight", { count: stats.totalVisits })}
       </Hero>
       <Grid>
+        {stats.totalKm > 0 && (
+          <Row label={t("map:globe.pinned.distance")} value={formatKm(stats.totalKm)} />
+        )}
         {stats.longestRoute && (
           <Row
             label={t("map:globe.pinned.longestRoute")}

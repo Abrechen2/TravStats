@@ -163,6 +163,7 @@ export function CruisesTab(): JSX.Element {
         showInternalCruises={showInternalCruises}
         cruisesOverride={visibleCruises}
         appearanceDomains={["cruise"]}
+        onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
       />
       <SidebarToggle
         open={sidebarOpen}

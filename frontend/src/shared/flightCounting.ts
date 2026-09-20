@@ -16,8 +16,8 @@
  *
  * The client needs its own copy because the map decides the same question
  * locally and does not ask the server: `layers/routesLayer.ts` and `GlobeView`
- * split each route into flown-vs-scheduled to colour it, `AirportTooltip` only
- * adds kilometres for legs that were actually covered, and `Stats.tsx` /
+ * split each route into flown-vs-scheduled to colour it, the map card's
+ * `getAirportStats` only adds kilometres for legs that were actually covered, and `Stats.tsx` /
  * `AdvancedStatsPage` filter a raw flight list before computing anything. Those
  * numbers sit on screen next to the server's own, so the two rules disagreeing
  * would be visible as two different answers on one page.
