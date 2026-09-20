@@ -361,3 +361,50 @@ for (const surface of surfaces) {
     });
   });
 }
+
+/**
+ * Two camera commands fought on every flat flight selection: the bounding-box
+ * `flyTo` at t=0, which exists so BOTH airports are on screen, and then the
+ * card's own `focusMarker` at t=220 ms, which snapped to zoom 6 over the route
+ * midpoint and pushed both of them off it. The comment above the bbox effect
+ * states the invariant the second call broke.
+ *
+ * The host frames a flight selection; the hook frames the single markers the
+ * host has no framing rule for.
+ */
+describe("the flat map frames a flight selection exactly once", () => {
+  it("issues the bounding-box flyTo and nothing after it", async () => {
+    render(<DeckGLMap flights={GEO} visMode="routes" />);
+    flyTo.mockClear();
+
+    act(() => useFlightSelectionStore.getState().setSelection([FLIGHT]));
+    await settle();
+
+    expect(flyTo).toHaveBeenCalledTimes(1);
+    // The bbox zoom for a 10° span, not the single-marker floor of 6.
+    expect(flyTo.mock.calls[0][0]).toMatchObject({ zoom: 4 });
+  });
+
+  it("still frames a hotel, which the host has no bounding box for", async () => {
+    render(<DeckGLMap flights={GEO} visMode="routes" />);
+    flyTo.mockClear();
+
+    act(() => useLodgingSelectionStore.getState().setSelection(lodging()));
+    await settle();
+
+    expect(flyTo).toHaveBeenCalledTimes(1);
+    expect(flyTo.mock.calls[0][0]).toMatchObject({ center: [13.4, 52.5] });
+  });
+});
+
+describe("the globe frames a flight selection itself", () => {
+  it("has no bounding-box flyTo of its own, so the card must move the camera", async () => {
+    render(<GlobeView flights={GEO} />);
+    flyTo.mockClear();
+
+    act(() => useFlightSelectionStore.getState().setSelection([FLIGHT]));
+    await settle();
+
+    expect(flyTo).toHaveBeenCalled();
+  });
+});

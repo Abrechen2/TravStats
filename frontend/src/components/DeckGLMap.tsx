@@ -512,6 +512,9 @@ export function DeckGLMap({
     setPinned,
     flightDelayMs: TOOLTIP_DELAY_MS,
     clearOnEmpty: true,
+    // The bounding-box flyTo above already frames a flight selection with both
+    // airports on screen; a second command would undo exactly that.
+    framesFlightSelection: true,
   });
 
   // Wrap onFlightClick so that a deck.gl layer click sets the guard ref BEFORE the

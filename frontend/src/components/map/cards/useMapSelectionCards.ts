@@ -97,6 +97,17 @@ export interface MapSelectionCardsOptions {
    * opened.
    */
   clearOnEmpty?: boolean;
+  /**
+   * Whether the HOST already moves the camera for a flight selection.
+   *
+   * True on the flat map, which has a bounding-box `flyTo` so BOTH airports
+   * land on screen. Focusing again 220 ms later snapped to the single-marker
+   * zoom over the route midpoint and pushed both of them off it — two camera
+   * commands fighting, the second one breaking the invariant the first exists
+   * for. False on the globe, which has no framing rule of its own, so the card
+   * is what brings the route round to the near side.
+   */
+  framesFlightSelection?: boolean;
 }
 
 export interface MapSelectionCards {
@@ -118,6 +129,7 @@ export function useMapSelectionCards({
   setPinned,
   flightDelayMs = 0,
   clearOnEmpty = false,
+  framesFlightSelection = false,
 }: MapSelectionCardsOptions): MapSelectionCards {
   const selectedFlights = useFlightSelectionStore((s) => s.selectedFlights);
   const selectedCruise = useCruiseSelectionStore((s) => s.selectedCruise);
@@ -156,7 +168,7 @@ export function useMapSelectionCards({
             );
       if (!next) return;
       setPinned(next);
-      focus(next.anchorLngLat);
+      if (!framesFlightSelection) focus(next.anchorLngLat);
     };
 
     if (flightDelayMs === 0) {
@@ -165,7 +177,16 @@ export function useMapSelectionCards({
     }
     const timer = setTimeout(open, flightDelayMs);
     return () => clearTimeout(timer);
-  }, [selectedFlights, cardFlights, flightColor, focus, setPinned, flightDelayMs, clearOnEmpty]);
+  }, [
+    selectedFlights,
+    cardFlights,
+    flightColor,
+    focus,
+    setPinned,
+    flightDelayMs,
+    clearOnEmpty,
+    framesFlightSelection,
+  ]);
 
   useEffect(() => {
     if (selectedCruise === null) {
