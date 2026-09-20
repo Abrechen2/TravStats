@@ -52,12 +52,29 @@ function coordsOf(f: GeoJSONFeature): { from: LngLat; to: LngLat } | null {
   return { from: [dep.lon, dep.lat], to: [arr.lon, arr.lat] };
 }
 
-/** Screen-space-free bounding centre of a set of points, wrap-naive. */
+/**
+ * Bounding centre of a set of points, the short way round.
+ *
+ * Averaging raw min/max longitude puts a transpacific set on the OTHER side of
+ * the planet: LAX→NRT→HNL anchored its trip card over central Europe, where
+ * nothing on the map is. `midpoint` already applied the wrap rule for a single
+ * leg; this is the same rule for a set.
+ *
+ * Each point is unwrapped relative to the FIRST one — the shorter of the two
+ * ways round — so the extent is measured in one continuous frame, and the
+ * result is normalised back into [-180, 180] at the end.
+ */
 function centreOf(points: LngLat[]): LngLat | null {
   if (points.length === 0) return null;
-  const lons = points.map((p) => p[0]);
+  const base = points[0][0];
+  const lons = points.map((p) => {
+    const d = p[0] - base;
+    return base + (d > 180 ? d - 360 : d < -180 ? d + 360 : d);
+  });
   const lats = points.map((p) => p[1]);
-  return [(Math.min(...lons) + Math.max(...lons)) / 2, (Math.min(...lats) + Math.max(...lats)) / 2];
+  const lon = (Math.min(...lons) + Math.max(...lons)) / 2;
+  const wrapped = ((((lon + 180) % 360) + 360) % 360) - 180;
+  return [wrapped, (Math.min(...lats) + Math.max(...lats)) / 2];
 }
 
 /**

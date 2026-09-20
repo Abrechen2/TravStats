@@ -206,3 +206,30 @@ describe("geoFromFlightRow — the Reise view has no /geo set at all", () => {
     expect(pinned.data.departure.iata).toBe("TOS");
   });
 });
+
+describe("the card anchors across the antimeridian", () => {
+  const LAX = { iata: "LAX", lon: -118.4, lat: 33.9 };
+  const NRT = { iata: "NRT", lon: 140.4, lat: 35.8 };
+  const HNL = { iata: "HNL", lon: -157.9, lat: 21.3 };
+
+  /**
+   * `centreOf` averaged the raw min/max longitude, so a transpacific set
+   * straddling ±180 came out on the OTHER side of the planet: LAX→NRT→HNL
+   * anchored its trip card over central Europe, where nothing on the map is.
+   * `midpoint` already had the wrap rule for a single leg; the trip and cruise
+   * anchors did not.
+   */
+  it("anchors a transpacific trip over the Pacific, not over Europe", () => {
+    const geo = [leg("a", LAX, NRT), leg("b", NRT, HNL)];
+    const pinned = pinnedFromFlightSelection(["a", "b"], geo, ACCENT);
+    expect(pinned?.kind).toBe("trip");
+    // Somewhere in the Pacific: past the dateline either way, never near 0°.
+    expect(Math.abs(pinned!.anchorLngLat[0])).toBeGreaterThan(120);
+  });
+
+  it("still centres an ordinary spread the obvious way", () => {
+    const geo = [leg("a", { iata: "A", lon: 0, lat: 40 }, { iata: "B", lon: 20, lat: 50 })];
+    const pinned = pinnedFromFlightSelection(["a"], geo, ACCENT);
+    expect(pinned?.anchorLngLat[0]).toBeCloseTo(10, 5);
+  });
+});
