@@ -57,5 +57,23 @@ setup("authenticate", async ({ page }) => {
     await expect(dismiss).toBeHidden({ timeout: 10_000 });
   }
 
+  // Since 2026-09-20 the instance-wide usage-statistics question is its own
+  // step, shown to an administrator once the release notes are gone (owner
+  // ruling: it used to sit inside that dialog and was dismissed with it). On a
+  // fresh CI database nobody has answered it, so it is the next full-screen
+  // overlay in line — the first CI run after the merge failed eleven specs with
+  // the same 'element found, click timed out' signature the block above names.
+  // Answering 'no' here is persisted instance-wide (PUT /admin/usage-stats), so
+  // it fixes every spec, including the ones that log in with a fresh context.
+  const decline = page.getByRole("button", { name: /Nein, danke|No, thanks/i });
+  const asked = await decline
+    .waitFor({ state: "visible", timeout: 10_000 })
+    .then(() => true)
+    .catch(() => false);
+  if (asked) {
+    await decline.click();
+    await expect(decline).toBeHidden({ timeout: 10_000 });
+  }
+
   await page.context().storageState({ path: STORAGE_STATE });
 });
