@@ -39,9 +39,15 @@ import { useMapCameraStore } from "../store/mapCameraStore";
 // Base marker radius (px) a size preset scales. off → 0 (hidden).
 const GLOBE_MARKER_BASE_PX = 5;
 import { nightCells as computeNightCells } from "./Globe/sunPosition";
-import { HoverTooltip, type HoverTooltipApi } from "./Globe/HoverTooltip";
-import { PinnedCard } from "./Globe/PinnedCard";
-import { PinnedCardBoundary } from "./Globe/PinnedCardBoundary";
+import { HoverTooltip, type HoverTooltipApi } from "./map/cards/HoverTooltip";
+import { PinnedCard } from "./map/cards/PinnedCard";
+import { PinnedCardBoundary } from "./map/cards/PinnedCardBoundary";
+import {
+  airportHoverHtml,
+  arcHoverHtml,
+  cruiseHoverHtml,
+  portHoverHtml,
+} from "./map/cards/hoverCardHtml";
 import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
 import { toPortLabel } from "./map/portLabel";
 import { applyMapOverlays } from "./Globe/mapOverlays";
@@ -55,8 +61,6 @@ import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise"
 import { resolveCruiseArcColor } from "../lib/cruiseColor";
 import { useCruiseColorStore } from "../store/cruiseColorStore";
 import { logger } from "../lib/logger";
-import { escapeHtml } from "../lib/escapeHtml";
-import { flagImgHtml, countryName } from "../lib/countryFlag";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTimeSliderStore } from "../store/timeSliderStore";
 import { GlobeTimeHistogram } from "./Globe/GlobeTimeHistogram";
@@ -73,7 +77,6 @@ import {
   type CruiseLegDates,
   type MonthBucket,
 } from "./Globe/timeSliderUtils";
-import { formatDate as formatUserDate } from "../lib/displayFormat";
 
 /**
  * Globe-mode renderer. MapLibre's native globe projection (5.x) draws
@@ -128,11 +131,6 @@ const INITIAL_VIEW_STATE: MapViewState = {
   pitch: 0,
   bearing: 0,
 };
-
-/** In the user's date format (Settings → Display); the locale no longer decides. */
-function formatTooltipDate(iso: string, _locale: string): string {
-  return formatUserDate(iso) || iso.slice(0, 10);
-}
 
 interface DeckOverlayProps {
   layers: Layer[];
@@ -1182,32 +1180,17 @@ export default function GlobeView({
     map.flyTo({ center: [midLng, midLat], zoom, duration: 1500 });
   }, []);
 
+  // Hover content lives in `map/cards/hoverCardHtml.ts` — the flat map draws
+  // the same four tooltips, and it had its own near-twin of each until the
+  // owner's 2026-09-20 ruling made the globe the reference for map chrome.
   const onArcHover = useCallback(
     (info: PickingInfo<ArcDatum>): void => {
       if (info.object && info.x != null && info.y != null) {
-        const d = info.object;
-        const epLine = (ep: { iata?: string; name?: string; country?: string | null }): string =>
-          `<div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;padding:1px 0;">
-            ${flagImgHtml(ep.country, 18)}<span>${escapeHtml(ep.iata ?? "UNK")}</span>
-            <span style="opacity:0.6;font-weight:500;font-size:11px;">${escapeHtml(ep.name ?? "")}</span>
-          </div>`;
-        // Two-part label, same rule as markerTooltip.ts's renderArcHtml:
-        // flown first, then scheduled, zero-count parts omitted. Falls back
-        // to the legacy flown-only label for a cancelled-only route where
-        // both counts are 0 despite count > 0 (accepted pre-existing
-        // cancelled semantic, out of this fix's scope).
-        const labelParts: string[] = [];
-        if (d.flownCount > 0) labelParts.push(t("map:globe.timesFlown", { count: d.flownCount }));
-        if (d.scheduledCount > 0)
-          labelParts.push(t("map:globe.timesPlanned", { count: d.scheduledCount }));
-        const label = labelParts.join(" · ") || t("map:globe.timesFlown", { count: d.count });
-        const html = `
-          ${epLine(d.departure)}
-          ${epLine(d.arrival)}
-          <div style="color:rgb(${d.color[0]},${d.color[1]},${d.color[2]});font-weight:600;margin-top:4px;">
-            ${escapeHtml(label)}
-          </div>`;
-        tooltipRef.current?.show({ html, x: info.x, y: info.y });
+        tooltipRef.current?.show({
+          html: arcHoverHtml(info.object, { t }),
+          x: info.x,
+          y: info.y,
+        });
       } else {
         tooltipRef.current?.hide();
       }
@@ -1219,27 +1202,22 @@ export default function GlobeView({
     (info: PickingInfo<PointDatum>): void => {
       if (info.object && info.x != null && info.y != null) {
         const d = info.object;
-        const lastVisitLine = d.lastVisit
-          ? `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">
-              ${escapeHtml(t("map:tooltip.lastVisit"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
-            </div>`
-          : "";
-        const icaoPill = d.icao
-          ? `<span style="font-size:10px;font-family:monospace;color:rgba(241,245,249,0.5);background:rgba(255,255,255,0.06);border-radius:4px;padding:1px 5px;">${escapeHtml(d.icao)}</span>`
-          : "";
-        const place = [d.city, countryName(d.country, locale)].filter(Boolean).join(", ");
-        const placeLine = place
-          ? `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(place)}</div>`
-          : "";
-        const html = `
-          <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;">${flagImgHtml(d.country, 19)}<span>${escapeHtml(d.iata)}</span>${icaoPill}</div>
-          <div style="opacity:0.88;font-size:11.5px;margin-top:3px;">${escapeHtml(d.name)}</div>
-          ${placeLine}
-          <div style="color:#fbbf24;margin-top:4px;">
-            ${d.size} ${escapeHtml(t("map:globe.flight", { count: d.size }))}
-          </div>
-          ${lastVisitLine}`;
-        tooltipRef.current?.show({ html, x: info.x, y: info.y });
+        tooltipRef.current?.show({
+          html: airportHoverHtml(
+            {
+              iata: d.iata,
+              icao: d.icao,
+              name: d.name,
+              city: d.city,
+              country: d.country,
+              count: d.size,
+              lastVisit: d.lastVisit,
+            },
+            { t, locale }
+          ),
+          x: info.x,
+          y: info.y,
+        });
       } else {
         tooltipRef.current?.hide();
       }
@@ -1251,25 +1229,22 @@ export default function GlobeView({
     (info: PickingInfo<PointDatum>): void => {
       if (info.object && info.x != null && info.y != null) {
         const d = info.object;
-        const lastCallLine = d.lastVisit
-          ? `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">
-              ${escapeHtml(t("map:tooltip.lastCall"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
-            </div>`
-          : "";
-        const place = [d.city, countryName(d.country, locale)].filter(Boolean).join(", ");
-        const placeLine = place
-          ? `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(place)}</div>`
-          : "";
-        const codeLine =
-          d.iata !== d.name
-            ? `<div style="opacity:0.55;font-size:10px;font-family:monospace;margin-top:2px;">${escapeHtml(d.iata)}</div>`
-            : "";
-        const html = `
-          <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;">${d.country ? flagImgHtml(d.country, 19) : "⚓"}<span>${escapeHtml(d.name)}</span></div>
-          ${placeLine}
-          ${codeLine}
-          ${lastCallLine}`;
-        tooltipRef.current?.show({ html, x: info.x, y: info.y });
+        // No visit count on the globe's port tooltip: the pinned card answers
+        // that, and the marker datum's `size` is a radius here, not a tally.
+        tooltipRef.current?.show({
+          html: portHoverHtml(
+            {
+              name: d.name,
+              code: d.iata,
+              city: d.city,
+              country: d.country,
+              lastVisit: d.lastVisit,
+            },
+            { t, locale }
+          ),
+          x: info.x,
+          y: info.y,
+        });
       } else {
         tooltipRef.current?.hide();
       }
@@ -1279,8 +1254,11 @@ export default function GlobeView({
 
   const onCruisePathHover = useCallback((info: PickingInfo<CruisePathDatum>): void => {
     if (info.object && info.x != null && info.y != null) {
-      const html = `<div style="font-weight:600;">🚢 ${escapeHtml(info.object.cruiseLabel)}</div>`;
-      tooltipRef.current?.show({ html, x: info.x, y: info.y });
+      tooltipRef.current?.show({
+        html: cruiseHoverHtml(info.object.cruiseLabel),
+        x: info.x,
+        y: info.y,
+      });
     } else {
       tooltipRef.current?.hide();
     }

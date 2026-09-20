@@ -238,7 +238,10 @@
       "embark": "Start",
       "debark": "Ende",
       "openCruise": "Cruise öffnen",
-      "durationHours": "{{h}} h {{m}} min"
+      "durationHours": "{{h}} h {{m}} min",
+      "openFlight": "Flug öffnen",
+      "details": "Details",
+      "event": "Ereignis"
     },
     "timeSlider": {
       "title": "Zeitachse",

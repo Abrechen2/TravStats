@@ -1,7 +1,19 @@
 import type { PickingInfo } from "@deck.gl/core";
 import { escapeHtml } from "../../lib/escapeHtml";
 import { flagImgHtml, countryName, resolveCountryCode } from "../../lib/countryFlag";
-import { formatDate as formatUserDate } from "../../lib/displayFormat";
+import {
+  airportHoverHtml,
+  arcHoverHtml,
+  cruiseHoverHtml,
+  portHoverHtml,
+} from "./cards/hoverCardHtml";
+
+// A flat-map marker sits closer to its neighbours than a globe marker does, so
+// its tooltip wants a slightly smaller flag. That is the ONLY thing this file
+// still decides about airport/port/route content — everything else comes from
+// `cards/hoverCardHtml.ts`, which the globe draws too. Until 2026-09-20 there
+// were two implementations of these four tooltips and they had already drifted.
+const FLAT_FLAG_PX = 16;
 
 // Marker layer ids that should surface a hover tooltip with the rich
 // content (short label + full name + visit count + last visit date).
@@ -136,11 +148,6 @@ const SURFACE_STYLE: Record<string, string> = {
   lineHeight: "1.35",
 };
 
-/** In the user's date format (Settings → Display); the locale no longer decides. */
-function formatDate(iso: string, _locale: string): string {
-  return formatUserDate(iso) || iso.slice(0, 10);
-}
-
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
 /**
@@ -189,8 +196,7 @@ export function createMarkerTooltip(
     if (CRUISE_PATH_LAYER_IDS.has(layerId)) {
       const datum = info.object as CruisePathTooltipDatum | undefined | null;
       if (!datum) return null;
-      const html = `<div style="font-weight:600;">🚢 ${escapeHtml(datum.cruiseLine ?? "Cruise")}</div>`;
-      return { html, style: SURFACE_STYLE };
+      return { html: cruiseHoverHtml(datum.cruiseLine ?? "Cruise"), style: SURFACE_STYLE };
     }
 
     if (LODGING_LAYER_IDS.has(layerId)) {
@@ -212,84 +218,35 @@ export function createMarkerTooltip(
 }
 
 function renderAirportHtml(d: AirportDatum, heading: string, t: TFn, locale: string): string {
-  const name = d.name && d.name !== heading ? d.name : null;
-  const count = typeof d.count === "number" && d.count > 0 ? d.count : null;
-  const lastVisit = d.lastVisit ?? null;
-  const icaoPill = d.icao
-    ? `<span style="font-size:10px;font-family:monospace;color:rgba(241,245,249,0.5);background:rgba(255,255,255,0.06);border-radius:4px;padding:1px 5px;">${escapeHtml(d.icao)}</span>`
-    : "";
-  const place = [d.city, countryName(d.country, locale)].filter(Boolean).join(", ");
-
-  const lines: string[] = [];
-  lines.push(
-    `<div style="display:flex;align-items:center;gap:8px;font-weight:600;">${flagImgHtml(d.country, 16)}<span>${escapeHtml(heading)}</span>${icaoPill}</div>`
+  return airportHoverHtml(
+    {
+      // The flat map's heading may come from `name` when no IATA resolved;
+      // pass it as the iata slot so the shared builder heads the card with it
+      // and then skips the duplicate name line.
+      iata: heading,
+      icao: d.icao,
+      name: d.name,
+      city: d.city,
+      country: d.country,
+      count: d.count,
+      lastVisit: d.lastVisit,
+    },
+    { t, locale, flagHeight: FLAT_FLAG_PX }
   );
-  if (name) {
-    lines.push(
-      `<div style="opacity:0.85;font-size:11px;margin-top:2px;">${escapeHtml(name)}</div>`
-    );
-  }
-  if (place) {
-    lines.push(
-      `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(place)}</div>`
-    );
-  }
-  if (count !== null) {
-    lines.push(
-      `<div style="color:#fbbf24;margin-top:2px;">${count} ${escapeHtml(
-        t("map:globe.flight", { count })
-      )}</div>`
-    );
-  }
-  if (lastVisit) {
-    lines.push(
-      `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">${escapeHtml(
-        t("map:tooltip.lastVisit")
-      )}: ${escapeHtml(formatDate(lastVisit, locale))}</div>`
-    );
-  }
-  return lines.join("");
 }
 
 function renderPortHtml(d: PortDatum, heading: string, t: TFn, locale: string): string {
-  const sub =
-    d.shortLabel && d.shortLabel !== heading
-      ? d.shortLabel
-      : d.iata && d.iata !== heading
-        ? d.iata
-        : null;
-  const visits = d.visits ?? d.size ?? null;
-  const lastCall = d.lastVisit ?? null;
-  const place = [d.city, countryName(d.country, locale)].filter(Boolean).join(", ");
-  const flagOrAnchor = d.country ? flagImgHtml(d.country, 16) : "⚓";
-
-  const lines: string[] = [];
-  lines.push(
-    `<div style="display:flex;align-items:center;gap:8px;font-weight:600;">${flagOrAnchor}<span>${escapeHtml(heading)}</span></div>`
+  return portHoverHtml(
+    {
+      name: heading,
+      code: d.shortLabel ?? d.iata,
+      city: d.city,
+      country: d.country,
+      visits: d.visits ?? d.size,
+      lastVisit: d.lastVisit,
+    },
+    { t, locale, flagHeight: FLAT_FLAG_PX }
   );
-  if (sub) {
-    lines.push(`<div style="opacity:0.85;font-size:11px;margin-top:2px;">${escapeHtml(sub)}</div>`);
-  }
-  if (place) {
-    lines.push(
-      `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(place)}</div>`
-    );
-  }
-  if (visits !== null && visits > 0) {
-    lines.push(
-      `<div style="color:#7dd3fc;margin-top:2px;">${visits} ${escapeHtml(
-        t("map:airportMarkers.visits")
-      )}</div>`
-    );
-  }
-  if (lastCall) {
-    lines.push(
-      `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">${escapeHtml(
-        t("map:tooltip.lastCall")
-      )}: ${escapeHtml(formatDate(lastCall, locale))}</div>`
-    );
-  }
-  return lines.join("");
 }
 
 // Lodging domain rose (BRAND.md §3 / DOMAINS.lodging.color, shared/domains.ts)
@@ -330,32 +287,17 @@ function renderLodgingHtml(d: LodgingDatum, heading: string, t: TFn, locale: str
 }
 
 function renderArcHtml(d: ArcTooltipDatum, t: TFn): string {
-  const epLine = (ep?: { iata?: string; name?: string; country?: string | null }): string =>
-    `<div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;padding:1px 0;">
-      ${flagImgHtml(ep?.country, 16)}<span>${escapeHtml(ep?.iata ?? "?")}</span>
-      <span style="opacity:0.6;font-weight:500;font-size:11px;">${escapeHtml(ep?.name ?? "")}</span>
-    </div>`;
-  const [r, g, b] = d.sourceColor ?? [241, 245, 249, 255];
-  const flown = d.flownCount;
-  const scheduled = d.scheduledCount;
-  let label: string;
-  if (typeof flown === "number" && typeof scheduled === "number") {
-    const parts: string[] = [];
-    if (flown > 0) parts.push(t("map:globe.timesFlown", { count: flown }));
-    if (scheduled > 0) parts.push(t("map:globe.timesPlanned", { count: scheduled }));
-    // Cancelled-only route: flown + scheduled can both be 0 while count > 0.
-    // Falls back to the legacy flown label with the total — accepted
-    // pre-existing cancelled semantic, out of this fix's scope.
-    label = parts.join(" · ") || t("map:globe.timesFlown", { count: d.count ?? 0 });
-  } else {
-    label = t("map:globe.timesFlown", { count: d.count ?? 0 });
-  }
-  return `
-    ${epLine(d.departure)}
-    ${epLine(d.arrival)}
-    <div style="color:rgb(${r},${g},${b});font-weight:600;margin-top:4px;">
-      ${escapeHtml(label)}
-    </div>`;
+  return arcHoverHtml(
+    {
+      departure: d.departure,
+      arrival: d.arrival,
+      count: d.count,
+      color: d.sourceColor,
+      flownCount: d.flownCount,
+      scheduledCount: d.scheduledCount,
+    },
+    { t, flagHeight: FLAT_FLAG_PX }
+  );
 }
 
 /**

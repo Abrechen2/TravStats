@@ -6,9 +6,9 @@
 // Phase B of the Globe pinned-card UX rework — Phase A wired up the
 // MapLibre Popup anchor, this file backs the denser content.
 
-import type { GeoJSONFeature } from "../../types";
-import type { Cruise } from "../../types/cruise";
-import { isCountableCruise } from "../../shared/cruiseCounting";
+import type { GeoJSONFeature } from "../../../types";
+import type { Cruise } from "../../../types/cruise";
+import { isCountableCruise } from "../../../shared/cruiseCounting";
 
 export interface AirportCardStats {
   totalVisits: number;

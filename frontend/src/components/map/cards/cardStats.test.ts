@@ -1,7 +1,7 @@
 import { describe, it, expect } from "vitest";
 import { getAirportStats, getPortStats } from "./cardStats";
-import type { Cruise, Port } from "../../types/cruise";
-import type { GeoJSONFeature } from "../../types";
+import type { Cruise, Port } from "../../../types/cruise";
+import type { GeoJSONFeature } from "../../../types";
 
 const PORT: Port = {
   id: 1,
