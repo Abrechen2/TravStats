@@ -248,7 +248,10 @@
       "openLodging": "Unterkunft öffnen",
       "openPlace": "Ort öffnen",
       "stay": "Aufenthalt",
-      "upcomingStay": "Nächster Aufenthalt"
+      "upcomingStay": "Nächster Aufenthalt",
+      "co2": "CO₂",
+      "dateRange": "Zeitraum",
+      "status": "Status"
     },
     "timeSlider": {
       "title": "Zeitachse",

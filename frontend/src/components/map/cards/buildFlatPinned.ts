@@ -127,25 +127,47 @@ export function geoFromFlightRow(flight: Flight): GeoJSONFeature {
       arrivalTime: flight.arrivalTime,
       status: flight.status,
       distance,
+      co2Kg: flight.co2Kg,
+      seatClass: flight.seatClass,
+      durationMinutes: flight.durationMinutes,
     },
   } as GeoJSONFeature;
 }
 
 /**
- * Every selected row the /geo set does not carry, added to it.
+ * The /geo set with every selected row ADDED where it is missing and ENRICHED
+ * where it is present.
  *
- * Returns `geo` unchanged when nothing is missing, so the common case costs
- * one `Set` and no new array identity for the memo downstream.
+ * Enriched because /geo does not send CO₂, seat class or duration, and the
+ * card shows them — `MapTooltip` could, because it took the store row. A
+ * selection always has that row beside it, so the card need not go without.
+ *
+ * Returns `geo` unchanged when there is no selection, so the common case costs
+ * nothing and hands the memo downstream the same array identity.
  */
 export function withSelectedFlights(
   geo: readonly GeoJSONFeature[],
   selected: readonly Flight[]
 ): readonly GeoJSONFeature[] {
   if (selected.length === 0) return geo;
-  const have = new Set(geo.map((f) => f.properties.id));
-  const missing = selected.filter((f) => !have.has(f.id));
-  if (missing.length === 0) return geo;
-  return [...geo, ...missing.map(geoFromFlightRow)];
+  const rows = new Map(selected.map((f) => [f.id, f]));
+  const seen = new Set<string>();
+  const merged = geo.map((f) => {
+    const row = rows.get(f.properties.id);
+    if (!row) return f;
+    seen.add(f.properties.id);
+    return {
+      ...f,
+      properties: {
+        ...f.properties,
+        co2Kg: f.properties.co2Kg ?? row.co2Kg,
+        seatClass: f.properties.seatClass ?? row.seatClass,
+        durationMinutes: f.properties.durationMinutes ?? row.durationMinutes,
+      },
+    };
+  });
+  const missing = selected.filter((f) => !seen.has(f.id));
+  return missing.length === 0 ? merged : [...merged, ...missing.map(geoFromFlightRow)];
 }
 
 /**

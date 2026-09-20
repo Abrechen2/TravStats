@@ -43,7 +43,14 @@ export interface PortCardStats {
 
 export interface ArcCardStats {
   totalKm: number;
+  /** Earliest departure in the selection — the trip card names a SPAN, and
+   *  `TripTooltip` did before it; only "last flight" survived the move. */
+  firstFlightDate: string | null;
   lastFlightDate: string | null;
+  /** Sum of the selection's CO₂, or null when no leg records any. Never 0 for
+   *  "unknown": `MapTooltip` printed the figure and a zero would read as a
+   *  flight that emitted nothing. */
+  totalCo2Kg: number | null;
   /** Most-frequently-flown aircraft type on this route. */
   topAircraft: string | null;
   topAirline: string | null;
@@ -52,6 +59,10 @@ export interface ArcCardStats {
 export interface CruiseCardStats {
   shipName: string | null;
   line: string | null;
+  /** The map draws a planned cruise differently; the card has to say which. */
+  status: string | null;
+  /** Already formatted with its currency, or null when none is recorded. */
+  price: string | null;
   startDate: string | null;
   endDate: string | null;
   portCount: number;
@@ -77,6 +88,15 @@ function modeOf(values: ReadonlyArray<string | undefined | null>): string | null
     }
   }
   return topKey;
+}
+
+function minDate(dates: ReadonlyArray<string | null | undefined>): string | null {
+  let best: string | null = null;
+  for (const d of dates) {
+    if (!d) continue;
+    if (best === null || d < best) best = d;
+  }
+  return best;
 }
 
 function maxDate(dates: ReadonlyArray<string | null | undefined>): string | null {
@@ -198,9 +218,18 @@ export function getArcStats(
 
   const totalKm = matched.reduce((sum, f) => sum + (f.properties.distance ?? 0), 0);
 
+  let totalCo2Kg: number | null = null;
+  for (const f of matched) {
+    const c = f.properties.co2Kg;
+    if (typeof c === "number") totalCo2Kg = (totalCo2Kg ?? 0) + c;
+  }
+
+  const departures = matched.map((f) => f.properties.departureTime);
   return {
     totalKm,
-    lastFlightDate: maxDate(matched.map((f) => f.properties.departureTime)),
+    firstFlightDate: minDate(departures),
+    lastFlightDate: maxDate(departures),
+    totalCo2Kg,
     topAircraft: modeOf(matched.map((f) => f.properties.aircraft)),
     topAirline: modeOf(matched.map((f) => f.properties.airline)),
   };
@@ -208,7 +237,11 @@ export function getArcStats(
 
 // ─── Cruise ───────────────────────────────────────────────────────
 
-export function getCruiseStats(cruises: Cruise[], cruiseId: string): CruiseCardStats | null {
+export function getCruiseStats(
+  cruises: readonly Cruise[],
+  cruiseId: string,
+  locale = "de"
+): CruiseCardStats | null {
   const cruise = cruises.find((c) => c.id === cruiseId);
   if (!cruise) return null;
 
@@ -218,6 +251,11 @@ export function getCruiseStats(cruises: Cruise[], cruiseId: string): CruiseCardS
   return {
     shipName: cruise.ship?.name ?? cruise.shipNameOverride ?? null,
     line: cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? null,
+    status: cruise.status ?? null,
+    price:
+      cruise.price != null
+        ? formatAmount(cruise.price, cruise.currency as never, { language: locale })
+        : null,
     startDate: cruise.startDate,
     endDate: cruise.endDate,
     portCount: portStops.length,

@@ -89,7 +89,14 @@ export function PinnedCard({
   onPlaceOpen,
   selectionScope = "route",
 }: PinnedCardProps): JSX.Element {
-  const { t, i18n } = useTranslation(["map", "common", "lodging", "places", "specialFlights"]);
+  const { t, i18n } = useTranslation([
+    "map",
+    "common",
+    "lodging",
+    "places",
+    "specialFlights",
+    "cruise",
+  ]);
   const locale = i18n.language || "de";
 
   // Subtle entrance: fade + lift on mount (each pin remounts this card).
@@ -311,6 +318,20 @@ function CruiseFlags({ cruise }: { cruise: Cruise }): JSX.Element | null {
 
 // ─── Airport body ─────────────────────────────────────────────────
 
+/**
+ * What this card does NOT say, deliberately.
+ *
+ * `AirportTooltip` enumerated the airlines seen here and split departures from
+ * arrivals; neither survived the 2026-09-20 fold, because five rows of
+ * destinations do not fit the card's width and "Längste Strecke" plus "Top
+ * Linie" answer the same question in two.
+ *
+ * `totalVisits` is NOT the old `departures + arrivals`. It counts flights that
+ * TOUCH the airport, once each — so a leg that starts and ends here is one
+ * visit rather than two — and it excludes scheduled ones, which that sum did
+ * not. The number is smaller than the one this card used to show, and it is
+ * the truer of the two.
+ */
 function AirportBody({
   data,
   flights,
@@ -447,6 +468,15 @@ function ArcBody({
         {stats.topAirline && (
           <Row label={t("map:globe.pinned.topAirline")} value={stats.topAirline} />
         )}
+        {/* `MapTooltip` reported it and the shared card did not. Null rather
+            than 0 when no leg records any: a zero reads as a flight that
+            emitted nothing. */}
+        {stats.totalCo2Kg !== null && (
+          <Row
+            label={t("map:globe.pinned.co2")}
+            value={`${Math.round(stats.totalCo2Kg).toLocaleString(locale)} kg`}
+          />
+        )}
       </Grid>
       <CardFlights flights={flights} flightIds={data.flightIds} locale={locale} t={t} />
       <Actions
@@ -484,7 +514,7 @@ function CruiseBody({
   cruises: Cruise[];
   onCruiseOpen?: (cruiseId: string) => void;
 } & BodyCommonProps): JSX.Element {
-  const stats = getCruiseStats(cruises, data.cruiseId);
+  const stats = getCruiseStats(cruises, data.cruiseId, locale);
   const cruise = cruises.find((c) => c.id === data.cruiseId);
   if (!stats) {
     return <div className="text-[11px] opacity-85">{t("map:visMode.tripRoutes")}</div>;
@@ -501,12 +531,16 @@ function CruiseBody({
       {cruise && <CruiseFlags cruise={cruise} />}
       <Hero color={tokens.domainColor.cruise}>{dateRange}</Hero>
       <Grid>
+        {stats.status && (
+          <Row label={t("map:globe.pinned.status")} value={t(`cruise:status.${stats.status}`)} />
+        )}
         <Row label={t("map:globe.pinned.portsLabel")} value={String(stats.portCount)} />
         <Row label={t("map:globe.pinned.seaDaysLabel")} value={String(stats.seaDays)} />
         {stats.embarkPort && <Row label={t("map:globe.pinned.embark")} value={stats.embarkPort} />}
         {stats.debarkPort && stats.debarkPort !== stats.embarkPort && (
           <Row label={t("map:globe.pinned.debark")} value={stats.debarkPort} />
         )}
+        {stats.price && <Row label={t("map:globe.pinned.price")} value={stats.price} />}
       </Grid>
       <Actions
         primary={

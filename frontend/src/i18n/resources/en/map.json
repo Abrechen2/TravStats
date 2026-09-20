@@ -248,7 +248,10 @@
       "openLodging": "Open lodging",
       "openPlace": "Open place",
       "stay": "Stay",
-      "upcomingStay": "Next stay"
+      "upcomingStay": "Next stay",
+      "co2": "CO₂",
+      "dateRange": "Period",
+      "status": "Status"
     },
     "timeSlider": {
       "title": "Timeline",

@@ -69,10 +69,16 @@ export function TripBody({
         })}
       </Hero>
       <Grid>
-        {stats.lastFlightDate && (
+        {/* The SPAN, as `TripTooltip` showed it. Only "last flight" survived
+            the fold, which for a two-week trip named one day of it. */}
+        {stats.firstFlightDate && stats.lastFlightDate && (
           <Row
-            label={t("map:globe.pinned.lastFlight")}
-            value={formatDate(stats.lastFlightDate, locale)}
+            label={t("map:globe.pinned.dateRange")}
+            value={
+              stats.firstFlightDate === stats.lastFlightDate
+                ? formatDate(stats.lastFlightDate, locale)
+                : `${formatDate(stats.firstFlightDate, locale)} – ${formatDate(stats.lastFlightDate, locale)}`
+            }
           />
         )}
         {stats.topAirline && (

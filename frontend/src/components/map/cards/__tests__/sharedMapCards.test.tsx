@@ -182,3 +182,75 @@ describe("the shared hover html", () => {
     expect(html).toContain("map:globe.timesPlanned:1");
   });
 });
+
+/**
+ * Four numbers the deleted cards carried and the shared one dropped. Each is
+ * something a reader could see before this branch and could not after it, so
+ * each gets an assertion rather than a promise.
+ */
+describe("what the deleted cards used to say", () => {
+  const withCo2 = feature("f1", { co2Kg: 766 });
+
+  it("the single-flight card reports CO₂, as MapTooltip did", async () => {
+    await renderCard(
+      <PinnedCard
+        pinned={routePinned}
+        flights={[withCo2]}
+        cruises={[]}
+        onClose={vi.fn()}
+        selectionScope="single"
+      />
+    );
+    expect(screen.getByText("map:globe.pinned.co2")).toBeInTheDocument();
+  });
+
+  it("the trip card reports the whole span, not only the last flight", async () => {
+    const tripPinned: MapPinned = {
+      kind: "trip",
+      anchorLngLat: [10, 50],
+      data: { flightIds: ["f1", "f2"], color: [240, 169, 71] },
+    };
+    await renderCard(
+      <PinnedCard
+        pinned={tripPinned}
+        flights={[
+          feature("f1", { departureTime: "2021-06-05T08:00:00Z" }),
+          feature("f2", { departureTime: "2021-06-19T08:00:00Z" }),
+        ]}
+        cruises={[]}
+        onClose={vi.fn()}
+      />
+    );
+    // TripTooltip showed first–last; the shared card showed only "last flight".
+    expect(screen.getByText("map:globe.pinned.dateRange")).toBeInTheDocument();
+  });
+
+  it("the cruise card says whether the voyage happened, and what it cost", async () => {
+    const cruise = {
+      id: "c1",
+      status: "scheduled",
+      price: 2400,
+      currency: "EUR",
+      startDate: "2026-10-01",
+      endDate: "2026-10-08",
+      stops: [],
+      ship: { name: "AIDAnova" },
+    } as unknown as Parameters<typeof PinnedCard>[0]["cruises"][number];
+
+    await renderCard(
+      <PinnedCard
+        pinned={{
+          kind: "cruise",
+          anchorLngLat: [12, 42],
+          data: { cruiseId: "c1", cruiseLabel: "AIDAnova" },
+        }}
+        flights={[]}
+        cruises={[cruise]}
+        onClose={vi.fn()}
+      />
+    );
+    // The map draws a planned cruise differently; the card said nothing.
+    expect(screen.getByText("cruise:status.scheduled")).toBeInTheDocument();
+    expect(screen.getByText("map:globe.pinned.price")).toBeInTheDocument();
+  });
+});
