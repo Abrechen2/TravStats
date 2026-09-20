@@ -212,7 +212,6 @@ const mockRows = (rows: Lodging[], total = rows.length): void => {
 /** Facets that agree with a set of rows, for the tests that do not care. */
 const mockFacets = (over: Partial<LodgingFacets> = {}): void => {
   getLodgingFacetsMock.mockResolvedValue({
-    chains: [],
     countries: [],
     years: [],
     types: [],
@@ -289,6 +288,46 @@ describe("LodgingListPage", () => {
     });
     const row = screen.getByText("Hotel Test Ludwigsburg").closest('[role="row"]');
     expect(row?.querySelector('[title="lodging:list.otherCurrencyHint"]')).not.toBeInTheDocument();
+  });
+
+  it("puts the facet's count on every type and status option, zero included", async () => {
+    // The endpoint counted these from the day it existed and nothing read
+    // them: the two dropdowns are closed vocabularies drawn from constants, so
+    // the counts were measured for nobody. They are the option's own label
+    // now — including the zero, which says an option returns nothing BEFORE it
+    // is clicked rather than after.
+    mockRows([]);
+    mockFacets({
+      types: [
+        { type: "hotel", count: 12 },
+        { type: "hostel", count: 2 },
+      ],
+      statuses: [{ status: "completed", count: 9 }],
+    });
+
+    renderListPage();
+    await openFilterPanel();
+
+    const types = (await screen.findByLabelText("lodging:filter.type")) as HTMLSelectElement;
+    await waitFor(() => {
+      expect(Array.from(types.options).map((o) => o.textContent)).toEqual([
+        "lodging:filter.allTypes",
+        "lodging:type.hotel (12)",
+        "lodging:type.campsite (0)",
+        "lodging:type.guesthouse (0)",
+        "lodging:type.apartment (0)",
+        "lodging:type.hostel (2)",
+      ]);
+    });
+
+    const statuses = screen.getByLabelText("lodging:list.status.label") as HTMLSelectElement;
+    expect(Array.from(statuses.options).map((o) => o.textContent)).toEqual([
+      "lodging:filter.allStatuses",
+      "lodging:stayStatus.in_progress (0)",
+      "lodging:stayStatus.scheduled (0)",
+      "lodging:stayStatus.completed (9)",
+      "lodging:stayStatus.cancelled (0)",
+    ]);
   });
 
   it("offers all five lodging types (plus 'all') in the type filter", async () => {

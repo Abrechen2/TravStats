@@ -30,7 +30,6 @@ const CHAIN_A = "Facet Chain A";
 const CHAIN_B = "Facet Chain B";
 
 interface Facets {
-  chains: Array<{ id: number; name: string; count: number }>;
   countries: Array<{ value: string; isoCode: string | null; count: number }>;
   years: Array<{ year: number; count: number }>;
   types: Array<{ type: string; count: number }>;
@@ -158,12 +157,17 @@ describe("GET /api/v1/lodging/facets", () => {
     await prisma.$disconnect();
   });
 
-  it("offers every chain, country, year, type and status with its count", async () => {
+  it("offers no chain list — nothing filters by chain, so nothing counts them", async () => {
+    // It was here, counted on every keystroke, and no dropdown read it: the
+    // `chainId` filter is one the API accepts and no client sends. A facet is
+    // honest work only while something can choose from it.
+    expect(await facets()).not.toHaveProperty("chains");
+    // The SUMMARY's chains figure is a different question and stays.
+    expect((await facets()).summary.chains).toBe(2);
+  });
+
+  it("offers every country, year, type and status with its count", async () => {
     const data = await facets();
-    expect(data.chains).toEqual([
-      { id: chainA, name: CHAIN_A, count: 1 },
-      { id: chainB, name: CHAIN_B, count: 1 },
-    ]);
     expect(data.countries).toEqual([
       { value: "DE", isoCode: "DE", count: 1 },
       // A country text that resolves to nothing keeps its own entry, under the
@@ -193,7 +197,6 @@ describe("GET /api/v1/lodging/facets", () => {
     // would hold only the value already chosen and could never be changed.
     expect(data.countries.map((c) => c.value)).toEqual(["DE", "Dubai", "PT"]);
     // Everything else IS narrowed to the German house.
-    expect(data.chains).toEqual([{ id: chainA, name: CHAIN_A, count: 1 }]);
     expect(data.years).toEqual([
       { year: 2024, count: 1 },
       { year: 2023, count: 1 },

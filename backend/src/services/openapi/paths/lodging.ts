@@ -182,9 +182,6 @@ const lodgingFacets = registry.register(
   "LodgingFacets",
   z
     .object({
-      chains: z.array(
-        z.object({ id: z.number().int(), name: z.string(), count: z.number().int() })
-      ),
       countries: z.array(
         z.object({
           value: z
@@ -210,7 +207,12 @@ const lodgingFacets = registry.register(
       "Filter options and totals for one query. Each facet is counted under every " +
         "ACTIVE filter EXCEPT its own, so the list you are choosing from never shrinks " +
         "to the value already chosen. The summary is counted under all of them, by the " +
-        "same counting rule the rows use."
+        "same counting rule the rows use. " +
+        "There is deliberately NO `chains` facet. `chainId` is a filter this API " +
+        "accepts and no client sends, so counting that option list on every request " +
+        "would be work for nobody; it returns when something can choose from it. " +
+        "`summary.chains` is a different figure — how many named chains the matching " +
+        "houses belong to — and is here."
     )
     .openapi("LodgingFacets")
 );

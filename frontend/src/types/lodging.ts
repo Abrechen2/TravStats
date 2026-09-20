@@ -366,9 +366,12 @@ export interface LodgingPage {
  * so choosing a country does not reduce the country list to that country. The
  * summary is counted under all of them, because it describes what the table is
  * showing.
+ *
+ * There is no `chains` list on purpose: `chainId` is a filter this app never
+ * sends, so counting its options would have been work for nobody. The
+ * summary's `chains` is a different figure and is here.
  */
 export interface LodgingFacets {
-  chains: Array<{ id: number; name: string; count: number }>;
   /** `value` is what to send back as `country`: the ISO code where one was
    *  derived, the raw text where it was not (a city in the country field). */
   countries: Array<{ value: string; isoCode: string | null; count: number }>;

@@ -297,6 +297,30 @@ export default function LodgingListPage(): JSX.Element {
    * (a city in the country field, say) keeps its own entry rather than
    * disappearing from the filter entirely.
    */
+  /**
+   * "Hotel (12)" — the option and how much is behind it.
+   *
+   * Type and status are CLOSED vocabularies, so unlike the country and year
+   * lists they are not built from the facet: every value keeps its place and
+   * its fixed order whatever the other filters say. What the facet adds is the
+   * count, including the zero — an option that would return nothing says so
+   * before it is clicked, rather than after. While the facets are still in
+   * flight there is no count to show and the label stands alone.
+   */
+  const countedLabel = useCallback(
+    (label: string, count: number | undefined): string =>
+      count === undefined ? label : `${label} (${count})`,
+    []
+  );
+  const typeCounts = useMemo(() => {
+    if (facets === null) return null;
+    return new Map(facets.types.map((t) => [t.type, t.count]));
+  }, [facets]);
+  const statusCounts = useMemo(() => {
+    if (facets === null) return null;
+    return new Map(facets.statuses.map((st) => [st.status, st.count]));
+  }, [facets]);
+
   const availableCountries = useMemo(
     () =>
       (facets?.countries ?? [])
@@ -439,7 +463,10 @@ export default function LodgingListPage(): JSX.Element {
             allLabel: t("lodging:filter.allStatuses"),
             options: STATUSES.map((st) => ({
               value: st,
-              label: t(`lodging:stayStatus.${st}`),
+              label: countedLabel(
+                t(`lodging:stayStatus.${st}`),
+                statusCounts === null ? undefined : (statusCounts.get(st) ?? 0)
+              ),
             })),
           }}
           year={{
@@ -461,7 +488,10 @@ export default function LodgingListPage(): JSX.Element {
                   <option value="all">{t("lodging:filter.allTypes")}</option>
                   {TYPES.map((ty) => (
                     <option key={ty} value={ty}>
-                      {t(`lodging:type.${ty}`)}
+                      {countedLabel(
+                        t(`lodging:type.${ty}`),
+                        typeCounts === null ? undefined : (typeCounts.get(ty) ?? 0)
+                      )}
                     </option>
                   ))}
                 </select>

@@ -31,8 +31,16 @@ import { LIFECYCLE_SORT_RANK, LODGING_LIFECYCLE_STATUSES } from "../../shared/lo
 import { lodgingFilterSql } from "./listQuery";
 import { lifecycleRankSql, stayCountsSql, stayNightsSql } from "./listSql";
 
+/**
+ * NO `chains` here, deliberately. It was in the first cut of this endpoint and
+ * was counted on every keystroke for nobody: `chainId` is a filter the API
+ * accepts and no client sends, so the option list had no dropdown to fill. A
+ * facet is only honest work while something can choose from it — when a client
+ * filters by chain, it comes back with the same shape the others have. The
+ * SUMMARY's `chains` is a different figure and stays: it is a count of the
+ * houses on screen, not a list to pick from.
+ */
 export interface LodgingFacets {
-  chains: Array<{ id: number; name: string; count: number }>;
   /** `value` is what to send back as the `country` filter: the ISO code where
    *  one was derived, the raw text where it was not (a city in the field). */
   countries: Array<{ value: string; isoCode: string | null; count: number }>;
@@ -52,7 +60,7 @@ export interface LodgingSummary {
 }
 
 /** The filter keys a facet drops when counting itself. */
-type FacetDimension = "chainId" | "country" | "year" | "type" | "status";
+type FacetDimension = "country" | "year" | "type" | "status";
 
 function without(query: LodgingQueryInput, dimension: FacetDimension): LodgingQueryInput {
   // A new object, never a delete on the caller's — the query is read five more
@@ -100,8 +108,7 @@ export async function queryLodgingFacets(params: {
   const { userId, query } = params;
   const now = params.now ?? new Date();
 
-  const [chains, countries, years, types, statuses, summary] = await Promise.all([
-    chainFacet(without(query, "chainId"), userId),
+  const [countries, years, types, statuses, summary] = await Promise.all([
     countryFacet(without(query, "country"), userId),
     yearFacet(without(query, "year"), userId),
     typeFacet(without(query, "type"), userId),
@@ -109,24 +116,7 @@ export async function queryLodgingFacets(params: {
     summarise(query, userId, now),
   ]);
 
-  return { chains, countries, years, types, statuses, summary };
-}
-
-async function chainFacet(
-  query: LodgingQueryInput,
-  userId: string
-): Promise<LodgingFacets["chains"]> {
-  const rows = await prisma.$queryRaw<Array<{ id: number; name: string; count: bigint }>>(
-    Prisma.sql`
-      ${matchingHouses(query, userId)}
-      SELECT c.id, c.name, COUNT(*) AS count
-      FROM agg
-      JOIN lodging_chains c ON c.id = agg.chain_id
-      GROUP BY c.id, c.name
-      ORDER BY c.name ASC
-    `
-  );
-  return rows.map((r) => ({ id: r.id, name: r.name, count: Number(r.count) }));
+  return { countries, years, types, statuses, summary };
 }
 
 async function countryFacet(
