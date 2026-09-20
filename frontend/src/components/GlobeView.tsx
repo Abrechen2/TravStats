@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
@@ -25,9 +25,6 @@ import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 import { loadGlobeChrome, saveGlobeChrome } from "./map/globeChrome";
 import { useFlightColorStore } from "../store/flightColorStore";
-import { LODGING_COLOR } from "../lib/lodgingColor";
-import { PLACE_COLOR } from "../lib/placeColor";
-import { rgbCss } from "../lib/flightColor";
 import { useLodgingColorStore } from "../store/lodgingColorStore";
 import { usePlaceColorStore } from "../store/placeColorStore";
 import { useMapCameraStore } from "../store/mapCameraStore";
@@ -36,8 +33,6 @@ import { useMapCameraStore } from "../store/mapCameraStore";
 const GLOBE_MARKER_BASE_PX = 5;
 import { nightCells as computeNightCells } from "./Globe/sunPosition";
 import { HoverTooltip, type HoverTooltipApi } from "./map/cards/HoverTooltip";
-import { PinnedCard } from "./map/cards/PinnedCard";
-import { PinnedCardBoundary } from "./map/cards/PinnedCardBoundary";
 import {
   airportHoverHtml,
   arcHoverHtml,
@@ -47,6 +42,7 @@ import {
 import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
 import { usePinnedAnchor } from "./Globe/usePinnedAnchor";
 import { occludeExtraLayers } from "./Globe/occludeExtraLayers";
+import { GlobePinnedOverlay } from "./Globe/GlobePinnedOverlay";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { buildAirportPoints, buildPortPoints } from "./Globe/globePointData";
 import { buildGlobeArcData } from "./Globe/globeArcData";
@@ -195,21 +191,6 @@ const INITIAL_VIEW_STATE: MapViewState = {
 interface DeckOverlayProps {
   layers: Layer[];
   onHover: (info: PickingInfo) => void;
-}
-
-/**
- * The ring that pulses on the marker a pinned card belongs to. Only the four
- * SINGLE-POINT kinds get one — an arc or a cruise path is pinned somewhere
- * along a line, where a ring would mark a spot the user did not click.
- * Lodging and place read their domain colour rather than a literal, so the
- * ring cannot disagree with the pin it surrounds.
- */
-function pulseColor(kind: MapPinned["kind"]): string | null {
-  if (kind === "airport") return "#f0a947";
-  if (kind === "port") return "#6fa0d6";
-  if (kind === "lodging") return rgbCss(LODGING_COLOR);
-  if (kind === "place") return rgbCss(PLACE_COLOR);
-  return null;
 }
 
 function DeckGLOverlay({ layers, onHover }: DeckOverlayProps): null {
@@ -1479,80 +1460,36 @@ export default function GlobeView({
         mode={labelsMode}
       />
 
-      {/* Pinned detail card — custom React overlay positioned via
-          map.project() on every render frame. Replaces the MapLibre
-          Popup primitive that was crashing the WebGL canvas in this
-          stack (interleaved deck.gl 9 + globe projection). Visibility
-          flag from the JS-side dot-product check fades the card when
-          the anchor rotates to the back of the globe. */}
-      {/* Pulse ring on the selected marker (airports + ports). Drawn under
-          the pinned card, non-interactive; reduced-motion shows a static
-          ring. Colour follows the domain. */}
-      {pinned && pulseColor(pinned.kind) && popupScreenPos && popupScreenPos.visible && (
-        <div
-          className="pointer-events-none absolute z-20"
-          style={{ left: popupScreenPos.x, top: popupScreenPos.y }}
-        >
-          {[0, 0.6].map((delay) => (
-            <span
-              key={delay}
-              className="map-pulse-ring"
-              style={
-                {
-                  "--pulse-color": pulseColor(pinned.kind),
-                  animationDelay: `${delay}s`,
-                } as CSSProperties
-              }
-            />
-          ))}
-        </div>
-      )}
-
-      {pinned && popupScreenPos && popupScreenPos.visible && (
-        <div
-          className="absolute z-30 pointer-events-auto"
-          style={{
-            left: popupScreenPos.x,
-            top: popupScreenPos.y,
-            transform: "translate(-50%, calc(-100% - 14px))",
-          }}
-        >
-          <PinnedCardBoundary>
-            <PinnedCard
-              pinned={pinned}
-              flights={cardFlights}
-              cruises={[...(cruisesForCard ?? cruises)]}
-              // Letting go of the selection is half of closing: see
-              // `clearSelections` for the reopen this fixes.
-              selectionScope={selectionScope}
-              onClose={() => {
+      <GlobePinnedOverlay
+        pinned={pinned}
+        screen={popupScreenPos}
+        flights={cardFlights}
+        cruises={[...(cruisesForCard ?? cruises)]}
+        selectionScope={selectionScope}
+        onClose={() => {
+          setPinned(null);
+          clearSelections();
+        }}
+        onFlightOpen={onFlightOpen}
+        onFlightEdit={
+          onEdit
+            ? (flightId) => {
+                const target = resolveSelectedFlight(flightId);
+                if (!target) return;
                 setPinned(null);
                 clearSelections();
-              }}
-              onFlightOpen={onFlightOpen}
-              onFlightEdit={
-                onEdit
-                  ? (flightId) => {
-                      const target = resolveSelectedFlight(flightId);
-                      if (!target) return;
-                      setPinned(null);
-                      clearSelections();
-                      onEdit(target);
-                    }
-                  : undefined
+                onEdit(target);
               }
-              onTripDetails={() => {
-                setPinned(null);
-                openTripDetails();
-              }}
-              onCruiseOpen={onCruiseOpen}
-              onLodgingOpen={onLodgingOpen}
-              onPlaceOpen={onPlaceOpen}
-            />
-          </PinnedCardBoundary>
-        </div>
-      )}
-
+            : undefined
+        }
+        onTripDetails={() => {
+          setPinned(null);
+          openTripDetails();
+        }}
+        onCruiseOpen={onCruiseOpen}
+        onLodgingOpen={onLodgingOpen}
+        onPlaceOpen={onPlaceOpen}
+      />
       {/* Hover tooltip — leaf component with imperative show/hide so onHover
           updates at 60–120 Hz don't re-render the parent GlobeView tree. */}
       <HoverTooltip ref={tooltipRef} />
