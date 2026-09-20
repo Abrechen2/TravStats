@@ -85,6 +85,31 @@ const normalizedFlightNumber = z
   // which the update handler reads as "don't change".
   .transform((v) => (v === null ? null : normalizeFlightNumber(v)));
 
+/**
+ * The eight values of `Flight.specialType` — the ONE list.
+ *
+ * It is read twice and must stay one: `baseFlightSchema` below accepts these
+ * on a write, and `flightQuerySchema` filters on them plus two answers that
+ * are not a type at all — everything WITHOUT one (`standard`) and everything
+ * WITH one (`special`). They were two literal arrays for a day, which is a
+ * list that can only ever drift: a ninth type added to the writer and not to
+ * the filter is a flight the logbook can store and never find again.
+ *
+ * Mirrored in `frontend/src/components/specialFlights/specialTypeMeta.ts`,
+ * which carries the icon and colour for each — that pair is a convention,
+ * checked by each side's own tests, like the other `shared/` mirrors.
+ */
+export const SPECIAL_FLIGHT_TYPES = [
+  "sightseeing",
+  "eclipse",
+  "rocket_launch",
+  "zerog",
+  "aurora",
+  "training",
+  "ferry",
+  "test",
+] as const;
+
 const baseFlightSchema = z.object({
   airline: emptyStringToNull,
   airlineIata: z.string().max(4).nullable().optional(),
@@ -259,19 +284,7 @@ const baseFlightSchema = z.object({
   baggageBelt: z.string().max(20).nullable().optional(),
   checkInDesk: z.string().max(40).nullable().optional(),
   // Special flights (Sonder-Flüge) — flight subtype, see schema.prisma
-  specialType: z
-    .enum([
-      "sightseeing",
-      "eclipse",
-      "rocket_launch",
-      "zerog",
-      "aurora",
-      "training",
-      "ferry",
-      "test",
-    ])
-    .nullable()
-    .optional(),
+  specialType: z.enum(SPECIAL_FLIGHT_TYPES).nullable().optional(),
   eventLat: z.number().min(-90).max(90).nullable().optional(),
   eventLon: z.number().min(-180).max(180).nullable().optional(),
   eventLabel: z.string().max(120).nullable().optional(),
@@ -402,22 +415,6 @@ export const updateFlightSchema = partialForUpdate(baseFlightSchema)
   .refine((data) => Object.keys(data).length > 0, {
     message: "At least one field must be provided for update",
   });
-
-/**
- * The eight values of `Flight.specialType`, plus the two answers the logbook's
- * filter asks that are not a type at all: everything WITHOUT a type
- * (`standard`) and everything WITH one (`special`).
- */
-export const SPECIAL_FLIGHT_TYPES = [
-  "sightseeing",
-  "eclipse",
-  "rocket_launch",
-  "zerog",
-  "aurora",
-  "training",
-  "ferry",
-  "test",
-] as const;
 
 export const SPECIAL_TYPE_FILTER_NONE = "standard";
 export const SPECIAL_TYPE_FILTER_ANY = "special";

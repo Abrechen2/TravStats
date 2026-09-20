@@ -8,7 +8,12 @@
  *  - IANA timezone strings are validated.
  */
 import { describe, it, expect } from "@jest/globals";
-import { createFlightSchema, updateFlightSchema } from "../flight";
+import {
+  createFlightSchema,
+  flightQuerySchema,
+  SPECIAL_FLIGHT_TYPES,
+  updateFlightSchema,
+} from "../flight";
 
 const baseAirport = { lat: 50, lon: 8, iata: "FRA" };
 const baseValid = {
@@ -97,5 +102,36 @@ describe("updateFlightSchema — partial canonical-UTC contract", () => {
     // with every value individually legitimate. See `schemas/partialUpdate.ts`.
     const parsed = updateFlightSchema.parse({ notes: "only this" });
     expect(Object.keys(parsed)).toEqual(["notes"]);
+  });
+});
+
+/**
+ * The write schema and the list filter speak of the same eight types.
+ *
+ * They were two literal arrays for a day. A list that exists twice can only
+ * drift, and the drift has a shape: a ninth type accepted on write and absent
+ * from the filter is a flight the logbook can store and then never find.
+ */
+describe("specialType — one list, read twice", () => {
+  it("accepts every type on a write that the filter can select", () => {
+    for (const type of SPECIAL_FLIGHT_TYPES) {
+      expect(flightQuerySchema.parse({ specialType: type }).specialType).toBe(type);
+      expect(createFlightSchema.parse({ ...baseValid, specialType: type }).specialType).toBe(type);
+    }
+  });
+
+  it("offers the filter exactly those eight, plus the two that are not types", () => {
+    const accepted = [...SPECIAL_FLIGHT_TYPES, "standard", "special"];
+    for (const value of accepted) {
+      expect(flightQuerySchema.safeParse({ specialType: value }).success).toBe(true);
+    }
+    expect(flightQuerySchema.safeParse({ specialType: "teleport" }).success).toBe(false);
+    // `standard` and `special` are filter answers only — a flight cannot BE
+    // one, and accepting them on a write would store a type that is not one.
+    for (const notAType of ["standard", "special"]) {
+      expect(createFlightSchema.safeParse({ ...baseValid, specialType: notAType }).success).toBe(
+        false
+      );
+    }
   });
 });
