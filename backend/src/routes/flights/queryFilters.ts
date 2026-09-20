@@ -69,6 +69,18 @@ export const departureYearSpan = async (
   return { min: min.getUTCFullYear(), max: max.getUTCFullYear() };
 };
 
+/**
+ * The year span a where-clause needs, or `null` when it needs none.
+ *
+ * Only a month WITHOUT a year costs the extra aggregate; every other query
+ * skips it. Three call sites ask the same question, so they ask it here.
+ */
+export const resolveYearSpan = async (
+  query: Pick<FlightQueryInput, "year" | "month">,
+  userId: string
+): Promise<{ min: number; max: number } | null> =>
+  query.month !== undefined && query.year === undefined ? departureYearSpan(userId) : null;
+
 /** Half-open UTC range for a calendar year, or for one month inside it. */
 const utcRange = (year: number, month?: number): Prisma.DateTimeFilter =>
   month === undefined

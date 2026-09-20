@@ -7,8 +7,8 @@ import { enrichFlightsWithAirportFacts } from "../../services/flightAirportFacts
 import { buildFlightOrderBy } from "./listOrder";
 import {
   buildFlightWhere,
-  departureYearSpan,
   normalizeQueryParams,
+  resolveYearSpan,
   splitMultiValue,
 } from "./queryFilters";
 
@@ -45,12 +45,7 @@ export const flightListHandler = async (
       offset: all ? 0 : parsedQuery.offset,
     };
     const take = all ? undefined : cappedLimit;
-    // One extra aggregate, and only for the one filter that needs it: a month
-    // named without a year. See `departureYearSpan`.
-    const yearSpan =
-      query.month !== undefined && query.year === undefined
-        ? await departureYearSpan(userId)
-        : null;
+    const yearSpan = await resolveYearSpan(query, userId);
     const { where, noResults } = buildFlightWhere(query, userId, { yearSpan });
 
     if (noResults) {

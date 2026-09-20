@@ -5,11 +5,12 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { rejectDemoQuota } from "../middleware/demoGuard";
 import {
   buildFlightWhere,
-  departureYearSpan,
   normalizeQueryParams,
+  resolveYearSpan,
   splitMultiValue,
 } from "./flights/queryFilters";
 import { flightListHandler } from "./flights/list";
+import { flightFacetsHandler } from "./flights/facets";
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from "../schemas/flight";
 import logger from "../utils/logger";
 import { AppError } from "../middleware/errorHandler";
@@ -532,6 +533,9 @@ async function withAirportFacts<T extends EnrichableFlight>(flight: T): Promise<
 // Get flights with filters. The handler lives in ./flights/list.ts: this file
 // is frozen at its size in scripts/file-size-baseline.json and may only shrink.
 router.get("/", flightListHandler);
+// Option lists + figures drawn AROUND that page; before "/:id", which would
+// otherwise swallow the word "facets".
+router.get("/facets", flightFacetsHandler);
 
 // Get flights as GeoJSON
 router.get("/geo", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -547,12 +551,7 @@ router.get("/geo", async (req: AuthRequest, res: Response, next: NextFunction) =
       tags: tagsArray,
       limit: Math.min(parsedQuery.limit ?? 100, 500),
     };
-    // Same month-without-year case the list handler resolves; see
-    // `departureYearSpan`. Costs one aggregate, and only when asked for.
-    const yearSpan =
-      query.month !== undefined && query.year === undefined
-        ? await departureYearSpan(userId)
-        : null;
+    const yearSpan = await resolveYearSpan(query, userId);
     const { where, noResults } = buildFlightWhere(query, userId, { yearSpan });
 
     if (noResults) {

@@ -77,6 +77,58 @@ registry.registerPath({
   },
 });
 
+const facetOption = <T extends z.ZodTypeAny>(value: T) =>
+  z.object({ value, count: z.number().int() });
+
+registry.registerPath({
+  method: "get",
+  path: "/flights/facets",
+  summary: "Filter options and headline figures for a flight list",
+  description:
+    "The year and airline option lists for the current filter set, each " +
+    "counted under every OTHER filter but not its own (standard faceting), " +
+    "plus the summary figures for the filtered set with ALL filters applied. " +
+    "Takes the same query parameters as `GET /flights`; `limit`, `offset`, " +
+    "`sort` and `order` are ignored. Lets a client page through the list " +
+    "without holding it.",
+  tags: ["Flights"],
+  request: {
+    query: z.object({
+      q: z.string().optional(),
+      year: z.coerce.number().int().optional(),
+      month: z.coerce.number().int().min(1).max(12).optional(),
+      status: z.string().optional(),
+      airline: z.string().optional(),
+      airlineExact: z.string().optional(),
+      tripId: z.string().optional(),
+      specialType: z.string().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Facet option lists and summary figures",
+      content: {
+        "application/json": {
+          schema: z.object({
+            years: z.array(facetOption(z.number().int())),
+            airlines: z.array(facetOption(z.string())),
+            summary: z.object({
+              flights: z.number().int(),
+              airlines: z.number().int().describe("Distinct carriers by IATA identity"),
+              airports: z.number().int().describe("Distinct IATA codes across both ends"),
+              withoutAirline: z
+                .number()
+                .int()
+                .describe("Flights naming no carrier, excluded from `airlines`"),
+            }),
+          }),
+        },
+      },
+    },
+    401: { description: "Missing or invalid token", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/flights/{id}",
