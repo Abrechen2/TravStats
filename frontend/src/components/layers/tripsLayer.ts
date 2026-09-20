@@ -171,7 +171,17 @@ function rgbaCss(hex: string, alpha: number): string {
   return `rgba(${r},${g},${b},${alpha})`;
 }
 
+/**
+ * One icon object for the lifetime of the tab.
+ *
+ * deck.gl keys its packed icon atlas on the object's `id`, but it re-reads
+ * and re-rasterises the `url` whenever the layer is newly mounted. Building a
+ * fresh object per call was cheap in JS and not cheap on the GPU.
+ */
+let cachedIcon: { id: string; url: string; width: number; height: number } | null = null;
+
 function planeIcon(): { id: string; url: string; width: number; height: number } {
+  if (cachedIcon) return cachedIcon;
   const size = PLANE_ICON_UNITS * PLANE_RASTER_SCALE;
   const fill = rgbaCss(tokens.domainColor.flight, 1);
   const stroke = rgbaCss(tokens.color.bg, 0.85);
@@ -182,12 +192,13 @@ function planeIcon(): { id: string; url: string; width: number; height: number }
     `L2.8 12 L1.8 6.4 L3.4 6.4 L5 8.8 L9.6 9.6 L8 3 L10.4 3 L14 9.6 Z" ` +
     `fill="${fill}" stroke="${stroke}" stroke-width="0.9" stroke-linejoin="round"/>` +
     `</svg>`;
-  return {
+  cachedIcon = {
     id: "trips-plane",
     url: `data:image/svg+xml;charset=utf-8,${encodeURIComponent(svg)}`,
     width: size,
     height: size,
   };
+  return cachedIcon;
 }
 
 /**
@@ -201,12 +212,13 @@ function planeIcon(): { id: string; url: string; width: number; height: number }
  * rendering of it. The "Bogen/Flach" setting belongs to the route shape and
  * has no meaning here.
  *
- * Returns null when nothing is in the air, so the caller mounts no layer at
- * all rather than an empty one.
+ * Always mounted, with `data: []` when nothing is in the air, rather than
+ * returned as null. Unmounting tears down deck.gl's icon atlas, and scrubbing
+ * the slider crosses the gaps between flights constantly — every crossing
+ * rebuilt the atlas and blinked the aeroplane back in.
  */
-export function createPlaneLayer(trips: TripDatum[], currentTime: number): Layer | null {
+export function createPlaneLayer(trips: TripDatum[], currentTime: number): Layer {
   const data = buildPlaneData(trips, currentTime);
-  if (data.length === 0) return null;
   const icon = planeIcon();
   return new IconLayer<PlaneDatum>({
     id: "trips-planes",
@@ -229,7 +241,5 @@ export function createPlaneLayer(trips: TripDatum[], currentTime: number): Layer
  * bug one level subtler.
  */
 export function createTripsModeLayers(trips: TripDatum[], currentTime: number): Layer[] {
-  const trail = createTripsLayer(trips, currentTime);
-  const planes = createPlaneLayer(trips, currentTime);
-  return planes ? [trail, planes] : [trail];
+  return [createTripsLayer(trips, currentTime), createPlaneLayer(trips, currentTime)];
 }

@@ -19,6 +19,7 @@ import { describe, it, expect } from "vitest";
 import {
   buildPlaneData,
   buildTripsData,
+  createPlaneLayer,
   getTimeRange,
   planeAt,
 } from "../../components/layers/tripsLayer";
@@ -237,5 +238,26 @@ describe("getTimeRange survives the vertex count the great circle brought", () =
 
   it("still answers zeroes for an empty set rather than ±Infinity", () => {
     expect(getTimeRange([])).toEqual({ min: 0, max: 0 });
+  });
+});
+
+describe("createPlaneLayer keeps its icon atlas between frames", () => {
+  it("mounts with an empty data array when nothing is airborne", () => {
+    // Returning null unmounted the IconLayer, and deck.gl re-rasterised the
+    // SVG into a fresh atlas the next time one was in the air — a blink on
+    // every gap while scrubbing the slider, and every gap is crossed twice.
+    const trips = buildTripsData([lpaYvr]);
+    const layer = createPlaneLayer(trips, T1 + 3600);
+    expect(layer).not.toBeNull();
+    expect((layer?.props as unknown as { data: unknown[] }).data).toEqual([]);
+  });
+
+  it("uses the same icon object across calls, so the atlas is not rebuilt", () => {
+    const trips = buildTripsData([lpaYvr]);
+    const a = createPlaneLayer(trips, T0 + (T1 - T0) * 0.3);
+    const b = createPlaneLayer(trips, T0 + (T1 - T0) * 0.6);
+    const iconOf = (l: typeof a): unknown =>
+      (l?.props as unknown as { getIcon: () => unknown }).getIcon();
+    expect(iconOf(a)).toBe(iconOf(b));
   });
 });
