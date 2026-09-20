@@ -209,6 +209,22 @@ describe("planeAt samples the SAME path the trail draws", () => {
     } as unknown as GeoJSONFeature;
     expect(buildTripsData([undated])).toHaveLength(0);
   });
+
+  // ...but `planeAt`'s own `if (!(end > start)) return null` is NOT dead code
+  // that the check above subsumes, and the check above cannot exercise it: it
+  // asserts that no trip is built, so it never calls `planeAt` at all. The
+  // reachable case is a flight whose departure and arrival are the SAME
+  // instant — both times present, both parsed, so `buildTripsData` builds the
+  // trip and hands it on with t0 === t1. Without the guard, `currentTime`
+  // equal to that instant passes the window test, the first segment's span is
+  // 0, and the plane is placed at the departure airport for an aircraft that
+  // is not flying — the parked plane the abstention exists to prevent. The
+  // datum is hand-built so the test reaches the guard directly, whatever
+  // `buildTripsData` decides to filter next.
+  it("declines a zero-length window — a same-instant flight parks no plane", () => {
+    const sameInstant = { path: [LPA, YVR], timestamps: [T0, T0] };
+    expect(planeAt(sameInstant, T0)).toBeNull();
+  });
 });
 
 describe("buildPlaneData", () => {
