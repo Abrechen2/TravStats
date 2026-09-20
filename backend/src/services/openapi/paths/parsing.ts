@@ -89,6 +89,18 @@ registry.registerPath({
           schema: z.object({
             flights: z.array(parsedFlightSchema),
             parserUsed: z.string(),
+            ollamaAvailable: z
+              .boolean()
+              .optional()
+              .describe(
+                "The LLM was configured for this caller and answered its last " +
+                  "health probe (at most 60 s old). It does NOT say the model " +
+                  "read this document — `parserUsed` says that. The field was " +
+                  "undocumented while it meant three different things per " +
+                  "domain; one definition now lives in " +
+                  "services/parsers/llmAvailability.ts and flights, cruises " +
+                  "and lodging all answer from it."
+              ),
             subject: z.string().optional(),
             documentId: z
               .string()

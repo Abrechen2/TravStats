@@ -81,20 +81,38 @@ describe("parseLodgingBookingText", () => {
     mockGetAdminParserSettings.mockResolvedValue({ ollamaUrl: null, ollamaModel: null });
   });
 
-  it("uses the template for a Booking.com confirmation and never calls the LLM", async () => {
-    const result = await parseLodgingBookingText(
-      `Ihre Buchung ist bestätigt: Musterhotel\n\n${BOOKING_COM_TEXT}`,
-      // A deliberately unreachable Ollama: if the template path is taken, this
-      // is never dialled, so the call must still succeed fast.
-      { url: "http://127.0.0.1:1", model: "nonexistent" }
-    );
-    expect(result.parserUsed).toBe("template");
-    expect(result.bookings).toHaveLength(1);
-    expect(result.bookings[0].hotelName).toBe("Musterhotel");
-    expect(result.bookings[0].totalPrice).toBeCloseTo(250, 2);
-    // Settings resolution is part of the LLM path — proving it was never
-    // reached proves the LLM itself was never dialled either.
-    expect(mockGetAdminParserSettings).not.toHaveBeenCalled();
+  it("uses the template for a Booking.com confirmation and never asks the LLM to read it", async () => {
+    // A HEALTHY model, deliberately: the template must win even when the model
+    // is there, and the answer must then say the model was there.
+    const paths: string[] = [];
+    const server = await createMockOllamaServer((req, res) => {
+      paths.push(req.url ?? "");
+      respondJson(res, HEALTHY_TAGS_RESPONSE);
+    });
+    try {
+      const result = await parseLodgingBookingText(
+        `Ihre Buchung ist bestätigt: Musterhotel\n\n${BOOKING_COM_TEXT}`,
+        { url: server.url, model: "mock" }
+      );
+      expect(result.parserUsed).toBe("template");
+      expect(result.bookings).toHaveLength(1);
+      expect(result.bookings[0].hotelName).toBe("Musterhotel");
+      expect(result.bookings[0].totalPrice).toBeCloseTo(250, 2);
+      // The point of the test, and the only thing that ever proved it: the
+      // model was never asked to READ the mail. It used to be phrased as "the
+      // admin settings were never loaded", which stopped being the same
+      // statement when `ollamaAvailable` became one honest question for all
+      // four domains — answering it reads the settings and probes `/api/tags`
+      // on the template path too. What must not happen is the generate call.
+      expect(paths).not.toContain("/api/generate");
+      // And the flag reports the INSTANCE, not which reader won: this template
+      // hit happened on a box whose model is up, and says so. It answered
+      // `false` here until 2026-09-20, while the flight parser said `true`
+      // about the same box.
+      expect(result.ollamaAvailable).toBe(true);
+    } finally {
+      await server.close();
+    }
   });
 
   it("never throws when the LLM is unreachable — it reports parserUsed 'none'", async () => {
