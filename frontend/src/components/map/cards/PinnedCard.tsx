@@ -348,12 +348,12 @@ function AirportBody({
       </Hero>
       <Grid>
         {stats.totalKm > 0 && (
-          <Row label={t("map:globe.pinned.distance")} value={formatKm(stats.totalKm)} />
+          <Row label={t("map:globe.pinned.distance")} value={formatKm(stats.totalKm, locale)} />
         )}
         {stats.longestRoute && (
           <Row
             label={t("map:globe.pinned.longestRoute")}
-            value={`→ ${stats.longestRoute.iata} · ${formatKm(stats.longestRoute.km)}`}
+            value={`→ ${stats.longestRoute.iata} · ${formatKm(stats.longestRoute.km, locale)}`}
           />
         )}
         {stats.topAirline && (
@@ -452,7 +452,7 @@ function ArcBody({
       <Hero color={colorRgb}>
         {t("map:globe.pinned.totalKm", {
           count: data.count,
-          km: formatKmNumber(stats.totalKm),
+          km: formatKmNumber(stats.totalKm, locale),
         })}
       </Hero>
       <Grid>

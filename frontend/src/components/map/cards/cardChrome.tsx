@@ -161,13 +161,21 @@ export function Actions({
 
 // ─── Formatters ───────────────────────────────────────────────────
 
-export function formatKm(km: number): string {
-  return `${formatKmNumber(km)} km`;
+export function formatKm(km: number, locale: string): string {
+  return `${formatKmNumber(km, locale)} km`;
 }
 
-export function formatKmNumber(km: number): string {
+/**
+ * The thousands separator follows the READER.
+ *
+ * It was `de-DE`, from when this helper belonged to the globe card alone and
+ * the globe was a German-first surface. It governs the flat map's card too
+ * now, where `MapTooltip` used the reader's locale — and to an English reader
+ * "3.931 km" is not 3931 but 3.9.
+ */
+export function formatKmNumber(km: number, locale: string): string {
   if (km < 1000) return Math.round(km).toString();
-  return Math.round(km).toLocaleString("de-DE");
+  return Math.round(km).toLocaleString(locale);
 }
 
 export function capitalize(s: string): string {

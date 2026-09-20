@@ -106,7 +106,7 @@ vi.mock("../Globe/GlobeControlPanel", () => ({
 vi.mock("../Globe/GlobeTimeHistogram", () => ({
   GlobeTimeHistogram: () => null,
 }));
-vi.mock("../Globe/HoverTooltip", () => ({
+vi.mock("../map/cards/HoverTooltip", () => ({
   HoverTooltip: React.forwardRef(function MockHoverTooltip(
     _props: unknown,
     ref: React.Ref<unknown>
@@ -115,8 +115,8 @@ vi.mock("../Globe/HoverTooltip", () => ({
     return null;
   }),
 }));
-vi.mock("../Globe/PinnedCard", () => ({ PinnedCard: () => null }));
-vi.mock("../Globe/PinnedCardBoundary", () => ({
+vi.mock("../map/cards/PinnedCard", () => ({ PinnedCard: () => null }));
+vi.mock("../map/cards/PinnedCardBoundary", () => ({
   PinnedCardBoundary: ({ children }: { children?: React.ReactNode }) => children,
 }));
 vi.mock("../Globe/GlobeLabelsOverlay", () => ({ GlobeLabelsOverlay: () => null }));

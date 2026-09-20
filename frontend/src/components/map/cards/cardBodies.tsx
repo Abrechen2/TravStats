@@ -65,7 +65,7 @@ export function TripBody({
       <Hero color={colorRgb}>
         {t("map:globe.pinned.totalKm", {
           count: data.flightIds.length,
-          km: formatKmNumber(stats.totalKm),
+          km: formatKmNumber(stats.totalKm, locale),
         })}
       </Hero>
       <Grid>
