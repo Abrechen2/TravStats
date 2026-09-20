@@ -34,23 +34,25 @@ describe("dashboard tab + mode registry", () => {
     expect(isModeForTab("poi", "routes")).toBe(false);
   });
 
+  // Owner ruling 2026-09-20: "Globus soll ueberall genutzt werden" — so every
+  // tab that HAS a globe opens on it, and `poi`, which has none, does not.
   it("defaultModeForTab returns the registered default", () => {
-    expect(defaultModeForTab("flight")).toBe("routes");
-    expect(defaultModeForTab("cruise")).toBe("sea-routes");
+    expect(defaultModeForTab("flight")).toBe("globe");
+    expect(defaultModeForTab("cruise")).toBe("globe");
     expect(defaultModeForTab("poi")).toBe("markers");
-    expect(defaultModeForTab("all")).toBe("overview");
+    expect(defaultModeForTab("all")).toBe("globe");
   });
 
   it("registers the lodging tab", () => {
     expect(DASHBOARD_TABS).toContain("lodging");
     expect(TAB_MODE_REGISTRY.lodging.modes).toContain("map");
-    expect(defaultModeForTab("lodging")).toBe("map");
+    expect(defaultModeForTab("lodging")).toBe("globe");
   });
 
   it("registers the tour tab", () => {
     expect(DASHBOARD_TABS).toContain("tour");
     expect(TAB_MODE_REGISTRY.tour.modes).toEqual(["routes", "globe"]);
-    expect(defaultModeForTab("tour")).toBe("routes");
+    expect(defaultModeForTab("tour")).toBe("globe");
     expect(isModeForTab("tour", "globe")).toBe(true);
     expect(isModeForTab("tour", "markers")).toBe(false);
   });

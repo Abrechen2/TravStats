@@ -35,14 +35,39 @@ interface TabRegistryEntry<M extends DashboardMode> {
   readonly default: M;
 }
 
+/**
+ * Every tab that has a globe opens on it.
+ *
+ * Owner ruling, 2026-09-20, from the globe's click card and the flat map's
+ * side by side: "Globus soll ueberall genutzt werden". A default is the only
+ * thing that makes that true for a reader who never opens the mode menu — and
+ * it is only a default: `useDashboardRoute` prefers the URL, then what the
+ * reader last chose for that tab, and reaches this table last.
+ *
+ * `poi` is the exception and not an oversight: POI_MODES has no globe entry,
+ * so there is nothing to default to.
+ */
 export const TAB_MODE_REGISTRY = {
-  all: { modes: ALL_MODES, default: "overview" },
-  flight: { modes: FLIGHT_MODES, default: "routes" },
-  cruise: { modes: CRUISE_MODES, default: "sea-routes" },
+  all: { modes: ALL_MODES, default: "globe" },
+  flight: { modes: FLIGHT_MODES, default: "globe" },
+  cruise: { modes: CRUISE_MODES, default: "globe" },
   poi: { modes: POI_MODES, default: "markers" },
-  lodging: { modes: LODGING_MODES, default: "map" },
-  tour: { modes: TOUR_MODES, default: "routes" },
+  lodging: { modes: LODGING_MODES, default: "globe" },
+  tour: { modes: TOUR_MODES, default: "globe" },
 } as const satisfies Record<DashboardTab, TabRegistryEntry<DashboardMode>>;
+
+/**
+ * Which projection a mode implies, or `null` when it says nothing about one.
+ *
+ * "journey" is the only `null`: it is a VIEW of one trip, drawable on either
+ * projection, so selecting it must not overwrite the reader's last projection
+ * choice — otherwise the journey view could never honour it.
+ */
+export function projectionOfMode(mode: DashboardMode): "globe" | "flat" | null {
+  if (mode === "globe") return "globe";
+  if (mode === "journey") return null;
+  return "flat";
+}
 
 export function isDashboardTab(value: unknown): value is DashboardTab {
   return typeof value === "string" && (DASHBOARD_TABS as readonly string[]).includes(value);

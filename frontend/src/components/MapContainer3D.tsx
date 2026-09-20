@@ -260,7 +260,12 @@ export default function MapContainer3D({
           >
             <GlobeView
               flights={flights}
-              cruises={cruises}
+              // `showInternalCruises={false}` means the caller draws its own
+              // cruise lines (the journey view draws exactly one trip's). The
+              // flat map has always honoured it; the globe was handed the
+              // whole list regardless, which only became visible when the
+              // journey view could open on the globe at all.
+              cruises={showInternalCruises ? cruises : []}
               onFlightOpen={onFlightOpen ?? onFlightClick}
               onCruiseOpen={onCruiseOpen}
               minRouteCount={minRouteCount}

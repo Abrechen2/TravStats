@@ -91,4 +91,36 @@ describe("MapContainer3D: extraLayers reaches both map engines", () => {
     // ALSO render underneath it.
     expect(capturedDeckGLMapProps.length).toBe(0);
   });
+
+  /**
+   * `showInternalCruises={false}` means "this tab draws its own cruises, do
+   * not draw them for it". DeckGLMap honoured it; GlobeView was handed the
+   * whole list regardless, because nothing rendered a caller's own layers
+   * there until `extraLayers` was wired. Now the journey view CAN open on the
+   * globe (owner ruling 2026-09-20), and without this the globe would draw
+   * every visible cruise on top of the one trip the view is about.
+   */
+  it("keeps the internal cruise layer off the globe when the caller owns it", async () => {
+    const cruise = { id: "c1", stops: [] } as never;
+    render(
+      <MapContainer3D
+        flights={[]}
+        visMode="globe"
+        extraLayers={[EXTRA_LAYER]}
+        showInternalCruises={false}
+        cruisesOverride={[cruise]}
+      />
+    );
+
+    await waitFor(() => expect(capturedGlobeViewProps.length).toBeGreaterThan(0));
+    expect(capturedGlobeViewProps[capturedGlobeViewProps.length - 1].cruises).toEqual([]);
+  });
+
+  it("still hands the globe its cruises when nobody else is drawing them", async () => {
+    const cruise = { id: "c1", stops: [] } as never;
+    render(<MapContainer3D flights={[]} visMode="globe" cruisesOverride={[cruise]} />);
+
+    await waitFor(() => expect(capturedGlobeViewProps.length).toBeGreaterThan(0));
+    expect(capturedGlobeViewProps[capturedGlobeViewProps.length - 1].cruises).toEqual([cruise]);
+  });
 });

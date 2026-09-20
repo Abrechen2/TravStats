@@ -54,6 +54,16 @@ interface CruiseArcBuildOptions {
    * Defaults to the status pair.
    */
   colorConfig?: CruiseColorConfig;
+  /**
+   * Metres to lift the path off the surface. 0 (the default) is right for the
+   * flat map. On the GLOBE a path at altitude 0 shares its plane with the
+   * sphere mesh and draws zero pixels — the same defect `TOUR_PATH_GLOBE_
+   * ALTITUDE_M` exists for, found in a real browser. The globe's own cruise
+   * layer already lifts by 5 km (`CRUISE_PATH_ALTITUDE_M` in
+   * `buildGlobeLayers.ts`); this option is what lets a CALLER-built cruise
+   * layer — the dashboard's journey view — do the same.
+   */
+  altitudeM?: number;
 }
 
 // The selected-cruise highlight stays amber, whatever the colour mode —
@@ -163,10 +173,15 @@ export function createCruiseArcsLayer(
   const FULL_ALPHA = 220;
   const PLANNED_ALPHA = 150;
 
+  const altitudeM = options.altitudeM ?? 0;
+
   return new PathLayer<ArcDatum>({
     id: "cruise-arcs",
     data: arcs,
-    getPath: (d) => d.path,
+    getPath: (d) =>
+      altitudeM === 0
+        ? d.path
+        : (d.path.map(([lon, lat]) => [lon, lat, altitudeM]) as unknown as [number, number][]),
     getColor: (d) => {
       if (hasSelection && d.cruiseId === selectedCruiseId) return [...HIGHLIGHT_COLOR, FULL_ALPHA];
       const base = d.planned ? PLANNED_ALPHA : FULL_ALPHA;
