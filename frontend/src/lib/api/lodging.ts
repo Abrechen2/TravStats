@@ -11,6 +11,8 @@ import type {
   ChainInput,
   MembershipInput,
   LodgingListQuery,
+  LodgingPage,
+  LodgingFacets,
   LodgingStats,
   FxPreview,
 } from "../../types/lodging";
@@ -41,10 +43,21 @@ const MAX_LODGING_PAGES = 40;
  * tester as "the hotel I just created never appears in the list" — it sorted
  * past the cut, while its own detail page worked fine (Discord, 2026-08-09).
  *
- * Paging HERE rather than in the list page is deliberate: the dashboard map,
- * the domain stats and the settings membership picker call this same function,
- * and every one of them was silently losing the same rows. One fix, one code
- * path — a second "paged" entry point would have left them behind.
+ * THE LIST PAGE NO LONGER CALLS THIS (2026-09-20). It asks for one page with
+ * `listLodgingPage` and counts with `getLodgingFacets`, because walking the
+ * whole library to draw twenty-five rows was the other half of the cost the
+ * audit measured on the server. What is left here are the five callers that
+ * genuinely need every row and have nowhere to page to:
+ *
+ *   - `Dashboard/tabs/AllTab.tsx` and `Dashboard/tabs/LodgingTab.tsx` — the
+ *     maps, which plot every pin;
+ *   - `lib/stats/domain-stats/useDomainStats.ts` — the domain figures;
+ *   - `Settings/MembershipsSection.tsx` — the picker that attaches houses to
+ *     a loyalty card;
+ *   - `Settings/SpreadsheetSection.tsx` — the export.
+ *
+ * Each of those is a whole-library question, so the loop is the right shape
+ * for them. None of them is a table.
  */
 export const listLodgings = async (params: LodgingListQuery = {}): Promise<Lodging[]> => {
   const items: Lodging[] = [];
@@ -60,6 +73,38 @@ export const listLodgings = async (params: LodgingListQuery = {}): Promise<Lodgi
   }
   logger.warn("listLodgings: stopped at the page cap — some lodgings were not fetched");
   return items;
+};
+
+/**
+ * ONE page, plus the size of the set it came from.
+ *
+ * The server decides which rows, in what order — including the sort keys that
+ * are derived from the stays (nights, rating, spend, last stay), which is what
+ * used to make paging impossible and the whole-library walk necessary. The
+ * caller sends `limit`/`offset` and reads `total` for its pager; it never sees
+ * a row it did not ask for.
+ */
+export const listLodgingPage = async (params: LodgingListQuery): Promise<LodgingPage> => {
+  const { data } = await api.get<Envelope<Lodging[]>>("/lodging", { params });
+  return {
+    rows: data.data,
+    // A server that somehow sent no `meta` is not a reason to claim a total of
+    // zero under a table with rows in it.
+    total: data.meta?.total ?? data.data.length,
+  };
+};
+
+/**
+ * The filter bar's options and the figures above the table, counted by the
+ * database under the same filters.
+ *
+ * Takes the same query as `listLodgingPage`; `limit`, `offset`, `sort` and
+ * `order` are ignored. Separate from the page fetch on purpose — turning a
+ * page changes none of these numbers.
+ */
+export const getLodgingFacets = async (params: LodgingListQuery = {}): Promise<LodgingFacets> => {
+  const { data } = await api.get<Envelope<LodgingFacets>>("/lodging/facets", { params });
+  return data.data;
 };
 
 export const getLodging = async (id: string): Promise<Lodging> => {

@@ -5,10 +5,12 @@ import { Link, useNavigate } from "react-router-dom";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import type { StayStatus } from "../types/lodging";
 import {
+  buildLodgingFilterQuery,
+  buildLodgingListQuery,
+  lodgingFilterSignature,
   LODGING_SORT_DEFAULT_ASC,
-  sortLodgingRows,
-  type LodgingSortKey,
-} from "../components/lodging/sortLodgingRows";
+  type LodgingListFilterState,
+} from "../lib/lodging/lodgingListQuery";
 import {
   LodgingRow,
   LODGING_COLUMN_IDS as COLUMN_IDS,
@@ -16,7 +18,6 @@ import {
   type LodgingColumnId,
 } from "../components/lodging/LodgingRow";
 import { Table, type TableColumn } from "../components/ui/Table";
-import { lodgingLifecycleStatus } from "../components/lodging/lodgingLifecycle";
 import { ColumnPicker } from "../components/table/ColumnPicker";
 import { SortableHeader } from "../components/table/SortableHeader";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
@@ -30,13 +31,14 @@ import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useLodgingImportAdapter } from "../components/import/adapters/lodgingAdapter";
 import { useTranslation } from "../hooks/useTranslation";
 import { countryName } from "../shared/geo/countryCode";
-import { deleteLodging, listLodgings } from "../lib/api/lodging";
+import { deleteLodging, getLodgingFacets, listLodgingPage } from "../lib/api/lodging";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
-import type { Lodging, LodgingListQuery, LodgingType } from "../types/lodging";
+import type { Lodging, LodgingFacets, LodgingSortKey, LodgingType } from "../types/lodging";
 import { useSortPrefs } from "../components/table/useSortPrefs";
-import { usePagination } from "../components/table/usePagination";
+import { useServerPagination } from "../components/table/useServerPagination";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import TablePagination from "../components/table/TablePagination";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
@@ -95,15 +97,15 @@ export default function LodgingListPage(): JSX.Element {
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
   const addToast = useToastStore((s) => s.addToast);
 
-  // `baseline` is an UNFILTERED fetch, used only to derive the year/country
-  // dropdown option sets so they don't shrink as the user narrows other
-  // filters. `rows` is the server's response to the CURRENT filter query.
-  // Sorting is CLIENT-side (header clicks, flights-table style): that is safe
-  // here — and only here — because `listLodgings` walks every page into
-  // memory before returning, so the sort always covers the complete set,
-  // never one paginated slice.
-  const [baseline, setBaseline] = useState<Lodging[]>([]);
+  // `rows` is ONE page, in the order the server decided; `total` is the size
+  // of the filtered set it came from. Both the sort and the filters are query
+  // parameters now (2026-09-20). They were not, and could not be while the
+  // sort keys were derived from the stays: the page walked the whole library
+  // in a `limit=500` loop, and then walked it a SECOND time, unfiltered, only
+  // to fill the year and country dropdowns. `/lodging/facets` fills those.
   const [rows, setRows] = useState<Lodging[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [facets, setFacets] = useState<LodgingFacets | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
   const [showAdd, setShowAdd] = useState<boolean>(false);
@@ -111,6 +113,7 @@ export default function LodgingListPage(): JSX.Element {
   const [toDelete, setToDelete] = useState<Lodging | null>(null);
   const [deleting, setDeleting] = useState<boolean>(false);
   const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebouncedValue(search);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
   const [yearFilter, setYearFilter] = useState<YearFilter>("all");
   const [countryFilter, setCountryFilter] = useState<CountryFilter>("all");
@@ -176,42 +179,83 @@ export default function LodgingListPage(): JSX.Element {
     [columnPrefs, t, sortBy, sortOrder]
   );
 
-  useEffect(() => {
-    void listLodgings({})
-      .then(setBaseline)
-      .catch((err: unknown) => logger.error("LodgingListPage: baseline fetch failed", err));
+  /**
+   * The filter bar's answers as ONE value, so the query, the effect
+   * dependencies and the pager's reset key cannot drift apart.
+   */
+  const filterState = useMemo<LodgingListFilterState>(
+    () => ({
+      // Debounced: the search used to narrow rows the browser already held, so
+      // typing cost nothing. As a query parameter, "Steigenberger" would be
+      // thirteen requests without this.
+      search: debouncedSearch,
+      status: statusFilter,
+      year: yearFilter,
+      country: countryFilter,
+      type: typeFilter,
+    }),
+    [debouncedSearch, statusFilter, yearFilter, countryFilter, typeFilter]
+  );
+  const filterSignature = useMemo(() => lodgingFilterSignature(filterState), [filterState]);
+
+  const pagination = useServerPagination(total, "lodging-list", filterSignature);
+  const { limit, offset } = pagination;
+
+  // Bumped by anything that CHANGES rows (a delete, an import, an edit), which
+  // no filter or page dependency would otherwise notice.
+  const [reloadToken, setReloadToken] = useState<number>(0);
+  const reloadAll = useCallback(async (): Promise<void> => {
+    setReloadToken((token) => token + 1);
   }, []);
 
-  const reload = useCallback(async (): Promise<void> => {
-    setLoading(true);
-    setLoadError(false);
-    try {
-      const query: LodgingListQuery = {};
-      if (typeFilter !== "all") query.type = typeFilter;
-      if (yearFilter !== "all") query.year = yearFilter;
-      if (countryFilter !== "all") query.country = countryFilter;
-      const data = await listLodgings(query);
-      setRows(data);
-    } catch (err: unknown) {
-      logger.error("LodgingListPage: failed to load lodgings", err);
-      setLoadError(true);
-    } finally {
-      setLoading(false);
-    }
-  }, [typeFilter, yearFilter, countryFilter]);
-
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      setLoading(true);
+      setLoadError(false);
+      try {
+        const page = await listLodgingPage(
+          buildLodgingListQuery(filterState, { sortBy, sortOrder }, { limit, offset })
+        );
+        if (cancelled) return;
+        setRows(page.rows);
+        setTotal(page.total);
+      } catch (err: unknown) {
+        if (cancelled) return;
+        logger.error("LodgingListPage: failed to load lodgings", err);
+        setLoadError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [filterState, sortBy, sortOrder, limit, offset, reloadToken]);
 
-  const reloadAll = useCallback(async (): Promise<void> => {
-    await Promise.all([
-      reload(),
-      listLodgings({})
-        .then(setBaseline)
-        .catch((err: unknown) => logger.error("LodgingListPage: baseline reload failed", err)),
-    ]);
-  }, [reload]);
+  // The option lists and the summary figures. Separate from the page fetch on
+  // purpose: turning a page or re-sorting changes none of these numbers, and
+  // asking again would make every page turn cost a second count over the whole
+  // filtered set.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      try {
+        const data = await getLodgingFacets(buildLodgingFilterQuery(filterState));
+        if (!cancelled) setFacets(data);
+      } catch (err: unknown) {
+        // The table still works without them; the strip and the dropdowns go
+        // quiet rather than showing counts nobody measured.
+        logger.error("LodgingListPage: failed to load lodging facets", err);
+        if (!cancelled) setFacets(null);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [filterState, reloadToken]);
 
   /**
    * Deleting from the list. The dialog names the number of stays that go with
@@ -234,19 +278,14 @@ export default function LodgingListPage(): JSX.Element {
     }
   };
 
-  const availableYears = useMemo(() => {
-    const years = new Set<number>();
-    for (const l of baseline) {
-      for (const stay of l.stays) {
-        // An undated stay belongs to no year, so it offers none to filter by.
-        // It stays visible while no year is selected.
-        if (stay.checkIn === null) continue;
-        const year = new Date(stay.checkIn).getFullYear();
-        if (!Number.isNaN(year)) years.add(year);
-      }
-    }
-    return Array.from(years).sort((a, b) => b - a);
-  }, [baseline]);
+  /**
+   * Counted by the database under every OTHER filter, so picking a country no
+   * longer leaves the year list holding only that country's years — and, more
+   * to the point, so neither list needs a second read of the whole library.
+   * An undated stay belongs to no year and so offers none; the house stays
+   * visible while no year is selected.
+   */
+  const availableYears = useMemo(() => (facets?.years ?? []).map((y) => y.year), [facets]);
 
   /**
    * One option per COUNTRY, not per spelling.
@@ -258,62 +297,85 @@ export default function LodgingListPage(): JSX.Element {
    * (a city in the country field, say) keeps its own entry rather than
    * disappearing from the filter entirely.
    */
-  const availableCountries = useMemo(() => {
-    const byValue = new Map<string, string>();
-    for (const l of baseline) {
-      if (l.isoCountryCode) {
-        byValue.set(
-          l.isoCountryCode,
-          countryName(l.isoCountryCode, i18n.language) || l.isoCountryCode
-        );
-      } else if (l.country) {
-        byValue.set(l.country, l.country);
-      }
-    }
-    return Array.from(byValue, ([value, label]) => ({ value, label })).sort((a, b) =>
-      a.label.localeCompare(b.label)
-    );
-  }, [baseline, i18n.language]);
+  /**
+   * "Hotel (12)" — the option and how much is behind it.
+   *
+   * Type and status are CLOSED vocabularies, so unlike the country and year
+   * lists they are not built from the facet: every value keeps its place and
+   * its fixed order whatever the other filters say. What the facet adds is the
+   * count, including the zero — an option that would return nothing says so
+   * before it is clicked, rather than after. While the facets are still in
+   * flight there is no count to show and the label stands alone.
+   */
+  const countedLabel = useCallback(
+    (label: string, count: number | undefined): string =>
+      count === undefined ? label : `${label} (${count})`,
+    []
+  );
+  const typeCounts = useMemo(() => {
+    if (facets === null) return null;
+    return new Map(facets.types.map((t) => [t.type, t.count]));
+  }, [facets]);
+  const statusCounts = useMemo(() => {
+    if (facets === null) return null;
+    return new Map(facets.statuses.map((st) => [st.status, st.count]));
+  }, [facets]);
 
-  // Free-text search narrows visibility; the header sort then orders the
-  // survivors. Both run over the COMPLETE set (`listLodgings` returns every
-  // row), so this cannot reintroduce the sorted-then-truncated-then-resorted
-  // bug the old server-side-only sorting guarded against.
-  const filtered = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    const visible = rows.filter((l) => {
-      // Status is DERIVED from the stays (see lodgingLifecycle), so unlike
-      // type/year/country it cannot be a query parameter — it is decided here,
-      // over the complete set the server already returned.
-      if (statusFilter !== "all" && lodgingLifecycleStatus(l.stays) !== statusFilter) return false;
-      if (needle.length > 0) {
-        const haystack = `${l.name} ${l.chain?.name ?? ""} ${l.city ?? ""}`.toLowerCase();
-        if (!haystack.includes(needle)) return false;
-      }
-      return true;
-    });
-    return sortLodgingRows(visible, sortBy, sortOrder);
-  }, [rows, search, statusFilter, sortBy, sortOrder]);
-  // Pages over the already filtered+sorted set — the summary strip and the
-  // filter option lists above keep reading `filtered`/`baseline`, never this.
-  const pagination = usePagination(filtered, "lodging-list");
+  const availableCountries = useMemo(
+    () =>
+      (facets?.countries ?? [])
+        .map((c) => ({
+          value: c.value,
+          // The server groups on the derived ISO code, so "Deutschland" and
+          // "Germany" are one option; the NAME is still resolved here, because
+          // it is the reader's language that decides it. A house whose text
+          // names no country ("Dubai" is a city) keeps its own entry under
+          // that text rather than disappearing from the filter.
+          label: c.isoCode ? countryName(c.isoCode, i18n.language) || c.isoCode : c.value,
+        }))
+        .sort((a, b) => a.label.localeCompare(b.label)),
+    [facets, i18n.language]
+  );
 
-  const summaryFigures = useMemo(() => {
-    let stays = 0;
-    let nights = 0;
-    const chains = new Set<string>();
-    for (const l of filtered) {
-      stays += l.stayCount;
-      nights += l.nights;
-      if (l.chain?.name) chains.add(l.chain.name);
-    }
-    return [
-      { key: "lodgings", value: String(filtered.length), label: t("common:summary.lodgings") },
-      { key: "stays", value: String(stays), label: t("common:summary.stays") },
-      { key: "nights", value: String(nights), label: t("common:summary.nights") },
-      { key: "chains", value: String(chains.size), label: t("common:summary.chains") },
-    ];
-  }, [filtered, t]);
+  /**
+   * The figures above the table, counted by the database over the WHOLE
+   * filtered set — not over the page, and not by this browser.
+   *
+   * They were summed here from `filtered`, which worked only because the page
+   * held every row. Summing a page would have said "25 Unterkünfte" over a
+   * library of three hundred. The counting rule behind `stays` and `nights` is
+   * the same one the rows use — `shared/lodgingCounting.ts`, restated for SQL
+   * in `services/lodging/listSql.ts` and pinned against it by a test — so the
+   * strip and the column beneath it cannot disagree.
+   */
+  const summaryFigures = useMemo(
+    () =>
+      facets === null
+        ? []
+        : [
+            {
+              key: "lodgings",
+              value: String(facets.summary.lodgings),
+              label: t("common:summary.lodgings"),
+            },
+            {
+              key: "stays",
+              value: String(facets.summary.stays),
+              label: t("common:summary.stays"),
+            },
+            {
+              key: "nights",
+              value: String(facets.summary.nights),
+              label: t("common:summary.nights"),
+            },
+            {
+              key: "chains",
+              value: String(facets.summary.chains),
+              label: t("common:summary.chains"),
+            },
+          ],
+    [facets, t]
+  );
 
   const resetFilters = (): void => {
     setSearch("");
@@ -325,8 +387,17 @@ export default function LodgingListPage(): JSX.Element {
 
   // Type and country are the two only lodging has; they sit behind the button.
   const extraActiveCount = (typeFilter === "all" ? 0 : 1) + (countryFilter === "all" ? 0 : 1);
+  // `debouncedSearch`, not the raw box. This flag drives the strip's "gefiltert"
+  // note and the empty state's "nothing matched your filter" wording, and both
+  // describe the answer on screen — which came from the query the server was
+  // last ASKED. Reading the live input instead put the page into its filtered
+  // wording for the 300 ms before that search had been sent, so an empty
+  // library briefly blamed a filter that was not yet applied.
   const hasActiveFilter =
-    search.length > 0 || statusFilter !== "all" || yearFilter !== "all" || extraActiveCount > 0;
+    debouncedSearch.trim().length > 0 ||
+    statusFilter !== "all" ||
+    yearFilter !== "all" ||
+    extraActiveCount > 0;
 
   const importAdapter = useLodgingImportAdapter();
 
@@ -401,7 +472,10 @@ export default function LodgingListPage(): JSX.Element {
             allLabel: t("lodging:filter.allStatuses"),
             options: STATUSES.map((st) => ({
               value: st,
-              label: t(`lodging:stayStatus.${st}`),
+              label: countedLabel(
+                t(`lodging:stayStatus.${st}`),
+                statusCounts === null ? undefined : (statusCounts.get(st) ?? 0)
+              ),
             })),
           }}
           year={{
@@ -423,7 +497,10 @@ export default function LodgingListPage(): JSX.Element {
                   <option value="all">{t("lodging:filter.allTypes")}</option>
                   {TYPES.map((ty) => (
                     <option key={ty} value={ty}>
-                      {t(`lodging:type.${ty}`)}
+                      {countedLabel(
+                        t(`lodging:type.${ty}`),
+                        typeCounts === null ? undefined : (typeCounts.get(ty) ?? 0)
+                      )}
                     </option>
                   ))}
                 </select>
@@ -446,9 +523,7 @@ export default function LodgingListPage(): JSX.Element {
           }
           hasActiveFilter={hasActiveFilter}
           onReset={resetFilters}
-          resultLabel={
-            loading || loadError ? "" : t("common:filters.matching", { count: filtered.length })
-          }
+          resultLabel={loading || loadError ? "" : t("common:filters.matching", { count: total })}
         />
 
         {loadError ? (
@@ -462,7 +537,7 @@ export default function LodgingListPage(): JSX.Element {
           <>
             {loading ? (
               <SkeletonTable rows={10} />
-            ) : filtered.length === 0 ? (
+            ) : rows.length === 0 ? (
               <div
                 className="overflow-hidden rounded-lg"
                 style={{ border: "1px solid var(--color-border)" }}
@@ -477,7 +552,7 @@ export default function LodgingListPage(): JSX.Element {
             ) : (
               <>
                 <Table columns={visibleColumns} label={t("lodging:list.title")} {...tableHints}>
-                  {pagination.paged.map((l) => (
+                  {rows.map((l: Lodging) => (
                     <LodgingRow
                       key={l.id}
                       lodging={l}
@@ -489,7 +564,13 @@ export default function LodgingListPage(): JSX.Element {
                     />
                   ))}
                 </Table>
-                <TablePagination {...pagination} />
+                {/* `allowAll` is off, as on the flights logbook: over a
+                    network "Alle" would promise a row count nobody checked,
+                    and the API caps a page at 500 — so it would quietly mean
+                    "the first 500 of however many". `meta.total` is shown in
+                    the range text instead, which is the honest version of the
+                    same reassurance. */}
+                <TablePagination {...pagination} allowAll={false} />
                 <p className="mt-2 px-1 text-xs text-[var(--text-muted)]">
                   {t("lodging:list.footer.sortedBy", {
                     label: columnLabel(t, sortBy),

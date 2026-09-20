@@ -8,6 +8,7 @@
 // response doesn't carry day-level granularity).
 import type { Lodging, LodgingStats } from "../../../types/lodging";
 import { classifyLodging, classifyStay } from "../../../shared/lodgingCounting";
+import { resolveStayTiming } from "../../../shared/lodgingTiming";
 import { crossDomainDayKey } from "../../../shared/crossDomainCounting";
 import type { DomainStats, YearSummary } from "./types";
 import { bucket, topFive } from "./yearSummary";
@@ -63,41 +64,57 @@ export function adaptLodging(input: LodgingAdapterInput): DomainStats {
       const checkOutRaw = new Date(stay.checkOut);
       const checkOut = Number.isNaN(checkOutRaw.getTime()) ? checkIn : checkOutRaw;
 
+      // ONE resolution decides what this stay's dates are good for. This file
+      // used to difference them itself, and a MONTH-precision stay — stored as
+      // the 1st to the 31st because that is what the month spans — reported
+      // THIRTY nights where every other reader said three (measured
+      // 2026-09-20, while auditing the lodging list's move to server-side
+      // paging). That is AUD-083 one module further along.
+      const timing = resolveStayTiming({
+        checkIn,
+        checkOut,
+        datePrecision: stay.datePrecision ?? "DAY",
+        nights: stay.nights ?? null,
+      });
+
       const startYear = checkIn.getUTCFullYear();
       yearlyEvents[startYear] = (yearlyEvents[startYear] ?? 0) + 1;
       // Keyed on the check-in day — the same day the year tally counts it in.
-      const checkInKey = crossDomainDayKey(
-        startYear,
-        checkIn.getUTCMonth() + 1,
-        checkIn.getUTCDate()
-      );
-      dailyEvents[checkInKey] = (dailyEvents[checkInKey] ?? 0) + 1;
-      weekdayEvents[checkIn.getUTCDay()] = (weekdayEvents[checkIn.getUTCDay()] ?? 0) + 1;
+      // Only a DAY-precision stay names a day at all; a month's placeholder
+      // 1st is not a day anybody slept on, and a heatmap cell is a claim that
+      // they did.
+      if (timing.precision === "DAY") {
+        const checkInKey = crossDomainDayKey(
+          startYear,
+          checkIn.getUTCMonth() + 1,
+          checkIn.getUTCDate()
+        );
+        dailyEvents[checkInKey] = (dailyEvents[checkInKey] ?? 0) + 1;
+        weekdayEvents[checkIn.getUTCDay()] = (weekdayEvents[checkIn.getUTCDay()] ?? 0) + 1;
+      }
 
       if (lodging.chain?.name) {
         chainCounts.set(lodging.chain.name, (chainCounts.get(lodging.chain.name) ?? 0) + 1);
       }
 
-      // The year of the check-in, as for `yearlyEvents`. Nights are whole UTC
-      // days between check-in and check-out; a same-day stay has none.
+      // The year of the check-in, as for `yearlyEvents`.
       const y = bucket(perYear, startYear, () => ({
         nights: 0,
         lodgings: new Set<string>(),
         chains: new Map<string, number>(),
       }));
-      const inDay = Date.UTC(checkIn.getUTCFullYear(), checkIn.getUTCMonth(), checkIn.getUTCDate());
-      const outDay = Date.UTC(
-        checkOut.getUTCFullYear(),
-        checkOut.getUTCMonth(),
-        checkOut.getUTCDate()
-      );
-      y.nights += Math.max(0, Math.round((outDay - inDay) / 86_400_000));
+      y.nights += timing.nights;
       y.lodgings.add(lodging.id);
       if (lodging.chain?.name) {
         y.chains.set(lodging.chain.name, (y.chains.get(lodging.chain.name) ?? 0) + 1);
       }
 
-      markActiveDays(checkIn, checkOut, dailyActiveDays, monthlyActiveDays, yearlyActiveDays);
+      // `walkable` is the one case where naming every day between two dates is
+      // honest: DAY precision with both ends. Walking a month's placeholders
+      // marked thirty-one days of presence for a three-night stay.
+      if (timing.walkable) {
+        markActiveDays(checkIn, checkOut, dailyActiveDays, monthlyActiveDays, yearlyActiveDays);
+      }
     }
   }
 

@@ -1,7 +1,7 @@
 import type { ReactNode } from "react";
 import type { JSX } from "react";
 import type { Lodging } from "../../types/lodging";
-import type { LodgingSortKey } from "./sortLodgingRows";
+import type { LodgingSortKey } from "../../types/lodging";
 import { StarRating } from "./StarRating";
 import { ChainNameLink } from "./ChainNameLink";
 import { LodgingStatusTag } from "./LodgingStatusTag";

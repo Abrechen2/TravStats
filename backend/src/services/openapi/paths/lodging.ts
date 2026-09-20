@@ -25,6 +25,7 @@ import { documentIdsBodySchema } from "../../../schemas/document";
 import { errorContent } from "./shared";
 import {
   createLodgingSchema,
+  lodgingQuerySchema,
   proposeLodgingSchema,
   updateLodgingSchema,
   createStaySchema,
@@ -126,7 +127,11 @@ const lodging = registry.register(
       stays: z
         .array(stay)
         .optional()
-        .describe("Included by GET /lodging/{id}; the list endpoint omits them."),
+        .describe(
+          "Included by GET /lodging/{id} AND by the list — the row's status pill and " +
+            "its delete confirmation are derived from them. This said the list omitted " +
+            "them, which it never did."
+        ),
       chain: includedRow("chain").nullable().optional(),
       stayCount: z.number().int().optional().describe("Stays that count: check-out is past"),
       nights: z.number().int().optional(),
@@ -145,20 +150,93 @@ registry.registerPath({
   method: "get",
   path: "/lodging",
   summary: "List lodgings",
+  description:
+    "One page, decided by the server. Sorting, filtering and the total are computed " +
+    "over the whole filtered set in SQL, so a page is a page: nights, rating and spend " +
+    "order by the stays that COUNT (check-out past, not cancelled), never by the " +
+    "bookings still ahead. `meta.total` is that set's size before the slice.",
   tags: ["Lodging"],
-  request: {
-    query: z.object({
-      search: z.string().optional(),
-      type: z.enum(LODGING_TYPES).optional(),
-      country: z.string().optional(),
-      chainId: z.coerce.number().int().optional(),
-    }),
-  },
+  request: { query: lodgingQuerySchema },
   responses: {
     200: {
-      description: "Lodgings, without their stays",
-      content: { "application/json": { schema: z.array(lodging) } },
+      description: "One page of lodgings, each with its stays and derived figures",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.array(lodging),
+            meta: z.object({
+              total: z.number().int().describe("Rows matching the filters, before the page slice"),
+              limit: z.number().int(),
+              offset: z.number().int(),
+            }),
+          }),
+        },
+      },
     },
+    400: { description: "Invalid query", content: errorContent },
+  },
+});
+
+const lodgingFacets = registry.register(
+  "LodgingFacets",
+  z
+    .object({
+      countries: z.array(
+        z.object({
+          value: z
+            .string()
+            .describe(
+              "What to send back as `country`: the ISO code, or the raw text where none was derived"
+            ),
+          isoCode: z.string().nullable(),
+          count: z.number().int(),
+        })
+      ),
+      years: z.array(z.object({ year: z.number().int(), count: z.number().int() })),
+      types: z.array(z.object({ type: z.enum(LODGING_TYPES), count: z.number().int() })),
+      statuses: z.array(z.object({ status: z.enum(STAY_STATUSES), count: z.number().int() })),
+      summary: z.object({
+        lodgings: z.number().int(),
+        stays: z.number().int().describe("Stays that COUNT — check-out past, not cancelled"),
+        nights: z.number().int(),
+        chains: z.number().int().describe("Distinct named chains; independents count for none"),
+      }),
+    })
+    .describe(
+      "Filter options and totals for one query. Each facet is counted under every " +
+        "ACTIVE filter EXCEPT its own, so the list you are choosing from never shrinks " +
+        "to the value already chosen. The summary is counted under all of them, by the " +
+        "same counting rule the rows use. " +
+        "There is deliberately NO `chains` facet. `chainId` is a filter this API " +
+        "accepts and no client sends, so counting that option list on every request " +
+        "would be work for nobody; it returns when something can choose from it. " +
+        "`summary.chains` is a different figure — how many named chains the matching " +
+        "houses belong to — and is here."
+    )
+    .openapi("LodgingFacets")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/lodging/facets",
+  summary: "Filter options and totals for a lodging query",
+  description:
+    "Takes the same query as GET /lodging and ignores its paging and sorting. " +
+    "Answers what the filter bar should offer and what the summary above the table " +
+    "should say — both over the whole filtered set, which a page cannot know.",
+  tags: ["Lodging"],
+  request: { query: lodgingQuerySchema },
+  responses: {
+    200: {
+      description: "Facets and summary",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.boolean(), data: lodgingFacets }),
+        },
+      },
+    },
+    400: { description: "Invalid query", content: errorContent },
   },
 });
 

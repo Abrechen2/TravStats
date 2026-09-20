@@ -6,7 +6,7 @@ import { logger } from "../../lib/logger";
  *
  * Sibling of `usePagination`, and deliberately not a replacement for it: that
  * hook slices rows the page already holds, which is still right for the
- * lodging and cruise lists. This one holds only the numbers — page, size and
+ * cruise and places lists. This one holds only the numbers — page, size and
  * the `offset` to ask for — and never sees a row.
  *
  * The distinction is the whole point of the change it belongs to. The flights
@@ -15,7 +15,9 @@ import { logger } from "../../lib/logger";
  * flight the account owns in a `limit=500` loop and called slicing the tail
  * "pagination" (measured 2026-09-20). Counting moved to `/flights/facets`,
  * filtering and sorting to `GET /flights`, and what is left here is
- * arithmetic.
+ * arithmetic. The lodging list followed the same day, through
+ * `/lodging/facets` and a `GET /lodging` that orders by the values derived
+ * from the stays.
  *
  * The page-size preference shares `usePagination`'s storage key shape and its
  * try/catch discipline, so a reader who set 25 rows on one logbook keeps it

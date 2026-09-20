@@ -2,10 +2,11 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
-import type { Lodging, LodgingStats, LodgingStay } from "../../types/lodging";
+import type { Lodging, LodgingFacets, LodgingStats, LodgingStay } from "../../types/lodging";
 import { countRenderedRows, paginationControlsRendered } from "./tablePaginationTestSupport";
 
-const listLodgingsMock = vi.fn();
+const listLodgingPageMock = vi.fn();
+const getLodgingFacetsMock = vi.fn();
 const getLodgingStatsMock = vi.fn();
 const deleteLodgingMock = vi.fn();
 const navigateMock = vi.fn();
@@ -46,7 +47,8 @@ const defaultStats: LodgingStats = {
 };
 
 vi.mock("../../lib/api/lodging", () => ({
-  listLodgings: (...args: unknown[]) => listLodgingsMock(...args),
+  listLodgingPage: (...args: unknown[]) => listLodgingPageMock(...args),
+  getLodgingFacets: (...args: unknown[]) => getLodgingFacetsMock(...args),
   getLodgingStats: () => getLodgingStatsMock(),
   deleteLodging: (...args: unknown[]) => deleteLodgingMock(...args),
 }));
@@ -194,9 +196,37 @@ function renderListPage(): ReturnType<typeof render> {
   );
 }
 
+/**
+ * One page of rows, and the size of the set it came from.
+ *
+ * The page asks the SERVER for its rows, its order and its counts since
+ * 2026-09-20; before that it walked every page of the library into memory and
+ * did all three here. Every fixture below therefore describes a RESPONSE, not
+ * a library — which is also why `total` defaults to the row count rather than
+ * being inferred from anything.
+ */
+const mockRows = (rows: Lodging[], total = rows.length): void => {
+  listLodgingPageMock.mockResolvedValue({ rows, total });
+};
+
+/** Facets that agree with a set of rows, for the tests that do not care. */
+const mockFacets = (over: Partial<LodgingFacets> = {}): void => {
+  getLodgingFacetsMock.mockResolvedValue({
+    countries: [],
+    years: [],
+    types: [],
+    statuses: [],
+    summary: { lodgings: 0, stays: 0, nights: 0, chains: 0 },
+    ...over,
+  });
+};
+
 describe("LodgingListPage", () => {
   beforeEach(() => {
-    listLodgingsMock.mockReset();
+    listLodgingPageMock.mockReset();
+    getLodgingFacetsMock.mockReset();
+    mockRows([]);
+    mockFacets();
     getLodgingStatsMock.mockReset();
     getLodgingStatsMock.mockResolvedValue(defaultStats);
     useSettingsStore.setState({
@@ -214,7 +244,7 @@ describe("LodgingListPage", () => {
       baseCurrency: "CHF",
       units: { distanceUnit: "kilometers" },
     });
-    listLodgingsMock.mockResolvedValue([
+    mockRows([
       makeLodging({
         stays: [makeStay({ totalPrice: 883, currency: "CHF", ...CONVERTED })],
       }),
@@ -232,7 +262,7 @@ describe("LodgingListPage", () => {
   });
 
   it("shows an honest hint when a lodging has spend snapshotted under an older base currency (finding 2)", async () => {
-    listLodgingsMock.mockResolvedValue([
+    mockRows([
       makeLodging({
         totalSpendBase: 100, // only the CHF (current base) slice
         totalSpendBaseByCurrency: { EUR: 200, CHF: 100 },
@@ -249,9 +279,7 @@ describe("LodgingListPage", () => {
   });
 
   it("shows no hint when all of a lodging's spend is in the current base currency", async () => {
-    listLodgingsMock.mockResolvedValue([
-      makeLodging({ totalSpendBase: 883, totalSpendBaseByCurrency: { EUR: 883 } }),
-    ]);
+    mockRows([makeLodging({ totalSpendBase: 883, totalSpendBaseByCurrency: { EUR: 883 } })]);
 
     renderListPage();
 
@@ -262,8 +290,48 @@ describe("LodgingListPage", () => {
     expect(row?.querySelector('[title="lodging:list.otherCurrencyHint"]')).not.toBeInTheDocument();
   });
 
+  it("puts the facet's count on every type and status option, zero included", async () => {
+    // The endpoint counted these from the day it existed and nothing read
+    // them: the two dropdowns are closed vocabularies drawn from constants, so
+    // the counts were measured for nobody. They are the option's own label
+    // now — including the zero, which says an option returns nothing BEFORE it
+    // is clicked rather than after.
+    mockRows([]);
+    mockFacets({
+      types: [
+        { type: "hotel", count: 12 },
+        { type: "hostel", count: 2 },
+      ],
+      statuses: [{ status: "completed", count: 9 }],
+    });
+
+    renderListPage();
+    await openFilterPanel();
+
+    const types = (await screen.findByLabelText("lodging:filter.type")) as HTMLSelectElement;
+    await waitFor(() => {
+      expect(Array.from(types.options).map((o) => o.textContent)).toEqual([
+        "lodging:filter.allTypes",
+        "lodging:type.hotel (12)",
+        "lodging:type.campsite (0)",
+        "lodging:type.guesthouse (0)",
+        "lodging:type.apartment (0)",
+        "lodging:type.hostel (2)",
+      ]);
+    });
+
+    const statuses = screen.getByLabelText("lodging:list.status.label") as HTMLSelectElement;
+    expect(Array.from(statuses.options).map((o) => o.textContent)).toEqual([
+      "lodging:filter.allStatuses",
+      "lodging:stayStatus.in_progress (0)",
+      "lodging:stayStatus.scheduled (0)",
+      "lodging:stayStatus.completed (9)",
+      "lodging:stayStatus.cancelled (0)",
+    ]);
+  });
+
   it("offers all five lodging types (plus 'all') in the type filter", async () => {
-    listLodgingsMock.mockResolvedValue([]);
+    mockRows([]);
 
     renderListPage();
 
@@ -273,135 +341,158 @@ describe("LodgingListPage", () => {
     expect(values).toEqual(["all", "hotel", "campsite", "guesthouse", "apartment", "hostel"]);
   });
 
-  it("passes the active type/year/country filters and sort as query params to listLodgings", async () => {
-    // Baseline (the unfiltered fetch used only to derive the year/country
-    // dropdown option sets) needs distinct countries/years so those
-    // <select>s have real, non-"all" options to pick below.
-    const baseline: Lodging[] = [
-      makeLodging({
-        id: "l-ch",
-        country: "CH",
-        stays: [makeStay({ checkIn: "2023-05-01T00:00:00.000Z" })],
-      }),
-      makeLodging({
-        id: "l-us",
-        country: "US",
-        stays: [makeStay({ checkIn: "2024-06-01T00:00:00.000Z" })],
-      }),
-    ];
-    listLodgingsMock.mockResolvedValue(baseline);
+  it("sends every active filter to the server, and asks the facets for the options", async () => {
+    // The dropdown options came from a SECOND, unfiltered walk of the whole
+    // library; they come from `/lodging/facets` now, counted under the other
+    // filters. Nothing here derives an option from a row.
+    mockFacets({
+      years: [
+        { year: 2024, count: 1 },
+        { year: 2023, count: 1 },
+      ],
+      countries: [
+        { value: "CH", isoCode: "CH", count: 1 },
+        { value: "US", isoCode: "US", count: 1 },
+      ],
+    });
+    mockRows([]);
 
     const user = userEvent.setup();
     renderListPage();
 
-    // Wait for the initial baseline + reload fetches to settle and the
-    // dropdown options to be populated from `baseline`.
     await screen.findByRole("option", { name: "2024" });
-    listLodgingsMock.mockClear();
+    listLodgingPageMock.mockClear();
 
     await openFilterPanel();
     await user.selectOptions(screen.getByLabelText("lodging:filter.type"), "campsite");
     await waitFor(() => {
-      expect(listLodgingsMock).toHaveBeenCalledWith(expect.objectContaining({ type: "campsite" }));
+      expect(listLodgingPageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ type: "campsite" })
+      );
     });
 
-    listLodgingsMock.mockClear();
+    listLodgingPageMock.mockClear();
     await user.selectOptions(screen.getByLabelText("lodging:filter.year"), "2023");
     await waitFor(() => {
-      expect(listLodgingsMock).toHaveBeenCalledWith(
+      expect(listLodgingPageMock).toHaveBeenCalledWith(
         expect.objectContaining({ type: "campsite", year: 2023 })
       );
     });
 
-    listLodgingsMock.mockClear();
+    listLodgingPageMock.mockClear();
     await openFilterPanel();
     await user.selectOptions(screen.getByLabelText("lodging:filter.country"), "US");
     await waitFor(() => {
-      expect(listLodgingsMock).toHaveBeenCalledWith(
+      expect(listLodgingPageMock).toHaveBeenCalledWith(
         expect.objectContaining({ type: "campsite", year: 2023, country: "US" })
       );
     });
 
-    // Sorting is client-side now (header clicks) — the server query must
-    // NEVER carry a sort key again, or the fetch and the headers would fight
-    // over the order.
-    for (const call of listLodgingsMock.mock.calls) {
-      expect(call[0]).not.toHaveProperty("sort");
-    }
+    // The facet call carries the same filters and never the page or the sort —
+    // turning a page changes no count, and asking again would double the work.
+    const facetCalls = getLodgingFacetsMock.mock.calls;
+    const facetCall = facetCalls[facetCalls.length - 1][0] as Record<string, unknown>;
+    expect(facetCall).toMatchObject({ type: "campsite", year: 2023, country: "US" });
+    expect(facetCall).not.toHaveProperty("limit");
+    expect(facetCall).not.toHaveProperty("sort");
   });
 
-  it("sorts client-side: newest stay first by default, header click re-sorts", async () => {
-    // Owner ask (2026-08-20): sorting moved into the column headers,
-    // flights-table style. Client-side is safe here because listLodgings
-    // returns the COMPLETE set, never one paginated slice.
-    //
-    // The DEFAULT changed on 2026-08-25 from "name ascending" to "newest stay
-    // first", so every domain list opens the same way. A hotel carries no date
-    // of its own, so the stay supplies it — and a PLANNED stay counts as the
-    // newest, which is why Zebra (2099) leads and not Alpha (2024).
-    const stay = (checkIn: string) =>
-      ({
-        id: `s-${checkIn}`,
-        checkIn,
-        checkOut: null,
-        datePrecision: "DAY",
-        nights: null,
-      }) as never;
-    const ordered: Lodging[] = [
-      makeLodging({
-        id: "l-1",
-        name: "Zebra Lodge",
-        nights: 1,
-        totalSpendBase: 500,
-        stays: [stay("2099-01-01")],
-      }),
-      makeLodging({
-        id: "l-2",
-        name: "Alpha Inn",
-        nights: 9,
-        totalSpendBase: 10,
-        stays: [stay("2024-01-01")],
-      }),
-      makeLodging({
-        id: "l-3",
-        name: "Mid Motel",
-        nights: 4,
-        totalSpendBase: 250,
-        stays: [stay("2026-01-01")],
-      }),
-    ];
-    listLodgingsMock.mockResolvedValue(ordered);
+  it("filters by status through the query, not by hiding rows it already has", async () => {
+    // The status pill is derived from the stays, so this filter used to be the
+    // one that COULD NOT be a query parameter — it was applied here, over the
+    // complete set the server had returned. With one page in hand that is no
+    // longer possible, and `shared/lodgingLifecycle.ts` is now the rule on
+    // both sides.
+    mockRows([]);
+    mockFacets();
+    const user = userEvent.setup();
+    renderListPage();
+
+    await waitFor(() => expect(listLodgingPageMock).toHaveBeenCalled());
+    listLodgingPageMock.mockClear();
+
+    await user.selectOptions(screen.getByLabelText("lodging:list.status.label"), "scheduled");
+    await waitFor(() => {
+      expect(listLodgingPageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ status: "scheduled" })
+      );
+    });
+  });
+
+  it("asks the server for the order, and flips it on a second click of the same header", async () => {
+    // Sorting was done here, over rows the browser held — safe only because it
+    // held ALL of them. A page cannot be sorted into the right order, so the
+    // header now names a sort key in the query. The DEFAULT is unchanged:
+    // newest stay first, so every domain list opens the same way.
+    mockRows([
+      makeLodging({ id: "l-1", name: "Zebra Lodge" }),
+      makeLodging({ id: "l-2", name: "Alpha Inn" }),
+    ]);
+    mockFacets();
 
     const user = userEvent.setup();
     const { container } = renderListPage();
 
     await waitFor(() => {
-      expect(container.querySelectorAll(".ts-table-row").length).toBe(3);
+      expect(container.querySelectorAll(".ts-table-row").length).toBe(2);
+    });
+    expect(listLodgingPageMock).toHaveBeenCalledWith(
+      expect.objectContaining({ sort: "lastStay", order: "desc" })
+    );
+
+    // The rows are rendered in the order they ARRIVED — re-sorting them here
+    // would reorder one page inside a set ordered by something else.
+    const rowNames = Array.from(container.querySelectorAll(".ts-table-row")).map(
+      (row) => row.querySelector('[role="cell"]')?.textContent ?? ""
+    );
+    expect(rowNames[0]).toContain("Zebra Lodge");
+    expect(rowNames[1]).toContain("Alpha Inn");
+
+    listLodgingPageMock.mockClear();
+    await user.click(screen.getByText("lodging:list.columns.nights"));
+    await waitFor(() => {
+      expect(listLodgingPageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ sort: "nights", order: "desc" })
+      );
     });
 
-    const rowNames = (): string[] =>
-      Array.from(container.querySelectorAll(".ts-table-row")).map(
-        (row) => row.querySelector('[role="cell"]')?.textContent ?? ""
+    listLodgingPageMock.mockClear();
+    await user.click(screen.getByText("lodging:list.columns.nights"));
+    await waitFor(() => {
+      expect(listLodgingPageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ sort: "nights", order: "asc" })
       );
-    expect(rowNames()[0]).toContain("Zebra Lodge");
-    expect(rowNames()[1]).toContain("Mid Motel");
-    expect(rowNames()[2]).toContain("Alpha Inn");
+    });
+  });
 
-    // Clicking the nights header sorts by nights, descending first. (The
-    // global t-mock is identity, so every header button shares the same
-    // aria-label — target the header by its visible label text instead.)
-    await user.click(screen.getByText("lodging:list.columns.nights"));
-    expect(rowNames()[0]).toContain("Alpha Inn");
-    expect(rowNames()[1]).toContain("Mid Motel");
-    expect(rowNames()[2]).toContain("Zebra Lodge");
+  it("does not call itself filtered before the search it is showing was sent", async () => {
+    // `hasActiveFilter` drives the strip's "gefiltert" note and the empty
+    // state's wording, and both describe the answer ON SCREEN — which came
+    // from the query the server was last asked. Reading the live input put the
+    // page into its filtered wording for the 300 ms before the search had been
+    // sent, so an empty library blamed a filter that was not yet applied.
+    mockRows([]);
+    mockFacets();
+    const user = userEvent.setup();
+    renderListPage();
 
-    // Same header again flips the direction.
-    await user.click(screen.getByText("lodging:list.columns.nights"));
-    expect(rowNames()[0]).toContain("Zebra Lodge");
+    await screen.findByText("lodging:list.empty");
+    await user.type(screen.getByPlaceholderText("lodging:filter.searchPlaceholder"), "adlon");
+
+    // Typed, not yet debounced, not yet sent: still the plain empty state.
+    expect(screen.getByText("lodging:list.empty")).toBeInTheDocument();
+
+    // Once the search reaches the server, the wording follows it.
+    await waitFor(() => {
+      expect(listLodgingPageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ search: "adlon" })
+      );
+    });
+    await screen.findByText("common:filters.noMatch");
   });
 
   it("renders the empty state without crashing when there are no lodgings", async () => {
-    listLodgingsMock.mockResolvedValue([]);
+    mockRows([]);
 
     renderListPage();
 
@@ -409,7 +500,7 @@ describe("LodgingListPage", () => {
   });
 
   it("shows the original currency amount with the converted total beneath it (mockup screen ①)", async () => {
-    listLodgingsMock.mockResolvedValue([
+    mockRows([
       makeLodging({
         totalSpendBase: 883,
         totalSpendBaseByCurrency: { EUR: 883 },
@@ -432,7 +523,7 @@ describe("LodgingListPage", () => {
   it("says 'kein Kurs' instead of 0 € when nothing on the lodging could be converted", async () => {
     // The row used to render "$780 ≈ 0 €" — the zero is the empty sum, not a
     // price, and pairing it with a real amount makes it look like arithmetic.
-    listLodgingsMock.mockResolvedValue([
+    mockRows([
       makeLodging({
         totalSpendBase: 0,
         totalSpendBaseByCurrency: {},
@@ -454,7 +545,7 @@ describe("LodgingListPage", () => {
   it("says how many stays a partly converted total leaves out", async () => {
     // One stay converted, one not: the figure is real but incomplete, and the
     // row used to show it bare — indistinguishable from a complete one.
-    listLodgingsMock.mockResolvedValue([
+    mockRows([
       makeLodging({
         totalSpendBase: 883,
         totalSpendBaseByCurrency: { EUR: 883 },
@@ -486,7 +577,7 @@ describe("LodgingListPage", () => {
    * underneath claiming it had left that very amount out.
    */
   it("names no omitted stay for a base-currency price that carries no snapshot", async () => {
-    listLodgingsMock.mockResolvedValue([
+    mockRows([
       makeLodging({
         totalSpendBase: 1120,
         totalSpendBaseByCurrency: { EUR: 1120 },
@@ -510,7 +601,7 @@ describe("LodgingListPage", () => {
   });
 
   it("renders — (not 0 €) in the spend column when every stay's price has been cleared", async () => {
-    listLodgingsMock.mockResolvedValue([
+    mockRows([
       makeLodging({
         totalSpendBase: 0,
         totalSpendBaseByCurrency: {},
@@ -542,7 +633,7 @@ describe("LodgingListPage", () => {
     // fell through to the converted total, and the row read "0 €" — a hotel
     // not yet slept in, reported as free. The price is not dropped either:
     // it gets its own "planned" line.
-    listLodgingsMock.mockResolvedValue([
+    mockRows([
       makeLodging({
         totalSpendBase: 0,
         totalSpendBaseByCurrency: {},
@@ -574,14 +665,11 @@ describe("LodgingListPage", () => {
     expect(spendCell?.textContent).toContain("lodging:list.spendPlanned");
   });
 
-  it("surfaces an error state (not a blank page) when the filtered fetch fails", async () => {
-    // The baseline call is always `listLodgings({})` — no `sort` key. The
-    // reload call that actually feeds the table always includes `sort`.
-    // Only the latter fails here, mirroring a real backend 500 on the list
-    // query while the dropdown-options fetch still succeeds.
-    // Both the baseline and the table fetch fail — only the table fetch
-    // drives the alert; the baseline failure merely logs.
-    listLodgingsMock.mockRejectedValue(new Error("network failure"));
+  it("surfaces an error state (not a blank page) when the page fetch fails", async () => {
+    // Only the PAGE fetch drives the alert. A facet call that fails leaves the
+    // strip and the dropdowns quiet — a table with rows in it is not an error
+    // because nobody could count them.
+    listLodgingPageMock.mockRejectedValue(new Error("network failure"));
 
     renderListPage();
 
@@ -596,7 +684,7 @@ describe("LodgingListPage", () => {
   // The CSV tile used to render below the list, which is the arrangement the
   // 2.5.0 import hub replaced everywhere else.
   it("links to the central import hub instead of embedding the CSV tile", async () => {
-    listLodgingsMock.mockResolvedValue([]);
+    mockRows([]);
     renderListPage();
 
     const hubLink = await screen.findByRole("link", { name: /settings:import\.openHub/ });
@@ -611,7 +699,7 @@ describe("LodgingListPage", () => {
   // first ROUTE into adding one. One button now, and the confusion cannot
   // recur because the second button no longer exists.
   it("offers exactly one way to add, with no rival import button beside it", async () => {
-    listLodgingsMock.mockResolvedValue([]);
+    mockRows([]);
     renderListPage();
 
     expect(await screen.findByRole("button", { name: /lodging:add\.title/ })).toBeInTheDocument();
@@ -630,7 +718,7 @@ describe("LodgingListPage", () => {
   describe("row actions", () => {
     it("edits and deletes from the row", async () => {
       const lodging = makeLodging({ id: "l1", name: "Hotel Adlon", stayCount: 3 });
-      listLodgingsMock.mockResolvedValue([lodging]);
+      mockRows([lodging]);
       deleteLodgingMock.mockResolvedValue(undefined);
       renderListPage();
 
@@ -651,7 +739,7 @@ describe("LodgingListPage", () => {
     });
 
     it("does not open the lodging when an action is clicked", async () => {
-      listLodgingsMock.mockResolvedValue([makeLodging({ id: "l1", name: "Hotel Adlon" })]);
+      mockRows([makeLodging({ id: "l1", name: "Hotel Adlon" })]);
       renderListPage();
 
       await screen.findByText("Hotel Adlon");
@@ -666,21 +754,34 @@ describe("LodgingListPage", () => {
   // Review finding (Alex T7, round 1): nothing tested that the wiring
   // actually pages the rows — reverting `filtered.map` -> `pagination.paged.map`
   // or dropping `<TablePagination>` would have left the suite green.
-  it("shows only one page of rows while the summary strip keeps the full count", async () => {
-    // stayCount/nights zeroed so the "lodgings" figure (63) cannot coincide
-    // with the "stays"/"nights" figures, which would otherwise also sum to 63.
-    const lodgings = Array.from({ length: 63 }, (_, i) =>
+  it("renders the page the server sent, and says how large the whole set is", async () => {
+    // Reverting to a client-side slice would show 63 rows here, and reverting
+    // the summary to a sum over them would print 25 where the library has 63.
+    const page = Array.from({ length: 25 }, (_, i) =>
       makeLodging({ id: `l-${i}`, name: `Hotel ${i}`, stayCount: 0, nights: 0 })
     );
-    listLodgingsMock.mockResolvedValue(lodgings);
+    mockRows(page, 63);
+    mockFacets({ summary: { lodgings: 63, stays: 71, nights: 104, chains: 4 } });
 
     const { container } = renderListPage();
 
     await waitFor(() => {
-      expect(countRenderedRows(container)).toBe(50); // default page size
+      expect(countRenderedRows(container)).toBe(25);
     });
     expect(paginationControlsRendered()).toBe(true);
-    // The FULL filtered count (63), not the 50 rows the page renders.
+    // The FULL set's figures, counted by the database — not the page's.
     expect(screen.getByText("63")).toBeInTheDocument();
+    expect(screen.getByText("104")).toBeInTheDocument();
+  });
+
+  it("offers no 'Alle' page size — over a network it would mean 'the first 500'", async () => {
+    mockRows([makeLodging({ id: "l-1" })], 1);
+    mockFacets();
+    renderListPage();
+
+    const sizes = (await screen.findByLabelText(
+      "common:table.pagination.pageSize"
+    )) as HTMLSelectElement;
+    expect(Array.from(sizes.options).map((o) => o.value)).toEqual(["25", "50", "100"]);
   });
 });
