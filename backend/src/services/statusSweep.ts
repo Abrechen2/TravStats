@@ -5,7 +5,6 @@ import {
   FLIGHT_DEPARTURE_SLACK_HOURS,
   CRUISE_SLACK_HOURS,
   deriveTripStatus,
-  tripDateBounds,
   tripStatusBounds,
 } from "../shared/statusDerivation";
 
