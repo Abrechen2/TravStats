@@ -75,6 +75,21 @@ export interface TripPointDatum {
   color: [number, number, number];
   radiusMeters: number;
   kind: "airport" | "stop" | "lodging";
+  /**
+   * What the SHARED marker tooltip reads off a picked object
+   * (`map/markerTooltip.ts`). Present on lodging markers, absent everywhere
+   * else — a stop is a bare dot on both projections, as it already was.
+   *
+   * These are not drawing fields, and that is the point: the globe marker
+   * carries the layer id `lodging-pins` so one click handler serves both
+   * projections, which means the tooltip answers for it too and then bailed
+   * on `if (!datum?.name)`. Sharing the id obliges the datum to match.
+   */
+  name?: string;
+  city?: string | null;
+  country?: string | null;
+  stayCount?: number;
+  nights?: number;
 }
 
 /** Marker radius in PIXELS on the globe. The mercator stack sizes its dots in
@@ -159,6 +174,15 @@ export function toGlobeLodgingPoints(
       color: resolveLodgingColor(l, colors),
       radiusMeters: 40_000,
       kind: "lodging",
+      // The tooltip's four facts, alongside the name it keys on. `stayCount`
+      // and `nights` are already scoped to THIS trip by TripMap's own
+      // per-house aggregation, so the globe card says the same as the flat
+      // one rather than the lifetime totals the lodging list shows.
+      name: l.name,
+      city: l.city,
+      country: l.country,
+      stayCount: l.stayCount,
+      nights: l.nights,
     });
   }
   return out;
