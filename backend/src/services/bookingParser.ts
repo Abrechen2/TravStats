@@ -118,7 +118,9 @@ export async function parseBookingEmail(
   // every flight parse while `parserUsed` came back `"regex"` every time and
   // no model had ever been contacted. It is one question for all four domains
   // now, and `services/parsers/llmAvailability.ts` is where it is answered.
-  const ollamaAvailable = await isLlmAvailableForConfig(config);
+  // Synchronous on purpose: no parse waits on a health probe to be told what
+  // the health probe last said.
+  const ollamaAvailable = isLlmAvailableForConfig(config);
 
   return {
     flights: result.flights,

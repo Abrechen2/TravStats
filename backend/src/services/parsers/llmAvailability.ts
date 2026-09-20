@@ -23,7 +23,11 @@ import { getOllamaTextParser } from "./text/ollamaTextParser";
  * compatibility and now means what this module measures:
  *
  *   the LLM was CONFIGURED for this caller, and it ANSWERED its last health
- *   probe (at most 60 s old).
+ *   probe.
+ *
+ * The probe is refreshed in the background, never awaited — see
+ * `refreshProbeIfStale`. A question asked before the first probe has come back
+ * is answered `false`, and the call after it has landed says what it found.
  *
  * "For this caller" carries the shared-demo denial: `getParserConfig` drops
  * `ollama` from the fallback chain for that account, so the answer here is
@@ -32,14 +36,10 @@ import { getOllamaTextParser } from "./text/ollamaTextParser";
  */
 
 /**
- * How long a probe result stands in for the next question.
+ * How long a probe result stands before it is refreshed.
  *
- * The probe is a live HTTP GET against `/api/tags` with a 5 s timeout, and a
- * parse can ask for the answer on a path that never talks to the model at all
- * (a template hit). Re-probing per request would put a network round trip —
- * and, when the configured host is down, a 5 s stall — in front of the fastest
- * path we have. 60 s is short enough that an admin who has just fixed the URL
- * sees it, and long enough that a burst import probes once.
+ * Short enough that an admin who has just fixed the URL sees it within a
+ * minute, long enough that a burst import probes once.
  */
 const PROBE_TTL_MS = 60_000;
 
@@ -52,19 +52,20 @@ interface ProbeResult {
 const probeCache = new Map<string, ProbeResult>();
 
 /**
- * Probes in flight, coalesced per endpoint. Two parses starting together must
- * not both stall on the same unreachable host — the same reason
- * `airlineLogo/logoCache.ts` coalesces its refreshes.
+ * Probes in flight, coalesced per endpoint. A burst of parses must kick ONE
+ * refresh, not one each — the same reason `airlineLogo/logoCache.ts`
+ * coalesces its refreshes per key.
  */
-const inFlightProbes = new Map<string, Promise<boolean>>();
+const inFlightProbes = new Map<string, Promise<void>>();
 
 /**
  * Feed an already-performed probe into the shared cache.
  *
  * The cruise and lodging pipelines probe the endpoint themselves before they
- * call the model, and that probe IS the health probe this module reports on.
- * Recording it keeps the domains on one measurement instead of two that can
- * disagree, and saves the duplicate round trip.
+ * call the model — there the wait is the point, because the very next thing
+ * they do is talk to it. That probe IS the health probe this module reports
+ * on, so recording it keeps the domains on one measurement instead of two
+ * that can disagree, and saves the duplicate round trip.
  */
 export function recordLlmProbe(url: string, reachable: boolean): void {
   probeCache.set(url, { reachable, probedAt: Date.now() });
@@ -76,35 +77,65 @@ export function clearLlmAvailabilityCache(): void {
   inFlightProbes.clear();
 }
 
-async function isReachable(url: string): Promise<boolean> {
-  const cached = probeCache.get(url);
-  if (cached && Date.now() - cached.probedAt < PROBE_TTL_MS) return cached.reachable;
+/**
+ * Test seam: wait for every probe this module has in flight.
+ *
+ * Production never needs this — nothing waits for a probe on purpose. A test
+ * that wants the SECOND answer, the one a refreshed cache gives, would
+ * otherwise have to sleep and guess.
+ */
+export async function settleLlmProbes(): Promise<void> {
+  while (inFlightProbes.size > 0) {
+    await Promise.all([...inFlightProbes.values()]);
+  }
+}
 
-  const pending = inFlightProbes.get(url);
-  if (pending) return pending;
+/**
+ * Start a probe if the cached answer is missing or older than the TTL.
+ *
+ * Fire-and-forget, deliberately: this is stale-while-revalidate, the shape
+ * `airlineLogo/logoCache.ts` already uses. Awaiting it here would put a
+ * network round trip on the response path of a parse that may never talk to
+ * the model at all — a pure-regex flight parse, or a cruise/lodging template
+ * hit. With the endpoint configured but DOWN that is a 5 s stall (the
+ * `/api/tags` timeout) on the fastest path we have, once a minute, to answer
+ * a boolean that is only ever advisory. So nothing ever awaits a probe to
+ * produce a response; the answer improves by one call instead.
+ */
+function refreshProbeIfStale(url: string): void {
+  const cached = probeCache.get(url);
+  if (cached && Date.now() - cached.probedAt < PROBE_TTL_MS) return;
+  if (inFlightProbes.has(url)) return;
 
   // The model name is irrelevant to `/api/tags` — it asks whether the server
   // answers at all — so the parser is built with the URL alone.
   const probe = getOllamaTextParser(url)
     .checkAvailability()
-    .then((availability) => {
-      recordLlmProbe(url, availability.available);
-      return availability.available;
-    })
+    .then((availability) => recordLlmProbe(url, availability.available))
+    // `checkAvailability` already swallows its own errors, but an unhandled
+    // rejection from a background task would take the process down. A probe
+    // that failed to answer is a probe that answered "not reachable".
+    .catch(() => recordLlmProbe(url, false))
     .finally(() => inFlightProbes.delete(url));
 
   inFlightProbes.set(url, probe);
-  return probe;
 }
 
 /**
  * The answer for an already-resolved parser configuration — what the flight
  * pipeline holds by the time it needs it, so it costs no second settings read.
+ *
+ * Synchronous, and that is the guarantee rather than a convenience: there is
+ * no way for this to wait on the network, so no caller can accidentally make
+ * it do so. A cold cache answers `false` — "no model has answered" — which is
+ * also what an instance with no model configured says, and is the safe
+ * direction: it understates the model rather than promising one.
  */
-export async function isLlmAvailableForConfig(config: ParserConfig): Promise<boolean> {
+export function isLlmAvailableForConfig(config: ParserConfig): boolean {
   if (!config.textFallbacks.includes("ollama")) return false;
   if (!config.ollamaUrl || !config.ollamaModel) return false;
-  return isReachable(config.ollamaUrl);
+  refreshProbeIfStale(config.ollamaUrl);
+  return probeCache.get(config.ollamaUrl)?.reachable ?? false;
 }
 
 export interface LlmAvailabilityQuery {
@@ -120,6 +151,10 @@ export interface LlmAvailabilityQuery {
   model?: string;
 }
 
+/**
+ * Asynchronous only because it reads the parser settings; the availability
+ * answer itself still costs no network — see `isLlmAvailableForConfig`.
+ */
 export async function isLlmAvailable(query: LlmAvailabilityQuery = {}): Promise<boolean> {
   const config = await getParserConfig(undefined, undefined, query.userId);
   return isLlmAvailableForConfig({

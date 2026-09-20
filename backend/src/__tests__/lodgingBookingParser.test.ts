@@ -6,6 +6,7 @@ import { extractEmailFromFile } from "../services/emailExtractor";
 import { parseLodgingBookingText } from "../services/lodging/lodgingBookingParser";
 import { bookingsToCandidates } from "../services/lodging/lodgingCandidates";
 import { getAdminParserSettings } from "../services/parserSettings";
+import { clearLlmAvailabilityCache, settleLlmProbes } from "../services/parsers/llmAvailability";
 import type { ParsedLodgingBooking } from "../services/lodging/bookingComTemplate";
 
 jest.mock("../services/parserSettings", () => ({
@@ -79,6 +80,14 @@ describe("parseLodgingBookingText", () => {
   beforeEach(() => {
     mockGetAdminParserSettings.mockClear();
     mockGetAdminParserSettings.mockResolvedValue({ ollamaUrl: null, ollamaModel: null });
+    // Each case configures its own endpoint; a probe remembered from the
+    // previous one would answer for a server that is already closed.
+    clearLlmAvailabilityCache();
+  });
+
+  afterEach(async () => {
+    // A background probe outliving its test logs into the next one.
+    await settleLlmProbes();
   });
 
   it("uses the template for a Booking.com confirmation and never asks the LLM to read it", async () => {
@@ -102,14 +111,26 @@ describe("parseLodgingBookingText", () => {
       // model was never asked to READ the mail. It used to be phrased as "the
       // admin settings were never loaded", which stopped being the same
       // statement when `ollamaAvailable` became one honest question for all
-      // four domains — answering it reads the settings and probes `/api/tags`
-      // on the template path too. What must not happen is the generate call.
+      // four domains — answering it reads the settings and kicks an
+      // `/api/tags` probe on the template path too. What must not happen is
+      // the generate call.
       expect(paths).not.toContain("/api/generate");
-      // And the flag reports the INSTANCE, not which reader won: this template
-      // hit happened on a box whose model is up, and says so. It answered
-      // `false` here until 2026-09-20, while the flight parser said `true`
-      // about the same box.
-      expect(result.ollamaAvailable).toBe(true);
+      // The probe is fire-and-forget, so this first parse reports what was
+      // known BEFORE it: nothing. A template hit must never wait on a health
+      // check to be told what the last health check said.
+      expect(result.ollamaAvailable).toBe(false);
+
+      // Once the probe has landed, the flag reports the INSTANCE rather than
+      // which reader won. It answered `false` here for good until 2026-09-20,
+      // while the flight parser said `true` about the same box.
+      await settleLlmProbes();
+      const second = await parseLodgingBookingText(
+        `Ihre Buchung ist bestätigt: Musterhotel\n\n${BOOKING_COM_TEXT}`,
+        { url: server.url, model: "mock" }
+      );
+      expect(second.parserUsed).toBe("template");
+      expect(second.ollamaAvailable).toBe(true);
+      expect(paths).not.toContain("/api/generate");
     } finally {
       await server.close();
     }

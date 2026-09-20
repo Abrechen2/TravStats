@@ -4,7 +4,12 @@ import { parseBookingEmail } from "../../bookingParser";
 import { parseCruiseBookingText } from "../../cruiseBookingParser";
 import { parseLodgingBookingText } from "../../lodging/lodgingBookingParser";
 import { clearAvailabilityCache } from "../config";
-import { clearLlmAvailabilityCache, isLlmAvailable, recordLlmProbe } from "../llmAvailability";
+import {
+  clearLlmAvailabilityCache,
+  isLlmAvailable,
+  recordLlmProbe,
+  settleLlmProbes,
+} from "../llmAvailability";
 
 /**
  * `ollamaAvailable` meant three different things, and the beta of 2026-09-19
@@ -41,18 +46,43 @@ interface MockOllama {
   url: string;
   close: () => Promise<void>;
   hits: () => number;
+  /** Sockets accepted. A hanging server never reaches its handler, so `hits`
+   *  cannot show that a probe was started — this can. */
+  connections: () => number;
+  /** Resolves on the first socket. Awaiting it is how a test waits for a
+   *  fire-and-forget probe to have actually left, without a sleep. */
+  firstConnection: Promise<void>;
 }
 
-function startMockOllama(): Promise<MockOllama> {
+/**
+ * @param hang when true the server accepts the connection and never answers —
+ *   the state that used to cost a template parse five seconds.
+ */
+function startMockOllama(hang = false): Promise<MockOllama> {
   return new Promise((resolve, reject) => {
     let hits = 0;
+    let connections = 0;
+    let announceFirstConnection = (): void => {};
+    const firstConnection = new Promise<void>((done) => {
+      announceFirstConnection = done;
+    });
+    const open = new Set<import("net").Socket>();
     const server = http.createServer((req, res) => {
       hits += 1;
+      if (hang) return;
       res.writeHead(200, { "Content-Type": "application/json" });
       // `/api/tags` proves reachability; anything else is the generate call,
       // answered with the empty array so the flight chain finishes without
       // inventing a booking.
       res.end(JSON.stringify(req.url === "/api/tags" ? HEALTHY_TAGS : { response: "[]" }));
+    });
+    // A hanging response holds its socket open, and `server.close()` waits for
+    // every one of them — so the sockets are tracked and destroyed explicitly.
+    server.on("connection", (socket) => {
+      connections += 1;
+      announceFirstConnection();
+      open.add(socket);
+      socket.on("close", () => open.delete(socket));
     });
     server.on("error", reject);
     server.listen(0, "127.0.0.1", () => {
@@ -60,7 +90,13 @@ function startMockOllama(): Promise<MockOllama> {
       resolve({
         url: `http://127.0.0.1:${port}`,
         hits: () => hits,
-        close: () => new Promise<void>((done) => server.close(() => done())),
+        connections: () => connections,
+        firstConnection,
+        close: () =>
+          new Promise<void>((done) => {
+            for (const socket of open) socket.destroy();
+            server.close(() => done());
+          }),
       });
     });
   });
@@ -140,6 +176,12 @@ beforeEach(() => {
   forgetProbes();
 });
 
+afterEach(async () => {
+  // A background probe that outlives its test logs into the next one, and a
+  // hanging one would hold the worker open.
+  await settleLlmProbes();
+});
+
 afterAll(() => {
   if (originalUrl === undefined) delete process.env.OLLAMA_URL;
   else process.env.OLLAMA_URL = originalUrl;
@@ -148,11 +190,18 @@ afterAll(() => {
   forgetProbes();
 });
 
+/** Ask once to kick the background probe, then wait for it to land. */
+async function warmProbe(): Promise<void> {
+  await isLlmAvailable();
+  await settleLlmProbes();
+}
+
 describe("llmAvailability — one definition of ollamaAvailable", () => {
   it("is true when the model is configured AND answers its probe", async () => {
     const server = await startMockOllama();
     try {
       configure(server.url, "mock");
+      await warmProbe();
       await expect(isLlmAvailable()).resolves.toBe(true);
     } finally {
       await server.close();
@@ -161,6 +210,7 @@ describe("llmAvailability — one definition of ollamaAvailable", () => {
 
   it("is false when the model is configured but nothing answers", async () => {
     configure(UNREACHABLE_URL, "mock");
+    await warmProbe();
     await expect(isLlmAvailable()).resolves.toBe(false);
   });
 
@@ -170,6 +220,7 @@ describe("llmAvailability — one definition of ollamaAvailable", () => {
       // A URL with no model is not a configured model: the endpoint exists but
       // nothing names what to ask it.
       configure(server.url, null);
+      await warmProbe();
       await expect(isLlmAvailable()).resolves.toBe(false);
       expect(server.hits()).toBe(0);
     } finally {
@@ -181,6 +232,7 @@ describe("llmAvailability — one definition of ollamaAvailable", () => {
     const server = await startMockOllama();
     try {
       configure(server.url, "mock");
+      await warmProbe();
       await expect(isLlmAvailable()).resolves.toBe(true);
       await expect(isLlmAvailable()).resolves.toBe(true);
       await expect(isLlmAvailable()).resolves.toBe(true);
@@ -208,9 +260,85 @@ describe("llmAvailability — one definition of ollamaAvailable", () => {
     const server = await startMockOllama();
     try {
       configure(server.url, "admin-model");
+      await isLlmAvailable({ url: UNREACHABLE_URL, model: "mock" });
+      await settleLlmProbes();
       await expect(isLlmAvailable({ url: UNREACHABLE_URL, model: "mock" })).resolves.toBe(false);
       // The admin's endpoint is not this parse's endpoint and must not be asked.
       expect(server.hits()).toBe(0);
+    } finally {
+      await server.close();
+    }
+  });
+});
+
+/**
+ * The review finding of 2026-09-20, and the reason the probe is never awaited.
+ *
+ * An instance with Ollama configured but DOWN answers its `/api/tags` probe
+ * only when the 5 s timeout fires. Awaiting that to fill in an advisory
+ * boolean put those 5 s in front of a parse that never touches the model —
+ * a pure-regex flight mail, or a cruise/lodging template hit — once a minute,
+ * for every user of that instance.
+ *
+ * "Hangs" rather than "refuses": a refused connection returns instantly, so
+ * only a server that accepts and never answers measures the thing.
+ */
+describe("llmAvailability — a probe never delays an answer", () => {
+  /** Well under the 5 s `/api/tags` timeout, well over any honest local call. */
+  const NO_WAIT_MS = 1_000;
+
+  it("answers at once on a cold cache, while the endpoint hangs", async () => {
+    const server = await startMockOllama(true);
+    let answer = true;
+    let elapsedMs = Number.POSITIVE_INFINITY;
+    try {
+      configure(server.url, "mock");
+      const started = Date.now();
+      answer = await isLlmAvailable();
+      elapsedMs = Date.now() - started;
+      // The probe left AFTER the answer was already in hand. Waiting for the
+      // socket here rather than closing straight away is what makes that
+      // visible: close the listener first and the probe would be refused
+      // before it ever connected, which looks identical to no probe at all.
+      await server.firstConnection;
+    } finally {
+      // Destroying the hanging socket is what lets the background probe finish
+      // at all — otherwise it would sit out its full 5 s timeout.
+      await server.close();
+      await settleLlmProbes();
+    }
+    expect(answer).toBe(false);
+    expect(elapsedMs).toBeLessThan(NO_WAIT_MS);
+    // The probe WAS started — the caller simply did not wait for it. Counted
+    // as a socket rather than a handler call, because a hanging server never
+    // reaches its handler.
+    expect(server.connections()).toBeGreaterThanOrEqual(1);
+  });
+
+  it("does not delay a template parse that never needed the model", async () => {
+    const server = await startMockOllama(true);
+    try {
+      configure(server.url, "mock");
+      const started = Date.now();
+      const cruise = await parseCruiseBookingText(TUI_CONFIRMATION);
+      expect(Date.now() - started).toBeLessThan(NO_WAIT_MS);
+      expect(cruise.parserUsed).toBe("template");
+      expect(cruise.ollamaAvailable).toBe(false);
+    } finally {
+      await server.close();
+    }
+  });
+
+  it("reports what the probe found on the NEXT call, once it has landed", async () => {
+    const server = await startMockOllama();
+    try {
+      configure(server.url, "mock");
+      // Cold: no model has answered yet, so the honest answer is "no".
+      await expect(isLlmAvailable()).resolves.toBe(false);
+      await settleLlmProbes();
+      // The probe landed. One call later the instance is described correctly.
+      await expect(isLlmAvailable()).resolves.toBe(true);
+      expect(server.hits()).toBe(1);
     } finally {
       await server.close();
     }
@@ -222,6 +350,7 @@ describe("llmAvailability — flights, cruises and lodging answer the same", () 
     const server = await startMockOllama();
     try {
       configure(server.url, "mock");
+      await warmProbe();
       expect(await askEveryDomain()).toEqual({ flight: true, cruise: true, lodging: true });
     } finally {
       await server.close();
@@ -230,10 +359,12 @@ describe("llmAvailability — flights, cruises and lodging answer the same", () 
 
   it("all say false when the model is configured but unreachable", async () => {
     configure(UNREACHABLE_URL, "mock");
+    await warmProbe();
     expect(await askEveryDomain()).toEqual({ flight: false, cruise: false, lodging: false });
   });
 
   it("all say false when no model is configured", async () => {
+    await warmProbe();
     expect(await askEveryDomain()).toEqual({ flight: false, cruise: false, lodging: false });
   });
 });
