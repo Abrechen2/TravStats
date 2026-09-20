@@ -5,16 +5,17 @@ import { checkAndUpdateAchievements } from "../utils/achievements";
  * The achievement engine used to `continue` on any already-unlocked achievement, so it
  * was never re-evaluated. These tests pin what re-evaluation may and may not do:
  *
- *   - the MEASURE is re-derived every run and may fall
- *   - the BADGE is not taken back, and its `unlockedAt` is not cleared
- *   - one still met keeps its ORIGINAL unlock date (re-checking must not make it
- *     look freshly earned and reshuffle the trophy case on every new flight)
+ *   - the MEASURE is re-derived every run and may fall — and with it the badge:
+ *     held-ness is the live measure (owner ruling 2026-09-20, "the live state counts")
+ *   - the DATE survives: `unlockedAt` is never cleared or rewritten, however far the
+ *     measure falls, and a recovery keeps the ORIGINAL date (re-checking must not make
+ *     a badge look freshly earned and reshuffle the trophy case on every new flight)
  *
- * The second line replaced the first on 2026-09-19. Until then a falling measure was
- * a revocation: the integrity audit restored the 2.6.2 prod mirror, booted it, and
- * watched AWAY_SHARE_25 — earned 2026-09-03 — come back at progress 24 with
- * `unlockedAt` NULL, because the away-share denominator grows with every day of the
- * year. The owner's rule is that a badge once earned stays earned.
+ * Why the date is guarded separately: the integrity audit of 2026-09-19 restored the
+ * 2.6.2 prod mirror, booted it, and watched AWAY_SHARE_25 — earned 2026-09-03 — come
+ * back at progress 24 with `unlockedAt` NULL, because the away-share denominator grows
+ * with every day of the year. Losing the badge for the moment is the rule; losing the
+ * date was the defect.
  *
  * Since 2026-09-02 they also pin what `unlocked_at` MEANS. It used to be
  * `NOT NULL DEFAULT now()`, so a plain progress row — 86 of a required 100 —
@@ -102,7 +103,7 @@ afterAll(async () => {
 });
 
 describe("achievement re-evaluation", () => {
-  it("lowers the measure but keeps the badge when the requirement is no longer met", async () => {
+  it("lowers the measure and keeps only the unlock date when the requirement is no longer met", async () => {
     // Six round trips = twelve distinct airports -> AIRPORTS_10 (needs 10) unlocks.
     await seedFlights(6);
     await checkAndUpdateAchievements(userId);
