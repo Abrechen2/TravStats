@@ -16,7 +16,7 @@ import {
 import { DEFAULT_FLIGHT_ROUTE_SHAPE, type FlightRouteShape } from "../../lib/flightRouteShape";
 import { isCountableFlight } from "../../shared/flightCounting";
 import { buildFlatRoutes, createFlatRoutesLayer } from "./flatRoutesLayer";
-import { markerDotRadiusProps } from "./markerDotStyle";
+import { markerDotRadiusProps, resolveAirportDotColor } from "./markerDotStyle";
 
 function routeKey(a: string, b: string): string {
   return [a, b].sort().join("-");
@@ -344,8 +344,7 @@ export function createRoutesLayers(
     labelsMode = "important",
     routeShape = DEFAULT_FLIGHT_ROUTE_SHAPE,
   } = appearance;
-  const dotRgb =
-    markerColor ?? themeColors?.airportDot ?? ([240, 169, 71] as [number, number, number]);
+  const dotRgb = resolveAirportDotColor(markerColor, themeColors);
 
   const selectedSet = new Set(selectedIds);
   const hasSelection = selectedIds.length > 0;

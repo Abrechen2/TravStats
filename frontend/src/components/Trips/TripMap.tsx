@@ -11,7 +11,6 @@ import type { TourGeometry } from "../../types/tour";
 import { buildLodgingPins } from "../layers/lodgingPinsLayer";
 import { buildTourPaths, type TourPathDatum } from "../layers/tourPathsLayer";
 import { stayNights } from "../../lib/lodgingDateDisplay";
-import { LODGING_COLOR } from "../../lib/lodgingColor";
 import { declutterByDistance, pickLabelled } from "../map/labelPriority";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
@@ -23,11 +22,19 @@ import { STYLE_OPTIONS } from "../Globe/globeStyles";
 import {
   buildTripMapGlobeLayers,
   toGlobeLabelPoints,
+  toGlobeLodgingPoints,
   type TripCruisePath,
   type TripFlightArc,
   type TripPointDatum,
   type TripProjection,
 } from "./TripMapGlobeLayers";
+import {
+  TRIP_MAP_CHROME,
+  resolveTripCruiseColor,
+  resolveTripFlightColor,
+  resolveTripStopColor,
+  useTripMapColorConfig,
+} from "./tripMapColors";
 
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
 
@@ -44,20 +51,6 @@ const DARK_SKY = (STYLE_OPTIONS.find((s) => s.id === "dark") ?? STYLE_OPTIONS[0]
  *  3 keeps the whole planet in view with the trip filling it. */
 const FIT_MAX_ZOOM_MERCATOR = 9;
 const FIT_MAX_ZOOM_GLOBE = 3;
-
-const FLIGHT_RGB: [number, number, number] = [240, 169, 71];
-const CRUISE_RGB: [number, number, number] = [111, 160, 214];
-const STOP_DOMAIN_RGB: Record<string, [number, number, number]> = {
-  poi: [94, 194, 178],
-  hotel: [176, 114, 214],
-  train: [143, 170, 95],
-  road: [168, 153, 132],
-  ferry: [74, 166, 176],
-  hike: [120, 150, 106],
-  bike: [159, 190, 99],
-  other: [180, 180, 180],
-};
-const AIRPORT_RGB: [number, number, number] = [240, 169, 71];
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
@@ -147,6 +140,8 @@ export default function TripMap({
   const { t, i18n } = useTranslation(["trips", "map"]);
   const locale = i18n.language || "de";
   const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
+  // Every hue on this map, from the same places the dashboard reads.
+  const colorConfig = useTripMapColorConfig();
   const mapRef = useRef<MapRef | null>(null);
   const [mapLoaded, setMapLoaded] = useState(false);
   const [projection, setProjection] = useState<Projection>("mercator");
@@ -204,17 +199,21 @@ export default function TripMap({
         source: [f.depLon, f.depLat],
         target: [f.arrLon, f.arrLat],
         label: `${f.depIata ?? "?"} → ${f.arrIata ?? "?"}`,
-        color: FLIGHT_RGB,
+        color: resolveTripFlightColor(f, colorConfig.flight),
       });
     }
     return out;
-  }, [trip.flights]);
+  }, [trip.flights, colorConfig.flight]);
 
   const cruisePaths = useMemo<CruisePath[]>(() => {
     const out: CruisePath[] = [];
     const cruiseLabel = new Map<string, string>();
+    // Resolved per CRUISE, not per leg: "perCruise" mode gives each voyage its
+    // own hue, so every leg of one cruise must land on the same one.
+    const cruiseTint = new Map<string, [number, number, number]>();
     for (const c of trip.cruises ?? []) {
       cruiseLabel.set(c.id, c.cruiseLine ?? "Cruise");
+      cruiseTint.set(c.id, resolveTripCruiseColor(c, colorConfig.cruise));
     }
     for (const [cruiseId, fc] of cruiseGeometry.entries()) {
       for (const feat of fc.features) {
@@ -223,13 +222,13 @@ export default function TripMap({
             cruiseId,
             path: feat.geometry.coordinates,
             label: cruiseLabel.get(cruiseId) ?? "Cruise",
-            color: CRUISE_RGB,
+            color: cruiseTint.get(cruiseId) ?? colorConfig.cruise.colors.past,
           });
         }
       }
     }
     return out;
-  }, [cruiseGeometry, trip.cruises]);
+  }, [cruiseGeometry, trip.cruises, colorConfig.cruise]);
 
   const airportPoints = useMemo<PointDatum[]>(() => {
     const seen = new Map<string, PointDatum>();
@@ -245,7 +244,7 @@ export default function TripMap({
         seen.set(dep, {
           position: [f.depLon, f.depLat],
           label: f.depIata ?? "",
-          color: AIRPORT_RGB,
+          color: colorConfig.airport,
           radiusMeters: 30000,
           kind: "airport",
         });
@@ -259,14 +258,14 @@ export default function TripMap({
         seen.set(arr, {
           position: [f.arrLon, f.arrLat],
           label: f.arrIata ?? "",
-          color: AIRPORT_RGB,
+          color: colorConfig.airport,
           radiusMeters: 30000,
           kind: "airport",
         });
       }
     }
     return Array.from(seen.values());
-  }, [trip.flights]);
+  }, [trip.flights, colorConfig.airport]);
 
   /**
    * The trip's lodgings, one entry per HOUSE rather than per night.
@@ -308,7 +307,7 @@ export default function TripMap({
     const out: PointDatum[] = [];
     for (const s of trip.stops ?? []) {
       if (s.lat == null || s.lon == null) continue;
-      const rgb = STOP_DOMAIN_RGB[s.domain ?? "other"] ?? STOP_DOMAIN_RGB.other;
+      const rgb = resolveTripStopColor(s.domain, colorConfig.domains);
       out.push({
         position: [s.lon, s.lat],
         label: s.title,
@@ -318,32 +317,11 @@ export default function TripMap({
       });
     }
     return out;
-  }, [trip.stops]);
+  }, [trip.stops, colorConfig.domains]);
 
-  /**
-   * The same houses, as plain globe markers.
-   *
-   * The flat map draws them through `buildLodgingPins`, which is right there:
-   * it carries the lodging tooltip, the rose the lodging list uses, and a
-   * deck.gl TextLayer for the names. Under globe projection that last part
-   * renders NOTHING (deck.gl 9 billboards do not draw there — the whole
-   * reason `GlobeLabelsOverlay` exists), and the dots have no horizon
-   * clipping, so a house on the far side of the planet shows through it. On
-   * the globe they become ordinary occluded markers and their names go to the
-   * HTML overlay with everything else's.
-   */
   const lodgingPoints = useMemo<PointDatum[]>(
-    () =>
-      lodgings
-        .filter((l) => l.lat != null && l.lon != null)
-        .map((l) => ({
-          position: [l.lon as number, l.lat as number] as [number, number],
-          label: l.name,
-          color: LODGING_COLOR,
-          radiusMeters: 40000,
-          kind: "lodging" as const,
-        })),
-    [lodgings]
+    () => toGlobeLodgingPoints(lodgings, colorConfig.lodging),
+    [lodgings, colorConfig.lodging]
   );
 
   /* ---- Fly-to handlers ---- */
@@ -449,7 +427,7 @@ export default function TripMap({
       getHeight: 0,
       pickable: true,
       autoHighlight: true,
-      highlightColor: [255, 255, 255, 80],
+      highlightColor: TRIP_MAP_CHROME.highlight,
     });
 
     const paths = new PathLayer<CruisePath>({
@@ -461,7 +439,7 @@ export default function TripMap({
       widthMinPixels: 2,
       pickable: true,
       autoHighlight: true,
-      highlightColor: [255, 255, 255, 80],
+      highlightColor: TRIP_MAP_CHROME.highlight,
     });
 
     const airports = new ScatterplotLayer<PointDatum>({
@@ -473,11 +451,11 @@ export default function TripMap({
       radiusMinPixels: 4,
       radiusMaxPixels: 8,
       stroked: true,
-      getLineColor: [13, 17, 23, 255],
+      getLineColor: TRIP_MAP_CHROME.outline,
       lineWidthMinPixels: 1,
       pickable: true,
       autoHighlight: true,
-      highlightColor: [255, 255, 255, 100],
+      highlightColor: TRIP_MAP_CHROME.highlightStrong,
     });
 
     // Tour route sections (Task 12). Coloured per LEG mode, never the
@@ -503,7 +481,7 @@ export default function TripMap({
       widthMinPixels: 2,
       pickable: true,
       autoHighlight: true,
-      highlightColor: [255, 255, 255, 80],
+      highlightColor: TRIP_MAP_CHROME.highlight,
     });
 
     const stops = new ScatterplotLayer<PointDatum>({
@@ -515,11 +493,11 @@ export default function TripMap({
       radiusMinPixels: 6,
       radiusMaxPixels: 12,
       stroked: true,
-      getLineColor: [13, 17, 23, 255],
+      getLineColor: TRIP_MAP_CHROME.outline,
       lineWidthMinPixels: 1.5,
       pickable: true,
       autoHighlight: true,
-      highlightColor: [255, 255, 255, 100],
+      highlightColor: TRIP_MAP_CHROME.highlightStrong,
     });
 
     // Stop (POI / hotel / …) labels. The markers alone were indistinguishable
@@ -542,7 +520,7 @@ export default function TripMap({
       data: stopLabelData,
       getPosition: (d) => d.position,
       getText: (d) => d.label,
-      getColor: [241, 245, 249, 255],
+      getColor: TRIP_MAP_CHROME.labelText,
       getSize: 12,
       sizeUnits: "pixels",
       getTextAnchor: "middle",
@@ -551,7 +529,7 @@ export default function TripMap({
       fontFamily: "'Inter', system-ui, sans-serif",
       fontWeight: 600,
       outlineWidth: 3,
-      outlineColor: [13, 17, 23, 255],
+      outlineColor: TRIP_MAP_CHROME.outline,
       fontSettings: { sdf: true },
       // Stop labels are user-entered POI/hotel/port names and can contain
       // umlauts/accents (e.g. "Travemünde"). deck.gl's default
@@ -566,10 +544,25 @@ export default function TripMap({
     // knows the "lodging-pins" ids), so a house looks the same wherever it is
     // shown. Labels are forced on: a trip has a handful of hotels, not the
     // hundreds the flat map's priority budget exists for.
-    const lodgingPins = buildLodgingPins(lodgings, 1, zoom, { labelsMode: "important" }) ?? [];
+    const lodgingPins =
+      buildLodgingPins(lodgings, 1, zoom, {
+        labelsMode: "important",
+        // Without this the pins fall back to the DEFAULT lodging config, so a
+        // user who switched hotels to "by rating" saw it everywhere but here.
+        colors: colorConfig.lodging,
+      }) ?? [];
 
     return [paths, arcs, airports, tourPaths, stops, ...lodgingPins, stopLabels];
-  }, [flightArcs, cruisePaths, airportPoints, stopPoints, lodgings, zoom, tourPathData]);
+  }, [
+    flightArcs,
+    cruisePaths,
+    airportPoints,
+    stopPoints,
+    lodgings,
+    zoom,
+    tourPathData,
+    colorConfig.lodging,
+  ]);
 
   const layers = projection === "globe" ? globeLayers : mercatorLayers;
 

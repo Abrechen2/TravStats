@@ -47,6 +47,8 @@ import {
 import { CRUISE_PATH_ALTITUDE_M, MARKER_ALTITUDE_M } from "../Globe/buildGlobeLayers";
 import type { PointDatum as GlobePointDatum } from "../Globe/globeLayerTypes";
 import type { TourPathDatum } from "../layers/tourPathsLayer";
+import type { Lodging } from "../../types/lodging";
+import { resolveLodgingColor, type LodgingColorConfig } from "../../lib/lodgingColor";
 
 /** Which projection the trip map is currently drawing in. */
 export type TripProjection = "mercator" | "globe";
@@ -132,6 +134,34 @@ export function toGlobeLabelPoints(points: readonly TripPointDatum[]): GlobePoin
       name: p.label,
       label: p.label,
     }));
+}
+
+/**
+ * The trip's hotels as plain globe markers.
+ *
+ * The flat map draws them through `buildLodgingPins`, which is right there:
+ * it carries the lodging tooltip, the colour the lodging list uses, and a
+ * deck.gl TextLayer for the names. Under globe projection that last part
+ * renders NOTHING, and the dots have no horizon clipping, so a house on the
+ * far side of the planet shows through it. Here they become ordinary occluded
+ * markers and their names go to the HTML overlay with everything else's.
+ */
+export function toGlobeLodgingPoints(
+  lodgings: readonly Lodging[],
+  colors: LodgingColorConfig
+): TripPointDatum[] {
+  const out: TripPointDatum[] = [];
+  for (const l of lodgings) {
+    if (l.lat == null || l.lon == null) continue;
+    out.push({
+      position: [l.lon, l.lat],
+      label: l.name,
+      color: resolveLodgingColor(l, colors),
+      radiusMeters: 40_000,
+      kind: "lodging",
+    });
+  }
+  return out;
 }
 
 export interface TripMapGlobeLayersOptions {

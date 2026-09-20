@@ -21,6 +21,31 @@
 // This governs ONLY the solid centre dot — the airport's count-scaled
 // frequency ring and the port's halo ring are unrelated and unaffected.
 
+import type { MapLayerColors } from "../../types/mapTheme";
+
+/**
+ * The airport dot's colour: the user's marker override if they set one, else
+ * the map theme's own.
+ *
+ * One line, and it lived inline in `routesLayer.ts` with a third fallback —
+ * a literal amber — behind the theme. The trip map (`Trips/tripMapColors.ts`)
+ * needs the same answer, and a second copy of a three-step fallback is a
+ * second chance to get the order wrong. The literal is gone with it: the
+ * theme always carries an `airportDot`, so the fallback protected against
+ * nothing and only hid a missing theme.
+ */
+export function resolveAirportDotColor(
+  markerColor: [number, number, number] | null | undefined,
+  themeColors: Pick<MapLayerColors, "airportDot"> | undefined
+): [number, number, number] {
+  return markerColor ?? themeColors?.airportDot ?? MAP_FALLBACK_AIRPORT_DOT;
+}
+
+/** Only reachable when a caller passes no theme at all. The one production
+ *  caller that can (`routesLayer`'s optional `themeColors`) is always given
+ *  one by `DeckGLMap`. */
+const MAP_FALLBACK_AIRPORT_DOT: [number, number, number] = [240, 169, 71];
+
 /** Base dot radius in metres — identical for airports and ports. */
 export const MARKER_DOT_RADIUS_M = 2200;
 /** Minimum on-screen dot radius in pixels, before the user's size-slider multiplier. */
