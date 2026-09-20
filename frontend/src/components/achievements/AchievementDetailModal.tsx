@@ -149,6 +149,22 @@ export default function AchievementDetailModal({
                 style={{ width: `${percentage}%`, background: "var(--accent)" }}
               />
             </div>
+            {!isMystery && achievement.unlockedAt && (
+              // The badge is not held — but it was. Held-ness follows the live
+              // measure (owner's ruling, 2026-09-20), while `unlockedAt` is a
+              // historical fact that is never cleared, so this is the one
+              // sentence that explains why the points went away. Withheld on a
+              // mystery card, which is still meant to give nothing away.
+              <p
+                className="text-xs"
+                style={{ color: "var(--text-muted)" }}
+                data-testid="achievement-detail-last-held"
+              >
+                {t("achievements:progress.lastHeld", {
+                  date: formatDate(achievement.unlockedAt),
+                })}
+              </p>
+            )}
           </div>
         )}
 
