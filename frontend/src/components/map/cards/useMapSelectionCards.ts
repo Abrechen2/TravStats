@@ -77,8 +77,6 @@ const FLIGHT_KINDS: ReadonlyArray<MapPinned["kind"]> = ["arc", "trip", "specialF
 export interface MapSelectionCardsOptions {
   /** The /geo features the route card reads its stats from. */
   flights: readonly GeoJSONFeature[];
-  /** Active language, for the lodging card's formatted price. */
-  locale: string;
   /** Hero colour for a route/trip card, resolved from the flight colour store. */
   flightColor: [number, number, number];
   /** Bring the selection's anchor into view. */
@@ -102,7 +100,6 @@ export interface MapSelectionCardsOptions {
 
 export function useMapSelectionCards({
   flights,
-  locale,
   flightColor,
   focus,
   setPinned,
@@ -170,11 +167,11 @@ export function useMapSelectionCards({
     // Abstains for a lodging whose location never resolved — the sidebar row
     // already says it is not on the map, and a card with no anchor would have
     // to float somewhere arbitrary.
-    const next = pinnedFromLodging(selectedLodging, locale);
+    const next = pinnedFromLodging(selectedLodging);
     if (!next) return;
     setPinned(next);
     focus(next.anchorLngLat);
-  }, [selectedLodging, locale, focus, setPinned, clearOnEmpty]);
+  }, [selectedLodging, focus, setPinned, clearOnEmpty]);
 
   useEffect(() => {
     if (selectedPlace === null) {

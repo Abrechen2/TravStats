@@ -53,7 +53,9 @@ interface PlacePinDatum {
 // ellipsis contract (never a dangling trailing space before "…").
 const MAX_PLACE_LABEL_LEN = 20;
 
-function toPlaceLabel(name: string, maxLen: number = MAX_PLACE_LABEL_LEN): string {
+/** Exported for the globe's HTML label overlay — same reason as
+ *  `toLodgingLabel`. */
+export function toPlaceLabel(name: string, maxLen: number = MAX_PLACE_LABEL_LEN): string {
   const trimmed = name.trim();
   if (trimmed.length <= maxLen) return trimmed;
   return trimmed.slice(0, Math.max(1, maxLen - 1)).trimEnd() + "…";

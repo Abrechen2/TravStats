@@ -246,8 +246,8 @@
       "nights": "Nächte",
       "price": "Preis",
       "openLodging": "Unterkunft öffnen",
-      "category": "Kategorie",
-      "openPlace": "Ort öffnen"
+      "openPlace": "Ort öffnen",
+      "stay": "Aufenthalt"
     },
     "timeSlider": {
       "title": "Zeitachse",

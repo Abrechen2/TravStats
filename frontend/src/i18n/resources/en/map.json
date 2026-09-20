@@ -246,8 +246,8 @@
       "nights": "Nights",
       "price": "Price",
       "openLodging": "Open lodging",
-      "category": "Category",
-      "openPlace": "Open place"
+      "openPlace": "Open place",
+      "stay": "Stay"
     },
     "timeSlider": {
       "title": "Timeline",

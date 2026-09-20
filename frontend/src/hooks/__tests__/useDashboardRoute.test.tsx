@@ -40,20 +40,13 @@ describe("useDashboardRoute", () => {
   });
 
   it("defaults to the globe on every tab that offers one", () => {
-    for (const tab of ["flight", "cruise", "lodging", "tour"]) {
+    for (const tab of ["flight", "cruise", "lodging", "tour", "poi"]) {
       window.localStorage.clear();
       const { result } = renderHook(() => useDashboardRoute(), {
         wrapper: wrapper([`/dashboard/${tab}`]),
       });
       expect(result.current.mode, `${tab} should open on the globe`).toBe("globe");
     }
-  });
-
-  it("leaves a tab with no globe mode on its own default", () => {
-    const { result } = renderHook(() => useDashboardRoute(), {
-      wrapper: wrapper(["/dashboard/poi"]),
-    });
-    expect(result.current.mode).toBe("markers");
   });
 
   it("respects a stored FLAT choice over the globe default", () => {

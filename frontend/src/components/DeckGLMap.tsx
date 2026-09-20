@@ -507,7 +507,6 @@ export function DeckGLMap({
   // globe uses (`map/cards/useMapSelectionCards.ts`).
   useMapSelectionCards({
     flights,
-    locale,
     flightColor: flightTipColor,
     focus: focusOn,
     setPinned,

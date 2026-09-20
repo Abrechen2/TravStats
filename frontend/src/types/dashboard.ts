@@ -10,7 +10,11 @@ export type FlightMode = (typeof FLIGHT_MODES)[number];
 export const CRUISE_MODES = ["sea-routes", "itinerary", "port-frequency", "globe"] as const;
 export type CruiseMode = (typeof CRUISE_MODES)[number];
 
-export const POI_MODES = ["markers", "heatmap"] as const;
+// Places were the last domain tab without the sphere, for the same reason
+// lodging was: nothing decided against it, the tab simply passed a hardcoded
+// "routes" through. Added 2026-09-20 together with the globe's place pins —
+// offering a mode whose map draws nothing would have been the worse half.
+export const POI_MODES = ["markers", "heatmap", "globe"] as const;
 export type PoiMode = (typeof POI_MODES)[number];
 
 // `globe` is a PROJECTION, not a data view — it only says "show me the same
@@ -44,14 +48,14 @@ interface TabRegistryEntry<M extends DashboardMode> {
  * it is only a default: `useDashboardRoute` prefers the URL, then what the
  * reader last chose for that tab, and reaches this table last.
  *
- * `poi` is the exception and not an oversight: POI_MODES has no globe entry,
- * so there is nothing to default to.
+ * There is no exception left: `poi` gained its globe on the same day (see
+ * POI_MODES above), so every tab in the table opens on the sphere.
  */
 export const TAB_MODE_REGISTRY = {
   all: { modes: ALL_MODES, default: "globe" },
   flight: { modes: FLIGHT_MODES, default: "globe" },
   cruise: { modes: CRUISE_MODES, default: "globe" },
-  poi: { modes: POI_MODES, default: "markers" },
+  poi: { modes: POI_MODES, default: "globe" },
   lodging: { modes: LODGING_MODES, default: "globe" },
   tour: { modes: TOUR_MODES, default: "globe" },
 } as const satisfies Record<DashboardTab, TabRegistryEntry<DashboardMode>>;

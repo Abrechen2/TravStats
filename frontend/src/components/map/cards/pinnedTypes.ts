@@ -82,48 +82,60 @@ export interface SpecialFlightCardDatum {
 }
 
 /**
- * A lodging. Self-describing for the same reason the Sonder-Flug datum is:
- * "which stay" is a question with a rule behind it (`shared/lodgingTiming.ts`
- * owns nights, and a stay can be dated to the day, the month, the year or not
- * at all), and the card must not answer it a second, different way.
+ * A lodging, as the card reads it.
+ *
+ * A structural SUBSET of `Lodging`, not a reduced copy of it — the globe pins
+ * the domain row itself (`globeLayerTypes.ts`: "one pin is one hotel, so a
+ * second shape would only be a copy of `Lodging` that could fall behind it"),
+ * and the flat map's builder wraps the same row. Keeping this a subset is what
+ * lets BOTH hand the card the record unchanged.
+ *
+ * `country` is FREE TEXT here — an ISO code or a full country name, in German
+ * or English, exactly as `Lodging.country` is. The card resolves it before it
+ * reaches `FlagImg`, which needs a strict two-letter code and renders nothing
+ * otherwise.
  */
 export interface LodgingCardDatum {
-  lodgingId: string;
+  id: string;
   name: string;
+  type?: string;
   city?: string | null;
-  /** ISO 3166-1 alpha-2, already resolved — `Lodging.country` is free text. */
   country?: string | null;
-  checkIn?: string | null;
-  checkOut?: string | null;
+  /** Stays recorded here, server-derived. */
+  stayCount?: number;
+  /** Nights across ALL stays, server-derived — not one stay's span. */
+  nights?: number;
+  chain?: { name: string } | null;
+  overallRating?: number | null;
   /**
-   * `null` rather than 0 when nothing in the record says — a same-day stay and
-   * an unknown span are both 0, and only one of them is a fact
-   * (`shared/lodgingTiming.ts`'s `nightsKnown`).
+   * The stays themselves, so the card can name the most recent one's dates
+   * and price. Optional because a pin datum may arrive without them; the
+   * rows simply do not render then.
    */
-  nights?: number | null;
-  /** Already formatted with its currency; the card does no money maths. */
-  price?: string | null;
+  stays?: ReadonlyArray<LodgingCardStay>;
 }
 
-/** A place (POI). */
+export interface LodgingCardStay {
+  checkIn: string | null;
+  checkOut: string | null;
+  datePrecision: string;
+  nights: number | null;
+  totalPrice: number | null;
+  currency: string | null;
+}
+
+/** A place (POI) — a structural subset of `Place`, for the same reason. */
 export interface PlaceCardDatum {
-  placeId: string;
+  id: string;
   name: string;
-  /**
-   * The raw `PlaceCategory` key, NOT a localised label. The card translates
-   * it — handing it a finished string would put `t` in the caller's effect
-   * dependency list, and `t` is a fresh function on every render, which is an
-   * effect that sets state on every render (it took the test runner out of
-   * memory before this was a key).
-   */
-  category?: string | null;
+  category?: string;
   city?: string | null;
   country?: string | null;
-  /** Visits that have actually happened. */
-  visitCount?: number | null;
-  lastVisit?: string | null;
   /** Logbook (`true`) or wishlist (`false`) — a wishlist entry counts nothing. */
   visited?: boolean;
+  /** Visits that have actually happened. */
+  visitCount?: number;
+  lastVisitAt?: string | null;
 }
 
 /**

@@ -162,6 +162,8 @@ function lodging(overrides: Partial<Lodging> = {}): Lodging {
     city: "Berlin",
     country: "Deutschland",
     isoCountryCode: "DE",
+    nights: 3,
+    stayCount: 1,
     lat: 52.5,
     lon: 13.4,
     stays: [
@@ -266,13 +268,14 @@ for (const surface of surfaces) {
         data: Record<string, unknown>;
         anchorLngLat: [number, number];
       };
+      // The card reads the DOMAIN ROW — `LodgingCardDatum` is a structural
+      // subset of `Lodging`, which is what lets the globe's pin click and this
+      // selection path hand it the same record without a second shape.
       expect(pinned.kind).toBe("lodging");
       expect(pinned.data.name).toBe("Hilton Berlin");
       expect(pinned.data.city).toBe("Berlin");
-      expect(pinned.data.country).toBe("DE");
-      expect(pinned.data.checkIn).toBe("2024-05-01");
       expect(pinned.data.nights).toBe(3);
-      expect(pinned.data.price).toBeTruthy();
+      expect((pinned.data.stays as Array<{ checkIn: string }>)[0].checkIn).toBe("2024-05-01");
       expect(pinned.anchorLngLat).toEqual([13.4, 52.5]);
       expect(flyTo).toHaveBeenCalled();
     });
@@ -287,7 +290,7 @@ for (const surface of surfaces) {
       expect(pinned.data.name).toBe("Kolosseum");
       expect(pinned.data.category).toBe("sight");
       expect(pinned.data.visitCount).toBe(2);
-      expect(pinned.data.lastVisit).toBe("2023-09-10");
+      expect(pinned.data.lastVisitAt).toBe("2023-09-10");
       expect(flyTo).toHaveBeenCalled();
     });
 

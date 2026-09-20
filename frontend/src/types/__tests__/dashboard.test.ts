@@ -34,12 +34,13 @@ describe("dashboard tab + mode registry", () => {
     expect(isModeForTab("poi", "routes")).toBe(false);
   });
 
-  // Owner ruling 2026-09-20: "Globus soll ueberall genutzt werden" — so every
-  // tab that HAS a globe opens on it, and `poi`, which has none, does not.
+  // Owner ruling 2026-09-20: "Globus soll ueberall genutzt werden" — every tab
+  // that HAS a globe opens on it, which since POI gained one the same day is
+  // all six.
   it("defaultModeForTab returns the registered default", () => {
     expect(defaultModeForTab("flight")).toBe("globe");
     expect(defaultModeForTab("cruise")).toBe("globe");
-    expect(defaultModeForTab("poi")).toBe("markers");
+    expect(defaultModeForTab("poi")).toBe("globe");
     expect(defaultModeForTab("all")).toBe("globe");
   });
 

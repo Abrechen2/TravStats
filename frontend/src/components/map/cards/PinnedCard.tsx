@@ -14,27 +14,22 @@
 
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { FlagImg, countryName, countryFromUnlocode } from "../../../lib/countryFlag";
+import {
+  FlagImg,
+  countryName,
+  countryFromUnlocode,
+  resolveCountryCode,
+} from "../../../lib/countryFlag";
 import type { GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
 import { tokens } from "../../../theme/tokens";
-import type {
-  CruiseCardDatum,
-  LodgingCardDatum,
-  MapPinned,
-  MarkerCardDatum,
-  PlaceCardDatum,
-  RouteCardDatum,
-  SpecialFlightCardDatum,
-  TripCardDatum,
-} from "./pinnedTypes";
+import type { CruiseCardDatum, MapPinned, MarkerCardDatum, RouteCardDatum } from "./pinnedTypes";
 import { getAirportStats, getArcStats, getCruiseStats, getPortStats } from "./cardStats";
 import {
   Actions,
   Grid,
   Hero,
   IcaoPill,
-  LABEL_STYLE,
   Place,
   Row,
   SubHeading,
@@ -46,6 +41,14 @@ import {
   formatKmNumber,
   type TFn,
 } from "./cardChrome";
+import { CardFlights } from "./CardFlights";
+import {
+  LodgingBody,
+  PlaceBody,
+  SpecialFlightBody,
+  TripBody,
+  type BodyCommonProps,
+} from "./cardBodies";
 
 interface PinnedCardProps {
   pinned: MapPinned;
@@ -230,11 +233,15 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
           </span>
         </div>
       );
+    // `Lodging.country` / `Place.country` are FREE TEXT — an ISO code or a
+    // full country name, in German or English. `FlagImg` needs a strict
+    // two-letter code and renders nothing otherwise, so both resolve first,
+    // exactly as the flat map's tooltip does (markerTooltip.ts).
     case "lodging":
       return (
         <div className="flex items-center gap-2 text-[14px] font-semibold">
-          {pinned.data.country ? (
-            <FlagImg country={pinned.data.country} height={18} />
+          {resolveCountryCode(pinned.data.country) ? (
+            <FlagImg country={resolveCountryCode(pinned.data.country)} height={20} />
           ) : (
             <span>🏨</span>
           )}
@@ -244,8 +251,8 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
     case "place":
       return (
         <div className="flex items-center gap-2 text-[14px] font-semibold">
-          {pinned.data.country ? (
-            <FlagImg country={pinned.data.country} height={18} />
+          {resolveCountryCode(pinned.data.country) ? (
+            <FlagImg country={resolveCountryCode(pinned.data.country)} height={20} />
           ) : (
             <span>📍</span>
           )}
@@ -266,65 +273,6 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
         </div>
       );
   }
-}
-
-const ARC_FLIGHTS_COLLAPSED = 2;
-
-/** Compact flight list on the card — airline name + number + date. Shows the
- *  two most recent by default; a "Liste (+N)" button reveals the rest inline
- *  (scrollable), so the card never runs off-screen. */
-function CardFlights({
-  flights,
-  flightIds,
-  locale,
-  t,
-}: {
-  flights: GeoJSONFeature[];
-  flightIds: string[];
-  locale: string;
-  t: TFn;
-}): JSX.Element | null {
-  const [expanded, setExpanded] = useState(false);
-  const ids = new Set(flightIds);
-  const rows = flights
-    .filter((f) => ids.has(f.properties.id))
-    .sort((a, b) =>
-      (b.properties.departureTime ?? "").localeCompare(a.properties.departureTime ?? "")
-    );
-  if (rows.length === 0) return null;
-  const shown = expanded ? rows : rows.slice(0, ARC_FLIGHTS_COLLAPSED);
-  const more = rows.length - ARC_FLIGHTS_COLLAPSED;
-
-  return (
-    <div className="mt-2 border-t pt-2" style={{ borderColor: tokens.color.border }}>
-      <div className="mb-1.5 flex items-center justify-between gap-2">
-        <span style={LABEL_STYLE}>{t("map:globe.pinned.flightsOnRoute")}</span>
-        {more > 0 && (
-          <button
-            type="button"
-            onClick={() => setExpanded((v) => !v)}
-            className="cursor-pointer text-[10px] font-medium"
-            style={{ color: tokens.color.accent }}
-          >
-            {expanded
-              ? t("map:globe.pinned.flightListHide")
-              : t("map:globe.pinned.flightListShow", { count: more })}
-          </button>
-        )}
-      </div>
-      <div className="space-y-1 overflow-y-auto" style={{ maxHeight: expanded ? 132 : undefined }}>
-        {shown.map((f) => (
-          <div key={f.properties.id} className="flex items-center gap-2 text-[11px]">
-            <span className="font-medium">{f.properties.airline ?? "—"}</span>
-            <span className="font-mono opacity-50">{f.properties.flightNumber ?? ""}</span>
-            <span className="ml-auto tabular-nums opacity-55">
-              {f.properties.departureTime ? formatDate(f.properties.departureTime, locale) : ""}
-            </span>
-          </div>
-        ))}
-      </div>
-    </div>
-  );
 }
 
 /** Row of the unique country flags a cruise visits, in itinerary order.
@@ -359,11 +307,6 @@ function CruiseFlags({ cruise }: { cruise: Cruise }): JSX.Element | null {
       ))}
     </div>
   );
-}
-
-interface BodyCommonProps {
-  locale: string;
-  t: TFn;
 }
 
 // ─── Airport body ─────────────────────────────────────────────────
@@ -572,212 +515,6 @@ function CruiseBody({
                 label: t("map:globe.pinned.openCruise"),
                 onClick: () => onCruiseOpen(data.cruiseId),
               }
-            : undefined
-        }
-      />
-    </>
-  );
-}
-
-// ─── Trip body ────────────────────────────────────────────────────
-
-/**
- * A selection that spans more than one airport pair — the flat map's trip
- * grouping. It reports the same three facts a route does (how far, when, with
- * whom) and lists the flights; the route heading would be a lie here, so the
- * heading counts instead.
- */
-function TripBody({
-  data,
-  flights,
-  locale,
-  t,
-  onTripDetails,
-}: {
-  data: TripCardDatum;
-  flights: GeoJSONFeature[];
-  onTripDetails?: () => void;
-} & BodyCommonProps): JSX.Element {
-  const stats = getArcStats(flights, data.flightIds);
-  const colorRgb = `rgb(${data.color[0]},${data.color[1]},${data.color[2]})`;
-  return (
-    <>
-      <Hero color={colorRgb}>
-        {t("map:globe.pinned.totalKm", {
-          count: data.flightIds.length,
-          km: formatKmNumber(stats.totalKm),
-        })}
-      </Hero>
-      <Grid>
-        {stats.lastFlightDate && (
-          <Row
-            label={t("map:globe.pinned.lastFlight")}
-            value={formatDate(stats.lastFlightDate, locale)}
-          />
-        )}
-        {stats.topAirline && (
-          <Row label={t("map:globe.pinned.topAirline")} value={stats.topAirline} />
-        )}
-        {stats.topAircraft && (
-          <Row label={t("map:globe.pinned.topAircraft")} value={stats.topAircraft} />
-        )}
-      </Grid>
-      <CardFlights flights={flights} flightIds={data.flightIds} locale={locale} t={t} />
-      <Actions
-        primary={
-          onTripDetails
-            ? { label: t("map:globe.pinned.details"), onClick: onTripDetails }
-            : undefined
-        }
-      />
-    </>
-  );
-}
-
-// ─── Sonder-Flug body ─────────────────────────────────────────────
-
-function SpecialFlightBody({
-  data,
-  locale,
-  t,
-  onFlightOpen,
-  onFlightEdit,
-}: {
-  data: SpecialFlightCardDatum;
-  onFlightOpen?: (flightId: string) => void;
-  onFlightEdit?: (flightId: string) => void;
-} & BodyCommonProps): JSX.Element {
-  const colorRgb = `rgb(${data.color[0]},${data.color[1]},${data.color[2]})`;
-  return (
-    <>
-      <Hero color={colorRgb}>{data.routeLabel}</Hero>
-      <Grid>
-        {data.aircraft && <Row label={t("map:globe.pinned.topAircraft")} value={data.aircraft} />}
-        {data.eventLabel && <Row label={t("map:globe.pinned.event")} value={data.eventLabel} />}
-        {data.departureTime && (
-          <Row
-            label={t("map:globe.pinned.lastFlight")}
-            value={formatDate(data.departureTime, locale)}
-          />
-        )}
-      </Grid>
-      <Actions
-        primary={
-          onFlightOpen
-            ? {
-                label: t("map:globe.pinned.openFlight"),
-                onClick: () => onFlightOpen(data.flightId),
-              }
-            : undefined
-        }
-        secondary={
-          onFlightEdit
-            ? { label: t("common:buttons.edit"), onClick: () => onFlightEdit(data.flightId) }
-            : undefined
-        }
-      />
-    </>
-  );
-}
-
-// ─── Lodging body ─────────────────────────────────────────────────
-
-/**
- * A hotel, as the activity sidebar's row means it: where it is, when you were
- * there and what it cost.
- *
- * `nights` is `null` rather than 0 when nothing in the record says — the rule
- * lives in `shared/lodgingTiming.ts` and the caller applies it, so the card
- * only has to not invent a zero.
- */
-function LodgingBody({
-  data,
-  locale,
-  t,
-  onLodgingOpen,
-}: {
-  data: LodgingCardDatum;
-  onLodgingOpen?: (lodgingId: string) => void;
-} & BodyCommonProps): JSX.Element {
-  const stay =
-    data.checkIn && data.checkOut
-      ? `${formatDate(data.checkIn, locale)} – ${formatDate(data.checkOut, locale)}`
-      : data.checkIn
-        ? formatDate(data.checkIn, locale)
-        : (data.checkOut ?? "");
-
-  return (
-    <>
-      <Place city={data.city} country={data.country} locale={locale} />
-      {stay !== "" && <Hero color={tokens.domainColor.hotel}>{stay}</Hero>}
-      <Grid>
-        {data.nights !== null && data.nights !== undefined && (
-          <Row
-            label={t("map:globe.pinned.nights")}
-            value={t("lodging:field.nightsCount", { count: data.nights })}
-          />
-        )}
-        {data.price && <Row label={t("map:globe.pinned.price")} value={data.price} />}
-      </Grid>
-      <Actions
-        primary={
-          onLodgingOpen
-            ? {
-                label: t("map:globe.pinned.openLodging"),
-                onClick: () => onLodgingOpen(data.lodgingId),
-              }
-            : undefined
-        }
-      />
-    </>
-  );
-}
-
-// ─── Place body ───────────────────────────────────────────────────
-
-/**
- * A place, as the POI sidebar means it.
- *
- * A wishlist entry reports its status instead of a visit count — "0 Besuche"
- * is technically true and reads as a failure, the same call `markerTooltip`'s
- * place hover already makes.
- */
-function PlaceBody({
-  data,
-  locale,
-  t,
-  onPlaceOpen,
-}: {
-  data: PlaceCardDatum;
-  onPlaceOpen?: (placeId: string) => void;
-} & BodyCommonProps): JSX.Element {
-  const visits = typeof data.visitCount === "number" ? data.visitCount : null;
-  const hero =
-    data.visited === false
-      ? t("places:list.status.wishlist")
-      : visits !== null
-        ? t("places:list.visitsCount", { count: visits })
-        : null;
-
-  return (
-    <>
-      <Place city={data.city} country={data.country} locale={locale} />
-      {hero !== null && <Hero color={tokens.domainColor.poi}>{hero}</Hero>}
-      <Grid>
-        {data.category && (
-          <Row
-            label={t("map:globe.pinned.category")}
-            value={t(`places:categories.${data.category}`)}
-          />
-        )}
-        {data.lastVisit && (
-          <Row label={t("map:tooltip.lastVisit")} value={formatDate(data.lastVisit, locale)} />
-        )}
-      </Grid>
-      <Actions
-        primary={
-          onPlaceOpen
-            ? { label: t("map:globe.pinned.openPlace"), onClick: () => onPlaceOpen(data.placeId) }
             : undefined
         }
       />

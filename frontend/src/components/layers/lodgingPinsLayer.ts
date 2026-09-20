@@ -51,7 +51,9 @@ interface LodgingPinDatum {
 // shouty all-caps source data.
 const MAX_LODGING_LABEL_LEN = 20;
 
-function toLodgingLabel(name: string, maxLen: number = MAX_LODGING_LABEL_LEN): string {
+/** Exported so the globe's HTML label overlay truncates a hotel name exactly
+ *  as this layer's TextLayer does — one budget, not two that drift. */
+export function toLodgingLabel(name: string, maxLen: number = MAX_LODGING_LABEL_LEN): string {
   const trimmed = name.trim();
   if (trimmed.length <= maxLen) return trimmed;
   return trimmed.slice(0, Math.max(1, maxLen - 1)).trimEnd() + "…";

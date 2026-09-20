@@ -10,6 +10,10 @@ import type { GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
 import { isCountableCruise } from "../../../shared/cruiseCounting";
 import { isCountableFlight } from "../../../shared/flightCounting";
+import { resolveStayTiming } from "../../../shared/lodgingTiming";
+import { formatAmount } from "../../../lib/units";
+import { formatDate as formatUserDate } from "../../../lib/displayFormat";
+import type { LodgingCardStay } from "./pinnedTypes";
 
 export interface AirportCardStats {
   totalVisits: number;
@@ -217,4 +221,62 @@ export function getCruiseStats(cruises: Cruise[], cruiseId: string): CruiseCardS
     embarkPort: cruise.departurePort?.name ?? null,
     debarkPort: cruise.arrivalPort?.name ?? null,
   };
+}
+
+// ─── Lodging: which stay ──────────────────────────────────────────
+
+export interface LatestStayFacts {
+  /** "01.05.2024 – 04.05.2024", or null when no date is recorded. */
+  dateRange: string | null;
+  /** Formatted with its own currency, or null when no total is recorded. */
+  price: string | null;
+}
+
+/**
+ * The most recent DATED stay, falling back to the last row.
+ *
+ * The card shows one visit and has to pick it once: the dates and the price
+ * must name the same stay, or the reader is looking at two different nights.
+ * The span itself is `shared/lodgingTiming.ts`'s question, not this file's —
+ * a stay can be dated to the day, the month, the year or not at all, and only
+ * that module knows which of those is safe to print.
+ */
+export function latestStayFacts(
+  stays: ReadonlyArray<LodgingCardStay> | undefined,
+  locale: string
+): LatestStayFacts {
+  if (!stays || stays.length === 0) return { dateRange: null, price: null };
+  const dated = stays.filter((s) => s.checkIn !== null || s.checkOut !== null);
+  const stay =
+    dated.length > 0
+      ? dated.reduce((best, s) =>
+          (s.checkIn ?? s.checkOut ?? "") > (best.checkIn ?? best.checkOut ?? "") ? s : best
+        )
+      : stays[stays.length - 1];
+
+  const timing = resolveStayTiming({
+    checkIn: stay.checkIn ? new Date(stay.checkIn) : null,
+    checkOut: stay.checkOut ? new Date(stay.checkOut) : null,
+    datePrecision: stay.datePrecision,
+    nights: stay.nights,
+  });
+
+  const day = (iso: string): string => formatUserDate(iso) || iso.slice(0, 10);
+  // Only DAY precision names real days. At MONTH/YEAR the stored date carries
+  // a placeholder day, so printing it would invent a precision nobody has.
+  const dateRange =
+    timing.precision !== "DAY"
+      ? null
+      : stay.checkIn && stay.checkOut
+        ? `${day(stay.checkIn)} – ${day(stay.checkOut)}`
+        : (stay.checkIn ?? stay.checkOut) !== null
+          ? day((stay.checkIn ?? stay.checkOut) as string)
+          : null;
+
+  const price =
+    stay.totalPrice != null
+      ? formatAmount(stay.totalPrice, stay.currency as never, { language: locale })
+      : null;
+
+  return { dateRange, price };
 }
