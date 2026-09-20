@@ -465,6 +465,32 @@ describe("LodgingListPage", () => {
     });
   });
 
+  it("does not call itself filtered before the search it is showing was sent", async () => {
+    // `hasActiveFilter` drives the strip's "gefiltert" note and the empty
+    // state's wording, and both describe the answer ON SCREEN — which came
+    // from the query the server was last asked. Reading the live input put the
+    // page into its filtered wording for the 300 ms before the search had been
+    // sent, so an empty library blamed a filter that was not yet applied.
+    mockRows([]);
+    mockFacets();
+    const user = userEvent.setup();
+    renderListPage();
+
+    await screen.findByText("lodging:list.empty");
+    await user.type(screen.getByPlaceholderText("lodging:filter.searchPlaceholder"), "adlon");
+
+    // Typed, not yet debounced, not yet sent: still the plain empty state.
+    expect(screen.getByText("lodging:list.empty")).toBeInTheDocument();
+
+    // Once the search reaches the server, the wording follows it.
+    await waitFor(() => {
+      expect(listLodgingPageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ search: "adlon" })
+      );
+    });
+    await screen.findByText("common:filters.noMatch");
+  });
+
   it("renders the empty state without crashing when there are no lodgings", async () => {
     mockRows([]);
 

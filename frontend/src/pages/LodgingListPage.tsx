@@ -387,8 +387,17 @@ export default function LodgingListPage(): JSX.Element {
 
   // Type and country are the two only lodging has; they sit behind the button.
   const extraActiveCount = (typeFilter === "all" ? 0 : 1) + (countryFilter === "all" ? 0 : 1);
+  // `debouncedSearch`, not the raw box. This flag drives the strip's "gefiltert"
+  // note and the empty state's "nothing matched your filter" wording, and both
+  // describe the answer on screen — which came from the query the server was
+  // last ASKED. Reading the live input instead put the page into its filtered
+  // wording for the 300 ms before that search had been sent, so an empty
+  // library briefly blamed a filter that was not yet applied.
   const hasActiveFilter =
-    search.length > 0 || statusFilter !== "all" || yearFilter !== "all" || extraActiveCount > 0;
+    debouncedSearch.trim().length > 0 ||
+    statusFilter !== "all" ||
+    yearFilter !== "all" ||
+    extraActiveCount > 0;
 
   const importAdapter = useLodgingImportAdapter();
 
