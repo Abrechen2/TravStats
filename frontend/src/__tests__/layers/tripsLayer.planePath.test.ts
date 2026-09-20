@@ -16,7 +16,12 @@
 // a wrong path cannot agree with itself.
 
 import { describe, it, expect } from "vitest";
-import { buildPlaneData, buildTripsData, planeAt } from "../../components/layers/tripsLayer";
+import {
+  buildPlaneData,
+  buildTripsData,
+  getTimeRange,
+  planeAt,
+} from "../../components/layers/tripsLayer";
 import { interpolateGreatCircle } from "../../components/layers/greatCircle";
 import { MercatorCoordinate } from "maplibre-gl";
 import type { GeoJSONFeature } from "../../types";
@@ -207,5 +212,30 @@ describe("buildPlaneData", () => {
     const trips = buildTripsData([lpaYvr]);
     expect(buildPlaneData(trips, T0 + (T1 - T0) * 0.4)).toHaveLength(1);
     expect(buildPlaneData(trips, T1 + 3600)).toHaveLength(0);
+  });
+});
+
+describe("getTimeRange survives the vertex count the great circle brought", () => {
+  it("handles a set whose timestamps far exceed the argument limit of a spread", () => {
+    // `Math.min(...all)` passes every timestamp as an ARGUMENT. Measured on
+    // this engine: ~124 920 arguments and it throws RangeError. A flight used
+    // to contribute 2 timestamps and now contributes 11–121, so the set grew
+    // 5–60×: an account whose dashboard used to reach ~60 000 now reaches
+    // well past the limit, and the whole trips mode would throw rather than
+    // degrade. 2 000 flights is a real account; at 121 vertices that is
+    // 242 000 values.
+    const many: Array<{ path: [number, number][]; timestamps: number[] }> = [];
+    for (let i = 0; i < 2000; i++) {
+      const timestamps: number[] = [];
+      for (let v = 0; v <= 120; v++) timestamps.push(1_700_000_000 + i * 1000 + v);
+      many.push({ path: timestamps.map(() => [0, 0]), timestamps });
+    }
+    const range = getTimeRange(many);
+    expect(range.min).toBe(1_700_000_000);
+    expect(range.max).toBe(1_700_000_000 + 1999 * 1000 + 120);
+  });
+
+  it("still answers zeroes for an empty set rather than ±Infinity", () => {
+    expect(getTimeRange([])).toEqual({ min: 0, max: 0 });
   });
 });

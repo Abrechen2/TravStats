@@ -58,13 +58,29 @@ export function buildTripsData(flights: GeoJSONFeature[]): TripDatum[] {
   );
 }
 
+/**
+ * The slider's bounds.
+ *
+ * A loop, not `Math.min(...all)`. The spread passes every timestamp as an
+ * ARGUMENT, and this engine throws RangeError at about 124 920 of them.
+ * That was comfortable while a flight contributed two timestamps; densifying
+ * the path onto the great circle made it 11 to 121, a 5–60× rise, so an
+ * account that used to sit at sixty thousand values now clears the limit —
+ * and the failure is not a slow slider, it is trips mode throwing.
+ */
 export function getTimeRange(trips: TripDatum[]): { min: number; max: number } {
-  const all = trips.flatMap((t) => t.timestamps).filter((n) => !isNaN(n));
-  if (all.length === 0) return { min: 0, max: 0 };
-  return {
-    min: Math.min(...all),
-    max: Math.max(...all),
-  };
+  let min = Infinity;
+  let max = -Infinity;
+  for (const trip of trips) {
+    for (const ts of trip.timestamps) {
+      if (isNaN(ts)) continue;
+      if (ts < min) min = ts;
+      if (ts > max) max = ts;
+    }
+  }
+  // Abstain rather than hand the slider ±Infinity: an empty set has no range,
+  // and the callers already read {0, 0} as "nothing to scrub".
+  return min === Infinity ? { min: 0, max: 0 } : { min, max };
 }
 
 export function createTripsLayer(trips: TripDatum[], currentTime: number): TripsLayer<TripDatum> {
