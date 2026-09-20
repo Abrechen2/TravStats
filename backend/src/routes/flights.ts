@@ -3,9 +3,14 @@ import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { rejectDemoQuota } from "../middleware/demoGuard";
-import { buildFlightWhere, normalizeQueryParams, splitMultiValue } from "./flights/queryFilters";
+import {
+  buildFlightWhere,
+  departureYearSpan,
+  normalizeQueryParams,
+  splitMultiValue,
+} from "./flights/queryFilters";
+import { flightListHandler } from "./flights/list";
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from "../schemas/flight";
-import type { FlightQueryInput } from "../schemas/flight";
 import logger from "../utils/logger";
 import { AppError } from "../middleware/errorHandler";
 import {
@@ -524,74 +529,9 @@ async function withAirportFacts<T extends EnrichableFlight>(flight: T): Promise<
   return enriched;
 }
 
-// Get flights with filters
-router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId!;
-    const normalizedQuery = normalizeQueryParams(
-      req.query as Record<string, string | string[] | undefined>
-    );
-    const parsedQuery = flightQuerySchema.parse(normalizedQuery);
-    const tagsArray = splitMultiValue(parsedQuery.tags as string | string[] | undefined);
-    // ?all=true bypasses the 500-row cap entirely so API consumers can sync
-    // the full row set in one request. Auth + user-scoped where clause make
-    // an unbounded read safe; the only consumer is the row owner.
-    const all = parsedQuery.all === true;
-    const cappedLimit = Math.min(parsedQuery.limit ?? 100, 500);
-    const query = {
-      ...parsedQuery,
-      tags: tagsArray,
-      limit: cappedLimit,
-      offset: all ? 0 : parsedQuery.offset,
-    };
-    const take = all ? undefined : cappedLimit;
-    const { where, noResults } = buildFlightWhere(query, userId);
-
-    if (noResults) {
-      return res.json({
-        flights: [],
-        total: 0,
-        limit: take ?? 0,
-        offset: query.offset,
-        all,
-      });
-    }
-
-    const [flights, total] = await Promise.all([
-      prisma.flight.findMany({
-        where,
-        // Deterministic tie-breaker: departureTime is nullable and not unique,
-        // so paginating on it alone (skip/take) can skip or duplicate rows at
-        // page boundaries. The id keeps the total order stable.
-        orderBy: [{ departureTime: "desc" }, { id: "asc" }],
-        skip: query.offset,
-        take,
-        include: {
-          trip: { select: { id: true, name: true, color: true } },
-        },
-      }),
-      prisma.flight.count({ where }),
-    ]);
-
-    // One rule for every flight read path — see services/flightAirportFacts.ts.
-    // The `durationMinutes` it attaches OVERRIDES the raw `duration_minutes`
-    // column carried in by the spread, so no client ever sees the raw NULL a
-    // LEGACY_FAKE_UTC pair stores (forgejo#45). A null here still means
-    // "no duration" (#106A: a DATE_ONLY row's 12:00 is a placeholder, not a
-    // clock) and the display layer draws its labelled estimate — never a 0.
-    const enrichedFlights = await enrichFlightsWithAirportFacts(flights);
-
-    res.json({
-      flights: enrichedFlights,
-      total,
-      limit: take ?? total,
-      offset: query.offset,
-      all,
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+// Get flights with filters. The handler lives in ./flights/list.ts: this file
+// is frozen at its size in scripts/file-size-baseline.json and may only shrink.
+router.get("/", flightListHandler);
 
 // Get flights as GeoJSON
 router.get("/geo", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -607,7 +547,13 @@ router.get("/geo", async (req: AuthRequest, res: Response, next: NextFunction) =
       tags: tagsArray,
       limit: Math.min(parsedQuery.limit ?? 100, 500),
     };
-    const { where, noResults } = buildFlightWhere(query, userId);
+    // Same month-without-year case the list handler resolves; see
+    // `departureYearSpan`. Costs one aggregate, and only when asked for.
+    const yearSpan =
+      query.month !== undefined && query.year === undefined
+        ? await departureYearSpan(userId)
+        : null;
+    const { where, noResults } = buildFlightWhere(query, userId, { yearSpan });
 
     if (noResults) {
       return res.json({

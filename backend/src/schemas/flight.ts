@@ -403,8 +403,93 @@ export const updateFlightSchema = partialForUpdate(baseFlightSchema)
     message: "At least one field must be provided for update",
   });
 
+/**
+ * The eight values of `Flight.specialType`, plus the two answers the logbook's
+ * filter asks that are not a type at all: everything WITHOUT a type
+ * (`standard`) and everything WITH one (`special`).
+ */
+export const SPECIAL_FLIGHT_TYPES = [
+  "sightseeing",
+  "eclipse",
+  "rocket_launch",
+  "zerog",
+  "aurora",
+  "training",
+  "ferry",
+  "test",
+] as const;
+
+export const SPECIAL_TYPE_FILTER_NONE = "standard";
+export const SPECIAL_TYPE_FILTER_ANY = "special";
+
+/** The trip filter's two non-id answers: assigned to any trip, or to none. */
+export const TRIP_FILTER_ANY = "with";
+export const TRIP_FILTER_NONE = "without";
+
+/**
+ * What `GET /flights` can be ordered by.
+ *
+ * A whitelist, not a column name off the wire: `orderBy` reaches Prisma, and
+ * a caller-chosen field would be a way to order by — and thereby probe —
+ * columns the response never shows.
+ *
+ * `distance` is deliberately absent. The logbook draws a distance per row,
+ * but it is a great-circle figure computed from the two ends; the only stored
+ * distance is `routeDistance`, which is null on every flight without a tracked
+ * route. Offering a sort that silently ranks by a mostly-empty column would be
+ * a worse answer than not offering one.
+ */
+export const FLIGHT_SORT_FIELDS = [
+  "departureTime",
+  "airline",
+  "status",
+  "duration",
+  "price",
+  "route",
+] as const;
+export type FlightSortField = (typeof FLIGHT_SORT_FIELDS)[number];
+
 export const flightQuerySchema = z.object({
   airline: z.union([z.string(), z.array(z.string())]).optional(),
+  /**
+   * Exact match on the `airline` column, which `airline` above is NOT: that
+   * one is a `contains`, so picking "LOT" from a list of carriers would also
+   * return the rows spelled "LOT Polish Airlines". Both spellings really occur
+   * — they are two entries in the alias table of `shared/airlineNormalize.ts`
+   * — so the facet list needs a filter that selects exactly the row group it
+   * counted.
+   */
+  airlineExact: z.string().max(200).optional(),
+  /**
+   * Free text over the columns the logbook row actually shows: flight number,
+   * carrier name and codes, both airport codes and both airport names. OR'ed,
+   * case-insensitive.
+   *
+   * It exists because the page had no server-side search and therefore held
+   * every flight in the browser to run one (`FlightsTablePage.tsx`, the
+   * `limit=500` loop the beta audit of 2026-09-20 measured).
+   */
+  q: z.string().trim().min(1).max(100).optional(),
+  /** A trip id, or `with` / `without` for "assigned to any trip" / "to none". */
+  tripId: z
+    .union([z.literal(TRIP_FILTER_ANY), z.literal(TRIP_FILTER_NONE), z.string().uuid()])
+    .optional(),
+  specialType: z
+    .enum([...SPECIAL_FLIGHT_TYPES, SPECIAL_TYPE_FILTER_NONE, SPECIAL_TYPE_FILTER_ANY])
+    .optional(),
+  /**
+   * Calendar year and month of the departure, in UTC.
+   *
+   * UTC, and not the reader's clock, on purpose: the browser used to bucket
+   * these with `new Date(...).getFullYear()`, so a flight leaving at 23:30 UTC
+   * on 31 December fell into a different year depending on who was looking.
+   * `fromDate`/`toDate` have always been UTC instants; these two are the same
+   * axis, expressed the way the filter bar asks the question.
+   */
+  year: z.coerce.number().int().min(1900).max(2999).optional(),
+  month: z.coerce.number().int().min(1).max(12).optional(),
+  sort: z.enum(FLIGHT_SORT_FIELDS).default("departureTime"),
+  order: z.enum(["asc", "desc"]).default("desc"),
   flightNumber: z.string().optional(),
   departureAirport: z.string().optional(),
   arrivalAirport: z.string().optional(),

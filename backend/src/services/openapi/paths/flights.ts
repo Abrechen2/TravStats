@@ -7,6 +7,7 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { errorContent, flightCreateInput, flightUpdateInput, flightResponse } from "./shared";
 import { documentIdsBodySchema } from "../../../schemas/document";
+import { FLIGHT_SORT_FIELDS } from "../../../schemas/flight";
 
 registry.registerPath({
   method: "get",
@@ -14,14 +15,50 @@ registry.registerPath({
   summary: "List flights",
   description:
     "Returns the authenticated user's flights, newest departure first. " +
-    "Pagination via `limit` (default 50, max 500) and `offset`.",
+    "Pagination via `limit` (default 100, max 500) and `offset`; `total` is " +
+    "the size of the FILTERED set, so a client can page without holding the " +
+    "logbook. Every filter below narrows both.",
   tags: ["Flights"],
   request: {
     query: z.object({
       limit: z.coerce.number().int().min(1).max(500).optional(),
       offset: z.coerce.number().int().min(0).optional(),
       status: z.string().optional().describe("Filter to a single flight status"),
-      year: z.coerce.number().int().optional(),
+      year: z.coerce.number().int().optional().describe("Calendar year of the departure, in UTC"),
+      month: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(12)
+        .optional()
+        .describe("Calendar month of the departure (1-12), in UTC. Combinable with `year`."),
+      q: z
+        .string()
+        .optional()
+        .describe(
+          "Free text, case-insensitive, OR'ed over flight number, airline name " +
+            "and codes, both airport codes and both airport names."
+        ),
+      airline: z.string().optional().describe("Substring match on the airline name"),
+      airlineExact: z
+        .string()
+        .optional()
+        .describe("Exact airline name, as `/flights/facets` reports it"),
+      tripId: z
+        .string()
+        .optional()
+        .describe("A trip id, or `with` / `without` for any trip / no trip"),
+      specialType: z
+        .string()
+        .optional()
+        .describe(
+          "One of the eight special-flight types, or `standard` (no type) / `special` (any type)"
+        ),
+      sort: z
+        .enum(FLIGHT_SORT_FIELDS)
+        .optional()
+        .describe("Sort key; every key carries a tie-breaker, so the order is total"),
+      order: z.enum(["asc", "desc"]).optional(),
     }),
   },
   responses: {
