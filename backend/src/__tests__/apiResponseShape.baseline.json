@@ -91,6 +91,7 @@
     "airlines.ts",
     "backup.ts",
     "cruises.ts",
+    "cruises/facets.ts",
     "cruises/list.ts",
     "cruises/routeOverride.ts",
     "currencies.ts",

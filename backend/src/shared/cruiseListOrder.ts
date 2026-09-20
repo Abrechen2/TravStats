@@ -138,9 +138,15 @@ export function compareCruises(
   return a.id.localeCompare(b.id);
 }
 
-/** The calendar year and month of a sailing's start, or null when undated. */
-export function cruiseStartPeriod(row: CruiseOrderRow): { year: number; month: number } | null {
-  if (!row.startDate) return null;
+/**
+ * The calendar year and month of a sailing's start, or null when undated.
+ *
+ * Takes the date rather than a row, because the facet endpoint asks the same
+ * question of a different projection and the answer must not depend on which
+ * one is holding it.
+ */
+export function cruiseStartPeriod(startDate: Date | null): { year: number; month: number } | null {
+  if (!startDate) return null;
   // UTC, because `startDate` is a calendar DAY carried at UTC midnight, not an
   // instant. `CruiseRow` says the same where it formats the cell — "the value
   // is a calendar day, not an instant, and the viewer's own zone would move a
@@ -148,5 +154,5 @@ export function cruiseStartPeriod(row: CruiseOrderRow): { year: number; month: n
   // value unchanged. Reading it on the embarkation port's clock would be the
   // one thing that breaks all three: midnight UTC in Los Angeles is 16:00 the
   // PREVIOUS day.
-  return { year: row.startDate.getUTCFullYear(), month: row.startDate.getUTCMonth() + 1 };
+  return { year: startDate.getUTCFullYear(), month: startDate.getUTCMonth() + 1 };
 }

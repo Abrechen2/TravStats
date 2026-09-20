@@ -168,13 +168,13 @@ export async function loadCruiseOrderRows(
  * list and the facet two chances to disagree about the same question. The
  * rows are already in hand for the ordering, so this costs nothing.
  */
-export function applyCruisePeriod(
-  rows: CruiseOrderRow[],
+export function applyCruisePeriod<T extends { startDate: Date | null }>(
+  rows: T[],
   period: { year?: number; month?: number }
-): CruiseOrderRow[] {
+): T[] {
   if (period.year === undefined && period.month === undefined) return rows;
   return rows.filter((row) => {
-    const started = cruiseStartPeriod(row);
+    const started = cruiseStartPeriod(row.startDate);
     // An undated cruise belongs to no year. It is left out rather than
     // bucketed, like an undated flight.
     if (!started) return false;

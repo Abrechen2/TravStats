@@ -170,6 +170,59 @@ registry.registerPath({
   },
 });
 
+const facetOption = <T extends z.ZodTypeAny>(value: T) =>
+  z.object({ value, count: z.number().int() });
+
+registry.registerPath({
+  method: "get",
+  path: "/cruises/facets",
+  summary: "Filter options and headline figures for a cruise list",
+  description:
+    "The year and line option lists for the current filter set, each counted " +
+    "under every OTHER filter but not its own (standard faceting), plus the " +
+    "summary figures for the filtered set with ALL filters applied. Takes the " +
+    "same query parameters as `GET /cruises`; `limit`, `offset`, `sort` and " +
+    "`order` are ignored. Lets a client page through the list without holding it.",
+  tags: ["Cruises"],
+  request: {
+    query: z.object({
+      q: z.string().optional(),
+      year: z.coerce.number().int().min(1900).max(2200).optional(),
+      month: z.coerce.number().int().min(1).max(12).optional(),
+      status: z.enum(CRUISE_QUERY_STATUSES).optional(),
+      cruiseLine: z.string().optional(),
+      shipLine: z.string().optional(),
+      region: z.string().optional(),
+      tripId: z.string().uuid().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Facet option lists and summary figures",
+      content: {
+        "application/json": {
+          schema: envelope(
+            z.object({
+              years: z.array(facetOption(z.number().int())),
+              lines: z.array(facetOption(z.string())),
+              summary: z.object({
+                cruises: z.number().int(),
+                portCalls: z
+                  .number()
+                  .int()
+                  .describe("How many times a ship tied up; sea days excluded"),
+                seaDays: z.number().int(),
+                lines: z.number().int().describe("Distinct lines, a cruise's own or its ship's"),
+              }),
+            })
+          ),
+        },
+      },
+    },
+    401: { description: "Missing or invalid token", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/cruises/{id}",

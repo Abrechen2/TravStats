@@ -10,6 +10,7 @@ import { assertReferencesOwned } from "../utils/ownedReferences";
 import { createCruiseSchema, updateCruiseSchema } from "../schemas/cruise";
 import { CRUISE_INCLUDE } from "./cruises/include";
 import { cruiseListHandler } from "./cruises/list";
+import { cruiseFacetsHandler } from "./cruises/facets";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { buildEffectivePortSequence } from "../shared/cruise/portSequence";
 import { buildLegRouteOverrideMap, portLegRouteKey } from "../shared/cruise/legRouteKey";
@@ -156,6 +157,10 @@ const requireUser = (req: AuthRequest): string => {
 // One page of the logbook. The handler lives in ./cruises/list.ts, with the
 // filters and the ordering it cannot push into a Prisma `orderBy`.
 router.get("/", cruiseListHandler);
+
+// The option lists and figures drawn AROUND that page. Before "/:id", which
+// would otherwise read "facets" as a cruise id.
+router.get("/facets", cruiseFacetsHandler);
 
 router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
