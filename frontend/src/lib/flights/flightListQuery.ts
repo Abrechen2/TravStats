@@ -1,6 +1,7 @@
 import type { FlightFilters } from "../../types";
 import type { SpecialTypeFilter } from "../../components/specialFlights/specialTypeMeta";
 import type { FlightStatusFilter } from "../../components/flightsTable/flightColumns";
+import { SEARCH_MAX_LENGTH } from "../../components/table/ListFilterBar";
 
 /**
  * The logbook's filter bar, as query parameters.
@@ -39,7 +40,12 @@ export interface FlightListSortState {
 /** Everything but the page: what the facet endpoint takes. */
 export function buildFlightFilterQuery(state: FlightListFilterState): FlightFilters {
   const query: FlightFilters = {};
-  const search = state.search.trim();
+  // Truncated, not rejected. The server caps `q` at 100 characters and
+  // answers a longer one with a 400 — which the list page can only draw as
+  // "the flights could not be loaded", a broken-looking table under a search
+  // box the user was simply typing into. A shortened search still finds
+  // things; an error finds nothing and blames the wrong thing.
+  const search = state.search.trim().slice(0, SEARCH_MAX_LENGTH);
   if (search) query.q = search;
   if (state.status !== "all") query.status = state.status;
   if (state.year !== "all") query.year = Number(state.year);

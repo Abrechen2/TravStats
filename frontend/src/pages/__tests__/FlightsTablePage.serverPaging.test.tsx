@@ -118,7 +118,10 @@ const lastQuery = (): Record<string, unknown> =>
 describe("FlightsTablePage — server-side paging", () => {
   beforeEach(() => {
     localStorage.clear();
-    getAll.mockReset().mockResolvedValue(page(50));
+    getAll.mockReset().mockImplementation(async (filters: { q?: string }) =>
+      // A search nothing matches answers with an empty page, like the server.
+      filters?.q ? { flights: [], total: 0, limit: 50, offset: 0 } : page(50)
+    );
     getFacets.mockReset().mockResolvedValue(FACETS);
     tripsGetAll.mockReset().mockResolvedValue([]);
   });
@@ -206,6 +209,25 @@ describe("FlightsTablePage — server-side paging", () => {
     await waitFor(() => expect(getAll).toHaveBeenCalled());
     // "174 treffen zu" over 50 rows, and "1–50 von 174" underneath.
     await screen.findByText(/174/);
+  });
+
+  it("caps a pasted search instead of turning the table red", async () => {
+    render(<FlightsTablePage />);
+    await waitFor(() => expect(getAll).toHaveBeenCalled());
+
+    const box = screen.getByPlaceholderText("flights:filter.searchPlaceholder");
+    expect(box).toHaveAttribute("maxlength", "100");
+
+    // jsdom's change event ignores maxLength, which is the point: the guard
+    // that matters is the truncation on the way to the query.
+    fireEvent.change(box, { target: { value: "z".repeat(150) } });
+    await waitFor(() => expect(lastQuery().q).toBe("z".repeat(100)));
+
+    // And the page reads as "nothing matched", not as "this is broken".
+    // "Nichts gefunden" + a way back out, which is what an active filter's
+    // empty state says — not the genuinely-empty headline, and not an error.
+    await waitFor(() => expect(screen.getByText("common:filters.noMatch")).toBeInTheDocument());
+    expect(screen.queryByText("flights:table.loadError")).toBeNull();
   });
 
   it("does not ask the facet endpoint again just because the page turned", async () => {

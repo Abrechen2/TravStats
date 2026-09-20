@@ -69,6 +69,23 @@ describe("buildFlightFilterQuery", () => {
   it("treats a whitespace-only search as no search", () => {
     expect(buildFlightFilterQuery({ ...none, search: "   " })).toEqual({});
   });
+
+  /**
+   * The server caps `q` at 100 characters and answers a longer one with a
+   * 400 — which the list page can only draw as "the flights could not be
+   * loaded". A pasted paragraph would turn a working table red and blank the
+   * facets beside it. Truncating finds fewer things; erroring finds nothing
+   * and blames the wrong thing.
+   */
+  it("truncates a search past what the server accepts, instead of sending a 400", () => {
+    const query = buildFlightFilterQuery({ ...none, search: "x".repeat(150) });
+    expect(query.q).toHaveLength(100);
+  });
+
+  it("truncates after trimming, so padding does not eat the search", () => {
+    const query = buildFlightFilterQuery({ ...none, search: `   ${"y".repeat(100)}   ` });
+    expect(query.q).toBe("y".repeat(100));
+  });
 });
 
 describe("buildFlightListQuery", () => {
