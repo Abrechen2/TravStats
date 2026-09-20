@@ -65,9 +65,14 @@ type PointDatum = TripPointDatum;
  * where the overlay draws above the basemap and interleaving would only give
  * MapLibre's own layers a chance to paint over the trip.
  *
- * No `position`: MapboxOverlay is a render-pipeline integration, not a corner
- * widget, and mounting it as one confuses its lifecycle (GlobeView says the
- * same). TripMap passed `{ position: "top-left" }` until this fix.
+ * No `position`, and that part is cosmetic rather than load-bearing — this
+ * comment used to claim otherwise. Measured in `@deck.gl/mapbox`:
+ * `MapboxOverlay.getDefaultPosition()` returns `"top-left"`, and MapLibre's
+ * `addControl` falls back to it when no position is given, so passing
+ * `{ position: "top-left" }` and passing nothing are the same call. It is
+ * omitted because the overlay is a render pipeline rather than a corner
+ * widget and saying so is clearer, NOT because passing it broke anything.
+ * The four sibling overlays still pass it, correctly.
  *
  * The caller REMOUNTS this control (a `key` on the projection) rather than
  * updating it, because the constructor — which runs inside `useControl`, i.e.

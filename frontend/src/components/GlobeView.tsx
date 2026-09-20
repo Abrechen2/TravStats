@@ -146,9 +146,12 @@ function DeckGLOverlay({ layers, onHover }: DeckOverlayProps): null {
   // strip floating beside the globe whenever the camera is rotated.
   //
   // No `position` here: MapboxOverlay isn't a corner control, it's a
-  // render-pipeline integration. Passing a position option causes
-  // react-map-gl to mount it as a corner widget, which can confuse the
-  // overlay's lifecycle.
+  // render-pipeline integration, so naming a corner for it reads as a
+  // category error. It is NOT a lifecycle fix, which this comment used to
+  // imply — measured in @deck.gl/mapbox: `getDefaultPosition()` returns
+  // "top-left" and MapLibre's `addControl` falls back to it, so omitting the
+  // option and passing `{position: "top-left"}` are the same call. The flat
+  // map, the cruise map and the lodging mini-map all pass it and are fine.
   //
   // No `getTooltip` either: GlobeView renders its own rich React-state
   // tooltip via `onAirportHover` / `onPortHover` / `onArcHover` /

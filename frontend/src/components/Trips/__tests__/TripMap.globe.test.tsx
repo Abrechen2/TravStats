@@ -12,12 +12,8 @@ import type { Trip } from "../../../types";
  *
  *   - without `interleaved: true` the overlay does not share MapLibre's WebGL
  *     context, so it keeps its own mercator matrices and the data detaches
- *     into a flat strip beside the sphere;
- *   - `MapboxOverlay` is a render-pipeline integration, not a corner widget,
- *     so passing `position` to `useControl` mounts it as one and confuses its
- *     lifecycle. TripMap passed `{ position: "top-left" }`.
- *
- * And the third: `MapboxOverlay`'s constructor runs inside `useControl`,
+ *     into a flat strip beside the sphere.
+ * And the second: `MapboxOverlay`'s constructor runs inside `useControl`,
  * which fires BEFORE any projection change lands. An overlay built while
  * MapLibre is still in mercator caches that and never re-detects globe — so
  * the overlay has to be rebuilt AFTER `setProjection({type:"globe"})`, which
@@ -34,7 +30,6 @@ interface CapturedOverlay {
    *  through `setProps` on every render. */
   overlay: { props: { onClick?: (info: unknown) => void } };
   props: { layers: Layer[]; interleaved?: boolean };
-  controlOptions: unknown;
   /** How many `setProjection` calls had already happened when this overlay
    *  was constructed — the ordering the whole gate exists for. */
   projectionCallsBefore: number;
@@ -88,18 +83,10 @@ vi.mock("react-map-gl/maplibre", async () => {
     return ReactMod.createElement("div", { "data-testid": "fake-map" }, props.children);
   });
 
-  // react-map-gl's real contract: the factory runs once per mounted control,
-  // and the second argument is the control's mount options. Both matter here.
-  function useControl<T>(factory: () => T, options?: unknown): T {
+  // react-map-gl's real contract: the factory runs once per mounted control.
+  function useControl<T>(factory: () => T): T {
     const ref = ReactMod.useRef<T | null>(null);
-    const seen = ReactMod.useRef(false);
-    if (ref.current === null) {
-      ref.current = factory();
-      if (!seen.current) {
-        seen.current = true;
-        captured[captured.length - 1].controlOptions = options;
-      }
-    }
+    if (ref.current === null) ref.current = factory();
     return ref.current;
   }
 
@@ -114,7 +101,6 @@ vi.mock("@deck.gl/mapbox", () => {
       captured.push({
         overlay: this,
         props,
-        controlOptions: undefined,
         projectionCallsBefore: mapCalls.setProjection.length,
       });
     }
@@ -174,16 +160,6 @@ async function toggleToGlobe(): Promise<void> {
 }
 
 describe("TripMap: the globe toggle mounts the overlay the way the globe needs it", () => {
-  it("never mounts the overlay as a corner control", async () => {
-    render(<TripMap trip={trip} />);
-    await waitFor(() => expect(captured.length).toBeGreaterThan(0));
-    await toggleToGlobe();
-    await waitFor(() => expect(captured.length).toBeGreaterThan(1));
-    for (const overlay of captured) {
-      expect(overlay.controlOptions, "MapboxOverlay is a pipeline, not a widget").toBeUndefined();
-    }
-  });
-
   it("interleaves with MapLibre's context in globe mode, and only there", async () => {
     render(<TripMap trip={trip} />);
     await waitFor(() => expect(captured.length).toBeGreaterThan(0));
