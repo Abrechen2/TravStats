@@ -478,13 +478,28 @@ export const flightQuerySchema = z.object({
     .enum([...SPECIAL_FLIGHT_TYPES, SPECIAL_TYPE_FILTER_NONE, SPECIAL_TYPE_FILTER_ANY])
     .optional(),
   /**
-   * Calendar year and month of the departure, in UTC.
+   * Calendar year and month of the departure, ON THE DEPARTURE AIRPORT'S
+   * CLOCK.
    *
-   * UTC, and not the reader's clock, on purpose: the browser used to bucket
-   * these with `new Date(...).getFullYear()`, so a flight leaving at 23:30 UTC
-   * on 31 December fell into a different year depending on who was looking.
-   * `fromDate`/`toDate` have always been UTC instants; these two are the same
-   * axis, expressed the way the filter bar asks the question.
+   * That is this project's one answer to "which day was that"
+   * (`airportCalendarDay`, forgejo#46, pinned by
+   * `stats.timeseriesLocalTime.test.ts`), and it is the answer the logbook
+   * cell next to this filter already gives: `FlightRow` formats the date with
+   * `flight.depTimezone`. So a departure from LAX at 18:00 on 31 December
+   * 2023 — 02:00Z on 1 January — is filed under 2023, month 12, exactly as
+   * the row prints it and exactly as `/stats` counts it.
+   *
+   * It is NOT the browser's clock, which is what the page used before the
+   * filter reached the server: `new Date(...).getFullYear()` put that flight
+   * in whichever year the READER happened to be standing in. And it is not
+   * UTC either, which is what the first server-side version of this filter
+   * shipped — same flight, wrong year, and disagreeing with the row beside it.
+   *
+   * `fromDate`/`toDate` remain UTC instants: they are a range on the time
+   * axis, not a question about a calendar. These two are the question the
+   * filter bar asks, so they are answered on the calendar the reader sees.
+   *
+   * Not a `where` clause — `routes/flights/departureLocalDay.ts` says why.
    */
   year: z.coerce.number().int().min(1900).max(2999).optional(),
   month: z.coerce.number().int().min(1).max(12).optional(),

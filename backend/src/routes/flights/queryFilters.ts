@@ -1,5 +1,5 @@
 import { Prisma } from "../../prisma";
-import { prisma } from "../../db";
+import { flightIdsInLocalPeriod } from "./departureLocalDay";
 import {
   SPECIAL_TYPE_FILTER_ANY,
   SPECIAL_TYPE_FILTER_NONE,
@@ -42,61 +42,7 @@ export const splitMultiValue = (value?: string | string[]) => {
     .filter(Boolean);
 };
 
-/**
- * The first and last calendar year (UTC) the account's flights fall into.
- *
- * Needed for one case only: a month filter that names no year — "every March
- * I have ever flown". Prisma cannot express `EXTRACT(MONTH FROM …)`, so that
- * question becomes one date range per year, and the range list has to be
- * bounded by something real rather than by a guessed century. Measured on the
- * owner's account: 12 years, so twelve ranges.
- *
- * `null` when the account holds no dated flight at all — then no month can
- * match, which the caller turns into an empty result rather than a silently
- * dropped filter.
- */
-export const departureYearSpan = async (
-  userId: string
-): Promise<{ min: number; max: number } | null> => {
-  const bounds = await prisma.flight.aggregate({
-    where: { userId, departureTime: { not: null } },
-    _min: { departureTime: true },
-    _max: { departureTime: true },
-  });
-  const min = bounds._min.departureTime;
-  const max = bounds._max.departureTime;
-  if (!min || !max) return null;
-  return { min: min.getUTCFullYear(), max: max.getUTCFullYear() };
-};
-
-/**
- * The year span a where-clause needs, or `null` when it needs none.
- *
- * Only a month WITHOUT a year costs the extra aggregate; every other query
- * skips it. Three call sites ask the same question, so they ask it here.
- */
-export const resolveYearSpan = async (
-  query: Pick<FlightQueryInput, "year" | "month">,
-  userId: string
-): Promise<{ min: number; max: number } | null> =>
-  query.month !== undefined && query.year === undefined ? departureYearSpan(userId) : null;
-
-/** Half-open UTC range for a calendar year, or for one month inside it. */
-const utcRange = (year: number, month?: number): Prisma.DateTimeFilter =>
-  month === undefined
-    ? { gte: new Date(Date.UTC(year, 0, 1)), lt: new Date(Date.UTC(year + 1, 0, 1)) }
-    : { gte: new Date(Date.UTC(year, month - 1, 1)), lt: new Date(Date.UTC(year, month, 1)) };
-
-export interface FlightWhereOptions {
-  /** Only consulted for a `month` without a `year` — see `departureYearSpan`. */
-  yearSpan?: { min: number; max: number } | null;
-}
-
-export const buildFlightWhere = (
-  query: FlightQueryInput & { tags?: string[] },
-  userId: string,
-  options: FlightWhereOptions = {}
-) => {
+export const buildFlightWhere = (query: FlightQueryInput & { tags?: string[] }, userId: string) => {
   const andConditions: Prisma.FlightWhereInput[] = [{ userId }];
   let noResults = false;
 
@@ -208,21 +154,9 @@ export const buildFlightWhere = (
     andConditions.push({ specialType: query.specialType });
   }
 
-  // Calendar year / month of the departure, in UTC (see the schema).
-  if (query.year !== undefined) {
-    andConditions.push({ departureTime: utcRange(query.year, query.month) });
-  } else if (query.month !== undefined) {
-    const span = options.yearSpan;
-    if (!span) {
-      noResults = true;
-    } else {
-      const years: number[] = [];
-      for (let y = span.min; y <= span.max; y += 1) years.push(y);
-      andConditions.push({
-        OR: years.map((y) => ({ departureTime: utcRange(y, query.month) })),
-      });
-    }
-  }
+  // `year` and `month` are deliberately NOT here. They are read on the
+  // departure airport's clock, which is not a column — see
+  // `resolveFlightWhere` below and `departureLocalDay.ts`.
 
   // Date range
   if (query.fromDate || query.toDate) {
@@ -236,4 +170,34 @@ export const buildFlightWhere = (
     where: { AND: andConditions },
     noResults,
   };
+};
+
+/**
+ * `buildFlightWhere`, plus the one filter that cannot be a where-clause.
+ *
+ * `year` and `month` name a day on the DEPARTURE AIRPORT'S calendar, which is
+ * this project's one answer to "which day was that" (`airportCalendarDay`,
+ * forgejo#46) and the one the table cell beside the filter already draws. It
+ * is not a column and cannot be expressed in a Prisma `where`, so the ids are
+ * resolved first and handed to the page query. `departureLocalDay.ts` says
+ * why this is not a SQL expression.
+ *
+ * Every caller that pages or counts flights goes through here rather than
+ * through `buildFlightWhere` directly, so the list, the facets and the map
+ * cannot answer the question three ways.
+ */
+export const resolveFlightWhere = async (
+  query: FlightQueryInput & { tags?: string[] },
+  userId: string
+): Promise<{ where: Prisma.FlightWhereInput; noResults: boolean }> => {
+  const base = buildFlightWhere(query, userId);
+  if (base.noResults) return base;
+  if (query.year === undefined && query.month === undefined) return base;
+
+  const ids = await flightIdsInLocalPeriod(base.where, { year: query.year, month: query.month });
+  // An empty id list is not `{ id: { in: [] } }` — that is a valid query, but
+  // saying so outright spares the caller a round trip and matches the
+  // `noResults` contract the status filter already uses.
+  if (ids.length === 0) return { where: base.where, noResults: true };
+  return { where: { AND: [base.where, { id: { in: ids } }] }, noResults: false };
 };

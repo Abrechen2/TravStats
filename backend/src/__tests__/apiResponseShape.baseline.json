@@ -34,6 +34,7 @@
     "evidence.ts",
     "flightLookup.ts",
     "flights.ts",
+    "flights/departureLocalDay.ts",
     "flights/facets.ts",
     "flights/list.ts",
     "flights/listOrder.ts",

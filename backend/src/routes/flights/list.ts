@@ -5,12 +5,7 @@ import type { AuthRequest } from "../../middleware/auth";
 import { flightQuerySchema } from "../../schemas/flight";
 import { enrichFlightsWithAirportFacts } from "../../services/flightAirportFacts";
 import { buildFlightOrderBy } from "./listOrder";
-import {
-  buildFlightWhere,
-  normalizeQueryParams,
-  resolveYearSpan,
-  splitMultiValue,
-} from "./queryFilters";
+import { normalizeQueryParams, resolveFlightWhere, splitMultiValue } from "./queryFilters";
 
 /**
  * `GET /flights` — one page of the logbook.
@@ -45,8 +40,7 @@ export const flightListHandler = async (
       offset: all ? 0 : parsedQuery.offset,
     };
     const take = all ? undefined : cappedLimit;
-    const yearSpan = await resolveYearSpan(query, userId);
-    const { where, noResults } = buildFlightWhere(query, userId, { yearSpan });
+    const { where, noResults } = await resolveFlightWhere(query, userId);
 
     if (noResults) {
       res.json({

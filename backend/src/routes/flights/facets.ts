@@ -5,12 +5,8 @@ import type { AuthRequest } from "../../middleware/auth";
 import { flightQuerySchema } from "../../schemas/flight";
 import { groupAirlines } from "../../shared/airlineNormalize";
 import { airlineResolvers } from "../../utils/airlineNormalize";
-import {
-  buildFlightWhere,
-  departureYearSpan,
-  normalizeQueryParams,
-  splitMultiValue,
-} from "./queryFilters";
+import { localDepartureYearCounts } from "./departureLocalDay";
+import { normalizeQueryParams, resolveFlightWhere, splitMultiValue } from "./queryFilters";
 
 /**
  * `GET /flights/facets` — the option lists and the headline figures the
@@ -75,28 +71,20 @@ export const flightFacetsHandler = async (
       tags: splitMultiValue(parsed.tags as string | string[] | undefined),
     };
 
-    // The year facet's own clause always drops `year`, so a month there is
-    // always a month without a year — resolve the span whenever one is named.
-    const yearSpan = query.month !== undefined ? await departureYearSpan(userId) : null;
     const build = (overrides: Partial<typeof query>) =>
-      buildFlightWhere({ ...query, ...overrides }, userId, { yearSpan });
+      resolveFlightWhere({ ...query, ...overrides }, userId);
 
-    const all = build({});
-    const withoutYear = build({ year: undefined });
-    const withoutAirlineFilter = build({ airline: undefined, airlineExact: undefined });
+    const [all, withoutYear, withoutAirlineFilter] = await Promise.all([
+      build({}),
+      build({ year: undefined }),
+      build({ airline: undefined, airlineExact: undefined }),
+    ]);
 
-    const [departures, airlineRows, flights, identityRows, depCodes, arrCodes] = await Promise.all([
-      // The year facet reads ONE column. Prisma cannot express
-      // `EXTRACT(YEAR FROM …)`, so there is no `groupBy` for this and the
-      // years are folded here. The read is bounded by the account's own
-      // flight count — the same bound the page used to pay for every one of
-      // its ~96 columns, over HTTP, on every load.
-      withoutYear.noResults
-        ? Promise.resolve([])
-        : prisma.flight.findMany({
-            where: withoutYear.where,
-            select: { departureTime: true },
-          }),
+    const [years, airlineRows, flights, identityRows, depCodes, arrCodes] = await Promise.all([
+      // Counted on the DEPARTURE AIRPORT'S calendar, like the date the row
+      // beside the filter draws and like `/stats` — see `departureLocalDay.ts`
+      // for why that is not a `groupBy`.
+      withoutYear.noResults ? Promise.resolve([]) : localDepartureYearCounts(withoutYear.where),
       withoutAirlineFilter.noResults
         ? Promise.resolve([])
         : prisma.flight.groupBy({
@@ -119,16 +107,6 @@ export const flightFacetsHandler = async (
         ? Promise.resolve([])
         : prisma.flight.groupBy({ by: ["arrIata"], where: all.where }),
     ]);
-
-    const yearCounts = new Map<number, number>();
-    for (const row of departures) {
-      if (!row.departureTime) continue;
-      const year = row.departureTime.getUTCFullYear();
-      yearCounts.set(year, (yearCounts.get(year) ?? 0) + 1);
-    }
-    const years = [...yearCounts.entries()]
-      .map(([value, count]) => ({ value, count }))
-      .sort((a, b) => b.value - a.value);
 
     const airlines = airlineRows
       // A row with no carrier is not an option — it would draw as a blank

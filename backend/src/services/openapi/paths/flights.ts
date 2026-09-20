@@ -24,14 +24,21 @@ registry.registerPath({
       limit: z.coerce.number().int().min(1).max(500).optional(),
       offset: z.coerce.number().int().min(0).optional(),
       status: z.string().optional().describe("Filter to a single flight status"),
-      year: z.coerce.number().int().optional().describe("Calendar year of the departure, in UTC"),
+      year: z.coerce
+        .number()
+        .int()
+        .optional()
+        .describe("Calendar year of the departure, on the departure airport's clock"),
       month: z.coerce
         .number()
         .int()
         .min(1)
         .max(12)
         .optional()
-        .describe("Calendar month of the departure (1-12), in UTC. Combinable with `year`."),
+        .describe(
+          "Calendar month of the departure (1-12), on the departure airport's " +
+            "clock. Combinable with `year`."
+        ),
       q: z
         .string()
         .optional()

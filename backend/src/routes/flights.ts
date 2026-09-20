@@ -3,12 +3,7 @@ import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { rejectDemoQuota } from "../middleware/demoGuard";
-import {
-  buildFlightWhere,
-  normalizeQueryParams,
-  resolveYearSpan,
-  splitMultiValue,
-} from "./flights/queryFilters";
+import { normalizeQueryParams, resolveFlightWhere, splitMultiValue } from "./flights/queryFilters";
 import { flightListHandler } from "./flights/list";
 import { flightFacetsHandler } from "./flights/facets";
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from "../schemas/flight";
@@ -551,8 +546,7 @@ router.get("/geo", async (req: AuthRequest, res: Response, next: NextFunction) =
       tags: tagsArray,
       limit: Math.min(parsedQuery.limit ?? 100, 500),
     };
-    const yearSpan = await resolveYearSpan(query, userId);
-    const { where, noResults } = buildFlightWhere(query, userId, { yearSpan });
+    const { where, noResults } = await resolveFlightWhere(query, userId);
 
     if (noResults) {
       return res.json({
