@@ -176,7 +176,16 @@ export function LodgingBody({
       <Place city={data.city} country={resolveCountryCode(data.country)} locale={locale} />
       <Hero color={rgbCss(LODGING_COLOR)}>{t("lodging:field.staysCount", { count: stays })}</Hero>
       <Grid>
-        {stay.dateRange && <Row label={t("map:globe.pinned.stay")} value={stay.dateRange} />}
+        {/* An upcoming booking is labelled as one: the hero counts only stays
+            already slept (shared/lodgingCounting.ts), so presenting a future
+            date under that count as "the stay" contradicted the number above
+            it. */}
+        {stay.dateRange && (
+          <Row
+            label={t(stay.upcoming ? "map:globe.pinned.upcomingStay" : "map:globe.pinned.stay")}
+            value={stay.dateRange}
+          />
+        )}
         {/* Nights are omitted rather than shown as 0 when nothing is recorded:
             a stay whose span is unknown and a same-day stay both come to 0,
             and only one of those means "no nights" (shared/lodgingTiming.ts). */}

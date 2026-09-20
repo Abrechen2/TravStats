@@ -11,6 +11,7 @@ import type { Cruise } from "../../../types/cruise";
 import { isCountableCruise } from "../../../shared/cruiseCounting";
 import { isCountableFlight } from "../../../shared/flightCounting";
 import { resolveStayTiming } from "../../../shared/lodgingTiming";
+import { classifyStay } from "../../../shared/lodgingCounting";
 import { formatAmount } from "../../../lib/units";
 import { formatDate as formatUserDate } from "../../../lib/displayFormat";
 import type { LodgingCardStay } from "./pinnedTypes";
@@ -229,57 +230,100 @@ export function getCruiseStats(cruises: Cruise[], cruiseId: string): CruiseCardS
 // ─── Lodging: which stay ──────────────────────────────────────────
 
 export interface LatestStayFacts {
-  /** "01.05.2024 – 04.05.2024", or null when no date is recorded. */
+  /** "01.05.2024 – 04.05.2024", or null when no real day is recorded. */
   dateRange: string | null;
-  /** Formatted with its own currency, or null when no total is recorded. */
+  /** Formatted with its own currency. Null whenever `dateRange` is, because a
+   *  price with nothing naming the stay it belongs to cannot be placed. */
   price: string | null;
+  /** True when the named stay has NOT happened yet — the card says so. */
+  upcoming: boolean;
 }
 
 /**
- * The most recent DATED stay, falling back to the last row.
+ * Which stay the card is about.
  *
- * The card shows one visit and has to pick it once: the dates and the price
- * must name the same stay, or the reader is looking at two different nights.
- * The span itself is `shared/lodgingTiming.ts`'s question, not this file's —
- * a stay can be dated to the day, the month, the year or not at all, and only
- * that module knows which of those is safe to print.
+ * The most recent one already slept, and only if there is none, the NEAREST
+ * booking ahead — flagged as upcoming, never presented as a visit.
+ *
+ * It used to be "the maximum ISO date", which meant a booking for next month
+ * beat every night already spent here. The hero counts only stays whose
+ * check-out is past (`shared/lodgingCounting.ts`, owner rule 2026-08-15), so
+ * the card read "2 Aufenthalte" above a stay that count deliberately excludes.
+ * Whether a stay has happened is that module's question, asked rather than
+ * re-decided here.
+ *
+ * The SPAN is a different module's question again: a stay can be dated to the
+ * day, the month, the year or not at all, and only `shared/lodgingTiming.ts`
+ * knows which of those is safe to print as a date. At anything but DAY
+ * precision the stored dates are placeholders, so there is no range — and with
+ * no range the price is withheld too, because a number under a lifetime nights
+ * figure with nothing naming its visit is a number the reader cannot place.
  */
 export function latestStayFacts(
   stays: ReadonlyArray<LodgingCardStay> | undefined,
-  locale: string
+  locale: string,
+  now?: Date
 ): LatestStayFacts {
-  if (!stays || stays.length === 0) return { dateRange: null, price: null };
-  const dated = stays.filter((s) => s.checkIn !== null || s.checkOut !== null);
-  const stay =
-    dated.length > 0
-      ? dated.reduce((best, s) =>
-          (s.checkIn ?? s.checkOut ?? "") > (best.checkIn ?? best.checkOut ?? "") ? s : best
-        )
-      : stays[stays.length - 1];
+  const none: LatestStayFacts = { dateRange: null, price: null, upcoming: false };
+  if (!stays || stays.length === 0) return none;
+
+  const asDate = (iso: string | null): Date | null => (iso ? new Date(iso) : null);
+  const key = (s: LodgingCardStay): string => s.checkIn ?? s.checkOut ?? "";
+  const classified = stays.map((s) => ({
+    stay: s,
+    state: classifyStay(
+      {
+        status: s.status ?? "confirmed",
+        checkIn: asDate(s.checkIn),
+        checkOut: asDate(s.checkOut),
+        datePrecision: s.datePrecision,
+        nights: s.nights,
+      },
+      now
+    ),
+  }));
+
+  const past = classified.filter((c) => c.state === "visited");
+  const ahead = classified.filter((c) => c.state === "planned");
+
+  let chosen: LodgingCardStay;
+  let upcoming: boolean;
+  if (past.length > 0) {
+    chosen = past.reduce((best, c) => (key(c.stay) > key(best.stay) ? c : best)).stay;
+    upcoming = false;
+  } else if (ahead.length > 0) {
+    // The NEAREST booking, not the furthest: "when am I next there" is the
+    // question a future-only hotel answers.
+    chosen = ahead.reduce((best, c) =>
+      key(c.stay) !== "" && (key(best.stay) === "" || key(c.stay) < key(best.stay)) ? c : best
+    ).stay;
+    upcoming = true;
+  } else {
+    // Every stay cancelled, or undated and unclassifiable: name none.
+    return none;
+  }
 
   const timing = resolveStayTiming({
-    checkIn: stay.checkIn ? new Date(stay.checkIn) : null,
-    checkOut: stay.checkOut ? new Date(stay.checkOut) : null,
-    datePrecision: stay.datePrecision,
-    nights: stay.nights,
+    checkIn: asDate(chosen.checkIn),
+    checkOut: asDate(chosen.checkOut),
+    datePrecision: chosen.datePrecision,
+    nights: chosen.nights,
   });
 
   const day = (iso: string): string => formatUserDate(iso) || iso.slice(0, 10);
-  // Only DAY precision names real days. At MONTH/YEAR the stored date carries
-  // a placeholder day, so printing it would invent a precision nobody has.
   const dateRange =
     timing.precision !== "DAY"
       ? null
-      : stay.checkIn && stay.checkOut
-        ? `${day(stay.checkIn)} – ${day(stay.checkOut)}`
-        : (stay.checkIn ?? stay.checkOut) !== null
-          ? day((stay.checkIn ?? stay.checkOut) as string)
+      : chosen.checkIn && chosen.checkOut
+        ? `${day(chosen.checkIn)} – ${day(chosen.checkOut)}`
+        : (chosen.checkIn ?? chosen.checkOut) !== null
+          ? day((chosen.checkIn ?? chosen.checkOut) as string)
           : null;
 
   const price =
-    stay.totalPrice != null
-      ? formatAmount(stay.totalPrice, stay.currency as never, { language: locale })
+    dateRange !== null && chosen.totalPrice != null
+      ? formatAmount(chosen.totalPrice, chosen.currency as never, { language: locale })
       : null;
 
-  return { dateRange, price };
+  return { dateRange, price, upcoming };
 }

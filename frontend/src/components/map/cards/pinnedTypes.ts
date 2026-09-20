@@ -122,6 +122,9 @@ export interface LodgingCardStay {
   nights: number | null;
   totalPrice: number | null;
   currency: string | null;
+  /** Fed to `shared/lodgingCounting.ts`, which decides whether this stay has
+   *  happened yet. Optional because a pin datum may arrive without it. */
+  status?: string;
 }
 
 /** A place (POI) — a structural subset of `Place`, for the same reason. */

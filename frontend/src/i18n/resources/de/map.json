@@ -247,7 +247,8 @@
       "price": "Preis",
       "openLodging": "Unterkunft öffnen",
       "openPlace": "Ort öffnen",
-      "stay": "Aufenthalt"
+      "stay": "Aufenthalt",
+      "upcomingStay": "Nächster Aufenthalt"
     },
     "timeSlider": {
       "title": "Zeitachse",
