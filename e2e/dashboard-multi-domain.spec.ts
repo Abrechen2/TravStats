@@ -37,9 +37,9 @@ test.describe("Multi-domain dashboard", () => {
   });
 
   // -------------------------------------------------------------------------
-  // 1. Default route lands on All tab (aria-selected="true") with overview mode
+  // 1. Default route lands on All tab (aria-selected="true") on its default mode
   // -------------------------------------------------------------------------
-  test("default lands on All tab with overview mode", async ({ page }) => {
+  test("default lands on All tab on the mode the registry opens it with", async ({ page }) => {
     await page.goto("/dashboard");
 
     // The DomainTabStrip renders buttons with role="tab".
@@ -54,6 +54,32 @@ test.describe("Multi-domain dashboard", () => {
     // The mode control is a segmented row of buttons in the map chrome, not the
     // "Modus: …" dropdown this file was written against — that one is retired.
     // Which option is chosen is now readable via `aria-pressed`.
+    // Which mode that is stopped being a constant on 2026-09-20: the owner
+    // ruled the globe every tab's default ("Globus soll ueberall genutzt
+    // werden"), and `defaultModeForTab` keeps the flat "Uebersicht" for a
+    // device without WebGL2 - which this engine may or may not have. So the
+    // assertion names both legitimate answers rather than pinning the one this
+    // runner happens to give; what it holds is that the control shows a
+    // pressed mode at all, and that it is one the registry allows.
+    await openMapPanel(page);
+    await expect(
+      page.getByRole("button", { name: /^(Globus|Übersicht)$/i, pressed: true })
+    ).toBeVisible({
+      timeout: 8_000,
+    });
+  });
+
+  // -------------------------------------------------------------------------
+  // 1b. The All tab's flat mode is still reachable and the URL still carries
+  //     it - the half of case 1 that the globe default took away.
+  // -------------------------------------------------------------------------
+  test("deep link to /dashboard?mode=overview shows the flat overview mode", async ({ page }) => {
+    await page.goto("/dashboard?mode=overview");
+
+    const allTab = page.getByRole("tab", { name: /alle/i });
+    await expect(allTab).toBeVisible({ timeout: 8_000 });
+    await expect(allTab).toHaveAttribute("aria-selected", "true");
+
     await openMapPanel(page);
     await expect(page.getByRole("button", { name: /^Übersicht$/i, pressed: true })).toBeVisible({
       timeout: 8_000,

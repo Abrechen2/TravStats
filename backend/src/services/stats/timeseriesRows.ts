@@ -11,7 +11,7 @@
 
 import { prisma } from "../../db";
 import { calculateDistance } from "../../utils/geo";
-import { localWallClockOf, type FlightTimeSemantics } from "../../utils/timezone";
+import { type FlightTimeSemantics } from "../../utils/timezone";
 import { measuredDurationMinutes } from "../../utils/flightDurationColumn";
 import { resolveFlightDuration } from "../../shared/flightDuration";
 import { countableFlightWhere } from "../../shared/flightCounting";
