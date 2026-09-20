@@ -75,3 +75,39 @@ export function flightSummaryFigures(
     { key: "airports", value: String(airports.size), label: labels.airports },
   ];
 }
+
+/**
+ * The same three figures, read off the server's own counts.
+ *
+ * `flightSummaryFigures` above folds rows the browser holds, which is still
+ * what a caller with rows in hand should use. The flights logbook no longer
+ * has them: it shows ONE page and asks `/flights/facets` for the numbers
+ * about the whole filtered set (measured 2026-09-20 — deriving them in the
+ * browser was the reason it fetched every flight the account owns).
+ *
+ * Both paths produce the same figures under the same rule: the endpoint folds
+ * carriers through `groupAirlines`, which is `airlineGroupKey` one level up,
+ * and reports `withoutAirline` for the same reason this file's note does.
+ */
+export interface FlightSummaryCounts {
+  flights: number;
+  airlines: number;
+  airports: number;
+  withoutAirline: number;
+}
+
+export function flightSummaryFiguresFromCounts(
+  counts: FlightSummaryCounts,
+  labels: SummaryLabels
+): SummaryFigure[] {
+  return [
+    { key: "flights", value: String(counts.flights), label: labels.flights },
+    {
+      key: "airlines",
+      value: String(counts.airlines),
+      label: labels.airlines,
+      note: counts.withoutAirline > 0 ? labels.withoutAirline(counts.withoutAirline) : undefined,
+    },
+    { key: "airports", value: String(counts.airports), label: labels.airports },
+  ];
+}

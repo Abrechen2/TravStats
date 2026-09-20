@@ -68,6 +68,7 @@ vi.mock("../../store/toastStore", () => ({
 vi.mock("../../lib/api", () => ({
   flightsApi: {
     getAll: vi.fn(),
+    getFacets: vi.fn(),
   },
   tripsApi: {
     getAll: vi.fn(),
@@ -82,6 +83,11 @@ describe("FlightsTablePage", () => {
       limit: 100,
       offset: 0,
     });
+    vi.mocked(flightsApi.getFacets).mockResolvedValue({
+      years: [],
+      airlines: [],
+      summary: { flights: 0, airlines: 0, airports: 0, withoutAirline: 0 },
+    });
     vi.mocked(tripsApi.getAll).mockResolvedValue([]);
 
     render(
@@ -95,10 +101,17 @@ describe("FlightsTablePage", () => {
   });
 
   // Review finding (Alex T7, round 1): nothing tested that the wiring
-  // actually pages the rows — reverting `displayedFlights.map` ->
-  // `pagination.paged.map` or dropping `<TablePagination>` would have left
+  // actually pages the rows — dropping `<TablePagination>` would have left
   // the suite green.
-  it("shows only one page of rows while the summary strip keeps the full count", async () => {
+  //
+  // Rewritten 2026-09-20, when the paging moved to the server. The old
+  // version handed the page all 63 rows and asserted that 50 were drawn,
+  // which is now a statement about a client-side slice that no longer
+  // exists — and could only pass by reintroducing the very loop the board
+  // item ("Seitengröße ist nur Anzeige") was about. What it always meant is
+  // below: one page of rows, the pager under them, and a count that reports
+  // the whole filtered set.
+  it("shows the page the server sent, under a count of the whole filtered set", async () => {
     const makeFlight = (i: number): Flight => ({
       id: `f-${i}`,
       userId: "u1",
@@ -115,12 +128,19 @@ describe("FlightsTablePage", () => {
       status: "flown",
       createdAt: "2026-01-01T00:00:00.000Z",
     });
-    const flights = Array.from({ length: 63 }, (_, i) => makeFlight(i));
-    vi.mocked(flightsApi.getAll).mockResolvedValue({
-      flights,
-      total: flights.length,
-      limit: 500,
-      offset: 0,
+    vi.mocked(flightsApi.getAll).mockImplementation(async (filters) => {
+      const limit = filters?.limit ?? 100;
+      return {
+        flights: Array.from({ length: Math.min(limit, 63) }, (_, i) => makeFlight(i)),
+        total: 63,
+        limit,
+        offset: filters?.offset ?? 0,
+      };
+    });
+    vi.mocked(flightsApi.getFacets).mockResolvedValue({
+      years: [],
+      airlines: [],
+      summary: { flights: 63, airlines: 1, airports: 2, withoutAirline: 0 },
     });
     vi.mocked(tripsApi.getAll).mockResolvedValue([]);
 
@@ -132,6 +152,11 @@ describe("FlightsTablePage", () => {
 
     await waitFor(() => {
       expect(countRenderedRows(container)).toBe(50); // default page size
+    });
+    // …and it is a page because it was ASKED for as one.
+    expect(vi.mocked(flightsApi.getAll).mock.calls[0][0]).toMatchObject({
+      limit: 50,
+      offset: 0,
     });
     expect(paginationControlsRendered()).toBe(true);
     // The FULL filtered count (63), not the 50 rows the page renders.
