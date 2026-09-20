@@ -4,6 +4,7 @@ import type { Layer } from "@deck.gl/core";
 import type { GeoJSONFeature } from "../../types";
 import type { TripDatum } from "./layerTypes";
 import { greatCirclePath } from "./greatCircle";
+import { screenTangentDeg } from "./screenTangent";
 import { tokens } from "../../theme/tokens";
 import { hexToRgb } from "../../lib/domainColor";
 
@@ -84,7 +85,9 @@ export interface PlaneDatum {
   position: [number, number];
   /** deck.gl icon rotation: y-up, 0 = pointing east, positive counterclockwise
    *  — the same convention `cruiseArcsLayer`'s direction arrows use, which was
-   *  verified in a browser against `icon-layer-vertex.glsl.js` (#160). */
+   *  verified in a browser against `icon-layer-vertex.glsl.js` (#160). The
+   *  angle is measured in the PROJECTION, not in lon/lat: see
+   *  `screenTangent.ts`. */
   angleDeg: number;
 }
 
@@ -118,8 +121,14 @@ export function planeAt(trip: TripDatum, currentTime: number): PlaneDatum | null
   const dx = x1 - x0;
   const dy = y1 - y0;
   return {
+    // The POSITION interpolates linearly in lon/lat — the vertices are ~2° of
+    // arc apart, so the difference from interpolating in projected space is
+    // far below a pixel. The HEADING cannot be taken the same way: deck.gl
+    // rotates the icon in screen space, which is Mercator, and on LPA→YVR the
+    // lon/lat angle is up to 8.4° off the line the plane is sitting on. See
+    // `screenTangent.ts`.
     position: [x0 + dx * f, y0 + dy * f],
-    angleDeg: dx === 0 && dy === 0 ? 0 : (Math.atan2(dy, dx) * 180) / Math.PI,
+    angleDeg: dx === 0 && dy === 0 ? 0 : screenTangentDeg(path[i], path[i + 1]),
   };
 }
 

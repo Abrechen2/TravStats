@@ -18,10 +18,15 @@
 import { describe, it, expect } from "vitest";
 import { buildPlaneData, buildTripsData, planeAt } from "../../components/layers/tripsLayer";
 import { interpolateGreatCircle } from "../../components/layers/greatCircle";
+import { MercatorCoordinate } from "maplibre-gl";
 import type { GeoJSONFeature } from "../../types";
 
 const LPA: [number, number] = [-15.3866, 27.9319];
 const YVR: [number, number] = [-123.184, 49.1947];
+// A second, northerly pair — its great circle crests at 77°N, where Mercator's
+// latitude stretch is large enough that a lon/lat heading is 26° wrong.
+const KEF: [number, number] = [-22.6056, 63.985];
+const ANC: [number, number] = [-149.996, 61.1744];
 
 const DEP = "2024-05-01T08:00:00Z";
 const ARR = "2024-05-01T19:00:00Z";
@@ -44,14 +49,34 @@ const lpaYvr: GeoJSONFeature = {
   geometry: { type: "LineString", coordinates: [LPA, YVR] },
 } as unknown as GeoJSONFeature;
 
-/** Great-circle course at fraction `t`, from a centred finite difference on
- *  the slerp itself — deliberately NOT the layer's vertices. deck.gl's icon
- *  rotation is y-up with 0 = east (see `cruiseArcsLayer`'s note, verified in
- *  a browser), so the course is `atan2(dLat, dLon)`. */
-function courseAt(t: number): number {
-  const eps = 0.001;
-  const a = interpolateGreatCircle(LPA, YVR, t - eps);
-  const b = interpolateGreatCircle(LPA, YVR, t + eps);
+/**
+ * The course as MAPLIBRE would draw it at fraction `t`.
+ *
+ * Two things are deliberately independent of the implementation. The tangent
+ * is a centred finite difference on the slerp, so it does not read the
+ * layer's vertices; and the projection is `MercatorCoordinate.fromLngLat` —
+ * maplibre-gl's own, the one the basemap is drawn with — rather than a second
+ * spelling of `mercatorY`. An earlier version of this helper computed
+ * `atan2(Δlat, Δlon)`, which is exactly the bug the implementation had, so
+ * the suite was green while the icon was skewed by up to 8.4° on this route.
+ *
+ * `MercatorCoordinate`'s y grows southward and deck.gl's `getAngle` is y-up
+ * with 0 = east, hence the negation.
+ */
+function courseAt(t: number, from: [number, number] = LPA, to: [number, number] = YVR): number {
+  const eps = 0.0005;
+  const a = interpolateGreatCircle(from, to, t - eps);
+  const b = interpolateGreatCircle(from, to, t + eps);
+  const pa = MercatorCoordinate.fromLngLat({ lng: a[0], lat: a[1] });
+  const pb = MercatorCoordinate.fromLngLat({ lng: b[0], lat: b[1] });
+  return (Math.atan2(-(pb.y - pa.y), pb.x - pa.x) * 180) / Math.PI;
+}
+
+/** What the layer used to compute, kept so the regression can be named. */
+function latSpaceCourseAt(t: number, from: [number, number] = LPA, to: [number, number] = YVR) {
+  const eps = 0.0005;
+  const a = interpolateGreatCircle(from, to, t - eps);
+  const b = interpolateGreatCircle(from, to, t + eps);
   return (Math.atan2(b[1] - a[1], b[0] - a[0]) * 180) / Math.PI;
 }
 
@@ -97,20 +122,52 @@ describe("planeAt samples the SAME path the trail draws", () => {
     expect(plane?.position[1]).toBeGreaterThan((LPA[1] + YVR[1]) / 2 + 5);
   });
 
-  it("points along the track, not at the destination", () => {
+  it("points along the track as DRAWN, not along it in lon/lat space", () => {
     // Measured at a QUARTER of the way, not at the midpoint. A symmetric bow's
     // mid-tangent runs almost parallel to its own chord (1.6° apart here), so
     // the midpoint is where the POSITION separates the two and the heading
-    // does not. A quarter in, the great-circle course is 147.4° against the
-    // chord's 168.8° — a difference a viewer sees.
+    // does not.
     const quarter = T0 + (T1 - T0) * 0.25;
     const plane = planeAt(trip, quarter);
     // Tolerance is one vertex of curvature: the heading comes from the segment
     // the plane is on (~2° of arc), the reference from a centred difference,
     // so the two differ by about half a segment's turn.
     expect(Math.abs((plane?.angleDeg ?? 0) - courseAt(0.25))).toBeLessThan(1.5);
+
+    // …and NOT the lat-space answer, which is 8.3° away here. That number is
+    // the whole point: a heading computed in lon/lat and rendered in Mercator
+    // is the same class of mistake as a route drawn as a chord, one level
+    // down. Hand-computed with `asinh(tan φ)`, a third spelling of the
+    // projection: drawn 139.11°, lat-space 147.39°.
+    expect(courseAt(0.25)).toBeCloseTo(139.11, 1);
+    expect(latSpaceCourseAt(0.25)).toBeCloseTo(147.39, 1);
+    expect(Math.abs((plane?.angleDeg ?? 0) - latSpaceCourseAt(0.25))).toBeGreaterThan(6);
+
+    // Not the chord's bearing either, which is what "points at the
+    // destination" would mean.
     const chordCourse = (Math.atan2(YVR[1] - LPA[1], YVR[0] - LPA[0]) * 180) / Math.PI;
     expect(Math.abs((plane?.angleDeg ?? 0) - chordCourse)).toBeGreaterThan(15);
+  });
+
+  it("holds on a NORTHERLY route, where the projection error is 26°", () => {
+    // KEF→ANC crests at 77°N. Mercator stretches latitude by 1/cos(lat), so
+    // the further north the leg, the further the old heading pointed from the
+    // line it was sitting on: 141.28° drawn against 167.07° in lon/lat.
+    const kefAnc = {
+      ...lpaYvr,
+      properties: {
+        ...lpaYvr.properties,
+        id: "north",
+        departureAirport: { iata: "KEF", lat: KEF[1], lon: KEF[0] },
+        arrivalAirport: { iata: "ANC", lat: ANC[1], lon: ANC[0] },
+      },
+      geometry: { type: "LineString", coordinates: [KEF, ANC] },
+    } as unknown as GeoJSONFeature;
+    const [north] = buildTripsData([kefAnc]);
+    const plane = planeAt(north, T0 + (T1 - T0) * 0.25);
+    expect(Math.abs((plane?.angleDeg ?? 0) - courseAt(0.25, KEF, ANC))).toBeLessThan(2.5);
+    expect(courseAt(0.25, KEF, ANC)).toBeCloseTo(141.28, 1);
+    expect(latSpaceCourseAt(0.25, KEF, ANC)).toBeCloseTo(167.07, 1);
   });
 
   it("turns as the flight progresses — a straight line would not", () => {
