@@ -1333,13 +1333,13 @@ export default function GlobeView({
         />
       </div>
 
-      {/* First-run coachmark — semi-modal centered hint, dismissible
-          forever via localStorage. Backdrop is click-through so
-          autoload basemap interaction isn't blocked silently if the
-          card is missed; only the card itself catches pointer. */}
+      {/* First-run coachmark — semi-modal hint, dismissed forever via
+          localStorage. Backdrop is click-through so a missed card does not
+          silently block the basemap; only the card catches pointer. z-40: over
+          the always-on stats card (z-30), under a popup the reader asked for. */}
       {coachmarkOpen && (
         <div
-          className="absolute inset-0 z-30 flex items-center justify-center"
+          className="absolute inset-0 z-40 flex items-center justify-center"
           style={{ pointerEvents: "none" }}
         >
           <div

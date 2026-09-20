@@ -35,7 +35,17 @@ export function GlobeStatsCard({ stats, t }: GlobeStatsCardProps): JSX.Element |
        z-30, not z-10: `GlobeLabelsOverlay` draws the map's own label pills at
        z-20 across the whole canvas, and at 390×844 they drew straight over
        this card (browser verification, beta.12). A label is scenery; a stats
-       panel is chrome, and chrome sits above it. */
+       panel is chrome, and chrome sits above it.
+
+       z-30 is also the FLOOR of the globe's chrome ladder, which is written
+       out here because it is the only rung that is always on screen: labels
+       z-20 (scenery), this card z-30, the first-run coachmark z-40
+       (`GlobeView`), the pinned popup z-50 (`GlobePinnedOverlay`). The two
+       above answer one moment and then go away; this one cannot cover them.
+       All three were z-30 until 2026-09-20 and the order was whatever the JSX
+       mount order happened to be — so moving this element a few lines up, or
+       extracting it into a component as this branch did, would have put an
+       always-on panel over the popup the reader clicked. */
     <div className="absolute top-16 right-4 z-30" style={{ pointerEvents: "auto" }}>
       <div
         className="rounded-xl p-3 text-xs"
