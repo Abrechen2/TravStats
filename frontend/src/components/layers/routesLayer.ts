@@ -418,6 +418,27 @@ export function createRoutesLayers(
         hasSelection && d.flightIds.some((id) => selectedSet.has(id))
       ),
     getHeight: arcHeight,
+    // A route is a great circle, not a Mercator chord. Without this flag
+    // deck.gl interpolates in lon/lat space, so LPA→YVR came out as a straight
+    // line across the Atlantic — a track no aircraft flies, and one that
+    // disagreed with the other two renderers of the same data: `flat` mode has
+    // followed the great circle since #183 (`greatCircle.ts`) and the globe
+    // pre-tessellates one per arc (`Globe/arcUtils.greatCircleWaypoints`).
+    //
+    // The SHAPE setting keeps its meaning: "Flach" is a flat great circle
+    // hugging the map, "Bogen" is the same great circle raised by `getHeight`.
+    // The bow's height does change slightly, because the flag also changes how
+    // the shader measures the span — the flat branch takes the chord in
+    // Mercator common space, the great-circle branch the real angular distance
+    // (`paraboloid(angularDist * EARTH_RADIUS, …)`). A long high-latitude
+    // route therefore bows a little lower than before: the height now tracks
+    // the distance flown rather than how far Mercator stretched the map there.
+    //
+    // `UpcomingArcLayer`'s tip gradient is unaffected, and that is checked
+    // rather than assumed: ArcLayer writes `geometry.uv` from the segment
+    // ratio ABOVE the `arc.greatCircle` branch, so `uv.x` still means "how far
+    // along this arc" — see `routesLayer.greatCircle.test.ts`.
+    greatCircle: true,
     // Visibility floor: 2 px minimum so a single far-flung route (e.g. a
     // one-off transpacific leg) stays clearly visible at world zoom instead
     // of thinning to a barely-perceptible 1 px hairline.
