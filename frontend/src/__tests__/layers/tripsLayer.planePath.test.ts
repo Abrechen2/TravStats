@@ -198,13 +198,16 @@ describe("planeAt samples the SAME path the trail draws", () => {
     expect(planeAt(trip, T1 + 1)).toBeNull();
   });
 
+  // The abstention moved one level UP on 2026-09-20: `buildTripsData` used to
+  // hand an undated flight a trip pinned to the epoch and `planeAt` declined
+  // to place a plane on it. Now no trip is built at all, which is what keeps
+  // the slider's minimum off 01.01.1970 (see `tripsLayer.test.ts`).
   it("abstains rather than guessing when a flight has no times at all", () => {
     const undated = {
       ...lpaYvr,
       properties: { ...lpaYvr.properties, departureTime: null, arrivalTime: null },
     } as unknown as GeoJSONFeature;
-    const [t] = buildTripsData([undated]);
-    expect(planeAt(t, 0)).toBeNull();
+    expect(buildTripsData([undated])).toHaveLength(0);
   });
 });
 
