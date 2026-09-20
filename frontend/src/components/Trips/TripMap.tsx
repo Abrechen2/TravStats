@@ -18,7 +18,6 @@ import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { EarthOcclusionExtension } from "../Globe/EarthOcclusionExtension";
 import { GlobeLabelsOverlay } from "../Globe/GlobeLabelsOverlay";
-import { STYLE_OPTIONS } from "../Globe/globeStyles";
 import {
   buildTripMapGlobeLayers,
   toGlobeLabelPoints,
@@ -28,6 +27,7 @@ import {
   type TripPointDatum,
   type TripProjection,
 } from "./TripMapGlobeLayers";
+import { GLOBE_SKY, fitMaxZoom, flyToZoom } from "./tripMapProjection";
 import {
   TRIP_MAP_CHROME,
   resolveTripCruiseColor,
@@ -37,20 +37,6 @@ import {
 } from "./tripMapColors";
 
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
-
-/** The horizon that belongs to THIS basemap. `globeStyles.ts` pairs every
- *  basemap with its own sky because the flat map has no horizon to paint and
- *  a globe without one has a hard black edge. TripMap draws the dark CARTO
- *  style, so it takes the dark sky rather than inventing a fourth set of
- *  colours. */
-const DARK_SKY = (STYLE_OPTIONS.find((s) => s.id === "dark") ?? STYLE_OPTIONS[0]).sky;
-
-/** Fit zoom caps, per projection. On the flat map a two-airport trip may zoom
- *  in to 9 and still read; on a sphere the same zoom puts the camera so close
- *  that the horizon leaves the frame and the globe stops looking like one.
- *  3 keeps the whole planet in view with the trip filling it. */
-const FIT_MAX_ZOOM_MERCATOR = 9;
-const FIT_MAX_ZOOM_GLOBE = 3;
 
 const INITIAL_VIEW: MapViewState = {
   longitude: 10,
@@ -326,31 +312,39 @@ export default function TripMap({
 
   /* ---- Fly-to handlers ---- */
 
-  const flyToBbox = useCallback((points: Array<[number, number]>): void => {
-    const map = mapRef.current?.getMap();
-    if (!map || points.length === 0) return;
-    const bbox = computeBbox(points);
-    if (!bbox) return;
-    const [west, south, east, north] = bbox;
-    map.fitBounds(
-      [
-        [west, south],
-        [east, north],
-      ],
-      { padding: 80, duration: 1200, maxZoom: 9 }
-    );
-  }, []);
+  // Every camera move is capped by the projection, not just the initial fit
+  // — see `tripMapProjection.ts` for why the two caps differ.
+  const flyToBbox = useCallback(
+    (points: Array<[number, number]>): void => {
+      const map = mapRef.current?.getMap();
+      if (!map || points.length === 0) return;
+      const bbox = computeBbox(points);
+      if (!bbox) return;
+      const [west, south, east, north] = bbox;
+      map.fitBounds(
+        [
+          [west, south],
+          [east, north],
+        ],
+        { padding: 80, duration: 1200, maxZoom: fitMaxZoom(projection) }
+      );
+    },
+    [projection]
+  );
 
-  const flyToPoint = useCallback((position: [number, number], zoom = 8): void => {
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    map.flyTo({
-      center: position,
-      zoom,
-      duration: 1200,
-      essential: true,
-    });
-  }, []);
+  const flyToPoint = useCallback(
+    (position: [number, number], zoom = 8): void => {
+      const map = mapRef.current?.getMap();
+      if (!map) return;
+      map.flyTo({
+        center: position,
+        zoom: flyToZoom(projection, zoom),
+        duration: 1200,
+        essential: true,
+      });
+    },
+    [projection]
+  );
 
   const handleClick = useCallback(
     (info: PickingInfo): void => {
@@ -622,7 +616,7 @@ export default function TripMap({
         {
           padding: 60,
           duration: durationMs,
-          maxZoom: forProjection === "globe" ? FIT_MAX_ZOOM_GLOBE : FIT_MAX_ZOOM_MERCATOR,
+          maxZoom: fitMaxZoom(forProjection),
         }
       );
     },
@@ -669,7 +663,7 @@ export default function TripMap({
     try {
       // A globe without a sky has a hard black edge where the horizon should
       // be; a flat map has no horizon at all, so the sky comes off again.
-      projApi.setSky?.(next === "globe" ? DARK_SKY : undefined);
+      projApi.setSky?.(next === "globe" ? GLOBE_SKY : undefined);
     } catch (err) {
       // Its OWN try, and deliberately non-fatal. A style source may not
       // support a sky, and a missing horizon is cosmetic — but while this

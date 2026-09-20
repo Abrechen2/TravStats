@@ -245,6 +245,47 @@ describe("TripMap: the globe toggle mounts the overlay the way the globe needs i
     ).toBe(true);
   });
 
+  it("caps a fly-to at globe zoom, so one click cannot flatten the sphere", async () => {
+    // MapLibre switches the globe to a plane above a zoom threshold. The fit
+    // was taught about that; the click handlers were not, so clicking a stop
+    // (zoom 11) or a hotel (12) turned the globe flat while the toggle still
+    // read as globe.
+    render(<TripMap trip={trip} />);
+    await waitFor(() => expect(captured.length).toBeGreaterThan(0));
+
+    const clickStop = (): void => {
+      const onClick = captured[captured.length - 1].overlay.props.onClick;
+      onClick?.({
+        layer: { id: "trip-stops" },
+        object: { position: [13.4, 52.52], kind: "stop" },
+      });
+    };
+
+    clickStop();
+    expect(mapCalls.flyTo[mapCalls.flyTo.length - 1].zoom).toBe(11);
+
+    await toggleToGlobe();
+    await waitFor(() => expect(captured.length).toBeGreaterThan(1));
+    clickStop();
+    expect(mapCalls.flyTo[mapCalls.flyTo.length - 1].zoom).toBeLessThanOrEqual(3);
+  });
+
+  it("caps a fly-to-bbox on the globe as well as the fit", async () => {
+    render(<TripMap trip={trip} />);
+    await waitFor(() => expect(captured.length).toBeGreaterThan(0));
+    await toggleToGlobe();
+    await waitFor(() => expect(captured.length).toBeGreaterThan(1));
+
+    const before = mapCalls.fitBounds.length;
+    const onClick = captured[captured.length - 1].overlay.props.onClick;
+    onClick?.({
+      layer: { id: "trip-flight-arcs" },
+      object: { source: [11.786, 48.3537], target: [-22.6056, 63.985] },
+    });
+    expect(mapCalls.fitBounds.length).toBeGreaterThan(before);
+    expect(mapCalls.fitBounds[mapCalls.fitBounds.length - 1].maxZoom).toBe(3);
+  });
+
   it("draws the flight as a path, not an ArcLayer, once the globe is on", async () => {
     render(<TripMap trip={trip} />);
     await waitFor(() => expect(captured.length).toBeGreaterThan(0));
