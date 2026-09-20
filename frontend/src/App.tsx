@@ -8,14 +8,15 @@ import ErrorBoundary from "./components/ErrorBoundary";
 import Toast from "./components/Toast";
 import AirportSeedingBanner from "./components/AirportSeedingBanner";
 import AirportSeedingModal from "./components/AirportSeedingModal";
-import { setupApi, usageStatsApi } from "./lib/api";
+import { setupApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
 import { DomainRouteGuard } from "./components/DomainRouteGuard";
 import { useWhatsNew } from "./hooks/useWhatsNew";
+import { useTelemetryConsentStep } from "./hooks/useTelemetryConsentStep";
 import { useSessionValidation } from "./hooks/useSessionValidation";
 import WhatsNewModal from "./components/WhatsNewModal";
-import UsageStatsConsentCard from "./components/UsageStatsConsentCard";
+import UsageStatsConsentDialog from "./components/UsageStatsConsentDialog";
 
 // Lazy load pages for code splitting
 const LoginPage = lazy(() => import("./pages/LoginPage"));
@@ -91,28 +92,18 @@ function AppContent() {
   // the render.
   const { sessionChecked } = useSessionValidation();
   const sessionConfirmed = isAuthenticated && sessionChecked;
-  const { entry, shouldShow, dismiss } = useWhatsNew(sessionConfirmed);
+  const { entry, shouldShow, checked: whatsNewChecked, dismiss } = useWhatsNew(sessionConfirmed);
   const [setupChecked, setSetupChecked] = useState(false);
   const [showSeedingModal, setShowSeedingModal] = useState(false);
-  const [consentPending, setConsentPending] = useState(false);
 
-  // Usage-stats consent is instance-wide: only offer it to admins, and only while
-  // it is still undecided. Fetch failures must never surface the card.
-  useEffect(() => {
-    if (!sessionConfirmed || !user?.isAdmin) return;
-    let cancelled = false;
-    void usageStatsApi
-      .get()
-      .then((status) => {
-        if (!cancelled) setConsentPending(status.consent === "unset");
-      })
-      .catch(() => {
-        if (!cancelled) setConsentPending(false);
-      });
-    return () => {
-      cancelled = true;
-    };
-  }, [sessionConfirmed, user?.isAdmin]);
+  // Usage-stats consent is instance-wide, so only an admin may answer it, and
+  // since 2026-09-20 (owner decision) it is a step of its own rather than a
+  // card inside the what's-new dialog — which people dismiss reflexively.
+  const consentStep = useTelemetryConsentStep({
+    isAdminSession: sessionConfirmed && Boolean(user?.isAdmin),
+    whatsNewChecked,
+    whatsNewOpen: shouldShow,
+  });
 
   // Sync language from settings store to i18n
   useEffect(() => {
@@ -237,16 +228,8 @@ function AppContent() {
         <Toast />
         <AirportSeedingBanner />
         <AirportSeedingModal isOpen={showSeedingModal} onClose={handleCloseSeedingModal} />
-        <WhatsNewModal
-          isOpen={shouldShow}
-          entry={entry}
-          onClose={() => void dismiss()}
-          extraSlot={
-            consentPending ? (
-              <UsageStatsConsentCard onDecided={() => setConsentPending(false)} />
-            ) : undefined
-          }
-        />
+        <WhatsNewModal isOpen={shouldShow} entry={entry} onClose={() => void dismiss()} />
+        <UsageStatsConsentDialog isOpen={consentStep.shouldShow} onClose={consentStep.close} />
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>

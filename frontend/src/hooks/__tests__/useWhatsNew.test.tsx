@@ -130,4 +130,51 @@ describe("useWhatsNew", () => {
     await waitFor(() => expect(mocks.getVersion).toHaveBeenCalled());
     expect(result.current.shouldShow).toBe(false);
   });
+
+  /**
+   * `checked` is what the telemetry consent step waits on (owner decision
+   * 2026-09-20). It must settle on EVERY path, including the ones that hide
+   * the modal — otherwise the consent dialog never appears on the instances
+   * that have no release notes to show, which is most of them.
+   */
+  describe("checked — the signal the consent step waits on", () => {
+    it("is false until the check has answered", async () => {
+      const { result } = renderHook(() => useWhatsNew(true));
+      expect(result.current.checked).toBe(false);
+      await waitFor(() => expect(result.current.checked).toBe(true));
+    });
+
+    it("settles when the modal is shown", async () => {
+      const { result } = renderHook(() => useWhatsNew(true));
+      await waitFor(() => expect(result.current.shouldShow).toBe(true));
+      expect(result.current.checked).toBe(true);
+    });
+
+    it("settles when there is nothing to show", async () => {
+      mocks.getVersion.mockResolvedValue({ version: "2.2.2" });
+      const { result } = renderHook(() => useWhatsNew(true));
+      await waitFor(() => expect(result.current.checked).toBe(true));
+      expect(result.current.shouldShow).toBe(false);
+    });
+
+    it("settles when the entry was already seen", async () => {
+      mocks.getSettings.mockResolvedValue({ whatsNewSeenVersion: "2.3.0" });
+      const { result } = renderHook(() => useWhatsNew(true));
+      await waitFor(() => expect(result.current.checked).toBe(true));
+      expect(result.current.shouldShow).toBe(false);
+    });
+
+    it("settles when the request fails", async () => {
+      mocks.getVersion.mockRejectedValue(new Error("offline"));
+      const { result } = renderHook(() => useWhatsNew(true));
+      await waitFor(() => expect(result.current.checked).toBe(true));
+      expect(result.current.shouldShow).toBe(false);
+    });
+
+    it("stays false while unauthenticated — nothing was checked", async () => {
+      const { result } = renderHook(() => useWhatsNew(false));
+      await waitFor(() => expect(result.current.shouldShow).toBe(false));
+      expect(result.current.checked).toBe(false);
+    });
+  });
 });

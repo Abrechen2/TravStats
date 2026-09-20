@@ -2,7 +2,15 @@
 
 > **For agentic workers:** REQUIRED SUB-SKILL: Use superpowers:subagent-driven-development (recommended) or superpowers:executing-plans to implement this plan task-by-task. Steps use checkbox (`- [ ]`) syntax for tracking.
 
-**Goal:** An opt-in, instance-wide anonymous usage ping: consent storage, a pure payload builder, a best-effort daily cron, server-side erasure on withdrawal, and three consent surfaces (setup, What's-New, admin toggle).
+> **Superseded in one point, 2026-09-20.** The `extraSlot` this plan built is
+> gone: the telemetry consent it was built to carry is its own dialog now
+> (`components/UsageStatsConsentDialog.tsx`, timed by
+> `hooks/useTelemetryConsentStep.ts`), because the beta audit of 2026-09-19
+> found that a question at the bottom of release notes gets closed rather than
+> answered. The rest of this plan is as-built. See §4 of
+> `docs/superpowers/specs/2026-07-10-anonymous-usage-stats-design.md`.
+
+**Goal:** An opt-in, instance-wide anonymous usage ping: consent storage, a pure payload builder, a best-effort daily cron, server-side erasure on withdrawal, and three consent surfaces (setup, the consent step, admin toggle).
 
 **Architecture:** Two new `AdminSettings` columns hold consent state and a random install id. `buildUsagePayload()` is a pure aggregation over Prisma with zero network I/O, which is what makes the no-PII test possible. A `node-cron` job pings daily with jitter and swallows every error — telemetry must never affect the running app. Flipping consent to `denied` fires one `DELETE` so erasure needs no e-mail.
 
