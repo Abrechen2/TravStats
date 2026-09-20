@@ -17,6 +17,7 @@ import type { Quartile } from "./heatmapUtils";
 import {
   CruiseAppearanceSection,
   FlightAppearanceSection,
+  LodgingAppearanceSection,
   PanelHeader,
   SectionLabel,
   SegControl,
@@ -31,7 +32,9 @@ import {
   type AppearanceDomain,
   type CruiseAppearanceState,
   type FlightAppearanceState,
+  type LodgingAppearanceState,
 } from "../map/controlPanelKit";
+import { PlaceAppearanceSection, type PlaceAppearanceState } from "../map/PlaceAppearanceSection";
 import { MapChromeSections } from "../map/MapChromeSections";
 import type { LabelsMode } from "../map/labelPriority";
 import { DEFAULT_AIRPORT_COLOR, DEFAULT_PORT_COLOR } from "./buildGlobeLayers";
@@ -72,6 +75,15 @@ export interface GlobeControlPanelProps {
   appearanceDomains: readonly AppearanceDomain[];
   flightAppearance: FlightAppearanceState;
   cruiseAppearance: CruiseAppearanceState;
+  /**
+   * The lodging and place sections are the SAME components the flat map's
+   * panel renders (`map/appearanceSections.tsx`, `map/PlaceAppearanceSection.tsx`).
+   * They were missing here until 2026-09-20, so the Alle tab — which names
+   * all four domains — offered a hotel's colour mode and marker size on the
+   * flat map and nothing at all on the globe.
+   */
+  lodgingAppearance: LodgingAppearanceState;
+  placeAppearance: PlaceAppearanceState;
 }
 
 export function GlobeControlPanel({
@@ -101,6 +113,8 @@ export function GlobeControlPanel({
   appearanceDomains,
   flightAppearance,
   cruiseAppearance,
+  lodgingAppearance,
+  placeAppearance,
 }: GlobeControlPanelProps): JSX.Element {
   const { t } = useTranslation();
   const [expanded, toggleExpanded] = usePanelExpanded();
@@ -231,6 +245,21 @@ export function GlobeControlPanel({
               markerLabel={t("map:globe.panel.ports")}
               markerAutoLabel={t("map:globe.panel.auto")}
               widthLabel={t("map:globe.panel.width")}
+              sizeLabel={t("map:globe.panel.size")}
+            />
+          )}
+
+          {appearanceDomains.includes("lodging") && (
+            <LodgingAppearanceSection
+              title={t("map:globe.panel.domainLodging")}
+              {...lodgingAppearance}
+              sizeLabel={t("map:globe.panel.size")}
+            />
+          )}
+          {appearanceDomains.includes("poi") && (
+            <PlaceAppearanceSection
+              title={t("map:globe.panel.domainPlace")}
+              {...placeAppearance}
               sizeLabel={t("map:globe.panel.size")}
             />
           )}

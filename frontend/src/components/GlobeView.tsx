@@ -226,7 +226,9 @@ export default function GlobeView({
   placeListColors,
   placeListLabels,
   lodgingMarkerSize = 1,
+  onLodgingMarkerSizeChange,
   placeMarkerSize = 1,
+  onPlaceMarkerSizeChange,
 }: GlobeViewProps): JSX.Element {
   const { t, i18n } = useTranslation(["map"]);
   const locale = i18n.language || "de";
@@ -301,11 +303,15 @@ export default function GlobeView({
   // flight and cruise colours are: the flat map, both panels, the legend and
   // this renderer all read one config, so a pin and its swatch cannot drift.
   const lodgingColorConfig = useLodgingColorStore((s) => s.config);
+  const setLodgingColorMode = useLodgingColorStore((s) => s.setMode);
+  const setLodgingColor = useLodgingColorStore((s) => s.setColor);
   const placeColorConfig = usePlaceColorStore((s) => s.config);
+  const setPlaceColorMode = usePlaceColorStore((s) => s.setMode);
+  const setPlaceColor = usePlaceColorStore((s) => s.setColor);
   // Whether a place pill says its name or its list's symbol. The flat map owns
   // the same setting (DeckGLMap), persisted in the shared mapAppearance blob,
   // so flipping it on one map is already flipped on the other.
-  const [placeLabelSource] = useState<PlaceLabelSource>(
+  const [placeLabelSource, setPlaceLabelSource] = useState<PlaceLabelSource>(
     () => loadMapAppearance().placeLabelSource ?? "list"
   );
   // Style-level overlays (relief hillshade + basemap place names).
@@ -1527,6 +1533,25 @@ export default function GlobeView({
             onMarkerColorChange: setPortColor,
             markerSize: cruiseMarkerSize,
             onMarkerSizeChange: setCruiseMarkerSize,
+          }}
+          lodgingAppearance={{
+            markerSize: lodgingMarkerSize,
+            // The size lives in MapContainer3D, which persists it — a tab that
+            // renders the globe without threading the setter gets a slider it
+            // cannot move, so it gets no setter and the section still reads.
+            onMarkerSizeChange: onLodgingMarkerSizeChange ?? (() => {}),
+            colorConfig: lodgingColorConfig,
+            onColorModeChange: setLodgingColorMode,
+            onColorChange: setLodgingColor,
+          }}
+          placeAppearance={{
+            colorConfig: placeColorConfig,
+            onColorModeChange: setPlaceColorMode,
+            onColorChange: setPlaceColor,
+            markerSize: placeMarkerSize,
+            onMarkerSizeChange: onPlaceMarkerSizeChange ?? (() => {}),
+            labelSource: placeLabelSource,
+            onLabelSourceChange: setPlaceLabelSource,
           }}
         />
       </div>
