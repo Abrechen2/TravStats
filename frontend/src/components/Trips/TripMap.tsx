@@ -11,13 +11,39 @@ import type { TourGeometry } from "../../types/tour";
 import { buildLodgingPins } from "../layers/lodgingPinsLayer";
 import { buildTourPaths, type TourPathDatum } from "../layers/tourPathsLayer";
 import { stayNights } from "../../lib/lodgingDateDisplay";
+import { LODGING_COLOR } from "../../lib/lodgingColor";
 import { declutterByDistance, pickLabelled } from "../map/labelPriority";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../../lib/api/cruise";
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
+import { EarthOcclusionExtension } from "../Globe/EarthOcclusionExtension";
+import { GlobeLabelsOverlay } from "../Globe/GlobeLabelsOverlay";
+import { STYLE_OPTIONS } from "../Globe/globeStyles";
+import {
+  buildTripMapGlobeLayers,
+  toGlobeLabelPoints,
+  type TripCruisePath,
+  type TripFlightArc,
+  type TripPointDatum,
+  type TripProjection,
+} from "./TripMapGlobeLayers";
 
 const DARK_MAP_STYLE = "https://basemaps.cartocdn.com/gl/dark-matter-gl-style/style.json";
+
+/** The horizon that belongs to THIS basemap. `globeStyles.ts` pairs every
+ *  basemap with its own sky because the flat map has no horizon to paint and
+ *  a globe without one has a hard black edge. TripMap draws the dark CARTO
+ *  style, so it takes the dark sky rather than inventing a fourth set of
+ *  colours. */
+const DARK_SKY = (STYLE_OPTIONS.find((s) => s.id === "dark") ?? STYLE_OPTIONS[0]).sky;
+
+/** Fit zoom caps, per projection. On the flat map a two-airport trip may zoom
+ *  in to 9 and still read; on a sphere the same zoom puts the camera so close
+ *  that the horizon leaves the frame and the globe stops looking like one.
+ *  3 keeps the whole planet in view with the trip filling it. */
+const FIT_MAX_ZOOM_MERCATOR = 9;
+const FIT_MAX_ZOOM_GLOBE = 3;
 
 const FLIGHT_RGB: [number, number, number] = [240, 169, 71];
 const CRUISE_RGB: [number, number, number] = [111, 160, 214];
@@ -41,37 +67,44 @@ const INITIAL_VIEW: MapViewState = {
   bearing: 0,
 };
 
-type Projection = "mercator" | "globe";
+// The datum shapes live beside the globe builder, which is the renderer with
+// the stricter contract (it needs a resolved colour per line). Both
+// projections read the SAME arrays — a trip must not change shape because the
+// projection did.
+type Projection = TripProjection;
+type FlightArc = TripFlightArc;
+type CruisePath = TripCruisePath;
+type PointDatum = TripPointDatum;
 
-interface FlightArc {
-  flightId: string;
-  source: [number, number];
-  target: [number, number];
-  label: string;
-}
-
-interface CruisePath {
-  cruiseId: string;
-  path: [number, number][];
-  label: string;
-}
-
-interface PointDatum {
-  position: [number, number];
-  label: string;
-  color: [number, number, number];
-  radiusMeters: number;
-  kind: "airport" | "stop";
-}
-
+/**
+ * The deck.gl overlay, mounted the way the projection needs it.
+ *
+ * `interleaved` shares MapLibre's WebGL context so deck.gl uses MapLibre's
+ * own projection matrices. Under the globe that is not an optimisation: an
+ * overlay with its own context keeps mercator matrices, and the data detaches
+ * into a flat strip floating beside the sphere. It stays OFF on the flat map,
+ * where the overlay draws above the basemap and interleaving would only give
+ * MapLibre's own layers a chance to paint over the trip.
+ *
+ * No `position`: MapboxOverlay is a render-pipeline integration, not a corner
+ * widget, and mounting it as one confuses its lifecycle (GlobeView says the
+ * same). TripMap passed `{ position: "top-left" }` until this fix.
+ *
+ * The caller REMOUNTS this control (a `key` on the projection) rather than
+ * updating it, because the constructor — which runs inside `useControl`, i.e.
+ * before any projection change lands — is where deck.gl decides which shaders
+ * to compile. An overlay built in mercator never re-detects globe.
+ */
 function DeckGLOverlay({
   layers,
   onClick,
   getTooltip,
+  interleaved,
 }: {
   layers: Layer[];
   onClick: (info: PickingInfo) => void;
   getTooltip: ReturnType<typeof createMarkerTooltip>;
+  interleaved: boolean;
 }): null {
   const { current: map } = useMap();
   // Issue #247. See map/mapCursor.ts for why this cannot be deck.gl's
@@ -85,10 +118,10 @@ function DeckGLOverlay({
       new MapboxOverlay({
         layers,
         pickingRadius: 8,
+        interleaved,
         getTooltip,
         onHover: handleHover,
-      }),
-    { position: "top-left" }
+      })
   );
   overlay.setProps({ layers, pickingRadius: 8, onClick, getTooltip, onHover: handleHover });
   return null;
@@ -171,6 +204,7 @@ export default function TripMap({
         source: [f.depLon, f.depLat],
         target: [f.arrLon, f.arrLat],
         label: `${f.depIata ?? "?"} → ${f.arrIata ?? "?"}`,
+        color: FLIGHT_RGB,
       });
     }
     return out;
@@ -189,6 +223,7 @@ export default function TripMap({
             cruiseId,
             path: feat.geometry.coordinates,
             label: cruiseLabel.get(cruiseId) ?? "Cruise",
+            color: CRUISE_RGB,
           });
         }
       }
@@ -285,6 +320,32 @@ export default function TripMap({
     return out;
   }, [trip.stops]);
 
+  /**
+   * The same houses, as plain globe markers.
+   *
+   * The flat map draws them through `buildLodgingPins`, which is right there:
+   * it carries the lodging tooltip, the rose the lodging list uses, and a
+   * deck.gl TextLayer for the names. Under globe projection that last part
+   * renders NOTHING (deck.gl 9 billboards do not draw there — the whole
+   * reason `GlobeLabelsOverlay` exists), and the dots have no horizon
+   * clipping, so a house on the far side of the planet shows through it. On
+   * the globe they become ordinary occluded markers and their names go to the
+   * HTML overlay with everything else's.
+   */
+  const lodgingPoints = useMemo<PointDatum[]>(
+    () =>
+      lodgings
+        .filter((l) => l.lat != null && l.lon != null)
+        .map((l) => ({
+          position: [l.lon as number, l.lat as number] as [number, number],
+          label: l.name,
+          color: LODGING_COLOR,
+          radiusMeters: 40000,
+          kind: "lodging" as const,
+        })),
+    [lodgings]
+  );
+
   /* ---- Fly-to handlers ---- */
 
   const flyToBbox = useCallback((points: Array<[number, number]>): void => {
@@ -336,14 +397,48 @@ export default function TripMap({
 
   /* ---- deck.gl layers ---- */
 
-  const layers = useMemo<Layer[]>(() => {
+  /** One shared instance, as the dashboard globe does: a stable reference
+   *  keeps deck.gl from recompiling the shader pipeline every rebuild. */
+  const occlusionExt = useMemo(() => new EarthOcclusionExtension(), []);
+  const occlusionProps = useMemo(
+    () => ({ earthOcclusionEnabled: true, earthOcclusionFadeBand: 0.04 }),
+    []
+  );
+
+  const tourPathData = useMemo(() => buildTourPaths(tourGeometries), [tourGeometries]);
+
+  const globeLayers = useMemo<Layer[]>(
+    () =>
+      buildTripMapGlobeLayers({
+        flightArcs,
+        cruisePaths,
+        tourPaths: tourPathData,
+        airportPoints,
+        stopPoints,
+        lodgingPoints,
+        occlusionExt,
+        occlusionProps,
+      }),
+    [
+      flightArcs,
+      cruisePaths,
+      tourPathData,
+      airportPoints,
+      stopPoints,
+      lodgingPoints,
+      occlusionExt,
+      occlusionProps,
+    ]
+  );
+
+  const mercatorLayers = useMemo<Layer[]>(() => {
     const arcs = new ArcLayer<FlightArc>({
       id: "trip-flight-arcs",
       data: flightArcs,
       getSourcePosition: (d) => d.source,
       getTargetPosition: (d) => d.target,
-      getSourceColor: [...FLIGHT_RGB, 230] as [number, number, number, number],
-      getTargetColor: [...FLIGHT_RGB, 230] as [number, number, number, number],
+      getSourceColor: (d) => [...d.color, 230] as [number, number, number, number],
+      getTargetColor: (d) => [...d.color, 230] as [number, number, number, number],
       getWidth: 2,
       greatCircle: true,
       // Flat. deck.gl's ArcLayer bows every arc up out of the map by default,
@@ -361,7 +456,7 @@ export default function TripMap({
       id: "trip-cruise-paths",
       data: cruisePaths,
       getPath: (d) => d.path,
-      getColor: [...CRUISE_RGB, 230] as [number, number, number, number],
+      getColor: (d) => [...d.color, 230] as [number, number, number, number],
       getWidth: 3,
       widthMinPixels: 2,
       pickable: true,
@@ -397,7 +492,6 @@ export default function TripMap({
     // pixels drawn between two assigned stops at any zoom. Do not lower
     // these again in the name of contrast; 170/2px is the floor that stays
     // visible while still reading as weaker than a drawn route at 255/3.5px.
-    const tourPathData = buildTourPaths(tourGeometries);
     const tourPaths = new PathLayer<TourPathDatum>({
       id: "trip-tour-paths",
       data: tourPathData,
@@ -475,7 +569,18 @@ export default function TripMap({
     const lodgingPins = buildLodgingPins(lodgings, 1, zoom, { labelsMode: "important" }) ?? [];
 
     return [paths, arcs, airports, tourPaths, stops, ...lodgingPins, stopLabels];
-  }, [flightArcs, cruisePaths, airportPoints, stopPoints, lodgings, zoom, tourGeometries]);
+  }, [flightArcs, cruisePaths, airportPoints, stopPoints, lodgings, zoom, tourPathData]);
+
+  const layers = projection === "globe" ? globeLayers : mercatorLayers;
+
+  /** Every name on the globe, in the shape the HTML overlay reads. A deck.gl
+   *  TextLayer draws nothing under globe projection, which is why the trip's
+   *  stop names vanished on every toggle. */
+  const globeLabelPoints = useMemo(
+    () => toGlobeLabelPoints([...stopPoints, ...lodgingPoints]),
+    [stopPoints, lodgingPoints]
+  );
+  const globeAirportLabels = useMemo(() => toGlobeLabelPoints(airportPoints), [airportPoints]);
 
   /* ---- bbox fit ---- */
 
@@ -499,23 +604,47 @@ export default function TripMap({
     return pts;
   }, [flightArcs, cruisePaths, stopPoints, lodgings]);
 
+  /**
+   * Frame the whole trip, at a zoom the current projection can honour.
+   *
+   * The cap is the only thing that differs, and it matters: a two-airport trip
+   * fits at zoom 9 on the flat map and reads fine, while the same 9 on a
+   * sphere puts the camera close enough that the horizon leaves the frame and
+   * the globe stops looking like one. Called on load and again on every
+   * projection switch, which is what "the globe fills the frame" means here.
+   */
+  const fitTrip = useCallback(
+    (forProjection: Projection, durationMs: number): void => {
+      if (bboxPoints.length === 0) return;
+      const bbox = computeBbox(bboxPoints);
+      if (!bbox) return;
+      const [west, south, east, north] = bbox;
+      const map = mapRef.current?.getMap();
+      if (!map) return;
+      map.fitBounds(
+        [
+          [west, south],
+          [east, north],
+        ],
+        {
+          padding: 60,
+          duration: durationMs,
+          maxZoom: forProjection === "globe" ? FIT_MAX_ZOOM_GLOBE : FIT_MAX_ZOOM_MERCATOR,
+        }
+      );
+    },
+    [bboxPoints]
+  );
+
   useEffect(() => {
     if (!mapLoaded || didFit.current) return;
     if (bboxPoints.length === 0) return;
-    const bbox = computeBbox(bboxPoints);
-    if (!bbox) return;
-    const [west, south, east, north] = bbox;
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-    map.fitBounds(
-      [
-        [west, south],
-        [east, north],
-      ],
-      { padding: 60, duration: 0, maxZoom: 9 }
-    );
+    fitTrip(projection, 0);
     didFit.current = true;
-  }, [mapLoaded, bboxPoints]);
+    // `projection` is read, not depended on: this runs once, on load, when it
+    // is still "mercator". The switch does its own fit.
+    // eslint-disable-next-line react-hooks/exhaustive-deps
+  }, [mapLoaded, bboxPoints, fitTrip]);
 
   /* ---- Globe / Mercator toggle ---- */
 
@@ -523,18 +652,30 @@ export default function TripMap({
     const map = mapRef.current?.getMap();
     if (!map) return;
     const next: Projection = projection === "globe" ? "mercator" : "globe";
-    // MapLibre 5 — `setProjection` is the runtime API. Wrapped in a try
-    // because some style sources may not support globe yet.
+    // MapLibre 5 — `setProjection` and `setSky` are the runtime APIs. Both are
+    // wrapped because a style source may not support globe, and because the
+    // toggle must not take the map down with it if one of them throws.
+    //
+    // ORDER IS THE POINT. `setProjection` runs here, imperatively, BEFORE the
+    // re-render that remounts the deck.gl overlay — and the overlay's
+    // constructor is where deck.gl reads the projection. Flip the two and the
+    // overlay caches mercator and never re-detects globe: the basemap becomes
+    // a sphere while the trip stays a flat strip pasted over it.
     try {
       const projApi = map as unknown as {
         setProjection?: (p: { type: string }) => void;
+        setSky?: (sky?: unknown) => void;
       };
       projApi.setProjection?.({ type: next });
+      // A globe without a sky has a hard black edge where the horizon should
+      // be; a flat map has no horizon at all, so the sky comes off again.
+      projApi.setSky?.(next === "globe" ? DARK_SKY : undefined);
       setProjection(next);
+      fitTrip(next, 600);
     } catch (err) {
       logger.warn("TripMap: projection toggle failed", err);
     }
-  }, [projection]);
+  }, [projection, fitTrip]);
 
   const empty = bboxPoints.length === 0;
 
@@ -563,9 +704,32 @@ export default function TripMap({
         onMoveEnd={(e): void => setZoom(e.viewState.zoom)}
       >
         {mapLoaded && (
-          <DeckGLOverlay layers={layers} onClick={handleClick} getTooltip={getTooltip} />
+          // `key` on the projection: the overlay is REMOUNTED rather than
+          // updated, because deck.gl reads the projection in MapboxOverlay's
+          // constructor and nowhere else.
+          <DeckGLOverlay
+            key={projection}
+            layers={layers}
+            onClick={handleClick}
+            getTooltip={getTooltip}
+            interleaved={projection === "globe"}
+          />
         )}
       </MapGL>
+      {/* Names on the globe. deck.gl 9's billboard TextLayer renders nothing
+          under globe projection, so the flat map's `trip-stop-labels` and the
+          lodging pins' own labels are simply absent there — this HTML overlay
+          is how the dashboard globe solved the same problem, and it brings the
+          horizon cull with it. */}
+      {projection === "globe" && (
+        <GlobeLabelsOverlay
+          mapRef={mapRef}
+          mapReady={mapLoaded}
+          airports={globeAirportLabels}
+          ports={globeLabelPoints}
+          mode="important"
+        />
+      )}
       {empty && (
         <div
           className="absolute inset-0 flex items-center justify-center text-sm pointer-events-none px-6 text-center"
