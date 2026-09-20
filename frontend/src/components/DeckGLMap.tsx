@@ -26,7 +26,7 @@ import { buildLodgingPins } from "./layers/lodgingPinsLayer";
 import { buildPlacePins } from "./layers/placePinsLayer";
 import type { PlaceLabelList, PlaceLabelSource } from "../lib/placeLabel";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
-import { createTripsLayer, buildTripsData, getTimeRange } from "./layers/tripsLayer";
+import { createTripsModeLayers, buildTripsData, getTimeRange } from "./layers/tripsLayer";
 import { createSpecialFlightsLayers } from "./layers/specialFlightsLayer";
 import { SpecialFlightTooltip } from "./specialFlights/SpecialFlightTooltip";
 import { getSpecialTooltipAnchor } from "./specialFlights/specialTooltipAnchor";
@@ -619,7 +619,7 @@ export function DeckGLMap({
         base = [createHeatmapLayer(flights)];
         break;
       case "trips":
-        base = [createTripsLayer(trips, currentTime)];
+        base = createTripsModeLayers(trips, currentTime);
         break;
       default:
         // "globe" is handled by MapContainer3D (GlobeView); DeckGLMap is not
