@@ -89,6 +89,21 @@ registry.registerPath({
           schema: z.object({
             flights: z.array(parsedFlightSchema),
             parserUsed: z.string(),
+            ollamaAvailable: z
+              .boolean()
+              .optional()
+              .describe(
+                "The LLM was configured for this caller and answered its last " +
+                  "health probe; a probe may still be in flight, in which " +
+                  "case the field reports the previous answer or false. The " +
+                  "probe is never awaited on the response path, so a parse is " +
+                  "never slowed down by a configured-but-unreachable model. " +
+                  "It does NOT say the model read this document — " +
+                  "`parserUsed` says that. The field was undocumented while " +
+                  "it meant three different things per domain; one definition " +
+                  "now lives in services/parsers/llmAvailability.ts and " +
+                  "flights, cruises and lodging all answer from it."
+              ),
             subject: z.string().optional(),
             documentId: z
               .string()

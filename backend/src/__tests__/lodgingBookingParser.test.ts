@@ -6,6 +6,7 @@ import { extractEmailFromFile } from "../services/emailExtractor";
 import { parseLodgingBookingText } from "../services/lodging/lodgingBookingParser";
 import { bookingsToCandidates } from "../services/lodging/lodgingCandidates";
 import { getAdminParserSettings } from "../services/parserSettings";
+import { clearLlmAvailabilityCache, settleLlmProbes } from "../services/parsers/llmAvailability";
 import type { ParsedLodgingBooking } from "../services/lodging/bookingComTemplate";
 
 jest.mock("../services/parserSettings", () => ({
@@ -79,22 +80,60 @@ describe("parseLodgingBookingText", () => {
   beforeEach(() => {
     mockGetAdminParserSettings.mockClear();
     mockGetAdminParserSettings.mockResolvedValue({ ollamaUrl: null, ollamaModel: null });
+    // Each case configures its own endpoint; a probe remembered from the
+    // previous one would answer for a server that is already closed.
+    clearLlmAvailabilityCache();
   });
 
-  it("uses the template for a Booking.com confirmation and never calls the LLM", async () => {
-    const result = await parseLodgingBookingText(
-      `Ihre Buchung ist bestätigt: Musterhotel\n\n${BOOKING_COM_TEXT}`,
-      // A deliberately unreachable Ollama: if the template path is taken, this
-      // is never dialled, so the call must still succeed fast.
-      { url: "http://127.0.0.1:1", model: "nonexistent" }
-    );
-    expect(result.parserUsed).toBe("template");
-    expect(result.bookings).toHaveLength(1);
-    expect(result.bookings[0].hotelName).toBe("Musterhotel");
-    expect(result.bookings[0].totalPrice).toBeCloseTo(250, 2);
-    // Settings resolution is part of the LLM path — proving it was never
-    // reached proves the LLM itself was never dialled either.
-    expect(mockGetAdminParserSettings).not.toHaveBeenCalled();
+  afterEach(async () => {
+    // A background probe outliving its test logs into the next one.
+    await settleLlmProbes();
+  });
+
+  it("uses the template for a Booking.com confirmation and never asks the LLM to read it", async () => {
+    // A HEALTHY model, deliberately: the template must win even when the model
+    // is there, and the answer must then say the model was there.
+    const paths: string[] = [];
+    const server = await createMockOllamaServer((req, res) => {
+      paths.push(req.url ?? "");
+      respondJson(res, HEALTHY_TAGS_RESPONSE);
+    });
+    try {
+      const result = await parseLodgingBookingText(
+        `Ihre Buchung ist bestätigt: Musterhotel\n\n${BOOKING_COM_TEXT}`,
+        { url: server.url, model: "mock" }
+      );
+      expect(result.parserUsed).toBe("template");
+      expect(result.bookings).toHaveLength(1);
+      expect(result.bookings[0].hotelName).toBe("Musterhotel");
+      expect(result.bookings[0].totalPrice).toBeCloseTo(250, 2);
+      // The point of the test, and the only thing that ever proved it: the
+      // model was never asked to READ the mail. It used to be phrased as "the
+      // admin settings were never loaded", which stopped being the same
+      // statement when `ollamaAvailable` became one honest question for all
+      // four domains — answering it reads the settings and kicks an
+      // `/api/tags` probe on the template path too. What must not happen is
+      // the generate call.
+      expect(paths).not.toContain("/api/generate");
+      // The probe is fire-and-forget, so this first parse reports what was
+      // known BEFORE it: nothing. A template hit must never wait on a health
+      // check to be told what the last health check said.
+      expect(result.ollamaAvailable).toBe(false);
+
+      // Once the probe has landed, the flag reports the INSTANCE rather than
+      // which reader won. It answered `false` here for good until 2026-09-20,
+      // while the flight parser said `true` about the same box.
+      await settleLlmProbes();
+      const second = await parseLodgingBookingText(
+        `Ihre Buchung ist bestätigt: Musterhotel\n\n${BOOKING_COM_TEXT}`,
+        { url: server.url, model: "mock" }
+      );
+      expect(second.parserUsed).toBe("template");
+      expect(second.ollamaAvailable).toBe(true);
+      expect(paths).not.toContain("/api/generate");
+    } finally {
+      await server.close();
+    }
   });
 
   it("never throws when the LLM is unreachable — it reports parserUsed 'none'", async () => {

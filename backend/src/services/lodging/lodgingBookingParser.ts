@@ -17,6 +17,7 @@ import { LODGING_TYPES } from "../../schemas/lodging";
 import { isCurrencyCode } from "../../shared/currencies";
 import { isSharedDemoUser } from "../../utils/sharedDemo";
 import { DEMO_NO_LLM_REASON } from "../cruiseBookingParser";
+import { isLlmAvailable, recordLlmProbe } from "../parsers/llmAvailability";
 import {
   isBookingComConfirmation,
   parseBookingComEmail,
@@ -463,6 +464,18 @@ export async function parseLodgingBookingText(
   // model in front instead.
   const order = await getParserOrder();
 
+  // Which reader won says nothing about whether the model was there: a template
+  // hit used to report `ollamaAvailable: false` on an instance whose model was
+  // up and configured, while the flight parser said `true` about the same
+  // instance. One definition for all four domains now, in
+  // `services/parsers/llmAvailability.ts`. Explicit options are forwarded
+  // because they win over the admin endpoint below.
+  const llmQuery = {
+    ...(userId !== undefined ? { userId } : {}),
+    ...(options?.url !== undefined ? { url: options.url } : {}),
+    ...(options?.model !== undefined ? { model: options.model } : {}),
+  };
+
   if (order === "template_first") {
     const templateHit = readTemplate();
     if (templateHit) {
@@ -470,7 +483,11 @@ export async function parseLodgingBookingText(
         { template: templateHit.parserTemplate, confidence: templateHit.parserConfidence },
         "[Lodging Parser] Template match"
       );
-      return { bookings: [templateHit], parserUsed: "template", ollamaAvailable: false };
+      return {
+        bookings: [templateHit],
+        parserUsed: "template",
+        ollamaAvailable: await isLlmAvailable(llmQuery),
+      };
     }
   }
 
@@ -508,7 +525,10 @@ export async function parseLodgingBookingText(
   }
 
   const { url, model } = await resolveOptions(options);
+  // This probe IS the health probe `ollamaAvailable` reports on, so it is fed
+  // back into the shared cache rather than measured twice per parse.
   const ollamaAvailable = await checkAvailability(url);
+  recordLlmProbe(url, ollamaAvailable);
   if (!ollamaAvailable) {
     // An unreachable model must never cost a mail the template could read:
     // under `llm_first` the template has not been tried yet.

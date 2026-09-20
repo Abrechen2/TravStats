@@ -5,6 +5,7 @@ import logger from "../utils/logger";
 import { getAdminParserSettings, getParserOrder } from "./parserSettings";
 import { isSharedDemoUser } from "../utils/sharedDemo";
 import { parseTuiCruisesConfirmation } from "./cruise/tuiCruisesTemplate";
+import { isLlmAvailable, recordLlmProbe } from "./parsers/llmAvailability";
 
 const CRUISE_CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
 
@@ -541,10 +542,26 @@ export async function parseCruiseBookingText(
   // (`getParserOrder`), default template-first — which is what this domain
   // has always done.
   const order = await getParserOrder();
+  // What this function owes its caller about the model does not depend on which
+  // reader won: a template hit used to report `ollamaAvailable: false` on an
+  // instance whose model was up and configured, which is the opposite of what
+  // the flight parser said about the same instance.
+  // `services/parsers/llmAvailability.ts` is the one definition now. Explicit
+  // options are forwarded because they win over the admin endpoint below, and
+  // reporting on a host this parse never touched is the same class of untruth.
+  const llmQuery = {
+    ...(userId !== undefined ? { userId } : {}),
+    ...(options?.url !== undefined ? { url: options.url } : {}),
+    ...(options?.model !== undefined ? { model: options.model } : {}),
+  };
   if (order === "template_first") {
     const templated = parseTuiCruisesConfirmation(text);
     if (templated.length > 0) {
-      return { cruises: templated, parserUsed: "template", ollamaAvailable: false };
+      return {
+        cruises: templated,
+        parserUsed: "template",
+        ollamaAvailable: await isLlmAvailable(llmQuery),
+      };
     }
   }
 
@@ -582,7 +599,10 @@ export async function parseCruiseBookingText(
 
   const resolved = await resolveCruiseParserOptions(options);
   const parser = getCruiseBookingParser(resolved);
+  // This probe IS the health probe `ollamaAvailable` reports on, so it is fed
+  // back into the shared cache rather than measured twice per parse.
   const ollamaAvailable = await parser.checkAvailability();
+  recordLlmProbe(parser.endpoint, ollamaAvailable);
   if (!ollamaAvailable) {
     // Under `llm_first` the template has not been tried yet, and an
     // unreachable model must not cost a booking the template can read.

@@ -1,4 +1,5 @@
 import { getParserConfig, parseEmail } from "./parsers/factory";
+import { isLlmAvailableForConfig } from "./parsers/llmAvailability";
 import logger from "../utils/logger";
 
 export interface ParsedBooking {
@@ -110,8 +111,16 @@ export async function parseBookingEmail(
     },
   });
 
-  // Map to legacy format for backward compatibility
-  const ollamaAvailable = config.textFallbacks.includes("ollama");
+  // Map to legacy format for backward compatibility.
+  //
+  // `ollamaAvailable` used to read `config.textFallbacks.includes("ollama")`,
+  // which is true on every default install — so the beta answered `true` on
+  // every flight parse while `parserUsed` came back `"regex"` every time and
+  // no model had ever been contacted. It is one question for all four domains
+  // now, and `services/parsers/llmAvailability.ts` is where it is answered.
+  // Synchronous on purpose: no parse waits on a health probe to be told what
+  // the health probe last said.
+  const ollamaAvailable = isLlmAvailableForConfig(config);
 
   return {
     flights: result.flights,
