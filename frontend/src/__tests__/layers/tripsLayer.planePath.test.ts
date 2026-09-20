@@ -198,13 +198,32 @@ describe("planeAt samples the SAME path the trail draws", () => {
     expect(planeAt(trip, T1 + 1)).toBeNull();
   });
 
+  // The abstention moved one level UP on 2026-09-20: `buildTripsData` used to
+  // hand an undated flight a trip pinned to the epoch and `planeAt` declined
+  // to place a plane on it. Now no trip is built at all, which is what keeps
+  // the slider's minimum off 01.01.1970 (see `tripsLayer.test.ts`).
   it("abstains rather than guessing when a flight has no times at all", () => {
     const undated = {
       ...lpaYvr,
       properties: { ...lpaYvr.properties, departureTime: null, arrivalTime: null },
     } as unknown as GeoJSONFeature;
-    const [t] = buildTripsData([undated]);
-    expect(planeAt(t, 0)).toBeNull();
+    expect(buildTripsData([undated])).toHaveLength(0);
+  });
+
+  // ...but `planeAt`'s own `if (!(end > start)) return null` is NOT dead code
+  // that the check above subsumes, and the check above cannot exercise it: it
+  // asserts that no trip is built, so it never calls `planeAt` at all. The
+  // reachable case is a flight whose departure and arrival are the SAME
+  // instant — both times present, both parsed, so `buildTripsData` builds the
+  // trip and hands it on with t0 === t1. Without the guard, `currentTime`
+  // equal to that instant passes the window test, the first segment's span is
+  // 0, and the plane is placed at the departure airport for an aircraft that
+  // is not flying — the parked plane the abstention exists to prevent. The
+  // datum is hand-built so the test reaches the guard directly, whatever
+  // `buildTripsData` decides to filter next.
+  it("declines a zero-length window — a same-instant flight parks no plane", () => {
+    const sameInstant = { path: [LPA, YVR], timestamps: [T0, T0] };
+    expect(planeAt(sameInstant, T0)).toBeNull();
   });
 });
 

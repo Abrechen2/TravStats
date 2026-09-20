@@ -88,9 +88,15 @@ export function GlobePinnedOverlay({
           map.project() on every render frame. The MapLibre Popup primitive was
           attempted in beta.12 and crashed the WebGL canvas in this stack
           (interleaved deck.gl 9 + globe projection); see `usePinnedAnchor` for
-          the visibility check that replaces its occlusion pass. */}
+          the visibility check that replaces its occlusion pass.
+
+          z-50, the top of the globe's chrome ladder (labels z-20, stats card
+          z-30, coachmark z-40): this is the one overlay the reader asked for
+          by clicking, so nothing may cover it. It won that position by being
+          mounted last while all three were z-30 — true, and not declared
+          anywhere until now. */}
       <div
-        className="absolute z-30 pointer-events-auto"
+        className="absolute z-50 pointer-events-auto"
         style={{
           left: screen.x,
           top: screen.y,

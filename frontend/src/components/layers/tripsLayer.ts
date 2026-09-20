@@ -24,6 +24,13 @@ import { hexToRgb } from "../../lib/domainColor";
  * about the climb, and inventing one would be a claim about data we do not
  * have.
  */
+/** An ISO instant as Unix seconds, or null when there is nothing to read. */
+function secondsOf(iso: string | null | undefined): number | null {
+  if (!iso) return null;
+  const ms = new Date(iso).getTime();
+  return Number.isNaN(ms) ? null : ms / 1000;
+}
+
 export function buildTripsData(flights: GeoJSONFeature[]): TripDatum[] {
   return (
     flights
@@ -33,12 +40,16 @@ export function buildTripsData(flights: GeoJSONFeature[]): TripDatum[] {
       })
       .map((f) => {
         const coords = f.geometry.coordinates;
-        const t0 = f.properties.departureTime
-          ? new Date(f.properties.departureTime).getTime() / 1000
-          : 0;
-        const t1 = f.properties.arrivalTime
-          ? new Date(f.properties.arrivalTime).getTime() / 1000
-          : 0;
+        // Abstain, never zero. These were `: 0` — the EPOCH — for a flight
+        // with no departure or arrival time, and the NaN filter below let it
+        // through because 0 is a perfectly good number. One undated flight
+        // pulled the slider's minimum back to 01.01.1970, so most of the
+        // scrub showed a blank map and every trail ghosted at once at t=0
+        // (browser verification, beta.12). A flight with no times has no
+        // place on a timeline; `null` here drops it a few lines down.
+        const t0 = secondsOf(f.properties.departureTime);
+        const t1 = secondsOf(f.properties.arrivalTime);
+        if (t0 === null || t1 === null) return null;
         const { points } = greatCirclePath(
           coords[0] as [number, number],
           coords[coords.length - 1] as [number, number]
@@ -53,8 +64,9 @@ export function buildTripsData(flights: GeoJSONFeature[]): TripDatum[] {
           timestamps: points.map((_, i) => (i === last ? t1 : t0 + ((t1 - t0) * i) / last)),
         };
       })
-      // Filter out trips with invalid timestamps so NaN never reaches the TimeSlider (Bug 6)
-      .filter((t) => t.timestamps.every((ts) => !isNaN(ts)))
+      // Undated flights (null above) and any residual NaN never reach the
+      // TimeSlider (Bug 6).
+      .filter((t): t is TripDatum => t !== null && t.timestamps.every((ts) => !isNaN(ts)))
   );
 }
 

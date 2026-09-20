@@ -42,6 +42,7 @@ import {
 import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
 import { usePinnedAnchor } from "./Globe/usePinnedAnchor";
 import { occludeExtraLayers } from "./Globe/occludeExtraLayers";
+import { GlobeStatsCard } from "./Globe/GlobeStatsCard";
 import { GlobePinnedOverlay } from "./Globe/GlobePinnedOverlay";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { buildAirportPoints, buildPortPoints } from "./Globe/globePointData";
@@ -1243,82 +1244,7 @@ export default function GlobeView({
         {mapReady && <DeckGLOverlay layers={layers} onHover={handleDeckHover} />}
       </MapGL>
 
-      {/* Top-right stats overlay — driven by the same slider-filtered
-          data as the globe layers, so numbers tick in real time as the
-          user scrubs. Lives top-right because the top-left is owned by
-          the dashboard's Aktivität sidebar (would otherwise overlap).
-          Offset down (top-16, not top-4) to clear DashboardLayout's
-          "+ hinzufügen" button, which lives in the same corner and is
-          always present regardless of map mode. */}
-      {(liveStats.flights > 0 || liveStats.cruises > 0) && (
-        <div className="absolute top-16 right-4 z-10" style={{ pointerEvents: "auto" }}>
-          <div
-            className="rounded-xl p-3 text-xs"
-            style={{
-              background: "rgba(13, 17, 23, 0.85)",
-              backdropFilter: "blur(14px)",
-              border: "1px solid rgba(255,255,255,0.12)",
-              color: "rgba(241,245,249,0.95)",
-              fontFamily: "'Inter', sans-serif",
-              minWidth: 168,
-              boxShadow: "0 8px 28px rgba(0,0,0,0.45)",
-            }}
-          >
-            <div
-              className="mb-1.5 text-[10px] font-semibold uppercase"
-              style={{ letterSpacing: "0.08em", color: "rgba(241,245,249,0.45)" }}
-            >
-              {t("map:globe.stats.title")}
-            </div>
-            <div className="space-y-0.5 text-[11px]">
-              {liveStats.flights > 0 && (
-                <div className="flex items-center justify-between gap-3">
-                  <span className="opacity-75">{t("map:globe.stats.flights")}</span>
-                  <span className="font-medium tabular-nums">{liveStats.flights}</span>
-                </div>
-              )}
-              {liveStats.routes > 0 && (
-                <div className="flex items-center justify-between gap-3">
-                  <span className="opacity-75">{t("map:globe.stats.routes")}</span>
-                  <span className="font-medium tabular-nums">{liveStats.routes}</span>
-                </div>
-              )}
-              {liveStats.flightKm > 0 && (
-                <div className="flex items-center justify-between gap-3">
-                  <span className="opacity-75">{t("map:globe.stats.flightKm")}</span>
-                  <span className="font-medium tabular-nums">
-                    {liveStats.flightKm.toLocaleString()} km
-                  </span>
-                </div>
-              )}
-              {liveStats.cruises > 0 && (
-                <div className="flex items-center justify-between gap-3">
-                  <span className="opacity-75">{t("map:globe.stats.cruises")}</span>
-                  <span className="font-medium tabular-nums">{liveStats.cruises}</span>
-                </div>
-              )}
-              {liveStats.ports > 0 && (
-                <div className="flex items-center justify-between gap-3">
-                  <span className="opacity-75">{t("map:globe.stats.ports")}</span>
-                  <span className="font-medium tabular-nums">{liveStats.ports}</span>
-                </div>
-              )}
-              {liveStats.topAirport && (
-                <div
-                  className="mt-1.5 border-t pt-1 text-[10px] opacity-80"
-                  style={{ borderColor: "rgba(255,255,255,0.12)" }}
-                >
-                  <span className="opacity-75">{t("map:globe.stats.top")}:</span>{" "}
-                  <span className="font-medium">
-                    {liveStats.topAirport.iata ?? liveStats.topAirport.name}
-                  </span>
-                  <span className="ml-1 opacity-60">×{liveStats.topAirport.size}</span>
-                </div>
-              )}
-            </div>
-          </div>
-        </div>
-      )}
+      <GlobeStatsCard stats={liveStats} t={t} />
 
       {/* Consolidated map controls — layers, basemap, frequency filter,
           performance + recenter in one collapsible panel (own design). */}
@@ -1407,13 +1333,13 @@ export default function GlobeView({
         />
       </div>
 
-      {/* First-run coachmark — semi-modal centered hint, dismissible
-          forever via localStorage. Backdrop is click-through so
-          autoload basemap interaction isn't blocked silently if the
-          card is missed; only the card itself catches pointer. */}
+      {/* First-run coachmark — semi-modal hint, dismissed forever via
+          localStorage. Backdrop is click-through so a missed card does not
+          silently block the basemap; only the card catches pointer. z-40: over
+          the always-on stats card (z-30), under a popup the reader asked for. */}
       {coachmarkOpen && (
         <div
-          className="absolute inset-0 z-30 flex items-center justify-center"
+          className="absolute inset-0 z-40 flex items-center justify-center"
           style={{ pointerEvents: "none" }}
         >
           <div
