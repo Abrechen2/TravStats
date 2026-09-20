@@ -543,6 +543,15 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       autoHighlight: !lite,
       highlightColor: [255, 255, 255, 200],
       onHover: onPinHover,
+      // Clicking PINS the card rather than calling the caller's open handler
+      // directly. The flat map does the opposite, and must: it has no card.
+      // Here the Alle tab's place handler navigates to the place page, so a
+      // click that fired it would leave the globe before the card it opened
+      // could be read. Same trade the flight arc and the cruise path make.
+      onClick: ({ object }: { object?: Lodging }): void => {
+        if (!object || object.lat === null || object.lon === null) return;
+        setPinned({ kind: "lodging", data: object, anchorLngLat: [object.lon, object.lat] });
+      },
       extensions: [occlusionExt],
       ...occlusionProps,
     } as ConstructorParameters<typeof ScatterplotLayer<Lodging>>[0] & EarthOcclusionExtensionProps),
@@ -575,6 +584,10 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       autoHighlight: !lite,
       highlightColor: [255, 255, 255, 200],
       onHover: onPinHover,
+      onClick: ({ object }: { object?: Place }): void => {
+        if (!object) return;
+        setPinned({ kind: "place", data: object, anchorLngLat: [object.lon, object.lat] });
+      },
       extensions: [occlusionExt],
       ...occlusionProps,
     } as ConstructorParameters<typeof ScatterplotLayer<Place>>[0] & EarthOcclusionExtensionProps),

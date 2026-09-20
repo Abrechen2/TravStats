@@ -25,6 +25,9 @@ import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 import { loadGlobeChrome, saveGlobeChrome } from "./map/globeChrome";
 import { useFlightColorStore } from "../store/flightColorStore";
+import { LODGING_COLOR } from "../lib/lodgingColor";
+import { PLACE_COLOR } from "../lib/placeColor";
+import { rgbCss } from "../lib/flightColor";
 import { useLodgingColorStore } from "../store/lodgingColorStore";
 import { usePlaceColorStore } from "../store/placeColorStore";
 import { useMapCameraStore } from "../store/mapCameraStore";
@@ -173,6 +176,21 @@ interface DeckOverlayProps {
   onHover: (info: PickingInfo) => void;
 }
 
+/**
+ * The ring that pulses on the marker a pinned card belongs to. Only the four
+ * SINGLE-POINT kinds get one — an arc or a cruise path is pinned somewhere
+ * along a line, where a ring would mark a spot the user did not click.
+ * Lodging and place read their domain colour rather than a literal, so the
+ * ring cannot disagree with the pin it surrounds.
+ */
+function pulseColor(kind: GlobePinned["kind"]): string | null {
+  if (kind === "airport") return "#f0a947";
+  if (kind === "port") return "#6fa0d6";
+  if (kind === "lodging") return rgbCss(LODGING_COLOR);
+  if (kind === "place") return rgbCss(PLACE_COLOR);
+  return null;
+}
+
 function DeckGLOverlay({ layers, onHover }: DeckOverlayProps): null {
   // `interleaved: true` shares MapLibre's WebGL context so deck.gl uses
   // MapLibre's globe projection matrices directly — without it, the
@@ -214,7 +232,9 @@ export default function GlobeView({
   appearanceDomains = ["flight", "cruise"],
   extraLayers = [],
   lodgings = [],
+  onLodgingOpen,
   places = [],
+  onPlaceOpen,
   placeListColors,
   placeListLabels,
   lodgingMarkerSize = 1,
@@ -1502,28 +1522,25 @@ export default function GlobeView({
       {/* Pulse ring on the selected marker (airports + ports). Drawn under
           the pinned card, non-interactive; reduced-motion shows a static
           ring. Colour follows the domain. */}
-      {pinned &&
-        (pinned.kind === "airport" || pinned.kind === "port") &&
-        popupScreenPos &&
-        popupScreenPos.visible && (
-          <div
-            className="pointer-events-none absolute z-20"
-            style={{ left: popupScreenPos.x, top: popupScreenPos.y }}
-          >
-            {[0, 0.6].map((delay) => (
-              <span
-                key={delay}
-                className="map-pulse-ring"
-                style={
-                  {
-                    "--pulse-color": pinned.kind === "port" ? "#6fa0d6" : "#f0a947",
-                    animationDelay: `${delay}s`,
-                  } as CSSProperties
-                }
-              />
-            ))}
-          </div>
-        )}
+      {pinned && pulseColor(pinned.kind) && popupScreenPos && popupScreenPos.visible && (
+        <div
+          className="pointer-events-none absolute z-20"
+          style={{ left: popupScreenPos.x, top: popupScreenPos.y }}
+        >
+          {[0, 0.6].map((delay) => (
+            <span
+              key={delay}
+              className="map-pulse-ring"
+              style={
+                {
+                  "--pulse-color": pulseColor(pinned.kind),
+                  animationDelay: `${delay}s`,
+                } as CSSProperties
+              }
+            />
+          ))}
+        </div>
+      )}
 
       {pinned && popupScreenPos && popupScreenPos.visible && (
         <div
@@ -1542,6 +1559,8 @@ export default function GlobeView({
               onClose={() => setPinned(null)}
               onFlightOpen={onFlightOpen}
               onCruiseOpen={onCruiseOpen}
+              onLodgingOpen={onLodgingOpen}
+              onPlaceOpen={onPlaceOpen}
             />
           </PinnedCardBoundary>
         </div>

@@ -9,7 +9,15 @@
 
 import { useEffect, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { FlagImg, countryName, countryFromUnlocode } from "../../lib/countryFlag";
+import {
+  FlagImg,
+  countryName,
+  countryFromUnlocode,
+  resolveCountryCode,
+} from "../../lib/countryFlag";
+import { LODGING_COLOR } from "../../lib/lodgingColor";
+import { PLACE_COLOR } from "../../lib/placeColor";
+import { rgbCss } from "../../lib/flightColor";
 import type { GeoJSONFeature } from "../../types";
 import type { Cruise } from "../../types/cruise";
 import type { GlobePinned } from "./globeLayerTypes";
@@ -27,6 +35,13 @@ interface PinnedCardProps {
   /** Fires when the "Open cruise" CTA is clicked — should navigate to
       the cruise detail page. */
   onCruiseOpen?: (cruiseId: string) => void;
+  /** Fires when the lodging CTA is clicked. This is the globe's equivalent
+      of the flat map's pin click (MapContainer3D's `onLodgingClick`) — see
+      the note on the layer's onClick in buildGlobeLayers.ts for why the
+      click itself only pins the card. */
+  onLodgingOpen?: (lodgingId: string) => void;
+  /** Fires when the place CTA is clicked. */
+  onPlaceOpen?: (placeId: string) => void;
 }
 
 const SURFACE: React.CSSProperties = {
@@ -59,8 +74,14 @@ export function PinnedCard({
   onClose,
   onFlightOpen,
   onCruiseOpen,
+  onLodgingOpen,
+  onPlaceOpen,
 }: PinnedCardProps): JSX.Element {
-  const { t, i18n } = useTranslation(["map", "common"]);
+  // `lodging` and `places` join the namespaces so the two new bodies reuse the
+  // copy those domains already own — "3 Übernachtungen", "Merkliste",
+  // "Wahrzeichen" — rather than growing a second wording under `map:` that can
+  // drift from the lists and detail pages showing the same facts.
+  const { t, i18n } = useTranslation(["map", "common", "lodging", "places"]);
   const locale = i18n.language || "de";
 
   // Subtle entrance: fade + lift on mount (each pin remounts this card).
@@ -121,6 +142,12 @@ export function PinnedCard({
           onCruiseOpen={onCruiseOpen}
         />
       )}
+      {pinned.kind === "lodging" && (
+        <LodgingBody pinned={pinned} locale={locale} t={t} onLodgingOpen={onLodgingOpen} />
+      )}
+      {pinned.kind === "place" && (
+        <PlaceBody pinned={pinned} locale={locale} t={t} onPlaceOpen={onPlaceOpen} />
+      )}
     </div>
   );
 }
@@ -168,6 +195,32 @@ function Heading({ pinned }: { pinned: GlobePinned }): JSX.Element {
       );
     case "cruise":
       return <div className="text-[13px] font-semibold">🚢 {pinned.data.cruiseLabel}</div>;
+    // `Lodging.country` / `Place.country` are FREE TEXT — an ISO code or a
+    // full country name, in German or English. `FlagImg` needs a strict
+    // two-letter code and renders nothing otherwise, so both resolve first,
+    // exactly as the flat map's tooltip does (markerTooltip.ts).
+    case "lodging":
+      return (
+        <div className="flex items-center gap-2 text-[14px] font-semibold">
+          {resolveCountryCode(pinned.data.country) ? (
+            <FlagImg country={resolveCountryCode(pinned.data.country)} height={20} />
+          ) : (
+            <span>🏨</span>
+          )}
+          <span>{pinned.data.name}</span>
+        </div>
+      );
+    case "place":
+      return (
+        <div className="flex items-center gap-2 text-[14px] font-semibold">
+          {resolveCountryCode(pinned.data.country) ? (
+            <FlagImg country={resolveCountryCode(pinned.data.country)} height={20} />
+          ) : (
+            <span>📍</span>
+          )}
+          <span>{pinned.data.name}</span>
+        </div>
+      );
   }
 }
 
@@ -493,6 +546,86 @@ function CruiseBody({
           label={t("map:globe.pinned.openCruise")}
           onClick={() => onCruiseOpen(pinned.data.cruiseId)}
         />
+      )}
+    </>
+  );
+}
+
+// ─── Lodging + place bodies ───────────────────────────────────────
+//
+// Neither needs a `cardStats` helper the way the four above do: a pin IS the
+// row, already carrying its own derived `stayCount`, `nights` and
+// `visitCount` from the server. There is nothing to fold, so there is nothing
+// to fold DIFFERENTLY from the list page showing the same numbers.
+
+function LodgingBody({
+  pinned,
+  locale,
+  t,
+  onLodgingOpen,
+}: {
+  pinned: Extract<GlobePinned, { kind: "lodging" }>;
+  onLodgingOpen?: (lodgingId: string) => void;
+} & BodyCommonProps): JSX.Element {
+  const lodging = pinned.data;
+  const stays = lodging.stayCount ?? 0;
+  const nights = lodging.nights ?? 0;
+  return (
+    <>
+      <SubHeading>{t(`lodging:type.${lodging.type}`)}</SubHeading>
+      <Place city={lodging.city} country={resolveCountryCode(lodging.country)} locale={locale} />
+      <Hero color={rgbCss(LODGING_COLOR)}>{t("lodging:field.staysCount", { count: stays })}</Hero>
+      <Grid>
+        {/* Nights are omitted rather than shown as 0 when nothing is recorded:
+            a stay whose span is unknown and a same-day stay both come to 0,
+            and only one of those means "no nights" (shared/lodgingTiming.ts). */}
+        {nights > 0 && (
+          <Row
+            label={t("map:globe.pinned.nights")}
+            value={t("lodging:field.nightsCount", { count: nights })}
+          />
+        )}
+        {lodging.chain?.name && <Row label={t("lodging:field.chain")} value={lodging.chain.name} />}
+        {lodging.overallRating != null && (
+          <Row label={t("lodging:field.ratingOverall")} value={lodging.overallRating.toFixed(1)} />
+        )}
+      </Grid>
+      {onLodgingOpen && (
+        <Cta label={t("map:globe.pinned.openLodging")} onClick={() => onLodgingOpen(lodging.id)} />
+      )}
+    </>
+  );
+}
+
+function PlaceBody({
+  pinned,
+  locale,
+  t,
+  onPlaceOpen,
+}: {
+  pinned: Extract<GlobePinned, { kind: "place" }>;
+  onPlaceOpen?: (placeId: string) => void;
+} & BodyCommonProps): JSX.Element {
+  const place = pinned.data;
+  return (
+    <>
+      <SubHeading>{t(`places:categories.${place.category}`)}</SubHeading>
+      <Place city={place.city} country={resolveCountryCode(place.country)} locale={locale} />
+      {/* A wishlist entry has no visit count to show — it is somewhere the
+          user has NOT been, and "0 Besuche" reads as a failure rather than an
+          intention (shared/placeCounting.ts draws the same line). */}
+      <Hero color={rgbCss(PLACE_COLOR)}>
+        {place.visited
+          ? t("places:list.visitsCount", { count: place.visitCount ?? 0 })
+          : t("places:list.status.wishlist")}
+      </Hero>
+      <Grid>
+        {place.lastVisitAt && (
+          <Row label={t("map:tooltip.lastVisit")} value={formatDate(place.lastVisitAt, locale)} />
+        )}
+      </Grid>
+      {onPlaceOpen && (
+        <Cta label={t("map:globe.pinned.openPlace")} onClick={() => onPlaceOpen(place.id)} />
       )}
     </>
   );
