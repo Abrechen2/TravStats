@@ -1,29 +1,15 @@
-import type { LodgingStay, StayStatus } from "../../types/lodging";
-
 /**
- * The lifecycle STATUS of a lodging row — derived from its stays, the way a
- * flight row carries its own status. Not to be confused with
- * `lodgingCompleteness.ts`, which tags data-quality issues (no location, no
- * address); this here is about time: is someone there right now, is a stay
- * booked, or is everything in the past?
- *
- * Priority: a running stay beats a booked one beats history; "cancelled"
- * only shows when cancellations are ALL the lodging has — a hotel with nine
- * completed stays and one cancelled booking is not a "cancelled hotel".
- * `null` = no stays at all (the list already marks those "vorgemerkt").
+ * The lifecycle rule moved to `shared/lodgingLifecycle.ts` on 2026-09-20, when
+ * the lodging list's status FILTER moved to the server: the rule now has to be
+ * applied in SQL over rows the browser never sees, so it needs a home on both
+ * sides, which in this project means `shared/` with a mirror. This file stays
+ * as the import path every caller already names — a re-export, not a copy.
  */
-export function lodgingLifecycleStatus(stays: readonly LodgingStay[]): StayStatus | null {
-  if (stays.length === 0) return null;
-  if (stays.some((s) => s.status === "in_progress")) return "in_progress";
-  if (stays.some((s) => s.status === "scheduled")) return "scheduled";
-  if (stays.some((s) => s.status === "completed")) return "completed";
-  return "cancelled";
-}
-
-/** Sort rank for the status column — running first, then booked, then past. */
-export const LIFECYCLE_SORT_RANK: Record<StayStatus, number> = {
-  in_progress: 0,
-  scheduled: 1,
-  completed: 2,
-  cancelled: 3,
-};
+export {
+  lodgingLifecycleStatus,
+  LIFECYCLE_SORT_RANK,
+  LIFECYCLE_RANK_STAYLESS,
+  lodgingLifecycleRank,
+  LODGING_LIFECYCLE_STATUSES,
+  type LodgingLifecycleStatus,
+} from "../../shared/lodgingLifecycle";

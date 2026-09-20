@@ -25,6 +25,7 @@ import { documentIdsBodySchema } from "../../../schemas/document";
 import { errorContent } from "./shared";
 import {
   createLodgingSchema,
+  lodgingQuerySchema,
   proposeLodgingSchema,
   updateLodgingSchema,
   createStaySchema,
@@ -126,7 +127,11 @@ const lodging = registry.register(
       stays: z
         .array(stay)
         .optional()
-        .describe("Included by GET /lodging/{id}; the list endpoint omits them."),
+        .describe(
+          "Included by GET /lodging/{id} AND by the list — the row's status pill and " +
+            "its delete confirmation are derived from them. This said the list omitted " +
+            "them, which it never did."
+        ),
       chain: includedRow("chain").nullable().optional(),
       stayCount: z.number().int().optional().describe("Stays that count: check-out is past"),
       nights: z.number().int().optional(),
@@ -145,20 +150,31 @@ registry.registerPath({
   method: "get",
   path: "/lodging",
   summary: "List lodgings",
+  description:
+    "One page, decided by the server. Sorting, filtering and the total are computed " +
+    "over the whole filtered set in SQL, so a page is a page: nights, rating and spend " +
+    "order by the stays that COUNT (check-out past, not cancelled), never by the " +
+    "bookings still ahead. `meta.total` is that set's size before the slice.",
   tags: ["Lodging"],
-  request: {
-    query: z.object({
-      search: z.string().optional(),
-      type: z.enum(LODGING_TYPES).optional(),
-      country: z.string().optional(),
-      chainId: z.coerce.number().int().optional(),
-    }),
-  },
+  request: { query: lodgingQuerySchema },
   responses: {
     200: {
-      description: "Lodgings, without their stays",
-      content: { "application/json": { schema: z.array(lodging) } },
+      description: "One page of lodgings, each with its stays and derived figures",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.array(lodging),
+            meta: z.object({
+              total: z.number().int().describe("Rows matching the filters, before the page slice"),
+              limit: z.number().int(),
+              offset: z.number().int(),
+            }),
+          }),
+        },
+      },
     },
+    400: { description: "Invalid query", content: errorContent },
   },
 });
 

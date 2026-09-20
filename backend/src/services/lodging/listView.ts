@@ -5,14 +5,17 @@
  * limit. The grouping stands on its own: every function below answers a
  * question about a COLLECTION of lodgings — which rows, in what order, with
  * what totals — and none of it is routing.
+ *
+ * ORDERING left on 2026-09-20. `sortLodgings` and `buildLodgingWhere` lived
+ * here and are gone: both only ever served a handler that sorted and filtered
+ * the whole library in memory to slice one page out of it, and that page is
+ * decided in SQL now (`listQuery.ts`). What remains is the derivation of what
+ * a ROW SHOWS, which is still the shared rules' answer and not the database's.
  */
-
-import { Prisma } from "../../prisma";
 
 import { classifyStay } from "../../shared/lodgingCounting";
 import { lodgingBaseAmount, type LodgingStayFx } from "../../shared/lodgingSpendBase";
 import { resolveStayTiming } from "../../shared/lodgingTiming";
-import type { LodgingQueryInput } from "../../schemas/lodging";
 import type { LodgingListRow } from "../../routes/lodging";
 
 export interface RatedStay {
@@ -105,53 +108,3 @@ export function computeAggregates(
 }
 
 export type LodgingListItem = LodgingListRow & LodgingAggregates;
-
-export function sortLodgings(
-  items: LodgingListItem[],
-  sort: LodgingQueryInput["sort"]
-): LodgingListItem[] {
-  switch (sort) {
-    case "name":
-      return [...items].sort((a, b) => a.name.localeCompare(b.name));
-    case "nights":
-      return [...items].sort((a, b) => b.nights - a.nights);
-    case "rating":
-      return [...items].sort((a, b) => (b.overallRating ?? -1) - (a.overallRating ?? -1));
-    case "spend":
-      return [...items].sort((a, b) => b.totalSpendBase - a.totalSpendBase);
-    case "checkIn": {
-      const latestCheckIn = (l: LodgingListItem) =>
-        // An undated stay has no position on this axis. It sorts as if it were
-        // the oldest thing in the list rather than jumping to the top on a NaN.
-        l.stays.reduce((max, s) => Math.max(max, s.checkIn?.getTime() ?? 0), 0);
-      return [...items].sort((a, b) => latestCheckIn(b) - latestCheckIn(a));
-    }
-    default:
-      return items; // already ordered by createdAt desc from the DB query
-  }
-}
-
-export function buildLodgingWhere(q: LodgingQueryInput, userId: string): Prisma.LodgingWhereInput {
-  const where: Prisma.LodgingWhereInput = { userId };
-  if (q.type) where.type = q.type;
-  if (q.chainId) where.chainId = q.chainId;
-  // The filter sends an ISO code now ("DE"), so one option covers "Deutschland"
-  // AND "Germany". A non-code value is still accepted verbatim: an older client
-  // — and any house whose text resolves to no country at all — must keep working.
-  if (q.country) {
-    if (/^[A-Za-z]{2}$/.test(q.country)) where.isoCountryCode = q.country.toUpperCase();
-    else where.country = q.country;
-  }
-
-  const stayFilter: Prisma.LodgingStayWhereInput = {};
-  if (q.tripId) stayFilter.tripId = q.tripId;
-  if (q.year) {
-    stayFilter.checkIn = {
-      gte: new Date(`${q.year}-01-01T00:00:00.000Z`),
-      lt: new Date(`${q.year + 1}-01-01T00:00:00.000Z`),
-    };
-  }
-  if (Object.keys(stayFilter).length > 0) where.stays = { some: stayFilter };
-
-  return where;
-}

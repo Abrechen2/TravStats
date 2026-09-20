@@ -9,12 +9,12 @@ import { AppError } from "../middleware/errorHandler";
 import * as fx from "../services/fx/resolver";
 import { resolveLocation } from "./lodgingGeocode";
 import proposeRouter from "./lodging/propose";
+import { computeAggregates, type LodgingListItem } from "../services/lodging/listView";
 import {
-  computeAggregates,
-  sortLodgings,
-  buildLodgingWhere,
-  type LodgingListItem,
-} from "../services/lodging/listView";
+  queryLodgingPage,
+  LODGING_LIST_DEFAULT_LIMIT,
+  LODGING_LIST_MAX_LIMIT,
+} from "../services/lodging/listQuery";
 import { requireUser } from "../middleware/auth";
 import {
   applyFxSnapshot,
@@ -82,38 +82,53 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const parsed = lodgingQuerySchema.safeParse(req.query);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const where = buildLodgingWhere(parsed.data, userId);
-    // `nights`, `rating` and `spend` are derived from each lodging's stays,
-    // not plain columns, so they cannot be pushed into a Prisma `orderBy`.
-    // To keep every sort key consistent (and correct under pagination) we
-    // fetch the full filtered set for this user, compute the aggregates,
-    // sort in memory, and ONLY THEN slice offset/limit — sort-then-paginate,
-    // never the other way around (a "sort the already-fetched page" bug
-    // silently reorders a truncated slice instead of the true global order).
+    // Fetched ONCE for the whole list — every lodging's totalSpendBase is
+    // filtered against the SAME current base currency (finding 2), and the
+    // spend sort below orders by that same currency.
+    const baseCurrency = await getBaseCurrency(userId);
+
+    // The page is decided in SQL (services/lodging/listQuery.ts). It used to
+    // be decided here: the full filtered set was loaded with its stays, the
+    // aggregates derived in JavaScript, the array sorted and only THEN sliced
+    // — correct, and unbounded, which the 2026-09-19 audit measured as reading
+    // every lodging and every stay of the account to draw one page.
+    //
+    // Only the ORDER and the TOTAL come from that query. The rows themselves
+    // are read here and their figures still derived by `computeAggregates`
+    // from the shared rules, so the SQL never becomes a second source for a
+    // number the user reads; `listSql.parity.test.ts` holds the two together.
+    const { ids, total } = await queryLodgingPage({
+      userId,
+      query: parsed.data,
+      baseCurrency,
+    });
     const lodgings = await prisma.lodging.findMany({
-      where,
+      where: { id: { in: ids } },
       include: LODGING_INCLUDE,
-      orderBy: { createdAt: "desc" },
+    });
+    // `in` has no order of its own, so the page is put back into the order the
+    // query decided. Reading the database's arbitrary order instead would sort
+    // each page by itself — the truncated-slice bug one level down.
+    const byId = new Map(lodgings.map((l) => [l.id, l]));
+    const rows: LodgingListItem[] = ids.flatMap((id) => {
+      const lodging = byId.get(id);
+      return lodging === undefined
+        ? []
+        : [{ ...lodging, ...computeAggregates(lodging.stays, baseCurrency) }];
     });
 
-    // Fetched ONCE for the whole list — every lodging's totalSpendBase is
-    // filtered against the SAME current base currency (finding 2).
-    const baseCurrency = await getBaseCurrency(userId);
-    const rows: LodgingListItem[] = lodgings.map((l) => ({
-      ...l,
-      ...computeAggregates(l.stays, baseCurrency),
-    }));
-    const sorted = sortLodgings(rows, parsed.data.sort);
-    const offset = parsed.data.offset ?? 0;
-    const limit = parsed.data.limit ?? 200;
     // `meta.total` is the count of the FULL filtered set, before the page
     // slice — without it a client asking for a page has no way to tell a
-    // truncated 200-row result apart from "that's really all of them", and
-    // no way to walk further pages via offset.
+    // truncated result apart from "that's really all of them", and no way to
+    // know how many pages are left.
     res.json({
       success: true,
-      data: sorted.slice(offset, offset + limit),
-      meta: { total: sorted.length, limit, offset },
+      data: rows,
+      meta: {
+        total,
+        limit: Math.min(parsed.data.limit ?? LODGING_LIST_DEFAULT_LIMIT, LODGING_LIST_MAX_LIMIT),
+        offset: parsed.data.offset ?? 0,
+      },
     });
   } catch (err) {
     next(err);

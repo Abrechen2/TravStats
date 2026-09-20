@@ -273,15 +273,44 @@ export const proposeLodgingSchema = z.object({
   lon: z.number().min(-180).max(180).nullable().optional(),
 });
 
+/**
+ * The sort keys the list endpoint orders by.
+ *
+ * Nine of them, because the table header offers nine and paging moved to the
+ * server (2026-09-20): a key the browser can sort but the server cannot is a
+ * key that silently sorts one page instead of the library. `checkIn` is the
+ * tenth and is the OLD spelling of `lastStay` — the only date sort this
+ * endpoint ever had. It stays accepted so renaming a word does not break a
+ * stored link or an API consumer.
+ */
+export const LODGING_SORT_KEYS = [
+  "lastStay",
+  "name",
+  "chain",
+  "location",
+  "status",
+  "stays",
+  "nights",
+  "rating",
+  "spend",
+  "checkIn",
+] as const;
+
 export const lodgingQuerySchema = z.object({
   type: z.enum(LODGING_TYPES).optional(),
   chainId: z.coerce.number().int().positive().optional(),
   tripId: z.string().uuid().optional(),
   year: z.coerce.number().int().min(1900).max(2200).optional(),
   country: z.string().optional(),
+  /** Free text over the house, its chain and its town — what the list's search box sends. */
+  search: z.string().trim().min(1).max(200).optional(),
+  /** The lifecycle pill's value, per shared/lodgingLifecycle.ts. */
+  status: z.enum(STAY_STATUSES).optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
-  sort: z.enum(["nights", "rating", "spend", "name", "checkIn"]).optional(),
+  sort: z.enum(LODGING_SORT_KEYS).optional(),
+  /** Omitted means the direction that key reads first in the table. */
+  order: z.enum(["asc", "desc"]).optional(),
 });
 
 // A membership is still PROGRAM-shaped — one card, one programme name, several
