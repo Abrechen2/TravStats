@@ -43,8 +43,8 @@ import { HoverTooltip, type HoverTooltipApi } from "./Globe/HoverTooltip";
 import { PinnedCard } from "./Globe/PinnedCard";
 import { PinnedCardBoundary } from "./Globe/PinnedCardBoundary";
 import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
-import { toPortLabel } from "./map/portLabel";
 import { applyMapOverlays } from "./Globe/mapOverlays";
+import { buildAirportPoints, buildPortPoints } from "./Globe/globePointData";
 import { GlobeControlPanel, type StyleId, type LiteMode } from "./Globe/GlobeControlPanel";
 import type { ArcDatum, CruisePathDatum, GlobePinned, PointDatum } from "./Globe/globeLayerTypes";
 import { STYLE_OPTIONS } from "./Globe/globeStyles";
@@ -60,7 +60,6 @@ import { flagImgHtml, countryName } from "../lib/countryFlag";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTimeSliderStore } from "../store/timeSliderStore";
 import { GlobeTimeHistogram } from "./Globe/GlobeTimeHistogram";
-import { isCountableCruise } from "../shared/cruiseCounting";
 import {
   computeCruiseLegDates,
   computeTimeRange,
@@ -763,75 +762,10 @@ export default function GlobeView({
     return { arcsData: arcs, antipodalArcs: antipodals, heatmapThresholds: thresholds };
   }, [filteredFlights, minRouteCount, lite, altitudeFactor]);
 
-  const airportPoints = useMemo<PointDatum[]>(() => {
-    const seen = new Map<string, PointDatum>();
-    const bumpLastVisit = (cur: PointDatum, candidate: string | undefined): string | undefined => {
-      if (!candidate) return cur.lastVisit;
-      if (!cur.lastVisit || candidate > cur.lastVisit) return candidate;
-      return cur.lastVisit;
-    };
-    for (const flight of filteredFlights) {
-      const coords = flight.geometry?.coordinates;
-      if (!coords || coords.length < 2) continue;
-      const dep = flight.properties?.departureAirport;
-      const arr = flight.properties?.arrivalAirport;
-      const start = coords[0];
-      const end = coords[coords.length - 1];
-      // A scheduled flight is a future flight — it must never bump
-      // "last visit" into the future. `size` stays all-status (its label
-      // is neutral); only the visit timestamp is status-gated (mirrors
-      // routesLayer.ts's buildAirportPoints).
-      const departureTime =
-        flight.properties?.status !== "scheduled"
-          ? (flight.properties?.departureTime ?? undefined)
-          : undefined;
-      if (dep?.iata && Number.isFinite(start[0]) && Number.isFinite(start[1])) {
-        const key = dep.iata;
-        const cur = seen.get(key);
-        if (cur) {
-          seen.set(key, {
-            ...cur,
-            size: cur.size + 1,
-            lastVisit: bumpLastVisit(cur, departureTime),
-          });
-        } else {
-          seen.set(key, {
-            position: [start[0], start[1]],
-            size: 1,
-            iata: dep.iata,
-            name: dep.name ?? dep.iata,
-            icao: dep.icao,
-            city: dep.city ?? undefined,
-            country: dep.country ?? undefined,
-            lastVisit: departureTime,
-          });
-        }
-      }
-      if (arr?.iata && Number.isFinite(end[0]) && Number.isFinite(end[1])) {
-        const key = arr.iata;
-        const cur = seen.get(key);
-        if (cur) {
-          seen.set(key, {
-            ...cur,
-            size: cur.size + 1,
-            lastVisit: bumpLastVisit(cur, departureTime),
-          });
-        } else {
-          seen.set(key, {
-            position: [end[0], end[1]],
-            size: 1,
-            iata: arr.iata,
-            name: arr.name ?? arr.iata,
-            icao: arr.icao,
-            city: arr.city ?? undefined,
-            country: arr.country ?? undefined,
-            lastVisit: departureTime,
-          });
-        }
-      }
-    }
-    return Array.from(seen.values());
-  }, [filteredFlights]);
+  const airportPoints = useMemo<PointDatum[]>(
+    () => buildAirportPoints(filteredFlights),
+    [filteredFlights]
+  );
   // FeatureCollection per cruise. Same source as the 2D map.
   const [cruiseGeometry, setCruiseGeometry] = useState<Map<string, CruiseRouteFeatureCollection>>(
     () => new Map()
@@ -1004,72 +938,16 @@ export default function GlobeView({
     sliderFilterEnd,
   ]);
 
-  const portPoints = useMemo<PointDatum[]>(() => {
-    const seen = new Map<number, PointDatum>();
-    for (const c of cruises) {
-      // Only a sailed cruise's port calls count as a visit — the rule lives in
-      // shared/cruiseCounting.ts, so it no longer drifts from the layer's copy.
-      if (!isCountableCruise(c)) continue;
-      const legs = cruiseLegDatesByCruise.get(c.id) ?? [];
-      // A port is "visited" at the ARRIVAL date of the leg ending there
-      // (or at startDate for the first port of the cruise).
-      const portVisitDate = new Map<number, Date>();
-      const startDate = c.startDate ? new Date(c.startDate) : null;
-      const firstPortStop = c.stops.find((s) => !s.isAtSea && s.port);
-      if (firstPortStop?.port && startDate) {
-        portVisitDate.set(firstPortStop.port.id, startDate);
-      }
-      for (const ld of legs) portVisitDate.set(ld.toPortId, ld.endDate);
-
-      for (const stop of c.stops) {
-        if (stop.isAtSea || !stop.port) continue;
-        const port = stop.port;
-        const visit = portVisitDate.get(port.id);
-
-        if (sliderMode === "live" && sliderCurrent) {
-          if (!visit || visit.getTime() > sliderCurrent.getTime()) continue;
-        } else if (sliderMode === "filter" && sliderFilterStart && sliderFilterEnd) {
-          if (
-            !visit ||
-            visit.getTime() < sliderFilterStart.getTime() ||
-            visit.getTime() > sliderFilterEnd.getTime()
-          ) {
-            continue;
-          }
-        }
-
-        const visitIso = visit ? visit.toISOString() : undefined;
-        const cur = seen.get(port.id);
-        if (cur) {
-          const nextLast =
-            visitIso && (!cur.lastVisit || visitIso > cur.lastVisit) ? visitIso : cur.lastVisit;
-          seen.set(port.id, { ...cur, size: cur.size + 1, lastVisit: nextLast });
-        } else {
-          seen.set(port.id, {
-            position: [port.lon, port.lat],
-            size: 1,
-            iata: port.unlocode ?? port.name,
-            name: port.name,
-            city: port.city ?? undefined,
-            // On-map pill shows the readable port name, not the raw
-            // UN/LOCODE (the tooltip still surfaces the code via `iata`).
-            label: toPortLabel(port.name),
-            // Flag from the LOCODE country prefix (only when it's a real code).
-            country: port.unlocode ? port.unlocode.slice(0, 2) : undefined,
-            lastVisit: visitIso,
-          });
-        }
-      }
-    }
-    return Array.from(seen.values());
-  }, [
-    cruises,
-    cruiseLegDatesByCruise,
-    sliderMode,
-    sliderCurrent,
-    sliderFilterStart,
-    sliderFilterEnd,
-  ]);
+  const portPoints = useMemo<PointDatum[]>(
+    () =>
+      buildPortPoints(cruises, cruiseLegDatesByCruise, {
+        mode: sliderMode,
+        current: sliderCurrent,
+        filterStart: sliderFilterStart,
+        filterEnd: sliderFilterEnd,
+      }),
+    [cruises, cruiseLegDatesByCruise, sliderMode, sliderCurrent, sliderFilterStart, sliderFilterEnd]
+  );
 
   // Live-mode head marker: in live slider mode, find the single most
   // recent flight (latest departureDate) and isolate its great-circle
