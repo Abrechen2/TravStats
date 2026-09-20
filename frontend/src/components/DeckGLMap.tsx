@@ -2,6 +2,12 @@ import { useState, useMemo, useCallback, useEffect, useRef } from "react";
 import MapGL, { type MapRef, type MapLayerMouseEvent } from "react-map-gl/maplibre";
 import { DeckGLOverlay, webgl2Available } from "./map/DeckGLOverlay";
 import { createMarkerTooltip } from "./map/markerTooltip";
+import { PinnedCard } from "./map/cards/PinnedCard";
+import { PinnedCardBoundary } from "./map/cards/PinnedCardBoundary";
+import { HoverTooltip, type HoverTooltipApi } from "./map/cards/HoverTooltip";
+import type { MapPinned } from "./map/cards/pinnedTypes";
+import { pinnedFromAirport } from "./map/cards/buildFlatPinned";
+import { FLAT_FOCUS, focusMarker, useMapSelectionCards } from "./map/cards/useMapSelectionCards";
 import { LightingEffect } from "@deck.gl/core";
 import { useDeckHoverCursor } from "../hooks/useDeckHoverCursor";
 import { useTranslation } from "../hooks/useTranslation";
@@ -12,11 +18,12 @@ import type { LabelsMode } from "./map/labelPriority";
 import { loadFlightRouteShape, loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 import type { FlightRouteShape } from "../lib/flightRouteShape";
 import { useFlightColorStore } from "../store/flightColorStore";
+import { resolveFlightTipColor } from "../lib/flightColor";
 import { useLodgingColorStore } from "../store/lodgingColorStore";
 import { usePlaceColorStore } from "../store/placeColorStore";
 import { useMapCameraStore } from "../store/mapCameraStore";
 import { FLAT_BASEMAPS, resolveFlatStyle, type FlatStyleId } from "./map/basemapStyles";
-import type { Layer, MapViewState } from "@deck.gl/core";
+import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
 import type { Cruise, GeoJSONFeature, Flight } from "../types";
 import type { Lodging } from "../types/lodging";
 import type { Place } from "../types/place";
@@ -28,8 +35,6 @@ import type { PlaceLabelList, PlaceLabelSource } from "../lib/placeLabel";
 import { createHeatmapLayer } from "./layers/heatmapLayer";
 import { createTripsModeLayers, buildTripsData, getTimeRange } from "./layers/tripsLayer";
 import { createSpecialFlightsLayers } from "./layers/specialFlightsLayer";
-import { SpecialFlightTooltip } from "./specialFlights/SpecialFlightTooltip";
-import { getSpecialTooltipAnchor } from "./specialFlights/specialTooltipAnchor";
 import {
   createCruiseArcsLayer,
   createCruiseArrowsLayer,
@@ -43,13 +48,11 @@ import { useThemeStore } from "../store/themeStore";
 import { MAP_LAYER_COLORS } from "../types/mapTheme";
 import { useFlightSelectionStore } from "../store/flightSelectionStore";
 import { useCruiseSelectionStore } from "../store/cruiseSelectionStore";
-import { CruiseTooltip } from "./CruiseTooltip";
+import { useLodgingSelectionStore } from "../store/lodgingSelectionStore";
+import { usePlaceSelectionStore } from "../store/placeSelectionStore";
 import { computeBbox } from "../utils/mapAnimationHelpers";
 import { usePlaneAnimation } from "../hooks/usePlaneAnimation";
 import { usePulseAnimation } from "../hooks/usePulseAnimation";
-import { MapTooltip } from "./MapTooltip";
-import { TripTooltip } from "./TripTooltip";
-import { AirportTooltip } from "./AirportTooltip";
 import {
   NativeRoutesLayer,
   NATIVE_ROUTE_LINE_ID,
@@ -76,6 +79,20 @@ interface DeckGLMapProps {
   onFlightClick?: (flightId: string) => void;
   onRouteClick?: (flightIds: string[]) => void;
   onEdit?: (flight: Flight) => void;
+  /**
+   * Fires when the card's "Open (last) flight" action is used. Used to be
+   * globe-only; since the two maps share one card (owner ruling 2026-09-20)
+   * the flat map needs it too — `onFlightClick` only moves the selection,
+   * which is where the reader already is.
+   */
+  onFlightOpen?: (flightId: string) => void;
+  /** Fires when the card's "Open cruise" action is used. The cruise card used
+   *  to navigate by itself; the shared card asks its host instead. */
+  onCruiseOpen?: (cruiseId: string) => void;
+  /** Fires when the lodging card's open action is used. */
+  onLodgingOpen?: (lodgingId: string) => void;
+  /** Fires when the place card's open action is used. */
+  onPlaceOpen?: (placeId: string) => void;
   flightList?: Flight[];
   onResetTrip?: () => void;
   cruises?: Cruise[];
@@ -149,6 +166,10 @@ export function DeckGLMap({
   onFlightClick,
   onRouteClick,
   onEdit,
+  onFlightOpen,
+  onCruiseOpen,
+  onLodgingOpen,
+  onPlaceOpen,
   flightList,
   onResetTrip,
   cruises = [],
@@ -341,11 +362,10 @@ export function DeckGLMap({
   // re-render when the specific field this component reads changes.
   const selectedIds = useFlightSelectionStore((s) => s.selectedIds);
   const selectedFlights = useFlightSelectionStore((s) => s.selectedFlights);
-  const highlightMode = useFlightSelectionStore((s) => s.highlightMode);
   const clearSelection = useFlightSelectionStore((s) => s.clearSelection);
-  const showDetails = useFlightSelectionStore((s) => s.showDetails);
   const selectedCruiseId = useCruiseSelectionStore((s) => s.selectedCruiseId);
-  const selectedCruise = useCruiseSelectionStore((s) => s.selectedCruise);
+  const clearLodgingSelection = useLodgingSelectionStore((s) => s.clearSelection);
+  const clearPlaceSelection = usePlaceSelectionStore((s) => s.clearSelection);
   const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
   const clearCruiseSelection = useCruiseSelectionStore((s) => s.clearSelection);
 
@@ -370,6 +390,16 @@ export function DeckGLMap({
   useEffect(() => {
     setCurrentTime(timeRange.min);
   }, [timeRange.min]);
+
+  /**
+   * Bring one point into view. The flight selection has its own bounding-box
+   * flyTo below (a route needs both ends on screen); a single marker — a hotel,
+   * a place — only needs to be where the reader is looking, and must not zoom
+   * OUT if they are already closer than the floor.
+   */
+  const focusOn = useCallback((lngLat: [number, number]): void => {
+    focusMarker(mapRef.current?.getMap(), lngLat, FLAT_FOCUS);
+  }, []);
 
   // flyTo when selection changes
   useEffect(() => {
@@ -401,47 +431,42 @@ export function DeckGLMap({
   const planeLayers = usePlaneAnimation(selectedFlights);
   const pulseLayers = usePulseAnimation(selectedFlights);
 
-  // ── Tooltip geo anchors ─────────────────────────────────────────────────────
-  // All tooltips store geographic coordinates so they reproject correctly on move.
+  // ── The pinned card ─────────────────────────────────────────────────────────
+  // ONE selection, one card, one anchor. There were five cards here with three
+  // anchoring schemes between them (a group bbox, a route midpoint, and the
+  // cruise one pinned to the bottom of the viewport); the owner's 2026-09-20
+  // ruling replaced all five with the globe's card, which anchors on a
+  // [lng, lat] and reprojects as the camera moves. So the anchor is on the
+  // payload (`MapPinned.anchorLngLat`) and this component only projects it.
+  const [pinned, setPinned] = useState<MapPinned | null>(null);
+  const [pinnedPos, setPinnedPos] = useState<{ x: number; y: number } | null>(null);
 
-  // Flight / trip tooltip
-  const [tooltipVisible, setTooltipVisible] = useState(false);
-  const [tooltipPos, setTooltipPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const tooltipGeoRef = useRef<{
-    mode: "group" | "single";
-    points: Array<[number, number]>; // [lon, lat]
-  } | null>(null);
+  // The hover tooltip is the globe's too, driven imperatively so a 60–120 Hz
+  // onHover never re-renders this component (see HoverTooltip.tsx).
+  const hoverRef = useRef<HoverTooltipApi | null>(null);
 
-  // Airport tooltip
-  const [airportIata, setAirportIata] = useState<string | null>(null);
-  const [airportPos, setAirportPos] = useState<{ x: number; y: number }>({ x: 0, y: 0 });
-  const airportGeoRef = useRef<[number, number] | null>(null); // [lon, lat]
-
-  // Reproject all active tooltips — called on every map move/zoom via onMove
+  // Reproject the card's anchor — called on every map move/zoom via onMove.
   const recomputeAllPositions = useCallback(() => {
     const map = mapRef.current?.getMap();
     if (!map) return;
-
-    const anchor = tooltipGeoRef.current;
-    if (anchor) {
-      if (anchor.mode === "group") {
-        const screenPts = anchor.points.map((p) => map.project(p));
-        const minX = Math.min(...screenPts.map((p) => p.x));
-        const maxX = Math.max(...screenPts.map((p) => p.x));
-        const minY = Math.min(...screenPts.map((p) => p.y));
-        setTooltipPos({ x: (minX + maxX) / 2, y: minY });
-      } else {
-        const pt = map.project(anchor.points[0]);
-        setTooltipPos({ x: pt.x, y: pt.y });
-      }
-    }
-
-    const airportAnchor = airportGeoRef.current;
-    if (airportAnchor) {
-      const pt = map.project(airportAnchor);
-      setAirportPos({ x: pt.x, y: pt.y });
-    }
+    const anchor = pinnedRef.current?.anchorLngLat;
+    if (!anchor) return;
+    const pt = map.project(anchor);
+    setPinnedPos({ x: pt.x, y: pt.y });
   }, []);
+
+  // `recomputeAllPositions` is wired into a rAF on every move, so it must stay
+  // referentially stable; reading the anchor through a ref is what keeps it so
+  // without going stale.
+  const pinnedRef = useRef<MapPinned | null>(null);
+  useEffect(() => {
+    pinnedRef.current = pinned;
+    if (pinned === null) {
+      setPinnedPos(null);
+      return;
+    }
+    recomputeAllPositions();
+  }, [pinned, recomputeAllPositions]);
 
   const moveRafRef = useRef<number | null>(null);
 
@@ -469,55 +494,35 @@ export function DeckGLMap({
     };
   }, []);
 
-  useEffect(() => {
-    setTooltipVisible(false);
-    tooltipGeoRef.current = null;
-    if (selectedFlights.length === 0) return;
+  // The card's hero colour follows the flight colour store, like every arc on
+  // the map — never a literal, per the 2.4.0 colour-mode rule.
+  const flightTipColor = useMemo(
+    () => resolveFlightTipColor(flightColorConfig),
+    [flightColorConfig]
+  );
 
-    const timer = setTimeout(() => {
-      const map = mapRef.current?.getMap();
-      if (!map || selectedFlights.length === 0) return;
-
-      if (highlightMode === "group") {
-        const pts: Array<[number, number]> = [];
-        for (const f of selectedFlights) {
-          if (f.depLon != null && f.depLat != null) pts.push([f.depLon, f.depLat]);
-          if (f.arrLon != null && f.arrLat != null) pts.push([f.arrLon, f.arrLat]);
-        }
-        if (pts.length === 0) return;
-        tooltipGeoRef.current = { mode: "group", points: pts };
-      } else {
-        const f = selectedFlights[0];
-        // Special flights anchor off event/pattern coords when regular
-        // dep/arr coords would make the tooltip float over empty ocean
-        // (e.g. eclipse chase mid-Atlantic, ZeroG hold pattern).
-        if (f.specialType) {
-          const anchor = getSpecialTooltipAnchor(f);
-          if (!anchor) return;
-          tooltipGeoRef.current = { mode: "single", points: [anchor] };
-        } else {
-          if (f.depLon == null || f.arrLon == null || f.depLat == null || f.arrLat == null) return;
-          tooltipGeoRef.current = {
-            mode: "single",
-            points: [[(f.depLon + f.arrLon) / 2, (f.depLat + f.arrLat) / 2]],
-          };
-        }
-      }
-
-      recomputeAllPositions();
-      setTooltipVisible(true);
-    }, TOOLTIP_DELAY_MS);
-
-    return () => clearTimeout(timer);
-  }, [selectedFlights, highlightMode, recomputeAllPositions]);
+  // Every selection that comes from outside the map — the activity sidebar,
+  // the flight panel — becomes a card and a camera move, on the same terms the
+  // globe uses (`map/cards/useMapSelectionCards.ts`).
+  const { cardFlights, clearSelections, selectionScope, resolveSelectedFlight, openTripDetails } =
+    useMapSelectionCards({
+      flights,
+      flightColor: flightTipColor,
+      focus: focusOn,
+      setPinned,
+      flightDelayMs: TOOLTIP_DELAY_MS,
+      clearOnEmpty: true,
+      // The bounding-box flyTo above already frames a flight selection with both
+      // airports on screen; a second command would undo exactly that.
+      framesFlightSelection: true,
+    });
 
   // Wrap onFlightClick so that a deck.gl layer click sets the guard ref BEFORE the
   // Map onClick fires and would otherwise clear the selection immediately (Bug 1).
   const handleFlightClick = useCallback(
     (flightIdOrIds: string | string[]): void => {
       deckClickedRef.current = true;
-      setAirportIata(null);
-      airportGeoRef.current = null;
+      setPinned(null);
       // Route clicks pass all flightIds for that route; single-flight clicks pass a string
       if (Array.isArray(flightIdOrIds)) {
         onRouteClick?.(flightIdOrIds);
@@ -532,18 +537,9 @@ export function DeckGLMap({
     (iata: string, lon: number, lat: number): void => {
       deckClickedRef.current = true;
       clearSelection();
-      setTooltipVisible(false);
-      tooltipGeoRef.current = null;
-      airportGeoRef.current = [lon, lat];
-      setAirportIata(iata);
-      // Initial screen position
-      const map = mapRef.current?.getMap();
-      if (map) {
-        const pt = map.project([lon, lat]);
-        setAirportPos({ x: pt.x, y: pt.y });
-      }
+      setPinned(pinnedFromAirport(iata, lon, lat, flights));
     },
-    [clearSelection]
+    [clearSelection, flights]
   );
 
   // Mirrors handleAirportClick's guard exactly: set deckClickedRef BEFORE
@@ -748,13 +744,22 @@ export function DeckGLMap({
   // the DeckGLOverlay API.
   const effects: LightingEffect[] = [];
 
-  // Enriched /geo feature for the currently selected flight — its dep/arr
-  // country codes feed the flags in the click tooltip (the structured Flight
-  // doesn't carry a country).
-  const selectedGeo = useMemo(() => {
-    const id = selectedFlights[0]?.id;
-    return id ? flights.find((f) => f.properties.id === id) : undefined;
-  }, [selectedFlights, flights]);
+  // deck.gl's own `getTooltip` is no longer wired: it can only be styled
+  // through a style object, so the flat map's hover never matched the card it
+  // sat beside. `createMarkerTooltip` still builds the CONTENT — it is the one
+  // renderer for both surfaces now — and the globe's `HoverTooltip` draws it.
+  const handleDeckHover = useCallback(
+    (info: PickingInfo): void => {
+      onDeckHover(info);
+      const tip = getTooltip(info);
+      if (tip && info.x != null && info.y != null) {
+        hoverRef.current?.show({ html: tip.html, x: info.x, y: info.y });
+      } else {
+        hoverRef.current?.hide();
+      }
+    },
+    [getTooltip, onDeckHover]
+  );
 
   const handleTimeChange = useCallback((value: number | ((prev: number) => number)): void => {
     setCurrentTime((prev) => (typeof value === "function" ? value(prev) : value));
@@ -792,11 +797,20 @@ export function DeckGLMap({
       // Background click — clear selection
       clearSelection();
       clearCruiseSelection();
-      setAirportIata(null);
-      airportGeoRef.current = null;
+      clearLodgingSelection();
+      clearPlaceSelection();
+      setPinned(null);
       onResetTrip?.();
     },
-    [onRouteClick, handleAirportClick, clearSelection, clearCruiseSelection, onResetTrip]
+    [
+      onRouteClick,
+      handleAirportClick,
+      clearSelection,
+      clearCruiseSelection,
+      clearLodgingSelection,
+      clearPlaceSelection,
+      onResetTrip,
+    ]
   );
 
   // Interactive layer IDs for native fallback (enables cursor: pointer on hover)
@@ -823,8 +837,7 @@ export function DeckGLMap({
           <DeckGLOverlay
             layers={[...layers, ...pulseLayers, ...planeLayers]}
             effects={effects}
-            getTooltip={getTooltip}
-            onHover={onDeckHover}
+            onHover={handleDeckHover}
           />
         )}
         {!webgl2Available && visMode === "routes" && (
@@ -923,74 +936,59 @@ export function DeckGLMap({
         </div>
       )}
 
-      {tooltipVisible && highlightMode === "group" && selectedFlights.length > 1 && (
-        <TripTooltip
-          flights={selectedFlights}
-          screenX={tooltipPos.x}
-          screenY={tooltipPos.y}
-          onClose={() => {
-            clearSelection();
-            setTooltipVisible(false);
-            onResetTrip?.();
+      {/* ONE card for every selection — the globe's, per the owner's
+          2026-09-20 ruling. It anchors on the selection's [lng, lat] and
+          reprojects on every move, the way the globe's does; the five cards
+          it replaced each had their own anchoring scheme. */}
+      {pinned && pinnedPos && (
+        <div
+          className="absolute z-30 pointer-events-auto"
+          style={{
+            left: pinnedPos.x,
+            top: pinnedPos.y,
+            transform: "translate(-50%, calc(-100% - 14px))",
           }}
-          onShowDetails={() => {
-            setTooltipVisible(false);
-            showDetails(selectedFlights, "route-details");
-          }}
-        />
+        >
+          <PinnedCardBoundary>
+            <PinnedCard
+              pinned={pinned}
+              flights={cardFlights}
+              cruises={cruises}
+              selectionScope={selectionScope}
+              onClose={() => {
+                setPinned(null);
+                clearSelections();
+                onResetTrip?.();
+              }}
+              onFlightOpen={onFlightOpen ?? onFlightClick}
+              onFlightEdit={
+                onEdit
+                  ? (flightId) => {
+                      const target = resolveSelectedFlight(flightId);
+                      if (!target) return;
+                      setPinned(null);
+                      clearSelections();
+                      onEdit(target);
+                    }
+                  : undefined
+              }
+              onCruiseOpen={onCruiseOpen}
+              onLodgingOpen={onLodgingOpen}
+              onPlaceOpen={onPlaceOpen}
+              onTripDetails={() => {
+                setPinned(null);
+                openTripDetails();
+              }}
+            />
+          </PinnedCardBoundary>
+        </div>
       )}
 
-      {tooltipVisible &&
-        highlightMode !== "group" &&
-        selectedFlights.length > 0 &&
-        (selectedFlights[0].specialType ? (
-          <SpecialFlightTooltip
-            flight={selectedFlights[0]}
-            screenX={tooltipPos.x}
-            screenY={tooltipPos.y}
-            onEdit={(flight) => {
-              clearSelection();
-              onEdit?.(flight);
-            }}
-            onClose={() => {
-              clearSelection();
-              setTooltipVisible(false);
-            }}
-          />
-        ) : (
-          <MapTooltip
-            flight={selectedFlights[0]}
-            screenX={tooltipPos.x}
-            screenY={tooltipPos.y}
-            depCountry={selectedGeo?.properties.departureAirport.country}
-            arrCountry={selectedGeo?.properties.arrivalAirport.country}
-            onEdit={(flight) => {
-              clearSelection();
-              onEdit?.(flight);
-            }}
-            onClose={() => {
-              clearSelection();
-              setTooltipVisible(false);
-            }}
-          />
-        ))}
-
-      {airportIata && (
-        <AirportTooltip
-          iata={airportIata}
-          screenX={airportPos.x}
-          screenY={airportPos.y}
-          flights={flights}
-          onClose={() => {
-            setAirportIata(null);
-            airportGeoRef.current = null;
-          }}
-        />
-      )}
-
-      {selectedCruise !== null && (
-        <CruiseTooltip cruise={selectedCruise} onClose={clearCruiseSelection} />
-      )}
+      {/* Hover tooltip — the globe's leaf component, fed imperatively. The
+          content still comes from `createMarkerTooltip`, which is the one
+          renderer for both surfaces since the cards were unified; it is what
+          still knows the lodging and place datums the globe has no layer for. */}
+      <HoverTooltip ref={hoverRef} />
 
       {!webgl2Available && (
         <div

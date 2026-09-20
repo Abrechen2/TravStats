@@ -9,6 +9,12 @@ import type { Cruise } from "../../../types/cruise";
 // Types
 // ---------------------------------------------------------------------------
 
+/**
+ * Same value and same reason as `TOUR_PATH_GLOBE_ALTITUDE_M` — high enough to
+ * clear the chord sag of a long leg, low enough to be invisible as height.
+ */
+export const JOURNEY_GLOBE_ALTITUDE_M = 5_000;
+
 export interface TripGroup {
   flights: GeoJSONFeature[];
   cruises: Cruise[];
@@ -113,7 +119,15 @@ export function buildJourneyLayers(
   /** The user's cruise colour mode + colours. Passed through so journey mode's
    *  cruise legs are tinted exactly like the dashboard legend says they are —
    *  omitting it falls back to the default status pair. */
-  cruiseColorConfig?: CruiseColorConfig
+  cruiseColorConfig?: CruiseColorConfig,
+  /**
+   * Metres to lift the trip's lines off the surface. 0 for the flat map;
+   * `JOURNEY_GLOBE_ALTITUDE_M` for the globe, where an unlifted PathLayer
+   * z-fights the sphere mesh and draws nothing — the defect
+   * `TOUR_PATH_GLOBE_ALTITUDE_M` documents. The flight legs are an ArcLayer,
+   * which bows above the surface on its own, so only the cruise legs need it.
+   */
+  altitudeM = 0
 ): Layer[] {
   const groups = groupByTripId(flights, cruises);
 
@@ -132,7 +146,7 @@ export function buildJourneyLayers(
 
   // Cruise legs (PathLayer via shared helper) + directional arrow heads.
   if (trip.cruises.length > 0) {
-    const cruiseOptions = { colorConfig: cruiseColorConfig };
+    const cruiseOptions = { colorConfig: cruiseColorConfig, altitudeM };
     const cruiseLayer = createCruiseArcsLayer(
       trip.cruises,
       undefined,

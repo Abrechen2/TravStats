@@ -1,16 +1,21 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, fireEvent } from "@testing-library/react";
 import { PinnedCard } from "../PinnedCard";
-import { buildGlobeLayers, type BuildGlobeLayersOptions } from "../buildGlobeLayers";
-import { EarthOcclusionExtension } from "../EarthOcclusionExtension";
-import { DEFAULT_LODGING_COLOR_CONFIG } from "../../../lib/lodgingColor";
-import { DEFAULT_PLACE_COLOR_CONFIG } from "../../../lib/placeColor";
-import type { GlobePinned } from "../globeLayerTypes";
-import type { Lodging } from "../../../types/lodging";
-import type { Place } from "../../../types/place";
+import { buildGlobeLayers, type BuildGlobeLayersOptions } from "../../../Globe/buildGlobeLayers";
+import { EarthOcclusionExtension } from "../../../Globe/EarthOcclusionExtension";
+import { DEFAULT_LODGING_COLOR_CONFIG } from "../../../../lib/lodgingColor";
+import { DEFAULT_PLACE_COLOR_CONFIG } from "../../../../lib/placeColor";
+import type { GlobePinned } from "../../../Globe/globeLayerTypes";
+import type { Lodging } from "../../../../types/lodging";
+import type { Place } from "../../../../types/place";
 import type { Layer } from "@deck.gl/core";
 
 /**
+ * Moved here with the card on 2026-09-20: it is shared map chrome now, not
+ * globe chrome, so its tests live beside it. The globe-layer half of this file
+ * (the pin click) still reaches back into `Globe/`, which is correct — that
+ * half IS globe-specific.
+ *
  * Clicking a hotel or a place on the globe has to answer with the same card
  * an airport or a port answers with — and with a way OUT of it, to the entry
  * itself. Two things are pinned here: that the click produces the pinned
@@ -23,7 +28,7 @@ import type { Layer } from "@deck.gl/core";
  * arc's "open last flight" already makes.
  */
 
-vi.mock("../../../hooks/useTranslation", () => ({
+vi.mock("../../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, unknown>) =>
       opts && "count" in opts ? `${key}:${String(opts.count)}` : key,

@@ -561,6 +561,15 @@ export interface GeoJSONFeature {
     taxes?: number;
     fees?: number;
     distance: number;
+    /**
+     * Carried by the SELECTED row rather than by /geo: the endpoint does not
+     * send these three, but the card shows them for a selection, which always
+     * has the store row beside it (`withSelectedFlights`). Optional because a
+     * feature the map merely draws has none.
+     */
+    co2Kg?: number;
+    seatClass?: string;
+    durationMinutes?: number;
   };
   geometry: {
     type: "LineString";

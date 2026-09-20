@@ -239,9 +239,19 @@
       "debark": "Debark",
       "openCruise": "Open cruise",
       "durationHours": "{{h}} h {{m}} min",
+      "openFlight": "Open flight",
+      "details": "Details",
+      "event": "Event",
+      "distance": "Distance",
       "nights": "Nights",
+      "price": "Price",
       "openLodging": "Open lodging",
-      "openPlace": "Open place"
+      "openPlace": "Open place",
+      "stay": "Stay",
+      "upcomingStay": "Next stay",
+      "co2": "CO₂",
+      "dateRange": "Period",
+      "status": "Status"
     },
     "timeSlider": {
       "title": "Timeline",

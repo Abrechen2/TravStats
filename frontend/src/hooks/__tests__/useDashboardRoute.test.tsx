@@ -1,4 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+
+// jsdom has no WebGL2, and without it the registry answers with each tab's
+// FLAT fallback (see `defaultModeForTab`). Everything below is about the
+// ruling's default, so the device says yes; the fallback has its own test in
+// `types/__tests__/dashboard.test.ts`.
+vi.mock("../../lib/webgl2", () => ({ webgl2Available: true }));
 import { renderHook, act } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { useDashboardRoute } from "../useDashboardRoute";
@@ -28,12 +34,54 @@ describe("useDashboardRoute", () => {
     window.localStorage.clear();
   });
 
-  it("defaults to all/overview when URL has no tab or mode", () => {
+  // Owner ruling 2026-09-20, from two screenshots of the same selection:
+  // "Globus soll ueberall genutzt werden". So the sphere is what a tab opens
+  // on when the reader has never said otherwise — and only then.
+  it("defaults to the globe when nothing is stored", () => {
     const { result } = renderHook(() => useDashboardRoute(), {
       wrapper: wrapper(["/dashboard"]),
     });
     expect(result.current.tab).toBe("all");
-    expect(result.current.mode).toBe("overview");
+    expect(result.current.mode).toBe("globe");
+  });
+
+  it("defaults to the globe on every tab that offers one", () => {
+    for (const tab of ["flight", "cruise", "lodging", "tour", "poi"]) {
+      window.localStorage.clear();
+      const { result } = renderHook(() => useDashboardRoute(), {
+        wrapper: wrapper([`/dashboard/${tab}`]),
+      });
+      expect(result.current.mode, `${tab} should open on the globe`).toBe("globe");
+    }
+  });
+
+  it("respects a stored FLAT choice over the globe default", () => {
+    window.localStorage.setItem(LAST_MODE_KEY, JSON.stringify({ flight: "heatmap" }));
+    const { result } = renderHook(() => useDashboardRoute(), {
+      wrapper: wrapper(["/dashboard/flight"]),
+    });
+    expect(result.current.mode).toBe("heatmap");
+  });
+
+  // The "Reise" view is a view, not a projection — picking it must not erase
+  // which projection the reader last chose, or journey could never honour it.
+  it("reports the projection behind the stored mode, and journey does not overwrite it", () => {
+    const { result } = renderHook(() => useDashboardRoute(), {
+      wrapper: wrapper(["/dashboard?mode=heatmap"]),
+    });
+    expect(result.current.projection).toBe("flat");
+
+    act(() => {
+      result.current.setMode("journey");
+    });
+    expect(result.current.projection).toBe("flat");
+  });
+
+  it("reports the globe projection when nothing has been chosen", () => {
+    const { result } = renderHook(() => useDashboardRoute(), {
+      wrapper: wrapper(["/dashboard"]),
+    });
+    expect(result.current.projection).toBe("globe");
   });
 
   it("reads tab from URL segment, mode from URL query", () => {
@@ -55,18 +103,11 @@ describe("useDashboardRoute", () => {
     expect(result.current.mode).toBe("trips");
   });
 
-  it("URL mode missing AND no localStorage → tab default", () => {
-    const { result } = renderHook(() => useDashboardRoute(), {
-      wrapper: wrapper(["/dashboard/cruise"]),
-    });
-    expect(result.current.mode).toBe("sea-routes");
-  });
-
   it("invalid URL mode for the active tab → tab default, no crash", () => {
     const { result } = renderHook(() => useDashboardRoute(), {
       wrapper: wrapper(["/dashboard/flight?mode=sea-routes"]),
     });
-    expect(result.current.mode).toBe("routes");
+    expect(result.current.mode).toBe("globe");
   });
 
   it("invalid tab → redirects to /dashboard (tab resolves to all)", () => {
@@ -111,7 +152,7 @@ describe("useDashboardRoute", () => {
     const { result } = renderHook(() => useDashboardRoute(), {
       wrapper: wrapper(["/dashboard/flight"]),
     });
-    expect(result.current.mode).toBe("routes");
+    expect(result.current.mode).toBe("globe");
   });
 
   it("URL-set mode persists to localStorage so tab-switch round-trip restores it", () => {

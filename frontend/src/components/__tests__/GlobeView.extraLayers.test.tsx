@@ -2,6 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { render, waitFor } from "@testing-library/react";
 import * as React from "react";
 import type { Layer } from "@deck.gl/core";
+import { PathLayer } from "@deck.gl/layers";
 
 /**
  * H1 (fix round 1 review, 2026-08-30): GlobeView never accepted extra
@@ -106,7 +107,7 @@ vi.mock("../Globe/GlobeControlPanel", () => ({
 vi.mock("../Globe/GlobeTimeHistogram", () => ({
   GlobeTimeHistogram: () => null,
 }));
-vi.mock("../Globe/HoverTooltip", () => ({
+vi.mock("../map/cards/HoverTooltip", () => ({
   HoverTooltip: React.forwardRef(function MockHoverTooltip(
     _props: unknown,
     ref: React.Ref<unknown>
@@ -115,8 +116,8 @@ vi.mock("../Globe/HoverTooltip", () => ({
     return null;
   }),
 }));
-vi.mock("../Globe/PinnedCard", () => ({ PinnedCard: () => null }));
-vi.mock("../Globe/PinnedCardBoundary", () => ({
+vi.mock("../map/cards/PinnedCard", () => ({ PinnedCard: () => null }));
+vi.mock("../map/cards/PinnedCardBoundary", () => ({
   PinnedCardBoundary: ({ children }: { children?: React.ReactNode }) => children,
 }));
 vi.mock("../Globe/GlobeLabelsOverlay", () => ({ GlobeLabelsOverlay: () => null }));
@@ -135,7 +136,11 @@ vi.mock("../../hooks/useTranslation", () => ({
 // Imported after the mocks above so the module graph picks them up.
 import GlobeView from "../GlobeView";
 
-const EXTRA_LAYER = { id: "dashboard-tour-paths-test" } as unknown as Layer;
+// A REAL layer, not a stand-in object: since `occludeExtraLayers` the globe
+// clones what a caller passes to give it the earth-occlusion extension, and a
+// bare `{id}` has neither `props` nor `clone` — it would measure the guard
+// rather than the wiring.
+const EXTRA_LAYER: Layer = new PathLayer({ id: "dashboard-tour-paths-test", data: [] });
 
 beforeEach(() => {
   capturedOverlayProps.length = 0;
@@ -149,7 +154,11 @@ describe("GlobeView: extraLayers reach the deck.gl overlay", () => {
 
     await waitFor(() => expect(capturedOverlayProps.length).toBeGreaterThan(0));
     const lastLayers = capturedOverlayProps[capturedOverlayProps.length - 1].layers;
-    expect(lastLayers).toContain(EXTRA_LAYER);
+    // By ID, not by identity: since `occludeExtraLayers` the caller's layer
+    // arrives CLONED, carrying the earth-occlusion extension every
+    // globe-built layer has. deck.gl diffs layers by id, so it is still the
+    // same layer as far as the overlay is concerned.
+    expect(lastLayers.map((l) => l.id)).toContain(EXTRA_LAYER.id);
   });
 
   it("renders with no extra layers at all when none are passed (default stays [])", async () => {
@@ -157,6 +166,6 @@ describe("GlobeView: extraLayers reach the deck.gl overlay", () => {
 
     await waitFor(() => expect(capturedOverlayProps.length).toBeGreaterThan(0));
     const lastLayers = capturedOverlayProps[capturedOverlayProps.length - 1].layers;
-    expect(lastLayers).not.toContain(EXTRA_LAYER);
+    expect(lastLayers.map((l) => l.id)).not.toContain(EXTRA_LAYER.id);
   });
 });

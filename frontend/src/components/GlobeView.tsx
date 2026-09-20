@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useMemo, useRef, useState, type CSSProperties } from "react";
+import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import MapGL, { useControl, type MapRef } from "react-map-gl/maplibre";
 import { MapboxOverlay } from "@deck.gl/mapbox";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
@@ -25,9 +25,6 @@ import type { LabelsMode } from "./map/labelPriority";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
 import { loadGlobeChrome, saveGlobeChrome } from "./map/globeChrome";
 import { useFlightColorStore } from "../store/flightColorStore";
-import { LODGING_COLOR } from "../lib/lodgingColor";
-import { PLACE_COLOR } from "../lib/placeColor";
-import { rgbCss } from "../lib/flightColor";
 import { useLodgingColorStore } from "../store/lodgingColorStore";
 import { usePlaceColorStore } from "../store/placeColorStore";
 import { useMapCameraStore } from "../store/mapCameraStore";
@@ -35,19 +32,27 @@ import { useMapCameraStore } from "../store/mapCameraStore";
 // Base marker radius (px) a size preset scales. off → 0 (hidden).
 const GLOBE_MARKER_BASE_PX = 5;
 import { nightCells as computeNightCells } from "./Globe/sunPosition";
-import { HoverTooltip, type HoverTooltipApi } from "./Globe/HoverTooltip";
-import { PinnedCard } from "./Globe/PinnedCard";
-import { PinnedCardBoundary } from "./Globe/PinnedCardBoundary";
+import { HoverTooltip, type HoverTooltipApi } from "./map/cards/HoverTooltip";
+import {
+  airportHoverHtml,
+  arcHoverHtml,
+  cruiseHoverHtml,
+  portHoverHtml,
+} from "./map/cards/hoverCardHtml";
 import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
+import { usePinnedAnchor } from "./Globe/usePinnedAnchor";
+import { occludeExtraLayers } from "./Globe/occludeExtraLayers";
+import { GlobePinnedOverlay } from "./Globe/GlobePinnedOverlay";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { buildAirportPoints, buildPortPoints } from "./Globe/globePointData";
 import { buildGlobeArcData } from "./Globe/globeArcData";
 import { lodgingLabelPoints, placeLabelPoints } from "./Globe/globePinLabels";
 import { createMarkerTooltip } from "./map/markerTooltip";
 import { GlobeControlPanel, type StyleId, type LiteMode } from "./Globe/GlobeControlPanel";
-import type { ArcDatum, CruisePathDatum, GlobePinned, PointDatum } from "./Globe/globeLayerTypes";
+import type { ArcDatum, CruisePathDatum, PointDatum } from "./Globe/globeLayerTypes";
+import type { MapPinned } from "./map/cards/pinnedTypes";
 import { STYLE_OPTIONS } from "./Globe/globeStyles";
-import type { GeoJSONFeature } from "../types";
+import type { Flight, GeoJSONFeature } from "../types";
 import { isCountableFlight } from "../shared/flightCounting";
 import type { Cruise } from "../types/cruise";
 import type { Lodging } from "../types/lodging";
@@ -57,9 +62,9 @@ import type { PlaceLabelList, PlaceLabelSource } from "../lib/placeLabel";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { resolveCruiseArcColor } from "../lib/cruiseColor";
 import { useCruiseColorStore } from "../store/cruiseColorStore";
+import { GLOBE_FOCUS, focusMarker, useMapSelectionCards } from "./map/cards/useMapSelectionCards";
+import { resolveFlightTipColor } from "../lib/flightColor";
 import { logger } from "../lib/logger";
-import { escapeHtml } from "../lib/escapeHtml";
-import { flagImgHtml, countryName } from "../lib/countryFlag";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTimeSliderStore } from "../store/timeSliderStore";
 import { GlobeTimeHistogram } from "./Globe/GlobeTimeHistogram";
@@ -75,7 +80,6 @@ import {
   type CruiseLegDates,
   type MonthBucket,
 } from "./Globe/timeSliderUtils";
-import { formatDate as formatUserDate } from "../lib/displayFormat";
 
 /**
  * Globe-mode renderer. MapLibre's native globe projection (5.x) draws
@@ -94,12 +98,30 @@ import { formatDate as formatUserDate } from "../lib/displayFormat";
 interface GlobeViewProps {
   flights: GeoJSONFeature[];
   cruises?: Cruise[];
+  /**
+   * Cruises the CARD may look up, which is not the same list as the one the
+   * globe DRAWS.
+   *
+   * `showInternalCruises={false}` means "I draw my own cruise lines" — the
+   * Reise view draws exactly one trip's. It does not mean "the reader may not
+   * read a cruise". Passing the empty draw-list to both left the card heading
+   * itself "🚢 AIDAnova" above the not-found body, because `getCruiseStats`
+   * had nothing to find. Defaults to `cruises`, so a caller that draws what it
+   * reads says it once.
+   */
+  cruisesForCard?: readonly Cruise[];
   /** Fired by the pinned-card "Open last flight" CTA — should open the
       flight (modal or detail page). */
   onFlightOpen?: (flightId: string) => void;
   /** Fired by the pinned-card "Open cruise" CTA — should navigate to
       the cruise detail page. */
   onCruiseOpen?: (cruiseId: string) => void;
+  /**
+   * Fired by the card's "Bearbeiten" action. Threaded here so the globe's
+   * card carries the SAME action row as the flat map's — the ruling asked for
+   * one card, and a card with one fewer action on one surface is two.
+   */
+  onEdit?: (flight: Flight) => void;
   minRouteCount?: number;
   /** Which domain appearance sections the control panel exposes. Globe
       currently only mounts on the Alle tab, so this defaults to both. */
@@ -166,29 +188,9 @@ const INITIAL_VIEW_STATE: MapViewState = {
   bearing: 0,
 };
 
-/** In the user's date format (Settings → Display); the locale no longer decides. */
-function formatTooltipDate(iso: string, _locale: string): string {
-  return formatUserDate(iso) || iso.slice(0, 10);
-}
-
 interface DeckOverlayProps {
   layers: Layer[];
   onHover: (info: PickingInfo) => void;
-}
-
-/**
- * The ring that pulses on the marker a pinned card belongs to. Only the four
- * SINGLE-POINT kinds get one — an arc or a cruise path is pinned somewhere
- * along a line, where a ring would mark a spot the user did not click.
- * Lodging and place read their domain colour rather than a literal, so the
- * ring cannot disagree with the pin it surrounds.
- */
-function pulseColor(kind: GlobePinned["kind"]): string | null {
-  if (kind === "airport") return "#f0a947";
-  if (kind === "port") return "#6fa0d6";
-  if (kind === "lodging") return rgbCss(LODGING_COLOR);
-  if (kind === "place") return rgbCss(PLACE_COLOR);
-  return null;
 }
 
 function DeckGLOverlay({ layers, onHover }: DeckOverlayProps): null {
@@ -229,8 +231,10 @@ function DeckGLOverlay({ layers, onHover }: DeckOverlayProps): null {
 export default function GlobeView({
   flights = [],
   cruises = [],
+  cruisesForCard,
   onFlightOpen,
   onCruiseOpen,
+  onEdit,
   minRouteCount = 1,
   appearanceDomains = ["flight", "cruise"],
   extraLayers = [],
@@ -484,7 +488,11 @@ export default function GlobeView({
   // Pinned selection: persistent detail card the user opens by clicking
   // a marker / arc / cruise path. Survives mouse-move (unlike the
   // hover tooltip) so they can read details without holding still.
-  const [pinned, setPinned] = useState<GlobePinned | null>(null);
+  // Typed as the SHARED `MapPinned`, not the globe's own `GlobePinned`: the
+  // globe's layer datums are assignable to it (that is what `pinnedTypes.ts`
+  // is a subset for), and the activity sidebar's selections — a hotel, a place
+  // — have no globe layer datum at all.
+  const [pinned, setPinned] = useState<MapPinned | null>(null);
 
   // The pinned card is rendered as a custom absolutely-positioned
   // overlay above the map container. MapLibre's own Popup primitive
@@ -498,11 +506,11 @@ export default function GlobeView({
   // dot-product visibility check — same math as
   // EarthOcclusionExtension — so we never trigger the popup's
   // internal occlusion pipeline.
-  const [popupScreenPos, setPopupScreenPos] = useState<{
-    x: number;
-    y: number;
-    visible: boolean;
-  } | null>(null);
+  // Screen position + front-hemisphere visibility for the pinned card. The
+  // occlusion maths lives in `Globe/usePinnedAnchor.ts` — globe-specific on
+  // purpose, since "the earth is in the way" is not a question the flat map has.
+  const getMapForAnchor = useCallback(() => mapRef.current?.getMap(), []);
+  const popupScreenPos = usePinnedAnchor(pinned, getMapForAnchor);
   // null = no filter (all quartiles visible at full opacity). 1-4 =
   // dim every arc outside this quartile so the click-selected band
   // pops. Click the active band again to clear.
@@ -732,74 +740,6 @@ export default function GlobeView({
     cruiseGeometryRef.current = cruiseGeometry;
   }, [cruiseGeometry]);
 
-  // Mount / re-anchor / dismount the MapLibre Popup that hosts the
-  // pinned detail card. `locationOccludedOpacity: 0` uses MapLibre's
-  // own globe-visibility math to fade the popup when the anchor is on
-  // the back of the earth — same logic as the layer occlusion shader,
-  // no JS-side dot-product replay needed.
-  // Subscribe to MapLibre `render` events while a card is pinned and
-  // re-project the anchor lng/lat → screen pixel each frame. The
-  // visibility check is the same dot-product math the EarthOcclusion
-  // shader uses on the GPU, just executed once per frame in JS.
-  useEffect(() => {
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-
-    if (!pinned) {
-      setPopupScreenPos(null);
-      return;
-    }
-
-    const [lng, lat] = pinned.anchorLngLat;
-    if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
-      setPopupScreenPos(null);
-      return;
-    }
-
-    const update = (): void => {
-      try {
-        const p = map.project([lng, lat]);
-        // Visibility: anchor is on the front hemisphere if the dot
-        // product between its surface-normal vector and the camera's
-        // direction vector is greater than cos(horizonAngle). Same
-        // approach as EarthOcclusionExtension, just JS-side.
-        const center = map.getCenter();
-        const zoom = map.getZoom();
-        const DEG = Math.PI / 180;
-        const camLng = center.lng * DEG;
-        const camLat = center.lat * DEG;
-        const aLng = lng * DEG;
-        const aLat = lat * DEG;
-        const camDir: [number, number, number] = [
-          Math.cos(camLat) * Math.cos(camLng),
-          Math.cos(camLat) * Math.sin(camLng),
-          Math.sin(camLat),
-        ];
-        const anchorDir: [number, number, number] = [
-          Math.cos(aLat) * Math.cos(aLng),
-          Math.cos(aLat) * Math.sin(aLng),
-          Math.sin(aLat),
-        ];
-        const dotProd =
-          camDir[0] * anchorDir[0] + camDir[1] * anchorDir[1] + camDir[2] * anchorDir[2];
-        // cameraDistanceFromZoom heuristic, mirrored from the shader
-        const dist = 1 + 1.5 * Math.pow(2, -Math.max(0, zoom) * 0.7);
-        const cosHorizon = 1.0 / Math.max(1.001, dist);
-        const visible = dotProd > cosHorizon;
-        setPopupScreenPos({ x: p.x, y: p.y, visible });
-      } catch (err) {
-        logger.error({ err, pinned }, "globe.pinned-overlay.project-failed");
-        setPopupScreenPos(null);
-      }
-    };
-
-    update();
-    map.on("render", update);
-    return () => {
-      map.off("render", update);
-    };
-  }, [pinned]);
-
   useEffect(() => {
     if (cruises.length === 0) return;
     let cancelled = false;
@@ -1000,6 +940,31 @@ export default function GlobeView({
     });
   }, []);
 
+  // Selections from OUTSIDE the globe — the activity sidebar, the flight
+  // panel — become a card and a camera move, on exactly the terms the flat map
+  // uses (`map/cards/useMapSelectionCards.ts`). The globe read NONE of the
+  // four selection stores before (owner, 2026-09-20). `clearOnEmpty` stays
+  // false here: a click on an arc pins a card without touching the store, and
+  // clearing on an empty store would wipe the card the click just opened.
+  const focusOnGlobe = useCallback((lngLat: [number, number]): void => {
+    focusMarker(mapRef.current?.getMap(), lngLat, GLOBE_FOCUS);
+  }, []);
+  // Memoised: `resolveFlightTipColor` returns a fresh array, which as a raw
+  // effect dependency is "changed" on every render — an effect that sets state
+  // every render, which is a render loop.
+  const flightCardColor = useMemo(
+    () => resolveFlightTipColor(flightColorConfig),
+    [flightColorConfig]
+  );
+
+  const { cardFlights, clearSelections, selectionScope, resolveSelectedFlight, openTripDetails } =
+    useMapSelectionCards({
+      flights,
+      flightColor: flightCardColor,
+      focus: focusOnGlobe,
+      setPinned,
+    });
+
   // Smooth fly-to on arc click. Compute mid-point (handling wrap-around)
   // and pick a zoom level that keeps both endpoints visible without
   // teleporting too close on short hops.
@@ -1017,32 +982,17 @@ export default function GlobeView({
     map.flyTo({ center: [midLng, midLat], zoom, duration: 1500 });
   }, []);
 
+  // Hover content lives in `map/cards/hoverCardHtml.ts` — the flat map draws
+  // the same four tooltips, and it had its own near-twin of each until the
+  // owner's 2026-09-20 ruling made the globe the reference for map chrome.
   const onArcHover = useCallback(
     (info: PickingInfo<ArcDatum>): void => {
       if (info.object && info.x != null && info.y != null) {
-        const d = info.object;
-        const epLine = (ep: { iata?: string; name?: string; country?: string | null }): string =>
-          `<div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:13px;padding:1px 0;">
-            ${flagImgHtml(ep.country, 18)}<span>${escapeHtml(ep.iata ?? "UNK")}</span>
-            <span style="opacity:0.6;font-weight:500;font-size:11px;">${escapeHtml(ep.name ?? "")}</span>
-          </div>`;
-        // Two-part label, same rule as markerTooltip.ts's renderArcHtml:
-        // flown first, then scheduled, zero-count parts omitted. Falls back
-        // to the legacy flown-only label for a cancelled-only route where
-        // both counts are 0 despite count > 0 (accepted pre-existing
-        // cancelled semantic, out of this fix's scope).
-        const labelParts: string[] = [];
-        if (d.flownCount > 0) labelParts.push(t("map:globe.timesFlown", { count: d.flownCount }));
-        if (d.scheduledCount > 0)
-          labelParts.push(t("map:globe.timesPlanned", { count: d.scheduledCount }));
-        const label = labelParts.join(" · ") || t("map:globe.timesFlown", { count: d.count });
-        const html = `
-          ${epLine(d.departure)}
-          ${epLine(d.arrival)}
-          <div style="color:rgb(${d.color[0]},${d.color[1]},${d.color[2]});font-weight:600;margin-top:4px;">
-            ${escapeHtml(label)}
-          </div>`;
-        tooltipRef.current?.show({ html, x: info.x, y: info.y });
+        tooltipRef.current?.show({
+          html: arcHoverHtml(info.object, { t }),
+          x: info.x,
+          y: info.y,
+        });
       } else {
         tooltipRef.current?.hide();
       }
@@ -1054,27 +1004,22 @@ export default function GlobeView({
     (info: PickingInfo<PointDatum>): void => {
       if (info.object && info.x != null && info.y != null) {
         const d = info.object;
-        const lastVisitLine = d.lastVisit
-          ? `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">
-              ${escapeHtml(t("map:tooltip.lastVisit"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
-            </div>`
-          : "";
-        const icaoPill = d.icao
-          ? `<span style="font-size:10px;font-family:monospace;color:rgba(241,245,249,0.5);background:rgba(255,255,255,0.06);border-radius:4px;padding:1px 5px;">${escapeHtml(d.icao)}</span>`
-          : "";
-        const place = [d.city, countryName(d.country, locale)].filter(Boolean).join(", ");
-        const placeLine = place
-          ? `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(place)}</div>`
-          : "";
-        const html = `
-          <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;">${flagImgHtml(d.country, 19)}<span>${escapeHtml(d.iata)}</span>${icaoPill}</div>
-          <div style="opacity:0.88;font-size:11.5px;margin-top:3px;">${escapeHtml(d.name)}</div>
-          ${placeLine}
-          <div style="color:#fbbf24;margin-top:4px;">
-            ${d.size} ${escapeHtml(t("map:globe.flight", { count: d.size }))}
-          </div>
-          ${lastVisitLine}`;
-        tooltipRef.current?.show({ html, x: info.x, y: info.y });
+        tooltipRef.current?.show({
+          html: airportHoverHtml(
+            {
+              iata: d.iata,
+              icao: d.icao,
+              name: d.name,
+              city: d.city,
+              country: d.country,
+              count: d.size,
+              lastVisit: d.lastVisit,
+            },
+            { t, locale }
+          ),
+          x: info.x,
+          y: info.y,
+        });
       } else {
         tooltipRef.current?.hide();
       }
@@ -1086,25 +1031,22 @@ export default function GlobeView({
     (info: PickingInfo<PointDatum>): void => {
       if (info.object && info.x != null && info.y != null) {
         const d = info.object;
-        const lastCallLine = d.lastVisit
-          ? `<div style="opacity:0.75;font-size:10.5px;margin-top:3px;">
-              ${escapeHtml(t("map:tooltip.lastCall"))}: ${escapeHtml(formatTooltipDate(d.lastVisit, locale))}
-            </div>`
-          : "";
-        const place = [d.city, countryName(d.country, locale)].filter(Boolean).join(", ");
-        const placeLine = place
-          ? `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(place)}</div>`
-          : "";
-        const codeLine =
-          d.iata !== d.name
-            ? `<div style="opacity:0.55;font-size:10px;font-family:monospace;margin-top:2px;">${escapeHtml(d.iata)}</div>`
-            : "";
-        const html = `
-          <div style="display:flex;align-items:center;gap:8px;font-weight:600;font-size:14px;">${d.country ? flagImgHtml(d.country, 19) : "⚓"}<span>${escapeHtml(d.name)}</span></div>
-          ${placeLine}
-          ${codeLine}
-          ${lastCallLine}`;
-        tooltipRef.current?.show({ html, x: info.x, y: info.y });
+        // No visit count on the globe's port tooltip: the pinned card answers
+        // that, and the marker datum's `size` is a radius here, not a tally.
+        tooltipRef.current?.show({
+          html: portHoverHtml(
+            {
+              name: d.name,
+              code: d.iata,
+              city: d.city,
+              country: d.country,
+              lastVisit: d.lastVisit,
+            },
+            { t, locale }
+          ),
+          x: info.x,
+          y: info.y,
+        });
       } else {
         tooltipRef.current?.hide();
       }
@@ -1114,8 +1056,11 @@ export default function GlobeView({
 
   const onCruisePathHover = useCallback((info: PickingInfo<CruisePathDatum>): void => {
     if (info.object && info.x != null && info.y != null) {
-      const html = `<div style="font-weight:600;">🚢 ${escapeHtml(info.object.cruiseLabel)}</div>`;
-      tooltipRef.current?.show({ html, x: info.x, y: info.y });
+      tooltipRef.current?.show({
+        html: cruiseHoverHtml(info.object.cruiseLabel),
+        x: info.x,
+        y: info.y,
+      });
     } else {
       tooltipRef.current?.hide();
     }
@@ -1201,8 +1146,10 @@ export default function GlobeView({
       }),
       // Appended, never merged into buildGlobeLayers itself -- these are the
       // caller's own layers (e.g. dashboard-wide tour paths), not part of
-      // what this component knows how to build.
-      ...extraLayers,
+      // what this component knows how to build. They DO get the occlusion
+      // extension every globe-built layer carries, or a tour on the far side
+      // of the sphere draws straight through it.
+      ...occludeExtraLayers(extraLayers, occlusionExt, occlusionProps),
     ],
     [
       arcsData,
@@ -1516,59 +1463,36 @@ export default function GlobeView({
         mode={labelsMode}
       />
 
-      {/* Pinned detail card — custom React overlay positioned via
-          map.project() on every render frame. Replaces the MapLibre
-          Popup primitive that was crashing the WebGL canvas in this
-          stack (interleaved deck.gl 9 + globe projection). Visibility
-          flag from the JS-side dot-product check fades the card when
-          the anchor rotates to the back of the globe. */}
-      {/* Pulse ring on the selected marker (airports + ports). Drawn under
-          the pinned card, non-interactive; reduced-motion shows a static
-          ring. Colour follows the domain. */}
-      {pinned && pulseColor(pinned.kind) && popupScreenPos && popupScreenPos.visible && (
-        <div
-          className="pointer-events-none absolute z-20"
-          style={{ left: popupScreenPos.x, top: popupScreenPos.y }}
-        >
-          {[0, 0.6].map((delay) => (
-            <span
-              key={delay}
-              className="map-pulse-ring"
-              style={
-                {
-                  "--pulse-color": pulseColor(pinned.kind),
-                  animationDelay: `${delay}s`,
-                } as CSSProperties
+      <GlobePinnedOverlay
+        pinned={pinned}
+        screen={popupScreenPos}
+        flights={cardFlights}
+        cruises={[...(cruisesForCard ?? cruises)]}
+        selectionScope={selectionScope}
+        onClose={() => {
+          setPinned(null);
+          clearSelections();
+        }}
+        onFlightOpen={onFlightOpen}
+        onFlightEdit={
+          onEdit
+            ? (flightId) => {
+                const target = resolveSelectedFlight(flightId);
+                if (!target) return;
+                setPinned(null);
+                clearSelections();
+                onEdit(target);
               }
-            />
-          ))}
-        </div>
-      )}
-
-      {pinned && popupScreenPos && popupScreenPos.visible && (
-        <div
-          className="absolute z-30 pointer-events-auto"
-          style={{
-            left: popupScreenPos.x,
-            top: popupScreenPos.y,
-            transform: "translate(-50%, calc(-100% - 14px))",
-          }}
-        >
-          <PinnedCardBoundary>
-            <PinnedCard
-              pinned={pinned}
-              flights={flights}
-              cruises={cruises ?? []}
-              onClose={() => setPinned(null)}
-              onFlightOpen={onFlightOpen}
-              onCruiseOpen={onCruiseOpen}
-              onLodgingOpen={onLodgingOpen}
-              onPlaceOpen={onPlaceOpen}
-            />
-          </PinnedCardBoundary>
-        </div>
-      )}
-
+            : undefined
+        }
+        onTripDetails={() => {
+          setPinned(null);
+          openTripDetails();
+        }}
+        onCruiseOpen={onCruiseOpen}
+        onLodgingOpen={onLodgingOpen}
+        onPlaceOpen={onPlaceOpen}
+      />
       {/* Hover tooltip — leaf component with imperative show/hide so onHover
           updates at 60–120 Hz don't re-render the parent GlobeView tree. */}
       <HoverTooltip ref={tooltipRef} />

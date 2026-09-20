@@ -16,23 +16,22 @@ import type { Layer, LightingEffect, PickingInfo } from "@deck.gl/core";
 import { applyHoverCursor } from "./mapCursor";
 import type { createMarkerTooltip } from "./markerTooltip";
 
-/** Check once whether WebGL2 is available (deck.gl requires it). */
-function hasWebGL2(): boolean {
-  try {
-    const canvas = document.createElement("canvas");
-    const gl = canvas.getContext("webgl2");
-    return gl !== null;
-  } catch {
-    return false;
-  }
-}
-
-export const webgl2Available = hasWebGL2();
+// Re-exported under its old name: the probe moved to `lib/webgl2.ts` when the
+// dashboard's mode registry needed the same answer and a `types/` module
+// cannot import a component. Every existing caller keeps its import.
+export { webgl2Available } from "../../lib/webgl2";
 
 interface DeckOverlayProps {
   layers: Layer[];
   effects: LightingEffect[];
-  getTooltip: ReturnType<typeof createMarkerTooltip>;
+  /**
+   * deck.gl's built-in tooltip. Optional since the owner's 2026-09-20 ruling:
+   * the flat map draws the shared `HoverTooltip` from its own `onHover`
+   * instead, because deck's tooltip can only be styled through a style object
+   * and never matched the card beside it. The surfaces that still pass one
+   * (`CruiseRouteMap`, `TripMap`) keep working unchanged.
+   */
+  getTooltip?: ReturnType<typeof createMarkerTooltip>;
   onHover: (info: PickingInfo) => void;
 }
 

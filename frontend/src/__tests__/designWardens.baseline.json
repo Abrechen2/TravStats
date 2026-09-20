@@ -20,7 +20,6 @@
     "components/FlightPanel.tsx",
     "components/FlightPanel/TripDetailsSidebar.tsx",
     "components/Globe/GlobeTimeHistogram.tsx",
-    "components/Globe/PinnedCard.tsx",
     "components/Globe/globeStyles.ts",
     "components/Globe/heatmapUtils.ts",
     "components/GlobeLoader.tsx",

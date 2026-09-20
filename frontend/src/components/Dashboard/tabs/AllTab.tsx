@@ -52,7 +52,11 @@ import { ALL_MODES } from "../../../types/dashboard";
 import FlightEditModal from "../../FlightEditModal";
 import MapContainer3D, { type MapMode } from "../../MapContainer3D";
 import { classifyVisit } from "../../../shared/placeCounting";
-import { buildJourneyLayers, groupByTripId } from "../modes/buildJourneyLayers";
+import {
+  JOURNEY_GLOBE_ALTITUDE_M,
+  buildJourneyLayers,
+  groupByTripId,
+} from "../modes/buildJourneyLayers";
 import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
 import type { ActivityItem } from "../sidebars/activityItems";
 import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
@@ -90,7 +94,7 @@ function isAllMode(mode: unknown): mode is AllMode {
 const LEGEND_OPEN_KEY = "dashboard.legendOpen";
 
 export function AllTab(): JSX.Element {
-  const { mode } = useDashboardRoute();
+  const { mode, projection } = useDashboardRoute();
   const { t } = useTranslation(["dashboard"]);
   // The SAME store the map layers + both control panels read. The legend
   // cannot drift from the map because it is not a copy of the state — it is
@@ -428,10 +432,24 @@ export function AllTab(): JSX.Element {
 
   // Journey layers: built only when journey mode is active, for the selected
   // (or first-available) cross-domain trip.
+  // "Reise" is a VIEW of one trip, not a projection, so it does not decide
+  // globe-vs-flat by being selected — it follows the reader's last projection
+  // choice, which is what `useDashboardRoute` reports (owner ruling
+  // 2026-09-20: "Globus soll ueberall genutzt werden"). It forced
+  // `visMode="routes"` before, and was the one dashboard view a reader on the
+  // globe could never see there.
+  const journeyVisMode: MapMode = projection === "globe" ? "globe" : "routes";
+
   const journeyLayers = useMemo<Layer[]>(() => {
     if (allMode !== "journey") return [];
-    return buildJourneyLayers(visibleFlights, visibleCruises, effectiveTripId, cruiseColorConfig);
-  }, [allMode, visibleFlights, visibleCruises, effectiveTripId, cruiseColorConfig]);
+    return buildJourneyLayers(
+      visibleFlights,
+      visibleCruises,
+      effectiveTripId,
+      cruiseColorConfig,
+      journeyVisMode === "globe" ? JOURNEY_GLOBE_ALTITUDE_M : 0
+    );
+  }, [allMode, visibleFlights, visibleCruises, effectiveTripId, cruiseColorConfig, journeyVisMode]);
 
   // Tours on the main overview map only — journey mode already takes over
   // the map for ONE trip (`journeyLayers`); every tour on top would misdescribe it.
@@ -670,7 +688,7 @@ export function AllTab(): JSX.Element {
       <div style={{ position: "absolute", inset: 0 }}>
         <MapContainer3D
           flights={[]}
-          visMode="routes"
+          visMode={journeyVisMode}
           extraLayers={journeyLayers}
           showInternalCruises={false}
           appearanceDomains={["flight", "cruise", "lodging", "poi"]}

@@ -239,9 +239,19 @@
       "debark": "Ende",
       "openCruise": "Cruise öffnen",
       "durationHours": "{{h}} h {{m}} min",
+      "openFlight": "Flug öffnen",
+      "details": "Details",
+      "event": "Ereignis",
+      "distance": "Strecke",
       "nights": "Nächte",
+      "price": "Preis",
       "openLodging": "Unterkunft öffnen",
-      "openPlace": "Ort öffnen"
+      "openPlace": "Ort öffnen",
+      "stay": "Aufenthalt",
+      "upcomingStay": "Nächster Aufenthalt",
+      "co2": "CO₂",
+      "dateRange": "Zeitraum",
+      "status": "Status"
     },
     "timeSlider": {
       "title": "Zeitachse",

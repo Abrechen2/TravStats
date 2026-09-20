@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import type { PathLayerProps } from "@deck.gl/layers";
 import { buildTourDeckLayers, TOUR_PATH_GLOBE_ALTITUDE_M } from "../tourMapOverlay";
 import type { TourPathDatum } from "../../../layers/tourPathsLayer";
+import { createCruiseArrowsLayer } from "../../../layers/cruiseArcsLayer";
 
 // deck.gl's `Layer` base class types `.props` generically
 // (`StatefulComponentProps<Required<LayerProps>>`), so reading a
@@ -84,5 +85,35 @@ describe("buildTourDeckLayers: altitude on the globe, none on the flat map", () 
 
   it("the globe altitude is non-zero -- a lift of 0 would silently reintroduce this exact bug", () => {
     expect(TOUR_PATH_GLOBE_ALTITUDE_M).toBeGreaterThan(0);
+  });
+});
+
+describe("the journey's cruise arrows ride with their path", () => {
+  it("lifts the arrow anchors by the same altitude as the leg", () => {
+    const cruise = {
+      id: "c1",
+      status: "flown",
+      stops: [],
+      departurePort: { id: 1, name: "Kiel", lat: 54.3, lon: 10.1 },
+      arrivalPort: { id: 2, name: "Oslo", lat: 59.9, lon: 10.7 },
+    } as unknown as Parameters<typeof createCruiseArrowsLayer>[0][number];
+
+    const lifted = createCruiseArrowsLayer([cruise], undefined, null, {
+      altitudeM: 5000,
+    });
+    const flat = createCruiseArrowsLayer([cruise], undefined, null, {});
+    if (!lifted || !flat) throw new Error("expected an arrows layer for a two-port cruise");
+
+    type ArrowRow = { position: [number, number] };
+    const accessor = (l: typeof lifted): ((d: ArrowRow) => number[]) =>
+      (l.props as unknown as { getPosition: (d: ArrowRow) => number[] }).getPosition;
+    const getLifted = accessor(lifted);
+    const getFlat = accessor(flat);
+    const row = { position: [10.4, 57.1] as [number, number] };
+
+    // An arrow left at altitude 0 while its leg rides 5 km above the sphere
+    // sits below the line and, at a shallow angle, behind the mesh entirely.
+    expect(getLifted(row)).toEqual([10.4, 57.1, 5000]);
+    expect(getFlat(row)).toEqual([10.4, 57.1]);
   });
 });
