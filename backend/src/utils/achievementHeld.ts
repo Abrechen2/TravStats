@@ -1,67 +1,60 @@
 // The one home for "does the user hold this badge".
 //
-// It used to be `progress >= requirement`, inlined at five places, and the
-// column comment said so: "held-ness is derived from the numbers, never from
-// `unlockedAt` — the date is a label on that fact, not the fact itself". That
-// reading makes every badge a rented one, because a measure is allowed to fall
-// for reasons that have nothing to do with the user:
+// The answer is the live measure: `progress >= requirement`. Owner's ruling,
+// 2026-09-20 — "Löschen löscht auch Punkte, der Live-Stand wird gezählt".
+// Delete the flights behind a badge and the badge goes, and the points with
+// it: the list, the category counts, the total, the rank and the leaderboard
+// all read the data as it is now. A trophy case that keeps showing a badge for
+// flights that are no longer in the logbook is describing a logbook the user
+// does not have.
 //
-//   - The 2026-09-19 integrity audit booted the 2.6.2 prod mirror and watched
-//     `AWAY_SHARE_25` — earned 2026-09-03 — come back with progress 25 → 24 and
-//     `unlockedAt` NULL, because `lodgingStats/rhythm.ts` divides the CURRENT
-//     year by the days elapsed so far, so the share drifts down every night the
-//     traveller spends at home.
-//   - The same audit booted CT106 with TZ=Europe/Berlin and saw
-//     `NOT_A_MORNING_PERSON` taken from two users and handed to a third, dated
-//     that day, purely because the process clock had moved.
+// For one day this read `progress >= requirement OR unlockedAt IS NOT NULL`.
+// That came out of the 2026-09-19 integrity audit, which found two ways a
+// measure falls without the user doing anything:
 //
-// Neither is the user un-earning anything. The owner's rule (the "achievement
-// engine monotonic" note) is that a badge once earned stays earned, so the
-// question has to be answerable from something a re-measurement cannot undo.
-// `unlockedAt` is that something: it is written the moment a badge is earned
-// and never cleared again.
+//   - `AWAY_SHARE_25`, earned 2026-09-03, came back at progress 24 on the 2.6.2
+//     prod mirror, because `lodgingStats/rhythm.ts` divides the CURRENT year by
+//     the days elapsed so far, so the share drifts down every night spent at
+//     home.
+//   - `NOT_A_MORNING_PERSON` moved between users when CT106 booted with
+//     TZ=Europe/Berlin, purely because the process clock had moved.
 //
-// `progress` remains a live measurement and may fall — it is what the progress
-// bar shows, and a number that could only ever rise would be a lie about the
-// data. Holding is the union: the measure is met NOW, or it was met ONCE.
+// Both were real defects and both are fixed at the source (the departure clock
+// is the airport's own — `achievementStats.departureClock.test.ts`). Making the
+// date confer the badge was a second, broader answer to them, and the owner
+// ruled it out: it silently froze every badge, including the ones a user had
+// genuinely stopped holding.
+//
+// What stays from that day is the part that was never about held-ness:
+// `unlockedAt` is a historical fact — the first time the requirement was met —
+// and is NEVER cleared or overwritten. Nothing in this module reads it, and
+// nothing anywhere writes NULL to it. It is what lets a card that has dropped
+// back to a progress bar still say when the badge was last held, instead of a
+// number falling with no explanation.
 
 /**
  * The parts of a `UserAchievement` row that decide held-ness.
  *
- * `unlockedAt` is REQUIRED, and deliberately not optional: a Prisma `select`
- * that forgets the column must fail to compile here rather than hand this
- * function an `undefined` it would have to guess about. The leaderboard's
- * `select` is exactly that risk — it lists its columns by hand.
+ * `progress` alone, deliberately. While the date was part of the rule this
+ * interface also demanded `unlockedAt`, so that a Prisma `select` which forgot
+ * the column would fail to compile rather than hand the function an
+ * `undefined` it read as a date — measured in `routes/achievements.rank.test.ts`,
+ * where a LOCKED 9000-point badge was counted and moved the user two rungs up
+ * the rank ladder. The rule no longer reads that column, so the hazard is gone
+ * by construction rather than by a type that has to be remembered.
  */
 export interface HeldInput {
   progress: number;
-  unlockedAt: Date | null;
 }
 
 /**
- * True when the user holds the badge: the measure meets the requirement now,
- * or a previous run recorded that it once did.
+ * True when the user holds the badge: the measure meets the requirement NOW.
  *
- * EITHER, not BOTH. A date without the measure is the case this rule exists
- * for. A measure without a date is the ordinary steady state of a badge earned
- * before `unlockedAt` meant anything: migration `20260902170000` nulled every
- * row whose progress sat below its requirement and left the rest alone, so a
- * surviving date is a real unlock and a missing one on a row that meets its
- * requirement is only a gap in the record. `planAchievementWrites` fills that
- * gap the next time it sees the row.
- *
- * What this cannot do is give back a badge the old revoke path already emptied:
- * such a row lost its date AND sits below its requirement, and nothing in the
- * table remembers it. Those come back when the measure does.
- *
- * `!= null`, not `!== null`. A row that never carried the column at all —
- * a `select` that left it out, or a stub in a test — arrives with `undefined`,
- * and a strict comparison reads that as a date and hands out the badge.
- * Measured the day this rule shipped: `routes/achievements.rank.test.ts` stubs
- * its rows without the column, and a locked 9000-point badge was counted,
- * putting the user two rungs up the rank ladder. A missing date is not a date.
+ * No `unlockedAt` term. A row carrying a date but measuring below its
+ * requirement is not held — it is a badge the user had and does not have any
+ * more, and its date is a label for the UI, not a claim on the points.
  */
 export function isAchievementHeld(row: HeldInput | null | undefined, requirement: number): boolean {
   if (!row) return false;
-  return row.progress >= requirement || row.unlockedAt != null;
+  return row.progress >= requirement;
 }

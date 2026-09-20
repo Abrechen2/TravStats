@@ -567,13 +567,21 @@ model UserAchievement {
   /// the default in place a progress-tracking `create` would stamp a date
   /// nobody asked for and the lie would re-appear on every new row.
   ///
-  /// Since 2026-09-19 this column is also what MAKES a badge held. It was
-  /// cleared when a measure fell back below its requirement; the integrity
-  /// audit of that day booted the prod mirror and watched AWAY_SHARE_25 —
-  /// earned 2026-09-03 — lose its date because the away-share denominator grows
-  /// with every day of the year. Held-ness is now `progress >= requirement OR
-  /// unlockedAt IS NOT NULL` (`utils/achievementHeld.ts`), and nothing clears
-  /// the column.
+  /// It does NOT make a badge held. Held-ness is `progress >= requirement`,
+  /// read live (`utils/achievementHeld.ts`) — owner's ruling, 2026-09-20:
+  /// "Löschen löscht auch Punkte, der Live-Stand wird gezählt". Delete the
+  /// flights behind a badge and the badge goes, and its points with it. For one
+  /// day the rule also accepted a non-null date here, which silently froze every
+  /// badge a user had genuinely stopped holding.
+  ///
+  /// What this column IS, and has been since 2026-09-19, is a fact that survives
+  /// re-measurement: it is never cleared and never overwritten. It used to be
+  /// cleared whenever a measure fell back below its requirement, and the
+  /// integrity audit of that day booted the prod mirror and watched
+  /// AWAY_SHARE_25 — earned 2026-09-03 — lose its date because the away-share
+  /// denominator grows with every day of the year. The date is what lets a card
+  /// that has dropped back to a progress bar say when the badge was last held,
+  /// instead of a total falling in silence.
   unlockedAt    DateTime? @map("unlocked_at")
   progress      Int       @default(0) // current progress towards achievement
 

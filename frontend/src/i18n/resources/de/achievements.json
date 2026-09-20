@@ -52,6 +52,7 @@
   "progress": {
     "label": "Fortschritt",
     "unlocked": "Freigeschaltet am {{date}}",
+    "lastHeld": "Zuletzt erreicht am {{date}}",
     "units": {
       "km": "km",
       "hours": "Std.",

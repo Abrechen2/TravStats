@@ -23,9 +23,8 @@ const achievement = registry.register(
       isUnlocked: z
         .boolean()
         .describe(
-          "Earned: progress reached the requirement, or it was earned before — a badge is " +
-            "never taken back. `progress` may therefore be below the requirement on a badge " +
-            "that is held, because progress is a live measurement."
+          "Held right now: progress has reached the requirement. `unlockedAt` is the first " +
+            "time it did and is never cleared."
         ),
       isRetired: z
         .boolean()
@@ -33,7 +32,15 @@ const achievement = registry.register(
           "The definition was removed; listed only because this user earned it. " +
             "Its points count, but it is outside totalAchievements/unlockedAchievements."
         ),
-      unlockedAt: z.string().datetime().nullable(),
+      unlockedAt: z
+        .string()
+        .datetime()
+        .nullable()
+        .describe(
+          "The first time the requirement was met, or null if it never was. Sent even when " +
+            "`isUnlocked` is false — the badge is then one the user no longer holds, and this " +
+            "is when they last did."
+        ),
       progress: z
         .number()
         .describe(

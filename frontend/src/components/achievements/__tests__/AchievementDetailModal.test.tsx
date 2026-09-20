@@ -76,6 +76,42 @@ describe("AchievementDetailModal", () => {
     expect(screen.queryByTestId("achievement-detail-progress")).not.toBeInTheDocument();
   });
 
+  it("explains a badge the user no longer holds instead of just showing a bar", () => {
+    // Owner's ruling, 2026-09-20: held-ness is the live measure, so deleting
+    // the flights behind a badge takes it back. `unlockedAt` survives that —
+    // it is never cleared — and is the only thing here that can tell the user
+    // why the badge and its points went away.
+    renderModal(
+      <AchievementDetailModal
+        achievement={{
+          ...base,
+          isUnlocked: false,
+          progress: 4,
+          unlockedAt: "2026-08-12T10:00:00Z",
+        }}
+        onClose={() => {}}
+      />
+    );
+    expect(screen.getByTestId("achievement-detail-progress")).toBeInTheDocument();
+    expect(screen.getByText("4 / 10")).toBeInTheDocument();
+    expect(screen.getByTestId("achievement-detail-last-held")).toHaveTextContent(
+      "achievements:progress.lastHeld"
+    );
+    // Not a claim that it is held — the points line belongs to the other state.
+    expect(screen.queryByTestId("achievement-detail-unlocked")).not.toBeInTheDocument();
+  });
+
+  it("says nothing about a date for a badge that was never held", () => {
+    renderModal(
+      <AchievementDetailModal
+        achievement={{ ...base, isUnlocked: false, progress: 4, unlockedAt: null }}
+        onClose={() => {}}
+      />
+    );
+    expect(screen.getByTestId("achievement-detail-progress")).toBeInTheDocument();
+    expect(screen.queryByTestId("achievement-detail-last-held")).not.toBeInTheDocument();
+  });
+
   // The grid draws a hidden, still-locked achievement as "???" so it stays a
   // surprise. A dialog that spelled it out would be a way to read every secret
   // by clicking one.

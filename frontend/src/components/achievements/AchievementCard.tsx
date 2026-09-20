@@ -110,6 +110,20 @@ export default function AchievementCard({
                 : `${achievement.progress} / ${achievement.requirement}`}
           </span>
         </div>
+        {!achievement.isUnlocked && !isMystery && achievement.unlockedAt && (
+          // A badge the user HAD. Held-ness is the live measure since the
+          // owner's ruling of 2026-09-20, so deleting the flights behind a
+          // badge takes it and its points away — and without this line that is
+          // a total silently going down with nothing to read it against.
+          // `unlockedAt` survives the fall (it is never cleared), so the card
+          // can say when. Not drawn on a mystery card: "last held" under a
+          // "???" would give away that the user once solved it.
+          <p className="t-caption" data-testid="achievement-last-held">
+            {t("achievements:progress.lastHeld", {
+              date: formatIsoDate(achievement.unlockedAt),
+            })}
+          </p>
+        )}
         {!achievement.isUnlocked && !isMystery && (
           <div
             role="progressbar"

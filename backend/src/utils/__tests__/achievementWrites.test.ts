@@ -7,6 +7,13 @@
  * back at progress 24 with a null date, because the away-share denominator
  * grows with every day of the current year. Nobody un-travelled anything.
  *
+ * The owner's ruling of 2026-09-20 narrowed what that fix protects. A badge
+ * whose measure has fallen IS lost, with its points — held-ness is the live
+ * number (`achievementHeld.ts`). The date is what is never destroyed: it is
+ * the historical fact of when the requirement was first met, and the only
+ * thing that lets the page say when the badge was last held. So these tests
+ * pin the write, not the badge.
+ *
  * `planAchievementWrites` is pure, so these run without a database.
  */
 
@@ -57,7 +64,7 @@ function planFor(existing: UserAchievement | null, airports: number) {
   return planAchievementWrites([AIRPORTS_10], map, statsWithAirports(airports), NO_FLIGHTS);
 }
 
-describe("planAchievementWrites — a badge once earned stays earned", () => {
+describe("planAchievementWrites — the measure moves, the unlock date does not", () => {
   it("lowers the measure of a held badge without touching its unlock date", () => {
     const held = row({ progress: 10, unlockedAt: new Date("2026-09-03T12:00:00Z") });
 
@@ -69,14 +76,15 @@ describe("planAchievementWrites — a badge once earned stays earned", () => {
     // `revoking: true` and had `applyAchievementWrites` write NULL.
     expect(Object.keys(plan.writes[0])).not.toContain("unlockedAt");
     expect(Object.keys(plan.writes[0])).not.toContain("revoking");
-    // Still reported, because a progress bar that has fallen is worth a log
-    // line — under a name that does not claim anything was taken away.
+    // Reported: the user has just stopped holding this badge, which is worth a
+    // log line even though the row itself only records a new number.
     expect(plan.belowRequirement).toEqual(["AIRPORTS_10"]);
   });
 
-  it("re-locks nothing when a badge held only by its date is re-measured", () => {
+  it("writes nothing when a lapsed badge is re-measured at the same value", () => {
     // The state the previous case leaves behind: date set, measure below the
-    // requirement. A second run must be a no-op, not a revocation.
+    // requirement. A second run has nothing to say — in particular it must not
+    // reach for the date, which is the one thing here that cannot be rebuilt.
     const dipped = row({ progress: 4, unlockedAt: new Date("2026-09-03T12:00:00Z") });
 
     const plan = planFor(dipped, 4);
@@ -86,6 +94,9 @@ describe("planAchievementWrites — a badge once earned stays earned", () => {
   });
 
   it("does not re-announce a badge whose measure recovers", () => {
+    // The user holds it again, and the trophy case says so again — but no
+    // popup: `unlockedAt` already records the first time, and an achievement
+    // announces a first time, not a return.
     const dipped = row({ progress: 4, unlockedAt: new Date("2026-09-03T12:00:00Z") });
 
     const plan = planFor(dipped, 12);
@@ -97,7 +108,7 @@ describe("planAchievementWrites — a badge once earned stays earned", () => {
         requirement: 10,
         wasUnlocked: false,
         // The date is already there, so no new one is stamped and no unlock
-        // event is emitted: nothing was ever lost to hand back.
+        // event is emitted.
         hadUnlockDate: true,
       },
     ]);

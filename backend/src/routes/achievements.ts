@@ -70,7 +70,14 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
           // flag lets a client keep it out of "x of y" the way `summary` does.
           isRetired: !isLive(achievement.code),
           isUnlocked,
-          unlockedAt: isUnlocked ? userAchievement?.unlockedAt || null : null,
+          // Sent whether or not the badge is held right now. It is the first
+          // time the requirement was met and is never cleared (owner's ruling,
+          // 2026-09-20), so a card that has dropped back to a progress bar can
+          // say "Zuletzt erreicht am …" rather than let a number fall with no
+          // explanation. Suppressing it here — which this line did, while
+          // held-ness and the date were the same question — leaves the page
+          // nothing to show.
+          unlockedAt: userAchievement?.unlockedAt ?? null,
           progress,
           progressPercentage: Math.min(100, Math.round((progress / achievement.requirement) * 100)),
         };
@@ -142,9 +149,10 @@ router.get("/recent", async (req: AuthRequest, res: Response, next: NextFunction
     });
 
     // Only badges the user actually holds — `isAchievementHeld` is the one home
-    // for that question. A badge whose measure has since dipped below its
-    // requirement stays on this list, and stays at its original date, because it
-    // is still earned (see utils/achievementHeld.ts).
+    // for that question, and since the owner's ruling of 2026-09-20 it reads
+    // the live measure. A badge whose measure has dipped below its requirement
+    // leaves this list; its `unlockedAt` stays in the database, and it comes
+    // back here at that original date if the measure recovers.
     const recentAchievements = allRecent
       .filter((ua) => isAchievementHeld(ua, ua.achievement.requirement))
       .slice(0, limit);
@@ -202,11 +210,11 @@ router.get(
         },
         select: {
           userId: true,
+          // The only column held-ness reads (utils/achievementHeld.ts). This
+          // `select` also carried `unlockedAt` for the day the date conferred
+          // the badge; the owner's ruling of 2026-09-20 took that back, and a
+          // column nothing reads is one more thing to keep in step.
           progress: true,
-          // Selected because held-ness reads it — dropping it here would quietly
-          // put the leaderboard back on the progress-only rule the other two
-          // lists left behind.
-          unlockedAt: true,
           achievement: {
             select: {
               points: true,
@@ -224,7 +232,8 @@ router.get(
       });
 
       // Only count badges the user actually holds — same rule as the two lists
-      // above, so a dipped measure does not silently cost someone their points.
+      // above, read off the live measure, so the board and the user's own page
+      // can never disagree about what they are counting.
       const userPointsMap = new Map<
         string,
         {

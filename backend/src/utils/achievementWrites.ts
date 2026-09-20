@@ -52,10 +52,12 @@ export type UserAchievementWithRelation = UserAchievement & { achievement: Achie
 type PlannedWrite =
   // `hadUnlockDate` says the snapshot already carried an `unlockedAt`. It is
   // what decides whether this write stamps one, and it is NOT the same question
-  // as `wasUnlocked` (which reads the measure): a badge whose measure has since
-  // fallen is still held, and a badge earned before the column meant anything
-  // meets its requirement without carrying a date. Carried on the write rather
-  // than re-derived at apply time because the snapshot is not in scope there.
+  // as `wasUnlocked` (which reads the measure, and is what held-ness means
+  // since the owner's ruling of 2026-09-20). The two come apart in both
+  // directions: a badge whose measure has fallen keeps its date while ceasing
+  // to be held, and a badge earned before the column meant anything meets its
+  // requirement without carrying a date. Carried on the write rather than
+  // re-derived at apply time because the snapshot is not in scope there.
   | {
       kind: "unlock";
       achievementId: string;
@@ -68,8 +70,11 @@ type PlannedWrite =
 
 export interface AchievementWritePlan {
   writes: PlannedWrite[];
-  /** Codes of badges the user still holds whose measure has fallen below the
-   *  requirement. Logged, never acted on — see `planAchievementWrites`. */
+  /** Codes of badges the user has just STOPPED holding: the measure was at or
+   *  above the requirement in the snapshot and is not any more. The row keeps
+   *  its `unlockedAt`; what it loses is the badge and its points (owner's
+   *  ruling, 2026-09-20). Reported so a support question about a total that
+   *  dropped has an answer in the log. */
   belowRequirement: string[];
 }
 
@@ -90,8 +95,10 @@ export function planAchievementWrites(
     const existing = existingAchievementMap.get(achievement.id);
     const wasUnlocked = Boolean(existing && existing.progress >= achievement.requirement);
     const hadUnlockDate = Boolean(existing?.unlockedAt);
-    // Held is the union — see `achievementHeld.ts`. A run may lower a measure;
-    // it may not take a badge away.
+    // Held is the live measure — see `achievementHeld.ts`, and the owner's
+    // ruling of 2026-09-20 behind it. Read through that function rather than
+    // reusing `wasUnlocked`, which happens to compute the same thing today:
+    // the rule has one home, and this is a caller of it, not a copy.
     const wasHeld = isAchievementHeld(existing, achievement.requirement);
 
     // Every achievement is re-evaluated on every run, held ones included. It
@@ -100,11 +107,13 @@ export function planAchievementWrites(
     // Antarctica, say) went on showing its inflated number long after the bug
     // was fixed, and a progress bar that had lost its flights stayed full.
     //
-    // What re-evaluation may change is the number. Since 2026-09-19 it may not
-    // change the badge: `unlockedAt` is never cleared, and a measure that has
-    // fallen below its requirement is reported, not acted on. The original
-    // wording here said a badge "could never be taken back" as if that were the
-    // defect; taking one back is the defect.
+    // Re-evaluation may change the number, and through it the badge: the
+    // owner's ruling of 2026-09-20 is that held-ness follows the live data, so
+    // a measure that falls below its requirement costs the badge and its
+    // points. What re-evaluation may NOT change is the record of when the
+    // requirement was first met — `unlockedAt` is a historical fact and is
+    // never cleared or overwritten, which is how the page can explain the drop
+    // instead of letting a total fall in silence.
     const { isUnlocked, progress } = checkAchievement(achievement, stats, flights);
 
     if (isUnlocked) {
@@ -136,11 +145,14 @@ export function planAchievementWrites(
         continue;
       }
       if (wasHeld) {
-        // The user holds this badge and the measure no longer reaches its
-        // requirement. This is NOT a revocation, and the write below does not
-        // clear `unlockedAt`.
+        // The user held this badge and the measure no longer reaches its
+        // requirement, so from this write on they do not hold it. That IS the
+        // owner's ruling of 2026-09-20 — "Löschen löscht auch Punkte, der
+        // Live-Stand wird gezählt" — and it needs no write of its own, because
+        // held-ness is read off the very number this row is about to carry.
         //
-        // It used to. The 2026-09-19 integrity audit restored the 2.6.2 prod
+        // What the write below must not do is touch `unlockedAt`. It used to
+        // clear it. The 2026-09-19 integrity audit restored the 2.6.2 prod
         // mirror and booted it: `AWAY_SHARE_25`, earned 2026-09-03, came back
         // with progress 25 → 24 and `unlockedAt` NULL — not because the
         // traveller had done anything, but because `lodgingStats/rhythm.ts`
@@ -148,10 +160,8 @@ export function planAchievementWrites(
         // falls on every night spent at home. The same boot on CT106 with
         // TZ=Europe/Berlin took `NOT_A_MORNING_PERSON` off two users and gave
         // it to a third, dated that day, because a process clock had moved.
-        //
-        // The owner's rule is that a badge once earned stays earned, so the
-        // measure is written down (it is a measurement, and the progress bar
-        // has to be able to tell the truth) and the badge stays.
+        // The date is the one thing here a re-measurement cannot rebuild, and
+        // it is what the card reads to say when the badge was last held.
         belowRequirement.push(achievement.code);
       }
       writes.push({
@@ -205,8 +215,10 @@ export async function applyAchievementWrites(
                 // requirement but carries no date was earned before the column
                 // meant anything (or while the old revoke path was clearing it),
                 // and this is where it gets one. A row that has a date keeps it
-                // whatever the measure does. No other write touches the column,
-                // and nothing clears it.
+                // whatever the measure does — including a measure that fell and
+                // came back, which is a return and not a first time. No other
+                // write touches the column, and nothing clears it (owner's
+                // ruling, 2026-09-20).
                 ...(write.hadUnlockDate ? {} : { unlockedAt: new Date() }),
               },
               create: {
@@ -217,11 +229,13 @@ export async function applyAchievementWrites(
               },
               include: { achievement: true },
             });
-            // Only count as newly-unlocked when the snapshot held it by neither
-            // reading. Re-upserting a row the user already holds — including one
-            // whose measure had dipped and recovered — emits no second event,
-            // and stamping a missing date on an old row is bookkeeping, not an
-            // unlock the user should be told about again.
+            // Announced only when `unlockedAt` was null AND the measure was below
+            // the requirement — a genuine first time. A badge whose measure
+            // dipped and recovered already carries a date, so it returns to the
+            // trophy case without a second popup: an achievement announces a
+            // first time, not a return (owner's ruling, 2026-09-20). Stamping a
+            // missing date on an old row that already met its requirement is
+            // bookkeeping, and is silent for the same reason.
             if (!write.wasUnlocked && !write.hadUnlockDate) {
               newlyUnlocked.push(updated);
             }
@@ -255,7 +269,7 @@ export async function applyAchievementWrites(
     if (plan.belowRequirement.length > 0) {
       logger.info({
         operation: "achievements_below_requirement",
-        message: "Held achievements whose measure fell below their requirement — kept",
+        message: "Achievements no longer held: their measure fell below the requirement",
         context: { userId, codes: plan.belowRequirement },
       });
     }
