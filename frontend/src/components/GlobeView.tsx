@@ -1250,8 +1250,12 @@ export default function GlobeView({
           Offset down (top-16, not top-4) to clear DashboardLayout's
           "+ hinzufügen" button, which lives in the same corner and is
           always present regardless of map mode. */}
+      {/* z-30, not z-10: `GlobeLabelsOverlay` draws the map's own label pills
+          at z-20 across the whole canvas, and at 390×844 they drew straight
+          over this card (browser verification, beta.12). A label is scenery;
+          a stats panel is chrome, and chrome sits above it. */}
       {(liveStats.flights > 0 || liveStats.cruises > 0) && (
-        <div className="absolute top-16 right-4 z-10" style={{ pointerEvents: "auto" }}>
+        <div className="absolute top-16 right-4 z-30" style={{ pointerEvents: "auto" }}>
           <div
             className="rounded-xl p-3 text-xs"
             style={{

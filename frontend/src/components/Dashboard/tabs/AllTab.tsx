@@ -63,6 +63,7 @@ import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
 import { usePlaceSelectionStore } from "../../../store/placeSelectionStore";
 import type { Layer } from "@deck.gl/core";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
+import { initialLegendOpen, isPhoneViewport } from "./legendInitialState";
 import { SidebarToggle } from "../SidebarToggle";
 import { Icon } from "../../ui/Icon";
 
@@ -125,9 +126,9 @@ export function AllTab(): JSX.Element {
   const [legendOpen, setLegendOpen] = useState<boolean>(() => {
     if (typeof window === "undefined") return true;
     try {
-      return window.localStorage.getItem(LEGEND_OPEN_KEY) !== "false";
+      return initialLegendOpen(window.localStorage.getItem(LEGEND_OPEN_KEY), isPhoneViewport());
     } catch {
-      return true;
+      return !isPhoneViewport();
     }
   });
 
