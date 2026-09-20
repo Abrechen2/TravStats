@@ -104,7 +104,12 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       baseCurrency,
     });
     const lodgings = await prisma.lodging.findMany({
-      where: { id: { in: ids } },
+      // `userId` as well as the ids, although the query that produced them was
+      // already scoped to this account. Ownership belongs in the query that
+      // reads the row, not two functions away: an id list is a foreign key and
+      // a foreign key proves existence, not ownership. This read has no way of
+      // knowing where its ids came from, so it asks.
+      where: { id: { in: ids }, userId },
       include: LODGING_INCLUDE,
     });
     // `in` has no order of its own, so the page is put back into the order the

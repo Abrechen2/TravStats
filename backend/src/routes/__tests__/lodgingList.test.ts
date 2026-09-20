@@ -198,6 +198,18 @@ describe("GET /api/v1/lodging — server-side paging, sorting and filtering", ()
       expect(new Set(walked).size).toBe(walked.length);
     });
 
+    it("never carries another account's house, whatever it is sorted or filtered by", async () => {
+      // The ids come from a query already scoped to the account; the read that
+      // turns them into rows asks again, because a foreign key proves
+      // existence and not ownership, and that read cannot see where its ids
+      // came from.
+      for (const sort of ["name", "nights", "spend", "rating", "lastStay", "status"]) {
+        const body = await list({ limit: 100, sort });
+        expect(names(body)).not.toContain("Alpha Haus (foreign)");
+        expect(body.meta.total).toBe(4);
+      }
+    });
+
     it("still reports the total for a page past the end of the set", async () => {
       // `COUNT(*) OVER ()` rides on the rows, so an empty page carries none —
       // answering 0 would tell a client that had paged too far that its filter
