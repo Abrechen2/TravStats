@@ -46,6 +46,7 @@ import {
 } from "./map/cards/hoverCardHtml";
 import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
 import { usePinnedAnchor } from "./Globe/usePinnedAnchor";
+import { occludeExtraLayers } from "./Globe/occludeExtraLayers";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { buildAirportPoints, buildPortPoints } from "./Globe/globePointData";
 import { buildGlobeArcData } from "./Globe/globeArcData";
@@ -1161,8 +1162,10 @@ export default function GlobeView({
       }),
       // Appended, never merged into buildGlobeLayers itself -- these are the
       // caller's own layers (e.g. dashboard-wide tour paths), not part of
-      // what this component knows how to build.
-      ...extraLayers,
+      // what this component knows how to build. They DO get the occlusion
+      // extension every globe-built layer carries, or a tour on the far side
+      // of the sphere draws straight through it.
+      ...occludeExtraLayers(extraLayers, occlusionExt, occlusionProps),
     ],
     [
       arcsData,

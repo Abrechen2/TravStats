@@ -256,10 +256,19 @@ export function createCruiseArrowsLayer(
     return arrowIcon(rgba(d.color, alpha));
   };
 
+  // Lifted with the path they annotate. An arrow left at altitude 0 while its
+  // leg rides 5 km above the sphere sits BELOW the line on the globe and, at a
+  // shallow camera angle, behind the mesh entirely — the same z-fight the
+  // path's own altitude exists to avoid.
+  const arrowAltitudeM = options.altitudeM ?? 0;
+
   return new IconLayer<ArrowDatum, CollisionFilterExtensionProps<ArrowDatum>>({
     id: "cruise-arc-arrows",
     data: arrows,
-    getPosition: (d) => d.position,
+    getPosition: (d) =>
+      arrowAltitudeM === 0
+        ? d.position
+        : ([d.position[0], d.position[1], arrowAltitudeM] as unknown as [number, number]),
     getIcon: iconFor,
     getAngle: (d) => d.angleDeg,
     getSize: ARROW_DISPLAY_HEIGHT * arrowSizeScale,
