@@ -14,7 +14,11 @@ import { SortableHeader } from "../components/table/SortableHeader";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
-import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
+import ListFilterBar, {
+  FilterField,
+  PANEL_SELECT_CLASS,
+  SEARCH_MAX_LENGTH,
+} from "../components/table/ListFilterBar";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
 import CruiseRowActions from "../components/Cruise/CruiseRowActions";
 import DomainImportPanel from "../components/import/DomainImportPanel";
@@ -24,11 +28,13 @@ import { SkeletonTable } from "../components/SkeletonLoader";
 import { useTranslation } from "../hooks/useTranslation";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { countPortCalls } from "../components/Cruise/cruisePorts";
+import type { CruiseFacets, CruiseListQuery } from "../lib/api/cruise";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
-import { sortCruises, type CruiseSortKey } from "../components/Cruise/sortCruises";
+import { CRUISE_SORT_FIELDS, type CruiseSortField } from "../shared/cruiseListOrder";
 import { useSortPrefs } from "../components/table/useSortPrefs";
-import { usePagination } from "../components/table/usePagination";
+import { useServerPagination } from "../components/table/useServerPagination";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import TablePagination from "../components/table/TablePagination";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
@@ -74,7 +80,7 @@ const SORT_KEY_TO_COLUMN: Partial<Record<string, CruiseColumnId>> = {
  * Column id -> sort key. Mostly identity; `dates` sorts on `date`, and the
  * two columns that carry no key (cabin, actions) are not sortable.
  */
-const CRUISE_SORT_KEY_BY_COLUMN: Partial<Record<CruiseColumnId, CruiseSortKey>> = {
+const CRUISE_SORT_KEY_BY_COLUMN: Partial<Record<CruiseColumnId, CruiseSortField>> = {
   ship: "ship",
   line: "line",
   dates: "date",
@@ -89,6 +95,8 @@ export default function CruisesPage(): JSX.Element {
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
   const [cruises, setCruises] = useState<Cruise[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [facets, setFacets] = useState<CruiseFacets | null>(null);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<boolean>(false);
   const [showAdd, setShowAdd] = useState<boolean>(false);
@@ -101,6 +109,10 @@ export default function CruisesPage(): JSX.Element {
   // Filter state — mirrors the flights filter panel conceptually but the
   // data domain is smaller so we inline rather than reuse <Filters />.
   const [search, setSearch] = useState<string>("");
+  // Debounced: the search used to filter rows already in the browser, so
+  // typing cost nothing. As a query parameter, "AIDAnova" is eight requests
+  // without this, seven for a prefix nobody wanted to see.
+  const debouncedSearch = useDebouncedValue(search);
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   const [yearFilter, setYearFilter] = useState<YearFilter>("all");
   // The one filter only cruises have. It lives behind the "Filter" button,
@@ -109,17 +121,17 @@ export default function CruisesPage(): JSX.Element {
   const [lineFilter, setLineFilter] = useState<string>("all");
   // Newest first everywhere, and the choice survives a reload — the
   // column choice already did (useColumnPrefs), the sort never had.
-  const { sortBy, sortOrder, setSort } = useSortPrefs("cruises-list", "date", "desc", [
+  // The vocabulary comes from the mirror the SERVER also reads, so a key the
+  // header offers cannot be one the server rejects.
+  const { sortBy, sortOrder, setSort } = useSortPrefs(
+    "cruises-list",
     "date",
-    "ship",
-    "line",
-    "ports",
-    "status",
-    "price",
-  ] as const);
+    "desc",
+    CRUISE_SORT_FIELDS
+  );
   const columnPrefs = useColumnPrefs("cruise-list", CRUISE_ALWAYS_VISIBLE);
 
-  const handleSort = (col: CruiseSortKey): void => {
+  const handleSort = (col: CruiseSortField): void => {
     if (col === sortBy) {
       setSort(col, sortOrder === "asc" ? "desc" : "asc");
     } else {
@@ -161,77 +173,102 @@ export default function CruisesPage(): JSX.Element {
     });
   };
 
+  /** Bumped after a create, edit, duplicate or delete — the only reason to
+   *  ask the server for the same page and the same counts twice. */
+  const [reloadToken, setReloadToken] = useState(0);
   const reload = useCallback(async (): Promise<void> => {
-    setLoading(true);
-    setLoadError(false);
-    try {
-      const data = await cruiseApi.list();
-      setCruises(data);
-    } catch (err) {
-      // Without this the list simply stayed empty on a network failure —
-      // indistinguishable from an account that has no cruises yet.
-      logger.error("CruisesPage: failed to load cruises", err);
-      setLoadError(true);
-    } finally {
-      setLoading(false);
-    }
+    setReloadToken((n) => n + 1);
   }, []);
 
+  /**
+   * The filter bar's answers as ONE value, so the query, the effect
+   * dependencies and the pager's reset key cannot drift apart.
+   */
+  const filterQuery = useMemo<CruiseListQuery>(() => {
+    const query: CruiseListQuery = {};
+    const needle = debouncedSearch.trim().slice(0, SEARCH_MAX_LENGTH);
+    if (needle) query.q = needle;
+    if (statusFilter !== "all") query.status = statusFilter;
+    if (yearFilter !== "all") query.year = yearFilter;
+    // `shipLine`, not `cruiseLine`: the dropdown lists the line a row DRAWS,
+    // which falls back to the ship's, and the column filter cannot see that.
+    if (lineFilter !== "all") query.shipLine = lineFilter;
+    return query;
+  }, [debouncedSearch, statusFilter, yearFilter, lineFilter]);
+  const filterSignature = useMemo(
+    () =>
+      Object.keys(filterQuery)
+        .sort()
+        .map((key) => `${key}=${String((filterQuery as Record<string, unknown>)[key])}`)
+        .join("&"),
+    [filterQuery]
+  );
+
+  const pagination = useServerPagination(total, "cruises-list", filterSignature);
+  const { limit, offset } = pagination;
+
   useEffect(() => {
-    void reload();
-  }, [reload]);
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      setLoading(true);
+      setLoadError(false);
+      try {
+        const page = await cruiseApi.listPage({
+          ...filterQuery,
+          sort: sortBy,
+          order: sortOrder,
+          limit,
+          offset,
+        });
+        if (cancelled) return;
+        setCruises(page.items);
+        setTotal(page.total);
+      } catch (err) {
+        if (cancelled) return;
+        // Without this the list simply stayed empty on a network failure —
+        // indistinguishable from an account that has no cruises yet.
+        logger.error("CruisesPage: failed to load cruises", err);
+        setLoadError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [filterQuery, sortBy, sortOrder, limit, offset, reloadToken]);
+
+  // The option lists and the summary figures. Separate from the page fetch on
+  // purpose: paging and re-sorting change none of these numbers, and asking
+  // again would make every page turn cost two passes over the filtered set.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      try {
+        const data = await cruiseApi.facets(filterQuery);
+        if (!cancelled) setFacets(data);
+      } catch (err) {
+        // The table still works without them; the strip and the dropdowns go
+        // quiet rather than showing counts nobody measured.
+        logger.error("CruisesPage: failed to load cruise facets", err);
+        if (!cancelled) setFacets(null);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [filterQuery, reloadToken]);
 
   // Year options come from ALL loaded cruises (`cruises`), never from the
   // filtered set — otherwise picking a year would remove the other years from
   // the dropdown, leaving the choice changeable only by resetting. It reads
   // from the full list already; the note is here so it stays that way.
-  const availableYears = useMemo(() => {
-    const years = new Set<number>();
-    for (const c of cruises) {
-      if (c.startDate) years.add(new Date(c.startDate).getFullYear());
-    }
-    return Array.from(years).sort((a, b) => b - a);
-  }, [cruises]);
-
-  /** One entry per cruise line, read from the FULL list so the options do not
-   *  shrink as the other filters narrow the table. */
-  const availableLines = useMemo(() => {
-    const names = new Set<string>();
-    for (const c of cruises) {
-      const line = c.cruiseLine ?? c.ship?.cruiseLine ?? "";
-      if (line.trim().length > 0) names.add(line);
-    }
-    return Array.from(names).sort((a, b) => a.localeCompare(b));
-  }, [cruises]);
-
-  const filtered = useMemo(() => {
-    const needle = search.trim().toLowerCase();
-    return cruises.filter((c) => {
-      if (statusFilter !== "all" && c.status !== statusFilter) return false;
-      if (lineFilter !== "all" && (c.cruiseLine ?? c.ship?.cruiseLine ?? "") !== lineFilter) {
-        return false;
-      }
-      if (yearFilter !== "all") {
-        const year = c.startDate ? new Date(c.startDate).getFullYear() : null;
-        if (year !== yearFilter) return false;
-      }
-      if (needle.length > 0) {
-        const shipName = c.ship?.name ?? c.shipNameOverride ?? "";
-        const line = c.cruiseLine ?? c.ship?.cruiseLine ?? "";
-        const haystack = `${shipName} ${line}`.toLowerCase();
-        if (!haystack.includes(needle)) return false;
-      }
-      return true;
-    });
-  }, [cruises, search, statusFilter, yearFilter, lineFilter]);
-
-  const sorted = useMemo(
-    () => sortCruises(filtered, sortBy, sortOrder),
-    [filtered, sortBy, sortOrder]
-  );
-  // Pages over the already filtered+sorted set — the summary strip and the
-  // filter option lists above keep reading `filtered`/`cruises`, never this.
-  const pagination = usePagination(sorted, "cruises-list");
+  /** Counted by the database under every OTHER filter, so picking a line no
+   *  longer leaves the line list holding only that line. */
+  const availableYears = useMemo(() => (facets?.years ?? []).map((y) => y.value), [facets]);
+  const availableLines = useMemo(() => (facets?.lines ?? []).map((l) => l.value), [facets]);
 
   /**
    * The visible columns, in order, with their narrow places and their sort
@@ -272,23 +309,25 @@ export default function CruisesPage(): JSX.Element {
     [columnPrefs, t, sortBy, sortOrder, handleSort]
   );
 
+  /**
+   * The four figures above the table, read off the server's own counts.
+   *
+   * They were folded from the rows the browser held, which is the reason it
+   * held them: a strip that describes the whole filtered set cannot be
+   * computed from one page. `portCalls` is still the count of TIMES a ship
+   * tied up, not of places — the different question `countUniquePorts`
+   * answers for the row cell.
+   */
   const summaryFigures = useMemo(() => {
-    let portCalls = 0;
-    let seaDays = 0;
-    const lines = new Set<string>();
-    for (const c of filtered) {
-      portCalls += countPortCalls(c);
-      seaDays += c.stops.filter((stop) => stop.isAtSea).length;
-      const line = c.cruiseLine ?? c.ship?.cruiseLine ?? "";
-      if (line.trim().length > 0) lines.add(line);
-    }
+    if (facets === null) return [];
+    const { summary } = facets;
     return [
-      { key: "cruises", value: String(filtered.length), label: t("common:summary.cruises") },
-      { key: "portCalls", value: String(portCalls), label: t("common:summary.portCalls") },
-      { key: "seaDays", value: String(seaDays), label: t("common:summary.seaDays") },
-      { key: "lines", value: String(lines.size), label: t("common:summary.lines") },
+      { key: "cruises", value: String(summary.cruises), label: t("common:summary.cruises") },
+      { key: "portCalls", value: String(summary.portCalls), label: t("common:summary.portCalls") },
+      { key: "seaDays", value: String(summary.seaDays), label: t("common:summary.seaDays") },
+      { key: "lines", value: String(summary.lines), label: t("common:summary.lines") },
     ];
-  }, [filtered, t]);
+  }, [facets, t]);
 
   const resetFilters = (): void => {
     setSearch("");
@@ -385,9 +424,7 @@ export default function CruisesPage(): JSX.Element {
           }
           hasActiveFilter={hasActiveFilter}
           onReset={resetFilters}
-          resultLabel={
-            loading || loadError ? "" : t("common:filters.matching", { count: filtered.length })
-          }
+          resultLabel={loading || loadError ? "" : t("common:filters.matching", { count: total })}
         />
 
         {loadError ? (
@@ -399,7 +436,7 @@ export default function CruisesPage(): JSX.Element {
           </div>
         ) : loading ? (
           <SkeletonTable rows={10} />
-        ) : filtered.length === 0 ? (
+        ) : cruises.length === 0 ? (
           <div
             className="overflow-hidden rounded-lg shadow-xs"
             style={{ border: "1px solid var(--color-border)" }}
@@ -414,7 +451,7 @@ export default function CruisesPage(): JSX.Element {
         ) : (
           <>
             <Table columns={visibleColumns} label={t("list.title")} {...tableHints}>
-              {pagination.paged.map((c) => (
+              {cruises.map((c) => (
                 <CruiseRow
                   key={c.id}
                   cruise={c}
@@ -431,7 +468,9 @@ export default function CruisesPage(): JSX.Element {
                 />
               ))}
             </Table>
-            <TablePagination {...pagination} />
+            {/* `allowAll` is off: over a network "Alle" would promise a row
+                count nobody has checked — see `useServerPagination`. */}
+            <TablePagination {...pagination} allowAll={false} />
             {/* Same closing line the flights and lodging tables carry: how many
                 rows, and what they are sorted by. The count used to sit only in
                 the filter bar, so the table simply stopped. */}

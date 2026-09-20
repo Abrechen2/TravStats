@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import CruisesPage from "../../pages/CruisesPage";
 import { cruiseApi } from "../../lib/api";
 import type { Cruise } from "../../types";
+import type { CruiseFacets } from "../../lib/api/cruise";
 import {
   countRenderedRows,
   paginationControlsRendered,
@@ -55,7 +56,8 @@ vi.mock("react-router-dom", async () => {
 
 vi.mock("../../lib/api", () => ({
   cruiseApi: {
-    list: vi.fn(),
+    listPage: vi.fn(),
+    facets: vi.fn(),
     remove: vi.fn(),
   },
 }));
@@ -97,19 +99,39 @@ const makeCruise = (overrides: Partial<Cruise> & Pick<Cruise, "id">): Cruise => 
   ...overrides,
 });
 
+/** The facet endpoint's answer, shaped from the fixture the case sets up. */
+const facetsFor = (cruises: Cruise[]): CruiseFacets => ({
+  years: [],
+  lines: [],
+  summary: { cruises: cruises.length, portCalls: 0, seaDays: 0, lines: 0 },
+});
+
+/** One page of the given cruises, with the filtered total beside it. */
+const pageOf = (cruises: Cruise[]) => async (query?: { limit?: number; offset?: number }) => {
+  const limit = query?.limit ?? 50;
+  const offset = query?.offset ?? 0;
+  return { items: cruises.slice(offset, offset + limit), total: cruises.length };
+};
+
 describe("CruisesPage", () => {
-  it("toggles sort order and re-orders rows when a column header is clicked", async () => {
-    const early = makeCruise({
-      id: "a",
-      shipNameOverride: "Early Ship",
-      startDate: "2026-01-10",
-    });
-    const late = makeCruise({
-      id: "b",
-      shipNameOverride: "Late Ship",
-      startDate: "2026-06-10",
-    });
-    vi.mocked(cruiseApi.list).mockResolvedValue([early, late]);
+  /**
+   * Rewritten 2026-09-20, when the ordering moved to the server.
+   *
+   * It used to hand the page two cruises and assert that clicking the header
+   * swapped them, which is a statement about a browser sort that no longer
+   * exists — and could only pass by reintroducing the whole-account fetch it
+   * needed. What it always meant is what it checks now: the click toggles the
+   * direction, and the direction is what the server is ASKED for. Which rows
+   * come back is the server's answer, pinned by
+   * `cruises.listQuery.test.ts`.
+   */
+  it("toggles sort order and asks the server for it when a column header is clicked", async () => {
+    const cruises = [
+      makeCruise({ id: "a", shipNameOverride: "Early Ship", startDate: "2026-01-10" }),
+      makeCruise({ id: "b", shipNameOverride: "Late Ship", startDate: "2026-06-10" }),
+    ];
+    vi.mocked(cruiseApi.listPage).mockImplementation(pageOf(cruises));
+    vi.mocked(cruiseApi.facets).mockResolvedValue(facetsFor(cruises));
 
     render(
       <MemoryRouter>
@@ -118,18 +140,18 @@ describe("CruisesPage", () => {
     );
 
     await screen.findByRole("table");
+    const lastSort = (): { sort?: string; order?: string } => {
+      const calls = vi.mocked(cruiseApi.listPage).mock.calls;
+      return calls[calls.length - 1]?.[0] ?? {};
+    };
 
-    // Default sort is date/desc — newest (Late Ship) first.
-    const rowsInitial = screen.getAllByRole("row").slice(1); // drop header row
-    expect(within(rowsInitial[0]).getByText("Late Ship")).toBeInTheDocument();
-    expect(within(rowsInitial[1]).getByText("Early Ship")).toBeInTheDocument();
+    // Default sort is date/desc — newest first.
+    expect(lastSort()).toMatchObject({ sort: "date", order: "desc" });
 
     await userEvent.click(screen.getByRole("button", { name: /columns\.dates/ }));
 
-    // Clicking the already-active "date" header toggles to asc — oldest first.
-    const rowsAfter = screen.getAllByRole("row").slice(1);
-    expect(within(rowsAfter[0]).getByText("Early Ship")).toBeInTheDocument();
-    expect(within(rowsAfter[1]).getByText("Late Ship")).toBeInTheDocument();
+    // Clicking the already-active "date" header toggles to asc.
+    await waitFor(() => expect(lastSort()).toMatchObject({ sort: "date", order: "asc" }));
   });
 
   it("opens the delete-confirm dialog when a row's Delete action is clicked", async () => {
@@ -138,7 +160,8 @@ describe("CruisesPage", () => {
       shipNameOverride: "Solo Ship",
       startDate: "2026-01-10",
     });
-    vi.mocked(cruiseApi.list).mockResolvedValue([cruise]);
+    vi.mocked(cruiseApi.listPage).mockImplementation(pageOf([cruise]));
+    vi.mocked(cruiseApi.facets).mockResolvedValue(facetsFor([cruise]));
 
     render(
       <MemoryRouter>
@@ -162,13 +185,19 @@ describe("CruisesPage", () => {
   });
 
   // Review finding (Alex T7, round 1): nothing tested that the wiring
-  // actually pages the rows — reverting `sorted.map` -> `pagination.paged.map`
-  // or dropping `<TablePagination>` would have left the suite green.
-  it("shows only one page of rows while the summary strip keeps the full count", async () => {
+  // actually pages the rows — dropping `<TablePagination>` would have left
+  // the suite green.
+  //
+  // Rewritten 2026-09-20 with the paging: the old version handed the page all
+  // 63 rows and asserted 50 were drawn, which is a statement about a slice
+  // that no longer happens here. What it always meant is below — one page of
+  // rows, the pager under them, and a count of the whole filtered set.
+  it("shows the page the server sent, under a count of the whole filtered set", async () => {
     const cruises = Array.from({ length: 63 }, (_, i) =>
       makeCruise({ id: `c-${i}`, shipNameOverride: `Ship ${i}`, startDate: "2026-01-10" })
     );
-    vi.mocked(cruiseApi.list).mockResolvedValue(cruises);
+    vi.mocked(cruiseApi.listPage).mockImplementation(pageOf(cruises));
+    vi.mocked(cruiseApi.facets).mockResolvedValue(facetsFor(cruises));
 
     const { container } = render(
       <MemoryRouter>
@@ -178,6 +207,11 @@ describe("CruisesPage", () => {
 
     await waitFor(() => {
       expect(countRenderedRows(container)).toBe(50); // default page size
+    });
+    // …and it is a page because it was ASKED for as one.
+    expect(vi.mocked(cruiseApi.listPage).mock.calls[0][0]).toMatchObject({
+      limit: 50,
+      offset: 0,
     });
     expect(paginationControlsRendered()).toBe(true);
     // The FULL filtered count (63), not the 50 rows the page renders.

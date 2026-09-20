@@ -13,6 +13,8 @@ import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { errorContent } from "./shared";
+import { CRUISE_QUERY_STATUSES } from "../../../schemas/cruise";
+import { CRUISE_SORT_FIELDS } from "../../../shared/cruiseListOrder";
 import {
   createCruiseSchema,
   updateCruiseSchema,
@@ -97,30 +99,125 @@ const cruise = registry.register(
 
 const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.literal(true), data });
 
+/** The same envelope, carrying the page a list answered from. */
+const pagedEnvelope = <T extends z.ZodTypeAny>(data: T) =>
+  z.object({
+    success: z.literal(true),
+    data,
+    meta: z.object({
+      total: z.number().int().describe("Size of the FILTERED set, before the page slice"),
+      limit: z.number().int(),
+      offset: z.number().int(),
+    }),
+  });
+
 registry.registerPath({
   method: "get",
   path: "/cruises",
   summary: "List cruises",
   description:
-    "Returns the authenticated user's cruises. `status` and `cruiseLine` accept " +
-    "either a single value or a repeated query parameter.",
+    "Returns one page of the authenticated user's cruises. `status` and " +
+    "`cruiseLine` accept either a single value or a repeated query parameter. " +
+    "`meta.total` is the size of the FILTERED set, so a client can page " +
+    "without holding the logbook; it is always present.",
   tags: ["Cruises"],
   request: {
     query: z.object({
-      status: z.enum(["scheduled", "flown", "cancelled", "historical"]).optional(),
-      cruiseLine: z.string().optional(),
-      year: z.coerce.number().int().min(1900).max(2200).optional(),
+      status: z.enum(CRUISE_QUERY_STATUSES).optional(),
+      cruiseLine: z.string().optional().describe("Exact match on the cruise_line column"),
+      shipLine: z
+        .string()
+        .optional()
+        .describe("The line a cruise belongs to — its own, or its ship's when it has none"),
+      q: z
+        .string()
+        .optional()
+        .describe(
+          "Free text, case-insensitive, OR'ed over ship, line, route name, booking " +
+            "reference and the names of the departure, arrival and called-at ports."
+        ),
+      year: z.coerce
+        .number()
+        .int()
+        .min(1900)
+        .max(2200)
+        .optional()
+        .describe("Calendar year of the sailing's start, read in UTC"),
+      month: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(12)
+        .optional()
+        .describe("Calendar month of the sailing's start (1-12), in UTC. Combinable with `year`."),
       region: z.string().optional(),
       tripId: z.string().uuid().optional(),
       limit: z.coerce.number().int().min(1).max(500).optional(),
       offset: z.coerce.number().int().min(0).optional(),
-      sort: z.enum(["date", "ship", "line", "ports", "status"]).optional(),
+      sort: z
+        .enum(CRUISE_SORT_FIELDS)
+        .optional()
+        .describe("Sort key; every key carries a tie-breaker, so the order is total"),
+      order: z.enum(["asc", "desc"]).optional(),
     }),
   },
   responses: {
     200: {
-      description: "Cruises",
-      content: { "application/json": { schema: envelope(z.array(cruise)) } },
+      description: "One page of cruises",
+      content: { "application/json": { schema: pagedEnvelope(z.array(cruise)) } },
+    },
+    401: { description: "Missing or invalid token", content: errorContent },
+  },
+});
+
+const facetOption = <T extends z.ZodTypeAny>(value: T) =>
+  z.object({ value, count: z.number().int() });
+
+registry.registerPath({
+  method: "get",
+  path: "/cruises/facets",
+  summary: "Filter options and headline figures for a cruise list",
+  description:
+    "The year and line option lists for the current filter set, each counted " +
+    "under every OTHER filter but not its own (standard faceting), plus the " +
+    "summary figures for the filtered set with ALL filters applied. Takes the " +
+    "same query parameters as `GET /cruises`; `limit`, `offset`, `sort` and " +
+    "`order` are ignored. Lets a client page through the list without holding it.",
+  tags: ["Cruises"],
+  request: {
+    query: z.object({
+      q: z.string().optional(),
+      year: z.coerce.number().int().min(1900).max(2200).optional(),
+      month: z.coerce.number().int().min(1).max(12).optional(),
+      status: z.enum(CRUISE_QUERY_STATUSES).optional(),
+      cruiseLine: z.string().optional(),
+      shipLine: z.string().optional(),
+      region: z.string().optional(),
+      tripId: z.string().uuid().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Facet option lists and summary figures",
+      content: {
+        "application/json": {
+          schema: envelope(
+            z.object({
+              years: z.array(facetOption(z.number().int())),
+              lines: z.array(facetOption(z.string())),
+              summary: z.object({
+                cruises: z.number().int(),
+                portCalls: z
+                  .number()
+                  .int()
+                  .describe("How many times a ship tied up; sea days excluded"),
+                seaDays: z.number().int(),
+                lines: z.number().int().describe("Distinct lines, a cruise's own or its ship's"),
+              }),
+            })
+          ),
+        },
+      },
     },
     401: { description: "Missing or invalid token", content: errorContent },
   },

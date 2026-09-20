@@ -47,6 +47,16 @@ describe("cruise schemas", () => {
     expect(result.success).toBe(true);
   });
 
+  it("refuses in_progress on the write path although the list filter accepts it", () => {
+    // `in_progress` is derived from the dates by the write path and the status
+    // sweep; a client may ASK for it (CRUISE_QUERY_STATUSES) but never store it.
+    expect(createCruiseSchema.safeParse({ ...minimalValid, status: "in_progress" }).success).toBe(
+      false
+    );
+    expect(updateCruiseSchema.safeParse({ status: "in_progress" }).success).toBe(false);
+    expect(cruiseQuerySchema.safeParse({ status: "in_progress" }).success).toBe(true);
+  });
+
   it("rejects invalid cabinType", () => {
     expect(createCruiseSchema.safeParse({ ...minimalValid, cabinType: "penthouse" }).success).toBe(
       false

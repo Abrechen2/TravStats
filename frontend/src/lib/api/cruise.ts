@@ -1,18 +1,50 @@
 import { api } from "./client";
+import { logger } from "../logger";
 import type { Cruise, CruiseInput, Port, Ship } from "../../types";
+import type { CruiseSortField } from "../../shared/cruiseListOrder";
+
+/** The server's own maximum per request (`cruiseQuerySchema`). */
+const CRUISE_PAGE_SIZE = 500;
+/** Backstop against an endless loop if `meta.total` ever disagrees with the
+ *  rows actually returned. 20 000 sailings is far past any real account. */
+const MAX_CRUISE_PAGES = 40;
 
 interface Envelope<T> {
   success: boolean;
   data: T;
 }
 
+interface PagedEnvelope<T> extends Envelope<T> {
+  meta: { total: number; limit: number; offset: number };
+}
+
+/** One option in a cruise filter dropdown, with how many rows carry it. */
+export interface CruiseFacetOption<T extends string | number> {
+  value: T;
+  count: number;
+}
+
+/** `GET /cruises/facets` — the lists and figures drawn around the table. */
+export interface CruiseFacets {
+  years: CruiseFacetOption<number>[];
+  lines: CruiseFacetOption<string>[];
+  summary: { cruises: number; portCalls: number; seaDays: number; lines: number };
+}
+
 export interface CruiseListQuery {
   status?: string | string[];
+  /** Exact match on the `cruiseLine` COLUMN. For the dropdown, see `shipLine`. */
   cruiseLine?: string | string[];
+  /** The line a cruise belongs to — its own, or its ship's when it has none. */
+  shipLine?: string;
+  /** Free text over ship, line, route name and the ports it called at. */
+  q?: string;
   year?: number;
+  month?: number;
   region?: string;
   tripId?: string;
-  sort?: "date" | "ship" | "line" | "ports" | "status";
+  sort?: CruiseSortField;
+  order?: "asc" | "desc";
   limit?: number;
   offset?: number;
 }
@@ -56,8 +88,57 @@ export interface RouteOverrideKey {
 }
 
 export const cruiseApi = {
+  /**
+   * EVERY cruise matching the query — all of them, walked page by page.
+   *
+   * This used to be a single request with no `limit`, which the server
+   * answers with its cap of 500 and, until 2026-09-20, with no `meta` to
+   * notice it by. From 501 cruises on the dashboard map drew a subset, the
+   * spreadsheet export wrote a subset and the statistics counted a subset,
+   * and nothing anywhere said so. It is the same defect `listLodgings` was
+   * written for, and the same answer: paging HERE rather than in each caller,
+   * because the map, the stats, the export and the domain summary all go
+   * through this one function.
+   *
+   * The LIST PAGE does not — it wants one page, and asks for it through
+   * `listPage` below.
+   */
   list: async (q: CruiseListQuery = {}): Promise<Cruise[]> => {
-    const { data } = await api.get<Envelope<Cruise[]>>("/cruises", { params: q });
+    const items: Cruise[] = [];
+    for (let page = 0; page < MAX_CRUISE_PAGES; page += 1) {
+      const { data } = await api.get<PagedEnvelope<Cruise[]>>("/cruises", {
+        params: { ...q, limit: CRUISE_PAGE_SIZE, offset: page * CRUISE_PAGE_SIZE },
+      });
+      items.push(...data.data);
+      // An empty page ends the walk even if `meta` is missing or wrong —
+      // without it a stale `total` would spin this to its cap on every load.
+      if (data.data.length === 0) return items;
+      if (data.meta === undefined || items.length >= data.meta.total) return items;
+    }
+    logger.warn("cruiseApi.list: stopped at the page cap — some cruises were not fetched");
+    return items;
+  },
+
+  /**
+   * ONE page, with the size of the filtered set beside it.
+   *
+   * `total` is what the pager counts with and what the "N treffen zu" label
+   * reports — the filtered set, not the page and not the account.
+   */
+  listPage: async (q: CruiseListQuery = {}): Promise<{ items: Cruise[]; total: number }> => {
+    const { data } = await api.get<PagedEnvelope<Cruise[]>>("/cruises", { params: q });
+    return { items: data.data, total: data.meta?.total ?? data.data.length };
+  },
+
+  /**
+   * The year and line option lists, and the summary figures, for a filter set
+   * — counted by the database.
+   *
+   * The logbook used to derive all of this from the complete row set in the
+   * browser, which is why it held every sailing before it could draw a page.
+   */
+  facets: async (q: CruiseListQuery = {}): Promise<CruiseFacets> => {
+    const { data } = await api.get<Envelope<CruiseFacets>>("/cruises/facets", { params: q });
     return data.data;
   },
   get: async (id: string): Promise<Cruise> => {

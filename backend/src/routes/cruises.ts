@@ -7,7 +7,10 @@ import { statsLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
-import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from "../schemas/cruise";
+import { createCruiseSchema, updateCruiseSchema } from "../schemas/cruise";
+import { CRUISE_INCLUDE } from "./cruises/include";
+import { cruiseListHandler } from "./cruises/list";
+import { cruiseFacetsHandler } from "./cruises/facets";
 import { checkAndUpdateAchievements } from "../utils/achievements";
 import { buildEffectivePortSequence } from "../shared/cruise/portSequence";
 import { buildLegRouteOverrideMap, portLegRouteKey } from "../shared/cruise/legRouteKey";
@@ -146,62 +149,18 @@ router.use(authenticate);
 // cannot POST/PATCH/DELETE cruises — consistent with flights/trips.
 router.use(requireWriteScope);
 
-const CRUISE_INCLUDE = {
-  ship: true,
-  departurePort: true,
-  arrivalPort: true,
-  // Only id + name: the cruise list and detail need to SHOW which trip a
-  // cruise belongs to, and pulling the whole Trip row (with its own relations)
-  // into every list entry would be paid on all 500 rows for two fields.
-  trip: { select: { id: true, name: true, color: true } },
-  stops: { include: { port: true }, orderBy: { dayNumber: "asc" as const } },
-  legs: { orderBy: { ordinal: "asc" as const } },
-} satisfies Prisma.CruiseInclude;
-
 const requireUser = (req: AuthRequest): string => {
   if (!req.userId) throw new AppError("Not authenticated", 401);
   return req.userId;
 };
 
-const buildWhere = (q: Record<string, unknown>, userId: string): Prisma.CruiseWhereInput => {
-  const where: Prisma.CruiseWhereInput = { userId };
-  if (typeof q.cruiseLine === "string") where.cruiseLine = q.cruiseLine;
-  if (typeof q.status === "string") where.status = q.status;
-  if (typeof q.tripId === "string") where.tripId = q.tripId;
-  if (typeof q.year === "number") {
-    const y = q.year;
-    where.startDate = { gte: new Date(`${y}-01-01`), lt: new Date(`${y + 1}-01-01`) };
-  }
-  if (typeof q.region === "string") {
-    const region = q.region;
-    where.OR = [
-      { departurePort: { region } },
-      { arrivalPort: { region } },
-      { stops: { some: { port: { region } } } },
-    ];
-  }
-  return where;
-};
+// One page of the logbook. The handler lives in ./cruises/list.ts, with the
+// filters and the ordering it cannot push into a Prisma `orderBy`.
+router.get("/", cruiseListHandler);
 
-router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = requireUser(req);
-    const parsed = cruiseQuerySchema.safeParse(req.query);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
-
-    const where = buildWhere(parsed.data as Record<string, unknown>, userId);
-    const cruises = await prisma.cruise.findMany({
-      where,
-      include: CRUISE_INCLUDE,
-      orderBy: { startDate: "desc" },
-      take: parsed.data.limit ?? 500,
-      skip: parsed.data.offset ?? 0,
-    });
-    res.json({ success: true, data: cruises });
-  } catch (err) {
-    next(err);
-  }
-});
+// The option lists and figures drawn AROUND that page. Before "/:id", which
+// would otherwise read "facets" as a cruise id.
+router.get("/facets", cruiseFacetsHandler);
 
 router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

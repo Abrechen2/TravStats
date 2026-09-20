@@ -15,11 +15,72 @@ vi.mock("../client", () => ({
 describe("cruiseApi", () => {
   beforeEach(() => vi.clearAllMocks());
 
-  it("list() fetches /cruises and unwraps envelope", async () => {
-    vi.mocked(api.get).mockResolvedValue({ data: { success: true, data: [{ id: "c1" }] } });
+  /**
+   * `list()` asks for PAGES now.
+   *
+   * It used to send the query alone, which the server answers with its cap of
+   * 500 — and, until `meta` existed, with nothing to notice the cut by. From
+   * 501 cruises on the dashboard map, the export and the statistics each drew
+   * a subset in silence. The walk is here rather than in each of them for the
+   * reason `listLodgings` gives: one fix, one code path.
+   */
+  it("list() walks the pages and unwraps the envelope", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: { success: true, data: [{ id: "c1" }], meta: { total: 1, limit: 500, offset: 0 } },
+    });
     const result = await cruiseApi.list({ cruiseLine: "AIDA" });
-    expect(api.get).toHaveBeenCalledWith("/cruises", { params: { cruiseLine: "AIDA" } });
+    expect(api.get).toHaveBeenCalledWith("/cruises", {
+      params: { cruiseLine: "AIDA", limit: 500, offset: 0 },
+    });
     expect(result).toEqual([{ id: "c1" }]);
+  });
+
+  it("list() keeps walking while `meta.total` says there is more", async () => {
+    const page = (ids: string[], total: number) => ({
+      data: {
+        success: true,
+        data: ids.map((id) => ({ id })),
+        meta: { total, limit: 500, offset: 0 },
+      },
+    });
+    vi.mocked(api.get)
+      .mockResolvedValueOnce(page(["a"], 2))
+      .mockResolvedValueOnce(page(["b"], 2));
+    const result = await cruiseApi.list();
+    expect(result).toEqual([{ id: "a" }, { id: "b" }]);
+    expect(vi.mocked(api.get).mock.calls[1][1]).toEqual({ params: { limit: 500, offset: 500 } });
+  });
+
+  it("list() stops on an empty page even when `meta` is missing or wrong", async () => {
+    vi.mocked(api.get)
+      .mockResolvedValueOnce({ data: { success: true, data: [{ id: "a" }], meta: { total: 99 } } })
+      .mockResolvedValueOnce({ data: { success: true, data: [], meta: { total: 99 } } });
+    expect(await cruiseApi.list()).toEqual([{ id: "a" }]);
+    expect(api.get).toHaveBeenCalledTimes(2);
+  });
+
+  it("listPage() asks for ONE page and reports the filtered total", async () => {
+    vi.mocked(api.get).mockResolvedValue({
+      data: { success: true, data: [{ id: "c1" }], meta: { total: 63, limit: 25, offset: 25 } },
+    });
+    const result = await cruiseApi.listPage({ limit: 25, offset: 25, sort: "price" });
+    expect(api.get).toHaveBeenCalledWith("/cruises", {
+      params: { limit: 25, offset: 25, sort: "price" },
+    });
+    // The FILTERED set, not the page — this is what the pager counts with.
+    expect(result).toEqual({ items: [{ id: "c1" }], total: 63 });
+  });
+
+  it("facets() fetches /cruises/facets and unwraps the envelope", async () => {
+    const facets = {
+      years: [{ value: 2024, count: 2 }],
+      lines: [{ value: "AIDA Cruises", count: 2 }],
+      summary: { cruises: 2, portCalls: 3, seaDays: 1, lines: 1 },
+    };
+    vi.mocked(api.get).mockResolvedValue({ data: { success: true, data: facets } });
+    const result = await cruiseApi.facets({ year: 2024 });
+    expect(api.get).toHaveBeenCalledWith("/cruises/facets", { params: { year: 2024 } });
+    expect(result).toEqual(facets);
   });
 
   it("get() fetches /cruises/:id", async () => {
