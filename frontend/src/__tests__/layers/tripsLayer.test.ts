@@ -28,8 +28,11 @@ describe("buildTripsData", () => {
   it("converts flights to trip paths with timestamps", () => {
     const trips = buildTripsData([mockFlight]);
     expect(trips).toHaveLength(1);
-    expect(trips[0].path).toHaveLength(2);
-    expect(trips[0].timestamps).toHaveLength(2);
+    // The path is the densified great circle since 2026-09-20 — it used to be
+    // the two endpoints, which is why the animation did not follow the route.
+    // One timestamp per vertex, because TripsLayer pairs them by index.
+    expect(trips[0].path.length).toBeGreaterThan(2);
+    expect(trips[0].timestamps).toHaveLength(trips[0].path.length);
   });
 
   it("timestamps are Unix seconds (not milliseconds)", () => {
@@ -42,7 +45,9 @@ describe("buildTripsData", () => {
 
   it("departure timestamp < arrival timestamp", () => {
     const trips = buildTripsData([mockFlight]);
-    expect(trips[0].timestamps[0]).toBeLessThan(trips[0].timestamps[1]);
+    expect(trips[0].timestamps[0]).toBeLessThan(
+      trips[0].timestamps[trips[0].timestamps.length - 1]
+    );
   });
 
   it("skips flights with missing geometry coordinates", () => {
@@ -61,6 +66,6 @@ describe("getTimeRange", () => {
     const range = getTimeRange(trips);
     expect(range.min).toBeLessThan(range.max);
     expect(range.min).toBe(trips[0].timestamps[0]);
-    expect(range.max).toBe(trips[0].timestamps[1]);
+    expect(range.max).toBe(trips[0].timestamps[trips[0].timestamps.length - 1]);
   });
 });

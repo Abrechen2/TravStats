@@ -1,4 +1,5 @@
 import { IconLayer, PathLayer } from "@deck.gl/layers";
+import { screenTangentDeg } from "./screenTangent";
 import { CollisionFilterExtension, type CollisionFilterExtensionProps } from "@deck.gl/extensions";
 import type { Layer } from "@deck.gl/core";
 import type { Cruise } from "../../types";
@@ -447,20 +448,25 @@ function interpolateAlongPath(
   const [x0, y0] = path[segStart];
   const [x1, y1] = path[segStart + 1];
   const dx = x1 - x0;
-  // deck.gl's icon/text rotation shader rotates the local (pre-flip) offset
-  // and only afterwards negates its y-component, which nets out to a
-  // standard y-up getAngle convention (angle 0 = pointing +x/east, positive
-  // = counterclockwise on screen — verified against icon-layer-vertex.glsl.js).
-  // Geographic latitude already increases "up" the same way, so the raw
-  // lat delta is used directly with no extra sign flip (#160 — a previous
-  // version negated dy here, which mirrored every arrow vertically).
   const dy = y1 - y0;
   if (dx === 0 && dy === 0) return null;
 
   const segLength = cumulative[segStart + 1] - cumulative[segStart];
   const t = segLength > 0 ? (targetDist - cumulative[segStart]) / segLength : 0;
   const position: [number, number] = [x0 + dx * t, y0 + dy * t];
-  const angleDeg = (Math.atan2(dy, dx) * 180) / Math.PI;
+  // deck.gl's icon/text rotation shader rotates the local (pre-flip) offset
+  // and only afterwards negates its y-component, which nets out to a standard
+  // y-up getAngle convention (angle 0 = pointing +x/east, positive =
+  // counterclockwise on screen — verified against icon-layer-vertex.glsl.js;
+  // #160, where a previous version negated dy and mirrored every arrow).
+  //
+  // That convention is unchanged. What was wrong is the SPACE the angle was
+  // measured in: this used `atan2(y1 - y0, dx)`, raw lon/lat, while deck.gl
+  // rotates in screen space — Mercator. Barcelona → Civitavecchia is 1.4°
+  // out that way, which is small enough to survive a browser check;
+  // Reykjavík → Longyearbyen is 30° out, and the arrow visibly leaves its
+  // own line. `screenTangent.ts` carries the measurements.
+  const angleDeg = screenTangentDeg(path[segStart], path[segStart + 1]);
   return { position, angleDeg };
 }
 

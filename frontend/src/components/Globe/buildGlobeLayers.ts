@@ -110,7 +110,12 @@ const HEAD_MARKER_RADIUS_PX = 8;
 // depth-buffer values with the sphere mesh and produces the clipping
 // the user observed. 5 km is invisible at any user-relevant zoom but
 // safely above the precision noise of the fragment depth.
-const CRUISE_PATH_ALTITUDE_M = 5_000;
+//
+// Exported because the TRIP map's globe (Trips/TripMapGlobeLayers.ts) draws
+// the same two things at the same two heights. A second copy of the number is
+// a second thing to get wrong, and the symptom — a cruise line sinking into
+// the sphere — reads as a rendering bug rather than a drifted constant.
+export const CRUISE_PATH_ALTITUDE_M = 5_000;
 // Night-shade cells sit above the sphere so the globe mesh's depth buffer
 // occludes the far side directly (no per-frame occlusion-extension lag).
 //
@@ -129,8 +134,9 @@ const NIGHT_SHADE_ALTITUDE_M = 10_000;
 // than getting visually clipped where a path intersects the marker.
 // Beta.22 had markers at altitude 0 → cruise paths drew over them at
 // shallow camera angles. 8 km is well above the 5 km cruise altitude
-// but still hugs the surface visually.
-const MARKER_ALTITUDE_M = 8_000;
+// but still hugs the surface visually. Exported for the trip map's globe, for
+// the same reason as CRUISE_PATH_ALTITUDE_M above.
+export const MARKER_ALTITUDE_M = 8_000;
 
 // Convert a deck.gl PickingInfo.coordinate into a [lng, lat] pair so we
 // can anchor the popup where the user actually clicked the line. The

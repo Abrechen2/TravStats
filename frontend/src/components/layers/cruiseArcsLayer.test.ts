@@ -420,6 +420,27 @@ describe("cruise arrow placement — arc length, not vertex index (2.3.1 fix)", 
     expect(data[0].angleDeg).toBeCloseTo(0, 5);
   });
 
+  it("aims a HIGH-LATITUDE leg along the line as drawn, not as it reads in lon/lat", () => {
+    // #160 verified the rotation convention in a browser and it has been
+    // right ever since — on the legs it was checked against. The angle was
+    // computed from `atan2(Δlat, Δlon)` though, and deck.gl rotates in SCREEN
+    // space, which is Mercator. Barcelona → Civitavecchia is off by 1.4°,
+    // which is why nobody saw it. Reykjavík → Longyearbyen is off by 30°:
+    // 20.53° in lon/lat against the 50.64° the line is actually drawn at.
+    const cruise = makeCruise([
+      makeStop(1, 1, { id: 1, lat: 64.15, lon: -21.94 }),
+      makeStop(2, 2, { id: 2, lat: 78.22, lon: 15.63 }),
+    ]);
+    const arrows = createCruiseArrowsLayer([cruise]);
+    const data = (arrows as { props: { data: unknown } }).props.data as Array<{
+      angleDeg: number;
+    }>;
+    expect(data.length).toBeGreaterThan(0);
+    for (const arrow of data) {
+      expect(arrow.angleDeg).toBeCloseTo(50.64, 1);
+    }
+  });
+
   it("still points a north→south leg south under the existing rotation convention", () => {
     const cruise = makeCruise([
       makeStop(1, 1, { id: 1, lat: 10, lon: 0 }),
