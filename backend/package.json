@@ -122,6 +122,8 @@
     },
     "fast-xml-parser": ">=5.10.1",
     "fast-xml-builder": ">=1.1.7",
-    "uuid": "$uuid"
+    "uuid": "$uuid",
+    "deepmerge-ts": ">=8.0.2",
+    "mysql2": ">=3.24.4"
   }
 }
