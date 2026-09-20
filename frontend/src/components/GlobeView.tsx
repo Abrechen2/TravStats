@@ -55,7 +55,7 @@ import { GlobeControlPanel, type StyleId, type LiteMode } from "./Globe/GlobeCon
 import type { ArcDatum, CruisePathDatum, PointDatum } from "./Globe/globeLayerTypes";
 import type { MapPinned } from "./map/cards/pinnedTypes";
 import { STYLE_OPTIONS } from "./Globe/globeStyles";
-import type { GeoJSONFeature } from "../types";
+import type { Flight, GeoJSONFeature } from "../types";
 import { isCountableFlight } from "../shared/flightCounting";
 import type { Cruise } from "../types/cruise";
 import type { Lodging } from "../types/lodging";
@@ -107,6 +107,12 @@ interface GlobeViewProps {
   /** Fired by the pinned-card "Open cruise" CTA — should navigate to
       the cruise detail page. */
   onCruiseOpen?: (cruiseId: string) => void;
+  /**
+   * Fired by the card's "Bearbeiten" action. Threaded here so the globe's
+   * card carries the SAME action row as the flat map's — the ruling asked for
+   * one card, and a card with one fewer action on one surface is two.
+   */
+  onEdit?: (flight: Flight) => void;
   minRouteCount?: number;
   /** Which domain appearance sections the control panel exposes. Globe
       currently only mounts on the Alle tab, so this defaults to both. */
@@ -230,6 +236,7 @@ export default function GlobeView({
   cruises = [],
   onFlightOpen,
   onCruiseOpen,
+  onEdit,
   minRouteCount = 1,
   appearanceDomains = ["flight", "cruise"],
   extraLayers = [],
@@ -952,12 +959,13 @@ export default function GlobeView({
     [flightColorConfig]
   );
 
-  const { cardFlights, clearSelections } = useMapSelectionCards({
-    flights,
-    flightColor: flightCardColor,
-    focus: focusOnGlobe,
-    setPinned,
-  });
+  const { cardFlights, clearSelections, selectionScope, resolveSelectedFlight, openTripDetails } =
+    useMapSelectionCards({
+      flights,
+      flightColor: flightCardColor,
+      focus: focusOnGlobe,
+      setPinned,
+    });
 
   // Smooth fly-to on arc click. Compute mid-point (handling wrap-around)
   // and pick a zoom level that keeps both endpoints visible without
@@ -1500,11 +1508,27 @@ export default function GlobeView({
               cruises={cruises ?? []}
               // Letting go of the selection is half of closing: see
               // `clearSelections` for the reopen this fixes.
+              selectionScope={selectionScope}
               onClose={() => {
                 setPinned(null);
                 clearSelections();
               }}
               onFlightOpen={onFlightOpen}
+              onFlightEdit={
+                onEdit
+                  ? (flightId) => {
+                      const target = resolveSelectedFlight(flightId);
+                      if (!target) return;
+                      setPinned(null);
+                      clearSelections();
+                      onEdit(target);
+                    }
+                  : undefined
+              }
+              onTripDetails={() => {
+                setPinned(null);
+                openTripDetails();
+              }}
               onCruiseOpen={onCruiseOpen}
               onLodgingOpen={onLodgingOpen}
               onPlaceOpen={onPlaceOpen}

@@ -434,3 +434,43 @@ describe("the globe frames a flight selection itself", () => {
     expect(flyTo).toHaveBeenCalled();
   });
 });
+
+/**
+ * "One card, one action row" is what the 2026-09-20 ruling asked for, and the
+ * globe was not reaching it: `onFlightEdit`, `onTripDetails` and
+ * `selectionScope` stopped at `MapContainer3D`, so "Bearbeiten" was flat-only,
+ * the trip card had no action row at all on the sphere, and one selected
+ * flight read "Flug öffnen" on the flat map and "Letzten Flug öffnen" on the
+ * globe — two names for one thing, which is how a card starts being two cards.
+ */
+describe("the same selection gets the same action row on both surfaces", () => {
+  const edit = vi.fn();
+  const renderers: Array<[string, () => void]> = [
+    ["the flat map", () => render(<DeckGLMap flights={GEO} visMode="routes" onEdit={edit} />)],
+    ["the globe", () => render(<GlobeView flights={GEO} onEdit={edit} />)],
+  ];
+
+  for (const [name, renderIt] of renderers) {
+    it(`${name}: a single flight offers edit, and the action names THAT flight`, async () => {
+      renderIt();
+      act(() => useFlightSelectionStore.getState().setSelection([FLIGHT]));
+      await settle();
+
+      const props = lastCard();
+      expect(props.onFlightEdit, `${name} has no edit action`).toBeTypeOf("function");
+      expect(props.selectionScope, `${name} misnames the selection`).toBe("single");
+    });
+
+    it(`${name}: a trip selection offers its details action`, async () => {
+      renderIt();
+      act(() =>
+        useFlightSelectionStore
+          .getState()
+          .setSelection([FLIGHT, { ...FLIGHT, id: "f2", arrIata: "OSL" } as typeof FLIGHT])
+      );
+      await settle();
+
+      expect(lastCard().onTripDetails, `${name} has no details action`).toBeTypeOf("function");
+    });
+  }
+});

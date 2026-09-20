@@ -276,6 +276,7 @@ export default function MapContainer3D({
               cruises={showInternalCruises ? cruises : []}
               onFlightOpen={onFlightOpen ?? onFlightClick}
               onCruiseOpen={onCruiseOpen}
+              onEdit={onEdit}
               minRouteCount={minRouteCount}
               appearanceDomains={appearanceDomains}
               extraLayers={extraLayers}

@@ -363,7 +363,6 @@ export function DeckGLMap({
   const selectedIds = useFlightSelectionStore((s) => s.selectedIds);
   const selectedFlights = useFlightSelectionStore((s) => s.selectedFlights);
   const clearSelection = useFlightSelectionStore((s) => s.clearSelection);
-  const showDetails = useFlightSelectionStore((s) => s.showDetails);
   const selectedCruiseId = useCruiseSelectionStore((s) => s.selectedCruiseId);
   const clearLodgingSelection = useLodgingSelectionStore((s) => s.clearSelection);
   const clearPlaceSelection = usePlaceSelectionStore((s) => s.clearSelection);
@@ -505,17 +504,18 @@ export function DeckGLMap({
   // Every selection that comes from outside the map — the activity sidebar,
   // the flight panel — becomes a card and a camera move, on the same terms the
   // globe uses (`map/cards/useMapSelectionCards.ts`).
-  const { cardFlights, clearSelections } = useMapSelectionCards({
-    flights,
-    flightColor: flightTipColor,
-    focus: focusOn,
-    setPinned,
-    flightDelayMs: TOOLTIP_DELAY_MS,
-    clearOnEmpty: true,
-    // The bounding-box flyTo above already frames a flight selection with both
-    // airports on screen; a second command would undo exactly that.
-    framesFlightSelection: true,
-  });
+  const { cardFlights, clearSelections, selectionScope, resolveSelectedFlight, openTripDetails } =
+    useMapSelectionCards({
+      flights,
+      flightColor: flightTipColor,
+      focus: focusOn,
+      setPinned,
+      flightDelayMs: TOOLTIP_DELAY_MS,
+      clearOnEmpty: true,
+      // The bounding-box flyTo above already frames a flight selection with both
+      // airports on screen; a second command would undo exactly that.
+      framesFlightSelection: true,
+    });
 
   // Wrap onFlightClick so that a deck.gl layer click sets the guard ref BEFORE the
   // Map onClick fires and would otherwise clear the selection immediately (Bug 1).
@@ -954,7 +954,7 @@ export function DeckGLMap({
               pinned={pinned}
               flights={cardFlights}
               cruises={cruises}
-              selectionScope={selectedFlights.length === 1 ? "single" : "route"}
+              selectionScope={selectionScope}
               onClose={() => {
                 setPinned(null);
                 clearSelections();
@@ -964,11 +964,10 @@ export function DeckGLMap({
               onFlightEdit={
                 onEdit
                   ? (flightId) => {
-                      const target =
-                        selectedFlights.find((f) => f.id === flightId) ?? selectedFlights[0];
+                      const target = resolveSelectedFlight(flightId);
                       if (!target) return;
-                      clearSelection();
                       setPinned(null);
+                      clearSelections();
                       onEdit(target);
                     }
                   : undefined
@@ -978,7 +977,7 @@ export function DeckGLMap({
               onPlaceOpen={onPlaceOpen}
               onTripDetails={() => {
                 setPinned(null);
-                showDetails(selectedFlights, "route-details");
+                openTripDetails();
               }}
             />
           </PinnedCardBoundary>

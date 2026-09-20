@@ -12,7 +12,7 @@
 // move the camera, and whether an emptied selection clears the card.
 
 import { useCallback, useEffect, useMemo } from "react";
-import type { GeoJSONFeature } from "../../../types";
+import type { Flight, GeoJSONFeature } from "../../../types";
 import { useFlightSelectionStore } from "../../../store/flightSelectionStore";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
 import { useLodgingSelectionStore } from "../../../store/lodgingSelectionStore";
@@ -121,6 +121,17 @@ export interface MapSelectionCards {
    */
   clearSelections: () => void;
   /**
+   * `"single"` when the selection IS one flight rather than the whole route —
+   * only the primary action's wording changes. Derived here so both surfaces
+   * say the same thing; it used to stop at `MapContainer3D`, and the globe
+   * called one selected flight "Letzten Flug öffnen".
+   */
+  selectionScope: "single" | "route";
+  /** The selected row behind a card action, or undefined once it is gone. */
+  resolveSelectedFlight: (flightId: string) => Flight | undefined;
+  /** What the trip card's "Details" action does — open the route sidebar. */
+  openTripDetails: () => void;
+  /**
    * What the card should read its route, stats and flight list from.
    *
    * The /geo set the map is drawing, PLUS any selected row it does not carry.
@@ -149,6 +160,8 @@ export function useMapSelectionCards({
   const clearCruise = useCruiseSelectionStore((s) => s.clearSelection);
   const clearLodging = useLodgingSelectionStore((s) => s.clearSelection);
   const clearPlace = usePlaceSelectionStore((s) => s.clearSelection);
+
+  const showDetails = useFlightSelectionStore((s) => s.showDetails);
 
   const clearSelections = useCallback((): void => {
     clearFlights();
@@ -243,5 +256,22 @@ export function useMapSelectionCards({
     focus(next.anchorLngLat);
   }, [selectedPlace, focus, setPinned, clearOnEmpty]);
 
-  return { cardFlights, clearSelections };
+  const resolveSelectedFlight = useCallback(
+    (flightId: string): Flight | undefined =>
+      selectedFlights.find((f) => f.id === flightId) ?? selectedFlights[0],
+    [selectedFlights]
+  );
+
+  const openTripDetails = useCallback((): void => {
+    if (selectedFlights.length === 0) return;
+    showDetails(selectedFlights, "route-details");
+  }, [selectedFlights, showDetails]);
+
+  return {
+    cardFlights,
+    clearSelections,
+    selectionScope: selectedFlights.length === 1 ? "single" : "route",
+    resolveSelectedFlight,
+    openTripDetails,
+  };
 }
