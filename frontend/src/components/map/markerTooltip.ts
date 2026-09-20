@@ -40,6 +40,11 @@ const LODGING_LAYER_IDS = new Set<string>([
   // Flat-map lodging pins (lodgingPinsLayer.ts) — dot + name label.
   "lodging-pins",
   "lodging-pins-labels",
+  // Globe lodging pins (buildGlobeLayers.ts). GlobeView does not wire
+  // `getTooltip` — it owns a React tooltip — but it calls this factory for
+  // the same datum, so a hotel says the same thing on both maps instead of
+  // growing a second renderer that can disagree with this one.
+  "globe-lodging-pins",
 ]);
 const PLACE_LAYER_IDS = new Set<string>([
   // Flat-map place pins (placePinsLayer.ts). All three are pickable and all
@@ -49,6 +54,8 @@ const PLACE_LAYER_IDS = new Set<string>([
   "place-pins",
   "place-pins-labels",
   "place-pins-symbols",
+  // Globe place pins — see the note on the lodging set above.
+  "globe-place-pins",
 ]);
 
 interface PlaceDatum {

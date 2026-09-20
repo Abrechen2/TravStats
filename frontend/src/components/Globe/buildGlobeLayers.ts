@@ -22,6 +22,11 @@ import {
   tierFromQuartile,
   type FlightColorConfig,
 } from "../../lib/flightColor";
+import { resolveLodgingColor, type LodgingColorConfig } from "../../lib/lodgingColor";
+import { resolvePlaceColor, type PlaceColorConfig } from "../../lib/placeColor";
+import type { Rgb } from "../../lib/cruiseColor";
+import type { Lodging } from "../../types/lodging";
+import type { Place } from "../../types/place";
 
 // NOTE: there is no `DEFAULT_CRUISE_ROUTE_COLOR` any more. It existed to seed
 // the "Standard" pill of the old single-colour cruise picker; cruise routes are
@@ -188,6 +193,35 @@ export interface BuildGlobeLayersOptions {
   airportRadius: number;
   /** Cruise-port marker radius in pixels. */
   portRadius: number;
+  /**
+   * Lodgings to pin. The globe drew none of these until 2026-09-20 — the
+   * flat map had drawn them since #187, and `/dashboard/lodging?mode=globe`
+   * therefore answered a sidebar of 31 hotels with an empty sphere.
+   * Coordinate-less entries are skipped here, exactly as `buildLodgingPins`
+   * skips them on the flat map.
+   */
+  lodgings: readonly Lodging[];
+  /** The USER's lodging colour mode + colours (`store/lodgingColorStore`) —
+   *  the same config the flat pin layer and the legend resolve through, so a
+   *  hotel cannot be one colour on the map and another on the sphere. */
+  lodgingColors: LodgingColorConfig;
+  /** Lodging marker radius in pixels. */
+  lodgingRadius: number;
+  /** Places to pin, on the same terms as `lodgings`. */
+  places: readonly Place[];
+  /** The USER's place colour mode + colours (`store/placeColorStore`). */
+  placeColors: PlaceColorConfig;
+  /** Place id → its list's colour, as `resolvePlaceListColors` resolved it.
+   *  Consulted only in `list` mode — passed in rather than derived here for
+   *  the reason the colour contract exists: a layer that resolved membership
+   *  privately would be a second place deciding what a pin means. */
+  placeListColors?: ReadonlyMap<string, Rgb>;
+  /** Place marker radius in pixels. */
+  placeRadius: number;
+  /** Hover on a lodging or place pin. One handler for both: GlobeView routes
+   *  it through `createMarkerTooltip`, the SAME renderer the flat map uses,
+   *  which already keys on the layer id. */
+  onPinHover: (info: PickingInfo) => void;
   /** Fine night-side grid cells (from the day/night terminator). */
   nightCells: NightCell[];
   /** Toggle the day/night shade overlay. */
@@ -218,9 +252,31 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     portColor,
     airportRadius,
     portRadius,
+    lodgings,
+    lodgingColors,
+    lodgingRadius,
+    places,
+    placeColors,
+    placeListColors,
+    placeRadius,
+    onPinHover,
     nightCells,
     showNight,
   } = opts;
+  // Only entries that can be drawn. `Lodging.lat`/`lon` are independently
+  // nullable (a manual pin or a geocoder pass, either of which can fail);
+  // a `Place`'s pair is non-nullable in the model but a hand-edited payload
+  // could still deliver NaN, which crashes the layer rather than skipping a
+  // row. Same two guards the flat layers apply.
+  const lodgingPins = lodgings.filter(
+    (l) => l.lat !== null && l.lon !== null && Number.isFinite(l.lat) && Number.isFinite(l.lon)
+  );
+  const placePins = places.filter((p) => Number.isFinite(p.lat) && Number.isFinite(p.lon));
+  // List membership is resolved by the CALLER (`resolvePlaceListColors`), so
+  // the accessor stays a lookup and the "which list wins" rule keeps its one
+  // home.
+  const placeColorOf = (d: Place): Rgb =>
+    resolvePlaceColor({ visited: d.visited, listColor: placeListColors?.get(d.id) }, placeColors);
   // Per-arc colour — resolved through the shared `resolveFlightColor` (see
   // `resolveFlightArcColor`), so the globe and the flat map agree on every
   // mode. Active-quartile alpha dimming is preserved on top so the
@@ -463,6 +519,84 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       ...occlusionProps,
     } as ConstructorParameters<typeof ScatterplotLayer<PointDatum>>[0] &
       EarthOcclusionExtensionProps),
+    // Lodging + place pins. Same pixel-radius model as the airport and port
+    // dots above (a metre radius balloons into a city-covering disk at high
+    // zoom), same MARKER_ALTITUDE_M lift so a cruise path crossing a hotel
+    // does not draw over it, same EarthOcclusionExtension so a pin on the far
+    // side of the sphere is hidden rather than floating over the Pacific.
+    //
+    // The COLOUR is not decided here: `resolveLodgingColor` / `resolvePlaceColor`
+    // are the same functions the flat pin layers and the dashboard legend call,
+    // reading the same user config out of the colour stores. That is the whole
+    // point — the globe must not be able to paint a hotel differently from the
+    // map beside it.
+    new ScatterplotLayer<Lodging>({
+      id: "globe-lodging-pins",
+      data: lodgingPins,
+      getPosition: (d) => [d.lon as number, d.lat as number, MARKER_ALTITUDE_M],
+      getFillColor: (d) => [...resolveLodgingColor(d, lodgingColors), 230],
+      getRadius: lodgingRadius,
+      updateTriggers: {
+        getFillColor: [lodgingColors.mode, lodgingColors.colors],
+        getRadius: [lodgingRadius],
+      },
+      radiusUnits: "pixels",
+      stroked: true,
+      getLineColor: [13, 17, 23, 220],
+      lineWidthUnits: "pixels",
+      getLineWidth: 1,
+      pickable: true,
+      autoHighlight: !lite,
+      highlightColor: [255, 255, 255, 200],
+      onHover: onPinHover,
+      // Clicking PINS the card rather than calling the caller's open handler
+      // directly. The flat map does the opposite, and must: it has no card.
+      // Here the Alle tab's place handler navigates to the place page, so a
+      // click that fired it would leave the globe before the card it opened
+      // could be read. Same trade the flight arc and the cruise path make.
+      onClick: ({ object }: { object?: Lodging }): void => {
+        if (!object || object.lat === null || object.lon === null) return;
+        setPinned({ kind: "lodging", data: object, anchorLngLat: [object.lon, object.lat] });
+      },
+      extensions: [occlusionExt],
+      ...occlusionProps,
+    } as ConstructorParameters<typeof ScatterplotLayer<Lodging>>[0] & EarthOcclusionExtensionProps),
+    // A wishlist place is drawn HOLLOW — transparent fill, coloured ring —
+    // exactly as on the flat map, and for the measured reason recorded in
+    // placePinsLayer.ts: the POI teal against the wishlist grey falls below
+    // the normal-vision colour-separation floor, so shape carries "been
+    // there" and colour merely agrees.
+    new ScatterplotLayer<Place>({
+      id: "globe-place-pins",
+      data: placePins,
+      getPosition: (d) => [d.lon, d.lat, MARKER_ALTITUDE_M],
+      getFillColor: (d) =>
+        d.visited ? [...placeColorOf(d), 230] : ([0, 0, 0, 0] as [number, number, number, number]),
+      getLineColor: (d) =>
+        d.visited
+          ? ([13, 17, 23, 220] as [number, number, number, number])
+          : [...placeColorOf(d), 235],
+      getLineWidth: (d) => (d.visited ? 1 : 2),
+      getRadius: placeRadius,
+      updateTriggers: {
+        getFillColor: [placeColors.mode, placeColors.colors, placeListColors],
+        getLineColor: [placeColors.mode, placeColors.colors, placeListColors],
+        getRadius: [placeRadius],
+      },
+      radiusUnits: "pixels",
+      stroked: true,
+      lineWidthUnits: "pixels",
+      pickable: true,
+      autoHighlight: !lite,
+      highlightColor: [255, 255, 255, 200],
+      onHover: onPinHover,
+      onClick: ({ object }: { object?: Place }): void => {
+        if (!object) return;
+        setPinned({ kind: "place", data: object, anchorLngLat: [object.lon, object.lat] });
+      },
+      extensions: [occlusionExt],
+      ...occlusionProps,
+    } as ConstructorParameters<typeof ScatterplotLayer<Place>>[0] & EarthOcclusionExtensionProps),
     // NOTE: IATA / UN-LOCODE labels are intentionally NOT a deck.gl
     // TextLayer here. deck.gl 9's billboard TextLayer/IconLayer does not
     // render under MapLibre's globe projection in interleaved mode (the

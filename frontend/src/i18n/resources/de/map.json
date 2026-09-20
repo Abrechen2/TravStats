@@ -238,7 +238,10 @@
       "embark": "Start",
       "debark": "Ende",
       "openCruise": "Cruise öffnen",
-      "durationHours": "{{h}} h {{m}} min"
+      "durationHours": "{{h}} h {{m}} min",
+      "nights": "Nächte",
+      "openLodging": "Unterkunft öffnen",
+      "openPlace": "Ort öffnen"
     },
     "timeSlider": {
       "title": "Zeitachse",

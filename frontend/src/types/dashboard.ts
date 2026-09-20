@@ -10,7 +10,11 @@ export type FlightMode = (typeof FLIGHT_MODES)[number];
 export const CRUISE_MODES = ["sea-routes", "itinerary", "port-frequency", "globe"] as const;
 export type CruiseMode = (typeof CRUISE_MODES)[number];
 
-export const POI_MODES = ["markers", "heatmap"] as const;
+// Places were the last domain tab without the sphere, for the same reason
+// lodging was: nothing decided against it, the tab simply passed a hardcoded
+// "routes" through. Added 2026-09-20 together with the globe's place pins —
+// offering a mode whose map draws nothing would have been the worse half.
+export const POI_MODES = ["markers", "heatmap", "globe"] as const;
 export type PoiMode = (typeof POI_MODES)[number];
 
 // `globe` is a PROJECTION, not a data view — it only says "show me the same
