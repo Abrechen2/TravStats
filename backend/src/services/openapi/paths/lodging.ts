@@ -178,6 +178,66 @@ registry.registerPath({
   },
 });
 
+const lodgingFacets = registry.register(
+  "LodgingFacets",
+  z
+    .object({
+      chains: z.array(
+        z.object({ id: z.number().int(), name: z.string(), count: z.number().int() })
+      ),
+      countries: z.array(
+        z.object({
+          value: z
+            .string()
+            .describe(
+              "What to send back as `country`: the ISO code, or the raw text where none was derived"
+            ),
+          isoCode: z.string().nullable(),
+          count: z.number().int(),
+        })
+      ),
+      years: z.array(z.object({ year: z.number().int(), count: z.number().int() })),
+      types: z.array(z.object({ type: z.enum(LODGING_TYPES), count: z.number().int() })),
+      statuses: z.array(z.object({ status: z.enum(STAY_STATUSES), count: z.number().int() })),
+      summary: z.object({
+        lodgings: z.number().int(),
+        stays: z.number().int().describe("Stays that COUNT — check-out past, not cancelled"),
+        nights: z.number().int(),
+        chains: z.number().int().describe("Distinct named chains; independents count for none"),
+      }),
+    })
+    .describe(
+      "Filter options and totals for one query. Each facet is counted under every " +
+        "ACTIVE filter EXCEPT its own, so the list you are choosing from never shrinks " +
+        "to the value already chosen. The summary is counted under all of them, by the " +
+        "same counting rule the rows use."
+    )
+    .openapi("LodgingFacets")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/lodging/facets",
+  summary: "Filter options and totals for a lodging query",
+  description:
+    "Takes the same query as GET /lodging and ignores its paging and sorting. " +
+    "Answers what the filter bar should offer and what the summary above the table " +
+    "should say — both over the whole filtered set, which a page cannot know.",
+  tags: ["Lodging"],
+  request: { query: lodgingQuerySchema },
+  responses: {
+    200: {
+      description: "Facets and summary",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.boolean(), data: lodgingFacets }),
+        },
+      },
+    },
+    400: { description: "Invalid query", content: errorContent },
+  },
+});
+
 const lodgingProposal = registry.register(
   "LodgingProposal",
   z

@@ -15,6 +15,7 @@ import {
   LODGING_LIST_DEFAULT_LIMIT,
   LODGING_LIST_MAX_LIMIT,
 } from "../services/lodging/listQuery";
+import { queryLodgingFacets } from "../services/lodging/listFacets";
 import { requireUser } from "../middleware/auth";
 import {
   applyFxSnapshot,
@@ -130,6 +131,21 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         offset: parsed.data.offset ?? 0,
       },
     });
+  } catch (err) {
+    next(err);
+  }
+});
+
+// The filter bar's options and the figures above the table. Separate from the
+// list on purpose: a page changes on every click, these change only when the
+// filters do, so tying them together would recount the library per keystroke.
+// Registered BEFORE `/:id`, or Express reads "facets" as a lodging id.
+router.get("/facets", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const parsed = lodgingQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    res.json({ success: true, data: await queryLodgingFacets({ userId, query: parsed.data }) });
   } catch (err) {
     next(err);
   }
