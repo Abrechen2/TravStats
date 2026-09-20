@@ -45,6 +45,9 @@ interface Props {
   resultLabel: string;
 }
 
+/** The longest search the flights list's `q` parameter accepts. */
+export const SEARCH_MAX_LENGTH = 100;
+
 const CONTROL_CLASS =
   "rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]";
 
@@ -105,8 +108,16 @@ export default function ListFilterBar({
     <div className="mb-4">
       <div className="mx-auto flex max-w-(--breakpoint-2xl) flex-col gap-3 md:flex-row md:items-center md:justify-between">
         <div className="flex flex-1 flex-wrap items-center gap-2">
+          {/* Capped at what the server accepts (`q` in flightQuerySchema).
+              Without it a pasted paragraph is a 400, and a 400 on a list
+              request draws the red "could not be loaded" banner over a table
+              that is perfectly fine — the user sees a broken page where they
+              meant to type a search. The client-side truncation in
+              `buildFlightFilterQuery` is the real guard; this one stops the
+              box accepting characters it will silently drop. */}
           <input
             type="search"
+            maxLength={SEARCH_MAX_LENGTH}
             value={search.value}
             onChange={(e): void => search.onChange(e.target.value)}
             placeholder={search.placeholder}

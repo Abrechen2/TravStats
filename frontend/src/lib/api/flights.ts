@@ -1,5 +1,6 @@
 import type {
   Flight,
+  FlightFacets,
   FlightFilters,
   FlightInput,
   GeoJSONFeatureCollection,
@@ -52,6 +53,20 @@ export const flightsApi = {
       limit: number;
       offset: number;
     }>("/flights", { params: filters });
+    return data;
+  },
+
+  /**
+   * The year and airline option lists, and the summary figures, for a filter
+   * set — counted by the database.
+   *
+   * The logbook used to derive all of this from the complete row set in the
+   * browser, which is why it fetched every flight the account owns before it
+   * could draw a single page (measured 2026-09-20). Takes the same filters as
+   * `getAll`; `limit`, `offset`, `sort` and `order` are ignored.
+   */
+  getFacets: async (filters?: FlightFilters): Promise<FlightFacets> => {
+    const { data } = await api.get<FlightFacets>("/flights/facets", { params: filters });
     return data;
   },
 

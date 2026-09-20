@@ -15,6 +15,12 @@ export interface TablePaginationProps {
   total: number;
   setPage: (page: number) => void;
   setPageSize: (size: number | "all") => void;
+  /**
+   * Whether "Alle" is offered. It is not, where the SERVER pages: over a
+   * network "all" is a promise about a row count nobody has checked, and the
+   * flights list would quietly show the first 500 of 900 under that label.
+   */
+  allowAll?: boolean;
 }
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
@@ -42,6 +48,7 @@ export default function TablePagination({
   total,
   setPage,
   setPageSize,
+  allowAll = true,
 }: TablePaginationProps): JSX.Element {
   const { t } = useTranslation(["common"]);
   const { from, to } = paginationRange(page, pageSize, total);
@@ -112,7 +119,7 @@ export default function TablePagination({
                 {size}
               </option>
             ))}
-            <option value="all">{t("common:table.pagination.all")}</option>
+            {allowAll && <option value="all">{t("common:table.pagination.all")}</option>}
           </select>
         </label>
       </div>

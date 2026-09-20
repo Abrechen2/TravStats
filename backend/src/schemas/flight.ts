@@ -85,6 +85,31 @@ const normalizedFlightNumber = z
   // which the update handler reads as "don't change".
   .transform((v) => (v === null ? null : normalizeFlightNumber(v)));
 
+/**
+ * The eight values of `Flight.specialType` — the ONE list.
+ *
+ * It is read twice and must stay one: `baseFlightSchema` below accepts these
+ * on a write, and `flightQuerySchema` filters on them plus two answers that
+ * are not a type at all — everything WITHOUT one (`standard`) and everything
+ * WITH one (`special`). They were two literal arrays for a day, which is a
+ * list that can only ever drift: a ninth type added to the writer and not to
+ * the filter is a flight the logbook can store and never find again.
+ *
+ * Mirrored in `frontend/src/components/specialFlights/specialTypeMeta.ts`,
+ * which carries the icon and colour for each — that pair is a convention,
+ * checked by each side's own tests, like the other `shared/` mirrors.
+ */
+export const SPECIAL_FLIGHT_TYPES = [
+  "sightseeing",
+  "eclipse",
+  "rocket_launch",
+  "zerog",
+  "aurora",
+  "training",
+  "ferry",
+  "test",
+] as const;
+
 const baseFlightSchema = z.object({
   airline: emptyStringToNull,
   airlineIata: z.string().max(4).nullable().optional(),
@@ -259,19 +284,7 @@ const baseFlightSchema = z.object({
   baggageBelt: z.string().max(20).nullable().optional(),
   checkInDesk: z.string().max(40).nullable().optional(),
   // Special flights (Sonder-Flüge) — flight subtype, see schema.prisma
-  specialType: z
-    .enum([
-      "sightseeing",
-      "eclipse",
-      "rocket_launch",
-      "zerog",
-      "aurora",
-      "training",
-      "ferry",
-      "test",
-    ])
-    .nullable()
-    .optional(),
+  specialType: z.enum(SPECIAL_FLIGHT_TYPES).nullable().optional(),
   eventLat: z.number().min(-90).max(90).nullable().optional(),
   eventLon: z.number().min(-180).max(180).nullable().optional(),
   eventLabel: z.string().max(120).nullable().optional(),
@@ -403,8 +416,92 @@ export const updateFlightSchema = partialForUpdate(baseFlightSchema)
     message: "At least one field must be provided for update",
   });
 
+export const SPECIAL_TYPE_FILTER_NONE = "standard";
+export const SPECIAL_TYPE_FILTER_ANY = "special";
+
+/** The trip filter's two non-id answers: assigned to any trip, or to none. */
+export const TRIP_FILTER_ANY = "with";
+export const TRIP_FILTER_NONE = "without";
+
+/**
+ * What `GET /flights` can be ordered by.
+ *
+ * A whitelist, not a column name off the wire: `orderBy` reaches Prisma, and
+ * a caller-chosen field would be a way to order by — and thereby probe —
+ * columns the response never shows.
+ *
+ * `distance` is deliberately absent. The logbook draws a distance per row,
+ * but it is a great-circle figure computed from the two ends; the only stored
+ * distance is `routeDistance`, which is null on every flight without a tracked
+ * route. Offering a sort that silently ranks by a mostly-empty column would be
+ * a worse answer than not offering one.
+ */
+export const FLIGHT_SORT_FIELDS = [
+  "departureTime",
+  "airline",
+  "status",
+  "duration",
+  "price",
+  "route",
+] as const;
+export type FlightSortField = (typeof FLIGHT_SORT_FIELDS)[number];
+
 export const flightQuerySchema = z.object({
   airline: z.union([z.string(), z.array(z.string())]).optional(),
+  /**
+   * Exact match on the `airline` column, which `airline` above is NOT: that
+   * one is a `contains`, so picking "LOT" from a list of carriers would also
+   * return the rows spelled "LOT Polish Airlines". Both spellings really occur
+   * — they are two entries in the alias table of `shared/airlineNormalize.ts`
+   * — so the facet list needs a filter that selects exactly the row group it
+   * counted.
+   */
+  airlineExact: z.string().max(200).optional(),
+  /**
+   * Free text over the columns the logbook row actually shows: flight number,
+   * carrier name and codes, both airport codes and both airport names. OR'ed,
+   * case-insensitive.
+   *
+   * It exists because the page had no server-side search and therefore held
+   * every flight in the browser to run one (`FlightsTablePage.tsx`, the
+   * `limit=500` loop the beta audit of 2026-09-20 measured).
+   */
+  q: z.string().trim().min(1).max(100).optional(),
+  /** A trip id, or `with` / `without` for "assigned to any trip" / "to none". */
+  tripId: z
+    .union([z.literal(TRIP_FILTER_ANY), z.literal(TRIP_FILTER_NONE), z.string().uuid()])
+    .optional(),
+  specialType: z
+    .enum([...SPECIAL_FLIGHT_TYPES, SPECIAL_TYPE_FILTER_NONE, SPECIAL_TYPE_FILTER_ANY])
+    .optional(),
+  /**
+   * Calendar year and month of the departure, ON THE DEPARTURE AIRPORT'S
+   * CLOCK.
+   *
+   * That is this project's one answer to "which day was that"
+   * (`airportCalendarDay`, forgejo#46, pinned by
+   * `stats.timeseriesLocalTime.test.ts`), and it is the answer the logbook
+   * cell next to this filter already gives: `FlightRow` formats the date with
+   * `flight.depTimezone`. So a departure from LAX at 18:00 on 31 December
+   * 2023 — 02:00Z on 1 January — is filed under 2023, month 12, exactly as
+   * the row prints it and exactly as `/stats` counts it.
+   *
+   * It is NOT the browser's clock, which is what the page used before the
+   * filter reached the server: `new Date(...).getFullYear()` put that flight
+   * in whichever year the READER happened to be standing in. And it is not
+   * UTC either, which is what the first server-side version of this filter
+   * shipped — same flight, wrong year, and disagreeing with the row beside it.
+   *
+   * `fromDate`/`toDate` remain UTC instants: they are a range on the time
+   * axis, not a question about a calendar. These two are the question the
+   * filter bar asks, so they are answered on the calendar the reader sees.
+   *
+   * Not a `where` clause — `routes/flights/departureLocalDay.ts` says why.
+   */
+  year: z.coerce.number().int().min(1900).max(2999).optional(),
+  month: z.coerce.number().int().min(1).max(12).optional(),
+  sort: z.enum(FLIGHT_SORT_FIELDS).default("departureTime"),
+  order: z.enum(["asc", "desc"]).default("desc"),
   flightNumber: z.string().optional(),
   departureAirport: z.string().optional(),
   arrivalAirport: z.string().optional(),

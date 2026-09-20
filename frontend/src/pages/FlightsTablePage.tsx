@@ -5,9 +5,8 @@
  */
 
 import AppShell from "../components/ui/AppShell";
-import { flightSummaryFigures } from "../lib/flights/flightSummaryFigures";
-import { airlineResolvers } from "../lib/airlineUtils";
-import { useState, useEffect, useMemo } from "react";
+import { flightSummaryFiguresFromCounts } from "../lib/flights/flightSummaryFigures";
+import { useState, useEffect, useMemo, useCallback } from "react";
 import { Link, useNavigate, useSearchParams } from "react-router-dom";
 import { flightsApi, tripsApi } from "../lib/api";
 import { ColumnPicker } from "../components/table/ColumnPicker";
@@ -16,7 +15,7 @@ import ListSummaryStrip from "../components/table/ListSummaryStrip";
 import ListEmptyState from "../components/table/ListEmptyState";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { useColumnPrefs } from "../components/table/useColumnPrefs";
-import type { Flight, FlightInput, Trip } from "../types";
+import type { Flight, FlightFacets, FlightInput, Trip } from "../types";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
 import SpecialFlightModal from "../components/SpecialFlightModal";
 import FlightEditModal from "../components/FlightEditModal";
@@ -25,8 +24,7 @@ import { buildDuplicateInput } from "../lib/flightDuplicate";
 import type { SpecialTypeFilter } from "../components/specialFlights/specialTypeMeta";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { useToastStore } from "../store/toastStore";
-import { API_LIMITS } from "../lib/constants";
-import { getFlightDuration, getFlightDurationMinutes } from "../lib/flightDuration";
+import { getFlightDuration } from "../lib/flightDuration";
 import { formatDurationWithEstimate } from "../lib/formatters";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
@@ -37,7 +35,7 @@ import { Table, type TableColumn } from "../components/ui/Table";
 import { formatAmount } from "../lib/units";
 import { SkeletonTable } from "../components/SkeletonLoader";
 import { useSortPrefs } from "../components/table/useSortPrefs";
-import { usePagination } from "../components/table/usePagination";
+import { useServerPagination } from "../components/table/useServerPagination";
 import TablePagination from "../components/table/TablePagination";
 import {
   FLIGHT_ALWAYS_VISIBLE,
@@ -46,6 +44,13 @@ import {
   flightColumnLabel,
   type FlightStatusFilter,
 } from "../components/flightsTable/flightColumns";
+import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import {
+  buildFlightFilterQuery,
+  buildFlightListQuery,
+  flightFilterSignature,
+  type FlightListFilterState,
+} from "../lib/flights/flightListQuery";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
 
@@ -62,15 +67,19 @@ export default function FlightsTablePage(): JSX.Element {
   ]);
   const tableHints = useTableHints();
   const [flights, setFlights] = useState<Flight[]>([]);
+  const [total, setTotal] = useState<number>(0);
+  const [facets, setFacets] = useState<FlightFacets | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
   const [tripFilter, setTripFilter] = useState<"all" | "with" | "without" | string>("all");
   const [specialFilter, setSpecialFilter] = useState<SpecialTypeFilter>("all");
-  // Every filter on this page is now decided HERE, over the complete list.
-  // It used to be split: year/month/airline/status went to the server as a
-  // query (re-fetching every flight on every change, while a second component
-  // paginated through all of them AGAIN just to build its dropdown options),
-  // and trip/special were applied in memory. One source, one pass.
+  // Every filter, the sort and the page are decided by the SERVER now, and
+  // the option lists and the summary figures come from /flights/facets.
+  // They were all decided here, over a list this page fetched in full — a
+  // `limit=500` loop until the account was exhausted, on every load, so that
+  // a dropdown could count years (measured 2026-09-20). A page cannot be a
+  // page while the thing that decides its contents runs after the fetch.
   const [search, setSearch] = useState<string>("");
+  const debouncedSearch = useDebouncedValue(search);
   const [statusFilter, setStatusFilter] = useState<FlightStatusFilter>("all");
   const [yearFilter, setYearFilter] = useState<string>("all");
   const [monthFilter, setMonthFilter] = useState<string>("all");
@@ -113,53 +122,21 @@ export default function FlightsTablePage(): JSX.Element {
   };
 
   useEffect(() => {
-    loadFlights();
-  }, []);
-
-  useEffect(() => {
+    const loadTrips = async (): Promise<void> => {
+      try {
+        const data = await tripsApi.getAll();
+        setTrips(data);
+      } catch (err) {
+        logger.warn({ err }, "Failed to load trips");
+      }
+    };
     void loadTrips();
   }, []);
 
-  const loadTrips = async () => {
-    try {
-      const data = await tripsApi.getAll();
-      setTrips(data);
-    } catch (err) {
-      logger.warn({ err }, "Failed to load trips");
-    }
-  };
-
-  const loadFlights = async () => {
-    try {
-      setLoading(true);
-      setLoadError(false);
-      let allFlights: Flight[] = [];
-      let offset = 0;
-      const limit = API_LIMITS.MAX_PAGE_SIZE;
-
-      const MAX_PAGES = 200;
-      let pages = 0;
-      while (pages < MAX_PAGES) {
-        pages++;
-        const data = await flightsApi.getAll({ limit, offset });
-        allFlights = [...allFlights, ...data.flights];
-
-        if (data.flights.length < limit) {
-          break;
-        }
-        offset += limit;
-      }
-
-      setFlights(allFlights);
-    } catch (error) {
-      // Logged only, until now: a network failure left an empty table that
-      // looked exactly like an account with no flights.
-      logger.error("Failed to load flights:", error);
-      setLoadError(true);
-    } finally {
-      setLoading(false);
-    }
-  };
+  /** Bumped after a create, edit, duplicate or delete — the only reason to
+   *  ask the server for the same page and the same counts twice. */
+  const [reloadToken, setReloadToken] = useState(0);
+  const reload = useCallback((): void => setReloadToken((n) => n + 1), []);
 
   /**
    * The row opens the flight's PAGE now, like a cruise row and a lodging row
@@ -190,7 +167,7 @@ export default function FlightsTablePage(): JSX.Element {
       addToast("success", t("flights:table.toast.deleted"));
       setDeleteConfirmOpen(false);
       setFlightToDelete(null);
-      loadFlights();
+      reload();
     } catch (error) {
       logger.error("Failed to delete flight:", error);
       addToast("error", t("dashboard:errors.deleteFlight"));
@@ -218,7 +195,7 @@ export default function FlightsTablePage(): JSX.Element {
     try {
       const created = await flightsApi.create(input, { force: true });
       addToast("success", t("flights:table.toast.duplicated"));
-      await loadFlights();
+      reload();
       setEditingFlight(created);
     } catch (error) {
       logger.error("Failed to duplicate flight:", error);
@@ -231,7 +208,7 @@ export default function FlightsTablePage(): JSX.Element {
       await flightsApi.update(id, updates);
       addToast("success", t("flights:table.toast.updated"));
       setEditingFlight(null);
-      loadFlights();
+      reload();
     } catch (error) {
       logger.error("Failed to update flight:", error);
       addToast("error", t("dashboard:errors.updateFlight"));
@@ -262,7 +239,7 @@ export default function FlightsTablePage(): JSX.Element {
       if (!opts.hasMoreFlights) {
         setShowAddFlight(false);
       }
-      void loadFlights();
+      reload();
       // The created flight flows back so the form can run its post-create
       // trip assignment (#199).
       return result;
@@ -272,36 +249,7 @@ export default function FlightsTablePage(): JSX.Element {
     }
   };
 
-  const getDurationMinutes = getFlightDurationMinutes;
-
   const tripMap = useMemo(() => new Map(trips.map((t) => [t.id, t])), [trips]);
-
-  const sortedFlights = useMemo(
-    () =>
-      [...flights].sort((a, b) => {
-        let comparison = 0;
-
-        switch (sortBy) {
-          case "departureTime":
-            comparison =
-              (a.departureTime ? new Date(a.departureTime).getTime() : 0) -
-              (b.departureTime ? new Date(b.departureTime).getTime() : 0);
-            break;
-          case "airline":
-            comparison = (a.airline || "").localeCompare(b.airline || "");
-            break;
-          case "status":
-            comparison = a.status.localeCompare(b.status);
-            break;
-          case "duration":
-            comparison = getDurationMinutes(a) - getDurationMinutes(b);
-            break;
-        }
-
-        return sortOrder === "asc" ? comparison : -comparison;
-      }),
-    [flights, sortBy, sortOrder]
-  );
 
   const handleSort = (column: typeof sortBy) => {
     setSort(column, sortBy === column ? (sortOrder === "asc" ? "desc" : "asc") : "desc");
@@ -346,101 +294,109 @@ export default function FlightsTablePage(): JSX.Element {
     [flightColumnPrefs, t, sortBy, sortOrder]
   );
 
-  const searchNeedle = useMemo(() => search.trim().toLowerCase(), [search]);
-
-  /** Years and airlines read from the COMPLETE list, so the options never
-   *  shrink as the other filters narrow the table. */
-  const availableYears = useMemo(() => {
-    const years = new Set<number>();
-    for (const f of flights) {
-      if (!f.departureTime) continue;
-      const y = new Date(f.departureTime).getFullYear();
-      if (!Number.isNaN(y)) years.add(y);
-    }
-    return Array.from(years).sort((a, b) => b - a);
-  }, [flights]);
-
-  const availableAirlines = useMemo(() => {
-    const counts = new Map<string, number>();
-    for (const f of flights) {
-      if (!f.airline) continue;
-      counts.set(f.airline, (counts.get(f.airline) ?? 0) + 1);
-    }
-    return Array.from(counts, ([name, count]) => ({ name, count })).sort(
-      (a, b) => b.count - a.count
-    );
-  }, [flights]);
-
-  const displayedFlights = useMemo(
-    () =>
-      sortedFlights.filter((f) => {
-        if (statusFilter !== "all" && f.status !== statusFilter) return false;
-
-        if (yearFilter !== "all" || monthFilter !== "all") {
-          if (!f.departureTime) return false;
-          const dep = new Date(f.departureTime);
-          if (yearFilter !== "all" && dep.getFullYear() !== Number(yearFilter)) return false;
-          if (monthFilter !== "all" && dep.getMonth() + 1 !== Number(monthFilter)) return false;
-        }
-
-        if (airlineFilter !== "all" && f.airline !== airlineFilter) return false;
-
-        if (searchNeedle.length > 0) {
-          const haystack = [f.airline, f.flightNumber, f.depIata, f.arrIata, f.depName, f.arrName]
-            .filter(Boolean)
-            .join(" ")
-            .toLowerCase();
-          if (!haystack.includes(searchNeedle)) return false;
-        }
-
-        // Trip filter
-        if (tripFilter === "with" && !f.tripId) return false;
-        if (tripFilter === "without" && f.tripId) return false;
-        if (
-          tripFilter !== "all" &&
-          tripFilter !== "with" &&
-          tripFilter !== "without" &&
-          f.tripId !== tripFilter
-        )
-          return false;
-
-        // Special-type filter
-        if (specialFilter === "standard" && f.specialType) return false;
-        if (specialFilter === "special" && !f.specialType) return false;
-        if (
-          specialFilter !== "all" &&
-          specialFilter !== "standard" &&
-          specialFilter !== "special" &&
-          f.specialType !== specialFilter
-        )
-          return false;
-
-        return true;
-      }),
+  /**
+   * The filter bar's answers as ONE value, so the query, the effect
+   * dependencies and the pager's reset key cannot drift apart.
+   */
+  const filterState = useMemo<FlightListFilterState>(
+    () => ({
+      // Debounced: the search used to filter rows already in the browser, so
+      // typing cost nothing. As a query parameter, "Lufthansa" is nine
+      // requests without this, eight for a prefix nobody wanted to see.
+      search: debouncedSearch,
+      status: statusFilter,
+      year: yearFilter,
+      month: monthFilter,
+      airline: airlineFilter,
+      trip: tripFilter,
+      special: specialFilter,
+    }),
     [
-      sortedFlights,
-      tripFilter,
-      specialFilter,
+      debouncedSearch,
       statusFilter,
       yearFilter,
       monthFilter,
       airlineFilter,
-      searchNeedle,
+      tripFilter,
+      specialFilter,
     ]
   );
-  // Paginates the filtered+sorted set; the summary strip stays on the full list.
-  const pagination = usePagination(displayedFlights, "flights-list");
+  const filterSignature = useMemo(() => flightFilterSignature(filterState), [filterState]);
+
+  const pagination = useServerPagination(total, "flights-list", filterSignature);
+  const { limit, offset } = pagination;
+
+  useEffect(() => {
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      try {
+        setLoading(true);
+        setLoadError(false);
+        const data = await flightsApi.getAll(
+          buildFlightListQuery(filterState, { sortBy, sortOrder }, { limit, offset })
+        );
+        if (cancelled) return;
+        setFlights(data.flights);
+        setTotal(data.total);
+      } catch (error) {
+        if (cancelled) return;
+        // Logged only, until 2.7: a network failure left an empty table that
+        // looked exactly like an account with no flights.
+        logger.error("Failed to load flights:", error);
+        setLoadError(true);
+      } finally {
+        if (!cancelled) setLoading(false);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [filterState, sortBy, sortOrder, limit, offset, reloadToken]);
+
+  // The option lists and the summary figures. Separate from the page fetch on
+  // purpose: paging and re-sorting do not change a single one of these
+  // numbers, and asking again would make every page turn cost two queries
+  // over the whole filtered set.
+  useEffect(() => {
+    let cancelled = false;
+    const load = async (): Promise<void> => {
+      try {
+        const data = await flightsApi.getFacets(buildFlightFilterQuery(filterState));
+        if (!cancelled) setFacets(data);
+      } catch (error) {
+        // The table still works without them; the strip and the dropdowns go
+        // quiet rather than showing counts nobody measured.
+        logger.error("Failed to load flight facets:", error);
+        if (!cancelled) setFacets(null);
+      }
+    };
+    void load();
+    return () => {
+      cancelled = true;
+    };
+  }, [filterState, reloadToken]);
+
+  /** Counted by the database under every OTHER filter, so picking a carrier
+   *  no longer leaves the carrier list holding only that carrier. */
+  const availableYears = useMemo(() => (facets?.years ?? []).map((y) => y.value), [facets]);
+  const availableAirlines = useMemo(
+    () => (facets?.airlines ?? []).map((a) => ({ name: a.value, count: a.count })),
+    [facets]
+  );
 
   /** The rule, the note and the reasons live in `lib/flights/flightSummaryFigures`. */
   const summaryFigures = useMemo(
     () =>
-      flightSummaryFigures(displayedFlights, airlineResolvers, {
-        flights: t("common:summary.flights"),
-        airlines: t("common:summary.airlines"),
-        airports: t("common:summary.airports"),
-        withoutAirline: (count) => t("common:summary.withoutAirline", { count }),
-      }),
-    [displayedFlights, t]
+      facets === null
+        ? []
+        : flightSummaryFiguresFromCounts(facets.summary, {
+            flights: t("common:summary.flights"),
+            airlines: t("common:summary.airlines"),
+            airports: t("common:summary.airports"),
+            withoutAirline: (count) => t("common:summary.withoutAirline", { count }),
+          }),
+    [facets, t]
   );
 
   const resetFilters = (): void => {
@@ -547,7 +503,7 @@ export default function FlightsTablePage(): JSX.Element {
           onReset={resetFilters}
           loading={loading}
           loadError={loadError}
-          resultCount={displayedFlights.length}
+          resultCount={total}
         />
 
         {loadError ? (
@@ -561,7 +517,7 @@ export default function FlightsTablePage(): JSX.Element {
           <>
             {loading ? (
               <SkeletonTable rows={10} />
-            ) : displayedFlights.length === 0 ? (
+            ) : flights.length === 0 ? (
               <div
                 className="overflow-hidden rounded-lg"
                 style={{ border: "1px solid var(--color-border)" }}
@@ -575,7 +531,7 @@ export default function FlightsTablePage(): JSX.Element {
               </div>
             ) : (
               <Table columns={visibleColumns} label={t("flights:table.title")} {...tableHints}>
-                {pagination.paged.map((flight) => (
+                {flights.map((flight) => (
                   <FlightRow
                     key={flight.id}
                     flight={flight}
@@ -625,9 +581,11 @@ export default function FlightsTablePage(): JSX.Element {
                 ))}
               </Table>
             )}
-            {!loading && displayedFlights.length > 0 && <TablePagination {...pagination} />}
+            {/* `allowAll` is off: over a network "Alle" would promise a
+                row count nobody has checked — see `useServerPagination`. */}
+            {!loading && flights.length > 0 && <TablePagination {...pagination} allowAll={false} />}
             {/* Footer */}
-            {!loading && displayedFlights.length > 0 && (
+            {!loading && flights.length > 0 && (
               <p className="mt-2 px-1 text-right text-xs text-(--text-muted)">
                 {t("flights:table.footer.sortedBy", {
                   label: sortLabels[sortBy],
@@ -681,7 +639,7 @@ export default function FlightsTablePage(): JSX.Element {
             "success",
             t(wasEdit ? "flights:table.toast.updated" : "flights:table.toast.created")
           );
-          void loadFlights();
+          reload();
         }}
       />
 

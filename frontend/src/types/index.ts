@@ -471,6 +471,9 @@ export interface FlightFilters {
     | "flown"
     | "cancelled"
     | "historical"
+    // `duplicated` is a real state the logbook's status filter offers, and it
+    // was missing from the single-value arm while the array arm carried it.
+    | "duplicated"
     | Array<"scheduled" | "flown" | "cancelled" | "historical" | "duplicated">;
   category?: "business" | "private" | "vacation";
   tags?: string[];
@@ -478,6 +481,20 @@ export interface FlightFilters {
   maxPrice?: number;
   limit?: number;
   offset?: number;
+  /** Free text over flight number, carrier name and codes, both airport codes and both airport names. */
+  q?: string;
+  /** The whole carrier name, where `airline` above is a substring match. */
+  airlineExact?: string;
+  /** A trip id, or `with` / `without`. */
+  tripId?: string;
+  /** One of the eight special-flight types, or `standard` / `special`. */
+  specialType?: string;
+  /** Calendar year of the departure, in UTC. */
+  year?: number;
+  /** Calendar month of the departure (1-12), in UTC. */
+  month?: number;
+  sort?: "departureTime" | "airline" | "status" | "duration" | "price" | "route";
+  order?: "asc" | "desc";
   // Frontend-only filter to hide infrequent routes on the globe; never sent to backend
   minRouteCount?: number;
 }
@@ -767,3 +784,4 @@ export * from "./achievement";
 export * from "./cruise";
 export * from "./catalogue";
 export * from "./aircraft";
+export * from "./flightFacets";

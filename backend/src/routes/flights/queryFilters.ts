@@ -1,5 +1,12 @@
 import { Prisma } from "../../prisma";
-import type { FlightQueryInput } from "../../schemas/flight";
+import { flightIdsInLocalPeriod } from "./departureLocalDay";
+import {
+  SPECIAL_TYPE_FILTER_ANY,
+  SPECIAL_TYPE_FILTER_NONE,
+  TRIP_FILTER_ANY,
+  TRIP_FILTER_NONE,
+  type FlightQueryInput,
+} from "../../schemas/flight";
 
 /**
  * Query parameters -> a Prisma `where` for the flights list.
@@ -105,6 +112,52 @@ export const buildFlightWhere = (query: FlightQueryInput & { tags?: string[] }, 
     andConditions.push({ price });
   }
 
+  // Exact carrier — the facet list's own filter, see the schema for why it is
+  // not `airline`.
+  if (query.airlineExact) {
+    andConditions.push({ airline: query.airlineExact });
+  }
+
+  // Free text across the columns a logbook row shows.
+  if (query.q) {
+    const needle = query.q;
+    const like = { contains: needle, mode: "insensitive" } as const;
+    andConditions.push({
+      OR: [
+        { flightNumber: like },
+        { airline: like },
+        { airlineIata: like },
+        { airlineIcao: like },
+        { depIata: like },
+        { arrIata: like },
+        { depIcao: like },
+        { arrIcao: like },
+        { depName: like },
+        { arrName: like },
+      ],
+    });
+  }
+
+  if (query.tripId === TRIP_FILTER_ANY) {
+    andConditions.push({ tripId: { not: null } });
+  } else if (query.tripId === TRIP_FILTER_NONE) {
+    andConditions.push({ tripId: null });
+  } else if (query.tripId) {
+    andConditions.push({ tripId: query.tripId });
+  }
+
+  if (query.specialType === SPECIAL_TYPE_FILTER_NONE) {
+    andConditions.push({ specialType: null });
+  } else if (query.specialType === SPECIAL_TYPE_FILTER_ANY) {
+    andConditions.push({ specialType: { not: null } });
+  } else if (query.specialType) {
+    andConditions.push({ specialType: query.specialType });
+  }
+
+  // `year` and `month` are deliberately NOT here. They are read on the
+  // departure airport's clock, which is not a column — see
+  // `resolveFlightWhere` below and `departureLocalDay.ts`.
+
   // Date range
   if (query.fromDate || query.toDate) {
     const departureTime: Prisma.DateTimeFilter = {};
@@ -117,4 +170,34 @@ export const buildFlightWhere = (query: FlightQueryInput & { tags?: string[] }, 
     where: { AND: andConditions },
     noResults,
   };
+};
+
+/**
+ * `buildFlightWhere`, plus the one filter that cannot be a where-clause.
+ *
+ * `year` and `month` name a day on the DEPARTURE AIRPORT'S calendar, which is
+ * this project's one answer to "which day was that" (`airportCalendarDay`,
+ * forgejo#46) and the one the table cell beside the filter already draws. It
+ * is not a column and cannot be expressed in a Prisma `where`, so the ids are
+ * resolved first and handed to the page query. `departureLocalDay.ts` says
+ * why this is not a SQL expression.
+ *
+ * Every caller that pages or counts flights goes through here rather than
+ * through `buildFlightWhere` directly, so the list, the facets and the map
+ * cannot answer the question three ways.
+ */
+export const resolveFlightWhere = async (
+  query: FlightQueryInput & { tags?: string[] },
+  userId: string
+): Promise<{ where: Prisma.FlightWhereInput; noResults: boolean }> => {
+  const base = buildFlightWhere(query, userId);
+  if (base.noResults) return base;
+  if (query.year === undefined && query.month === undefined) return base;
+
+  const ids = await flightIdsInLocalPeriod(base.where, { year: query.year, month: query.month });
+  // An empty id list is not `{ id: { in: [] } }` — that is a valid query, but
+  // saying so outright spares the caller a round trip and matches the
+  // `noResults` contract the status filter already uses.
+  if (ids.length === 0) return { where: base.where, noResults: true };
+  return { where: { AND: [base.where, { id: { in: ids } }] }, noResults: false };
 };
