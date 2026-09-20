@@ -1,6 +1,8 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import {
   listLodgings,
+  listLodgingPage,
+  getLodgingFacets,
   getLodging,
   createLodging,
   updateLodging,
@@ -80,6 +82,32 @@ describe("lodging API client — lodgings", () => {
     vi.mocked(api.get).mockResolvedValue({ data: { success: true, data: [] } });
     await listLodgings();
     expect(api.get).toHaveBeenCalledWith("/lodging", { params: { limit: 500, offset: 0 } });
+  });
+
+  it("listLodgingPage() asks for ONE page and keeps the total beside it", async () => {
+    // What the list page uses since 2026-09-20. The filters, the sort and the
+    // window all travel as they are given — nothing is added, and nothing is
+    // walked: a second page is the pager's decision, not this function's.
+    vi.mocked(api.get).mockResolvedValue({
+      data: { success: true, data: [{ id: "l1" }], meta: { total: 63, limit: 25, offset: 50 } },
+    });
+    const result = await listLodgingPage({ sort: "nights", order: "desc", limit: 25, offset: 50 });
+    expect(api.get).toHaveBeenCalledWith("/lodging", {
+      params: { sort: "nights", order: "desc", limit: 25, offset: 50 },
+    });
+    expect(result).toEqual({ rows: [{ id: "l1" }], total: 63 });
+  });
+
+  it("listLodgingPage() does not claim a total of zero under a table with rows in it", async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { success: true, data: [{ id: "l1" }] } });
+    expect(await listLodgingPage({})).toEqual({ rows: [{ id: "l1" }], total: 1 });
+  });
+
+  it("getLodgingFacets() GETs /lodging/facets with the same filters", async () => {
+    vi.mocked(api.get).mockResolvedValue({ data: { success: true, data: { summary: {} } } });
+    const result = await getLodgingFacets({ country: "DE" });
+    expect(api.get).toHaveBeenCalledWith("/lodging/facets", { params: { country: "DE" } });
+    expect(result).toEqual({ summary: {} });
   });
 
   it("getLodging() GETs /lodging/:id and unwraps the envelope", async () => {

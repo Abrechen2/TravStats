@@ -326,15 +326,65 @@ export interface LodgingChainDetail {
   suggestedChains: LodgingChainRef[];
 }
 
+/**
+ * The sort keys `GET /lodging` orders by — the nine the table header offers.
+ *
+ * `checkIn` is the old API spelling of `lastStay` and is still accepted by the
+ * server; nothing in this tree sends it.
+ */
+export type LodgingSortKey =
+  "lastStay" | "name" | "chain" | "location" | "status" | "stays" | "nights" | "rating" | "spend";
+
 export interface LodgingListQuery {
   type?: LodgingType;
   chainId?: number;
   tripId?: string;
   year?: number;
   country?: string;
+  /** Free text over the house, its chain and its town. */
+  search?: string;
+  /** The lifecycle pill's value — see `shared/lodgingLifecycle.ts`. */
+  status?: StayStatus;
   limit?: number;
   offset?: number;
-  sort?: "nights" | "rating" | "spend" | "name" | "checkIn";
+  sort?: LodgingSortKey | "checkIn";
+  order?: "asc" | "desc";
+}
+
+/** One page of `GET /lodging`: the rows, and the size of the set they came from. */
+export interface LodgingPage {
+  rows: Lodging[];
+  /** Rows matching the filters, BEFORE the page slice. */
+  total: number;
+}
+
+/**
+ * `GET /lodging/facets` — the filter bar's options and the figures above the
+ * table, counted by the database.
+ *
+ * Every facet is counted under the other ACTIVE filters and not under its own,
+ * so choosing a country does not reduce the country list to that country. The
+ * summary is counted under all of them, because it describes what the table is
+ * showing.
+ */
+export interface LodgingFacets {
+  chains: Array<{ id: number; name: string; count: number }>;
+  /** `value` is what to send back as `country`: the ISO code where one was
+   *  derived, the raw text where it was not (a city in the country field). */
+  countries: Array<{ value: string; isoCode: string | null; count: number }>;
+  years: Array<{ year: number; count: number }>;
+  types: Array<{ type: LodgingType; count: number }>;
+  statuses: Array<{ status: StayStatus; count: number }>;
+  summary: LodgingSummary;
+}
+
+export interface LodgingSummary {
+  lodgings: number;
+  /** Stays that COUNT — check-out past, not cancelled. Never every stay row. */
+  stays: number;
+  nights: number;
+  /** Distinct named chains; independent houses count for none. */
+  chains: number;
 }
 
 /**

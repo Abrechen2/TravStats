@@ -4,25 +4,10 @@
  * row-level derivation and the status sort order.
  */
 import { describe, it, expect } from "vitest";
-import { lodgingLifecycleStatus } from "../lodgingLifecycle";
-import { sortLodgingRows } from "../sortLodgingRows";
-import type { Lodging, LodgingStay, StayStatus } from "../../../types/lodging";
+import { lodgingLifecycleRank, lodgingLifecycleStatus } from "../lodgingLifecycle";
+import type { LodgingStay, StayStatus } from "../../../types/lodging";
 
 const stay = (status: StayStatus): LodgingStay => ({ status }) as unknown as LodgingStay;
-
-const lodging = (name: string, statuses: StayStatus[], extra: Partial<Lodging> = {}): Lodging =>
-  ({
-    name,
-    chain: null,
-    city: null,
-    country: null,
-    stays: statuses.map(stay),
-    stayCount: statuses.length,
-    nights: 0,
-    overallRating: null,
-    totalSpendBase: 0,
-    ...extra,
-  }) as unknown as Lodging;
 
 describe("lodgingLifecycleStatus", () => {
   it("prefers a running stay over everything else", () => {
@@ -48,31 +33,22 @@ describe("lodgingLifecycleStatus", () => {
   });
 });
 
-describe("sortLodgingRows by status", () => {
-  it("orders running, booked, past, cancelled-only, stayless", () => {
-    const rows = [
-      lodging("stayless", []),
-      lodging("past", ["completed"]),
-      lodging("cancelledOnly", ["cancelled"]),
-      lodging("running", ["in_progress"]),
-      lodging("booked", ["scheduled", "completed"]),
-    ];
-    expect(sortLodgingRows(rows, "status", "asc").map((l) => l.name)).toEqual([
-      "running",
-      "booked",
-      "past",
-      "cancelledOnly",
-      "stayless",
-    ]);
-  });
-
-  it("sorts independents after named chains", () => {
-    const rows = [
-      lodging("indie", ["completed"]),
-      lodging("chained", ["completed"], {
-        chain: { id: 1, name: "Accor" } as unknown as Lodging["chain"],
-      }),
-    ];
-    expect(sortLodgingRows(rows, "chain", "asc").map((l) => l.name)).toEqual(["chained", "indie"]);
+describe("lodgingLifecycleRank — the status sort, now applied in SQL", () => {
+  /**
+   * The list orders by this rank on the SERVER since 2026-09-20, so
+   * `sortLodgingRows` is gone and with it the comparator these cases used to
+   * exercise. The RULE is what mattered, and it is still here: this file and
+   * `backend/src/shared/__tests__/lodgingLifecycle.test.ts` assert the same
+   * table on either side of the mirror, which is what makes a one-sided edit
+   * show up as a red test somewhere.
+   */
+  it("ranks running, booked, past, cancelled-only, stayless — in that order", () => {
+    expect([
+      lodgingLifecycleRank([stay("in_progress")]),
+      lodgingLifecycleRank([stay("scheduled"), stay("completed")]),
+      lodgingLifecycleRank([stay("completed")]),
+      lodgingLifecycleRank([stay("cancelled")]),
+      lodgingLifecycleRank([]),
+    ]).toEqual([0, 1, 2, 3, 4]);
   });
 });
