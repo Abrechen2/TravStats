@@ -1,4 +1,5 @@
-// HTML overlay for airport / port IATA labels on the globe.
+// HTML overlay for the globe's marker labels — airport IATA, port name, and
+// (since 2026-09-20) hotel and place names.
 //
 // Why not a deck.gl TextLayer? deck.gl 9's billboard TextLayer/IconLayer
 // does not render under MapLibre's globe projection in interleaved mode
@@ -16,18 +17,26 @@
 import { useEffect, useMemo, useRef } from "react";
 import type { MapRef } from "react-map-gl/maplibre";
 import type { PointDatum } from "./globeLayerTypes";
+import type { GlobeExtraLabel } from "./globePinLabels";
 import type { LabelsMode } from "../map/labelPriority";
 
 const DEG = Math.PI / 180;
 
 interface LabelPoint {
-  /** Text drawn in the pill — IATA for airports, readable name for ports. */
+  /** Text drawn in the pill — IATA for airports, readable name for ports,
+   *  the hotel/place name for pins (or a list's symbol, which a DOM pill can
+   *  render in colour and a deck.gl font atlas cannot). */
   text: string;
   lng: number;
   lat: number;
-  kind: "airport" | "port";
+  /** Only keys the DOM node and picks a text colour for the two point kinds. */
+  kind: string;
   /** Visit weight — higher wins when two labels would overlap. */
   weight: number;
+  /** Text colour. Airports and ports take the two constants below; lodging
+   *  and place pills carry their own, resolved from the same colour config
+   *  their dot reads (see `globePinLabels.ts`). */
+  color: string;
 }
 
 interface PlacedBox {
@@ -43,6 +52,14 @@ export interface GlobeLabelsOverlayProps {
   mapReady: boolean;
   airports: PointDatum[];
   ports: PointDatum[];
+  /**
+   * Lodging + place pills, already reduced by `globePinLabels.ts`. They ride
+   * the SAME budget as the airport and port labels rather than a second one:
+   * the whole job of the greedy cull below is to decide what the sphere has
+   * room for, and a domain exempt from it would crowd out the domains that
+   * are not.
+   */
+  extras?: readonly GlobeExtraLabel[];
   /** off = no labels · important = greedy collision (busiest win) · all =
    *  every front-facing label, overlap allowed. */
   mode: LabelsMode;
@@ -58,6 +75,7 @@ export function GlobeLabelsOverlay({
   mapReady,
   airports,
   ports,
+  extras,
   mode,
 }: GlobeLabelsOverlayProps): JSX.Element | null {
   const points = useMemo<LabelPoint[]>(() => {
@@ -71,14 +89,23 @@ export function GlobeLabelsOverlay({
           lat: p.position[1],
           kind,
           weight: p.size ?? 0,
+          color: kind === "port" ? PORT_TEXT : AIRPORT_TEXT,
         }))
         .filter((p) => p.text.length > 0);
+    const extraPts: LabelPoint[] = (extras ?? []).map((e) => ({
+      text: e.text,
+      lng: e.lng,
+      lat: e.lat,
+      kind: `${e.kind}-${e.id}`,
+      weight: e.weight,
+      color: e.color,
+    }));
     // Sort by weight desc so the busiest markers claim screen space first
-    // during collision culling; ties keep airports ahead of ports.
-    return [...toPts(airports, "airport"), ...toPts(ports, "port")].sort(
+    // during collision culling; ties keep airports ahead of ports, then pins.
+    return [...toPts(airports, "airport"), ...toPts(ports, "port"), ...extraPts].sort(
       (a, b) => b.weight - a.weight
     );
-  }, [airports, ports, mode]);
+  }, [airports, ports, extras, mode]);
 
   const nodeRefs = useRef<(HTMLDivElement | null)[]>([]);
 
@@ -183,7 +210,7 @@ export function GlobeLabelsOverlay({
             lineHeight: "14px",
             letterSpacing: "0.02em",
             padding: "1px 5px",
-            color: pt.kind === "port" ? PORT_TEXT : AIRPORT_TEXT,
+            color: pt.color,
             background: "rgba(13,17,23,0.72)",
             border: "1px solid rgba(255,255,255,0.10)",
             boxShadow: "0 1px 3px rgba(0,0,0,0.45)",

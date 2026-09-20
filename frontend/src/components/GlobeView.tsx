@@ -47,6 +47,8 @@ import { PinnedCardBoundary } from "./Globe/PinnedCardBoundary";
 import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { buildAirportPoints, buildPortPoints } from "./Globe/globePointData";
+import { lodgingLabelPoints, placeLabelPoints } from "./Globe/globePinLabels";
+import { createMarkerTooltip } from "./map/markerTooltip";
 import { GlobeControlPanel, type StyleId, type LiteMode } from "./Globe/GlobeControlPanel";
 import type { ArcDatum, CruisePathDatum, GlobePinned, PointDatum } from "./Globe/globeLayerTypes";
 import { STYLE_OPTIONS } from "./Globe/globeStyles";
@@ -56,7 +58,7 @@ import type { Cruise } from "../types/cruise";
 import type { Lodging } from "../types/lodging";
 import type { Place } from "../types/place";
 import type { Rgb } from "../lib/cruiseColor";
-import type { PlaceLabelList } from "../lib/placeLabel";
+import type { PlaceLabelList, PlaceLabelSource } from "../lib/placeLabel";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { resolveCruiseArcColor } from "../lib/cruiseColor";
 import { useCruiseColorStore } from "../store/cruiseColorStore";
@@ -222,6 +224,7 @@ export default function GlobeView({
   lodgings = [],
   places = [],
   placeListColors,
+  placeListLabels,
   lodgingMarkerSize = 1,
   placeMarkerSize = 1,
 }: GlobeViewProps): JSX.Element {
@@ -299,6 +302,12 @@ export default function GlobeView({
   // this renderer all read one config, so a pin and its swatch cannot drift.
   const lodgingColorConfig = useLodgingColorStore((s) => s.config);
   const placeColorConfig = usePlaceColorStore((s) => s.config);
+  // Whether a place pill says its name or its list's symbol. The flat map owns
+  // the same setting (DeckGLMap), persisted in the shared mapAppearance blob,
+  // so flipping it on one map is already flipped on the other.
+  const [placeLabelSource] = useState<PlaceLabelSource>(
+    () => loadMapAppearance().placeLabelSource ?? "list"
+  );
   // Style-level overlays (relief hillshade + basemap place names).
   const [showTerrain, setShowTerrain] = useState<boolean>(
     () => loadMapAppearance().showTerrain ?? false
@@ -320,6 +329,7 @@ export default function GlobeView({
       showTerrain,
       showPlaceLabels,
       labelsMode,
+      placeLabelSource,
     });
   }, [
     styleId,
@@ -332,6 +342,7 @@ export default function GlobeView({
     showTerrain,
     showPlaceLabels,
     labelsMode,
+    placeLabelSource,
   ]);
 
   // Mirror the overlay toggles into refs so the `style.load` re-apply
@@ -1215,6 +1226,47 @@ export default function GlobeView({
     }
   }, []);
 
+  // Hover on a lodging or place pin goes through the flat map's own tooltip
+  // renderer, which already keys on the layer id (markerTooltip.ts) — a second
+  // renderer for the same datum is a second thing that can disagree.
+  const markerTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
+  const onPinHover = useCallback(
+    (info: PickingInfo): void => {
+      const rendered = info.object ? markerTooltip(info) : null;
+      if (rendered && info.x != null && info.y != null) {
+        tooltipRef.current?.show({ html: rendered.html, x: info.x, y: info.y });
+      } else {
+        tooltipRef.current?.hide();
+      }
+    },
+    [markerTooltip]
+  );
+
+  // Pin labels for the HTML overlay. deck.gl billboard text does not render
+  // under the globe projection at all (see GlobeLabelsOverlay), so this is the
+  // only route a hotel or place name has onto the sphere.
+  const pinLabels = useMemo(
+    () => [
+      ...lodgingLabelPoints(lodgings, lodgingColorConfig),
+      ...placeLabelPoints(
+        places,
+        placeColorConfig,
+        placeListColors,
+        placeListLabels,
+        placeLabelSource
+      ),
+    ],
+    [
+      lodgings,
+      lodgingColorConfig,
+      places,
+      placeColorConfig,
+      placeListColors,
+      placeListLabels,
+      placeLabelSource,
+    ]
+  );
+
   const layers = useMemo<Layer[]>(
     () => [
       ...buildGlobeLayers({
@@ -1248,6 +1300,7 @@ export default function GlobeView({
         placeColors: placeColorConfig,
         placeListColors,
         placeRadius: GLOBE_MARKER_BASE_PX * placeMarkerSize,
+        onPinHover,
         nightCells: nightCellsData,
         showNight,
       }),
@@ -1287,6 +1340,7 @@ export default function GlobeView({
       placeColorConfig,
       placeListColors,
       placeMarkerSize,
+      onPinHover,
       nightCellsData,
       showNight,
     ]
@@ -1544,6 +1598,7 @@ export default function GlobeView({
         mapReady={mapReady}
         airports={airportPoints}
         ports={portPoints}
+        extras={pinLabels}
         mode={labelsMode}
       />
 

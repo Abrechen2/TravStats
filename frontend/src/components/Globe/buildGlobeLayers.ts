@@ -212,6 +212,10 @@ export interface BuildGlobeLayersOptions {
   placeListColors?: ReadonlyMap<string, Rgb>;
   /** Place marker radius in pixels. */
   placeRadius: number;
+  /** Hover on a lodging or place pin. One handler for both: GlobeView routes
+   *  it through `createMarkerTooltip`, the SAME renderer the flat map uses,
+   *  which already keys on the layer id. */
+  onPinHover: (info: PickingInfo) => void;
   /** Fine night-side grid cells (from the day/night terminator). */
   nightCells: NightCell[];
   /** Toggle the day/night shade overlay. */
@@ -249,6 +253,7 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
     placeColors,
     placeListColors,
     placeRadius,
+    onPinHover,
     nightCells,
     showNight,
   } = opts;
@@ -534,6 +539,10 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       getLineColor: [13, 17, 23, 220],
       lineWidthUnits: "pixels",
       getLineWidth: 1,
+      pickable: true,
+      autoHighlight: !lite,
+      highlightColor: [255, 255, 255, 200],
+      onHover: onPinHover,
       extensions: [occlusionExt],
       ...occlusionProps,
     } as ConstructorParameters<typeof ScatterplotLayer<Lodging>>[0] & EarthOcclusionExtensionProps),
@@ -562,6 +571,10 @@ export function buildGlobeLayers(opts: BuildGlobeLayersOptions): Layer[] {
       radiusUnits: "pixels",
       stroked: true,
       lineWidthUnits: "pixels",
+      pickable: true,
+      autoHighlight: !lite,
+      highlightColor: [255, 255, 255, 200],
+      onHover: onPinHover,
       extensions: [occlusionExt],
       ...occlusionProps,
     } as ConstructorParameters<typeof ScatterplotLayer<Place>>[0] & EarthOcclusionExtensionProps),
