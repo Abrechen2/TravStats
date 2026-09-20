@@ -242,7 +242,12 @@
       "openFlight": "Open flight",
       "details": "Details",
       "event": "Event",
-      "distance": "Distance"
+      "distance": "Distance",
+      "nights": "Nights",
+      "price": "Price",
+      "openLodging": "Open lodging",
+      "category": "Category",
+      "openPlace": "Open place"
     },
     "timeSlider": {
       "title": "Timeline",

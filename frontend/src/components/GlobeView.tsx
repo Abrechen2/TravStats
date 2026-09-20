@@ -49,10 +49,12 @@ import {
   portHoverHtml,
 } from "./map/cards/hoverCardHtml";
 import { GlobeLabelsOverlay } from "./Globe/GlobeLabelsOverlay";
+import { usePinnedAnchor } from "./Globe/usePinnedAnchor";
 import { toPortLabel } from "./map/portLabel";
 import { applyMapOverlays } from "./Globe/mapOverlays";
 import { GlobeControlPanel, type StyleId, type LiteMode } from "./Globe/GlobeControlPanel";
-import type { ArcDatum, CruisePathDatum, GlobePinned, PointDatum } from "./Globe/globeLayerTypes";
+import type { ArcDatum, CruisePathDatum, PointDatum } from "./Globe/globeLayerTypes";
+import type { MapPinned } from "./map/cards/pinnedTypes";
 import { STYLE_OPTIONS } from "./Globe/globeStyles";
 import type { GeoJSONFeature } from "../types";
 import { isCountableFlight } from "../shared/flightCounting";
@@ -60,6 +62,8 @@ import type { Cruise } from "../types/cruise";
 import { cruiseApi, type CruiseRouteFeatureCollection } from "../lib/api/cruise";
 import { resolveCruiseArcColor } from "../lib/cruiseColor";
 import { useCruiseColorStore } from "../store/cruiseColorStore";
+import { GLOBE_FOCUS, focusMarker, useMapSelectionCards } from "./map/cards/useMapSelectionCards";
+import { resolveFlightTipColor } from "../lib/flightColor";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTimeSliderStore } from "../store/timeSliderStore";
@@ -101,6 +105,10 @@ interface GlobeViewProps {
   /** Fired by the pinned-card "Open cruise" CTA — should navigate to
       the cruise detail page. */
   onCruiseOpen?: (cruiseId: string) => void;
+  /** Fired by the lodging card's open action. */
+  onLodgingOpen?: (lodgingId: string) => void;
+  /** Fired by the place card's open action. */
+  onPlaceOpen?: (placeId: string) => void;
   minRouteCount?: number;
   /** Which domain appearance sections the control panel exposes. Globe
       currently only mounts on the Alle tab, so this defaults to both. */
@@ -174,6 +182,8 @@ export default function GlobeView({
   cruises = [],
   onFlightOpen,
   onCruiseOpen,
+  onLodgingOpen,
+  onPlaceOpen,
   minRouteCount = 1,
   appearanceDomains = ["flight", "cruise"],
   extraLayers = [],
@@ -400,7 +410,11 @@ export default function GlobeView({
   // Pinned selection: persistent detail card the user opens by clicking
   // a marker / arc / cruise path. Survives mouse-move (unlike the
   // hover tooltip) so they can read details without holding still.
-  const [pinned, setPinned] = useState<GlobePinned | null>(null);
+  // Typed as the SHARED `MapPinned`, not the globe's own `GlobePinned`: the
+  // globe's layer datums are assignable to it (that is what `pinnedTypes.ts`
+  // is a subset for), and the activity sidebar's selections — a hotel, a place
+  // — have no globe layer datum at all.
+  const [pinned, setPinned] = useState<MapPinned | null>(null);
 
   // The pinned card is rendered as a custom absolutely-positioned
   // overlay above the map container. MapLibre's own Popup primitive
@@ -414,11 +428,11 @@ export default function GlobeView({
   // dot-product visibility check — same math as
   // EarthOcclusionExtension — so we never trigger the popup's
   // internal occlusion pipeline.
-  const [popupScreenPos, setPopupScreenPos] = useState<{
-    x: number;
-    y: number;
-    visible: boolean;
-  } | null>(null);
+  // Screen position + front-hemisphere visibility for the pinned card. The
+  // occlusion maths lives in `Globe/usePinnedAnchor.ts` — globe-specific on
+  // purpose, since "the earth is in the way" is not a question the flat map has.
+  const getMapForAnchor = useCallback(() => mapRef.current?.getMap(), []);
+  const popupScreenPos = usePinnedAnchor(pinned, getMapForAnchor);
   // null = no filter (all quartiles visible at full opacity). 1-4 =
   // dim every arc outside this quartile so the click-selected band
   // pops. Click the active band again to clear.
@@ -839,74 +853,6 @@ export default function GlobeView({
     cruiseGeometryRef.current = cruiseGeometry;
   }, [cruiseGeometry]);
 
-  // Mount / re-anchor / dismount the MapLibre Popup that hosts the
-  // pinned detail card. `locationOccludedOpacity: 0` uses MapLibre's
-  // own globe-visibility math to fade the popup when the anchor is on
-  // the back of the earth — same logic as the layer occlusion shader,
-  // no JS-side dot-product replay needed.
-  // Subscribe to MapLibre `render` events while a card is pinned and
-  // re-project the anchor lng/lat → screen pixel each frame. The
-  // visibility check is the same dot-product math the EarthOcclusion
-  // shader uses on the GPU, just executed once per frame in JS.
-  useEffect(() => {
-    const map = mapRef.current?.getMap();
-    if (!map) return;
-
-    if (!pinned) {
-      setPopupScreenPos(null);
-      return;
-    }
-
-    const [lng, lat] = pinned.anchorLngLat;
-    if (!Number.isFinite(lng) || !Number.isFinite(lat)) {
-      setPopupScreenPos(null);
-      return;
-    }
-
-    const update = (): void => {
-      try {
-        const p = map.project([lng, lat]);
-        // Visibility: anchor is on the front hemisphere if the dot
-        // product between its surface-normal vector and the camera's
-        // direction vector is greater than cos(horizonAngle). Same
-        // approach as EarthOcclusionExtension, just JS-side.
-        const center = map.getCenter();
-        const zoom = map.getZoom();
-        const DEG = Math.PI / 180;
-        const camLng = center.lng * DEG;
-        const camLat = center.lat * DEG;
-        const aLng = lng * DEG;
-        const aLat = lat * DEG;
-        const camDir: [number, number, number] = [
-          Math.cos(camLat) * Math.cos(camLng),
-          Math.cos(camLat) * Math.sin(camLng),
-          Math.sin(camLat),
-        ];
-        const anchorDir: [number, number, number] = [
-          Math.cos(aLat) * Math.cos(aLng),
-          Math.cos(aLat) * Math.sin(aLng),
-          Math.sin(aLat),
-        ];
-        const dotProd =
-          camDir[0] * anchorDir[0] + camDir[1] * anchorDir[1] + camDir[2] * anchorDir[2];
-        // cameraDistanceFromZoom heuristic, mirrored from the shader
-        const dist = 1 + 1.5 * Math.pow(2, -Math.max(0, zoom) * 0.7);
-        const cosHorizon = 1.0 / Math.max(1.001, dist);
-        const visible = dotProd > cosHorizon;
-        setPopupScreenPos({ x: p.x, y: p.y, visible });
-      } catch (err) {
-        logger.error({ err, pinned }, "globe.pinned-overlay.project-failed");
-        setPopupScreenPos(null);
-      }
-    };
-
-    update();
-    map.on("render", update);
-    return () => {
-      map.off("render", update);
-    };
-  }, [pinned]);
-
   useEffect(() => {
     if (cruises.length === 0) return;
     let cancelled = false;
@@ -1162,6 +1108,31 @@ export default function GlobeView({
       duration: 1200,
     });
   }, []);
+
+  // Selections from OUTSIDE the globe — the activity sidebar, the flight
+  // panel — become a card and a camera move, on exactly the terms the flat map
+  // uses (`map/cards/useMapSelectionCards.ts`). The globe read NONE of the
+  // four selection stores before (owner, 2026-09-20). `clearOnEmpty` stays
+  // false here: a click on an arc pins a card without touching the store, and
+  // clearing on an empty store would wipe the card the click just opened.
+  const focusOnGlobe = useCallback((lngLat: [number, number]): void => {
+    focusMarker(mapRef.current?.getMap(), lngLat, GLOBE_FOCUS);
+  }, []);
+  // Memoised: `resolveFlightTipColor` returns a fresh array, which as a raw
+  // effect dependency is "changed" on every render — an effect that sets state
+  // every render, which is a render loop.
+  const flightCardColor = useMemo(
+    () => resolveFlightTipColor(flightColorConfig),
+    [flightColorConfig]
+  );
+
+  useMapSelectionCards({
+    flights,
+    locale,
+    flightColor: flightCardColor,
+    focus: focusOnGlobe,
+    setPinned,
+  });
 
   // Smooth fly-to on arc click. Compute mid-point (handling wrap-around)
   // and pick a zoom level that keeps both endpoints visible without
@@ -1631,6 +1602,8 @@ export default function GlobeView({
               onClose={() => setPinned(null)}
               onFlightOpen={onFlightOpen}
               onCruiseOpen={onCruiseOpen}
+              onLodgingOpen={onLodgingOpen}
+              onPlaceOpen={onPlaceOpen}
             />
           </PinnedCardBoundary>
         </div>

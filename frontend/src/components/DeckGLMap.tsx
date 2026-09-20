@@ -6,12 +6,8 @@ import { PinnedCard } from "./map/cards/PinnedCard";
 import { PinnedCardBoundary } from "./map/cards/PinnedCardBoundary";
 import { HoverTooltip, type HoverTooltipApi } from "./map/cards/HoverTooltip";
 import type { MapPinned } from "./map/cards/pinnedTypes";
-import {
-  pinnedFromAirport,
-  pinnedFromCruise,
-  pinnedFromFlightSelection,
-  pinnedFromSpecialFlight,
-} from "./map/cards/buildFlatPinned";
+import { pinnedFromAirport } from "./map/cards/buildFlatPinned";
+import { FLAT_FOCUS, focusMarker, useMapSelectionCards } from "./map/cards/useMapSelectionCards";
 import { LightingEffect } from "@deck.gl/core";
 import { useDeckHoverCursor } from "../hooks/useDeckHoverCursor";
 import { useTranslation } from "../hooks/useTranslation";
@@ -52,6 +48,8 @@ import { useThemeStore } from "../store/themeStore";
 import { MAP_LAYER_COLORS } from "../types/mapTheme";
 import { useFlightSelectionStore } from "../store/flightSelectionStore";
 import { useCruiseSelectionStore } from "../store/cruiseSelectionStore";
+import { useLodgingSelectionStore } from "../store/lodgingSelectionStore";
+import { usePlaceSelectionStore } from "../store/placeSelectionStore";
 import { computeBbox } from "../utils/mapAnimationHelpers";
 import { usePlaneAnimation } from "../hooks/usePlaneAnimation";
 import { usePulseAnimation } from "../hooks/usePulseAnimation";
@@ -91,6 +89,10 @@ interface DeckGLMapProps {
   /** Fires when the card's "Open cruise" action is used. The cruise card used
    *  to navigate by itself; the shared card asks its host instead. */
   onCruiseOpen?: (cruiseId: string) => void;
+  /** Fires when the lodging card's open action is used. */
+  onLodgingOpen?: (lodgingId: string) => void;
+  /** Fires when the place card's open action is used. */
+  onPlaceOpen?: (placeId: string) => void;
   flightList?: Flight[];
   onResetTrip?: () => void;
   cruises?: Cruise[];
@@ -166,6 +168,8 @@ export function DeckGLMap({
   onEdit,
   onFlightOpen,
   onCruiseOpen,
+  onLodgingOpen,
+  onPlaceOpen,
   flightList,
   onResetTrip,
   cruises = [],
@@ -361,7 +365,8 @@ export function DeckGLMap({
   const clearSelection = useFlightSelectionStore((s) => s.clearSelection);
   const showDetails = useFlightSelectionStore((s) => s.showDetails);
   const selectedCruiseId = useCruiseSelectionStore((s) => s.selectedCruiseId);
-  const selectedCruise = useCruiseSelectionStore((s) => s.selectedCruise);
+  const clearLodgingSelection = useLodgingSelectionStore((s) => s.clearSelection);
+  const clearPlaceSelection = usePlaceSelectionStore((s) => s.clearSelection);
   const setCruiseSelection = useCruiseSelectionStore((s) => s.setSelection);
   const clearCruiseSelection = useCruiseSelectionStore((s) => s.clearSelection);
 
@@ -386,6 +391,16 @@ export function DeckGLMap({
   useEffect(() => {
     setCurrentTime(timeRange.min);
   }, [timeRange.min]);
+
+  /**
+   * Bring one point into view. The flight selection has its own bounding-box
+   * flyTo below (a route needs both ends on screen); a single marker — a hotel,
+   * a place — only needs to be where the reader is looking, and must not zoom
+   * OUT if they are already closer than the floor.
+   */
+  const focusOn = useCallback((lngLat: [number, number]): void => {
+    focusMarker(mapRef.current?.getMap(), lngLat, FLAT_FOCUS);
+  }, []);
 
   // flyTo when selection changes
   useEffect(() => {
@@ -487,47 +502,18 @@ export function DeckGLMap({
     [flightColorConfig]
   );
 
-  // A flight selection becomes the route card (or the trip card, when it spans
-  // more than one airport pair). Delayed by TOOLTIP_DELAY_MS so the flyTo has
-  // started and the card does not flash at the old anchor first.
-  useEffect(() => {
-    if (selectedFlights.length === 0) {
-      setPinned((prev) => (prev?.kind === "airport" || prev?.kind === "cruise" ? prev : null));
-      return;
-    }
-
-    const timer = setTimeout(() => {
-      const first = selectedFlights[0];
-      // A Sonder-Flug gets its own card shape: "dep → arr" is a lie for a
-      // sightseeing loop, and an eclipse chase's anchor is the event, not the
-      // arrival airport.
-      if (selectedFlights.length === 1 && first.specialType) {
-        const special = pinnedFromSpecialFlight(
-          first,
-          t(`specialFlights:specialType.${first.specialType}`)
-        );
-        if (special) setPinned(special);
-        return;
-      }
-      const next = pinnedFromFlightSelection(
-        selectedFlights.map((f) => f.id),
-        flights,
-        flightTipColor
-      );
-      if (next) setPinned(next);
-    }, TOOLTIP_DELAY_MS);
-
-    return () => clearTimeout(timer);
-  }, [selectedFlights, flights, flightTipColor, t]);
-
-  // A cruise selection becomes the cruise card — the same one the globe draws.
-  useEffect(() => {
-    if (selectedCruise === null) {
-      setPinned((prev) => (prev?.kind === "cruise" ? null : prev));
-      return;
-    }
-    setPinned(pinnedFromCruise(selectedCruise));
-  }, [selectedCruise]);
+  // Every selection that comes from outside the map — the activity sidebar,
+  // the flight panel — becomes a card and a camera move, on the same terms the
+  // globe uses (`map/cards/useMapSelectionCards.ts`).
+  useMapSelectionCards({
+    flights,
+    locale,
+    flightColor: flightTipColor,
+    focus: focusOn,
+    setPinned,
+    flightDelayMs: TOOLTIP_DELAY_MS,
+    clearOnEmpty: true,
+  });
 
   // Wrap onFlightClick so that a deck.gl layer click sets the guard ref BEFORE the
   // Map onClick fires and would otherwise clear the selection immediately (Bug 1).
@@ -809,10 +795,20 @@ export function DeckGLMap({
       // Background click — clear selection
       clearSelection();
       clearCruiseSelection();
+      clearLodgingSelection();
+      clearPlaceSelection();
       setPinned(null);
       onResetTrip?.();
     },
-    [onRouteClick, handleAirportClick, clearSelection, clearCruiseSelection, onResetTrip]
+    [
+      onRouteClick,
+      handleAirportClick,
+      clearSelection,
+      clearCruiseSelection,
+      clearLodgingSelection,
+      clearPlaceSelection,
+      onResetTrip,
+    ]
   );
 
   // Interactive layer IDs for native fallback (enables cursor: pointer on hover)
@@ -961,6 +957,8 @@ export function DeckGLMap({
                 setPinned(null);
                 clearSelection();
                 clearCruiseSelection();
+                clearLodgingSelection();
+                clearPlaceSelection();
                 onResetTrip?.();
               }}
               onFlightOpen={onFlightOpen ?? onFlightClick}
@@ -977,6 +975,8 @@ export function DeckGLMap({
                   : undefined
               }
               onCruiseOpen={onCruiseOpen}
+              onLodgingOpen={onLodgingOpen}
+              onPlaceOpen={onPlaceOpen}
               onTripDetails={() => {
                 setPinned(null);
                 showDetails(selectedFlights, "route-details");

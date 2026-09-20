@@ -70,7 +70,14 @@ describe("UnifiedActivityPanel", () => {
         onClose={vi.fn()}
       />
     );
-    expect(screen.getByTitle("dashboard:sidebar.notOnMap")).toBeInTheDocument();
+    // Two places say it: the ⌀ badge, and — since 2026-09-20 — the row
+    // itself, because selecting it is a deliberate no-op and a click that
+    // does nothing without explaining itself reads as a bug.
+    expect(screen.getAllByTitle("dashboard:sidebar.notOnMap")).toHaveLength(2);
+    expect(screen.getByRole("button", { name: /Hilton Berlin/ })).toHaveAttribute(
+      "title",
+      "dashboard:sidebar.notOnMap"
+    );
 
     rerender(
       <UnifiedActivityPanel lodgings={[lodging()]} lockedKind="lodging" isOpen onClose={vi.fn()} />

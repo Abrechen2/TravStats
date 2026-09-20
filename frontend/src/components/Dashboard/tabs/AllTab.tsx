@@ -700,6 +700,8 @@ export function AllTab(): JSX.Element {
           onRouteClick={handleRouteClick}
           onFlightOpen={handleFlightOpen}
           onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
+          onLodgingOpen={(lodgingId) => navigate(`/lodging/${lodgingId}`)}
+          onPlaceOpen={(placeId) => navigate(`/places/${placeId}`)}
           cruisesOverride={visibleCruises}
           lodgingsOverride={visibleLodgings}
           onLodgingClick={handleLodgingClick}
@@ -729,6 +731,8 @@ export function AllTab(): JSX.Element {
         onRouteClick={handleRouteClick}
         onFlightOpen={handleFlightOpen}
         onCruiseOpen={(cruiseId) => navigate(`/cruises/${cruiseId}`)}
+        onLodgingOpen={(lodgingId) => navigate(`/lodging/${lodgingId}`)}
+        onPlaceOpen={(placeId) => navigate(`/places/${placeId}`)}
         cruisesOverride={visibleCruises}
         lodgingsOverride={visibleLodgings}
         onLodgingClick={handleLodgingClick}

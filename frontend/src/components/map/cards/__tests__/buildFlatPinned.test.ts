@@ -141,14 +141,14 @@ describe("pinnedFromSpecialFlight", () => {
       departureTime: "2024-05-01T10:00:00Z",
     } as unknown as Flight;
 
-    const pinned = pinnedFromSpecialFlight(flight, "Rundflug");
+    const pinned = pinnedFromSpecialFlight(flight);
     expect(pinned?.kind).toBe("specialFlight");
     if (pinned?.kind !== "specialFlight") throw new Error("expected a special-flight card");
     expect(pinned.data.routeLabel).toBe("INN");
-    expect(pinned.data.typeLabel).toBe("Rundflug");
+    expect(pinned.data.specialType).toBe("sightseeing");
   });
 
   it("answers nothing for an ordinary flight", () => {
-    expect(pinnedFromSpecialFlight({ id: "x" } as unknown as Flight, "—")).toBeNull();
+    expect(pinnedFromSpecialFlight({ id: "x" } as unknown as Flight)).toBeNull();
   });
 });

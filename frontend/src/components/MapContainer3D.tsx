@@ -39,6 +39,10 @@ interface MapContainer3DProps {
   /** Fires when the pinned card's "Open cruise" action is used — should
       navigate to the cruise detail page. Both renderers, same reason. */
   onCruiseOpen?: (cruiseId: string) => void;
+  /** Fires when the lodging card's open action is used. */
+  onLodgingOpen?: (lodgingId: string) => void;
+  /** Fires when the place card's open action is used. */
+  onPlaceOpen?: (placeId: string) => void;
   visMode: MapMode;
   minRouteCount?: number;
   filterSlot?: React.ReactNode;
@@ -131,6 +135,8 @@ export default function MapContainer3D({
   onEdit,
   onFlightOpen,
   onCruiseOpen,
+  onLodgingOpen,
+  onPlaceOpen,
   visMode,
   minRouteCount = 1,
   filterSlot,
@@ -268,6 +274,8 @@ export default function MapContainer3D({
               cruises={showInternalCruises ? cruises : []}
               onFlightOpen={onFlightOpen ?? onFlightClick}
               onCruiseOpen={onCruiseOpen}
+              onLodgingOpen={onLodgingOpen}
+              onPlaceOpen={onPlaceOpen}
               minRouteCount={minRouteCount}
               appearanceDomains={appearanceDomains}
               extraLayers={extraLayers}
@@ -283,6 +291,8 @@ export default function MapContainer3D({
             onEdit={onEdit}
             onFlightOpen={onFlightOpen}
             onCruiseOpen={onCruiseOpen}
+            onLodgingOpen={onLodgingOpen}
+            onPlaceOpen={onPlaceOpen}
             visMode={visMode}
             minRouteCount={minRouteCount}
             onResetTrip={onResetTrip}

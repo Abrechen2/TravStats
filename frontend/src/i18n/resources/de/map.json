@@ -242,7 +242,12 @@
       "openFlight": "Flug öffnen",
       "details": "Details",
       "event": "Ereignis",
-      "distance": "Strecke"
+      "distance": "Strecke",
+      "nights": "Nächte",
+      "price": "Preis",
+      "openLodging": "Unterkunft öffnen",
+      "category": "Kategorie",
+      "openPlace": "Ort öffnen"
     },
     "timeSlider": {
       "title": "Zeitachse",

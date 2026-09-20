@@ -66,14 +66,64 @@ export interface TripCardDatum {
  */
 export interface SpecialFlightCardDatum {
   flightId: string;
-  /** Localised type name — resolved by the caller, which owns the namespace. */
-  typeLabel: string;
+  /**
+   * The raw `SpecialType` key, NOT a localised label — same reason
+   * `PlaceCardDatum.category` is raw: a finished string would put `t` in the
+   * caller's effect dependency list, and `t` is a fresh function on every
+   * render.
+   */
+  specialType: string;
   icon: string;
   routeLabel: string;
   color: [number, number, number];
   aircraft?: string | null;
   eventLabel?: string | null;
   departureTime?: string | null;
+}
+
+/**
+ * A lodging. Self-describing for the same reason the Sonder-Flug datum is:
+ * "which stay" is a question with a rule behind it (`shared/lodgingTiming.ts`
+ * owns nights, and a stay can be dated to the day, the month, the year or not
+ * at all), and the card must not answer it a second, different way.
+ */
+export interface LodgingCardDatum {
+  lodgingId: string;
+  name: string;
+  city?: string | null;
+  /** ISO 3166-1 alpha-2, already resolved — `Lodging.country` is free text. */
+  country?: string | null;
+  checkIn?: string | null;
+  checkOut?: string | null;
+  /**
+   * `null` rather than 0 when nothing in the record says — a same-day stay and
+   * an unknown span are both 0, and only one of them is a fact
+   * (`shared/lodgingTiming.ts`'s `nightsKnown`).
+   */
+  nights?: number | null;
+  /** Already formatted with its currency; the card does no money maths. */
+  price?: string | null;
+}
+
+/** A place (POI). */
+export interface PlaceCardDatum {
+  placeId: string;
+  name: string;
+  /**
+   * The raw `PlaceCategory` key, NOT a localised label. The card translates
+   * it — handing it a finished string would put `t` in the caller's effect
+   * dependency list, and `t` is a fresh function on every render, which is an
+   * effect that sets state on every render (it took the test runner out of
+   * memory before this was a key).
+   */
+  category?: string | null;
+  city?: string | null;
+  country?: string | null;
+  /** Visits that have actually happened. */
+  visitCount?: number | null;
+  lastVisit?: string | null;
+  /** Logbook (`true`) or wishlist (`false`) — a wishlist entry counts nothing. */
+  visited?: boolean;
 }
 
 /**
@@ -88,7 +138,9 @@ export type MapPinned =
   | { kind: "port"; data: MarkerCardDatum; anchorLngLat: [number, number] }
   | { kind: "cruise"; data: CruiseCardDatum; anchorLngLat: [number, number] }
   | { kind: "trip"; data: TripCardDatum; anchorLngLat: [number, number] }
-  | { kind: "specialFlight"; data: SpecialFlightCardDatum; anchorLngLat: [number, number] };
+  | { kind: "specialFlight"; data: SpecialFlightCardDatum; anchorLngLat: [number, number] }
+  | { kind: "lodging"; data: LodgingCardDatum; anchorLngLat: [number, number] }
+  | { kind: "place"; data: PlaceCardDatum; anchorLngLat: [number, number] };
 
 /**
  * What the hover tooltip draws: pre-rendered HTML plus the screen point it

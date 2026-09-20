@@ -20,8 +20,10 @@ import type { Cruise } from "../../../types/cruise";
 import { tokens } from "../../../theme/tokens";
 import type {
   CruiseCardDatum,
+  LodgingCardDatum,
   MapPinned,
   MarkerCardDatum,
+  PlaceCardDatum,
   RouteCardDatum,
   SpecialFlightCardDatum,
   TripCardDatum,
@@ -58,6 +60,10 @@ interface PinnedCardProps {
   onCruiseOpen?: (cruiseId: string) => void;
   /** Fires when a trip group's "Details" action is used. */
   onTripDetails?: () => void;
+  /** Fires when the lodging card's "Unterkunft öffnen" action is used. */
+  onLodgingOpen?: (lodgingId: string) => void;
+  /** Fires when the place card's "Ort öffnen" action is used. */
+  onPlaceOpen?: (placeId: string) => void;
   /**
    * `"single"` when the selection IS one flight rather than the whole route,
    * which is what the flat map's single-flight click means. Only changes the
@@ -76,9 +82,11 @@ export function PinnedCard({
   onFlightEdit,
   onCruiseOpen,
   onTripDetails,
+  onLodgingOpen,
+  onPlaceOpen,
   selectionScope = "route",
 }: PinnedCardProps): JSX.Element {
-  const { t, i18n } = useTranslation(["map", "common"]);
+  const { t, i18n } = useTranslation(["map", "common", "lodging", "places", "specialFlights"]);
   const locale = i18n.language || "de";
 
   // Subtle entrance: fade + lift on mount (each pin remounts this card).
@@ -159,6 +167,12 @@ export function PinnedCard({
           onFlightEdit={onFlightEdit}
         />
       )}
+      {pinned.kind === "lodging" && (
+        <LodgingBody data={pinned.data} locale={locale} t={t} onLodgingOpen={onLodgingOpen} />
+      )}
+      {pinned.kind === "place" && (
+        <PlaceBody data={pinned.data} locale={locale} t={t} onPlaceOpen={onPlaceOpen} />
+      )}
     </div>
   );
 }
@@ -216,6 +230,28 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
           </span>
         </div>
       );
+    case "lodging":
+      return (
+        <div className="flex items-center gap-2 text-[14px] font-semibold">
+          {pinned.data.country ? (
+            <FlagImg country={pinned.data.country} height={18} />
+          ) : (
+            <span>🏨</span>
+          )}
+          <span>{pinned.data.name}</span>
+        </div>
+      );
+    case "place":
+      return (
+        <div className="flex items-center gap-2 text-[14px] font-semibold">
+          {pinned.data.country ? (
+            <FlagImg country={pinned.data.country} height={18} />
+          ) : (
+            <span>📍</span>
+          )}
+          <span>{pinned.data.name}</span>
+        </div>
+      );
     case "specialFlight":
       return (
         <div className="flex items-center gap-2 text-[13px] font-semibold">
@@ -225,7 +261,7 @@ function Heading({ pinned, t }: { pinned: MapPinned; t: TFn }): JSX.Element {
               color: `rgb(${pinned.data.color[0]},${pinned.data.color[1]},${pinned.data.color[2]})`,
             }}
           >
-            {pinned.data.typeLabel}
+            {t(`specialFlights:specialType.${pinned.data.specialType}`)}
           </span>
         </div>
       );
@@ -637,6 +673,111 @@ function SpecialFlightBody({
         secondary={
           onFlightEdit
             ? { label: t("common:buttons.edit"), onClick: () => onFlightEdit(data.flightId) }
+            : undefined
+        }
+      />
+    </>
+  );
+}
+
+// ─── Lodging body ─────────────────────────────────────────────────
+
+/**
+ * A hotel, as the activity sidebar's row means it: where it is, when you were
+ * there and what it cost.
+ *
+ * `nights` is `null` rather than 0 when nothing in the record says — the rule
+ * lives in `shared/lodgingTiming.ts` and the caller applies it, so the card
+ * only has to not invent a zero.
+ */
+function LodgingBody({
+  data,
+  locale,
+  t,
+  onLodgingOpen,
+}: {
+  data: LodgingCardDatum;
+  onLodgingOpen?: (lodgingId: string) => void;
+} & BodyCommonProps): JSX.Element {
+  const stay =
+    data.checkIn && data.checkOut
+      ? `${formatDate(data.checkIn, locale)} – ${formatDate(data.checkOut, locale)}`
+      : data.checkIn
+        ? formatDate(data.checkIn, locale)
+        : (data.checkOut ?? "");
+
+  return (
+    <>
+      <Place city={data.city} country={data.country} locale={locale} />
+      {stay !== "" && <Hero color={tokens.domainColor.hotel}>{stay}</Hero>}
+      <Grid>
+        {data.nights !== null && data.nights !== undefined && (
+          <Row
+            label={t("map:globe.pinned.nights")}
+            value={t("lodging:field.nightsCount", { count: data.nights })}
+          />
+        )}
+        {data.price && <Row label={t("map:globe.pinned.price")} value={data.price} />}
+      </Grid>
+      <Actions
+        primary={
+          onLodgingOpen
+            ? {
+                label: t("map:globe.pinned.openLodging"),
+                onClick: () => onLodgingOpen(data.lodgingId),
+              }
+            : undefined
+        }
+      />
+    </>
+  );
+}
+
+// ─── Place body ───────────────────────────────────────────────────
+
+/**
+ * A place, as the POI sidebar means it.
+ *
+ * A wishlist entry reports its status instead of a visit count — "0 Besuche"
+ * is technically true and reads as a failure, the same call `markerTooltip`'s
+ * place hover already makes.
+ */
+function PlaceBody({
+  data,
+  locale,
+  t,
+  onPlaceOpen,
+}: {
+  data: PlaceCardDatum;
+  onPlaceOpen?: (placeId: string) => void;
+} & BodyCommonProps): JSX.Element {
+  const visits = typeof data.visitCount === "number" ? data.visitCount : null;
+  const hero =
+    data.visited === false
+      ? t("places:list.status.wishlist")
+      : visits !== null
+        ? t("places:list.visitsCount", { count: visits })
+        : null;
+
+  return (
+    <>
+      <Place city={data.city} country={data.country} locale={locale} />
+      {hero !== null && <Hero color={tokens.domainColor.poi}>{hero}</Hero>}
+      <Grid>
+        {data.category && (
+          <Row
+            label={t("map:globe.pinned.category")}
+            value={t(`places:categories.${data.category}`)}
+          />
+        )}
+        {data.lastVisit && (
+          <Row label={t("map:tooltip.lastVisit")} value={formatDate(data.lastVisit, locale)} />
+        )}
+      </Grid>
+      <Actions
+        primary={
+          onPlaceOpen
+            ? { label: t("map:globe.pinned.openPlace"), onClick: () => onPlaceOpen(data.placeId) }
             : undefined
         }
       />

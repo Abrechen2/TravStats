@@ -217,6 +217,11 @@ export function UnifiedActivityPanel({
             role="button"
             tabIndex={0}
             onClick={() => onSelect?.(item)}
+            // A row the map cannot focus says so on the row itself, not only
+            // on the small ⌀ badge further down: selecting it is a deliberate
+            // no-op (see `handleActivitySelect`), and a click that does
+            // nothing without explaining itself reads as a bug.
+            title={item.mappable ? undefined : t("dashboard:sidebar.notOnMap")}
             onKeyDown={(e) => {
               if (e.key === "Enter" || e.key === " ") {
                 e.preventDefault();

@@ -11,6 +11,10 @@
 
 import type { Flight, GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
+import type { Lodging } from "../../../types/lodging";
+import type { Place } from "../../../types/place";
+import { resolveStayTiming } from "../../../shared/lodgingTiming";
+import { formatAmount } from "../../../lib/units";
 import { SPECIAL_TYPE_META, type SpecialType } from "../../specialFlights/specialTypeMeta";
 import { getSpecialTooltipAnchor } from "../../specialFlights/specialTooltipAnchor";
 import type { CardEndpoint, MapPinned } from "./pinnedTypes";
@@ -177,7 +181,7 @@ export function pinnedFromCruise(cruise: Cruise): MapPinned {
  * rather than the arrival airport — so the route label and the anchor both
  * follow the type.
  */
-export function pinnedFromSpecialFlight(flight: Flight, typeLabel: string): MapPinned | null {
+export function pinnedFromSpecialFlight(flight: Flight): MapPinned | null {
   const type = flight.specialType as SpecialType | null | undefined;
   if (!type) return null;
   const meta = SPECIAL_TYPE_META[type];
@@ -198,13 +202,91 @@ export function pinnedFromSpecialFlight(flight: Flight, typeLabel: string): MapP
     anchorLngLat: anchor,
     data: {
       flightId: flight.id,
-      typeLabel,
+      specialType: type,
       icon: meta.icon,
       routeLabel,
       color: meta.rgb,
       aircraft: flight.aircraft,
       eventLabel: flight.eventLabel,
       departureTime: flight.departureTime,
+    },
+  };
+}
+
+/**
+ * The card for a lodging.
+ *
+ * Nothing to build for one whose location never resolved — `Lodging.lat/lon`
+ * are nullable, and a card with no anchor would have to float somewhere
+ * arbitrary. The activity row already marks those rows as not-on-the-map; this
+ * returns `null` so the click stays the honest no-op it is.
+ *
+ * "Which stay" is the most recent one that carries a date, falling back to the
+ * last row. `nights` comes from `shared/lodgingTiming.ts`, the one home for
+ * that rule, and stays `null` when that rule says nobody knows — a same-day
+ * stay and an unknown span are both 0, and only one of them is a fact.
+ */
+export function pinnedFromLodging(lodging: Lodging, language?: string): MapPinned | null {
+  if (lodging.lat == null || lodging.lon == null) return null;
+
+  const dated = lodging.stays.filter((s) => s.checkIn !== null || s.checkOut !== null);
+  const stay =
+    dated.length > 0
+      ? dated.reduce((best, s) =>
+          (s.checkIn ?? s.checkOut ?? "") > (best.checkIn ?? best.checkOut ?? "") ? s : best
+        )
+      : (lodging.stays[lodging.stays.length - 1] ?? null);
+
+  let nights: number | null = null;
+  let price: string | null = null;
+  if (stay) {
+    const timing = resolveStayTiming({
+      checkIn: stay.checkIn ? new Date(stay.checkIn) : null,
+      checkOut: stay.checkOut ? new Date(stay.checkOut) : null,
+      datePrecision: stay.datePrecision,
+      nights: stay.nights,
+    });
+    nights = timing.nightsKnown ? timing.nights : null;
+    if (stay.totalPrice != null) {
+      price = formatAmount(stay.totalPrice, stay.currency, { language });
+    }
+  }
+
+  return {
+    kind: "lodging",
+    anchorLngLat: [lodging.lon, lodging.lat],
+    data: {
+      lodgingId: lodging.id,
+      name: lodging.name,
+      city: lodging.city,
+      country: lodging.isoCountryCode,
+      checkIn: stay?.checkIn ?? null,
+      checkOut: stay?.checkOut ?? null,
+      nights,
+      price,
+    },
+  };
+}
+
+/**
+ * The card for a place.
+ *
+ * `lat`/`lon` are NOT NULL on a place, so unlike a lodging this never abstains
+ * — the type says a place that cannot be drawn is not creatable.
+ */
+export function pinnedFromPlace(place: Place): MapPinned {
+  return {
+    kind: "place",
+    anchorLngLat: [place.lon, place.lat],
+    data: {
+      placeId: place.id,
+      name: place.name,
+      category: place.category,
+      city: place.city,
+      country: place.isoCountryCode,
+      visitCount: place.visitCount,
+      lastVisit: place.lastVisitAt,
+      visited: place.visited,
     },
   };
 }
