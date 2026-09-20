@@ -15,6 +15,7 @@ import type { Lodging } from "../../../types/lodging";
 import type { Place } from "../../../types/place";
 import { SPECIAL_TYPE_META, type SpecialType } from "../../specialFlights/specialTypeMeta";
 import { getSpecialTooltipAnchor } from "../../specialFlights/specialTooltipAnchor";
+import { calculateDistance } from "../../../lib/geo";
 import type { CardEndpoint, MapPinned } from "./pinnedTypes";
 
 type LngLat = [number, number];
@@ -57,6 +58,77 @@ function centreOf(points: LngLat[]): LngLat | null {
   const lons = points.map((p) => p[0]);
   const lats = points.map((p) => p[1]);
   return [(Math.min(...lons) + Math.max(...lons)) / 2, (Math.min(...lats) + Math.max(...lats)) / 2];
+}
+
+/**
+ * A selected `Flight` row as the enriched /geo feature the card reads.
+ *
+ * The card's stats, its flight list and its route all come from the /geo set
+ * the map is drawing. The "Reise" view draws ONE trip through `extraLayers`
+ * and passes `flights={[]}`, so that set is empty there and a flight row
+ * selected in the sidebar produced no card at all — while the `MapTooltip`
+ * this card replaced read the selection store and never touched /geo.
+ *
+ * What a `Flight` cannot supply is the endpoint COUNTRY and CITY, which only
+ * /geo enrichment carries; the card degrades to the plane glyph instead of a
+ * flag there, rather than inventing one. Everything else — codes, names,
+ * coordinates, airline, aircraft, times, distance — is on the row.
+ */
+export function geoFromFlightRow(flight: Flight): GeoJSONFeature {
+  const distance =
+    flight.routeDistance ??
+    calculateDistance(flight.depLat, flight.depLon, flight.arrLat, flight.arrLon);
+  return {
+    type: "Feature",
+    geometry: {
+      type: "LineString",
+      coordinates: [
+        [flight.depLon, flight.depLat],
+        [flight.arrLon, flight.arrLat],
+      ],
+    },
+    properties: {
+      id: flight.id,
+      airline: flight.airline,
+      flightNumber: flight.flightNumber,
+      aircraft: flight.aircraft,
+      departureAirport: {
+        iata: flight.depIata,
+        icao: flight.depIcao,
+        name: flight.depName,
+        lat: flight.depLat,
+        lon: flight.depLon,
+      },
+      arrivalAirport: {
+        iata: flight.arrIata,
+        icao: flight.arrIcao,
+        name: flight.arrName,
+        lat: flight.arrLat,
+        lon: flight.arrLon,
+      },
+      departureTime: flight.departureTime,
+      arrivalTime: flight.arrivalTime,
+      status: flight.status,
+      distance,
+    },
+  } as GeoJSONFeature;
+}
+
+/**
+ * Every selected row the /geo set does not carry, added to it.
+ *
+ * Returns `geo` unchanged when nothing is missing, so the common case costs
+ * one `Set` and no new array identity for the memo downstream.
+ */
+export function withSelectedFlights(
+  geo: readonly GeoJSONFeature[],
+  selected: readonly Flight[]
+): readonly GeoJSONFeature[] {
+  if (selected.length === 0) return geo;
+  const have = new Set(geo.map((f) => f.properties.id));
+  const missing = selected.filter((f) => !have.has(f.id));
+  if (missing.length === 0) return geo;
+  return [...geo, ...missing.map(geoFromFlightRow)];
 }
 
 /**

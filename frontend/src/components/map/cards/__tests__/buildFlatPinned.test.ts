@@ -5,6 +5,7 @@ import {
   pinnedFromFlightSelection,
   pinnedFromSpecialFlight,
 } from "../buildFlatPinned";
+import { geoFromFlightRow } from "../buildFlatPinned";
 import type { Flight, GeoJSONFeature } from "../../../../types";
 import type { Cruise } from "../../../../types/cruise";
 
@@ -150,5 +151,58 @@ describe("pinnedFromSpecialFlight", () => {
 
   it("answers nothing for an ordinary flight", () => {
     expect(pinnedFromSpecialFlight({ id: "x" } as unknown as Flight)).toBeNull();
+  });
+});
+
+describe("geoFromFlightRow — the Reise view has no /geo set at all", () => {
+  /**
+   * `AllTab`'s journey branch passes `flights={[]}`: it draws ONE trip through
+   * `extraLayers` and lets the map render nothing of its own. The card built
+   * its route, its stats and its flight list out of that empty array, so
+   * selecting a flight row there produced no card and no camera move — while
+   * the `MapTooltip` this card replaced read the selection store and never
+   * touched /geo at all.
+   */
+  const row = {
+    id: "f9",
+    airline: "Delta Air Lines",
+    flightNumber: "DL6287",
+    aircraft: "B767-400ER",
+    depIata: "TOS",
+    depName: "Tromsø",
+    depLon: 18.9,
+    depLat: 69.7,
+    arrIata: "AGP",
+    arrName: "Málaga",
+    arrLon: -4.5,
+    arrLat: 36.7,
+    departureTime: "2021-06-05T08:00:00Z",
+    arrivalTime: "2021-06-05T12:00:00Z",
+    status: "flown",
+    routeDistance: 3931,
+  } as unknown as Flight;
+
+  it("carries the identity, the geometry and the distance the card needs", () => {
+    const f = geoFromFlightRow(row);
+    expect(f.properties.id).toBe("f9");
+    expect(f.properties.departureAirport.iata).toBe("TOS");
+    expect(f.properties.arrivalAirport.iata).toBe("AGP");
+    expect(f.properties.distance).toBe(3931);
+    expect(f.geometry.coordinates).toEqual([
+      [18.9, 69.7],
+      [-4.5, 36.7],
+    ]);
+  });
+
+  it("estimates the distance when the row has none, rather than reporting zero", () => {
+    const f = geoFromFlightRow({ ...row, routeDistance: undefined } as unknown as Flight);
+    expect(f.properties.distance).toBeGreaterThan(3000);
+  });
+
+  it("lets the route card be built from the store alone", () => {
+    const pinned = pinnedFromFlightSelection(["f9"], [geoFromFlightRow(row)], ACCENT);
+    expect(pinned?.kind).toBe("arc");
+    if (pinned?.kind !== "arc") throw new Error("expected a route card");
+    expect(pinned.data.departure.iata).toBe("TOS");
   });
 });

@@ -20,7 +20,7 @@ export function CardFlights({
   locale,
   t,
 }: {
-  flights: GeoJSONFeature[];
+  flights: readonly GeoJSONFeature[];
   flightIds: string[];
   locale: string;
   t: TFn;

@@ -52,7 +52,7 @@ import {
 
 interface PinnedCardProps {
   pinned: MapPinned;
-  flights: GeoJSONFeature[];
+  flights: readonly GeoJSONFeature[];
   cruises: Cruise[];
   onClose: () => void;
   /** Fires when the "Open (last) flight" action is used. */
@@ -316,7 +316,7 @@ function AirportBody({
   flights,
   locale,
   t,
-}: { data: MarkerCardDatum; flights: GeoJSONFeature[] } & BodyCommonProps): JSX.Element {
+}: { data: MarkerCardDatum; flights: readonly GeoJSONFeature[] } & BodyCommonProps): JSX.Element {
   const stats = getAirportStats(flights, data.iata);
   return (
     <>
@@ -403,7 +403,7 @@ function ArcBody({
   selectionScope,
 }: {
   data: RouteCardDatum;
-  flights: GeoJSONFeature[];
+  flights: readonly GeoJSONFeature[];
   onFlightOpen?: (flightId: string) => void;
   onFlightEdit?: (flightId: string) => void;
   selectionScope: "route" | "single";

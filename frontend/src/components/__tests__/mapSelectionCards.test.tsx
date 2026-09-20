@@ -145,7 +145,23 @@ const GEO: GeoJSONFeature[] = [
   } as unknown as GeoJSONFeature,
 ];
 
-const FLIGHT = { id: "f1", depIata: "TOS", arrIata: "AGP" } as unknown as Flight;
+const FLIGHT = {
+  id: "f1",
+  airline: "Delta Air Lines",
+  flightNumber: "DL6287",
+  depIata: "TOS",
+  depName: "Tromsø",
+  arrIata: "AGP",
+  arrName: "Málaga",
+  depLon: 10,
+  depLat: 50,
+  arrLon: 20,
+  arrLat: 40,
+  departureTime: "2021-06-05T08:00:00Z",
+  arrivalTime: "2021-06-05T12:00:00Z",
+  status: "flown",
+  routeDistance: 3931,
+} as unknown as Flight;
 
 const CRUISE = {
   id: "c1",
@@ -218,17 +234,28 @@ async function settle(): Promise<void> {
   });
 }
 
-const surfaces: Array<{ name: string; render: () => void }> = [
+const surfaces: Array<{
+  name: string;
+  render: () => void;
+  /** The "Reise" view: one trip via extraLayers, `flights={[]}`. */
+  renderJourney: () => void;
+}> = [
   {
     name: "the flat map",
     render: () => {
       render(<DeckGLMap flights={GEO} visMode="routes" cruises={[CRUISE]} />);
+    },
+    renderJourney: () => {
+      render(<DeckGLMap flights={[]} visMode="routes" cruises={[]} />);
     },
   },
   {
     name: "the globe",
     render: () => {
       render(<GlobeView flights={GEO} cruises={[CRUISE]} />);
+    },
+    renderJourney: () => {
+      render(<GlobeView flights={[]} cruises={[]} />);
     },
   },
 ];
@@ -291,6 +318,31 @@ for (const surface of surfaces) {
       expect(pinned.data.category).toBe("sight");
       expect(pinned.data.visitCount).toBe(2);
       expect(pinned.data.lastVisitAt).toBe("2023-09-10");
+      expect(flyTo).toHaveBeenCalled();
+    });
+
+    /**
+     * `AllTab`'s journey branch passes `flights={[]}` — it draws one trip
+     * through `extraLayers` and nothing of its own. The card read its route,
+     * its stats and its list out of that empty array, so a flight row selected
+     * in the Reise view produced no card and no camera move, on either
+     * surface. The `MapTooltip` this card replaced read the selection store
+     * and never touched /geo.
+     */
+    it("opens the route card in the Reise view, where the /geo set is empty", async () => {
+      surface.renderJourney();
+      flyTo.mockClear();
+
+      act(() => useFlightSelectionStore.getState().setSelection([FLIGHT]));
+      await settle();
+
+      const props = lastCard();
+      const pinned = props.pinned as { kind: string; data: { departure: { iata?: string } } };
+      expect(pinned.kind).toBe("arc");
+      expect(pinned.data.departure.iata).toBe("TOS");
+      // …and the card can still look the flight up, so the list and the stats
+      // are not empty beside a route that is not.
+      expect((props.flights as unknown[]).length).toBe(1);
       expect(flyTo).toHaveBeenCalled();
     });
 

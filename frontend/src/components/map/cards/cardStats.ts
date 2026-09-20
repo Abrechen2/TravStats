@@ -89,7 +89,10 @@ function maxDate(dates: ReadonlyArray<string | null | undefined>): string | null
 
 // ─── Airport ──────────────────────────────────────────────────────
 
-export function getAirportStats(flights: GeoJSONFeature[], iata: string): AirportCardStats {
+export function getAirportStats(
+  flights: readonly GeoJSONFeature[],
+  iata: string
+): AirportCardStats {
   const touched = flights.filter(
     (f) => f.properties.departureAirport.iata === iata || f.properties.arrivalAirport.iata === iata
   );
@@ -186,7 +189,7 @@ export function getPortStats(cruises: Cruise[], portKey: string): PortCardStats 
 // ─── Arc (flight route) ───────────────────────────────────────────
 
 export function getArcStats(
-  flights: GeoJSONFeature[],
+  flights: readonly GeoJSONFeature[],
   flightIds: ReadonlyArray<string>
 ): ArcCardStats {
   const ids = new Set(flightIds);

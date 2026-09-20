@@ -55,7 +55,7 @@ export function TripBody({
   onTripDetails,
 }: {
   data: TripCardDatum;
-  flights: GeoJSONFeature[];
+  flights: readonly GeoJSONFeature[];
   onTripDetails?: () => void;
 } & BodyCommonProps): JSX.Element {
   const stats = getArcStats(flights, data.flightIds);

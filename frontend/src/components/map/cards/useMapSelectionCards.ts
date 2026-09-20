@@ -11,7 +11,7 @@
 // a property of the projection. What IS per-renderer stays a parameter: how to
 // move the camera, and whether an emptied selection clears the card.
 
-import { useEffect } from "react";
+import { useEffect, useMemo } from "react";
 import type { GeoJSONFeature } from "../../../types";
 import { useFlightSelectionStore } from "../../../store/flightSelectionStore";
 import { useCruiseSelectionStore } from "../../../store/cruiseSelectionStore";
@@ -23,6 +23,7 @@ import {
   pinnedFromLodging,
   pinnedFromPlace,
   pinnedFromSpecialFlight,
+  withSelectedFlights,
 } from "./buildFlatPinned";
 import type { MapPinned } from "./pinnedTypes";
 
@@ -98,6 +99,18 @@ export interface MapSelectionCardsOptions {
   clearOnEmpty?: boolean;
 }
 
+export interface MapSelectionCards {
+  /**
+   * What the card should read its route, stats and flight list from.
+   *
+   * The /geo set the map is drawing, PLUS any selected row it does not carry.
+   * The "Reise" view draws one trip through `extraLayers` and passes
+   * `flights={[]}`, so without this a flight row selected there produced no
+   * card at all.
+   */
+  cardFlights: readonly GeoJSONFeature[];
+}
+
 export function useMapSelectionCards({
   flights,
   flightColor,
@@ -105,11 +118,16 @@ export function useMapSelectionCards({
   setPinned,
   flightDelayMs = 0,
   clearOnEmpty = false,
-}: MapSelectionCardsOptions): void {
+}: MapSelectionCardsOptions): MapSelectionCards {
   const selectedFlights = useFlightSelectionStore((s) => s.selectedFlights);
   const selectedCruise = useCruiseSelectionStore((s) => s.selectedCruise);
   const selectedLodging = useLodgingSelectionStore((s) => s.selectedLodging);
   const selectedPlace = usePlaceSelectionStore((s) => s.selectedPlace);
+
+  const cardFlights = useMemo(
+    () => withSelectedFlights(flights, selectedFlights),
+    [flights, selectedFlights]
+  );
 
   useEffect(() => {
     if (selectedFlights.length === 0) {
@@ -133,7 +151,7 @@ export function useMapSelectionCards({
           ? pinnedFromSpecialFlight(first)
           : pinnedFromFlightSelection(
               selectedFlights.map((f) => f.id),
-              flights,
+              cardFlights,
               flightColor
             );
       if (!next) return;
@@ -147,7 +165,7 @@ export function useMapSelectionCards({
     }
     const timer = setTimeout(open, flightDelayMs);
     return () => clearTimeout(timer);
-  }, [selectedFlights, flights, flightColor, focus, setPinned, flightDelayMs, clearOnEmpty]);
+  }, [selectedFlights, cardFlights, flightColor, focus, setPinned, flightDelayMs, clearOnEmpty]);
 
   useEffect(() => {
     if (selectedCruise === null) {
@@ -182,4 +200,6 @@ export function useMapSelectionCards({
     setPinned(next);
     focus(next.anchorLngLat);
   }, [selectedPlace, focus, setPinned, clearOnEmpty]);
+
+  return { cardFlights };
 }

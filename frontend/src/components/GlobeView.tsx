@@ -952,7 +952,7 @@ export default function GlobeView({
     [flightColorConfig]
   );
 
-  useMapSelectionCards({
+  const { cardFlights } = useMapSelectionCards({
     flights,
     flightColor: flightCardColor,
     focus: focusOnGlobe,
@@ -1496,7 +1496,7 @@ export default function GlobeView({
           <PinnedCardBoundary>
             <PinnedCard
               pinned={pinned}
-              flights={flights}
+              flights={cardFlights}
               cruises={cruises ?? []}
               onClose={() => setPinned(null)}
               onFlightOpen={onFlightOpen}

@@ -505,7 +505,7 @@ export function DeckGLMap({
   // Every selection that comes from outside the map — the activity sidebar,
   // the flight panel — becomes a card and a camera move, on the same terms the
   // globe uses (`map/cards/useMapSelectionCards.ts`).
-  useMapSelectionCards({
+  const { cardFlights } = useMapSelectionCards({
     flights,
     flightColor: flightTipColor,
     focus: focusOn,
@@ -949,7 +949,7 @@ export function DeckGLMap({
           <PinnedCardBoundary>
             <PinnedCard
               pinned={pinned}
-              flights={flights}
+              flights={cardFlights}
               cruises={cruises}
               selectionScope={selectedFlights.length === 1 ? "single" : "route"}
               onClose={() => {
