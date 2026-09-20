@@ -274,6 +274,10 @@ export default function MapContainer3D({
               // whole list regardless, which only became visible when the
               // journey view could open on the globe at all.
               cruises={showInternalCruises ? cruises : []}
+              // …but the CARD may still look one up: not drawing a cruise's
+              // line is not the same as the reader not being allowed to read
+              // it (the Reise view draws one trip's lines and lists them all).
+              cruisesForCard={cruises}
               onFlightOpen={onFlightOpen ?? onFlightClick}
               onCruiseOpen={onCruiseOpen}
               onEdit={onEdit}

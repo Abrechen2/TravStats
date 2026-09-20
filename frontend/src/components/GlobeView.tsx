@@ -101,6 +101,18 @@ import {
 interface GlobeViewProps {
   flights: GeoJSONFeature[];
   cruises?: Cruise[];
+  /**
+   * Cruises the CARD may look up, which is not the same list as the one the
+   * globe DRAWS.
+   *
+   * `showInternalCruises={false}` means "I draw my own cruise lines" — the
+   * Reise view draws exactly one trip's. It does not mean "the reader may not
+   * read a cruise". Passing the empty draw-list to both left the card heading
+   * itself "🚢 AIDAnova" above the not-found body, because `getCruiseStats`
+   * had nothing to find. Defaults to `cruises`, so a caller that draws what it
+   * reads says it once.
+   */
+  cruisesForCard?: readonly Cruise[];
   /** Fired by the pinned-card "Open last flight" CTA — should open the
       flight (modal or detail page). */
   onFlightOpen?: (flightId: string) => void;
@@ -234,6 +246,7 @@ function DeckGLOverlay({ layers, onHover }: DeckOverlayProps): null {
 export default function GlobeView({
   flights = [],
   cruises = [],
+  cruisesForCard,
   onFlightOpen,
   onCruiseOpen,
   onEdit,
@@ -1505,7 +1518,7 @@ export default function GlobeView({
             <PinnedCard
               pinned={pinned}
               flights={cardFlights}
-              cruises={cruises ?? []}
+              cruises={[...(cruisesForCard ?? cruises)]}
               // Letting go of the selection is half of closing: see
               // `clearSelections` for the reopen this fixes.
               selectionScope={selectionScope}

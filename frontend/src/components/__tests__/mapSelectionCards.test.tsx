@@ -246,7 +246,7 @@ const surfaces: Array<{
       render(<DeckGLMap flights={GEO} visMode="routes" cruises={[CRUISE]} />);
     },
     renderJourney: () => {
-      render(<DeckGLMap flights={[]} visMode="routes" cruises={[]} />);
+      render(<DeckGLMap flights={[]} visMode="routes" cruises={[CRUISE]} />);
     },
   },
   {
@@ -255,7 +255,9 @@ const surfaces: Array<{
       render(<GlobeView flights={GEO} cruises={[CRUISE]} />);
     },
     renderJourney: () => {
-      render(<GlobeView flights={[]} cruises={[]} />);
+      // What MapContainer3D hands the globe in the Reise view: the caller's
+      // cruises to READ, and nothing to draw.
+      render(<GlobeView flights={[]} cruises={[]} cruisesForCard={[CRUISE]} />);
     },
   },
 ];
@@ -370,6 +372,24 @@ for (const surface of surfaces) {
       act(() => useLodgingSelectionStore.getState().setSelection(L));
       await settle();
       expect(cardProps.length).toBeGreaterThan(0);
+    });
+
+    /**
+     * "Do not draw cruise lines for me, I draw my own" and "do not let the
+     * card look a cruise up" are different instructions, and the globe heard
+     * only the first. In the Reise view the card headed itself "🚢 AIDAnova"
+     * and then printed the not-found body, because `getCruiseStats` was
+     * handed an empty list.
+     */
+    it("fills the cruise card in the Reise view, where the map draws no cruise lines", async () => {
+      surface.renderJourney();
+
+      act(() => useCruiseSelectionStore.getState().setSelection(CRUISE));
+      await settle();
+
+      const props = lastCard();
+      expect((props.pinned as { kind: string }).kind).toBe("cruise");
+      expect((props.cruises as unknown[]).length).toBe(1);
     });
 
     it("a lodging with no resolved location opens no card and moves no camera", async () => {
