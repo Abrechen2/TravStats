@@ -141,8 +141,14 @@ function flightToArcRow(f: GeoJSONFeature): FlightArcRow | null {
  *   omit the overlay entirely.
  *
  * Cruise legs are rendered via `createCruiseArcsLayer` (PathLayer, sky-blue).
- * Flight legs are rendered as amber ArcLayer arcs so both domains are
- * visually distinguishable at a glance.
+ * Flight legs are amber, so both domains are distinguishable at a glance —
+ * but they come in TWO layer types, because the two projections cannot draw
+ * the same one. The flat map keeps the `ArcLayer` it has always drawn; the
+ * globe gets a pre-tessellated great-circle `PathLayer`, because MapLibre's
+ * globe projection never hands an ArcLayer the COMMON-space source and target
+ * its vertex shader needs to compute the bow, so an ArcLayer there draws
+ * nothing at all. The comment above the flight branch below has the
+ * measurement.
  */
 export function buildJourneyLayers(
   flights: readonly GeoJSONFeature[],
@@ -153,11 +159,17 @@ export function buildJourneyLayers(
    *  omitting it falls back to the default status pair. */
   cruiseColorConfig?: CruiseColorConfig,
   /**
-   * Metres to lift the trip's lines off the surface. 0 for the flat map;
+   * Metres to lift the CRUISE legs off the surface. 0 for the flat map;
    * `JOURNEY_GLOBE_ALTITUDE_M` for the globe, where an unlifted PathLayer
    * z-fights the sphere mesh and draws nothing — the defect
-   * `TOUR_PATH_GLOBE_ALTITUDE_M` documents. The flight legs are an ArcLayer,
-   * which bows above the surface on its own, so only the cruise legs need it.
+   * `TOUR_PATH_GLOBE_ALTITUDE_M` documents.
+   *
+   * The flight legs never read it, on either projection, because each of
+   * their two layer types lifts itself: the flat map's `ArcLayer` bows in its
+   * own shader, and the globe's `PathLayer` carries a per-vertex altitude
+   * from `getArcPeakAltitudeMeters` (see `toGreatCirclePath`), which scales
+   * with the leg and is larger than this constant. To the flight branch a
+   * non-zero value therefore means only "this is the globe".
    */
   altitudeM = 0
 ): Layer[] {
