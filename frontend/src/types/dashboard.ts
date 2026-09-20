@@ -1,3 +1,5 @@
+import { webgl2Available } from "../lib/webgl2";
+
 export const DASHBOARD_TABS = ["all", "flight", "cruise", "poi", "lodging", "tour"] as const;
 export type DashboardTab = (typeof DASHBOARD_TABS)[number];
 
@@ -37,6 +39,11 @@ export type DashboardMode = AllMode | FlightMode | CruiseMode | PoiMode | Lodgin
 interface TabRegistryEntry<M extends DashboardMode> {
   readonly modes: readonly M[];
   readonly default: M;
+  /**
+   * What the tab opens on where the device cannot draw a globe. Each is the
+   * default this tab had before the 2026-09-20 ruling.
+   */
+  readonly flatDefault: M;
 }
 
 /**
@@ -50,14 +57,17 @@ interface TabRegistryEntry<M extends DashboardMode> {
  *
  * There is no exception left: `poi` gained its globe on the same day (see
  * POI_MODES above), so every tab in the table opens on the sphere.
+ *
+ * `flatDefault` is the device's exception rather than the tab's — see
+ * `defaultModeForTab`.
  */
 export const TAB_MODE_REGISTRY = {
-  all: { modes: ALL_MODES, default: "globe" },
-  flight: { modes: FLIGHT_MODES, default: "globe" },
-  cruise: { modes: CRUISE_MODES, default: "globe" },
-  poi: { modes: POI_MODES, default: "globe" },
-  lodging: { modes: LODGING_MODES, default: "globe" },
-  tour: { modes: TOUR_MODES, default: "globe" },
+  all: { modes: ALL_MODES, default: "globe", flatDefault: "overview" },
+  flight: { modes: FLIGHT_MODES, default: "globe", flatDefault: "routes" },
+  cruise: { modes: CRUISE_MODES, default: "globe", flatDefault: "sea-routes" },
+  poi: { modes: POI_MODES, default: "globe", flatDefault: "markers" },
+  lodging: { modes: LODGING_MODES, default: "globe", flatDefault: "map" },
+  tour: { modes: TOUR_MODES, default: "globe", flatDefault: "routes" },
 } as const satisfies Record<DashboardTab, TabRegistryEntry<DashboardMode>>;
 
 /**
@@ -82,6 +92,23 @@ export function isModeForTab(tab: DashboardTab, mode: unknown): mode is Dashboar
   return (TAB_MODE_REGISTRY[tab].modes as readonly string[]).includes(mode);
 }
 
-export function defaultModeForTab(tab: DashboardTab): DashboardMode {
-  return TAB_MODE_REGISTRY[tab].default;
+/**
+ * What a tab opens on when the reader has never said otherwise.
+ *
+ * The globe — unless the device cannot draw one. `liteMode` is dataset-driven
+ * and `webgl2Available` was consulted by the FLAT map alone, which is the only
+ * surface with a fallback for a "no" (`NativeRoutesLayer` plus a notice). So
+ * after the ruling a device without WebGL2 landed on a globe that cannot draw
+ * at all, with no fallback and nothing saying why; it used to land on `routes`
+ * and see the notice.
+ *
+ * `hasWebgl2` is a parameter so the rule can be tested both ways — the probe
+ * itself answers once at import and never changes for the life of the page.
+ */
+export function defaultModeForTab(
+  tab: DashboardTab,
+  hasWebgl2: boolean = webgl2Available
+): DashboardMode {
+  const entry = TAB_MODE_REGISTRY[tab];
+  return hasWebgl2 ? entry.default : entry.flatDefault;
 }

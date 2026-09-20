@@ -1,4 +1,10 @@
-import { describe, it, expect, beforeEach, afterEach } from "vitest";
+import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
+
+// jsdom has no WebGL2, and without it the registry answers with each tab's
+// FLAT fallback (see `defaultModeForTab`). Everything below is about the
+// ruling's default, so the device says yes; the fallback has its own test in
+// `types/__tests__/dashboard.test.ts`.
+vi.mock("../../lib/webgl2", () => ({ webgl2Available: true }));
 import { renderHook, act } from "@testing-library/react";
 import { MemoryRouter, Routes, Route } from "react-router-dom";
 import { useDashboardRoute } from "../useDashboardRoute";
