@@ -260,12 +260,7 @@ async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutco
       continue;
     }
 
-    // Same truncation as the visit column had (SRV-EXPORT-001): a cruise
-    // start can carry a boarding time — the booking parser emits
-    // "2026-06-17T08:00" — and cutting the string at ten characters moved it
-    // to midnight on every re-import. Not measured in the audit, because the
-    // cruises it round-tripped happened to start at midnight; the same line,
-    // the same loss.
+    // A boarding time ("2026-06-17T08:00" from the parser) survives this now.
     const startDate = cell.isoTimestamp(raw.startDate);
     const endDate = cell.isoTimestamp(raw.endDate);
     if (startDate === null || endDate === null) {
@@ -431,10 +426,8 @@ async function importPlaceVisits(sheet: IncomingSheet, ctx: Ctx): Promise<SheetO
     const id = cell.text(raw.id);
     const label = cell.text(raw.placeId) ?? `#${rowNo}`;
 
-    // The whole instant, not its first ten characters. A visit carries a
-    // clock — the form builds `...T12:00:00.000Z` from a date and a time —
-    // and `isoDate` used to cut it off, so re-importing an untouched export
-    // silently moved every visit to midnight (SRV-EXPORT-001).
+    // `isoDate` cut the clock off, moving every visit to midnight on an
+    // unchanged re-import (SRV-EXPORT-001; `cells.ts#isoTimestamp` has it).
     const visitedAt = cell.isoTimestamp(raw.visitedAt);
     if (visitedAt === null) {
       keepDespiteError(seen, id);
