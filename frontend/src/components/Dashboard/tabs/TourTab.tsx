@@ -18,6 +18,7 @@ import { legendRow } from "./allTabLegendRows";
 import MapContainer3D from "../../MapContainer3D";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
 import { SidebarToggle } from "../SidebarToggle";
+import { MapEmptyOverlay } from "./MapEmptyOverlay";
 
 function isLegMode(value: string): value is LegMode {
   return (LEG_MODES as readonly string[]).includes(value);
@@ -241,23 +242,13 @@ export function TourTab(): JSX.Element {
       />
 
       {isEmpty && (
-        <div
-          style={{
-            position: "absolute",
-            top: 12,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 30,
-            padding: "6px 14px",
-            borderRadius: 10,
-            background: "rgba(22,27,34,0.85)",
-            color: "var(--text-muted)",
-            border: "1px solid var(--color-border)",
-            fontSize: 13,
-          }}
-        >
-          {t("dashboard:tourTab.empty")}
-        </div>
+        <MapEmptyOverlay
+          emoji="🥾"
+          title={t("dashboard:tourTab.emptyTitle")}
+          body={t("dashboard:tourTab.emptyBody")}
+          ctaLabel={t("dashboard:tourTab.emptyCta")}
+          onCta={() => navigate("/trips")}
+        />
       )}
     </div>
   );

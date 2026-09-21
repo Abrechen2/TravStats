@@ -252,7 +252,7 @@ describe("TourTab", () => {
 
     expect(screen.getByText("dashboard:tours.loading")).toBeInTheDocument();
     expect(screen.queryByText("dashboard:tours.loadError")).not.toBeInTheDocument();
-    expect(screen.queryByText("dashboard:tourTab.empty")).not.toBeInTheDocument();
+    expect(screen.queryByText("dashboard:tourTab.emptyTitle")).not.toBeInTheDocument();
     expect(screen.queryByText("dashboard:tourTab.listEmpty")).not.toBeInTheDocument();
   });
 
@@ -270,7 +270,7 @@ describe("TourTab", () => {
 
     expect(screen.getByText("dashboard:tours.loadError")).toBeInTheDocument();
     expect(screen.queryByText("dashboard:tours.loading")).not.toBeInTheDocument();
-    expect(screen.queryByText("dashboard:tourTab.empty")).not.toBeInTheDocument();
+    expect(screen.queryByText("dashboard:tourTab.emptyTitle")).not.toBeInTheDocument();
 
     fireEvent.click(screen.getByText("dashboard:tours.retry"));
     expect(reload).toHaveBeenCalledTimes(1);
@@ -279,7 +279,12 @@ describe("TourTab", () => {
   it("shows a distinct empty state for a genuinely empty, successful load", () => {
     renderTab();
 
-    expect(screen.getByText("dashboard:tourTab.empty")).toBeInTheDocument();
+    // The same card the flight, cruise and lodging tabs draw — a title, what
+    // to do, and a way there — not the bare line of muted text this tab had
+    // while the other three had the card (Alex, 2026-09-20).
+    expect(screen.getByText("dashboard:tourTab.emptyTitle")).toBeInTheDocument();
+    expect(screen.getByText("dashboard:tourTab.emptyBody")).toBeInTheDocument();
+    expect(screen.getByText("dashboard:tourTab.emptyCta")).toBeInTheDocument();
     expect(screen.getByText("dashboard:tourTab.listEmpty")).toBeInTheDocument();
     expect(screen.queryByText("dashboard:tours.loading")).not.toBeInTheDocument();
     expect(screen.queryByText("dashboard:tours.loadError")).not.toBeInTheDocument();
