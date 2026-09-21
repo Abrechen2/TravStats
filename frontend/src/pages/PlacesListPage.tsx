@@ -529,6 +529,7 @@ export default function PlacesListPage(): JSX.Element {
             </div>
           ) : (
             <>
+              <TablePagination {...pagination} placement="top" />
               <Table columns={visibleColumns} label={t("places:list.title")} {...tableHints}>
                 {pagination.paged.map((p) => (
                   <PlaceRow

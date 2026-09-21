@@ -162,12 +162,12 @@ describe("FlightsTablePage — server-side paging", () => {
     render(<FlightsTablePage />);
     await waitFor(() => expect(getAll).toHaveBeenCalled());
 
-    fireEvent.change(screen.getByLabelText("common:table.pagination.pageSize"), {
+    fireEvent.change(screen.getAllByLabelText("common:table.pagination.pageSize")[0], {
       target: { value: "25" },
     });
     await waitFor(() => expect(lastQuery()).toMatchObject({ limit: 25, offset: 0 }));
 
-    fireEvent.click(screen.getByLabelText("common:table.pagination.next"));
+    fireEvent.click(screen.getAllByLabelText("common:table.pagination.next")[0]);
     await waitFor(() => expect(lastQuery()).toMatchObject({ limit: 25, offset: 25 }));
   });
 
@@ -175,7 +175,7 @@ describe("FlightsTablePage — server-side paging", () => {
     render(<FlightsTablePage />);
     await waitFor(() => expect(getAll).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByLabelText("common:table.pagination.next"));
+    fireEvent.click(screen.getAllByLabelText("common:table.pagination.next")[0]);
     await waitFor(() => expect(lastQuery()).toMatchObject({ offset: 50 }));
 
     // The carrier lives behind the "Filter" button, with the other
@@ -233,7 +233,7 @@ describe("FlightsTablePage — server-side paging", () => {
   it("does not ask the facet endpoint again just because the page turned", async () => {
     render(<FlightsTablePage />);
     await waitFor(() => expect(getFacets).toHaveBeenCalledTimes(1));
-    fireEvent.click(screen.getByLabelText("common:table.pagination.next"));
+    fireEvent.click(screen.getAllByLabelText("common:table.pagination.next")[0]);
     await waitFor(() => expect(lastQuery()).toMatchObject({ offset: 50 }));
     expect(getFacets).toHaveBeenCalledTimes(1);
   });

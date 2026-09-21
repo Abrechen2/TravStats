@@ -142,4 +142,39 @@ describe("TablePagination", () => {
     await user.selectOptions(select, "all");
     expect(setPageSize).toHaveBeenCalledWith("all");
   });
+
+  it("names itself by where it sits, so the two copies are not anonymous duplicates", () => {
+    // Alex, 2026-09-20: "Die Box 'Zeilen pro Seite' sollte oben und unten
+    // sein." Two identical landmarks would be worse than one for anyone
+    // navigating by them, so each copy says which end it is.
+    const { rerender } = render(
+      <TablePagination
+        page={1}
+        pageCount={3}
+        pageSize={50}
+        total={123}
+        setPage={vi.fn()}
+        setPageSize={vi.fn()}
+        placement="top"
+      />
+    );
+    expect(
+      screen.getByRole("navigation", { name: "common:table.pagination.landmark.top" })
+    ).toBeInTheDocument();
+
+    rerender(
+      <TablePagination
+        page={1}
+        pageCount={3}
+        pageSize={50}
+        total={123}
+        setPage={vi.fn()}
+        setPageSize={vi.fn()}
+      />
+    );
+    // Bottom is the default: a caller that says nothing keeps the old place.
+    expect(
+      screen.getByRole("navigation", { name: "common:table.pagination.landmark.bottom" })
+    ).toBeInTheDocument();
+  });
 });

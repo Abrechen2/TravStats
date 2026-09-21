@@ -3,7 +3,11 @@ import { render, screen, waitFor, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter } from "react-router-dom";
 import type { Lodging, LodgingFacets, LodgingStats, LodgingStay } from "../../types/lodging";
-import { countRenderedRows, paginationControlsRendered } from "./tablePaginationTestSupport";
+import {
+  countRenderedRows,
+  pageSizeSelects,
+  paginationControlsRendered,
+} from "./tablePaginationTestSupport";
 
 const listLodgingPageMock = vi.fn();
 const getLodgingFacetsMock = vi.fn();
@@ -779,9 +783,9 @@ describe("LodgingListPage", () => {
     mockFacets();
     renderListPage();
 
-    const sizes = (await screen.findByLabelText(
-      "common:table.pagination.pageSize"
-    )) as HTMLSelectElement;
+    await screen.findAllByLabelText("common:table.pagination.pageSize");
+    // Both copies offer the same sizes; the check reads the first.
+    const sizes = pageSizeSelects()[0];
     expect(Array.from(sizes.options).map((o) => o.value)).toEqual(["25", "50", "100"]);
   });
 });

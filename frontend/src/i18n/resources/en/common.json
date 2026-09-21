@@ -223,7 +223,11 @@
       "next": "Next page",
       "last": "Last page",
       "pageSize": "Rows per page",
-      "all": "All"
+      "all": "All",
+      "landmark": {
+        "top": "Pagination, above the table",
+        "bottom": "Pagination, below the table"
+      }
     }
   },
   "support": {

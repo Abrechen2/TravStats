@@ -150,12 +150,12 @@ describe("CruisesPage — server-side paging", () => {
     render(<CruisesPage />);
     await waitFor(() => expect(listPage).toHaveBeenCalled());
 
-    fireEvent.change(screen.getByLabelText("common:table.pagination.pageSize"), {
+    fireEvent.change(screen.getAllByLabelText("common:table.pagination.pageSize")[0], {
       target: { value: "25" },
     });
     await waitFor(() => expect(lastQuery()).toMatchObject({ limit: 25, offset: 0 }));
 
-    fireEvent.click(screen.getByLabelText("common:table.pagination.next"));
+    fireEvent.click(screen.getAllByLabelText("common:table.pagination.next")[0]);
     await waitFor(() => expect(lastQuery()).toMatchObject({ limit: 25, offset: 25 }));
   });
 
@@ -163,7 +163,7 @@ describe("CruisesPage — server-side paging", () => {
     render(<CruisesPage />);
     await waitFor(() => expect(listPage).toHaveBeenCalled());
 
-    fireEvent.click(screen.getByLabelText("common:table.pagination.next"));
+    fireEvent.click(screen.getAllByLabelText("common:table.pagination.next")[0]);
     await waitFor(() => expect(lastQuery()).toMatchObject({ offset: 50 }));
 
     // The line lives behind the "Filter" button, with the other
@@ -206,7 +206,7 @@ describe("CruisesPage — server-side paging", () => {
   it("does not ask the facet endpoint again just because the page turned", async () => {
     render(<CruisesPage />);
     await waitFor(() => expect(facets).toHaveBeenCalledTimes(1));
-    fireEvent.click(screen.getByLabelText("common:table.pagination.next"));
+    fireEvent.click(screen.getAllByLabelText("common:table.pagination.next")[0]);
     await waitFor(() => expect(lastQuery()).toMatchObject({ offset: 50 }));
     expect(facets).toHaveBeenCalledTimes(1);
   });

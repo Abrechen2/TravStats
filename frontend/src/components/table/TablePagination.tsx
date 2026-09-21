@@ -21,6 +21,14 @@ export interface TablePaginationProps {
    * flights list would quietly show the first 500 of 900 under that label.
    */
   allowAll?: boolean;
+  /**
+   * Where this copy sits. A long list makes the control unreachable from the
+   * top of the page — you have to scroll past everything you did not want to
+   * read to change how much is shown (Alex, 2026-09-20). The lists render it
+   * at both ends; this only picks the margin and the accessible name, so the
+   * two copies are not two anonymous duplicates to a screen reader.
+   */
+  placement?: "top" | "bottom";
 }
 
 const PAGE_SIZE_OPTIONS = [25, 50, 100] as const;
@@ -49,6 +57,7 @@ export default function TablePagination({
   setPage,
   setPageSize,
   allowAll = true,
+  placement = "bottom",
 }: TablePaginationProps): JSX.Element {
   const { t } = useTranslation(["common"]);
   const { from, to } = paginationRange(page, pageSize, total);
@@ -56,7 +65,10 @@ export default function TablePagination({
   const atLast = page >= pageCount;
 
   return (
-    <div className="mt-2 flex flex-wrap items-center justify-between gap-3 px-1 text-xs text-[var(--text-muted)]">
+    <nav
+      aria-label={t(`common:table.pagination.landmark.${placement}`)}
+      className={`${placement === "top" ? "mb-2" : "mt-2"} flex flex-wrap items-center justify-between gap-3 px-1 text-xs text-[var(--text-muted)]`}
+    >
       <span>{t("common:table.pagination.range", { from, to, total })}</span>
       <div className="flex flex-wrap items-center gap-3">
         <div className="flex items-center gap-1">
@@ -123,6 +135,6 @@ export default function TablePagination({
           </select>
         </label>
       </div>
-    </div>
+    </nav>
   );
 }

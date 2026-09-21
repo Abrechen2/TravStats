@@ -450,6 +450,7 @@ export default function CruisesPage(): JSX.Element {
           </div>
         ) : (
           <>
+            <TablePagination {...pagination} allowAll={false} placement="top" />
             <Table columns={visibleColumns} label={t("list.title")} {...tableHints}>
               {cruises.map((c) => (
                 <CruiseRow

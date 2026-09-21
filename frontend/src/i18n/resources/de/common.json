@@ -223,7 +223,11 @@
       "next": "Nächste Seite",
       "last": "Letzte Seite",
       "pageSize": "Zeilen pro Seite",
-      "all": "Alle"
+      "all": "Alle",
+      "landmark": {
+        "top": "Seitensteuerung oben",
+        "bottom": "Seitensteuerung unten"
+      }
     }
   },
   "support": {
