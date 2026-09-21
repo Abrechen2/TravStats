@@ -25,47 +25,82 @@ const ISO_DATE = z
 const STRING_LIST = z.array(z.string().min(1).max(80)).max(40);
 const COUNTRY_LIST = z.array(z.string().regex(/^[A-Z]{2}$/, "ISO 3166-1 alpha-2")).max(60);
 
-export const createTripSchema = z.object({
-  name: z.string().min(1).max(200),
-  description: z.string().max(1000).optional(),
-  color: HEX_COLOR.optional(),
-  // Phase-1 metadata redesign — every field optional on create.
-  startDate: ISO_DATE.optional(),
-  endDate: ISO_DATE.optional(),
-  status: z.enum(TRIP_STATUSES).optional(),
-  category: z.enum(TRIP_CATEGORIES).optional(),
-  tags: STRING_LIST.optional(),
-  companions: STRING_LIST.optional(),
-  notes: z.string().max(20000).optional(),
-  summary: z.string().max(2000).optional(),
-  originLabel: z.string().max(120).optional(),
-  destinationLabel: z.string().max(120).optional(),
-  coverImageUrl: z.string().max(500).optional(),
-  icon: z.string().max(8).optional(),
-  countries: COUNTRY_LIST.optional(),
-});
+export const TRIP_DATE_ORDER_MESSAGE = "endDate must not precede startDate";
+
+/**
+ * A span is in order, or one of its ends is unknown.
+ *
+ * Trips had no such check at all: the 2026-09-20 audit created a trip running
+ * 10.08.2025 to 01.08.2025 through POST (201) and again through the real web
+ * form (PATCH 200), and both Web and Companion then showed "10. – 1. August
+ * 2025" (SRV-TRIP-DATE-001). Cruises and stays had refused this since their
+ * first schema; trips are simply where nobody wrote it down.
+ *
+ * Same day is allowed — a day trip is a trip. Only an end strictly BEFORE the
+ * start is a span that cannot have happened.
+ *
+ * Exported because a PATCH has to be judged on the span it LEAVES BEHIND, not
+ * on the one or two dates it happens to carry; `routes/trips.ts` asks the same
+ * question of the merged row.
+ */
+export function tripDatesInOrder(
+  startDate: Date | null | undefined,
+  endDate: Date | null | undefined
+): boolean {
+  if (startDate == null || endDate == null) return true;
+  return endDate.getTime() >= startDate.getTime();
+}
+
+const DATE_ORDER_ISSUE = { message: TRIP_DATE_ORDER_MESSAGE, path: ["endDate"] };
+
+export const createTripSchema = z
+  .object({
+    name: z.string().min(1).max(200),
+    description: z.string().max(1000).optional(),
+    color: HEX_COLOR.optional(),
+    // Phase-1 metadata redesign — every field optional on create.
+    startDate: ISO_DATE.optional(),
+    endDate: ISO_DATE.optional(),
+    status: z.enum(TRIP_STATUSES).optional(),
+    category: z.enum(TRIP_CATEGORIES).optional(),
+    tags: STRING_LIST.optional(),
+    companions: STRING_LIST.optional(),
+    notes: z.string().max(20000).optional(),
+    summary: z.string().max(2000).optional(),
+    originLabel: z.string().max(120).optional(),
+    destinationLabel: z.string().max(120).optional(),
+    coverImageUrl: z.string().max(500).optional(),
+    icon: z.string().max(8).optional(),
+    countries: COUNTRY_LIST.optional(),
+  })
+  .refine((d) => tripDatesInOrder(d.startDate, d.endDate), DATE_ORDER_ISSUE);
 
 // PATCH semantics: explicit `null` clears nullable string fields, `undefined`
 // leaves them untouched. Arrays accept the new full list (no element-level
 // patch — keeps the contract small).
-export const updateTripSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
-  description: z.string().max(1000).nullable().optional(),
-  color: HEX_COLOR.optional(),
-  startDate: ISO_DATE.nullable().optional(),
-  endDate: ISO_DATE.nullable().optional(),
-  status: z.enum(TRIP_STATUSES).optional(),
-  category: z.enum(TRIP_CATEGORIES).nullable().optional(),
-  tags: STRING_LIST.optional(),
-  companions: STRING_LIST.optional(),
-  notes: z.string().max(20000).nullable().optional(),
-  summary: z.string().max(2000).nullable().optional(),
-  originLabel: z.string().max(120).nullable().optional(),
-  destinationLabel: z.string().max(120).nullable().optional(),
-  coverImageUrl: z.string().max(500).nullable().optional(),
-  icon: z.string().max(8).nullable().optional(),
-  countries: COUNTRY_LIST.optional(),
-});
+export const updateTripSchema = z
+  .object({
+    name: z.string().min(1).max(200).optional(),
+    description: z.string().max(1000).nullable().optional(),
+    color: HEX_COLOR.optional(),
+    startDate: ISO_DATE.nullable().optional(),
+    endDate: ISO_DATE.nullable().optional(),
+    status: z.enum(TRIP_STATUSES).optional(),
+    category: z.enum(TRIP_CATEGORIES).nullable().optional(),
+    tags: STRING_LIST.optional(),
+    companions: STRING_LIST.optional(),
+    notes: z.string().max(20000).nullable().optional(),
+    summary: z.string().max(2000).nullable().optional(),
+    originLabel: z.string().max(120).nullable().optional(),
+    destinationLabel: z.string().max(120).nullable().optional(),
+    coverImageUrl: z.string().max(500).nullable().optional(),
+    icon: z.string().max(8).nullable().optional(),
+    countries: COUNTRY_LIST.optional(),
+  })
+  // Only catches a PATCH that carries BOTH dates. A patch that moves one of
+  // them is checked against the stored row in `routes/trips.ts`, because the
+  // schema cannot see what it is being merged into.
+  .refine((d) => tripDatesInOrder(d.startDate, d.endDate), DATE_ORDER_ISSUE);
 
 export const assignFlightsSchema = z.object({
   flightIds: z.array(z.string().uuid()).min(1),
@@ -104,31 +139,35 @@ export type TripCategory = (typeof TRIP_CATEGORIES)[number];
 
 /* ---------------- Trip stops ---------------- */
 
-export const createStopSchema = z.object({
-  title: z.string().min(1).max(200),
-  domain: z.string().max(40).optional(),
-  sourceId: z.string().max(120).optional(),
-  description: z.string().max(2000).optional(),
-  startDate: ISO_DATE.optional(),
-  endDate: ISO_DATE.optional(),
-  lat: z.number().min(-90).max(90).optional(),
-  lon: z.number().min(-180).max(180).optional(),
-  notes: z.string().max(20000).optional(),
-  orderIdx: z.number().int().min(0).optional(),
-});
+export const createStopSchema = z
+  .object({
+    title: z.string().min(1).max(200),
+    domain: z.string().max(40).optional(),
+    sourceId: z.string().max(120).optional(),
+    description: z.string().max(2000).optional(),
+    startDate: ISO_DATE.optional(),
+    endDate: ISO_DATE.optional(),
+    lat: z.number().min(-90).max(90).optional(),
+    lon: z.number().min(-180).max(180).optional(),
+    notes: z.string().max(20000).optional(),
+    orderIdx: z.number().int().min(0).optional(),
+  })
+  .refine((d) => tripDatesInOrder(d.startDate, d.endDate), DATE_ORDER_ISSUE);
 
-export const updateStopSchema = z.object({
-  title: z.string().min(1).max(200).optional(),
-  domain: z.string().max(40).nullable().optional(),
-  sourceId: z.string().max(120).nullable().optional(),
-  description: z.string().max(2000).nullable().optional(),
-  startDate: ISO_DATE.nullable().optional(),
-  endDate: ISO_DATE.nullable().optional(),
-  lat: z.number().min(-90).max(90).nullable().optional(),
-  lon: z.number().min(-180).max(180).nullable().optional(),
-  notes: z.string().max(20000).nullable().optional(),
-  orderIdx: z.number().int().min(0).optional(),
-});
+export const updateStopSchema = z
+  .object({
+    title: z.string().min(1).max(200).optional(),
+    domain: z.string().max(40).nullable().optional(),
+    sourceId: z.string().max(120).nullable().optional(),
+    description: z.string().max(2000).nullable().optional(),
+    startDate: ISO_DATE.nullable().optional(),
+    endDate: ISO_DATE.nullable().optional(),
+    lat: z.number().min(-90).max(90).nullable().optional(),
+    lon: z.number().min(-180).max(180).nullable().optional(),
+    notes: z.string().max(20000).nullable().optional(),
+    orderIdx: z.number().int().min(0).optional(),
+  })
+  .refine((d) => tripDatesInOrder(d.startDate, d.endDate), DATE_ORDER_ISSUE);
 
 export type CreateStopInput = z.infer<typeof createStopSchema>;
 export type UpdateStopInput = z.infer<typeof updateStopSchema>;

@@ -53,6 +53,7 @@
     "categoryLabel": "Kategorie",
     "startDateLabel": "Startdatum",
     "endDateLabel": "Enddatum",
+    "endBeforeStart": "Das Ende darf nicht vor dem Beginn liegen.",
     "originLabel": "Herkunft",
     "destinationLabel": "Ziel",
     "tagsLabel": "Tags (kommagetrennt)",

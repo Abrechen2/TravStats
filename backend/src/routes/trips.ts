@@ -14,6 +14,7 @@ import {
   updateBookingSchema,
   TRIP_COLORS,
 } from "../schemas/trip";
+import { assertMergedTripDates } from "../services/trip/tripDateOrder";
 import logger from "../utils/logger";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { deriveTripStatus } from "../shared/statusDerivation";
@@ -523,6 +524,11 @@ router.patch(
 
       const body = updateTripSchema.parse(req.body);
       if (await refusesCoverImage(userId, body.coverImageUrl, res)) return;
+
+      // Judged on what the PATCH leaves behind — moving only the end date
+      // before the stored start would otherwise answer 200 and store a trip
+      // that ends before it begins (SRV-TRIP-DATE-001).
+      assertMergedTripDates(body, existing);
 
       // Status derivation (spec 2026-07-17-status-from-dates): the schema
       // still ACCEPTS `status` for API compat (never a 400), but the route
