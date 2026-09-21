@@ -4,9 +4,16 @@ import https from "https";
 /**
  * One HTTP text request with a HARD deadline.
  *
- * The lodging parsers talk to Ollama, which the owner runs on weak hardware
- * and which has timed out in production — so no parse may depend on it, and
- * every call must come back inside its budget whatever the server does.
+ * Every parser here talks to Ollama, which the owner runs on weak hardware and
+ * which has timed out in production — so no parse may depend on it, and every
+ * call must come back inside its budget whatever the server does.
+ *
+ * It lives under `services/http` rather than under `services/lodging`, where it
+ * grew, because the flight and cruise parsers use it too now: they each carried
+ * their own `fetchJson` that checked NOTHING, and a provider answering HTTP 503
+ * with a plausible-looking body was accepted as a parse result (audit
+ * SRV-LLM-HTTP-001, measured 2026-09-20 — `/parse-email` reported
+ * `parserUsed=ollama` and HTTP 200 for a 503).
  *
  * Three things `http.request` plus `req.setTimeout()` does NOT give you, and
  * which this helper does (AUD-058, measured on the booking parser):
@@ -84,7 +91,7 @@ export function requestTextWithDeadline(options: BoundedRequestOptions): Promise
           if (settled) return;
           const statusCode = res.statusCode ?? 0;
           if (statusCode !== 200) {
-            fail(new Error(`Ollama returned HTTP ${statusCode}`));
+            fail(new Error(`${options.label} returned HTTP ${statusCode}`));
             return;
           }
           settle(() => resolve(data));

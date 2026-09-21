@@ -1,5 +1,6 @@
 import logger from "../../utils/logger";
-import { requestTextWithDeadline } from "./boundedHttp";
+import { requestTextWithDeadline } from "../http/boundedHttp";
+import { LLM_AVAILABILITY_TIMEOUT_MS, llmParseTimeoutMs } from "../http/llmTimeout";
 import {
   splitPostcodeFromCity,
   cleanText,
@@ -49,18 +50,19 @@ export interface LodgingParseResult {
   fallbackReason?: string;
 }
 
-const DEFAULT_OLLAMA_TIMEOUT_MS = 120_000;
-const AVAILABILITY_TIMEOUT_MS = 5_000;
+const AVAILABILITY_TIMEOUT_MS = LLM_AVAILABILITY_TIMEOUT_MS;
 
 /**
- * Generate-request timeout, overridable via `LODGING_OLLAMA_TIMEOUT_MS` (test-only
- * escape hatch — production always gets the 120s default). Read at call time, not
- * at module load, so tests can shrink it without needing to re-import the module.
+ * Generate-request timeout. The default is the SHARED one now (see
+ * `services/http/llmTimeout.ts`): this parser's own 120 s was picked against
+ * how long a model takes rather than against how long the request lives, and
+ * a 60 s proxy cut it in half — the same defect the flight and cruise parsers
+ * had at 300 s (audit SRV-LLM-TIMEOUT-001). `LODGING_OLLAMA_TIMEOUT_MS` still
+ * wins where it is set; the suites use it to shrink the budget to
+ * milliseconds.
  */
 function getOllamaTimeoutMs(): number {
-  const raw = process.env.LODGING_OLLAMA_TIMEOUT_MS;
-  const parsed = raw ? Number(raw) : NaN;
-  return Number.isFinite(parsed) && parsed > 0 ? parsed : DEFAULT_OLLAMA_TIMEOUT_MS;
+  return llmParseTimeoutMs("LODGING_OLLAMA_TIMEOUT_MS");
 }
 
 // Exported for the prompt-contract tests — date-anchoring and
