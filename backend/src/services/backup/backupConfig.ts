@@ -20,7 +20,23 @@ export interface RestoreOptions {
   scope: "full" | "database" | "files";
   createBackupBefore?: boolean;
   targetDatabaseUrl?: string;
+  /**
+   * The caller has been told that the archive's encrypted values were written
+   * with a different instance key and cannot be read here, and wants the
+   * restore anyway. Without it such a restore is refused before it writes —
+   * see `inspectRestoreArchive` in backupRestore.ts.
+   */
+  acceptEncryptionKeyChange?: boolean;
 }
+
+/**
+ * The `metadata.json` key naming the encryption key a dump was written with.
+ *
+ * Declared here rather than in either half, because `backupFiles.ts` writes it
+ * and `backupRestore.ts` reads it, and a spelling that drifts would turn the
+ * mismatch check into a check that never fires.
+ */
+export const ENCRYPTION_FINGERPRINT_KEY = "encryptionKeyFingerprint";
 
 // Use BACKUP_PATH from environment if set (e.g., in Docker: /app/data/backups)
 // Otherwise use a platform-appropriate default

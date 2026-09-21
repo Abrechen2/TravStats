@@ -4,7 +4,7 @@ import type { BackupScheduleSettings } from "../../lib/api/backup";
 import { useToastStore } from "../../store/toastStore";
 import { format } from "date-fns";
 import { logger } from "../../lib/logger";
-import { extractApiErrorMessage } from "../../lib/apiError";
+import { apiErrorMachineCode, extractApiErrorMessage } from "../../lib/apiError";
 import { useTranslation } from "../../hooks/useTranslation";
 // The shared frame: role=dialog, aria-modal, Escape, focus in and back out,
 // and a panel that scrolls instead of running off a 320px screen (AUD-037).
@@ -31,15 +31,33 @@ interface Backup {
 interface RestoreModalProps {
   backup: Backup;
   onClose: () => void;
-  onConfirm: (scope: "full" | "database" | "files", createBackupBefore: boolean) => void;
+  onConfirm: (
+    scope: "full" | "database" | "files",
+    createBackupBefore: boolean,
+    acceptEncryptionKeyChange: boolean
+  ) => void;
+  /**
+   * The server refused the last attempt because the archive's encrypted values
+   * were written with a different instance key (audit SRV-RESTORE-001). The
+   * dialog stays open and asks for that acknowledgement rather than closing on
+   * a toast: the admin is mid-recovery, and what is needed from them is a
+   * decision, not an error message.
+   */
+  encryptionKeyMismatch?: boolean;
 }
 
 /** Exported for its own test — the dialog contract is worth holding on its
  *  own, without driving the whole backup page to reach it. */
-export function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps): JSX.Element {
+export function RestoreModal({
+  backup,
+  onClose,
+  onConfirm,
+  encryptionKeyMismatch = false,
+}: RestoreModalProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const [scope, setScope] = useState<"full" | "database" | "files">("full");
   const [createBackupBefore, setCreateBackupBefore] = useState(true);
+  const [acceptKeyChange, setAcceptKeyChange] = useState(false);
 
   const [confirmText, setConfirmText] = useState("");
 
@@ -56,11 +74,15 @@ export function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps):
     }
   };
 
+  const mayConfirm =
+    confirmText === t("admin:backup.restore.confirmText") &&
+    (!encryptionKeyMismatch || acceptKeyChange);
+
   const handleConfirm = () => {
-    if (confirmText !== t("admin:backup.restore.confirmText")) {
+    if (!mayConfirm) {
       return;
     }
-    onConfirm(scope, createBackupBefore);
+    onConfirm(scope, createBackupBefore, acceptKeyChange);
   };
 
   return (
@@ -77,7 +99,7 @@ export function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps):
           </button>
           <button
             onClick={handleConfirm}
-            disabled={confirmText !== t("admin:backup.restore.confirmText")}
+            disabled={!mayConfirm}
             className="btn-danger disabled:opacity-50 disabled:cursor-not-allowed"
           >
             {t("admin:backup.restore.confirmButton")}
@@ -97,6 +119,27 @@ export function RestoreModal({ backup, onClose, onConfirm }: RestoreModalProps):
             {t("admin:backup.restore.backupFrom", { date: formatDate(backup.completedAt) })}
           </p>
         </div>
+
+        {encryptionKeyMismatch && (
+          <div
+            className="border rounded-lg p-4"
+            style={{ background: "var(--bg-elevated)", borderColor: "var(--danger)" }}
+          >
+            <p className="font-semibold" style={{ color: "var(--danger)" }}>
+              {t("admin:backup.restore.keyMismatchTitle")}
+            </p>
+            <p className="text-sm mt-2">{t("admin:backup.restore.keyMismatchBody")}</p>
+            <label className="flex items-start gap-3 mt-3">
+              <input
+                type="checkbox"
+                checked={acceptKeyChange}
+                onChange={(e) => setAcceptKeyChange(e.target.checked)}
+                className="checkbox"
+              />
+              <span>{t("admin:backup.restore.keyMismatchAcknowledge")}</span>
+            </label>
+          </div>
+        )}
 
         <div>
           <label className="label" htmlFor="restore-scope">
@@ -151,6 +194,10 @@ export default function BackupManagement(): JSX.Element {
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
   const [restoreModal, setRestoreModal] = useState<Backup | null>(null);
+  /** Set when the server refused the last restore over the encryption key.
+   *  Cleared whenever the dialog opens or closes, so an acknowledgement can
+   *  never carry over to a different archive. */
+  const [keyMismatch, setKeyMismatch] = useState(false);
   const [syncingId, setSyncingId] = useState<string | null>(null);
   const [webdavEnabled, setWebdavEnabled] = useState(false);
   const [status, setStatus] = useState<{
@@ -269,7 +316,8 @@ export default function BackupManagement(): JSX.Element {
 
   const handleRestore = async (
     scope: "full" | "database" | "files",
-    createBackupBefore: boolean
+    createBackupBefore: boolean,
+    acceptEncryptionKeyChange: boolean
   ) => {
     if (!restoreModal) return;
 
@@ -277,16 +325,35 @@ export default function BackupManagement(): JSX.Element {
       await backupApi.restore(restoreModal.id, {
         scope,
         createBackupBefore,
+        acceptEncryptionKeyChange,
       });
       addToast("success", t("admin:backup.toasts.restoring"));
       setRestoreModal(null);
+      setKeyMismatch(false);
       setTimeout(() => {
         loadBackups();
         loadStatus();
       }, 2000);
     } catch (error) {
       logger.error("Failed to restore backup:", error);
-      addToast("error", t("admin:backup.toasts.restoreFailed"));
+      // The preflight refusals each say something the generic toast cannot,
+      // and two of them are the whole point of refusing: nothing was written.
+      // A single "restore failed" over an archive whose credentials merely
+      // cannot be decrypted would send the admin looking for a broken file.
+      switch (apiErrorMachineCode(error)) {
+        case "RESTORE_ENCRYPTION_KEY_MISMATCH":
+          // Modal stays open — it now asks for the acknowledgement.
+          setKeyMismatch(true);
+          break;
+        case "RESTORE_ARCHIVE_INCOMPLETE":
+          addToast("error", t("admin:backup.restore.archiveIncomplete"));
+          break;
+        case "RESTORE_ARCHIVE_UNREADABLE":
+          addToast("error", t("admin:backup.restore.archiveUnreadable"));
+          break;
+        default:
+          addToast("error", t("admin:backup.toasts.restoreFailed"));
+      }
     }
   };
 
@@ -594,7 +661,10 @@ export default function BackupManagement(): JSX.Element {
                             {t("admin:backup.actions.download")}
                           </button>
                           <button
-                            onClick={() => setRestoreModal(backup)}
+                            onClick={() => {
+                              setKeyMismatch(false);
+                              setRestoreModal(backup);
+                            }}
                             className="hover:underline"
                             style={{ color: "var(--warning)" }}
                           >
@@ -635,8 +705,12 @@ export default function BackupManagement(): JSX.Element {
       {restoreModal && (
         <RestoreModal
           backup={restoreModal}
-          onClose={() => setRestoreModal(null)}
+          onClose={() => {
+            setRestoreModal(null);
+            setKeyMismatch(false);
+          }}
           onConfirm={handleRestore}
+          encryptionKeyMismatch={keyMismatch}
         />
       )}
     </div>

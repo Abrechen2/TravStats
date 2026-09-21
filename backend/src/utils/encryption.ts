@@ -220,6 +220,31 @@ export function encryptApiKey(apiKey: string | null | undefined): string | null 
   return CIPHERTEXT_MARKER + encrypt(apiKey);
 }
 
+/**
+ * A short, non-secret name for the key this instance encrypts with.
+ *
+ * It exists so a backup archive can say WHICH key produced the ciphertext it
+ * carries. Without that, a restore onto an instance with different secrets
+ * completes, reports success, and leaves every stored API key, SMTP password
+ * and Immich/Dawarich token as bytes nothing on the machine can read. Measured
+ * on 2026-09-20 (audit SRV-RESTORE-001): the settings page showed `hasKey=true`
+ * for an Immich connection whose test call answered 400, because the row was
+ * there and only the plaintext was gone.
+ *
+ * Domain-separated and truncated on purpose: what travels in the archive is
+ * eight bytes of a hash over a prefix plus 32 random bytes. It identifies the
+ * key, cannot be turned back into it, and is useless against anything else
+ * hashed elsewhere.
+ */
+export function encryptionKeyFingerprint(): string {
+  return crypto
+    .createHash("sha256")
+    .update("travstats-encryption-key-fingerprint:")
+    .update(getEncryptionKey())
+    .digest("hex")
+    .slice(0, 16);
+}
+
 /** Does this value actually decrypt? The auth tag answers; nothing else can. */
 function looksDecryptable(value: string): boolean {
   try {
