@@ -114,6 +114,7 @@
     "components/lodging/ChainPicker.tsx",
     "components/lodging/LodgingFormModal.tsx",
     "components/lodging/LodgingImportPreviewModal.tsx",
+    "components/lodging/LodgingImportPreviewRow.tsx",
     "components/lodging/StayEditor.tsx",
     "components/places/PlaceImportPreviewModal.tsx",
     "pages/AircraftPage.tsx",
