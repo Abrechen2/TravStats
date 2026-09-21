@@ -421,6 +421,26 @@
       "message_one": "The tour “{{name}}” with {{count}} stop will be deleted permanently, along with its legs and the tracks uploaded to it. The trip itself and its places are kept.",
       "message_other": "The tour “{{name}}” with {{count}} stops will be deleted permanently, along with its legs and the tracks uploaded to it. The trip itself and its places are kept.",
       "confirm": "Delete tour"
+    },
+    "pageTitle": "Tours",
+    "newTour": "New tour",
+    "pageEmpty": "No tour yet. A tour can belong to a trip, or stand on its own.",
+    "noTrip": "no trip",
+    "modeLabel": "Kind",
+    "backToTours": "Back to tours",
+    "points": {
+      "empty": "No points yet. Add the first one.",
+      "titlePlaceholder": "Point name",
+      "lat": "Latitude",
+      "lon": "Longitude",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Remove",
+      "add": "Add point",
+      "save": "Save points",
+      "incomplete": "Every point needs a name and both coordinates.",
+      "saveError": "The points could not be saved.",
+      "heading": "Points"
     }
   },
   "head": {

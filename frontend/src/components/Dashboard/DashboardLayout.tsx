@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useNavigate } from "react-router-dom";
 import AppShell from "../ui/AppShell";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -45,6 +46,7 @@ export function DashboardLayout({
   // Ensures the dashboard namespace is loaded for children that use t("dashboard:...")
   const { t } = useTranslation(["dashboard", "flights"]);
   const { tab, setTab } = useDashboardRoute();
+  const navigate = useNavigate();
   const [addingDomain, setAddingDomain] = useState<AddableDomain | null>(null);
   const lodgingAdapter = useLodgingImportAdapter();
   const cruiseAdapter = useCruiseImportAdapter();
@@ -85,7 +87,10 @@ export function DashboardLayout({
   // strip's visibility does — instance flag AND user toggle — where the menu
   // used to offer "POI hinzufügen" on the user toggle alone, and then did
   // nothing with the click (#288).
-  const addableDomains = { ...enabledDomains, poi: placesVisible };
+  //
+  // "tour" is always offered: it is not a domain with a toggle, and a tour
+  // that belongs to no trip has no other place it could be started from.
+  const addableDomains = { ...enabledDomains, poi: placesVisible, tour: true };
 
   // A truly empty account: nothing in any domain. Shown only after the counts
   // have loaded, and only on the "all" landing tab — a per-domain tab already
@@ -137,7 +142,19 @@ export function DashboardLayout({
         )}
         <div style={{ position: "absolute", top: 16, right: 16, zIndex: 30 }}>
           {tab === "all" ? (
-            <AddDomainPicker enabled={addableDomains} onPick={setAddingDomain} />
+            <AddDomainPicker
+              enabled={addableDomains}
+              onPick={(domain) => {
+                // A tour opens a page, not a modal: it is made of an ordered
+                // list of points, which is not a thing to type into a dialog
+                // floating over the map.
+                if (domain === "tour") {
+                  navigate("/tours");
+                  return;
+                }
+                setAddingDomain(domain);
+              }}
+            />
           ) : (
             // `isValidDomain` narrows `tab` to `DomainKey` — the actual set
             // this button knows how to handle — rather than a cast that

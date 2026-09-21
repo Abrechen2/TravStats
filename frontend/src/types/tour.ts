@@ -57,7 +57,8 @@ export type RoutingProviderId = (typeof ROUTING_PROVIDER_IDS)[number];
 
 export interface TourRoute {
   id: string;
-  tripId: string;
+  /** `null` for a standalone tour — one that belongs to no trip. */
+  tripId: string | null;
   name: string;
   mode: LegMode;
   orderIdx: number;

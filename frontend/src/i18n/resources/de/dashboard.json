@@ -204,7 +204,8 @@
     "flight": "Flug",
     "cruise": "Kreuzfahrt",
     "poi": "Ort",
-    "lodging": "Unterkunft"
+    "lodging": "Unterkunft",
+    "tour": "Tour"
   },
   "controls": {
     "mode": "Modus",

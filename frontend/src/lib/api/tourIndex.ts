@@ -13,8 +13,10 @@ import type { TourGeometry } from "../../types/tour";
  */
 export interface TourSummary {
   id: string;
-  tripId: string;
-  tripName: string;
+  /** `null` for a standalone tour. */
+  tripId: string | null;
+  /** `null` where there is no trip whose name to show. */
+  tripName: string | null;
   name: string;
   mode: string;
   distanceKm: number;

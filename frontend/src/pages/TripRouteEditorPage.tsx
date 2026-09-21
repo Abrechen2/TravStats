@@ -4,12 +4,13 @@ import { Link, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import TripMap from "../components/Trips/TripMap";
 import TourStopAssigner from "../components/Trips/TourStopAssigner";
+import TourPointEditor from "../components/Trips/TourPointEditor";
 import TourLegList from "../components/Trips/TourLegList";
 import TourTrackList from "../components/Trips/TourTrackList";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTourTracks } from "../hooks/useTourTracks";
 import { tripsApi } from "../lib/api";
-import { toursApi } from "../lib/api/tours";
+import { toursApi, type TourPointInput } from "../lib/api/tours";
 import { dawarichFailureKey, dawarichFailureKind } from "../lib/api/dawarich";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { findCoveringTrackId } from "../lib/trackCoverage";
@@ -83,6 +84,12 @@ export default function TripRouteEditorPage(): JSX.Element {
   const [trip, setTrip] = useState<Trip | null>(null);
   const [route, setRoute] = useState<TourRoute | null>(null);
   const [legs, setLegs] = useState<TourLeg[]>([]);
+  /* The section's OWN points, as the endpoint returns them. For a tour on
+     a trip they are a subset of `trip.stops` and the assigner works from
+     the trip; for a standalone tour there is no trip, and these are the
+     only points there are. */
+  const [sectionStops, setSectionStops] = useState<TourStop[]>([]);
+  const [savingPoints, setSavingPoints] = useState(false);
   const [geometry, setGeometry] = useState<TourGeometry | null>(null);
   // Whether a routing provider is configured and usable right now — see
   // `routingAvailable` on `toursApi.get()`. Defaults to `false` (never a
@@ -107,11 +114,15 @@ export default function TripRouteEditorPage(): JSX.Element {
   }, []);
 
   const load = useCallback(async (): Promise<void> => {
-    if (!id || !routeId) return;
+    if (!routeId) return;
     setFailure(null);
     try {
+      /* `id` is absent on `/tours/:routeId` — a tour that belongs to no
+         trip. Then there is no trip to fetch and none to show; every
+         section call takes the trip-less path instead (see `sectionPath`
+         in `lib/api/tours.ts`), so the rest of this page is unchanged. */
       const [tripData, sectionData, geometryData] = await Promise.all([
-        tripsApi.getById(id),
+        id === undefined ? Promise.resolve(null) : tripsApi.getById(id),
         toursApi.get(id, routeId),
         toursApi.geometry(id, routeId),
       ]);
@@ -120,6 +131,7 @@ export default function TripRouteEditorPage(): JSX.Element {
       setTrip(tripData);
       setRoute(sectionData.route);
       setLegs(sectionData.legs);
+      setSectionStops(sectionData.stops);
       setRoutingAvailable(sectionData.routingAvailable);
       setGeometry(geometryData);
     } catch (err) {
@@ -163,7 +175,10 @@ export default function TripRouteEditorPage(): JSX.Element {
   // `TourStopAssigner` has no other way to tell "not in any section" apart
   // from "in a section that is not this one".
   const assignerStops = useMemo<TourStop[]>(() => {
-    const stopsWithRoute = (trip?.stops ?? []) as unknown as StopWithRoute[];
+    // No trip means no timeline to choose from: the section's own points
+    // ARE the list, and they are all already on it.
+    if (trip === null) return sectionStops;
+    const stopsWithRoute = (trip.stops ?? []) as unknown as StopWithRoute[];
     return stopsWithRoute.map((s) => ({
       id: s.id,
       title: s.title,
@@ -171,7 +186,7 @@ export default function TripRouteEditorPage(): JSX.Element {
       lon: s.lon,
       routeOrderIdx: s.routeId === routeId ? s.routeOrderIdx : null,
     }));
-  }, [trip, routeId]);
+  }, [trip, sectionStops, routeId]);
 
   const stopTitleById = useMemo(() => {
     const map = new Map<string, string>();
@@ -218,6 +233,34 @@ export default function TripRouteEditorPage(): JSX.Element {
   const tourGeometries = useMemo(
     () => (geometry && route ? [{ routeId: route.id, name: route.name, geometry }] : []),
     [geometry, route?.id, route?.name]
+  );
+
+  /**
+   * The standalone tour's write path: one call replaces the whole point
+   * list, and the response carries the section, its points and the
+   * recomputed legs — so nothing is re-read and the page cannot briefly
+   * show a list that disagrees with its own kilometres.
+   */
+  const handleSavePoints = useCallback(
+    async (points: TourPointInput[]): Promise<void> => {
+      if (!routeId) return;
+      setSavingPoints(true);
+      try {
+        const result = await toursApi.replacePoints(routeId, points);
+        if (!mountedRef.current) return;
+        setRoute(result.route);
+        setSectionStops(result.stops);
+        setLegs(result.legs);
+        // The geometry is derived from the legs that just changed; it is
+        // the one thing the write does not return.
+        setGeometry(await toursApi.geometry(undefined, routeId));
+      } catch {
+        if (mountedRef.current) addToast("error", t("trips:tours.points.saveError"));
+      } finally {
+        if (mountedRef.current) setSavingPoints(false);
+      }
+    },
+    [routeId, addToast, t]
   );
 
   const handleAssignChange = useCallback(
@@ -442,7 +485,7 @@ export default function TripRouteEditorPage(): JSX.Element {
             </button>
           )}
           <div className="mt-6">
-            <Link to={id ? `/trips/${id}?tab=tours` : "/trips"} className="text-sm underline">
+            <Link to={id ? `/trips/${id}?tab=tours` : "/tours"} className="text-sm underline">
               {t("trips:tours.backToTrip")}
             </Link>
           </div>
@@ -456,10 +499,10 @@ export default function TripRouteEditorPage(): JSX.Element {
       <div className="space-y-6">
         <header>
           <Link
-            to={`/trips/${id}?tab=tours`}
+            to={id ? `/trips/${id}?tab=tours` : "/tours"}
             className="text-xs text-(--text-muted) hover:underline"
           >
-            ← {t("trips:tours.backToTrip")}
+            ← {t(id ? "trips:tours.backToTrip" : "trips:tours.backToTours")}
           </Link>
           <h1 className="t-screen-title mt-1">{route.name}</h1>
           <p className="text-sm text-(--text-muted)">
@@ -467,11 +510,30 @@ export default function TripRouteEditorPage(): JSX.Element {
           </p>
         </header>
 
-        <TripMap trip={trip} tourGeometries={tourGeometries} />
+        {/* The map draws a TRIP. A standalone tour has none — its own
+            geometry is on the dashboard's tour tab, and inventing an empty
+            trip to hand this component would be a lie the map would then
+            draw. */}
+        {trip !== null && <TripMap trip={trip} tourGeometries={tourGeometries} />}
 
         <section>
-          <h2 className="text-lg font-semibold mb-3">{t("trips:tours.stopsHeading")}</h2>
-          <TourStopAssigner stops={assignerStops} onChange={handleAssignChange} />
+          <h2 className="text-lg font-semibold mb-3">
+            {trip === null ? t("trips:tours.points.heading") : t("trips:tours.stopsHeading")}
+          </h2>
+          {trip === null ? (
+            <TourPointEditor
+              points={sectionStops.map((s) => ({
+                id: s.id,
+                title: s.title,
+                lat: s.lat ?? NaN,
+                lon: s.lon ?? NaN,
+              }))}
+              saving={savingPoints}
+              onSave={(points) => void handleSavePoints(points)}
+            />
+          ) : (
+            <TourStopAssigner stops={assignerStops} onChange={handleAssignChange} />
+          )}
         </section>
 
         <section>
