@@ -20,6 +20,19 @@ export const LEG_MODES = ["road", "ferry", "rail", "foot", "bike"] as const;
 export type LegMode = (typeof LEG_MODES)[number];
 
 /**
+ * The modes a NEW leg or section may be created with.
+ *
+ * "rail" is not among them since 2026-09-21 and is still a perfectly valid
+ * stored value — the two lists exist precisely so that withdrawing an offer
+ * does not invalidate data somebody already has. Alex, 2026-09-20: a train
+ * journey deserves the real thing, a domain with an API that can draw the
+ * line the train actually took, rather than a tour mode that can only draw
+ * a road detour around the track. Owner agreed the same evening. Put it
+ * back here the day that domain does NOT happen.
+ */
+export const SELECTABLE_LEG_MODES = LEG_MODES.filter((mode) => mode !== "rail");
+
+/**
  * Leg modes a routing provider can meaningfully answer. Mirrors
  * `RoutableMode`/`isRoutableMode` in
  * `backend/src/services/tour/routing/types.ts` — ferry and rail are

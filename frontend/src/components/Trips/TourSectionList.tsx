@@ -5,7 +5,7 @@ import { toursApi } from "../../lib/api/tours";
 import { useToastStore } from "../../store/toastStore";
 import ConfirmModal from "../Training/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
-import { LEG_MODES, type LegMode, type TourRoute } from "../../types/tour";
+import { SELECTABLE_LEG_MODES, type LegMode, type TourRoute } from "../../types/tour";
 
 interface Props {
   tripId: string;
@@ -133,7 +133,7 @@ export default function TourSectionList({ tripId }: Props): JSX.Element {
             onChange={(e) => setNewMode(e.target.value as LegMode)}
             className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
           >
-            {LEG_MODES.map((mode) => (
+            {SELECTABLE_LEG_MODES.map((mode) => (
               <option key={mode} value={mode}>
                 {t(`trips:tours.mode.${mode}`)}
               </option>

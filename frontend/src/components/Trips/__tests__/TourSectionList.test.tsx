@@ -168,4 +168,21 @@ describe("TourSectionList", () => {
     await waitFor(() => expect(toursApi.remove).toHaveBeenCalled());
     expect(screen.getByText("Südnorwegen")).toBeInTheDocument();
   });
+
+  it("offers no rail mode for a new section, while a stored rail tour still reads back", async () => {
+    // Alex, 2026-09-20, owner agreed: a train journey is held back for a
+    // domain of its own with a real route API, so the tour editor stops
+    // offering it. Withdrawing the OFFER must not invalidate data — a tour
+    // already saved as rail still renders its own label.
+    vi.mocked(toursApi.list).mockResolvedValue([{ ...route("r1", "Zugfahrt"), mode: "rail" }]);
+    renderList("t1");
+    await screen.findByText("Zugfahrt");
+    expect(screen.getByText("trips:tours.mode.rail")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("trips:tours.newSection"));
+    const options = Array.from(screen.getByRole("combobox").querySelectorAll("option"), (o) =>
+      o.getAttribute("value")
+    );
+    expect(options).toEqual(["road", "ferry", "foot", "bike"]);
+  });
 });
