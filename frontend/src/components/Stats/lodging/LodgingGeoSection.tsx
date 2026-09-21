@@ -5,6 +5,7 @@ import type { LodgingPlace, LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import RankedBarList from "./RankedBarList";
+import { formatLatitude as formatLat, formatLongitude as formatLon } from "../../../lib/hemisphere";
 
 const LODGING_ACCENT = "var(--domain-lodging, #d4778f)";
 const LIST_LIMIT = 8;
@@ -19,15 +20,6 @@ interface Props {
    * that screen never shows.
    */
   evidenceScope?: EvidenceScopeParams;
-}
-
-/** "52.5164° N" — the hemisphere letter reads faster than a minus sign. */
-function formatLat(lat: number): string {
-  return `${Math.abs(lat).toFixed(2)}° ${lat >= 0 ? "N" : "S"}`;
-}
-
-function formatLon(lon: number): string {
-  return `${Math.abs(lon).toFixed(2)}° ${lon >= 0 ? "E" : "W"}`;
 }
 
 function placeLabel(place: LodgingPlace): string {

@@ -4,6 +4,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import type { PoiStatsDetail } from "../../../lib/stats/poiStatsDetail";
 import StatCard from "../StatCard";
 import { formatDate as formatUserDate } from "../../../lib/displayFormat";
+import { formatLatitude } from "../../../lib/hemisphere";
 
 interface Props {
   detail: PoiStatsDetail;
@@ -82,7 +83,7 @@ export default function PoiFunSection({ detail, accent, locale }: Props): JSX.El
         valueSize="sm"
         title={t("places:stats.fun.northernmost")}
         value={detail.northernmost.name}
-        description={`${detail.northernmost.lat.toFixed(2)}° N`}
+        description={formatLatitude(detail.northernmost.lat)}
       />
     );
   }
@@ -95,9 +96,7 @@ export default function PoiFunSection({ detail, accent, locale }: Props): JSX.El
         valueSize="sm"
         title={t("places:stats.fun.southernmost")}
         value={detail.southernmost.name}
-        description={`${Math.abs(detail.southernmost.lat).toFixed(2)}° ${
-          detail.southernmost.lat < 0 ? "S" : "N"
-        }`}
+        description={formatLatitude(detail.southernmost.lat)}
       />
     );
   }
