@@ -3,10 +3,12 @@ import { Router, Response, NextFunction } from "express";
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
-import { tourGeometryBatchSchema } from "../../schemas/tour";
+import { createTourSchema, tourGeometryBatchSchema } from "../../schemas/tour";
 import { travelledKm } from "../../services/tour/tourDistance";
 import logger from "../../utils/logger";
 import { buildRouteGeometry, RouteGeometryFeatureCollection } from "./tourLegs";
+import { toDto, ROUTE_SELECT } from "./tourRoutes";
+import { resolveTrip } from "../trips";
 
 /**
  * Dashboard-wide tour endpoints — the two things the ALL-trips map needs
@@ -36,10 +38,11 @@ const router = Router();
 
 interface TourSummaryRow {
   id: string;
-  tripId: string;
+  /** `null` for a standalone tour — one that belongs to no trip. */
+  tripId: string | null;
   name: string;
   mode: string;
-  trip: { name: string };
+  trip: { name: string } | null;
   legs: Array<{ distanceKm: number }>;
   _count: { stops: number };
   stops: Array<{ startDate: Date | null; endDate: Date | null }>;
@@ -98,7 +101,10 @@ function toTourSummary(route: TourSummaryRow): Record<string, unknown> {
   return {
     id: route.id,
     tripId: route.tripId,
-    tripName: route.trip.name,
+    // `null` for a standalone tour. The list shows the trip's name as the
+    // second line of a row; a tour with no trip simply has no second line,
+    // rather than an invented one.
+    tripName: route.trip?.name ?? null,
     name: route.name,
     mode: route.mode,
     distanceKm: travelledKm(route.legs),
@@ -124,12 +130,70 @@ router.get(
     try {
       const userId = req.userId!;
       const routes = await prisma.tripRoute.findMany({
-        where: { trip: { userId } },
+        // The section's OWN owner, not the trip's. A standalone tour has no
+        // trip to be owned through, and `where: { trip: { userId } }` does
+        // not merely fail to prove ownership for one — it silently omits it
+        // from the list, which reads as "you have no tours".
+        where: { userId },
+        // Undated and trip-less sections sort last, both for the same
+        // reason: nulls last on the trip's start date.
         orderBy: [{ trip: { startDate: "asc" } }, { orderIdx: "asc" }],
         select: TOUR_SUMMARY_SELECT,
       });
 
       res.json({ tours: routes.map(toTourSummary) });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * POST /tours
+ *
+ * Creates a tour. `tripId` is OPTIONAL: omit it and the tour stands on its
+ * own, with no trip to be read, listed or owned through (owner ruling,
+ * 2026-09-21 — "Sie können auch einzeln leben"). Where it IS given, the
+ * trip is resolved first, so this is exactly `POST /trips/:id/routes` with
+ * the trip named in the body instead of the path.
+ *
+ * `orderIdx` counts within the tour's own group — the trip's sections, or
+ * the reader's trip-less ones — because that is the group it is ordered
+ * against when listed.
+ */
+router.post(
+  "/tours",
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const { tripId, ...body } = createTourSchema.parse(req.body);
+      if (tripId != null) await resolveTrip(userId, tripId);
+
+      const last = await prisma.tripRoute.findFirst({
+        where: { userId, tripId: tripId ?? null },
+        orderBy: { orderIdx: "desc" },
+        select: { orderIdx: true },
+      });
+
+      const route = await prisma.tripRoute.create({
+        data: {
+          userId,
+          tripId: tripId ?? null,
+          name: body.name,
+          mode: body.mode,
+          color: body.color,
+          notes: body.notes,
+          startOdometerKm: body.startOdometerKm,
+          endOdometerKm: body.endOdometerKm,
+          orderIdx: last ? last.orderIdx + 1 : 0,
+        },
+        include: ROUTE_SELECT,
+      });
+
+      logger.info({ operation: "tour.create", routeId: route.id, tripId: tripId ?? null });
+      res.status(201).json({ route: toDto(route) });
     } catch (error) {
       next(error);
     }
@@ -164,7 +228,7 @@ router.post(
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
       const routes = await prisma.tripRoute.findMany({
-        where: { id: { in: parsed.data.ids }, trip: { userId } },
+        where: { id: { in: parsed.data.ids }, userId },
         select: { id: true },
       });
 

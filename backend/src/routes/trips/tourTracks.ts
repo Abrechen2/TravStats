@@ -19,8 +19,7 @@ import {
 import { createDawarichClient } from "../../services/dawarich/dawarichClient";
 import { getDawarichConnection } from "../../services/dawarich/dawarichResolver";
 import { DawarichError } from "../../services/dawarich/errors";
-import { resolveTrip } from "../trips";
-import { resolveRoute } from "./tourRoutes";
+import { resolveRouteFromRequest } from "./tourRoutes";
 import logger from "../../utils/logger";
 
 /**
@@ -180,7 +179,7 @@ export async function resolveTrack(routeId: string, trackId: string): Promise<Tr
  * other six upload routes already refuse for this account.
  */
 router.post(
-  "/trips/:id/routes/:routeId/tracks",
+  ["/trips/:id/routes/:routeId/tracks", "/tours/:routeId/tracks"],
   authenticate,
   requireWriteScope,
   rejectDemo,
@@ -188,8 +187,7 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
 
       if (!req.file) {
         throw new AppError("No GPX file uploaded", 400);
@@ -280,14 +278,13 @@ router.post(
  * confidence.
  */
 router.post(
-  "/trips/:id/routes/:routeId/tracks/dawarich",
+  ["/trips/:id/routes/:routeId/tracks/dawarich", "/tours/:routeId/tracks/dawarich"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
       const body = pullDawarichTrackSchema.parse(req.body);
 
       const stops = await prisma.tripStop.findMany({
@@ -383,14 +380,13 @@ router.post(
  * `TRACK_META_SELECT`'s doc comment for why.
  */
 router.get(
-  "/trips/:id/routes/:routeId/tracks",
+  ["/trips/:id/routes/:routeId/tracks", "/tours/:routeId/tracks"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
 
       const tracks = await prisma.tripRouteTrack.findMany({
         where: { routeId },
@@ -407,14 +403,13 @@ router.get(
 
 /** GET /trips/:id/routes/:routeId/tracks/:trackId — WITH geometry. */
 router.get(
-  "/trips/:id/routes/:routeId/tracks/:trackId",
+  ["/trips/:id/routes/:routeId/tracks/:trackId", "/tours/:routeId/tracks/:trackId"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
       const track = await resolveTrack(routeId, req.params.trackId);
 
       res.json({ track: toTrackDto(track) });
@@ -441,14 +436,13 @@ router.get(
  * adding one, which would silently blank out working, still-accurate legs.
  */
 router.delete(
-  "/trips/:id/routes/:routeId/tracks/:trackId",
+  ["/trips/:id/routes/:routeId/tracks/:trackId", "/tours/:routeId/tracks/:trackId"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
       await resolveTrack(routeId, req.params.trackId);
 
       await prisma.tripRouteTrack.delete({ where: { id: req.params.trackId } });

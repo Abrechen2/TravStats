@@ -16,6 +16,7 @@ import "./shared";
 import "./flights";
 import "./trips";
 import "./tours";
+import "./tourTracks";
 import "./tourIndex";
 import "./companions";
 import "./airports";

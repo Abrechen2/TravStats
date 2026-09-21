@@ -32,7 +32,8 @@ interface LegRow {
  */
 export function toDto(route: {
   id: string;
-  tripId: string;
+  /** `null` for a standalone tour — one that belongs to no trip. */
+  tripId: string | null;
   name: string;
   mode: string;
   orderIdx: number;
@@ -94,19 +95,48 @@ export const ROUTE_SELECT = {
   _count: { select: { stops: true } },
 } as const;
 
-/** Section must exist AND belong to a trip this user owns. */
+/**
+ * The section must exist and be OWNED by this user.
+ *
+ * Ownership is the section's own `userId` since 2026-09-21, not the trip's:
+ * a standalone tour has no trip to be owned through. Every one of these
+ * endpoints answers under two paths — `/trips/:id/routes/:routeId` and
+ * `/tours/:routeId` — and the second one has no trip in it at all.
+ *
+ * Where the caller DID name a trip, the section must actually be on that
+ * trip. That check is not ceremony: without it `/trips/A/routes/<a section
+ * of trip B>` would edit B's section, and both trips being yours is exactly
+ * the case where nobody would notice.
+ */
 export async function resolveRoute(
   userId: string,
-  tripId: string,
+  tripId: string | undefined,
   routeId: string
 ): Promise<string> {
-  await resolveTrip(userId, tripId);
   const route = await prisma.tripRoute.findFirst({
-    where: { id: routeId, tripId },
-    select: { id: true },
+    where: { id: routeId, userId },
+    select: { id: true, tripId: true },
   });
   if (!route) throw new AppError("Route not found", 404);
+  if (tripId !== undefined && route.tripId !== tripId) {
+    throw new AppError("Route not found", 404);
+  }
   return route.id;
+}
+
+/**
+ * The section named by EITHER path shape.
+ *
+ * `/trips/:id/routes/:routeId` still carries a trip, `/tours/:routeId` does
+ * not, and a standalone tour has none to carry. Where a trip IS named it is
+ * resolved first, so a trip that is not yours still answers 404 from the
+ * trip rather than leaking the existence of a section through a different
+ * error.
+ */
+export async function resolveRouteFromRequest(userId: string, req: AuthRequest): Promise<string> {
+  const tripId = req.params.id;
+  if (tripId !== undefined) await resolveTrip(userId, tripId);
+  return resolveRoute(userId, tripId, req.params.routeId);
 }
 
 /** GET /trips/:id/routes */
@@ -149,6 +179,7 @@ router.post(
 
       const route = await prisma.tripRoute.create({
         data: {
+          userId,
           tripId: trip.id,
           name: body.name,
           mode: body.mode,
@@ -171,7 +202,7 @@ router.post(
 
 /** PATCH /trips/:id/routes/:routeId */
 router.patch(
-  "/trips/:id/routes/:routeId",
+  ["/trips/:id/routes/:routeId", "/tours/:routeId"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
@@ -193,24 +224,34 @@ router.patch(
 );
 
 /**
- * DELETE /trips/:id/routes/:routeId
+ * DELETE /trips/:id/routes/:routeId · DELETE /tours/:routeId
  *
- * Deletes the section and its legs. Its stops are RELEASED, not deleted —
- * `TripStop.routeId` is `onDelete: SetNull`. A tour is scaffolding over the
- * timeline; removing the scaffolding must not remove the timeline.
+ * Deletes the section and its legs. A stop that sits on a TRIP is
+ * RELEASED, not deleted — a tour is scaffolding over the timeline, and
+ * removing the scaffolding must not remove the timeline. That is what the
+ * delete confirmation promises the reader.
+ *
+ * A stop of a STANDALONE tour has no timeline to fall back to: releasing
+ * it would leave a row belonging to nobody and reachable from nothing (and
+ * `trip_stops_trip_or_route` refuses to store one). Those are deleted with
+ * the section. The database cannot express "cascade only the orphans", so
+ * both halves happen here, in one transaction.
  */
 router.delete(
-  "/trips/:id/routes/:routeId",
+  ["/trips/:id/routes/:routeId", "/tours/:routeId"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const routeId = await resolveRoute(userId, req.params.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
 
       await prisma.$transaction(async (tx) => {
+        // Release the TRIP's stops first; the section's own trip-less
+        // points then go with it through the cascade. Reversing these two
+        // deletes the timeline the tour was only drawn over.
         await tx.tripStop.updateMany({
-          where: { routeId },
+          where: { routeId, tripId: { not: null } },
           data: { routeId: null, routeOrderIdx: null },
         });
         await tx.tripRoute.delete({ where: { id: routeId } });
@@ -257,14 +298,13 @@ router.delete(
  * it needs no separate error handling here.
  */
 router.get(
-  "/trips/:id/routes/:routeId",
+  ["/trips/:id/routes/:routeId", "/tours/:routeId"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
 
       const [route, stops, legs, routing] = await Promise.all([
         prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, include: ROUTE_SELECT }),
@@ -318,25 +358,43 @@ router.get(
  * not collide and would not be caught by the schema.
  */
 router.put(
-  "/trips/:id/routes/:routeId/stops",
+  ["/trips/:id/routes/:routeId/stops", "/tours/:routeId/stops"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
       const { stopIds } = assignStopsSchema.parse(req.body);
+
+      const section = await prisma.tripRoute.findUniqueOrThrow({
+        where: { id: routeId },
+        select: { tripId: true },
+      });
+      /* What makes a stop eligible, and it is not the same question in both
+         cases. On a trip's section, a stop must be on THAT trip — that is
+         what keeps one trip's timeline out of another's route. A standalone
+         tour has no trip, so its stops are the ones its own sections own,
+         and eligibility is ownership of the section they sit on. Filtering
+         on `tripId: null` alone would have matched a stranger's standalone
+         stop: a foreign key proves existence, not ownership. */
+      const ownedStop =
+        section.tripId !== null ? { tripId: section.tripId } : { route: { userId } };
 
       // No de-dup needed here: `assignStopsSchema` already rejects a
       // repeated stop id (see the loop-modelling note on that schema).
       const stops = await prisma.tripStop.findMany({
-        where: { id: { in: stopIds }, tripId: trip.id },
+        where: { id: { in: stopIds }, ...ownedStop },
         select: { id: true, lat: true, lon: true, title: true, routeId: true },
       });
 
       if (stops.length !== stopIds.length) {
-        throw new AppError("Every stop must belong to this trip", 400);
+        throw new AppError(
+          section.tripId !== null
+            ? "Every stop must belong to this trip"
+            : "Every stop must belong to this tour",
+          400
+        );
       }
       const missing = stops.find((s) => s.lat === null || s.lon === null);
       if (missing) {
@@ -375,7 +433,7 @@ router.put(
           for (let idx = 0; idx < stopIds.length; idx++) {
             const id = stopIds[idx];
             const hit = await tx.tripStop.updateMany({
-              where: { id, tripId: trip.id, OR: [{ routeId: null }, { routeId }] },
+              where: { id, ...ownedStop, OR: [{ routeId: null }, { routeId }] },
               data: { routeId, routeOrderIdx: idx },
             });
             if (hit.count !== 1) {

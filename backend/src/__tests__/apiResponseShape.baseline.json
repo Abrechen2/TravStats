@@ -79,6 +79,7 @@
     "trips/resolveTrip.ts",
     "trips/tourIndex.ts",
     "trips/tourLegs.ts",
+    "trips/tourPoints.ts",
     "trips/tourRoutes.ts",
     "trips/tourRouting.ts",
     "trips/tourTracks.ts",

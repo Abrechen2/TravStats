@@ -10,9 +10,8 @@ import { LEG_MODES, LegMode } from "../../services/tour/tourDistance";
 import { resolveRouteProvider } from "../../services/tour/routing/resolveProvider";
 import { routeLegGeometry, RoutedLeg } from "../../services/tour/routing/routeLeg";
 import { isRoutableMode, RouteProvider } from "../../services/tour/routing/types";
-import { resolveTrip } from "../trips";
 import { findLegOrThrow, requireCoords } from "./tourLegs";
-import { resolveRoute, toDto, toLegDto, ROUTE_SELECT } from "./tourRoutes";
+import { resolveRouteFromRequest, toDto, toLegDto, ROUTE_SELECT } from "./tourRoutes";
 import logger from "../../utils/logger";
 
 /**
@@ -104,14 +103,16 @@ async function applyRoutedLeg(legId: string, routed: RoutedLeg): Promise<void> {
  * does for a per-leg provider failure inside a batch.
  */
 router.post(
-  "/trips/:id/routes/:routeId/legs/:fromStopId/:toStopId/route",
+  [
+    "/trips/:id/routes/:routeId/legs/:fromStopId/:toStopId/route",
+    "/tours/:routeId/legs/:fromStopId/:toStopId/route",
+  ],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
 
       const provider: RouteProvider | null = await resolveRouteProvider(userId);
       if (provider === null) {
@@ -177,14 +178,13 @@ router.post(
  * the legs already routed — those results are real and worth keeping.
  */
 router.post(
-  "/trips/:id/routes/:routeId/route-all",
+  ["/trips/:id/routes/:routeId/route-all", "/tours/:routeId/route-all"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
 
       const provider = await resolveRouteProvider(userId);
 

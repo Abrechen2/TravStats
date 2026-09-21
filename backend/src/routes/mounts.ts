@@ -55,6 +55,7 @@ import tourLegRoutes from "./trips/tourLegs";
 import tourRoutingRoutes from "./trips/tourRouting";
 import tourTrackRoutes from "./trips/tourTracks";
 import tourIndexRoutes from "./trips/tourIndex";
+import tourPointRoutes from "./trips/tourPoints";
 import immichTripRoutes from "./immich/tripAlbums";
 import immichAssetProxyRoutes from "./immich/assetProxy";
 import immichTripCoverRoutes from "./immich/tripCover";
@@ -182,6 +183,10 @@ export const apiMounts: ApiMount[] = [
   // tour satellites so it never shadows a more specific `/trips/:id/...`
   // route above it.
   { id: "tourIndex", base: "/api/v1", router: tourIndexRoutes },
+  // The point list of a standalone tour. After `tourIndex` because it is
+  // the same family, and its one path (`/tours/:routeId/points`) collides
+  // with nothing above it.
+  { id: "tourPoints", base: "/api/v1", router: tourPointRoutes },
   { id: "immich.tripAlbums", base: "/api/v1", router: immichTripRoutes },
   { id: "immich.assetProxy", base: "/api/v1", router: immichAssetProxyRoutes },
   { id: "immich.tripCover", base: "/api/v1", router: immichTripCoverRoutes },

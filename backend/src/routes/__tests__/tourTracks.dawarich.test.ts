@@ -102,7 +102,7 @@ describe("Tour tracks — pull a Dawarich window", () => {
     tripId = trip.id;
 
     const route = await prisma.tripRoute.create({
-      data: { tripId, name: "Fjordrunde", mode: "road" },
+      data: { userId, tripId, name: "Fjordrunde", mode: "road" },
     });
     routeId = route.id;
 

@@ -238,7 +238,7 @@ async function seedStory(
     }
   }
 
-  if (story.tour) await seedTour(trip.id, story.tour, 0);
+  if (story.tour) await seedTour(userId, trip.id, story.tour, 0);
 
   for (const j of story.journal) {
     await prisma.tripJournalEntry.create({
