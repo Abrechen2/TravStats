@@ -4,7 +4,36 @@ import fs from "fs";
 import crypto from "crypto";
 import type { Db } from "../db";
 import logger from "../utils/logger";
+import { AppError } from "./errorHandler";
 import { FILE_LIMITS, CLEANUP } from "../config/constants";
+
+/**
+ * A file this endpoint does not accept — the CLIENT's mistake, answered 400.
+ *
+ * Every filter below used to reject with a bare `Error`, which carries no
+ * `statusCode`, so the global handler's `|| 500` default took it. Measured
+ * 2026-09-20 on 2.7.0-beta.13 (audit SRV-UPLOAD-TYPE-001): an .ics, an .mbox
+ * and a .zip sent to `/parse-email-file` with their own correct MIME types each
+ * answered `500 {"error":"Invalid file type…"}`, while the SAME zip bytes
+ * declared as `application/octet-stream` slipped past the filter and were
+ * refused with 400 by the magic-number check inside the route. The answer
+ * therefore depended on what the client CLAIMED the file was, and one of the
+ * two answers blamed the server: a client that retries on 5xx retries a
+ * request that can never succeed, and the instance logs a fault it never had.
+ *
+ * 400 rather than 415 deliberately — 400 is what the in-route check already
+ * answers for the very same refusal, and one status for one refusal is worth
+ * more here than the more specific code on one of the two paths.
+ *
+ * Sibling of the `MulterError` branch in `errorHandler`, which fixed this same
+ * class for multer's OWN rejections (wrong field name, file too large).
+ */
+export class UnsupportedUploadTypeError extends AppError {
+  constructor(message: string) {
+    super(message, 400);
+    this.name = "UnsupportedUploadTypeError";
+  }
+}
 
 // Upload directories
 const UPLOAD_DIR = path.join(__dirname, "../../uploads/receipts");
@@ -85,7 +114,9 @@ const fileFilter = (
   ];
 
   if (!allowedMimeTypes.includes(file.mimetype)) {
-    return cb(new Error(`Invalid file type. Allowed: ${allowedMimeTypes.join(", ")}`));
+    return cb(
+      new UnsupportedUploadTypeError(`Invalid file type. Allowed: ${allowedMimeTypes.join(", ")}`)
+    );
   }
 
   // Note: Magic number validation happens after file is saved
@@ -221,7 +252,7 @@ const emailFileFilter = (
     // We'll validate in the route handler after multer processes the file
     cb(null, true);
   } else {
-    cb(new Error(`Invalid file type. Allowed: .eml, .txt, .msg files`));
+    cb(new UnsupportedUploadTypeError(`Invalid file type. Allowed: .eml, .txt, .msg files`));
   }
 };
 
@@ -275,7 +306,7 @@ const tripPhotoFilter = (
 ): void => {
   const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
   if (!allowed.includes(file.mimetype)) {
-    return cb(new Error(`Invalid image type. Allowed: ${allowed.join(", ")}`));
+    return cb(new UnsupportedUploadTypeError(`Invalid image type. Allowed: ${allowed.join(", ")}`));
   }
   cb(null, true);
 };
@@ -487,7 +518,7 @@ const profilePictureFilter = (
 ): void => {
   const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
   if (!allowed.includes(file.mimetype)) {
-    return cb(new Error(`Invalid image type. Allowed: ${allowed.join(", ")}`));
+    return cb(new UnsupportedUploadTypeError(`Invalid image type. Allowed: ${allowed.join(", ")}`));
   }
   cb(null, true);
 };
