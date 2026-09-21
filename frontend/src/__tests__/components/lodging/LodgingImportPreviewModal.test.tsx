@@ -860,3 +860,90 @@ describe("parseTotalPriceInput", () => {
     expect(parseTotalPriceInput("0")).toBe(0);
   });
 });
+
+/**
+ * Alex, 2026-09-20: a first lodging import has an unknown chain on very
+ * nearly every row, so the per-row tick and the per-row action select are
+ * the same two clicks repeated as often as the file is long — ten minutes
+ * on his own list. Two bulk buttons, and both act ONLY on rows nobody has
+ * answered yet.
+ */
+describe("LodgingImportPreviewModal — the bulk buttons", () => {
+  const chainRows: LodgingImportPreviewRow[] = [
+    {
+      sourceRowIndex: 0,
+      lodging: { name: "Hotel A", chainName: "Kettenhaus" },
+      stay: null,
+      flags: ["unknown_chain"],
+      dedupeHint: "none",
+      matchedLodgingId: null,
+      matchedLodgingName: null,
+      matchedStayId: null,
+      action: "needs_input",
+    },
+    {
+      sourceRowIndex: 1,
+      lodging: { name: "Hotel B", chainName: "Kettenhaus" },
+      stay: null,
+      flags: ["unknown_chain"],
+      dedupeHint: "none",
+      matchedLodgingId: null,
+      matchedLodgingName: null,
+      matchedStayId: null,
+      action: "needs_input",
+    },
+  ];
+
+  function renderChains(): void {
+    render(
+      <LodgingImportPreviewModal
+        rows={chainRows}
+        summary={{ newRows: 0, alreadyPresent: 0, needsInput: 2 }}
+        onCancel={vi.fn()}
+        onCommit={vi.fn()}
+      />
+    );
+  }
+
+  it("ticks every unknown chain at once, and then has nothing left to offer", () => {
+    renderChains();
+
+    const boxes = (): HTMLInputElement[] => screen.getAllByRole("checkbox") as HTMLInputElement[];
+    expect(boxes().every((b) => !b.checked)).toBe(true);
+
+    fireEvent.click(screen.getByTestId("lodging-import-create-all-chains"));
+
+    expect(boxes().every((b) => b.checked)).toBe(true);
+    expect(screen.queryByTestId("lodging-import-create-all-chains")).not.toBeInTheDocument();
+  });
+
+  it("decides every undecided row as create, and leaves a hand-made decision alone", () => {
+    renderChains();
+
+    fireEvent.change(screen.getByTestId("lodging-import-action-1"), {
+      target: { value: "skip" },
+    });
+    fireEvent.click(screen.getByTestId("lodging-import-create-all-undecided"));
+
+    expect((screen.getByTestId("lodging-import-action-0") as HTMLSelectElement).value).toBe(
+      "create"
+    );
+    // The row the reader answered by hand keeps its answer — a bulk button
+    // that overwrote it would be a bulk button nobody could use safely.
+    expect((screen.getByTestId("lodging-import-action-1") as HTMLSelectElement).value).toBe("skip");
+  });
+
+  it("offers neither button when every row is already answered", () => {
+    render(
+      <LodgingImportPreviewModal
+        rows={[{ ...chainRows[0], flags: [], action: "create" }]}
+        summary={{ newRows: 1, alreadyPresent: 0, needsInput: 0 }}
+        onCancel={vi.fn()}
+        onCommit={vi.fn()}
+      />
+    );
+
+    expect(screen.queryByTestId("lodging-import-create-all-undecided")).not.toBeInTheDocument();
+    expect(screen.queryByTestId("lodging-import-create-all-chains")).not.toBeInTheDocument();
+  });
+});

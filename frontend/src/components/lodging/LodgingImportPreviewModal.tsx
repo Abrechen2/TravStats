@@ -218,6 +218,54 @@ export function LodgingImportPreviewModal({
     return { newRows, alreadyPresent, needsInput, changed };
   }, [edited]);
 
+  /**
+   * The two bulk actions.
+   *
+   * A first lodging import has an unknown chain on very nearly every row,
+   * so the per-row tick and the per-row action select are the same two
+   * clicks repeated as often as the file is long — a tester measured ten
+   * minutes on his own list (Alex, 2026-09-20). What was right about the
+   * per-row design stays: an unknown chain is an OFFER, never a silent
+   * create, and the reader still reads the list before deciding.
+   *
+   * So both act only on rows nobody has answered yet, never overwrite a
+   * decision the reader already made by hand, and are two separate buttons
+   * because they answer two separate questions — "import these" and "create
+   * the chains they name".
+   *
+   * The undecided ones are exactly the `needs_input` rows: the server saw a
+   * POSSIBLE match and declined to guess. So this button is named for what
+   * it does — create them anyway — and not "accept", which would suggest
+   * the server had recommended something. The hint under it says what is
+   * being overruled; a reader who wants the matches keeps skipping by hand.
+   */
+  const undecidedCount = useMemo(() => edited.filter((r) => r.decision === "").length, [edited]);
+
+  const uncheckedChains = useMemo(
+    () =>
+      edited.filter(
+        (r) =>
+          r.flags.includes("unknown_chain") &&
+          r.lodging?.chainName !== undefined &&
+          r.lodging.createChain !== true
+      ).length,
+    [edited]
+  );
+
+  const createAllUndecided = useCallback((): void => {
+    setEdited((prev) => prev.map((r) => (r.decision === "" ? { ...r, decision: "create" } : r)));
+  }, []);
+
+  const createAllChains = useCallback((): void => {
+    setEdited((prev) =>
+      prev.map((r) =>
+        r.flags.includes("unknown_chain") && r.lodging?.chainName !== undefined
+          ? { ...r, lodging: { ...r.lodging, createChain: true } }
+          : r
+      )
+    );
+  }, []);
+
   const pricesWithoutCurrency = useMemo(() => edited.filter(priceLacksCurrency).length, [edited]);
 
   const canCommit = counts.needsInput === 0 && pricesWithoutCurrency === 0 && !saving;
@@ -346,6 +394,31 @@ export function LodgingImportPreviewModal({
           <p data-testid="lodging-import-currency-hint" className="mb-3 text-xs text-amber-300/90">
             {t("lodging:import.preview.currencyMissingHint")}
           </p>
+        )}
+
+        {(undecidedCount > 0 || uncheckedChains > 0) && (
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            {undecidedCount > 0 && (
+              <button
+                type="button"
+                data-testid="lodging-import-create-all-undecided"
+                onClick={createAllUndecided}
+                className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              >
+                {t("lodging:import.preview.createAllUndecided", { count: undecidedCount })}
+              </button>
+            )}
+            {uncheckedChains > 0 && (
+              <button
+                type="button"
+                data-testid="lodging-import-create-all-chains"
+                onClick={createAllChains}
+                className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              >
+                {t("lodging:import.preview.createAllChains", { count: uncheckedChains })}
+              </button>
+            )}
+          </div>
         )}
 
         {error !== null && (
