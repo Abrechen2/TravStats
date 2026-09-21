@@ -65,20 +65,29 @@ export function bool(raw: string | undefined): boolean | undefined {
 }
 
 /**
+ * `03.04.2024`, optionally followed by `12:30` or `12:30:00` — what somebody
+ * types into a German spreadsheet. Day-first deliberately: this is the locale
+ * the UI is written for, and reading it month-first would turn the 3rd of
+ * April into the 4th of March without complaining.
+ */
+const GERMAN_DATE = /^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/;
+
+/**
  * A date as a plain `YYYY-MM-DD` string, or undefined.
  *
  * Cells written by our own exporter come back as ISO timestamps; a hand-typed
- * cell may be "2024-04-03" or "03.04.2024". The German form is read as
- * day-first deliberately: this is the locale the UI is written for, and
- * guessing month-first would turn the 3rd of April into the 4th of March
- * without complaining. Anything unparseable returns null so the caller can
- * refuse the row.
+ * cell may be "2024-04-03" or "03.04.2024". Anything unparseable returns null
+ * so the caller can refuse the row.
+ *
+ * For a column whose value carries a CLOCK, use `isoTimestamp` below — this
+ * one throws the time away by construction, which is the defect that function
+ * exists to fix.
  */
 export function isoDate(raw: string | undefined): string | null | undefined {
   const v = raw?.trim();
   if (!v) return undefined;
 
-  const german = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(v);
+  const german = GERMAN_DATE.exec(v);
   if (german) {
     const [, d, m, y] = german;
     return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
@@ -87,6 +96,40 @@ export function isoDate(raw: string | undefined): string | null | undefined {
   const parsed = new Date(v);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed.toISOString().slice(0, 10);
+}
+
+/**
+ * The full instant a date cell stands for — the time kept where the cell has
+ * one, midnight UTC where it does not.
+ *
+ * SRV-EXPORT-001 (beta audit 2026-09-20): a German Excel export re-imported
+ * BYTE FOR BYTE moved both visits of a place from 12:00 UTC to 00:00, and
+ * `lastVisitAt` followed. Nothing in the file was wrong — exceljs writes a
+ * real date cell, and the reader hands it back as a full ISO timestamp. The
+ * loss was here: the importer ran every date column through `isoDate`, which
+ * cuts the string at ten characters, and `new Date("2025-07-10")` is
+ * midnight. A round trip that changes data is worse than one that refuses it,
+ * because it is believed.
+ *
+ * A typed wall clock is read as UTC, which is the convention the whole visit
+ * column already follows (`PlaceDetailPage` builds `...T12:00:00.000Z` from
+ * two form inputs, and the schema comment says not to normalise it).
+ */
+export function isoTimestamp(raw: string | undefined): string | null | undefined {
+  const v = raw?.trim();
+  if (!v) return undefined;
+
+  const german = GERMAN_DATE.exec(v);
+  if (german) {
+    const [, d, m, y, hh, mm, ss] = german;
+    const date = `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
+    const time = `${(hh ?? "0").padStart(2, "0")}:${mm ?? "00"}:${ss ?? "00"}`;
+    return `${date}T${time}.000Z`;
+  }
+
+  const parsed = new Date(v);
+  if (Number.isNaN(parsed.getTime())) return null;
+  return parsed.toISOString();
 }
 
 /** Full ISO timestamp, for the fields that carry a time. */
