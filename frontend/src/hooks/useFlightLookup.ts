@@ -25,10 +25,14 @@ export function useFlightLookup(): {
   useEffect(() => {
     let cancelled = false;
     setLoading(true);
+    // Walked, not asked for in one oversized page. `limit: 5000` was the
+    // same mistake the spreadsheet export made (SRV-EXPORT-002): the server
+    // caps it at 500, so a logbook past that lost its oldest flights here and
+    // every id in them resolved to undefined.
     flightsApi
-      .getAll({ limit: 5000, offset: 0 })
-      .then((data) => {
-        if (!cancelled) setFlights(data.flights);
+      .getEvery()
+      .then((flights) => {
+        if (!cancelled) setFlights(flights);
       })
       .catch((err: unknown) => {
         logger.error("useFlightLookup: failed to load flights", err);

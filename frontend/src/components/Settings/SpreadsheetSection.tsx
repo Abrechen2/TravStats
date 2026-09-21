@@ -56,11 +56,11 @@ export default function SpreadsheetSection(): JSX.Element {
       // on an instance with cruises switched off would 404 and fail the whole
       // export over data the user does not have.
       const [flights, cruises, lodging, places] = await Promise.all([
-        // The list endpoint pages; one large page is enough for an export and
-        // keeps this to a single request.
-        isEnabled("flight")
-          ? flightsApi.getAll({ limit: 5000, offset: 0 }).then((r) => r.flights)
-          : Promise.resolve([]),
+        // Walked page by page, like the other three. One "large" page was
+        // never enough: the server caps `limit` at 500 whatever is asked for,
+        // so an account with 501 flights exported 500 of them and said
+        // nothing (beta audit 2026-09-20, SRV-EXPORT-002).
+        isEnabled("flight") ? flightsApi.getEvery() : Promise.resolve([]),
         isEnabled("cruise") ? cruiseApi.list() : Promise.resolve([]),
         isEnabled("lodging") ? listLodgings() : Promise.resolve([]),
         isEnabled("poi") ? placesApi.list() : Promise.resolve([]),
