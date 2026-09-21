@@ -48,7 +48,7 @@
     "@kenjiuno/msgreader": "^1.28.0",
     "@prisma/adapter-pg": "^7.10.0",
     "@prisma/client": "^7.10.0",
-    "@simplewebauthn/server": "^13.3.3",
+    "@simplewebauthn/server": "^14.0.2",
     "archiver": "^7.0.1",
     "axios": "^1.20.0",
     "bcrypt": "^5.1.1",
