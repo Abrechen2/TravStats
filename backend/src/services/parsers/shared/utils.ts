@@ -1,6 +1,7 @@
 import { ParsedBooking } from "../../bookingParser";
 import logger from "../../../utils/logger";
 import { AIRLINE_IATA_MAP } from "../../../data/airlines";
+import { isPlausibleLegArrival } from "./legTiming";
 
 /**
  * Get all available Claude models for text parsing, ordered by preference (newest first)
@@ -275,13 +276,35 @@ export function normalizeParsedBooking(data: Record<string, unknown>): ParsedBoo
     typeof val === "string" && val ? val.toUpperCase() : undefined;
   const flightNum = str(data.flightNumber);
 
+  // A pairing that cannot describe one leg is dropped here rather than
+  // downstream, because this is the one gate both regex paths and the OCR
+  // path pass through. See `legTiming.ts` for the window and the measurement
+  // (audit SRV-PARSER-001: one flight "departing" 15.07. and "arriving"
+  // 10.07., built from two invoices in one PDF).
+  const departureTime = validateDateTime(str(data.departureTime));
+  const claimedArrival = validateDateTime(str(data.arrivalTime));
+  const arrivalTime = isPlausibleLegArrival(departureTime, claimedArrival)
+    ? claimedArrival
+    : undefined;
+  if (claimedArrival && !arrivalTime) {
+    if (!missing.includes("arrivalTime")) missing.push("arrivalTime");
+    logger.debug(
+      {
+        operation: "parser_implausible_leg_arrival",
+        message: "Dropped an arrival that cannot belong to the same leg as the departure",
+        context: { departureTime, claimedArrival },
+      },
+      "[Parser Utils] Implausible arrival dropped"
+    );
+  }
+
   const result: ParsedBooking = {
     airline: str(data.airline) || flightNum?.slice(0, 2).toUpperCase() || undefined,
     flightNumber: validateFlightNumber(str(data.flightNumber)),
     departureCode: validateIATACode(str(data.departureCode)),
     arrivalCode: validateIATACode(str(data.arrivalCode)),
-    departureTime: validateDateTime(str(data.departureTime)),
-    arrivalTime: validateDateTime(str(data.arrivalTime)),
+    departureTime,
+    arrivalTime,
     pnr: strUp(data.pnr) || strUp(data.bookingReference) || undefined,
     seat: strUp(data.seat) || undefined,
     terminal: str(data.terminal) || undefined,
@@ -338,9 +361,18 @@ export const PATTERNS = {
   /**
    * A booking reference the pass NAMES. Tried first, and the only form that is
    * trusted on letters alone.
+   *
+   * The `\b` after the label group is load-bearing. Without it the engine was
+   * free to back out of `Reference` into the shorter `Ref` when the value
+   * behind the label did not fit `[A-Z0-9]{6}\b` — and "erence" fits it
+   * perfectly. Measured 2026-09-20 on 2.7.0-beta.13 (audit SRV-PARSER-001): a
+   * multi-invoice PDF was imported with booking reference "ERENCE", read out
+   * of the word "Reference" itself. That is worse than no reference, because
+   * `findExistingFlight` treats the PNR as its STRONGEST match key, so a
+   * second document with the same label would merge into the first.
    */
   PNR_LABELLED:
-    /(?:PNR|Booking\s*(?:Reference|Ref|Code)|Buchungs(?:code|referenz|nummer)|Reservation\s*Code|Record\s*Locator)\s*:?\s*([A-Z0-9]{6})\b/i,
+    /(?:PNR|Booking\s*(?:Reference|Ref|Code)|Buchungs(?:code|referenz|nummer)|Reservation\s*Code|Record\s*Locator)\b\s*:?\s*([A-Z0-9]{6})\b/i,
   /**
    * An unlabelled six-character token, which must contain a digit to count.
    *

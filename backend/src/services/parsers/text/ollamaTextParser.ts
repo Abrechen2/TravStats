@@ -1,5 +1,6 @@
 import { ITextParser, ProviderAvailability, TextProvider, TextParseOptions } from "../types";
 import { ParsedBooking } from "../../bookingParser";
+import { isPlausibleLegArrival } from "../shared/legTiming";
 import { requestTextWithDeadline } from "../../http/boundedHttp";
 import {
   LLM_AVAILABILITY_TIMEOUT_MS,
@@ -291,7 +292,14 @@ export class OllamaTextParser implements ITextParser {
       if (f.departureCode) booking.departureCode = f.departureCode.toUpperCase();
       if (f.arrivalCode) booking.arrivalCode = f.arrivalCode.toUpperCase();
       if (f.departureTime) booking.departureTime = f.departureTime;
-      if (f.arrivalTime) booking.arrivalTime = f.arrivalTime;
+      // Same gate the regex and OCR paths pass through in
+      // `normalizeParsedBooking`, which this mapper does not use: a model that
+      // reads two documents as one leg produces the same impossible pair a
+      // positional regex does. The `critical` loop below then reports the
+      // arrival as missing, which is the honest answer.
+      if (f.arrivalTime && isPlausibleLegArrival(f.departureTime, f.arrivalTime)) {
+        booking.arrivalTime = f.arrivalTime;
+      }
       if (f.seat) booking.seat = f.seat;
       if (f.seatClass) booking.seatClass = mapSeatClass(f.seatClass);
       if (f.airline) booking.airline = f.airline;
