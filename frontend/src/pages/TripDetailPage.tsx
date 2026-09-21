@@ -10,6 +10,7 @@ import { assessStayPlausibility } from "../shared/stayPlausibility";
 import { useSettingsStore } from "../store/settingsStore";
 import { computeRailStates } from "../lib/timelineRail";
 import { ExpandableEventCard } from "../components/Trip/ExpandableEventCard";
+import JournalBody from "../components/Trips/JournalBody";
 import { stripMarkdown } from "../lib/markdownPreview";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
@@ -23,7 +24,6 @@ import TripHead from "../components/Trips/TripHead";
 import TripOverview from "../components/Trips/TripOverview";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
 import JournalViewModal from "../components/Trips/JournalViewModal";
-import JournalPreview from "../components/Trips/JournalPreview";
 import StopModal from "../components/Trips/StopModal";
 import BookingEditModal from "../components/Trips/BookingEditModal";
 import TripMap from "../components/Trips/TripMap";
@@ -1141,23 +1141,66 @@ function JournalCard({
   onEdit: () => void;
   onDelete: () => void;
 }): JSX.Element {
+  const { t } = useTranslation(["trips", "common"]);
+  const [open, setOpen] = useState(false);
   const e = ev.entry;
   // The headline is a single short line, so Markdown is stripped rather than
   // rendered there; the body below it renders (issue #231).
   const headline = e.title ?? truncate(stripMarkdown(e.body), 50);
   const meta = [e.weather, e.mood].filter(Boolean).join(" · ") || undefined;
+
+  /* Opens in place, like a flight and a cruise on this same timeline.
+     It used to be the only entry whose full text lived behind a 11px eye
+     glyph in the row's action strip — "das winzig kleine Auge" (Alex,
+     2026-09-20) — while the two entries above it opened with a click on the
+     header. One timeline, one way to read an entry.
+
+     The modal stays and keeps its own place: the panel renders the body,
+     the modal renders the body plus everything around it, and "Ganz öffnen"
+     inside the panel is how you get there. Edit and delete moved into the
+     panel too, as SIBLINGS of the toggle — never children of it, see the
+     note in ExpandableEventCard. */
   return (
-    <EventCard
+    <ExpandableEventCard
       icon="📝"
       bg="rgba(96,165,250,0.15)"
       iconColor="#60a5fa"
       title={headline}
       subtitle={meta ?? null}
-      meta={e.title ? <JournalPreview body={e.body} /> : undefined}
       date={ev.date}
       dateLabel={formatTimelineDate(ev.date, language)}
-      actions={<RowActions onView={onView} onEdit={onEdit} onDelete={onDelete} />}
-    />
+      expanded={open}
+      onToggle={() => setOpen((v) => !v)}
+      detailsLabel={t("trips:detail.timeline.showDetails")}
+    >
+      <JournalBody body={e.body} />
+      <div className="mt-2 flex flex-wrap gap-2">
+        <button
+          type="button"
+          onClick={onView}
+          className="rounded-lg px-3 py-1.5 text-xs font-medium"
+          style={{ border: "1px solid var(--accent)", color: "var(--accent)" }}
+        >
+          {t("trips:detail.timeline.openJournal")}
+        </button>
+        <button
+          type="button"
+          onClick={onEdit}
+          className="rounded-lg px-3 py-1.5 text-xs"
+          style={{ border: "1px solid var(--color-border)", color: "var(--text-muted)" }}
+        >
+          {t("common:buttons.edit")}
+        </button>
+        <button
+          type="button"
+          onClick={onDelete}
+          className="rounded-lg px-3 py-1.5 text-xs"
+          style={{ border: "1px solid var(--color-border)", color: "var(--text-muted)" }}
+        >
+          {t("common:buttons.delete")}
+        </button>
+      </div>
+    </ExpandableEventCard>
   );
 }
 

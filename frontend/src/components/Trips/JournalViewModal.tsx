@@ -1,8 +1,7 @@
 import Modal from "../Modal";
 import { useMemo } from "react";
-import ReactMarkdown from "react-markdown";
-import type { Components } from "react-markdown";
 import type { TripJournalEntry } from "../../types";
+import JournalBody from "./JournalBody";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useLocale } from "../../hooks/useLocale";
 
@@ -12,17 +11,6 @@ interface JournalViewModalProps {
   /** Optional jump-to-edit affordance (closes this modal, opens the editor). */
   onEdit?: () => void;
 }
-
-// Links inside a diary entry are user-authored — open them in a new tab and
-// sever the opener reference so the target page can't reach back into the app.
-// (react-markdown already sanitizes javascript: URLs by default.)
-const MARKDOWN_COMPONENTS: Components = {
-  a: ({ children, ...props }) => (
-    <a {...props} target="_blank" rel="noopener noreferrer">
-      {children}
-    </a>
-  ),
-};
 
 /**
  * Read-only view of a single trip journal entry with its body rendered as
@@ -105,9 +93,7 @@ export default function JournalViewModal({
         </>
       }
     >
-      <div className="trip-markdown">
-        <ReactMarkdown components={MARKDOWN_COMPONENTS}>{entry.body}</ReactMarkdown>
-      </div>
+      <JournalBody body={entry.body} />
     </Modal>
   );
 }

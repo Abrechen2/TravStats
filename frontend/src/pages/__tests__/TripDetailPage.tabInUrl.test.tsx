@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { MemoryRouter, Route, Routes, useLocation } from "react-router-dom";
 import type { Trip } from "../../types";
@@ -132,5 +132,60 @@ describe("the trip page's open tab", () => {
 
     expect(screen.getByText("trips:detail.timeline.addJournal")).toBeInTheDocument();
     expect(screen.queryByText("trips:detail.timeline.addStop")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Alex, 2026-09-20: "In der Timeline könnte man vereinheitlichen und den
+ * vollen Inhalt eines Tagebucheintrages auch zum Ausklappen machen wie bei
+ * Flügen. Dann muss man nicht das winzig kleine Auge finden."
+ */
+describe("a diary entry on the trip timeline", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  async function renderWithJournal(): Promise<void> {
+    getByIdMock.mockResolvedValue({
+      ...makeTrip(),
+      journalEntries: [
+        {
+          id: "j-1",
+          tripId: "trip-1",
+          title: "Ankunft",
+          body: "Der **erste** Tag am Meer.",
+          entryDate: "2024-05-13T00:00:00.000Z",
+          weather: null,
+          mood: null,
+          createdAt: "2024-05-13T00:00:00.000Z",
+          updatedAt: "2024-05-13T00:00:00.000Z",
+        },
+      ],
+    } as unknown as Trip);
+    render(
+      <MemoryRouter initialEntries={["/trips/trip-1?tab=timeline"]}>
+        <Routes>
+          <Route path="/trips/:id" element={<TripDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(getByIdMock).toHaveBeenCalled());
+    await screen.findByText("Ankunft");
+  }
+
+  it("opens in place on the header, the way a flight does", async () => {
+    await renderWithJournal();
+
+    const toggle = screen.getByRole("button", { name: /Ankunft/ });
+    expect(toggle).toHaveAttribute("aria-expanded", "false");
+    // Rendered Markdown, not the source — the body is one node with the
+    // emphasis marked up, so the text is matched across its elements.
+    expect(screen.queryByText(/erste/)).not.toBeInTheDocument();
+
+    fireEvent.click(toggle);
+
+    expect(toggle).toHaveAttribute("aria-expanded", "true");
+    expect(screen.getByText("erste")).toBeInTheDocument();
+    expect(screen.getByText("trips:detail.timeline.openJournal")).toBeInTheDocument();
   });
 });

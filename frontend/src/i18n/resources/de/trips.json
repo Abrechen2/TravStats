@@ -185,7 +185,8 @@
       "aircraft": "Flugzeug",
       "seat": "Sitzplatz",
       "itinerary": "Etappen",
-      "atSea": "Seetag"
+      "atSea": "Seetag",
+      "openJournal": "Ganz öffnen"
     }
   },
   "journalModal": {

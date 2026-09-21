@@ -185,7 +185,8 @@
       "aircraft": "Aircraft",
       "seat": "Seat",
       "itinerary": "Itinerary",
-      "atSea": "Day at sea"
+      "atSea": "Day at sea",
+      "openJournal": "Open in full"
     }
   },
   "journalModal": {
