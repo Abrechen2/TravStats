@@ -18,9 +18,9 @@
     "trips": "Trips"
   },
   "hints": {
-    "cruises": "One row per cruise. Do not change the ID in column A — it is what matches the row back to its record on import. A row without an ID is created as a new cruise.",
+    "cruises": "One row per cruise. Do not change the ID in column A — it is what matches the row back to its entry on import. New cruises canNOT be created here: a row without an ID is reported as an error, because a cruise with no ship, ports or stops would not be a usable record. Use the form for that.",
     "cruiseStops": "One row per port call or sea day. The \"Cruise\" column points at the \"Cruises\" sheet through the ID in square brackets.",
-    "lodging": "One row per property. Stays live on their own sheet, because one property can have any number of them.",
+    "lodging": "One row per property. Stays live on their own sheet, because one property can have any number of them. New properties canNOT be created here: a row without an ID is reported as an error. Use the form, or the CSV import on the lodging page.",
     "lodgingStays": "One row per stay. The \"Lodging\" column points at the \"Lodging\" sheet through the ID in square brackets. Nights are calculated and cannot be set here.",
     "places": "One row per place. Visits live on their own sheet.",
     "placeVisits": "One row per visit. The \"Place\" column points at the \"Places\" sheet through the ID in square brackets.",
@@ -90,7 +90,7 @@
   },
   "import": {
     "title": "Excel import",
-    "description": "Send an edited export file back. Rows with an ID update the existing record, rows without one are created. Nothing is written until you confirm — the file is checked first.",
+    "description": "Play back an edited export file. Rows with an ID change the existing entry. A row WITHOUT an ID only creates something where the sheet allows it — flights, places and visits; on cruises and lodging it is reported as an error. Nothing is written until you confirm.",
     "choose": "Choose file",
     "checking": "Checking the file …",
     "applying": "Applying …",
@@ -127,7 +127,7 @@
       },
       "merge": {
         "label": "Merge",
-        "hint": "Rows with an ID update the existing entry, rows without one are created. Nothing is deleted."
+        "hint": "Rows with an ID change the existing entry. Rows without one are created where the sheet allows it (flights, places, visits). Nothing is deleted."
       },
       "replace": {
         "label": "Replace contents",
