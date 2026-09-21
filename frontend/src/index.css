@@ -72,6 +72,21 @@
     Utilities still win over this, because Tailwind's `base` layer sits below
     them: a component that wants `cursor-grab` or `cursor-wait` just says so.
   */
+  /*
+    A `<select>`'s dropdown is painted by the browser, not by the page, and it
+    does NOT inherit the page's colours: an `<option>` falls back to the UA's
+    white list with black text. A select styled `bg-transparent` therefore
+    looks right while closed — it inherits the dark page text — and opens a
+    list of WHITE-ON-WHITE entries, which is exactly what a tester hit on the
+    tour type control (Alex, 2026-09-20). One base rule instead of a colour
+    pair per select: the per-component approach is what left the gap.
+  */
+  option,
+  optgroup {
+    background-color: var(--bg-surface);
+    color: var(--text-primary);
+  }
+
   button,
   summary,
   label:has(input[type="checkbox"]),

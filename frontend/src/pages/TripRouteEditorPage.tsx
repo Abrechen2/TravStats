@@ -442,7 +442,7 @@ export default function TripRouteEditorPage(): JSX.Element {
             </button>
           )}
           <div className="mt-6">
-            <Link to={id ? `/trips/${id}` : "/trips"} className="text-sm underline">
+            <Link to={id ? `/trips/${id}?tab=tours` : "/trips"} className="text-sm underline">
               {t("trips:tours.backToTrip")}
             </Link>
           </div>
@@ -455,7 +455,10 @@ export default function TripRouteEditorPage(): JSX.Element {
     <AppShell width="list">
       <div className="space-y-6">
         <header>
-          <Link to={`/trips/${id}`} className="text-xs text-(--text-muted) hover:underline">
+          <Link
+            to={`/trips/${id}?tab=tours`}
+            className="text-xs text-(--text-muted) hover:underline"
+          >
             ← {t("trips:tours.backToTrip")}
           </Link>
           <h1 className="t-screen-title mt-1">{route.name}</h1>

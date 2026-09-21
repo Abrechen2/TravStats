@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { tripsApi } from "../lib/api";
 import { formatDateInTimezone, formatDateTimeInTimezone } from "../lib/dateUtils";
 import { formatDate } from "../lib/displayFormat";
@@ -67,7 +67,24 @@ export default function TripDetailPage(): JSX.Element {
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<TabKey>("overview");
+  /* The open tab lives in the URL, not in component state alone: a link back
+     from the tour editor (`/trips/:id?tab=tours`) has to land on the tab the
+     user left, and a browser Back has to as well. An unknown value falls back
+     to the overview rather than rendering nothing. */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const tab: TabKey = TABS.includes(tabParam as TabKey) ? (tabParam as TabKey) : "overview";
+  const setTab = (next: TabKey): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "overview") params.delete("tab");
+        else params.set("tab", next);
+        return params;
+      },
+      { replace: true }
+    );
+  };
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 

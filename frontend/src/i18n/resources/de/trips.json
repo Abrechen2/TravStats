@@ -412,6 +412,14 @@
       "connected": "Verbunden (Version {{version}})",
       "loadError": "Einstellungen konnten nicht geladen werden",
       "saveError": "Speichern fehlgeschlagen"
+    },
+    "deleteLabel": "Löschen",
+    "deleteError": "Die Tour konnte nicht gelöscht werden.",
+    "deleteConfirm": {
+      "title": "Tour löschen?",
+      "message_one": "Die Tour „{{name}}“ mit {{count}} Station wird dauerhaft gelöscht, zusammen mit ihren Etappen und den dazu hochgeladenen Tracks. Die Reise selbst und ihre Orte bleiben erhalten.",
+      "message_other": "Die Tour „{{name}}“ mit {{count}} Stationen wird dauerhaft gelöscht, zusammen mit ihren Etappen und den dazu hochgeladenen Tracks. Die Reise selbst und ihre Orte bleiben erhalten.",
+      "confirm": "Tour löschen"
     }
   },
   "head": {

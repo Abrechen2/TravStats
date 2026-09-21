@@ -3,6 +3,8 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
 import { useToastStore } from "../../store/toastStore";
+import ConfirmModal from "../Training/ConfirmModal";
+import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { LEG_MODES, type LegMode, type TourRoute } from "../../types/tour";
 
 interface Props {
@@ -36,6 +38,7 @@ export default function TourSectionList({ tripId }: Props): JSX.Element {
   const [newName, setNewName] = useState("");
   const [newMode, setNewMode] = useState<LegMode>(DEFAULT_MODE);
   const [saving, setSaving] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<TourRoute | null>(null);
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -83,6 +86,19 @@ export default function TourSectionList({ tripId }: Props): JSX.Element {
       if (mountedRef.current) addToast("error", t("trips:tours.createError"));
     } finally {
       if (mountedRef.current) setSaving(false);
+    }
+  };
+
+  const handleDelete = async (route: TourRoute): Promise<void> => {
+    try {
+      await toursApi.remove(tripId, route.id);
+      if (!mountedRef.current) return;
+      setRoutes((prev) => (prev ?? []).filter((r) => r.id !== route.id));
+    } catch {
+      // The row stays. A tour that failed to delete must not disappear from
+      // the list — an optimistic removal here would read as "deleted" and
+      // come back on the next load, which is worse than the error itself.
+      if (mountedRef.current) addToast("error", t("trips:tours.deleteError"));
     }
   };
 
@@ -158,10 +174,16 @@ export default function TourSectionList({ tripId }: Props): JSX.Element {
       {hasRoutes && (
         <ul className="space-y-2">
           {(routes ?? []).map((route) => (
-            <li key={route.id}>
+            <li
+              key={route.id}
+              className="flex items-center gap-2 rounded-lg border border-(--color-border) pr-3 text-sm hover:bg-(--bg-surface)"
+            >
+              {/* The delete button sits OUTSIDE the link, not inside it: a
+                  button nested in an `<a>` is not a second action, it is a
+                  click the link swallows. */}
               <Link
                 to={`/trips/${tripId}/route/${route.id}`}
-                className="flex items-center justify-between gap-3 rounded-lg border border-(--color-border) p-3 text-sm hover:bg-(--bg-surface)"
+                className="flex flex-1 items-center justify-between gap-3 p-3"
               >
                 <span className="flex items-center gap-2">
                   <span className="font-medium">{route.name}</span>
@@ -174,9 +196,37 @@ export default function TourSectionList({ tripId }: Props): JSX.Element {
                   <span>{formatKm(route.distanceKm)} km</span>
                 </span>
               </Link>
+              <button
+                type="button"
+                className="text-xs underline"
+                onClick={() => setPendingDelete(route)}
+              >
+                {t("trips:tours.deleteLabel")}
+              </button>
             </li>
           ))}
         </ul>
+      )}
+
+      {pendingDelete && (
+        <ConfirmModal
+          isOpen
+          onClose={() => setPendingDelete(null)}
+          onConfirm={() => {
+            const route = pendingDelete;
+            setPendingDelete(null);
+            void handleDelete(route);
+          }}
+          title={t("trips:tours.deleteConfirm.title")}
+          // The name and what goes with it, because a tour carries its stops,
+          // its legs and its tracks — "Tour löschen?" names none of that.
+          message={t("trips:tours.deleteConfirm.message", {
+            name: pendingDelete.name,
+            count: pendingDelete.stopCount,
+          })}
+          confirmText={t("trips:tours.deleteConfirm.confirm")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
       )}
     </div>
   );

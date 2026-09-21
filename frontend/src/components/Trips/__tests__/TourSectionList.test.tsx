@@ -22,6 +22,24 @@ function renderList(tripId: string): ReturnType<typeof render> {
   );
 }
 
+function route(id: string, name: string) {
+  return {
+    id,
+    tripId: "t1",
+    name,
+    mode: "road" as const,
+    orderIdx: 0,
+    color: null,
+    notes: null,
+    startOdometerKm: null,
+    endOdometerKm: null,
+    stopCount: 8,
+    legCount: 7,
+    distanceKm: 1284.4,
+    drivenKm: 1284.4,
+  };
+}
+
 describe("TourSectionList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
@@ -117,5 +135,37 @@ describe("TourSectionList", () => {
     // render an empty list as if the trip genuinely had no sections.
     expect(screen.getByText("trips:tours.loadError")).toBeInTheDocument();
     expect(screen.queryByText("trips:tours.empty")).not.toBeInTheDocument();
+  });
+
+  it("deletes a tour and drops its row, once the confirmation is accepted", async () => {
+    vi.mocked(toursApi.list).mockResolvedValue([
+      route("r1", "Südnorwegen"),
+      route("r2", "Jütland"),
+    ]);
+    vi.mocked(toursApi.remove).mockResolvedValue(undefined);
+
+    renderList("t1");
+    await screen.findByText("Südnorwegen");
+
+    fireEvent.click(screen.getAllByText("trips:tours.deleteLabel")[0]);
+    fireEvent.click(await screen.findByText("trips:tours.deleteConfirm.confirm"));
+
+    await waitFor(() => expect(toursApi.remove).toHaveBeenCalledWith("t1", "r1"));
+    await waitFor(() => expect(screen.queryByText("Südnorwegen")).not.toBeInTheDocument());
+    expect(screen.getByText("Jütland")).toBeInTheDocument();
+  });
+
+  it("keeps the row when the delete fails — a vanished row would read as deleted", async () => {
+    vi.mocked(toursApi.list).mockResolvedValue([route("r1", "Südnorwegen")]);
+    vi.mocked(toursApi.remove).mockRejectedValue(new Error("boom"));
+
+    renderList("t1");
+    await screen.findByText("Südnorwegen");
+
+    fireEvent.click(screen.getByText("trips:tours.deleteLabel"));
+    fireEvent.click(await screen.findByText("trips:tours.deleteConfirm.confirm"));
+
+    await waitFor(() => expect(toursApi.remove).toHaveBeenCalled());
+    expect(screen.getByText("Südnorwegen")).toBeInTheDocument();
   });
 });

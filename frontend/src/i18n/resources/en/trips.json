@@ -412,6 +412,14 @@
       "connected": "Connected (version {{version}})",
       "loadError": "Settings could not be loaded",
       "saveError": "Save failed"
+    },
+    "deleteLabel": "Delete",
+    "deleteError": "The tour could not be deleted.",
+    "deleteConfirm": {
+      "title": "Delete this tour?",
+      "message_one": "The tour “{{name}}” with {{count}} stop will be deleted permanently, along with its legs and the tracks uploaded to it. The trip itself and its places are kept.",
+      "message_other": "The tour “{{name}}” with {{count}} stops will be deleted permanently, along with its legs and the tracks uploaded to it. The trip itself and its places are kept.",
+      "confirm": "Delete tour"
     }
   },
   "head": {
