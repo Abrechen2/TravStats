@@ -122,4 +122,15 @@ describe("the trip page's open tab", () => {
       "true"
     );
   });
+
+  it("offers no way to add a stop — the places domain owns that", async () => {
+    // Alex, 2026-09-21: "'Stopp/Ort' Button aus Timeline von Reisen
+    // entfernen. Das doppelt sich mit der eigentlichen POI Domäne."
+    // The journal button proves the row itself still rendered, so this is
+    // the button being gone and not the toolbar failing to appear.
+    await renderAt("/trips/trip-1?tab=timeline");
+
+    expect(screen.getByText("trips:detail.timeline.addJournal")).toBeInTheDocument();
+    expect(screen.queryByText("trips:detail.timeline.addStop")).not.toBeInTheDocument();
+  });
 });

@@ -579,14 +579,13 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
         >
           {t("trips:detail.timeline.addJournal")}
         </button>
-        <button
-          type="button"
-          onClick={() => setAdding("stop")}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)"
-          style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
-        >
-          {t("trips:detail.timeline.addStop")}
-        </button>
+        {/* No "add stop" button since 2026-09-21. A stop and a place were
+            the same thing said twice — the places domain owns "somewhere I
+            was", with a catalogue, coordinates, visits and its own map layer,
+            and this button offered a second, thinner way to record the same
+            fact inside one trip (Alex, 2026-09-20). Existing stops still
+            render and still open their editor (`editingStop`); only the way
+            to make NEW ones here is gone. */}
       </div>
 
       {empty ? (
