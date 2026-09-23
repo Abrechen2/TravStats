@@ -135,6 +135,16 @@ export interface MapAppearance {
   /** Whether the control panel is expanded (#194). One value for both maps —
    *  it is the same panel to the user. Absent = expanded (the default). */
   panelExpanded?: boolean;
+  /**
+   * Which of the panel's sections are open, keyed by section id.
+   *
+   * The panel grew a section per domain and the tester called it "extrem voll"
+   * (2026-09-21); the sections collapse individually now. Only the sections
+   * the user has actually TOUCHED appear here — an absent key means "whatever
+   * that section defaults to", so changing a default later still reaches
+   * everyone who never opened it.
+   */
+  panelSections?: Record<string, boolean>;
 }
 
 const KEY = "mapAppearance.v2";

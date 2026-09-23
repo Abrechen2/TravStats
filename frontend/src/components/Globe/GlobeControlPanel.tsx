@@ -15,6 +15,7 @@
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Quartile } from "./heatmapUtils";
 import {
+  CollapsibleSection,
   CruiseAppearanceSection,
   FlightAppearanceSection,
   LodgingAppearanceSection,
@@ -143,87 +144,94 @@ export function GlobeControlPanel({
 
       {expanded && (
         <div className="scrollbar-none min-h-0 overflow-y-auto overflow-x-hidden px-3 pb-3">
-          {/* Modus + Filter + Add — folded in from the old top toolbar */}
-          <MapChromeSections />
+          {/* Everything that is about the MAP rather than about one domain:
+              mode, filter, layers, basemap. One section, open by default,
+              because it is what a reader reaches for first — the per-domain
+              colours below it are the part that made the panel long
+              (tester, 2026-09-21). */}
+          <CollapsibleSection id="basics" title={t("map:globe.panel.basics")} defaultOpen first>
+            {/* Modus + Filter + Add — folded in from the old top toolbar */}
+            <MapChromeSections />
 
-          {/* Layers */}
-          <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
-            <SectionLabel>{t("map:globe.panel.layers")}</SectionLabel>
-            <div className="-mx-1 flex flex-col gap-0.5">
-              <Toggle
-                checked={showNight}
-                onChange={onShowNightChange}
-                icon="🌓"
-                label={t("map:globe.panel.dayNight")}
-              />
-              <Toggle
-                checked={showPlaceLabels}
-                onChange={onShowPlaceLabelsChange}
-                icon="🗺️"
-                label={t("map:globe.panel.placeLabels")}
-              />
-              <Toggle
-                checked={showTerrain}
-                onChange={onShowTerrainChange}
-                icon="⛰️"
-                label={t("map:globe.panel.terrain")}
-              />
-              <Toggle
-                checked={autoRotate}
-                onChange={onAutoRotateChange}
-                icon="🌍"
-                label={t("map:globe.autoRotation")}
-              />
-            </div>
-            {/* Marker labels: off / key markers only / all */}
-            <div className="mt-2">
-              <div
-                className="mb-1 flex items-center gap-2 px-1 text-xs font-medium"
-                style={{ color: TEXT }}
-              >
-                <span aria-hidden style={{ opacity: 0.9 }}>
-                  🏷️
-                </span>
-                {t("map:globe.panel.labels")}
+            {/* Layers */}
+            <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
+              <SectionLabel>{t("map:globe.panel.layers")}</SectionLabel>
+              <div className="-mx-1 flex flex-col gap-0.5">
+                <Toggle
+                  checked={showNight}
+                  onChange={onShowNightChange}
+                  icon="🌓"
+                  label={t("map:globe.panel.dayNight")}
+                />
+                <Toggle
+                  checked={showPlaceLabels}
+                  onChange={onShowPlaceLabelsChange}
+                  icon="🗺️"
+                  label={t("map:globe.panel.placeLabels")}
+                />
+                <Toggle
+                  checked={showTerrain}
+                  onChange={onShowTerrainChange}
+                  icon="⛰️"
+                  label={t("map:globe.panel.terrain")}
+                />
+                <Toggle
+                  checked={autoRotate}
+                  onChange={onAutoRotateChange}
+                  icon="🌍"
+                  label={t("map:globe.autoRotation")}
+                />
               </div>
-              <SegControl<LabelsMode>
-                value={labelsMode}
-                onChange={onLabelsModeChange}
-                options={[
-                  { value: "off", label: t("map:globe.panel.off") },
-                  { value: "important", label: t("map:globe.panel.labelsImportant") },
-                  { value: "all", label: t("map:globe.panel.labelsAll") },
-                ]}
-              />
+              {/* Marker labels: off / key markers only / all */}
+              <div className="mt-2">
+                <div
+                  className="mb-1 flex items-center gap-2 px-1 text-xs font-medium"
+                  style={{ color: TEXT }}
+                >
+                  <span aria-hidden style={{ opacity: 0.9 }}>
+                    🏷️
+                  </span>
+                  {t("map:globe.panel.labels")}
+                </div>
+                <SegControl<LabelsMode>
+                  value={labelsMode}
+                  onChange={onLabelsModeChange}
+                  options={[
+                    { value: "off", label: t("map:globe.panel.off") },
+                    { value: "important", label: t("map:globe.panel.labelsImportant") },
+                    { value: "all", label: t("map:globe.panel.labelsAll") },
+                  ]}
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Basemap */}
-          <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
-            <SectionLabel>{t("map:globe.panel.basemap")}</SectionLabel>
-            <div className="grid grid-cols-3 gap-1">
-              {styleOptions.map((opt) => {
-                const active = opt.id === styleId;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => onStyleChange(opt.id)}
-                    className="cursor-pointer rounded-md px-1.5 py-1 text-[11px] font-medium transition-colors"
-                    style={{
-                      background: active ? `rgba(${ACCENT},0.16)` : "rgba(255,255,255,0.04)",
-                      color: active ? `rgb(${ACCENT})` : "rgba(241,245,249,0.72)",
-                      border: active
-                        ? `1px solid rgba(${ACCENT},0.55)`
-                        : "1px solid rgba(255,255,255,0.06)",
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
+            {/* Basemap */}
+            <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
+              <SectionLabel>{t("map:globe.panel.basemap")}</SectionLabel>
+              <div className="grid grid-cols-3 gap-1">
+                {styleOptions.map((opt) => {
+                  const active = opt.id === styleId;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => onStyleChange(opt.id)}
+                      className="cursor-pointer rounded-md px-1.5 py-1 text-[11px] font-medium transition-colors"
+                      style={{
+                        background: active ? `rgba(${ACCENT},0.16)` : "rgba(255,255,255,0.04)",
+                        color: active ? `rgb(${ACCENT})` : "rgba(241,245,249,0.72)",
+                        border: active
+                          ? `1px solid rgba(${ACCENT},0.55)`
+                          : "1px solid rgba(255,255,255,0.06)",
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          </CollapsibleSection>
 
           {/* Per-domain appearance sections (Flüge / Kreuzfahrten / …) */}
           {appearanceDomains.includes("flight") && (
@@ -266,8 +274,7 @@ export function GlobeControlPanel({
 
           {/* Frequency filter (only when arcs exist) */}
           {hasArcs && (
-            <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
-              <SectionLabel>{t("map:globe.routeFrequency")}</SectionLabel>
+            <CollapsibleSection id="frequency" title={t("map:globe.routeFrequency")}>
               <div className="flex flex-col gap-0.5">
                 {legendRanges.map(({ q, color, label }) => {
                   const active = activeQuartile === q;
@@ -325,7 +332,7 @@ export function GlobeControlPanel({
                   <span>{t("map:globe.weak")}</span>
                 </div>
               )}
-            </div>
+            </CollapsibleSection>
           )}
 
           {/* Actions + performance */}

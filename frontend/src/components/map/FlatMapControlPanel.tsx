@@ -9,6 +9,7 @@
 
 import { useTranslation } from "../../hooks/useTranslation";
 import {
+  CollapsibleSection,
   CruiseAppearanceSection,
   FlightAppearanceSection,
   LodgingAppearanceSection,
@@ -95,75 +96,79 @@ export function FlatMapControlPanel({
 
       {expanded && (
         <div className="scrollbar-none min-h-0 overflow-y-auto overflow-x-hidden px-3 pb-3">
-          {/* Modus + Filter + Add — folded in from the old top toolbar */}
-          <MapChromeSections />
+          {/* Map-wide settings in one section — see the globe panel, which
+              this one must match control for control. */}
+          <CollapsibleSection id="basics" title={t("map:globe.panel.basics")} defaultOpen first>
+            {/* Modus + Filter + Add — folded in from the old top toolbar */}
+            <MapChromeSections />
 
-          {/* Layers */}
-          <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
-            <SectionLabel>{t("map:globe.panel.layers")}</SectionLabel>
-            <div className="-mx-1 flex flex-col gap-0.5">
-              <Toggle
-                checked={showPlaceLabels}
-                onChange={onShowPlaceLabelsChange}
-                icon="🗺️"
-                label={t("map:globe.panel.placeLabels")}
-              />
-              <Toggle
-                checked={showTerrain}
-                onChange={onShowTerrainChange}
-                icon="⛰️"
-                label={t("map:globe.panel.terrain")}
-              />
-            </div>
-            {/* Marker labels: off / key markers only / all */}
-            <div className="mt-2">
-              <div
-                className="mb-1 flex items-center gap-2 px-1 text-xs font-medium"
-                style={{ color: TEXT }}
-              >
-                <span aria-hidden style={{ opacity: 0.9 }}>
-                  🏷️
-                </span>
-                {t("map:globe.panel.labels")}
+            {/* Layers */}
+            <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
+              <SectionLabel>{t("map:globe.panel.layers")}</SectionLabel>
+              <div className="-mx-1 flex flex-col gap-0.5">
+                <Toggle
+                  checked={showPlaceLabels}
+                  onChange={onShowPlaceLabelsChange}
+                  icon="🗺️"
+                  label={t("map:globe.panel.placeLabels")}
+                />
+                <Toggle
+                  checked={showTerrain}
+                  onChange={onShowTerrainChange}
+                  icon="⛰️"
+                  label={t("map:globe.panel.terrain")}
+                />
               </div>
-              <SegControl<LabelsMode>
-                value={labelsMode}
-                onChange={onLabelsModeChange}
-                options={[
-                  { value: "off", label: t("map:globe.panel.off") },
-                  { value: "important", label: t("map:globe.panel.labelsImportant") },
-                  { value: "all", label: t("map:globe.panel.labelsAll") },
-                ]}
-              />
+              {/* Marker labels: off / key markers only / all */}
+              <div className="mt-2">
+                <div
+                  className="mb-1 flex items-center gap-2 px-1 text-xs font-medium"
+                  style={{ color: TEXT }}
+                >
+                  <span aria-hidden style={{ opacity: 0.9 }}>
+                    🏷️
+                  </span>
+                  {t("map:globe.panel.labels")}
+                </div>
+                <SegControl<LabelsMode>
+                  value={labelsMode}
+                  onChange={onLabelsModeChange}
+                  options={[
+                    { value: "off", label: t("map:globe.panel.off") },
+                    { value: "important", label: t("map:globe.panel.labelsImportant") },
+                    { value: "all", label: t("map:globe.panel.labelsAll") },
+                  ]}
+                />
+              </div>
             </div>
-          </div>
 
-          {/* Basemap */}
-          <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
-            <SectionLabel>{t("map:globe.panel.basemap")}</SectionLabel>
-            <div className="grid grid-cols-3 gap-1">
-              {styleOptions.map((opt) => {
-                const active = opt.id === styleId;
-                return (
-                  <button
-                    key={opt.id}
-                    type="button"
-                    onClick={() => onStyleChange(opt.id)}
-                    className="cursor-pointer rounded-md px-1.5 py-1 text-[11px] font-medium transition-colors"
-                    style={{
-                      background: active ? `rgba(${ACCENT},0.16)` : "rgba(255,255,255,0.04)",
-                      color: active ? `rgb(${ACCENT})` : "rgba(241,245,249,0.72)",
-                      border: active
-                        ? `1px solid rgba(${ACCENT},0.55)`
-                        : "1px solid rgba(255,255,255,0.06)",
-                    }}
-                  >
-                    {opt.label}
-                  </button>
-                );
-              })}
+            {/* Basemap */}
+            <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
+              <SectionLabel>{t("map:globe.panel.basemap")}</SectionLabel>
+              <div className="grid grid-cols-3 gap-1">
+                {styleOptions.map((opt) => {
+                  const active = opt.id === styleId;
+                  return (
+                    <button
+                      key={opt.id}
+                      type="button"
+                      onClick={() => onStyleChange(opt.id)}
+                      className="cursor-pointer rounded-md px-1.5 py-1 text-[11px] font-medium transition-colors"
+                      style={{
+                        background: active ? `rgba(${ACCENT},0.16)` : "rgba(255,255,255,0.04)",
+                        color: active ? `rgb(${ACCENT})` : "rgba(241,245,249,0.72)",
+                        border: active
+                          ? `1px solid rgba(${ACCENT},0.55)`
+                          : "1px solid rgba(255,255,255,0.06)",
+                      }}
+                    >
+                      {opt.label}
+                    </button>
+                  );
+                })}
+              </div>
             </div>
-          </div>
+          </CollapsibleSection>
 
           {/* Per-domain appearance sections (Flüge / Kreuzfahrten / …) */}
           {appearanceDomains.includes("flight") && (
