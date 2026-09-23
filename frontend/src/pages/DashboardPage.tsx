@@ -117,6 +117,12 @@ export default function DashboardPage(): JSX.Element {
           {
             flight: scheduledFlights.total,
             cruise: cruises.filter((c) => c.status === "scheduled").length,
+            // A house whose every stay still lies ahead. It is NOT part of
+            // `counts.lodging` above -- `lodgingsCount` is houses been to --
+            // which is why the strip words this one as an addition rather
+            // than a subset (tester, 2026-09-21: the strip named the next
+            // stay on the right and still said nothing about it on the left).
+            lodging: lodgingStats?.plannedLodgingsCount ?? 0,
           }
         );
       } catch (err) {

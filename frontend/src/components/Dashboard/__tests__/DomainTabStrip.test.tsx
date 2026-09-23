@@ -19,7 +19,12 @@ vi.mock("react-router-dom", async () => {
 // Override the global key-passthrough mock with human-readable labels for this component.
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, opts?: { count?: number }) => {
+      // The two planned hints carry a count and are the point of the test
+      // below, so they interpolate here rather than falling through to the
+      // bare key like the labels do.
+      if (key === "dashboard:tabStrip.scheduledHint") return ` incl. ${opts?.count} planned`;
+      if (key === "dashboard:tabStrip.plannedExtraHint") return ` +${opts?.count} planned`;
       const labels: Record<string, string> = {
         "dashboard:tabStrip.label": "Domain switcher",
         "dashboard:tabStrip.tabs.all": "All",
@@ -333,5 +338,46 @@ describe("DomainTabStrip: the next-up entry", () => {
   it("shows nothing on the domain-less 'tour' tab, which cannot match any upcoming entry", () => {
     renderStrip("tour");
     expect(screen.queryByTestId("next-up-entry")).not.toBeInTheDocument();
+  });
+
+  // Tester, 2026-09-21: the strip said "Flüge 123 · 2 geplant" and
+  // "Unterkünfte 243" with nothing at all, while naming his next stay on the
+  // right -- so he asked whether lodging simply has no planned figure. It
+  // does; the strip was not asking for it. The wording differs because the
+  // counting rules do: `counts.flight` already contains its planned flights,
+  // `counts.lodging` is houses been to and contains none of the planned ones
+  // (`shared/lodgingCounting.ts`).
+  describe("planned hint", () => {
+    const renderCounts = (scheduledCounts: Partial<Record<string, number>>): void => {
+      render(
+        <MemoryRouter>
+          <DomainTabStrip
+            active="all"
+            counts={{ flight: 123, cruise: 0, poi: 0, lodging: 243 }}
+            scheduledCounts={scheduledCounts}
+            enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+            onSelect={() => {}}
+          />
+        </MemoryRouter>
+      );
+    };
+
+    it("names the planned stays on the lodging tab, as an addition to its count", () => {
+      renderCounts({ lodging: 2 });
+      expect(screen.getByRole("tab", { name: /lodging/i }).textContent).toContain("243 +2 planned");
+    });
+
+    it("keeps the flight hint a subset, because planned flights are already counted", () => {
+      renderCounts({ flight: 2 });
+      expect(screen.getByRole("tab", { name: /flights/i }).textContent).toContain(
+        "123 incl. 2 planned"
+      );
+    });
+
+    it("says nothing where there is nothing planned", () => {
+      renderCounts({ lodging: 0, flight: 0 });
+      expect(screen.getByRole("tab", { name: /lodging/i }).textContent).not.toContain("planned");
+      expect(screen.getByRole("tab", { name: /flights/i }).textContent).not.toContain("planned");
+    });
   });
 });

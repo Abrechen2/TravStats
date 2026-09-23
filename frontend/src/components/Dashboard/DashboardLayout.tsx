@@ -26,8 +26,9 @@ import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 interface DashboardLayoutProps {
   children: ReactNode;
   counts: { flight: number; cruise: number; poi: number; lodging: number };
-  /** How many of `counts` are merely planned — see DomainTabStrip (B6). */
-  scheduledCounts?: { flight?: number; cruise?: number };
+  /** What is still ahead per domain — see DomainTabStrip (B6). Whether it is
+   * part of `counts` or beside it differs per domain; the strip says which. */
+  scheduledCounts?: { flight?: number; cruise?: number; lodging?: number };
   /** Optional refetch hook called after a create-modal saves so the
    * outer page can refresh counts / per-tab data without a navigation. */
   onDataChanged?: () => void;

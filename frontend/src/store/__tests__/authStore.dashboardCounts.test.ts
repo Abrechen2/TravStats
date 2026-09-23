@@ -31,7 +31,7 @@ import { rememberQuotaRefused, wasQuotaRefused } from "../../lib/bulkRefreshRefu
 function seedCounts(): void {
   useDashboardCountsStore
     .getState()
-    .setCounts({ flight: 42, cruise: 3, poi: 1, lodging: 2 }, { flight: 1, cruise: 0 });
+    .setCounts({ flight: 42, cruise: 3, poi: 1, lodging: 2 }, { flight: 1, cruise: 0, lodging: 1 });
 }
 
 beforeEach(() => {

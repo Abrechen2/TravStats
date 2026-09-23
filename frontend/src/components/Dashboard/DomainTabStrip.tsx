@@ -19,11 +19,12 @@ interface DomainTabStripProps {
    */
   counts: Record<DomainKey, number>;
   /**
-   * How many of `counts` are merely planned (per domain, optional). Shown as
-   * a "(n geplant)" hint so the tab count and the statistics stop appearing
-   * to contradict each other — "Flüge 1" next to "keine Daten" is factually
-   * consistent (statistics count flown things) but reads like a bug without
-   * the hint (UAT finding B6).
+   * What is still ahead per domain (optional). Shown as a "geplant" hint so
+   * the tab count and the statistics stop appearing to contradict each other —
+   * "Flüge 1" next to "keine Daten" is factually consistent (statistics count
+   * flown things) but reads like a bug without the hint (UAT finding B6).
+   *
+   * See `PLANNED_IS_INCLUDED` for why the same number is worded two ways.
    */
   scheduledCounts?: Partial<Record<DomainKey, number>>;
   enabled: Record<DomainKey, boolean>;
@@ -37,6 +38,27 @@ interface DomainTabStripProps {
   /** Now, as a timestamp — injected so the countdown is testable. */
   nowMs?: number;
 }
+
+/**
+ * Whether a domain's planned figure is already INSIDE its count badge.
+ *
+ * Flights and cruises list every row, planned ones included, so the hint names
+ * a SUBSET of the number beside it. Lodging counts houses the user has BEEN to
+ * (`shared/lodgingCounting.ts` — a stay counts only once its check-out is
+ * past), so a house with nothing but future stays is missing from that number
+ * and the hint has to ADD to it. One wording for both would be wrong for one
+ * of them, and wrong in the direction the tester already read it: on
+ * 2026-09-21 the strip named his next stay on the right ("in 5 Tagen") and
+ * said nothing at all on the left, which he read as the planned figure
+ * working for flights only.
+ *
+ * A domain absent here has no planned figure to show.
+ */
+const PLANNED_IS_INCLUDED: Partial<Record<DomainKey, boolean>> = {
+  flight: true,
+  cruise: true,
+  lodging: false,
+};
 
 /** Line icons, as the logbook tabs; "Alle" carries none, as in round 4. */
 const TAB_ICON: Record<DashboardTab, IconName | null> = {
@@ -169,7 +191,12 @@ export function DomainTabStrip({
                 {count}
                 {scheduled > 0 && (
                   <span style={{ marginLeft: 4 }}>
-                    {t("dashboard:tabStrip.scheduledHint", { count: scheduled })}
+                    {t(
+                      domain !== null && PLANNED_IS_INCLUDED[domain] === true
+                        ? "dashboard:tabStrip.scheduledHint"
+                        : "dashboard:tabStrip.plannedExtraHint",
+                      { count: scheduled }
+                    )}
                   </span>
                 )}
               </span>
