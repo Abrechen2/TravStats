@@ -1,4 +1,5 @@
 import { isCurrencyCode, minorUnits } from "../../shared/currencies";
+import { refCellName } from "../xlsx/sheetSpec";
 // Lodging CSV importer: field spec, header heuristic, shape detection and
 // candidate builder. This is a ONE-TIME MIGRATION TOOL (spec §3.1) — the
 // ongoing lodging import path is email/PDF via cruiseBookingParser-style
@@ -655,7 +656,11 @@ export function buildLodgingCandidates(
   const rowErrors: LodgingRowError[] = [];
 
   records.forEach((record, rowIndex) => {
-    const name = cell(record, mapping.name);
+    // `refCellName` rather than `cell`: a CSV built from the workbook's own
+    // "Aufenthalte" sheet carries "Catalonia Rigoletto [42]" here, and the id
+    // belongs to the instance that exported it. Keeping the brackets would
+    // match no house and create one named after them (tester, 2026-09-20).
+    const name = refCellName(cell(record, mapping.name));
     if (!name) {
       rowErrors.push({ rowIndex, code: "missing_name", message: "Row has no hotel name" });
       return;
