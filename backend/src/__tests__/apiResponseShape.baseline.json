@@ -48,6 +48,7 @@
     "immich/tripCover.ts",
     "import.ts",
     "lodgingGeocode.ts",
+    "loginBackgrounds.ts",
     "mounts.ts",
     "openapi.ts",
     "pairing.ts",

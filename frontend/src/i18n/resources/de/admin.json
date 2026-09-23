@@ -694,5 +694,17 @@
     "title": "Wechselkurse",
     "label": "Kurse für Währungen ohne EZB-Kurs von cdn.jsdelivr.net holen",
     "description": "Die EZB veröffentlicht 30 Währungen. Ist das aus, bleiben genau diese umrechenbar; alles andere wird gespeichert und angezeigt, aber als „kein Kurs“ markiert und nicht in Summen gezählt. Ist es an, fragt diese Instanz für die übrigen Währungen den kostenlosen jsDelivr-Datensatz ab — nur für Kurse, die die EZB nicht hat, und ohne Schlüssel."
+  },
+  "loginBackgrounds": {
+    "title": "Bilder der Anmeldeseite",
+    "subtitle": "Fotos, die auf der Anmeldeseite links als ruhige Diaschau durchlaufen. Ohne Bilder bleibt der bisherige Verlauf stehen.",
+    "publicWarning": "Diese Bilder sieht jeder, der die Instanz erreicht — auch ohne Anmeldung. Lade nur Fotos hoch, die veröffentlicht sein dürfen.",
+    "empty": "Noch keine Bilder hinterlegt.",
+    "add": "Bilder hinzufügen",
+    "uploaded": "{{count}} Bild hochgeladen",
+    "uploaded_other": "{{count}} Bilder hochgeladen",
+    "partial": "{{accepted}} übernommen. Nicht als Bild erkannt: {{rejected}}",
+    "uploadFailed": "Hochladen fehlgeschlagen.",
+    "removeFailed": "Entfernen fehlgeschlagen."
   }
 }

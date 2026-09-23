@@ -694,5 +694,17 @@
     "title": "Exchange rates",
     "label": "Fetch rates for currencies the ECB does not publish from cdn.jsdelivr.net",
     "description": "The ECB publishes 30 currencies. With this off, exactly those stay convertible; everything else is stored and shown but marked “no rate” and left out of totals. With it on, this instance asks the free jsDelivr dataset for the rest — only for rates the ECB lacks, and without a key."
+  },
+  "loginBackgrounds": {
+    "title": "Sign-in page images",
+    "subtitle": "Photographs that drift across the left half of the sign-in page. With none, the existing gradient stays as it is.",
+    "publicWarning": "Anyone who can reach this instance sees these, signed in or not. Only upload photographs that may be public.",
+    "empty": "No images yet.",
+    "add": "Add images",
+    "uploaded": "{{count}} image uploaded",
+    "uploaded_other": "{{count}} images uploaded",
+    "partial": "{{accepted}} kept. Not recognised as images: {{rejected}}",
+    "uploadFailed": "Upload failed.",
+    "removeFailed": "Could not remove the image."
   }
 }

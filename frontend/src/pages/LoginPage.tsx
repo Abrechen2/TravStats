@@ -6,6 +6,7 @@ import { authApi, passkeyApi, setupApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
+import { LoginBackdrop } from "../components/LoginBackdrop";
 import { PasswordInput } from "../components/Auth/PasswordInput";
 import { Icon } from "../components/ui/Icon";
 import { loginFailure, type LoginFailureCopy } from "../lib/loginFailure";
@@ -183,17 +184,21 @@ export default function LoginPage(): JSX.Element {
       style={{ background: "var(--ts-bg)" }}
     >
       <aside
-        className="hidden flex-col justify-between p-10 lg:flex"
+        className="relative hidden flex-col justify-between p-10 lg:flex"
         style={{
           borderRight: "1px solid var(--ts-border)",
           background:
             "radial-gradient(ellipse at 20% 20%, color-mix(in srgb, var(--ts-surface2) 70%, transparent), transparent 60%)",
         }}
       >
-        <div className="self-start">
+        {/* An admin's pictures, if the instance has any, behind everything
+            else in this half. Draws nothing at all otherwise, so the gradient
+            above stays the default look (Alex, 2026-09-21). */}
+        <LoginBackdrop />
+        <div className="relative self-start">
           <LogoLockup size={22} markSize={36} layout="horizontal" />
         </div>
-        <div className="flex max-w-md flex-col gap-4">
+        <div className="relative flex max-w-md flex-col gap-4">
           <h2
             style={{
               fontSize: 34,
@@ -206,7 +211,7 @@ export default function LoginPage(): JSX.Element {
           </h2>
           <p style={{ color: "var(--ts-text)", lineHeight: 1.6 }}>{t("login.brand.body")}</p>
         </div>
-        <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
+        <span className="t-caption relative" style={{ fontFamily: "var(--ts-font-mono)" }}>
           {t("login.brand.footer")}
         </span>
       </aside>

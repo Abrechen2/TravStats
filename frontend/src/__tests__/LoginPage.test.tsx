@@ -4,6 +4,15 @@ import { BrowserRouter } from "react-router-dom";
 import { authApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 
+// The sign-in page's left half carries an admin-supplied slideshow that asks
+// the server for its list on mount. Mocked away here: these cases are about
+// signing in, and the network guard would fail the render before the form is
+// drawn.
+vi.mock("../lib/api/loginBackgrounds", () => ({
+  getLoginBackgrounds: () => Promise.resolve([]),
+  loginBackgroundUrl: (name: string) => `/api/v1/login-backgrounds/${name}`,
+}));
+
 vi.mock("../lib/api", () => ({
   authApi: {
     login: vi.fn(),

@@ -518,3 +518,73 @@ export function deleteProfilePictureFile(filename: string): void {
     }
   }
 }
+
+// =============== Login backgrounds (Alex, 2026-09-21) ===============
+//
+// Images an admin puts behind the left half of the sign-in page. Its own
+// directory for the same reason every other kind got one, and for a second
+// one that matters more here: this is the ONLY upload directory whose
+// contents are served to anyone who can reach the instance, signed in or
+// not. Keeping it apart is what makes "public" a property of a folder
+// rather than of a guess about a filename.
+//
+// REGISTER A NEW DIRECTORY IN `config/uploadDirs.ts`.
+
+const LOGIN_BACKGROUND_DIR = path.join(__dirname, "../../uploads/login-backgrounds");
+
+try {
+  if (!fs.existsSync(LOGIN_BACKGROUND_DIR)) {
+    fs.mkdirSync(LOGIN_BACKGROUND_DIR, { recursive: true });
+  }
+} catch (error: unknown) {
+  const errMsg = error instanceof Error ? error.message : String(error);
+  logger.warn({
+    operation: "upload_login_background_dir_creation_failed",
+    message: `Could not create login background directory: ${LOGIN_BACKGROUND_DIR}`,
+    context: { directory: LOGIN_BACKGROUND_DIR, error: errMsg },
+  });
+}
+
+const loginBackgroundStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, LOGIN_BACKGROUND_DIR);
+  },
+  filename: (_req, file, cb) => {
+    // No user id in the name, unlike a profile picture: these belong to the
+    // INSTANCE, and there is nothing to own. The timestamp leads so a plain
+    // directory listing is already in upload order.
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
+    const ext = path.extname(file.originalname).toLowerCase();
+    const basename = path.basename(file.originalname, ext);
+    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 40);
+    cb(null, `${uniqueSuffix}-${sanitized}${ext}`);
+  },
+});
+
+export const uploadLoginBackgrounds = multer({
+  storage: loginBackgroundStorage,
+  fileFilter: profilePictureFilter,
+  limits: {
+    fileSize: FILE_LIMITS.LOGIN_BACKGROUND_MAX_SIZE,
+    files: FILE_LIMITS.LOGIN_BACKGROUND_MAX_COUNT,
+  },
+});
+
+export function getLoginBackgroundDir(): string {
+  return LOGIN_BACKGROUND_DIR;
+}
+
+export function deleteLoginBackgroundFile(filename: string): void {
+  const filePath = path.join(LOGIN_BACKGROUND_DIR, path.basename(filename));
+  if (fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch (error) {
+      logger.warn({
+        operation: "upload_login_background_delete_error",
+        message: `Failed to delete login background file: ${filename}`,
+        context: { filename, error: error instanceof Error ? error.message : "Unknown error" },
+      });
+    }
+  }
+}

@@ -37,6 +37,7 @@ import "./integrations";
 import "./catalog";
 import "./misc";
 import "./countryFlags";
+import "./loginBackgrounds";
 import "./xlsxImport";
 import "./settingsRouting";
 import "./documents";
