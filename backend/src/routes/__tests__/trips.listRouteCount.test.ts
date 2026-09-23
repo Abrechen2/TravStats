@@ -30,8 +30,8 @@ describe("the trip list counts tour sections in _count.routes", () => {
     tripWithRoutes = withRoutes.id;
     await prisma.tripRoute.createMany({
       data: [
-        { tripId: tripWithRoutes, name: "Outbound", mode: "road", orderIdx: 0 },
-        { tripId: tripWithRoutes, name: "Return", mode: "rail", orderIdx: 1 },
+        { userId, tripId: tripWithRoutes, name: "Outbound", mode: "road", orderIdx: 0 },
+        { userId, tripId: tripWithRoutes, name: "Return", mode: "rail", orderIdx: 1 },
       ],
     });
 
