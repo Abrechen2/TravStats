@@ -98,6 +98,11 @@ export interface CruiseStopInput {
    *  the selected port when editing an existing cruise. Not sent to the
    *  backend — the submit mapper strips it (backend Zod also ignores it). */
   port?: Port | null;
+  /** UI-only: the day this stop was loaded with, so the stops editor can keep
+   *  it (`null` = added in the editor, `undefined` = not touched yet, which
+   *  means its `dayNumber` IS the loaded day). Stripped on submit like `port`.
+   *  See `cruiseDayNumbers.ts` (forgejo#126). */
+  originalDay?: number | null;
 }
 
 export interface CruiseInput {

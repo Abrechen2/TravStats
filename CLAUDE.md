@@ -369,10 +369,12 @@ enforced, and merely practised** below.
   preserved, the stop stays a port call, the user resolves it later). Zod
   (`schemas/cruise.ts`) rejects any other combination. An unresolved stop
   counts as a port call (`totalPortCalls`, frontend `countUniquePorts`) but
-  is coordinate-less, so it's excluded from legs/distance/map. The stops
-  editor must renumber `dayNumber` as `index + 1` after add/remove/reorder,
-  and clear `unresolvedPortName` whenever a stop becomes a matched port or a
-  sea day.
+  is coordinate-less, so it's excluded from legs/distance/map. `dayNumber` is
+  the day of the cruise, not a list position (owner, 2026-09-19, forgejo#126):
+  the stops editor keeps each stop's day, gives a new stop the day after the
+  one before it, and pushes a stop moved behind a later day to the next free
+  day (`components/Cruise/cruiseDayNumbers.ts`). It also clears
+  `unresolvedPortName` whenever a stop becomes a matched port or a sea day.
 - **Dashboard is multi-domain** — `frontend/src/pages/DashboardPage.tsx` is a thin shell delegating to per-tab components under `frontend/src/components/Dashboard/tabs/`. Tab modes are domain-scoped via `frontend/src/types/dashboard.ts` (no more global `VisMode` union). URL carries tab + mode (`/dashboard/<tab>?mode=<mode>`); `localStorage` remembers the last mode per domain. `MapContainer3D` uses a private `MapMode = "routes" | "heatmap" | "trips" | "globe"` internally; retired modes `hexagon`, `contour`, `columns`, `trip-routes` are gone. Flight-only modes are opt-in via `showInternalCruises={false}` on FlightsTab.
 - **Cruise sea-routes** — `backend/src/services/schematicRouter.ts` runs
   the schematic pipeline (coarse 1° A* water path → Douglas-Peucker
