@@ -6,7 +6,8 @@ import { AppError } from "../../middleware/errorHandler";
 import { tourPointsSchema } from "../../schemas/tour";
 import { recomputeLegs, type StopCoords } from "../../services/tour/legRecompute";
 import logger from "../../utils/logger";
-import { resolveRoute, toDto, toLegDto, ROUTE_SELECT } from "./tourRoutes";
+import { resolveRoute, toDto, toLegDto, readRouteAndLegs, ROUTE_SELECT } from "./tourRoutes";
+import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 
 /**
  * The point list of a STANDALONE tour — one that belongs to no trip.
@@ -55,7 +56,7 @@ router.put(
         throw new AppError("A point may appear once — a loop is two points at one place", 400);
       }
 
-      const { route, stops, legs } = await prisma.$transaction(
+      const saved = await prisma.$transaction(
         async (tx) => {
           // Every id the body names must already be a point of THIS tour.
           // Without this an id from a stranger's tour would be adopted by
@@ -122,9 +123,10 @@ router.put(
           // removed.
           await tx.tripStop.deleteMany({ where: { routeId, routeOrderIdx: null } });
 
-          await recomputeLegs(tx, routeId, section.mode, ordered);
+          const createdLegs = await recomputeLegs(tx, routeId, section.mode, ordered);
 
           return {
+            createdLegs,
             route: await tx.tripRoute.findUniqueOrThrow({
               where: { id: routeId },
               include: ROUTE_SELECT,
@@ -147,7 +149,9 @@ router.put(
       );
 
       logger.info({ operation: "tour.points.replace", routeId, count: points.length });
-      res.json({ route: toDto(route), stops, legs: legs.map(toLegDto) });
+      const routedCount = await autoRouteNewLegs(userId, routeId, saved.createdLegs);
+      const { route, legs } = routedCount > 0 ? await readRouteAndLegs(routeId) : saved;
+      res.json({ route: toDto(route), stops: saved.stops, legs: legs.map(toLegDto) });
     } catch (error) {
       next(error);
     }

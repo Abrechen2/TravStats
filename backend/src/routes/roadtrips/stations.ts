@@ -6,7 +6,8 @@ import { AppError } from "../../middleware/errorHandler";
 import { stationsSchema, type StationsInput } from "../../schemas/roadtrip";
 import { recomputeLegs, type StopCoords } from "../../services/tour/legRecompute";
 import { STATION_SELECT, nightsOf, toStationDto } from "../../services/roadtrip/roadtripSummary";
-import { toDto, toLegDto, ROUTE_SELECT } from "../trips/tourRoutes";
+import { toDto, toLegDto, readRouteAndLegs, ROUTE_SELECT } from "../trips/tourRoutes";
+import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 import logger from "../../utils/logger";
 import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
 
@@ -127,9 +128,10 @@ router.put(
           });
           await tx.tripStop.deleteMany({ where: { routeId, routeOrderIdx: null } });
 
-          await recomputeLegs(tx, routeId, mode, ordered);
+          const createdLegs = await recomputeLegs(tx, routeId, mode, ordered);
 
           return {
+            createdLegs,
             route: await tx.tripRoute.findUniqueOrThrow({
               where: { id: routeId },
               include: ROUTE_SELECT,
@@ -148,12 +150,15 @@ router.put(
         { timeout: 20_000 }
       );
 
+      const routedCount = await autoRouteNewLegs(userId, routeId, result.createdLegs);
+      const { route, legs } = routedCount > 0 ? await readRouteAndLegs(routeId) : result;
+
       logger.info({ operation: "roadtrip.stations.replace", routeId, count: stations.length });
       res.json({
-        roadtrip: toDto(result.route),
+        roadtrip: toDto(route),
         nights: nightsOf(result.stations),
         stations: result.stations.map(toStationDto),
-        legs: result.legs.map(toLegDto),
+        legs: legs.map(toLegDto),
       });
     } catch (error) {
       next(error);

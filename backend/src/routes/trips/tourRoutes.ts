@@ -8,6 +8,7 @@ import { assignStopsSchema, createRouteSchema, updateRouteSchema } from "../../s
 import { kindFieldsSchema } from "../../schemas/roadtrip";
 import { drivenKm, travelledKm } from "../../services/tour/tourDistance";
 import { recomputeLegs } from "../../services/tour/legRecompute";
+import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 import { describeRoutingAvailability } from "../../services/tour/routing/resolveProvider";
 import { resolveTrip } from "../trips";
 import logger from "../../utils/logger";
@@ -157,6 +158,22 @@ export const ROUTE_SELECT = {
   legs: { select: { mode: true, distanceKm: true } },
   _count: { select: { stops: true } },
 } as const;
+
+/**
+ * A section and its legs as they stand now. For a handler that changed the
+ * legs after its own transaction committed (the automatic routing pass), so
+ * the response shows the routed lines rather than the straight ones it wrote.
+ */
+export async function readRouteAndLegs(routeId: string) {
+  const [route, legs] = await Promise.all([
+    prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, include: ROUTE_SELECT }),
+    prisma.tripRouteLeg.findMany({
+      where: { routeId },
+      orderBy: { fromStop: { routeOrderIdx: "asc" } },
+    }),
+  ]);
+  return { route, legs };
+}
 
 /**
  * The section must exist and be OWNED by this user.
@@ -478,7 +495,7 @@ router.put(
       // so its index IS the final `routeOrderIdx`, contiguous from 0.
       const ordered = stopIds.map((id) => byId.get(id)!);
 
-      await prisma.$transaction(
+      const createdLegs = await prisma.$transaction(
         async (tx) => {
           // Release first: `@@unique([routeId, routeOrderIdx])` would
           // collide with the old numbering otherwise.
@@ -508,13 +525,14 @@ router.put(
             where: { id: routeId },
             select: { mode: true },
           });
-          await recomputeLegs(tx, routeId, route.mode, ordered);
+          return recomputeLegs(tx, routeId, route.mode, ordered);
         },
         // Default interactive-transaction timeout is 5000ms. At the
         // 512-stop cap this loop is up to 512 awaited updates; comfortably
         // inside 20s even over a non-local socket.
         { timeout: 20_000 }
       );
+      await autoRouteNewLegs(userId, routeId, createdLegs);
 
       const [route, legs, savedStops] = await Promise.all([
         prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, include: ROUTE_SELECT }),

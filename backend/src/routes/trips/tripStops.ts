@@ -10,6 +10,7 @@ import {
 } from "../../schemas/trip";
 
 import { updateStopAndLegs, recomputeLegs } from "../../services/tour/legRecompute";
+import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 import { resolveTrip } from "./resolveTrip";
 
 /**
@@ -118,10 +119,10 @@ router.delete(
       });
       if (!existing) throw new AppError("Stop not found", 404);
 
-      await prisma.$transaction(async (tx) => {
+      const createdLegs = await prisma.$transaction(async (tx) => {
         await tx.tripStop.delete({ where: { id: req.params.stopId } });
 
-        if (existing.routeId === null) return;
+        if (existing.routeId === null) return [];
 
         const route = await tx.tripRoute.findUnique({
           where: { id: existing.routeId },
@@ -129,7 +130,7 @@ router.delete(
         });
         // The section itself may have been deleted concurrently (cascade
         // from a route DELETE) — nothing left to renumber or recompute.
-        if (!route) return;
+        if (!route) return [];
 
         const survivors = await tx.tripStop.findMany({
           where: { routeId: existing.routeId },
@@ -144,8 +145,12 @@ router.delete(
           });
         }
 
-        await recomputeLegs(tx, existing.routeId, route.mode, survivors);
+        return recomputeLegs(tx, existing.routeId, route.mode, survivors);
       });
+
+      if (existing.routeId !== null) {
+        await autoRouteNewLegs(userId, existing.routeId, createdLegs);
+      }
 
       res.status(204).send();
     } catch (error) {

@@ -2,7 +2,7 @@ import type { DbTransaction } from "../../db";
 import { Prisma } from "../../prisma";
 
 import { AppError } from "../../middleware/errorHandler";
-import { planLegs } from "../../shared/tour/legPlan";
+import { planLegs, type LegPair } from "../../shared/tour/legPlan";
 import { legDistanceKm, type LegSource } from "./tourDistance";
 
 /** Just enough of the client to open a transaction — keeps this testable. */
@@ -28,13 +28,16 @@ export interface StopCoords {
  * manual costs included. Pairs that vanished are deleted; new pairs start
  * as `straight`. Nothing here consults the previous ORDER, only the pairs,
  * which is what makes an insertion (or a deletion) cheap.
+ *
+ * Returns the pairs it created, so the caller can route exactly those after
+ * the transaction commits (`autoRouteNewLegs`) and nothing it kept.
  */
 export async function recomputeLegs(
   tx: Tx,
   routeId: string,
   defaultMode: string,
   orderedStops: readonly StopCoords[]
-): Promise<void> {
+): Promise<LegPair[]> {
   const existing = await tx.tripRouteLeg.findMany({
     where: { routeId },
     select: { id: true, fromStopId: true, toStopId: true },
@@ -88,6 +91,7 @@ export async function recomputeLegs(
   if (rows.length > 0) {
     await tx.tripRouteLeg.createMany({ data: rows });
   }
+  return plan.create;
 }
 
 /**
