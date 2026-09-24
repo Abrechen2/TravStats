@@ -19,6 +19,7 @@ import "./tours";
 import "./tourTracks";
 import "./tourIndex";
 import "./roadtrips";
+import "./strava";
 import "./companions";
 import "./airports";
 import "./stats";

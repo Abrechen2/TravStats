@@ -639,6 +639,17 @@ model UserSettings {
   dawarichBaseUrl String? @map("dawarich_base_url")
   dawarichApiKey  String? @map("dawarich_api_key")
 
+  /// Strava connection (2.7, design 2026-09-24 §5). OAuth tokens, both
+  /// encrypted at rest; the athlete id identifies the account for the UI.
+  /// Strava's API agreement (Nov 2024) lets a third-party app show this data
+  /// to this user ONLY and never to an AI model — tracks imported from it
+  /// carry `source = "strava"`, which is what those paths check.
+  stravaAthleteId      String?   @map("strava_athlete_id")
+  stravaAccessToken    String?   @map("strava_access_token")
+  stravaRefreshToken   String?   @map("strava_refresh_token")
+  stravaTokenExpiresAt DateTime? @map("strava_token_expires_at")
+  stravaScope          String?   @map("strava_scope")
+
   // Trip automation: silently group imported flights of one PNR into a trip +
   // booking (routes/flightsBatch.ts). Default keeps today's behaviour; the
   // explicit "detect trips" endpoint is NOT gated by this — pressing that
@@ -795,6 +806,12 @@ model AdminSettings {
   // Global Dawarich connection (base URL plain, API key encrypted, Phase 3b)
   globalDawarichBaseUrl String? @map("global_dawarich_base_url")
   globalDawarichApiKey  String? @map("global_dawarich_api_key")
+
+  // The operator's own Strava API application (client secret encrypted).
+  // TravStats ships no client id: since June 2026 Strava's standard API tier
+  // needs a subscription, and a self-hosted instance registers its own app.
+  stravaClientId     String? @map("strava_client_id")
+  stravaClientSecret String? @map("strava_client_secret")
 
   // User permissions
   allowUserApiKeys       Boolean @default(true) @map("allow_user_api_keys")

@@ -59,6 +59,7 @@ import tourIndexRoutes from "./trips/tourIndex";
 import tourPointRoutes from "./trips/tourPoints";
 import tourKindRoutes from "./trips/tourKind";
 import roadtripRoutes from "./roadtrips";
+import stravaRoutes from "./integrations/strava";
 import immichTripRoutes from "./immich/tripAlbums";
 import immichAssetProxyRoutes from "./immich/assetProxy";
 import immichTripCoverRoutes from "./immich/tripCover";
@@ -199,6 +200,9 @@ export const apiMounts: ApiMount[] = [
   // Roadtrips (2.7): list, detail, creation and the station list. The rest of
   // a roadtrip — legs, tracks, geometry — is the `/tours/:routeId` family.
   { id: "roadtrips", base: "/api/v1", router: roadtripRoutes },
+  // Strava (2.7): the OAuth round trip, the activity list and the imports.
+  // Its `/tours/...` paths end in `/strava`, so they shadow nothing above.
+  { id: "strava", base: "/api/v1", router: stravaRoutes },
   { id: "immich.tripAlbums", base: "/api/v1", router: immichTripRoutes },
   { id: "immich.assetProxy", base: "/api/v1", router: immichAssetProxyRoutes },
   { id: "immich.tripCover", base: "/api/v1", router: immichTripCoverRoutes },

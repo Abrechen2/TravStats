@@ -40,3 +40,15 @@ export function ingestedTrackColumns(ingested: IngestedTrack): {
     movingSeconds: ingested.movingSeconds,
   };
 }
+
+/**
+ * P2002 on `[routeId, externalRef]` — the same source record (a HealthKit
+ * workout, a Strava activity) imported into the same route a second time.
+ */
+export function isDuplicateExternalRef(error: unknown): boolean {
+  return (
+    error instanceof Prisma.PrismaClientKnownRequestError &&
+    error.code === "P2002" &&
+    JSON.stringify(error.meta ?? {}).includes("external_ref")
+  );
+}

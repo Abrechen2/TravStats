@@ -10,7 +10,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { FILE_LIMITS } from "../../config/constants";
 import { TRACK_SOURCES, pullDawarichTrackSchema } from "../../schemas/tour";
 import { parseTrackFile } from "../../services/tour/tracks/parseTrackFile";
-import { ingestedTrackColumns } from "../../services/tour/tracks/trackRow";
+import { ingestedTrackColumns, isDuplicateExternalRef } from "../../services/tour/tracks/trackRow";
 import { ingestTrack } from "../../services/tour/tracks/ingestTrack";
 import {
   EmptyDawarichWindowError,
@@ -183,15 +183,6 @@ const uploadFieldsSchema = z.object({
   externalRef: z.string().trim().min(1).max(200).optional(),
   origin: z.enum(["healthkit"]).optional(),
 });
-
-/** P2002 on `[routeId, externalRef]` — the same source record, again. */
-function isDuplicateExternalRef(error: unknown): boolean {
-  return (
-    error instanceof Prisma.PrismaClientKnownRequestError &&
-    error.code === "P2002" &&
-    JSON.stringify(error.meta ?? {}).includes("external_ref")
-  );
-}
 
 /**
  * Track must exist AND belong to this route (which `resolveRoute` already
