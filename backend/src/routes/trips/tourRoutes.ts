@@ -5,6 +5,7 @@ import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { assignStopsSchema, createRouteSchema, updateRouteSchema } from "../../schemas/tour";
+import { kindFieldsSchema } from "../../schemas/roadtrip";
 import { drivenKm, travelledKm } from "../../services/tour/tourDistance";
 import { recomputeLegs } from "../../services/tour/legRecompute";
 import { describeRoutingAvailability } from "../../services/tour/routing/resolveProvider";
@@ -19,6 +20,56 @@ import logger from "../../utils/logger";
  */
 
 const router = Router();
+
+/**
+ * The kind-specific PATCH fields each point at something that must be the
+ * caller's and must fit the row's kind: an anchor is a station of one of the
+ * caller's roadtrips and only a tour sets out from one; a trip must be the
+ * caller's. A foreign key would prove existence, not ownership.
+ */
+async function assertKindFields(
+  userId: string,
+  routeId: string,
+  body: { anchorStopId?: string | null; tripId?: string | null }
+): Promise<void> {
+  if (body.tripId) await resolveTrip(userId, body.tripId);
+  if (body.tripId !== undefined) {
+    // Only a roadtrip moves between trips: its stations are its own. A tour
+    // section of a trip is built from that trip's timeline, and a standalone
+    // tour's points would land beside a timeline the assign endpoint owns.
+    const { kind } = await prisma.tripRoute.findUniqueOrThrow({
+      where: { id: routeId },
+      select: { kind: true },
+    });
+    if (kind !== "roadtrip") {
+      throw new AppError("Only a roadtrip can be attached to or moved between trips", 400);
+    }
+    // A section built from a trip's timeline stops cannot change trip: its
+    // stops would stay on the old trip's timeline while the route claimed the
+    // new one. Only a route whose points are its own may move.
+    const timelineStops = await prisma.tripStop.count({
+      where: { routeId, tripId: { not: null } },
+    });
+    if (timelineStops > 0) {
+      throw new AppError(
+        "This route is built from a trip's timeline stops and cannot move to another trip",
+        409
+      );
+    }
+  }
+  if (!body.anchorStopId) return;
+  const [route, anchor] = await Promise.all([
+    prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, select: { kind: true } }),
+    prisma.tripStop.findFirst({
+      where: { id: body.anchorStopId, route: { userId, kind: "roadtrip" } },
+      select: { id: true },
+    }),
+  ]);
+  if (route.kind !== "tour") {
+    throw new AppError("Only a tour sets out from a roadtrip station", 400);
+  }
+  if (!anchor) throw new AppError("Station not found", 404);
+}
 
 interface LegRow {
   mode: string;
@@ -41,6 +92,12 @@ export function toDto(route: {
   notes: string | null;
   startOdometerKm: number | null;
   endOdometerKm: number | null;
+  kind: string;
+  activity: string | null;
+  vehicle: string | null;
+  vehicleName: string | null;
+  anchorStopId: string | null;
+  kindAssignedAutomatically: boolean;
   legs: LegRow[];
   _count: { stops: number };
 }): Record<string, unknown> {
@@ -54,6 +111,12 @@ export function toDto(route: {
     notes: route.notes,
     startOdometerKm: route.startOdometerKm,
     endOdometerKm: route.endOdometerKm,
+    kind: route.kind,
+    activity: route.activity,
+    vehicle: route.vehicle,
+    vehicleName: route.vehicleName,
+    anchorStopId: route.anchorStopId,
+    kindAssignedAutomatically: route.kindAssignedAutomatically,
     stopCount: route._count.stops,
     legCount: route.legs.length,
     distanceKm: travelledKm(route.legs),
@@ -209,7 +272,8 @@ router.patch(
     try {
       const userId = req.userId!;
       const routeId = await resolveRoute(userId, req.params.id, req.params.routeId);
-      const body = updateRouteSchema.parse(req.body);
+      const body = updateRouteSchema.merge(kindFieldsSchema).parse(req.body);
+      await assertKindFields(userId, routeId, body);
 
       const route = await prisma.tripRoute.update({
         where: { id: routeId },

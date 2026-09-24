@@ -63,6 +63,22 @@ const tourRouteTrackMeta = registry.register(
             'source: "gpx", which refuses an oversized file outright instead ' +
             "of ever storing a silently-shortened one."
         ),
+      ascentM: z
+        .number()
+        .nullable()
+        .describe(
+          "Climb in metres, measured on the raw points with hysteresis; null without elevation"
+        ),
+      descentM: z.number().nullable(),
+      movingSeconds: z
+        .number()
+        .int()
+        .nullable()
+        .describe("Time actually moving; null when the points carry no times"),
+      externalRef: z
+        .string()
+        .nullable()
+        .describe("The source record's own id (a HealthKit workout UUID), unique per route"),
       createdAt: z.string().datetime(),
     })
     .openapi("TourRouteTrackMeta", {
@@ -76,6 +92,10 @@ const tourRouteTrackMeta = registry.register(
         pointCount: 3,
         distanceKm: 1.7,
         truncated: false,
+        ascentM: 334,
+        descentM: 0,
+        movingSeconds: 540,
+        externalRef: null,
         createdAt: "2026-06-02T09:00:00.000Z",
       },
     })
@@ -88,6 +108,14 @@ const tourRouteTrack = registry.register(
       geometry: z
         .array(z.tuple([z.number(), z.number()]))
         .describe("[[lon, lat], …], simplified on import — see pointCount for the raw count"),
+      cumulativeKm: z
+        .array(z.number())
+        .nullable()
+        .describe("Raw running distance at each vertex — the x axis of the elevation profile"),
+      elevations: z
+        .array(z.number().nullable())
+        .nullable()
+        .describe("Metres at each vertex, aligned with geometry; null where the source had none"),
     })
     .openapi("TourRouteTrack")
 );

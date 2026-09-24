@@ -34,6 +34,8 @@ import {
   legOverrideSchema,
 } from "../../../schemas/tour";
 import { LEG_MODES, LEG_SOURCES } from "../../../services/tour/tourDistance";
+import { kindFieldsSchema } from "../../../schemas/roadtrip";
+import { ROADTRIP_VEHICLES, ROUTE_KINDS, TOUR_ACTIVITIES } from "../../../shared/tour/roadtrip";
 
 const legMode = z.enum(LEG_MODES).describe("Per-leg travel mode, not per section");
 const legSource = z
@@ -53,9 +55,27 @@ const tourRoute = registry.register(
   z
     .object({
       id: z.string().uuid(),
-      tripId: z.string().uuid(),
+      tripId: z.string().uuid().nullable().describe("Null for a route that belongs to no trip"),
       name: z.string(),
       mode: legMode.describe("Default mode for legs created in this section"),
+      kind: z
+        .enum(ROUTE_KINDS)
+        .describe(
+          "Which page owns the row: a day tour or a roadtrip (2.7). Legs and tracks ignore it."
+        ),
+      activity: z.enum(TOUR_ACTIVITIES).nullable().describe("Tour only: what the day tour was"),
+      vehicle: z.enum(ROADTRIP_VEHICLES).nullable().describe("Roadtrip only: what it travelled in"),
+      vehicleName: z.string().nullable().describe("Roadtrip only: the vehicle's own name"),
+      anchorStopId: z
+        .string()
+        .uuid()
+        .nullable()
+        .describe("Tour only: the roadtrip station the day tour set out from"),
+      kindAssignedAutomatically: z
+        .boolean()
+        .describe(
+          "True for rows the 2.7 migration classified by rule and nobody has confirmed or switched yet"
+        ),
       orderIdx: z.number().int(),
       color: z.string().nullable(),
       notes: z.string().nullable(),
@@ -74,6 +94,12 @@ const tourRoute = registry.register(
         tripId: "a1a1a1a1-1a1a-1a1a-1a1a-1a1a1a1a1a1a",
         name: "Süd-Norwegen",
         mode: "road",
+        kind: "roadtrip",
+        activity: null,
+        vehicle: "motorhome",
+        vehicleName: "Der Dicke",
+        anchorStopId: null,
+        kindAssignedAutomatically: false,
         orderIdx: 0,
         color: "#2563eb",
         notes: null,
@@ -225,7 +251,10 @@ const tourPointsInput = registry.register(
 );
 const routeUpdateInput = registry.register(
   "TourRouteUpdateInput",
-  updateRouteSchema.openapi("TourRouteUpdateInput", {
+  updateRouteSchema.merge(kindFieldsSchema).openapi("TourRouteUpdateInput", {
+    description:
+      "`tripId` moves only a roadtrip between trips (400 for a tour); `anchorStopId` " +
+      "must be a station of one of the caller's roadtrips and is refused on a roadtrip.",
     example: { name: "Süd-Norwegen (Umweg)", endOdometerKm: 84920 },
   })
 );
@@ -657,4 +686,4 @@ registry.registerPath({
   },
 });
 
-export { legMode, tourRouteGeometry };
+export { legMode, tourLeg, tourRoute, tourRouteGeometry };

@@ -18,6 +18,7 @@ import "./trips";
 import "./tours";
 import "./tourTracks";
 import "./tourIndex";
+import "./roadtrips";
 import "./companions";
 import "./airports";
 import "./stats";

@@ -2,6 +2,7 @@ import { z } from "./zod";
 
 import { LEG_MODES } from "../services/tour/tourDistance";
 import { ROUTING_PROVIDER_IDS } from "../services/tour/routing/types";
+import { TOUR_ACTIVITIES } from "../shared/tour/roadtrip";
 
 /**
  * Validation for the tour endpoints.
@@ -246,6 +247,8 @@ export const legOverrideSchema = z
  */
 export const createTourSchema = createRouteSchema.extend({
   tripId: z.string().uuid().nullish(),
+  /** What the day tour was (design 2026-09-24); optional, the mode stays. */
+  activity: z.enum(TOUR_ACTIVITIES).nullish(),
 });
 
 /**

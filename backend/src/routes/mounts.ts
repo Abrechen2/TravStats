@@ -57,6 +57,8 @@ import tourRoutingRoutes from "./trips/tourRouting";
 import tourTrackRoutes from "./trips/tourTracks";
 import tourIndexRoutes from "./trips/tourIndex";
 import tourPointRoutes from "./trips/tourPoints";
+import tourKindRoutes from "./trips/tourKind";
+import roadtripRoutes from "./roadtrips";
 import immichTripRoutes from "./immich/tripAlbums";
 import immichAssetProxyRoutes from "./immich/assetProxy";
 import immichTripCoverRoutes from "./immich/tripCover";
@@ -191,6 +193,12 @@ export const apiMounts: ApiMount[] = [
   // the same family, and its one path (`/tours/:routeId/points`) collides
   // with nothing above it.
   { id: "tourPoints", base: "/api/v1", router: tourPointRoutes },
+  // Moving a row between the tour and roadtrip pages (2.7). Its paths end in
+  // `/kind`, so they collide with nothing above.
+  { id: "tourKind", base: "/api/v1", router: tourKindRoutes },
+  // Roadtrips (2.7): list, detail, creation and the station list. The rest of
+  // a roadtrip — legs, tracks, geometry — is the `/tours/:routeId` family.
+  { id: "roadtrips", base: "/api/v1", router: roadtripRoutes },
   { id: "immich.tripAlbums", base: "/api/v1", router: immichTripRoutes },
   { id: "immich.assetProxy", base: "/api/v1", router: immichAssetProxyRoutes },
   { id: "immich.tripCover", base: "/api/v1", router: immichTripCoverRoutes },

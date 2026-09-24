@@ -4,6 +4,7 @@ import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { createTourSchema, tourGeometryBatchSchema } from "../../schemas/tour";
+import { listToursQuerySchema } from "../../schemas/roadtrip";
 import { travelledKm } from "../../services/tour/tourDistance";
 import logger from "../../utils/logger";
 import { buildRouteGeometry, RouteGeometryFeatureCollection } from "./tourLegs";
@@ -42,6 +43,16 @@ interface TourSummaryRow {
   tripId: string | null;
   name: string;
   mode: string;
+  kind: string;
+  activity: string | null;
+  vehicle: string | null;
+  kindAssignedAutomatically: boolean;
+  tracks: Array<{
+    distanceKm: number;
+    ascentM: number | null;
+    movingSeconds: number | null;
+    startedAt: Date;
+  }>;
   trip: { name: string } | null;
   legs: Array<{ distanceKm: number }>;
   _count: { stops: number };
@@ -60,6 +71,14 @@ const TOUR_SUMMARY_SELECT = {
   tripId: true,
   name: true,
   mode: true,
+  kind: true,
+  activity: true,
+  vehicle: true,
+  kindAssignedAutomatically: true,
+  tracks: {
+    select: { distanceKm: true, ascentM: true, movingSeconds: true, startedAt: true },
+    orderBy: { startedAt: "asc" },
+  },
   trip: { select: { name: true } },
   legs: { select: { distanceKm: true } },
   _count: { select: { stops: true } },
@@ -96,8 +115,22 @@ function sectionDateSpan(stops: TourSummaryRow["stops"]): {
   };
 }
 
+/**
+ * Sum a figure over the tracks, or `null` when no track carries it — a tour
+ * whose recordings have no elevation did not climb zero metres.
+ */
+function sumOrNull(values: ReadonlyArray<number | null>): number | null {
+  const known = values.filter((v): v is number => v !== null);
+  return known.length === 0 ? null : known.reduce((a, b) => a + b, 0);
+}
+
 function toTourSummary(route: TourSummaryRow): Record<string, unknown> {
   const span = sectionDateSpan(route.stops);
+  const trackKm = route.tracks.reduce((sum, t) => sum + t.distanceKm, 0);
+  // A day tour is measured by its recording (design 2026-09-24 §1); its legs
+  // only speak when nothing was recorded. A roadtrip is measured by its legs.
+  const fromTrack = route.kind === "tour" && route.tracks.length > 0;
+  const firstTrack = route.tracks[0]?.startedAt ?? null;
   return {
     id: route.id,
     tripId: route.tripId,
@@ -107,9 +140,18 @@ function toTourSummary(route: TourSummaryRow): Record<string, unknown> {
     tripName: route.trip?.name ?? null,
     name: route.name,
     mode: route.mode,
-    distanceKm: travelledKm(route.legs),
+    kind: route.kind,
+    activity: route.activity,
+    vehicle: route.vehicle,
+    kindAssignedAutomatically: route.kindAssignedAutomatically,
+    distanceKm: fromTrack ? trackKm : travelledKm(route.legs),
+    distanceSource: fromTrack ? "track" : "legs",
+    ascentM: sumOrNull(route.tracks.map((t) => t.ascentM)),
+    movingSeconds: sumOrNull(route.tracks.map((t) => t.movingSeconds)),
+    trackCount: route.tracks.length,
     stopCount: route._count.stops,
-    startDate: span.startDate,
+    // A standalone tour has no dated stops; its recording says when it was.
+    startDate: span.startDate ?? firstTrack?.toISOString() ?? null,
     endDate: span.endDate,
   };
 }
@@ -129,12 +171,13 @@ router.get(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
+      const { kind } = listToursQuerySchema.parse(req.query);
       const routes = await prisma.tripRoute.findMany({
         // The section's OWN owner, not the trip's. A standalone tour has no
         // trip to be owned through, and `where: { trip: { userId } }` does
         // not merely fail to prove ownership for one — it silently omits it
         // from the list, which reads as "you have no tours".
-        where: { userId },
+        where: { userId, ...(kind ? { kind } : {}) },
         // Undated and trip-less sections sort last, both for the same
         // reason: nulls last on the trip's start date.
         orderBy: [{ trip: { startDate: "asc" } }, { orderIdx: "asc" }],
@@ -183,6 +226,7 @@ router.post(
           tripId: tripId ?? null,
           name: body.name,
           mode: body.mode,
+          activity: body.activity ?? null,
           color: body.color,
           notes: body.notes,
           startOdometerKm: body.startOdometerKm,
