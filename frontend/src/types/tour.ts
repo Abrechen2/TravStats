@@ -180,8 +180,8 @@ export interface TourTrackMeta {
  */
 export interface TourTrack extends TourTrackMeta {
   geometry: Array<[number, number]>;
-  /** Raw running distance per vertex — the profile's x axis. Null on old rows. */
+  /** Raw running distance per geometry vertex. Null on old rows. */
   cumulativeKm: number[] | null;
-  /** Metres per vertex, aligned with `geometry`. Null when the source had none. */
-  elevations: Array<number | null> | null;
+  /** `[km, metres]` sampled from the raw points; null when the source had none. */
+  elevationProfile: Array<[number, number]> | null;
 }

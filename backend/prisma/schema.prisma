@@ -1691,8 +1691,10 @@ model TripRouteTrack {
   /// response and in `TourTrackList` so a partial track's distance is never
   /// presented with the same confidence as a complete one.
   truncated     Boolean  @default(false)
-  /// Metres per `geometry` vertex (same indices as `cumulativeKm`), null
-  /// where the file carried no elevation. Null on rows written before.
+  /// The elevation PROFILE: `[km, metres]` pairs sampled from the raw points
+  /// (low and high per distance bucket), NOT aligned with `geometry` — the
+  /// simplified line drops the summits a profile exists to show. Null when
+  /// the source had no elevation, and on rows written before.
   elevations    Json?
   /// Climb and descent in metres, measured on the RAW points with a
   /// hysteresis — never on the simplified line, which cuts exactly the

@@ -601,8 +601,10 @@ export default function TripMap({
     for (const l of lodgings) {
       if (l.lat != null && l.lon != null) pts.push([l.lon, l.lat]);
     }
+    // Tour lines too: a day tour may be nothing but its recording (2.7).
+    for (const p of tourPathData) for (const c of p.path) pts.push(c);
     return pts;
-  }, [flightArcs, cruisePaths, stopPoints, lodgings]);
+  }, [flightArcs, cruisePaths, stopPoints, lodgings, tourPathData]);
 
   /**
    * Frame the whole trip, at a zoom the current projection can honour.

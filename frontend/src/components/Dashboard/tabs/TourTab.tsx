@@ -7,6 +7,7 @@ import { useDashboardTours } from "../../../hooks/useDashboardTours";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { TourSummary } from "../../../lib/api/tourIndex";
 import type { RouteKind } from "../../../shared/tour/roadtrip";
+import { useDomainColors } from "../../../hooks/useDomainColors";
 import { LEG_MODES, type LegMode } from "../../../types/tour";
 import { buildTourPaths, type TourPathDatum } from "../../layers/tourPathsLayer";
 import {
@@ -67,6 +68,7 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
   // phone app). The hook keeps its `enabled` argument for a future caller
   // that has a reason to say no.
   const dashboardTours = useDashboardTours(true, kind);
+  const { colorOf } = useDomainColors();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const visMode = mode === "globe" ? "globe" : "routes";
 
@@ -87,7 +89,10 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
   // shared in `./allTabLegendRows.tsx` since the fix-round review
   // (2026-08-30) found this tab had grown its own byte-identical copy.
   // Called with the default "line" shape (its only use here).
-  const tourLegend = buildTourLegendRows(true, dashboardTours, t, legendRow);
+  const tourLegend = buildTourLegendRows(true, dashboardTours, t, legendRow, {
+    color: colorOf("roadtrip"),
+    label: t("roadtrips:kind.roadtrip"),
+  });
 
   // Settled + genuinely nothing to show — distinct from `toursLoading` and
   // `toursLoadError`, which TourStatusOverlay renders instead. Never derive

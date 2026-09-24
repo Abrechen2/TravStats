@@ -96,7 +96,9 @@ describe("Tour tracks — formats, figures and duplicates", () => {
     const detail = await request(app)
       .get(`/api/v1/tours/${routeId}/tracks/${res.body.track.id}`)
       .set("Cookie", cookie);
-    expect(detail.body.track.elevations).toHaveLength(detail.body.track.geometry.length);
+    expect(detail.body.track.elevationProfile.map((p: [number, number]) => p[1])).toEqual([
+      270, 350, 480, 604,
+    ]);
     expect(detail.body.track.cumulativeKm).toHaveLength(detail.body.track.geometry.length);
   });
 
@@ -104,7 +106,7 @@ describe("Tour tracks — formats, figures and duplicates", () => {
     const res = await request(app).get(`/api/v1/tours/${routeId}/tracks`).set("Cookie", cookie);
     expect(res.status).toBe(200);
     for (const t of res.body.tracks) {
-      expect(t).not.toHaveProperty("elevations");
+      expect(t).not.toHaveProperty("elevationProfile");
       expect(t).not.toHaveProperty("geometry");
     }
   });

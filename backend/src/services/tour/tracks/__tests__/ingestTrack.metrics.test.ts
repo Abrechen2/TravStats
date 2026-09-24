@@ -36,11 +36,17 @@ describe("ingestTrack — elevation and moving time", () => {
     expect(track.descentM).toBe(300);
   });
 
-  it("keeps one elevation per stored vertex, aligned with the geometry", () => {
+  it("keeps the summit on the profile although the line simplifies it away", () => {
+    // The browser showed this on 2026-09-24: a straight path to a summit
+    // simplified to its two ends, and a profile read off the simplified line
+    // drew a 300 m climb as a flat line.
     const track = ingestTrack(valleyHike())!;
-    expect(track.elevations).toHaveLength(track.geometry.length);
-    expect(track.elevations![0]).toBe(300);
-    expect(track.elevations![track.elevations!.length - 1]).toBe(300);
+    const heights = track.elevationProfile!.map(([, m]) => m);
+    expect(Math.max(...heights)).toBe(600);
+    expect(heights[0]).toBe(300);
+    expect(heights[heights.length - 1]).toBe(300);
+    const kms = track.elevationProfile!.map(([km]) => km);
+    expect(kms).toEqual([...kms].sort((a, b) => a - b));
   });
 
   it("counts the whole walk as moving (33 m per 30 s)", () => {
@@ -50,7 +56,7 @@ describe("ingestTrack — elevation and moving time", () => {
   it("abstains on every figure when the source carries no elevation or times", () => {
     const { elevations: _e, times: _t, ...bare } = valleyHike();
     const track = ingestTrack(bare)!;
-    expect(track.elevations).toBeNull();
+    expect(track.elevationProfile).toBeNull();
     expect(track.ascentM).toBeNull();
     expect(track.descentM).toBeNull();
     expect(track.movingSeconds).toBeNull();

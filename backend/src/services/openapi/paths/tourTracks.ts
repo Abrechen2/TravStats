@@ -111,11 +111,14 @@ const tourRouteTrack = registry.register(
       cumulativeKm: z
         .array(z.number())
         .nullable()
-        .describe("Raw running distance at each vertex — the x axis of the elevation profile"),
-      elevations: z
-        .array(z.number().nullable())
+        .describe("Raw running distance at each geometry vertex"),
+      elevationProfile: z
+        .array(z.tuple([z.number(), z.number()]))
         .nullable()
-        .describe("Metres at each vertex, aligned with geometry; null where the source had none"),
+        .describe(
+          "[[km, metres], …] sampled from the RAW points (low and high per distance bucket), " +
+            "so a summit the simplified line dropped is still on the profile; null without elevation"
+        ),
     })
     .openapi("TourRouteTrack")
 );

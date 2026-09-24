@@ -240,21 +240,42 @@ export default function TripRouteEditorPage(): JSX.Element {
   // (not the whole `route` object, whose other fields like `distanceKm`
   // change on every reload without touching this array's shape) and `geometry`.
   const roadtripHex = colorOf("roadtrip");
-  const tourGeometries = useMemo(
+  // The recordings, drawn as lines of their own. For a day tour the track IS
+  // the route — its points are often none at all — so a map without it
+  // showed an empty world. Keyed on the ids: `tracksWithGeometry` is a fresh
+  // array on every render.
+  const recordedKey = tracksWithGeometry.map((tr) => tr.id).join(",");
+  const recordingGeometry = useMemo<TourGeometry | null>(
     () =>
-      geometry && route
-        ? [
-            {
-              routeId: route.id,
-              name: route.name,
-              geometry,
-              // A roadtrip's line in its own domain hue (2.7); a tour keeps the tour hue.
-              rgb: route.kind === "roadtrip" ? hexToRgb(roadtripHex) : undefined,
-            },
-          ]
-        : [],
-    [geometry, route?.id, route?.name, route?.kind, roadtripHex]
+      tracksWithGeometry.length === 0
+        ? null
+        : {
+            type: "FeatureCollection",
+            features: tracksWithGeometry.map((tr) => ({
+              type: "Feature",
+              geometry: { type: "LineString", coordinates: [...tr.geometry] },
+              properties: {
+                legId: `track:${tr.id}`,
+                source: "track",
+                mode: route?.mode ?? "foot",
+                confidence: "high",
+                distanceKm: tracks.find((x) => x.id === tr.id)?.distanceKm ?? 0,
+              },
+            })),
+          },
+    [recordedKey, route?.mode]
   );
+  const tourGeometries = useMemo(() => {
+    if (!route) return [];
+    // A roadtrip's line in its own domain hue (2.7); a tour keeps the tour hue.
+    const rgb = route.kind === "roadtrip" ? hexToRgb(roadtripHex) : undefined;
+    return [
+      ...(geometry ? [{ routeId: route.id, name: route.name, geometry, rgb }] : []),
+      ...(recordingGeometry
+        ? [{ routeId: `${route.id}:tracks`, name: route.name, geometry: recordingGeometry, rgb }]
+        : []),
+    ];
+  }, [geometry, recordingGeometry, route?.id, route?.name, route?.kind, roadtripHex]);
 
   /**
    * What the map draws when there is no trip: the tour's own points. A
@@ -524,7 +545,11 @@ export default function TripRouteEditorPage(): JSX.Element {
     );
   }
 
-  if (failure || !trip || !route) {
+  // A standalone tour (and a roadtrip) has no trip, so `trip === null` is its
+  // normal state, not a failure. Only a TRIP section needs its trip loaded.
+  // This read `!trip` alone until 2026-09-24, which turned every standalone
+  // tour's page into "could not be loaded" — found in the browser.
+  if (failure || !route || (id !== undefined && !trip)) {
     return (
       <AppShell width="reading">
         <div className="py-16 text-center">
@@ -586,7 +611,14 @@ export default function TripRouteEditorPage(): JSX.Element {
               </select>
             )}
             <span>
-              {t(`trips:tours.mode.${route.mode}`)} · {formatKm(route.distanceKm)} km
+              {t(`trips:tours.mode.${route.mode}`)} ·{" "}
+              {/* A day tour is measured by its recording once it has one. */}
+              {formatKm(
+                route.kind === "tour" && tracks.length > 0
+                  ? tracks.reduce((sum, tr) => sum + tr.distanceKm, 0)
+                  : route.distanceKm
+              )}{" "}
+              km
             </span>
           </p>
         </header>

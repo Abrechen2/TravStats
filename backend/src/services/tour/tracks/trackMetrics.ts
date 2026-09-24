@@ -158,3 +158,60 @@ export function movingSeconds(
   }
   return Math.round(total);
 }
+
+/** At most this many buckets; each contributes its low and high point. */
+const PROFILE_BUCKETS = 150;
+
+/**
+ * The elevation profile a day tour is drawn with: `[km, metres]` pairs from
+ * the RAW points, at most two per distance bucket — the lowest and the
+ * highest, in travel order. Taken from the simplified line instead, the
+ * profile lost exactly what it exists to show: a straight path up to a
+ * summit simplifies to its two ends, and the summit went with it (measured in
+ * the browser on 2026-09-24: a 170 m climb drew as a flat line at 270 m).
+ *
+ * `null` when fewer than two readings exist — no profile, not a flat one.
+ */
+export function elevationProfile(
+  cumulativeKm: ReadonlyArray<number>,
+  elevations: ReadonlyArray<number | null>
+): Array<[number, number]> | null {
+  const readings: Array<[number, number]> = [];
+  for (let i = 0; i < elevations.length; i++) {
+    const e = elevations[i];
+    if (e !== null && Number.isFinite(e) && Number.isFinite(cumulativeKm[i])) {
+      readings.push([cumulativeKm[i], e]);
+    }
+  }
+  if (readings.length < 2) return null;
+  if (readings.length <= PROFILE_BUCKETS * 2) {
+    return readings.map(([km, e]) => [Math.round(km * 1000) / 1000, Math.round(e)]);
+  }
+
+  const total = readings[readings.length - 1][0] || 1;
+  const out: Array<[number, number]> = [];
+  let bucket = -1;
+  let low: [number, number] | null = null;
+  let high: [number, number] | null = null;
+  const flush = (): void => {
+    if (!low || !high) return;
+    const pair = low[0] <= high[0] ? [low, high] : [high, low];
+    for (const p of pair) {
+      const last = out[out.length - 1];
+      if (!last || last[0] !== p[0] || last[1] !== p[1]) out.push(p);
+    }
+  };
+  for (const r of readings) {
+    const b = Math.min(PROFILE_BUCKETS - 1, Math.floor((r[0] / total) * PROFILE_BUCKETS));
+    if (b !== bucket) {
+      flush();
+      bucket = b;
+      low = high = r;
+      continue;
+    }
+    if (r[1] < (low as [number, number])[1]) low = r;
+    if (r[1] > (high as [number, number])[1]) high = r;
+  }
+  flush();
+  return out.map(([km, e]) => [Math.round(km * 1000) / 1000, Math.round(e)]);
+}

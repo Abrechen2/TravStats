@@ -26,7 +26,8 @@ function hoursMinutes(seconds: number): string {
  * as zero: a track with no elevation did not climb nothing.
  *
  * The profile is drawn from the FIRST recording's detail call, the only one
- * that carries elevations; a tour of several recordings is rare, and drawing
+ * that carries the profile (sampled from the raw points, so a summit the
+ * simplified line dropped is still on it); a tour of several recordings is rare, and drawing
  * one profile honestly beats stitching several with gaps between them.
  */
 export default function TourRecordingSummary({
@@ -63,11 +64,8 @@ export default function TourRecordingSummary({
   }, [tripId, routeId, firstId]);
 
   const profile = useMemo(() => {
-    const x = detail?.cumulativeKm;
-    const y = detail?.elevations;
-    if (!x || !y || x.length !== y.length) return null;
-    const points = x.flatMap((km, i) => (y[i] === null ? [] : [[km, y[i] as number] as const]));
-    if (points.length < 2) return null;
+    const points = detail?.elevationProfile ?? null;
+    if (!points || points.length < 2) return null;
     const maxKm = points[points.length - 1][0] || 1;
     let lo = Infinity;
     let hi = -Infinity;

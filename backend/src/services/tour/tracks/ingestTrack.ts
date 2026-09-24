@@ -1,5 +1,5 @@
 import { simplifyDegrees } from "../../schematicRouter";
-import { climbAndDescent, movingSeconds } from "./trackMetrics";
+import { climbAndDescent, elevationProfile, movingSeconds } from "./trackMetrics";
 import { polylineDistanceKm } from "../../cruiseDistance/polylineDistance";
 import type { ParsedTrack } from "./parseGpx";
 
@@ -58,8 +58,8 @@ export interface IngestedTrack {
   distanceKm: number;
   startedAt: Date;
   endedAt: Date;
-  /** Metres per `geometry` vertex, or `null` when the source had none. */
-  elevations: Array<number | null> | null;
+  /** `[km, metres]` from the raw points, or `null` when the source had none. */
+  elevationProfile: Array<[number, number]> | null;
   ascentM: number | null;
   descentM: number | null;
   movingSeconds: number | null;
@@ -138,7 +138,6 @@ export function ingestTrack(
   const cumulativeKm: number[] = [];
   const rawElevations =
     parsed.elevations && parsed.elevations.length === pointCount ? parsed.elevations : null;
-  const elevations: Array<number | null> = [];
   const perSegmentCap = Math.max(2, Math.floor(maxPoints / bounds.length));
 
   for (const [start, end] of bounds) {
@@ -150,7 +149,6 @@ export function ingestTrack(
     for (let i = 0; i < simplified.length; i++) {
       geometry.push(simplified[i]);
       cumulativeKm.push(rawCumulative[start + keptIndices[i]]);
-      elevations.push(rawElevations ? (rawElevations[start + keptIndices[i]] ?? null) : null);
     }
   }
 
@@ -165,7 +163,7 @@ export function ingestTrack(
     distanceKm,
     startedAt: parsed.startedAt,
     endedAt: parsed.endedAt,
-    elevations: elevations.some((e) => e !== null) ? elevations : null,
+    elevationProfile: rawElevations ? elevationProfile(rawCumulative, rawElevations) : null,
     ascentM: climb?.ascentM ?? null,
     descentM: climb?.descentM ?? null,
     movingSeconds: movingSeconds(parsed.points, parsed.times, parsed.segmentStarts),

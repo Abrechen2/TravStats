@@ -31,10 +31,11 @@ export function ingestedTrackColumns(ingested: IngestedTrack): {
     cumulativeKm: ingested.cumulativeKm as unknown as Prisma.InputJsonValue,
     pointCount: ingested.pointCount,
     distanceKm: ingested.distanceKm,
+    // The column holds the PROFILE, `[km, metres]` pairs (see schema.prisma).
     elevations:
-      ingested.elevations === null
+      ingested.elevationProfile === null
         ? Prisma.JsonNull
-        : (ingested.elevations as unknown as Prisma.InputJsonValue),
+        : (ingested.elevationProfile as unknown as Prisma.InputJsonValue),
     ascentM: ingested.ascentM,
     descentM: ingested.descentM,
     movingSeconds: ingested.movingSeconds,

@@ -66,6 +66,7 @@ import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
 import { initialLegendOpen, isPhoneViewport } from "./legendInitialState";
 import { SidebarToggle } from "../SidebarToggle";
 import { Icon } from "../../ui/Icon";
+import { useDomainColors } from "../../../hooks/useDomainColors";
 
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
@@ -96,7 +97,8 @@ const LEGEND_OPEN_KEY = "dashboard.legendOpen";
 
 export function AllTab(): JSX.Element {
   const { mode, projection } = useDashboardRoute();
-  const { t } = useTranslation(["dashboard"]);
+  const { t } = useTranslation(["dashboard", "roadtrips"]);
+  const { colorOf: colorOfDomain } = useDomainColors();
   // The SAME store the map layers + both control panels read. The legend
   // cannot drift from the map because it is not a copy of the state — it is
   // the state, run through the same colour resolver.
@@ -510,7 +512,10 @@ export function AllTab(): JSX.Element {
 
   // See `buildTourLegendRows` (`./tourMapOverlay.tsx`) for why "empty"
   // shows no row here — `tourStatusOverlay` below carries loading/error.
-  const tourLegend = buildTourLegendRows(showTours, dashboardTours, t, legendRow);
+  const tourLegend = buildTourLegendRows(showTours, dashboardTours, t, legendRow, {
+    color: colorOfDomain("roadtrip"),
+    label: t("roadtrips:kind.roadtrip"),
+  });
   const tourHasData = tourLegend.hasData;
 
   // Colour key as a compact table pinned bottom-right — out of the top band

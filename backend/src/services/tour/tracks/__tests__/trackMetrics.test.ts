@@ -1,4 +1,4 @@
-import { climbAndDescent, movingSeconds } from "../trackMetrics";
+import { climbAndDescent, elevationProfile, movingSeconds } from "../trackMetrics";
 
 describe("climbAndDescent", () => {
   it("measures a clean climb and descent", () => {
@@ -74,5 +74,28 @@ describe("movingSeconds", () => {
     ];
     expect(movingSeconds(points, [null, null])).toBeNull();
     expect(movingSeconds(points, undefined)).toBeNull();
+  });
+});
+
+describe("elevationProfile", () => {
+  it("keeps every reading of a short recording", () => {
+    expect(elevationProfile([0, 0.5, 1], [100, 150, 120])).toEqual([
+      [0, 100],
+      [0.5, 150],
+      [1, 120],
+    ]);
+  });
+
+  it("keeps the low and high of each stretch of a long one, in order", () => {
+    const km = Array.from({ length: 3000 }, (_, i) => i * 0.01);
+    const ele = km.map((k) => (k === 12 ? 900 : 100));
+    const profile = elevationProfile(km, ele)!;
+    expect(profile.length).toBeLessThanOrEqual(300);
+    expect(Math.max(...profile.map(([, m]) => m))).toBe(900);
+    expect(profile.map(([k]) => k)).toEqual([...profile.map(([k]) => k)].sort((a, b) => a - b));
+  });
+
+  it("abstains without two readings", () => {
+    expect(elevationProfile([0, 1], [null, 100])).toBeNull();
   });
 });

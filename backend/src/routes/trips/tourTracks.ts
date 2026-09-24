@@ -168,7 +168,7 @@ function toTrackDto(track: TrackRow): Record<string, unknown> {
     ...toTrackMetaDto(track),
     geometry: track.geometry,
     cumulativeKm: track.cumulativeKm,
-    elevations: track.elevations,
+    elevationProfile: track.elevations,
   };
 }
 
