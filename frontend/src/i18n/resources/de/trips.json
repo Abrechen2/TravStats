@@ -382,7 +382,8 @@
         "fit": "FIT-Datei",
         "tcx": "TCX-Datei",
         "strava": "Strava",
-        "healthkit": "Apple Health"
+        "healthkit": "Apple Health",
+        "healthconnect": "Health Connect"
       },
       "dawarich": {
         "pullLabel": "Aus Dawarich abrufen",

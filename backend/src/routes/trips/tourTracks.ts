@@ -174,14 +174,15 @@ function toTrackDto(track: TrackRow): Record<string, unknown> {
 
 /**
  * Optional form fields beside the file. `externalRef` is the source record's
- * own id (a HealthKit workout UUID from the Companion) so the same workout
- * uploaded twice is refused instead of stored twice; `origin` says the file
- * was exported FROM somewhere rather than recorded as that format, which is
- * what the Companion's HealthKit import sends (`companion#9`).
+ * own id (a HealthKit workout UUID or a Health Connect exercise-session id
+ * from the Companion) so the same workout uploaded twice is refused instead
+ * of stored twice; `origin` says the file was exported FROM somewhere rather
+ * than recorded as that format, which is what the Companion's workout import
+ * sends (`companion#9`: iOS reads HealthKit, Android reads Health Connect).
  */
 const uploadFieldsSchema = z.object({
   externalRef: z.string().trim().min(1).max(200).optional(),
-  origin: z.enum(["healthkit"]).optional(),
+  origin: z.enum(["healthkit", "healthconnect"]).optional(),
 });
 
 /**

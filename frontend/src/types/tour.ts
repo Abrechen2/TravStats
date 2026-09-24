@@ -135,9 +135,17 @@ export interface TourGeometry {
  * is the RECORDING, `"track"` (a `LegSource`) is a LEG that adopted a
  * segment of one.
  */
-// Since 2.7 also `fit`/`tcx` (file formats) and `strava`/`healthkit` (where an
+// Since 2.7 also `fit`/`tcx` (file formats) and `strava`/`healthkit`/`healthconnect` (where an
 // imported recording came from).
-export const TRACK_SOURCES = ["gpx", "dawarich", "fit", "tcx", "strava", "healthkit"] as const;
+export const TRACK_SOURCES = [
+  "gpx",
+  "dawarich",
+  "fit",
+  "tcx",
+  "strava",
+  "healthkit",
+  "healthconnect",
+] as const;
 export type TrackSource = (typeof TRACK_SOURCES)[number];
 
 /**

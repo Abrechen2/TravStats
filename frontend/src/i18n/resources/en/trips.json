@@ -382,7 +382,8 @@
         "fit": "FIT file",
         "tcx": "TCX file",
         "strava": "Strava",
-        "healthkit": "Apple Health"
+        "healthkit": "Apple Health",
+        "healthconnect": "Health Connect"
       },
       "dawarich": {
         "pullLabel": "Pull from Dawarich",

@@ -141,6 +141,18 @@ describe("Tour tracks — formats, figures and duplicates", () => {
     expect(again.status).toBe(409);
   });
 
+  it("marks a Companion Health Connect export by its origin", async () => {
+    const res = await upload(HIKE_GPX, "session.gpx", {
+      externalRef: "health-connect-session-1",
+      origin: "healthconnect",
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.track).toMatchObject({
+      source: "healthconnect",
+      externalRef: "health-connect-session-1",
+    });
+  });
+
   it("refuses an origin it does not know", async () => {
     const res = await upload(HIKE_GPX, "x.gpx", { origin: "garmin-connect" });
     expect(res.status).toBe(400);

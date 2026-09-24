@@ -132,11 +132,16 @@ const trackParams = z.object({
 registerSectionPath({
   method: "post",
   path: "/trips/{id}/routes/{routeId}/tracks",
-  summary: "Upload a recorded GPX track for a route section",
+  summary: "Upload a recorded track (GPX, TCX or FIT) for a route section",
   description:
-    "multipart/form-data; one GPX file under the field name 'file'. The " +
-    "pipeline is parseGpx -> ingestTrack -> store: a file that cannot be " +
-    "read as GPX at all is refused with one 400 message, a file that reads " +
+    "multipart/form-data; one GPX, TCX or FIT file under the field name " +
+    "'file' (up to 15 MB), detected by its bytes, not its name. Two optional " +
+    "text fields: 'externalRef' (1-200 chars, the source record's own id, " +
+    "e.g. a HealthKit workout UUID) makes a second upload of the same record " +
+    "into the same route a 409 instead of a duplicate; 'origin' " +
+    "('healthkit' | 'healthconnect') is stored as the track's source instead " +
+    "of the file format. A file that cannot be " +
+    "read as any of the three formats is refused with one 400 message, a file that reads " +
     "fine but has no timestamps is refused with a DIFFERENT 400 message " +
     "(it cannot be placed in time) — the two are never collapsed into one. " +
     "Distance and point count are measured on the raw recording before the " +
@@ -150,10 +155,15 @@ registerSectionPath({
     },
     400: {
       description:
-        "No file uploaded, the file is too large, could not be read as GPX, or has no timestamps",
+        "No file uploaded, the file is too large, could not be read as GPX/TCX/FIT, " +
+        "has no timestamps, or an optional field is invalid",
       content: errorContent,
     },
     404: { description: "Trip or section not found", content: errorContent },
+    409: {
+      description: "A track with this externalRef is already stored on this route",
+      content: errorContent,
+    },
   },
 });
 
