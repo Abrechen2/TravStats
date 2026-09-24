@@ -937,8 +937,8 @@ model AdminSettings {
 }
 
 model TrainingData {
-  id     String @id @default(uuid())
-  userId String @map("user_id")
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
   /// Which KIND of document this sample is — 'flight' | 'lodging' | 'cruise' |
   /// 'place'. `type` beside it is the MEDIUM (a mail or a boarding pass) and
   /// never answered this; without the distinction the workshop derived every
@@ -1485,10 +1485,21 @@ model TripStop {
   /// Position WITHIN the route, 0-based and contiguous. Written only by
   /// PUT /trips/:id/routes/:routeId/stops, never by a client.
   routeOrderIdx Int?      @map("route_order_idx")
+  /// Roadtrip station: the stay slept in here. SetNull — deleting the stay
+  /// keeps the station, which then reads as a free night (`overnight` stays
+  /// true), because the night still happened. The stay never points back:
+  /// the stay owns the night (design 2026-09-24 §2).
+  lodgingStayId String?   @map("lodging_stay_id")
+  /// Roadtrip station: a night was spent here. With `lodgingStayId` it is a
+  /// "stay" station; without it a "free" one (a pitch with no accommodation
+  /// record); false is a pass-through. Derived, never stored as an enum — a
+  /// stored enum plus the SetNull above would need a CHECK that the cascade
+  /// itself then violates (the trap migration 20260921195505 met).
+  overnight     Boolean   @default(false)
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  trip     Trip?          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip          Trip?          @relation(fields: [tripId], references: [id], onDelete: Cascade)
   /// Cascade, and the delete handler does the other half.
   ///
   /// The two cases want opposite things and the database can only be told
@@ -1505,14 +1516,18 @@ model TripStop {
   /// stops BEFORE deleting the section (`tourRoutes.ts`). Deleting a
   /// section any other way than through that handler takes its stops with
   /// it — which is what every other caller (seeds, account deletion) wants.
-  route    TripRoute?     @relation(fields: [routeId], references: [id], onDelete: Cascade)
-  legsFrom TripRouteLeg[] @relation("LegFrom")
-  legsTo   TripRouteLeg[] @relation("LegTo")
+  route         TripRoute?     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  legsFrom      TripRouteLeg[] @relation("LegFrom")
+  legsTo        TripRouteLeg[] @relation("LegTo")
+  lodgingStay   LodgingStay?   @relation(fields: [lodgingStayId], references: [id], onDelete: SetNull)
+  /// Tours that started from this station ("Preikestolen, from Mosvangen").
+  anchoredTours TripRoute[]    @relation("TourAnchor")
 
   @@unique([routeId, routeOrderIdx])
   @@index([tripId])
   @@index([tripId, orderIdx])
   @@index([routeId])
+  @@index([lodgingStayId])
   @@map("trip_stops")
 }
 
@@ -1523,7 +1538,7 @@ model TripStop {
 /// stop may be the same place — which is what makes a day hike from a base
 /// camp expressible. The vehicle link arrives with phase 2.
 model TripRoute {
-  id     String @id @default(uuid())
+  id       String  @id @default(uuid())
   /// The owner, held DIRECTLY rather than read through the trip.
   ///
   /// A tour may stand on its own since 2026-09-21 (owner ruling: "Sie
@@ -1531,7 +1546,7 @@ model TripRoute {
   /// read an owner from. Holding it here also means authorisation never
   /// depends on a join that a later query might forget — a foreign key
   /// proves existence, not ownership.
-  userId String @map("user_id")
+  userId   String  @map("user_id")
   /// The trip this section belongs to, or NULL for a standalone tour.
   tripId   String? @map("trip_id")
   name     String
@@ -1547,17 +1562,37 @@ model TripRoute {
   startOdometerKm Int? @map("start_odometer_km")
   endOdometerKm   Int? @map("end_odometer_km")
 
+  /// "tour" | "roadtrip" (design 2026-09-24). Decides which page owns the
+  /// row and which of the fields below mean anything; every leg, track and
+  /// routing feature is kind-agnostic, which is the point of one engine.
+  kind                      String  @default("tour")
+  /// Tour only: hike | walk | run | bike | mtb | ski | paddle | climb | other.
+  activity                  String?
+  /// Roadtrip only: motorhome | campervan | caravan | car | motorcycle |
+  /// bicycle | rail | other. A free field on purpose (owner, 2026-09-24): a
+  /// vehicle catalog waits until someone asks for per-vehicle figures.
+  vehicle                   String?
+  vehicleName               String? @map("vehicle_name")
+  /// Tour only: the roadtrip station this day trip set out from.
+  anchorStopId              String? @map("anchor_stop_id")
+  /// Set on rows the 2.7 migration classified by rule. The UI lists them
+  /// once so a misfiled row can be moved; confirming or switching clears it.
+  kindAssignedAutomatically Boolean @default(false) @map("kind_assigned_automatically")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user   User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  trip   Trip?            @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  stops  TripStop[]
-  legs   TripRouteLeg[]
-  tracks TripRouteTrack[]
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip       Trip?            @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  anchorStop TripStop?        @relation("TourAnchor", fields: [anchorStopId], references: [id], onDelete: SetNull)
+  stops      TripStop[]
+  legs       TripRouteLeg[]
+  tracks     TripRouteTrack[]
 
   @@index([userId])
+  @@index([userId, kind])
   @@index([tripId])
+  @@index([anchorStopId])
   @@map("trip_routes")
 }
 
@@ -1639,10 +1674,24 @@ model TripRouteTrack {
   /// response and in `TourTrackList` so a partial track's distance is never
   /// presented with the same confidence as a complete one.
   truncated     Boolean  @default(false)
+  /// Metres per `geometry` vertex (same indices as `cumulativeKm`), null
+  /// where the file carried no elevation. Null on rows written before.
+  elevations    Json?
+  /// Climb and descent in metres, measured on the RAW points with a
+  /// hysteresis — never on the simplified line, which cuts exactly the
+  /// small climbs a hike is made of (`services/tour/tracks/trackMetrics.ts`).
+  ascentM       Float?   @map("ascent_m")
+  descentM      Float?   @map("descent_m")
+  /// Seconds spent actually moving. Null when the points carry no times.
+  movingSeconds Int?     @map("moving_seconds")
+  /// The source record's own id (a HealthKit workout UUID, a Strava activity
+  /// id), so importing the same workout twice is one track, not two.
+  externalRef   String?  @map("external_ref")
   createdAt     DateTime @default(now()) @map("created_at")
 
   route TripRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
 
+  @@unique([routeId, externalRef])
   @@index([routeId])
   @@map("trip_route_tracks")
 }
@@ -2056,6 +2105,9 @@ model LodgingStay {
   booking    Booking?           @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   membership LodgingMembership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
   batch      ImportBatch?       @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  /// Roadtrip stations that slept here. The stay does not own them.
+  roadtripStations TripStop[]
 
   documents Document[]
 
@@ -2759,9 +2811,9 @@ model Document {
   tripId        String? @map("trip_id")
   placeVisitId  String? @map("place_visit_id")
 
-  createdAt DateTime  @default(now()) @map("created_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
   /// When it was filed with an entry; null while unlinked.
-  linkedAt  DateTime? @map("linked_at")
+  linkedAt   DateTime? @map("linked_at")
   /// Since WHEN this document has belonged to nothing — the clock the sweep
   /// runs on, and the one `deletesAt` is measured from. Null exactly when the
   /// document IS filed.

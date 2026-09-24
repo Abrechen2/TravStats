@@ -59,7 +59,7 @@ const MANUAL_LEG_SOURCES = ["straight", "drawn"] as const;
  * write-side boundary check, cheap insurance against a future writer
  * putting the column into a shape this vocabulary doesn't describe.
  */
-export const TRACK_SOURCES = ["gpx", "dawarich"] as const;
+export const TRACK_SOURCES = ["gpx", "dawarich", "fit", "tcx", "strava", "healthkit"] as const;
 export type TrackSource = (typeof TRACK_SOURCES)[number];
 
 /**
