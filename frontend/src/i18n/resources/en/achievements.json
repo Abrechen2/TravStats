@@ -1196,6 +1196,34 @@
     "PLACE_SOUTH_54": {
       "name": "End of the world",
       "description": "Visited a place south of the 54th parallel — Tierra del Fuego and beyond"
+    },
+    "ROADTRIP_FIRST": {
+      "name": "On the road",
+      "description": "Went on your first roadtrip"
+    },
+    "ROADTRIP_5": {
+      "name": "Repeat offender",
+      "description": "Went on five roadtrips"
+    },
+    "ROADTRIP_KM_1000": {
+      "name": "A thousand kilometres of road",
+      "description": "Covered 1,000 km on roadtrips"
+    },
+    "ROADTRIP_KM_10000": {
+      "name": "Mile muncher",
+      "description": "Covered 10,000 km on roadtrips"
+    },
+    "ROADTRIP_LONG_3000": {
+      "name": "The long haul",
+      "description": "A single roadtrip of more than 3,000 km"
+    },
+    "ROADTRIP_FREE_NIGHTS_10": {
+      "name": "Wild camper",
+      "description": "Spent ten nights on roadtrips without accommodation"
+    },
+    "ROADTRIP_COUNTRIES_3": {
+      "name": "Border hopper",
+      "description": "Three countries on a single roadtrip"
     }
   },
   "header": {
