@@ -900,6 +900,14 @@ model AdminSettings {
   // user reads it (read-only) from GET /api/v1/settings.
   betaFeaturesEnabled Boolean @default(false) @map("beta_features_enabled")
 
+  /// May this instance ask open data services on its users' behalf: historical
+  /// weather and elevations from Open-Meteo, article summaries from Wikipedia /
+  /// Wikidata, hotel tags from OpenStreetMap's Overpass API. OFF by default,
+  /// because each call sends a place and a date to a third party, and the
+  /// sign-in page promises that nothing leaves the instance unless it is set
+  /// up (2026-09-24).
+  openDataEnabled Boolean @default(false) @map("open_data_enabled")
+
   /// The instance's STARTING POINT for "a country counts as visited from …" —
   /// one of `COUNTRY_TIERS` (shared/countryEvidence.ts). Spec §3.2: a fresh
   /// account must not have to decide anything, so the admin picks the default;
@@ -1724,15 +1732,21 @@ model TripRouteTrack {
 }
 
 model TripJournalEntry {
-  id        String   @id @default(uuid())
-  tripId    String   @map("trip_id")
-  date      DateTime
-  title     String?
-  body      String
-  mood      String?
-  weather   String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id              String   @id @default(uuid())
+  tripId          String   @map("trip_id")
+  date            DateTime
+  title           String?
+  body            String
+  mood            String?
+  weather         String?
+  /// The day's measured weather at the trip's stop on `date`, from Open-Meteo:
+  /// `{ code, tMaxC, tMinC, precipMm, place, lat, lon, source, fetchedAt }`.
+  /// Kept apart from `weather`, which is the author's own words and is counted
+  /// as such by the trip statistics. Null until fetched, or when no stop of
+  /// the trip gives that day a place.
+  observedWeather Json?    @map("observed_weather")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
   trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
 
@@ -2015,6 +2029,11 @@ model Lodging {
   /// run, so a hotel added afterwards was never reached at all (AUD-070).
   geocodeAttemptedAt DateTime? @map("geocode_attempted_at")
   stars              Int? // official 1–5
+  /// The house's own website. Filled by hand or by the OpenStreetMap
+  /// enrichment, which only ever writes an empty field.
+  website            String?
+  /// Wikidata item of the house itself, from its OpenStreetMap tags.
+  wikidataId         String?   @map("wikidata_id")
   amenities          String[]  @default([])
   notes              String?
   /// Has the user actually been here, or is it only noted down? A saved-places
@@ -2280,6 +2299,11 @@ model Place {
   /// Null for anything the user created themselves. Reserved for Phase C; the
   /// column ships now so the unique index does not need a later table rewrite.
   curatedItemId String? @map("curated_item_id")
+
+  /// Wikidata item ("Q64"), resolved once from the place's OSM tags or its
+  /// curated item and remembered, so the Wikipedia summary is not looked up
+  /// through two services on every visit. Never guessed from the name.
+  wikidataId String? @map("wikidata_id")
 
   /// Logbook or wishlist? Same question Lodging.visited answers — but note the
   /// OPPOSITE default. Lodging chose `true` because every row predating the

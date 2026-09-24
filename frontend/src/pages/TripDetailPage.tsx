@@ -22,6 +22,7 @@ import TripModal from "../components/Trips/TripModal";
 import TripHead from "../components/Trips/TripHead";
 import TripOverview from "../components/Trips/TripOverview";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
+import TimelineActions from "../components/Trips/TimelineActions";
 import JournalViewModal from "../components/Trips/JournalViewModal";
 import StopModal from "../components/Trips/StopModal";
 import BookingEditModal from "../components/Trips/BookingEditModal";
@@ -569,23 +570,12 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
 
   return (
     <>
-      <div className="mb-4 flex gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={() => setAdding("journal")}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)"
-          style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
-        >
-          {t("trips:detail.timeline.addJournal")}
-        </button>
-        {/* No "add stop" button since 2026-09-21. A stop and a place were
-            the same thing said twice — the places domain owns "somewhere I
-            was", with a catalogue, coordinates, visits and its own map layer,
-            and this button offered a second, thinner way to record the same
-            fact inside one trip (Alex, 2026-09-20). Existing stops still
-            render and still open their editor (`editingStop`); only the way
-            to make NEW ones here is gone. */}
-      </div>
+      <TimelineActions
+        tripId={trip.id}
+        entries={trip.journalEntries ?? []}
+        onAddJournal={() => setAdding("journal")}
+        onChanged={onChanged}
+      />
 
       {empty ? (
         <Placeholder text={t("trips:detail.timeline.noEvents")} />

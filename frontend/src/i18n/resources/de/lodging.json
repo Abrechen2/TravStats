@@ -154,7 +154,8 @@
     "programName": "Programmname",
     "membershipNumber": "Mitgliedsnummer",
     "tier": "Status-Stufe",
-    "ratingOverallDerived": "Ø aus Zimmer, Frühstück und Service"
+    "ratingOverallDerived": "Ø aus Zimmer, Frühstück und Service",
+    "website": "Webseite"
   },
   "type": {
     "hotel": "Hotel",

@@ -60,6 +60,7 @@ import tourPointRoutes from "./trips/tourPoints";
 import tourKindRoutes from "./trips/tourKind";
 import roadtripRoutes from "./roadtrips";
 import stravaRoutes from "./integrations/strava";
+import openDataRoutes from "./openData";
 import immichTripRoutes from "./immich/tripAlbums";
 import immichAssetProxyRoutes from "./immich/assetProxy";
 import immichTripCoverRoutes from "./immich/tripCover";
@@ -203,6 +204,10 @@ export const apiMounts: ApiMount[] = [
   // Strava (2.7): the OAuth round trip, the activity list and the imports.
   // Its `/tours/...` paths end in `/strava`, so they shadow nothing above.
   { id: "strava", base: "/api/v1", router: stravaRoutes },
+  // Open data (2.7): weather, planned elevation, Wikipedia, OSM enrichment.
+  // Every path ends in a segment no other router uses (`/weather`,
+  // `/planned-profile`, `/wikipedia`, `/enrich`), so it shadows nothing.
+  { id: "openData", base: "/api/v1", router: openDataRoutes },
   { id: "immich.tripAlbums", base: "/api/v1", router: immichTripRoutes },
   { id: "immich.assetProxy", base: "/api/v1", router: immichAssetProxyRoutes },
   { id: "immich.tripCover", base: "/api/v1", router: immichTripCoverRoutes },

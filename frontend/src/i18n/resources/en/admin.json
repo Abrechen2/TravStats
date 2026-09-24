@@ -151,6 +151,10 @@
           "roadtrips": {
             "name": "Roadtrips and day tours",
             "what": "The “Roadtrips” domain (multi-day journeys with stations at your stays) and the reworked day tours with an elevation profile."
+          },
+          "lodgingEnrichment": {
+            "name": "Complete lodgings from OpenStreetMap",
+            "what": "The “Complete from OpenStreetMap” button on a lodging’s page: it writes stars, website, chain and the Wikipedia link into empty fields. Also needs the open data services switch."
           }
         }
       },

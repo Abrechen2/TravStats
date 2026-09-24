@@ -52,6 +52,7 @@
     "lodgingGeocode.ts",
     "loginBackgrounds.ts",
     "mounts.ts",
+    "openData.ts",
     "openapi.ts",
     "pairing.ts",
     "parserTemplates.ts",

@@ -12,6 +12,7 @@ import {
 import { updateStopAndLegs, recomputeLegs } from "../../services/tour/legRecompute";
 import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 import { resolveTrip } from "./resolveTrip";
+import { refreshJournalWeather } from "../../services/openData/journalWeather";
 
 /**
  * Trip stops and journal entries — a same-prefix satellite of routes/trips.ts, split out when that
@@ -181,7 +182,10 @@ router.post(
           weather: body.weather,
         },
       });
-      res.status(201).json({ entry });
+      // The day's measured weather, where the instance allows open data and a
+      // stop of the trip says where the day was spent. Best effort: the entry
+      // is saved either way.
+      res.status(201).json({ entry: await refreshJournalWeather(entry.id) });
     } catch (error) {
       next(error);
     }
@@ -212,7 +216,10 @@ router.patch(
           ...(body.weather !== undefined && { weather: body.weather }),
         },
       });
-      res.json({ entry });
+      // A new date is a new day: its weather replaces the old one's.
+      const dayMoved = entry.date.getTime() !== existing.date.getTime();
+      const needsWeather = dayMoved || entry.observedWeather === null;
+      res.json({ entry: needsWeather ? await refreshJournalWeather(entry.id) : entry });
     } catch (error) {
       next(error);
     }

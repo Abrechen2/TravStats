@@ -1,3 +1,4 @@
+import OpenDataCard from "../../components/Settings/OpenDataCard";
 import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
@@ -127,6 +128,8 @@ export default function SettingsSectionSwitch({
           <DawarichConnectionCard />
           {/* Strava (2.7): day tours from Strava activities. */}
           <StravaConnectionCard isAdmin={isAdmin} />
+          {/* Open data (2.7): Open-Meteo, Wikipedia, OpenStreetMap — off by default. */}
+          <OpenDataCard isAdmin={isAdmin} />
         </div>
       );
     case "homeAirport":

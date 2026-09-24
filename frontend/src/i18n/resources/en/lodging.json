@@ -154,7 +154,8 @@
     "programName": "Program name",
     "membershipNumber": "Membership number",
     "tier": "Tier",
-    "ratingOverallDerived": "Average of room, breakfast and service"
+    "ratingOverallDerived": "Average of room, breakfast and service",
+    "website": "Website"
   },
   "type": {
     "hotel": "Hotel",

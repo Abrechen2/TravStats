@@ -96,6 +96,17 @@ export const BETA_FEATURES = Object.freeze({
       "The owner and the tester have used roadtrips on real trips, the automatic classification of existing sections has been reviewed on the RC's copy of production, and the owner accepts the domain for release.",
     reason: "beta",
   }),
+  /**
+   * "Complete from OpenStreetMap" on a lodging's page: stars, website, the
+   * house's Wikidata item and a known chain, written only into empty fields.
+   * Also needs the instance's open data switch; the button asks both.
+   */
+  lodgingEnrichment: Object.freeze({
+    why: "Owner ruling 2026-09-24: the OpenStreetMap enrichment of hotels goes in behind the beta switch. It matches a house by its pin and its name within 150 m, and that match has not yet been checked against real lodgings — a wrong match would write a stranger's stars and website into the user's record.",
+    returnsWhen:
+      "The enrichment has been run over the owner's real lodgings on the RC's copy of production, its wrong matches counted and found acceptable, and the owner accepts it for release.",
+    reason: "beta",
+  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;

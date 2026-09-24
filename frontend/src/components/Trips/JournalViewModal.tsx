@@ -3,6 +3,7 @@ import { useMemo } from "react";
 import type { TripJournalEntry } from "../../types";
 import JournalBody from "./JournalBody";
 import { useTranslation } from "../../hooks/useTranslation";
+import { formatObservedWeather } from "../../lib/observedWeather";
 import { useLocale } from "../../hooks/useLocale";
 
 interface JournalViewModalProps {
@@ -22,7 +23,7 @@ export default function JournalViewModal({
   onClose,
   onEdit,
 }: JournalViewModalProps): JSX.Element {
-  const { t } = useTranslation(["trips", "common"]);
+  const { t } = useTranslation(["trips", "common", "openData"]);
   const locale = useLocale();
 
   const dateLabel = useMemo(() => {
@@ -37,7 +38,11 @@ export default function JournalViewModal({
   }, [entry.date, locale]);
 
   const heading = entry.title?.trim() || dateLabel || t("trips:journalView.untitled");
-  const meta = [entry.weather, entry.mood].filter(Boolean).join(" · ");
+  // The author's own words first; the measured day beside them, not instead.
+  const observed = entry.observedWeather
+    ? formatObservedWeather(entry.observedWeather, t, locale)
+    : null;
+  const meta = [entry.weather, observed, entry.mood].filter(Boolean).join(" · ");
 
   return (
     <Modal
@@ -62,6 +67,11 @@ export default function JournalViewModal({
               <span
                 className="mt-0.5 block text-xs font-normal"
                 style={{ color: "var(--text-muted)" }}
+                title={
+                  entry.observedWeather
+                    ? `${t("openData:weather.measuredAt", { place: entry.observedWeather.place })} · ${t("openData:weather.source")}`
+                    : undefined
+                }
               >
                 {meta}
               </span>

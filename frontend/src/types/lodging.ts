@@ -157,6 +157,10 @@ export interface Lodging {
   lat: number | null;
   lon: number | null;
   stars: number | null;
+  /** The house's own website (hand-entered or from OpenStreetMap). Absent on older backends. */
+  website?: string | null;
+  /** Wikidata item of the house, set by the OpenStreetMap enrichment. */
+  wikidataId?: string | null;
   amenities: string[];
   notes: string | null;
   /**
@@ -200,6 +204,8 @@ export interface LodgingInput {
   lat?: number | null;
   lon?: number | null;
   stars?: number | null;
+  /** Empty string or null clears it. */
+  website?: string | null;
   amenities?: string[];
   notes?: string | null;
 }

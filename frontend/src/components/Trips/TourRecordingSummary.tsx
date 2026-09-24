@@ -1,13 +1,11 @@
-import { useEffect, useMemo, useState } from "react";
+import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
 import { logger } from "../../lib/logger";
 import type { TourTrack, TourTrackMeta } from "../../types/tour";
-
-const PROFILE_W = 400;
-const PROFILE_H = 90;
+import ElevationProfileChart from "./ElevationProfileChart";
 
 /** "3:25 h" from seconds. */
 function hoursMinutes(seconds: number): string {
@@ -63,30 +61,6 @@ export default function TourRecordingSummary({
     };
   }, [tripId, routeId, firstId]);
 
-  const profile = useMemo(() => {
-    const points = detail?.elevationProfile ?? null;
-    if (!points || points.length < 2) return null;
-    const maxKm = points[points.length - 1][0] || 1;
-    let lo = Infinity;
-    let hi = -Infinity;
-    for (const [, e] of points) {
-      lo = Math.min(lo, e);
-      hi = Math.max(hi, e);
-    }
-    const span = Math.max(hi - lo, 1);
-    const path = points
-      .map(
-        ([km, e], i) =>
-          `${i === 0 ? "M" : "L"}${((km / maxKm) * PROFILE_W).toFixed(1)} ${(
-            PROFILE_H -
-            6 -
-            ((e - lo) / span) * (PROFILE_H - 12)
-          ).toFixed(1)}`
-      )
-      .join(" ");
-    return { path, lo, hi, maxKm };
-  }, [detail]);
-
   if (tracks.length === 0) return null;
 
   const sum = (pick: (t: TourTrackMeta) => number | null): number | null => {
@@ -126,32 +100,7 @@ export default function TourRecordingSummary({
           </div>
         ))}
       </dl>
-      {profile && (
-        <figure className="mt-3">
-          <svg
-            viewBox={`0 0 ${PROFILE_W} ${PROFILE_H}`}
-            preserveAspectRatio="none"
-            className="h-24 w-full"
-            role="img"
-            aria-label={t("roadtrips:recording.profileLabel", {
-              low: nf0.format(profile.lo),
-              high: nf0.format(profile.hi),
-            })}
-          >
-            <path
-              d={`${profile.path} L${PROFILE_W} ${PROFILE_H} L0 ${PROFILE_H} Z`}
-              fill={accent}
-              fillOpacity={0.15}
-            />
-            <path d={profile.path} fill="none" stroke={accent} strokeWidth={2} />
-          </svg>
-          <figcaption className="t-meta-mono flex justify-between text-(--text-muted)">
-            <span>{nf0.format(profile.lo)} m</span>
-            <span>{nf0.format(profile.hi)} m</span>
-            <span>{nf.format(profile.maxKm)} km</span>
-          </figcaption>
-        </figure>
-      )}
+      <ElevationProfileChart points={detail?.elevationProfile} accent={accent} />
     </section>
   );
 }

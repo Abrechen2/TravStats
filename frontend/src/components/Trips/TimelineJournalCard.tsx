@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { formatObservedWeather } from "../../lib/observedWeather";
 import { stripMarkdown } from "../../lib/markdownPreview";
 import { formatTimelineDate } from "../../lib/tripTimeline";
 import { ExpandableEventCard } from "../Trip/ExpandableEventCard";
@@ -33,13 +34,14 @@ export function JournalCard({
   onEdit: () => void;
   onDelete: () => void;
 }): JSX.Element {
-  const { t } = useTranslation(["trips", "common"]);
+  const { t } = useTranslation(["trips", "common", "openData"]);
   const [open, setOpen] = useState(false);
   const e = ev.entry;
   // The headline is a single short line, so Markdown is stripped rather than
   // rendered there; the body below it renders (issue #231).
   const headline = e.title ?? truncate(stripMarkdown(e.body), 50);
-  const meta = [e.weather, e.mood].filter(Boolean).join(" · ") || undefined;
+  const observed = e.observedWeather ? formatObservedWeather(e.observedWeather, t, language) : null;
+  const meta = [e.weather, observed, e.mood].filter(Boolean).join(" · ") || undefined;
 
   /* Opens in place, like a flight and a cruise on this same timeline.
      It used to be the only entry whose full text lived behind a 11px eye

@@ -2,6 +2,8 @@ import type { Lodging, LodgingStay } from "./lodging";
 import type { LinkedAlbum } from "./immich";
 import type { CabinType, CruiseStop, Port, Ship } from "./cruise";
 
+import type { ObservedWeather } from "./openData";
+export type { ObservedWeather } from "./openData";
 export interface User {
   id: string;
   username: string;
@@ -189,6 +191,8 @@ export interface TripJournalEntry {
   body: string;
   mood: string | null;
   weather: string | null;
+  /** The day's measured weather at the trip's stop, from Open-Meteo. Absent on older backends. */
+  observedWeather?: ObservedWeather | null;
   createdAt: string;
   updatedAt: string;
 }

@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
 import TourRecordingSummary from "../components/Trips/TourRecordingSummary";
+import PlannedProfileCard from "../components/Trips/PlannedProfileCard";
 import StravaImportDialog, { useStravaConnected } from "../components/Trips/StravaImportDialog";
 import { useDomainColors } from "../hooks/useDomainColors";
 import { hexToRgb } from "../lib/domainColor";
@@ -628,6 +629,15 @@ export default function TripRouteEditorPage(): JSX.Element {
             tracks={tracks}
             tripId={id}
             routeId={route.id}
+            accent={TOUR_COLOR}
+          />
+        )}
+        {route.kind === "tour" && tracksKnown && tracks.length === 0 && legs.length > 0 && (
+          <PlannedProfileCard
+            routeId={route.id}
+            lineKey={legs
+              .map((l) => `${l.fromStopId}-${l.toStopId}-${l.source}-${l.distanceKm}`)
+              .join("|")}
             accent={TOUR_COLOR}
           />
         )}

@@ -138,6 +138,28 @@ export default function AboutSection(): JSX.Element {
             </li>
             <li>
               <a
+                href="https://open-meteo.com/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                Open-Meteo.com
+              </a>{" "}
+              — {t("settings:about.dataSources.openMeteo")}
+            </li>
+            <li>
+              <a
+                href="https://www.wikipedia.org/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                Wikipedia / Wikidata
+              </a>{" "}
+              — {t("settings:about.dataSources.wikipedia")}
+            </li>
+            <li>
+              <a
                 href={`${REPO_URL}#third-party-data-and-assets`}
                 target="_blank"
                 rel="noopener noreferrer"

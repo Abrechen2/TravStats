@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import WikipediaCard from "../components/common/WikipediaCard";
+import LodgingEnrichButton from "../components/lodging/LodgingEnrichButton";
 import type { JSX, ReactNode } from "react";
 import { useLocation, useNavigate, useParams, Link } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
@@ -58,7 +60,7 @@ export default function LodgingDetailPage(): JSX.Element {
   const fromChain =
     (location.state as { fromChain?: { id: number; name: string } } | null)?.fromChain ?? null;
   const backTo = fromChain ? `/lodging/chains/${fromChain.id}` : "/lodging";
-  const { t, i18n } = useTranslation(["lodging", "common"]);
+  const { t, i18n } = useTranslation(["lodging", "common", "openData"]);
   const backLabel = fromChain ? fromChain.name : t("lodging:list.title");
   const addToast = useToastStore((s) => s.addToast);
   // `totalSpendBase` is computed by the backend in the user's actual base
@@ -328,6 +330,11 @@ export default function LodgingDetailPage(): JSX.Element {
     ) : (
       t("lodging:field.independent")
     ),
+    lodging.website ? (
+      <a href={lodging.website} target="_blank" rel="noopener noreferrer" className="underline">
+        {t("lodging:field.website")}
+      </a>
+    ) : null,
   ].filter(Boolean);
   const kpis: DetailKpi[] = [
     {
@@ -401,6 +408,7 @@ export default function LodgingDetailPage(): JSX.Element {
         }
         actions={
           <>
+            <LodgingEnrichButton lodgingId={lodging.id} onDone={() => setReloadKey((k) => k + 1)} />
             <Button onClick={() => setEditing(true)}>{t("common:buttons.edit")}</Button>
             <Button
               variant="danger"
@@ -415,6 +423,7 @@ export default function LodgingDetailPage(): JSX.Element {
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
         <div className="flex flex-col gap-6 md:col-span-3">
+          <WikipediaCard kind="lodging" id={lodging.id} />
           <section className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
             <div className="flex items-center justify-between gap-3">
               <h2 className="t-label-mono">

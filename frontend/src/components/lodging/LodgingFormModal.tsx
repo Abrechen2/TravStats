@@ -44,6 +44,7 @@ export function LodgingFormModal({
     (lodging?.amenities ?? []).join(", ")
   );
   const [notes, setNotes] = useState<string>(lodging?.notes ?? "");
+  const [website, setWebsite] = useState<string>(lodging?.website ?? "");
   const [saving, setSaving] = useState(false);
   // Forgejo #9: out-of-range coordinates used to vanish silently and the
   // record saved without them. LocationInput now says so; this stops the
@@ -103,6 +104,8 @@ export function LodgingFormModal({
           .map((a) => a.trim())
           .filter((a) => a.length > 0),
         notes: notes.trim() || null,
+        // Empty clears it — same explicit `null` rule as the fields above.
+        website: website.trim() || null,
       };
       let saved: Lodging;
       if (mode === "create") {
@@ -240,6 +243,16 @@ export function LodgingFormModal({
             <input
               value={country}
               onChange={(e) => setCountry(e.target.value)}
+              className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
+            />
+          </label>
+          <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
+            {t("lodging:field.website")}
+            <input
+              type="url"
+              value={website}
+              onChange={(e) => setWebsite(e.target.value)}
+              placeholder="https://"
               className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             />
           </label>

@@ -174,6 +174,21 @@ export const photonSearchLimiter = rateLimit({
 });
 
 /**
+ * Per-caller limit for the open data endpoints (Open-Meteo, Wikipedia,
+ * Wikidata, OpenStreetMap). Each request may make one or more calls to a
+ * free public service whose fair-use terms bind the INSTANCE's address, so a
+ * busy client must not be able to spend it. Same shape as the geocoder limits.
+ */
+export const openDataLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(30),
+  message: "Too many open data requests in a short time — please slow down",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Per-user/IP limit for the FX preview proxy (`/lodging/fx-preview`).
  *
  * The route proxies to the free public Frankfurter/ECB API so the frontend

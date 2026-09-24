@@ -151,6 +151,10 @@
           "roadtrips": {
             "name": "Roadtrips und Tagestouren",
             "what": "Die Domäne „Roadtrips“ (mehrtägige Touren mit Stationen an deinen Unterkünften) und die überarbeiteten Tagestouren mit Höhenprofil."
+          },
+          "lodgingEnrichment": {
+            "name": "Unterkünfte aus OpenStreetMap ergänzen",
+            "what": "Der Knopf „Aus OpenStreetMap ergänzen“ auf der Seite einer Unterkunft: Er trägt Sterne, Webseite, Kette und die Wikipedia-Verknüpfung in leere Felder ein. Braucht zusätzlich den Schalter für offene Datendienste."
           }
         }
       },
