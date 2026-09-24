@@ -248,3 +248,117 @@ registry.registerPath({
     404: { description: "Not found", content: errorContent },
   },
 });
+
+// ---- The phone's endpoints (companion#12, #13; 2026-09-24) ----
+
+const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/);
+
+registry.registerPath({
+  method: "get",
+  path: "/roadtrips/active",
+  summary: "The roadtrip running on a given day",
+  description:
+    "The roadtrip whose stations' span covers `date` (the phone's LOCAL date); failing that, " +
+    "one that started before it and ended at most three days earlier. Of several, the latest " +
+    "started. `roadtrip` is null when none runs — never a guess. `todayStationId` is the " +
+    "station whose span covers the day, the one reached last on a travel day.",
+  tags: ["Roadtrips"],
+  request: { query: z.object({ date: isoDay }) },
+  responses: {
+    200: {
+      description: "The running roadtrip, or null",
+      content: {
+        "application/json": {
+          schema: z.object({
+            roadtrip: tourRoute.nullable(),
+            stations: z.array(station),
+            todayStationId: z.string().uuid().nullable(),
+          }),
+        },
+      },
+    },
+    400: { description: "Validation failed", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/roadtrips/{id}/stations",
+  summary: "Append ONE station where the phone stands",
+  description:
+    "The phone never sends the whole list (that is the web's PUT): it appends. Without a " +
+    "`title` the server names the place by reverse geocoding. A free night covers `date` to " +
+    "the next day. Idempotent for an outbox: a station of this roadtrip on the same day within " +
+    "150 m answers 200 with that station instead of adding a second one. Legs are recomputed " +
+    "and routed like a web save.",
+  tags: ["Roadtrips"],
+  request: {
+    params: idParams,
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            lat: z.number(),
+            lon: z.number(),
+            date: isoDay,
+            night: z.enum(["pass", "free"]),
+            title: z.string().optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Already there (a resend)",
+      content: {
+        "application/json": {
+          schema: z.object({ station, stations: z.array(station), legs: z.array(tourLeg) }),
+        },
+      },
+    },
+    201: {
+      description: "Appended",
+      content: {
+        "application/json": {
+          schema: z.object({ station, stations: z.array(station), legs: z.array(tourLeg) }),
+        },
+      },
+    },
+    400: { description: "Validation failed", content: errorContent },
+    404: { description: "Roadtrip not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/day-context",
+  summary: "The trip and roadtrip station a day belongs to",
+  description:
+    "What a workout recorded that day should be anchored to (companion#13): the trip whose " +
+    "dates cover it (the latest started of several) and the roadtrip station whose span covers " +
+    "it (the one reached last on a travel day). Either may be null.",
+  tags: ["Roadtrips", "Tours"],
+  request: { query: z.object({ date: isoDay }) },
+  responses: {
+    200: {
+      description: "Context",
+      content: {
+        "application/json": {
+          schema: z.object({
+            trip: z.object({ id: z.string().uuid(), name: z.string() }).nullable(),
+            station: z
+              .object({
+                id: z.string().uuid(),
+                title: z.string(),
+                roadtripId: z.string().uuid(),
+                roadtripName: z.string(),
+              })
+              .nullable(),
+          }),
+        },
+      },
+    },
+    400: { description: "Validation failed", content: errorContent },
+  },
+});

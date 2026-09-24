@@ -93,3 +93,66 @@ export async function findOsmLodging(
   });
   return [...candidates].sort((a, b) => a.distanceM - b.distanceM)[0] ?? null;
 }
+
+/** What `nearbyLodgings` looks for: somewhere to spend the night on the road. */
+const NIGHT_TOURISM = "camp_site|caravan_site|hotel|guest_house|hostel|motel|alpine_hut|chalet";
+const MAX_NEARBY_RADIUS_M = 20_000;
+const MAX_NEARBY = 20;
+
+export interface NearbyLodging {
+  name: string;
+  /** The OSM `tourism` value: camp_site, caravan_site, hotel, … */
+  kind: string;
+  lat: number;
+  lon: number;
+  distanceM: number;
+  osmRef: string;
+  website: string | null;
+}
+
+/**
+ * Places to spend the night near a point (companion#12, "Campingplatz in der
+ * Nähe"): named OSM features tagged as a campsite, a motorhome pitch or a
+ * lodging, nearest first. Pitches and campsites before hotels at the same
+ * distance, because the question is asked from a van. Null when Overpass did
+ * not answer, which is not the same as an empty list.
+ */
+export async function nearbyLodgings(
+  lat: number,
+  lon: number,
+  radiusM: number
+): Promise<NearbyLodging[] | null> {
+  const radius = Math.min(Math.max(Math.round(radiusM), 100), MAX_NEARBY_RADIUS_M);
+  const query =
+    `[out:json][timeout:20];` +
+    `nwr(around:${radius},${lat},${lon})["tourism"~"^(${NIGHT_TOURISM})$"]["name"];` +
+    `out tags center 60;`;
+  const parsed = overpassSchema.safeParse(
+    await fetchOpenDataJson("overpass", OVERPASS_URL, { form: { data: query }, timeoutMs: 25_000 })
+  );
+  if (!parsed.success) return null;
+  const vanFirst = (kind: string): number =>
+    kind === "caravan_site" || kind === "camp_site" ? 0 : 1;
+  return parsed.data.elements
+    .flatMap((el) => {
+      const at =
+        el.center ?? (el.lat != null && el.lon != null ? { lat: el.lat, lon: el.lon } : null);
+      const name = el.tags?.name;
+      const kind = el.tags?.tourism;
+      if (!at || !name || !kind) return [];
+      const site = el.tags?.website ?? el.tags?.["contact:website"] ?? null;
+      return [
+        {
+          name,
+          kind,
+          lat: at.lat,
+          lon: at.lon,
+          distanceM: Math.round(haversineKm({ lat, lon }, at) * 1000),
+          osmRef: `osm:${el.type}/${el.id}`,
+          website: site && /^https?:\/\//i.test(site) ? site : null,
+        },
+      ];
+    })
+    .sort((a, b) => a.distanceM - b.distanceM || vanFirst(a.kind) - vanFirst(b.kind))
+    .slice(0, MAX_NEARBY);
+}

@@ -59,6 +59,7 @@
     "passwordReset.ts",
     "pdfParse.ts",
     "pendingUpdates.ts",
+    "roadtrips/companion.ts",
     "roadtrips/index.ts",
     "roadtrips/stations.ts",
     "settings/apiKeys.ts",

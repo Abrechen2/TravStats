@@ -211,8 +211,17 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const { tripId, ...body } = createTourSchema.parse(req.body);
+      const { tripId, anchorStopId, ...body } = createTourSchema.parse(req.body);
       if (tripId != null) await resolveTrip(userId, tripId);
+      // The anchor must be a station of one of the caller's roadtrips: a foreign
+      // key proves it exists, not whose it is.
+      if (anchorStopId != null) {
+        const station = await prisma.tripStop.findFirst({
+          where: { id: anchorStopId, route: { userId, kind: "roadtrip" } },
+          select: { id: true },
+        });
+        if (!station) throw new AppError("Station not found", 404);
+      }
 
       const last = await prisma.tripRoute.findFirst({
         where: { userId, tripId: tripId ?? null },
@@ -227,6 +236,7 @@ router.post(
           name: body.name,
           mode: body.mode,
           activity: body.activity ?? null,
+          anchorStopId: anchorStopId ?? null,
           color: body.color,
           notes: body.notes,
           startOdometerKm: body.startOdometerKm,

@@ -9,6 +9,7 @@ import { openDataLimiter } from "../middleware/rateLimit";
 import { assertOpenDataEnabled, OpenDataDisabledError } from "../services/openData/http";
 import { fillTripJournalWeather, refreshJournalWeather } from "../services/openData/journalWeather";
 import { enrichLodgingFromOsm } from "../services/openData/lodgingEnrichment";
+import { nearbyLodgings } from "../services/openData/openStreetMap";
 import { wikidataForPlace } from "../services/openData/placeWikidata";
 import { plannedElevationProfile } from "../services/openData/plannedProfile";
 import { WIKI_LANGUAGES, wikipediaSummary } from "../services/openData/wikipedia";
@@ -142,6 +143,34 @@ router.get(
       res.json({
         summary: lodging.wikidataId ? await wikipediaSummary(lodging.wikidataId, lang) : null,
       });
+    } catch (error) {
+      if (!sendDisabled(error, res)) next(error);
+    }
+  }
+);
+
+const nearbyQuery = z.object({
+  lat: z.coerce.number().min(-90).max(90),
+  lon: z.coerce.number().min(-180).max(180),
+  radiusKm: z.coerce.number().min(0.1).max(20).default(5),
+});
+
+/**
+ * GET /nearby/lodging?lat=&lon=&radiusKm= — campsites, pitches and lodgings
+ * near a point, from OpenStreetMap (companion#12). 502 when Overpass did not
+ * answer: "none nearby" and "could not ask" are different answers.
+ */
+router.get(
+  "/nearby/lodging",
+  authenticate,
+  openDataLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { lat, lon, radiusKm } = nearbyQuery.parse(req.query);
+      await assertOpenDataEnabled();
+      const places = await nearbyLodgings(lat, lon, radiusKm * 1000);
+      if (places === null) throw new AppError("OpenStreetMap did not answer", 502);
+      res.json({ places });
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);
     }

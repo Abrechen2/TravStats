@@ -18,6 +18,7 @@ import { toDto, toLegDto, ROUTE_SELECT } from "../trips/tourRoutes";
 import logger from "../../utils/logger";
 import { getCountryResolver } from "../../services/geo/countryFromCoordinates";
 import stationRoutes from "./stations";
+import companionRoutes from "./companion";
 import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
 
 /**
@@ -33,6 +34,8 @@ import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
  * requests (the phase-1 bug that 401'd the public pairing endpoints).
  */
 const router = Router();
+// The phone's routes first: `/roadtrips/active` must not reach `/roadtrips/:id`.
+router.use(companionRoutes);
 
 const LIST_SELECT = {
   id: true,

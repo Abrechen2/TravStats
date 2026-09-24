@@ -257,6 +257,11 @@ export const createTourSchema = createRouteSchema.extend({
   tripId: z.string().uuid().nullish(),
   /** What the day tour was (design 2026-09-24); optional, the mode stays. */
   activity: z.enum(TOUR_ACTIVITIES).nullish(),
+  /**
+   * The roadtrip station the day tour sets out from — what the Companion's
+   * workout import sends when the day belongs to a roadtrip (companion#13).
+   */
+  anchorStopId: z.string().uuid().nullish(),
 });
 
 /**

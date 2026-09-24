@@ -227,6 +227,68 @@ describe("open data endpoints", () => {
     expect(foreign.status).toBe(404);
   });
 
+  describe("places to sleep nearby (companion#12)", () => {
+    const OVERPASS = {
+      elements: [
+        {
+          type: "node",
+          id: 11,
+          lat: 62.09,
+          lon: 6.87,
+          tags: { name: "Hotel Union", tourism: "hotel" },
+        },
+        {
+          type: "node",
+          id: 12,
+          lat: 62.0835,
+          lon: 6.8668,
+          tags: {
+            name: "Hellesylt Camping",
+            tourism: "camp_site",
+            website: "https://camping.example",
+          },
+        },
+        {
+          type: "way",
+          id: 13,
+          center: { lat: 62.0834, lon: 6.8669 },
+          tags: { name: "Bobil", tourism: "caravan_site" },
+        },
+        { type: "node", id: 14, lat: 62.1, lon: 6.9, tags: { tourism: "camp_site" } },
+      ],
+    };
+
+    it("lists them nearest first, named ones only, with a website where OSM has one", async () => {
+      fetches = mockFetch([[/overpass-api\.de/, OVERPASS]]);
+      const res = await request(app)
+        .get("/api/v1/nearby/lodging?lat=62.0833&lon=6.8667&radiusKm=3")
+        .set("Cookie", cookie);
+      expect(res.status).toBe(200);
+      expect(res.body.places.map((p: { name: string }) => p.name)).toEqual([
+        "Bobil",
+        "Hellesylt Camping",
+        "Hotel Union",
+      ]);
+      expect(res.body.places[1].website).toBe("https://camping.example");
+    });
+
+    it("says openDataDisabled while the switch is off, and 502 when OSM does not answer", async () => {
+      await setSwitch(false);
+      fetches = mockFetch([]);
+      const off = await request(app)
+        .get("/api/v1/nearby/lodging?lat=62&lon=6")
+        .set("Cookie", cookie);
+      expect(off.status).toBe(409);
+      await setSwitch(true);
+      fetches.restore();
+      fetches = mockFetch([[/overpass-api\.de/, { error: "busy" }, 504]]);
+      const down = await request(app)
+        .get("/api/v1/nearby/lodging?lat=62&lon=6")
+        .set("Cookie", cookie);
+      expect(down.status).toBe(502);
+    });
+  });
+
   describe("a lodging from OpenStreetMap (beta)", () => {
     const OVERPASS = {
       elements: [

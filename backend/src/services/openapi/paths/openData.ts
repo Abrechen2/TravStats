@@ -210,3 +210,47 @@ registry.registerPath({
     409: disabled,
   },
 });
+
+registry.registerPath({
+  method: "get",
+  path: "/nearby/lodging",
+  summary: "Campsites, pitches and lodgings near a point (OpenStreetMap)",
+  description:
+    "Named OSM features tagged camp_site, caravan_site, hotel, guest_house, hostel, motel, " +
+    "alpine_hut or chalet within `radiusKm` (default 5, at most 20), nearest first, at most " +
+    '20 — what the Companion\'s "Campingplatz in der Nähe" lists (companion#12). 502 when ' +
+    "Overpass did not answer: that is not an empty neighbourhood.",
+  tags: ["Open data"],
+  request: {
+    query: z.object({
+      lat: z.number(),
+      lon: z.number(),
+      radiusKm: z.number().optional(),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Places",
+      content: {
+        "application/json": {
+          schema: z.object({
+            places: z.array(
+              z.object({
+                name: z.string(),
+                kind: z.string(),
+                lat: z.number(),
+                lon: z.number(),
+                distanceM: z.number().int(),
+                osmRef: z.string(),
+                website: z.string().nullable(),
+              })
+            ),
+          }),
+        },
+      },
+    },
+    400: { description: "Validation failed", content: errorContent },
+    409: disabled,
+    502: { description: "OpenStreetMap did not answer", content: errorContent },
+  },
+});
