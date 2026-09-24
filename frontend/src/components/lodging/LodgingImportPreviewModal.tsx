@@ -509,7 +509,7 @@ function PreviewRowLine({ row, onChange, t, language }: PreviewRowLineProps): JS
               <p className="mt-1 text-[10px] text-[var(--text-muted)]">
                 {t("lodging:import.matchedLodgingHint")}
               </p>
-              {HEURISTIC_MATCH.has(row.dedupeHint) && (
+              {(row.matchIsGuess ?? HEURISTIC_MATCH.has(row.dedupeHint)) && (
                 <button
                   type="button"
                   data-testid={`lodging-import-reject-match-${sourceRowIndex}`}
@@ -520,12 +520,17 @@ function PreviewRowLine({ row, onChange, t, language }: PreviewRowLineProps): JS
                     // a described stay left behind would keep the hint line
                     // open (`hasHints`) and name a stay in a house this row no
                     // longer claims to be.
+                    // A stays-only row carries no house of its own, only the
+                    // name it was joined by; it gets one here, or `create`
+                    // would have nothing to create and fail.
                     onChange(sourceRowIndex, {
                       matchedLodgingId: null,
                       matchedLodgingName: null,
+                      matchIsGuess: false,
                       matchedStayId: null,
                       matchedStay: null,
                       dedupeHint: "none",
+                      lodging: ensureLodging(row, name),
                     })
                   }
                   className="mt-1 text-[10px] text-[var(--accent)] underline-offset-2 hover:underline"

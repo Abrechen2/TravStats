@@ -65,6 +65,52 @@ describe("buildLodgingPreviewRows", () => {
     expect(summary).toEqual({ newRows: 0, alreadyPresent: 1, needsInput: 0, changedRows: 0 });
   });
 
+  /**
+   * AUD-056, re-check 13.09.: two guesses reached the preview without the
+   * mark the UI needs to offer "this is a different house". A same-day stay
+   * overwrote the heuristic hint with `stay_same_dates`, and the stays-only
+   * name join never set one. `matchIsGuess` carries it on its own.
+   */
+  describe("matchIsGuess", () => {
+    it("stays a guess when a same-day stay follows a name match", async () => {
+      const { rows } = await buildLodgingPreviewRows(userId, [
+        {
+          sourceRowIndex: 0,
+          lodging: { name: "NH Ludwigsburg", city: "Ludwigsburg" },
+          stay: { checkIn: "2026-03-30", checkOut: "2026-03-31" },
+        },
+      ]);
+      expect(rows[0].dedupeHint).toBe("stay_same_dates");
+      expect(rows[0].matchedLodgingId).toBe(existingId);
+      expect(rows[0].matchIsGuess).toBe(true);
+    });
+
+    it("marks a stays-only row joined by its free-text name as a guess", async () => {
+      const { rows } = await buildLodgingPreviewRows(userId, [
+        {
+          sourceRowIndex: 0,
+          lodging: null,
+          lodgingName: "NH Ludwigsburg",
+          stay: { checkIn: "2026-06-01", checkOut: "2026-06-02" },
+        },
+      ]);
+      expect(rows[0].dedupeHint).toBe("none");
+      expect(rows[0].matchedLodgingId).toBe(existingId);
+      expect(rows[0].matchIsGuess).toBe(true);
+    });
+
+    it("is no guess where a reference proves the house", async () => {
+      const { rows } = await buildLodgingPreviewRows(userId, [
+        {
+          sourceRowIndex: 0,
+          lodging: { name: "Anything", externalRef: "google:ChIJexisting" },
+          stay: null,
+        },
+      ]);
+      expect(rows[0].matchIsGuess).toBe(false);
+    });
+  });
+
   // forgejo#84 — five pairs on the owner's account became ten houses because
   // a booking mail and a saved-places export write one building differently,
   // and neither carries a pin at preview time for the coordinate rule.

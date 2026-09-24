@@ -585,6 +585,70 @@ describe("LodgingImportPreviewModal — rejecting a guessed match", () => {
   });
 
   /**
+   * AUD-056, re-check 13.09.: the two guesses `dedupeHint` could not mark. A
+   * same-day stay turns the hint into `stay_same_dates`, and a stays-only row
+   * joined by its free-text name has no hint at all — both had no reject
+   * button, and `create` attached the stay to the guessed house.
+   */
+  it("offers the rejection on a guess the dedupe hint no longer shows", () => {
+    render(
+      <LodgingImportPreviewModal
+        rows={[{ ...guessed[0], dedupeHint: "stay_same_dates", matchIsGuess: true }]}
+        summary={guessedSummary}
+        onCommit={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.getByTestId("lodging-import-reject-match-4")).toBeInTheDocument();
+  });
+
+  it("gives a rejected stays-only row a house of its own to create", async () => {
+    const onCommit = vi.fn().mockResolvedValue(undefined);
+    render(
+      <LodgingImportPreviewModal
+        rows={[
+          {
+            ...guessed[0],
+            lodging: null,
+            lodgingName: "Synthetic Other Building",
+            dedupeHint: "none",
+            matchIsGuess: true,
+          },
+        ]}
+        summary={guessedSummary}
+        onCommit={onCommit}
+        onCancel={vi.fn()}
+      />
+    );
+
+    fireEvent.click(screen.getByTestId("lodging-import-reject-match-4"));
+    fireEvent.change(screen.getByTestId("lodging-import-action-4"), {
+      target: { value: "create" },
+    });
+    fireEvent.click(screen.getByTestId("lodging-import-commit"));
+    await waitFor(() => expect(onCommit).toHaveBeenCalledTimes(1));
+
+    const committed = onCommit.mock.calls[0][0] as {
+      matchedLodgingId?: string | null;
+      lodging: { name?: string } | null;
+    }[];
+    expect(committed[0].matchedLodgingId).toBeNull();
+    expect(committed[0].lodging?.name).toBe("Synthetic Other Building");
+  });
+
+  it("offers no rejection when the server says the match is proven", () => {
+    render(
+      <LodgingImportPreviewModal
+        rows={[{ ...guessed[0], matchIsGuess: false }]}
+        summary={guessedSummary}
+        onCommit={vi.fn()}
+        onCancel={vi.fn()}
+      />
+    );
+    expect(screen.queryByTestId("lodging-import-reject-match-4")).toBeNull();
+  });
+
+  /**
    * Rejecting the guess must take the DESCRIBED stay with it.
    *
    * `matchedStay` is what keeps the hint line open (`hasHints`) and what names
