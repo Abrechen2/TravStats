@@ -603,25 +603,10 @@ if (process.env.NODE_ENV !== "test") {
       });
     }
 
-    // Backfill airport timezones from coordinates (idempotent, skips airports that already have timezone)
-    try {
-      const { backfillAirportTimezones } = await import("./services/airportLookup");
-      const updated = await backfillAirportTimezones();
-      if (updated > 0) {
-        const { clearAirportCache } = await import("./services/airportCache");
-        clearAirportCache();
-        logger.info({
-          operation: "server_start_timezone_backfill",
-          message: `Backfilled timezone for ${updated} airports`,
-        });
-      }
-    } catch (error) {
-      logger.warn({
-        operation: "server_start_timezone_backfill_error",
-        message: "Failed to backfill airport timezones",
-        error,
-      });
-    }
+    // Airport zones: fill the missing ones, and once per instance re-derive
+    // the ones geo-tz's old default folded together (CAMP-03).
+    const { refreshAirportTimezonesOnStartup } = await import("./services/airportTimezoneRepair");
+    await refreshAirportTimezonesOnStartup();
 
     // Converge stored temporal statuses with the dates on boot (idempotent —
     // same logic as the hourly sweep, see services/statusSweep.ts).
