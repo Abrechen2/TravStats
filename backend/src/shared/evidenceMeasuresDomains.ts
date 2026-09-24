@@ -157,7 +157,7 @@ export const DOMAIN_MEASURES: Record<string, MeasureSpec> = {
     servedIn: 2,
   },
   cruiseCompanionCount: {
-    aggregation: "sum",
+    aggregation: "distinct",
     unit: "companions",
     scopes: ["allTime", "year"],
     surface: "CruiseStatsSection (CruiseFunSection)",

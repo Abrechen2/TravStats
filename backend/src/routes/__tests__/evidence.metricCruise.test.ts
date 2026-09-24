@@ -385,7 +385,7 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
   });
 
   /**
-   * Four companion slots over THREE cruises — including the one that has not
+   * THREE people over three cruises — including the one that has not
    * sailed. This is the only measure in the family that ignores the countable
    * filter, and it has to: its calculator is `deriveCruiseStats` over
    * `cruiseApi.list()`, and `GET /cruises` applies no status filter, so the
@@ -393,19 +393,20 @@ describe("GET /api/v1/evidence/metric/... — the cruise tab", () => {
    * companions. A panel that named fewer people than the bar it explains would
    * be the disagreement the panel exists to prevent.
    *
-   * Anna came on two and is two of the four slots — the same arithmetic
-   * `CruiseFunSection` draws as one bar reading "2", not a distinct count of
-   * people.
+   * Anna came on two and is ONE person (owner, 2026-09-24): the figure is
+   * how many people you sailed with, not how many seats they filled. Until
+   * then it summed per cruise and read 4 here.
    */
-  it("cruiseCompanionCount: Anna twice, Ben once, and Chris on a cruise that has not sailed", () => {
+  it("cruiseCompanionCount: Anna, Ben and Chris — three people, Anna counted once", () => {
     const res = answer("cruiseCompanionCount");
-    expect(res.measure.value).toBe(4);
-    expect(res.entries.find((e) => e.id === cruise2024)!.contribution).toBe(2);
-    expect(res.entries.find((e) => e.id === cruise2025)!.contribution).toBe(1);
-    expect(res.entries.find((e) => e.id === cruiseBooked)!.contribution).toBe(1);
+    expect(res.measure.aggregation).toBe("distinct");
+    expect(res.measure.value).toBe(3);
+    expect(res.entries.find((e) => e.id === cruise2024)!.credits).toEqual(["Anna", "Ben"]);
+    expect(res.entries.find((e) => e.id === cruise2025)!.credits).toEqual(["Anna"]);
+    expect(res.entries.find((e) => e.id === cruiseBooked)!.credits).toEqual(["Chris"]);
     // The same fixture is invisible to every OTHER measure in this suite.
     expect(answer("cruiseCount").entries.map((e) => e.id)).not.toContain(cruiseBooked);
-    assertSumInvariant(res, Math.round);
+    assertDistinctInvariant(res);
   });
 
   /**

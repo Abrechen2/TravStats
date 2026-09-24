@@ -300,12 +300,12 @@ describe("the numbers inside a sentence, and the strip's own figures", () => {
   });
 
   /**
-   * A ranked list has no figure of its own, so the companions total — which is
-   * exactly what the resolver sums — is drawn as a line under the title. Two
-   * sailings with the same person are two mentions there and one bar reading
-   * "2" below, which is the same arithmetic at two grains.
+   * A ranked list has no figure of its own, so the companions total — the
+   * number of people, which is what the resolver answers — is drawn as a line
+   * under the title. Ada sailed twice and is still one person (owner,
+   * 2026-09-24); the total used to sum the bars and read 3 here.
    */
-  it("the cruise companions total opens its measure and counts per sailing", async () => {
+  it("the cruise companions total opens its measure and counts each person once", async () => {
     const detail = {
       first: null,
       mostPorts: null,
@@ -330,7 +330,7 @@ describe("the numbers inside a sentence, and the strip's own figures", () => {
       </MemoryRouter>
     );
     const total = screen.getByRole("button", { name: "cruise:stats.fun.companionsTotalLabel" });
-    expect(total).toHaveTextContent("3");
+    expect(total).toHaveTextContent("2");
     await act(async () => {
       total.click();
     });

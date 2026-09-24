@@ -389,13 +389,12 @@ export function CruiseFunSection({
     }));
 
   /**
-   * What the rows ADD UP TO, which is exactly what `resolveCruiseCompanionCount`
-   * answers: it sums `companions.length` per cruise, so somebody who sailed
-   * twice counts twice. That is why the copy says "per sailing" rather than
-   * letting the figure be read as a number of people — the ranked list below
-   * already says how many people there are.
+   * How many PEOPLE came along, each once however often they sailed (owner,
+   * 2026-09-24) — one per bar in the ranked list, and exactly what
+   * `resolveCruiseCompanionCount` answers. Until then it summed the bars, so
+   * somebody who sailed twice counted twice.
    */
-  const companionMentions = [...detail.companions.values()].reduce((sum, n) => sum + n, 0);
+  const companionMentions = detail.companions.size;
 
   if (cards.length === 0 && cabinRows.length === 0 && companionRows.length === 0) return null;
 
