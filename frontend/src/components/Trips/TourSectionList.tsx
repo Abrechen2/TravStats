@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useToursVisible } from "../../hooks/useToursVisible";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
@@ -26,7 +27,16 @@ function formatKm(value: number): string {
  * looks identical to "this trip genuinely has no sections yet" and the user
  * has no way to tell a real zero from a swallowed error.
  */
-export default function TourSectionList({ tripId }: Props): JSX.Element {
+/**
+ * Behind the roadtrips beta key since 2026-09-24 (owner). The gate sits here
+ * rather than in the trip page, so a `?tab=tours` link on a closed instance
+ * renders nothing and fetches nothing.
+ */
+export default function TourSectionList(props: Props): JSX.Element | null {
+  return useToursVisible() ? <TourSectionListBody {...props} /> : null;
+}
+
+function TourSectionListBody({ tripId }: Props): JSX.Element {
   const { t } = useTranslation();
   const addToast = useToastStore((s) => s.addToast);
 

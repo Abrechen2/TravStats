@@ -1,4 +1,5 @@
 import OpenDataCard from "../../components/Settings/OpenDataCard";
+import { useToursVisible } from "../../hooks/useToursVisible";
 import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
@@ -47,6 +48,7 @@ export default function SettingsSectionSwitch({
   page,
 }: SettingsSectionSwitchProps): JSX.Element | null {
   const isAdmin = page.user?.isAdmin ?? false;
+  const toursVisible = useToursVisible();
 
   switch (section) {
     case "profile":
@@ -119,7 +121,10 @@ export default function SettingsSectionSwitch({
               because tours were its only consumer and an instance with beta
               off would have offered routing for a feature hidden everywhere
               else. Tours shipped, so the gate went with them. */}
-          <RoutingProviderSection isAdmin={isAdmin} />
+          {/* Routing serves tours and roadtrips only, and both went back
+              behind the roadtrips beta key on 2026-09-24 — a routing card for
+              a feature hidden everywhere else would offer nothing. */}
+          {toursVisible && <RoutingProviderSection isAdmin={isAdmin} />}
           <ImmichConnectionCard />
           {/* It had a key of its OWN rather than riding on `tourRoutes`, because
               tours stopped being the only consumer the moment cruise legs were
@@ -127,7 +132,7 @@ export default function SettingsSectionSwitch({
               2026-09-18. */}
           <DawarichConnectionCard />
           {/* Strava (2.7): day tours from Strava activities. */}
-          <StravaConnectionCard isAdmin={isAdmin} />
+          {toursVisible && <StravaConnectionCard isAdmin={isAdmin} />}
           {/* Open data (2.7): Open-Meteo, Wikipedia, OpenStreetMap — off by default. */}
           <OpenDataCard isAdmin={isAdmin} />
         </div>

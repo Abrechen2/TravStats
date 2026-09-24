@@ -29,6 +29,7 @@ import BookingEditModal from "../components/Trips/BookingEditModal";
 import TripMap from "../components/Trips/TripMap";
 import TripGallery from "../components/Trips/TripGallery";
 import TourSectionList from "../components/Trips/TourSectionList";
+import { useToursVisible } from "../hooks/useToursVisible";
 import { PanelHeader, Placeholder } from "../components/Trips/TripDetailPanels";
 import {
   compareTimelineEvents,
@@ -264,13 +265,12 @@ interface TabBarProps {
   t: ReturnType<typeof useTranslation>["t"];
 }
 
-/** Exported for its own test: the "tours" tab kept a hard-coded "Beta" pill
- *  long after the gate came off (auditor 3, 2026-09-19), and a badge no
- *  registry entry backs is one nothing can ever take away. */
+/** Exported for its own test: the "tours" tab kept a hard-coded "Beta" pill after its gate
+ *  came off (auditor 3, 2026-09-19); a badge no registry entry backs, nothing can take away. */
 export function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
-  // Every tab is offered. "tours" was the last one behind the instance beta
-  // flag, and the owner released it on 2026-09-18.
-  const visibleTabs = TABS;
+  // "tours" is behind the roadtrips beta key again since 2026-09-24 (owner).
+  const toursVisible = useToursVisible();
+  const visibleTabs = TABS.filter((key) => key !== "tours" || toursVisible);
 
   // Round 4: text tabs with the accent underline, like the logbook's. The
   // emoji in front of each label were the last ones in a tab bar.

@@ -12,6 +12,14 @@ import { MemoryRouter } from "react-router-dom";
  */
 const { mapProps } = vi.hoisted(() => ({ mapProps: [] as Record<string, unknown>[] }));
 
+const mockToursVisible = vi.hoisted(() => vi.fn(() => true));
+// Tours sit behind the roadtrips beta key since 2026-09-24; this suite is
+// about what the component does once they are visible.
+vi.mock("../../../../hooks/useToursVisible", () => ({
+  useToursVisible: () => mockToursVisible(),
+  useToursAccess: () => (mockToursVisible() ? "allowed" : "denied"),
+}));
+
 vi.mock("../../../MapContainer3D", () => ({
   default: (props: Record<string, unknown>) => {
     mapProps.push(props);

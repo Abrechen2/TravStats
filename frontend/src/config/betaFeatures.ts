@@ -91,7 +91,7 @@ export const BETA_FEATURES = Object.freeze({
    * so a domain nobody can see is not offered as a switch either.
    */
   roadtrips: Object.freeze({
-    why: "Owner ruling 2026-09-24 in #dev-talk: the first version of roadtrips (a domain of its own, stations that sleep at the user's stays) and of day tours with climb and moving time goes into 2.7 behind the switch, so the 2.7 core can ship without waiting for it. The existing tour sections were classified by rule during the migration, and nobody has reviewed that classification on real data yet.",
+    why: "Owner ruling 2026-09-24 in #dev-talk: the first version of roadtrips (a domain of its own, stations that sleep at the user's stays) and of day tours with climb and moving time goes into 2.7 behind the switch, so the 2.7 core can ship without waiting for it. The existing tour sections were classified by rule during the migration, and nobody has reviewed that classification on real data yet. The same evening the owner put tours as a whole back behind this key (they had been released on 2026-09-18): the tours page and editor, the tour tab on the dashboard and on a trip, the tours on the overview map, and the routing and Strava cards all ask `useToursVisible`, which reads this key.",
     returnsWhen:
       "The owner and the tester have used roadtrips on real trips, the automatic classification of existing sections has been reviewed on the RC's copy of production, and the owner accepts the domain for release.",
     reason: "beta",

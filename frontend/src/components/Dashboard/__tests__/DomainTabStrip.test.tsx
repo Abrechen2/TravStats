@@ -180,7 +180,7 @@ describe("DomainTabStrip", () => {
   // decision. It also has no domain behind it: `counts`/`enabled` are keyed
   // by DomainKey and never carry a "tour" entry, so the tab must render with
   // no count badge and — unlike POI — must never be dimmed either.
-  describe("beta gate: tourRoutes", () => {
+  describe("beta gate: tours and roadtrips (roadtrips key)", () => {
     const renderStrip = (): void => {
       render(
         <DomainTabStrip
@@ -192,18 +192,18 @@ describe("DomainTabStrip", () => {
       );
     };
 
-    // Tours left the beta registry on 2026-09-18 (owner). The strip must now
-    // offer the tab whatever the instance flag says — including while it is
-    // still unknown, which is the state a cold load spends one request in and
-    // the reason the gated version needed three states instead of a boolean.
+    // Tours were released on 2026-09-18 and went back behind the switch on
+    // 2026-09-24 (owner), under the roadtrips key. Closed and unknown both
+    // hide the two tabs — hidden, not dimmed: dimming is for a domain the
+    // user switched off, and a closed instance gate is not that.
     it.each([
       ["off", false],
       ["unknown (not loaded yet)", null],
-      ["on", true],
-    ])("offers the Touren tab when the beta flag is %s", (_label, flag) => {
+    ])("hides the Touren and Roadtrips tabs when the beta flag is %s", (_label, flag) => {
       useSettingsStore.setState({ betaFeaturesEnabled: flag });
       renderStrip();
-      expect(screen.getByRole("tab", { name: /tours/i })).toBeTruthy();
+      expect(screen.queryByRole("tab", { name: /tours/i })).toBeNull();
+      expect(screen.queryByRole("tab", { name: /roadtrip/i })).toBeNull();
       expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
     });
 

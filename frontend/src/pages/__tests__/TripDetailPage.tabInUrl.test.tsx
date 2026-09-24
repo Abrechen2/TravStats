@@ -13,6 +13,14 @@ import type { Trip } from "../../types";
  */
 const getByIdMock = vi.fn();
 
+const mockToursVisible = vi.hoisted(() => vi.fn(() => true));
+// Tours sit behind the roadtrips beta key since 2026-09-24; this suite is
+// about what the component does once they are visible.
+vi.mock("../../hooks/useToursVisible", () => ({
+  useToursVisible: () => mockToursVisible(),
+  useToursAccess: () => (mockToursVisible() ? "allowed" : "denied"),
+}));
+
 vi.mock("../../hooks/useHasLlm", () => ({ useHasLlm: () => true }));
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
 vi.mock("../../lib/api", () => ({

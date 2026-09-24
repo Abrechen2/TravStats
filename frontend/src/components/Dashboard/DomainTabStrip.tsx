@@ -1,4 +1,5 @@
 import type { JSX } from "react";
+import { useToursVisible } from "../../hooks/useToursVisible";
 import { useNavigate } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { DashboardTab } from "../../types/dashboard";
@@ -89,10 +90,13 @@ export function DomainTabStrip({
   // them click through to the "coming soon" screen and turn it back on. Mixing
   // the enabled state in here would hide the tab instead and break that.
   //
-  // Every tab is offered now. "Touren" was the last one behind a gate, and
-  // the owner released it on 2026-09-18 — as places were released on
-  // 2026-09-05 when the CSV import gave them a surface.
-  const visibleTabs = DASHBOARD_TABS;
+  // "Touren" and "Roadtrips" went back behind the beta switch on 2026-09-24
+  // (owner) — hidden, not dimmed: dimming is for a domain the USER switched
+  // off and can turn back on, and a closed instance gate is neither.
+  const toursVisible = useToursVisible();
+  const visibleTabs = DASHBOARD_TABS.filter(
+    (tab) => (tab !== "tour" && tab !== "roadtrip") || toursVisible
+  );
 
   // On a domain tab, that domain's next entry; on "Alle", the soonest of all —
   // including the trip, which belongs to no single tab. `upcoming` arrives

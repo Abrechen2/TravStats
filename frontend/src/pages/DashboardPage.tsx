@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useToursAccess } from "../hooks/useToursVisible";
 import { Navigate } from "react-router-dom";
 import type { JSX } from "react";
 import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
@@ -58,6 +59,7 @@ export default function DashboardPage(): JSX.Element {
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
   const placesAccess = usePlacesAccess();
+  const toursAccess = useToursAccess();
   // Tours have no domain to be "enabled"/"disabled" — only the instance-level
   // beta flag gates them. `betaFeaturesEnabled` is `null` for one request on
   // a cold load; treating that as "denied" would redirect a direct
@@ -153,6 +155,10 @@ export default function DashboardPage(): JSX.Element {
   // on a cold load, and treating that as "no" is what made /places bounce on
   // every refresh (defect 1 in the branch's own handover).
   if (tab === "poi" && placesAccess === "denied") {
+    return <Navigate to="/dashboard" replace />;
+  }
+  // Same for the tour and roadtrip tabs behind the roadtrips beta key.
+  if ((tab === "tour" || tab === "roadtrip") && toursAccess === "denied") {
     return <Navigate to="/dashboard" replace />;
   }
   return (

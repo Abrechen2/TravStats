@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import { useToursVisible } from "../../../hooks/useToursVisible";
 import type { JSX } from "react";
 import { useNavigate } from "react-router-dom";
 import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
@@ -163,7 +164,9 @@ export function AllTab(): JSX.Element {
 
   // Tours have no domain pill and no gate since 2026-09-18 — the hook still
   // takes the flag so a future domain switch has somewhere to say no.
-  const dashboardTours = useDashboardTours(true);
+  // Tours are beta again (2026-09-24): nothing is fetched while the key is closed.
+  const toursVisible = useToursVisible();
+  const dashboardTours = useDashboardTours(toursVisible);
 
   // Filter flights by departureTime within the year/time range.
   // Flights without a departureTime stay visible (treat NaN as
@@ -456,7 +459,7 @@ export function AllTab(): JSX.Element {
 
   // Tours on the main overview map only — journey mode already takes over
   // the map for ONE trip (`journeyLayers`); every tour on top would misdescribe it.
-  const showTours = allMode !== "journey";
+  const showTours = toursVisible && allMode !== "journey";
 
   // `buildTourPaths` is the SAME builder `TripMap.tsx` uses; the deck.gl
   // layer itself comes from `buildTourDeckLayers` (`./tourMapOverlay.tsx`,

@@ -5,6 +5,14 @@ import { MemoryRouter } from "react-router-dom";
 import TourSectionList from "../TourSectionList";
 import { toursApi } from "../../../lib/api/tours";
 
+const mockToursVisible = vi.hoisted(() => vi.fn(() => true));
+// Tours sit behind the roadtrips beta key since 2026-09-24; this suite is
+// about what the component does once they are visible.
+vi.mock("../../../hooks/useToursVisible", () => ({
+  useToursVisible: () => mockToursVisible(),
+  useToursAccess: () => (mockToursVisible() ? "allowed" : "denied"),
+}));
+
 vi.mock("../../../lib/api/tours", () => ({
   toursApi: { list: vi.fn(), create: vi.fn(), remove: vi.fn() },
 }));
@@ -202,5 +210,16 @@ describe("TourSectionList", () => {
       o.getAttribute("value")
     );
     expect(options).toEqual(["road", "ferry", "foot", "bike"]);
+  });
+
+  it("renders nothing and fetches nothing while tours are behind the closed beta switch", () => {
+    mockToursVisible.mockReturnValueOnce(false);
+    const { container } = render(
+      <MemoryRouter>
+        <TourSectionList tripId="t1" />
+      </MemoryRouter>
+    );
+    expect(container).toBeEmptyDOMElement();
+    expect(toursApi.list).not.toHaveBeenCalled();
   });
 });

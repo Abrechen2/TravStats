@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useToursVisible } from "../../hooks/useToursVisible";
 import { useNavigate } from "react-router-dom";
 import AppShell from "../ui/AppShell";
 import type { JSX, ReactNode } from "react";
@@ -90,9 +91,11 @@ export function DashboardLayout({
   // used to offer "POI hinzufügen" on the user toggle alone, and then did
   // nothing with the click (#288).
   //
-  // "tour" is always offered: it is not a domain with a toggle, and a tour
-  // that belongs to no trip has no other place it could be started from.
-  const addableDomains = { ...enabledDomains, poi: placesVisible, tour: true };
+  // "tour" is offered wherever tours are visible at all: it is not a domain
+  // with a toggle, and a tour that belongs to no trip has no other place it
+  // could be started from. Behind the roadtrips beta key since 2026-09-24.
+  const toursVisible = useToursVisible();
+  const addableDomains = { ...enabledDomains, poi: placesVisible, tour: toursVisible };
 
   // A truly empty account: nothing in any domain. Shown only after the counts
   // have loaded, and only on the "all" landing tab — a per-domain tab already

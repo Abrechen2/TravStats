@@ -149,8 +149,8 @@
             "what": "Der Einstellungs-Eintrag „Geräte“ mit dem QR-Code, über den die Handy-App an dieses Konto gebunden wird."
           },
           "roadtrips": {
-            "name": "Roadtrips und Tagestouren",
-            "what": "Die Domäne „Roadtrips“ (mehrtägige Touren mit Stationen an deinen Unterkünften) und die überarbeiteten Tagestouren mit Höhenprofil."
+            "name": "Roadtrips und Touren",
+            "what": "Die Domäne „Roadtrips“ (mehrtägige Touren mit Stationen an deinen Unterkünften) und alle Touren: die Touren-Seite und der Editor, der Touren-Reiter im Dashboard und in einer Reise, die Touren auf der Übersichtskarte sowie die Karten für Routing-Anbieter und Strava."
           },
           "lodgingEnrichment": {
             "name": "Unterkünfte aus OpenStreetMap ergänzen",

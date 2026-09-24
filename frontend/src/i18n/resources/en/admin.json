@@ -149,8 +149,8 @@
             "what": "The Devices settings entry and its QR code, the only way to bind the phone app to this account."
           },
           "roadtrips": {
-            "name": "Roadtrips and day tours",
-            "what": "The “Roadtrips” domain (multi-day journeys with stations at your stays) and the reworked day tours with an elevation profile."
+            "name": "Roadtrips and tours",
+            "what": "The “Roadtrips” domain (multi-day trips with stations at your stays) and all tours: the tours page and editor, the tour tab on the dashboard and on a trip, the tours on the overview map, and the routing provider and Strava cards."
           },
           "lodgingEnrichment": {
             "name": "Complete lodgings from OpenStreetMap",
