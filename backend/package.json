@@ -31,6 +31,7 @@
     "backfill:route-distance": "node dist/scripts/backfillRouteDistance.js",
     "seed:demo": "node dist/seedDemoAccount.js",
     "seed:dev-admin": "tsx src/seedDevAdmin.ts",
+    "seed:roadtrip-demo": "tsx src/seedRoadtripDemoCli.ts",
     "seed:dev-admin-keys": "tsx src/seedDevAdminKeys.ts",
     "dead-code": "ts-prune | grep -v \"(used in module)\"",
     "lint:py": "ruff check src/scripts/",
