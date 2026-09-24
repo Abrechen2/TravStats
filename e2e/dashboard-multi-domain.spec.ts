@@ -166,14 +166,10 @@ test.describe("Multi-domain dashboard", () => {
       timeout: 8_000,
     });
 
-    // NOT asserted: that the URL also says `mode=heatmap`.
-    //
-    // It does not. Coming back to a tab restores the remembered mode in the UI
-    // and leaves the address bar without a mode at all, so copying the link
-    // hands someone else the DEFAULT view rather than the one on screen —
-    // while `CLAUDE.md` describes the URL as carrying tab and mode. Which of
-    // the two is meant to win is a product decision, so it is written up as
-    // CAMP-05 rather than decided here by a test.
+    // And the address says it too (CAMP-05, fixed 2026-09-24): a restored
+    // mode used to leave the bar without one, so a copied link handed someone
+    // else the default view instead of the one on screen.
+    await expect(page).toHaveURL(/[?&]mode=heatmap/);
   });
 
   // -------------------------------------------------------------------------

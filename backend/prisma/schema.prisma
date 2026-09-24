@@ -799,6 +799,14 @@ model AdminSettings {
   /// this targets. Do not re-flag without changing that threat model.
   routingCustomUrl String? @map("routing_custom_url")
 
+  // Which geo-tz dataset last derived the airport catalogue's time zones.
+  // Until 2026-09-24 the default import was geo-tz's "now" dataset, which
+  // folds zones that share TODAY's rules into one name: Bangkok became
+  // Asia/Jakarta, Dublin Europe/London, Tahiti Pacific/Honolulu (526 airports
+  // on a test catalogue, CAMP-03). "all" is the full set. Startup repairs the
+  // stored zones once when this is not "all", then records it.
+  airportTimezoneDataset String? @map("airport_timezone_dataset")
+
   // Global Immich connection (base URL plain, API key encrypted)
   globalImmichBaseUrl String? @map("global_immich_base_url")
   globalImmichApiKey  String? @map("global_immich_api_key")

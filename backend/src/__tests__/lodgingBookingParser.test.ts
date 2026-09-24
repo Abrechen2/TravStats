@@ -609,6 +609,34 @@ describe("parseLodgingBookingText — prices (AUD-050, AUD-051)", () => {
     ]);
   });
 
+  // Two stays at ONE house: the name cannot tell their sections apart, so both
+  // took the first section and 100/500 came back as 100/100 (re-check 13.09.).
+  it("keeps the model's prices for two stays at the same hotel (AUD-050)", async () => {
+    const document = [
+      "Buchungsnummer: 3",
+      "Hotel Alpha, January",
+      "Total price: EUR 100.00",
+      "",
+      "Hotel Alpha, February",
+      "Total price: EUR 500.00",
+    ].join("\n");
+    const bookings = await withModelAnswer(
+      [
+        { hotelName: "Hotel Alpha", ...stay, totalPrice: 100, currency: "EUR" },
+        {
+          hotelName: "Hotel Alpha",
+          checkIn: "2026-06-01",
+          checkOut: "2026-06-03",
+          nights: 2,
+          totalPrice: 500,
+          currency: "EUR",
+        },
+      ],
+      document
+    );
+    expect(bookings.map((b) => b.totalPrice)).toEqual([100, 500]);
+  });
+
   // The labelled total was a EUR conversion under an AED fee. It overruled
   // the model and kept the model's unit: 100 AED.
   it("does not let a labelled total in another currency overrule the model (AUD-050)", async () => {

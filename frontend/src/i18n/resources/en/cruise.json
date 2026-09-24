@@ -292,9 +292,9 @@
       "noCabins": "No cabin type recorded.",
       "companions": "Companions",
       "companionsTotalLabel": "Companions in total",
-      "companionsTotalAfter": " companions, counted per sailing",
-      "companionsTotalAfter_one": " companion, counted per sailing",
-      "companionsTotalAfter_other": " companions, counted per sailing",
+      "companionsTotalAfter": " different people",
+      "companionsTotalAfter_one": " person",
+      "companionsTotalAfter_other": " different people",
       "noCompanions": "No companions recorded.",
       "more": "+ {{count}} more"
     }

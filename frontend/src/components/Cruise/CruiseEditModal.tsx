@@ -188,7 +188,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         // including as []: omitting the field when the user removed every
         // stop would silently keep the old stops (the server reads absence
         // as "don't touch").
-        stops: stops.map(({ port: _port, ...rest }) => rest),
+        stops: stops.map(({ port: _port, originalDay: _originalDay, ...rest }) => rest),
       };
       const saved =
         mode === "create"

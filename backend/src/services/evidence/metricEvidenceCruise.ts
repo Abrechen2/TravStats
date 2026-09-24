@@ -302,11 +302,11 @@ export function resolveCruiseCountriesCount(
  * `cruisesStartedIn` before folding, so a cruise belongs to the year it began
  * in here too.
  *
- * `deriveCruiseStats` folds the names into a `Map<name, cruises>` and there is
- * no single companion figure on that surface — this total is the sum of that
- * list's values, one row per cruise. A name that came along twice is two
- * companion slots here and one bar reading "2" there; both are the same
- * arithmetic at different grain.
+ * `deriveCruiseStats` folds the names into a `Map<name, cruises>`, one bar per
+ * person, and this total is the number of those bars: how many PEOPLE came
+ * along, each once however often they sailed (owner, 2026-09-24). Each cruise
+ * credits the names it carried; the figure is their union. It used to sum per
+ * cruise, so a companion on two cruises counted twice.
  */
 export async function resolveCruiseCompanionCount(
   userId: string,
@@ -316,9 +316,8 @@ export async function resolveCruiseCompanionCount(
   const key = "cruiseCompanionCount";
   const year = readYearScope(scope, key);
   const { rows } = await loadCruiseStatsData(userId, year, "every");
-  const entries = rows.map((row) => entryOf(row, { contribution: row.companions.length }));
-  const total = rows.reduce((sum, row) => sum + row.companions.length, 0);
-  return domainSumEvidence({ key, unit: "companions", scope, page, entries, value: total });
+  const entries = rows.map((row) => entryOf(row, { credits: [...new Set(row.companions)] }));
+  return domainDistinctEvidence({ key, unit: "companions", scope, page, entries });
 }
 
 /**

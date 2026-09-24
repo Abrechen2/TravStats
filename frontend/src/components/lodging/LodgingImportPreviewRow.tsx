@@ -5,7 +5,7 @@ import {
   HEURISTIC_MATCH,
   INPUT,
   changeSummary,
-  currencyOptions,
+  currencyOptionGroups,
   ensureLodging,
   ensureStay,
   matchedStayLabel,
@@ -98,7 +98,7 @@ export function PreviewRowLine({ row, onChange, t, language }: PreviewRowLinePro
               <p className="mt-1 text-[10px] text-[var(--text-muted)]">
                 {t("lodging:import.matchedLodgingHint")}
               </p>
-              {HEURISTIC_MATCH.has(row.dedupeHint) && (
+              {(row.matchIsGuess ?? HEURISTIC_MATCH.has(row.dedupeHint)) && (
                 <button
                   type="button"
                   data-testid={`lodging-import-reject-match-${sourceRowIndex}`}
@@ -109,12 +109,17 @@ export function PreviewRowLine({ row, onChange, t, language }: PreviewRowLinePro
                     // a described stay left behind would keep the hint line
                     // open (`hasHints`) and name a stay in a house this row no
                     // longer claims to be.
+                    // A stays-only row carries no house of its own, only the
+                    // name it was joined by; it gets one here, or `create`
+                    // would have nothing to create and fail (AUD-056).
                     onChange(sourceRowIndex, {
                       matchedLodgingId: null,
                       matchedLodgingName: null,
+                      matchIsGuess: false,
                       matchedStayId: null,
                       matchedStay: null,
                       dedupeHint: "none",
+                      lodging: ensureLodging(row, name),
                     })
                   }
                   className="mt-1 text-[10px] text-[var(--accent)] underline-offset-2 hover:underline"
@@ -232,11 +237,20 @@ export function PreviewRowLine({ row, onChange, t, language }: PreviewRowLinePro
               className={INPUT}
             >
               <option value="">{t("lodging:import.preview.chooseCurrency")}</option>
-              {currencyOptions(row.stay.currency).map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
-              ))}
+              <optgroup label={t("common:currencySelect.frequent")}>
+                {currencyOptionGroups(row.stay.currency).frequent.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label={t("common:currencySelect.all")}>
+                {currencyOptionGroups(row.stay.currency).rest.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           )}
         </td>

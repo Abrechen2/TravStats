@@ -6,7 +6,7 @@ import { describe, it, expect, beforeEach, afterEach, vi } from "vitest";
 // `types/__tests__/dashboard.test.ts`.
 vi.mock("../../lib/webgl2", () => ({ webgl2Available: true }));
 import { renderHook, act } from "@testing-library/react";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import { useDashboardRoute } from "../useDashboardRoute";
 import type { ReactNode } from "react";
 
@@ -219,6 +219,59 @@ describe("useDashboardRoute", () => {
         wrapper: wrapper(["/dashboard/flight"]),
       });
       expect(result.current.mode).toBe("globe");
+    });
+  });
+
+  // CAMP-05: the restored mode was on screen but not in the address, so a
+  // copied link showed somebody else a different view.
+  describe("the address says what the screen shows", () => {
+    function withLocation(entry: string): {
+      Wrapper: (props: { children: ReactNode }) => JSX.Element;
+      search: () => string;
+    } {
+      let seen = "";
+      function Probe(): null {
+        seen = useLocation().search;
+        return null;
+      }
+      function Wrapper({ children }: { children: ReactNode }): JSX.Element {
+        return (
+          <MemoryRouter initialEntries={[entry]}>
+            <Routes>
+              <Route
+                path="/dashboard/:tab"
+                element={
+                  <>
+                    {children}
+                    <Probe />
+                  </>
+                }
+              />
+            </Routes>
+          </MemoryRouter>
+        );
+      }
+      return { Wrapper, search: () => seen };
+    }
+
+    it("writes a mode restored from storage into the URL", () => {
+      window.localStorage.setItem(LAST_MODE_KEY, JSON.stringify({ flight: "heatmap" }));
+      const { Wrapper, search } = withLocation("/dashboard/flight");
+      const { result } = renderHook(() => useDashboardRoute(), { wrapper: Wrapper });
+      expect(result.current.mode).toBe("heatmap");
+      expect(new URLSearchParams(search()).get("mode")).toBe("heatmap");
+    });
+
+    it("replaces an invalid mode with the one on screen", () => {
+      const { Wrapper, search } = withLocation("/dashboard/flight?mode=spaceship");
+      const { result } = renderHook(() => useDashboardRoute(), { wrapper: Wrapper });
+      expect(new URLSearchParams(search()).get("mode")).toBe(result.current.mode);
+    });
+
+    it("leaves the default without a parameter", () => {
+      const { Wrapper, search } = withLocation("/dashboard/flight");
+      renderHook(() => useDashboardRoute(), { wrapper: Wrapper });
+      expect(search()).toBe("");
     });
   });
 });

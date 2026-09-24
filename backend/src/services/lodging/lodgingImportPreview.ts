@@ -97,6 +97,7 @@ interface RowVerdict {
   dedupeHint: LodgingDedupeHint;
   matchedLodgingId: string | null;
   matchedLodgingName: string | null;
+  matchIsGuess: boolean;
   matchedStayId: string | null;
   matchedStay: LodgingImportMatchedStay | null;
   action: LodgingImportAction;
@@ -233,6 +234,13 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
   let flags: LodgingImportFlag[] = [];
   let dedupeHint: LodgingDedupeHint = "none";
   let matchedLodgingId: string | null = null;
+  // Whether `matchedLodgingId` was GUESSED — by name, by similarity, by
+  // place, or by a stays-only row's free-text name — rather than proven by a
+  // reference. Kept apart from `dedupeHint` because that one is overwritten
+  // by a later stay match (`stay_same_dates`) and is never set at all by the
+  // stays-only join, and in both cases the UI lost its "reject" button
+  // (AUD-056, re-check 13.09.).
+  let matchIsGuess = false;
   let matchedStayId: string | null = null;
   let changes: LodgingStayChange[] = [];
 
@@ -266,6 +274,7 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     if (hits.length === 1) {
       dedupeHint = "lodging_name_city";
       matchedLodgingId = hits[0].id;
+      matchIsGuess = true;
     } else if (hits.length > 1) {
       dedupeHint = "lodging_name_city";
       flags = [...flags, "ambiguous_lodging_name"];
@@ -289,6 +298,7 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     if (similar.length === 1) {
       dedupeHint = "lodging_name_similar";
       matchedLodgingId = similar[0].id;
+      matchIsGuess = true;
     } else if (similar.length > 1) {
       dedupeHint = "lodging_name_similar";
       flags = [...flags, "ambiguous_lodging_name"];
@@ -306,6 +316,7 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     if (nearby.length === 1) {
       dedupeHint = "lodging_nearby";
       matchedLodgingId = nearby[0].id;
+      matchIsGuess = true;
     } else if (nearby.length > 1) {
       dedupeHint = "lodging_nearby";
       flags = [...flags, "ambiguous_lodging_name"];
@@ -326,6 +337,7 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     const hits = joinKey ? (idx.byName.get(joinKey) ?? []) : [];
     if (hits.length === 1) {
       matchedLodgingId = hits[0].id;
+      matchIsGuess = true;
     } else if (hits.length > 1) {
       flags = [...flags, "ambiguous_lodging_name"];
     } else if (!joinKey || !idx.payloadNames.has(joinKey)) {
@@ -354,6 +366,7 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
         dedupeHint = "stay_exact_ref";
         matchedStayId = hit.id;
         matchedLodgingId = hit.lodgingId;
+        matchIsGuess = false;
         // ...but "the same booking" is not "the same values". A changed
         // booking carries the same reference and different dates, and it was
         // skipped in silence until 2026-09-17 (forgejo#122).
@@ -416,6 +429,7 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     dedupeHint,
     matchedLodgingId,
     matchedLodgingName,
+    matchIsGuess,
     matchedStayId,
     matchedStay: matchedStay ? describeStay(matchedStay) : null,
     action,

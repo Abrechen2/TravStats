@@ -260,6 +260,14 @@ export interface LodgingImportPreviewRow extends LodgingImportCandidate {
    * user was asked "the same house?" without being told which one (AUD-056).
    */
   matchedLodgingName: string | null;
+  /**
+   * True when `matchedLodgingId` is a guess (name, similarity, place, or a
+   * stays-only row's free-text name) and not a proven reference, so the user
+   * may reject it. Carried separately because `dedupeHint` cannot say it: a
+   * same-day stay overwrites it, and the stays-only join never sets it
+   * (AUD-056).
+   */
+  matchIsGuess: boolean;
   matchedStayId: string | null;
   /** The stay behind `matchedStayId`, named rather than merely counted. */
   matchedStay: LodgingImportMatchedStay | null;

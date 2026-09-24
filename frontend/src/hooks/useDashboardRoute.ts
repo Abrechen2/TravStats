@@ -176,6 +176,20 @@ export function useDashboardRoute(): DashboardRouteState {
     }
   }, [search, tab]);
 
+  // The address says what the screen shows (CAMP-05). A mode restored from
+  // storage, or one that replaced an invalid `?mode=`, used to leave the bar
+  // without it: the map drew a heatmap while the link said default, and a
+  // copied link showed somebody else a different view. The default itself
+  // needs no parameter, so a plain /dashboard/flight stays plain.
+  useEffect(() => {
+    const urlMode = search.get("mode");
+    if (urlMode === mode) return;
+    if (urlMode === null && mode === defaultModeForTab(tab)) return;
+    const nextSearch = new URLSearchParams(search);
+    nextSearch.set("mode", mode);
+    setSearch(nextSearch, { replace: true });
+  }, [search, tab, mode, setSearch]);
+
   const setTab = useCallback(
     (next: DashboardTab) => {
       if (next === "all") {

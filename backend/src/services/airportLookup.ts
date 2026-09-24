@@ -1,4 +1,8 @@
-import { find as findTimezone } from "geo-tz";
+// The FULL dataset. geo-tz's default is "now", which folds every zone that
+// keeps today's clock into one name: Bangkok came back as Asia/Jakarta
+// (CAMP-03). `moduleResolution: node` cannot see this exports subpath, so
+// tsconfig `paths` maps its types; Node resolves it at runtime as it is.
+import { find as findTimezone } from "geo-tz/all";
 import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";

@@ -17,7 +17,7 @@ import { PreviewRowLine } from "./LodgingImportPreviewRow";
 
 // Re-exported because the suite imports them from here, and because this
 // is the surface everything else in the app already knows.
-export { isEmptyStay, parseTotalPriceInput } from "./lodgingImportRowModel";
+export { currencyOptionGroups, isEmptyStay, parseTotalPriceInput } from "./lodgingImportRowModel";
 
 export interface LodgingImportPreviewModalProps {
   rows: LodgingImportPreviewRow[];

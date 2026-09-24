@@ -1,4 +1,4 @@
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { Link } from "react-router-dom";
 import { Icon, type IconName } from "../../components/ui/Icon";
 import { Select } from "../../components/ui/Field";
@@ -29,6 +29,8 @@ interface Props {
   /** The section currently in view. */
   active: string | null;
   onJump: (section: string) => void;
+  /** The settings search, drawn above the tabs (`SettingsSearch`). */
+  search?: ReactNode;
 }
 
 /**
@@ -44,11 +46,18 @@ interface Props {
  * Below `md` a 240px column would be the whole screen, so the same two lists
  * become tab pills and a jump menu, as the export's phone layout draws them.
  */
-export function SettingsIndexCompact({ tabs, categories, active, onJump }: Props): JSX.Element {
+export function SettingsIndexCompact({
+  tabs,
+  categories,
+  active,
+  onJump,
+  search,
+}: Props): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const all = categories.flatMap((category) => category.entries);
   return (
     <div className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
+      {search}
       {all.length > 1 && (
         <Select
           aria-label={t("settings:sectionPicker", { defaultValue: "Bereich" })}
@@ -101,7 +110,13 @@ export function SettingsIndexCompact({ tabs, categories, active, onJump }: Props
   );
 }
 
-export function SettingsIndexColumn({ tabs, categories, active, onJump }: Props): JSX.Element {
+export function SettingsIndexColumn({
+  tabs,
+  categories,
+  active,
+  onJump,
+  search,
+}: Props): JSX.Element {
   const { t } = useTranslation(["settings"]);
   return (
     <aside
@@ -114,6 +129,7 @@ export function SettingsIndexColumn({ tabs, categories, active, onJump }: Props)
         gap: "var(--ts-space-lg)",
       }}
     >
+      {search}
       <nav
         aria-label={t("settings:title", { defaultValue: "Einstellungen" })}
         className="flex overflow-x-auto scrollbar-none"

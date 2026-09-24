@@ -40,7 +40,9 @@ describe("CruiseStopsEditor", () => {
     expect(screen.getByLabelText("stops.date")).toHaveValue("2027-10-08");
   });
 
-  it("removes a stop and renumbers subsequent days", async () => {
+  // Until forgejo#126 the remaining stops were renumbered 1, 2. A day is the
+  // day of the cruise, so removing day 1 leaves days 2 and 3 where they were.
+  it("removes a stop and keeps the other stops' days of the cruise", async () => {
     const stops = [
       { portId: 1, dayNumber: 1, isAtSea: false },
       { portId: 2, dayNumber: 2, isAtSea: false },
@@ -53,8 +55,8 @@ describe("CruiseStopsEditor", () => {
     await userEvent.click(removeBtns[0]);
     const emitted = onChange.mock.calls[0][0] as Array<{ dayNumber: number }>;
     expect(emitted.length).toBe(2);
-    expect(emitted[0].dayNumber).toBe(1);
-    expect(emitted[1].dayNumber).toBe(2);
+    expect(emitted[0].dayNumber).toBe(2);
+    expect(emitted[1].dayNumber).toBe(3);
   });
 
   it("shows a 🔶 unresolved banner for an unresolved stop and clears the name on resolve", async () => {

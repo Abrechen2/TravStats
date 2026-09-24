@@ -137,6 +137,9 @@ export interface LodgingImportPreviewRow extends LodgingImportCandidate {
   matchedLodgingId: string | null;
   /** The stored name behind `matchedLodgingId` — what a guessed match is judged against. */
   matchedLodgingName: string | null;
+  /** The match is a guess the user may reject (AUD-056). Absent on a backend
+   *  older than 2.7, where the dedupe hint is the only signal. */
+  matchIsGuess?: boolean;
   matchedStayId: string | null;
   /** The stay behind `matchedStayId`. Absent on a backend older than 2.7. */
   matchedStay?: LodgingImportMatchedStay | null;

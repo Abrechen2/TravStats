@@ -16,6 +16,7 @@ import {
   type SettingsIndexCategory,
 } from "./Settings/SettingsIndex";
 import { SECTION_LABEL_KEY } from "./Settings/sectionLabels";
+import { SettingsSearch, type SettingsSearchScope } from "./Settings/SettingsSearch";
 import { SECTION_ICON } from "./Settings/sectionIcons";
 import {
   DEFAULT_GROUP,
@@ -116,6 +117,22 @@ export default function SettingsPage(): JSX.Element {
       .filter((category) => category.entries.length > 0);
   }, [group, isGeneral, sections, isShown, t]);
 
+  /**
+   * What the search looks through: every page this account can reach, with the
+   * sections it would see there — so a hit never leads to a section the page
+   * then leaves out. A general group keeps its own name ("Konto"), because
+   * "Allgemein" would say nothing about where on that long page the hit is.
+   */
+  const searchScopes = useMemo<SettingsSearchScope[]>(
+    () =>
+      SETTINGS_GROUPS.filter((g) => !g.domain || isEnabled(g.domain)).map((g) => ({
+        route: isGeneralGroup(g.id) ? GENERAL_ROUTE : g.id,
+        label: t(g.labelKey),
+        sections: g.sections.filter(isShown),
+      })),
+    [isEnabled, isShown, t]
+  );
+
   const inView = useSectionInView(sections, "settings");
 
   /**
@@ -194,7 +211,13 @@ export default function SettingsPage(): JSX.Element {
         style={{ gap: "var(--ts-space-xxl)" }}
       >
         <div className="hidden md:block">
-          <SettingsIndexColumn tabs={tabs} categories={categories} active={inView} onJump={jump} />
+          <SettingsIndexColumn
+            tabs={tabs}
+            categories={categories}
+            active={inView}
+            onJump={jump}
+            search={<SettingsSearch scopes={searchScopes} />}
+          />
         </div>
 
         <div className="min-w-0 flex flex-col" style={{ gap: "var(--ts-space-xl)" }}>
@@ -233,6 +256,7 @@ export default function SettingsPage(): JSX.Element {
               categories={categories}
               active={inView}
               onJump={jump}
+              search={<SettingsSearch scopes={searchScopes} />}
             />
           </div>
 

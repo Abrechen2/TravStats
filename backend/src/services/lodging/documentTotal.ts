@@ -175,6 +175,12 @@ export function findLabelledTotal(text: string): number | null {
  * Returns "" — a section in which no total can be found — when the hotel's
  * name does not appear at all in a document that holds several bookings: a
  * total that cannot be attributed must not overrule anything (AUD-050).
+ *
+ * The same holds when ANOTHER booking in the document names the same hotel:
+ * two stays at one house in January and February. The name cannot tell their
+ * sections apart — both started at its first mention, so the January total
+ * overruled February's and 100/500 EUR came back as 100/100 (AUD-050,
+ * re-check 13.09.). The model's own figure per booking stands instead.
  */
 export function documentSectionFor(
   text: string,
@@ -183,6 +189,8 @@ export function documentSectionFor(
 ): string {
   if (otherHotelNames.length === 0) return text;
   if (!hotelName) return "";
+  const key = hotelName.trim().toLowerCase();
+  if (otherHotelNames.some((other) => other.trim().toLowerCase() === key)) return "";
   const lower = text.toLowerCase();
   const start = lower.indexOf(hotelName.toLowerCase());
   if (start < 0) return "";

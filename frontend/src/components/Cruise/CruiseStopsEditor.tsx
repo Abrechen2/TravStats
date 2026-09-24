@@ -1,6 +1,7 @@
 import { PortPicker } from "./PortPicker";
 import type { CruiseStopInput, Port } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
+import { withCruiseDayNumbers } from "./cruiseDayNumbers";
 
 // Stop arrival/departure are PORT-LOCAL wall-clock times — a ship arrives at
 // "08:00" in the port's own time, independent of the viewer's timezone. Treat
@@ -31,22 +32,20 @@ interface Props {
  * - Arrival / departure datetime-local inputs (only when not at sea).
  * - An excursion note textarea.
  *
- * After any mutation the editor re-emits the full list with `dayNumber`
- * renumbered to `index + 1` so the numbering always stays consecutive.
+ * After any mutation the editor re-emits the full list with each stop's
+ * `dayNumber` resolved by `withCruiseDayNumbers`: a stop keeps its day of the
+ * cruise, a new one takes the next free day (forgejo#126).
  */
 export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
   const { t } = useTranslation("cruise");
 
-  const renumber = (list: CruiseStopInput[]): CruiseStopInput[] =>
-    list.map((s, idx) => ({ ...s, dayNumber: idx + 1 }));
-
   const update = (index: number, patch: Partial<CruiseStopInput>): void => {
     const next = stops.map((s, i) => (i === index ? { ...s, ...patch } : s));
-    onChange(renumber(next));
+    onChange(withCruiseDayNumbers(next));
   };
 
   const remove = (index: number): void => {
-    onChange(renumber(stops.filter((_, i) => i !== index)));
+    onChange(withCruiseDayNumbers(stops.filter((_, i) => i !== index)));
   };
 
   const move = (index: number, delta: -1 | 1): void => {
@@ -54,11 +53,16 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
     if (target < 0 || target >= stops.length) return;
     const next = [...stops];
     [next[index], next[target]] = [next[target], next[index]];
-    onChange(renumber(next));
+    onChange(withCruiseDayNumbers(next));
   };
 
   const add = (): void => {
-    onChange(renumber([...stops, { portId: null, dayNumber: stops.length + 1, isAtSea: false }]));
+    onChange(
+      withCruiseDayNumbers([
+        ...stops,
+        { portId: null, dayNumber: 1, originalDay: null, isAtSea: false },
+      ])
+    );
   };
 
   const handlePortChange = (index: number, port: Port): void => {
