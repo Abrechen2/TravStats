@@ -833,5 +833,35 @@
   },
   "deepLink": {
     "adminOnlySection": "Der in der Adresse genannte Abschnitt ist der Administration dieser Instanz vorbehalten und wird dir deshalb nicht angezeigt. Die übrigen Einstellungen auf dieser Seite gehören dir."
+  },
+  "search": {
+    "label": "Einstellungen durchsuchen",
+    "placeholder": "Einstellung suchen …",
+    "results": "Treffer",
+    "noResults": "Nichts gefunden.",
+    "keywords": {
+      "profile": "Benutzername, Name, E-Mail, Profilbild, Avatar, Konto",
+      "security": "Passwort, Kennwort, Passkey, Zwei-Faktor, 2FA, TOTP, Authenticator, Anmeldung, Login",
+      "apitokens": "Token, API-Token, Zugriffsschlüssel, Schnittstelle, Automatisierung, Skript",
+      "devices": "Handy, Smartphone, App, Companion, Koppeln, Kopplungscode, QR-Code, Gerät",
+      "display": "Sprache, Deutsch, Englisch, Design, Dunkel, Hell, Theme, Darstellung",
+      "units": "Kilometer, Meilen, Einheit, Währung, Basiswährung, Datumsformat, Uhrzeit, 24 Stunden, Zeitzone",
+      "domainColors": "Farbe, Farben, Kartenfarbe, Linienfarbe",
+      "modules": "Bereiche, Module, Flüge, Kreuzfahrten, Unterkünfte, Orte, Roadtrips, ein- und ausschalten",
+      "countryCounting": "Länder, Land zählen, Umstieg, Transit, Länderzählung",
+      "backup": "Backup, Sicherung, Export, Exportieren, Wiederherstellen, Download, Excel, Tabelle, JSON, Daten",
+      "import": "Import, Importieren, CSV, Flightradar24, Logbuch, Hochladen",
+      "notifications": "Benachrichtigung, E-Mail, SMTP, Mailserver, Erinnerung",
+      "about": "Version, Lizenz, Datenquellen, Attribution, Über, Impressum",
+      "externalServices": "API-Schlüssel, AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, KI, Immich, Fotos, Dawarich, Standortverlauf, Routing, Navi, Straßenroute, OpenRouteService, GraphHopper, OSRM, Strava",
+      "homeAirport": "Heimatflughafen, Flughafen, Startflughafen, Wohnort",
+      "defaults": "Standard, Vorgabe, Buchungsklasse, Sitzplatz, Fluggesellschaft, Airline",
+      "features": "Funktionen, Parser, Bordkarte, E-Mail-Parser, Bordkarten-Scan",
+      "enrichment": "Anreicherung, Flugdaten nachtragen, Verspätung, historische Daten, Flugzeug",
+      "autoupdate": "Automatische Updates, Flugstatus, Aktualisierung, Gate, Abflugzeit",
+      "cruisePreferences": "Kreuzfahrt, Reederei, Schiff, Kabine",
+      "lodgingPreferences": "Geocoder, Adresse, Koordinaten, Nominatim, Hotelketten, Unterkunft",
+      "lodgingMemberships": "Bonusprogramm, Mitgliedschaft, Status, Hotelprogramm, Punkte, Treueprogramm"
+    }
   }
 }

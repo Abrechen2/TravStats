@@ -833,5 +833,35 @@
   },
   "deepLink": {
     "adminOnlySection": "The section named in the address is reserved for whoever administers this instance, so it is not shown to you. The rest of the settings on this page are yours."
+  },
+  "search": {
+    "label": "Search settings",
+    "placeholder": "Search settings …",
+    "results": "Results",
+    "noResults": "Nothing found.",
+    "keywords": {
+      "profile": "Username, name, email, profile picture, avatar, account",
+      "security": "Password, passkey, two-factor, 2FA, TOTP, authenticator, sign-in, login",
+      "apitokens": "Token, API token, access key, interface, automation, script",
+      "devices": "Phone, smartphone, app, companion, pair, pairing code, QR code, device",
+      "display": "Language, German, English, design, dark, light, theme, appearance",
+      "units": "Kilometres, kilometers, miles, unit, currency, base currency, date format, time, 24 hours, time zone",
+      "domainColors": "Colour, color, colours, map colour, line colour",
+      "modules": "Areas, modules, flights, cruises, lodging, places, roadtrips, switch on and off",
+      "countryCounting": "Countries, count a country, layover, transit, country counting",
+      "backup": "Backup, export, restore, download, Excel, spreadsheet, JSON, data",
+      "import": "Import, CSV, Flightradar24, logbook, upload",
+      "notifications": "Notification, email, SMTP, mail server, reminder",
+      "about": "Version, licence, license, data sources, attribution, about, imprint",
+      "externalServices": "API key, AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, AI, Immich, photos, Dawarich, location history, routing, satnav, road route, OpenRouteService, GraphHopper, OSRM, Strava",
+      "homeAirport": "Home airport, airport, departure airport, home",
+      "defaults": "Default, preset, booking class, seat, airline, carrier",
+      "features": "Features, parser, boarding pass, email parser, boarding pass scan",
+      "enrichment": "Enrichment, fill in flight data, delay, historical data, aircraft",
+      "autoupdate": "Automatic updates, flight status, refresh, gate, departure time",
+      "cruisePreferences": "Cruise, cruise line, ship, cabin",
+      "lodgingPreferences": "Geocoder, address, coordinates, Nominatim, hotel chains, lodging",
+      "lodgingMemberships": "Loyalty programme, membership, status, hotel programme, points, rewards"
+    }
   }
 }
