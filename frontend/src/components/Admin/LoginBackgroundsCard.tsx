@@ -97,6 +97,7 @@ export function LoginBackgroundsCard(): JSX.Element {
       <p className="mt-2 text-sm" style={{ color: "var(--warning)" }}>
         {t("admin:loginBackgrounds.publicWarning")}
       </p>
+      <p className="mt-2 text-xs text-(--text-muted)">{t("admin:loginBackgrounds.hint")}</p>
 
       {loaded && backgrounds.length > 0 && (
         <ul className="mt-4 grid grid-cols-2 gap-3 sm:grid-cols-3">
@@ -131,6 +132,11 @@ export function LoginBackgroundsCard(): JSX.Element {
 
       {loaded && backgrounds.length === 0 && (
         <p className="mt-4 text-sm text-(--text-muted)">{t("admin:loginBackgrounds.empty")}</p>
+      )}
+      {loaded && backgrounds.length > 0 && (
+        <p className="mt-3 text-xs text-(--text-muted)">
+          {t("admin:loginBackgrounds.replacesShipped")}
+        </p>
       )}
 
       <input

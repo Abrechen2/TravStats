@@ -1,15 +1,17 @@
 import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor, act } from "@testing-library/react";
 import { LoginBackdrop } from "../LoginBackdrop";
+import { DEFAULT_LOGIN_BACKGROUNDS } from "../../lib/defaultLoginBackgrounds";
 
 /**
  * The sign-in slideshow (Alex, 2026-09-21).
  *
- * Three things are worth pinning, and all three are about what happens when
- * there is nothing to show: an instance with no images must look exactly as
- * it did before the feature existed, a failed fetch must be silent on the
- * page where someone is trying to sign in, and a reader who asked for less
- * motion gets a still picture rather than a slideshow.
+ * What is worth pinning is mostly about the cases where the instance has
+ * nothing of its own: it must fall back to the shipped pictures rather than
+ * to a bare gradient, a failed fetch must be silent on the page where someone
+ * is trying to sign in AND still show something, an admin's own uploads must
+ * REPLACE the shipped set rather than join it, and a reader who asked for
+ * less motion gets a still picture rather than a slideshow.
  */
 
 const getLoginBackgrounds = vi.fn();
@@ -44,19 +46,25 @@ afterEach(() => {
 });
 
 describe("LoginBackdrop", () => {
-  it("renders nothing at all when the instance has no images", async () => {
+  it("shows the shipped pictures when the instance has none of its own", async () => {
     getLoginBackgrounds.mockResolvedValue([]);
     const { container } = render(<LoginBackdrop />);
-    await waitFor(() => expect(getLoginBackgrounds).toHaveBeenCalled());
-    expect(container.firstChild).toBeNull();
+    await waitFor(() => expect(layers(container)).toHaveLength(DEFAULT_LOGIN_BACKGROUNDS.length));
+    expect(layers(container)[0].style.backgroundImage).toContain(DEFAULT_LOGIN_BACKGROUNDS[0]);
   });
 
-  it("stays silent when the list cannot be fetched", async () => {
+  it("stays silent when the list cannot be fetched, and still shows the shipped ones", async () => {
     getLoginBackgrounds.mockRejectedValue(new Error("offline"));
     const { container } = render(<LoginBackdrop />);
-    await waitFor(() => expect(getLoginBackgrounds).toHaveBeenCalled());
-    expect(container.firstChild).toBeNull();
+    await waitFor(() => expect(layers(container)).toHaveLength(DEFAULT_LOGIN_BACKGROUNDS.length));
     expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("lets an admin's own pictures REPLACE the shipped ones, never join them", async () => {
+    getLoginBackgrounds.mockResolvedValue(["eigenes.jpg"]);
+    const { container } = render(<LoginBackdrop />);
+    await waitFor(() => expect(layers(container)).toHaveLength(1));
+    expect(layers(container)[0].style.backgroundImage).toContain("eigenes.jpg");
   });
 
   it("shows the first image and keeps the others loaded but transparent", async () => {

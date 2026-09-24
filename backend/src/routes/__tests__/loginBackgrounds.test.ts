@@ -61,7 +61,11 @@ describe("login backgrounds", () => {
     const res = await request(app).get("/api/v1/login-backgrounds");
     expect(res.status).toBe(200);
     expect(Array.isArray(res.body.backgrounds)).toBe(true);
-    expect(res.headers["cache-control"]).toBe("private, max-age=3600");
+    // The LIST must not be cached: an hour on it meant an admin uploaded a
+    // picture and the sign-in page kept showing the old set, with nothing on
+    // screen to explain it (browser check, 2026-09-23). The images below are
+    // the half worth caching.
+    expect(res.headers["cache-control"]).toBe("no-store");
   });
 
   it("refuses an upload from a signed-in NON-admin", async () => {

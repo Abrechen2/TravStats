@@ -697,14 +697,16 @@
   },
   "loginBackgrounds": {
     "title": "Bilder der Anmeldeseite",
-    "subtitle": "Fotos, die auf der Anmeldeseite links als ruhige Diaschau durchlaufen. Ohne Bilder bleibt der bisherige Verlauf stehen.",
+    "subtitle": "Fotos, die auf der Anmeldeseite links als ruhige Diaschau durchlaufen. Ohne eigene Bilder laufen die fünf mitgelieferten Motive.",
     "publicWarning": "Diese Bilder sieht jeder, der die Instanz erreicht — auch ohne Anmeldung. Lade nur Fotos hoch, die veröffentlicht sein dürfen.",
-    "empty": "Noch keine Bilder hinterlegt.",
+    "empty": "Noch keine eigenen Bilder — die Anmeldeseite zeigt die fünf mitgelieferten Motive.",
     "add": "Bilder hinzufügen",
     "uploaded": "{{count}} Bild hochgeladen",
     "uploaded_other": "{{count}} Bilder hochgeladen",
     "partial": "{{accepted}} übernommen. Nicht als Bild erkannt: {{rejected}}",
     "uploadFailed": "Hochladen fehlgeschlagen.",
-    "removeFailed": "Entfernen fehlgeschlagen."
+    "removeFailed": "Entfernen fehlgeschlagen.",
+    "replacesShipped": "Deine Bilder ersetzen die mitgelieferten vollständig. Lösche alle, um wieder zu den mitgelieferten zurückzukehren.",
+    "hint": "Am besten wirken dunkle Hochformat-Fotos mit ruhiger linker Hälfte — dort steht der Text. Auf hellen Fotos wird die Schrift schwer lesbar."
   }
 }

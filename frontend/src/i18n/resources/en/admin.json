@@ -697,14 +697,16 @@
   },
   "loginBackgrounds": {
     "title": "Sign-in page images",
-    "subtitle": "Photographs that drift across the left half of the sign-in page. With none, the existing gradient stays as it is.",
+    "subtitle": "Photographs that drift across the left half of the sign-in page. With none of your own, the five shipped ones run.",
     "publicWarning": "Anyone who can reach this instance sees these, signed in or not. Only upload photographs that may be public.",
-    "empty": "No images yet.",
+    "empty": "No images of your own yet — the sign-in page shows the five that ship with TravStats.",
     "add": "Add images",
     "uploaded": "{{count}} image uploaded",
     "uploaded_other": "{{count}} images uploaded",
     "partial": "{{accepted}} kept. Not recognised as images: {{rejected}}",
     "uploadFailed": "Upload failed.",
-    "removeFailed": "Could not remove the image."
+    "removeFailed": "Could not remove the image.",
+    "replacesShipped": "Your images replace the shipped ones entirely. Remove them all to go back to the shipped set.",
+    "hint": "Dark portrait photographs with a quiet left half work best — that is where the text sits. On bright ones the text becomes hard to read."
   }
 }

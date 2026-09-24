@@ -7,6 +7,16 @@ import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
 import { LoginBackdrop } from "../components/LoginBackdrop";
+
+/**
+ * What keeps the left column readable over a photograph.
+ *
+ * A shadow rather than a heavier scrim, because the scrim has to be chosen
+ * once for every picture an admin might ever upload, and a shadow adapts: it
+ * is invisible on the dark pictures TravStats ships and does the work on a
+ * bright one.
+ */
+const TEXT_ON_PHOTO = { textShadow: "0 1px 16px rgba(0,0,0,0.9), 0 0 3px rgba(0,0,0,0.75)" };
 import { PasswordInput } from "../components/Auth/PasswordInput";
 import { Icon } from "../components/ui/Icon";
 import { loginFailure, type LoginFailureCopy } from "../lib/loginFailure";
@@ -195,10 +205,16 @@ export default function LoginPage(): JSX.Element {
             else in this half. Draws nothing at all otherwise, so the gradient
             above stays the default look (Alex, 2026-09-21). */}
         <LoginBackdrop />
-        <div className="relative self-start">
+        {/* `TEXT_ON_PHOTO` on everything in this half: the backdrop behind it
+            is whatever an admin uploaded, and a shadow holds the contrast for
+            a snow scene as well as for a night shot. Without it the scrim
+            would have to be heavy enough for the worst case, which is what
+            made the shipped pictures nearly invisible (browser check,
+            2026-09-23). */}
+        <div className="relative self-start" style={TEXT_ON_PHOTO}>
           <LogoLockup size={22} markSize={36} layout="horizontal" />
         </div>
-        <div className="relative flex max-w-md flex-col gap-4">
+        <div className="relative flex max-w-md flex-col gap-4" style={TEXT_ON_PHOTO}>
           <h2
             style={{
               fontSize: 34,
@@ -209,9 +225,20 @@ export default function LoginPage(): JSX.Element {
           >
             {t("login.brand.heading")}
           </h2>
-          <p style={{ color: "var(--ts-text)", lineHeight: 1.6 }}>{t("login.brand.body")}</p>
+          {/* `--ts-text-bright`, not `--ts-text`: this paragraph sits on a
+              photograph, and the muted tone that reads well on the page's own
+              background is the first thing to disappear over a bright one
+              (browser check, 2026-09-23). */}
+          <p style={{ color: "var(--ts-text-bright)", lineHeight: 1.6 }}>{t("login.brand.body")}</p>
         </div>
-        <span className="t-caption relative" style={{ fontFamily: "var(--ts-font-mono)" }}>
+        <span
+          className="relative text-xs"
+          style={{
+            fontFamily: "var(--ts-font-mono)",
+            color: "var(--ts-text)",
+            ...TEXT_ON_PHOTO,
+          }}
+        >
           {t("login.brand.footer")}
         </span>
       </aside>

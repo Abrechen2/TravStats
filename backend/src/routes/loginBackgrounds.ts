@@ -40,9 +40,19 @@ import logger from "../utils/logger";
 
 const router = Router();
 
-/** No user data here, so the response is cacheable — `private`, never
- *  `public`: a shared cache must not be handed anything from `/api`. */
-const CACHE_CONTROL = "private, max-age=3600";
+/**
+ * The IMAGES are cacheable — `private`, never `public`: a shared cache must
+ * not be handed anything from `/api`. Their names carry a timestamp and a
+ * random, so a name always means the same bytes.
+ *
+ * The LIST is not, and deliberately: it falls through to the `no-store`
+ * default every `/api` response carries. Caught in the browser on 2026-09-23
+ * — with an hour on the list, an admin uploads a picture and the sign-in page
+ * keeps showing the old set until the cache expires, with nothing on screen
+ * to explain it. The list is a few dozen bytes; the pictures are the weight,
+ * and they are the half that caching was for.
+ */
+const IMAGE_CACHE_CONTROL = "private, max-age=3600";
 
 /** Uploaded names are server-generated (`<ts>-<rand>-<slug><ext>`); this is
  *  what a caller is allowed to ask for, checked before any path is built. */
@@ -57,7 +67,8 @@ function listBackgroundFiles(): string[] {
     entries = fs.readdirSync(dir);
   } catch {
     // An instance that has never had one has no directory yet. "No images"
-    // is the honest answer, and the page simply draws its gradient.
+    // is the honest answer; the page then shows the pictures TravStats ships
+    // with (`frontend/src/lib/defaultLoginBackgrounds.ts`).
     return [];
   }
   return entries
@@ -68,13 +79,11 @@ function listBackgroundFiles(): string[] {
 
 /**
  * GET /api/v1/login-backgrounds
- * PUBLIC. The filenames, oldest first. The sign-in page fetches this before
- * anyone has signed in, which is the whole point.
+ * PUBLIC, and uncached. The filenames, oldest first. The sign-in page fetches
+ * this before anyone has signed in, which is the whole point.
  */
 router.get("/", (_req: Request, res: Response): void => {
-  const files = listBackgroundFiles();
-  res.set("Cache-Control", CACHE_CONTROL);
-  res.json({ backgrounds: files });
+  res.json({ backgrounds: listBackgroundFiles() });
 });
 
 /**
@@ -97,7 +106,7 @@ router.get("/:filename", (req: Request, res: Response, next: NextFunction): void
     if (!fs.existsSync(filePath)) {
       throw new AppError("File not found", 404);
     }
-    res.set("Cache-Control", CACHE_CONTROL);
+    res.set("Cache-Control", IMAGE_CACHE_CONTROL);
     res.sendFile(filePath);
   } catch (error) {
     next(error);

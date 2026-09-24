@@ -1,4 +1,4 @@
-import { api } from "./client";
+import { API_URL, api } from "./client";
 
 /**
  * The sign-in page's background images.
@@ -9,9 +9,19 @@ import { api } from "./client";
  * here is visible to anyone who can reach the instance.
  */
 
-/** Where one image is fetched from — a path, so it works behind any host. */
+/**
+ * Where one image is fetched from.
+ *
+ * Prefixed with `API_URL` for the reason `photoJourneyPreviewUrl` states: a
+ * root-relative `/api/...` in an `<img src>` goes to VITE's proxy target,
+ * which is read from the shell, while axios reads `import.meta.env` — set the
+ * variable in only one of the two and the pictures load from a different
+ * backend than the list did. Caught in the browser on 2026-09-23, where the
+ * admin tile showed two broken images beside a list that had just loaded fine.
+ * In production `API_URL` is empty and this is the root-relative URL again.
+ */
 export function loginBackgroundUrl(filename: string): string {
-  return `/api/v1/login-backgrounds/${encodeURIComponent(filename)}`;
+  return `${API_URL}/api/v1/login-backgrounds/${encodeURIComponent(filename)}`;
 }
 
 export async function getLoginBackgrounds(): Promise<string[]> {
