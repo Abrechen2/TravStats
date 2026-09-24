@@ -146,5 +146,42 @@
     "vehicles": "Fahrzeuge",
     "empty": "In diesem Zeitraum gibt es keinen Roadtrip.",
     "loadFailed": "Die Roadtrips konnten nicht geladen werden."
-  }
+  },
+  "strava": {
+    "title": "Strava",
+    "subtitle": "Aktivitäten aus Strava als Tagestouren übernehmen.",
+    "privacy": "Deine Strava-Daten siehst nur du. Die Daten werden nicht geteilt und nicht an die KI-Zusammenfassung gegeben — so verlangt es Strava.",
+    "connect": "Mit Strava verbinden",
+    "disconnect": "Verbindung trennen",
+    "connected": "Verbunden (Athlet {{athlete}})",
+    "askAdmin": "Strava ist auf dieser Instanz nicht eingerichtet. Eine Person mit Admin-Rechten muss dafür eine eigene Strava-App hinterlegen.",
+    "adminTitle": "Strava-App dieser Instanz (Admin)",
+    "adminHelp": "Leg unter strava.com/settings/api eine eigene App an und trag als „Authorization Callback Domain“ {{domain}} ein. Seit Juni 2026 braucht der API-Zugang ein Strava-Abo.",
+    "clientId": "Client ID",
+    "clientSecret": "Client Secret",
+    "secretStored": "gespeichert — leer lassen, um es zu behalten",
+    "adminSave": "Speichern",
+    "adminSaveError": "Die Strava-App konnte nicht gespeichert werden.",
+    "loadError": "Der Strava-Status konnte nicht geladen werden.",
+    "genericError": "Strava hat nicht wie erwartet geantwortet.",
+    "importButton": "Aus Strava übernehmen",
+    "importTitle": "Strava-Aktivität wählen",
+    "importFailed": "Die Aktivität konnte nicht übernommen werden.",
+    "noActivities": "In diesem Zeitraum gibt es keine Strava-Aktivität.",
+    "noRoute": "ohne GPS-Strecke (z. B. Laufband) — nichts zu übernehmen",
+    "callbackWorking": "Verbindung zu Strava wird abgeschlossen …",
+    "callbackDone": "Strava ist verbunden.",
+    "callbackDenied": "Die Verbindung zu Strava wurde abgebrochen.",
+    "callbackFailed": "Die Verbindung zu Strava konnte nicht abgeschlossen werden.",
+    "backToSettings": "Zurück zu den Einstellungen",
+    "failure": {
+      "notConfigured": "Strava ist nicht eingerichtet oder nicht verbunden.",
+      "unreachable": "Strava ist gerade nicht erreichbar.",
+      "auth": "Strava hat den Zugriff verweigert — bitte neu verbinden und das Lesen von Aktivitäten erlauben.",
+      "notFound": "Diese Aktivität gibt es bei Strava nicht (mehr).",
+      "protocol": "Diese Aktivität hat keine GPS-Strecke, die sich übernehmen ließe.",
+      "rateLimited": "Das Strava-Anfragelimit ist erreicht. In einer Viertelstunde noch einmal versuchen."
+    }
+  },
+  "komootHint": "Komoot: Tour in Komoot als GPX exportieren und hier hochladen — eine direkte Anbindung gibt es nicht, Komoot hat keine öffentliche Schnittstelle."
 }

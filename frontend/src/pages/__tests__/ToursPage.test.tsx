@@ -9,6 +9,11 @@ import { toursApi } from "../../lib/api/tours";
 vi.mock("../../lib/api/tourIndex", () => ({
   tourIndexApi: { list: vi.fn(), geometryBatch: vi.fn() },
 }));
+// Strava's status call would reach the network; the page only needs "not connected".
+vi.mock("../../components/Trips/StravaImportDialog", () => ({
+  default: () => null,
+  useStravaConnected: () => false,
+}));
 vi.mock("../../lib/api/tours", () => ({
   toursApi: { createStandalone: vi.fn(), removeStandalone: vi.fn() },
 }));

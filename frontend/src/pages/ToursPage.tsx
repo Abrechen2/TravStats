@@ -1,6 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import type { JSX } from "react";
-import { Link } from "react-router-dom";
+import { Link, useNavigate } from "react-router-dom";
 
 import AppShell from "../components/ui/AppShell";
 import ConfirmModal from "../components/Training/ConfirmModal";
@@ -11,6 +11,7 @@ import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { useToastStore } from "../store/toastStore";
 import { SELECTABLE_LEG_MODES, type LegMode } from "../types/tour";
 import KindReviewNotice from "../components/Roadtrips/KindReviewNotice";
+import StravaImportDialog, { useStravaConnected } from "../components/Trips/StravaImportDialog";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { TOUR_ACTIVITIES, type TourActivity } from "../shared/tour/roadtrip";
 
@@ -46,6 +47,9 @@ export default function ToursPage(): JSX.Element {
   const [newMode, setNewMode] = useState<LegMode>(DEFAULT_MODE);
   const [newActivity, setNewActivity] = useState<TourActivity | "">("hike");
   const { isEnabled } = useEnabledDomains();
+  const stravaConnected = useStravaConnected();
+  const [stravaOpen, setStravaOpen] = useState(false);
+  const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<TourSummary | null>(null);
 
@@ -119,14 +123,32 @@ export default function ToursPage(): JSX.Element {
     <AppShell width="list">
       <header className="mb-4 flex items-center justify-between">
         <h1 className="t-screen-title">{t("trips:tours.pageTitle")}</h1>
-        <button
-          type="button"
-          className="rounded-sm border border-(--color-border) px-3 py-1.5 text-sm hover:bg-(--bg-surface)"
-          onClick={() => setCreating((v) => !v)}
-        >
-          {t("trips:tours.newTour")}
-        </button>
+        <span className="flex flex-wrap gap-2">
+          {stravaConnected && (
+            <button
+              type="button"
+              className="rounded-sm border border-(--color-border) px-3 py-1.5 text-sm hover:bg-(--bg-surface)"
+              onClick={() => setStravaOpen(true)}
+            >
+              {t("roadtrips:strava.importButton")}
+            </button>
+          )}
+          <button
+            type="button"
+            className="rounded-sm border border-(--color-border) px-3 py-1.5 text-sm hover:bg-(--bg-surface)"
+            onClick={() => setCreating((v) => !v)}
+          >
+            {t("trips:tours.newTour")}
+          </button>
+        </span>
       </header>
+      {stravaOpen && (
+        <StravaImportDialog
+          target={{ kind: "newTour" }}
+          onClose={() => setStravaOpen(false)}
+          onDone={(routeId) => navigate(`/tours/${routeId}`)}
+        />
+      )}
 
       {/* The rule's classification of the pre-2.7 sections, shown where a
           misfiled row is found — only while the roadtrip page exists to

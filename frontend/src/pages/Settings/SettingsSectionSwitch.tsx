@@ -27,6 +27,7 @@ import GeocoderSettingsCard from "../../components/Settings/GeocoderSettingsCard
 import RoutingProviderSection from "../../components/Settings/RoutingProviderSection";
 import ImmichConnectionCard from "../../components/Settings/ImmichConnectionCard";
 import DawarichConnectionCard from "../../components/Settings/DawarichConnectionCard";
+import StravaConnectionCard from "../../components/Settings/StravaConnectionCard";
 
 type SettingsPageState = ReturnType<typeof useSettingsPage>;
 
@@ -124,6 +125,8 @@ export default function SettingsSectionSwitch({
               scoped onto the same connection. Both keys left the registry on
               2026-09-18. */}
           <DawarichConnectionCard />
+          {/* Strava (2.7): day tours from Strava activities. */}
+          <StravaConnectionCard isAdmin={isAdmin} />
         </div>
       );
     case "homeAirport":

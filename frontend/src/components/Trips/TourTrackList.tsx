@@ -23,6 +23,8 @@ interface Props {
    *  only possible outcome is an error. */
   dawarichAvailable: boolean;
   onPullDawarich: () => void;
+  /** Opens the Strava picker; absent when Strava is not connected (2.7). */
+  onImportStrava?: () => void;
 }
 
 function formatDistanceKm(value: number): string {
@@ -74,6 +76,7 @@ export default function TourTrackList({
   pulling,
   dawarichAvailable,
   onPullDawarich,
+  onImportStrava,
 }: Props): JSX.Element {
   const { t } = useTranslation("trips");
   const [pendingDelete, setPendingDelete] = useState<TourTrackMeta | null>(null);
@@ -113,12 +116,24 @@ export default function TourTrackList({
             ? t("trips:tours.tracks.dawarich.pulling")
             : t("trips:tours.tracks.dawarich.pullLabel")}
         </button>
+        {onImportStrava && (
+          <button
+            type="button"
+            className="rounded-sm border border-(--color-border) px-3 py-1.5 text-xs hover:bg-(--bg-surface)"
+            onClick={onImportStrava}
+          >
+            {t("roadtrips:strava.importButton")}
+          </button>
+        )}
         {!dawarichAvailable && (
           <span className="text-xs text-(--text-muted)">
             {t("trips:tours.tracks.dawarich.unavailableReason")}
           </span>
         )}
       </div>
+      {/* Komoot has no public API (checked 2026-09-24): its tours come in as
+          the GPX file Komoot itself exports. */}
+      <p className="text-xs text-(--text-muted)">{t("roadtrips:komootHint")}</p>
 
       {loading && <p className="text-sm text-(--text-muted)">{t("trips:tours.tracks.loading")}</p>}
 

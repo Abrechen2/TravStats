@@ -4,6 +4,7 @@ import { Link, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
 import TourRecordingSummary from "../components/Trips/TourRecordingSummary";
+import StravaImportDialog, { useStravaConnected } from "../components/Trips/StravaImportDialog";
 import { useDomainColors } from "../hooks/useDomainColors";
 import { hexToRgb } from "../lib/domainColor";
 import { TOUR_COLOR } from "../shared/domains";
@@ -86,6 +87,8 @@ export default function TripRouteEditorPage(): JSX.Element {
   const { t } = useTranslation(["trips", "roadtrips", "common"]);
   const addToast = useToastStore((s) => s.addToast);
   const { colorOf } = useDomainColors();
+  const stravaConnected = useStravaConnected();
+  const [stravaOpen, setStravaOpen] = useState(false);
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [route, setRoute] = useState<TourRoute | null>(null);
@@ -651,7 +654,19 @@ export default function TripRouteEditorPage(): JSX.Element {
             pulling={trackPulling}
             dawarichAvailable={dawarichAvailable}
             onPullDawarich={handlePullDawarich}
+            onImportStrava={stravaConnected ? () => setStravaOpen(true) : undefined}
           />
+          {stravaOpen && route && (
+            <StravaImportDialog
+              target={{ kind: "route", routeId: route.id }}
+              around={tracks[0]?.startedAt ?? null}
+              onClose={() => setStravaOpen(false)}
+              onDone={() => {
+                setStravaOpen(false);
+                void loadTracks();
+              }}
+            />
+          )}
         </section>
       </div>
     </AppShell>

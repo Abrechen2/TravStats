@@ -146,5 +146,42 @@
     "vehicles": "Vehicles",
     "empty": "No roadtrip in this period.",
     "loadFailed": "The roadtrips could not be loaded."
-  }
+  },
+  "strava": {
+    "title": "Strava",
+    "subtitle": "Bring activities in from Strava as day tours.",
+    "privacy": "Only you see your Strava data. It is not shared and not given to the AI summary — Strava requires that.",
+    "connect": "Connect to Strava",
+    "disconnect": "Disconnect",
+    "connected": "Connected (athlete {{athlete}})",
+    "askAdmin": "Strava is not set up on this instance. Someone with admin rights has to register a Strava app for it.",
+    "adminTitle": "This instance's Strava app (admin)",
+    "adminHelp": "Create your own app at strava.com/settings/api and enter {{domain}} as its “Authorization Callback Domain”. Since June 2026 API access needs a Strava subscription.",
+    "clientId": "Client ID",
+    "clientSecret": "Client secret",
+    "secretStored": "stored — leave empty to keep it",
+    "adminSave": "Save",
+    "adminSaveError": "The Strava app could not be saved.",
+    "loadError": "The Strava status could not be loaded.",
+    "genericError": "Strava did not answer as expected.",
+    "importButton": "Import from Strava",
+    "importTitle": "Choose a Strava activity",
+    "importFailed": "The activity could not be imported.",
+    "noActivities": "No Strava activity in this period.",
+    "noRoute": "no GPS route (e.g. treadmill) — nothing to import",
+    "callbackWorking": "Finishing the Strava connection …",
+    "callbackDone": "Strava is connected.",
+    "callbackDenied": "The Strava connection was cancelled.",
+    "callbackFailed": "The Strava connection could not be finished.",
+    "backToSettings": "Back to settings",
+    "failure": {
+      "notConfigured": "Strava is not set up or not connected.",
+      "unreachable": "Strava cannot be reached right now.",
+      "auth": "Strava refused access — connect again and allow reading activities.",
+      "notFound": "This activity does not exist on Strava (any more).",
+      "protocol": "This activity has no GPS route to import.",
+      "rateLimited": "Strava's request limit is reached. Try again in a quarter of an hour."
+    }
+  },
+  "komootHint": "Komoot: export the tour from Komoot as GPX and upload it here — there is no direct connection, Komoot has no public API."
 }

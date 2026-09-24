@@ -43,6 +43,7 @@ const TripRouteEditorPage = lazy(() => import("./pages/TripRouteEditorPage"));
 const ToursPage = lazy(() => import("./pages/ToursPage"));
 const RoadtripsPage = lazy(() => import("./pages/RoadtripsPage"));
 const RoadtripDetailPage = lazy(() => import("./pages/RoadtripDetailPage"));
+const StravaCallbackPage = lazy(() => import("./pages/StravaCallbackPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
@@ -437,6 +438,13 @@ function AppContent() {
               <Route
                 path="/tours"
                 element={isAuthenticated ? <ToursPage /> : <Navigate to="/login" />}
+              />
+              {/* Strava's consent page returns here (2.7) — a page, not an API
+                  route, because the strict auth cookie is not on that
+                  cross-site redirect; this page's own request is same-site. */}
+              <Route
+                path="/integrations/strava/callback"
+                element={isAuthenticated ? <StravaCallbackPage /> : <Navigate to="/login" />}
               />
               {/* Roadtrips (2.7). The domain guard is also the beta gate:
                   `useEnabledDomains` drops `roadtrip` while the instance's
