@@ -1,6 +1,7 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
+import { LocationInput } from "../location/LocationInput";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { TourPointInput } from "../../lib/api/tours";
 
@@ -15,8 +16,9 @@ interface TourPointEditorProps {
  *
  * A section of a TRIP picks its vertices from that trip's timeline
  * (`TourStopAssigner`). A standalone tour has no timeline to pick from, so
- * its points are typed here — a name and a coordinate each, in the order
- * they are travelled.
+ * its points are found here — by place search, a click on the map or a pasted
+ * coordinate (all three live in `LocationInput`), never by typing two bare
+ * numbers. A search hit names an unnamed point, so "Gjendesheim" is one pick.
  *
  * Everything is edited locally and written in ONE call: the endpoint
  * replaces the whole list (added, moved, removed, renumbered) in a single
@@ -75,22 +77,6 @@ export default function TourPointEditor({
               aria-label={t("trips:tours.points.titlePlaceholder")}
               className="min-w-40 flex-1 rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
             />
-            <input
-              type="number"
-              step="any"
-              value={Number.isFinite(point.lat) ? point.lat : ""}
-              onChange={(e) => update(index, { lat: Number(e.target.value) })}
-              aria-label={t("trips:tours.points.lat")}
-              className="w-28 rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
-            />
-            <input
-              type="number"
-              step="any"
-              value={Number.isFinite(point.lon) ? point.lon : ""}
-              onChange={(e) => update(index, { lon: Number(e.target.value) })}
-              aria-label={t("trips:tours.points.lon")}
-              className="w-28 rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
-            />
             <button
               type="button"
               onClick={() => move(index, -1)}
@@ -116,6 +102,24 @@ export default function TourPointEditor({
             >
               {t("trips:tours.points.remove")}
             </button>
+            <div className="basis-full">
+              <LocationInput
+                compact
+                idPrefix={`tour-point-${index}`}
+                value={
+                  Number.isFinite(point.lat) && Number.isFinite(point.lon)
+                    ? { lat: point.lat, lon: point.lon }
+                    : null
+                }
+                onChange={(sel) =>
+                  update(index, {
+                    lat: sel.lat,
+                    lon: sel.lon,
+                    title: point.title.trim() === "" && sel.name ? sel.name : point.title,
+                  })
+                }
+              />
+            </div>
           </li>
         ))}
       </ul>

@@ -7,6 +7,26 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));
 
+// The place search is its own tested component; here it is a button that
+// reports what a search hit reports — a coordinate and a name.
+vi.mock("../../location/LocationInput", () => ({
+  LocationInput: ({
+    idPrefix,
+    onChange,
+  }: {
+    idPrefix: string;
+    onChange: (s: { lat: number; lon: number; name?: string }) => void;
+  }) => (
+    <button
+      type="button"
+      data-testid={idPrefix}
+      onClick={() => onChange({ lat: 61.52, lon: 8.7, name: "Memurubu" })}
+    >
+      pick
+    </button>
+  ),
+}));
+
 const POINTS = [
   { id: "p1", title: "Gjendesheim", lat: 61.49, lon: 8.8 },
   { id: "p2", title: "Besseggen", lat: 61.5, lon: 8.73 },
@@ -61,5 +81,35 @@ describe("the standalone tour's point editor", () => {
 
     expect(onSave.mock.calls[0][0]).toHaveLength(1);
     expect(onSave.mock.calls[0][0][0].id).toBe("p2");
+  });
+
+  it("takes a new point's place AND name from the search — no coordinate typed", () => {
+    const onSave = vi.fn();
+    render(<TourPointEditor points={POINTS} saving={false} onSave={onSave} />);
+
+    fireEvent.click(screen.getByText("trips:tours.points.add"));
+    fireEvent.click(screen.getByTestId("tour-point-2"));
+    fireEvent.click(screen.getByText("trips:tours.points.save"));
+
+    expect(onSave.mock.calls[0][0][2]).toEqual({ title: "Memurubu", lat: 61.52, lon: 8.7 });
+  });
+
+  it("keeps a name the reader typed when the place is picked afterwards", () => {
+    const onSave = vi.fn();
+    render(<TourPointEditor points={POINTS} saving={false} onSave={onSave} />);
+
+    fireEvent.click(screen.getByTestId("tour-point-0"));
+    fireEvent.click(screen.getByText("trips:tours.points.save"));
+
+    expect(onSave.mock.calls[0][0][0]).toMatchObject({
+      id: "p1",
+      title: "Gjendesheim",
+      lat: 61.52,
+    });
+  });
+
+  it("offers no bare latitude/longitude fields", () => {
+    render(<TourPointEditor points={POINTS} saving={false} onSave={vi.fn()} />);
+    expect(screen.queryByRole("spinbutton")).toBeNull();
   });
 });
