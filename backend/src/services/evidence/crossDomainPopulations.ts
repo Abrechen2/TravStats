@@ -18,6 +18,7 @@ import {
   stayEvidenceEntry,
 } from "./entryMappersDomains";
 import { getCountryResolver } from "../geo/countryFromCoordinates";
+import { stationCountries } from "../roadtrip/roadtripSummary";
 
 /**
  * The rows behind the three `CrossDomainKpis` numbers, per domain, as the
@@ -464,21 +465,10 @@ async function loadRoadtrips(userId: string): Promise<CrossDomainPopulation> {
     const dayKeys = start ? inclusiveUtcDays(start, end ?? start) : [];
     events.push({ domain: "roadtrip", entry, year, dayKeys });
 
-    const touched = new Set<string>();
-    for (const stop of row.stops) {
-      // The boundary set is land-only and answers null for a point on the
-      // shore — exactly where campsites and ferry ports are (measured: Hirtshals
-      // and Stavanger both null). The linked stay's own country then speaks;
-      // with neither, the station abstains rather than guessing.
-      const fromPoint =
-        stop.lat !== null && stop.lon !== null ? resolver.countryAt(stop.lat, stop.lon) : null;
-      const code = fromPoint ?? toCountryCode(stop.lodgingStay?.lodging.isoCountryCode ?? null);
-      if (code) touched.add(code);
-    }
     countryRows.push({
       domain: "roadtrip",
       entry,
-      countries: [...touched],
+      countries: stationCountries(row.stops, resolver),
       years: year === null ? [] : [year],
     });
   }

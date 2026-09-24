@@ -196,7 +196,8 @@
       "cruise": "Cruises",
       "lodging": "Lodging",
       "poi": "Places",
-      "tour": "Tours"
+      "tour": "Tours",
+      "roadtrip": "Roadtrips"
     },
     "disabledHint": "Area disabled — Settings → Areas"
   },
@@ -206,7 +207,8 @@
     "cruise": "Cruise",
     "poi": "Place",
     "lodging": "Stay",
-    "tour": "Tour"
+    "tour": "Tour",
+    "roadtrip": "Roadtrip"
   },
   "controls": {
     "mode": "Mode",
@@ -215,7 +217,8 @@
       "flight": "Add flight",
       "cruise": "Add cruise",
       "lodging": "Add stay",
-      "poi": "Add place"
+      "poi": "Add place",
+      "roadtrip": "Add roadtrip"
     }
   },
   "filter": {

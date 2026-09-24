@@ -10,6 +10,9 @@ import { toursApi } from "../lib/api/tours";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { useToastStore } from "../store/toastStore";
 import { SELECTABLE_LEG_MODES, type LegMode } from "../types/tour";
+import KindReviewNotice from "../components/Roadtrips/KindReviewNotice";
+import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { TOUR_ACTIVITIES, type TourActivity } from "../shared/tour/roadtrip";
 
 const DEFAULT_MODE: LegMode = "road";
 
@@ -33,7 +36,7 @@ function formatKm(value: number): string {
  * the reader cannot tell which they are looking at.
  */
 export default function ToursPage(): JSX.Element {
-  const { t } = useTranslation(["trips", "common"]);
+  const { t } = useTranslation(["trips", "roadtrips", "common"]);
   const addToast = useToastStore((s) => s.addToast);
 
   const [tours, setTours] = useState<TourSummary[] | null>(null);
@@ -41,6 +44,8 @@ export default function ToursPage(): JSX.Element {
   const [creating, setCreating] = useState(false);
   const [newName, setNewName] = useState("");
   const [newMode, setNewMode] = useState<LegMode>(DEFAULT_MODE);
+  const [newActivity, setNewActivity] = useState<TourActivity | "">("hike");
+  const { isEnabled } = useEnabledDomains();
   const [saving, setSaving] = useState(false);
   const [pendingDelete, setPendingDelete] = useState<TourSummary | null>(null);
 
@@ -55,7 +60,8 @@ export default function ToursPage(): JSX.Element {
   const load = useCallback(async (): Promise<void> => {
     setLoadError(false);
     try {
-      const data = await tourIndexApi.list();
+      // Day tours only since 2.7 — the multi-day kind has its own page.
+      const data = await tourIndexApi.list("tour");
       if (!mountedRef.current) return;
       setTours(data);
     } catch {
@@ -74,7 +80,11 @@ export default function ToursPage(): JSX.Element {
     if (!name) return;
     setSaving(true);
     try {
-      await toursApi.createStandalone({ name, mode: newMode });
+      await toursApi.createStandalone({
+        name,
+        mode: newMode,
+        activity: newActivity === "" ? null : newActivity,
+      });
       if (!mountedRef.current) return;
       // Re-read rather than append: the list is ordered by the owning
       // trip's start date, and a new trip-less tour's place in that order
@@ -82,6 +92,7 @@ export default function ToursPage(): JSX.Element {
       await load();
       setNewName("");
       setNewMode(DEFAULT_MODE);
+      setNewActivity("hike");
       setCreating(false);
     } catch {
       if (mountedRef.current) addToast("error", t("trips:tours.createError"));
@@ -117,6 +128,11 @@ export default function ToursPage(): JSX.Element {
         </button>
       </header>
 
+      {/* The rule's classification of the pre-2.7 sections, shown where a
+          misfiled row is found — only while the roadtrip page exists to
+          move it to. */}
+      {isEnabled("roadtrip") && <KindReviewNotice onChanged={() => void load()} />}
+
       {creating && (
         <div className="mb-4 flex flex-wrap items-center gap-2 rounded-lg border border-(--color-border) p-3">
           <input
@@ -127,6 +143,19 @@ export default function ToursPage(): JSX.Element {
             aria-label={t("trips:tours.namePlaceholder")}
             className="min-w-48 flex-1 rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
           />
+          <select
+            value={newActivity}
+            onChange={(e) => setNewActivity(e.target.value as TourActivity | "")}
+            aria-label={t("roadtrips:activityLabel")}
+            className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
+          >
+            <option value="">{t("roadtrips:activityNone")}</option>
+            {TOUR_ACTIVITIES.map((a) => (
+              <option key={a} value={a}>
+                {t(`roadtrips:activity.${a}`)}
+              </option>
+            ))}
+          </select>
           <select
             value={newMode}
             onChange={(e) => setNewMode(e.target.value as LegMode)}
@@ -191,7 +220,9 @@ export default function ToursPage(): JSX.Element {
                 <span className="flex items-center gap-2">
                   <span className="font-medium">{tour.name}</span>
                   <span className="rounded-sm bg-(--bg-surface) px-1.5 py-0.5 text-xs">
-                    {t(`trips:tours.mode.${tour.mode}`)}
+                    {tour.activity
+                      ? t(`roadtrips:activity.${tour.activity}`)
+                      : t(`trips:tours.mode.${tour.mode}`)}
                   </span>
                   {/* A tour with no trip says so, rather than showing a blank
                       where every other row shows a name. */}
@@ -200,8 +231,11 @@ export default function ToursPage(): JSX.Element {
                   </span>
                 </span>
                 <span className="flex items-center gap-3 text-(--text-muted)">
-                  <span>{t("trips:tours.stopCount", { count: tour.stopCount })}</span>
+                  {tour.trackCount === 0 && (
+                    <span>{t("trips:tours.stopCount", { count: tour.stopCount })}</span>
+                  )}
                   <span>{formatKm(tour.distanceKm)} km</span>
+                  {tour.ascentM !== null && <span>↑ {formatKm(tour.ascentM)} m</span>}
                 </span>
               </Link>
               <button

@@ -19,6 +19,10 @@ function makeTrack(overrides: Partial<TourTrackMeta> = {}): TourTrackMeta {
     pointCount: 1200,
     distanceKm: 340.4,
     truncated: false,
+    ascentM: null,
+    descentM: null,
+    movingSeconds: null,
+    externalRef: null,
     createdAt: "2026-06-02T00:00:00.000Z",
     ...overrides,
   };

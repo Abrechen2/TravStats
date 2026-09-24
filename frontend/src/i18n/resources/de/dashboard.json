@@ -196,7 +196,8 @@
       "cruise": "Kreuzfahrten",
       "lodging": "Unterkünfte",
       "poi": "Orte",
-      "tour": "Touren"
+      "tour": "Touren",
+      "roadtrip": "Roadtrips"
     },
     "disabledHint": "Bereich deaktiviert — Einstellungen → Bereiche"
   },
@@ -206,7 +207,8 @@
     "cruise": "Kreuzfahrt",
     "poi": "Ort",
     "lodging": "Unterkunft",
-    "tour": "Tour"
+    "tour": "Tour",
+    "roadtrip": "Roadtrip"
   },
   "controls": {
     "mode": "Modus",
@@ -215,7 +217,8 @@
       "flight": "Flug hinzufügen",
       "cruise": "Kreuzfahrt hinzufügen",
       "lodging": "Unterkunft anlegen",
-      "poi": "Ort anlegen"
+      "poi": "Ort anlegen",
+      "roadtrip": "Roadtrip hinzufügen"
     }
   },
   "filter": {

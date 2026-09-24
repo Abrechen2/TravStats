@@ -67,6 +67,7 @@ const TAB_ICON: Record<DashboardTab, IconName | null> = {
   cruise: "ship",
   poi: "map-pin",
   lodging: "bed",
+  roadtrip: "caravan",
   tour: "route",
 };
 

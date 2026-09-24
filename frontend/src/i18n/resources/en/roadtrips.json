@@ -1,0 +1,150 @@
+{
+  "pageTitle": "Roadtrips",
+  "newRoadtrip": "New roadtrip",
+  "namePlaceholder": "Name, e.g. Norway by motorhome",
+  "vehicleLabel": "Vehicle",
+  "vehicleNone": "Leave the vehicle open",
+  "create": "Create",
+  "createError": "The roadtrip could not be created.",
+  "loadError": "The roadtrips could not be loaded.",
+  "detailLoadError": "This roadtrip could not be loaded.",
+  "empty": "No roadtrip yet. A roadtrip is several days on the move: stations where you spend the night, and the road between them.",
+  "undated": "undated",
+  "inTrip": "Part of the trip “{{name}}”",
+  "nightsCount_one": "{{count}} night",
+  "nightsCount_other": "{{count}} nights",
+  "stationCount_one": "{{count}} station",
+  "stationCount_other": "{{count}} stations",
+  "tourCount_one": "{{count}} day tour",
+  "tourCount_other": "{{count}} day tours",
+  "nightsSoft": "* At least one overnight stop has no known length — the figure is a lower bound.",
+  "backToList": "← All roadtrips",
+  "backToRoadtrip": "Back to the roadtrip",
+  "editLegs": "Edit route & recordings",
+  "legStraight": "straight line",
+  "startTour": "+ Day tour",
+  "startTourError": "The day tour could not be created.",
+  "delete": "Delete roadtrip",
+  "deleteError": "The roadtrip could not be deleted.",
+  "deleteConfirm": {
+    "title": "Delete roadtrip?",
+    "message": "“{{name}}” is deleted with its stations, legs and recordings. Linked accommodation and stays are kept.",
+    "confirm": "Delete"
+  },
+  "kind": {
+    "roadtrip": "Roadtrip",
+    "tour": "Day tour"
+  },
+  "vehicle": {
+    "motorhome": "Motorhome",
+    "campervan": "Campervan",
+    "caravan": "Caravan",
+    "car": "Car",
+    "motorcycle": "Motorcycle",
+    "bicycle": "Bicycle",
+    "rail": "Rail",
+    "other": "Other",
+    "unknown": "Not stated"
+  },
+  "activityLabel": "Activity",
+  "activityNone": "No activity",
+  "activitySaveError": "The activity could not be saved.",
+  "activity": {
+    "hike": "Hike",
+    "walk": "Walk",
+    "run": "Run",
+    "bike": "Bike ride",
+    "mtb": "Mountain bike",
+    "ski": "Ski tour",
+    "paddle": "Paddling",
+    "climb": "Climbing",
+    "other": "Other"
+  },
+  "figures": {
+    "km": "driven",
+    "days": "days",
+    "nights": "nights · {{places}} places",
+    "countries": "countries",
+    "tours": "day tours"
+  },
+  "night": {
+    "stay": "Accommodation",
+    "free": "Night without accommodation",
+    "pass": "Pass-through"
+  },
+  "stations": {
+    "title": "Stations",
+    "edit": "Edit stations",
+    "empty": "No stations yet. Add the places you stopped at along the way.",
+    "add": "Add station",
+    "save": "Save stations",
+    "saveError": "The stations could not be saved.",
+    "remove": "Remove",
+    "moveUp": "Move up",
+    "moveDown": "Move down",
+    "titlePlaceholder": "Station name",
+    "from": "from",
+    "to": "to",
+    "nightLabel": "Overnight at this station",
+    "incomplete": "Every station needs a name and a location."
+  },
+  "stay": {
+    "search": "Search accommodation",
+    "noneNearby": "No stay near these dates — search by name or create one.",
+    "noMatch": "No accommodation with that name.",
+    "createNew": "Create new accommodation",
+    "newName": "Accommodation name",
+    "newType": "Type of accommodation",
+    "createAndLink": "Create and link",
+    "createFailed": "The accommodation could not be created.",
+    "linked": "linked accommodation",
+    "change": "change"
+  },
+  "review": {
+    "title_one": "One entry was classified automatically by the 2.7 update",
+    "title_other": "{{count}} entries were classified automatically by the 2.7 update",
+    "intro": "Tours and roadtrips are separate now. Multi-day road, ferry and rail sections became roadtrips, everything else day tours. Is that right?",
+    "isNow": {
+      "tour": "now a day tour",
+      "roadtrip": "now a roadtrip"
+    },
+    "keep": "Keep",
+    "moveTo": {
+      "tour": "It is a day tour",
+      "roadtrip": "It is a roadtrip"
+    },
+    "error": "The classification could not be saved."
+  },
+  "recording": {
+    "distance": "Distance",
+    "ascent": "Ascent",
+    "descent": "Descent",
+    "duration": "Duration",
+    "moving": "Moving",
+    "profileLabel": "Elevation profile from {{low}} to {{high}} metres"
+  },
+  "dashboard": {
+    "listTitle": "Roadtrips",
+    "listEmpty": "No roadtrips yet.",
+    "emptyTitle": "No roadtrip on the map yet",
+    "emptyBody": "Create a roadtrip with its stations — its route then appears here.",
+    "emptyCta": "Create roadtrip"
+  },
+  "stats": {
+    "count": "Roadtrips",
+    "countHint_one": "one roadtrip on the road",
+    "countHint_other": "{{count}} roadtrips on the road",
+    "distance": "Distance",
+    "drivenHint": "{{km}} km of it driven (ferries excluded)",
+    "nights": "Nights",
+    "nightsHint": "{{stay}} at accommodation, {{free}} without",
+    "nightsSoft": "At least one overnight stop has no known length.",
+    "countries": "Countries",
+    "recordsLabel": "Records",
+    "longestByKm": "Longest roadtrips",
+    "longestByNights": "Most nights",
+    "vehicles": "Vehicles",
+    "empty": "No roadtrip in this period.",
+    "loadFailed": "The roadtrips could not be loaded."
+  }
+}

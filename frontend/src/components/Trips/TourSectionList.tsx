@@ -182,13 +182,22 @@ export default function TourSectionList({ tripId }: Props): JSX.Element {
                   button nested in an `<a>` is not a second action, it is a
                   click the link swallows. */}
               <Link
-                to={`/trips/${tripId}/route/${route.id}`}
+                // A roadtrip has a page of its own (2.7); a day tour opens in the editor.
+                to={
+                  route.kind === "roadtrip"
+                    ? `/roadtrips/${route.id}`
+                    : `/trips/${tripId}/route/${route.id}`
+                }
                 className="flex flex-1 items-center justify-between gap-3 p-3"
               >
                 <span className="flex items-center gap-2">
                   <span className="font-medium">{route.name}</span>
                   <span className="rounded-sm bg-(--bg-surface) px-1.5 py-0.5 text-xs">
-                    {t(`trips:tours.mode.${route.mode}`)}
+                    {route.kind === "roadtrip"
+                      ? t("roadtrips:kind.roadtrip")
+                      : route.activity
+                        ? t(`roadtrips:activity.${route.activity}`)
+                        : t(`trips:tours.mode.${route.mode}`)}
                   </span>
                 </span>
                 <span className="flex items-center gap-3 text-(--text-muted)">

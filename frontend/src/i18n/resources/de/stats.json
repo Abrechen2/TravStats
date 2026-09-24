@@ -94,13 +94,15 @@
       "countries": "Länder",
       "lists": "Listen",
       "bestChecklist": "Beste Checkliste",
-      "cruiseNights": "Nächte an Bord"
+      "cruiseNights": "Nächte an Bord",
+      "roadtripNights": "Nächte unterwegs"
     },
     "topItems": {
       "airlines": "Top-Airlines",
       "cruiseLines": "Top-Reedereien",
       "chains": "Top-Ketten",
-      "categories": "Top-Kategorien"
+      "categories": "Top-Kategorien",
+      "vehicles": "Fahrzeuge"
     },
     "badge": {
       "balconyCabin": "Balkon-Kabine",

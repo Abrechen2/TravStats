@@ -147,6 +147,7 @@ const DOMAIN_ALIASES: Readonly<Record<string, DomainKey>> = {
   lodging: "lodging",
   flight: "flight",
   cruise: "cruise",
+  roadtrip: "roadtrip",
 };
 
 const TOUR_MODES: ReadonlySet<string> = new Set(["train", "road", "ferry", "hike", "bike", "tour"]);

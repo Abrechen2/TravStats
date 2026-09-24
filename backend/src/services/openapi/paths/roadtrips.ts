@@ -65,6 +65,9 @@ const roadtripSummary = registry.register(
       placesSlept: z.number().int(),
       trackCount: z.number().int(),
       tourCount: z.number().int().describe("Day tours that set out from one of its stations"),
+      countries: z
+        .array(z.string())
+        .describe("ISO alpha-2 codes of the countries its stations stand in"),
     })
     .openapi("RoadtripSummary")
 );
@@ -105,6 +108,7 @@ const station = registry.register(
 
 const roadtripDetail = z.object({
   roadtrip: tourRoute,
+  countries: z.array(z.string()),
   trip: z.object({ id: z.string().uuid(), name: z.string() }).nullable(),
   startDate: z.string().datetime().nullable(),
   endDate: z.string().datetime().nullable(),

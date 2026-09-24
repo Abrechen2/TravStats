@@ -2,7 +2,12 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import AppShell from "../components/ui/AppShell";
-import TripMap from "../components/Trips/TripMap";
+import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
+import TourRecordingSummary from "../components/Trips/TourRecordingSummary";
+import { useDomainColors } from "../hooks/useDomainColors";
+import { hexToRgb } from "../lib/domainColor";
+import { TOUR_COLOR } from "../shared/domains";
+import { TOUR_ACTIVITIES, type TourActivity } from "../shared/tour/roadtrip";
 import TourStopAssigner from "../components/Trips/TourStopAssigner";
 import TourPointEditor from "../components/Trips/TourPointEditor";
 import TourLegList from "../components/Trips/TourLegList";
@@ -78,8 +83,9 @@ function apiErrorStatus(error: unknown): number | null {
  */
 export default function TripRouteEditorPage(): JSX.Element {
   const { id, routeId } = useParams<{ id: string; routeId: string }>();
-  const { t } = useTranslation(["trips", "common"]);
+  const { t } = useTranslation(["trips", "roadtrips", "common"]);
   const addToast = useToastStore((s) => s.addToast);
+  const { colorOf } = useDomainColors();
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [route, setRoute] = useState<TourRoute | null>(null);
@@ -230,9 +236,52 @@ export default function TripRouteEditorPage(): JSX.Element {
   // match exactly what the constructed object reads: `route.id`/`route.name`
   // (not the whole `route` object, whose other fields like `distanceKm`
   // change on every reload without touching this array's shape) and `geometry`.
+  const roadtripHex = colorOf("roadtrip");
   const tourGeometries = useMemo(
-    () => (geometry && route ? [{ routeId: route.id, name: route.name, geometry }] : []),
-    [geometry, route?.id, route?.name]
+    () =>
+      geometry && route
+        ? [
+            {
+              routeId: route.id,
+              name: route.name,
+              geometry,
+              // A roadtrip's line in its own domain hue (2.7); a tour keeps the tour hue.
+              rgb: route.kind === "roadtrip" ? hexToRgb(roadtripHex) : undefined,
+            },
+          ]
+        : [],
+    [geometry, route?.id, route?.name, route?.kind, roadtripHex]
+  );
+
+  /**
+   * What the map draws when there is no trip: the tour's own points. A
+   * standalone tour used to get no map at all, because the map could only
+   * draw a TRIP; since 2.7 it draws whatever content it is handed.
+   */
+  const mapContent = useMemo<TripMapContent>(
+    () =>
+      trip ?? {
+        stops: sectionStops.map((s) => ({
+          title: s.title,
+          lat: s.lat,
+          lon: s.lon,
+          domain: "tour",
+        })),
+      },
+    [trip, sectionStops]
+  );
+
+  const handleActivityChange = useCallback(
+    async (activity: TourActivity | null): Promise<void> => {
+      if (!route) return;
+      try {
+        const updated = await toursApi.update(id, route.id, { activity });
+        setRoute(updated);
+      } catch {
+        addToast("error", t("roadtrips:activitySaveError"));
+      }
+    },
+    [route, id, addToast, t]
   );
 
   /**
@@ -499,22 +548,58 @@ export default function TripRouteEditorPage(): JSX.Element {
       <div className="space-y-6">
         <header>
           <Link
-            to={id ? `/trips/${id}?tab=tours` : "/tours"}
+            to={
+              route.kind === "roadtrip"
+                ? `/roadtrips/${route.id}`
+                : id
+                  ? `/trips/${id}?tab=tours`
+                  : "/tours"
+            }
             className="text-xs text-(--text-muted) hover:underline"
           >
-            ← {t(id ? "trips:tours.backToTrip" : "trips:tours.backToTours")}
+            ←{" "}
+            {route.kind === "roadtrip"
+              ? t("roadtrips:backToRoadtrip")
+              : t(id ? "trips:tours.backToTrip" : "trips:tours.backToTours")}
           </Link>
           <h1 className="t-screen-title mt-1">{route.name}</h1>
-          <p className="text-sm text-(--text-muted)">
-            {t(`trips:tours.mode.${route.mode}`)} · {formatKm(route.distanceKm)} km
+          <p className="flex flex-wrap items-center gap-2 text-sm text-(--text-muted)">
+            {route.kind === "tour" && (
+              <select
+                id="tour-activity"
+                value={route.activity ?? ""}
+                onChange={(e) =>
+                  void handleActivityChange((e.target.value || null) as TourActivity | null)
+                }
+                aria-label={t("roadtrips:activityLabel")}
+                className="rounded-sm border border-(--color-border) bg-transparent px-2 py-0.5 text-sm"
+              >
+                <option value="">{t("roadtrips:activityNone")}</option>
+                {TOUR_ACTIVITIES.map((a) => (
+                  <option key={a} value={a}>
+                    {t(`roadtrips:activity.${a}`)}
+                  </option>
+                ))}
+              </select>
+            )}
+            <span>
+              {t(`trips:tours.mode.${route.mode}`)} · {formatKm(route.distanceKm)} km
+            </span>
           </p>
         </header>
 
-        {/* The map draws a TRIP. A standalone tour has none — its own
-            geometry is on the dashboard's tour tab, and inventing an empty
-            trip to hand this component would be a lie the map would then
-            draw. */}
-        {trip !== null && <TripMap trip={trip} tourGeometries={tourGeometries} />}
+        {route.kind === "tour" && (
+          <TourRecordingSummary
+            tracks={tracks}
+            tripId={id}
+            routeId={route.id}
+            accent={TOUR_COLOR}
+          />
+        )}
+
+        {/* A trip's section draws the whole trip around it; a standalone
+            tour or a roadtrip draws its own points (see `mapContent`). */}
+        <TripMap trip={mapContent} tourGeometries={tourGeometries} />
 
         <section>
           <h2 className="text-lg font-semibold mb-3">

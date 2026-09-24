@@ -79,6 +79,23 @@ export const BETA_FEATURES = Object.freeze({
       "The Companion is installable outside TestFlight — a public build a reader of the release notes can actually get — and the owner accepts the pairing flow for release.",
     reason: "advanced",
   }),
+
+  /**
+   * The roadtrip domain and the reworked day tours (2.7, design
+   * docs/superpowers/specs/2026-09-24-roadtrips-and-day-tours-design.md).
+   *
+   * Gated at ONE place: `useEnabledDomains` drops `roadtrip` while this is
+   * closed, so the nav entry, the logbook tab, the dashboard tab, the
+   * statistics tab and the overview all disappear together — each of them
+   * already asks that hook. The settings and setup pickers ask the same key
+   * so a domain nobody can see is not offered as a switch either.
+   */
+  roadtrips: Object.freeze({
+    why: "Owner ruling 2026-09-24 in #dev-talk: the first version of roadtrips (a domain of its own, stations that sleep at the user's stays) and of day tours with climb and moving time goes into 2.7 behind the switch, so the 2.7 core can ship without waiting for it. The existing tour sections were classified by rule during the migration, and nobody has reviewed that classification on real data yet.",
+    returnsWhen:
+      "The owner and the tester have used roadtrips on real trips, the automatic classification of existing sections has been reviewed on the RC's copy of production, and the owner accepts the domain for release.",
+    reason: "beta",
+  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;

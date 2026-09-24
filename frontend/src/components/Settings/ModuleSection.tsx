@@ -1,6 +1,7 @@
 import { JSX } from "react";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
@@ -16,7 +17,12 @@ export default function ModuleSection(): JSX.Element {
   // Every domain, since 2026-09-05. Places sat behind the instance beta flag
   // here (never behind "already enabled" — this list is where the user turns
   // a domain on) until its gate's own condition was met.
-  const visibleKeys = DOMAIN_KEYS;
+  // Roadtrips are beta (2.7): not offered as a switch while the instance
+  // gate is closed — `useEnabledDomains` would hide the domain anyway.
+  const { isFeatureVisible } = useBetaFeatures();
+  const visibleKeys = DOMAIN_KEYS.filter(
+    (key) => key !== "roadtrip" || isFeatureVisible("roadtrips")
+  );
 
   const toggle = (key: DomainKey): void => {
     if (!DOMAINS[key].available) return;

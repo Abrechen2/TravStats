@@ -52,8 +52,8 @@ describe("DomainTabStrip", () => {
     render(
       <DomainTabStrip
         active="all"
-        counts={{ flight: 127, cruise: 2, poi: 0, lodging: 0 }}
-        enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+        counts={{ flight: 127, cruise: 2, poi: 0, lodging: 0, roadtrip: 0 }}
+        enabled={{ flight: true, cruise: true, poi: true, lodging: true, roadtrip: true }}
         onSelect={() => {}}
       />
     );
@@ -68,8 +68,8 @@ describe("DomainTabStrip", () => {
     render(
       <DomainTabStrip
         active="cruise"
-        counts={{ flight: 0, cruise: 2, poi: 0, lodging: 0 }}
-        enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+        counts={{ flight: 0, cruise: 2, poi: 0, lodging: 0, roadtrip: 0 }}
+        enabled={{ flight: true, cruise: true, poi: true, lodging: true, roadtrip: true }}
         onSelect={() => {}}
       />
     );
@@ -82,8 +82,8 @@ describe("DomainTabStrip", () => {
     render(
       <DomainTabStrip
         active="all"
-        counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0 }}
-        enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+        counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0, roadtrip: 0 }}
+        enabled={{ flight: true, cruise: true, poi: true, lodging: true, roadtrip: true }}
         onSelect={onSelect}
       />
     );
@@ -102,8 +102,8 @@ describe("DomainTabStrip", () => {
       render(
         <DomainTabStrip
           active="all"
-          counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0 }}
-          enabled={{ flight: true, cruise: true, poi: false, lodging: true }}
+          counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0, roadtrip: 0 }}
+          enabled={{ flight: true, cruise: true, poi: false, lodging: true, roadtrip: true }}
           onSelect={onSelect}
         />
       );
@@ -165,8 +165,8 @@ describe("DomainTabStrip", () => {
       render(
         <DomainTabStrip
           active="all"
-          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0 }}
-          enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0, roadtrip: 0 }}
+          enabled={{ flight: true, cruise: true, poi: true, lodging: true, roadtrip: true }}
           onSelect={() => {}}
         />
       );
@@ -185,8 +185,8 @@ describe("DomainTabStrip", () => {
       render(
         <DomainTabStrip
           active="all"
-          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0 }}
-          enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0, roadtrip: 0 }}
+          enabled={{ flight: true, cruise: true, poi: true, lodging: true, roadtrip: true }}
           onSelect={() => {}}
         />
       );
@@ -269,8 +269,8 @@ describe("DomainTabStrip: the next-up entry", () => {
       <MemoryRouter>
         <DomainTabStrip
           active={active}
-          counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0 }}
-          enabled={{ flight: true, cruise: true, poi: false, lodging: true }}
+          counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0, roadtrip: 0 }}
+          enabled={{ flight: true, cruise: true, poi: false, lodging: true, roadtrip: true }}
           onSelect={vi.fn()}
           upcoming={entries}
           nowMs={NOW}
@@ -353,9 +353,9 @@ describe("DomainTabStrip: the next-up entry", () => {
         <MemoryRouter>
           <DomainTabStrip
             active="all"
-            counts={{ flight: 123, cruise: 0, poi: 0, lodging: 243 }}
+            counts={{ flight: 123, cruise: 0, poi: 0, lodging: 243, roadtrip: 0 }}
             scheduledCounts={scheduledCounts}
-            enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+            enabled={{ flight: true, cruise: true, poi: true, lodging: true, roadtrip: true }}
             onSelect={() => {}}
           />
         </MemoryRouter>

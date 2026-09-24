@@ -1,5 +1,7 @@
 import { countRoadtripNights, stationState, type RoadtripNights } from "../../shared/tour/roadtrip";
 import { drivenKm, travelledKm } from "../tour/tourDistance";
+import type { CountryResolver } from "../geo/countryFromCoordinates";
+import { toCountryCode } from "../../shared/countryEvidence";
 
 /**
  * What a roadtrip page and list say about one roadtrip, derived from rows the
@@ -16,7 +18,9 @@ export const STATION_STAY_SELECT = {
   datePrecision: true,
   nights: true,
   status: true,
-  lodging: { select: { id: true, name: true, type: true, city: true, country: true } },
+  lodging: {
+    select: { id: true, name: true, type: true, city: true, country: true, isoCountryCode: true },
+  },
 } as const;
 
 export const STATION_SELECT = {
@@ -58,6 +62,7 @@ export interface StationRow {
       type: string;
       city: string | null;
       country: string | null;
+      isoCountryCode: string | null;
     };
   } | null;
 }
@@ -147,9 +152,34 @@ export interface RoadtripListRow {
   _count: { tracks: number };
 }
 
+/**
+ * The countries a roadtrip's stations stand in (ISO alpha-2). The land-only
+ * boundary set answers null on the shore — measured at Hirtshals and
+ * Stavanger, which is where campsites and ferry ports are — so a station's
+ * linked stay speaks for its country there; with neither, it abstains. The
+ * cross-domain overview asks the same question of the same rule.
+ */
+export function stationCountries(
+  stations: ReadonlyArray<{
+    lat: number | null;
+    lon: number | null;
+    lodgingStay: { lodging: { isoCountryCode: string | null } } | null;
+  }>,
+  resolver: Pick<CountryResolver, "countryAt">
+): string[] {
+  const touched = new Set<string>();
+  for (const s of stations) {
+    const fromPoint = s.lat !== null && s.lon !== null ? resolver.countryAt(s.lat, s.lon) : null;
+    const code = fromPoint ?? toCountryCode(s.lodgingStay?.lodging.isoCountryCode ?? null);
+    if (code) touched.add(code);
+  }
+  return [...touched].sort();
+}
+
 export function toRoadtripSummary(
   row: RoadtripListRow,
-  tourCount: number
+  tourCount: number,
+  countries: string[]
 ): Record<string, unknown> {
   const nights = nightsOf(row.stops);
   return {
@@ -176,5 +206,6 @@ export function toRoadtripSummary(
     placesSlept: nights.placesSlept,
     trackCount: row._count.tracks,
     tourCount,
+    countries,
   };
 }

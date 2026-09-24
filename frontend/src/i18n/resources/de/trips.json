@@ -360,7 +360,7 @@
       "loading": "Tracks werden geladen …",
       "loadError": "Tracks konnten nicht geladen werden",
       "empty": "Noch kein Track für diese Tour",
-      "uploadLabel": "GPX hochladen",
+      "uploadLabel": "Aufzeichnung hochladen (GPX, TCX, FIT)",
       "uploading": "Wird hochgeladen …",
       "uploadError": "Der Track konnte nicht hochgeladen werden",
       "deleteLabel": "Löschen",
@@ -378,7 +378,11 @@
       "noCoverageReason": "Kein aufgezeichneter Track deckt diese Etappe ab",
       "source": {
         "gpx": "GPX-Upload",
-        "dawarich": "Dawarich"
+        "dawarich": "Dawarich",
+        "fit": "FIT-Datei",
+        "tcx": "TCX-Datei",
+        "strava": "Strava",
+        "healthkit": "Apple Health"
       },
       "dawarich": {
         "pullLabel": "Aus Dawarich abrufen",

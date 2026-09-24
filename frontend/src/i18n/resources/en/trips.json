@@ -360,7 +360,7 @@
       "loading": "Loading tracks …",
       "loadError": "Tracks could not be loaded",
       "empty": "No track for this tour yet",
-      "uploadLabel": "Upload GPX",
+      "uploadLabel": "Upload recording (GPX, TCX, FIT)",
       "uploading": "Uploading …",
       "uploadError": "The track could not be uploaded",
       "deleteLabel": "Delete",
@@ -378,7 +378,11 @@
       "noCoverageReason": "No recorded track covers this leg",
       "source": {
         "gpx": "GPX upload",
-        "dawarich": "Dawarich"
+        "dawarich": "Dawarich",
+        "fit": "FIT file",
+        "tcx": "TCX file",
+        "strava": "Strava",
+        "healthkit": "Apple Health"
       },
       "dawarich": {
         "pullLabel": "Pull from Dawarich",

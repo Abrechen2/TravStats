@@ -5,7 +5,9 @@ import { applyHoverCursor } from "../map/mapCursor";
 import { createMarkerTooltip } from "../map/markerTooltip";
 import { ArcLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
-import type { Trip } from "../../types";
+import type { TripMapContent } from "./tripMapContent";
+
+export type { TripMapContent };
 import type { Lodging } from "../../types/lodging";
 import type { TourGeometry } from "../../types/tour";
 import { buildLodgingPins } from "../layers/lodgingPinsLayer";
@@ -112,8 +114,14 @@ function DeckGLOverlay({
 }
 
 interface TripMapProps {
-  trip: Trip;
-  tourGeometries?: readonly { routeId: string; name: string; geometry: TourGeometry }[];
+  trip: TripMapContent;
+  tourGeometries?: readonly {
+    routeId: string;
+    name: string;
+    geometry: TourGeometry;
+    /** A roadtrip's line takes the roadtrip hue instead of the tour one. */
+    rgb?: [number, number, number];
+  }[];
 }
 
 // Stable module-level default. `tourGeometries = []` inline in the props
@@ -122,7 +130,7 @@ interface TripMapProps {
 // with no `tourGeometries` at all) — a fresh reference invalidates the
 // `layers` useMemo below every single render, defeating the dependency array
 // entirely even though it lists `tourGeometries` correctly.
-const NO_TOUR_GEOMETRIES: readonly { routeId: string; name: string; geometry: TourGeometry }[] = [];
+const NO_TOUR_GEOMETRIES: NonNullable<TripMapProps["tourGeometries"]> = [];
 
 export default function TripMap({
   trip,

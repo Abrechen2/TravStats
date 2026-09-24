@@ -47,7 +47,8 @@
       "all": "All",
       "unlocked": "Unlocked",
       "open": "Open"
-    }
+    },
+    "domainRoadtrip": "Roadtrips"
   },
   "progress": {
     "label": "Progress",

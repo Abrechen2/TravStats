@@ -5,6 +5,7 @@ export interface DashboardCounts {
   cruise: number;
   poi: number;
   lodging: number;
+  roadtrip: number;
 }
 
 /**
@@ -23,7 +24,7 @@ export interface DashboardScheduledCounts {
   lodging: number;
 }
 
-const INITIAL_COUNTS: DashboardCounts = { flight: 0, cruise: 0, poi: 0, lodging: 0 };
+const INITIAL_COUNTS: DashboardCounts = { flight: 0, cruise: 0, poi: 0, lodging: 0, roadtrip: 0 };
 const INITIAL_SCHEDULED_COUNTS: DashboardScheduledCounts = { flight: 0, cruise: 0, lodging: 0 };
 
 interface DashboardCountsState {

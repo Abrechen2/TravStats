@@ -94,13 +94,15 @@
       "countries": "Countries",
       "lists": "Lists",
       "bestChecklist": "Best checklist",
-      "cruiseNights": "Nights aboard"
+      "cruiseNights": "Nights aboard",
+      "roadtripNights": "Nights on the road"
     },
     "topItems": {
       "airlines": "Top airlines",
       "cruiseLines": "Top cruise lines",
       "chains": "Top chains",
-      "categories": "Top categories"
+      "categories": "Top categories",
+      "vehicles": "Vehicles"
     },
     "badge": {
       "balconyCabin": "Balcony cabin",

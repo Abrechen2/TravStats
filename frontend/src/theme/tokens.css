@@ -49,6 +49,7 @@
   --ts-domain-hotel: #5ec2b2;
   --ts-domain-poi: #e7e3dc;
   --ts-domain-tour: #8faa5f;
+  --ts-domain-roadtrip: #a597f0;
 
   /* Status — always a pill, never plain text (DESIGN_SYSTEM.md §2.6) */
   --ts-status-pending: #6fa0d6;
@@ -185,6 +186,7 @@
   --color-ts-domain-hotel: var(--ts-domain-hotel);
   --color-ts-domain-poi: var(--ts-domain-poi);
   --color-ts-domain-tour: var(--ts-domain-tour);
+  --color-ts-domain-roadtrip: var(--ts-domain-roadtrip);
   --color-ts-status-pending: var(--ts-status-pending);
   --color-ts-status-scheduled: var(--ts-status-scheduled);
   --color-ts-status-flown: var(--ts-status-flown);

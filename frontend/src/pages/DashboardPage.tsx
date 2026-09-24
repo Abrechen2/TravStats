@@ -20,6 +20,7 @@ import { CruisesTab } from "../components/Dashboard/tabs/CruisesTab";
 import { PoiTab } from "../components/Dashboard/tabs/PoiTab";
 import { LodgingTab } from "../components/Dashboard/tabs/LodgingTab";
 import { TourTab } from "../components/Dashboard/tabs/TourTab";
+import { roadtripsApi } from "../lib/api/roadtrips";
 
 const IMPORT_MOVED_FLAG = "tsv1_5_import_moved_seen";
 
@@ -96,16 +97,23 @@ export default function DashboardPage(): JSX.Element {
         // `visited: true` so the tab count matches "Orte besucht" on the tab
         // itself. Counting wishlist entries here would make the strip disagree
         // with every figure inside the tab (shared/placeCounting.ts).
+        // Roadtrips (2.7): the list is small and carries its own figures, so
+        // its length is the count — there is no cheaper endpoint to ask.
+        const roadtripsPromise = isEnabled("roadtrip")
+          ? roadtripsApi.list().then((r) => r.length)
+          : Promise.resolve(0);
         const placesPromise = placesVisible
           ? placesApi.count({ visited: true })
           : Promise.resolve(0);
-        const [flights, scheduledFlights, cruises, lodgingStats, placeCount] = await Promise.all([
-          flightsPromise,
-          scheduledFlightsPromise,
-          cruisesPromise,
-          lodgingPromise,
-          placesPromise,
-        ]);
+        const [flights, scheduledFlights, cruises, lodgingStats, placeCount, roadtripCount] =
+          await Promise.all([
+            flightsPromise,
+            scheduledFlightsPromise,
+            cruisesPromise,
+            lodgingPromise,
+            placesPromise,
+            roadtripsPromise,
+          ]);
         if (cancelled) return;
         setCounts(
           {
@@ -113,6 +121,7 @@ export default function DashboardPage(): JSX.Element {
             cruise: cruises.length,
             poi: placeCount,
             lodging: lodgingStats?.lodgingsCount ?? 0,
+            roadtrip: roadtripCount,
           },
           {
             flight: scheduledFlights.total,
@@ -159,6 +168,7 @@ export default function DashboardPage(): JSX.Element {
       {tab === "poi" && placesVisible && <PoiTab key={refreshToken} />}
       {tab === "lodging" && <LodgingTab key={refreshToken} />}
       {tab === "tour" && <TourTab key={refreshToken} />}
+      {tab === "roadtrip" && <TourTab key={`roadtrip-${refreshToken}`} kind="roadtrip" />}
     </DashboardLayout>
   );
 }

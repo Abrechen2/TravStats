@@ -8,8 +8,16 @@ import {
 } from "../dashboard";
 
 describe("dashboard tab + mode registry", () => {
-  it("exposes exactly the six agreed tabs", () => {
-    expect(DASHBOARD_TABS).toEqual(["all", "flight", "cruise", "poi", "lodging", "tour"]);
+  it("exposes exactly the seven agreed tabs", () => {
+    expect(DASHBOARD_TABS).toEqual([
+      "all",
+      "flight",
+      "cruise",
+      "poi",
+      "lodging",
+      "roadtrip",
+      "tour",
+    ]);
   });
 
   it("isDashboardTab narrows arbitrary strings", () => {

@@ -7,6 +7,8 @@
 //
 // Dates and JSON cross the wire as plain data, never `Date` objects.
 
+import type { RouteKind, RoadtripVehicle, TourActivity } from "../shared/tour/roadtrip";
+
 /**
  * The full leg-source vocabulary. The API only accepts `straight` and
  * `drawn` today (phase 1) — `routed` and `track` already exist here so a
@@ -70,6 +72,15 @@ export interface TourRoute {
   legCount: number;
   distanceKm: number;
   drivenKm: number;
+  /** "tour" (a day trip) or "roadtrip" (the 2.7 domain). */
+  kind: RouteKind;
+  activity: TourActivity | null;
+  vehicle: RoadtripVehicle | null;
+  vehicleName: string | null;
+  /** Tour only: the roadtrip station the day tour set out from. */
+  anchorStopId: string | null;
+  /** Set on rows the 2.7 migration classified by rule, until confirmed or switched. */
+  kindAssignedAutomatically: boolean;
 }
 
 export interface TourStop {
@@ -124,7 +135,9 @@ export interface TourGeometry {
  * is the RECORDING, `"track"` (a `LegSource`) is a LEG that adopted a
  * segment of one.
  */
-export const TRACK_SOURCES = ["gpx", "dawarich"] as const;
+// Since 2.7 also `fit`/`tcx` (file formats) and `strava`/`healthkit` (where an
+// imported recording came from).
+export const TRACK_SOURCES = ["gpx", "dawarich", "fit", "tcx", "strava", "healthkit"] as const;
 export type TrackSource = (typeof TRACK_SOURCES)[number];
 
 /**
@@ -150,6 +163,12 @@ export interface TourTrackMeta {
    *  `distanceKm` is a PARTIAL measurement. Always `false` for `source:
    *  "gpx"`, which refuses an oversized file outright instead. */
   truncated: boolean;
+  /** Climb in metres, measured on the raw points; null without elevation. */
+  ascentM: number | null;
+  descentM: number | null;
+  /** Time actually moving; null when the points carry no times. */
+  movingSeconds: number | null;
+  externalRef: string | null;
   createdAt: string;
 }
 
@@ -161,4 +180,8 @@ export interface TourTrackMeta {
  */
 export interface TourTrack extends TourTrackMeta {
   geometry: Array<[number, number]>;
+  /** Raw running distance per vertex — the profile's x axis. Null on old rows. */
+  cumulativeKm: number[] | null;
+  /** Metres per vertex, aligned with `geometry`. Null when the source had none. */
+  elevations: Array<number | null> | null;
 }

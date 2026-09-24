@@ -41,6 +41,8 @@ const TripsPage = lazy(() => import("./pages/TripsPage"));
 const TripDetailPage = lazy(() => import("./pages/TripDetailPage"));
 const TripRouteEditorPage = lazy(() => import("./pages/TripRouteEditorPage"));
 const ToursPage = lazy(() => import("./pages/ToursPage"));
+const RoadtripsPage = lazy(() => import("./pages/RoadtripsPage"));
+const RoadtripDetailPage = lazy(() => import("./pages/RoadtripDetailPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
@@ -435,6 +437,33 @@ function AppContent() {
               <Route
                 path="/tours"
                 element={isAuthenticated ? <ToursPage /> : <Navigate to="/login" />}
+              />
+              {/* Roadtrips (2.7). The domain guard is also the beta gate:
+                  `useEnabledDomains` drops `roadtrip` while the instance's
+                  beta switch is closed. */}
+              <Route
+                path="/roadtrips"
+                element={
+                  isAuthenticated ? (
+                    <DomainRouteGuard domain="roadtrip">
+                      <RoadtripsPage />
+                    </DomainRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
+                path="/roadtrips/:id"
+                element={
+                  isAuthenticated ? (
+                    <DomainRouteGuard domain="roadtrip">
+                      <RoadtripDetailPage />
+                    </DomainRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
               />
               {/* The SAME editor as the trip-bound path below: a tour with no
                   trip has no id to put in the URL, and every endpoint it uses

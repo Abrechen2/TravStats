@@ -37,6 +37,12 @@ function route(id: string, name: string) {
     legCount: 7,
     distanceKm: 1284.4,
     drivenKm: 1284.4,
+    kind: "tour" as const,
+    activity: null,
+    vehicle: null,
+    vehicleName: null,
+    anchorStopId: null,
+    kindAssignedAutomatically: false,
   };
 }
 
@@ -61,6 +67,12 @@ describe("TourSectionList", () => {
         legCount: 7,
         distanceKm: 1284.4,
         drivenKm: 1284.4,
+        kind: "tour",
+        activity: null,
+        vehicle: null,
+        vehicleName: null,
+        anchorStopId: null,
+        kindAssignedAutomatically: false,
       },
     ]);
 
@@ -102,6 +114,12 @@ describe("TourSectionList", () => {
       legCount: 0,
       distanceKm: 0,
       drivenKm: 0,
+      kind: "tour",
+      activity: null,
+      vehicle: null,
+      vehicleName: null,
+      anchorStopId: null,
+      kindAssignedAutomatically: false,
     });
 
     // Drive the create control the way a user would: open it, name the

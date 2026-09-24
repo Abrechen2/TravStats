@@ -147,6 +147,10 @@
           "devicePairing": {
             "name": "Geräte koppeln",
             "what": "Der Einstellungs-Eintrag „Geräte“ mit dem QR-Code, über den die Handy-App an dieses Konto gebunden wird."
+          },
+          "roadtrips": {
+            "name": "Roadtrips und Tagestouren",
+            "what": "Die Domäne „Roadtrips“ (mehrtägige Touren mit Stationen an deinen Unterkünften) und die überarbeiteten Tagestouren mit Höhenprofil."
           }
         }
       },

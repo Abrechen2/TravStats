@@ -26,7 +26,15 @@ function tour(overrides: Partial<TourSummary> = {}): TourSummary {
     tripName: "Norwegen",
     name: "Süd-Norwegen",
     mode: "road",
+    kind: "tour",
+    activity: null,
+    vehicle: null,
+    kindAssignedAutomatically: false,
     distanceKm: 1284.4,
+    distanceSource: "legs",
+    ascentM: null,
+    movingSeconds: null,
+    trackCount: 0,
     stopCount: 8,
     startDate: null,
     endDate: null,
@@ -101,6 +109,7 @@ describe("the tours page", () => {
       expect(toursApi.createStandalone).toHaveBeenCalledWith({
         name: "Besseggen",
         mode: "road",
+        activity: "hike",
       })
     );
     // Re-read, not appended: where the new tour lands in an order keyed on

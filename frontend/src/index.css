@@ -317,6 +317,10 @@
     --domain-tour-soft: color-mix(in srgb, var(--ts-domain-tour) 10%, transparent);
     --domain-tour-locked: color-mix(in srgb, var(--ts-domain-tour) 18%, transparent);
 
+    --domain-roadtrip: var(--ts-domain-roadtrip);
+    --domain-roadtrip-soft: color-mix(in srgb, var(--ts-domain-roadtrip) 10%, transparent);
+    --domain-roadtrip-locked: color-mix(in srgb, var(--ts-domain-roadtrip) 18%, transparent);
+
     /* Aliases, not colours. They exist so block 4 can move the layers one at
        a time without a tour route rendering in nothing meanwhile. */
     --domain-train: var(--domain-tour);

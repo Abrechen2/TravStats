@@ -89,7 +89,9 @@ export default function TourTrackList({
           {uploading ? t("trips:tours.tracks.uploading") : t("trips:tours.tracks.uploadLabel")}
           <input
             type="file"
-            accept=".gpx"
+            // GPX, and since 2.7 the watch formats: TCX and FIT (Garmin, Wahoo,
+            // Coros …). The server decides the format by the bytes.
+            accept=".gpx,.tcx,.fit"
             className="sr-only"
             disabled={uploading}
             onChange={(e) => {
@@ -158,6 +160,9 @@ export default function TourTrackList({
                 {t("trips:tours.tracks.pointCount", { count: track.pointCount })}
               </span>
               <span className="text-(--text-muted)">{formatDistanceKm(track.distanceKm)} km</span>
+              {track.ascentM !== null && (
+                <span className="text-(--text-muted)">↑ {Math.round(track.ascentM)} m</span>
+              )}
               <button
                 type="button"
                 className="text-xs underline"

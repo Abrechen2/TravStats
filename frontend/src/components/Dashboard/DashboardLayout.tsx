@@ -25,7 +25,7 @@ import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  counts: { flight: number; cruise: number; poi: number; lodging: number };
+  counts: { flight: number; cruise: number; poi: number; lodging: number; roadtrip: number };
   /** What is still ahead per domain — see DomainTabStrip (B6). Whether it is
    * part of `counts` or beside it differs per domain; the strip says which. */
   scheduledCounts?: { flight?: number; cruise?: number; lodging?: number };
@@ -79,6 +79,7 @@ export function DashboardLayout({
     cruise: isEnabled("cruise"),
     poi: isEnabled("poi"),
     lodging: isEnabled("lodging"),
+    roadtrip: isEnabled("roadtrip"),
   };
 
   // What the "+" menu offers. One entry differs from `enabledDomains`, on
@@ -101,7 +102,16 @@ export function DashboardLayout({
     counts.flight === 0 &&
     counts.cruise === 0 &&
     counts.poi === 0 &&
-    counts.lodging === 0;
+    counts.lodging === 0 &&
+    counts.roadtrip === 0;
+
+  // A tour and a roadtrip open a page, not a modal: both are an ordered list
+  // of points, which is not a thing to type into a dialog over the map.
+  const startAdding = (domain: AddableDomain): void => {
+    if (domain === "tour") navigate("/tours");
+    else if (domain === "roadtrip") navigate("/roadtrips");
+    else setAddingDomain(domain);
+  };
 
   const handleFlightCreate = async (
     flight: FlightInput,
@@ -143,19 +153,7 @@ export function DashboardLayout({
         )}
         <div style={{ position: "absolute", top: 16, right: 16, zIndex: 30 }}>
           {tab === "all" ? (
-            <AddDomainPicker
-              enabled={addableDomains}
-              onPick={(domain) => {
-                // A tour opens a page, not a modal: it is made of an ordered
-                // list of points, which is not a thing to type into a dialog
-                // floating over the map.
-                if (domain === "tour") {
-                  navigate("/tours");
-                  return;
-                }
-                setAddingDomain(domain);
-              }}
-            />
+            <AddDomainPicker enabled={addableDomains} onPick={startAdding} />
           ) : (
             // `isValidDomain` narrows `tab` to `DomainKey` — the actual set
             // this button knows how to handle — rather than a cast that
@@ -169,7 +167,7 @@ export function DashboardLayout({
             isValidDomain(tab) && (
               <button
                 type="button"
-                onClick={() => setAddingDomain(tab)}
+                onClick={() => startAdding(tab)}
                 className="cursor-pointer rounded-lg px-3 py-2 text-[13px] font-semibold shadow-lg transition-opacity hover:opacity-90"
                 style={{ background: "rgb(240,169,71)", color: "#0d1117", border: "none" }}
               >

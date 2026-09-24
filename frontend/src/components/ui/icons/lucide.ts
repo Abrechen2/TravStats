@@ -65,6 +65,13 @@ export const LUCIDE = {
     ["rect", { width: "18", height: "18", x: "3", y: "4", rx: "2" }],
     ["path", { d: "M3 10h18" }],
   ],
+  // Lucide "caravan" — the roadtrip domain (2.7).
+  caravan: [
+    ["path", { d: "M18 19V9a4 4 0 0 0-4-4H6a4 4 0 0 0-4 4v8a2 2 0 0 0 2 2h2" }],
+    ["path", { d: "M2 9h3a1 1 0 0 1 1 1v2a1 1 0 0 1-1 1H2" }],
+    ["path", { d: "M22 17v1a1 1 0 0 1-1 1H10v-9a1 1 0 0 1 1-1h2a1 1 0 0 1 1 1v9" }],
+    ["circle", { cx: "8", cy: "19", r: "2" }],
+  ],
   check: [["path", { d: "M20 6 9 17l-5-5" }]],
   "chevron-down": [["path", { d: "m6 9 6 6 6-6" }]],
   "chevron-right": [["path", { d: "m9 18 6-6-6-6" }]],

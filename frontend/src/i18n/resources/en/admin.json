@@ -147,6 +147,10 @@
           "devicePairing": {
             "name": "Device pairing",
             "what": "The Devices settings entry and its QR code, the only way to bind the phone app to this account."
+          },
+          "roadtrips": {
+            "name": "Roadtrips and day tours",
+            "what": "The “Roadtrips” domain (multi-day journeys with stations at your stays) and the reworked day tours with an elevation profile."
           }
         }
       },

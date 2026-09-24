@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { RoadtripVehicle, TourActivity } from "../../shared/tour/roadtrip";
 import type {
   TourRoute,
   TourStop,
@@ -13,6 +14,8 @@ import type {
 export interface CreateTourRouteInput {
   name: string;
   mode: LegMode;
+  /** What the day tour was (2.7). */
+  activity?: TourActivity | null;
 }
 
 /** One authored point of a standalone tour. `id` identifies an existing
@@ -30,6 +33,16 @@ export interface UpdateTourRouteInput {
   name?: string;
   mode?: LegMode;
   color?: string | null;
+  notes?: string | null;
+  startOdometerKm?: number | null;
+  endOdometerKm?: number | null;
+  /** Kind-specific fields (2.7) — see `kindFieldsSchema` on the server. */
+  activity?: TourActivity | null;
+  vehicle?: RoadtripVehicle | null;
+  vehicleName?: string | null;
+  anchorStopId?: string | null;
+  /** Only a roadtrip may move between trips; the server refuses it for a tour. */
+  tripId?: string | null;
 }
 
 // `drivingMinutes`/`tollCost`/`currency` are nullable AND optional: sending

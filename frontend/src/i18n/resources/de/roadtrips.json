@@ -1,0 +1,150 @@
+{
+  "pageTitle": "Roadtrips",
+  "newRoadtrip": "Neuer Roadtrip",
+  "namePlaceholder": "Name, z. B. Norwegen mit dem Wohnmobil",
+  "vehicleLabel": "Fahrzeug",
+  "vehicleNone": "Fahrzeug offen lassen",
+  "create": "Anlegen",
+  "createError": "Der Roadtrip konnte nicht angelegt werden.",
+  "loadError": "Die Roadtrips konnten nicht geladen werden.",
+  "detailLoadError": "Dieser Roadtrip konnte nicht geladen werden.",
+  "empty": "Noch kein Roadtrip. Ein Roadtrip sind mehrere Tage unterwegs: Stationen, an denen du übernachtest, und die Strecke dazwischen.",
+  "undated": "ohne Datum",
+  "inTrip": "Teil der Reise „{{name}}“",
+  "nightsCount_one": "{{count}} Nacht",
+  "nightsCount_other": "{{count}} Nächte",
+  "stationCount_one": "{{count}} Station",
+  "stationCount_other": "{{count}} Stationen",
+  "tourCount_one": "{{count}} Tagestour",
+  "tourCount_other": "{{count}} Tagestouren",
+  "nightsSoft": "* Mindestens eine Übernachtung hat keine bekannte Länge — die Zahl ist eine Untergrenze.",
+  "backToList": "← Alle Roadtrips",
+  "backToRoadtrip": "Zurück zum Roadtrip",
+  "editLegs": "Strecke & Aufzeichnungen bearbeiten",
+  "legStraight": "Luftlinie",
+  "startTour": "+ Tagestour",
+  "startTourError": "Die Tagestour konnte nicht angelegt werden.",
+  "delete": "Roadtrip löschen",
+  "deleteError": "Der Roadtrip konnte nicht gelöscht werden.",
+  "deleteConfirm": {
+    "title": "Roadtrip löschen?",
+    "message": "„{{name}}“ wird mit seinen Stationen, Etappen und Aufzeichnungen gelöscht. Verknüpfte Unterkünfte und Aufenthalte bleiben erhalten.",
+    "confirm": "Löschen"
+  },
+  "kind": {
+    "roadtrip": "Roadtrip",
+    "tour": "Tagestour"
+  },
+  "vehicle": {
+    "motorhome": "Wohnmobil",
+    "campervan": "Campervan",
+    "caravan": "Wohnwagen",
+    "car": "Auto",
+    "motorcycle": "Motorrad",
+    "bicycle": "Fahrrad",
+    "rail": "Bahn",
+    "other": "Anderes",
+    "unknown": "Ohne Angabe"
+  },
+  "activityLabel": "Aktivität",
+  "activityNone": "Ohne Aktivität",
+  "activitySaveError": "Die Aktivität konnte nicht gespeichert werden.",
+  "activity": {
+    "hike": "Wanderung",
+    "walk": "Spaziergang",
+    "run": "Lauf",
+    "bike": "Radtour",
+    "mtb": "Mountainbike",
+    "ski": "Skitour",
+    "paddle": "Paddeln",
+    "climb": "Klettern",
+    "other": "Andere"
+  },
+  "figures": {
+    "km": "gefahren",
+    "days": "Tage",
+    "nights": "Nächte · {{places}} Plätze",
+    "countries": "Länder",
+    "tours": "Tagestouren"
+  },
+  "night": {
+    "stay": "Unterkunft",
+    "free": "Übernachtung ohne Unterkunft",
+    "pass": "Durchfahrt"
+  },
+  "stations": {
+    "title": "Stationen",
+    "edit": "Stationen bearbeiten",
+    "empty": "Noch keine Stationen. Füge die Orte hinzu, an denen du unterwegs warst.",
+    "add": "Station hinzufügen",
+    "save": "Stationen speichern",
+    "saveError": "Die Stationen konnten nicht gespeichert werden.",
+    "remove": "Entfernen",
+    "moveUp": "Nach oben",
+    "moveDown": "Nach unten",
+    "titlePlaceholder": "Name der Station",
+    "from": "von",
+    "to": "bis",
+    "nightLabel": "Übernachtung an dieser Station",
+    "incomplete": "Jede Station braucht einen Namen und einen Ort."
+  },
+  "stay": {
+    "search": "Unterkunft suchen",
+    "noneNearby": "Kein Aufenthalt in der Nähe dieser Daten — such nach dem Namen oder leg einen an.",
+    "noMatch": "Keine Unterkunft mit diesem Namen.",
+    "createNew": "Neue Unterkunft anlegen",
+    "newName": "Name der Unterkunft",
+    "newType": "Art der Unterkunft",
+    "createAndLink": "Anlegen und verknüpfen",
+    "createFailed": "Die Unterkunft konnte nicht angelegt werden.",
+    "linked": "verknüpfte Unterkunft",
+    "change": "ändern"
+  },
+  "review": {
+    "title_one": "Ein Eintrag wurde beim Update auf 2.7 automatisch eingeordnet",
+    "title_other": "{{count}} Einträge wurden beim Update auf 2.7 automatisch eingeordnet",
+    "intro": "Touren und Roadtrips sind jetzt getrennt. Mehrtägige Straßen-, Fähr- und Bahnabschnitte sind Roadtrips geworden, alles andere Tagestouren. Stimmt das?",
+    "isNow": {
+      "tour": "jetzt Tagestour",
+      "roadtrip": "jetzt Roadtrip"
+    },
+    "keep": "Passt so",
+    "moveTo": {
+      "tour": "Ist eine Tagestour",
+      "roadtrip": "Ist ein Roadtrip"
+    },
+    "error": "Die Einordnung konnte nicht gespeichert werden."
+  },
+  "recording": {
+    "distance": "Distanz",
+    "ascent": "Aufstieg",
+    "descent": "Abstieg",
+    "duration": "Dauer",
+    "moving": "in Bewegung",
+    "profileLabel": "Höhenprofil von {{low}} bis {{high}} Metern"
+  },
+  "dashboard": {
+    "listTitle": "Roadtrips",
+    "listEmpty": "Noch keine Roadtrips.",
+    "emptyTitle": "Noch kein Roadtrip auf der Karte",
+    "emptyBody": "Leg einen Roadtrip mit seinen Stationen an — die Strecke erscheint dann hier.",
+    "emptyCta": "Roadtrip anlegen"
+  },
+  "stats": {
+    "count": "Roadtrips",
+    "countHint_one": "ein Roadtrip unterwegs gewesen",
+    "countHint_other": "{{count}} Roadtrips unterwegs gewesen",
+    "distance": "Strecke",
+    "drivenHint": "davon {{km}} km selbst gefahren (ohne Fähren)",
+    "nights": "Nächte",
+    "nightsHint": "{{stay}} in Unterkünften, {{free}} ohne Unterkunft",
+    "nightsSoft": "Mindestens eine Übernachtung hat keine bekannte Länge.",
+    "countries": "Länder",
+    "recordsLabel": "Rekorde",
+    "longestByKm": "Längste Roadtrips",
+    "longestByNights": "Die meisten Nächte",
+    "vehicles": "Fahrzeuge",
+    "empty": "In diesem Zeitraum gibt es keinen Roadtrip.",
+    "loadFailed": "Die Roadtrips konnten nicht geladen werden."
+  }
+}

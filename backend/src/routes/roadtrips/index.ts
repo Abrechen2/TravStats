@@ -9,12 +9,14 @@ import {
   STATION_SELECT,
   nightsOf,
   spanOf,
+  stationCountries,
   toRoadtripSummary,
   toStationDto,
 } from "../../services/roadtrip/roadtripSummary";
 import { resolveTrip } from "../trips/resolveTrip";
 import { toDto, toLegDto, ROUTE_SELECT } from "../trips/tourRoutes";
 import logger from "../../utils/logger";
+import { getCountryResolver } from "../../services/geo/countryFromCoordinates";
 import stationRoutes from "./stations";
 import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
 
@@ -80,8 +82,15 @@ router.get(
         userId,
         rows.map((r) => r.id)
       );
+      const resolver = rows.length > 0 ? await getCountryResolver() : null;
       const roadtrips = rows
-        .map((r) => toRoadtripSummary(r, tourCounts.get(r.id) ?? 0))
+        .map((r) =>
+          toRoadtripSummary(
+            r,
+            tourCounts.get(r.id) ?? 0,
+            resolver ? stationCountries(r.stops, resolver) : []
+          )
+        )
         // Sort-then-return: the order key is derived from the stations and
         // cannot be pushed into the query. Undated ones go last.
         .sort((a, b) => String(b.startDate ?? "").localeCompare(String(a.startDate ?? "")));
@@ -175,7 +184,9 @@ router.get(
       ]);
 
       const nights = nightsOf(stations);
+      const resolver = await getCountryResolver();
       res.json({
+        countries: stationCountries(stations, resolver),
         roadtrip: toDto(route),
         trip: route.trip,
         ...spanOf(stations),
