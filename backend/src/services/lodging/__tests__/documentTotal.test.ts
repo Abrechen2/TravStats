@@ -179,6 +179,16 @@ describe("documentSectionFor", () => {
     expect(documentSectionFor(TWO, null, [])).toBe(TWO);
   });
 
+  it("attributes nothing when two bookings name the same hotel (AUD-050, re-check)", () => {
+    const sameHouse = [
+      "Hotel Alpha, 10-12 January",
+      "Total price: EUR 100.00",
+      "Hotel Alpha, 5-9 February",
+      "Total price: EUR 500.00",
+    ].join("\n");
+    expect(documentSectionFor(sameHouse, "Hotel Alpha", ["hotel alpha "])).toBe("");
+  });
+
   it("attributes nothing to a booking the document does not name", () => {
     expect(documentSectionFor(TWO, "Hotel Gamma", ["Hotel Alpha"])).toBe("");
     expect(documentSectionFor(TWO, null, ["Hotel Alpha"])).toBe("");
