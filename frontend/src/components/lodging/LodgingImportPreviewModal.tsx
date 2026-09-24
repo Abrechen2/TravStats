@@ -3,7 +3,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatStayPeriod, hasUnknownLength, stayNights } from "../../lib/lodgingDateDisplay";
 import { logger } from "../../lib/logger";
-import { ECB_CURRENCIES } from "../../shared/currencies";
+import { ECB_CURRENCIES, ISO_4217 } from "../../shared/currencies";
 import type { LodgingCurrency } from "../../types/lodging";
 import type {
   LodgingDedupeHint,
@@ -78,10 +78,22 @@ function priceLacksCurrency(row: EditableRow): boolean {
   );
 }
 
-/** The ECB set, plus whatever the row already carries. */
-function currencyOptions(current: string | null | undefined): readonly string[] {
+/**
+ * Every ISO 4217 code the server accepts, the ECB set first. Offering only the
+ * ECB set meant a price in dirham or dinar could be KEPT when the row already
+ * carried it, but never CHOSEN when the parser left the unit empty — so the
+ * one row the picker exists for could not be completed (AUD-057, 13.09.).
+ */
+export function currencyOptionGroups(current: string | null | undefined): {
+  frequent: readonly string[];
+  rest: readonly string[];
+} {
   const ecb: readonly string[] = ECB_CURRENCIES;
-  return current && !ecb.includes(current) ? [current, ...ecb] : ecb;
+  const frequent = current && !ecb.includes(current) ? [current, ...ecb] : ecb;
+  const rest = Object.keys(ISO_4217)
+    .filter((code) => !frequent.includes(code))
+    .sort();
+  return { frequent, rest };
 }
 
 function toEditableRow(row: LodgingImportPreviewRow): EditableRow {
@@ -631,11 +643,20 @@ function PreviewRowLine({ row, onChange, t, language }: PreviewRowLineProps): JS
               className={INPUT}
             >
               <option value="">{t("lodging:import.preview.chooseCurrency")}</option>
-              {currencyOptions(row.stay.currency).map((code) => (
-                <option key={code} value={code}>
-                  {code}
-                </option>
-              ))}
+              <optgroup label={t("common:currencySelect.frequent")}>
+                {currencyOptionGroups(row.stay.currency).frequent.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </optgroup>
+              <optgroup label={t("common:currencySelect.all")}>
+                {currencyOptionGroups(row.stay.currency).rest.map((code) => (
+                  <option key={code} value={code}>
+                    {code}
+                  </option>
+                ))}
+              </optgroup>
             </select>
           )}
         </td>
