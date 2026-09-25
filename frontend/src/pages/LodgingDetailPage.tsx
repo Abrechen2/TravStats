@@ -40,6 +40,7 @@ import { deriveStayMembership } from "../shared/membershipDerivation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
 import type { Lodging, LodgingMembership, LodgingStay } from "../types/lodging";
+import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 
 /** What a figure reads as when it cannot be stated. The same dash the spend
  *  card already prints for an unconvertible total. */
@@ -424,6 +425,9 @@ export default function LodgingDetailPage(): JSX.Element {
       <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
         <div className="flex flex-col gap-6 md:col-span-3">
           <WikipediaCard kind="lodging" id={lodging.id} />
+          {lodging.lat !== null && lodging.lon !== null && (
+            <TripPhotoWindowStrip entry="lodging" id={lodging.id} />
+          )}
           <section className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
             <div className="flex items-center justify-between gap-3">
               <h2 className="t-label-mono">

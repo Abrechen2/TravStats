@@ -2,6 +2,7 @@ import { useState, useEffect } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { tripsApi } from "../../../lib/api/trips";
 import { logger } from "../../../lib/logger";
+import { useTripPreselection } from "../../../hooks/useTripPreselection";
 import type { Trip } from "../../../types";
 
 interface TripSelectFieldProps {
@@ -10,6 +11,9 @@ interface TripSelectFieldProps {
   /** Translated helper line under the select; the edit modal explains its
    *  save-then-assign timing here. */
   hint?: string;
+  /** The departure day of a NEW flight: the trip covering it is preselected
+   *  until the user touches the select. Left out when editing. */
+  preselectForDate?: string;
   labelClassName?: string;
   inputClassName?: string;
 }
@@ -24,6 +28,7 @@ export default function TripSelectField({
   value,
   onChange,
   hint,
+  preselectForDate,
   labelClassName = "",
   inputClassName = "",
 }: TripSelectFieldProps): JSX.Element {
@@ -45,12 +50,20 @@ export default function TripSelectField({
     };
   }, []);
 
+  const pick = useTripPreselection({
+    enabled: preselectForDate !== undefined,
+    trips,
+    date: preselectForDate ?? "",
+    value,
+    onChange,
+  });
+
   return (
     <div>
       <label className={`label ${labelClassName}`.trim()}>{t("flights:edit.tripLabel")}</label>
       <select
         value={value}
-        onChange={(e) => onChange(e.target.value)}
+        onChange={(e) => pick(e.target.value)}
         className={`input ${inputClassName}`.trim()}
       >
         <option value="">{t("flights:edit.tripNone")}</option>

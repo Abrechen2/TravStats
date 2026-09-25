@@ -89,6 +89,45 @@ const facetOption = <T extends z.ZodTypeAny>(value: T) =>
 
 registry.registerPath({
   method: "get",
+  path: "/flights/entry-suggestions",
+  summary: "Suggestions for a flight form from the user's own logbook",
+  description:
+    "Seats, flight numbers, the frequent flyer number and departure terminals the " +
+    "requesting user has recorded before, most frequent first, then most recently flown. " +
+    "Flight numbers favour the route (`dep` + `arr`), then the airline; with neither given " +
+    "they are the overall ranking. The frequent flyer number is the one from the latest " +
+    "flight with the same marketing airline, null without `airline` or without a match. " +
+    "Terminals need `dep`. Suggestions only — nothing here is written.",
+  tags: ["Flights"],
+  request: {
+    query: z.object({
+      airline: z.string().max(100).optional().describe("Marketing airline name, IATA or ICAO"),
+      dep: z.string().optional().describe("Departure airport, IATA or ICAO"),
+      arr: z.string().optional().describe("Arrival airport, IATA or ICAO"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Ranked suggestions; empty lists where the logbook has nothing to offer",
+      content: {
+        "application/json": {
+          schema: z.object({
+            seats: z.array(z.string()),
+            flightNumbers: z.array(z.string()),
+            frequentFlyerNumber: z.string().nullable(),
+            departureTerminals: z.array(z.string()),
+          }),
+        },
+      },
+    },
+    400: { description: "Validation failed", content: errorContent },
+    401: { description: "Missing or invalid token", content: errorContent },
+    429: { description: "Rate limit exceeded", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/flights/facets",
   summary: "Filter options and headline figures for a flight list",
   description:

@@ -5,6 +5,11 @@ import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { TRIP_COLORS as PALETTE } from "../../lib/tripColors";
 import CompanionPicker from "../CompanionPicker";
+import TagInput from "../TagInput";
+import SuggestionChips from "../common/SuggestionChips";
+import { useTripEntrySuggestions } from "../../hooks/useTripEntrySuggestions";
+import { tripEntrySpan } from "../../lib/tripEntrySpan";
+import { formatDate } from "../../lib/displayFormat";
 
 interface TripModalProps {
   trip: Trip | null; // null = create mode
@@ -45,17 +50,6 @@ function fromDateInput(value: string): string | null {
   return new Date(value + "T00:00:00.000Z").toISOString();
 }
 
-function csvFromArray(arr: string[]): string {
-  return arr.join(", ");
-}
-
-function arrayFromCsv(value: string): string[] {
-  return value
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
 export default function TripModal({ trip, onClose, onSaved }: TripModalProps): JSX.Element {
   const { t } = useTranslation(["trips", "common"]);
   const addToast = useToastStore((s) => s.addToast);
@@ -69,7 +63,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const [endDate, setEndDate] = useState(toDateInput(trip?.endDate ?? null));
   const [originLabel, setOriginLabel] = useState(trip?.originLabel ?? "");
   const [destinationLabel, setDestinationLabel] = useState(trip?.destinationLabel ?? "");
-  const [tagsCsv, setTagsCsv] = useState(csvFromArray(trip?.tags ?? []));
+  const [tags, setTags] = useState<string[]>(trip?.tags ?? []);
   const [companions, setCompanions] = useState<string[]>(trip?.companions ?? []);
   const [notes, setNotes] = useState(trip?.notes ?? "");
   // Cover is upload-only. The chosen file is buffered and uploaded on save,
@@ -83,6 +77,14 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const [saving, setSaving] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  // Offered under the two place labels, never written into them: the labels
+  // stay the user's free text.
+  const placeSuggestions = useTripEntrySuggestions(trip?.id ?? null);
+  // Read from the entries the trip detail already carries; a trip from a list
+  // endpoint has none, and then there is simply nothing to offer.
+  const entrySpan = trip ? tripEntrySpan(trip) : null;
+  const offerEntrySpan =
+    entrySpan !== null && (entrySpan.start !== startDate || entrySpan.end !== endDate);
 
   // Release the object URL of a pending pick when it changes or on unmount.
   useEffect(() => {
@@ -117,7 +119,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
     setEndDate(toDateInput(trip.endDate));
     setOriginLabel(trip.originLabel ?? "");
     setDestinationLabel(trip.destinationLabel ?? "");
-    setTagsCsv(csvFromArray(trip.tags));
+    setTags(trip.tags);
     setCompanions(trip.companions);
     setNotes(trip.notes ?? "");
     setCoverUrl(trip.coverImageUrl ?? "");
@@ -144,7 +146,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           endDate: fromDateInput(endDate),
           originLabel: originLabel.trim() || null,
           destinationLabel: destinationLabel.trim() || null,
-          tags: arrayFromCsv(tagsCsv),
+          tags,
           companions,
           notes: notes.trim() || null,
           ...(removeCover ? { coverImageUrl: null } : {}),
@@ -159,7 +161,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           endDate: fromDateInput(endDate) ?? undefined,
           originLabel: originLabel.trim() || undefined,
           destinationLabel: destinationLabel.trim() || undefined,
-          tags: arrayFromCsv(tagsCsv),
+          tags,
           companions,
           notes: notes.trim() || undefined,
         });
@@ -295,6 +297,21 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                   />
                 </Field>
               </div>
+              {offerEntrySpan && entrySpan && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStartDate(entrySpan.start);
+                    setEndDate(entrySpan.end);
+                  }}
+                  className="-mt-2 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent)"
+                >
+                  {t("trips:modal.useEntrySpan", {
+                    start: formatDate(entrySpan.start, { timeZone: "UTC" }),
+                    end: formatDate(entrySpan.end, { timeZone: "UTC" }),
+                  })}
+                </button>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label={t("trips:modal.originLabel")}>
@@ -305,6 +322,12 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                     className="w-full rounded-lg px-3 py-2 text-sm"
                     style={inputStyle}
                   />
+                  <SuggestionChips
+                    value={originLabel}
+                    suggestions={placeSuggestions.origins}
+                    onPick={setOriginLabel}
+                    fieldLabel={t("trips:modal.originLabel")}
+                  />
                 </Field>
                 <Field label={t("trips:modal.destinationLabel")}>
                   <input
@@ -313,6 +336,12 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                     placeholder="Tokyo, Japan"
                     className="w-full rounded-lg px-3 py-2 text-sm"
                     style={inputStyle}
+                  />
+                  <SuggestionChips
+                    value={destinationLabel}
+                    suggestions={placeSuggestions.destinations}
+                    onPick={setDestinationLabel}
+                    fieldLabel={t("trips:modal.destinationLabel")}
                   />
                 </Field>
               </div>
@@ -337,15 +366,16 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
               </Field>
 
               <Field label={t("trips:modal.tagsLabel")}>
-                <input
-                  value={tagsCsv}
-                  onChange={(e) => setTagsCsv(e.target.value)}
+                <TagInput
+                  value={tags}
+                  onChange={setTags}
+                  ariaLabel={t("trips:modal.tagsLabel")}
                   placeholder="kultur, food, fotos"
                   className="w-full rounded-lg px-3 py-2 text-sm"
                   style={inputStyle}
+                  accent={color}
                 />
               </Field>
-              <TagPreview values={arrayFromCsv(tagsCsv)} accent={color} />
             </>
           )}
 
@@ -527,27 +557,6 @@ function CoverPreview({ url, accent, title, onClick }: CoverPreviewProps): JSX.E
       >
         {title}
       </div>
-    </div>
-  );
-}
-
-function TagPreview({ values, accent }: { values: string[]; accent: string }): JSX.Element | null {
-  if (values.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {values.map((v) => (
-        <span
-          key={v}
-          className="px-2.5 py-1 rounded-full text-xs"
-          style={{
-            background: `${accent}1f`,
-            border: `1px solid ${accent}66`,
-            color: accent,
-          }}
-        >
-          #{v}
-        </span>
-      ))}
     </div>
   );
 }

@@ -32,8 +32,33 @@ export interface NextFlight {
   arrival: NextFlightEnd;
 }
 
+/** What the flight forms can offer from the user's own logbook — see
+ *  `GET /flights/entry-suggestions`. Empty lists and null mean "nothing to
+ *  offer", never an error. */
+export interface FlightEntrySuggestions {
+  seats: string[];
+  flightNumbers: string[];
+  frequentFlyerNumber: string | null;
+  departureTerminals: string[];
+}
+
+export interface FlightEntrySuggestionQuery {
+  airline?: string;
+  dep?: string;
+  arr?: string;
+}
+
 // Flights API
 export const flightsApi = {
+  getEntrySuggestions: async (
+    query: FlightEntrySuggestionQuery
+  ): Promise<FlightEntrySuggestions> => {
+    const { data } = await api.get<FlightEntrySuggestions>("/flights/entry-suggestions", {
+      params: query,
+    });
+    return data;
+  },
+
   getNext: async (): Promise<NextFlight | null> => {
     const { data } = await api.get<{ flight: NextFlight | null }>("/flights/next");
     return data.flight;

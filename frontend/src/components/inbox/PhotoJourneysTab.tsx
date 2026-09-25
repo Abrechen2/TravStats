@@ -183,8 +183,16 @@ export default function PhotoJourneysTab({
     }
 
     try {
-      await linkPhotoJourney(journey.id, created);
+      const photos = await linkPhotoJourney(journey.id, created);
       addToast("success", t(`dataQuality:inbox.photoJourneys.messages.accepted.${created.kind}`));
+      if (photos?.kind === "linked" && photos.linked > 0) {
+        addToast(
+          "success",
+          t("dataQuality:inbox.photoJourneys.messages.photosLinked", { count: photos.linked })
+        );
+      } else if (photos?.kind === "failed") {
+        addToast("warning", t("dataQuality:inbox.photoJourneys.messages.photosNotLinked"));
+      }
       // The row is answered and about to leave the list; its created entry goes
       // with it. A copy, then a delete on the copy — the held state is not
       // touched.

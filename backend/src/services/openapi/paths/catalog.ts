@@ -165,6 +165,30 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/ships/cruise-lines",
+  summary: "Cruise line suggestions",
+  description:
+    "Distinct cruise lines matching `q`: the requesting user's own cruises first, then the ship " +
+    "catalogue, deduplicated case-insensitively. Suggestions only — any cruise line stays valid " +
+    "on a cruise.",
+  tags: ["Catalogue"],
+  request: {
+    query: z.object({
+      q: z.string().max(120).optional(),
+      limit: z.coerce.number().int().min(1).max(50).optional().describe("Default 20"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Cruise lines",
+      content: { "application/json": { schema: envelope(z.array(z.string())) } },
+    },
+    400: { description: "Validation failed", content: errorContent },
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/ships",
   summary: "Add a ship to the catalogue",

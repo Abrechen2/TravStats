@@ -64,6 +64,16 @@ export interface PhotoJourneyAcceptLinks {
  * `API_URL` is empty and this is the root-relative URL the Immich album proxy
  * already hands out.
  */
+/**
+ * What accepting with a visit did with the finding's photographs: linked them
+ * (the server re-finds each id in the caller's own library first), found no
+ * library, or found it down. Null when there was nothing to link.
+ */
+export type PhotoJourneyPhotoOutcome =
+  | { kind: "notConfigured" }
+  | { kind: "failed"; reason: string }
+  | { kind: "linked"; linked: number; skipped: number };
+
 export function photoJourneyPreviewUrl(journeyId: string, index: number): string {
   return `${API_URL}/api/v1/photo-journeys/${journeyId}/preview/${index}/file?size=thumbnail`;
 }
@@ -90,8 +100,23 @@ export const photoJourneysApi = {
     return data.data;
   },
 
-  accept: async (id: string, links: PhotoJourneyAcceptLinks = {}): Promise<void> => {
-    await api.patch(`/photo-journeys/${id}`, { status: "accepted", ...links });
+  accept: async (
+    id: string,
+    links: PhotoJourneyAcceptLinks = {}
+  ): Promise<PhotoJourneyPhotoOutcome | null> => {
+    const { data } = await api.patch<Envelope<{ photos: PhotoJourneyPhotoOutcome | null }>>(
+      `/photo-journeys/${id}`,
+      { status: "accepted", ...links }
+    );
+    return data.data?.photos ?? null;
+  },
+
+  /** The accepted findings that made a trip, and how long each preview strip is. */
+  forTrip: async (tripId: string): Promise<Array<{ id: string; previewCount: number }>> => {
+    const { data } = await api.get<Envelope<Array<{ id: string; previewCount: number }>>>(
+      `/photo-journeys/for-trip/${tripId}`
+    );
+    return data.data;
   },
 
   dismiss: async (id: string): Promise<void> => {

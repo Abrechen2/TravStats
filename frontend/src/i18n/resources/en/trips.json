@@ -53,9 +53,10 @@
     "categoryLabel": "Category",
     "startDateLabel": "Start Date",
     "endDateLabel": "End Date",
+    "useEntrySpan": "Use the span of the entries: {{start}} – {{end}}",
     "originLabel": "Origin",
     "destinationLabel": "Destination",
-    "tagsLabel": "Tags (comma separated)",
+    "tagsLabel": "Tags",
     "companionsLabel": "Companions",
     "coverLabel": "Cover image",
     "notesLabel": "Notes (Markdown)",
@@ -200,7 +201,10 @@
     "moodLabel": "Mood (optional)",
     "weatherLabel": "Weather (optional)",
     "save": "Save",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "photosLabel": "Photos from the trip",
+    "photosEmpty": "The trip has no photos in its gallery yet.",
+    "photoAlt": "Photo for the entry"
   },
   "journalView": {
     "view": "View",
@@ -300,7 +304,9 @@
     "coverUploaded": "Cover updated",
     "deleteConfirm": "Really delete this photo?",
     "deleteError": "Failed to delete photo",
-    "empty": "No photos yet — upload the first memories of this journey."
+    "empty": "No photos yet — upload the first memories of this journey.",
+    "fromLibrary": "From the photo library",
+    "fromLibraryAlt": "Photo from the photo library"
   },
   "insights": {
     "longest": "Longest trip",
@@ -467,5 +473,9 @@
   },
   "list": {
     "undated": "Undated"
+  },
+  "photoWindow": {
+    "title": "Photos from the trip",
+    "alt": "Photo from the trip"
   }
 }

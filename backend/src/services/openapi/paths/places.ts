@@ -201,6 +201,50 @@ registry.registerPath({
   responses: { 201: { description: "Created" }, 400: badInput, 404: notFound },
 });
 
+const visitDateSuggestion = z.object({
+  date: z.string().describe("Calendar day at the place, YYYY-MM-DD"),
+  source: z.enum(["trip", "stay", "flight", "photo"]),
+  label: z.string().nullable().describe("Trip or lodging name, or the arrival airport"),
+  photoCount: z
+    .number()
+    .int()
+    .nullable()
+    .describe("Photographs taken within 300 m of the place that day"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/places/{id}/visit-date-suggestions",
+  summary: "Dates a new visit to this place could carry",
+  description:
+    "Read from the caller's own logbook. With `tripId`: that trip's stays and arrivals " +
+    "within 50 km of the place, or — when none is near — the trip's days. Without it: the " +
+    "most recent past stay and arrival within 50 km. Always: the days with trip photographs " +
+    "taken within 300 m, busiest first (at most 8). A stay or trip longer than 14 days names " +
+    "no day. Days that already carry a visit to this place are left out. A trip that is not " +
+    "the caller's yields no trip suggestions.",
+  tags: placesTag,
+  request: {
+    params: z.object({ id: uuid }),
+    query: z.object({ tripId: uuid.optional() }),
+  },
+  responses: {
+    200: {
+      description: "Suggestions",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({ suggestions: z.array(visitDateSuggestion) }),
+          }),
+        },
+      },
+    },
+    400: badInput,
+    404: notFound,
+  },
+});
+
 registry.registerPath({
   method: "patch",
   path: "/places/visits/{visitId}",
@@ -236,7 +280,8 @@ registry.registerPath({
     "Ownership-checked, and sets its own `Cache-Control: private` over the " +
     "API-wide `no-store`. Private, never public. A photo that has become an Immich " +
     "link (`immichAssetId` set, no copy on disk) is streamed from the owner's Immich; " +
-    "the asset id comes from the row, never from the request. `size` picks the " +
+    "the asset id comes from the row, never from the request. A link to one of the " +
+    "caller's trip photos (`tripPhotoId`) streams that photo's file. `size` picks the " +
     "rendition for a link: thumbnail, preview (default) or original.",
   tags: placesTag,
   request: {

@@ -260,6 +260,11 @@ export const shipsApi = {
     const { data } = await api.get<Envelope<Ship[]>>("/ships", { params });
     return data.data;
   },
+  /** Cruise-line suggestions: the user's own lines first, then the catalogue's. */
+  cruiseLines: async (q: string): Promise<string[]> => {
+    const { data } = await api.get<Envelope<string[]>>("/ships/cruise-lines", { params: { q } });
+    return data.data;
+  },
   create: async (input: {
     name: string;
     cruiseLine: string;

@@ -8,7 +8,7 @@ import { AppError } from "../middleware/errorHandler";
 import { openDataLimiter } from "../middleware/rateLimit";
 import { assertOpenDataEnabled, OpenDataDisabledError } from "../services/openData/http";
 import { fillTripJournalWeather, refreshJournalWeather } from "../services/openData/journalWeather";
-import { enrichLodgingFromOsm } from "../services/openData/lodgingEnrichment";
+import { enrichLodgingFromOsm, withCatalogueChains } from "../services/openData/lodgingEnrichment";
 import { nearbyLodgings } from "../services/openData/openStreetMap";
 import { wikidataForPlace } from "../services/openData/placeWikidata";
 import { plannedElevationProfile } from "../services/openData/plannedProfile";
@@ -157,8 +157,10 @@ const nearbyQuery = z.object({
 
 /**
  * GET /nearby/lodging?lat=&lon=&radiusKm= — campsites, pitches and lodgings
- * near a point, from OpenStreetMap (companion#12). 502 when Overpass did not
- * answer: "none nearby" and "could not ask" are different answers.
+ * near a point, from OpenStreetMap (companion#12), and the lodging form's
+ * "which house is this?" list. A brand the chain catalogue knows comes back
+ * as that chain. 502 when Overpass did not answer: "none nearby" and "could
+ * not ask" are different answers.
  */
 router.get(
   "/nearby/lodging",
@@ -170,7 +172,7 @@ router.get(
       await assertOpenDataEnabled();
       const places = await nearbyLodgings(lat, lon, radiusKm * 1000);
       if (places === null) throw new AppError("OpenStreetMap did not answer", 502);
-      res.json({ places });
+      res.json({ places: await withCatalogueChains(places) });
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);
     }

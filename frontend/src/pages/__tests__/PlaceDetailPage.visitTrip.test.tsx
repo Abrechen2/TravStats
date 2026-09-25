@@ -22,6 +22,9 @@ vi.mock("../../lib/api/places", () => ({
   createVisit: (...a: unknown[]) => createVisit(...a),
   deleteVisit: vi.fn(),
   deletePlace: vi.fn(),
+  getVisitDateSuggestions: vi.fn(async () => [
+    { date: "2026-05-02", source: "stay", label: "Hotel am Markt", photoCount: null },
+  ]),
 }));
 
 vi.mock("../../lib/api/trips", () => ({
@@ -87,6 +90,23 @@ describe("PlaceDetailPage — attaching a visit to a trip", () => {
 
     await waitFor(() =>
       expect(createVisit).toHaveBeenCalledWith("p1", expect.objectContaining({ tripId: null }))
+    );
+  });
+
+  // A date chip only fills the field; the visit is saved with it like a typed one.
+  it("saves the visit with a picked date suggestion", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /detail\.addVisit/ }));
+    await user.click(await screen.findByRole("button", { name: /suggestionChip/ }));
+    await user.click(screen.getByRole("button", { name: /buttons\.save/ }));
+
+    await waitFor(() =>
+      expect(createVisit).toHaveBeenCalledWith(
+        "p1",
+        expect.objectContaining({ visitedAt: "2026-05-02T00:00:00.000Z" })
+      )
     );
   });
 });

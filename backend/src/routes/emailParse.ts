@@ -14,6 +14,7 @@ import { describeParserError } from "../utils/parserErrors";
 import { parseEmailSchema } from "../schemas/parseEmail";
 import { EMAIL_TEXT_FORMAT } from "../services/documents/documentFormats";
 import {
+  assertMayRecord,
   assertRetainable,
   multipartRetain,
   readDocumentForParse,
@@ -50,6 +51,7 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const parsed = parseEmailSchema.parse(req.body);
+      assertMayRecord(req, parsed);
       const userId = req.userId!;
 
       // A kept original stands in for the body: an .eml carries its own subject,
@@ -217,6 +219,7 @@ router.post(
           details: retainParse.error.issues,
         });
       }
+      assertMayRecord(req, { retain: retainParse.data });
 
       const userId = req.userId!;
 

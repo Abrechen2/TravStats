@@ -91,7 +91,27 @@ export interface TripCostSuperlative {
   excluded: { count: number; reason: "unconvertible" };
 }
 
+/** What the trip form can offer for its place labels (`GET /trips/entry-suggestions`).
+ *  Empty lists mean "nothing to offer", never an error. */
+export interface TripEntrySuggestions {
+  origins: string[];
+  destinations: string[];
+}
+
 export const tripsApi = {
+  getEntrySuggestions: async (tripId?: string): Promise<TripEntrySuggestions> => {
+    const { data } = await api.get<TripEntrySuggestions>("/trips/entry-suggestions", {
+      params: tripId ? { tripId } : {},
+    });
+    return data;
+  },
+
+  /** The moods the user has written in their journal, most used first. */
+  getJournalMoods: async (): Promise<string[]> => {
+    const { data } = await api.get<{ moods: string[] }>("/trips/journal-moods");
+    return data.moods;
+  },
+
   getAll: async (): Promise<Trip[]> => {
     const { data } = await api.get<{ trips: Trip[] }>("/trips");
     return data.trips;
@@ -229,6 +249,11 @@ export const tripsApi = {
 
   /* ─────────── Photos ─────────── */
 
+  /** The gallery on its own — what a journal entry picks its photos from. */
+  listPhotos: async (tripId: string): Promise<TripPhoto[]> => {
+    const { data } = await api.get<{ photos: TripPhoto[] }>(`/trips/${tripId}/photos`);
+    return data.photos;
+  },
   uploadPhotos: async (tripId: string, files: File[]): Promise<TripPhoto[]> => {
     const fd = new FormData();
     for (const f of files) fd.append("photos", f);
@@ -317,6 +342,8 @@ export interface CreateJournalInput {
   body: string;
   mood?: string;
   weather?: string;
+  /** Photos of the trip's gallery, in order. */
+  photoIds?: string[];
 }
 
 export interface UpdateJournalInput {
@@ -325,6 +352,8 @@ export interface UpdateJournalInput {
   body?: string;
   mood?: string | null;
   weather?: string | null;
+  /** Replaces the entry's photos; `[]` clears them. */
+  photoIds?: string[];
 }
 
 export interface ProposedTripLeg {

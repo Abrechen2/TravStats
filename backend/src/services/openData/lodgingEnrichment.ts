@@ -1,8 +1,12 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
-import { findOsmLodging } from "./openStreetMap";
+import { findOsmLodging, type NearbyLodging } from "./openStreetMap";
+import { starsFromOsm, websiteFromOsm } from "./osmValues";
 import { isWikidataId } from "./wikipedia";
+
+// Re-exported: the enrichment tests name this module for them.
+export { starsFromOsm, websiteFromOsm };
 
 /** The fields the enrichment may write — each only while it is still empty. */
 export type EnrichedField = "stars" | "website" | "wikidataId" | "chain";
@@ -15,23 +19,6 @@ export interface LodgingEnrichment {
   osmRef: string | null;
   osmName: string | null;
   filled: EnrichedField[];
-}
-
-/** OSM writes stars as "4", sometimes "4S" (superior) or "3.5"; only a clean 1–5 counts. */
-export function starsFromOsm(raw: string | undefined): number | null {
-  const match = raw?.trim().match(/^([1-5])(?:\s*S|\.0)?$/i);
-  return match ? Number(match[1]) : null;
-}
-
-/** Only an absolute http(s) address is a website; anything else stays out of the record. */
-export function websiteFromOsm(raw: string | undefined): string | null {
-  if (!raw || raw.length > 500) return null;
-  try {
-    const url = new URL(raw.trim());
-    return url.protocol === "https:" || url.protocol === "http:" ? url.toString() : null;
-  } catch {
-    return null;
-  }
 }
 
 /**
@@ -88,4 +75,49 @@ export async function enrichLodgingFromOsm(
   }
   logger.info({ operation: "lodging_osm_enrichment", lodgingId, osmRef: hit.osmRef, filled });
   return { found: true, reason: null, osmRef: hit.osmRef, osmName: hit.name, filled };
+}
+
+/** A catalogue chain as the lodging form's chain picker holds it. */
+const CHAIN_SELECT = {
+  id: true,
+  name: true,
+  brandColor: true,
+  loyaltyProgram: true,
+  isUserAdded: true,
+  createdAt: true,
+} as const;
+
+export type NearbyLodgingWithChain = NearbyLodging & {
+  chain: {
+    id: number;
+    name: string;
+    brandColor: string | null;
+    loyaltyProgram: string | null;
+    isUserAdded: boolean;
+    createdAt: Date;
+  } | null;
+};
+
+/**
+ * Each nearby house's `brand`, resolved to the catalogue chain of that name —
+ * the same rule the enrichment links by: a known brand is linked, an unknown
+ * one is left for the user rather than created. One query for the whole list.
+ */
+export async function withCatalogueChains(
+  places: NearbyLodging[]
+): Promise<NearbyLodgingWithChain[]> {
+  const brands = [...new Set(places.flatMap((p) => (p.brand ? [p.brand] : [])))];
+  const chains =
+    brands.length === 0
+      ? []
+      : await prisma.lodgingChain.findMany({
+          where: { OR: brands.map((b) => ({ name: { equals: b, mode: "insensitive" as const } })) },
+          select: CHAIN_SELECT,
+          take: brands.length * 2,
+        });
+  const byName = new Map(chains.map((c) => [c.name.toLowerCase(), c]));
+  return places.map((p) => ({
+    ...p,
+    chain: (p.brand && byName.get(p.brand.toLowerCase())) || null,
+  }));
 }

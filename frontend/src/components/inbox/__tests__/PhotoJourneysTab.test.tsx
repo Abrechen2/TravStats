@@ -193,6 +193,42 @@ describe("PhotoJourneysTab", () => {
     expect(tripsApi.create).not.toHaveBeenCalled();
   });
 
+  it("says how many photographs came along with an accepted place finding", async () => {
+    vi.mocked(createVisit).mockResolvedValue({ id: "visit-3" } as never);
+    vi.mocked(photoJourneysApi.accept).mockResolvedValue({
+      kind: "linked",
+      linked: 3,
+      skipped: 1,
+    });
+    await renderTab([makeJourney({ kind: "place", placeId: "place-7", airportIata: null })]);
+
+    vi.mocked(photoJourneysApi.list).mockResolvedValue([]);
+    await userEvent.click(screen.getByRole("button", { name: ACCEPT }));
+
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith(
+        "success",
+        "dataQuality:inbox.photoJourneys.messages.photosLinked"
+      )
+    );
+  });
+
+  it("warns when the photo library was down while the place finding was accepted", async () => {
+    vi.mocked(createVisit).mockResolvedValue({ id: "visit-3" } as never);
+    vi.mocked(photoJourneysApi.accept).mockResolvedValue({ kind: "failed", reason: "unreachable" });
+    await renderTab([makeJourney({ kind: "place", placeId: "place-7", airportIata: null })]);
+
+    vi.mocked(photoJourneysApi.list).mockResolvedValue([]);
+    await userEvent.click(screen.getByRole("button", { name: ACCEPT }));
+
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith(
+        "warning",
+        "dataQuality:inbox.photoJourneys.messages.photosNotLinked"
+      )
+    );
+  });
+
   it("accepting a stay finding creates nothing — a stay needs a lodging the row does not name", async () => {
     await renderTab([makeJourney({ kind: "stay", placeId: "place-7" })]);
 
@@ -275,7 +311,7 @@ describe("PhotoJourneysTab", () => {
       )
     );
 
-    vi.mocked(photoJourneysApi.accept).mockResolvedValue(undefined);
+    vi.mocked(photoJourneysApi.accept).mockResolvedValue(null);
     await userEvent.click(screen.getByRole("button", { name: ACCEPT }));
 
     await waitFor(() =>

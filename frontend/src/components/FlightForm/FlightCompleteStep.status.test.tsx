@@ -18,6 +18,16 @@ import FlightCompleteStep, { type FlightCompleteStepProps } from "./FlightComple
 
 const mocks = vi.hoisted(() => ({ companionsList: vi.fn() }));
 
+// The flight forms ask the user's logbook for suggestions over the network;
+// these tests pin other wiring and must reach none.
+vi.mock("@/hooks/useFlightEntrySuggestions", () => ({
+  useFlightEntrySuggestions: () => ({
+    seats: [],
+    flightNumbers: [],
+    frequentFlyerNumber: null,
+    departureTerminals: [],
+  }),
+}));
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
@@ -42,7 +52,8 @@ vi.mock("../../lib/api", () => ({
 vi.mock("../Help/HelpIcon", () => ({ default: () => null }));
 vi.mock("../AirportAutocomplete", () => ({ default: () => null }));
 vi.mock("./CopyActionButton", () => ({ default: () => null }));
-vi.mock("../CurrencyInput", () => ({ default: () => null }));
+vi.mock("../common/CurrencySelect", () => ({ default: () => null }));
+vi.mock("../../hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
 
 // TripSelectField fetches the trip list on mount from `lib/api/trips` — a
 // different module than the `lib/api` barrel, so a barrel mock never covered it

@@ -277,5 +277,12 @@
     "open": "Choose",
     "clear": "Clear",
     "unavailable": "The emoji picker cannot load here. You can still paste an emoji into the field."
-  }
+  },
+  "tagInput": {
+    "remove": "Remove tag {{name}}",
+    "suggestions": "Your tags",
+    "usage_one": "used once",
+    "usage_other": "used {{count}} times"
+  },
+  "suggestionChip": "Use {{field}} {{value}}"
 }

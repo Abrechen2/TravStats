@@ -380,7 +380,10 @@ router.get(
             orderBy: { startDate: "asc" },
           },
           stops: { orderBy: [{ orderIdx: "asc" }, { startDate: "asc" }] },
-          journalEntries: { orderBy: { date: "asc" } },
+          journalEntries: {
+            orderBy: { date: "asc" },
+            include: { photos: { orderBy: { sortIdx: "asc" }, include: { tripPhoto: true } } },
+          },
           photos: { orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }] },
           immichAlbums: { orderBy: { sortIdx: "asc" } },
           // A LodgingStay linked to this trip (StayEditor's tripId picker) —
@@ -418,7 +421,12 @@ router.get(
         lodgingCountries.get(trip.id) ?? [],
         roadtripCountries.get(trip.id) ?? []
       );
-      res.json({ trip: { ...trip, photos, flights, countries } });
+      // Each entry carries the photos it shows, in the gallery's own shape.
+      const journalEntries = trip.journalEntries.map(({ photos: links, ...entry }) => ({
+        ...entry,
+        photos: links.map((link) => toPhotoDto(link.tripPhoto)),
+      }));
+      res.json({ trip: { ...trip, photos, flights, countries, journalEntries } });
     } catch (error) {
       next(error);
     }

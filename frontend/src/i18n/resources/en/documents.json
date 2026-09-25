@@ -28,5 +28,27 @@
     "boardingPass": "Boarding pass",
     "ticket": "Ticket",
     "other": "Other"
+  },
+  "extract": {
+    "action": "Use values",
+    "title": "Use values from the receipt",
+    "reading": "Reading the receipt … With a language model this can take a minute. You can cancel at any time.",
+    "apply": "Use selected",
+    "nothingFound": "No values that could be used were found in the receipt.",
+    "nothingNew": "The receipt holds nothing that is not already filled in.",
+    "noText": "The receipt contains no readable text — probably a scan. Please enter its values by hand.",
+    "unsupported": "This format cannot be read. PDF files and emails can.",
+    "rateLimited": "Too many receipts were read just now. Please try again in a few minutes.",
+    "unavailable": "The parser cannot be reached right now. Please try again later.",
+    "failed": "The receipt could not be read.",
+    "applyFailed": "The values could not be saved.",
+    "field": {
+      "price": "Price",
+      "currency": "Currency",
+      "bookingReference": "Booking reference",
+      "seatNumber": "Seat",
+      "seatClass": "Cabin class"
+    },
+    "applied": "The values from the receipt were applied."
   }
 }

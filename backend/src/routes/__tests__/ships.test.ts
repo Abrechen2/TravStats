@@ -101,4 +101,70 @@ describe("Ships API", () => {
       expect(res.status).toBe(401);
     });
   });
+
+  describe("GET /api/v1/ships/cruise-lines", () => {
+    let otherUserId: string;
+
+    beforeAll(async () => {
+      await prisma.user.deleteMany({ where: { username: "shiptest-other" } });
+      const other = await prisma.user.create({
+        data: { username: "shiptest-other", passwordHash: await hashPassword("password123") },
+      });
+      otherUserId = other.id;
+      await prisma.cruise.createMany({
+        data: [
+          // The user's own spelling of a catalogue line, and a line the catalogue lacks.
+          { userId, cruiseLine: "aida cruises" },
+          { userId, cruiseLine: "Aidaverse Private Charters" },
+          { userId, cruiseLine: null },
+          // Another account's line never reaches this user.
+          { userId: otherUserId, cruiseLine: "Aida Secret Line" },
+        ],
+      });
+    });
+
+    afterAll(async () => {
+      await prisma.cruise.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+      await prisma.user.delete({ where: { id: otherUserId } });
+    });
+
+    it("offers the user's own lines first, then the catalogue's, once each", async () => {
+      const res = await request(app)
+        .get("/api/v1/ships/cruise-lines?q=aida")
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      // The catalogue's "AIDA Cruises" is the user's "aida cruises" and is not
+      // offered twice. (Order between the two own lines is the DB collation's.)
+      expect([...res.body.data].sort()).toEqual(["Aidaverse Private Charters", "aida cruises"]);
+    });
+
+    it("never offers another account's cruise lines", async () => {
+      const res = await request(app)
+        .get("/api/v1/ships/cruise-lines?q=secret")
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+    });
+
+    it("lists catalogue lines without a query, bounded by limit", async () => {
+      const res = await request(app)
+        .get("/api/v1/ships/cruise-lines?limit=3")
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toHaveLength(3);
+    });
+
+    it("rejects an out-of-range limit", async () => {
+      const res = await request(app)
+        .get("/api/v1/ships/cruise-lines?limit=500")
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(400);
+    });
+
+    it("requires authentication", async () => {
+      const res = await request(app).get("/api/v1/ships/cruise-lines");
+      expect(res.status).toBe(401);
+    });
+  });
 });

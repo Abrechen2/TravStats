@@ -19,7 +19,9 @@ import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { useDisplayFormat, type DisplayFormatter } from "../../lib/displayFormat";
 import { formatBytes } from "../../lib/fileSize";
 import { logger } from "../../lib/logger";
+import type { ExtractTarget } from "../../lib/extractValues";
 import { DOCUMENT_FORMAT_ICON, exceededDocumentLimit } from "./documentDisplay";
+import { ExtractValuesAction } from "./ExtractValuesAction";
 
 interface Props {
   /** Which record these documents hang off. One of the five the API serves. */
@@ -31,7 +33,15 @@ interface Props {
    * the photo strip beside them does.
    */
   layout?: "card" | "inline";
+  /**
+   * Where "take the values from this document" writes. Absent for an entry
+   * with no cost block (a trip, a place visit), and then no row offers it.
+   */
+  extract?: ExtractTarget;
 }
+
+/** The formats the text parsers read; an image or a wallet pass is not offered. */
+const EXTRACTABLE = new Set(["pdf", "eml", "emailText"]);
 
 /**
  * The kept originals of ONE entry: list, open, add, remove.
@@ -65,7 +75,7 @@ function issuedOrCreated(document: TravelDocument, format: DisplayFormatter): st
     : format.date(document.createdAt);
 }
 
-export default function DocumentsSection({ entry, layout = "card" }: Props): JSX.Element {
+export default function DocumentsSection({ entry, layout = "card", extract }: Props): JSX.Element {
   const { t } = useTranslation(["documents", "common"]);
   const format = useDisplayFormat();
   const isSharedDemo = useIsDemoAccount();
@@ -232,6 +242,9 @@ export default function DocumentsSection({ entry, layout = "card" }: Props): JSX
                   issuedOrCreated(doc, format),
                 ].join(" · ")}
               </span>
+              {extract && !locked && EXTRACTABLE.has(doc.format) && (
+                <ExtractValuesAction documentId={doc.id} target={extract} />
+              )}
               {!locked && (
                 <button
                   type="button"

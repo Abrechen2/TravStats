@@ -1,6 +1,7 @@
 import type { Dispatch, JSX, SetStateAction } from "react";
 
 import HelpIcon from "../../Help/HelpIcon";
+import TagInput from "../../TagInput";
 import { useTranslation } from "../../../hooks/useTranslation";
 import BookingFields from "../fields/BookingFields";
 import CompanionsField from "../fields/CompanionsField";
@@ -19,6 +20,8 @@ interface BookingAndNotesSectionProps {
   onBookingChange: (value: BookingFieldsValue) => void;
   tripId: string;
   setTripId: (v: string) => void;
+  /** Preselects the trip covering this day — see TripSelectField. */
+  departureDate: string;
   tags: string[];
   setTags: (v: string[]) => void;
   companions: string[];
@@ -30,6 +33,9 @@ interface BookingAndNotesSectionProps {
   labelClassName: string;
   mutedTextClassName: string;
   inputClassName: string;
+  /** See BookingFields. */
+  frequentFlyerSuggestion?: string | null;
+  frequentFlyerSuggested?: boolean;
 }
 
 /**
@@ -47,6 +53,7 @@ export default function BookingAndNotesSection({
   onBookingChange,
   tripId,
   setTripId,
+  departureDate,
   tags,
   setTags,
   companions,
@@ -57,6 +64,8 @@ export default function BookingAndNotesSection({
   labelClassName,
   mutedTextClassName,
   inputClassName,
+  frequentFlyerSuggestion,
+  frequentFlyerSuggested,
 }: BookingAndNotesSectionProps): JSX.Element {
   const { t } = useTranslation(["flights"]);
 
@@ -68,6 +77,8 @@ export default function BookingAndNotesSection({
         onChange={onBookingChange}
         labelClassName={labelClassName}
         inputClassName={inputClassName}
+        frequentFlyerSuggestion={frequentFlyerSuggestion}
+        frequentFlyerSuggested={frequentFlyerSuggested}
       />
 
       {/* Trip (#199) — the assignment runs after the create, see
@@ -75,6 +86,7 @@ export default function BookingAndNotesSection({
       <TripSelectField
         value={tripId}
         onChange={setTripId}
+        preselectForDate={departureDate}
         labelClassName={labelClassName}
         inputClassName={inputClassName}
       />
@@ -88,17 +100,10 @@ export default function BookingAndNotesSection({
             position="top"
           />
         </label>
-        <input
-          type="text"
-          value={tags.join(", ")}
-          onChange={(e) =>
-            setTags(
-              e.target.value
-                .split(",")
-                .map((tag) => tag.trim())
-                .filter(Boolean)
-            )
-          }
+        <TagInput
+          value={tags}
+          onChange={setTags}
+          ariaLabel={t("flights:form.tags")}
           className={`input ${inputClassName}`}
           placeholder={t("flights:form.placeholders.tags")}
         />

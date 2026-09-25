@@ -6,6 +6,18 @@ import { createLodging, updateLodging } from "../../../lib/api/lodging";
 import type { Lodging } from "../../../types/lodging";
 import type { LocationCoordinates, LocationSelection } from "../../location/LocationInput";
 
+vi.mock("../../../hooks/useLodgingEntrySuggestions", () => ({
+  useLodgingEntrySuggestions: () => ({
+    amenities: [
+      { name: "Pool", usageCount: 3 },
+      { name: "Parkplatz", usageCount: 1 },
+    ],
+    roomAmenities: [{ name: "Balkon", usageCount: 2 }],
+    roomNumbers: [],
+    roomCategories: [],
+    boards: [],
+  }),
+}));
 vi.mock("../../../lib/api/lodging", () => ({
   createLodging: vi.fn(),
   updateLodging: vi.fn(),
@@ -213,5 +225,25 @@ describe("LodgingFormModal", () => {
     const [, payload] = vi.mocked(updateLodging).mock.calls[0];
     expect(payload.lat).toBeNull();
     expect(payload.lon).toBeNull();
+  });
+
+  it("keeps amenities as chips and offers the ones the user has recorded before", async () => {
+    vi.mocked(updateLodging).mockResolvedValue({ ...baseLodging });
+    render(
+      <LodgingFormModal
+        mode="edit"
+        lodging={{ ...baseLodging, amenities: ["WLAN"] }}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+    await userEvent.type(screen.getByLabelText("lodging:field.amenities"), "po");
+    fireEvent.mouseDown(screen.getByRole("option", { name: /Pool/ }));
+    await userEvent.type(screen.getByLabelText("lodging:field.amenities"), "Garten,");
+    await userEvent.click(screen.getByText("common:buttons.save"));
+
+    await waitFor(() => expect(updateLodging).toHaveBeenCalled());
+    const [, payload] = vi.mocked(updateLodging).mock.calls[0];
+    expect(payload.amenities).toEqual(["WLAN", "Pool", "Garten"]);
   });
 });

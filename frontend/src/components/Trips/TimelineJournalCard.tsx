@@ -6,6 +6,7 @@ import { stripMarkdown } from "../../lib/markdownPreview";
 import { formatTimelineDate } from "../../lib/tripTimeline";
 import { ExpandableEventCard } from "../Trip/ExpandableEventCard";
 import JournalBody from "./JournalBody";
+import JournalPhotoRow from "./JournalPhotoRow";
 import type { TimelineEvent } from "../../pages/TripDetailPage";
 
 /**
@@ -72,6 +73,7 @@ export function JournalCard({
       detailsLabel={t("trips:detail.timeline.showDetails")}
     >
       <JournalBody body={e.body} />
+      <JournalPhotoRow photos={e.photos ?? []} />
       <div className="mt-2 flex flex-wrap gap-2">
         <button
           type="button"

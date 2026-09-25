@@ -36,6 +36,7 @@
     "bookingClassLetter": "Buchungsklasse (Code)",
     "baggageAllowance": "Freigepäck",
     "frequentFlyerNumber": "Vielfliegernummer",
+    "frequentFlyerSuggested": "Vorschlag aus deinem letzten Flug mit dieser Airline",
     "status": "Status",
     "category": "Kategorie",
     "price": "Preis",
@@ -78,7 +79,7 @@
       "arrivalTimeExpanded": "Die Zeit sollte in der lokalen Zeitzone des Zielflughafens angegeben werden. Das System konvertiert automatisch bei Bedarf.",
       "price": "Der Preis wird zusammen mit der Währung gespeichert. Du kannst später nach Preisen filtern und Statistiken anzeigen.",
       "tags": "Füge Tags hinzu, um Flüge später zu kategorisieren und zu filtern (z. B. 'business', 'international').",
-      "tagsExpanded": "Tags werden durch Kommas getrennt. Du kannst später nach Tags filtern und Statistiken nach Tags gruppieren. Beispiele: 'business', 'vacation', 'lufthansa', 'long-haul'.",
+      "tagsExpanded": "Enter oder ein Komma macht aus dem Text einen Tag; beim Tippen werden deine bisherigen Tags vorgeschlagen. Du kannst später nach Tags filtern und Statistiken nach Tags gruppieren. Beispiele: 'business', 'vacation', 'lufthansa', 'long-haul'.",
       "flightNumber": "Gib die Flugnummer ein (z. B. LH400). Die automatische Suche funktioniert für heutige Flüge. Für vergangene oder zukünftige Flüge ist ein Aviationstack Basic+ Key nötig — sonst bitte manuell eintragen.",
       "flightNumberExpanded": "Die Flugsuche kaskadiert über mehrere APIs:\n• Aviationstack (mit Basic+ Key: vergangene und zukünftige Flüge)\n• AirLabs (heutige Flüge)\n• OpenSky (heutige Flüge, Login erforderlich)\n\nFehlt ein passender Provider für das gewählte Datum, müssen die Daten manuell eingetragen werden. Auch bei konfiguriertem Key kann es passieren, dass die API einen bestimmten Flug nicht kennt."
     },
@@ -148,7 +149,7 @@
       "selectDate": "Bitte wähle ein Abflugdatum aus",
       "invalidPrice": "Preis, Steuern und Gebühren müssen positive Zahlen sein"
     },
-    "tagsHint": "Durch Kommas getrennte Tags zum Filtern.",
+    "tagsHint": "Enter oder Komma fügt einen Tag hinzu; deine bisherigen Tags werden vorgeschlagen.",
     "loadingScanner": "Scanner wird geladen...",
     "noFlightsInEmail": "Keine Flüge in der E-Mail gefunden.",
     "departureAirportCode": "Abflughafen (IATA)",

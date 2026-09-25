@@ -158,6 +158,60 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/trips/entry-suggestions",
+  summary: "Suggestions for the trip form's origin and destination labels",
+  description:
+    "`origins` is the requesting user's current home airport, named as a reader names it " +
+    "(never the catalogue's municipality), or empty without one. `destinations` needs " +
+    "`tripId`: the places the trip's stays, cruise end ports and outbound flights point at, " +
+    "most frequent first, plus a country that two or more of those cities share. Flights " +
+    "back to the home airport or to the trip's first departure airport are not destinations. " +
+    "Suggestions only — nothing here is written.",
+  tags: ["Trips"],
+  request: {
+    query: z.object({
+      tripId: z.string().uuid().optional().describe("An own trip, for its destinations"),
+    }),
+  },
+  responses: {
+    200: {
+      description: "Ranked suggestions; empty lists where there is nothing to offer",
+      content: {
+        "application/json": {
+          schema: z.object({
+            origins: z.array(z.string()),
+            destinations: z.array(z.string()),
+          }),
+        },
+      },
+    },
+    400: badInput,
+    401: { description: "Missing or invalid token", content: errorContent },
+    404: notFound,
+    429: { description: "Rate limit exceeded", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/trips/journal-moods",
+  summary: "Moods the user has written in their journal before",
+  description:
+    "Distinct moods of the requesting user's journal entries across all their trips, most " +
+    "used first, then most recently written; at most eight. Suggestions only.",
+  tags: ["Trips"],
+  responses: {
+    200: {
+      description: "Ranked moods; empty when the journal has none",
+      content: { "application/json": { schema: z.object({ moods: z.array(z.string()) }) } },
+    },
+    401: { description: "Missing or invalid token", content: errorContent },
+    429: { description: "Rate limit exceeded", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/trips/{id}",
   summary: "Get a trip",
   description:
@@ -300,6 +354,41 @@ registry.registerPath({
   tags: ["Trips"],
   request: { params: z.object({ id: z.string().uuid(), entryId: z.string().uuid() }) },
   responses: { 204: deleted, 404: notFound },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/trips/{id}/photos",
+  summary: "List a trip's photos",
+  description:
+    "The gallery without the rest of the trip, in gallery order, at most 1000; the cover's " +
+    "internal row is left out. A journal entry picks its photos from this list (`photoIds`).",
+  tags: ["Trips"],
+  request: { params: tripId },
+  responses: {
+    200: {
+      description: "Photos",
+      content: {
+        "application/json": {
+          schema: z.object({
+            photos: z.array(
+              z.object({
+                id: z.string().uuid(),
+                url: z.string(),
+                caption: z.string().nullable(),
+                takenAt: z.string().nullable(),
+                sortIdx: z.number().int(),
+                mimetype: z.string(),
+                sizeBytes: z.number().int(),
+                createdAt: z.string(),
+              })
+            ),
+          }),
+        },
+      },
+    },
+    404: notFound,
+  },
 });
 
 registry.registerPath({

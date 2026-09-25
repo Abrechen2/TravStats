@@ -19,11 +19,16 @@ import CatalogueCombobox, {
 } from "./FlightForm/fields/CatalogueCombobox";
 import BookingFields from "./FlightForm/fields/BookingFields";
 import CostFields from "./FlightForm/fields/CostFields";
+import { flightFormExtract, flightHints } from "../lib/extractTargets";
 import TripSelectField from "./FlightForm/fields/TripSelectField";
 import StatusField from "./FlightForm/fields/StatusField";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
 import { buildLocalString } from "./FlightForm/useFlightForm";
 import CompanionsField from "./FlightForm/fields/CompanionsField";
+import TagInput from "./TagInput";
+import { splitTagText } from "../lib/tagList";
+import SuggestionChips from "./common/SuggestionChips";
+import { useFlightEntrySuggestions } from "../hooks/useFlightEntrySuggestions";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
@@ -148,6 +153,13 @@ export default function FlightEditModal({
     depCode: departureAirport?.iata || departureAirport?.icao || null,
     arrCode: arrivalAirport?.iata || arrivalAirport?.icao || null,
     browserTimezone: browserTz,
+  });
+
+  const suggestions = useFlightEntrySuggestions({
+    enabled: isOpen,
+    airline: formData.airline,
+    dep: departureAirport?.iata || departureAirport?.icao,
+    arr: arrivalAirport?.iata || arrivalAirport?.icao,
   });
 
   const update = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
@@ -340,12 +352,7 @@ export default function FlightEditModal({
         taxes: formData.taxes > 0 ? formData.taxes : null,
         fees: formData.fees > 0 ? formData.fees : null,
         notes: formData.notes || null,
-        tags: formData.tags
-          ? formData.tags
-              .split(",")
-              .map((tag) => tag.trim())
-              .filter(Boolean)
-          : [],
+        tags: splitTagText(formData.tags),
         receiptUrl: formData.receiptUrl || null,
         // Recombine with the SAME buildLocalString the create form uses —
         // no second implementation of date+time recombination.
@@ -569,6 +576,12 @@ export default function FlightEditModal({
               placeholder={t("flights:form.placeholders.flightNumber")}
               maxLength={10}
             />
+            <SuggestionChips
+              value={formData.flightNumber}
+              suggestions={suggestions.flightNumbers}
+              onPick={(v) => update("flightNumber", v)}
+              fieldLabel={t("flights:form.flightNumber")}
+            />
           </div>
         </div>
 
@@ -634,6 +647,12 @@ export default function FlightEditModal({
               className="input"
               placeholder={t("flights:form.placeholders.seat")}
             />
+            <SuggestionChips
+              value={formData.seatNumber}
+              suggestions={suggestions.seats}
+              onPick={(v) => update("seatNumber", v)}
+              fieldLabel={t("flights:form.seat")}
+            />
           </div>
           <div>
             <label className="label">{t("flights:form.gate")}</label>
@@ -653,6 +672,12 @@ export default function FlightEditModal({
               onChange={(e) => update("terminal", e.target.value)}
               className="input"
               placeholder={t("flights:form.placeholders.terminal")}
+            />
+            <SuggestionChips
+              value={formData.terminal}
+              suggestions={suggestions.departureTerminals}
+              onPick={(v) => update("terminal", v)}
+              fieldLabel={t("flights:form.terminal")}
             />
           </div>
           <div>
@@ -678,6 +703,7 @@ export default function FlightEditModal({
             frequentFlyerNumber: formData.frequentFlyerNumber,
           }}
           onChange={(v) => setFormData((prev) => ({ ...prev, ...v }))}
+          frequentFlyerSuggestion={suggestions.frequentFlyerNumber}
         />
 
         {/* Companions */}
@@ -710,16 +736,18 @@ export default function FlightEditModal({
             }))
           }
           showBreakdown={features.enableCostTracking}
+          receiptExtract={flightFormExtract(flightHints(flight), formData, (v) =>
+            setFormData((prev) => ({ ...prev, ...v }))
+          )}
         />
 
         {/* Tags */}
         <div>
           <label className="label">{t("flights:form.tags")}</label>
-          <input
-            type="text"
-            value={formData.tags}
-            onChange={(e) => update("tags", e.target.value)}
-            className="input"
+          <TagInput
+            value={splitTagText(formData.tags)}
+            onChange={(tags) => update("tags", tags.join(", "))}
+            ariaLabel={t("flights:form.tags")}
             placeholder={t("flights:form.placeholders.tags")}
           />
           <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>

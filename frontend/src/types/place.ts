@@ -45,6 +45,8 @@ export interface Place {
   curatedItemId: string | null;
   /** Logbook (`true`) or wishlist (`false`). Independent of whether visits exist. */
   visited: boolean;
+  /** The lead photograph the user chose; null means "the first one". */
+  coverPhotoId?: string | null;
   notes: string | null;
   dataSource: string | null;
   createdAt: string;
@@ -101,4 +103,17 @@ export interface PlaceListQuery {
   sortOrder?: "asc" | "desc";
   limit?: number;
   offset?: number;
+}
+
+/** Where a suggested visit date came from — see `GET /places/:id/visit-date-suggestions`. */
+export type VisitDateSource = "trip" | "stay" | "flight" | "photo";
+
+export interface VisitDateSuggestion {
+  /** `YYYY-MM-DD`, the calendar day at the place. */
+  date: string;
+  source: VisitDateSource;
+  /** Trip or lodging name, or the arrival airport; null for photographs. */
+  label: string | null;
+  /** Photographs taken at the place that day; null when there were none. */
+  photoCount: number | null;
 }

@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { PARSER_SUPPORTED_DOMAINS } from "../shared/domains";
 import {
   DOCUMENT_FORMATS,
   DOCUMENT_KINDS,
@@ -136,3 +137,17 @@ export const documentLimitsSchema = z.object(
     z.ZodNumber
   >
 );
+
+/**
+ * `POST /documents/:id/extract-values`. The domain is the entry's, sent by the
+ * form — never guessed here, because a flight form must not be offered a
+ * hotel's total. The two hints pick the leg out of a multi-flight booking.
+ */
+export const extractValuesBodySchema = z.object({
+  domain: z.enum(PARSER_SUPPORTED_DOMAINS),
+  flightNumber: z.string().trim().max(10).optional(),
+  departureDate: z
+    .string()
+    .regex(/^\d{4}-\d{2}-\d{2}$/)
+    .optional(),
+});

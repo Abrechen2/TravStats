@@ -30,6 +30,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import { generateApiToken } from "../../utils/apiTokens";
 import {
   DOCUMENT_DIR,
   documentPath,
@@ -258,5 +259,54 @@ describe("parse routes keep their originals", () => {
     expect(res.status).toBe(200);
     expect(res.body.documentId).toBe(own.document.id);
     expect(extractTextFromPdf.mock.calls[0]?.[0].equals(PDF(`by-id-${stamp}`))).toBe(true);
+  });
+
+  /**
+   * Both additions WRITE — `retain` creates a document, `documentId` replaces
+   * the reading recorded on one — so a read-scoped token may parse, but not
+   * keep or overwrite anything, and is refused before the parser runs.
+   */
+  it("refuses retain and documentId to a read-scoped token, but lets it parse", async () => {
+    const tok = await generateApiToken();
+    await prisma.apiToken.create({
+      data: {
+        userId,
+        label: "parse-read",
+        lookupHash: tok.lookupHash,
+        hash: tok.hash,
+        scope: "read",
+      },
+    });
+    const bearer = `Bearer ${tok.plaintext}`;
+    const own = await createDocument({ userId, buffer: PDF(`read-scope-${stamp}`) });
+    const before = await prisma.document.count({ where: { userId } });
+
+    const overwrite = await request(app)
+      .post("/api/v1/parse-pdf")
+      .set("Authorization", bearer)
+      .send({ documentId: own.document.id });
+    expect(overwrite.status).toBe(403);
+    const keep = await request(app)
+      .post("/api/v1/parse-pdf")
+      .set("Authorization", bearer)
+      .send({ pdfBase64: PDF(`read-keep-${stamp}`).toString("base64"), retain: true });
+    expect(keep.status).toBe(403);
+    const mail = await request(app)
+      .post("/api/v1/parse-email")
+      .set("Authorization", bearer)
+      .send({ emailContent: "x", retain: true });
+    expect(mail.status).toBe(403);
+    expect(extractTextFromPdf).not.toHaveBeenCalled();
+    expect(parseBookingEmail).not.toHaveBeenCalled();
+    expect(
+      (await prisma.document.findUniqueOrThrow({ where: { id: own.document.id } })).parsedPayload
+    ).toBeNull();
+    expect(await prisma.document.count({ where: { userId } })).toBe(before);
+
+    const plain = await request(app)
+      .post("/api/v1/parse-pdf")
+      .set("Authorization", bearer)
+      .send({ pdfBase64: PDF(`read-plain-${stamp}`).toString("base64") });
+    expect(plain.status).toBe(200);
   });
 });

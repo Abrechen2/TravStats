@@ -13,6 +13,7 @@ import { updateStopAndLegs, recomputeLegs } from "../../services/tour/legRecompu
 import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 import { resolveTrip } from "./resolveTrip";
 import { refreshJournalWeather } from "../../services/openData/journalWeather";
+import { assertTripPhotos, setJournalPhotos } from "../../services/trips/journalPhotos";
 
 /**
  * Trip stops and journal entries — a same-prefix satellite of routes/trips.ts, split out when that
@@ -172,6 +173,7 @@ router.post(
       const userId = req.userId!;
       const trip = await resolveTrip(userId, req.params.id);
       const body = createJournalSchema.parse(req.body);
+      const photoIds = await assertTripPhotos(trip.id, body.photoIds ?? []);
       const entry = await prisma.tripJournalEntry.create({
         data: {
           tripId: trip.id,
@@ -182,6 +184,7 @@ router.post(
           weather: body.weather,
         },
       });
+      if (photoIds.length > 0) await setJournalPhotos(entry.id, photoIds);
       // The day's measured weather, where the instance allows open data and a
       // stop of the trip says where the day was spent. Best effort: the entry
       // is saved either way.
@@ -206,6 +209,10 @@ router.patch(
       });
       if (!existing) throw new AppError("Journal entry not found", 404);
       const body = updateJournalSchema.parse(req.body);
+      const photoIds =
+        body.photoIds === undefined
+          ? undefined
+          : await assertTripPhotos(req.params.id, body.photoIds);
       const entry = await prisma.tripJournalEntry.update({
         where: { id: req.params.entryId },
         data: {
@@ -216,6 +223,7 @@ router.patch(
           ...(body.weather !== undefined && { weather: body.weather }),
         },
       });
+      if (photoIds !== undefined) await setJournalPhotos(entry.id, photoIds);
       // A new date is a new day: its weather replaces the old one's.
       const dayMoved = entry.date.getTime() !== existing.date.getTime();
       const needsWeather = dayMoved || entry.observedWeather === null;

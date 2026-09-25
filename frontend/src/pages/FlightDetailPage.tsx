@@ -22,12 +22,14 @@ import { flightsApi, tripsApi } from "../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { getFlightDuration } from "../lib/flightDuration";
+import { flightExtractTarget } from "../lib/extractTargets";
 import { convertDistance, formatAmount, getDistanceLabel } from "../lib/units";
 import { useSettingsStore } from "../store/settingsStore";
 import { formatDurationWithEstimate } from "../lib/formatters";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { Flight, FlightInput, Trip } from "../types";
+import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 
 /**
  * Reading a flight without editing it.
@@ -328,7 +330,14 @@ export default function FlightDetailPage(): JSX.Element {
 
           {/* Beside the costs, not instead of the receipt above them: the
               "Beleg" is the one file the price links to, this is the folder. */}
-          <DocumentsSection entry={{ type: "flight", id: flight.id }} />
+          <DocumentsSection
+            entry={{ type: "flight", id: flight.id }}
+            extract={flightExtractTarget(flight, async (updates) => {
+              await flightsApi.update(flight.id, updates);
+              addToast("success", t("documents:extract.applied"));
+              setReloadKey((k) => k + 1);
+            })}
+          />
         </div>
 
         <aside className="flex flex-col gap-6 md:col-span-2">
@@ -347,6 +356,7 @@ export default function FlightDetailPage(): JSX.Element {
               </Link>
             </DetailSection>
           )}
+          {flight.tripId && <TripPhotoWindowStrip entry="flights" id={flight.id} />}
 
           <DetailSection
             title={t("flights:form.aircraft")}

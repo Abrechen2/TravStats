@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import ReceiptUpload from "../ReceiptUpload";
 import DocumentsSection from "../documents/DocumentsSection";
 import { StayEditorSection } from "./StayEditorSection";
+import type { ExtractTarget } from "../../lib/extractValues";
 
 interface StayEditorAttachmentsSectionProps {
   /** The stay being edited, or null while one is being CREATED. */
@@ -9,6 +10,8 @@ interface StayEditorAttachmentsSectionProps {
   receiptUrl: string | null;
   onReceiptChange: (url: string | null) => void;
   t: (key: string, options?: Record<string, unknown>) => string;
+  /** "Take the values from this receipt" — into the editor's fields, saved with the stay. */
+  extract?: ExtractTarget;
 }
 
 /**
@@ -33,6 +36,7 @@ export function StayEditorAttachmentsSection({
   receiptUrl,
   onReceiptChange,
   t,
+  extract,
 }: StayEditorAttachmentsSectionProps): JSX.Element {
   return (
     <>
@@ -41,10 +45,13 @@ export function StayEditorAttachmentsSection({
           currentReceiptUrl={receiptUrl}
           onUploadSuccess={(url): void => onReceiptChange(url)}
           onDelete={(): void => onReceiptChange(null)}
+          extract={extract}
         />
       </StayEditorSection>
 
-      {stayId !== null ? <DocumentsSection entry={{ type: "lodgingStay", id: stayId }} /> : null}
+      {stayId !== null ? (
+        <DocumentsSection entry={{ type: "lodgingStay", id: stayId }} extract={extract} />
+      ) : null}
     </>
   );
 }

@@ -235,7 +235,13 @@ describe("open data endpoints", () => {
           id: 11,
           lat: 62.09,
           lon: 6.87,
-          tags: { name: "Hotel Union", tourism: "hotel" },
+          tags: {
+            name: "Hotel Union",
+            tourism: "hotel",
+            stars: "4S",
+            brand: "Nearby Test Chain",
+            website: "www.no-scheme.example",
+          },
         },
         {
           type: "node",
@@ -269,7 +275,29 @@ describe("open data endpoints", () => {
         "Hellesylt Camping",
         "Hotel Union",
       ]);
-      expect(res.body.places[1].website).toBe("https://camping.example");
+      expect(res.body.places[1].website).toBe("https://camping.example/");
+    });
+
+    it("gives the lodging form what it fills from: stars, and the catalogue chain of the brand", async () => {
+      await prisma.lodgingChain.upsert({
+        where: { name: "Nearby Test Chain" },
+        update: {},
+        create: { name: "Nearby Test Chain", loyaltyProgram: "Nearby Rewards" },
+      });
+      fetches = mockFetch([[/overpass-api\.de/, OVERPASS]]);
+      const res = await request(app)
+        .get("/api/v1/nearby/lodging?lat=62.0833&lon=6.8667&radiusKm=3")
+        .set("Cookie", cookie);
+      const hotel = res.body.places.find((p: { name: string }) => p.name === "Hotel Union");
+      expect(hotel).toMatchObject({
+        stars: 4,
+        brand: "Nearby Test Chain",
+        // Same rule as the enrichment: no scheme, no website.
+        website: null,
+        chain: { name: "Nearby Test Chain", loyaltyProgram: "Nearby Rewards" },
+      });
+      const camping = res.body.places.find((p: { name: string }) => p.name === "Bobil");
+      expect(camping).toMatchObject({ stars: null, brand: null, chain: null });
     });
 
     it("says openDataDisabled while the switch is off, and 502 when OSM does not answer", async () => {

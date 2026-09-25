@@ -2,6 +2,7 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import CatalogueCombobox, { searchAircraftOptions } from "../fields/CatalogueCombobox";
+import SuggestionChips from "../../common/SuggestionChips";
 
 interface AircraftSectionProps {
   aircraft: string;
@@ -12,6 +13,8 @@ interface AircraftSectionProps {
   setGate: (v: string) => void;
   labelClassName: string;
   inputClassName: string;
+  /** Terminals the user departed this airport from before. */
+  terminalSuggestions?: readonly string[];
 }
 
 /**
@@ -32,6 +35,7 @@ export default function AircraftSection({
   setGate,
   labelClassName,
   inputClassName,
+  terminalSuggestions = [],
 }: AircraftSectionProps): JSX.Element {
   const { t } = useTranslation(["flights"]);
 
@@ -56,6 +60,12 @@ export default function AircraftSection({
             onChange={(e) => setTerminal(e.target.value)}
             className={`input ${inputClassName}`}
             placeholder={t("flights:form.placeholders.terminal")}
+          />
+          <SuggestionChips
+            value={terminal}
+            suggestions={terminalSuggestions}
+            onPick={setTerminal}
+            fieldLabel={t("flights:form.terminal")}
           />
         </div>
         <div>

@@ -14,6 +14,7 @@ import { recheckAchievements } from "../utils/achievements";
 import { classifyVisit } from "../shared/placeCounting";
 import { deletePlacePhotoFile } from "../middleware/upload";
 import logger from "../utils/logger";
+import { toPhotoDto } from "./places/visitPhotoDto";
 import {
   createPlaceSchema,
   updatePlaceSchema,
@@ -278,7 +279,14 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       include: PLACE_DETAIL_INCLUDE,
     });
     if (!place) throw new AppError("Place not found", 404);
-    res.json({ success: true, data: decorate(place) });
+    const decorated = decorate(place);
+    res.json({
+      success: true,
+      data: {
+        ...decorated,
+        visits: decorated.visits.map((v) => ({ ...v, photos: v.photos.map(toPhotoDto) })),
+      },
+    });
   } catch (error) {
     next(error);
   }

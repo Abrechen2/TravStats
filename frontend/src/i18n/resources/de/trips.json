@@ -53,9 +53,10 @@
     "categoryLabel": "Kategorie",
     "startDateLabel": "Startdatum",
     "endDateLabel": "Enddatum",
+    "useEntrySpan": "Zeitraum der Einträge übernehmen: {{start}} – {{end}}",
     "originLabel": "Herkunft",
     "destinationLabel": "Ziel",
-    "tagsLabel": "Tags (kommagetrennt)",
+    "tagsLabel": "Tags",
     "companionsLabel": "Mitreisende",
     "coverLabel": "Coverbild",
     "notesLabel": "Notizen (Markdown)",
@@ -200,7 +201,10 @@
     "moodLabel": "Stimmung (optional)",
     "weatherLabel": "Wetter (optional)",
     "save": "Speichern",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "photosLabel": "Fotos aus der Reise",
+    "photosEmpty": "Die Reise hat noch keine Fotos in der Galerie.",
+    "photoAlt": "Foto zum Eintrag"
   },
   "journalView": {
     "view": "Ansehen",
@@ -300,7 +304,9 @@
     "coverUploaded": "Cover aktualisiert",
     "deleteConfirm": "Foto wirklich löschen?",
     "deleteError": "Foto konnte nicht gelöscht werden",
-    "empty": "Noch keine Fotos — lade die ersten Erinnerungen dieser Reise hoch."
+    "empty": "Noch keine Fotos — lade die ersten Erinnerungen dieser Reise hoch.",
+    "fromLibrary": "Aus der Fotobibliothek",
+    "fromLibraryAlt": "Foto aus der Fotobibliothek"
   },
   "insights": {
     "longest": "Längste Reise",
@@ -467,5 +473,9 @@
   },
   "list": {
     "undated": "Ohne Datum"
+  },
+  "photoWindow": {
+    "title": "Fotos aus der Reise",
+    "alt": "Foto aus der Reise"
   }
 }

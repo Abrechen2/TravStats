@@ -3,6 +3,16 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import SimplifiedFlightFormV2 from "../components/SimplifiedFlightFormV2";
 import { companionsApi } from "../lib/api";
 
+// The flight forms ask the user's logbook for suggestions over the network;
+// these tests pin other wiring and must reach none.
+vi.mock("@/hooks/useFlightEntrySuggestions", () => ({
+  useFlightEntrySuggestions: () => ({
+    seats: [],
+    flightNumbers: [],
+    frequentFlyerNumber: null,
+    departureTerminals: [],
+  }),
+}));
 vi.mock("../lib/api");
 vi.mock("../store/settingsStore", () => ({
   useSettingsStore: vi.fn().mockReturnValue({
