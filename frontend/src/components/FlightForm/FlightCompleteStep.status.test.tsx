@@ -42,7 +42,8 @@ vi.mock("../../lib/api", () => ({
 vi.mock("../Help/HelpIcon", () => ({ default: () => null }));
 vi.mock("../AirportAutocomplete", () => ({ default: () => null }));
 vi.mock("./CopyActionButton", () => ({ default: () => null }));
-vi.mock("../CurrencyInput", () => ({ default: () => null }));
+vi.mock("../common/CurrencySelect", () => ({ default: () => null }));
+vi.mock("../../hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
 
 // TripSelectField fetches the trip list on mount from `lib/api/trips` — a
 // different module than the `lib/api` barrel, so a barrel mock never covered it

@@ -34,7 +34,8 @@ vi.mock("../../lib/api", () => ({ companionsApi: { list: mocks.companionsList } 
 vi.mock("../Help/HelpIcon", () => ({ default: () => null }));
 vi.mock("../AirportAutocomplete", () => ({ default: () => null }));
 vi.mock("./CopyActionButton", () => ({ default: () => null }));
-vi.mock("../CurrencyInput", () => ({ default: () => null }));
+vi.mock("../common/CurrencySelect", () => ({ default: () => null }));
+vi.mock("../../hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
 vi.mock("@/lib/api/trips", async (importOriginal) => {
   const actual = await importOriginal<typeof import("@/lib/api/trips")>();
   return { ...actual, tripsApi: { ...actual.tripsApi, getAll: vi.fn().mockResolvedValue([]) } };

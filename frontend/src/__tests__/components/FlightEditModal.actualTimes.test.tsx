@@ -15,6 +15,9 @@ import type { Flight } from "../../types";
 
 const mocks = vi.hoisted(() => ({ getByCode: vi.fn() }));
 
+// The cost section's currency picker asks for the user's recent currencies on
+// mount; an empty list is what a failed request would give it anyway.
+vi.mock("@/hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));

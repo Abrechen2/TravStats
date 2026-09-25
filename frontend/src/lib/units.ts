@@ -105,47 +105,6 @@ export function getDistanceLabel(unit: DistanceUnit, t: (key: string) => string)
 }
 
 /**
- * Curated list of ISO 4217 codes shown in the currency picker dropdown.
- * Covers the most commonly used currencies in international travel —
- * users on a different code can still POST it directly to the API
- * (Backend Zod accepts any /^[A-Z]{3}$/). Add codes here as picker
- * coverage requests come in.
- */
-export const CURRENCY_OPTIONS: ReadonlyArray<string> = [
-  "EUR",
-  "USD",
-  "GBP",
-  "CHF",
-  "AUD",
-  "CAD",
-  "NZD",
-  "JPY",
-  "CNY",
-  "KRW",
-  "INR",
-  "SGD",
-  "HKD",
-  "THB",
-  "MYR",
-  "IDR",
-  "AED",
-  "SAR",
-  "ILS",
-  "SEK",
-  "NOK",
-  "DKK",
-  "PLN",
-  "CZK",
-  "HUF",
-  "BRL",
-  "MXN",
-  "ARS",
-  "ZAR",
-  "TRY",
-  "RUB",
-] as const;
-
-/**
  * Localized display name for an ISO 4217 code (e.g. "Euro", "US-Dollar",
  * "Indische Rupie"). Falls back to the raw code if Intl.DisplayNames is
  * unavailable or rejects the input.

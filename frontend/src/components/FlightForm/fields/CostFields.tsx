@@ -1,5 +1,6 @@
 import { useTranslation } from "../../../hooks/useTranslation";
-import CurrencyInput from "../../CurrencyInput";
+import CurrencySelect from "../../common/CurrencySelect";
+import { useRecentCurrencies } from "../../../hooks/useRecentCurrencies";
 import ReceiptUpload from "../../ReceiptUpload";
 import HelpIcon from "../../Help/HelpIcon";
 
@@ -46,6 +47,7 @@ export default function CostFields({
   inputClassName = "",
 }: CostFieldsProps): JSX.Element {
   const { t } = useTranslation(["flights", "common"]);
+  const recentCurrencies = useRecentCurrencies();
 
   const labelClass = `label ${labelClassName}`.trim();
   const inputClass = `input ${inputClassName}`.trim();
@@ -79,10 +81,10 @@ export default function CostFields({
         </div>
         <div>
           <label className={labelClass}>{t("flights:form.currency")}</label>
-          <CurrencyInput
+          <CurrencySelect
             value={value.currency || "EUR"}
             onChange={(v) => set("currency", v)}
-            className={inputClass}
+            recent={recentCurrencies}
           />
         </div>
       </div>

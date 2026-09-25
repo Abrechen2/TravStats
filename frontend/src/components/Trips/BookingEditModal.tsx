@@ -3,7 +3,9 @@ import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
 import { tripsApi } from "../../lib/api";
-import CurrencyInput from "../CurrencyInput";
+import CurrencySelect from "../common/CurrencySelect";
+import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
+import { useSettingsStore } from "../../store/settingsStore";
 import type { Booking } from "../../types";
 import { logger } from "../../lib/logger";
 
@@ -22,7 +24,11 @@ export default function BookingEditModal({
   const addToast = useToastStore((s) => s.addToast);
   const [pnr, setPnr] = useState(booking.pnr ?? "");
   const [price, setPrice] = useState(booking.price != null ? String(booking.price) : "");
-  const [currency, setCurrency] = useState(booking.currency ?? "EUR");
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  // A booking with no currency on record starts in the account's own
+  // currency, not a literal EUR; a stored one is a fact and stays.
+  const [currency, setCurrency] = useState(booking.currency ?? baseCurrency ?? "EUR");
+  const recentCurrencies = useRecentCurrencies();
   const [saving, setSaving] = useState(false);
 
   const handleSave = async (): Promise<void> => {
@@ -102,7 +108,7 @@ export default function BookingEditModal({
           <span className="mb-1 block" style={{ color: "var(--text-muted)" }}>
             {t("trips:bookingEdit.currency")}
           </span>
-          <CurrencyInput value={currency} onChange={setCurrency} />
+          <CurrencySelect value={currency} onChange={setCurrency} recent={recentCurrencies} />
         </label>
       </div>
     </Modal>

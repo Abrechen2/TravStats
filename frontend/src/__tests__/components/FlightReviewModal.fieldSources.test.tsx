@@ -28,6 +28,10 @@ vi.mock("../../store/authStore", () => ({
 vi.mock("../../store/settingsStore", () => ({
   useSettingsStore: () => ({ features: { enableCostTracking: false } }),
 }));
+vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/hooks/useRecentCurrencies")>();
+  return { ...actual, useRecentCurrencies: () => [] };
+});
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k }),
 }));

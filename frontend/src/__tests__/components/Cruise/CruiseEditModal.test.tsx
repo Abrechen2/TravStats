@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import { CruiseEditModal } from "../../../components/Cruise/CruiseEditModal";
 import { cruiseApi, companionsApi, tripsApi } from "../../../lib/api";
 import type { Cruise, Trip } from "../../../types";
+import { useSettingsStore } from "../../../store/settingsStore";
 
 vi.mock("../../../lib/api", () => ({
   cruiseApi: { create: vi.fn(), update: vi.fn() },
@@ -355,6 +356,55 @@ describe("CruiseEditModal", () => {
 
       expect(await screen.findByLabelText("field.trip")).toBeInTheDocument();
       expect(screen.getByLabelText("field.line")).toBeInTheDocument();
+    });
+  });
+
+  // A new cruise used to start at a literal "EUR" whatever the account's own
+  // currency was. The suite-wide store mock pins EUR, so the base currency is
+  // swapped to CHF here — otherwise the test could not tell the two apart.
+  describe("currency default", () => {
+    function withBaseCurrency(code: string): () => void {
+      const mocked = vi.mocked(useSettingsStore);
+      const original = mocked.getMockImplementation();
+      const state = {
+        display: { language: "en", dateFormat: "DD.MM.YYYY", timeFormat: "24h" },
+        baseCurrency: code,
+      };
+      mocked.mockImplementation(((sel?: (s: typeof state) => unknown) =>
+        sel ? sel(state) : state) as unknown as typeof useSettingsStore);
+      return () => {
+        if (original) mocked.mockImplementation(original);
+      };
+    }
+
+    it("a new cruise starts in the account's base currency", async () => {
+      const restore = withBaseCurrency("CHF");
+      try {
+        vi.mocked(cruiseApi.create).mockResolvedValue({ id: "c1" } as unknown as Cruise);
+        render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+        await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+        await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
+        const calls = vi.mocked(cruiseApi.create).mock.calls;
+        expect(calls[calls.length - 1][0].currency).toBe("CHF");
+      } finally {
+        restore();
+      }
+    });
+
+    it("an existing cruise keeps the currency it was saved with", async () => {
+      const restore = withBaseCurrency("CHF");
+      try {
+        vi.mocked(cruiseApi.update).mockResolvedValue(baseCruise);
+        render(
+          <CruiseEditModal mode="edit" cruise={baseCruise} onClose={vi.fn()} onSaved={vi.fn()} />
+        );
+        await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+        await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
+        const calls = vi.mocked(cruiseApi.update).mock.calls;
+        expect(calls[calls.length - 1][1].currency).toBe("EUR");
+      } finally {
+        restore();
+      }
     });
   });
 });

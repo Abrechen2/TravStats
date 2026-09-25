@@ -2,6 +2,7 @@ import { minorUnits } from "../../shared/currencies";
 import Modal from "../Modal";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
+import { useSettingsStore } from "../../store/settingsStore";
 import { useState, useEffect } from "react";
 import type {
   Cruise,
@@ -117,7 +118,10 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
 
   const [bookingReference, setBookingReference] = useState<string>(cruise?.bookingReference ?? "");
   const [price, setPrice] = useState<string>(cruise?.price?.toString() ?? "");
-  const [currency, setCurrency] = useState<string>(cruise?.currency ?? "EUR");
+  // A new cruise starts in the account's base currency; an existing one keeps
+  // what it was saved with.
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const [currency, setCurrency] = useState<string>(cruise?.currency ?? baseCurrency ?? "EUR");
   const recentCurrencies = useRecentCurrencies();
 
   const [tagsInput, setTagsInput] = useState<string>((cruise?.tags ?? []).join(", "));

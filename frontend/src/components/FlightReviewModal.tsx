@@ -10,7 +10,8 @@ import { filterEmailText } from "../lib/filterEmailText";
 import { getAirlineFromFlightNumber } from "../lib/airlineUtils";
 import AirportAutocomplete from "./AirportAutocomplete";
 import { useSuggestions } from "../hooks/useSuggestions";
-import CurrencyInput from "./CurrencyInput";
+import CurrencySelect from "./common/CurrencySelect";
+import { useRecentCurrencies } from "../hooks/useRecentCurrencies";
 import { getConfidenceColor, isInferred } from "../lib/flightReviewFields";
 
 function getFieldBorderClass(
@@ -68,7 +69,8 @@ export default function FlightReviewModal({
   originalData,
 }: FlightReviewModalProps): JSX.Element | null {
   const { t } = useTranslation(["flights", "common", "errors"]);
-  const { features } = useSettingsStore();
+  const { features, baseCurrency } = useSettingsStore();
+  const recentCurrencies = useRecentCurrencies();
   const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions();
   // Form state
   const [flightNumber, setFlightNumber] = useState("");
@@ -88,7 +90,7 @@ export default function FlightReviewModal({
   const [boardingGroup, setBoardingGroup] = useState("");
   const [ticketNumber, setTicketNumber] = useState("");
   const [price, setPrice] = useState<number | undefined>(undefined);
-  const [currency, setCurrency] = useState<string>("EUR");
+  const [currency, setCurrency] = useState<string>(baseCurrency || "EUR");
   const [taxes, setTaxes] = useState<number | undefined>(undefined);
   const [fees, setFees] = useState<number | undefined>(undefined);
 
@@ -711,11 +713,7 @@ export default function FlightReviewModal({
                 <label className="block text-sm font-medium text-(--text-primary) mb-2">
                   {t("flights:form.currency")}
                 </label>
-                <CurrencyInput
-                  value={currency}
-                  onChange={setCurrency}
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
-                />
+                <CurrencySelect value={currency} onChange={setCurrency} recent={recentCurrencies} />
               </div>
 
               {features.enableCostTracking && (
