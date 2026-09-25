@@ -1,49 +1,83 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import type { JSX } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 
 import AppShell from "../components/ui/AppShell";
+import Button from "../components/ui/Button";
+import DetailHeader from "../components/ui/DetailHeader";
+import EmptyState from "../components/ui/EmptyState";
+import Pill from "../components/ui/Pill";
+import { Icon } from "../components/ui/Icon";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
-import StationEditor from "../components/Roadtrips/StationEditor";
+import LegDialog from "../components/Roadtrips/LegDialog";
+import RoadtripFigures from "../components/Roadtrips/RoadtripFigures";
+import RoadtripTourCards from "../components/Roadtrips/RoadtripTourCards";
+import StationEditor, { type EditorStart } from "../components/Roadtrips/StationEditor";
 import StationTimeline from "../components/Roadtrips/StationTimeline";
+import { stationHighlightLayer } from "../components/Roadtrips/stationHighlightLayer";
+import type { SaveStatus } from "../components/Roadtrips/useStationAutosave";
 import { useTranslation } from "../hooks/useTranslation";
 import { useDomainColors } from "../hooks/useDomainColors";
-import { roadtripsApi, toStationInput } from "../lib/api/roadtrips";
+import { roadtripsApi } from "../lib/api/roadtrips";
 import { toursApi } from "../lib/api/tours";
 import { useDisplayFormat } from "../lib/displayFormat";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { hexToRgb } from "../lib/domainColor";
 import { logger } from "../lib/logger";
+import { dayNumber, localToday, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
 import { useToastStore } from "../store/toastStore";
-import type { RoadtripDetail, RoadtripStation, StationInput } from "../types/roadtrip";
-import type { TourGeometry } from "../types/tour";
+import type { RoadtripDetail, RoadtripStation } from "../types/roadtrip";
+import type { TourGeometry, TourLeg } from "../types/tour";
+
+type LegEdit = {
+  leg: TourLeg;
+  from: { id: string; title: string };
+  to: { id: string; title: string };
+};
+
+const STATUS_COLOR: Record<SaveStatus, string> = {
+  saved: "var(--ts-good)",
+  pending: "var(--ts-muted)",
+  saving: "var(--ts-muted)",
+  error: "var(--ts-bad)",
+  waiting: "var(--ts-warn)",
+};
 
 /**
- * One roadtrip, laid out like a cruise (design 2026-09-24, planning page
- * "Entwurf 1"): the figures up top, the map, then the stations by day.
+ * One roadtrip (design 2026-09-25, board 2): the head and its figures, the
+ * stations by day beside a map that follows the selection, then the day
+ * tours. Editing happens on the same page — the stations turn into the
+ * editor, the map stays — and saves as it goes.
  *
- * Only the station list is edited here. Legs, routing and recorded tracks are
- * the tour editor's (`/tours/:id`) — a roadtrip is a tour route underneath,
- * and one editor for legs is one place for leg bugs.
+ * `?station=neu` opens the editor with a new station (from "Neuer
+ * Roadtrip"), `?station=heute` with one dated today (from "Heutige Nacht
+ * eintragen").
  */
 export default function RoadtripDetailPage(): JSX.Element {
   const { id = "" } = useParams<{ id: string }>();
-  const { t, i18n } = useTranslation(["roadtrips", "common"]);
+  const [params, setParams] = useSearchParams();
+  const { t } = useTranslation(["roadtrips", "common"]);
   const display = useDisplayFormat();
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
   const roadtripColor = useDomainColors().colorOf("roadtrip");
-  const nf = useMemo(
-    () => new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 0 }),
-    [i18n.language]
-  );
+  const today = useMemo(() => localToday(), []);
 
+  const arrival = params.get("station");
+  const [editorStart] = useState<EditorStart>(
+    arrival === "heute" ? "today" : arrival === "neu" ? "new" : "plain"
+  );
+  const [editing, setEditing] = useState(editorStart !== "plain");
   const [detail, setDetail] = useState<RoadtripDetail | null>(null);
   const [geometry, setGeometry] = useState<TourGeometry | null>(null);
   const [loadError, setLoadError] = useState(false);
-  const [editing, setEditing] = useState(false);
-  const [saving, setSaving] = useState(false);
+  const [selectedId, setSelectedId] = useState<string | null>(null);
+  const [legEdit, setLegEdit] = useState<LegEdit | null>(null);
+  const [save, setSave] = useState<{ status: SaveStatus; flush: () => Promise<void> }>({
+    status: "saved",
+    flush: async () => {},
+  });
   const [confirmDelete, setConfirmDelete] = useState(false);
 
   const mountedRef = useRef(true);
@@ -53,6 +87,11 @@ export default function RoadtripDetailPage(): JSX.Element {
       mountedRef.current = false;
     };
   }, []);
+
+  // The query parameter has done its job once the editor opened.
+  useEffect(() => {
+    if (arrival) setParams({}, { replace: true });
+  }, [arrival, setParams]);
 
   const load = useCallback(async (): Promise<void> => {
     setLoadError(false);
@@ -78,6 +117,11 @@ export default function RoadtripDetailPage(): JSX.Element {
     void load();
   }, [load]);
 
+  const onStatus = useCallback(
+    (status: SaveStatus, flush: () => Promise<void>) => setSave({ status, flush }),
+    []
+  );
+
   const mapContent = useMemo<TripMapContent>(
     () => ({
       stops: (detail?.stations ?? []).map((s) => ({
@@ -85,7 +129,7 @@ export default function RoadtripDetailPage(): JSX.Element {
         lat: s.lat,
         lon: s.lon,
         // A night at a stay is drawn in the stay's colour, everything else in
-        // the roadtrip's — the same split the chips below make.
+        // the roadtrip's — the same split the markers make.
         domain: s.state === "stay" ? "hotel" : "roadtrip",
       })),
     }),
@@ -98,20 +142,16 @@ export default function RoadtripDetailPage(): JSX.Element {
         : [],
     [geometry, detail, id, roadtripColor]
   );
-
-  const saveStations = async (stations: StationInput[]): Promise<void> => {
-    setSaving(true);
-    try {
-      await roadtripsApi.replaceStations(id, stations);
-      if (!mountedRef.current) return;
-      setEditing(false);
-      await load();
-    } catch {
-      if (mountedRef.current) addToast("error", t("roadtrips:stations.saveError"));
-    } finally {
-      if (mountedRef.current) setSaving(false);
-    }
-  };
+  const selected = detail?.stations.find((s) => s.id === selectedId) ?? null;
+  const highlight = useMemo(
+    () =>
+      stationHighlightLayer(
+        selected && selected.lat !== null && selected.lon !== null
+          ? { lat: selected.lat, lon: selected.lon }
+          : null
+      ),
+    [selected]
+  );
 
   const startTour = async (station: RoadtripStation): Promise<void> => {
     try {
@@ -136,146 +176,245 @@ export default function RoadtripDetailPage(): JSX.Element {
     }
   };
 
+  // A station that is not complete keeps the editor open: closing would
+  // leave it unsaved with nothing on screen saying so. Its hint is already
+  // in the "still open" list.
+  const finishEditing = async (): Promise<void> => {
+    if (save.status === "waiting") return;
+    await save.flush();
+    setEditing(false);
+    await load();
+  };
+
   if (loadError) {
     return (
-      <AppShell width="list">
-        <div className="rounded-lg border border-(--color-border) bg-(--bg-surface) p-4 text-sm">
-          <p style={{ color: "var(--danger)" }}>{t("roadtrips:detailLoadError")}</p>
-          <button type="button" className="mt-2 underline" onClick={() => void load()}>
-            {t("common:buttons.retry")}
-          </button>
-        </div>
+      <AppShell width="table">
+        <EmptyState
+          kind="degraded"
+          title={t("roadtrips:detailLoadError")}
+          action={
+            <Button variant="secondary" onClick={() => void load()}>
+              {t("common:buttons.retry")}
+            </Button>
+          }
+        />
       </AppShell>
     );
   }
   if (!detail) {
     return (
-      <AppShell width="list">
-        <div className="py-10 text-center text-sm text-(--text-muted)">
-          {t("common:loading.default")}
+      <AppShell width="table">
+        <div
+          aria-busy="true"
+          aria-label={t("common:loading.default")}
+          className="flex flex-col"
+          style={{ gap: 16 }}
+        >
+          <div
+            className="animate-pulse"
+            style={{
+              height: 150,
+              borderRadius: "var(--ts-radius-card)",
+              background: "var(--ts-surface)",
+            }}
+          />
+          <div
+            className="animate-pulse"
+            style={{
+              height: 96,
+              borderRadius: "var(--ts-radius-card)",
+              background: "var(--ts-surface)",
+            }}
+          />
+          <div
+            className="animate-pulse"
+            style={{
+              height: 420,
+              borderRadius: "var(--ts-radius-card)",
+              background: "var(--ts-surface)",
+            }}
+          />
         </div>
       </AppShell>
     );
   }
 
   const r = detail.roadtrip;
+  const phase = roadtripPhase(detail.startDate, detail.endDate, today);
+  const day = dayNumber(detail.startDate, today);
+  const total = spanDays(detail.startDate, detail.endDate);
   const span =
     detail.startDate === null
       ? t("roadtrips:undated")
-      : `${display.date(detail.startDate, { timeZone: "UTC" })}${
-          detail.endDate && detail.endDate !== detail.startDate
+      : `${display.date(detail.startDate, { timeZone: "UTC", omitYear: detail.endDate !== null })}${
+          detail.endDate && detail.endDate.slice(0, 10) !== detail.startDate.slice(0, 10)
             ? ` – ${display.date(detail.endDate, { timeZone: "UTC" })}`
             : ""
         }`;
-  const days =
-    detail.startDate && detail.endDate
-      ? Math.round(
-          (Date.parse(detail.endDate.slice(0, 10)) - Date.parse(detail.startDate.slice(0, 10))) /
-            86_400_000
-        ) + 1
-      : null;
-  const stayLabels = Object.fromEntries(
-    detail.stations.filter((s) => s.stay).map((s) => [s.id, s.stay!.lodgingName])
+
+  const status =
+    phase === "underway" && day !== null ? (
+      <Pill color="var(--ts-good)">
+        {total !== null
+          ? t("roadtrips:phase.underway", { day, total })
+          : t("roadtrips:phase.underwayOpen", { day })}
+      </Pill>
+    ) : phase === "planned" ? (
+      <Pill color="var(--ts-info)">{t("roadtrips:phase.planned")}</Pill>
+    ) : undefined;
+
+  const actions = editing ? (
+    <div className="flex flex-wrap items-center" style={{ gap: 12 }}>
+      <span
+        role="status"
+        className="flex items-center"
+        style={{ gap: 6, fontSize: 13, color: STATUS_COLOR[save.status] }}
+      >
+        {save.status === "saved" && <Icon name="check" size={14} />}
+        {t(`roadtrips:editor.status.${save.status}`)}
+        {save.status === "error" && (
+          <button type="button" className="underline" onClick={() => void save.flush()}>
+            {t("roadtrips:editor.status.retry")}
+          </button>
+        )}
+      </span>
+      <Button variant="primary" onClick={() => void finishEditing()}>
+        {t("roadtrips:detail.done")}
+      </Button>
+    </div>
+  ) : (
+    <div className="flex flex-wrap" style={{ gap: 8 }}>
+      <Link
+        to={`/tours/${id}`}
+        className="flex items-center"
+        style={{
+          minHeight: "var(--ts-size-touch-min)",
+          padding: "0 14px",
+          borderRadius: "var(--ts-radius-button)",
+          border: "1px solid var(--ts-border-button)",
+          color: "var(--ts-text)",
+          textDecoration: "none",
+          fontSize: 14,
+        }}
+      >
+        {t("roadtrips:editLegs")}
+      </Link>
+      <Button
+        variant="primary"
+        icon={<Icon name="pencil" size={16} />}
+        onClick={() => setEditing(true)}
+      >
+        {t("roadtrips:detail.edit")}
+      </Button>
+    </div>
   );
 
-  const figures: Array<{ value: string; label: string }> = [
-    { value: `${nf.format(r.distanceKm)} km`, label: t("roadtrips:figures.km") },
-    ...(days !== null ? [{ value: nf.format(days), label: t("roadtrips:figures.days") }] : []),
-    {
-      value: `${nf.format(detail.nights.nights)}${detail.nights.nightsKnown ? "" : " *"}`,
-      label: t("roadtrips:figures.nights", { places: detail.nights.placesSlept }),
-    },
-    { value: nf.format(detail.countries.length), label: t("roadtrips:figures.countries") },
-    { value: nf.format(detail.tours.length), label: t("roadtrips:figures.tours") },
-  ];
-
   return (
-    <AppShell width="list">
-      <nav className="mb-2 text-sm">
-        <Link to="/roadtrips" className="underline">
-          {t("roadtrips:backToList")}
-        </Link>
-      </nav>
-      <header className="mb-3 space-y-1">
-        <div className="flex flex-wrap items-center gap-2">
-          <h1 className="t-screen-title">{r.name}</h1>
-        </div>
-        <p className="text-sm text-(--text-muted)">
-          {[
-            r.vehicle ? t(`roadtrips:vehicle.${r.vehicle}`) : null,
-            r.vehicleName,
-            span,
-            detail.trip ? t("roadtrips:inTrip", { name: detail.trip.name }) : null,
-          ]
-            .filter(Boolean)
-            .join(" · ")}
-        </p>
-      </header>
+    <AppShell width="table">
+      <DetailHeader
+        backTo="/roadtrips"
+        backLabel={t("roadtrips:pageTitle")}
+        domain="roadtrip"
+        icon={<Icon name="caravan" size={24} />}
+        title={r.name}
+        status={status}
+        subtitle={
+          <span>
+            {[
+              r.vehicle ? t(`roadtrips:vehicle.${r.vehicle}`) : null,
+              r.vehicleName ? `„${r.vehicleName}“` : null,
+              span,
+            ]
+              .filter(Boolean)
+              .join(" · ")}
+            {detail.trip && (
+              <>
+                {" · "}
+                <Link to={`/trips/${detail.trip.id}`}>
+                  {t("roadtrips:inTrip", { name: detail.trip.name })}
+                </Link>
+              </>
+            )}
+          </span>
+        }
+        actions={actions}
+      />
 
-      <dl
-        className="mb-4 grid grid-cols-2 gap-px overflow-hidden rounded-lg border border-(--color-border) sm:grid-cols-5"
-        style={{ background: "var(--color-border)" }}
+      <RoadtripFigures detail={detail} today={today} />
+
+      <div
+        className="grid items-start lg:grid-cols-[minmax(0,1fr)_minmax(340px,440px)]"
+        style={{ gap: "var(--ts-space-xl)", marginTop: "var(--ts-space-xl)" }}
       >
-        {figures.map((f) => (
-          <div key={f.label} className="p-3" style={{ background: "var(--bg-elevated)" }}>
-            <dt className="text-xs text-(--text-muted)">{f.label}</dt>
-            <dd className="t-stat-number">{f.value}</dd>
-          </div>
-        ))}
-      </dl>
-      {!detail.nights.nightsKnown && (
-        <p className="-mt-2 mb-4 text-xs text-(--text-muted)">{t("roadtrips:nightsSoft")}</p>
-      )}
+        <section className="order-2 flex min-w-0 flex-col lg:order-1" style={{ gap: 8 }}>
+          <h2 className="t-card-title">{t("roadtrips:stations.title")}</h2>
+          {editing ? (
+            <StationEditor
+              routeId={id}
+              stations={detail.stations.filter((s) => s.lat !== null)}
+              legs={detail.legs}
+              tripId={detail.trip?.id ?? null}
+              start={editorStart}
+              today={today}
+              onSaved={() => void load()}
+              onStatus={onStatus}
+              onEditLeg={(leg, from, to) => setLegEdit({ leg, from, to })}
+            />
+          ) : (
+            <StationTimeline
+              stations={detail.stations}
+              legs={detail.legs}
+              tours={detail.tours}
+              startDate={detail.startDate}
+              today={today}
+              selectedId={selectedId}
+              onSelect={(s) => setSelectedId((cur) => (cur === s.id ? null : s.id))}
+              onStartTour={(s) => void startTour(s)}
+            />
+          )}
+        </section>
 
-      <div className="mb-4 overflow-hidden rounded-lg border border-(--color-border)">
-        <TripMap trip={mapContent} tourGeometries={mapGeometries} />
+        <aside className="order-1 flex flex-col lg:sticky lg:order-2" style={{ gap: 8, top: 72 }}>
+          <div
+            className="overflow-hidden"
+            style={{
+              borderRadius: 20,
+              border: "1px solid var(--ts-border)",
+              height: "min(640px, calc(100vh - 96px))",
+              minHeight: 380,
+            }}
+          >
+            <TripMap trip={mapContent} tourGeometries={mapGeometries} extraLayers={highlight} />
+          </div>
+          {!editing && <span className="t-caption">{t("roadtrips:detail.mapHint")}</span>}
+        </aside>
       </div>
 
-      <section className="space-y-3">
-        <div className="flex flex-wrap items-center justify-between gap-2">
-          <h2 className="t-card-title">{t("roadtrips:stations.title")}</h2>
-          {!editing && (
-            <div className="flex flex-wrap gap-2 text-sm">
-              <button
-                type="button"
-                onClick={() => setEditing(true)}
-                className="rounded-sm border border-(--color-border) px-3 py-1.5 hover:bg-(--bg-surface)"
-              >
-                {t("roadtrips:stations.edit")}
-              </button>
-              <Link
-                to={`/tours/${id}`}
-                className="rounded-sm border border-(--color-border) px-3 py-1.5 hover:bg-(--bg-surface)"
-              >
-                {t("roadtrips:editLegs")}
-              </Link>
-            </div>
-          )}
-        </div>
-        {editing ? (
-          <StationEditor
-            initial={detail.stations.filter((s) => s.lat !== null).map(toStationInput)}
-            initialStayLabels={stayLabels}
-            tripId={detail.trip?.id ?? null}
-            saving={saving}
-            onSave={(stations) => void saveStations(stations)}
-            onCancel={() => setEditing(false)}
-          />
-        ) : (
-          <StationTimeline
-            stations={detail.stations}
-            legs={detail.legs}
-            tours={detail.tours}
-            onStartTour={(s) => void startTour(s)}
-          />
-        )}
+      <section className="flex flex-col" style={{ gap: 14, marginTop: "var(--ts-space-xxl)" }}>
+        <h2 className="t-card-title">{t("roadtrips:detail.toursTitle")}</h2>
+        <RoadtripTourCards tours={detail.tours} stations={detail.stations} />
       </section>
 
-      <footer className="mt-8 border-t border-(--color-border) pt-4 text-sm">
+      <footer className="mt-8 pt-4 text-sm" style={{ borderTop: "1px solid var(--ts-border)" }}>
         <button type="button" className="underline" onClick={() => setConfirmDelete(true)}>
           {t("roadtrips:delete")}
         </button>
       </footer>
+
+      {legEdit && (
+        <LegDialog
+          routeId={id}
+          leg={legEdit.leg}
+          from={legEdit.from}
+          to={legEdit.to}
+          routingAvailable={detail.routingAvailable}
+          onClose={() => setLegEdit(null)}
+          onSaved={() => {
+            setLegEdit(null);
+            void load();
+          }}
+        />
+      )}
 
       {confirmDelete && (
         <ConfirmModal

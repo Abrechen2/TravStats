@@ -9,7 +9,7 @@
  * characters ARE that day; "today" is the reader's local day.
  */
 import { ROADTRIP_VEHICLES, type RoadtripVehicle } from "../../shared/tour/roadtrip";
-import type { RoadtripStation, StationInput } from "../../types/roadtrip";
+import type { RoadtripStation, StationInput, StationNightInput } from "../../types/roadtrip";
 
 const DAY_MS = 86_400_000;
 
@@ -185,16 +185,21 @@ export type StationWarning =
   | { kind: "beforePrevious"; index: number }
   | { kind: "noDeparture"; index: number };
 
-/** A station while it is edited: the point may still be missing. */
-export type StationDraft = Omit<StationInput, "lat" | "lon"> & {
+/**
+ * A station while it is edited: the point may still be missing, and a stay
+ * night may be chosen before the stay is linked — a state the server
+ * refuses, so it waits here instead.
+ */
+export type StationDraft = Omit<StationInput, "lat" | "lon" | "night"> & {
   lat: number | null;
   lon: number | null;
+  night: StationNightInput | { kind: "stay"; lodgingStayId: null };
 };
 
 /**
- * What the editor points out — hints, not refusals. Only a missing place
- * holds the save back (the server needs a point); the rest are things a
- * reader usually wants to know and may still mean.
+ * What the editor points out. A missing place or an unlinked stay holds the
+ * save back (the server needs both); the rest are hints a reader usually
+ * wants and may still mean.
  */
 export function stationWarnings(drafts: readonly StationDraft[]): StationWarning[] {
   const out: StationWarning[] = [];
@@ -202,6 +207,9 @@ export function stationWarnings(drafts: readonly StationDraft[]): StationWarning
   drafts.forEach((d, index) => {
     if (d.lat === null || d.lon === null || d.title.trim() === "") {
       out.push({ kind: "noPlace", index });
+    }
+    if (d.night.kind === "stay" && !d.night.lodgingStayId) {
+      out.push({ kind: "noStay", index });
     }
     const day = dayKey(d.startDate ?? null);
     if (day !== null && lastDay !== null && day < lastDay) {
@@ -215,9 +223,12 @@ export function stationWarnings(drafts: readonly StationDraft[]): StationWarning
   return out;
 }
 
-/** A draft the server accepts: it has a place. */
-export function isSavable(d: StationDraft): d is StationDraft & { lat: number; lon: number } {
-  return d.title.trim() !== "" && d.lat !== null && d.lon !== null;
+/** A draft the server accepts: it has a place, and a stay night has its stay. */
+export function isSavable(
+  d: StationDraft
+): d is StationDraft & { lat: number; lon: number; night: StationNightInput } {
+  const stayLinked = d.night.kind !== "stay" || Boolean(d.night.lodgingStayId);
+  return d.title.trim() !== "" && d.lat !== null && d.lon !== null && stayLinked;
 }
 
 /** The morning after a day, for the "left next morning" shortcut. */

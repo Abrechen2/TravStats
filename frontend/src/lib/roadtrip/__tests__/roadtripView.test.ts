@@ -3,6 +3,7 @@ import { describe, expect, it } from "vitest";
 import {
   currentStationIndex,
   groupRoadtrips,
+  isSavable,
   localToday,
   nextMorning,
   nextStation,
@@ -158,12 +159,21 @@ describe("stationWarnings", () => {
       draft({ startDate: "2026-09-21" }),
       draft({ lat: null, lon: null, title: "" }),
       draft({ startDate: "2026-09-23", night: { kind: "free" } }),
+      draft({ night: { kind: "stay", lodgingStayId: null } }),
     ]);
     expect(warnings).toEqual([
       { kind: "beforePrevious", index: 1 },
       { kind: "noPlace", index: 2 },
       { kind: "noDeparture", index: 3 },
+      { kind: "noStay", index: 4 },
     ]);
+  });
+
+  it("saves a station only once it has a place, and a stay night only with its stay", () => {
+    expect(isSavable(draft({}))).toBe(true);
+    expect(isSavable(draft({ lat: null }))).toBe(false);
+    expect(isSavable(draft({ night: { kind: "stay", lodgingStayId: null } }))).toBe(false);
+    expect(isSavable(draft({ night: { kind: "stay", lodgingStayId: "s1" } }))).toBe(true);
   });
 
   it("starts a new station where the one before it was left", () => {

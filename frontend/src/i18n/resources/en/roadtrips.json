@@ -289,7 +289,7 @@
       "saving": "Saving …",
       "saved": "All saved",
       "error": "Not saved",
-      "waiting": "Waiting — a station has no place yet",
+      "waiting": "Waiting — a station is not complete yet",
       "retry": "Try again"
     },
     "whatHere": "What was here?",
@@ -326,9 +326,10 @@
     "warnings": {
       "noPlace": "{{name}}: place missing",
       "beforePrevious": "{{name}} is before the previous station — check the date",
-      "noDeparture": "{{name}}: departure missing"
+      "noDeparture": "{{name}}: departure missing",
+      "noStay": "{{name}}: stay not linked yet"
     },
-    "warningsNote": "Hints only — everything is saved anyway. Only a station without a place waits until it has one."
+    "warningsNote": "Hints only — everything is saved anyway. Only a station without a place or without its linked stay waits."
   },
   "legDialog": {
     "title": "Leg",

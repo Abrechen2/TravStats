@@ -13,6 +13,8 @@ export interface PickableStay {
   label: string;
   checkIn: string | null;
   checkOut: string | null;
+  /** Offered, but marked: a cancelled stay links fine and counts no night. */
+  cancelled: boolean;
 }
 
 const NEW_STAY_TYPES: LodgingType[] = ["campsite", "hotel", "guesthouse", "apartment", "hostel"];
@@ -20,7 +22,13 @@ const DAY_MS = 86_400_000;
 
 function flatten(lodgings: Lodging[]): PickableStay[] {
   return lodgings.flatMap((l) =>
-    l.stays.map((s) => ({ id: s.id, label: l.name, checkIn: s.checkIn, checkOut: s.checkOut }))
+    l.stays.map((s) => ({
+      id: s.id,
+      label: l.name,
+      checkIn: s.checkIn,
+      checkOut: s.checkOut,
+      cancelled: s.status === "cancelled",
+    }))
   );
 }
 
@@ -103,7 +111,13 @@ export default function StayPicker({
         );
         throw err;
       });
-      onPick({ id: stay.id, label: lodging.name, checkIn: stay.checkIn, checkOut: stay.checkOut });
+      onPick({
+        id: stay.id,
+        label: lodging.name,
+        checkIn: stay.checkIn,
+        checkOut: stay.checkOut,
+        cancelled: false,
+      });
       setCreating(false);
     } catch (err) {
       logger.warn("Creating a stay from a roadtrip station failed", err);
@@ -145,6 +159,11 @@ export default function StayPicker({
               }
             >
               {describe(s)}
+              {s.cancelled && (
+                <span className="ml-2 text-xs" style={{ color: "var(--ts-warn)" }}>
+                  {t("roadtrips:stay.cancelled")}
+                </span>
+              )}
             </button>
           </li>
         ))}

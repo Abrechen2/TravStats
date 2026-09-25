@@ -1,282 +1,321 @@
-import { useState } from "react";
-import type { JSX } from "react";
+import { useEffect, useRef, useState } from "react";
+import type { CSSProperties, JSX } from "react";
 
-import { LocationInput } from "../location/LocationInput";
+import Button from "../ui/Button";
+import IconButton from "../ui/IconButton";
+import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
-import type { StationNightInput, StationInput } from "../../types/roadtrip";
-import StayPicker, { useLodgingLibrary, type PickableStay } from "./StayPicker";
+import { stationAfter, stationWarnings } from "../../lib/roadtrip/roadtripView";
+import type { RoadtripStation } from "../../types/roadtrip";
+import type { TourLeg } from "../../types/tour";
+import StationEditCard from "./StationEditCard";
+import StationMarker from "./StationMarker";
+import { useLodgingLibrary } from "./StayPicker";
+import {
+  newStationKey,
+  toEditorStation,
+  useStationAutosave,
+  type EditorStation,
+  type SaveStatus,
+  type SavedStations,
+} from "./useStationAutosave";
 
-/** A station while it is being edited: coordinates may still be missing. */
-interface StationDraft extends Omit<StationInput, "lat" | "lon"> {
-  lat: number | null;
-  lon: number | null;
-  /** The linked stay's display name, for a stay picked in this session. */
-  stayLabel?: string;
-}
+const UNDO_MS = 8000;
 
-function toDraft(input: StationInput, stayLabel?: string): StationDraft {
-  return { ...input, stayLabel };
-}
+const DASHED: CSSProperties = {
+  minHeight: 40,
+  borderRadius: "var(--ts-radius-button)",
+  background: "none",
+  border: "1px dashed color-mix(in srgb, var(--domain-roadtrip) 50%, transparent)",
+  color: "var(--domain-roadtrip)",
+  fontSize: 13,
+  cursor: "pointer",
+};
 
-function isComplete(d: StationDraft): d is StationDraft & { lat: number; lon: number } {
-  return d.title.trim() !== "" && d.lat !== null && d.lon !== null;
-}
-
-/** `YYYY-MM-DD` for a date input from whatever the API returned. */
-function dayInput(value: string | null | undefined): string {
-  return value ? value.slice(0, 10) : "";
-}
-
-const NIGHT_KINDS: StationNightInput["kind"][] = ["stay", "free", "pass"];
+/** How the editor opens: plainly, with a new station, or with tonight's. */
+export type EditorStart = "plain" | "new" | "today";
 
 /**
- * The station list of one roadtrip, edited as a whole and saved in one write
- * (the endpoint replaces the list atomically, so the editor does too).
- *
- * Each station's night is one of three things and the control says so — a
- * segmented choice, not a checkbox plus an optional field, because "a night
- * at a stay" without a stay is a state the server refuses and the form should
- * not be able to express either.
+ * The stations of a roadtrip, edited in place (design 2026-09-25, board 3).
+ * One station is open at a time; the rest are one line each with move and
+ * remove. There is no save button: every change is sent after a short pause
+ * (`useStationAutosave`), and a removal can be taken back for a few seconds.
+ * A new station goes in where it belongs — between two, or at the end — and
+ * starts where the one before it left off.
  */
 export default function StationEditor({
-  initial,
-  initialStayLabels,
+  routeId,
+  stations,
+  legs,
   tripId,
-  saving,
-  onSave,
-  onCancel,
+  start,
+  today,
+  onSaved,
+  onStatus,
+  onEditLeg,
 }: {
-  initial: StationInput[];
-  /** Stay names for the stations as loaded, keyed by station id. */
-  initialStayLabels: Record<string, string>;
+  routeId: string;
+  stations: RoadtripStation[];
+  legs: TourLeg[];
   tripId: string | null;
-  saving: boolean;
-  onSave: (stations: StationInput[]) => void;
-  onCancel: () => void;
+  start: EditorStart;
+  today: string;
+  onSaved: (saved: SavedStations) => void;
+  onStatus: (status: SaveStatus, flush: () => Promise<void>) => void;
+  onEditLeg: (
+    leg: TourLeg,
+    from: { id: string; title: string },
+    to: { id: string; title: string }
+  ) => void;
 }): JSX.Element {
-  const { t } = useTranslation(["roadtrips", "common"]);
-  const [draft, setDraft] = useState<StationDraft[]>(() =>
-    initial.map((s) => toDraft(s, s.id ? initialStayLabels[s.id] : undefined))
-  );
-  const [pickerFor, setPickerFor] = useState<number | null>(null);
-  const lodgings = useLodgingLibrary(pickerFor !== null);
+  const { t } = useTranslation(["roadtrips"]);
+  const { drafts, status, change, flush } = useStationAutosave({
+    routeId,
+    initial: stations.map(toEditorStation),
+    onSaved,
+  });
+  const [openKey, setOpenKey] = useState<string | null>(null);
+  const [removed, setRemoved] = useState<{ station: EditorStation; index: number } | null>(null);
+  const lodgings = useLodgingLibrary(true);
+  const started = useRef(false);
 
-  const update = (index: number, patch: Partial<StationDraft>): void =>
-    setDraft((prev) => prev.map((s, i) => (i === index ? { ...s, ...patch } : s)));
+  useEffect(() => onStatus(status, flush), [status, onStatus, flush]);
 
-  const move = (index: number, delta: number): void => {
-    const target = index + delta;
-    if (target < 0 || target >= draft.length) return;
-    setDraft((prev) => {
+  const insertAt = (index: number, seed?: Partial<EditorStation>): void => {
+    const station: EditorStation = {
+      ...stationAfter(drafts[index - 1] ?? null),
+      ...seed,
+      key: newStationKey(),
+    };
+    change((prev) => [...prev.slice(0, index), station, ...prev.slice(index)]);
+    setOpenKey(station.key);
+  };
+
+  // `?station=neu` / `?station=heute`: the list and the "tonight" button
+  // arrive here wanting a station open, once.
+  useEffect(() => {
+    if (started.current || start === "plain") return;
+    started.current = true;
+    insertAt(drafts.length, start === "today" ? { startDate: today } : undefined);
+  }, []);
+
+  useEffect(() => {
+    if (!removed) return;
+    const timer = setTimeout(() => setRemoved(null), UNDO_MS);
+    return () => clearTimeout(timer);
+  }, [removed]);
+
+  const update = (key: string, patch: Partial<EditorStation>): void =>
+    change((prev) => prev.map((s) => (s.key === key ? { ...s, ...patch } : s)));
+
+  const move = (index: number, delta: number): void =>
+    change((prev) => {
+      const target = index + delta;
+      if (target < 0 || target >= prev.length) return prev;
       const next = [...prev];
       [next[index], next[target]] = [next[target], next[index]];
       return next;
     });
+
+  const remove = (index: number): void => {
+    setRemoved({ station: drafts[index], index });
+    if (drafts[index].key === openKey) setOpenKey(null);
+    change((prev) => prev.filter((_, i) => i !== index));
   };
 
-  const setNightKind = (index: number, kind: StationNightInput["kind"]): void => {
-    if (kind === "stay") {
-      // A stay night needs a stay; open the picker rather than store a
-      // half-state the server would refuse.
-      setPickerFor(index);
-      return;
-    }
-    update(index, { night: { kind }, stayLabel: undefined });
+  const undo = (): void => {
+    if (!removed) return;
+    const { station, index } = removed;
+    change((prev) => [...prev.slice(0, index), station, ...prev.slice(index)]);
+    setRemoved(null);
   };
 
-  const pickStay = (index: number, stay: PickableStay): void => {
-    update(index, {
-      night: { kind: "stay", lodgingStayId: stay.id },
-      stayLabel: stay.label,
-      startDate: draft[index].startDate || stay.checkIn,
-      endDate: draft[index].endDate || stay.checkOut,
-    });
-    setPickerFor(null);
-  };
+  const legBetween = (a: EditorStation, b: EditorStation): TourLeg | undefined =>
+    a.id && b.id ? legs.find((l) => l.fromStopId === a.id && l.toStopId === b.id) : undefined;
 
-  const incomplete = draft.some((s) => !isComplete(s));
-
-  const save = (): void => {
-    const complete = draft.filter(isComplete);
-    if (complete.length !== draft.length) return;
-    onSave(
-      complete.map(({ stayLabel: _label, ...s }) => ({
-        ...s,
-        startDate: s.startDate || null,
-        endDate: s.endDate || null,
-      }))
-    );
-  };
+  const name = (s: EditorStation): string => s.title.trim() || t("roadtrips:editor.unnamed");
+  const warnings = stationWarnings(drafts);
 
   return (
-    <div className="space-y-3">
-      {draft.length === 0 && (
-        <p className="text-sm text-(--text-muted)">{t("roadtrips:stations.empty")}</p>
-      )}
-      <ol className="space-y-3">
-        {draft.map((station, index) => (
-          <li
-            key={station.id ?? `new-${index}`}
-            className="space-y-2 rounded-lg border border-(--color-border) p-3"
-          >
-            <div className="flex flex-wrap items-center gap-2">
-              <span className="t-meta-mono w-6 text-center">{index + 1}</span>
-              <input
-                id={`station-title-${index}`}
-                type="text"
-                value={station.title}
-                onChange={(e) => update(index, { title: e.target.value })}
-                placeholder={t("roadtrips:stations.titlePlaceholder")}
-                aria-label={t("roadtrips:stations.titlePlaceholder")}
-                className="min-w-40 flex-1 rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
-              />
-              <button
-                type="button"
-                onClick={() => move(index, -1)}
-                disabled={index === 0}
-                aria-label={t("roadtrips:stations.moveUp")}
-                className="px-1 text-sm disabled:opacity-30"
-              >
-                ↑
-              </button>
-              <button
-                type="button"
-                onClick={() => move(index, 1)}
-                disabled={index === draft.length - 1}
-                aria-label={t("roadtrips:stations.moveDown")}
-                className="px-1 text-sm disabled:opacity-30"
-              >
-                ↓
-              </button>
-              <button
-                type="button"
-                onClick={() => setDraft((prev) => prev.filter((_, i) => i !== index))}
-                className="text-xs underline"
-              >
-                {t("roadtrips:stations.remove")}
-              </button>
-            </div>
+    <div className="flex flex-col" style={{ gap: 8 }}>
+      <p
+        className="t-caption"
+        style={{
+          padding: "12px 16px",
+          borderRadius: "var(--ts-radius-button)",
+          background: "var(--domain-roadtrip-soft)",
+        }}
+      >
+        {t("roadtrips:editor.hint")}
+      </p>
 
-            <LocationInput
-              compact
-              idPrefix={`station-location-${index}`}
-              value={
-                station.lat !== null && station.lon !== null
-                  ? { lat: station.lat, lon: station.lon }
-                  : null
-              }
-              onChange={(sel) =>
-                update(index, {
-                  lat: sel.lat,
-                  lon: sel.lon,
-                  title: station.title.trim() === "" && sel.name ? sel.name : station.title,
-                })
-              }
-            />
-
-            <div className="flex flex-wrap items-center gap-2 text-sm">
-              <label className="flex items-center gap-1">
-                <span className="text-xs text-(--text-muted)">{t("roadtrips:stations.from")}</span>
-                <input
-                  id={`station-start-${index}`}
-                  type="date"
-                  value={dayInput(station.startDate)}
-                  onChange={(e) => update(index, { startDate: e.target.value || null })}
-                  className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1"
-                />
-              </label>
-              <label className="flex items-center gap-1">
-                <span className="text-xs text-(--text-muted)">{t("roadtrips:stations.to")}</span>
-                <input
-                  id={`station-end-${index}`}
-                  type="date"
-                  value={dayInput(station.endDate)}
-                  onChange={(e) => update(index, { endDate: e.target.value || null })}
-                  className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1"
-                />
-              </label>
-            </div>
-
-            <div
-              role="radiogroup"
-              aria-label={t("roadtrips:stations.nightLabel")}
-              className="flex flex-wrap items-center gap-1"
-            >
-              {NIGHT_KINDS.map((kind) => (
-                <button
-                  key={kind}
-                  type="button"
-                  role="radio"
-                  aria-checked={station.night.kind === kind}
-                  onClick={() => setNightKind(index, kind)}
-                  className="rounded-full border px-2.5 py-0.5 text-xs"
-                  style={
-                    station.night.kind === kind
-                      ? {
-                          borderColor: `var(--domain-${kind === "stay" ? "lodging" : "roadtrip"})`,
-                          background: `var(--domain-${kind === "stay" ? "lodging" : "roadtrip"}-soft)`,
-                        }
-                      : { borderColor: "var(--color-border)" }
-                  }
-                >
-                  {t(`roadtrips:night.${kind}`)}
-                </button>
-              ))}
-              {station.night.kind === "stay" && (
-                <button
-                  type="button"
-                  className="text-xs underline"
-                  onClick={() => setPickerFor(pickerFor === index ? null : index)}
-                >
-                  {station.stayLabel ?? t("roadtrips:stay.linked")} · {t("roadtrips:stay.change")}
-                </button>
-              )}
-            </div>
-
-            {pickerFor === index && (
-              <StayPicker
-                selectedStayId={station.night.kind === "stay" ? station.night.lodgingStayId : null}
-                near={{ startDate: station.startDate ?? null, endDate: station.endDate ?? null }}
-                place={{ name: station.title, lat: station.lat, lon: station.lon }}
+      {drafts.map((s, index) => {
+        const next = drafts[index + 1];
+        const leg = next ? legBetween(s, next) : undefined;
+        return (
+          <div key={s.key} className="flex flex-col" style={{ gap: 8 }}>
+            {s.key === openKey ? (
+              <StationEditCard
+                station={s}
+                position={index + 1}
+                total={drafts.length}
                 tripId={tripId}
                 lodgings={lodgings}
-                onPick={(stay) => pickStay(index, stay)}
+                onChange={(patch) => update(s.key, patch)}
+                onClose={() => setOpenKey(null)}
               />
+            ) : (
+              <div
+                className="flex items-center"
+                style={{
+                  gap: 12,
+                  padding: "10px 12px",
+                  borderRadius: "var(--ts-radius-button)",
+                  background: "var(--ts-surface)",
+                  border: "1px solid var(--ts-border)",
+                }}
+              >
+                <StationMarker state={s.night.kind} size="sm" cancelled={s.stayCancelled} />
+                <button
+                  type="button"
+                  onClick={() => setOpenKey(s.key)}
+                  className="flex min-w-0 flex-1 flex-wrap items-baseline text-left"
+                  style={{
+                    gap: 8,
+                    background: "none",
+                    border: 0,
+                    padding: 0,
+                    color: "inherit",
+                    cursor: "pointer",
+                  }}
+                >
+                  <span style={{ fontWeight: 800 }}>{name(s)}</span>
+                  <span className="t-caption">
+                    {[
+                      t(`roadtrips:editor.choice.${s.night.kind}.label`),
+                      s.stayLabel,
+                      s.startDate?.slice(0, 10),
+                    ]
+                      .filter(Boolean)
+                      .join(" · ")}
+                  </span>
+                </button>
+                <IconButton
+                  label={t("roadtrips:stations.moveUp")}
+                  onClick={() => move(index, -1)}
+                  disabled={index === 0}
+                >
+                  <Icon name="chevron-up" size={16} />
+                </IconButton>
+                <IconButton
+                  label={t("roadtrips:stations.moveDown")}
+                  onClick={() => move(index, 1)}
+                  disabled={index === drafts.length - 1}
+                >
+                  <Icon name="chevron-down" size={16} />
+                </IconButton>
+                <IconButton label={t("roadtrips:stations.remove")} onClick={() => remove(index)}>
+                  <Icon name="x" size={16} />
+                </IconButton>
+              </div>
             )}
-          </li>
-        ))}
-      </ol>
+            {leg && next && (
+              <button
+                type="button"
+                onClick={() =>
+                  onEditLeg(
+                    leg,
+                    { id: s.id as string, title: name(s) },
+                    { id: next.id as string, title: name(next) }
+                  )
+                }
+                className="flex items-center self-start"
+                style={{
+                  ...DASHED,
+                  gap: 10,
+                  padding: "0 14px",
+                  borderColor: "var(--ts-border-button)",
+                  color: "var(--ts-muted)",
+                }}
+              >
+                {t(`roadtrips:timeline.leg.${leg.mode}`)} · {Math.round(leg.distanceKm)} km —{" "}
+                {t("roadtrips:timeline.legEdit")}
+              </button>
+            )}
+            {next && (
+              <button type="button" onClick={() => insertAt(index + 1)} style={DASHED}>
+                + {t("roadtrips:editor.insertBetween", { a: name(s), b: name(next) })}
+              </button>
+            )}
+          </div>
+        );
+      })}
 
-      <div className="flex flex-wrap items-center gap-2">
-        <button
-          type="button"
-          onClick={() =>
-            setDraft((prev) => [
-              ...prev,
-              { title: "", lat: null, lon: null, night: { kind: "free" } },
-            ])
-          }
-          className="rounded-sm border border-(--color-border) px-3 py-1.5 text-sm hover:bg-(--bg-surface)"
+      <button type="button" onClick={() => insertAt(drafts.length)} style={DASHED}>
+        + {t("roadtrips:editor.insertEnd")}
+      </button>
+
+      {warnings.length > 0 && (
+        <div
+          className="flex flex-col"
+          style={{
+            gap: 6,
+            marginTop: 8,
+            padding: 14,
+            borderRadius: "var(--ts-radius-card)",
+            background: "var(--ts-surface)",
+            border: "1px solid var(--ts-border)",
+          }}
         >
-          {t("roadtrips:stations.add")}
-        </button>
-        <button
-          type="button"
-          disabled={saving || incomplete}
-          onClick={save}
-          className="rounded-sm bg-(--accent) px-3 py-1.5 text-sm text-(--bg-base) disabled:opacity-40"
+          <span className="t-label-mono">{t("roadtrips:editor.warningsTitle")}</span>
+          {warnings.map((w) => (
+            <button
+              key={`${w.kind}-${w.index}`}
+              type="button"
+              onClick={() => setOpenKey(drafts[w.index].key)}
+              className="flex items-center text-left"
+              style={{
+                gap: 8,
+                fontSize: 13,
+                color: "var(--ts-warn)",
+                background: "none",
+                border: 0,
+                padding: 0,
+                cursor: "pointer",
+              }}
+            >
+              <Icon name="triangle-alert" size={14} />
+              {t(`roadtrips:editor.warnings.${w.kind}`, { name: name(drafts[w.index]) })}
+            </button>
+          ))}
+          <span className="t-caption">{t("roadtrips:editor.warningsNote")}</span>
+        </div>
+      )}
+
+      {removed && (
+        <div
+          role="status"
+          className="fixed flex items-center"
+          style={{
+            left: "50%",
+            bottom: 28,
+            transform: "translateX(-50%)",
+            zIndex: 60,
+            gap: 14,
+            padding: "12px 16px",
+            borderRadius: 14,
+            background: "var(--ts-surface2)",
+            border: "1px solid var(--ts-border-input)",
+            boxShadow: "var(--ts-shadow-dialog)",
+            fontSize: 14,
+          }}
         >
-          {t("roadtrips:stations.save")}
-        </button>
-        <button type="button" onClick={onCancel} className="text-sm underline">
-          {t("common:buttons.cancel")}
-        </button>
-        {incomplete && (
-          <span className="text-xs" style={{ color: "var(--warning)" }}>
-            {t("roadtrips:stations.incomplete")}
-          </span>
-        )}
-      </div>
+          {t("roadtrips:editor.removed", { name: name(removed.station) })}
+          <Button variant="secondary" icon={<Icon name="undo-2" size={16} />} onClick={undo}>
+            {t("roadtrips:editor.undo")}
+          </Button>
+        </div>
+      )}
     </div>
   );
 }

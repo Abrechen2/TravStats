@@ -243,7 +243,7 @@
     "figTours": "Tagestouren",
     "odometer": "Kilometerstand {{from}} → {{to}}",
     "odometerOpen": "noch offen",
-    "approxHint": "„≈“ heißt: Mindestens eine Station hat kein Abfahrtsdatum. Sie zählt als eine Nacht, bis du es einträgst.",
+    "approxHint": "„≈“ heißt: Mindestens eine Station hat kein Abfahrtsdatum und zählt als eine Nacht, bis du es einträgst.",
     "mapHint": "Station anklicken — sie wird in der Karte markiert.",
     "noRouting": "Ohne Routing-Anbieter erscheinen neue Etappen als gerade Linien.",
     "toursTitle": "Tagestouren auf diesem Roadtrip",
@@ -289,7 +289,7 @@
       "saving": "Wird gespeichert …",
       "saved": "Alles gespeichert",
       "error": "Nicht gespeichert",
-      "waiting": "Wartet — eine Station hat noch keinen Ort",
+      "waiting": "Wartet — eine Station ist noch nicht vollständig",
       "retry": "Erneut versuchen"
     },
     "whatHere": "Was war hier?",
@@ -326,9 +326,10 @@
     "warnings": {
       "noPlace": "{{name}}: Ort fehlt noch",
       "beforePrevious": "{{name}} liegt vor der vorherigen Station — Datum prüfen",
-      "noDeparture": "{{name}}: Abfahrt fehlt"
+      "noDeparture": "{{name}}: Abfahrt fehlt",
+      "noStay": "{{name}}: Unterkunft noch nicht verknüpft"
     },
-    "warningsNote": "Nur Hinweise — gespeichert wird trotzdem. Nur eine Station ohne Ort wartet, bis sie einen hat."
+    "warningsNote": "Nur Hinweise — gespeichert wird trotzdem. Nur eine Station ohne Ort oder ohne verknüpfte Unterkunft wartet."
   },
   "legDialog": {
     "title": "Etappe",
