@@ -96,7 +96,11 @@ describe("GET /api/v1/stats/passport — the counting threshold", () => {
     await leg("DOH", "SIN", "2024-03-01T16:00:00Z");
 
     await ensureAchievements();
-  });
+    // ensureAchievements upserts every definition (282 at the time of
+    // writing) one by one, on every call. That alone measured close to five
+    // seconds on a workstation, so jest's 5 s hook default failed all five
+    // tests before any assertion — alone as well as in the full run.
+  }, 30_000);
 
   afterEach(async () => {
     if (!catalogReady) return;
