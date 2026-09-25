@@ -236,7 +236,8 @@
     "notesSection": "Notes",
     "saveError": "Could not save stay",
     "companionsHint": "This booking covered {{count}} people. Add the companions — the confirmation only names the booker.",
-    "tripSection": "Trip"
+    "tripSection": "Trip",
+    "boardSuggestion": "Usually: {{board}}"
   },
   "membership": {
     "title": "Loyalty programs",

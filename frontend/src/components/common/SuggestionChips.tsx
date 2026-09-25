@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-import { useTranslation } from "../../../hooks/useTranslation";
+import { useTranslation } from "../../hooks/useTranslation";
 
 interface SuggestionChipsProps {
   /** The field's current text — chips narrow to what it starts with. */
@@ -25,7 +25,7 @@ export default function SuggestionChips({
   onPick,
   fieldLabel,
 }: SuggestionChipsProps): JSX.Element | null {
-  const { t } = useTranslation(["flights"]);
+  const { t } = useTranslation(["common"]);
   const typed = value.trim().toUpperCase();
   const visible = suggestions.filter((s) => {
     const candidate = s.toUpperCase();
@@ -40,7 +40,7 @@ export default function SuggestionChips({
           key={s}
           type="button"
           onClick={() => onPick(s)}
-          aria-label={t("flights:form.suggestionChip", { field: fieldLabel, value: s })}
+          aria-label={t("common:suggestionChip", { field: fieldLabel, value: s })}
           className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent)"
         >
           {s}

@@ -17,6 +17,9 @@ vi.mock("../../../hooks/useLodgingEntrySuggestions", () => ({
       { name: "Parkplatz", usageCount: 1 },
     ],
     roomAmenities: [{ name: "Balkon", usageCount: 2 }],
+    roomNumbers: [],
+    roomCategories: [],
+    boards: [],
   }),
 }));
 vi.mock("../../../lib/api/lodging", () => ({

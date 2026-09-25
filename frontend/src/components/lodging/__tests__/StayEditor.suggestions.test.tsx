@@ -9,16 +9,23 @@ import type { LodgingStay } from "../../../types/lodging";
 
 // Same module boundary as StayEditor.test.tsx; see there for why each mock exists.
 const suggestions = vi.hoisted(() => ({
+  askedFor: [] as Array<string | undefined>,
   current: {
     amenities: [],
     roomAmenities: [
       { name: "Balkon", usageCount: 3 },
       { name: "Minibar", usageCount: 1 },
     ],
+    roomNumbers: ["412", "12"],
+    roomCategories: ["Deluxe", "Suite"],
+    boards: ["half", "breakfast"],
   },
 }));
 vi.mock("../../../hooks/useLodgingEntrySuggestions", () => ({
-  useLodgingEntrySuggestions: () => suggestions.current,
+  useLodgingEntrySuggestions: (lodgingId?: string) => {
+    suggestions.askedFor.push(lodgingId);
+    return suggestions.current;
+  },
 }));
 vi.mock("../../documents/DocumentsSection", () => ({ default: () => null }));
 vi.mock("../../../lib/api/lodging", () => ({
@@ -73,5 +80,51 @@ describe("StayEditor — suggestions from the user's own stays", () => {
     await userEvent.type(screen.getByLabelText("lodging:field.roomAmenities"), "Meerblick{Enter}");
 
     expect((await saved()).roomAmenities).toEqual(["Balkon", "Meerblick"]);
+  });
+
+  it("offers this house's rooms and the usual categories as one-click chips", async () => {
+    await renderCreate();
+    expect(suggestions.askedFor).toContain("lodging-1");
+    await fillDates();
+    const room = screen.getByLabelText("lodging:field.room") as HTMLInputElement;
+    await userEvent.type(room, "4");
+    // Narrowed to what continues the typed text.
+    expect(screen.queryByText("12", { selector: "button" })).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("412", { selector: "button" }));
+    await userEvent.click(screen.getByText("Suite", { selector: "button" }));
+
+    expect(await saved()).toMatchObject({ roomNumber: "412", roomCategory: "Suite" });
+  });
+
+  it("offers the usual board on a new stay, never writes it", async () => {
+    await renderCreate();
+    await fillDates();
+    const offer = screen.getByRole("button", { name: /lodging:stayEditor.boardSuggestion/ });
+    await userEvent.click(offer);
+    expect(screen.getByRole("button", { name: "lodging:board.half" })).toHaveAttribute(
+      "aria-pressed",
+      "true"
+    );
+    // A chosen board makes the offer disappear.
+    expect(
+      screen.queryByRole("button", { name: /lodging:stayEditor.boardSuggestion/ })
+    ).not.toBeInTheDocument();
+    expect((await saved()).board).toBe("half");
+  });
+
+  it("does not offer a board on an existing stay that recorded none", async () => {
+    render(
+      <StayEditor
+        mode="edit"
+        lodgingId="lodging-1"
+        stay={{ id: "stay-1", board: "none", roomAmenities: [] } as unknown as LodgingStay}
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+    await act(async () => {});
+    expect(
+      screen.queryByRole("button", { name: /lodging:stayEditor.boardSuggestion/ })
+    ).not.toBeInTheDocument();
   });
 });

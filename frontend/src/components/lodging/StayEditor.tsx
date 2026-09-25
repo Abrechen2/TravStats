@@ -12,6 +12,7 @@ import { useLodgingEntrySuggestions } from "../../hooks/useLodgingEntrySuggestio
 import { Field } from "../ui/Field";
 import { StayEditorAttachmentsSection } from "./StayEditorAttachmentsSection";
 import { StayEditorTripSection } from "./StayEditorTripSection";
+import { StayEditorBoardSection, StayEditorRoomFields } from "./StayEditorRoomSection";
 import { StayEditorSection } from "./StayEditorSection";
 import { StayEditorNotesSection } from "./StayEditorNotesSection";
 import { StayEditorRatingsSection } from "./StayEditorRatingsSection";
@@ -54,8 +55,6 @@ interface StayEditorProps {
    */
   onRequestDelete?: () => void;
 }
-
-const BOARD_TYPES: BoardType[] = ["none", "breakfast", "half", "full", "all_inclusive"];
 
 const INPUT_CLASS =
   "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none";
@@ -182,7 +181,7 @@ export function StayEditor({
   );
   const [notes, setNotes] = useState<string>(stay?.notes ?? "");
 
-  const entrySuggestions = useLodgingEntrySuggestions();
+  const entrySuggestions = useLodgingEntrySuggestions(lodgingId);
   const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
 
@@ -547,53 +546,25 @@ export function StayEditor({
                 </span>
               )}
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <Field label={t("lodging:field.room")} htmlFor={`${fid}-room`}>
-                <input
-                  id={`${fid}-room`}
-                  className={INPUT_CLASS}
-                  value={roomNumber}
-                  onChange={(e): void => setRoomNumber(e.target.value)}
-                />
-              </Field>
-              <Field label={t("lodging:field.roomCategory")} htmlFor={`${fid}-roomCategory`}>
-                <input
-                  id={`${fid}-roomCategory`}
-                  className={INPUT_CLASS}
-                  value={roomCategory}
-                  onChange={(e): void => setRoomCategory(e.target.value)}
-                />
-              </Field>
-            </div>
+            <StayEditorRoomFields
+              roomNumber={roomNumber}
+              onRoomNumberChange={setRoomNumber}
+              roomCategory={roomCategory}
+              onRoomCategoryChange={setRoomCategory}
+              roomNumberSuggestions={entrySuggestions.roomNumbers}
+              roomCategorySuggestions={entrySuggestions.roomCategories}
+              fieldIdPrefix={fid}
+              inputClassName={INPUT_CLASS}
+              t={t}
+            />
           </StayEditorSection>
 
-          <StayEditorSection title={t("lodging:field.board")}>
-            <div
-              className="inline-flex flex-wrap rounded-lg p-0.5"
-              style={{ background: "var(--bg-muted)", border: "1px solid var(--color-border)" }}
-              role="group"
-              aria-label={t("lodging:field.board")}
-            >
-              {BOARD_TYPES.map((b) => {
-                const active = b === board;
-                return (
-                  <button
-                    key={b}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={(): void => setBoard(b)}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
-                    style={{
-                      background: active ? "var(--accent)" : "transparent",
-                      color: active ? "#1a1205" : "var(--text-secondary)",
-                    }}
-                  >
-                    {t(`lodging:board.${b}`)}
-                  </button>
-                );
-              })}
-            </div>
-          </StayEditorSection>
+          <StayEditorBoardSection
+            board={board}
+            onBoardChange={setBoard}
+            suggestedBoard={mode === "create" ? (entrySuggestions.boards[0] ?? null) : null}
+            t={t}
+          />
 
           <StayEditorSection title={t("lodging:stayEditor.ratingsSection")}>
             <StayEditorRatingsSection

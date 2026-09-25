@@ -6,11 +6,13 @@ import { Prisma } from "../../prisma";
 import { type AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { statsLimiter } from "../../middleware/rateLimit";
+import { staySuggestionsFor, type StaySuggestions } from "../../services/lodging/staySuggestions";
 
 /**
  * `GET /lodging/entry-suggestions` — what the lodging and stay forms can offer
  * from the user's own lodgings: the amenities they have written down before,
- * for the house and for the room.
+ * for the house and for the room, and — for the stay being entered at
+ * `lodgingId` — the rooms, room categories and board they had before.
  *
  * Mounted inside the lodging router BEFORE `/:id`, which would otherwise read
  * "entry-suggestions" as a lodging id. Shares the stats bucket, like the
@@ -21,14 +23,16 @@ const router = Router();
 
 const AMENITY_CAP = 30;
 
-export const lodgingEntrySuggestionsQuerySchema = z.object({});
+export const lodgingEntrySuggestionsQuerySchema = z.object({
+  lodgingId: z.string().uuid().optional(),
+});
 
 export interface RankedValue {
   name: string;
   usageCount: number;
 }
 
-export interface LodgingEntrySuggestions {
+export interface LodgingEntrySuggestions extends StaySuggestions {
   amenities: RankedValue[];
   roomAmenities: RankedValue[];
 }
@@ -74,12 +78,13 @@ router.get(
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
       const userId = req.userId!;
 
-      const [amenities, roomAmenities] = await Promise.all([
+      const [amenities, roomAmenities, stay] = await Promise.all([
         rankedArrayValues("amenities", userId),
         rankedArrayValues("roomAmenities", userId),
+        staySuggestionsFor(userId, parsed.data.lodgingId),
       ]);
 
-      const data: LodgingEntrySuggestions = { amenities, roomAmenities };
+      const data: LodgingEntrySuggestions = { amenities, roomAmenities, ...stay };
       res.json({ success: true, data });
     } catch (err) {
       next(err);

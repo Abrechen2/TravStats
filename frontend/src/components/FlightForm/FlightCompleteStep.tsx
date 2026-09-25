@@ -17,7 +17,7 @@ import AircraftSection from "./sections/AircraftSection";
 import BookingAndNotesSection from "./sections/BookingAndNotesSection";
 import PriceAndSeatSection from "./sections/PriceAndSeatSection";
 import { countValue, priceSummaryValue, summaryLine } from "./sections/sectionSummaries";
-import SuggestionChips from "./fields/SuggestionChips";
+import SuggestionChips from "../common/SuggestionChips";
 import { useFlightEntrySuggestions } from "../../hooks/useFlightEntrySuggestions";
 import { useSuggestedPrefill } from "../../hooks/useSuggestedPrefill";
 

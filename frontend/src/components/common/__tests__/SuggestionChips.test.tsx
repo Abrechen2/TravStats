@@ -1,7 +1,7 @@
 import { describe, expect, it, vi } from "vitest";
 import { fireEvent, render, screen } from "@testing-library/react";
 
-vi.mock("../../../../hooks/useTranslation", () => ({
+vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (key: string, opts?: Record<string, string>) =>
       opts ? `${key}:${opts.field}:${opts.value}` : key,

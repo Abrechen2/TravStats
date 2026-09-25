@@ -132,7 +132,7 @@ const renderStep = async (props: FlightCompleteStepProps): Promise<RenderResult>
 };
 
 const chip = (value: string): HTMLElement =>
-  screen.getByRole("button", { name: `flights:form.suggestionChip:${value}` });
+  screen.getByRole("button", { name: `common:suggestionChip:${value}` });
 
 const MUC = { iata: "MUC", name: "Munich", lat: 48.35, lon: 11.79 };
 const CPH = { iata: "CPH", name: "Copenhagen", lat: 55.62, lon: 12.66 };

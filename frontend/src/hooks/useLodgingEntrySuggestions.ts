@@ -9,16 +9,17 @@ import { logger } from "../lib/logger";
 
 /**
  * The user's own lodging vocabulary for the lodging and stay forms, asked
- * once per opened form. A failed request offers nothing: every field it
- * feeds stays free text.
+ * once per opened form. `lodgingId` (the stay editor's house) adds that
+ * house's rooms, categories and board. A failed request offers nothing: every
+ * field it feeds stays free text.
  */
-export function useLodgingEntrySuggestions(): LodgingEntrySuggestions {
+export function useLodgingEntrySuggestions(lodgingId?: string): LodgingEntrySuggestions {
   const [suggestions, setSuggestions] =
     useState<LodgingEntrySuggestions>(EMPTY_LODGING_SUGGESTIONS);
 
   useEffect(() => {
     let active = true;
-    getLodgingEntrySuggestions()
+    getLodgingEntrySuggestions(lodgingId)
       .then((next) => {
         if (active) setSuggestions(next);
       })
@@ -28,7 +29,7 @@ export function useLodgingEntrySuggestions(): LodgingEntrySuggestions {
     return () => {
       active = false;
     };
-  }, []);
+  }, [lodgingId]);
 
   return suggestions;
 }

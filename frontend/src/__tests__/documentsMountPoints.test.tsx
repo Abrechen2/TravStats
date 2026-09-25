@@ -22,7 +22,13 @@ const mounted = vi.hoisted(() => [] as { type: string; id: string }[]);
 
 // The form asks for the user's own lodging vocabulary on mount; no network here.
 vi.mock("../hooks/useLodgingEntrySuggestions", () => ({
-  useLodgingEntrySuggestions: () => ({ amenities: [], roomAmenities: [] }),
+  useLodgingEntrySuggestions: () => ({
+    amenities: [],
+    roomAmenities: [],
+    roomNumbers: [],
+    roomCategories: [],
+    boards: [],
+  }),
 }));
 vi.mock("../components/documents/DocumentsSection", () => ({
   default: ({ entry }: { entry: { type: string; id: string } }) => {

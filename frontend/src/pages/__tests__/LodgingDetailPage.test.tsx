@@ -16,7 +16,13 @@ const tripsGetAllMock = vi.fn();
 // network, which the setup refuses (forgejo#110).
 // The stay editor asks for the user's own lodging vocabulary on mount; no network here.
 vi.mock("../../hooks/useLodgingEntrySuggestions", () => ({
-  useLodgingEntrySuggestions: () => ({ amenities: [], roomAmenities: [] }),
+  useLodgingEntrySuggestions: () => ({
+    amenities: [],
+    roomAmenities: [],
+    roomNumbers: [],
+    roomCategories: [],
+    boards: [],
+  }),
 }));
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
 

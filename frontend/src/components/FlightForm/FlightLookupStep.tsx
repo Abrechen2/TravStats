@@ -1,7 +1,7 @@
 import { lazy, Suspense } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useFlightEntrySuggestions } from "../../hooks/useFlightEntrySuggestions";
-import SuggestionChips from "./fields/SuggestionChips";
+import SuggestionChips from "../common/SuggestionChips";
 import { ImportManualFooter, ImportRouteRow } from "../import/ImportRouteList";
 import type { ParseEmailResult, ParsePdfResult } from "../../lib/api/parse";
 import { createImportBatch } from "../../lib/api/importBatches";

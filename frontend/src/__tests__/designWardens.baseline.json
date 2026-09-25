@@ -42,7 +42,6 @@
     "components/lodging/LodgingSpendCell.tsx",
     "components/lodging/LodgingStayCard.tsx",
     "components/lodging/StarRating.tsx",
-    "components/lodging/StayEditor.tsx",
     "components/lodging/StayEditorPriceSection.tsx",
     "components/map/MapChromeSections.tsx",
     "components/map/controlPanelKit.tsx",

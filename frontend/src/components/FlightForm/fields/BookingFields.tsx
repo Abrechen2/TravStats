@@ -1,5 +1,5 @@
 import { useTranslation } from "../../../hooks/useTranslation";
-import SuggestionChips from "./SuggestionChips";
+import SuggestionChips from "../../common/SuggestionChips";
 
 /** The five booking-side fields, shared between the create and edit flight
  *  forms. The last three (booking class letter, baggage allowance, frequent

@@ -283,5 +283,6 @@
     "suggestions": "Deine Tags",
     "usage_one": "1-mal verwendet",
     "usage_other": "{{count}}-mal verwendet"
-  }
+  },
+  "suggestionChip": "{{field}} {{value}} übernehmen"
 }

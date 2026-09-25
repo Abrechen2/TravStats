@@ -26,7 +26,7 @@ import { buildLocalString } from "./FlightForm/useFlightForm";
 import CompanionsField from "./FlightForm/fields/CompanionsField";
 import TagInput from "./TagInput";
 import { splitTagText } from "../lib/tagList";
-import SuggestionChips from "./FlightForm/fields/SuggestionChips";
+import SuggestionChips from "./common/SuggestionChips";
 import { useFlightEntrySuggestions } from "../hooks/useFlightEntrySuggestions";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";

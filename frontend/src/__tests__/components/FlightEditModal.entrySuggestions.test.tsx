@@ -86,7 +86,7 @@ const renderModal = async (ui: ReactElement): Promise<void> => {
 };
 
 const chip = (value: string): HTMLElement =>
-  screen.getByRole("button", { name: `flights:form.suggestionChip:${value}` });
+  screen.getByRole("button", { name: `common:suggestionChip:${value}` });
 
 describe("FlightEditModal — entry suggestions", () => {
   beforeEach(() => {

@@ -2,7 +2,7 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import CatalogueCombobox, { searchAircraftOptions } from "../fields/CatalogueCombobox";
-import SuggestionChips from "../fields/SuggestionChips";
+import SuggestionChips from "../../common/SuggestionChips";
 
 interface AircraftSectionProps {
   aircraft: string;
