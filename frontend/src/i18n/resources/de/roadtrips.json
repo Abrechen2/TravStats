@@ -210,7 +210,9 @@
     "kmUnknown": "Noch keine Etappe — dafür braucht es zwei Stationen.",
     "nightsApprox": "Mindestens eine Station hat kein Abfahrtsdatum.",
     "emptyTitle": "Noch kein Roadtrip",
-    "emptyCta": "Ersten Roadtrip anlegen"
+    "emptyCta": "Ersten Roadtrip anlegen",
+    "count_one": "{{count}} Roadtrip",
+    "count_other": "{{count}} Roadtrips"
   },
   "newDialog": {
     "title": "Neuer Roadtrip",

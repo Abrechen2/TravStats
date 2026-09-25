@@ -543,4 +543,27 @@ describe("Roadtrips", () => {
     }
     expect(unlocked).toBe(true);
   });
+
+  it("gives a trip the countries its roadtrip's stations stand in", async () => {
+    const trip = await prisma.trip.create({ data: { userId, name: "Nur Roadtrip" } });
+    const route = await prisma.tripRoute.create({
+      data: { userId, tripId: trip.id, name: "Binnenland", mode: "road", kind: "roadtrip" },
+    });
+    await prisma.tripStop.create({
+      data: {
+        title: "Lillehammer",
+        lat: 61.11,
+        lon: 10.46,
+        routeId: route.id,
+        routeOrderIdx: 0,
+        domain: "roadtrip",
+      },
+    });
+
+    const detail = await request(app).get(`/api/v1/trips/${trip.id}`).set("Cookie", cookie);
+    expect(detail.body.trip.countries).toContain("NO");
+    const list = await request(app).get("/api/v1/trips").set("Cookie", cookie);
+    const row = list.body.trips.find((t: { id: string }) => t.id === trip.id);
+    expect(row.countries).toContain("NO");
+  });
 });

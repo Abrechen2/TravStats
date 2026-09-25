@@ -210,7 +210,9 @@
     "kmUnknown": "No leg yet — that takes two stations.",
     "nightsApprox": "At least one station has no departure date.",
     "emptyTitle": "No roadtrip yet",
-    "emptyCta": "Create your first roadtrip"
+    "emptyCta": "Create your first roadtrip",
+    "count_one": "{{count}} roadtrip",
+    "count_other": "{{count}} roadtrips"
   },
   "newDialog": {
     "title": "New roadtrip",

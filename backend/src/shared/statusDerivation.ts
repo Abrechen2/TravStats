@@ -156,8 +156,9 @@ export function tripDateBounds(
  *
  * The rule, stated once so the three callers cannot each invent one:
  *
- *  1. **What the trip HOLDS wins.** Flights, cruises and hotel stays are the
- *     record of what happened, and their span is the trip's span.
+ *  1. **What the trip HOLDS wins.** Flights, cruises, hotel stays and
+ *     roadtrips are the record of what happened, and their span is the
+ *     trip's span.
  *  2. **Otherwise the trip's OWN dates.** A trip with nothing dated on it has
  *     only what the user typed, and that is a complete answer, not a missing
  *     one.
@@ -171,6 +172,8 @@ export function tripStatusBounds(input: {
   cruises: Array<{ startDate: Date | null; endDate: Date | null }>;
   /** Hotel stays are dated travel too, and a hotel-only trip has nothing else. */
   lodgingStays?: Array<{ checkIn: Date | null; checkOut: Date | null }>;
+  /** A roadtrip is dated by its stations; a roadtrip-only trip has nothing else. */
+  roadtrips?: Array<{ stops: Array<{ startDate: Date | null; endDate: Date | null }> }>;
   ownStartDate: Date | null;
   ownEndDate: Date | null;
 }): { earliestStart: Date | null; latestEnd: Date | null } {
@@ -178,7 +181,8 @@ export function tripStatusBounds(input: {
     startDate: s.checkIn,
     endDate: s.checkOut,
   }));
-  const held = tripDateBounds(input.flights, [...input.cruises, ...stays]);
+  const stations = (input.roadtrips ?? []).flatMap((r) => r.stops);
+  const held = tripDateBounds(input.flights, [...input.cruises, ...stays, ...stations]);
   if (held.earliestStart != null || held.latestEnd != null) return held;
 
   return { earliestStart: input.ownStartDate, latestEnd: input.ownEndDate };
