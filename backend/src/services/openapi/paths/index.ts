@@ -26,6 +26,7 @@ import "./training";
 import "./tokens";
 import "./diagnostics";
 import "./cruises";
+import "./rail";
 import "./lodging";
 import "./settings";
 import "./places";

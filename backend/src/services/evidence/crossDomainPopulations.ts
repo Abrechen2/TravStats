@@ -400,11 +400,22 @@ async function loadPlaces(userId: string): Promise<CrossDomainPopulation> {
   return { events, countryRows };
 }
 
+/**
+ * Rail is a domain since 2026-09-25 but not yet part of the cross-domain
+ * figures (spec 2026-09-25-rail-domain, phase 2). Its population is empty
+ * rather than missing, so a request that names it is answered — and the
+ * overview, which draws only domains with statistics, never shows it a zero.
+ */
+async function loadRail(): Promise<CrossDomainPopulation> {
+  return { events: [], countryRows: [] };
+}
+
 const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulation>> = {
   flight: loadFlights,
   cruise: loadCruises,
   lodging: loadLodging,
   poi: loadPlaces,
+  rail: loadRail,
 };
 
 /** Loads only the domains asked for — a chip that is off is never queried. */

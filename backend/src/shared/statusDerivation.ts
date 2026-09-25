@@ -117,6 +117,31 @@ export function deriveLodgingStatus(input: {
   return "in_progress";
 }
 
+/** Rail shares lodging's vocabulary; only a cancellation survives derivation. */
+export const RAIL_PASSTHROUGH = ["cancelled"] as const;
+
+/**
+ * Rail journeys (spec 2026-09-25-rail-domain): scheduled until the train
+ * leaves, in_progress while it runs, completed once it has arrived. No slack
+ * band — no legacy writer ever set this column, so there is no deliberate data
+ * to protect. An unknown arrival is treated as the departure, the same
+ * one-ended rule `deriveLodgingStatus` uses.
+ */
+export function deriveRailStatus(input: {
+  departureTime: Date;
+  arrivalTime: Date | null;
+  current: string;
+  now?: Date;
+}): string {
+  const { departureTime, arrivalTime, current } = input;
+  if ((RAIL_PASSTHROUGH as readonly string[]).includes(current)) return current;
+  const nowMs = (input.now ?? new Date()).getTime();
+  const end = arrivalTime ?? departureTime;
+  if (nowMs < departureTime.getTime()) return "scheduled";
+  if (nowMs >= end.getTime()) return "completed";
+  return "in_progress";
+}
+
 /**
  * Extract a trip's date bounds from its linked flights + cruises — the
  * earliest segment start and the latest segment end. Shared by the sweep

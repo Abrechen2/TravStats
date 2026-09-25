@@ -89,6 +89,7 @@ model User {
   trips                  Trip[]
   bookings               Booking[]
   cruises                Cruise[]
+  railJourneys           RailJourney[]
   apiTokens              ApiToken[]
   pairingCodes           PairingCode[]
   lodgings               Lodging[]
@@ -944,8 +945,8 @@ model AdminSettings {
 }
 
 model TrainingData {
-  id     String @id @default(uuid())
-  userId String @map("user_id")
+  id            String    @id @default(uuid())
+  userId        String    @map("user_id")
   /// Which KIND of document this sample is — 'flight' | 'lodging' | 'cruise' |
   /// 'place'. `type` beside it is the MEDIUM (a mail or a boarding pass) and
   /// never answered this; without the distinction the workshop derived every
@@ -1380,6 +1381,7 @@ model Trip {
   flights        Flight[]
   bookings       Booking[]
   cruises        Cruise[]
+  railJourneys   RailJourney[]
   stops          TripStop[]
   routes         TripRoute[]
   journalEntries TripJournalEntry[]
@@ -1667,6 +1669,7 @@ model Booking {
   trip         Trip?         @relation(fields: [tripId], references: [id], onDelete: SetNull)
   flights      Flight[]
   cruises      Cruise[]
+  railJourneys RailJourney[]
   lodgingStays LodgingStay[]
 
   @@index([userId])
@@ -2480,7 +2483,7 @@ model CuratedPlace {
 model ImportBatch {
   id        String   @id @default(uuid())
   userId    String   @map("user_id")
-  domain    String // flight | cruise | lodging
+  domain    String // flight | cruise | lodging | rail
   source    String // csv | email | pdf
   fileName  String?  @map("file_name")
   createdAt DateTime @default(now()) @map("created_at")
@@ -2490,6 +2493,7 @@ model ImportBatch {
   stays    LodgingStay[]
   flights  Flight[]
   cruises  Cruise[]
+  rail     RailJourney[]
   places   Place[]
 
   @@index([userId])
@@ -2531,10 +2535,11 @@ model Companion {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  user    User              @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
   flights FlightCompanion[]
   trips   TripCompanion[]
   cruises CruiseCompanion[]
+  rail    RailJourneyCompanion[]
 
   @@unique([userId, canonicalName])
   @@index([userId, searchName])
@@ -2735,9 +2740,9 @@ model Document {
   tripId        String? @map("trip_id")
   placeVisitId  String? @map("place_visit_id")
 
-  createdAt DateTime  @default(now()) @map("created_at")
+  createdAt  DateTime  @default(now()) @map("created_at")
   /// When it was filed with an entry; null while unlinked.
-  linkedAt  DateTime? @map("linked_at")
+  linkedAt   DateTime? @map("linked_at")
   /// Since WHEN this document has belonged to nothing — the clock the sweep
   /// runs on, and the one `deletesAt` is measured from. Null exactly when the
   /// document IS filed.
@@ -2767,4 +2772,128 @@ model Document {
   /// The sweep asks exactly this: unfiled rows past their stamp.
   @@index([unlinkedAt])
   @@map("documents")
+}
+
+/// One train ride: one vehicle, boarded at one station and left at another
+/// (spec docs/superpowers/specs/2026-09-25-rail-domain.md). A connection is
+/// several rows bound by `bookingId`, exactly as a flight's legs are.
+///
+/// Station fields are the ones a catalogue row will later fill; phase 1 takes
+/// them from the geocoder. Coordinates are REQUIRED, as on `Flight`: a station
+/// without a position can be neither drawn, measured nor placed in a zone.
+model RailJourney {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  operator      String?
+  /// "ICE", "TGV", "RJX" — apart from the number because statistics group by it.
+  trainCategory String? @map("train_category")
+  trainNumber   String? @map("train_number")
+
+  depStationName String  @map("dep_station_name")
+  /// UIC/EVA code when known. Empty until the station catalogue exists.
+  depStationCode String? @map("dep_station_code")
+  depLat         Float   @map("dep_lat")
+  depLon         Float   @map("dep_lon")
+  /// ISO 3166-1 alpha-2, from the geocoder; null when unknown, never guessed.
+  depCountry     String? @map("dep_country")
+  /// IANA zone, derived by the server from the coordinates — never user input.
+  depTimezone    String? @map("dep_timezone")
+  arrStationName String  @map("arr_station_name")
+  arrStationCode String? @map("arr_station_code")
+  arrLat         Float   @map("arr_lat")
+  arrLon         Float   @map("arr_lon")
+  arrCountry     String? @map("arr_country")
+  arrTimezone    String? @map("arr_timezone")
+
+  /// Real UTC instants. The client sends the station's wall clock and the
+  /// server converts it with the station's zone.
+  departureTime DateTime  @map("departure_time")
+  arrivalTime   DateTime? @map("arrival_time")
+
+  /// great_circle | user | null. Great-circle understates track length; the
+  /// source is kept so a statistic can say which it is showing.
+  distanceKm     Float?  @map("distance_km")
+  distanceSource String? @map("distance_source")
+
+  /// The line on the map, `[[lon, lat], ...]`, fetched ONCE when the journey is
+  /// logged and frozen with it — a timetable changes, the ride that happened
+  /// does not. Null = draw the chord between the two stations.
+  geometry       Json?
+  /// straight | transitous | openrailrouting | manual (| none for a row that
+  /// cannot be drawn). Kept because a line routed over the TRACKS may not be
+  /// the line the train took, and the map has to be able to say which it shows.
+  geometrySource String  @default("straight") @map("geometry_source")
+
+  /// What actually happened, when known: captured on the day or typed. A past
+  /// journey with no record keeps null — no free source answers past actuals.
+  actualDepartureTime DateTime? @map("actual_departure_time")
+  actualArrivalTime   DateTime? @map("actual_arrival_time")
+
+  /// The timetable trip a lookup matched (phase 2: transitous | db-rest | …),
+  /// and that provider's id for it. Apart from `externalRef`, which is the
+  /// IMPORT key and unique per user; two journeys may match the same trip.
+  lookupProvider String? @map("lookup_provider")
+  lookupRef      String? @map("lookup_ref")
+
+  /// first | second | sleeper | couchette
+  travelClass      String? @map("travel_class")
+  coach            String?
+  seat             String?
+  bookingReference String? @map("booking_reference")
+
+  price          Float?
+  currency       String?   @default("EUR")
+  /// FX snapshot (#267), same contract as `Cruise`, dated by the departure.
+  priceBase      Float?    @map("price_base")
+  fxRate         Float?    @map("fx_rate")
+  fxRateDate     DateTime? @map("fx_rate_date")
+  fxBaseCurrency String?   @map("fx_base_currency")
+  fxSource       String?   @map("fx_source")
+
+  /// scheduled | in_progress | completed | cancelled — lodging's vocabulary.
+  /// A cache of `deriveRailStatus`; only `cancelled` is set by a client.
+  status       String   @default("scheduled")
+  /// Arrival delay as experienced. Null = not recorded, 0 = on time.
+  delayMinutes Int?     @map("delay_minutes")
+  notes        String?
+  tags         String[] @default([])
+  companions   String[] @default([])
+
+  tripId    String? @map("trip_id")
+  bookingId String? @map("booking_id")
+
+  /// Reserved for imports, same contract as `Cruise.externalRef`.
+  externalRef   String? @map("external_ref")
+  importBatchId String? @map("import_batch_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user           User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip           Trip?                  @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  booking        Booking?               @relation(fields: [bookingId], references: [id], onDelete: SetNull)
+  importBatch    ImportBatch?           @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  companionLinks RailJourneyCompanion[]
+
+  @@unique([userId, externalRef])
+  @@index([userId, departureTime])
+  @@index([status])
+  @@index([tripId])
+  @@index([bookingId])
+  @@index([importBatchId])
+  @@map("rail_journeys")
+}
+
+model RailJourneyCompanion {
+  railJourneyId String @map("rail_journey_id")
+  companionId   String @map("companion_id")
+  position      Int
+
+  railJourney RailJourney @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
+  companion   Companion   @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  @@id([railJourneyId, companionId])
+  @@index([companionId])
+  @@map("rail_journey_companions")
 }

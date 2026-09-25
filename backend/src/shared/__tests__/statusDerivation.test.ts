@@ -1,4 +1,5 @@
 import {
+  deriveRailStatus,
   deriveFlightStatus,
   deriveCruiseStatus,
   deriveLodgingStatus,
@@ -188,5 +189,56 @@ describe("deriveLodgingStatus", () => {
     expect(deriveLodgingStatus({ checkIn: now, checkOut: now, current: "scheduled", now })).toBe(
       "completed"
     );
+  });
+});
+
+describe("deriveRailStatus", () => {
+  const now = new Date("2026-07-01T12:00:00Z");
+  const at = (iso: string) => new Date(iso);
+
+  it("is scheduled before the train leaves, in progress while it runs, completed after", () => {
+    const dep = at("2026-07-01T11:00:00Z");
+    const arr = at("2026-07-01T13:00:00Z");
+    expect(
+      deriveRailStatus({
+        departureTime: at("2026-07-01T13:00:00Z"),
+        arrivalTime: null,
+        current: "scheduled",
+        now,
+      })
+    ).toBe("scheduled");
+    expect(
+      deriveRailStatus({ departureTime: dep, arrivalTime: arr, current: "scheduled", now })
+    ).toBe("in_progress");
+    expect(
+      deriveRailStatus({
+        departureTime: dep,
+        arrivalTime: at("2026-07-01T12:00:00Z"),
+        current: "scheduled",
+        now,
+      })
+    ).toBe("completed");
+  });
+
+  it("reads an unknown arrival as the departure", () => {
+    expect(
+      deriveRailStatus({
+        departureTime: at("2026-07-01T11:59:00Z"),
+        arrivalTime: null,
+        current: "scheduled",
+        now,
+      })
+    ).toBe("completed");
+  });
+
+  it("keeps a cancellation whatever the clock says", () => {
+    expect(
+      deriveRailStatus({
+        departureTime: at("2020-01-01T00:00:00Z"),
+        arrivalTime: null,
+        current: "cancelled",
+        now,
+      })
+    ).toBe("cancelled");
   });
 });
