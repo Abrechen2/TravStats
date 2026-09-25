@@ -163,4 +163,63 @@ describe("TripModal", () => {
     const calls = vi.mocked(tripsApi.update).mock.calls;
     expect(calls[calls.length - 1][1].destinationLabel).toBe("Kyoto");
   });
+
+  it("offers the span of the trip's entries as its dates, and applies it on click", async () => {
+    vi.mocked(tripsApi.update).mockResolvedValue(existingTrip);
+    const withEntries = {
+      ...existingTrip,
+      startDate: "2025-05-02T00:00:00.000Z",
+      endDate: "2025-05-05T00:00:00.000Z",
+      flights: [
+        {
+          id: "f1",
+          status: "flown",
+          departureTime: "2025-05-01T08:00:00Z",
+          arrivalTime: "2025-05-01T10:00:00Z",
+        },
+      ],
+      lodgingStays: [
+        {
+          id: "s1",
+          status: "completed",
+          checkIn: "2025-05-01T00:00:00Z",
+          checkOut: "2025-05-07T00:00:00Z",
+        },
+      ],
+    } as unknown as Trip;
+    render(<TripModal trip={withEntries} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.click(screen.getByText("trips:modal.useEntrySpan"));
+    expect(screen.queryByText("trips:modal.useEntrySpan")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("trips:modal.save"));
+
+    await waitFor(() => expect(tripsApi.update).toHaveBeenCalled());
+    const calls = vi.mocked(tripsApi.update).mock.calls;
+    expect(calls[calls.length - 1][1]).toMatchObject({
+      startDate: "2025-05-01T00:00:00.000Z",
+      endDate: "2025-05-07T00:00:00.000Z",
+    });
+  });
+
+  it("offers no span when the dates already match it, or when the trip carries no entries", () => {
+    const matching = {
+      ...existingTrip,
+      startDate: "2025-05-01T00:00:00.000Z",
+      endDate: "2025-05-07T00:00:00.000Z",
+      lodgingStays: [
+        {
+          id: "s1",
+          status: "completed",
+          checkIn: "2025-05-01T00:00:00Z",
+          checkOut: "2025-05-07T00:00:00Z",
+        },
+      ],
+    } as unknown as Trip;
+    const { unmount } = render(<TripModal trip={matching} onClose={vi.fn()} onSaved={vi.fn()} />);
+    expect(screen.queryByText("trips:modal.useEntrySpan")).not.toBeInTheDocument();
+    unmount();
+
+    render(<TripModal trip={existingTrip} onClose={vi.fn()} onSaved={vi.fn()} />);
+    expect(screen.queryByText("trips:modal.useEntrySpan")).not.toBeInTheDocument();
+  });
 });

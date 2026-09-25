@@ -53,6 +53,7 @@
     "categoryLabel": "Kategorie",
     "startDateLabel": "Startdatum",
     "endDateLabel": "Enddatum",
+    "useEntrySpan": "Zeitraum der Einträge übernehmen: {{start}} – {{end}}",
     "originLabel": "Herkunft",
     "destinationLabel": "Ziel",
     "tagsLabel": "Tags",

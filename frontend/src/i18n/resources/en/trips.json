@@ -53,6 +53,7 @@
     "categoryLabel": "Category",
     "startDateLabel": "Start Date",
     "endDateLabel": "End Date",
+    "useEntrySpan": "Use the span of the entries: {{start}} – {{end}}",
     "originLabel": "Origin",
     "destinationLabel": "Destination",
     "tagsLabel": "Tags",

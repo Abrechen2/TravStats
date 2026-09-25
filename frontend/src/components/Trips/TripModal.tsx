@@ -8,6 +8,8 @@ import CompanionPicker from "../CompanionPicker";
 import TagInput from "../TagInput";
 import SuggestionChips from "../common/SuggestionChips";
 import { useTripEntrySuggestions } from "../../hooks/useTripEntrySuggestions";
+import { tripEntrySpan } from "../../lib/tripEntrySpan";
+import { formatDate } from "../../lib/displayFormat";
 
 interface TripModalProps {
   trip: Trip | null; // null = create mode
@@ -78,6 +80,11 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   // Offered under the two place labels, never written into them: the labels
   // stay the user's free text.
   const placeSuggestions = useTripEntrySuggestions(trip?.id ?? null);
+  // Read from the entries the trip detail already carries; a trip from a list
+  // endpoint has none, and then there is simply nothing to offer.
+  const entrySpan = trip ? tripEntrySpan(trip) : null;
+  const offerEntrySpan =
+    entrySpan !== null && (entrySpan.start !== startDate || entrySpan.end !== endDate);
 
   // Release the object URL of a pending pick when it changes or on unmount.
   useEffect(() => {
@@ -290,6 +297,21 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                   />
                 </Field>
               </div>
+              {offerEntrySpan && entrySpan && (
+                <button
+                  type="button"
+                  onClick={() => {
+                    setStartDate(entrySpan.start);
+                    setEndDate(entrySpan.end);
+                  }}
+                  className="-mt-2 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent)"
+                >
+                  {t("trips:modal.useEntrySpan", {
+                    start: formatDate(entrySpan.start, { timeZone: "UTC" }),
+                    end: formatDate(entrySpan.end, { timeZone: "UTC" }),
+                  })}
+                </button>
+              )}
 
               <div className="grid grid-cols-2 gap-3">
                 <Field label={t("trips:modal.originLabel")}>
