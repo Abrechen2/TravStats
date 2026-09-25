@@ -6,6 +6,11 @@ import { batchCreationLimiter } from "../middleware/rateLimit";
 import { createFlightSchema } from "../schemas/flight";
 import { withAirportTimezones } from "../services/flightTimezoneDefaults";
 import { TRIP_COLORS } from "../schemas/trip";
+import {
+  MIN_BOOKED_TRIP_FLIGHTS,
+  tripNameLanguageOf,
+  tripNameMonth,
+} from "../services/trip/tripGrouping";
 import logger from "../utils/logger";
 import { enrichFlightAirports } from "../services/airportLookup";
 import { calculateCo2Kg, haversineKm, toSeatClass } from "../services/co2Calculator";
@@ -349,9 +354,10 @@ router.post(
         // either way, so the explicit "detect trips" endpoint can group later.
         const settings = await tx.userSettings.findUnique({
           where: { userId },
-          select: { autoCreateTrips: true },
+          select: { autoCreateTrips: true, data: true },
         });
         const autoCreateTrips = settings?.autoCreateTrips ?? true;
+        const nameLanguage = tripNameLanguageOf(settings?.data);
 
         type CreatedFlight = (typeof flights)[number];
         const pnrGroups = new Map<string, CreatedFlight[]>();
@@ -366,7 +372,7 @@ router.post(
         }
 
         for (const [pnr, groupFlights] of pnrGroups.entries()) {
-          if (groupFlights.length < 2) continue;
+          if (groupFlights.length < MIN_BOOKED_TRIP_FLIGHTS) continue;
 
           const count = await tx.trip.count({ where: { userId } });
           const color = TRIP_COLORS[count % TRIP_COLORS.length];
@@ -376,11 +382,9 @@ router.post(
           );
           const origin = sorted[0]?.depIata ?? "?";
           const dest = sorted[Math.ceil(sorted.length / 2) - 1]?.arrIata ?? "?";
-          const month =
-            sorted[0]?.departureTime?.toLocaleDateString("en", {
-              month: "short",
-              year: "numeric",
-            }) ?? "";
+          const month = sorted[0]?.departureTime
+            ? tripNameMonth(sorted[0].departureTime, nameLanguage)
+            : "";
           const name = `${origin} – ${dest} · ${month}`;
 
           // An auto-created trip knows its flights, so it gets its date range
