@@ -301,7 +301,9 @@
     "coverUploaded": "Cover aktualisiert",
     "deleteConfirm": "Foto wirklich löschen?",
     "deleteError": "Foto konnte nicht gelöscht werden",
-    "empty": "Noch keine Fotos — lade die ersten Erinnerungen dieser Reise hoch."
+    "empty": "Noch keine Fotos — lade die ersten Erinnerungen dieser Reise hoch.",
+    "fromLibrary": "Aus der Fotobibliothek",
+    "fromLibraryAlt": "Foto aus der Fotobibliothek"
   },
   "insights": {
     "longest": "Längste Reise",

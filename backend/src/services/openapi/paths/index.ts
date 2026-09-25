@@ -37,6 +37,7 @@ import "./operations";
 import "./dataQuality";
 import "./accounts";
 import "./integrations";
+import "./photoJourneys";
 import "./catalog";
 import "./misc";
 import "./countryFlags";

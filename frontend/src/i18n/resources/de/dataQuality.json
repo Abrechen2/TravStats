@@ -69,7 +69,9 @@
           "placeVisit": "Besuch am Ort eingetragen.",
           "none": "Als beantwortet gemerkt. Angelegt wurde nichts."
         },
-        "dismissed": "Verworfen. Diese Fotoserie wird nicht mehr vorgeschlagen."
+        "dismissed": "Verworfen. Diese Fotoserie wird nicht mehr vorgeschlagen.",
+        "photosLinked": "{{count}} Fotos mit dem Besuch verknüpft.",
+        "photosNotLinked": "Die Fotos konnten nicht verknüpft werden – die Fotobibliothek war nicht erreichbar."
       },
       "errors": {
         "loadFailed": "Die Foto-Vorschläge konnten nicht geladen werden.",

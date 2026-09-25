@@ -16,6 +16,7 @@ vi.mock("../../../lib/api", () => ({
   },
 }));
 
+vi.mock("../JourneyPhotosSection", () => ({ default: () => null }));
 vi.mock("../PhotoLightbox", () => ({ default: () => <div data-testid="lightbox" /> }));
 vi.mock("../ImmichAlbumPicker", () => ({ default: () => <div data-testid="picker" /> }));
 vi.mock("../ImmichAlbumSection", () => ({
