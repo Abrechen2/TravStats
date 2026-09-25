@@ -221,7 +221,26 @@
     "deleteFailed": "Das Foto konnte nicht gelöscht werden.",
     "caption": "Bildunterschrift",
     "captionAdd": "Unterschrift…",
-    "captionFailed": "Die Bildunterschrift konnte nicht gespeichert werden."
+    "captionFailed": "Die Bildunterschrift konnte nicht gespeichert werden.",
+    "suggest": {
+      "open": "Fotos aus deiner Reise vorschlagen",
+      "title": "Fotos aus deiner Reise",
+      "loading": "Suche Fotos …",
+      "none": "Keine Fotos von diesem Tag in der Nähe gefunden.",
+      "undated": "Ein Besuch ohne Datum bekommt keine Fotovorschläge.",
+      "libraryDown": "Die Fotobibliothek war nicht erreichbar – gezeigt werden nur Fotos aus deinen Reisen.",
+      "loadFailed": "Fotovorschläge konnten nicht geladen werden.",
+      "linkFailed": "Die Fotos konnten nicht verknüpft werden.",
+      "link_one": "{{count}} Foto verknüpfen",
+      "link_other": "{{count}} Fotos verknüpfen",
+      "linked_one": "{{count}} Foto verknüpft.",
+      "linked_other": "{{count}} Fotos verknüpft.",
+      "distance": "{{metres}} m vom Ort entfernt",
+      "alt": {
+        "trip": "Foto aus deiner Reise",
+        "library": "Foto aus der Fotobibliothek"
+      }
+    }
   },
   "stats": {
     "empty": "Noch keine besuchten Orte — trage einen Besuch ein, dann füllt sich diese Seite.",

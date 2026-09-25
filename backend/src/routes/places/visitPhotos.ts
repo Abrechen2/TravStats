@@ -7,7 +7,12 @@ import fsp from "fs/promises";
 
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
-import { uploadPlacePhotos, getPlacePhotoDir, deletePlacePhotoFile } from "../../middleware/upload";
+import {
+  uploadPlacePhotos,
+  getPlacePhotoDir,
+  deletePlacePhotoFile,
+  getTripPhotoDir,
+} from "../../middleware/upload";
 import {
   immichImportLimiter,
   immichProxyLimiter,
@@ -252,6 +257,23 @@ router.get(
         where: { id: req.params.photoId, placeVisitId: req.params.visitId },
       });
       if (!photo) throw new AppError("Photo not found", 404);
+
+      // A link to one of the caller's trip photographs: the trip photo's own
+      // file, looked up through the caller's trips — the FK proves the photo
+      // exists, not whose it is.
+      if (photo.filename === null && photo.tripPhotoId) {
+        const tripPhoto = await prisma.tripPhoto.findFirst({
+          where: { id: photo.tripPhotoId, trip: { userId } },
+          select: { filename: true, mimetype: true },
+        });
+        if (!tripPhoto) throw new AppError("Photo not found", 404);
+        const tripFile = path.join(getTripPhotoDir(), path.basename(tripPhoto.filename));
+        if (!fs.existsSync(tripFile)) throw new AppError("File missing", 404);
+        res.setHeader("Cache-Control", "private, max-age=3600");
+        res.type(tripPhoto.mimetype);
+        res.sendFile(tripFile);
+        return;
+      }
 
       if (photo.filename === null) {
         if (!photo.immichAssetId) throw new AppError("File missing", 404);

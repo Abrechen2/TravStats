@@ -280,7 +280,8 @@ registry.registerPath({
     "Ownership-checked, and sets its own `Cache-Control: private` over the " +
     "API-wide `no-store`. Private, never public. A photo that has become an Immich " +
     "link (`immichAssetId` set, no copy on disk) is streamed from the owner's Immich; " +
-    "the asset id comes from the row, never from the request. `size` picks the " +
+    "the asset id comes from the row, never from the request. A link to one of the " +
+    "caller's trip photos (`tripPhotoId`) streams that photo's file. `size` picks the " +
     "rendition for a link: thumbnail, preview (default) or original.",
   tags: placesTag,
   request: {

@@ -157,6 +157,41 @@ export async function deleteVisitPhoto(visitId: string, photoId: string): Promis
   await api.delete(`/places/visits/${visitId}/photos/${photoId}`);
 }
 
+/** One photograph a visit could show; see `GET …/photo-suggestions`. */
+export interface VisitPhotoSuggestion {
+  kind: "trip" | "library";
+  id: string;
+  url: string;
+  takenAt: string | null;
+  distanceM: number;
+}
+
+export interface VisitPhotoSuggestions {
+  day: string | null;
+  suggestions: VisitPhotoSuggestion[];
+  /** Whether the library was searched: `ok`, `notConfigured`, or why not. */
+  library: string;
+}
+
+export async function getVisitPhotoSuggestions(visitId: string): Promise<VisitPhotoSuggestions> {
+  const res = await api.get<Envelope<VisitPhotoSuggestions>>(
+    `/places/visits/${visitId}/photo-suggestions`
+  );
+  return res.data.data;
+}
+
+/** Link picked suggestions to the visit — the server re-checks every id. */
+export async function linkVisitPhotoSuggestions(
+  visitId: string,
+  picks: { tripPhotoIds: string[]; assetIds: string[] }
+): Promise<{ linked: number; skipped: number }> {
+  const res = await api.post<Envelope<{ linked: number; skipped: number }>>(
+    `/places/visits/${visitId}/photo-suggestions/link`,
+    picks
+  );
+  return res.data.data;
+}
+
 export const placesApi = {
   list: listPlaces,
   count: countPlaces,

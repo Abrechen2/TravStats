@@ -2,6 +2,7 @@ import type { JSX } from "react";
 
 import { PhotoStrip } from "../common/PhotoStrip";
 import { deleteVisitPhoto, updateVisitPhoto, uploadVisitPhotos } from "../../lib/api/places";
+import { VisitPhotoSuggestions } from "./VisitPhotoSuggestions";
 import type { PlaceVisitPhoto } from "../../types/placeList";
 
 interface Props {
@@ -26,6 +27,7 @@ export function VisitPhotoStrip({ visitId, photos }: Props): JSX.Element {
       onUpload={(files) => uploadVisitPhotos(visitId, files)}
       onDelete={(photoId) => deleteVisitPhoto(visitId, photoId)}
       onCaption={(photoId, caption) => updateVisitPhoto(visitId, photoId, { caption })}
+      footer={(merge) => <VisitPhotoSuggestions visitId={visitId} onLinked={merge} />}
     />
   );
 }

@@ -107,3 +107,14 @@ export type UpdatePlaceInput = z.infer<typeof updatePlaceSchema>;
 export type CreateVisitInput = z.infer<typeof createVisitSchema>;
 export type UpdateVisitInput = z.infer<typeof updateVisitSchema>;
 export type PlaceQueryInput = z.infer<typeof placeQuerySchema>;
+
+/** Suggestions of each kind a visit is offered, and picks it accepts at once. */
+export const VISIT_PHOTO_SUGGESTION_CAP = 24;
+
+/** What the user picked from a visit's photo suggestions. */
+export const linkPicksSchema = z
+  .object({
+    tripPhotoIds: z.array(z.string().uuid()).max(VISIT_PHOTO_SUGGESTION_CAP).default([]),
+    assetIds: z.array(z.string().uuid()).max(VISIT_PHOTO_SUGGESTION_CAP).default([]),
+  })
+  .strict();

@@ -81,6 +81,7 @@ import placesRouter from "./places";
 import xlsxImportRouter from "./xlsxImport";
 import placeVisitPhotoRouter from "./places/visitPhotos";
 import placeVisitDateSuggestionRouter from "./places/visitDateSuggestions";
+import placeVisitPhotoSuggestionRouter from "./places/visitPhotoSuggestions";
 import documentExtractValueRoutes from "./documents/extractValues";
 import placeListsRouter from "./placeLists";
 import curatedListsRouter from "./placeLists/curated";
@@ -257,6 +258,12 @@ export const apiMounts: ApiMount[] = [
     id: "places.visitDateSuggestions",
     base: "/api/v1/places",
     router: placeVisitDateSuggestionRouter,
+  },
+  // Photographs a visit could link — same prefix, own file, same reason.
+  {
+    id: "places.visitPhotoSuggestions",
+    base: "/api/v1/places",
+    router: placeVisitPhotoSuggestionRouter,
   },
   { id: "places", base: "/api/v1/places", router: placesRouter },
   { id: "xlsxImport", base: "/api/v1/xlsx-import", router: xlsxImportRouter },

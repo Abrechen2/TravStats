@@ -221,7 +221,26 @@
     "deleteFailed": "The photo could not be deleted.",
     "caption": "Caption",
     "captionAdd": "Caption…",
-    "captionFailed": "The caption could not be saved."
+    "captionFailed": "The caption could not be saved.",
+    "suggest": {
+      "open": "Suggest photos from your trip",
+      "title": "Photos from your trip",
+      "loading": "Looking for photos …",
+      "none": "No photos from this day were found nearby.",
+      "undated": "A visit without a date gets no photo suggestions.",
+      "libraryDown": "The photo library could not be reached – only photos from your trips are shown.",
+      "loadFailed": "Photo suggestions could not be loaded.",
+      "linkFailed": "The photos could not be linked.",
+      "link_one": "Link {{count}} photo",
+      "link_other": "Link {{count}} photos",
+      "linked_one": "{{count}} photo linked.",
+      "linked_other": "{{count}} photos linked.",
+      "distance": "{{metres}} m from the place",
+      "alt": {
+        "trip": "Photo from your trip",
+        "library": "Photo from the photo library"
+      }
+    }
   },
   "stats": {
     "empty": "No visited places yet — record a visit and this page fills up.",

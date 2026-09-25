@@ -33,6 +33,7 @@ import "./cruises";
 import "./lodging";
 import "./settings";
 import "./places";
+import "./placePhotos";
 import "./operations";
 import "./dataQuality";
 import "./accounts";

@@ -1,5 +1,5 @@
 import { useCallback, useRef, useState } from "react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
@@ -20,6 +20,11 @@ interface Props<T extends StripPhoto> {
   onCaption: (photoId: string, caption: string | null) => Promise<T>;
   /** For the log line, so a failure can be traced to a call site. */
   context: string;
+  /**
+   * Something drawn under the strip that can add photos to it — the visit's
+   * photo suggestions. `merge` adds the photos the strip does not hold yet.
+   */
+  footer?: (merge: (photos: T[]) => void) => ReactNode;
 }
 
 /**
@@ -46,6 +51,7 @@ export function PhotoStrip<T extends StripPhoto>({
   onDelete,
   onCaption,
   context,
+  footer,
 }: Props<T>): JSX.Element {
   const { t } = useTranslation(["places", "common"]);
   const addToast = useToastStore((s) => s.addToast);
@@ -114,107 +120,114 @@ export function PhotoStrip<T extends StripPhoto>({
     [onCaption, context, rows, addToast, t]
   );
 
+  const merge = useCallback((photos: T[]): void => {
+    setRows((prev) => [...prev, ...photos.filter((p) => !prev.some((have) => have.id === p.id))]);
+  }, []);
+
   return (
-    <div className="mt-2 flex flex-wrap items-end gap-2">
-      {rows.map((photo) => (
-        <span
-          key={photo.id}
-          style={{ display: "inline-flex", flexDirection: "column", gap: 2, width: 64 }}
-        >
-          <span style={{ position: "relative", display: "inline-block" }}>
-            <img
-              src={photo.url}
-              alt={photo.caption ?? t("places:photos.alt")}
-              width={64}
-              height={64}
-              style={{
-                width: 64,
-                height: 64,
-                objectFit: "cover",
-                borderRadius: 6,
-                border: "1px solid var(--color-border)",
-                display: "block",
-              }}
-            />
-            <button
-              type="button"
-              onClick={() => void handleDelete(photo.id)}
-              aria-label={t("places:photos.delete")}
-              style={{
-                position: "absolute",
-                top: -6,
-                right: -6,
-                width: 18,
-                height: 18,
-                borderRadius: "50%",
-                fontSize: 11,
-                lineHeight: "16px",
-                background: "var(--bg-elevated)",
-                border: "1px solid var(--color-border)",
-                color: "var(--text-muted)",
-                cursor: "pointer",
-              }}
-            >
-              ✕
-            </button>
+    <>
+      <div className="mt-2 flex flex-wrap items-end gap-2">
+        {rows.map((photo) => (
+          <span
+            key={photo.id}
+            style={{ display: "inline-flex", flexDirection: "column", gap: 2, width: 64 }}
+          >
+            <span style={{ position: "relative", display: "inline-block" }}>
+              <img
+                src={photo.url}
+                alt={photo.caption ?? t("places:photos.alt")}
+                width={64}
+                height={64}
+                style={{
+                  width: 64,
+                  height: 64,
+                  objectFit: "cover",
+                  borderRadius: 6,
+                  border: "1px solid var(--color-border)",
+                  display: "block",
+                }}
+              />
+              <button
+                type="button"
+                onClick={() => void handleDelete(photo.id)}
+                aria-label={t("places:photos.delete")}
+                style={{
+                  position: "absolute",
+                  top: -6,
+                  right: -6,
+                  width: 18,
+                  height: 18,
+                  borderRadius: "50%",
+                  fontSize: 11,
+                  lineHeight: "16px",
+                  background: "var(--bg-elevated)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--text-muted)",
+                  cursor: "pointer",
+                }}
+              >
+                ✕
+              </button>
+            </span>
+
+            {editing?.id === photo.id ? (
+              <input
+                autoFocus
+                value={editing.text}
+                aria-label={t("places:photos.caption")}
+                onChange={(e) => setEditing({ id: photo.id, text: e.target.value })}
+                onBlur={() => void handleCaption(photo.id, editing.text)}
+                onKeyDown={(e) => {
+                  if (e.key === "Enter") void handleCaption(photo.id, editing.text);
+                  if (e.key === "Escape") setEditing(null);
+                }}
+                className="w-full rounded px-1 text-[10px]"
+                style={{
+                  background: "var(--bg-surface)",
+                  border: "1px solid var(--color-border)",
+                  color: "var(--text-primary)",
+                }}
+              />
+            ) : (
+              <button
+                type="button"
+                onClick={() => setEditing({ id: photo.id, text: photo.caption ?? "" })}
+                className="w-full truncate text-left text-[10px]"
+                style={{
+                  color: photo.caption
+                    ? "var(--text-muted)"
+                    : "var(--text-subtle, var(--text-muted))",
+                  background: "none",
+                  border: "none",
+                  padding: 0,
+                  cursor: "pointer",
+                  opacity: photo.caption ? 1 : 0.6,
+                }}
+                title={photo.caption ?? t("places:photos.captionAdd")}
+              >
+                {photo.caption ?? t("places:photos.captionAdd")}
+              </button>
+            )}
           </span>
+        ))}
 
-          {editing?.id === photo.id ? (
-            <input
-              autoFocus
-              value={editing.text}
-              aria-label={t("places:photos.caption")}
-              onChange={(e) => setEditing({ id: photo.id, text: e.target.value })}
-              onBlur={() => void handleCaption(photo.id, editing.text)}
-              onKeyDown={(e) => {
-                if (e.key === "Enter") void handleCaption(photo.id, editing.text);
-                if (e.key === "Escape") setEditing(null);
-              }}
-              className="w-full rounded px-1 text-[10px]"
-              style={{
-                background: "var(--bg-surface)",
-                border: "1px solid var(--color-border)",
-                color: "var(--text-primary)",
-              }}
-            />
-          ) : (
-            <button
-              type="button"
-              onClick={() => setEditing({ id: photo.id, text: photo.caption ?? "" })}
-              className="w-full truncate text-left text-[10px]"
-              style={{
-                color: photo.caption
-                  ? "var(--text-muted)"
-                  : "var(--text-subtle, var(--text-muted))",
-                background: "none",
-                border: "none",
-                padding: 0,
-                cursor: "pointer",
-                opacity: photo.caption ? 1 : 0.6,
-              }}
-              title={photo.caption ?? t("places:photos.captionAdd")}
-            >
-              {photo.caption ?? t("places:photos.captionAdd")}
-            </button>
-          )}
-        </span>
-      ))}
-
-      <label
-        className="cursor-pointer rounded-md px-3 py-2 text-xs"
-        style={{ border: "1px dashed var(--color-border)", color: "var(--text-muted)" }}
-      >
-        {busy ? t("places:photos.uploading") : `+ ${t("places:photos.add")}`}
-        <input
-          ref={inputRef}
-          type="file"
-          accept="image/*"
-          multiple
-          hidden
-          disabled={busy}
-          onChange={(e) => void handleUpload(e.target.files)}
-        />
-      </label>
-    </div>
+        <label
+          className="cursor-pointer rounded-md px-3 py-2 text-xs"
+          style={{ border: "1px dashed var(--color-border)", color: "var(--text-muted)" }}
+        >
+          {busy ? t("places:photos.uploading") : `+ ${t("places:photos.add")}`}
+          <input
+            ref={inputRef}
+            type="file"
+            accept="image/*"
+            multiple
+            hidden
+            disabled={busy}
+            onChange={(e) => void handleUpload(e.target.files)}
+          />
+        </label>
+      </div>
+      {footer?.(merge)}
+    </>
   );
 }
