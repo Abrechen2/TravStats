@@ -83,6 +83,8 @@ const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   cruise: CRUISE_SECTIONS,
   lodging: LODGING_SECTIONS,
   poi: POI_SECTIONS,
+  // No statistics yet (rail spec, phase 2); `resolveStatsTab` never lands here.
+  rail: () => [],
 };
 
 /** The menu's options for a tab. */

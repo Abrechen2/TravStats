@@ -298,6 +298,10 @@
     --domain-poi-soft: color-mix(in srgb, var(--ts-domain-poi) 10%, transparent);
     --domain-poi-locked: color-mix(in srgb, var(--ts-domain-poi) 18%, transparent);
 
+    --domain-rail: var(--ts-domain-rail);
+    --domain-rail-soft: color-mix(in srgb, var(--ts-domain-rail) 10%, transparent);
+    --domain-rail-locked: color-mix(in srgb, var(--ts-domain-rail) 18%, transparent);
+
     --domain-tour: var(--ts-domain-tour);
     --domain-tour-soft: color-mix(in srgb, var(--ts-domain-tour) 10%, transparent);
     --domain-tour-locked: color-mix(in srgb, var(--ts-domain-tour) 18%, transparent);

@@ -147,6 +147,10 @@
           "devicePairing": {
             "name": "Device pairing",
             "what": "The Devices settings entry and its QR code, the only way to bind the phone app to this account."
+          },
+          "railDomain": {
+            "name": "Rail",
+            "what": "The Rail area: a logbook for train journeys with stations, times, class and price. Map, statistics, station catalogue and import are still to come."
           }
         }
       },

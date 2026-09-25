@@ -19,7 +19,7 @@ import { adaptFlight } from "./flightStatsAdapter";
 import { adaptCruise } from "./cruiseStatsAdapter";
 import { adaptLodging } from "./lodgingStatsAdapter";
 import { adaptPoi } from "./poiStatsAdapter";
-import type { DomainStats, DomainStatsMap } from "./types";
+import { hasStatistics, type DomainStats, type DomainStatsMap, type StatsDomain } from "./types";
 import { toYearKeyed } from "./yearKeyed";
 
 export interface UseDomainStatsResult {
@@ -59,7 +59,7 @@ export function useDomainStats(input: {
       const result: DomainStatsMap = {};
       const errs: Partial<Record<DomainKey, string>> = {};
 
-      const tasks = enabled.map(async (domain) => {
+      const tasks = enabled.filter(hasStatistics).map(async (domain) => {
         try {
           const value = await loadDomain(domain, flights);
           result[domain] = value;
@@ -83,7 +83,7 @@ export function useDomainStats(input: {
   return { stats, errors, loading };
 }
 
-async function loadDomain(domain: DomainKey, flights: Flight[]): Promise<DomainStats> {
+async function loadDomain(domain: StatsDomain, flights: Flight[]): Promise<DomainStats> {
   switch (domain) {
     case "flight": {
       const countryResp = await statsApi.getCountryStats();

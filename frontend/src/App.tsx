@@ -12,6 +12,7 @@ import { setupApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
 import { DomainRouteGuard } from "./components/DomainRouteGuard";
+import { BetaFeatureRouteGuard } from "./components/BetaFeatureRouteGuard";
 import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useTelemetryConsentStep } from "./hooks/useTelemetryConsentStep";
 import { useSessionValidation } from "./hooks/useSessionValidation";
@@ -25,6 +26,7 @@ const DashboardPage = lazy(() => import("./pages/DashboardPage"));
 const FlightsTablePage = lazy(() => import("./pages/FlightsTablePage"));
 const FlightDetailPage = lazy(() => import("./pages/FlightDetailPage"));
 const CruisesPage = lazy(() => import("./pages/CruisesPage"));
+const RailPage = lazy(() => import("./pages/RailPage"));
 const CruiseDetailPage = lazy(() => import("./pages/CruiseDetailPage"));
 const LodgingListPage = lazy(() => import("./pages/LodgingListPage"));
 const PlacesListPage = lazy(() => import("./pages/PlacesListPage"));
@@ -294,6 +296,24 @@ function AppContent() {
                     <DomainRouteGuard domain="cruise">
                       <CruisesPage />
                     </DomainRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
+                path="/rail"
+                element={
+                  isAuthenticated ? (
+                    // Two gates, outer first: the instance beta switch
+                    // (config/betaFeatures.ts → railDomain), then the user's
+                    // own domain choice. Both are three-state guards, so a cold
+                    // load waits instead of bouncing a bookmark.
+                    <BetaFeatureRouteGuard feature="railDomain" redirectTo="/dashboard">
+                      <DomainRouteGuard domain="rail">
+                        <RailPage />
+                      </DomainRouteGuard>
+                    </BetaFeatureRouteGuard>
                   ) : (
                     <Navigate to="/login" />
                   )

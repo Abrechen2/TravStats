@@ -8,6 +8,9 @@ import { Icon, type IconName } from "../ui/Icon";
 import { DASHBOARD_TABS } from "../../types/dashboard";
 import { DOMAINS, isValidDomain, type DomainKey } from "../../shared/domains";
 
+/** A domain with a dashboard tab of its own. */
+type TabDomain = Extract<DashboardTab, DomainKey>;
+
 interface DomainTabStripProps {
   active: DashboardTab;
   /**
@@ -16,8 +19,12 @@ interface DomainTabStripProps {
    * proof: it has no count badge and no enable/disable pill, because it has
    * no domain to count or disable. Widening this to every non-"all" tab
    * would force a fake count for a tab that doesn't have one.
+   *
+   * Narrowed to the domains that HAVE a tab: rail is a domain without a
+   * dashboard tab until phase 2 of its spec, and a key here would demand a
+   * count nobody fetched.
    */
-  counts: Record<DomainKey, number>;
+  counts: Record<TabDomain, number>;
   /**
    * How many of `counts` are merely planned (per domain, optional). Shown as
    * a "(n geplant)" hint so the tab count and the statistics stop appearing
@@ -25,8 +32,8 @@ interface DomainTabStripProps {
    * consistent (statistics count flown things) but reads like a bug without
    * the hint (UAT finding B6).
    */
-  scheduledCounts?: Partial<Record<DomainKey, number>>;
-  enabled: Record<DomainKey, boolean>;
+  scheduledCounts?: Partial<Record<TabDomain, number>>;
+  enabled: Record<TabDomain, boolean>;
   onSelect(next: DashboardTab): void;
   /**
    * At most one upcoming entry per domain, soonest first. The strip shows the
@@ -112,7 +119,7 @@ export function DomainTabStrip({
         // keyed by DOMAIN — "Touren" is a tab with no domain behind it, so it
         // is never dimmed (there is nothing to disable) and never carries a
         // count badge (there is nothing this strip fetched to count).
-        const domain = isValidDomain(tab) ? tab : null;
+        const domain = isValidDomain(tab) ? (tab as TabDomain) : null;
         const isDisabled = domain !== null && !enabled[domain];
         const count = domain === null ? null : counts[domain];
         const scheduled = domain === null ? 0 : (scheduledCounts?.[domain] ?? 0);

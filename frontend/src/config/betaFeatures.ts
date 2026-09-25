@@ -79,6 +79,22 @@ export const BETA_FEATURES = Object.freeze({
       "The Companion is installable outside TestFlight — a public build a reader of the release notes can actually get — and the owner accepts the pairing flow for release.",
     reason: "advanced",
   }),
+
+  /**
+   * The rail domain — train journeys logged like flights (owner decision
+   * 2026-09-25, spec docs/superpowers/specs/2026-09-25-rail-domain.md).
+   *
+   * Gated in `hooks/useRailVisible.ts`, the rule's one home: the module toggle
+   * and the setup picker ask the flag alone (that is where the domain is
+   * switched on); nav, logbook tabs, colour settings and the route ask the
+   * flag AND the user's own domain choice.
+   */
+  railDomain: Object.freeze({
+    why: "Phase 1 of the rail domain is a logbook and nothing more: a list and a form, with stations picked through the geocoder. There is no station catalogue, no map layer, no dashboard tab, no statistics, no trip timeline entry and no import yet, so offering it to everybody would advertise a domain that does not yet do what the other four do.",
+    returnsWhen:
+      "Phase 2 of the rail spec has shipped — station catalogue, map layer and dashboard tab, statistics, trip timeline — and the owner accepts the domain for release.",
+    reason: "beta",
+  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;

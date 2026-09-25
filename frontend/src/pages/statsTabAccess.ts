@@ -1,5 +1,6 @@
 import type { DomainKey } from "../shared/domains";
 import type { PlacesAccess } from "../hooks/usePlacesVisible";
+import { hasStatistics } from "../lib/stats/domain-stats/types";
 
 export type StatsTab = DomainKey | "all";
 
@@ -37,7 +38,9 @@ export function visibleStatsTabs(
   enabledDomains: readonly DomainKey[],
   placesAccess: PlacesAccess
 ): DomainKey[] {
-  return enabledDomains.filter((key) => key !== "poi" || placesAccess !== "denied");
+  return enabledDomains.filter(
+    (key) => hasStatistics(key) && (key !== "poi" || placesAccess !== "denied")
+  );
 }
 
 export function resolveStatsTab(
@@ -47,6 +50,8 @@ export function resolveStatsTab(
 ): StatsTab {
   if (requested === "all") return "all";
   if (requested === "poi") return placesAccess === "denied" ? "all" : "poi";
+  // A domain without statistics yet (rail) has no tab to land on.
+  if (!hasStatistics(requested)) return "all";
   // Falling back to the overview rather than showing nothing: the reader asked
   // for statistics, and a page they can use beats an empty panel.
   return enabledDomains.includes(requested) ? requested : "all";

@@ -147,6 +147,10 @@
           "devicePairing": {
             "name": "Geräte koppeln",
             "what": "Der Einstellungs-Eintrag „Geräte“ mit dem QR-Code, über den die Handy-App an dieses Konto gebunden wird."
+          },
+          "railDomain": {
+            "name": "Bahn",
+            "what": "Der Bereich „Bahn“: ein Fahrtenbuch für Zugfahrten mit Bahnhöfen, Zeiten, Klasse und Preis. Karte, Statistik, Bahnhofskatalog und Import folgen."
           }
         }
       },

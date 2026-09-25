@@ -156,7 +156,9 @@
     "lodging": "Lodging",
     "lodging_desc": "Overnight stays, chain loyalty, countries/cities.",
     "poi": "Places",
-    "poi_desc": "Landmarks, restaurants, concerts, any place."
+    "poi_desc": "Landmarks, restaurants, concerts, any place.",
+    "rail": "Rail",
+    "rail_desc": "Train journeys like flights: stations, train number, class, seat, kilometres. (Beta)"
   },
   "settings": {
     "modules": {
@@ -167,7 +169,8 @@
         "flight": "Navigation, statistics, map",
         "cruise": "Navigation, statistics, map",
         "lodging": "Navigation, statistics, days away",
-        "poi": "Places, visits and place lists"
+        "poi": "Places, visits and place lists",
+        "rail": "Beta: a logbook for train journeys"
       }
     }
   },

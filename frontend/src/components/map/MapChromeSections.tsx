@@ -73,7 +73,9 @@ export function MapChromeSections(): JSX.Element {
   const modes = TAB_MODE_REGISTRY[tab].modes;
   const yearOptions = buildYearOptions();
 
-  const domainOptions = AVAILABLE_DOMAINS.filter((key) => isEnabled(key));
+  // Rail has no map layer until phase 2 of its spec; a chip for it would
+  // filter nothing.
+  const domainOptions = AVAILABLE_DOMAINS.filter((key) => key !== "rail" && isEnabled(key));
   const yearActive = year !== null;
   const domainsFiltered = tab === "all" && domainOptions.some((key) => !domains.includes(key));
   const filterActive = yearActive || domainsFiltered;

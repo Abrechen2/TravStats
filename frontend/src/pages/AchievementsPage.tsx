@@ -52,6 +52,7 @@ const DOMAIN_LABEL: Record<DomainKey, string> = {
   cruise: "achievements:filters.domainCruise",
   lodging: "achievements:filters.domainLodging",
   poi: "achievements:filters.domainPoi",
+  rail: "achievements:filters.domainRail",
 };
 
 type DomainFilter = "all" | "shared" | DomainKey;
@@ -316,7 +317,9 @@ export default function AchievementsPage(): JSX.Element {
           <Pill active={selectedDomain === "all"} onClick={() => setSelectedDomain("all")}>
             {t("achievements:filters.allDomains")}
           </Pill>
-          {AVAILABLE_DOMAINS.filter((d) => enabled.includes(d)).map((d) => (
+          {/* Rail has no achievements yet (its spec, phase 2) — a chip for it
+              would open an empty list. */}
+          {AVAILABLE_DOMAINS.filter((d) => d !== "rail" && enabled.includes(d)).map((d) => (
             <Pill key={d} active={selectedDomain === d} onClick={() => setSelectedDomain(d)}>
               {t(DOMAIN_LABEL[d])}
             </Pill>

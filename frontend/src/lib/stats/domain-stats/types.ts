@@ -2,6 +2,18 @@
 import type { DomainKey } from "../../../shared/domains";
 
 /**
+ * Domains that have statistics. Rail is a domain since 2026-09-25 but its
+ * figures are phase 2 of its spec (docs/superpowers/specs/2026-09-25-rail-domain.md);
+ * until then it has no statistics tab, is not fetched, and is never folded into
+ * the overview — which is different from "no data", and must not read as it.
+ */
+export type StatsDomain = Exclude<DomainKey, "rail">;
+
+export function hasStatistics(domain: DomainKey): domain is StatsDomain {
+  return domain !== "rail";
+}
+
+/**
  * One headline figure on a per-domain card.
  *
  * `labelKey`, not a label: these adapters are pure functions with no `t` in

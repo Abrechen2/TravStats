@@ -156,7 +156,9 @@
     "lodging": "Unterkünfte",
     "lodging_desc": "Übernachtungen, Ketten-Loyalty, Länder/Städte.",
     "poi": "Orte",
-    "poi_desc": "Sehenswürdigkeiten, Restaurants, Konzerte, beliebige Orte."
+    "poi_desc": "Sehenswürdigkeiten, Restaurants, Konzerte, beliebige Orte.",
+    "rail": "Bahn",
+    "rail_desc": "Zugfahrten wie Flüge: Bahnhöfe, Zugnummer, Klasse, Sitzplatz, Kilometer. (Beta)"
   },
   "settings": {
     "modules": {
@@ -167,7 +169,8 @@
         "flight": "Navigation, Statistik, Karte",
         "cruise": "Navigation, Statistik, Karte",
         "lodging": "Navigation, Statistik, Reisetage",
-        "poi": "Orte, Besuche und Ortslisten"
+        "poi": "Orte, Besuche und Ortslisten",
+        "rail": "Beta: Fahrtenbuch für Zugfahrten"
       }
     }
   },

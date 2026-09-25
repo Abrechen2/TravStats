@@ -4,6 +4,7 @@ import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
+import { useRailOffered } from "../../hooks/useRailVisible";
 import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
 
@@ -13,10 +14,13 @@ export default function ModuleSection(): JSX.Element {
   const enabledDomains = useSettingsStore((s) => s.enabledDomains);
   const setEnabledDomains = useSettingsStore((s) => s.setEnabledDomains);
 
-  // Every domain, since 2026-09-05. Places sat behind the instance beta flag
-  // here (never behind "already enabled" — this list is where the user turns
-  // a domain on) until its gate's own condition was met.
-  const visibleKeys = DOMAIN_KEYS;
+  // Every domain but one: rail is offered only where the instance beta
+  // switch allows it — the flag ALONE (hooks/useRailVisible.ts), because this
+  // list is where the user turns the domain on. A domain the user already
+  // enabled stays listed, so it can always be switched off again.
+  const railOffered = useRailOffered();
+  const enabledRail = enabledDomains.includes("rail");
+  const visibleKeys = DOMAIN_KEYS.filter((key) => key !== "rail" || railOffered || enabledRail);
 
   const toggle = (key: DomainKey): void => {
     if (!DOMAINS[key].available) return;
