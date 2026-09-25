@@ -72,16 +72,19 @@ jobs:
       - uses: https://code.forgejo.org/actions/checkout@v4
       - name: Install dependencies
         run: cd frontend && npm ci
+      # Capped workers: the runner takes four jobs at once on 8 cores, and Vitest
+      # otherwise starts one worker per core in every job. Uncapped, heavy React
+      # suites (StayEditor) hit the 5 s test timeout on main runs 1261/1264/1280.
       - name: Vitest
-        run: cd frontend && npx vitest --run
+        run: cd frontend && npx vitest --run --maxWorkers=2
 
   backend-tests:
-    name: Backend tests (Jest ${{ matrix.shard }}/2)
+    name: Backend tests (Jest ${{ matrix.shard }}/4)
     runs-on: homelab-docker
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     services:
       postgres:
         image: postgis/postgis:16-3.4
@@ -116,4 +119,4 @@ jobs:
           cd backend
           npx prisma migrate deploy
           npx tsx scripts/seed-test-catalogues.ts
-          npx jest --ci --forceExit --shard=${{ matrix.shard }}/2
+          npx jest --ci --forceExit --shard=${{ matrix.shard }}/4
