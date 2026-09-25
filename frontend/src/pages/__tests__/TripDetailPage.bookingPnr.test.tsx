@@ -32,6 +32,12 @@ vi.mock("../../lib/api/places", () => ({
   listPlaces: vi.fn().mockResolvedValue([]),
 }));
 
+// The trip's tours tab lists its routes on mount (2.7) — a request the
+// network guard refuses (forgejo#110).
+vi.mock("../../lib/api/tours", () => ({
+  toursApi: { list: vi.fn().mockResolvedValue([]), create: vi.fn(), remove: vi.fn() },
+}));
+
 // The booking editor's currency picker asks for the user's recent currencies.
 vi.mock("../../hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
 
