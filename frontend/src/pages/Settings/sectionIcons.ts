@@ -15,6 +15,7 @@ export const SECTION_ICON: Record<SettingsSectionId, IconName> = {
   domainColors: "layers",
   modules: "sparkles",
   countryCounting: "book-open",
+  trips: "route",
   backup: "database",
   import: "upload",
   notifications: "bell",

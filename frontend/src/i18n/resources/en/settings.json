@@ -697,7 +697,11 @@
     "toast": {
       "movedFromDashboard": "The flight import has moved here — under Settings → Import."
     },
-    "noRoutes": "No list format for this area yet. Add single entries in the area itself.",
+    "noRoutes": "No list format for this area yet. Add single entries in the area itself."
+  },
+  "trips": {
+    "title": "Trips",
+    "description": "How TravStats forms trips from your entries.",
     "autoCreateTrips": {
       "label": "Create trips automatically",
       "description": "Flights sharing a booking reference are grouped into a trip with a booking during import. When off, the booking reference is kept – you can still group them later via “Detect trips”."
@@ -830,6 +834,7 @@
   "groups": {
     "account": "Account",
     "display": "Appearance",
+    "trips": "Trips",
     "data": "Data",
     "services": "Services"
   },
@@ -851,6 +856,7 @@
       "domainColors": "Colour, color, colours, map colour, line colour",
       "modules": "Areas, modules, flights, cruises, lodging, places, roadtrips, switch on and off",
       "countryCounting": "Countries, count a country, layover, transit, country counting",
+      "trips": "trip, trips, automatic, booking reference, group, create trip, detect trips",
       "backup": "Backup, export, restore, download, Excel, spreadsheet, JSON, data",
       "import": "Import, CSV, Flightradar24, logbook, upload",
       "notifications": "Notification, email, SMTP, mail server, reminder",
