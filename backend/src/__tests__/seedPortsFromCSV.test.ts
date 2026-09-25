@@ -65,11 +65,12 @@ describe("seedPortsFromCSV", () => {
       // the actual CSV, not a number that was already true for a fixture.
       const validRowCount = countValidCsvRows();
       const count = await seedPortsFromCSV();
-      // A handful of rows collide on (name, country) within the CSV itself
-      // and are legitimately skipped by `skipDuplicates` (measured: 3 of
-      // 12062) — not a regression, so allow a small margin instead of an
-      // exact match.
+      // 3 of 12,062 rows repeat a UNLOCODE within the CSV itself and are dropped
+      // by skipDuplicates against ports_unlocode_key - the table's only unique
+      // index. (76 rows repeat (name, country); those are all inserted, because
+      // that pair is deduped against rows already in the DB, not by an index.)
       expect(count).toBeGreaterThan(validRowCount * 0.99);
+      expect(count).toBeLessThanOrEqual(validRowCount);
       const rows = await prisma.port.count();
       expect(rows).toBe(count);
     },

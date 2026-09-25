@@ -42,8 +42,8 @@ const INSERT_CHUNK_SIZE = 2000;
  * params), so the bind limit was never the problem chunking here solves.
  * What chunking trades away is that wrapping transaction: a failure partway
  * through can now leave a partial seed committed, where the old call would
- * have rolled back whole. That's fine
- * here — both callers (`index.ts`, `init.ts`) warn and continue rather than
+ * have rolled back whole. That's fine here — both callers (`index.ts`,
+ * `init.ts`) warn and continue rather than
  * abort on a seed error, and the dedupe keys (unlocode, lowercase
  * name+country) mean the next boot just inserts whatever is still missing.
  * The measured ~10-20% speedup under contention most likely comes from
