@@ -237,7 +237,12 @@
     "saveError": "Aufenthalt konnte nicht gespeichert werden",
     "companionsHint": "Diese Buchung galt für {{count}} Personen. Trage die Begleitung ein — der Beleg nennt nur den Buchenden.",
     "tripSection": "Reise",
-    "boardSuggestion": "Sonst meist: {{board}}"
+    "boardSuggestion": "Sonst meist: {{board}}",
+    "tripDates": {
+      "both": "Reisezeitraum übernehmen: {{from}} – {{to}}",
+      "checkIn": "Reisebeginn als Check-in: {{date}}",
+      "checkOut": "Reiseende als Check-out: {{date}}"
+    }
   },
   "membership": {
     "title": "Bonusprogramme",

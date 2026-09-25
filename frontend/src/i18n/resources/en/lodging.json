@@ -237,7 +237,12 @@
     "saveError": "Could not save stay",
     "companionsHint": "This booking covered {{count}} people. Add the companions — the confirmation only names the booker.",
     "tripSection": "Trip",
-    "boardSuggestion": "Usually: {{board}}"
+    "boardSuggestion": "Usually: {{board}}",
+    "tripDates": {
+      "both": "Use the trip's dates: {{from}} – {{to}}",
+      "checkIn": "Trip start as check-in: {{date}}",
+      "checkOut": "Trip end as check-out: {{date}}"
+    }
   },
   "membership": {
     "title": "Loyalty programs",

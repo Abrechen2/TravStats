@@ -6,7 +6,7 @@ export type DatedTrip = Pick<Trip, "id" | "startDate" | "endDate">;
 const ISO_DAY = /^\d{4}-\d{2}-\d{2}/;
 
 /** The calendar day of a date input value or an ISO timestamp, or null. */
-function dayOf(value: string | null | undefined): string | null {
+export function dayOf(value: string | null | undefined): string | null {
   if (!value) return null;
   const match = ISO_DAY.exec(value);
   return match ? match[0] : null;

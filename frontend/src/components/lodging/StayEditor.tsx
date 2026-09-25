@@ -9,6 +9,8 @@ import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import TagInput from "../TagInput";
 import { useLodgingEntrySuggestions } from "../../hooks/useLodgingEntrySuggestions";
+import { useStayDatesFromTrip } from "../../hooks/useStayDatesFromTrip";
+import { StayDatesOfferButton } from "./StayDatesOfferButton";
 import { Field } from "../ui/Field";
 import { StayEditorAttachmentsSection } from "./StayEditorAttachmentsSection";
 import { StayEditorTripSection } from "./StayEditorTripSection";
@@ -184,6 +186,16 @@ export function StayEditor({
   const entrySuggestions = useLodgingEntrySuggestions(lodgingId);
   const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
+
+  const tripDates = useStayDatesFromTrip({
+    enabled: mode === "create" && datePrecision === "DAY",
+    trips,
+    tripId,
+    checkIn,
+    checkOut,
+    onCheckInChange: setCheckIn,
+    onCheckOutChange: setCheckOut,
+  });
 
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -457,6 +469,9 @@ export function StayEditor({
                   </Field>
                 )}
               </div>
+            )}
+            {tripDates.offer && (
+              <StayDatesOfferButton offer={tripDates.offer} onAccept={tripDates.accept} t={t} />
             )}
 
             {/* Optional times, DAY precision only — mainly so a planned stay's

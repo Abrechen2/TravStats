@@ -114,4 +114,27 @@ describe("StayEditor — trip preselection by check-in", () => {
     await tripsLoaded();
     expect(tripSelect().value).toBe("");
   });
+
+  it("a trip picked with no dates yet gives the new stay the trip's days", async () => {
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+    await tripsLoaded();
+    fireEvent.change(tripSelect(), { target: { value: "trip-autumn" } });
+
+    expect(screen.getByLabelText("lodging:field.checkIn")).toHaveValue("2026-10-03");
+    expect(screen.getByLabelText("lodging:field.checkOut")).toHaveValue("2026-10-05");
+  });
+
+  it("with the check-in typed, only offers the trip's last day as check-out", async () => {
+    render(<StayEditor mode="create" lodgingId="lodging-1" onClose={vi.fn()} onSaved={vi.fn()} />);
+    await tripsLoaded();
+    fireEvent.change(screen.getByLabelText("lodging:field.checkIn"), {
+      target: { value: "2026-07-10" },
+    });
+    await waitFor(() => expect(tripSelect().value).toBe("trip-summer"));
+    expect(screen.getByLabelText("lodging:field.checkOut")).toHaveValue("");
+
+    fireEvent.click(screen.getByTestId("stay-trip-dates-offer"));
+    expect(screen.getByLabelText("lodging:field.checkOut")).toHaveValue("2026-07-14");
+    expect(screen.queryByTestId("stay-trip-dates-offer")).not.toBeInTheDocument();
+  });
 });
