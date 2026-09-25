@@ -24,7 +24,8 @@ import logger from "../../utils/logger";
  * The listing and the link share the stats bucket: each is one bounded query
  * plus, at most, one Immich day search that the asset cache then holds for a
  * minute. The thumbnail proxy shares the other proxies' bucket, because a
- * suggestion strip loads a couple of dozen tiles at once.
+ * suggestion strip loads a couple of dozen tiles at once — which is why it
+ * only reads the search the listing cached and never searches itself.
  *
  * ## A library id is only ever served after the server found it itself
  *

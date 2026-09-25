@@ -19,6 +19,7 @@ import request from "supertest";
 import app from "../../index";
 import { prisma } from "../../db";
 import { getTripPhotoDir } from "../../middleware/upload";
+import { clearImmichAssetCache } from "../../services/immich/immichAssetCache";
 import { generateToken } from "../../utils/jwt";
 import { hashPassword } from "../../utils/password";
 
@@ -105,6 +106,7 @@ describe("place-visit photo suggestions", () => {
   });
 
   beforeEach(() => {
+    clearImmichAssetCache();
     searchAssetsByDate.mockReset();
     fetchAssetStream.mockReset();
     getImmichConnection.mockReset();
@@ -149,6 +151,9 @@ describe("place-visit photo suggestions", () => {
       contentLength: 12,
     });
     const base = `/api/v1/places/visits/${visitId}/photo-suggestions/library`;
+    await request(app)
+      .get(`/api/v1/places/visits/${visitId}/photo-suggestions`)
+      .set("Cookie", cookie);
 
     const near = await request(app).get(`${base}/${NEAR_ASSET}/file`).set("Cookie", cookie);
     expect(near.status).toBe(200);
@@ -161,6 +166,37 @@ describe("place-visit photo suggestions", () => {
       .set("Cookie", strangerCookie);
     expect(stranger.status).toBe(404);
     expect(fetchAssetStream).toHaveBeenCalledTimes(1);
+  });
+
+  it("proves a thumbnail only against a listing already made, never by searching", async () => {
+    // A thumbnail request is cheap to repeat; a day search is not, and the
+    // connection may be a shared one. Without a listing there is no proof.
+    fetchAssetStream.mockResolvedValue({
+      stream: Readable.from([Buffer.from("immich-bytes")]),
+      contentType: "image/jpeg",
+      contentLength: 12,
+    });
+    const file = `/api/v1/places/visits/${visitId}/photo-suggestions/library/${NEAR_ASSET}/file`;
+
+    const cold = await request(app).get(file).set("Cookie", cookie);
+    expect(cold.status).toBe(404);
+    expect(searchAssetsByDate).not.toHaveBeenCalled();
+    expect(fetchAssetStream).not.toHaveBeenCalled();
+
+    await request(app)
+      .get(`/api/v1/places/visits/${visitId}/photo-suggestions`)
+      .set("Cookie", cookie);
+    const warm = await request(app).get(file).set("Cookie", cookie);
+    expect(warm.status).toBe(200);
+    expect(warm.body.toString()).toBe("immich-bytes");
+    expect(searchAssetsByDate).toHaveBeenCalledTimes(1);
+
+    const revalidated = await request(app)
+      .get(file)
+      .set("Cookie", cookie)
+      .set("If-None-Match", `"${NEAR_ASSET}-thumbnail"`);
+    expect(revalidated.status).toBe(304);
+    expect(searchAssetsByDate).toHaveBeenCalledTimes(1);
   });
 
   it("links only the caller's photos and the proven library ids, once", async () => {

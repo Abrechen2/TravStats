@@ -7,7 +7,7 @@ import { VISIT_PHOTO_SUGGESTION_CAP } from "../../schemas/place";
 import { localDay, withinKm } from "../../utils/sqlGeo";
 import { timezoneOfLodging } from "../../utils/stayInstant";
 import { createImmichClient } from "../immich/immichClient";
-import { getCachedAlbumAssets } from "../immich/immichAssetCache";
+import { getCachedAlbumAssets, peekCachedAlbumAssets } from "../immich/immichAssetCache";
 import { getImmichConnection } from "../immich/immichResolver";
 import { ImmichError, type ImmichAsset, type ImmichErrorKind } from "../immich/types";
 import { PHOTO_RADIUS_KM } from "./visitDateSuggestions";
@@ -110,6 +110,17 @@ async function tripPhotosNear(userId: string, a: VisitAnchor): Promise<TripPhoto
   `);
 }
 
+const dayCacheKey = (a: VisitAnchor): string => `visit-day:${a.id}:${a.day}`;
+
+function nearTheAnchor(a: VisitAnchor, day: ImmichAsset[]): ImmichAsset[] {
+  return day.filter(
+    (asset) =>
+      asset.lat !== null &&
+      asset.lon !== null &&
+      haversineKm(a, { lat: asset.lat, lon: asset.lon }) <= PHOTO_RADIUS_KM
+  );
+}
+
 /**
  * The library's photographs of the visit's day within the photo radius.
  *
@@ -129,17 +140,11 @@ export async function libraryAssetsNear(
   const start = fromZonedTime(`${a.day}T00:00:00`, a.tz ?? "UTC");
   const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
   try {
-    const day = await getCachedAlbumAssets(userId, `visit-day:${a.id}:${a.day}`, async () => {
+    const day = await getCachedAlbumAssets(userId, dayCacheKey(a), async () => {
       const page = await client.searchAssetsByDate({ takenAfter: start, takenBefore: end });
       return page.assets;
     });
-    const near = day.filter(
-      (asset) =>
-        asset.lat !== null &&
-        asset.lon !== null &&
-        haversineKm(a, { lat: asset.lat, lon: asset.lon }) <= PHOTO_RADIUS_KM
-    );
-    return { state: "ok", assets: near };
+    return { state: "ok", assets: nearTheAnchor(a, day) };
   } catch (error) {
     if (error instanceof ImmichError) return { state: error.kind, assets: [] };
     throw error;
@@ -202,6 +207,13 @@ export async function visitPhotoSuggestionsFor(
  * Whether one library asset is among the visit's suggestions — the check the
  * thumbnail proxy makes before it streams anything. Null when the visit is not
  * the caller's (or has no day, which suggests nothing).
+ *
+ * It only reads the day search the LISTING left in the cache and never runs
+ * one: the proxy sits on the generous thumbnail bucket, and a search per tile
+ * request would let one account drive hundreds of full-day library searches a
+ * minute against what may be a shared connection. The strip requests its
+ * tiles right after the listing; a tile asked for once the cache's minute is
+ * over is a 404 until the suggestions are opened again.
  */
 export async function isSuggestedLibraryAsset(
   userId: string,
@@ -210,8 +222,9 @@ export async function isSuggestedLibraryAsset(
 ): Promise<boolean | null> {
   const anchor = await anchorOf(userId, visitId);
   if (anchor === null || anchor === "undated") return null;
-  const { assets } = await libraryAssetsNear(userId, anchor);
-  return assets.some((asset) => asset.id === assetId);
+  const day = await peekCachedAlbumAssets(userId, dayCacheKey(anchor));
+  if (day === null) return false;
+  return nearTheAnchor(anchor, day).some((asset) => asset.id === assetId);
 }
 
 export interface LinkPicks {

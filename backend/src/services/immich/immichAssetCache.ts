@@ -72,6 +72,21 @@ export async function getCachedAlbumAssets(
   return promise;
 }
 
+/**
+ * What the cache already holds for a key — a fresh entry, or the load already
+ * in flight — without ever starting a load. For callers that must not cause an
+ * upstream request themselves (a thumbnail proof); null means "nothing held".
+ */
+export function peekCachedAlbumAssets(
+  userId: string,
+  albumId: string
+): Promise<ImmichAsset[]> | null {
+  const key = keyOf(userId, albumId);
+  const cached = entries.get(key);
+  if (cached && cached.expiresAt > Date.now()) return Promise.resolve(cached.assets);
+  return inFlight.get(key) ?? null;
+}
+
 export function invalidateAlbumAssets(userId: string, albumId: string): void {
   const key = keyOf(userId, albumId);
   generations.set(key, generationOf(key) + 1);
