@@ -24,6 +24,8 @@ import StatusField from "./FlightForm/fields/StatusField";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
 import { buildLocalString } from "./FlightForm/useFlightForm";
 import CompanionsField from "./FlightForm/fields/CompanionsField";
+import SuggestionChips from "./FlightForm/fields/SuggestionChips";
+import { useFlightEntrySuggestions } from "../hooks/useFlightEntrySuggestions";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
@@ -148,6 +150,13 @@ export default function FlightEditModal({
     depCode: departureAirport?.iata || departureAirport?.icao || null,
     arrCode: arrivalAirport?.iata || arrivalAirport?.icao || null,
     browserTimezone: browserTz,
+  });
+
+  const suggestions = useFlightEntrySuggestions({
+    enabled: isOpen,
+    airline: formData.airline,
+    dep: departureAirport?.iata || departureAirport?.icao,
+    arr: arrivalAirport?.iata || arrivalAirport?.icao,
   });
 
   const update = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
@@ -569,6 +578,12 @@ export default function FlightEditModal({
               placeholder={t("flights:form.placeholders.flightNumber")}
               maxLength={10}
             />
+            <SuggestionChips
+              value={formData.flightNumber}
+              suggestions={suggestions.flightNumbers}
+              onPick={(v) => update("flightNumber", v)}
+              fieldLabel={t("flights:form.flightNumber")}
+            />
           </div>
         </div>
 
@@ -634,6 +649,12 @@ export default function FlightEditModal({
               className="input"
               placeholder={t("flights:form.placeholders.seat")}
             />
+            <SuggestionChips
+              value={formData.seatNumber}
+              suggestions={suggestions.seats}
+              onPick={(v) => update("seatNumber", v)}
+              fieldLabel={t("flights:form.seat")}
+            />
           </div>
           <div>
             <label className="label">{t("flights:form.gate")}</label>
@@ -653,6 +674,12 @@ export default function FlightEditModal({
               onChange={(e) => update("terminal", e.target.value)}
               className="input"
               placeholder={t("flights:form.placeholders.terminal")}
+            />
+            <SuggestionChips
+              value={formData.terminal}
+              suggestions={suggestions.departureTerminals}
+              onPick={(v) => update("terminal", v)}
+              fieldLabel={t("flights:form.terminal")}
             />
           </div>
           <div>
@@ -678,6 +705,7 @@ export default function FlightEditModal({
             frequentFlyerNumber: formData.frequentFlyerNumber,
           }}
           onChange={(v) => setFormData((prev) => ({ ...prev, ...v }))}
+          frequentFlyerSuggestion={suggestions.frequentFlyerNumber}
         />
 
         {/* Companions */}

@@ -32,6 +32,9 @@ interface BookingAndNotesSectionProps {
   labelClassName: string;
   mutedTextClassName: string;
   inputClassName: string;
+  /** See BookingFields. */
+  frequentFlyerSuggestion?: string | null;
+  frequentFlyerSuggested?: boolean;
 }
 
 /**
@@ -60,6 +63,8 @@ export default function BookingAndNotesSection({
   labelClassName,
   mutedTextClassName,
   inputClassName,
+  frequentFlyerSuggestion,
+  frequentFlyerSuggested,
 }: BookingAndNotesSectionProps): JSX.Element {
   const { t } = useTranslation(["flights"]);
 
@@ -71,6 +76,8 @@ export default function BookingAndNotesSection({
         onChange={onBookingChange}
         labelClassName={labelClassName}
         inputClassName={inputClassName}
+        frequentFlyerSuggestion={frequentFlyerSuggestion}
+        frequentFlyerSuggested={frequentFlyerSuggested}
       />
 
       {/* Trip (#199) — the assignment runs after the create, see

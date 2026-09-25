@@ -1,4 +1,5 @@
 import { useTranslation } from "../../../hooks/useTranslation";
+import SuggestionChips from "./SuggestionChips";
 
 /** The five booking-side fields, shared between the create and edit flight
  *  forms. The last three (booking class letter, baggage allowance, frequent
@@ -19,6 +20,12 @@ interface BookingFieldsProps {
   /** The create form's density classes; the edit modal passes neither. */
   labelClassName?: string;
   inputClassName?: string;
+  /** The number from the user's latest flight with this airline, offered as a
+   *  chip while the field is empty. */
+  frequentFlyerSuggestion?: string | null;
+  /** The field holds that number because the form filled it in, not the
+   *  user — says so under the field. */
+  frequentFlyerSuggested?: boolean;
 }
 
 export default function BookingFields({
@@ -26,6 +33,8 @@ export default function BookingFields({
   onChange,
   labelClassName = "",
   inputClassName = "",
+  frequentFlyerSuggestion = null,
+  frequentFlyerSuggested = false,
 }: BookingFieldsProps): JSX.Element {
   const { t } = useTranslation(["flights"]);
 
@@ -95,6 +104,21 @@ export default function BookingFields({
             placeholder={t("flights:form.placeholders.frequentFlyerNumber")}
             maxLength={30}
           />
+          {frequentFlyerSuggested ? (
+            <p className="mt-1 text-xs text-(--text-muted)">
+              {t("flights:form.frequentFlyerSuggested")}
+            </p>
+          ) : (
+            !value.frequentFlyerNumber &&
+            frequentFlyerSuggestion && (
+              <SuggestionChips
+                value=""
+                suggestions={[frequentFlyerSuggestion]}
+                onPick={(v) => set("frequentFlyerNumber", v)}
+                fieldLabel={t("flights:form.frequentFlyerNumber")}
+              />
+            )
+          )}
         </div>
       </div>
     </>

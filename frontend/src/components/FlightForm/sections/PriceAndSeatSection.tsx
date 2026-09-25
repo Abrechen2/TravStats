@@ -2,6 +2,7 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../../hooks/useTranslation";
 import CostFields, { type CostFieldsValue } from "../fields/CostFields";
+import SuggestionChips from "../fields/SuggestionChips";
 
 export type SeatClass = "" | "economy" | "premium_economy" | "business" | "first";
 export type FlightCategory = "" | "business" | "private" | "vacation";
@@ -21,6 +22,8 @@ interface PriceAndSeatSectionProps {
   priceHelp: { content: string; expandedContent?: string };
   labelClassName: string;
   inputClassName: string;
+  /** Seats from the user's own history, offered under the seat field. */
+  seatSuggestions?: readonly string[];
 }
 
 /**
@@ -48,6 +51,7 @@ export default function PriceAndSeatSection({
   priceHelp,
   labelClassName,
   inputClassName,
+  seatSuggestions = [],
 }: PriceAndSeatSectionProps): JSX.Element {
   const { t } = useTranslation(["flights", "common"]);
 
@@ -62,6 +66,12 @@ export default function PriceAndSeatSection({
             onChange={(e) => setSeatNumber(e.target.value.toUpperCase())}
             className={`input ${inputClassName}`}
             placeholder={t("flights:form.placeholders.seat")}
+          />
+          <SuggestionChips
+            value={seatNumber}
+            suggestions={seatSuggestions}
+            onPick={setSeatNumber}
+            fieldLabel={t("flights:form.seat")}
           />
         </div>
         <div>

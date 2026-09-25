@@ -1,5 +1,7 @@
 import { lazy, Suspense } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useFlightEntrySuggestions } from "../../hooks/useFlightEntrySuggestions";
+import SuggestionChips from "./fields/SuggestionChips";
 import { ImportManualFooter, ImportRouteRow } from "../import/ImportRouteList";
 import type { ParseEmailResult, ParsePdfResult } from "../../lib/api/parse";
 import { createImportBatch } from "../../lib/api/importBatches";
@@ -67,6 +69,9 @@ export default function FlightLookupStep({
   onPickSpecialFlight,
 }: FlightLookupStepProps): JSX.Element {
   const { t } = useTranslation(["flights", "common", "specialFlights"]);
+  // No route and no airline exist yet at this step, so these are the flight
+  // numbers the user flies most overall — the commute, the route home.
+  const { flightNumbers: flightNumberSuggestions } = useFlightEntrySuggestions({});
 
   // Lifted out of the old nested modal: the drop zone now sits inline in the
   // first route, so these run in place instead of behind an extra window.
@@ -204,6 +209,12 @@ export default function FlightLookupStep({
             {loading ? t("flights:form.searching") : t("flights:form.searchFlight")}
           </button>
         </div>
+        <SuggestionChips
+          value={flightNumber}
+          suggestions={flightNumberSuggestions}
+          onPick={setFlightNumber}
+          fieldLabel={t("flights:form.flightNumber")}
+        />
         {/* Two hints, never both: what is MISSING before the search can run at
             all, then what would make it better. The empty case used to say
             nothing, leaving a disabled button with no reason (forgejo#88

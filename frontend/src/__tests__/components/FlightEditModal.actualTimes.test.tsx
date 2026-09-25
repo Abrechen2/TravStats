@@ -15,6 +15,16 @@ import type { Flight } from "../../types";
 
 const mocks = vi.hoisted(() => ({ getByCode: vi.fn() }));
 
+// The flight forms ask the user's logbook for suggestions over the network;
+// these tests pin other wiring and must reach none.
+vi.mock("@/hooks/useFlightEntrySuggestions", () => ({
+  useFlightEntrySuggestions: () => ({
+    seats: [],
+    flightNumbers: [],
+    frequentFlyerNumber: null,
+    departureTerminals: [],
+  }),
+}));
 // The cost section's currency picker asks for the user's recent currencies on
 // mount; an empty list is what a failed request would give it anyway.
 vi.mock("@/hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));

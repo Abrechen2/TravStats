@@ -17,6 +17,9 @@ import AircraftSection from "./sections/AircraftSection";
 import BookingAndNotesSection from "./sections/BookingAndNotesSection";
 import PriceAndSeatSection from "./sections/PriceAndSeatSection";
 import { countValue, priceSummaryValue, summaryLine } from "./sections/sectionSummaries";
+import SuggestionChips from "./fields/SuggestionChips";
+import { useFlightEntrySuggestions } from "../../hooks/useFlightEntrySuggestions";
+import { useSuggestedPrefill } from "../../hooks/useSuggestedPrefill";
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -214,6 +217,20 @@ export default function FlightCompleteStep({
   const { t } = useTranslation(["flights", "common"]);
   const addToast = useToastStore((s) => s.addToast);
   const { features } = useSettingsStore();
+
+  const suggestions = useFlightEntrySuggestions({
+    airline,
+    dep: departure?.iata ?? departure?.icao,
+    arr: arrival?.iata ?? arrival?.icao,
+  });
+  // A new flight with a known airline takes the number last booked with it;
+  // the edit modal only offers it, because a save there would write it into
+  // a record the user opened for something else.
+  const frequentFlyerSuggested = useSuggestedPrefill(
+    suggestions.frequentFlyerNumber,
+    frequentFlyerNumber ?? "",
+    setFrequentFlyerNumber
+  );
 
   const canEstimateArrival = Boolean(
     departure && arrival && departureDate && departureTime && status !== "historical"
@@ -539,6 +556,12 @@ export default function FlightCompleteStep({
                 placeholder={t("flights:form.placeholders.flightNumber")}
                 maxLength={10}
               />
+              <SuggestionChips
+                value={flightNumber}
+                suggestions={suggestions.flightNumbers}
+                onPick={setFlightNumber}
+                fieldLabel={t("flights:form.flightNumber")}
+              />
             </div>
             <StatusField status={status} onStatusChange={setStatus} labelClassName={textClass} />
           </div>
@@ -564,6 +587,7 @@ export default function FlightCompleteStep({
           cost={cost}
           onCostChange={onCostChange}
           showCostBreakdown={features.enableCostTracking}
+          seatSuggestions={suggestions.seats}
           priceHelp={{
             content: t("flights:form.help.price"),
             expandedContent: t("flights:form.help.price"),
@@ -587,6 +611,7 @@ export default function FlightCompleteStep({
           setGate={setGate}
           labelClassName={textClass}
           inputClassName={sizedInputClass}
+          terminalSuggestions={suggestions.departureTerminals}
         />
       </FlightFormSection>
 
@@ -623,6 +648,8 @@ export default function FlightCompleteStep({
           labelClassName={textClass}
           mutedTextClassName={mutedTextClass}
           inputClassName={sizedInputClass}
+          frequentFlyerSuggestion={suggestions.frequentFlyerNumber}
+          frequentFlyerSuggested={frequentFlyerSuggested}
         />
       </FlightFormSection>
 

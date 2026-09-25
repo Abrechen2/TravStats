@@ -36,6 +36,8 @@
     "bookingClassLetter": "Booking class (code)",
     "baggageAllowance": "Baggage allowance",
     "frequentFlyerNumber": "Frequent flyer number",
+    "frequentFlyerSuggested": "Suggested from your last flight with this airline",
+    "suggestionChip": "Use {{field}} {{value}}",
     "status": "Status",
     "category": "Category",
     "price": "Price",

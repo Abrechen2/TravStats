@@ -26,6 +26,16 @@ import { MemoryRouter } from "react-router-dom";
  */
 
 const mockUseDashboardRoute = vi.hoisted(() => vi.fn());
+// The flight forms ask the user's logbook for suggestions over the network;
+// these tests pin other wiring and must reach none.
+vi.mock("@/hooks/useFlightEntrySuggestions", () => ({
+  useFlightEntrySuggestions: () => ({
+    seats: [],
+    flightNumbers: [],
+    frequentFlyerNumber: null,
+    departureTerminals: [],
+  }),
+}));
 vi.mock("../../../hooks/useDashboardRoute", () => ({
   useDashboardRoute: () => mockUseDashboardRoute(),
 }));
