@@ -20,6 +20,7 @@ import authRoutes from "./auth";
 import twoFactorRoutes from "./auth/twoFactor";
 import passkeyRoutes from "./auth/passkeys";
 import flightRoutes from "./flights";
+import flightEntrySuggestionRoutes from "./flights/entrySuggestions";
 import upcomingRoutes from "./upcoming";
 import photoJourneyRoutes from "./photoJourneys";
 import flightLookupRoutes from "./flightLookup";
@@ -123,6 +124,13 @@ export const apiMounts: ApiMount[] = [
   // (lodging's write-scope requirement, say) decides a document read. It has
   // no router-level middleware of its own, so passing through it is free.
   { id: "documents", base: "/api/v1", router: documentRoutes },
+  // Before `flights`, whose `GET /:id` would otherwise take the word
+  // "entry-suggestions" for a flight id.
+  {
+    id: "flights.entrySuggestions",
+    base: "/api/v1/flights",
+    router: flightEntrySuggestionRoutes,
+  },
   { id: "flights", base: "/api/v1/flights", router: flightRoutes },
   // The dashboard tab strip's "next up" line — one route for every domain,
   // so the strip never depends on which tab happens to have loaded.
