@@ -314,63 +314,27 @@ if (process.env.NODE_ENV !== "test") {
       });
     }
 
-    // Seed cruise catalog tables (ports + ships) — idempotent, skips on
-    // already-seeded UNLOCODE/IMO matches and preserves isUserAdded rows.
-    try {
-      await seedPortsFromCSV();
-      logger.info({ operation: "server_start_seed_ports", message: "Ports seeded" });
-    } catch (error) {
-      logger.warn({
-        operation: "server_start_seed_ports_error",
-        message: "Failed to seed ports from CSV",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-
-    try {
-      await seedShipsFromCSV();
-      logger.info({ operation: "server_start_seed_ships", message: "Ships seeded" });
-    } catch (error) {
-      logger.warn({
-        operation: "server_start_seed_ships_error",
-        message: "Failed to seed ships from CSV",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-
-    // The rail station catalogue (Trainline, ODbL) — idempotent, inserts only
-    // missing rows, never touches an existing or user-added one.
-    try {
-      await seedRailStations();
-    } catch (error) {
-      logger.warn({
-        operation: "server_start_seed_rail_stations_error",
-        message: "Failed to seed rail stations",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-
-    // Seed the lodging chain catalog — idempotent, preserves isUserAdded rows.
-    try {
-      await seedLodgingChainsFromCSV();
-      logger.info({
-        operation: "server_start_seed_lodging_chains",
-        message: "Lodging chains seeded",
-      });
-    } catch (error) {
-      logger.warn({
-        operation: "server_start_seed_lodging_chains_error",
-        message: "Failed to seed lodging chains from CSV",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
+    // The catalogue seeds: cruise ports and ships, the rail station catalogue
+    // (Trainline, ODbL) and the lodging chains. Each is idempotent — it
+    // inserts missing rows only and never touches a user-added one — and a
+    // failure is logged without stopping the ones after it.
+    const catalogueSeeds: Array<[string, () => Promise<unknown>]> = [
+      ["ports", seedPortsFromCSV],
+      ["ships", seedShipsFromCSV],
+      ["rail_stations", seedRailStations],
+      ["lodging_chains", seedLodgingChainsFromCSV],
+    ];
+    for (const [name, seed] of catalogueSeeds) {
+      try {
+        await seed();
+        logger.info({ operation: `server_start_seed_${name}`, message: `Seeded ${name}` });
+      } catch (error) {
+        logger.warn({
+          operation: `server_start_seed_${name}_error`,
+          message: `Failed to seed ${name}`,
+          error: { message: error instanceof Error ? error.message : "Unknown error" },
+        });
+      }
     }
 
     // Seed the shipped POI checklists. Unlike the catalogs above this one
