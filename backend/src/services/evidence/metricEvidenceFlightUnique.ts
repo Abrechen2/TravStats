@@ -13,7 +13,8 @@ import {
   continentsTouchedBy,
   countRoundTrips,
   crossesDateLine,
-  crossesHemisphere,
+  changesEastWestHemisphere,
+  crossesEquator,
   crossesLocalMidnight,
   flightAirportCodes,
   flightCountryReach,
@@ -33,12 +34,9 @@ import type { AirportData } from "../airportLookup";
  * (`GET /stats/unique`, `utils/stats/uniqueStats.ts`).
  *
  * Every per-flight rule comes from `utils/stats/flightPredicates.ts`, which
- * `calculateUniqueStats` itself calls. Three inherited quirks a reader will
+ * `calculateUniqueStats` itself calls. Two inherited quirks a reader will
  * otherwise mistake for bugs here:
  *
- *   - `equatorCrossingCount` and `hemisphereHopCount` are the SAME predicate
- *     and therefore always the same number. That is the tile's own state,
- *     not a copy-paste in this file.
  *   - the time-travel rule skips a flight whose zones cannot both be
  *     resolved, while the same-day and midnight rules fall back to UTC. The
  *     calculators differ that way and the panels follow them.
@@ -67,7 +65,7 @@ export async function resolveEquatorCrossingCount(
     unit: "flights",
     scope,
     page,
-    rows: rows.filter(crossesHemisphere),
+    rows: rows.filter(crossesEquator),
   });
 }
 
@@ -84,7 +82,7 @@ export async function resolveHemisphereHopCount(
     unit: "flights",
     scope,
     page,
-    rows: rows.filter(crossesHemisphere),
+    rows: rows.filter(changesEastWestHemisphere),
   });
 }
 

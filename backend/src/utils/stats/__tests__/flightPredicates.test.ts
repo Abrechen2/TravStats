@@ -1,6 +1,7 @@
 import {
   countRoundTrips,
-  crossesHemisphere,
+  changesEastWestHemisphere,
+  crossesEquator,
   departureDaypartOf,
   isWeekendDeparture,
   longitudeDirectionOf,
@@ -94,11 +95,39 @@ describe("flightPredicates", () => {
     });
   });
 
-  it("crossesHemisphere is false for a flight that only touches the equator", () => {
+  it("crossesEquator is false for a flight that only touches the equator", () => {
     // Latitude 0 is in neither hemisphere, so a flight from it has not
-    // crossed — the strict `> 0` / `< 0` comparison both tiles inherit.
-    expect(crossesHemisphere({ depLat: 0, depLon: 10, arrLat: -5, arrLon: 10 })).toBe(false);
-    expect(crossesHemisphere({ depLat: 5, depLon: 10, arrLat: -5, arrLon: 10 })).toBe(true);
+    // crossed — the strict `> 0` / `< 0` comparison.
+    expect(crossesEquator({ depLat: 0, depLon: 10, arrLat: -5, arrLon: 10 })).toBe(false);
+    expect(crossesEquator({ depLat: 5, depLon: 10, arrLat: -5, arrLon: 10 })).toBe(true);
+  });
+
+  // Owner 2026-09-25: the hemisphere tile is east↔west, no longer a second
+  // copy of the equator rule.
+  describe("changesEastWestHemisphere", () => {
+    it("counts a prime-meridian crossing (FRA → JFK)", () => {
+      expect(
+        changesEastWestHemisphere({ depLat: 50, depLon: 8.56, arrLat: 40.6, arrLon: -73.78 })
+      ).toBe(true);
+    });
+
+    it("counts an antimeridian crossing (LAX → NRT)", () => {
+      expect(
+        changesEastWestHemisphere({ depLat: 33.9, depLon: -118.4, arrLat: 35.8, arrLon: 140.4 })
+      ).toBe(true);
+    });
+
+    it("ignores a north↔south flight that stays in one longitude half (SIN → SYD)", () => {
+      const sinSyd = { depLat: 1.35, depLon: 103.99, arrLat: -33.95, arrLon: 151.18 };
+      expect(changesEastWestHemisphere(sinSyd)).toBe(false);
+      expect(crossesEquator(sinSyd)).toBe(true);
+    });
+
+    it("treats longitude 0 as neither hemisphere", () => {
+      expect(changesEastWestHemisphere({ depLat: 51, depLon: 0, arrLat: 48, arrLon: -2 })).toBe(
+        false
+      );
+    });
   });
 
   it("longitudeDirectionOf folds the date line out rather than measuring the long way", () => {

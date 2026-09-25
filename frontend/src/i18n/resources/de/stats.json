@@ -468,7 +468,7 @@
     "mostCountriesInDay": "Meiste Länder an einem Tag",
     "mostCountriesInDayDesc": "{{count}} Länder am {{date}}",
     "hemisphereHops": "Hemisphären-Wechsler",
-    "hemisphereHopsDesc": "{{count}}× zwischen Nord- und Südhalbkugel gewechselt",
+    "hemisphereHopsDesc": "{{count}}× zwischen Ost- und Westhalbkugel gewechselt (Nullmeridian oder Datumsgrenze)",
     "dateLineCrossings": "Datumsgrenzen-Überquerungen",
     "dateLineCrossingsDesc": "{{count}}× die Internationale Datumsgrenze überquert",
     "continentalExplorer": "Kontinental-Entdecker",

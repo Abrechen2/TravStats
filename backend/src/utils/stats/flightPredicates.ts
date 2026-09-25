@@ -26,12 +26,10 @@ import type { AirportData } from "../../services/airportLookup";
  *     from the flight table. They are kept because `FlightData` declares the
  *     fields nullable for hand-built callers, and because the calculators
  *     they came from guarded them.
- *   - Two of these predicates are the SAME rule under two names:
- *     `/stats/unique` counts "equator crossings" and "hemisphere hops" with
- *     byte-identical code, so the two tiles have always shown the same
- *     number. `crossesHemisphere` is that one rule; whether the product
- *     wants two tiles for it is a product question, and answering it here
- *     under cover of a refactor would move a figure on screen.
+ *   - "Equator crossings" and "hemisphere hops" were once the SAME rule, so
+ *     the two tiles always showed the same number. The owner split them on
+ *     2026-09-25: the equator tile counts north↔south (`crossesEquator`), the
+ *     hemisphere tile east↔west (`changesEastWestHemisphere`).
  */
 
 export interface FlightCoordinates {
@@ -107,14 +105,25 @@ export const ARCTIC_CIRCLE_LAT = 66.5;
 export const TROPIC_LAT = 23.5;
 
 /**
- * North↔south crossing. Backs BOTH `equatorCrossings` and `hemisphereHops`
- * in `/stats/unique` — see the module header on why they stay two tiles.
- * A latitude of exactly 0 counts as neither hemisphere, as it always has.
+ * North↔south crossing — the `equatorCrossings` tile. A latitude of exactly 0
+ * counts as neither hemisphere, as it always has.
  */
-export function crossesHemisphere(flight: FlightCoordinates): boolean {
+export function crossesEquator(flight: FlightCoordinates): boolean {
   const { depLat, arrLat } = flight;
   if (depLat == null || arrLat == null) return false;
   return (depLat > 0 && arrLat < 0) || (depLat < 0 && arrLat > 0);
+}
+
+/**
+ * East↔west change — the `hemisphereHops` tile (owner, 2026-09-25). Endpoints
+ * on opposite sides of 0° longitude: the flight crossed either the prime
+ * meridian or the antimeridian, whichever way is shorter, and both count. A
+ * longitude of exactly 0 is in neither hemisphere, mirroring `crossesEquator`.
+ */
+export function changesEastWestHemisphere(flight: FlightCoordinates): boolean {
+  const { depLon, arrLon } = flight;
+  if (depLon == null || arrLon == null) return false;
+  return (depLon > 0 && arrLon < 0) || (depLon < 0 && arrLon > 0);
 }
 
 /** Either END north of the Arctic circle — the flight need not cross it. */
