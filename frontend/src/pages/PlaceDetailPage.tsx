@@ -11,6 +11,7 @@ import ConfirmModal from "../components/Training/ConfirmModal";
 import { LocationMiniMap } from "../components/location/LocationMiniMap";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { VisitPhotoStrip } from "../components/places/VisitPhotoStrip";
+import { VisitDateChips } from "../components/places/VisitDateChips";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { RowActionButton, RowActions } from "../components/table/RowActionButton";
 import { useDocumentCount } from "../hooks/useDocumentCount";
@@ -366,6 +367,12 @@ export default function PlaceDetailPage(): JSX.Element {
                     />
                   </label>
                 </div>
+                <VisitDateChips
+                  placeId={place.id}
+                  tripId={visitTripId}
+                  value={visitDate}
+                  onPick={setVisitDate}
+                />
                 <label className="mt-3 flex flex-col gap-1">
                   <span className="t-caption">{t("places:detail.visitNotes")}</span>
                   <input

@@ -80,6 +80,7 @@ import lodgingPhotoRouter from "./lodging/photos";
 import placesRouter from "./places";
 import xlsxImportRouter from "./xlsxImport";
 import placeVisitPhotoRouter from "./places/visitPhotos";
+import placeVisitDateSuggestionRouter from "./places/visitDateSuggestions";
 import placeListsRouter from "./placeLists";
 import curatedListsRouter from "./placeLists/curated";
 import lodgingChainsRouter from "./lodgingChains";
@@ -247,6 +248,12 @@ export const apiMounts: ApiMount[] = [
   // approaches the 800-line max. Mounted first so nothing depends on segment
   // counts to keep the two routers apart.
   { id: "places.visitPhotos", base: "/api/v1/places", router: placeVisitPhotoRouter },
+  // Dates the add-visit form can offer — same prefix, own file, same reason.
+  {
+    id: "places.visitDateSuggestions",
+    base: "/api/v1/places",
+    router: placeVisitDateSuggestionRouter,
+  },
   { id: "places", base: "/api/v1/places", router: placesRouter },
   { id: "xlsxImport", base: "/api/v1/xlsx-import", router: xlsxImportRouter },
   // Curated checklists mount FIRST on the same path: '/curated' would

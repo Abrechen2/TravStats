@@ -124,6 +124,7 @@
     "placeLists.ts",
     "placeLists/curated.ts",
     "places.ts",
+    "places/visitDateSuggestions.ts",
     "places/visitPhotos.ts",
     "ports.ts",
     "settings/profilePicture.ts",

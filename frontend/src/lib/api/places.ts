@@ -1,5 +1,12 @@
 import { api } from "./client";
-import type { Place, PlaceInput, PlaceVisit, VisitInput, PlaceListQuery } from "../../types/place";
+import type {
+  Place,
+  PlaceInput,
+  PlaceVisit,
+  VisitDateSuggestion,
+  VisitInput,
+  PlaceListQuery,
+} from "../../types/place";
 import type { PlaceVisitPhoto } from "../../types/placeList";
 
 interface Envelope<T> {
@@ -76,6 +83,18 @@ export async function createVisit(placeId: string, input: VisitInput): Promise<P
 export async function updateVisit(visitId: string, input: VisitInput): Promise<PlaceVisit> {
   const res = await api.patch<Envelope<PlaceVisit>>(`/places/visits/${visitId}`, input);
   return res.data.data;
+}
+
+/** Dates the add-visit form can offer; `tripId` narrows them to that trip. */
+export async function getVisitDateSuggestions(
+  placeId: string,
+  tripId: string | null
+): Promise<VisitDateSuggestion[]> {
+  const res = await api.get<Envelope<{ suggestions: VisitDateSuggestion[] }>>(
+    `/places/${placeId}/visit-date-suggestions`,
+    { params: tripId ? { tripId } : {} }
+  );
+  return res.data.data.suggestions;
 }
 
 export async function deleteVisit(visitId: string): Promise<void> {
