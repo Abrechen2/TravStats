@@ -19,6 +19,8 @@ interface CatalogueComboboxProps {
   /** Extra class appended to the input — the create form passes its
    *  density-sized input class through here. */
   inputClassName?: string;
+  /** Accessible name, for a form that labels its inputs without a <label>. */
+  ariaLabel?: string;
 }
 
 /** Stable adapter references (module-level on purpose): the debounce effect
@@ -69,6 +71,7 @@ export default function CatalogueCombobox({
   search,
   placeholder,
   inputClassName = "",
+  ariaLabel,
 }: CatalogueComboboxProps): JSX.Element {
   const [results, setResults] = useState<CatalogueOption[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -133,6 +136,7 @@ export default function CatalogueCombobox({
         onChange={handleInputChange}
         onFocus={() => results.length > 0 && setIsOpen(true)}
         placeholder={placeholder}
+        aria-label={ariaLabel}
         className={`input ${inputClassName}`.trim()}
         autoComplete="off"
       />

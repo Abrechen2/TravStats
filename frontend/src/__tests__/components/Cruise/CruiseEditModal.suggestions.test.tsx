@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CruiseEditModal } from "../../../components/Cruise/CruiseEditModal";
-import { cruiseApi, companionsApi, tripsApi } from "../../../lib/api";
+import { cruiseApi, companionsApi, shipsApi, tripsApi } from "../../../lib/api";
 import type { Cruise } from "../../../types";
 
 /**
@@ -216,6 +216,30 @@ describe("CruiseEditModal — entry suggestions", () => {
       await act(async () => {});
       expect(screen.getByLabelText("field.routeName")).toHaveValue("Norwegen");
       expect(screen.queryByRole("button", { name: "form.routeNameSuggestion" })).toBeNull();
+    });
+  });
+
+  describe("cruise line", () => {
+    it("suggests lines from the server and takes a pick as the value", async () => {
+      vi.mocked(shipsApi.cruiseLines).mockReset().mockResolvedValue(["AIDA Cruises"]);
+      render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+      const line = screen.getByLabelText("field.line");
+
+      await userEvent.type(line, "ai");
+      await userEvent.click(await screen.findByRole("button", { name: "AIDA Cruises" }));
+
+      expect(shipsApi.cruiseLines).toHaveBeenCalledWith("ai");
+      expect(line).toHaveValue("AIDA Cruises");
+      expect((await savedPayload()).cruiseLine).toBe("AIDA Cruises");
+    });
+
+    it("keeps a line no source knows", async () => {
+      vi.mocked(shipsApi.cruiseLines).mockReset().mockResolvedValue([]);
+      render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+
+      await userEvent.type(screen.getByLabelText("field.line"), "Hurtigruten Expeditions");
+
+      expect((await savedPayload()).cruiseLine).toBe("Hurtigruten Expeditions");
     });
   });
 });

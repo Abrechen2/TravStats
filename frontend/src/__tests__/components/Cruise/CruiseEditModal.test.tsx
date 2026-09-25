@@ -9,7 +9,11 @@ import { useSettingsStore } from "../../../store/settingsStore";
 vi.mock("../../../lib/api", () => ({
   cruiseApi: { create: vi.fn(), update: vi.fn() },
   portsApi: { search: vi.fn().mockResolvedValue([]), create: vi.fn() },
-  shipsApi: { search: vi.fn().mockResolvedValue([]), create: vi.fn() },
+  shipsApi: {
+    search: vi.fn().mockResolvedValue([]),
+    create: vi.fn(),
+    cruiseLines: vi.fn().mockResolvedValue([]),
+  },
   companionsApi: { list: vi.fn() },
   tripsApi: { getAll: vi.fn() },
 }));

@@ -14,7 +14,7 @@ import type {
   CabinType,
   CruiseStatus,
 } from "../../types";
-import { cruiseApi, tripsApi } from "../../lib/api";
+import { cruiseApi, shipsApi, tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ShipPicker } from "./ShipPicker";
@@ -22,6 +22,7 @@ import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import CompanionPicker from "../CompanionPicker";
+import CatalogueCombobox, { type CatalogueOption } from "../FlightForm/fields/CatalogueCombobox";
 import { useTripPreselection } from "../../hooks/useTripPreselection";
 import { useCruiseDateSuggestions } from "./useCruiseDateSuggestions";
 import { suggestCruiseRouteName } from "./cruiseRouteName";
@@ -73,6 +74,13 @@ const splitCsv = (v: string): string[] =>
     .split(",")
     .map((x) => x.trim())
     .filter((x) => x.length > 0);
+
+/** Module-level so the combobox's debounce effect sees one stable function. The
+ *  lines carry no catalogue id; the list position is only a React key. */
+async function searchCruiseLineOptions(q: string): Promise<CatalogueOption[]> {
+  const lines = await shipsApi.cruiseLines(q);
+  return lines.map((name, id) => ({ id, name, codes: [] }));
+}
 
 const INPUT_CLASS =
   "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
@@ -273,13 +281,16 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         <div>
           <Section title={`${t("field.ship")} & ${t("field.line")}`}>
             <ShipPicker value={ship} onChange={onShipPicked} />
-            <input
-              className={`mt-3 ${INPUT_CLASS}`}
-              aria-label={t("field.line")}
-              value={cruiseLine}
-              onChange={(e): void => setCruiseLine(e.target.value)}
-              placeholder={t("field.line")}
-            />
+            <div className="mt-3">
+              <CatalogueCombobox
+                ariaLabel={t("field.line")}
+                value={cruiseLine}
+                onChange={setCruiseLine}
+                search={searchCruiseLineOptions}
+                placeholder={t("field.line")}
+                inputClassName={INPUT_CLASS}
+              />
+            </div>
             <input
               className={`mt-3 ${INPUT_CLASS}`}
               aria-label={t("field.routeName")}
