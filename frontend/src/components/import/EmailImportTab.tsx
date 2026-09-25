@@ -44,14 +44,17 @@ export default function EmailImportTab({
   const { t } = useTranslation(["import", "common"]);
   const [dropState, setDropState] = useState<DropState>("idle");
   const [emailText, setEmailText] = useState("");
-  const [hasLlm, setHasLlm] = useState<boolean | null>(null);
+  // `"disabled"`: an admin switched the model off (Admin → Parser). Kept apart
+  // from `false`, because "none is configured" and "turned off on purpose"
+  // are two different sentences to the person about to import.
+  const [hasLlm, setHasLlm] = useState<boolean | "disabled" | null>(null);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const showLoader = useMinLoadingState(dropState === "loading", 2000);
 
   useEffect(() => {
     api
-      .get<{ hasLlm: boolean }>("/parser-capabilities")
-      .then(({ data }) => setHasLlm(Boolean(data?.hasLlm)))
+      .get<{ hasLlm: boolean; llmDisabledByAdmin?: boolean }>("/parser-capabilities")
+      .then(({ data }) => setHasLlm(data?.llmDisabledByAdmin ? "disabled" : Boolean(data?.hasLlm)))
       .catch(() => setHasLlm(null));
   }, []);
 
@@ -128,6 +131,15 @@ export default function EmailImportTab({
 
   return (
     <div className="flex flex-col gap-4">
+      {hasLlm === "disabled" && (
+        <div
+          data-testid="llm-disabled-notice"
+          className="text-sm text-(--text-muted) bg-(--bg-surface) border border-(--color-border) rounded-lg px-4 py-3"
+        >
+          <p className="font-medium mb-1">{t("import:email.llmDisabled.title")}</p>
+          <p>{t("import:email.llmDisabled.body")}</p>
+        </div>
+      )}
       {hasLlm === false && (
         <div className="text-sm text-amber-300 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3">
           <p className="font-medium mb-1">{t("import:email.regexWarning.title")}</p>

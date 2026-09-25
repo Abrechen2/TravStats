@@ -36,6 +36,7 @@ import { parseLodgingBookingText } from "../lodging/lodgingBookingParser";
 import { bookingsToCandidates } from "../lodging/lodgingCandidates";
 import { PARSER_SUPPORTED_DOMAINS, type ParserSupportedDomain } from "../../shared/domains";
 import { scoreDocument, type DomainDetection } from "./documentDomain";
+import { isLlmEnabledByAdmin } from "../llm/llmGate";
 
 /** What a caller may ask for. `auto` is the addition — see the header. */
 export const REQUESTABLE_DOMAINS = [...PARSER_SUPPORTED_DOMAINS, "auto"] as const;
@@ -85,8 +86,15 @@ type LodgingBody = {
 
 type FlightBody = { domain: "flight" } & ParseResult;
 
-/** The domain-shaped payload, byte-identical to what each route returned before. */
-export type ParsedDocumentBody = FlightBody | CruiseBody | LodgingBody;
+/**
+ * The domain-shaped payload, plus one field every domain shares:
+ * `llmDisabledByAdmin`, so a templates-only answer can say it was a decision
+ * (`services/llm/llmGate.ts`) rather than an unreachable model — which is what
+ * `ollamaAvailable: false` alone cannot tell apart.
+ */
+export type ParsedDocumentBody = (FlightBody | CruiseBody | LodgingBody) & {
+  llmDisabledByAdmin: boolean;
+};
 
 export interface ParseDocumentOutcome {
   /** The domain actually parsed with. */
@@ -130,7 +138,10 @@ export async function parseDocument(input: ParseDocumentInput): Promise<ParseDoc
   const combined = combineSubjectAndText(input.subject, input.text);
   const { domain, detection } = resolveDomain(input.domain, combined);
 
-  const body = await parseAs(domain, input, combined);
+  const body = {
+    ...(await parseAs(domain, input, combined)),
+    llmDisabledByAdmin: !(await isLlmEnabledByAdmin()),
+  };
 
   return {
     domain,
@@ -144,7 +155,7 @@ async function parseAs(
   domain: ParserSupportedDomain,
   input: ParseDocumentInput,
   combined: string
-): Promise<ParsedDocumentBody> {
+): Promise<FlightBody | CruiseBody | LodgingBody> {
   if (domain === "cruise") {
     // The userId is what lets the parser refuse the ADMIN's Ollama to the
     // shared demo account (security audit of 2026-09-19, finding 3). The flight

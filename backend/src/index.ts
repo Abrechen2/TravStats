@@ -200,27 +200,13 @@ app.get("/api/v1/version", async (_req, res) => {
   });
 });
 
-// Public parser-capabilities endpoint. Lets the email import UI show
-// an accuracy warning when no LLM is wired up. Non-sensitive — just
-// a boolean reflecting the instance-wide admin setting.
+// Public parser-capabilities endpoint. Lets the email import UI say why a
+// parse may be templates-only — no model configured, or one switched off.
+// Non-sensitive: two booleans about instance configuration.
 app.get("/api/v1/parser-capabilities", async (_req, res, next) => {
   try {
-    /**
-     * Answered from the SAME resolution the parser uses.
-     *
-     * Forgejo #12: this read `admin_settings` alone, while `getParserConfig`
-     * also falls back to OLLAMA_URL / OLLAMA_MODEL from the environment. On any
-     * instance configured through env — which is how the test VM installer sets
-     * it up — the import screen said "Kein LLM-Parser verfuegbar" while the
-     * very next request came back labelled `ollama` with 85% confidence, and
-     * the server log agreed with the parser.
-     *
-     * Two sources of truth for one question is how they disagreed. There is now
-     * one, and the user cannot be told the opposite of what happens.
-     */
-    const { getParserConfig } = await import("./services/parsers/config");
-    const config = await getParserConfig();
-    res.json({ hasLlm: Boolean(config.ollamaUrl && config.ollamaModel) });
+    const { getParserCapabilities } = await import("./services/llm/parserCapabilities");
+    res.json(await getParserCapabilities());
   } catch (error) {
     next(error);
   }

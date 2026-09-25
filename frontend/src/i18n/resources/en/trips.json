@@ -294,7 +294,8 @@
     "generating": "Writing… this can take a few minutes",
     "generated": "Summary created",
     "error": "Summary failed",
-    "unavailable": "AI service unreachable. The admin sets up Ollama under Admin → Parser."
+    "unavailable": "AI service unreachable. The admin sets up Ollama under Admin → Parser.",
+    "disabled": "AI summaries are switched off – the admin has turned the AI model off under Admin → Parser."
   },
   "gallery": {
     "title": "Gallery",

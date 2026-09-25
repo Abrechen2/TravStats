@@ -19,19 +19,28 @@ import { logger } from "../lib/logger";
  * of the truth for a moment, and flicker is how a true sentence becomes
  * untrustworthy.
  *
+ * And a fourth: `"disabled"` — an admin switched the model off (Admin →
+ * Parser, since 2026-09-25). It is falsy-for-generation like `false`, but the
+ * sentence differs: "no model is set up" sends the reader to the admin,
+ * "switched off" says templates-only is a decision rather than a fault. It
+ * is a string rather than a second hook so every existing caller, and every
+ * test that mocks this module with `() => true`, keeps working unchanged.
+ *
  * The answer is cached for the tab. It is instance configuration, it changes
  * only when an admin changes it, and every trip page would otherwise ask
  * again.
  */
-let cached: boolean | null = null;
-let inFlight: Promise<boolean | null> | null = null;
+export type LlmAvailability = boolean | "disabled" | null;
 
-async function fetchHasLlm(): Promise<boolean | null> {
+let cached: LlmAvailability = null;
+let inFlight: Promise<LlmAvailability> | null = null;
+
+async function fetchHasLlm(): Promise<LlmAvailability> {
   if (cached !== null) return cached;
   inFlight ??= api
-    .get<{ hasLlm: boolean }>("/parser-capabilities")
+    .get<{ hasLlm: boolean; llmDisabledByAdmin?: boolean }>("/parser-capabilities")
     .then(({ data }) => {
-      cached = Boolean(data?.hasLlm);
+      cached = data?.llmDisabledByAdmin ? "disabled" : Boolean(data?.hasLlm);
       return cached;
     })
     .catch((error: unknown) => {
@@ -46,9 +55,9 @@ async function fetchHasLlm(): Promise<boolean | null> {
   return inFlight;
 }
 
-/** `true` / `false` once known, `null` while the answer is still outstanding. */
-export function useHasLlm(): boolean | null {
-  const [hasLlm, setHasLlm] = useState<boolean | null>(cached);
+/** `true` / `false` / `"disabled"` once known, `null` while still outstanding. */
+export function useHasLlm(): LlmAvailability {
+  const [hasLlm, setHasLlm] = useState<LlmAvailability>(cached);
 
   useEffect(() => {
     if (cached !== null) return;

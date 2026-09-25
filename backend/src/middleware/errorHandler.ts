@@ -48,7 +48,11 @@ export type ApiErrorCode =
   | "RESTORE_ARCHIVE_UNREADABLE"
   /** The archive's encrypted values belong to another instance key. The
    *  restore dialog turns this into the acknowledgement it needs. */
-  | "RESTORE_ENCRYPTION_KEY_MISMATCH";
+  | "RESTORE_ENCRYPTION_KEY_MISMATCH"
+  /** An admin has turned the language model off (`services/llm/llmGate.ts`).
+   *  Kept apart from a plain 503 so the UI can say "switched off" rather than
+   *  send the reader to check whether Ollama is running. */
+  | "LLM_DISABLED";
 
 interface AuthRequest extends Request {
   user?: {

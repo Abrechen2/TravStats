@@ -10,6 +10,7 @@ interface ParserSettingsUpdateData {
   allowUserApiKeys?: boolean;
   fxCdnFallbackEnabled?: boolean;
   parserOrder?: string;
+  llmEnabled?: boolean;
   ollamaUrl?: string | null;
   ollamaModel?: string | null;
 }
@@ -25,6 +26,9 @@ const parserSettingsSchema = z.object({
   // the two values the parsers understand, so an admin cannot save a word
   // that silently means "template_first" (`getParserOrder`).
   parserOrder: z.enum(["template_first", "llm_first"]).optional(),
+  // The "KI-Parser aus" switch (owner decision 2026-09-25): off means no model
+  // call anywhere, even with an Ollama URL or OLLAMA_URL set — see llmGate.ts.
+  llmEnabled: z.boolean().optional(),
   ollamaUrl: z.string().url("Must be a valid URL").optional().nullable(),
   ollamaModel: z.string().min(1).max(100).optional().nullable(),
 });
@@ -46,6 +50,7 @@ router.get("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
       fxCdnFallbackEnabled: adminSettings.fxCdnFallbackEnabled,
       allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys,
       parserOrder: adminSettings.parserOrder ?? "template_first",
+      llmEnabled: adminSettings.llmEnabled,
       ollamaUrl: adminSettings.ollamaUrl ?? null,
       ollamaModel: adminSettings.ollamaModel ?? null,
     });
@@ -57,8 +62,14 @@ router.get("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
 // Update admin parser settings
 router.put("/parser-settings", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { allowUserApiKeys, fxCdnFallbackEnabled, parserOrder, ollamaUrl, ollamaModel } =
-      parserSettingsSchema.parse(req.body);
+    const {
+      allowUserApiKeys,
+      fxCdnFallbackEnabled,
+      parserOrder,
+      llmEnabled,
+      ollamaUrl,
+      ollamaModel,
+    } = parserSettingsSchema.parse(req.body);
 
     let adminSettings;
 
@@ -72,6 +83,9 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
     }
     if (parserOrder !== undefined) {
       updateData.parserOrder = parserOrder;
+    }
+    if (llmEnabled !== undefined) {
+      updateData.llmEnabled = llmEnabled;
     }
     if (ollamaUrl !== undefined) {
       updateData.ollamaUrl = ollamaUrl;
@@ -94,6 +108,7 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
         allowUserApiKeys: adminSettings.allowUserApiKeys,
         fxCdnFallbackEnabled: adminSettings.fxCdnFallbackEnabled,
         parserOrder: adminSettings.parserOrder ?? "template_first",
+        llmEnabled: adminSettings.llmEnabled,
         ollamaUrl: adminSettings.ollamaUrl ?? null,
         ollamaModel: adminSettings.ollamaModel ?? null,
       },

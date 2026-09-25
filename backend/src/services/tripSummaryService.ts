@@ -4,6 +4,7 @@ import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { getAdminParserSettings } from "./parserSettings";
+import { assertLlmEnabled } from "./llm/llmGate";
 
 /**
  * LLM-generated trip summaries.
@@ -573,6 +574,7 @@ export const ollamaGenerate: GenerateFn = async (target, { system, prompt }) => 
     think: false,
     options: { temperature: 0.6, num_ctx: NUM_CTX },
   });
+  await assertLlmEnabled();
   const raw = await postJson(`${target.url}/api/generate`, body, getGenerateTimeoutMs());
   const response: unknown = JSON.parse(raw);
   if (typeof response !== "object" || response === null || !("response" in response)) {
@@ -642,6 +644,10 @@ export async function summariseTrip(
   userId: string,
   { language, target, generate = ollamaGenerate }: SummariseOptions
 ): Promise<SummariseResult> {
+  // The admin switch covers the summary too — there is no second toggle, and
+  // "off" was ruled to mean no model call at all (see llmGate.ts). Asked here
+  // as well as in `ollamaGenerate`, so an injected generator is refused alike.
+  await assertLlmEnabled();
   const trip = await prisma.trip.findFirst({
     where: { id: tripId, userId },
     include: TRIP_BRIEF_INCLUDE,

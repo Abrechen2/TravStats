@@ -104,6 +104,16 @@ registry.registerPath({
                   "now lives in services/parsers/llmAvailability.ts and " +
                   "flights, cruises and lodging all answer from it."
               ),
+            llmDisabledByAdmin: z
+              .boolean()
+              .optional()
+              .describe(
+                "An admin has switched the language model off, so only the " +
+                  "built-in templates read this document. Tells a " +
+                  "templates-only answer that was decided apart from one " +
+                  "whose model is unreachable, which `ollamaAvailable: false` " +
+                  "alone cannot."
+              ),
             subject: z.string().optional(),
             documentId: z
               .string()

@@ -1,3 +1,4 @@
+import type { LlmRefusal } from "../llm/llmGate";
 import { ParsedBooking } from "../bookingParser";
 
 /**
@@ -135,6 +136,13 @@ export interface ParserConfig {
    * Ollama model name — overrides OLLAMA_MODEL env var
    */
   ollamaModel?: string;
+
+  /**
+   * Why this caller's config carries no model, when it was taken away rather
+   * than never configured — the admin switch or the shared-demo denial
+   * (`services/llm/llmGate.ts`). Absent when the model is allowed.
+   */
+  llmRefusal?: LlmRefusal;
 
   /**
    * Optional user ID for template lookup

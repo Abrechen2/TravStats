@@ -16,8 +16,7 @@ import { loadActiveLodgingTemplates } from "../parsers/userTemplates/lodgingTemp
 import type { LodgingTemplate } from "./templates/types";
 import { LODGING_TYPES } from "../../schemas/lodging";
 import { isCurrencyCode } from "../../shared/currencies";
-import { isSharedDemoUser } from "../../utils/sharedDemo";
-import { DEMO_NO_LLM_REASON } from "../cruiseBookingParser";
+import { assertLlmEnabled, llmRefusalFor } from "../llm/llmGate";
 import { isLlmAvailable, recordLlmProbe } from "../parsers/llmAvailability";
 import {
   isBookingComConfirmation,
@@ -366,6 +365,8 @@ async function parseWithOllama(
     options: { temperature: 0, num_ctx: 8192 },
   });
 
+  // Fail closed if a caller skipped `llmRefusalFor` (see llmGate.ts).
+  await assertLlmEnabled();
   const raw = await postJson(`${url}/api/generate`, body);
   const response: unknown = JSON.parse(raw);
   if (typeof response !== "object" || response === null || !("response" in response)) {
@@ -418,9 +419,9 @@ function firstLineAsSubject(text: string): string | undefined {
 export async function parseLodgingBookingText(
   text: string,
   options?: LodgingBookingParserOptions,
-  /** Who is asking. Only the shared demo account is treated differently — see
-   *  the guard below; every other value, including `undefined`, parses as
-   *  before. */
+  /** Who is asking. Only the shared demo account is treated differently
+   *  (`llmRefusalFor` below); every other value, including `undefined`, is
+   *  subject to the admin switch alone. */
   userId?: string
 ): Promise<LodgingParseResult> {
   /**
@@ -494,25 +495,20 @@ export async function parseLodgingBookingText(
   }
 
   /**
-   * The SHARED demo account never reaches the model — one of the three places a
-   * parse falls through from a template to the LLM (security audit of
-   * 2026-09-19, finding 3). `resolveOptions` below hands back the ADMIN's
-   * Ollama for whoever asks, so on a public preview whose demo password is
-   * printed on the login page this is the operator's hardware answering
-   * strangers, minutes per document, while the summarize route is guarded
-   * against precisely that.
+   * A refused caller never reaches the model — the admin switch (owner
+   * decision 2026-09-25) or the SHARED demo account (security audit of
+   * 2026-09-19, finding 3), both answered by `llmRefusalFor`. `resolveOptions`
+   * below hands back the ADMIN's Ollama, or `OLLAMA_URL`, for whoever asks, so
+   * this has to come before it.
    *
-   * Booking.com and the declarative templates above are what a visitor came to
-   * try — 97 of the owner's 108 mails, and they cost nothing — so they run
-   * untouched; this is the step after them. The answer is the one an instance
-   * with no model configured already gives, the same shape as
-   * `services/immich/immichResolver.ts` returning `null`, so the routes take
-   * their existing "template only / not recognised" path and no new error
-   * exists. The reason names the account rather than the endpoint: an
-   * unreachable-Ollama reason quotes the admin's URL, which is not the shared
-   * account's business.
+   * Booking.com and the declarative templates above are what most mails need
+   * — 97 of the owner's 108 — and they cost nothing, so they run untouched;
+   * this is the step after them. The answer is the one an instance with no
+   * model configured already gives, and `fallbackReason` says which refusal
+   * it was.
    */
-  if (userId !== undefined && (await isSharedDemoUser(userId))) {
+  const refusal = await llmRefusalFor(userId);
+  if (refusal) {
     // Under `llm_first` the template has not been tried yet.
     const templateHit = order === "llm_first" ? readTemplate() : null;
     if (templateHit) {
@@ -522,7 +518,7 @@ export async function parseLodgingBookingText(
       bookings: [],
       parserUsed: "none",
       ollamaAvailable: false,
-      fallbackReason: DEMO_NO_LLM_REASON,
+      fallbackReason: refusal.reason,
     };
   }
 

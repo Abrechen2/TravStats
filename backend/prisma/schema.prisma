@@ -840,6 +840,15 @@ model AdminSettings {
   // otherwise. This is that say, and it is the same say for all four domains.
   parserOrder String @default("template_first") @map("parser_order")
 
+  // Whether this instance may ask a language model anything at all — parsing,
+  // CSV mapping suggestions and trip summaries alike. Owner decision
+  // 2026-09-25: before this, any configured Ollama (or a bare OLLAMA_URL in
+  // the environment) was used and there was no way to say no, for privacy,
+  // for a slow box, or for deterministic parses. On by default, so an
+  // instance that has a model keeps using it; off means template/regex only,
+  // enforced by `services/llm/llmGate.ts` in front of every model call.
+  llmEnabled Boolean @default(true) @map("llm_enabled")
+
   // Aviationstack usage guard — max lookups per UTC day before falling
   // through to AirLabs/OpenSky. Default 3 keeps Free tier (100/month) safe.
   // Set to 0 to disable Aviationstack entirely.

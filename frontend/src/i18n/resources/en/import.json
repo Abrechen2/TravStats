@@ -10,6 +10,10 @@
       "title": "No LLM parser available",
       "body": "No LLM (Ollama, OpenAI, Claude) is configured. The regex fallback only recognises the most common booking formats; manual corrections will be needed more often."
     },
+    "llmDisabled": {
+      "title": "AI parser switched off",
+      "body": "The administrator has switched the AI model off. Bookings are read with the built-in templates only; anything no template knows you fill in by hand."
+    },
     "pasteFirst": "Paste the text of the e-mail first."
   },
   "pdf": {

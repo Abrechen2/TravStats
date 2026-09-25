@@ -49,7 +49,8 @@ services:
         max-file: "3"
 
   # Ollama LLM server — optional, powers AI-backed email/PDF parsing.
-  # Disable by setting OLLAMA_URL to an empty string in the admin UI.
+  # Turn it off with the "KI-Parser" switch under Admin → Parser: that stops
+  # every model call even while OLLAMA_URL below is still set.
   ollama:
     image: ollama/ollama:latest
     container_name: travstats-ollama
@@ -112,8 +113,8 @@ services:
       # or all visitors share its address and one login rate limit.
       TRUST_PROXY: ${TRUST_PROXY:-}
 
-      # Default Ollama endpoint inside the stack. Admin can change model
-      # (and disable entirely) via the UI.
+      # Default Ollama endpoint inside the stack. Admin can change the model,
+      # and switch the model off entirely, via the UI.
       OLLAMA_URL: ${OLLAMA_URL:-http://ollama:11434}
 
       # Docker container name of the Postgres service — used by the backup
