@@ -25,7 +25,7 @@ vi.mock("../../../store/settingsStore", () => ({
     sel({ baseCurrency, display: { language: "en" } }),
 }));
 
-import BookingEditModal from "../BookingEditModal";
+import BookingEditModal, { pnrSuggestions } from "../BookingEditModal";
 
 const booking = { id: "b1", userId: "u1", tripId: "t1", pnr: "ABC", price: 250, currency: "EUR" };
 
@@ -83,5 +83,35 @@ describe("BookingEditModal", () => {
     );
     expect(onClose).toHaveBeenCalled();
     expect(updateBooking).not.toHaveBeenCalled();
+  });
+
+  it("offers the PNRs of the trip's flights, this booking's own first, once each", () => {
+    expect(
+      pnrSuggestions("b1", [
+        { bookingId: "b2", bookingReference: "OTHER1" },
+        { bookingId: "b1", bookingReference: " xyz123 " },
+        { bookingId: "b1", bookingReference: "XYZ123" },
+        { bookingId: null, bookingReference: "" },
+        { bookingId: null, bookingReference: null },
+      ])
+    ).toEqual(["xyz123", "OTHER1"]);
+  });
+
+  it("fills the PNR from a chip and submits it", async () => {
+    render(
+      <BookingEditModal
+        booking={{ ...booking, pnr: null }}
+        flights={[{ bookingId: "b1", bookingReference: "XYZ123" }]}
+        onClose={() => {}}
+        onSaved={() => {}}
+      />
+    );
+    fireEvent.click(screen.getByText("XYZ123"));
+    fireEvent.click(
+      screen.getByRole("button", { name: /save|Speichern|trips:bookingEdit\.save/i })
+    );
+    await waitFor(() =>
+      expect(updateBooking).toHaveBeenCalledWith("b1", expect.objectContaining({ pnr: "XYZ123" }))
+    );
   });
 });

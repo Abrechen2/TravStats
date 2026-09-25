@@ -8,15 +8,52 @@ import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useSettingsStore } from "../../store/settingsStore";
 import type { Booking } from "../../types";
 import { logger } from "../../lib/logger";
+import SuggestionChips from "../common/SuggestionChips";
+
+/**
+ * A flight of the booking's trip. GET /trips/:id sends the whole flight row;
+ * these are the two fields read here, optional because the trip type's flight
+ * Pick does not declare the reference.
+ */
+export interface PnrSource {
+  bookingId?: string | null;
+  bookingReference?: string | null;
+}
+
+const PNR_SUGGESTION_CAP = 4;
+
+/**
+ * Booking references the trip's flights carry, those of this booking's own
+ * flights first — a PNR typed once on a flight (or parsed off its boarding
+ * pass) should not have to be typed again on the booking that paid for it.
+ */
+export function pnrSuggestions(bookingId: string, flights: readonly PnrSource[]): string[] {
+  const ordered = [
+    ...flights.filter((f) => f.bookingId === bookingId),
+    ...flights.filter((f) => f.bookingId !== bookingId),
+  ];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const f of ordered) {
+    const value = f.bookingReference?.trim() ?? "";
+    if (!value || seen.has(value.toUpperCase())) continue;
+    seen.add(value.toUpperCase());
+    out.push(value);
+  }
+  return out.slice(0, PNR_SUGGESTION_CAP);
+}
 
 interface BookingEditModalProps {
   booking: Booking;
+  /** The trip's flights, for the PNR chips; without them nothing is offered. */
+  flights?: readonly PnrSource[];
   onClose: () => void;
   onSaved: () => void;
 }
 
 export default function BookingEditModal({
   booking,
+  flights = [],
   onClose,
   onSaved,
 }: BookingEditModalProps): JSX.Element {
@@ -89,6 +126,12 @@ export default function BookingEditModal({
             value={pnr}
             maxLength={20}
             onChange={(e) => setPnr(e.target.value)}
+          />
+          <SuggestionChips
+            value={pnr}
+            suggestions={pnrSuggestions(booking.id, flights)}
+            onPick={setPnr}
+            fieldLabel={t("trips:bookingEdit.pnr")}
           />
         </label>
         <label className="block text-sm">

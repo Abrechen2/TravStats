@@ -31,6 +31,7 @@ import TripGallery from "../components/Trips/TripGallery";
 import TourSectionList from "../components/Trips/TourSectionList";
 import { useToursVisible } from "../hooks/useToursVisible";
 import { PanelHeader, Placeholder } from "../components/Trips/TripDetailPanels";
+import { RowActionButton } from "../components/table/RowActionButton";
 import {
   compareTimelineEvents,
   formatTimelineDate,
@@ -1268,26 +1269,11 @@ function LogisticsTab({
                     {b.price != null ? formatAmount(b.price, b.currency, { language }) : "—"}
                   </td>
                   <td className="px-4 py-2.5 text-right">
-                    <button
-                      type="button"
+                    <RowActionButton
+                      icon="edit"
+                      label={t("trips:bookingEdit.title")}
                       onClick={() => setEditingBooking(b)}
-                      className="inline-flex items-center justify-center w-7 h-7 rounded-sm hover:bg-(--bg-muted) hover:text-[#388bfd]"
-                      style={{ color: "var(--text-muted)" }}
-                      aria-label={t("trips:bookingEdit.title")}
-                      title={t("trips:bookingEdit.title")}
-                    >
-                      <svg
-                        viewBox="0 0 24 24"
-                        className="w-4 h-4"
-                        fill="none"
-                        stroke="currentColor"
-                        strokeWidth={1.8}
-                        strokeLinecap="round"
-                        strokeLinejoin="round"
-                      >
-                        <path d="M17 3a2.8 2.8 0 1 1 4 4L7.5 20.5 2 22l1.5-5.5Z" />
-                      </svg>
-                    </button>
+                    />
                   </td>
                 </tr>
               ))}
@@ -1299,6 +1285,7 @@ function LogisticsTab({
       {editingBooking && (
         <BookingEditModal
           booking={editingBooking}
+          flights={flights}
           onClose={() => setEditingBooking(null)}
           onSaved={() => {
             setEditingBooking(null);
