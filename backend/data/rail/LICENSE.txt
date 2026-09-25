@@ -1,0 +1,23 @@
+Rail station catalogue — stations.csv.gz
+========================================
+
+Source:   Trainline "stations" database
+          https://github.com/trainline-eu/stations
+          (stations.csv at commit a3e4437539deecff25b9d31af04fb3e46730fb4a,
+          fetched 2026-09-25)
+Licence:  Open Database License (ODbL) v1.0
+          https://opendatacommons.org/licenses/odbl/1-0/
+Credit:   Contains information from the Trainline stations database, which is
+          made available under the Open Database License (ODbL).
+
+This file is a derivative database of that source, and is itself made available
+under the ODbL v1.0. It was produced by backend/scripts/build-rail-stations.mjs:
+the rows with coordinates and is_suggestable = t, plus the parent stations they
+reference when those have coordinates, reduced to the columns id, name, uic,
+db_id, lat, lon, country, time_zone and parent. Nothing else was changed. The
+script is the complete description of the transformation; run it against the
+source file to reproduce this one.
+
+The ODbL covers this database only. The TravStats program that reads it is
+licensed separately (AGPL-3.0-or-later, see the LICENSE file at the root of the
+repository).

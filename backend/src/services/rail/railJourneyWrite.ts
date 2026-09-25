@@ -19,12 +19,14 @@ import { timezoneOfLodging } from "../../utils/stayInstant";
 export interface RailJourneyState {
   depStationName: string;
   depStationCode: string | null;
+  depStationId: number | null;
   depLat: number;
   depLon: number;
   depCountry: string | null;
   depTimezone: string | null;
   arrStationName: string;
   arrStationCode: string | null;
+  arrStationId: number | null;
   arrLat: number;
   arrLon: number;
   arrCountry: string | null;
@@ -39,12 +41,20 @@ export interface RailJourneyState {
 type StationColumns<P extends "dep" | "arr"> = {
   [
     K in
-      `${P}StationName` | `${P}StationCode` | `${P}Lat` | `${P}Lon` | `${P}Country` | `${P}Timezone`
+      | `${P}StationName`
+      | `${P}StationCode`
+      | `${P}StationId`
+      | `${P}Lat`
+      | `${P}Lon`
+      | `${P}Country`
+      | `${P}Timezone`
   ]: K extends `${P}Lat` | `${P}Lon`
     ? number
     : K extends `${P}StationName`
       ? string
-      : string | null;
+      : K extends `${P}StationId`
+        ? number | null
+        : string | null;
 };
 
 /**
@@ -59,6 +69,7 @@ export function stationColumns<P extends "dep" | "arr">(
   return {
     [`${prefix}StationName`]: station.name,
     [`${prefix}StationCode`]: station.code ?? null,
+    [`${prefix}StationId`]: station.stationId ?? null,
     [`${prefix}Lat`]: station.lat,
     [`${prefix}Lon`]: station.lon,
     [`${prefix}Country`]: station.country ?? null,
@@ -144,6 +155,7 @@ function pickStation<P extends "dep" | "arr">(row: RailJourneyState, prefix: P):
   return {
     [`${prefix}StationName`]: read("StationName"),
     [`${prefix}StationCode`]: read("StationCode"),
+    [`${prefix}StationId`]: read("StationId") ?? null,
     [`${prefix}Lat`]: read("Lat"),
     [`${prefix}Lon`]: read("Lon"),
     [`${prefix}Country`]: read("Country"),
@@ -171,4 +183,17 @@ function resolveDistance(
     return { distanceKm: existing.distanceKm, distanceSource: "user" };
   }
   return { distanceKm: greatCircleKm(coords), distanceSource: "great_circle" };
+}
+
+/**
+ * The distance once the line is known. A typed distance always wins; a traced
+ * line's own length beats the great-circle figure, which understates track by
+ * 10–30 %; without a traced line the great-circle figure stands, labelled so.
+ */
+export function withTracedDistance(
+  state: RailJourneyState,
+  tracedKm: number | null
+): RailJourneyState {
+  if (state.distanceSource === "user" || tracedKm === null) return state;
+  return { ...state, distanceKm: tracedKm, distanceSource: "route" };
 }

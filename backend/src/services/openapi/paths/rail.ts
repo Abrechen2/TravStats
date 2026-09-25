@@ -29,7 +29,15 @@ const railJourney = registry.register(
       id: z.string().uuid(),
       userId: z.string().uuid(),
       trainCategory: z.string().nullable().describe("'ICE', 'TGV', 'RJX' — grouped by statistics"),
-      depStationCode: z.string().nullable().describe("UIC/EVA code when known"),
+      depStationCode: z.string().nullable().describe("UIC code when known"),
+      depStationId: z
+        .number()
+        .int()
+        .nullable()
+        .describe(
+          "Catalogue row (GET /rail/stations) the station was picked from; null = geocoder"
+        ),
+      arrStationId: z.number().int().nullable(),
       depCountry: z.string().nullable().describe("ISO 3166-1 alpha-2; null when unknown"),
       depTimezone: z
         .string()
@@ -42,7 +50,10 @@ const railJourney = registry.register(
       distanceSource: z
         .enum(RAIL_DISTANCE_SOURCES)
         .nullable()
-        .describe("great_circle = straight line between the stations, not track length"),
+        .describe(
+          "great_circle = straight line between the stations, not track length; " +
+            "user = typed from the ticket; route = length of the traced Transitous line"
+        ),
       geometry: z
         .array(z.tuple([z.number(), z.number()]))
         .nullable()
@@ -155,7 +166,12 @@ registry.registerPath({
   description:
     "`departureLocal`/`arrivalLocal` are the station's wall clock without an offset; " +
     "the server looks up each station's zone from its coordinates and stores the " +
-    "real instant. Without `distanceKm` the great-circle distance is stored.",
+    "real instant. A station with `stationId` takes position, code and country from " +
+    "the catalogue. With `lookup` of provider `transitous` the server fetches that " +
+    "trip's traced line once, cuts it to the two stations and freezes it " +
+    "(`geometrySource: transitous`, distance along it); a missing, unreachable or " +
+    "chord-only line stores `straight`. Without `distanceKm` the traced or else the " +
+    "great-circle distance is stored.",
   tags: ["Rail"],
   request: {
     body: {
@@ -182,7 +198,8 @@ registry.registerPath({
   description:
     "Partial update. A station is replaced whole. The wall clock not sent is kept " +
     "and re-read in the (possibly new) station zone. `distanceKm: null` returns to " +
-    "the measured distance.",
+    "the measured distance. The frozen line is fetched again only when a station or " +
+    "`lookup` changes; `lookup: null` drops it.",
   tags: ["Rail"],
   request: {
     params: z.object({ id: z.string().uuid() }),

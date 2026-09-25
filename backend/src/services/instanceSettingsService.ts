@@ -70,6 +70,13 @@ export interface InstanceSettings {
    * `services/countryThresholdResolver.ts`, never this field read alone.
    */
   countryThreshold: CountryTier;
+  /**
+   * Which third parties the rail train-number lookup may ask (spec
+   * 2026-09-25-rail-domain): Transitous and db-rest. Both ON by default — the
+   * lookup runs only when a user presses its button — and admin-settable only.
+   */
+  railTransitousEnabled: boolean;
+  railDbRestEnabled: boolean;
 }
 
 export interface WebDAVSettings {
@@ -122,6 +129,8 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
     // counts the normal way — an unreadable setting must never leave the
     // headline filtering against a rank that does not exist.
     countryThreshold: parseCountryTier(row.countryThreshold) ?? DEFAULT_COUNTRY_TIER,
+    railTransitousEnabled: row.railTransitousEnabled,
+    railDbRestEnabled: row.railDbRestEnabled,
   };
 }
 
@@ -177,6 +186,12 @@ export async function updateInstanceSettings(
       }),
       ...(patch.countryThreshold !== undefined && {
         countryThreshold: patch.countryThreshold,
+      }),
+      ...(patch.railTransitousEnabled !== undefined && {
+        railTransitousEnabled: patch.railTransitousEnabled,
+      }),
+      ...(patch.railDbRestEnabled !== undefined && {
+        railDbRestEnabled: patch.railDbRestEnabled,
       }),
     },
   });

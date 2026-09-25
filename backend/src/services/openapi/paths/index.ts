@@ -27,6 +27,7 @@ import "./tokens";
 import "./diagnostics";
 import "./cruises";
 import "./rail";
+import "./railLookup";
 import "./lodging";
 import "./settings";
 import "./places";

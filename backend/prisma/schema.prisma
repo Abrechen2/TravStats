@@ -901,6 +901,13 @@ model AdminSettings {
   /// values along that mapping, so no instance's headline moves.
   countryThreshold String @default("transited") @map("country_threshold")
 
+  /// May the rail train-number lookup ask Transitous (api.transitous.org) and
+  /// db-rest (v6.db.transport.rest) on its users' behalf. Both ON by default:
+  /// the lookup only runs when a user presses the button, and an admin whose
+  /// instance must not talk to third parties switches either off here.
+  railTransitousEnabled Boolean @default(true) @map("rail_transitous_enabled")
+  railDbRestEnabled     Boolean @default(true) @map("rail_db_rest_enabled")
+
   // Off-site backup sync via WebDAV — supersedes WEBDAV_* ENV variables.
   // webdavPasswordEncrypted is AES-GCM via encryptApiKey() — never stored plain.
   webdavSyncEnabled       Boolean @default(false) @map("webdav_sync_enabled")
@@ -2791,8 +2798,12 @@ model RailJourney {
   trainNumber   String? @map("train_number")
 
   depStationName String  @map("dep_station_name")
-  /// UIC/EVA code when known. Empty until the station catalogue exists.
+  /// UIC code when known — the catalogue's, when the station was picked there.
   depStationCode String? @map("dep_station_code")
+  /// The catalogue row the station was picked from; null for a geocoder pick.
+  /// The name/code/position columns stay the record either way, so deleting
+  /// or reseeding a catalogue row never empties a journey.
+  depStationId   Int?    @map("dep_station_id")
   depLat         Float   @map("dep_lat")
   depLon         Float   @map("dep_lon")
   /// ISO 3166-1 alpha-2, from the geocoder; null when unknown, never guessed.
@@ -2801,6 +2812,7 @@ model RailJourney {
   depTimezone    String? @map("dep_timezone")
   arrStationName String  @map("arr_station_name")
   arrStationCode String? @map("arr_station_code")
+  arrStationId   Int?    @map("arr_station_id")
   arrLat         Float   @map("arr_lat")
   arrLon         Float   @map("arr_lon")
   arrCountry     String? @map("arr_country")
@@ -2823,7 +2835,7 @@ model RailJourney {
   /// straight | transitous | openrailrouting | manual (| none for a row that
   /// cannot be drawn). Kept because a line routed over the TRACKS may not be
   /// the line the train took, and the map has to be able to say which it shows.
-  geometrySource String  @default("straight") @map("geometry_source")
+  geometrySource String @default("straight") @map("geometry_source")
 
   /// What actually happened, when known: captured on the day or typed. A past
   /// journey with no record keeps null — no free source answers past actuals.
@@ -2874,6 +2886,8 @@ model RailJourney {
   trip           Trip?                  @relation(fields: [tripId], references: [id], onDelete: SetNull)
   booking        Booking?               @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   importBatch    ImportBatch?           @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  depStation     RailStation?           @relation("RailJourneyDepStation", fields: [depStationId], references: [id], onDelete: SetNull)
+  arrStation     RailStation?           @relation("RailJourneyArrStation", fields: [arrStationId], references: [id], onDelete: SetNull)
   companionLinks RailJourneyCompanion[]
 
   @@unique([userId, externalRef])
@@ -2882,7 +2896,40 @@ model RailJourney {
   @@index([tripId])
   @@index([bookingId])
   @@index([importBatchId])
+  @@index([depStationId])
+  @@index([arrStationId])
   @@map("rail_journeys")
+}
+
+/// The station catalogue: a filtered copy of Trainline's stations.csv (ODbL 1.0,
+/// backend/data/rail/), seeded idempotently like ports and ships. Seeding only
+/// ever INSERTS missing `sourceId`s, so a user-added row (`isUserAdded`) and any
+/// row already present are never overwritten.
+model RailStation {
+  id             Int     @id @default(autoincrement())
+  /// Trainline's own id; null for a row a user added.
+  sourceId       String? @unique @map("source_id")
+  name           String
+  /// Lower case, diacritics folded, punctuation to spaces — what search matches.
+  searchName     String  @map("search_name")
+  uic            String?
+  /// Deutsche Bahn's EVA number (Trainline `db_id`) — how db-rest names a stop.
+  /// Not the UIC code: Frankfurt (Main) Hbf is UIC 8011068 but EVA 8000105.
+  dbId           String? @map("db_id")
+  lat            Float
+  lon            Float
+  country        String?
+  timezone       String?
+  /// Trainline id of the parent (the city or the main station a platform belongs to).
+  parentSourceId String? @map("parent_source_id")
+  isUserAdded    Boolean @default(false) @map("is_user_added")
+
+  departures RailJourney[] @relation("RailJourneyDepStation")
+  arrivals   RailJourney[] @relation("RailJourneyArrStation")
+
+  @@index([uic])
+  @@index([searchName(ops: raw("gin_trgm_ops"))], type: Gin)
+  @@map("rail_stations")
 }
 
 model RailJourneyCompanion {

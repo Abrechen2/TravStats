@@ -1,6 +1,6 @@
 # Rail — a fifth domain for train journeys
 
-Date: 2026-09-25 · Branch: `dev/rail` · Status: phase 1 implemented behind the beta switch
+Date: 2026-09-25 · Branch: `dev/rail` · Status: phase 1 and phase 2a implemented behind the beta switch
 
 ## Why
 
@@ -278,3 +278,57 @@ The owner took every proposal ("nimm die Vorschläge"):
    and cruises — in phase 2.
 7. **Distance in the statistics before routing exists:** show straight-line km,
    labelled as such.
+
+## Phase 2a — as built (2026-09-25)
+
+Station catalogue, train-number lookup and Transitous geometry. What the
+implementation settled, and what was measured on the way:
+
+- **Catalogue file.** `backend/data/rail/stations.csv.gz`, built by
+  `backend/scripts/build-rail-stations.mjs` from Trainline `stations.csv`
+  (commit `a3e44375`): 52 808 stations (suggestable with a position, plus
+  their parents), 3.5 MB of CSV, **1.16 MB gzipped**; `*.gz` is binary in
+  `.gitattributes`. Nine columns — the eight named above plus `db_id`, because
+  db-rest addresses stops by DB's EVA number, which is not the UIC code
+  (Frankfurt (Main) Hbf: UIC 8011068, EVA 8000105). 21 k of the rows are
+  Swiss bus stops without a rail code; search ranks coded rows first rather
+  than dropping them. Seeding a fresh database takes ~6 s, a seeded boot
+  ~0.2 s. Licence and provenance: `backend/data/rail/LICENSE.txt`; credited in
+  the README and under Settings → About.
+- **Search.** `GET /rail/stations?q=` — a `search_name` column (lower case,
+  diacritics folded, punctuation to spaces) with a `pg_trgm` GIN index; every
+  query word must start a word of the name ("hb" finds Zürich HB, not
+  Frohburg); seven or eight digits match UIC or EVA exactly.
+- **Journeys.** `depStationId`/`arrStationId` (FK, `SET NULL`). With an id the
+  server takes position, code and country from the catalogue; the name stays
+  the client's.
+- **Lookup.** `GET /rail/lookup` needs a boarding station: MOTIS has no
+  search by train number, so the lookup reads that station's departures of the
+  day (four-hour windows, stopping at the first match) and picks the train by
+  its label. Transitous, then db-rest for German stations. Each provider's
+  outcome is reported (`matched`, `noMatch`, `unavailable`, `disabled`,
+  `notApplicable`). Admin switches `admin_settings.rail_transitous_enabled` /
+  `rail_db_rest_enabled`, both on by default; `RAIL_LOOKUP_CONTACT` goes into
+  the User-Agent Transitous asks for. Answers are cached for six hours by URL
+  (the validated, stripped value — a four-hour stoptimes page at Frankfurt Hbf
+  is ~270 kB on the wire).
+- **Past days, measured against the live service.** Asked for any day before
+  its timetable begins (2024-06-01, 2025-12-01, 2026-06-01, 2026-09-01),
+  Transitous answers with the departures of **the first day it has
+  (2026-08-25)**, not with nothing. The lookup therefore drops every departure
+  that is not on the asked day in the station's zone; without that guard it
+  would have filled a 2024 journey with a 2026 train. A day beyond the feed
+  (2027-03-01) comes back empty. db-rest answered 503 on every request that
+  day. The form says before the lookup that a past day rarely finds anything.
+- **Geometry.** Saving with a Transitous match fetches the trip once (usually
+  from the lookup's cache), cuts the line to the two stations (each within
+  2 km of it, in order), and stores it frozen with `geometrySource =
+  transitous` and the distance along it (`distanceSource = route`). A line
+  with any segment over 35 km, an unreachable Transitous, a station off the
+  line or a switched-off provider stores `straight`. The line is fetched again
+  only when a station or the match changes. ICE 696 Frankfurt → Berlin
+  Gesundbrunnen came back with 9 750 points, 547 km.
+
+Still open for **phase 2b**: detail page, map layer and dashboard tab, trip
+timeline and trip bounds, statistics, import and backup/export coverage, demo
+seed, the connecting-train UI, and the roadtrip conversion offer.

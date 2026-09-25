@@ -12,7 +12,14 @@ import {
   type RailQueryInput,
   type UpdateRailJourneyInput,
 } from "../schemas/rail";
-import { mergeRailJourney } from "../services/rail/railJourneyWrite";
+import { mergeRailJourney, withTracedDistance } from "../services/rail/railJourneyWrite";
+import {
+  readStoredLine,
+  resolveJourneyGeometry,
+  tracedLengthKm,
+  type JourneyGeometry,
+} from "../services/rail/railGeometry";
+import { resolveStationInput } from "../services/rail/railStations";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { assertReferencesOwned } from "../utils/ownedReferences";
@@ -144,6 +151,7 @@ function plainColumns(
   | "distanceKm"
   | "status"
   | "companions"
+  | "lookup"
 > {
   const {
     departureStation: _dep,
@@ -153,9 +161,39 @@ function plainColumns(
     distanceKm: _distance,
     status: _status,
     companions: _companions,
+    lookup: _lookup,
     ...rest
   } = input;
   return rest;
+}
+
+/** Catalogue picks resolved to the catalogue's position, code and country. */
+async function withResolvedStations(
+  input: UpdateRailJourneyInput
+): Promise<UpdateRailJourneyInput> {
+  return {
+    ...input,
+    ...(input.departureStation && {
+      departureStation: await resolveStationInput(input.departureStation),
+    }),
+    ...(input.arrivalStation && {
+      arrivalStation: await resolveStationInput(input.arrivalStation),
+    }),
+  };
+}
+
+/** The geometry columns of a write; the null line is SQL NULL, not JSON null. */
+function geometryColumns(
+  lookup: { provider: string | null; ref: string | null },
+  geo: JourneyGeometry
+): Prisma.RailJourneyUncheckedUpdateInput {
+  return {
+    lookupProvider: lookup.provider,
+    lookupRef: lookup.ref,
+    geometry:
+      geo.geometry === null ? Prisma.DbNull : (geo.geometry as unknown as Prisma.InputJsonValue),
+    geometrySource: geo.geometrySource,
+  };
 }
 
 router.post(
@@ -170,7 +208,15 @@ router.post(
       // Prisma proves a trip or booking EXISTS, never whose it is (AUD-038).
       await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
 
-      const state = mergeRailJourney(null, input);
+      const merged = mergeRailJourney(null, await withResolvedStations(input));
+      const lookup = { provider: input.lookup?.provider ?? null, ref: input.lookup?.ref ?? null };
+      const geo = await resolveJourneyGeometry({
+        lookupProvider: lookup.provider,
+        lookupRef: lookup.ref,
+        dep: { lat: merged.depLat, lon: merged.depLon },
+        arr: { lat: merged.arrLat, lon: merged.arrLon },
+      });
+      const state = withTracedDistance(merged, geo.geometry && tracedLengthKm(geo.geometry));
       const companions = await resolveCompanions(userId, input.companions ?? []);
       const fxColumns = await fxColumnsFor(
         { amount: input.price, currency: input.currency, date: state.departureTime },
@@ -183,6 +229,7 @@ router.post(
             ...plainColumns(input),
             ...state,
             ...fxColumns,
+            ...(geometryColumns(lookup, geo) as Prisma.RailJourneyUncheckedCreateInput),
             userId,
             companions: companions.map((c) => c.displayName),
           },
@@ -223,7 +270,28 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
 
     // The MERGED state, so a one-field PATCH is checked against the stored
     // rest (an arrival moved behind an untouched departure is refused here).
-    const state = mergeRailJourney(existing, input);
+    const merged = mergeRailJourney(existing, await withResolvedStations(input));
+
+    // The line is fetched again only when what it depends on moved — the
+    // stations or the matched trip. Otherwise the frozen line stays frozen.
+    const lookup =
+      input.lookup !== undefined
+        ? { provider: input.lookup?.provider ?? null, ref: input.lookup?.ref ?? null }
+        : { provider: existing.lookupProvider, ref: existing.lookupRef };
+    const refetch =
+      input.lookup !== undefined ||
+      input.departureStation !== undefined ||
+      input.arrivalStation !== undefined;
+    const geo: JourneyGeometry | null = refetch
+      ? await resolveJourneyGeometry({
+          lookupProvider: lookup.provider,
+          lookupRef: lookup.ref,
+          dep: { lat: merged.depLat, lon: merged.depLon },
+          arr: { lat: merged.arrLat, lon: merged.arrLon },
+        })
+      : null;
+    const line = geo ? geo.geometry : readStoredLine(existing.geometry);
+    const state = withTracedDistance(merged, line && tracedLengthKm(line));
 
     const resolved =
       input.companions === undefined
@@ -265,6 +333,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           ...plainColumns(input),
           ...state,
           ...fxColumns,
+          ...(geo && geometryColumns(lookup, geo)),
           ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
         },
       });

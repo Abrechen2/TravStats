@@ -15,6 +15,7 @@ import { resolveTrustProxy } from "./utils/trustProxy";
 import { templateRegistry } from "./services/parsers/templates/registry";
 import { seedPortsFromCSV } from "./seedPortsFromCSV";
 import { seedShipsFromCSV } from "./seedShipsFromCSV";
+import { seedRailStations } from "./seedRailStations";
 import { seedLodgingChainsFromCSV } from "./seedLodgingChainsFromCSV";
 import { seedCuratedPlacesFromCSV } from "./seedCuratedPlacesFromCSV";
 import { seedAirlinesFromData } from "./seedAirlinesFromData";
@@ -330,6 +331,20 @@ if (process.env.NODE_ENV !== "test") {
       logger.warn({
         operation: "server_start_seed_ships_error",
         message: "Failed to seed ships from CSV",
+        error: {
+          message: error instanceof Error ? error.message : "Unknown error",
+        },
+      });
+    }
+
+    // The rail station catalogue (Trainline, ODbL) — idempotent, inserts only
+    // missing rows, never touches an existing or user-added one.
+    try {
+      await seedRailStations();
+    } catch (error) {
+      logger.warn({
+        operation: "server_start_seed_rail_stations_error",
+        message: "Failed to seed rail stations",
         error: {
           message: error instanceof Error ? error.message : "Unknown error",
         },

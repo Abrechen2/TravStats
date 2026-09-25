@@ -85,6 +85,9 @@ const instancePatchSchema = z.object({
    * and a dial would promise precision that is not there.
    */
   countryThreshold: z.enum(COUNTRY_TIERS).optional(),
+  /** May the rail lookup ask Transitous / db-rest (both on by default). */
+  railTransitousEnabled: z.boolean().optional(),
+  railDbRestEnabled: z.boolean().optional(),
 });
 
 /**
@@ -149,6 +152,12 @@ router.put("/instance-settings", async (req: AuthRequest, res: Response, next: N
       }),
       ...(patch.countryThreshold !== undefined && {
         countryThreshold: patch.countryThreshold,
+      }),
+      ...(patch.railTransitousEnabled !== undefined && {
+        railTransitousEnabled: patch.railTransitousEnabled,
+      }),
+      ...(patch.railDbRestEnabled !== undefined && {
+        railDbRestEnabled: patch.railDbRestEnabled,
       }),
     });
     res.json({ settings, passkeyStatus: passkeyStatusOf(settings) });
