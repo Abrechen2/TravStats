@@ -1,6 +1,23 @@
+import fs from "fs";
+import path from "path";
+import { parse } from "csv-parse/sync";
 import { describe, it, expect, beforeEach, afterAll } from "@jest/globals";
 import { prisma } from "../db";
 import { seedPortsFromCSV } from "../seedPortsFromCSV";
+
+const CSV_PATH = path.resolve(__dirname, "..", "seedData", "ports.csv");
+
+// Independent of seedPortsFromCSV's own filtering, so a regression in that
+// filtering (or in the chunked insert loop) can't hide behind a shared count.
+function countValidCsvRows(): number {
+  const raw = fs.readFileSync(CSV_PATH, "utf-8");
+  const rows = parse(raw, { columns: true, skip_empty_lines: true, trim: true }) as Array<{
+    name: string;
+    lat: string;
+    lon: string;
+  }>;
+  return rows.filter((r) => r.name && r.lat && r.lon).length;
+}
 
 /**
  * `ports.csv` is 12000+ rows, and every test below runs at least one
@@ -42,8 +59,17 @@ describe("seedPortsFromCSV", () => {
   it(
     "inserts all rows from the CSV on a fresh DB",
     async () => {
+      // `>= 50` used to be the whole assertion here, which a chunking bug that
+      // dropped all but the first INSERT_CHUNK_SIZE rows would still clear —
+      // the title says "all rows", so the count needs to be checked against
+      // the actual CSV, not a number that was already true for a fixture.
+      const validRowCount = countValidCsvRows();
       const count = await seedPortsFromCSV();
-      expect(count).toBeGreaterThanOrEqual(50);
+      // A handful of rows collide on (name, country) within the CSV itself
+      // and are legitimately skipped by `skipDuplicates` (measured: 3 of
+      // 12062) — not a regression, so allow a small margin instead of an
+      // exact match.
+      expect(count).toBeGreaterThan(validRowCount * 0.99);
       const rows = await prisma.port.count();
       expect(rows).toBe(count);
     },
