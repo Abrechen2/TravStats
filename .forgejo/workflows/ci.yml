@@ -93,7 +93,7 @@ jobs:
           --health-cmd "pg_isready -U travstats_ci"
           --health-interval 10s --health-timeout 5s --health-retries 10
     env:
-      DATABASE_URL: postgresql://travstats_ci:travstats_ci@postgres:5432/travstats_ci?connection_limit=5
+      DATABASE_URL: postgresql://travstats_ci:travstats_ci@localhost:5432/travstats_ci?connection_limit=5
       NODE_ENV: test
       # Throwaway CI literals, same values and reasons as .github/workflows/ci.yml.
       JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0000
@@ -103,9 +103,17 @@ jobs:
       - uses: https://code.forgejo.org/actions/checkout@v4
       - name: Install dependencies
         run: cd backend && npm ci
-      - name: Apply migrations
-        run: cd backend && npx prisma migrate deploy
-      - name: Seed test catalogues
-        run: cd backend && npx tsx scripts/seed-test-catalogues.ts
-      - name: Jest
-        run: cd backend && npx jest --ci --forceExit --shard=${{ matrix.shard }}/2
+      # jest.globalSetup.ts refuses any database host that is not local, because
+      # the suite deletes every user; there is deliberately no override. Here the
+      # job runs in a container and the job-local PostGIS service is reachable as
+      # `postgres`, so a tiny TCP proxy exposes it on localhost:5432 - the same
+      # throwaway database, the guard untouched. Migrate, seed and Jest share one
+      # step so the proxy is alive for all three.
+      - name: Migrate, seed and run Jest
+        run: |
+          node -e "const n=require('net');n.createServer(c=>{const u=n.connect(5432,'postgres');c.pipe(u).pipe(c);u.on('error',()=>c.destroy());c.on('error',()=>u.destroy())}).listen(5432,'127.0.0.1')" >/dev/null 2>&1 &
+          sleep 1
+          cd backend
+          npx prisma migrate deploy
+          npx tsx scripts/seed-test-catalogues.ts
+          npx jest --ci --forceExit --shard=${{ matrix.shard }}/2
