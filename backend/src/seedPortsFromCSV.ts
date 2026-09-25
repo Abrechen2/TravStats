@@ -19,14 +19,23 @@ const CSV_PATH = path.resolve(__dirname, "seedData", "ports.csv");
 
 /**
  * Idempotent port seeder. Bulk pattern: one query loads existing UNLOCODEs,
- * one query inserts the new ones. Boot-time stays sub-100ms even with 1000+
- * rows (the previous per-row findUnique+create scaled at ~3ms/row → multi-
- * second boot delays once the CSV grew past a few hundred entries).
+ * then chunked `createMany` calls insert the new ones. Boot-time stays
+ * sub-100ms once the catalog is fully seeded — there is nothing left to
+ * insert, so only the lookup query runs (the previous per-row
+ * findUnique+create scaled at ~3ms/row → multi-second boot delays once the
+ * CSV grew past a few hundred entries).
  *
- * Rows without an UNLOCODE always insert (the unique-conflict skip can't gate
- * them). User-added rows are protected via `isUserAdded=false` on insert and
- * the `skipDuplicates` clause on the unique unlocode index.
+ * A fresh-DB seed is a different story: `ports.csv` is 12000+ rows now, and
+ * a single unchunked `createMany` for all of them measured 2.5s idle /
+ * 13-17s under the CPU contention four parallel PostGIS-backed Jest shards
+ * produce on one CI runner (see seedPortsFromCSV.test.ts for the measurement
+ * and the timeout it derives from it). `INSERT_CHUNK_SIZE` keeps each
+ * statement's parameter count well under Postgres's per-statement bind limit
+ * and measured ~10-20% faster under that same contention, since the
+ * scheduler gets a chunk boundary to interleave sibling jobs at instead of
+ * one giant statement holding the connection.
  */
+const INSERT_CHUNK_SIZE = 2000;
 export async function seedPortsFromCSV(): Promise<number> {
   if (!fs.existsSync(CSV_PATH)) {
     logger.warn({ operation: "seed_ports_skip", reason: "csv_missing", path: CSV_PATH });
@@ -85,16 +94,21 @@ export async function seedPortsFromCSV(): Promise<number> {
   // where a concurrent insert creates the same unlocode between our findMany
   // and createMany. The pre-filter does the heavy lifting; this just keeps us
   // crash-free in edge cases.
-  const result = await prisma.port.createMany({
-    data: toInsert,
-    skipDuplicates: true,
-  });
+  let inserted = 0;
+  for (let i = 0; i < toInsert.length; i += INSERT_CHUNK_SIZE) {
+    const chunk = toInsert.slice(i, i + INSERT_CHUNK_SIZE);
+    const result = await prisma.port.createMany({
+      data: chunk,
+      skipDuplicates: true,
+    });
+    inserted += result.count;
+  }
 
   logger.info({
     operation: "seed_ports_done",
-    inserted: result.count,
-    skipped: valid.length - result.count,
+    inserted,
+    skipped: valid.length - inserted,
     total: valid.length,
   });
-  return result.count;
+  return inserted;
 }
