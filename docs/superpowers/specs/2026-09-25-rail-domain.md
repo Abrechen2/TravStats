@@ -397,3 +397,39 @@ hand-written list of the four older domains, so the Bahn tab reset itself to
 the overview on every click. Noted, not changed: every dashboard tab opens on
 the whole world rather than the rides' extent, which on a Europe-only rail
 logbook makes the lines small until one zooms.
+
+## Merged with main — as built (2026-09-25)
+
+`dev/rail` took main in at `c6277fd3` (roadtrips and tours as their own
+domain, open data, entry suggestions, the reworked spreadsheet importer). What
+the merge settled and what it made possible:
+
+- **Registries.** `rail` sits after `roadtrip` in `DOMAIN_KEYS` on both sides;
+  the beta registry carries both `roadtrips` and `railDomain`, and every picker
+  asks each gate for its own domain.
+- **Migrations.** The three rail migrations were renamed to
+  `20260925190000`–`190200`, after main's photo migrations of the same
+  afternoon. They had not left the branch; a fresh database migrates cleanly
+  and `check:drift` reports no difference.
+- **Rail left the roadtrip vehicles.** `ROADTRIP_VEHICLES` no longer lists
+  it; `STORED_ROADTRIP_VEHICLES` keeps it as a legacy value, so a roadtrip
+  stored by rail loads with its label, and nothing rewrites it except the user
+  or the conversion below.
+- **Roadtrip conversion.** `GET/POST /rail/roadtrip-conversion/:routeId`
+  and "Als Bahnfahrt übernehmen" on a roadtrip by rail (behind the rail gate).
+  One leg is one ride, written through the rail write rules; the departure is
+  noon on the boarding station's clock and says so, the arrival stays unknown
+  (a day-only arrival would put a length nobody measured into the hours
+  statistic — a deviation from the contract above, which had noon UTC and an
+  arrival day). `externalRef = roadtrip:<section>:<leg>` makes it idempotent.
+  The roadtrip goes only with `removeSection: true`, only when every leg
+  converted, in the same transaction.
+- **Spreadsheet import.** `services/xlsxImport/rail.ts` on the importer's
+  rules (own id updates, foreign or missing id creates, natural key train
+  number + departure day on the boarding clock + both stations, unchanged rows
+  not written, unknown class/status dropped with a warning, real row numbers,
+  `replace` prunes). The sheet now carries each station's position. The
+  browser reads the sheet only where rail is visible.
+- **Shared surfaces.** `GET /tags` counts rail tags, the rail form uses
+  `TagInput` and `useTripPreselection`, and the rail detail page shows the
+  trip's photos taken on board (`GET /rail/:id/trip-photos`).
