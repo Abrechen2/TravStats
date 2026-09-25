@@ -209,7 +209,8 @@
     "saving": "Saving …",
     "createTitle": "New cruise",
     "editTitle": "Edit cruise",
-    "saveError": "Could not save the cruise"
+    "saveError": "Could not save the cruise",
+    "routeNameSuggestion": "Use suggestion: {{name}}"
   },
   "add": {
     "title": "Add cruise"

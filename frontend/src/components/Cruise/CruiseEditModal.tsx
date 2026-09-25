@@ -24,6 +24,7 @@ import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import CompanionPicker from "../CompanionPicker";
 import { useTripPreselection } from "../../hooks/useTripPreselection";
 import { useCruiseDateSuggestions } from "./useCruiseDateSuggestions";
+import { suggestCruiseRouteName } from "./cruiseRouteName";
 
 type Mode = "create" | "edit";
 
@@ -121,6 +122,10 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
     endDate,
     setEndDate,
   });
+
+  const routeNameSuggestion = routeName
+    ? ""
+    : suggestCruiseRouteName(departurePort, stops, arrivalPort);
 
   const [cabinNumber, setCabinNumber] = useState<string>(cruise?.cabinNumber ?? "");
   const [cabinType, setCabinType] = useState<CabinType | "">(cruise?.cabinType ?? "");
@@ -282,6 +287,17 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
               onChange={(e): void => setRouteName(e.target.value)}
               placeholder={t("field.routeName")}
             />
+            {/* Offered, never written on its own: a route name is the user's
+                wording, and the ports only say what it could be. */}
+            {routeNameSuggestion && (
+              <button
+                type="button"
+                onClick={(): void => setRouteName(routeNameSuggestion)}
+                className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent)"
+              >
+                {t("form.routeNameSuggestion", { name: routeNameSuggestion })}
+              </button>
+            )}
             <div className="mt-3 grid grid-cols-2 gap-3">
               <input
                 type="date"

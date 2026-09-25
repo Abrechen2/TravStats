@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { act, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CruiseEditModal } from "../../../components/Cruise/CruiseEditModal";
 import { cruiseApi, companionsApi, tripsApi } from "../../../lib/api";
@@ -167,6 +167,55 @@ describe("CruiseEditModal — entry suggestions", () => {
 
       await waitFor(() => expect(stopDates()).toEqual(["2026-01-08"]));
       expect(endInput().value).toBe("2026-01-20");
+    });
+  });
+
+  describe("route name", () => {
+    const kiel = { id: 1, name: "Kiel" };
+    const withPorts = (routeName: string | null) =>
+      ({
+        id: "cruise-1",
+        routeName,
+        departurePort: kiel,
+        arrivalPort: kiel,
+        startDate: null,
+        endDate: null,
+        status: "scheduled",
+        currency: "EUR",
+        tags: [],
+        companions: [],
+        stops: [
+          { portId: 2, port: { id: 2, name: "Oslo" }, dayNumber: 2, date: null, isAtSea: false },
+        ],
+      }) as unknown as Cruise;
+
+    it("offers a name built from the ports and fills it only on a click", async () => {
+      vi.mocked(cruiseApi.update).mockReset().mockResolvedValue(withPorts(null));
+      render(
+        <CruiseEditModal mode="edit" cruise={withPorts(null)} onClose={vi.fn()} onSaved={vi.fn()} />
+      );
+      const route = screen.getByLabelText("field.routeName") as HTMLInputElement;
+      expect(route.value).toBe("");
+
+      await userEvent.click(screen.getByRole("button", { name: "form.routeNameSuggestion" }));
+
+      expect(route.value).toBe("Kiel → Oslo → Kiel");
+      expect(screen.queryByRole("button", { name: "form.routeNameSuggestion" })).toBeNull();
+    });
+
+    it("offers nothing over a name the cruise already has", async () => {
+      render(
+        <CruiseEditModal
+          mode="edit"
+          cruise={withPorts("Norwegen")}
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      );
+      // Let the trip list settle, so the assertion below is not made mid-load.
+      await act(async () => {});
+      expect(screen.getByLabelText("field.routeName")).toHaveValue("Norwegen");
+      expect(screen.queryByRole("button", { name: "form.routeNameSuggestion" })).toBeNull();
     });
   });
 });
