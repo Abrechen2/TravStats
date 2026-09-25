@@ -14,7 +14,7 @@ import { seedPortsFromCSV } from "../seedPortsFromCSV";
  * 8-core runner — pushed a single run to 13-17s before this fix, and
  * 6.2-6.7s per test after it (3/3 passing), which is the number 30s
  * actually keeps headroom above. The pre-fix ceiling came from the
- * then-unmerged #129 (backend Jest split into 4 shards): its run hit this
+ * then-unmerged forgejo#129 (backend Jest split into 4 shards): its run hit this
  * suite's first test at ~20s against the pre-chunking `createMany`, over
  * the 5s default.
  */
