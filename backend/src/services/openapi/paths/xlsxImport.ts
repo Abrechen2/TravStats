@@ -13,7 +13,11 @@ import { registry } from "../registry";
 
 const rowOutcome = z.object({
   row: z.number().int().openapi({ description: "1-based row number as shown in Excel." }),
-  action: z.enum(["create", "update", "skip", "error"]),
+  action: z.enum(["create", "update", "skip", "error"]).openapi({
+    description:
+      "`skip` is a row that changes nothing: identical to the stored entry, or an existing " +
+      "entry in `add` mode. Nothing is written for it.",
+  }),
   id: z.string().nullable().openapi({
     description: "Record id. Null for a create that has not been applied yet.",
   }),
@@ -30,6 +34,15 @@ const rowOutcome = z.object({
   notes: z.array(z.string()).optional().openapi({
     description: "Non-fatal remarks the row was applied with, e.g. `trip_not_linked`.",
   }),
+  dropped: z
+    .array(z.object({ field: z.string(), value: z.string() }))
+    .optional()
+    .openapi({
+      description:
+        "Cells whose text the column does not know (e.g. a free-text cabin type). The field " +
+        "is left empty and the row is still applied; each entry names the column key and " +
+        "the text as it stood.",
+    }),
 });
 
 const sheetOutcome = z.object({

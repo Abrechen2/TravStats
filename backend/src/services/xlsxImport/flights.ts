@@ -17,22 +17,42 @@
 
 import { prisma } from "../../db";
 import { findOrCreateAirport } from "../airportLookup";
-import {
-  flightFxColumnsIfChanged,
-  flightFxColumnsForCreate,
-  findFlightForFxMerge,
-} from "./fxSnapshot";
+import { flightFxColumnsIfChanged, flightFxColumnsForCreate } from "./fxSnapshot";
 import * as cell from "./cells";
 import { MATCHED, type Ctx, dayRange, definedOnly, errorRow, keepDespiteError } from "./context";
 import { pruneMissing } from "./prune";
 import { resolveTrip } from "./references";
-import { summarise, type IncomingSheet, type RowOutcome, type SheetOutcome } from "./types";
+import {
+  summarise,
+  type DroppedValue,
+  type IncomingSheet,
+  type RowOutcome,
+  type SheetOutcome,
+} from "./types";
+import { changedOnly, droppedOrNone, enumCell } from "./values";
 
 /** Statuses a spreadsheet may set. Anything else is refused rather than
- *  coerced — silently turning a typo into "flown" changes what is counted. */
-const FLIGHT_STATUSES = ["scheduled", "flown", "cancelled", "historical"] as const;
+ *  coerced — silently turning a typo into "flown" changes what is counted, and
+ *  status is the one enum here that cannot be left empty: a new flight without
+ *  one would be "flown" by default, which is the guess this refusal prevents.
+ *  `duplicated` is a stored passthrough status, so an export carries it. */
+const FLIGHT_STATUSES = ["scheduled", "flown", "cancelled", "historical", "duplicated"] as const;
+/** The optional enum columns — unknown text is left empty, the row applied. */
+const SEAT_CLASSES = ["economy", "premium_economy", "business", "first"] as const;
+const CATEGORIES = ["business", "private", "vacation"] as const;
 
 type Airport = NonNullable<Awaited<ReturnType<typeof findOrCreateAirport>>>;
+
+/** The position columns of one end of a flight, from its airport. */
+function airportColumns(end: "dep" | "arr", a: Airport): Record<string, unknown> {
+  return {
+    [`${end}Iata`]: a.iata,
+    [`${end}Icao`]: a.icao,
+    [`${end}Name`]: a.name,
+    [`${end}Lat`]: a.lat,
+    [`${end}Lon`]: a.lon,
+  };
+}
 
 async function matchFlight(
   ctx: Ctx,
@@ -103,6 +123,10 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
 
     const trip = await resolveTrip(raw.tripId, ctx.userId);
     const notes = trip.note ? [trip.note] : undefined;
+    const dropped: DroppedValue[] = [];
+    const seatClass = enumCell(raw.seatClass, SEAT_CLASSES, "seatClass", dropped);
+    const category = enumCell(raw.category, CATEGORIES, "category", dropped);
+    const extra = { notes, dropped: droppedOrNone(dropped) };
 
     const fields: Record<string, unknown> = {
       airline,
@@ -113,36 +137,24 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
       aircraft: cell.text(raw.aircraft),
       aircraftRegistration: cell.text(raw.aircraftRegistration),
       seatNumber: cell.text(raw.seatNumber),
-      seatClass: cell.text(raw.seatClass),
+      seatClass,
       bookingReference: cell.text(raw.bookingReference),
       price,
       currency,
-      category: cell.text(raw.category),
+      category,
       notes: cell.text(raw.notes),
       tripId: trip.tripId,
-      ...(dep
-        ? {
-            depIata: dep.iata,
-            depIcao: dep.icao,
-            depName: dep.name,
-            depLat: dep.lat,
-            depLon: dep.lon,
-          }
-        : {}),
-      ...(arr
-        ? {
-            arrIata: arr.iata,
-            arrIcao: arr.icao,
-            arrName: arr.name,
-            arrLat: arr.lat,
-            arrLon: arr.lon,
-          }
-        : {}),
+      // The code is what the sheet says; the airport columns follow it only
+      // when it changed (below), so an untouched code never moves a flight.
+      depIata: dep?.iata,
+      arrIata: arr?.iata,
     };
 
-    // Scoped by userId inside `findFlightForFxMerge`: a foreign id misses and
-    // the row is treated as a new flight of this account.
-    const owned = fileId ? await findFlightForFxMerge(fileId, ctx.userId) : null;
+    // Scoped by userId: a foreign id misses and the row is treated as a new
+    // flight of this account.
+    const owned = fileId
+      ? await prisma.flight.findFirst({ where: { id: fileId, userId: ctx.userId } })
+      : null;
     const targetId =
       owned?.id ?? (await matchFlight(ctx, { flightNumber, dep, arr, departure: departureTime }));
 
@@ -154,26 +166,29 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
         out.push({ row: rowNo, action: "skip", id: targetId, label, message: "exists" });
         continue;
       }
-      const existing = owned ?? (await findFlightForFxMerge(targetId, ctx.userId));
+      const stored = owned ?? (await prisma.flight.findUniqueOrThrow({ where: { id: targetId } }));
+      const data: Record<string, unknown> = changedOnly(definedOnly(fields), stored);
+      if (Object.keys(data).length === 0) {
+        out.push({ row: rowNo, action: "skip", id: targetId, label, message, ...extra });
+        continue;
+      }
+      if (dep && "depIata" in data) Object.assign(data, airportColumns("dep", dep));
+      if (arr && "arrIata" in data) Object.assign(data, airportColumns("arr", arr));
       // FX snapshot (fix round 1, finding 3) — see `xlsxImport/fxSnapshot.ts`.
-      if (existing) {
+      // Only when a column it reads actually changed.
+      if ("price" in data || "currency" in data || "departureTime" in data) {
         Object.assign(
-          fields,
+          data,
           await flightFxColumnsIfChanged(
             ctx.userId,
             { price, currency, departureTime: departureTimeValue },
-            existing
+            stored
           )
         );
       }
-      const data = definedOnly(fields);
-      if (Object.keys(data).length === 0) {
-        out.push({ row: rowNo, action: "skip", id: targetId, label, notes });
-        continue;
-      }
       if (!ctx.dryRun) await prisma.flight.update({ where: { id: targetId }, data });
       ctx.wrote = ctx.wrote || !ctx.dryRun;
-      out.push({ row: rowNo, action: "update", id: targetId, label, message, notes });
+      out.push({ row: rowNo, action: "update", id: targetId, label, message, ...extra });
       continue;
     }
 
@@ -214,9 +229,9 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
           aircraft: cell.text(raw.aircraft) ?? null,
           aircraftRegistration: cell.text(raw.aircraftRegistration) ?? null,
           seatNumber: cell.text(raw.seatNumber) ?? null,
-          seatClass: cell.text(raw.seatClass) ?? null,
+          seatClass: seatClass ?? null,
           bookingReference: cell.text(raw.bookingReference) ?? null,
-          category: cell.text(raw.category) ?? null,
+          category: category ?? null,
           price: price ?? null,
           currency: currency ?? null,
           notes: cell.text(raw.notes) ?? null,
@@ -231,7 +246,7 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
       ctx.claimed.add(created.id);
       ctx.wrote = true;
     }
-    out.push({ row: rowNo, action: "create", id: newId, label, notes });
+    out.push({ row: rowNo, action: "create", id: newId, label, ...extra });
   }
 
   const deleted = await pruneMissing("flight", seen, ctx);

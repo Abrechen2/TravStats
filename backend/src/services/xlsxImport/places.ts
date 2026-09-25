@@ -13,6 +13,7 @@
 import { prisma } from "../../db";
 import { createPlaceSchema } from "../../schemas/place";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
+import { PLACE_CATEGORIES } from "../../shared/placeCategories";
 import * as cell from "./cells";
 import {
   MATCHED,
@@ -29,7 +30,14 @@ import {
 } from "./context";
 import { pruneMissing } from "./prune";
 import { resolveParent } from "./references";
-import { summarise, type IncomingSheet, type RowOutcome, type SheetOutcome } from "./types";
+import {
+  summarise,
+  type DroppedValue,
+  type IncomingSheet,
+  type RowOutcome,
+  type SheetOutcome,
+} from "./types";
+import { changedOnly, droppedOrNone, enumCell } from "./values";
 
 const COORD_DECIMALS = 4;
 const sameCoord = (a: number | null, b: number | undefined): boolean =>
@@ -77,9 +85,10 @@ export async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<Shee
       continue;
     }
 
+    const dropped: DroppedValue[] = [];
     const fields = {
       name: cell.text(raw.name),
-      category: cell.text(raw.category),
+      category: enumCell(raw.category, PLACE_CATEGORIES, "category", dropped),
       lat,
       lon,
       address: cell.text(raw.address),
@@ -112,15 +121,22 @@ export async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<Shee
         out.push({ row: rowNo, action: "skip", id: targetId, label, message: "exists" });
         continue;
       }
-      const data = definedOnly(fields) as Record<string, unknown>;
+      const stored = await prisma.place.findUniqueOrThrow({ where: { id: targetId } });
+      const data: Record<string, unknown> = changedOnly(definedOnly(fields), stored);
+      // The export writes the country as the reader's name for the stored
+      // code ("Italien" for IT) — the same country, not an edit.
+      if (data.country && resolveCountryCode(String(data.country)) === stored.isoCountryCode) {
+        delete data.country;
+      }
       if (data.country) data.isoCountryCode = resolveCountryCode(String(data.country));
+      const extra = { dropped: droppedOrNone(dropped) };
       if (Object.keys(data).length === 0) {
-        out.push({ row: rowNo, action: "skip", id: targetId, label });
+        out.push({ row: rowNo, action: "skip", id: targetId, label, message, ...extra });
         continue;
       }
       if (!ctx.dryRun) await prisma.place.update({ where: { id: targetId }, data });
       ctx.wrote = ctx.wrote || !ctx.dryRun;
-      out.push({ row: rowNo, action: "update", id: targetId, label, message });
+      out.push({ row: rowNo, action: "update", id: targetId, label, message, ...extra });
       continue;
     }
 
@@ -159,7 +175,7 @@ export async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<Shee
       ctx.wrote = true;
     }
     registerParent(ctx, "place", { fileId, id: newId ?? pendingId("places", rowNo), labels });
-    out.push({ row: rowNo, action: "create", id: newId, label });
+    out.push({ row: rowNo, action: "create", id: newId, label, dropped: droppedOrNone(dropped) });
   }
 
   const deleted = await pruneMissing("place", seen, ctx);
@@ -245,9 +261,10 @@ export async function importPlaceVisits(sheet: IncomingSheet, ctx: Ctx): Promise
         out.push({ row: rowNo, action: "skip", id: targetId, label, message: "exists" });
         continue;
       }
-      const data = definedOnly(fields);
+      const stored = await prisma.placeVisit.findUniqueOrThrow({ where: { id: targetId } });
+      const data = changedOnly(definedOnly(fields), stored);
       if (Object.keys(data).length === 0) {
-        out.push({ row: rowNo, action: "skip", id: targetId, label });
+        out.push({ row: rowNo, action: "skip", id: targetId, label, message });
         continue;
       }
       if (!ctx.dryRun) await prisma.placeVisit.update({ where: { id: targetId }, data });

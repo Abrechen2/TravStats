@@ -4,7 +4,11 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (k: string, o?: Record<string, unknown>) =>
-      o && "row" in o ? `${k}|${String(o.row)}|${String(o.label)}` : k,
+      o && "row" in o
+        ? `${k}|${String(o.row)}|${String(o.label)}`
+        : o && "value" in o
+          ? `${k}|${String(o.field)}|${String(o.value)}`
+          : k,
     i18n: { language: "de" },
   }),
 }));
@@ -60,6 +64,23 @@ vi.mock("../../../lib/xlsx/importClient", async (importOriginal) => {
             },
           ],
         },
+        {
+          key: "cruises",
+          created: 1,
+          updated: 0,
+          skipped: 0,
+          errors: 0,
+          deleted: 0,
+          rows: [
+            {
+              row: 2,
+              action: "create",
+              id: null,
+              label: "Karibik",
+              dropped: [{ field: "cabinType", value: "Havana Cabana" }],
+            },
+          ],
+        },
       ],
     }),
   };
@@ -91,6 +112,15 @@ describe("SpreadsheetSection — import preview", () => {
     await preview();
     expect(screen.getByTestId("xlsx-row-flights-2").textContent).toContain(
       "xlsx:import.notes.trip_not_linked"
+    );
+  });
+
+  it("names a cell whose value was unknown and left empty (browser acceptance, 2026-09-25)", async () => {
+    await preview();
+    const row = screen.getByTestId("xlsx-row-cruises-2");
+    expect(row.textContent).toContain("xlsx:import.actions.create");
+    expect(row.textContent).toContain(
+      "xlsx:import.droppedValue|xlsx:columns.cabinType|Havana Cabana"
     );
   });
 

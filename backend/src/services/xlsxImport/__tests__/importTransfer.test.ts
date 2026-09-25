@@ -327,7 +327,9 @@ describe("moving entries to another account", () => {
     expect(await countsOf(bId)).toEqual(ONE_OF_EACH);
     expect(second.every((s) => s.created === 0)).toBe(true);
     const actions = second.flatMap((s) => s.rows.map((r) => `${r.action}:${r.message ?? ""}`));
-    expect(new Set(actions)).toEqual(new Set(["update:matched_existing"]));
+    // Matched, and unchanged: the second read is the first file again, so it
+    // writes nothing (it used to rewrite every row as an "update").
+    expect(new Set(actions)).toEqual(new Set(["skip:matched_existing"]));
   });
 
   it("reads a file that still carries the other account's ids twice without duplicating", async () => {

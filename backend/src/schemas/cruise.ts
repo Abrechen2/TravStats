@@ -3,7 +3,7 @@ import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
 import { CRUISE_SORT_FIELDS } from "../shared/cruiseListOrder";
 
-const CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
+export const CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
 const STATUSES = ["scheduled", "flown", "cancelled", "historical"] as const;
 
 /**

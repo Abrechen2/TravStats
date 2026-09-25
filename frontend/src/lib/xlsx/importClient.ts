@@ -37,6 +37,8 @@ export interface RowOutcome {
   message?: string;
   /** Non-fatal remarks, e.g. `trip_not_linked`. */
   notes?: string[];
+  /** Cells the column does not know — left empty, the row still applied. */
+  dropped?: { field: string; value: string }[];
 }
 
 export interface SheetOutcome {

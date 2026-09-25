@@ -20,7 +20,8 @@
  */
 
 import { prisma } from "../../db";
-import { createCruiseSchema, cruiseStopSchema } from "../../schemas/cruise";
+import { CABIN_TYPES, createCruiseSchema, cruiseStopSchema } from "../../schemas/cruise";
+import { toCabinType } from "../cruise/cabinType";
 import { createCruiseRecord } from "../cruise/createCruise";
 import { cruiseFxColumnsIfChanged, findCruiseForFxMerge } from "./fxSnapshot";
 import * as cell from "./cells";
@@ -39,11 +40,20 @@ import {
 } from "./context";
 import { pruneMissing } from "./prune";
 import { cruiseLabelBase, findPortId, findShipId, resolveParent, resolveTrip } from "./references";
-import { summarise, type IncomingSheet, type RowOutcome, type SheetOutcome } from "./types";
+import {
+  summarise,
+  type DroppedValue,
+  type IncomingSheet,
+  type RowOutcome,
+  type SheetOutcome,
+} from "./types";
+import { changedOnly, droppedOrNone, enumCell } from "./values";
 
 /** Statuses the write schema accepts. `in_progress` is derived and stored,
  *  never written — an exported one is dropped and re-derived from the dates. */
-const WRITABLE_STATUSES = new Set(["scheduled", "flown", "cancelled", "historical"]);
+const WRITABLE_STATUSES = ["scheduled", "flown", "cancelled", "historical"] as const;
+/** Stored but derived — our own export writes it, so it is not "unknown". */
+const DERIVED_STATUS = "in_progress";
 
 async function matchCruise(
   ctx: Ctx,
@@ -68,7 +78,14 @@ async function matchCruise(
 async function createCruiseFromRow(
   raw: Record<string, string>,
   ctx: Ctx,
-  base: { startDate?: string; endDate?: string; price?: number; currency?: string },
+  base: {
+    startDate?: string;
+    endDate?: string;
+    price?: number;
+    currency?: string;
+    status?: string;
+    cabinType?: string;
+  },
   tripId: string | undefined,
   notes: string[]
 ): Promise<{ id: string | null } | { error: string }> {
@@ -79,7 +96,7 @@ async function createCruiseFromRow(
   const departurePortId = await findPortId(depName);
   const arrivalPortId = await findPortId(arrName);
   if ((depName && !departurePortId) || (arrName && !arrivalPortId)) notes.push("port_not_found");
-  const status = cell.text(raw.status);
+  const status = base.status;
 
   const parsed = createCruiseSchema.safeParse({
     cruiseLine: cell.text(raw.cruiseLine) ?? null,
@@ -88,11 +105,11 @@ async function createCruiseFromRow(
     routeName: cell.text(raw.routeName) ?? null,
     startDate: base.startDate ?? null,
     endDate: base.endDate ?? null,
-    ...(status && WRITABLE_STATUSES.has(status) ? { status } : {}),
+    ...(status ? { status } : {}),
     departurePortId,
     arrivalPortId,
     cabinNumber: cell.text(raw.cabinNumber) ?? null,
-    cabinType: cell.text(raw.cabinType) ?? null,
+    cabinType: base.cabinType ?? null,
     deck: cell.int(raw.deck) ?? null,
     bookingReference: cell.text(raw.bookingReference) ?? null,
     price: base.price ?? null,
@@ -137,6 +154,12 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
       continue;
     }
     const currency = cell.text(raw.currency);
+    const dropped: DroppedValue[] = [];
+    const cabinType = enumCell(raw.cabinType, CABIN_TYPES, "cabinType", dropped, toCabinType);
+    const status =
+      cell.text(raw.status) === DERIVED_STATUS
+        ? undefined
+        : enumCell(raw.status, WRITABLE_STATUSES, "status", dropped);
     const trip = await resolveTrip(raw.tripId, ctx.userId);
     const notes: string[] = trip.note ? [trip.note] : [];
     const labels = labelForms(
@@ -174,6 +197,7 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
         startDate: startDateValue,
         endDate: endDate ? new Date(endDate) : undefined,
         cabinNumber: cell.text(raw.cabinNumber),
+        cabinType,
         deck,
         bookingReference: cell.text(raw.bookingReference),
         price,
@@ -183,34 +207,36 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
         companions: cell.list(raw.companions),
         tripId: trip.tripId,
       };
-      const existing = owned ?? (await findCruiseForFxMerge(targetId, ctx.userId));
+      const stored = await prisma.cruise.findUniqueOrThrow({ where: { id: targetId } });
+      const data: Record<string, unknown> = changedOnly(definedOnly(fields), stored);
+      const rowNotes = notes.length > 0 ? notes : undefined;
+      const extra = { notes: rowNotes, dropped: droppedOrNone(dropped) };
+      if (Object.keys(data).length === 0) {
+        out.push({ row: rowNo, action: "skip", id: targetId, label, message, ...extra });
+        continue;
+      }
       // FX snapshot (fix round 1, finding 3) — see `xlsxImport/fxSnapshot.ts`.
-      if (existing) {
+      // Only when a column it reads actually changed.
+      if ("price" in data || "currency" in data || "startDate" in data) {
         Object.assign(
-          fields,
+          data,
           await cruiseFxColumnsIfChanged(
             ctx.userId,
             { price, currency, startDate: startDateValue },
-            existing
+            stored
           )
         );
       }
-      const data = definedOnly(fields);
-      const rowNotes = notes.length > 0 ? notes : undefined;
-      if (Object.keys(data).length === 0) {
-        out.push({ row: rowNo, action: "skip", id: targetId, label, notes: rowNotes });
-        continue;
-      }
       if (!ctx.dryRun) await prisma.cruise.update({ where: { id: targetId }, data });
       ctx.wrote = ctx.wrote || !ctx.dryRun;
-      out.push({ row: rowNo, action: "update", id: targetId, label, message, notes: rowNotes });
+      out.push({ row: rowNo, action: "update", id: targetId, label, message, ...extra });
       continue;
     }
 
     const created = await createCruiseFromRow(
       raw,
       ctx,
-      { startDate, endDate, price, currency },
+      { startDate, endDate, price, currency, status, cabinType },
       trip.tripId,
       notes
     );
@@ -234,6 +260,7 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
       id: created.id,
       label,
       notes: notes.length > 0 ? notes : undefined,
+      dropped: droppedOrNone(dropped),
     });
   }
 
@@ -334,24 +361,30 @@ export async function importCruiseStops(sheet: IncomingSheet, ctx: Ctx): Promise
         out.push({ row: rowNo, action: "skip", id: target.id, label, message: "exists" });
         continue;
       }
+      // What the stop IS (port / unresolved / sea day) is always written as
+      // one triple, so the invariant cannot be half-updated; the optional
+      // cells follow the usual rule — blank means "not mentioned".
+      const triple = {
+        dayNumber: stop.dayNumber,
+        isAtSea: stop.isAtSea,
+        portId: stop.portId,
+        unresolvedPortName: stop.unresolvedPortName,
+      };
+      const optional = definedOnly({
+        arrivalTime: arrivalTime ? stop.arrivalTime : undefined,
+        departureTime: departureTime ? stop.departureTime : undefined,
+        excursionNote: cell.text(raw.excursionNote),
+      });
+      const stored = await prisma.cruiseStop.findUniqueOrThrow({ where: { id: target.id } });
+      const changed = changedOnly({ ...triple, ...optional }, stored);
+      if (Object.keys(changed).length === 0) {
+        out.push({ row: rowNo, action: "skip", id: target.id, label, message });
+        continue;
+      }
       if (!ctx.dryRun) {
-        // What the stop IS (port / unresolved / sea day) is always written as
-        // one triple, so the invariant cannot be half-updated; the optional
-        // cells follow the usual rule — blank means "not mentioned".
-        const optional = definedOnly({
-          arrivalTime: arrivalTime ? stop.arrivalTime : undefined,
-          departureTime: departureTime ? stop.departureTime : undefined,
-          excursionNote: cell.text(raw.excursionNote),
-        });
         await prisma.cruiseStop.update({
           where: { id: target.id },
-          data: {
-            dayNumber: stop.dayNumber,
-            isAtSea: stop.isAtSea,
-            portId: stop.portId,
-            unresolvedPortName: stop.unresolvedPortName,
-            ...optional,
-          },
+          data: { ...triple, ...changedOnly(optional, stored) },
         });
         ctx.touchedCruises.add(target.cruiseId);
         ctx.wrote = true;

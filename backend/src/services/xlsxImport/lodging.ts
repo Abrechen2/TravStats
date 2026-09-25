@@ -14,7 +14,14 @@
  */
 
 import { prisma } from "../../db";
-import { createLodgingSchema, createStaySchema, updateStaySchema } from "../../schemas/lodging";
+import {
+  BOARD_TYPES,
+  LODGING_TYPES,
+  STAY_STATUSES,
+  createLodgingSchema,
+  createStaySchema,
+  updateStaySchema,
+} from "../../schemas/lodging";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
 import { createLodgingRecord } from "../lodging/createLodging";
 import { createStayRecord, updateStayRecord } from "../lodging/stayWrites";
@@ -33,7 +40,14 @@ import {
 } from "./context";
 import { pruneMissing } from "./prune";
 import { findChainId, resolveParent } from "./references";
-import { summarise, type IncomingSheet, type RowOutcome, type SheetOutcome } from "./types";
+import {
+  summarise,
+  type DroppedValue,
+  type IncomingSheet,
+  type RowOutcome,
+  type SheetOutcome,
+} from "./types";
+import { changedOnly, droppedOrNone, enumCell } from "./values";
 import logger from "../../utils/logger";
 
 async function matchLodging(
@@ -109,13 +123,15 @@ export async function importLodging(sheet: IncomingSheet, ctx: Ctx): Promise<She
         out.push({ row: rowNo, action: "skip", id: targetId, label, message: "exists" });
         continue;
       }
-      const data = definedOnly({
-        ...fields,
-        isoCountryCode: country ? (resolveCountryCode(country) ?? undefined) : undefined,
-      });
+      const stored = await prisma.lodging.findUniqueOrThrow({ where: { id: targetId } });
+      const data: Record<string, unknown> = changedOnly(definedOnly(fields), stored);
       if (Object.keys(data).length === 0) {
-        out.push({ row: rowNo, action: "skip", id: targetId, label });
+        out.push({ row: rowNo, action: "skip", id: targetId, label, message });
         continue;
+      }
+      if (country && "country" in data) {
+        const code = resolveCountryCode(country);
+        if (code) data.isoCountryCode = code;
       }
       if (!ctx.dryRun) await prisma.lodging.update({ where: { id: targetId }, data });
       ctx.wrote = ctx.wrote || !ctx.dryRun;
@@ -126,7 +142,8 @@ export async function importLodging(sheet: IncomingSheet, ctx: Ctx): Promise<She
     const chainName = cell.text(raw.chain);
     const chainId = await findChainId(chainName);
     const notes = chainName && !chainId ? ["chain_not_found"] : undefined;
-    const type = cell.text(raw.type);
+    const dropped: DroppedValue[] = [];
+    const type = enumCell(raw.type, LODGING_TYPES, "type", dropped);
     const parsed = createLodgingSchema.safeParse({
       ...(type ? { type } : {}),
       name: fields.name,
@@ -158,7 +175,14 @@ export async function importLodging(sheet: IncomingSheet, ctx: Ctx): Promise<She
       ctx.wrote = true;
     }
     registerParent(ctx, "lodging", { fileId, id: newId ?? pendingId("lodging", rowNo), labels });
-    out.push({ row: rowNo, action: "create", id: newId, label, notes });
+    out.push({
+      row: rowNo,
+      action: "create",
+      id: newId,
+      label,
+      notes,
+      dropped: droppedOrNone(dropped),
+    });
   }
 
   const deleted = await pruneMissing("lodging", seen, ctx);
@@ -167,7 +191,7 @@ export async function importLodging(sheet: IncomingSheet, ctx: Ctx): Promise<She
 
 // ------------------------------------------------------------------ stays
 
-function stayFields(raw: Record<string, string>) {
+function stayFields(raw: Record<string, string>, dropped: DroppedValue[]) {
   const checkIn = cell.isoDate(raw.checkIn);
   const checkOut = cell.isoDate(raw.checkOut);
   const pricePerNight = cell.num(raw.pricePerNight);
@@ -184,10 +208,10 @@ function stayFields(raw: Record<string, string>) {
     values: {
       checkIn: checkIn ?? undefined,
       checkOut: checkOut ?? undefined,
-      status: cell.text(raw.status),
+      status: enumCell(raw.status, STAY_STATUSES, "status", dropped),
       roomNumber: cell.text(raw.roomNumber),
       roomCategory: cell.text(raw.roomCategory),
-      board: cell.text(raw.board),
+      board: enumCell(raw.board, BOARD_TYPES, "board", dropped),
       pricePerNight,
       totalPrice,
       currency: cell.text(raw.currency),
@@ -217,7 +241,9 @@ export async function importLodgingStays(sheet: IncomingSheet, ctx: Ctx): Promis
     const fileId = cell.text(raw.id);
     const label = cell.text(raw.lodgingId) ?? `#${rowNo}`;
 
-    const f = stayFields(raw);
+    const dropped: DroppedValue[] = [];
+    const f = stayFields(raw, dropped);
+    const extra = { dropped: droppedOrNone(dropped) };
     if (f.bad) {
       out.push(
         errorRow(
@@ -264,14 +290,17 @@ export async function importLodgingStays(sheet: IncomingSheet, ctx: Ctx): Promis
         out.push({ row: rowNo, action: "skip", id: target.id, label, message: "exists" });
         continue;
       }
-      const values = definedOnly(f.values);
-      if (Object.keys(values).length === 0) {
-        out.push({ row: rowNo, action: "skip", id: target.id, label });
-        continue;
-      }
-      const parsed = updateStaySchema.safeParse(values);
+      const parsed = updateStaySchema.safeParse(definedOnly(f.values));
       if (!parsed.success) {
         out.push(errorRow(rowNo, label, "invalid_row"));
+        continue;
+      }
+      // Compared in the form the writer receives: the schema's ISO strings
+      // against the stored Dates. A changed row still hands the writer every
+      // cell it carried, as before — its derivations (total price, status)
+      // read the row as a whole.
+      if (Object.keys(changedOnly(parsed.data, target)).length === 0) {
+        out.push({ row: rowNo, action: "skip", id: target.id, label, message, ...extra });
         continue;
       }
       if (!ctx.dryRun) {
@@ -283,7 +312,7 @@ export async function importLodgingStays(sheet: IncomingSheet, ctx: Ctx): Promis
         }
         ctx.wrote = true;
       }
-      out.push({ row: rowNo, action: "update", id: target.id, label, message });
+      out.push({ row: rowNo, action: "update", id: target.id, label, message, ...extra });
       continue;
     }
 
@@ -306,7 +335,7 @@ export async function importLodgingStays(sheet: IncomingSheet, ctx: Ctx): Promis
       ctx.claimed.add(newId);
       ctx.wrote = true;
     }
-    out.push({ row: rowNo, action: "create", id: newId, label });
+    out.push({ row: rowNo, action: "create", id: newId, label, ...extra });
   }
 
   return summarise(sheet.key, out, 0);

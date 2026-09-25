@@ -62,6 +62,16 @@ function SheetRows({ sheet, t }: { sheet: SheetOutcome; t: Translate }): JSX.Ele
                 · {t(`xlsx:import.notes.${n}`, { defaultValue: n })}
               </span>
             ))}
+            {(r.dropped ?? []).map((d) => (
+              <span key={`dropped-${d.field}`} style={{ color: "var(--text-muted)" }}>
+                {" "}
+                ·{" "}
+                {t("xlsx:import.droppedValue", {
+                  field: t(`xlsx:columns.${d.field}`, { defaultValue: d.field }),
+                  value: d.value,
+                })}
+              </span>
+            ))}
           </li>
         ))}
       </ul>

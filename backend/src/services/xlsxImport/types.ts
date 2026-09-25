@@ -58,6 +58,19 @@ export interface RowOutcome {
   message?: string;
   /** Non-fatal remarks the row was applied with (e.g. `trip_not_linked`). */
   notes?: string[];
+  /**
+   * Cells whose value the field does not know — an old free-text cabin type,
+   * a board type nobody offers. The field is left empty (abstention, not a
+   * guess) and the ROW is still applied; a whole cruise refused over its cabin
+   * cost the demo data every cruise it had.
+   */
+  dropped?: DroppedValue[];
+}
+
+/** One unknown cell value: the column key and the text as it stood. */
+export interface DroppedValue {
+  field: string;
+  value: string;
 }
 
 export interface SheetOutcome {
