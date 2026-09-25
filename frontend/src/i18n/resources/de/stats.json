@@ -458,9 +458,9 @@
     "highestAirport": "Höchster Flughafen",
     "highestAirportDesc": "{{name}} ({{code}}) auf {{altitude}}m",
     "northernmost": "Nördlichster Punkt",
-    "northernmostDesc": "{{code}} bei {{lat}}°N",
+    "northernmostDesc": "{{code}} bei {{lat}}",
     "southernmost": "Südlichster Punkt",
-    "southernmostDesc": "{{code}} bei {{lat}}°S",
+    "southernmostDesc": "{{code}} bei {{lat}}",
     "longestTravelChain": "Längste Reisekette",
     "longestTravelChainDesc": "{{count}} aufeinanderfolgende Flüge",
     "fastestRoute": "Schnellste Route",
@@ -688,7 +688,8 @@
       "flights_other": "Flüge",
       "days_one": "Tag",
       "days_other": "Tage",
-      "north": "Nord"
+      "north": "Nord",
+      "south": "Süd"
     }
   },
   "wrapped": {

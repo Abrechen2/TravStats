@@ -37,8 +37,14 @@ export function formatRecordValue(record: TravelRecord, ctx: RecordFormatContext
       return `${value.toLocaleString(locale)} ${ctx.t("stats:records.units.flights", { count: value })}`;
     case "days":
       return `${value.toLocaleString(locale)} ${ctx.t("stats:records.units.days", { count: value })}`;
-    case "degrees-north":
-      return `${value.toLocaleString(locale, { maximumFractionDigits: 1 })}° ${ctx.t("stats:records.units.north")}`;
+    case "degrees-north": {
+      // `degrees-north` is the AXIS, north-positive — not a claim that the
+      // point is north of the equator. Printing the signed number beside the
+      // word "Nord" read "-33,9° Nord" for a southern airport
+      // (SRV-STATS-HEMISPHERE-001); the sign picks the word instead.
+      const word = value < 0 ? "stats:records.units.south" : "stats:records.units.north";
+      return `${Math.abs(value).toLocaleString(locale, { maximumFractionDigits: 1 })}° ${ctx.t(word)}`;
+    }
     default:
       // The union is closed, but a payload is not the type system: a unit this
       // build does not know prints the bare number rather than "undefined".

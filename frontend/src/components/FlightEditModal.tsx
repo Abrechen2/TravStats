@@ -100,10 +100,16 @@ export default function FlightEditModal({
       baggageAllowance: f.baggageAllowance || "",
       frequentFlyerNumber: f.frequentFlyerNumber || "",
       companions: f.companions ?? [],
-      price: f.price || 0,
+      // `?? undefined`, never `|| 0`: the modal used to load a stored 0 and a
+      // stored null into the same form state, and write `> 0 ? … : null`
+      // back — so changing only the seat number DELETED a valid zero price,
+      // and `priceBase`, `fxRate` and the currency metadata went with it
+      // (audit 2026-09-20, SRV-UI-001). `undefined` is the one value
+      // `CostFields` reads as "not recorded".
+      price: f.price ?? undefined,
       currency: f.currency || "EUR",
-      taxes: f.taxes || 0,
-      fees: f.fees || 0,
+      taxes: f.taxes ?? undefined,
+      fees: f.fees ?? undefined,
       notes: f.notes || "",
       tags: f.tags?.join(", ") || "",
       receiptUrl: f.receiptUrl || "",
@@ -347,10 +353,12 @@ export default function FlightEditModal({
         baggageAllowance: formData.baggageAllowance || null,
         frequentFlyerNumber: formData.frequentFlyerNumber || null,
         companions: formData.companions,
-        price: formData.price > 0 ? formData.price : null,
+        // A recorded 0 is a price — an award flight, a staff ticket — and
+        // only an empty field is `null`. See `shared/flightPricing.ts`.
+        price: formData.price ?? null,
         currency: formData.currency as FlightInput["currency"],
-        taxes: formData.taxes > 0 ? formData.taxes : null,
-        fees: formData.fees > 0 ? formData.fees : null,
+        taxes: formData.taxes ?? null,
+        fees: formData.fees ?? null,
         notes: formData.notes || null,
         tags: splitTagText(formData.tags),
         receiptUrl: formData.receiptUrl || null,
@@ -713,25 +721,25 @@ export default function FlightEditModal({
           coPassengers={flight.coPassengers}
         />
 
-        {/* Cost (#192, #199) — shared with the create form. The modal keeps
-              its historical empty-means-0 internal state; CostFields speaks
-              undefined-means-unrecorded, so the adapter converts both ways.
-              The submit-side `> 0` strip below is unchanged. */}
+        {/* Cost (#192, #199) — shared with the create form. The modal's own
+              state now speaks the same undefined-means-unrecorded language
+              CostFields does, so nothing is converted here and a 0 survives
+              the round trip (SRV-UI-001). */}
         <CostFields
           value={{
-            price: formData.price > 0 ? formData.price : undefined,
+            price: formData.price,
             currency: formData.currency || "EUR",
-            taxes: formData.taxes > 0 ? formData.taxes : undefined,
-            fees: formData.fees > 0 ? formData.fees : undefined,
+            taxes: formData.taxes,
+            fees: formData.fees,
             receiptUrl: formData.receiptUrl,
           }}
           onChange={(v) =>
             setFormData((prev) => ({
               ...prev,
-              price: v.price ?? 0,
+              price: v.price,
               currency: v.currency,
-              taxes: v.taxes ?? 0,
-              fees: v.fees ?? 0,
+              taxes: v.taxes,
+              fees: v.fees,
               receiptUrl: v.receiptUrl,
             }))
           }

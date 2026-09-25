@@ -80,10 +80,26 @@ export function decodeBcbp(raw: string, now: Date = new Date()): DecodedBcbp | n
   };
 }
 
+/** 366 days only where February has 29. */
+function daysInYear(year: number): number {
+  const leap = (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0;
+  return leap ? 366 : 365;
+}
+
 /**
  * BCBP carries only the Julian day-of-year (001-366) — no year. Resolve to the
  * calendar year whose resulting date is closest to `now`, so a Dec/Jan boundary
  * picks correctly.
+ *
+ * A candidate year that does not HAVE the day is skipped. `setUTCDate(366)` on
+ * a non-leap year does not fail, it rolls over into January of the next one:
+ * asked on 20.09.2026 for day 366, the decoder answered 2027-01-01 with
+ * nothing in `missing`, so a boarding pass for 31 December was proposed as New
+ * Year's Day and the field looked fully recognised (audit 2026-09-20,
+ * SRV-BCBP-DATE-001). Day 366 is only a date in a leap year; where none of the
+ * three candidates is one, the decoder abstains and the date joins `missing`
+ * for the user to supply. A wrong day that looks certain is worse than an
+ * absent one that asks.
  */
 function julianToISO(julian: string, now: Date): string | undefined {
   const day = parseInt(julian, 10);
@@ -93,6 +109,7 @@ function julianToISO(julian: string, now: Date): string | undefined {
   let best: Date | undefined;
   let bestDiff = Infinity;
   for (const y of [year - 1, year, year + 1]) {
+    if (day > daysInYear(y)) continue;
     const d = new Date(Date.UTC(y, 0, 1));
     d.setUTCDate(day);
     const diff = Math.abs(d.getTime() - now.getTime());

@@ -128,8 +128,14 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
     setRemoveCover(false);
   }, [trip]);
 
+  // Both inputs are `type="date"`, so their values are YYYY-MM-DD and compare
+  // correctly as strings. The audit saved 10.08. → 01.08. through this very
+  // form and got a 200 (SRV-TRIP-DATE-001); the server refuses that now, and
+  // this says WHICH field is wrong instead of raising a generic save toast.
+  const datesOutOfOrder = Boolean(startDate && endDate && endDate < startDate);
+
   const handleSave = async (): Promise<void> => {
-    if (!name.trim()) return;
+    if (!name.trim() || datesOutOfOrder) return;
     setSaving(true);
     try {
       // The cover image is never sent as a field here — it's uploaded
@@ -294,7 +300,13 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                     onChange={(e) => setEndDate(e.target.value)}
                     className="w-full rounded-lg px-3 py-2 text-sm"
                     style={inputStyle}
+                    aria-invalid={datesOutOfOrder}
                   />
+                  {datesOutOfOrder && (
+                    <p className="text-[11px] mt-1" style={{ color: "var(--color-danger)" }}>
+                      {t("trips:modal.endBeforeStart")}
+                    </p>
+                  )}
                 </Field>
               </div>
               {offerEntrySpan && entrySpan && (
@@ -478,7 +490,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           </button>
           <button
             onClick={() => void handleSave()}
-            disabled={!name.trim() || saving}
+            disabled={!name.trim() || saving || datesOutOfOrder}
             type="button"
             className="px-4 py-2 rounded-lg text-sm font-medium bg-(--accent) text-(--bg-base) disabled:opacity-50"
           >

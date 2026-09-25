@@ -54,6 +54,7 @@
     "startDateLabel": "Start Date",
     "endDateLabel": "End Date",
     "useEntrySpan": "Use the span of the entries: {{start}} – {{end}}",
+    "endBeforeStart": "The end date cannot be before the start date.",
     "originLabel": "Origin",
     "destinationLabel": "Destination",
     "tagsLabel": "Tags",

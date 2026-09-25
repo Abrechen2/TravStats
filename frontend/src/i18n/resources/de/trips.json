@@ -54,6 +54,7 @@
     "startDateLabel": "Startdatum",
     "endDateLabel": "Enddatum",
     "useEntrySpan": "Zeitraum der Einträge übernehmen: {{start}} – {{end}}",
+    "endBeforeStart": "Das Ende darf nicht vor dem Beginn liegen.",
     "originLabel": "Herkunft",
     "destinationLabel": "Ziel",
     "tagsLabel": "Tags",
