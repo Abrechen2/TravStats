@@ -20,7 +20,14 @@ export const continentSchema = z.enum([
   "South America",
 ]);
 
-export const passportEvidenceSchema = z.enum(["flight", "lodging", "port", "place", "track"]);
+export const passportEvidenceSchema = z.enum([
+  "flight",
+  "lodging",
+  "port",
+  "place",
+  "roadtrip",
+  "track",
+]);
 
 export const countryAirportUseSchema = z.object({
   iata: z.string(),
@@ -63,6 +70,21 @@ const timelineLodgingSchema = z.object({
   name: z.string(),
 });
 
+const timelineRoadtripSchema = z
+  .object({
+    kind: z.literal("roadtrip"),
+    date: z.string().nullable(),
+    roadtripId: z.string(),
+    roadtripName: z.string(),
+    stationId: z.string(),
+    stationTitle: z.string(),
+  })
+  .openapi({
+    description:
+      "A station of a roadtrip that has started — one entry per station, linked to " +
+      "the roadtrip, which is where a station is edited.",
+  });
+
 const timelineTrackSchema = z
   .object({
     kind: z.literal("track"),
@@ -88,6 +110,7 @@ export const countryTimelineEntrySchema = z.discriminatedUnion("kind", [
   timelinePortSchema,
   timelinePlaceSchema,
   timelineLodgingSchema,
+  timelineRoadtripSchema,
   timelineTrackSchema,
 ]);
 
@@ -110,6 +133,9 @@ export const countryDetailSchema = z.object({
   places: z.number().int(),
   lodgings: z.number().int().openapi({
     description: "Houses here whose record proves presence.",
+  }),
+  roadtripStations: z.number().int().openapi({
+    description: "Stations of started roadtrips standing in this country.",
   }),
   trackDays: z
     .number()

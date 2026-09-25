@@ -15,7 +15,10 @@
     "lodgingStays": "Aufenthalte",
     "places": "Orte",
     "placeVisits": "Besuche",
-    "trips": "Reisen"
+    "trips": "Reisen",
+    "roadtrips": "Roadtrips",
+    "roadtripStations": "Roadtrip-Stationen",
+    "tours": "Touren"
   },
   "hints": {
     "cruises": "Eine Zeile je Kreuzfahrt. Die ID in Spalte A nicht ändern — sie ordnet die Zeile beim Import wieder ihrem Eintrag zu. Neue Kreuzfahrten lassen sich hier NICHT anlegen: eine Zeile ohne ID wird als Fehler gemeldet, weil eine Kreuzfahrt ohne Schiff, Häfen und Stopps kein brauchbarer Eintrag wäre. Dafür gibt es das Formular.",
@@ -24,7 +27,10 @@
     "lodgingStays": "Eine Zeile je Aufenthalt. Die Spalte „Unterkunft“ verweist über die ID in eckigen Klammern auf das Blatt „Unterkünfte“. Nächte werden berechnet und lassen sich hier nicht setzen.",
     "places": "Eine Zeile je Ort. Besuche stehen im eigenen Blatt.",
     "placeVisits": "Eine Zeile je Besuch. Die Spalte „Ort“ verweist über die ID in eckigen Klammern auf das Blatt „Orte“.",
-    "flights": "Eine Zeile je Flug. Die ID in Spalte A nicht ändern — sie ordnet die Zeile beim Import wieder ihrem Eintrag zu. Flughäfen stehen als IATA-Code; wird ein Code geändert, verschiebt das den Flug. Zeilen ohne ID werden als neuer Flug angelegt."
+    "flights": "Eine Zeile je Flug. Die ID in Spalte A nicht ändern — sie ordnet die Zeile beim Import wieder ihrem Eintrag zu. Flughäfen stehen als IATA-Code; wird ein Code geändert, verschiebt das den Flug. Zeilen ohne ID werden als neuer Flug angelegt.",
+    "roadtrips": "Ein Roadtrip pro Zeile. Ohne ID wird ein neuer angelegt. Fahrzeug: motorhome, campervan, caravan, car, motorcycle, bicycle oder other. Grau geschriebene Spalten sind abgeleitet und werden nicht übernommen.",
+    "roadtripStations": "Eine Station pro Zeile. Die Spalte Reihenfolge bestimmt die Abfolge — 2,5 fügt eine Station zwischen 2 und 3 ein. Nacht: stay (mit Unterkunft in der Spalte Unterkunft), free (ohne Unterkunft) oder pass (Durchfahrt). Eine Station, die hier fehlt, bleibt erhalten — außer beim Ersetzen.",
+    "tours": "Nur zum Lesen: eine Tour wird an ihrer Aufzeichnung gemessen, und die passt in keine Zelle. Änderungen hier werden nicht übernommen."
   },
   "columns": {
     "id": "ID",
@@ -86,7 +92,22 @@
     "aircraft": "Flugzeug",
     "registration": "Kennzeichen",
     "seat": "Sitz",
-    "seatClass": "Klasse"
+    "seatClass": "Klasse",
+    "vehicle": "Fahrzeug",
+    "vehicleName": "Eigenname",
+    "drivenKm": "Gefahren (km)",
+    "distanceKm": "Strecke (km)",
+    "startOdometerKm": "Km-Stand Start",
+    "endOdometerKm": "Km-Stand Ende",
+    "roadtrip": "Roadtrip",
+    "order": "Reihenfolge",
+    "stationArrival": "Ankunft",
+    "stationDeparture": "Abfahrt",
+    "night": "Nacht",
+    "stay": "Unterkunft",
+    "activity": "Aktivität",
+    "ascentM": "Aufstieg (m)",
+    "movingMinutes": "In Bewegung (min)"
   },
   "import": {
     "title": "Excel-Import",
@@ -117,7 +138,16 @@
       "invalid_rating": "Die Bewertung muss zwischen 1 und 5 liegen.",
       "unknown_airport": "Der IATA-Code ist unbekannt.",
       "flight_needs_route": "Ein neuer Flug braucht Von, Nach, Airline und Flugnummer.",
-      "invalid_status": "Unbekannter Status."
+      "invalid_status": "Unbekannter Status.",
+      "invalid_vehicle": "Dieses Fahrzeug kennt TravStats nicht.",
+      "roadtrip_needs_name": "Ein neuer Roadtrip braucht einen Namen.",
+      "station_needs_point": "Eine Station braucht Breite und Länge als Zahlen.",
+      "station_needs_title": "Eine Station braucht einen Namen.",
+      "invalid_night": "Nacht muss stay, free oder pass sein.",
+      "station_needs_stay": "Eine Nacht in einer Unterkunft braucht die Unterkunft.",
+      "station_needs_roadtrip": "Die Station nennt keinen Roadtrip.",
+      "unknown_stay": "Diese Unterkunft gibt es in deinem Konto nicht.",
+      "station_list_refused": "Die Stationen dieses Roadtrips ließen sich nicht übernehmen."
     },
     "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
     "modes": {

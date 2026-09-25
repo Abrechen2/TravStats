@@ -59,6 +59,9 @@ const linkFor = (entry: CountryTimelineEntry): string => {
       // The house itself, not the list. A list is where a reader starts
       // hunting; the design's promise is that they do not have to.
       return `/lodging/${entry.lodgingId}`;
+    case "roadtrip":
+      // Stations are edited on their roadtrip; there is no page of their own.
+      return `/roadtrips/${entry.roadtripId}`;
     case "track":
       // There is no record to open — a country-day is a reduction of a
       // location history, not something anybody typed. What CAN be reached is
@@ -91,6 +94,10 @@ const labelFor = (
     case "place":
     case "lodging":
       return entry.name;
+    case "roadtrip":
+      // Both names, and no words between them to translate: the station says
+      // where, the roadtrip is what the link opens.
+      return `${entry.stationTitle} · ${entry.roadtripName}`;
     case "track":
       // The two observable facts, and no verdict between them (§8.3): how many
       // days were recorded, and how thinly. A phrase like "GPS-measured" would
@@ -163,7 +170,14 @@ export default function CountryProvenance({ code }: { code: string }): JSX.Eleme
           {timeline.map((entry) => {
             const date = isoDate(entry.date, locale);
             return (
-              <li key={`${entry.kind}-${linkFor(entry)}-${entry.date ?? "undated"}`}>
+              <li
+                key={
+                  // Several stations of one roadtrip share a link and a day.
+                  entry.kind === "roadtrip"
+                    ? `roadtrip-${entry.stationId}`
+                    : `${entry.kind}-${linkFor(entry)}-${entry.date ?? "undated"}`
+                }
+              >
                 <Link
                   to={linkFor(entry)}
                   className="hover:underline"

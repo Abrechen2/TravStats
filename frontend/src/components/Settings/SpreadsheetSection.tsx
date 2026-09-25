@@ -17,6 +17,9 @@ import { cruiseApi } from "../../lib/api/cruise";
 import { flightsApi } from "../../lib/api/flights";
 import { listLodgings } from "../../lib/api/lodging";
 import { placesApi } from "../../lib/api/places";
+import { roadtripsApi } from "../../lib/api/roadtrips";
+import { tourIndexApi } from "../../lib/api/tourIndex";
+import { useToursVisible } from "../../hooks/useToursVisible";
 import { exportFilename, exportWorkbook } from "../../lib/xlsx/exportAll";
 import {
   ImportRefused,
@@ -47,6 +50,7 @@ type Pending = { key: string; rows: Record<string, string>[] }[];
 export default function SpreadsheetSection(): JSX.Element {
   const { t, i18n } = useTranslation(["xlsx", "common"]);
   const { isEnabled } = useEnabledDomains();
+  const toursVisible = useToursVisible();
   const [status, setStatus] = useState<Status>("idle");
 
   const handleExport = useCallback(async () => {
@@ -55,7 +59,7 @@ export default function SpreadsheetSection(): JSX.Element {
       // Only domains this instance actually runs. Asking the cruise endpoint
       // on an instance with cruises switched off would 404 and fail the whole
       // export over data the user does not have.
-      const [flights, cruises, lodging, places] = await Promise.all([
+      const [flights, cruises, lodging, places, roadtrips, tours] = await Promise.all([
         // The list endpoint pages; one large page is enough for an export and
         // keeps this to a single request.
         isEnabled("flight")
@@ -64,9 +68,18 @@ export default function SpreadsheetSection(): JSX.Element {
         isEnabled("cruise") ? cruiseApi.list() : Promise.resolve([]),
         isEnabled("lodging") ? listLodgings() : Promise.resolve([]),
         isEnabled("poi") ? placesApi.list() : Promise.resolve([]),
+        // A station sheet needs every station, which only the detail carries.
+        isEnabled("roadtrip")
+          ? roadtripsApi.list().then((rows) => Promise.all(rows.map((r) => roadtripsApi.get(r.id))))
+          : Promise.resolve([]),
+        toursVisible ? tourIndexApi.list("tour") : Promise.resolve([]),
       ]);
 
-      const blob = await exportWorkbook(t, { flights, cruises, lodging, places }, i18n.language);
+      const blob = await exportWorkbook(
+        t,
+        { flights, cruises, lodging, places, roadtrips, tours },
+        i18n.language
+      );
       if (!blob) {
         setStatus("empty");
         return;
@@ -86,7 +99,7 @@ export default function SpreadsheetSection(): JSX.Element {
     } catch {
       setStatus("failed");
     }
-  }, [isEnabled, t, i18n.language]);
+  }, [isEnabled, toursVisible, t, i18n.language]);
 
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);

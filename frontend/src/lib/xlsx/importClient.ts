@@ -12,6 +12,7 @@ import api from "./../api/client";
 import { parseWorkbook } from "./workbook";
 import { cruiseSheet, flightSheet, lodgingSheet, placeSheet, placeVisitSheet } from "./sheets";
 import type { SheetSpec } from "./sheetSpec";
+import { roadtripSheet, roadtripStationSheet } from "./roadtripSheets";
 
 type T = (key: string) => string;
 
@@ -71,6 +72,9 @@ function importableSpecs(t: T): SheetSpec<never>[] {
     placeVisitSheet(t),
     cruiseSheet(t),
     lodgingSheet(t),
+    // Roadtrips before their stations, as the server applies them.
+    roadtripSheet(t),
+    roadtripStationSheet(t),
   ] as unknown as SheetSpec<never>[];
 }
 

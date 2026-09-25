@@ -30,6 +30,7 @@ import { buildTzMap, withDepartureClock } from "./departureClock";
 import { buildPassport } from "./passport";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { classifyVisit } from "../../shared/placeCounting";
+import { loadRoadtripStations } from "./roadtripEvidenceLoader";
 
 /**
  * The airport codes a passport-shaped flight row touches, deduplicated.
@@ -199,7 +200,7 @@ export async function loadPassport(
    * "Deutschland" and "Germany" are one country and only the code knows that.
    */
   // prettier-ignore
-  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold] = await Promise.all([
+  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations] = await Promise.all([
     loadAirportCountries(passportAirportCodes(flights)),
     prisma.cruiseStop.findMany({
       where: {
@@ -282,6 +283,10 @@ export async function loadPassport(
      * folded and returned at every threshold.
      */
     countryThresholdFor(userId),
+    // Stations of started roadtrips — the evidence the Stats overview already
+    // counted and this passport did not. Same loader as the drill-down, so a
+    // row and its page agree about which station proved a country.
+    loadRoadtripStations(userId, now),
   ]);
 
   return buildPassport(
@@ -324,6 +329,7 @@ export async function loadPassport(
       pointCount: row.pointCount,
       airportPointCount: row.airportPointCount,
       partialWindow: row.partialWindow,
-    }))
+    })),
+    roadtripStations
   );
 }

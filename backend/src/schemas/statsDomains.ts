@@ -91,7 +91,8 @@ export const travelAccountSchema = z.object({
       description:
         "Stays with no usable date. They count in the totals — a hotel you cannot " +
         "date is still one you slept in — and in no year, because a guessed " +
-        "position would be indistinguishable from a known one.",
+        "position would be indistinguishable from a known one. Includes free-pitch " +
+        "nights at an undated roadtrip station, which are the same fact.",
     }),
   contestedNights: z.number().int().openapi({
     description: "Nights claimed by more than one record, reported rather than silently picked.",

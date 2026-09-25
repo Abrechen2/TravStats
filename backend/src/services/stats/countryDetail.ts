@@ -69,6 +69,14 @@ import {
 import { lodgingEvidence, type CountableStay } from "../../shared/countryEvidence";
 import { lodgingCountry, placeVisitCountry, portCallCountry } from "./evidenceCountry";
 import type { PassportEvidence } from "./passport";
+import type { LoadedRoadtripStation } from "./roadtripEvidenceLoader";
+
+/**
+ * A roadtrip station, as the loader shared with the passport hands it over —
+ * country resolved, night and days already decided — so a row and its page
+ * cannot disagree about which station proved a country.
+ */
+export type CountryDetailRoadtripStation = LoadedRoadtripStation;
 
 /** The columns the derivation reads. Any flight row is a superset. */
 export interface CountryDetailFlight {
@@ -175,7 +183,8 @@ const KIND_RANK: Record<CountryTimelineEntry["kind"], number> = {
   port: 1,
   place: 2,
   lodging: 3,
-  track: 4,
+  roadtrip: 4,
+  track: 5,
 };
 
 const isoDay = (at: Date | null): string | null => (at ? at.toISOString().slice(0, 10) : null);
@@ -203,7 +212,8 @@ export function buildCountryDetail(
   placeVisits: readonly CountryDetailPlaceVisit[] = [],
   lodgings: readonly CountryDetailLodging[] = [],
   trackDays: readonly CountryDetailTrackDay[] = [],
-  timelineLimit: number = COUNTRY_TIMELINE_LIMIT
+  timelineLimit: number = COUNTRY_TIMELINE_LIMIT,
+  roadtripStations: readonly CountryDetailRoadtripStation[] = []
 ): CountryDetail | null {
   const wanted = isoCountryCode(code);
   if (!wanted) return null;
@@ -338,6 +348,28 @@ export function buildCountryDetail(
   }
 
   /**
+   * A roadtrip station, one entry each and linked to its roadtrip — the page
+   * that edits it. Like a house it touches neither `entries` nor `airports`.
+   * The country arrives resolved by the loader the passport uses too.
+   */
+  let roadtripStationCount = 0;
+  for (const s of roadtripStations) {
+    if (s.country !== wanted) continue;
+    roadtripStationCount += 1;
+    stretchYears(s.at);
+    const lastDay = s.days[s.days.length - 1];
+    if (lastDay) stretchYears(new Date(`${lastDay}T00:00:00.000Z`));
+    timeline.push({
+      kind: "roadtrip",
+      date: isoDay(s.at),
+      roadtripId: s.roadtripId,
+      roadtripName: s.roadtripName,
+      stationId: s.stationId,
+      stationTitle: s.title,
+    });
+  }
+
+  /**
    * Measured presence, folded into ONE entry rather than one per day.
    *
    * A country driven through for a fortnight would otherwise contribute
@@ -368,6 +400,7 @@ export function buildCountryDetail(
     portCallCount === 0 &&
     placeCount === 0 &&
     lodgingCount === 0 &&
+    roadtripStationCount === 0 &&
     trackDayCount === 0
   ) {
     return null;
@@ -402,7 +435,9 @@ export function buildCountryDetail(
           ? "place"
           : lodgingCount > 0
             ? "lodging"
-            : "track";
+            : roadtripStationCount > 0
+              ? "roadtrip"
+              : "track";
 
   return {
     code: wanted,
@@ -420,6 +455,7 @@ export function buildCountryDetail(
     portCalls: portCallCount,
     places: placeCount,
     lodgings: lodgingCount,
+    roadtripStations: roadtripStationCount,
     trackDays: trackDayCount,
     anchor: anchored ? { iata: anchored[0], lat: anchored[1].lat, lon: anchored[1].lon } : null,
     timeline: ordered.slice(0, timelineLimit),

@@ -6,6 +6,7 @@ import { flightEvidenceEntry } from "./entryMappers";
 import {
   cruiseEvidenceEntry,
   pageSumEntries,
+  roadtripEvidenceEntry,
   stayEvidenceEntry,
   tripEvidenceEntry,
 } from "./entryMappersDomains";
@@ -101,7 +102,7 @@ function nightEntriesFor(
   subtitleOf: (id: string) => EvidenceEntry["subtitle"]
 ): EvidenceEntry[] {
   if (source === "hotel") {
-    return data.stays
+    const stayEntries = data.stays
       .filter((stay) => contributionById.has(stay.id))
       .map((stay) =>
         stayEvidenceEntry(stay, {
@@ -109,6 +110,22 @@ function nightEntriesFor(
           subtitle: subtitleOf(stay.id),
         })
       );
+    // A free-pitch night claims the hotel bucket too, so the panel names the
+    // station — identity is the station, the link its roadtrip, where it is
+    // edited. Leaving it out would list fewer nights than the tile counts.
+    const freeEntries = data.freeNights
+      .filter((night) => contributionById.has(night.id))
+      .map((night) => ({
+        ...roadtripEvidenceEntry(
+          { id: night.roadtripId, name: night.roadtripName, startDate: night.from },
+          {
+            contribution: contributionById.get(night.id)!,
+            subtitle: subtitleOf(night.id) ?? { text: night.title },
+          }
+        ),
+        id: night.id,
+      }));
+    return [...stayEntries, ...freeEntries];
   }
   if (source === "sea") {
     return data.cruises

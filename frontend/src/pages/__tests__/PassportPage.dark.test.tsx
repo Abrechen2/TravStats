@@ -65,7 +65,7 @@ const passport = (over: Partial<Passport["summary"]> = {}): Passport => ({
     continentsTotal: 7,
     firstStampYear: 2008,
     newThisYear: 1,
-    byEvidence: { flight: 31, port: 5, place: 2, lodging: 5, track: 0 },
+    byEvidence: { flight: 31, port: 5, place: 2, lodging: 5, roadtrip: 0, track: 0 },
     byTier: { slept: 12, visited: 28, transited: 0, connection: 3 },
     ...over,
   },

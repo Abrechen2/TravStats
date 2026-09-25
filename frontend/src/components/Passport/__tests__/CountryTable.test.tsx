@@ -51,6 +51,7 @@ const emptyDetail = (code: string): CountryDetail => ({
   portCalls: 0,
   places: 0,
   lodgings: 0,
+  roadtripStations: 0,
   trackDays: 0,
   anchor: null,
   timeline: [],
