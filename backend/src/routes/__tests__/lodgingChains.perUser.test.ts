@@ -129,6 +129,38 @@ describe("hotel chains are per user, the catalogue is shared", () => {
     expect(res.status).toBe(400);
   });
 
+  it("B cannot attach A's chain to a card on the loyalty page either, on create or on edit", async () => {
+    // The loyalty page writes the same rows through its own router; a chain
+    // check that held on one write path and not the other would be no check.
+    const created = await request(app)
+      .post("/api/v1/loyalty-memberships")
+      .set("Cookie", bCookie)
+      .send({ domain: "lodging", programName: `B Loyalty ${stamp}`, chainIds: [aChainId] });
+    expect(created.status).toBe(400);
+
+    const own = await request(app)
+      .post("/api/v1/loyalty-memberships")
+      .set("Cookie", bCookie)
+      .send({ domain: "lodging", programName: `B Loyalty Own ${stamp}` });
+    expect(own.status).toBe(201);
+    const patched = await request(app)
+      .patch(`/api/v1/loyalty-memberships/${own.body.data.id}`)
+      .set("Cookie", bCookie)
+      .send({ chainIds: [aChainId] });
+    expect(patched.status).toBe(400);
+    const links = await prisma.lodgingMembershipChain.count({
+      where: { membershipId: own.body.data.id },
+    });
+    expect(links).toBe(0);
+
+    // The catalogue stays linkable from the same route.
+    const catalogue = await request(app)
+      .patch(`/api/v1/loyalty-memberships/${own.body.data.id}`)
+      .set("Cookie", bCookie)
+      .send({ chainIds: [catalogueId] });
+    expect(catalogue.status).toBe(200);
+  });
+
   it("the catalogue stays visible to both, and a known catalogue name creates nothing", async () => {
     expect((await list(aCookie, catalogueName)).map((c) => c.id)).toEqual([catalogueId]);
     expect((await list(bCookie, catalogueName)).map((c) => c.id)).toEqual([catalogueId]);

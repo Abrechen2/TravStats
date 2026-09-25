@@ -12,6 +12,7 @@ import {
   type TierPeriodInput,
 } from "../schemas/loyalty";
 import { type LoyaltyDomain } from "../shared/domains";
+import { assertChainsVisible } from "../services/lodging/chainScope";
 import { loadFrequentFlyerSuggestions } from "../services/loyalty/frequentFlyerSuggestions";
 import { loadMembershipActivity } from "../services/loyalty/membershipActivity";
 import logger from "../utils/logger";
@@ -70,17 +71,6 @@ function isUniqueConstraintError(error: unknown): boolean {
 }
 
 const DUPLICATE = "A membership for this programme already exists in this domain";
-
-async function resolveChainIds(chainIds: number[]): Promise<number[]> {
-  const unique = Array.from(new Set(chainIds));
-  if (unique.length === 0) return [];
-  const found = await prisma.lodgingChain.findMany({
-    where: { id: { in: unique } },
-    select: { id: true },
-  });
-  if (found.length !== unique.length) throw new AppError("Unknown chain id(s)", 400);
-  return unique;
-}
 
 /** Scoped to the caller: another user's hotel is "unknown", like one that never existed. */
 async function resolveLodgingIds(lodgingIds: string[], userId: string): Promise<string[]> {
@@ -152,7 +142,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
     const { chainIds, lodgingIds, tierPeriods, airlineCodes, cruiseLines, ...fields } = parsed.data;
-    const chainLinks = await resolveChainIds(chainIds ?? []);
+    const chainLinks = await assertChainsVisible(userId, chainIds ?? []);
     const lodgingLinks = await resolveLodgingIds(lodgingIds ?? [], userId);
 
     try {
@@ -200,7 +190,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const { chainIds, lodgingIds, tierPeriods, airlineCodes, cruiseLines, ...fields } = parsed.data;
     // Absent leaves a list alone, an array replaces it — editing a tier can
     // never unlink a chain or wipe the status history as a side effect.
-    const chainLinks = chainIds === undefined ? null : await resolveChainIds(chainIds);
+    const chainLinks = chainIds === undefined ? null : await assertChainsVisible(userId, chainIds);
     const lodgingLinks =
       lodgingIds === undefined ? null : await resolveLodgingIds(lodgingIds, userId);
 
