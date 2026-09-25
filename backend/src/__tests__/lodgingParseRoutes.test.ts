@@ -60,6 +60,7 @@ jest.mock("../services/cruiseBookingParser", () => ({
 
 import { parseLodgingBookingText } from "../services/lodging/lodgingBookingParser";
 import { parseBookingEmail } from "../services/bookingParser";
+import { parseCruiseBookingText } from "../services/cruiseBookingParser";
 
 const mockParseLodgingBookingText = parseLodgingBookingText as jest.MockedFunction<
   typeof parseLodgingBookingText
@@ -222,7 +223,10 @@ describe("lodging domain wired into the parse routes", () => {
         .field("domain", "cruise");
       expect(res.status).not.toBe(501);
       expect(mockParseLodgingBookingText).not.toHaveBeenCalled();
-    }, 30000);
+      // The STUB answered, not the real parser: the real one falls back to
+      // OLLAMA_URL and dialled a developer's live model from this test.
+      expect(parseCruiseBookingText).toHaveBeenCalled();
+    });
   });
 
   // -----------------------------------------------------------------------

@@ -62,9 +62,11 @@ describe("deriveCruiseStats", () => {
       cruise({ id: "c3", price: 0, currency: "EUR" }),
     ]);
 
-    // A price of zero is not a price — it is the field left alone.
-    expect(d.pricedCruises).toBe(1);
-    expect(d.unpricedCruises).toBe(2);
+    // An empty price field is stored as null. A 0 was typed on purpose — a
+    // free sailing is a price, and the rule flights follow since 2026-09-21.
+    expect(d.pricedCruises).toBe(2);
+    expect(d.unpricedCruises).toBe(1);
+    expect(d.spendByCurrency.find((s) => s.currency === "EUR")?.total).toBe(300);
   });
 
   it("counts port calls and not sea days", () => {

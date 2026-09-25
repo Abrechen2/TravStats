@@ -59,7 +59,9 @@ describe("Wave A demo guards", () => {
       expect(res.body.error).toBe("DEMO_ACCOUNT_FORBIDDEN");
     });
 
-    it("still serves the diagnostic export to a normal account", async () => {
+    it("does not answer a normal account with the demo refusal", async () => {
+      // A normal account is refused too since 2026-09-25 (admins only), but
+      // for being no admin — `diagnosticExport.adminOnly.test.ts` owns that.
       const res = await request(app).get("/api/v1/diagnostic-export").set("Cookie", userCookie);
       expect(res.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
     });

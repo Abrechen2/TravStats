@@ -112,6 +112,18 @@ describe("flight batch import — trip auto-creation", () => {
     }
   });
 
+  it("names an auto-created trip in the reader's language", async () => {
+    // The month used to be hard-wired English ("Aug 2026") for everyone.
+    await prisma.userSettings.upsert({
+      where: { userId },
+      update: { data: { display: { language: "de" } } },
+      create: { userId, data: { display: { language: "de" } } },
+    });
+    await post(legs()).expect(201);
+    const trip = await prisma.trip.findFirstOrThrow({ where: { userId } });
+    expect(trip.name).toBe("FRA – GRU · Aug. 2026");
+  });
+
   it("an untouched settings row defaults to auto-creating the trip", async () => {
     const settings = await prisma.userSettings.findUniqueOrThrow({ where: { userId } });
     expect(settings.autoCreateTrips).toBe(true);

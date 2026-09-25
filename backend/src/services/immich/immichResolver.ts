@@ -8,7 +8,7 @@
  */
 import { prisma } from "../../db";
 import { decryptApiKey } from "../../utils/encryption";
-import { isSharedDemoUser } from "../../utils/sharedDemo";
+import { isSharedDemoAccount } from "../../utils/sharedDemo";
 import logger from "../../utils/logger";
 import {
   ImmichConnection,
@@ -64,12 +64,21 @@ export async function getImmichConnection(userId?: string): Promise<ImmichConnec
        * configure a connection of its own — `/settings/immich` refuses it — so
        * this is the whole integration, deliberately.
        */
-      if (await isSharedDemoUser(userId)) return null;
-
-      const settings = await prisma.userSettings.findUnique({
-        where: { userId },
-        select: { immichBaseUrl: true, immichApiKey: true },
+      // ONE read answers both questions — who the caller is and what they
+      // configured. Asking `isSharedDemoUser` first cost every Immich request
+      // (each proxied thumbnail included) a second round trip for a fact
+      // this row already carries.
+      const caller = await prisma.user.findUnique({
+        where: { id: userId },
+        select: {
+          isDemo: true,
+          username: true,
+          settings: { select: { immichBaseUrl: true, immichApiKey: true } },
+        },
       });
+      if (caller && isSharedDemoAccount(caller)) return null;
+
+      const settings = caller?.settings;
       const user = buildConnection(settings?.immichBaseUrl, settings?.immichApiKey, "user", true);
       if (user) return user;
     }

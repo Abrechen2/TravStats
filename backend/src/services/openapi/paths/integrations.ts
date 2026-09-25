@@ -493,9 +493,14 @@ registry.registerPath({
   method: "get",
   path: "/diagnostic-export",
   summary: "A support bundle about this instance",
-  description: "Redacted: no keys, no passwords, no user content.",
+  description:
+    "Redacted: no keys, no passwords, no user content. Admins only — the log " +
+    "tails span every account on the instance.",
   tags: miscTag,
-  responses: { 200: { description: "Diagnostics" } },
+  responses: {
+    200: { description: "Diagnostics" },
+    403: { description: "Not an admin", content: errorContent },
+  },
 });
 
 registry.registerPath({

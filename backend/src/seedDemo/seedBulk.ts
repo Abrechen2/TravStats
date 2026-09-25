@@ -5,7 +5,8 @@ import { seedFxColumns } from "./stayFx";
 
 /** Stays and places outside the narrated trips, plus two user lists across them. */
 export async function seedBulk(
-  userId: string
+  userId: string,
+  now: Date = new Date()
 ): Promise<{ stays: number; places: number; lists: number }> {
   // The base currency the money figures are reported in. Without a snapshot
   // into it, a priced stay counts as "not converted" and never reaches the
@@ -30,7 +31,8 @@ export async function seedBulk(
         dataSource: "manual",
       },
     });
-    const checkIn = new Date(Date.UTC(h.year, (i * 5) % 12, 3 + (i % 20)));
+    const year = now.getUTCFullYear() - h.yearsAgo;
+    const checkIn = new Date(Date.UTC(year, (i * 5) % 12, 3 + (i % 20)));
     const checkOut = new Date(checkIn.getTime() + h.nights * 86_400_000);
     await prisma.lodgingStay.create({
       data: {

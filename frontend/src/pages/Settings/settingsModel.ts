@@ -16,7 +16,7 @@ import type { BetaFeatureKey } from "../../config/betaFeatures";
  * page of settings am I on".
  */
 export type SettingsGroupId =
-  "account" | "display" | "data" | "services" | "flight" | "cruise" | "lodging";
+  "account" | "display" | "trips" | "data" | "services" | "flight" | "cruise" | "lodging";
 
 /** Every section that can render. Ids are stable — old links carry them. */
 export type SettingsSectionId =
@@ -29,6 +29,7 @@ export type SettingsSectionId =
   | "domainColors"
   | "modules"
   | "countryCounting"
+  | "trips"
   | "backup"
   | "import"
   | "notifications"
@@ -76,6 +77,13 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
     sections: ["display", "units", "domainColors", "modules", "countryCounting"],
   },
   {
+    // Trips are no domain, so this group has no `domain` and never hides
+    // (owner, 2026-08-23: its own "Reisen" section).
+    id: "trips",
+    labelKey: "settings:groups.trips",
+    sections: ["trips"],
+  },
+  {
     id: "data",
     labelKey: "settings:groups.data",
     sections: ["backup", "import", "notifications", "about"],
@@ -105,10 +113,11 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
   },
 ] as const;
 
-/** The four that sit behind the "Allgemein" tab, in index order. */
+/** The general groups behind the "Allgemein" tab, in index order. */
 export const GENERAL_GROUP_IDS: readonly SettingsGroupId[] = [
   "account",
   "display",
+  "trips",
   "data",
   "services",
 ];
