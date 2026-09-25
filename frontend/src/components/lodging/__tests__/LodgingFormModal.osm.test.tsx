@@ -10,6 +10,15 @@ import type { Lodging, LodgingChain } from "../../../types/lodging";
 import type { LocationSelection } from "../../location/LocationInput";
 
 vi.unmock("../../../store/settingsStore");
+vi.mock("../../../hooks/useLodgingEntrySuggestions", () => ({
+  useLodgingEntrySuggestions: () => ({
+    amenities: [
+      { name: "Pool", usageCount: 3 },
+      { name: "Parkplatz", usageCount: 1 },
+    ],
+    roomAmenities: [{ name: "Balkon", usageCount: 2 }],
+  }),
+}));
 vi.mock("../../../lib/api/lodging", () => ({
   createLodging: vi.fn(),
   updateLodging: vi.fn(),

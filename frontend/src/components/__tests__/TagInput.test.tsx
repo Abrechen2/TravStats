@@ -97,4 +97,33 @@ describe("TagInput", () => {
     expect(chips()).toEqual(["x"]);
     expect(screen.queryByRole("listbox")).not.toBeInTheDocument();
   });
+
+  it("offers a vocabulary of the caller's own and then never asks the tag endpoint", async () => {
+    const own = [
+      { name: "Pool", usageCount: 4 },
+      { name: "Parkplatz", usageCount: 2 },
+      { name: "Sauna", usageCount: 1 },
+    ];
+    function Own(): JSX.Element {
+      const [values, setValues] = useState<string[]>(["Sauna"]);
+      return (
+        <TagInput
+          ariaLabel="Tags"
+          value={values}
+          onChange={setValues}
+          suggestions={own}
+          listLabel="Amenities"
+        />
+      );
+    }
+    render(<Own />);
+    await userEvent.type(field(), "p");
+    const list = screen.getByRole("listbox", { name: "Amenities" });
+    expect(
+      Array.from(list.querySelectorAll("li > span:first-child")).map((n) => n.textContent)
+    ).toEqual(["Pool", "Parkplatz"]);
+    fireEvent.mouseDown(screen.getByRole("option", { name: /Parkplatz/ }));
+    expect(chips()).toEqual(["Sauna", "Parkplatz"]);
+    expect(mocks.search).not.toHaveBeenCalled();
+  });
 });

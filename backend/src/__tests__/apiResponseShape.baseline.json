@@ -111,6 +111,7 @@
     "geo.ts",
     "importBatches.ts",
     "lodging.ts",
+    "lodging/entrySuggestions.ts",
     "lodging/photos.ts",
     "lodging/propose.ts",
     "lodging/stays.ts",

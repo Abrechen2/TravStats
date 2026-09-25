@@ -14,6 +14,10 @@ import type { LodgingStay, LodgingMembership } from "../../../types/lodging";
 // its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
 // this surface mounts it — here it would only be a request reaching the
 // network, which the setup refuses (forgejo#110).
+// The form asks for the user's own lodging vocabulary on mount; no network here.
+vi.mock("../../../hooks/useLodgingEntrySuggestions", () => ({
+  useLodgingEntrySuggestions: () => ({ amenities: [], roomAmenities: [] }),
+}));
 vi.mock("../../documents/DocumentsSection", () => ({ default: () => null }));
 
 vi.mock("../../../lib/api/lodging", () => ({

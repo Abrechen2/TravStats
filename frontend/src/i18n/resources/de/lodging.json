@@ -107,7 +107,7 @@
     "city": "Stadt",
     "country": "Land",
     "amenities": "Ausstattung",
-    "amenitiesPlaceholder": "z. B. WLAN, Pool, Parkplatz (kommagetrennt)",
+    "amenitiesPlaceholder": "z. B. WLAN, Pool, Parkplatz",
     "notes": "Notizen",
     "independent": "Unabhängig",
     "staysCount": "{{count}} Aufenthalte",
@@ -137,7 +137,7 @@
     "totalPrice": "Gesamtpreis",
     "pricePerNight": "Preis pro Nacht",
     "roomAmenities": "Zimmerausstattung",
-    "roomAmenitiesPlaceholder": "z. B. Meerblick, Balkon (kommagetrennt)",
+    "roomAmenitiesPlaceholder": "z. B. Meerblick, Balkon",
     "membership": "Bonusprogramm",
     "noMembership": "Kein Bonusprogramm",
     "membershipDerive": "Automatisch (aus der Kette)",
@@ -155,7 +155,9 @@
     "membershipNumber": "Mitgliedsnummer",
     "tier": "Status-Stufe",
     "ratingOverallDerived": "Ø aus Zimmer, Frühstück und Service",
-    "website": "Webseite"
+    "website": "Webseite",
+    "amenitySuggestions": "Deine Ausstattung",
+    "removeAmenity": "{{name}} entfernen"
   },
   "type": {
     "hotel": "Hotel",

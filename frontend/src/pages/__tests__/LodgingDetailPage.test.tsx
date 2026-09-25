@@ -14,6 +14,10 @@ const tripsGetAllMock = vi.fn();
 // its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
 // this surface mounts it — here it would only be a request reaching the
 // network, which the setup refuses (forgejo#110).
+// The stay editor asks for the user's own lodging vocabulary on mount; no network here.
+vi.mock("../../hooks/useLodgingEntrySuggestions", () => ({
+  useLodgingEntrySuggestions: () => ({ amenities: [], roomAmenities: [] }),
+}));
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
 
 // The stay's delete dialog counts the kept originals that cascade with it.

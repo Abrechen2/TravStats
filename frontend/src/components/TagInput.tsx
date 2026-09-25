@@ -9,6 +9,7 @@ import {
 } from "react";
 
 import { useTagSuggestions } from "../hooks/useTagSuggestions";
+import type { TagSuggestion } from "../lib/api/tags";
 import { useTranslation } from "../hooks/useTranslation";
 import { addTags, hasTag, splitTagText } from "../lib/tagList";
 
@@ -25,7 +26,19 @@ interface Props {
   style?: CSSProperties;
   /** Chip colour; the trip form tints tags with the trip's colour. */
   accent?: string;
+  /**
+   * A vocabulary of the caller's own (lodging amenities, say) in place of the
+   * user's tags from `GET /tags`. Filtered here as the user types; the tag
+   * endpoint is then never asked.
+   */
+  suggestions?: readonly TagSuggestion[];
+  /** Names the suggestion list and each chip's remove button for that vocabulary. */
+  listLabel?: string;
+  removeLabel?: (name: string) => string;
 }
+
+/** Offered at once — the tag endpoint's own page size. */
+const VISIBLE_SUGGESTIONS = 8;
 
 /**
  * Tags as chips, with the user's own tags offered while typing (most used
@@ -46,6 +59,9 @@ export default function TagInput({
   className = "input",
   style,
   accent,
+  suggestions: ownSuggestions,
+  listLabel,
+  removeLabel,
 }: Props): JSX.Element {
   const { t } = useTranslation("common");
   const inputRef = useRef<HTMLInputElement>(null);
@@ -53,15 +69,16 @@ export default function TagInput({
   const [query, setQuery] = useState("");
   const [focused, setFocused] = useState(false);
   const [active, setActive] = useState(-1);
-  const suggestions = useTagSuggestions(query, focused);
+  const tagSuggestions = useTagSuggestions(query, focused && ownSuggestions === undefined);
+  const suggestions = ownSuggestions ?? tagSuggestions;
 
   // The server answers for the debounced text; this keeps the list true to
   // what is in the field right now, and never offers a tag already chosen.
   const options = useMemo(() => {
     const needle = query.trim().toLowerCase();
-    return suggestions.filter(
-      (s) => !hasTag(value, s.name) && (!needle || s.name.toLowerCase().includes(needle))
-    );
+    return suggestions
+      .filter((s) => !hasTag(value, s.name) && (!needle || s.name.toLowerCase().includes(needle)))
+      .slice(0, VISIBLE_SUGGESTIONS);
   }, [suggestions, query, value]);
   const open = focused && options.length > 0;
 
@@ -153,7 +170,7 @@ export default function TagInput({
             {tag}
             <button
               type="button"
-              aria-label={t("tagInput.remove", { name: tag })}
+              aria-label={removeLabel ? removeLabel(tag) : t("tagInput.remove", { name: tag })}
               // The test i18n mock ignores interpolation, so every chip's label
               // reads the same there; a per-tag id is what can address one.
               data-testid={`tag-remove-${tag}`}
@@ -196,7 +213,7 @@ export default function TagInput({
         <ul
           id={listId}
           role="listbox"
-          aria-label={t("tagInput.suggestions")}
+          aria-label={listLabel ?? t("tagInput.suggestions")}
           className="absolute z-20 mt-1 max-h-60 w-full overflow-auto rounded-md border border-border bg-(--bg-surface) shadow-lg"
         >
           {options.map((option, i) => (

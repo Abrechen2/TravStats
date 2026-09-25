@@ -7,6 +7,10 @@ import type { Trip } from "../../../types";
 import type { LodgingStay } from "../../../types/lodging";
 
 // Same module boundary as StayEditor.test.tsx; see there for why each mock exists.
+// The form asks for the user's own lodging vocabulary on mount; no network here.
+vi.mock("../../../hooks/useLodgingEntrySuggestions", () => ({
+  useLodgingEntrySuggestions: () => ({ amenities: [], roomAmenities: [] }),
+}));
 vi.mock("../../documents/DocumentsSection", () => ({ default: () => null }));
 vi.mock("../../../lib/api/lodging", () => ({
   createStay: vi.fn(),

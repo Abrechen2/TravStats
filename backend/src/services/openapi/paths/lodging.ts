@@ -309,6 +309,39 @@ registry.registerPath({
   },
 });
 
+const rankedValue = z.object({ name: z.string(), usageCount: z.number().int() });
+
+const lodgingEntrySuggestions = registry.register(
+  "LodgingEntrySuggestions",
+  z
+    .object({
+      amenities: z.array(rankedValue),
+      roomAmenities: z.array(rankedValue),
+    })
+    .openapi("LodgingEntrySuggestions")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/lodging/entry-suggestions",
+  summary: "Values the lodging and stay forms can offer from the caller's own lodgings",
+  description:
+    "The amenities the caller has recorded for houses and for rooms, each merged " +
+    "case-insensitively and ranked by use (at most 30). Only the caller's own rows are read.",
+  tags: ["Lodging"],
+  responses: {
+    200: {
+      description: "Suggestions",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.boolean(), data: lodgingEntrySuggestions }),
+        },
+      },
+    },
+    400: { description: "Invalid input", content: errorContent },
+  },
+});
+
 registry.registerPath({
   method: "get",
   path: "/lodging/{id}",

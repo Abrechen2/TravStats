@@ -9,6 +9,7 @@ import { AppError } from "../middleware/errorHandler";
 import * as fx from "../services/fx/resolver";
 import { resolveLocation } from "./lodgingGeocode";
 import proposeRouter from "./lodging/propose";
+import entrySuggestionsRouter from "./lodging/entrySuggestions";
 import { computeAggregates, type LodgingListItem } from "../services/lodging/listView";
 import {
   queryLodgingPage,
@@ -195,6 +196,8 @@ router.get(
 // "Is this that house?" lives in `lodging/propose` — mounted HERE so the
 // literal path is matched before `/:id` could read "propose" as an id.
 router.use(proposeRouter);
+// Same reason: "entry-suggestions" is a literal path, not a lodging id.
+router.use(entrySuggestionsRouter);
 
 router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {

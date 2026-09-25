@@ -7,7 +7,8 @@ import { currencyForCountry } from "../../shared/countryCurrency";
 import { createStay, updateStay, listMemberships } from "../../lib/api/lodging";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
-import { AmenityChipsInput } from "./AmenityChipsInput";
+import TagInput from "../TagInput";
+import { useLodgingEntrySuggestions } from "../../hooks/useLodgingEntrySuggestions";
 import { Field } from "../ui/Field";
 import { StayEditorAttachmentsSection } from "./StayEditorAttachmentsSection";
 import { StayEditorTripSection } from "./StayEditorTripSection";
@@ -181,6 +182,7 @@ export function StayEditor({
   );
   const [notes, setNotes] = useState<string>(stay?.notes ?? "");
 
+  const entrySuggestions = useLodgingEntrySuggestions();
   const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
 
@@ -637,12 +639,18 @@ export function StayEditor({
           </StayEditorSection>
 
           <StayEditorSection title={t("lodging:stayEditor.amenitiesSection")}>
-            <AmenityChipsInput
-              label={t("lodging:field.roomAmenities")}
-              values={roomAmenities}
-              onChange={setRoomAmenities}
-              placeholder={t("lodging:field.roomAmenitiesPlaceholder")}
-            />
+            <Field label={t("lodging:field.roomAmenities")} htmlFor={`${fid}-roomAmenities`}>
+              <TagInput
+                id={`${fid}-roomAmenities`}
+                value={roomAmenities}
+                onChange={setRoomAmenities}
+                suggestions={entrySuggestions.roomAmenities}
+                listLabel={t("lodging:field.amenitySuggestions")}
+                removeLabel={(name) => t("lodging:field.removeAmenity", { name })}
+                placeholder={t("lodging:field.roomAmenitiesPlaceholder")}
+                className={INPUT_CLASS}
+              />
+            </Field>
             <div className="mt-3">
               <Field label={t("lodging:field.bookingReference")} htmlFor={`${fid}-reference`}>
                 <input

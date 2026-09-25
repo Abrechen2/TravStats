@@ -11,6 +11,8 @@ import type { LocationCoordinates, LocationSelection } from "../location/Locatio
 import type { NearbyLodging } from "../../lib/api/openData";
 import { LodgingOsmNearby } from "./LodgingOsmNearby";
 import { lodgingTypeForKind, osmFillFor } from "./lodgingFromOsm";
+import TagInput from "../TagInput";
+import { useLodgingEntrySuggestions } from "../../hooks/useLodgingEntrySuggestions";
 
 const LODGING_TYPES: LodgingType[] = ["hotel", "campsite", "guesthouse", "apartment", "hostel"];
 
@@ -47,9 +49,8 @@ export function LodgingFormModal({
   const [lat, setLat] = useState<number | null>(lodging?.lat ?? null);
   const [lon, setLon] = useState<number | null>(lodging?.lon ?? null);
   const [stars, setStars] = useState<string>(lodging?.stars?.toString() ?? "");
-  const [amenitiesInput, setAmenitiesInput] = useState<string>(
-    (lodging?.amenities ?? []).join(", ")
-  );
+  const [amenities, setAmenities] = useState<string[]>(lodging?.amenities ?? []);
+  const entrySuggestions = useLodgingEntrySuggestions();
   const [notes, setNotes] = useState<string>(lodging?.notes ?? "");
   const [website, setWebsite] = useState<string>(lodging?.website ?? "");
   const [saving, setSaving] = useState(false);
@@ -124,10 +125,7 @@ export function LodgingFormModal({
         lat,
         lon,
         stars: stars.trim() ? Number.parseInt(stars, 10) : null,
-        amenities: amenitiesInput
-          .split(",")
-          .map((a) => a.trim())
-          .filter((a) => a.length > 0),
+        amenities,
         notes: notes.trim() || null,
         // Empty clears it — same explicit `null` rule as the fields above.
         website: website.trim() || null,
@@ -292,15 +290,19 @@ export function LodgingFormModal({
               className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             />
           </label>
-          <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
-            {t("lodging:field.amenities")}
-            <input
-              value={amenitiesInput}
-              onChange={(e) => setAmenitiesInput(e.target.value)}
+          <div className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
+            <label htmlFor="lodging-form-amenities">{t("lodging:field.amenities")}</label>
+            <TagInput
+              id="lodging-form-amenities"
+              value={amenities}
+              onChange={setAmenities}
+              suggestions={entrySuggestions.amenities}
+              listLabel={t("lodging:field.amenitySuggestions")}
+              removeLabel={(name) => t("lodging:field.removeAmenity", { name })}
               placeholder={t("lodging:field.amenitiesPlaceholder")}
               className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             />
-          </label>
+          </div>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
             {t("lodging:field.notes")}
             <textarea
