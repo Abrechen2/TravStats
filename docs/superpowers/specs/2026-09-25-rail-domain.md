@@ -5,7 +5,9 @@ Date: 2026-09-25 · Branch: `dev/rail` · Status: phase 1 implemented behind the
 ## Why
 
 Owner decision 2026-09-25: rail becomes its own domain. It was promised in
-`#dev-talk` on 2026-09-20 as "individual train journeys like flights". A train
+`#dev-talk` on 2026-09-20 as "individual train journeys like flights", after a
+tester suggested rail as a domain of its own — because open APIs exist that can
+show a train journey properly, including the route the train actually took. A train
 ride is a logged, dated, point-to-point movement with an operator, a number, a
 seat and a price — the same shape as a flight, not the shape of a tour section.
 
@@ -13,9 +15,9 @@ seat and a price — the same shape as a flight, not the shape of a tour section
 here) still carries `rail` in `ROADTRIP_VEHICLES`. When the two lines meet,
 `rail` must leave that list, and the roadtrip migration has to decide what
 happens to rows that already carry `vehicle = 'rail'` (they may exist on beta
-instances). The options are: keep them readable as a legacy value, or offer a
-one-way conversion of such a section into a `RailJourney`. That is listed below
-as an owner question; the rail domain does not depend on the answer.
+instances). Owner decision (below): offer a one-way conversion of such a
+section into a `RailJourney` when the roadtrip branch drops the value. The rail
+domain itself does not depend on it.
 
 ## How cruise did it — the model this follows
 
@@ -57,6 +59,10 @@ connection is several legs.
 | `arrivalTime` | timestamptz? | A real UTC instant; may be unknown. Must not precede the departure. |
 | `distanceKm` | float? | See "Geometry". |
 | `distanceSource` | text? | `great_circle` \| `user` \| null. |
+| `geometry` | jsonb? | `[[lon, lat], …]`, fetched ONCE when the journey is logged and frozen with it. Null = the chord between the stations. |
+| `geometrySource` | text | `none` \| `straight` \| `transitous` \| `openrailrouting` \| `manual`; default `straight`. Phase 1 writes only `straight`. |
+| `actualDepartureTime`, `actualArrivalTime` | timestamptz? | What happened, when known (captured on the day or typed). Null for a past journey nobody recorded. |
+| `lookupProvider`, `lookupRef` | text? | The timetable trip a lookup matched (phase 2) and the provider's id for it. Separate from `externalRef`, the per-user unique IMPORT key — two journeys may match the same trip. |
 | `travelClass` | text? | `first` \| `second` \| `sleeper` \| `couchette`. |
 | `coach`, `seat` | text? | "Wagen 7", "Platz 45". |
 | `bookingReference` | text? | Auftragsnummer / PNR. |
@@ -125,16 +131,38 @@ optional `depStationId`/`arrStationId` foreign key; no row has to be migrated.
 
 ## Geometry
 
-- **Phase 1: great-circle.** `distanceKm` is the haversine distance between the
-  two stations (`utils/geo.calculateDistance`), stored with
-  `distanceSource = 'great_circle'`, recomputed when a station moves. A user may
-  type the real distance from the ticket; that is kept (`'user'`) until the user
-  clears it. The map line (phase 2) is a straight chord.
-- **Later: routed.** OSM rail routing (e.g. a vendored network in the manner of
-  the marnet shipping lanes, or an external router such as signal.eu's
-  OSRM-based rail profile) would give a real track length. Great-circle
-  understates rail distance by roughly 10–30 %; the statistics must label it as
-  straight-line until then rather than present it as track kilometres.
+Three sources, in this order, and the map always says which one it shows
+(`geometrySource`), because a line routed over the TRACKS may not be the line
+the train took:
+
+1. **Transitous / MOTIS** (api.transitous.org), phase 2. A matched trip's leg
+   geometry follows the real train. Fetched **once** when the journey is logged,
+   stored in `geometry` and **frozen** — a timetable changes, the ride that
+   happened does not, and a re-fetch would also be a request against a service
+   that asks to be cached. Terms to honour: open-source and non-commercial use
+   only, a User-Agent with contact details, caching, a link to its sources page,
+   asking first before using heavy endpoints, no SLA. Feeds without shapes come
+   back as straight segments; a leg whose "geometry" is a straight segment over
+   roughly 35 km is stored as `straight`, not as `transitous`.
+2. **OpenRailRouting** (Geofabrik; GraphHopper, Apache-2.0; OSM data ODbL),
+   phase 3, as an **admin-configurable URL to a self-hosted instance** — for
+   journeys Transitous cannot match. It routes over the tracks and may pick
+   another line than the train used, hence its own source label. The public
+   demo is experimental and is never a default.
+3. **Straight line** (great-circle chord), always — the fallback, and the whole
+   of phase 1. Stored as `geometry = null`, `geometrySource = 'straight'`.
+
+Considered and not used: BRouter's rail profile (lighter, known wrong turns at
+switches — Träwelling uses it), signal.eu.org (no API), OSRM rail (stale), raw
+GTFS shapes (only reachable through MOTIS anyway).
+
+**Distance** follows the geometry: great-circle in phase 1
+(`utils/geo.calculateDistance`, `distanceSource = 'great_circle'`, recomputed
+when a station moves). A user may type the real distance from the ticket; that
+is kept (`'user'`) until cleared. Once a Transitous or OpenRailRouting line
+exists, its length is the better figure; until then great-circle understates
+the track by roughly 10–30 %, and the statistics label it as straight-line
+(owner decision 7).
 
 ## Statistics (phase 2)
 
@@ -154,6 +182,32 @@ the colour most European readers already associate with a train. Layers and
 legend resolve it through the domain colour store like every other domain —
 never a hardcoded arc colour. `--domain-train` stays what it is today: the
 alias of the tour colour for tour sections by train.
+
+## Lookup by train number and date (phase 2)
+
+A chain like the flight lookup, each step falling through on a miss:
+
+1. **Transitous** — primary, no key.
+2. **db-rest** (`v6.db.transport.rest`, Germany; unofficial, built on
+   db-vendo-client since DB's HAFAS was shut down; ~100 requests/min).
+3. Country plug-ins, later: Entur (Norway, `ET-Client-Name` header),
+   SNCF/Navitia (key), Trafiklab (Sweden, key), transport.opendata.ch
+   (Switzerland).
+4. Manual entry — always available.
+
+A hit fills stations, times and `lookupProvider`/`lookupRef`, and fetches the
+geometry once. Avoided: DB RIS::Journeys (contract), HAFAS scraping. DB
+Timetables (free key, CC BY 4.0, 60/min) only reaches hours ahead, so it is no
+lookup for a past journey.
+
+**Honest limits.** No free API reliably answers a PAST date's timetable, and
+none answers past actual times at all. A journey logged the same day can
+capture actual times and the delay; an older one stores `null` unless the user
+types the delay — never 0, never a guess (the abstention rule). The only route
+to German past delays is the piebro/deutsche-bahn-data archive (CC BY 4.0), an
+offline bulk import at most, later. Unverified so far: OpenRailRouting's memory
+needs for a Europe import, BRouter's licence and server policy, Transitous'
+rate limits and how far back it keeps timetables, SNCF and opendata.ch quotas.
 
 ## Imports (phase 3)
 
@@ -187,34 +241,40 @@ dashboard tab strip), rail is excluded explicitly with a pointer to phase 2.
 
 ## Phases
 
-**Phase 1 (this branch):** model + migration, Zod, CRUD router with list
-paging, OpenAPI with response schemas, ratchet family, status derivation +
-sweep, companions (join table + dual write), trip link (write + ownership),
-FX snapshot, both registries, beta gate, logbook list page + create/edit/delete
-modal (station via `LocationInput`, `CurrencySelect`, `CompanionPicker`, the
-comma tag field), i18n DE+EN, tests.
+**Phase 1 (this branch):** model + migration (including the geometry, actuals
+and lookup columns, so phase 2 needs no second migration for them), Zod, CRUD
+router with list paging, OpenAPI with response schemas, ratchet family, status
+derivation + sweep, companions (join table + dual write), trip link (write +
+ownership), FX snapshot, both registries, beta gate, logbook list page +
+create/edit/delete modal (station via `LocationInput`, `CurrencySelect`,
+`CompanionPicker`, the comma tag field), i18n DE+EN, tests.
 
-**Phase 2:** station catalogue (Trainline CSV) + station picker, connecting-train
-UI via `Booking`, trip timeline and trip status bounds including rail, detail
-page, documents, map layer + dashboard tab, statistics, achievements, CSV/XLSX
-import, backup/export coverage, demo seed.
+**Phase 2:** station catalogue (Trainline CSV) + station picker; train-number
+lookup chain (Transitous → db-rest → manual); Transitous trip geometry, fetched
+once, frozen, labelled, straight line as fallback; connecting-train UI via
+`Booking`; trip timeline and trip status bounds including rail; detail page;
+documents; map layer + dashboard tab; statistics with straight-line km labelled
+as such; CSV/XLSX import; backup/export coverage; demo seed; the roadtrip
+conversion offer.
 
-**Phase 3:** DB/Trainline/SNCF parser templates, routed geometry, delay lookup.
+**Phase 3:** admin-configurable self-hosted OpenRailRouting URL; delay data
+(same-day capture of actual times; the German archive as an optional bulk
+import); DB/Trainline/SNCF parser templates; country lookup plug-ins.
 
-## Open questions for the owner
+**2.8 or later:** rail achievements (owner decision 3).
 
-1. **Existing roadtrip rows with `vehicle = 'rail'`:** keep as legacy, or offer
-   a conversion into rail journeys when the roadtrip branch drops the value?
-2. **Tours by train:** tour sections can still be "by train" (the tour icon).
-   Should a tour section by train be offered as a rail journey instead, or do
-   the two coexist (a tour is a route, a rail journey is a ticket)?
-3. **Achievements for rail** (km by train, countries by train, night trains):
-   wanted in 2.8, or later?
-4. **Colour:** `#d4655c` brick red — acceptable, or does the Companion app need
-   to pick first (the rule is one colour per domain across web and phone)?
-5. **Companion app:** does the phone app get rail in the same release, or does
-   the web ship rail first?
-6. **Trip bounds:** should a train ride extend a trip's start/end dates and
-   status like flights and cruises do (proposed: yes, phase 2)?
-7. **Distance in the statistics before routing exists:** show straight-line km
-   labelled as such (proposed), or hide the kilometre figure until routed?
+## Owner decisions 2026-09-25
+
+The owner took every proposal ("nimm die Vorschläge"):
+
+1. **Existing roadtrip rows with `vehicle = 'rail'`:** offer a one-way
+   conversion into rail journeys when the roadtrip branch drops the value.
+2. **Tours by train:** tour sections by train and rail journeys coexist — a
+   tour is a route, a rail journey is a ticket.
+3. **Achievements for rail:** later, 2.8.
+4. **Colour:** `#d4655c` brick red, accepted.
+5. **Companion app:** web first, the Companion follows later.
+6. **Trip bounds:** a train ride extends a trip's dates and status like flights
+   and cruises — in phase 2.
+7. **Distance in the statistics before routing exists:** show straight-line km,
+   labelled as such.
