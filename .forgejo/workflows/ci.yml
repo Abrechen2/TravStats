@@ -1,0 +1,111 @@
+name: CI (Forgejo)
+
+# Runs on the homelab Forgejo runner (CT 146, label `homelab-docker`,
+# job image node:22-bookworm). The GitHub workflows in .github/workflows stay
+# authoritative on GitHub; because this directory exists, Forgejo ignores
+# .github/workflows entirely, so claude*.yml and security.yml never run here.
+#
+# Deliberately a subset of .github/workflows/ci.yml: the same checks, minus
+# the coverage merge (no artifact round-trip here; GitHub still enforces the
+# coverage ratchet). Same honesty rules: no continue-on-error, no path filters.
+#
+# Difference to GitHub: jobs run inside a container, so service containers are
+# reached by their service name (`postgres`), not via localhost.
+
+on:
+  push:
+    branches: [main]
+  pull_request:
+  workflow_dispatch:
+
+concurrency:
+  group: ${{ github.workflow }}-${{ github.ref }}
+  cancel-in-progress: true
+
+jobs:
+  static:
+    name: Typecheck + lint (both trees)
+    runs-on: homelab-docker
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+      - name: Install backend dependencies
+        run: cd backend && npm ci
+      - name: Install frontend dependencies
+        run: cd frontend && npm ci
+      - name: Typecheck backend
+        run: cd backend && npx tsc --noEmit
+      - name: Typecheck frontend
+        run: cd frontend && npx tsc --noEmit
+      - name: Lint backend
+        run: cd backend && npm run lint
+      - name: Lint frontend
+        run: cd frontend && npm run lint
+      - name: File-size ratchet
+        run: npm run check:size
+
+  schema-drift:
+    name: Prisma schema drift
+    runs-on: homelab-docker
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: travstats_ci
+          POSTGRES_PASSWORD: travstats_ci
+          POSTGRES_DB: travstats_ci
+        options: >-
+          --health-cmd "pg_isready -U travstats_ci"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://travstats_ci:travstats_ci@postgres:5432/travstats_ci
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+      - name: Install dependencies
+        run: cd backend && npm ci
+      - name: Schema drift
+        run: npm run check:drift
+
+  frontend-tests:
+    name: Frontend tests (Vitest)
+    runs-on: homelab-docker
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+      - name: Install dependencies
+        run: cd frontend && npm ci
+      - name: Vitest
+        run: cd frontend && npx vitest --run
+
+  backend-tests:
+    name: Backend tests (Jest ${{ matrix.shard }}/2)
+    runs-on: homelab-docker
+    strategy:
+      fail-fast: false
+      matrix:
+        shard: [1, 2]
+    services:
+      postgres:
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: travstats_ci
+          POSTGRES_PASSWORD: travstats_ci
+          POSTGRES_DB: travstats_ci
+        options: >-
+          --health-cmd "pg_isready -U travstats_ci"
+          --health-interval 10s --health-timeout 5s --health-retries 10
+    env:
+      DATABASE_URL: postgresql://travstats_ci:travstats_ci@postgres:5432/travstats_ci?connection_limit=5
+      NODE_ENV: test
+      # Throwaway CI literals, same values and reasons as .github/workflows/ci.yml.
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0000
+      ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      TRAVSTATS_ALLOW_DESTRUCTIVE_TESTS: "1"
+    steps:
+      - uses: https://code.forgejo.org/actions/checkout@v4
+      - name: Install dependencies
+        run: cd backend && npm ci
+      - name: Apply migrations
+        run: cd backend && npx prisma migrate deploy
+      - name: Seed test catalogues
+        run: cd backend && npx tsx scripts/seed-test-catalogues.ts
+      - name: Jest
+        run: cd backend && npx jest --ci --forceExit --shard=${{ matrix.shard }}/2
