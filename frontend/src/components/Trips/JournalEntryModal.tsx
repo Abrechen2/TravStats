@@ -5,6 +5,8 @@ import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import JournalWeatherFetch from "./JournalWeatherFetch";
+import SuggestionChips from "../common/SuggestionChips";
+import { useJournalMoods } from "../../hooks/useJournalMoods";
 
 interface JournalEntryModalProps {
   tripId: string;
@@ -45,6 +47,7 @@ export default function JournalEntryModal({
   const [mood, setMood] = useState(entry?.mood ?? "");
   const [weather, setWeather] = useState(entry?.weather ?? "");
   const [saving, setSaving] = useState(false);
+  const moods = useJournalMoods();
 
   useEffect(() => {
     if (!entry) return;
@@ -156,6 +159,12 @@ export default function JournalEntryModal({
               placeholder="🙂 / 🌟 / 😴"
               className="w-full rounded-lg px-3 py-2 text-sm"
               style={inputStyle}
+            />
+            <SuggestionChips
+              value={mood}
+              suggestions={moods}
+              onPick={setMood}
+              fieldLabel={t("trips:journalModal.moodLabel")}
             />
           </Field>
           <Field label={t("trips:journalModal.weatherLabel")}>

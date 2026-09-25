@@ -106,6 +106,12 @@ export const tripsApi = {
     return data;
   },
 
+  /** The moods the user has written in their journal, most used first. */
+  getJournalMoods: async (): Promise<string[]> => {
+    const { data } = await api.get<{ moods: string[] }>("/trips/journal-moods");
+    return data.moods;
+  },
+
   getAll: async (): Promise<Trip[]> => {
     const { data } = await api.get<{ trips: Trip[] }>("/trips");
     return data.trips;

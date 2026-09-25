@@ -22,12 +22,18 @@ import { getCurrentHomeAirport, getHomeAirportAt } from "../../utils/homeAirport
  * it is mounted at `/api/v1/trips`, and a router-level guard would stand in
  * front of every trip route that passes through it.
  *
+ * `GET /trips/journal-moods` sits beside it for the journal editor: the moods
+ * the user has written before, most used first.
+ *
  * The stats rate-limit bucket, like `/flights/entry-suggestions`: several
  * reads per call, asked once when the form opens.
  */
 const router = Router();
 
 const DESTINATION_CAP = 4;
+const MOOD_CAP = 8;
+/** Rows read before merging spellings that differ only by surrounding space. */
+const MOOD_OVERFETCH = 3;
 /** A trip is a handful of entries; the bound only stops a pathological one. */
 const ENTRY_TAKE = 200;
 
@@ -198,6 +204,46 @@ router.get(
         destinations,
       };
       res.json(body);
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/** The user's journal moods, most used first, then most recently written. */
+export async function journalMoods(userId: string): Promise<string[]> {
+  const groups = await prisma.tripJournalEntry.groupBy({
+    by: ["mood"],
+    where: { trip: { userId }, mood: { not: null }, NOT: { mood: "" } },
+    _count: { mood: true },
+    _max: { createdAt: true },
+    orderBy: [{ _count: { mood: "desc" } }, { _max: { createdAt: "desc" } }],
+    take: MOOD_CAP * MOOD_OVERFETCH,
+  });
+  const merged = new Map<string, { count: number; last: number }>();
+  for (const g of groups) {
+    const mood = g.mood?.trim();
+    if (!mood) continue;
+    const seen = merged.get(mood);
+    const last = g._max.createdAt?.getTime() ?? 0;
+    merged.set(mood, {
+      count: (seen?.count ?? 0) + g._count.mood,
+      last: Math.max(seen?.last ?? 0, last),
+    });
+  }
+  return [...merged.entries()]
+    .sort(([, a], [, b]) => b.count - a.count || b.last - a.last)
+    .slice(0, MOOD_CAP)
+    .map(([mood]) => mood);
+}
+
+router.get(
+  "/journal-moods",
+  authenticate,
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      res.json({ moods: await journalMoods(req.userId!) });
     } catch (err) {
       next(err);
     }

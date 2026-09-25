@@ -194,6 +194,24 @@ registry.registerPath({
 
 registry.registerPath({
   method: "get",
+  path: "/trips/journal-moods",
+  summary: "Moods the user has written in their journal before",
+  description:
+    "Distinct moods of the requesting user's journal entries across all their trips, most " +
+    "used first, then most recently written; at most eight. Suggestions only.",
+  tags: ["Trips"],
+  responses: {
+    200: {
+      description: "Ranked moods; empty when the journal has none",
+      content: { "application/json": { schema: z.object({ moods: z.array(z.string()) }) } },
+    },
+    401: { description: "Missing or invalid token", content: errorContent },
+    429: { description: "Rate limit exceeded", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
   path: "/trips/{id}",
   summary: "Get a trip",
   description:
