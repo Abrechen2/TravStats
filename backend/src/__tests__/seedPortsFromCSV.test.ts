@@ -11,20 +11,24 @@ import { seedPortsFromCSV } from "../seedPortsFromCSV";
  * createMany, INSERT_CHUNK_SIZE=2000) took 2.5s idle. Reproducing the CI
  * failure's actual contention — 4 parallel Jest processes each seeding
  * their own DB, competing for CPU the way 4 PostGIS-backed shards do on an
- * 8-core runner — pushed a single run to 13-17s. PR #129 (backend split
- * into 4 shards) hit exactly that: this suite's first test took ~20s
- * against the pre-chunking `createMany`, over the 5s default. 30s keeps
- * comfortable headroom above the worst measured run without leaving the
- * timeout effectively unbounded.
+ * 8-core runner — pushed a single run to 13-17s before this fix, and
+ * 6.2-6.7s per test after it (3/3 passing), which is the number 30s
+ * actually keeps headroom above. The pre-fix ceiling came from the
+ * then-unmerged #129 (backend Jest split into 4 shards): its run hit this
+ * suite's first test at ~20s against the pre-chunking `createMany`, over
+ * the 5s default.
  */
 const SEED_TEST_TIMEOUT_MS = 30000;
 
 describe("seedPortsFromCSV", () => {
   beforeEach(async () => {
     // Wipe ALL rows (incl. isUserAdded) so each test starts clean. The
-    // isUserAdded test below relies on Hamburg not pre-existing.
+    // isUserAdded test below relies on Hamburg not pre-existing. Same
+    // fresh-DB deleteMany cost as the seed itself, so it needs the same
+    // timeout — Jest's per-test duration excludes beforeEach, so leaving
+    // this on the 5s default would reopen the exact failure this PR fixes.
     await prisma.port.deleteMany({});
-  });
+  }, SEED_TEST_TIMEOUT_MS);
 
   afterAll(async () => {
     // Leave the dev DB populated with the real seed data so other

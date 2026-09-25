@@ -16,6 +16,7 @@ interface CSVPort {
 }
 
 const CSV_PATH = path.resolve(__dirname, "seedData", "ports.csv");
+const INSERT_CHUNK_SIZE = 2000;
 
 /**
  * Idempotent port seeder. Bulk pattern: one query loads existing UNLOCODEs,
@@ -29,13 +30,22 @@ const CSV_PATH = path.resolve(__dirname, "seedData", "ports.csv");
  * a single unchunked `createMany` for all of them measured 2.5s idle /
  * 13-17s under the CPU contention four parallel PostGIS-backed Jest shards
  * produce on one CI runner (see seedPortsFromCSV.test.ts for the measurement
- * and the timeout it derives from it). `INSERT_CHUNK_SIZE` keeps each
- * statement's parameter count well under Postgres's per-statement bind limit
- * and measured ~10-20% faster under that same contention, since the
- * scheduler gets a chunk boundary to interleave sibling jobs at instead of
- * one giant statement holding the connection.
+ * and the timeout it derives from it).
+ *
+ * `INSERT_CHUNK_SIZE` is a plain round number, not derived from Postgres's
+ * per-statement bind limit — Prisma 7 already splits a `createMany` whose
+ * bind values exceed that limit (32766 for postgresql) into several
+ * statements wrapped in one transaction, and the unchunked call never came
+ * close to it (12,062 rows × 9 columns = 108,558 params → 4 statements, all
+ * inside that one transaction). Chunking below the limit trades that
+ * wrapping transaction away: a failure partway through can now leave a
+ * partial seed committed, where the old call rolled back whole. That's fine
+ * here — both callers (`index.ts`, `init.ts`) warn and continue rather than
+ * abort on a seed error, and the dedupe keys (unlocode, lowercase
+ * name+country) mean the next boot just inserts whatever is still missing.
+ * The measured ~10-20% speedup under contention most likely comes from
+ * dropping that transaction wrapper, not from the chunk boundary itself.
  */
-const INSERT_CHUNK_SIZE = 2000;
 export async function seedPortsFromCSV(): Promise<number> {
   if (!fs.existsSync(CSV_PATH)) {
     logger.warn({ operation: "seed_ports_skip", reason: "csv_missing", path: CSV_PATH });
