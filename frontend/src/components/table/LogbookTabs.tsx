@@ -3,6 +3,7 @@ import { Link, useLocation } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
+import { useRailVisible } from "../../hooks/useRailVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import { Icon } from "../ui/Icon";
 import { DOMAIN_ICON } from "../ui/domainIcons";
@@ -21,9 +22,12 @@ export default function LogbookTabs(): JSX.Element | null {
   const { t } = useTranslation(["common", "dashboard"]);
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
+  const railVisible = useRailVisible();
   const { pathname } = useLocation();
 
-  const areas = AVAILABLE_DOMAINS.filter((key) => (key === "poi" ? placesVisible : isEnabled(key)));
+  const areas = AVAILABLE_DOMAINS.filter((key) =>
+    key === "poi" ? placesVisible : key === "rail" ? railVisible : isEnabled(key)
+  );
   if (areas.length < 2) return null;
 
   return (

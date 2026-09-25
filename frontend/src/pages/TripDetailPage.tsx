@@ -1,7 +1,7 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { tripsApi } from "../lib/api";
-import { formatDateInTimezone, formatDateTimeInTimezone } from "../lib/dateUtils";
+import { formatDateInTimezone } from "../lib/dateUtils";
 import { formatDate } from "../lib/displayFormat";
 import { logger } from "../lib/logger";
 import { sumByCurrency } from "../lib/bookingCost";
@@ -9,6 +9,7 @@ import { formatAmount, formatCurrency } from "../lib/units";
 import { assessStayPlausibility } from "../shared/stayPlausibility";
 import { useSettingsStore } from "../store/settingsStore";
 import { computeRailStates } from "../lib/timelineRail";
+import { buildTimelineEvents, type TimelineEvent } from "../lib/tripTimelineEvents";
 import { ExpandableEventCard } from "../components/Trip/ExpandableEventCard";
 import { JournalCard, RowActions } from "../components/Trips/TimelineJournalCard";
 import { useToastStore } from "../store/toastStore";
@@ -32,11 +33,9 @@ import TourSectionList from "../components/Trips/TourSectionList";
 import { useToursVisible } from "../hooks/useToursVisible";
 import { PanelHeader, Placeholder } from "../components/Trips/TripDetailPanels";
 import { RowActionButton } from "../components/table/RowActionButton";
-import {
-  compareTimelineEvents,
-  formatTimelineDate,
-  isSupersededByPlaceVisit,
-} from "../lib/tripTimeline";
+import { formatTimelineDate } from "../lib/tripTimeline";
+import { RailTripCard, TripRailList } from "../components/rail/RailTripCard";
+import { useRailVisible } from "../hooks/useRailVisible";
 import { listPlaces } from "../lib/api/places";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
 import type { Place, PlaceVisit } from "../types/place";
@@ -97,12 +96,15 @@ export default function TripDetailPage(): JSX.Element {
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
   const lodgingEnabled = isEnabled("lodging");
+  // Rail asks its own hook: the beta switch AND the domain (useRailVisible).
+  const railVisible = useRailVisible();
   const displayTrip = useMemo<Trip | null>(() => {
-    if (trip === null || (cruiseEnabled && lodgingEnabled)) return trip;
+    if (trip === null || (cruiseEnabled && lodgingEnabled && railVisible)) return trip;
     return {
       ...trip,
       cruises: cruiseEnabled ? trip.cruises : [],
       lodgingStays: lodgingEnabled ? trip.lodgingStays : [],
+      railJourneys: railVisible ? trip.railJourneys : [],
       _count: trip._count
         ? {
             ...trip._count,
@@ -111,7 +113,7 @@ export default function TripDetailPage(): JSX.Element {
           }
         : trip._count,
     };
-  }, [trip, cruiseEnabled, lodgingEnabled]);
+  }, [trip, cruiseEnabled, lodgingEnabled, railVisible]);
   const hiddenCruiseCount = cruiseEnabled
     ? 0
     : (trip?._count?.cruises ?? trip?.cruises?.length ?? 0);
@@ -307,51 +309,6 @@ export function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
 
 /* ─────────── Tab: Timeline ─────────── */
 
-export type TimelineEvent =
-  | {
-      id: string;
-      kind: "flight";
-      date: string;
-      title: string;
-      subtitle: string | null;
-      /** The row itself, so the entry can open in place. It is already on the
-       *  trip payload -- see the note on `Trip["flights"]`. */
-      flight: NonNullable<Trip["flights"]>[number];
-    }
-  | {
-      id: string;
-      kind: "cruise";
-      date: string;
-      title: string;
-      subtitle: string | null;
-      cruise: NonNullable<Trip["cruises"]>[number];
-    }
-  | {
-      id: string;
-      kind: "stop";
-      date: string;
-      stop: TripStop;
-    }
-  | {
-      id: string;
-      kind: "journal";
-      date: string;
-      entry: TripJournalEntry;
-    }
-  | {
-      id: string;
-      kind: "lodging-checkin" | "lodging-checkout";
-      date: string;
-      stay: NonNullable<Trip["lodgingStays"]>[number];
-    }
-  | {
-      id: string;
-      kind: "place-visit";
-      date: string;
-      place: Place;
-      visit: PlaceVisit;
-    };
-
 const STOP_DOMAIN_ICON: Record<string, string> = {
   poi: "📍",
   hotel: "🏨",
@@ -417,101 +374,10 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
   // Only a fallback: a flight whose airport record lacks an IANA zone.
   const userTz = useSettingsStore((s) => s.display?.timezone) || "UTC";
 
-  const events = useMemo<TimelineEvent[]>(() => {
-    const out: TimelineEvent[] = [];
-    for (const f of trip.flights ?? []) {
-      if (!f.departureTime) continue;
-      out.push({
-        id: `flight-${f.id}`,
-        kind: "flight",
-        date: f.departureTime,
-        title: `${f.depIata ?? "???"} → ${f.arrIata ?? "???"}`,
-        // Airport-local, not the viewer's clock. `toLocaleString()` rendered a
-        // JFK arrival in Europe/Berlin, so the same flight read 13:45 in the
-        // flights table and 19:45 here — six hours apart from the boarding
-        // pass. Each end is formatted against its own airport's zone, with the
-        // stored time semantics so a DATE_ONLY historical row keeps its date.
-        subtitle: f.arrivalTime
-          ? `${formatDateTimeInTimezone(f.departureTime, f.depTimezone || userTz, f.depTimeSemantics)} → ${formatDateTimeInTimezone(f.arrivalTime, f.arrTimezone || userTz, f.arrTimeSemantics)}`
-          : formatDateTimeInTimezone(f.departureTime, f.depTimezone || userTz, f.depTimeSemantics),
-        flight: f,
-      });
-    }
-    for (const c of trip.cruises ?? []) {
-      if (!c.startDate) continue;
-      out.push({
-        id: `cruise-${c.id}`,
-        kind: "cruise",
-        date: c.startDate,
-        title: c.cruiseLine ?? "Kreuzfahrt",
-        subtitle: c.endDate
-          ? `${formatDate(c.startDate)} → ${formatDate(c.endDate)}`
-          : formatDate(c.startDate),
-        cruise: c,
-      });
-    }
-    for (const s of trip.stops ?? []) {
-      // A migrated POI stop is drawn as its PlaceVisit instead. Both rows
-      // exist between the backfill and the delete release, so without this
-      // every migrated POI would appear twice — see isSupersededByPlaceVisit.
-      if (isSupersededByPlaceVisit(s)) continue;
-      out.push({
-        id: `stop-${s.id}`,
-        kind: "stop",
-        date: s.startDate ?? s.createdAt,
-        stop: s,
-      });
-    }
-    for (const { place, visit } of placeVisits) {
-      // An undated visit has no place on a chronology; it still shows on the
-      // place itself. Same rule an undated lodging stay already follows.
-      if (!visit.visitedAt) continue;
-      out.push({
-        id: `place-visit-${visit.id}`,
-        kind: "place-visit",
-        date: visit.visitedAt,
-        place,
-        visit,
-      });
-    }
-    for (const e of trip.journalEntries ?? []) {
-      out.push({
-        id: `journal-${e.id}`,
-        kind: "journal",
-        date: e.date,
-        entry: e,
-      });
-    }
-    // Each linked stay renders as TWO timeline entries — a check-in and a
-    // check-out — mirroring how TripStop entries already work, so the
-    // hotel is actually visible in the trip's chronology instead of
-    // disappearing once it's assigned (the spec gap this closes).
-    for (const s of trip.lodgingStays ?? []) {
-      // A timeline is ordered by date, so an undated stay has no place on one.
-      // It is still shown on the trip — in the lodging list below, which needs
-      // no chronology — rather than being dropped from the page.
-      if (s.checkIn !== null) {
-        out.push({
-          id: `lodging-checkin-${s.id}`,
-          kind: "lodging-checkin",
-          date: s.checkIn,
-          stay: s,
-        });
-      }
-      if (s.checkOut !== null) {
-        out.push({
-          id: `lodging-checkout-${s.id}`,
-          kind: "lodging-checkout",
-          date: s.checkOut,
-          stay: s,
-        });
-      }
-    }
-    // #175: ordered by time of day, with a day's diary entry last. See
-    // compareTimelineEvents — the tie-break rules and the reason they exist
-    // live there, not here.
-    return out.sort(compareTimelineEvents);
-  }, [trip, placeVisits]);
+  const events = useMemo<TimelineEvent[]>(
+    () => buildTimelineEvents(trip, placeVisits, userTz),
+    [trip, placeVisits, userTz]
+  );
 
   // Cross-domain geo sanity (#6): a stay whose hotel sits far from every trip
   // leg is almost certainly an import/typo error. Compute the set of such stay
@@ -648,6 +514,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
                 />
                 {ev.kind === "flight" && <FlightCard ev={ev} language={language} t={t} />}
                 {ev.kind === "cruise" && <CruiseCard ev={ev} language={language} t={t} />}
+                {ev.kind === "rail" && <RailTripCard journey={ev.journey} date={ev.date} />}
                 {(ev.kind === "lodging-checkin" || ev.kind === "lodging-checkout") && (
                   <LodgingCheckCard
                     ev={ev}
@@ -732,6 +599,8 @@ function dotColor(ev: TimelineEvent): string {
       return "var(--domain-flight, var(--accent))";
     case "cruise":
       return "var(--domain-cruise, #6fa0d6)";
+    case "rail":
+      return "var(--domain-rail)";
     case "stop":
     case "place-visit":
       return "var(--domain-poi, #5ec2b2)";
@@ -1138,7 +1007,8 @@ function LogisticsTab({
 
   const costTotals = sumByCurrency(bookings);
 
-  if (flights.length === 0 && cruises.length === 0 && bookings.length === 0) {
+  const railJourneys = trip.railJourneys ?? [];
+  if (!flights.length && !cruises.length && !bookings.length && !railJourneys.length) {
     return <Placeholder text={t("trips:detail.noLinks")} />;
   }
 
@@ -1231,6 +1101,8 @@ function LogisticsTab({
           </table>
         </div>
       )}
+
+      {railJourneys.length > 0 && <TripRailList journeys={railJourneys} />}
 
       {bookings.length > 0 && (
         <div

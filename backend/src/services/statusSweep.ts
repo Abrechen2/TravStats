@@ -29,9 +29,13 @@ const H = 60 * 60 * 1000;
  * paths; the sweep deliberately does NOT narrow its window to match—only
  * corrects clearly contradictory (future-dated) rows.
  */
-export async function sweepStatuses(
-  now: Date = new Date()
-): Promise<{ flights: number; cruises: number; lodging: number; trips: number }> {
+export async function sweepStatuses(now: Date = new Date()): Promise<{
+  flights: number;
+  cruises: number;
+  lodging: number;
+  rail: number;
+  trips: number;
+}> {
   const arrivalCutoff = new Date(now.getTime() - FLIGHT_ARRIVAL_SLACK_HOURS * H);
   const departureCutoff = new Date(now.getTime() - FLIGHT_DEPARTURE_SLACK_HOURS * H);
   const cruiseCutoff = new Date(now.getTime() - CRUISE_SLACK_HOURS * H);
@@ -133,6 +137,29 @@ export async function sweepStatuses(
     data: { status: "scheduled" },
   });
 
+  // Rail journeys: the lodging split over two instants (`deriveRailStatus`).
+  // No slack for the same reason as lodging — no legacy writer ever set this
+  // column. An unknown arrival reads as the departure, as the deriver does.
+  const railToInProgress = await prisma.railJourney.updateMany({
+    where: {
+      status: { in: ["scheduled", "completed"] },
+      departureTime: { lte: now },
+      arrivalTime: { gt: now },
+    },
+    data: { status: "in_progress" },
+  });
+  const railToCompleted = await prisma.railJourney.updateMany({
+    where: {
+      status: { in: ["scheduled", "in_progress"] },
+      OR: [{ arrivalTime: { lte: now } }, { arrivalTime: null, departureTime: { lte: now } }],
+    },
+    data: { status: "completed" },
+  });
+  const railToScheduled = await prisma.railJourney.updateMany({
+    where: { status: { in: ["in_progress", "completed"] }, departureTime: { gt: now } },
+    data: { status: "scheduled" },
+  });
+
   // Trips: recompute from segment date bounds, update diffs only
   const trips = await prisma.trip.findMany({
     select: {
@@ -147,6 +174,7 @@ export async function sweepStatuses(
         where: { kind: "roadtrip" },
         select: { stops: { select: { startDate: true, endDate: true } } },
       },
+      railJourneys: { select: { departureTime: true, arrivalTime: true } },
     },
   });
   let tripFlips = 0;
@@ -159,6 +187,7 @@ export async function sweepStatuses(
       cruises: trip.cruises,
       lodgingStays: trip.lodgingStays,
       roadtrips: trip.routes,
+      railJourneys: trip.railJourneys,
       ownStartDate: trip.startDate,
       ownEndDate: trip.endDate,
     });
@@ -172,11 +201,12 @@ export async function sweepStatuses(
   const flights = staleFlights.count + futureFlown.count;
   const cruises = cruiseToInProgress.count + cruiseToFlown.count + cruiseToScheduled.count;
   const lodging = lodgingToInProgress.count + lodgingToCompleted.count + lodgingToScheduled.count;
-  if (flights + cruises + lodging + tripFlips > 0) {
+  const rail = railToInProgress.count + railToCompleted.count + railToScheduled.count;
+  if (flights + cruises + lodging + rail + tripFlips > 0) {
     logger.info({
       operation: "status_sweep_done",
-      context: { flights, cruises, lodging, trips: tripFlips },
+      context: { flights, cruises, lodging, rail, trips: tripFlips },
     });
   }
-  return { flights, cruises, lodging, trips: tripFlips };
+  return { flights, cruises, lodging, rail, trips: tripFlips };
 }

@@ -37,6 +37,7 @@ import { linkRowsFor, resolveCompanions } from "./services/companionService";
 import { seedStories } from "./seedDemo/seedStories";
 import { stopTimesForDay } from "./seedDemo/cruiseTiming";
 import { seedBulk } from "./seedDemo/seedBulk";
+import { createDemoRail } from "./seedDemo/seedRail";
 
 export type AirportRow = {
   id: number;
@@ -1671,6 +1672,7 @@ export async function runDemoSeed(
   await seedTripsAndBookings(userId);
   await seedStories(userId, airports);
   await seedBulk(userId);
+  await createDemoRail(userId);
 
   try {
     await checkAndUpdateAchievements(userId);

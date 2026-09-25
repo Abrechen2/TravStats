@@ -3,7 +3,7 @@
  * See: docs/superpowers/specs/2026-04-19-multi-domain-foundation-design.md
  */
 
-export const DOMAIN_KEYS = ["flight", "cruise", "lodging", "poi", "roadtrip"] as const;
+export const DOMAIN_KEYS = ["flight", "cruise", "lodging", "poi", "roadtrip", "rail"] as const;
 export type DomainKey = (typeof DOMAIN_KEYS)[number];
 
 export interface DomainDescriptor {
@@ -67,6 +67,19 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     icon: "🚐",
     color: "#a597f0",
     routePrefix: "/roadtrips",
+  },
+  // Train journeys (spec 2026-09-25-rail-domain). Available, so shared code
+  // iterating AVAILABLE_DOMAINS sees it; the UI additionally hides it behind
+  // the `railDomain` beta gate. Brick red: clear of flight amber, cruise teal,
+  // hotel mint, POI ink and the tour olive — see `domainColor.rail` in
+  // design/tokens.json.
+  rail: {
+    key: "rail",
+    available: true,
+    i18nKey: "domain.rail",
+    icon: "🚆",
+    color: "#d4655c",
+    routePrefix: "/rail",
   },
 };
 

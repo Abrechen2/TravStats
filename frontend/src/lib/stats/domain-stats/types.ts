@@ -2,6 +2,14 @@
 import type { DomainKey } from "../../../shared/domains";
 
 /**
+ * Domains that have statistics — every domain since rail's phase 2b
+ * (docs/superpowers/specs/2026-09-25-rail-domain.md). Kept as its own name so
+ * a future domain that arrives before its figures can be excluded here again,
+ * which is how rail sat out its first phase.
+ */
+export type StatsDomain = DomainKey;
+
+/**
  * One headline figure on a per-domain card.
  *
  * `labelKey`, not a label: these adapters are pure functions with no `t` in

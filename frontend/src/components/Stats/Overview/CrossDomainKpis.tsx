@@ -5,6 +5,7 @@ import type { YearScopedAgg } from "../../../lib/stats/domain-stats";
 import type { AchievementSummary } from "../../../types";
 import { DOMAINS, type DomainKey } from "../../../shared/domains";
 import type { EvidenceDomain } from "../../../shared/evidence";
+import type { StatsDomain } from "../../../lib/stats/domain-stats/types";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import type { ComparisonKind } from "../../../lib/stats/comparisonWindow";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -38,12 +39,13 @@ interface Props {
  * is); the domain registry calls it `poi` (what the FEATURE is). One letter
  * of translation, in one place, rather than a cast at each tile.
  */
-const EVIDENCE_DOMAIN_OF: Record<DomainKey, EvidenceDomain> = {
+const EVIDENCE_DOMAIN_OF: Record<StatsDomain, EvidenceDomain> = {
   flight: "flight",
   cruise: "cruise",
   lodging: "lodging",
   poi: "place",
   roadtrip: "roadtrip",
+  rail: "rail",
 };
 
 export default function CrossDomainKpis({

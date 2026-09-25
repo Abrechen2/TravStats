@@ -7,6 +7,7 @@ export const DASHBOARD_TABS = [
   "poi",
   "lodging",
   "roadtrip",
+  "rail",
   "tour",
 ] as const;
 export type DashboardTab = (typeof DASHBOARD_TABS)[number];
@@ -42,7 +43,13 @@ export type LodgingMode = (typeof LODGING_MODES)[number];
 export const TOUR_MODES = ["routes", "globe"] as const;
 export type TourMode = (typeof TOUR_MODES)[number];
 
-export type DashboardMode = AllMode | FlightMode | CruiseMode | PoiMode | LodgingMode | TourMode;
+// Rail (spec 2026-09-25-rail-domain, phase 2b) draws lines like tours do, so
+// it offers the same two views: the flat map and the sphere.
+export const RAIL_MODES = ["routes", "globe"] as const;
+export type RailMode = (typeof RAIL_MODES)[number];
+
+export type DashboardMode =
+  AllMode | FlightMode | CruiseMode | PoiMode | LodgingMode | RailMode | TourMode;
 
 interface TabRegistryEntry<M extends DashboardMode> {
   readonly modes: readonly M[];
@@ -75,6 +82,7 @@ export const TAB_MODE_REGISTRY = {
   cruise: { modes: CRUISE_MODES, default: "globe", flatDefault: "sea-routes" },
   poi: { modes: POI_MODES, default: "globe", flatDefault: "markers" },
   lodging: { modes: LODGING_MODES, default: "globe", flatDefault: "map" },
+  rail: { modes: RAIL_MODES, default: "globe", flatDefault: "routes" },
   tour: { modes: TOUR_MODES, default: "globe", flatDefault: "routes" },
   // Roadtrips (2.7) draw the same kind of line a tour does, so they take the
   // tour's two modes — the globe first, like every tab.

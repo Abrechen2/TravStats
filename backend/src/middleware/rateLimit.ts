@@ -307,6 +307,50 @@ export const flightCreationLimiter = rateLimit({
 });
 
 /**
+ * Rail journey creation. The same budget as flight creation — a train ride is
+ * entered the way a flight is, one form at a time — but its own bucket and its
+ * own message, so a busy flight import cannot lock the rail logbook and a 429
+ * does not tell a rail user that they created too many flights.
+ */
+export const railCreationLimiter = rateLimit({
+  windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
+  max: patAwareMax(RATE_LIMITS.FLIGHT_CREATION_MAX),
+  message: "Too many train journeys saved, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
+ * The rail station typeahead reads the local catalogue only, so it is looser
+ * than the geocoder proxies (30/min): a debounced field still sends a request
+ * per pause, and a user correcting a station name pauses often.
+ */
+export const railStationSearchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(120),
+  message: "Too many station searches in a short time — please slow down",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
+ * The train-number lookup asks Transitous and db-rest — free services run by
+ * volunteers (db-rest allows ~100 requests a minute for EVERYONE). One lookup
+ * is up to eight upstream requests, so a user gets ten a minute: plenty for
+ * logging journeys, useless for scraping a timetable through this instance.
+ */
+export const railLookupLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(10),
+  message: "Too many train lookups in a short time — please slow down",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * General API rate limiter
  * Allows 1000 requests per hour per IP
  */

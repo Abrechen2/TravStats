@@ -75,6 +75,11 @@ import airlinesRoutes from "./airlines";
 import aircraftRoutes from "./aircraft";
 import cruisesRouter from "./cruises";
 import cruiseRouteOverrideRoutes from "./cruises/routeOverride";
+import railRouter from "./rail";
+import railStationsRouter from "./rail/stations";
+import railLookupRouter from "./rail/lookup";
+import railStatsRouter from "./rail/stats";
+import railRoadtripConversionRouter from "./rail/roadtripConversion";
 import currenciesRouter from "./currencies";
 import lodgingRouter from "./lodging";
 import lodgingPhotoRouter from "./lodging/photos";
@@ -251,6 +256,18 @@ export const apiMounts: ApiMount[] = [
   // Same-prefix satellite router, same pattern as authRoutes + passwordResetRoutes
   // above — split out of cruises.ts once that file crossed the 800-line max.
   { id: "cruises.routeOverride", base: "/api/v1/cruises", router: cruiseRouteOverrideRoutes },
+  // Train journeys (spec 2026-09-25-rail-domain). Behind the beta switch in the UI only.
+  // The catalogue typeahead and the train lookup mount FIRST on the same
+  // prefix: the journey router's '/:id' would otherwise answer them as a 404.
+  { id: "rail.stations", base: "/api/v1/rail/stations", router: railStationsRouter },
+  { id: "rail.lookup", base: "/api/v1/rail/lookup", router: railLookupRouter },
+  { id: "rail.stats", base: "/api/v1/rail/stats", router: railStatsRouter },
+  {
+    id: "rail.roadtripConversion",
+    base: "/api/v1/rail/roadtrip-conversion",
+    router: railRoadtripConversionRouter,
+  },
+  { id: "rail", base: "/api/v1/rail", router: railRouter },
   { id: "currencies", base: "/api/v1/currencies", router: currenciesRouter },
   // Photographs of the house — same prefix, own file. Mounted FIRST for the
   // same reason the visit-photo router is: relying on segment counts to keep

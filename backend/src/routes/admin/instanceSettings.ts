@@ -87,6 +87,9 @@ const instancePatchSchema = z.object({
   countryThreshold: z.enum(COUNTRY_TIERS).optional(),
   /** May the instance call open data services for its users (off by default). */
   openDataEnabled: z.boolean().optional(),
+  /** May the rail lookup ask Transitous / db-rest (both on by default). */
+  railTransitousEnabled: z.boolean().optional(),
+  railDbRestEnabled: z.boolean().optional(),
 });
 
 /**
@@ -154,6 +157,12 @@ router.put("/instance-settings", async (req: AuthRequest, res: Response, next: N
       }),
       ...(patch.openDataEnabled !== undefined && {
         openDataEnabled: patch.openDataEnabled,
+      }),
+      ...(patch.railTransitousEnabled !== undefined && {
+        railTransitousEnabled: patch.railTransitousEnabled,
+      }),
+      ...(patch.railDbRestEnabled !== undefined && {
+        railDbRestEnabled: patch.railDbRestEnabled,
       }),
     });
     res.json({ settings, passkeyStatus: passkeyStatusOf(settings) });

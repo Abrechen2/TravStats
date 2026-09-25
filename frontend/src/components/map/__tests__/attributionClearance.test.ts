@@ -27,6 +27,6 @@ describe("bottom-right overlays clear the attribution bar (#273)", () => {
     const users = readdirSync(tabsDir)
       .filter((f) => f.endsWith(".tsx"))
       .filter((f) => /bottom: ATTRIBUTION_CLEARANCE/.test(readFileSync(join(tabsDir, f), "utf8")));
-    expect(users.sort()).toEqual(["AllTab.tsx", "PoiTab.tsx", "TourTab.tsx"]);
+    expect(users.sort()).toEqual(["AllTab.tsx", "PoiTab.tsx", "RailTab.tsx", "TourTab.tsx"]);
   });
 });

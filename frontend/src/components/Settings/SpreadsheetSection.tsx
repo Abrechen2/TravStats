@@ -17,6 +17,7 @@ import { cruiseApi } from "../../lib/api/cruise";
 import { flightsApi } from "../../lib/api/flights";
 import { listLodgings } from "../../lib/api/lodging";
 import { placesApi } from "../../lib/api/places";
+import { railApi } from "../../lib/api/rail";
 import { roadtripsApi } from "../../lib/api/roadtrips";
 import { tourIndexApi } from "../../lib/api/tourIndex";
 import { toursApi } from "../../lib/api/tours";
@@ -32,6 +33,7 @@ import {
 } from "../../lib/xlsx/importClient";
 import type { ParsedSheet } from "../../lib/xlsx/workbook";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { useRailVisible } from "../../hooks/useRailVisible";
 import { Icon } from "../ui/Icon";
 import { SettingRow } from "../ui/SettingRow";
 
@@ -102,6 +104,8 @@ type Pending = ParsedSheet[];
 export default function SpreadsheetSection(): JSX.Element {
   const { t, i18n } = useTranslation(["xlsx", "common"]);
   const { isEnabled } = useEnabledDomains();
+  // Rail is beta: behind the `railDomain` gate the export carries no rail sheet.
+  const railVisible = useRailVisible();
   const toursVisible = useToursVisible();
   const [status, setStatus] = useState<Status>("idle");
 
@@ -111,7 +115,7 @@ export default function SpreadsheetSection(): JSX.Element {
       // Only domains this instance actually runs. Asking the cruise endpoint
       // on an instance with cruises switched off would 404 and fail the whole
       // export over data the user does not have.
-      const [flights, cruises, lodging, places, roadtrips, tours] = await Promise.all([
+      const [flights, cruises, lodging, places, roadtrips, tours, rail] = await Promise.all([
         // Walked page by page, like the other domains. One "large" page was
         // never enough: the server caps `limit` at 500 whatever is asked for,
         // so an account with 501 flights exported 500 of them and said
@@ -135,11 +139,12 @@ export default function SpreadsheetSection(): JSX.Element {
               )
             )
           : Promise.resolve([]),
+        railVisible ? railApi.listAll() : Promise.resolve([]),
       ]);
 
       const blob = await exportWorkbook(
         t,
-        { flights, cruises, lodging, places, roadtrips, tours },
+        { flights, cruises, lodging, places, roadtrips, tours, rail },
         i18n.language
       );
       if (!blob) {
@@ -161,7 +166,7 @@ export default function SpreadsheetSection(): JSX.Element {
     } catch {
       setStatus("failed");
     }
-  }, [isEnabled, toursVisible, t, i18n.language]);
+  }, [isEnabled, toursVisible, railVisible, t, i18n.language]);
 
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
@@ -178,7 +183,7 @@ export default function SpreadsheetSection(): JSX.Element {
       setImportStatus("checking");
       setOutcome(null);
       try {
-        const sheets = await readWorkbookForImport(t, file);
+        const sheets = await readWorkbookForImport(t, file, { rail: railVisible });
         if (sheets.length === 0) {
           setImportStatus("nothing");
           return;
@@ -192,7 +197,7 @@ export default function SpreadsheetSection(): JSX.Element {
         setImportStatus("failed");
       }
     },
-    [t, mode]
+    [t, mode, railVisible]
   );
 
   const handleApply = useCallback(async () => {

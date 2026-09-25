@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { resolveStatsTab, visibleStatsTabs } from "../statsTabAccess";
+import { parseStatsTab, resolveStatsTab, visibleStatsTabs } from "../statsTabAccess";
 
 /**
  * A deep link must not open a tab the reader does not have.
@@ -78,5 +78,42 @@ describe("visibleStatsTabs", () => {
       "cruise",
       "lodging",
     ]);
+  });
+});
+
+// Rail stays behind the `railDomain` beta gate after phase 2 (owner rule,
+// 2026-09-25): the strip, the deep link and — through `visibleStatsTabs` —
+// the overview's chips and cards all ask the instance half.
+describe("rail statistics tab", () => {
+  it("is drawn only when the beta gate is on", () => {
+    expect(visibleStatsTabs(["flight", "rail"], "denied", true)).toEqual(["flight", "rail"]);
+    expect(visibleStatsTabs(["flight", "rail"], "denied", false)).toEqual(["flight"]);
+  });
+
+  it("hides rail when a caller does not say", () => {
+    expect(visibleStatsTabs(["flight", "rail"], "denied")).toEqual(["flight"]);
+  });
+
+  it("refuses a deep link to rail while the gate is off", () => {
+    expect(resolveStatsTab("rail", ["flight", "rail"], "denied", false)).toBe("all");
+    expect(resolveStatsTab("rail", ["flight", "rail"], "denied")).toBe("all");
+  });
+
+  it("opens rail with the gate on, but only for a user who has the domain", () => {
+    expect(resolveStatsTab("rail", ["flight", "rail"], "denied", true)).toBe("rail");
+    expect(resolveStatsTab("rail", ["flight"], "denied", true)).toBe("all");
+  });
+});
+
+describe("parseStatsTab", () => {
+  it("reads every registered domain, rail included", () => {
+    for (const tab of ["flight", "cruise", "lodging", "poi", "rail"]) {
+      expect(parseStatsTab(tab)).toBe(tab);
+    }
+  });
+
+  it("reads anything else as the overview", () => {
+    expect(parseStatsTab(null)).toBe("all");
+    expect(parseStatsTab("hexagon")).toBe("all");
   });
 });

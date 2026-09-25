@@ -438,6 +438,17 @@ modifications available under the same licence. See [LICENSE](LICENSE).
   affiliation with the airlines.*
 - **Airports** — [OurAirports](https://ourairports.com/), public domain.
 - **Shipping lanes** — Eurostat *marnet* network, © European Union.
+- **Rail stations** — [Trainline stations](https://github.com/trainline-eu/stations),
+  ODbL 1.0. A filtered copy (stations with a position that Trainline offers
+  in its own search, plus their parents; nine columns) is vendored under
+  `backend/data/rail/`, which carries the licence and how it was built. That
+  derivative is itself available under the ODbL.
+- **Train lookup and traced lines** — [Transitous](https://transitous.org/)
+  and the timetables of [its sources](https://transitous.org/sources/), used
+  for open-source, non-commercial purposes as its terms ask; German journeys
+  can also be looked up through [db-rest](https://v6.db.transport.rest/). Both
+  are asked only when a user presses "look the train up", and an admin can
+  switch either off.
 
 ## Support the project
 

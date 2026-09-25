@@ -11,6 +11,8 @@ import type { Flight } from "../../types";
 import type { Cruise } from "../../types/cruise";
 import type { Lodging } from "../../types/lodging";
 import type { Place } from "../../types/place";
+import type { RailJourney } from "../../types/rail";
+import { railSheet } from "./railSheet";
 import {
   flightSheet,
   cruiseSheet,
@@ -42,6 +44,8 @@ export interface ExportInput {
   cruises?: readonly Cruise[];
   lodging?: readonly Lodging[];
   places?: readonly Place[];
+  /** Only passed when the rail domain is visible (beta gate + user). */
+  rail?: readonly RailJourney[];
   roadtrips?: readonly RoadtripDetail[];
   /** Day tours only — a roadtrip is on its own sheet. Each carries its points
    *  when the caller fetched them; without, the points sheet is left out. */
@@ -146,6 +150,8 @@ export function buildSheets(t: T, input: ExportInput, locale = "de"): AnySheetDa
     const points = tourPointRows(tours);
     if (points.length > 0) sheets.push(sheet(tourPointSheet(t), points));
   }
+  const rail = input.rail ?? [];
+  if (rail.length > 0) sheets.push(sheet(railSheet(t), rail));
 
   return sheets;
 }

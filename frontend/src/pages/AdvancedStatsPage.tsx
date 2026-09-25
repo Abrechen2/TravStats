@@ -50,6 +50,7 @@ import StatsSeatSection from "../components/Stats/StatsSeatSection";
 import CruiseStatsSection from "../components/Stats/CruiseStatsSection";
 import LodgingStatsSection from "../components/Stats/LodgingStatsSection";
 import PoiStatsSection from "../components/Stats/PoiStatsSection";
+import RailStatsSection from "../components/Stats/rail/RailStatsSection";
 import RoadtripStatsSection from "../components/Stats/RoadtripStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
 import FlightScorecardBlock from "../components/Stats/scorecard/FlightScorecardBlock";
@@ -65,7 +66,8 @@ import { useMinLoadingState } from "../hooks/useMinLoadingState";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useStatsPageSections } from "../lib/stats/useStatsPageSections";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
-import { resolveStatsTab, visibleStatsTabs } from "./statsTabAccess";
+import { useRailOffered } from "../hooks/useRailVisible";
+import { parseStatsTab, resolveStatsTab, visibleStatsTabs } from "./statsTabAccess";
 import type { DomainKey } from "../shared/domains";
 
 export default function AdvancedStatsPage(): JSX.Element {
@@ -96,20 +98,9 @@ export default function AdvancedStatsPage(): JSX.Element {
   // the right drill-down.
   const { enabled } = useEnabledDomains();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [filter, setFilterState] = useState<DomainKey | "all">(() => {
-    const tab = searchParams.get("tab");
-    if (
-      tab === "all" ||
-      tab === "flight" ||
-      tab === "cruise" ||
-      tab === "lodging" ||
-      tab === "poi" ||
-      tab === "roadtrip"
-    ) {
-      return tab;
-    }
-    return "all";
-  });
+  const [filter, setFilterState] = useState<DomainKey | "all">(() =>
+    parseStatsTab(searchParams.get("tab"))
+  );
 
   const setFilter = useCallback(
     (next: DomainKey | "all") => {
@@ -127,15 +118,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   // Sync URL → state when the user navigates back/forward or follows a
   // deep link from another page (e.g. the Gesamt-tab "Details →").
   useEffect(() => {
-    const tab = searchParams.get("tab");
-    const next: DomainKey | "all" =
-      tab === "flight" ||
-      tab === "cruise" ||
-      tab === "lodging" ||
-      tab === "poi" ||
-      tab === "roadtrip"
-        ? tab
-        : "all";
+    const next = parseStatsTab(searchParams.get("tab"));
     if (next !== filter) setFilterState(next);
   }, [searchParams, filter]);
 
@@ -156,7 +139,8 @@ export default function AdvancedStatsPage(): JSX.Element {
    * to the overview, which is a page rather than a blank.
    */
   const placesAccess = usePlacesAccess();
-  const effectiveFilter = resolveStatsTab(filter, enabled, placesAccess);
+  const railOffered = useRailOffered(); // the `railDomain` beta gate, as for the strip
+  const effectiveFilter = resolveStatsTab(filter, enabled, placesAccess, railOffered);
 
   // Which blocks this tab draws. Per tab, because hiding costs on flights says
   // nothing about cruises — and everything is visible until someone says
@@ -560,7 +544,7 @@ export default function AdvancedStatsPage(): JSX.Element {
             second instance. */}
         <EvidencePanel />
         <StatsTabStrip
-          tabs={visibleStatsTabs(enabled, placesAccess)}
+          tabs={visibleStatsTabs(enabled, placesAccess, railOffered)}
           active={filter}
           onSelect={setFilter}
         />
@@ -602,6 +586,7 @@ export default function AdvancedStatsPage(): JSX.Element {
           {effectiveFilter === "roadtrip" && (
             <RoadtripStatsSection scope={scope} visibility={sections} />
           )}
+          {effectiveFilter === "rail" && <RailStatsSection scope={scope} visibility={sections} />}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}
           {effectiveFilter === "flight" && flights.length > 0 && (

@@ -7,6 +7,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useDashboardRoute } from "../../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
+import { useRailVisible } from "../../hooks/useRailVisible";
+import { RailFormModal } from "../rail/RailFormModal";
 import { flightsApi } from "../../lib/api/flights";
 import { getUpcoming, type UpcomingEntry } from "../../lib/api/upcoming";
 import { useToastStore } from "../../store/toastStore";
@@ -26,7 +28,14 @@ import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  counts: { flight: number; cruise: number; poi: number; lodging: number; roadtrip: number };
+  counts: {
+    flight: number;
+    cruise: number;
+    poi: number;
+    lodging: number;
+    roadtrip: number;
+    rail: number;
+  };
   /** What is still ahead per domain — see DomainTabStrip (B6). Whether it is
    * part of `counts` or beside it differs per domain; the strip says which. */
   scheduledCounts?: { flight?: number; cruise?: number; lodging?: number };
@@ -55,6 +64,7 @@ export function DashboardLayout({
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
+  const railVisible = useRailVisible();
   const { addToast } = useToastStore();
   // What is coming up, per domain. Fetched HERE rather than inside the strip so
   // it reloads with the same `onDataChanged` signal the counts do — adding a
@@ -65,7 +75,9 @@ export function DashboardLayout({
     let cancelled = false;
     getUpcoming()
       .then((entries) => {
-        if (!cancelled) setUpcoming(entries);
+        // The server answers by the user's domains alone; the rail beta
+        // switch is the client's to apply (owner rule 2026-09-25).
+        if (!cancelled) setUpcoming(entries.filter((e) => e.domain !== "rail" || railVisible));
       })
       .catch((err: unknown) => logger.error("Failed to load the upcoming entries", err));
     return () => {
@@ -73,7 +85,7 @@ export function DashboardLayout({
     };
     // `counts` changes whenever the page refetches after a create — the cheapest
     // honest trigger for "something might now be sooner than what is shown".
-  }, [counts]);
+  }, [counts, railVisible]);
 
   const enabledDomains = {
     flight: isEnabled("flight"),
@@ -81,6 +93,7 @@ export function DashboardLayout({
     poi: isEnabled("poi"),
     lodging: isEnabled("lodging"),
     roadtrip: isEnabled("roadtrip"),
+    rail: isEnabled("rail"),
   };
 
   // What the "+" menu offers. One entry differs from `enabledDomains`, on
@@ -95,7 +108,12 @@ export function DashboardLayout({
   // with a toggle, and a tour that belongs to no trip has no other place it
   // could be started from. Behind the roadtrips beta key since 2026-09-24.
   const toursVisible = useToursVisible();
-  const addableDomains = { ...enabledDomains, poi: placesVisible, tour: toursVisible };
+  const addableDomains = {
+    ...enabledDomains,
+    poi: placesVisible,
+    rail: railVisible,
+    tour: toursVisible,
+  };
 
   // A truly empty account: nothing in any domain. Shown only after the counts
   // have loaded, and only on the "all" landing tab — a per-domain tab already
@@ -106,7 +124,8 @@ export function DashboardLayout({
     counts.cruise === 0 &&
     counts.poi === 0 &&
     counts.lodging === 0 &&
-    counts.roadtrip === 0;
+    counts.roadtrip === 0 &&
+    counts.rail === 0;
 
   // A tour and a roadtrip open a page, not a modal: both are an ordered list
   // of points, which is not a thing to type into a dialog over the map.
@@ -218,6 +237,16 @@ export function DashboardLayout({
       {/* This slot held a "not wired — domain is disabled until V2" comment
           long after the domain had shipped, so the menu offered "POI
           hinzufügen" and the click went nowhere (#288). */}
+      {addingDomain === "rail" && (
+        <RailFormModal
+          journey={null}
+          onClose={() => setAddingDomain(null)}
+          onSaved={() => {
+            setAddingDomain(null);
+            onDataChanged?.();
+          }}
+        />
+      )}
       {addingDomain === "poi" && (
         <PlaceFormModal
           place={null}

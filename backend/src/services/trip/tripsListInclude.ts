@@ -12,6 +12,31 @@
 
 import { Prisma } from "../../prisma";
 
+/**
+ * A trip's train rides as `GET /trips/:id` sends them: what a timeline entry
+ * and a logistics row show. Not the frozen `geometry` — one traced ICE line is
+ * ~10 000 points, and the trip page does not draw it.
+ */
+export const TRIP_RAIL_SELECT = {
+  id: true,
+  operator: true,
+  trainCategory: true,
+  trainNumber: true,
+  depStationName: true,
+  arrStationName: true,
+  depTimezone: true,
+  arrTimezone: true,
+  departureTime: true,
+  arrivalTime: true,
+  distanceKm: true,
+  distanceSource: true,
+  status: true,
+  delayMinutes: true,
+  price: true,
+  currency: true,
+  bookingId: true,
+} satisfies Prisma.RailJourneySelect;
+
 export const TRIPS_LIST_INCLUDE = {
   _count: {
     select: {

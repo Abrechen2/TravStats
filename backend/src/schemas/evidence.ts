@@ -45,6 +45,7 @@ const EVIDENCE_DOMAINS = [
   "cruise",
   "lodging",
   "place",
+  "rail",
   "trip",
   "roadtrip",
 ] as const satisfies readonly EvidenceDomain[];

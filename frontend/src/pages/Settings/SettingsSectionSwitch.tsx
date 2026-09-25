@@ -30,6 +30,7 @@ import GeocoderSettingsCard from "../../components/Settings/GeocoderSettingsCard
 import RoutingProviderSection from "../../components/Settings/RoutingProviderSection";
 import ImmichConnectionCard from "../../components/Settings/ImmichConnectionCard";
 import DawarichConnectionCard from "../../components/Settings/DawarichConnectionCard";
+import RailProvidersCard from "../../components/Settings/RailProvidersCard";
 import StravaConnectionCard from "../../components/Settings/StravaConnectionCard";
 
 type SettingsPageState = ReturnType<typeof useSettingsPage>;
@@ -128,6 +129,8 @@ export default function SettingsSectionSwitch({
               behind the roadtrips beta key on 2026-09-24 — a routing card for
               a feature hidden everywhere else would offer nothing. */}
           {toursVisible && <RoutingProviderSection isAdmin={isAdmin} />}
+          {/* Admin-only, and only where the rail domain is offered (beta). */}
+          <RailProvidersCard isAdmin={isAdmin} />
           <ImmichConnectionCard />
           {/* It had a key of its OWN rather than riding on `tourRoutes`, because
               tours stopped being the only consumer the moment cruise legs were

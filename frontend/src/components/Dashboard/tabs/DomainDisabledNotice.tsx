@@ -9,6 +9,7 @@ const TAB_ICON: Record<DomainKey, string> = {
   poi: "📍",
   lodging: "🏨",
   roadtrip: "🚐",
+  rail: "🚆",
 };
 
 /**

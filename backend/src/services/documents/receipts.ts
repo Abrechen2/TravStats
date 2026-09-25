@@ -77,6 +77,7 @@ export async function reconcileReceiptDocuments(): Promise<ReceiptReconcileResul
         lodgingStayId: null,
         tripId: null,
         placeVisitId: null,
+        railJourneyId: null,
       },
       data: { [ref.column]: ref.id, linkedAt: new Date() },
     });

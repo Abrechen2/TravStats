@@ -155,6 +155,10 @@
           "lodgingEnrichment": {
             "name": "Complete lodgings from OpenStreetMap",
             "what": "The “Complete from OpenStreetMap” button on a lodging’s page: it writes stars, website, chain and the Wikipedia link into empty fields. Also needs the open data services switch."
+          },
+          "railDomain": {
+            "name": "Rail",
+            "what": "The Rail area: a logbook for train journeys with a station catalogue, train lookup, map, statistics and Excel import and export. A roadtrip with “Rail” as its vehicle can be taken over as train rides."
           }
         }
       },

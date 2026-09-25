@@ -155,6 +155,10 @@
           "lodgingEnrichment": {
             "name": "Unterkünfte aus OpenStreetMap ergänzen",
             "what": "Der Knopf „Aus OpenStreetMap ergänzen“ auf der Seite einer Unterkunft: Er trägt Sterne, Webseite, Kette und die Wikipedia-Verknüpfung in leere Felder ein. Braucht zusätzlich den Schalter für offene Datendienste."
+          },
+          "railDomain": {
+            "name": "Bahn",
+            "what": "Der Bereich „Bahn“: ein Fahrtenbuch für Zugfahrten mit Bahnhofskatalog, Zugsuche, Karte, Statistik und Excel-Import und -Export. Ein Roadtrip mit „Bahn“ als Fahrzeug lässt sich als Zugfahrten übernehmen."
           }
         }
       },

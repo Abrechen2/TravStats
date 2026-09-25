@@ -150,7 +150,7 @@ registry.registerPath({
   path: "/upcoming",
   summary: "The next item across every enabled domain",
   description:
-    "One entry per domain the user has enabled — next flight, cruise, stay — " +
+    "One entry per domain the user has enabled — next flight, cruise, stay, train — " +
     "plus the next trip, sorted by start. Domains the user has switched off are " +
     "absent rather than empty. An account with no settings row is treated as " +
     "flights-only, matching the column default.",
@@ -165,7 +165,7 @@ registry.registerPath({
             data: z.object({
               entries: z.array(
                 z.object({
-                  domain: z.enum(["flight", "cruise", "lodging", "place", "trip"]),
+                  domain: z.enum(["flight", "cruise", "lodging", "place", "rail", "trip"]),
                   id: z.string(),
                   detailId: z
                     .string()

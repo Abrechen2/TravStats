@@ -26,7 +26,7 @@ interface Props {
 export default function StatsToolbar({ tab, years, period, visibility }: Props): JSX.Element {
   // The menu labels are the headings each tab draws, which live in the domain
   // namespaces as well as `stats`.
-  const { t } = useTranslation(["stats", "cruise", "lodging", "places", "common"]);
+  const { t } = useTranslation(["stats", "cruise", "lodging", "places", "rail", "common"]);
   return (
     // One row on a wide screen; on a phone the period bar takes the full
     // width and the section menu its own row. Side by side, the menu kept its

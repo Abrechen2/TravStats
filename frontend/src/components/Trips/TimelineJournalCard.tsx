@@ -7,7 +7,7 @@ import { formatTimelineDate } from "../../lib/tripTimeline";
 import { ExpandableEventCard } from "../Trip/ExpandableEventCard";
 import JournalBody from "./JournalBody";
 import JournalPhotoRow from "./JournalPhotoRow";
-import type { TimelineEvent } from "../../pages/TripDetailPage";
+import type { TimelineEvent } from "../../lib/tripTimelineEvents";
 
 /**
  * The diary entry and the small action strip a trip's timeline draws.

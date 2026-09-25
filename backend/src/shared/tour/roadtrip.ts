@@ -24,7 +24,14 @@ export const TOUR_ACTIVITIES = [
 ] as const;
 export type TourActivity = (typeof TOUR_ACTIVITIES)[number];
 
-/** What a roadtrip travelled in. A free field, not a catalog (owner, 2026-09-24). */
+/**
+ * What a roadtrip travels in — what a NEW or changed roadtrip may say. A free
+ * field, not a catalog (owner, 2026-09-24).
+ *
+ * `rail` is not one any more (owner, 2026-09-25): train journeys are a domain
+ * of their own, and a section by rail is offered for conversion into rail
+ * journeys instead (`POST /rail/roadtrip-conversion/:routeId`).
+ */
 export const ROADTRIP_VEHICLES = [
   "motorhome",
   "campervan",
@@ -32,10 +39,25 @@ export const ROADTRIP_VEHICLES = [
   "car",
   "motorcycle",
   "bicycle",
-  "rail",
   "other",
 ] as const;
 export type RoadtripVehicle = (typeof ROADTRIP_VEHICLES)[number];
+
+/**
+ * Values a STORED roadtrip may still carry that no write accepts any more. A
+ * row written before 2026-09-25 can say `rail`; it keeps loading and keeps its
+ * label, and nothing rewrites it behind the user's back — only the conversion
+ * the user confirms, or the user picking another vehicle, changes it.
+ */
+export const LEGACY_ROADTRIP_VEHICLES = ["rail"] as const;
+export type LegacyRoadtripVehicle = (typeof LEGACY_ROADTRIP_VEHICLES)[number];
+
+/** Every vehicle a roadtrip can be READ with: the current ones and the legacy ones. */
+export const STORED_ROADTRIP_VEHICLES = [
+  ...ROADTRIP_VEHICLES,
+  ...LEGACY_ROADTRIP_VEHICLES,
+] as const;
+export type StoredRoadtripVehicle = RoadtripVehicle | LegacyRoadtripVehicle;
 
 /**
  * A station is exactly one of three things. Derived from two columns and

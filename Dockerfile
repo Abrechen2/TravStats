@@ -160,6 +160,12 @@ COPY backend/data/airline-logos ./data/airline-logos
 # degrades to placeholders.
 COPY backend/data/openflights/airlines.dat ./data/openflights/airlines.dat
 COPY backend/data/openflights/planes.dat ./data/openflights/planes.dat
+# Vendored rail station catalogue (Trainline stations.csv, ODbL 1.0, filtered
+# by scripts/build-rail-stations.mjs; 1.2 MB gzipped, ~53 k stations) plus its
+# licence file, read by the boot seeder (seedRailStations.ts) via __dirname
+# from dist/ to /app/backend/data/rail. Without it the seeder skips with
+# `file_missing` and the station picker only ever finds geocoder results.
+COPY backend/data/rail ./data/rail
 # Developer scripts, copied as-is. NOTE: these are .ts files and the image
 # has neither tsx nor the src/ tree they import from, so they do NOT run
 # here — that was forgejo#108, where the documented backfill could not

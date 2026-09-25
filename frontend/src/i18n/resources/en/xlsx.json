@@ -19,7 +19,8 @@
     "roadtrips": "Roadtrips",
     "roadtripStations": "Roadtrip stations",
     "tours": "Tours",
-    "tourPoints": "Tour points"
+    "tourPoints": "Tour points",
+    "rail": "Train rides"
   },
   "hints": {
     "cruises": "One row per cruise. Do not change the ID in column A — it is what matches the row back to its record on import. A row without an ID is created as a new cruise.",
@@ -32,7 +33,8 @@
     "roadtrips": "One roadtrip per row. A row with the ID of one of your roadtrips changes it; without an ID — or with an ID from another account — a new one is created, unless one with the same name and start is already here. Vehicle: motorhome, campervan, caravan, car, motorcycle, bicycle or other. Columns in grey are derived and not imported.",
     "roadtripStations": "One station per row. The Roadtrip column points to the Roadtrips sheet by the ID in square brackets – without an ID, the name before it counts. The Order column sets the sequence — 2.5 inserts a station between 2 and 3. Night: stay (with the accommodation in the Stay column), free (no accommodation) or pass (pass-through). A station missing here is kept — except when replacing. Moved into another account, a station keeps its night but not its link to the stay.",
     "tours": "One tour per row. A row with the ID of one of your tours changes it; without an ID — or with an ID from another account — a new standalone tour is created, unless one with the same name and start is already here. Activity: hike, walk, run, bike, mtb, ski, paddle, climb or other. Travel mode: foot, bike, road, rail or ferry — left empty, a new ride (bike, mtb) gets bike and any other tour foot. Start station points to a roadtrip station by the ID in square brackets; without an ID, the name counts when only one station has it. Columns in grey are derived and not imported.",
-    "tourPoints": "One point per row. The Tour column points to the Tours sheet by the ID in square brackets – without an ID, the name before it counts. The Order column sets the sequence — 2.5 inserts a point between 2 and 3. A point missing here is kept — except when replacing. When a tour belongs to a trip, its points are the trip's stops: they are listed here for reading and are edited at the trip, not through this sheet."
+    "tourPoints": "One point per row. The Tour column points to the Tours sheet by the ID in square brackets – without an ID, the name before it counts. The Order column sets the sequence — 2.5 inserts a point between 2 and 3. A point missing here is kept — except when replacing. When a tour belongs to a trip, its points are the trip's stops: they are listed here for reading and are edited at the trip, not through this sheet.",
+    "rail": "One row per train ride. A row with the ID of one of your rides changes it; without an ID — or with an ID from another account — a new one is created, unless one with the same train number, stations and departure day is already here. Times are on each station's local clock. A station is found by its UIC code, else by latitude and longitude, else by its name in the station catalogue. Class: first, second, sleeper or couchette; status: only cancelled is set, the rest follows from the times. The distance is measured again — unless \"Source\" says user, the figure from the ticket."
   },
   "columns": {
     "id": "ID",
@@ -112,7 +114,24 @@
     "movingMinutes": "Moving (min)",
     "mode": "Travel mode",
     "anchorStation": "Start station",
-    "tour": "Tour"
+    "tour": "Tour",
+    "operator": "Operator",
+    "trainCategory": "Train category",
+    "trainNumber": "Train number",
+    "fromStation": "From (station)",
+    "fromStationCode": "From (code)",
+    "toStation": "To (station)",
+    "toStationCode": "To (code)",
+    "departureLocal": "Departure (local time)",
+    "arrivalLocal": "Arrival (local time)",
+    "distanceSource": "Source",
+    "delayMinutes": "Delay (min)",
+    "travelClass": "Class",
+    "coach": "Coach",
+    "fromLat": "From (latitude)",
+    "fromLon": "From (longitude)",
+    "toLat": "To (latitude)",
+    "toLon": "To (longitude)"
   },
   "import": {
     "title": "Excel import",
@@ -162,7 +181,9 @@
       "ambiguous_cruise": "Several cruises have that name — please give the ID in square brackets.",
       "stay_needs_lodging": "A new stay has to name a property — the “Lodging” column.",
       "unknown_lodging": "That property is neither in your account nor on the “Lodging” sheet.",
-      "ambiguous_lodging": "Several properties have that name — please give the ID in square brackets."
+      "ambiguous_lodging": "Several properties have that name — please give the ID in square brackets.",
+      "unknown_station": "A station could not be found — give its latitude and longitude or its UIC code.",
+      "rail_needs_route": "A new train ride needs From, To and the departure."
     },
     "modeLabel": "What should happen to entries that already exist?",
     "modes": {

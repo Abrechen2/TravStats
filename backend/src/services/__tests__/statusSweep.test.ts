@@ -182,4 +182,32 @@ describe("sweepStatuses", () => {
       "flown"
     );
   });
+
+  it("converges rail journeys over their two instants and leaves a cancellation alone", async () => {
+    const station = { depStationName: "A", depLat: 50, depLon: 8, arrStationName: "B" };
+    const rail = (over: Record<string, unknown>) =>
+      prisma.railJourney.create({
+        data: { userId, ...station, arrLat: 48, arrLon: 2, departureTime: past(1), ...over },
+      });
+    const arrived = await rail({ status: "scheduled", arrivalTime: past(0.5) });
+    const running = await rail({ status: "scheduled", arrivalTime: future(2) });
+    const noArrival = await rail({ status: "scheduled", arrivalTime: null });
+    const future_ = await rail({
+      status: "completed",
+      departureTime: future(24),
+      arrivalTime: future(26),
+    });
+    const cancelled = await rail({ status: "cancelled", arrivalTime: past(0.5) });
+
+    const counts = await sweepStatuses();
+
+    const statusOf = async (id: string) =>
+      (await prisma.railJourney.findUnique({ where: { id } }))?.status;
+    expect(await statusOf(arrived.id)).toBe("completed");
+    expect(await statusOf(running.id)).toBe("in_progress");
+    expect(await statusOf(noArrival.id)).toBe("completed");
+    expect(await statusOf(future_.id)).toBe("scheduled");
+    expect(await statusOf(cancelled.id)).toBe("cancelled");
+    expect(counts.rail).toBeGreaterThanOrEqual(4);
+  });
 });

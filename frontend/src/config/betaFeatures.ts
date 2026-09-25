@@ -107,6 +107,22 @@ export const BETA_FEATURES = Object.freeze({
       "The enrichment has been run over the owner's real lodgings on the RC's copy of production, its wrong matches counted and found acceptable, and the owner accepts it for release.",
     reason: "beta",
   }),
+
+  /**
+   * The rail domain — train journeys logged like flights (owner decision
+   * 2026-09-25, spec docs/superpowers/specs/2026-09-25-rail-domain.md).
+   *
+   * Gated in `hooks/useRailVisible.ts`, the rule's one home: the module toggle
+   * and the setup picker ask the flag alone (that is where the domain is
+   * switched on); nav, logbook tabs, colour settings and the route ask the
+   * flag AND the user's own domain choice.
+   */
+  railDomain: Object.freeze({
+    why: "The rail domain is complete as phase 2 of its spec describes it — logbook, station catalogue, train lookup with Transitous lines, detail page with documents and connections, trip bounds and timeline, dashboard tab and map layer, statistics, Excel and JSON export, demo seed; since it merged main the spreadsheet also reads rides back, and a roadtrip stored by rail can be taken over as rides. The owner ruled on 2026-09-25 that it stays in beta after phase 2: the Companion app does not handle it yet, and it has not been through a release candidate.",
+    returnsWhen:
+      "The owner explicitly takes rail out of beta. Phase 2 being done is not that event (owner rule 2026-09-25).",
+    reason: "beta",
+  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;

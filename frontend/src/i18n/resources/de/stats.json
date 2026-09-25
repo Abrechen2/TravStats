@@ -95,14 +95,18 @@
       "lists": "Listen",
       "bestChecklist": "Beste Checkliste",
       "cruiseNights": "Nächte an Bord",
-      "roadtripNights": "Nächte unterwegs"
+      "roadtripNights": "Nächte unterwegs",
+      "railJourneys": "Fahrten",
+      "railKmMeasured": "Strecke",
+      "railKmStraight": "Luftlinie"
     },
     "topItems": {
       "airlines": "Top-Airlines",
       "cruiseLines": "Top-Reedereien",
       "chains": "Top-Ketten",
       "categories": "Top-Kategorien",
-      "vehicles": "Fahrzeuge"
+      "vehicles": "Fahrzeuge",
+      "railOperators": "Top-Bahngesellschaften"
     },
     "badge": {
       "balconyCabin": "Balkon-Kabine",

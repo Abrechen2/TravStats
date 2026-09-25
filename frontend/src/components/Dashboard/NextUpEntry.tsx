@@ -9,6 +9,7 @@ const DOMAIN_ICON: Record<UpcomingEntry["domain"], string> = {
   lodging: "🏨",
   poi: "📍",
   roadtrip: "🚐",
+  rail: "🚆",
   trip: "🧳",
 };
 
@@ -26,6 +27,7 @@ const DOMAIN_DETAIL_ROUTE: Record<UpcomingEntry["domain"], string> = {
   lodging: "/lodging",
   poi: "/places",
   roadtrip: "/roadtrips",
+  rail: "/rail",
   trip: "/trips",
 };
 

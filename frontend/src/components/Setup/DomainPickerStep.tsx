@@ -3,6 +3,7 @@ import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
+import { useRailOffered } from "../../hooks/useRailVisible";
 
 export interface DomainPickerStepProps {
   value: DomainKey[];
@@ -31,10 +32,18 @@ export default function DomainPickerStep({ value, onChange }: DomainPickerStepPr
   // request, and unknown read as OFF here on purpose); that gate is gone.
   // Roadtrips are beta (2.7): not offered as a switch while the instance
   // gate is closed — `useEnabledDomains` would hide the domain anyway.
+  // Rail is offered only where its own beta switch allows it — the flag ALONE
+  // (hooks/useRailVisible.ts), because this list is where the user turns the
+  // domain on. A rail domain the user already enabled stays listed, so it can
+  // always be switched off again.
   const { isFeatureVisible } = useBetaFeatures();
-  const visibleKeys = DOMAIN_KEYS.filter(
-    (key) => key !== "roadtrip" || isFeatureVisible("roadtrips")
-  );
+  const railOffered = useRailOffered();
+  const enabledRail = value.includes("rail");
+  const visibleKeys = DOMAIN_KEYS.filter((key) => {
+    if (key === "roadtrip") return isFeatureVisible("roadtrips");
+    if (key === "rail") return railOffered || enabledRail;
+    return true;
+  });
 
   return (
     <div className="space-y-4">

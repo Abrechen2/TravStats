@@ -36,6 +36,9 @@ export interface InstanceSettings {
    * they do. Always resolved — there is no "unset" state to handle.
    */
   countryThreshold: CountryTier;
+  /** May the rail train lookup ask Transitous / db-rest (both on by default). */
+  railTransitousEnabled: boolean;
+  railDbRestEnabled: boolean;
 }
 
 /**
@@ -68,6 +71,8 @@ export interface InstanceSettingsPatch {
   photonUrl?: string;
   nominatimUrl?: string;
   countryThreshold?: CountryTier;
+  railTransitousEnabled?: boolean;
+  railDbRestEnabled?: boolean;
 }
 
 /**

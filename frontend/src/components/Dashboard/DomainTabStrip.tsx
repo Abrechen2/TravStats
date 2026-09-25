@@ -8,6 +8,10 @@ import { NextUpEntry } from "./NextUpEntry";
 import { Icon, type IconName } from "../ui/Icon";
 import { DASHBOARD_TABS } from "../../types/dashboard";
 import { DOMAINS, isValidDomain, type DomainKey } from "../../shared/domains";
+import { useRailOffered } from "../../hooks/useRailVisible";
+
+/** A domain with a dashboard tab of its own. */
+type TabDomain = Extract<DashboardTab, DomainKey>;
 
 interface DomainTabStripProps {
   active: DashboardTab;
@@ -18,7 +22,7 @@ interface DomainTabStripProps {
    * no domain to count or disable. Widening this to every non-"all" tab
    * would force a fake count for a tab that doesn't have one.
    */
-  counts: Record<DomainKey, number>;
+  counts: Record<TabDomain, number>;
   /**
    * What is still ahead per domain (optional). Shown as a "geplant" hint so
    * the tab count and the statistics stop appearing to contradict each other —
@@ -27,8 +31,8 @@ interface DomainTabStripProps {
    *
    * See `PLANNED_IS_INCLUDED` for why the same number is worded two ways.
    */
-  scheduledCounts?: Partial<Record<DomainKey, number>>;
-  enabled: Record<DomainKey, boolean>;
+  scheduledCounts?: Partial<Record<TabDomain, number>>;
+  enabled: Record<TabDomain, boolean>;
   onSelect(next: DashboardTab): void;
   /**
    * At most one upcoming entry per domain, soonest first. The strip shows the
@@ -69,6 +73,7 @@ const TAB_ICON: Record<DashboardTab, IconName | null> = {
   poi: "map-pin",
   lodging: "bed",
   roadtrip: "caravan",
+  rail: "train-front",
   tour: "route",
 };
 
@@ -91,12 +96,16 @@ export function DomainTabStrip({
   // the enabled state in here would hide the tab instead and break that.
   //
   // "Touren" and "Roadtrips" went back behind the beta switch on 2026-09-24
-  // (owner) — hidden, not dimmed: dimming is for a domain the USER switched
-  // off and can turn back on, and a closed instance gate is neither.
+  // (owner), and rail sits behind its own `railDomain` switch (owner rule
+  // 2026-09-25) — hidden, not dimmed: dimming is for a domain the USER
+  // switched off and can turn back on, and a closed instance gate is neither.
   const toursVisible = useToursVisible();
-  const visibleTabs = DASHBOARD_TABS.filter(
-    (tab) => (tab !== "tour" && tab !== "roadtrip") || toursVisible
-  );
+  const railOffered = useRailOffered();
+  const visibleTabs = DASHBOARD_TABS.filter((tab) => {
+    if (tab === "tour" || tab === "roadtrip") return toursVisible;
+    if (tab === "rail") return railOffered;
+    return true;
+  });
 
   // On a domain tab, that domain's next entry; on "Alle", the soonest of all —
   // including the trip, which belongs to no single tab. `upcoming` arrives
@@ -139,7 +148,7 @@ export function DomainTabStrip({
         // keyed by DOMAIN — "Touren" is a tab with no domain behind it, so it
         // is never dimmed (there is nothing to disable) and never carries a
         // count badge (there is nothing this strip fetched to count).
-        const domain = isValidDomain(tab) ? tab : null;
+        const domain = isValidDomain(tab) ? (tab as TabDomain) : null;
         const isDisabled = domain !== null && !enabled[domain];
         const count = domain === null ? null : counts[domain];
         const scheduled = domain === null ? 0 : (scheduledCounts?.[domain] ?? 0);

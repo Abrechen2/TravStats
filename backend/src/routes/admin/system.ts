@@ -273,6 +273,9 @@ router.get(
           places: true,
           placeVisits: { include: { photos: true } },
           placeLists: { include: { entries: true } },
+          // Rail (spec 2026-09-25-rail-domain): the rides with their companion
+          // links, frozen line included — it cannot be fetched again for a past day.
+          railJourneys: { include: { companionLinks: true } },
           companions: true,
           // Kept originals (forgejo#116): the rows — what each is, where it is
           // filed, what its parse read. The bytes stay out, as a photo's do.
@@ -303,11 +306,19 @@ router.get(
         },
       });
 
+      // Stations a user added belong to no user, but exist nowhere else: the
+      // Trainline catalogue is re-seeded from the vendored file, these are not.
+      const userAddedRailStations = await prisma.railStation.findMany({
+        where: { isUserAdded: true },
+        orderBy: { id: "asc" },
+      });
+
       const { instanceName } = await getInstanceSettings();
       const exportData = {
         exportedAt: new Date().toISOString(),
         instanceName,
         users,
+        userAddedRailStations,
       };
 
       const exportFilename = `travstats-backup-${Date.now()}.json`;

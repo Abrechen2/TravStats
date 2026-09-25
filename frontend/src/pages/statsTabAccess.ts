@@ -1,7 +1,20 @@
-import type { DomainKey } from "../shared/domains";
+import { DOMAIN_KEYS, type DomainKey } from "../shared/domains";
 import type { PlacesAccess } from "../hooks/usePlacesVisible";
 
 export type StatsTab = DomainKey | "all";
+
+/**
+ * `?tab=` read into a tab — any registered domain, else the overview. Whether
+ * that tab may be DRAWN is `resolveStatsTab`'s question, not this one's.
+ *
+ * It used to be two hand-written lists of four domains in the page, one for
+ * the first render and one for the URL sync. Rail was on neither, so clicking
+ * its tab wrote `?tab=rail` and the sync effect at once reset it to the
+ * overview — found in the production-bundle check of 2026-09-25.
+ */
+export function parseStatsTab(tab: string | null): StatsTab {
+  return (DOMAIN_KEYS as readonly string[]).includes(tab ?? "") ? (tab as DomainKey) : "all";
+}
 
 /**
  * Which statistics tab may actually be drawn.
@@ -32,21 +45,32 @@ export type StatsTab = DomainKey | "all";
  * `enabled` alone while the deep link had already learned to ask
  * `usePlacesAccess`. Pending keeps the tab (the app does not know yet);
  * denied removes it.
+ *
+ * Rail asks the INSTANCE half separately (`railOffered`, the `railDomain` beta
+ * gate — `useRailOffered`); `enabledDomains` already carries the user half. It
+ * defaults to hidden, so a caller that forgets to pass it hides rail rather
+ * than showing a beta domain on an instance that switched it off.
  */
 export function visibleStatsTabs(
   enabledDomains: readonly DomainKey[],
-  placesAccess: PlacesAccess
+  placesAccess: PlacesAccess,
+  railOffered = false
 ): DomainKey[] {
-  return enabledDomains.filter((key) => key !== "poi" || placesAccess !== "denied");
+  return enabledDomains.filter(
+    (key) => (key !== "poi" || placesAccess !== "denied") && (key !== "rail" || railOffered)
+  );
 }
 
 export function resolveStatsTab(
   requested: StatsTab,
   enabledDomains: readonly DomainKey[],
-  placesAccess: PlacesAccess
+  placesAccess: PlacesAccess,
+  railOffered = false
 ): StatsTab {
   if (requested === "all") return "all";
   if (requested === "poi") return placesAccess === "denied" ? "all" : "poi";
+  // Rail behind a closed beta gate has no tab to land on, however it was asked.
+  if (requested === "rail" && !railOffered) return "all";
   // Falling back to the overview rather than showing nothing: the reader asked
   // for statistics, and a page they can use beats an empty panel.
   return enabledDomains.includes(requested) ? requested : "all";

@@ -14,9 +14,16 @@ import { flightEvidenceEntry } from "./entryMappers";
 import {
   cruiseEvidenceEntry,
   placeEvidenceEntry,
+  railEvidenceEntry,
   roadtripEvidenceEntry,
   stayEvidenceEntry,
 } from "./entryMappersDomains";
+import {
+  countableRailWhere,
+  railCountries,
+  railDayKeys,
+  railYear,
+} from "../../shared/railCounting";
 import { getCountryResolver } from "../geo/countryFromCoordinates";
 import { stationCountries } from "../roadtrip/roadtripSummary";
 
@@ -475,12 +482,53 @@ async function loadRoadtrips(userId: string): Promise<CrossDomainPopulation> {
   return { events, countryRows };
 }
 
+/**
+ * Mirrors `railStatsAdapter.ts`: a completed ride is one event, filed under
+ * the year it left on its departure station's calendar, active on the day it
+ * left and — for a night train — the day it arrived, each on its own
+ * station's clock; it proves both stations' countries. Every one of those
+ * rules lives in `shared/railCounting.ts`, which both sides mirror.
+ */
+async function loadRail(userId: string): Promise<CrossDomainPopulation> {
+  const rows = await prisma.railJourney.findMany({
+    where: { userId, ...countableRailWhere() },
+    select: {
+      id: true,
+      depStationName: true,
+      arrStationName: true,
+      depCountry: true,
+      arrCountry: true,
+      depTimezone: true,
+      arrTimezone: true,
+      departureTime: true,
+      arrivalTime: true,
+    },
+  });
+  const events: CrossDomainEventRow[] = [];
+  const countryRows: CrossDomainCountryRow[] = [];
+  for (const row of rows) {
+    const entry = railEvidenceEntry(
+      {
+        id: row.id,
+        label: `${row.depStationName} → ${row.arrStationName}`,
+        departureTime: row.departureTime,
+      },
+      { subtitle: null }
+    );
+    const year = railYear(row);
+    events.push({ domain: "rail", entry, year, dayKeys: railDayKeys(row) });
+    countryRows.push({ domain: "rail", entry, countries: railCountries(row), years: [year] });
+  }
+  return { events, countryRows };
+}
+
 const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulation>> = {
   flight: loadFlights,
   cruise: loadCruises,
   lodging: loadLodging,
   poi: loadPlaces,
   roadtrip: loadRoadtrips,
+  rail: loadRail,
 };
 
 /** Loads only the domains asked for — a chip that is off is never queried. */

@@ -5,15 +5,17 @@
 // domain's slot stays empty, the rest renders. Lodging is fed by
 // `/stats/lodging` + the raw lodging list; POI has no rollup endpoint at all
 // and derives everything from places, lists and the checklist catalog.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Flight } from "../../../types";
 import { statsApi } from "../../api";
 import { cruiseApi } from "../../api/cruise";
 import { listLodgings, getLodgingStats } from "../../api/lodging";
 import { listPlaces } from "../../api/places";
 import { listCuratedChecklists, listPlaceLists } from "../../api/placeLists";
+import { railApi } from "../../api/rail";
 import { logger } from "../../logger";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
+import { useRailOffered } from "../../../hooks/useRailVisible";
 import type { DomainKey } from "../../../shared/domains";
 import { adaptFlight } from "./flightStatsAdapter";
 import { adaptCruise } from "./cruiseStatsAdapter";
@@ -21,7 +23,8 @@ import { adaptLodging } from "./lodgingStatsAdapter";
 import { adaptRoadtrip } from "./roadtripStatsAdapter";
 import { roadtripsApi } from "../../api/roadtrips";
 import { adaptPoi } from "./poiStatsAdapter";
-import type { DomainStats, DomainStatsMap } from "./types";
+import { adaptRail } from "./railStatsAdapter";
+import type { DomainStats, DomainStatsMap, StatsDomain } from "./types";
 import { toYearKeyed } from "./yearKeyed";
 
 export interface UseDomainStatsResult {
@@ -49,7 +52,14 @@ export function useDomainStats(input: {
   // Domain-gating: only the user's enabled domains are fetched — a
   // disabled domain must not surface in the cross-domain overview, so
   // its stats are never loaded in the first place.
-  const { enabled } = useEnabledDomains();
+  const { enabled: enabledDomains } = useEnabledDomains();
+  // Rail sits behind the `railDomain` beta gate as well: with the gate off it
+  // is not fetched, so it can reach neither a card nor a sum on the overview.
+  const railOffered = useRailOffered();
+  const enabled = useMemo(
+    () => enabledDomains.filter((d) => d !== "rail" || railOffered),
+    [enabledDomains, railOffered]
+  );
   const [stats, setStats] = useState<DomainStatsMap>({});
   const [errors, setErrors] = useState<Partial<Record<DomainKey, string>>>({});
   const [loading, setLoading] = useState(true);
@@ -85,7 +95,7 @@ export function useDomainStats(input: {
   return { stats, errors, loading };
 }
 
-async function loadDomain(domain: DomainKey, flights: Flight[]): Promise<DomainStats> {
+async function loadDomain(domain: StatsDomain, flights: Flight[]): Promise<DomainStats> {
   switch (domain) {
     case "flight": {
       const countryResp = await statsApi.getCountryStats();
@@ -118,5 +128,7 @@ async function loadDomain(domain: DomainKey, flights: Flight[]): Promise<DomainS
     }
     case "roadtrip":
       return adaptRoadtrip({ roadtrips: await roadtripsApi.list() });
+    case "rail":
+      return adaptRail({ journeys: await railApi.listAll({ status: "completed" }) });
   }
 }

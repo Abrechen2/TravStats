@@ -63,7 +63,9 @@
       "osm": "Kartenkacheln (ODbL 1.0)",
       "searoute": "Seestrecken der Kreuzfahrten (EUPL-1.2 / ORNL Global Shipping Lane Network, gemeinfrei)",
       "openMeteo": "Wetter und Geländehöhen (CC BY 4.0)",
-      "wikipedia": "Beschreibungen von Orten und Unterkünften (CC BY-SA 4.0)"
+      "wikipedia": "Beschreibungen von Orten und Unterkünften (CC BY-SA 4.0)",
+      "trainline": "Bahnhofskatalog (ODbL 1.0)",
+      "transitous": "Zugsuche und Streckenverläufe, mit den Fahrplänen seiner Quellen"
     },
     "title": "Über TravStats",
     "tagline": "Selbst gehostetes Reise-Logbuch",
@@ -865,5 +867,15 @@
       "lodgingPreferences": "Geocoder, Adresse, Koordinaten, Nominatim, Hotelketten, Unterkunft",
       "lodgingMemberships": "Bonusprogramm, Mitgliedschaft, Status, Hotelprogramm, Punkte, Treueprogramm"
     }
+  },
+  "railProviders": {
+    "title": "Zugsuche",
+    "description": "Welche Fahrplandienste die Zugsuche im Bahn-Logbuch fragen darf. Jede Suche schickt Zugnummer, Bahnhof und Tag an den Dienst — sie verlassen damit diese Instanz. Beide Dienste sind kostenlos und werden von Freiwilligen für nicht-kommerzielle Nutzung betrieben.",
+    "transitous": "Transitous",
+    "transitousHint": "Europaweit, liefert auch den Streckenverlauf. Setze RAIL_LOOKUP_CONTACT, damit der Dienst dich als Betreiber erreichen kann.",
+    "dbRest": "db-rest",
+    "dbRestHint": "Nur Deutschland, inoffiziell, etwa 100 Anfragen pro Minute für alle Nutzer zusammen.",
+    "loadError": "Die Einstellung konnte nicht geladen werden.",
+    "saveError": "Die Einstellung konnte nicht gespeichert werden."
   }
 }

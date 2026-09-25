@@ -197,7 +197,8 @@
       "lodging": "Lodging",
       "poi": "Places",
       "tour": "Tours",
-      "roadtrip": "Roadtrips"
+      "roadtrip": "Roadtrips",
+      "rail": "Rail"
     },
     "disabledHint": "Area disabled — Settings → Areas"
   },
@@ -208,7 +209,8 @@
     "poi": "Place",
     "lodging": "Stay",
     "tour": "Tour",
-    "roadtrip": "Roadtrip"
+    "roadtrip": "Roadtrip",
+    "rail": "Train journey"
   },
   "controls": {
     "mode": "Mode",
@@ -218,7 +220,8 @@
       "cruise": "Add cruise",
       "lodging": "Add stay",
       "poi": "Add place",
-      "roadtrip": "Add roadtrip"
+      "roadtrip": "Add roadtrip",
+      "rail": "Add train journey"
     }
   },
   "filter": {
@@ -313,7 +316,9 @@
     "lodgingUnrated": "Not rated",
     "lodgingChain": "Chain",
     "lodgingIndependent": "Independent",
-    "title": "Key"
+    "title": "Key",
+    "railTraced": "Rail · route (Transitous)",
+    "railStraight": "Rail · straight line"
   },
   "userMenu": {
     "label": "Account menu"
@@ -335,5 +340,11 @@
     "inHours_other": "in {{count}} h",
     "today": "today"
   },
-  "installApp": "Install as app"
+  "installApp": "Install as app",
+  "railTab": {
+    "listTitle": "Train journeys",
+    "loading": "Loading train journeys …",
+    "loadError": "The train journeys could not be loaded.",
+    "empty": "No train journeys yet."
+  }
 }

@@ -83,6 +83,14 @@ export const ROADTRIP_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "vehicles", label: t("roadtrips:stats.vehicles") },
 ];
 
+export const RAIL_SECTIONS = (t: Translate): SectionOption[] => [
+  { key: "kpis", label: t("rail:stats.sections.kpis") },
+  { key: "rankings", label: t("rail:stats.sections.rankings") },
+  { key: "delays", label: t("rail:stats.sections.delays") },
+  { key: "records", label: t("rail:stats.sections.records") },
+  { key: "years", label: t("rail:stats.sections.years") },
+];
+
 const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   all: OVERVIEW_SECTIONS,
   flight: FLIGHT_SECTIONS,
@@ -90,6 +98,7 @@ const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   lodging: LODGING_SECTIONS,
   poi: POI_SECTIONS,
   roadtrip: ROADTRIP_SECTIONS,
+  rail: RAIL_SECTIONS,
 };
 
 /** The menu's options for a tab. */

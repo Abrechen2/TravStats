@@ -27,6 +27,7 @@ describe("AddDomainPicker", () => {
           lodging: true,
           poi: false,
           roadtrip: false,
+          rail: false,
           tour: false,
         }}
         onPick={() => {}}
@@ -44,6 +45,7 @@ describe("AddDomainPicker", () => {
           lodging: true,
           poi: false,
           roadtrip: false,
+          rail: false,
           tour: false,
         }}
         onPick={() => {}}
@@ -67,6 +69,7 @@ describe("AddDomainPicker", () => {
           lodging: false,
           poi: false,
           roadtrip: false,
+          rail: false,
           tour: false,
         }}
         onPick={() => {}}
@@ -86,6 +89,7 @@ describe("AddDomainPicker", () => {
           lodging: true,
           poi: false,
           roadtrip: false,
+          rail: false,
           tour: false,
         }}
         onPick={onPick}
@@ -108,6 +112,7 @@ describe("AddDomainPicker", () => {
             lodging: true,
             poi: false,
             roadtrip: false,
+            rail: false,
             tour: false,
           }}
           onPick={onPick}

@@ -16,6 +16,7 @@ describe("dashboard tab + mode registry", () => {
       "poi",
       "lodging",
       "roadtrip",
+      "rail",
       "tour",
     ]);
   });

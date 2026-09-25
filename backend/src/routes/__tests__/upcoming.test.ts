@@ -31,6 +31,7 @@ describe("GET /api/v1/upcoming", () => {
 
   afterEach(async () => {
     await prisma.flight.deleteMany({ where: { userId } });
+    await prisma.railJourney.deleteMany({ where: { userId } });
     await prisma.trip.deleteMany({ where: { userId } });
     await prisma.userSettings.deleteMany({ where: { userId } });
   });
@@ -468,6 +469,46 @@ describe("GET /api/v1/upcoming", () => {
 
       const stay = res.body.data.entries.find((e: { domain: string }) => e.domain === "lodging");
       expect(stay).toBeUndefined();
+    });
+  });
+
+  describe("rail", () => {
+    const ride = (dep: Date, status = "scheduled") => ({
+      userId,
+      depStationName: "Frankfurt (Main) Hbf",
+      arrStationName: "Basel SBB",
+      depLat: 50.1071,
+      depLon: 8.6632,
+      arrLat: 47.5476,
+      arrLon: 7.5897,
+      trainCategory: "ICE",
+      trainNumber: "271",
+      departureTime: dep,
+      status,
+    });
+
+    it("names the next train, not one that left or was cancelled", async () => {
+      await enableDomains(["flight", "rail"]);
+      await prisma.railJourney.createMany({
+        data: [ride(inDays(-1)), ride(inDays(1), "cancelled"), ride(inDays(3))],
+      });
+      const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+      const entry = res.body.data.entries.find((e: { domain: string }) => e.domain === "rail");
+      expect(entry).toMatchObject({
+        primary: "Frankfurt (Main) Hbf → Basel SBB",
+        secondary: "ICE 271",
+      });
+      expect(new Date(entry.startsAt).getTime()).toBeGreaterThan(inDays(2).getTime());
+      expect(entry.detailId).toBe(entry.id);
+    });
+
+    it("says nothing about rail to a user who has not switched it on", async () => {
+      await enableDomains(["flight"]);
+      await prisma.railJourney.create({ data: ride(inDays(2)) });
+      const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+      expect(res.body.data.entries.some((e: { domain: string }) => e.domain === "rail")).toBe(
+        false
+      );
     });
   });
 });

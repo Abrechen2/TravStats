@@ -1,6 +1,6 @@
 import { api } from "./client";
 import type { TourGeometry } from "../../types/tour";
-import type { RouteKind, RoadtripVehicle, TourActivity } from "../../shared/tour/roadtrip";
+import type { RouteKind, StoredRoadtripVehicle, TourActivity } from "../../shared/tour/roadtrip";
 
 /**
  * One tour section as the dashboard-wide list sees it. Mirrors
@@ -22,7 +22,7 @@ export interface TourSummary {
   mode: string;
   kind: RouteKind;
   activity: TourActivity | null;
-  vehicle: RoadtripVehicle | null;
+  vehicle: StoredRoadtripVehicle | null;
   kindAssignedAutomatically: boolean;
   notes: string | null;
   /** A tour only: the roadtrip station it set out from, and that station's title. */

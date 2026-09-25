@@ -32,7 +32,7 @@ function seedCounts(): void {
   useDashboardCountsStore
     .getState()
     .setCounts(
-      { flight: 42, cruise: 3, poi: 1, lodging: 2, roadtrip: 0 },
+      { flight: 42, cruise: 3, poi: 1, lodging: 2, roadtrip: 0, rail: 0 },
       { flight: 1, cruise: 0, lodging: 1 }
     );
 }
@@ -55,6 +55,7 @@ describe("authStore: an account switch resets dashboardCountsStore (Critical, re
       poi: 0,
       lodging: 0,
       roadtrip: 0,
+      rail: 0,
     });
     expect(useDashboardCountsStore.getState().countsLoaded).toBe(false);
   });
@@ -72,6 +73,7 @@ describe("authStore: an account switch resets dashboardCountsStore (Critical, re
       poi: 0,
       lodging: 0,
       roadtrip: 0,
+      rail: 0,
     });
     expect(useDashboardCountsStore.getState().countsLoaded).toBe(false);
   });

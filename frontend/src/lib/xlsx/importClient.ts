@@ -21,6 +21,7 @@ import {
 } from "./sheets";
 import type { SheetSpec } from "./sheetSpec";
 import { roadtripSheet, roadtripStationSheet, tourPointSheet, tourSheet } from "./roadtripSheets";
+import { railSheet } from "./railSheet";
 
 type T = (key: string) => string;
 
@@ -74,8 +75,12 @@ export interface ImportOutcome {
  * Cruise stops and lodging stays joined on 2026-09-25: the workbook is for
  * editing AND moving entries, and a moved hotel without its stays, or a
  * cruise without its itinerary, is not a moved entry.
+ *
+ * The rail sheet is read only where rail is visible (`useRailVisible`: the
+ * `railDomain` beta switch AND the user's domain) — the owner rule that keeps
+ * rail behind its gate. Last, where the export writes it.
  */
-export function importableSpecs(t: T): SheetSpec<never>[] {
+export function importableSpecs(t: T, options: { rail?: boolean } = {}): SheetSpec<never>[] {
   return [
     flightSheet(t),
     cruiseSheet(t),
@@ -90,13 +95,18 @@ export function importableSpecs(t: T): SheetSpec<never>[] {
     roadtripStationSheet(t),
     tourSheet(t),
     tourPointSheet(t),
+    ...(options.rail ? [railSheet(t)] : []),
   ] as unknown as SheetSpec<never>[];
 }
 
 /** Read the workbook into the payload shape the server expects. */
-export async function readWorkbookForImport(t: T, file: File): Promise<ParsedSheet[]> {
+export async function readWorkbookForImport(
+  t: T,
+  file: File,
+  options: { rail?: boolean } = {}
+): Promise<ParsedSheet[]> {
   const buffer = await file.arrayBuffer();
-  const parsed = await parseWorkbook(buffer, importableSpecs(t));
+  const parsed = await parseWorkbook(buffer, importableSpecs(t, options));
   return parsed.filter((sheet) => sheet.rows.length > 0);
 }
 

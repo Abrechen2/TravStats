@@ -79,7 +79,7 @@ function renderAt(tab: string, setTab = vi.fn()): ReturnType<typeof render> {
   mockUseDashboardRoute.mockReturnValue({ tab, setTab });
   return render(
     <MemoryRouter>
-      <DashboardLayout counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0, roadtrip: 0 }}>
+      <DashboardLayout counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0, roadtrip: 0, rail: 0 }}>
         <div />
       </DashboardLayout>
     </MemoryRouter>

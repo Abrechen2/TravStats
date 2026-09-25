@@ -21,7 +21,14 @@ export const DOCUMENT_KINDS = ["invoice", "booking", "boardingPass", "ticket", "
 export type DocumentKind = (typeof DOCUMENT_KINDS)[number];
 
 /** The entries a document can be filed with — at most one of them. */
-export const ENTRY_TYPES = ["flight", "cruise", "lodgingStay", "trip", "placeVisit"] as const;
+export const ENTRY_TYPES = [
+  "flight",
+  "cruise",
+  "lodgingStay",
+  "trip",
+  "placeVisit",
+  "railJourney",
+] as const;
 export type EntryType = (typeof ENTRY_TYPES)[number];
 
 const MB = 1024 * 1024;

@@ -21,6 +21,10 @@ import { CruisesTab } from "../components/Dashboard/tabs/CruisesTab";
 import { PoiTab } from "../components/Dashboard/tabs/PoiTab";
 import { LodgingTab } from "../components/Dashboard/tabs/LodgingTab";
 import { TourTab } from "../components/Dashboard/tabs/TourTab";
+import { RailTab } from "../components/Dashboard/tabs/RailTab";
+import { railApi } from "../lib/api/rail";
+import { useRailVisible } from "../hooks/useRailVisible";
+import { useBetaFeatures } from "../hooks/useBetaFeatures";
 import { roadtripsApi } from "../lib/api/roadtrips";
 
 const IMPORT_MOVED_FLAG = "tsv1_5_import_moved_seen";
@@ -59,6 +63,9 @@ export default function DashboardPage(): JSX.Element {
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
   const placesAccess = usePlacesAccess();
+  const railVisible = useRailVisible();
+  // Three-state like places: `false` only once the instance has answered.
+  const { betaFeaturesEnabled } = useBetaFeatures();
   const toursAccess = useToursAccess();
   // Tours have no domain to be "enabled"/"disabled" — only the instance-level
   // beta flag gates them. `betaFeaturesEnabled` is `null` for one request on
@@ -107,15 +114,27 @@ export default function DashboardPage(): JSX.Element {
         const placesPromise = placesVisible
           ? placesApi.count({ visited: true })
           : Promise.resolve(0);
-        const [flights, scheduledFlights, cruises, lodgingStats, placeCount, roadtripCount] =
-          await Promise.all([
-            flightsPromise,
-            scheduledFlightsPromise,
-            cruisesPromise,
-            lodgingPromise,
-            placesPromise,
-            roadtripsPromise,
-          ]);
+        // One row is enough: the count is the page's `total`.
+        const railPromise = railVisible
+          ? railApi.list({ limit: 1 }).then((page) => page.total)
+          : Promise.resolve(0);
+        const [
+          flights,
+          scheduledFlights,
+          cruises,
+          lodgingStats,
+          placeCount,
+          roadtripCount,
+          railCount,
+        ] = await Promise.all([
+          flightsPromise,
+          scheduledFlightsPromise,
+          cruisesPromise,
+          lodgingPromise,
+          placesPromise,
+          roadtripsPromise,
+          railPromise,
+        ]);
         if (cancelled) return;
         setCounts(
           {
@@ -124,6 +143,7 @@ export default function DashboardPage(): JSX.Element {
             poi: placeCount,
             lodging: lodgingStats?.lodgingsCount ?? 0,
             roadtrip: roadtripCount,
+            rail: railCount,
           },
           {
             flight: scheduledFlights.total,
@@ -144,7 +164,7 @@ export default function DashboardPage(): JSX.Element {
     return () => {
       cancelled = true;
     };
-  }, [isEnabled, placesVisible, refreshToken]);
+  }, [isEnabled, placesVisible, railVisible, refreshToken]);
 
   // `/dashboard/poi` on a hidden instance used to render the SHELL with the
   // tab hidden from the strip — which still drew the shell's per-tab
@@ -161,6 +181,11 @@ export default function DashboardPage(): JSX.Element {
   if ((tab === "tour" || tab === "roadtrip") && toursAccess === "denied") {
     return <Navigate to="/dashboard" replace />;
   }
+  // The same answer for rail while its beta switch is off (owner rule
+  // 2026-09-25); a switched-off DOMAIN is useDashboardRoute's to handle.
+  if (tab === "rail" && betaFeaturesEnabled === false) {
+    return <Navigate to="/dashboard" replace />;
+  }
   return (
     <DashboardLayout
       counts={counts}
@@ -173,6 +198,7 @@ export default function DashboardPage(): JSX.Element {
       {tab === "cruise" && <CruisesTab key={refreshToken} />}
       {tab === "poi" && placesVisible && <PoiTab key={refreshToken} />}
       {tab === "lodging" && <LodgingTab key={refreshToken} />}
+      {tab === "rail" && railVisible && <RailTab key={refreshToken} />}
       {tab === "tour" && <TourTab key={refreshToken} />}
       {tab === "roadtrip" && <TourTab key={`roadtrip-${refreshToken}`} kind="roadtrip" />}
     </DashboardLayout>

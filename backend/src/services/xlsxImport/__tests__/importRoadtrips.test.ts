@@ -96,6 +96,37 @@ describe("spreadsheet import — roadtrips", () => {
     ).toBe(1);
   });
 
+  // `rail` left the vehicles on 2026-09-25. An exported roadtrip by rail comes
+  // back with that cell: the stored value is kept and the drop reported, and a
+  // new row cannot become a roadtrip by rail.
+  it("keeps a stored rail vehicle on re-import and gives a new row none", async () => {
+    const route = await prisma.tripRoute.create({
+      data: { userId, name: "Interrail", mode: "rail", kind: "roadtrip", vehicle: "rail" },
+    });
+    const [outcome] = await importSheets(
+      [
+        {
+          key: "roadtrips",
+          rows: [
+            { id: route.id, name: "Interrail 2025", vehicle: "rail" },
+            { name: "Noch ein Zug", vehicle: "rail" },
+          ],
+        },
+      ],
+      ctx()
+    );
+    expect(outcome).toMatchObject({ updated: 1, created: 1, errors: 0 });
+    expect(await prisma.tripRoute.findUniqueOrThrow({ where: { id: route.id } })).toMatchObject({
+      name: "Interrail 2025",
+      vehicle: "rail",
+    });
+    const created = await prisma.tripRoute.findFirstOrThrow({
+      where: { userId, name: "Noch ein Zug" },
+    });
+    expect(created.vehicle).toBeNull();
+    expect(outcome.rows.every((r) => r.dropped?.[0]?.field === "vehicle")).toBe(true);
+  });
+
   it("creates a new roadtrip from someone else's id and never touches theirs", async () => {
     const [outcome] = await importSheets(
       [{ key: "roadtrips", rows: [{ id: victimRoadtripId, name: "Übernommen" }] }],

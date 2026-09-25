@@ -71,6 +71,13 @@ export interface InstanceSettings {
    */
   countryThreshold: CountryTier;
   /**
+   * Which third parties the rail train-number lookup may ask (spec
+   * 2026-09-25-rail-domain): Transitous and db-rest. Both ON by default — the
+   * lookup runs only when a user presses its button — and admin-settable only.
+   */
+  railTransitousEnabled: boolean;
+  railDbRestEnabled: boolean;
+  /**
    * Whether the instance may ask open data services on its users' behalf
    * (Open-Meteo, Wikipedia/Wikidata, OpenStreetMap Overpass). OFF by default:
    * every call sends a place and a date to a third party. Admin-settable only.
@@ -129,6 +136,8 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
     // headline filtering against a rank that does not exist.
     countryThreshold: parseCountryTier(row.countryThreshold) ?? DEFAULT_COUNTRY_TIER,
     openDataEnabled: row.openDataEnabled,
+    railTransitousEnabled: row.railTransitousEnabled,
+    railDbRestEnabled: row.railDbRestEnabled,
   };
 }
 
@@ -187,6 +196,12 @@ export async function updateInstanceSettings(
       }),
       ...(patch.openDataEnabled !== undefined && {
         openDataEnabled: patch.openDataEnabled,
+      }),
+      ...(patch.railTransitousEnabled !== undefined && {
+        railTransitousEnabled: patch.railTransitousEnabled,
+      }),
+      ...(patch.railDbRestEnabled !== undefined && {
+        railDbRestEnabled: patch.railDbRestEnabled,
       }),
     },
   });

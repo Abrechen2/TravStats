@@ -158,7 +158,9 @@
     "poi": "Orte",
     "poi_desc": "Sehenswürdigkeiten, Restaurants, Konzerte, beliebige Orte.",
     "roadtrip": "Roadtrips",
-    "roadtrip_desc": "Mehrtägige Touren mit dem Wohnmobil, Auto oder Rad: Stationen, Übernachtungen, Strecke."
+    "roadtrip_desc": "Mehrtägige Touren mit dem Wohnmobil, Auto oder Rad: Stationen, Übernachtungen, Strecke.",
+    "rail": "Bahn",
+    "rail_desc": "Zugfahrten wie Flüge: Bahnhöfe, Zugnummer, Klasse, Sitzplatz, Kilometer. (Beta)"
   },
   "settings": {
     "modules": {
@@ -170,7 +172,8 @@
         "cruise": "Navigation, Statistik, Karte",
         "lodging": "Navigation, Statistik, Reisetage",
         "poi": "Orte, Besuche und Ortslisten",
-        "roadtrip": "Stationen, Übernachtungen, Karte"
+        "roadtrip": "Stationen, Übernachtungen, Karte",
+        "rail": "Beta: Fahrtenbuch für Zugfahrten"
       }
     }
   },

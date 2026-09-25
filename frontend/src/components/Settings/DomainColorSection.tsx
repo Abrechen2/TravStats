@@ -6,6 +6,7 @@ import { useDomainColors } from "../../hooks/useDomainColors";
 import { useDomainColorStore } from "../../store/domainColorStore";
 import { isBrandDefault, needsOutline } from "../../lib/domainColor";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
+import { useRailVisible } from "../../hooks/useRailVisible";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 
 /**
@@ -31,9 +32,13 @@ export default function DomainColorSection(): JSX.Element | null {
   // Roadtrips are beta (2.7): no colour to pick for a domain the instance
   // does not show — the same rule as the module switch beside it.
   const { isFeatureVisible } = useBetaFeatures();
-  const keys = AVAILABLE_DOMAINS.filter(
-    (key) => key !== "roadtrip" || isFeatureVisible("roadtrips")
-  );
+  // Rail's row appears with the domain itself (beta gate + domain choice).
+  const railVisible = useRailVisible();
+  const keys = AVAILABLE_DOMAINS.filter((key) => {
+    if (key === "roadtrip") return isFeatureVisible("roadtrips");
+    if (key === "rail") return railVisible;
+    return true;
+  });
 
   return (
     <SectionCard>
@@ -75,7 +80,7 @@ export default function DomainColorSection(): JSX.Element | null {
       {/* A colour close to the app's own ground is a legitimate choice, and it
           is also nearly invisible on a chart. Say so once; do not quietly
           brighten what the user picked. */}
-      {AVAILABLE_DOMAINS.some((key) => needsOutline(colors[key])) && (
+      {keys.some((key) => needsOutline(colors[key])) && (
         <p className="mt-3 max-w-md text-xs" style={{ color: "var(--text-muted)" }}>
           {t("settings:domainColors.lowContrast")}
         </p>

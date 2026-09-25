@@ -13,6 +13,7 @@ import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
 import LegDialog from "../components/Roadtrips/LegDialog";
 import RoadtripFigures from "../components/Roadtrips/RoadtripFigures";
 import RoadtripTourCards from "../components/Roadtrips/RoadtripTourCards";
+import { RoadtripRailConversion } from "../components/rail/RoadtripRailConversion";
 import StationEditor, { type EditorStart } from "../components/Roadtrips/StationEditor";
 import StationTimeline from "../components/Roadtrips/StationTimeline";
 import { stationHighlightLayer } from "../components/Roadtrips/stationHighlightLayer";
@@ -341,6 +342,9 @@ export default function RoadtripDetailPage(): JSX.Element {
       />
 
       <RoadtripFigures detail={detail} today={today} />
+
+      {/* A roadtrip stored by rail, from before rail was a domain (rail beta). */}
+      <RoadtripRailConversion routeId={id} vehicle={r.vehicle} onConverted={() => void load()} />
 
       <div
         className="grid items-start lg:grid-cols-[minmax(0,1fr)_minmax(340px,440px)]"

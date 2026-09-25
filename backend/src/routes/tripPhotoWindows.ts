@@ -8,12 +8,13 @@ import {
   cruiseTripPhotos,
   flightTripPhotos,
   lodgingTripPhotos,
+  railTripPhotos,
   type WindowPhoto,
 } from "../services/photos/tripPhotoWindows";
 
 /**
- * Read-only trip photographs on a stay, a flight and a cruise (package 9,
- * item 4) — found by when and where they were taken, see the service.
+ * Read-only trip photographs on a stay, a flight, a cruise and a train ride
+ * (package 9, item 4) — found by when and where they were taken, see the service.
  *
  * Mounted on `/api/v1`, so middleware is PER ROUTE: a `router.use` here would
  * run for every request that passes this router, public ones included. Each
@@ -57,6 +58,14 @@ router.get(
   authenticate,
   statsLimiter,
   windowRoute(cruiseTripPhotos, "Cruise not found")
+);
+// Answers whatever the rail beta switch says, like every rail endpoint; the
+// switch hides the detail page that asks.
+router.get(
+  "/rail/:id/trip-photos",
+  authenticate,
+  statsLimiter,
+  windowRoute(railTripPhotos, "Rail journey not found")
 );
 
 export default router;
