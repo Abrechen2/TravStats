@@ -1,6 +1,6 @@
 # Rail — a fifth domain for train journeys
 
-Date: 2026-09-25 · Branch: `dev/rail` · Status: phase 1 and phase 2a implemented behind the beta switch
+Date: 2026-09-25 · Branch: `dev/rail` · Status: phases 1, 2a and 2b implemented behind the beta switch
 
 ## Why
 
@@ -329,6 +329,56 @@ implementation settled, and what was measured on the way:
   only when a station or the match changes. ICE 696 Frankfurt → Berlin
   Gesundbrunnen came back with 9 750 points, 547 km.
 
-Still open for **phase 2b**: detail page, map layer and dashboard tab, trip
-timeline and trip bounds, statistics, import and backup/export coverage, demo
-seed, the connecting-train UI, and the roadtrip conversion offer.
+Phase 2b followed the same day; see below.
+
+## Phase 2b — as built (2026-09-25)
+
+Rail stays behind the `railDomain` beta gate after phase 2 (owner rule,
+2026-09-25): every surface below is hidden with the gate off, each with its
+own test, and the gate comes off only when the owner explicitly takes rail
+out of beta.
+
+- **Detail page, documents, connecting trains** (`/rail/:id`,
+  `Document.railJourneyId`, the connection read through `Booking`).
+- **Trip bounds and timeline.** A ride widens its trip's dates and status
+  like a flight or a cruise (`tripStatusBounds`); the trip timeline and the
+  logistics tab list it on its stations' clocks.
+- **Dashboard tab and map layer.** A `rail` tab (globe and flat map, the globe
+  first) and a rail chip on the "Alle" map, one layer module for all of them:
+  the frozen Transitous line where there is one, else the great circle drawn
+  lighter; the colour from the domain colour store, the key naming only the
+  kinds of line drawn.
+- **Statistics.** `GET /rail/stats` and a rail tab on the statistics page:
+  rides, kilometres **per source** (straight line, traced line, ticket — never
+  one undifferentiated number, owner decision 7), hours on board and delays
+  with their sample size, countries, operators, train categories, top
+  stations, the longest ride, rides per year. "Does a ride count, and on which
+  day" lives in `shared/railCounting.ts` (mirrored): completed only, filed
+  under the year it left on its departure station's calendar, active on the
+  arrival station's day too. The cross-domain overview and its evidence
+  population both ask it — `crossDomainPopulations` no longer answers an empty
+  population for rail.
+- **Export.** A "Train rides" sheet in the Excel export, times on each
+  station's clock, the distance with its source. **Export-only:** the
+  spreadsheet importer is being reworked on another line that is merging into
+  main; rail import (`importableSpecs` + a server-side rail sheet) follows
+  after this branch merges main, not before. The JSON data export carries each
+  user's rail journeys and the user-added rail stations; the pg_dump backup
+  already covered both tables.
+- **Demo seed.** Four rides (ICE, RJX, a Nightjet across New Year, an
+  upcoming TGV) in both demo seeders, through the router's wall-clock
+  conversion and status derivation.
+- **Roadtrip conversion — contract only.** The roadtrip code is on main, not
+  here. `services/rail/roadtripConversion.ts` states the conversion against
+  structural types that mirror main's `TripRoute` / `TripStop` /
+  `TripRouteLeg` columns by name and plans it purely: one LEG becomes one
+  journey (a section is a route, a journey a ticket — decision 2); a leg
+  without a date or a position is skipped with its reason; a day-only date
+  becomes noon UTC and the notes say so; a routed or drawn leg keeps its line
+  and distance (`route` / `manual`), a straight one becomes a straight ride.
+  **When this branch merges main:** remove `rail` from `ROADTRIP_VEHICLES`
+  (`shared/tour/roadtrip.ts`) in the merge, replace the structural types with
+  the Prisma ones, and add the offer — an endpoint per `vehicle = 'rail'`
+  section that writes the drafts through the rail write path (station
+  matching, FX, status) and deletes the section in the same transaction, only
+  once every ride was written.
