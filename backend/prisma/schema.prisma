@@ -2313,6 +2313,11 @@ model Place {
   /// inflate the headline number on day one.
   visited Boolean @default(false)
 
+  /// The photograph the place page leads with, picked from its visits' photos.
+  /// Null means "the first one" — a default, not a choice, so it is never
+  /// written for the user. SetNull: deleting the photo must not delete the place.
+  coverPhotoId String? @map("cover_photo_id")
+
   notes      String?
   dataSource String? @map("data_source") // manual | import | curated
   batchId    String? @map("batch_id")
@@ -2322,6 +2327,7 @@ model Place {
 
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   batch         ImportBatch?     @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  coverPhoto    PlaceVisitPhoto? @relation("PlaceCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
   visits        PlaceVisit[]
   listEntries   PlaceListEntry[]
   photoJourneys PhotoJourney[]
@@ -2465,6 +2471,7 @@ model PlaceVisitPhoto {
 
   visit     PlaceVisit @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
   tripPhoto TripPhoto? @relation(fields: [tripPhotoId], references: [id], onDelete: Cascade)
+  coverOf   Place[]    @relation("PlaceCover")
 
   @@index([placeVisitId])
   @@index([tripPhotoId])

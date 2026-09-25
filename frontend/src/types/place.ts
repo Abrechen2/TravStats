@@ -45,6 +45,8 @@ export interface Place {
   curatedItemId: string | null;
   /** Logbook (`true`) or wishlist (`false`). Independent of whether visits exist. */
   visited: boolean;
+  /** The lead photograph the user chose; null means "the first one". */
+  coverPhotoId?: string | null;
   notes: string | null;
   dataSource: string | null;
   createdAt: string;

@@ -192,6 +192,11 @@ export async function linkVisitPhotoSuggestions(
   return res.data.data;
 }
 
+/** Choose the place page's lead photograph; null returns it to the first one. */
+export async function setPlaceCover(placeId: string, photoId: string | null): Promise<void> {
+  await api.put(`/places/${placeId}/cover`, { photoId });
+}
+
 export const placesApi = {
   list: listPlaces,
   count: countPlaces,

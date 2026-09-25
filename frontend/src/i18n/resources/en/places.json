@@ -369,5 +369,11 @@
         "write_failed": "not saved"
       }
     }
+  },
+  "gallery": {
+    "title": "Gallery",
+    "lead": "Cover photo of {{name}}",
+    "makeCover": "Use as cover photo",
+    "coverFailed": "The cover photo could not be saved."
   }
 }

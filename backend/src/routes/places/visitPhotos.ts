@@ -27,6 +27,7 @@ import { createImmichClient } from "../../services/immich/immichClient";
 import { getImmichConnection } from "../../services/immich/immichResolver";
 import { ImmichError } from "../../services/immich/types";
 import { linkVisitPhotosToImmich } from "../../services/places/visitPhotoImmichLink";
+import { toPhotoDto } from "./visitPhotoDto";
 
 /**
  * Photo proof for a place visit.
@@ -61,39 +62,6 @@ const updatePhotoSchema = z.object({
   caption: z.string().max(500).nullable().optional(),
   sortIdx: z.number().int().min(0).max(10000).optional(),
 });
-
-interface PhotoDto {
-  id: string;
-  url: string;
-  caption: string | null;
-  sortIdx: number;
-  mimetype: string;
-  sizeBytes: number;
-  immichAssetId: string | null;
-  createdAt: string;
-}
-
-function toPhotoDto(photo: {
-  id: string;
-  placeVisitId: string;
-  caption: string | null;
-  sortIdx: number;
-  mimetype: string;
-  sizeBytes: number;
-  immichAssetId: string | null;
-  createdAt: Date;
-}): PhotoDto {
-  return {
-    id: photo.id,
-    url: `/api/v1/places/visits/${photo.placeVisitId}/photos/${photo.id}/file`,
-    caption: photo.caption,
-    sortIdx: photo.sortIdx,
-    mimetype: photo.mimetype,
-    sizeBytes: photo.sizeBytes,
-    immichAssetId: photo.immichAssetId,
-    createdAt: photo.createdAt.toISOString(),
-  };
-}
 
 /** The visit, or a 404 — the single ownership gate every handler goes through. */
 async function resolveVisit(visitId: string, userId: string): Promise<{ id: string }> {

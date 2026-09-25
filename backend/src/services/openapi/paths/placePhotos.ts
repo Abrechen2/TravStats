@@ -11,7 +11,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { errorContent } from "./shared";
-import { linkPicksSchema } from "../../../schemas/place";
+import { linkPicksSchema, placeCoverSchema } from "../../../schemas/place";
 
 const placesTag = ["Places"];
 const badInput = { description: "Invalid input", content: errorContent };
@@ -114,5 +114,34 @@ registry.registerPath({
     404: notFound,
     409: { description: "Immich is not configured", content: errorContent },
     502: { description: "Immich did not deliver the asset" },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/places/{id}/cover",
+  summary: "Choose the place page's lead photograph",
+  description:
+    "The photo must belong to a visit of this place, and the place to the caller (404 " +
+    "otherwise). `null` returns the page to its default, the first photograph.",
+  tags: placesTag,
+  request: {
+    params: z.object({ id: uuid }),
+    body: { content: { "application/json": { schema: placeCoverSchema } } },
+  },
+  responses: {
+    200: {
+      description: "Saved",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({ coverPhotoId: uuid.nullable() }),
+          }),
+        },
+      },
+    },
+    400: badInput,
+    404: notFound,
   },
 });

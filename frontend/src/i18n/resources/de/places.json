@@ -369,5 +369,11 @@
         "write_failed": "nicht gespeichert"
       }
     }
+  },
+  "gallery": {
+    "title": "Galerie",
+    "lead": "Titelbild von {{name}}",
+    "makeCover": "Als Titelbild verwenden",
+    "coverFailed": "Das Titelbild konnte nicht gespeichert werden."
   }
 }

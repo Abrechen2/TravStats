@@ -118,3 +118,6 @@ export const linkPicksSchema = z
     assetIds: z.array(z.string().uuid()).max(VISIT_PHOTO_SUGGESTION_CAP).default([]),
   })
   .strict();
+
+/** The place page's lead photograph; null returns it to "the first one". */
+export const placeCoverSchema = z.object({ photoId: z.string().uuid().nullable() }).strict();

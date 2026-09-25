@@ -82,6 +82,7 @@ import xlsxImportRouter from "./xlsxImport";
 import placeVisitPhotoRouter from "./places/visitPhotos";
 import placeVisitDateSuggestionRouter from "./places/visitDateSuggestions";
 import placeVisitPhotoSuggestionRouter from "./places/visitPhotoSuggestions";
+import placeCoverRouter from "./places/placeCover";
 import documentExtractValueRoutes from "./documents/extractValues";
 import placeListsRouter from "./placeLists";
 import curatedListsRouter from "./placeLists/curated";
@@ -265,6 +266,8 @@ export const apiMounts: ApiMount[] = [
     base: "/api/v1/places",
     router: placeVisitPhotoSuggestionRouter,
   },
+  // The place page's lead photograph — same prefix, own file, same reason.
+  { id: "places.cover", base: "/api/v1/places", router: placeCoverRouter },
   { id: "places", base: "/api/v1/places", router: placesRouter },
   { id: "xlsxImport", base: "/api/v1/xlsx-import", router: xlsxImportRouter },
   // Curated checklists mount FIRST on the same path: '/curated' would

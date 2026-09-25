@@ -11,6 +11,7 @@ import ConfirmModal from "../components/Training/ConfirmModal";
 import { LocationMiniMap } from "../components/location/LocationMiniMap";
 import { PlaceFormModal } from "../components/places/PlaceFormModal";
 import { VisitPhotoStrip } from "../components/places/VisitPhotoStrip";
+import { PlaceGallery } from "../components/places/PlaceGallery";
 import { VisitDateChips } from "../components/places/VisitDateChips";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { RowActionButton, RowActions } from "../components/table/RowActionButton";
@@ -334,6 +335,7 @@ export default function PlaceDetailPage(): JSX.Element {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
         <div className="flex flex-col gap-6">
+          <PlaceGallery key={place.id} place={place} />
           <WikipediaCard kind="place" id={place.id} />
           <section className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
             <div className="flex items-center justify-between gap-3">
@@ -492,7 +494,8 @@ export default function PlaceDetailPage(): JSX.Element {
           place={place}
           onClose={() => setEditing(false)}
           onSaved={(saved) => {
-            setPlace(saved);
+            // The update answers without photos; the visits did not change.
+            setPlace({ ...saved, visits: place.visits });
             setEditing(false);
           }}
         />
