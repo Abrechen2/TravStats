@@ -19,6 +19,8 @@ interface BookingAndNotesSectionProps {
   onBookingChange: (value: BookingFieldsValue) => void;
   tripId: string;
   setTripId: (v: string) => void;
+  /** Preselects the trip covering this day — see TripSelectField. */
+  departureDate: string;
   tags: string[];
   setTags: (v: string[]) => void;
   companions: string[];
@@ -47,6 +49,7 @@ export default function BookingAndNotesSection({
   onBookingChange,
   tripId,
   setTripId,
+  departureDate,
   tags,
   setTags,
   companions,
@@ -75,6 +78,7 @@ export default function BookingAndNotesSection({
       <TripSelectField
         value={tripId}
         onChange={setTripId}
+        preselectForDate={departureDate}
         labelClassName={labelClassName}
         inputClassName={inputClassName}
       />

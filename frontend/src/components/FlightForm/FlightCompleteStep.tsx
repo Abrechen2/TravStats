@@ -612,6 +612,7 @@ export default function FlightCompleteStep({
           }}
           tripId={tripId}
           setTripId={setTripId}
+          departureDate={departureDate}
           tags={tags}
           setTags={setTags}
           companions={companions}

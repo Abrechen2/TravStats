@@ -11,7 +11,9 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
+import { render, fireEvent, waitFor } from "@testing-library/react";
+import { tripsApi } from "@/lib/api/trips";
+import type { Trip } from "../../types";
 import FlightCompleteStep, { type FlightCompleteStepProps } from "./FlightCompleteStep";
 
 const mocks = vi.hoisted(() => ({ companionsList: vi.fn() }));
@@ -154,5 +156,22 @@ describe("FlightCompleteStep booking field wiring (Phase 2 Task 2)", () => {
 
     expect(byPlaceholder(container, "bookingReference").value).toBe("9RFAA7");
     expect(byPlaceholder(container, "ticketNumber").value).toBe("2202236084346");
+  });
+
+  // The departure day reaches the trip select, which preselects the one trip
+  // covering it (lib/tripForDate.ts) — the flight form's half of the rule.
+  it("preselects the trip the departure day falls in", async () => {
+    vi.mocked(tripsApi.getAll).mockResolvedValueOnce([
+      {
+        id: "trip-summer",
+        name: "Sommer",
+        startDate: "2026-07-01T00:00:00.000Z",
+        endDate: "2026-07-14T00:00:00.000Z",
+      },
+    ] as unknown as Trip[]);
+    const setTripId = vi.fn();
+    render(<FlightCompleteStep {...baseProps({ departureDate: "2026-07-05", setTripId })} />);
+
+    await waitFor(() => expect(setTripId).toHaveBeenCalledWith("trip-summer"));
   });
 });

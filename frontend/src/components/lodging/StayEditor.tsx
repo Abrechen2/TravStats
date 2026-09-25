@@ -10,6 +10,7 @@ import { logger } from "../../lib/logger";
 import { AmenityChipsInput } from "./AmenityChipsInput";
 import { Field } from "../ui/Field";
 import { StayEditorAttachmentsSection } from "./StayEditorAttachmentsSection";
+import { StayEditorTripSection } from "./StayEditorTripSection";
 import { StayEditorSection } from "./StayEditorSection";
 import { StayEditorNotesSection } from "./StayEditorNotesSection";
 import { StayEditorRatingsSection } from "./StayEditorRatingsSection";
@@ -694,34 +695,15 @@ export function StayEditor({
             )}
           </StayEditorSection>
 
-          {/* Its own section. This select used to sit unlabelled at the bottom
-           * of "Loyalty programme", between membership numbers — the word
-           * "trip" existed only as an aria-label, so the sole thing on screen
-           * was the option text "Not linked to a trip". Nobody looking for
-           * how to attach a stay to a trip searches under loyalty, and they
-           * would be right not to. */}
-          <StayEditorSection title={t("lodging:stayEditor.tripSection")}>
-            <label
-              htmlFor="stay-editor-trip"
-              className="mb-1 block text-xs text-[var(--text-muted)]"
-            >
-              {t("lodging:field.trip")}
-            </label>
-            <select
-              id="stay-editor-trip"
-              aria-label={t("lodging:field.trip")}
-              className={INPUT_CLASS}
-              value={tripId}
-              onChange={(e): void => setTripId(e.target.value)}
-            >
-              <option value="">{t("lodging:field.noTrip")}</option>
-              {trips.map((trip) => (
-                <option key={trip.id} value={trip.id}>
-                  {trip.name}
-                </option>
-              ))}
-            </select>
-          </StayEditorSection>
+          <StayEditorTripSection
+            trips={trips}
+            tripId={tripId}
+            onTripChange={setTripId}
+            preselect={mode === "create"}
+            checkIn={checkIn}
+            inputClassName={INPUT_CLASS}
+            t={t}
+          />
 
           <StayEditorAttachmentsSection
             stayId={stay?.id ?? null}

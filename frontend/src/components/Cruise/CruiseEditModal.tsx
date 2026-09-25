@@ -22,6 +22,7 @@ import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import CompanionPicker from "../CompanionPicker";
+import { useTripPreselection } from "../../hooks/useTripPreselection";
 
 type Mode = "create" | "edit";
 
@@ -151,6 +152,14 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       cancelled = true;
     };
   }, []);
+
+  const pickTrip = useTripPreselection({
+    enabled: mode === "create",
+    trips,
+    date: startDate,
+    value: tripId,
+    onChange: setTripId,
+  });
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -445,7 +454,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 aria-label={t("field.trip")}
                 className={INPUT_CLASS}
                 value={tripId}
-                onChange={(e): void => setTripId(e.target.value)}
+                onChange={(e): void => pickTrip(e.target.value)}
               >
                 <option value="">{t("field.noTrip")}</option>
                 {trips.map((trip) => (

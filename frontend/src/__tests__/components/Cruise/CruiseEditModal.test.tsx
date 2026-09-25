@@ -345,6 +345,46 @@ describe("CruiseEditModal", () => {
       expect(calls[calls.length - 1][1].tripId).toBeNull();
     });
 
+    // A new cruise is preselected onto the trip its start day falls in, while
+    // the user has not touched the select (rule: lib/tripForDate.ts).
+    it("a new cruise preselects the trip covering its start date", async () => {
+      vi.mocked(tripsApi.getAll).mockResolvedValue([
+        { ...trips[0], startDate: "2026-05-01T00:00:00.000Z", endDate: "2026-05-20T00:00:00.000Z" },
+        { ...trips[1], startDate: "2027-02-01T00:00:00.000Z", endDate: null },
+      ] as Trip[]);
+      vi.mocked(cruiseApi.create).mockResolvedValue({ id: "c1" } as unknown as Cruise);
+
+      render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+      const select = (await screen.findByLabelText("field.trip")) as HTMLSelectElement;
+      await waitFor(() =>
+        expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument()
+      );
+      expect(select.value).toBe("");
+
+      await userEvent.type(screen.getByLabelText("field.depart"), "2026-05-20");
+      await waitFor(() => expect(select.value).toBe("trip-1"));
+
+      await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+      await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
+      const calls = vi.mocked(cruiseApi.create).mock.calls;
+      expect(calls[calls.length - 1][0].tripId).toBe("trip-1");
+    });
+
+    it("editing a cruise never preselects a trip", async () => {
+      vi.mocked(tripsApi.getAll).mockResolvedValue([
+        { ...trips[0], startDate: "2025-12-20T00:00:00.000Z", endDate: "2026-01-10T00:00:00.000Z" },
+      ] as Trip[]);
+
+      render(
+        <CruiseEditModal mode="edit" cruise={baseCruise} onClose={vi.fn()} onSaved={vi.fn()} />
+      );
+      const select = (await screen.findByLabelText("field.trip")) as HTMLSelectElement;
+      await waitFor(() =>
+        expect(screen.getByRole("option", { name: "Mittelmeer 2026" })).toBeInTheDocument()
+      );
+      expect(select.value).toBe("");
+    });
+
     // Non-fatal on purpose, mirroring TripSelectField: a failed trip list must
     // not take the whole edit dialog down. The field just offers "no trip".
     it("still renders the form when the trip list fails to load", async () => {
