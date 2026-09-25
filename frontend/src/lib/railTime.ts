@@ -46,3 +46,17 @@ export function formatStationClock(iso: string, timeZone: string | null, locale:
     timeStyle: "short",
   }).format(new Date(iso));
 }
+
+/**
+ * Minutes on board, from the two instants — both are real UTC instants, so a
+ * ride across a zone border is measured right. Null when the arrival is not
+ * known or precedes the departure: an unknown duration is not zero.
+ */
+export function railDurationMinutes(
+  departureIso: string,
+  arrivalIso: string | null
+): number | null {
+  if (!arrivalIso) return null;
+  const minutes = Math.round((Date.parse(arrivalIso) - Date.parse(departureIso)) / 60_000);
+  return Number.isFinite(minutes) && minutes >= 0 ? minutes : null;
+}

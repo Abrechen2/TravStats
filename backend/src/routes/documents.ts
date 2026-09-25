@@ -55,6 +55,7 @@ const ENTRY_LIST_PATHS: Record<EntryType, string> = {
   lodgingStay: "/lodging/stays/:id/documents",
   placeVisit: "/places/visits/:id/documents",
   trip: "/trips/:id/documents",
+  railJourney: "/rail/:id/documents",
 };
 
 const toDate = (value: string | null | undefined): Date | null | undefined =>

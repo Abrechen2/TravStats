@@ -111,6 +111,27 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
   };
 }
 
+/**
+ * The next leg of a connection, prefilled from the leg before it: it leaves
+ * from where that one arrived, no earlier than it arrived (on that station's
+ * clock), in the same trip, class and company, under the same booking
+ * reference. The train, the destination and the price are the new ticket's
+ * and stay empty.
+ */
+export function connectionDraftFrom(previous: RailJourney): RailFormDraft {
+  const before = draftFrom(previous);
+  return {
+    ...draftFrom(null),
+    departure: before.arrival,
+    departureLocal: before.arrivalLocal || before.departureLocal,
+    travelClass: before.travelClass,
+    bookingReference: before.bookingReference,
+    currency: before.currency,
+    companions: before.companions,
+    tripId: before.tripId,
+  };
+}
+
 /** A station the server will accept: a name AND a position. */
 export function isStationComplete(station: RailStationDraft): boolean {
   return station.name.trim() !== "" && station.lat !== null && station.lon !== null;

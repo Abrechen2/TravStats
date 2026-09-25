@@ -1,4 +1,5 @@
 import type { JSX } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatStationClock, formatStationTime } from "../../lib/railTime";
 import type { RailJourney } from "../../types/rail";
@@ -69,9 +70,9 @@ export function RailJourneyRow({ journey, onEdit, onDelete }: Props): JSX.Elemen
           <Icon name="train-front" size={20} />
         </span>
         <div className="min-w-0">
-          <div className="font-semibold">
+          <Link to={`/rail/${journey.id}`} className="font-semibold hover:underline">
             {journey.depStationName} → {journey.arrStationName}
-          </div>
+          </Link>
           <div className="t-caption">{details.join(" · ")}</div>
           {journey.trip ? <div className="t-caption">{journey.trip.name}</div> : null}
         </div>

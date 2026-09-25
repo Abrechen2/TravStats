@@ -1,5 +1,12 @@
 import { describe, it, expect } from "vitest";
-import { applyLookup, canSubmit, draftFrom, toRailInput } from "../railFormModel";
+import {
+  applyLookup,
+  canSubmit,
+  connectionDraftFrom,
+  draftFrom,
+  toRailInput,
+} from "../railFormModel";
+import { makeRailJourney } from "./railJourneyFixture";
 import type { RailJourney, RailLookupAnswer } from "../../../types/rail";
 
 const journey: RailJourney = {
@@ -185,5 +192,44 @@ describe("the lookup in the form", () => {
     const linked = { ...journey, lookupProvider: "transitous" as const, lookupRef: "trip-696" };
     expect(draftFrom(linked).lookup).toEqual({ provider: "transitous", ref: "trip-696" });
     expect(toRailInput(draftFrom(journey)).lookup).toBeNull();
+  });
+});
+
+describe("connectionDraftFrom", () => {
+  // Frankfurt 06:15 UTC -> Fulda 05:10 UTC is the fixture; Fulda is on Berlin time.
+  const previous = makeRailJourney({
+    tripId: "trip-1",
+    bookingReference: "AB12CD",
+    travelClass: "first",
+    companions: ["Alex"],
+    price: 49.9,
+    seat: "45",
+  });
+
+  it("leaves from where the previous leg arrived, at its arrival clock", () => {
+    const draft = connectionDraftFrom(previous);
+    expect(draft.departure).toMatchObject({ name: "Fulda", lat: 50.55, lon: 9.68 });
+    expect(draft.departureLocal).toBe("2026-09-26T07:10");
+    expect(draft.arrival.name).toBe("");
+    expect(draft.arrivalLocal).toBe("");
+  });
+
+  it("keeps the trip, class, company and booking reference, not the ticket's own fields", () => {
+    const draft = connectionDraftFrom(previous);
+    expect(draft).toMatchObject({
+      tripId: "trip-1",
+      bookingReference: "AB12CD",
+      travelClass: "first",
+      companions: ["Alex"],
+      trainNumber: "",
+      price: "",
+      seat: "",
+      lookup: null,
+    });
+  });
+
+  it("falls back to the departure clock when the arrival is unknown", () => {
+    const draft = connectionDraftFrom({ ...previous, arrivalTime: null });
+    expect(draft.departureLocal).toBe("2026-09-26T06:15");
   });
 });

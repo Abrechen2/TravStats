@@ -1,7 +1,7 @@
 {
   "title": "Bahn",
   "subtitle": "Deine Zugfahrten — jede Fahrt ein Eintrag, wie ein Flug.",
-  "betaNote": "Beta: Karte, Statistik und Import folgen.",
+  "betaNote": "Beta: Der Import von Buchungen folgt.",
   "add": "Fahrt hinzufügen",
   "empty": "Noch keine Zugfahrten. Trag deine erste Fahrt ein.",
   "loadError": "Die Zugfahrten konnten nicht geladen werden.",
@@ -108,5 +108,39 @@
     "unlink": "Verknüpfung lösen",
     "credit": "Fahrplandaten und Streckenverläufe:",
     "switchedOff": "Die Zugsuche ist auf dieser Instanz abgeschaltet. Trag die Fahrt von Hand ein."
+  },
+  "detail": {
+    "loading": "Lädt …",
+    "loadError": "Die Fahrt konnte nicht geladen werden.",
+    "notFound": "Diese Fahrt gibt es nicht (mehr).",
+    "back": "Zurück zum Bahn-Logbuch",
+    "distance": "Entfernung",
+    "typedDistance": "vom Ticket",
+    "duration": "Fahrzeit",
+    "durationHm": "{{h}} h {{m}} min",
+    "durationM": "{{m}} min",
+    "delay": "Verspätung",
+    "delayUnknown": "nicht erfasst",
+    "times": "Zeiten (Ortszeit am Bahnhof)",
+    "plannedDeparture": "Abfahrt laut Plan",
+    "plannedArrival": "Ankunft laut Plan",
+    "actualDeparture": "Tatsächliche Abfahrt",
+    "actualArrival": "Tatsächliche Ankunft",
+    "ticket": "Fahrkarte",
+    "route": "Strecke",
+    "lineTraced": "Linie: Streckenverlauf dieses Zuges, von Transitous übernommen.",
+    "lineStraight": "Linie: Luftlinie zwischen den Bahnhöfen — nicht der Weg des Zuges."
+  },
+  "connection": {
+    "add": "Anschluss hinzufügen",
+    "saveAndAdd": "Speichern & Anschluss eintragen",
+    "banner": "Anschlusszug ab {{station}} — beide Fahrten werden über eine Buchung verbunden.",
+    "title": "Verbindung",
+    "booking": "Buchung {{pnr}}"
+  },
+  "trip": {
+    "open": "Fahrt öffnen",
+    "listTitle_one": "Bahn ({{count}} Fahrt)",
+    "listTitle_other": "Bahn ({{count}} Fahrten)"
   }
 }

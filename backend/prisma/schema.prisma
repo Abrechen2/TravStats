@@ -2746,6 +2746,7 @@ model Document {
   lodgingStayId String? @map("lodging_stay_id")
   tripId        String? @map("trip_id")
   placeVisitId  String? @map("place_visit_id")
+  railJourneyId String? @map("rail_journey_id")
 
   createdAt  DateTime  @default(now()) @map("created_at")
   /// When it was filed with an entry; null while unlinked.
@@ -2768,6 +2769,7 @@ model Document {
   lodgingStay LodgingStay? @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
   trip        Trip?        @relation(fields: [tripId], references: [id], onDelete: Cascade)
   placeVisit  PlaceVisit?  @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
+  railJourney RailJourney? @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
 
   @@index([userId, sha256])
   @@index([flightId])
@@ -2775,6 +2777,7 @@ model Document {
   @@index([lodgingStayId])
   @@index([tripId])
   @@index([placeVisitId])
+  @@index([railJourneyId])
   @@index([userId, linkedAt])
   /// The sweep asks exactly this: unfiled rows past their stamp.
   @@index([unlinkedAt])
@@ -2889,6 +2892,7 @@ model RailJourney {
   depStation     RailStation?           @relation("RailJourneyDepStation", fields: [depStationId], references: [id], onDelete: SetNull)
   arrStation     RailStation?           @relation("RailJourneyArrStation", fields: [arrStationId], references: [id], onDelete: SetNull)
   companionLinks RailJourneyCompanion[]
+  documents      Document[]
 
   @@unique([userId, externalRef])
   @@index([userId, departureTime])

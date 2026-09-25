@@ -148,6 +148,7 @@ export default function RailPage(): JSX.Element {
           journey={editing.journey}
           onClose={(): void => setEditing(null)}
           onSaved={handleSaved}
+          onProgress={(): Promise<void> => load(0)}
         />
       )}
       <ConfirmModal

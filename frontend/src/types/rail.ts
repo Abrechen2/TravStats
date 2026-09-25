@@ -69,6 +69,51 @@ export interface RailJourney {
   updatedAt: string;
 }
 
+/**
+ * A journey as `GET /trips/:id` carries it: everything a timeline entry and a
+ * logistics row show, without the frozen line (thousands of points a trip page
+ * does not draw).
+ */
+export type TripRailJourney = Pick<
+  RailJourney,
+  | "id"
+  | "operator"
+  | "trainCategory"
+  | "trainNumber"
+  | "depStationName"
+  | "arrStationName"
+  | "depTimezone"
+  | "arrTimezone"
+  | "departureTime"
+  | "arrivalTime"
+  | "distanceKm"
+  | "distanceSource"
+  | "status"
+  | "delayMinutes"
+  | "price"
+  | "currency"
+  | "bookingId"
+>;
+
+/** A leg of the same booking, as `GET /rail/:id` lists it. */
+export interface RailBookingLeg {
+  id: string;
+  depStationName: string;
+  arrStationName: string;
+  departureTime: string;
+  arrivalTime: string | null;
+  depTimezone: string | null;
+  arrTimezone: string | null;
+  trainCategory: string | null;
+  trainNumber: string | null;
+  status: RailStatus;
+}
+
+/** A single journey read: the row plus the booking that binds its connection. */
+export interface RailJourneyDetail extends RailJourney {
+  booking: { id: string; pnr: string | null; railJourneys: RailBookingLeg[] } | null;
+}
+
 export interface RailStationInput {
   /** Catalogue row; the server then takes position, code and country from it. */
   stationId?: number | null;
@@ -102,6 +147,9 @@ export interface RailJourneyInput {
   tags?: string[];
   companions?: string[];
   tripId?: string | null;
+  bookingId?: string | null;
+  /** Create only: the leg this one continues (a connecting train). */
+  connectsFrom?: string;
   /** The timetable trip a lookup matched; null drops it (and its traced line). */
   lookup?: { provider: RailLookupProvider; ref: string } | null;
 }

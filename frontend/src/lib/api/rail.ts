@@ -1,6 +1,7 @@
 import { api } from "./client";
 import type {
   RailJourney,
+  RailJourneyDetail,
   RailJourneyInput,
   RailLookupAnswer,
   RailLookupProviders,
@@ -38,6 +39,12 @@ export const railApi = {
       params: query,
     });
     return { journeys: res.data.data, total: res.data.meta.total };
+  },
+
+  /** One journey with its booking's legs. */
+  async get(id: string): Promise<RailJourneyDetail> {
+    const res = await api.get<Envelope<RailJourneyDetail>>(`/rail/${encodeURIComponent(id)}`);
+    return res.data.data;
   },
 
   async create(input: RailJourneyInput): Promise<RailJourney> {

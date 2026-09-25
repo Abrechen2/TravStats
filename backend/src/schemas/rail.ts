@@ -122,7 +122,15 @@ const baseRailSchema = z.object({
  * compare (Paris 10:00 to London 10:55 is a 1 h 55 min train). The route checks
  * the INSTANTS, after it knows both zones.
  */
-export const createRailJourneySchema = baseRailSchema;
+export const createRailJourneySchema = baseRailSchema.extend({
+  /**
+   * "Add a connecting train": the id of the leg this one continues. The server
+   * binds both through a booking (creating one on the previous leg when it has
+   * none) and files the new leg in the previous leg's trip unless `tripId` is
+   * sent. Create-only — an existing leg joins a booking through `bookingId`.
+   */
+  connectsFrom: z.string().uuid().optional(),
+});
 
 export const updateRailJourneySchema = partialForUpdate(baseRailSchema).refine(
   (data) => Object.keys(data).length > 0,

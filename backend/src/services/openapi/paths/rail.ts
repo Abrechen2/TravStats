@@ -11,6 +11,7 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { errorContent } from "./shared";
+import { documentIdsBodySchema } from "../../../schemas/document";
 import {
   createRailJourneySchema,
   updateRailJourneySchema,
@@ -88,6 +89,35 @@ const railJourney = registry.register(
     .openapi("RailJourney")
 );
 
+/** A leg of the same booking, as the detail read lists it. */
+const railBookingLeg = z.object({
+  id: z.string().uuid(),
+  depStationName: z.string(),
+  arrStationName: z.string(),
+  departureTime: z.string().datetime(),
+  arrivalTime: z.string().datetime().nullable(),
+  depTimezone: z.string().nullable(),
+  arrTimezone: z.string().nullable(),
+  trainCategory: z.string().nullable(),
+  trainNumber: z.string().nullable(),
+  status: z.enum(RAIL_STATUSES),
+});
+
+const railJourneyDetail = railJourney
+  .extend({
+    booking: z
+      .object({
+        id: z.string().uuid(),
+        pnr: z.string().nullable(),
+        railJourneys: z
+          .array(railBookingLeg)
+          .describe("Every rail leg of the booking, this one included, in departure order"),
+      })
+      .nullable()
+      .describe("The booking that binds a connection's legs; null for a single ride"),
+  })
+  .openapi("RailJourneyDetail");
+
 const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.literal(true), data });
 
 registry.registerPath({
@@ -152,8 +182,8 @@ registry.registerPath({
   request: { params: z.object({ id: z.string().uuid() }) },
   responses: {
     200: {
-      description: "Rail journey",
-      content: { "application/json": { schema: envelope(railJourney) } },
+      description: "Rail journey with its booking's legs",
+      content: { "application/json": { schema: envelope(railJourneyDetail) } },
     },
     404: { description: "Not found", content: errorContent },
   },
@@ -171,12 +201,18 @@ registry.registerPath({
     "trip's traced line once, cuts it to the two stations and freezes it " +
     "(`geometrySource: transitous`, distance along it); a missing, unreachable or " +
     "chord-only line stores `straight`. Without `distanceKm` the traced or else the " +
-    "great-circle distance is stored.",
+    "great-circle distance is stored. `connectsFrom` names the leg this one continues: " +
+    "the server binds both through a booking (creating one on that leg when it has " +
+    "none) and files the new leg in that leg's trip unless `tripId` is sent.",
   tags: ["Rail"],
   request: {
     body: {
       content: {
-        "application/json": { schema: createRailJourneySchema.openapi("RailJourneyCreateInput") },
+        "application/json": {
+          schema: createRailJourneySchema
+            .openapi("RailJourneyCreateInput")
+            .and(documentIdsBodySchema),
+        },
       },
     },
   },

@@ -20,8 +20,10 @@ import {
   type JourneyGeometry,
 } from "../services/rail/railGeometry";
 import { resolveStationInput } from "../services/rail/railStations";
+import { bindConnection } from "../services/rail/railConnection";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
+import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import logger from "../utils/logger";
 
@@ -37,6 +39,36 @@ import logger from "../utils/logger";
 /** What a journey carries when read — list rows and a single row alike. */
 export const RAIL_INCLUDE = {
   trip: { select: { id: true, name: true, color: true } },
+} satisfies Prisma.RailJourneyInclude;
+
+/**
+ * A single journey also carries its booking and that booking's other legs, so
+ * the detail page can show the connection it is part of. Only the fields a
+ * leg list needs — the legs are links, not copies.
+ */
+export const RAIL_DETAIL_INCLUDE = {
+  ...RAIL_INCLUDE,
+  booking: {
+    select: {
+      id: true,
+      pnr: true,
+      railJourneys: {
+        select: {
+          id: true,
+          depStationName: true,
+          arrStationName: true,
+          departureTime: true,
+          arrivalTime: true,
+          depTimezone: true,
+          arrTimezone: true,
+          trainCategory: true,
+          trainNumber: true,
+          status: true,
+        },
+        orderBy: [{ departureTime: "asc" }, { id: "asc" }],
+      },
+    },
+  },
 } satisfies Prisma.RailJourneyInclude;
 
 const DEFAULT_LIMIT = 100;
@@ -130,7 +162,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     const userId = requireUser(req);
     const journey = await prisma.railJourney.findFirst({
       where: { id: req.params.id, userId },
-      include: RAIL_INCLUDE,
+      include: RAIL_DETAIL_INCLUDE,
     });
     if (!journey) throw new AppError("Rail journey not found", 404);
     res.json({ success: true, data: journey });
@@ -204,9 +236,10 @@ router.post(
       const userId = requireUser(req);
       const parsed = createRailJourneySchema.safeParse(req.body);
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
-      const input = parsed.data;
+      const { connectsFrom, ...input } = parsed.data;
       // Prisma proves a trip or booking EXISTS, never whose it is (AUD-038).
       await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
+      const documentIds = await takeDocumentIds(userId, req.body);
 
       const merged = mergeRailJourney(null, await withResolvedStations(input));
       const lookup = { provider: input.lookup?.provider ?? null, ref: input.lookup?.ref ?? null };
@@ -224,12 +257,19 @@ router.post(
       );
 
       const journey = await prisma.$transaction(async (tx) => {
+        // Bound inside the transaction, so a failed create leaves the previous
+        // leg without the booking it was given for this one.
+        const link = connectsFrom ? await bindConnection(tx, userId, connectsFrom) : null;
         const created = await tx.railJourney.create({
           data: {
             ...plainColumns(input),
             ...state,
             ...fxColumns,
             ...(geometryColumns(lookup, geo) as Prisma.RailJourneyUncheckedCreateInput),
+            ...(link && {
+              bookingId: link.bookingId,
+              tripId: input.tripId !== undefined ? input.tripId : link.tripId,
+            }),
             userId,
             companions: companions.map((c) => c.displayName),
           },
@@ -248,6 +288,8 @@ router.post(
           include: RAIL_INCLUDE,
         });
       });
+
+      await linkDocuments(userId, documentIds, { type: "railJourney", id: journey.id });
 
       logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
       res.status(201).json({ success: true, data: journey });

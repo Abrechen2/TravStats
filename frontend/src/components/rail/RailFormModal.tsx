@@ -15,6 +15,7 @@ import { StationPicker } from "./StationPicker";
 import { RailLookupPanel } from "./RailLookupPanel";
 import {
   canSubmit,
+  connectionDraftFrom,
   draftFrom,
   isStationComplete,
   toRailInput,
@@ -23,8 +24,17 @@ import {
 
 interface Props {
   journey: RailJourney | null;
+  /** A prefilled new leg — the connection the detail page asked for. */
+  initialDraft?: RailFormDraft;
+  /** The leg a new journey continues; the server binds both via a booking. */
+  connectsFrom?: string;
   onClose: () => void;
   onSaved: (saved: RailJourney) => void | Promise<void>;
+  /**
+   * Called when "save and add a connection" saved a leg and the dialog stays
+   * open for the next one — the caller refreshes, but does not close.
+   */
+  onProgress?: (saved: RailJourney) => void | Promise<void>;
 }
 
 const INPUT_CLASS =
@@ -42,10 +52,26 @@ const DARK_PICKER_STYLE = { colorScheme: "dark" } as const;
  * status is not a field: it follows from the times, and only a cancellation
  * is the user's to state — the same rule the cruise form follows.
  */
-export function RailFormModal({ journey, onClose, onSaved }: Props): JSX.Element {
+export function RailFormModal({
+  journey: initialJourney,
+  initialDraft,
+  connectsFrom: initialConnectsFrom,
+  onClose,
+  onSaved,
+  onProgress,
+}: Props): JSX.Element {
   const { t } = useTranslation(["rail", "common"]);
   const recentCurrencies = useRecentCurrencies();
-  const [draft, setDraft] = useState<RailFormDraft>(() => draftFrom(journey));
+  // The dialog can move on to the next leg without closing, so what it edits
+  // and what it continues are state, seeded from the props.
+  const [journey, setJourney] = useState<RailJourney | null>(initialJourney);
+  const [connectsFrom, setConnectsFrom] = useState<RailJourney | string | undefined>(
+    initialConnectsFrom
+  );
+  const [formKey, setFormKey] = useState(0);
+  const [draft, setDraft] = useState<RailFormDraft>(
+    () => initialDraft ?? draftFrom(initialJourney)
+  );
   const [trips, setTrips] = useState<Trip[]>([]);
   const [depValid, setDepValid] = useState(true);
   const [arrValid, setArrValid] = useState(true);
@@ -72,14 +98,30 @@ export function RailFormModal({ journey, onClose, onSaved }: Props): JSX.Element
 
   const ready = canSubmit(draft) && depValid && arrValid;
 
-  const submit = async (): Promise<void> => {
+  const previousId = typeof connectsFrom === "string" ? connectsFrom : connectsFrom?.id;
+  const previousStation =
+    typeof connectsFrom === "object" ? connectsFrom.arrStationName : draft.departure.name;
+
+  const submit = async (thenConnect = false): Promise<void> => {
     if (!ready) return;
     setSaving(true);
     setError(null);
     try {
       const input = toRailInput(draft);
-      const saved = journey ? await railApi.update(journey.id, input) : await railApi.create(input);
-      await onSaved(saved);
+      const saved = journey
+        ? await railApi.update(journey.id, input)
+        : await railApi.create(previousId ? { ...input, connectsFrom: previousId } : input);
+      if (!thenConnect) {
+        await onSaved(saved);
+        return;
+      }
+      // The next leg: from where this one arrives, after it arrives, in the
+      // same trip and booking. The pickers remount so they show the new pick.
+      await onProgress?.(saved);
+      setJourney(null);
+      setConnectsFrom(saved);
+      setDraft(connectionDraftFrom(saved));
+      setFormKey((k) => k + 1);
     } catch (err: unknown) {
       logger.error("RailFormModal: save failed", err);
       const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
@@ -109,6 +151,15 @@ export function RailFormModal({ journey, onClose, onSaved }: Props): JSX.Element
           </button>
           <button
             type="button"
+            onClick={(): void => void submit(true)}
+            disabled={saving || !ready}
+            data-testid="rail-save-and-connect"
+            className="rounded-md border border-border px-4 py-2 text-sm hover:bg-(--bg-surface) disabled:opacity-50"
+          >
+            {t("rail:connection.saveAndAdd")}
+          </button>
+          <button
+            type="button"
             onClick={(): void => void submit()}
             disabled={saving || !ready}
             className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base) hover:bg-(--accent-dim) disabled:opacity-50"
@@ -118,7 +169,15 @@ export function RailFormModal({ journey, onClose, onSaved }: Props): JSX.Element
         </>
       }
     >
-      <div>
+      <div key={formKey}>
+        {previousId && (
+          <p
+            className="mb-3 rounded-md border border-border px-3 py-2 text-sm"
+            data-testid="rail-connection-banner"
+          >
+            {t("rail:connection.banner", { station: previousStation })}
+          </p>
+        )}
         <Section title={t("rail:form.train")}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
             <input

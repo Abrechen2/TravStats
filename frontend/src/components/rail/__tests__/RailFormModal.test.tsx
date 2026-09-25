@@ -53,6 +53,7 @@ vi.mock("../../../lib/api/rail", () => ({
 }));
 
 import { RailFormModal } from "../RailFormModal";
+import { makeRailJourney } from "./railJourneyFixture";
 
 function saveButton(): HTMLElement {
   return screen.getByRole("button", { name: "rail:form.save" });
@@ -241,5 +242,37 @@ describe("RailFormModal", () => {
       arrivalStation: { stationId: 10112, name: "Berlin Gesundbrunnen" },
       lookup: { provider: "transitous", ref: "trip-696" },
     });
+  });
+
+  it("saves a leg and moves on to its connection, bound to it on the next save", async () => {
+    const first = makeRailJourney({ id: "leg-1", tripId: "t1" });
+    const second = makeRailJourney({ id: "leg-2" });
+    create.mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+    const onProgress = vi.fn();
+    const onSaved = vi.fn();
+    render(
+      <RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} onProgress={onProgress} />
+    );
+    await screen.findByRole("option", { name: "Paris weekend" });
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText("rail:form.departureTime"), {
+      target: { value: "2026-07-01T08:15" },
+    });
+    fireEvent.click(screen.getByTestId("rail-save-and-connect"));
+
+    await waitFor(() => expect(onProgress).toHaveBeenCalledWith(first));
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(create.mock.calls[0][0]).not.toHaveProperty("connectsFrom");
+    // The dialog now holds the next leg, from the previous arrival.
+    expect(await screen.findByTestId("rail-connection-banner")).toBeInTheDocument();
+    expect(screen.getByLabelText("rail:form.departureTime")).toHaveValue("2026-09-26T07:10");
+
+    for (const b of screen.getAllByRole("button", { name: "rail:station.useGeocoder" })) {
+      fireEvent.click(b);
+    }
+    fireEvent.click(screen.getByText("pick rail:form.arrivalStation"));
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith(second));
+    expect(create.mock.calls[1][0]).toMatchObject({ connectsFrom: "leg-1", tripId: "t1" });
   });
 });

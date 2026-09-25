@@ -1,7 +1,7 @@
 {
   "title": "Rail",
   "subtitle": "Your train journeys — every ride an entry of its own, like a flight.",
-  "betaNote": "Beta: map, statistics and import are still to come.",
+  "betaNote": "Beta: importing bookings comes next.",
   "add": "Add journey",
   "empty": "No train journeys yet. Add your first ride.",
   "loadError": "The train journeys could not be loaded.",
@@ -108,5 +108,39 @@
     "unlink": "Unlink",
     "credit": "Timetable data and lines:",
     "switchedOff": "The train lookup is switched off on this instance. Enter the journey by hand."
+  },
+  "detail": {
+    "loading": "Loading …",
+    "loadError": "The journey could not be loaded.",
+    "notFound": "This journey does not exist (any more).",
+    "back": "Back to the rail logbook",
+    "distance": "Distance",
+    "typedDistance": "from the ticket",
+    "duration": "Time on board",
+    "durationHm": "{{h}} h {{m}} min",
+    "durationM": "{{m}} min",
+    "delay": "Delay",
+    "delayUnknown": "not recorded",
+    "times": "Times (local time at the station)",
+    "plannedDeparture": "Scheduled departure",
+    "plannedArrival": "Scheduled arrival",
+    "actualDeparture": "Actual departure",
+    "actualArrival": "Actual arrival",
+    "ticket": "Ticket",
+    "route": "Route",
+    "lineTraced": "Line: this train's route, taken from Transitous.",
+    "lineStraight": "Line: straight line between the stations — not the train's path."
+  },
+  "connection": {
+    "add": "Add connection",
+    "saveAndAdd": "Save & add connection",
+    "banner": "Connecting train from {{station}} — both rides are joined by one booking.",
+    "title": "Connection",
+    "booking": "Booking {{pnr}}"
+  },
+  "trip": {
+    "open": "Open journey",
+    "listTitle_one": "Rail ({{count}} journey)",
+    "listTitle_other": "Rail ({{count}} journeys)"
   }
 }
