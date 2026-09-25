@@ -40,6 +40,39 @@ for `/deploy`. Dev branches never deploy.
 > question** whether to merge — never bundled into a list of next steps
 > where a general "ja" could be mistaken for release consent.
 
+### Who writes to `main` (since 2026-09-25)
+
+"No PRs" above describes the Claude sessions, not everyone. `main` now has
+three writers, and a plan computed against it minutes ago can be stale:
+
+| Writer | Route into `main` |
+|---|---|
+| The owner | Direct merge or push |
+| Claude sessions (PC, CT142) | Local merge on the owner's release decision, no PR |
+| **Paperclip agents** (CT 145, commits as `paperclip-bot`) | **Forgejo pull requests**; merged only by the owner |
+
+On 2026-09-25 two Paperclip PRs were merged into `main` on Forgejo while a
+Claude session was integrating branches against the same `main`, and five
+CI commits existed only on Forgejo until a session fast-forwarded to them.
+Hence:
+
+1. **Before moving `main`, fetch both remotes** (`git fetch origin main &&
+   git fetch forgejo main`). If either moved, merge it into the branch being
+   integrated and re-run the gates first.
+2. **Fast-forward only, pushed to both remotes.** Never force-push `main`.
+   When the two disagree, Forgejo is the side PRs land on — reconcile from it.
+3. **A Forgejo PR is `forgejo#N` in every commit message**, including the
+   merge commit. Forgejo's default "Merge pull request #128" becomes, once
+   the commit reaches GitHub, a link to GitHub #128 — a different thing (see
+   the reference rules under *Three trackers* below).
+4. **`.forgejo/workflows/` is Paperclip's CI work**; change it through a PR or
+   with the owner, not in passing.
+5. **Paperclip work that matters for a release gets a Leitstand item.** The
+   board reads issues, not PRs, so an unrecorded PR is invisible there.
+
+Paperclip reads this file, not the private session memory on the owner's
+machines — a rule that must bind every writer belongs here.
+
 ### Long-running feature branches (e.g. `dev/multi-domain-v1`)
 
 When a `dev/<slug>` branch is active:
@@ -725,8 +758,13 @@ from it, so the divergence is recorded here.
 
 ### Open — do not settle these in passing
 
-Nothing at the moment. The 800-line number was the last entry and was
-ratified on 2026-09-05. Thirteen design-system decisions from the same day
+- **Which CI gates a merge.** Since 2026-09-25 there are two: GitHub Actions
+  (`.github/workflows/ci.yml`, described above) and the homelab Forgejo runner
+  (`.forgejo/workflows/ci.yml`, Paperclip). Until the owner decides, a merge
+  needs both green — a second red job that everyone learns to ignore is how
+  the database jobs stayed broken unnoticed in September.
+
+The 800-line number was ratified on 2026-09-05. Thirteen design-system decisions from the same day
 are recorded, with the owner's answer to each, in
 `ClaudeDesign/handoff/2026-09-05-web-redesign-rueckmeldung.md` §9 — read
 that table before re-opening any of them (dashboard tabs stay; tours are ONE
