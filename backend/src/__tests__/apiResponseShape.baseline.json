@@ -79,6 +79,7 @@
     "stats/aircraft.ts",
     "stats/page.ts",
     "suggestions.ts",
+    "tags.ts",
     "templateStatus.ts",
     "training.ts",
     "trips.ts",

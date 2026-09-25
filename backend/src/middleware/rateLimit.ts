@@ -174,6 +174,22 @@ export const photonSearchLimiter = rateLimit({
 });
 
 /**
+ * Per-user limit for the tag typeahead (`/tags`). It spends no one else's
+ * quota, but each call unnests the tag arrays of the caller's whole logbook,
+ * and it fires per settled keystroke in every travel form. 120/min is four
+ * times the stats bucket so tagging a batch of entries never meets it, while
+ * a scripted loop still does.
+ */
+export const tagSuggestLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(120),
+  message: "Too many tag lookups in a short time — please slow down",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Per-caller limit for the open data endpoints (Open-Meteo, Wikipedia,
  * Wikidata, OpenStreetMap). Each request may make one or more calls to a
  * free public service whose fair-use terms bind the INSTANCE's address, so a

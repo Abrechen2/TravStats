@@ -87,6 +87,7 @@ import lodgingImportRoutes from "./lodgingImport";
 import placeImportRoutes from "./placeImport";
 import importBatchRoutes from "./importBatches";
 import companionRoutes from "./companions";
+import tagRoutes from "./tags";
 import openapiRoutes from "./openapi";
 import importRoutes from "./import";
 import pairingRoutes from "./pairing";
@@ -254,6 +255,7 @@ export const apiMounts: ApiMount[] = [
   { id: "placeImport", base: "/api/v1/place-import", router: placeImportRoutes },
   { id: "importBatches", base: "/api/v1/import-batches", router: importBatchRoutes },
   { id: "companions", base: "/api/v1/companions", router: companionRoutes },
+  { id: "tags", base: "/api/v1/tags", router: tagRoutes },
   { id: "import", base: "/api/v1/import", router: importRoutes },
   { id: "pairing", base: "/api/v1/pairing", router: pairingRoutes },
   { id: "appSettings", base: "/api/v1/app-settings", router: appSettingsRoutes },
