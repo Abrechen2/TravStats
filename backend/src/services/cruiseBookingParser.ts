@@ -1,6 +1,10 @@
-import http from "http";
-import https from "https";
 import { type CurrencyCode, isCurrencyCode } from "../shared/currencies";
+import { requestTextWithDeadline } from "./http/boundedHttp";
+import {
+  LLM_AVAILABILITY_TIMEOUT_MS,
+  LLM_MAX_RESPONSE_BYTES,
+  llmParseTimeoutMs,
+} from "./http/llmTimeout";
 import logger from "../utils/logger";
 import { getAdminParserSettings, getParserOrder } from "./parserSettings";
 import { isSharedDemoUser } from "../utils/sharedDemo";
@@ -121,59 +125,31 @@ EXAMPLE OUTPUT:
 // values reliably. The schema is kept here as a comment for future
 // revisitation if we want stricter enforcement.
 
-const OLLAMA_GENERATE_TIMEOUT_MS = 300_000;
-
+/**
+ * Byte-for-byte the same pair the flight text parser carried, and with the
+ * same two defects — see the note in `parsers/text/ollamaTextParser.ts`. A
+ * non-200 answer was accepted as a result (SRV-LLM-HTTP-001), and the 300 s
+ * inactivity timer outlived the request it belonged to (SRV-LLM-TIMEOUT-001).
+ * Both now go through the one deadline-bound client.
+ */
 function fetchJson(url: string, body: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const isHttps = parsed.protocol === "https:";
-    const options = {
-      hostname: parsed.hostname,
-      port: parsed.port || (isHttps ? 443 : 80),
-      path: parsed.pathname + (parsed.search ?? ""),
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
-    };
-    const lib = isHttps ? https : http;
-    const req = lib.request(options, (res) => {
-      let data = "";
-      res.on("data", (chunk: string) => {
-        data += chunk;
-      });
-      res.on("end", () => resolve(data));
-    });
-    req.setTimeout(OLLAMA_GENERATE_TIMEOUT_MS, () =>
-      req.destroy(new Error(`Ollama request timeout after ${OLLAMA_GENERATE_TIMEOUT_MS}ms`))
-    );
-    req.on("error", reject);
-    req.write(body);
-    req.end();
+  return requestTextWithDeadline({
+    url,
+    method: "POST",
+    body,
+    timeoutMs: llmParseTimeoutMs(),
+    maxResponseBytes: LLM_MAX_RESPONSE_BYTES,
+    label: "Ollama request",
   });
 }
 
 function fetchGet(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const isHttps = parsed.protocol === "https:";
-    const lib = isHttps ? https : http;
-    const req = lib.request(
-      {
-        hostname: parsed.hostname,
-        port: parsed.port || (isHttps ? 443 : 80),
-        path: parsed.pathname + (parsed.search ?? ""),
-        method: "GET",
-      },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk: string) => {
-          data += chunk;
-        });
-        res.on("end", () => resolve(data));
-      }
-    );
-    req.setTimeout(5_000, () => req.destroy(new Error("Ollama availability check timeout")));
-    req.on("error", reject);
-    req.end();
+  return requestTextWithDeadline({
+    url,
+    method: "GET",
+    timeoutMs: LLM_AVAILABILITY_TIMEOUT_MS,
+    maxResponseBytes: LLM_MAX_RESPONSE_BYTES,
+    label: "Ollama availability check",
   });
 }
 

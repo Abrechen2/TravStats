@@ -23,8 +23,13 @@ export function findPNRInSource(sourceUpper: string): string | undefined {
 /** Extract shared PNR (should be same for all flights in one booking) */
 export function extractSharedPNR(source: string): string | undefined {
   // Label-based extraction first (more reliable) — covers both old and new Lufthansa formats
+  // `\b` after the label for the same reason as `PATTERNS.PNR_LABELLED` in
+  // shared/utils.ts: without it the engine may back out of a long alternative
+  // into a shorter one and capture the tail of the label word as the value —
+  // which is how "Reference" became the booking reference "ERENCE" (audit
+  // SRV-PARSER-001).
   const labeledPnr = source.match(
-    /(?:Buchungsreferenz|Buchungscode|Booking\s*(?:Reference|Code)|PNR|Confirmation\s*(?:Number|Code))\s*:?\s*([A-Z0-9]{5,8})\b/i
+    /(?:Buchungsreferenz|Buchungscode|Booking\s*(?:Reference|Code)|PNR|Confirmation\s*(?:Number|Code))\b\s*:?\s*([A-Z0-9]{5,8})\b/i
   );
   if (labeledPnr) return labeledPnr[1].toUpperCase();
   return findPNRInSource(source.toUpperCase());
