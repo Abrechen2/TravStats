@@ -62,7 +62,7 @@ export function tripDistanceKm(trip: Trip): number {
  * The single largest per-currency total of a trip, as {currency, amount}. A
  * trip mixing currencies picks its biggest bucket — the cost model never
  * converts, so a cross-currency "total" would be a fiction. null when the trip
- * has no positive cost.
+ * has no recorded cost; a trip priced only at 0 answers 0.
  */
 export function tripDominantCost(trip: Trip): { currency: string; amount: number } | null {
   const totals = sumByCurrency(

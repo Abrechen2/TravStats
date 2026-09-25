@@ -25,7 +25,7 @@ describe("sumByCurrency", () => {
     ]);
   });
 
-  it("treats null currency as EUR and skips null/zero prices", () => {
+  it("treats null currency as EUR, skips null prices and a 0 beside real money", () => {
     expect(
       sumByCurrency([
         { price: 30, currency: null },
@@ -33,6 +33,30 @@ describe("sumByCurrency", () => {
         { price: 0, currency: "USD" },
       ])
     ).toEqual([{ currency: "EUR", total: 30 }]);
+  });
+
+  // A free award booking is a price of 0, not an unknown one: a trip made
+  // only of it used to read "—" as if nobody had written anything down.
+  it("answers 0 for a trip whose only price is a recorded 0", () => {
+    expect(sumByCurrency([{ price: 0, currency: "EUR" }])).toEqual([{ currency: "EUR", total: 0 }]);
+  });
+
+  // 0 is 0 in every currency: a free leg priced in USD needs no rate and must
+  // not append "+ 0 $" to a EUR total.
+  it("folds zero buckets into one, and drops them beside real money", () => {
+    expect(
+      sumByCurrency([
+        { price: 0, currency: "USD" },
+        { price: 0, currency: "EUR" },
+      ])
+    ).toEqual([{ currency: "EUR", total: 0 }]);
+    expect(sumByCurrency([{ price: 0, currency: "USD" }])).toEqual([{ currency: "USD", total: 0 }]);
+    expect(
+      sumByCurrency([
+        { price: 250, currency: "EUR" },
+        { price: 0, currency: "USD" },
+      ])
+    ).toEqual([{ currency: "EUR", total: 250 }]);
   });
 
   it("returns [] for no priced bookings", () => {
@@ -167,6 +191,16 @@ describe("tripCostSources", () => {
       ]
     );
     expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 399 }]);
+  });
+
+  it("counts a stay entered as free as a price of 0", () => {
+    const sources = tripCostSources(
+      [],
+      [],
+      [],
+      [{ totalPrice: 0, pricePerNight: 140, currency: "EUR", bookingId: null }]
+    );
+    expect(sumByCurrency(sources)).toEqual([{ currency: "EUR", total: 0 }]);
   });
 
   it("contributes nothing for a per-night price without dates", () => {
