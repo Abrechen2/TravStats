@@ -17,6 +17,12 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));
 vi.mock("../../CompanionPicker", () => ({ default: () => null }));
+// The tag vocabulary and the origin/destination offers ask the server;
+// neither is what this test is about.
+vi.mock("@/hooks/useTagSuggestions", () => ({ useTagSuggestions: () => [] }));
+vi.mock("@/hooks/useTripEntrySuggestions", () => ({
+  useTripEntrySuggestions: () => ({ origins: [], destinations: [] }),
+}));
 vi.mock("../../../lib/api", () => ({
   tripsApi: { update: mocks.update, create: mocks.create },
 }));

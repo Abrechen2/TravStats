@@ -18,6 +18,17 @@ vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));
 vi.mock("../../components/ReceiptUpload", () => ({ default: () => null }));
+// The form's own-logbook offers and the recent-currency chips ask the server;
+// neither is what this test is about.
+vi.mock("@/hooks/useFlightEntrySuggestions", () => ({
+  useFlightEntrySuggestions: () => ({
+    seats: [],
+    flightNumbers: [],
+    frequentFlyerNumber: null,
+    departureTerminals: [],
+  }),
+}));
+vi.mock("@/hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
 vi.mock("../../store/settingsStore", () => ({
   useSettingsStore: () => ({ features: { enableCostTracking: true } }),
 }));
