@@ -227,6 +227,15 @@ export const lodgingLoyaltyStatsSchema = z.object({
         tier: z.string().nullable().openapi({
           description: "The card's CURRENT tier, not the tier held during that year.",
         }),
+        tiersHeld: z
+          .array(z.string())
+          .nullable()
+          .openapi({
+            description:
+              "The tiers held during THIS year, from the card's dated status history, in the " +
+              "order reached. null: the card has no dated history (unknown); []: the history " +
+              "names no status for the year.",
+          }),
         year: z.string(),
         nights: z.number().int(),
         stays: z.number().int(),

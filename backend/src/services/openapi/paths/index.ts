@@ -31,6 +31,7 @@ import "./tokens";
 import "./diagnostics";
 import "./cruises";
 import "./lodging";
+import "./loyalty";
 import "./settings";
 import "./places";
 import "./placePhotos";

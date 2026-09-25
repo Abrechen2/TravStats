@@ -85,3 +85,17 @@ export const AVAILABLE_DOMAINS: DomainKey[] = DOMAIN_KEYS.filter((k) => DOMAINS[
 export function isValidDomain(value: string): value is DomainKey {
   return (DOMAIN_KEYS as readonly string[]).includes(value);
 }
+
+/**
+ * Domains that carry loyalty programmes (owner, 2026-09-25): hotel cards,
+ * frequent-flyer cards and cruise-line clubs, all on one page. The vocabulary
+ * of `LoyaltyMembership.domain`; the database holds it too, with a CHECK
+ * constraint (migration `20260925220000_loyalty_memberships`), so a domain
+ * added here needs that constraint widened in the same change.
+ */
+export const LOYALTY_DOMAINS = [
+  "flight",
+  "cruise",
+  "lodging",
+] as const satisfies readonly DomainKey[];
+export type LoyaltyDomain = (typeof LOYALTY_DOMAINS)[number];

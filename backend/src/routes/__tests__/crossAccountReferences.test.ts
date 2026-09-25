@@ -59,7 +59,7 @@ describe("cross-account references", () => {
     const booking = await prisma.booking.create({ data: { userId: ownerId, pnr: "OWNR01" } });
     ownerBookingId = booking.id;
 
-    const membership = await prisma.lodgingMembership.create({
+    const membership = await prisma.loyaltyMembership.create({
       data: { userId: ownerId, programName: "Owner Rewards" },
     });
     ownerMembershipId = membership.id;

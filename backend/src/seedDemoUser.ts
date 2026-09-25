@@ -1151,8 +1151,10 @@ async function createDemoLodging(userId: string): Promise<void> {
     stays++;
 
     if (hilton) {
-      const membership = await prisma.lodgingMembership.upsert({
-        where: { userId_programName: { userId, programName: "Hilton Honors" } },
+      const membership = await prisma.loyaltyMembership.upsert({
+        where: {
+          userId_domain_programName: { userId, domain: "lodging", programName: "Hilton Honors" },
+        },
         update: {},
         create: {
           userId,

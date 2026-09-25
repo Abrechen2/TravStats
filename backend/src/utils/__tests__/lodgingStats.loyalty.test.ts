@@ -225,3 +225,37 @@ describe("lodgingNightsRanked", () => {
     expect(calculateLodgingStats([], NOW).loyalty.lodgingNightsRanked).toEqual([]);
   });
 });
+
+// loyalty-status-history-dated: a year names the tier the card held THEN,
+// read from its dated history — never today's tier printed beside 2019.
+describe("lodging loyalty — the tier a year held", () => {
+  const periods = [
+    { tier: "Silver", validFrom: new Date("2022-03-01"), validUntil: new Date("2024-02-29") },
+    { tier: "Gold", validFrom: new Date("2024-03-01"), validUntil: null },
+  ];
+  const underCard = (checkIn: string, checkOut: string, withHistory: boolean) =>
+    nightsAt("Marriott", {
+      programName: "Marriott Bonvoy",
+      membershipTier: "Gold",
+      membershipTierPeriods: withHistory ? periods : null,
+      checkIn: new Date(checkIn),
+      checkOut: new Date(checkOut),
+    });
+
+  it("names each year's tiers from the dated history, in the order reached", () => {
+    const l = loyalty([
+      underCard("2021-05-01", "2021-05-03", true),
+      underCard("2023-05-01", "2023-05-03", true),
+      underCard("2024-05-01", "2024-05-03", true),
+    ]);
+    const held = Object.fromEntries(l.programmeYears.map((p) => [p.year, p.tiersHeld]));
+    expect(held).toEqual({ "2021": [], "2023": ["Silver"], "2024": ["Silver", "Gold"] });
+  });
+
+  it("says nothing about a year when the card has no dated history", () => {
+    const l = loyalty([underCard("2021-05-01", "2021-05-03", false)]);
+    expect(l.programmeYears[0].tiersHeld).toBeNull();
+    // Today's tier still travels on the row, labelled as today's.
+    expect(l.programmeYears[0].tier).toBe("Gold");
+  });
+});

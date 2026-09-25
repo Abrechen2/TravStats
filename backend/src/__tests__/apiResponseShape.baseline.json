@@ -122,6 +122,7 @@
     "lodgingChains.ts",
     "lodgingImport.ts",
     "lodgingMemberships.ts",
+    "loyaltyMemberships.ts",
     "photoJourneys.ts",
     "placeImport.ts",
     "placeLists.ts",

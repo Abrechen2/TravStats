@@ -20,6 +20,12 @@ import logger from "../utils/logger";
 // No rate limiter: per-user CRUD over the caller's own membership rows and
 // their chain links. A person has a handful of loyalty programmes, so the
 // working set is a handful of rows; nothing here scans, computes or calls out.
+// Since 2.7 the table holds every domain's cards (`LoyaltyMembership`); this
+// router stays the lodging view of it, unchanged for its consumers — the stay
+// editor, the chain page — and blind to flight and cruise cards, which have no
+// chain to cover. The cross-domain surface is `routes/loyaltyMemberships.ts`.
+const LODGING = "lodging";
+
 const router = Router();
 router.use(authenticate);
 // Method-aware: GET passes through, so read-only PATs keep read access but
@@ -42,7 +48,7 @@ const MEMBERSHIP_INCLUDE = {
   lodgings: { include: { lodging: { select: { id: true, name: true } } } },
 } as const;
 
-type MembershipWithChains = Prisma.LodgingMembershipGetPayload<{
+type MembershipWithChains = Prisma.LoyaltyMembershipGetPayload<{
   include: typeof MEMBERSHIP_INCLUDE;
 }>;
 
@@ -102,8 +108,8 @@ async function resolveLodgingIds(lodgingIds: string[], userId: string): Promise<
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
-    const memberships = await prisma.lodgingMembership.findMany({
-      where: { userId },
+    const memberships = await prisma.loyaltyMembership.findMany({
+      where: { userId, domain: LODGING },
       orderBy: { createdAt: "desc" },
       include: MEMBERSHIP_INCLUDE,
     });
@@ -124,10 +130,11 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     const lodgingLinkIds = await resolveLodgingIds(lodgingIds ?? [], userId);
 
     try {
-      const membership = await prisma.lodgingMembership.create({
+      const membership = await prisma.loyaltyMembership.create({
         data: {
           ...fields,
           userId,
+          domain: LODGING,
           chains: { create: linkIds.map((chainId) => ({ chainId })) },
           lodgings: { create: lodgingLinkIds.map((lodgingId) => ({ lodgingId })) },
         },
@@ -160,8 +167,8 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     // Ownership check lives INSIDE the query — a mismatched id (someone
     // else's row, or one that never existed) returns null either way, so
     // the 404 below never leaks whether the row exists for another user.
-    const existing = await prisma.lodgingMembership.findFirst({
-      where: { id: req.params.id, userId },
+    const existing = await prisma.loyaltyMembership.findFirst({
+      where: { id: req.params.id, userId, domain: LODGING },
     });
     if (!existing) throw new AppError("Membership not found", 404);
 
@@ -178,7 +185,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
 
     try {
       const membership = await prisma.$transaction(async (tx) => {
-        await tx.lodgingMembership.update({ where: { id: existing.id }, data: fields });
+        await tx.loyaltyMembership.update({ where: { id: existing.id }, data: fields });
         if (linkIds !== null) {
           await tx.lodgingMembershipChain.deleteMany({ where: { membershipId: existing.id } });
           if (linkIds.length > 0) {
@@ -195,7 +202,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
             });
           }
         }
-        return tx.lodgingMembership.findUniqueOrThrow({
+        return tx.loyaltyMembership.findUniqueOrThrow({
           where: { id: existing.id },
           include: MEMBERSHIP_INCLUDE,
         });
@@ -213,8 +220,8 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
 router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
-    const existing = await prisma.lodgingMembership.findFirst({
-      where: { id: req.params.id, userId },
+    const existing = await prisma.loyaltyMembership.findFirst({
+      where: { id: req.params.id, userId, domain: LODGING },
     });
     if (!existing) throw new AppError("Membership not found", 404);
     // LodgingStay.membershipId -> onDelete: SetNull (schema.prisma) — the DB
@@ -223,7 +230,7 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     // here. The chain LINKS cascade away with the row (LodgingMembershipChain
     // -> onDelete: Cascade); the chains themselves are catalogue rows and are
     // never touched.
-    await prisma.lodgingMembership.delete({ where: { id: existing.id } });
+    await prisma.loyaltyMembership.delete({ where: { id: existing.id } });
     res.status(204).send();
   } catch (err) {
     next(err);

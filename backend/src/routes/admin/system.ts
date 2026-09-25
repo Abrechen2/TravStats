@@ -269,7 +269,7 @@ router.get(
           bookings: true,
           lodgings: true,
           lodgingStays: true,
-          lodgingMemberships: true,
+          loyaltyMemberships: { include: { tierPeriods: true } },
           places: true,
           placeVisits: { include: { photos: true } },
           placeLists: { include: { entries: true } },

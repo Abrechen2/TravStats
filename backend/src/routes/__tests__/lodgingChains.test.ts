@@ -224,7 +224,7 @@ describe("Lodging Chains API", () => {
       // Linked by ID, not by a name that happens to equal the chain's
       // `loyaltyProgram` — that string join is gone (see LodgingMembershipChain).
       // Linked to BOTH chains, which is what makes the sibling a sibling here.
-      const membership = await prisma.lodgingMembership.create({
+      const membership = await prisma.loyaltyMembership.create({
         data: {
           userId,
           programName: "Marriott Bonvoy Detail Test",
@@ -253,7 +253,7 @@ describe("Lodging Chains API", () => {
       expect(res.body.data.siblingChains).toHaveLength(1);
       expect(res.body.data.siblingChains[0].id).toBe(sibling.id);
 
-      await prisma.lodgingMembership.deleteMany({ where: { id: membership.id } });
+      await prisma.loyaltyMembership.deleteMany({ where: { id: membership.id } });
     });
 
     it("returns null membership and an empty hotel list for a chain the caller has no data for", async () => {

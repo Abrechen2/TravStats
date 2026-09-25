@@ -203,8 +203,8 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       prisma.lodging.findMany({ where: { userId } }),
       // Same derivation the stats endpoint uses, so a loyalty achievement and
       // the loyalty figures can never disagree about which card covered a stay.
-      prisma.lodgingMembership.findMany({
-        where: { userId },
+      prisma.loyaltyMembership.findMany({
+        where: { userId, domain: "lodging" },
         include: { chains: true, lodgings: true },
       }),
       // Domain rows come back as bare status/date columns, not `_count`s — a
