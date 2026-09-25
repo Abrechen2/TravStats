@@ -35,7 +35,11 @@ import {
 } from "../../../schemas/tour";
 import { LEG_MODES, LEG_SOURCES } from "../../../services/tour/tourDistance";
 import { kindFieldsSchema } from "../../../schemas/roadtrip";
-import { ROADTRIP_VEHICLES, ROUTE_KINDS, TOUR_ACTIVITIES } from "../../../shared/tour/roadtrip";
+import {
+  STORED_ROADTRIP_VEHICLES,
+  ROUTE_KINDS,
+  TOUR_ACTIVITIES,
+} from "../../../shared/tour/roadtrip";
 
 const legMode = z.enum(LEG_MODES).describe("Per-leg travel mode, not per section");
 const legSource = z
@@ -64,7 +68,10 @@ const tourRoute = registry.register(
           "Which page owns the row: a day tour or a roadtrip (2.7). Legs and tracks ignore it."
         ),
       activity: z.enum(TOUR_ACTIVITIES).nullable().describe("Tour only: what the day tour was"),
-      vehicle: z.enum(ROADTRIP_VEHICLES).nullable().describe("Roadtrip only: what it travelled in"),
+      vehicle: z
+        .enum(STORED_ROADTRIP_VEHICLES)
+        .nullable()
+        .describe("Roadtrip only: what it travelled in"),
       vehicleName: z.string().nullable().describe("Roadtrip only: the vehicle's own name"),
       anchorStopId: z
         .string()

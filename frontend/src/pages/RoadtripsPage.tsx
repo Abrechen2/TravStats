@@ -16,7 +16,7 @@ import UnderwayCard from "../components/Roadtrips/UnderwayCard";
 import { useTranslation } from "../hooks/useTranslation";
 import { roadtripsApi } from "../lib/api/roadtrips";
 import { groupRoadtrips, localToday, roadtripPhase } from "../lib/roadtrip/roadtripView";
-import type { RoadtripVehicle } from "../shared/tour/roadtrip";
+import type { StoredRoadtripVehicle } from "../shared/tour/roadtrip";
 import type { RoadtripSummary } from "../types/roadtrip";
 
 const GRID = "grid gap-4 sm:grid-cols-2 xl:grid-cols-3";
@@ -56,7 +56,7 @@ export default function RoadtripsPage(): JSX.Element {
   const [loadError, setLoadError] = useState(false);
   const [creating, setCreating] = useState(false);
   const [query, setQuery] = useState("");
-  const [vehicle, setVehicle] = useState<RoadtripVehicle | "">("");
+  const [vehicle, setVehicle] = useState<StoredRoadtripVehicle | "">("");
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -128,7 +128,7 @@ export default function RoadtripsPage(): JSX.Element {
             <div className="w-48">
               <Select
                 value={vehicle}
-                onChange={(e) => setVehicle(e.target.value as RoadtripVehicle | "")}
+                onChange={(e) => setVehicle(e.target.value as StoredRoadtripVehicle | "")}
                 aria-label={t("roadtrips:vehicleLabel")}
               >
                 <option value="">{t("roadtrips:list.allVehicles")}</option>

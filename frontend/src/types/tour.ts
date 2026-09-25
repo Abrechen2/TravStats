@@ -7,7 +7,7 @@
 //
 // Dates and JSON cross the wire as plain data, never `Date` objects.
 
-import type { RouteKind, RoadtripVehicle, TourActivity } from "../shared/tour/roadtrip";
+import type { RouteKind, StoredRoadtripVehicle, TourActivity } from "../shared/tour/roadtrip";
 
 /**
  * The full leg-source vocabulary. The API only accepts `straight` and
@@ -75,7 +75,7 @@ export interface TourRoute {
   /** "tour" (a day trip) or "roadtrip" (the 2.7 domain). */
   kind: RouteKind;
   activity: TourActivity | null;
-  vehicle: RoadtripVehicle | null;
+  vehicle: StoredRoadtripVehicle | null;
   vehicleName: string | null;
   /** Tour only: the roadtrip station the day tour set out from. */
   anchorStopId: string | null;

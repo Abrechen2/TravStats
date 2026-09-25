@@ -544,6 +544,38 @@ describe("Roadtrips", () => {
     expect(unlocked).toBe(true);
   });
 
+  // Rail left the vehicles on 2026-09-25 (owner): train journeys are a domain
+  // of their own. A new or changed roadtrip may not say `rail`; one stored
+  // before keeps loading with its value, and an unrelated edit leaves it be.
+  it("refuses rail for a new roadtrip, and keeps a stored one by rail as it is", async () => {
+    const refused = await request(app)
+      .post("/api/v1/roadtrips")
+      .set("Cookie", cookie)
+      .send({ name: "Interrail", vehicle: "rail" });
+    expect(refused.status).toBe(400);
+
+    const legacy = await prisma.tripRoute.create({
+      data: { userId, name: "Interrail 2025", mode: "rail", kind: "roadtrip", vehicle: "rail" },
+    });
+    const read = await request(app).get(`/api/v1/roadtrips/${legacy.id}`).set("Cookie", cookie);
+    expect(read.status).toBe(200);
+    expect(read.body.roadtrip.vehicle).toBe("rail");
+
+    const renamed = await request(app)
+      .patch(`/api/v1/tours/${legacy.id}`)
+      .set("Cookie", cookie)
+      .send({ name: "Interrail Sommer 2025" });
+    expect(renamed.status).toBe(200);
+    const stored = await prisma.tripRoute.findUniqueOrThrow({ where: { id: legacy.id } });
+    expect(stored).toMatchObject({ name: "Interrail Sommer 2025", vehicle: "rail" });
+
+    const switched = await request(app)
+      .patch(`/api/v1/tours/${legacy.id}`)
+      .set("Cookie", cookie)
+      .send({ vehicle: "rail" });
+    expect(switched.status).toBe(400);
+  });
+
   it("gives a trip the countries its roadtrip's stations stand in", async () => {
     const trip = await prisma.trip.create({ data: { userId, name: "Nur Roadtrip" } });
     const route = await prisma.tripRoute.create({

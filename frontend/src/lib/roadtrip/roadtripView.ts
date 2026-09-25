@@ -8,7 +8,11 @@
  * stored as UTC midnights of the day the user typed, so their first ten
  * characters ARE that day; "today" is the reader's local day.
  */
-import { ROADTRIP_VEHICLES, type RoadtripVehicle } from "../../shared/tour/roadtrip";
+import {
+  ROADTRIP_VEHICLES,
+  type RoadtripVehicle,
+  type StoredRoadtripVehicle,
+} from "../../shared/tour/roadtrip";
 import type { RoadtripStation, StationInput, StationNightInput } from "../../types/roadtrip";
 
 const DAY_MS = 86_400_000;
@@ -171,12 +175,15 @@ export function sketchPath(
 
 /**
  * The vehicles a roadtrip may be given. Rail is not one (owner, 2026-09-25):
- * train journeys become a domain of their own. A row that already says
- * `rail` keeps it on display, so choosing nothing never rewrites it.
+ * train journeys are a domain of their own, and `ROADTRIP_VEHICLES` no longer
+ * lists it. A row that already says `rail` keeps it on display, so choosing
+ * nothing never rewrites it.
  */
-export function vehicleChoices(current: RoadtripVehicle | null = null): RoadtripVehicle[] {
-  const offered = ROADTRIP_VEHICLES.filter((v) => v !== "rail");
-  return current === "rail" ? [...offered, "rail"] : offered;
+export function vehicleChoices<V extends StoredRoadtripVehicle>(
+  current: V | null = null
+): Array<RoadtripVehicle | V> {
+  const offered: Array<RoadtripVehicle | V> = [...ROADTRIP_VEHICLES];
+  return current !== null && !offered.includes(current) ? [...offered, current] : offered;
 }
 
 export type StationWarning =

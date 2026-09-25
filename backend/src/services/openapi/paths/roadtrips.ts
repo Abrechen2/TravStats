@@ -14,7 +14,11 @@ import { registry } from "../registry";
 import { errorContent } from "./shared";
 import { tourLeg, tourRoute } from "./tours";
 import { createRoadtripSchema, kindSwitchSchema, stationsSchema } from "../../../schemas/roadtrip";
-import { ROADTRIP_VEHICLES, STATION_STATES, TOUR_ACTIVITIES } from "../../../shared/tour/roadtrip";
+import {
+  STORED_ROADTRIP_VEHICLES,
+  STATION_STATES,
+  TOUR_ACTIVITIES,
+} from "../../../shared/tour/roadtrip";
 import { TRACK_SOURCES } from "../../../schemas/tour";
 
 const idParams = z.object({ id: z.string().uuid() });
@@ -49,7 +53,7 @@ const roadtripSummary = registry.register(
       name: z.string(),
       mode: z.string(),
       color: z.string().nullable(),
-      vehicle: z.enum(ROADTRIP_VEHICLES).nullable(),
+      vehicle: z.enum(STORED_ROADTRIP_VEHICLES).nullable(),
       vehicleName: z.string().nullable(),
       kindAssignedAutomatically: z.boolean(),
       startDate: z.string().datetime().nullable(),

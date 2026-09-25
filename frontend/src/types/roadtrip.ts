@@ -3,7 +3,12 @@
 // A roadtrip IS a tour route (`TourRoute` with `kind: "roadtrip"`); these are
 // the shapes only the roadtrip endpoints return.
 
-import type { RoadtripVehicle, StationState, TourActivity } from "../shared/tour/roadtrip";
+import type {
+  RoadtripVehicle,
+  StationState,
+  TourActivity,
+  StoredRoadtripVehicle,
+} from "../shared/tour/roadtrip";
 import type { TourLeg, TourRoute, TrackSource } from "./tour";
 
 export interface RoadtripNights {
@@ -25,7 +30,7 @@ export interface RoadtripSummary extends RoadtripNights {
   name: string;
   mode: string;
   color: string | null;
-  vehicle: RoadtripVehicle | null;
+  vehicle: StoredRoadtripVehicle | null;
   vehicleName: string | null;
   kindAssignedAutomatically: boolean;
   startDate: string | null;

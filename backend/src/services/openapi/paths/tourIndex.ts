@@ -26,7 +26,11 @@ import { registry } from "../registry";
 import { errorContent } from "./shared";
 import { legMode, tourRouteGeometry } from "./tours";
 import { listToursQuerySchema } from "../../../schemas/roadtrip";
-import { ROADTRIP_VEHICLES, ROUTE_KINDS, TOUR_ACTIVITIES } from "../../../shared/tour/roadtrip";
+import {
+  STORED_ROADTRIP_VEHICLES,
+  ROUTE_KINDS,
+  TOUR_ACTIVITIES,
+} from "../../../shared/tour/roadtrip";
 
 const tourSummary = registry.register(
   "TourSummary",
@@ -42,7 +46,7 @@ const tourSummary = registry.register(
       mode: legMode.describe("The section's own default mode, not any one leg's"),
       kind: z.enum(ROUTE_KINDS),
       activity: z.enum(TOUR_ACTIVITIES).nullable(),
-      vehicle: z.enum(ROADTRIP_VEHICLES).nullable(),
+      vehicle: z.enum(STORED_ROADTRIP_VEHICLES).nullable(),
       kindAssignedAutomatically: z.boolean(),
       notes: z.string().nullable(),
       anchorStopId: z
