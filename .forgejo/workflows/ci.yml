@@ -76,12 +76,12 @@ jobs:
         run: cd frontend && npx vitest --run
 
   backend-tests:
-    name: Backend tests (Jest ${{ matrix.shard }}/2)
+    name: Backend tests (Jest ${{ matrix.shard }}/4)
     runs-on: homelab-docker
     strategy:
       fail-fast: false
       matrix:
-        shard: [1, 2]
+        shard: [1, 2, 3, 4]
     services:
       postgres:
         image: postgis/postgis:16-3.4
@@ -116,4 +116,4 @@ jobs:
           cd backend
           npx prisma migrate deploy
           npx tsx scripts/seed-test-catalogues.ts
-          npx jest --ci --forceExit --shard=${{ matrix.shard }}/2
+          npx jest --ci --forceExit --shard=${{ matrix.shard }}/4
