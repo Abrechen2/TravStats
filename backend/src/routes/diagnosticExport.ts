@@ -1,5 +1,5 @@
 import { Router, Response, NextFunction } from "express";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, AuthRequest, requireAdmin } from "../middleware/auth";
 import { rejectDemo } from "../middleware/demoGuard";
 import { diagnosticExportLimiter } from "../middleware/rateLimit";
 import { buildDiagnosticBundle } from "../services/diagnosticExport";
@@ -10,7 +10,7 @@ const router = Router();
 /**
  * GET /api/v1/diagnostic-export
  *
- * Returns a PII-scrubbed JSON bundle the user can paste into a GitHub issue.
+ * Returns a PII-scrubbed JSON bundle an admin can attach to a GitHub issue.
  * Authenticated (the endpoint reads server log files, which are not public),
  * rate-limited, and never persisted. The bundle's identity has been stripped
  * so the reader of the issue sees no user IDs, IPs, emails, tokens, etc.
@@ -24,14 +24,17 @@ const router = Router();
  * `rejectDemo`, not `rejectDemoWrites`: this is a GET, and reading is
  * precisely the harm. It sits ABOVE the limiter so a refusal costs no bucket.
  *
- * Whether an ordinary user should receive server-wide logs at all is a
- * separate, owner-level question and stays a board item — the guard here is
- * deliberately only about the shared login.
+ * Admins only (owner decision, 2026-09-25). The demo refusal alone left every
+ * ordinary account able to download every OTHER account's scrubbed activity;
+ * an instance's logs belong to whoever runs the instance. `rejectDemo` stays
+ * in front so the shared login keeps its own, explicit refusal code. The
+ * user-scoped `/diagnostics` snapshot is the caller's own data and stays open.
  */
 router.get(
   "/diagnostic-export",
   authenticate,
   rejectDemo,
+  requireAdmin,
   diagnosticExportLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
