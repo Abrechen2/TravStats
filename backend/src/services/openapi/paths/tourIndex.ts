@@ -44,6 +44,16 @@ const tourSummary = registry.register(
       activity: z.enum(TOUR_ACTIVITIES).nullable(),
       vehicle: z.enum(ROADTRIP_VEHICLES).nullable(),
       kindAssignedAutomatically: z.boolean(),
+      notes: z.string().nullable(),
+      anchorStopId: z
+        .string()
+        .uuid()
+        .nullable()
+        .describe("A tour only: the roadtrip station it set out from"),
+      anchorStopTitle: z
+        .string()
+        .nullable()
+        .describe("That station's title, so the spreadsheet can write a readable reference"),
       distanceKm: z
         .number()
         .describe(
@@ -83,6 +93,9 @@ const tourSummary = registry.register(
         activity: "hike",
         vehicle: null,
         kindAssignedAutomatically: false,
+        notes: null,
+        anchorStopId: null,
+        anchorStopTitle: null,
         distanceKm: 305.4,
         distanceSource: "legs",
         ascentM: null,

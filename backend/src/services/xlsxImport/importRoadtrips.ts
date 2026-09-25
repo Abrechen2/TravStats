@@ -52,15 +52,26 @@ interface Ctx {
 interface RunState {
   byFileId: Map<string, string>;
   byName: Map<string, Set<string>>;
+  /** Station file id → account station id, for the tour sheet's anchors. */
+  stations: Map<string, string>;
 }
 const runs = new WeakMap<object, RunState>();
 function runState(ctx: Ctx): RunState {
   let state = runs.get(ctx);
   if (!state) {
-    state = { byFileId: new Map(), byName: new Map() };
+    state = { byFileId: new Map(), byName: new Map(), stations: new Map() };
     runs.set(ctx, state);
   }
   return state;
+}
+
+/**
+ * The account station a station id from the file became in this run, if the
+ * station sheet wrote or recognised it. A tour's anchor names a station by
+ * the file's id; for a moved roadtrip that id means nothing in this account.
+ */
+export function stationFromFile(ctx: Ctx, fileId: string): string | undefined {
+  return runs.get(ctx)?.stations.get(fileId);
 }
 
 const PENDING = "pending:roadtrip:";
@@ -229,6 +240,8 @@ interface ParsedStation {
   label: string;
   order: number;
   station: Station;
+  /** The id the file gave, whatever it meant — what a tour's anchor names. */
+  fileId?: string;
   /** The readable half of the stay cell — what a moved stay is found by. */
   stayName?: string;
 }
@@ -277,6 +290,7 @@ function parseStationRow(
       rowNo,
       label,
       order: order ?? fallbackOrder,
+      fileId: rawId,
       stayName: refName(raw.lodgingStayId),
       station: {
         ...(id ? { id } : {}),
@@ -454,6 +468,7 @@ export async function importRoadtripStations(
       if (p.station.id) continue;
       const id = matchExisting(p.station);
       if (!id) continue;
+      if (p.fileId) state.stations.set(p.fileId, id);
       if (ctx.mode === "add") {
         groupOut.push({ row: p.rowNo, action: "skip", id, label: p.label });
         parsed.splice(i, 1);
@@ -518,11 +533,15 @@ export async function importRoadtripStations(
     if (!ctx.dryRun) {
       try {
         const relinked = await ownStays(ctx.userId, parsed);
-        await replaceStations(
+        const { stations } = await replaceStations(
           ctx.userId,
           roadtripId,
           list.map((l) => relinked.get(l.station) ?? l.station)
         );
+        // The writer numbers the list 0..n in the order given.
+        list.forEach((l, i) => {
+          if (l.fileId && stations[i]) state.stations.set(l.fileId, stations[i].id);
+        });
       } catch (error) {
         logger.warn({ error, roadtripId }, "Spreadsheet import could not apply a station list");
         out.push(

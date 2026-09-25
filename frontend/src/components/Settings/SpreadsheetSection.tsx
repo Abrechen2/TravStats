@@ -19,6 +19,7 @@ import { listLodgings } from "../../lib/api/lodging";
 import { placesApi } from "../../lib/api/places";
 import { roadtripsApi } from "../../lib/api/roadtrips";
 import { tourIndexApi } from "../../lib/api/tourIndex";
+import { toursApi } from "../../lib/api/tours";
 import { useToursVisible } from "../../hooks/useToursVisible";
 import { exportFilename, exportWorkbook } from "../../lib/xlsx/exportAll";
 import {
@@ -72,7 +73,17 @@ export default function SpreadsheetSection(): JSX.Element {
         isEnabled("roadtrip")
           ? roadtripsApi.list().then((rows) => Promise.all(rows.map((r) => roadtripsApi.get(r.id))))
           : Promise.resolve([]),
-        toursVisible ? tourIndexApi.list("tour") : Promise.resolve([]),
+        // The points sheet needs every tour's points, which only the detail carries.
+        toursVisible
+          ? tourIndexApi.list("tour").then((rows) =>
+              Promise.all(
+                rows.map(async (r) => ({
+                  ...r,
+                  points: (await toursApi.get(undefined, r.id)).stops,
+                }))
+              )
+            )
+          : Promise.resolve([]),
       ]);
 
       const blob = await exportWorkbook(

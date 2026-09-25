@@ -24,6 +24,10 @@ export interface TourSummary {
   activity: TourActivity | null;
   vehicle: RoadtripVehicle | null;
   kindAssignedAutomatically: boolean;
+  notes: string | null;
+  /** A tour only: the roadtrip station it set out from, and that station's title. */
+  anchorStopId: string | null;
+  anchorStopTitle: string | null;
   /** A day tour with a recording is measured by it; otherwise by its legs. */
   distanceKm: number;
   distanceSource: "track" | "legs";

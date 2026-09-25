@@ -8,12 +8,16 @@
  * two others with a decimal (2.5 goes between 2 and 3). The server applies
  * the list through the same writer as the station editor.
  *
- * Tours are export-only: a tour is measured by its recording, and a
- * recording is a line of points no cell can hold. The sheet says so.
+ * Tours follow the same rules, and their points get a sheet of their own with
+ * the same order column. A recording is a line no cell can hold, so what the
+ * sheet measures from it (distance, ascent, moving time) is read-only; a tour
+ * that belongs to a trip takes its points from the trip's timeline, which is
+ * edited at the trip, so its rows are written for reading and skipped on import.
  */
 
 import type { TourSummary } from "../api/tourIndex";
 import type { RoadtripDetail, RoadtripStation } from "../../types/roadtrip";
+import type { TourStop } from "../../types/tour";
 import { refCell, type SheetSpec } from "./sheetSpec";
 
 type T = (key: string) => string;
@@ -39,6 +43,36 @@ export interface RoadtripStationRow extends RoadtripStation {
   roadtripId: string;
   roadtripLabel: string;
   position: number;
+}
+
+/** A tour with the points `GET /tours/:routeId` returns for it, in route order. */
+export type TourWithPoints = TourSummary & { points?: readonly TourStop[] };
+
+export interface TourPointRow {
+  id: string;
+  tourId: string;
+  tourLabel: string;
+  position: number;
+  title: string;
+  lat: number | null;
+  lon: number | null;
+  notes: string | null;
+}
+
+/** Flatten every tour's points into sheet rows, numbered 1..n per tour. */
+export function tourPointRows(tours: readonly TourWithPoints[]): TourPointRow[] {
+  return tours.flatMap((tour) =>
+    (tour.points ?? []).map((p, i) => ({
+      id: p.id,
+      tourId: tour.id,
+      tourLabel: tour.name,
+      position: i + 1,
+      title: p.title,
+      lat: p.lat,
+      lon: p.lon,
+      notes: p.notes ?? null,
+    }))
+  );
 }
 
 const id = <R extends { id: string }>(header: string) => ({
@@ -271,7 +305,6 @@ export function tourSheet(t: T): SheetSpec<TourSummary> {
         header: t("xlsx:columns.name"),
         kind: "text",
         width: 30,
-        locked: true,
         value: (r) => r.name,
       },
       {
@@ -279,8 +312,30 @@ export function tourSheet(t: T): SheetSpec<TourSummary> {
         header: t("xlsx:columns.activity"),
         kind: "text",
         width: 12,
-        locked: true,
         value: (r) => r.activity,
+      },
+      // foot / bike / road / rail / ferry: the words the importer reads.
+      {
+        key: "mode",
+        header: t("xlsx:columns.mode"),
+        kind: "text",
+        width: 10,
+        value: (r) => r.mode,
+      },
+      {
+        key: "anchorStopId",
+        header: t("xlsx:columns.anchorStation"),
+        kind: "text",
+        width: 30,
+        reference: true,
+        value: (r) => (r.anchorStopId ? refCell(r.anchorStopTitle, r.anchorStopId) : null),
+      },
+      {
+        key: "notes",
+        header: t("xlsx:columns.notes"),
+        kind: "text",
+        width: 40,
+        value: (r) => r.notes,
       },
       {
         key: "trip",
@@ -290,6 +345,7 @@ export function tourSheet(t: T): SheetSpec<TourSummary> {
         locked: true,
         value: (r) => r.tripName,
       },
+      // Read back only to recognise a moved tour, never written.
       {
         key: "startDate",
         header: t("xlsx:columns.startDate"),
@@ -321,6 +377,48 @@ export function tourSheet(t: T): SheetSpec<TourSummary> {
         width: 12,
         locked: true,
         value: (r) => (r.movingSeconds === null ? null : Math.round(r.movingSeconds / 60)),
+      },
+    ],
+  };
+}
+
+export function tourPointSheet(t: T): SheetSpec<TourPointRow> {
+  return {
+    key: "tourPoints",
+    name: t("xlsx:sheets.tourPoints"),
+    hint: t("xlsx:hints.tourPoints"),
+    columns: [
+      id<TourPointRow>(t("xlsx:columns.id")),
+      {
+        key: "tourId",
+        header: t("xlsx:columns.tour"),
+        kind: "text",
+        width: 30,
+        reference: true,
+        value: (p) => refCell(p.tourLabel, p.tourId),
+      },
+      {
+        key: "order",
+        header: t("xlsx:columns.order"),
+        kind: "number",
+        width: 8,
+        value: (p) => p.position,
+      },
+      {
+        key: "title",
+        header: t("xlsx:columns.name"),
+        kind: "text",
+        width: 26,
+        value: (p) => p.title,
+      },
+      { key: "lat", header: t("xlsx:columns.lat"), kind: "number", width: 11, value: (p) => p.lat },
+      { key: "lon", header: t("xlsx:columns.lon"), kind: "number", width: 11, value: (p) => p.lon },
+      {
+        key: "notes",
+        header: t("xlsx:columns.notes"),
+        kind: "text",
+        width: 40,
+        value: (p) => p.notes,
       },
     ],
   };

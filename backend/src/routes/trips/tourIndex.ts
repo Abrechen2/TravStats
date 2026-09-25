@@ -47,6 +47,9 @@ interface TourSummaryRow {
   activity: string | null;
   vehicle: string | null;
   kindAssignedAutomatically: boolean;
+  notes: string | null;
+  anchorStopId: string | null;
+  anchorStop: { title: string } | null;
   tracks: Array<{
     distanceKm: number;
     ascentM: number | null;
@@ -75,6 +78,9 @@ const TOUR_SUMMARY_SELECT = {
   activity: true,
   vehicle: true,
   kindAssignedAutomatically: true,
+  notes: true,
+  anchorStopId: true,
+  anchorStop: { select: { title: true } },
   tracks: {
     select: { distanceKm: true, ascentM: true, movingSeconds: true, startedAt: true },
     orderBy: { startedAt: "asc" },
@@ -144,6 +150,11 @@ function toTourSummary(route: TourSummaryRow): Record<string, unknown> {
     activity: route.activity,
     vehicle: route.vehicle,
     kindAssignedAutomatically: route.kindAssignedAutomatically,
+    notes: route.notes,
+    // The spreadsheet writes the anchor as "Station [id]"; the title saves it
+    // a lookup per tour.
+    anchorStopId: route.anchorStopId,
+    anchorStopTitle: route.anchorStop?.title ?? null,
     distanceKm: fromTrack ? trackKm : travelledKm(route.legs),
     distanceSource: fromTrack ? "track" : "legs",
     ascentM: sumOrNull(route.tracks.map((t) => t.ascentM)),

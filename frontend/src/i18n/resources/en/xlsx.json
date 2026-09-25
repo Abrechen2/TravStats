@@ -18,7 +18,8 @@
     "trips": "Trips",
     "roadtrips": "Roadtrips",
     "roadtripStations": "Roadtrip stations",
-    "tours": "Tours"
+    "tours": "Tours",
+    "tourPoints": "Tour points"
   },
   "hints": {
     "cruises": "One row per cruise. Do not change the ID in column A — it is what matches the row back to its entry on import. New cruises canNOT be created here: a row without an ID is reported as an error, because a cruise with no ship, ports or stops would not be a usable record. Use the form for that.",
@@ -30,7 +31,8 @@
     "flights": "One row per flight. Do not change the ID in column A — it is what matches the row back to its record on import. Airports travel as IATA codes; changing a code moves the flight. A row without an ID is created as a new flight.",
     "roadtrips": "One roadtrip per row. A row with the ID of one of your roadtrips changes it; without an ID — or with an ID from another account — a new one is created, unless one with the same name and start is already here. Vehicle: motorhome, campervan, caravan, car, motorcycle, bicycle or other. Columns in grey are derived and not imported.",
     "roadtripStations": "One station per row. The Roadtrip column points to the Roadtrips sheet by the ID in square brackets – without an ID, the name before it counts. The Order column sets the sequence — 2.5 inserts a station between 2 and 3. Night: stay (with the accommodation in the Stay column), free (no accommodation) or pass (pass-through). A station missing here is kept — except when replacing. Moved into another account, a station keeps its night but not its link to the stay.",
-    "tours": "Read-only: a tour is measured by its recording, which fits in no cell. Changes here are not imported."
+    "tours": "One tour per row. A row with the ID of one of your tours changes it; without an ID — or with an ID from another account — a new standalone tour is created, unless one with the same name and start is already here. Activity: hike, walk, run, bike, mtb, ski, paddle, climb or other. Travel mode: foot, bike, road, rail or ferry — left empty, a new ride (bike, mtb) gets bike and any other tour foot. Start station points to a roadtrip station by the ID in square brackets; without an ID, the name counts when only one station has it. Columns in grey are derived and not imported.",
+    "tourPoints": "One point per row. The Tour column points to the Tours sheet by the ID in square brackets – without an ID, the name before it counts. The Order column sets the sequence — 2.5 inserts a point between 2 and 3. A point missing here is kept — except when replacing. When a tour belongs to a trip, its points are the trip's stops: they are listed here for reading and are edited at the trip, not through this sheet."
   },
   "columns": {
     "id": "ID",
@@ -107,11 +109,14 @@
     "stay": "Stay",
     "activity": "Activity",
     "ascentM": "Ascent (m)",
-    "movingMinutes": "Moving (min)"
+    "movingMinutes": "Moving (min)",
+    "mode": "Travel mode",
+    "anchorStation": "Start station",
+    "tour": "Tour"
   },
   "import": {
     "title": "Excel import",
-    "description": "Play back an edited export file. Rows with an ID change the existing entry. A row WITHOUT an ID only creates something where the sheet allows it — flights, places and visits; on cruises and lodging it is reported as an error. Nothing is written until you confirm.",
+    "description": "Play back an edited export file. Rows with an ID change the existing entry. A row WITHOUT an ID only creates something where the sheet allows it — flights, places, visits, roadtrips, stations, tours and tour points; on cruises and lodging it is reported as an error. Nothing is written until you confirm.",
     "choose": "Choose file",
     "checking": "Checking the file …",
     "applying": "Applying …",
@@ -148,7 +153,16 @@
       "station_needs_roadtrip": "The station names no roadtrip.",
       "station_list_refused": "This roadtrip's stations could not be applied.",
       "unknown_roadtrip": "The roadtrip named here is neither in your account nor on the Roadtrips sheet.",
-      "ambiguous_roadtrip": "Several roadtrips have this name — please give the ID in square brackets."
+      "ambiguous_roadtrip": "Several roadtrips have this name — please give the ID in square brackets.",
+      "invalid_activity": "TravStats does not know this activity.",
+      "invalid_mode": "Travel mode must be foot, bike, road, rail or ferry.",
+      "tour_needs_name": "A new tour needs a name.",
+      "tour_point_needs_point": "A tour point needs latitude and longitude as numbers.",
+      "tour_point_needs_title": "A tour point needs a name.",
+      "tour_point_needs_tour": "The point names no tour.",
+      "tour_points_refused": "This tour's points could not be applied.",
+      "unknown_tour": "The tour named here is neither in your account nor on the Tours sheet.",
+      "ambiguous_tour": "Several tours have this name — please give the ID in square brackets."
     },
     "modeLabel": "What should happen to entries that already exist?",
     "modes": {
@@ -158,7 +172,7 @@
       },
       "merge": {
         "label": "Merge",
-        "hint": "Rows with an ID change the existing entry. Rows without one are created where the sheet allows it (flights, places, visits). Nothing is deleted."
+        "hint": "Rows with an ID change the existing entry. Rows without one are created where the sheet allows it (flights, places, visits, roadtrips, stations, tours, tour points). Nothing is deleted."
       },
       "replace": {
         "label": "Replace contents",

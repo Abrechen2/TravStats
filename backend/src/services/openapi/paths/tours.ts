@@ -121,6 +121,7 @@ const tourStop = registry.register(
       title: z.string(),
       lat: z.number(),
       lon: z.number(),
+      notes: z.string().nullable(),
       routeOrderIdx: z.number().int().describe("0-based position within the section"),
     })
     .openapi("TourRouteStop")

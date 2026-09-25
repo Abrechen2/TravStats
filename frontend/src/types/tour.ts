@@ -89,6 +89,9 @@ export interface TourStop {
   lat: number | null;
   lon: number | null;
   routeOrderIdx: number | null;
+  /** Returned by every read and write of a section's stops; optional so a
+   *  stop built locally need not invent one. */
+  notes?: string | null;
 }
 
 export interface TourLeg {
