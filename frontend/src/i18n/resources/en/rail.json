@@ -181,5 +181,31 @@
       "records": "Records",
       "years": "Rides per year"
     }
+  },
+  "roadtripConversion": {
+    "title": "Take over as train rides",
+    "offer": "This roadtrip has “Rail” as its vehicle — from before train journeys became an area of their own. You can take it over into the rail logbook: one train ride per section between two stations.",
+    "action": "Take over as train ride",
+    "loading": "Loading the preview …",
+    "loadError": "The preview could not be loaded.",
+    "rides_one": "{{count}} train ride",
+    "rides_other": "{{count}} train rides",
+    "already": "already taken over",
+    "placeholder": "Each departure is a placeholder at 12:00 local time and the arrival is unknown — correct them from the ticket afterwards.",
+    "skippedTitle": "Cannot be taken over:",
+    "reason": {
+      "noDate": "no date",
+      "noPosition": "no place",
+      "stopMissing": "station missing",
+      "notRail": "not by rail"
+    },
+    "removeSection": "Delete the roadtrip afterwards",
+    "removeSectionHint": "Only possible when every section can be taken over.",
+    "confirm": "Take over",
+    "done_one": "{{count}} train ride taken over.",
+    "done_other": "{{count}} train rides taken over.",
+    "nothingNew": "Every ride had already been taken over.",
+    "removed": "The roadtrip was deleted.",
+    "error": "Taking it over failed."
   }
 }

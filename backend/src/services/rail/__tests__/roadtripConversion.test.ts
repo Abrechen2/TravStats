@@ -30,8 +30,16 @@ const section = (over: Partial<RoadtripSectionInput> = {}): RoadtripSectionInput
     stop("c", { title: "Budapest-Keleti", startDate: new Date("2025-07-04T00:00:00Z") }),
   ],
   legs: [
-    { fromStopId: "a", toStopId: "b", distanceKm: 355, source: "straight", waypoints: null },
     {
+      id: "l1",
+      fromStopId: "a",
+      toStopId: "b",
+      distanceKm: 355,
+      source: "straight",
+      waypoints: null,
+    },
+    {
+      id: "l2",
       fromStopId: "b",
       toStopId: "c",
       distanceKm: 250,
@@ -53,28 +61,29 @@ const section = (over: Partial<RoadtripSectionInput> = {}): RoadtripSectionInput
 describe("planRoadtripRailConversion", () => {
   it("makes one journey per leg, not one per section", () => {
     const plan = planRoadtripRailConversion(section());
-    expect(plan.journeys.map((j) => `${j.depStationName} → ${j.arrStationName}`)).toEqual([
-      "München Hbf → Wien Hbf",
-      "Wien Hbf → Budapest-Keleti",
-    ]);
+    expect(
+      plan.journeys.map((j) => `${j.departureStation.name} → ${j.arrivalStation.name}`)
+    ).toEqual(["München Hbf → Wien Hbf", "Wien Hbf → Budapest-Keleti"]);
     expect(plan.journeys.every((j) => j.tripId === "t1" && j.operator === "ÖBB")).toBe(true);
   });
 
   it("keeps a straight leg straight and carries a routed leg's line", () => {
     const [straight, routed] = planRoadtripRailConversion(section()).journeys;
-    expect(straight).toMatchObject({
-      distanceSource: "great_circle",
-      geometry: null,
-      geometrySource: "straight",
-    });
-    expect(routed).toMatchObject({ distanceSource: "route", geometrySource: "manual" });
+    expect(straight).toMatchObject({ tracedKm: null, geometry: null, geometrySource: "straight" });
+    expect(routed).toMatchObject({ tracedKm: 250, geometrySource: "manual" });
     expect(routed.geometry).toHaveLength(2);
   });
 
-  it("places a day-only date at noon UTC and says so, never at an invented clock time", () => {
+  it("keeps a day-only date a day, says the time is a placeholder, and invents no arrival", () => {
     const [first] = planRoadtripRailConversion(section()).journeys;
-    expect(first.departureTime.toISOString()).toBe("2025-07-01T12:00:00.000Z");
-    expect(first.notes).toContain("noon UTC");
+    expect(first.departureDay).toBe("2025-07-01");
+    expect(first.notes).toContain("placeholder at noon");
+    expect(first).not.toHaveProperty("arrivalDay");
+  });
+
+  it("keys each ride by section and leg, so a second run can find it", () => {
+    const plan = planRoadtripRailConversion(section());
+    expect(plan.journeys.map((j) => j.externalRef)).toEqual(["roadtrip:s1:l1", "roadtrip:s1:l2"]);
   });
 
   it("skips a leg without a date or a position, with the reason", () => {

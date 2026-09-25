@@ -1,63 +1,52 @@
 /**
- * Converting a roadtrip section "by rail" into rail journeys — the CONTRACT
- * (spec 2026-09-25-rail-domain, owner decision 1; phase 2b item 7).
+ * Converting a roadtrip section "by rail" into rail journeys — the PLAN
+ * (spec 2026-09-25-rail-domain, owner decision 1). Pure: no database, no
+ * route. `roadtripConversionWrite.ts` loads the section, writes the plan
+ * through the rail write rules and, only when the user confirms it, removes
+ * the section.
  *
- * The roadtrip code (`TripRoute.kind = 'roadtrip'`, `vehicle`, its stops and
- * legs) lives on main and is NOT on this branch, which has not merged main
- * yet. So this file states what the conversion takes and gives, and maps it —
- * purely, no database, no route — against STRUCTURAL input types that mirror
- * main's `TripRoute` / `TripStop` / `TripRouteLeg` columns by name. When this
- * branch merges main:
- *
- *  1. `rail` leaves `ROADTRIP_VEHICLES` (`shared/tour/roadtrip.ts`), so no new
- *     section can be "by rail";
- *  2. the input types below are replaced by the Prisma ones (the names match);
- *  3. an endpoint offers the conversion for each existing `vehicle = 'rail'`
- *     section, writes the drafts through the rail router's own write path
- *     (`mergeRailJourney`, station matching, FX, status), and deletes the
- *     section only after every journey was written — one transaction, one way.
+ * `rail` left `ROADTRIP_VEHICLES` when this branch merged main, so no new
+ * section can be "by rail"; this converts the ones stored before.
  *
  * The rules, each an instance of the project's abstention rule:
  *
  *  - One LEG becomes one journey: the leg's from-stop is the boarding station,
  *    its to-stop the one left. A section is a route, a journey is a ticket
  *    (owner decision 2), so a three-stop section is two rides, not one.
- *  - A ride needs a departure instant and positions for both stations. A leg
+ *  - A ride needs a departure day and positions for both stations. A leg
  *    whose stops lack either is reported as skipped, with the reason — never
- *    given an invented time or a (0, 0) station.
+ *    given an invented day or a (0, 0) station.
  *  - A stop's dates are DAYS (the roadtrip stores dates, not clock times), so
- *    a converted ride starts at noon UTC of that day and says so in its notes;
- *    the user corrects the time from the ticket. Arrival is left null unless
- *    the to-stop names a day, because a guessed length would feed the hours
- *    statistic.
+ *    a converted ride leaves at noon on its boarding station's clock and its
+ *    notes say so; the user corrects the time from the ticket. The arrival is
+ *    left unknown: a day-only arrival would put the length of the ride at
+ *    zero or at whole days, and either would feed the hours-on-board figure
+ *    with a number nobody measured.
  *  - The leg's line and distance carry over only where the leg was routed or
  *    drawn; a straight leg becomes a straight ride with a great-circle figure,
  *    exactly what a ride logged by hand without a traced line has.
+ *  - Every ride carries `externalRef = roadtrip:<section>:<leg>`, unique per
+ *    user, so converting the same section twice writes each ride once.
  */
 
-/** Mirrors main's `TripStop` columns the conversion reads. */
-export interface RoadtripStopInput {
-  id: string;
-  title: string;
-  lat: number | null;
-  lon: number | null;
-  /** A DAY: main stores roadtrip dates without a clock time. */
+import type { TripRouteLeg, TripStop } from "../../prisma";
+
+/** A stop as the conversion reads it; the dates are its effective DAYS. */
+export type RoadtripStopInput = Pick<TripStop, "id" | "title" | "lat" | "lon"> & {
   startDate: Date | null;
   endDate: Date | null;
-}
+};
 
-/** Mirrors main's `TripRouteLeg` columns the conversion reads. */
-export interface RoadtripLegInput {
-  fromStopId: string;
-  toStopId: string;
-  distanceKm: number;
-  /** straight | drawn | routed | track */
-  source: string;
+/** A leg as the conversion reads it; `waypoints` is the stored line, parsed. */
+export type RoadtripLegInput = Pick<
+  TripRouteLeg,
+  "id" | "fromStopId" | "toStopId" | "distanceKm" | "source"
+> & {
   /** `[[lon, lat], …]`, null for a straight leg. */
   waypoints: [number, number][] | null;
-}
+};
 
-/** Mirrors main's `TripRoute` (kind `roadtrip`) with its stops and legs. */
+/** A `TripRoute` of kind `roadtrip` with its stops (in route order) and legs. */
 export interface RoadtripSectionInput {
   id: string;
   userId: string;
@@ -66,42 +55,46 @@ export interface RoadtripSectionInput {
   notes: string | null;
   vehicle: string | null;
   vehicleName: string | null;
-  /** In route order. */
   stops: RoadtripStopInput[];
   legs: RoadtripLegInput[];
 }
 
-/** The fields a converted journey is written with — a subset of `RailJourney`. */
+export interface RailStationDraft {
+  name: string;
+  lat: number;
+  lon: number;
+}
+
+/** One ride as the plan proposes it — what the write turns into a `RailJourney`. */
 export interface RailJourneyDraft {
-  userId: string;
+  /** The import key: `roadtrip:<routeId>:<legId>`. */
+  externalRef: string;
+  legId: string;
   tripId: string | null;
   operator: string | null;
-  depStationName: string;
-  depLat: number;
-  depLon: number;
-  arrStationName: string;
-  arrLat: number;
-  arrLon: number;
-  departureTime: Date;
-  arrivalTime: Date | null;
-  distanceKm: number | null;
-  distanceSource: "great_circle" | "route" | null;
+  departureStation: RailStationDraft;
+  arrivalStation: RailStationDraft;
+  /** `YYYY-MM-DD`; the ride leaves at noon of it on the boarding station's clock. */
+  departureDay: string;
+  /** The leg's own length, carried only for a routed or drawn leg. */
+  tracedKm: number | null;
   geometry: [number, number][] | null;
   geometrySource: "straight" | "manual";
   notes: string;
-  tags: string[];
 }
 
 export type SkipReason = "notRail" | "stopMissing" | "noPosition" | "noDate";
 
 export interface RoadtripConversionPlan {
   journeys: RailJourneyDraft[];
-  skipped: Array<{ fromStopId: string; toStopId: string; reason: SkipReason }>;
+  skipped: Array<{ legId: string; fromStopId: string; toStopId: string; reason: SkipReason }>;
 }
 
-/** Noon UTC of a stored day: the middle of the day on every European clock. */
-function noonOf(day: Date): Date {
-  return new Date(`${day.toISOString().slice(0, 10)}T12:00:00.000Z`);
+/** The wall-clock time a converted ride leaves at: noon, the middle of any day. */
+export const CONVERTED_DEPARTURE_CLOCK = "12:00";
+
+export function conversionRef(routeId: string, legId: string): string {
+  return `roadtrip:${routeId}:${legId}`;
 }
 
 function hasPosition(
@@ -110,17 +103,31 @@ function hasPosition(
   return stop.lat !== null && stop.lon !== null;
 }
 
+function dayOf(date: Date): string {
+  return date.toISOString().slice(0, 10);
+}
+
 /**
- * Plan the conversion of one section. Pure: the caller writes the drafts.
- * A section that is not "by rail" yields nothing and one `notRail` entry per
- * leg, so a caller that passes the wrong section cannot convert it by accident.
+ * Plan the conversion of one section. A section that is not "by rail" yields
+ * nothing and one `notRail` entry per leg, so a caller that passes the wrong
+ * section cannot convert it by accident.
  */
 export function planRoadtripRailConversion(section: RoadtripSectionInput): RoadtripConversionPlan {
   const plan: RoadtripConversionPlan = { journeys: [], skipped: [] };
   const byId = new Map(section.stops.map((s) => [s.id, s]));
-  for (const leg of section.legs) {
+  const order = new Map(section.stops.map((s, i) => [s.id, i]));
+  // Legs in route order, so the rides come out in the order they were taken.
+  const legs = [...section.legs].sort(
+    (a, b) => (order.get(a.fromStopId) ?? 0) - (order.get(b.fromStopId) ?? 0)
+  );
+  for (const leg of legs) {
     const skip = (reason: SkipReason): void => {
-      plan.skipped.push({ fromStopId: leg.fromStopId, toStopId: leg.toStopId, reason });
+      plan.skipped.push({
+        legId: leg.id,
+        fromStopId: leg.fromStopId,
+        toStopId: leg.toStopId,
+        reason,
+      });
     };
     if (section.vehicle !== "rail") {
       skip("notRail");
@@ -143,28 +150,22 @@ export function planRoadtripRailConversion(section: RoadtripSectionInput): Roadt
     }
     const traced = leg.source !== "straight" && leg.waypoints !== null;
     plan.journeys.push({
-      userId: section.userId,
+      externalRef: conversionRef(section.id, leg.id),
+      legId: leg.id,
       tripId: section.tripId,
       operator: section.vehicleName?.trim() || null,
-      depStationName: from.title,
-      depLat: from.lat,
-      depLon: from.lon,
-      arrStationName: to.title,
-      arrLat: to.lat,
-      arrLon: to.lon,
-      departureTime: noonOf(departureDay),
-      arrivalTime: to.startDate ? noonOf(to.startDate) : null,
-      distanceKm: leg.distanceKm,
-      distanceSource: traced ? "route" : "great_circle",
+      departureStation: { name: from.title, lat: from.lat, lon: from.lon },
+      arrivalStation: { name: to.title, lat: to.lat, lon: to.lon },
+      departureDay: dayOf(departureDay),
+      tracedKm: traced ? leg.distanceKm : null,
       geometry: traced ? leg.waypoints : null,
       geometrySource: traced ? "manual" : "straight",
       notes: [
-        `Converted from the roadtrip section "${section.name}". Times are placeholders at noon UTC of the day — correct them from the ticket.`,
+        `Converted from the roadtrip section "${section.name}". The departure is a placeholder at noon on the station's clock and the arrival is not known — correct both from the ticket.`,
         section.notes,
       ]
         .filter(Boolean)
         .join("\n\n"),
-      tags: [],
     });
   }
   return plan;

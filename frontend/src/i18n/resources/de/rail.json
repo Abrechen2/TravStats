@@ -181,5 +181,31 @@
       "records": "Rekorde",
       "years": "Fahrten pro Jahr"
     }
+  },
+  "roadtripConversion": {
+    "title": "Als Bahnfahrten übernehmen",
+    "offer": "Dieser Roadtrip ist mit „Bahn“ als Fahrzeug angelegt — aus der Zeit, bevor Zugfahrten ein eigener Bereich wurden. Du kannst ihn ins Bahn-Fahrtenbuch übernehmen: eine Zugfahrt je Abschnitt zwischen zwei Stationen.",
+    "action": "Als Bahnfahrt übernehmen",
+    "loading": "Vorschau wird geladen …",
+    "loadError": "Die Vorschau ließ sich nicht laden.",
+    "rides_one": "{{count}} Zugfahrt",
+    "rides_other": "{{count}} Zugfahrten",
+    "already": "schon übernommen",
+    "placeholder": "Abfahrt jeweils 12:00 Uhr Ortszeit als Platzhalter, Ankunft unbekannt — bitte danach nach dem Ticket korrigieren.",
+    "skippedTitle": "Nicht übernehmbar:",
+    "reason": {
+      "noDate": "ohne Datum",
+      "noPosition": "ohne Ort",
+      "stopMissing": "Station fehlt",
+      "notRail": "nicht per Bahn"
+    },
+    "removeSection": "Roadtrip danach löschen",
+    "removeSectionHint": "Nur möglich, wenn jeder Abschnitt übernommen werden kann.",
+    "confirm": "Übernehmen",
+    "done_one": "{{count}} Zugfahrt übernommen.",
+    "done_other": "{{count}} Zugfahrten übernommen.",
+    "nothingNew": "Alle Fahrten waren schon übernommen.",
+    "removed": "Der Roadtrip wurde gelöscht.",
+    "error": "Die Übernahme ist fehlgeschlagen."
   }
 }

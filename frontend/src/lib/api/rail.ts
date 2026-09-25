@@ -103,7 +103,62 @@ export const railApi = {
     const res = await api.get<Envelope<RailLookupAnswer>>("/rail/lookup", { params: query });
     return res.data.data;
   },
+
+  /** What converting a roadtrip by rail would write — nothing is written. */
+  async previewRoadtripConversion(routeId: string): Promise<RoadtripConversionPreview> {
+    const res = await api.get<Envelope<RoadtripConversionPreview>>(
+      `/rail/roadtrip-conversion/${encodeURIComponent(routeId)}`
+    );
+    return res.data.data;
+  },
+
+  /**
+   * One ride per leg; a ride an earlier run wrote is not written again.
+   * `removeSection` only after the user confirmed it.
+   */
+  async convertRoadtrip(
+    routeId: string,
+    removeSection: boolean
+  ): Promise<RoadtripConversionResult> {
+    const res = await api.post<Envelope<RoadtripConversionResult>>(
+      `/rail/roadtrip-conversion/${encodeURIComponent(routeId)}`,
+      { removeSection }
+    );
+    return res.data.data;
+  },
 };
+
+export type RoadtripConversionSkipReason = "notRail" | "stopMissing" | "noPosition" | "noDate";
+
+export interface RoadtripConversionPreview {
+  routeId: string;
+  name: string;
+  rides: Array<{
+    legId: string;
+    departureStationName: string;
+    arrivalStationName: string;
+    /** YYYY-MM-DD; the ride leaves at noon of it on the station's clock. */
+    departureDay: string;
+    distanceKm: number;
+    /** The ride an earlier conversion already wrote. */
+    journeyId: string | null;
+  }>;
+  skipped: Array<{
+    legId: string;
+    fromStopId: string;
+    toStopId: string;
+    reason: RoadtripConversionSkipReason;
+  }>;
+  canRemoveSection: boolean;
+}
+
+export interface RoadtripConversionResult {
+  created: number;
+  alreadyConverted: number;
+  journeyIds: string[];
+  skipped: RoadtripConversionPreview["skipped"];
+  sectionRemoved: boolean;
+}
 
 export interface RailLookupQuery {
   trainNumber: string;
