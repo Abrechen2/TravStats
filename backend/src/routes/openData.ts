@@ -172,7 +172,7 @@ router.get(
       await assertOpenDataEnabled();
       const places = await nearbyLodgings(lat, lon, radiusKm * 1000);
       if (places === null) throw new AppError("OpenStreetMap did not answer", 502);
-      res.json({ places: await withCatalogueChains(places) });
+      res.json({ places: await withCatalogueChains(req.userId!, places) });
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);
     }

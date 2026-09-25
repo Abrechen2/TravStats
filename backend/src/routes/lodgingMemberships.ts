@@ -5,6 +5,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { AppError } from "../middleware/errorHandler";
 import { createMembershipSchema, updateMembershipSchema } from "../schemas/lodging";
 import logger from "../utils/logger";
+import { assertChainsVisible } from "../services/lodging/chainScope";
 
 // A strictly user-owned resource — a loyalty membership (e.g. "my Marriott
 // Bonvoy Gold card"). Unlike LodgingChain, this is never shared: every read
@@ -58,26 +59,6 @@ function serialize(membership: MembershipWithChains) {
 }
 
 /**
- * Rejects a chain id that does not exist BEFORE the write, so a typo comes back
- * as a 400 naming the problem rather than a raw foreign-key 500. Returns the
- * de-duplicated list actually to be linked.
- */
-async function resolveChainIds(chainIds: number[]): Promise<number[]> {
-  const unique = Array.from(new Set(chainIds));
-  if (unique.length === 0) return [];
-  const found = await prisma.lodgingChain.findMany({
-    where: { id: { in: unique } },
-    select: { id: true },
-  });
-  if (found.length !== unique.length) {
-    const known = new Set(found.map((c) => c.id));
-    const missing = unique.filter((id) => !known.has(id));
-    throw new AppError(`Unknown chain id(s): ${missing.join(", ")}`, 400);
-  }
-  return unique;
-}
-
-/**
  * Unlike chains — a shared catalogue where existence is the only question — a
  * lodging is user-owned, so the lookup is scoped to the caller. An id belonging
  * to someone else comes back as "unknown", identical to one that never existed,
@@ -120,7 +101,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
     const { chainIds, lodgingIds, ...fields } = parsed.data;
-    const linkIds = await resolveChainIds(chainIds ?? []);
+    const linkIds = await assertChainsVisible(userId, chainIds ?? []);
     const lodgingLinkIds = await resolveLodgingIds(lodgingIds ?? [], userId);
 
     try {
@@ -172,7 +153,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     // Absent `chainIds`/`lodgingIds` leaves the links untouched; an array
     // REPLACES them (an empty array is a deliberate "covers no chain/hotel"),
     // so editing a tier can never unlink a membership as a side effect.
-    const linkIds = chainIds === undefined ? null : await resolveChainIds(chainIds);
+    const linkIds = chainIds === undefined ? null : await assertChainsVisible(userId, chainIds);
     const lodgingLinkIds =
       lodgingIds === undefined ? null : await resolveLodgingIds(lodgingIds, userId);
 

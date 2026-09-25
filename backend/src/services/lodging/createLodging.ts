@@ -16,6 +16,7 @@ import { prisma } from "../../db";
 import type { Prisma } from "../../prisma";
 import type { LodgingInput } from "../../schemas/lodging";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
+import { assertChainsVisible } from "./chainScope";
 
 /** Coordinates/address a caller resolved before the write (the form geocodes). */
 export interface LodgingLocationPatch {
@@ -31,6 +32,9 @@ export async function createLodgingRecord<I extends Prisma.LodgingInclude>(
   input: LodgingInput & { visited?: boolean },
   opts: { dataSource: string; location?: LodgingLocationPatch; include?: I }
 ): Promise<Prisma.LodgingGetPayload<{ include: I }>> {
+  // A chain id is a reference to a row the caller may not own: another
+  // account's chain is refused like one that does not exist.
+  if (input.chainId != null) await assertChainsVisible(userId, [input.chainId]);
   const created = { ...input, ...(opts.location ?? {}) };
   // Typed as the plain args, not through the generic `I`: with the 2.7 schema
   // TypeScript gives up comparing the generic include ("excessive stack

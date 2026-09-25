@@ -1061,8 +1061,10 @@ async function createDemoLodging(userId: string): Promise<void> {
 
   // Chain lookups — the catalog seed runs at boot; a missing chain just means
   // the hotel is created chainless rather than the seed failing.
-  const hilton = await prisma.lodgingChain.findFirst({ where: { name: "Hilton" } });
-  const marriott = await prisma.lodgingChain.findFirst({ where: { name: "Marriott" } });
+  const hilton = await prisma.lodgingChain.findFirst({ where: { name: "Hilton", userId: null } });
+  const marriott = await prisma.lodgingChain.findFirst({
+    where: { name: "Marriott", userId: null },
+  });
 
   /** The stay should sit INSIDE its trip's flight window, so the timeline
    *  reads as one journey rather than a hotel floating outside the flights. */
