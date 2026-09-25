@@ -218,8 +218,10 @@ registry.registerPath({
   description:
     "Named OSM features tagged camp_site, caravan_site, hotel, guest_house, hostel, motel, " +
     "alpine_hut or chalet within `radiusKm` (default 5, at most 20), nearest first, at most " +
-    '20 — what the Companion\'s "Campingplatz in der Nähe" lists (companion#12). 502 when ' +
-    "Overpass did not answer: that is not an empty neighbourhood.",
+    '20 — what the Companion\'s "Campingplatz in der Nähe" lists (companion#12) and what ' +
+    "the lodging form offers to fill a new house from. `stars` only when OSM states a clean " +
+    "1–5; `chain` is the catalogue chain whose name equals the OSM `brand`, never a new one. " +
+    "502 when Overpass did not answer: that is not an empty neighbourhood.",
   tags: ["Open data"],
   request: {
     query: z.object({
@@ -243,6 +245,18 @@ registry.registerPath({
                 distanceM: z.number().int(),
                 osmRef: z.string(),
                 website: z.string().nullable(),
+                stars: z.number().int().nullable(),
+                brand: z.string().nullable(),
+                chain: z
+                  .object({
+                    id: z.number().int(),
+                    name: z.string(),
+                    brandColor: z.string().nullable(),
+                    loyaltyProgram: z.string().nullable(),
+                    isUserAdded: z.boolean(),
+                    createdAt: z.string(),
+                  })
+                  .nullable(),
               })
             ),
           }),

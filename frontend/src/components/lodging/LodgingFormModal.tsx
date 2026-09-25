@@ -8,6 +8,9 @@ import { logger } from "../../lib/logger";
 import { ChainPicker } from "./ChainPicker";
 import { LocationInput } from "../location/LocationInput";
 import type { LocationCoordinates, LocationSelection } from "../location/LocationInput";
+import type { NearbyLodging } from "../../lib/api/openData";
+import { LodgingOsmNearby } from "./LodgingOsmNearby";
+import { lodgingTypeForKind, osmFillFor } from "./lodgingFromOsm";
 
 const LODGING_TYPES: LodgingType[] = ["hotel", "campsite", "guesthouse", "apartment", "hostel"];
 
@@ -30,8 +33,12 @@ export function LodgingFormModal({
   onClose,
   onSaved,
 }: LodgingFormModalProps): JSX.Element {
-  const { t } = useTranslation(["lodging", "common", "location"]);
+  const { t } = useTranslation(["lodging", "common", "location", "openData"]);
   const [type, setType] = useState<LodgingType>(lodging?.type ?? "hotel");
+  // "hotel" is only the select's starting point, so an OSM pick may replace it
+  // on a new lodging — until the user chooses a type themselves.
+  const [typeChosen, setTypeChosen] = useState<boolean>(mode === "edit");
+  const [osmFilled, setOsmFilled] = useState<string | null>(null);
   const [chain, setChain] = useState<LodgingChain | null>(lodging?.chain ?? null);
   const [name, setName] = useState<string>(lodging?.name ?? "");
   const [address, setAddress] = useState<string>(lodging?.address ?? "");
@@ -67,6 +74,24 @@ export function LodgingFormModal({
     if (selection.city) setCity(selection.city);
     if (selection.country) setCountry(selection.country);
     if (selection.name && name.trim().length === 0) setName(selection.name);
+  };
+
+  const handleOsmPick = (place: NearbyLodging): void => {
+    const { patch, filled } = osmFillFor(place, { name, stars, website, chain });
+    if (patch.name !== undefined) setName(patch.name);
+    if (patch.stars !== undefined) setStars(patch.stars);
+    if (patch.website !== undefined) setWebsite(patch.website);
+    if (patch.chain !== undefined) setChain(patch.chain);
+    const osmType = typeChosen ? null : lodgingTypeForKind(place.kind);
+    if (osmType !== null && osmType !== type) setType(osmType);
+    const fields = [...filled, ...(osmType !== null && osmType !== type ? ["type"] : [])];
+    setOsmFilled(
+      fields.length === 0
+        ? t("openData:lodging.nearby.nothingNew", { name: place.name })
+        : t("openData:lodging.nearby.filled", {
+            fields: fields.map((f) => t(`openData:lodging.field.${f}`)).join(", "),
+          })
+    );
   };
 
   const handleClearPosition = (): void => {
@@ -184,6 +209,14 @@ export function LodgingFormModal({
                 {t("location:clear")}
               </button>
             )}
+            {position !== null && (
+              <LodgingOsmNearby lat={position.lat} lon={position.lon} onPick={handleOsmPick} />
+            )}
+            {osmFilled !== null && (
+              <p role="status" className="text-xs text-[var(--text-muted)]">
+                {osmFilled}
+              </p>
+            )}
           </div>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">
             {t("lodging:field.name")}
@@ -197,7 +230,10 @@ export function LodgingFormModal({
             {t("lodging:field.type")}
             <select
               value={type}
-              onChange={(e) => setType(e.target.value as LodgingType)}
+              onChange={(e) => {
+                setTypeChosen(true);
+                setType(e.target.value as LodgingType);
+              }}
               className="rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)]"
             >
               {LODGING_TYPES.map((lt) => (

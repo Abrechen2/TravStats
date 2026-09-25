@@ -3,6 +3,7 @@ import { z } from "zod";
 import { haversineKm } from "../../shared/geo/haversine";
 import { namesCouldBeOneHouse } from "../lodging/nameSimilarity";
 import { fetchOpenDataJson } from "./http";
+import { starsFromOsm, websiteFromOsm } from "./osmValues";
 
 /**
  * OpenStreetMap as a source of facts about a place TravStats already located:
@@ -108,6 +109,10 @@ export interface NearbyLodging {
   distanceM: number;
   osmRef: string;
   website: string | null;
+  /** Official stars, only when OSM states a clean 1–5 (`starsFromOsm`). */
+  stars: number | null;
+  /** The OSM `brand` tag — the chain's name as the map writes it. */
+  brand: string | null;
 }
 
 /**
@@ -140,7 +145,6 @@ export async function nearbyLodgings(
       const name = el.tags?.name;
       const kind = el.tags?.tourism;
       if (!at || !name || !kind) return [];
-      const site = el.tags?.website ?? el.tags?.["contact:website"] ?? null;
       return [
         {
           name,
@@ -149,7 +153,9 @@ export async function nearbyLodgings(
           lon: at.lon,
           distanceM: Math.round(haversineKm({ lat, lon }, at) * 1000),
           osmRef: `osm:${el.type}/${el.id}`,
-          website: site && /^https?:\/\//i.test(site) ? site : null,
+          website: websiteFromOsm(el.tags?.website ?? el.tags?.["contact:website"]),
+          stars: starsFromOsm(el.tags?.stars),
+          brand: el.tags?.brand?.trim() || null,
         },
       ];
     })

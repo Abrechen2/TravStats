@@ -55,7 +55,19 @@
       "stars": "stars",
       "website": "website",
       "wikidataId": "Wikipedia link",
-      "chain": "chain"
+      "chain": "chain",
+      "name": "name",
+      "type": "type"
+    },
+    "nearby": {
+      "search": "Find lodgings nearby (OpenStreetMap)",
+      "searching": "Searching OpenStreetMap …",
+      "listLabel": "Lodgings nearby",
+      "none": "OpenStreetMap knows no lodging here.",
+      "failed": "OpenStreetMap did not answer.",
+      "distance": "{{m}} m",
+      "filled": "Taken from OpenStreetMap: {{fields}}",
+      "nothingNew": "Picked “{{name}}” — nothing new, the fields were already filled."
     }
   }
 }

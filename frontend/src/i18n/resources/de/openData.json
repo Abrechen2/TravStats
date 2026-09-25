@@ -55,7 +55,19 @@
       "stars": "Sterne",
       "website": "Webseite",
       "wikidataId": "Wikipedia-Verknüpfung",
-      "chain": "Kette"
+      "chain": "Kette",
+      "name": "Name",
+      "type": "Art"
+    },
+    "nearby": {
+      "search": "Unterkünfte in der Nähe suchen (OpenStreetMap)",
+      "searching": "Suche in OpenStreetMap …",
+      "listLabel": "Unterkünfte in der Nähe",
+      "none": "OpenStreetMap kennt hier keine Unterkunft.",
+      "failed": "OpenStreetMap hat nicht geantwortet.",
+      "distance": "{{m}} m",
+      "filled": "Aus OpenStreetMap übernommen: {{fields}}",
+      "nothingNew": "„{{name}}“ gewählt — nichts Neues, die Felder waren schon ausgefüllt."
     }
   }
 }
