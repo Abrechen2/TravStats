@@ -3,8 +3,10 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 
 vi.mock("../../../lib/api/rail", () => ({ railApi: { listAll: vi.fn(async () => []) } }));
 vi.mock("../../../lib/api/flights", () => ({
-  flightsApi: { getAll: vi.fn(async () => ({ flights: [] })) },
+  flightsApi: { getEvery: vi.fn(async () => []) },
 }));
+// The gate on is also the roadtrips gate, which lets the tours in.
+vi.mock("../../../lib/api/tourIndex", () => ({ tourIndexApi: { list: vi.fn(async () => []) } }));
 vi.mock("../../../lib/xlsx/exportAll", () => ({
   exportWorkbook: vi.fn(async () => null),
   exportFilename: () => "x.xlsx",

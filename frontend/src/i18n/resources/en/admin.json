@@ -158,7 +158,7 @@
           },
           "railDomain": {
             "name": "Rail",
-            "what": "The Rail area: a logbook for train journeys with stations, times, class and price. Map, statistics, station catalogue and import are still to come."
+            "what": "The Rail area: a logbook for train journeys with a station catalogue, train lookup, map, statistics and Excel import and export. A roadtrip with “Rail” as its vehicle can be taken over as train rides."
           }
         }
       },

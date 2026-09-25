@@ -4,6 +4,7 @@ import { buildWorkbook, parseWorkbook } from "../workbook";
 import { parseRefCell } from "../sheetSpec";
 import { buildSheets } from "../exportAll";
 import { railSheet } from "../railSheet";
+import { importableSpecs } from "../importClient";
 import type { RailJourney } from "../../../types/rail";
 
 const t = (key: string): string => key;
@@ -15,6 +16,10 @@ const ride = (over: Partial<RailJourney> = {}): RailJourney =>
     trainCategory: "NJ",
     trainNumber: "466",
     depStationName: "Wien Hbf",
+    depLat: 48.1852,
+    depLon: 16.3776,
+    arrLat: 47.378,
+    arrLon: 8.54,
     depStationCode: "8103000",
     arrStationName: "Zürich HB",
     arrStationCode: "8503000",
@@ -72,6 +77,28 @@ describe("rail sheet", () => {
   it("keeps the trip reference resolvable", async () => {
     const [row] = await roundTrip([ride()]);
     expect(parseRefCell(row.tripId)).toBe("trip-7");
+  });
+
+  // The importer places a station by its code, else by its position — a ride
+  // at a station outside the catalogue, or one moved into another account,
+  // has nothing else to come back by.
+  it("carries each station's position for the way back", async () => {
+    const [row] = await roundTrip([ride()]);
+    expect([row.depLat, row.depLon, row.arrLat, row.arrLon]).toEqual([
+      "48.1852",
+      "16.3776",
+      "47.378",
+      "8.54",
+    ]);
+  });
+
+  // Owner rule 2026-09-25: rail stays behind its beta gate, the import too.
+  it("is read back only where rail is visible", () => {
+    const keys = (rail?: boolean) =>
+      importableSpecs(t, rail === undefined ? {} : { rail }).map((s) => (s as { key: string }).key);
+    expect(keys()).not.toContain("rail");
+    expect(keys(false)).not.toContain("rail");
+    expect(keys(true)).toContain("rail");
   });
 
   it("adds no rail sheet when there are no rides to write", () => {

@@ -11,9 +11,11 @@
  * wall clock, so the station's wall clock is handed over as that — writing the
  * UTC instant would put a Vienna departure an hour or two off in every cell.
  *
- * Export-only for now: the importer on this branch does not read the sheet
- * (`importClient.importableSpecs`), and the sheet's hint says so. Rail import
- * follows once the reworked importer from main is merged into this branch.
+ * Read back by `services/xlsxImport/rail.ts` where rail is visible
+ * (`importClient.importableSpecs`). The stations travel with their position,
+ * so a ride at a station outside the catalogue — or one moved into another
+ * account — comes back where it was, not only where a name search would
+ * guess.
  */
 
 import type { RailJourney } from "../../types/rail";
@@ -35,6 +37,13 @@ export function railSheet(t: T): SheetSpec<RailJourney> {
     width: number,
     value: (r: RailJourney) => string | null
   ) => ({ key, header: t(`xlsx:columns.${header}`), kind: "text" as const, width, value });
+  const coordinate = (key: string, header: string, value: (r: RailJourney) => number) => ({
+    key,
+    header: t(`xlsx:columns.${header}`),
+    kind: "number" as const,
+    width: 11,
+    value,
+  });
   return {
     key: "rail",
     name: t("xlsx:sheets.rail"),
@@ -53,8 +62,12 @@ export function railSheet(t: T): SheetSpec<RailJourney> {
       text("trainNumber", "trainNumber", 10, (r) => r.trainNumber),
       text("depStationName", "fromStation", 24, (r) => r.depStationName),
       text("depStationCode", "fromStationCode", 12, (r) => r.depStationCode),
+      coordinate("depLat", "fromLat", (r) => r.depLat),
+      coordinate("depLon", "fromLon", (r) => r.depLon),
       text("arrStationName", "toStation", 24, (r) => r.arrStationName),
       text("arrStationCode", "toStationCode", 12, (r) => r.arrStationCode),
+      coordinate("arrLat", "toLat", (r) => r.arrLat),
+      coordinate("arrLon", "toLon", (r) => r.arrLon),
       {
         key: "departureTime",
         header: t("xlsx:columns.departureLocal"),

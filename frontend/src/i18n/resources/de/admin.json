@@ -158,7 +158,7 @@
           },
           "railDomain": {
             "name": "Bahn",
-            "what": "Der Bereich „Bahn“: ein Fahrtenbuch für Zugfahrten mit Bahnhöfen, Zeiten, Klasse und Preis. Karte, Statistik, Bahnhofskatalog und Import folgen."
+            "what": "Der Bereich „Bahn“: ein Fahrtenbuch für Zugfahrten mit Bahnhofskatalog, Zugsuche, Karte, Statistik und Excel-Import und -Export. Ein Roadtrip mit „Bahn“ als Fahrzeug lässt sich als Zugfahrten übernehmen."
           }
         }
       },

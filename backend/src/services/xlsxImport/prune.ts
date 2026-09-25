@@ -24,7 +24,8 @@ import {
 } from "../lodging/deleteLodgingPhotoFiles";
 import type { Ctx } from "./context";
 
-export type PrunableModel = "place" | "cruise" | "lodging" | "flight" | "placeVisit";
+export type PrunableModel =
+  "place" | "cruise" | "lodging" | "flight" | "placeVisit" | "railJourney";
 
 export async function pruneMissing(
   model: PrunableModel,
@@ -42,6 +43,7 @@ export async function pruneMissing(
     if (model === "cruise") return prisma.cruise.count({ where });
     if (model === "flight") return prisma.flight.count({ where });
     if (model === "placeVisit") return prisma.placeVisit.count({ where });
+    if (model === "railJourney") return prisma.railJourney.count({ where });
     return prisma.lodging.count({ where });
   };
   const removeAll = async (): Promise<void> => {
@@ -49,6 +51,7 @@ export async function pruneMissing(
     else if (model === "cruise") await prisma.cruise.deleteMany({ where });
     else if (model === "flight") await prisma.flight.deleteMany({ where });
     else if (model === "placeVisit") await prisma.placeVisit.deleteMany({ where });
+    else if (model === "railJourney") await prisma.railJourney.deleteMany({ where });
     else {
       // The cascade takes the photo rows and with them the only record of
       // their filenames, so they are read first (AUD-042).

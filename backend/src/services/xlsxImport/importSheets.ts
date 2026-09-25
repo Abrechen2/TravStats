@@ -32,6 +32,7 @@ import { importCruiseStops, importCruises } from "./cruises";
 import { importFlights } from "./flights";
 import { importLodging, importLodgingStays } from "./lodging";
 import { importPlaceVisits, importPlaces } from "./places";
+import { importRail } from "./rail";
 import { importRoadtripStations } from "./roadtripStations";
 import { importRoadtrips } from "./roadtrips";
 import { importTourPoints } from "./tourPoints";
@@ -67,6 +68,9 @@ const HANDLERS: Record<string, Handler> = {
   roadtripStations: importRoadtripStations,
   tours: importTours,
   tourPoints: importTourPoints,
+  // Rail rides (rail spec) point at trips only, so their place in the order
+  // is free; last, as the export writes the sheet last.
+  rail: importRail,
 };
 
 export function isImportable(key: string): boolean {

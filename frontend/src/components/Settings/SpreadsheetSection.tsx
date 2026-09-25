@@ -183,7 +183,7 @@ export default function SpreadsheetSection(): JSX.Element {
       setImportStatus("checking");
       setOutcome(null);
       try {
-        const sheets = await readWorkbookForImport(t, file);
+        const sheets = await readWorkbookForImport(t, file, { rail: railVisible });
         if (sheets.length === 0) {
           setImportStatus("nothing");
           return;
@@ -197,7 +197,7 @@ export default function SpreadsheetSection(): JSX.Element {
         setImportStatus("failed");
       }
     },
-    [t, mode]
+    [t, mode, railVisible]
   );
 
   const handleApply = useCallback(async () => {

@@ -34,7 +34,7 @@
     "roadtripStations": "Eine Station pro Zeile. Die Spalte „Roadtrip“ verweist über die ID in eckigen Klammern auf das Blatt „Roadtrips“ – fehlt die ID, zählt der Name davor. Die Spalte Reihenfolge bestimmt die Abfolge — 2,5 fügt eine Station zwischen 2 und 3 ein. Nacht: stay (mit Unterkunft in der Spalte Unterkunft), free (ohne Unterkunft) oder pass (Durchfahrt). Eine Station, die hier fehlt, bleibt erhalten — außer beim Ersetzen. In ein anderes Konto übertragen, behält eine Station ihre Nacht, aber nicht die Verknüpfung zur Unterkunft.",
     "tours": "Eine Tour pro Zeile. Eine Zeile mit der ID einer deiner Touren ändert sie; ohne ID — oder mit einer ID aus einem anderen Konto — wird eine neue, eigenständige Tour angelegt, außer es gibt schon eine mit gleichem Namen und Beginn. Aktivität: hike, walk, run, bike, mtb, ski, paddle, climb oder other. Fortbewegung: foot, bike, road, rail oder ferry — leer lässt eine neue Rad-Tour (bike, mtb) mit bike, jede andere zu Fuß (foot) anlegen. Startstation verweist über die ID in eckigen Klammern auf eine Roadtrip-Station; fehlt die ID, zählt der Name, wenn nur eine Station so heißt. Grau geschriebene Spalten sind abgeleitet und werden nicht übernommen.",
     "tourPoints": "Ein Punkt pro Zeile. Die Spalte „Tour“ verweist über die ID in eckigen Klammern auf das Blatt „Touren“ – fehlt die ID, zählt der Name davor. Die Spalte Reihenfolge bestimmt die Abfolge — 2,5 fügt einen Punkt zwischen 2 und 3 ein. Ein Punkt, der hier fehlt, bleibt erhalten — außer beim Ersetzen. Gehört eine Tour zu einer Reise, sind ihre Punkte die Stopps der Reise — hier nur zum Lesen, bearbeitet werden sie bei der Reise.",
-    "rail": "Eine Zeile je Zugfahrt. Zeiten stehen in Ortszeit des jeweiligen Bahnhofs. Die Entfernung sagt in „Quelle“, was sie misst: great_circle ist die Luftlinie, route der Streckenverlauf, user die Angabe vom Ticket. Dieses Blatt wird beim Import noch nicht eingelesen."
+    "rail": "Eine Zeile je Zugfahrt. Eine Zeile mit der ID einer deiner Fahrten ändert sie; ohne ID — oder mit einer ID aus einem anderen Konto — wird eine neue angelegt, außer es gibt schon eine mit gleicher Zugnummer, gleichen Bahnhöfen und gleichem Abfahrtstag. Zeiten stehen in Ortszeit des jeweiligen Bahnhofs. Ein Bahnhof wird über seinen UIC-Code gefunden, sonst über Breite und Länge, sonst über seinen Namen im Bahnhofskatalog. Klasse: first, second, sleeper oder couchette; Status: nur cancelled wird gesetzt, der Rest ergibt sich aus den Zeiten. Die Entfernung wird neu gemessen — außer in „Quelle“ steht user, die Angabe vom Ticket."
   },
   "columns": {
     "id": "ID",
@@ -127,7 +127,11 @@
     "distanceSource": "Quelle",
     "delayMinutes": "Verspätung (min)",
     "travelClass": "Klasse",
-    "coach": "Wagen"
+    "coach": "Wagen",
+    "fromLat": "Von (Breite)",
+    "fromLon": "Von (Länge)",
+    "toLat": "Nach (Breite)",
+    "toLon": "Nach (Länge)"
   },
   "import": {
     "title": "Excel-Import",
@@ -177,7 +181,9 @@
       "ambiguous_cruise": "Mehrere Kreuzfahrten heißen so — bitte die ID in eckigen Klammern angeben.",
       "stay_needs_lodging": "Ein neuer Aufenthalt muss eine Unterkunft nennen — Spalte „Unterkunft“.",
       "unknown_lodging": "Die angegebene Unterkunft gibt es weder in deinem Konto noch im Blatt „Unterkünfte“.",
-      "ambiguous_lodging": "Mehrere Unterkünfte heißen so — bitte die ID in eckigen Klammern angeben."
+      "ambiguous_lodging": "Mehrere Unterkünfte heißen so — bitte die ID in eckigen Klammern angeben.",
+      "unknown_station": "Ein Bahnhof ließ sich nicht finden — bitte Breite und Länge oder den UIC-Code angeben.",
+      "rail_needs_route": "Eine neue Zugfahrt braucht Von, Nach und die Abfahrt."
     },
     "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
     "modes": {

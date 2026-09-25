@@ -118,7 +118,7 @@ export const BETA_FEATURES = Object.freeze({
    * flag AND the user's own domain choice.
    */
   railDomain: Object.freeze({
-    why: "The rail domain is complete as phase 2 of its spec describes it — logbook, station catalogue, train lookup with Transitous lines, detail page with documents and connections, trip bounds and timeline, dashboard tab and map layer, statistics, Excel and JSON export, demo seed — but the owner ruled on 2026-09-25 that it stays in beta after phase 2: import, the roadtrip conversion and the Companion app do not handle it yet, and it has not been through a release candidate.",
+    why: "The rail domain is complete as phase 2 of its spec describes it — logbook, station catalogue, train lookup with Transitous lines, detail page with documents and connections, trip bounds and timeline, dashboard tab and map layer, statistics, Excel and JSON export, demo seed; since it merged main the spreadsheet also reads rides back, and a roadtrip stored by rail can be taken over as rides. The owner ruled on 2026-09-25 that it stays in beta after phase 2: the Companion app does not handle it yet, and it has not been through a release candidate.",
     returnsWhen:
       "The owner explicitly takes rail out of beta. Phase 2 being done is not that event (owner rule 2026-09-25).",
     reason: "beta",
