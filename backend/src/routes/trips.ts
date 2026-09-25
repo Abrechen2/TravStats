@@ -33,6 +33,7 @@ import {
   resolveOllamaTarget,
 } from "../services/tripSummaryService";
 import { emailParseLimiter } from "../middleware/rateLimit";
+import { assertLlmEnabled } from "../services/llm/llmGate";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { mostExpensiveTrip } from "../services/trip/tripCostSuperlative";
 import { TRIPS_LIST_INCLUDE, TRIP_RAIL_SELECT } from "../services/trip/tripsListInclude";
@@ -747,6 +748,9 @@ router.post(
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
       const language = parsed.data.language ?? "de";
 
+      // Switched off by the admin: refused as LLM_DISABLED before any probe,
+      // so the client can tell "turned off" from "unreachable" below.
+      await assertLlmEnabled();
       // The admin's Ollama (parser settings), then the environment — the same
       // resolution the parsers use, so one configured Ollama serves both.
       const target = await resolveOllamaTarget();

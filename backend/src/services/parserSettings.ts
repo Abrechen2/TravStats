@@ -22,6 +22,8 @@ export interface AdminParserSettings {
   ollamaModel?: string | null;
   ollamaVisionModel?: string | null;
   parserOrder?: string | null;
+  /** The admin switch — see `services/llm/llmGate.ts`, its only reader. */
+  llmEnabled?: boolean;
 }
 
 /**
@@ -92,6 +94,7 @@ export async function getAdminParserSettings(): Promise<AdminParserSettings | nu
     ollamaModel: settings.ollamaModel,
     ollamaVisionModel: settings.ollamaVisionModel,
     parserOrder: settings.parserOrder,
+    llmEnabled: settings.llmEnabled,
   };
 }
 

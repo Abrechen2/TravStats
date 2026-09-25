@@ -13,6 +13,10 @@ generator client {
   provider     = "prisma-client"
   output       = "../src/generated/prisma"
   moduleFormat = "cjs"
+  // `partialIndexes`: the chain catalogue is unique by name among its
+  // catalogue rows only (`LodgingChain`, user_id IS NULL) — Postgres treats
+  // NULLs as distinct, so a plain (name, user_id) unique would not hold it.
+  previewFeatures = ["partialIndexes"]
 }
 
 // Prisma 7 deprecated `url` / `directUrl` / `shadowDatabaseUrl` in the schema:
@@ -96,6 +100,7 @@ model User {
   lodgings               Lodging[]
   lodgingStays           LodgingStay[]
   lodgingMemberships     LodgingMembership[]
+  lodgingChains          LodgingChain[]
   places                 Place[]
   placeVisits            PlaceVisit[]
   placeLists             PlaceList[]
@@ -523,6 +528,10 @@ model Flight {
   @@index([nextApiCheckAt])
   @@index([specialType])
   @@index([importBatchId])
+  // Partial, and written in the 2026-05-03 migration by hand. Declared here
+  // since the `partialIndexes` preview feature makes Prisma see it — without
+  // this line the next migration would silently drop it.
+  @@index([userId, aircraftRegistration], map: "flights_user_id_aircraft_registration_idx", where: raw("aircraft_registration IS NOT NULL"))
   @@map("flights")
 }
 
@@ -840,6 +849,15 @@ model AdminSettings {
   // cruise were template-first — one hardcoded order each, and no way to say
   // otherwise. This is that say, and it is the same say for all four domains.
   parserOrder String @default("template_first") @map("parser_order")
+
+  // Whether this instance may ask a language model anything at all — parsing,
+  // CSV mapping suggestions and trip summaries alike. Owner decision
+  // 2026-09-25: before this, any configured Ollama (or a bare OLLAMA_URL in
+  // the environment) was used and there was no way to say no, for privacy,
+  // for a slow box, or for deterministic parses. On by default, so an
+  // instance that has a model keeps using it; off means template/regex only,
+  // enforced by `services/llm/llmGate.ts` in front of every model call.
+  llmEnabled Boolean @default(true) @map("llm_enabled")
 
   // Aviationstack usage guard — max lookups per UTC day before falling
   // through to AirLabs/OpenSky. Default 3 keeps Free tier (100/month) safe.
@@ -2200,17 +2218,32 @@ model LodgingStay {
   @@map("lodging_stays")
 }
 
+/// A hotel chain. Two kinds share the table (owner decision 2026-09-25):
+///
+/// - the CATALOGUE (`userId` null) — seeded from CSV, the same rows for every
+///   account, read-only for users;
+/// - a user's OWN chains (`userId` set) — created by that user, by hand or by
+///   an import, and visible to nobody else.
+///
+/// Until then every chain was global, so one tester's import wrote "KOA" into
+/// the owner's catalogue (UAT 2026-08-16). Every read is catalogue ∪ own and
+/// every lookup goes through `services/lodging/chainScope.ts`.
 model LodgingChain {
   id             Int      @id @default(autoincrement())
-  name           String   @unique
+  name           String
   brandColor     String?  @map("brand_color")
   loyaltyProgram String?  @map("loyalty_program")
   isUserAdded    Boolean  @default(false) @map("is_user_added")
+  userId         String?  @map("user_id")
   createdAt      DateTime @default(now()) @map("created_at")
 
+  user        User?                    @relation(fields: [userId], references: [id], onDelete: Cascade)
   lodgings    Lodging[]
   memberships LodgingMembershipChain[]
 
+  @@unique([userId, name])
+  @@unique([name], map: "lodging_chains_catalogue_name_key", where: raw("user_id IS NULL"))
+  @@index([userId])
   @@map("lodging_chains")
 }
 

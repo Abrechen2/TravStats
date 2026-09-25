@@ -4,6 +4,7 @@ import { prisma } from "../../db";
 import { Prisma } from "../../prisma";
 import { anyNonLatin, hasNonLatinScript } from "../../shared/geo/latinScript";
 import logger from "../../utils/logger";
+import { findVisibleChainByName } from "./chainScope";
 import { geocodeAddress, reverseGeocode } from "../geo/nominatim";
 import { collectBackfillCandidates } from "../geo/backfillScan";
 import { searchPlaces } from "../geo/photon";
@@ -338,20 +339,17 @@ export async function backfillMissingCoordinates(
         // position is the point of this pass, and an unknown chain name is not
         // a reason to store nothing.
         //
-        // Matched case-insensitively, and trimmed, because
-        // `lodgingImportCommit.ts` `resolveChainId` already answers the same
-        // question that way — it says why: "'hilton' and 'Hilton' both exist
-        // as separate rows". A case-SENSITIVE lookup here would drop the chain
+        // Matched case-insensitively, and trimmed, through the same
+        // `chainScope.ts` lookup the import uses. A case-SENSITIVE lookup here
+        // would drop the chain
         // for a name the import would have matched, so the same hotel would
         // carry a brand when it arrived by CSV and none when the geocoder
         // found it. One question, one answer.
         let resolvedChainId: number | null = null;
         const chainName = coords.chainName?.trim();
         if (chainName && row.chainId === null) {
-          const chain = await prisma.lodgingChain.findFirst({
-            where: { name: { equals: chainName, mode: "insensitive" } },
-            select: { id: true },
-          });
+          // Catalogue or this user's own — never another account's chain.
+          const chain = await findVisibleChainByName(userId, chainName);
           resolvedChainId = chain?.id ?? null;
         }
         // CONDITIONAL on the row still lacking a position. A geocode takes

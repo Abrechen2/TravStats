@@ -511,6 +511,11 @@
     "visionParser": "Standard Vision-Parser (Bordkarte)",
     "textParser": "Standard Text-Parser (E-Mail)",
     "autoHelp": "Auto-Modus wählt automatisch den besten verfügbaren Parser",
+    "llmSwitch": {
+      "title": "KI-Modell",
+      "label": "KI-Modell verwenden (Buchungen lesen und Reise-Zusammenfassungen)",
+      "hint": "Aus: TravStats fragt kein Sprachmodell mehr – auch nicht, wenn oben eine Ollama-URL eingetragen oder OLLAMA_URL gesetzt ist. Buchungen werden dann nur mit den eingebauten Vorlagen gelesen."
+    },
     "ollama": {
       "title": "Ollama LLM Parser",
       "description": "Ollama läuft lokal oder im Netzwerk und analysiert Buchungsbestätigungen mit einem LLM. Ideal für Multi-Stopp und komplexe E-Mails.",

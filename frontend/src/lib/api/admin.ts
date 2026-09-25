@@ -303,6 +303,8 @@ export const adminApi = {
     /** Who reads a booking document first, in every domain. Absent on a
      *  backend older than 2.7 — treat a missing value as "template_first". */
     parserOrder?: ParserOrder;
+    /** The "KI-Parser aus" switch; absent on a backend older than 2.7 (= on). */
+    llmEnabled?: boolean;
     ollamaUrl: string | null;
     ollamaModel: string | null;
   }> => {
@@ -310,6 +312,7 @@ export const adminApi = {
       allowUserApiKeys: boolean;
       fxCdnFallbackEnabled: boolean;
       parserOrder?: ParserOrder;
+      llmEnabled?: boolean;
       ollamaUrl: string | null;
       ollamaModel: string | null;
     }>("/admin/parser-settings");
@@ -320,6 +323,7 @@ export const adminApi = {
     allowUserApiKeys?: boolean;
     fxCdnFallbackEnabled?: boolean;
     parserOrder?: ParserOrder;
+    llmEnabled?: boolean;
     ollamaUrl?: string | null;
     ollamaModel?: string | null;
   }): Promise<MessageResponse> => {

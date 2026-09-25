@@ -294,7 +294,8 @@
     "generating": "Schreibt … das kann ein paar Minuten dauern",
     "generated": "Zusammenfassung erstellt",
     "error": "Zusammenfassung fehlgeschlagen",
-    "unavailable": "KI-Dienst nicht erreichbar. Ollama richtet der Admin unter Admin → Parser ein."
+    "unavailable": "KI-Dienst nicht erreichbar. Ollama richtet der Admin unter Admin → Parser ein.",
+    "disabled": "Die KI-Zusammenfassung ist abgeschaltet – der Admin hat das KI-Modell unter Admin → Parser deaktiviert."
   },
   "gallery": {
     "title": "Galerie",

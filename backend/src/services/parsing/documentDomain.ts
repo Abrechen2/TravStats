@@ -18,9 +18,9 @@
  * explainable: it returns the signals it matched, so a wrong answer can be
  * argued with rather than merely retried.
  *
- * (The `USE_LLM_PARSER` env var named in older notes is dead — no TypeScript
- * file reads it. Measured 2026-09-01; the only occurrence is a preview compose
- * file. Do not gate anything on it.)
+ * (The `USE_LLM_PARSER` env var named in older notes was never read by any
+ * code and is gone. Whether the model may be asked is the admin switch in
+ * `services/llm/llmGate.ts`.)
  *
  * ## Three rules the scoring follows, each learned from a real bug
  *

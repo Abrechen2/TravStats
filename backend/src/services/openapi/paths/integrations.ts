@@ -380,7 +380,7 @@ const lodgingTag = ["Lodging"];
 registry.registerPath({
   method: "get",
   path: "/lodging-chains",
-  summary: "Hotel chains in the catalogue",
+  summary: "Hotel chains the caller can see: the catalogue plus their own",
   tags: lodgingTag,
   responses: { 200: { description: "Chains" } },
 });
@@ -397,7 +397,7 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/lodging-chains",
-  summary: "Add a chain the catalogue does not have",
+  summary: "Add a chain as the caller's own (200 with the existing row when the name is known)",
   tags: lodgingTag,
   responses: { 201: { description: "Created" }, 400: badInput },
 });

@@ -47,7 +47,13 @@ export async function seedLodgingChainsFromCSV(): Promise<number> {
     logger.warn({ operation: "seed_lodging_chains_malformed_rows", skipped });
   }
 
-  const existing = await prisma.lodgingChain.findMany({ select: { name: true } });
+  // The CATALOGUE only: a user's own "Marriott" must not stop the catalogue
+  // from carrying one — the user then sees both, and every lookup prefers the
+  // catalogue row (`services/lodging/chainScope.ts`).
+  const existing = await prisma.lodgingChain.findMany({
+    where: { userId: null },
+    select: { name: true },
+  });
   const existingLower = new Set(existing.map((c) => c.name.toLowerCase()));
 
   let inserted = 0;
@@ -55,10 +61,11 @@ export async function seedLodgingChainsFromCSV(): Promise<number> {
     const name = row.name.trim();
     if (existingLower.has(name.toLowerCase())) continue;
 
-    await prisma.lodgingChain.upsert({
-      where: { name },
-      update: {},
-      create: {
+    // A plain create: `name` is unique among catalogue rows only (a partial
+    // index), which an upsert's ON CONFLICT cannot target. The pre-check
+    // above already skips every name the catalogue has.
+    await prisma.lodgingChain.create({
+      data: {
         name,
         loyaltyProgram: row.loyaltyProgram?.trim() || null,
         brandColor: row.brandColor?.trim() || null,

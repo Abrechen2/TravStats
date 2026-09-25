@@ -1,5 +1,4 @@
 import { Router, Response, NextFunction } from "express";
-import { Prisma } from "../prisma";
 import { z } from "zod";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
@@ -13,17 +12,17 @@ import {
   getBaseCurrency,
 } from "./lodging";
 import { classifyStay } from "../shared/lodgingCounting";
+import { findOrCreateOwnChain, visibleChainsWhere } from "../services/lodging/chainScope";
 
-// A shared, global catalog: every authenticated user reads the SAME rows
-// (Marriott, Hilton, NH, ...), seeded from CSV in a later task. A user may
-// add a chain that's missing from the catalog — that write is then visible
-// to everyone, unlike every other resource in the lodging domain, which is
-// strictly per-user (see routes/lodging.ts, routes/lodgingMemberships.ts).
+// Two kinds of chain, one table (owner decision 2026-09-25): the seeded
+// CATALOGUE every account reads (Marriott, Hilton, NH, ...), and chains a user
+// added, which only that user sees. Every read here is catalogue ∪ own, every
+// create is an own chain — `services/lodging/chainScope.ts` holds the rule.
 
 // No rate limiter. `GET /:id` is the heaviest thing here and it still only
 // aggregates the CALLER's own lodgings for one chain — their row count is the
-// ceiling. `POST /` writes a globally-visible row, which is the unusual part of
-// this file, but it is two indexed statements and is idempotent by name, so
+// ceiling. `POST /` writes one of the caller's own rows: two indexed
+// statements, idempotent by name, so
 // repeating it produces the same single row rather than accumulating work.
 // Neither touches an external service.
 const router = Router();
@@ -31,11 +30,9 @@ router.use(authenticate);
 // Method-aware: GET passes through, so read-only PATs keep read access but
 // cannot POST — consistent with routes/lodging.ts.
 router.use(requireWriteScope);
-// A GLOBAL catalogue: every account reads the same rows, and a write here is
-// visible to all of them AND survives the nightly demo reseed, which only
-// deletes rows the demo user owns. So the shared demo account does not write
-// here (independent review, 2026-09-17, finding A3). Method-aware: the
-// typeahead is most of what a visitor came to try, so reads pass through.
+// The shared demo account does not create chains (independent review,
+// 2026-09-17, finding A3). Reads pass through: the typeahead is what a
+// visitor came to try.
 router.use(rejectDemoWrites);
 
 // A huge catalog must never be dumped in one response.
@@ -59,10 +56,6 @@ const createChainSchema = z.object({
     .optional(),
 });
 
-function isUniqueConstraintError(error: unknown): error is Prisma.PrismaClientKnownRequestError {
-  return error instanceof Prisma.PrismaClientKnownRequestError && error.code === "P2002";
-}
-
 const requireUser = (req: AuthRequest): string => {
   if (!req.userId) throw new AppError("Not authenticated", 401);
   return req.userId;
@@ -75,10 +68,16 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const parsed = chainQuerySchema.safeParse(req.query);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
+    const userId = requireUser(req);
     const chains = await prisma.lodgingChain.findMany({
-      where: parsed.data.search
-        ? { name: { contains: parsed.data.search, mode: "insensitive" } }
-        : undefined,
+      where: {
+        AND: [
+          visibleChainsWhere(userId),
+          ...(parsed.data.search
+            ? [{ name: { contains: parsed.data.search, mode: "insensitive" as const } }]
+            : []),
+        ],
+      },
       orderBy: { name: "asc" },
       take: MAX_CHAINS_PER_REQUEST,
     });
@@ -101,7 +100,11 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     if (!parsedId.success) throw new AppError(parsedId.error.message, 400);
     const { id } = parsedId.data;
 
-    const chain = await prisma.lodgingChain.findUnique({ where: { id } });
+    // Another account's chain is "not found", never "forbidden": the answer
+    // must not confirm that it exists.
+    const chain = await prisma.lodgingChain.findFirst({
+      where: { AND: [visibleChainsWhere(userId), { id }] },
+    });
     if (!chain) throw new AppError("Chain not found", 404);
 
     // The caller's own lodgings for this chain — same include + aggregate
@@ -164,7 +167,9 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     // missing membership.
     const suggestedChains = chain.loyaltyProgram
       ? await prisma.lodgingChain.findMany({
-          where: { loyaltyProgram: chain.loyaltyProgram },
+          where: {
+            AND: [visibleChainsWhere(userId), { loyaltyProgram: chain.loyaltyProgram }],
+          },
           orderBy: { name: "asc" },
           select: { id: true, name: true },
         })
@@ -187,57 +192,22 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
 
 router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
+    const userId = requireUser(req);
     const parsed = createChainSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    // Case-insensitive pre-check: `name`'s @unique constraint is a Postgres
-    // unique index, which is case-sensitive, so "hilton" would never collide
-    // with "Hilton" at the DB level and would otherwise sail straight into
-    // `create` below. Catch that here so the client experience (200 + the
-    // existing row) is identical for a case-variant collision as for an
-    // exact one. NOT race-safe by itself — see the P2002 catch below for why
-    // it's kept as a backstop, and the residual gap that remains.
-    const caseInsensitiveMatch = await prisma.lodgingChain.findFirst({
-      where: { name: { equals: parsed.data.name, mode: "insensitive" } },
-    });
-    if (caseInsensitiveMatch) {
-      res.status(200).json({ success: true, data: caseInsensitiveMatch });
-      return;
+    // Idempotent "get or add": a name the caller can already see — in the
+    // catalogue or among their own, in any case — hands back that row with
+    // 200 rather than an error, because a user typing a chain has no way to
+    // know whether it exists. A new name becomes the caller's OWN chain and
+    // is visible to nobody else. `isUserAdded` and `userId` are set here,
+    // server-side, never from the (already-stripped) input.
+    const { name, ...fields } = parsed.data;
+    const { chain, created } = await findOrCreateOwnChain(userId, name, fields);
+    if (created) {
+      logger.info({ operation: "lodging_chain_create", chainId: chain.id, userId });
     }
-
-    try {
-      // isUserAdded is set here, server-side, unconditionally — never from
-      // the (already-stripped) parsed input.
-      const chain = await prisma.lodgingChain.create({
-        data: { ...parsed.data, isUserAdded: true },
-      });
-      logger.info({ operation: "lodging_chain_create", chainId: chain.id, userId: req.userId });
-      res.status(201).json({ success: true, data: chain });
-    } catch (createError) {
-      if (!isUniqueConstraintError(createError)) throw createError;
-      // `name` is @unique. A duplicate name is a completely normal thing for
-      // a user to try — they have no visibility into whether the catalog
-      // already has the chain they're typing. Decision: treat this as an
-      // idempotent "get or add" rather than a hard error — hand back the
-      // EXISTING chain with 200, instead of a raw Prisma unique-constraint
-      // 500 or an opaque 409 the client would have to special-case. This is
-      // the race-safe backstop for the pre-check above: two concurrent
-      // requests for the exact same name can both miss the pre-check and
-      // race into `create`, but only one wins and the other lands here.
-      //
-      // Residual gap: this does NOT cover two concurrent requests that
-      // differ only in case (e.g. "hilton" and "Hilton" at the same
-      // instant) — Postgres's unique index is case-sensitive, so both
-      // creates can succeed and neither throws P2002. Closing that fully
-      // needs a case-insensitive unique constraint (a `citext` column or a
-      // functional `LOWER(name)` index), a schema change deliberately
-      // deferred for now.
-      const existing = await prisma.lodgingChain.findFirst({
-        where: { name: { equals: parsed.data.name, mode: "insensitive" } },
-      });
-      if (!existing) throw createError; // shouldn't happen — never swallow silently
-      res.status(200).json({ success: true, data: existing });
-    }
+    res.status(created ? 201 : 200).json({ success: true, data: chain });
   } catch (err) {
     next(err);
   }
