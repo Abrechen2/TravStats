@@ -98,7 +98,9 @@
     "createAndLink": "Create and link",
     "createFailed": "The accommodation could not be created.",
     "linked": "linked accommodation",
-    "change": "change"
+    "change": "change",
+    "cancelled": "cancelled — counts no night",
+    "fitsDate": "matches the dates"
   },
   "review": {
     "title_one": "One entry was classified automatically by the 2.7 update",
@@ -183,5 +185,165 @@
       "rateLimited": "Strava's request limit is reached. Try again in a quarter of an hour."
     }
   },
-  "komootHint": "Komoot: export the tour from Komoot as GPX and upload it here — there is no direct connection, Komoot has no public API."
+  "komootHint": "Komoot: export the tour from Komoot as GPX and upload it here — there is no direct connection, Komoot has no public API.",
+  "phase": {
+    "planned": "Planned",
+    "underway": "On the road · day {{day}} of {{total}}",
+    "underwayOpen": "On the road · day {{day}}"
+  },
+  "list": {
+    "search": "Name, trip or country",
+    "allVehicles": "All vehicles",
+    "sectionUnderway": "On the road now",
+    "sectionPlanned": "Planned",
+    "sectionUndated": "Undated",
+    "noMatch": "No roadtrip matches this search.",
+    "today": "Today: {{station}}",
+    "todayStay": "Today: {{station}}, {{stay}}",
+    "next": "Next up: {{station}}",
+    "enterTonight": "Record tonight",
+    "open": "Open roadtrip",
+    "figKm": "km",
+    "figNights": "nights",
+    "figStations": "stations",
+    "figTours": "tours",
+    "kmUnknown": "No leg yet — that takes two stations.",
+    "nightsApprox": "At least one station has no departure date.",
+    "emptyTitle": "No roadtrip yet",
+    "emptyCta": "Create your first roadtrip"
+  },
+  "newDialog": {
+    "title": "New roadtrip",
+    "intro": "Only the name is required. Everything else can wait.",
+    "name": "Name",
+    "vehicle": "Travelling in?",
+    "railHint": "Going by train? Train journeys get a section of their own.",
+    "vehicleName": "Vehicle's own name",
+    "odometer": "Odometer at the start",
+    "optional": "optional",
+    "trip": "Part of a trip?",
+    "tripHint": "It then shows on that trip too.",
+    "noTrip": "No trip",
+    "submit": "Create and add the first station"
+  },
+  "detail": {
+    "edit": "Edit",
+    "done": "Done",
+    "figDriven": "Driven",
+    "figDrivenSub": "without ferries · {{km}} km in total",
+    "figDays": "Days",
+    "figDaysAhead_one": "one still ahead",
+    "figDaysAhead_other": "{{count}} still ahead",
+    "figNights": "Nights",
+    "figNightsSub": "{{stay}} at a stay · {{free}} free",
+    "figPlaces": "Slept in",
+    "figPlacesValue_one": "{{count}} place",
+    "figPlacesValue_other": "{{count}} places",
+    "figCountries": "Countries",
+    "figTours": "Day tours",
+    "odometer": "Odometer {{from}} → {{to}}",
+    "odometerOpen": "still open",
+    "approxHint": "“≈” means at least one station has no departure date. It counts as one night until you add it.",
+    "mapHint": "Click a station to mark it on the map.",
+    "noRouting": "Without a routing provider, new legs show as straight lines.",
+    "toursTitle": "Day tours on this roadtrip",
+    "toursEmpty": "No day tour yet. Start one at a station.",
+    "tourAt": "at station {{station}}",
+    "noElevation": "The recording has no elevation.",
+    "noMoving": "The recording has no timestamps.",
+    "source": {
+      "gpx": "GPX",
+      "fit": "FIT",
+      "tcx": "TCX",
+      "dawarich": "Dawarich",
+      "strava": "Strava · only you",
+      "healthkit": "Apple Health",
+      "healthconnect": "Health Connect"
+    }
+  },
+  "timeline": {
+    "day": "Day {{n}}",
+    "today": "Today",
+    "planned": "Planned",
+    "approxNight": "≈ 1 night · departure not recorded",
+    "cancelled": "Stay cancelled — counts no night",
+    "leg": {
+      "road": "Road",
+      "ferry": "Ferry",
+      "rail": "Rail",
+      "foot": "On foot",
+      "bike": "Bike"
+    },
+    "source": {
+      "routed": "along the road",
+      "straight": "straight line",
+      "drawn": "drawn by hand",
+      "track": "from the recording"
+    },
+    "legEdit": "Edit leg",
+    "duration": "{{h}} h {{m}}"
+  },
+  "editor": {
+    "hint": "Tap a station to edit it. Tap a leg for ferry or line. Every change is saved at once and can be undone.",
+    "status": {
+      "saving": "Saving …",
+      "saved": "All saved",
+      "error": "Not saved",
+      "waiting": "Waiting — a station has no place yet",
+      "retry": "Try again"
+    },
+    "whatHere": "What was here?",
+    "choice": {
+      "stay": {
+        "label": "Accommodation",
+        "hint": "Campsite, hotel, holiday flat — with a stay"
+      },
+      "free": {
+        "label": "Free night",
+        "hint": "Slept without a booking: pitch, car park"
+      },
+      "pass": {
+        "label": "Pass-through",
+        "hint": "Just passed by, no night"
+      }
+    },
+    "place": "Place",
+    "name": "Station name",
+    "arrival": "Arrival",
+    "departure": "Departure",
+    "date": "Date",
+    "noDepartureHint": "Without a departure the station counts as one night and the total gets a “≈”.",
+    "nextMorning": "Next morning: {{date}}",
+    "whereSlept": "Where did you sleep?",
+    "close": "Done",
+    "insertBetween": "Station between {{a}} and {{b}}",
+    "insertEnd": "Add a station at the end",
+    "removed": "“{{name}}” removed",
+    "undo": "Undo",
+    "unnamed": "New station",
+    "stationOf": "Station {{n}} of {{total}}",
+    "warningsTitle": "Still open",
+    "warnings": {
+      "noPlace": "{{name}}: place missing",
+      "beforePrevious": "{{name}} is before the previous station — check the date",
+      "noDeparture": "{{name}}: departure missing"
+    },
+    "warningsNote": "Hints only — everything is saved anyway. Only a station without a place waits until it has one."
+  },
+  "legDialog": {
+    "title": "Leg",
+    "mode": "Travelling by?",
+    "line": "Line on the map",
+    "routed": "Along the road",
+    "routedHint": "Calculated by the routing provider",
+    "routedFerry": "Not for ferries — ships follow no road",
+    "routedUnavailable": "No routing provider is set up on this instance.",
+    "straight": "Straight line",
+    "straightHint": "Station to station, no detour",
+    "drawn": "Draw it yourself",
+    "drawnHint": "Point by point in the leg editor",
+    "distance": "Distance now: {{km}} km",
+    "apply": "Apply",
+    "error": "The leg could not be saved."
+  }
 }

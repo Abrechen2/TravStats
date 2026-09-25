@@ -30,6 +30,7 @@ function roadtrip(overrides: Partial<RoadtripSummary>): RoadtripSummary {
     trackCount: 0,
     tourCount: 0,
     countries: ["DE", "NO"],
+    points: [],
     ...overrides,
   };
 }

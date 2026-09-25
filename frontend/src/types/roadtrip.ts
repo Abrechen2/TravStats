@@ -4,7 +4,7 @@
 // the shapes only the roadtrip endpoints return.
 
 import type { RoadtripVehicle, StationState, TourActivity } from "../shared/tour/roadtrip";
-import type { TourLeg, TourRoute } from "./tour";
+import type { TourLeg, TourRoute, TrackSource } from "./tour";
 
 export interface RoadtripNights {
   /** Nights at linked stays — the SAME figure the lodging statistics hold. */
@@ -39,6 +39,8 @@ export interface RoadtripSummary extends RoadtripNights {
   tourCount: number;
   /** ISO alpha-2 codes of the countries its stations stand in. */
   countries: string[];
+  /** Station points as `[lon, lat]`, in travel order — the list's route sketch. */
+  points: Array<[number, number]>;
 }
 
 export interface StationStay {
@@ -74,8 +76,12 @@ export interface RoadtripDayTour {
   activity: TourActivity | null;
   anchorStopId: string | null;
   distanceKm: number;
+  /** Null unless every recording carries it — never a partial sum. */
   ascentM: number | null;
+  movingSeconds: number | null;
   startedAt: string | null;
+  /** Where the first recording came from; null for a tour drawn by hand. */
+  source: TrackSource | null;
 }
 
 export interface RoadtripDetail {
@@ -114,4 +120,5 @@ export interface CreateRoadtripInput {
   color?: string;
   notes?: string;
   tripId?: string | null;
+  startOdometerKm?: number;
 }

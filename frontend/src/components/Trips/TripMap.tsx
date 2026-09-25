@@ -122,6 +122,8 @@ interface TripMapProps {
     /** A roadtrip's line takes the roadtrip hue instead of the tour one. */
     rgb?: [number, number, number];
   }[];
+  /** Drawn over everything else — the roadtrip page's selected station. */
+  extraLayers?: readonly Layer[];
 }
 
 // Stable module-level default. `tourGeometries = []` inline in the props
@@ -135,6 +137,7 @@ const NO_TOUR_GEOMETRIES: NonNullable<TripMapProps["tourGeometries"]> = [];
 export default function TripMap({
   trip,
   tourGeometries = NO_TOUR_GEOMETRIES,
+  extraLayers,
 }: TripMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["trips", "map"]);
   const locale = i18n.language || "de";
@@ -571,7 +574,8 @@ export default function TripMap({
     colorConfig.lodging,
   ]);
 
-  const layers = projection === "globe" ? globeLayers : mercatorLayers;
+  const baseLayers = projection === "globe" ? globeLayers : mercatorLayers;
+  const layers = extraLayers ? [...baseLayers, ...extraLayers] : baseLayers;
 
   /** Every name on the globe, in the shape the HTML overlay reads. A deck.gl
    *  TextLayer draws nothing under globe projection, which is why the trip's
