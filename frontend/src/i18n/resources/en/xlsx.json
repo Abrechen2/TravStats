@@ -28,8 +28,8 @@
     "places": "One row per place. Visits live on their own sheet.",
     "placeVisits": "One row per visit. The \"Place\" column points at the \"Places\" sheet through the ID in square brackets.",
     "flights": "One row per flight. Do not change the ID in column A — it is what matches the row back to its record on import. Airports travel as IATA codes; changing a code moves the flight. A row without an ID is created as a new flight.",
-    "roadtrips": "One roadtrip per row. A row without an ID creates a new one. Vehicle: motorhome, campervan, caravan, car, motorcycle, bicycle or other. Columns in grey are derived and not imported.",
-    "roadtripStations": "One station per row. The Order column sets the sequence — 2.5 inserts a station between 2 and 3. Night: stay (with the accommodation in the Stay column), free (no accommodation) or pass (pass-through). A station missing here is kept — except when replacing.",
+    "roadtrips": "One roadtrip per row. A row with the ID of one of your roadtrips changes it; without an ID — or with an ID from another account — a new one is created, unless one with the same name and start is already here. Vehicle: motorhome, campervan, caravan, car, motorcycle, bicycle or other. Columns in grey are derived and not imported.",
+    "roadtripStations": "One station per row. The Roadtrip column points to the Roadtrips sheet by the ID in square brackets – without an ID, the name before it counts. The Order column sets the sequence — 2.5 inserts a station between 2 and 3. Night: stay (with the accommodation in the Stay column), free (no accommodation) or pass (pass-through). A station missing here is kept — except when replacing. Moved into another account, a station keeps its night but not its link to the stay.",
     "tours": "Read-only: a tour is measured by its recording, which fits in no cell. Changes here are not imported."
   },
   "columns": {
@@ -146,8 +146,9 @@
       "invalid_night": "Night must be stay, free or pass.",
       "station_needs_stay": "A night at a stay needs the stay.",
       "station_needs_roadtrip": "The station names no roadtrip.",
-      "unknown_stay": "There is no such stay in your account.",
-      "station_list_refused": "This roadtrip's stations could not be applied."
+      "station_list_refused": "This roadtrip's stations could not be applied.",
+      "unknown_roadtrip": "The roadtrip named here is neither in your account nor on the Roadtrips sheet.",
+      "ambiguous_roadtrip": "Several roadtrips have this name — please give the ID in square brackets."
     },
     "modeLabel": "What should happen to entries that already exist?",
     "modes": {

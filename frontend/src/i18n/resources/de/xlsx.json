@@ -28,8 +28,8 @@
     "places": "Eine Zeile je Ort. Besuche stehen im eigenen Blatt.",
     "placeVisits": "Eine Zeile je Besuch. Die Spalte „Ort“ verweist über die ID in eckigen Klammern auf das Blatt „Orte“.",
     "flights": "Eine Zeile je Flug. Die ID in Spalte A nicht ändern — sie ordnet die Zeile beim Import wieder ihrem Eintrag zu. Flughäfen stehen als IATA-Code; wird ein Code geändert, verschiebt das den Flug. Zeilen ohne ID werden als neuer Flug angelegt.",
-    "roadtrips": "Ein Roadtrip pro Zeile. Ohne ID wird ein neuer angelegt. Fahrzeug: motorhome, campervan, caravan, car, motorcycle, bicycle oder other. Grau geschriebene Spalten sind abgeleitet und werden nicht übernommen.",
-    "roadtripStations": "Eine Station pro Zeile. Die Spalte Reihenfolge bestimmt die Abfolge — 2,5 fügt eine Station zwischen 2 und 3 ein. Nacht: stay (mit Unterkunft in der Spalte Unterkunft), free (ohne Unterkunft) oder pass (Durchfahrt). Eine Station, die hier fehlt, bleibt erhalten — außer beim Ersetzen.",
+    "roadtrips": "Ein Roadtrip pro Zeile. Eine Zeile mit der ID eines deiner Roadtrips ändert ihn; ohne ID — oder mit einer ID aus einem anderen Konto — wird ein neuer angelegt, außer es gibt schon einen mit gleichem Namen und Beginn. Fahrzeug: motorhome, campervan, caravan, car, motorcycle, bicycle oder other. Grau geschriebene Spalten sind abgeleitet und werden nicht übernommen.",
+    "roadtripStations": "Eine Station pro Zeile. Die Spalte „Roadtrip“ verweist über die ID in eckigen Klammern auf das Blatt „Roadtrips“ – fehlt die ID, zählt der Name davor. Die Spalte Reihenfolge bestimmt die Abfolge — 2,5 fügt eine Station zwischen 2 und 3 ein. Nacht: stay (mit Unterkunft in der Spalte Unterkunft), free (ohne Unterkunft) oder pass (Durchfahrt). Eine Station, die hier fehlt, bleibt erhalten — außer beim Ersetzen. In ein anderes Konto übertragen, behält eine Station ihre Nacht, aber nicht die Verknüpfung zur Unterkunft.",
     "tours": "Nur zum Lesen: eine Tour wird an ihrer Aufzeichnung gemessen, und die passt in keine Zelle. Änderungen hier werden nicht übernommen."
   },
   "columns": {
@@ -146,8 +146,9 @@
       "invalid_night": "Nacht muss stay, free oder pass sein.",
       "station_needs_stay": "Eine Nacht in einer Unterkunft braucht die Unterkunft.",
       "station_needs_roadtrip": "Die Station nennt keinen Roadtrip.",
-      "unknown_stay": "Diese Unterkunft gibt es in deinem Konto nicht.",
-      "station_list_refused": "Die Stationen dieses Roadtrips ließen sich nicht übernehmen."
+      "station_list_refused": "Die Stationen dieses Roadtrips ließen sich nicht übernehmen.",
+      "unknown_roadtrip": "Den angegebenen Roadtrip gibt es weder in deinem Konto noch im Blatt „Roadtrips“.",
+      "ambiguous_roadtrip": "Mehrere Roadtrips heißen so — bitte die ID in eckigen Klammern angeben."
     },
     "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
     "modes": {

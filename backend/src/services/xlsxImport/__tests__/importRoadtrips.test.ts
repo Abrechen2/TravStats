@@ -96,15 +96,100 @@ describe("spreadsheet import — roadtrips", () => {
     ).toBe(1);
   });
 
-  it("refuses someone else's roadtrip as if it did not exist", async () => {
+  it("creates a new roadtrip from someone else's id and never touches theirs", async () => {
     const [outcome] = await importSheets(
       [{ key: "roadtrips", rows: [{ id: victimRoadtripId, name: "Übernommen" }] }],
       ctx()
     );
-    expect(outcome.rows[0]).toMatchObject({ action: "error", message: "unknown_id" });
+    expect(outcome).toMatchObject({ created: 1, errors: 0 });
     expect(
       (await prisma.tripRoute.findUniqueOrThrow({ where: { id: victimRoadtripId } })).name
     ).toBe("Fremd");
+    expect(await prisma.tripRoute.count({ where: { userId, name: "Übernommen" } })).toBe(1);
+  });
+
+  it("moves a roadtrip with its stations into another account in one file", async () => {
+    // As exported from another account: ids that mean nothing here.
+    const sourceId = "11111111-2222-4333-8444-555555555555";
+    const sheets = [
+      { key: "roadtrips", rows: [{ id: sourceId, name: "Fjorde 2026", vehicle: "campervan" }] },
+      {
+        key: "roadtripStations",
+        rows: [
+          {
+            id: "aaaaaaaa-0000-4000-8000-000000000001",
+            roadtripId: `Fjorde 2026 [${sourceId}]`,
+            order: "1",
+            title: "Hamburg",
+            lat: "53.55",
+            lon: "10",
+            night: "pass",
+          },
+          {
+            id: "aaaaaaaa-0000-4000-8000-000000000002",
+            roadtripId: `Fjorde 2026 [${sourceId}]`,
+            order: "2",
+            title: "Hirtshals",
+            lat: "57.59",
+            lon: "9.96",
+            night: "free",
+          },
+          // A stay from the other account: the night stays, the link cannot.
+          {
+            roadtripId: `Fjorde 2026 [${sourceId}]`,
+            order: "3",
+            title: "Stavanger",
+            lat: "58.97",
+            lon: "5.73",
+            night: "stay",
+            lodgingStayId: "Mosvangen [aaaaaaaa-0000-4000-8000-00000000ffff]",
+          },
+        ],
+      },
+    ];
+
+    const [preview, stationPreview] = await importSheets(sheets, ctx("merge", true));
+    expect(preview).toMatchObject({ created: 1, errors: 0 });
+    expect(stationPreview).toMatchObject({ created: 3, errors: 0 });
+    expect(await prisma.tripRoute.count({ where: { userId } })).toBe(0);
+
+    await importSheets(sheets, ctx());
+    const moved = await prisma.tripRoute.findFirstOrThrow({
+      where: { userId, name: "Fjorde 2026" },
+    });
+    expect(await titlesOf(moved.id)).toEqual(["Hamburg", "Hirtshals", "Stavanger"]);
+    const stavanger = await prisma.tripStop.findFirstOrThrow({
+      where: { routeId: moved.id, title: "Stavanger" },
+    });
+    expect(stavanger).toMatchObject({ lodgingStayId: null, overnight: true });
+
+    // The same file again: recognised by name and start, not doubled.
+    await importSheets(sheets, ctx());
+    expect(await prisma.tripRoute.count({ where: { userId, name: "Fjorde 2026" } })).toBe(1);
+  });
+
+  it("finds a station's roadtrip by its name when the cell carries no id", async () => {
+    const { id } = await roadtripWith(["Hamburg"]);
+    const [outcome] = await importSheets(
+      [
+        {
+          key: "roadtripStations",
+          rows: [
+            {
+              roadtripId: "Norwegen",
+              order: "2",
+              title: "Neu",
+              lat: "60",
+              lon: "7",
+              night: "free",
+            },
+          ],
+        },
+      ],
+      ctx()
+    );
+    expect(outcome).toMatchObject({ created: 1, errors: 0 });
+    expect(await titlesOf(id)).toEqual(["Hamburg", "Neu"]);
   });
 
   it("reorders by the order column, inserts a new station by decimal, keeps what the file leaves out", async () => {
@@ -236,7 +321,7 @@ describe("spreadsheet import — roadtrips", () => {
     expect(await titlesOf(id)).toEqual(["Hamburg", "Hirtshals"]);
   });
 
-  it("refuses a stay night whose stay is not the caller's, already in the preview", async () => {
+  it("never links a station to someone else's stay — the night stays, the link does not", async () => {
     const { id } = await roadtripWith(["Hamburg"]);
     const victim = await prisma.user.findUniqueOrThrow({ where: { username: USERS[1] } });
     const lodging = await prisma.lodging.create({
@@ -245,7 +330,7 @@ describe("spreadsheet import — roadtrips", () => {
     const stay = await prisma.lodgingStay.create({
       data: { lodgingId: lodging.id, userId: victim.id },
     });
-    const [outcome] = await importSheets(
+    await importSheets(
       [
         {
           key: "roadtripStations",
@@ -261,8 +346,9 @@ describe("spreadsheet import — roadtrips", () => {
           ],
         },
       ],
-      ctx("merge", true)
+      ctx()
     );
-    expect(outcome.rows[0]).toMatchObject({ action: "error", message: "unknown_stay" });
+    const gast = await prisma.tripStop.findFirstOrThrow({ where: { routeId: id, title: "Gast" } });
+    expect(gast).toMatchObject({ lodgingStayId: null, overnight: true });
   });
 });
