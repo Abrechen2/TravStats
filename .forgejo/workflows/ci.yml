@@ -72,8 +72,11 @@ jobs:
       - uses: https://code.forgejo.org/actions/checkout@v4
       - name: Install dependencies
         run: cd frontend && npm ci
+      # Capped workers: the runner takes four jobs at once on 8 cores, and Vitest
+      # otherwise starts one worker per core in every job. Uncapped, heavy React
+      # suites (StayEditor) hit the 5 s test timeout on main runs 1261/1264/1280.
       - name: Vitest
-        run: cd frontend && npx vitest --run
+        run: cd frontend && npx vitest --run --maxWorkers=2
 
   backend-tests:
     name: Backend tests (Jest ${{ matrix.shard }}/4)
