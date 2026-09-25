@@ -40,6 +40,7 @@
 
 import { prisma } from "../../db";
 import { getBaseCurrency } from "../fx/snapshot";
+import { isAmountRecorded } from "../../shared/flightPricing";
 
 export interface TripCostSuperlative {
   tripId: string;
@@ -65,7 +66,12 @@ interface CostItem {
 }
 
 /**
- * A null or zero price counts as "no price" — mirrors `bookingCost.sumByCurrency`.
+ * A null price is "no price"; 0 is a price — a comped sailing, a free pass —
+ * that adds nothing, by `shared/flightPricing.ts`'s `isAmountRecorded`, the
+ * rule flights moved to on 2026-09-21 and cruises on 2026-09-25. `price <= 0`
+ * here had kept a logbook of free trips abstaining instead of answering 0.
+ * A 0 needs no rate: it is 0 in every currency, so a 0 without a snapshot
+ * does not push its trip out as unconvertible.
  * A snapshot whose `fxBaseCurrency` disagrees with the user's CURRENT base
  * currency is downgraded to unconvertible here (not later): the stored
  * `priceBase` number is real, but it is real in a currency the sum below is
@@ -93,13 +99,12 @@ function pushIfPriced(
   fxBaseCurrency: string | null,
   currentBaseCurrency: string
 ): void {
-  if (price == null || price <= 0) return;
+  if (!isAmountRecorded(price)) return;
   // No currency on the schema's default column is EUR; matches sumByCurrency.
   const ownCurrency = currency ?? "EUR";
-  const convertible =
-    ownCurrency === currentBaseCurrency ||
-    (priceBase != null && fxBaseCurrency === currentBaseCurrency);
-  const baseAmount = ownCurrency === currentBaseCurrency ? price : priceBase;
+  const atOwnPrice = ownCurrency === currentBaseCurrency || price === 0;
+  const convertible = atOwnPrice || (priceBase != null && fxBaseCurrency === currentBaseCurrency);
+  const baseAmount = atOwnPrice ? price : priceBase;
   items.push({ price, currency: ownCurrency, priceBase: convertible ? baseAmount : null });
 }
 
@@ -195,7 +200,7 @@ function costItemsForTrip(
 }
 
 /** The most expensive trip across the user's ENTIRE logbook, or null when no
- *  started trip carries a positive cost. */
+ *  started trip carries a recorded cost (0 included). */
 export async function mostExpensiveTrip(userId: string): Promise<TripCostSuperlative | null> {
   // A trip still on the drawing board hasn't spent anything yet — mirrors
   // `computeTripInsights`'s `t.status !== "planned"` filter so the two never
