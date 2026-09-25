@@ -163,9 +163,50 @@ describe("spreadsheet import — roadtrips", () => {
     });
     expect(stavanger).toMatchObject({ lodgingStayId: null, overnight: true });
 
-    // The same file again: recognised by name and start, not doubled.
+    // The same file again: the roadtrip AND its stations are recognised, not doubled.
     await importSheets(sheets, ctx());
     expect(await prisma.tripRoute.count({ where: { userId, name: "Fjorde 2026" } })).toBe(1);
+    expect(await titlesOf(moved.id)).toEqual(["Hamburg", "Hirtshals", "Stavanger"]);
+  });
+
+  it("links a moved station to the stay that moved with it — same house, same arrival", async () => {
+    // The lodging sheet of the same file created this stay in this account.
+    const lodging = await prisma.lodging.create({ data: { userId, name: "Mosvangen Camping" } });
+    const stay = await prisma.lodgingStay.create({
+      data: {
+        lodgingId: lodging.id,
+        userId,
+        checkIn: new Date("2026-09-19"),
+        checkOut: new Date("2026-09-22"),
+      },
+    });
+    const sourceId = "11111111-2222-4333-8444-666666666666";
+    await importSheets(
+      [
+        { key: "roadtrips", rows: [{ id: sourceId, name: "Mit Unterkunft" }] },
+        {
+          key: "roadtripStations",
+          rows: [
+            {
+              roadtripId: `Mit Unterkunft [${sourceId}]`,
+              title: "Stavanger",
+              lat: "58.97",
+              lon: "5.73",
+              startDate: "2026-09-19",
+              endDate: "2026-09-22",
+              night: "stay",
+              lodgingStayId: "Mosvangen Camping [aaaaaaaa-0000-4000-8000-00000000eeee]",
+            },
+          ],
+        },
+      ],
+      ctx()
+    );
+    const route = await prisma.tripRoute.findFirstOrThrow({
+      where: { userId, name: "Mit Unterkunft" },
+    });
+    const station = await prisma.tripStop.findFirstOrThrow({ where: { routeId: route.id } });
+    expect(station).toMatchObject({ lodgingStayId: stay.id, overnight: true });
   });
 
   it("finds a station's roadtrip by its name when the cell carries no id", async () => {

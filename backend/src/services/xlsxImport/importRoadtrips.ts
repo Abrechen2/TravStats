@@ -229,6 +229,8 @@ interface ParsedStation {
   label: string;
   order: number;
   station: Station;
+  /** The readable half of the stay cell — what a moved stay is found by. */
+  stayName?: string;
 }
 
 type StationParse = { ok: ParsedStation } | { error: RowOutcome } | { skip: RowOutcome };
@@ -275,6 +277,7 @@ function parseStationRow(
       rowNo,
       label,
       order: order ?? fallbackOrder,
+      stayName: refName(raw.lodgingStayId),
       station: {
         ...(id ? { id } : {}),
         title,
@@ -294,13 +297,21 @@ function parseStationRow(
 
 /**
  * A stay link the caller cannot have — another account's, from a moved file —
- * is dropped, and the station keeps its night as a free one: the night
- * happened, the booking record is simply not in this account. Linking it
- * would read someone else's stay back through the station.
+ * never reaches the station as it is: linking it would read someone else's
+ * stay back. It is looked up in THIS account instead, by the house's name and
+ * the day of arrival, which finds the stay the lodging sheet of the same file
+ * just moved over. With no such stay the station keeps its night as a free
+ * one: the night happened, the booking is simply not in this account.
  */
-async function keepOnlyOwnStays(userId: string, stations: Station[]): Promise<Station[]> {
-  const ids = stations.flatMap((s) => (s.night.kind === "stay" ? [s.night.lodgingStayId] : []));
-  if (ids.length === 0) return stations;
+async function ownStays(
+  userId: string,
+  parsed: readonly ParsedStation[]
+): Promise<Map<Station, Station>> {
+  const out = new Map<Station, Station>();
+  const ids = parsed.flatMap((p) =>
+    p.station.night.kind === "stay" ? [p.station.night.lodgingStayId] : []
+  );
+  if (ids.length === 0) return out;
   const owned = new Set(
     (
       await prisma.lodgingStay.findMany({
@@ -309,11 +320,59 @@ async function keepOnlyOwnStays(userId: string, stations: Station[]): Promise<St
       })
     ).map((s) => s.id)
   );
-  return stations.map((s) =>
-    s.night.kind === "stay" && !owned.has(s.night.lodgingStayId)
-      ? { ...s, night: { kind: "free" } }
-      : s
-  );
+  for (const p of parsed) {
+    const night = p.station.night;
+    if (night.kind !== "stay" || owned.has(night.lodgingStayId)) continue;
+    const day = p.station.startDate ? p.station.startDate.toISOString().slice(0, 10) : null;
+    const candidates =
+      p.stayName && day
+        ? await prisma.lodgingStay.findMany({
+            where: {
+              userId,
+              lodging: { name: { equals: p.stayName, mode: "insensitive" } },
+              checkIn: { gte: new Date(`${day}T00:00:00Z`), lt: new Date(`${day}T23:59:59.999Z`) },
+            },
+            select: { id: true },
+          })
+        : [];
+    out.set(
+      p.station,
+      candidates.length === 1
+        ? { ...p.station, night: { kind: "stay", lodgingStayId: candidates[0].id } }
+        : { ...p.station, night: { kind: "free" } }
+    );
+  }
+  return out;
+}
+
+/**
+ * The station of this roadtrip a row with no usable id means, if any: same
+ * name, same arrival day, same place to about a hundred metres. That is how a
+ * moved file read a second time finds the stations the first read created,
+ * instead of adding each one again. Each station is claimed once.
+ */
+function stationMatcher(
+  stops: ReadonlyArray<{
+    id: string;
+    title: string;
+    lat: number | null;
+    lon: number | null;
+    startDate: Date | null;
+  }>
+): (s: Station) => string | undefined {
+  const key = (title: string, lat: number | null, lon: number | null, start: Date | null): string =>
+    [
+      norm(title),
+      start ? start.toISOString().slice(0, 10) : "",
+      lat?.toFixed(3) ?? "",
+      lon?.toFixed(3) ?? "",
+    ].join("|");
+  const free = new Map<string, string[]>();
+  for (const s of stops) {
+    const k = key(s.title, s.lat, s.lon, s.startDate);
+    free.set(k, [...(free.get(k) ?? []), s.id]);
+  }
+  return (s) => free.get(key(s.title, s.lat, s.lon, s.startDate ?? null))?.shift();
 }
 
 /** Resolve a station row's roadtrip cell to an account id, a dry-run placeholder, or an error code. */
@@ -388,6 +447,21 @@ export async function importRoadtripStations(
       else if ("error" in result) groupOut.push(result.error);
       else parsed.push(result.ok);
     }
+    // A row with no usable id may still mean a station already here.
+    const matchExisting = stationMatcher(stops);
+    for (let i = parsed.length - 1; i >= 0; i--) {
+      const p = parsed[i];
+      if (p.station.id) continue;
+      const id = matchExisting(p.station);
+      if (!id) continue;
+      if (ctx.mode === "add") {
+        groupOut.push({ row: p.rowNo, action: "skip", id, label: p.label });
+        parsed.splice(i, 1);
+      } else {
+        parsed[i] = { ...p, station: { ...p.station, id } };
+      }
+    }
+
     // Only a row that is applied replaces its station. A skipped row (an id
     // in `add` mode) leaves it where it is; a refused row holds the whole
     // roadtrip back below — "unreadable" never means "remove".
@@ -443,11 +517,12 @@ export async function importRoadtripStations(
     }
     if (!ctx.dryRun) {
       try {
-        const stations = await keepOnlyOwnStays(
+        const relinked = await ownStays(ctx.userId, parsed);
+        await replaceStations(
           ctx.userId,
-          list.map((l) => l.station)
+          roadtripId,
+          list.map((l) => relinked.get(l.station) ?? l.station)
         );
-        await replaceStations(ctx.userId, roadtripId, stations);
       } catch (error) {
         logger.warn({ error, roadtripId }, "Spreadsheet import could not apply a station list");
         out.push(
