@@ -30,12 +30,14 @@ export async function fillTripDatesFromSegments(tripId: string): Promise<void> {
       endDate: true,
       flights: { select: { departureTime: true, arrivalTime: true } },
       cruises: { select: { startDate: true, endDate: true } },
+      railJourneys: { select: { departureTime: true, arrivalTime: true } },
     },
   });
   if (!trip) return;
   if (trip.startDate != null || trip.endDate != null) return;
 
-  const bounds = tripDateBounds(trip.flights, trip.cruises);
+  // A ride has the flight's shape (departure, arrival), so it joins them.
+  const bounds = tripDateBounds([...trip.flights, ...trip.railJourneys], trip.cruises);
   if (bounds.earliestStart == null && bounds.latestEnd == null) return;
 
   await prisma.trip.update({
@@ -54,6 +56,7 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
       flights: { select: { departureTime: true, arrivalTime: true } },
       cruises: { select: { startDate: true, endDate: true } },
       lodgingStays: { select: { checkIn: true, checkOut: true } },
+      railJourneys: { select: { departureTime: true, arrivalTime: true } },
     },
   });
   if (!trip) return;
@@ -65,6 +68,7 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
     flights: trip.flights,
     cruises: trip.cruises,
     lodgingStays: trip.lodgingStays,
+    railJourneys: trip.railJourneys,
     ownStartDate: trip.startDate,
     ownEndDate: trip.endDate,
   });

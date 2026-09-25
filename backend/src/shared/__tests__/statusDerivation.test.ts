@@ -4,6 +4,7 @@ import {
   deriveCruiseStatus,
   deriveLodgingStatus,
   deriveTripStatus,
+  tripStatusBounds,
 } from "../statusDerivation";
 
 const H = 60 * 60 * 1000;
@@ -240,5 +241,41 @@ describe("deriveRailStatus", () => {
         now,
       })
     ).toBe("cancelled");
+  });
+});
+
+describe("tripStatusBounds — rail (owner decision 6, 2026-09-25)", () => {
+  const ride = (dep: Date, arr: Date | null) => ({ departureTime: dep, arrivalTime: arr });
+  const none = { flights: [], cruises: [], ownStartDate: null, ownEndDate: null };
+
+  it("spans a trip that holds only a train ride", () => {
+    const bounds = tripStatusBounds({ ...none, railJourneys: [ride(past(3), past(1))] });
+    expect(bounds).toEqual({ earliestStart: past(3), latestEnd: past(1) });
+    expect(deriveTripStatus({ ...bounds, now })).toBe("completed");
+  });
+
+  it("widens a flight trip by a later ride home", () => {
+    const bounds = tripStatusBounds({
+      ...none,
+      flights: [{ departureTime: past(50), arrivalTime: past(48) }],
+      railJourneys: [ride(future(2), future(5))],
+    });
+    expect(bounds).toEqual({ earliestStart: past(50), latestEnd: future(5) });
+    expect(deriveTripStatus({ ...bounds, now })).toBe("in_progress");
+  });
+
+  it("reads a ride with no arrival as its departure", () => {
+    const bounds = tripStatusBounds({ ...none, railJourneys: [ride(future(4), null)] });
+    expect(bounds).toEqual({ earliestStart: future(4), latestEnd: future(4) });
+  });
+
+  it("beats the trip's own dates, as every held segment does", () => {
+    const bounds = tripStatusBounds({
+      ...none,
+      ownStartDate: past(1000),
+      ownEndDate: past(900),
+      railJourneys: [ride(future(1), future(2))],
+    });
+    expect(deriveTripStatus({ ...bounds, now })).toBe("planned");
   });
 });

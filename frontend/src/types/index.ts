@@ -1,4 +1,5 @@
 import type { Lodging, LodgingStay } from "./lodging";
+import type { TripRailJourney } from "./rail";
 import type { LinkedAlbum } from "./immich";
 import type { CabinType, CruiseStop, Port, Ship } from "./cruise";
 
@@ -291,6 +292,8 @@ export interface Trip {
   photos?: TripPhoto[];
   /** A stay linked to this trip via `LodgingStay.tripId` — always includes its `lodging` (GET /trips/:id). */
   lodgingStays?: (LodgingStay & { lodging: Lodging })[];
+  /** Train rides linked to this trip (GET /trips/:id), departure order. */
+  railJourneys?: TripRailJourney[];
   immichAlbums?: LinkedAlbum[];
 }
 

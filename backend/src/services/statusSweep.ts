@@ -170,6 +170,7 @@ export async function sweepStatuses(now: Date = new Date()): Promise<{
       flights: { select: { departureTime: true, arrivalTime: true } },
       cruises: { select: { startDate: true, endDate: true } },
       lodgingStays: { select: { checkIn: true, checkOut: true } },
+      railJourneys: { select: { departureTime: true, arrivalTime: true } },
     },
   });
   let tripFlips = 0;
@@ -181,6 +182,7 @@ export async function sweepStatuses(now: Date = new Date()): Promise<{
       flights: trip.flights,
       cruises: trip.cruises,
       lodgingStays: trip.lodgingStays,
+      railJourneys: trip.railJourneys,
       ownStartDate: trip.startDate,
       ownEndDate: trip.endDate,
     });

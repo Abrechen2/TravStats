@@ -217,6 +217,42 @@ async function nextStay(userId: string): Promise<UpcomingEntry | null> {
   };
 }
 
+/**
+ * The next train (spec 2026-09-25-rail-domain). The departure is a real
+ * instant — the server read the ticket's clock in the station's zone — so the
+ * date rule is the flight's, unchanged. The rail beta switch is the CLIENT's
+ * to apply: this route answers by the user's domains, as for every domain.
+ */
+async function nextRail(userId: string): Promise<UpcomingEntry | null> {
+  const ride = await prisma.railJourney.findFirst({
+    where: { userId, status: { not: "cancelled" }, departureTime: { gte: new Date() } },
+    orderBy: [{ departureTime: "asc" }, { id: "asc" }],
+    select: {
+      id: true,
+      depStationName: true,
+      arrStationName: true,
+      trainCategory: true,
+      trainNumber: true,
+      operator: true,
+      departureTime: true,
+      tripId: true,
+      trip: { select: { name: true } },
+    },
+  });
+  if (!ride) return null;
+  const train = [ride.trainCategory, ride.trainNumber].filter(Boolean).join(" ");
+  return {
+    domain: "rail",
+    id: ride.id,
+    detailId: ride.id,
+    startsAt: ride.departureTime.toISOString(),
+    tripId: ride.tripId,
+    tripName: ride.trip?.name ?? null,
+    primary: `${ride.depStationName} → ${ride.arrStationName}`,
+    secondary: train || ride.operator || null,
+  };
+}
+
 async function nextTrip(userId: string): Promise<UpcomingEntry | null> {
   const trip = await prisma.trip.findFirst({
     where: { userId, status: { not: "cancelled" }, startDate: { gte: new Date() } },
@@ -263,6 +299,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       enabled.has("flight") ? nextFlight(userId) : null,
       enabled.has("cruise") ? nextCruise(userId) : null,
       enabled.has("lodging") ? nextStay(userId) : null,
+      enabled.has("rail") ? nextRail(userId) : null,
       nextTrip(userId),
     ]);
 

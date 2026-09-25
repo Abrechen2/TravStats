@@ -181,8 +181,11 @@ export function tripDateBounds(
  *
  * The rule, stated once so the three callers cannot each invent one:
  *
- *  1. **What the trip HOLDS wins.** Flights, cruises and hotel stays are the
- *     record of what happened, and their span is the trip's span.
+ *  1. **What the trip HOLDS wins.** Flights, cruises, train rides and hotel
+ *     stays are the record of what happened, and their span is the trip's
+ *     span. A ride counts from its departure to its arrival (or departure,
+ *     when the arrival is unknown), exactly as a flight does (owner decision
+ *     6 of the rail spec, 2026-09-25).
  *  2. **Otherwise the trip's OWN dates.** A trip with nothing dated on it has
  *     only what the user typed, and that is a complete answer, not a missing
  *     one.
@@ -196,6 +199,8 @@ export function tripStatusBounds(input: {
   cruises: Array<{ startDate: Date | null; endDate: Date | null }>;
   /** Hotel stays are dated travel too, and a hotel-only trip has nothing else. */
   lodgingStays?: Array<{ checkIn: Date | null; checkOut: Date | null }>;
+  /** Train rides (spec 2026-09-25-rail-domain) — dated travel like a flight. */
+  railJourneys?: Array<{ departureTime: Date; arrivalTime: Date | null }>;
   ownStartDate: Date | null;
   ownEndDate: Date | null;
 }): { earliestStart: Date | null; latestEnd: Date | null } {
@@ -203,7 +208,10 @@ export function tripStatusBounds(input: {
     startDate: s.checkIn,
     endDate: s.checkOut,
   }));
-  const held = tripDateBounds(input.flights, [...input.cruises, ...stays]);
+  const held = tripDateBounds(
+    [...input.flights, ...(input.railJourneys ?? [])],
+    [...input.cruises, ...stays]
+  );
   if (held.earliestStart != null || held.latestEnd != null) return held;
 
   return { earliestStart: input.ownStartDate, latestEnd: input.ownEndDate };

@@ -21,6 +21,7 @@ import {
 } from "../services/rail/railGeometry";
 import { resolveStationInput } from "../services/rail/railStations";
 import { bindConnection } from "../services/rail/railConnection";
+import { recomputeTripStatus } from "../services/tripStatusService";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
@@ -88,6 +89,17 @@ function primaryOrder(query: RailQueryInput): Prisma.RailJourneyOrderByWithRelat
   return column === "distanceKm"
     ? { distanceKm: { sort: query.order, nulls: "last" } }
     : { [column]: query.order };
+}
+
+/**
+ * A ride extends its trip's span, so every write re-derives the status of the
+ * trip it was in and the trip it is in now (owner decision 6 of the rail spec)
+ * — after the commit, because the derivation reads the stored rows.
+ */
+async function restatusTrips(...tripIds: Array<string | null | undefined>): Promise<void> {
+  for (const id of new Set(tripIds.filter((t): t is string => Boolean(t)))) {
+    await recomputeTripStatus(id);
+  }
 }
 
 const router = Router();
@@ -290,6 +302,7 @@ router.post(
       });
 
       await linkDocuments(userId, documentIds, { type: "railJourney", id: journey.id });
+      await restatusTrips(journey.tripId);
 
       logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
       res.status(201).json({ success: true, data: journey });
@@ -385,6 +398,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       });
     });
 
+    await restatusTrips(existing.tripId, journey.tripId);
     res.json({ success: true, data: journey });
   } catch (err) {
     next(err);
@@ -396,10 +410,11 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     const userId = requireUser(req);
     const existing = await prisma.railJourney.findFirst({
       where: { id: req.params.id, userId },
-      select: { id: true },
+      select: { id: true, tripId: true },
     });
     if (!existing) throw new AppError("Rail journey not found", 404);
     await prisma.railJourney.delete({ where: { id: existing.id } });
+    await restatusTrips(existing.tripId);
     res.status(204).send();
   } catch (err) {
     next(err);
