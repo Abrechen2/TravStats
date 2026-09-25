@@ -39,6 +39,7 @@ interface RenderOverrides {
   pulling?: boolean;
   dawarichAvailable?: boolean;
   onPullDawarich?: () => void;
+  onDownload?: (track: TourTrackMeta) => void;
 }
 
 function renderList(overrides: RenderOverrides = {}) {
@@ -187,5 +188,20 @@ describe("TourTrackList", () => {
   it("shows no truncated badge for a complete track", () => {
     renderList({ tracks: [makeTrack({ truncated: false })] });
     expect(screen.queryByText("trips:tours.tracks.truncated")).not.toBeInTheDocument();
+  });
+
+  it("offers each recording as a GPX file, and hands over the one clicked", () => {
+    const onDownload = vi.fn();
+    const second = makeTrack({ id: "track-2" });
+    renderList({ tracks: [makeTrack(), second], onDownload });
+    const buttons = screen.getAllByText("roadtrips:trackArchive.downloadOne");
+    expect(buttons).toHaveLength(2);
+    fireEvent.click(buttons[1]);
+    expect(onDownload).toHaveBeenCalledWith(second);
+  });
+
+  it("draws no download control where no page can take the file", () => {
+    renderList({ tracks: [makeTrack()] });
+    expect(screen.queryByText("roadtrips:trackArchive.downloadOne")).not.toBeInTheDocument();
   });
 });

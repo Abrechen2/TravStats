@@ -90,6 +90,7 @@
     "trips/tourPoints.ts",
     "trips/tourRoutes.ts",
     "trips/tourRouting.ts",
+    "trips/tourTrackArchive.ts",
     "trips/tourTracks.ts",
     "trips/tripCountries.ts",
     "trips/tripPhotos.ts",

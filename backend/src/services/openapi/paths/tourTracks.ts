@@ -253,3 +253,89 @@ registerSectionPath({
     404: { description: "Trip, section, or track not found", content: errorContent },
   },
 });
+
+registerSectionPath({
+  method: "get",
+  path: "/trips/{id}/routes/{routeId}/tracks/{trackId}/gpx",
+  summary: "One recorded track as a GPX file",
+  description:
+    "The stored (simplified) line with its recording segments, the start and end time on the " +
+    "first and last point, and a TravStats extension block carrying every figure measured on the " +
+    "raw points, so reading the file back into TravStats restores them instead of re-measuring.",
+  tags: ["Tours"],
+  request: { params: trackParams },
+  responses: {
+    200: {
+      description: "GPX 1.1 document, as an attachment",
+      content: { "application/gpx+xml": { schema: z.string() } },
+    },
+    404: { description: "Trip, section, or track not found", content: errorContent },
+    429: { description: "Too many archive requests", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/track-archive",
+  summary: "Every recording of every tour and roadtrip, one GPX each, as a ZIP",
+  tags: ["Tours"],
+  responses: {
+    200: {
+      description: "ZIP archive, as an attachment",
+      content: { "application/zip": { schema: z.string().openapi({ format: "binary" }) } },
+    },
+    429: { description: "Too many archive requests", content: errorContent },
+  },
+});
+
+const archiveOutcome = registry.register(
+  "TrackArchiveFileOutcome",
+  z.object({
+    file: z.string(),
+    action: z.enum(["attach", "createTour", "duplicate", "error"]),
+    tourId: z.string().nullable(),
+    tourName: z.string().nullable(),
+    message: z
+      .enum(["unreadable", "noTimestamps", "roadtripNotFound", "ambiguousTour"])
+      .optional()
+      .describe("Present only for `error`"),
+  })
+);
+
+registry.registerPath({
+  method: "post",
+  path: "/track-archive/import",
+  summary: "Read recordings from GPX, TCX or FIT files, or ZIPs of them",
+  description:
+    "multipart/form-data: files in the field `files`, and `dryRun` (default `true`) — a dry run " +
+    "writes nothing and reports per file what would happen. A TravStats GPX finds its tour by id, " +
+    "else by name; a day tour that is not here is created, a roadtrip is not (its stations come " +
+    "from the spreadsheet). Any other file becomes a new day tour. The same file twice is one " +
+    "recording.",
+  tags: ["Tours"],
+  request: {
+    body: {
+      content: {
+        "multipart/form-data": {
+          schema: z.object({
+            files: z.array(z.string().openapi({ format: "binary" })),
+            dryRun: z.enum(["true", "false"]).optional(),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "What happened, or would happen, to each file",
+      content: {
+        "application/json": {
+          schema: z.object({ dryRun: z.boolean(), files: z.array(archiveOutcome) }),
+        },
+      },
+    },
+    400: { description: "No file, or an invalid dryRun", content: errorContent },
+    413: { description: "An archive past the unpacking limits", content: errorContent },
+    429: { description: "Too many archive requests", content: errorContent },
+  },
+});

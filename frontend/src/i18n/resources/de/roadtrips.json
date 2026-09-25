@@ -348,5 +348,36 @@
     "distance": "Strecke jetzt: {{km}} km",
     "apply": "Übernehmen",
     "error": "Die Etappe konnte nicht gespeichert werden."
+  },
+  "trackArchive": {
+    "downloadOne": "Als GPX",
+    "downloadFailed": "Die Aufzeichnung konnte nicht heruntergeladen werden.",
+    "exportTitle": "Aufzeichnungen als GPX",
+    "exportDescription": "Jede Aufzeichnung deiner Touren und Roadtrips als eigene GPX-Datei, zusammen in einem ZIP. Andere Programme lesen die Strecke; TravStats liest beim Einspielen auch Distanz, Höhenmeter und Bewegungszeit so zurück, wie sie gemessen wurden.",
+    "exportButton": "ZIP herunterladen",
+    "exportRunning": "Wird gepackt …",
+    "exportFailed": "Das ZIP konnte nicht erstellt werden.",
+    "importTitle": "GPX oder ZIP einlesen",
+    "importDescription": "GPX-, TCX- oder FIT-Dateien oder ein ZIP davon. Eine Datei aus TravStats kommt an ihre Tour zurück (oder legt sie an); jede andere wird eine eigene Tagestour. Eine Aufzeichnung, die schon da ist, wird nicht doppelt angelegt. Roadtrips kommen aus der Tabelle – lies sie zuerst ein.",
+    "choose": "Dateien wählen",
+    "checking": "Wird geprüft …",
+    "preview": "Vorschau – noch nichts gespeichert:",
+    "applied": "Übernommen:",
+    "counts": "{{attach}} an bestehende Touren, {{createTour}} neue Touren, {{duplicate}} schon vorhanden, {{error}} nicht lesbar",
+    "actions": {
+      "attach": "kommt zu „{{name}}“",
+      "createTour": "wird neue Tour „{{name}}“",
+      "duplicate": "schon vorhanden"
+    },
+    "errors": {
+      "unreadable": "keine lesbare GPX-, TCX- oder FIT-Datei",
+      "noTimestamps": "ohne Zeitstempel – nicht einzuordnen",
+      "roadtripNotFound": "gehört zum Roadtrip „{{name}}“, der hier fehlt – erst die Tabelle einlesen",
+      "ambiguousTour": "mehrere Touren heißen „{{name}}“ – nicht eindeutig"
+    },
+    "more": "… und {{count}} weitere",
+    "apply": "{{count}} übernehmen",
+    "failed": "Die Dateien konnten nicht eingelesen werden.",
+    "tooLarge": "Das ZIP ist zu groß (höchstens 500 Dateien, 200 MB entpackt, 15 MB je Aufzeichnung)."
   }
 }

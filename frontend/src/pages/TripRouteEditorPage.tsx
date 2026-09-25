@@ -18,6 +18,8 @@ import { useTranslation } from "../hooks/useTranslation";
 import { useTourTracks } from "../hooks/useTourTracks";
 import { tripsApi } from "../lib/api";
 import { toursApi, type TourPointInput } from "../lib/api/tours";
+import { trackArchiveApi } from "../lib/api/trackArchive";
+import { downloadBlob } from "../lib/export";
 import { dawarichFailureKey, dawarichFailureKind } from "../lib/api/dawarich";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { findCoveringTrackId } from "../lib/trackCoverage";
@@ -511,6 +513,21 @@ export default function TripRouteEditorPage(): JSX.Element {
     [deleteTrack, addToast, t]
   );
 
+  const handleDownloadTrack = useCallback(
+    (track: TourTrackMeta): void => {
+      if (!routeId) return;
+      void (async (): Promise<void> => {
+        try {
+          const file = await trackArchiveApi.downloadTrack(id, routeId, track.id);
+          downloadBlob(file.blob, file.filename);
+        } catch (err) {
+          addToast("error", apiErrorMessage(err) ?? t("roadtrips:trackArchive.downloadFailed"));
+        }
+      })();
+    },
+    [id, routeId, addToast, t]
+  );
+
   /**
    * Pulls the section's own date span from Dawarich (an empty body — the
    * server derives the window from the section's stops). Three failure
@@ -693,6 +710,7 @@ export default function TripRouteEditorPage(): JSX.Element {
             uploading={trackUploading}
             onUpload={handleUploadTrack}
             onDelete={handleDeleteTrack}
+            onDownload={handleDownloadTrack}
             pulling={trackPulling}
             dawarichAvailable={dawarichAvailable}
             onPullDawarich={handlePullDawarich}

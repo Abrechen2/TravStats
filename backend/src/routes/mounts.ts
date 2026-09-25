@@ -55,6 +55,7 @@ import tourRouteRoutes from "./trips/tourRoutes";
 import tourLegRoutes from "./trips/tourLegs";
 import tourRoutingRoutes from "./trips/tourRouting";
 import tourTrackRoutes from "./trips/tourTracks";
+import tourTrackArchiveRoutes from "./trips/tourTrackArchive";
 import tourIndexRoutes from "./trips/tourIndex";
 import tourPointRoutes from "./trips/tourPoints";
 import tourKindRoutes from "./trips/tourKind";
@@ -185,6 +186,8 @@ export const apiMounts: ApiMount[] = [
   // written before `tourRouting` existed; this ordering is a controller
   // ruling made when `tourRouting` landed first.
   { id: "tourTracks", base: "/api/v1", router: tourTrackRoutes },
+  // Recordings as GPX files and ZIPs, out and back in (2.7).
+  { id: "tourTrackArchive", base: "/api/v1", router: tourTrackArchiveRoutes },
   // Dashboard-wide tour listing + batch geometry (task 1, phase 4) — NOT
   // trip-scoped like the four satellites above, so it cannot reuse their
   // `/trips/:id/...` prefix pattern for ownership; mounted last among the

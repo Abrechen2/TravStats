@@ -16,6 +16,8 @@ interface Props {
   uploading: boolean;
   onUpload: (file: File) => void;
   onDelete: (track: TourTrackMeta) => void;
+  /** Saves the recording as a GPX file (2.7) — absent where there is no page to host it. */
+  onDownload?: (track: TourTrackMeta) => void;
   pulling: boolean;
   /** Whether a Dawarich connection is configured and usable right now.
    *  Gates the "pull from Dawarich" button the same way `routingAvailable`
@@ -73,6 +75,7 @@ export default function TourTrackList({
   uploading,
   onUpload,
   onDelete,
+  onDownload,
   pulling,
   dawarichAvailable,
   onPullDawarich,
@@ -177,6 +180,15 @@ export default function TourTrackList({
               <span className="text-(--text-muted)">{formatDistanceKm(track.distanceKm)} km</span>
               {track.ascentM !== null && (
                 <span className="text-(--text-muted)">↑ {Math.round(track.ascentM)} m</span>
+              )}
+              {onDownload && (
+                <button
+                  type="button"
+                  className="text-xs underline"
+                  onClick={() => onDownload(track)}
+                >
+                  {t("roadtrips:trackArchive.downloadOne")}
+                </button>
               )}
               <button
                 type="button"

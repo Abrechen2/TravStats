@@ -348,5 +348,36 @@
     "distance": "Distance now: {{km}} km",
     "apply": "Apply",
     "error": "The leg could not be saved."
+  },
+  "trackArchive": {
+    "downloadOne": "As GPX",
+    "downloadFailed": "The recording could not be downloaded.",
+    "exportTitle": "Recordings as GPX",
+    "exportDescription": "Every recording of your tours and roadtrips as its own GPX file, together in one ZIP. Other programs read the track; when you read it back in, TravStats also restores distance, climb and moving time as they were measured.",
+    "exportButton": "Download ZIP",
+    "exportRunning": "Packing …",
+    "exportFailed": "The ZIP could not be created.",
+    "importTitle": "Read GPX or ZIP",
+    "importDescription": "GPX, TCX or FIT files, or a ZIP of them. A file from TravStats returns to its tour (or creates it); any other file becomes a day tour of its own. A recording that is already there is not added twice. Roadtrips come from the spreadsheet – read that first.",
+    "choose": "Choose files",
+    "checking": "Checking …",
+    "preview": "Preview – nothing saved yet:",
+    "applied": "Applied:",
+    "counts": "{{attach}} to existing tours, {{createTour}} new tours, {{duplicate}} already there, {{error}} unreadable",
+    "actions": {
+      "attach": "joins “{{name}}”",
+      "createTour": "becomes new tour “{{name}}”",
+      "duplicate": "already there"
+    },
+    "errors": {
+      "unreadable": "not a readable GPX, TCX or FIT file",
+      "noTimestamps": "no timestamps – cannot be placed",
+      "roadtripNotFound": "belongs to the roadtrip “{{name}}”, which is missing here – read the spreadsheet first",
+      "ambiguousTour": "several tours are called “{{name}}” – not unique"
+    },
+    "more": "… and {{count}} more",
+    "apply": "Apply {{count}}",
+    "failed": "The files could not be read.",
+    "tooLarge": "The ZIP is too large (at most 500 files, 200 MB unpacked, 15 MB per recording)."
   }
 }

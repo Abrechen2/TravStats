@@ -261,6 +261,21 @@ export const lodgingImportLimiter = rateLimit({
 });
 
 /**
+ * Per-user limit for the recording archive (`/track-archive`): the ZIP of
+ * every recording is built in memory from every track's line, and an import
+ * parses up to a few hundred files. Thirty in a quarter of an hour covers a
+ * person trying, checking the preview and applying several times over.
+ */
+export const trackArchiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: patAwareMax(30),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many recording archive requests, please try again later" },
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Rate limiter for flight creation
  * Allows 20 flight creations per hour per IP
  */

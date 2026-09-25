@@ -14,6 +14,7 @@ import DefaultsSection from "../../components/Settings/DefaultsSection";
 import NotificationsSection from "../../components/Settings/NotificationsSection";
 import BackupSection from "../../components/Settings/BackupSection";
 import SpreadsheetSection from "../../components/Settings/SpreadsheetSection";
+import TrackArchiveSection from "../../components/Settings/TrackArchiveSection";
 import AutoUpdateSection from "../../components/Settings/AutoUpdateSection";
 import EnrichmentSection from "../../components/Settings/EnrichmentSection";
 import ApiKeysSection from "../../components/Settings/ApiKeysSection";
@@ -99,6 +100,8 @@ export default function SettingsSectionSwitch({
               out" — but they are not the same thing: a backup restores an
               instance, the spreadsheet is for reading and editing. */}
           <SpreadsheetSection />
+          {/* The recordings the spreadsheet cannot carry. */}
+          <TrackArchiveSection />
         </BackupSection>
       );
     case "import":
