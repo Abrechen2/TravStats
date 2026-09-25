@@ -33,7 +33,7 @@ import { getCountryResolver, type CountryResolver } from "../geo/countryFromCoor
 import { readStoredLine, tracedLengthKm } from "../rail/railGeometry";
 import { instantToWallClock, mergeRailJourney, withTracedDistance } from "../rail/railJourneyWrite";
 import * as cell from "./cells";
-import { MATCHED, type Ctx, definedOnly, errorRow, keepDespiteError, norm } from "./context";
+import { MATCHED, type Ctx, definedOnly, errorRow, keepDespiteError } from "./context";
 import { pruneMissing } from "./prune";
 import { resolveTrip } from "./references";
 import { resolveStation, sameStation, stationCells, type RailEnd } from "./railStations";
