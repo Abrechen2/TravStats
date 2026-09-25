@@ -330,4 +330,63 @@ describe("MembershipManager — unticking the chain you are on", () => {
 
     expect(screen.queryByTestId("membership-leaves-chain")).not.toBeInTheDocument();
   });
+
+  describe("suggestions from the catalogue and the user's own cards", () => {
+    const catalog = [
+      { id: 1, name: "Marriott", loyaltyProgram: "Marriott Bonvoy" },
+      { id: 3, name: "Hilton", loyaltyProgram: "Hilton Honors" },
+      { id: 4, name: "Conrad", loyaltyProgram: "Hilton Honors" },
+      { id: 5, name: "Motel One", loyaltyProgram: null },
+    ];
+
+    it("offers the catalogue's programmes the user holds no card for", async () => {
+      render(<MembershipManager chainCatalog={catalog} />);
+      await userEvent.click(await screen.findByText("lodging:membership.add"));
+
+      const options = Array.from(
+        screen.getByTestId("membership-program-options").querySelectorAll("option")
+      ).map((o) => o.getAttribute("value"));
+      // Marriott Bonvoy is already a card; a second one would be a 409.
+      expect(options).toEqual(["Hilton Honors"]);
+    });
+
+    it("ticks a picked programme's chains, and takes them back when the name moves on", async () => {
+      vi.mocked(createMembership).mockResolvedValue({ ...existingMembership, id: "m2" });
+      render(<MembershipManager chainCatalog={catalog} />);
+      await userEvent.click(await screen.findByText("lodging:membership.add"));
+      const name = screen.getByLabelText("lodging:field.programName");
+
+      await userEvent.type(name, "Hilton Honors");
+      expect(screen.getByRole("checkbox", { name: "Hilton" })).toBeChecked();
+      expect(screen.getByRole("checkbox", { name: "Conrad" })).toBeChecked();
+
+      await userEvent.type(name, " Diamond");
+      expect(screen.getByRole("checkbox", { name: "Hilton" })).not.toBeChecked();
+
+      await userEvent.clear(name);
+      await userEvent.type(name, "Hilton Honors");
+      await userEvent.click(screen.getByRole("checkbox", { name: "Conrad" }));
+      await userEvent.type(name, "!");
+      // Unticked by hand: the user's selection now stands.
+      expect(screen.getByRole("checkbox", { name: "Hilton" })).toBeChecked();
+      expect(screen.getByRole("checkbox", { name: "Conrad" })).not.toBeChecked();
+    });
+
+    it("offers the tiers already written on the user's cards", async () => {
+      vi.mocked(createMembership).mockResolvedValue({ ...existingMembership, id: "m2" });
+      render(<MembershipManager chainCatalog={catalog} />);
+      await userEvent.click(await screen.findByText("lodging:membership.add"));
+      await userEvent.type(screen.getByLabelText("lodging:field.programName"), "Hilton Honors");
+      await userEvent.click(screen.getByText("Gold", { selector: "button" }));
+      await userEvent.click(screen.getByText("common:buttons.save"));
+
+      await waitFor(() =>
+        expect(createMembership).toHaveBeenCalledWith({
+          programName: "Hilton Honors",
+          tier: "Gold",
+          chainIds: [3, 4],
+        })
+      );
+    });
+  });
 });

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useId, useRef, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import {
@@ -9,6 +9,13 @@ import {
 } from "../../lib/api/lodging";
 import { logger } from "../../lib/logger";
 import type { LodgingChainRef, LodgingMembership, MembershipInput } from "../../types/lodging";
+import SuggestionChips from "../common/SuggestionChips";
+import {
+  chainIdsOfProgram,
+  programSuggestions,
+  tierSuggestions,
+  type CatalogueChain,
+} from "./membershipSuggestions";
 
 interface MembershipManagerProps {
   /** Fired after every successful load/create/update/delete with the fresh list. */
@@ -38,8 +45,11 @@ interface MembershipManagerProps {
    * at all (saves `chainIds: []`), and editing a card is untick-only, with
    * no way to add a chain back. Ignored when `scopeChain` is set — the chain
    * page keeps its existing `suggestedChains`-based list unchanged.
+   *
+   * Chains that carry their `loyaltyProgram` also feed the programme-name
+   * suggestions, and picking such a programme ticks its chains.
    */
-  chainCatalog?: LodgingChainRef[];
+  chainCatalog?: CatalogueChain[];
   /**
    * Extra content rendered inside each row, below the programme name/tier
    * line — e.g. the settings overview's coverage summary and hotel-coverage
@@ -108,6 +118,10 @@ export function MembershipManager({
   // The existing card a duplicate-name 409 clashed with, when one was found —
   // offers "extend this card to cover the chain too" instead of a dead end.
   const [clash, setClash] = useState<LodgingMembership | null>(null);
+  const programListId = useId();
+  // The chains a picked catalogue programme ticked — replaced while they are
+  // still exactly that, never once the user has ticked or unticked by hand.
+  const autoTicked = useRef<number[] | null>(null);
 
   const load = async (): Promise<void> => {
     setLoading(true);
@@ -167,6 +181,7 @@ export function MembershipManager({
   })();
 
   const startCreate = (): void => {
+    autoTicked.current = null;
     setEditingId("new");
     setProgramName(scopeChain?.suggestedProgramName ?? "");
     setMembershipNumber("");
@@ -188,7 +203,21 @@ export function MembershipManager({
     setClash(null);
   };
 
+  const changeProgramName = (value: string): void => {
+    setProgramName(value);
+    if (scopeChain !== undefined || editingId !== "new") return;
+    const ours =
+      autoTicked.current !== null &&
+      autoTicked.current.length === chainIds.length &&
+      autoTicked.current.every((id) => chainIds.includes(id));
+    if (chainIds.length > 0 && !ours) return;
+    const next = chainIdsOfProgram(chainCatalog ?? [], value);
+    autoTicked.current = next.length > 0 ? next : null;
+    setChainIds(next);
+  };
+
   const toggleChain = (chainId: number): void => {
+    autoTicked.current = null;
     setChainIds((prev) =>
       prev.includes(chainId) ? prev.filter((id) => id !== chainId) : [...prev, chainId]
     );
@@ -284,6 +313,15 @@ export function MembershipManager({
       setLoadError(t("lodging:membership.deleteError"));
     }
   };
+
+  // Catalogue programmes the user has no card for yet, and the tiers written
+  // on their cards (status names repeat across programmes: "Gold", "Platinum").
+  const programOptions = programSuggestions(
+    chainCatalog ?? [],
+    memberships,
+    editingId === "new" ? null : editingId
+  );
+  const tierOptions = tierSuggestions(memberships);
 
   const addButton =
     editingId === null && !hasFilteredMembership ? (
@@ -383,9 +421,17 @@ export function MembershipManager({
             placeholder={t("lodging:field.programName")}
             data-testid="membership-name-input"
             value={programName}
-            onChange={(e) => setProgramName(e.target.value)}
+            onChange={(e) => changeProgramName(e.target.value)}
             className="input"
+            list={programOptions.length > 0 ? programListId : undefined}
           />
+          {programOptions.length > 0 && (
+            <datalist id={programListId} data-testid="membership-program-options">
+              {programOptions.map((program) => (
+                <option key={program} value={program} />
+              ))}
+            </datalist>
+          )}
           <div className="grid grid-cols-2 gap-2">
             <input
               aria-label={t("lodging:field.membershipNumber")}
@@ -394,13 +440,21 @@ export function MembershipManager({
               onChange={(e) => setMembershipNumber(e.target.value)}
               className="input"
             />
-            <input
-              aria-label={t("lodging:field.tier")}
-              placeholder={t("lodging:field.tier")}
-              value={tier}
-              onChange={(e) => setTier(e.target.value)}
-              className="input"
-            />
+            <div>
+              <input
+                aria-label={t("lodging:field.tier")}
+                placeholder={t("lodging:field.tier")}
+                value={tier}
+                onChange={(e) => setTier(e.target.value)}
+                className="input"
+              />
+              <SuggestionChips
+                value={tier}
+                suggestions={tierOptions}
+                onPick={setTier}
+                fieldLabel={t("lodging:field.tier")}
+              />
+            </div>
           </div>
           {chainChoices.length > 0 && (
             <fieldset data-testid="membership-chain-choices" className="mt-1">

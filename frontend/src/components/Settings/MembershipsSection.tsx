@@ -5,7 +5,7 @@ import { SectionCard, SectionTitle } from "./SettingsShared";
 import { MembershipManager } from "../lodging/MembershipManager";
 import { listChains, listLodgings, updateMembership } from "../../lib/api/lodging";
 import { logger } from "../../lib/logger";
-import type { Lodging, LodgingChainRef, LodgingMembership } from "../../types/lodging";
+import type { Lodging, LodgingChain, LodgingMembership } from "../../types/lodging";
 
 /**
  * The one place every loyalty card is visible.
@@ -26,7 +26,8 @@ import type { Lodging, LodgingChainRef, LodgingMembership } from "../../types/lo
 export default function MembershipsSection(): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
-  const [chains, setChains] = useState<LodgingChainRef[]>([]);
+  // With `loyaltyProgram`: the manager offers the catalogue's programme names.
+  const [chains, setChains] = useState<LodgingChain[]>([]);
   const [openPicker, setOpenPicker] = useState<string | null>(null);
   const [reloadSignal, setReloadSignal] = useState<number | undefined>(undefined);
 
