@@ -470,5 +470,9 @@
   },
   "list": {
     "undated": "Undated"
+  },
+  "photoWindow": {
+    "title": "Photos from the trip",
+    "alt": "Photo from the trip"
   }
 }

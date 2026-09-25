@@ -31,6 +31,7 @@ import DocumentsSection from "../components/documents/DocumentsSection";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
+import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 
 const fmtDate = (iso: string | null): string => {
   if (!iso) return "—";
@@ -269,6 +270,7 @@ export default function CruiseDetailPage(): JSX.Element {
               </span>
             </DetailSection>
           )}
+          {cruise.tripId && <TripPhotoWindowStrip entry="cruises" id={cruise.id} />}
 
           <DetailSection title={t("detail.route")}>
             <CruiseRouteMap cruise={cruise} />

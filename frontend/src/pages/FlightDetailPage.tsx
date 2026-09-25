@@ -29,6 +29,7 @@ import { formatDurationWithEstimate } from "../lib/formatters";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { Flight, FlightInput, Trip } from "../types";
+import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 
 /**
  * Reading a flight without editing it.
@@ -355,6 +356,7 @@ export default function FlightDetailPage(): JSX.Element {
               </Link>
             </DetailSection>
           )}
+          {flight.tripId && <TripPhotoWindowStrip entry="flights" id={flight.id} />}
 
           <DetailSection
             title={t("flights:form.aircraft")}

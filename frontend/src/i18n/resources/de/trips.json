@@ -470,5 +470,9 @@
   },
   "list": {
     "undated": "Ohne Datum"
+  },
+  "photoWindow": {
+    "title": "Fotos aus der Reise",
+    "alt": "Foto aus der Reise"
   }
 }

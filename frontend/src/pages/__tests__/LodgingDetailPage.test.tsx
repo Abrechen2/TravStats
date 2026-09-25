@@ -25,6 +25,8 @@ vi.mock("../../hooks/useLodgingEntrySuggestions", () => ({
   }),
 }));
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
+// Fetches the trip photos taken at the house on mount; the network is refused here.
+vi.mock("../../components/common/TripPhotoWindowStrip", () => ({ default: () => null }));
 
 // The stay's delete dialog counts the kept originals that cascade with it.
 // The section above is stubbed out, so this mock serves the COUNT only.

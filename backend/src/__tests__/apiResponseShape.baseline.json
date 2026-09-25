@@ -133,6 +133,7 @@
     "ports.ts",
     "settings/profilePicture.ts",
     "ships.ts",
+    "tripPhotoWindows.ts",
     "upcoming.ts",
     "uploads.ts",
     "xlsxImport.ts"

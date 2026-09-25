@@ -99,6 +99,7 @@ import pairingRoutes from "./pairing";
 import appSettingsRoutes from "./appSettings";
 import geoRoutes from "./geo";
 import documentRoutes from "./documents";
+import tripPhotoWindowRoutes from "./tripPhotoWindows";
 
 export interface ApiMount {
   /** Mount path, always absolute and always under /api/v1. */
@@ -133,6 +134,9 @@ export const apiMounts: ApiMount[] = [
   // its own file; mounted first so the documents router never sees the path.
   { id: "documents.extractValues", base: "/api/v1", router: documentExtractValueRoutes },
   { id: "documents", base: "/api/v1", router: documentRoutes },
+  // Trip photos on a stay, a flight and a cruise — read-only, on /api/v1 with
+  // per-route middleware; the extra path segment keeps it off the `/:id` routes.
+  { id: "tripPhotoWindows", base: "/api/v1", router: tripPhotoWindowRoutes },
   // Before `flights`, whose `GET /:id` would otherwise take the word
   // "entry-suggestions" for a flight id.
   {

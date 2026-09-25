@@ -1,7 +1,8 @@
 /**
  * Photographs offered to a place visit and to a place — the suggestion strip,
- * the link a pick becomes, and the place gallery's cover. Own module so
- * `places.ts` stays well inside the line limit.
+ * the link a pick becomes, and the place gallery's cover — and the trip photos
+ * a stay, a flight and a cruise show by when and where they were taken. Own
+ * module so `places.ts` stays well inside the line limit.
  *
  * The rule across all of it: a library id is served or linked only after the
  * server found it itself, in a search against the caller's own connection.
@@ -144,4 +145,65 @@ registry.registerPath({
     400: badInput,
     404: notFound,
   },
+});
+
+const windowPhotos = {
+  200: {
+    description: "Photos, oldest first, at most 48",
+    content: {
+      "application/json": {
+        schema: z.object({
+          success: z.boolean(),
+          data: z.object({
+            photos: z.array(
+              z.object({
+                id: uuid,
+                url: z.string(),
+                caption: z.string().nullable(),
+                takenAt: z.string().nullable(),
+              })
+            ),
+          }),
+        }),
+      },
+    },
+  },
+  400: badInput,
+  404: notFound,
+};
+
+registry.registerPath({
+  method: "get",
+  path: "/lodging/{id}/trip-photos",
+  summary: "Trip photos taken at this lodging",
+  description:
+    "The caller's trip photos taken on a day of one of the lodging's stays (in the lodging's " +
+    "time zone) within 500 m of it. Read-only and computed per request; none without coordinates.",
+  tags: ["Lodging"],
+  request: { params: z.object({ id: uuid }) },
+  responses: windowPhotos,
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/flights/{id}/trip-photos",
+  summary: "Trip photos taken during this flight",
+  description:
+    "Photos of the flight's trip taken between departure and arrival. None when the flight is " +
+    "on no trip or its times are not real instants (a wall clock stored as UTC).",
+  tags: ["Flights"],
+  request: { params: z.object({ id: uuid }) },
+  responses: windowPhotos,
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/cruises/{id}/trip-photos",
+  summary: "Trip photos taken during this cruise",
+  description:
+    "Photos of the cruise's trip taken from its first to its last day, compared by UTC day. " +
+    "None when the cruise is on no trip.",
+  tags: ["Cruises"],
+  request: { params: z.object({ id: uuid }) },
+  responses: windowPhotos,
 });
