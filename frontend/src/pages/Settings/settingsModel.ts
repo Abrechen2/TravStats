@@ -42,7 +42,9 @@ export type SettingsSectionId =
   | "autoupdate"
   | "cruisePreferences"
   | "lodgingPreferences"
-  | "lodgingMemberships";
+  | "lodgingMemberships"
+  | "flightMemberships"
+  | "cruiseMemberships";
 
 export interface SettingsGroup {
   id: SettingsGroupId;
@@ -97,13 +99,20 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
     id: "flight",
     labelKey: "settings:tabs.flight",
     domain: "flight",
-    sections: ["homeAirport", "defaults", "features", "enrichment", "autoupdate"],
+    sections: [
+      "homeAirport",
+      "defaults",
+      "features",
+      "enrichment",
+      "autoupdate",
+      "flightMemberships",
+    ],
   },
   {
     id: "cruise",
     labelKey: "settings:tabs.cruise",
     domain: "cruise",
-    sections: ["cruisePreferences"],
+    sections: ["cruisePreferences", "cruiseMemberships"],
   },
   {
     id: "lodging",

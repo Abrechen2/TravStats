@@ -102,6 +102,10 @@ export const LUCIDE = {
     ["path", { d: "M9 3v18" }],
     ["path", { d: "M15 3v18" }],
   ],
+  "credit-card": [
+    ["rect", { width: "20", height: "14", x: "2", y: "5", rx: "2" }],
+    ["line", { x1: "2", x2: "22", y1: "10", y2: "10" }],
+  ],
   database: [
     ["ellipse", { cx: "12", cy: "5", rx: "9", ry: "3" }],
     ["path", { d: "M3 5V19A9 3 0 0 0 21 19V5" }],

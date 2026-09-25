@@ -30,4 +30,6 @@ export const SECTION_LABEL_KEY: Record<SettingsSectionId, string> = {
   cruisePreferences: "settings:cruisePreferences.title",
   lodgingPreferences: "settings:lodgingPreferences.geocoder.title",
   lodgingMemberships: "settings:memberships.title",
+  flightMemberships: "settings:memberships.title",
+  cruiseMemberships: "settings:memberships.title",
 };

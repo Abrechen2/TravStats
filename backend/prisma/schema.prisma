@@ -99,7 +99,7 @@ model User {
   pairingCodes           PairingCode[]
   lodgings               Lodging[]
   lodgingStays           LodgingStay[]
-  lodgingMemberships     LodgingMembership[]
+  loyaltyMemberships     LoyaltyMembership[]
   lodgingChains          LodgingChain[]
   places                 Place[]
   placeVisits            PlaceVisit[]
@@ -2199,7 +2199,7 @@ model LodgingStay {
   user       User               @relation(fields: [userId], references: [id], onDelete: Cascade)
   trip       Trip?              @relation(fields: [tripId], references: [id], onDelete: SetNull)
   booking    Booking?           @relation(fields: [bookingId], references: [id], onDelete: SetNull)
-  membership LodgingMembership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
+  membership LoyaltyMembership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
   batch      ImportBatch?       @relation(fields: [batchId], references: [id], onDelete: SetNull)
 
   /// Roadtrip stations that slept here. The stay does not own them.
@@ -2247,23 +2247,68 @@ model LodgingChain {
   @@map("lodging_chains")
 }
 
-model LodgingMembership {
+/// One loyalty card of the user's — a hotel programme, a frequent-flyer
+/// programme or a cruise line's club. It was `LodgingMembership` until 2.7,
+/// when the owner asked for one page holding every programme (2026-09-25).
+///
+/// ONE table for all three domains rather than one per domain, because the
+/// card is the same thing in each: a name, a number, a status. What differs is
+/// only what the card COVERS, and each domain keeps its own coverage shape:
+/// lodging links chains and hotels by id (the two link tables below), a
+/// flight card lists IATA codes (a code is the airline's identity —
+/// `shared/airlineNormalize.ts`), a cruise card lists cruise-line names (there
+/// is no cruise-line catalogue; a cruise names its line as text). A column for
+/// another domain's coverage stays empty, and the write path refuses to fill
+/// it (`schemas/loyalty.ts`).
+///
+/// `domain` is a closed vocabulary — `LOYALTY_DOMAINS` in
+/// `shared/domains.ts`, held by a CHECK constraint in the migration. It
+/// is fixed at creation: moving a card between domains would strand its
+/// coverage and every stay that names it.
+model LoyaltyMembership {
   id               String   @id @default(uuid())
   userId           String   @map("user_id")
+  domain           String   @default("lodging")
   programName      String   @map("program_name")
   membershipNumber String?  @map("membership_number")
+  /// The status held TODAY. Earlier statuses, with dates, are `tierPeriods`.
   tier             String?
+  notes            String?
+  airlineCodes     String[] @default([]) @map("airline_codes")
+  cruiseLines      String[] @default([]) @map("cruise_lines")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  user     User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stays    LodgingStay[]
-  chains   LodgingMembershipChain[]
-  lodgings LodgingMembershipLodging[]
+  user        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stays       LodgingStay[]
+  chains      LodgingMembershipChain[]
+  lodgings    LodgingMembershipLodging[]
+  tierPeriods LoyaltyTierPeriod[]
 
-  @@unique([userId, programName])
+  @@unique([userId, domain, programName])
   @@index([userId])
-  @@map("lodging_memberships")
+  @@map("loyalty_memberships")
+}
+
+/// A status the card held, and when (loyalty-status-history-dated).
+///
+/// The lodging statistics printed today's tier next to every year until
+/// `d0fb0be1` stopped it — "Gold · 2019" for a status that may not have
+/// existed then. A dated row is what lets a year name the tier it truly had.
+/// `validUntil` null means "still held". Periods may overlap (a status match
+/// running alongside an earned tier is real), so nothing here forbids it.
+model LoyaltyTierPeriod {
+  id           String    @id @default(uuid())
+  membershipId String    @map("membership_id")
+  tier         String
+  validFrom    DateTime  @map("valid_from") @db.Date
+  validUntil   DateTime? @map("valid_until") @db.Date
+  createdAt    DateTime  @default(now()) @map("created_at")
+
+  membership LoyaltyMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+
+  @@index([membershipId])
+  @@map("loyalty_tier_periods")
 }
 
 /// Which chains a membership covers, linked BY ID.
@@ -2287,7 +2332,7 @@ model LodgingMembershipChain {
   chainId      Int      @map("chain_id")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  membership LodgingMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  membership LoyaltyMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
   chain      LodgingChain      @relation(fields: [chainId], references: [id], onDelete: Cascade)
 
   @@id([membershipId, chainId])
@@ -2312,7 +2357,7 @@ model LodgingMembershipLodging {
   lodgingId    String   @map("lodging_id")
   createdAt    DateTime @default(now()) @map("created_at")
 
-  membership LodgingMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
+  membership LoyaltyMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
   lodging    Lodging           @relation(fields: [lodgingId], references: [id], onDelete: Cascade)
 
   @@id([membershipId, lodgingId])

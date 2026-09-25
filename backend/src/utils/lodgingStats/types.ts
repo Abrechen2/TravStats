@@ -7,6 +7,8 @@
  * other field crosses unchanged.
  */
 
+import type { DatedTier } from "../../shared/loyaltyTiers";
+
 export interface LodgingStayData {
   lodgingId: string;
   /** Shown next to a superlative ("cheapest night: …"), so the name travels with the stay. */
@@ -51,6 +53,11 @@ export interface LodgingStayData {
   programName: string | null;
   /** The card's CURRENT tier, travelling with the name — a status figure without it says half. */
   membershipTier: string | null;
+  /**
+   * The card's dated status history, from which a year's true tier is read
+   * (`shared/loyaltyTiers.ts`). Null or absent: the card has none.
+   */
+  membershipTierPeriods?: DatedTier[] | null;
 }
 
 /**
@@ -321,6 +328,12 @@ export interface LodgingProgrammeYear {
   programme: string;
   /** The card's current tier, not the tier held during that year. */
   tier: string | null;
+  /**
+   * The tiers the card held during THIS year, from its dated history, in the
+   * order reached. Null when the card has no dated history — unknown, which is
+   * not the same as `[]`, "the history says no status that year".
+   */
+  tiersHeld: string[] | null;
   year: string;
   nights: number;
   stays: number;

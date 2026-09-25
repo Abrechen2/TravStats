@@ -21,7 +21,13 @@ function backfillStatement(): string {
   const sql = fs.readFileSync(MIGRATION, "utf8");
   const match = sql.match(/WITH users_per_chain[\s\S]*?is_user_added = true;/);
   if (!match) throw new Error("backfill statement not found in the migration");
-  return match[0];
+  // The loyalty migration that sorts after this one (20260925230000) renames
+  // the table the statement joins; the statement ran against the old name in
+  // the migration chain, and runs against today's name here.
+  if (!match[0].includes('"lodging_memberships"')) {
+    throw new Error("backfill statement no longer joins lodging_memberships — revisit this test");
+  }
+  return match[0].replace(/"lodging_memberships"/g, '"loyalty_memberships"');
 }
 
 describe("per-user chains migration — who a user-added chain is given to", () => {
@@ -56,7 +62,7 @@ describe("per-user chains migration — who a user-added chain is given to", () 
     await lodge(bId, ids.shared);
     await lodge(aId, ids.seeded);
     await lodge(aId, ids.lodgeAMemberB);
-    await prisma.lodgingMembership.create({
+    await prisma.loyaltyMembership.create({
       data: {
         userId: bId,
         programName: `P ${stamp}`,

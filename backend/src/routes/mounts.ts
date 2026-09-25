@@ -94,6 +94,7 @@ import placeListsRouter from "./placeLists";
 import curatedListsRouter from "./placeLists/curated";
 import lodgingChainsRouter from "./lodgingChains";
 import lodgingMembershipsRouter from "./lodgingMemberships";
+import loyaltyMembershipsRouter from "./loyaltyMemberships";
 import lodgingImportRoutes from "./lodgingImport";
 import placeImportRoutes from "./placeImport";
 import importBatchRoutes from "./importBatches";
@@ -303,6 +304,12 @@ export const apiMounts: ApiMount[] = [
     id: "lodgingMemberships",
     base: "/api/v1/lodging-memberships",
     router: lodgingMembershipsRouter,
+  },
+  // Every domain's loyalty cards (2.7). Same rows as lodging-memberships.
+  {
+    id: "loyaltyMemberships",
+    base: "/api/v1/loyalty-memberships",
+    router: loyaltyMembershipsRouter,
   },
   { id: "lodgingImport", base: "/api/v1/lodging-import", router: lodgingImportRoutes },
   { id: "placeImport", base: "/api/v1/place-import", router: placeImportRoutes },
