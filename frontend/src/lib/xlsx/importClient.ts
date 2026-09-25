@@ -9,7 +9,7 @@
  */
 
 import api from "./../api/client";
-import { parseWorkbook } from "./workbook";
+import { parseWorkbook, type ParsedSheet } from "./workbook";
 import {
   cruiseSheet,
   cruiseStopSheet,
@@ -37,8 +37,10 @@ export interface RowOutcome {
   message?: string;
   /** Non-fatal remarks, e.g. `trip_not_linked`. */
   notes?: string[];
-  /** Cells the column does not know — left empty, the row still applied. */
-  dropped?: { field: string; value: string }[];
+  /** Cells the column does not know — the row is still applied. `kept` when
+   *  the row resolved to an existing entry, whose stored value then stays;
+   *  absent on a create, where the field is left empty. */
+  dropped?: { field: string; value: string; kept?: true }[];
 }
 
 export interface SheetOutcome {
@@ -85,10 +87,7 @@ export function importableSpecs(t: T): SheetSpec<never>[] {
 }
 
 /** Read the workbook into the payload shape the server expects. */
-export async function readWorkbookForImport(
-  t: T,
-  file: File
-): Promise<{ key: string; rows: Record<string, string>[] }[]> {
+export async function readWorkbookForImport(t: T, file: File): Promise<ParsedSheet[]> {
   const buffer = await file.arrayBuffer();
   const parsed = await parseWorkbook(buffer, importableSpecs(t));
   return parsed.filter((sheet) => sheet.rows.length > 0);
@@ -115,7 +114,7 @@ export class ImportRefused extends Error {
 }
 
 export async function sendImport(
-  sheets: { key: string; rows: Record<string, string>[] }[],
+  sheets: ParsedSheet[],
   dryRun: boolean,
   mode: ImportMode = "merge"
 ): Promise<ImportOutcome> {

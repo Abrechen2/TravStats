@@ -161,6 +161,7 @@
       "exists": "already there"
     },
     "droppedValue": "{{field}} “{{value}}” unknown — left empty",
+    "droppedValueKept": "{{field}} “{{value}}” unknown — existing value kept",
     "notes": {
       "trip_not_linked": "trip not found in this account — imported without a trip",
       "port_not_found": "port not in the catalogue — left empty",

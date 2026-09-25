@@ -31,6 +31,7 @@ import {
 import { pruneMissing } from "./prune";
 import { resolveParent } from "./references";
 import {
+  sheetRowNumber,
   summarise,
   type DroppedValue,
   type IncomingSheet,
@@ -72,8 +73,7 @@ export async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<Shee
   const seen = new Set<string>();
 
   for (const [index, raw] of sheet.rows.entries()) {
-    // +2: one for 1-based rows, one for the header. Matches what Excel shows.
-    const rowNo = index + 2;
+    const rowNo = sheetRowNumber(sheet, index);
     const label = cell.text(raw.name) ?? `#${rowNo}`;
     const fileId = cell.text(raw.id);
 
@@ -198,7 +198,7 @@ export async function importPlaceVisits(sheet: IncomingSheet, ctx: Ctx): Promise
   const seen = new Set<string>();
 
   for (const [index, raw] of sheet.rows.entries()) {
-    const rowNo = index + 2;
+    const rowNo = sheetRowNumber(sheet, index);
     const fileId = cell.text(raw.id);
     const label = cell.text(raw.placeId) ?? `#${rowNo}`;
 

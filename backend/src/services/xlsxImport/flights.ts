@@ -23,6 +23,7 @@ import { MATCHED, type Ctx, dayRange, definedOnly, errorRow, keepDespiteError } 
 import { pruneMissing } from "./prune";
 import { resolveTrip } from "./references";
 import {
+  sheetRowNumber,
   summarise,
   type DroppedValue,
   type IncomingSheet,
@@ -79,7 +80,7 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
   const seen = new Set<string>();
 
   for (const [index, raw] of sheet.rows.entries()) {
-    const rowNo = index + 2;
+    const rowNo = sheetRowNumber(sheet, index);
     const fileId = cell.text(raw.id);
     const airline = cell.text(raw.airline);
     const flightNumber = cell.text(raw.flightNumber);

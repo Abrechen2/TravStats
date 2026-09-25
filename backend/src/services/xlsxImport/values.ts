@@ -15,7 +15,7 @@
  */
 
 import * as cell from "./cells";
-import type { DroppedValue } from "./types";
+import type { DroppedValue, RowOutcome } from "./types";
 
 /**
  * The enum value a cell names, or undefined (blank, or unknown and recorded in
@@ -36,6 +36,21 @@ export function enumCell<T extends string>(
   if (hit) return hit;
   dropped.push({ field, value });
   return undefined;
+}
+
+/**
+ * Mark every dropped cell of a row that resolved to an existing entry as
+ * `kept`. Every update path writes through `definedOnly`, so an unknown enum
+ * cell (undefined) never reaches the UPDATE and the stored value survives —
+ * only a create leaves the field empty. Done once over a sheet's outcomes so
+ * no handler can forget it.
+ */
+export function markKeptDrops(rows: RowOutcome[]): RowOutcome[] {
+  return rows.map((r) =>
+    r.dropped && (r.action === "update" || r.action === "skip")
+      ? { ...r, dropped: r.dropped.map((d) => ({ ...d, kept: true as const })) }
+      : r
+  );
 }
 
 /** `dropped` for a row outcome — absent rather than an empty list. */

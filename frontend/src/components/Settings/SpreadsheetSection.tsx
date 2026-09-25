@@ -26,6 +26,7 @@ import {
   type ImportOutcome,
   type SheetOutcome,
 } from "../../lib/xlsx/importClient";
+import type { ParsedSheet } from "../../lib/xlsx/workbook";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { Icon } from "../ui/Icon";
 import { SettingRow } from "../ui/SettingRow";
@@ -66,7 +67,7 @@ function SheetRows({ sheet, t }: { sheet: SheetOutcome; t: Translate }): JSX.Ele
               <span key={`dropped-${d.field}`} style={{ color: "var(--text-muted)" }}>
                 {" "}
                 ·{" "}
-                {t("xlsx:import.droppedValue", {
+                {t(d.kept ? "xlsx:import.droppedValueKept" : "xlsx:import.droppedValue", {
                   field: t(`xlsx:columns.${d.field}`, { defaultValue: d.field }),
                   value: d.value,
                 })}
@@ -92,7 +93,7 @@ type ImportStatus =
 
 /** Sheets held for the confirm step, so applying re-sends exactly what was
  *  previewed rather than re-reading a file that may have changed on disk. */
-type Pending = { key: string; rows: Record<string, string>[] }[];
+type Pending = ParsedSheet[];
 
 export default function SpreadsheetSection(): JSX.Element {
   const { t, i18n } = useTranslation(["xlsx", "common"]);

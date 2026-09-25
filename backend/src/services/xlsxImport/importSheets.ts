@@ -32,6 +32,7 @@ import { importCruiseStops, importCruises } from "./cruises";
 import { importFlights } from "./flights";
 import { importLodging, importLodgingStays } from "./lodging";
 import { importPlaceVisits, importPlaces } from "./places";
+import { markKeptDrops } from "./values";
 import { summarise, type ImportMode, type IncomingSheet, type SheetOutcome } from "./types";
 
 /** Cap per sheet. A spreadsheet is a hand-editing tool; anything larger is an
@@ -86,7 +87,8 @@ export async function importSheets(
       results.push(summarise(key, [errorRow(0, key, "too_many_rows")], 0));
       continue;
     }
-    results.push(await HANDLERS[key](sheet, ctx));
+    const outcome = await HANDLERS[key](sheet, ctx);
+    results.push({ ...outcome, rows: markKeptDrops(outcome.rows) });
   }
 
   if (!ctx.dryRun) {

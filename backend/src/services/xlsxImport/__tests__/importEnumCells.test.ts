@@ -186,11 +186,40 @@ describe("the other enum columns follow the same rule", () => {
     const rows = sheetOf(result, "places").rows;
     expect(rows.map((r) => r.action)).toEqual(["create", "skip"]);
     expect(rows[0].dropped).toEqual([{ field: "category", value: "Biergarten" }]);
-    expect(rows[1].dropped).toEqual([{ field: "category", value: "Biergarten" }]);
+    // The existing place keeps its category, and the outcome says so — the
+    // preview read "left empty" here, which was not what happened.
+    expect(rows[1].dropped).toEqual([{ field: "category", value: "Biergarten", kept: true }]);
     const places = await prisma.place.findMany({ where: { userId }, orderBy: { name: "asc" } });
     expect(places.map((p) => [p.name, p.category])).toEqual([
       ["Augustiner", "other"],
       ["Hofbräuhaus", "restaurant"],
     ]);
+  });
+});
+
+describe("an unknown cell on an existing entry is reported as kept, not emptied", () => {
+  it("an updated flight keeps its stored seat class and the drop says kept", async () => {
+    const flight = {
+      airline: "Lufthansa",
+      flightNumber: "LH3",
+      depIata: "FRA",
+      arrIata: "JFK",
+      departureTime: "2024-06-03T10:00:00.000Z",
+      seatClass: "business",
+    };
+    await run([{ key: "flights", rows: [flight] }]);
+    const stored = await prisma.flight.findFirstOrThrow({ where: { userId } });
+
+    const result = await run([
+      {
+        key: "flights",
+        rows: [{ ...flight, id: stored.id, seatClass: "Holzklasse", aircraft: "A350" }],
+      },
+    ]);
+    const row = sheetOf(result, "flights").rows[0];
+    expect(row.action).toBe("update");
+    expect(row.dropped).toEqual([{ field: "seatClass", value: "Holzklasse", kept: true }]);
+    const after = await prisma.flight.findUniqueOrThrow({ where: { id: stored.id } });
+    expect(after.seatClass).toBe("business");
   });
 });

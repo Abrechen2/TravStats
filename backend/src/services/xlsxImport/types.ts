@@ -71,6 +71,13 @@ export interface RowOutcome {
 export interface DroppedValue {
   field: string;
   value: string;
+  /**
+   * True when the row resolved to an EXISTING entry (update or skip): the
+   * unknown cell is simply not written, so the stored value stays. Absent on a
+   * create, where the field really is left empty. The preview must say which —
+   * "left empty" on an update told the user a value was lost that was not.
+   */
+  kept?: true;
 }
 
 export interface SheetOutcome {
@@ -108,6 +115,22 @@ export interface ImportOutcome {
 export interface IncomingSheet {
   key: string;
   rows: Record<string, string>[];
+  /**
+   * The sheet row each record came from, parallel to `rows`. The reader finds
+   * the header row by its text (the export writes a hint line above it, and a
+   * user may insert more) and skips blank lines, so `index + 2` is wrong for
+   * every file the app itself writes. Optional for API callers that send bare
+   * rows; those get the `index + 2` guess.
+   */
+  rowNumbers?: number[];
+}
+
+/** The 1-based sheet row of `sheet.rows[index]`, as the user sees it in Excel. */
+export function sheetRowNumber(sheet: IncomingSheet, index: number): number {
+  const recorded = sheet.rowNumbers?.[index];
+  if (recorded !== undefined && Number.isInteger(recorded) && recorded > 0) return recorded;
+  // One for 1-based rows, one for a header in row 1.
+  return index + 2;
 }
 
 /** Tally a list of row outcomes into the counts the preview shows. */

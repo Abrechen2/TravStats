@@ -276,6 +276,26 @@ describe("workbook round trip", () => {
     expect(buildSheets(t, {})).toHaveLength(0);
   });
 
+  it("records the sheet row of each record past the hint line and a blank line", async () => {
+    // Browser acceptance, 2026-09-25: the preview said "Zeile 2" for what Excel
+    // shows as row 3, because the server guessed index + 2 — blind to the
+    // hint line above the header and to skipped blank lines.
+    const sheets = buildSheets(t, {
+      places: [makePlace(), makePlace({ id: "place-2", name: "Tokyo Tower" })],
+    });
+    const wb = await buildWorkbook(sheets);
+    const ws = wb.getWorksheet(safeSheetName("xlsx:sheets.places", new Set()));
+    if (!ws) throw new Error("no places sheet");
+    // hint (1), header (2), first place (3) — then a blank line pushes the
+    // second place from row 4 to row 5.
+    ws.spliceRows(4, 0, []);
+    const buffer = await wb.xlsx.writeBuffer();
+
+    const [places] = await parseWorkbook(buffer as ArrayBuffer, [placeSheet(t)] as never[]);
+    expect(places.rows.map((r) => r.name)).toEqual(["Tokyo Skytree", "Tokyo Tower"]);
+    expect(places.rowNumbers).toEqual([3, 5]);
+  });
+
   it("skips a sheet the specs do not know instead of failing the whole read", async () => {
     const sheets = buildSheets(t, { places: [makePlace()] });
     const wb = await buildWorkbook(sheets);

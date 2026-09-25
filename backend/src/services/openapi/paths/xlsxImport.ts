@@ -35,13 +35,14 @@ const rowOutcome = z.object({
     description: "Non-fatal remarks the row was applied with, e.g. `trip_not_linked`.",
   }),
   dropped: z
-    .array(z.object({ field: z.string(), value: z.string() }))
+    .array(z.object({ field: z.string(), value: z.string(), kept: z.literal(true).optional() }))
     .optional()
     .openapi({
       description:
-        "Cells whose text the column does not know (e.g. a free-text cabin type). The field " +
-        "is left empty and the row is still applied; each entry names the column key and " +
-        "the text as it stood.",
+        "Cells whose text the column does not know (e.g. a free-text cabin type). The row is " +
+        "still applied; each entry names the column key and the text as it stood. On a " +
+        "create the field is left empty; on an update or skip the cell is not written and " +
+        "the stored value stays — those entries carry `kept: true`.",
     }),
 });
 
@@ -89,6 +90,15 @@ registry.registerPath({
                     "`cruiseStops`, `lodging` or `lodgingStays`. Unknown keys are ignored.",
                 }),
                 rows: z.array(z.record(z.string(), z.string())),
+                rowNumbers: z
+                  .array(z.number().int().positive())
+                  .optional()
+                  .openapi({
+                    description:
+                      "The sheet row each record came from, parallel to `rows`, so outcomes " +
+                      "name the row Excel shows. Omitted: row N of `rows` is reported as N + 2 " +
+                      "(a header in row 1, no blank lines).",
+                  }),
               })
             ),
           }),

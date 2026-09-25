@@ -41,6 +41,7 @@ import {
 import { pruneMissing } from "./prune";
 import { findChainId, resolveParent } from "./references";
 import {
+  sheetRowNumber,
   summarise,
   type DroppedValue,
   type IncomingSheet,
@@ -73,7 +74,7 @@ export async function importLodging(sheet: IncomingSheet, ctx: Ctx): Promise<She
   const seen = new Set<string>();
 
   for (const [index, raw] of sheet.rows.entries()) {
-    const rowNo = index + 2;
+    const rowNo = sheetRowNumber(sheet, index);
     const label = cell.text(raw.name) ?? `#${rowNo}`;
     const fileId = cell.text(raw.id);
 
@@ -237,7 +238,7 @@ export async function importLodgingStays(sheet: IncomingSheet, ctx: Ctx): Promis
   const out: RowOutcome[] = [];
 
   for (const [index, raw] of sheet.rows.entries()) {
-    const rowNo = index + 2;
+    const rowNo = sheetRowNumber(sheet, index);
     const fileId = cell.text(raw.id);
     const label = cell.text(raw.lodgingId) ?? `#${rowNo}`;
 

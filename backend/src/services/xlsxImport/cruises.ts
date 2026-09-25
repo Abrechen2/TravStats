@@ -41,6 +41,7 @@ import {
 import { pruneMissing } from "./prune";
 import { cruiseLabelBase, findPortId, findShipId, resolveParent, resolveTrip } from "./references";
 import {
+  sheetRowNumber,
   summarise,
   type DroppedValue,
   type IncomingSheet,
@@ -132,7 +133,7 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
   const seen = new Set<string>();
 
   for (const [index, raw] of sheet.rows.entries()) {
-    const rowNo = index + 2;
+    const rowNo = sheetRowNumber(sheet, index);
     const label = cell.text(raw.routeName) ?? cell.text(raw.ship) ?? `#${rowNo}`;
     const fileId = cell.text(raw.id);
 
@@ -288,7 +289,7 @@ export async function importCruiseStops(sheet: IncomingSheet, ctx: Ctx): Promise
   const out: RowOutcome[] = [];
 
   for (const [index, raw] of sheet.rows.entries()) {
-    const rowNo = index + 2;
+    const rowNo = sheetRowNumber(sheet, index);
     const fileId = cell.text(raw.id);
     const label = cell.text(raw.port) ?? cell.text(raw.cruiseId) ?? `#${rowNo}`;
 

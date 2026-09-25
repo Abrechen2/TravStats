@@ -161,6 +161,7 @@
       "exists": "schon vorhanden"
     },
     "droppedValue": "{{field}} „{{value}}“ unbekannt – leer gelassen",
+    "droppedValueKept": "{{field}} „{{value}}“ unbekannt – bisheriger Wert bleibt",
     "notes": {
       "trip_not_linked": "Reise im Konto nicht gefunden – ohne Reise übernommen",
       "port_not_found": "Hafen nicht im Katalog – bleibt leer",

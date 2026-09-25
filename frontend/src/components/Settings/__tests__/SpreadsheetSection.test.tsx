@@ -22,7 +22,9 @@ vi.mock("../../../lib/xlsx/importClient", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../../lib/xlsx/importClient")>();
   return {
     ...actual,
-    readWorkbookForImport: vi.fn().mockResolvedValue([{ key: "lodgingStays", rows: [{}] }]),
+    readWorkbookForImport: vi
+      .fn()
+      .mockResolvedValue([{ key: "lodgingStays", rows: [{}], rowNumbers: [3] }]),
     sendImport: vi.fn().mockResolvedValue({
       dryRun: true,
       mode: "merge",
@@ -67,7 +69,7 @@ vi.mock("../../../lib/xlsx/importClient", async (importOriginal) => {
         {
           key: "cruises",
           created: 1,
-          updated: 0,
+          updated: 1,
           skipped: 0,
           errors: 0,
           deleted: 0,
@@ -78,6 +80,13 @@ vi.mock("../../../lib/xlsx/importClient", async (importOriginal) => {
               id: null,
               label: "Karibik",
               dropped: [{ field: "cabinType", value: "Havana Cabana" }],
+            },
+            {
+              row: 5,
+              action: "update",
+              id: "c-1",
+              label: "Nordland",
+              dropped: [{ field: "cabinType", value: "Havana Cabana", kept: true }],
             },
           ],
         },
@@ -122,6 +131,16 @@ describe("SpreadsheetSection — import preview", () => {
     expect(row.textContent).toContain(
       "xlsx:import.droppedValue|xlsx:columns.cabinType|Havana Cabana"
     );
+  });
+
+  it("says the stored value stays when the row updates an existing entry", async () => {
+    await preview();
+    const row = screen.getByTestId("xlsx-row-cruises-5");
+    expect(row.textContent).toContain("xlsx:import.actions.update");
+    expect(row.textContent).toContain(
+      "xlsx:import.droppedValueKept|xlsx:columns.cabinType|Havana Cabana"
+    );
+    expect(row.textContent).not.toContain("xlsx:import.droppedValue|");
   });
 
   it("explains what the table moves and what only the backup moves", () => {
