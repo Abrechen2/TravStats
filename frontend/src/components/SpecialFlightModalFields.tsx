@@ -8,6 +8,7 @@
 import type { Airport } from "../lib/api";
 import AirportAutocomplete from "./AirportAutocomplete";
 import CompanionPicker from "./CompanionPicker";
+import CatalogueCombobox, { searchAircraftOptions } from "./FlightForm/fields/CatalogueCombobox";
 import { useTranslation } from "../hooks/useTranslation";
 import { EventLocationPicker, type EventLocationValue } from "./specialFlights/EventLocationPicker";
 
@@ -83,16 +84,16 @@ export function SightseeingFields({
         required
       />
       <div>
-        <label className="label" htmlFor="special-aircraft">
-          {t("specialFlights:field.aircraft")}
-        </label>
-        <input
-          id="special-aircraft"
-          type="text"
-          className="input"
+        <label className="label">{t("specialFlights:field.aircraft")}</label>
+        {/* The same catalogue the flight forms offer, so a sightseeing flight's
+            "Cessna 172" is spelled the way the statistics group it; free text
+            stays valid for a type the catalogue does not know. */}
+        <CatalogueCombobox
           value={aircraft}
-          onChange={(e) => onAircraftChange(e.target.value)}
+          onChange={onAircraftChange}
+          search={searchAircraftOptions}
           placeholder={t("specialFlights:field.aircraftHint")}
+          ariaLabel={t("specialFlights:field.aircraft")}
         />
       </div>
     </div>
