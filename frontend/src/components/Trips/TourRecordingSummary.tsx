@@ -20,8 +20,9 @@ function hoursMinutes(seconds: number): string {
  * beside them. A hike is read in metres of height, not in kilometres.
  *
  * Every figure comes from the recordings — summed over them where there are
- * several — and a figure no recording carries is left out rather than shown
- * as zero: a track with no elevation did not climb nothing.
+ * several — and a figure is left out unless EVERY recording carries it: a
+ * track with no elevation did not climb nothing, and a sum over the ones that
+ * do would pass a part off as the whole day.
  *
  * The profile is drawn from the FIRST recording's detail call, the only one
  * that carries the profile (sampled from the raw points, so a summit the
@@ -64,8 +65,9 @@ export default function TourRecordingSummary({
   if (tracks.length === 0) return null;
 
   const sum = (pick: (t: TourTrackMeta) => number | null): number | null => {
-    const known = tracks.map(pick).filter((v): v is number => v !== null);
-    return known.length === 0 ? null : known.reduce((a, b) => a + b, 0);
+    const values = tracks.map(pick);
+    if (values.some((v) => v === null)) return null;
+    return (values as number[]).reduce((a, b) => a + b, 0);
   };
   const km = tracks.reduce((s, tr) => s + tr.distanceKm, 0);
   const ascent = sum((tr) => tr.ascentM);

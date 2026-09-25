@@ -320,4 +320,73 @@ describe("Roadtrips", () => {
       .set("Cookie", cookie);
     expect(asRoadtrip.status).toBe(404);
   });
+
+  it("counts no night at a station whose linked stay was cancelled", async () => {
+    const lodging = await prisma.lodging.create({
+      data: { userId, name: "Storniert Camping", type: "campsite", lat: 60.1, lon: 6.6 },
+    });
+    const cancelled = await prisma.lodgingStay.create({
+      data: {
+        lodgingId: lodging.id,
+        userId,
+        checkIn: d("2026-07-18"),
+        checkOut: d("2026-07-20"),
+        status: "cancelled",
+      },
+    });
+    const created = await request(app)
+      .post("/api/v1/roadtrips")
+      .set("Cookie", cookie)
+      .send({ name: "Abgesagt", vehicle: "campervan" });
+    const res = await stations(created.body.roadtrip.id).send({
+      stations: [
+        {
+          title: "Odda",
+          lat: 60.07,
+          lon: 6.55,
+          startDate: "2026-07-18",
+          endDate: "2026-07-20",
+          night: { kind: "stay", lodgingStayId: cancelled.id },
+        },
+      ],
+    });
+    expect(res.status).toBe(200);
+    // The link stays — the station still names the stay — but the night is
+    // the stay's, and a cancelled stay has none (as in the lodging statistics).
+    expect(res.body.stations[0].state).toBe("stay");
+    expect(res.body.nights).toMatchObject({ stayNights: 0, nights: 0, placesSlept: 0 });
+  });
+
+  it("gives a trip stop back without its night when its roadtrip is deleted", async () => {
+    const trip = await prisma.trip.create({ data: { userId, name: "Norwegen" } });
+    const route = await prisma.tripRoute.create({
+      data: { userId, tripId: trip.id, name: "Norwegen im Bus", mode: "road", kind: "roadtrip" },
+    });
+    const stop = await prisma.tripStop.create({
+      data: {
+        tripId: trip.id,
+        title: "Stavanger",
+        lat: 58.97,
+        lon: 5.73,
+        routeId: route.id,
+        routeOrderIdx: 0,
+        lodgingStayId: campStayId,
+        overnight: true,
+      },
+    });
+
+    const res = await request(app).delete(`/api/v1/tours/${route.id}`).set("Cookie", cookie);
+    expect(res.status).toBe(204);
+
+    // The timeline keeps its stop; the night columns were the roadtrip's
+    // station state, and a stop outside a roadtrip is no station.
+    const back = await prisma.tripStop.findUniqueOrThrow({ where: { id: stop.id } });
+    expect(back).toMatchObject({
+      tripId: trip.id,
+      routeId: null,
+      routeOrderIdx: null,
+      lodgingStayId: null,
+      overnight: false,
+    });
+  });
 });

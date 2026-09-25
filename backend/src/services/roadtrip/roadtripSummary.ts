@@ -80,6 +80,7 @@ export function nightsOf(stations: readonly StationRow[]): RoadtripNights {
             checkOut: s.lodgingStay.checkOut,
             datePrecision: s.lodgingStay.datePrecision,
             nights: s.lodgingStay.nights,
+            status: s.lodgingStay.status,
           }
         : null,
     }))

@@ -157,13 +157,26 @@ roadtrip uses it as-is. New:
 GET    /roadtrips                          list: name, vehicle, span, km, nights, stations
 POST   /roadtrips                          create (optional tripId)
 GET    /roadtrips/:id                      detail: stations with stay summary, legs, tours
-PATCH  /roadtrips/:id                      name, vehicle, colour, notes, odometer, trip
-DELETE /roadtrips/:id
 PUT    /roadtrips/:id/stations             ATOMIC full ordered station list (like /points)
-POST   /roadtrips/:id/stations/:stopId/stay   create lodging + stay from a station
 PATCH  /tours/:routeId/kind                switch tour <-> roadtrip; clears the auto flag
 POST   /tours/:routeId/kind/confirm        keep the automatic kind; clears the flag
+
+# The phone's (companion#12, #13) — append, never replace the whole list
+GET    /roadtrips/active?date=             the roadtrip covering the phone's local date
+POST   /roadtrips/:id/stations             append ONE station; idempotent within 150 m
+GET    /day-context?date=                  the trip and roadtrip station covering a day
 ```
+
+**As built, differing from the first draft (corrected 2026-09-25):**
+
+- A roadtrip is edited and deleted through the kind-agnostic
+  `PATCH/DELETE /tours/:routeId`; a separate `/roadtrips/:id` pair would have
+  been a second copy of the same handler. Deleting gives a trip's stops back
+  WITHOUT their night columns, as dropping a station does.
+- There is no `.../stations/:stopId/stay`. The station editor creates the
+  lodging and its stay through the ordinary lodging endpoints — so currency,
+  status and FX follow the lodging page's rules — and takes the lodging back
+  when the stay fails. The link itself is saved with the station list.
 
 `GET /tours` gains `?kind=tour|roadtrip` and returns `kind`, `activity` and the
 track figures. The track upload accepts `.gpx`, `.fit` and `.tcx`.
@@ -232,8 +245,10 @@ second time. Achievements follow the monotonic engine: a first roadtrip, 1,000 /
    that deleting the linked stay leaves a free station.
 2. A station's stay belongs to the caller — 404 for someone else's stay.
 3. A roadtrip's nights never double-count a stay night — test with one stay
-   station and one free station.
+   station and one free station. A cancelled stay contributes no night and no
+   place slept, as in the lodging statistics.
 4. Ascent uses raw points with hysteresis — a noisy flat track stays under 10 m.
 5. The same `externalRef` twice on one route is one track — second upload 409.
-6. Classification — foot/bike/short road rows stay tours, a multi-night road row
-   becomes a roadtrip, both flagged.
+6. Classification — foot/bike rows and a road row within one day stay tours, a
+   road/ferry/rail row spanning at least one night becomes a roadtrip, all
+   flagged.

@@ -330,10 +330,12 @@ router.delete(
       await prisma.$transaction(async (tx) => {
         // Release the TRIP's stops first; the section's own trip-less
         // points then go with it through the cascade. Reversing these two
-        // deletes the timeline the tour was only drawn over.
+        // deletes the timeline the tour was only drawn over. The night
+        // columns are a roadtrip station's state and leave with the station,
+        // as they do when `PUT /roadtrips/:id/stations` drops one.
         await tx.tripStop.updateMany({
           where: { routeId, tripId: { not: null } },
-          data: { routeId: null, routeOrderIdx: null },
+          data: { routeId: null, routeOrderIdx: null, lodgingStayId: null, overnight: false },
         });
         await tx.tripRoute.delete({ where: { id: routeId } });
       });

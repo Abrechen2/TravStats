@@ -77,6 +77,16 @@ describe("migration 20260924160000 — classifying existing sections", () => {
       ["2024-08-09", null],
     ]);
     const undated = await prisma.tripRoute.create({ data: { userId, name: "u", mode: "road" } });
+    // The boundary of "spans a night", from both sides: a scenic drive out
+    // and back on one day stays a tour, one night away already travels.
+    const dayDrive = await section("road", [
+      ["2024-09-14", null],
+      ["2024-09-14", "2024-09-14"],
+    ]);
+    const oneNight = await section("road", [
+      ["2024-09-20", null],
+      ["2024-09-21", null],
+    ]);
 
     for (const statement of classificationStatements()) {
       await prisma.$executeRawUnsafe(statement);
@@ -95,6 +105,8 @@ describe("migration 20260924160000 — classifying existing sections", () => {
     // rule reads `bike` as a day tour. The owner corrects it in the UI.
     expect(byId.get(bikeTrip)).toMatchObject({ kind: "tour", activity: "bike" });
     expect(byId.get(undated.id)).toMatchObject({ kind: "tour" });
+    expect(byId.get(dayDrive)).toMatchObject({ kind: "tour", activity: null });
+    expect(byId.get(oneNight)).toMatchObject({ kind: "roadtrip" });
     expect(rows.every((r) => r.kindAssignedAutomatically)).toBe(true);
   });
 });

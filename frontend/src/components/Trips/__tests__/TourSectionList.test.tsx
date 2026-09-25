@@ -13,6 +13,14 @@ vi.mock("../../../hooks/useToursVisible", () => ({
   useToursAccess: () => (mockToursVisible() ? "allowed" : "denied"),
 }));
 
+const mockRoadtripDomain = vi.hoisted(() => vi.fn(() => true));
+vi.mock("../../../hooks/useEnabledDomains", () => ({
+  useEnabledDomains: () => ({
+    enabled: [],
+    isEnabled: (key: string) => (key === "roadtrip" ? mockRoadtripDomain() : true),
+  }),
+}));
+
 vi.mock("../../../lib/api/tours", () => ({
   toursApi: { list: vi.fn(), create: vi.fn(), remove: vi.fn() },
 }));
@@ -57,6 +65,19 @@ function route(id: string, name: string) {
 describe("TourSectionList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRoadtripDomain.mockReturnValue(true);
+  });
+
+  it("lists a roadtrip on the trip only while the roadtrip domain is switched on", async () => {
+    const roadtrip = { ...route("rt1", "Nordkap im Bus"), kind: "roadtrip" as const };
+    vi.mocked(toursApi.list).mockResolvedValue([route("r1", "Preikestolen"), roadtrip]);
+    mockRoadtripDomain.mockReturnValue(false);
+
+    renderList("t1");
+
+    // The row would link to /roadtrips/:id, which the domain guard refuses.
+    expect(await screen.findByText("Preikestolen")).toBeInTheDocument();
+    expect(screen.queryByText("Nordkap im Bus")).not.toBeInTheDocument();
   });
 
   it("shows each section with its distance", async () => {

@@ -1,5 +1,6 @@
 import { useCallback, useEffect, useRef, useState } from "react";
 import { useToursVisible } from "../../hooks/useToursVisible";
+import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
@@ -112,9 +113,17 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
     }
   };
 
-  const isLoading = routes === null && !loadError;
-  const isEmpty = !isLoading && !loadError && routes !== null && routes.length === 0;
-  const hasRoutes = !isLoading && !loadError && routes !== null && routes.length > 0;
+  // A roadtrip row links to its own page, which the domain guard refuses
+  // while the reader has the roadtrip domain switched off — so it is not
+  // offered here either.
+  const { isEnabled } = useEnabledDomains();
+  const roadtripsShown = isEnabled("roadtrip");
+  const shown =
+    routes === null ? null : routes.filter((r) => roadtripsShown || r.kind !== "roadtrip");
+
+  const isLoading = shown === null && !loadError;
+  const isEmpty = !isLoading && !loadError && shown !== null && shown.length === 0;
+  const hasRoutes = !isLoading && !loadError && shown !== null && shown.length > 0;
 
   return (
     <div>
@@ -183,7 +192,7 @@ function TourSectionListBody({ tripId }: Props): JSX.Element {
 
       {hasRoutes && (
         <ul className="space-y-2">
-          {(routes ?? []).map((route) => (
+          {(shown ?? []).map((route) => (
             <li
               key={route.id}
               className="flex items-center gap-2 rounded-lg border border-(--color-border) pr-3 text-sm hover:bg-(--bg-surface)"

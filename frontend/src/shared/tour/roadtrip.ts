@@ -65,8 +65,12 @@ export interface CountableStation {
   overnight: boolean;
   startDate: Date | null;
   endDate: Date | null;
-  /** The linked stay's timing, when `lodgingStayId` is set and the stay was loaded. */
-  stay: TimedStay | null;
+  /**
+   * The linked stay's timing, when `lodgingStayId` is set and the stay was
+   * loaded. `status` is read for one value only: a cancelled stay is a night
+   * that did not happen.
+   */
+  stay: (TimedStay & { status?: string }) | null;
 }
 
 export interface RoadtripNights {
@@ -103,6 +107,10 @@ export function countRoadtripNights(stations: readonly CountableStation[]): Road
       const id = station.lodgingStayId as string;
       if (seenStays.has(id)) continue;
       seenStays.add(id);
+      // Cancelled counts nowhere, exactly as `classifyStay` rules for the
+      // lodging statistics: no night and no place slept. The user said so,
+      // which is why the stored status is enough here without deriving.
+      if (station.stay?.status === "cancelled") continue;
       placesSlept++;
       if (station.stay === null) {
         nightsKnown = false;

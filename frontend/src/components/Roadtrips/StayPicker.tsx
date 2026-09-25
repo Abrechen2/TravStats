@@ -2,7 +2,7 @@ import { useEffect, useMemo, useState } from "react";
 import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
-import { createLodging, createStay, listLodgings } from "../../lib/api/lodging";
+import { createLodging, createStay, deleteLodging, listLodgings } from "../../lib/api/lodging";
 import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
 import type { Lodging, LodgingType } from "../../types/lodging";
@@ -34,7 +34,9 @@ function flatten(lodgings: Lodging[]): PickableStay[] {
  *
  * "New" goes through the ordinary lodging endpoints — the lodging and its
  * stay are created exactly as the lodging page would create them, with its
- * currency, status and FX rules — and only the link is the roadtrip's.
+ * currency, status and FX rules — and only the link is the roadtrip's. Those
+ * are two requests, so a stay that fails takes its fresh lodging back with
+ * it: an empty lodging nobody asked for would otherwise sit in the library.
  */
 export default function StayPicker({
   selectedStayId,
@@ -95,6 +97,11 @@ export default function StayPicker({
         checkOut: near.endDate,
         datePrecision: near.startDate ? "DAY" : "NONE",
         tripId,
+      }).catch(async (err: unknown) => {
+        await deleteLodging(lodging.id).catch((cleanupErr: unknown) =>
+          logger.warn("Taking back the lodging of a failed stay failed", cleanupErr)
+        );
+        throw err;
       });
       onPick({ id: stay.id, label: lodging.name, checkIn: stay.checkIn, checkOut: stay.checkOut });
       setCreating(false);

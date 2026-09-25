@@ -62,6 +62,24 @@ describe("countRoadtripNights", () => {
     expect(result.placesSlept).toBe(1);
   });
 
+  it("counts no night at a cancelled stay, as the lodging statistics count none", () => {
+    // The lodging statistics exclude a cancelled stay (`classifyStay` ->
+    // "excluded"). A roadtrip that still counted its nights would report
+    // nights no lodging figure knows — the double book this module forbids.
+    const cancelled = stayStation("camp-x", "2026-07-12", "2026-07-14");
+    const result = countRoadtripNights([
+      { ...cancelled, stay: { ...cancelled.stay!, status: "cancelled" } },
+      stayStation("camp-1", "2026-07-14", "2026-07-15"),
+    ]);
+    expect(result).toEqual({
+      stayNights: 1,
+      freeNights: 0,
+      nights: 1,
+      nightsKnown: true,
+      placesSlept: 1,
+    });
+  });
+
   it("counts a free station with no dates as one night, and says the count is soft", () => {
     const result = countRoadtripNights([
       { lodgingStayId: null, overnight: true, startDate: null, endDate: null, stay: null },
