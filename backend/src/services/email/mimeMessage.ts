@@ -63,11 +63,29 @@ interface ContentType {
   parameters: Map<string, string>;
 }
 
+/**
+ * The header block as text: UTF-8 when the bytes are valid UTF-8, latin1
+ * otherwise.
+ *
+ * RFC 6532 lets a header carry UTF-8 unencoded, and real mail does. Read as
+ * latin1 unconditionally, "Buchungsbestätigung" came back as
+ * "BuchungsbestÃ¤tigung" and the sample-header columns stored that
+ * (parserWorkshop.sampleHeaders.test.ts). Pure ASCII reads the same either
+ * way, and bytes that are not UTF-8 are what an older mailer wrote in latin1.
+ */
+function headerBlockText(bytes: Buffer): string {
+  try {
+    return new TextDecoder("utf-8", { fatal: true }).decode(bytes);
+  } catch {
+    return bytes.toString("latin1");
+  }
+}
+
 /** Everything before the first empty line, and everything after it. */
 function splitHeadersAndBody(raw: Buffer): { headerText: string; body: Buffer } {
   for (let i = 0; i + 1 < raw.length; i++) {
     if (raw[i] === 0x0a && raw[i + 1] === 0x0a) {
-      return { headerText: raw.subarray(0, i).toString("latin1"), body: raw.subarray(i + 2) };
+      return { headerText: headerBlockText(raw.subarray(0, i)), body: raw.subarray(i + 2) };
     }
     if (
       i + 3 < raw.length &&
@@ -76,7 +94,7 @@ function splitHeadersAndBody(raw: Buffer): { headerText: string; body: Buffer } 
       raw[i + 2] === 0x0d &&
       raw[i + 3] === 0x0a
     ) {
-      return { headerText: raw.subarray(0, i).toString("latin1"), body: raw.subarray(i + 4) };
+      return { headerText: headerBlockText(raw.subarray(0, i)), body: raw.subarray(i + 4) };
     }
   }
   // No blank line at all — there is no header block to speak of, so the whole
@@ -85,8 +103,8 @@ function splitHeadersAndBody(raw: Buffer): { headerText: string; body: Buffer } 
 }
 
 /**
- * Header names and structure are ASCII, so the block is read as latin1 and
- * any non-ASCII inside a value arrives through RFC 2047 encoded-words, which
+ * Header names and structure are ASCII. Non-ASCII inside a value arrives
+ * either raw (see `headerBlockText`) or through RFC 2047 encoded-words, which
  * `decodeEncodedWords` handles. Unfolding first is what makes a continued
  * `Subject:` survive.
  */

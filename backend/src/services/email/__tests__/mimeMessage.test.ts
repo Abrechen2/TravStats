@@ -184,4 +184,19 @@ describe("reading a multipart booking mail", () => {
     expect(extracted.text).toContain("Flight LH2230 from MUC to CDG.");
     expect(extracted.text).not.toContain("<p>");
   });
+
+  it("reads a raw UTF-8 header as UTF-8, and a raw latin-1 one as latin-1", () => {
+    // RFC 6532 lets a header carry UTF-8 unencoded, and real mail does. Read as
+    // latin1 the subject came back as "BuchungsbestÃ¤tigung", which the
+    // sample-header columns then stored (parserWorkshop.sampleHeaders.test.ts).
+    const utf8 = Buffer.from(
+      ["Subject: Ihre Buchungsbestätigung", "From: a@b.test", "", "Text"].join("\n"),
+      "utf-8"
+    );
+    expect(extractEmailFromFile(utf8, "utf8.eml").subject).toBe("Ihre Buchungsbestätigung");
+
+    // Bytes that are not valid UTF-8 are still what an older mailer wrote.
+    const latin1 = eml(["Subject: Ihre Buchungsbestätigung", "", "Text"]);
+    expect(extractEmailFromFile(latin1, "latin1.eml").subject).toBe("Ihre Buchungsbestätigung");
+  });
 });
