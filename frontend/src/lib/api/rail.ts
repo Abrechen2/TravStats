@@ -42,6 +42,20 @@ export const railApi = {
     return { journeys: res.data.data, total: res.data.meta.total };
   },
 
+  /**
+   * Every journey matching `query`, a page of 500 (the endpoint's cap) at a
+   * time — for the statistics overview and the export, which need the whole set.
+   */
+  async listAll(query: Omit<RailListQuery, "limit" | "offset"> = {}): Promise<RailJourney[]> {
+    const PAGE = 500;
+    const rides: RailJourney[] = [];
+    for (let offset = 0; ; offset += PAGE) {
+      const page = await railApi.list({ ...query, limit: PAGE, offset });
+      rides.push(...page.journeys);
+      if (page.journeys.length < PAGE || rides.length >= page.total) return rides;
+    }
+  },
+
   /** One journey with its booking's legs. */
   async get(id: string): Promise<RailJourneyDetail> {
     const res = await api.get<Envelope<RailJourneyDetail>>(`/rail/${encodeURIComponent(id)}`);

@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { renderHook, waitFor } from "@testing-library/react";
 
 vi.mock("../../../api/rail", () => ({
-  railApi: { list: vi.fn(async () => ({ journeys: [], total: 0 })) },
+  railApi: { listAll: vi.fn(async () => []) },
 }));
 const ENABLED = ["rail"];
 vi.mock("../../../../hooks/useEnabledDomains", () => ({
@@ -25,13 +25,13 @@ const NO_FLIGHTS: Flight[] = [];
  * chip or sum on the overview can carry them.
  */
 describe("useDomainStats — rail beta gate", () => {
-  beforeEach(() => vi.mocked(railApi.list).mockClear());
+  beforeEach(() => vi.mocked(railApi.listAll).mockClear());
 
   it("does not load rail while the gate is off", async () => {
     gate.offered = false;
     const { result } = renderHook(() => useDomainStats({ flights: NO_FLIGHTS }));
     await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(railApi.list).not.toHaveBeenCalled();
+    expect(railApi.listAll).not.toHaveBeenCalled();
     expect(result.current.stats.rail).toBeUndefined();
   });
 
@@ -39,7 +39,7 @@ describe("useDomainStats — rail beta gate", () => {
     gate.offered = true;
     const { result } = renderHook(() => useDomainStats({ flights: NO_FLIGHTS }));
     await waitFor(() => expect(result.current.loading).toBe(false));
-    expect(railApi.list).toHaveBeenCalledWith(expect.objectContaining({ status: "completed" }));
+    expect(railApi.listAll).toHaveBeenCalledWith(expect.objectContaining({ status: "completed" }));
     expect(result.current.stats.rail).toEqual({ domain: "rail", hasData: false });
   });
 });

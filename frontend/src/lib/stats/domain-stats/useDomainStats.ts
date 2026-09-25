@@ -7,7 +7,6 @@
 // and derives everything from places, lists and the checklist catalog.
 import { useEffect, useMemo, useState } from "react";
 import type { Flight } from "../../../types";
-import type { RailJourney } from "../../../types/rail";
 import { statsApi } from "../../api";
 import { cruiseApi } from "../../api/cruise";
 import { listLodgings, getLodgingStats } from "../../api/lodging";
@@ -126,17 +125,6 @@ async function loadDomain(domain: StatsDomain, flights: Flight[]): Promise<Domai
       return adaptPoi({ places, lists, curated });
     }
     case "rail":
-      return adaptRail({ journeys: await loadCompletedRides() });
-  }
-}
-
-/** Every completed ride, a page of 500 at a time — the list endpoint's cap. */
-async function loadCompletedRides(): Promise<RailJourney[]> {
-  const PAGE = 500;
-  const rides: RailJourney[] = [];
-  for (let offset = 0; ; offset += PAGE) {
-    const page = await railApi.list({ status: "completed", limit: PAGE, offset });
-    rides.push(...page.journeys);
-    if (page.journeys.length < PAGE || rides.length >= page.total) return rides;
+      return adaptRail({ journeys: await railApi.listAll({ status: "completed" }) });
   }
 }

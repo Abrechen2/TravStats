@@ -15,7 +15,8 @@
     "lodgingStays": "Aufenthalte",
     "places": "Orte",
     "placeVisits": "Besuche",
-    "trips": "Reisen"
+    "trips": "Reisen",
+    "rail": "Bahnfahrten"
   },
   "hints": {
     "cruises": "Eine Zeile je Kreuzfahrt. Die ID in Spalte A nicht ändern – sie ordnet die Zeile beim Import wieder ihrem Eintrag zu. Zeilen ohne ID werden als neue Kreuzfahrt angelegt.",
@@ -24,7 +25,8 @@
     "lodgingStays": "Eine Zeile je Aufenthalt. Die Spalte „Unterkunft“ verweist über die ID in eckigen Klammern auf das Blatt „Unterkünfte“. Nächte werden berechnet und lassen sich hier nicht setzen.",
     "places": "Eine Zeile je Ort. Besuche stehen im eigenen Blatt.",
     "placeVisits": "Eine Zeile je Besuch. Die Spalte „Ort“ verweist über die ID in eckigen Klammern auf das Blatt „Orte“.",
-    "flights": "Eine Zeile je Flug. Die ID in Spalte A nicht ändern – sie ordnet die Zeile beim Import wieder ihrem Eintrag zu. Flughäfen stehen als IATA-Code; wird ein Code geändert, verschiebt das den Flug. Zeilen ohne ID werden als neuer Flug angelegt."
+    "flights": "Eine Zeile je Flug. Die ID in Spalte A nicht ändern – sie ordnet die Zeile beim Import wieder ihrem Eintrag zu. Flughäfen stehen als IATA-Code; wird ein Code geändert, verschiebt das den Flug. Zeilen ohne ID werden als neuer Flug angelegt.",
+    "rail": "Eine Zeile je Zugfahrt. Zeiten stehen in Ortszeit des jeweiligen Bahnhofs. Die Entfernung sagt in „Quelle“, was sie misst: great_circle ist die Luftlinie, route der Streckenverlauf, user die Angabe vom Ticket. Dieses Blatt wird beim Import noch nicht eingelesen."
   },
   "columns": {
     "id": "ID",
@@ -86,7 +88,21 @@
     "aircraft": "Flugzeug",
     "registration": "Kennzeichen",
     "seat": "Sitz",
-    "seatClass": "Klasse"
+    "seatClass": "Klasse",
+    "operator": "Bahngesellschaft",
+    "trainCategory": "Zuggattung",
+    "trainNumber": "Zugnummer",
+    "fromStation": "Von (Bahnhof)",
+    "fromStationCode": "Von (Code)",
+    "toStation": "Nach (Bahnhof)",
+    "toStationCode": "Nach (Code)",
+    "departureLocal": "Abfahrt (Ortszeit)",
+    "arrivalLocal": "Ankunft (Ortszeit)",
+    "distanceKm": "Entfernung (km)",
+    "distanceSource": "Quelle",
+    "delayMinutes": "Verspätung (min)",
+    "travelClass": "Klasse",
+    "coach": "Wagen"
   },
   "import": {
     "title": "Excel-Import",

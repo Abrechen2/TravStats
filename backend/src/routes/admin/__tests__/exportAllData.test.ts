@@ -93,6 +93,7 @@ describe("GET /api/v1/admin/export/all-data", () => {
       "placeLists",
       "companions",
       "documents",
+      "railJourneys",
       "userAchievements",
     ]) {
       expect(Object.prototype.hasOwnProperty.call(user, domain)).toBe(true);
@@ -102,6 +103,47 @@ describe("GET /api/v1/admin/export/all-data", () => {
     // shells from a select that silently matched nothing.
     expect(user.trips).toHaveLength(1);
     expect(user.companions).toHaveLength(1);
+  });
+
+  // Rail (spec 2026-09-25-rail-domain, phase 2b): the rides, and the stations
+  // users added — which live outside any user and are not re-seeded.
+  it("carries the rail rides and the user-added rail stations", async () => {
+    const station = await prisma.railStation.create({
+      data: {
+        name: `Export Halt ${Date.now()}`,
+        searchName: "export halt",
+        lat: 50,
+        lon: 8,
+        isUserAdded: true,
+      },
+    });
+    await prisma.railJourney.create({
+      data: {
+        userId: createdUserIds[0],
+        depStationName: "Frankfurt (Main) Hbf",
+        arrStationName: station.name,
+        arrStationId: station.id,
+        depLat: 50.1,
+        depLon: 8.66,
+        arrLat: 50,
+        arrLon: 8,
+        departureTime: new Date("2025-03-01T07:00:00Z"),
+        status: "completed",
+      },
+    });
+    try {
+      const res = await request(app)
+        .get("/api/v1/admin/export/all-data")
+        .set("Cookie", adminCookie)
+        .expect(200);
+      const user = res.body.users.find((u: { id: string }) => u.id === createdUserIds[0]);
+      expect(user.railJourneys).toHaveLength(1);
+      expect(user.railJourneys[0].arrStationName).toBe(station.name);
+      expect(res.body.userAddedRailStations.map((s: { id: number }) => s.id)).toContain(station.id);
+    } finally {
+      await prisma.railJourney.deleteMany({ where: { userId: createdUserIds[0] } });
+      await prisma.railStation.delete({ where: { id: station.id } });
+    }
   });
 
   it("carries no credential material of any kind", async () => {

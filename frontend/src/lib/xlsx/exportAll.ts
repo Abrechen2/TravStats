@@ -11,6 +11,8 @@ import type { Flight } from "../../types";
 import type { Cruise } from "../../types/cruise";
 import type { Lodging } from "../../types/lodging";
 import type { Place } from "../../types/place";
+import type { RailJourney } from "../../types/rail";
+import { railSheet } from "./railSheet";
 import {
   flightSheet,
   cruiseSheet,
@@ -32,6 +34,8 @@ export interface ExportInput {
   cruises?: readonly Cruise[];
   lodging?: readonly Lodging[];
   places?: readonly Place[];
+  /** Only passed when the rail domain is visible (beta gate + user). */
+  rail?: readonly RailJourney[];
 }
 
 /** A short, stable label for a parent row, used as the readable half of a
@@ -104,6 +108,9 @@ export function buildSheets(t: T, input: ExportInput, locale = "de"): AnySheetDa
     const visits = placeVisitRows(places);
     if (visits.length > 0) sheets.push(sheet(placeVisitSheet(t), visits));
   }
+
+  const rail = input.rail ?? [];
+  if (rail.length > 0) sheets.push(sheet(railSheet(t), rail));
 
   return sheets;
 }
