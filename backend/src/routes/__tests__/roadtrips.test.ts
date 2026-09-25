@@ -389,4 +389,81 @@ describe("Roadtrips", () => {
       overnight: false,
     });
   });
+
+  it("lists each roadtrip with its station points, in order, for the list's route sketch", async () => {
+    const created = await request(app)
+      .post("/api/v1/roadtrips")
+      .set("Cookie", cookie)
+      .send({ name: "Skizze" });
+    const id = created.body.roadtrip.id as string;
+    await stations(id).send({
+      stations: [
+        { title: "A", lat: 53.55, lon: 10.0, night: { kind: "pass" } },
+        { title: "B", lat: 57.59, lon: 9.96, night: { kind: "free" } },
+      ],
+    });
+    const list = await request(app).get("/api/v1/roadtrips").set("Cookie", cookie);
+    const row = list.body.roadtrips.find((r: { id: string }) => r.id === id);
+    expect(row.points).toEqual([
+      [10.0, 53.55],
+      [9.96, 57.59],
+    ]);
+  });
+
+  it("reports a day tour's climb and moving time only when every recording carries them", async () => {
+    const created = await request(app)
+      .post("/api/v1/roadtrips")
+      .set("Cookie", cookie)
+      .send({ name: "Zwei Uhren" });
+    const id = created.body.roadtrip.id as string;
+    const seeded = await stations(id).send({
+      stations: [{ title: "Odda", lat: 60.07, lon: 6.55, night: { kind: "free" } }],
+    });
+    const stationId = seeded.body.stations[0].id as string;
+    const track = (
+      routeId: string,
+      source: string,
+      ascentM: number | null,
+      movingSeconds: number | null
+    ) =>
+      prisma.tripRouteTrack.create({
+        data: {
+          routeId,
+          source,
+          startedAt: d("2026-07-16"),
+          endedAt: d("2026-07-16"),
+          geometry: [
+            [6.55, 60.07],
+            [6.6, 60.1],
+          ],
+          pointCount: 2,
+          distanceKm: 4,
+          ascentM,
+          movingSeconds,
+        },
+      });
+    const mk = async (name: string) => {
+      const tour = await request(app)
+        .post("/api/v1/tours")
+        .set("Cookie", cookie)
+        .send({ name, mode: "foot", activity: "hike" });
+      await request(app)
+        .patch(`/api/v1/tours/${tour.body.route.id}`)
+        .set("Cookie", cookie)
+        .send({ anchorStopId: stationId });
+      return tour.body.route.id as string;
+    };
+    const whole = await mk("Ganz");
+    await track(whole, "fit", 300, 3600);
+    await track(whole, "gpx", 212, 1800);
+    const partial = await mk("Halb");
+    await track(partial, "gpx", 500, 7200);
+    await track(partial, "gpx", null, null);
+
+    const detail = await request(app).get(`/api/v1/roadtrips/${id}`).set("Cookie", cookie);
+    const byName = Object.fromEntries(detail.body.tours.map((t: { name: string }) => [t.name, t]));
+    expect(byName.Ganz).toMatchObject({ ascentM: 512, movingSeconds: 5400, source: "fit" });
+    // 500 m is what one watch measured, not what the day climbed.
+    expect(byName.Halb).toMatchObject({ ascentM: null, movingSeconds: null, source: "gpx" });
+  });
 });

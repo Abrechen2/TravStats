@@ -200,6 +200,9 @@ export function toRoadtripSummary(
     startOdometerKm: row.startOdometerKm,
     endOdometerKm: row.endOdometerKm,
     stationCount: row.stops.length,
+    // `[lon, lat]` in travel order, for the list's route sketch; a station
+    // without a point has nothing to draw and is left out.
+    points: row.stops.flatMap((s) => (s.lat !== null && s.lon !== null ? [[s.lon, s.lat]] : [])),
     nights: nights.nights,
     stayNights: nights.stayNights,
     freeNights: nights.freeNights,

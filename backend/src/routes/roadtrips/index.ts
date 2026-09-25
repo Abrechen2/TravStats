@@ -54,6 +54,16 @@ const LIST_SELECT = {
   _count: { select: { tracks: true } },
 } as const;
 
+/**
+ * A figure summed over a tour's recordings, or null unless EVERY recording
+ * carries it: two watches on one hike, one without a barometer, climbed more
+ * than the one that measured — a partial sum passes a part off as the whole.
+ */
+function sumOverEvery(values: ReadonlyArray<number | null>): number | null {
+  if (values.length === 0 || values.some((v) => v === null)) return null;
+  return (values as number[]).reduce((sum, v) => sum + v, 0);
+}
+
 /** How many day tours set out from each roadtrip's stations. */
 async function tourCountsByRoadtrip(userId: string, ids: string[]): Promise<Map<string, number>> {
   if (ids.length === 0) return new Map();
@@ -178,7 +188,13 @@ router.get(
             anchorStopId: true,
             legs: { select: { distanceKm: true } },
             tracks: {
-              select: { distanceKm: true, ascentM: true, startedAt: true },
+              select: {
+                distanceKm: true,
+                ascentM: true,
+                movingSeconds: true,
+                startedAt: true,
+                source: true,
+              },
               orderBy: { startedAt: "asc" },
             },
           },
@@ -206,10 +222,10 @@ router.get(
             t.tracks.length > 0
               ? t.tracks.reduce((sum, tr) => sum + tr.distanceKm, 0)
               : travelledKm(t.legs),
-          ascentM: t.tracks.every((tr) => tr.ascentM === null)
-            ? null
-            : t.tracks.reduce((sum, tr) => sum + (tr.ascentM ?? 0), 0),
+          ascentM: sumOverEvery(t.tracks.map((tr) => tr.ascentM)),
+          movingSeconds: sumOverEvery(t.tracks.map((tr) => tr.movingSeconds)),
           startedAt: t.tracks[0]?.startedAt ?? null,
+          source: t.tracks[0]?.source ?? null,
         })),
         routingAvailable: routing.configured,
       });

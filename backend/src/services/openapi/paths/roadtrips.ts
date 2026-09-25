@@ -15,6 +15,7 @@ import { errorContent } from "./shared";
 import { tourLeg, tourRoute } from "./tours";
 import { createRoadtripSchema, kindSwitchSchema, stationsSchema } from "../../../schemas/roadtrip";
 import { ROADTRIP_VEHICLES, STATION_STATES, TOUR_ACTIVITIES } from "../../../shared/tour/roadtrip";
+import { TRACK_SOURCES } from "../../../schemas/tour";
 
 const idParams = z.object({ id: z.string().uuid() });
 const routeIdParams = z.object({ routeId: z.string().uuid() });
@@ -58,6 +59,9 @@ const roadtripSummary = registry.register(
       startOdometerKm: z.number().int().nullable(),
       endOdometerKm: z.number().int().nullable(),
       stationCount: z.number().int(),
+      points: z
+        .array(z.tuple([z.number(), z.number()]))
+        .describe("Station coordinates as [lon, lat], in travel order"),
       nights: z.number().int(),
       stayNights: z.number().int(),
       freeNights: z.number().int(),
@@ -122,8 +126,17 @@ const roadtripDetail = z.object({
       activity: z.enum(TOUR_ACTIVITIES).nullable(),
       anchorStopId: z.string().uuid().nullable(),
       distanceKm: z.number(),
-      ascentM: z.number().nullable(),
+      ascentM: z
+        .number()
+        .nullable()
+        .describe("Summed over the recordings; null unless every one carries it"),
+      movingSeconds: z
+        .number()
+        .int()
+        .nullable()
+        .describe("Summed over the recordings; null unless every one carries it"),
       startedAt: z.string().datetime().nullable(),
+      source: z.enum(TRACK_SOURCES).nullable().describe("Where the first recording came from"),
     })
   ),
   routingAvailable: z.boolean(),
