@@ -1,8 +1,9 @@
-import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import { fromZonedTime } from "date-fns-tz";
 
 import { AppError } from "../../middleware/errorHandler";
 import type { RailStationInput, UpdateRailJourneyInput } from "../../schemas/rail";
 import { deriveRailStatus } from "../../shared/statusDerivation";
+import { formatWallClockIn } from "../../shared/zonedWallClock";
 import { calculateDistance } from "../../utils/geo";
 import { timezoneOfLodging } from "../../utils/stayInstant";
 
@@ -88,9 +89,15 @@ export function wallClockToInstant(wall: string, timezone: string | null): Date 
   return timezone ? fromZonedTime(normalised, timezone) : new Date(`${normalised}Z`);
 }
 
-/** The inverse: what the station clock read at `instant`. */
+/**
+ * The inverse: what the station clock read at `instant`. Through
+ * `shared/zonedWallClock.ts`, not `formatInTimeZone`, which slides an hour
+ * when the reading falls into the host's own DST gap.
+ */
 export function instantToWallClock(instant: Date, timezone: string | null): string {
-  return formatInTimeZone(instant, timezone ?? "UTC", "yyyy-MM-dd'T'HH:mm");
+  const wall = formatWallClockIn(instant, timezone ?? "UTC");
+  if (wall === null) throw new RangeError(`Invalid time zone: ${timezone}`);
+  return wall.slice(0, 16);
 }
 
 /** Great-circle kilometres, one decimal — enough for a statistic, honest about being straight. */
