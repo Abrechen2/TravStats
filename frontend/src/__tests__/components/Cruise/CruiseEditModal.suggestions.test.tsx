@@ -116,4 +116,57 @@ describe("CruiseEditModal — entry suggestions", () => {
       await waitFor(() => expect(stopDates()).toEqual(["2026-01-01", "2026-01-09"]));
     });
   });
+
+  describe("end date", () => {
+    const endInput = (): HTMLInputElement =>
+      screen.getAllByLabelText("field.arrive")[0] as HTMLInputElement;
+
+    it("follows the last day of the cruise while the user has not touched it", async () => {
+      render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+      fireEvent.change(screen.getByLabelText("field.depart"), {
+        target: { value: "2026-07-01" },
+      });
+      const add = screen.getByRole("button", { name: /stops.add/ });
+      await userEvent.click(add);
+      expect(endInput().value).toBe("");
+      await userEvent.click(add);
+      await userEvent.click(add);
+
+      await waitFor(() => expect(endInput().value).toBe("2026-07-03"));
+    });
+
+    it("stops following once the user edits it", async () => {
+      render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+      fireEvent.change(screen.getByLabelText("field.depart"), {
+        target: { value: "2026-07-01" },
+      });
+      const add = screen.getByRole("button", { name: /stops.add/ });
+      await userEvent.click(add);
+      await userEvent.click(add);
+      await waitFor(() => expect(endInput().value).toBe("2026-07-02"));
+
+      fireEvent.change(endInput(), { target: { value: "2026-07-10" } });
+      await userEvent.click(add);
+
+      expect(endInput().value).toBe("2026-07-10");
+      expect((await savedPayload()).endDate).toBe("2026-07-10T00:00:00.000Z");
+    });
+
+    it("never replaces the end date an existing cruise was loaded with", async () => {
+      const cruise = {
+        id: "cruise-1",
+        startDate: "2026-01-01T00:00:00.000Z",
+        endDate: "2026-01-20T00:00:00.000Z",
+        status: "scheduled",
+        currency: "EUR",
+        tags: [],
+        companions: [],
+        stops: [{ portId: null, port: null, dayNumber: 8, date: null, isAtSea: true }],
+      } as unknown as Cruise;
+      render(<CruiseEditModal mode="edit" cruise={cruise} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+      await waitFor(() => expect(stopDates()).toEqual(["2026-01-08"]));
+      expect(endInput().value).toBe("2026-01-20");
+    });
+  });
 });

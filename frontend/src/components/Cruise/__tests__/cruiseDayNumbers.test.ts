@@ -1,6 +1,10 @@
 import { describe, it, expect } from "vitest";
 
-import { withCruiseDayNumbers, withDerivedStopDates } from "../cruiseDayNumbers";
+import {
+  suggestedCruiseEndDate,
+  withCruiseDayNumbers,
+  withDerivedStopDates,
+} from "../cruiseDayNumbers";
 import type { CruiseStopInput } from "../../../types";
 
 /** The owner's four examples from forgejo#126, and the one the bug was found by. */
@@ -83,5 +87,17 @@ describe("withDerivedStopDates", () => {
     expect(withDerivedStopDates(once, "2026-01-01")).toBe(once);
     const none = [dated(1)];
     expect(withDerivedStopDates(none, "")).toBe(none);
+  });
+});
+
+describe("suggestedCruiseEndDate", () => {
+  it("ends on the highest day of the cruise", () => {
+    expect(suggestedCruiseEndDate("2026-01-01", [stop(1), stop(8), stop(4)])).toBe("2026-01-08");
+  });
+
+  it("abstains without a start date, without stops, or with only day 1", () => {
+    expect(suggestedCruiseEndDate("", [stop(1), stop(8)])).toBe("");
+    expect(suggestedCruiseEndDate("2026-01-01", [])).toBe("");
+    expect(suggestedCruiseEndDate("2026-01-01", [stop(1)])).toBe("");
   });
 });

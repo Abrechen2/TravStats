@@ -114,7 +114,13 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
     }))
   );
 
-  useCruiseDateSuggestions({ startDate, stops, setStops });
+  const onEndDateChange = useCruiseDateSuggestions({
+    startDate,
+    stops,
+    setStops,
+    endDate,
+    setEndDate,
+  });
 
   const [cabinNumber, setCabinNumber] = useState<string>(cruise?.cabinNumber ?? "");
   const [cabinType, setCabinType] = useState<CabinType | "">(cruise?.cabinType ?? "");
@@ -291,7 +297,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 className={INPUT_CLASS}
                 style={DARK_PICKER_STYLE}
                 value={endDate}
-                onChange={(e): void => setEndDate(e.target.value)}
+                onChange={(e): void => onEndDateChange(e.target.value)}
               />
             </div>
             {/* #status-from-dates: cruise write paths derive scheduled/

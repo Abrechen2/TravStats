@@ -66,3 +66,17 @@ export function withDerivedStopDates(
   });
   return changed ? next : stops;
 }
+
+/**
+ * The last day of the cruise as a date: start + highest day of the cruise - 1
+ * ("YYYY-MM-DD"), or "" to abstain. A cruise whose stops reach only day 1 says
+ * nothing about when it ends, so no end date is guessed from it.
+ */
+export function suggestedCruiseEndDate(
+  startDate: string,
+  stops: readonly CruiseStopInput[]
+): string {
+  const lastDay = stops.reduce((max, stop) => Math.max(max, stop.dayNumber), 0);
+  if (!startDate || lastDay < 2) return "";
+  return addDays(startDate, lastDay - 1) ?? "";
+}
