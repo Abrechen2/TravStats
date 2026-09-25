@@ -24,6 +24,11 @@
     "filled_other": "Wetter für {{count}} Einträge ergänzt.",
     "nothing": "Kein Eintrag ohne Wetter mit bekanntem Ort gefunden.",
     "failed": "Das Wetter konnte nicht geholt werden.",
+    "fetchOne": "Wetter holen",
+    "onSave": "Das Wetter des Tages wird beim Speichern geholt, wenn die Reise für den Tag einen Ort kennt.",
+    "onSaveNewDate": "Das Wetter des neuen Tages wird beim Speichern geholt.",
+    "noPlace": "Für diesen Tag kennt die Reise keinen Ort mit Koordinaten – ohne Ort gibt es kein Wetter.",
+    "disabled": "Die offenen Datendienste sind auf dieser Instanz ausgeschaltet.",
     "source": "Wetterdaten: Open-Meteo",
     "code": {
       "clear": "klar",

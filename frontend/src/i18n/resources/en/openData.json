@@ -24,6 +24,11 @@
     "filled_other": "Weather added to {{count}} entries.",
     "nothing": "No entry without weather has a known place.",
     "failed": "The weather could not be fetched.",
+    "fetchOne": "Fetch weather",
+    "onSave": "The day's weather is fetched on save, if the trip knows a place for that day.",
+    "onSaveNewDate": "The new day's weather is fetched on save.",
+    "noPlace": "The trip knows no place with coordinates for this day — without a place there is no weather.",
+    "disabled": "Open data services are switched off on this instance.",
     "source": "Weather data: Open-Meteo",
     "code": {
       "clear": "clear",

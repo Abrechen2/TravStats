@@ -4,6 +4,7 @@ import type { TripJournalEntry } from "../../types";
 import { tripsApi } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
+import JournalWeatherFetch from "./JournalWeatherFetch";
 
 interface JournalEntryModalProps {
   tripId: string;
@@ -164,6 +165,14 @@ export default function JournalEntryModal({
               placeholder="☀ 24°C"
               className="w-full rounded-lg px-3 py-2 text-sm"
               style={inputStyle}
+            />
+            <JournalWeatherFetch
+              key={entry?.id ?? "new"}
+              tripId={tripId}
+              entry={entry}
+              date={date}
+              weather={weather}
+              onPick={setWeather}
             />
           </Field>
         </div>
