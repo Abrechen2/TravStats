@@ -10,6 +10,7 @@ import { FILE_LIMITS } from "../config/constants";
 import logger from "../utils/logger";
 import { MIN_USABLE_TEXT_LENGTH } from "../services/parsing/usableText";
 import {
+  assertMayRecord,
   assertRetainable,
   parseRetentionFields,
   readDocumentForParse,
@@ -78,6 +79,7 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const parsed = parseImageSchema.parse(req.body);
+      assertMayRecord(req, parsed);
       const userId = req.userId!;
       const imageBase64 = parsed.documentId
         ? (await readDocumentForParse(userId, parsed.documentId, ["image"])).buffer.toString(

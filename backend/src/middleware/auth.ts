@@ -327,31 +327,36 @@ export const requireBrowserSession = (
   next(new AppError("This action requires a browser session, not an API token", 403));
 };
 
+/**
+ * The refusal a read-scoped token earns for a write, or null when the caller
+ * may write (a browser session, or a write/admin token). For a route whose
+ * body decides whether it writes at all — a parse that may keep its input —
+ * and which therefore cannot put `requireWriteScope` in front of every call.
+ */
+export function writeScopeDenial(req: AuthRequest): AppError | null {
+  if (req.apiToken?.scope !== "read") return null;
+  securityLogger.warn({
+    operation: "security_event",
+    message: "API token denied: insufficient scope (write required)",
+    context: {
+      eventType: "auth_failure",
+      reason: "pat_scope_insufficient",
+      tokenId: req.apiToken.id,
+      userId: req.userId,
+      url: req.url,
+    },
+  });
+  return new AppError("API token lacks write scope", 403);
+}
+
 export const requireWriteScope = (req: AuthRequest, _res: Response, next: NextFunction) => {
-  if (!req.apiToken) {
-    next();
-    return;
-  }
   if (req.method === "GET" || req.method === "HEAD" || req.method === "OPTIONS") {
     next();
     return;
   }
-  if (req.apiToken.scope === "read") {
-    securityLogger.warn({
-      operation: "security_event",
-      message: "API token denied: insufficient scope (write required)",
-      context: {
-        eventType: "auth_failure",
-        reason: "pat_scope_insufficient",
-        tokenId: req.apiToken.id,
-        userId: req.userId,
-        url: req.url,
-      },
-    });
-    next(new AppError("API token lacks write scope", 403));
-    return;
-  }
-  next();
+  const denial = writeScopeDenial(req);
+  if (denial) next(denial);
+  else next();
 };
 
 export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFunction) => {

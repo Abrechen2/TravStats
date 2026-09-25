@@ -31,6 +31,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import { generateApiToken } from "../../utils/apiTokens";
 import { documentPath } from "../../services/documents/documentStore";
 import { createDocument } from "../../services/documents/documentService";
 
@@ -217,5 +218,28 @@ describe("POST /api/v1/documents/:id/extract-values", () => {
   it("400s on a domain it cannot parse", async () => {
     const res = await extract(await keptPdf("bad"), { domain: "placeVisit" });
     expect(res.status).toBe(400);
+  });
+
+  it("refuses a read-scoped token: the reading it records replaces the document's", async () => {
+    const tok = await generateApiToken();
+    await prisma.apiToken.create({
+      data: {
+        userId,
+        label: "extract-read",
+        lookupHash: tok.lookupHash,
+        hash: tok.hash,
+        scope: "read",
+      },
+    });
+    const id = await keptPdf("read-scope");
+
+    const res = await request(app)
+      .post(`/api/v1/documents/${id}/extract-values`)
+      .set("Authorization", `Bearer ${tok.plaintext}`)
+      .send({ domain: "flight" });
+
+    expect(res.status).toBe(403);
+    expect(extractTextFromPdf).not.toHaveBeenCalled();
+    expect((await prisma.document.findUniqueOrThrow({ where: { id } })).parsedPayload).toBeNull();
   });
 });

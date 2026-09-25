@@ -4,6 +4,7 @@ import type { Document, Prisma } from "../../prisma";
 import type { Response } from "express";
 
 import { prisma } from "../../db";
+import { writeScopeDenial, type AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { isSharedDemoUser } from "../../utils/sharedDemo";
 import { z } from "../../schemas/zod";
@@ -60,6 +61,21 @@ export async function readDocumentForParse(
   } catch {
     throw new AppError("Document file missing", 404);
   }
+}
+
+/**
+ * Refuses a read-scoped token that asked a parse to write. Both additions do:
+ * `retain` creates a document and `documentId` replaces the reading recorded
+ * on one. A plain parse writes nothing and stays open to a read token. Called
+ * before the parser runs, so a refusal costs no parser time.
+ */
+export function assertMayRecord(
+  req: AuthRequest,
+  asked: { retain?: boolean; documentId?: string }
+): void {
+  if (!asked.retain && !asked.documentId) return;
+  const denial = writeScopeDenial(req);
+  if (denial) throw denial;
 }
 
 export interface RetainInput {

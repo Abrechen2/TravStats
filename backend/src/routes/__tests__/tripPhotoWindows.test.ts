@@ -20,6 +20,7 @@ describe("trip photos by when and where", () => {
   let cookie: string;
   let strangerCookie: string;
   let userId: string;
+  let strangerId: string;
   let tripId: string;
   const ids: Record<string, string> = {};
 
@@ -44,11 +45,11 @@ describe("trip photos by when and where", () => {
   beforeAll(async () => {
     const passwordHash = await hashPassword("test-password");
     userId = (await prisma.user.create({ data: { username: `win-${stamp}`, passwordHash } })).id;
-    const stranger = await prisma.user.create({
-      data: { username: `win-other-${stamp}`, passwordHash },
-    });
+    strangerId = (
+      await prisma.user.create({ data: { username: `win-other-${stamp}`, passwordHash } })
+    ).id;
     cookie = `auth_token=${generateToken(userId)}`;
-    strangerCookie = `auth_token=${generateToken(stranger.id)}`;
+    strangerCookie = `auth_token=${generateToken(strangerId)}`;
     tripId = (await prisma.trip.create({ data: { userId, name: "Roma" } })).id;
 
     // At the hotel (Rome, UTC+2 in May), during the stay 1–3 May.
@@ -151,5 +152,83 @@ describe("trip photos by when and where", () => {
       .get(`/api/v1/cruises/${cruise.id}/trip-photos`)
       .set("Cookie", strangerCookie);
     expect(stranger.status).toBe(404);
+  });
+
+  it("never shows another user's photos, even where a record points at their trip", async () => {
+    // The stranger was at the same hotel, on the same flight, at the same time.
+    const theirTrip = (await prisma.trip.create({ data: { userId: strangerId, name: "Roma" } })).id;
+    const theirs = await Promise.all(
+      [
+        ["2024-05-02T10:30:00Z", 41.9, 12.49],
+        ["2024-05-01T09:30:00Z", null, null],
+      ].map(
+        async ([takenAt, lat, lon]) =>
+          (
+            await prisma.tripPhoto.create({
+              data: {
+                tripId: theirTrip,
+                filename: `win-${stamp}-theirs-${takenAt}.jpg`,
+                mimetype: "image/jpeg",
+                sizeBytes: 1,
+                takenAt: new Date(takenAt as string),
+                lat: lat as number | null,
+                lon: lon as number | null,
+              },
+            })
+          ).id
+      )
+    );
+
+    const lodging = await prisma.lodging.create({
+      data: { userId, name: "Hotel Roma bis", lat: 41.9, lon: 12.49 },
+    });
+    await prisma.lodgingStay.create({
+      data: {
+        userId,
+        lodgingId: lodging.id,
+        checkIn: new Date("2024-05-01T00:00:00Z"),
+        checkOut: new Date("2024-05-03T00:00:00Z"),
+      },
+    });
+    // A foreign key proves the trip exists, not that it is the caller's.
+    const flight = await prisma.flight.create({
+      data: {
+        userId,
+        tripId: theirTrip,
+        depIata: "FRA",
+        depLat: 50.03,
+        depLon: 8.56,
+        arrIata: "FCO",
+        arrLat: 41.8,
+        arrLon: 12.25,
+        departureTime: new Date("2024-05-01T08:00:00Z"),
+        arrivalTime: new Date("2024-05-01T10:00:00Z"),
+        status: "flown",
+      },
+    });
+    const cruise = await prisma.cruise.create({
+      data: {
+        userId,
+        tripId: theirTrip,
+        cruiseLine: "Test Line",
+        startDate: new Date("2024-05-01T00:00:00Z"),
+        endDate: new Date("2024-05-02T00:00:00Z"),
+        status: "flown",
+      },
+    });
+
+    const seen = await Promise.all(
+      [
+        `/api/v1/lodging/${lodging.id}/trip-photos`,
+        `/api/v1/flights/${flight.id}/trip-photos`,
+        `/api/v1/cruises/${cruise.id}/trip-photos`,
+      ].map(async (url) => {
+        const res = await request(app).get(url).set("Cookie", cookie);
+        expect(res.status).toBe(200);
+        return photoIds(res);
+      })
+    );
+    expect(seen[0]).toContain(ids.atHotel);
+    for (const list of seen) for (const id of theirs) expect(list).not.toContain(id);
   });
 });

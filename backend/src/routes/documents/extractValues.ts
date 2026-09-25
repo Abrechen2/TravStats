@@ -1,7 +1,7 @@
 import { Router, type NextFunction, type Response } from "express";
 import { z } from "zod";
 
-import { authenticate, type AuthRequest } from "../../middleware/auth";
+import { authenticate, requireWriteScope, type AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { emailParseLimiter, pdfParseLimiter } from "../../middleware/rateLimit";
 import { extractValuesBodySchema } from "../../schemas/document";
@@ -42,6 +42,8 @@ async function limitByFormat(req: AuthRequest, res: Response, next: NextFunction
 router.post(
   "/documents/:id/extract-values",
   authenticate,
+  // It replaces the reading recorded on the document, so a read token may not.
+  requireWriteScope,
   limitByFormat,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
