@@ -1,4 +1,4 @@
-import { z } from "zod";
+import { z } from "./zod";
 
 import { LOYALTY_DOMAINS, type LoyaltyDomain } from "../shared/domains";
 
