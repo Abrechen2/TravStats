@@ -26,3 +26,43 @@ export function withCruiseDayNumbers(stops: readonly CruiseStopInput[]): CruiseS
     return { ...stop, originalDay, dayNumber };
   });
 }
+
+/** "2026-01-01" + 7 days -> "2026-01-08", in UTC so no timezone can shift the day. */
+function addDays(isoDate: string, days: number): string | null {
+  const start = Date.parse(`${isoDate}T00:00:00.000Z`);
+  if (Number.isNaN(start)) return null;
+  return new Date(start + days * 86_400_000).toISOString().slice(0, 10);
+}
+
+/**
+ * The calendar date of each stop, derived from the cruise's start date and the
+ * stop's day of the cruise: day 1 is the start date, day 8 a week later.
+ *
+ * A date the user typed, or one the stop was loaded with, is never touched —
+ * only an EMPTY date is filled, and a date this function filled keeps following
+ * the day (a stop moved behind a later day moves its date with it) until the
+ * user edits it. Without a start date there is nothing to derive from, so a
+ * derived date is taken back rather than left pointing at a start that is gone.
+ *
+ * Returns the input array itself when nothing changed, so a caller can run it
+ * from an effect without looping.
+ */
+export function withDerivedStopDates(
+  stops: CruiseStopInput[],
+  startDate: string
+): CruiseStopInput[] {
+  let changed = false;
+  const next = stops.map((stop) => {
+    if (stop.dateSource === "user") return stop;
+    const derivable = stop.dateSource === "derived" || !stop.date;
+    if (!derivable) return stop;
+    const day = startDate ? addDays(startDate, stop.dayNumber - 1) : null;
+    const date = day ? `${day}T00:00:00.000Z` : null;
+    const dateSource = day ? ("derived" as const) : undefined;
+    if (stop.date === date && stop.dateSource === dateSource) return stop;
+    if (!stop.date && !date) return stop;
+    changed = true;
+    return { ...stop, date, dateSource };
+  });
+  return changed ? next : stops;
+}

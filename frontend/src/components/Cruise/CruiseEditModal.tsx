@@ -23,6 +23,7 @@ import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import CompanionPicker from "../CompanionPicker";
 import { useTripPreselection } from "../../hooks/useTripPreselection";
+import { useCruiseDateSuggestions } from "./useCruiseDateSuggestions";
 
 type Mode = "create" | "edit";
 
@@ -113,6 +114,8 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
     }))
   );
 
+  useCruiseDateSuggestions({ startDate, stops, setStops });
+
   const [cabinNumber, setCabinNumber] = useState<string>(cruise?.cabinNumber ?? "");
   const [cabinType, setCabinType] = useState<CabinType | "">(cruise?.cabinType ?? "");
   const [deck, setDeck] = useState<string>(cruise?.deck?.toString() ?? "");
@@ -201,7 +204,9 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         // including as []: omitting the field when the user removed every
         // stop would silently keep the old stops (the server reads absence
         // as "don't touch").
-        stops: stops.map(({ port: _port, originalDay: _originalDay, ...rest }) => rest),
+        stops: stops.map(
+          ({ port: _port, originalDay: _originalDay, dateSource: _dateSource, ...rest }) => rest
+        ),
       };
       const saved =
         mode === "create"

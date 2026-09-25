@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { withCruiseDayNumbers } from "../cruiseDayNumbers";
+import { withCruiseDayNumbers, withDerivedStopDates } from "../cruiseDayNumbers";
 import type { CruiseStopInput } from "../../../types";
 
 /** The owner's four examples from forgejo#126, and the one the bug was found by. */
@@ -36,5 +36,52 @@ describe("withCruiseDayNumbers", () => {
     expect(afterAdd.map((s) => s.dayNumber)).toEqual([1, 8, 9]);
     const movedUp = [afterAdd[0], afterAdd[2], afterAdd[1]];
     expect(days(movedUp)).toEqual([1, 2, 8]);
+  });
+});
+
+describe("withDerivedStopDates", () => {
+  const dated = (dayNumber: number, extra: Partial<CruiseStopInput> = {}): CruiseStopInput => ({
+    ...stop(dayNumber),
+    ...extra,
+  });
+  const dates = (stops: CruiseStopInput[], start: string) =>
+    withDerivedStopDates(stops, start).map((s) => s.date?.slice(0, 10) ?? null);
+
+  it("dates an undated stop from the start date and its day of the cruise", () => {
+    expect(dates([dated(1), dated(8)], "2026-01-01")).toEqual(["2026-01-01", "2026-01-08"]);
+  });
+
+  it("crosses a month end in UTC", () => {
+    expect(dates([dated(3)], "2026-01-30")).toEqual(["2026-02-01"]);
+  });
+
+  it("never overwrites a date the stop was loaded with or the user typed", () => {
+    const loaded = dated(2, { date: "2026-05-05T00:00:00.000Z" });
+    const typed = dated(3, { date: "2026-06-06T00:00:00.000Z", dateSource: "user" });
+    expect(dates([loaded, typed], "2026-01-01")).toEqual(["2026-05-05", "2026-06-06"]);
+  });
+
+  it("keeps a cleared date cleared once the user owns it", () => {
+    expect(dates([dated(2, { date: null, dateSource: "user" })], "2026-01-01")).toEqual([null]);
+  });
+
+  it("lets a derived date follow its day and the start date", () => {
+    const [first] = withDerivedStopDates([dated(2)], "2026-01-01");
+    expect(first.date).toBe("2026-01-02T00:00:00.000Z");
+    expect(dates([{ ...first, dayNumber: 5 }], "2026-01-01")).toEqual(["2026-01-05"]);
+    expect(dates([first], "2026-03-01")).toEqual(["2026-03-02"]);
+  });
+
+  it("takes a derived date back when the start date is cleared, and abstains without one", () => {
+    const [first] = withDerivedStopDates([dated(2)], "2026-01-01");
+    expect(dates([first], "")).toEqual([null]);
+    expect(dates([dated(2)], "")).toEqual([null]);
+  });
+
+  it("returns the same array when nothing changes, so an effect cannot loop", () => {
+    const once = withDerivedStopDates([dated(1)], "2026-01-01");
+    expect(withDerivedStopDates(once, "2026-01-01")).toBe(once);
+    const none = [dated(1)];
+    expect(withDerivedStopDates(none, "")).toBe(none);
   });
 });

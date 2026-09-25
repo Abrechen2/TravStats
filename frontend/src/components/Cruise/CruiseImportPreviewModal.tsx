@@ -365,7 +365,9 @@ function CruiseImportEntryEditor({
       bookingReference: bookingReference.trim() || undefined,
       price: price ? Number(price) : undefined,
       currency: (currency as CruiseInput["currency"]) || undefined,
-      stops: stops.map(({ port: _port, originalDay: _originalDay, ...rest }) => rest),
+      stops: stops.map(
+        ({ port: _port, originalDay: _originalDay, dateSource: _dateSource, ...rest }) => rest
+      ),
     };
 
     const userTz = useSettingsStore.getState().display?.timezone || "UTC";
