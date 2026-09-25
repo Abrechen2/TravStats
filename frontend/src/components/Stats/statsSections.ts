@@ -77,6 +77,12 @@ export const POI_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "fun", label: t("places:stats.fun.title") },
 ];
 
+export const ROADTRIP_SECTIONS = (t: Translate): SectionOption[] => [
+  { key: "kpis", label: t("stats:sections.keyFigures") },
+  { key: "records", label: t("roadtrips:stats.recordsLabel") },
+  { key: "vehicles", label: t("roadtrips:stats.vehicles") },
+];
+
 export const RAIL_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "kpis", label: t("rail:stats.sections.kpis") },
   { key: "rankings", label: t("rail:stats.sections.rankings") },
@@ -91,6 +97,7 @@ const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   cruise: CRUISE_SECTIONS,
   lodging: LODGING_SECTIONS,
   poi: POI_SECTIONS,
+  roadtrip: ROADTRIP_SECTIONS,
   rail: RAIL_SECTIONS,
 };
 

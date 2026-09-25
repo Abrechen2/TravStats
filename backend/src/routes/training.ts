@@ -14,6 +14,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { rejectDemo } from "../middleware/demoGuard";
 import { uploadReceiptLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
+import { UnsupportedUploadTypeError } from "../middleware/upload";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { deriveTemplateFromAnnotation } from "../services/parsers/userTemplates/deriver";
@@ -132,7 +133,7 @@ const trainingUpload = multer({
     if (allowed.includes(ext)) {
       cb(null, true);
     } else {
-      cb(new Error(`Unsupported file type: ${ext}`));
+      cb(new UnsupportedUploadTypeError(`Unsupported file type: ${ext}`));
     }
   },
 });

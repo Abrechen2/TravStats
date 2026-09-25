@@ -157,6 +157,8 @@
     "lodging_desc": "Übernachtungen, Ketten-Loyalty, Länder/Städte.",
     "poi": "Orte",
     "poi_desc": "Sehenswürdigkeiten, Restaurants, Konzerte, beliebige Orte.",
+    "roadtrip": "Roadtrips",
+    "roadtrip_desc": "Mehrtägige Touren mit dem Wohnmobil, Auto oder Rad: Stationen, Übernachtungen, Strecke.",
     "rail": "Bahn",
     "rail_desc": "Zugfahrten wie Flüge: Bahnhöfe, Zugnummer, Klasse, Sitzplatz, Kilometer. (Beta)"
   },
@@ -170,6 +172,7 @@
         "cruise": "Navigation, Statistik, Karte",
         "lodging": "Navigation, Statistik, Reisetage",
         "poi": "Orte, Besuche und Ortslisten",
+        "roadtrip": "Stationen, Übernachtungen, Karte",
         "rail": "Beta: Fahrtenbuch für Zugfahrten"
       }
     }
@@ -226,7 +229,11 @@
       "next": "Nächste Seite",
       "last": "Letzte Seite",
       "pageSize": "Zeilen pro Seite",
-      "all": "Alle"
+      "all": "Alle",
+      "landmark": {
+        "top": "Seitensteuerung oben",
+        "bottom": "Seitensteuerung unten"
+      }
     }
   },
   "support": {
@@ -273,5 +280,12 @@
     "open": "Auswählen",
     "clear": "Entfernen",
     "unavailable": "Die Emoji-Auswahl lässt sich hier nicht laden. Du kannst ein Emoji weiterhin ins Feld einfügen."
-  }
+  },
+  "tagInput": {
+    "remove": "Tag {{name}} entfernen",
+    "suggestions": "Deine Tags",
+    "usage_one": "1-mal verwendet",
+    "usage_other": "{{count}}-mal verwendet"
+  },
+  "suggestionChip": "{{field}} {{value}} übernehmen"
 }

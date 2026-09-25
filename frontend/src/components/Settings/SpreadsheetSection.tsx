@@ -18,6 +18,10 @@ import { flightsApi } from "../../lib/api/flights";
 import { listLodgings } from "../../lib/api/lodging";
 import { placesApi } from "../../lib/api/places";
 import { railApi } from "../../lib/api/rail";
+import { roadtripsApi } from "../../lib/api/roadtrips";
+import { tourIndexApi } from "../../lib/api/tourIndex";
+import { toursApi } from "../../lib/api/tours";
+import { useToursVisible } from "../../hooks/useToursVisible";
 import { exportFilename, exportWorkbook } from "../../lib/xlsx/exportAll";
 import {
   ImportRefused,
@@ -25,11 +29,62 @@ import {
   sendImport,
   type ImportMode,
   type ImportOutcome,
+  type SheetOutcome,
 } from "../../lib/xlsx/importClient";
+import type { ParsedSheet } from "../../lib/xlsx/workbook";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useRailVisible } from "../../hooks/useRailVisible";
 import { Icon } from "../ui/Icon";
 import { SettingRow } from "../ui/SettingRow";
+
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * Per row: new or changed, and how an existing entry was found. The counts
+ * alone cannot say WHICH hotel is about to be created twice — this can, and
+ * it is what a person checks before moving a file into another account.
+ */
+function SheetRows({ sheet, t }: { sheet: SheetOutcome; t: Translate }): JSX.Element | null {
+  const rows = sheet.rows.filter((r) => r.action !== "error");
+  if (rows.length === 0) return null;
+  return (
+    <details className="ml-3">
+      <summary className="cursor-pointer" style={{ color: "var(--text-muted)" }}>
+        {t("xlsx:import.rowsToggle")}
+      </summary>
+      <ul className="mt-1 space-y-0.5">
+        {rows.map((r) => (
+          <li key={r.row} data-testid={`xlsx-row-${sheet.key}-${r.row}`}>
+            <span className="font-medium">{t(`xlsx:import.actions.${r.action}`)}</span>{" "}
+            {t("xlsx:import.rowLine", { row: r.row, label: r.label })}
+            {r.message && (
+              <span style={{ color: "var(--text-muted)" }}>
+                {" "}
+                · {t(`xlsx:import.resolution.${r.message}`, { defaultValue: r.message })}
+              </span>
+            )}
+            {(r.notes ?? []).map((n) => (
+              <span key={n} style={{ color: "var(--text-muted)" }}>
+                {" "}
+                · {t(`xlsx:import.notes.${n}`, { defaultValue: n })}
+              </span>
+            ))}
+            {(r.dropped ?? []).map((d) => (
+              <span key={`dropped-${d.field}`} style={{ color: "var(--text-muted)" }}>
+                {" "}
+                ·{" "}
+                {t(d.kept ? "xlsx:import.droppedValueKept" : "xlsx:import.droppedValue", {
+                  field: t(`xlsx:columns.${d.field}`, { defaultValue: d.field }),
+                  value: d.value,
+                })}
+              </span>
+            ))}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
 
 type Status = "idle" | "running" | "empty" | "failed";
 type ImportStatus =
@@ -44,13 +99,14 @@ type ImportStatus =
 
 /** Sheets held for the confirm step, so applying re-sends exactly what was
  *  previewed rather than re-reading a file that may have changed on disk. */
-type Pending = { key: string; rows: Record<string, string>[] }[];
+type Pending = ParsedSheet[];
 
 export default function SpreadsheetSection(): JSX.Element {
   const { t, i18n } = useTranslation(["xlsx", "common"]);
   const { isEnabled } = useEnabledDomains();
   // Rail is beta: behind the `railDomain` gate the export carries no rail sheet.
   const railVisible = useRailVisible();
+  const toursVisible = useToursVisible();
   const [status, setStatus] = useState<Status>("idle");
 
   const handleExport = useCallback(async () => {
@@ -59,21 +115,36 @@ export default function SpreadsheetSection(): JSX.Element {
       // Only domains this instance actually runs. Asking the cruise endpoint
       // on an instance with cruises switched off would 404 and fail the whole
       // export over data the user does not have.
-      const [flights, cruises, lodging, places, rail] = await Promise.all([
-        // The list endpoint pages; one large page is enough for an export and
-        // keeps this to a single request.
-        isEnabled("flight")
-          ? flightsApi.getAll({ limit: 5000, offset: 0 }).then((r) => r.flights)
-          : Promise.resolve([]),
+      const [flights, cruises, lodging, places, roadtrips, tours, rail] = await Promise.all([
+        // Walked page by page, like the other domains. One "large" page was
+        // never enough: the server caps `limit` at 500 whatever is asked for,
+        // so an account with 501 flights exported 500 of them and said
+        // nothing (beta audit 2026-09-20, SRV-EXPORT-002).
+        isEnabled("flight") ? flightsApi.getEvery() : Promise.resolve([]),
         isEnabled("cruise") ? cruiseApi.list() : Promise.resolve([]),
         isEnabled("lodging") ? listLodgings() : Promise.resolve([]),
         isEnabled("poi") ? placesApi.list() : Promise.resolve([]),
+        // A station sheet needs every station, which only the detail carries.
+        isEnabled("roadtrip")
+          ? roadtripsApi.list().then((rows) => Promise.all(rows.map((r) => roadtripsApi.get(r.id))))
+          : Promise.resolve([]),
+        // The points sheet needs every tour's points, which only the detail carries.
+        toursVisible
+          ? tourIndexApi.list("tour").then((rows) =>
+              Promise.all(
+                rows.map(async (r) => ({
+                  ...r,
+                  points: (await toursApi.get(undefined, r.id)).stops,
+                }))
+              )
+            )
+          : Promise.resolve([]),
         railVisible ? railApi.listAll() : Promise.resolve([]),
       ]);
 
       const blob = await exportWorkbook(
         t,
-        { flights, cruises, lodging, places, rail },
+        { flights, cruises, lodging, places, roadtrips, tours, rail },
         i18n.language
       );
       if (!blob) {
@@ -95,7 +166,7 @@ export default function SpreadsheetSection(): JSX.Element {
     } catch {
       setStatus("failed");
     }
-  }, [isEnabled, railVisible, t, i18n.language]);
+  }, [isEnabled, toursVisible, railVisible, t, i18n.language]);
 
   const [importStatus, setImportStatus] = useState<ImportStatus>("idle");
   const [outcome, setOutcome] = useState<ImportOutcome | null>(null);
@@ -191,10 +262,9 @@ export default function SpreadsheetSection(): JSX.Element {
           sub={
             <>
               {t("xlsx:import.description")}{" "}
-              {/* Named rather than left to be discovered: editing a sheet and
-                  watching nothing happen is worse than knowing beforehand that
-                  it is read-only. */}
-              {t("xlsx:import.readOnlySheets")}
+              {/* Said up front: the table moves entries, not files, and a
+                  whole-installation move is the backup's job — not this. */}
+              {t("xlsx:import.transferNote")}
             </>
           }
           control={
@@ -251,16 +321,19 @@ export default function SpreadsheetSection(): JSX.Element {
               {importStatus === "applied" ? t("xlsx:import.applied") : t("xlsx:import.preview")}
             </p>
             {outcome.sheets.map((s) => (
-              <div key={s.key} className="flex items-baseline gap-2">
-                <span className="font-medium">{t(`xlsx:sheets.${s.key}`)}</span>
-                <span style={{ color: "var(--text-muted)" }}>
-                  {t("xlsx:import.counts", {
-                    created: s.created,
-                    updated: s.updated,
-                    skipped: s.skipped,
-                    errors: s.errors,
-                  })}
-                </span>
+              <div key={s.key}>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-medium">{t(`xlsx:sheets.${s.key}`)}</span>
+                  <span style={{ color: "var(--text-muted)" }}>
+                    {t("xlsx:import.counts", {
+                      created: s.created,
+                      updated: s.updated,
+                      skipped: s.skipped,
+                      errors: s.errors,
+                    })}
+                  </span>
+                </div>
+                <SheetRows sheet={s} t={t} />
               </div>
             ))}
 

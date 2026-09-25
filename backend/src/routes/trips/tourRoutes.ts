@@ -5,8 +5,10 @@ import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { assignStopsSchema, createRouteSchema, updateRouteSchema } from "../../schemas/tour";
+import { kindFieldsSchema } from "../../schemas/roadtrip";
 import { drivenKm, travelledKm } from "../../services/tour/tourDistance";
 import { recomputeLegs } from "../../services/tour/legRecompute";
+import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 import { describeRoutingAvailability } from "../../services/tour/routing/resolveProvider";
 import { resolveTrip } from "../trips";
 import logger from "../../utils/logger";
@@ -20,6 +22,56 @@ import logger from "../../utils/logger";
 
 const router = Router();
 
+/**
+ * The kind-specific PATCH fields each point at something that must be the
+ * caller's and must fit the row's kind: an anchor is a station of one of the
+ * caller's roadtrips and only a tour sets out from one; a trip must be the
+ * caller's. A foreign key would prove existence, not ownership.
+ */
+async function assertKindFields(
+  userId: string,
+  routeId: string,
+  body: { anchorStopId?: string | null; tripId?: string | null }
+): Promise<void> {
+  if (body.tripId) await resolveTrip(userId, body.tripId);
+  if (body.tripId !== undefined) {
+    // Only a roadtrip moves between trips: its stations are its own. A tour
+    // section of a trip is built from that trip's timeline, and a standalone
+    // tour's points would land beside a timeline the assign endpoint owns.
+    const { kind } = await prisma.tripRoute.findUniqueOrThrow({
+      where: { id: routeId },
+      select: { kind: true },
+    });
+    if (kind !== "roadtrip") {
+      throw new AppError("Only a roadtrip can be attached to or moved between trips", 400);
+    }
+    // A section built from a trip's timeline stops cannot change trip: its
+    // stops would stay on the old trip's timeline while the route claimed the
+    // new one. Only a route whose points are its own may move.
+    const timelineStops = await prisma.tripStop.count({
+      where: { routeId, tripId: { not: null } },
+    });
+    if (timelineStops > 0) {
+      throw new AppError(
+        "This route is built from a trip's timeline stops and cannot move to another trip",
+        409
+      );
+    }
+  }
+  if (!body.anchorStopId) return;
+  const [route, anchor] = await Promise.all([
+    prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, select: { kind: true } }),
+    prisma.tripStop.findFirst({
+      where: { id: body.anchorStopId, route: { userId, kind: "roadtrip" } },
+      select: { id: true },
+    }),
+  ]);
+  if (route.kind !== "tour") {
+    throw new AppError("Only a tour sets out from a roadtrip station", 400);
+  }
+  if (!anchor) throw new AppError("Station not found", 404);
+}
+
 interface LegRow {
   mode: string;
   distanceKm: number;
@@ -32,7 +84,8 @@ interface LegRow {
  */
 export function toDto(route: {
   id: string;
-  tripId: string;
+  /** `null` for a standalone tour — one that belongs to no trip. */
+  tripId: string | null;
   name: string;
   mode: string;
   orderIdx: number;
@@ -40,6 +93,12 @@ export function toDto(route: {
   notes: string | null;
   startOdometerKm: number | null;
   endOdometerKm: number | null;
+  kind: string;
+  activity: string | null;
+  vehicle: string | null;
+  vehicleName: string | null;
+  anchorStopId: string | null;
+  kindAssignedAutomatically: boolean;
   legs: LegRow[];
   _count: { stops: number };
 }): Record<string, unknown> {
@@ -53,6 +112,12 @@ export function toDto(route: {
     notes: route.notes,
     startOdometerKm: route.startOdometerKm,
     endOdometerKm: route.endOdometerKm,
+    kind: route.kind,
+    activity: route.activity,
+    vehicle: route.vehicle,
+    vehicleName: route.vehicleName,
+    anchorStopId: route.anchorStopId,
+    kindAssignedAutomatically: route.kindAssignedAutomatically,
     stopCount: route._count.stops,
     legCount: route.legs.length,
     distanceKm: travelledKm(route.legs),
@@ -94,19 +159,64 @@ export const ROUTE_SELECT = {
   _count: { select: { stops: true } },
 } as const;
 
-/** Section must exist AND belong to a trip this user owns. */
+/**
+ * A section and its legs as they stand now. For a handler that changed the
+ * legs after its own transaction committed (the automatic routing pass), so
+ * the response shows the routed lines rather than the straight ones it wrote.
+ */
+export async function readRouteAndLegs(routeId: string) {
+  const [route, legs] = await Promise.all([
+    prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, include: ROUTE_SELECT }),
+    prisma.tripRouteLeg.findMany({
+      where: { routeId },
+      orderBy: { fromStop: { routeOrderIdx: "asc" } },
+    }),
+  ]);
+  return { route, legs };
+}
+
+/**
+ * The section must exist and be OWNED by this user.
+ *
+ * Ownership is the section's own `userId` since 2026-09-21, not the trip's:
+ * a standalone tour has no trip to be owned through. Every one of these
+ * endpoints answers under two paths — `/trips/:id/routes/:routeId` and
+ * `/tours/:routeId` — and the second one has no trip in it at all.
+ *
+ * Where the caller DID name a trip, the section must actually be on that
+ * trip. That check is not ceremony: without it `/trips/A/routes/<a section
+ * of trip B>` would edit B's section, and both trips being yours is exactly
+ * the case where nobody would notice.
+ */
 export async function resolveRoute(
   userId: string,
-  tripId: string,
+  tripId: string | undefined,
   routeId: string
 ): Promise<string> {
-  await resolveTrip(userId, tripId);
   const route = await prisma.tripRoute.findFirst({
-    where: { id: routeId, tripId },
-    select: { id: true },
+    where: { id: routeId, userId },
+    select: { id: true, tripId: true },
   });
   if (!route) throw new AppError("Route not found", 404);
+  if (tripId !== undefined && route.tripId !== tripId) {
+    throw new AppError("Route not found", 404);
+  }
   return route.id;
+}
+
+/**
+ * The section named by EITHER path shape.
+ *
+ * `/trips/:id/routes/:routeId` still carries a trip, `/tours/:routeId` does
+ * not, and a standalone tour has none to carry. Where a trip IS named it is
+ * resolved first, so a trip that is not yours still answers 404 from the
+ * trip rather than leaking the existence of a section through a different
+ * error.
+ */
+export async function resolveRouteFromRequest(userId: string, req: AuthRequest): Promise<string> {
+  const tripId = req.params.id;
+  if (tripId !== undefined) await resolveTrip(userId, tripId);
+  return resolveRoute(userId, tripId, req.params.routeId);
 }
 
 /** GET /trips/:id/routes */
@@ -149,6 +259,7 @@ router.post(
 
       const route = await prisma.tripRoute.create({
         data: {
+          userId,
           tripId: trip.id,
           name: body.name,
           mode: body.mode,
@@ -171,14 +282,15 @@ router.post(
 
 /** PATCH /trips/:id/routes/:routeId */
 router.patch(
-  "/trips/:id/routes/:routeId",
+  ["/trips/:id/routes/:routeId", "/tours/:routeId"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
       const routeId = await resolveRoute(userId, req.params.id, req.params.routeId);
-      const body = updateRouteSchema.parse(req.body);
+      const body = updateRouteSchema.merge(kindFieldsSchema).parse(req.body);
+      await assertKindFields(userId, routeId, body);
 
       const route = await prisma.tripRoute.update({
         where: { id: routeId },
@@ -193,25 +305,37 @@ router.patch(
 );
 
 /**
- * DELETE /trips/:id/routes/:routeId
+ * DELETE /trips/:id/routes/:routeId · DELETE /tours/:routeId
  *
- * Deletes the section and its legs. Its stops are RELEASED, not deleted —
- * `TripStop.routeId` is `onDelete: SetNull`. A tour is scaffolding over the
- * timeline; removing the scaffolding must not remove the timeline.
+ * Deletes the section and its legs. A stop that sits on a TRIP is
+ * RELEASED, not deleted — a tour is scaffolding over the timeline, and
+ * removing the scaffolding must not remove the timeline. That is what the
+ * delete confirmation promises the reader.
+ *
+ * A stop of a STANDALONE tour has no timeline to fall back to: releasing
+ * it would leave a row belonging to nobody and reachable from nothing (and
+ * `trip_stops_trip_or_route` refuses to store one). Those are deleted with
+ * the section. The database cannot express "cascade only the orphans", so
+ * both halves happen here, in one transaction.
  */
 router.delete(
-  "/trips/:id/routes/:routeId",
+  ["/trips/:id/routes/:routeId", "/tours/:routeId"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const routeId = await resolveRoute(userId, req.params.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
 
       await prisma.$transaction(async (tx) => {
+        // Release the TRIP's stops first; the section's own trip-less
+        // points then go with it through the cascade. Reversing these two
+        // deletes the timeline the tour was only drawn over. The night
+        // columns are a roadtrip station's state and leave with the station,
+        // as they do when `PUT /roadtrips/:id/stations` drops one.
         await tx.tripStop.updateMany({
-          where: { routeId },
-          data: { routeId: null, routeOrderIdx: null },
+          where: { routeId, tripId: { not: null } },
+          data: { routeId: null, routeOrderIdx: null, lodgingStayId: null, overnight: false },
         });
         await tx.tripRoute.delete({ where: { id: routeId } });
       });
@@ -257,21 +381,20 @@ router.delete(
  * it needs no separate error handling here.
  */
 router.get(
-  "/trips/:id/routes/:routeId",
+  ["/trips/:id/routes/:routeId", "/tours/:routeId"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
 
       const [route, stops, legs, routing] = await Promise.all([
         prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, include: ROUTE_SELECT }),
         prisma.tripStop.findMany({
           where: { routeId },
           orderBy: { routeOrderIdx: "asc" },
-          select: { id: true, title: true, lat: true, lon: true, routeOrderIdx: true },
+          select: { id: true, title: true, lat: true, lon: true, notes: true, routeOrderIdx: true },
         }),
         prisma.tripRouteLeg.findMany({
           where: { routeId },
@@ -318,25 +441,43 @@ router.get(
  * not collide and would not be caught by the schema.
  */
 router.put(
-  "/trips/:id/routes/:routeId/stops",
+  ["/trips/:id/routes/:routeId/stops", "/tours/:routeId/stops"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
       const { stopIds } = assignStopsSchema.parse(req.body);
+
+      const section = await prisma.tripRoute.findUniqueOrThrow({
+        where: { id: routeId },
+        select: { tripId: true },
+      });
+      /* What makes a stop eligible, and it is not the same question in both
+         cases. On a trip's section, a stop must be on THAT trip — that is
+         what keeps one trip's timeline out of another's route. A standalone
+         tour has no trip, so its stops are the ones its own sections own,
+         and eligibility is ownership of the section they sit on. Filtering
+         on `tripId: null` alone would have matched a stranger's standalone
+         stop: a foreign key proves existence, not ownership. */
+      const ownedStop =
+        section.tripId !== null ? { tripId: section.tripId } : { route: { userId } };
 
       // No de-dup needed here: `assignStopsSchema` already rejects a
       // repeated stop id (see the loop-modelling note on that schema).
       const stops = await prisma.tripStop.findMany({
-        where: { id: { in: stopIds }, tripId: trip.id },
+        where: { id: { in: stopIds }, ...ownedStop },
         select: { id: true, lat: true, lon: true, title: true, routeId: true },
       });
 
       if (stops.length !== stopIds.length) {
-        throw new AppError("Every stop must belong to this trip", 400);
+        throw new AppError(
+          section.tripId !== null
+            ? "Every stop must belong to this trip"
+            : "Every stop must belong to this tour",
+          400
+        );
       }
       const missing = stops.find((s) => s.lat === null || s.lon === null);
       if (missing) {
@@ -356,7 +497,7 @@ router.put(
       // so its index IS the final `routeOrderIdx`, contiguous from 0.
       const ordered = stopIds.map((id) => byId.get(id)!);
 
-      await prisma.$transaction(
+      const createdLegs = await prisma.$transaction(
         async (tx) => {
           // Release first: `@@unique([routeId, routeOrderIdx])` would
           // collide with the old numbering otherwise.
@@ -375,7 +516,7 @@ router.put(
           for (let idx = 0; idx < stopIds.length; idx++) {
             const id = stopIds[idx];
             const hit = await tx.tripStop.updateMany({
-              where: { id, tripId: trip.id, OR: [{ routeId: null }, { routeId }] },
+              where: { id, ...ownedStop, OR: [{ routeId: null }, { routeId }] },
               data: { routeId, routeOrderIdx: idx },
             });
             if (hit.count !== 1) {
@@ -386,13 +527,14 @@ router.put(
             where: { id: routeId },
             select: { mode: true },
           });
-          await recomputeLegs(tx, routeId, route.mode, ordered);
+          return recomputeLegs(tx, routeId, route.mode, ordered);
         },
         // Default interactive-transaction timeout is 5000ms. At the
         // 512-stop cap this loop is up to 512 awaited updates; comfortably
         // inside 20s even over a non-local socket.
         { timeout: 20_000 }
       );
+      await autoRouteNewLegs(userId, routeId, createdLegs);
 
       const [route, legs, savedStops] = await Promise.all([
         prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, include: ROUTE_SELECT }),
@@ -403,7 +545,7 @@ router.put(
         prisma.tripStop.findMany({
           where: { routeId },
           orderBy: { routeOrderIdx: "asc" },
-          select: { id: true, title: true, lat: true, lon: true, routeOrderIdx: true },
+          select: { id: true, title: true, lat: true, lon: true, notes: true, routeOrderIdx: true },
         }),
       ]);
 

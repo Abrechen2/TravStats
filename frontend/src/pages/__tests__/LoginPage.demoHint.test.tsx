@@ -4,6 +4,16 @@ import { MemoryRouter } from "react-router-dom";
 
 const getStatus = vi.fn();
 
+// The sign-in page's left half carries an admin-supplied slideshow that asks
+// the server for its list on mount. Mocked away: these cases are about signing
+// in, and the network guard would fail the render before the form is drawn.
+vi.mock("../../lib/api/loginBackgrounds", () => ({
+  getLoginBackgrounds: () => Promise.resolve([]),
+  loginBackgroundUrl: (name: string) => `/api/v1/login-backgrounds/${name}`,
+  uploadLoginBackgrounds: vi.fn(),
+  deleteLoginBackground: vi.fn(),
+}));
+
 vi.mock("../../lib/api", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../lib/api")>();
   return {

@@ -7,6 +7,7 @@ import {
   isDashboardTab,
   isModeForTab,
   projectionOfMode,
+  TAB_MODE_REGISTRY,
 } from "../types/dashboard";
 import { useEnabledDomains } from "./useEnabledDomains";
 import { useSettingsStore } from "../store/settingsStore";
@@ -14,11 +15,21 @@ import { DOMAIN_KEYS, type DomainKey } from "../shared/domains";
 
 const LAST_MODE_KEY = "travstats:dashboard:lastMode";
 /**
- * The last projection the reader chose, per tab — separate from the mode
- * because the two answer different questions. "journey" is a view of one trip
- * and says nothing about globe-vs-flat, so picking it leaves this untouched;
- * that is what lets the journey view open on the projection the reader last
- * asked for rather than on a hardcoded one (owner ruling, 2026-09-20).
+ * The last projection the reader chose — ONE choice for the whole dashboard,
+ * not one per tab.
+ *
+ * Separate from the mode because the two answer different questions. "Heatmap
+ * or routes" is a question about flights, and asking it again of cruises would
+ * be nonsense; "globe or flat" is a question about the map itself and has the
+ * same answer everywhere. It was stored per tab until 2026-09-21, which is why
+ * switching the "Alle" tab to the globe left every other tab on whatever it
+ * showed before — a tester read that as the switch not being taken (Alex,
+ * 2026-09-20), and he is right: nobody asks for a globe meaning "here only".
+ *
+ * "journey" is a view of one trip and says nothing about globe-vs-flat, so
+ * picking it leaves this untouched; that is what lets the journey view open on
+ * the projection the reader last asked for rather than on a hardcoded one
+ * (owner ruling, 2026-09-20).
  */
 const LAST_PROJECTION_KEY = "travstats:dashboard:lastProjection";
 
@@ -49,15 +60,23 @@ function readLastModes(): Partial<Record<DashboardTab, DashboardMode>> {
   }
 }
 
-function readLastProjections(): Partial<Record<DashboardTab, MapProjectionChoice>> {
+/**
+ * `undefined` when the reader has never chosen, which is not the same as
+ * "flat" — an unanswered question falls through to the globe default.
+ *
+ * A value written before 2026-09-21 is the old per-tab OBJECT. It is ignored
+ * rather than migrated: the reader's next mode click writes the new shape,
+ * and guessing which of up to six entries was meant would be inventing an
+ * answer nobody gave.
+ */
+function readLastProjection(): MapProjectionChoice | undefined {
   try {
     const raw = window.localStorage.getItem(LAST_PROJECTION_KEY);
-    if (!raw) return {};
+    if (!raw) return undefined;
     const parsed = JSON.parse(raw);
-    if (!parsed || typeof parsed !== "object") return {};
-    return parsed as Partial<Record<DashboardTab, MapProjectionChoice>>;
+    return parsed === "globe" || parsed === "flat" ? parsed : undefined;
   } catch {
-    return {};
+    return undefined;
   }
 }
 
@@ -73,10 +92,7 @@ function writeLastMode(tab: DashboardTab, mode: DashboardMode): void {
   const projection = projectionOfMode(mode);
   if (projection === null) return;
   try {
-    window.localStorage.setItem(
-      LAST_PROJECTION_KEY,
-      JSON.stringify({ ...readLastProjections(), [tab]: projection })
-    );
+    window.localStorage.setItem(LAST_PROJECTION_KEY, JSON.stringify(projection));
   } catch {
     // Same silence, same reason.
   }
@@ -123,9 +139,29 @@ export function useDashboardRoute(): DashboardRouteState {
   const mode: DashboardMode = useMemo(() => {
     const urlMode = search.get("mode");
     if (urlMode && isModeForTab(tab, urlMode)) return urlMode;
-    const stored = readLastModes()[tab];
-    if (stored && isModeForTab(tab, stored)) return stored;
-    return defaultModeForTab(tab);
+
+    const storedRaw = readLastModes()[tab];
+    const stored = storedRaw && isModeForTab(tab, storedRaw) ? storedRaw : undefined;
+    const wanted = readLastProjection();
+
+    // A mode that says nothing about the projection ("journey") is the
+    // reader's view choice and outranks the projection question entirely —
+    // it is drawable either way, so there is nothing to reconcile.
+    if (stored !== undefined && projectionOfMode(stored) === null) return stored;
+
+    // The projection carries ACROSS tabs, the data view does not. So a tab
+    // whose remembered mode disagrees with the projection the reader last
+    // asked for follows the projection: to the globe, or back to the flat
+    // view this tab opens on. What it must not do is keep drawing a flat map
+    // because that is what this particular tab saw last.
+    if (wanted === "globe")
+      return isModeForTab(tab, "globe") ? "globe" : (stored ?? defaultModeForTab(tab));
+    if (wanted === "flat") {
+      if (stored !== undefined && projectionOfMode(stored) === "flat") return stored;
+      return TAB_MODE_REGISTRY[tab].flatDefault;
+    }
+
+    return stored ?? defaultModeForTab(tab);
   }, [search, tab]);
 
   // Persist the resolved mode so a later tab-switch round-trip
@@ -181,7 +217,7 @@ export function useDashboardRoute(): DashboardRouteState {
   // effect. Storage is only consulted for a mode that says nothing about a
   // projection ("journey"), which is the whole reason it exists.
   const projection = useMemo<MapProjectionChoice>(
-    () => projectionOfMode(mode) ?? readLastProjections()[tab] ?? "globe",
+    () => projectionOfMode(mode) ?? readLastProjection() ?? "globe",
     [tab, mode]
   );
 

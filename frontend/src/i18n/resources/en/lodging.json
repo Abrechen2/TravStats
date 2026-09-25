@@ -107,7 +107,7 @@
     "city": "City",
     "country": "Country",
     "amenities": "Amenities",
-    "amenitiesPlaceholder": "e.g. Wi-Fi, pool, parking (comma-separated)",
+    "amenitiesPlaceholder": "e.g. Wi-Fi, pool, parking",
     "notes": "Notes",
     "independent": "Independent",
     "staysCount": "{{count}} stays",
@@ -137,7 +137,7 @@
     "totalPrice": "Total price",
     "pricePerNight": "Price per night",
     "roomAmenities": "Room amenities",
-    "roomAmenitiesPlaceholder": "e.g. sea view, balcony (comma-separated)",
+    "roomAmenitiesPlaceholder": "e.g. sea view, balcony",
     "membership": "Loyalty program",
     "noMembership": "No loyalty program",
     "membershipDerive": "Automatic (from the chain)",
@@ -154,7 +154,10 @@
     "programName": "Program name",
     "membershipNumber": "Membership number",
     "tier": "Tier",
-    "ratingOverallDerived": "Average of room, breakfast and service"
+    "ratingOverallDerived": "Average of room, breakfast and service",
+    "website": "Website",
+    "amenitySuggestions": "Your amenities",
+    "removeAmenity": "Remove {{name}}"
   },
   "type": {
     "hotel": "Hotel",
@@ -233,7 +236,13 @@
     "notesSection": "Notes",
     "saveError": "Could not save stay",
     "companionsHint": "This booking covered {{count}} people. Add the companions — the confirmation only names the booker.",
-    "tripSection": "Trip"
+    "tripSection": "Trip",
+    "boardSuggestion": "Usually: {{board}}",
+    "tripDates": {
+      "both": "Use the trip's dates: {{from}} – {{to}}",
+      "checkIn": "Trip start as check-in: {{date}}",
+      "checkOut": "Trip end as check-out: {{date}}"
+    }
   },
   "membership": {
     "title": "Loyalty programs",
@@ -276,7 +285,9 @@
       "commitError": "Could not commit the import",
       "chooseCurrency": "— currency —",
       "currencyMissingHint": "A price needs a currency — pick one for the highlighted rows, or the amount will not be imported.",
-      "changedLabel": "changed"
+      "changedLabel": "changed",
+      "createAllUndecided": "Create all {{count}} undecided as new",
+      "createAllChains": "Create all {{count}} chains"
     },
     "matchedLodgingHint": "This row attaches to an existing hotel — name and city cannot be edited here.",
     "matchedAs": "Matched to:",

@@ -3,18 +3,57 @@ import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
 import { tripsApi } from "../../lib/api";
-import CurrencyInput from "../CurrencyInput";
+import CurrencySelect from "../common/CurrencySelect";
+import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
+import { useSettingsStore } from "../../store/settingsStore";
 import type { Booking } from "../../types";
 import { logger } from "../../lib/logger";
+import SuggestionChips from "../common/SuggestionChips";
+
+/**
+ * A flight of the booking's trip. GET /trips/:id sends the whole flight row;
+ * these are the two fields read here, optional because the trip type's flight
+ * Pick does not declare the reference.
+ */
+export interface PnrSource {
+  bookingId?: string | null;
+  bookingReference?: string | null;
+}
+
+const PNR_SUGGESTION_CAP = 4;
+
+/**
+ * Booking references the trip's flights carry, those of this booking's own
+ * flights first — a PNR typed once on a flight (or parsed off its boarding
+ * pass) should not have to be typed again on the booking that paid for it.
+ */
+export function pnrSuggestions(bookingId: string, flights: readonly PnrSource[]): string[] {
+  const ordered = [
+    ...flights.filter((f) => f.bookingId === bookingId),
+    ...flights.filter((f) => f.bookingId !== bookingId),
+  ];
+  const seen = new Set<string>();
+  const out: string[] = [];
+  for (const f of ordered) {
+    const value = f.bookingReference?.trim() ?? "";
+    if (!value || seen.has(value.toUpperCase())) continue;
+    seen.add(value.toUpperCase());
+    out.push(value);
+  }
+  return out.slice(0, PNR_SUGGESTION_CAP);
+}
 
 interface BookingEditModalProps {
   booking: Booking;
+  /** The trip's flights, for the PNR chips; without them nothing is offered. */
+  flights?: readonly PnrSource[];
   onClose: () => void;
   onSaved: () => void;
 }
 
 export default function BookingEditModal({
   booking,
+  flights = [],
   onClose,
   onSaved,
 }: BookingEditModalProps): JSX.Element {
@@ -22,7 +61,11 @@ export default function BookingEditModal({
   const addToast = useToastStore((s) => s.addToast);
   const [pnr, setPnr] = useState(booking.pnr ?? "");
   const [price, setPrice] = useState(booking.price != null ? String(booking.price) : "");
-  const [currency, setCurrency] = useState(booking.currency ?? "EUR");
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  // A booking with no currency on record starts in the account's own
+  // currency, not a literal EUR; a stored one is a fact and stays.
+  const [currency, setCurrency] = useState(booking.currency ?? baseCurrency ?? "EUR");
+  const recentCurrencies = useRecentCurrencies();
   const [saving, setSaving] = useState(false);
 
   const handleSave = async (): Promise<void> => {
@@ -84,6 +127,12 @@ export default function BookingEditModal({
             maxLength={20}
             onChange={(e) => setPnr(e.target.value)}
           />
+          <SuggestionChips
+            value={pnr}
+            suggestions={pnrSuggestions(booking.id, flights)}
+            onPick={setPnr}
+            fieldLabel={t("trips:bookingEdit.pnr")}
+          />
         </label>
         <label className="block text-sm">
           <span className="mb-1 block" style={{ color: "var(--text-muted)" }}>
@@ -102,7 +151,7 @@ export default function BookingEditModal({
           <span className="mb-1 block" style={{ color: "var(--text-muted)" }}>
             {t("trips:bookingEdit.currency")}
           </span>
-          <CurrencyInput value={currency} onChange={setCurrency} />
+          <CurrencySelect value={currency} onChange={setCurrency} recent={recentCurrencies} />
         </label>
       </div>
     </Modal>

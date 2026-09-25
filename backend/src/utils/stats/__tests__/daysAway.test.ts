@@ -18,6 +18,7 @@ describe("computeDaysAway", () => {
       cruise: 0,
       lodging: 0,
       place: 0,
+      roadtrip: 0,
       total: 0,
     });
   });
@@ -91,7 +92,7 @@ describe("computeDaysAway", () => {
       lodging: [{ from: null, to: null }],
       places: [{ at: null }],
     });
-    expect(out).toEqual({ flight: 0, cruise: 0, lodging: 0, place: 0, total: 0 });
+    expect(out).toEqual({ flight: 0, cruise: 0, lodging: 0, place: 0, roadtrip: 0, total: 0 });
   });
 
   it("names only the end a half-dated span has", () => {
@@ -101,7 +102,7 @@ describe("computeDaysAway", () => {
       lodging: [{ from: null, to: d("2024-05-04T00:00:00Z") }],
       places: [],
     });
-    expect(out).toEqual({ flight: 1, cruise: 1, lodging: 1, total: 3, place: 0 });
+    expect(out).toEqual({ flight: 1, cruise: 1, lodging: 1, total: 3, place: 0, roadtrip: 0 });
   });
 
   it("clips a stay that straddles the window to the days inside it", () => {

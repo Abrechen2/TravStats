@@ -30,15 +30,6 @@ export function findCruiseForFxMerge(id: string, userId: string) {
   });
 }
 
-/** Same idea for a flight — also carries `taxes`/`fees`, which this importer
- *  never edits but `flightOwnAmount` still needs for the merge. */
-export function findFlightForFxMerge(id: string, userId: string) {
-  return prisma.flight.findFirst({
-    where: { id, userId },
-    select: { id: true, price: true, taxes: true, fees: true, currency: true, departureTime: true },
-  });
-}
-
 /** Recomputes a cruise's FX columns, or `{}` (leave untouched) when none of
  *  price/currency/startDate was actually mentioned in the row. */
 export async function cruiseFxColumnsIfChanged(

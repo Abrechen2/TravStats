@@ -83,6 +83,12 @@ export interface SettingsResponse extends SettingsDataJson {
    */
   betaFeaturesEnabled: boolean;
   /**
+   * READ-ONLY mirror of the instance's open data switch, like
+   * `betaFeaturesEnabled`: the client needs it to decide whether to offer
+   * weather, elevations and Wikipedia at all. Written only by an admin.
+   */
+  openDataEnabled: boolean;
+  /**
    * The user's OWN choice of which evidence tier the country headline counts
    * from, or null when they follow the instance (spec §3.2).
    *

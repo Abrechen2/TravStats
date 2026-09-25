@@ -1,6 +1,7 @@
 import type { AxiosError } from "axios";
 
 import { API_URL, api } from "./client";
+import type { ExtractValuesRequest, ExtractValuesResult } from "../extractValues";
 
 /**
  * Kept originals, from the web.
@@ -200,7 +201,28 @@ export const documentsApi = {
   remove: async (id: string): Promise<void> => {
     await api.delete(`/documents/${id}`);
   },
+
+  /**
+   * The parser run on a kept document, answering the cost-block values as a
+   * proposal (`POST /documents/:id/extract-values`). Parsing can take a minute
+   * with a language model behind it, hence the long timeout and the signal.
+   */
+  extractValues: async (
+    id: string,
+    body: ExtractValuesRequest,
+    signal?: AbortSignal
+  ): Promise<ExtractValuesResult> => {
+    const { data } = await api.post<Envelope<ExtractValuesResult>>(
+      `/documents/${id}/extract-values`,
+      body,
+      { timeout: EXTRACT_VALUES_TIMEOUT_MS, signal }
+    );
+    return data.data;
+  },
 };
+
+/** Longer than any parser's own model timeout, so the server answers first. */
+const EXTRACT_VALUES_TIMEOUT_MS = 5 * 60 * 1000;
 
 /**
  * The shared demo account's 403, told apart from every other 403.

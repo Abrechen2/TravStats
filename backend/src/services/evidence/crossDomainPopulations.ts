@@ -15,6 +15,7 @@ import {
   cruiseEvidenceEntry,
   placeEvidenceEntry,
   railEvidenceEntry,
+  roadtripEvidenceEntry,
   stayEvidenceEntry,
 } from "./entryMappersDomains";
 import {
@@ -23,6 +24,8 @@ import {
   railDayKeys,
   railYear,
 } from "../../shared/railCounting";
+import { getCountryResolver } from "../geo/countryFromCoordinates";
+import { stationCountries } from "../roadtrip/roadtripSummary";
 
 /**
  * The rows behind the three `CrossDomainKpis` numbers, per domain, as the
@@ -412,6 +415,74 @@ async function loadPlaces(userId: string): Promise<CrossDomainPopulation> {
 }
 
 /**
+ * Roadtrips (2.7). The event is the roadtrip, spanning its stations' dates
+ * (a linked stay's dates where the station has none); the countries are the
+ * ones its stations stand in, read from their coordinates.
+ *
+ * A roadtrip that has not started yet is PLANNED and counts nowhere — the
+ * same line the lodging rule draws for a stay whose dates are still ahead.
+ * An undated roadtrip counts, with no year: it happened, the logbook just
+ * does not say when.
+ */
+async function loadRoadtrips(userId: string): Promise<CrossDomainPopulation> {
+  const rows = await prisma.tripRoute.findMany({
+    where: { userId, kind: "roadtrip" },
+    select: {
+      id: true,
+      name: true,
+      stops: {
+        select: {
+          lat: true,
+          lon: true,
+          startDate: true,
+          endDate: true,
+          lodgingStay: {
+            select: {
+              checkIn: true,
+              checkOut: true,
+              lodging: { select: { isoCountryCode: true } },
+            },
+          },
+        },
+      },
+    },
+  });
+  if (rows.length === 0) return { events: [], countryRows: [] };
+
+  const resolver = await getCountryResolver();
+  const now = Date.now();
+  const events: CrossDomainEventRow[] = [];
+  const countryRows: CrossDomainCountryRow[] = [];
+  for (const row of rows) {
+    let start: Date | null = null;
+    let end: Date | null = null;
+    for (const stop of row.stops) {
+      const from = stop.startDate ?? stop.lodgingStay?.checkIn ?? null;
+      const to = stop.endDate ?? stop.lodgingStay?.checkOut ?? from;
+      if (from && (!start || from < start)) start = from;
+      if (to && (!end || to > end)) end = to;
+    }
+    if (start && start.getTime() > now) continue;
+
+    const entry = roadtripEvidenceEntry(
+      { id: row.id, name: row.name, startDate: start },
+      { subtitle: null }
+    );
+    const year = start ? start.getUTCFullYear() : null;
+    const dayKeys = start ? inclusiveUtcDays(start, end ?? start) : [];
+    events.push({ domain: "roadtrip", entry, year, dayKeys });
+
+    countryRows.push({
+      domain: "roadtrip",
+      entry,
+      countries: stationCountries(row.stops, resolver),
+      years: year === null ? [] : [year],
+    });
+  }
+  return { events, countryRows };
+}
+
+/**
  * Mirrors `railStatsAdapter.ts`: a completed ride is one event, filed under
  * the year it left on its departure station's calendar, active on the day it
  * left and — for a night train — the day it arrived, each on its own
@@ -456,6 +527,7 @@ const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulati
   cruise: loadCruises,
   lodging: loadLodging,
   poi: loadPlaces,
+  roadtrip: loadRoadtrips,
   rail: loadRail,
 };
 

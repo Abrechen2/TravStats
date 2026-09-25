@@ -52,6 +52,7 @@ const DOMAIN_LABEL: Record<DomainKey, string> = {
   cruise: "achievements:filters.domainCruise",
   lodging: "achievements:filters.domainLodging",
   poi: "achievements:filters.domainPoi",
+  roadtrip: "achievements:filters.domainRoadtrip",
   rail: "achievements:filters.domainRail",
 };
 

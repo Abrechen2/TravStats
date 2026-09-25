@@ -255,6 +255,17 @@ router.get(
           flights: true,
           cruises: { include: { stops: true, legs: true } },
           trips: { include: { stops: true, journalEntries: true, photos: true } },
+          // Tours and roadtrips from the user's side, not the trip's: one with
+          // no trip is reachable from nowhere else, stations and recordings
+          // with it. A trip-borrowed station appears under both — twice is
+          // honest, missing is not.
+          tourRoutes: {
+            include: {
+              stops: { orderBy: { routeOrderIdx: "asc" } },
+              legs: true,
+              tracks: true,
+            },
+          },
           bookings: true,
           lodgings: true,
           lodgingStays: true,

@@ -1,7 +1,12 @@
-import https from "https";
-import http from "http";
 import { ITextParser, ProviderAvailability, TextProvider, TextParseOptions } from "../types";
 import { ParsedBooking } from "../../bookingParser";
+import { isPlausibleLegArrival } from "../shared/legTiming";
+import { requestTextWithDeadline } from "../../http/boundedHttp";
+import {
+  LLM_AVAILABILITY_TIMEOUT_MS,
+  LLM_MAX_RESPONSE_BYTES,
+  llmParseTimeoutMs,
+} from "../../http/llmTimeout";
 import logger from "../../../utils/logger";
 
 /**
@@ -55,64 +60,43 @@ Inference reporting:
 `;
 }
 
-// Ollama generation timeout. qwen3-class reasoning models on large emails can
-// take minutes; the previous 120s was too aggressive and caused fallback to
-// single-leg regex templates for multi-flight bookings.
-const OLLAMA_GENERATE_TIMEOUT_MS = 300_000;
-
 const EMAIL_SNIPPET_MAX_CHARS = 12_000;
 
+/**
+ * Both calls go through the deadline-bound client, which the lodging parser
+ * already used (AUD-058). The hand-rolled pair that stood here checked
+ * NOTHING: it resolved with whatever body arrived, whatever the status line
+ * said, and its `req.setTimeout` was an inactivity timer against a 300 s
+ * budget no HTTP request survives.
+ *
+ * Both halves were measured on 2.7.0-beta.13 (2026-09-20):
+ *
+ * - SRV-LLM-HTTP-001 — a provider answering `HTTP 503` with a plausible body
+ *   had its candidate accepted, and `/parse-email` reported `parserUsed=ollama`
+ *   with HTTP 200. A refusal read as a result.
+ * - SRV-LLM-TIMEOUT-001 — a provider that accepted the request and never
+ *   answered had the whole request killed by the proxy at 60 s while this
+ *   parser still had four minutes of patience left, so neither a parser error
+ *   nor the regex fallback ever reached the caller.
+ */
 function fetchJson(url: string, body: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const isHttps = parsed.protocol === "https:";
-    const options = {
-      hostname: parsed.hostname,
-      port: parsed.port || (isHttps ? 443 : 80),
-      path: parsed.pathname + (parsed.search ?? ""),
-      method: "POST",
-      headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
-    };
-    const lib = isHttps ? https : http;
-    const req = lib.request(options, (res) => {
-      let data = "";
-      res.on("data", (chunk: string) => {
-        data += chunk;
-      });
-      res.on("end", () => resolve(data));
-    });
-    req.setTimeout(OLLAMA_GENERATE_TIMEOUT_MS, () =>
-      req.destroy(new Error(`Ollama request timeout after ${OLLAMA_GENERATE_TIMEOUT_MS}ms`))
-    );
-    req.on("error", reject);
-    req.write(body);
-    req.end();
+  return requestTextWithDeadline({
+    url,
+    method: "POST",
+    body,
+    timeoutMs: llmParseTimeoutMs(),
+    maxResponseBytes: LLM_MAX_RESPONSE_BYTES,
+    label: "Ollama request",
   });
 }
 
 function fetchGet(url: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const isHttps = parsed.protocol === "https:";
-    const lib = isHttps ? https : http;
-    const req = lib.request(
-      {
-        hostname: parsed.hostname,
-        port: parsed.port || (isHttps ? 443 : 80),
-        path: parsed.pathname + (parsed.search ?? ""),
-        method: "GET",
-      },
-      (res) => {
-        let data = "";
-        res.on("data", (chunk: string) => {
-          data += chunk;
-        });
-        res.on("end", () => resolve(data));
-      }
-    );
-    req.setTimeout(5_000, () => req.destroy(new Error("Ollama availability check timeout")));
-    req.on("error", reject);
-    req.end();
+  return requestTextWithDeadline({
+    url,
+    method: "GET",
+    timeoutMs: LLM_AVAILABILITY_TIMEOUT_MS,
+    maxResponseBytes: LLM_MAX_RESPONSE_BYTES,
+    label: "Ollama availability check",
   });
 }
 
@@ -308,7 +292,14 @@ export class OllamaTextParser implements ITextParser {
       if (f.departureCode) booking.departureCode = f.departureCode.toUpperCase();
       if (f.arrivalCode) booking.arrivalCode = f.arrivalCode.toUpperCase();
       if (f.departureTime) booking.departureTime = f.departureTime;
-      if (f.arrivalTime) booking.arrivalTime = f.arrivalTime;
+      // Same gate the regex and OCR paths pass through in
+      // `normalizeParsedBooking`, which this mapper does not use: a model that
+      // reads two documents as one leg produces the same impossible pair a
+      // positional regex does. The `critical` loop below then reports the
+      // arrival as missing, which is the honest answer.
+      if (f.arrivalTime && isPlausibleLegArrival(f.departureTime, f.arrivalTime)) {
+        booking.arrivalTime = f.arrivalTime;
+      }
       if (f.seat) booking.seat = f.seat;
       if (f.seatClass) booking.seatClass = mapSeatClass(f.seatClass);
       if (f.airline) booking.airline = f.airline;

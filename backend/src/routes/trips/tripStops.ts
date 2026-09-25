@@ -10,7 +10,10 @@ import {
 } from "../../schemas/trip";
 
 import { updateStopAndLegs, recomputeLegs } from "../../services/tour/legRecompute";
+import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 import { resolveTrip } from "./resolveTrip";
+import { refreshJournalWeather } from "../../services/openData/journalWeather";
+import { assertTripPhotos, setJournalPhotos } from "../../services/trips/journalPhotos";
 
 /**
  * Trip stops and journal entries — a same-prefix satellite of routes/trips.ts, split out when that
@@ -118,10 +121,10 @@ router.delete(
       });
       if (!existing) throw new AppError("Stop not found", 404);
 
-      await prisma.$transaction(async (tx) => {
+      const createdLegs = await prisma.$transaction(async (tx) => {
         await tx.tripStop.delete({ where: { id: req.params.stopId } });
 
-        if (existing.routeId === null) return;
+        if (existing.routeId === null) return [];
 
         const route = await tx.tripRoute.findUnique({
           where: { id: existing.routeId },
@@ -129,7 +132,7 @@ router.delete(
         });
         // The section itself may have been deleted concurrently (cascade
         // from a route DELETE) — nothing left to renumber or recompute.
-        if (!route) return;
+        if (!route) return [];
 
         const survivors = await tx.tripStop.findMany({
           where: { routeId: existing.routeId },
@@ -144,8 +147,12 @@ router.delete(
           });
         }
 
-        await recomputeLegs(tx, existing.routeId, route.mode, survivors);
+        return recomputeLegs(tx, existing.routeId, route.mode, survivors);
       });
+
+      if (existing.routeId !== null) {
+        await autoRouteNewLegs(userId, existing.routeId, createdLegs);
+      }
 
       res.status(204).send();
     } catch (error) {
@@ -166,6 +173,7 @@ router.post(
       const userId = req.userId!;
       const trip = await resolveTrip(userId, req.params.id);
       const body = createJournalSchema.parse(req.body);
+      const photoIds = await assertTripPhotos(trip.id, body.photoIds ?? []);
       const entry = await prisma.tripJournalEntry.create({
         data: {
           tripId: trip.id,
@@ -176,7 +184,11 @@ router.post(
           weather: body.weather,
         },
       });
-      res.status(201).json({ entry });
+      if (photoIds.length > 0) await setJournalPhotos(entry.id, photoIds);
+      // The day's measured weather, where the instance allows open data and a
+      // stop of the trip says where the day was spent. Best effort: the entry
+      // is saved either way.
+      res.status(201).json({ entry: await refreshJournalWeather(entry.id) });
     } catch (error) {
       next(error);
     }
@@ -197,6 +209,10 @@ router.patch(
       });
       if (!existing) throw new AppError("Journal entry not found", 404);
       const body = updateJournalSchema.parse(req.body);
+      const photoIds =
+        body.photoIds === undefined
+          ? undefined
+          : await assertTripPhotos(req.params.id, body.photoIds);
       const entry = await prisma.tripJournalEntry.update({
         where: { id: req.params.entryId },
         data: {
@@ -207,7 +223,11 @@ router.patch(
           ...(body.weather !== undefined && { weather: body.weather }),
         },
       });
-      res.json({ entry });
+      if (photoIds !== undefined) await setJournalPhotos(entry.id, photoIds);
+      // A new date is a new day: its weather replaces the old one's.
+      const dayMoved = entry.date.getTime() !== existing.date.getTime();
+      const needsWeather = dayMoved || entry.observedWeather === null;
+      res.json({ entry: needsWeather ? await refreshJournalWeather(entry.id) : entry });
     } catch (error) {
       next(error);
     }

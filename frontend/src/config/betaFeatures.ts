@@ -81,6 +81,34 @@ export const BETA_FEATURES = Object.freeze({
   }),
 
   /**
+   * The roadtrip domain and the reworked day tours (2.7, design
+   * docs/superpowers/specs/2026-09-24-roadtrips-and-day-tours-design.md).
+   *
+   * Gated at ONE place: `useEnabledDomains` drops `roadtrip` while this is
+   * closed, so the nav entry, the logbook tab, the dashboard tab, the
+   * statistics tab and the overview all disappear together — each of them
+   * already asks that hook. The settings and setup pickers ask the same key
+   * so a domain nobody can see is not offered as a switch either.
+   */
+  roadtrips: Object.freeze({
+    why: "Owner ruling 2026-09-24 in #dev-talk: the first version of roadtrips (a domain of its own, stations that sleep at the user's stays) and of day tours with climb and moving time goes into 2.7 behind the switch, so the 2.7 core can ship without waiting for it. The existing tour sections were classified by rule during the migration, and nobody has reviewed that classification on real data yet. The same evening the owner put tours as a whole back behind this key (they had been released on 2026-09-18): the tours page and editor, the tour tab on the dashboard and on a trip, the tours on the overview map, and the routing and Strava cards all ask `useToursVisible`, which reads this key.",
+    returnsWhen:
+      "The owner and the tester have used roadtrips on real trips, the automatic classification of existing sections has been reviewed on the RC's copy of production, and the owner accepts the domain for release.",
+    reason: "beta",
+  }),
+  /**
+   * "Complete from OpenStreetMap" on a lodging's page: stars, website, the
+   * house's Wikidata item and a known chain, written only into empty fields.
+   * Also needs the instance's open data switch; the button asks both.
+   */
+  lodgingEnrichment: Object.freeze({
+    why: "Owner ruling 2026-09-24: the OpenStreetMap enrichment of hotels goes in behind the beta switch. It matches a house by its pin and its name within 150 m, and that match has not yet been checked against real lodgings — a wrong match would write a stranger's stars and website into the user's record.",
+    returnsWhen:
+      "The enrichment has been run over the owner's real lodgings on the RC's copy of production, its wrong matches counted and found acceptable, and the owner accepts it for release.",
+    reason: "beta",
+  }),
+
+  /**
    * The rail domain — train journeys logged like flights (owner decision
    * 2026-09-25, spec docs/superpowers/specs/2026-09-25-rail-domain.md).
    *

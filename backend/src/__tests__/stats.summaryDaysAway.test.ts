@@ -163,6 +163,7 @@ describe("GET /stats/summary — daysAway", () => {
       cruise: 7, // 1–7 June
       lodging: 7, // 10–12 May, 30 Dec–2 Jan
       place: 1, // 11 May
+      roadtrip: 0, // no roadtrip in this fixture
       // 10, 11, 12 May + 7 June days + 4 New Year days
       total: 14,
     });
@@ -174,7 +175,14 @@ describe("GET /stats/summary — daysAway", () => {
       .query({ year: 2025 })
       .set("Cookie", cookie);
     expect(res.status).toBe(200);
-    expect(res.body.daysAway).toEqual({ flight: 0, cruise: 0, lodging: 2, place: 0, total: 2 });
+    expect(res.body.daysAway).toEqual({
+      flight: 0,
+      cruise: 0,
+      lodging: 2,
+      place: 0,
+      roadtrip: 0,
+      total: 2,
+    });
   });
 
   it("carries daysAway on both halves of a year comparison", async () => {

@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { RoadtripVehicle, TourActivity } from "../../shared/tour/roadtrip";
 import type {
   TourRoute,
   TourStop,
@@ -13,6 +14,17 @@ import type {
 export interface CreateTourRouteInput {
   name: string;
   mode: LegMode;
+  /** What the day tour was (2.7). */
+  activity?: TourActivity | null;
+}
+
+/** One authored point of a standalone tour. `id` identifies an existing
+ *  one; omitting it creates a new point. */
+export interface TourPointInput {
+  id?: string;
+  title: string;
+  lat: number;
+  lon: number;
 }
 
 // PATCH semantics: explicit `null` clears `color`, `undefined` leaves it
@@ -21,6 +33,16 @@ export interface UpdateTourRouteInput {
   name?: string;
   mode?: LegMode;
   color?: string | null;
+  notes?: string | null;
+  startOdometerKm?: number | null;
+  endOdometerKm?: number | null;
+  /** Kind-specific fields (2.7) — see `kindFieldsSchema` on the server. */
+  activity?: TourActivity | null;
+  vehicle?: RoadtripVehicle | null;
+  vehicleName?: string | null;
+  anchorStopId?: string | null;
+  /** Only a roadtrip may move between trips; the server refuses it for a tour. */
+  tripId?: string | null;
 }
 
 // `drivingMinutes`/`tollCost`/`currency` are nullable AND optional: sending
@@ -48,6 +70,19 @@ export interface SetTourLegInput {
   trackId?: string;
 }
 
+/**
+ * The section's path, in whichever shape it has.
+ *
+ * A tour that belongs to a trip is `/trips/:id/routes/:routeId`; one that
+ * belongs to no trip has no id to put there and is `/tours/:routeId`. The
+ * server answers both under the same handlers (2026-09-21), so every call
+ * below takes `tripId` as possibly-undefined and the editor works on
+ * either kind without knowing which it has.
+ */
+function sectionPath(tripId: string | undefined, routeId: string): string {
+  return tripId === undefined ? `/tours/${routeId}` : `/trips/${tripId}/routes/${routeId}`;
+}
+
 export const toursApi = {
   list: async (tripId: string): Promise<TourRoute[]> => {
     const { data } = await api.get<{ routes: TourRoute[] }>(`/trips/${tripId}/routes`);
@@ -57,6 +92,33 @@ export const toursApi = {
   create: async (tripId: string, input: CreateTourRouteInput): Promise<TourRoute> => {
     const { data } = await api.post<{ route: TourRoute }>(`/trips/${tripId}/routes`, input);
     return data.route;
+  },
+
+  /**
+   * Creates a tour with NO trip — it stands on its own (owner ruling,
+   * 2026-09-21). `create` above is the same thing with a trip; both exist
+   * because the trip page already speaks in terms of its own id and has no
+   * reason to repeat it in a body.
+   */
+  createStandalone: async (input: CreateTourRouteInput): Promise<TourRoute> => {
+    const { data } = await api.post<{ route: TourRoute }>("/tours", input);
+    return data.route;
+  },
+
+  /**
+   * Replaces a standalone tour's ENTIRE point list — added, moved, removed
+   * and renumbered in one write. A tour that belongs to a trip answers 409:
+   * there the vertices come from the trip's timeline (`assignStops`).
+   */
+  replacePoints: async (
+    routeId: string,
+    points: TourPointInput[]
+  ): Promise<{ route: TourRoute; stops: TourStop[]; legs: TourLeg[] }> => {
+    const { data } = await api.put<{ route: TourRoute; stops: TourStop[]; legs: TourLeg[] }>(
+      `/tours/${routeId}/points`,
+      { points }
+    );
+    return data;
   },
 
   /**
@@ -77,7 +139,7 @@ export const toursApi = {
    * `backend/src/routes/trips/tourRoutes.ts`.
    */
   get: async (
-    tripId: string,
+    tripId: string | undefined,
     routeId: string
   ): Promise<{
     route: TourRoute;
@@ -90,24 +152,27 @@ export const toursApi = {
       stops: TourStop[];
       legs: TourLeg[];
       routingAvailable: boolean;
-    }>(`/trips/${tripId}/routes/${routeId}`);
+    }>(sectionPath(tripId, routeId));
     return data;
   },
 
   update: async (
-    tripId: string,
+    tripId: string | undefined,
     routeId: string,
     input: UpdateTourRouteInput
   ): Promise<TourRoute> => {
-    const { data } = await api.patch<{ route: TourRoute }>(
-      `/trips/${tripId}/routes/${routeId}`,
-      input
-    );
+    const { data } = await api.patch<{ route: TourRoute }>(sectionPath(tripId, routeId), input);
     return data.route;
   },
 
-  remove: async (tripId: string, routeId: string): Promise<void> => {
-    await api.delete(`/trips/${tripId}/routes/${routeId}`);
+  remove: async (tripId: string | undefined, routeId: string): Promise<void> => {
+    await api.delete(sectionPath(tripId, routeId));
+  },
+
+  /** The same delete, reached without a trip in the path — the only way to
+   *  reach a tour that has none. */
+  removeStandalone: async (routeId: string): Promise<void> => {
+    await api.delete(`/tours/${routeId}`);
   },
 
   /**
@@ -117,42 +182,42 @@ export const toursApi = {
    * repeat with 400; see `assignStopsSchema`).
    */
   assignStops: async (
-    tripId: string,
+    tripId: string | undefined,
     routeId: string,
     stopIds: string[]
   ): Promise<{ route: TourRoute; stops: TourStop[]; legs: TourLeg[] }> => {
     const { data } = await api.put<{ route: TourRoute; stops: TourStop[]; legs: TourLeg[] }>(
-      `/trips/${tripId}/routes/${routeId}/stops`,
+      `${sectionPath(tripId, routeId)}/stops`,
       { stopIds }
     );
     return data;
   },
 
   setLeg: async (
-    tripId: string,
+    tripId: string | undefined,
     routeId: string,
     fromStopId: string,
     toStopId: string,
     input: SetTourLegInput
   ): Promise<TourLeg> => {
     const { data } = await api.put<{ leg: TourLeg }>(
-      `/trips/${tripId}/routes/${routeId}/legs/${fromStopId}/${toStopId}`,
+      `${sectionPath(tripId, routeId)}/legs/${fromStopId}/${toStopId}`,
       input
     );
     return data.leg;
   },
 
   clearLeg: async (
-    tripId: string,
+    tripId: string | undefined,
     routeId: string,
     fromStopId: string,
     toStopId: string
   ): Promise<void> => {
-    await api.delete(`/trips/${tripId}/routes/${routeId}/legs/${fromStopId}/${toStopId}`);
+    await api.delete(`${sectionPath(tripId, routeId)}/legs/${fromStopId}/${toStopId}`);
   },
 
-  geometry: async (tripId: string, routeId: string): Promise<TourGeometry> => {
-    const { data } = await api.get<TourGeometry>(`/trips/${tripId}/routes/${routeId}/geometry`);
+  geometry: async (tripId: string | undefined, routeId: string): Promise<TourGeometry> => {
+    const { data } = await api.get<TourGeometry>(`${sectionPath(tripId, routeId)}/geometry`);
     return data;
   },
 
@@ -168,13 +233,13 @@ export const toursApi = {
    * honest fallback rather than an error.
    */
   routeLeg: async (
-    tripId: string,
+    tripId: string | undefined,
     routeId: string,
     fromStopId: string,
     toStopId: string
   ): Promise<TourLeg> => {
     const { data } = await api.post<{ leg: TourLeg }>(
-      `/trips/${tripId}/routes/${routeId}/legs/${fromStopId}/${toStopId}/route`
+      `${sectionPath(tripId, routeId)}/legs/${fromStopId}/${toStopId}/route`
     );
     return data.leg;
   },
@@ -188,7 +253,7 @@ export const toursApi = {
    * report the caller must show, never a blanket "success" toast.
    */
   routeAll: async (
-    tripId: string,
+    tripId: string | undefined,
     routeId: string
   ): Promise<{ route: TourRoute; legs: TourLeg[]; routedCount: number; skippedCount: number }> => {
     const { data } = await api.post<{
@@ -196,7 +261,7 @@ export const toursApi = {
       legs: TourLeg[];
       routedCount: number;
       skippedCount: number;
-    }>(`/trips/${tripId}/routes/${routeId}/route-all`);
+    }>(`${sectionPath(tripId, routeId)}/route-all`);
     return data;
   },
 
@@ -213,17 +278,21 @@ export const toursApi = {
      * (`backend/src/routes/trips/tourTracks.ts`): no `geometry` field at
      * all, not merely an empty one.
      */
-    list: async (tripId: string, routeId: string): Promise<TourTrackMeta[]> => {
+    list: async (tripId: string | undefined, routeId: string): Promise<TourTrackMeta[]> => {
       const { data } = await api.get<{ tracks: TourTrackMeta[] }>(
-        `/trips/${tripId}/routes/${routeId}/tracks`
+        `${sectionPath(tripId, routeId)}/tracks`
       );
       return data.tracks;
     },
 
     /** One track WITH geometry — needed to gate/adopt a leg's `track` option. */
-    get: async (tripId: string, routeId: string, trackId: string): Promise<TourTrack> => {
+    get: async (
+      tripId: string | undefined,
+      routeId: string,
+      trackId: string
+    ): Promise<TourTrack> => {
       const { data } = await api.get<{ track: TourTrack }>(
-        `/trips/${tripId}/routes/${routeId}/tracks/${trackId}`
+        `${sectionPath(tripId, routeId)}/tracks/${trackId}`
       );
       return data.track;
     },
@@ -237,19 +306,19 @@ export const toursApi = {
      * with DIFFERENT server messages — this call surfaces whichever one the
      * server sent; callers must not invent a generic replacement.
      */
-    upload: async (tripId: string, routeId: string, file: File): Promise<TourTrack> => {
+    upload: async (tripId: string | undefined, routeId: string, file: File): Promise<TourTrack> => {
       const form = new FormData();
       form.append("file", file);
       const { data } = await api.post<{ track: TourTrack }>(
-        `/trips/${tripId}/routes/${routeId}/tracks`,
+        `${sectionPath(tripId, routeId)}/tracks`,
         form,
         { headers: { "Content-Type": "multipart/form-data" } }
       );
       return data.track;
     },
 
-    remove: async (tripId: string, routeId: string, trackId: string): Promise<void> => {
-      await api.delete(`/trips/${tripId}/routes/${routeId}/tracks/${trackId}`);
+    remove: async (tripId: string | undefined, routeId: string, trackId: string): Promise<void> => {
+      await api.delete(`${sectionPath(tripId, routeId)}/tracks/${trackId}`);
     },
 
     /**
@@ -262,12 +331,12 @@ export const toursApi = {
      * which carry plain prose and no kind; callers must handle both.
      */
     pullDawarich: async (
-      tripId: string,
+      tripId: string | undefined,
       routeId: string,
       input: { startedAt?: string; endedAt?: string }
     ): Promise<TourTrack> => {
       const { data } = await api.post<{ track: TourTrack }>(
-        `/trips/${tripId}/routes/${routeId}/tracks/dawarich`,
+        `${sectionPath(tripId, routeId)}/tracks/dawarich`,
         input
       );
       return data.track;

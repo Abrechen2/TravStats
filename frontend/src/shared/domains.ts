@@ -3,7 +3,7 @@
  * Keep in sync manually — both source files are small and stable.
  */
 
-export const DOMAIN_KEYS = ["flight", "cruise", "lodging", "poi", "rail"] as const;
+export const DOMAIN_KEYS = ["flight", "cruise", "lodging", "poi", "roadtrip", "rail"] as const;
 export type DomainKey = (typeof DOMAIN_KEYS)[number];
 
 export interface DomainDescriptor {
@@ -55,6 +55,15 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     icon: "📍",
     color: "#e7e3dc",
     routePrefix: "/places",
+  },
+  // Roadtrips (2.7, design 2026-09-24) — mirror of the backend descriptor.
+  roadtrip: {
+    key: "roadtrip",
+    available: true,
+    i18nKey: "domain.roadtrip",
+    icon: "🚐",
+    color: "#a597f0",
+    routePrefix: "/roadtrips",
   },
   // Train journeys (spec 2026-09-25-rail-domain). Available, so shared code
   // iterating AVAILABLE_DOMAINS sees it; the UI additionally hides it behind

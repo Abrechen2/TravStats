@@ -174,6 +174,54 @@ export const photonSearchLimiter = rateLimit({
 });
 
 /**
+ * Per-user limit for the tag typeahead (`/tags`). It spends no one else's
+ * quota, but each call unnests the tag arrays of the caller's whole logbook,
+ * and it fires per settled keystroke in every travel form. 120/min is four
+ * times the stats bucket so tagging a batch of entries never meets it, while
+ * a scripted loop still does.
+ */
+export const tagSuggestLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(120),
+  message: "Too many tag lookups in a short time — please slow down",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
+ * Per-caller limit for the open data endpoints (Open-Meteo, Wikipedia,
+ * Wikidata, OpenStreetMap). Each request may make one or more calls to a
+ * free public service whose fair-use terms bind the INSTANCE's address, so a
+ * busy client must not be able to spend it. Same shape as the geocoder limits.
+ */
+export const openDataLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(30),
+  message: "Too many open data requests in a short time — please slow down",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
+ * Per-user limit for the phone's "append a station" (`POST
+ * /roadtrips/:id/stations`). Every call reverse-geocodes through the
+ * process-wide one-request-a-second Nominatim queue and routes the new legs,
+ * so an app retrying in a loop would stall naming for every user on the
+ * instance. Twenty a minute is far past a person tapping "tonight here"; the
+ * outbox resends are idempotent and answer 200 without new work anyway.
+ */
+export const stationAppendLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(20),
+  message: "Too many stations added in a short time — please slow down",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Per-user/IP limit for the FX preview proxy (`/lodging/fx-preview`).
  *
  * The route proxies to the free public Frankfurter/ECB API so the frontend
@@ -225,6 +273,21 @@ export const lodgingImportLimiter = rateLimit({
   standardHeaders: true,
   legacyHeaders: false,
   message: { error: "Too many import requests, please try again later" },
+  keyGenerator: userOrIpKey,
+});
+
+/**
+ * Per-user limit for the recording archive (`/track-archive`): the ZIP of
+ * every recording is built in memory from every track's line, and an import
+ * parses up to a few hundred files. Thirty in a quarter of an hour covers a
+ * person trying, checking the preview and applying several times over.
+ */
+export const trackArchiveLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: patAwareMax(30),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many recording archive requests, please try again later" },
   keyGenerator: userOrIpKey,
 });
 

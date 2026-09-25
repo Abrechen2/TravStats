@@ -1,3 +1,9 @@
+import {
+  hasRecordedBookingPrice,
+  hasRecordedOwnCost,
+  recordedOwnAmount,
+} from "../../shared/flightPricing";
+
 export interface CostFlight {
   price: number | null;
   taxes: number | null;
@@ -28,11 +34,19 @@ export interface DedupedCost {
    * price. Amounts that exist but could not be converted are not in `base`
    * either; they sit in `unconvertedByCurrency`, and `base` is null when
    * they are all there is.
+   *
+   * A year whose flights were all recorded as free reports 0, not null. That
+   * is the opposite claim and the correct one — someone wrote the zero down
+   * (SRV-STATS-ZERO-PRICE-001).
    */
   base: number | null;
-  /** Flights whose own price or whose booking's price was recorded. */
+  /** Flights whose own price or whose booking's price was recorded — 0 counts. */
   pricedFlights: number;
-  /** Flights that contributed nothing — no price, no priced booking. */
+  /**
+   * Flights nobody put a number on — no price, taxes or fees of their own and
+   * no booking amount. A flight recorded as free is NOT one of these; it is
+   * priced, at 0.
+   */
   unpricedFlights: number;
   /**
    * Amounts that could not be converted, kept in the currency they were paid
@@ -44,8 +58,10 @@ export interface DedupedCost {
   /**
    * This flight's own contribution to `base`, RAW and unrounded, in the same
    * order as the input `flights` array — 0 for an unpriced flight, for a
-   * later segment of a booking already counted, and for an amount that could
-   * not convert (it is in `unconvertedByCurrency` instead). Added so evidence
+   * flight recorded as free, for a later segment of a booking already
+   * counted, and for an amount that could not convert (it is in
+   * `unconvertedByCurrency` instead). Read `perFlightPriced` to tell the
+   * first two apart. Added so evidence
    * resolvers can reuse this EXACT rule per-row rather than re-deriving it
    * (`services/evidence/metricEvidenceFlightCore.ts`, `businessTotalCost`,
    * and `services/stats/summary.ts`'s `yearTotalCost`) — the alternative, a
@@ -62,8 +78,12 @@ export interface DedupedCost {
  * sync by hand; businessStats' loop also attributes distance, so the rule is
  * knowingly duplicated, not shared): a booking price counts once per booking
  * and is all-in (per-flight taxes/fees NOT added on top); flights without a
- * priced booking fall back to price + taxes + fees. Truthiness matches
- * businessStats: booking price 0/null -> fallback.
+ * recorded booking price fall back to price + taxes + fees.
+ *
+ * "Recorded", not "positive" — `shared/flightPricing.ts` owns that
+ * distinction. A booking explicitly saved at 0 is a free booking and its
+ * segments do NOT fall back to their own columns; only a booking with no
+ * amount at all does.
  *
  * Currency-aware since #267. This function used to add every amount together
  * regardless of currency and return one number, which the UI then rendered with
@@ -77,8 +97,17 @@ export interface DedupedCost {
  */
 /** What one flight contributes to a cost total, in the currency it was paid in. */
 export interface FlightCostShare {
-  /** Zero when this flight's booking was already counted for another segment. */
-  amount: number;
+  /**
+   * The amount to add here, or `null` when there is nothing to add — no price
+   * was ever recorded, or this flight's booking was already counted on an
+   * earlier segment.
+   *
+   * `0` and `null` are DIFFERENT answers and were the same one until the
+   * 2026-09-20 audit (SRV-STATS-ZERO-PRICE-001): 0 is a free flight, null is
+   * an unknown one, and a caller that adds them together reports a year of
+   * award tickets as a year nobody priced.
+   */
+  amount: number | null;
   currency: string | null;
   /** Base-currency snapshot of `amount`, where one exists. */
   amountBase: number | null;
@@ -106,27 +135,26 @@ export function flightCostShare(
   flight: CostFlight,
   countedBookingIds: Set<string>
 ): FlightCostShare {
-  if (flight.bookingId && flight.booking?.price) {
+  if (flight.bookingId && hasRecordedBookingPrice(flight.booking)) {
     // Every segment of a priced booking is a priced flight, even though the
     // booking's amount is added once.
     const first = !countedBookingIds.has(flight.bookingId);
     if (first) countedBookingIds.add(flight.bookingId);
     return {
-      amount: first ? flight.booking.price : 0,
-      currency: flight.booking.currency,
-      amountBase: first ? flight.booking.priceBase : null,
-      snapshotCurrency: flight.booking.fxBaseCurrency,
+      amount: first ? flight.booking!.price : null,
+      currency: flight.booking!.currency,
+      amountBase: first ? flight.booking!.priceBase : null,
+      snapshotCurrency: flight.booking!.fxBaseCurrency,
       priced: true,
     };
   }
 
-  const own = (flight.price ?? 0) + (flight.taxes ?? 0) + (flight.fees ?? 0);
   return {
-    amount: own,
+    amount: recordedOwnAmount(flight),
     currency: flight.currency,
     amountBase: flight.priceBase,
     snapshotCurrency: flight.fxBaseCurrency,
-    priced: own > 0,
+    priced: hasRecordedOwnCost(flight),
   };
 }
 
@@ -144,12 +172,15 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
   // caller can attribute the total back to individual rows without a second
   // pass over the same amounts.
   const add = (
-    amount: number,
+    amount: number | null,
     amountBase: number | null,
     snapshotCurrency: string | null,
     ownCurrency: string | null
   ): number => {
-    if (amount === 0) return 0;
+    // Nothing to add: no price was recorded, or this row's booking amount
+    // already landed on an earlier segment. NOT the same as a recorded 0,
+    // which falls through and marks the total as answered.
+    if (amount === null) return 0;
     // An amount already IN the base currency needs no conversion and no
     // snapshot — 300 EUR in a EUR logbook is 300 EUR. This matters beyond
     // tidiness: every row written before #267 has a null snapshot, and without
@@ -167,6 +198,14 @@ export function computeDedupedTotalCost(flights: CostFlight[], baseCurrency: str
       base += amountBase;
       contributedToBase = true;
       return amountBase;
+    }
+    // Zero is the one amount that needs no rate: it is zero in every
+    // currency. Bucketing it as unconvertible would report "0 USD still
+    // outstanding" beside a total that stayed null, so a flight explicitly
+    // saved as free would read "no price recorded" (SRV-STATS-ZERO-PRICE-001).
+    if (amount === 0) {
+      contributedToBase = true;
+      return 0;
     }
     // No unit recorded is its own bucket. It is NOT assumed to be the base
     // currency — that assumption is how 11,662 AED became €11,662 once already.

@@ -10,6 +10,7 @@
 // in, import it again. A row that still has none is not rejected here — the
 // preview offers it back to the user, who knows where the place is.
 
+import { refCellName } from "../xlsx/sheetSpec";
 import type { MappingFieldSpec } from "../../components/import/ColumnMappingWizard";
 import type { PlaceImportCandidate } from "../../types/placeImport";
 
@@ -125,7 +126,10 @@ export function buildPlaceCandidates(
       return column ? row[column] : undefined;
     };
 
-    const name = readText(cell("name"));
+    // Same reason as `lodgingCsv.ts`: the workbook's "Besuche" sheet writes
+    // its place column as "Name [id]", and that id belongs to whichever
+    // instance exported the file.
+    const name = refCellName(readText(cell("name")));
     if (!name) {
       errors.push({ sourceRowIndex: index, code: "missing_name" });
       return;

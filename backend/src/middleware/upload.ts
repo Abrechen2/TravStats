@@ -4,7 +4,36 @@ import fs from "fs";
 import crypto from "crypto";
 import type { Db } from "../db";
 import logger from "../utils/logger";
+import { AppError } from "./errorHandler";
 import { FILE_LIMITS, CLEANUP } from "../config/constants";
+
+/**
+ * A file this endpoint does not accept — the CLIENT's mistake, answered 400.
+ *
+ * Every filter below used to reject with a bare `Error`, which carries no
+ * `statusCode`, so the global handler's `|| 500` default took it. Measured
+ * 2026-09-20 on 2.7.0-beta.13 (audit SRV-UPLOAD-TYPE-001): an .ics, an .mbox
+ * and a .zip sent to `/parse-email-file` with their own correct MIME types each
+ * answered `500 {"error":"Invalid file type…"}`, while the SAME zip bytes
+ * declared as `application/octet-stream` slipped past the filter and were
+ * refused with 400 by the magic-number check inside the route. The answer
+ * therefore depended on what the client CLAIMED the file was, and one of the
+ * two answers blamed the server: a client that retries on 5xx retries a
+ * request that can never succeed, and the instance logs a fault it never had.
+ *
+ * 400 rather than 415 deliberately — 400 is what the in-route check already
+ * answers for the very same refusal, and one status for one refusal is worth
+ * more here than the more specific code on one of the two paths.
+ *
+ * Sibling of the `MulterError` branch in `errorHandler`, which fixed this same
+ * class for multer's OWN rejections (wrong field name, file too large).
+ */
+export class UnsupportedUploadTypeError extends AppError {
+  constructor(message: string) {
+    super(message, 400);
+    this.name = "UnsupportedUploadTypeError";
+  }
+}
 
 // Upload directories
 const UPLOAD_DIR = path.join(__dirname, "../../uploads/receipts");
@@ -85,7 +114,9 @@ const fileFilter = (
   ];
 
   if (!allowedMimeTypes.includes(file.mimetype)) {
-    return cb(new Error(`Invalid file type. Allowed: ${allowedMimeTypes.join(", ")}`));
+    return cb(
+      new UnsupportedUploadTypeError(`Invalid file type. Allowed: ${allowedMimeTypes.join(", ")}`)
+    );
   }
 
   // Note: Magic number validation happens after file is saved
@@ -221,7 +252,7 @@ const emailFileFilter = (
     // We'll validate in the route handler after multer processes the file
     cb(null, true);
   } else {
-    cb(new Error(`Invalid file type. Allowed: .eml, .txt, .msg files`));
+    cb(new UnsupportedUploadTypeError(`Invalid file type. Allowed: .eml, .txt, .msg files`));
   }
 };
 
@@ -275,7 +306,7 @@ const tripPhotoFilter = (
 ): void => {
   const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
   if (!allowed.includes(file.mimetype)) {
-    return cb(new Error(`Invalid image type. Allowed: ${allowed.join(", ")}`));
+    return cb(new UnsupportedUploadTypeError(`Invalid image type. Allowed: ${allowed.join(", ")}`));
   }
   cb(null, true);
 };
@@ -487,7 +518,7 @@ const profilePictureFilter = (
 ): void => {
   const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
   if (!allowed.includes(file.mimetype)) {
-    return cb(new Error(`Invalid image type. Allowed: ${allowed.join(", ")}`));
+    return cb(new UnsupportedUploadTypeError(`Invalid image type. Allowed: ${allowed.join(", ")}`));
   }
   cb(null, true);
 };
@@ -513,6 +544,76 @@ export function deleteProfilePictureFile(filename: string): void {
       logger.warn({
         operation: "upload_profile_picture_delete_error",
         message: `Failed to delete profile picture file: ${filename}`,
+        context: { filename, error: error instanceof Error ? error.message : "Unknown error" },
+      });
+    }
+  }
+}
+
+// =============== Login backgrounds (Alex, 2026-09-21) ===============
+//
+// Images an admin puts behind the left half of the sign-in page. Its own
+// directory for the same reason every other kind got one, and for a second
+// one that matters more here: this is the ONLY upload directory whose
+// contents are served to anyone who can reach the instance, signed in or
+// not. Keeping it apart is what makes "public" a property of a folder
+// rather than of a guess about a filename.
+//
+// REGISTER A NEW DIRECTORY IN `config/uploadDirs.ts`.
+
+const LOGIN_BACKGROUND_DIR = path.join(__dirname, "../../uploads/login-backgrounds");
+
+try {
+  if (!fs.existsSync(LOGIN_BACKGROUND_DIR)) {
+    fs.mkdirSync(LOGIN_BACKGROUND_DIR, { recursive: true });
+  }
+} catch (error: unknown) {
+  const errMsg = error instanceof Error ? error.message : String(error);
+  logger.warn({
+    operation: "upload_login_background_dir_creation_failed",
+    message: `Could not create login background directory: ${LOGIN_BACKGROUND_DIR}`,
+    context: { directory: LOGIN_BACKGROUND_DIR, error: errMsg },
+  });
+}
+
+const loginBackgroundStorage = multer.diskStorage({
+  destination: (_req, _file, cb) => {
+    cb(null, LOGIN_BACKGROUND_DIR);
+  },
+  filename: (_req, file, cb) => {
+    // No user id in the name, unlike a profile picture: these belong to the
+    // INSTANCE, and there is nothing to own. The timestamp leads so a plain
+    // directory listing is already in upload order.
+    const uniqueSuffix = `${Date.now()}-${crypto.randomBytes(6).toString("hex")}`;
+    const ext = path.extname(file.originalname).toLowerCase();
+    const basename = path.basename(file.originalname, ext);
+    const sanitized = basename.replace(/[^a-zA-Z0-9-_]/g, "_").slice(0, 40);
+    cb(null, `${uniqueSuffix}-${sanitized}${ext}`);
+  },
+});
+
+export const uploadLoginBackgrounds = multer({
+  storage: loginBackgroundStorage,
+  fileFilter: profilePictureFilter,
+  limits: {
+    fileSize: FILE_LIMITS.LOGIN_BACKGROUND_MAX_SIZE,
+    files: FILE_LIMITS.LOGIN_BACKGROUND_MAX_COUNT,
+  },
+});
+
+export function getLoginBackgroundDir(): string {
+  return LOGIN_BACKGROUND_DIR;
+}
+
+export function deleteLoginBackgroundFile(filename: string): void {
+  const filePath = path.join(LOGIN_BACKGROUND_DIR, path.basename(filename));
+  if (fs.existsSync(filePath)) {
+    try {
+      fs.unlinkSync(filePath);
+    } catch (error) {
+      logger.warn({
+        operation: "upload_login_background_delete_error",
+        message: `Failed to delete login background file: ${filename}`,
         context: { filename, error: error instanceof Error ? error.message : "Unknown error" },
       });
     }

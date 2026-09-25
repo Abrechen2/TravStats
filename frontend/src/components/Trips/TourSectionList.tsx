@@ -1,9 +1,13 @@
 import { useCallback, useEffect, useRef, useState } from "react";
+import { useToursVisible } from "../../hooks/useToursVisible";
+import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import { toursApi } from "../../lib/api/tours";
 import { useToastStore } from "../../store/toastStore";
-import { LEG_MODES, type LegMode, type TourRoute } from "../../types/tour";
+import ConfirmModal from "../Training/ConfirmModal";
+import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
+import { SELECTABLE_LEG_MODES, type LegMode, type TourRoute } from "../../types/tour";
 
 interface Props {
   tripId: string;
@@ -24,7 +28,16 @@ function formatKm(value: number): string {
  * looks identical to "this trip genuinely has no sections yet" and the user
  * has no way to tell a real zero from a swallowed error.
  */
-export default function TourSectionList({ tripId }: Props): JSX.Element {
+/**
+ * Behind the roadtrips beta key since 2026-09-24 (owner). The gate sits here
+ * rather than in the trip page, so a `?tab=tours` link on a closed instance
+ * renders nothing and fetches nothing.
+ */
+export default function TourSectionList(props: Props): JSX.Element | null {
+  return useToursVisible() ? <TourSectionListBody {...props} /> : null;
+}
+
+function TourSectionListBody({ tripId }: Props): JSX.Element {
   const { t } = useTranslation();
   const addToast = useToastStore((s) => s.addToast);
 
@@ -36,6 +49,7 @@ export default function TourSectionList({ tripId }: Props): JSX.Element {
   const [newName, setNewName] = useState("");
   const [newMode, setNewMode] = useState<LegMode>(DEFAULT_MODE);
   const [saving, setSaving] = useState(false);
+  const [pendingDelete, setPendingDelete] = useState<TourRoute | null>(null);
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -86,9 +100,30 @@ export default function TourSectionList({ tripId }: Props): JSX.Element {
     }
   };
 
-  const isLoading = routes === null && !loadError;
-  const isEmpty = !isLoading && !loadError && routes !== null && routes.length === 0;
-  const hasRoutes = !isLoading && !loadError && routes !== null && routes.length > 0;
+  const handleDelete = async (route: TourRoute): Promise<void> => {
+    try {
+      await toursApi.remove(tripId, route.id);
+      if (!mountedRef.current) return;
+      setRoutes((prev) => (prev ?? []).filter((r) => r.id !== route.id));
+    } catch {
+      // The row stays. A tour that failed to delete must not disappear from
+      // the list — an optimistic removal here would read as "deleted" and
+      // come back on the next load, which is worse than the error itself.
+      if (mountedRef.current) addToast("error", t("trips:tours.deleteError"));
+    }
+  };
+
+  // A roadtrip row links to its own page, which the domain guard refuses
+  // while the reader has the roadtrip domain switched off — so it is not
+  // offered here either.
+  const { isEnabled } = useEnabledDomains();
+  const roadtripsShown = isEnabled("roadtrip");
+  const shown =
+    routes === null ? null : routes.filter((r) => roadtripsShown || r.kind !== "roadtrip");
+
+  const isLoading = shown === null && !loadError;
+  const isEmpty = !isLoading && !loadError && shown !== null && shown.length === 0;
+  const hasRoutes = !isLoading && !loadError && shown !== null && shown.length > 0;
 
   return (
     <div>
@@ -117,7 +152,7 @@ export default function TourSectionList({ tripId }: Props): JSX.Element {
             onChange={(e) => setNewMode(e.target.value as LegMode)}
             className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
           >
-            {LEG_MODES.map((mode) => (
+            {SELECTABLE_LEG_MODES.map((mode) => (
               <option key={mode} value={mode}>
                 {t(`trips:tours.mode.${mode}`)}
               </option>
@@ -157,16 +192,31 @@ export default function TourSectionList({ tripId }: Props): JSX.Element {
 
       {hasRoutes && (
         <ul className="space-y-2">
-          {(routes ?? []).map((route) => (
-            <li key={route.id}>
+          {(shown ?? []).map((route) => (
+            <li
+              key={route.id}
+              className="flex items-center gap-2 rounded-lg border border-(--color-border) pr-3 text-sm hover:bg-(--bg-surface)"
+            >
+              {/* The delete button sits OUTSIDE the link, not inside it: a
+                  button nested in an `<a>` is not a second action, it is a
+                  click the link swallows. */}
               <Link
-                to={`/trips/${tripId}/route/${route.id}`}
-                className="flex items-center justify-between gap-3 rounded-lg border border-(--color-border) p-3 text-sm hover:bg-(--bg-surface)"
+                // A roadtrip has a page of its own (2.7); a day tour opens in the editor.
+                to={
+                  route.kind === "roadtrip"
+                    ? `/roadtrips/${route.id}`
+                    : `/trips/${tripId}/route/${route.id}`
+                }
+                className="flex flex-1 items-center justify-between gap-3 p-3"
               >
                 <span className="flex items-center gap-2">
                   <span className="font-medium">{route.name}</span>
                   <span className="rounded-sm bg-(--bg-surface) px-1.5 py-0.5 text-xs">
-                    {t(`trips:tours.mode.${route.mode}`)}
+                    {route.kind === "roadtrip"
+                      ? t("roadtrips:kind.roadtrip")
+                      : route.activity
+                        ? t(`roadtrips:activity.${route.activity}`)
+                        : t(`trips:tours.mode.${route.mode}`)}
                   </span>
                 </span>
                 <span className="flex items-center gap-3 text-(--text-muted)">
@@ -174,9 +224,37 @@ export default function TourSectionList({ tripId }: Props): JSX.Element {
                   <span>{formatKm(route.distanceKm)} km</span>
                 </span>
               </Link>
+              <button
+                type="button"
+                className="text-xs underline"
+                onClick={() => setPendingDelete(route)}
+              >
+                {t("trips:tours.deleteLabel")}
+              </button>
             </li>
           ))}
         </ul>
+      )}
+
+      {pendingDelete && (
+        <ConfirmModal
+          isOpen
+          onClose={() => setPendingDelete(null)}
+          onConfirm={() => {
+            const route = pendingDelete;
+            setPendingDelete(null);
+            void handleDelete(route);
+          }}
+          title={t("trips:tours.deleteConfirm.title")}
+          // The name and what goes with it, because a tour carries its stops,
+          // its legs and its tracks — "Tour löschen?" names none of that.
+          message={t("trips:tours.deleteConfirm.message", {
+            name: pendingDelete.name,
+            count: pendingDelete.stopCount,
+          })}
+          confirmText={t("trips:tours.deleteConfirm.confirm")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
       )}
     </div>
   );

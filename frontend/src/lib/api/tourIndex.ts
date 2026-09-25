@@ -1,5 +1,6 @@
 import { api } from "./client";
 import type { TourGeometry } from "../../types/tour";
+import type { RouteKind, RoadtripVehicle, TourActivity } from "../../shared/tour/roadtrip";
 
 /**
  * One tour section as the dashboard-wide list sees it. Mirrors
@@ -13,11 +14,26 @@ import type { TourGeometry } from "../../types/tour";
  */
 export interface TourSummary {
   id: string;
-  tripId: string;
-  tripName: string;
+  /** `null` for a standalone tour. */
+  tripId: string | null;
+  /** `null` where there is no trip whose name to show. */
+  tripName: string | null;
   name: string;
   mode: string;
+  kind: RouteKind;
+  activity: TourActivity | null;
+  vehicle: RoadtripVehicle | null;
+  kindAssignedAutomatically: boolean;
+  notes: string | null;
+  /** A tour only: the roadtrip station it set out from, and that station's title. */
+  anchorStopId: string | null;
+  anchorStopTitle: string | null;
+  /** A day tour with a recording is measured by it; otherwise by its legs. */
   distanceKm: number;
+  distanceSource: "track" | "legs";
+  ascentM: number | null;
+  movingSeconds: number | null;
+  trackCount: number;
   stopCount: number;
   startDate: string | null;
   endDate: string | null;
@@ -31,6 +47,8 @@ export interface TourGeometryEntry {
   routeId: string;
   name: string;
   geometry: TourGeometry;
+  /** A roadtrip's line takes the roadtrip hue (2.7); absent = the tour hue. */
+  rgb?: [number, number, number];
 }
 
 /**
@@ -47,8 +65,11 @@ const GEOMETRY_BATCH_MAX_IDS = 100;
 export const tourIndexApi = {
   /** Every tour section the caller owns, across every trip. No geometry —
    *  see `TOUR_SUMMARY_SELECT`'s doc comment on the backend route. */
-  list: async (): Promise<TourSummary[]> => {
-    const { data } = await api.get<{ tours: TourSummary[] }>("/tours");
+  /** Every route, or only one kind — the tour page asks for `tour`. */
+  list: async (kind?: RouteKind): Promise<TourSummary[]> => {
+    const { data } = await api.get<{ tours: TourSummary[] }>("/tours", {
+      params: kind ? { kind } : undefined,
+    });
     return data.tours;
   },
 

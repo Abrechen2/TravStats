@@ -69,7 +69,9 @@
           "placeVisit": "Visit recorded at the place.",
           "none": "Marked as answered. Nothing was created."
         },
-        "dismissed": "Dismissed. This burst will not be suggested again."
+        "dismissed": "Dismissed. This burst will not be suggested again.",
+        "photosLinked": "{{count}} photos linked to the visit.",
+        "photosNotLinked": "The photos could not be linked – the photo library could not be reached."
       },
       "errors": {
         "loadFailed": "The photo suggestions could not be loaded.",

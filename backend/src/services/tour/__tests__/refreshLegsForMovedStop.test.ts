@@ -41,7 +41,7 @@ describe("refreshLegsForMovedStop", () => {
     tripId = trip.id;
 
     const route = await prisma.tripRoute.create({
-      data: { tripId, name: "Section", mode: "road" },
+      data: { userId, tripId, name: "Section", mode: "road" },
     });
     routeId = route.id;
 

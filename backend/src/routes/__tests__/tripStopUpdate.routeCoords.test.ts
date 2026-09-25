@@ -40,7 +40,7 @@ describe("PATCH /trips/:id/stops/:stopId refuses to null a route member's coordi
 
   it("rejects lat:null on an assigned route stop with 400", async () => {
     const route = await prisma.tripRoute.create({
-      data: { tripId, name: "Südnorwegen", mode: "road" },
+      data: { userId, tripId, name: "Südnorwegen", mode: "road" },
     });
     const stop = await prisma.tripStop.create({
       data: {
@@ -67,7 +67,7 @@ describe("PATCH /trips/:id/stops/:stopId refuses to null a route member's coordi
 
   it("rejects lon:null on an assigned route stop with 400", async () => {
     const route = await prisma.tripRoute.create({
-      data: { tripId, name: "Südnorwegen", mode: "road" },
+      data: { userId, tripId, name: "Südnorwegen", mode: "road" },
     });
     const stop = await prisma.tripStop.create({
       data: {

@@ -1,6 +1,7 @@
 import { JSX } from "react";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { DOMAIN_KEYS, DOMAINS, type DomainKey } from "../../shared/domains";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
@@ -14,13 +15,23 @@ export default function ModuleSection(): JSX.Element {
   const enabledDomains = useSettingsStore((s) => s.enabledDomains);
   const setEnabledDomains = useSettingsStore((s) => s.setEnabledDomains);
 
-  // Every domain but one: rail is offered only where the instance beta
-  // switch allows it — the flag ALONE (hooks/useRailVisible.ts), because this
-  // list is where the user turns the domain on. A domain the user already
-  // enabled stays listed, so it can always be switched off again.
+  // Every domain, since 2026-09-05. Places sat behind the instance beta flag
+  // here (never behind "already enabled" — this list is where the user turns
+  // a domain on) until its gate's own condition was met.
+  // Roadtrips are beta (2.7): not offered as a switch while the instance
+  // gate is closed — `useEnabledDomains` would hide the domain anyway.
+  // Rail is offered only where its own beta switch allows it — the flag ALONE
+  // (hooks/useRailVisible.ts), because this list is where the user turns the
+  // domain on. A rail domain the user already enabled stays listed, so it can
+  // always be switched off again.
+  const { isFeatureVisible } = useBetaFeatures();
   const railOffered = useRailOffered();
   const enabledRail = enabledDomains.includes("rail");
-  const visibleKeys = DOMAIN_KEYS.filter((key) => key !== "rail" || railOffered || enabledRail);
+  const visibleKeys = DOMAIN_KEYS.filter((key) => {
+    if (key === "roadtrip") return isFeatureVisible("roadtrips");
+    if (key === "rail") return railOffered || enabledRail;
+    return true;
+  });
 
   const toggle = (key: DomainKey): void => {
     if (!DOMAINS[key].available) return;

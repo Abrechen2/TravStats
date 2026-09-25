@@ -10,7 +10,7 @@ import {
 
 describe("domain registry", () => {
   it("exposes all domain keys", () => {
-    expect(DOMAIN_KEYS).toEqual(["flight", "cruise", "lodging", "poi", "rail"]);
+    expect(DOMAIN_KEYS).toEqual(["flight", "cruise", "lodging", "poi", "roadtrip", "rail"]);
   });
 
   it("only lists available domains in AVAILABLE_DOMAINS", () => {
@@ -20,7 +20,7 @@ describe("domain registry", () => {
     // exists to catch a descriptor and the derived list disagreeing, not to
     // count domains. Mirrors frontend/src/__tests__/shared/domains.test.ts.
     expect(AVAILABLE_DOMAINS).toEqual(DOMAIN_KEYS.filter((k) => DOMAINS[k].available));
-    expect(AVAILABLE_DOMAINS).toEqual(["flight", "cruise", "lodging", "poi", "rail"]);
+    expect(AVAILABLE_DOMAINS).toEqual(["flight", "cruise", "lodging", "poi", "roadtrip", "rail"]);
   });
 
   it("every descriptor has required fields", () => {

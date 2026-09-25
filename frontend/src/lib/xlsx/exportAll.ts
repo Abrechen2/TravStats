@@ -26,6 +26,16 @@ import {
   type PlaceVisitRow,
 } from "./sheets";
 import { buildWorkbookBlob, sheet, type AnySheetData } from "./workbook";
+import {
+  roadtripRows,
+  roadtripSheet,
+  roadtripStationSheet,
+  tourPointRows,
+  tourPointSheet,
+  tourSheet,
+  type TourWithPoints,
+} from "./roadtripSheets";
+import type { RoadtripDetail } from "../../types/roadtrip";
 
 type T = (key: string) => string;
 
@@ -36,12 +46,31 @@ export interface ExportInput {
   places?: readonly Place[];
   /** Only passed when the rail domain is visible (beta gate + user). */
   rail?: readonly RailJourney[];
+  roadtrips?: readonly RoadtripDetail[];
+  /** Day tours only — a roadtrip is on its own sheet. Each carries its points
+   *  when the caller fetched them; without, the points sheet is left out. */
+  tours?: readonly TourWithPoints[];
+}
+
+/**
+ * The readable half of a reference cell: "Base (qualifier)".
+ *
+ * MUST agree with `backend/src/services/xlsxImport/context.ts#labelForms`.
+ * The importer falls back to this label when the bracketed id is missing or
+ * belongs to another account (a file moved between accounts), so it has to
+ * tell two "Ibis Budget" or two "Westliches Mittelmeer" apart — hence the
+ * city or the start day behind the name.
+ */
+export function parentLabel(base: string, qualifier?: string | null): string {
+  const q = qualifier?.trim();
+  return q ? `${base} (${q})` : base;
 }
 
 /** A short, stable label for a parent row, used as the readable half of a
  *  reference cell. Long enough to recognise, short enough to read in a cell. */
 function cruiseLabel(c: Cruise): string {
-  return c.routeName ?? c.shipNameOverride ?? c.ship?.name ?? c.cruiseLine ?? c.id;
+  const base = c.routeName ?? c.shipNameOverride ?? c.ship?.name ?? c.cruiseLine ?? c.id;
+  return parentLabel(base, c.startDate ? String(c.startDate).slice(0, 10) : null);
 }
 
 /**
@@ -64,7 +93,7 @@ function lodgingStayRows(lodgings: readonly Lodging[]): LodgingStayRow[] {
   const rows: LodgingStayRow[] = [];
   for (const l of lodgings) {
     for (const stay of l.stays ?? []) {
-      rows.push({ ...stay, lodgingId: l.id, lodgingLabel: l.name });
+      rows.push({ ...stay, lodgingId: l.id, lodgingLabel: parentLabel(l.name, l.city) });
     }
   }
   return rows;
@@ -74,7 +103,7 @@ function placeVisitRows(places: readonly Place[]): PlaceVisitRow[] {
   const rows: PlaceVisitRow[] = [];
   for (const p of places) {
     for (const visit of p.visits ?? []) {
-      rows.push({ ...visit, placeId: p.id, placeLabel: p.name });
+      rows.push({ ...visit, placeId: p.id, placeLabel: parentLabel(p.name, p.city) });
     }
   }
   return rows;
@@ -109,6 +138,18 @@ export function buildSheets(t: T, input: ExportInput, locale = "de"): AnySheetDa
     if (visits.length > 0) sheets.push(sheet(placeVisitSheet(t), visits));
   }
 
+  const { roadtrips, stations } = roadtripRows(input.roadtrips ?? []);
+  if (roadtrips.length > 0) {
+    sheets.push(sheet(roadtripSheet(t), roadtrips));
+    if (stations.length > 0) sheets.push(sheet(roadtripStationSheet(t), stations));
+  }
+
+  const tours = input.tours ?? [];
+  if (tours.length > 0) {
+    sheets.push(sheet(tourSheet(t), tours));
+    const points = tourPointRows(tours);
+    if (points.length > 0) sheets.push(sheet(tourPointSheet(t), points));
+  }
   const rail = input.rail ?? [];
   if (rail.length > 0) sheets.push(sheet(railSheet(t), rail));
 

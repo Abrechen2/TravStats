@@ -17,6 +17,8 @@ export interface InstanceSettings {
   allowRegistration: boolean;
   /** Instance-wide gate for unfinished features — see config/betaFeatures.ts. */
   betaFeaturesEnabled: boolean;
+  /** May the instance ask Open-Meteo, Wikipedia and OpenStreetMap for its users. */
+  openDataEnabled: boolean;
   frontendUrl: string | null;
   publicUrl: string | null;
   lanUrl: string | null;
@@ -59,6 +61,7 @@ export interface InstanceSettingsPatch {
   maxUsers?: number;
   allowRegistration?: boolean;
   betaFeaturesEnabled?: boolean;
+  openDataEnabled?: boolean;
   frontendUrl?: string;
   publicUrl?: string;
   lanUrl?: string;

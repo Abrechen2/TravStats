@@ -2,6 +2,7 @@ import { minorUnits } from "../../shared/currencies";
 import Modal from "../Modal";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
+import { useSettingsStore } from "../../store/settingsStore";
 import { useState, useEffect } from "react";
 import type {
   Cruise,
@@ -13,7 +14,7 @@ import type {
   CabinType,
   CruiseStatus,
 } from "../../types";
-import { cruiseApi, tripsApi } from "../../lib/api";
+import { cruiseApi, shipsApi, tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ShipPicker } from "./ShipPicker";
@@ -21,6 +22,11 @@ import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import CompanionPicker from "../CompanionPicker";
+import TagInput from "../TagInput";
+import CatalogueCombobox, { type CatalogueOption } from "../FlightForm/fields/CatalogueCombobox";
+import { useTripPreselection } from "../../hooks/useTripPreselection";
+import { useCruiseDateSuggestions } from "./useCruiseDateSuggestions";
+import { suggestCruiseRouteName } from "./cruiseRouteName";
 
 type Mode = "create" | "edit";
 
@@ -64,11 +70,12 @@ const toDateInput = (iso: string | null | undefined): string => (iso ? iso.slice
 
 const fromDateInput = (date: string): string | null => (date ? `${date}T00:00:00.000Z` : null);
 
-const splitCsv = (v: string): string[] =>
-  v
-    .split(",")
-    .map((x) => x.trim())
-    .filter((x) => x.length > 0);
+/** Module-level so the combobox's debounce effect sees one stable function. The
+ *  lines carry no catalogue id; the list position is only a React key. */
+async function searchCruiseLineOptions(q: string): Promise<CatalogueOption[]> {
+  const lines = await shipsApi.cruiseLines(q);
+  return lines.map((name, id) => ({ id, name, codes: [] }));
+}
 
 const INPUT_CLASS =
   "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
@@ -111,16 +118,31 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
     }))
   );
 
+  const onEndDateChange = useCruiseDateSuggestions({
+    startDate,
+    stops,
+    setStops,
+    endDate,
+    setEndDate,
+  });
+
+  const routeNameSuggestion = routeName
+    ? ""
+    : suggestCruiseRouteName(departurePort, stops, arrivalPort);
+
   const [cabinNumber, setCabinNumber] = useState<string>(cruise?.cabinNumber ?? "");
   const [cabinType, setCabinType] = useState<CabinType | "">(cruise?.cabinType ?? "");
   const [deck, setDeck] = useState<string>(cruise?.deck?.toString() ?? "");
 
   const [bookingReference, setBookingReference] = useState<string>(cruise?.bookingReference ?? "");
   const [price, setPrice] = useState<string>(cruise?.price?.toString() ?? "");
-  const [currency, setCurrency] = useState<string>(cruise?.currency ?? "EUR");
+  // A new cruise starts in the account's base currency; an existing one keeps
+  // what it was saved with.
+  const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const [currency, setCurrency] = useState<string>(cruise?.currency ?? baseCurrency ?? "EUR");
   const recentCurrencies = useRecentCurrencies();
 
-  const [tagsInput, setTagsInput] = useState<string>((cruise?.tags ?? []).join(", "));
+  const [tags, setTags] = useState<string[]>(cruise?.tags ?? []);
   const [companions, setCompanions] = useState<string[]>(cruise?.companions ?? []);
   const [notes, setNotes] = useState<string>(cruise?.notes ?? "");
 
@@ -147,6 +169,14 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       cancelled = true;
     };
   }, []);
+
+  const pickTrip = useTripPreselection({
+    enabled: mode === "create",
+    trips,
+    date: startDate,
+    value: tripId,
+    onChange: setTripId,
+  });
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
@@ -179,7 +209,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         bookingReference: bookingReference || null,
         price: price ? Number.parseFloat(price) : null,
         currency: (currency || "EUR") as CruiseInput["currency"],
-        tags: splitCsv(tagsInput),
+        tags,
         companions,
         notes: notes || null,
         tripId: tripId || null,
@@ -188,7 +218,9 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         // including as []: omitting the field when the user removed every
         // stop would silently keep the old stops (the server reads absence
         // as "don't touch").
-        stops: stops.map(({ port: _port, originalDay: _originalDay, ...rest }) => rest),
+        stops: stops.map(
+          ({ port: _port, originalDay: _originalDay, dateSource: _dateSource, ...rest }) => rest
+        ),
       };
       const saved =
         mode === "create"
@@ -244,13 +276,16 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         <div>
           <Section title={`${t("field.ship")} & ${t("field.line")}`}>
             <ShipPicker value={ship} onChange={onShipPicked} />
-            <input
-              className={`mt-3 ${INPUT_CLASS}`}
-              aria-label={t("field.line")}
-              value={cruiseLine}
-              onChange={(e): void => setCruiseLine(e.target.value)}
-              placeholder={t("field.line")}
-            />
+            <div className="mt-3">
+              <CatalogueCombobox
+                ariaLabel={t("field.line")}
+                value={cruiseLine}
+                onChange={setCruiseLine}
+                search={searchCruiseLineOptions}
+                placeholder={t("field.line")}
+                inputClassName={INPUT_CLASS}
+              />
+            </div>
             <input
               className={`mt-3 ${INPUT_CLASS}`}
               aria-label={t("field.routeName")}
@@ -258,6 +293,17 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
               onChange={(e): void => setRouteName(e.target.value)}
               placeholder={t("field.routeName")}
             />
+            {/* Offered, never written on its own: a route name is the user's
+                wording, and the ports only say what it could be. */}
+            {routeNameSuggestion && (
+              <button
+                type="button"
+                onClick={(): void => setRouteName(routeNameSuggestion)}
+                className="mt-1 rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent)"
+              >
+                {t("form.routeNameSuggestion", { name: routeNameSuggestion })}
+              </button>
+            )}
             <div className="mt-3 grid grid-cols-2 gap-3">
               <input
                 type="date"
@@ -273,7 +319,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 className={INPUT_CLASS}
                 style={DARK_PICKER_STYLE}
                 value={endDate}
-                onChange={(e): void => setEndDate(e.target.value)}
+                onChange={(e): void => onEndDateChange(e.target.value)}
               />
             </div>
             {/* #status-from-dates: cruise write paths derive scheduled/
@@ -421,11 +467,11 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
           </Section>
 
           <Section title={t("detail.meta")}>
-            <input
-              aria-label={t("field.tags")}
+            <TagInput
+              ariaLabel={t("field.tags")}
               className={INPUT_CLASS}
-              value={tagsInput}
-              onChange={(e): void => setTagsInput(e.target.value)}
+              value={tags}
+              onChange={setTags}
               placeholder={t("field.tags")}
             />
             <div className="mt-3">
@@ -441,7 +487,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 aria-label={t("field.trip")}
                 className={INPUT_CLASS}
                 value={tripId}
-                onChange={(e): void => setTripId(e.target.value)}
+                onChange={(e): void => pickTrip(e.target.value)}
               >
                 <option value="">{t("field.noTrip")}</option>
                 {trips.map((trip) => (

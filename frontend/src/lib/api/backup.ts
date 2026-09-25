@@ -68,6 +68,12 @@ export const backupApi = {
     options: {
       scope: "full" | "database" | "files";
       createBackupBefore?: boolean;
+      /**
+       * Sent only on the second attempt, after the server refused the first
+       * with `RESTORE_ENCRYPTION_KEY_MISMATCH` and the admin acknowledged that
+       * the stored credentials in the archive will not decrypt here.
+       */
+      acceptEncryptionKeyChange?: boolean;
     }
   ): Promise<{
     success: boolean;

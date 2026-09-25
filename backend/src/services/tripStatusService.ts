@@ -56,6 +56,10 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
       flights: { select: { departureTime: true, arrivalTime: true } },
       cruises: { select: { startDate: true, endDate: true } },
       lodgingStays: { select: { checkIn: true, checkOut: true } },
+      routes: {
+        where: { kind: "roadtrip" },
+        select: { stops: { select: { startDate: true, endDate: true } } },
+      },
       railJourneys: { select: { departureTime: true, arrivalTime: true } },
     },
   });
@@ -68,6 +72,7 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
     flights: trip.flights,
     cruises: trip.cruises,
     lodgingStays: trip.lodgingStays,
+    roadtrips: trip.routes,
     railJourneys: trip.railJourneys,
     ownStartDate: trip.startDate,
     ownEndDate: trip.endDate,

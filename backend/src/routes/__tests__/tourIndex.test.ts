@@ -41,7 +41,7 @@ describe("Tour dashboard index", () => {
     const tripA = await prisma.trip.create({ data: { userId, name: "Norwegen 2024" } });
     tripAId = tripA.id;
     const routeA = await prisma.tripRoute.create({
-      data: { tripId: tripAId, name: "Süd-Norwegen", mode: "road" },
+      data: { userId, tripId: tripAId, name: "Süd-Norwegen", mode: "road" },
     });
     routeAId = routeA.id;
     const a1 = await prisma.tripStop.create({
@@ -72,14 +72,14 @@ describe("Tour dashboard index", () => {
     const tripB = await prisma.trip.create({ data: { userId, name: "Alpenquerung" } });
     tripBId = tripB.id;
     const routeB = await prisma.tripRoute.create({
-      data: { tripId: tripBId, name: "Alpen", mode: "bike" },
+      data: { userId, tripId: tripBId, name: "Alpen", mode: "bike" },
     });
     routeBId = routeB.id;
 
     // Another user's trip/route — must never surface for `cookie`.
     const tripOther = await prisma.trip.create({ data: { userId: other.id, name: "Fremd" } });
     const routeOther = await prisma.tripRoute.create({
-      data: { tripId: tripOther.id, name: "Fremde Route", mode: "road" },
+      data: { userId: other.id, tripId: tripOther.id, name: "Fremde Route", mode: "road" },
     });
     otherRouteId = routeOther.id;
   });

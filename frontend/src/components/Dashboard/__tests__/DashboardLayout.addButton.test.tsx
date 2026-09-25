@@ -26,6 +26,16 @@ import { MemoryRouter } from "react-router-dom";
  */
 
 const mockUseDashboardRoute = vi.hoisted(() => vi.fn());
+// The flight forms ask the user's logbook for suggestions over the network;
+// these tests pin other wiring and must reach none.
+vi.mock("@/hooks/useFlightEntrySuggestions", () => ({
+  useFlightEntrySuggestions: () => ({
+    seats: [],
+    flightNumbers: [],
+    frequentFlyerNumber: null,
+    departureTerminals: [],
+  }),
+}));
 vi.mock("../../../hooks/useDashboardRoute", () => ({
   useDashboardRoute: () => mockUseDashboardRoute(),
 }));
@@ -69,7 +79,7 @@ function renderAt(tab: string, setTab = vi.fn()): ReturnType<typeof render> {
   mockUseDashboardRoute.mockReturnValue({ tab, setTab });
   return render(
     <MemoryRouter>
-      <DashboardLayout counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0, rail: 0 }}>
+      <DashboardLayout counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0, roadtrip: 0, rail: 0 }}>
         <div />
       </DashboardLayout>
     </MemoryRouter>

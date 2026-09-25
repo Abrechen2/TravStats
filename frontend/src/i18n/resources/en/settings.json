@@ -62,6 +62,8 @@
       "fullList": "Full list with licenses",
       "osm": "map tiles (ODbL 1.0)",
       "searoute": "cruise ocean-leg distances (EUPL-1.2 / ORNL Global Shipping Lane Network, public domain)",
+      "openMeteo": "weather and ground elevations (CC BY 4.0)",
+      "wikipedia": "descriptions of places and lodgings (CC BY-SA 4.0)",
       "trainline": "station catalogue (ODbL 1.0)",
       "transitous": "train lookup and traced lines, with the timetables of its sources"
     },

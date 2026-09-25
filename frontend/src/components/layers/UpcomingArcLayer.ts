@@ -1,10 +1,34 @@
 import { ArcLayer } from "@deck.gl/layers";
+import type { UpdateParameters } from "@deck.gl/core";
 import { FLIGHT_STATUS_UPCOMING_COLOR } from "../../lib/statusColors";
 
 // Fallback tip colour for callers that don't pass one. Production callers
 // always pass `edgeColor` — resolved from the user's flight-colour config via
 // `resolveFlightTipColor` (see routesLayer.ts) — so this is only a safety net.
 const DEFAULT_EDGE_COLOR: [number, number, number] = FLIGHT_STATUS_UPCOMING_COLOR;
+
+/** Two tip colours are the same colour. Compared component-wise because the
+ *  caller builds a fresh array on every resolve, so identity says nothing. */
+function sameEdgeColor(
+  a: readonly [number, number, number],
+  b: readonly [number, number, number]
+): boolean {
+  return a[0] === b[0] && a[1] === b[1] && a[2] === b[2];
+}
+
+/**
+ * Whether the model has to be rebuilt for the tip colour to reach the screen.
+ *
+ * Its own function because it is the whole rule, and the layer method around
+ * it cannot be exercised without a GPU device: `baked` is what `getShaders()`
+ * last wrote into the GLSL source, `wanted` is what the props ask for now.
+ */
+export function edgeColorNeedsRebuild(
+  baked: readonly [number, number, number],
+  wanted: readonly [number, number, number]
+): boolean {
+  return !sameEdgeColor(baked, wanted);
+}
 
 /** Convert an 8-bit RGB triplet into a GLSL `vec3` literal (0..1 normalised). */
 function toGlslVec3(rgb: readonly [number, number, number]): string {
@@ -46,9 +70,49 @@ export class UpcomingArcLayer<DataT = unknown> extends ArcLayer<DataT, UpcomingA
     edgeColor: { type: "array", value: DEFAULT_EDGE_COLOR, compare: true },
   };
 
+  /**
+   * The colour currently COMPILED INTO the fragment shader, which is not
+   * necessarily `props.edgeColor` — see `updateState`.
+   */
+  private bakedEdgeColor: readonly [number, number, number] = DEFAULT_EDGE_COLOR;
+
+  /**
+   * Rebuild the model when the tip colour changes.
+   *
+   * `edgeColor` is baked into the injected GLSL below rather than passed as a
+   * uniform, and deck.gl calls `getShaders()` only when it BUILDS the model —
+   * so without this, a new planned colour reached the screen only on the next
+   * full rebuild. The user-visible symptom, reported by the tester on
+   * 2026-09-20: picking a new "geflogen" colour repainted at once (it travels
+   * in the arc data) while "geplant" did nothing until a page reload or a trip
+   * through another colour mode, both of which rebuild the layer anyway. It
+   * showed on mixed routes — flown AND with a flight still to come — which is
+   * what most planned flights sit on, and only in the default "arc" route
+   * shape; the "flat" shape puts the same colour in its data
+   * (`flatRoutesLayer.ts`) and never had the lag.
+   *
+   * The parent already does exactly this for `extensionsChanged`; comparing
+   * against what was baked rather than against `oldProps` keeps the two from
+   * rebuilding twice for one change, and costs nothing on mount, where the
+   * shader was just built from the current props.
+   */
+  updateState(params: UpdateParameters<this>): void {
+    super.updateState(params);
+    const wanted = this.props.edgeColor ?? DEFAULT_EDGE_COLOR;
+    if (!edgeColorNeedsRebuild(this.bakedEdgeColor, wanted)) return;
+    // No model yet means nothing has been compiled: the build that follows
+    // reads the current props by itself, and destroying nothing would throw.
+    const model = this.state?.model;
+    if (!model) return;
+    model.destroy();
+    this.state.model = this._getModel();
+    this.getAttributeManager()?.invalidateAll();
+  }
+
   getShaders() {
     const shaders = super.getShaders();
     const edgeColor = this.props.edgeColor ?? DEFAULT_EDGE_COLOR;
+    this.bakedEdgeColor = edgeColor;
     return {
       ...shaders,
       inject: {

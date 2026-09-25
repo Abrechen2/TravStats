@@ -15,7 +15,7 @@
   "editTrip": "Reise bearbeiten",
   "deleteTrip": "Reise löschen",
   "removeFromTrip": "Aus Reise entfernen",
-  "deleteTripConfirm": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, Touren mit ihren aufgezeichneten Tracks und den hier abgelegten Dokumenten. Flüge, Kreuzfahrten und Unterkünfte bleiben erhalten.",
+  "deleteTripConfirm": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, Touren mit ihren aufgezeichneten Tracks und den hier abgelegten Dokumenten. Flüge, Kreuzfahrten, Unterkünfte und Roadtrips bleiben erhalten.",
   "showOnMap": "Auf Karte",
   "flightCount_one": "{{count}} Flug",
   "flightCount_other": "{{count}} Flüge",
@@ -53,9 +53,11 @@
     "categoryLabel": "Kategorie",
     "startDateLabel": "Startdatum",
     "endDateLabel": "Enddatum",
+    "useEntrySpan": "Zeitraum der Einträge übernehmen: {{start}} – {{end}}",
+    "endBeforeStart": "Das Ende darf nicht vor dem Beginn liegen.",
     "originLabel": "Herkunft",
     "destinationLabel": "Ziel",
-    "tagsLabel": "Tags (kommagetrennt)",
+    "tagsLabel": "Tags",
     "companionsLabel": "Mitreisende",
     "coverLabel": "Coverbild",
     "notesLabel": "Notizen (Markdown)",
@@ -185,7 +187,8 @@
       "aircraft": "Flugzeug",
       "seat": "Sitzplatz",
       "itinerary": "Etappen",
-      "atSea": "Seetag"
+      "atSea": "Seetag",
+      "openJournal": "Ganz öffnen"
     }
   },
   "journalModal": {
@@ -199,7 +202,10 @@
     "moodLabel": "Stimmung (optional)",
     "weatherLabel": "Wetter (optional)",
     "save": "Speichern",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "photosLabel": "Fotos aus der Reise",
+    "photosEmpty": "Die Reise hat noch keine Fotos in der Galerie.",
+    "photoAlt": "Foto zum Eintrag"
   },
   "journalView": {
     "view": "Ansehen",
@@ -299,7 +305,9 @@
     "coverUploaded": "Cover aktualisiert",
     "deleteConfirm": "Foto wirklich löschen?",
     "deleteError": "Foto konnte nicht gelöscht werden",
-    "empty": "Noch keine Fotos — lade die ersten Erinnerungen dieser Reise hoch."
+    "empty": "Noch keine Fotos — lade die ersten Erinnerungen dieser Reise hoch.",
+    "fromLibrary": "Aus der Fotobibliothek",
+    "fromLibraryAlt": "Foto aus der Fotobibliothek"
   },
   "insights": {
     "longest": "Längste Reise",
@@ -359,7 +367,7 @@
       "loading": "Tracks werden geladen …",
       "loadError": "Tracks konnten nicht geladen werden",
       "empty": "Noch kein Track für diese Tour",
-      "uploadLabel": "GPX hochladen",
+      "uploadLabel": "Aufzeichnung hochladen (GPX, TCX, FIT)",
       "uploading": "Wird hochgeladen …",
       "uploadError": "Der Track konnte nicht hochgeladen werden",
       "deleteLabel": "Löschen",
@@ -377,7 +385,12 @@
       "noCoverageReason": "Kein aufgezeichneter Track deckt diese Etappe ab",
       "source": {
         "gpx": "GPX-Upload",
-        "dawarich": "Dawarich"
+        "dawarich": "Dawarich",
+        "fit": "FIT-Datei",
+        "tcx": "TCX-Datei",
+        "strava": "Strava",
+        "healthkit": "Apple Health",
+        "healthconnect": "Health Connect"
       },
       "dawarich": {
         "pullLabel": "Aus Dawarich abrufen",
@@ -412,6 +425,34 @@
       "connected": "Verbunden (Version {{version}})",
       "loadError": "Einstellungen konnten nicht geladen werden",
       "saveError": "Speichern fehlgeschlagen"
+    },
+    "deleteLabel": "Löschen",
+    "deleteError": "Die Tour konnte nicht gelöscht werden.",
+    "deleteConfirm": {
+      "title": "Tour löschen?",
+      "message_one": "Die Tour „{{name}}“ mit {{count}} Station wird dauerhaft gelöscht, zusammen mit ihren Etappen und den dazu hochgeladenen Tracks. Die Reise selbst und ihre Orte bleiben erhalten.",
+      "message_other": "Die Tour „{{name}}“ mit {{count}} Stationen wird dauerhaft gelöscht, zusammen mit ihren Etappen und den dazu hochgeladenen Tracks. Die Reise selbst und ihre Orte bleiben erhalten.",
+      "confirm": "Tour löschen"
+    },
+    "pageTitle": "Touren",
+    "newTour": "Neue Tour",
+    "pageEmpty": "Noch keine Tour angelegt. Eine Tour kann zu einer Reise gehören oder für sich stehen.",
+    "noTrip": "ohne Reise",
+    "modeLabel": "Art",
+    "backToTours": "Zu den Touren",
+    "points": {
+      "empty": "Noch keine Punkte. Füge den ersten Punkt hinzu.",
+      "titlePlaceholder": "Name des Punktes",
+      "lat": "Breitengrad",
+      "lon": "Längengrad",
+      "moveUp": "Nach oben",
+      "moveDown": "Nach unten",
+      "remove": "Entfernen",
+      "add": "Punkt hinzufügen",
+      "save": "Punkte speichern",
+      "incomplete": "Jeder Punkt braucht einen Namen und beide Koordinaten.",
+      "saveError": "Die Punkte konnten nicht gespeichert werden.",
+      "heading": "Punkte"
     }
   },
   "head": {
@@ -433,5 +474,9 @@
   },
   "list": {
     "undated": "Ohne Datum"
+  },
+  "photoWindow": {
+    "title": "Fotos aus der Reise",
+    "alt": "Foto aus der Reise"
   }
 }

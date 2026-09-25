@@ -7,9 +7,14 @@ import type { StoryTour } from "./stories";
  * `recomputeLegs` the tour routes use, so they are `straight` legs with a
  * great-circle distance until someone asks the app for a road route.
  */
-export async function seedTour(tripId: string, tour: StoryTour, orderIdx: number): Promise<string> {
+export async function seedTour(
+  userId: string,
+  tripId: string,
+  tour: StoryTour,
+  orderIdx: number
+): Promise<string> {
   const route = await prisma.tripRoute.create({
-    data: { tripId, name: tour.name, mode: tour.mode, color: tour.color, orderIdx },
+    data: { userId, tripId, name: tour.name, mode: tour.mode, color: tour.color, orderIdx },
   });
   const stops: StopCoords[] = [];
   for (const [index, point] of tour.stops.entries()) {

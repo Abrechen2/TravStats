@@ -1,6 +1,16 @@
 import { describe, it, expect, vi } from "vitest";
 import { render, screen, act } from "@testing-library/react";
 
+// The flight forms ask the user's logbook for suggestions over the network;
+// these tests pin other wiring and must reach none.
+vi.mock("@/hooks/useFlightEntrySuggestions", () => ({
+  useFlightEntrySuggestions: () => ({
+    seats: [],
+    flightNumbers: [],
+    frequentFlyerNumber: null,
+    departureTerminals: [],
+  }),
+}));
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key }),
 }));

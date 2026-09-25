@@ -209,7 +209,8 @@
     "saving": "Speichere …",
     "createTitle": "Neue Kreuzfahrt",
     "editTitle": "Kreuzfahrt bearbeiten",
-    "saveError": "Kreuzfahrt konnte nicht gespeichert werden"
+    "saveError": "Kreuzfahrt konnte nicht gespeichert werden",
+    "routeNameSuggestion": "Vorschlag übernehmen: {{name}}"
   },
   "add": {
     "title": "Kreuzfahrt hinzufügen"

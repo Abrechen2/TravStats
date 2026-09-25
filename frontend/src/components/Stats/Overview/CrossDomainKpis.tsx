@@ -44,6 +44,7 @@ const EVIDENCE_DOMAIN_OF: Record<StatsDomain, EvidenceDomain> = {
   cruise: "cruise",
   lodging: "lodging",
   poi: "place",
+  roadtrip: "roadtrip",
   rail: "rail",
 };
 

@@ -62,6 +62,8 @@
       "fullList": "Vollständige Liste mit Lizenzen",
       "osm": "Kartenkacheln (ODbL 1.0)",
       "searoute": "Seestrecken der Kreuzfahrten (EUPL-1.2 / ORNL Global Shipping Lane Network, gemeinfrei)",
+      "openMeteo": "Wetter und Geländehöhen (CC BY 4.0)",
+      "wikipedia": "Beschreibungen von Orten und Unterkünften (CC BY-SA 4.0)",
       "trainline": "Bahnhofskatalog (ODbL 1.0)",
       "transitous": "Zugsuche und Streckenverläufe, mit den Fahrplänen seiner Quellen"
     },

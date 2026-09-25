@@ -13,6 +13,7 @@ import {
   documentDtoSchema,
   documentLimitsSchema,
   documentUploadFieldsObject,
+  extractValuesBodySchema,
   unfiledDocumentDtoSchema,
   unfiledDocumentsResponseSchema,
   updateDocumentSchema,
@@ -185,4 +186,51 @@ registry.registerPath({
   tags,
   request: { params: idParams },
   responses: { 204: { description: "Deleted" }, 404: notFound },
+});
+
+const extractedValues = z.object({
+  price: z.number().nullable(),
+  currency: z.string().nullable().describe("ISO 4217"),
+  bookingReference: z.string().nullable(),
+  seatNumber: z.string().nullable().describe("Flights only"),
+  seatClass: z.enum(["economy", "premium_economy", "business", "first"]).nullable(),
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/documents/{id}/extract-values",
+  summary: "Read price, currency and booking reference out of a kept document",
+  description:
+    "Runs the parser pipeline — with the caller's parser settings — on a kept PDF, .eml or " +
+    "mail text and answers the values an entry's cost block holds, as a proposal: nothing is " +
+    "written to any entry. For a flight, `flightNumber` and `departureDate` pick the leg out " +
+    "of a multi-flight booking; with several legs and no match, seat and class abstain and the " +
+    "booking-wide values are given only where every leg agrees. `values` is null when nothing " +
+    "was found, with `reason` `noText` (no readable text, e.g. a scan) or `nothingFound`. The " +
+    "reading is recorded on the document. Rate-limited by the PDF or the mail parse budget, " +
+    "depending on the document's format; an image answers 415.",
+  tags,
+  request: {
+    params: idParams,
+    body: { content: json(extractValuesBodySchema), required: true },
+  },
+  responses: {
+    200: {
+      description: "The proposal",
+      content: json(
+        envelope(
+          z.object({
+            domain: z.enum(["flight", "cruise", "lodging"]),
+            parserUsed: z.string().nullable(),
+            values: extractedValues.nullable(),
+            reason: z.enum(["noText", "nothingFound"]).nullable(),
+          })
+        )
+      ),
+    },
+    400: badInput,
+    404: notFound,
+    415: { description: "A format the text parsers cannot read", content: errorContent },
+    429: { description: "Parse budget spent", content: errorContent },
+  },
 });

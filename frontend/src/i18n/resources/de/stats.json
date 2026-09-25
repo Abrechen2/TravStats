@@ -95,6 +95,7 @@
       "lists": "Listen",
       "bestChecklist": "Beste Checkliste",
       "cruiseNights": "Nächte an Bord",
+      "roadtripNights": "Nächte unterwegs",
       "railJourneys": "Fahrten",
       "railKmMeasured": "Strecke",
       "railKmStraight": "Luftlinie"
@@ -104,6 +105,7 @@
       "cruiseLines": "Top-Reedereien",
       "chains": "Top-Ketten",
       "categories": "Top-Kategorien",
+      "vehicles": "Fahrzeuge",
       "railOperators": "Top-Bahngesellschaften"
     },
     "badge": {
@@ -460,9 +462,9 @@
     "highestAirport": "Höchster Flughafen",
     "highestAirportDesc": "{{name}} ({{code}}) auf {{altitude}}m",
     "northernmost": "Nördlichster Punkt",
-    "northernmostDesc": "{{code}} bei {{lat}}°N",
+    "northernmostDesc": "{{code}} bei {{lat}}",
     "southernmost": "Südlichster Punkt",
-    "southernmostDesc": "{{code}} bei {{lat}}°S",
+    "southernmostDesc": "{{code}} bei {{lat}}",
     "longestTravelChain": "Längste Reisekette",
     "longestTravelChainDesc": "{{count}} aufeinanderfolgende Flüge",
     "fastestRoute": "Schnellste Route",
@@ -690,7 +692,8 @@
       "flights_other": "Flüge",
       "days_one": "Tag",
       "days_other": "Tage",
-      "north": "Nord"
+      "north": "Nord",
+      "south": "Süd"
     }
   },
   "wrapped": {

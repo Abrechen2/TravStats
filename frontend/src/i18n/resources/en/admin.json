@@ -148,6 +148,14 @@
             "name": "Device pairing",
             "what": "The Devices settings entry and its QR code, the only way to bind the phone app to this account."
           },
+          "roadtrips": {
+            "name": "Roadtrips and tours",
+            "what": "The “Roadtrips” domain (multi-day trips with stations at your stays) and all tours: the tours page and editor, the tour tab on the dashboard and on a trip, the tours on the overview map, and the routing provider and Strava cards."
+          },
+          "lodgingEnrichment": {
+            "name": "Complete lodgings from OpenStreetMap",
+            "what": "The “Complete from OpenStreetMap” button on a lodging’s page: it writes stars, website, chain and the Wikipedia link into empty fields. Also needs the open data services switch."
+          },
           "railDomain": {
             "name": "Rail",
             "what": "The Rail area: a logbook for train journeys with stations, times, class and price. Map, statistics, station catalogue and import are still to come."
@@ -574,7 +582,12 @@
       "createBackupBefore": "Create backup before restore (recommended)",
       "confirmLabel": "To confirm, type \"{{text}}\":",
       "confirmText": "Restore",
-      "confirmButton": "Restore"
+      "confirmButton": "Restore",
+      "keyMismatchTitle": "This archive was written with a different encryption key",
+      "keyMismatchBody": "The stored API keys, the SMTP password and the Immich/Dawarich credentials cannot be decrypted on this instance. Put the original key back (ENCRYPTION_KEY, or encryption.key in the secrets directory) and try again — or confirm here and enter those credentials again afterwards.",
+      "keyMismatchAcknowledge": "Understood: I will re-enter the credentials afterwards",
+      "archiveIncomplete": "The archive is missing the part you asked to restore. Nothing was restored.",
+      "archiveUnreadable": "The archive's file part cannot be read. Nothing was restored."
     },
     "settingsSaved": "Backup settings saved",
     "settingsFailed": "Failed to save backup settings",
@@ -698,5 +711,19 @@
     "title": "Exchange rates",
     "label": "Fetch rates for currencies the ECB does not publish from cdn.jsdelivr.net",
     "description": "The ECB publishes 30 currencies. With this off, exactly those stay convertible; everything else is stored and shown but marked “no rate” and left out of totals. With it on, this instance asks the free jsDelivr dataset for the rest — only for rates the ECB lacks, and without a key."
+  },
+  "loginBackgrounds": {
+    "title": "Sign-in page images",
+    "subtitle": "Photographs that drift across the left half of the sign-in page. With none of your own, the five shipped ones run.",
+    "publicWarning": "Anyone who can reach this instance sees these, signed in or not. Only upload photographs that may be public.",
+    "empty": "No images of your own yet — the sign-in page shows the five that ship with TravStats.",
+    "add": "Add images",
+    "uploaded": "{{count}} image uploaded",
+    "uploaded_other": "{{count}} images uploaded",
+    "partial": "{{accepted}} kept. Not recognised as images: {{rejected}}",
+    "uploadFailed": "Upload failed.",
+    "removeFailed": "Could not remove the image.",
+    "replacesShipped": "Your images replace the shipped ones entirely. Remove them all to go back to the shipped set.",
+    "hint": "Dark portrait photographs with a quiet left half work best — that is where the text sits. On bright ones the text becomes hard to read."
   }
 }

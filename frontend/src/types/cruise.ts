@@ -103,6 +103,10 @@ export interface CruiseStopInput {
    *  means its `dayNumber` IS the loaded day). Stripped on submit like `port`.
    *  See `cruiseDayNumbers.ts` (forgejo#126). */
   originalDay?: number | null;
+  /** UI-only: where `date` came from — `"derived"` = filled from the cruise
+   *  start date and the day number (keeps following both), `"user"` = typed
+   *  (never touched again), `undefined` = as loaded. Stripped on submit. */
+  dateSource?: "derived" | "user";
 }
 
 export interface CruiseInput {

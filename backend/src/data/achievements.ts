@@ -18,13 +18,14 @@ import { seedsPartE } from "./achievementSeeds/partE";
 import { seedsPartF } from "./achievementSeeds/partF";
 import { seedsPartG } from "./achievementSeeds/partG";
 import { seedsPartH } from "./achievementSeeds/partH";
+import { seedsPartI } from "./achievementSeeds/partI";
 
 export interface AchievementDefinition {
   code: string;
   name: string;
   description: string;
   category: string;
-  domain: "flight" | "cruise" | "lodging" | "poi" | "shared";
+  domain: "flight" | "cruise" | "lodging" | "poi" | "roadtrip" | "shared";
   icon: string;
   tier: string;
   requirement: number;
@@ -42,6 +43,7 @@ export const achievements: AchievementDefinition[] = [
   ...seedsPartF,
   ...seedsPartG,
   ...seedsPartH,
+  ...seedsPartI,
 ];
 
 /**

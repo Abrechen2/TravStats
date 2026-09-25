@@ -6,6 +6,7 @@ export const DASHBOARD_TABS = [
   "cruise",
   "poi",
   "lodging",
+  "roadtrip",
   "rail",
   "tour",
 ] as const;
@@ -83,6 +84,9 @@ export const TAB_MODE_REGISTRY = {
   lodging: { modes: LODGING_MODES, default: "globe", flatDefault: "map" },
   rail: { modes: RAIL_MODES, default: "globe", flatDefault: "routes" },
   tour: { modes: TOUR_MODES, default: "globe", flatDefault: "routes" },
+  // Roadtrips (2.7) draw the same kind of line a tour does, so they take the
+  // tour's two modes — the globe first, like every tab.
+  roadtrip: { modes: TOUR_MODES, default: "globe", flatDefault: "routes" },
 } as const satisfies Record<DashboardTab, TabRegistryEntry<DashboardMode>>;
 
 /**

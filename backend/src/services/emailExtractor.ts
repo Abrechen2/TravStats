@@ -2,6 +2,7 @@ import MsgReader from "@kenjiuno/msgreader";
 import { parse as parseHtml } from "node-html-parser";
 import logger from "../utils/logger";
 import { senderAddressIn } from "./parsers/userTemplates/sampleHeaders";
+import { headerText, parseMimeMessage } from "./email/mimeMessage";
 
 /**
  * Email Extractor Service
@@ -103,65 +104,41 @@ function extractFromMsg(buffer: Buffer): ExtractedEmail {
 }
 
 /**
- * Extract email content from .eml file (RFC 822 format)
+ * Extract email content from .eml file (RFC 5322 / MIME).
+ *
+ * The MIME tree is read by `parseMimeMessage`; see that file for what a
+ * blank-line split got wrong (audit SRV-MAIL-MIME-001 — a multipart/mixed
+ * confirmation handed its boundaries, part headers and the base64 of its PDF
+ * to the parser as the message text).
  */
-function extractFromEml(content: string): ExtractedEmail {
+function extractFromEml(content: Buffer): ExtractedEmail {
   try {
-    // Simple EML parser - extract subject and body
-    const lines = content.split("\n");
-    let subject = "";
-    let from: string | undefined;
-    let sentAt: Date | undefined;
-    let bodyStartIndex = 0;
-    let inHeaders = true;
+    const message = parseMimeMessage(content);
 
-    // Parse headers
-    for (let i = 0; i < lines.length; i++) {
-      const line = lines[i];
+    const subject = headerText(message, "subject") ?? "";
+    // Only the bare address, never the display name: a template anchors on
+    // the DOMAIN, and "Hotel Seeblick Garni <res@…>" would otherwise have to
+    // be unwrapped again by every reader downstream.
+    const from = senderAddressIn(`From: ${headerText(message, "from") ?? ""}`) ?? undefined;
+    // `Date:`, never `Delivery-Date:` — the header map is keyed by the exact
+    // field name, so the two can no longer be confused by a prefix match.
+    const sentAt = toDate(message.headers.get("date"));
 
-      if (inHeaders) {
-        if (line.trim() === "") {
-          // End of headers
-          inHeaders = false;
-          bodyStartIndex = i + 1;
-          break;
-        }
-
-        if (line.toLowerCase().startsWith("subject:")) {
-          subject = line.substring(8).trim();
-        }
-
-        // Only the bare address, never the display name: a template anchors on
-        // the DOMAIN, and "Hotel Seeblick Garni <res@…>" would otherwise have
-        // to be unwrapped again by every reader downstream.
-        if (line.toLowerCase().startsWith("from:")) {
-          from = from ?? senderAddressIn(line) ?? undefined;
-        }
-
-        // `Date:` only at the start of a line, so a `Delivery-Date:` or a
-        // quoted date inside another header cannot win.
-        if (line.toLowerCase().startsWith("date:")) {
-          sentAt = sentAt ?? toDate(line.substring(5).trim());
-        }
-      }
+    // A mail with no MIME structure that simply CONTAINS markup: the old
+    // reader's behaviour, kept because it is right and nothing in the tree
+    // declares a content type for such a body. A declared text/html part has
+    // already been picked up above and does not reach this.
+    let text = message.text;
+    let html = message.html;
+    if (!html) {
+      const inlineHtml = text.match(/<html[\s\S]*?<\/html>/i)?.[0];
+      if (inlineHtml) html = inlineHtml;
     }
-
-    // Extract body (everything after headers)
-    const body = lines.slice(bodyStartIndex).join("\n").trim();
-
-    // Try to extract HTML if present (simple approach)
-    const htmlMatch = body.match(/<html[\s\S]*?<\/html>/i);
-    const html = htmlMatch ? htmlMatch[0] : undefined;
-
-    // If HTML found, try to extract plain text from it
-    let text = body;
-    if (html) {
+    if (html && (!message.text || message.text === html)) {
       try {
-        const root = parseHtml(html);
-        text = root.textContent || body;
+        text = parseHtml(html).textContent || text;
       } catch (_htmlError) {
-        // If HTML parsing fails, use raw body
-        text = body;
+        // Unparseable markup is still better read as itself than dropped.
       }
     }
 
@@ -170,6 +147,9 @@ function extractFromEml(content: string): ExtractedEmail {
         subject,
         bodyLength: text.length,
         hasHtml: !!html,
+        attachments: message.attachments.map(
+          (a) => `${a.mediaType}${a.filename ? ` (${a.filename})` : ""}`
+        ),
       },
       "[Email Extractor] Extracted .eml file"
     );
@@ -234,8 +214,10 @@ export function extractEmailFromFile(file: Buffer | string, filename: string): E
       return extractFromMsg(file);
 
     case ".eml": {
-      const emlContent = Buffer.isBuffer(file) ? file.toString("utf-8") : file;
-      return extractFromEml(emlContent);
+      // The BYTES, not a UTF-8 string: a part declares its own charset and a
+      // latin-1 body decoded as UTF-8 loses exactly the umlauts the German
+      // templates key on.
+      return extractFromEml(Buffer.isBuffer(file) ? file : Buffer.from(file, "utf8"));
     }
 
     case ".txt": {

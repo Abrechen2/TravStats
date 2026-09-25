@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import StatCard from "./StatCard";
 import DualFigureCard from "./DualFigureCard";
 import { formatDate } from "../../lib/displayFormat";
+import { formatLatitude } from "../../lib/hemisphere";
 
 interface StatsUniqueSectionProps {
   uniqueStats: UniqueStats | null;
@@ -273,7 +274,11 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
               value={uniqueStats.northernmost.code}
               description={t("stats:unique.northernmostDesc", {
                 code: uniqueStats.northernmost.code,
-                lat: uniqueStats.northernmost.lat.toFixed(2),
+                // The hemisphere comes from the sign, not from the card's
+                // title — "northernmost in the account" is a rank, and a
+                // purely southern logbook used to read "-33.95°N" here
+                // (SRV-STATS-HEMISPHERE-001).
+                lat: formatLatitude(uniqueStats.northernmost.lat),
               })}
             />
           )}
@@ -284,7 +289,7 @@ export default function StatsUniqueSection({ uniqueStats }: StatsUniqueSectionPr
               value={uniqueStats.southernmost.code}
               description={t("stats:unique.southernmostDesc", {
                 code: uniqueStats.southernmost.code,
-                lat: Math.abs(uniqueStats.southernmost.lat).toFixed(2),
+                lat: formatLatitude(uniqueStats.southernmost.lat),
               })}
             />
           )}

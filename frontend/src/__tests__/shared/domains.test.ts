@@ -3,7 +3,7 @@ import { DOMAINS, AVAILABLE_DOMAINS, isValidDomain, DOMAIN_KEYS } from "../../sh
 
 describe("frontend domain registry", () => {
   it("lists all keys", () => {
-    expect(DOMAIN_KEYS).toEqual(["flight", "cruise", "lodging", "poi", "rail"]);
+    expect(DOMAIN_KEYS).toEqual(["flight", "cruise", "lodging", "poi", "roadtrip", "rail"]);
   });
   it("exposes AVAILABLE_DOMAINS only with available=true", () => {
     // All five are available (rail since 2026-09-25, hidden in the UI by the
@@ -12,7 +12,7 @@ describe("frontend domain registry", () => {
     // relationship rather than a frozen list: this test existed to catch a
     // descriptor and the derived list disagreeing, not to count domains.
     expect(AVAILABLE_DOMAINS).toEqual(DOMAIN_KEYS.filter((k) => DOMAINS[k].available));
-    expect(AVAILABLE_DOMAINS).toEqual(["flight", "cruise", "lodging", "poi", "rail"]);
+    expect(AVAILABLE_DOMAINS).toEqual(["flight", "cruise", "lodging", "poi", "roadtrip", "rail"]);
   });
   it("isValidDomain", () => {
     expect(isValidDomain("flight")).toBe(true);

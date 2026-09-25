@@ -26,7 +26,8 @@
  */
 export type EvidenceKind = "metric" | "ranking" | "record" | "achievement";
 
-export type EvidenceDomain = "flight" | "cruise" | "lodging" | "place" | "rail" | "trip";
+export type EvidenceDomain =
+  "flight" | "cruise" | "lodging" | "place" | "rail" | "trip" | "roadtrip";
 
 /**
  * One invariant per kind, not one invariant for everything — the exact

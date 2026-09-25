@@ -19,11 +19,16 @@ import CatalogueCombobox, {
 } from "./FlightForm/fields/CatalogueCombobox";
 import BookingFields from "./FlightForm/fields/BookingFields";
 import CostFields from "./FlightForm/fields/CostFields";
+import { flightFormExtract, flightHints } from "../lib/extractTargets";
 import TripSelectField from "./FlightForm/fields/TripSelectField";
 import StatusField from "./FlightForm/fields/StatusField";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
 import { buildLocalString } from "./FlightForm/useFlightForm";
 import CompanionsField from "./FlightForm/fields/CompanionsField";
+import TagInput from "./TagInput";
+import { splitTagText } from "../lib/tagList";
+import SuggestionChips from "./common/SuggestionChips";
+import { useFlightEntrySuggestions } from "../hooks/useFlightEntrySuggestions";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
 import { useToastStore } from "../store/toastStore";
@@ -95,10 +100,16 @@ export default function FlightEditModal({
       baggageAllowance: f.baggageAllowance || "",
       frequentFlyerNumber: f.frequentFlyerNumber || "",
       companions: f.companions ?? [],
-      price: f.price || 0,
+      // `?? undefined`, never `|| 0`: the modal used to load a stored 0 and a
+      // stored null into the same form state, and write `> 0 ? … : null`
+      // back — so changing only the seat number DELETED a valid zero price,
+      // and `priceBase`, `fxRate` and the currency metadata went with it
+      // (audit 2026-09-20, SRV-UI-001). `undefined` is the one value
+      // `CostFields` reads as "not recorded".
+      price: f.price ?? undefined,
       currency: f.currency || "EUR",
-      taxes: f.taxes || 0,
-      fees: f.fees || 0,
+      taxes: f.taxes ?? undefined,
+      fees: f.fees ?? undefined,
       notes: f.notes || "",
       tags: f.tags?.join(", ") || "",
       receiptUrl: f.receiptUrl || "",
@@ -148,6 +159,13 @@ export default function FlightEditModal({
     depCode: departureAirport?.iata || departureAirport?.icao || null,
     arrCode: arrivalAirport?.iata || arrivalAirport?.icao || null,
     browserTimezone: browserTz,
+  });
+
+  const suggestions = useFlightEntrySuggestions({
+    enabled: isOpen,
+    airline: formData.airline,
+    dep: departureAirport?.iata || departureAirport?.icao,
+    arr: arrivalAirport?.iata || arrivalAirport?.icao,
   });
 
   const update = <K extends keyof typeof formData>(key: K, value: (typeof formData)[K]) =>
@@ -335,17 +353,14 @@ export default function FlightEditModal({
         baggageAllowance: formData.baggageAllowance || null,
         frequentFlyerNumber: formData.frequentFlyerNumber || null,
         companions: formData.companions,
-        price: formData.price > 0 ? formData.price : null,
+        // A recorded 0 is a price — an award flight, a staff ticket — and
+        // only an empty field is `null`. See `shared/flightPricing.ts`.
+        price: formData.price ?? null,
         currency: formData.currency as FlightInput["currency"],
-        taxes: formData.taxes > 0 ? formData.taxes : null,
-        fees: formData.fees > 0 ? formData.fees : null,
+        taxes: formData.taxes ?? null,
+        fees: formData.fees ?? null,
         notes: formData.notes || null,
-        tags: formData.tags
-          ? formData.tags
-              .split(",")
-              .map((tag) => tag.trim())
-              .filter(Boolean)
-          : [],
+        tags: splitTagText(formData.tags),
         receiptUrl: formData.receiptUrl || null,
         // Recombine with the SAME buildLocalString the create form uses —
         // no second implementation of date+time recombination.
@@ -569,6 +584,12 @@ export default function FlightEditModal({
               placeholder={t("flights:form.placeholders.flightNumber")}
               maxLength={10}
             />
+            <SuggestionChips
+              value={formData.flightNumber}
+              suggestions={suggestions.flightNumbers}
+              onPick={(v) => update("flightNumber", v)}
+              fieldLabel={t("flights:form.flightNumber")}
+            />
           </div>
         </div>
 
@@ -634,6 +655,12 @@ export default function FlightEditModal({
               className="input"
               placeholder={t("flights:form.placeholders.seat")}
             />
+            <SuggestionChips
+              value={formData.seatNumber}
+              suggestions={suggestions.seats}
+              onPick={(v) => update("seatNumber", v)}
+              fieldLabel={t("flights:form.seat")}
+            />
           </div>
           <div>
             <label className="label">{t("flights:form.gate")}</label>
@@ -653,6 +680,12 @@ export default function FlightEditModal({
               onChange={(e) => update("terminal", e.target.value)}
               className="input"
               placeholder={t("flights:form.placeholders.terminal")}
+            />
+            <SuggestionChips
+              value={formData.terminal}
+              suggestions={suggestions.departureTerminals}
+              onPick={(v) => update("terminal", v)}
+              fieldLabel={t("flights:form.terminal")}
             />
           </div>
           <div>
@@ -678,6 +711,7 @@ export default function FlightEditModal({
             frequentFlyerNumber: formData.frequentFlyerNumber,
           }}
           onChange={(v) => setFormData((prev) => ({ ...prev, ...v }))}
+          frequentFlyerSuggestion={suggestions.frequentFlyerNumber}
         />
 
         {/* Companions */}
@@ -687,39 +721,41 @@ export default function FlightEditModal({
           coPassengers={flight.coPassengers}
         />
 
-        {/* Cost (#192, #199) — shared with the create form. The modal keeps
-              its historical empty-means-0 internal state; CostFields speaks
-              undefined-means-unrecorded, so the adapter converts both ways.
-              The submit-side `> 0` strip below is unchanged. */}
+        {/* Cost (#192, #199) — shared with the create form. The modal's own
+              state now speaks the same undefined-means-unrecorded language
+              CostFields does, so nothing is converted here and a 0 survives
+              the round trip (SRV-UI-001). */}
         <CostFields
           value={{
-            price: formData.price > 0 ? formData.price : undefined,
+            price: formData.price,
             currency: formData.currency || "EUR",
-            taxes: formData.taxes > 0 ? formData.taxes : undefined,
-            fees: formData.fees > 0 ? formData.fees : undefined,
+            taxes: formData.taxes,
+            fees: formData.fees,
             receiptUrl: formData.receiptUrl,
           }}
           onChange={(v) =>
             setFormData((prev) => ({
               ...prev,
-              price: v.price ?? 0,
+              price: v.price,
               currency: v.currency,
-              taxes: v.taxes ?? 0,
-              fees: v.fees ?? 0,
+              taxes: v.taxes,
+              fees: v.fees,
               receiptUrl: v.receiptUrl,
             }))
           }
           showBreakdown={features.enableCostTracking}
+          receiptExtract={flightFormExtract(flightHints(flight), formData, (v) =>
+            setFormData((prev) => ({ ...prev, ...v }))
+          )}
         />
 
         {/* Tags */}
         <div>
           <label className="label">{t("flights:form.tags")}</label>
-          <input
-            type="text"
-            value={formData.tags}
-            onChange={(e) => update("tags", e.target.value)}
-            className="input"
+          <TagInput
+            value={splitTagText(formData.tags)}
+            onChange={(tags) => update("tags", tags.join(", "))}
+            ariaLabel={t("flights:form.tags")}
             placeholder={t("flights:form.placeholders.tags")}
           />
           <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>

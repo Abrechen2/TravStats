@@ -206,6 +206,7 @@ export const settingsUpdateSchema = settingsSchema;
 function buildSettingsResponse(
   extra: {
     betaFeaturesEnabled: boolean;
+    openDataEnabled: boolean;
     countryThreshold: CountryTier;
     /**
      * Whether THIS account has any track evidence. Per-user, unlike the two
@@ -271,6 +272,7 @@ function buildSettingsResponse(
     // Listed after the `...baseData` spread so a stale key that somehow made
     // it into the settings JSON can never shadow the authoritative value.
     betaFeaturesEnabled: extra.betaFeaturesEnabled,
+    openDataEnabled: extra.openDataEnabled,
     instanceCountryThreshold: extra.countryThreshold,
     hasCountryTracks: extra.hasCountryTracks,
   };
@@ -299,10 +301,14 @@ async function hasCountryTracks(userId: string): Promise<boolean> {
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const userId = req.userId!;
-    const { betaFeaturesEnabled, countryThreshold: instanceCountryThreshold } =
-      await getInstanceSettings();
+    const {
+      betaFeaturesEnabled,
+      openDataEnabled,
+      countryThreshold: instanceCountryThreshold,
+    } = await getInstanceSettings();
     const extra = {
       betaFeaturesEnabled,
+      openDataEnabled,
       countryThreshold: instanceCountryThreshold,
       hasCountryTracks: await hasCountryTracks(userId),
     };
@@ -391,10 +397,14 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     }
 
     const { enabledDomains, baseCurrency, autoCreateTrips, countryThreshold, ...rest } = payload;
-    const { betaFeaturesEnabled, countryThreshold: instanceCountryThreshold } =
-      await getInstanceSettings();
+    const {
+      betaFeaturesEnabled,
+      openDataEnabled,
+      countryThreshold: instanceCountryThreshold,
+    } = await getInstanceSettings();
     const extra = {
       betaFeaturesEnabled,
+      openDataEnabled,
       countryThreshold: instanceCountryThreshold,
       hasCountryTracks: await hasCountryTracks(userId),
     };

@@ -87,6 +87,7 @@ model User {
   pendingUpdateStats     PendingUpdateStatistics?
   parseLogs              ParseTrainingLog[]
   trips                  Trip[]
+  tourRoutes             TripRoute[]
   bookings               Booking[]
   cruises                Cruise[]
   railJourneys           RailJourney[]
@@ -639,6 +640,17 @@ model UserSettings {
   dawarichBaseUrl String? @map("dawarich_base_url")
   dawarichApiKey  String? @map("dawarich_api_key")
 
+  /// Strava connection (2.7, design 2026-09-24 §5). OAuth tokens, both
+  /// encrypted at rest; the athlete id identifies the account for the UI.
+  /// Strava's API agreement (Nov 2024) lets a third-party app show this data
+  /// to this user ONLY and never to an AI model — tracks imported from it
+  /// carry `source = "strava"`, which is what those paths check.
+  stravaAthleteId      String?   @map("strava_athlete_id")
+  stravaAccessToken    String?   @map("strava_access_token")
+  stravaRefreshToken   String?   @map("strava_refresh_token")
+  stravaTokenExpiresAt DateTime? @map("strava_token_expires_at")
+  stravaScope          String?   @map("strava_scope")
+
   // Trip automation: silently group imported flights of one PNR into a trip +
   // booking (routes/flightsBatch.ts). Default keeps today's behaviour; the
   // explicit "detect trips" endpoint is NOT gated by this — pressing that
@@ -804,6 +816,12 @@ model AdminSettings {
   globalDawarichBaseUrl String? @map("global_dawarich_base_url")
   globalDawarichApiKey  String? @map("global_dawarich_api_key")
 
+  // The operator's own Strava API application (client secret encrypted).
+  // TravStats ships no client id: since June 2026 Strava's standard API tier
+  // needs a subscription, and a self-hosted instance registers its own app.
+  stravaClientId     String? @map("strava_client_id")
+  stravaClientSecret String? @map("strava_client_secret")
+
   // User permissions
   allowUserApiKeys       Boolean @default(true) @map("allow_user_api_keys")
   allowUserFlightApiKeys Boolean @default(true) @map("allow_user_flight_api_keys")
@@ -882,6 +900,14 @@ model AdminSettings {
   // Admin-settable via PUT /api/v1/admin/instance-settings; every logged-in
   // user reads it (read-only) from GET /api/v1/settings.
   betaFeaturesEnabled Boolean @default(false) @map("beta_features_enabled")
+
+  /// May this instance ask open data services on its users' behalf: historical
+  /// weather and elevations from Open-Meteo, article summaries from Wikipedia /
+  /// Wikidata, hotel tags from OpenStreetMap's Overpass API. OFF by default,
+  /// because each call sends a place and a date to a third party, and the
+  /// sign-in page promises that nothing leaves the instance unless it is set
+  /// up (2026-09-24).
+  openDataEnabled Boolean @default(false) @map("open_data_enabled")
 
   /// The instance's STARTING POINT for "a country counts as visited from …" —
   /// one of `COUNTRY_TIERS` (shared/countryEvidence.ts). Spec §3.2: a fresh
@@ -1425,8 +1451,10 @@ model TripPhoto {
   lat Float?
   lon Float?
 
-  trip        Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  immichAlbum TripImmichAlbum? @relation(fields: [immichAlbumLinkId], references: [id], onDelete: Cascade)
+  trip         Trip                @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  immichAlbum  TripImmichAlbum?    @relation(fields: [immichAlbumLinkId], references: [id], onDelete: Cascade)
+  visitLinks   PlaceVisitPhoto[]
+  journalLinks JournalEntryPhoto[]
 
   @@unique([tripId, immichAssetId])
   @@index([tripId])
@@ -1476,7 +1504,11 @@ model ImmichImportJob {
 
 model TripStop {
   id            String    @id @default(uuid())
-  tripId        String    @map("trip_id")
+  /// The trip this stop sits on, or NULL for a stop that exists only as a
+  /// vertex of a standalone tour. A stop always has one or the other —
+  /// `trip_stops_trip_or_route` in the migration refuses a row with
+  /// neither, because such a row would belong to nobody.
+  tripId        String?   @map("trip_id")
   orderIdx      Int       @default(0) @map("order_idx")
   // Free-form DomainKey-style label so the timeline picks the right
   // colour ("poi", "hotel", "train", "hike", …). Null means "generic".
@@ -1497,18 +1529,49 @@ model TripStop {
   /// Position WITHIN the route, 0-based and contiguous. Written only by
   /// PUT /trips/:id/routes/:routeId/stops, never by a client.
   routeOrderIdx Int?      @map("route_order_idx")
+  /// Roadtrip station: the stay slept in here. SetNull — deleting the stay
+  /// keeps the station, which then reads as a free night (`overnight` stays
+  /// true), because the night still happened. The stay never points back:
+  /// the stay owns the night (design 2026-09-24 §2).
+  lodgingStayId String?   @map("lodging_stay_id")
+  /// Roadtrip station: a night was spent here. With `lodgingStayId` it is a
+  /// "stay" station; without it a "free" one (a pitch with no accommodation
+  /// record); false is a pass-through. Derived, never stored as an enum — a
+  /// stored enum plus the SetNull above would need a CHECK that the cascade
+  /// itself then violates (the trap migration 20260921195505 met).
+  overnight     Boolean   @default(false)
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  trip     Trip           @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  route    TripRoute?     @relation(fields: [routeId], references: [id], onDelete: SetNull)
-  legsFrom TripRouteLeg[] @relation("LegFrom")
-  legsTo   TripRouteLeg[] @relation("LegTo")
+  trip          Trip?          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  /// Cascade, and the delete handler does the other half.
+  ///
+  /// The two cases want opposite things and the database can only be told
+  /// one: a stop of a TRIP must survive its section being deleted (a tour
+  /// is scaffolding over the timeline, and the delete confirmation says
+  /// so), while a stop of a STANDALONE tour must not, because it would be
+  /// left owned by nobody and reachable from nothing — which
+  /// `trip_stops_trip_or_route` refuses to store anyway.
+  ///
+  /// SetNull was the other way round and broke on the harder path: dropping
+  /// a USER cascades the sections away, SetNull then tries to strand their
+  /// trip-less stops, and the CHECK rejects the cascade itself. So the
+  /// cascade handles the orphans and the delete handler releases the trip's
+  /// stops BEFORE deleting the section (`tourRoutes.ts`). Deleting a
+  /// section any other way than through that handler takes its stops with
+  /// it — which is what every other caller (seeds, account deletion) wants.
+  route         TripRoute?     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  legsFrom      TripRouteLeg[] @relation("LegFrom")
+  legsTo        TripRouteLeg[] @relation("LegTo")
+  lodgingStay   LodgingStay?   @relation(fields: [lodgingStayId], references: [id], onDelete: SetNull)
+  /// Tours that started from this station ("Preikestolen, from Mosvangen").
+  anchoredTours TripRoute[]    @relation("TourAnchor")
 
   @@unique([routeId, routeOrderIdx])
   @@index([tripId])
   @@index([tripId, orderIdx])
   @@index([routeId])
+  @@index([lodgingStayId])
   @@map("trip_stops")
 }
 
@@ -1520,7 +1583,16 @@ model TripStop {
 /// camp expressible. The vehicle link arrives with phase 2.
 model TripRoute {
   id       String  @id @default(uuid())
-  tripId   String  @map("trip_id")
+  /// The owner, held DIRECTLY rather than read through the trip.
+  ///
+  /// A tour may stand on its own since 2026-09-21 (owner ruling: "Sie
+  /// können auch einzeln leben"), and a tour with no trip has no trip to
+  /// read an owner from. Holding it here also means authorisation never
+  /// depends on a join that a later query might forget — a foreign key
+  /// proves existence, not ownership.
+  userId   String  @map("user_id")
+  /// The trip this section belongs to, or NULL for a standalone tour.
+  tripId   String? @map("trip_id")
   name     String
   /// Default mode for legs created in this section:
   /// road | ferry | rail | foot | bike
@@ -1534,15 +1606,37 @@ model TripRoute {
   startOdometerKm Int? @map("start_odometer_km")
   endOdometerKm   Int? @map("end_odometer_km")
 
+  /// "tour" | "roadtrip" (design 2026-09-24). Decides which page owns the
+  /// row and which of the fields below mean anything; every leg, track and
+  /// routing feature is kind-agnostic, which is the point of one engine.
+  kind                      String  @default("tour")
+  /// Tour only: hike | walk | run | bike | mtb | ski | paddle | climb | other.
+  activity                  String?
+  /// Roadtrip only: motorhome | campervan | caravan | car | motorcycle |
+  /// bicycle | rail | other. A free field on purpose (owner, 2026-09-24): a
+  /// vehicle catalog waits until someone asks for per-vehicle figures.
+  vehicle                   String?
+  vehicleName               String? @map("vehicle_name")
+  /// Tour only: the roadtrip station this day trip set out from.
+  anchorStopId              String? @map("anchor_stop_id")
+  /// Set on rows the 2.7 migration classified by rule. The UI lists them
+  /// once so a misfiled row can be moved; confirming or switching clears it.
+  kindAssignedAutomatically Boolean @default(false) @map("kind_assigned_automatically")
+
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  trip   Trip             @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  stops  TripStop[]
-  legs   TripRouteLeg[]
-  tracks TripRouteTrack[]
+  user       User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip       Trip?            @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  anchorStop TripStop?        @relation("TourAnchor", fields: [anchorStopId], references: [id], onDelete: SetNull)
+  stops      TripStop[]
+  legs       TripRouteLeg[]
+  tracks     TripRouteTrack[]
 
+  @@index([userId])
+  @@index([userId, kind])
   @@index([tripId])
+  @@index([anchorStopId])
   @@map("trip_routes")
 }
 
@@ -1624,30 +1718,72 @@ model TripRouteTrack {
   /// response and in `TourTrackList` so a partial track's distance is never
   /// presented with the same confidence as a complete one.
   truncated     Boolean  @default(false)
+  /// The elevation PROFILE: `[km, metres]` pairs sampled from the raw points
+  /// (low and high per distance bucket), NOT aligned with `geometry` — the
+  /// simplified line drops the summits a profile exists to show. Null when
+  /// the source had no elevation, and on rows written before.
+  elevations    Json?
+  /// Climb and descent in metres, measured on the RAW points with a
+  /// hysteresis — never on the simplified line, which cuts exactly the
+  /// small climbs a hike is made of (`services/tour/tracks/trackMetrics.ts`).
+  ascentM       Float?   @map("ascent_m")
+  descentM      Float?   @map("descent_m")
+  /// Seconds spent actually moving. Null when the points carry no times.
+  movingSeconds Int?     @map("moving_seconds")
+  /// The source record's own id (a HealthKit workout UUID, a Strava activity
+  /// id), so importing the same workout twice is one track, not two.
+  externalRef   String?  @map("external_ref")
   createdAt     DateTime @default(now()) @map("created_at")
 
   route TripRoute @relation(fields: [routeId], references: [id], onDelete: Cascade)
 
+  @@unique([routeId, externalRef])
   @@index([routeId])
   @@map("trip_route_tracks")
 }
 
 model TripJournalEntry {
-  id        String   @id @default(uuid())
-  tripId    String   @map("trip_id")
-  date      DateTime
-  title     String?
-  body      String
-  mood      String?
-  weather   String?
-  createdAt DateTime @default(now()) @map("created_at")
-  updatedAt DateTime @updatedAt @map("updated_at")
+  id              String   @id @default(uuid())
+  tripId          String   @map("trip_id")
+  date            DateTime
+  title           String?
+  body            String
+  mood            String?
+  weather         String?
+  /// The day's measured weather at the trip's stop on `date`, from Open-Meteo:
+  /// `{ code, tMaxC, tMinC, precipMm, place, lat, lon, source, fetchedAt }`.
+  /// Kept apart from `weather`, which is the author's own words and is counted
+  /// as such by the trip statistics. Null until fetched, or when no stop of
+  /// the trip gives that day a place.
+  observedWeather Json?    @map("observed_weather")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
 
-  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip   Trip                @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  photos JournalEntryPhoto[]
 
   @@index([tripId])
   @@index([tripId, date])
   @@map("trip_journal_entries")
+}
+
+/// A photograph of the trip's gallery shown in a journal entry. A join, not a
+/// copy: the picture stays the trip's, and the entry only points at it. Both
+/// ends cascade — an entry without the photo, or a photo without the entry,
+/// leaves nothing to show. Only a photo of the entry's own trip is accepted
+/// (checked in the route; the keys prove existence, not the trip).
+model JournalEntryPhoto {
+  id          String @id @default(uuid())
+  entryId     String @map("entry_id")
+  tripPhotoId String @map("trip_photo_id")
+  sortIdx     Int    @default(0) @map("sort_idx")
+
+  entry     TripJournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  tripPhoto TripPhoto        @relation(fields: [tripPhotoId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, tripPhotoId])
+  @@index([tripPhotoId])
+  @@map("journal_entry_photos")
 }
 
 model Booking {
@@ -1925,6 +2061,11 @@ model Lodging {
   /// run, so a hotel added afterwards was never reached at all (AUD-070).
   geocodeAttemptedAt DateTime? @map("geocode_attempted_at")
   stars              Int? // official 1–5
+  /// The house's own website. Filled by hand or by the OpenStreetMap
+  /// enrichment, which only ever writes an empty field.
+  website            String?
+  /// Wikidata item of the house itself, from its OpenStreetMap tags.
+  wikidataId         String?   @map("wikidata_id")
   amenities          String[]  @default([])
   notes              String?
   /// Has the user actually been here, or is it only noted down? A saved-places
@@ -2042,6 +2183,9 @@ model LodgingStay {
   booking    Booking?           @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   membership LodgingMembership? @relation(fields: [membershipId], references: [id], onDelete: SetNull)
   batch      ImportBatch?       @relation(fields: [batchId], references: [id], onDelete: SetNull)
+
+  /// Roadtrip stations that slept here. The stay does not own them.
+  roadtripStations TripStop[]
 
   documents Document[]
 
@@ -2188,12 +2332,22 @@ model Place {
   /// column ships now so the unique index does not need a later table rewrite.
   curatedItemId String? @map("curated_item_id")
 
+  /// Wikidata item ("Q64"), resolved once from the place's OSM tags or its
+  /// curated item and remembered, so the Wikipedia summary is not looked up
+  /// through two services on every visit. Never guessed from the name.
+  wikidataId String? @map("wikidata_id")
+
   /// Logbook or wishlist? Same question Lodging.visited answers — but note the
   /// OPPOSITE default. Lodging chose `true` because every row predating the
   /// column described a real stay; here the dominant creation path is "add a
   /// target to a list", and a wishlist entry silently counted as visited would
   /// inflate the headline number on day one.
   visited Boolean @default(false)
+
+  /// The photograph the place page leads with, picked from its visits' photos.
+  /// Null means "the first one" — a default, not a choice, so it is never
+  /// written for the user. SetNull: deleting the photo must not delete the place.
+  coverPhotoId String? @map("cover_photo_id")
 
   notes      String?
   dataSource String? @map("data_source") // manual | import | curated
@@ -2204,6 +2358,7 @@ model Place {
 
   user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
   batch         ImportBatch?     @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  coverPhoto    PlaceVisitPhoto? @relation("PlaceCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
   visits        PlaceVisit[]
   listEntries   PlaceListEntry[]
   photoJourneys PhotoJourney[]
@@ -2338,11 +2493,19 @@ model PlaceVisitPhoto {
   /// `fileCreatedAt` on import, or by the client through PATCH.
   takenAt DateTime? @map("taken_at")
 
+  /// A LINK to one of the owner's trip photographs, picked from the visit's
+  /// photo suggestions: the file route streams the trip photo's bytes, and no
+  /// copy is made. Cascade, because a link to a deleted photo shows nothing.
+  tripPhotoId String? @map("trip_photo_id")
+
   createdAt DateTime @default(now()) @map("created_at")
 
-  visit PlaceVisit @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
+  visit     PlaceVisit @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
+  tripPhoto TripPhoto? @relation(fields: [tripPhotoId], references: [id], onDelete: Cascade)
+  coverOf   Place[]    @relation("PlaceCover")
 
   @@index([placeVisitId])
+  @@index([tripPhotoId])
   @@map("place_visit_photos")
 }
 

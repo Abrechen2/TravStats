@@ -5,7 +5,9 @@ import { applyHoverCursor } from "../map/mapCursor";
 import { createMarkerTooltip } from "../map/markerTooltip";
 import { ArcLayer, PathLayer, ScatterplotLayer, TextLayer } from "@deck.gl/layers";
 import type { Layer, MapViewState, PickingInfo } from "@deck.gl/core";
-import type { Trip } from "../../types";
+import type { TripMapContent } from "./tripMapContent";
+
+export type { TripMapContent };
 import type { Lodging } from "../../types/lodging";
 import type { TourGeometry } from "../../types/tour";
 import { buildLodgingPins } from "../layers/lodgingPinsLayer";
@@ -112,8 +114,16 @@ function DeckGLOverlay({
 }
 
 interface TripMapProps {
-  trip: Trip;
-  tourGeometries?: readonly { routeId: string; name: string; geometry: TourGeometry }[];
+  trip: TripMapContent;
+  tourGeometries?: readonly {
+    routeId: string;
+    name: string;
+    geometry: TourGeometry;
+    /** A roadtrip's line takes the roadtrip hue instead of the tour one. */
+    rgb?: [number, number, number];
+  }[];
+  /** Drawn over everything else — the roadtrip page's selected station. */
+  extraLayers?: readonly Layer[];
 }
 
 // Stable module-level default. `tourGeometries = []` inline in the props
@@ -122,11 +132,12 @@ interface TripMapProps {
 // with no `tourGeometries` at all) — a fresh reference invalidates the
 // `layers` useMemo below every single render, defeating the dependency array
 // entirely even though it lists `tourGeometries` correctly.
-const NO_TOUR_GEOMETRIES: readonly { routeId: string; name: string; geometry: TourGeometry }[] = [];
+const NO_TOUR_GEOMETRIES: NonNullable<TripMapProps["tourGeometries"]> = [];
 
 export default function TripMap({
   trip,
   tourGeometries = NO_TOUR_GEOMETRIES,
+  extraLayers,
 }: TripMapProps): JSX.Element {
   const { t, i18n } = useTranslation(["trips", "map"]);
   const locale = i18n.language || "de";
@@ -563,7 +574,8 @@ export default function TripMap({
     colorConfig.lodging,
   ]);
 
-  const layers = projection === "globe" ? globeLayers : mercatorLayers;
+  const baseLayers = projection === "globe" ? globeLayers : mercatorLayers;
+  const layers = extraLayers ? [...baseLayers, ...extraLayers] : baseLayers;
 
   /** Every name on the globe, in the shape the HTML overlay reads. A deck.gl
    *  TextLayer draws nothing under globe projection, which is why the trip's
@@ -593,8 +605,10 @@ export default function TripMap({
     for (const l of lodgings) {
       if (l.lat != null && l.lon != null) pts.push([l.lon, l.lat]);
     }
+    // Tour lines too: a day tour may be nothing but its recording (2.7).
+    for (const p of tourPathData) for (const c of p.path) pts.push(c);
     return pts;
-  }, [flightArcs, cruisePaths, stopPoints, lodgings]);
+  }, [flightArcs, cruisePaths, stopPoints, lodgings, tourPathData]);
 
   /**
    * Frame the whole trip, at a zoom the current projection can honour.

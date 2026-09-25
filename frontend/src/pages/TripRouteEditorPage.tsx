@@ -2,14 +2,24 @@ import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
 
 import AppShell from "../components/ui/AppShell";
-import TripMap from "../components/Trips/TripMap";
+import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
+import TourRecordingSummary from "../components/Trips/TourRecordingSummary";
+import PlannedProfileCard from "../components/Trips/PlannedProfileCard";
+import StravaImportDialog, { useStravaConnected } from "../components/Trips/StravaImportDialog";
+import { useDomainColors } from "../hooks/useDomainColors";
+import { hexToRgb } from "../lib/domainColor";
+import { TOUR_COLOR } from "../shared/domains";
+import { TOUR_ACTIVITIES, type TourActivity } from "../shared/tour/roadtrip";
 import TourStopAssigner from "../components/Trips/TourStopAssigner";
+import TourPointEditor from "../components/Trips/TourPointEditor";
 import TourLegList from "../components/Trips/TourLegList";
 import TourTrackList from "../components/Trips/TourTrackList";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTourTracks } from "../hooks/useTourTracks";
 import { tripsApi } from "../lib/api";
-import { toursApi } from "../lib/api/tours";
+import { toursApi, type TourPointInput } from "../lib/api/tours";
+import { trackArchiveApi } from "../lib/api/trackArchive";
+import { downloadBlob } from "../lib/export";
 import { dawarichFailureKey, dawarichFailureKind } from "../lib/api/dawarich";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { findCoveringTrackId } from "../lib/trackCoverage";
@@ -77,12 +87,21 @@ function apiErrorStatus(error: unknown): number | null {
  */
 export default function TripRouteEditorPage(): JSX.Element {
   const { id, routeId } = useParams<{ id: string; routeId: string }>();
-  const { t } = useTranslation(["trips", "common"]);
+  const { t } = useTranslation(["trips", "roadtrips", "common"]);
   const addToast = useToastStore((s) => s.addToast);
+  const { colorOf } = useDomainColors();
+  const stravaConnected = useStravaConnected();
+  const [stravaOpen, setStravaOpen] = useState(false);
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [route, setRoute] = useState<TourRoute | null>(null);
   const [legs, setLegs] = useState<TourLeg[]>([]);
+  /* The section's OWN points, as the endpoint returns them. For a tour on
+     a trip they are a subset of `trip.stops` and the assigner works from
+     the trip; for a standalone tour there is no trip, and these are the
+     only points there are. */
+  const [sectionStops, setSectionStops] = useState<TourStop[]>([]);
+  const [savingPoints, setSavingPoints] = useState(false);
   const [geometry, setGeometry] = useState<TourGeometry | null>(null);
   // Whether a routing provider is configured and usable right now — see
   // `routingAvailable` on `toursApi.get()`. Defaults to `false` (never a
@@ -107,11 +126,15 @@ export default function TripRouteEditorPage(): JSX.Element {
   }, []);
 
   const load = useCallback(async (): Promise<void> => {
-    if (!id || !routeId) return;
+    if (!routeId) return;
     setFailure(null);
     try {
+      /* `id` is absent on `/tours/:routeId` — a tour that belongs to no
+         trip. Then there is no trip to fetch and none to show; every
+         section call takes the trip-less path instead (see `sectionPath`
+         in `lib/api/tours.ts`), so the rest of this page is unchanged. */
       const [tripData, sectionData, geometryData] = await Promise.all([
-        tripsApi.getById(id),
+        id === undefined ? Promise.resolve(null) : tripsApi.getById(id),
         toursApi.get(id, routeId),
         toursApi.geometry(id, routeId),
       ]);
@@ -120,6 +143,7 @@ export default function TripRouteEditorPage(): JSX.Element {
       setTrip(tripData);
       setRoute(sectionData.route);
       setLegs(sectionData.legs);
+      setSectionStops(sectionData.stops);
       setRoutingAvailable(sectionData.routingAvailable);
       setGeometry(geometryData);
     } catch (err) {
@@ -163,7 +187,10 @@ export default function TripRouteEditorPage(): JSX.Element {
   // `TourStopAssigner` has no other way to tell "not in any section" apart
   // from "in a section that is not this one".
   const assignerStops = useMemo<TourStop[]>(() => {
-    const stopsWithRoute = (trip?.stops ?? []) as unknown as StopWithRoute[];
+    // No trip means no timeline to choose from: the section's own points
+    // ARE the list, and they are all already on it.
+    if (trip === null) return sectionStops;
+    const stopsWithRoute = (trip.stops ?? []) as unknown as StopWithRoute[];
     return stopsWithRoute.map((s) => ({
       id: s.id,
       title: s.title,
@@ -171,7 +198,7 @@ export default function TripRouteEditorPage(): JSX.Element {
       lon: s.lon,
       routeOrderIdx: s.routeId === routeId ? s.routeOrderIdx : null,
     }));
-  }, [trip, routeId]);
+  }, [trip, sectionStops, routeId]);
 
   const stopTitleById = useMemo(() => {
     const map = new Map<string, string>();
@@ -215,9 +242,101 @@ export default function TripRouteEditorPage(): JSX.Element {
   // match exactly what the constructed object reads: `route.id`/`route.name`
   // (not the whole `route` object, whose other fields like `distanceKm`
   // change on every reload without touching this array's shape) and `geometry`.
-  const tourGeometries = useMemo(
-    () => (geometry && route ? [{ routeId: route.id, name: route.name, geometry }] : []),
-    [geometry, route?.id, route?.name]
+  const roadtripHex = colorOf("roadtrip");
+  // The recordings, drawn as lines of their own. For a day tour the track IS
+  // the route — its points are often none at all — so a map without it
+  // showed an empty world. Keyed on the ids: `tracksWithGeometry` is a fresh
+  // array on every render.
+  const recordedKey = tracksWithGeometry.map((tr) => tr.id).join(",");
+  const recordingGeometry = useMemo<TourGeometry | null>(
+    () =>
+      tracksWithGeometry.length === 0
+        ? null
+        : {
+            type: "FeatureCollection",
+            features: tracksWithGeometry.map((tr) => ({
+              type: "Feature",
+              geometry: { type: "LineString", coordinates: [...tr.geometry] },
+              properties: {
+                legId: `track:${tr.id}`,
+                source: "track",
+                mode: route?.mode ?? "foot",
+                confidence: "high",
+                distanceKm: tracks.find((x) => x.id === tr.id)?.distanceKm ?? 0,
+              },
+            })),
+          },
+    [recordedKey, route?.mode]
+  );
+  const tourGeometries = useMemo(() => {
+    if (!route) return [];
+    // A roadtrip's line in its own domain hue (2.7); a tour keeps the tour hue.
+    const rgb = route.kind === "roadtrip" ? hexToRgb(roadtripHex) : undefined;
+    return [
+      ...(geometry ? [{ routeId: route.id, name: route.name, geometry, rgb }] : []),
+      ...(recordingGeometry
+        ? [{ routeId: `${route.id}:tracks`, name: route.name, geometry: recordingGeometry, rgb }]
+        : []),
+    ];
+  }, [geometry, recordingGeometry, route?.id, route?.name, route?.kind, roadtripHex]);
+
+  /**
+   * What the map draws when there is no trip: the tour's own points. A
+   * standalone tour used to get no map at all, because the map could only
+   * draw a TRIP; since 2.7 it draws whatever content it is handed.
+   */
+  const mapContent = useMemo<TripMapContent>(
+    () =>
+      trip ?? {
+        stops: sectionStops.map((s) => ({
+          title: s.title,
+          lat: s.lat,
+          lon: s.lon,
+          domain: "tour",
+        })),
+      },
+    [trip, sectionStops]
+  );
+
+  const handleActivityChange = useCallback(
+    async (activity: TourActivity | null): Promise<void> => {
+      if (!route) return;
+      try {
+        const updated = await toursApi.update(id, route.id, { activity });
+        setRoute(updated);
+      } catch {
+        addToast("error", t("roadtrips:activitySaveError"));
+      }
+    },
+    [route, id, addToast, t]
+  );
+
+  /**
+   * The standalone tour's write path: one call replaces the whole point
+   * list, and the response carries the section, its points and the
+   * recomputed legs — so nothing is re-read and the page cannot briefly
+   * show a list that disagrees with its own kilometres.
+   */
+  const handleSavePoints = useCallback(
+    async (points: TourPointInput[]): Promise<void> => {
+      if (!routeId) return;
+      setSavingPoints(true);
+      try {
+        const result = await toursApi.replacePoints(routeId, points);
+        if (!mountedRef.current) return;
+        setRoute(result.route);
+        setSectionStops(result.stops);
+        setLegs(result.legs);
+        // The geometry is derived from the legs that just changed; it is
+        // the one thing the write does not return.
+        setGeometry(await toursApi.geometry(undefined, routeId));
+      } catch {
+        if (mountedRef.current) addToast("error", t("trips:tours.points.saveError"));
+      } finally {
+        if (mountedRef.current) setSavingPoints(false);
+      }
+    },
+    [routeId, addToast, t]
   );
 
   const handleAssignChange = useCallback(
@@ -394,6 +513,21 @@ export default function TripRouteEditorPage(): JSX.Element {
     [deleteTrack, addToast, t]
   );
 
+  const handleDownloadTrack = useCallback(
+    (track: TourTrackMeta): void => {
+      if (!routeId) return;
+      void (async (): Promise<void> => {
+        try {
+          const file = await trackArchiveApi.downloadTrack(id, routeId, track.id);
+          downloadBlob(file.blob, file.filename);
+        } catch (err) {
+          addToast("error", apiErrorMessage(err) ?? t("roadtrips:trackArchive.downloadFailed"));
+        }
+      })();
+    },
+    [id, routeId, addToast, t]
+  );
+
   /**
    * Pulls the section's own date span from Dawarich (an empty body — the
    * server derives the window from the section's stops). Three failure
@@ -429,7 +563,11 @@ export default function TripRouteEditorPage(): JSX.Element {
     );
   }
 
-  if (failure || !trip || !route) {
+  // A standalone tour (and a roadtrip) has no trip, so `trip === null` is its
+  // normal state, not a failure. Only a TRIP section needs its trip loaded.
+  // This read `!trip` alone until 2026-09-24, which turned every standalone
+  // tour's page into "could not be loaded" — found in the browser.
+  if (failure || !route || (id !== undefined && !trip)) {
     return (
       <AppShell width="reading">
         <div className="py-16 text-center">
@@ -442,7 +580,7 @@ export default function TripRouteEditorPage(): JSX.Element {
             </button>
           )}
           <div className="mt-6">
-            <Link to={id ? `/trips/${id}` : "/trips"} className="text-sm underline">
+            <Link to={id ? `/trips/${id}?tab=tours` : "/tours"} className="text-sm underline">
               {t("trips:tours.backToTrip")}
             </Link>
           </div>
@@ -455,20 +593,94 @@ export default function TripRouteEditorPage(): JSX.Element {
     <AppShell width="list">
       <div className="space-y-6">
         <header>
-          <Link to={`/trips/${id}`} className="text-xs text-(--text-muted) hover:underline">
-            ← {t("trips:tours.backToTrip")}
+          <Link
+            to={
+              route.kind === "roadtrip"
+                ? `/roadtrips/${route.id}`
+                : id
+                  ? `/trips/${id}?tab=tours`
+                  : "/tours"
+            }
+            className="text-xs text-(--text-muted) hover:underline"
+          >
+            ←{" "}
+            {route.kind === "roadtrip"
+              ? t("roadtrips:backToRoadtrip")
+              : t(id ? "trips:tours.backToTrip" : "trips:tours.backToTours")}
           </Link>
           <h1 className="t-screen-title mt-1">{route.name}</h1>
-          <p className="text-sm text-(--text-muted)">
-            {t(`trips:tours.mode.${route.mode}`)} · {formatKm(route.distanceKm)} km
+          <p className="flex flex-wrap items-center gap-2 text-sm text-(--text-muted)">
+            {route.kind === "tour" && (
+              <select
+                id="tour-activity"
+                value={route.activity ?? ""}
+                onChange={(e) =>
+                  void handleActivityChange((e.target.value || null) as TourActivity | null)
+                }
+                aria-label={t("roadtrips:activityLabel")}
+                className="rounded-sm border border-(--color-border) bg-transparent px-2 py-0.5 text-sm"
+              >
+                <option value="">{t("roadtrips:activityNone")}</option>
+                {TOUR_ACTIVITIES.map((a) => (
+                  <option key={a} value={a}>
+                    {t(`roadtrips:activity.${a}`)}
+                  </option>
+                ))}
+              </select>
+            )}
+            <span>
+              {t(`trips:tours.mode.${route.mode}`)} ·{" "}
+              {/* A day tour is measured by its recording once it has one. */}
+              {formatKm(
+                route.kind === "tour" && tracks.length > 0
+                  ? tracks.reduce((sum, tr) => sum + tr.distanceKm, 0)
+                  : route.distanceKm
+              )}{" "}
+              km
+            </span>
           </p>
         </header>
 
-        <TripMap trip={trip} tourGeometries={tourGeometries} />
+        {route.kind === "tour" && (
+          <TourRecordingSummary
+            tracks={tracks}
+            tripId={id}
+            routeId={route.id}
+            accent={TOUR_COLOR}
+          />
+        )}
+        {route.kind === "tour" && tracksKnown && tracks.length === 0 && legs.length > 0 && (
+          <PlannedProfileCard
+            routeId={route.id}
+            lineKey={legs
+              .map((l) => `${l.fromStopId}-${l.toStopId}-${l.source}-${l.distanceKm}`)
+              .join("|")}
+            accent={TOUR_COLOR}
+          />
+        )}
+
+        {/* A trip's section draws the whole trip around it; a standalone
+            tour or a roadtrip draws its own points (see `mapContent`). */}
+        <TripMap trip={mapContent} tourGeometries={tourGeometries} />
 
         <section>
-          <h2 className="text-lg font-semibold mb-3">{t("trips:tours.stopsHeading")}</h2>
-          <TourStopAssigner stops={assignerStops} onChange={handleAssignChange} />
+          <h2 className="text-lg font-semibold mb-3">
+            {trip === null ? t("trips:tours.points.heading") : t("trips:tours.stopsHeading")}
+          </h2>
+          {trip === null ? (
+            <TourPointEditor
+              points={sectionStops.map((s) => ({
+                id: s.id,
+                title: s.title,
+                lat: s.lat ?? NaN,
+                lon: s.lon ?? NaN,
+              }))}
+              saving={savingPoints}
+              onSave={(points) => void handleSavePoints(points)}
+            />
+          ) : (
+            <TourStopAssigner stops={assignerStops} onChange={handleAssignChange} />
+          )}
         </section>
 
         <section>
@@ -498,10 +710,23 @@ export default function TripRouteEditorPage(): JSX.Element {
             uploading={trackUploading}
             onUpload={handleUploadTrack}
             onDelete={handleDeleteTrack}
+            onDownload={handleDownloadTrack}
             pulling={trackPulling}
             dawarichAvailable={dawarichAvailable}
             onPullDawarich={handlePullDawarich}
+            onImportStrava={stravaConnected ? () => setStravaOpen(true) : undefined}
           />
+          {stravaOpen && route && (
+            <StravaImportDialog
+              target={{ kind: "route", routeId: route.id }}
+              around={tracks[0]?.startedAt ?? null}
+              onClose={() => setStravaOpen(false)}
+              onDone={() => {
+                setStravaOpen(false);
+                void loadTracks();
+              }}
+            />
+          )}
         </section>
       </div>
     </AppShell>

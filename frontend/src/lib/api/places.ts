@@ -1,5 +1,12 @@
 import { api } from "./client";
-import type { Place, PlaceInput, PlaceVisit, VisitInput, PlaceListQuery } from "../../types/place";
+import type {
+  Place,
+  PlaceInput,
+  PlaceVisit,
+  VisitDateSuggestion,
+  VisitInput,
+  PlaceListQuery,
+} from "../../types/place";
 import type { PlaceVisitPhoto } from "../../types/placeList";
 
 interface Envelope<T> {
@@ -78,6 +85,18 @@ export async function updateVisit(visitId: string, input: VisitInput): Promise<P
   return res.data.data;
 }
 
+/** Dates the add-visit form can offer; `tripId` narrows them to that trip. */
+export async function getVisitDateSuggestions(
+  placeId: string,
+  tripId: string | null
+): Promise<VisitDateSuggestion[]> {
+  const res = await api.get<Envelope<{ suggestions: VisitDateSuggestion[] }>>(
+    `/places/${placeId}/visit-date-suggestions`,
+    { params: tripId ? { tripId } : {} }
+  );
+  return res.data.data.suggestions;
+}
+
 export async function deleteVisit(visitId: string): Promise<void> {
   await api.delete(`/places/visits/${visitId}`);
 }
@@ -136,6 +155,46 @@ export async function updateVisitPhoto(
 
 export async function deleteVisitPhoto(visitId: string, photoId: string): Promise<void> {
   await api.delete(`/places/visits/${visitId}/photos/${photoId}`);
+}
+
+/** One photograph a visit could show; see `GET …/photo-suggestions`. */
+export interface VisitPhotoSuggestion {
+  kind: "trip" | "library";
+  id: string;
+  url: string;
+  takenAt: string | null;
+  distanceM: number;
+}
+
+export interface VisitPhotoSuggestions {
+  day: string | null;
+  suggestions: VisitPhotoSuggestion[];
+  /** Whether the library was searched: `ok`, `notConfigured`, or why not. */
+  library: string;
+}
+
+export async function getVisitPhotoSuggestions(visitId: string): Promise<VisitPhotoSuggestions> {
+  const res = await api.get<Envelope<VisitPhotoSuggestions>>(
+    `/places/visits/${visitId}/photo-suggestions`
+  );
+  return res.data.data;
+}
+
+/** Link picked suggestions to the visit — the server re-checks every id. */
+export async function linkVisitPhotoSuggestions(
+  visitId: string,
+  picks: { tripPhotoIds: string[]; assetIds: string[] }
+): Promise<{ linked: number; skipped: number }> {
+  const res = await api.post<Envelope<{ linked: number; skipped: number }>>(
+    `/places/visits/${visitId}/photo-suggestions/link`,
+    picks
+  );
+  return res.data.data;
+}
+
+/** Choose the place page's lead photograph; null returns it to the first one. */
+export async function setPlaceCover(placeId: string, photoId: string | null): Promise<void> {
+  await api.put(`/places/${placeId}/cover`, { photoId });
 }
 
 export const placesApi = {

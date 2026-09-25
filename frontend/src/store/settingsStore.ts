@@ -207,6 +207,15 @@ export interface SettingsState {
    */
   betaFeaturesEnabled: boolean | null;
   /**
+   * The instance's open data switch (Open-Meteo, Wikipedia, OpenStreetMap),
+   * mirrored read-only from `GET /settings` exactly like `betaFeaturesEnabled`:
+   * `null` = not loaded yet = OFF, never persisted, and changed only through
+   * `syncOpenDataEnabled` with the value a `PUT /admin/instance-settings`
+   * RESPONSE carried.
+   */
+  openDataEnabled: boolean | null;
+  syncOpenDataEnabled: (enabled: boolean) => void;
+  /**
    * Mirrors the beta gate from a `PUT /admin/instance-settings` RESPONSE into
    * this store, so gated UI (Devices entry, POI tab, trip AI card) reacts
    * without a full page reload. Callers must pass the value the server
@@ -384,6 +393,7 @@ const defaultSettings: Omit<
   | "setCruise"
   | "setApiKeys"
   | "syncBetaFeaturesEnabled"
+  | "syncOpenDataEnabled"
   | "setEnabledDomains"
   | "setBaseCurrency"
   | "setAutoCreateTrips"
@@ -442,6 +452,7 @@ const defaultSettings: Omit<
   instanceCountryThreshold: null,
   hasCountryTracks: null,
   betaFeaturesEnabled: null,
+  openDataEnabled: null,
 };
 
 export const useSettingsStore = create<SettingsState>()(
@@ -475,6 +486,7 @@ export const useSettingsStore = create<SettingsState>()(
           apiKeys: status,
         })),
       syncBetaFeaturesEnabled: (enabled) => set({ betaFeaturesEnabled: enabled }),
+      syncOpenDataEnabled: (enabled) => set({ openDataEnabled: enabled }),
       setEnabledDomains: (keys) => {
         set({ enabledDomains: keys });
         void settingsApi.update({ enabledDomains: keys });
@@ -638,6 +650,10 @@ export const useSettingsStore = create<SettingsState>()(
               // gate closed.
               newState.betaFeaturesEnabled =
                 typeof remote.betaFeaturesEnabled === "boolean" ? remote.betaFeaturesEnabled : null;
+              // Same rule for the open data switch: only an explicit boolean
+              // from the server counts, anything else stays off.
+              newState.openDataEnabled =
+                typeof remote.openDataEnabled === "boolean" ? remote.openDataEnabled : null;
               return newState;
             });
           }
@@ -749,6 +765,7 @@ export const useSettingsStore = create<SettingsState>()(
         // previous session decide what we skip writing today.
         const {
           betaFeaturesEnabled: _beta,
+          openDataEnabled: _openData,
           instanceCountryThreshold: _instanceThreshold,
           hasCountryTracks: _hasTracks,
           remoteSnapshot: _snapshot,
@@ -767,6 +784,7 @@ export const useSettingsStore = create<SettingsState>()(
         delete s["map"];
         // Drop any value written before `partialize` existed.
         delete s["betaFeaturesEnabled"];
+        delete s["openDataEnabled"];
         delete s["instanceCountryThreshold"];
         delete s["hasCountryTracks"];
         return s;

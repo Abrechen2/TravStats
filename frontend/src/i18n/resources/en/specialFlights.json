@@ -64,7 +64,7 @@
     "departureTime": "Departure",
     "arrivalTime": "Arrival",
     "notes": "Notes",
-    "tags": "Tags (comma-separated)",
+    "tags": "Tags",
     "companions": "Companions"
   },
   "picker": {

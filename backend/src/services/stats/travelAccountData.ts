@@ -19,9 +19,11 @@ import type { FlightTimeSemantics } from "../../utils/timezone";
 import type {
   AccountCruise,
   AccountFlight,
+  AccountFreeNight,
   AccountStay,
   TravelAccountInput,
 } from "./travelAccount";
+import { freeStationNights, roadtripHasStarted } from "./roadtripEvidence";
 import type { TripAccountInput } from "./tripAccount";
 
 /** A stay, plus what an evidence entry needs to name it and to link to it. */
@@ -41,15 +43,24 @@ export interface TravelAccountFlightRow extends AccountFlight {
   arrIata: string | null;
 }
 
+/** A free-pitch station, plus the roadtrip it belongs to — where it is edited. */
+export interface TravelAccountFreeNightRow extends AccountFreeNight {
+  roadtripId: string;
+  roadtripName: string;
+  title: string;
+}
+
 export interface TravelAccountData extends TravelAccountInput {
   stays: TravelAccountStayRow[];
   cruises: TravelAccountCruiseRow[];
   flights: TravelAccountFlightRow[];
+  freeNights: TravelAccountFreeNightRow[];
   trips: TripAccountInput[];
 }
 
 export async function loadTravelAccountData(userId: string): Promise<TravelAccountData> {
-  const [stays, cruises, flights, trips] = await Promise.all([
+  const now = new Date();
+  const [stays, cruises, flights, trips, roadtrips] = await Promise.all([
     prisma.lodgingStay.findMany({
       where: { userId },
       select: {
@@ -154,6 +165,35 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
         },
       },
     }),
+    // Roadtrip stations, for the nights spent at a free pitch. The linked
+    // stays are selected only for the "has it started" test the Stats
+    // overview applies; their nights reach the account through `stays`.
+    prisma.tripRoute.findMany({
+      where: { userId, kind: "roadtrip" },
+      select: {
+        id: true,
+        name: true,
+        stops: {
+          select: {
+            id: true,
+            title: true,
+            startDate: true,
+            endDate: true,
+            overnight: true,
+            lodgingStayId: true,
+            lodgingStay: {
+              select: {
+                checkIn: true,
+                checkOut: true,
+                datePrecision: true,
+                nights: true,
+                status: true,
+              },
+            },
+          },
+        },
+      },
+    }),
   ]);
 
   // Resolve both ends' calendar days here, at the load, so the account stays
@@ -205,6 +245,25 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
             : null,
       };
     }),
+    freeNights: roadtrips
+      // A planned roadtrip counts nowhere, the cut the Stats overview makes.
+      .filter((route) => roadtripHasStarted(route.stops, now))
+      .flatMap((route) =>
+        route.stops.flatMap((stop) => {
+          const span = freeStationNights(stop);
+          return span
+            ? [
+                {
+                  id: stop.id,
+                  ...span,
+                  roadtripId: route.id,
+                  roadtripName: route.name,
+                  title: stop.title,
+                },
+              ]
+            : [];
+        })
+      ),
     trips: trips.map((t) => ({
       id: t.id,
       name: t.name,
@@ -219,6 +278,6 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
       cruises: t.cruises,
       flights: t.flights,
     })),
-    now: new Date(),
+    now,
   };
 }

@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, fireEvent } from "@testing-library/react";
 import { DEFAULT_FLIGHT_COLOR_CONFIG } from "../../../lib/flightColor";
 import { DEFAULT_CRUISE_COLOR_CONFIG } from "../../../lib/cruiseColor";
 import { DEFAULT_LODGING_COLOR_CONFIG } from "../../../lib/lodgingColor";
@@ -113,7 +113,10 @@ describe("GlobeControlPanel: every domain the caller names gets its section", ()
     expect(screen.getByText("map:globe.panel.domainLodging")).toBeTruthy();
     expect(screen.getByText("map:globe.panel.domainPlace")).toBeTruthy();
     // The place section's own control — the map-wide label override, which
-    // the globe can actually honour (a DOM pill renders colour emoji).
+    // the globe can actually honour (a DOM pill renders colour emoji). The
+    // per-domain sections collapse individually since 2026-09-21 and start
+    // closed, so the section has to be opened to see inside it.
+    fireEvent.click(screen.getByText("map:globe.panel.domainPlace"));
     expect(screen.getByText("map:globe.panel.placeLabelSource.label")).toBeTruthy();
   });
 

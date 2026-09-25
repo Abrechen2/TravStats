@@ -41,6 +41,12 @@ export const FILE_LIMITS = {
   // Matches the client-side check in useSettingsPage.ts (handleAvatarUpload)
   // — the client check alone is not a security control, this is the real cap.
   PROFILE_PICTURE_MAX_SIZE: 5 * 1024 * 1024, // 5 MB
+
+  // Sign-in backgrounds. Larger than an avatar because one fills half a
+  // desktop screen, smaller than a trip photo because it is decoration that
+  // every visitor downloads before they are even signed in.
+  LOGIN_BACKGROUND_MAX_SIZE: 8 * 1024 * 1024, // 8 MB per image
+  LOGIN_BACKGROUND_MAX_COUNT: 10, // per upload request
   // GPX track upload for tour route sections (Phase 3b, task 4). Handled
   // with multer.memoryStorage() — routes/trips/tourTracks.ts — because a GPX
   // file has no life after parsing; only the simplified geometry is

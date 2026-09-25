@@ -7,6 +7,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import PhotoLightbox, { type LightboxItem } from "./PhotoLightbox";
 import ImmichAlbumPicker from "./ImmichAlbumPicker";
 import ImmichAlbumSection from "./ImmichAlbumSection";
+import JourneyPhotosSection from "./JourneyPhotosSection";
 
 interface TripGalleryProps {
   tripId: string;
@@ -149,6 +150,8 @@ export default function TripGallery({
       {immichAlbums.map((album) => (
         <ImmichAlbumSection key={album.id} tripId={tripId} album={album} onChanged={onChange} />
       ))}
+
+      <JourneyPhotosSection tripId={tripId} />
 
       {lightbox && (
         <PhotoLightbox

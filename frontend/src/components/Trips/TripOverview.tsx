@@ -13,6 +13,7 @@ import { Icon, type IconName } from "../ui/Icon";
 import DetailSection from "../ui/DetailSection";
 import PeopleList from "../ui/PeopleList";
 import TripSummaryPanel from "./TripSummaryPanel";
+import { useTripRoadtrips } from "../Roadtrips/useTripRoadtrips";
 import DocumentsSection from "../documents/DocumentsSection";
 
 type T = ReturnType<typeof useTranslation>["t"];
@@ -196,7 +197,8 @@ export default function TripOverview({
       : []),
   ];
 
-  const nothingLinked = flights.length + cruises.length + stays.length === 0;
+  const roadtrips = useTripRoadtrips(trip.id, isEnabled("roadtrip"));
+  const nothingLinked = flights.length + cruises.length + stays.length + roadtrips.length === 0;
   // The side column only when it has something to hold: an empty 1fr beside
   // the entries pushed them into two thirds of the page for nothing.
   // Mirrors TripSummaryPanel's own condition: the beta gate went with the
@@ -290,6 +292,29 @@ export default function TripOverview({
                       .filter(Boolean)
                       .join(" · ") || null
                   }
+                />
+              ))}
+            </EntryList>
+          )}
+
+          {roadtrips.length > 0 && (
+            <EntryList
+              title={t("roadtrips:pageTitle")}
+              count={t("roadtrips:list.count", { count: roadtrips.length })}
+            >
+              {roadtrips.map((r) => (
+                <EntryRow
+                  key={r.id}
+                  to={`/roadtrips/${r.id}`}
+                  icon="caravan"
+                  title={r.name}
+                  sub={[
+                    r.vehicle ? t(`roadtrips:vehicle.${r.vehicle}`) : null,
+                    t("roadtrips:stationCount", { count: r.stopCount }),
+                    `${Math.round(r.drivenKm)} km`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
                 />
               ))}
             </EntryList>

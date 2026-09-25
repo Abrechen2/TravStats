@@ -2,6 +2,7 @@ import { describe, it, expect } from "vitest";
 import { buildWorkbook, parseWorkbook, safeSheetName } from "../workbook";
 import { refCell, parseRefCell } from "../sheetSpec";
 import { buildSheets, exportFilename } from "../exportAll";
+import { readWorkbookForImport } from "../importClient";
 import { cruiseSheet, lodgingSheet, placeSheet, placeVisitSheet } from "../sheets";
 import type { Cruise } from "../../../types/cruise";
 import type { Lodging } from "../../../types/lodging";
@@ -275,6 +276,26 @@ describe("workbook round trip", () => {
     expect(buildSheets(t, {})).toHaveLength(0);
   });
 
+  it("records the sheet row of each record past the hint line and a blank line", async () => {
+    // Browser acceptance, 2026-09-25: the preview said "Zeile 2" for what Excel
+    // shows as row 3, because the server guessed index + 2 — blind to the
+    // hint line above the header and to skipped blank lines.
+    const sheets = buildSheets(t, {
+      places: [makePlace(), makePlace({ id: "place-2", name: "Tokyo Tower" })],
+    });
+    const wb = await buildWorkbook(sheets);
+    const ws = wb.getWorksheet(safeSheetName("xlsx:sheets.places", new Set()));
+    if (!ws) throw new Error("no places sheet");
+    // hint (1), header (2), first place (3) — then a blank line pushes the
+    // second place from row 4 to row 5.
+    ws.spliceRows(4, 0, []);
+    const buffer = await wb.xlsx.writeBuffer();
+
+    const [places] = await parseWorkbook(buffer as ArrayBuffer, [placeSheet(t)] as never[]);
+    expect(places.rows.map((r) => r.name)).toEqual(["Tokyo Skytree", "Tokyo Tower"]);
+    expect(places.rowNumbers).toEqual([3, 5]);
+  });
+
   it("skips a sheet the specs do not know instead of failing the whole read", async () => {
     const sheets = buildSheets(t, { places: [makePlace()] });
     const wb = await buildWorkbook(sheets);
@@ -284,6 +305,64 @@ describe("workbook round trip", () => {
     const parsed = await parseWorkbook(buffer as ArrayBuffer, [placeSheet(t)] as never[]);
     expect(parsed).toHaveLength(1);
     expect(parsed[0].key).toBe("places");
+  });
+});
+
+/**
+ * Moving entries between accounts (tester report, 2026-09-20/25). The stays
+ * and stops sheets were written but never read back, and a reference cell
+ * named its parent only by a bare name — two "Hotel Okura" were one.
+ */
+describe("workbook for moving entries", () => {
+  const stay = {
+    id: "stay-1",
+    lodgingId: "lodging-1",
+    checkIn: "2024-05-01",
+    checkOut: "2024-05-04",
+    nights: 3,
+    status: "completed",
+    roomNumber: "1204",
+    roomCategory: null,
+    board: "breakfast",
+    pricePerNight: null,
+    totalPrice: 600,
+    currency: "EUR",
+  };
+
+  async function asFile(buffer: ArrayBuffer): Promise<File> {
+    return { arrayBuffer: async () => buffer } as unknown as File;
+  }
+
+  it("reads the stops and stays sheets back for import", async () => {
+    const sheets = buildSheets(t, {
+      cruises: [makeCruise()],
+      lodging: [makeLodging({ stays: [stay] } as unknown as Partial<Lodging>)],
+    });
+    const wb = await buildWorkbook(sheets);
+    const buffer = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
+
+    const payload = await readWorkbookForImport(t, await asFile(buffer));
+    const keys = payload.map((p) => p.key);
+    expect(keys).toContain("cruiseStops");
+    expect(keys).toContain("lodgingStays");
+    const stays = payload.find((p) => p.key === "lodgingStays");
+    expect(stays?.rows[0].roomNumber).toBe("1204");
+  });
+
+  it("qualifies a parent reference so two houses of one name stay apart", async () => {
+    const sheets = buildSheets(t, {
+      lodging: [makeLodging({ stays: [stay] } as unknown as Partial<Lodging>)],
+      places: [makePlace()],
+      cruises: [makeCruise()],
+    });
+    const wb = await buildWorkbook(sheets);
+    const buffer = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
+    const payload = await readWorkbookForImport(t, await asFile(buffer));
+    const cellOf = (key: string, col: string) => payload.find((p) => p.key === key)?.rows[0][col];
+
+    expect(cellOf("lodgingStays", "lodgingId")).toBe("Hotel Okura (Tokyo) [lodging-1]");
+    expect(cellOf("placeVisits", "placeId")).toBe("Tokyo Skytree (Tokyo) [place-1]");
+    expect(cellOf("cruiseStops", "cruiseId")).toBe("Westliches Mittelmeer (2024-04-03) [cruise-1]");
   });
 });
 

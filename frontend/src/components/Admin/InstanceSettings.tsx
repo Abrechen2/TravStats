@@ -3,6 +3,7 @@ import { adminApi } from "../../lib/api";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
 import BetaFeatureList from "./BetaFeatureList";
+import { LoginBackgroundsCard } from "./LoginBackgroundsCard";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import type { PasskeyStatus } from "../../lib/api/admin";
@@ -164,235 +165,252 @@ export default function InstanceSettings(): JSX.Element {
   }
 
   return (
-    <form onSubmit={handleSave} className="max-w-2xl space-y-6 p-6">
-      <div>
-        <h2 className="text-xl font-semibold text-(--text-primary)">{t("admin:instance.title")}</h2>
-        <p className="mt-1 text-sm text-(--text-muted)">{t("admin:instance.subtitle")}</p>
-      </div>
+    <>
+      <form onSubmit={handleSave} className="max-w-2xl space-y-6 p-6">
+        <div>
+          <h2 className="text-xl font-semibold text-(--text-primary)">
+            {t("admin:instance.title")}
+          </h2>
+          <p className="mt-1 text-sm text-(--text-muted)">{t("admin:instance.subtitle")}</p>
+        </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-(--text-primary)">
-          {t("admin:instance.fields.name.label")}
-        </label>
-        <input
-          type="text"
-          maxLength={100}
-          value={form.instanceName}
-          onChange={(e) => setForm({ ...form, instanceName: e.target.value })}
-          className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
-        />
-        <p className="mt-1 text-xs text-(--text-muted)">{t("admin:instance.fields.name.help")}</p>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-(--text-primary)">
-          {t("admin:instance.fields.frontendUrl.label")}
-        </label>
-        <input
-          type="url"
-          maxLength={500}
-          value={form.frontendUrl ?? ""}
-          onChange={(e) => setForm({ ...form, frontendUrl: e.target.value })}
-          placeholder="https://travstats.example.com"
-          className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
-        />
-        <p className="mt-1 text-xs text-(--text-muted)">
-          {t("admin:instance.fields.frontendUrl.help")}
-        </p>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-(--text-primary)">
-          {t("admin:instance.fields.publicUrl.label")}
-        </label>
-        <input
-          type="url"
-          maxLength={500}
-          value={form.publicUrl ?? ""}
-          onChange={(e) => setForm({ ...form, publicUrl: e.target.value })}
-          placeholder="https://trav.example.de"
-          className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
-        />
-        <p className="mt-1 text-xs text-(--text-muted)">
-          {t("admin:instance.fields.publicUrl.help")}
-        </p>
-      </div>
-
-      <div>
-        <label className="mb-1 block text-sm font-medium text-(--text-primary)">
-          {t("admin:instance.fields.lanUrl.label")}
-        </label>
-        <input
-          type="url"
-          maxLength={500}
-          value={form.lanUrl ?? ""}
-          onChange={(e) => setForm({ ...form, lanUrl: e.target.value })}
-          placeholder="http://192.168.1.10:3010"
-          className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
-        />
-        <p className="mt-1 text-xs text-(--text-muted)">{t("admin:instance.fields.lanUrl.help")}</p>
-      </div>
-
-      {/* Passkeys. Separated by a rule because these two fields are not "more
-          URLs" — a credential is bound to the rpId forever, so changing it
-          later invalidates every passkey already registered. */}
-      <div className="border-t border-(--border) pt-6">
-        <h3 className="text-base font-semibold text-(--text-primary)">
-          {t("admin:instance.passkeys.title")}
-        </h3>
-        <p className="mt-1 text-sm text-(--text-muted)">{t("admin:instance.passkeys.subtitle")}</p>
-
-        {passkeyStatus && (
-          <p
-            className="mt-3 text-sm"
-            role="status"
-            style={{ color: passkeyStatus.usable ? "var(--success)" : "var(--text-muted)" }}
-          >
-            {passkeyStatus.usable
-              ? t("admin:instance.passkeys.statusUsable")
-              : t(`admin:instance.passkeys.status.${passkeyStatus.reason ?? "notConfigured"}`)}
-          </p>
-        )}
-
-        <div className="mt-4">
-          <label
-            htmlFor="webauthn-rp-id"
-            className="mb-1 block text-sm font-medium text-(--text-primary)"
-          >
-            {t("admin:instance.passkeys.rpId.label")}
+        <div>
+          <label className="mb-1 block text-sm font-medium text-(--text-primary)">
+            {t("admin:instance.fields.name.label")}
           </label>
           <input
-            id="webauthn-rp-id"
             type="text"
-            maxLength={253}
-            value={form.webauthnRpId ?? ""}
-            onChange={(e) => setForm({ ...form, webauthnRpId: e.target.value })}
-            placeholder="travstats.example.com"
+            maxLength={100}
+            value={form.instanceName}
+            onChange={(e) => setForm({ ...form, instanceName: e.target.value })}
+            className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
+          />
+          <p className="mt-1 text-xs text-(--text-muted)">{t("admin:instance.fields.name.help")}</p>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-(--text-primary)">
+            {t("admin:instance.fields.frontendUrl.label")}
+          </label>
+          <input
+            type="url"
+            maxLength={500}
+            value={form.frontendUrl ?? ""}
+            onChange={(e) => setForm({ ...form, frontendUrl: e.target.value })}
+            placeholder="https://travstats.example.com"
             className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
           />
           <p className="mt-1 text-xs text-(--text-muted)">
-            {t("admin:instance.passkeys.rpId.help")}
+            {t("admin:instance.fields.frontendUrl.help")}
           </p>
         </div>
 
-        <div className="mt-4">
-          <label
-            htmlFor="webauthn-origins"
-            className="mb-1 block text-sm font-medium text-(--text-primary)"
-          >
-            {t("admin:instance.passkeys.origins.label")}
+        <div>
+          <label className="mb-1 block text-sm font-medium text-(--text-primary)">
+            {t("admin:instance.fields.publicUrl.label")}
           </label>
-          <textarea
-            id="webauthn-origins"
-            rows={3}
-            value={form.webauthnOrigins}
-            onChange={(e) => setForm({ ...form, webauthnOrigins: e.target.value })}
-            placeholder={"https://travstats.example.com\nhttps://www.travstats.example.com"}
-            className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm font-mono"
+          <input
+            type="url"
+            maxLength={500}
+            value={form.publicUrl ?? ""}
+            onChange={(e) => setForm({ ...form, publicUrl: e.target.value })}
+            placeholder="https://trav.example.de"
+            className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
           />
           <p className="mt-1 text-xs text-(--text-muted)">
-            {t("admin:instance.passkeys.origins.help")}
+            {t("admin:instance.fields.publicUrl.help")}
           </p>
         </div>
-      </div>
 
-      <div>
-        <label className="mb-1 block text-sm font-medium text-(--text-primary)">
-          {t("admin:instance.fields.maxUsers.label")}
-        </label>
-        <input
-          type="number"
-          min={1}
-          max={1000}
-          value={form.maxUsers}
-          onChange={(e) =>
-            setForm({
-              ...form,
-              maxUsers: Math.max(1, Math.min(1000, Number(e.target.value) || 10)),
-            })
-          }
-          className="w-40 rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
-        />
-        <p className="mt-1 text-xs text-(--text-muted)">
-          {t("admin:instance.fields.maxUsers.help")}
-        </p>
-      </div>
+        <div>
+          <label className="mb-1 block text-sm font-medium text-(--text-primary)">
+            {t("admin:instance.fields.lanUrl.label")}
+          </label>
+          <input
+            type="url"
+            maxLength={500}
+            value={form.lanUrl ?? ""}
+            onChange={(e) => setForm({ ...form, lanUrl: e.target.value })}
+            placeholder="http://192.168.1.10:3010"
+            className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
+          />
+          <p className="mt-1 text-xs text-(--text-muted)">
+            {t("admin:instance.fields.lanUrl.help")}
+          </p>
+        </div>
 
-      <label className="flex items-start gap-3 text-sm text-(--text-primary)">
-        <input
-          type="checkbox"
-          checked={form.allowRegistration}
-          onChange={(e) => setForm({ ...form, allowRegistration: e.target.checked })}
-          className="mt-1 h-4 w-4 rounded-sm border-(--border)"
-        />
-        <span>
-          <span className="font-medium">{t("admin:instance.fields.allowRegistration.label")}</span>
-          <span className="block text-xs text-(--text-muted)">
-            {t("admin:instance.fields.allowRegistration.help")}
+        {/* Passkeys. Separated by a rule because these two fields are not "more
+          URLs" — a credential is bound to the rpId forever, so changing it
+          later invalidates every passkey already registered. */}
+        <div className="border-t border-(--border) pt-6">
+          <h3 className="text-base font-semibold text-(--text-primary)">
+            {t("admin:instance.passkeys.title")}
+          </h3>
+          <p className="mt-1 text-sm text-(--text-muted)">
+            {t("admin:instance.passkeys.subtitle")}
+          </p>
+
+          {passkeyStatus && (
+            <p
+              className="mt-3 text-sm"
+              role="status"
+              style={{ color: passkeyStatus.usable ? "var(--success)" : "var(--text-muted)" }}
+            >
+              {passkeyStatus.usable
+                ? t("admin:instance.passkeys.statusUsable")
+                : t(`admin:instance.passkeys.status.${passkeyStatus.reason ?? "notConfigured"}`)}
+            </p>
+          )}
+
+          <div className="mt-4">
+            <label
+              htmlFor="webauthn-rp-id"
+              className="mb-1 block text-sm font-medium text-(--text-primary)"
+            >
+              {t("admin:instance.passkeys.rpId.label")}
+            </label>
+            <input
+              id="webauthn-rp-id"
+              type="text"
+              maxLength={253}
+              value={form.webauthnRpId ?? ""}
+              onChange={(e) => setForm({ ...form, webauthnRpId: e.target.value })}
+              placeholder="travstats.example.com"
+              className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
+            />
+            <p className="mt-1 text-xs text-(--text-muted)">
+              {t("admin:instance.passkeys.rpId.help")}
+            </p>
+          </div>
+
+          <div className="mt-4">
+            <label
+              htmlFor="webauthn-origins"
+              className="mb-1 block text-sm font-medium text-(--text-primary)"
+            >
+              {t("admin:instance.passkeys.origins.label")}
+            </label>
+            <textarea
+              id="webauthn-origins"
+              rows={3}
+              value={form.webauthnOrigins}
+              onChange={(e) => setForm({ ...form, webauthnOrigins: e.target.value })}
+              placeholder={"https://travstats.example.com\nhttps://www.travstats.example.com"}
+              className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm font-mono"
+            />
+            <p className="mt-1 text-xs text-(--text-muted)">
+              {t("admin:instance.passkeys.origins.help")}
+            </p>
+          </div>
+        </div>
+
+        <div>
+          <label className="mb-1 block text-sm font-medium text-(--text-primary)">
+            {t("admin:instance.fields.maxUsers.label")}
+          </label>
+          <input
+            type="number"
+            min={1}
+            max={1000}
+            value={form.maxUsers}
+            onChange={(e) =>
+              setForm({
+                ...form,
+                maxUsers: Math.max(1, Math.min(1000, Number(e.target.value) || 10)),
+              })
+            }
+            className="w-40 rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
+          />
+          <p className="mt-1 text-xs text-(--text-muted)">
+            {t("admin:instance.fields.maxUsers.help")}
+          </p>
+        </div>
+
+        <label className="flex items-start gap-3 text-sm text-(--text-primary)">
+          <input
+            type="checkbox"
+            checked={form.allowRegistration}
+            onChange={(e) => setForm({ ...form, allowRegistration: e.target.checked })}
+            className="mt-1 h-4 w-4 rounded-sm border-(--border)"
+          />
+          <span>
+            <span className="font-medium">
+              {t("admin:instance.fields.allowRegistration.label")}
+            </span>
+            <span className="block text-xs text-(--text-muted)">
+              {t("admin:instance.fields.allowRegistration.help")}
+            </span>
           </span>
-        </span>
-      </label>
-
-      <div>
-        <label
-          htmlFor="country-threshold"
-          className="mb-1 block text-sm font-medium text-(--text-primary)"
-        >
-          {t("admin:instance.fields.countryThreshold.label")}
         </label>
-        <select
-          id="country-threshold"
-          value={form.countryThreshold}
-          onChange={(e) => setForm({ ...form, countryThreshold: e.target.value as CountryTier })}
-          className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
-        >
-          {COUNTRY_TIER_CHOICES.map((tier) => (
-            <option key={tier} value={tier}>
-              {t(`passport:thresholdChoice.options.${tier}`)}
-            </option>
-          ))}
-        </select>
-        {/* The effect, in plain language, at the point of choosing — spec §5:
+
+        <div>
+          <label
+            htmlFor="country-threshold"
+            className="mb-1 block text-sm font-medium text-(--text-primary)"
+          >
+            {t("admin:instance.fields.countryThreshold.label")}
+          </label>
+          <select
+            id="country-threshold"
+            value={form.countryThreshold}
+            onChange={(e) => setForm({ ...form, countryThreshold: e.target.value as CountryTier })}
+            className="w-full rounded-lg border border-(--border) bg-(--bg-elevated) px-3 py-2 text-sm"
+          >
+            {COUNTRY_TIER_CHOICES.map((tier) => (
+              <option key={tier} value={tier}>
+                {t(`passport:thresholdChoice.options.${tier}`)}
+              </option>
+            ))}
+          </select>
+          {/* The effect, in plain language, at the point of choosing — spec §5:
             this moves a number every user has already seen, and a number that
             changes without explanation reads as data loss. */}
-        <p className="mt-1 text-xs text-(--text-muted)">
-          {t("admin:instance.fields.countryThreshold.help")}
-        </p>
-        <p className="mt-1 text-xs text-(--text-muted)">
-          {t(`passport:thresholdChoice.effect.${form.countryThreshold}`)}
-        </p>
-        <p className="mt-1 text-xs text-(--text-muted)">
-          {t("passport:thresholdChoice.listUnchanged")}
-        </p>
-      </div>
+          <p className="mt-1 text-xs text-(--text-muted)">
+            {t("admin:instance.fields.countryThreshold.help")}
+          </p>
+          <p className="mt-1 text-xs text-(--text-muted)">
+            {t(`passport:thresholdChoice.effect.${form.countryThreshold}`)}
+          </p>
+          <p className="mt-1 text-xs text-(--text-muted)">
+            {t("passport:thresholdChoice.listUnchanged")}
+          </p>
+        </div>
 
-      <label className="flex items-start gap-3 text-sm text-(--text-primary)">
-        <input
-          type="checkbox"
-          checked={form.betaFeaturesEnabled}
-          onChange={(e) => setForm({ ...form, betaFeaturesEnabled: e.target.checked })}
-          className="mt-1 h-4 w-4 rounded-sm border-(--border)"
-        />
-        <span>
-          <span className="font-medium">{t("admin:instance.fields.betaFeatures.label")}</span>
-          <span className="block text-xs text-(--text-muted)">
-            {t("admin:instance.fields.betaFeatures.help")}
-          </span>
-          {/* Derived from the registry, so it cannot drift from what the
+        <label className="flex items-start gap-3 text-sm text-(--text-primary)">
+          <input
+            type="checkbox"
+            checked={form.betaFeaturesEnabled}
+            onChange={(e) => setForm({ ...form, betaFeaturesEnabled: e.target.checked })}
+            className="mt-1 h-4 w-4 rounded-sm border-(--border)"
+          />
+          <span>
+            <span className="font-medium">{t("admin:instance.fields.betaFeatures.label")}</span>
+            <span className="block text-xs text-(--text-muted)">
+              {t("admin:instance.fields.betaFeatures.help")}
+            </span>
+            {/* Derived from the registry, so it cannot drift from what the
               switch actually gates — see BetaFeatureList.tsx. */}
-          <BetaFeatureList />
-        </span>
-      </label>
+            <BetaFeatureList />
+          </span>
+        </label>
 
-      <div className="pt-2">
-        <button
-          type="submit"
-          disabled={saving}
-          className="rounded-lg bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base) hover:opacity-90 disabled:opacity-50"
-        >
-          {saving ? t("common:buttons.saving") : t("common:buttons.save")}
-        </button>
+        <div className="pt-2">
+          <button
+            type="submit"
+            disabled={saving}
+            className="rounded-lg bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base) hover:opacity-90 disabled:opacity-50"
+          >
+            {saving ? t("common:buttons.saving") : t("common:buttons.save")}
+          </button>
+        </div>
+      </form>
+
+      {/* OUTSIDE the form, deliberately: uploading a picture takes effect the
+          moment it succeeds, so it must not sit under a Save button that has
+          nothing to do with it. */}
+      <div className="max-w-2xl px-6 pb-6">
+        <LoginBackgroundsCard />
       </div>
-    </form>
+    </>
   );
 }

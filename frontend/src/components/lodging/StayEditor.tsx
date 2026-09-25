@@ -7,9 +7,14 @@ import { currencyForCountry } from "../../shared/countryCurrency";
 import { createStay, updateStay, listMemberships } from "../../lib/api/lodging";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
-import { AmenityChipsInput } from "./AmenityChipsInput";
+import TagInput from "../TagInput";
+import { useLodgingEntrySuggestions } from "../../hooks/useLodgingEntrySuggestions";
+import { useStayDatesFromTrip } from "../../hooks/useStayDatesFromTrip";
+import { StayDatesOfferButton } from "./StayDatesOfferButton";
 import { Field } from "../ui/Field";
 import { StayEditorAttachmentsSection } from "./StayEditorAttachmentsSection";
+import { StayEditorTripSection } from "./StayEditorTripSection";
+import { StayEditorBoardSection, StayEditorRoomFields } from "./StayEditorRoomSection";
 import { StayEditorSection } from "./StayEditorSection";
 import { StayEditorNotesSection } from "./StayEditorNotesSection";
 import { StayEditorRatingsSection } from "./StayEditorRatingsSection";
@@ -52,8 +57,6 @@ interface StayEditorProps {
    */
   onRequestDelete?: () => void;
 }
-
-const BOARD_TYPES: BoardType[] = ["none", "breakfast", "half", "full", "all_inclusive"];
 
 const INPUT_CLASS =
   "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-3 py-2 text-sm text-[var(--text-primary)] placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none";
@@ -180,8 +183,19 @@ export function StayEditor({
   );
   const [notes, setNotes] = useState<string>(stay?.notes ?? "");
 
+  const entrySuggestions = useLodgingEntrySuggestions(lodgingId);
   const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
   const [trips, setTrips] = useState<Trip[]>([]);
+
+  const tripDates = useStayDatesFromTrip({
+    enabled: mode === "create" && datePrecision === "DAY",
+    trips,
+    tripId,
+    checkIn,
+    checkOut,
+    onCheckInChange: setCheckIn,
+    onCheckOutChange: setCheckOut,
+  });
 
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
@@ -456,6 +470,9 @@ export function StayEditor({
                 )}
               </div>
             )}
+            {tripDates.offer && (
+              <StayDatesOfferButton offer={tripDates.offer} onAccept={tripDates.accept} t={t} />
+            )}
 
             {/* Optional times, DAY precision only — mainly so a planned stay's
                 "Als Nächstes" countdown points at the real check-in, not at
@@ -544,53 +561,25 @@ export function StayEditor({
                 </span>
               )}
             </div>
-            <div className="mt-3 grid grid-cols-2 gap-3">
-              <Field label={t("lodging:field.room")} htmlFor={`${fid}-room`}>
-                <input
-                  id={`${fid}-room`}
-                  className={INPUT_CLASS}
-                  value={roomNumber}
-                  onChange={(e): void => setRoomNumber(e.target.value)}
-                />
-              </Field>
-              <Field label={t("lodging:field.roomCategory")} htmlFor={`${fid}-roomCategory`}>
-                <input
-                  id={`${fid}-roomCategory`}
-                  className={INPUT_CLASS}
-                  value={roomCategory}
-                  onChange={(e): void => setRoomCategory(e.target.value)}
-                />
-              </Field>
-            </div>
+            <StayEditorRoomFields
+              roomNumber={roomNumber}
+              onRoomNumberChange={setRoomNumber}
+              roomCategory={roomCategory}
+              onRoomCategoryChange={setRoomCategory}
+              roomNumberSuggestions={entrySuggestions.roomNumbers}
+              roomCategorySuggestions={entrySuggestions.roomCategories}
+              fieldIdPrefix={fid}
+              inputClassName={INPUT_CLASS}
+              t={t}
+            />
           </StayEditorSection>
 
-          <StayEditorSection title={t("lodging:field.board")}>
-            <div
-              className="inline-flex flex-wrap rounded-lg p-0.5"
-              style={{ background: "var(--bg-muted)", border: "1px solid var(--color-border)" }}
-              role="group"
-              aria-label={t("lodging:field.board")}
-            >
-              {BOARD_TYPES.map((b) => {
-                const active = b === board;
-                return (
-                  <button
-                    key={b}
-                    type="button"
-                    aria-pressed={active}
-                    onClick={(): void => setBoard(b)}
-                    className="px-3 py-1.5 text-sm font-medium rounded-md transition-colors"
-                    style={{
-                      background: active ? "var(--accent)" : "transparent",
-                      color: active ? "#1a1205" : "var(--text-secondary)",
-                    }}
-                  >
-                    {t(`lodging:board.${b}`)}
-                  </button>
-                );
-              })}
-            </div>
-          </StayEditorSection>
+          <StayEditorBoardSection
+            board={board}
+            onBoardChange={setBoard}
+            suggestedBoard={mode === "create" ? (entrySuggestions.boards[0] ?? null) : null}
+            t={t}
+          />
 
           <StayEditorSection title={t("lodging:stayEditor.ratingsSection")}>
             <StayEditorRatingsSection
@@ -636,12 +625,18 @@ export function StayEditor({
           </StayEditorSection>
 
           <StayEditorSection title={t("lodging:stayEditor.amenitiesSection")}>
-            <AmenityChipsInput
-              label={t("lodging:field.roomAmenities")}
-              values={roomAmenities}
-              onChange={setRoomAmenities}
-              placeholder={t("lodging:field.roomAmenitiesPlaceholder")}
-            />
+            <Field label={t("lodging:field.roomAmenities")} htmlFor={`${fid}-roomAmenities`}>
+              <TagInput
+                id={`${fid}-roomAmenities`}
+                value={roomAmenities}
+                onChange={setRoomAmenities}
+                suggestions={entrySuggestions.roomAmenities}
+                listLabel={t("lodging:field.amenitySuggestions")}
+                removeLabel={(name) => t("lodging:field.removeAmenity", { name })}
+                placeholder={t("lodging:field.roomAmenitiesPlaceholder")}
+                className={INPUT_CLASS}
+              />
+            </Field>
             <div className="mt-3">
               <Field label={t("lodging:field.bookingReference")} htmlFor={`${fid}-reference`}>
                 <input
@@ -694,40 +689,30 @@ export function StayEditor({
             )}
           </StayEditorSection>
 
-          {/* Its own section. This select used to sit unlabelled at the bottom
-           * of "Loyalty programme", between membership numbers — the word
-           * "trip" existed only as an aria-label, so the sole thing on screen
-           * was the option text "Not linked to a trip". Nobody looking for
-           * how to attach a stay to a trip searches under loyalty, and they
-           * would be right not to. */}
-          <StayEditorSection title={t("lodging:stayEditor.tripSection")}>
-            <label
-              htmlFor="stay-editor-trip"
-              className="mb-1 block text-xs text-[var(--text-muted)]"
-            >
-              {t("lodging:field.trip")}
-            </label>
-            <select
-              id="stay-editor-trip"
-              aria-label={t("lodging:field.trip")}
-              className={INPUT_CLASS}
-              value={tripId}
-              onChange={(e): void => setTripId(e.target.value)}
-            >
-              <option value="">{t("lodging:field.noTrip")}</option>
-              {trips.map((trip) => (
-                <option key={trip.id} value={trip.id}>
-                  {trip.name}
-                </option>
-              ))}
-            </select>
-          </StayEditorSection>
+          <StayEditorTripSection
+            trips={trips}
+            tripId={tripId}
+            onTripChange={setTripId}
+            preselect={mode === "create"}
+            checkIn={checkIn}
+            inputClassName={INPUT_CLASS}
+            t={t}
+          />
 
           <StayEditorAttachmentsSection
             stayId={stay?.id ?? null}
             receiptUrl={receiptUrl}
             onReceiptChange={setReceiptUrl}
             t={t}
+            extract={{
+              domain: "lodging",
+              current: { price: totalPrice, currency, bookingReference },
+              onApply: (v) => {
+                if (v.price != null) setTotalPrice(String(v.price));
+                if (v.currency) setCurrency(v.currency as LodgingCurrency);
+                if (v.bookingReference) setBookingReference(v.bookingReference);
+              },
+            }}
           />
 
           <StayEditorNotesSection

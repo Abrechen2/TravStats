@@ -8,6 +8,7 @@ import { validateBoardingPassImageBase64 } from "../utils/fileValidation";
 import { PARSER_SUPPORTED_DOMAINS } from "../shared/domains";
 import { isEmpty, readBoardingPass } from "../services/boardingPassRead";
 import {
+  assertMayRecord,
   assertRetainable,
   parseRetentionFields,
   readDocumentForParse,
@@ -59,6 +60,7 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const parsed = parseBoardingpassSchema.parse(req.body);
+      assertMayRecord(req, parsed);
 
       // Defensive guard for future domain expansion (Cruise etc.).
       // Zod already rejects unknown values; this catches the case where the

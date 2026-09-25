@@ -69,10 +69,17 @@ describe("computeDedupedTotalCost", () => {
     expect(computeDedupedTotalCost([f({ price: 100, taxes: 20, fees: 5 })], BASE).base).toBe(125);
   });
 
-  it("booking with null/zero price falls back per flight (truthiness semantics)", () => {
+  // SRV-STATS-ZERO-PRICE-001: this used to read `if (booking.price)`, so a
+  // booking someone recorded as free fell back to the segment's own column
+  // and reported 80 for a booking whose stated price was 0. Only an ABSENT
+  // booking amount is a reason to fall back.
+  it("keeps a booking recorded at 0 instead of falling back to the segment's own price", () => {
     expect(
       computeDedupedTotalCost([f({ bookingId: "b2", booking: booking(0), price: 80 })], BASE).base
-    ).toBe(80);
+    ).toBe(0);
+  });
+
+  it("falls back per flight when the booking carries no amount at all", () => {
     expect(
       computeDedupedTotalCost(
         [f({ bookingId: "b3", booking: { ...booking(0), price: null }, price: 60 })],
@@ -96,6 +103,58 @@ describe("computeDedupedTotalCost", () => {
     expect(out.base).toBeNull();
     expect(out.pricedFlights).toBe(0);
     expect(out.unpricedFlights).toBe(2);
+  });
+
+  // SRV-STATS-ZERO-PRICE-001 (audit 2026-09-20). A single flight saved at
+  // 0 EUR answered `totalCost: null` / `unpricedFlights: 1`, so the overview
+  // said "Kein Preis erfasst" about a price the user had typed in.
+  describe("a price of 0 is a measurement, not a missing value", () => {
+    it("reports 0, not null, for a year whose only flight was recorded as free", () => {
+      const out = computeDedupedTotalCost([f({ price: 0 })], BASE);
+      expect(out.base).toBe(0);
+      expect(out.pricedFlights).toBe(1);
+      expect(out.unpricedFlights).toBe(0);
+    });
+
+    it("counts one unpriced flight in the audit's mixed year, not four", () => {
+      const out = computeDedupedTotalCost(
+        [f({ price: 0 }), f({ price: 0 }), f({ price: 0 }), f({ price: 123.45 }), f({})],
+        BASE
+      );
+      expect(out.base).toBe(123.45);
+      expect(out.pricedFlights).toBe(4);
+      expect(out.unpricedFlights).toBe(1);
+    });
+
+    it("does not park a recorded 0 in the unconvertible bucket for want of a rate", () => {
+      const out = computeDedupedTotalCost(
+        [f({ price: 0, currency: "USD", priceBase: null, fxBaseCurrency: null })],
+        BASE
+      );
+      expect(out.base).toBe(0);
+      expect(out.unconvertedByCurrency).toEqual({});
+    });
+
+    it("still abstains when the only amounts are foreign and unconvertible", () => {
+      const out = computeDedupedTotalCost(
+        [f({ price: 300, currency: "USD", priceBase: null, fxBaseCurrency: null })],
+        BASE
+      );
+      expect(out.base).toBeNull();
+    });
+
+    // A later segment of an already-counted booking contributes nothing. It
+    // must not be mistaken for a recorded zero, or an all-unconvertible
+    // logbook would report a total of 0 instead of abstaining.
+    it("keeps a second segment of an unconvertible booking out of the total", () => {
+      const shared = {
+        bookingId: "b9",
+        booking: { price: 500, currency: "USD", priceBase: null, fxBaseCurrency: null },
+      };
+      const out = computeDedupedTotalCost([f(shared), f(shared)], BASE);
+      expect(out.base).toBeNull();
+      expect(out.unconvertedByCurrency).toEqual({ USD: 500 });
+    });
   });
 
   it("counts every segment of a priced booking as priced, and adds its amount once", () => {

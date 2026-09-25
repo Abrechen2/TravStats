@@ -48,12 +48,25 @@ export function sameClockToday(a: string, b: string, now: Date = new Date()): bo
  * airport_timezone_dataset` records it, because a full pass loads geo-tz's
  * whole dataset, which a small host should not pay for on every boot.
  */
-export async function repairFoldedAirportTimezones(): Promise<number> {
+/**
+ * The zone a stored one should become, or null to keep it: only a zone the
+ * full dataset names differently AND that keeps the same clock. Pure, so the
+ * rule is tested without the shared settings row.
+ */
+export function refoldedZone(stored: string, derived: string | null): string | null {
+  if (derived === null || derived === stored || !sameClockToday(stored, derived)) return null;
+  return derived;
+}
+
+export async function repairFoldedAirportTimezones(
+  options: { force?: boolean } = {}
+): Promise<number> {
   const settings = await prisma.adminSettings.findFirst({
     orderBy: { id: "asc" },
     select: { id: true, airportTimezoneDataset: true },
   });
-  if (!settings || settings.airportTimezoneDataset === AIRPORT_TIMEZONE_DATASET) return 0;
+  const done = !settings || settings.airportTimezoneDataset === AIRPORT_TIMEZONE_DATASET;
+  if (done && !options.force) return 0;
 
   const airports = await prisma.airport.findMany({
     where: { timezone: { not: null } },
@@ -64,16 +77,18 @@ export async function repairFoldedAirportTimezones(): Promise<number> {
   for (const airport of airports) {
     const stored = airport.timezone;
     if (stored === null) continue;
-    const derived = deriveTimezone(airport.lat, airport.lon);
-    if (derived === null || derived === stored || !sameClockToday(stored, derived)) continue;
-    await prisma.airport.update({ where: { id: airport.id }, data: { timezone: derived } });
+    const next = refoldedZone(stored, deriveTimezone(airport.lat, airport.lon));
+    if (next === null) continue;
+    await prisma.airport.update({ where: { id: airport.id }, data: { timezone: next } });
     repaired++;
   }
 
-  await prisma.adminSettings.update({
-    where: { id: settings.id },
-    data: { airportTimezoneDataset: AIRPORT_TIMEZONE_DATASET },
-  });
+  if (settings) {
+    await prisma.adminSettings.update({
+      where: { id: settings.id },
+      data: { airportTimezoneDataset: AIRPORT_TIMEZONE_DATASET },
+    });
+  }
   logger.info({
     operation: "airport_timezone_repair",
     message: `Re-derived ${repaired} airport time zones from the full geo-tz dataset`,

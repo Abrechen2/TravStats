@@ -65,7 +65,10 @@
     "listTitle": "Tours",
     "listEmpty": "No tours recorded yet",
     "empty": "No tours yet. Add your first one from a trip's “Tours” tab on its detail page.",
-    "unavailable": "This feature is currently unavailable."
+    "unavailable": "This feature is currently unavailable.",
+    "emptyTitle": "No tours yet",
+    "emptyBody": "A tour belongs to a trip: open a trip and create it there under the \"Tours\" tab. A GPX file can be uploaded right away.",
+    "emptyCta": "Go to trips"
   },
   "lodgingTab": {
     "loading": "Loading lodgings …",
@@ -185,7 +188,8 @@
   "flightsOnRoute": "Flights on this route",
   "tabStrip": {
     "label": "Area switcher",
-    "scheduledHint": "· {{count}} planned",
+    "scheduledHint": "· incl. {{count}} planned",
+    "plannedExtraHint": "· +{{count}} planned",
     "tabs": {
       "all": "All",
       "flight": "Flights",
@@ -193,6 +197,7 @@
       "lodging": "Lodging",
       "poi": "Places",
       "tour": "Tours",
+      "roadtrip": "Roadtrips",
       "rail": "Rail"
     },
     "disabledHint": "Area disabled — Settings → Areas"
@@ -203,6 +208,8 @@
     "cruise": "Cruise",
     "poi": "Place",
     "lodging": "Stay",
+    "tour": "Tour",
+    "roadtrip": "Roadtrip",
     "rail": "Train journey"
   },
   "controls": {
@@ -213,6 +220,7 @@
       "cruise": "Add cruise",
       "lodging": "Add stay",
       "poi": "Add place",
+      "roadtrip": "Add roadtrip",
       "rail": "Add train journey"
     }
   },
@@ -265,7 +273,10 @@
     "disabled": "The Places area is not enabled yet. Turn it on under Settings → Areas.",
     "goToSettings": "Open settings",
     "listFilter": "Filter by list",
-    "allLists": "All places"
+    "allLists": "All places",
+    "emptyTitle": "No places yet",
+    "emptyBody": "Add your first place with \"+ Place\" on the places page — or assign one to a trip.",
+    "emptyCta": "Go to places"
   },
   "tabDisabled": {
     "title": "Area disabled",

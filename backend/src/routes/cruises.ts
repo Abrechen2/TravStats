@@ -9,6 +9,7 @@ import { linkDocuments, takeDocumentIds } from "../services/documents/documentSe
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import { createCruiseSchema, updateCruiseSchema } from "../schemas/cruise";
 import { CRUISE_INCLUDE } from "./cruises/include";
+import { createCruiseRecord } from "../services/cruise/createCruise";
 import { cruiseListHandler } from "./cruises/list";
 import { cruiseFacetsHandler } from "./cruises/facets";
 import { checkAndUpdateAchievements } from "../utils/achievements";
@@ -382,94 +383,14 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       }
     }
 
-    const startDateUtc = startDate ? new Date(startDate) : null;
-    const endDateUtc = endDate ? new Date(endDate) : null;
-
-    // The status field is a client-sent HINT, not the source of truth (spec
-    // 2026-07-17-status-from-dates) — passthrough statuses (cancelled,
-    // historical) are assigned verbatim, everything else (including the
-    // schema's 'scheduled' default) is derived from the dates being written.
-    const effectiveStatus = (CRUISE_PASSTHROUGH as readonly string[]).includes(status)
-      ? status
-      : deriveCruiseStatus({ startDate: startDateUtc, endDate: endDateUtc, current: status });
-
-    // Resolve companion names to Companion entities up front (find-or-create
-    // is idempotent via companionService, so it's safe to run outside the
-    // transaction below — it cannot participate in a passed `tx` anyway). The
-    // cruise row and its links are written together inside the transaction so
-    // a failure never leaves the legacy `companions` array and the
-    // `companionLinks` table disagreeing. Mirrors routes/trips.ts.
-    const companionNames = companions ?? [];
-    const resolvedCompanions = await resolveCompanions(userId, companionNames);
-
-    // FX snapshot (#267), same rule as `Flight`/`Booking` — the ONLY priced
-    // model that lacked one, which is what let a large-face-value-but-small
-    // currency (e.g. KRW) beat a euro trip on the trips page (compared by raw
-    // number, never converted). Rated on the START day; a cruise with no
-    // price, no currency or no start date gets the all-null columns instead
-    // of a guessed rate.
-    const fxColumns = await fxColumnsFor(
-      { amount: rest.price, currency: rest.currency, date: startDateUtc },
-      await getBaseCurrency(userId)
+    // Everything from status derivation to leg recompute lives in
+    // `services/cruise/createCruise.ts`, shared with the spreadsheet import.
+    const cruise = await createCruiseRecord(
+      userId,
+      { ...rest, stops, startDate, endDate, tripId, bookingId, status, companions },
+      { importBatchId: batchId, externalRef }
     );
-
-    const cruise = await prisma.$transaction(async (tx) => {
-      const created = await tx.cruise.create({
-        data: {
-          userId,
-          ...rest,
-          ...fxColumns,
-          importBatchId: batchId,
-          externalRef,
-          status: effectiveStatus,
-          startDate: startDateUtc,
-          endDate: endDateUtc,
-          tripId: tripId ?? null,
-          bookingId: bookingId ?? null,
-          // Dual write: resolved display names keep this legacy array in
-          // agreement with `companionLinks` below (trimmed, blanks dropped,
-          // newest spelling wins) — the previous image still reads this column.
-          companions: resolvedCompanions.map((c) => c.displayName),
-        },
-      });
-
-      if (resolvedCompanions.length > 0) {
-        await tx.cruiseCompanion.createMany({
-          data: linkRowsFor(resolvedCompanions.map((c) => c.id)).map((row) => ({
-            ...row,
-            cruiseId: created.id,
-          })),
-          skipDuplicates: true,
-        });
-      }
-
-      if (stops && stops.length > 0) {
-        await tx.cruiseStop.createMany({
-          data: stops.map((s) => ({
-            cruiseId: created.id,
-            portId: s.portId ?? null,
-            dayNumber: s.dayNumber,
-            date: s.date ? new Date(s.date) : null,
-            isAtSea: s.isAtSea,
-            arrivalTime: s.arrivalTime ? new Date(s.arrivalTime) : null,
-            departureTime: s.departureTime ? new Date(s.departureTime) : null,
-            excursionNote: s.excursionNote ?? null,
-            unresolvedPortName: s.unresolvedPortName ?? null,
-          })),
-        });
-      }
-
-      await recomputeLegsForCruise(created.id, tx);
-      return tx.cruise.findUniqueOrThrow({ where: { id: created.id }, include: CRUISE_INCLUDE });
-    });
     await linkDocuments(userId, documentIds, { type: "cruise", id: cruise.id });
-
-    // Status derivation (spec 2026-07-17-status-from-dates) needs to read
-    // the cruise it just linked, so recomputeTripStatus() runs AFTER the
-    // transaction commits — same after-commit idiom as flightsBatch.ts.
-    if (cruise.tripId) {
-      await recomputeTripStatus(cruise.tripId);
-    }
 
     // Await the recalc (was fire-and-forget). Its $transaction on
     // user_achievement rows must commit before the response returns — a

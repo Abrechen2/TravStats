@@ -40,6 +40,43 @@ describe("decodeBcbp", () => {
     expect(decodeBcbp(SAMPLE, NOW)?.date).toBe("2026-11-22");
   });
 
+  // SRV-BCBP-DATE-001 (audit 2026-09-20): asked on 20.09.2026 for day 366,
+  // the decoder answered 2027-01-01 with nothing reported missing.
+  // `setUTCDate(366)` does not fail on a 365-day year, it rolls into January
+  // — so a pass for 31 December was proposed as New Year's Day and the field
+  // looked fully recognised.
+  describe("Julian day 366", () => {
+    const withJulian = (julian: string): string => SAMPLE.slice(0, 44) + julian + SAMPLE.slice(47);
+
+    it("abstains when none of the candidate years is a leap year", () => {
+      // 2025, 2026 and 2027 all have 365 days.
+      expect(decodeBcbp(withJulian("366"), NOW)?.date).toBeUndefined();
+    });
+
+    it("still decodes the rest of the pass, so only the date needs asking", () => {
+      const d = decodeBcbp(withJulian("366"), NOW);
+      expect(d?.flightNumber).toBe("AC834");
+      expect(d?.pnr).toBe("ABC123");
+    });
+
+    it("resolves it to 31 December when a candidate year IS a leap year", () => {
+      expect(decodeBcbp(withJulian("366"), new Date("2024-12-20T00:00:00.000Z"))?.date).toBe(
+        "2024-12-31"
+      );
+    });
+
+    it("leaves day 365 alone — every year has one", () => {
+      expect(decodeBcbp(withJulian("365"), NOW)?.date).toBe("2026-12-31");
+    });
+
+    it("still picks the nearer year across the December/January boundary", () => {
+      // Day 001 asked on 28 Dec 2026 is 1 Jan 2027, not 1 Jan 2026.
+      expect(decodeBcbp(withJulian("001"), new Date("2026-12-28T00:00:00.000Z"))?.date).toBe(
+        "2027-01-01"
+      );
+    });
+  });
+
   it("rejects non-BCBP strings", () => {
     expect(looksLikeBcbp("https://example.com")).toBe(false);
     expect(looksLikeBcbp("M1")).toBe(false); // too short

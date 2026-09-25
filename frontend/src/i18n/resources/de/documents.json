@@ -28,5 +28,27 @@
     "boardingPass": "Bordkarte",
     "ticket": "Ticket",
     "other": "Sonstiges"
+  },
+  "extract": {
+    "action": "Werte übernehmen",
+    "title": "Werte aus dem Beleg übernehmen",
+    "reading": "Der Beleg wird gelesen … Mit einem Sprachmodell kann das eine Minute dauern. Abbrechen ist jederzeit möglich.",
+    "apply": "Ausgewählte übernehmen",
+    "nothingFound": "Im Beleg wurden keine Werte gefunden, die sich übernehmen lassen.",
+    "nothingNew": "Der Beleg enthält nichts, was nicht schon eingetragen ist.",
+    "noText": "Der Beleg enthält keinen lesbaren Text — vermutlich ein Scan. Werte daraus bitte von Hand eintragen.",
+    "unsupported": "Dieses Format kann nicht ausgelesen werden. Ausgelesen werden PDF-Dateien und E-Mails.",
+    "rateLimited": "Gerade wurden zu viele Belege gelesen. Bitte in ein paar Minuten noch einmal versuchen.",
+    "unavailable": "Der Parser ist gerade nicht erreichbar. Bitte später noch einmal versuchen.",
+    "failed": "Der Beleg konnte nicht gelesen werden.",
+    "applyFailed": "Die Werte konnten nicht gespeichert werden.",
+    "field": {
+      "price": "Preis",
+      "currency": "Währung",
+      "bookingReference": "Buchungsnummer",
+      "seatNumber": "Sitzplatz",
+      "seatClass": "Sitzklasse"
+    },
+    "applied": "Die Werte aus dem Beleg wurden übernommen."
   }
 }

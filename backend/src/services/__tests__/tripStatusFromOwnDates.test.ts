@@ -141,4 +141,45 @@ describe("a trip with no flight and no cruise", () => {
       "completed"
     );
   });
+  it("takes its span from a roadtrip it holds, as it would from a stay", async () => {
+    const trip = await prisma.trip.create({
+      data: {
+        userId,
+        name: "Nur ein Roadtrip",
+        // A stale plan: the roadtrip it holds is the record.
+        startDate: new Date("2030-06-01"),
+        endDate: new Date("2030-06-10"),
+        status: "planned",
+      },
+    });
+    const route = await prisma.tripRoute.create({
+      data: { userId, tripId: trip.id, name: "Norwegen", mode: "road", kind: "roadtrip" },
+    });
+    await prisma.tripStop.createMany({
+      data: [
+        {
+          title: "A",
+          lat: 58,
+          lon: 6,
+          routeId: route.id,
+          routeOrderIdx: 0,
+          startDate: new Date("2020-07-01"),
+        },
+        {
+          title: "B",
+          lat: 60,
+          lon: 7,
+          routeId: route.id,
+          routeOrderIdx: 1,
+          startDate: new Date("2020-07-03"),
+          endDate: new Date("2020-07-05"),
+        },
+      ],
+    });
+
+    await recomputeTripStatus(trip.id);
+    expect((await prisma.trip.findUniqueOrThrow({ where: { id: trip.id } })).status).toBe(
+      "completed"
+    );
+  });
 });

@@ -97,10 +97,29 @@ function daysInYear(year: number): number {
   return (year % 4 === 0 && year % 100 !== 0) || year % 400 === 0 ? 366 : 365;
 }
 
+/**
+ * A night at a FREE roadtrip station — a pitch with no booking behind it.
+ * Before 2.7's audit the account knew only stays, so a week in a campervan
+ * was billed as a week at home. `from`/`to` bound the night-starting days
+ * `[from, to)`, as `freeStationNights` derives them; a null `from` is a night
+ * that happened and cannot be placed.
+ *
+ * A station LINKED to a stay is never here: the stay is already in `stays`,
+ * and listing it twice would bill one bed two nights.
+ */
+export interface AccountFreeNight {
+  /** The station's id — what a night names as its claimant. */
+  id: string;
+  from: Date | null;
+  to: Date | null;
+}
+
 export interface TravelAccountInput {
   stays: AccountStay[];
   cruises: AccountCruise[];
   flights: AccountFlight[];
+  /** Optional so every caller that predates roadtrips keeps its exact answer. */
+  freeNights?: AccountFreeNight[];
   now: Date;
 }
 
@@ -137,7 +156,7 @@ export interface TravelNightAttribution {
  * impossible.
  */
 export function attributeTravelNights(input: TravelAccountInput): TravelNightAttribution {
-  const { stays, cruises, flights, now } = input;
+  const { stays, cruises, flights, freeNights = [], now } = input;
   const today = dayKey(now);
 
   const hotel = new Map<number, string[]>();
@@ -163,6 +182,20 @@ export function attributeTravelNights(input: TravelAccountInput): TravelNightAtt
       continue;
     }
     spanDays(stay.checkIn, stay.checkOut, stay.id, hotel);
+  }
+
+  // A free pitch is a bed away from home too — the hotel bucket, whose tile
+  // reads "nights in a bed away". Only a night that is over counts, the same
+  // "check-out is past" rule every stay obeys; an undated one is reported
+  // beside the undated stays, because it is the same fact: a night slept away
+  // that no calendar can hold.
+  for (const night of freeNights) {
+    if (night.from === null || night.to === null) {
+      undatedStays += 1;
+      continue;
+    }
+    if (dayKey(night.to) > today) continue;
+    spanDays(night.from, night.to, night.id, hotel);
   }
 
   for (const cruise of cruises) {

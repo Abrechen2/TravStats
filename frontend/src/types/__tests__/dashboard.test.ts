@@ -9,8 +9,16 @@ import {
 
 describe("dashboard tab + mode registry", () => {
   it("exposes exactly the seven agreed tabs", () => {
-    // Rail joined on 2026-09-25 (rail spec, phase 2b), behind its beta gate.
-    expect(DASHBOARD_TABS).toEqual(["all", "flight", "cruise", "poi", "lodging", "rail", "tour"]);
+    expect(DASHBOARD_TABS).toEqual([
+      "all",
+      "flight",
+      "cruise",
+      "poi",
+      "lodging",
+      "roadtrip",
+      "rail",
+      "tour",
+    ]);
   });
 
   it("isDashboardTab narrows arbitrary strings", () => {

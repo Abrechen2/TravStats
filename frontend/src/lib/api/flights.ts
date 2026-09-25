@@ -32,8 +32,40 @@ export interface NextFlight {
   arrival: NextFlightEnd;
 }
 
+/** What the flight forms can offer from the user's own logbook — see
+ *  `GET /flights/entry-suggestions`. Empty lists and null mean "nothing to
+ *  offer", never an error. */
+export interface FlightEntrySuggestions {
+  seats: string[];
+  flightNumbers: string[];
+  frequentFlyerNumber: string | null;
+  departureTerminals: string[];
+}
+
+export interface FlightEntrySuggestionQuery {
+  airline?: string;
+  dep?: string;
+  arr?: string;
+}
+
+/** The server's own maximum per request (`flights/list.ts` caps at 500), so a
+ *  full account costs as few round trips as the API allows. */
+const FLIGHT_PAGE_SIZE = 500;
+/** Backstop against an endless loop if `total` ever disagrees with the rows
+ *  actually returned. 20 000 flights is far past any real logbook. */
+const MAX_FLIGHT_PAGES = 40;
+
 // Flights API
 export const flightsApi = {
+  getEntrySuggestions: async (
+    query: FlightEntrySuggestionQuery
+  ): Promise<FlightEntrySuggestions> => {
+    const { data } = await api.get<FlightEntrySuggestions>("/flights/entry-suggestions", {
+      params: query,
+    });
+    return data;
+  },
+
   getNext: async (): Promise<NextFlight | null> => {
     const { data } = await api.get<{ flight: NextFlight | null }>("/flights/next");
     return data.flight;
@@ -54,6 +86,40 @@ export const flightsApi = {
       offset: number;
     }>("/flights", { params: filters });
     return data;
+  },
+
+  /**
+   * EVERY flight matching the query, walked page by page.
+   *
+   * `getAll` above is one page and nothing more: the server caps `limit` at
+   * 500 however large a number is asked for. A caller that wanted the whole
+   * logbook and passed `limit: 5000` got 500 rows, a `total` it threw away,
+   * and no hint that anything was missing — which is how the spreadsheet
+   * export of an account with 501 flights wrote 500 of them (beta audit
+   * 2026-09-20, SRV-EXPORT-002). Places, lodging and cruises all learned this
+   * separately and all page in their own api module; flights was the one
+   * domain still relying on a caller to pass a big enough number.
+   *
+   * Paging HERE rather than in the export, for the same reason as those
+   * three: the next caller that needs the complete set would otherwise write
+   * its own loop, or its own too-large `limit`.
+   *
+   * The order is total — `buildFlightOrderBy` always appends the id as a
+   * tie-breaker — so no row is skipped or seen twice at a page boundary.
+   */
+  getEvery: async (filters?: Omit<FlightFilters, "limit" | "offset">): Promise<Flight[]> => {
+    const out: Flight[] = [];
+    for (let page = 0; page < MAX_FLIGHT_PAGES; page += 1) {
+      const { data } = await api.get<{ flights: Flight[]; total: number }>("/flights", {
+        params: { ...filters, limit: FLIGHT_PAGE_SIZE, offset: page * FLIGHT_PAGE_SIZE },
+      });
+      const batch = data.flights ?? [];
+      out.push(...batch);
+      // An empty page ends the walk even if `total` is missing or wrong —
+      // without it a stale total would spin this to its cap every time.
+      if (batch.length === 0 || out.length >= (data.total ?? out.length)) return out;
+    }
+    return out;
   },
 
   /**

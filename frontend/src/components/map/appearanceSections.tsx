@@ -17,10 +17,9 @@
 import { useTranslation } from "../../hooks/useTranslation";
 import {
   AutoPill,
+  CollapsibleSection,
   ColorField,
   ColorRow,
-  HAIRLINE,
-  SectionLabel,
   SegControl,
   Slider,
 } from "./controlPanelKit";
@@ -124,9 +123,7 @@ export function FlightAppearanceSection({
   }));
 
   return (
-    <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
-      <SectionLabel>{title}</SectionLabel>
-
+    <CollapsibleSection id="flight" title={title}>
       {/* Route shape — 3D arcs or flat on the map surface (#183). Only the flat
           map wires this; on the globe the props are absent and the picker is
           simply not there. */}
@@ -234,7 +231,7 @@ export function FlightAppearanceSection({
           format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
         />
       </div>
-    </div>
+    </CollapsibleSection>
   );
 }
 
@@ -311,9 +308,7 @@ export function CruiseAppearanceSection({
   }));
 
   return (
-    <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
-      <SectionLabel>{title}</SectionLabel>
-
+    <CollapsibleSection id="cruise" title={title}>
       {/* Colour mode — the explicit choice that replaces the per-tab hardcoded
           mode + the silent single-colour override. */}
       <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
@@ -405,7 +400,7 @@ export function CruiseAppearanceSection({
           format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
         />
       )}
-    </div>
+    </CollapsibleSection>
   );
 }
 
@@ -465,9 +460,7 @@ export function LodgingAppearanceSection({
   }));
 
   return (
-    <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
-      <SectionLabel>{title}</SectionLabel>
-
+    <CollapsibleSection id="lodging" title={title}>
       {onColorModeChange && onColorChange && (
         <>
           <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
@@ -506,6 +499,6 @@ export function LodgingAppearanceSection({
         onChange={onMarkerSizeChange}
         format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
       />
-    </div>
+    </CollapsibleSection>
   );
 }

@@ -9,6 +9,7 @@ import { FILE_LIMITS } from "../config/constants";
 import { describeParserError } from "../utils/parserErrors";
 import { hasUsableText } from "../services/parsing/usableText";
 import {
+  assertMayRecord,
   assertRetainable,
   parseRetentionFields,
   readDocumentForParse,
@@ -57,6 +58,7 @@ router.post(
   async (req: AuthRequest, res: Response) => {
     try {
       const parsed = parsePdfSchema.parse(req.body);
+      assertMayRecord(req, parsed);
       const userId = req.userId!;
 
       const buffer = parsed.documentId

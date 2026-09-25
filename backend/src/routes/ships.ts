@@ -40,6 +40,58 @@ const createShipSchema = z.object({
   capacity: z.number().int().min(0).optional(),
 });
 
+const cruiseLinesQuerySchema = z.object({
+  q: z.string().trim().max(120).optional(),
+  limit: z.coerce.number().int().min(1).max(50).default(20),
+});
+
+/**
+ * Cruise lines for the edit form's typeahead: the lines the user has sailed
+ * with first, then the catalogue's. Free text stays valid on the client — this
+ * only offers spellings, so a line neither source knows is still enterable.
+ * Both reads are distinct and bounded in the query; the merge only dedupes
+ * across the two (case-insensitively, the user's own spelling winning).
+ */
+router.get("/cruise-lines", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const parsed = cruiseLinesQuerySchema.safeParse(req.query);
+    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    if (!req.userId) throw new AppError("Not authenticated", 401);
+    const { q, limit } = parsed.data;
+    const contains = q ? { contains: q, mode: "insensitive" as const } : {};
+
+    const [own, catalogue] = await Promise.all([
+      prisma.cruise.findMany({
+        where: { userId: req.userId, cruiseLine: { not: null, ...contains } },
+        distinct: ["cruiseLine"],
+        select: { cruiseLine: true },
+        orderBy: { cruiseLine: "asc" },
+        take: limit,
+      }),
+      prisma.ship.findMany({
+        where: q ? { cruiseLine: contains } : {},
+        distinct: ["cruiseLine"],
+        select: { cruiseLine: true },
+        orderBy: { cruiseLine: "asc" },
+        take: limit,
+      }),
+    ]);
+
+    const seen = new Set<string>();
+    const lines: string[] = [];
+    for (const raw of [...own, ...catalogue].map((row) => row.cruiseLine?.trim() ?? "")) {
+      const key = raw.toLowerCase();
+      if (!raw || seen.has(key)) continue;
+      seen.add(key);
+      lines.push(raw);
+    }
+
+    res.json({ success: true, data: lines.slice(0, limit) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const parsed = listQuerySchema.safeParse(req.query);

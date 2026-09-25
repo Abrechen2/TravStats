@@ -157,6 +157,8 @@
     "lodging_desc": "Overnight stays, chain loyalty, countries/cities.",
     "poi": "Places",
     "poi_desc": "Landmarks, restaurants, concerts, any place.",
+    "roadtrip": "Roadtrips",
+    "roadtrip_desc": "Multi-day journeys by motorhome, car or bike: stations, nights, the road between.",
     "rail": "Rail",
     "rail_desc": "Train journeys like flights: stations, train number, class, seat, kilometres. (Beta)"
   },
@@ -170,6 +172,7 @@
         "cruise": "Navigation, statistics, map",
         "lodging": "Navigation, statistics, days away",
         "poi": "Places, visits and place lists",
+        "roadtrip": "Stations, nights, map",
         "rail": "Beta: a logbook for train journeys"
       }
     }
@@ -226,7 +229,11 @@
       "next": "Next page",
       "last": "Last page",
       "pageSize": "Rows per page",
-      "all": "All"
+      "all": "All",
+      "landmark": {
+        "top": "Pagination, above the table",
+        "bottom": "Pagination, below the table"
+      }
     }
   },
   "support": {
@@ -273,5 +280,12 @@
     "open": "Choose",
     "clear": "Clear",
     "unavailable": "The emoji picker cannot load here. You can still paste an emoji into the field."
-  }
+  },
+  "tagInput": {
+    "remove": "Remove tag {{name}}",
+    "suggestions": "Your tags",
+    "usage_one": "used once",
+    "usage_other": "used {{count}} times"
+  },
+  "suggestionChip": "Use {{field}} {{value}}"
 }

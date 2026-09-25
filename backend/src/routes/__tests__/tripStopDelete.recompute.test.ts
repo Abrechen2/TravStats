@@ -41,7 +41,7 @@ describe("DELETE /trips/:id/stops/:stopId recomputes its section", () => {
 
   it("bridges A-B-C into one A-C leg, distance > 0, orderIdx [0,1]", async () => {
     const route = await prisma.tripRoute.create({
-      data: { tripId, name: "Südnorwegen", mode: "road" },
+      data: { userId, tripId, name: "Südnorwegen", mode: "road" },
     });
 
     const places: Array<[string, number, number]> = [

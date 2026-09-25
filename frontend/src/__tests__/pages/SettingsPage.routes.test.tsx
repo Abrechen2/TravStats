@@ -94,6 +94,9 @@ vi.unmock("../../store/settingsStore");
 vi.mock("../../components/Settings/DawarichConnectionCard", () => ({
   default: () => <div data-testid="dawarich-connection-card" />,
 }));
+vi.mock("../../components/Settings/StravaConnectionCard", () => ({
+  default: () => <div data-testid="strava-connection-card" />,
+}));
 vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
   default: () => <div data-testid="immich-connection-card" />,
 }));

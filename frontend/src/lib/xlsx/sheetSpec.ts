@@ -63,6 +63,28 @@ export function refCell(name: string | null | undefined, id: string | null | und
 }
 
 /**
+ * The NAME half of a reference cell — the other side of `parseRefCell`.
+ *
+ * A CSV assembled from an exported sheet carries "Catalonia Rigoletto [42]"
+ * where a name is expected, and an id from ANOTHER instance means nothing
+ * anyway. The tester hit exactly that on 2026-09-20 ("da im excel export
+ * hinter dem Hotelnamen die ID steht, daher konnte ich die nicht in eine
+ * geeignete CSV umwandeln"), and the name would otherwise have been imported
+ * with the brackets attached — matching no existing house and creating one
+ * called "Catalonia Rigoletto [42]".
+ *
+ * The suffix has to look like an id (word characters and dashes, nothing
+ * else) and something has to precede it, so a house genuinely named "[42]"
+ * keeps its name and a "Hotel [Renovierung 2024]" is left alone.
+ */
+export function refCellName(cell: string | null | undefined): string {
+  if (!cell) return "";
+  const trimmed = cell.trim();
+  const match = /^(.*\S)\s*\[[\w-]+\]$/.exec(trimmed);
+  return match ? match[1].trim() : trimmed;
+}
+
+/**
  * Recover the id from a reference cell.
  *
  * Deliberately tolerant about the name half: someone may well retype "Japan

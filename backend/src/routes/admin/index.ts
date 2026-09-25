@@ -12,6 +12,7 @@ import backupSettingsRouter from "./backupSettings";
 import instanceSettingsRouter from "./instanceSettings";
 import immichAdminRouter from "./immich";
 import dawarichAdminRouter from "./dawarich";
+import stravaAdminRouter from "./strava";
 import usageStatsRouter from "./usageStats";
 import passwordResetRequestsRouter from "./passwordResetRequests";
 
@@ -49,6 +50,7 @@ router.use("/", backupSettingsRouter);
 router.use("/", instanceSettingsRouter);
 router.use("/immich", immichAdminRouter);
 router.use("/dawarich", dawarichAdminRouter);
+router.use("/strava", stravaAdminRouter);
 router.use("/", usageStatsRouter);
 router.use("/", passwordResetRequestsRouter);
 

@@ -515,6 +515,9 @@ export default function FlightsTablePage(): JSX.Element {
           </div>
         ) : (
           <>
+            {!loading && flights.length > 0 && (
+              <TablePagination {...pagination} allowAll={false} placement="top" />
+            )}
             {loading ? (
               <SkeletonTable rows={10} />
             ) : flights.length === 0 ? (

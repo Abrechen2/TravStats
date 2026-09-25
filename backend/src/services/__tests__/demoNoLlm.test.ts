@@ -2,7 +2,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { CruiseBookingParser, parseCruiseBookingText } from "../cruiseBookingParser";
 import { parseLodgingBookingText } from "../lodging/lodgingBookingParser";
-import { requestTextWithDeadline } from "../lodging/boundedHttp";
+import { requestTextWithDeadline } from "../http/boundedHttp";
 import { parseBookingEmail } from "../bookingParser";
 import { getOllamaTextParser } from "../parsers/text/ollamaTextParser";
 import { clearAvailabilityCache } from "../parsers/config";
@@ -31,9 +31,9 @@ import { clearAvailabilityCache } from "../parsers/config";
  * asked and its answer discarded.
  */
 
-jest.mock("../lodging/boundedHttp", () => ({
+jest.mock("../http/boundedHttp", () => ({
   requestTextWithDeadline: jest.fn(async () => {
-    throw new Error("the lodging parser must not reach Ollama in this suite");
+    throw new Error("no parser may reach Ollama in this suite");
   }),
 }));
 

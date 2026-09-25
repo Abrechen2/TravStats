@@ -41,6 +41,7 @@ export const tokens = {
     "hotel": "#5ec2b2",
     "poi": "#e7e3dc",
     "tour": "#8faa5f",
+    "roadtrip": "#a597f0",
     "rail": "#d4655c"
   },
   "statusColor": {

@@ -21,7 +21,15 @@ describe("AddDomainPicker", () => {
   it("renders the button label", () => {
     render(
       <AddDomainPicker
-        enabled={{ flight: true, cruise: true, lodging: true, poi: false, rail: false }}
+        enabled={{
+          flight: true,
+          cruise: true,
+          lodging: true,
+          poi: false,
+          roadtrip: false,
+          rail: false,
+          tour: false,
+        }}
         onPick={() => {}}
       />
     );
@@ -31,7 +39,15 @@ describe("AddDomainPicker", () => {
   it("opens the menu on click and lists only enabled domains", () => {
     render(
       <AddDomainPicker
-        enabled={{ flight: true, cruise: true, lodging: true, poi: false, rail: false }}
+        enabled={{
+          flight: true,
+          cruise: true,
+          lodging: true,
+          poi: false,
+          roadtrip: false,
+          rail: false,
+          tour: false,
+        }}
         onPick={() => {}}
       />
     );
@@ -47,7 +63,15 @@ describe("AddDomainPicker", () => {
   it("omits stays when the lodging domain is switched off", () => {
     render(
       <AddDomainPicker
-        enabled={{ flight: true, cruise: false, lodging: false, poi: false, rail: false }}
+        enabled={{
+          flight: true,
+          cruise: false,
+          lodging: false,
+          poi: false,
+          roadtrip: false,
+          rail: false,
+          tour: false,
+        }}
         onPick={() => {}}
       />
     );
@@ -59,7 +83,15 @@ describe("AddDomainPicker", () => {
     const onPick = vi.fn();
     render(
       <AddDomainPicker
-        enabled={{ flight: true, cruise: true, lodging: true, poi: false, rail: false }}
+        enabled={{
+          flight: true,
+          cruise: true,
+          lodging: true,
+          poi: false,
+          roadtrip: false,
+          rail: false,
+          tour: false,
+        }}
         onPick={onPick}
       />
     );
@@ -74,7 +106,15 @@ describe("AddDomainPicker", () => {
     render(
       <div>
         <AddDomainPicker
-          enabled={{ flight: true, cruise: true, lodging: true, poi: false, rail: false }}
+          enabled={{
+            flight: true,
+            cruise: true,
+            lodging: true,
+            poi: false,
+            roadtrip: false,
+            rail: false,
+            tour: false,
+          }}
           onPick={onPick}
         />
         <button type="button">outside</button>

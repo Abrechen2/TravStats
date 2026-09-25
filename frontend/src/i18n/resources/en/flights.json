@@ -36,6 +36,7 @@
     "bookingClassLetter": "Booking class (code)",
     "baggageAllowance": "Baggage allowance",
     "frequentFlyerNumber": "Frequent flyer number",
+    "frequentFlyerSuggested": "Suggested from your last flight with this airline",
     "status": "Status",
     "category": "Category",
     "price": "Price",
@@ -78,7 +79,7 @@
       "arrivalTimeExpanded": "The time should be specified in the local timezone of the arrival airport. The system automatically converts if necessary.",
       "price": "The price is saved together with the currency. You can filter by prices later and display statistics.",
       "tags": "Add tags to categorize and filter flights later (e.g. 'business', 'international').",
-      "tagsExpanded": "Tags are separated by commas. You can filter by tags later and group statistics by tags. Examples: 'business', 'vacation', 'lufthansa', 'long-haul'.",
+      "tagsExpanded": "Enter or a comma turns the text into a tag; your earlier tags are suggested as you type. You can filter by tags later and group statistics by tags. Examples: 'business', 'vacation', 'lufthansa', 'long-haul'.",
       "flightNumber": "Enter the flight number (e.g. LH400). Automatic search works for today's flights. For past or future flights an Aviationstack Basic+ key is required — otherwise please enter the flight manually.",
       "flightNumberExpanded": "The flight lookup cascades through multiple APIs:\n• Aviationstack (with Basic+ key: past and future flights)\n• AirLabs (today's flights)\n• OpenSky (today's flights, credentials required)\n\nIf no provider covers the selected date, you'll need to enter the flight manually. Even with a key configured, the API may simply not have data for some flights."
     },
@@ -148,7 +149,7 @@
       "selectDate": "Please select departure date",
       "invalidPrice": "Price, taxes, and fees must be positive numbers"
     },
-    "tagsHint": "Comma-separated tags for filtering.",
+    "tagsHint": "Enter or a comma adds a tag; your earlier tags are suggested.",
     "loadingScanner": "Loading scanner...",
     "noFlightsInEmail": "No flights found in the email.",
     "departureAirportCode": "Departure airport (IATA)",

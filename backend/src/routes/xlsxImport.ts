@@ -23,6 +23,9 @@ import type { ImportOutcome } from "../services/xlsxImport/types";
 
 const router = Router();
 
+/** Excel's own last row. A larger "row number" is not one a sheet can have. */
+const MAX_SHEET_ROW = 1_048_576;
+
 /** Cells are strings by the time they leave the spreadsheet reader. The bound
  *  on sheets and rows is what stops one request from pinning the process. */
 const requestSchema = z.object({
@@ -35,6 +38,11 @@ const requestSchema = z.object({
       z.object({
         key: z.string().min(1).max(64),
         rows: z.array(z.record(z.string(), z.string())).max(MAX_ROWS_PER_SHEET),
+        /** Sheet row per record, parallel to `rows` — see `IncomingSheet`. */
+        rowNumbers: z
+          .array(z.number().int().positive().max(MAX_SHEET_ROW))
+          .max(MAX_ROWS_PER_SHEET)
+          .optional(),
       })
     )
     .min(1)

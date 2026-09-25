@@ -7,6 +7,8 @@
 //
 // Dates and JSON cross the wire as plain data, never `Date` objects.
 
+import type { RouteKind, RoadtripVehicle, TourActivity } from "../shared/tour/roadtrip";
+
 /**
  * The full leg-source vocabulary. The API only accepts `straight` and
  * `drawn` today (phase 1) — `routed` and `track` already exist here so a
@@ -18,6 +20,19 @@ export type LegSource = (typeof LEG_SOURCES)[number];
 
 export const LEG_MODES = ["road", "ferry", "rail", "foot", "bike"] as const;
 export type LegMode = (typeof LEG_MODES)[number];
+
+/**
+ * The modes a NEW leg or section may be created with.
+ *
+ * "rail" is not among them since 2026-09-21 and is still a perfectly valid
+ * stored value — the two lists exist precisely so that withdrawing an offer
+ * does not invalidate data somebody already has. Alex, 2026-09-20: a train
+ * journey deserves the real thing, a domain with an API that can draw the
+ * line the train actually took, rather than a tour mode that can only draw
+ * a road detour around the track. Owner agreed the same evening. Put it
+ * back here the day that domain does NOT happen.
+ */
+export const SELECTABLE_LEG_MODES = LEG_MODES.filter((mode) => mode !== "rail");
 
 /**
  * Leg modes a routing provider can meaningfully answer. Mirrors
@@ -44,7 +59,8 @@ export type RoutingProviderId = (typeof ROUTING_PROVIDER_IDS)[number];
 
 export interface TourRoute {
   id: string;
-  tripId: string;
+  /** `null` for a standalone tour — one that belongs to no trip. */
+  tripId: string | null;
   name: string;
   mode: LegMode;
   orderIdx: number;
@@ -56,6 +72,15 @@ export interface TourRoute {
   legCount: number;
   distanceKm: number;
   drivenKm: number;
+  /** "tour" (a day trip) or "roadtrip" (the 2.7 domain). */
+  kind: RouteKind;
+  activity: TourActivity | null;
+  vehicle: RoadtripVehicle | null;
+  vehicleName: string | null;
+  /** Tour only: the roadtrip station the day tour set out from. */
+  anchorStopId: string | null;
+  /** Set on rows the 2.7 migration classified by rule, until confirmed or switched. */
+  kindAssignedAutomatically: boolean;
 }
 
 export interface TourStop {
@@ -64,6 +89,9 @@ export interface TourStop {
   lat: number | null;
   lon: number | null;
   routeOrderIdx: number | null;
+  /** Returned by every read and write of a section's stops; optional so a
+   *  stop built locally need not invent one. */
+  notes?: string | null;
 }
 
 export interface TourLeg {
@@ -110,7 +138,17 @@ export interface TourGeometry {
  * is the RECORDING, `"track"` (a `LegSource`) is a LEG that adopted a
  * segment of one.
  */
-export const TRACK_SOURCES = ["gpx", "dawarich"] as const;
+// Since 2.7 also `fit`/`tcx` (file formats) and `strava`/`healthkit`/`healthconnect` (where an
+// imported recording came from).
+export const TRACK_SOURCES = [
+  "gpx",
+  "dawarich",
+  "fit",
+  "tcx",
+  "strava",
+  "healthkit",
+  "healthconnect",
+] as const;
 export type TrackSource = (typeof TRACK_SOURCES)[number];
 
 /**
@@ -136,6 +174,12 @@ export interface TourTrackMeta {
    *  `distanceKm` is a PARTIAL measurement. Always `false` for `source:
    *  "gpx"`, which refuses an oversized file outright instead. */
   truncated: boolean;
+  /** Climb in metres, measured on the raw points; null without elevation. */
+  ascentM: number | null;
+  descentM: number | null;
+  /** Time actually moving; null when the points carry no times. */
+  movingSeconds: number | null;
+  externalRef: string | null;
   createdAt: string;
 }
 
@@ -147,4 +191,8 @@ export interface TourTrackMeta {
  */
 export interface TourTrack extends TourTrackMeta {
   geometry: Array<[number, number]>;
+  /** Raw running distance per geometry vertex. Null on old rows. */
+  cumulativeKm: number[] | null;
+  /** `[km, metres]` sampled from the raw points; null when the source had none. */
+  elevationProfile: Array<[number, number]> | null;
 }

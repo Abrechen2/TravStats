@@ -1,4 +1,4 @@
-import { photoJourneysApi } from "../../lib/api/photoJourneys";
+import { photoJourneysApi, type PhotoJourneyPhotoOutcome } from "../../lib/api/photoJourneys";
 import { createVisit } from "../../lib/api/places";
 import { tripsApi } from "../../lib/api/trips";
 import type { PhotoJourney } from "../../types/photoJourney";
@@ -61,18 +61,19 @@ export async function createFromPhotoJourney(
   return { kind: "none" };
 }
 
-/** Step two: record the answer, pointing at whatever step one made. */
+/**
+ * Step two: record the answer, pointing at whatever step one made. A visit
+ * comes back with what became of the finding's photographs.
+ */
 export async function linkPhotoJourney(
   journeyId: string,
   created: PhotoJourneyCreated
-): Promise<void> {
+): Promise<PhotoJourneyPhotoOutcome | null> {
   if (created.kind === "trip") {
-    await photoJourneysApi.accept(journeyId, { createdTripId: created.id });
-    return;
+    return photoJourneysApi.accept(journeyId, { createdTripId: created.id });
   }
   if (created.kind === "placeVisit") {
-    await photoJourneysApi.accept(journeyId, { createdPlaceVisitId: created.id });
-    return;
+    return photoJourneysApi.accept(journeyId, { createdPlaceVisitId: created.id });
   }
-  await photoJourneysApi.accept(journeyId);
+  return photoJourneysApi.accept(journeyId);
 }

@@ -1,6 +1,9 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { tourIndexApi, type TourGeometryEntry, type TourSummary } from "../lib/api/tourIndex";
 import { logger } from "../lib/logger";
+import { hexToRgb } from "../lib/domainColor";
+import { useDomainColors } from "./useDomainColors";
+import type { RouteKind } from "../shared/tour/roadtrip";
 
 export interface UseDashboardToursResult {
   tours: TourSummary[];
@@ -32,7 +35,13 @@ export interface UseDashboardToursResult {
  * flights/cruises/lodgings/places: a feature hidden behind the `tourRoutes`
  * beta gate must never hit the network for it.
  */
-export function useDashboardTours(enabled: boolean): UseDashboardToursResult {
+export function useDashboardTours(
+  enabled: boolean,
+  /** One kind only (the roadtrip tab), or every route (the all tab). */
+  kind?: RouteKind
+): UseDashboardToursResult {
+  const { colorOf } = useDomainColors();
+  const roadtripHex = colorOf("roadtrip");
   const [tours, setTours] = useState<TourSummary[]>([]);
   const [toursLoading, setToursLoading] = useState(true);
   const [toursLoadError, setToursLoadError] = useState(false);
@@ -64,7 +73,7 @@ export function useDashboardTours(enabled: boolean): UseDashboardToursResult {
 
     void (async (): Promise<void> => {
       try {
-        const list = await tourIndexApi.list();
+        const list = await tourIndexApi.list(kind);
         if (cancelled || !mountedRef.current) return;
         setTours(list);
 
@@ -96,7 +105,7 @@ export function useDashboardTours(enabled: boolean): UseDashboardToursResult {
     return () => {
       cancelled = true;
     };
-  }, [enabled, reloadToken]);
+  }, [enabled, reloadToken, kind]);
 
   const reload = useCallback(() => setReloadToken((n) => n + 1), []);
 
@@ -105,7 +114,15 @@ export function useDashboardTours(enabled: boolean): UseDashboardToursResult {
   // the map itself changed, which silently defeated the `tourPathData`
   // `useMemo` in AllTab.tsx that depends on this array: it recomputed on
   // every render too, since its dependency was never actually stable.
-  const geometries = useMemo(() => Array.from(geometryById.values()), [geometryById]);
+  // The colour is applied here, not in the fetch, so changing the roadtrip
+  // hue in settings recolours the lines without refetching them.
+  const geometries = useMemo(() => {
+    const kindById = new Map(tours.map((t) => [t.id, t.kind]));
+    const roadtripRgb = hexToRgb(roadtripHex);
+    return Array.from(geometryById.values()).map((g) =>
+      kindById.get(g.routeId) === "roadtrip" ? { ...g, rgb: roadtripRgb } : g
+    );
+  }, [geometryById, tours, roadtripHex]);
 
   return { tours, toursLoading, toursLoadError, geometries, reload };
 }

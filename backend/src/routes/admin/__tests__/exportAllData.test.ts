@@ -94,6 +94,7 @@ describe("GET /api/v1/admin/export/all-data", () => {
       "companions",
       "documents",
       "railJourneys",
+      "tourRoutes",
       "userAchievements",
     ]) {
       expect(Object.prototype.hasOwnProperty.call(user, domain)).toBe(true);
@@ -179,5 +180,60 @@ describe("GET /api/v1/admin/export/all-data", () => {
     ]) {
       expect(serialized).not.toContain(field);
     }
+  });
+
+  // Tours and roadtrips were not in the export: a trip exported its stops and
+  // nothing of the route drawn over them, and a roadtrip or tour with no trip
+  // was missing entirely, stations and recordings with it.
+  it("carries a standalone roadtrip with its stations, legs and recordings", async () => {
+    const route = await prisma.tripRoute.create({
+      data: {
+        userId: createdUserIds[0],
+        name: "Ohne Reise",
+        mode: "road",
+        kind: "roadtrip",
+        vehicle: "campervan",
+      },
+    });
+    await prisma.tripStop.create({
+      data: {
+        title: "Hirtshals",
+        lat: 57.59,
+        lon: 9.96,
+        routeId: route.id,
+        routeOrderIdx: 0,
+        overnight: true,
+      },
+    });
+    await prisma.tripRouteTrack.create({
+      data: {
+        routeId: route.id,
+        source: "gpx",
+        startedAt: new Date("2026-09-18T08:00:00Z"),
+        endedAt: new Date("2026-09-18T12:00:00Z"),
+        geometry: [
+          [9.96, 57.59],
+          [9.9, 57.6],
+        ],
+        pointCount: 2,
+        distanceKm: 5,
+        ascentM: 120,
+      },
+    });
+
+    const res = await request(app).get("/api/v1/admin/export/all-data").set("Cookie", adminCookie);
+    expect(res.status).toBe(200);
+    const body = typeof res.body === "object" && res.body.users ? res.body : JSON.parse(res.text);
+    const me = body.users.find((u: { id: string }) => u.id === createdUserIds[0]);
+    expect(me.tourRoutes).toEqual([
+      expect.objectContaining({
+        name: "Ohne Reise",
+        kind: "roadtrip",
+        vehicle: "campervan",
+        stops: [expect.objectContaining({ title: "Hirtshals", overnight: true })],
+        legs: [],
+        tracks: [expect.objectContaining({ source: "gpx", ascentM: 120 })],
+      }),
+    ]);
   });
 });

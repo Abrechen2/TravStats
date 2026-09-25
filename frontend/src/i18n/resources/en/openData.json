@@ -1,0 +1,78 @@
+{
+  "settings": {
+    "title": "Open data services",
+    "description": "Weather and elevations from Open-Meteo, descriptions from Wikipedia, hotel facts from OpenStreetMap. Places and dates of your trips are sent to these services — which is why this stays off until you switch it on.",
+    "switch": "Use open data services",
+    "switchSub": "Applies to the whole instance. No account, no key.",
+    "adminOnly": "Only an admin can change this.",
+    "stateOn": "Switched on",
+    "stateOff": "Switched off",
+    "saveFailed": "The setting could not be saved."
+  },
+  "planned": {
+    "title": "Planned elevation profile",
+    "distance": "Distance",
+    "ascent": "Ascent",
+    "descent": "Descent",
+    "note": "Ground heights from Open-Meteo along the planned line — calculated, not measured."
+  },
+  "weather": {
+    "measuredAt": "Weather in {{place}}",
+    "fill": "Add the weather",
+    "filling": "Fetching the weather …",
+    "filled_one": "Weather added to {{count}} entry.",
+    "filled_other": "Weather added to {{count}} entries.",
+    "nothing": "No entry without weather has a known place.",
+    "failed": "The weather could not be fetched.",
+    "fetchOne": "Fetch weather",
+    "onSave": "The day's weather is fetched on save, if the trip knows a place for that day.",
+    "onSaveNewDate": "The new day's weather is fetched on save.",
+    "noPlace": "The trip knows no place with coordinates for this day — without a place there is no weather.",
+    "disabled": "Open data services are switched off on this instance.",
+    "source": "Weather data: Open-Meteo",
+    "code": {
+      "clear": "clear",
+      "partly": "partly cloudy",
+      "cloudy": "cloudy",
+      "fog": "fog",
+      "drizzle": "drizzle",
+      "rain": "rain",
+      "snow": "snow",
+      "showers": "showers",
+      "thunder": "thunderstorm"
+    }
+  },
+  "wikipedia": {
+    "title": "From Wikipedia",
+    "readMore": "Read more on Wikipedia",
+    "englishArticle": "English article",
+    "license": "Text: Wikipedia, CC BY-SA 4.0"
+  },
+  "lodging": {
+    "enrich": "Complete from OpenStreetMap",
+    "enriching": "Searching OpenStreetMap …",
+    "filled": "Added: {{fields}}",
+    "nothingNew": "Found as “{{name}}” — nothing new, every field was already filled.",
+    "notFound": "OpenStreetMap knows no house of this name nearby.",
+    "noCoordinates": "The lodging has no coordinates, so it cannot be searched.",
+    "failed": "The OpenStreetMap search failed.",
+    "field": {
+      "stars": "stars",
+      "website": "website",
+      "wikidataId": "Wikipedia link",
+      "chain": "chain",
+      "name": "name",
+      "type": "type"
+    },
+    "nearby": {
+      "search": "Find lodgings nearby (OpenStreetMap)",
+      "searching": "Searching OpenStreetMap …",
+      "listLabel": "Lodgings nearby",
+      "none": "OpenStreetMap knows no lodging here.",
+      "failed": "OpenStreetMap did not answer.",
+      "distance": "{{m}} m",
+      "filled": "Taken from OpenStreetMap: {{fields}}",
+      "nothingNew": "Picked “{{name}}” — nothing new, the fields were already filled."
+    }
+  }
+}

@@ -14,7 +14,19 @@ const tripsGetAllMock = vi.fn();
 // its own suite, and `__tests__/documentsMountPoints.test.tsx` checks that
 // this surface mounts it — here it would only be a request reaching the
 // network, which the setup refuses (forgejo#110).
+// The stay editor asks for the user's own lodging vocabulary on mount; no network here.
+vi.mock("../../hooks/useLodgingEntrySuggestions", () => ({
+  useLodgingEntrySuggestions: () => ({
+    amenities: [],
+    roomAmenities: [],
+    roomNumbers: [],
+    roomCategories: [],
+    boards: [],
+  }),
+}));
 vi.mock("../../components/documents/DocumentsSection", () => ({ default: () => null }));
+// Fetches the trip photos taken at the house on mount; the network is refused here.
+vi.mock("../../components/common/TripPhotoWindowStrip", () => ({ default: () => null }));
 
 // The stay's delete dialog counts the kept originals that cascade with it.
 // The section above is stubbed out, so this mock serves the COUNT only.

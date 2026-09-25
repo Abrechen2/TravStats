@@ -192,8 +192,16 @@ describe("AdminPage — lazy section reveal (Wave C finding C3)", () => {
     const sectionEl = document.getElementById("admin-logging");
     expect(sectionEl?.childElementCount).toBe(0);
 
+    // LazySection creates its IntersectionObserver from a passive effect,
+    // which commits asynchronously relative to the DOM — a sibling
+    // region (like "system", awaited above) can already be in the
+    // document before THIS section's effect has run. Normally that gap
+    // is sub-millisecond and invisible; under CPU contention (reproduced
+    // locally by saturating every core) it widened enough to read
+    // `observerFor` as undefined. Waiting for the observer itself,
+    // rather than a proxy for it, is what actually closes the race.
+    await waitFor(() => expect(io.observerFor("admin-logging")).toBeDefined());
     const observer = io.observerFor("admin-logging");
-    expect(observer).toBeDefined();
 
     act(() => {
       observer?.trigger(true);

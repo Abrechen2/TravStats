@@ -3,7 +3,7 @@
  * See: docs/superpowers/specs/2026-04-19-multi-domain-foundation-design.md
  */
 
-export const DOMAIN_KEYS = ["flight", "cruise", "lodging", "poi", "rail"] as const;
+export const DOMAIN_KEYS = ["flight", "cruise", "lodging", "poi", "roadtrip", "rail"] as const;
 export type DomainKey = (typeof DOMAIN_KEYS)[number];
 
 export interface DomainDescriptor {
@@ -56,6 +56,18 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     color: "#e7e3dc",
     routePrefix: "/places",
   },
+  // Roadtrips (2.7, design 2026-09-24): several days on the road, stations
+  // that sleep at the user's stays. Stored as `TripRoute` rows with
+  // `kind = "roadtrip"` — a domain in the product sense (its own page, colour,
+  // enable switch), the same engine as a tour underneath. No parser target.
+  roadtrip: {
+    key: "roadtrip",
+    available: true,
+    i18nKey: "domain.roadtrip",
+    icon: "🚐",
+    color: "#a597f0",
+    routePrefix: "/roadtrips",
+  },
   // Train journeys (spec 2026-09-25-rail-domain). Available, so shared code
   // iterating AVAILABLE_DOMAINS sees it; the UI additionally hides it behind
   // the `railDomain` beta gate. Brick red: clear of flight amber, cruise teal,
@@ -72,7 +84,8 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
 };
 
 /**
- * Tours are ONE domain with ONE colour (owner, 2026-09-05). The means of
+ * Day tours are ONE colour (owner, 2026-09-05) — and since 2.7 a day tour is
+ * all a tour is; the multi-day kind is the `roadtrip` domain above. The means of
  * transport changes the icon, never the hue — the web ran five colours for
  * train, hiking, cycling, road and ferry, and they fall with this constant.
  *

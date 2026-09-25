@@ -112,7 +112,9 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
           <input
             type="date"
             value={stop.date?.slice(0, 10) ?? ""}
-            onChange={(e): void => update(i, { date: fromDateInput(e.target.value) })}
+            onChange={(e): void =>
+              update(i, { date: fromDateInput(e.target.value), dateSource: "user" })
+            }
             style={{ colorScheme: "dark" }}
             className="mb-2 w-full rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-xs text-(--text-primary)"
             aria-label={t("stops.date")}

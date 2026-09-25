@@ -6,6 +6,7 @@ import { AppError } from "../middleware/errorHandler";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
 import { immichImportLimiter } from "../middleware/rateLimit";
 import { scanPhotoJourneys } from "../services/photoJourneys/scan";
+import { attachJourneyPhotosToVisit } from "../services/places/visitPhotoLinks";
 
 const router = Router();
 router.use(authenticate);
@@ -135,6 +136,49 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
   }
 });
 
+const forTripParamsSchema = z.object({ tripId: z.string().uuid() });
+/** Accepted journeys one trip can have made; far more would be a data error, not a gallery. */
+const FOR_TRIP_CAP = 20;
+
+/**
+ * The accepted findings that made this trip, with how many preview photographs
+ * each carries — the trip gallery draws them through the preview proxy.
+ *
+ * This is how a trip finding brings its photographs along. A trip photo is a
+ * FILE (`TripPhoto.filename` is required, and the import job and resync depend
+ * on that), and link mode is an ALBUM, which a finding does not have. The
+ * journey row already points at the trip and already grants its own previews
+ * (`/photo-journeys/:id/preview/:index/file`), so the link exists; it only
+ * needed a reader. Zero bytes, and no id ever leaves the server.
+ */
+router.get(
+  "/for-trip/:tripId",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const parsed = forTripParamsSchema.safeParse(req.params);
+      if (!parsed.success) throw new AppError("Invalid trip id", 400);
+      const trip = await prisma.trip.findFirst({
+        where: { id: parsed.data.tripId, userId: req.userId! },
+        select: { id: true },
+      });
+      if (!trip) throw new AppError("Trip not found", 404);
+
+      const rows = await prisma.photoJourney.findMany({
+        where: { userId: req.userId!, createdTripId: trip.id, status: "accepted" },
+        select: { id: true, previewAssetIds: true },
+        orderBy: { startDate: "asc" },
+        take: FOR_TRIP_CAP,
+      });
+      res.json({
+        success: true,
+        data: rows.map((row) => ({ id: row.id, previewCount: row.previewAssetIds.length })),
+      });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
 /**
  * The scan is the expensive one and the only route here that is limited.
  *
@@ -217,7 +261,19 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       throw new AppError("Photo journey not found", 404);
     }
 
-    res.json({ success: true });
+    // A visit made from a finding carries the finding's photographs as links —
+    // the pictures were the evidence, and leaving them behind made the user
+    // find them again by hand. Reported, never thrown: the answer is recorded.
+    const photos =
+      parsed.data.status === "accepted" && parsed.data.createdPlaceVisitId
+        ? await attachJourneyPhotosToVisit(
+            req.userId!,
+            req.params.id,
+            parsed.data.createdPlaceVisitId
+          )
+        : null;
+
+    res.json({ success: true, data: { photos } });
   } catch (err) {
     next(err);
   }

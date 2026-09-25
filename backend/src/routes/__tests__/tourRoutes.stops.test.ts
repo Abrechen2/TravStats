@@ -33,7 +33,7 @@ describe("Tour route sections — stop assignment", () => {
     tripId = trip.id;
 
     const route = await prisma.tripRoute.create({
-      data: { tripId, name: "Südnorwegen", mode: "road" },
+      data: { userId, tripId, name: "Südnorwegen", mode: "road" },
     });
     routeId = route.id;
 
@@ -91,7 +91,7 @@ describe("Tour route sections — stop assignment", () => {
 
   it("refuses a stop that already belongs to a different route section", async () => {
     const otherRoute = await prisma.tripRoute.create({
-      data: { tripId, name: "Anderer Abschnitt", mode: "road" },
+      data: { userId, tripId, name: "Anderer Abschnitt", mode: "road" },
     });
     await prisma.tripStop.update({
       where: { id: stopIds.bergen },
@@ -186,7 +186,7 @@ describe("Tour route sections — stop assignment", () => {
     // it resolves with the stop still unassigned, a second "request" steals
     // Bergen for another section before this request's transaction runs.
     const otherRoute = await prisma.tripRoute.create({
-      data: { tripId, name: "Konkurrent", mode: "road" },
+      data: { userId, tripId, name: "Konkurrent", mode: "road" },
     });
 
     const originalFindMany = prisma.tripStop.findMany.bind(prisma.tripStop);

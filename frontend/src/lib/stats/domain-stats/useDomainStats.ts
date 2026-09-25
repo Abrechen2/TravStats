@@ -20,6 +20,8 @@ import type { DomainKey } from "../../../shared/domains";
 import { adaptFlight } from "./flightStatsAdapter";
 import { adaptCruise } from "./cruiseStatsAdapter";
 import { adaptLodging } from "./lodgingStatsAdapter";
+import { adaptRoadtrip } from "./roadtripStatsAdapter";
+import { roadtripsApi } from "../../api/roadtrips";
 import { adaptPoi } from "./poiStatsAdapter";
 import { adaptRail } from "./railStatsAdapter";
 import type { DomainStats, DomainStatsMap, StatsDomain } from "./types";
@@ -124,6 +126,8 @@ async function loadDomain(domain: StatsDomain, flights: Flight[]): Promise<Domai
       ]);
       return adaptPoi({ places, lists, curated });
     }
+    case "roadtrip":
+      return adaptRoadtrip({ roadtrips: await roadtripsApi.list() });
     case "rail":
       return adaptRail({ journeys: await railApi.listAll({ status: "completed" }) });
   }

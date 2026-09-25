@@ -107,7 +107,7 @@
     "city": "Stadt",
     "country": "Land",
     "amenities": "Ausstattung",
-    "amenitiesPlaceholder": "z. B. WLAN, Pool, Parkplatz (kommagetrennt)",
+    "amenitiesPlaceholder": "z. B. WLAN, Pool, Parkplatz",
     "notes": "Notizen",
     "independent": "Unabhängig",
     "staysCount": "{{count}} Aufenthalte",
@@ -137,7 +137,7 @@
     "totalPrice": "Gesamtpreis",
     "pricePerNight": "Preis pro Nacht",
     "roomAmenities": "Zimmerausstattung",
-    "roomAmenitiesPlaceholder": "z. B. Meerblick, Balkon (kommagetrennt)",
+    "roomAmenitiesPlaceholder": "z. B. Meerblick, Balkon",
     "membership": "Bonusprogramm",
     "noMembership": "Kein Bonusprogramm",
     "membershipDerive": "Automatisch (aus der Kette)",
@@ -154,7 +154,10 @@
     "programName": "Programmname",
     "membershipNumber": "Mitgliedsnummer",
     "tier": "Status-Stufe",
-    "ratingOverallDerived": "Ø aus Zimmer, Frühstück und Service"
+    "ratingOverallDerived": "Ø aus Zimmer, Frühstück und Service",
+    "website": "Webseite",
+    "amenitySuggestions": "Deine Ausstattung",
+    "removeAmenity": "{{name}} entfernen"
   },
   "type": {
     "hotel": "Hotel",
@@ -233,7 +236,13 @@
     "notesSection": "Notizen",
     "saveError": "Aufenthalt konnte nicht gespeichert werden",
     "companionsHint": "Diese Buchung galt für {{count}} Personen. Trage die Begleitung ein — der Beleg nennt nur den Buchenden.",
-    "tripSection": "Reise"
+    "tripSection": "Reise",
+    "boardSuggestion": "Sonst meist: {{board}}",
+    "tripDates": {
+      "both": "Reisezeitraum übernehmen: {{from}} – {{to}}",
+      "checkIn": "Reisebeginn als Check-in: {{date}}",
+      "checkOut": "Reiseende als Check-out: {{date}}"
+    }
   },
   "membership": {
     "title": "Bonusprogramme",
@@ -276,7 +285,9 @@
       "commitError": "Import konnte nicht übernommen werden",
       "chooseCurrency": "— Währung —",
       "currencyMissingHint": "Ein Preis braucht eine Währung — bitte für die markierten Zeilen auswählen, sonst wird der Betrag nicht übernommen.",
-      "changedLabel": "geändert"
+      "changedLabel": "geändert",
+      "createAllUndecided": "Alle {{count}} offenen als neu anlegen",
+      "createAllChains": "Alle {{count}} Ketten anlegen"
     },
     "matchedLodgingHint": "Diese Zeile wird mit einem vorhandenen Hotel verknüpft — Name und Ort können hier nicht geändert werden.",
     "matchedAs": "Zugeordnet zu:",

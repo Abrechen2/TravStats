@@ -9,6 +9,7 @@ import { AppError } from "../middleware/errorHandler";
 import * as fx from "../services/fx/resolver";
 import { resolveLocation } from "./lodgingGeocode";
 import proposeRouter from "./lodging/propose";
+import entrySuggestionsRouter from "./lodging/entrySuggestions";
 import { computeAggregates, type LodgingListItem } from "../services/lodging/listView";
 import {
   queryLodgingPage,
@@ -35,6 +36,7 @@ export {
   type LodgingListItem,
 } from "../services/lodging/listView";
 import staysRouter from "./lodging/stays";
+import { createLodgingRecord } from "../services/lodging/createLodging";
 import {
   createLodgingSchema,
   updateLodgingSchema,
@@ -195,6 +197,8 @@ router.get(
 // "Is this that house?" lives in `lodging/propose` — mounted HERE so the
 // literal path is matched before `/:id` could read "propose" as an id.
 router.use(proposeRouter);
+// Same reason: "entry-suggestions" is a literal path, not a lodging id.
+router.use(entrySuggestionsRouter);
 
 router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -227,16 +231,12 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
 
     // dataSource is provenance metadata, never client-set (finding 1) —
     // a lodging created through this endpoint was hand-entered by the user.
-    // Derive from the EFFECTIVE country — `resolveLocation` may have filled it
-    // in from the geocoder, and deriving from the payload alone would miss that.
-    const created = { ...parsed.data, ...location };
-    const lodging = await prisma.lodging.create({
-      data: {
-        ...created,
-        isoCountryCode: resolveCountryCode(created.country ?? null),
-        userId,
-        dataSource: "manual",
-      },
+    // The ISO code is derived from the EFFECTIVE country inside the shared
+    // writer (`services/lodging/createLodging.ts`), which the spreadsheet
+    // import uses too.
+    const lodging = await createLodgingRecord(userId, parsed.data, {
+      dataSource: "manual",
+      location,
       include: LODGING_INCLUDE,
     });
     logger.info({ operation: "lodging_create", lodgingId: lodging.id, userId });

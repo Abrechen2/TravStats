@@ -499,6 +499,44 @@ describe("tripSummaryService", () => {
       ]);
     });
 
+    it("never hands a Strava recording to the model", async () => {
+      // Strava's API agreement (Nov 2024) forbids feeding its data to AI/ML
+      // (design 2026-09-24 §5). Nothing in the brief reads tracks today; this
+      // holds that line when something starts to.
+      const route = await prisma.tripRoute.create({
+        data: { userId, tripId, name: "Laufrunde", mode: "foot" },
+      });
+      await prisma.tripRouteTrack.create({
+        data: {
+          routeId: route.id,
+          source: "strava",
+          name: "Stravalauf am Rheinufer",
+          startedAt: new Date("2026-05-11T06:00:00Z"),
+          endedAt: new Date("2026-05-11T07:00:00Z"),
+          geometry: [
+            [6.96, 50.94],
+            [6.98, 50.93],
+          ],
+          pointCount: 2,
+          distanceKm: 8.4,
+          externalRef: "strava:123",
+        },
+      });
+      let prompt = "";
+      await summariseTrip(tripId, userId, {
+        language: "de",
+        target: { url: "http://fake:11434", model: "fake-model" },
+        generate: async (_target, request) => {
+          prompt = `${request.system}
+${request.prompt}`;
+          return "Zwei Nächte in Köln.";
+        },
+      });
+      expect(prompt).toMatch(/Hotel Chelsea/);
+      expect(prompt).not.toMatch(/Stravalauf|Rheinufer|strava:123|8[.,]4/);
+      await prisma.tripRoute.delete({ where: { id: route.id } });
+    });
+
     it("sends the brief in the requested language to the given Ollama and persists the cleaned answer", async () => {
       const calls: Array<{ url: string; model: string; system: string; prompt: string }> = [];
       const generate: GenerateFn = async (target, { system, prompt }) => {

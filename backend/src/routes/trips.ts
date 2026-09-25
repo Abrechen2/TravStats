@@ -14,6 +14,7 @@ import {
   updateBookingSchema,
   TRIP_COLORS,
 } from "../schemas/trip";
+import { assertMergedTripDates } from "../services/trip/tripDateOrder";
 import logger from "../utils/logger";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { deriveTripStatus } from "../shared/statusDerivation";
@@ -40,6 +41,7 @@ import {
   tripCountries,
   cruiseCountriesByTrip,
   lodgingCountriesByTrip,
+  roadtripCountriesByTrip,
 } from "./trips/tripCountries";
 import { resolveTrip } from "./trips/resolveTrip";
 import { refusesCoverImage } from "./trips/refusesCoverImage";
@@ -137,18 +139,20 @@ router.get(
       // port-to-port hop. One grouped query over every cruise on the page keeps
       // this at a constant query count, like the airport lookup above.
       const cruiseIds = trips.flatMap((t) => t.cruises.map((c) => c.id));
-      const [facts, cruiseCountries, lodgingCountries, legSums] = await Promise.all([
-        airportFactsFor(trips.flatMap((t) => t.flights)),
-        cruiseCountriesByTrip(trips.map((t) => t.id)),
-        lodgingCountriesByTrip(trips.map((t) => t.id)),
-        cruiseIds.length > 0
-          ? prisma.cruiseLeg.groupBy({
-              by: ["cruiseId"],
-              where: { cruiseId: { in: cruiseIds } },
-              _sum: { distanceKm: true },
-            })
-          : Promise.resolve([]),
-      ]);
+      const [facts, cruiseCountries, lodgingCountries, roadtripCountries, legSums] =
+        await Promise.all([
+          airportFactsFor(trips.flatMap((t) => t.flights)),
+          cruiseCountriesByTrip(trips.map((t) => t.id)),
+          lodgingCountriesByTrip(trips.map((t) => t.id)),
+          roadtripCountriesByTrip(trips.map((t) => t.id)),
+          cruiseIds.length > 0
+            ? prisma.cruiseLeg.groupBy({
+                by: ["cruiseId"],
+                where: { cruiseId: { in: cruiseIds } },
+                _sum: { distanceKm: true },
+              })
+            : Promise.resolve([]),
+        ]);
       const distanceByCruise = new Map(
         legSums.map((row) => [row.cruiseId, row._sum.distanceKm ?? 0])
       );
@@ -168,7 +172,8 @@ router.get(
             t.flights,
             facts,
             cruiseCountries.get(t.id) ?? [],
-            lodgingCountries.get(t.id) ?? []
+            lodgingCountries.get(t.id) ?? [],
+            roadtripCountries.get(t.id) ?? []
           ),
         })),
         ...(includeInsights && { mostExpensiveTrip: mostExpensive }),
@@ -376,7 +381,10 @@ router.get(
             orderBy: { startDate: "asc" },
           },
           stops: { orderBy: [{ orderIdx: "asc" }, { startDate: "asc" }] },
-          journalEntries: { orderBy: { date: "asc" } },
+          journalEntries: {
+            orderBy: { date: "asc" },
+            include: { photos: { orderBy: { sortIdx: "asc" }, include: { tripPhoto: true } } },
+          },
           photos: { orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }] },
           immichAlbums: { orderBy: { sortIdx: "asc" } },
           // A LodgingStay linked to this trip (StayEditor's tripId picker) —
@@ -397,10 +405,11 @@ router.get(
       // off), and the countries tile stayed at 0 because `trips.countries` is a
       // stored column nobody derives and `overflownCountries` is empty for
       // manually created flights.
-      const [facts, cruiseCountries, lodgingCountries] = await Promise.all([
+      const [facts, cruiseCountries, lodgingCountries, roadtripCountries] = await Promise.all([
         airportFactsFor(trip.flights),
         cruiseCountriesByTrip([trip.id]),
         lodgingCountriesByTrip([trip.id]),
+        roadtripCountriesByTrip([trip.id]),
       ]);
       const flights = trip.flights.map((f) => ({
         ...f,
@@ -412,9 +421,15 @@ router.get(
         trip.flights,
         facts,
         cruiseCountries.get(trip.id) ?? [],
-        lodgingCountries.get(trip.id) ?? []
+        lodgingCountries.get(trip.id) ?? [],
+        roadtripCountries.get(trip.id) ?? []
       );
-      res.json({ trip: { ...trip, photos, flights, countries } });
+      // Each entry carries the photos it shows, in the gallery's own shape.
+      const journalEntries = trip.journalEntries.map(({ photos: links, ...entry }) => ({
+        ...entry,
+        photos: links.map((link) => toPhotoDto(link.tripPhoto)),
+      }));
+      res.json({ trip: { ...trip, photos, flights, countries, journalEntries } });
     } catch (error) {
       next(error);
     }
@@ -526,6 +541,11 @@ router.patch(
       const body = updateTripSchema.parse(req.body);
       if (await refusesCoverImage(userId, body.coverImageUrl, res)) return;
 
+      // Judged on what the PATCH leaves behind — moving only the end date
+      // before the stored start would otherwise answer 200 and store a trip
+      // that ends before it begins (SRV-TRIP-DATE-001).
+      assertMergedTripDates(body, existing);
+
       // Status derivation (spec 2026-07-17-status-from-dates): the schema
       // still ACCEPTS `status` for API compat (never a 400), but the route
       // ignores it — a stale client's guess must not fight the derivation.
@@ -616,7 +636,25 @@ router.delete(
       });
       if (!existing) throw new AppError("Trip not found", 404);
 
-      await prisma.trip.delete({ where: { id: req.params.id } });
+      // A roadtrip is a domain of its own and outlives the trip, as a flight
+      // or a cruise does; the schema's cascade is right for a day tour drawn
+      // over the trip's timeline and wrong for it. Its stations borrowed from
+      // the timeline become its own first — they would go with the trip.
+      await prisma.$transaction(async (tx) => {
+        const roadtrips = await tx.tripRoute.findMany({
+          where: { tripId: existing.id, kind: "roadtrip" },
+          select: { id: true },
+        });
+        const ids = roadtrips.map((r) => r.id);
+        if (ids.length > 0) {
+          await tx.tripStop.updateMany({
+            where: { routeId: { in: ids }, tripId: existing.id },
+            data: { tripId: null, domain: "roadtrip" },
+          });
+          await tx.tripRoute.updateMany({ where: { id: { in: ids } }, data: { tripId: null } });
+        }
+        await tx.trip.delete({ where: { id: existing.id } });
+      });
       logger.info({ tripId: req.params.id, userId }, "[Trips] Deleted trip");
       res.status(204).send();
     } catch (error) {

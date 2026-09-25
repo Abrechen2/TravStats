@@ -9,9 +9,18 @@
  */
 
 import api from "./../api/client";
-import { parseWorkbook } from "./workbook";
-import { cruiseSheet, flightSheet, lodgingSheet, placeSheet, placeVisitSheet } from "./sheets";
+import { parseWorkbook, type ParsedSheet } from "./workbook";
+import {
+  cruiseSheet,
+  cruiseStopSheet,
+  flightSheet,
+  lodgingSheet,
+  lodgingStaySheet,
+  placeSheet,
+  placeVisitSheet,
+} from "./sheets";
 import type { SheetSpec } from "./sheetSpec";
+import { roadtripSheet, roadtripStationSheet, tourPointSheet, tourSheet } from "./roadtripSheets";
 
 type T = (key: string) => string;
 
@@ -25,7 +34,14 @@ export interface RowOutcome {
   action: RowAction;
   id: string | null;
   label: string;
+  /** Error reason, or how an existing entry was found (`matched_existing`). */
   message?: string;
+  /** Non-fatal remarks, e.g. `trip_not_linked`. */
+  notes?: string[];
+  /** Cells the column does not know — the row is still applied. `kept` when
+   *  the row resolved to an existing entry, whose stored value then stays;
+   *  absent on a create, where the field is left empty. */
+  dropped?: { field: string; value: string; kept?: true }[];
 }
 
 export interface SheetOutcome {
@@ -51,34 +67,34 @@ export interface ImportOutcome {
 }
 
 /**
- * The sheets the server can apply.
+ * The sheets the server can apply — every sheet the export writes, in the
+ * export's own order (the tab names are de-duplicated in sequence, so reader
+ * and writer must walk the same list).
  *
- * Visits are here because a visit is the point of recording a place — the
- * McDonald's case is fifteen restaurants and seventeen orders, and without
- * this the seventeen had no way in.
- *
- * Cruise stops and lodging stays are still export-only. Each needs rules of
- * its own that a place visit does not: a stop has to renumber its day index
- * and keep the port/sea-day/unresolved invariant, and a stay must not
- * overwrite the nights the server computes. Sending them before those exist
- * would let someone edit a row and watch nothing happen, which is worse than
- * not offering it — so they are not sent, and the sheet says so.
+ * Cruise stops and lodging stays joined on 2026-09-25: the workbook is for
+ * editing AND moving entries, and a moved hotel without its stays, or a
+ * cruise without its itinerary, is not a moved entry.
  */
-function importableSpecs(t: T): SheetSpec<never>[] {
+export function importableSpecs(t: T): SheetSpec<never>[] {
   return [
     flightSheet(t),
+    cruiseSheet(t),
+    cruiseStopSheet(t),
+    lodgingSheet(t),
+    lodgingStaySheet(t),
     placeSheet(t),
     placeVisitSheet(t),
-    cruiseSheet(t),
-    lodgingSheet(t),
+    // Roadtrips before their stations, tours after both — the export's order
+    // and the order the server applies them in.
+    roadtripSheet(t),
+    roadtripStationSheet(t),
+    tourSheet(t),
+    tourPointSheet(t),
   ] as unknown as SheetSpec<never>[];
 }
 
 /** Read the workbook into the payload shape the server expects. */
-export async function readWorkbookForImport(
-  t: T,
-  file: File
-): Promise<{ key: string; rows: Record<string, string>[] }[]> {
+export async function readWorkbookForImport(t: T, file: File): Promise<ParsedSheet[]> {
   const buffer = await file.arrayBuffer();
   const parsed = await parseWorkbook(buffer, importableSpecs(t));
   return parsed.filter((sheet) => sheet.rows.length > 0);
@@ -105,7 +121,7 @@ export class ImportRefused extends Error {
 }
 
 export async function sendImport(
-  sheets: { key: string; rows: Record<string, string>[] }[],
+  sheets: ParsedSheet[],
   dryRun: boolean,
   mode: ImportMode = "merge"
 ): Promise<ImportOutcome> {

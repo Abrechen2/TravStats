@@ -1,16 +1,17 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent, screen } from "@testing-library/react";
+import { render, fireEvent, screen, within } from "@testing-library/react";
 
 import CostFields, { type CostFieldsValue } from "../CostFields";
 
 vi.mock("../../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
-vi.mock("../../../CurrencyInput", () => ({
-  default: ({ value, onChange }: { value: string; onChange: (v: string) => void }) => (
-    <input data-testid="currency-input" value={value} onChange={(e) => onChange(e.target.value)} />
-  ),
-}));
+// The real picker, fed a history — the point of the flight field is that it
+// offers the same "your currencies first" list as every other domain.
+vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
+  const actual = await importOriginal<typeof import("@/hooks/useRecentCurrencies")>();
+  return { ...actual, useRecentCurrencies: () => ["NOK", "EGP"] };
+});
 vi.mock("../../../ReceiptUpload", () => ({
   default: ({
     currentReceiptUrl,
@@ -54,8 +55,22 @@ describe("CostFields", () => {
     );
 
     expect(byPlaceholder(container, "price").value).toBe("199.99");
-    expect(screen.getByTestId("currency-input")).toBeInTheDocument();
+    expect(screen.getByRole("combobox")).toHaveValue("EUR");
     expect(screen.getByTestId("receipt-upload")).toBeInTheDocument();
+  });
+
+  it("offers the user's recently used currencies first, like every other domain", () => {
+    render(<CostFields value={VALUE} onChange={() => {}} showBreakdown={false} />);
+    const frequent = screen.getByRole("group", { name: /currencySelect.frequent/i });
+    expect(within(frequent).getByText(/NOK/)).toBeInTheDocument();
+    expect(within(frequent).getByText(/EGP/)).toBeInTheDocument();
+  });
+
+  it("emits the picked currency", () => {
+    const onChange = vi.fn();
+    render(<CostFields value={VALUE} onChange={onChange} showBreakdown={false} />);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "NOK" } });
+    expect(onChange).toHaveBeenCalledWith({ ...VALUE, currency: "NOK" });
   });
 
   it("renders taxes and fees only when the breakdown is enabled (#192)", () => {

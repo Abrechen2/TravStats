@@ -57,7 +57,6 @@
   "PATCH /lodging-memberships/{id}",
   "PATCH /lodging/{lodgingId}/photos/{photoId}",
   "PATCH /parser-templates/{id}",
-  "PATCH /photo-journeys/{id}",
   "PATCH /places/visits/{visitId}",
   "PATCH /places/visits/{visitId}/photos/{photoId}",
   "PATCH /places/{id}",

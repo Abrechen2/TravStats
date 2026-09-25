@@ -9,7 +9,15 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ACCENT, BORDER, PANEL_BG, TEXT } from "../map/controlPanelKit";
 
-export type AddableDomain = "flight" | "cruise" | "lodging" | "poi" | "rail";
+/**
+ * "tour" is in here and is NOT a domain in `shared/domains.ts`: it has no
+ * domain toggle, no map colour mode and no modal. It is an entry in this
+ * menu because a tour may belong to no trip since 2026-09-21, and the
+ * reader asked for it where everything else is created (Alex, 2026-09-20).
+ * The caller decides what a pick does — this one opens a page rather than
+ * a modal.
+ */
+export type AddableDomain = "flight" | "cruise" | "lodging" | "poi" | "roadtrip" | "rail" | "tour";
 
 interface AddDomainPickerProps {
   enabled: Record<AddableDomain, boolean>;
@@ -35,6 +43,8 @@ export function AddDomainPicker({ enabled, onPick }: AddDomainPickerProps): JSX.
   if (enabled.cruise) options.push({ key: "cruise", label: t("dashboard:addPicker.cruise") });
   if (enabled.lodging) options.push({ key: "lodging", label: t("dashboard:addPicker.lodging") });
   if (enabled.poi) options.push({ key: "poi", label: t("dashboard:addPicker.poi") });
+  if (enabled.roadtrip) options.push({ key: "roadtrip", label: t("dashboard:addPicker.roadtrip") });
+  if (enabled.tour) options.push({ key: "tour", label: t("dashboard:addPicker.tour") });
   // `enabled.rail` is the combined rule (beta switch AND domain) — see
   // DashboardLayout's `addableDomains`.
   if (enabled.rail) options.push({ key: "rail", label: t("dashboard:addPicker.rail") });

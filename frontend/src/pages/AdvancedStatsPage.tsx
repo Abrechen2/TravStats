@@ -51,6 +51,7 @@ import CruiseStatsSection from "../components/Stats/CruiseStatsSection";
 import LodgingStatsSection from "../components/Stats/LodgingStatsSection";
 import PoiStatsSection from "../components/Stats/PoiStatsSection";
 import RailStatsSection from "../components/Stats/rail/RailStatsSection";
+import RoadtripStatsSection from "../components/Stats/RoadtripStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
 import FlightScorecardBlock from "../components/Stats/scorecard/FlightScorecardBlock";
 import type { WindowKind } from "../components/Stats/scorecard/TimeRangeControl";
@@ -581,6 +582,9 @@ export default function AdvancedStatsPage(): JSX.Element {
               tearing it away a moment later. */}
           {effectiveFilter === "poi" && placesAccess === "allowed" && (
             <PoiStatsSection scope={scope} visibility={sections} />
+          )}
+          {effectiveFilter === "roadtrip" && (
+            <RoadtripStatsSection scope={scope} visibility={sections} />
           )}
           {effectiveFilter === "rail" && <RailStatsSection scope={scope} visibility={sections} />}
 

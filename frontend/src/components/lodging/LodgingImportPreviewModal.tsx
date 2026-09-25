@@ -1,17 +1,23 @@
-import { Fragment, useCallback, useMemo, useState } from "react";
+import { useCallback, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatStayPeriod, hasUnknownLength, stayNights } from "../../lib/lodgingDateDisplay";
 import { logger } from "../../lib/logger";
-import { ECB_CURRENCIES, ISO_4217 } from "../../shared/currencies";
-import type { LodgingCurrency } from "../../types/lodging";
 import type {
-  LodgingDedupeHint,
   LodgingImportCommitRow,
-  LodgingImportMatchedStay,
   LodgingImportPreviewRow,
   LodgingImportSummary,
 } from "../../types/lodgingImport";
+import {
+  isEmptyStay,
+  priceLacksCurrency,
+  toEditableRow,
+  type EditableRow,
+} from "./lodgingImportRowModel";
+import { PreviewRowLine } from "./LodgingImportPreviewRow";
+
+// Re-exported because the suite imports them from here, and because this
+// is the surface everything else in the app already knows.
+export { currencyOptionGroups, isEmptyStay, parseTotalPriceInput } from "./lodgingImportRowModel";
 
 export interface LodgingImportPreviewModalProps {
   rows: LodgingImportPreviewRow[];
@@ -28,171 +34,6 @@ export interface LodgingImportPreviewModalProps {
    */
   onCommit: (rows: LodgingImportCommitRow[]) => Promise<void>;
   onCancel: () => void;
-}
-
-/**
- * The row plus the user's in-modal edits. Immutable updates only.
- * `decision` deliberately excludes "needs_input" — the <select> only ever
- * offers "" / "create" / "skip", so a resolved row can never regress back
- * to `needs_input` through the UI.
- */
-interface EditableRow extends LodgingImportPreviewRow {
-  /**
-   * "" while a needs_input row is still undecided.
-   *
-   * `update` is offered only for a row the server classified that way — a
-   * changed booking under a stored reference (forgejo#122). It is never a
-   * choice on any other row: there would be no stay to move.
-   */
-  decision: "" | "create" | "skip" | "update";
-}
-
-const INPUT =
-  "w-full rounded-md border border-[var(--color-border)] bg-[var(--bg-surface)] px-2 py-1.5 text-sm text-[var(--text-primary)] focus:border-[var(--accent)] focus:outline-none";
-
-/**
- * Matches that are GUESSES. A proven identity (an external reference, or a
- * stay reference) is not up for debate; these three are, and the user could
- * accept them or skip the whole row — but not say "no, this is a different
- * house". `create` on such a row carried the guessed id along and attached
- * the stay to the wrong hotel (AUD-056).
- */
-const HEURISTIC_MATCH: ReadonlySet<LodgingDedupeHint> = new Set([
-  "lodging_name_city",
-  "lodging_name_similar",
-  "lodging_nearby",
-]);
-
-/**
- * An amount whose unit is not known. The commit refuses to store such a
- * price rather than invent a currency, and reported the row as a success
- * with the price silently gone — because this dialog had a price field and
- * no currency field (AUD-057). The row is held back until the unit is set.
- */
-function priceLacksCurrency(row: EditableRow): boolean {
-  return (
-    row.decision === "create" &&
-    row.stay !== null &&
-    (row.stay.totalPrice != null || row.stay.pricePerNight != null) &&
-    !row.stay.currency
-  );
-}
-
-/**
- * Every ISO 4217 code the server accepts, the ECB set first. Offering only the
- * ECB set meant a price in dirham or dinar could be KEPT when the row already
- * carried it, but never CHOSEN when the parser left the unit empty — so the
- * one row the picker exists for could not be completed (AUD-057, 13.09.).
- */
-export function currencyOptionGroups(current: string | null | undefined): {
-  frequent: readonly string[];
-  rest: readonly string[];
-} {
-  const ecb: readonly string[] = ECB_CURRENCIES;
-  const frequent = current && !ecb.includes(current) ? [current, ...ecb] : ecb;
-  const rest = Object.keys(ISO_4217)
-    .filter((code) => !frequent.includes(code))
-    .sort();
-  return { frequent, rest };
-}
-
-function toEditableRow(row: LodgingImportPreviewRow): EditableRow {
-  return { ...row, decision: row.action === "needs_input" ? "" : row.action };
-}
-
-/**
- * How the existing stay is written in the hint: "20.09.2026 – 21.09.2026
- * (1 Nacht)".
- *
- * Through `formatStayPeriod`, the same helper the stay cards use, so the period
- * cannot be written one way on the lodging page and another here — and so a
- * month-precision or undated stay is never printed as a range it does not
- * have. The nights are appended only when the record says: "(0 Nächte)" beside
- * a stay the user is asked to judge would be a measurement nobody took.
- */
-function matchedStayLabel(
-  stay: LodgingImportMatchedStay,
-  language: string,
-  t: (key: string, options?: Record<string, unknown>) => string
-): string {
-  const period = formatStayPeriod(stay, language, t).label;
-  return hasUnknownLength(stay)
-    ? period
-    : `${period} (${t("lodging:field.nightsCount", { count: stayNights(stay) })})`;
-}
-
-/** What a changed booking would move, as "field: old → new". */
-function changeSummary(row: EditableRow): string {
-  return (row.changes ?? []).map((c) => `${c.field}: ${c.from ?? "—"} → ${c.to ?? "—"}`).join(", ");
-}
-
-/**
- * An UNMATCHED row's lodging/stay fields are editable regardless of which of
- * the "3 real shapes" (spec: types/lodgingImport.ts) the candidate started
- * as — e.g. a stays-only row whose free-text name failed to match
- * (`needs_input`, `unresolvable_lodging_name`) can be turned into a
- * brand-new lodging by filling in its city, which the commit service
- * (`lodgingImportCommit.ts`) happily accepts: it only reads `row.lodging`
- * when `matchedLodgingId` is still unset. These two helpers lazily create
- * the missing half on first edit instead of leaving the field disabled.
- *
- * A MATCHED row (`matchedLodgingId` already set) is the opposite case: the
- * commit service never reads `row.lodging` for it (it attaches a stay to the
- * existing lodging instead), so `PreviewRowLine` renders its name/city as
- * read-only rather than let the user edit a value that would be silently
- * discarded on commit.
- */
-function ensureLodging(row: EditableRow, name: string): NonNullable<EditableRow["lodging"]> {
-  return row.lodging ?? { name };
-}
-function ensureStay(row: EditableRow): NonNullable<EditableRow["stay"]> {
-  return row.stay ?? { checkIn: "", checkOut: "" };
-}
-
-/**
- * `ensureStay` above is a one-way door: the first touch of ANY stay input on
- * a stay-less row materializes `stay: {checkIn: "", checkOut: ""}`, and
- * nothing in this UI ever sets `stay` back to `null` — there is no "clear
- * stay" control. If the user touches a stay field and then clears it again
- * (or never fills in real dates), the row would otherwise commit an
- * all-empty stay object that 400s wholesale on the backend's `isoDay` regex.
- * `handleCommit` calls this to fold such a stay back to `null` right before
- * building the payload, so a touch-then-clear on a places-only row is a
- * genuine no-op rather than a dead end.
- */
-export function isEmptyStay(stay: NonNullable<EditableRow["stay"]>): boolean {
-  return (
-    stay.checkIn === "" &&
-    stay.checkOut === "" &&
-    stay.totalPrice == null &&
-    stay.roomCategory == null &&
-    stay.board == null &&
-    stay.currency == null &&
-    stay.ratingRoom == null &&
-    stay.ratingBreakfast == null &&
-    stay.ratingService == null &&
-    stay.ratingOverall == null &&
-    stay.bookingReference == null &&
-    stay.externalRef == null &&
-    stay.notes == null
-  );
-}
-
-/**
- * Parses the raw string from the total-price `<input type="number">` into a
- * finite number or `null`. `??`/a plain falsy check does not catch `NaN`
- * (`NaN ?? 0` is still `NaN`) — without `Number.isFinite`, a malformed entry
- * would silently store `NaN` and echo "NaN" back into this controlled
- * input. Exported standalone (rather than inlined in the `onChange`) so it
- * can be unit-tested directly: jsdom (and real browsers) sanitize an
- * invalid `type="number"` DOM value to `""` before a change event ever
- * fires, so a DOM-level test cannot actually drive a non-numeric string
- * through `e.target.value`.
- */
-export function parseTotalPriceInput(raw: string): number | null {
-  if (!raw) return null;
-  const n = Number(raw);
-  return Number.isFinite(n) ? n : null;
 }
 
 /**
@@ -229,6 +70,54 @@ export function LodgingImportPreviewModal({
     const changed = edited.filter((r) => r.decision === "update").length;
     return { newRows, alreadyPresent, needsInput, changed };
   }, [edited]);
+
+  /**
+   * The two bulk actions.
+   *
+   * A first lodging import has an unknown chain on very nearly every row,
+   * so the per-row tick and the per-row action select are the same two
+   * clicks repeated as often as the file is long — a tester measured ten
+   * minutes on his own list (Alex, 2026-09-20). What was right about the
+   * per-row design stays: an unknown chain is an OFFER, never a silent
+   * create, and the reader still reads the list before deciding.
+   *
+   * So both act only on rows nobody has answered yet, never overwrite a
+   * decision the reader already made by hand, and are two separate buttons
+   * because they answer two separate questions — "import these" and "create
+   * the chains they name".
+   *
+   * The undecided ones are exactly the `needs_input` rows: the server saw a
+   * POSSIBLE match and declined to guess. So this button is named for what
+   * it does — create them anyway — and not "accept", which would suggest
+   * the server had recommended something. The hint under it says what is
+   * being overruled; a reader who wants the matches keeps skipping by hand.
+   */
+  const undecidedCount = useMemo(() => edited.filter((r) => r.decision === "").length, [edited]);
+
+  const uncheckedChains = useMemo(
+    () =>
+      edited.filter(
+        (r) =>
+          r.flags.includes("unknown_chain") &&
+          r.lodging?.chainName !== undefined &&
+          r.lodging.createChain !== true
+      ).length,
+    [edited]
+  );
+
+  const createAllUndecided = useCallback((): void => {
+    setEdited((prev) => prev.map((r) => (r.decision === "" ? { ...r, decision: "create" } : r)));
+  }, []);
+
+  const createAllChains = useCallback((): void => {
+    setEdited((prev) =>
+      prev.map((r) =>
+        r.flags.includes("unknown_chain") && r.lodging?.chainName !== undefined
+          ? { ...r, lodging: { ...r.lodging, createChain: true } }
+          : r
+      )
+    );
+  }, []);
 
   const pricesWithoutCurrency = useMemo(() => edited.filter(priceLacksCurrency).length, [edited]);
 
@@ -360,6 +249,31 @@ export function LodgingImportPreviewModal({
           </p>
         )}
 
+        {(undecidedCount > 0 || uncheckedChains > 0) && (
+          <div className="mb-3 flex flex-wrap items-center gap-2">
+            {undecidedCount > 0 && (
+              <button
+                type="button"
+                data-testid="lodging-import-create-all-undecided"
+                onClick={createAllUndecided}
+                className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              >
+                {t("lodging:import.preview.createAllUndecided", { count: undecidedCount })}
+              </button>
+            )}
+            {uncheckedChains > 0 && (
+              <button
+                type="button"
+                data-testid="lodging-import-create-all-chains"
+                onClick={createAllChains}
+                className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+              >
+                {t("lodging:import.preview.createAllChains", { count: uncheckedChains })}
+              </button>
+            )}
+          </div>
+        )}
+
         {error !== null && (
           <p
             role="alert"
@@ -422,372 +336,5 @@ export function LodgingImportPreviewModal({
         </div>
       </div>
     </div>
-  );
-}
-
-interface PreviewRowLineProps {
-  row: EditableRow;
-  onChange: (sourceRowIndex: number, patch: Partial<EditableRow>) => void;
-  t: (key: string, options?: Record<string, unknown>) => string;
-  /** For `formatStayPeriod`, which names the month of a month-precision stay. */
-  language: string;
-}
-
-/**
- * ONE entry, across TWO table rows: the editable fields, then the hints as a
- * full-width line beneath them.
- *
- * They shared a row until 2026-09-19, and the hint cell was the narrowest
- * column carrying the longest text — "Aufenthalt bereits vorhanden (gleiche
- * Referenz)" wrapped to three lines and took the width the action control
- * needed, which then clipped its own selected value to "Übersp…". A reader
- * could neither see what the row would do nor that "Anlegen" was among the
- * choices. `colSpan` costs nothing and cannot be squeezed.
- */
-function PreviewRowLine({ row, onChange, t, language }: PreviewRowLineProps): JSX.Element {
-  const { sourceRowIndex } = row;
-  const name = row.lodging?.name ?? row.lodgingName ?? "";
-  // A row can be `action: "create"` while `matchedLodgingId` already points
-  // at an existing hotel — that row creates a STAY, not a new hotel. Show
-  // the dedupe hint whenever a match exists, independent of the chosen
-  // action, so the user is never told a hotel will be added when it won't.
-  const showDedupeHint = row.dedupeHint !== "none";
-  // A matched row attaches its stay to the EXISTING lodging on commit — the
-  // commit service never reads `row.lodging` for it (lodgingImportCommit.ts:
-  // `if (!lodgingId && row.lodging)`). Editing name/city here would look
-  // saved but be silently discarded, so these two fields render read-only
-  // instead of as editable inputs. Note `matchedLodgingId` can be set with
-  // `dedupeHint === "none"` (the stays-only by-name join never sets a
-  // dedupe hint), so this must be its own check, not derived from
-  // `showDedupeHint`.
-  const isMatched = row.matchedLodgingId !== null;
-  const needsCurrency = priceLacksCurrency(row);
-  const attention = row.decision === "" || needsCurrency;
-  // A stay that already exists is the one case where the reader has to be told
-  // that creating anyway is possible — the server's own choice is `skip` or
-  // `update`, and both read as "nothing to decide here".
-  const offersCreateAnyway = row.matchedStayId !== null && row.decision !== "create";
-  // Whether the second row has anything in it. Derived from the same four
-  // conditions the cells below render on, so a silent drift cannot leave an
-  // empty band under an entry.
-  const hasHints =
-    row.flags.length > 0 ||
-    showDedupeHint ||
-    row.matchedStay != null ||
-    (row.action === "update" && (row.changes ?? []).length > 0);
-
-  return (
-    <Fragment>
-      <tr
-        className={
-          attention
-            ? "border-t border-[var(--color-border)] bg-amber-500/5"
-            : "border-t border-[var(--color-border)]"
-        }
-      >
-        <td className="p-2">
-          {isMatched ? (
-            <div>
-              <div
-                data-testid={`lodging-import-name-${sourceRowIndex}`}
-                aria-label={t("lodging:import.fields.name")}
-                title={t("lodging:import.matchedLodgingHint")}
-                className={`${INPUT} cursor-not-allowed truncate text-[var(--text-muted)]`}
-              >
-                {name}
-              </div>
-              {/* The house the guess points at — plain JSX, not interpolated,
-                so the test mock (which drops t() options) still shows it. */}
-              {row.matchedLodgingName && (
-                <p
-                  data-testid={`lodging-import-matched-name-${sourceRowIndex}`}
-                  className="mt-1 text-[10px] text-emerald-300"
-                >
-                  {t("lodging:import.matchedAs")} {row.matchedLodgingName}
-                </p>
-              )}
-              <p className="mt-1 text-[10px] text-[var(--text-muted)]">
-                {t("lodging:import.matchedLodgingHint")}
-              </p>
-              {(row.matchIsGuess ?? HEURISTIC_MATCH.has(row.dedupeHint)) && (
-                <button
-                  type="button"
-                  data-testid={`lodging-import-reject-match-${sourceRowIndex}`}
-                  onClick={(): void =>
-                    // Rejecting the guess makes this an ordinary unmatched row:
-                    // the fields unlock, and `create` then creates a NEW house.
-                    // Every trace of the match goes, `matchedStay` included —
-                    // a described stay left behind would keep the hint line
-                    // open (`hasHints`) and name a stay in a house this row no
-                    // longer claims to be.
-                    // A stays-only row carries no house of its own, only the
-                    // name it was joined by; it gets one here, or `create`
-                    // would have nothing to create and fail.
-                    onChange(sourceRowIndex, {
-                      matchedLodgingId: null,
-                      matchedLodgingName: null,
-                      matchIsGuess: false,
-                      matchedStayId: null,
-                      matchedStay: null,
-                      dedupeHint: "none",
-                      lodging: ensureLodging(row, name),
-                    })
-                  }
-                  className="mt-1 text-[10px] text-[var(--accent)] underline-offset-2 hover:underline"
-                >
-                  {t("lodging:import.rejectMatch")}
-                </button>
-              )}
-            </div>
-          ) : (
-            <input
-              data-testid={`lodging-import-name-${sourceRowIndex}`}
-              value={name}
-              onChange={(e): void =>
-                onChange(sourceRowIndex, {
-                  // Immutable: a NEW lodging object, never a mutation of the
-                  // prop. Mirrors the city-edit path below: a name edit on a
-                  // NON-matched row must materialize `row.lodging` — otherwise
-                  // `commitRowSchema` has no `lodgingName` field, commit reads
-                  // only `lodging`/`matchedLodgingId`, and an unresolved row the
-                  // user only renamed is guaranteed to fail with
-                  // `missing_lodging_reference`.
-                  lodging: { ...ensureLodging(row, name), name: e.target.value },
-                  lodgingName: e.target.value,
-                })
-              }
-              aria-label={t("lodging:import.fields.name")}
-              className={INPUT}
-            />
-          )}
-        </td>
-        <td className="p-2">
-          {isMatched ? (
-            <div
-              data-testid={`lodging-import-city-${sourceRowIndex}`}
-              aria-label={t("lodging:import.fields.city")}
-              title={t("lodging:import.matchedLodgingHint")}
-              className={`${INPUT} cursor-not-allowed truncate text-[var(--text-muted)]`}
-            >
-              {row.lodging?.city ?? ""}
-            </div>
-          ) : (
-            <input
-              data-testid={`lodging-import-city-${sourceRowIndex}`}
-              value={row.lodging?.city ?? ""}
-              onChange={(e): void =>
-                onChange(sourceRowIndex, {
-                  lodging: { ...ensureLodging(row, name), city: e.target.value },
-                })
-              }
-              aria-label={t("lodging:import.fields.city")}
-              className={INPUT}
-            />
-          )}
-        </td>
-        <td className="p-2">
-          <input
-            type="date"
-            data-testid={`lodging-import-checkin-${sourceRowIndex}`}
-            value={row.stay?.checkIn ?? ""}
-            onChange={(e): void =>
-              onChange(sourceRowIndex, {
-                stay: { ...ensureStay(row), checkIn: e.target.value },
-              })
-            }
-            style={{ colorScheme: "dark" }}
-            aria-label={t("lodging:import.fields.checkIn")}
-            className={INPUT}
-          />
-        </td>
-        <td className="p-2">
-          <input
-            type="date"
-            data-testid={`lodging-import-checkout-${sourceRowIndex}`}
-            value={row.stay?.checkOut ?? ""}
-            onChange={(e): void =>
-              onChange(sourceRowIndex, {
-                stay: { ...ensureStay(row), checkOut: e.target.value },
-              })
-            }
-            style={{ colorScheme: "dark" }}
-            aria-label={t("lodging:import.fields.checkOut")}
-            className={INPUT}
-          />
-        </td>
-        <td className="p-2">
-          <input
-            type="number"
-            data-testid={`lodging-import-price-${sourceRowIndex}`}
-            value={row.stay?.totalPrice ?? ""}
-            onChange={(e): void =>
-              onChange(sourceRowIndex, {
-                stay: { ...ensureStay(row), totalPrice: parseTotalPriceInput(e.target.value) },
-              })
-            }
-            aria-label={t("lodging:import.fields.totalPrice")}
-            className={INPUT}
-          />
-        </td>
-        <td className="p-2">
-          {/* Only once a stay exists — a currency alone would materialise an
-            all-empty stay (see `isEmptyStay`) that the backend refuses. */}
-          {row.stay !== null && (
-            <select
-              data-testid={`lodging-import-currency-${sourceRowIndex}`}
-              value={row.stay.currency ?? ""}
-              onChange={(e): void =>
-                onChange(sourceRowIndex, {
-                  stay: {
-                    ...ensureStay(row),
-                    currency: e.target.value ? (e.target.value as LodgingCurrency) : null,
-                  },
-                })
-              }
-              aria-label={t("lodging:import.fields.currency")}
-              className={INPUT}
-            >
-              <option value="">{t("lodging:import.preview.chooseCurrency")}</option>
-              <optgroup label={t("common:currencySelect.frequent")}>
-                {currencyOptionGroups(row.stay.currency).frequent.map((code) => (
-                  <option key={code} value={code}>
-                    {code}
-                  </option>
-                ))}
-              </optgroup>
-              <optgroup label={t("common:currencySelect.all")}>
-                {currencyOptionGroups(row.stay.currency).rest.map((code) => (
-                  <option key={code} value={code}>
-                    {code}
-                  </option>
-                ))}
-              </optgroup>
-            </select>
-          )}
-        </td>
-        <td className="p-2">
-          <select
-            data-testid={`lodging-import-action-${sourceRowIndex}`}
-            value={row.decision}
-            onChange={(e): void =>
-              onChange(sourceRowIndex, {
-                decision: e.target.value as EditableRow["decision"],
-              })
-            }
-            aria-label={t("lodging:import.fields.action")}
-            // A width, not a truncation: the longest option is the German
-            // "Aktualisieren", and a `w-full` select in a narrow column cut
-            // its OWN selected value down to "Übersp…" — so the row said
-            // nothing at all about what it would do.
-            className={`${INPUT} min-w-[11rem]`}
-          >
-            <option value="">{t("lodging:import.actions.choose")}</option>
-            <option value="create">{t("lodging:import.actions.create")}</option>
-            <option value="skip">{t("lodging:import.actions.skip")}</option>
-            {row.action === "update" && (
-              <option value="update">{t("lodging:import.actions.update")}</option>
-            )}
-          </select>
-          {/* The one control that names the alternative out loud.
-            A <select> keeps its options behind a click, and the owner's
-            complaint was exactly that: with a stay already on file the row
-            read "Überspringen" and gave no sign that creating was even
-            possible. The select stays — it is the full chooser, and every
-            decision still travels through `decision` — and this button is the
-            missing affordance, shown only where the server's own choice hides
-            an alternative the reader may want. */}
-          {offersCreateAnyway && (
-            <button
-              type="button"
-              data-testid={`lodging-import-create-anyway-${sourceRowIndex}`}
-              onClick={(): void => onChange(sourceRowIndex, { decision: "create" })}
-              title={t("lodging:import.createAnywayHint")}
-              className="mt-1 block text-[10px] text-[var(--accent)] underline-offset-2 hover:underline"
-            >
-              {t("lodging:import.createAnyway")}
-            </button>
-          )}
-        </td>
-      </tr>
-      {/* The hints, full width under the entry they belong to, and only
-          when there is something to say — an empty second row is a gap
-          the reader has to account for. */}
-      {hasHints && (
-        <tr className={attention ? "bg-amber-500/5" : undefined}>
-          <td colSpan={7} className="px-2 pb-2">
-            <div className="flex flex-wrap gap-1">
-              {row.flags.map((flag) => (
-                <span
-                  key={flag}
-                  title={t(`lodging:import.flags.${flag}`)}
-                  className="rounded bg-amber-500/15 px-1.5 py-0.5 text-[10px] text-amber-300"
-                >
-                  {t(`lodging:import.flags.${flag}`)}
-                </span>
-              ))}
-              {/* An unknown chain is an OFFER, never a silent create — the
-                  commit stopped adding whatever a parser took for a chain. One
-                  tick per row decides it; unticked, the house imports without
-                  a chain. */}
-              {row.flags.includes("unknown_chain") && row.lodging?.chainName && (
-                <label className="flex items-center gap-1 text-[10px] text-amber-300">
-                  <input
-                    type="checkbox"
-                    checked={row.lodging.createChain === true}
-                    onChange={(e): void =>
-                      onChange(sourceRowIndex, {
-                        lodging: { ...row.lodging!, createChain: e.target.checked },
-                      })
-                    }
-                    className="h-3 w-3"
-                  />
-                  {t("lodging:import.createChain", { name: row.lodging.chainName })}
-                </label>
-              )}
-              {showDedupeHint && (
-                <span
-                  title={t(`lodging:import.dedupeHints.${row.dedupeHint}`)}
-                  className="rounded bg-emerald-500/15 px-1.5 py-0.5 text-[10px] text-emerald-300"
-                >
-                  {t(`lodging:import.dedupeHints.${row.dedupeHint}`)}
-                </span>
-              )}
-              {/* WHICH stay is already there, not merely that one is. The
-                  dates link to the house that holds it — a stay has no page of
-                  its own — and open in a new tab so the half-finished import
-                  is not lost. */}
-              {row.matchedStay && (
-                <span
-                  data-testid={`lodging-import-matched-stay-${sourceRowIndex}`}
-                  className="text-[10px] text-emerald-300"
-                >
-                  {t("lodging:import.matchedStayAt")}{" "}
-                  <a
-                    href={row.matchedStay.href}
-                    target="_blank"
-                    rel="noopener noreferrer"
-                    title={t("lodging:import.openMatchedStay")}
-                    className="underline underline-offset-2"
-                  >
-                    {matchedStayLabel(row.matchedStay, language, t)}
-                  </a>
-                </span>
-              )}
-              {/* A changed booking: say WHAT moves. "This differs" is not a
-                  decision anyone can take. */}
-              {row.action === "update" && (row.changes ?? []).length > 0 && (
-                <span
-                  data-testid={`lodging-import-changes-${sourceRowIndex}`}
-                  title={changeSummary(row)}
-                  className="rounded bg-sky-500/15 px-1.5 py-0.5 text-[10px] text-sky-300"
-                >
-                  {t("lodging:import.changedHint")}: {changeSummary(row)}
-                </span>
-              )}
-            </div>
-          </td>
-        </tr>
-      )}
-    </Fragment>
   );
 }

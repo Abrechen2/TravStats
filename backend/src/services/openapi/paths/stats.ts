@@ -59,10 +59,15 @@ const statsResponse = registry.register(
             .number()
             .describe("Distinct days from a stay's check-in to its check-out, inclusive"),
           place: z.number().describe("Distinct days with a recorded place visit"),
+          roadtrip: z
+            .number()
+            .describe(
+              "Distinct days a station of a started roadtrip attests: a night station its span, a station driven through its day"
+            ),
           total: z
             .number()
             .describe(
-              "The UNION of the four day sets — never their sum; a day with a flight and a hotel night is one day"
+              "The UNION of the five day sets — never their sum; a day with a flight and a hotel night is one day"
             ),
         })
         .describe(
@@ -70,11 +75,12 @@ const statsResponse = registry.register(
             "Per domain, the number of DISTINCT calendar days on which the account holds a record " +
             "that HAPPENED there: a flight counts its departure day and its arrival day; a cruise " +
             "every day from departure to arrival inclusive; a lodging stay every day from check-in " +
-            "to check-out inclusive; a place visit its visit day. Only records that count under " +
+            "to check-out inclusive; a place visit its visit day; a roadtrip station the days it " +
+            "attests. Only records that count under " +
             "the shared counting rules contribute (flown or historical flights, sailed cruises, " +
             "stays whose check-out is past and not cancelled, visits dated no later than today). " +
             "A day is the UTC date of the stored instant, for every domain alike. `total` is the " +
-            "size of the union of the four sets. A record with no usable date contributes no day. " +
+            "size of the union of the five sets. A record with no usable date contributes no day. " +
             "Scoped exactly like the flight figures beside it: with `year`, the year's days."
         ),
     })
@@ -88,7 +94,7 @@ registry.registerPath({
   description:
     "Top-level totals (distance, hours, cost) plus rollups by status, " +
     "airline and category, and `daysAway` — distinct calendar days with a " +
-    "record that happened, per domain and as one union across all four. " +
+    "record that happened, per domain and as one union across all five. " +
     "Other /stats/* sub-routes return more " +
     "specialized breakdowns (routes, fun, business, unique, seats, " +
     "airlines, countries) — see the Stats tag for the full list.",
@@ -213,7 +219,7 @@ const continentSchema = z.enum([
   "Oceania",
   "South America",
 ]);
-const evidenceKindSchema = z.enum(["flight", "lodging", "port", "place", "track"]);
+const evidenceKindSchema = z.enum(["flight", "lodging", "port", "place", "roadtrip", "track"]);
 const countryTierSchema = z.enum(["slept", "visited", "transited", "connection"]);
 
 const passportCountrySchema = z.object({

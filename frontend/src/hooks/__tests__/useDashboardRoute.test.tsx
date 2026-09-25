@@ -11,6 +11,7 @@ import { useDashboardRoute } from "../useDashboardRoute";
 import type { ReactNode } from "react";
 
 const LAST_MODE_KEY = "travstats:dashboard:lastMode";
+const PROJECTION_KEY = "travstats:dashboard:lastProjection";
 
 function wrapper(initialEntries: string[]): (props: { children: ReactNode }) => JSX.Element {
   function Wrapper({ children }: { children: ReactNode }): JSX.Element {
@@ -161,6 +162,64 @@ describe("useDashboardRoute", () => {
     });
     const stored = JSON.parse(window.localStorage.getItem(LAST_MODE_KEY) ?? "{}");
     expect(stored.flight).toBe("heatmap");
+  });
+
+  // Alex, 2026-09-20: "Der Wechsel der Kartenmodi (Globus, Heatmap etc.) wird
+  // nicht für alle 'Tabs' angenommen." The projection was stored per tab, so
+  // a globe chosen on "Alle" meant a globe on "Alle" — every other tab kept
+  // whatever it last showed. The projection is one choice for the dashboard
+  // now; the data view stays per tab, because "port frequency" means nothing
+  // to a flight.
+  describe("the projection carries across tabs, the data view does not", () => {
+    it("takes a globe chosen on one tab to every other tab", () => {
+      window.localStorage.setItem(LAST_MODE_KEY, JSON.stringify({ flight: "heatmap" }));
+
+      const { result: all } = renderHook(() => useDashboardRoute(), {
+        wrapper: wrapper(["/dashboard"]),
+      });
+      act(() => all.current.setMode("globe"));
+
+      const { result: flight } = renderHook(() => useDashboardRoute(), {
+        wrapper: wrapper(["/dashboard/flight"]),
+      });
+      expect(flight.current.mode).toBe("globe");
+    });
+
+    it("gives a tab its own flat view back when the reader leaves the globe", () => {
+      window.localStorage.setItem(LAST_MODE_KEY, JSON.stringify({ flight: "heatmap" }));
+      window.localStorage.setItem(PROJECTION_KEY, JSON.stringify("globe"));
+
+      const { result: all } = renderHook(() => useDashboardRoute(), {
+        wrapper: wrapper(["/dashboard"]),
+      });
+      act(() => all.current.setMode("overview"));
+
+      const { result: flight } = renderHook(() => useDashboardRoute(), {
+        wrapper: wrapper(["/dashboard/flight"]),
+      });
+      // Not the tab's flat DEFAULT ("routes") — the flat view this reader
+      // actually chose here before the globe.
+      expect(flight.current.mode).toBe("heatmap");
+    });
+
+    it("falls back to the tab's flat default when it has no flat view of its own", () => {
+      window.localStorage.setItem(LAST_MODE_KEY, JSON.stringify({ cruise: "globe" }));
+      window.localStorage.setItem(PROJECTION_KEY, JSON.stringify("flat"));
+
+      const { result } = renderHook(() => useDashboardRoute(), {
+        wrapper: wrapper(["/dashboard/cruise"]),
+      });
+      expect(result.current.mode).toBe("sea-routes");
+    });
+
+    it("ignores the pre-2026-09-21 per-tab object rather than guessing which entry was meant", () => {
+      window.localStorage.setItem(PROJECTION_KEY, JSON.stringify({ all: "flat" }));
+
+      const { result } = renderHook(() => useDashboardRoute(), {
+        wrapper: wrapper(["/dashboard/flight"]),
+      });
+      expect(result.current.mode).toBe("globe");
+    });
   });
 
   // CAMP-05: the restored mode was on screen but not in the address, so a

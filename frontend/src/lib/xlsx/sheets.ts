@@ -663,6 +663,13 @@ export function placeVisitSheet(t: T): SheetSpec<PlaceVisitRow> {
         value: (v) => refCell(v.placeLabel, v.placeId),
       },
       {
+        // A DATE mask over a value that is a full instant, on purpose. The
+        // cell keeps the clock — exceljs writes the whole Date and the reader
+        // hands it back as an ISO timestamp, so a round trip is lossless
+        // (SRV-EXPORT-001 was the importer truncating it, not this column).
+        // It is not shown as `datetime` because a visit with no time given is
+        // stored at midnight UTC, and "2025-07-10 00:00" reads as a claim
+        // about the hour where the row means it does not know one.
         key: "visitedAt",
         header: t("xlsx:columns.visitedAt"),
         kind: "date",

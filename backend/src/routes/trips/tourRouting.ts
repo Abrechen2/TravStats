@@ -1,18 +1,15 @@
 import { Router, Response, NextFunction } from "express";
-import { Prisma } from "../../prisma";
-import { z } from "zod";
 
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
-import { ACCEPTED_LEG_SOURCES } from "../../schemas/tour";
 import { LEG_MODES, LegMode } from "../../services/tour/tourDistance";
 import { resolveRouteProvider } from "../../services/tour/routing/resolveProvider";
-import { routeLegGeometry, RoutedLeg } from "../../services/tour/routing/routeLeg";
+import { routeLegGeometry } from "../../services/tour/routing/routeLeg";
+import { applyRoutedLeg } from "../../services/tour/routing/autoRouteLegs";
 import { isRoutableMode, RouteProvider } from "../../services/tour/routing/types";
-import { resolveTrip } from "../trips";
 import { findLegOrThrow, requireCoords } from "./tourLegs";
-import { resolveRoute, toDto, toLegDto, ROUTE_SELECT } from "./tourRoutes";
+import { resolveRouteFromRequest, toDto, toLegDto, ROUTE_SELECT } from "./tourRoutes";
 import logger from "../../utils/logger";
 
 /**
@@ -57,38 +54,6 @@ function requireLegMode(mode: string): LegMode {
 }
 
 /**
- * The write-side counterpart of `schemas/tour.ts`'s `MANUAL_LEG_SOURCES`
- * split: this is the routing endpoints' own boundary check on what they
- * persist, using `ACCEPTED_LEG_SOURCES` (`straight | drawn | routed` —
- * everything the column may hold, as opposed to `MANUAL_LEG_SOURCES`,
- * which is what a caller may hand the manual override endpoint). `routed.source`
- * is already typed `"routed" | "straight"` by `RoutedLeg`, so this can never
- * actually fail today — it is the same belt-and-suspenders backstop as
- * `requireLegMode` above: cheap insurance against a future change to
- * `routeLegGeometry` silently writing a value this column is not meant to
- * hold, rather than an `as` cast past the `any`-forbidden rule.
- */
-const acceptedLegSource = z.enum(ACCEPTED_LEG_SOURCES);
-
-/** Persist one leg's routing outcome — shared by both endpoints below. */
-async function applyRoutedLeg(legId: string, routed: RoutedLeg): Promise<void> {
-  const source = acceptedLegSource.parse(routed.source);
-  await prisma.tripRouteLeg.update({
-    where: { id: legId },
-    data: {
-      source,
-      confidence: routed.confidence,
-      waypoints:
-        routed.waypoints === null
-          ? Prisma.DbNull
-          : (routed.waypoints as unknown as Prisma.InputJsonValue),
-      distanceKm: routed.distanceKm,
-      drivingMinutes: routed.drivingMinutes,
-    },
-  });
-}
-
-/**
  * POST /trips/:id/routes/:routeId/legs/:fromStopId/:toStopId/route
  *
  * Routes ONE leg through the configured provider and stores the result.
@@ -104,14 +69,16 @@ async function applyRoutedLeg(legId: string, routed: RoutedLeg): Promise<void> {
  * does for a per-leg provider failure inside a batch.
  */
 router.post(
-  "/trips/:id/routes/:routeId/legs/:fromStopId/:toStopId/route",
+  [
+    "/trips/:id/routes/:routeId/legs/:fromStopId/:toStopId/route",
+    "/tours/:routeId/legs/:fromStopId/:toStopId/route",
+  ],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
 
       const provider: RouteProvider | null = await resolveRouteProvider(userId);
       if (provider === null) {
@@ -177,14 +144,13 @@ router.post(
  * the legs already routed — those results are real and worth keeping.
  */
 router.post(
-  "/trips/:id/routes/:routeId/route-all",
+  ["/trips/:id/routes/:routeId/route-all", "/tours/:routeId/route-all"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
 
       const provider = await resolveRouteProvider(userId);
 

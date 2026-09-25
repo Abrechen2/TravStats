@@ -7,6 +7,7 @@ import { useDomainColorStore } from "../../store/domainColorStore";
 import { isBrandDefault, needsOutline } from "../../lib/domainColor";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import { useRailVisible } from "../../hooks/useRailVisible";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 
 /**
  * One colour per domain, for everywhere that is not the map.
@@ -27,10 +28,17 @@ export default function DomainColorSection(): JSX.Element | null {
   const { t } = useTranslation(["settings", "common"]);
   const { colors } = useDomainColors();
   const setColor = useDomainColorStore((s) => s.setColor);
+  const resetToBrand = useDomainColorStore((s) => s.resetToBrand);
+  // Roadtrips are beta (2.7): no colour to pick for a domain the instance
+  // does not show — the same rule as the module switch beside it.
+  const { isFeatureVisible } = useBetaFeatures();
   // Rail's row appears with the domain itself (beta gate + domain choice).
   const railVisible = useRailVisible();
-  const shownDomains = AVAILABLE_DOMAINS.filter((key) => key !== "rail" || railVisible);
-  const resetToBrand = useDomainColorStore((s) => s.resetToBrand);
+  const keys = AVAILABLE_DOMAINS.filter((key) => {
+    if (key === "roadtrip") return isFeatureVisible("roadtrips");
+    if (key === "rail") return railVisible;
+    return true;
+  });
 
   return (
     <SectionCard>
@@ -40,7 +48,7 @@ export default function DomainColorSection(): JSX.Element | null {
       />
 
       <div className="max-w-md space-y-3">
-        {shownDomains.map((key) => {
+        {keys.map((key) => {
           const hex = colors[key];
           return (
             <div key={key} className="flex items-center gap-3">
@@ -72,7 +80,7 @@ export default function DomainColorSection(): JSX.Element | null {
       {/* A colour close to the app's own ground is a legitimate choice, and it
           is also nearly invisible on a chart. Say so once; do not quietly
           brighten what the user picked. */}
-      {shownDomains.some((key) => needsOutline(colors[key])) && (
+      {keys.some((key) => needsOutline(colors[key])) && (
         <p className="mt-3 max-w-md text-xs" style={{ color: "var(--text-muted)" }}>
           {t("settings:domainColors.lowContrast")}
         </p>

@@ -8,6 +8,16 @@ import InstanceSettings from "../../../components/Admin/InstanceSettings";
 // Issue #190 only reproduces with an unstable `t`: a load effect that lists
 // `t` in its dependencies re-fires on every keystroke's re-render and
 // overwrites the form with the server response, making typing impossible.
+// The instance page also carries the sign-in-background card, which fetches
+// its list on mount. Mocked away: a real request would fail the render before
+// the fields these cases are about are drawn.
+vi.mock("../../../lib/api/loginBackgrounds", () => ({
+  getLoginBackgrounds: () => Promise.resolve([]),
+  loginBackgroundUrl: (name: string) => `/api/v1/login-backgrounds/${name}`,
+  uploadLoginBackgrounds: vi.fn(),
+  deleteLoginBackground: vi.fn(),
+}));
+
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (key: string) => key,

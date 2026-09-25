@@ -3,6 +3,7 @@ import type { TripRailJourney } from "./rail";
 import type { LinkedAlbum } from "./immich";
 import type { CabinType, CruiseStop, Port, Ship } from "./cruise";
 
+export type { ObservedWeather } from "./openData";
 export interface User {
   id: string;
   username: string;
@@ -182,17 +183,8 @@ export interface TripStop {
   updatedAt: string;
 }
 
-export interface TripJournalEntry {
-  id: string;
-  tripId: string;
-  date: string;
-  title: string | null;
-  body: string;
-  mood: string | null;
-  weather: string | null;
-  createdAt: string;
-  updatedAt: string;
-}
+import type { TripJournalEntry } from "./journal";
+export type { TripJournalEntry };
 
 export interface Trip {
   id: string;

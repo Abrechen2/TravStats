@@ -1,4 +1,5 @@
 import { useEffect, useState } from "react";
+import { useToursAccess } from "../hooks/useToursVisible";
 import { Navigate } from "react-router-dom";
 import type { JSX } from "react";
 import { DashboardLayout } from "../components/Dashboard/DashboardLayout";
@@ -24,6 +25,7 @@ import { RailTab } from "../components/Dashboard/tabs/RailTab";
 import { railApi } from "../lib/api/rail";
 import { useRailVisible } from "../hooks/useRailVisible";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
+import { roadtripsApi } from "../lib/api/roadtrips";
 
 const IMPORT_MOVED_FLAG = "tsv1_5_import_moved_seen";
 
@@ -64,6 +66,7 @@ export default function DashboardPage(): JSX.Element {
   const railVisible = useRailVisible();
   // Three-state like places: `false` only once the instance has answered.
   const { betaFeaturesEnabled } = useBetaFeatures();
+  const toursAccess = useToursAccess();
   // Tours have no domain to be "enabled"/"disabled" — only the instance-level
   // beta flag gates them. `betaFeaturesEnabled` is `null` for one request on
   // a cold load; treating that as "denied" would redirect a direct
@@ -103,6 +106,11 @@ export default function DashboardPage(): JSX.Element {
         // `visited: true` so the tab count matches "Orte besucht" on the tab
         // itself. Counting wishlist entries here would make the strip disagree
         // with every figure inside the tab (shared/placeCounting.ts).
+        // Roadtrips (2.7): the list is small and carries its own figures, so
+        // its length is the count — there is no cheaper endpoint to ask.
+        const roadtripsPromise = isEnabled("roadtrip")
+          ? roadtripsApi.list().then((r) => r.length)
+          : Promise.resolve(0);
         const placesPromise = placesVisible
           ? placesApi.count({ visited: true })
           : Promise.resolve(0);
@@ -110,15 +118,23 @@ export default function DashboardPage(): JSX.Element {
         const railPromise = railVisible
           ? railApi.list({ limit: 1 }).then((page) => page.total)
           : Promise.resolve(0);
-        const [flights, scheduledFlights, cruises, lodgingStats, placeCount, railCount] =
-          await Promise.all([
-            flightsPromise,
-            scheduledFlightsPromise,
-            cruisesPromise,
-            lodgingPromise,
-            placesPromise,
-            railPromise,
-          ]);
+        const [
+          flights,
+          scheduledFlights,
+          cruises,
+          lodgingStats,
+          placeCount,
+          roadtripCount,
+          railCount,
+        ] = await Promise.all([
+          flightsPromise,
+          scheduledFlightsPromise,
+          cruisesPromise,
+          lodgingPromise,
+          placesPromise,
+          roadtripsPromise,
+          railPromise,
+        ]);
         if (cancelled) return;
         setCounts(
           {
@@ -126,11 +142,18 @@ export default function DashboardPage(): JSX.Element {
             cruise: cruises.length,
             poi: placeCount,
             lodging: lodgingStats?.lodgingsCount ?? 0,
+            roadtrip: roadtripCount,
             rail: railCount,
           },
           {
             flight: scheduledFlights.total,
             cruise: cruises.filter((c) => c.status === "scheduled").length,
+            // A house whose every stay still lies ahead. It is NOT part of
+            // `counts.lodging` above -- `lodgingsCount` is houses been to --
+            // which is why the strip words this one as an addition rather
+            // than a subset (tester, 2026-09-21: the strip named the next
+            // stay on the right and still said nothing about it on the left).
+            lodging: lodgingStats?.plannedLodgingsCount ?? 0,
           }
         );
       } catch (err) {
@@ -154,6 +177,10 @@ export default function DashboardPage(): JSX.Element {
   if (tab === "poi" && placesAccess === "denied") {
     return <Navigate to="/dashboard" replace />;
   }
+  // Same for the tour and roadtrip tabs behind the roadtrips beta key.
+  if ((tab === "tour" || tab === "roadtrip") && toursAccess === "denied") {
+    return <Navigate to="/dashboard" replace />;
+  }
   // The same answer for rail while its beta switch is off (owner rule
   // 2026-09-25); a switched-off DOMAIN is useDashboardRoute's to handle.
   if (tab === "rail" && betaFeaturesEnabled === false) {
@@ -173,6 +200,7 @@ export default function DashboardPage(): JSX.Element {
       {tab === "lodging" && <LodgingTab key={refreshToken} />}
       {tab === "rail" && railVisible && <RailTab key={refreshToken} />}
       {tab === "tour" && <TourTab key={refreshToken} />}
+      {tab === "roadtrip" && <TourTab key={`roadtrip-${refreshToken}`} kind="roadtrip" />}
     </DashboardLayout>
   );
 }

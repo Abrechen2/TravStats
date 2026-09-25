@@ -5,8 +5,9 @@
  * so every domain handler does the same three things in the same order, and
  * this module names them so no handler can quietly skip one:
  *
- *   1. **Resolve the id.** Present and owned by the caller → update. Absent →
- *      create. Present but NOT owned, or unknown → refuse the row.
+ *   1. **Resolve the id.** Present and owned by the caller → update. Absent,
+ *      unknown, or another account's → the row is NEW to this account: it is
+ *      matched to an existing record by its natural key, or created.
  *   2. **Coerce and validate** through the domain's existing Zod schema. The
  *      importer does not get its own idea of what a valid cruise is.
  *   3. **Report**, per row, what would happen — because an import runs as a
@@ -15,10 +16,12 @@
  * Step 1 is the one with teeth. An id in a spreadsheet is a claim, not a
  * proof: the file is user-supplied, so a row carrying someone else's id must
  * never reach an UPDATE. Looking the row up by id alone would find it and
- * change it. Every lookup is therefore scoped by `userId`, and a row whose id
- * exists but belongs to another account is refused with the same message as
- * one whose id does not exist at all — telling them apart would confirm that
- * the other row exists.
+ * change it. Every lookup is therefore scoped by `userId`. A row whose id
+ * belongs to another account is treated exactly like one whose id does not
+ * exist — both become a new entry in the caller's account (owner decision
+ * 2026-09-25: the workbook moves entries between accounts). The foreign
+ * record is never read, changed or reported; telling the two cases apart
+ * would confirm that it exists.
  */
 
 /**
@@ -48,8 +51,33 @@ export interface RowOutcome {
   id: string | null;
   /** Short human label so the preview reads as records, not row numbers. */
   label: string;
-  /** Why the row was refused. Present only for `error`. */
+  /**
+   * A code, never prose. For `error` the reason the row was refused; for
+   * `skip`/`update` how it was resolved (`exists`, `matched_existing`).
+   */
   message?: string;
+  /** Non-fatal remarks the row was applied with (e.g. `trip_not_linked`). */
+  notes?: string[];
+  /**
+   * Cells whose value the field does not know — an old free-text cabin type,
+   * a board type nobody offers. The field is left empty (abstention, not a
+   * guess) and the ROW is still applied; a whole cruise refused over its cabin
+   * cost the demo data every cruise it had.
+   */
+  dropped?: DroppedValue[];
+}
+
+/** One unknown cell value: the column key and the text as it stood. */
+export interface DroppedValue {
+  field: string;
+  value: string;
+  /**
+   * True when the row resolved to an EXISTING entry (update or skip): the
+   * unknown cell is simply not written, so the stored value stays. Absent on a
+   * create, where the field really is left empty. The preview must say which —
+   * "left empty" on an update told the user a value was lost that was not.
+   */
+  kept?: true;
 }
 
 export interface SheetOutcome {
@@ -87,6 +115,22 @@ export interface ImportOutcome {
 export interface IncomingSheet {
   key: string;
   rows: Record<string, string>[];
+  /**
+   * The sheet row each record came from, parallel to `rows`. The reader finds
+   * the header row by its text (the export writes a hint line above it, and a
+   * user may insert more) and skips blank lines, so `index + 2` is wrong for
+   * every file the app itself writes. Optional for API callers that send bare
+   * rows; those get the `index + 2` guess.
+   */
+  rowNumbers?: number[];
+}
+
+/** The 1-based sheet row of `sheet.rows[index]`, as the user sees it in Excel. */
+export function sheetRowNumber(sheet: IncomingSheet, index: number): number {
+  const recorded = sheet.rowNumbers?.[index];
+  if (recorded !== undefined && Number.isInteger(recorded) && recorded > 0) return recorded;
+  // One for 1-based rows, one for a header in row 1.
+  return index + 2;
 }
 
 /** Tally a list of row outcomes into the counts the preview shows. */

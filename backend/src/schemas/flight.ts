@@ -1,6 +1,7 @@
 import { z } from "./zod";
 import { receiptUrlValidator } from "./receiptUrl";
 import { chronologyProblem, departsInFuture } from "../shared/flightChronology";
+import { wallClockExists } from "../shared/wallClockExistence";
 import { partialForUpdate } from "./partialUpdate";
 
 export const airportSchema = z.object({
@@ -373,6 +374,48 @@ const requireChronologicalOrder = (
   }
 };
 
+/**
+ * Refuse a wall-clock time that the spring-forward hour ate.
+ *
+ * MUC 30.03.2025 02:30 does not exist; the server answered 201 and stored
+ * 00:30Z, and the detail page then showed 01:30 — an hour the user never
+ * typed (SRV-TIMEZONE-GAP-001). A refusal is the only honest answer: the
+ * server cannot know whether 02:30 meant 01:30 or 03:30.
+ *
+ * DATE_ONLY and UNKNOWN rows are exempt. Their clock component is a
+ * placeholder the importer chose (12:00, or 00:00 for a year-only historical
+ * row), and a handful of zones move their clocks AT midnight — Havana,
+ * Santiago, Asunción — so an exempt-less rule would refuse a 1987 Havana
+ * departure entered as a bare year. The default is UTC because that is what
+ * both create paths write when the field is absent.
+ */
+const requireExistingWallClock = (
+  data: Partial<Record<LocalTzPair, string | null | undefined>> & {
+    depTimeSemantics?: string | null;
+    arrTimeSemantics?: string | null;
+  },
+  ctx: z.RefinementCtx
+): void => {
+  const pairs: Array<[LocalTzPair, LocalTzPair, "depTimeSemantics" | "arrTimeSemantics"]> = [
+    ["departureLocal", "depTimezone", "depTimeSemantics"],
+    ["arrivalLocal", "arrTimezone", "arrTimeSemantics"],
+    ["actualDepartureLocal", "actualDepartureTz", "depTimeSemantics"],
+    ["actualArrivalLocal", "actualArrivalTz", "arrTimeSemantics"],
+  ];
+  for (const [localField, tzField, semanticsField] of pairs) {
+    const local = data[localField];
+    const tz = data[tzField];
+    if (!local || !tz) continue;
+    if ((data[semanticsField] ?? "UTC") !== "UTC") continue;
+    if (wallClockExists(local, tz)) continue;
+    ctx.addIssue({
+      code: z.ZodIssueCode.custom,
+      message: `${local} does not exist in ${tz} — the clocks skip that hour on this day`,
+      path: [localField],
+    });
+  }
+};
+
 const requireStatusTimeAxisSanity = (
   data: { status?: string; departureLocal?: string | null; depTimezone?: string | null },
   ctx: z.RefinementCtx
@@ -392,6 +435,7 @@ const requireStatusTimeAxisSanity = (
 
 export const createFlightSchema = baseFlightSchema
   .superRefine(requirePairedTimezone)
+  .superRefine(requireExistingWallClock)
   .superRefine(requireChronologicalOrder)
   .superRefine(requireStatusTimeAxisSanity)
   .refine(
@@ -410,6 +454,7 @@ export const createFlightSchema = baseFlightSchema
 
 export const updateFlightSchema = partialForUpdate(baseFlightSchema)
   .superRefine(requirePairedTimezone)
+  .superRefine(requireExistingWallClock)
   .superRefine(requireChronologicalOrder)
   .superRefine(requireStatusTimeAxisSanity)
   .refine((data) => Object.keys(data).length > 0, {
