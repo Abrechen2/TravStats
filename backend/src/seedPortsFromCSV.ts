@@ -35,11 +35,14 @@ const INSERT_CHUNK_SIZE = 2000;
  * `INSERT_CHUNK_SIZE` is a plain round number, not derived from Postgres's
  * per-statement bind limit — Prisma 7 already splits a `createMany` whose
  * bind values exceed that limit (32766 for postgresql) into several
- * statements wrapped in one transaction, and the unchunked call never came
- * close to it (12,062 rows × 9 columns = 108,558 params → 4 statements, all
- * inside that one transaction). Chunking below the limit trades that
- * wrapping transaction away: a failure partway through can now leave a
- * partial seed committed, where the old call rolled back whole. That's fine
+ * statements wrapped in one transaction, and the unchunked call *did* exceed
+ * it (12,062 rows × 9 columns = 108,558 params → 4 statements, all inside
+ * that one transaction, courtesy of Prisma). 2000 rows/chunk keeps each
+ * chunked call under the limit as a single statement (2000 × 9 = 18,000
+ * params), so the bind limit was never the problem chunking here solves.
+ * What chunking trades away is that wrapping transaction: a failure partway
+ * through can now leave a partial seed committed, where the old call would
+ * have rolled back whole. That's fine
  * here — both callers (`index.ts`, `init.ts`) warn and continue rather than
  * abort on a seed error, and the dedupe keys (unlocode, lowercase
  * name+country) mean the next boot just inserts whatever is still missing.
