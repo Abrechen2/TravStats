@@ -89,6 +89,19 @@ describe("PlacesListPage", () => {
     expect(await screen.findByText("places:list.empty")).toBeInTheDocument();
   });
 
+  // The add button was filled with the place domain colour, which is an
+  // off-white (#e7e3dc) — every other logbook's add button is the shared
+  // yellow `btn-primary`, so this one read as a disabled control.
+  it("draws the add button as the shared primary button, like the other logbooks", async () => {
+    listPlacesMock.mockResolvedValue([]);
+
+    renderListPage();
+
+    const add = await screen.findByRole("button", { name: /places:list\.addPlace/ });
+    expect(add).toHaveClass("btn-primary");
+    expect(add.style.background).toBe("");
+  });
+
   // Review finding (Alex T7, round 1): nothing tested that the wiring
   // actually pages the rows — reverting `filtered.map` -> `pagination.paged.map`
   // or dropping `<TablePagination>` would have left the suite green. This is
