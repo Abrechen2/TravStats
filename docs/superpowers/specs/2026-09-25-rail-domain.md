@@ -382,3 +382,18 @@ out of beta.
   section that writes the drafts through the rail write path (station
   matching, FX, status) and deletes the section in the same transaction, only
   once every ride was written.
+
+**Map check in the production bundle (2026-09-25).** `vite build` + `vite
+preview`, backend against a seeded dev database, beta switch and rail domain
+on, the four demo rides plus ICE 597 Frankfurt → München logged through the
+Transitous lookup (7 188 points, 420 km, `route`). On both the globe and the
+flat map the traced line and the straight chords draw in `#d4655c`; setting a
+different rail colour in the domain colour store turned the lines AND both
+legend rows to it, so neither is hardcoded. With the switch off,
+`/dashboard/rail` redirects to the dashboard, the Bahn tab, legend rows and
+next-up entry are gone, and `/stats?tab=rail` shows the overview. The check
+found one defect, fixed with it: the statistics page parsed `?tab=` against a
+hand-written list of the four older domains, so the Bahn tab reset itself to
+the overview on every click. Noted, not changed: every dashboard tab opens on
+the whole world rather than the rides' extent, which on a Europe-only rail
+logbook makes the lines small until one zooms.

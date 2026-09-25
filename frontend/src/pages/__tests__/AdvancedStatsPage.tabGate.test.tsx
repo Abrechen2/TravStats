@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
 
-import { resolveStatsTab, visibleStatsTabs } from "../statsTabAccess";
+import { parseStatsTab, resolveStatsTab, visibleStatsTabs } from "../statsTabAccess";
 
 /**
  * A deep link must not open a tab the reader does not have.
@@ -102,5 +102,18 @@ describe("rail statistics tab", () => {
   it("opens rail with the gate on, but only for a user who has the domain", () => {
     expect(resolveStatsTab("rail", ["flight", "rail"], "denied", true)).toBe("rail");
     expect(resolveStatsTab("rail", ["flight"], "denied", true)).toBe("all");
+  });
+});
+
+describe("parseStatsTab", () => {
+  it("reads every registered domain, rail included", () => {
+    for (const tab of ["flight", "cruise", "lodging", "poi", "rail"]) {
+      expect(parseStatsTab(tab)).toBe(tab);
+    }
+  });
+
+  it("reads anything else as the overview", () => {
+    expect(parseStatsTab(null)).toBe("all");
+    expect(parseStatsTab("hexagon")).toBe("all");
   });
 });

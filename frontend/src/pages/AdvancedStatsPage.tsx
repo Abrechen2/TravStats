@@ -66,7 +66,7 @@ import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useStatsPageSections } from "../lib/stats/useStatsPageSections";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { useRailOffered } from "../hooks/useRailVisible";
-import { resolveStatsTab, visibleStatsTabs } from "./statsTabAccess";
+import { parseStatsTab, resolveStatsTab, visibleStatsTabs } from "./statsTabAccess";
 import type { DomainKey } from "../shared/domains";
 
 export default function AdvancedStatsPage(): JSX.Element {
@@ -97,19 +97,9 @@ export default function AdvancedStatsPage(): JSX.Element {
   // the right drill-down.
   const { enabled } = useEnabledDomains();
   const [searchParams, setSearchParams] = useSearchParams();
-  const [filter, setFilterState] = useState<DomainKey | "all">(() => {
-    const tab = searchParams.get("tab");
-    if (
-      tab === "all" ||
-      tab === "flight" ||
-      tab === "cruise" ||
-      tab === "lodging" ||
-      tab === "poi"
-    ) {
-      return tab;
-    }
-    return "all";
-  });
+  const [filter, setFilterState] = useState<DomainKey | "all">(() =>
+    parseStatsTab(searchParams.get("tab"))
+  );
 
   const setFilter = useCallback(
     (next: DomainKey | "all") => {
@@ -127,9 +117,7 @@ export default function AdvancedStatsPage(): JSX.Element {
   // Sync URL → state when the user navigates back/forward or follows a
   // deep link from another page (e.g. the Gesamt-tab "Details →").
   useEffect(() => {
-    const tab = searchParams.get("tab");
-    const next: DomainKey | "all" =
-      tab === "flight" || tab === "cruise" || tab === "lodging" || tab === "poi" ? tab : "all";
+    const next = parseStatsTab(searchParams.get("tab"));
     if (next !== filter) setFilterState(next);
   }, [searchParams, filter]);
 

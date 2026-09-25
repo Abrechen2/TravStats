@@ -1,7 +1,20 @@
-import type { DomainKey } from "../shared/domains";
+import { DOMAIN_KEYS, type DomainKey } from "../shared/domains";
 import type { PlacesAccess } from "../hooks/usePlacesVisible";
 
 export type StatsTab = DomainKey | "all";
+
+/**
+ * `?tab=` read into a tab — any registered domain, else the overview. Whether
+ * that tab may be DRAWN is `resolveStatsTab`'s question, not this one's.
+ *
+ * It used to be two hand-written lists of four domains in the page, one for
+ * the first render and one for the URL sync. Rail was on neither, so clicking
+ * its tab wrote `?tab=rail` and the sync effect at once reset it to the
+ * overview — found in the production-bundle check of 2026-09-25.
+ */
+export function parseStatsTab(tab: string | null): StatsTab {
+  return (DOMAIN_KEYS as readonly string[]).includes(tab ?? "") ? (tab as DomainKey) : "all";
+}
 
 /**
  * Which statistics tab may actually be drawn.
