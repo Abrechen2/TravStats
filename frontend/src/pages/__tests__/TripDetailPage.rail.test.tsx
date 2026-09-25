@@ -50,6 +50,9 @@ vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-stub" />,
 }));
 
+// The overview's roadtrip list has its own endpoint and its own test.
+vi.mock("../../components/Roadtrips/useTripRoadtrips", () => ({ useTripRoadtrips: () => [] }));
+
 import TripDetailPage from "../TripDetailPage";
 
 function makeTrip(overrides: Partial<Trip> = {}): Trip {
