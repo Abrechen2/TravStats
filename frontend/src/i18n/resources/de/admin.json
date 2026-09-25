@@ -578,7 +578,12 @@
       "createBackupBefore": "Backup vor Wiederherstellung erstellen (empfohlen)",
       "confirmLabel": "Gib zur Bestätigung \"{{text}}\" ein:",
       "confirmText": "Wiederherstellen",
-      "confirmButton": "Wiederherstellen"
+      "confirmButton": "Wiederherstellen",
+      "keyMismatchTitle": "Dieses Archiv wurde mit einem anderen Verschlüsselungsschlüssel geschrieben",
+      "keyMismatchBody": "Die gespeicherten API-Schlüssel, das SMTP-Passwort und die Immich-/Dawarich-Zugänge lassen sich auf dieser Instanz nicht entschlüsseln. Lege den ursprünglichen Schlüssel zurück (ENCRYPTION_KEY bzw. encryption.key im Secrets-Verzeichnis) und versuche es erneut — oder bestätige hier und trage die Zugänge danach neu ein.",
+      "keyMismatchAcknowledge": "Verstanden: Zugangsdaten danach neu eintragen",
+      "archiveIncomplete": "Dem Archiv fehlt der angeforderte Teil. Es wurde nichts wiederhergestellt.",
+      "archiveUnreadable": "Der Dateiteil des Archivs lässt sich nicht lesen. Es wurde nichts wiederhergestellt."
     },
     "settingsSaved": "Backup-Einstellungen gespeichert",
     "settingsFailed": "Fehler beim Speichern der Einstellungen",

@@ -39,6 +39,13 @@ const createBackupSchema = z.object({
 const restoreBackupSchema = z.object({
   scope: z.enum(["full", "database", "files"]),
   createBackupBefore: z.boolean().optional().default(true),
+  /**
+   * Set by the restore dialog on its SECOND attempt, after the first was
+   * refused with `RESTORE_ENCRYPTION_KEY_MISMATCH` and the admin ticked the
+   * acknowledgement. Never a default: the whole point is that somebody was
+   * told the stored credentials will be unreadable and said yes anyway.
+   */
+  acceptEncryptionKeyChange: z.boolean().optional().default(false),
 });
 
 // ─── Literal routes (must be defined before parametric /:id routes) ──────────
@@ -324,6 +331,7 @@ router.post(
       await restoreBackup(id, {
         scope: body.scope,
         createBackupBefore: body.createBackupBefore,
+        acceptEncryptionKeyChange: body.acceptEncryptionKeyChange,
       });
 
       res.json({

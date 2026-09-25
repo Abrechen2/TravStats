@@ -4,7 +4,9 @@ import archiver from "archiver";
 import { prisma } from "../../db";
 import { getInstanceSettings } from "../instanceSettingsService";
 import { BACKED_UP_UPLOAD_DIRS } from "../../config/uploadDirs";
+import { encryptionKeyFingerprint } from "../../utils/encryption";
 import logger from "../../utils/logger";
+import { ENCRYPTION_FINGERPRINT_KEY } from "./backupConfig";
 
 /**
  * Archive upload directories
@@ -83,5 +85,10 @@ export async function getMetadata(): Promise<Record<string, string | number>> {
     achievementCount,
     timestamp: new Date().toISOString(),
     instanceName,
+    // Which key the encrypted columns in this dump were written with. A
+    // restore compares it with its own and refuses to finish silently when
+    // they differ — see `inspectRestoreArchive` in backupRestore.ts. Not the
+    // key: a truncated, domain-separated hash of it.
+    [ENCRYPTION_FINGERPRINT_KEY]: encryptionKeyFingerprint(),
   };
 }

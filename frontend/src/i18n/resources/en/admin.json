@@ -578,7 +578,12 @@
       "createBackupBefore": "Create backup before restore (recommended)",
       "confirmLabel": "To confirm, type \"{{text}}\":",
       "confirmText": "Restore",
-      "confirmButton": "Restore"
+      "confirmButton": "Restore",
+      "keyMismatchTitle": "This archive was written with a different encryption key",
+      "keyMismatchBody": "The stored API keys, the SMTP password and the Immich/Dawarich credentials cannot be decrypted on this instance. Put the original key back (ENCRYPTION_KEY, or encryption.key in the secrets directory) and try again — or confirm here and enter those credentials again afterwards.",
+      "keyMismatchAcknowledge": "Understood: I will re-enter the credentials afterwards",
+      "archiveIncomplete": "The archive is missing the part you asked to restore. Nothing was restored.",
+      "archiveUnreadable": "The archive's file part cannot be read. Nothing was restored."
     },
     "settingsSaved": "Backup settings saved",
     "settingsFailed": "Failed to save backup settings",

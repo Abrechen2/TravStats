@@ -41,5 +41,20 @@ export function apiErrorMessage(err: unknown): string | null {
   return typeof data?.message === "string" && data.message.trim().length > 0 ? data.message : null;
 }
 
+/**
+ * The `code` field — the backend's closed `ApiErrorCode` union, sent beside
+ * the prose in `error`.
+ *
+ * Distinct from `apiErrorCode` above, which reads `error`: that field carries
+ * a code only under the older convention (`DEMO_ACCOUNT_FORBIDDEN`) and prose
+ * everywhere else. Anything thrown with `new AppError(message, status, code)`
+ * lands here instead, and a client branching on the wrong one of the two
+ * silently never matches.
+ */
+export function apiErrorMachineCode(err: unknown): string | null {
+  const data = (err as { response?: { data?: { code?: string } } } | undefined)?.response?.data;
+  return typeof data?.code === "string" && data.code.length > 0 ? data.code : null;
+}
+
 /** The server's word for "the shared demo account may not do this". */
 export const DEMO_FORBIDDEN_CODE = "DEMO_ACCOUNT_FORBIDDEN";

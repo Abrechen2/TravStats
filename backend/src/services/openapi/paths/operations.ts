@@ -85,14 +85,25 @@ registry.registerPath({
   description:
     "REPLACES everything. This is the one call in the API that can lose data the " +
     "backup does not contain, so a client should confirm in words rather than " +
-    "with a button that looks like the others.",
+    "with a button that looks like the others. " +
+    "The archive is checked before anything is written: a missing or unreadable " +
+    "part answers 400 with nothing restored, and an archive whose encrypted " +
+    "values were written with another instance's key answers 409 " +
+    "(RESTORE_ENCRYPTION_KEY_MISMATCH) until the caller repeats the request with " +
+    "acceptEncryptionKeyChange.",
   tags: backupTag,
   request: { params: z.object({ id: z.string() }) },
   responses: {
     202: { description: "Restore started" },
-    400: { description: "Backup is not completed", content: errorContent },
+    400: {
+      description: "Backup is not completed, or the archive is incomplete or unreadable",
+      content: errorContent,
+    },
     404: notFound,
-    409: { description: "Another operation is running", content: errorContent },
+    409: {
+      description: "Another operation is running, or the archive's encryption key differs",
+      content: errorContent,
+    },
   },
 });
 

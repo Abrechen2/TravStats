@@ -4,9 +4,15 @@ import * as path from "path";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import { DATABASE_URL } from "../../utils/database";
-import { BACKUP_BASE_DIR, DOCKER_DB_CONTAINER, RestoreOptions } from "./backupConfig";
+import {
+  BACKUP_BASE_DIR,
+  DOCKER_DB_CONTAINER,
+  ENCRYPTION_FINGERPRINT_KEY,
+  RestoreOptions,
+} from "./backupConfig";
 import { parseDatabaseUrl } from "./backupDatabase";
 import { AppError } from "../../middleware/errorHandler";
+import { encryptionKeyFingerprint } from "../../utils/encryption";
 import { reconcileInterruptedBackups } from "./reconcileBackups";
 
 /**
@@ -188,6 +194,160 @@ export async function extractUploadsArchive(
 
 const PSQL_STRICT = ["-v", "ON_ERROR_STOP=1", "--single-transaction"] as const;
 
+/** Everything a restore can find wrong with an archive before it writes. */
+export type RestoreArchiveProblem =
+  | { kind: "missingDatabasePart" }
+  | { kind: "missingFilesPart" }
+  | { kind: "unreadableFilesPart"; detail: string }
+  | { kind: "encryptionKeyMismatch"; archiveFingerprint: string; ownFingerprint: string };
+
+/** Can `tar` read this archive end to end? The answer, not an exception. */
+async function listArchive(
+  archivePath: string
+): Promise<{ ok: true } | { ok: false; detail: string }> {
+  return new Promise((resolve) => {
+    // `-t` lists without extracting, so this reads the whole archive and
+    // writes nothing. It costs one full read of the uploads tarball before the
+    // restore reads it again — accepted, because the alternative is finding
+    // out it is corrupt with the database already replaced.
+    const tar = spawn("tar", ["-tzf", archivePath], { stdio: ["ignore", "ignore", "pipe"] });
+    let stderr = "";
+    tar.stderr.on("data", (chunk: Buffer) => {
+      stderr += chunk.toString();
+    });
+    tar.on("close", (code: number) => {
+      if (code === 0) resolve({ ok: true });
+      else
+        resolve({
+          ok: false,
+          detail: stderr.trim().split("\n").slice(0, 3).join("; ") || `tar exited with ${code}`,
+        });
+    });
+    tar.on("error", (error) => resolve({ ok: false, detail: error.message }));
+  });
+}
+
+/**
+ * Everything wrong with an extracted archive, asked BEFORE the restore writes.
+ *
+ * Two audit findings of 2026-09-20 live here, and they are the same defect
+ * seen from two sides.
+ *
+ * SRV-RESTORE-002: a full restore whose `uploads.tar.gz` was corrupt replaced
+ * the database first and then died unpacking the files. The database had
+ * already moved — psql's `--single-transaction` rolls back a failing SQL run,
+ * but it cannot roll back a run that SUCCEEDED before a later step failed. The
+ * restore answered with an error over a database that was neither the archive
+ * nor what had been there, and only the optional safety backup could undo it.
+ *
+ * SRV-RESTORE-003: a FILES restore from an archive with no `uploads.tar.gz`
+ * logged a warning, skipped the only thing it had been asked to do, and
+ * answered 200. Success is a claim about what happened; nothing had.
+ *
+ * SRV-RESTORE-001 is the third: the archive carries encrypted API keys, SMTP
+ * passwords and Immich/Dawarich tokens, and the key that wrote them lives in
+ * `/app/data/secrets`, which is NOT in the archive. Restoring onto an instance
+ * with different secrets therefore completes and reports success while every
+ * one of those values becomes unreadable — measured as `hasKey=true`,
+ * `hasAccess=false`, connection test 400. The fingerprint in `metadata.json`
+ * makes that decidable; the caller decides what to do about it.
+ *
+ * Returns the problems rather than throwing, so the caller can rank them: an
+ * encryption-key mismatch is acknowledgeable, a corrupt archive is not.
+ * Archives written before the fingerprint existed carry none, and a missing
+ * one is NOT reported — an absent answer is not a wrong one, and refusing
+ * every older archive would be a worse bug than the one this prevents.
+ */
+export async function inspectRestoreArchive(
+  tempDir: string,
+  scope: RestoreOptions["scope"]
+): Promise<RestoreArchiveProblem[]> {
+  const problems: RestoreArchiveProblem[] = [];
+  const dbBackupPath = path.join(tempDir, "database.sql");
+  const filesBackupPath = path.join(tempDir, "uploads.tar.gz");
+  const wantsDatabase = scope === "full" || scope === "database";
+  const wantsFiles = scope === "full" || scope === "files";
+
+  if (wantsDatabase && !fs.existsSync(dbBackupPath)) {
+    problems.push({ kind: "missingDatabasePart" });
+  }
+
+  if (wantsFiles) {
+    if (!fs.existsSync(filesBackupPath)) {
+      problems.push({ kind: "missingFilesPart" });
+    } else {
+      const listed = await listArchive(filesBackupPath);
+      if (!listed.ok) problems.push({ kind: "unreadableFilesPart", detail: listed.detail });
+    }
+  }
+
+  if (wantsDatabase) {
+    const archiveFingerprint = readArchiveEncryptionFingerprint(tempDir);
+    const ownFingerprint = encryptionKeyFingerprint();
+    if (archiveFingerprint && archiveFingerprint !== ownFingerprint) {
+      problems.push({ kind: "encryptionKeyMismatch", archiveFingerprint, ownFingerprint });
+    }
+  }
+
+  return problems;
+}
+
+/** The fingerprint `metadata.json` names, or null when it names none. A
+ *  metadata file that will not parse is treated as naming none — it is a
+ *  descriptive sidecar, and refusing a restore over it would be a new way to
+ *  lose data. */
+function readArchiveEncryptionFingerprint(tempDir: string): string | null {
+  const metadataPath = path.join(tempDir, "metadata.json");
+  if (!fs.existsSync(metadataPath)) return null;
+  try {
+    const parsed: unknown = JSON.parse(fs.readFileSync(metadataPath, "utf-8"));
+    if (!parsed || typeof parsed !== "object") return null;
+    const value = (parsed as Record<string, unknown>)[ENCRYPTION_FINGERPRINT_KEY];
+    return typeof value === "string" && value ? value : null;
+  } catch (error) {
+    logger.warn({
+      operation: "restore_metadata_unreadable",
+      message: "Could not read metadata.json from the archive; continuing without it",
+      error: error instanceof Error ? error.message : "Unknown error",
+    });
+    return null;
+  }
+}
+
+/** The refusal an unacceptable problem becomes. Each names what to do about
+ *  it, because the admin reading it is mid-recovery. */
+function toRestoreError(problem: RestoreArchiveProblem): AppError {
+  switch (problem.kind) {
+    case "missingDatabasePart":
+      return new AppError(
+        "This archive carries no database.sql, so the requested database restore cannot be performed.",
+        400,
+        "RESTORE_ARCHIVE_INCOMPLETE"
+      );
+    case "missingFilesPart":
+      return new AppError(
+        "This archive carries no uploads.tar.gz, so the requested file restore cannot be performed.",
+        400,
+        "RESTORE_ARCHIVE_INCOMPLETE"
+      );
+    case "unreadableFilesPart":
+      return new AppError(
+        `This archive's uploads.tar.gz cannot be read (${problem.detail}). Nothing was restored.`,
+        400,
+        "RESTORE_ARCHIVE_UNREADABLE"
+      );
+    case "encryptionKeyMismatch":
+      return new AppError(
+        "This archive was written by an instance with a different encryption key, so its stored API keys, " +
+          "SMTP password and Immich/Dawarich tokens cannot be decrypted here. Put the original key back " +
+          "(ENCRYPTION_KEY, or encryption.key in the secrets directory) and retry, or confirm the restore " +
+          "to continue and enter those credentials again afterwards.",
+        409,
+        "RESTORE_ENCRYPTION_KEY_MISMATCH"
+      );
+  }
+}
+
 export async function restoreBackup(
   id: string,
   options: RestoreOptions,
@@ -212,15 +372,6 @@ export async function restoreBackup(
     throw new AppError("Backup file not found", 404);
   }
 
-  // Create backup before restore if requested
-  if (options.createBackupBefore) {
-    logger.info({
-      operation: "restore_backup_before",
-      message: "Creating backup before restore",
-    });
-    await createBackupFn({ type: "full" });
-  }
-
   const tempDir = path.join(BACKUP_BASE_DIR, "restore-temp");
   fs.mkdirSync(tempDir, { recursive: true });
 
@@ -241,15 +392,48 @@ export async function restoreBackup(
       tar.on("error", reject);
     });
 
+    // Every objection to this archive, BEFORE a byte is written and before the
+    // safety backup is taken — a refused restore should cost neither a changed
+    // database nor a pointless archive. See `inspectRestoreArchive` for the
+    // three audit findings this ordering answers.
+    const problems = await inspectRestoreArchive(tempDir, options.scope);
+    const refusals = problems.filter(
+      (problem) => !(problem.kind === "encryptionKeyMismatch" && options.acceptEncryptionKeyChange)
+    );
+    if (refusals.length > 0) {
+      logger.warn({
+        operation: "restore_refused",
+        message: "Restore refused before writing anything",
+        backupId: id,
+        scope: options.scope,
+        problems: refusals.map((problem) => problem.kind),
+      });
+      throw toRestoreError(refusals[0]);
+    }
+    if (problems.some((problem) => problem.kind === "encryptionKeyMismatch")) {
+      logger.warn({
+        operation: "restore_encryption_key_mismatch_accepted",
+        message:
+          "The archive's encrypted values were written with a different key and will not decrypt here; the caller accepted this. Every stored API key, SMTP password and Immich/Dawarich token has to be entered again.",
+        backupId: id,
+      });
+    }
+
+    // Create backup before restore if requested. After the preflight, so a
+    // broken archive does not leave a spurious archive behind.
+    if (options.createBackupBefore) {
+      logger.info({
+        operation: "restore_backup_before",
+        message: "Creating backup before restore",
+      });
+      await createBackupFn({ type: "full" });
+    }
+
     const dbBackupPath = path.join(tempDir, "database.sql");
     const filesBackupPath = path.join(tempDir, "uploads.tar.gz");
 
     // Restore database if requested
     if (options.scope === "full" || options.scope === "database") {
-      if (!fs.existsSync(dbBackupPath)) {
-        throw new Error("Database backup file not found in archive");
-      }
-
       logger.info({ operation: "restore_db", message: "Restoring database" });
       // Read BEFORE psql runs — afterwards the row belongs to the archive.
       const identityBefore = await readInstanceIdentity();
@@ -348,19 +532,14 @@ export async function restoreBackup(
       await restoreInstanceIdentity(identityBefore);
     }
 
-    // Restore files if requested
+    // Restore files if requested. The part is known to be present and
+    // readable by now — the preflight above refused the restore otherwise,
+    // where it used to warn, skip, and report success (SRV-RESTORE-003).
     if (options.scope === "full" || options.scope === "files") {
-      if (!fs.existsSync(filesBackupPath)) {
-        logger.warn({
-          operation: "restore_files_missing",
-          message: "Files backup not found in archive",
-        });
-      } else {
-        logger.info({ operation: "restore_files", message: "Restoring files" });
-        const uploadsDir = path.join(__dirname, "../../../uploads");
-        await extractUploadsArchive(filesBackupPath, uploadsDir);
-        logger.info({ operation: "restore_files_complete", message: "Files restored" });
-      }
+      logger.info({ operation: "restore_files", message: "Restoring files" });
+      const uploadsDir = path.join(__dirname, "../../../uploads");
+      await extractUploadsArchive(filesBackupPath, uploadsDir);
+      logger.info({ operation: "restore_files_complete", message: "Files restored" });
     }
 
     // A restored database carries the backup rows as they stood when the dump

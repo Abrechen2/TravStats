@@ -39,7 +39,16 @@ export type ApiErrorCode =
   /** The requested username is reserved by the system — see
    *  `schemas/auth.ts` `RESERVED_USERNAMES`. The register form turns this
    *  into its own sentence, in the reader's language. */
-  | "USERNAME_RESERVED";
+  | "USERNAME_RESERVED"
+  /** A restore was asked for a part the archive does not carry — a file
+   *  restore from an archive with no `uploads.tar.gz`, say. */
+  | "RESTORE_ARCHIVE_INCOMPLETE"
+  /** The archive carries the part but it cannot be read. Caught BEFORE the
+   *  restore writes anything, because half a restore is neither state. */
+  | "RESTORE_ARCHIVE_UNREADABLE"
+  /** The archive's encrypted values belong to another instance key. The
+   *  restore dialog turns this into the acknowledgement it needs. */
+  | "RESTORE_ENCRYPTION_KEY_MISMATCH";
 
 interface AuthRequest extends Request {
   user?: {
