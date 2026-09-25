@@ -35,6 +35,7 @@
  * abstain about.
  */
 import type { CruiseStatsRow } from "./cruiseStatsData";
+import { isAmountRecorded } from "../../shared/flightPricing";
 
 /** The wire shape `GET /stats/cruise` carries as `totalSpendBase`. */
 export interface CruiseSpendBase {
@@ -47,19 +48,21 @@ export interface CruiseSpendBase {
 }
 
 /**
- * Whether the cruise carries a price at all.
+ * Whether a price was RECORDED for the cruise.
  *
- * A null or zero price is "no price", matching the client fold's own
- * `typeof price === "number" && price > 0` and `bookingCost.sumByCurrency`.
- * An unpriced cruise is not an exclusion: nothing was withheld from the total.
+ * `null` is "nobody wrote a price down"; 0 is a price — a prize voyage, a
+ * comped sailing — and counts as a priced cruise that adds nothing. The rule
+ * is `shared/flightPricing.ts`'s `isAmountRecorded`, the one flights moved to
+ * on 2026-09-21 (SRV-STATS-ZERO-PRICE-001); `price > 0` here had kept the old
+ * collapse alive for cruises, so a cruise saved at 0 EUR counted as unpriced
+ * and a logbook of free sailings abstained instead of answering 0.
+ * The frontend fold in `lib/stats/cruiseStatsDetail.ts` asks the same.
  *
  * Spelled as a type predicate so that callers which have asked the question
- * may then READ the price without a non-null assertion — the alternative was
- * a second copy of `price !== null && price > 0` at each such site, and two
- * copies of a counting rule is the drift this file exists to prevent.
+ * may then READ the price without a non-null assertion.
  */
 export function isPricedCruise(row: CruiseStatsRow): row is CruiseStatsRow & { price: number } {
-  return row.price !== null && row.price > 0;
+  return isAmountRecorded(row.price);
 }
 
 /**
