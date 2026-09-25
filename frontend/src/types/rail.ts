@@ -6,7 +6,9 @@
 
 export type RailStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
 export type RailTravelClass = "first" | "second" | "sleeper" | "couchette";
-export type RailDistanceSource = "great_circle" | "user";
+/** great_circle = straight line; user = typed; route = along the traced Transitous line. */
+export type RailDistanceSource = "great_circle" | "user" | "route";
+export type RailLookupProvider = "transitous" | "db-rest";
 
 export const RAIL_TRAVEL_CLASSES: readonly RailTravelClass[] = [
   "first",
@@ -23,6 +25,8 @@ export interface RailJourney {
   trainNumber: string | null;
   depStationName: string;
   depStationCode: string | null;
+  /** Catalogue row the station was picked from; null = geocoder pick. */
+  depStationId: number | null;
   depLat: number;
   depLon: number;
   depCountry: string | null;
@@ -30,6 +34,7 @@ export interface RailJourney {
   depTimezone: string | null;
   arrStationName: string;
   arrStationCode: string | null;
+  arrStationId: number | null;
   arrLat: number;
   arrLon: number;
   arrCountry: string | null;
@@ -44,7 +49,7 @@ export interface RailJourney {
   geometrySource: "none" | "straight" | "transitous" | "openrailrouting" | "manual";
   actualDepartureTime: string | null;
   actualArrivalTime: string | null;
-  lookupProvider: string | null;
+  lookupProvider: RailLookupProvider | null;
   lookupRef: string | null;
   travelClass: RailTravelClass | null;
   coach: string | null;
@@ -65,6 +70,8 @@ export interface RailJourney {
 }
 
 export interface RailStationInput {
+  /** Catalogue row; the server then takes position, code and country from it. */
+  stationId?: number | null;
   name: string;
   code?: string | null;
   lat: number;
@@ -95,4 +102,53 @@ export interface RailJourneyInput {
   tags?: string[];
   companions?: string[];
   tripId?: string | null;
+  /** The timetable trip a lookup matched; null drops it (and its traced line). */
+  lookup?: { provider: RailLookupProvider; ref: string } | null;
+}
+
+/** A row of the station catalogue (GET /rail/stations). */
+export interface RailStationHit {
+  id: number;
+  name: string;
+  uic: string | null;
+  dbId: string | null;
+  lat: number;
+  lon: number;
+  country: string | null;
+  timezone: string | null;
+}
+
+export interface RailLookupStop {
+  name: string;
+  lat: number;
+  lon: number;
+  stationId: number | null;
+  code: string | null;
+  country: string | null;
+  /** Station clock, `YYYY-MM-DDTHH:mm`. */
+  arrivalLocal: string | null;
+  departureLocal: string | null;
+}
+
+export type RailLookupOutcome =
+  "matched" | "noMatch" | "unavailable" | "disabled" | "notApplicable";
+
+export interface RailLookupAnswer {
+  match: {
+    provider: RailLookupProvider;
+    ref: string;
+    operator: string | null;
+    trainCategory: string | null;
+    trainNumber: string | null;
+    stops: RailLookupStop[];
+    boardingIndex: number;
+    hasGeometry: boolean;
+  } | null;
+  attempts: Array<{ provider: RailLookupProvider; outcome: RailLookupOutcome }>;
+}
+
+export interface RailLookupProviders {
+  transitous: boolean;
+  dbRest: boolean;
+  transitousSourcesUrl: string;
 }

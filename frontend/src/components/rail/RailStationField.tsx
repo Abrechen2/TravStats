@@ -9,9 +9,20 @@ export interface RailStationDraft {
   lat: number | null;
   lon: number | null;
   country: string | null;
+  /** UIC code, when the station came from the catalogue or a lookup. */
+  code: string | null;
+  /** Catalogue row; null for a geocoder pick. */
+  stationId: number | null;
 }
 
-export const EMPTY_STATION: RailStationDraft = { name: "", lat: null, lon: null, country: null };
+export const EMPTY_STATION: RailStationDraft = {
+  name: "",
+  lat: null,
+  lon: null,
+  country: null,
+  code: null,
+  stationId: null,
+};
 
 interface Props {
   label: string;
@@ -23,11 +34,12 @@ interface Props {
 }
 
 /**
- * One station: the shared geocoder search (`LocationInput`) for the position,
- * plus the name as the ticket prints it.
+ * One station through the shared geocoder search (`LocationInput`) for the
+ * position, plus the name as the ticket prints it — the fallback of the
+ * `StationPicker` for stations the catalogue does not know (it is thin
+ * outside Europe). A geocoder pick carries no catalogue id and no code.
  *
- * Phase 1 of the rail spec has no station catalogue, so the geocoder is the
- * catalogue for now. A search hit names a station and brings its country; a
+ * A search hit names a station and brings its country; a
  * new pick REPLACES the name, unlike the place form, because picking another
  * point means another station — the old name would label the wrong one. The
  * name stays editable afterwards ("Frankfurt (Main) Hbf" rather than whatever
@@ -50,6 +62,8 @@ export function RailStationField({
         lat: selection.lat,
         lon: selection.lon,
         country: selection.countryCode ? selection.countryCode.toUpperCase() : value.country,
+        code: null,
+        stationId: null,
       });
     },
     [onChange, value.name, value.country]

@@ -34,6 +34,8 @@ const SETTINGS_FIXTURE = {
   photonUrl: "https://photon.komoot.io",
   nominatimUrl: "https://nominatim.openstreetmap.org",
   countryThreshold: "visited" as const,
+  railTransitousEnabled: true,
+  railDbRestEnabled: true,
 };
 
 /** The endpoint answers with the settings PLUS a derived passkey status; this

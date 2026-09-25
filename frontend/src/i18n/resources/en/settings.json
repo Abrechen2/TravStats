@@ -61,7 +61,9 @@
       "title": "Data sources & attribution",
       "fullList": "Full list with licenses",
       "osm": "map tiles (ODbL 1.0)",
-      "searoute": "cruise ocean-leg distances (EUPL-1.2 / ORNL Global Shipping Lane Network, public domain)"
+      "searoute": "cruise ocean-leg distances (EUPL-1.2 / ORNL Global Shipping Lane Network, public domain)",
+      "trainline": "station catalogue (ODbL 1.0)",
+      "transitous": "train lookup and traced lines, with the timetables of its sources"
     },
     "title": "About TravStats",
     "tagline": "Self-hosted travel logbook",
@@ -863,5 +865,15 @@
       "lodgingPreferences": "Geocoder, address, coordinates, Nominatim, hotel chains, lodging",
       "lodgingMemberships": "Loyalty programme, membership, status, hotel programme, points, rewards"
     }
+  },
+  "railProviders": {
+    "title": "Train lookup",
+    "description": "Which timetable services the rail logbook's train lookup may ask. Every lookup sends the train number, station and day to the service — they leave this instance. Both services are free and run by volunteers for non-commercial use.",
+    "transitous": "Transitous",
+    "transitousHint": "Europe-wide, and traces the line too. Set RAIL_LOOKUP_CONTACT so the service can reach you as the operator.",
+    "dbRest": "db-rest",
+    "dbRestHint": "Germany only, unofficial, about 100 requests a minute for all its users together.",
+    "loadError": "The setting could not be loaded.",
+    "saveError": "The setting could not be saved."
   }
 }

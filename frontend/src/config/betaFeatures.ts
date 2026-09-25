@@ -90,7 +90,7 @@ export const BETA_FEATURES = Object.freeze({
    * flag AND the user's own domain choice.
    */
   railDomain: Object.freeze({
-    why: "Phase 1 of the rail domain is a logbook and nothing more: a list and a form, with stations picked through the geocoder. There is no station catalogue, no map layer, no dashboard tab, no statistics, no trip timeline entry and no import yet, so offering it to everybody would advertise a domain that does not yet do what the other four do.",
+    why: "The rail domain is a logbook with a station catalogue and a train lookup, and nothing more yet: there is no map layer, no dashboard tab, no statistics, no trip timeline entry, no detail page and no import, so offering it to everybody would advertise a domain that does not yet do what the other four do.",
     returnsWhen:
       "Phase 2 of the rail spec has shipped — station catalogue, map layer and dashboard tab, statistics, trip timeline — and the owner accepts the domain for release.",
     reason: "beta",

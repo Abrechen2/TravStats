@@ -18,8 +18,9 @@ export function trainLabel(journey: RailJourney): string {
 
 /**
  * One train ride in the logbook. Times are shown on each station's clock,
- * never the reader's; a measured distance says it is a straight line, because
- * it understates the track and a reader must not take it for the ticket's.
+ * never the reader's; a measured distance says whether it is a straight line
+ * (it understates the track) or runs along the line Transitous traced, so a
+ * reader never takes either for the ticket's figure.
  * Actions are real buttons, not a clickable row — a clickable row swallows
  * the clicks of the buttons inside it.
  */
@@ -27,12 +28,18 @@ export function RailJourneyRow({ journey, onEdit, onDelete }: Props): JSX.Elemen
   const { t, i18n } = useTranslation(["rail"]);
   const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
   const label = trainLabel(journey);
+  // Each figure says what it measures: a straight line understates the
+  // track, and a traced line may still not be the one the train took.
+  const kmNote =
+    journey.distanceSource === "great_circle"
+      ? t("rail:straightLine")
+      : journey.distanceSource === "route"
+        ? t("rail:tracedLine")
+        : null;
   const km =
     journey.distanceKm === null
       ? null
-      : `${Math.round(journey.distanceKm).toLocaleString(locale)} km${
-          journey.distanceSource === "great_circle" ? ` (${t("rail:straightLine")})` : ""
-        }`;
+      : `${Math.round(journey.distanceKm).toLocaleString(locale)} km${kmNote ? ` (${kmNote})` : ""}`;
   const delay =
     journey.delayMinutes === null
       ? null

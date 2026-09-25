@@ -1,7 +1,7 @@
 {
   "title": "Bahn",
   "subtitle": "Deine Zugfahrten — jede Fahrt ein Eintrag, wie ein Flug.",
-  "betaNote": "Beta: Bahnhofskatalog, Karte, Statistik und Import folgen.",
+  "betaNote": "Beta: Karte, Statistik und Import folgen.",
   "add": "Fahrt hinzufügen",
   "empty": "Noch keine Zugfahrten. Trag deine erste Fahrt ein.",
   "loadError": "Die Zugfahrten konnten nicht geladen werden.",
@@ -50,7 +50,7 @@
     "arrivalTime": "Ankunft (Ortszeit am Bahnhof)",
     "timeHint": "Die Uhrzeit, die auf dem Ticket steht. Die Zeitzone ergibt sich aus dem Bahnhof.",
     "distance": "Entfernung in km",
-    "distanceHint": "Leer lassen: TravStats misst die Luftlinie. Eintragen, wenn das Ticket die Strecke nennt.",
+    "distanceHint": "Leer lassen: TravStats misst entlang der von Transitous übernommenen Strecke, sonst die Luftlinie. Eintragen, wenn das Ticket die Strecke nennt.",
     "seat": "Platz",
     "class": "Klasse",
     "coach": "Wagen",
@@ -70,5 +70,43 @@
     "save": "Speichern",
     "saving": "Speichert …",
     "saveError": "Die Fahrt konnte nicht gespeichert werden."
+  },
+  "tracedLine": "entlang der Strecke, Transitous",
+  "station": {
+    "searchPlaceholder": "Bahnhof suchen, z. B. Frankfurt Hbf",
+    "searching": "Sucht …",
+    "searchError": "Die Bahnhofssuche ist gerade nicht erreichbar.",
+    "noHits": "Kein Bahnhof im Katalog gefunden. Wähle ihn über die Ortssuche.",
+    "picked": "Aus dem Bahnhofskatalog · UIC {{code}}",
+    "useGeocoder": "Nicht im Bahnhofskatalog? Über die Ortssuche wählen",
+    "backToCatalogue": "Zurück zum Bahnhofskatalog"
+  },
+  "lookup": {
+    "title": "Zug nachschlagen",
+    "hint": "Zugnummer, Abfahrtsbahnhof und Tag genügen — Halte, Zeiten und Strecke kommen aus dem Fahrplan.",
+    "date": "Reisetag",
+    "run": "Nachschlagen",
+    "searching": "Sucht im Fahrplan …",
+    "needs": "Dafür braucht es eine Zugnummer und einen Abfahrtsbahnhof.",
+    "pastDay": "Für vergangene Tage finden die offenen Fahrplandienste meist nichts, denn sie kennen nur den aktuellen Fahrplan, einige Wochen zurück. Trag die Fahrt dann einfach von Hand ein.",
+    "error": "Die Suche ist fehlgeschlagen. Du kannst die Fahrt von Hand eintragen.",
+    "none": {
+      "disabled": "Für diesen Bahnhof ist hier kein Fahrplandienst eingeschaltet.",
+      "unavailable": "Die Fahrplandienste antworten gerade nicht. Versuch es später noch einmal oder trag die Fahrt von Hand ein.",
+      "noMatch": "Im Fahrplan fährt an diesem Tag kein solcher Zug ab diesem Bahnhof. Bei einem vergangenen Tag ist das normal."
+    },
+    "found": "Gefunden: {{train}} · {{operator}} (Quelle: {{provider}})",
+    "provider": {
+      "transitous": "Transitous",
+      "db-rest": "db-rest (Deutsche Bahn)"
+    },
+    "alightAt": "Ausstieg",
+    "withLine": "Beim Speichern wird der Streckenverlauf von Transitous übernommen und mit der Fahrt gespeichert.",
+    "withoutLine": "Diese Quelle liefert keinen Streckenverlauf — die Karte zeigt die Luftlinie.",
+    "apply": "Übernehmen",
+    "linked": "Mit einer Fahrt aus dem Fahrplan verknüpft ({{provider}}).",
+    "unlink": "Verknüpfung lösen",
+    "credit": "Fahrplandaten und Streckenverläufe:",
+    "switchedOff": "Die Zugsuche ist auf dieser Instanz abgeschaltet. Trag die Fahrt von Hand ein."
   }
 }

@@ -11,7 +11,8 @@ import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import type { Trip } from "../../types";
 import { RAIL_TRAVEL_CLASSES, type RailJourney, type RailTravelClass } from "../../types/rail";
-import { RailStationField } from "./RailStationField";
+import { StationPicker } from "./StationPicker";
+import { RailLookupPanel } from "./RailLookupPanel";
 import {
   canSubmit,
   draftFrom,
@@ -144,9 +145,16 @@ export function RailFormModal({ journey, onClose, onSaved }: Props): JSX.Element
           </div>
         </Section>
 
+        <RailLookupPanel
+          draft={draft}
+          onApply={setDraft}
+          onClearLookup={(): void => set("lookup", null)}
+          inputClassName={INPUT_CLASS}
+        />
+
         <Section title={t("rail:form.route")}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
-            <RailStationField
+            <StationPicker
               label={t("rail:form.departureStation")}
               idPrefix="rail-dep"
               value={draft.departure}
@@ -154,7 +162,7 @@ export function RailFormModal({ journey, onClose, onSaved }: Props): JSX.Element
               onValidityChange={setDepValid}
               inputClassName={INPUT_CLASS}
             />
-            <RailStationField
+            <StationPicker
               label={t("rail:form.arrivalStation")}
               idPrefix="rail-arr"
               value={draft.arrival}

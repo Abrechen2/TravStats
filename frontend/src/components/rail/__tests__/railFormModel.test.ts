@@ -1,6 +1,6 @@
 import { describe, it, expect } from "vitest";
-import { canSubmit, draftFrom, toRailInput } from "../railFormModel";
-import type { RailJourney } from "../../../types/rail";
+import { applyLookup, canSubmit, draftFrom, toRailInput } from "../railFormModel";
+import type { RailJourney, RailLookupAnswer } from "../../../types/rail";
 
 const journey: RailJourney = {
   id: "j1",
@@ -10,12 +10,14 @@ const journey: RailJourney = {
   trainNumber: "9557",
   depStationName: "Frankfurt (Main) Hbf",
   depStationCode: null,
+  depStationId: null,
   depLat: 50.1071,
   depLon: 8.6632,
   depCountry: "DE",
   depTimezone: "Europe/Berlin",
   arrStationName: "Paris Est",
   arrStationCode: null,
+  arrStationId: null,
   arrLat: 48.8768,
   arrLon: 2.3591,
   arrCountry: "FR",
@@ -101,5 +103,87 @@ describe("railFormModel", () => {
     expect(canSubmit({ ...filled, departureLocal: "" })).toBe(false);
     expect(canSubmit({ ...filled, arrival: { ...filled.arrival, lat: null } })).toBe(false);
     expect(canSubmit({ ...filled, departure: { ...filled.departure, name: " " } })).toBe(false);
+  });
+});
+
+describe("the lookup in the form", () => {
+  const match: NonNullable<RailLookupAnswer["match"]> = {
+    provider: "transitous",
+    ref: "trip-696",
+    operator: "DB Fernverkehr AG",
+    trainCategory: "ICE",
+    trainNumber: "696",
+    boardingIndex: 1,
+    hasGeometry: true,
+    stops: [
+      {
+        name: "Mainz",
+        lat: 50,
+        lon: 8.26,
+        stationId: 1,
+        code: "1",
+        country: "DE",
+        arrivalLocal: null,
+        departureLocal: "2026-09-26T05:40",
+      },
+      {
+        name: "Frankfurt",
+        lat: 50.1,
+        lon: 8.66,
+        stationId: 2,
+        code: "2",
+        country: "DE",
+        arrivalLocal: "2026-09-26T06:10",
+        departureLocal: "2026-09-26T06:15",
+      },
+      {
+        name: "Fulda",
+        lat: 50.55,
+        lon: 9.68,
+        stationId: 3,
+        code: "3",
+        country: "DE",
+        arrivalLocal: null,
+        departureLocal: "2026-09-26T07:12",
+      },
+      {
+        name: "Berlin",
+        lat: 52.55,
+        lon: 13.39,
+        stationId: null,
+        code: null,
+        country: null,
+        arrivalLocal: "2026-09-26T10:43",
+        departureLocal: null,
+      },
+    ],
+  };
+
+  it("boards at the station asked from, alights at the chosen stop, and keeps the match", () => {
+    const next = applyLookup({ ...draftFrom(journey), seat: "45" }, match, 3);
+    expect(next.departure).toMatchObject({ name: "Frankfurt", stationId: 2, code: "2" });
+    expect(next.arrival).toMatchObject({ name: "Berlin", stationId: null, lat: 52.55 });
+    expect(next.departureLocal).toBe("2026-09-26T06:15");
+    expect(next.arrivalLocal).toBe("2026-09-26T10:43");
+    expect(next.lookup).toEqual({ provider: "transitous", ref: "trip-696" });
+    // What a timetable cannot know stays the user's.
+    expect(next.seat).toBe("45");
+    expect(toRailInput(next).lookup).toEqual({ provider: "transitous", ref: "trip-696" });
+  });
+
+  it("keeps the user's own time where the timetable gives none", () => {
+    const next = applyLookup({ ...draftFrom(journey), arrivalLocal: "2026-09-26T07:20" }, match, 2);
+    expect(next.arrivalLocal).toBe("2026-09-26T07:20");
+  });
+
+  it("refuses an arrival stop that is not after the boarding one", () => {
+    expect(() => applyLookup(draftFrom(journey), match, 0)).toThrow();
+    expect(() => applyLookup(draftFrom(journey), match, 1)).toThrow();
+  });
+
+  it("reads a saved match back, and sends null when there is none", () => {
+    const linked = { ...journey, lookupProvider: "transitous" as const, lookupRef: "trip-696" };
+    expect(draftFrom(linked).lookup).toEqual({ provider: "transitous", ref: "trip-696" });
+    expect(toRailInput(draftFrom(journey)).lookup).toBeNull();
   });
 });

@@ -39,10 +39,16 @@ vi.mock("../../../lib/api", () => ({
 }));
 const create = vi.fn();
 const update = vi.fn();
+const searchStations = vi.fn();
+const lookup = vi.fn();
+const lookupProviders = vi.fn();
 vi.mock("../../../lib/api/rail", () => ({
   railApi: {
     create: (...a: unknown[]) => create(...a),
     update: (...a: unknown[]) => update(...a),
+    searchStations: (...a: unknown[]) => searchStations(...a),
+    lookup: (...a: unknown[]) => lookup(...a),
+    lookupProviders: (...a: unknown[]) => lookupProviders(...a),
   },
 }));
 
@@ -52,12 +58,29 @@ function saveButton(): HTMLElement {
   return screen.getByRole("button", { name: "rail:form.save" });
 }
 
+/** Both station fields switched from the catalogue to the geocoder, then picked. */
+function pickBothViaGeocoder(): void {
+  for (const b of screen.getAllByRole("button", { name: "rail:station.useGeocoder" })) {
+    fireEvent.click(b);
+  }
+  fireEvent.click(screen.getByText("pick rail:form.departureStation"));
+  fireEvent.click(screen.getByText("pick rail:form.arrivalStation"));
+}
+
 describe("RailFormModal", () => {
   beforeEach(() => {
     create.mockReset();
     update.mockReset();
     getAllTrips.mockReset();
     getAllTrips.mockResolvedValue([{ id: "t1", name: "Paris weekend" }]);
+    searchStations.mockReset();
+    lookup.mockReset();
+    lookupProviders.mockReset();
+    lookupProviders.mockResolvedValue({
+      transitous: true,
+      dbRest: true,
+      transitousSourcesUrl: "https://transitous.org/sources/",
+    });
   });
 
   it("will not save until both stations have a position and the train has a departure", async () => {
@@ -66,8 +89,7 @@ describe("RailFormModal", () => {
     expect(saveButton()).toBeDisabled();
     expect(screen.getByText("rail:form.stationMissing")).toBeInTheDocument();
 
-    fireEvent.click(screen.getByText("pick rail:form.departureStation"));
-    fireEvent.click(screen.getByText("pick rail:form.arrivalStation"));
+    pickBothViaGeocoder();
     expect(screen.queryByText("rail:form.stationMissing")).toBeNull();
     expect(saveButton()).toBeDisabled();
 
@@ -84,8 +106,7 @@ describe("RailFormModal", () => {
     render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);
     await screen.findByRole("option", { name: "Paris weekend" });
 
-    fireEvent.click(screen.getByText("pick rail:form.departureStation"));
-    fireEvent.click(screen.getByText("pick rail:form.arrivalStation"));
+    pickBothViaGeocoder();
     fireEvent.change(screen.getByLabelText("rail:form.departureTime"), {
       target: { value: "2026-07-01T08:15" },
     });
@@ -100,14 +121,24 @@ describe("RailFormModal", () => {
         departureLocal: "2026-07-01T08:15",
         arrivalLocal: null,
         departureStation: {
+          stationId: null,
+          code: null,
           name: "Frankfurt (Main) Hbf",
           lat: 50.1071,
           lon: 8.6632,
           country: "DE",
         },
-        arrivalStation: { name: "Paris Est", lat: 48.8768, lon: 2.3591, country: "FR" },
+        arrivalStation: {
+          stationId: null,
+          code: null,
+          name: "Paris Est",
+          lat: 48.8768,
+          lon: 2.3591,
+          country: "FR",
+        },
         tripId: "t1",
         status: "scheduled",
+        lookup: null,
       })
     );
   });
@@ -118,8 +149,7 @@ describe("RailFormModal", () => {
     });
     const onSaved = vi.fn();
     render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);
-    fireEvent.click(screen.getByText("pick rail:form.departureStation"));
-    fireEvent.click(screen.getByText("pick rail:form.arrivalStation"));
+    pickBothViaGeocoder();
     fireEvent.change(screen.getByLabelText("rail:form.departureTime"), {
       target: { value: "2026-07-01T08:15" },
     });
@@ -128,5 +158,88 @@ describe("RailFormModal", () => {
       "arrival must not precede departure"
     );
     expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it("sends a catalogue pick with its id and code, and a looked-up train with its match", async () => {
+    searchStations.mockResolvedValue([
+      {
+        id: 7604,
+        name: "Frankfurt (Main) Hbf",
+        uic: "8011068",
+        dbId: "8000105",
+        lat: 50.107149,
+        lon: 8.663785,
+        country: "DE",
+        timezone: "Europe/Berlin",
+      },
+    ]);
+    lookup.mockResolvedValue({
+      match: {
+        provider: "transitous",
+        ref: "trip-696",
+        operator: "DB Fernverkehr AG",
+        trainCategory: "ICE",
+        trainNumber: "696",
+        boardingIndex: 0,
+        hasGeometry: true,
+        stops: [
+          {
+            name: "Frankfurt (Main) Hauptbahnhof",
+            lat: 50.107149,
+            lon: 8.663785,
+            stationId: 7604,
+            code: "8011068",
+            country: "DE",
+            arrivalLocal: null,
+            departureLocal: "2026-09-26T06:15",
+          },
+          {
+            name: "Berlin Gesundbrunnen",
+            lat: 52.5486,
+            lon: 13.3884,
+            stationId: 10112,
+            code: "8011102",
+            country: "DE",
+            arrivalLocal: "2026-09-26T10:43",
+            departureLocal: null,
+          },
+        ],
+      },
+      attempts: [{ provider: "transitous", outcome: "matched" }],
+    });
+    create.mockResolvedValue({ id: "new" });
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    const [depSearch] = screen.getAllByRole("combobox");
+    fireEvent.change(depSearch, { target: { value: "frankfurt hbf" } });
+    fireEvent.click(await screen.findByRole("button", { name: /Frankfurt \(Main\) Hbf/ }));
+    expect(screen.getByText("rail:station.picked")).toBeInTheDocument();
+
+    fireEvent.change(screen.getByLabelText("rail:form.number"), { target: { value: "ICE 696" } });
+    fireEvent.change(screen.getByLabelText("rail:lookup.date"), {
+      target: { value: "2026-09-26" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "rail:lookup.run" }));
+    await waitFor(() =>
+      expect(lookup).toHaveBeenCalledWith({
+        trainNumber: "ICE 696",
+        date: "2026-09-26",
+        fromStationId: 7604,
+      })
+    );
+    fireEvent.click(await screen.findByRole("button", { name: "rail:lookup.apply" }));
+    fireEvent.click(saveButton());
+
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    expect(create.mock.calls[0][0]).toMatchObject({
+      operator: "DB Fernverkehr AG",
+      trainCategory: "ICE",
+      trainNumber: "696",
+      departureLocal: "2026-09-26T06:15",
+      arrivalLocal: "2026-09-26T10:43",
+      departureStation: { stationId: 7604, code: "8011068" },
+      arrivalStation: { stationId: 10112, name: "Berlin Gesundbrunnen" },
+      lookup: { provider: "transitous", ref: "trip-696" },
+    });
   });
 });

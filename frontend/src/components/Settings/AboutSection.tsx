@@ -138,6 +138,28 @@ export default function AboutSection(): JSX.Element {
             </li>
             <li>
               <a
+                href="https://github.com/trainline-eu/stations"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                Trainline stations
+              </a>{" "}
+              — {t("settings:about.dataSources.trainline")}
+            </li>
+            <li>
+              <a
+                href="https://transitous.org/sources/"
+                target="_blank"
+                rel="noopener noreferrer"
+                className="underline"
+              >
+                Transitous
+              </a>{" "}
+              — {t("settings:about.dataSources.transitous")}
+            </li>
+            <li>
+              <a
                 href={`${REPO_URL}#third-party-data-and-assets`}
                 target="_blank"
                 rel="noopener noreferrer"

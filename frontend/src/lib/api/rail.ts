@@ -1,5 +1,11 @@
 import { api } from "./client";
-import type { RailJourney, RailJourneyInput } from "../../types/rail";
+import type {
+  RailJourney,
+  RailJourneyInput,
+  RailLookupAnswer,
+  RailLookupProviders,
+  RailStationHit,
+} from "../../types/rail";
 
 /**
  * `/api/v1/rail` — the rail logbook (spec 2026-09-25-rail-domain). Enveloped,
@@ -47,4 +53,34 @@ export const railApi = {
   async remove(id: string): Promise<void> {
     await api.delete(`/rail/${id}`);
   },
+
+  /** The station catalogue typeahead; `q` needs two characters. */
+  async searchStations(q: string, limit = 12): Promise<RailStationHit[]> {
+    const res = await api.get<Envelope<RailStationHit[]>>("/rail/stations", {
+      params: { q, limit },
+    });
+    return res.data.data;
+  },
+
+  /** Which lookup providers the admin allows on this instance. */
+  async lookupProviders(): Promise<RailLookupProviders> {
+    const res = await api.get<Envelope<RailLookupProviders>>("/rail/lookup/providers");
+    return res.data.data;
+  },
+
+  /** A train by number and day, boarded at a catalogue station or a position. */
+  async lookup(query: RailLookupQuery): Promise<RailLookupAnswer> {
+    const res = await api.get<Envelope<RailLookupAnswer>>("/rail/lookup", { params: query });
+    return res.data.data;
+  },
 };
+
+export interface RailLookupQuery {
+  trainNumber: string;
+  category?: string;
+  /** YYYY-MM-DD on the boarding station's clock. */
+  date: string;
+  fromStationId?: number;
+  fromLat?: number;
+  fromLon?: number;
+}
