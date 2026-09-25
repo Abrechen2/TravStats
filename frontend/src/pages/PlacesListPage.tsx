@@ -399,10 +399,10 @@ export default function PlacesListPage(): JSX.Element {
             <button
               type="button"
               onClick={() => setCreating(true)}
-              className="rounded-lg px-4 py-2 text-sm font-semibold"
-              style={{ background: "var(--domain-poi)", color: "#08221e" }}
+              className="btn-primary flex items-center gap-2 whitespace-nowrap"
             >
-              + {t("places:list.addPlace")}
+              <span>+</span>
+              <span>{t("places:list.addPlace")}</span>
             </button>
           </div>
         </div>
