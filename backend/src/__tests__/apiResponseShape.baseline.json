@@ -109,6 +109,7 @@
     "currencies.ts",
     "dataQualityFlags.ts",
     "documents.ts",
+    "documents/extractValues.ts",
     "geo.ts",
     "importBatches.ts",
     "lodging.ts",

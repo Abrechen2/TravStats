@@ -3,6 +3,7 @@ import CurrencySelect from "../../common/CurrencySelect";
 import { useRecentCurrencies } from "../../../hooks/useRecentCurrencies";
 import ReceiptUpload from "../../ReceiptUpload";
 import HelpIcon from "../../Help/HelpIcon";
+import type { ExtractTarget } from "../../../lib/extractValues";
 
 /** The cost side of a flight, shared between the create and edit forms.
  *  `undefined` means "not recorded" for every amount — the edit modal keeps
@@ -32,6 +33,8 @@ interface CostFieldsProps {
   priceHelp?: CostFieldsHelp;
   labelClassName?: string;
   inputClassName?: string;
+  /** Where "take the values from this receipt" writes — the whole form, not only this block. */
+  receiptExtract?: ExtractTarget;
 }
 
 function parseAmount(raw: string): number | undefined {
@@ -45,6 +48,7 @@ export default function CostFields({
   priceHelp,
   labelClassName = "",
   inputClassName = "",
+  receiptExtract,
 }: CostFieldsProps): JSX.Element {
   const { t } = useTranslation(["flights", "common"]);
   const recentCurrencies = useRecentCurrencies();
@@ -122,6 +126,7 @@ export default function CostFields({
         currentReceiptUrl={value.receiptUrl}
         onUploadSuccess={(receiptUrl) => set("receiptUrl", receiptUrl)}
         onDelete={() => set("receiptUrl", "")}
+        extract={receiptExtract}
       />
     </>
   );

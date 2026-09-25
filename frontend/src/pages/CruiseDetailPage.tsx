@@ -25,6 +25,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { formatDateInTimezone } from "../lib/dateUtils";
 import { formatAmount } from "../lib/units";
 import { useToastStore } from "../store/toastStore";
+import { cruiseExtractTarget } from "../lib/extractTargets";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
@@ -250,7 +251,14 @@ export default function CruiseDetailPage(): JSX.Element {
             ]}
           />
 
-          <DocumentsSection entry={{ type: "cruise", id: cruise.id }} />
+          <DocumentsSection
+            entry={{ type: "cruise", id: cruise.id }}
+            extract={cruiseExtractTarget(cruise, async (updates) => {
+              await cruiseApi.update(cruise.id, updates);
+              addToast("success", t("documents:extract.applied"));
+              setReloadKey((k) => k + 1);
+            })}
+          />
         </div>
 
         <aside className="flex flex-col gap-6 md:col-span-2">

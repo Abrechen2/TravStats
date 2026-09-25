@@ -16,6 +16,7 @@ import { RequiredMark } from "./requiredFields";
 import AircraftSection from "./sections/AircraftSection";
 import BookingAndNotesSection from "./sections/BookingAndNotesSection";
 import PriceAndSeatSection from "./sections/PriceAndSeatSection";
+import { flightFormExtract } from "../../lib/extractTargets";
 import { countValue, priceSummaryValue, summaryLine } from "./sections/sectionSummaries";
 import SuggestionChips from "../common/SuggestionChips";
 import { useFlightEntrySuggestions } from "../../hooks/useFlightEntrySuggestions";
@@ -588,6 +589,21 @@ export default function FlightCompleteStep({
           onCostChange={onCostChange}
           showCostBreakdown={features.enableCostTracking}
           seatSuggestions={suggestions.seats}
+          receiptExtract={flightFormExtract(
+            { flightNumber: flightNumber || undefined, departureDate: departureDate || undefined },
+            { ...cost, bookingReference, seatNumber, seatClass },
+            (v) => {
+              if (v.price !== undefined || v.currency !== undefined)
+                onCostChange({
+                  ...cost,
+                  price: v.price ?? cost.price,
+                  currency: v.currency ?? cost.currency,
+                });
+              if (v.bookingReference) setBookingReference(v.bookingReference);
+              if (v.seatNumber) setSeatNumber(v.seatNumber);
+              if (v.seatClass) setSeatClass(v.seatClass);
+            }
+          )}
           priceHelp={{
             content: t("flights:form.help.price"),
             expandedContent: t("flights:form.help.price"),

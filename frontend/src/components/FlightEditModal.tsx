@@ -19,6 +19,7 @@ import CatalogueCombobox, {
 } from "./FlightForm/fields/CatalogueCombobox";
 import BookingFields from "./FlightForm/fields/BookingFields";
 import CostFields from "./FlightForm/fields/CostFields";
+import { flightFormExtract, flightHints } from "../lib/extractTargets";
 import TripSelectField from "./FlightForm/fields/TripSelectField";
 import StatusField from "./FlightForm/fields/StatusField";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
@@ -735,6 +736,9 @@ export default function FlightEditModal({
             }))
           }
           showBreakdown={features.enableCostTracking}
+          receiptExtract={flightFormExtract(flightHints(flight), formData, (v) =>
+            setFormData((prev) => ({ ...prev, ...v }))
+          )}
         />
 
         {/* Tags */}

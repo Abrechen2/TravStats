@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import CostFields, { type CostFieldsValue } from "../fields/CostFields";
 import SuggestionChips from "../../common/SuggestionChips";
+import type { ExtractTarget } from "../../../lib/extractValues";
 
 export type SeatClass = "" | "economy" | "premium_economy" | "business" | "first";
 export type FlightCategory = "" | "business" | "private" | "vacation";
@@ -24,6 +25,8 @@ interface PriceAndSeatSectionProps {
   inputClassName: string;
   /** Seats from the user's own history, offered under the seat field. */
   seatSuggestions?: readonly string[];
+  /** "Take the values from this receipt", passed through to the receipt upload. */
+  receiptExtract?: ExtractTarget;
 }
 
 /**
@@ -52,6 +55,7 @@ export default function PriceAndSeatSection({
   labelClassName,
   inputClassName,
   seatSuggestions = [],
+  receiptExtract,
 }: PriceAndSeatSectionProps): JSX.Element {
   const { t } = useTranslation(["flights", "common"]);
 
@@ -125,6 +129,7 @@ export default function PriceAndSeatSection({
         priceHelp={priceHelp}
         labelClassName={labelClassName}
         inputClassName={inputClassName}
+        receiptExtract={receiptExtract}
       />
     </div>
   );

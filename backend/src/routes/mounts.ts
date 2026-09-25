@@ -81,6 +81,7 @@ import placesRouter from "./places";
 import xlsxImportRouter from "./xlsxImport";
 import placeVisitPhotoRouter from "./places/visitPhotos";
 import placeVisitDateSuggestionRouter from "./places/visitDateSuggestions";
+import documentExtractValueRoutes from "./documents/extractValues";
 import placeListsRouter from "./placeLists";
 import curatedListsRouter from "./placeLists/curated";
 import lodgingChainsRouter from "./lodgingChains";
@@ -126,6 +127,9 @@ export const apiMounts: ApiMount[] = [
   // ...); mounted BEFORE those routers so none of their `router.use` guards
   // (lodging's write-scope requirement, say) decides a document read. It has
   // no router-level middleware of its own, so passing through it is free.
+  // "Take the values from this receipt": one POST under `/documents/:id`, in
+  // its own file; mounted first so the documents router never sees the path.
+  { id: "documents.extractValues", base: "/api/v1", router: documentExtractValueRoutes },
   { id: "documents", base: "/api/v1", router: documentRoutes },
   // Before `flights`, whose `GET /:id` would otherwise take the word
   // "entry-suggestions" for a flight id.

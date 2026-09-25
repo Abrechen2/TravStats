@@ -2,17 +2,22 @@ import { useState, useRef } from "react";
 import { uploadsApi, API_URL } from "../lib/api";
 import { useTranslation } from "../hooks/useTranslation";
 import { apiErrorCode, apiErrorMessage, DEMO_FORBIDDEN_CODE } from "../lib/apiError";
+import { documentIdFromUrl, type ExtractTarget } from "../lib/extractValues";
+import { ExtractValuesAction } from "./documents/ExtractValuesAction";
 
 interface ReceiptUploadProps {
   currentReceiptUrl?: string | null;
   onUploadSuccess: (receiptUrl: string) => void;
   onDelete: () => void;
+  /** Offers "take the values from this receipt" into the form's own fields. */
+  extract?: ExtractTarget;
 }
 
 export default function ReceiptUpload({
   currentReceiptUrl,
   onUploadSuccess,
   onDelete,
+  extract,
 }: ReceiptUploadProps): JSX.Element {
   const { t } = useTranslation(["flights", "common", "errors", "settings"]);
   const [uploading, setUploading] = useState(false);
@@ -20,6 +25,8 @@ export default function ReceiptUpload({
   const [error, setError] = useState("");
   const [dragActive, setDragActive] = useState(false);
   const fileInputRef = useRef<HTMLInputElement>(null);
+  // A legacy upload (`/uploads/receipts/...`) is not a kept document and cannot be parsed by id.
+  const receiptDocumentId = documentIdFromUrl(currentReceiptUrl);
 
   const handleFileChange = async (file: File) => {
     // Validate file type
@@ -105,6 +112,9 @@ export default function ReceiptUpload({
               {t("flights:receipt.viewReceipt")}
             </a>
           </div>
+          {extract && receiptDocumentId && (
+            <ExtractValuesAction documentId={receiptDocumentId} target={extract} />
+          )}
           <button
             type="button"
             onClick={handleDelete}

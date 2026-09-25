@@ -704,6 +704,15 @@ export function StayEditor({
             receiptUrl={receiptUrl}
             onReceiptChange={setReceiptUrl}
             t={t}
+            extract={{
+              domain: "lodging",
+              current: { price: totalPrice, currency, bookingReference },
+              onApply: (v) => {
+                if (v.price != null) setTotalPrice(String(v.price));
+                if (v.currency) setCurrency(v.currency as LodgingCurrency);
+                if (v.bookingReference) setBookingReference(v.bookingReference);
+              },
+            }}
           />
 
           <StayEditorNotesSection
