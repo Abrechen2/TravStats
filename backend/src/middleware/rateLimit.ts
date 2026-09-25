@@ -189,6 +189,23 @@ export const openDataLimiter = rateLimit({
 });
 
 /**
+ * Per-user limit for the phone's "append a station" (`POST
+ * /roadtrips/:id/stations`). Every call reverse-geocodes through the
+ * process-wide one-request-a-second Nominatim queue and routes the new legs,
+ * so an app retrying in a loop would stall naming for every user on the
+ * instance. Twenty a minute is far past a person tapping "tonight here"; the
+ * outbox resends are idempotent and answer 200 without new work anyway.
+ */
+export const stationAppendLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(20),
+  message: "Too many stations added in a short time — please slow down",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/**
  * Per-user/IP limit for the FX preview proxy (`/lodging/fx-preview`).
  *
  * The route proxies to the free public Frankfurter/ECB API so the frontend

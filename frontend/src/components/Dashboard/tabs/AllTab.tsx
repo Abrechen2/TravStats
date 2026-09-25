@@ -167,6 +167,29 @@ export function AllTab(): JSX.Element {
   // Tours are beta again (2026-09-24): nothing is fetched while the key is closed.
   const toursVisible = useToursVisible();
   const dashboardTours = useDashboardTours(toursVisible);
+  // A roadtrip IS a domain: it answers to the user's own switch and the
+  // filter pill like a cruise does, and to the time range like everything
+  // else. A day tour is not a domain and answers to the range alone.
+  const roadtripsVisible = filterDomains.includes("roadtrip") && isEnabled("roadtrip");
+  // Keyed on the hook's stable arrays, not its result object, which is new
+  // on every render and would rebuild the tour paths each time.
+  const filteredTours = useMemo(() => {
+    const tours = dashboardTours.tours.filter(
+      (tour) =>
+        (tour.kind !== "roadtrip" || roadtripsVisible) &&
+        (!tour.startDate ||
+          intervalOverlapsRange(tour.startDate, tour.endDate, filterTime.from, filterTime.to))
+    );
+    const ids = new Set(tours.map((tour) => tour.id));
+    return { tours, geometries: dashboardTours.geometries.filter((g) => ids.has(g.routeId)) };
+  }, [
+    dashboardTours.tours,
+    dashboardTours.geometries,
+    roadtripsVisible,
+    filterTime.from,
+    filterTime.to,
+  ]);
+  const shownTours = { ...dashboardTours, ...filteredTours };
 
   // Filter flights by departureTime within the year/time range.
   // Flights without a departureTime stay visible (treat NaN as
@@ -465,8 +488,8 @@ export function AllTab(): JSX.Element {
   // layer itself comes from `buildTourDeckLayers` (`./tourMapOverlay.tsx`,
   // which also carries the width/alpha rationale).
   const tourPathData = useMemo<TourPathDatum[]>(
-    () => (showTours ? buildTourPaths(dashboardTours.geometries) : []),
-    [showTours, dashboardTours.geometries]
+    () => (showTours ? buildTourPaths(shownTours.geometries) : []),
+    [showTours, shownTours.geometries]
   );
   // Altitude-lifted on the globe only — see `TOUR_PATH_GLOBE_ALTITUDE_M`'s
   // doc comment (tourMapOverlay.tsx): an unlifted path z-fights with the
@@ -515,7 +538,7 @@ export function AllTab(): JSX.Element {
 
   // See `buildTourLegendRows` (`./tourMapOverlay.tsx`) for why "empty"
   // shows no row here — `tourStatusOverlay` below carries loading/error.
-  const tourLegend = buildTourLegendRows(showTours, dashboardTours, t, legendRow, {
+  const tourLegend = buildTourLegendRows(showTours, shownTours, t, legendRow, {
     color: colorOfDomain("roadtrip"),
     label: t("roadtrips:kind.roadtrip"),
   });

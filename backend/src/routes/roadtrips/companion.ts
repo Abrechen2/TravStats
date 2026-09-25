@@ -2,6 +2,7 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 
 import { prisma } from "../../db";
+import { stationAppendLimiter } from "../../middleware/rateLimit";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { rejectDemo } from "../../middleware/demoGuard";
 import {
@@ -86,6 +87,7 @@ router.get(
 router.post(
   "/roadtrips/:id/stations",
   authenticate,
+  stationAppendLimiter,
   requireWriteScope,
   rejectDemo,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {

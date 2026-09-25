@@ -52,10 +52,11 @@ vi.mock("../../../../hooks/useDashboardRoute", () => ({
   useDashboardRoute: () => mockUseDashboardRoute(),
 }));
 
+const mockRoadtripDomain = vi.hoisted(() => vi.fn(() => true));
 vi.mock("../../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({
     enabled: ["flight", "cruise", "lodging"],
-    isEnabled: () => true,
+    isEnabled: (key: string) => (key === "roadtrip" ? mockRoadtripDomain() : true),
   }),
 }));
 
@@ -158,6 +159,34 @@ beforeEach(() => {
 });
 
 describe("AllTab: tour lines and legend on the dashboard map", () => {
+  it("draws a roadtrip only while the reader's roadtrip domain is on, a day tour regardless", async () => {
+    const roadtrip = { ...TOUR_A, id: "rt-1", name: "Nordkap", kind: "roadtrip" };
+    const dayTour = { ...TOUR_A, id: "tour-a", kind: "tour" };
+    mockUseDashboardTours.mockReturnValue({
+      ...READY_NO_TOURS,
+      tours: [roadtrip, dayTour],
+      geometries: [{ ...GEOMETRY, routeId: "rt-1", name: "Nordkap" }, GEOMETRY],
+    });
+    mockRoadtripDomain.mockReturnValue(false);
+
+    render(
+      <MemoryRouter>
+        <AllTab />
+      </MemoryRouter>
+    );
+
+    await waitFor(() => expect(mapProps.length).toBeGreaterThan(0));
+    const layers = mapProps[mapProps.length - 1].extraLayers as Array<{
+      id: string;
+      props: { data: Array<{ name?: string; sectionName?: string }> };
+    }>;
+    const paths = layers.find((layer) => layer.id === "dashboard-tour-paths");
+    const names = JSON.stringify(paths?.props.data ?? []);
+    expect(names).toContain("Fjord loop");
+    expect(names).not.toContain("Nordkap");
+    mockRoadtripDomain.mockReturnValue(true);
+  });
+
   it("feeds the tour path layer through MapContainer3D's extraLayers prop", async () => {
     mockUseDashboardTours.mockReturnValue({
       ...READY_NO_TOURS,

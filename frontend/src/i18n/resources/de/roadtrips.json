@@ -28,7 +28,7 @@
   "deleteError": "Der Roadtrip konnte nicht gelöscht werden.",
   "deleteConfirm": {
     "title": "Roadtrip löschen?",
-    "message": "„{{name}}“ wird mit seinen Stationen, Etappen und Aufzeichnungen gelöscht. Verknüpfte Unterkünfte und Aufenthalte bleiben erhalten.",
+    "message": "„{{name}}“ wird mit seinen Stationen, Etappen und Aufzeichnungen gelöscht. Verknüpfte Unterkünfte und Aufenthalte bleiben erhalten, seine Tagestouren als Touren ohne Station.",
     "confirm": "Löschen"
   },
   "kind": {

@@ -28,7 +28,7 @@
   "deleteError": "The roadtrip could not be deleted.",
   "deleteConfirm": {
     "title": "Delete roadtrip?",
-    "message": "“{{name}}” is deleted with its stations, legs and recordings. Linked accommodation and stays are kept.",
+    "message": "“{{name}}” is deleted with its stations, legs and recordings. Linked accommodation and stays are kept, and its day tours stay as tours without a station.",
     "confirm": "Delete"
   },
   "kind": {
