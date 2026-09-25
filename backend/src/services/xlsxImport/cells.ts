@@ -132,6 +132,16 @@ export function isoTimestamp(raw: string | undefined): string | null | undefined
   return parsed.toISOString();
 }
 
+/**
+ * Whether a date cell names a time of day at all. "2025-07-10" and
+ * "10.07.2025" do not; "2025-07-10T12:00:00.000Z" (our own export read back)
+ * and "10.07.2025 12:30" do. A cell that names no clock says nothing about the
+ * hour, so it must not overwrite one — see `keepStoredClock` in `values.ts`.
+ */
+export function hasClock(raw: string | undefined): boolean {
+  return /\d:\d{2}/.test(raw ?? "");
+}
+
 /** Full ISO timestamp, for the fields that carry a time. */
 export function isoDateTime(raw: string | undefined): string | null | undefined {
   const v = raw?.trim();

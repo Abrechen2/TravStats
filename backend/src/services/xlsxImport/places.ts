@@ -38,7 +38,7 @@ import {
   type RowOutcome,
   type SheetOutcome,
 } from "./types";
-import { changedOnly, droppedOrNone, enumCell } from "./values";
+import { changedOnly, droppedOrNone, enumCell, keepStoredClock } from "./values";
 
 const COORD_DECIMALS = 4;
 const sameCoord = (a: number | null, b: number | undefined): boolean =>
@@ -202,7 +202,10 @@ export async function importPlaceVisits(sheet: IncomingSheet, ctx: Ctx): Promise
     const fileId = cell.text(raw.id);
     const label = cell.text(raw.placeId) ?? `#${rowNo}`;
 
-    const visitedAt = cell.isoDate(raw.visitedAt);
+    // The whole instant, not its first ten characters: `isoDate` cut the
+    // clock off, so an untouched re-import moved every visit to midnight
+    // (SRV-EXPORT-001, see `cells.ts#isoTimestamp`).
+    const visitedAt = cell.isoTimestamp(raw.visitedAt);
     if (visitedAt === null) {
       keepDespiteError(seen, fileId);
       out.push(errorRow(rowNo, label, "invalid_date"));
@@ -262,7 +265,8 @@ export async function importPlaceVisits(sheet: IncomingSheet, ctx: Ctx): Promise
         continue;
       }
       const stored = await prisma.placeVisit.findUniqueOrThrow({ where: { id: targetId } });
-      const data = changedOnly(definedOnly(fields), stored);
+      const visitedAtKept = keepStoredClock(fields.visitedAt, raw.visitedAt, stored.visitedAt);
+      const data = changedOnly(definedOnly({ ...fields, visitedAt: visitedAtKept }), stored);
       if (Object.keys(data).length === 0) {
         out.push({ row: rowNo, action: "skip", id: targetId, label, message });
         continue;

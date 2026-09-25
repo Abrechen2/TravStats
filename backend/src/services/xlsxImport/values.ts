@@ -91,3 +91,24 @@ export function changedOnly<T extends Record<string, unknown>>(
     Object.entries(incoming).filter(([key, value]) => !same(value, stored[key]))
   ) as Partial<T>;
 }
+
+const DAY = (d: Date): string => d.toISOString().slice(0, 10);
+
+/**
+ * The instant a date cell should write, given the one already stored.
+ *
+ * A cell that names no time of day ("2025-07-10", "10.07.2025") on the SAME
+ * UTC day as the stored value keeps the stored clock: it states the day, and
+ * the day has not changed. Without this a hand-edited sheet that typed the
+ * visit date back in moved a 12:00 visit to midnight, which is the same loss
+ * SRV-EXPORT-001 found for the untouched export (beta audit 2026-09-20). A
+ * different day, or a cell that does carry a clock, is written as read.
+ */
+export function keepStoredClock(
+  incoming: Date | undefined,
+  raw: string | undefined,
+  stored: Date | null
+): Date | undefined {
+  if (!incoming || !stored || cell.hasClock(raw)) return incoming;
+  return DAY(incoming) === DAY(stored) ? stored : incoming;
+}

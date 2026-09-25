@@ -48,7 +48,7 @@ import {
   type RowOutcome,
   type SheetOutcome,
 } from "./types";
-import { changedOnly, droppedOrNone, enumCell } from "./values";
+import { changedOnly, droppedOrNone, enumCell, keepStoredClock } from "./values";
 
 /** Statuses the write schema accepts. `in_progress` is derived and stored,
  *  never written — an exported one is dropped and re-derived from the dates. */
@@ -137,8 +137,11 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
     const label = cell.text(raw.routeName) ?? cell.text(raw.ship) ?? `#${rowNo}`;
     const fileId = cell.text(raw.id);
 
-    const startDate = cell.isoDate(raw.startDate);
-    const endDate = cell.isoDate(raw.endDate);
+    // The whole instant (SRV-EXPORT-001): a sailing can carry a boarding
+    // time — the booking parser emits "2026-06-17T08:00" — and `isoDate`
+    // flattened it to midnight on every re-import.
+    const startDate = cell.isoTimestamp(raw.startDate);
+    const endDate = cell.isoTimestamp(raw.endDate);
     if (startDate === null || endDate === null) {
       keepDespiteError(seen, fileId);
       out.push(errorRow(rowNo, label, "invalid_date"));
@@ -169,7 +172,8 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
         shipNameOverride: cell.text(raw.ship),
         cruiseLine: cell.text(raw.cruiseLine),
       }),
-      startDate
+      // A day, as the stops sheet names its cruise: "Route (2026-06-17)".
+      startDate?.slice(0, 10)
     );
 
     // Scoped by userId: a foreign id misses and the row is new to this account.
@@ -209,6 +213,12 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
         tripId: trip.tripId,
       };
       const stored = await prisma.cruise.findUniqueOrThrow({ where: { id: targetId } });
+      fields.startDate = keepStoredClock(startDateValue, raw.startDate, stored.startDate);
+      fields.endDate = keepStoredClock(
+        endDate ? new Date(endDate) : undefined,
+        raw.endDate,
+        stored.endDate
+      );
       const data: Record<string, unknown> = changedOnly(definedOnly(fields), stored);
       const rowNotes = notes.length > 0 ? notes : undefined;
       const extra = { notes: rowNotes, dropped: droppedOrNone(dropped) };
