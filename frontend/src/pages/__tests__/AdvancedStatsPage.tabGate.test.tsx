@@ -80,3 +80,27 @@ describe("visibleStatsTabs", () => {
     ]);
   });
 });
+
+// Rail stays behind the `railDomain` beta gate after phase 2 (owner rule,
+// 2026-09-25): the strip, the deep link and — through `visibleStatsTabs` —
+// the overview's chips and cards all ask the instance half.
+describe("rail statistics tab", () => {
+  it("is drawn only when the beta gate is on", () => {
+    expect(visibleStatsTabs(["flight", "rail"], "denied", true)).toEqual(["flight", "rail"]);
+    expect(visibleStatsTabs(["flight", "rail"], "denied", false)).toEqual(["flight"]);
+  });
+
+  it("hides rail when a caller does not say", () => {
+    expect(visibleStatsTabs(["flight", "rail"], "denied")).toEqual(["flight"]);
+  });
+
+  it("refuses a deep link to rail while the gate is off", () => {
+    expect(resolveStatsTab("rail", ["flight", "rail"], "denied", false)).toBe("all");
+    expect(resolveStatsTab("rail", ["flight", "rail"], "denied")).toBe("all");
+  });
+
+  it("opens rail with the gate on, but only for a user who has the domain", () => {
+    expect(resolveStatsTab("rail", ["flight", "rail"], "denied", true)).toBe("rail");
+    expect(resolveStatsTab("rail", ["flight"], "denied", true)).toBe("all");
+  });
+});

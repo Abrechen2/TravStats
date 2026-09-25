@@ -1,6 +1,5 @@
 import type { DomainKey } from "../shared/domains";
 import type { PlacesAccess } from "../hooks/usePlacesVisible";
-import { hasStatistics } from "../lib/stats/domain-stats/types";
 
 export type StatsTab = DomainKey | "all";
 
@@ -33,25 +32,32 @@ export type StatsTab = DomainKey | "all";
  * `enabled` alone while the deep link had already learned to ask
  * `usePlacesAccess`. Pending keeps the tab (the app does not know yet);
  * denied removes it.
+ *
+ * Rail asks the INSTANCE half separately (`railOffered`, the `railDomain` beta
+ * gate — `useRailOffered`); `enabledDomains` already carries the user half. It
+ * defaults to hidden, so a caller that forgets to pass it hides rail rather
+ * than showing a beta domain on an instance that switched it off.
  */
 export function visibleStatsTabs(
   enabledDomains: readonly DomainKey[],
-  placesAccess: PlacesAccess
+  placesAccess: PlacesAccess,
+  railOffered = false
 ): DomainKey[] {
   return enabledDomains.filter(
-    (key) => hasStatistics(key) && (key !== "poi" || placesAccess !== "denied")
+    (key) => (key !== "poi" || placesAccess !== "denied") && (key !== "rail" || railOffered)
   );
 }
 
 export function resolveStatsTab(
   requested: StatsTab,
   enabledDomains: readonly DomainKey[],
-  placesAccess: PlacesAccess
+  placesAccess: PlacesAccess,
+  railOffered = false
 ): StatsTab {
   if (requested === "all") return "all";
   if (requested === "poi") return placesAccess === "denied" ? "all" : "poi";
-  // A domain without statistics yet (rail) has no tab to land on.
-  if (!hasStatistics(requested)) return "all";
+  // Rail behind a closed beta gate has no tab to land on, however it was asked.
+  if (requested === "rail" && !railOffered) return "all";
   // Falling back to the overview rather than showing nothing: the reader asked
   // for statistics, and a page they can use beats an empty panel.
   return enabledDomains.includes(requested) ? requested : "all";

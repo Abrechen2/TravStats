@@ -94,13 +94,17 @@
       "countries": "Countries",
       "lists": "Lists",
       "bestChecklist": "Best checklist",
-      "cruiseNights": "Nights aboard"
+      "cruiseNights": "Nights aboard",
+      "railJourneys": "Rides",
+      "railKmMeasured": "Track",
+      "railKmStraight": "Straight line"
     },
     "topItems": {
       "airlines": "Top airlines",
       "cruiseLines": "Top cruise lines",
       "chains": "Top chains",
-      "categories": "Top categories"
+      "categories": "Top categories",
+      "railOperators": "Top operators"
     },
     "badge": {
       "balconyCabin": "Balcony cabin",

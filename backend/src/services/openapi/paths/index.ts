@@ -28,6 +28,7 @@ import "./diagnostics";
 import "./cruises";
 import "./rail";
 import "./railLookup";
+import "./railStats";
 import "./lodging";
 import "./settings";
 import "./places";

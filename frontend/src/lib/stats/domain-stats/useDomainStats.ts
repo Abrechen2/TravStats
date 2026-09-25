@@ -5,21 +5,25 @@
 // domain's slot stays empty, the rest renders. Lodging is fed by
 // `/stats/lodging` + the raw lodging list; POI has no rollup endpoint at all
 // and derives everything from places, lists and the checklist catalog.
-import { useEffect, useState } from "react";
+import { useEffect, useMemo, useState } from "react";
 import type { Flight } from "../../../types";
+import type { RailJourney } from "../../../types/rail";
 import { statsApi } from "../../api";
 import { cruiseApi } from "../../api/cruise";
 import { listLodgings, getLodgingStats } from "../../api/lodging";
 import { listPlaces } from "../../api/places";
 import { listCuratedChecklists, listPlaceLists } from "../../api/placeLists";
+import { railApi } from "../../api/rail";
 import { logger } from "../../logger";
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
+import { useRailOffered } from "../../../hooks/useRailVisible";
 import type { DomainKey } from "../../../shared/domains";
 import { adaptFlight } from "./flightStatsAdapter";
 import { adaptCruise } from "./cruiseStatsAdapter";
 import { adaptLodging } from "./lodgingStatsAdapter";
 import { adaptPoi } from "./poiStatsAdapter";
-import { hasStatistics, type DomainStats, type DomainStatsMap, type StatsDomain } from "./types";
+import { adaptRail } from "./railStatsAdapter";
+import type { DomainStats, DomainStatsMap, StatsDomain } from "./types";
 import { toYearKeyed } from "./yearKeyed";
 
 export interface UseDomainStatsResult {
@@ -47,7 +51,14 @@ export function useDomainStats(input: {
   // Domain-gating: only the user's enabled domains are fetched — a
   // disabled domain must not surface in the cross-domain overview, so
   // its stats are never loaded in the first place.
-  const { enabled } = useEnabledDomains();
+  const { enabled: enabledDomains } = useEnabledDomains();
+  // Rail sits behind the `railDomain` beta gate as well: with the gate off it
+  // is not fetched, so it can reach neither a card nor a sum on the overview.
+  const railOffered = useRailOffered();
+  const enabled = useMemo(
+    () => enabledDomains.filter((d) => d !== "rail" || railOffered),
+    [enabledDomains, railOffered]
+  );
   const [stats, setStats] = useState<DomainStatsMap>({});
   const [errors, setErrors] = useState<Partial<Record<DomainKey, string>>>({});
   const [loading, setLoading] = useState(true);
@@ -59,7 +70,7 @@ export function useDomainStats(input: {
       const result: DomainStatsMap = {};
       const errs: Partial<Record<DomainKey, string>> = {};
 
-      const tasks = enabled.filter(hasStatistics).map(async (domain) => {
+      const tasks = enabled.map(async (domain) => {
         try {
           const value = await loadDomain(domain, flights);
           result[domain] = value;
@@ -114,5 +125,18 @@ async function loadDomain(domain: StatsDomain, flights: Flight[]): Promise<Domai
       ]);
       return adaptPoi({ places, lists, curated });
     }
+    case "rail":
+      return adaptRail({ journeys: await loadCompletedRides() });
+  }
+}
+
+/** Every completed ride, a page of 500 at a time — the list endpoint's cap. */
+async function loadCompletedRides(): Promise<RailJourney[]> {
+  const PAGE = 500;
+  const rides: RailJourney[] = [];
+  for (let offset = 0; ; offset += PAGE) {
+    const page = await railApi.list({ status: "completed", limit: PAGE, offset });
+    rides.push(...page.journeys);
+    if (page.journeys.length < PAGE || rides.length >= page.total) return rides;
   }
 }

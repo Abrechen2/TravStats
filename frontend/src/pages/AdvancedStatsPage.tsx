@@ -50,6 +50,7 @@ import StatsSeatSection from "../components/Stats/StatsSeatSection";
 import CruiseStatsSection from "../components/Stats/CruiseStatsSection";
 import LodgingStatsSection from "../components/Stats/LodgingStatsSection";
 import PoiStatsSection from "../components/Stats/PoiStatsSection";
+import RailStatsSection from "../components/Stats/rail/RailStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
 import FlightScorecardBlock from "../components/Stats/scorecard/FlightScorecardBlock";
 import type { WindowKind } from "../components/Stats/scorecard/TimeRangeControl";
@@ -64,6 +65,7 @@ import { useMinLoadingState } from "../hooks/useMinLoadingState";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useStatsPageSections } from "../lib/stats/useStatsPageSections";
 import { usePlacesAccess } from "../hooks/usePlacesVisible";
+import { useRailOffered } from "../hooks/useRailVisible";
 import { resolveStatsTab, visibleStatsTabs } from "./statsTabAccess";
 import type { DomainKey } from "../shared/domains";
 
@@ -148,7 +150,8 @@ export default function AdvancedStatsPage(): JSX.Element {
    * to the overview, which is a page rather than a blank.
    */
   const placesAccess = usePlacesAccess();
-  const effectiveFilter = resolveStatsTab(filter, enabled, placesAccess);
+  const railOffered = useRailOffered(); // the `railDomain` beta gate, as for the strip
+  const effectiveFilter = resolveStatsTab(filter, enabled, placesAccess, railOffered);
 
   // Which blocks this tab draws. Per tab, because hiding costs on flights says
   // nothing about cruises — and everything is visible until someone says
@@ -552,7 +555,7 @@ export default function AdvancedStatsPage(): JSX.Element {
             second instance. */}
         <EvidencePanel />
         <StatsTabStrip
-          tabs={visibleStatsTabs(enabled, placesAccess)}
+          tabs={visibleStatsTabs(enabled, placesAccess, railOffered)}
           active={filter}
           onSelect={setFilter}
         />
@@ -591,6 +594,7 @@ export default function AdvancedStatsPage(): JSX.Element {
           {effectiveFilter === "poi" && placesAccess === "allowed" && (
             <PoiStatsSection scope={scope} visibility={sections} />
           )}
+          {effectiveFilter === "rail" && <RailStatsSection scope={scope} visibility={sections} />}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}
           {effectiveFilter === "flight" && flights.length > 0 && (

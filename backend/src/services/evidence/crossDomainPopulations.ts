@@ -11,7 +11,18 @@ import { lodgingCountryKey } from "../../utils/stats/lodgingCountryKey";
 import { localWallClockOf, type FlightTimeSemantics } from "../../utils/timezone";
 import { getCachedAirports } from "../airportCache";
 import { flightEvidenceEntry } from "./entryMappers";
-import { cruiseEvidenceEntry, placeEvidenceEntry, stayEvidenceEntry } from "./entryMappersDomains";
+import {
+  cruiseEvidenceEntry,
+  placeEvidenceEntry,
+  railEvidenceEntry,
+  stayEvidenceEntry,
+} from "./entryMappersDomains";
+import {
+  countableRailWhere,
+  railCountries,
+  railDayKeys,
+  railYear,
+} from "../../shared/railCounting";
 
 /**
  * The rows behind the three `CrossDomainKpis` numbers, per domain, as the
@@ -401,13 +412,43 @@ async function loadPlaces(userId: string): Promise<CrossDomainPopulation> {
 }
 
 /**
- * Rail is a domain since 2026-09-25 but not yet part of the cross-domain
- * figures (spec 2026-09-25-rail-domain, phase 2). Its population is empty
- * rather than missing, so a request that names it is answered — and the
- * overview, which draws only domains with statistics, never shows it a zero.
+ * Mirrors `railStatsAdapter.ts`: a completed ride is one event, filed under
+ * the year it left on its departure station's calendar, active on the day it
+ * left and — for a night train — the day it arrived, each on its own
+ * station's clock; it proves both stations' countries. Every one of those
+ * rules lives in `shared/railCounting.ts`, which both sides mirror.
  */
-async function loadRail(): Promise<CrossDomainPopulation> {
-  return { events: [], countryRows: [] };
+async function loadRail(userId: string): Promise<CrossDomainPopulation> {
+  const rows = await prisma.railJourney.findMany({
+    where: { userId, ...countableRailWhere() },
+    select: {
+      id: true,
+      depStationName: true,
+      arrStationName: true,
+      depCountry: true,
+      arrCountry: true,
+      depTimezone: true,
+      arrTimezone: true,
+      departureTime: true,
+      arrivalTime: true,
+    },
+  });
+  const events: CrossDomainEventRow[] = [];
+  const countryRows: CrossDomainCountryRow[] = [];
+  for (const row of rows) {
+    const entry = railEvidenceEntry(
+      {
+        id: row.id,
+        label: `${row.depStationName} → ${row.arrStationName}`,
+        departureTime: row.departureTime,
+      },
+      { subtitle: null }
+    );
+    const year = railYear(row);
+    events.push({ domain: "rail", entry, year, dayKeys: railDayKeys(row) });
+    countryRows.push({ domain: "rail", entry, countries: railCountries(row), years: [year] });
+  }
+  return { events, countryRows };
 }
 
 const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulation>> = {

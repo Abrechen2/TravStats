@@ -5,7 +5,7 @@ import type { YearScopedAgg } from "../../../lib/stats/domain-stats";
 import type { AchievementSummary } from "../../../types";
 import { DOMAINS, type DomainKey } from "../../../shared/domains";
 import type { EvidenceDomain } from "../../../shared/evidence";
-import { hasStatistics, type StatsDomain } from "../../../lib/stats/domain-stats/types";
+import type { StatsDomain } from "../../../lib/stats/domain-stats/types";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 import type { ComparisonKind } from "../../../lib/stats/comparisonWindow";
 import { useTranslation } from "../../../hooks/useTranslation";
@@ -44,6 +44,7 @@ const EVIDENCE_DOMAIN_OF: Record<StatsDomain, EvidenceDomain> = {
   cruise: "cruise",
   lodging: "lodging",
   poi: "place",
+  rail: "rail",
 };
 
 export default function CrossDomainKpis({
@@ -82,7 +83,7 @@ export default function CrossDomainKpis({
   const scope: EvidenceScopeParams = {
     period: selectedYear === null ? "allTime" : "year",
     ...(selectedYear === null ? {} : { year: selectedYear }),
-    domains: foldedDomains.filter(hasStatistics).map((domain) => EVIDENCE_DOMAIN_OF[domain]),
+    domains: foldedDomains.map((domain) => EVIDENCE_DOMAIN_OF[domain]),
   };
 
   const cards: Array<{

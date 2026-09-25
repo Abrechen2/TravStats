@@ -6,6 +6,7 @@ import type {
   RailLookupAnswer,
   RailLookupProviders,
   RailStationHit,
+  RailStats,
 } from "../../types/rail";
 
 /**
@@ -59,6 +60,14 @@ export const railApi = {
 
   async remove(id: string): Promise<void> {
     await api.delete(`/rail/${id}`);
+  },
+
+  /** The statistics over completed rides; `year` is the year a ride left in. */
+  async stats(year: number | null = null): Promise<RailStats> {
+    const res = await api.get<Envelope<RailStats>>("/rail/stats", {
+      params: year === null ? {} : { year },
+    });
+    return res.data.data;
   },
 
   /** The station catalogue typeahead; `q` needs two characters. */

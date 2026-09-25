@@ -57,6 +57,30 @@ export function cruiseEvidenceEntry(
   };
 }
 
+export interface RailEvidenceRow {
+  id: string;
+  label: string;
+  departureTime: Date;
+}
+
+/** A train ride as evidence: it links to its own page (spec 2026-09-25-rail-domain). */
+export function railEvidenceEntry(
+  row: RailEvidenceRow,
+  fields: Pick<EvidenceEntry, "contribution" | "credits" | "creditLabels" | "subtitle">
+): EvidenceEntry {
+  return {
+    domain: "rail",
+    id: row.id,
+    href: `/rail/${row.id}`,
+    title: { text: row.label },
+    subtitle: fields.subtitle ?? null,
+    date: dayPrecisionDate(row.departureTime),
+    ...(fields.contribution === undefined ? {} : { contribution: fields.contribution }),
+    ...(fields.credits === undefined ? {} : { credits: fields.credits }),
+    ...(fields.creditLabels === undefined ? {} : { creditLabels: fields.creditLabels }),
+  };
+}
+
 export interface StayEvidenceRow {
   /** The STAY's id — the evidence — which is not what `href` targets. */
   id: string;

@@ -200,3 +200,42 @@ export interface RailLookupProviders {
   dbRest: boolean;
   transitousSourcesUrl: string;
 }
+
+/** One ranked label — an operator, a train category, a station. */
+export interface RailRanked {
+  label: string;
+  count: number;
+}
+
+/**
+ * `GET /rail/stats` — mirrors `RailStats` in `backend/src/services/rail/railStats.ts`.
+ * Kilometres come per source and are never one undifferentiated figure; hours
+ * and delays carry the size of the sample they were measured over.
+ */
+export interface RailStats {
+  journeys: number;
+  distance: {
+    totalKm: number;
+    straightLineKm: number;
+    tracedKm: number;
+    ticketKm: number;
+    unmeasuredJourneys: number;
+  };
+  hoursOnBoard: { hours: number; measuredJourneys: number };
+  countries: string[];
+  operators: RailRanked[];
+  trainCategories: RailRanked[];
+  stations: RailRanked[];
+  longest: {
+    id: string;
+    depStationName: string;
+    arrStationName: string;
+    distanceKm: number;
+    distanceSource: string | null;
+  } | null;
+  delays: {
+    recordedJourneys: number;
+    buckets: Array<{ upToMinutes: number | null; count: number }>;
+  };
+  byYear: Array<{ year: number; journeys: number; km: number }>;
+}

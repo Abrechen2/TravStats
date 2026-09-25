@@ -77,14 +77,21 @@ export const POI_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "fun", label: t("places:stats.fun.title") },
 ];
 
+export const RAIL_SECTIONS = (t: Translate): SectionOption[] => [
+  { key: "kpis", label: t("rail:stats.sections.kpis") },
+  { key: "rankings", label: t("rail:stats.sections.rankings") },
+  { key: "delays", label: t("rail:stats.sections.delays") },
+  { key: "records", label: t("rail:stats.sections.records") },
+  { key: "years", label: t("rail:stats.sections.years") },
+];
+
 const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   all: OVERVIEW_SECTIONS,
   flight: FLIGHT_SECTIONS,
   cruise: CRUISE_SECTIONS,
   lodging: LODGING_SECTIONS,
   poi: POI_SECTIONS,
-  // No statistics yet (rail spec, phase 2); `resolveStatsTab` never lands here.
-  rail: () => [],
+  rail: RAIL_SECTIONS,
 };
 
 /** The menu's options for a tab. */

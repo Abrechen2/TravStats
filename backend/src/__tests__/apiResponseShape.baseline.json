@@ -116,6 +116,7 @@
     "rail.ts",
     "rail/lookup.ts",
     "rail/stations.ts",
+    "rail/stats.ts",
     "settings/profilePicture.ts",
     "ships.ts",
     "upcoming.ts",
