@@ -14,6 +14,14 @@ import { TabBar } from "../../pages/TripDetailPage";
  * The registry is the list: a badge written into a component instead is a
  * badge no un-gating can ever remove, because nothing knows it is there.
  */
+const mockToursVisible = vi.hoisted(() => vi.fn(() => true));
+// Tours sit behind the roadtrips beta key since 2026-09-24; this suite is
+// about what the component does once they are visible.
+vi.mock("../../hooks/useToursVisible", () => ({
+  useToursVisible: () => mockToursVisible(),
+  useToursAccess: () => (mockToursVisible() ? "allowed" : "denied"),
+}));
+
 describe("the trip page's tab strip", () => {
   it("draws no Beta badge on the Touren tab", () => {
     render(
@@ -24,5 +32,17 @@ describe("the trip page's tab strip", () => {
 
     expect(screen.getByRole("tab", { name: "trips:detail.tabs.tours" })).toBeInTheDocument();
     expect(screen.queryByText("Beta")).not.toBeInTheDocument();
+  });
+
+  it("offers no Touren tab while tours are behind the closed beta switch (2026-09-24)", () => {
+    mockToursVisible.mockReturnValue(false);
+    render(
+      <MemoryRouter>
+        <TabBar tab="overview" onChange={vi.fn()} t={(key: string) => key} />
+      </MemoryRouter>
+    );
+
+    expect(screen.queryByRole("tab", { name: "trips:detail.tabs.tours" })).toBeNull();
+    mockToursVisible.mockReturnValue(true);
   });
 });

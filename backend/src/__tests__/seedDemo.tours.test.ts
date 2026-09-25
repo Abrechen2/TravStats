@@ -22,7 +22,7 @@ describe("seedTour writes a tour the app can draw", () => {
 
   it("stores ordered stops and one straight leg between each pair", async () => {
     const tour = STORIES.find((s) => s.tour)!.tour!;
-    const routeId = await seedTour(tripId, tour, 0);
+    const routeId = await seedTour(userId, tripId, tour, 0);
 
     const stops = await prisma.tripStop.findMany({
       where: { routeId },

@@ -37,4 +37,8 @@ export const BACKED_UP_UPLOAD_DIRS: readonly string[] = [
   "lodging-photos",
   // Kept originals — bills, PDFs, mails, Wallet passes (forgejo#116).
   "documents",
+  // The sign-in page's backgrounds. Instance decoration rather than user
+  // data, and archived all the same: restoring an instance that comes back
+  // looking like a different one is a restore nobody trusts.
+  "login-backgrounds",
 ] as const;

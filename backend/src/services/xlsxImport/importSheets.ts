@@ -39,6 +39,7 @@ import {
   collectLodgingPhotoFilenames,
   removeLodgingPhotoFiles,
 } from "../lodging/deleteLodgingPhotoFiles";
+import { ROUTE_HANDLERS } from "./importTours";
 
 /** Cap per sheet. A spreadsheet is a hand-editing tool; anything larger is an
  *  import job, and one request should not sit in a transaction for minutes. */
@@ -762,6 +763,8 @@ const HANDLERS: Record<string, Handler> = {
   placeVisits: importPlaceVisits,
   cruises: importCruises,
   lodging: importLodging,
+  // Roadtrips, their stations, tours, tour points — in that order, see there.
+  ...ROUTE_HANDLERS,
 };
 
 export function isImportable(key: string): boolean {

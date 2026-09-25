@@ -59,7 +59,9 @@ describe("Tour route sections — provider routing", () => {
     await prisma.trip.deleteMany({ where: { userId } });
     const trip = await prisma.trip.create({ data: { userId, name: "T" } });
     tripId = trip.id;
-    const route = await prisma.tripRoute.create({ data: { tripId, name: "S", mode: "road" } });
+    const route = await prisma.tripRoute.create({
+      data: { userId, tripId, name: "S", mode: "road" },
+    });
     routeId = route.id;
 
     const oslo = await prisma.tripStop.create({

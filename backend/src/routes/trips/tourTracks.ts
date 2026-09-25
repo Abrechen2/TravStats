@@ -9,7 +9,8 @@ import { rejectDemo } from "../../middleware/demoGuard";
 import { AppError } from "../../middleware/errorHandler";
 import { FILE_LIMITS } from "../../config/constants";
 import { TRACK_SOURCES, pullDawarichTrackSchema } from "../../schemas/tour";
-import { parseGpx } from "../../services/tour/tracks/parseGpx";
+import { parseTrackFile } from "../../services/tour/tracks/parseTrackFile";
+import { ingestedTrackColumns, isDuplicateExternalRef } from "../../services/tour/tracks/trackRow";
 import { ingestTrack } from "../../services/tour/tracks/ingestTrack";
 import {
   EmptyDawarichWindowError,
@@ -19,8 +20,7 @@ import {
 import { createDawarichClient } from "../../services/dawarich/dawarichClient";
 import { getDawarichConnection } from "../../services/dawarich/dawarichResolver";
 import { DawarichError } from "../../services/dawarich/errors";
-import { resolveTrip } from "../trips";
-import { resolveRoute } from "./tourRoutes";
+import { resolveRouteFromRequest } from "./tourRoutes";
 import logger from "../../utils/logger";
 
 /**
@@ -69,7 +69,7 @@ function handleGpxUpload(req: Request, res: Response, next: NextFunction): void 
     if (err) {
       if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
         const maxMb = FILE_LIMITS.GPX_TRACK_MAX_SIZE / (1024 * 1024);
-        return next(new AppError(`GPX file too large — maximum size is ${maxMb} MB`, 400));
+        return next(new AppError(`Track file too large — maximum size is ${maxMb} MB`, 400));
       }
       const message = err instanceof Error ? err.message : "Upload failed";
       return next(new AppError(message, 400));
@@ -100,6 +100,10 @@ export interface TrackMetaRow {
   /** See `TripRouteTrack.truncated`'s doc comment in schema.prisma. Always
    *  `false` for `source: "gpx"`. */
   truncated: boolean;
+  ascentM: number | null;
+  descentM: number | null;
+  movingSeconds: number | null;
+  externalRef: string | null;
   createdAt: Date;
 }
 
@@ -109,6 +113,7 @@ export interface TrackRow extends TrackMetaRow {
    *  rows written before they existed. See the schema comments. */
   segmentStarts: Prisma.JsonValue;
   cumulativeKm: Prisma.JsonValue;
+  elevations: Prisma.JsonValue;
 }
 
 /**
@@ -127,6 +132,10 @@ const TRACK_META_SELECT = {
   pointCount: true,
   distanceKm: true,
   truncated: true,
+  ascentM: true,
+  descentM: true,
+  movingSeconds: true,
+  externalRef: true,
   createdAt: true,
 } as const;
 
@@ -141,13 +150,40 @@ function toTrackMetaDto(track: TrackMetaRow): Record<string, unknown> {
     pointCount: track.pointCount,
     distanceKm: track.distanceKm,
     truncated: track.truncated,
+    ascentM: track.ascentM,
+    descentM: track.descentM,
+    movingSeconds: track.movingSeconds,
+    externalRef: track.externalRef,
     createdAt: track.createdAt,
   };
 }
 
+/**
+ * The detail shape carries the elevation profile beside the line: the
+ * running raw distance (x) and the height at each vertex (y). Both are
+ * aligned with `geometry`; either may be null on rows written before.
+ */
 function toTrackDto(track: TrackRow): Record<string, unknown> {
-  return { ...toTrackMetaDto(track), geometry: track.geometry };
+  return {
+    ...toTrackMetaDto(track),
+    geometry: track.geometry,
+    cumulativeKm: track.cumulativeKm,
+    elevationProfile: track.elevations,
+  };
 }
+
+/**
+ * Optional form fields beside the file. `externalRef` is the source record's
+ * own id (a HealthKit workout UUID or a Health Connect exercise-session id
+ * from the Companion) so the same workout uploaded twice is refused instead
+ * of stored twice; `origin` says the file was exported FROM somewhere rather
+ * than recorded as that format, which is what the Companion's workout import
+ * sends (`companion#9`: iOS reads HealthKit, Android reads Health Connect).
+ */
+const uploadFieldsSchema = z.object({
+  externalRef: z.string().trim().min(1).max(200).optional(),
+  origin: z.enum(["healthkit", "healthconnect"]).optional(),
+});
 
 /**
  * Track must exist AND belong to this route (which `resolveRoute` already
@@ -180,7 +216,7 @@ export async function resolveTrack(routeId: string, trackId: string): Promise<Tr
  * other six upload routes already refuse for this account.
  */
 router.post(
-  "/trips/:id/routes/:routeId/tracks",
+  ["/trips/:id/routes/:routeId/tracks", "/tours/:routeId/tracks"],
   authenticate,
   requireWriteScope,
   rejectDemo,
@@ -188,46 +224,46 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
 
       if (!req.file) {
-        throw new AppError("No GPX file uploaded", 400);
+        throw new AppError("No track file uploaded", 400);
+      }
+      const fields = uploadFieldsSchema.safeParse(req.body ?? {});
+      if (!fields.success) throw new AppError(fields.error.message, 400);
+
+      const file = await parseTrackFile(req.file.buffer, req.file.originalname);
+      if (!file) {
+        throw new AppError("The file could not be read as GPX, TCX or FIT", 400);
       }
 
-      const xml = req.file.buffer.toString("utf-8");
-      const parsed = parseGpx(xml);
-      if (!parsed) {
-        throw new AppError("The file could not be read as GPX", 400);
-      }
-
-      const ingested = ingestTrack(parsed);
+      const ingested = ingestTrack(file.track);
       if (!ingested) {
-        throw new AppError("This GPX file has no timestamps, so it cannot be placed in time", 400);
+        throw new AppError("This recording has no timestamps, so it cannot be placed in time", 400);
       }
 
-      const source = trackSource.parse("gpx");
-      const track = await prisma.tripRouteTrack.create({
-        data: {
-          routeId,
-          source,
-          name: parsed.name,
-          startedAt: ingested.startedAt,
-          endedAt: ingested.endedAt,
-          geometry: ingested.geometry as unknown as Prisma.InputJsonValue,
-          // The two things the geometry alone cannot say: where the recording
-          // stopped, and how far the RAW track had run at each kept vertex
-          // (AUD-033, AUD-034).
-          segmentStarts: ingested.segmentStarts as unknown as Prisma.InputJsonValue,
-          cumulativeKm: ingested.cumulativeKm as unknown as Prisma.InputJsonValue,
-          pointCount: ingested.pointCount,
-          distanceKm: ingested.distanceKm,
-          // The GPX path refuses an oversized file outright (see
-          // `handleGpxUpload` above) rather than ever storing a shortened
-          // one — always false here, unlike the Dawarich pull below.
-          truncated: false,
-        },
-      });
+      const source = trackSource.parse(fields.data.origin ?? file.format);
+      let track;
+      try {
+        track = await prisma.tripRouteTrack.create({
+          data: {
+            routeId,
+            source,
+            name: file.track.name,
+            ...ingestedTrackColumns(ingested),
+            externalRef: fields.data.externalRef ?? null,
+            // A file upload refuses an oversized file outright (see
+            // `handleGpxUpload` above) rather than ever storing a shortened
+            // one — always false here, unlike the Dawarich pull below.
+            truncated: false,
+          },
+        });
+      } catch (error) {
+        if (isDuplicateExternalRef(error)) {
+          throw new AppError("This recording has already been imported into this tour", 409);
+        }
+        throw error;
+      }
 
       logger.info({
         operation: "tour.track.create",
@@ -280,14 +316,13 @@ router.post(
  * confidence.
  */
 router.post(
-  "/trips/:id/routes/:routeId/tracks/dawarich",
+  ["/trips/:id/routes/:routeId/tracks/dawarich", "/tours/:routeId/tracks/dawarich"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
       const body = pullDawarichTrackSchema.parse(req.body);
 
       const stops = await prisma.tripStop.findMany({
@@ -343,16 +378,7 @@ router.post(
           routeId,
           source,
           name: null,
-          startedAt: ingested.startedAt,
-          endedAt: ingested.endedAt,
-          geometry: ingested.geometry as unknown as Prisma.InputJsonValue,
-          // The two things the geometry alone cannot say: where the recording
-          // stopped, and how far the RAW track had run at each kept vertex
-          // (AUD-033, AUD-034).
-          segmentStarts: ingested.segmentStarts as unknown as Prisma.InputJsonValue,
-          cumulativeKm: ingested.cumulativeKm as unknown as Prisma.InputJsonValue,
-          pointCount: ingested.pointCount,
-          distanceKm: ingested.distanceKm,
+          ...ingestedTrackColumns(ingested),
           // Reaches the stored row (and from there the API response and
           // `TourTrackList`) rather than only the log line
           // `dawarichClient.ts` already writes — a partial pull must not be
@@ -383,14 +409,13 @@ router.post(
  * `TRACK_META_SELECT`'s doc comment for why.
  */
 router.get(
-  "/trips/:id/routes/:routeId/tracks",
+  ["/trips/:id/routes/:routeId/tracks", "/tours/:routeId/tracks"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
 
       const tracks = await prisma.tripRouteTrack.findMany({
         where: { routeId },
@@ -407,14 +432,13 @@ router.get(
 
 /** GET /trips/:id/routes/:routeId/tracks/:trackId — WITH geometry. */
 router.get(
-  "/trips/:id/routes/:routeId/tracks/:trackId",
+  ["/trips/:id/routes/:routeId/tracks/:trackId", "/tours/:routeId/tracks/:trackId"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
       const track = await resolveTrack(routeId, req.params.trackId);
 
       res.json({ track: toTrackDto(track) });
@@ -441,14 +465,13 @@ router.get(
  * adding one, which would silently blank out working, still-accurate legs.
  */
 router.delete(
-  "/trips/:id/routes/:routeId/tracks/:trackId",
+  ["/trips/:id/routes/:routeId/tracks/:trackId", "/tours/:routeId/tracks/:trackId"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
       await resolveTrack(routeId, req.params.trackId);
 
       await prisma.tripRouteTrack.delete({ where: { id: req.params.trackId } });

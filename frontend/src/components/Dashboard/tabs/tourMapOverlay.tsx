@@ -54,7 +54,8 @@ export interface TourLegendState {
 export interface TourFetchState {
   toursLoading: boolean;
   toursLoadError: boolean;
-  tours: readonly unknown[];
+  /** Only `kind` is read — roadtrips get their own legend row (2.7). */
+  tours: ReadonlyArray<{ kind?: string }>;
 }
 
 /**
@@ -69,15 +70,23 @@ export function buildTourLegendRows(
   showTours: boolean,
   fetch: TourFetchState,
   t: (key: string) => string,
-  legendRow: (background: string, label: string, key: string) => JSX.Element
+  legendRow: (background: string, label: string, key: string) => JSX.Element,
+  /** Roadtrips (2.7) draw in their own hue, so they get their own row. */
+  roadtrip?: { color: string; label: string }
 ): TourLegendState {
   const hasData =
     showTours && !fetch.toursLoading && !fetch.toursLoadError && fetch.tours.length > 0;
-  const rows = hasData
-    ? buildTourLegend().map((row) =>
-        legendRow(rgbCss(row.color), t(TOUR_LEGEND_LABEL_KEY[row.mode]), `tour-${row.mode}`)
-      )
-    : [];
+  if (!hasData) return { hasData, rows: [] };
+  const hasRoadtrips = fetch.tours.some((tour) => tour.kind === "roadtrip");
+  const hasTours = fetch.tours.some((tour) => tour.kind !== "roadtrip");
+  const rows = [
+    ...(hasTours
+      ? buildTourLegend().map((row) =>
+          legendRow(rgbCss(row.color), t(TOUR_LEGEND_LABEL_KEY[row.mode]), `tour-${row.mode}`)
+        )
+      : []),
+    ...(hasRoadtrips && roadtrip ? [legendRow(roadtrip.color, roadtrip.label, "roadtrip")] : []),
+  ];
   return { hasData, rows };
 }
 

@@ -2,6 +2,7 @@ import { z } from "./zod";
 
 import { LEG_MODES } from "../services/tour/tourDistance";
 import { ROUTING_PROVIDER_IDS } from "../services/tour/routing/types";
+import { TOUR_ACTIVITIES } from "../shared/tour/roadtrip";
 
 /**
  * Validation for the tour endpoints.
@@ -59,7 +60,15 @@ const MANUAL_LEG_SOURCES = ["straight", "drawn"] as const;
  * write-side boundary check, cheap insurance against a future writer
  * putting the column into a shape this vocabulary doesn't describe.
  */
-export const TRACK_SOURCES = ["gpx", "dawarich"] as const;
+export const TRACK_SOURCES = [
+  "gpx",
+  "dawarich",
+  "fit",
+  "tcx",
+  "strava",
+  "healthkit",
+  "healthconnect",
+] as const;
 export type TrackSource = (typeof TRACK_SOURCES)[number];
 
 /**
@@ -239,7 +248,53 @@ export const legOverrideSchema = z
     path: ["waypoints"],
   });
 
+/**
+ * A standalone tour: the same fields as a section of a trip, plus an
+ * OPTIONAL trip to attach it to. Omitting `tripId` is the whole point —
+ * a tour may stand on its own (owner ruling, 2026-09-21).
+ */
+export const createTourSchema = createRouteSchema.extend({
+  tripId: z.string().uuid().nullish(),
+  /** What the day tour was (design 2026-09-24); optional, the mode stays. */
+  activity: z.enum(TOUR_ACTIVITIES).nullish(),
+  /**
+   * The roadtrip station the day tour sets out from — what the Companion's
+   * workout import sends when the day belongs to a roadtrip (companion#13).
+   */
+  anchorStopId: z.string().uuid().nullish(),
+});
+
+/**
+ * The complete, ordered point list of a standalone tour.
+ *
+ * A section of a TRIP assigns stops that already exist on that trip
+ * (`assignStopsSchema`); a standalone tour has no timeline to draw from,
+ * so its points are authored here directly and this list REPLACES them —
+ * added, moved, removed and renumbered in one write, the same all-or-
+ * nothing shape the assign endpoint has.
+ *
+ * Every point needs a coordinate. A route stop without one produces no
+ * leg and no kilometre, and the assign path already refuses it; accepting
+ * one here would be the same hole through a different door.
+ */
+export const tourPointsSchema = z.object({
+  points: z
+    .array(
+      z.object({
+        /** Omitted for a new point; an existing point keeps its id so its
+         *  legs survive a reorder (legs are keyed by endpoint stop). */
+        id: z.string().uuid().optional(),
+        title: z.string().min(1).max(200),
+        lat: z.number().min(-90).max(90),
+        lon: z.number().min(-180).max(180),
+      })
+    )
+    .max(500),
+});
+
 export type CreateRouteInput = z.infer<typeof createRouteSchema>;
+export type CreateTourInput = z.infer<typeof createTourSchema>;
+export type TourPointsInput = z.infer<typeof tourPointsSchema>;
 export type UpdateRouteInput = z.infer<typeof updateRouteSchema>;
 export type AssignStopsInput = z.infer<typeof assignStopsSchema>;
 export type LegOverrideInput = z.infer<typeof legOverrideSchema>;

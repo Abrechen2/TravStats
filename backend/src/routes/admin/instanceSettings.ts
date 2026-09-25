@@ -85,6 +85,8 @@ const instancePatchSchema = z.object({
    * and a dial would promise precision that is not there.
    */
   countryThreshold: z.enum(COUNTRY_TIERS).optional(),
+  /** May the instance call open data services for its users (off by default). */
+  openDataEnabled: z.boolean().optional(),
 });
 
 /**
@@ -149,6 +151,9 @@ router.put("/instance-settings", async (req: AuthRequest, res: Response, next: N
       }),
       ...(patch.countryThreshold !== undefined && {
         countryThreshold: patch.countryThreshold,
+      }),
+      ...(patch.openDataEnabled !== undefined && {
+        openDataEnabled: patch.openDataEnabled,
       }),
     });
     res.json({ settings, passkeyStatus: passkeyStatusOf(settings) });

@@ -32,6 +32,7 @@ import { stayNamesExactDays } from "../../shared/lodgingTiming";
 import { classifyVisit } from "../../shared/placeCounting";
 import { computeDaysAway, type DayWindow, type DaysAway } from "../../utils/stats/daysAway";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
+import { attestStation, roadtripHasStarted } from "./roadtripEvidence";
 
 /** The sailed predicate — the cut `/stats/cruise` and the passport make. */
 
@@ -113,7 +114,7 @@ export async function loadDaysAway(userId: string, scope: DaysAwayScope = {}): P
   const window = daysAwayWindow(scope);
   const now = new Date();
 
-  const [flights, cruises, stays, visits] = await Promise.all([
+  const [flights, cruises, stays, visits, roadtrips] = await Promise.all([
     prisma.flight.findMany({
       where: {
         userId,
@@ -148,6 +149,31 @@ export async function loadDaysAway(userId: string, scope: DaysAwayScope = {}): P
       },
       select: { visitedAt: true },
     }),
+    // Every roadtrip, unscoped: a station's days depend on the whole
+    // roadtrip (has it started?) and on its night, neither of which a
+    // column filter can answer. `computeDaysAway` clips to the window.
+    prisma.tripRoute.findMany({
+      where: { userId, kind: "roadtrip" },
+      select: {
+        stops: {
+          select: {
+            startDate: true,
+            endDate: true,
+            overnight: true,
+            lodgingStayId: true,
+            lodgingStay: {
+              select: {
+                checkIn: true,
+                checkOut: true,
+                datePrecision: true,
+                nights: true,
+                status: true,
+              },
+            },
+          },
+        },
+      },
+    }),
   ]);
 
   return computeDaysAway({
@@ -167,6 +193,12 @@ export async function loadDaysAway(userId: string, scope: DaysAwayScope = {}): P
     places: visits
       .filter((v) => classifyVisit(v, now) === "visited")
       .map((v) => ({ at: v.visitedAt })),
+    // A station of every state counts — driven through, a free pitch or a
+    // booked bed, the traveller was away from home. A planned roadtrip and a
+    // station still ahead count nothing, as the Stats overview rules.
+    roadtrips: roadtrips
+      .filter((route) => roadtripHasStarted(route.stops, now))
+      .flatMap((route) => route.stops.flatMap((stop) => attestStation(stop, now) ?? [])),
     window,
   });
 }

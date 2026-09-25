@@ -18,7 +18,7 @@ import {
 } from "../../lib/placeColor";
 import type { PlaceLabelSource } from "../../lib/placeLabel";
 import type { Rgb } from "../../lib/cruiseColor";
-import { ColorRow, HAIRLINE, SectionLabel, SegControl, Slider } from "./controlPanelKit";
+import { CollapsibleSection, ColorRow, SegControl, Slider } from "./controlPanelKit";
 
 /** Offered in the order a user reaches for them: the default first, then the
  *  two overrides. */
@@ -98,9 +98,7 @@ export function PlaceAppearanceSection({
   }));
 
   return (
-    <div style={{ borderTop: `1px solid ${HAIRLINE}` }} className="mt-2.5 pt-2.5">
-      <SectionLabel>{title}</SectionLabel>
-
+    <CollapsibleSection id="poi" title={title}>
       {showColors && onColorModeChange && onColorChange && (
         <>
           <div className="mb-1 text-[11px]" style={{ color: "rgba(241,245,249,0.7)" }}>
@@ -163,6 +161,6 @@ export function PlaceAppearanceSection({
           format={(v) => (v <= 0 ? t("map:globe.panel.off") : `${v.toFixed(1)}×`)}
         />
       )}
-    </div>
+    </CollapsibleSection>
   );
 }

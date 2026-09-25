@@ -1,4 +1,6 @@
 import { useEffect, useState } from "react";
+import { useToursVisible } from "../../hooks/useToursVisible";
+import { useNavigate } from "react-router-dom";
 import AppShell from "../ui/AppShell";
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -24,9 +26,10 @@ import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
 
 interface DashboardLayoutProps {
   children: ReactNode;
-  counts: { flight: number; cruise: number; poi: number; lodging: number };
-  /** How many of `counts` are merely planned — see DomainTabStrip (B6). */
-  scheduledCounts?: { flight?: number; cruise?: number };
+  counts: { flight: number; cruise: number; poi: number; lodging: number; roadtrip: number };
+  /** What is still ahead per domain — see DomainTabStrip (B6). Whether it is
+   * part of `counts` or beside it differs per domain; the strip says which. */
+  scheduledCounts?: { flight?: number; cruise?: number; lodging?: number };
   /** Optional refetch hook called after a create-modal saves so the
    * outer page can refresh counts / per-tab data without a navigation. */
   onDataChanged?: () => void;
@@ -45,6 +48,7 @@ export function DashboardLayout({
   // Ensures the dashboard namespace is loaded for children that use t("dashboard:...")
   const { t } = useTranslation(["dashboard", "flights"]);
   const { tab, setTab } = useDashboardRoute();
+  const navigate = useNavigate();
   const [addingDomain, setAddingDomain] = useState<AddableDomain | null>(null);
   const lodgingAdapter = useLodgingImportAdapter();
   const cruiseAdapter = useCruiseImportAdapter();
@@ -76,6 +80,7 @@ export function DashboardLayout({
     cruise: isEnabled("cruise"),
     poi: isEnabled("poi"),
     lodging: isEnabled("lodging"),
+    roadtrip: isEnabled("roadtrip"),
   };
 
   // What the "+" menu offers. One entry differs from `enabledDomains`, on
@@ -85,7 +90,12 @@ export function DashboardLayout({
   // strip's visibility does — instance flag AND user toggle — where the menu
   // used to offer "POI hinzufügen" on the user toggle alone, and then did
   // nothing with the click (#288).
-  const addableDomains = { ...enabledDomains, poi: placesVisible };
+  //
+  // "tour" is offered wherever tours are visible at all: it is not a domain
+  // with a toggle, and a tour that belongs to no trip has no other place it
+  // could be started from. Behind the roadtrips beta key since 2026-09-24.
+  const toursVisible = useToursVisible();
+  const addableDomains = { ...enabledDomains, poi: placesVisible, tour: toursVisible };
 
   // A truly empty account: nothing in any domain. Shown only after the counts
   // have loaded, and only on the "all" landing tab — a per-domain tab already
@@ -95,7 +105,16 @@ export function DashboardLayout({
     counts.flight === 0 &&
     counts.cruise === 0 &&
     counts.poi === 0 &&
-    counts.lodging === 0;
+    counts.lodging === 0 &&
+    counts.roadtrip === 0;
+
+  // A tour and a roadtrip open a page, not a modal: both are an ordered list
+  // of points, which is not a thing to type into a dialog over the map.
+  const startAdding = (domain: AddableDomain): void => {
+    if (domain === "tour") navigate("/tours");
+    else if (domain === "roadtrip") navigate("/roadtrips");
+    else setAddingDomain(domain);
+  };
 
   const handleFlightCreate = async (
     flight: FlightInput,
@@ -137,7 +156,7 @@ export function DashboardLayout({
         )}
         <div style={{ position: "absolute", top: 16, right: 16, zIndex: 30 }}>
           {tab === "all" ? (
-            <AddDomainPicker enabled={addableDomains} onPick={setAddingDomain} />
+            <AddDomainPicker enabled={addableDomains} onPick={startAdding} />
           ) : (
             // `isValidDomain` narrows `tab` to `DomainKey` — the actual set
             // this button knows how to handle — rather than a cast that
@@ -151,7 +170,7 @@ export function DashboardLayout({
             isValidDomain(tab) && (
               <button
                 type="button"
-                onClick={() => setAddingDomain(tab)}
+                onClick={() => startAdding(tab)}
                 className="cursor-pointer rounded-lg px-3 py-2 text-[13px] font-semibold shadow-lg transition-opacity hover:opacity-90"
                 style={{ background: "rgb(240,169,71)", color: "#0d1117", border: "none" }}
               >

@@ -16,9 +16,11 @@
  * - a flight counts its departure day and its arrival day;
  * - a cruise counts every day from departure to arrival, inclusive;
  * - a lodging stay counts every day from check-in to check-out, inclusive;
- * - a place visit counts its visit day.
+ * - a place visit counts its visit day;
+ * - a roadtrip station counts the days it attests (`attestStation`): its
+ *   whole span for a night, its one day for a station driven through.
  *
- * `total` is the size of the UNION of the four day sets — never their sum. A
+ * `total` is the size of the UNION of the five day sets — never their sum. A
  * day with a flight in the morning and a hotel at night is one day away, and
  * reporting it as two is precisely the cross-domain addition the charter
  * forbids.
@@ -88,6 +90,12 @@ export interface DaysAwayInput {
   lodging: readonly DaySpan[];
   /** Visits that happened. */
   places: readonly DayPoint[];
+  /**
+   * Stations of started roadtrips, each already reduced to the ISO days it
+   * attests. Days rather than a span because a station's night decides how
+   * many it attests, and that rule lives in `services/stats/roadtripEvidence.ts`.
+   */
+  roadtrips?: readonly { days: readonly string[] }[];
   window?: DayWindow | null;
 }
 
@@ -96,7 +104,8 @@ export interface DaysAway {
   cruise: number;
   lodging: number;
   place: number;
-  /** The union of the four sets above — never their sum. */
+  roadtrip: number;
+  /** The union of the five sets above — never their sum. */
   total: number;
 }
 
@@ -149,11 +158,14 @@ export function computeDaysAway(input: DaysAwayInput): DaysAway {
     })
   );
 
+  const roadtrip = collect((input.roadtrips ?? []).map((station) => [...station.days]));
+
   return {
     flight: flight.size,
     cruise: cruise.size,
     lodging: lodging.size,
     place: place.size,
-    total: new Set([...flight, ...cruise, ...lodging, ...place]).size,
+    roadtrip: roadtrip.size,
+    total: new Set([...flight, ...cruise, ...lodging, ...place, ...roadtrip]).size,
   };
 }

@@ -75,7 +75,9 @@ describe("Tour route legs — adopting a track", () => {
 
     const trip = await prisma.trip.create({ data: { userId: u.id, name: "T" } });
     tripId = trip.id;
-    const route = await prisma.tripRoute.create({ data: { tripId, name: "S", mode: "road" } });
+    const route = await prisma.tripRoute.create({
+      data: { userId: u.id, tripId, name: "S", mode: "road" },
+    });
     routeId = route.id;
 
     const oslo = await prisma.tripStop.create({
@@ -198,7 +200,7 @@ describe("Tour route legs — adopting a track", () => {
       },
     });
     const otherRoute = await prisma.tripRoute.create({
-      data: { tripId: otherTrip.id, name: "Other section", mode: "road" },
+      data: { userId: otherTrip.userId, tripId: otherTrip.id, name: "Other section", mode: "road" },
     });
     const foreignTrackId = await createTrack(otherRoute.id, coveringTrack);
 

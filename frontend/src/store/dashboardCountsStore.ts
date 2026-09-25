@@ -5,15 +5,27 @@ export interface DashboardCounts {
   cruise: number;
   poi: number;
   lodging: number;
+  roadtrip: number;
 }
 
+/**
+ * The forward-looking half of `DashboardCounts`, per domain.
+ *
+ * Whether a domain's planned figure is INSIDE its `DashboardCounts` number or
+ * beside it is a property of that domain's counting rule, not of this store:
+ * `flight`/`cruise` list every row and this is a subset of it, while `lodging`
+ * counts houses the user HAS been to (`shared/lodgingCounting.ts`), so a house
+ * with only future stays is not in `counts.lodging` at all. `DomainTabStrip`
+ * words the hint accordingly -- never fold one into the other here.
+ */
 export interface DashboardScheduledCounts {
   flight: number;
   cruise: number;
+  lodging: number;
 }
 
-const INITIAL_COUNTS: DashboardCounts = { flight: 0, cruise: 0, poi: 0, lodging: 0 };
-const INITIAL_SCHEDULED_COUNTS: DashboardScheduledCounts = { flight: 0, cruise: 0 };
+const INITIAL_COUNTS: DashboardCounts = { flight: 0, cruise: 0, poi: 0, lodging: 0, roadtrip: 0 };
+const INITIAL_SCHEDULED_COUNTS: DashboardScheduledCounts = { flight: 0, cruise: 0, lodging: 0 };
 
 interface DashboardCountsState {
   counts: DashboardCounts;

@@ -80,8 +80,13 @@ export function useTourTracks(
     };
   }, []);
 
+  // Only the ROUTE is required. A standalone tour or a roadtrip has no trip,
+  // and every track call takes the trip-less `/tours/:routeId` path then
+  // (`sectionPath` in lib/api/tours.ts). Guarding on `tripId` as well — as
+  // this hook did until 2026-09-24 — left such a route's track list on
+  // "loading" forever and its upload and pull buttons doing nothing.
   const loadTracks = useCallback(async (): Promise<void> => {
-    if (!tripId || !routeId) return;
+    if (!routeId) return;
     setTracksLoading(true);
     setTracksLoadError(false);
     try {
@@ -126,7 +131,7 @@ export function useTourTracks(
   // fetch is not retried until `tracks` reloads with that id again.
   const fetchedTrackIdsRef = useRef<Set<string>>(new Set());
   useEffect(() => {
-    if (!tripId || !routeId) return;
+    if (!routeId) return;
     const missing = tracks.filter((tr) => !fetchedTrackIdsRef.current.has(tr.id));
     if (missing.length === 0) return;
     let cancelled = false;
@@ -172,7 +177,7 @@ export function useTourTracks(
 
   const uploadTrack = useCallback(
     async (file: File): Promise<TourTrack> => {
-      if (!tripId || !routeId) throw new Error("uploadTrack called with no trip/route id");
+      if (!routeId) throw new Error("uploadTrack called with no route id");
       setTrackUploading(true);
       try {
         const track = await toursApi.tracks.upload(tripId, routeId, file);
@@ -187,7 +192,7 @@ export function useTourTracks(
 
   const deleteTrack = useCallback(
     async (trackId: string): Promise<void> => {
-      if (!tripId || !routeId) return;
+      if (!routeId) return;
       await toursApi.tracks.remove(tripId, routeId, trackId);
       await loadTracks();
     },
@@ -195,7 +200,7 @@ export function useTourTracks(
   );
 
   const pullDawarichTrack = useCallback(async (): Promise<TourTrack> => {
-    if (!tripId || !routeId) throw new Error("pullDawarichTrack called with no trip/route id");
+    if (!routeId) throw new Error("pullDawarichTrack called with no route id");
     setTrackPulling(true);
     try {
       const track = await toursApi.tracks.pullDawarich(tripId, routeId, {});

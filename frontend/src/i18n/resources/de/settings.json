@@ -61,7 +61,9 @@
       "title": "Datenquellen & Attribution",
       "fullList": "Vollständige Liste mit Lizenzen",
       "osm": "Kartenkacheln (ODbL 1.0)",
-      "searoute": "Seestrecken der Kreuzfahrten (EUPL-1.2 / ORNL Global Shipping Lane Network, gemeinfrei)"
+      "searoute": "Seestrecken der Kreuzfahrten (EUPL-1.2 / ORNL Global Shipping Lane Network, gemeinfrei)",
+      "openMeteo": "Wetter und Geländehöhen (CC BY 4.0)",
+      "wikipedia": "Beschreibungen von Orten und Unterkünften (CC BY-SA 4.0)"
     },
     "title": "Über TravStats",
     "tagline": "Selbst gehostetes Reise-Logbuch",

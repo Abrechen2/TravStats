@@ -77,12 +77,19 @@ export const POI_SECTIONS = (t: Translate): SectionOption[] => [
   { key: "fun", label: t("places:stats.fun.title") },
 ];
 
+export const ROADTRIP_SECTIONS = (t: Translate): SectionOption[] => [
+  { key: "kpis", label: t("stats:sections.keyFigures") },
+  { key: "records", label: t("roadtrips:stats.recordsLabel") },
+  { key: "vehicles", label: t("roadtrips:stats.vehicles") },
+];
+
 const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   all: OVERVIEW_SECTIONS,
   flight: FLIGHT_SECTIONS,
   cruise: CRUISE_SECTIONS,
   lodging: LODGING_SECTIONS,
   poi: POI_SECTIONS,
+  roadtrip: ROADTRIP_SECTIONS,
 };
 
 /** The menu's options for a tab. */

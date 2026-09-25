@@ -18,10 +18,21 @@ export function countRenderedRows(container: HTMLElement): number {
 
 /** True once `TablePagination` has rendered its next/previous controls. The
  *  global `react-i18next` test mock returns the raw key, so the accessible
- *  names are the untranslated `common:table.pagination.*` keys. */
+ *  names are the untranslated `common:table.pagination.*` keys.
+ *
+ *  `queryAll`, because each list renders the control at BOTH ends since
+ *  2026-09-21 — a single-match query would now throw on every page rather
+ *  than answer the question this helper is asked. */
 export function paginationControlsRendered(): boolean {
   return (
-    screen.queryByRole("button", { name: "common:table.pagination.next" }) !== null &&
-    screen.queryByRole("button", { name: "common:table.pagination.previous" }) !== null
+    screen.queryAllByRole("button", { name: "common:table.pagination.next" }).length > 0 &&
+    screen.queryAllByRole("button", { name: "common:table.pagination.previous" }).length > 0
   );
+}
+
+/** Both copies of the page-size select — above and below the table. They are
+ *  the same control rendered twice, so a test that only needs "the" select
+ *  takes the first. */
+export function pageSizeSelects(): HTMLSelectElement[] {
+  return screen.queryAllByLabelText("common:table.pagination.pageSize") as HTMLSelectElement[];
 }

@@ -70,6 +70,12 @@ export interface InstanceSettings {
    * `services/countryThresholdResolver.ts`, never this field read alone.
    */
   countryThreshold: CountryTier;
+  /**
+   * Whether the instance may ask open data services on its users' behalf
+   * (Open-Meteo, Wikipedia/Wikidata, OpenStreetMap Overpass). OFF by default:
+   * every call sends a place and a date to a third party. Admin-settable only.
+   */
+  openDataEnabled: boolean;
 }
 
 export interface WebDAVSettings {
@@ -122,6 +128,7 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
     // counts the normal way — an unreadable setting must never leave the
     // headline filtering against a rank that does not exist.
     countryThreshold: parseCountryTier(row.countryThreshold) ?? DEFAULT_COUNTRY_TIER,
+    openDataEnabled: row.openDataEnabled,
   };
 }
 
@@ -177,6 +184,9 @@ export async function updateInstanceSettings(
       }),
       ...(patch.countryThreshold !== undefined && {
         countryThreshold: patch.countryThreshold,
+      }),
+      ...(patch.openDataEnabled !== undefined && {
+        openDataEnabled: patch.openDataEnabled,
       }),
     },
   });

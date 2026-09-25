@@ -1,5 +1,5 @@
 import { useEffect, useMemo, useState } from "react";
-import { Link, useNavigate, useParams } from "react-router-dom";
+import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { tripsApi } from "../lib/api";
 import { formatDateInTimezone, formatDateTimeInTimezone } from "../lib/dateUtils";
 import { formatDate } from "../lib/displayFormat";
@@ -10,7 +10,7 @@ import { assessStayPlausibility } from "../shared/stayPlausibility";
 import { useSettingsStore } from "../store/settingsStore";
 import { computeRailStates } from "../lib/timelineRail";
 import { ExpandableEventCard } from "../components/Trip/ExpandableEventCard";
-import { stripMarkdown } from "../lib/markdownPreview";
+import { JournalCard, RowActions } from "../components/Trips/TimelineJournalCard";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../hooks/usePlacesVisible";
@@ -22,13 +22,14 @@ import TripModal from "../components/Trips/TripModal";
 import TripHead from "../components/Trips/TripHead";
 import TripOverview from "../components/Trips/TripOverview";
 import JournalEntryModal from "../components/Trips/JournalEntryModal";
+import TimelineActions from "../components/Trips/TimelineActions";
 import JournalViewModal from "../components/Trips/JournalViewModal";
-import JournalPreview from "../components/Trips/JournalPreview";
 import StopModal from "../components/Trips/StopModal";
 import BookingEditModal from "../components/Trips/BookingEditModal";
 import TripMap from "../components/Trips/TripMap";
 import TripGallery from "../components/Trips/TripGallery";
 import TourSectionList from "../components/Trips/TourSectionList";
+import { useToursVisible } from "../hooks/useToursVisible";
 import { PanelHeader, Placeholder } from "../components/Trips/TripDetailPanels";
 import {
   compareTimelineEvents,
@@ -67,7 +68,24 @@ export default function TripDetailPage(): JSX.Element {
 
   const [trip, setTrip] = useState<Trip | null>(null);
   const [loading, setLoading] = useState(true);
-  const [tab, setTab] = useState<TabKey>("overview");
+  /* The open tab lives in the URL, not in component state alone: a link back
+     from the tour editor (`/trips/:id?tab=tours`) has to land on the tab the
+     user left, and a browser Back has to as well. An unknown value falls back
+     to the overview rather than rendering nothing. */
+  const [searchParams, setSearchParams] = useSearchParams();
+  const tabParam = searchParams.get("tab");
+  const tab: TabKey = TABS.includes(tabParam as TabKey) ? (tabParam as TabKey) : "overview";
+  const setTab = (next: TabKey): void => {
+    setSearchParams(
+      (prev) => {
+        const params = new URLSearchParams(prev);
+        if (next === "overview") params.delete("tab");
+        else params.set("tab", next);
+        return params;
+      },
+      { replace: true }
+    );
+  };
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
@@ -247,13 +265,12 @@ interface TabBarProps {
   t: ReturnType<typeof useTranslation>["t"];
 }
 
-/** Exported for its own test: the "tours" tab kept a hard-coded "Beta" pill
- *  long after the gate came off (auditor 3, 2026-09-19), and a badge no
- *  registry entry backs is one nothing can ever take away. */
+/** Exported for its own test: the "tours" tab kept a hard-coded "Beta" pill after its gate
+ *  came off (auditor 3, 2026-09-19); a badge no registry entry backs, nothing can take away. */
 export function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
-  // Every tab is offered. "tours" was the last one behind the instance beta
-  // flag, and the owner released it on 2026-09-18.
-  const visibleTabs = TABS;
+  // "tours" is behind the roadtrips beta key again since 2026-09-24 (owner).
+  const toursVisible = useToursVisible();
+  const visibleTabs = TABS.filter((key) => key !== "tours" || toursVisible);
 
   // Round 4: text tabs with the accent underline, like the logbook's. The
   // emoji in front of each label were the last ones in a tab bar.
@@ -289,7 +306,7 @@ export function TabBar({ tab, onChange, t }: TabBarProps): JSX.Element {
 
 /* ─────────── Tab: Timeline ─────────── */
 
-type TimelineEvent =
+export type TimelineEvent =
   | {
       id: string;
       kind: "flight";
@@ -553,24 +570,12 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
 
   return (
     <>
-      <div className="mb-4 flex gap-2 flex-wrap">
-        <button
-          type="button"
-          onClick={() => setAdding("journal")}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)"
-          style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
-        >
-          {t("trips:detail.timeline.addJournal")}
-        </button>
-        <button
-          type="button"
-          onClick={() => setAdding("stop")}
-          className="px-3 py-1.5 rounded-lg text-xs font-medium border transition-colors hover:border-(--accent) hover:text-(--accent)"
-          style={{ borderColor: "var(--color-border)", color: "var(--text-muted)" }}
-        >
-          {t("trips:detail.timeline.addStop")}
-        </button>
-      </div>
+      <TimelineActions
+        tripId={trip.id}
+        entries={trip.journalEntries ?? []}
+        onAddJournal={() => setAdding("journal")}
+        onChanged={onChanged}
+      />
 
       {empty ? (
         <Placeholder text={t("trips:detail.timeline.noEvents")} />
@@ -1110,92 +1115,6 @@ function PlaceVisitCard({
       dateLabel={formatTimelineDate(ev.date, language)}
     />
   );
-}
-
-function JournalCard({
-  ev,
-  language,
-  onView,
-  onEdit,
-  onDelete,
-}: {
-  ev: Extract<TimelineEvent, { kind: "journal" }>;
-  language: string | undefined;
-  onView: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}): JSX.Element {
-  const e = ev.entry;
-  // The headline is a single short line, so Markdown is stripped rather than
-  // rendered there; the body below it renders (issue #231).
-  const headline = e.title ?? truncate(stripMarkdown(e.body), 50);
-  const meta = [e.weather, e.mood].filter(Boolean).join(" · ") || undefined;
-  return (
-    <EventCard
-      icon="📝"
-      bg="rgba(96,165,250,0.15)"
-      iconColor="#60a5fa"
-      title={headline}
-      subtitle={meta ?? null}
-      meta={e.title ? <JournalPreview body={e.body} /> : undefined}
-      date={ev.date}
-      dateLabel={formatTimelineDate(ev.date, language)}
-      actions={<RowActions onView={onView} onEdit={onEdit} onDelete={onDelete} />}
-    />
-  );
-}
-
-function RowActions({
-  onView,
-  onEdit,
-  onDelete,
-}: {
-  onView?: () => void;
-  onEdit: () => void;
-  onDelete: () => void;
-}): JSX.Element {
-  const { t } = useTranslation(["common"]);
-  return (
-    <div className="flex gap-1 mt-1">
-      {onView && (
-        <button
-          type="button"
-          onClick={onView}
-          className="text-[11px] px-1.5 py-0.5 rounded-sm"
-          style={{ color: "var(--text-muted)" }}
-          aria-label={t("common:accessibility.view")}
-          title="view"
-        >
-          👁
-        </button>
-      )}
-      <button
-        type="button"
-        onClick={onEdit}
-        className="text-[11px] px-1.5 py-0.5 rounded-sm"
-        style={{ color: "var(--text-muted)" }}
-        aria-label={t("common:buttons.edit")}
-        title="edit"
-      >
-        ✎
-      </button>
-      <button
-        type="button"
-        onClick={onDelete}
-        className="text-[11px] px-1.5 py-0.5 rounded-sm"
-        style={{ color: "var(--danger, #f87171)" }}
-        aria-label={t("common:buttons.delete")}
-        title="delete"
-      >
-        ✕
-      </button>
-    </div>
-  );
-}
-
-function truncate(text: string, n: number): string {
-  if (text.length <= n) return text;
-  return text.slice(0, n - 1).trimEnd() + "…";
 }
 
 /* ─────────── Tab: Logistics ─────────── */

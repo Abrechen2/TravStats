@@ -914,7 +914,7 @@ async function wipeDemoUser(userId: string): Promise<void> {
   await prisma.lodgingStay.deleteMany({ where: { userId } });
   await prisma.lodging.deleteMany({ where: { userId } });
   await prisma.tripJournalEntry.deleteMany({ where: { trip: { userId } } });
-  await prisma.tripRoute.deleteMany({ where: { trip: { userId } } }); // legs/tracks cascade
+  await prisma.tripRoute.deleteMany({ where: { userId } }); // legs/tracks cascade
   await prisma.tripStop.deleteMany({ where: { trip: { userId } } });
   await prisma.companion.deleteMany({ where: { userId } }); // join rows cascade
 
@@ -1685,7 +1685,7 @@ export async function runDemoSeed(
     prisma.lodgingStay.count({ where: { userId } }),
     prisma.place.count({ where: { userId } }),
     prisma.placeList.count({ where: { userId } }),
-    prisma.tripRoute.count({ where: { trip: { userId } } }),
+    prisma.tripRoute.count({ where: { userId } }),
     prisma.tripJournalEntry.count({ where: { trip: { userId } } }),
   ]);
 

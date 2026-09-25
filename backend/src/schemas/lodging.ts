@@ -67,6 +67,19 @@ const baseLodgingSchema = z.object({
   lat: z.number().min(-90).max(90).nullable().optional(),
   lon: z.number().min(-180).max(180).nullable().optional(),
   stars: z.number().int().min(1).max(5).nullable().optional(),
+  // The house's own site. An empty field clears it; only http(s) is a
+  // website — anything else would become a link the detail page renders.
+  website: z.preprocess(
+    (v) => (typeof v === "string" && v.trim() === "" ? null : v),
+    z
+      .string()
+      .trim()
+      .max(500)
+      .url()
+      .refine((v) => /^https?:\/\//i.test(v), "website must be an http(s) address")
+      .nullable()
+      .optional()
+  ),
   amenities: z.array(z.string().max(60)).max(50).optional(),
   notes: z
     .string()

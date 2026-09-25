@@ -37,6 +37,13 @@ export interface ParsedTrack {
   startedAt: Date | null;
   endedAt: Date | null;
   name: string | null;
+  /**
+   * Metres above sea level per point, aligned with `points`; `null` where the
+   * file had no reading. Optional because a Dawarich pull carries none.
+   */
+  elevations?: Array<number | null>;
+  /** Epoch milliseconds per point, aligned with `points`; `null` where absent. */
+  times?: Array<number | null>;
 }
 
 const parser = new XMLParser({
@@ -91,6 +98,7 @@ interface RawPoint {
   lon: number;
   lat: number;
   time: Date | null;
+  ele: number | null;
 }
 
 /**
@@ -104,7 +112,7 @@ function parsePoint(node: unknown): RawPoint | null {
   const lon = toFiniteNumber(node["@_lon"]);
   if (lat === null || lon === null) return null;
   if (Math.abs(lat) > 90 || Math.abs(lon) > 180) return null;
-  return { lon, lat, time: toValidDate(node["time"]) };
+  return { lon, lat, time: toValidDate(node["time"]), ele: toFiniteNumber(node["ele"]) };
 }
 
 interface Collected {
@@ -222,6 +230,8 @@ export function parseGpx(xml: string): ParsedTrack | null {
       startedAt,
       endedAt,
       name: collected.name,
+      elevations: collected.points.map((p) => p.ele),
+      times: collected.points.map((p) => (p.time ? p.time.getTime() : null)),
     };
   } catch {
     return null;

@@ -20,6 +20,7 @@ import { UnifiedActivityPanel } from "../sidebars/UnifiedActivityPanel";
 import type { ActivityItem } from "../sidebars/activityItems";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 import { SidebarToggle } from "../SidebarToggle";
+import { MapEmptyOverlay } from "./MapEmptyOverlay";
 
 interface ItineraryDot {
   lat: number;
@@ -226,54 +227,13 @@ export function CruisesTab(): JSX.Element {
         </div>
       )}
       {!loading && !loadError && cruises.length === 0 && (
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 20,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            pointerEvents: "none",
-          }}
-        >
-          <div
-            style={{
-              pointerEvents: "auto",
-              maxWidth: 420,
-              textAlign: "center",
-              padding: "28px 32px",
-              borderRadius: 16,
-              background: "rgba(22,27,34,0.92)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            <div style={{ fontSize: 40, marginBottom: 12 }} aria-hidden>
-              ⚓
-            </div>
-            <h2 style={{ margin: "0 0 8px", color: "var(--text-primary)", fontSize: 18 }}>
-              {t("dashboard:cruiseTab.emptyTitle")}
-            </h2>
-            <p style={{ margin: "0 0 20px", color: "var(--text-muted)", fontSize: 14 }}>
-              {t("dashboard:cruiseTab.emptyBody")}
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate("/cruises")}
-              style={{
-                padding: "10px 20px",
-                background: "var(--accent)",
-                color: "#0d1117",
-                borderRadius: 10,
-                border: "none",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              {t("dashboard:cruiseTab.emptyCta")}
-            </button>
-          </div>
-        </div>
+        <MapEmptyOverlay
+          emoji="⚓"
+          title={t("dashboard:cruiseTab.emptyTitle")}
+          body={t("dashboard:cruiseTab.emptyBody")}
+          ctaLabel={t("dashboard:cruiseTab.emptyCta")}
+          onCta={() => navigate("/cruises")}
+        />
       )}
     </div>
   );

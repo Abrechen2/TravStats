@@ -23,7 +23,7 @@ describe("mergeTrips carries route sections", () => {
     const source = await prisma.trip.create({ data: { userId, name: "Quelle" } });
 
     const route = await prisma.tripRoute.create({
-      data: { tripId: source.id, name: "Südnorwegen", mode: "road" },
+      data: { userId, tripId: source.id, name: "Südnorwegen", mode: "road" },
     });
     const stop = await prisma.tripStop.create({
       data: {

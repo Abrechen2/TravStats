@@ -12,6 +12,24 @@ import { PlaceAppearanceSection } from "./PlaceAppearanceSection";
 import { DEFAULT_FLIGHT_COLOR_CONFIG, FLIGHT_COLOR_MODES } from "../../lib/flightColor";
 import { CRUISE_COLOR_MODES, DEFAULT_CRUISE_COLOR_CONFIG } from "../../lib/cruiseColor";
 
+/**
+ * The per-domain sections collapse individually since 2026-09-21 and start
+ * CLOSED, so the cases below — which are about what a section contains, not
+ * about opening it — open them through the persisted state rather than
+ * clicking four headers apiece. The collapsing itself is covered in
+ * "CollapsibleSection" at the bottom of this file.
+ *
+ * `usePanelExpanded`'s own describe clears storage in its inner beforeEach,
+ * which runs after this one, so its "nothing written on mount" case is
+ * unaffected.
+ */
+beforeEach(() => {
+  window.localStorage.setItem(
+    "mapAppearance.v2",
+    JSON.stringify({ panelSections: { flight: true, cruise: true, lodging: true, poi: true } })
+  );
+});
+
 describe("PanelHeader", () => {
   it("calls onToggle when the header is clicked", () => {
     const onToggle = vi.fn();
@@ -358,5 +376,40 @@ describe("PlaceAppearanceSection", () => {
   it("renders nothing at all when neither colours nor a size are offered", () => {
     const { container } = render(<PlaceAppearanceSection title="Orte" />);
     expect(container.textContent).toBe("");
+  });
+});
+
+describe("CollapsibleSection", () => {
+  beforeEach(() => {
+    window.localStorage.clear();
+  });
+
+  const props = {
+    title: "Orte",
+    markerSize: 1,
+    onMarkerSizeChange: () => {},
+    sizeLabel: "Größe",
+  };
+
+  it("hides its body until the title is clicked — the panel was 'extrem voll'", () => {
+    render(<PlaceAppearanceSection {...props} />);
+    expect(screen.queryByRole("slider")).toBeNull();
+
+    fireEvent.click(screen.getByRole("button", { name: /Orte/ }));
+    expect(screen.getByRole("slider")).toBeTruthy();
+  });
+
+  it("remembers the section it was told to open, per section", () => {
+    const { unmount } = render(<PlaceAppearanceSection {...props} />);
+    fireEvent.click(screen.getByRole("button", { name: /Orte/ }));
+    unmount();
+
+    render(<PlaceAppearanceSection {...props} />);
+    expect(screen.getByRole("slider")).toBeTruthy();
+    // Only the touched section is recorded; the others keep their default,
+    // so changing a default later is not a no-op for people who never
+    // opened them.
+    const stored = JSON.parse(window.localStorage.getItem("mapAppearance.v2") ?? "{}");
+    expect(stored.panelSections).toEqual({ poi: true });
   });
 });

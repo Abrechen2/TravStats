@@ -24,6 +24,16 @@ import {
   type PlaceVisitRow,
 } from "./sheets";
 import { buildWorkbookBlob, sheet, type AnySheetData } from "./workbook";
+import {
+  roadtripRows,
+  roadtripSheet,
+  roadtripStationSheet,
+  tourPointRows,
+  tourPointSheet,
+  tourSheet,
+  type TourWithPoints,
+} from "./roadtripSheets";
+import type { RoadtripDetail } from "../../types/roadtrip";
 
 type T = (key: string) => string;
 
@@ -32,6 +42,10 @@ export interface ExportInput {
   cruises?: readonly Cruise[];
   lodging?: readonly Lodging[];
   places?: readonly Place[];
+  roadtrips?: readonly RoadtripDetail[];
+  /** Day tours only — a roadtrip is on its own sheet. Each carries its points
+   *  when the caller fetched them; without, the points sheet is left out. */
+  tours?: readonly TourWithPoints[];
 }
 
 /** A short, stable label for a parent row, used as the readable half of a
@@ -103,6 +117,19 @@ export function buildSheets(t: T, input: ExportInput, locale = "de"): AnySheetDa
     sheets.push(sheet(placeSheet(t, locale), places));
     const visits = placeVisitRows(places);
     if (visits.length > 0) sheets.push(sheet(placeVisitSheet(t), visits));
+  }
+
+  const { roadtrips, stations } = roadtripRows(input.roadtrips ?? []);
+  if (roadtrips.length > 0) {
+    sheets.push(sheet(roadtripSheet(t), roadtrips));
+    if (stations.length > 0) sheets.push(sheet(roadtripStationSheet(t), stations));
+  }
+
+  const tours = input.tours ?? [];
+  if (tours.length > 0) {
+    sheets.push(sheet(tourSheet(t), tours));
+    const points = tourPointRows(tours);
+    if (points.length > 0) sheets.push(sheet(tourPointSheet(t), points));
   }
 
   return sheets;

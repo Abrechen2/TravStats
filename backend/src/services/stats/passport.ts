@@ -102,6 +102,7 @@ import {
 } from "../../shared/countryEvidence";
 import { FLOWN, flightEvidence, isoDayOf, type PassportFlight } from "./flightEvidence";
 import { trackEvidence, type CountryDayRow } from "./trackEvidence";
+import { roadtripEvidence, type PassportRoadtripStation } from "./roadtripEvidence";
 import { countEvidencePerCountry } from "./evidenceCountry";
 import { lodgingStampsPerCountry, type LodgingStamp, type StampLodging } from "./lodgingStamp";
 
@@ -181,10 +182,14 @@ export type PassportLodging = StampLodging;
 export type PassportEvidence = EvidenceKind;
 
 const EVIDENCE_RANK: Record<PassportEvidence, number> = {
-  flight: 5,
-  port: 4,
-  place: 3,
-  lodging: 2,
+  flight: 6,
+  port: 5,
+  place: 4,
+  lodging: 3,
+  // Below the house, so a country already labelled by its stay keeps that
+  // label; above the track, because a station is a record somebody typed and
+  // can open, which a country-day is not.
+  roadtrip: 2,
   track: 1,
 };
 
@@ -409,7 +414,13 @@ export function buildPassport(
    * the same code it did before. What a track proves lives in
    * `./trackEvidence.ts`; nothing about it is decided here.
    */
-  trackDays: readonly CountryDayRow[] = []
+  trackDays: readonly CountryDayRow[] = [],
+  /**
+   * Stations of roadtrips that have started, each already reduced to its
+   * night, days and country (`./roadtripEvidence.ts`). Before this the Stats
+   * overview counted a roadtrip's countries while the passport did not.
+   */
+  roadtripStations: readonly PassportRoadtripStation[] = []
 ): Passport {
   const thisYear = now.getUTCFullYear();
   const home = new Set(homeIatas.map((c) => c.toUpperCase()));
@@ -613,6 +624,9 @@ export function buildPassport(
     // `byCountry` does not already hold — which is the entire point: Estonia
     // and Lithuania exist in this account only because somebody drove there.
     ...trackEvidence(trackDays),
+    // Like a track it raises its own rows through the loop below — a country
+    // reached only by campervan has no other record to be found under.
+    ...roadtripEvidence(roadtripStations),
   ]);
 
   for (const row of evidence) {
@@ -732,6 +746,7 @@ export function buildPassport(
         port: countries.filter((c) => c.evidence === "port").length,
         place: countries.filter((c) => c.evidence === "place").length,
         lodging: countries.filter((c) => c.evidence === "lodging").length,
+        roadtrip: countries.filter((c) => c.evidence === "roadtrip").length,
         track: countries.filter((c) => c.evidence === "track").length,
       },
       byTier: {

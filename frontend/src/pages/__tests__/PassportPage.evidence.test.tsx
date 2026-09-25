@@ -69,7 +69,7 @@ const passport = (over: Partial<Passport["summary"]>, countries: PassportCountry
     continentsTotal: 7,
     firstStampYear: 2008,
     newThisYear: 1,
-    byEvidence: { flight: 31, port: 5, place: 2, lodging: 5, track: 0 },
+    byEvidence: { flight: 31, port: 5, place: 2, lodging: 5, roadtrip: 0, track: 0 },
     byTier: { slept: 12, visited: 28, transited: 0, connection: 3 },
     ...over,
   },
@@ -148,7 +148,7 @@ describe("PassportPage — headline, total and threshold", () => {
           countries: 0,
           countriesTotal: 3,
           legacyCountries: 3,
-          byEvidence: { flight: 3, port: 0, place: 0, lodging: 0, track: 0 },
+          byEvidence: { flight: 3, port: 0, place: 0, lodging: 0, roadtrip: 0, track: 0 },
           byTier: { slept: 0, visited: 0, transited: 0, connection: 3 },
         },
         [

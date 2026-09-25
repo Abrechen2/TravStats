@@ -22,6 +22,7 @@ import type { FlightSubmitOptions } from "../../FlightForm/useFlightForm";
 import { buildStatsMapLayer } from "../modes/buildStatsMapLayer";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 import { SidebarToggle } from "../SidebarToggle";
+import { MapEmptyOverlay } from "./MapEmptyOverlay";
 
 // Maps the dashboard-level FlightMode to what MapContainer3D's visMode prop expects.
 // "stats-map" is delivered via extraLayers — the map itself renders in "routes" mode.
@@ -304,56 +305,13 @@ export function FlightsTab(): JSX.Element {
         />
       )}
       {loaded && structuredTotal === 0 && flights.length === 0 && (
-        // Empty state (#262), modeled on the cruises tab: what this tab
-        // shows, plus the two ways to get a first flight in.
-        <div
-          style={{
-            position: "absolute",
-            inset: 0,
-            zIndex: 20,
-            display: "flex",
-            alignItems: "center",
-            justifyContent: "center",
-            pointerEvents: "none",
-          }}
-        >
-          <div
-            style={{
-              pointerEvents: "auto",
-              maxWidth: 420,
-              textAlign: "center",
-              padding: "28px 32px",
-              borderRadius: 16,
-              background: "rgba(22,27,34,0.92)",
-              border: "1px solid var(--color-border)",
-            }}
-          >
-            <div style={{ fontSize: 40, marginBottom: 12 }} aria-hidden>
-              ✈️
-            </div>
-            <h2 style={{ margin: "0 0 8px", color: "var(--text-primary)", fontSize: 18 }}>
-              {t("dashboard:flightTab.emptyTitle")}
-            </h2>
-            <p style={{ margin: "0 0 20px", color: "var(--text-muted)", fontSize: 14 }}>
-              {t("dashboard:flightTab.emptyBody")}
-            </p>
-            <button
-              type="button"
-              onClick={() => navigate("/flights")}
-              style={{
-                padding: "10px 20px",
-                background: "var(--accent)",
-                color: "#0d1117",
-                borderRadius: 10,
-                border: "none",
-                cursor: "pointer",
-                fontWeight: 600,
-              }}
-            >
-              {t("dashboard:flightTab.emptyCta")}
-            </button>
-          </div>
-        </div>
+        <MapEmptyOverlay
+          emoji="✈️"
+          title={t("dashboard:flightTab.emptyTitle")}
+          body={t("dashboard:flightTab.emptyBody")}
+          ctaLabel={t("dashboard:flightTab.emptyCta")}
+          onCta={() => navigate("/flights")}
+        />
       )}
       <SpecialFlightModal
         isOpen={showSpecialModal || editingSpecialFlight !== null}

@@ -27,6 +27,7 @@ import statsRoutes from "./stats";
 import airportRoutes from "./airports";
 import airlineLogoRoutes from "./airlineLogos";
 import countryFlagRoutes from "./countryFlags";
+import loginBackgroundRoutes from "./loginBackgrounds";
 import achievementRoutes from "./achievements";
 import evidenceRoutes from "./evidence";
 import settingsRoutes from "./settings";
@@ -54,7 +55,13 @@ import tourRouteRoutes from "./trips/tourRoutes";
 import tourLegRoutes from "./trips/tourLegs";
 import tourRoutingRoutes from "./trips/tourRouting";
 import tourTrackRoutes from "./trips/tourTracks";
+import tourTrackArchiveRoutes from "./trips/tourTrackArchive";
 import tourIndexRoutes from "./trips/tourIndex";
+import tourPointRoutes from "./trips/tourPoints";
+import tourKindRoutes from "./trips/tourKind";
+import roadtripRoutes from "./roadtrips";
+import stravaRoutes from "./integrations/strava";
+import openDataRoutes from "./openData";
 import immichTripRoutes from "./immich/tripAlbums";
 import immichAssetProxyRoutes from "./immich/assetProxy";
 import immichTripCoverRoutes from "./immich/tripCover";
@@ -127,6 +134,9 @@ export const apiMounts: ApiMount[] = [
   { id: "airports", base: "/api/v1/airports", router: airportRoutes },
   { id: "airlineLogos", base: "/api/v1/airline-logos", router: airlineLogoRoutes },
   { id: "countryFlags", base: "/api/v1/country-flags", router: countryFlagRoutes },
+  // Sign-in decoration. Its two GETs are deliberately unauthenticated — the
+  // page that reads them is what a visitor sees BEFORE a session exists.
+  { id: "loginBackgrounds", base: "/api/v1/login-backgrounds", router: loginBackgroundRoutes },
   { id: "achievements", base: "/api/v1/achievements", router: achievementRoutes },
   // "Which entries produced this number" — plumbing only until Task 5 wires
   // a resolver (task-3-brief.md); every metric/ranking request 404s until then.
@@ -176,12 +186,31 @@ export const apiMounts: ApiMount[] = [
   // written before `tourRouting` existed; this ordering is a controller
   // ruling made when `tourRouting` landed first.
   { id: "tourTracks", base: "/api/v1", router: tourTrackRoutes },
+  // Recordings as GPX files and ZIPs, out and back in (2.7).
+  { id: "tourTrackArchive", base: "/api/v1", router: tourTrackArchiveRoutes },
   // Dashboard-wide tour listing + batch geometry (task 1, phase 4) — NOT
   // trip-scoped like the four satellites above, so it cannot reuse their
   // `/trips/:id/...` prefix pattern for ownership; mounted last among the
   // tour satellites so it never shadows a more specific `/trips/:id/...`
   // route above it.
   { id: "tourIndex", base: "/api/v1", router: tourIndexRoutes },
+  // The point list of a standalone tour. After `tourIndex` because it is
+  // the same family, and its one path (`/tours/:routeId/points`) collides
+  // with nothing above it.
+  { id: "tourPoints", base: "/api/v1", router: tourPointRoutes },
+  // Moving a row between the tour and roadtrip pages (2.7). Its paths end in
+  // `/kind`, so they collide with nothing above.
+  { id: "tourKind", base: "/api/v1", router: tourKindRoutes },
+  // Roadtrips (2.7): list, detail, creation and the station list. The rest of
+  // a roadtrip — legs, tracks, geometry — is the `/tours/:routeId` family.
+  { id: "roadtrips", base: "/api/v1", router: roadtripRoutes },
+  // Strava (2.7): the OAuth round trip, the activity list and the imports.
+  // Its `/tours/...` paths end in `/strava`, so they shadow nothing above.
+  { id: "strava", base: "/api/v1", router: stravaRoutes },
+  // Open data (2.7): weather, planned elevation, Wikipedia, OSM enrichment.
+  // Every path ends in a segment no other router uses (`/weather`,
+  // `/planned-profile`, `/wikipedia`, `/enrich`), so it shadows nothing.
+  { id: "openData", base: "/api/v1", router: openDataRoutes },
   { id: "immich.tripAlbums", base: "/api/v1", router: immichTripRoutes },
   { id: "immich.assetProxy", base: "/api/v1", router: immichAssetProxyRoutes },
   { id: "immich.tripCover", base: "/api/v1", router: immichTripCoverRoutes },

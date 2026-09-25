@@ -63,6 +63,8 @@ vi.mock("../hooks/usePlacesVisible", () => ({
 // Landed here by a clean merge, not by a conflict: neither side's text
 // overlapped, so only running the suite showed it.
 vi.mock("../hooks/useHasLlm", () => ({ useHasLlm: () => true }));
+// The trip overview lists its roadtrips from their own endpoint; not this suite's subject.
+vi.mock("../components/Roadtrips/useTripRoadtrips", () => ({ useTripRoadtrips: () => [] }));
 vi.mock("../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ isEnabled: () => true }),
 }));

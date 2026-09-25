@@ -16,6 +16,8 @@ interface Props {
   uploading: boolean;
   onUpload: (file: File) => void;
   onDelete: (track: TourTrackMeta) => void;
+  /** Saves the recording as a GPX file (2.7) — absent where there is no page to host it. */
+  onDownload?: (track: TourTrackMeta) => void;
   pulling: boolean;
   /** Whether a Dawarich connection is configured and usable right now.
    *  Gates the "pull from Dawarich" button the same way `routingAvailable`
@@ -23,6 +25,8 @@ interface Props {
    *  only possible outcome is an error. */
   dawarichAvailable: boolean;
   onPullDawarich: () => void;
+  /** Opens the Strava picker; absent when Strava is not connected (2.7). */
+  onImportStrava?: () => void;
 }
 
 function formatDistanceKm(value: number): string {
@@ -71,9 +75,11 @@ export default function TourTrackList({
   uploading,
   onUpload,
   onDelete,
+  onDownload,
   pulling,
   dawarichAvailable,
   onPullDawarich,
+  onImportStrava,
 }: Props): JSX.Element {
   const { t } = useTranslation("trips");
   const [pendingDelete, setPendingDelete] = useState<TourTrackMeta | null>(null);
@@ -89,7 +95,9 @@ export default function TourTrackList({
           {uploading ? t("trips:tours.tracks.uploading") : t("trips:tours.tracks.uploadLabel")}
           <input
             type="file"
-            accept=".gpx"
+            // GPX, and since 2.7 the watch formats: TCX and FIT (Garmin, Wahoo,
+            // Coros …). The server decides the format by the bytes.
+            accept=".gpx,.tcx,.fit"
             className="sr-only"
             disabled={uploading}
             onChange={(e) => {
@@ -111,12 +119,24 @@ export default function TourTrackList({
             ? t("trips:tours.tracks.dawarich.pulling")
             : t("trips:tours.tracks.dawarich.pullLabel")}
         </button>
+        {onImportStrava && (
+          <button
+            type="button"
+            className="rounded-sm border border-(--color-border) px-3 py-1.5 text-xs hover:bg-(--bg-surface)"
+            onClick={onImportStrava}
+          >
+            {t("roadtrips:strava.importButton")}
+          </button>
+        )}
         {!dawarichAvailable && (
           <span className="text-xs text-(--text-muted)">
             {t("trips:tours.tracks.dawarich.unavailableReason")}
           </span>
         )}
       </div>
+      {/* Komoot has no public API (checked 2026-09-24): its tours come in as
+          the GPX file Komoot itself exports. */}
+      <p className="text-xs text-(--text-muted)">{t("roadtrips:komootHint")}</p>
 
       {loading && <p className="text-sm text-(--text-muted)">{t("trips:tours.tracks.loading")}</p>}
 
@@ -158,6 +178,18 @@ export default function TourTrackList({
                 {t("trips:tours.tracks.pointCount", { count: track.pointCount })}
               </span>
               <span className="text-(--text-muted)">{formatDistanceKm(track.distanceKm)} km</span>
+              {track.ascentM !== null && (
+                <span className="text-(--text-muted)">↑ {Math.round(track.ascentM)} m</span>
+              )}
+              {onDownload && (
+                <button
+                  type="button"
+                  className="text-xs underline"
+                  onClick={() => onDownload(track)}
+                >
+                  {t("roadtrips:trackArchive.downloadOne")}
+                </button>
+              )}
               <button
                 type="button"
                 className="text-xs underline"

@@ -30,10 +30,11 @@
  *                 same-day port call; a track day on which no other country was
  *                 recorded.
  * - `transited` — passed through on the ground. A track day shared with another
- *                 country: a border crossed by car (spec §3.4c). No curated
- *                 event can produce this rung — nothing in a flight, a cruise or
- *                 a hotel records a road crossing — so an account with no
- *                 location history never carries one.
+ *                 country: a border crossed by car (spec §3.4c), or a roadtrip
+ *                 station driven through without a night. Nothing in a
+ *                 flight, a cruise or a hotel records a road crossing, so an
+ *                 account with neither a location history nor a roadtrip
+ *                 never carries one.
  * - `connection`— a change of planes and nothing else.
  *
  * Strongest wins, so a country both flown through and slept in reports `slept`
@@ -233,8 +234,12 @@ export function parseCountryTier(value: unknown): CountryTier | null {
  * at all, so nothing here may claim the difference — see
  * `services/countryDays/countryDaySource.ts`, which stores `pointCount` as a
  * number precisely so that no one has to invent a verdict.
+ *
+ * `roadtrip` is a station of a roadtrip that has started (2.7). It is the one
+ * curated kind that can produce `transited`: a station driven through records
+ * the road crossing no flight, cruise or house ever could.
  */
-export type EvidenceKind = "flight" | "lodging" | "port" | "place" | "track";
+export type EvidenceKind = "flight" | "lodging" | "port" | "place" | "roadtrip" | "track";
 
 /**
  * How long the traveller was on the ground in a country — spec §3.4b.

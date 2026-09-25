@@ -65,7 +65,10 @@
     "listTitle": "Touren",
     "listEmpty": "Noch keine Touren erfasst",
     "empty": "Noch keine Touren angelegt. Lege deine erste Tour auf der Detailseite einer Reise unter „Touren“ an.",
-    "unavailable": "Diese Funktion ist derzeit nicht verfügbar."
+    "unavailable": "Diese Funktion ist derzeit nicht verfügbar.",
+    "emptyTitle": "Noch keine Touren",
+    "emptyBody": "Eine Tour gehört zu einer Reise: öffne eine Reise und lege sie dort im Reiter „Touren“ an. Eine GPX-Datei lässt sich dabei direkt hochladen.",
+    "emptyCta": "Zu den Reisen"
   },
   "lodgingTab": {
     "loading": "Unterkünfte werden geladen …",
@@ -185,14 +188,16 @@
   "flightsOnRoute": "Flüge auf dieser Route",
   "tabStrip": {
     "label": "Bereichswahl",
-    "scheduledHint": "· {{count}} geplant",
+    "scheduledHint": "· davon {{count}} geplant",
+    "plannedExtraHint": "· +{{count}} geplant",
     "tabs": {
       "all": "Alle",
       "flight": "Flüge",
       "cruise": "Kreuzfahrten",
       "lodging": "Unterkünfte",
       "poi": "Orte",
-      "tour": "Touren"
+      "tour": "Touren",
+      "roadtrip": "Roadtrips"
     },
     "disabledHint": "Bereich deaktiviert — Einstellungen → Bereiche"
   },
@@ -201,7 +206,9 @@
     "flight": "Flug",
     "cruise": "Kreuzfahrt",
     "poi": "Ort",
-    "lodging": "Unterkunft"
+    "lodging": "Unterkunft",
+    "tour": "Tour",
+    "roadtrip": "Roadtrip"
   },
   "controls": {
     "mode": "Modus",
@@ -210,7 +217,8 @@
       "flight": "Flug hinzufügen",
       "cruise": "Kreuzfahrt hinzufügen",
       "lodging": "Unterkunft anlegen",
-      "poi": "Ort anlegen"
+      "poi": "Ort anlegen",
+      "roadtrip": "Roadtrip hinzufügen"
     }
   },
   "filter": {
@@ -262,7 +270,10 @@
     "disabled": "Der Bereich Orte ist noch nicht aktiviert. Schalte ihn unter Einstellungen → Bereiche frei.",
     "goToSettings": "Zu den Einstellungen",
     "listFilter": "Nach Liste filtern",
-    "allLists": "Alle Orte"
+    "allLists": "Alle Orte",
+    "emptyTitle": "Noch keine Orte",
+    "emptyBody": "Lege deinen ersten Ort über „+ Ort“ auf der Orte-Seite an — oder ordne einer Reise einen Ort zu.",
+    "emptyCta": "Zur Orte-Seite"
   },
   "tabDisabled": {
     "title": "Bereich deaktiviert",

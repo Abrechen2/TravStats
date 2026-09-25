@@ -43,6 +43,7 @@ const EVIDENCE_DOMAIN_OF: Record<DomainKey, EvidenceDomain> = {
   cruise: "cruise",
   lodging: "lodging",
   poi: "place",
+  roadtrip: "roadtrip",
 };
 
 export default function CrossDomainKpis({

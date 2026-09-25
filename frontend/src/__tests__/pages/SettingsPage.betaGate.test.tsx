@@ -79,6 +79,9 @@ vi.mock("../../components/Settings/DevicesSection", () => ({
 vi.mock("../../components/Settings/DawarichConnectionCard", () => ({
   default: () => <div data-testid="dawarich-connection-card" />,
 }));
+vi.mock("../../components/Settings/StravaConnectionCard", () => ({
+  default: () => <div data-testid="strava-connection-card" />,
+}));
 vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
   default: () => <div data-testid="immich-connection-card" />,
 }));
@@ -277,19 +280,25 @@ describe("SettingsPage — the routing provider card", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
   });
 
-  // Released on 2026-09-18 with tours, which were its only consumer and the
-  // reason it was gated: on an instance with the switch off it offered to set
-  // up routing for a feature invisible everywhere else.
+  // Released on 2026-09-18 with tours; back behind the switch on 2026-09-24
+  // (owner), with tours and roadtrips, its only consumers: on an instance with
+  // the switch off it would offer routing for a feature invisible elsewhere.
   it.each([
     ["OFF", false],
     ["unknown", null],
-    ["ON", true],
-  ])("renders when the flag is %s", async (_label, flag) => {
+  ])("is not there when the flag is %s", async (_label, flag) => {
     useSettingsStore.setState({ betaFeaturesEnabled: flag });
     renderSettings("/settings?section=externalServices");
     await screen.findByTestId("immich-connection-card");
 
+    expect(screen.queryByTestId("routing-provider-section")).toBeNull();
+  });
+
+  it("renders when the flag is ON", async () => {
+    useSettingsStore.setState({ betaFeaturesEnabled: true });
+    renderSettings("/settings?section=externalServices");
+    await screen.findByTestId("immich-connection-card");
+
     expect(screen.getByTestId("routing-provider-section")).toBeTruthy();
-    expect(screen.getByTestId("immich-connection-card")).toBeTruthy();
   });
 });

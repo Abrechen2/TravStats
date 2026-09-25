@@ -1,6 +1,14 @@
 import { webgl2Available } from "../lib/webgl2";
 
-export const DASHBOARD_TABS = ["all", "flight", "cruise", "poi", "lodging", "tour"] as const;
+export const DASHBOARD_TABS = [
+  "all",
+  "flight",
+  "cruise",
+  "poi",
+  "lodging",
+  "roadtrip",
+  "tour",
+] as const;
 export type DashboardTab = (typeof DASHBOARD_TABS)[number];
 
 export const ALL_MODES = ["overview", "heatmap", "journey", "globe"] as const;
@@ -68,6 +76,9 @@ export const TAB_MODE_REGISTRY = {
   poi: { modes: POI_MODES, default: "globe", flatDefault: "markers" },
   lodging: { modes: LODGING_MODES, default: "globe", flatDefault: "map" },
   tour: { modes: TOUR_MODES, default: "globe", flatDefault: "routes" },
+  // Roadtrips (2.7) draw the same kind of line a tour does, so they take the
+  // tour's two modes — the globe first, like every tab.
+  roadtrip: { modes: TOUR_MODES, default: "globe", flatDefault: "routes" },
 } as const satisfies Record<DashboardTab, TabRegistryEntry<DashboardMode>>;
 
 /**

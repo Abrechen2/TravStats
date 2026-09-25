@@ -21,6 +21,7 @@ import MapContainer3D from "../../MapContainer3D";
 import { DomainDisabledNotice } from "./DomainDisabledNotice";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
 import { SidebarToggle } from "../SidebarToggle";
+import { MapEmptyOverlay } from "./MapEmptyOverlay";
 
 interface HeatDatum {
   position: [number, number];
@@ -300,7 +301,15 @@ export function PoiTab(): JSX.Element {
           </button>
         </div>
       )}
-      {isEmpty && <div style={overlayStyle}>{t("dashboard:poi.empty")}</div>}
+      {isEmpty && (
+        <MapEmptyOverlay
+          emoji="📍"
+          title={t("dashboard:poi.emptyTitle")}
+          body={t("dashboard:poi.emptyBody")}
+          ctaLabel={t("dashboard:poi.emptyCta")}
+          onCta={() => navigate("/places")}
+        />
+      )}
     </div>
   );
 }

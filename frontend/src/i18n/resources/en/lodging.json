@@ -154,7 +154,8 @@
     "programName": "Program name",
     "membershipNumber": "Membership number",
     "tier": "Tier",
-    "ratingOverallDerived": "Average of room, breakfast and service"
+    "ratingOverallDerived": "Average of room, breakfast and service",
+    "website": "Website"
   },
   "type": {
     "hotel": "Hotel",
@@ -276,7 +277,9 @@
       "commitError": "Could not commit the import",
       "chooseCurrency": "— currency —",
       "currencyMissingHint": "A price needs a currency — pick one for the highlighted rows, or the amount will not be imported.",
-      "changedLabel": "changed"
+      "changedLabel": "changed",
+      "createAllUndecided": "Create all {{count}} undecided as new",
+      "createAllChains": "Create all {{count}} chains"
     },
     "matchedLodgingHint": "This row attaches to an existing hotel — name and city cannot be edited here.",
     "matchedAs": "Matched to:",

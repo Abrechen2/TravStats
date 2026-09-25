@@ -8,6 +8,7 @@ import { generateToken } from "../../utils/jwt";
 describe("Tour route sections — geometry", () => {
   let cookie: string;
   let tripId: string;
+  let userId: string;
   let routeId: string;
 
   beforeAll(async () => {
@@ -16,10 +17,13 @@ describe("Tour route sections — geometry", () => {
       data: { username: "tourgeo", passwordHash: await hashPassword("password123") },
     });
     cookie = `auth_token=${generateToken(u.id)}`;
+    userId = u.id;
 
     const trip = await prisma.trip.create({ data: { userId: u.id, name: "T" } });
     tripId = trip.id;
-    const route = await prisma.tripRoute.create({ data: { tripId, name: "S", mode: "road" } });
+    const route = await prisma.tripRoute.create({
+      data: { userId: u.id, tripId, name: "S", mode: "road" },
+    });
     routeId = route.id;
 
     const a = await prisma.tripStop.create({ data: { tripId, title: "A", lat: 58.15, lon: 8.0 } });
@@ -55,7 +59,9 @@ describe("Tour route sections — geometry", () => {
   });
 
   it("returns an empty collection for a section with no stops", async () => {
-    const empty = await prisma.tripRoute.create({ data: { tripId, name: "Leer", mode: "foot" } });
+    const empty = await prisma.tripRoute.create({
+      data: { userId, tripId, name: "Leer", mode: "foot" },
+    });
     const res = await request(app)
       .get(`/api/v1/trips/${tripId}/routes/${empty.id}/geometry`)
       .set("Cookie", cookie);

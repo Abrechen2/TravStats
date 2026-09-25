@@ -1,3 +1,5 @@
+import OpenDataCard from "../../components/Settings/OpenDataCard";
+import { useToursVisible } from "../../hooks/useToursVisible";
 import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
@@ -12,6 +14,7 @@ import DefaultsSection from "../../components/Settings/DefaultsSection";
 import NotificationsSection from "../../components/Settings/NotificationsSection";
 import BackupSection from "../../components/Settings/BackupSection";
 import SpreadsheetSection from "../../components/Settings/SpreadsheetSection";
+import TrackArchiveSection from "../../components/Settings/TrackArchiveSection";
 import AutoUpdateSection from "../../components/Settings/AutoUpdateSection";
 import EnrichmentSection from "../../components/Settings/EnrichmentSection";
 import ApiKeysSection from "../../components/Settings/ApiKeysSection";
@@ -27,6 +30,7 @@ import GeocoderSettingsCard from "../../components/Settings/GeocoderSettingsCard
 import RoutingProviderSection from "../../components/Settings/RoutingProviderSection";
 import ImmichConnectionCard from "../../components/Settings/ImmichConnectionCard";
 import DawarichConnectionCard from "../../components/Settings/DawarichConnectionCard";
+import StravaConnectionCard from "../../components/Settings/StravaConnectionCard";
 
 type SettingsPageState = ReturnType<typeof useSettingsPage>;
 
@@ -45,6 +49,7 @@ export default function SettingsSectionSwitch({
   page,
 }: SettingsSectionSwitchProps): JSX.Element | null {
   const isAdmin = page.user?.isAdmin ?? false;
+  const toursVisible = useToursVisible();
 
   switch (section) {
     case "profile":
@@ -95,6 +100,8 @@ export default function SettingsSectionSwitch({
               out" — but they are not the same thing: a backup restores an
               instance, the spreadsheet is for reading and editing. */}
           <SpreadsheetSection />
+          {/* The recordings the spreadsheet cannot carry. */}
+          <TrackArchiveSection />
         </BackupSection>
       );
     case "import":
@@ -117,13 +124,20 @@ export default function SettingsSectionSwitch({
               because tours were its only consumer and an instance with beta
               off would have offered routing for a feature hidden everywhere
               else. Tours shipped, so the gate went with them. */}
-          <RoutingProviderSection isAdmin={isAdmin} />
+          {/* Routing serves tours and roadtrips only, and both went back
+              behind the roadtrips beta key on 2026-09-24 — a routing card for
+              a feature hidden everywhere else would offer nothing. */}
+          {toursVisible && <RoutingProviderSection isAdmin={isAdmin} />}
           <ImmichConnectionCard />
           {/* It had a key of its OWN rather than riding on `tourRoutes`, because
               tours stopped being the only consumer the moment cruise legs were
               scoped onto the same connection. Both keys left the registry on
               2026-09-18. */}
           <DawarichConnectionCard />
+          {/* Strava (2.7): day tours from Strava activities. */}
+          {toursVisible && <StravaConnectionCard isAdmin={isAdmin} />}
+          {/* Open data (2.7): Open-Meteo, Wikipedia, OpenStreetMap — off by default. */}
+          <OpenDataCard isAdmin={isAdmin} />
         </div>
       );
     case "homeAirport":

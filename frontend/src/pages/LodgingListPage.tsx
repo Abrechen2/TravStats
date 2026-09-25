@@ -551,6 +551,7 @@ export default function LodgingListPage(): JSX.Element {
               </div>
             ) : (
               <>
+                <TablePagination {...pagination} allowAll={false} placement="top" />
                 <Table columns={visibleColumns} label={t("lodging:list.title")} {...tableHints}>
                   {rows.map((l: Lodging) => (
                     <LodgingRow

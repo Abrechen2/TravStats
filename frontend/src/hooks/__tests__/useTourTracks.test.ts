@@ -214,3 +214,13 @@ describe("useTourTracks", () => {
     expect(result.current.tracksKnown).toBe(false);
   });
 });
+
+describe("useTourTracks — a route with no trip", () => {
+  it("loads the tracks of a standalone tour or roadtrip through the trip-less path", async () => {
+    mocks.list.mockResolvedValue([TRACK_A]);
+    const { result } = renderHook(() => useTourTracks(undefined, "route-1"));
+    await waitFor(() => expect(result.current.tracksLoading).toBe(false));
+    expect(mocks.list).toHaveBeenCalledWith(undefined, "route-1");
+    expect(result.current.tracks).toEqual([TRACK_A]);
+  });
+});

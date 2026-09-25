@@ -44,7 +44,11 @@ export default function EvidenceSummary({
   const tiers = [
     { tier: "slept" as const, count: summary.byTier.slept },
     { tier: "visited" as const, count: summary.byTier.visited },
-    ...(hasTracks ? [{ tier: "transited" as const, count: summary.byTier.transited }] : []),
+    // A roadtrip station driven through reaches this rung too, so a non-zero
+    // count is shown even on an account with no location history.
+    ...(hasTracks || summary.byTier.transited > 0
+      ? [{ tier: "transited" as const, count: summary.byTier.transited }]
+      : []),
     { tier: "connection" as const, count: summary.byTier.connection },
   ];
 
@@ -53,6 +57,10 @@ export default function EvidenceSummary({
     { kind: "port" as const, count: summary.byEvidence.port },
     { kind: "place" as const, count: summary.byEvidence.place },
     { kind: "lodging" as const, count: summary.byEvidence.lodging },
+    // Drawn only where it is not a permanent zero, like the track below.
+    ...(summary.byEvidence.roadtrip > 0
+      ? [{ kind: "roadtrip" as const, count: summary.byEvidence.roadtrip }]
+      : []),
     ...(hasTracks ? [{ kind: "track" as const, count: summary.byEvidence.track }] : []),
   ];
 

@@ -15,7 +15,7 @@
   "editTrip": "Edit Journey",
   "deleteTrip": "Delete Journey",
   "removeFromTrip": "Remove from journey",
-  "deleteTripConfirm": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours with their recorded tracks, and the documents filed here. Flights, cruises and stays are kept.",
+  "deleteTripConfirm": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours with their recorded tracks, and the documents filed here. Flights, cruises, stays and roadtrips are kept.",
   "showOnMap": "Show on Map",
   "flightCount_one": "{{count}} Flight",
   "flightCount_other": "{{count}} Flights",
@@ -185,7 +185,8 @@
       "aircraft": "Aircraft",
       "seat": "Seat",
       "itinerary": "Itinerary",
-      "atSea": "Day at sea"
+      "atSea": "Day at sea",
+      "openJournal": "Open in full"
     }
   },
   "journalModal": {
@@ -359,7 +360,7 @@
       "loading": "Loading tracks …",
       "loadError": "Tracks could not be loaded",
       "empty": "No track for this tour yet",
-      "uploadLabel": "Upload GPX",
+      "uploadLabel": "Upload recording (GPX, TCX, FIT)",
       "uploading": "Uploading …",
       "uploadError": "The track could not be uploaded",
       "deleteLabel": "Delete",
@@ -377,7 +378,12 @@
       "noCoverageReason": "No recorded track covers this leg",
       "source": {
         "gpx": "GPX upload",
-        "dawarich": "Dawarich"
+        "dawarich": "Dawarich",
+        "fit": "FIT file",
+        "tcx": "TCX file",
+        "strava": "Strava",
+        "healthkit": "Apple Health",
+        "healthconnect": "Health Connect"
       },
       "dawarich": {
         "pullLabel": "Pull from Dawarich",
@@ -412,6 +418,34 @@
       "connected": "Connected (version {{version}})",
       "loadError": "Settings could not be loaded",
       "saveError": "Save failed"
+    },
+    "deleteLabel": "Delete",
+    "deleteError": "The tour could not be deleted.",
+    "deleteConfirm": {
+      "title": "Delete this tour?",
+      "message_one": "The tour “{{name}}” with {{count}} stop will be deleted permanently, along with its legs and the tracks uploaded to it. The trip itself and its places are kept.",
+      "message_other": "The tour “{{name}}” with {{count}} stops will be deleted permanently, along with its legs and the tracks uploaded to it. The trip itself and its places are kept.",
+      "confirm": "Delete tour"
+    },
+    "pageTitle": "Tours",
+    "newTour": "New tour",
+    "pageEmpty": "No tour yet. A tour can belong to a trip, or stand on its own.",
+    "noTrip": "no trip",
+    "modeLabel": "Kind",
+    "backToTours": "Back to tours",
+    "points": {
+      "empty": "No points yet. Add the first one.",
+      "titlePlaceholder": "Point name",
+      "lat": "Latitude",
+      "lon": "Longitude",
+      "moveUp": "Move up",
+      "moveDown": "Move down",
+      "remove": "Remove",
+      "add": "Add point",
+      "save": "Save points",
+      "incomplete": "Every point needs a name and both coordinates.",
+      "saveError": "The points could not be saved.",
+      "heading": "Points"
     }
   },
   "head": {

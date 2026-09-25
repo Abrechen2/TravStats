@@ -36,7 +36,13 @@ export interface TourPathDatum {
 }
 
 export function buildTourPaths(
-  geometries: readonly { routeId: string; name: string; geometry: TourGeometry }[]
+  geometries: readonly {
+    routeId: string;
+    name: string;
+    geometry: TourGeometry;
+    /** Overrides the tour hue — a roadtrip's line is drawn in its domain colour (2.7). */
+    rgb?: [number, number, number];
+  }[]
 ): TourPathDatum[] {
   const out: TourPathDatum[] = [];
   for (const g of geometries) {
@@ -46,7 +52,7 @@ export function buildTourPaths(
       out.push({
         legId: f.properties.legId,
         path,
-        color: TOUR_RGB,
+        color: g.rgb ?? TOUR_RGB,
         isPlaceholder: f.properties.source === "straight",
         label: `${g.name} · ${Math.round(f.properties.distanceKm)} km`,
       });

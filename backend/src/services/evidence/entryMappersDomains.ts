@@ -182,3 +182,27 @@ export function pageDistinctEntries(
   const returned = new Set(paged.flatMap((e) => e.credits ?? []));
   return { entries: paged, omittedCount, omittedCredits: all.size - returned.size };
 }
+
+export interface RoadtripEvidenceRow {
+  id: string;
+  name: string;
+  startDate: Date | null;
+}
+
+/** A roadtrip as evidence: one experience, filed under the day it started. */
+export function roadtripEvidenceEntry(
+  row: RoadtripEvidenceRow,
+  fields: Pick<EvidenceEntry, "contribution" | "credits" | "creditLabels" | "subtitle">
+): EvidenceEntry {
+  return {
+    domain: "roadtrip",
+    id: row.id,
+    href: `/roadtrips/${row.id}`,
+    title: { text: row.name },
+    subtitle: fields.subtitle ?? null,
+    date: dayPrecisionDate(row.startDate),
+    ...(fields.contribution === undefined ? {} : { contribution: fields.contribution }),
+    ...(fields.credits === undefined ? {} : { credits: fields.credits }),
+    ...(fields.creditLabels === undefined ? {} : { creditLabels: fields.creditLabels }),
+  };
+}

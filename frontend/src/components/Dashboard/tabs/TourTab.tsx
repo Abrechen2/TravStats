@@ -6,6 +6,8 @@ import { useDashboardRoute } from "../../../hooks/useDashboardRoute";
 import { useDashboardTours } from "../../../hooks/useDashboardTours";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { TourSummary } from "../../../lib/api/tourIndex";
+import type { RouteKind } from "../../../shared/tour/roadtrip";
+import { useDomainColors } from "../../../hooks/useDomainColors";
 import { LEG_MODES, type LegMode } from "../../../types/tour";
 import { buildTourPaths, type TourPathDatum } from "../../layers/tourPathsLayer";
 import {
@@ -18,6 +20,7 @@ import { legendRow } from "./allTabLegendRows";
 import MapContainer3D from "../../MapContainer3D";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
 import { SidebarToggle } from "../SidebarToggle";
+import { MapEmptyOverlay } from "./MapEmptyOverlay";
 
 function isLegMode(value: string): value is LegMode {
   return (LEG_MODES as readonly string[]).includes(value);
@@ -40,14 +43,32 @@ function isLegMode(value: string): value is LegMode {
  * `enabled` argument is what actually stops the fetch if either upstream
  * guard is ever wrong.
  */
-export function TourTab(): JSX.Element {
+/** Where a row opens: a roadtrip's page, a trip section, or a standalone tour. */
+function routeOf(tour: TourSummary): string {
+  if (tour.kind === "roadtrip") return `/roadtrips/${tour.id}`;
+  return tour.tripId === null ? `/tours/${tour.id}` : `/trips/${tour.tripId}/route/${tour.id}`;
+}
+
+/**
+ * Since 2.7 this is also the roadtrip tab (`kind="roadtrip"`): both draw
+ * routes of the same engine; only the list, its words and its colour differ.
+ */
+export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Element {
   const { mode } = useDashboardRoute();
   const navigate = useNavigate();
-  const { t } = useTranslation(["dashboard", "trips", "common"]);
+  const { t } = useTranslation(["dashboard", "trips", "roadtrips", "common"]);
+  const isRoadtrip = kind === "roadtrip";
+  const listTitle = isRoadtrip
+    ? t("roadtrips:dashboard.listTitle")
+    : t("dashboard:tourTab.listTitle");
+  const listEmpty = isRoadtrip
+    ? t("roadtrips:dashboard.listEmpty")
+    : t("dashboard:tourTab.listEmpty");
   // No gate since 2026-09-18 (owner: everything out of the registry but the
   // phone app). The hook keeps its `enabled` argument for a future caller
   // that has a reason to say no.
-  const dashboardTours = useDashboardTours(true);
+  const dashboardTours = useDashboardTours(true, kind);
+  const { colorOf } = useDomainColors();
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const visMode = mode === "globe" ? "globe" : "routes";
 
@@ -68,7 +89,10 @@ export function TourTab(): JSX.Element {
   // shared in `./allTabLegendRows.tsx` since the fix-round review
   // (2026-08-30) found this tab had grown its own byte-identical copy.
   // Called with the default "line" shape (its only use here).
-  const tourLegend = buildTourLegendRows(true, dashboardTours, t, legendRow);
+  const tourLegend = buildTourLegendRows(true, dashboardTours, t, legendRow, {
+    color: colorOf("roadtrip"),
+    label: t("roadtrips:kind.roadtrip"),
+  });
 
   // Settled + genuinely nothing to show — distinct from `toursLoading` and
   // `toursLoadError`, which TourStatusOverlay renders instead. Never derive
@@ -81,7 +105,7 @@ export function TourTab(): JSX.Element {
     dashboardTours.tours.length === 0;
 
   const handleRowClick = (tour: TourSummary): void => {
-    navigate(`/trips/${tour.tripId}/route/${tour.id}`);
+    navigate(routeOf(tour));
   };
 
   return (
@@ -103,7 +127,7 @@ export function TourTab(): JSX.Element {
       <SidebarToggle
         open={sidebarOpen}
         onToggle={() => setSidebarOpen((prev) => !prev)}
-        label={t("dashboard:tourTab.listTitle")}
+        label={listTitle}
       />
 
       {sidebarOpen && (
@@ -129,7 +153,7 @@ export function TourTab(): JSX.Element {
               borderBottom: "1px solid var(--color-border)",
             }}
           >
-            <strong>{t("dashboard:tourTab.listTitle")}</strong>
+            <strong>{listTitle}</strong>
             <button
               type="button"
               onClick={() => setSidebarOpen(false)}
@@ -153,9 +177,7 @@ export function TourTab(): JSX.Element {
           {!dashboardTours.toursLoading &&
             !dashboardTours.toursLoadError &&
             (dashboardTours.tours.length === 0 ? (
-              <p style={{ padding: 16, color: "var(--text-muted)", fontSize: 13 }}>
-                {t("dashboard:tourTab.listEmpty")}
-              </p>
+              <p style={{ padding: 16, color: "var(--text-muted)", fontSize: 13 }}>{listEmpty}</p>
             ) : (
               dashboardTours.tours.map((tour) => (
                 <div
@@ -241,23 +263,17 @@ export function TourTab(): JSX.Element {
       />
 
       {isEmpty && (
-        <div
-          style={{
-            position: "absolute",
-            top: 12,
-            left: "50%",
-            transform: "translateX(-50%)",
-            zIndex: 30,
-            padding: "6px 14px",
-            borderRadius: 10,
-            background: "rgba(22,27,34,0.85)",
-            color: "var(--text-muted)",
-            border: "1px solid var(--color-border)",
-            fontSize: 13,
-          }}
-        >
-          {t("dashboard:tourTab.empty")}
-        </div>
+        <MapEmptyOverlay
+          emoji={isRoadtrip ? "🚐" : "🥾"}
+          title={
+            isRoadtrip ? t("roadtrips:dashboard.emptyTitle") : t("dashboard:tourTab.emptyTitle")
+          }
+          body={isRoadtrip ? t("roadtrips:dashboard.emptyBody") : t("dashboard:tourTab.emptyBody")}
+          ctaLabel={
+            isRoadtrip ? t("roadtrips:dashboard.emptyCta") : t("dashboard:tourTab.emptyCta")
+          }
+          onCta={() => navigate(isRoadtrip ? "/roadtrips" : "/trips")}
+        />
       )}
     </div>
   );

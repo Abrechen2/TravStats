@@ -25,19 +25,47 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { errorContent } from "./shared";
 import { legMode, tourRouteGeometry } from "./tours";
+import { listToursQuerySchema } from "../../../schemas/roadtrip";
+import { ROADTRIP_VEHICLES, ROUTE_KINDS, TOUR_ACTIVITIES } from "../../../shared/tour/roadtrip";
 
 const tourSummary = registry.register(
   "TourSummary",
   z
     .object({
       id: z.string().uuid(),
-      tripId: z.string().uuid(),
+      tripId: z.string().uuid().nullable(),
       tripName: z
         .string()
+        .nullable()
         .describe("The owning trip's name, so a dashboard list needs no second lookup"),
       name: z.string(),
       mode: legMode.describe("The section's own default mode, not any one leg's"),
-      distanceKm: z.number().describe("Sum of every leg's distanceKm, any mode"),
+      kind: z.enum(ROUTE_KINDS),
+      activity: z.enum(TOUR_ACTIVITIES).nullable(),
+      vehicle: z.enum(ROADTRIP_VEHICLES).nullable(),
+      kindAssignedAutomatically: z.boolean(),
+      notes: z.string().nullable(),
+      anchorStopId: z
+        .string()
+        .uuid()
+        .nullable()
+        .describe("A tour only: the roadtrip station it set out from"),
+      anchorStopTitle: z
+        .string()
+        .nullable()
+        .describe("That station's title, so the spreadsheet can write a readable reference"),
+      distanceKm: z
+        .number()
+        .describe(
+          "A tour with a recording: the recordings' raw distance. Otherwise the sum of its legs."
+        ),
+      distanceSource: z.enum(["track", "legs"]),
+      ascentM: z
+        .number()
+        .nullable()
+        .describe("Summed over the recordings; null when none has elevation"),
+      movingSeconds: z.number().nullable(),
+      trackCount: z.number().int(),
       stopCount: z.number().int(),
       startDate: z
         .string()
@@ -61,7 +89,18 @@ const tourSummary = registry.register(
         tripName: "Norwegen 2024",
         name: "Süd-Norwegen",
         mode: "road",
+        kind: "tour",
+        activity: "hike",
+        vehicle: null,
+        kindAssignedAutomatically: false,
+        notes: null,
+        anchorStopId: null,
+        anchorStopTitle: null,
         distanceKm: 305.4,
+        distanceSource: "legs",
+        ascentM: null,
+        movingSeconds: null,
+        trackCount: 0,
         stopCount: 2,
         startDate: "2024-07-01T00:00:00.000Z",
         endDate: "2024-07-05T00:00:00.000Z",
@@ -81,6 +120,7 @@ registry.registerPath({
     "geometry for the sections you actually render via the batch endpoint " +
     "below. Mirrors why the recorded-tracks list omits geometry too.",
   tags: ["Tours"],
+  request: { query: listToursQuerySchema },
   responses: {
     200: {
       description: "Every section the caller owns",

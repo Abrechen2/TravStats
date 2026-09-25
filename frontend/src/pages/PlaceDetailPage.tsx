@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useMemo, useState } from "react";
+import WikipediaCard from "../components/common/WikipediaCard";
 import type { JSX } from "react";
 import { Link, useNavigate, useParams } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
@@ -332,6 +333,7 @@ export default function PlaceDetailPage(): JSX.Element {
 
       <div className="grid grid-cols-1 gap-6 lg:grid-cols-[1.4fr_1fr]">
         <div className="flex flex-col gap-6">
+          <WikipediaCard kind="place" id={place.id} />
           <section className="flex flex-col" style={{ gap: "var(--ts-space-md)" }}>
             <div className="flex items-center justify-between gap-3">
               <h2 className="t-label-mono">

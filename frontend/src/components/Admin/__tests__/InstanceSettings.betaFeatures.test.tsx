@@ -22,6 +22,17 @@ vi.mock("../../../store/toastStore", () => ({
     selector({ addToast }),
 }));
 
+// The page also carries the sign-in-background card, which fetches its list
+// on mount. Mocked here rather than left to the network guard: this suite is
+// about the beta-features flag, and a real request would fail the whole render
+// before the flag is even drawn.
+vi.mock("../../../lib/api/loginBackgrounds", () => ({
+  getLoginBackgrounds: () => Promise.resolve([]),
+  loginBackgroundUrl: (name: string) => `/api/v1/login-backgrounds/${name}`,
+  uploadLoginBackgrounds: vi.fn(),
+  deleteLoginBackground: vi.fn(),
+}));
+
 vi.mock("../../../lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn(), debug: vi.fn() },
 }));

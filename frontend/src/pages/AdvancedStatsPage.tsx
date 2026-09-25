@@ -50,6 +50,7 @@ import StatsSeatSection from "../components/Stats/StatsSeatSection";
 import CruiseStatsSection from "../components/Stats/CruiseStatsSection";
 import LodgingStatsSection from "../components/Stats/LodgingStatsSection";
 import PoiStatsSection from "../components/Stats/PoiStatsSection";
+import RoadtripStatsSection from "../components/Stats/RoadtripStatsSection";
 import OverviewTab from "../components/Stats/Overview/OverviewTab";
 import FlightScorecardBlock from "../components/Stats/scorecard/FlightScorecardBlock";
 import type { WindowKind } from "../components/Stats/scorecard/TimeRangeControl";
@@ -102,7 +103,8 @@ export default function AdvancedStatsPage(): JSX.Element {
       tab === "flight" ||
       tab === "cruise" ||
       tab === "lodging" ||
-      tab === "poi"
+      tab === "poi" ||
+      tab === "roadtrip"
     ) {
       return tab;
     }
@@ -127,7 +129,13 @@ export default function AdvancedStatsPage(): JSX.Element {
   useEffect(() => {
     const tab = searchParams.get("tab");
     const next: DomainKey | "all" =
-      tab === "flight" || tab === "cruise" || tab === "lodging" || tab === "poi" ? tab : "all";
+      tab === "flight" ||
+      tab === "cruise" ||
+      tab === "lodging" ||
+      tab === "poi" ||
+      tab === "roadtrip"
+        ? tab
+        : "all";
     if (next !== filter) setFilterState(next);
   }, [searchParams, filter]);
 
@@ -590,6 +598,9 @@ export default function AdvancedStatsPage(): JSX.Element {
               tearing it away a moment later. */}
           {effectiveFilter === "poi" && placesAccess === "allowed" && (
             <PoiStatsSection scope={scope} visibility={sections} />
+          )}
+          {effectiveFilter === "roadtrip" && (
+            <RoadtripStatsSection scope={scope} visibility={sections} />
           )}
 
           {/* Generate Certificate + Year Report Buttons — flight-only now. */}

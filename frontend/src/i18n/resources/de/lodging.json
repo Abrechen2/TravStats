@@ -154,7 +154,8 @@
     "programName": "Programmname",
     "membershipNumber": "Mitgliedsnummer",
     "tier": "Status-Stufe",
-    "ratingOverallDerived": "Ø aus Zimmer, Frühstück und Service"
+    "ratingOverallDerived": "Ø aus Zimmer, Frühstück und Service",
+    "website": "Webseite"
   },
   "type": {
     "hotel": "Hotel",
@@ -276,7 +277,9 @@
       "commitError": "Import konnte nicht übernommen werden",
       "chooseCurrency": "— Währung —",
       "currencyMissingHint": "Ein Preis braucht eine Währung — bitte für die markierten Zeilen auswählen, sonst wird der Betrag nicht übernommen.",
-      "changedLabel": "geändert"
+      "changedLabel": "geändert",
+      "createAllUndecided": "Alle {{count}} offenen als neu anlegen",
+      "createAllChains": "Alle {{count}} Ketten anlegen"
     },
     "matchedLodgingHint": "Diese Zeile wird mit einem vorhandenen Hotel verknüpft — Name und Ort können hier nicht geändert werden.",
     "matchedAs": "Zugeordnet zu:",

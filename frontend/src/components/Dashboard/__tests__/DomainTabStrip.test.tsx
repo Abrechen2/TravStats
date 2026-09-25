@@ -19,7 +19,12 @@ vi.mock("react-router-dom", async () => {
 // Override the global key-passthrough mock with human-readable labels for this component.
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
-    t: (key: string) => {
+    t: (key: string, opts?: { count?: number }) => {
+      // The two planned hints carry a count and are the point of the test
+      // below, so they interpolate here rather than falling through to the
+      // bare key like the labels do.
+      if (key === "dashboard:tabStrip.scheduledHint") return ` incl. ${opts?.count} planned`;
+      if (key === "dashboard:tabStrip.plannedExtraHint") return ` +${opts?.count} planned`;
       const labels: Record<string, string> = {
         "dashboard:tabStrip.label": "Domain switcher",
         "dashboard:tabStrip.tabs.all": "All",
@@ -47,8 +52,8 @@ describe("DomainTabStrip", () => {
     render(
       <DomainTabStrip
         active="all"
-        counts={{ flight: 127, cruise: 2, poi: 0, lodging: 0 }}
-        enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+        counts={{ flight: 127, cruise: 2, poi: 0, lodging: 0, roadtrip: 0 }}
+        enabled={{ flight: true, cruise: true, poi: true, lodging: true, roadtrip: true }}
         onSelect={() => {}}
       />
     );
@@ -63,8 +68,8 @@ describe("DomainTabStrip", () => {
     render(
       <DomainTabStrip
         active="cruise"
-        counts={{ flight: 0, cruise: 2, poi: 0, lodging: 0 }}
-        enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+        counts={{ flight: 0, cruise: 2, poi: 0, lodging: 0, roadtrip: 0 }}
+        enabled={{ flight: true, cruise: true, poi: true, lodging: true, roadtrip: true }}
         onSelect={() => {}}
       />
     );
@@ -77,8 +82,8 @@ describe("DomainTabStrip", () => {
     render(
       <DomainTabStrip
         active="all"
-        counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0 }}
-        enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+        counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0, roadtrip: 0 }}
+        enabled={{ flight: true, cruise: true, poi: true, lodging: true, roadtrip: true }}
         onSelect={onSelect}
       />
     );
@@ -97,8 +102,8 @@ describe("DomainTabStrip", () => {
       render(
         <DomainTabStrip
           active="all"
-          counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0 }}
-          enabled={{ flight: true, cruise: true, poi: false, lodging: true }}
+          counts={{ flight: 0, cruise: 0, poi: 0, lodging: 0, roadtrip: 0 }}
+          enabled={{ flight: true, cruise: true, poi: false, lodging: true, roadtrip: true }}
           onSelect={onSelect}
         />
       );
@@ -160,8 +165,8 @@ describe("DomainTabStrip", () => {
       render(
         <DomainTabStrip
           active="all"
-          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0 }}
-          enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0, roadtrip: 0 }}
+          enabled={{ flight: true, cruise: true, poi: true, lodging: true, roadtrip: true }}
           onSelect={() => {}}
         />
       );
@@ -175,30 +180,30 @@ describe("DomainTabStrip", () => {
   // decision. It also has no domain behind it: `counts`/`enabled` are keyed
   // by DomainKey and never carry a "tour" entry, so the tab must render with
   // no count badge and — unlike POI — must never be dimmed either.
-  describe("beta gate: tourRoutes", () => {
+  describe("beta gate: tours and roadtrips (roadtrips key)", () => {
     const renderStrip = (): void => {
       render(
         <DomainTabStrip
           active="all"
-          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0 }}
-          enabled={{ flight: true, cruise: true, poi: true, lodging: true }}
+          counts={{ flight: 1, cruise: 1, poi: 0, lodging: 0, roadtrip: 0 }}
+          enabled={{ flight: true, cruise: true, poi: true, lodging: true, roadtrip: true }}
           onSelect={() => {}}
         />
       );
     };
 
-    // Tours left the beta registry on 2026-09-18 (owner). The strip must now
-    // offer the tab whatever the instance flag says — including while it is
-    // still unknown, which is the state a cold load spends one request in and
-    // the reason the gated version needed three states instead of a boolean.
+    // Tours were released on 2026-09-18 and went back behind the switch on
+    // 2026-09-24 (owner), under the roadtrips key. Closed and unknown both
+    // hide the two tabs — hidden, not dimmed: dimming is for a domain the
+    // user switched off, and a closed instance gate is not that.
     it.each([
       ["off", false],
       ["unknown (not loaded yet)", null],
-      ["on", true],
-    ])("offers the Touren tab when the beta flag is %s", (_label, flag) => {
+    ])("hides the Touren and Roadtrips tabs when the beta flag is %s", (_label, flag) => {
       useSettingsStore.setState({ betaFeaturesEnabled: flag });
       renderStrip();
-      expect(screen.getByRole("tab", { name: /tours/i })).toBeTruthy();
+      expect(screen.queryByRole("tab", { name: /tours/i })).toBeNull();
+      expect(screen.queryByRole("tab", { name: /roadtrip/i })).toBeNull();
       expect(screen.getByRole("tab", { name: /flights/i })).toBeTruthy();
     });
 
@@ -264,8 +269,8 @@ describe("DomainTabStrip: the next-up entry", () => {
       <MemoryRouter>
         <DomainTabStrip
           active={active}
-          counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0 }}
-          enabled={{ flight: true, cruise: true, poi: false, lodging: true }}
+          counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0, roadtrip: 0 }}
+          enabled={{ flight: true, cruise: true, poi: false, lodging: true, roadtrip: true }}
           onSelect={vi.fn()}
           upcoming={entries}
           nowMs={NOW}
@@ -333,5 +338,46 @@ describe("DomainTabStrip: the next-up entry", () => {
   it("shows nothing on the domain-less 'tour' tab, which cannot match any upcoming entry", () => {
     renderStrip("tour");
     expect(screen.queryByTestId("next-up-entry")).not.toBeInTheDocument();
+  });
+
+  // Tester, 2026-09-21: the strip said "Flüge 123 · 2 geplant" and
+  // "Unterkünfte 243" with nothing at all, while naming his next stay on the
+  // right -- so he asked whether lodging simply has no planned figure. It
+  // does; the strip was not asking for it. The wording differs because the
+  // counting rules do: `counts.flight` already contains its planned flights,
+  // `counts.lodging` is houses been to and contains none of the planned ones
+  // (`shared/lodgingCounting.ts`).
+  describe("planned hint", () => {
+    const renderCounts = (scheduledCounts: Partial<Record<string, number>>): void => {
+      render(
+        <MemoryRouter>
+          <DomainTabStrip
+            active="all"
+            counts={{ flight: 123, cruise: 0, poi: 0, lodging: 243, roadtrip: 0 }}
+            scheduledCounts={scheduledCounts}
+            enabled={{ flight: true, cruise: true, poi: true, lodging: true, roadtrip: true }}
+            onSelect={() => {}}
+          />
+        </MemoryRouter>
+      );
+    };
+
+    it("names the planned stays on the lodging tab, as an addition to its count", () => {
+      renderCounts({ lodging: 2 });
+      expect(screen.getByRole("tab", { name: /lodging/i }).textContent).toContain("243 +2 planned");
+    });
+
+    it("keeps the flight hint a subset, because planned flights are already counted", () => {
+      renderCounts({ flight: 2 });
+      expect(screen.getByRole("tab", { name: /flights/i }).textContent).toContain(
+        "123 incl. 2 planned"
+      );
+    });
+
+    it("says nothing where there is nothing planned", () => {
+      renderCounts({ lodging: 0, flight: 0 });
+      expect(screen.getByRole("tab", { name: /lodging/i }).textContent).not.toContain("planned");
+      expect(screen.getByRole("tab", { name: /flights/i }).textContent).not.toContain("planned");
+    });
   });
 });

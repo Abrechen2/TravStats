@@ -34,6 +34,8 @@ import enXlsx from "./resources/en/xlsx.json";
 import enDataQuality from "./resources/en/dataQuality.json";
 import enEvidence from "./resources/en/evidence.json";
 import enDocuments from "./resources/en/documents.json";
+import enRoadtrips from "./resources/en/roadtrips.json";
+import enOpenData from "./resources/en/openData.json";
 
 import deCommon from "./resources/de/common.json";
 import deDashboard from "./resources/de/dashboard.json";
@@ -66,6 +68,8 @@ import deXlsx from "./resources/de/xlsx.json";
 import deDataQuality from "./resources/de/dataQuality.json";
 import deEvidence from "./resources/de/evidence.json";
 import deDocuments from "./resources/de/documents.json";
+import deRoadtrips from "./resources/de/roadtrips.json";
+import deOpenData from "./resources/de/openData.json";
 
 // Get initial language: stored preference → browser language → fallback "en"
 const getInitialLanguage = (): string => {
@@ -121,6 +125,8 @@ const resources = {
     dataQuality: enDataQuality,
     evidence: enEvidence,
     documents: enDocuments,
+    roadtrips: enRoadtrips,
+    openData: enOpenData,
   },
   de: {
     common: deCommon,
@@ -154,6 +160,8 @@ const resources = {
     dataQuality: deDataQuality,
     evidence: deEvidence,
     documents: deDocuments,
+    roadtrips: deRoadtrips,
+    openData: deOpenData,
   },
 };
 
@@ -197,6 +205,8 @@ i18n.use(initReactI18next).init({
     "dataQuality",
     "evidence",
     "documents",
+    "roadtrips",
+    "openData",
   ],
   interpolation: {
     escapeValue: false, // React already escapes values

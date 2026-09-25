@@ -54,7 +54,7 @@ describe("DELETE /trips/:id", () => {
       data: { tripId: trip.id, title: `${TAG}-b`, lat: 2, lon: 2 },
     });
     const route = await prisma.tripRoute.create({
-      data: { tripId: trip.id, mode: "car", name: `${TAG}-route` },
+      data: { userId, tripId: trip.id, mode: "car", name: `${TAG}-route` },
     });
     await prisma.tripRouteLeg.create({
       data: {

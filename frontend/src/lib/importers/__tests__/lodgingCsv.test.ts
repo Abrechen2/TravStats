@@ -129,6 +129,47 @@ describe("buildLodgingCandidates", () => {
     expect(c.stay).toBeNull();
   });
 
+  // Tester, 2026-09-20: "Import von Aufenthalten konnte ich jetzt nicht
+  // testen, da im excel export hinter dem Hotelnamen die ID steht, daher
+  // konnte ich die nicht in eine geeignete CSV umwandeln." The workbook's
+  // "Aufenthalte" sheet writes its lodging column as "Name [id]", and that id
+  // names a row in the instance that EXPORTED it -- so the name is the only
+  // half worth keeping when the file crosses instances.
+  it("reads a hotel name that still carries the workbook's [id] suffix", () => {
+    const csv = [
+      "Unterkunft,Check-in,Check-out",
+      "Catalonia Rigoletto [42],2026-09-26,2026-09-29",
+    ].join("\n");
+    const mapping: LodgingCsvMapping = {
+      name: "Unterkunft",
+      checkIn: "Check-in",
+      checkOut: "Check-out",
+    };
+
+    const result = buildLodgingCandidates(parseCsv(csv), mapping);
+
+    expect(result.rowErrors).toEqual([]);
+    // The "stays" shape joins by name rather than building a lodging, so the
+    // name under test is `lodgingName` here.
+    expect(result.candidates[0].lodgingName).toBe("Catalonia Rigoletto");
+  });
+
+  it("leaves a bracketed suffix alone when it is not an id", () => {
+    const csv = [
+      "Unterkunft,Check-in,Check-out",
+      "Hotel [Renovierung 2024],2026-09-26,2026-09-29",
+    ].join("\n");
+    const mapping: LodgingCsvMapping = {
+      name: "Unterkunft",
+      checkIn: "Check-in",
+      checkOut: "Check-out",
+    };
+
+    const result = buildLodgingCandidates(parseCsv(csv), mapping);
+
+    expect(result.candidates[0].lodgingName).toBe("Hotel [Renovierung 2024]");
+  });
+
   it("builds stays-only candidates joined by hotel name, with no price and no FX", () => {
     const csv = [
       "Hotel,Anreise,Abreise,Bew. Zimmer,Bew. Frühstück",

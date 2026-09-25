@@ -163,6 +163,8 @@ export interface UserSettings {
    * an admin can write it, via PUT /admin/instance-settings.
    */
   betaFeaturesEnabled?: boolean;
+  /** Instance open data switch — READ-ONLY here, like `betaFeaturesEnabled`. */
+  openDataEnabled?: boolean;
   [key: string]: unknown;
 }
 

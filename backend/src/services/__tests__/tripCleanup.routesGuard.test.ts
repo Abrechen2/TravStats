@@ -29,7 +29,7 @@ describe("findMicroTripCandidates excludes trips with a route section", () => {
   it("does not propose a trip whose only content is a TripRoute", async () => {
     const trip = await prisma.trip.create({ data: { userId, name: "Wohnmobiltour" } });
     await prisma.tripRoute.create({
-      data: { tripId: trip.id, name: "Südnorwegen", mode: "road" },
+      data: { userId, tripId: trip.id, name: "Südnorwegen", mode: "road" },
     });
 
     const candidates = await findMicroTripCandidates(userId);

@@ -61,7 +61,9 @@
       "title": "Data sources & attribution",
       "fullList": "Full list with licenses",
       "osm": "map tiles (ODbL 1.0)",
-      "searoute": "cruise ocean-leg distances (EUPL-1.2 / ORNL Global Shipping Lane Network, public domain)"
+      "searoute": "cruise ocean-leg distances (EUPL-1.2 / ORNL Global Shipping Lane Network, public domain)",
+      "openMeteo": "weather and ground elevations (CC BY 4.0)",
+      "wikipedia": "descriptions of places and lodgings (CC BY-SA 4.0)"
     },
     "title": "About TravStats",
     "tagline": "Self-hosted travel logbook",

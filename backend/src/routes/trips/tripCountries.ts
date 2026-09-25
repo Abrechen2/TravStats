@@ -1,5 +1,7 @@
 import { prisma } from "../../db";
 import { toCountryCode } from "../../shared/countryEvidence";
+import { getCountryResolver } from "../../services/geo/countryFromCoordinates";
+import { STATION_SELECT, stationCountries } from "../../services/roadtrip/roadtripSummary";
 
 /**
  * Where a trip's countries come from — the stored list, or the flights,
@@ -56,7 +58,8 @@ export function tripCountries(
   flights: Array<{ depIata: string | null; arrIata: string | null }>,
   facts: Map<string, { country: string | null; timezone: string | null }>,
   cruiseCountries: string[] = [],
-  lodgingCountries: string[] = []
+  lodgingCountries: string[] = [],
+  roadtripCountries: string[] = []
 ): string[] {
   // A list the user filled in themselves is theirs — returned untouched.
   if (stored.length) return stored;
@@ -73,6 +76,9 @@ export function tripCountries(
     // Same shape for hotel-only trips: a stay linked to the trip is itinerary
     // evidence even when no flight or cruise exists.
     ...lodgingCountries,
+    // A roadtrip in the trip reaches every country its stations stand in,
+    // free pitches and pass-throughs included — not only where a stay was.
+    ...roadtripCountries,
   ];
 
   // The two catalogues speak different languages — airports store ISO alpha-2,
@@ -150,5 +156,28 @@ export async function lodgingCountriesByTrip(tripIds: string[]): Promise<Map<str
     out.set(stay.tripId, acc);
   }
 
+  return out;
+}
+
+/**
+ * Countries reached by each trip's roadtrips, keyed by trip id — by the one
+ * station-country rule the roadtrip page uses (`stationCountries`), so a
+ * trip and its roadtrip never disagree about where it went.
+ */
+export async function roadtripCountriesByTrip(tripIds: string[]): Promise<Map<string, string[]>> {
+  const out = new Map<string, string[]>();
+  if (tripIds.length === 0) return out;
+
+  const roadtrips = await prisma.tripRoute.findMany({
+    where: { tripId: { in: tripIds }, kind: "roadtrip" },
+    select: { tripId: true, stops: { select: STATION_SELECT } },
+  });
+  if (roadtrips.length === 0) return out;
+
+  const resolver = await getCountryResolver();
+  for (const r of roadtrips) {
+    if (!r.tripId) continue;
+    out.set(r.tripId, [...(out.get(r.tripId) ?? []), ...stationCountries(r.stops, resolver)]);
+  }
   return out;
 }

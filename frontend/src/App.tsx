@@ -12,6 +12,7 @@ import { setupApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
 import { DomainRouteGuard } from "./components/DomainRouteGuard";
+import { BetaFeatureRouteGuard } from "./components/BetaFeatureRouteGuard";
 import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useTelemetryConsentStep } from "./hooks/useTelemetryConsentStep";
 import { useSessionValidation } from "./hooks/useSessionValidation";
@@ -40,6 +41,10 @@ const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage
 const TripsPage = lazy(() => import("./pages/TripsPage"));
 const TripDetailPage = lazy(() => import("./pages/TripDetailPage"));
 const TripRouteEditorPage = lazy(() => import("./pages/TripRouteEditorPage"));
+const ToursPage = lazy(() => import("./pages/ToursPage"));
+const RoadtripsPage = lazy(() => import("./pages/RoadtripsPage"));
+const RoadtripDetailPage = lazy(() => import("./pages/RoadtripDetailPage"));
+const StravaCallbackPage = lazy(() => import("./pages/StravaCallbackPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
@@ -428,16 +433,88 @@ function AppContent() {
                 path="/trips/:id"
                 element={isAuthenticated ? <TripDetailPage /> : <Navigate to="/login" />}
               />
+              {/* Tours, across every trip and none. A tour may belong to no
+                  trip at all since 2026-09-21, and then this list is the only
+                  place it can be reached from. */}
+              {/* Tours sit behind the same beta key as roadtrips since
+                  2026-09-24 (owner): day tours and roadtrips are one feature
+                  in review, and one switch lets them in or out together. */}
+              <Route
+                path="/tours"
+                element={
+                  isAuthenticated ? (
+                    <BetaFeatureRouteGuard feature="roadtrips" redirectTo="/trips">
+                      <ToursPage />
+                    </BetaFeatureRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              {/* Strava's consent page returns here (2.7) — a page, not an API
+                  route, because the strict auth cookie is not on that
+                  cross-site redirect; this page's own request is same-site. */}
+              <Route
+                path="/integrations/strava/callback"
+                element={isAuthenticated ? <StravaCallbackPage /> : <Navigate to="/login" />}
+              />
+              {/* Roadtrips (2.7). The domain guard is also the beta gate:
+                  `useEnabledDomains` drops `roadtrip` while the instance's
+                  beta switch is closed. */}
+              <Route
+                path="/roadtrips"
+                element={
+                  isAuthenticated ? (
+                    <DomainRouteGuard domain="roadtrip">
+                      <RoadtripsPage />
+                    </DomainRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
+                path="/roadtrips/:id"
+                element={
+                  isAuthenticated ? (
+                    <DomainRouteGuard domain="roadtrip">
+                      <RoadtripDetailPage />
+                    </DomainRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              {/* The SAME editor as the trip-bound path below: a tour with no
+                  trip has no id to put in the URL, and every endpoint it uses
+                  answers under both shapes (`sectionPath` in
+                  `lib/api/tours.ts`). */}
+              <Route
+                path="/tours/:routeId"
+                element={
+                  isAuthenticated ? (
+                    <BetaFeatureRouteGuard feature="roadtrips" redirectTo="/trips">
+                      <TripRouteEditorPage />
+                    </BetaFeatureRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
               <Route
                 path="/trips/:id/route/:routeId"
                 element={
-                  // Tours came out of the beta registry on 2026-09-18, and
-                  // `TripRouteGuard` went with them: it existed ONLY to hold
-                  // this URL shut while the flag was off, and to render a
-                  // loading state instead of a redirect for the one request
-                  // where the flag is still unknown. With no flag to wait for,
-                  // a guard here would delay the page for nothing.
-                  isAuthenticated ? <TripRouteEditorPage /> : <Navigate to="/login" />
+                  // Back behind the switch on 2026-09-24 (owner), under the
+                  // roadtrips key. The guard renders a loading state for the one
+                  // request where the flag is still unknown, then lets in or
+                  // redirects — never a flash of the editor on production.
+                  isAuthenticated ? (
+                    <BetaFeatureRouteGuard feature="roadtrips" redirectTo="/trips">
+                      <TripRouteEditorPage />
+                    </BetaFeatureRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
                 }
               />
               <Route

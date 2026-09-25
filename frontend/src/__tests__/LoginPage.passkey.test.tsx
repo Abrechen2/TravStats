@@ -31,6 +31,15 @@ const startAuthentication = vi.hoisted(() => vi.fn());
 const navigate = vi.hoisted(() => vi.fn());
 const setAuth = vi.hoisted(() => vi.fn());
 
+// The sign-in page's left half carries an admin-supplied slideshow that asks
+// the server for its list on mount. Mocked away here: these cases are about
+// signing in, and the network guard would fail the render before the form is
+// drawn.
+vi.mock("../lib/api/loginBackgrounds", () => ({
+  getLoginBackgrounds: () => Promise.resolve([]),
+  loginBackgroundUrl: (name: string) => `/api/v1/login-backgrounds/${name}`,
+}));
+
 vi.mock("../lib/api", () => ({ authApi, passkeyApi, setupApi }));
 vi.mock("@simplewebauthn/browser", () => ({ startAuthentication }));
 vi.mock("../hooks/useTranslation", () => ({

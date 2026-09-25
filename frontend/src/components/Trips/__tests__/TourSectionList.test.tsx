@@ -5,6 +5,22 @@ import { MemoryRouter } from "react-router-dom";
 import TourSectionList from "../TourSectionList";
 import { toursApi } from "../../../lib/api/tours";
 
+const mockToursVisible = vi.hoisted(() => vi.fn(() => true));
+// Tours sit behind the roadtrips beta key since 2026-09-24; this suite is
+// about what the component does once they are visible.
+vi.mock("../../../hooks/useToursVisible", () => ({
+  useToursVisible: () => mockToursVisible(),
+  useToursAccess: () => (mockToursVisible() ? "allowed" : "denied"),
+}));
+
+const mockRoadtripDomain = vi.hoisted(() => vi.fn(() => true));
+vi.mock("../../../hooks/useEnabledDomains", () => ({
+  useEnabledDomains: () => ({
+    enabled: [],
+    isEnabled: (key: string) => (key === "roadtrip" ? mockRoadtripDomain() : true),
+  }),
+}));
+
 vi.mock("../../../lib/api/tours", () => ({
   toursApi: { list: vi.fn(), create: vi.fn(), remove: vi.fn() },
 }));
@@ -22,9 +38,46 @@ function renderList(tripId: string): ReturnType<typeof render> {
   );
 }
 
+function route(id: string, name: string) {
+  return {
+    id,
+    tripId: "t1",
+    name,
+    mode: "road" as const,
+    orderIdx: 0,
+    color: null,
+    notes: null,
+    startOdometerKm: null,
+    endOdometerKm: null,
+    stopCount: 8,
+    legCount: 7,
+    distanceKm: 1284.4,
+    drivenKm: 1284.4,
+    kind: "tour" as const,
+    activity: null,
+    vehicle: null,
+    vehicleName: null,
+    anchorStopId: null,
+    kindAssignedAutomatically: false,
+  };
+}
+
 describe("TourSectionList", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    mockRoadtripDomain.mockReturnValue(true);
+  });
+
+  it("lists a roadtrip on the trip only while the roadtrip domain is switched on", async () => {
+    const roadtrip = { ...route("rt1", "Nordkap im Bus"), kind: "roadtrip" as const };
+    vi.mocked(toursApi.list).mockResolvedValue([route("r1", "Preikestolen"), roadtrip]);
+    mockRoadtripDomain.mockReturnValue(false);
+
+    renderList("t1");
+
+    // The row would link to /roadtrips/:id, which the domain guard refuses.
+    expect(await screen.findByText("Preikestolen")).toBeInTheDocument();
+    expect(screen.queryByText("Nordkap im Bus")).not.toBeInTheDocument();
   });
 
   it("shows each section with its distance", async () => {
@@ -43,6 +96,12 @@ describe("TourSectionList", () => {
         legCount: 7,
         distanceKm: 1284.4,
         drivenKm: 1284.4,
+        kind: "tour",
+        activity: null,
+        vehicle: null,
+        vehicleName: null,
+        anchorStopId: null,
+        kindAssignedAutomatically: false,
       },
     ]);
 
@@ -84,6 +143,12 @@ describe("TourSectionList", () => {
       legCount: 0,
       distanceKm: 0,
       drivenKm: 0,
+      kind: "tour",
+      activity: null,
+      vehicle: null,
+      vehicleName: null,
+      anchorStopId: null,
+      kindAssignedAutomatically: false,
     });
 
     // Drive the create control the way a user would: open it, name the
@@ -117,5 +182,65 @@ describe("TourSectionList", () => {
     // render an empty list as if the trip genuinely had no sections.
     expect(screen.getByText("trips:tours.loadError")).toBeInTheDocument();
     expect(screen.queryByText("trips:tours.empty")).not.toBeInTheDocument();
+  });
+
+  it("deletes a tour and drops its row, once the confirmation is accepted", async () => {
+    vi.mocked(toursApi.list).mockResolvedValue([
+      route("r1", "Südnorwegen"),
+      route("r2", "Jütland"),
+    ]);
+    vi.mocked(toursApi.remove).mockResolvedValue(undefined);
+
+    renderList("t1");
+    await screen.findByText("Südnorwegen");
+
+    fireEvent.click(screen.getAllByText("trips:tours.deleteLabel")[0]);
+    fireEvent.click(await screen.findByText("trips:tours.deleteConfirm.confirm"));
+
+    await waitFor(() => expect(toursApi.remove).toHaveBeenCalledWith("t1", "r1"));
+    await waitFor(() => expect(screen.queryByText("Südnorwegen")).not.toBeInTheDocument());
+    expect(screen.getByText("Jütland")).toBeInTheDocument();
+  });
+
+  it("keeps the row when the delete fails — a vanished row would read as deleted", async () => {
+    vi.mocked(toursApi.list).mockResolvedValue([route("r1", "Südnorwegen")]);
+    vi.mocked(toursApi.remove).mockRejectedValue(new Error("boom"));
+
+    renderList("t1");
+    await screen.findByText("Südnorwegen");
+
+    fireEvent.click(screen.getByText("trips:tours.deleteLabel"));
+    fireEvent.click(await screen.findByText("trips:tours.deleteConfirm.confirm"));
+
+    await waitFor(() => expect(toursApi.remove).toHaveBeenCalled());
+    expect(screen.getByText("Südnorwegen")).toBeInTheDocument();
+  });
+
+  it("offers no rail mode for a new section, while a stored rail tour still reads back", async () => {
+    // Alex, 2026-09-20, owner agreed: a train journey is held back for a
+    // domain of its own with a real route API, so the tour editor stops
+    // offering it. Withdrawing the OFFER must not invalidate data — a tour
+    // already saved as rail still renders its own label.
+    vi.mocked(toursApi.list).mockResolvedValue([{ ...route("r1", "Zugfahrt"), mode: "rail" }]);
+    renderList("t1");
+    await screen.findByText("Zugfahrt");
+    expect(screen.getByText("trips:tours.mode.rail")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByText("trips:tours.newSection"));
+    const options = Array.from(screen.getByRole("combobox").querySelectorAll("option"), (o) =>
+      o.getAttribute("value")
+    );
+    expect(options).toEqual(["road", "ferry", "foot", "bike"]);
+  });
+
+  it("renders nothing and fetches nothing while tours are behind the closed beta switch", () => {
+    mockToursVisible.mockReturnValueOnce(false);
+    const { container } = render(
+      <MemoryRouter>
+        <TourSectionList tripId="t1" />
+      </MemoryRouter>
+    );
+    expect(container).toBeEmptyDOMElement();
+    expect(toursApi.list).not.toHaveBeenCalled();
   });
 });

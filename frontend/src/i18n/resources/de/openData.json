@@ -1,0 +1,61 @@
+{
+  "settings": {
+    "title": "Offene Datendienste",
+    "description": "Wetter und Höhen von Open-Meteo, Beschreibungen aus Wikipedia, Hoteldaten aus OpenStreetMap. Dafür gehen Orte und Daten deiner Reisen an diese Dienste – deshalb ist es aus, bis du es einschaltest.",
+    "switch": "Offene Datendienste nutzen",
+    "switchSub": "Gilt für die ganze Instanz. Kein Konto, kein Schlüssel.",
+    "adminOnly": "Nur ein Admin kann das umstellen.",
+    "stateOn": "Eingeschaltet",
+    "stateOff": "Ausgeschaltet",
+    "saveFailed": "Die Einstellung konnte nicht gespeichert werden."
+  },
+  "planned": {
+    "title": "Geplantes Höhenprofil",
+    "distance": "Strecke",
+    "ascent": "Aufstieg",
+    "descent": "Abstieg",
+    "note": "Geländehöhen von Open-Meteo entlang der geplanten Strecke – berechnet, nicht gemessen."
+  },
+  "weather": {
+    "measuredAt": "Wetter in {{place}}",
+    "fill": "Wetter nachtragen",
+    "filling": "Wetter wird geholt …",
+    "filled_one": "Wetter für {{count}} Eintrag ergänzt.",
+    "filled_other": "Wetter für {{count}} Einträge ergänzt.",
+    "nothing": "Kein Eintrag ohne Wetter mit bekanntem Ort gefunden.",
+    "failed": "Das Wetter konnte nicht geholt werden.",
+    "source": "Wetterdaten: Open-Meteo",
+    "code": {
+      "clear": "klar",
+      "partly": "teils bewölkt",
+      "cloudy": "bewölkt",
+      "fog": "Nebel",
+      "drizzle": "Nieselregen",
+      "rain": "Regen",
+      "snow": "Schnee",
+      "showers": "Schauer",
+      "thunder": "Gewitter"
+    }
+  },
+  "wikipedia": {
+    "title": "Aus Wikipedia",
+    "readMore": "Weiterlesen auf Wikipedia",
+    "englishArticle": "Artikel auf Englisch",
+    "license": "Text: Wikipedia, CC BY-SA 4.0"
+  },
+  "lodging": {
+    "enrich": "Aus OpenStreetMap ergänzen",
+    "enriching": "Suche in OpenStreetMap …",
+    "filled": "Ergänzt: {{fields}}",
+    "nothingNew": "Gefunden als „{{name}}“ – nichts Neues, alle Felder waren schon gefüllt.",
+    "notFound": "OpenStreetMap kennt in der Nähe kein Haus mit diesem Namen.",
+    "noCoordinates": "Die Unterkunft hat keine Koordinaten, darum lässt sie sich nicht suchen.",
+    "failed": "Die Suche in OpenStreetMap ist fehlgeschlagen.",
+    "field": {
+      "stars": "Sterne",
+      "website": "Webseite",
+      "wikidataId": "Wikipedia-Verknüpfung",
+      "chain": "Kette"
+    }
+  }
+}

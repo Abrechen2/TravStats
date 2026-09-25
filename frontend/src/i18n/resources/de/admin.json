@@ -147,6 +147,14 @@
           "devicePairing": {
             "name": "Geräte koppeln",
             "what": "Der Einstellungs-Eintrag „Geräte“ mit dem QR-Code, über den die Handy-App an dieses Konto gebunden wird."
+          },
+          "roadtrips": {
+            "name": "Roadtrips und Touren",
+            "what": "Die Domäne „Roadtrips“ (mehrtägige Touren mit Stationen an deinen Unterkünften) und alle Touren: die Touren-Seite und der Editor, der Touren-Reiter im Dashboard und in einer Reise, die Touren auf der Übersichtskarte sowie die Karten für Routing-Anbieter und Strava."
+          },
+          "lodgingEnrichment": {
+            "name": "Unterkünfte aus OpenStreetMap ergänzen",
+            "what": "Der Knopf „Aus OpenStreetMap ergänzen“ auf der Seite einer Unterkunft: Er trägt Sterne, Webseite, Kette und die Wikipedia-Verknüpfung in leere Felder ein. Braucht zusätzlich den Schalter für offene Datendienste."
           }
         }
       },
@@ -694,5 +702,19 @@
     "title": "Wechselkurse",
     "label": "Kurse für Währungen ohne EZB-Kurs von cdn.jsdelivr.net holen",
     "description": "Die EZB veröffentlicht 30 Währungen. Ist das aus, bleiben genau diese umrechenbar; alles andere wird gespeichert und angezeigt, aber als „kein Kurs“ markiert und nicht in Summen gezählt. Ist es an, fragt diese Instanz für die übrigen Währungen den kostenlosen jsDelivr-Datensatz ab — nur für Kurse, die die EZB nicht hat, und ohne Schlüssel."
+  },
+  "loginBackgrounds": {
+    "title": "Bilder der Anmeldeseite",
+    "subtitle": "Fotos, die auf der Anmeldeseite links als ruhige Diaschau durchlaufen. Ohne eigene Bilder laufen die fünf mitgelieferten Motive.",
+    "publicWarning": "Diese Bilder sieht jeder, der die Instanz erreicht — auch ohne Anmeldung. Lade nur Fotos hoch, die veröffentlicht sein dürfen.",
+    "empty": "Noch keine eigenen Bilder — die Anmeldeseite zeigt die fünf mitgelieferten Motive.",
+    "add": "Bilder hinzufügen",
+    "uploaded": "{{count}} Bild hochgeladen",
+    "uploaded_other": "{{count}} Bilder hochgeladen",
+    "partial": "{{accepted}} übernommen. Nicht als Bild erkannt: {{rejected}}",
+    "uploadFailed": "Hochladen fehlgeschlagen.",
+    "removeFailed": "Entfernen fehlgeschlagen.",
+    "replacesShipped": "Deine Bilder ersetzen die mitgelieferten vollständig. Lösche alle, um wieder zu den mitgelieferten zurückzukehren.",
+    "hint": "Am besten wirken dunkle Hochformat-Fotos mit ruhiger linker Hälfte — dort steht der Text. Auf hellen Fotos wird die Schrift schwer lesbar."
   }
 }

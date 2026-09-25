@@ -106,6 +106,91 @@ export function PanelHeader({
   );
 }
 
+// ── Collapsible section ──────────────────────────────────────────────
+/**
+ * Open/closed state of ONE section of the panel, persisted per section id.
+ *
+ * Separate from `usePanelExpanded`, which is the whole panel: that one is a
+ * single boolean and this is a map, because a user opens the sections they
+ * work in and leaves the rest shut. Absence is not "closed" — it means the
+ * section has never been touched and keeps its default, so a later change to
+ * that default is not silently baked in for everyone (the same rule
+ * `usePanelExpanded` follows, for the same reason).
+ */
+export function useSectionExpanded(id: string, defaultOpen: boolean): [boolean, () => void] {
+  const [expanded, setExpanded] = useState(
+    () => loadMapAppearance().panelSections?.[id] ?? defaultOpen
+  );
+  const toggle = useCallback(() => {
+    const next = !expanded;
+    saveMapAppearance({ panelSections: { ...loadMapAppearance().panelSections, [id]: next } });
+    setExpanded(next);
+  }, [expanded, id]);
+  return [expanded, toggle];
+}
+
+/**
+ * One titled, collapsible block of a map control panel.
+ *
+ * Replaces the fixed `<div><SectionLabel>…` that every section used to open
+ * with, so the panel reads as a list of areas rather than one long column —
+ * the tester's ask of 2026-09-21, after the panel had grown a section per
+ * domain on top of mode, filter, layers and basemap.
+ *
+ * Several sections may be open at once. A strict accordion (opening one shuts
+ * the last) would mean losing the flight colours to glance at the cruise ones,
+ * and these are settings people compare.
+ */
+export function CollapsibleSection({
+  id,
+  title,
+  defaultOpen = false,
+  first = false,
+  children,
+}: {
+  /** Stable key for the persisted open/closed state. */
+  id: string;
+  title: string;
+  defaultOpen?: boolean;
+  /** The topmost section draws no rule above itself. */
+  first?: boolean;
+  children: React.ReactNode;
+}): JSX.Element {
+  const [expanded, toggle] = useSectionExpanded(id, defaultOpen);
+  return (
+    <div
+      style={{ borderTop: first ? undefined : `1px solid ${HAIRLINE}` }}
+      className={first ? "" : "mt-2.5 pt-2.5"}
+    >
+      <button
+        type="button"
+        onClick={toggle}
+        aria-expanded={expanded}
+        className="flex w-full cursor-pointer items-center justify-between rounded-sm py-0.5"
+        style={{ background: "transparent" }}
+      >
+        <SectionLabel>{title}</SectionLabel>
+        <svg
+          aria-hidden
+          viewBox="0 0 24 24"
+          fill="none"
+          stroke="currentColor"
+          strokeWidth={2.5}
+          className="mb-1.5 h-3 w-3 shrink-0 transition-transform"
+          style={{
+            transform: expanded ? "none" : "rotate(-90deg)",
+            opacity: 0.55,
+            color: TEXT,
+          }}
+        >
+          <path strokeLinecap="round" strokeLinejoin="round" d="M6 9l6 6 6-6" />
+        </svg>
+      </button>
+      {expanded && children}
+    </div>
+  );
+}
+
 // ── Section label ────────────────────────────────────────────────────
 export function SectionLabel({ children }: { children: React.ReactNode }): JSX.Element {
   return (

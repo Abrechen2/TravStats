@@ -16,6 +16,11 @@
 // exactly one.
 
 import { prisma } from "../db";
+import {
+  checkRoadtripAchievement,
+  EMPTY_ROADTRIP_STATS,
+  type RoadtripAchievementStats,
+} from "./roadtripAchievements";
 import type { Achievement, UserAchievement } from "../prisma";
 import logger from "./logger";
 import { checkAchievement } from "./achievementChecks";
@@ -86,7 +91,9 @@ export function planAchievementWrites(
   allAchievements: Achievement[],
   existingAchievementMap: Map<string, UserAchievement>,
   stats: UserStats,
-  flights: FlightData[]
+  flights: FlightData[],
+  /** Roadtrip measures (2.7) — their badges are checked by their own module. */
+  roadtripStats: RoadtripAchievementStats = EMPTY_ROADTRIP_STATS
 ): AchievementWritePlan {
   const writes: PlannedWrite[] = [];
   const belowRequirement: string[] = [];
@@ -114,7 +121,9 @@ export function planAchievementWrites(
     // requirement was first met — `unlockedAt` is a historical fact and is
     // never cleared or overwritten, which is how the page can explain the drop
     // instead of letting a total fall in silence.
-    const { isUnlocked, progress } = checkAchievement(achievement, stats, flights);
+    const { isUnlocked, progress } =
+      checkRoadtripAchievement(achievement, roadtripStats) ??
+      checkAchievement(achievement, stats, flights);
 
     if (isUnlocked) {
       // Steady state: the user already holds it, the stored progress is already

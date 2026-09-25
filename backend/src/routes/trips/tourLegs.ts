@@ -8,9 +8,8 @@ import { legOverrideSchema } from "../../schemas/tour";
 import { legDistanceKm } from "../../services/tour/tourDistance";
 import { adoptSegment, ANCHOR_TOLERANCE_KM } from "../../services/tour/tracks/adoptTrack";
 import { haversineKm } from "../../shared/geo/haversine";
-import { resolveTrip } from "../trips";
 import logger from "../../utils/logger";
-import { resolveRoute, toLegDto } from "./tourRoutes";
+import { resolveRouteFromRequest, toLegDto } from "./tourRoutes";
 import { resolveTrack } from "./tourTracks";
 
 /**
@@ -96,14 +95,16 @@ export function requireCoords(
  * stops' coordinates from the database, which a schema cannot see.
  */
 router.put(
-  "/trips/:id/routes/:routeId/legs/:fromStopId/:toStopId",
+  [
+    "/trips/:id/routes/:routeId/legs/:fromStopId/:toStopId",
+    "/tours/:routeId/legs/:fromStopId/:toStopId",
+  ],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
       const body = legOverrideSchema.parse(req.body);
 
       const leg = await findLegOrThrow(routeId, req.params.fromStopId, req.params.toStopId);
@@ -222,14 +223,16 @@ router.put(
 
 /** DELETE the override — back to a straight chord. */
 router.delete(
-  "/trips/:id/routes/:routeId/legs/:fromStopId/:toStopId",
+  [
+    "/trips/:id/routes/:routeId/legs/:fromStopId/:toStopId",
+    "/tours/:routeId/legs/:fromStopId/:toStopId",
+  ],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
 
       const leg = await findLegOrThrow(routeId, req.params.fromStopId, req.params.toStopId);
       const fromCoord = requireCoords(leg.fromStop, "from");
@@ -390,14 +393,13 @@ export async function buildRouteGeometry(routeId: string): Promise<RouteGeometry
  * `routeId` is established.
  */
 router.get(
-  "/trips/:id/routes/:routeId/geometry",
+  ["/trips/:id/routes/:routeId/geometry", "/tours/:routeId/geometry"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const trip = await resolveTrip(userId, req.params.id);
-      const routeId = await resolveRoute(userId, trip.id, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
       res.json(await buildRouteGeometry(routeId));
     } catch (error) {
       next(error);
