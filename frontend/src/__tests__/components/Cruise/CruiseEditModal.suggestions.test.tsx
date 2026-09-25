@@ -35,6 +35,13 @@ vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
   return { ...actual, useRecentCurrencies: () => [] };
 });
 
+vi.mock("@/hooks/useTagSuggestions", () => ({
+  useTagSuggestions: () => [
+    { name: "Fjords", usageCount: 3 },
+    { name: "family", usageCount: 2 },
+  ],
+}));
+
 const stopDates = (): string[] =>
   screen.getAllByLabelText("stops.date").map((el) => (el as HTMLInputElement).value);
 
@@ -240,6 +247,20 @@ describe("CruiseEditModal — entry suggestions", () => {
       await userEvent.type(screen.getByLabelText("field.line"), "Hurtigruten Expeditions");
 
       expect((await savedPayload()).cruiseLine).toBe("Hurtigruten Expeditions");
+    });
+  });
+
+  describe("tags", () => {
+    it("offers the user's own tags and saves the chips as a list", async () => {
+      render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+      await userEvent.type(screen.getByLabelText("field.line"), "AIDA");
+      const tags = screen.getByRole("combobox", { name: "field.tags" });
+
+      await userEvent.type(tags, "fj");
+      await userEvent.click(screen.getByRole("option", { name: /Fjords/ }));
+      await userEvent.type(tags, "Sea days{Enter}");
+
+      expect((await savedPayload()).tags).toEqual(["Fjords", "Sea days"]);
     });
   });
 });

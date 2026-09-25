@@ -5,6 +5,7 @@ import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { TRIP_COLORS as PALETTE } from "../../lib/tripColors";
 import CompanionPicker from "../CompanionPicker";
+import TagInput from "../TagInput";
 
 interface TripModalProps {
   trip: Trip | null; // null = create mode
@@ -45,17 +46,6 @@ function fromDateInput(value: string): string | null {
   return new Date(value + "T00:00:00.000Z").toISOString();
 }
 
-function csvFromArray(arr: string[]): string {
-  return arr.join(", ");
-}
-
-function arrayFromCsv(value: string): string[] {
-  return value
-    .split(",")
-    .map((s) => s.trim())
-    .filter(Boolean);
-}
-
 export default function TripModal({ trip, onClose, onSaved }: TripModalProps): JSX.Element {
   const { t } = useTranslation(["trips", "common"]);
   const addToast = useToastStore((s) => s.addToast);
@@ -69,7 +59,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const [endDate, setEndDate] = useState(toDateInput(trip?.endDate ?? null));
   const [originLabel, setOriginLabel] = useState(trip?.originLabel ?? "");
   const [destinationLabel, setDestinationLabel] = useState(trip?.destinationLabel ?? "");
-  const [tagsCsv, setTagsCsv] = useState(csvFromArray(trip?.tags ?? []));
+  const [tags, setTags] = useState<string[]>(trip?.tags ?? []);
   const [companions, setCompanions] = useState<string[]>(trip?.companions ?? []);
   const [notes, setNotes] = useState(trip?.notes ?? "");
   // Cover is upload-only. The chosen file is buffered and uploaded on save,
@@ -117,7 +107,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
     setEndDate(toDateInput(trip.endDate));
     setOriginLabel(trip.originLabel ?? "");
     setDestinationLabel(trip.destinationLabel ?? "");
-    setTagsCsv(csvFromArray(trip.tags));
+    setTags(trip.tags);
     setCompanions(trip.companions);
     setNotes(trip.notes ?? "");
     setCoverUrl(trip.coverImageUrl ?? "");
@@ -144,7 +134,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           endDate: fromDateInput(endDate),
           originLabel: originLabel.trim() || null,
           destinationLabel: destinationLabel.trim() || null,
-          tags: arrayFromCsv(tagsCsv),
+          tags,
           companions,
           notes: notes.trim() || null,
           ...(removeCover ? { coverImageUrl: null } : {}),
@@ -159,7 +149,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           endDate: fromDateInput(endDate) ?? undefined,
           originLabel: originLabel.trim() || undefined,
           destinationLabel: destinationLabel.trim() || undefined,
-          tags: arrayFromCsv(tagsCsv),
+          tags,
           companions,
           notes: notes.trim() || undefined,
         });
@@ -337,15 +327,16 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
               </Field>
 
               <Field label={t("trips:modal.tagsLabel")}>
-                <input
-                  value={tagsCsv}
-                  onChange={(e) => setTagsCsv(e.target.value)}
+                <TagInput
+                  value={tags}
+                  onChange={setTags}
+                  ariaLabel={t("trips:modal.tagsLabel")}
                   placeholder="kultur, food, fotos"
                   className="w-full rounded-lg px-3 py-2 text-sm"
                   style={inputStyle}
+                  accent={color}
                 />
               </Field>
-              <TagPreview values={arrayFromCsv(tagsCsv)} accent={color} />
             </>
           )}
 
@@ -527,27 +518,6 @@ function CoverPreview({ url, accent, title, onClick }: CoverPreviewProps): JSX.E
       >
         {title}
       </div>
-    </div>
-  );
-}
-
-function TagPreview({ values, accent }: { values: string[]; accent: string }): JSX.Element | null {
-  if (values.length === 0) return null;
-  return (
-    <div className="flex flex-wrap gap-1.5">
-      {values.map((v) => (
-        <span
-          key={v}
-          className="px-2.5 py-1 rounded-full text-xs"
-          style={{
-            background: `${accent}1f`,
-            border: `1px solid ${accent}66`,
-            color: accent,
-          }}
-        >
-          #{v}
-        </span>
-      ))}
     </div>
   );
 }

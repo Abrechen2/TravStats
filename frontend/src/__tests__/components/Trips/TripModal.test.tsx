@@ -10,6 +10,11 @@ vi.mock("../../../lib/api", () => ({
   companionsApi: { list: vi.fn() },
 }));
 
+// The tag input asks the user's tag vocabulary over the network.
+vi.mock("@/hooks/useTagSuggestions", () => ({
+  useTagSuggestions: () => [{ name: "food", usageCount: 4 }],
+}));
+
 vi.mock("../../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: () => void }) => unknown) =>
     selector({ addToast: vi.fn() }),
@@ -101,5 +106,21 @@ describe("TripModal", () => {
     const calls = vi.mocked(tripsApi.create).mock.calls;
     const payload = calls[calls.length - 1][0];
     expect(payload.companions).toEqual(["Marie"]);
+  });
+
+  it("submits tags as a string[] built from the chips, offering the user's own tags", async () => {
+    vi.mocked(tripsApi.create).mockResolvedValue({ id: "t1" } as unknown as Trip);
+    render(<TripModal trip={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    await userEvent.type(screen.getByPlaceholderText("trips:modal.namePlaceholder"), "Japan trip");
+    await userEvent.click(screen.getByRole("tab", { name: /trips:modalTabs\.people/ }));
+    const tags = screen.getByRole("combobox", { name: "trips:modal.tagsLabel" });
+    await userEvent.type(tags, "Kultur,");
+    await userEvent.click(screen.getByRole("option", { name: /food/ }));
+    await userEvent.click(screen.getByText("trips:modal.save"));
+
+    await waitFor(() => expect(tripsApi.create).toHaveBeenCalled());
+    const calls = vi.mocked(tripsApi.create).mock.calls;
+    expect(calls[calls.length - 1][0].tags).toEqual(["Kultur", "food"]);
   });
 });

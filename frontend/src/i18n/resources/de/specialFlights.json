@@ -64,7 +64,7 @@
     "departureTime": "Abflug",
     "arrivalTime": "Ankunft",
     "notes": "Notizen",
-    "tags": "Tags (kommagetrennt)",
+    "tags": "Tags",
     "companions": "Begleitung"
   },
   "picker": {

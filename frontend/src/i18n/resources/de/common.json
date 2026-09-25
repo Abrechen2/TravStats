@@ -277,5 +277,11 @@
     "open": "Auswählen",
     "clear": "Entfernen",
     "unavailable": "Die Emoji-Auswahl lässt sich hier nicht laden. Du kannst ein Emoji weiterhin ins Feld einfügen."
+  },
+  "tagInput": {
+    "remove": "Tag {{name}} entfernen",
+    "suggestions": "Deine Tags",
+    "usage_one": "1-mal verwendet",
+    "usage_other": "{{count}}-mal verwendet"
   }
 }

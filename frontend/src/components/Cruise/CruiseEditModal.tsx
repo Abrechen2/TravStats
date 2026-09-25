@@ -22,6 +22,7 @@ import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import CompanionPicker from "../CompanionPicker";
+import TagInput from "../TagInput";
 import CatalogueCombobox, { type CatalogueOption } from "../FlightForm/fields/CatalogueCombobox";
 import { useTripPreselection } from "../../hooks/useTripPreselection";
 import { useCruiseDateSuggestions } from "./useCruiseDateSuggestions";
@@ -68,12 +69,6 @@ const COLOR_PALETTE = [
 const toDateInput = (iso: string | null | undefined): string => (iso ? iso.slice(0, 10) : "");
 
 const fromDateInput = (date: string): string | null => (date ? `${date}T00:00:00.000Z` : null);
-
-const splitCsv = (v: string): string[] =>
-  v
-    .split(",")
-    .map((x) => x.trim())
-    .filter((x) => x.length > 0);
 
 /** Module-level so the combobox's debounce effect sees one stable function. The
  *  lines carry no catalogue id; the list position is only a React key. */
@@ -147,7 +142,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
   const [currency, setCurrency] = useState<string>(cruise?.currency ?? baseCurrency ?? "EUR");
   const recentCurrencies = useRecentCurrencies();
 
-  const [tagsInput, setTagsInput] = useState<string>((cruise?.tags ?? []).join(", "));
+  const [tags, setTags] = useState<string[]>(cruise?.tags ?? []);
   const [companions, setCompanions] = useState<string[]>(cruise?.companions ?? []);
   const [notes, setNotes] = useState<string>(cruise?.notes ?? "");
 
@@ -214,7 +209,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         bookingReference: bookingReference || null,
         price: price ? Number.parseFloat(price) : null,
         currency: (currency || "EUR") as CruiseInput["currency"],
-        tags: splitCsv(tagsInput),
+        tags,
         companions,
         notes: notes || null,
         tripId: tripId || null,
@@ -472,11 +467,11 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
           </Section>
 
           <Section title={t("detail.meta")}>
-            <input
-              aria-label={t("field.tags")}
+            <TagInput
+              ariaLabel={t("field.tags")}
               className={INPUT_CLASS}
-              value={tagsInput}
-              onChange={(e): void => setTagsInput(e.target.value)}
+              value={tags}
+              onChange={setTags}
               placeholder={t("field.tags")}
             />
             <div className="mt-3">

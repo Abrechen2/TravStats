@@ -1,6 +1,7 @@
 import type { Dispatch, JSX, SetStateAction } from "react";
 
 import HelpIcon from "../../Help/HelpIcon";
+import TagInput from "../../TagInput";
 import { useTranslation } from "../../../hooks/useTranslation";
 import BookingFields from "../fields/BookingFields";
 import CompanionsField from "../fields/CompanionsField";
@@ -99,17 +100,10 @@ export default function BookingAndNotesSection({
             position="top"
           />
         </label>
-        <input
-          type="text"
-          value={tags.join(", ")}
-          onChange={(e) =>
-            setTags(
-              e.target.value
-                .split(",")
-                .map((tag) => tag.trim())
-                .filter(Boolean)
-            )
-          }
+        <TagInput
+          value={tags}
+          onChange={setTags}
+          ariaLabel={t("flights:form.tags")}
           className={`input ${inputClassName}`}
           placeholder={t("flights:form.placeholders.tags")}
         />

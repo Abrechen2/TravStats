@@ -16,6 +16,9 @@ vi.mock("@/hooks/useFlightEntrySuggestions", () => ({
     departureTerminals: [],
   }),
 }));
+vi.mock("@/hooks/useTagSuggestions", () => ({
+  useTagSuggestions: () => [{ name: "lounge", usageCount: 2 }],
+}));
 // The cost section's currency picker asks for the user's recent currencies on
 // mount; an empty list is what a failed request would give it anyway.
 vi.mock("@/hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
@@ -537,12 +540,32 @@ describe("FlightEditModal", () => {
       expect(input.maxLength).toBe(20);
     });
 
-    it("explains the comma separation under the tags input", () => {
+    it("explains the tag input under it", () => {
       render(
         <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={vi.fn()} />
       );
 
       expect(screen.getByText("flights:form.tagsHint")).toBeInTheDocument();
+    });
+
+    it("shows stored tags as chips and saves the edited chips as a list", async () => {
+      const onSave = vi.fn().mockResolvedValue(undefined);
+      render(
+        <FlightEditModal
+          flight={{ ...mockFlight, tags: ["business", "long-haul"] }}
+          isOpen={true}
+          onClose={vi.fn()}
+          onSave={onSave}
+        />
+      );
+
+      await userEvent.click(screen.getByTestId("tag-remove-long-haul"));
+      await userEvent.type(screen.getByRole("combobox", { name: "flights:form.tags" }), "lo");
+      await userEvent.click(screen.getByRole("option", { name: /lounge/ }));
+      fireEvent.click(screen.getByText("flights:edit.saveChanges"));
+
+      await waitFor(() => expect(onSave).toHaveBeenCalled());
+      expect(onSave.mock.calls[0][1].tags).toEqual(["business", "lounge"]);
     });
   });
 

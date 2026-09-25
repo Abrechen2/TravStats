@@ -24,6 +24,8 @@ import StatusField from "./FlightForm/fields/StatusField";
 import { useAirportLocalTimes } from "./FlightForm/useAirportLocalTimes";
 import { buildLocalString } from "./FlightForm/useFlightForm";
 import CompanionsField from "./FlightForm/fields/CompanionsField";
+import TagInput from "./TagInput";
+import { splitTagText } from "../lib/tagList";
 import SuggestionChips from "./FlightForm/fields/SuggestionChips";
 import { useFlightEntrySuggestions } from "../hooks/useFlightEntrySuggestions";
 import { useTranslation } from "../hooks/useTranslation";
@@ -349,12 +351,7 @@ export default function FlightEditModal({
         taxes: formData.taxes > 0 ? formData.taxes : null,
         fees: formData.fees > 0 ? formData.fees : null,
         notes: formData.notes || null,
-        tags: formData.tags
-          ? formData.tags
-              .split(",")
-              .map((tag) => tag.trim())
-              .filter(Boolean)
-          : [],
+        tags: splitTagText(formData.tags),
         receiptUrl: formData.receiptUrl || null,
         // Recombine with the SAME buildLocalString the create form uses —
         // no second implementation of date+time recombination.
@@ -743,11 +740,10 @@ export default function FlightEditModal({
         {/* Tags */}
         <div>
           <label className="label">{t("flights:form.tags")}</label>
-          <input
-            type="text"
-            value={formData.tags}
-            onChange={(e) => update("tags", e.target.value)}
-            className="input"
+          <TagInput
+            value={splitTagText(formData.tags)}
+            onChange={(tags) => update("tags", tags.join(", "))}
+            ariaLabel={t("flights:form.tags")}
             placeholder={t("flights:form.placeholders.tags")}
           />
           <p className="text-xs mt-1" style={{ color: "var(--text-muted)" }}>

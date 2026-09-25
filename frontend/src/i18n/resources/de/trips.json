@@ -55,7 +55,7 @@
     "endDateLabel": "Enddatum",
     "originLabel": "Herkunft",
     "destinationLabel": "Ziel",
-    "tagsLabel": "Tags (kommagetrennt)",
+    "tagsLabel": "Tags",
     "companionsLabel": "Mitreisende",
     "coverLabel": "Coverbild",
     "notesLabel": "Notizen (Markdown)",

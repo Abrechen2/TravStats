@@ -11,7 +11,8 @@
  */
 
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, fireEvent, waitFor } from "@testing-library/react";
+import { render, fireEvent, screen, waitFor } from "@testing-library/react";
+import userEvent from "@testing-library/user-event";
 import { tripsApi } from "@/lib/api/trips";
 import type { Trip } from "../../types";
 import FlightCompleteStep, { type FlightCompleteStepProps } from "./FlightCompleteStep";
@@ -28,6 +29,7 @@ vi.mock("@/hooks/useFlightEntrySuggestions", () => ({
     departureTerminals: [],
   }),
 }));
+vi.mock("@/hooks/useTagSuggestions", () => ({ useTagSuggestions: () => [] }));
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
 }));
@@ -183,5 +185,16 @@ describe("FlightCompleteStep booking field wiring (Phase 2 Task 2)", () => {
     render(<FlightCompleteStep {...baseProps({ departureDate: "2026-07-05", setTripId })} />);
 
     await waitFor(() => expect(setTripId).toHaveBeenCalledWith("trip-summer"));
+  });
+
+  // The old text field re-joined its own split on every keystroke, so a typed
+  // comma vanished at once and a second tag could not be started.
+  it("adds a tag chip on a comma and hands the form the list", async () => {
+    const setTags = vi.fn();
+    render(<FlightCompleteStep {...baseProps({ tags: ["business"], setTags })} />);
+
+    await userEvent.type(screen.getByRole("combobox", { name: "flights:form.tags" }), "long-haul,");
+
+    expect(setTags).toHaveBeenLastCalledWith(["business", "long-haul"]);
   });
 });

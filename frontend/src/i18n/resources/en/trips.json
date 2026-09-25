@@ -55,7 +55,7 @@
     "endDateLabel": "End Date",
     "originLabel": "Origin",
     "destinationLabel": "Destination",
-    "tagsLabel": "Tags (comma separated)",
+    "tagsLabel": "Tags",
     "companionsLabel": "Companions",
     "coverLabel": "Cover image",
     "notesLabel": "Notes (Markdown)",

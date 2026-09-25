@@ -8,6 +8,8 @@
 import type { Airport } from "../lib/api";
 import AirportAutocomplete from "./AirportAutocomplete";
 import CompanionPicker from "./CompanionPicker";
+import TagInput from "./TagInput";
+import { splitTagText } from "../lib/tagList";
 import CatalogueCombobox, { searchAircraftOptions } from "./FlightForm/fields/CatalogueCombobox";
 import { useTranslation } from "../hooks/useTranslation";
 import { EventLocationPicker, type EventLocationValue } from "./specialFlights/EventLocationPicker";
@@ -430,12 +432,10 @@ export function CommonTimeAndMetaFields({
           <label className="label" htmlFor="special-tags">
             {t("specialFlights:field.tags")}
           </label>
-          <input
+          <TagInput
             id="special-tags"
-            type="text"
-            className="input"
-            value={tagsCsv}
-            onChange={(e) => onTagsCsvChange(e.target.value)}
+            value={splitTagText(tagsCsv)}
+            onChange={(tags) => onTagsCsvChange(tags.join(", "))}
             placeholder={t("specialFlights:placeholder.tags")}
           />
         </div>
