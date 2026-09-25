@@ -47,8 +47,20 @@ vi.mock("../../lib/api/rail", () => ({
   },
 }));
 
+import { MemoryRouter } from "react-router-dom";
+
 import RailPage from "../RailPage";
 import type { RailJourney } from "../../types/rail";
+
+// A row links to the journey's own page since the detail page (phase 2b), and
+// a <Link> needs a router around it.
+const renderPage = (): void => {
+  render(
+    <MemoryRouter>
+      <RailPage />
+    </MemoryRouter>
+  );
+};
 
 function journey(over: Partial<RailJourney> = {}): RailJourney {
   return {
@@ -109,7 +121,7 @@ describe("RailPage", () => {
 
   it("lists journeys with times on each station's own clock", async () => {
     list.mockResolvedValue({ journeys: [journey()], total: 1 });
-    render(<RailPage />);
+    renderPage();
     const row = await screen.findByTestId("rail-row-j1");
     expect(row.textContent).toContain("Frankfurt (Main) Hbf → Paris Est");
     // 06:15 UTC read in Frankfurt, 10:09 UTC read in Paris — never the viewer's zone.
@@ -122,21 +134,21 @@ describe("RailPage", () => {
 
   it("asks the server for one page, not the whole logbook", async () => {
     list.mockResolvedValue({ journeys: [], total: 0 });
-    render(<RailPage />);
+    renderPage();
     await waitFor(() => expect(list).toHaveBeenCalled());
     expect(list.mock.calls[0][0]).toMatchObject({ limit: 50, offset: 0 });
   });
 
   it("says a failed load instead of drawing an empty logbook", async () => {
     list.mockRejectedValue(new Error("down"));
-    render(<RailPage />);
+    renderPage();
     expect(await screen.findByRole("alert")).toHaveTextContent("rail:loadError");
     expect(screen.queryByText("rail:empty")).toBeNull();
   });
 
   it("shows the empty state only for a logbook that loaded and is empty", async () => {
     list.mockResolvedValue({ journeys: [], total: 0 });
-    render(<RailPage />);
+    renderPage();
     expect(await screen.findByText("rail:empty")).toBeInTheDocument();
   });
 
@@ -145,14 +157,14 @@ describe("RailPage", () => {
       journeys: [journey({ id: "a", delayMinutes: 0 }), journey({ id: "b", delayMinutes: 12 })],
       total: 2,
     });
-    render(<RailPage />);
+    renderPage();
     expect((await screen.findByTestId("rail-row-a")).textContent).toContain("rail:onTime");
     expect(screen.getByTestId("rail-row-b").textContent).toContain("rail:delay/12");
   });
 
   it("opens the form for a new and for an existing journey", async () => {
     list.mockResolvedValue({ journeys: [journey()], total: 1 });
-    render(<RailPage />);
+    renderPage();
     await screen.findByTestId("rail-row-j1");
     fireEvent.click(screen.getByText("rail:add"));
     expect(screen.getByTestId("rail-form")).toHaveTextContent("new");
@@ -162,7 +174,7 @@ describe("RailPage", () => {
     list.mockResolvedValueOnce({ journeys: [journey()], total: 1 });
     list.mockResolvedValueOnce({ journeys: [], total: 0 });
     remove.mockResolvedValue(undefined);
-    render(<RailPage />);
+    renderPage();
     await screen.findByTestId("rail-row-j1");
     fireEvent.click(screen.getByText("rail:delete"));
     fireEvent.click(screen.getByText("confirm-delete"));
