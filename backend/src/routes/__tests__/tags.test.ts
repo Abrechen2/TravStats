@@ -107,6 +107,30 @@ describe("GET /api/v1/tags", () => {
     expect((await tags({ limit: "500" })).status).toBe(400);
   });
 
+  // Rail rides (rail spec) carry tags like flights and cruises do.
+  it("offers the tags of train rides too", async () => {
+    const ride = await prisma.railJourney.create({
+      data: {
+        userId: user.id,
+        depStationName: "Wien Hbf",
+        arrStationName: "Zürich HB",
+        depLat: 48.1852,
+        depLon: 16.3776,
+        arrLat: 47.378,
+        arrLon: 8.54,
+        departureTime: new Date("2025-12-31T21:58:00Z"),
+        status: "completed",
+        tags: ["Nachtzug", "beach"],
+      },
+    });
+    try {
+      expect((await tags({ q: "nacht" })).body.tags).toEqual([{ name: "Nachtzug", usageCount: 1 }]);
+      expect((await tags({ q: "beach" })).body.tags).toEqual([{ name: "beach", usageCount: 4 }]);
+    } finally {
+      await prisma.railJourney.delete({ where: { id: ride.id } });
+    }
+  });
+
   it("requires authentication", async () => {
     expect((await request(app).get("/api/v1/tags")).status).toBe(401);
   });

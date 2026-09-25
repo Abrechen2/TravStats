@@ -207,3 +207,15 @@ registry.registerPath({
   request: { params: z.object({ id: uuid }) },
   responses: windowPhotos,
 });
+
+registry.registerPath({
+  method: "get",
+  path: "/rail/{id}/trip-photos",
+  summary: "Trip photos taken during this train ride",
+  description:
+    "Photos of the ride's trip taken between departure and arrival. None when the ride is on " +
+    "no trip, has no arrival, or a station has no time zone (its times are then wall clocks).",
+  tags: ["Rail"],
+  request: { params: z.object({ id: uuid }) },
+  responses: windowPhotos,
+});

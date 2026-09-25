@@ -144,6 +144,30 @@ describe("RailFormModal", () => {
     );
   });
 
+  // As for flights, cruises and stays: the one trip whose dates hold the
+  // departure day is picked for a new ride, and a pick by hand ends that.
+  it("files a new ride under the one trip its departure day falls in", async () => {
+    getAllTrips.mockResolvedValue([
+      { id: "t1", name: "Paris weekend", startDate: "2026-07-01", endDate: "2026-07-03" },
+      { id: "t2", name: "Später", startDate: "2026-08-01", endDate: "2026-08-05" },
+    ]);
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    await screen.findByRole("option", { name: "Paris weekend" });
+    const trip = screen.getByLabelText("rail:form.trip") as HTMLSelectElement;
+    expect(trip.value).toBe("");
+
+    fireEvent.change(screen.getByLabelText("rail:form.departureTime"), {
+      target: { value: "2026-07-02T08:15" },
+    });
+    await waitFor(() => expect(trip.value).toBe("t1"));
+
+    fireEvent.change(trip, { target: { value: "" } });
+    fireEvent.change(screen.getByLabelText("rail:form.departureTime"), {
+      target: { value: "2026-08-02T08:15" },
+    });
+    expect(trip.value).toBe("");
+  });
+
   it("shows the server's refusal instead of closing", async () => {
     create.mockRejectedValue({
       response: { data: { error: "arrival must not precede departure" } },

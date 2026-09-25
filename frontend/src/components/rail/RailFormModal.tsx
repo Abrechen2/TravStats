@@ -2,6 +2,8 @@ import { useEffect, useState } from "react";
 import type { JSX, ReactNode } from "react";
 import Modal from "../Modal";
 import CurrencySelect from "../common/CurrencySelect";
+import TagInput from "../TagInput";
+import { useTripPreselection } from "../../hooks/useTripPreselection";
 import CompanionPicker from "../CompanionPicker";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -95,6 +97,16 @@ export function RailFormModal({
       cancelled = true;
     };
   }, []);
+
+  // A NEW ride is filed under the one trip whose dates contain its departure
+  // day, as flights, cruises and stays are; a pick by hand ends it.
+  const pickTrip = useTripPreselection({
+    enabled: journey === null,
+    trips,
+    date: draft.departureLocal,
+    value: draft.tripId,
+    onChange: (tripId) => set("tripId", tripId),
+  });
 
   const ready = canSubmit(draft) && depValid && arrValid;
 
@@ -344,12 +356,12 @@ export function RailFormModal({
         </Section>
 
         <Section title={t("rail:form.meta")}>
-          <input
+          <TagInput
+            ariaLabel={t("rail:form.tags")}
             className={INPUT_CLASS}
-            aria-label={t("rail:form.tags")}
             placeholder={t("rail:form.tags")}
             value={draft.tags}
-            onChange={(e): void => set("tags", e.target.value)}
+            onChange={(next): void => set("tags", next)}
           />
           <div className="mt-3">
             <span className="label">{t("rail:form.companions")}</span>
@@ -363,7 +375,7 @@ export function RailFormModal({
             <select
               className={`mt-1 ${INPUT_CLASS}`}
               value={draft.tripId}
-              onChange={(e): void => set("tripId", e.target.value)}
+              onChange={(e): void => pickTrip(e.target.value)}
             >
               <option value="">{t("rail:form.noTrip")}</option>
               {trips.map((trip) => (

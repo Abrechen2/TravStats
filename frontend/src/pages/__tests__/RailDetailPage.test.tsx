@@ -23,6 +23,11 @@ vi.mock("../../components/rail/RailRouteMap", () => ({
   RailRouteMap: () => <div data-testid="map-stub" />,
 }));
 vi.mock("../../components/rail/RailFormModal", () => ({ RailFormModal: () => null }));
+vi.mock("../../components/common/TripPhotoWindowStrip", () => ({
+  default: ({ entry, id }: { entry: string; id: string }) => (
+    <div data-testid="photo-window-stub">{`${entry}:${id}`}</div>
+  ),
+}));
 vi.mock("../../lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
@@ -63,6 +68,21 @@ describe("RailDetailPage", () => {
     // 04:15 UTC is 06:15 in Frankfurt (CEST).
     expect(screen.getAllByText(/06:15 \(Europe\/Berlin\)/).length).toBeGreaterThan(0);
     expect(screen.getAllByText(/07:10 \(Europe\/Berlin\)/).length).toBeGreaterThan(0);
+  });
+
+  // As a flight shows them: the trip's photos taken on board, for a ride on a trip.
+  it("asks for no photos for a ride on no trip", async () => {
+    await renderPage(detail({ tripId: null }));
+    expect(screen.queryByTestId("photo-window-stub")).toBeNull();
+  });
+
+  it("asks for the photos of the ride's own window", async () => {
+    const journey = detail({
+      tripId: "trip-1",
+      trip: { id: "trip-1", name: "Rhön", color: "#fff" },
+    });
+    await renderPage(journey);
+    expect(screen.getByTestId("photo-window-stub").textContent).toBe(`rail:${journey.id}`);
   });
 
   it("keeps an unrecorded delay apart from an on-time arrival", async () => {

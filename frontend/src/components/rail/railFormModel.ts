@@ -31,7 +31,7 @@ export interface RailFormDraft {
   price: string;
   currency: string;
   cancelled: boolean;
-  tags: string;
+  tags: string[];
   companions: string[];
   tripId: string;
   notes: string;
@@ -58,7 +58,7 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
       price: "",
       currency: "EUR",
       cancelled: false,
-      tags: "",
+      tags: [],
       companions: [],
       tripId: "",
       notes: "",
@@ -100,7 +100,7 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
     price: journey.price === null ? "" : String(journey.price),
     currency: journey.currency ?? "EUR",
     cancelled: journey.status === "cancelled",
-    tags: journey.tags.join(", "),
+    tags: [...journey.tags],
     companions: journey.companions,
     tripId: journey.tripId ?? "",
     notes: journey.notes ?? "",
@@ -192,10 +192,7 @@ export function toRailInput(draft: RailFormDraft): RailJourneyInput {
     price: numberOrNull(draft.price),
     currency: draft.currency || "EUR",
     status: draft.cancelled ? "cancelled" : "scheduled",
-    tags: draft.tags
-      .split(",")
-      .map((tag) => tag.trim())
-      .filter((tag) => tag.length > 0),
+    tags: draft.tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0),
     companions: draft.companions,
     tripId: draft.tripId === "" ? null : draft.tripId,
     notes: orNull(draft.notes),

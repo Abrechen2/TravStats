@@ -11,6 +11,7 @@ import { Icon } from "../components/ui/Icon";
 import TripPill from "../components/Trips/TripPill";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
+import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { RailFormModal } from "../components/rail/RailFormModal";
 import { RailRouteMap } from "../components/rail/RailRouteMap";
 import { RailConnectionLegs } from "../components/rail/RailConnectionLegs";
@@ -274,6 +275,8 @@ export default function RailDetailPage(): JSX.Element {
               </span>
             </DetailSection>
           )}
+          {/* The trip's photos taken on board, as a flight shows them. */}
+          {journey.tripId && <TripPhotoWindowStrip entry="rail" id={journey.id} />}
 
           <DetailSection title={t("rail:detail.route")}>
             <RailRouteMap journey={journey} />

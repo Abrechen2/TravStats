@@ -10,7 +10,8 @@ import { timezoneOfLodging } from "../../utils/stayInstant";
  *  - a lodging: the user's trip photos taken on a day of one of its stays,
  *    within 500 m of the house, days read in the house's zone;
  *  - a flight: its trip's photos taken between departure and arrival;
- *  - a cruise: its trip's photos taken from embarkation day to the last day.
+ *  - a cruise: its trip's photos taken from embarkation day to the last day;
+ *  - a train ride: its trip's photos taken between departure and arrival.
  *
  * Each abstains rather than guesses: a lodging without coordinates, a flight
  * whose times are not real instants, or an entry on no trip shows nothing.
@@ -146,5 +147,35 @@ export async function cruiseTripPhotos(
     userId,
     Prisma.sql`ph.trip_id = ${tripId}
       AND ${localDay(Prisma.sql`ph.taken_at`, null)} BETWEEN ${first} AND ${last}`
+  );
+}
+
+/**
+ * Null when the ride is not the caller's. A ride's times are real instants
+ * once both stations have a zone (the server derives it from where they
+ * are); without one, or without an arrival, there is no window to trust —
+ * the same abstention the flight makes.
+ */
+export async function railTripPhotos(
+  userId: string,
+  railJourneyId: string
+): Promise<WindowPhoto[] | null> {
+  const ride = await prisma.railJourney.findFirst({
+    where: { id: railJourneyId, userId },
+    select: {
+      tripId: true,
+      departureTime: true,
+      arrivalTime: true,
+      depTimezone: true,
+      arrTimezone: true,
+    },
+  });
+  if (!ride) return null;
+  const { tripId, departureTime, arrivalTime } = ride;
+  if (!tripId || !arrivalTime || !ride.depTimezone || !ride.arrTimezone) return [];
+  return photosWhere(
+    userId,
+    Prisma.sql`ph.trip_id = ${tripId}
+      AND ph.taken_at BETWEEN ${departureTime} AND ${arrivalTime}`
   );
 }

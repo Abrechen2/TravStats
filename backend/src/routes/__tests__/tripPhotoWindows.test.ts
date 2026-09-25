@@ -132,6 +132,35 @@ describe("trip photos by when and where", () => {
     expect(stranger.status).toBe(404);
   });
 
+  // Rail (rail spec): a ride is a flight by train — the same window, and the
+  // same abstention when its times are not real instants.
+  it("shows a train ride its trip's photos between departure and arrival", async () => {
+    const ride = await prisma.railJourney.create({
+      data: {
+        userId,
+        tripId,
+        depStationName: "Frankfurt (Main) Hbf",
+        arrStationName: "Roma Termini",
+        depLat: 50.107,
+        depLon: 8.663,
+        arrLat: 41.901,
+        arrLon: 12.501,
+        depTimezone: "Europe/Berlin",
+        arrTimezone: "Europe/Rome",
+        departureTime: new Date("2024-05-01T08:00:00Z"),
+        arrivalTime: new Date("2024-05-01T10:00:00Z"),
+        status: "completed",
+      },
+    });
+    const url = `/api/v1/rail/${ride.id}/trip-photos`;
+    expect(photoIds(await request(app).get(url).set("Cookie", cookie))).toEqual([ids.inFlight]);
+
+    await prisma.railJourney.update({ where: { id: ride.id }, data: { depTimezone: null } });
+    expect(photoIds(await request(app).get(url).set("Cookie", cookie))).toEqual([]);
+
+    expect((await request(app).get(url).set("Cookie", strangerCookie)).status).toBe(404);
+  });
+
   it("shows a cruise its trip's photos from its first to its last day", async () => {
     const cruise = await prisma.cruise.create({
       data: {
