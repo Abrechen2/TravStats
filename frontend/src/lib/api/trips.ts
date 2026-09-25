@@ -249,6 +249,11 @@ export const tripsApi = {
 
   /* ─────────── Photos ─────────── */
 
+  /** The gallery on its own — what a journal entry picks its photos from. */
+  listPhotos: async (tripId: string): Promise<TripPhoto[]> => {
+    const { data } = await api.get<{ photos: TripPhoto[] }>(`/trips/${tripId}/photos`);
+    return data.photos;
+  },
   uploadPhotos: async (tripId: string, files: File[]): Promise<TripPhoto[]> => {
     const fd = new FormData();
     for (const f of files) fd.append("photos", f);
@@ -337,6 +342,8 @@ export interface CreateJournalInput {
   body: string;
   mood?: string;
   weather?: string;
+  /** Photos of the trip's gallery, in order. */
+  photoIds?: string[];
 }
 
 export interface UpdateJournalInput {
@@ -345,6 +352,8 @@ export interface UpdateJournalInput {
   body?: string;
   mood?: string | null;
   weather?: string | null;
+  /** Replaces the entry's photos; `[]` clears them. */
+  photoIds?: string[];
 }
 
 export interface ProposedTripLeg {

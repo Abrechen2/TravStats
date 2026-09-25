@@ -135,12 +135,17 @@ export type UpdateStopInput = z.infer<typeof updateStopSchema>;
 
 /* ---------------- Journal entries ---------------- */
 
+/** Mirrors `JOURNAL_PHOTO_CAP` in services/trips/journalPhotos.ts. */
+const JOURNAL_PHOTO_LIMIT = 12;
+
 export const createJournalSchema = z.object({
   date: ISO_DATE,
   title: z.string().max(200).optional(),
   body: z.string().min(1).max(20000),
   mood: z.string().max(40).optional(),
   weather: z.string().max(40).optional(),
+  /** Photos of the trip's own gallery the entry shows, in order. */
+  photoIds: z.array(z.string().uuid()).max(JOURNAL_PHOTO_LIMIT).optional(),
 });
 
 export const updateJournalSchema = z.object({
@@ -149,6 +154,8 @@ export const updateJournalSchema = z.object({
   body: z.string().min(1).max(20000).optional(),
   mood: z.string().max(40).nullable().optional(),
   weather: z.string().max(40).nullable().optional(),
+  /** Replaces the entry's photos when present; `[]` clears them. */
+  photoIds: z.array(z.string().uuid()).max(JOURNAL_PHOTO_LIMIT).optional(),
 });
 
 export type CreateJournalInput = z.infer<typeof createJournalSchema>;

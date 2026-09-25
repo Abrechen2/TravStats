@@ -201,7 +201,10 @@
     "moodLabel": "Mood (optional)",
     "weatherLabel": "Weather (optional)",
     "save": "Save",
-    "cancel": "Cancel"
+    "cancel": "Cancel",
+    "photosLabel": "Photos from the trip",
+    "photosEmpty": "The trip has no photos in its gallery yet.",
+    "photoAlt": "Photo for the entry"
   },
   "journalView": {
     "view": "View",

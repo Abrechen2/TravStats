@@ -7,6 +7,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import JournalWeatherFetch from "./JournalWeatherFetch";
 import SuggestionChips from "../common/SuggestionChips";
 import { useJournalMoods } from "../../hooks/useJournalMoods";
+import JournalPhotoPicker from "./JournalPhotoPicker";
 
 interface JournalEntryModalProps {
   tripId: string;
@@ -46,6 +47,7 @@ export default function JournalEntryModal({
   const [body, setBody] = useState(entry?.body ?? "");
   const [mood, setMood] = useState(entry?.mood ?? "");
   const [weather, setWeather] = useState(entry?.weather ?? "");
+  const [photoIds, setPhotoIds] = useState<string[]>(entry?.photos?.map((p) => p.id) ?? []);
   const [saving, setSaving] = useState(false);
   const moods = useJournalMoods();
 
@@ -56,6 +58,7 @@ export default function JournalEntryModal({
     setBody(entry.body);
     setMood(entry.mood ?? "");
     setWeather(entry.weather ?? "");
+    setPhotoIds(entry.photos?.map((p) => p.id) ?? []);
   }, [entry]);
 
   const handleSave = async (): Promise<void> => {
@@ -69,6 +72,7 @@ export default function JournalEntryModal({
           body: body.trim(),
           mood: mood.trim() || null,
           weather: weather.trim() || null,
+          photoIds,
         });
       } else {
         await tripsApi.createJournalEntry(tripId, {
@@ -77,6 +81,7 @@ export default function JournalEntryModal({
           body: body.trim(),
           mood: mood.trim() || undefined,
           weather: weather.trim() || undefined,
+          ...(photoIds.length > 0 && { photoIds }),
         });
       }
       onSaved();
@@ -185,6 +190,9 @@ export default function JournalEntryModal({
             />
           </Field>
         </div>
+        <Field label={t("trips:journalModal.photosLabel")}>
+          <JournalPhotoPicker tripId={tripId} value={photoIds} onChange={setPhotoIds} />
+        </Field>
       </div>
     </Modal>
   );

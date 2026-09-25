@@ -201,7 +201,10 @@
     "moodLabel": "Stimmung (optional)",
     "weatherLabel": "Wetter (optional)",
     "save": "Speichern",
-    "cancel": "Abbrechen"
+    "cancel": "Abbrechen",
+    "photosLabel": "Fotos aus der Reise",
+    "photosEmpty": "Die Reise hat noch keine Fotos in der Galerie.",
+    "photoAlt": "Foto zum Eintrag"
   },
   "journalView": {
     "view": "Ansehen",

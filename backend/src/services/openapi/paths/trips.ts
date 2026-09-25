@@ -357,6 +357,41 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/trips/{id}/photos",
+  summary: "List a trip's photos",
+  description:
+    "The gallery without the rest of the trip, in gallery order, at most 1000; the cover's " +
+    "internal row is left out. A journal entry picks its photos from this list (`photoIds`).",
+  tags: ["Trips"],
+  request: { params: tripId },
+  responses: {
+    200: {
+      description: "Photos",
+      content: {
+        "application/json": {
+          schema: z.object({
+            photos: z.array(
+              z.object({
+                id: z.string().uuid(),
+                url: z.string(),
+                caption: z.string().nullable(),
+                takenAt: z.string().nullable(),
+                sortIdx: z.number().int(),
+                mimetype: z.string(),
+                sizeBytes: z.number().int(),
+                createdAt: z.string(),
+              })
+            ),
+          }),
+        },
+      },
+    },
+    404: notFound,
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/trips/{id}/photos",
   summary: "Upload trip photos",

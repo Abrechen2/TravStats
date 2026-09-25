@@ -2,6 +2,7 @@ import Modal from "../Modal";
 import { useMemo } from "react";
 import type { TripJournalEntry } from "../../types";
 import JournalBody from "./JournalBody";
+import JournalPhotoRow from "./JournalPhotoRow";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatObservedWeather } from "../../lib/observedWeather";
 import { useLocale } from "../../hooks/useLocale";
@@ -104,6 +105,7 @@ export default function JournalViewModal({
       }
     >
       <JournalBody body={entry.body} />
+      <JournalPhotoRow photos={entry.photos ?? []} size={120} />
     </Modal>
   );
 }

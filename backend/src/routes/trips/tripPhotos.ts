@@ -31,6 +31,9 @@ import { toPhotoDto } from "./photoDto";
 
 const router = Router();
 
+/** A gallery this large is a library; the picker shows the first thousand. */
+const TRIP_PHOTO_LIST_CAP = 1000;
+
 /* ─────────── Photos (iter 7) ─────────── */
 
 const updatePhotoSchema = z.object({
@@ -102,6 +105,31 @@ router.post(
           });
         }
       }
+      next(error);
+    }
+  }
+);
+
+/**
+ * GET /trips/:id/photos — the gallery on its own, for a picker that needs the
+ * photos and not the whole trip (the journal entry's photo choice).
+ */
+router.get(
+  "/trips/:id/photos",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      await resolveTrip(req.userId!, req.params.id);
+      const rows = await prisma.tripPhoto.findMany({
+        where: {
+          tripId: req.params.id,
+          OR: [{ caption: null }, { caption: { not: "__cover__" } }],
+        },
+        orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }],
+        take: TRIP_PHOTO_LIST_CAP,
+      });
+      res.json({ photos: rows.map(toPhotoDto) });
+    } catch (error) {
       next(error);
     }
   }

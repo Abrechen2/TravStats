@@ -1442,9 +1442,10 @@ model TripPhoto {
   lat Float?
   lon Float?
 
-  trip        Trip              @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  immichAlbum TripImmichAlbum?  @relation(fields: [immichAlbumLinkId], references: [id], onDelete: Cascade)
-  visitLinks  PlaceVisitPhoto[]
+  trip         Trip                @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  immichAlbum  TripImmichAlbum?    @relation(fields: [immichAlbumLinkId], references: [id], onDelete: Cascade)
+  visitLinks   PlaceVisitPhoto[]
+  journalLinks JournalEntryPhoto[]
 
   @@unique([tripId, immichAssetId])
   @@index([tripId])
@@ -1749,11 +1750,31 @@ model TripJournalEntry {
   createdAt       DateTime @default(now()) @map("created_at")
   updatedAt       DateTime @updatedAt @map("updated_at")
 
-  trip Trip @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip   Trip                @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  photos JournalEntryPhoto[]
 
   @@index([tripId])
   @@index([tripId, date])
   @@map("trip_journal_entries")
+}
+
+/// A photograph of the trip's gallery shown in a journal entry. A join, not a
+/// copy: the picture stays the trip's, and the entry only points at it. Both
+/// ends cascade — an entry without the photo, or a photo without the entry,
+/// leaves nothing to show. Only a photo of the entry's own trip is accepted
+/// (checked in the route; the keys prove existence, not the trip).
+model JournalEntryPhoto {
+  id          String @id @default(uuid())
+  entryId     String @map("entry_id")
+  tripPhotoId String @map("trip_photo_id")
+  sortIdx     Int    @default(0) @map("sort_idx")
+
+  entry     TripJournalEntry @relation(fields: [entryId], references: [id], onDelete: Cascade)
+  tripPhoto TripPhoto        @relation(fields: [tripPhotoId], references: [id], onDelete: Cascade)
+
+  @@unique([entryId, tripPhotoId])
+  @@index([tripPhotoId])
+  @@map("journal_entry_photos")
 }
 
 model Booking {
