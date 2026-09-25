@@ -4,6 +4,7 @@ import helmet from "helmet";
 import dotenv from "dotenv";
 import rateLimit from "express-rate-limit";
 import cookieParser from "cookie-parser";
+import { recheckAchievementsAfterWrite } from "./middleware/recheckAchievementsAfterWrite";
 import { apiMounts } from "./routes/mounts";
 import { errorHandler, notFoundHandler } from "./middleware/errorHandler";
 import { requestLoggerMiddleware } from "./middleware/requestLogger";
@@ -228,6 +229,10 @@ app.get("/api/v1/parser-capabilities", async (_req, res, next) => {
 // API routes — the ordered mount table lives in routes/mounts.ts so the
 // OpenAPI coverage guard can walk exactly what the app serves. Order is
 // significant; the reasons are documented next to each entry there.
+app.use(
+  ["/api/v1/roadtrips", "/api/v1/tours", "/api/v1/trips/:id/routes"],
+  recheckAchievementsAfterWrite
+);
 for (const { base, router } of apiMounts) {
   app.use(base, router);
 }

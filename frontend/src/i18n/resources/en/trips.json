@@ -15,7 +15,7 @@
   "editTrip": "Edit Journey",
   "deleteTrip": "Delete Journey",
   "removeFromTrip": "Remove from journey",
-  "deleteTripConfirm": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours with their recorded tracks, and the documents filed here. Flights, cruises and stays are kept.",
+  "deleteTripConfirm": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours with their recorded tracks, and the documents filed here. Flights, cruises, stays and roadtrips are kept.",
   "showOnMap": "Show on Map",
   "flightCount_one": "{{count}} Flight",
   "flightCount_other": "{{count}} Flights",

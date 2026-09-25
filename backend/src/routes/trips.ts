@@ -614,7 +614,25 @@ router.delete(
       });
       if (!existing) throw new AppError("Trip not found", 404);
 
-      await prisma.trip.delete({ where: { id: req.params.id } });
+      // A roadtrip is a domain of its own and outlives the trip, as a flight
+      // or a cruise does; the schema's cascade is right for a day tour drawn
+      // over the trip's timeline and wrong for it. Its stations borrowed from
+      // the timeline become its own first — they would go with the trip.
+      await prisma.$transaction(async (tx) => {
+        const roadtrips = await tx.tripRoute.findMany({
+          where: { tripId: existing.id, kind: "roadtrip" },
+          select: { id: true },
+        });
+        const ids = roadtrips.map((r) => r.id);
+        if (ids.length > 0) {
+          await tx.tripStop.updateMany({
+            where: { routeId: { in: ids }, tripId: existing.id },
+            data: { tripId: null, domain: "roadtrip" },
+          });
+          await tx.tripRoute.updateMany({ where: { id: { in: ids } }, data: { tripId: null } });
+        }
+        await tx.trip.delete({ where: { id: existing.id } });
+      });
       logger.info({ tripId: req.params.id, userId }, "[Trips] Deleted trip");
       res.status(204).send();
     } catch (error) {

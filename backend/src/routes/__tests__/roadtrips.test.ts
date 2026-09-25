@@ -466,4 +466,81 @@ describe("Roadtrips", () => {
     // 500 m is what one watch measured, not what the day climbed.
     expect(byName.Halb).toMatchObject({ ascentM: null, movingSeconds: null, source: "gpx" });
   });
+
+  it("keeps a roadtrip, with all its stations, when the trip it was part of is deleted", async () => {
+    const trip = await prisma.trip.create({ data: { userId, name: "Wird gelöscht" } });
+    const route = await prisma.tripRoute.create({
+      data: { userId, tripId: trip.id, name: "Bleibt", mode: "road", kind: "roadtrip" },
+    });
+    // One station borrowed from the trip's timeline, one the roadtrip owns.
+    await prisma.tripStop.create({
+      data: {
+        tripId: trip.id,
+        title: "Zeitleiste",
+        lat: 58,
+        lon: 6,
+        routeId: route.id,
+        routeOrderIdx: 0,
+      },
+    });
+    await prisma.tripStop.create({
+      data: {
+        title: "Eigene",
+        lat: 59,
+        lon: 6,
+        routeId: route.id,
+        routeOrderIdx: 1,
+        domain: "roadtrip",
+      },
+    });
+
+    const res = await request(app).delete(`/api/v1/trips/${trip.id}`).set("Cookie", cookie);
+    expect(res.status).toBe(204);
+
+    // A roadtrip is a domain of its own, like a flight or a cruise: the trip
+    // was a folder around it, not its owner.
+    const kept = await prisma.tripRoute.findUnique({
+      where: { id: route.id },
+      include: { stops: { orderBy: { routeOrderIdx: "asc" } } },
+    });
+    expect(kept).toMatchObject({ tripId: null, kind: "roadtrip" });
+    expect(kept?.stops.map((s) => [s.title, s.tripId])).toEqual([
+      ["Zeitleiste", null],
+      ["Eigene", null],
+    ]);
+  });
+
+  it("still deletes a trip's day tours with the trip — they were drawn over its timeline", async () => {
+    const trip = await prisma.trip.create({ data: { userId, name: "Mit Tour" } });
+    const tour = await prisma.tripRoute.create({
+      data: { userId, tripId: trip.id, name: "Wanderung", mode: "foot", kind: "tour" },
+    });
+    await request(app).delete(`/api/v1/trips/${trip.id}`).set("Cookie", cookie);
+    expect(await prisma.tripRoute.findUnique({ where: { id: tour.id } })).toBeNull();
+  });
+
+  it("unlocks the first-roadtrip badge on its own once a started roadtrip has a station", async () => {
+    const first = await prisma.achievement.findUniqueOrThrow({ where: { code: "ROADTRIP_FIRST" } });
+    await prisma.userAchievement.deleteMany({ where: { userId, achievementId: first.id } });
+    const created = await request(app)
+      .post("/api/v1/roadtrips")
+      .set("Cookie", cookie)
+      .send({ name: "Erster" });
+    await stations(created.body.roadtrip.id).send({
+      stations: [
+        { title: "Gestern", lat: 58.9, lon: 5.7, startDate: "2020-05-01", night: { kind: "pass" } },
+      ],
+    });
+
+    // The check runs after the answer, so the badge arrives a moment later.
+    let unlocked = false;
+    for (let i = 0; i < 40 && !unlocked; i++) {
+      const row = await prisma.userAchievement.findFirst({
+        where: { userId, achievementId: first.id, unlockedAt: { not: null } },
+      });
+      unlocked = row !== null;
+      if (!unlocked) await new Promise((r) => setTimeout(r, 100));
+    }
+    expect(unlocked).toBe(true);
+  });
 });
