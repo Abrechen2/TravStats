@@ -83,6 +83,7 @@
     "templateStatus.ts",
     "training.ts",
     "trips.ts",
+    "trips/entrySuggestions.ts",
     "trips/photoDto.ts",
     "trips/refusesCoverImage.ts",
     "trips/resolveTrip.ts",

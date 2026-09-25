@@ -15,6 +15,16 @@ vi.mock("@/hooks/useTagSuggestions", () => ({
   useTagSuggestions: () => [{ name: "food", usageCount: 4 }],
 }));
 
+// Origin and destination offers come from the server; which trip was asked
+// about is recorded so a test can tell a new trip from an existing one.
+const tripEntrySuggestions = vi.fn((tripId: string | null) => ({
+  origins: ["Munich"],
+  destinations: tripId ? ["Tokyo", "Kyoto", "Japan"] : [],
+}));
+vi.mock("@/hooks/useTripEntrySuggestions", () => ({
+  useTripEntrySuggestions: (tripId: string | null) => tripEntrySuggestions(tripId),
+}));
+
 vi.mock("../../../store/toastStore", () => ({
   useToastStore: (selector: (s: { addToast: () => void }) => unknown) =>
     selector({ addToast: vi.fn() }),
@@ -122,5 +132,35 @@ describe("TripModal", () => {
     await waitFor(() => expect(tripsApi.create).toHaveBeenCalled());
     const calls = vi.mocked(tripsApi.create).mock.calls;
     expect(calls[calls.length - 1][0].tags).toEqual(["Kultur", "food"]);
+  });
+
+  it("offers the home airport as the origin of a new trip, and no destination", async () => {
+    render(<TripModal trip={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    expect(tripEntrySuggestions).toHaveBeenLastCalledWith(null);
+    expect(screen.queryByText("Tokyo")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByText("Munich"));
+
+    expect(screen.getByPlaceholderText("München")).toHaveValue("Munich");
+  });
+
+  it("offers an existing trip's destinations and never overwrites what was typed", async () => {
+    vi.mocked(tripsApi.update).mockResolvedValue(existingTrip);
+    render(<TripModal trip={existingTrip} onClose={vi.fn()} onSaved={vi.fn()} />);
+
+    expect(tripEntrySuggestions).toHaveBeenLastCalledWith("t1");
+    const destination = screen.getByPlaceholderText("Tokyo, Japan");
+    await userEvent.type(destination, "Osaka");
+    // A chip that does not continue the typed text is withdrawn, not applied.
+    expect(screen.queryByText("Kyoto")).not.toBeInTheDocument();
+    expect(destination).toHaveValue("Osaka");
+
+    await userEvent.clear(destination);
+    await userEvent.click(screen.getByText("Kyoto"));
+    await userEvent.click(screen.getByText("trips:modal.save"));
+
+    await waitFor(() => expect(tripsApi.update).toHaveBeenCalled());
+    const calls = vi.mocked(tripsApi.update).mock.calls;
+    expect(calls[calls.length - 1][1].destinationLabel).toBe("Kyoto");
   });
 });

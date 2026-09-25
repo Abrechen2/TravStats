@@ -6,6 +6,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { TRIP_COLORS as PALETTE } from "../../lib/tripColors";
 import CompanionPicker from "../CompanionPicker";
 import TagInput from "../TagInput";
+import SuggestionChips from "../common/SuggestionChips";
+import { useTripEntrySuggestions } from "../../hooks/useTripEntrySuggestions";
 
 interface TripModalProps {
   trip: Trip | null; // null = create mode
@@ -73,6 +75,9 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const [saving, setSaving] = useState(false);
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
+  // Offered under the two place labels, never written into them: the labels
+  // stay the user's free text.
+  const placeSuggestions = useTripEntrySuggestions(trip?.id ?? null);
 
   // Release the object URL of a pending pick when it changes or on unmount.
   useEffect(() => {
@@ -295,6 +300,12 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                     className="w-full rounded-lg px-3 py-2 text-sm"
                     style={inputStyle}
                   />
+                  <SuggestionChips
+                    value={originLabel}
+                    suggestions={placeSuggestions.origins}
+                    onPick={setOriginLabel}
+                    fieldLabel={t("trips:modal.originLabel")}
+                  />
                 </Field>
                 <Field label={t("trips:modal.destinationLabel")}>
                   <input
@@ -303,6 +314,12 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                     placeholder="Tokyo, Japan"
                     className="w-full rounded-lg px-3 py-2 text-sm"
                     style={inputStyle}
+                  />
+                  <SuggestionChips
+                    value={destinationLabel}
+                    suggestions={placeSuggestions.destinations}
+                    onPick={setDestinationLabel}
+                    fieldLabel={t("trips:modal.destinationLabel")}
                   />
                 </Field>
               </div>

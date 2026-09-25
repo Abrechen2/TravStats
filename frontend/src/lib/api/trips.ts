@@ -91,7 +91,21 @@ export interface TripCostSuperlative {
   excluded: { count: number; reason: "unconvertible" };
 }
 
+/** What the trip form can offer for its place labels (`GET /trips/entry-suggestions`).
+ *  Empty lists mean "nothing to offer", never an error. */
+export interface TripEntrySuggestions {
+  origins: string[];
+  destinations: string[];
+}
+
 export const tripsApi = {
+  getEntrySuggestions: async (tripId?: string): Promise<TripEntrySuggestions> => {
+    const { data } = await api.get<TripEntrySuggestions>("/trips/entry-suggestions", {
+      params: tripId ? { tripId } : {},
+    });
+    return data;
+  },
+
   getAll: async (): Promise<Trip[]> => {
     const { data } = await api.get<{ trips: Trip[] }>("/trips");
     return data.trips;

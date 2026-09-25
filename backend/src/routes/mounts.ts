@@ -50,6 +50,7 @@ import templateStatusRoutes from "./templateStatus";
 import parserTemplatesRoutes from "./parserTemplates";
 import trainingRoutes from "./training";
 import tripsRoutes from "./trips";
+import tripEntrySuggestionRoutes from "./trips/entrySuggestions";
 import tripStopRoutes from "./trips/tripStops";
 import tripPhotoRoutes from "./trips/tripPhotos";
 import tourRouteRoutes from "./trips/tourRoutes";
@@ -168,6 +169,13 @@ export const apiMounts: ApiMount[] = [
   { id: "dataQualityFlags", base: "/api/v1/data-quality-flags", router: dataQualityFlagRoutes },
   { id: "templateStatus", base: "/api/v1/template-status", router: templateStatusRoutes },
   { id: "training", base: "/api/v1/training", router: trainingRoutes },
+  // Before `trips`, whose `GET /trips/:id` would otherwise take the word
+  // "entry-suggestions" for a trip id.
+  {
+    id: "trips.entrySuggestions",
+    base: "/api/v1/trips",
+    router: tripEntrySuggestionRoutes,
+  },
   { id: "trips", base: "/api/v1", router: tripsRoutes },
   // Stops + journal, and photos + cover: split out of trips.ts (forgejo#59).
   // Mounted directly after `trips`, before every other satellite, so Express
