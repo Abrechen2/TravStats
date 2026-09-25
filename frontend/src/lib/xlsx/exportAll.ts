@@ -34,10 +34,25 @@ export interface ExportInput {
   places?: readonly Place[];
 }
 
+/**
+ * The readable half of a reference cell: "Base (qualifier)".
+ *
+ * MUST agree with `backend/src/services/xlsxImport/context.ts#labelForms`.
+ * The importer falls back to this label when the bracketed id is missing or
+ * belongs to another account (a file moved between accounts), so it has to
+ * tell two "Ibis Budget" or two "Westliches Mittelmeer" apart — hence the
+ * city or the start day behind the name.
+ */
+export function parentLabel(base: string, qualifier?: string | null): string {
+  const q = qualifier?.trim();
+  return q ? `${base} (${q})` : base;
+}
+
 /** A short, stable label for a parent row, used as the readable half of a
  *  reference cell. Long enough to recognise, short enough to read in a cell. */
 function cruiseLabel(c: Cruise): string {
-  return c.routeName ?? c.shipNameOverride ?? c.ship?.name ?? c.cruiseLine ?? c.id;
+  const base = c.routeName ?? c.shipNameOverride ?? c.ship?.name ?? c.cruiseLine ?? c.id;
+  return parentLabel(base, c.startDate ? String(c.startDate).slice(0, 10) : null);
 }
 
 /**
@@ -60,7 +75,7 @@ function lodgingStayRows(lodgings: readonly Lodging[]): LodgingStayRow[] {
   const rows: LodgingStayRow[] = [];
   for (const l of lodgings) {
     for (const stay of l.stays ?? []) {
-      rows.push({ ...stay, lodgingId: l.id, lodgingLabel: l.name });
+      rows.push({ ...stay, lodgingId: l.id, lodgingLabel: parentLabel(l.name, l.city) });
     }
   }
   return rows;
@@ -70,7 +85,7 @@ function placeVisitRows(places: readonly Place[]): PlaceVisitRow[] {
   const rows: PlaceVisitRow[] = [];
   for (const p of places) {
     for (const visit of p.visits ?? []) {
-      rows.push({ ...visit, placeId: p.id, placeLabel: p.name });
+      rows.push({ ...visit, placeId: p.id, placeLabel: parentLabel(p.name, p.city) });
     }
   }
   return rows;

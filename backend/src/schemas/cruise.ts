@@ -47,7 +47,7 @@ const isoDateTime = z.preprocess((v) => {
   return Number.isNaN(d.getTime()) ? v : d.toISOString();
 }, z.string().datetime().nullable().optional());
 
-const stopSchema = z
+export const cruiseStopSchema = z
   .object({
     portId: z.number().int().positive().nullable().optional(),
     dayNumber: z.number().int().min(1).max(365),
@@ -142,7 +142,7 @@ const baseCruiseSchema = z.object({
     .regex(/^#?[0-9a-fA-F]{6}$/)
     .optional()
     .nullable(),
-  stops: z.array(stopSchema).max(60).optional(),
+  stops: z.array(cruiseStopSchema).max(60).optional(),
 });
 
 export const createCruiseSchema = baseCruiseSchema.refine(

@@ -24,10 +24,50 @@ import {
   sendImport,
   type ImportMode,
   type ImportOutcome,
+  type SheetOutcome,
 } from "../../lib/xlsx/importClient";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { Icon } from "../ui/Icon";
 import { SettingRow } from "../ui/SettingRow";
+
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/**
+ * Per row: new or changed, and how an existing entry was found. The counts
+ * alone cannot say WHICH hotel is about to be created twice — this can, and
+ * it is what a person checks before moving a file into another account.
+ */
+function SheetRows({ sheet, t }: { sheet: SheetOutcome; t: Translate }): JSX.Element | null {
+  const rows = sheet.rows.filter((r) => r.action !== "error");
+  if (rows.length === 0) return null;
+  return (
+    <details className="ml-3">
+      <summary className="cursor-pointer" style={{ color: "var(--text-muted)" }}>
+        {t("xlsx:import.rowsToggle")}
+      </summary>
+      <ul className="mt-1 space-y-0.5">
+        {rows.map((r) => (
+          <li key={r.row} data-testid={`xlsx-row-${sheet.key}-${r.row}`}>
+            <span className="font-medium">{t(`xlsx:import.actions.${r.action}`)}</span>{" "}
+            {t("xlsx:import.rowLine", { row: r.row, label: r.label })}
+            {r.message && (
+              <span style={{ color: "var(--text-muted)" }}>
+                {" "}
+                · {t(`xlsx:import.resolution.${r.message}`, { defaultValue: r.message })}
+              </span>
+            )}
+            {(r.notes ?? []).map((n) => (
+              <span key={n} style={{ color: "var(--text-muted)" }}>
+                {" "}
+                · {t(`xlsx:import.notes.${n}`, { defaultValue: n })}
+              </span>
+            ))}
+          </li>
+        ))}
+      </ul>
+    </details>
+  );
+}
 
 type Status = "idle" | "running" | "empty" | "failed";
 type ImportStatus =
@@ -182,10 +222,9 @@ export default function SpreadsheetSection(): JSX.Element {
           sub={
             <>
               {t("xlsx:import.description")}{" "}
-              {/* Named rather than left to be discovered: editing a sheet and
-                  watching nothing happen is worse than knowing beforehand that
-                  it is read-only. */}
-              {t("xlsx:import.readOnlySheets")}
+              {/* Said up front: the table moves entries, not files, and a
+                  whole-installation move is the backup's job — not this. */}
+              {t("xlsx:import.transferNote")}
             </>
           }
           control={
@@ -242,16 +281,19 @@ export default function SpreadsheetSection(): JSX.Element {
               {importStatus === "applied" ? t("xlsx:import.applied") : t("xlsx:import.preview")}
             </p>
             {outcome.sheets.map((s) => (
-              <div key={s.key} className="flex items-baseline gap-2">
-                <span className="font-medium">{t(`xlsx:sheets.${s.key}`)}</span>
-                <span style={{ color: "var(--text-muted)" }}>
-                  {t("xlsx:import.counts", {
-                    created: s.created,
-                    updated: s.updated,
-                    skipped: s.skipped,
-                    errors: s.errors,
-                  })}
-                </span>
+              <div key={s.key}>
+                <div className="flex items-baseline gap-2">
+                  <span className="font-medium">{t(`xlsx:sheets.${s.key}`)}</span>
+                  <span style={{ color: "var(--text-muted)" }}>
+                    {t("xlsx:import.counts", {
+                      created: s.created,
+                      updated: s.updated,
+                      skipped: s.skipped,
+                      errors: s.errors,
+                    })}
+                  </span>
+                </div>
+                <SheetRows sheet={s} t={t} />
               </div>
             ))}
 

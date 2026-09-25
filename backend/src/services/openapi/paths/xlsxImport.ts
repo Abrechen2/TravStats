@@ -23,9 +23,13 @@ const rowOutcome = z.object({
     .optional()
     .openapi({
       description:
-        "Reason the row was refused. `unknown_id` covers both an id that does not exist " +
-        "and one belonging to another account — the two are deliberately indistinguishable.",
+        "A code. For `error` the reason the row was refused (e.g. `unknown_lodging`, " +
+        "`ambiguous_cruise`, `invalid_row`); for `update`/`skip` how an existing entry " +
+        "was found (`matched_existing` — by its natural key, `exists` — `add` mode).",
     }),
+  notes: z.array(z.string()).optional().openapi({
+    description: "Non-fatal remarks the row was applied with, e.g. `trip_not_linked`.",
+  }),
 });
 
 const sheetOutcome = z.object({
@@ -42,9 +46,16 @@ registry.registerPath({
   path: "/xlsx-import",
   summary: "Apply an edited export workbook",
   description:
-    "Applies rows from a TravStats Excel export. A row carrying an id updates the record " +
-    "it names; a row without one is created, where the sheet supports creation. An id that " +
-    "does not belong to the caller is refused, never applied.\n\n" +
+    "Applies rows from a TravStats Excel export — to edit entries, or to move them into " +
+    "another account. A row carrying an id of the caller's account updates that record. A " +
+    "row without an id, or with an id that is unknown or belongs to another account, is " +
+    "new to the caller: it is matched to an existing record by its natural key (flight " +
+    "number + route + departure day; cruise start day + line + route; lodging name + city; " +
+    "stay lodging + check-in + check-out; place name + position; visit place + day; stop " +
+    "cruise + day + port), so reading the same file twice does not duplicate, or created " +
+    "otherwise. A foreign id is never read, updated or reported; within one file it only " +
+    "links child rows (stays, stops, visits) to the parent row that carried it. Where the " +
+    "id is missing, a child finds its parent by the name in its reference cell.\n\n" +
     "`dryRun` defaults to **true** and writes nothing: post once to preview, then again " +
     "with `dryRun: false` to apply. Cells are sent as strings, exactly as the spreadsheet " +
     "holds them; the server coerces and validates them through the same schemas the " +
@@ -56,10 +67,13 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             dryRun: z.boolean().default(true),
+            mode: z.enum(["add", "merge", "replace"]).default("merge"),
             sheets: z.array(
               z.object({
                 key: z.string().openapi({
-                  description: "Sheet key: `places`, `cruises` or `lodging`.",
+                  description:
+                    "Sheet key: `flights`, `places`, `placeVisits`, `cruises`, " +
+                    "`cruiseStops`, `lodging` or `lodgingStays`. Unknown keys are ignored.",
                 }),
                 rows: z.array(z.record(z.string(), z.string())),
               })

@@ -35,6 +35,7 @@ export {
   type LodgingListItem,
 } from "../services/lodging/listView";
 import staysRouter from "./lodging/stays";
+import { createLodgingRecord } from "../services/lodging/createLodging";
 import {
   createLodgingSchema,
   updateLodgingSchema,
@@ -227,16 +228,12 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
 
     // dataSource is provenance metadata, never client-set (finding 1) —
     // a lodging created through this endpoint was hand-entered by the user.
-    // Derive from the EFFECTIVE country — `resolveLocation` may have filled it
-    // in from the geocoder, and deriving from the payload alone would miss that.
-    const created = { ...parsed.data, ...location };
-    const lodging = await prisma.lodging.create({
-      data: {
-        ...created,
-        isoCountryCode: resolveCountryCode(created.country ?? null),
-        userId,
-        dataSource: "manual",
-      },
+    // The ISO code is derived from the EFFECTIVE country inside the shared
+    // writer (`services/lodging/createLodging.ts`), which the spreadsheet
+    // import uses too.
+    const lodging = await createLodgingRecord(userId, parsed.data, {
+      dataSource: "manual",
+      location,
       include: LODGING_INCLUDE,
     });
     logger.info({ operation: "lodging_create", lodgingId: lodging.id, userId });
