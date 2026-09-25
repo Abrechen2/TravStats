@@ -46,6 +46,7 @@ const RoadtripsPage = lazy(() => import("./pages/RoadtripsPage"));
 const RoadtripDetailPage = lazy(() => import("./pages/RoadtripDetailPage"));
 const StravaCallbackPage = lazy(() => import("./pages/StravaCallbackPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
+const LoyaltyPage = lazy(() => import("./pages/LoyaltyPage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const DesignPage = lazy(() => import("./pages/DesignPage"));
@@ -520,6 +521,12 @@ function AppContent() {
               <Route
                 path="/achievements"
                 element={isAuthenticated ? <AchievementsPage /> : <Navigate to="/login" />}
+              />
+              {/* Every domain's loyalty cards on one page (2.7). Not a domain
+                  itself: the page draws a section per enabled domain. */}
+              <Route
+                path="/loyalty"
+                element={isAuthenticated ? <LoyaltyPage /> : <Navigate to="/login" />}
               />
               <Route
                 path="/stats"

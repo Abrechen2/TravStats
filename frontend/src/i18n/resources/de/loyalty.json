@@ -1,0 +1,84 @@
+{
+  "title": "Bonusprogramme",
+  "meta": "Hotels, Airlines und Reedereien an einem Ort — jede Karte mit dem, wofür du sie laut Logbuch genutzt hast.",
+  "noDomains": "Für keine deiner aktiven Reisearten gibt es Bonusprogramme. Flüge, Kreuzfahrten und Unterkünfte lassen sich in den Einstellungen unter Module einschalten.",
+  "jumpTo": "Springe zu",
+  "sections": {
+    "flight": {
+      "title": "Vielfliegerprogramme",
+      "description": "Meilenprogramme deiner Airlines — mit den Airlines, für die sie gelten."
+    },
+    "cruise": {
+      "title": "Reederei-Programme",
+      "description": "Clubs und Treueprogramme deiner Reedereien."
+    },
+    "lodging": {
+      "title": "Hotelprogramme",
+      "description": "Mit den Ketten und einzelnen Hotels, für die sie gelten."
+    }
+  },
+  "empty": "Noch keine Programme hinterlegt.",
+  "add": "Programm hinzufügen",
+  "loadError": "Bonusprogramme konnten nicht geladen werden.",
+  "saveError": "Das Programm konnte nicht gespeichert werden.",
+  "duplicateError": "Ein Programm mit diesem Namen ist in diesem Bereich bereits hinterlegt.",
+  "deleteError": "Das Programm konnte nicht gelöscht werden.",
+  "confirmDelete": "„{{name}}“ löschen?",
+  "field": {
+    "programName": "Programmname",
+    "membershipNumber": "Mitgliedsnummer",
+    "tier": "Aktueller Status",
+    "notes": "Notizen",
+    "airlineCodes": "Gilt für Airlines",
+    "airlineCodesHint": "IATA-Code mit zwei Zeichen, z. B. LH — Enter fügt hinzu.",
+    "cruiseLines": "Gilt für Reedereien",
+    "cruiseLinesHint": "So geschrieben wie in deinen Kreuzfahrten — Enter fügt hinzu.",
+    "removeValue": "{{value}} entfernen",
+    "invalidCode": "Ein IATA-Airline-Code hat genau zwei Buchstaben oder Ziffern."
+  },
+  "coversNone": {
+    "flight": "noch keiner Airline zugeordnet",
+    "cruise": "noch keiner Reederei zugeordnet"
+  },
+  "number": {
+    "show": "Nummer anzeigen",
+    "hide": "Nummer verbergen"
+  },
+  "activity": {
+    "flight_one": "{{count}} Flug",
+    "flight_other": "{{count}} Flüge",
+    "cruise_one": "{{count}} Kreuzfahrt",
+    "cruise_other": "{{count}} Kreuzfahrten",
+    "lodging_one": "{{count}} Aufenthalt",
+    "lodging_other": "{{count}} Aufenthalte",
+    "nights_one": "{{count}} Nacht",
+    "nights_other": "{{count}} Nächte",
+    "last": "zuletzt {{date}}",
+    "none": "Noch nichts im Logbuch, das diese Karte abdeckt."
+  },
+  "history": {
+    "toggle": "Statusverlauf ({{count}})",
+    "empty": "Noch kein datierter Status. Trägst du ein, wann du welchen Status hattest, nennt die Statistik für jedes Jahr den Status, den du damals wirklich hattest.",
+    "add": "Zeitraum hinzufügen",
+    "tier": "Status",
+    "from": "Von",
+    "until": "Bis",
+    "untilOpen": "Leer lassen, solange der Status noch gilt.",
+    "remove": "Zeitraum entfernen",
+    "invalid": "Jeder Zeitraum braucht einen Status und ein Startdatum, und das Ende darf nicht davor liegen.",
+    "save": "Verlauf speichern",
+    "saveError": "Der Statusverlauf konnte nicht gespeichert werden."
+  },
+  "suggestions": {
+    "open": "Aus deinen Flügen übernehmen",
+    "title": "In deinen Flügen gefunden",
+    "hint": "Nummern, die an Flügen stehen, aber noch zu keinem Programm gehören. Übernehmen öffnet das Formular vorausgefüllt — gespeichert wird erst, wenn du bestätigst.",
+    "empty": "Keine weiteren Vielfliegernummern in deinen Flügen gefunden.",
+    "loadError": "Die Vorschläge konnten nicht geladen werden.",
+    "adopt": "Übernehmen"
+  },
+  "settingsLink": {
+    "description": "Deine Bonusprogramme — Hotels, Airlines und Reedereien — verwaltest du auf einer eigenen Seite, nach Bereichen getrennt.",
+    "open": "Zu den Bonusprogrammen"
+  }
+}

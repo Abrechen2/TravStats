@@ -1,5 +1,5 @@
 import { useEffect, useRef, useState } from "react";
-import type { JSX } from "react";
+import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { MembershipManager } from "../lodging/MembershipManager";
@@ -23,7 +23,22 @@ import type { Lodging, LodgingChain, LodgingMembership } from "../../types/lodgi
  * separate lists over the same unscoped membership set would each print
  * every programme name, so a card's name would appear twice in the DOM.
  */
-export default function MembershipsSection(): JSX.Element {
+interface MembershipsSectionProps {
+  /** Heading override — the loyalty page names the section by domain. */
+  title?: string;
+  description?: string;
+  /** More per-card content under the coverage line (activity, status history). */
+  renderExtra?: (membership: LodgingMembership) => ReactNode;
+  /** Fired with the fresh list after every load and write. */
+  onChanged?: (memberships: LodgingMembership[]) => void;
+}
+
+export default function MembershipsSection({
+  title,
+  description,
+  renderExtra,
+  onChanged,
+}: MembershipsSectionProps = {}): JSX.Element {
   const { t } = useTranslation(["settings"]);
   const [lodgings, setLodgings] = useState<Lodging[]>([]);
   // With `loyaltyProgram`: the manager offers the catalogue's programme names.
@@ -103,14 +118,15 @@ export default function MembershipsSection(): JSX.Element {
   return (
     <SectionCard>
       <SectionTitle
-        title={t("settings:memberships.title")}
-        description={t("settings:memberships.description")}
+        title={title ?? t("settings:memberships.title")}
+        description={description ?? t("settings:memberships.description")}
       />
 
       <MembershipManager
         hideTitle
         reloadSignal={reloadSignal}
         chainCatalog={chains}
+        onChanged={onChanged}
         renderRowExtra={(m) => (
           <div className="t-caption mt-1">
             {coverage(m)}
@@ -142,6 +158,7 @@ export default function MembershipsSection(): JSX.Element {
                 )}
               </div>
             )}
+            {renderExtra?.(m)}
           </div>
         )}
       />

@@ -36,6 +36,7 @@ import enEvidence from "./resources/en/evidence.json";
 import enDocuments from "./resources/en/documents.json";
 import enRoadtrips from "./resources/en/roadtrips.json";
 import enOpenData from "./resources/en/openData.json";
+import enLoyalty from "./resources/en/loyalty.json";
 
 import deCommon from "./resources/de/common.json";
 import deDashboard from "./resources/de/dashboard.json";
@@ -70,6 +71,7 @@ import deEvidence from "./resources/de/evidence.json";
 import deDocuments from "./resources/de/documents.json";
 import deRoadtrips from "./resources/de/roadtrips.json";
 import deOpenData from "./resources/de/openData.json";
+import deLoyalty from "./resources/de/loyalty.json";
 
 // Get initial language: stored preference → browser language → fallback "en"
 const getInitialLanguage = (): string => {
@@ -127,6 +129,7 @@ const resources = {
     documents: enDocuments,
     roadtrips: enRoadtrips,
     openData: enOpenData,
+    loyalty: enLoyalty,
   },
   de: {
     common: deCommon,
@@ -162,6 +165,7 @@ const resources = {
     documents: deDocuments,
     roadtrips: deRoadtrips,
     openData: deOpenData,
+    loyalty: deLoyalty,
   },
 };
 
@@ -207,6 +211,7 @@ i18n.use(initReactI18next).init({
     "documents",
     "roadtrips",
     "openData",
+    "loyalty",
   ],
   interpolation: {
     escapeValue: false, // React already escapes values

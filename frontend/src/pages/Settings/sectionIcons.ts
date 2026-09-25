@@ -27,5 +27,7 @@ export const SECTION_ICON: Record<SettingsSectionId, IconName> = {
   autoupdate: "activity",
   cruisePreferences: "ship",
   lodgingPreferences: "map-pin",
-  lodgingMemberships: "bed",
+  lodgingMemberships: "credit-card",
+  flightMemberships: "credit-card",
+  cruiseMemberships: "credit-card",
 };

@@ -25,7 +25,7 @@ import AboutSection from "../../components/Settings/AboutSection";
 import ImportSection from "../../components/Settings/ImportSection";
 import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
-import MembershipsSection from "../../components/Settings/MembershipsSection";
+import LoyaltyLinkSection from "../../components/Settings/LoyaltyLinkSection";
 import GeocoderSettingsCard from "../../components/Settings/GeocoderSettingsCard";
 import RoutingProviderSection from "../../components/Settings/RoutingProviderSection";
 import ImmichConnectionCard from "../../components/Settings/ImmichConnectionCard";
@@ -169,8 +169,14 @@ export default function SettingsSectionSwitch({
     case "lodgingPreferences":
       /* Admin-only; the card itself renders null for non-admins. */
       return <GeocoderSettingsCard isAdmin={isAdmin} />;
+    // The cards themselves live on the loyalty page since 2.7; each domain
+    // keeps an entry here that leads to its section there.
     case "lodgingMemberships":
-      return <MembershipsSection />;
+      return <LoyaltyLinkSection domain="lodging" />;
+    case "flightMemberships":
+      return <LoyaltyLinkSection domain="flight" />;
+    case "cruiseMemberships":
+      return <LoyaltyLinkSection domain="cruise" />;
     default:
       return null;
   }
