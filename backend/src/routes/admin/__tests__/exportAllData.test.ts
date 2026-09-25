@@ -87,7 +87,7 @@ describe("GET /api/v1/admin/export/all-data", () => {
       "bookings",
       "lodgings",
       "lodgingStays",
-      "lodgingMemberships",
+      "loyaltyMemberships",
       "places",
       "placeVisits",
       "placeLists",
