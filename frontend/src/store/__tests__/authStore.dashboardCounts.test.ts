@@ -31,7 +31,7 @@ import { rememberQuotaRefused, wasQuotaRefused } from "../../lib/bulkRefreshRefu
 function seedCounts(): void {
   useDashboardCountsStore
     .getState()
-    .setCounts({ flight: 42, cruise: 3, poi: 1, lodging: 2 }, { flight: 1, cruise: 0 });
+    .setCounts({ flight: 42, cruise: 3, poi: 1, lodging: 2, rail: 0 }, { flight: 1, cruise: 0 });
 }
 
 beforeEach(() => {
@@ -51,6 +51,7 @@ describe("authStore: an account switch resets dashboardCountsStore (Critical, re
       cruise: 0,
       poi: 0,
       lodging: 0,
+      rail: 0,
     });
     expect(useDashboardCountsStore.getState().countsLoaded).toBe(false);
   });
@@ -67,6 +68,7 @@ describe("authStore: an account switch resets dashboardCountsStore (Critical, re
       cruise: 0,
       poi: 0,
       lodging: 0,
+      rail: 0,
     });
     expect(useDashboardCountsStore.getState().countsLoaded).toBe(false);
   });

@@ -192,7 +192,8 @@
       "cruise": "Kreuzfahrten",
       "lodging": "Unterkünfte",
       "poi": "Orte",
-      "tour": "Touren"
+      "tour": "Touren",
+      "rail": "Bahn"
     },
     "disabledHint": "Bereich deaktiviert — Einstellungen → Bereiche"
   },
@@ -201,7 +202,8 @@
     "flight": "Flug",
     "cruise": "Kreuzfahrt",
     "poi": "Ort",
-    "lodging": "Unterkunft"
+    "lodging": "Unterkunft",
+    "rail": "Zugfahrt"
   },
   "controls": {
     "mode": "Modus",
@@ -210,7 +212,8 @@
       "flight": "Flug hinzufügen",
       "cruise": "Kreuzfahrt hinzufügen",
       "lodging": "Unterkunft anlegen",
-      "poi": "Ort anlegen"
+      "poi": "Ort anlegen",
+      "rail": "Zugfahrt hinzufügen"
     }
   },
   "filter": {
@@ -302,7 +305,9 @@
     "lodgingUnrated": "Ohne Bewertung",
     "lodgingChain": "Kette",
     "lodgingIndependent": "Unabhängig",
-    "title": "Legende"
+    "title": "Legende",
+    "railTraced": "Bahn · Streckenverlauf (Transitous)",
+    "railStraight": "Bahn · Luftlinie"
   },
   "userMenu": {
     "label": "Konto-Menü"
@@ -324,5 +329,11 @@
     "inHours_other": "in {{count}} Std.",
     "today": "heute"
   },
-  "installApp": "Als App installieren"
+  "installApp": "Als App installieren",
+  "railTab": {
+    "listTitle": "Zugfahrten",
+    "loading": "Zugfahrten werden geladen …",
+    "loadError": "Die Zugfahrten konnten nicht geladen werden.",
+    "empty": "Noch keine Zugfahrten erfasst."
+  }
 }

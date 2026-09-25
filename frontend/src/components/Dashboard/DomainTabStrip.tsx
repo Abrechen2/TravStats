@@ -7,6 +7,7 @@ import { NextUpEntry } from "./NextUpEntry";
 import { Icon, type IconName } from "../ui/Icon";
 import { DASHBOARD_TABS } from "../../types/dashboard";
 import { DOMAINS, isValidDomain, type DomainKey } from "../../shared/domains";
+import { useRailOffered } from "../../hooks/useRailVisible";
 
 /** A domain with a dashboard tab of its own. */
 type TabDomain = Extract<DashboardTab, DomainKey>;
@@ -19,10 +20,6 @@ interface DomainTabStripProps {
    * proof: it has no count badge and no enable/disable pill, because it has
    * no domain to count or disable. Widening this to every non-"all" tab
    * would force a fake count for a tab that doesn't have one.
-   *
-   * Narrowed to the domains that HAVE a tab: rail is a domain without a
-   * dashboard tab until phase 2 of its spec, and a key here would demand a
-   * count nobody fetched.
    */
   counts: Record<TabDomain, number>;
   /**
@@ -52,6 +49,7 @@ const TAB_ICON: Record<DashboardTab, IconName | null> = {
   cruise: "ship",
   poi: "map-pin",
   lodging: "bed",
+  rail: "train-front",
   tour: "route",
 };
 
@@ -73,10 +71,11 @@ export function DomainTabStrip({
   // them click through to the "coming soon" screen and turn it back on. Mixing
   // the enabled state in here would hide the tab instead and break that.
   //
-  // Every tab is offered now. "Touren" was the last one behind a gate, and
-  // the owner released it on 2026-09-18 — as places were released on
-  // 2026-09-05 when the CSV import gave them a surface.
-  const visibleTabs = DASHBOARD_TABS;
+  // "Touren" was released on 2026-09-18, places on 2026-09-05. Rail is the one
+  // tab behind a gate now: the `railDomain` beta switch hides it outright
+  // (owner rule 2026-09-25), where the user's own switch only dims it.
+  const railOffered = useRailOffered();
+  const visibleTabs = DASHBOARD_TABS.filter((tab) => tab !== "rail" || railOffered);
 
   // On a domain tab, that domain's next entry; on "Alle", the soonest of all —
   // including the trip, which belongs to no single tab. `upcoming` arrives

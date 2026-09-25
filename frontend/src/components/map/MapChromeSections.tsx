@@ -31,6 +31,7 @@ import {
   PANEL_OPTION_STYLE,
 } from "./controlPanelKit";
 import { useDomainColors } from "../../hooks/useDomainColors";
+import { useRailVisible } from "../../hooks/useRailVisible";
 
 const YEAR_RANGE_BACK = 14;
 
@@ -73,9 +74,12 @@ export function MapChromeSections(): JSX.Element {
   const modes = TAB_MODE_REGISTRY[tab].modes;
   const yearOptions = buildYearOptions();
 
-  // Rail has no map layer until phase 2 of its spec; a chip for it would
-  // filter nothing.
-  const domainOptions = AVAILABLE_DOMAINS.filter((key) => key !== "rail" && isEnabled(key));
+  // Rail's chip follows the rail layer: only where its beta switch is on
+  // (owner rule 2026-09-25) and the user has the domain.
+  const railVisible = useRailVisible();
+  const domainOptions = AVAILABLE_DOMAINS.filter(
+    (key) => (key !== "rail" || railVisible) && isEnabled(key)
+  );
   const yearActive = year !== null;
   const domainsFiltered = tab === "all" && domainOptions.some((key) => !domains.includes(key));
   const filterActive = yearActive || domainsFiltered;

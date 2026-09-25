@@ -29,6 +29,8 @@ import {
   buildPoiLegendRows,
   legendRow,
 } from "./allTabLegendRows";
+import { useRailOverlay } from "./railMapOverlay";
+import { useRailVisible } from "../../../hooks/useRailVisible";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { logger } from "../../../lib/logger";
 import { useCruiseColorStore } from "../../../store/cruiseColorStore";
@@ -468,9 +470,15 @@ export function AllTab(): JSX.Element {
   // sphere mesh and draws zero pixels there (fix round 2, found in a real
   // browser). `visMode` already resolves "globe" vs "routes"/"heatmap"/
   // "journey" a few lines up.
+  // Rail rides beside the tours, behind every rail gate plus the domain chip.
+  const railOn = useRailVisible() && showTours && filterDomains.includes("rail");
+  const rail = useRailOverlay(railOn, visMode === "globe", t);
   const tourLayers = useMemo<Layer[]>(
-    () => buildTourDeckLayers(tourPathData, visMode === "globe" ? TOUR_PATH_GLOBE_ALTITUDE_M : 0),
-    [tourPathData, visMode]
+    () => [
+      ...buildTourDeckLayers(tourPathData, visMode === "globe" ? TOUR_PATH_GLOBE_ALTITUDE_M : 0),
+      ...rail.layers,
+    ],
+    [tourPathData, visMode, rail.layers]
   );
 
   // The activity toggle stays top-left (it opens the activity sidebar).
@@ -534,6 +542,7 @@ export function AllTab(): JSX.Element {
     // or they would sit below the collapsed panel and stay visible when
     // the key is shut — and be missing from the count on the button.
     ...(tourHasData ? tourLegend.rows : []),
+    ...rail.legendRows,
   ];
 
   // Collapsible, like the map options beside it. The key grew a row per LIST

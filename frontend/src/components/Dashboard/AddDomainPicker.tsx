@@ -9,7 +9,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ACCENT, BORDER, PANEL_BG, TEXT } from "../map/controlPanelKit";
 
-export type AddableDomain = "flight" | "cruise" | "lodging" | "poi";
+export type AddableDomain = "flight" | "cruise" | "lodging" | "poi" | "rail";
 
 interface AddDomainPickerProps {
   enabled: Record<AddableDomain, boolean>;
@@ -35,6 +35,9 @@ export function AddDomainPicker({ enabled, onPick }: AddDomainPickerProps): JSX.
   if (enabled.cruise) options.push({ key: "cruise", label: t("dashboard:addPicker.cruise") });
   if (enabled.lodging) options.push({ key: "lodging", label: t("dashboard:addPicker.lodging") });
   if (enabled.poi) options.push({ key: "poi", label: t("dashboard:addPicker.poi") });
+  // `enabled.rail` is the combined rule (beta switch AND domain) — see
+  // DashboardLayout's `addableDomains`.
+  if (enabled.rail) options.push({ key: "rail", label: t("dashboard:addPicker.rail") });
 
   return (
     <div ref={containerRef} style={{ position: "relative" }}>
