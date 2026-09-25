@@ -30,6 +30,7 @@ import "./training";
 import "./tokens";
 import "./diagnostics";
 import "./cruises";
+import "./cruiseTracks";
 import "./lodging";
 import "./settings";
 import "./places";

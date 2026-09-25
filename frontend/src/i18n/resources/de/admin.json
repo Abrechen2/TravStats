@@ -155,6 +155,10 @@
           "lodgingEnrichment": {
             "name": "Unterkünfte aus OpenStreetMap ergänzen",
             "what": "Der Knopf „Aus OpenStreetMap ergänzen“ auf der Seite einer Unterkunft: Er trägt Sterne, Webseite, Kette und die Wikipedia-Verknüpfung in leere Felder ein. Braucht zusätzlich den Schalter für offene Datendienste."
+          },
+          "cruiseTracks": {
+            "name": "Aufgezeichnete Spuren bei Kreuzfahrten",
+            "what": "Der Abschnitt „Aufgezeichnete Spuren“ auf der Seite einer Kreuzfahrt: Eine GPS-Aufzeichnung (Datei oder Dawarich) ersetzt die berechnete Seeroute der Etappen, die sie abdeckt – auf der Karte und in den Statistiken."
           }
         }
       },

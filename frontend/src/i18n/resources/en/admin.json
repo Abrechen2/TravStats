@@ -155,6 +155,10 @@
           "lodgingEnrichment": {
             "name": "Complete lodgings from OpenStreetMap",
             "what": "The “Complete from OpenStreetMap” button on a lodging’s page: it writes stars, website, chain and the Wikipedia link into empty fields. Also needs the open data services switch."
+          },
+          "cruiseTracks": {
+            "name": "Recorded tracks on cruises",
+            "what": "The “Recorded tracks” section on a cruise’s page: a GPS recording (a file or Dawarich) replaces the computed sea route of the legs it covers – on the map and in the statistics."
           }
         }
       },
