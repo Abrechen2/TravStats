@@ -299,5 +299,47 @@
       "noCompanions": "No companions recorded.",
       "more": "+ {{count}} more"
     }
+  },
+  "tracks": {
+    "title": "Recorded tracks",
+    "intro": "A GPS recording replaces a leg's computed sea route when it reaches both ports in sailing order (within 10 km, e.g. at anchor) and at most a quarter of the way is missing. Missing stretches are bridged with a straight line and counted.",
+    "upload": "Upload track (GPX, TCX, FIT)",
+    "uploading": "Uploading …",
+    "pullVoyage": "Load whole voyage from Dawarich",
+    "pullLeg": "Load from Dawarich",
+    "pulling": "Loading …",
+    "addToLeg": "Add track",
+    "dawarichUnavailable": "Dawarich is not connected (Settings → Integrations).",
+    "loading": "Loading tracks …",
+    "loadError": "The tracks could not be loaded.",
+    "legsTitle": "Legs",
+    "listTitle": "Tracks",
+    "empty": "No track for this cruise yet.",
+    "source": {
+      "track": "Recording",
+      "drawn": "Drawn by hand",
+      "sea_route": "Computed sea route",
+      "chord": "Straight line"
+    },
+    "verdict": {
+      "complete": "Recorded end to end",
+      "bridgedGaps": "Recorded, short gaps bridged with a straight line",
+      "recordingGap": "Recording interrupted between the ports",
+      "tooManyGaps": "Too much of the way is missing from the recording",
+      "missesFrom": "Recording starts after departure",
+      "missesTo": "Recording ends before arrival",
+      "missesBoth": "No recording for this leg"
+    },
+    "coversNone": "Covers no leg",
+    "coversLegs_one": "Covers one leg",
+    "coversLegs_other": "Covers {{count}} legs",
+    "truncated": "Incomplete (Dawarich pull cut short)",
+    "remove": "Remove",
+    "removeConfirmTitle": "Remove track?",
+    "removeConfirmMessage": "The track from {{from}} to {{to}} will be removed. Its legs fall back to the drawn line or the computed sea route. The uploaded file itself is not kept – only its points.",
+    "added": "Track saved",
+    "removed": "Track removed",
+    "saveError": "The track could not be saved.",
+    "removeError": "The track could not be removed."
   }
 }

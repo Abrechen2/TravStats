@@ -80,6 +80,7 @@ import railStationsRouter from "./rail/stations";
 import railLookupRouter from "./rail/lookup";
 import railStatsRouter from "./rail/stats";
 import railRoadtripConversionRouter from "./rail/roadtripConversion";
+import cruiseTrackRoutes from "./cruises/tracks";
 import currenciesRouter from "./currencies";
 import lodgingRouter from "./lodging";
 import lodgingPhotoRouter from "./lodging/photos";
@@ -269,6 +270,8 @@ export const apiMounts: ApiMount[] = [
     router: railRoadtripConversionRouter,
   },
   { id: "rail", base: "/api/v1/rail", router: railRouter },
+  // Recorded tracks of a cruise (2.7) — the same satellite pattern.
+  { id: "cruises.tracks", base: "/api/v1/cruises", router: cruiseTrackRoutes },
   { id: "currencies", base: "/api/v1/currencies", router: currenciesRouter },
   // Photographs of the house — same prefix, own file. Mounted FIRST for the
   // same reason the visit-photo router is: relying on segment counts to keep

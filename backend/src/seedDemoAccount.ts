@@ -855,7 +855,7 @@ export const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
  *
  * Deleted by CASCADE from one of those, so they need no statement of their
  * own — each reaches the user through exactly one owner:
- *   CruiseCompanion, CruiseLeg, CruiseLegRoute (Cruise) ·
+ *   CruiseCompanion, CruiseLeg, CruiseLegRoute, CruiseTrack (Cruise) ·
  *   FlightCompanion (Flight/Companion) · ImmichImportJob (TripImmichAlbum) ·
  *   LodgingPhoto (Lodging) · LodgingMembershipChain,
  *   LodgingMembershipLodging, LoyaltyTierPeriod (LoyaltyMembership) · PlaceListEntry

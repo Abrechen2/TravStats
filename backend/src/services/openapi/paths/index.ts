@@ -34,6 +34,7 @@ import "./rail";
 import "./railLookup";
 import "./railStats";
 import "./railRoadtripConversion";
+import "./cruiseTracks";
 import "./lodging";
 import "./loyalty";
 import "./settings";

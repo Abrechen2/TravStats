@@ -58,13 +58,16 @@ const gpxUpload = multer({
 });
 
 /**
+ * Exported for `routes/cruises/tracks.ts` (2.7): a cruise recording is the
+ * same kind of file under the same limit.
+ *
  * Wraps `gpxUpload.single(...)` manually — same shape as
  * `routes/settings/profilePicture.ts` — so an oversized (or otherwise
  * rejected) upload surfaces as a normal 400 `AppError` instead of falling
  * through to the generic 500 path the shared errorHandler uses for an
  * unrecognised `MulterError`.
  */
-function handleGpxUpload(req: Request, res: Response, next: NextFunction): void {
+export function handleGpxUpload(req: Request, res: Response, next: NextFunction): void {
   gpxUpload.single("file")(req, res, (err: unknown) => {
     if (err) {
       if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {

@@ -1894,6 +1894,7 @@ model Cruise {
   stops         CruiseStop[]
   legs          CruiseLeg[]
   legRoutes     CruiseLegRoute[]
+  tracks        CruiseTrack[]
 
   /// Where this row came from, so a second import of the same file recognises
   /// it instead of duplicating it (#84). Format `<source>:<stable key>`; the
@@ -1989,6 +1990,55 @@ model CruiseLegRoute {
   @@unique([cruiseId, fromKind, fromRef, toKind, toRef])
   @@index([cruiseId])
   @@map("cruise_leg_routes")
+}
+
+/// A recorded track of a cruise (2.7): a GPS recording of the voyage, uploaded
+/// as a file or pulled from Dawarich.
+///
+/// Hangs off the CRUISE and a time window, never off a leg — the same rule
+/// `TripRouteTrack` follows, for the same reason: a recording knows nothing
+/// about the itinerary, and one file usually spans several legs. Which legs it
+/// covers is decided on read, from the geometry, by
+/// `services/trackCoverage/legCoverage.ts`; nothing per leg is stored here, so
+/// an itinerary change re-decides coverage instead of leaving a stale link.
+///
+/// A table of its own rather than a nullable `cruiseId` on `TripRouteTrack`:
+/// every tour path (ownership, archive, Strava, export) reads that table's
+/// `routeId` as non-null, and a second owner column would make each of them
+/// answer "which owner?" first. The COLUMNS are the same on purpose, and both
+/// are written through `ingestedTrackColumns`, so the pipeline stays one.
+/// Elevation, climb and moving time are left out: at sea they measure nothing.
+model CruiseTrack {
+  id            String   @id @default(uuid())
+  cruiseId      String   @map("cruise_id")
+  /// gpx | tcx | fit | dawarich | healthkit | healthconnect
+  source        String
+  name          String?
+  startedAt     DateTime @map("started_at")
+  endedAt       DateTime @map("ended_at")
+  /// GeoJSON LineString coordinates, simplified on import.
+  geometry      Json
+  /// Index into `geometry` where each recording segment starts. Besides the
+  /// file's own segments, a cruise import also breaks the line wherever two
+  /// consecutive points lie further apart than `CRUISE_TRACK_GAP_KM` — a phone
+  /// at sea is offline for hours, and the jump across is not a recording.
+  segmentStarts Json     @map("segment_starts")
+  /// Running RAW distance in km at each vertex of `geometry`; a step across a
+  /// segment boundary adds nothing (see `ingestTrack`).
+  cumulativeKm  Json     @map("cumulative_km")
+  pointCount    Int      @map("point_count")
+  distanceKm    Float    @map("distance_km")
+  /// A Dawarich pull that hit its page cap — see `TripRouteTrack.truncated`.
+  truncated     Boolean  @default(false)
+  /// The source record's own id, so the same export imported twice is one track.
+  externalRef   String?  @map("external_ref")
+  createdAt     DateTime @default(now()) @map("created_at")
+
+  cruise Cruise @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+
+  @@unique([cruiseId, externalRef])
+  @@index([cruiseId])
+  @@map("cruise_tracks")
 }
 
 model CruiseStop {

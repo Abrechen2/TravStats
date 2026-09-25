@@ -311,8 +311,11 @@ const geometry = z
   })
   .describe(
     "GeoJSON, coordinates in [lon, lat] order. One feature per leg between " +
-      "consecutive coordinate-bearing stops. Legs the shipping-lane router " +
-      "cannot solve fall back to a straight chord between the two ports."
+      "consecutive coordinate-bearing stops. Per leg, in precedence order: a " +
+      "covering recording (properties.geometrySource 'track', method " +
+      "'recorded_track', trackId; every vertex protected — draw it as given), a " +
+      "hand-drawn line ('drawn'), the shipping-lane router ('sea_route'), or a " +
+      "straight chord between the two ports ('chord')."
   );
 
 registry.registerPath({

@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
 import type { Cruise } from "../types";
@@ -32,6 +32,8 @@ import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
+import CruiseTracksPanel from "../components/Cruise/CruiseTracksPanel";
+import { useBetaFeatures } from "../hooks/useBetaFeatures";
 
 const fmtDate = (iso: string | null): string => {
   if (!iso) return "—";
@@ -61,6 +63,24 @@ export default function CruiseDetailPage(): JSX.Element {
   );
   const [deleting, setDeleting] = useState<boolean>(false);
   const addToast = useToastStore((s) => s.addToast);
+  const { isFeatureVisible } = useBetaFeatures();
+  /** Bumped when a recording changes the legs: the map reads its lines again. */
+  const [geometryVersion, setGeometryVersion] = useState<number>(0);
+
+  // A recording changes the legs' lines and kilometres. Re-read the cruise
+  // quietly — the retry key would blank the whole page into its loading state
+  // for what is one section's change.
+  const onTracksChanged = useCallback((): void => {
+    setGeometryVersion((v) => v + 1);
+    if (!id) return;
+    void (async () => {
+      try {
+        setCruise(await cruiseApi.get(id));
+      } catch (err: unknown) {
+        logger.warn("CruiseDetailPage: refresh after a track change failed", err);
+      }
+    })();
+  }, [id]);
 
   const handleDelete = async (): Promise<void> => {
     if (!id) return;
@@ -230,6 +250,10 @@ export default function CruiseDetailPage(): JSX.Element {
             )}
           </DetailSection>
 
+          {isFeatureVisible("cruiseTracks") && (
+            <CruiseTracksPanel cruiseId={cruise.id} onChanged={onTracksChanged} />
+          )}
+
           <DetailSection
             title={t("detail.cabin")}
             facts={[
@@ -273,7 +297,7 @@ export default function CruiseDetailPage(): JSX.Element {
           {cruise.tripId && <TripPhotoWindowStrip entry="cruises" id={cruise.id} />}
 
           <DetailSection title={t("detail.route")}>
-            <CruiseRouteMap cruise={cruise} />
+            <CruiseRouteMap key={geometryVersion} cruise={cruise} />
           </DetailSection>
 
           {cruise.companions.length > 0 && (

@@ -232,3 +232,42 @@ export type RouteOverrideInput = z.infer<typeof routeOverrideSchema>;
 
 /** Query form of the endpoint key, for DELETE. */
 export const routeOverrideKeySchema = routeOverrideSchema.omit({ waypoints: true });
+
+/**
+ * How a cruise recording was captured (2.7). The tour list minus `strava`: a
+ * Strava activity is a workout, and its API agreement binds what may be done
+ * with it — nothing here imports from it.
+ */
+export const CRUISE_TRACK_SOURCES = [
+  "gpx",
+  "tcx",
+  "fit",
+  "dawarich",
+  "healthkit",
+  "healthconnect",
+] as const;
+export type CruiseTrackSource = (typeof CRUISE_TRACK_SOURCES)[number];
+
+/** Form fields beside an uploaded cruise recording — the tour upload's fields. */
+export const cruiseTrackUploadFieldsSchema = z.object({
+  externalRef: z.string().trim().min(1).max(200).optional(),
+  origin: z.enum(["healthkit", "healthconnect"]).optional(),
+});
+
+/**
+ * Body for `POST /cruises/:id/tracks/dawarich`. `legOrdinal` pulls the window
+ * of that one leg; without it the whole cruise is pulled. An explicit side
+ * wins over the derived one.
+ */
+export const pullCruiseDawarichSchema = z
+  .object({
+    legOrdinal: z.number().int().min(0).max(500).optional(),
+    startedAt: z.coerce.date().optional(),
+    endedAt: z.coerce.date().optional(),
+  })
+  .strict()
+  .refine((v) => !v.startedAt || !v.endedAt || v.endedAt.getTime() >= v.startedAt.getTime(), {
+    message: "endedAt must not be before startedAt",
+    path: ["endedAt"],
+  });
+export type PullCruiseDawarichInput = z.infer<typeof pullCruiseDawarichSchema>;

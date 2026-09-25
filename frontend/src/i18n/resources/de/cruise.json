@@ -299,5 +299,47 @@
       "noCompanions": "Keine Mitreisenden erfasst.",
       "more": "+ {{count}} weitere"
     }
+  },
+  "tracks": {
+    "title": "Aufgezeichnete Spuren",
+    "intro": "Eine GPS-Aufzeichnung ersetzt die berechnete Seeroute einer Etappe, wenn sie beide Häfen in Fahrtrichtung erreicht (bis 10 km Abstand, etwa auf Reede) und höchstens ein Viertel der Strecke fehlt. Fehlende Stücke werden per Luftlinie überbrückt und mitgezählt.",
+    "upload": "Spur hochladen (GPX, TCX, FIT)",
+    "uploading": "Wird hochgeladen …",
+    "pullVoyage": "Ganze Reise aus Dawarich laden",
+    "pullLeg": "Aus Dawarich laden",
+    "pulling": "Wird geladen …",
+    "addToLeg": "Spur hinzufügen",
+    "dawarichUnavailable": "Dawarich ist nicht verbunden (Einstellungen → Integrationen).",
+    "loading": "Spuren werden geladen …",
+    "loadError": "Die Spuren konnten nicht geladen werden.",
+    "legsTitle": "Etappen",
+    "listTitle": "Spuren",
+    "empty": "Noch keine Spur für diese Kreuzfahrt.",
+    "source": {
+      "track": "Aufzeichnung",
+      "drawn": "Von Hand gezeichnet",
+      "sea_route": "Berechnete Seeroute",
+      "chord": "Luftlinie"
+    },
+    "verdict": {
+      "complete": "Vollständig aufgezeichnet",
+      "bridgedGaps": "Aufgezeichnet, kurze Lücken per Luftlinie überbrückt",
+      "recordingGap": "Aufzeichnung zwischen den Häfen unterbrochen",
+      "tooManyGaps": "Zu viel der Strecke fehlt in der Aufzeichnung",
+      "missesFrom": "Aufzeichnung beginnt erst nach der Abfahrt",
+      "missesTo": "Aufzeichnung endet vor der Ankunft",
+      "missesBoth": "Keine Aufzeichnung für diese Etappe"
+    },
+    "coversNone": "Deckt keine Etappe ab",
+    "coversLegs_one": "Deckt eine Etappe ab",
+    "coversLegs_other": "Deckt {{count}} Etappen ab",
+    "truncated": "Unvollständig (Dawarich-Abruf gekürzt)",
+    "remove": "Entfernen",
+    "removeConfirmTitle": "Spur entfernen?",
+    "removeConfirmMessage": "Die Spur vom {{from}} bis {{to}} wird entfernt. Die Etappen dieser Spur fallen auf die gezeichnete Linie oder die berechnete Seeroute zurück. Die hochgeladene Datei ist nicht gespeichert – nur ihre Punkte.",
+    "added": "Spur gespeichert",
+    "removed": "Spur entfernt",
+    "saveError": "Die Spur konnte nicht gespeichert werden.",
+    "removeError": "Die Spur konnte nicht entfernt werden."
   }
 }

@@ -159,6 +159,10 @@
           "railDomain": {
             "name": "Bahn",
             "what": "Der Bereich „Bahn“: ein Fahrtenbuch für Zugfahrten mit Bahnhofskatalog, Zugsuche, Karte, Statistik und Excel-Import und -Export. Ein Roadtrip mit „Bahn“ als Fahrzeug lässt sich als Zugfahrten übernehmen."
+          },
+          "cruiseTracks": {
+            "name": "Aufgezeichnete Spuren bei Kreuzfahrten",
+            "what": "Der Abschnitt „Aufgezeichnete Spuren“ auf der Seite einer Kreuzfahrt: Eine GPS-Aufzeichnung (Datei oder Dawarich) ersetzt die berechnete Seeroute der Etappen, die sie abdeckt – auf der Karte und in den Statistiken."
           }
         }
       },

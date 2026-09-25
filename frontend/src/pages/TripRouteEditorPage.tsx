@@ -16,13 +16,13 @@ import TourLegList from "../components/Trips/TourLegList";
 import TourTrackList from "../components/Trips/TourTrackList";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTourTracks } from "../hooks/useTourTracks";
+import { useTourTrackCoverage } from "../hooks/useTourTrackCoverage";
 import { tripsApi } from "../lib/api";
 import { toursApi, type TourPointInput } from "../lib/api/tours";
 import { trackArchiveApi } from "../lib/api/trackArchive";
 import { downloadBlob } from "../lib/export";
 import { dawarichFailureKey, dawarichFailureKind } from "../lib/api/dawarich";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
-import { findCoveringTrackId } from "../lib/trackCoverage";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { Trip, TripStop } from "../types";
@@ -206,32 +206,20 @@ export default function TripRouteEditorPage(): JSX.Element {
     return map;
   }, [assignerStops]);
 
-  const stopCoordById = useMemo(() => {
-    const map = new Map<string, { lat: number; lon: number }>();
-    for (const s of assignerStops) {
-      if (s.lat !== null && s.lon !== null) map.set(s.id, { lat: s.lat, lon: s.lon });
-    }
-    return map;
-  }, [assignerStops]);
-
   /**
    * legId -> id of the recorded track that covers it, powering
-   * `TourLegList`'s "track" option gate. See `lib/trackCoverage.ts` —
-   * `tracksWithGeometry` is already in `toursApi.tracks.list`'s
-   * oldest-started-first order, so "first match" there is a deterministic
-   * choice, not an arbitrary one.
+   * `TourLegList`'s "track" option gate — decided on the server by the rule
+   * the adoption itself applies. Asked again whenever the legs or the
+   * recordings change.
    */
-  const trackCoverageByLegId = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const leg of legs) {
-      const from = stopCoordById.get(leg.fromStopId);
-      const to = stopCoordById.get(leg.toStopId);
-      if (!from || !to) continue;
-      const trackId = findCoveringTrackId(tracksWithGeometry, from, to);
-      if (trackId) map.set(leg.id, trackId);
-    }
-    return map;
-  }, [legs, stopCoordById, tracksWithGeometry]);
+  const coverageKey = `${legs.map((l) => `${l.id}:${l.fromStopId}:${l.toStopId}`).join(",")}|${tracks
+    .map((tr) => tr.id)
+    .join(",")}`;
+  const { coveringTrackByLegId: trackCoverageByLegId, known: coverageKnown } = useTourTrackCoverage(
+    id,
+    routeId,
+    coverageKey
+  );
 
   // `TripMap` was specifically changed to protect its layer `useMemo` with a
   // stable default (`NO_TOUR_GEOMETRIES`) when no `tourGeometries` prop is
@@ -692,7 +680,7 @@ export default function TripRouteEditorPage(): JSX.Element {
             onSetSource={handleSetLegSource}
             onRoute={handleRouteLeg}
             trackCoverageByLegId={trackCoverageByLegId}
-            tracksKnown={tracksKnown}
+            tracksKnown={coverageKnown && tracksKnown}
             onAdoptTrack={handleAdoptTrack}
             onClear={handleClearLeg}
             onRouteAll={handleRouteAll}

@@ -11,6 +11,8 @@ import { haversineKm } from "../../shared/geo/haversine";
 import logger from "../../utils/logger";
 import { resolveRouteFromRequest, toLegDto } from "./tourRoutes";
 import { resolveTrack } from "./tourTracks";
+import { isCoordinatePolyline, readStoredTrack } from "../../services/trackCoverage/storedTrack";
+import { tourLegVerdict } from "../../services/trackCoverage/legCoverage";
 
 /**
  * Tour route leg overrides — split out of `tourRoutes.ts`, which was
@@ -116,13 +118,13 @@ router.put(
         // a track id lifted from another route (another user's, or even
         // a different section of this trip) must not adopt.
         const track = await resolveTrack(routeId, body.trackId);
-        const trackGeometry = isCoordinatePolyline(track.geometry) ? track.geometry : [];
-        const adoption = adoptSegment(trackGeometry, fromCoord, toCoord, {
+        const stored = readStoredTrack(track);
+        const adoption = adoptSegment(stored.geometry, fromCoord, toCoord, {
           maxAnchorKm: ANCHOR_TOLERANCE_KM,
           // Measure against the raw track rather than the simplified line it
           // was stored as — see `adoptTrack` (AUD-034).
-          cumulativeKm: numberArrayOrNull(track.cumulativeKm),
-          segmentStarts: numberArrayOrNull(track.segmentStarts),
+          cumulativeKm: stored.cumulativeKm,
+          segmentStarts: stored.segmentStarts,
         });
         if (!adoption) {
           throw new AppError(
@@ -260,41 +262,6 @@ router.delete(
 );
 
 /**
- * True iff `value` is a usable `[[lon, lat], ...]` polyline: an array of
- * two-element numeric tuples. `waypoints` is a `Json?` column, so it can
- * hold whatever was last written to it — `Array.isArray` alone would wave
- * a malformed value through and hand the map `NaN` coordinates. Same guard
- * shape as `shared/cruise/legRouteKey.ts`'s `isCoordinatePolyline`, kept
- * local here rather than shared because the two domains have no other
- * coupling.
- */
-/**
- * A stored JSON column read back as a plain number array, or null.
- *
- * The column is nullable on purpose — rows written before the raw cumulative
- * distance existed have nothing there, and those keep measuring the simplified
- * line exactly as they always did. Anything that is not a clean array of finite
- * numbers is treated as absent rather than half-trusted.
- */
-function numberArrayOrNull(value: unknown): number[] | null {
-  if (!Array.isArray(value)) return null;
-  return value.every((v) => typeof v === "number" && Number.isFinite(v))
-    ? (value as number[])
-    : null;
-}
-
-function isCoordinatePolyline(value: unknown): value is Array<[number, number]> {
-  if (!Array.isArray(value)) return false;
-  return value.every(
-    (point) =>
-      Array.isArray(point) &&
-      point.length === 2 &&
-      typeof point[0] === "number" &&
-      typeof point[1] === "number"
-  );
-}
-
-/**
  * The chord a straight leg's distance was computed from: the two endpoint
  * stops, in GeoJSON `[lon, lat]` order. Returns `null` if either stop lost
  * its coordinates (see `requireCoords` above for why that can only happen
@@ -385,6 +352,76 @@ export async function buildRouteGeometry(routeId: string): Promise<RouteGeometry
 
   return { type: "FeatureCollection", features };
 }
+
+/**
+ * GET /trips/:id/routes/:routeId/legs/track-coverage
+ *
+ * Per leg, which of the section's recordings covers it — or why none does.
+ * The editor offers the `track` source exactly where this says `covered`, and
+ * the verdict is `adoptSegment`'s own acceptance (`services/trackCoverage/
+ * legCoverage.ts`), so the offer and the 409 of `PUT …/legs/…` can no longer
+ * disagree. Until 2.7 the browser decided this with its own copy of the
+ * anchor tolerance after fetching every track's full geometry; one request
+ * here replaces that, and the second copy of the rule is gone.
+ *
+ * One segment after `/legs`, so it never collides with the two-segment
+ * `/legs/:fromStopId/:toStopId` paths above.
+ */
+router.get(
+  ["/trips/:id/routes/:routeId/legs/track-coverage", "/tours/:routeId/legs/track-coverage"],
+  authenticate,
+  requireWriteScope,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const routeId = await resolveRouteFromRequest(userId, req);
+      const [legs, tracks] = await Promise.all([
+        prisma.tripRouteLeg.findMany({
+          where: { routeId },
+          select: {
+            id: true,
+            fromStopId: true,
+            toStopId: true,
+            fromStop: { select: { lat: true, lon: true } },
+            toStop: { select: { lat: true, lon: true } },
+          },
+        }),
+        prisma.tripRouteTrack.findMany({
+          where: { routeId },
+          // Oldest first: the editor's choice among several covering
+          // recordings has always been the earliest one.
+          orderBy: { startedAt: "asc" },
+          select: { id: true, geometry: true, segmentStarts: true, cumulativeKm: true },
+        }),
+      ]);
+      const stored = tracks.map((t) => ({ id: t.id, track: readStoredTrack(t) }));
+
+      const coverage = legs.map((leg) => {
+        const { fromStop, toStop } = leg;
+        const coords =
+          fromStop.lat !== null &&
+          fromStop.lon !== null &&
+          toStop.lat !== null &&
+          toStop.lon !== null
+            ? {
+                from: { lat: fromStop.lat, lon: fromStop.lon },
+                to: { lat: toStop.lat, lon: toStop.lon },
+              }
+            : null;
+        return {
+          legId: leg.id,
+          fromStopId: leg.fromStopId,
+          toStopId: leg.toStopId,
+          verdict: coords === null ? null : tourLegVerdict(stored, coords.from, coords.to),
+        };
+      });
+
+      res.json({ coverage });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 /**
  * GET /trips/:id/routes/:routeId/geometry

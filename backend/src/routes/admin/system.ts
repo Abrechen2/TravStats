@@ -253,7 +253,7 @@ router.get(
 
           // Travel data — the point of the export.
           flights: true,
-          cruises: { include: { stops: true, legs: true } },
+          cruises: { include: { stops: true, legs: true, tracks: true } },
           trips: { include: { stops: true, journalEntries: true, photos: true } },
           // Tours and roadtrips from the user's side, not the trip's: one with
           // no trip is reachable from nowhere else, stations and recordings
