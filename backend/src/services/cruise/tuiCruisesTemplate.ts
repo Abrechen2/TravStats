@@ -37,7 +37,8 @@
  * codebase follows for derived values.
  */
 
-import type { ParsedCruise, ParsedCruiseStop, CruiseCabinType } from "../cruiseBookingParser";
+import type { ParsedCruise, ParsedCruiseStop } from "../cruiseBookingParser";
+import { cabinTypeFromCategory } from "./cabinType";
 
 /** What `parserTemplate` says on a cruise this module produced. */
 export const TUI_TEMPLATE_ID = "tui-cruises-confirmation";
@@ -80,20 +81,10 @@ function germanAmount(raw: string): number | null {
 /**
  * The cabin CATEGORY line sits directly above the deck line and names the
  * type in German prose: "Junior Suite Balkon (2er Belegung)",
- * "Himmel & Meer Suite", "Verandakabine", "Innenkabine".
- *
- * Suite wins over balcony where both words appear — a "Junior Suite Balkon" is
- * a suite with a balcony, and the type field records the category that was
- * paid for, which is the more specific one.
+ * "Himmel & Meer Suite", "Verandakabine", "Innenkabine". Read by the shared
+ * mapping in `./cabinType`, which the spreadsheet import uses too.
  */
-export function cabinTypeFromCategory(category: string): CruiseCabinType | undefined {
-  const text = category.toLowerCase();
-  if (/\bsuite\b/.test(text)) return "suite";
-  if (/balkon|veranda/.test(text)) return "balcony";
-  if (/außen|aussen|meerblick|ocean/.test(text)) return "oceanview";
-  if (/innen/.test(text)) return "inside";
-  return undefined;
-}
+export { cabinTypeFromCategory };
 
 /**
  * The itinerary is one run-on chain wrapped across lines:

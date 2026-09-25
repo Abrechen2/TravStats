@@ -114,12 +114,20 @@ describe("spreadsheet import — tours", () => {
     ).toMatchObject({ kind: "tour", tripId: null, mode: "bike", activity: "mtb" });
   });
 
-  it("refuses an activity TravStats does not know", async () => {
+  it("creates the tour without an activity TravStats does not know, and says so", async () => {
+    // The rule of every sheet (2026-09-25): an unknown enum cell is left
+    // empty and reported, the row is not refused over it.
     const [outcome] = await importSheets(
       [{ key: "tours", rows: [{ name: "X", activity: "skydive" }] }],
       ctx()
     );
-    expect(outcome.rows[0]).toMatchObject({ action: "error", message: "invalid_activity" });
+    expect(outcome.rows[0]).toMatchObject({
+      action: "create",
+      dropped: [{ field: "activity", value: "skydive" }],
+    });
+    expect(await prisma.tripRoute.findFirstOrThrow({ where: { userId, name: "X" } })).toMatchObject(
+      { activity: null, mode: "foot" }
+    );
   });
 
   it("creates a new tour from someone else's id and never touches theirs", async () => {

@@ -67,37 +67,47 @@ describe("spreadsheet import", () => {
 
   // ------------------------------------------------------------- ownership
 
-  it("refuses a row carrying another account's place id", async () => {
+  // Owner decision 2026-09-25: the workbook also MOVES entries between
+  // accounts, so a row carrying another account's id is a new entry for the
+  // caller. What must never change is the other half: the foreign record is
+  // not touched, not re-owned, and not reported.
+
+  it("creates the caller's own place for a row carrying another account's place id", async () => {
     const [result] = await run([{ id: victimPlaceId, name: "Übernommen", lat: "10", lon: "10" }]);
 
-    expect(result.errors).toBe(1);
+    expect(result.created).toBe(1);
     expect(result.updated).toBe(0);
-    expect(result.rows[0].message).toBe("unknown_id");
+    expect(result.rows[0].id).not.toBe(victimPlaceId);
 
     const victimPlace = await prisma.place.findUnique({ where: { id: victimPlaceId } });
     expect(victimPlace?.name).toBe("Fremder Ort");
     expect(victimPlace?.userId).toBe(victimId);
+    expect(await prisma.place.count({ where: { userId, name: "Übernommen" } })).toBe(1);
   });
 
-  it("refuses a row carrying another account's cruise id", async () => {
+  it("never updates another account's cruise, whatever its id row says", async () => {
     const [result] = await run(
       [{ id: victimCruiseId, cruiseLine: "Übernommen" }],
       false,
       "cruises"
     );
 
-    expect(result.errors).toBe(1);
+    expect(result.updated).toBe(0);
+    expect(result.created).toBe(1);
     const victimCruise = await prisma.cruise.findUnique({ where: { id: victimCruiseId } });
     expect(victimCruise?.cruiseLine).toBe("Fremde Reederei");
+    expect(victimCruise?.userId).toBe(victimId);
+    expect(await prisma.cruise.count({ where: { userId, cruiseLine: "Übernommen" } })).toBe(1);
   });
 
-  it("reports a foreign id exactly like an unknown one", async () => {
+  it("treats a foreign id exactly like an unknown one", async () => {
     // Telling them apart would confirm that the other record exists.
-    const [foreign] = await run([{ id: victimPlaceId, name: "A", lat: "1", lon: "1" }]);
-    const [absent] = await run([
-      { id: "00000000-0000-0000-0000-000000000000", name: "A", lat: "1", lon: "1" },
-    ]);
-    expect(foreign.rows[0].message).toBe(absent.rows[0].message);
+    const [foreign] = await run([{ id: victimPlaceId, name: "A", lat: "1", lon: "1" }], true);
+    const [absent] = await run(
+      [{ id: "00000000-0000-0000-0000-000000000000", name: "A", lat: "1", lon: "1" }],
+      true
+    );
+    expect(foreign.rows[0]).toEqual(absent.rows[0]);
   });
 
   // ------------------------------------------------------------ create/update
@@ -192,10 +202,11 @@ describe("spreadsheet import", () => {
     expect(result.errors).toBe(1);
   });
 
-  it("refuses a cruise row with no id instead of inventing an empty cruise", async () => {
+  it("creates a cruise for a row with no id (tester report, 2026-09-20)", async () => {
     const [result] = await run([{ id: "", cruiseLine: "AIDA" }], false, "cruises");
-    expect(result.errors).toBe(1);
-    expect(result.rows[0].message).toBe("cruise_needs_id");
+    expect(result.errors).toBe(0);
+    expect(result.created).toBe(1);
+    expect(await prisma.cruise.count({ where: { userId, cruiseLine: "AIDA" } })).toBe(1);
   });
 
   it("ignores a sheet key it does not know", async () => {

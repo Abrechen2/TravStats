@@ -167,6 +167,13 @@ export async function buildWorkbookBlob(sheets: AnySheetData[]): Promise<Blob> {
 export interface ParsedSheet {
   key: string;
   rows: Record<string, string>[];
+  /**
+   * The sheet row each record came from, parallel to `rows` — the number
+   * Excel shows. Not derivable from the index: the header row is found by its
+   * text (a hint line above it, maybe rows a user inserted) and blank lines are
+   * skipped, so the server's `index + 2` guess named the wrong row.
+   */
+  rowNumbers: number[];
 }
 
 function cellToString(value: unknown): string {
@@ -237,6 +244,7 @@ export async function parseWorkbook(
     });
 
     const rows: Record<string, string>[] = [];
+    const rowNumbers: number[] = [];
     ws.eachRow((row, rowNumber) => {
       if (rowNumber <= headerRowNumber) return;
       const record: Record<string, string> = {};
@@ -248,10 +256,12 @@ export async function parseWorkbook(
       });
       // A blank line in the middle of a sheet is formatting, not a record —
       // importing it would create an empty row.
-      if (hasAny) rows.push(record);
+      if (!hasAny) return;
+      rows.push(record);
+      rowNumbers.push(rowNumber);
     });
 
-    out.push({ key: spec.key, rows });
+    out.push({ key: spec.key, rows, rowNumbers });
   }
 
   return out;
