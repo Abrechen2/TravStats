@@ -72,5 +72,13 @@
     "gone": "Dieses Bonusprogramm gibt es nicht (mehr) — deshalb wird hier nichts angezeigt.",
     "unnamed": "Nur Einträge eines Bonusprogramms",
     "clear": "Filter entfernen"
+  },
+  "alliances": {
+    "label": "Ganze Allianz hinzufügen:",
+    "star": "Star Alliance",
+    "skyteam": "SkyTeam",
+    "oneworld": "oneworld",
+    "loadError": "Die Allianzen konnten nicht geladen werden — Airline-Codes lassen sich weiterhin einzeln eintragen.",
+    "tooMany": "Das wären mehr als {{max}} Airlines — ein Programm kann höchstens {{max}} abdecken."
   }
 }

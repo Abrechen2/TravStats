@@ -5,6 +5,7 @@ import { createLoyaltyMembership, updateLoyaltyMembership } from "../../lib/api/
 import { logger } from "../../lib/logger";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import type { LoyaltyMembership, LoyaltyMembershipInput } from "../../types/loyalty";
+import AlliancePicker from "./AlliancePicker";
 import ValueChips from "./ValueChips";
 
 /** The two domains whose cards this form edits; hotel cards keep their own editor. */
@@ -130,6 +131,7 @@ export default function LoyaltyCardForm({
         accept={acceptCoverage}
         options={coverageOptions}
       />
+      {domain === "flight" && <AlliancePicker values={coverage} onChange={setCoverage} />}
       <textarea
         aria-label={t("loyalty:field.notes")}
         placeholder={t("loyalty:field.notes")}
