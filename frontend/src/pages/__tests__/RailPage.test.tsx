@@ -29,6 +29,15 @@ vi.mock("../../components/rail/RailFormModal", () => ({
     <div data-testid="rail-form">{journey ? journey.id : "new"}</div>
   ),
 }));
+// A new ride starts at the import chooser (ticket or by hand); its own tests
+// live with the adapter. Here: that the page opens it, for rail.
+vi.mock("../../components/import/DomainImportPanel", () => ({
+  default: ({ open, adapter }: { open: boolean; adapter: { domain: string } }) =>
+    open ? <div data-testid="rail-import-panel">{adapter.domain}</div> : null,
+}));
+vi.mock("../../components/import/adapters/railAdapter", () => ({
+  useRailImportAdapter: () => ({ domain: "rail" }),
+}));
 vi.mock("../../components/Training/ConfirmModal", () => ({
   default: ({ isOpen, onConfirm }: { isOpen: boolean; onConfirm: () => void }) =>
     isOpen ? (
@@ -162,12 +171,14 @@ describe("RailPage", () => {
     expect(screen.getByTestId("rail-row-b").textContent).toContain("rail:delay/12");
   });
 
-  it("opens the form for a new and for an existing journey", async () => {
+  it("opens the ticket-or-by-hand chooser for a new journey", async () => {
     list.mockResolvedValue({ journeys: [journey()], total: 1 });
     renderPage();
     await screen.findByTestId("rail-row-j1");
+    expect(screen.queryByTestId("rail-import-panel")).toBeNull();
     fireEvent.click(screen.getByText("rail:add"));
-    expect(screen.getByTestId("rail-form")).toHaveTextContent("new");
+    expect(screen.getByTestId("rail-import-panel")).toHaveTextContent("rail");
+    expect(screen.queryByTestId("rail-form")).toBeNull();
   });
 
   it("deletes after confirmation and reloads the list", async () => {

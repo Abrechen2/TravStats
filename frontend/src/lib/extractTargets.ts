@@ -1,5 +1,6 @@
 import type { Flight, FlightInput } from "../types";
 import type { Cruise, CruiseInput } from "../types/cruise";
+import type { RailJourney, RailJourneyInput } from "../types/rail";
 import type { CurrencyCode } from "../shared/currencies";
 import type {
   CurrentValues,
@@ -82,6 +83,46 @@ export function cruiseExtractTarget(
           // The server only proposes ISO 4217 codes (`isCurrencyCode`).
           currency: (values.currency ?? undefined) as CurrencyCode | undefined,
         }) as CruiseInput
+      ),
+  };
+}
+
+/**
+ * A saved train ride. The seat and coach are the leg's; the train and the day
+ * pick that leg out of a connection's ticket (the server abstains on them when
+ * it cannot tell). The day is read on the departure station's clock.
+ */
+export function railExtractTarget(
+  journey: RailJourney,
+  save: (updates: Partial<RailJourneyInput>) => Promise<void>
+): ExtractTarget {
+  const train = [journey.trainCategory, journey.trainNumber].filter(Boolean).join(" ");
+  const day = departureDay({
+    departureTime: journey.departureTime,
+    depTimezone: journey.depTimezone,
+  });
+  return {
+    domain: "rail",
+    ...(train ? { trainNumber: train } : {}),
+    ...(day ? { departureDate: day } : {}),
+    current: {
+      price: journey.price,
+      currency: journey.currency,
+      bookingReference: journey.bookingReference,
+      travelClass: journey.travelClass,
+      coach: journey.coach,
+      seatNumber: journey.seat,
+    },
+    onApply: (values: Partial<ExtractedValues>) =>
+      save(
+        defined({
+          price: values.price,
+          currency: values.currency,
+          bookingReference: values.bookingReference,
+          travelClass: values.travelClass,
+          coach: values.coach,
+          seat: values.seatNumber,
+        }) as Partial<RailJourneyInput>
       ),
   };
 }

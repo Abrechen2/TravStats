@@ -4,6 +4,8 @@ import AppShell from "../components/ui/AppShell";
 import LogbookTabs from "../components/table/LogbookTabs";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { RailFormModal } from "../components/rail/RailFormModal";
+import DomainImportPanel from "../components/import/DomainImportPanel";
+import { useRailImportAdapter } from "../components/import/adapters/railAdapter";
 import { RailJourneyRow } from "../components/rail/RailJourneyRow";
 import { useTranslation } from "../hooks/useTranslation";
 import { railApi } from "../lib/api/rail";
@@ -33,6 +35,8 @@ export default function RailPage(): JSX.Element {
   const [editing, setEditing] = useState<Editing>(null);
   const [toDelete, setToDelete] = useState<RailJourney | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const railAdapter = useRailImportAdapter();
 
   useEffect(() => {
     const handle = setTimeout(() => setQuery(search.trim()), SEARCH_DEBOUNCE_MS);
@@ -92,7 +96,7 @@ export default function RailPage(): JSX.Element {
           <h1 className="t-screen-title">{t("rail:title")}</h1>
           <button
             type="button"
-            onClick={(): void => setEditing({ journey: null })}
+            onClick={(): void => setAdding(true)}
             className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base)"
           >
             {t("rail:add")}
@@ -143,6 +147,13 @@ export default function RailPage(): JSX.Element {
         )}
       </div>
 
+      {/* New rides start at the chooser: a ticket to read, or typing it in. */}
+      <DomainImportPanel
+        open={adding}
+        onClose={(): void => setAdding(false)}
+        onItemsCreated={(): Promise<void> => load(0)}
+        adapter={railAdapter}
+      />
       {editing && (
         <RailFormModal
           journey={editing.journey}

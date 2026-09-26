@@ -291,3 +291,53 @@ export interface RailEntrySuggestions {
   coaches: string[];
   seats: string[];
 }
+
+/** A station as a parsed ticket names it — tied to the catalogue, or not. */
+export interface RailImportStation {
+  /** The catalogue's name when resolved, else the printed one. */
+  name: string;
+  /** The name exactly as the ticket prints it. */
+  printedName: string;
+  stationId: number | null;
+  code: string | null;
+  lat: number | null;
+  lon: number | null;
+  country: string | null;
+  timezone: string | null;
+  /** False: no unambiguous catalogue match — the review asks the user to pick one. */
+  resolved: boolean;
+}
+
+/** One ride out of a parsed ticket, as the review shows it. */
+export interface RailImportLeg {
+  depStationName: string;
+  arrStationName: string;
+  /** `YYYY-MM-DDTHH:mm` on the station's clock, as printed. */
+  departureLocal: string;
+  arrivalLocal: string | null;
+  trainCategory: string | null;
+  trainNumber: string | null;
+  coach: string | null;
+  seat: string | null;
+  direction: "outbound" | "return" | null;
+  departureStation: RailImportStation;
+  arrivalStation: RailImportStation;
+  /** A journey the user already logged with this reference and departure. */
+  duplicateOf: string | null;
+}
+
+export interface RailImportBooking {
+  bookingReference: string | null;
+  travelClass: RailTravelClass | null;
+  tariff: string | null;
+  /** The total the document labels as such. */
+  price: number | null;
+  currency: string | null;
+  operator: string | null;
+  source: string;
+  legs: RailImportLeg[];
+}
+
+/** Why a rail parse found nothing — a stable code, worded by the client. */
+export type RailParseFallbackCode =
+  "noItinerary" | "llmUnreachable" | "llmFailed" | "llmFoundNothing" | "demoNoLlm";

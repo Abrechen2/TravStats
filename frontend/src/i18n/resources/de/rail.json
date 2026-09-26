@@ -244,5 +244,34 @@
       "stationOffLine": "ein Bahnhof liegt nicht auf der Strecke dieses Zuges",
       "untracedShape": "Transitous kennt für diesen Zug nur gerade Linien zwischen den Halten"
     }
+  },
+  "import": {
+    "panelTitle": "Zugfahrt hinzufügen",
+    "panelHint": "Hast du eine Buchungsbestätigung oder ein Ticket? Zieh die Mail (.eml, .msg) oder das PDF hierher — die Fahrten werden gelesen und du bestätigst jede einzeln.",
+    "title": "Gelesene Zugfahrten prüfen",
+    "save_one": "{{count}} Fahrt speichern",
+    "save_other": "{{count}} Fahrten speichern",
+    "tariff": "Tarif",
+    "total": "Gesamtpreis",
+    "totalNotWritten": "Eine Fahrt dieser Buchung ist schon erfasst — der Gesamtpreis wird nicht noch einmal gespeichert.",
+    "takeLeg": "Fahrt {{from}} → {{to}} übernehmen",
+    "direction": {
+      "outbound": "Hinfahrt",
+      "return": "Rückfahrt"
+    },
+    "noTrain": "keine Zugnummer auf dem Ticket",
+    "duplicate": "Schon im Fahrtenbuch (gleiche Buchung, gleiche Abfahrt) — nicht angehakt.",
+    "legSaved": "Gespeichert.",
+    "unresolved": "„{{name}}“ ist im Bahnhofsverzeichnis nicht eindeutig. Wähl den Bahnhof aus:",
+    "pickStations": "Wähl für jede angehakte Fahrt beide Bahnhöfe — ohne Bahnhof ist die Uhrzeit keiner Zeitzone zuzuordnen.",
+    "saved_one": "{{count}} Zugfahrt aus dem Ticket gespeichert.",
+    "saved_other": "{{count}} Zugfahrten aus dem Ticket gespeichert.",
+    "empty": {
+      "noItinerary": "Diese Bahn-Mail nennt die Buchung {{reference}}, aber keinen Fahrtverlauf. Der steht im angehängten Ticket-PDF — lade das PDF hoch oder die Mail mit Anhang (.eml/.msg).",
+      "llmUnreachable": "In diesem Dokument wurde keine Zugfahrt erkannt: Keine Vorlage kennt das Layout, und der KI-Parser ist nicht erreichbar. Trag die Fahrt von Hand ein.",
+      "llmFailed": "Der KI-Parser hat auf dieses Dokument keine verwertbare Antwort gegeben. Trag die Fahrt von Hand ein.",
+      "demoNoLlm": "Keine Vorlage kennt dieses Ticket, und im Demo-Konto steht der KI-Parser nicht zur Verfügung.",
+      "nothingFound": "In diesem Dokument wurde keine Zugfahrt gefunden. Trag die Fahrt von Hand ein."
+    }
   }
 }

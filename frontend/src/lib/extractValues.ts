@@ -12,10 +12,13 @@ export const EXTRACT_FIELDS = [
   "bookingReference",
   "seatNumber",
   "seatClass",
+  "travelClass",
+  "coach",
 ] as const;
 export type ExtractField = (typeof EXTRACT_FIELDS)[number];
 
-export type ExtractDomain = "flight" | "cruise" | "lodging";
+export type ExtractDomain = "flight" | "cruise" | "lodging" | "rail";
+export type ExtractedRailClass = "first" | "second" | "sleeper" | "couchette";
 export type ExtractedSeatClass = "economy" | "premium_economy" | "business" | "first";
 
 export interface ExtractedValues {
@@ -24,11 +27,17 @@ export interface ExtractedValues {
   bookingReference: string | null;
   seatNumber: string | null;
   seatClass: ExtractedSeatClass | null;
+  /** Rail only — absent in the other domains' answers. */
+  travelClass?: ExtractedRailClass | null;
+  /** Rail only — absent in the other domains' answers. */
+  coach?: string | null;
 }
 
 export interface ExtractValuesRequest {
   domain: ExtractDomain;
   flightNumber?: string;
+  /** Rail: the entry's train, to pick its leg out of a connection. */
+  trainNumber?: string;
   departureDate?: string;
 }
 
@@ -46,6 +55,7 @@ export type CurrentValues = Partial<Record<ExtractField, string | number | null 
 export interface ExtractTarget {
   domain: ExtractDomain;
   flightNumber?: string;
+  trainNumber?: string;
   departureDate?: string;
   current: CurrentValues;
   onApply: (values: Partial<ExtractedValues>) => void | Promise<void>;
@@ -62,7 +72,7 @@ export function offeredFields(values: ExtractedValues, current: CurrentValues): 
   return EXTRACT_FIELDS.filter((field) => {
     if (!(field in current)) return false;
     const found = values[field];
-    if (found === null) return false;
+    if (found === null || found === undefined) return false;
     const held = current[field];
     if (isEmpty(held)) return true;
     // A form holds its amount as typed text ("412.80"), a stored entry as a number.
