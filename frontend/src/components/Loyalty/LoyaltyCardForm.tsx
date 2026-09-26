@@ -7,9 +7,9 @@ import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import type { LoyaltyMembership, LoyaltyMembershipInput } from "../../types/loyalty";
 import AlliancePicker from "./AlliancePicker";
 import ValueChips from "./ValueChips";
+import { coverageField, coverageOf, type CardDomain } from "./cardCoverage";
 
-/** The two domains whose cards this form edits; hotel cards keep their own editor. */
-export type CardDomain = "flight" | "cruise";
+export type { CardDomain } from "./cardCoverage";
 
 /** What a new card starts with — empty, or a suggestion taken over from the flights. */
 export interface CardPrefill {
@@ -32,9 +32,10 @@ interface Props {
 const IATA_AIRLINE = /^[A-Z0-9]{2}$/;
 
 /**
- * Create or edit a frequent-flyer or cruise-line card. One form for both: the
- * card is the same thing, and only what it covers differs — IATA codes for an
- * airline programme, line names for a cruise club.
+ * Create or edit a frequent-flyer, cruise-line or rail card. One form for all:
+ * the card is the same thing, and only what it covers differs — IATA codes for
+ * an airline programme, line names for a cruise club, operators for a rail
+ * programme.
  */
 export default function LoyaltyCardForm({
   domain,
@@ -52,14 +53,14 @@ export default function LoyaltyCardForm({
   const [tier, setTier] = useState(card?.tier ?? "");
   const [notes, setNotes] = useState(card?.notes ?? "");
   const [coverage, setCoverage] = useState<string[]>(
-    card ? (domain === "flight" ? card.airlineCodes : card.cruiseLines) : (prefill?.coverage ?? [])
+    card ? coverageOf(domain, card) : (prefill?.coverage ?? [])
   );
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
   const acceptCoverage = (raw: string): string | null => {
     const value = raw.trim();
-    if (domain === "cruise") return value || null;
+    if (domain !== "flight") return value || null;
     const code = value.toUpperCase();
     return IATA_AIRLINE.test(code) ? code : null;
   };
@@ -71,7 +72,7 @@ export default function LoyaltyCardForm({
       membershipNumber: membershipNumber.trim() || null,
       tier: tier.trim() || null,
       notes: notes.trim() || null,
-      ...(domain === "flight" ? { airlineCodes: coverage } : { cruiseLines: coverage }),
+      [coverageField(domain)]: coverage,
     };
     setSaving(true);
     setError(null);
@@ -121,10 +122,8 @@ export default function LoyaltyCardForm({
       </div>
       <ValueChips
         testId={`loyalty-coverage-${domain}`}
-        label={t(domain === "flight" ? "loyalty:field.airlineCodes" : "loyalty:field.cruiseLines")}
-        hint={t(
-          domain === "flight" ? "loyalty:field.airlineCodesHint" : "loyalty:field.cruiseLinesHint"
-        )}
+        label={t(`loyalty:field.${coverageField(domain)}`)}
+        hint={t(`loyalty:field.${coverageField(domain)}Hint`)}
         invalidMessage={domain === "flight" ? t("loyalty:field.invalidCode") : undefined}
         values={coverage}
         onChange={setCoverage}

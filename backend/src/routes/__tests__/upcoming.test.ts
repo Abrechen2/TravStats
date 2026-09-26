@@ -4,6 +4,10 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { clearAirportCache } from "../../services/airportCache";
+import {
+  getInstanceSettings,
+  updateInstanceSettings,
+} from "../../services/instanceSettingsService";
 
 /**
  * The tab strip's "next up" line. What matters here is not that each query
@@ -473,6 +477,18 @@ describe("GET /api/v1/upcoming", () => {
   });
 
   describe("rail", () => {
+    // Rail sits behind the instance's beta switch (`services/domainVisibility.ts`).
+    // Every case below states the switch it needs rather than inheriting
+    // whatever the last suite left in `admin_settings`.
+    let betaBefore: boolean;
+    beforeAll(async () => {
+      betaBefore = (await getInstanceSettings()).betaFeaturesEnabled;
+      await updateInstanceSettings({ betaFeaturesEnabled: true });
+    });
+    afterAll(async () => {
+      await updateInstanceSettings({ betaFeaturesEnabled: betaBefore });
+    });
+
     const ride = (dep: Date, status = "scheduled") => ({
       userId,
       depStationName: "Frankfurt (Main) Hbf",
@@ -509,6 +525,27 @@ describe("GET /api/v1/upcoming", () => {
       expect(res.body.data.entries.some((e: { domain: string }) => e.domain === "rail")).toBe(
         false
       );
+    });
+
+    /**
+     * forgejo#132 item 18: the route used to leave the beta check to the
+     * client, so a client without that check — the Companion before it learnt
+     * it — showed the next train on an instance whose rail domain is off. The
+     * user switched rail on; the INSTANCE hides it, and the strip must agree.
+     */
+    it("says nothing about rail while the instance's beta switch is off", async () => {
+      await updateInstanceSettings({ betaFeaturesEnabled: false });
+      try {
+        await enableDomains(["flight", "rail"]);
+        await prisma.railJourney.create({ data: ride(inDays(2)) });
+        const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+        expect(res.status).toBe(200);
+        expect(res.body.data.entries.map((e: { domain: string }) => e.domain)).not.toContain(
+          "rail"
+        );
+      } finally {
+        await updateInstanceSettings({ betaFeaturesEnabled: true });
+      }
     });
   });
 });

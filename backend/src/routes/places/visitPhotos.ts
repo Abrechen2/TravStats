@@ -27,7 +27,7 @@ import { createImmichClient } from "../../services/immich/immichClient";
 import { getImmichConnection } from "../../services/immich/immichResolver";
 import { ImmichError } from "../../services/immich/types";
 import { linkVisitPhotosToImmich } from "../../services/places/visitPhotoImmichLink";
-import { toPhotoDto } from "./visitPhotoDto";
+import { toPhotoDto, VISIT_PHOTO_INCLUDE } from "./visitPhotoDto";
 
 /**
  * Photo proof for a place visit.
@@ -82,6 +82,7 @@ router.get(
       const photos = await prisma.placeVisitPhoto.findMany({
         where: { placeVisitId: req.params.visitId },
         orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }],
+        include: VISIT_PHOTO_INCLUDE,
       });
       res.json({ success: true, data: photos.map(toPhotoDto) });
     } catch (error) {
@@ -328,6 +329,7 @@ router.patch(
           ...(input.caption !== undefined && { caption: input.caption }),
           ...(input.sortIdx !== undefined && { sortIdx: input.sortIdx }),
         },
+        include: VISIT_PHOTO_INCLUDE,
       });
       res.json({ success: true, data: toPhotoDto(photo) });
     } catch (error) {

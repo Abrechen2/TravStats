@@ -47,6 +47,7 @@ import {
 import { resolveTrip } from "./trips/resolveTrip";
 import { refusesCoverImage } from "./trips/refusesCoverImage";
 import { toPhotoDto } from "./trips/photoDto";
+import { provenanceForWrite } from "../services/tripSummaryProvenance";
 
 // Re-exported for the Immich trip routers, which import it from here.
 export { resolveTrip };
@@ -496,6 +497,7 @@ router.post(
             companions: resolvedCompanions.map((c) => c.displayName),
             notes: body.notes,
             summary: body.summary,
+            ...provenanceForWrite(body.summary, null),
             originLabel: body.originLabel,
             destinationLabel: body.destinationLabel,
             coverImageUrl: body.coverImageUrl,
@@ -599,6 +601,7 @@ router.patch(
             }),
             ...(body.notes !== undefined && { notes: body.notes }),
             ...(body.summary !== undefined && { summary: body.summary }),
+            ...provenanceForWrite(body.summary, existing.summary),
             ...(body.originLabel !== undefined && {
               originLabel: body.originLabel,
             }),

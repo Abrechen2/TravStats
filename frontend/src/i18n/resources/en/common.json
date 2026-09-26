@@ -313,5 +313,11 @@
     "usage_one": "used once",
     "usage_other": "used {{count}} times"
   },
-  "suggestionChip": "Use {{field}} {{value}}"
+  "suggestionChip": "Use {{field}} {{value}}",
+  "demoBetaNotice": {
+    "title": "Beta features are switched on",
+    "body": "This demo runs with the beta features switched on. What you see here may still change – your feedback is welcome.",
+    "listTitle": "These include:",
+    "dismiss": "Got it"
+  }
 }

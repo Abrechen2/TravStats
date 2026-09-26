@@ -26,6 +26,7 @@ import photoJourneyRoutes from "./photoJourneys";
 import tripSuggestionRoutes from "./tripSuggestions";
 import flightLookupRoutes from "./flightLookup";
 import statsRoutes from "./stats";
+import statsNetworkRouteRoutes from "./stats/networkRoute";
 import airportRoutes from "./airports";
 import airlineLogoRoutes from "./airlineLogos";
 import countryFlagRoutes from "./countryFlags";
@@ -165,6 +166,13 @@ export const apiMounts: ApiMount[] = [
   // The cross-domain trip-suggestion engine's inbox tab (owner, 2026-09-26).
   { id: "tripSuggestions", base: "/api/v1/trip-suggestions", router: tripSuggestionRoutes },
   { id: "flightLookup", base: "/api/v1/flight-lookup", router: flightLookupRoutes },
+  // One arc of the globe (forgejo#132 item 9). Its own base because
+  // `routes/stats.ts` may not grow; it brings that router's middlewares along.
+  {
+    id: "stats.networkRoute",
+    base: "/api/v1/stats/network/route",
+    router: statsNetworkRouteRoutes,
+  },
   { id: "stats", base: "/api/v1/stats", router: statsRoutes },
   { id: "airports", base: "/api/v1/airports", router: airportRoutes },
   { id: "airlineLogos", base: "/api/v1/airline-logos", router: airlineLogoRoutes },

@@ -10,6 +10,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { prismaColumns } from "../prismaColumns";
 import { errorContent } from "./shared";
 import { jobStartedSchema } from "./jobs";
 
@@ -27,9 +28,40 @@ registry.registerPath({
     "`place` (photos within 2 km of an own place, no visit that day; `placeId`, `distanceKm`), " +
     "`trip` (an own, flown airport other than home within 300 km; `airportIata`, `distanceKm`, `spreadKm`) " +
     "or `stay` (nights away with no dated stay, named by an own place nearby; `placeId`, `nights`). " +
-    "Suggestions only: nothing is recorded until the client creates the entry and PATCHes the row.",
+    "Suggestions only: nothing is recorded until the client creates the entry and PATCHes the row. " +
+    "Each row is named from what is stored (no lookup per request): `placeName` is the own place " +
+    "a finding points at, `label` that name or else the city, then the country, the scan's reverse " +
+    "lookup stored — null when nothing is known.",
   tags: miscTag,
-  responses: { 200: { description: "Photo journeys" } },
+  request: {
+    query: z.object({ status: z.enum(["pending", "accepted", "dismissed"]).optional() }),
+  },
+  responses: {
+    200: {
+      description: "Photo journeys, newest first",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(
+              z.object({
+                ...prismaColumns("PhotoJourney"),
+                placeName: z
+                  .string()
+                  .nullable()
+                  .describe("The name of the own place a place/stay finding points at"),
+                label: z
+                  .string()
+                  .nullable()
+                  .describe("What to call the finding: placeName, else city, else countryName"),
+              })
+            ),
+          }),
+        },
+      },
+    },
+    400: badInput,
+  },
 });
 
 const nightlyScanSettings = z.object({

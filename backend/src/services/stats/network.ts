@@ -152,6 +152,42 @@ function endpointOf(
 }
 
 /**
+ * The unordered pair a leg belongs to (rule 2), or null when it is no leg.
+ *
+ * A leg needs two identified, DIFFERENT ends. A flight that returns to its
+ * departure airport (a scenic loop, a diversion back) is a real flight and
+ * counts as visits, but it is not an arc — drawing it would be a zero-length
+ * line, and ranking it as a "route" would be a pair with one member.
+ */
+function pairOfEndpoints(
+  dep: Endpoint | null,
+  arr: Endpoint | null
+): { a: string; b: string } | null {
+  if (!dep || !arr || dep.code === arr.code) return null;
+  return dep.code < arr.code ? { a: dep.code, b: arr.code } : { a: arr.code, b: dep.code };
+}
+
+/** The columns `flightRoutePair` reads. */
+export type RoutePairFlight = Omit<NetworkFlight, "status">;
+
+/**
+ * The route a flight is filed under — the SAME pair `buildFlightNetwork` counts
+ * it in, codes folded through the catalogue the same way. Exported for the
+ * per-route detail (`./networkRoute.ts`), so a route's sheet lists exactly the
+ * flights its arc counted: a second pairing rule would let the sheet say "3
+ * flights" under an arc labelled 4.
+ */
+export function flightRoutePair(
+  flight: RoutePairFlight,
+  catalogue: AirportCatalogue = new Map()
+): { a: string; b: string } | null {
+  return pairOfEndpoints(
+    endpointOf(flight.depIata, flight.depIcao, flight.depLat, flight.depLon, catalogue),
+    endpointOf(flight.arrIata, flight.arrIcao, flight.arrLat, flight.arrLon, catalogue)
+  );
+}
+
+/**
  * Build the whole network. DELIBERATELY UNBOUNDED — see the endpoint comment in
  * `routes/stats.ts`.
  *
@@ -201,14 +237,9 @@ export function buildFlightNetwork(
     if (dep) touch(dep);
     if (arr) touch(arr);
 
-    // A leg needs two identified, DIFFERENT ends. A flight that returns to its
-    // departure airport (a scenic loop, a diversion back) is a real flight and
-    // counts as visits above, but it is not an arc — drawing it would be a
-    // zero-length line, and ranking it as a "route" would be a pair with one
-    // member.
-    if (!dep || !arr || dep.code === arr.code) continue;
-
-    const [a, b] = dep.code < arr.code ? [dep.code, arr.code] : [arr.code, dep.code];
+    const pair = pairOfEndpoints(dep, arr);
+    if (!pair) continue;
+    const { a, b } = pair;
     const key = `${a} ${b}`;
     const existing = pairs.get(key);
     pairs.set(key, { a, b, count: (existing?.count ?? 0) + 1 });

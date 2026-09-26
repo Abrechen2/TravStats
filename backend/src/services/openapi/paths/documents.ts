@@ -14,6 +14,8 @@ import {
   documentLimitsSchema,
   documentUploadFieldsObject,
   extractValuesBodySchema,
+  extractedValuesSchema,
+  storedValuesQuerySchema,
   unfiledDocumentDtoSchema,
   unfiledDocumentsResponseSchema,
   updateDocumentSchema,
@@ -188,23 +190,7 @@ registry.registerPath({
   responses: { 204: { description: "Deleted" }, 404: notFound },
 });
 
-const extractedValues = z.object({
-  price: z.number().nullable(),
-  currency: z.string().nullable().describe("ISO 4217"),
-  bookingReference: z.string().nullable(),
-  seatNumber: z.string().nullable().describe("Flights and rail: the seat of the entry's leg"),
-  seatClass: z.enum(["economy", "premium_economy", "business", "first"]).nullable(),
-  travelClass: z
-    .enum(["first", "second", "sleeper", "couchette"])
-    .nullable()
-    .optional()
-    .describe("Rail only, absent otherwise: the class the ticket states"),
-  coach: z
-    .string()
-    .nullable()
-    .optional()
-    .describe("Rail only, absent otherwise: the coach of the entry's leg"),
-});
+const extractedValues = extractedValuesSchema;
 
 registry.registerPath({
   method: "post",
@@ -243,5 +229,37 @@ registry.registerPath({
     404: notFound,
     415: { description: "A format the text parsers cannot read", content: errorContent },
     429: { description: "Parse budget spent", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/documents/{id}/stored-values",
+  summary: "The values of the reading already stored on a document — no parser runs",
+  description:
+    "What POST /documents/{id}/extract-values would answer, read from the reading a parse " +
+    "stored on the document instead of parsing again: no parse budget is spent and a read " +
+    "token may ask (forgejo#132 item 3). The same leg hints pick the entry's leg. `values` is " +
+    "null with `reason` `notParsed` (no stored reading), `unreadable` (a stored body of an " +
+    "unknown shape — logged on the server) or `nothingFound`; `domain` is the one the stored " +
+    "reading was parsed as, null without a usable reading.",
+  tags,
+  request: { params: idParams, query: storedValuesQuerySchema },
+  responses: {
+    200: {
+      description: "The stored reading's values",
+      content: json(
+        envelope(
+          z.object({
+            domain: z.enum(["flight", "cruise", "lodging", "rail"]).nullable(),
+            parserUsed: z.string().nullable(),
+            values: extractedValues.nullable(),
+            reason: z.enum(["notParsed", "unreadable", "nothingFound"]).nullable(),
+          })
+        )
+      ),
+    },
+    400: badInput,
+    404: notFound,
   },
 });

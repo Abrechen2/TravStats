@@ -28,6 +28,7 @@ const card: LoyaltyMembership = {
   notes: null,
   airlineCodes: ["LH"],
   cruiseLines: [],
+  railOperators: [],
   chainIds: [],
   chains: [],
   lodgingIds: [],

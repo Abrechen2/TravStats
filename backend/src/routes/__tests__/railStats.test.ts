@@ -140,6 +140,9 @@ describe("rail statistics", () => {
     // 0 is on time; 12 falls in the (5, 15] bucket.
     expect(s.delays.buckets[0]).toEqual({ upToMinutes: 0, count: 1 });
     expect(s.delays.buckets[2]).toEqual({ upToMinutes: 15, count: 1 });
+    // forgejo#132 item 15 — "Ø Verspätung" over the RECORDED rides only:
+    // (0 + 12) / 2. The ride with no delay on file is not an on-time ride.
+    expect(s.delays.averageMinutes).toBe(6);
   });
 
   it("ranks operators, categories and stations, and lists both stations' countries", async () => {
@@ -214,5 +217,13 @@ describe("rail statistics", () => {
     });
     const s = computeRailStats([ride("route", 100), ride("roadtrip", 243.5)]);
     expect(s.distance).toMatchObject({ tracedKm: 100, roadtripKm: 243.5, totalKm: 343.5 });
+
+    // Neither ride carries a delay: the average abstains. A 0 here would read
+    // as "always on time" for a question nobody answered.
+    expect(s.delays).toMatchObject({ recordedJourneys: 0, averageMinutes: null });
+
+    // A recorded 0 IS on time, and averages to 0 — kept apart from the above.
+    const onTime = computeRailStats([{ ...ride("route", 100), delayMinutes: 0 }]);
+    expect(onTime.delays).toMatchObject({ recordedJourneys: 1, averageMinutes: 0 });
   });
 });

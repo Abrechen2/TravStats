@@ -25,6 +25,7 @@ import "./companions";
 import "./airports";
 import "./stats";
 import "./statsPage";
+import "./statsNetworkRoute";
 import "./parsing";
 import "./training";
 import "./tokens";

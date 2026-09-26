@@ -18,6 +18,7 @@ import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useTelemetryConsentStep } from "./hooks/useTelemetryConsentStep";
 import { useSessionValidation } from "./hooks/useSessionValidation";
 import WhatsNewModal from "./components/WhatsNewModal";
+import DemoBetaNotice from "./components/DemoBetaNotice";
 import UsageStatsConsentDialog from "./components/UsageStatsConsentDialog";
 
 // Lazy load pages for code splitting
@@ -220,6 +221,11 @@ function AppContent() {
         <AirportSeedingModal isOpen={showSeedingModal} onClose={handleCloseSeedingModal} />
         <WhatsNewModal isOpen={shouldShow} entry={entry} onClose={() => void dismiss()} />
         <UsageStatsConsentDialog isOpen={consentStep.shouldShow} onClose={consentStep.close} />
+        <DemoBetaNotice
+          sessionConfirmed={sessionConfirmed}
+          whatsNewChecked={whatsNewChecked}
+          whatsNewOpen={shouldShow}
+        />
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>

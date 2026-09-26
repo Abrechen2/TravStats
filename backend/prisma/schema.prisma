@@ -103,6 +103,7 @@ model User {
   lodgingChains          LodgingChain[]
   places                 Place[]
   placeVisits            PlaceVisit[]
+  visitPhotoRefusals     VisitPhotoRefusal[]
   placeLists             PlaceList[]
   importBatches          ImportBatch[]
   companions             Companion[]
@@ -1424,6 +1425,16 @@ model Trip {
   companions       String[]  @default([])
   notes            String? // markdown long-form
   summary          String? // optional, may be LLM-generated later
+  /// Who wrote `summary` (forgejo#132 item 8): "llm" (POST /trips/:id/summarize)
+  /// or "user" (typed on create or PATCH). NULL = unknown — every summary
+  /// written before the column existed, which may have been either, and a
+  /// trip without a summary. Never back-filled as "user".
+  summarySource    String?   @map("summary_source")
+  /// When the model wrote the current summary; NULL unless `summarySource` is "llm".
+  summaryGeneratedAt DateTime? @map("summary_generated_at")
+  /// How many entries (flights, cruises, stays, place visits, stops, journal
+  /// entries) the model was given; NULL unless `summarySource` is "llm".
+  summaryEntryCount Int?     @map("summary_entry_count")
   originLabel      String?   @map("origin_label")
   destinationLabel String?   @map("destination_label")
   coverImageUrl    String?   @map("cover_image_url")
@@ -2323,7 +2334,9 @@ model LodgingChain {
 /// lodging links chains and hotels by id (the two link tables below), a
 /// flight card lists IATA codes (a code is the airline's identity —
 /// `shared/airlineNormalize.ts`), a cruise card lists cruise-line names (there
-/// is no cruise-line catalogue; a cruise names its line as text). A column for
+/// is no cruise-line catalogue; a cruise names its line as text), a rail card
+/// lists operators as the rides name them (forgejo#132 item 23 — BahnBonus and
+/// the like; no operator catalogue exists either). A column for
 /// another domain's coverage stays empty, and the write path refuses to fill
 /// it (`schemas/loyalty.ts`).
 ///
@@ -2344,6 +2357,7 @@ model LoyaltyMembership {
   notes            String?
   airlineCodes     String[] @default([]) @map("airline_codes")
   cruiseLines      String[] @default([]) @map("cruise_lines")
+  railOperators    String[] @default([]) @map("rail_operators")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
@@ -2532,6 +2546,7 @@ model PlaceVisit {
   trip  Trip? @relation(fields: [tripId], references: [id], onDelete: SetNull)
 
   photos PlaceVisitPhoto[]
+  photoRefusals VisitPhotoRefusal[]
 
   documents Document[]
 
@@ -2631,6 +2646,29 @@ model PlaceVisitPhoto {
   @@index([placeVisitId])
   @@index([tripPhotoId])
   @@map("place_visit_photos")
+}
+
+/// A photo suggestion the user refused for one visit ("Nicht diese",
+/// forgejo#132 item 13), so the suggestion list stops offering it. Per visit:
+/// the same picture may well belong to another visit. `suggestionId` is a trip
+/// photo id for kind "trip" and an Immich asset id for kind "library" — no
+/// foreign key, because a library asset lives outside this database; a trip
+/// photo deleted later leaves a refusal that simply matches nothing.
+model VisitPhotoRefusal {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  placeVisitId String   @map("place_visit_id")
+  /// "trip" | "library"
+  kind         String
+  suggestionId String   @map("suggestion_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visit PlaceVisit @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
+
+  @@unique([placeVisitId, kind, suggestionId])
+  @@index([userId])
+  @@map("visit_photo_refusals")
 }
 
 /// A user's own grouping of places — "Maccis weltweit", "Rom 2024".
@@ -3051,6 +3089,10 @@ model Document {
   sizeBytes    Int     @map("size_bytes")
   /// SHA-256 of the stored bytes, hex, computed by the server.
   sha256       String
+  /// Pages of a PDF, counted from its bytes when it was kept (forgejo#132
+  /// item 4). NULL when unknown — every non-PDF, a PDF whose page tree could
+  /// not be read, and every row kept before the column existed. Never 0.
+  pageCount    Int?    @map("page_count")
 
   /// The FILE: image | pdf | eml | emailText | pkpass.
   format        String

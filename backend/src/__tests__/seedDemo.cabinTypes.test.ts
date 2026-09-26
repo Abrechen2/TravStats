@@ -1,6 +1,6 @@
 import { prisma } from "../db";
 import { createCruiseSchema } from "../schemas/cruise";
-import { CRUISE_TEMPLATES } from "../seedDemoAccount";
+import { CRUISE_TEMPLATES } from "../seedDemo/coverageCruises";
 
 /**
  * The demo seed writes only cabin types the cruise schema accepts (board item

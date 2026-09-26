@@ -55,6 +55,13 @@ const railStats = registry.register(
         buckets: z.array(
           z.object({ upToMinutes: z.number().int().nullable(), count: z.number().int() })
         ),
+        averageMinutes: z
+          .number()
+          .nullable()
+          .describe(
+            "Mean delay over the recorded rides, one decimal, early arrivals negative. " +
+              "Null when no ride carries a delay — never 0, which would claim on time."
+          ),
       }),
       byYear: z.array(
         z.object({ year: z.number().int(), journeys: z.number().int(), km: z.number() })

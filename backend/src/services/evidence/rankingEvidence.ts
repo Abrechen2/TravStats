@@ -10,6 +10,7 @@ import { airlineGroupKey, normalizeAirline } from "../../shared/airlineNormalize
 import { airlineResolvers } from "../../utils/airlineNormalize";
 import { flightDateOf, hydrateFlightSumEntries } from "./entryMappers";
 import { getCachedAirports } from "../../services/airportCache";
+import { resolvePassportCountryEntries } from "./metricEvidencePassport";
 
 /**
  * `EvidenceResolver` for `kind: "ranking"`. `airline` (Task 5,
@@ -46,6 +47,10 @@ export async function resolveRankingEvidence(
       return resolveCountryRankingEvidence(userId, parsed.value, scope, page);
     case "aircraftType":
       return resolveAircraftTypeRankingEvidence(userId, parsed.value, scope, page);
+    case "passportCountry":
+      // The passport's country page, by ISO code (forgejo#132 item 6) — see
+      // `metricEvidencePassport.ts` for why this is not the `country` case.
+      return resolvePassportCountryEntries(userId, parsed.value, scope, page);
     case "continent":
       // Deliberate abstention, not a gap (task-6-brief.md, "STOP AND
       // REPORT"; task-6-report.md has the finding in full). No

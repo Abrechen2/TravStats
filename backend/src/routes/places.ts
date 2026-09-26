@@ -14,7 +14,7 @@ import { recheckAchievements } from "../utils/achievements";
 import { classifyVisit } from "../shared/placeCounting";
 import { deletePlacePhotoFile } from "../middleware/upload";
 import logger from "../utils/logger";
-import { toPhotoDto } from "./places/visitPhotoDto";
+import { toPhotoDto, VISIT_PHOTO_INCLUDE } from "./places/visitPhotoDto";
 import {
   createPlaceSchema,
   updatePlaceSchema,
@@ -49,7 +49,11 @@ export type PlaceRow = Prisma.PlaceGetPayload<{ include: typeof PLACE_INCLUDE }>
  * and a gallery per row is a page of joins nobody asked for.
  */
 const PLACE_DETAIL_INCLUDE = {
-  visits: { include: { photos: { orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }] } } },
+  visits: {
+    include: {
+      photos: { orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }], include: VISIT_PHOTO_INCLUDE },
+    },
+  },
 } satisfies Prisma.PlaceInclude;
 
 interface PlaceAggregates {
