@@ -78,6 +78,7 @@
     "setup.ts",
     "stats.ts",
     "stats/aircraft.ts",
+    "stats/networkRoute.ts",
     "stats/page.ts",
     "suggestions.ts",
     "tags.ts",
