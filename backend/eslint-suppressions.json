@@ -89,11 +89,6 @@
       "count": 2
     }
   },
-  "src/services/statusSweep.ts": {
-    "time/no-ambient-now": {
-      "count": 1
-    }
-  },
   "src/shared/flightChronology.ts": {
     "time/no-ambient-now": {
       "count": 1
