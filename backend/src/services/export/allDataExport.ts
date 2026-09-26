@@ -92,6 +92,9 @@ export const USER_EXPORT_SELECT = {
   // asked again every question it already dismissed. The suggestions
   // themselves are derived and never stored.
   tripSuggestionAnswers: true,
+  // Visit photo suggestions the user refused ("Nicht diese", forgejo#132
+  // item 13): the same reason — a restored account must not be offered them again.
+  visitPhotoRefusals: true,
   userAchievements: { include: { achievement: true } },
   // Field-by-field: the stored API keys are not part of a data export.
   settings: {
