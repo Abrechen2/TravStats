@@ -1,10 +1,9 @@
 # ADR 0002 — One time model for server, web and Companion
 
-Status: **proposed**, 2026-09-26. Owner request the same day: "Mit den
+Status: **accepted**, 2026-09-26. Owner request the same day: "Mit den
 Zeitzonen gibt's häufiger Probleme, wir brauchen ein Konzept, das im gesamten
-Server und Companion gleich umgesetzt und eindeutig ist." Open questions for
-the owner are in the last section; nothing here is binding until they are
-answered and the status says accepted.
+Server und Companion gleich umgesetzt und eindeutig ist." The owner answered
+the five open questions the same day; the answers are recorded at the end.
 
 ## Context
 
@@ -206,22 +205,20 @@ changes folded in above: gap refusal limited to typed wall clocks, floating
 dates without a zone, `DATE` never crossing a boundary as a JS `Date`, the
 `offset` field and the tzdata version, an injected clock with midnight
 tests, and conversion at library boundaries. Its answers to the open
-questions below match the proposals.
+questions matched the proposals the owner then chose.
 
-## Open questions for the owner
+## Owner decisions (2026-09-26)
 
-- **Q1 — "Today" in the Companion:** the user's profile zone (one answer on
-  every device, matches the web) or the device's current zone (a traveller
-  abroad sees "today" where they are)? Proposed: profile zone for status and
-  statistics, device zone only for the live "now" screen, and the profile
-  zone follows the device when the user opts in.
-- **Q2 — Display:** always the place's local time (proposed), with an
-  optional "your time" hint?
-- **Q3 — `CountryDay`:** keep the UTC day for GPS points (cheap, documented
-  exception), or resolve each point's zone (correct, costs a geo-tz lookup per
-  point)?
-- **Q4 — Mixed `PlaceVisit.visitedAt`:** if provenance cannot split web- and
-  Companion-written rows, mark the ambiguous ones `precision: unknown` for
-  the time of day (the date survives), or ask the user per visit?
-- **Q5 — Repeated hour default:** the earlier occurrence (proposed) or
-  refuse and ask?
+- **Q1 — "Today" in the Companion:** the user's profile zone for status,
+  statistics, "planned or past" and countdowns (the same answer on every
+  device and in the web); the device's current zone only on the live "now"
+  screen. The profile zone follows the device when the user opts in.
+- **Q2 — Display:** always the place's local time, with an optional,
+  unobtrusive "your time: …" hint.
+- **Q3 — `CountryDay`:** stays a UTC day for GPS points — a documented
+  exception, because a raw point has no zone of its own.
+- **Q4 — Mixed `PlaceVisit.visitedAt`:** where the writer cannot be
+  established, the date is kept and the time of day is marked
+  `precision: unknown`; no guessing, no per-visit questions.
+- **Q5 — Repeated hour:** the earlier occurrence by default, with
+  `fold: "later"` available to the client.
