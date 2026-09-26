@@ -1,4 +1,4 @@
-import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { describe, it, expect, beforeAll, beforeEach, afterAll } from "@jest/globals";
 import request from "supertest";
 import express from "express";
 import cookieParser from "cookie-parser";
@@ -6,6 +6,7 @@ import adminRoutes from "../index";
 import { prisma } from "../../../db";
 import { hashPassword } from "../../../utils/password";
 import { generateToken } from "../../../utils/jwt";
+import { adminExportLimiter } from "../../../middleware/rateLimit";
 import { readFileSync } from "fs";
 import path from "path";
 import {
@@ -69,6 +70,13 @@ describe("GET /api/v1/admin/export/all-data", () => {
     });
     createdUserIds.push(admin.id);
     adminCookie = `auth_token=${generateToken(admin.id)}`;
+  });
+
+  // The export allows five downloads an hour per admin, and this file makes
+  // more than five: each case starts with a fresh bucket, so a new case can
+  // never turn an unrelated one into a 429.
+  beforeEach(async () => {
+    await adminExportLimiter.resetKey(`user:${createdUserIds[0]}`);
   });
 
   afterAll(async () => {
