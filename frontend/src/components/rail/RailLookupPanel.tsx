@@ -9,7 +9,13 @@ import type {
   RailLookupProvider,
   RailLookupProviders,
 } from "../../types/rail";
-import { applyLookup, isStationComplete, type RailFormDraft } from "./railFormModel";
+import {
+  applyLookup,
+  isStationComplete,
+  lookupKeptFields,
+  type RailFormDraft,
+  type RailLookupKeptField,
+} from "./railFormModel";
 
 interface Props {
   draft: RailFormDraft;
@@ -109,6 +115,7 @@ export function RailLookupPanel({
   const [date, setDate] = useState(() => draft.departureLocal.slice(0, 10) || todayIso());
   const [state, setState] = useState<LookupState>({ kind: "idle" });
   const [arrivalIndex, setArrivalIndex] = useState<number | null>(null);
+  const [kept, setKept] = useState<RailLookupKeptField[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -134,6 +141,7 @@ export function RailLookupPanel({
   const run = async (): Promise<void> => {
     if (!query) return;
     setState({ kind: "loading" });
+    setKept([]);
     try {
       const answer = await railApi.lookup(query);
       setState({ kind: "answered", answer });
@@ -214,6 +222,7 @@ export function RailLookupPanel({
             className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base)"
             onClick={(): void => {
               onApply(applyLookup(draft, match, arrivalIndex));
+              setKept(lookupKeptFields(draft, match));
               setState({ kind: "idle" });
             }}
           >
@@ -222,6 +231,15 @@ export function RailLookupPanel({
         </div>
       ) : null}
 
+      {kept.map((k) => (
+        <p key={k.field} className="t-caption mt-2" data-testid="rail-lookup-kept">
+          {t("rail:lookup.kept", {
+            field: t(k.field === "operator" ? "rail:form.operator" : "rail:form.category"),
+            yours: k.yours,
+            timetable: k.timetable,
+          })}
+        </p>
+      ))}
       {draft.lookup ? (
         <p className="t-caption mt-2">
           {t("rail:lookup.linked", {

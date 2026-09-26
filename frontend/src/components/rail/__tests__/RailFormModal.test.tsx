@@ -290,6 +290,64 @@ describe("RailFormModal", () => {
     });
   });
 
+  // Acceptance 2026-09-26: "Übernehmen" replaced a typed "ÖBB" with the
+  // timetable's "Deutsche Bahn AG". A typed value stays; the panel says so.
+  it("keeps a typed operator when a looked-up train is taken over, and says it did", async () => {
+    lookup.mockResolvedValue({
+      match: {
+        provider: "transitous",
+        ref: "trip-62",
+        operator: "Deutsche Bahn AG",
+        trainCategory: "RJX",
+        trainNumber: "62",
+        boardingIndex: 0,
+        hasGeometry: false,
+        stops: [
+          {
+            name: "Frankfurt (Main) Hbf",
+            lat: 50.1071,
+            lon: 8.6632,
+            stationId: null,
+            code: null,
+            country: "DE",
+            arrivalLocal: null,
+            departureLocal: "2026-09-26T09:13",
+          },
+          {
+            name: "München Hbf",
+            lat: 48.1402,
+            lon: 11.5586,
+            stationId: null,
+            code: null,
+            country: "DE",
+            arrivalLocal: "2026-09-26T12:58",
+            departureLocal: null,
+          },
+        ],
+      },
+      attempts: [{ provider: "transitous", outcome: "matched" }],
+    });
+    create.mockResolvedValue({ journey: { id: "new" }, geometry: null });
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    const dateField = await screen.findByLabelText("rail:lookup.date");
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText("rail:form.operator"), { target: { value: "ÖBB" } });
+    fireEvent.change(screen.getByLabelText("rail:form.number"), { target: { value: "62" } });
+    fireEvent.change(dateField, {
+      target: { value: "2026-09-26" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "rail:lookup.run" }));
+    fireEvent.click(await screen.findByRole("button", { name: "rail:lookup.apply" }));
+
+    expect(screen.getByLabelText("rail:form.operator")).toHaveValue("ÖBB");
+    expect(screen.getByLabelText("rail:form.category")).toHaveValue("RJX");
+    expect(screen.getByTestId("rail-lookup-kept")).toHaveTextContent("rail:lookup.kept");
+
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    expect(create.mock.calls[0][0]).toMatchObject({ operator: "ÖBB", trainCategory: "RJX" });
+  });
+
   it("saves a leg and moves on to its connection, bound to it on the next save", async () => {
     const first = makeRailJourney({ id: "leg-1", tripId: "t1" });
     const second = makeRailJourney({ id: "leg-2" });

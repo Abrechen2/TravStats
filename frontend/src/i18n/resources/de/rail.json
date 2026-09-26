@@ -120,6 +120,7 @@
     "withLine": "Beim Speichern wird der Streckenverlauf von Transitous übernommen und mit der Fahrt gespeichert.",
     "withoutLine": "Diese Quelle liefert keinen Streckenverlauf — die Karte zeigt die Luftlinie.",
     "apply": "Übernehmen",
+    "kept": "{{field}}: deine Angabe „{{yours}}“ bleibt stehen (Fahrplan: {{timetable}}).",
     "linked": "Mit einer Fahrt aus dem Fahrplan verknüpft ({{provider}}).",
     "unlink": "Verknüpfung lösen",
     "credit": "Fahrplandaten und Streckenverläufe:",
