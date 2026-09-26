@@ -26,20 +26,41 @@ export default function WikipediaCard({
   const enabled = useSettingsStore((s) => s.openDataEnabled) === true;
   const lang = wikiLanguage(i18n.language);
   const [summary, setSummary] = useState<WikipediaSummary | null>(null);
+  // The lookup failed (Wikipedia/Wikidata down, or our own request). Said on
+  // the card: it used to simply not appear, which reads as "no article".
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
     const load = kind === "place" ? openDataApi.placeWikipedia : openDataApi.lodgingWikipedia;
+    setFailed(false);
     load(id, lang)
       .then((s) => !cancelled && setSummary(s))
-      .catch((err: unknown) => logger.warn("Loading the Wikipedia summary failed", err));
+      .catch((err: unknown) => {
+        logger.warn("Loading the Wikipedia summary failed", err);
+        if (!cancelled) setFailed(true);
+      });
     return () => {
       cancelled = true;
     };
   }, [enabled, kind, id, lang]);
 
-  if (!enabled || !summary) return null;
+  if (!enabled) return null;
+  if (failed) {
+    return (
+      <section
+        className="rounded-lg border border-(--color-border) p-3"
+        aria-label={t("openData:wikipedia.title")}
+      >
+        <p className="t-label-mono mb-2 text-(--text-muted)">{t("openData:wikipedia.title")}</p>
+        <p role="status" className="text-sm text-(--text-muted)">
+          {t("openData:wikipedia.unavailable")}
+        </p>
+      </section>
+    );
+  }
+  if (!summary) return null;
   return (
     <section
       className="rounded-lg border border-(--color-border) p-3"

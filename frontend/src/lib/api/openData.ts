@@ -11,6 +11,24 @@ import type { LodgingChain } from "../../types/lodging";
  * switch is off; callers check `openDataEnabled` from the settings store first.
  */
 
+/**
+ * The free service behind an open-data endpoint did not answer (the server
+ * says `unavailable: true`). Thrown rather than returned as null: null means
+ * "nothing to show", and a card must not vanish silently while Wikipedia or
+ * Open-Meteo is down.
+ */
+export class OpenDataUnavailableError extends Error {
+  constructor() {
+    super("open data service unavailable");
+    this.name = "OpenDataUnavailableError";
+  }
+}
+
+function unlessUnavailable<T>(data: { unavailable?: boolean }, value: T): T {
+  if (data.unavailable === true) throw new OpenDataUnavailableError();
+  return value;
+}
+
 export interface PlannedProfile {
   distanceKm: number;
   ascentM: number | null;
@@ -76,17 +94,23 @@ export const openDataApi = {
   refreshEntryWeather: async (tripId: string, entryId: string): Promise<TripJournalEntry> =>
     (await api.post(`/trips/${tripId}/journal/${entryId}/weather`)).data.entry,
 
-  plannedProfile: async (routeId: string): Promise<PlannedProfile | null> =>
-    (await api.get(`/tours/${routeId}/planned-profile`)).data.profile,
+  plannedProfile: async (routeId: string): Promise<PlannedProfile | null> => {
+    const { data } = await api.get(`/tours/${routeId}/planned-profile`);
+    return unlessUnavailable(data, data.profile as PlannedProfile | null);
+  },
 
-  placeWikipedia: async (placeId: string, lang: "de" | "en"): Promise<WikipediaSummary | null> =>
-    (await api.get(`/places/${placeId}/wikipedia`, { params: { lang } })).data.summary,
+  placeWikipedia: async (placeId: string, lang: "de" | "en"): Promise<WikipediaSummary | null> => {
+    const { data } = await api.get(`/places/${placeId}/wikipedia`, { params: { lang } });
+    return unlessUnavailable(data, data.summary as WikipediaSummary | null);
+  },
 
   lodgingWikipedia: async (
     lodgingId: string,
     lang: "de" | "en"
-  ): Promise<WikipediaSummary | null> =>
-    (await api.get(`/lodging/${lodgingId}/wikipedia`, { params: { lang } })).data.summary,
+  ): Promise<WikipediaSummary | null> => {
+    const { data } = await api.get(`/lodging/${lodgingId}/wikipedia`, { params: { lang } });
+    return unlessUnavailable(data, data.summary as WikipediaSummary | null);
+  },
 
   nearbyLodgings: async (lat: number, lon: number, radiusKm: number): Promise<NearbyLodging[]> =>
     (await api.get("/nearby/lodging", { params: { lat, lon, radiusKm } })).data.places,

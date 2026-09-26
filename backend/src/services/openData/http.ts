@@ -33,6 +33,24 @@ export async function assertOpenDataEnabled(): Promise<void> {
 }
 
 /**
+ * The upstream service did not answer (network, timeout, 5xx, 429, not
+ * JSON). Distinct from "it answered: there is nothing" — an endpoint turns it
+ * into `unavailable: true`, so a card can say the service is unreachable
+ * instead of silently not appearing, and a service does not cache it.
+ */
+export class OpenDataUnavailableError extends Error {
+  constructor(public readonly service: string) {
+    super(`Open data service unavailable: ${service}`);
+    this.name = "OpenDataUnavailableError";
+  }
+}
+
+export type OpenDataFetchOutcome =
+  | { ok: true; body: unknown }
+  /** `status` null = no HTTP answer at all (network, timeout, not JSON). */
+  | { ok: false; status: number | null };
+
+/**
  * GET (or POST a form body) and parse JSON. Null on any failure — a network
  * error, a timeout, a non-2xx answer or a body that is not JSON — logged with
  * the service name so a quiet abstention can still be traced.
@@ -42,6 +60,16 @@ export async function fetchOpenDataJson(
   url: string,
   init: { form?: Record<string, string>; timeoutMs?: number } = {}
 ): Promise<unknown> {
+  const outcome = await fetchOpenDataJsonDetailed(service, url, init);
+  return outcome.ok ? outcome.body : null;
+}
+
+/** `fetchOpenDataJson` that says WHY there is no body: a status, or no answer. */
+export async function fetchOpenDataJsonDetailed(
+  service: string,
+  url: string,
+  init: { form?: Record<string, string>; timeoutMs?: number } = {}
+): Promise<OpenDataFetchOutcome> {
   try {
     const response = await fetch(url, {
       method: init.form ? "POST" : "GET",
@@ -55,15 +83,15 @@ export async function fetchOpenDataJson(
     });
     if (!response.ok) {
       logger.warn({ operation: "open_data_request", service, status: response.status });
-      return null;
+      return { ok: false, status: response.status };
     }
-    return (await response.json()) as unknown;
+    return { ok: true, body: (await response.json()) as unknown };
   } catch (error) {
     logger.warn({
       operation: "open_data_request",
       service,
       error: error instanceof Error ? error.message : String(error),
     });
-    return null;
+    return { ok: false, status: null };
   }
 }

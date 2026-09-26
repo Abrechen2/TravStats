@@ -14,7 +14,8 @@
     "distance": "Distance",
     "ascent": "Ascent",
     "descent": "Descent",
-    "note": "Ground heights from Open-Meteo along the planned line — calculated, not measured."
+    "note": "Ground heights from Open-Meteo along the planned line — calculated, not measured.",
+    "unavailable": "The elevation profile could not be computed right now – the elevation service (Open-Meteo) is not answering. Open this again later."
   },
   "weather": {
     "measuredAt": "Weather in {{place}}",
@@ -46,7 +47,8 @@
     "title": "From Wikipedia",
     "readMore": "Read more on Wikipedia",
     "englishArticle": "English article",
-    "license": "Text: Wikipedia, CC BY-SA 4.0"
+    "license": "Text: Wikipedia, CC BY-SA 4.0",
+    "unavailable": "Wikipedia cannot be reached right now. Open this again later."
   },
   "lodging": {
     "enrich": "Complete from OpenStreetMap",

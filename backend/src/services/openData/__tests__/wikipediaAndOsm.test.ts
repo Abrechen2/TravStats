@@ -1,4 +1,5 @@
 import { clearWikipediaCache, wikidataIdIn, wikipediaSummary } from "../wikipedia";
+import { OpenDataUnavailableError } from "../http";
 import { starsFromOsm, websiteFromOsm } from "../lodgingEnrichment";
 import { joinLegs, sampleEvenly } from "../plannedProfile";
 import { mockFetch, type FetchMock } from "./fetchMock";
@@ -53,6 +54,39 @@ describe("Wikipedia through Wikidata", () => {
     const callsAfterFirst = fetches.calls.length;
     expect(await wikipediaSummary("Q698095", "de")).toBeNull();
     expect(fetches.calls).toHaveLength(callsAfterFirst);
+  });
+
+  // A network error used to be the same null as "no article" and was cached
+  // for a day: the card disappeared until tomorrow.
+  it("reports Wikipedia not answering as unavailable, and asks again next time", async () => {
+    fetches = mockFetch([
+      [/wikidata\.org/, sitelinks({ dewiki: "Hotel Adlon" })],
+      [/de\.wikipedia\.org/, { error: "busy" }, 503],
+    ]);
+    await expect(wikipediaSummary("Q698095", "de")).rejects.toBeInstanceOf(
+      OpenDataUnavailableError
+    );
+    fetches.restore();
+    fetches = mockFetch([
+      [/wikidata\.org/, sitelinks({ dewiki: "Hotel Adlon" })],
+      [/de\.wikipedia\.org/, summary("Hotel Adlon")],
+    ]);
+    expect(await wikipediaSummary("Q698095", "de")).toMatchObject({ title: "Hotel Adlon" });
+  });
+
+  it("reports Wikidata not answering as unavailable too", async () => {
+    fetches = mockFetch([[/wikidata\.org/, { error: "busy" }, 429]]);
+    await expect(wikipediaSummary("Q698095", "de")).rejects.toBeInstanceOf(
+      OpenDataUnavailableError
+    );
+  });
+
+  it("still reads an article that is gone (404) as no article", async () => {
+    fetches = mockFetch([
+      [/wikidata\.org/, sitelinks({ dewiki: "Hotel Adlon" })],
+      [/de\.wikipedia\.org/, { title: "Not found" }, 404],
+    ]);
+    expect(await wikipediaSummary("Q698095", "de")).toBeNull();
   });
 
   it("finds a Q-id inside a curated item id", () => {
