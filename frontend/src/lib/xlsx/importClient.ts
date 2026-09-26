@@ -9,6 +9,7 @@
  */
 
 import api from "./../api/client";
+import { JobFailedError, JobLostError, waitForJob } from "../api/jobs";
 import { parseWorkbook, type ParsedSheet } from "./workbook";
 import {
   cruiseSheet,
@@ -124,27 +125,39 @@ export async function readWorkbookForImport(
  * server's backup storage — which is exactly what happened in the rc.18 UAT.
  */
 export class ImportRefused extends Error {
-  constructor(public readonly kind: "backupFailed" | "unknown") {
+  constructor(public readonly kind: "backupFailed" | "outcomeUnknown" | "unknown") {
     super(kind);
     this.name = "ImportRefused";
   }
 }
 
+/**
+ * Runs as a server job (2026-09-26): a large sheet costs a currency lookup per
+ * priced row and a `replace` a full backup first. Held open as one request,
+ * the ten-second client timeout answered "import failed" while the server
+ * went on writing rows. The request now returns a job id at once and this
+ * waits for the job's own outcome.
+ */
 export async function sendImport(
   sheets: ParsedSheet[],
   dryRun: boolean,
   mode: ImportMode = "merge"
 ): Promise<ImportOutcome> {
   try {
-    const { data } = await api.post<{ success: boolean; data: ImportOutcome }>("/xlsx-import", {
+    const { data } = await api.post<{ success: boolean; data: { jobId: string } }>("/xlsx-import", {
       dryRun,
       mode,
       sheets,
+      background: true,
     });
-    return data.data;
+    return await waitForJob<ImportOutcome>(data.data.jobId);
   } catch (err) {
-    const body = (err as { response?: { data?: { error?: string } } }).response?.data;
-    if (body?.error === "backup_failed") throw new ImportRefused("backupFailed");
+    if (err instanceof JobFailedError && err.code === "backup_failed") {
+      throw new ImportRefused("backupFailed");
+    }
+    // The server stopped reporting: rows may or may not have been written,
+    // and "failed" would invite a second run over a first that succeeded.
+    if (err instanceof JobLostError) throw new ImportRefused("outcomeUnknown");
     throw err;
   }
 }

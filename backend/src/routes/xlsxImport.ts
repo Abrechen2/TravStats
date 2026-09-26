@@ -20,6 +20,7 @@ import logger from "../utils/logger";
 import { createBackup } from "../services/backupService";
 import { importSheets, MAX_ROWS_PER_SHEET } from "../services/xlsxImport/importSheets";
 import type { ImportOutcome } from "../services/xlsxImport/types";
+import { startJob } from "../services/jobs/jobRegistry";
 
 const router = Router();
 
@@ -33,6 +34,12 @@ const requestSchema = z.object({
   /** Defaults to the non-destructive one. A caller that omits this can never
    *  accidentally get `replace`. */
   mode: z.enum(["add", "merge", "replace"]).default("merge"),
+  /** Answer 202 with a job instead of holding the request open. A large
+   *  sheet costs a currency lookup per priced row, and a `replace` a full
+   *  backup first — minutes, against a browser that gives up after ten
+   *  seconds and then reported "import failed" over rows being written. The
+   *  web client always sets it; a script may keep the synchronous answer. */
+  background: z.boolean().default(false),
   sheets: z
     .array(
       z.object({
@@ -60,61 +67,77 @@ router.post(
 
       const parsed = requestSchema.safeParse(req.body);
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
-      const { dryRun, mode, sheets } = parsed.data;
+      const { dryRun, mode, sheets, background } = parsed.data;
 
-      // A destructive import takes a full backup FIRST, so "undo this" has an
-      // answer that is not an apology. Deliberately before the write and
-      // outside the dry run: a preview must stay free of side effects, and a
-      // backup taken after the delete would be a backup of the damage.
-      //
-      // If the backup itself fails, the import does NOT proceed. Losing rows
-      // is recoverable with a backup and not without one — that asymmetry is
-      // what decides this.
-      let backupId: string | null = null;
-      if (mode === "replace" && !dryRun) {
-        try {
-          backupId = await createBackup();
-          logger.info(
-            { operation: "xlsx_import_pre_backup", userId, backupId },
-            "Backup taken before destructive spreadsheet import"
-          );
-        } catch (err) {
-          logger.error(
-            { operation: "xlsx_import_pre_backup_failed", userId, err },
-            "Refusing a replace import because the safety backup failed"
-          );
-          throw new AppError("backup_failed", 503);
-        }
+      if (background) {
+        const job = startJob("xlsx.import", userId, () =>
+          runImport(userId, { dryRun, mode, sheets })
+        );
+        res.status(202).json({ success: true, data: { jobId: job.id } });
+        return;
       }
-
-      const results = await importSheets(sheets, { userId, dryRun, mode });
-      const clean = results.every((s) => s.errors === 0);
-
-      const outcome: ImportOutcome = { dryRun, mode, sheets: results, clean, backupId };
-
-      logger.info(
-        {
-          operation: "xlsx_import",
-          userId,
-          dryRun,
-          mode,
-          backupId,
-          sheets: results.map((s) => ({
-            key: s.key,
-            created: s.created,
-            updated: s.updated,
-            deleted: s.deleted,
-            errors: s.errors,
-          })),
-        },
-        dryRun ? "Spreadsheet import previewed" : "Spreadsheet import applied"
-      );
-
-      res.json({ success: true, data: outcome });
+      res.json({ success: true, data: await runImport(userId, { dryRun, mode, sheets }) });
     } catch (error) {
       next(error);
     }
   }
 );
+
+type ImportRequest = Omit<z.infer<typeof requestSchema>, "background">;
+
+async function runImport(
+  userId: string,
+  { dryRun, mode, sheets }: ImportRequest
+): Promise<ImportOutcome> {
+  // A destructive import takes a full backup FIRST, so "undo this" has an
+  // answer that is not an apology. Deliberately before the write and
+  // outside the dry run: a preview must stay free of side effects, and a
+  // backup taken after the delete would be a backup of the damage.
+  //
+  // If the backup itself fails, the import does NOT proceed. Losing rows
+  // is recoverable with a backup and not without one — that asymmetry is
+  // what decides this.
+  let backupId: string | null = null;
+  if (mode === "replace" && !dryRun) {
+    try {
+      backupId = await createBackup();
+      logger.info(
+        { operation: "xlsx_import_pre_backup", userId, backupId },
+        "Backup taken before destructive spreadsheet import"
+      );
+    } catch (err) {
+      logger.error(
+        { operation: "xlsx_import_pre_backup_failed", userId, err },
+        "Refusing a replace import because the safety backup failed"
+      );
+      throw new AppError("backup_failed", 503);
+    }
+  }
+
+  const results = await importSheets(sheets, { userId, dryRun, mode });
+  const clean = results.every((s) => s.errors === 0);
+
+  const outcome: ImportOutcome = { dryRun, mode, sheets: results, clean, backupId };
+
+  logger.info(
+    {
+      operation: "xlsx_import",
+      userId,
+      dryRun,
+      mode,
+      backupId,
+      sheets: results.map((s) => ({
+        key: s.key,
+        created: s.created,
+        updated: s.updated,
+        deleted: s.deleted,
+        errors: s.errors,
+      })),
+    },
+    dryRun ? "Spreadsheet import previewed" : "Spreadsheet import applied"
+  );
+
+  return outcome;
+}
 
 export default router;
