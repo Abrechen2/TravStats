@@ -1,6 +1,7 @@
 import { useEffect, useId, useState } from "react";
 import type { JSX } from "react";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
+import { dayInput } from "../../lib/api/timeInput";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LODGING_DATE_PRECISIONS, type LodgingDatePrecision } from "../../shared/lodgingTiming";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -67,18 +68,12 @@ const DARK_PICKER_STYLE: React.CSSProperties = { colorScheme: "dark" };
 
 const toDateInput = (iso: string | null | undefined): string => (iso ? iso.slice(0, 10) : "");
 
-// A stay's dates are calendar days (a check-in has no meaningful time-of-day
-// for this app), so a date-only <input type="date"> round-trips through an
-// EXPLICIT UTC instant — "YYYY-MM-DDT00:00:00.000Z" — never a bare
-// "YYYY-MM-DDTHH:mm:ss" without a "Z"/offset. That distinction matters here:
-// the backend's `isoDateTimeRequired` Zod preprocessor
-// (schemas/lodging.ts) runs `new Date(v).toISOString()` on whatever string
-// arrives. An offset-less datetime string is parsed as SERVER-LOCAL time by
-// the JS Date constructor and can shift to a different UTC calendar day —
-// and `applyFxSnapshot` snapshots the ECB rate for exactly that (possibly
-// shifted) day. Appending "Z" pins the instant to UTC midnight, so the
-// snapshot always lands on the calendar day the user actually picked.
-const fromDateInput = (date: string): string => `${date}T00:00:00.000Z`;
+// A stay's dates are calendar days, sent as the bare `YYYY-MM-DD` the
+// picker gives (ADR 0002): the server stores a DATE, so there is no instant
+// to parse. It used to send `T00:00:00.000Z` because the schema ran
+// `new Date(v)` on whatever arrived and an offset-less string would have
+// been read in the SERVER's zone — the time model removes that parse.
+const fromDateInput = (date: string): string | null => dayInput(date);
 
 const splitCsv = (v: string): string[] =>
   v

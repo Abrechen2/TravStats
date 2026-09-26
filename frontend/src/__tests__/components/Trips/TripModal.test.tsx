@@ -196,8 +196,8 @@ describe("TripModal", () => {
     await waitFor(() => expect(tripsApi.update).toHaveBeenCalled());
     const calls = vi.mocked(tripsApi.update).mock.calls;
     expect(calls[calls.length - 1][1]).toMatchObject({
-      startDate: "2025-05-01T00:00:00.000Z",
-      endDate: "2025-05-07T00:00:00.000Z",
+      startDate: "2025-05-01",
+      endDate: "2025-05-07",
     });
   });
 

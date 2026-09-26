@@ -6,7 +6,9 @@ import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LocationInput } from "../location/LocationInput";
 import type { LocationCoordinates, LocationSelection } from "../location/LocationInput";
-import { joinDateTimeInput, splitDateTimeInput } from "../../lib/tripTimeline";
+import { splitDateTimeInput } from "../../lib/tripTimeline";
+import { tripStopTime } from "../../lib/tripStopTime";
+import { saveErrorMessage } from "../../lib/saveErrorMessage";
 
 interface StopModalProps {
   tripId: string;
@@ -18,10 +20,10 @@ interface StopModalProps {
 
 const STOP_DOMAINS = ["poi", "hotel", "train", "road", "ferry", "hike", "bike", "other"] as const;
 
-// Date/time conversion lives in lib/tripTimeline.ts — read the time model at
-// the top of that file before touching anything here. The short version: a
-// stop's time is a wall clock at the PLACE, stored timezone-naive pinned to
-// UTC, so what the user types round-trips exactly for every viewer.
+// A stop's time is a wall clock at the PLACE. Reading the stored value back
+// into the inputs lives in lib/tripTimeline.ts; the write shape (ADR 0002 D3:
+// the day, or `{ local }` placed by the stop's own coordinates) in
+// lib/tripStopTime.ts.
 
 export default function StopModal({
   tripId,
@@ -85,12 +87,15 @@ export default function StopModal({
     if (!title.trim()) return;
     setSaving(true);
     try {
+      const hasPosition = lat !== null && lon !== null;
+      const start = tripStopTime("startDate", startDate, startTime, hasPosition);
+      const end = tripStopTime("endDate", endDate, endTime, hasPosition);
       if (stop) {
         await tripsApi.updateStop(tripId, stop.id, {
           title: title.trim(),
           domain,
-          startDate: joinDateTimeInput(startDate, startTime),
-          endDate: joinDateTimeInput(endDate, endTime),
+          startDate: start,
+          endDate: end,
           lat,
           lon,
           notes: notes.trim() || null,
@@ -99,16 +104,17 @@ export default function StopModal({
         await tripsApi.createStop(tripId, {
           title: title.trim(),
           domain,
-          startDate: joinDateTimeInput(startDate, startTime) ?? undefined,
-          endDate: joinDateTimeInput(endDate, endTime) ?? undefined,
+          startDate: start ?? undefined,
+          endDate: end ?? undefined,
           lat: lat ?? undefined,
           lon: lon ?? undefined,
           notes: notes.trim() || undefined,
         });
       }
       onSaved();
-    } catch {
-      addToast("error", stop ? t("trips:toasts.updateError") : t("trips:toasts.createError"));
+    } catch (err: unknown) {
+      const fallback = stop ? "trips:toasts.updateError" : "trips:toasts.createError";
+      addToast("error", saveErrorMessage(err, t, fallback));
     } finally {
       setSaving(false);
     }

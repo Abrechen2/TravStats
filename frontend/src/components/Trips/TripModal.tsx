@@ -10,6 +10,8 @@ import SuggestionChips from "../common/SuggestionChips";
 import { useTripEntrySuggestions } from "../../hooks/useTripEntrySuggestions";
 import { tripEntrySpan } from "../../lib/tripEntrySpan";
 import { formatDate } from "../../lib/displayFormat";
+import { dayInput } from "../../lib/api/timeInput";
+import { saveErrorMessage } from "../../lib/saveErrorMessage";
 
 interface TripModalProps {
   trip: Trip | null; // null = create mode
@@ -45,9 +47,10 @@ function toDateInput(iso: string | null): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Sent as the bare day, `YYYY-MM-DD` (ADR 0002) — a trip's first and last
+// day are dates, not instants.
 function fromDateInput(value: string): string | null {
-  if (!value) return null;
-  return new Date(value + "T00:00:00.000Z").toISOString();
+  return dayInput(value);
 }
 
 export default function TripModal({ trip, onClose, onSaved }: TripModalProps): JSX.Element {
@@ -189,8 +192,9 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
 
       addToast("success", trip ? t("trips:toasts.updated") : t("trips:toasts.created"));
       onSaved();
-    } catch {
-      addToast("error", trip ? t("trips:toasts.updateError") : t("trips:toasts.createError"));
+    } catch (err: unknown) {
+      const fallback = trip ? "trips:toasts.updateError" : "trips:toasts.createError";
+      addToast("error", saveErrorMessage(err, t, fallback));
     } finally {
       setSaving(false);
     }
