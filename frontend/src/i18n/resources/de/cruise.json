@@ -159,7 +159,9 @@
   },
   "map": {
     "layer": "Kreuzfahrten",
-    "fallbackTitle": "Kreuzfahrt"
+    "fallbackTitle": "Kreuzfahrt",
+    "geometryFailed_one": "Der Seeweg von {{count}} Kreuzfahrt konnte nicht geladen werden – sie wird als gerade Linie gezeigt.",
+    "geometryFailed_other": "Die Seewege von {{count}} Kreuzfahrten konnten nicht geladen werden – sie werden als gerade Linien gezeigt."
   },
   "routeEditor": {
     "edit": "Route bearbeiten",

@@ -159,7 +159,9 @@
   },
   "map": {
     "layer": "Cruises",
-    "fallbackTitle": "Cruise"
+    "fallbackTitle": "Cruise",
+    "geometryFailed_one": "The sea route of {{count}} cruise could not be loaded – it is shown as a straight line.",
+    "geometryFailed_other": "The sea routes of {{count}} cruises could not be loaded – they are shown as straight lines."
   },
   "routeEditor": {
     "edit": "Edit route",

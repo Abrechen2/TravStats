@@ -157,11 +157,15 @@ export const cruiseApi = {
    * the result. Server caches per-port-pair routes in memory, so repeated
    * calls (and overlapping legs across cruises) are essentially free.
    */
-  getGeometryBatch: async (ids: string[]): Promise<Map<string, CruiseRouteFeatureCollection>> => {
+  getGeometryBatch: async (
+    ids: string[],
+    options: { timeoutMs?: number } = {}
+  ): Promise<Map<string, CruiseRouteFeatureCollection>> => {
     if (ids.length === 0) return new Map();
     const { data } = await api.post<Envelope<Record<string, CruiseRouteFeatureCollection>>>(
       "/cruises/geometry/batch",
-      { ids }
+      { ids },
+      options.timeoutMs !== undefined ? { timeout: options.timeoutMs } : undefined
     );
     return new Map(Object.entries(data.data));
   },
