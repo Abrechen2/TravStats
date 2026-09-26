@@ -89,6 +89,7 @@ const OSM_VALUE_TO_CATEGORY: Record<string, PlaceCategory> = {
   shrine: "landmark",
   monastery: "landmark",
   bridge: "landmark",
+  amphitheatre: "landmark",
   museum: "museum",
   gallery: "museum",
   artwork: "museum",
@@ -132,9 +133,34 @@ const OSM_VALUE_TO_CATEGORY: Record<string, PlaceCategory> = {
   department_store: "shopping",
   market: "shopping",
   viewpoint: "viewpoint",
+  // OSM CLASSES (Photon's `osm_key`), read only when a hit's value names no
+  // category — see `categorisingOsmValue`. `historic` is both, above.
+  // `tourism` is not among them: it holds hotels and campsites as well as sights.
+  natural: "nature",
+  shop: "shopping",
+  leisure: "entertainment",
 };
+
+const OSM_CLASSES_THAT_CATEGORISE = new Set(["historic", "natural", "shop", "leisure"]);
 
 export function categoryFromOsmValue(value?: string | null): PlaceCategory {
   if (!value) return "other";
   return OSM_VALUE_TO_CATEGORY[value.toLowerCase()] ?? "other";
+}
+
+/**
+ * The geocoder word a hit is categorised by: its OSM value when that names a
+ * category, else its class when that does, else the value as it came
+ * (acceptance D6, 2026-09-26: a search for "Kolosseum" labelled its top hit
+ * "Sonstiges"). The search sends this as the hit's `type`, so every reader of
+ * `type` gets the category from `categoryFromOsmValue` alone.
+ */
+export function categorisingOsmValue(
+  value?: string | null,
+  osmKey?: string | null
+): string | undefined {
+  if (categoryFromOsmValue(value) !== "other") return value ?? undefined;
+  const key = osmKey?.toLowerCase();
+  if (key && OSM_CLASSES_THAT_CATEGORISE.has(key)) return key;
+  return value ?? undefined;
 }
