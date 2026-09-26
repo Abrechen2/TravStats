@@ -108,6 +108,14 @@ export type ApiErrorCode =
    *  no zone". A local time cannot be interpreted, so the write is refused
    *  rather than stored as UTC — see `shared/time/zoneOf.ts`. */
   | "TZ_UNRESOLVED"
+  /** A wall clock typed by a person that its zone skips (spring-forward
+   *  gap) — see `shared/time/instant.ts`. Machine sources are never refused. */
+  | "LOCAL_TIME_NONEXISTENT"
+  /** A zone name the server's tzdata does not know (`shared/time/errors.ts`). */
+  | "ZONE_UNKNOWN"
+  /** The zone lookup itself could not run (503) — distinct from
+   *  `TZ_UNRESOLVED`, "this place has no zone" (422). */
+  | "TIMEZONE_LOOKUP_UNAVAILABLE"
   /** A tour's points are its trip's timeline stops — assigned at the trip, not replaced. */
   | "TOUR_POINTS_FROM_TRIP"
   /** Backup / restore job failures — see `services/backup/backupFailure.ts`.
