@@ -53,6 +53,12 @@ async function waitForLine(file: string, needle: string): Promise<string | undef
   return undefined;
 }
 
+// The whole app is imported inside the hook (after TRAVSTATS_LOG_DIR is set),
+// which puts its transpile + module load on the hook's clock. Alone that is a
+// few seconds; in a full parallel run it went past Jest's 5 s default and all
+// fifteen tests failed on the hook, not on logging.
+const APP_IMPORT_TIMEOUT_MS = 60_000;
+
 beforeAll(async () => {
   app = (await import("../../../index")).default;
   prisma = (await import("../../../db")).prisma;
@@ -74,7 +80,7 @@ beforeAll(async () => {
       maxLogFiles: true,
     },
   })) as Record<string, unknown> | null;
-});
+}, APP_IMPORT_TIMEOUT_MS);
 
 afterAll(async () => {
   delete process.env.LOG_LEVEL;
