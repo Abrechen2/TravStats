@@ -27,7 +27,7 @@
       },
       "inbox": {
         "title": "Inbox with trip suggestions, the spreadsheet both ways",
-        "body": "The inbox sorts flight updates, open questions and suggestions into tabs with status counts, and the logbook pages. New is the “Trip suggestions” tab: TravStats reads from flights, cruises, stays and place visits when you were away, and proposes a new trip – or the trip the entries belong to. You accept, edit or dismiss; nothing is created until you accept, and an answer survives an export. The Excel spreadsheet works both ways: edit it and read it back, or carry it into another account. And TravStats can be installed as a web app."
+        "body": "The inbox sorts flight updates, open questions and suggestions into tabs with status counts, and the logbook pages. New is the “Trip suggestions” tab: TravStats reads from flights, cruises, stays and place visits when you were away, and proposes a new trip – or the trip the entries belong to. You accept, edit or dismiss – nothing is created until you accept. The Excel spreadsheet works both ways: edit it and read it back, or carry it into another account. And TravStats can be installed as a web app."
       },
       "summaryOpenData": {
         "title": "The AI summary, Dawarich and open data services",

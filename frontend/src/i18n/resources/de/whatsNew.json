@@ -27,7 +27,7 @@
       },
       "inbox": {
         "title": "Posteingang mit Reise-Vorschlägen, die Tabelle hin und zurück",
-        "body": "Der Posteingang sortiert Flug-Updates, offene Fragen und Vorschläge in Reiter mit Statuszählern, das Logbuch blättert seitenweise. Neu ist der Reiter „Reise-Vorschläge“: TravStats liest aus Flügen, Kreuzfahrten, Aufenthalten und Ortsbesuchen, wann du unterwegs warst, und schlägt eine neue Reise vor – oder die Reise, zu der die Einträge gehören. Du übernimmst, bearbeitest oder verwirfst; angelegt wird erst, wenn du übernimmst, und eine Antwort gilt auch nach einem Export. Die Excel-Tabelle geht in beide Richtungen: bearbeiten und wieder einlesen, oder in ein anderes Konto übertragen. Und TravStats lässt sich als Web-App installieren."
+        "body": "Der Posteingang sortiert Flug-Updates, offene Fragen und Vorschläge in Reiter mit Statuszählern, das Logbuch blättert seitenweise. Neu ist der Reiter „Reise-Vorschläge“: TravStats liest aus Flügen, Kreuzfahrten, Aufenthalten und Ortsbesuchen, wann du unterwegs warst, und schlägt eine neue Reise vor – oder die Reise, zu der die Einträge gehören. Du übernimmst, bearbeitest oder verwirfst – angelegt wird erst, wenn du übernimmst. Die Excel-Tabelle geht in beide Richtungen: bearbeiten und wieder einlesen, oder in ein anderes Konto übertragen. Und TravStats lässt sich als Web-App installieren."
       },
       "summaryOpenData": {
         "title": "KI-Zusammenfassung, Dawarich und offene Datendienste",
