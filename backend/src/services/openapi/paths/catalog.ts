@@ -391,6 +391,9 @@ registry.registerPath({
 
 const geoResult = z.object({
   name: z.string(),
+  address: z.string().optional(),
+  district: z.string().optional().describe("Part of town, to tell same-named hits apart"),
+  type: z.string().optional().describe("The OSM value (`archaeological_site`, `museum`, …)"),
   city: z.string().nullable(),
   country: z.string().nullable(),
   lat: z.number(),

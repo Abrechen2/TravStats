@@ -12,6 +12,8 @@ export interface PlaceSearchResult {
   /** `osm:<type>/<id>` when the geocoder named one — the mirror of `PlaceResult.externalRef`. */
   externalRef?: string;
   address?: string;
+  /** Part of town — tells two same-named hits in one city apart. */
+  district?: string;
   city?: string;
   country?: string;
   countryCode?: string;

@@ -75,6 +75,40 @@ describe("Photon place search", () => {
     ]);
   });
 
+  // Acceptance 2026-09-26: two "Kolosseum, Rom" hits looked identical in the
+  // picker. The part of town travels with the hit so the row can show it.
+  it("carries the district (else the locality) and the OSM value of a hit", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse(
+        featureCollection([
+          {
+            properties: {
+              name: "Kolosseum",
+              city: "Rom",
+              district: "Monti",
+              osm_value: "archaeological_site",
+            },
+            geometry: { coordinates: [12.4922, 41.8902] },
+          },
+          {
+            properties: {
+              name: "Kolosseum",
+              city: "Rom",
+              locality: "Celio",
+              osm_value: "bus_stop",
+            },
+            geometry: { coordinates: [12.4935, 41.8895] },
+          },
+        ])
+      )
+    );
+    const results = await searchPlaces("Kolosseum");
+    expect(results.map((r) => [r.district, r.type])).toEqual([
+      ["Monti", "archaeological_site"],
+      ["Celio", "bus_stop"],
+    ]);
+  });
+
   it("skips features without a name or without coordinates", async () => {
     global.fetch = jest.fn().mockResolvedValue(
       jsonResponse(
