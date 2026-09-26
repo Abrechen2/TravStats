@@ -1,4 +1,11 @@
+import type { Config } from "@jest/types";
 import { createPrismaClient } from "./src/prismaClient";
+import {
+  BASE_URL_ENV,
+  WORKER_COUNT_ENV,
+  WORKER_DB_ENV,
+  createWorkerDatabases,
+} from "./jest.workerDatabase";
 
 /**
  * One reachable database, or one clear sentence — never a thousand assertions.
@@ -103,7 +110,7 @@ function assertDatabaseIsExpendable(url: string): void {
   }
 }
 
-export default async function globalSetup(): Promise<void> {
+export default async function globalSetup(globalConfig: Config.GlobalConfig): Promise<void> {
   const url = process.env.DATABASE_URL;
   if (!url) {
     throw new Error(
@@ -149,5 +156,14 @@ export default async function globalSetup(): Promise<void> {
     process.exit(1);
   } finally {
     await prisma.$disconnect();
+  }
+
+  // A parallel run gets one database per worker — see jest.workerDatabase.ts.
+  // The environment set here is inherited by the workers Jest forks next.
+  if (globalConfig.maxWorkers > 1) {
+    await createWorkerDatabases(url, globalConfig.maxWorkers);
+    process.env[WORKER_DB_ENV] = "1";
+    process.env[WORKER_COUNT_ENV] = String(globalConfig.maxWorkers);
+    process.env[BASE_URL_ENV] = url;
   }
 }

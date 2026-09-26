@@ -1,3 +1,5 @@
+import { BASE_URL_ENV, WORKER_DB_ENV, workerDatabaseUrl } from "./jest.workerDatabase";
+
 /**
  * Cap the connection pool before anything constructs a Prisma client.
  *
@@ -18,7 +20,22 @@ export function withConnectionLimit(url: string, limit = 5): string {
   return `${url}${url.includes("?") ? "&" : "?"}connection_limit=${limit}`;
 }
 
-const url = process.env.DATABASE_URL;
+/**
+ * In a parallel run each worker uses its own copy of the database, made by
+ * `jest.globalSetup.ts` (see `jest.workerDatabase.ts` for why). The base URL is
+ * read from its own variable, not from DATABASE_URL: in-band, this file runs
+ * once per test file in the same process, and would otherwise suffix twice.
+ */
+function testDatabaseUrl(): string | undefined {
+  const workerId = Number(process.env.JEST_WORKER_ID);
+  const base = process.env[BASE_URL_ENV];
+  if (process.env[WORKER_DB_ENV] === "1" && base && workerId > 0) {
+    return workerDatabaseUrl(base, workerId);
+  }
+  return process.env.DATABASE_URL;
+}
+
+const url = testDatabaseUrl();
 if (url) {
   process.env.DATABASE_URL = withConnectionLimit(url);
 }

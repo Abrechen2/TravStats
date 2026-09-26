@@ -19,6 +19,8 @@ module.exports = {
   workerIdleMemoryLimit: "1200MB",
   // Fail once, loudly, when Postgres is unreachable — see jest.globalSetup.ts.
   globalSetup: "<rootDir>/jest.globalSetup.ts",
+  // Drops the per-worker databases a parallel run made — see jest.workerDatabase.ts.
+  globalTeardown: "<rootDir>/jest.globalTeardown.ts",
   // Caps the Prisma pool before any client is built — see jest.setup.ts.
   setupFiles: ["<rootDir>/jest.setup.ts"],
   // Waits for after-write achievement rechecks between tests (recheckInFlight.ts).
