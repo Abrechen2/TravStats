@@ -79,13 +79,13 @@ function ExtractValuesDialog({
   target,
   onClose,
 }: Props & { onClose: () => void }): JSX.Element {
-  const { t } = useTranslation(["documents", "common", "flights"]);
+  const { t } = useTranslation(["documents", "common", "flights", "rail"]);
   const [phase, setPhase] = useState<Phase>({ kind: "reading" });
   const [selected, setSelected] = useState<ExtractField[]>([]);
   const [applying, setApplying] = useState(false);
   const [applyFailed, setApplyFailed] = useState(false);
   const controllerRef = useRef<AbortController | null>(null);
-  const { domain, flightNumber, departureDate, current } = target;
+  const { domain, flightNumber, trainNumber, departureDate, current } = target;
 
   useEffect(() => {
     // One controller per run: a controller kept across runs would arrive
@@ -99,6 +99,7 @@ function ExtractValuesDialog({
           {
             domain,
             ...(flightNumber ? { flightNumber } : {}),
+            ...(trainNumber ? { trainNumber } : {}),
             ...(departureDate ? { departureDate } : {}),
           },
           controller.signal
@@ -116,7 +117,7 @@ function ExtractValuesDialog({
     return (): void => controller.abort();
     // `current` is read once, when the proposal arrives — a later keystroke in
     // the form must not re-run a minute of parsing.
-  }, [documentId, domain, flightNumber, departureDate]);
+  }, [documentId, domain, flightNumber, trainNumber, departureDate]);
 
   const values = phase.kind === "result" ? phase.result.values : null;
   const offered = useMemo(() => (values ? offeredFields(values, current) : []), [values, current]);
@@ -124,6 +125,7 @@ function ExtractValuesDialog({
   const display = (field: ExtractField, value: string | number | null | undefined): string => {
     if (value === null || value === undefined || value === "") return "—";
     if (field === "seatClass") return t(`flights:seatClass.${value}`);
+    if (field === "travelClass") return t(`rail:class.${value}`);
     return String(value);
   };
 

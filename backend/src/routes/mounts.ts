@@ -77,6 +77,7 @@ import cruisesRouter from "./cruises";
 import cruiseRouteOverrideRoutes from "./cruises/routeOverride";
 import railRouter from "./rail";
 import railStationsRouter from "./rail/stations";
+import railEntrySuggestionsRouter from "./rail/entrySuggestions";
 import railLookupRouter from "./rail/lookup";
 import railStatsRouter from "./rail/stats";
 import railRoadtripConversionRouter from "./rail/roadtripConversion";
@@ -263,6 +264,11 @@ export const apiMounts: ApiMount[] = [
   { id: "rail.stations", base: "/api/v1/rail/stations", router: railStationsRouter },
   { id: "rail.lookup", base: "/api/v1/rail/lookup", router: railLookupRouter },
   { id: "rail.stats", base: "/api/v1/rail/stats", router: railStatsRouter },
+  {
+    id: "rail.entrySuggestions",
+    base: "/api/v1/rail/entry-suggestions",
+    router: railEntrySuggestionsRouter,
+  },
   {
     id: "rail.roadtripConversion",
     base: "/api/v1/rail/roadtrip-conversion",

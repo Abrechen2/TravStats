@@ -59,8 +59,29 @@ describe("reading a multipart booking mail", () => {
     const message = parseMimeMessage(MULTIPART_MIXED);
 
     expect(message.attachments).toEqual([
-      { filename: "ticket.pdf", mediaType: "application/pdf", size: 30 },
+      {
+        filename: "ticket.pdf",
+        mediaType: "application/pdf",
+        size: 30,
+        // A PDF ticket keeps its bytes: the rail parser reads a DB booking
+        // mail's itinerary out of exactly this attachment.
+        content: expect.any(Buffer),
+      },
     ]);
+    expect(message.attachments[0].content?.subarray(0, 5).toString("latin1")).toBe("%PDF-");
+    expect(message.text).not.toContain("%PDF");
+  });
+
+  it("names an attachment no parser reads without holding its bytes", () => {
+    const withImage = Buffer.from(
+      MULTIPART_MIXED.toString("latin1")
+        .replace(/application\/pdf/g, "image/png")
+        .replace(/ticket\.pdf/g, "logo.png"),
+      "latin1"
+    );
+    const [attachment] = parseMimeMessage(withImage).attachments;
+    expect(attachment).toMatchObject({ filename: "logo.png", mediaType: "image/png" });
+    expect(attachment.content).toBeUndefined();
   });
 
   it("still reads the headers the parser chain depends on", () => {

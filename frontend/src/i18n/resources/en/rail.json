@@ -75,7 +75,8 @@
       "nonexistentTime": "This time does not exist on that day: the clocks jump an hour ahead for summer time. Check the time on the ticket.",
       "invalidField": "“{{field}}” was not accepted. Please check it.",
       "invalid": "An entry was not accepted. Please check the fields."
-    }
+    },
+    "suggestionsFailed": "Suggestions from your earlier rides could not be loaded — the form works all the same."
   },
   "tracedLine": "along the line, Transitous",
   "roadtripLine": "along the roadtrip route",
@@ -124,7 +125,9 @@
     "linked": "Linked to a journey from the timetable ({{provider}}).",
     "unlink": "Unlink",
     "credit": "Timetable data and lines:",
-    "switchedOff": "The train lookup is switched off on this instance. Enter the journey by hand."
+    "switchedOff": "The train lookup is switched off on this instance. Enter the journey by hand.",
+    "changeNeeded": "Your destination {{station}} is not on this train's route. You change at {{stop}} — add the rest as a connection after saving.",
+    "applyWithChange": "Take over up to the change"
   },
   "detail": {
     "loading": "Loading …",
@@ -156,7 +159,10 @@
     "saveAndAdd": "Save & add connection",
     "banner": "Connecting train from {{station}} — both rides are joined by one booking.",
     "title": "Connection",
-    "booking": "Booking {{pnr}}"
+    "booking": "Booking {{pnr}}",
+    "onward": "Onward to {{station}}: after saving, the connection opens with this destination.",
+    "saveAndContinue": "Save & continue to {{station}}",
+    "dismissOnward": "No onward ride"
   },
   "trip": {
     "open": "Open journey",
@@ -238,6 +244,35 @@
       "providerUnavailable": "Transitous did not answer",
       "stationOffLine": "a station is not on this train's route",
       "untracedShape": "Transitous only has straight lines between this train's stops"
+    }
+  },
+  "import": {
+    "panelTitle": "Add a train ride",
+    "panelHint": "Got a booking confirmation or a ticket? Drop the mail (.eml, .msg) or the PDF here — the rides are read and you confirm each one.",
+    "title": "Review the rides read",
+    "save_one": "Save {{count}} ride",
+    "save_other": "Save {{count}} rides",
+    "tariff": "Fare",
+    "total": "Total price",
+    "totalNotWritten": "A ride of this booking is already logged — the total is not saved a second time.",
+    "takeLeg": "Take ride {{from}} → {{to}}",
+    "direction": {
+      "outbound": "Outward",
+      "return": "Return"
+    },
+    "noTrain": "no train number on the ticket",
+    "duplicate": "Already in your logbook (same booking, same departure) — not ticked.",
+    "legSaved": "Saved.",
+    "unresolved": "“{{name}}” is not unambiguous in the station catalogue. Pick the station:",
+    "pickStations": "Pick both stations for every ticked ride — without a station the time cannot be placed in a time zone.",
+    "saved_one": "{{count}} train ride saved from the ticket.",
+    "saved_other": "{{count}} train rides saved from the ticket.",
+    "empty": {
+      "noItinerary": "This rail mail names booking {{reference}} but no itinerary. It is in the attached ticket PDF — upload the PDF, or the mail with its attachment (.eml/.msg).",
+      "llmUnreachable": "No train ride was recognised in this document: no template knows the layout, and the AI parser is not reachable. Enter the ride by hand.",
+      "llmFailed": "The AI parser gave no usable answer for this document. Enter the ride by hand.",
+      "demoNoLlm": "No template knows this ticket, and the AI parser is not available to the demo account.",
+      "nothingFound": "No train ride was found in this document. Enter the ride by hand."
     }
   }
 }

@@ -135,6 +135,7 @@
     "places/visitPhotos.ts",
     "ports.ts",
     "rail.ts",
+    "rail/entrySuggestions.ts",
     "rail/lookup.ts",
     "rail/roadtripConversion.ts",
     "rail/stations.ts",

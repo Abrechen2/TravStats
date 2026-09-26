@@ -8,7 +8,7 @@ import { useDashboardRoute } from "../../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { useRailVisible } from "../../hooks/useRailVisible";
-import { RailFormModal } from "../rail/RailFormModal";
+import { useRailImportAdapter } from "../import/adapters/railAdapter";
 import { flightsApi } from "../../lib/api/flights";
 import { getUpcoming, type UpcomingEntry } from "../../lib/api/upcoming";
 import { useToastStore } from "../../store/toastStore";
@@ -61,6 +61,7 @@ export function DashboardLayout({
   const [addingDomain, setAddingDomain] = useState<AddableDomain | null>(null);
   const lodgingAdapter = useLodgingImportAdapter();
   const cruiseAdapter = useCruiseImportAdapter();
+  const railAdapter = useRailImportAdapter();
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
@@ -237,16 +238,15 @@ export function DashboardLayout({
       {/* This slot held a "not wired — domain is disabled until V2" comment
           long after the domain had shipped, so the menu offered "POI
           hinzufügen" and the click went nowhere (#288). */}
-      {addingDomain === "rail" && (
-        <RailFormModal
-          journey={null}
-          onClose={() => setAddingDomain(null)}
-          onSaved={() => {
-            setAddingDomain(null);
-            onDataChanged?.();
-          }}
-        />
-      )}
+      {/* A ticket mail or PDF first, typing it in as the footer route — the
+          same chooser cruises and stays open with. Only offered while rail
+          is visible (beta switch + domain), as `addableDomains` says. */}
+      <DomainImportPanel
+        open={addingDomain === "rail"}
+        onClose={() => setAddingDomain(null)}
+        onItemsCreated={() => onDataChanged?.()}
+        adapter={railAdapter}
+      />
       {addingDomain === "poi" && (
         <PlaceFormModal
           place={null}

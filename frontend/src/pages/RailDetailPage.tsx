@@ -11,6 +11,7 @@ import { Icon } from "../components/ui/Icon";
 import TripPill from "../components/Trips/TripPill";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
+import { railExtractTarget } from "../lib/extractTargets";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { RailFormModal } from "../components/rail/RailFormModal";
 import { RailRouteMap } from "../components/rail/RailRouteMap";
@@ -50,7 +51,7 @@ function formatDuration(
 export default function RailDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation(["rail", "common", "trips"]);
+  const { t, i18n } = useTranslation(["rail", "common", "trips", "documents"]);
   const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
   const addToast = useToastStore((s) => s.addToast);
   const [journey, setJourney] = useState<RailJourneyDetail | null>(null);
@@ -266,7 +267,14 @@ export default function RailDetailPage(): JSX.Element {
             </DetailSection>
           )}
 
-          <DocumentsSection entry={{ type: "railJourney", id: journey.id }} />
+          <DocumentsSection
+            entry={{ type: "railJourney", id: journey.id }}
+            extract={railExtractTarget(journey, async (updates) => {
+              await railApi.update(journey.id, updates);
+              addToast("success", t("documents:extract.applied"));
+              setReloadKey((k) => k + 1);
+            })}
+          />
         </div>
 
         <aside className="flex flex-col gap-6 md:col-span-2">

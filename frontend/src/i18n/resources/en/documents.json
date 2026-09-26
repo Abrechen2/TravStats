@@ -47,7 +47,9 @@
       "currency": "Currency",
       "bookingReference": "Booking reference",
       "seatNumber": "Seat",
-      "seatClass": "Cabin class"
+      "seatClass": "Cabin class",
+      "travelClass": "Class",
+      "coach": "Coach"
     },
     "applied": "The values from the receipt were applied."
   }

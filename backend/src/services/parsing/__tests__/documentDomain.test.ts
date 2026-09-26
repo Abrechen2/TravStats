@@ -10,6 +10,13 @@
 
 import { scoreDocument, type DomainScore } from "../documentDomain";
 import { PARSER_SUPPORTED_DOMAINS, type ParserSupportedDomain } from "../../../shared/domains";
+import {
+  CRUISE_MAIL,
+  DB_CONFIRMATION_SINGLE,
+  DB_ONLINE_TICKET,
+  FLIGHT_MAIL,
+  HOTEL_MAIL,
+} from "../../rail/parser/__tests__/railFixtures";
 
 /**
  * Reads one domain out of the candidate list. Written as a lookup with an
@@ -403,5 +410,39 @@ describe("scoreDocument — the scan is bounded", () => {
 
     expect(scoreDocument(`Boarding Gate B24 ${padding}`).confidence).toBeGreaterThan(0);
     expect(scoreDocument(`${padding} Boarding Gate B24`).confidence).toBe(0);
+  });
+});
+
+describe("scoreDocument — rail", () => {
+  it("reads DB's booking confirmation as rail, on its von/nach structure", () => {
+    const detection = scoreDocument(DB_CONFIRMATION_SINGLE);
+    expect(detection.domain).toBe("rail");
+    expect(candidate(detection.candidates, "rail").matched).toEqual(
+      expect.arrayContaining(["rail-von-nach", "rail-order-number"])
+    );
+  });
+
+  it("reads DB's Online-Ticket as rail, although its train numbers look like flight numbers", () => {
+    const detection = scoreDocument(DB_ONLINE_TICKET);
+    expect(detection.domain).toBe("rail");
+    expect(candidate(detection.candidates, "rail").matched).toContain("rail-halt-table");
+  });
+
+  it("leaves a flight mail that sells Rail&Fly on flight", () => {
+    expect(scoreDocument(FLIGHT_MAIL).domain).toBe("flight");
+  });
+
+  it("leaves a hotel that gives directions from the station on lodging", () => {
+    expect(scoreDocument(HOTEL_MAIL).domain).toBe("lodging");
+  });
+
+  it("leaves a cruise that offers a train to the ship on cruise", () => {
+    expect(scoreDocument(CRUISE_MAIL).domain).toBe("cruise");
+  });
+
+  it("gives a bare mention of a station no weight at all", () => {
+    const detection = scoreDocument("Treffpunkt: vor dem Bahnhof, dann mit dem Zug weiter.");
+    expect(candidate(detection.candidates, "rail").score).toBe(0);
+    expect(detection.domain).toBe("flight");
   });
 });

@@ -45,6 +45,38 @@ export interface MimeAttachment {
   mediaType: string;
   /** Decoded size in bytes. */
   size: number;
+  /**
+   * The decoded bytes — kept only for the kinds a parser reads (a calendar
+   * file, a PDF ticket) and only up to `MAX_KEPT_BYTES`; every other part is
+   * named and sized, never held.
+   */
+  content?: Buffer;
+}
+
+/** A booking's ticket PDF is tens of kilobytes; a calendar file a few. */
+const MAX_KEPT_BYTES = 5 * 1024 * 1024;
+const MAX_KEPT_PARTS = 6;
+
+/** Calendar files and PDFs: what the rail parser reads out of a booking mail. */
+function isReadablePart(filename: string | undefined, mediaType: string): boolean {
+  return (
+    /\.(ics|pdf)$/i.test(filename ?? "") ||
+    /^(text\/calendar|application\/ics|application\/pdf)$/i.test(mediaType)
+  );
+}
+
+function keepContent(
+  into: { attachments: MimeAttachment[] },
+  filename: string | undefined,
+  mediaType: string,
+  decoded: Buffer
+): Buffer | undefined {
+  const kept = into.attachments.filter((a) => a.content !== undefined).length;
+  return isReadablePart(filename, mediaType) &&
+    decoded.length <= MAX_KEPT_BYTES &&
+    kept < MAX_KEPT_PARTS
+    ? decoded
+    : undefined;
 }
 
 export interface MimeMessage {
@@ -286,13 +318,17 @@ function walk(headers: Map<string, string>, body: Buffer, depth: number, into: C
 
   const decoded = decodeTransferEncoding(body, headers.get("content-transfer-encoding"));
 
-  if (isAttachment(headers, contentType)) {
+  // A calendar part is an attachment even without a disposition: the message
+  // is its text, never its VCALENDAR block.
+  if (isAttachment(headers, contentType) || contentType.mediaType === "text/calendar") {
     if (into.attachments.length < MAX_PARTS) {
       const filename = filenameOf(headers, contentType);
+      const content = keepContent(into, filename, contentType.mediaType, decoded);
       into.attachments.push({
         ...(filename ? { filename } : {}),
         mediaType: contentType.mediaType,
         size: decoded.length,
+        ...(content ? { content } : {}),
       });
     }
     return;
@@ -311,7 +347,12 @@ function walk(headers: Map<string, string>, body: Buffer, depth: number, into: C
     decoded.length > 0
   ) {
     // A binary part with no disposition is still not the message.
-    into.attachments.push({ mediaType: contentType.mediaType, size: decoded.length });
+    const content = keepContent(into, undefined, contentType.mediaType, decoded);
+    into.attachments.push({
+      mediaType: contentType.mediaType,
+      size: decoded.length,
+      ...(content ? { content } : {}),
+    });
   }
 }
 

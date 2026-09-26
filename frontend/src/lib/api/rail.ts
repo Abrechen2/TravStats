@@ -2,6 +2,7 @@ import { api } from "./client";
 import { API_TIMEOUTS } from "../../config/constants";
 import type {
   RailJourney,
+  RailEntrySuggestions,
   RailJourneyDetail,
   RailJourneyInput,
   RailLookupAnswer,
@@ -98,6 +99,14 @@ export const railApi = {
     return res.data.data;
   },
 
+  /** Chips for the rail form from the user's own rides; nothing is written. */
+  async entrySuggestions(query: RailEntrySuggestionsQuery): Promise<RailEntrySuggestions> {
+    const res = await api.get<Envelope<RailEntrySuggestions>>("/rail/entry-suggestions", {
+      params: query,
+    });
+    return res.data.data;
+  },
+
   /** Which lookup providers the admin allows on this instance. */
   async lookupProviders(): Promise<RailLookupProviders> {
     const res = await api.get<Envelope<RailLookupProviders>>("/rail/lookup/providers");
@@ -167,6 +176,14 @@ export interface RoadtripConversionResult {
   journeyIds: string[];
   skipped: RoadtripConversionPreview["skipped"];
   sectionRemoved: boolean;
+}
+
+export interface RailEntrySuggestionsQuery {
+  depStationId?: number;
+  arrStationId?: number;
+  depName?: string;
+  arrName?: string;
+  operator?: string;
 }
 
 export interface RailLookupQuery {

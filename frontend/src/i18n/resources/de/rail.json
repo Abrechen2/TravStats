@@ -75,7 +75,8 @@
       "nonexistentTime": "Diese Uhrzeit gibt es an diesem Tag nicht: Bei der Umstellung auf Sommerzeit springen die Uhren eine Stunde vor. Prüf die Zeit auf dem Ticket.",
       "invalidField": "Die Angabe „{{field}}“ wurde nicht angenommen. Bitte prüf sie.",
       "invalid": "Eine Angabe wurde nicht angenommen. Bitte prüf die Felder."
-    }
+    },
+    "suggestionsFailed": "Vorschläge aus deinen bisherigen Fahrten konnten nicht geladen werden — das Formular funktioniert trotzdem."
   },
   "tracedLine": "entlang der Strecke, Transitous",
   "roadtripLine": "entlang der Roadtrip-Route",
@@ -124,7 +125,9 @@
     "linked": "Mit einer Fahrt aus dem Fahrplan verknüpft ({{provider}}).",
     "unlink": "Verknüpfung lösen",
     "credit": "Fahrplandaten und Streckenverläufe:",
-    "switchedOff": "Die Zugsuche ist auf dieser Instanz abgeschaltet. Trag die Fahrt von Hand ein."
+    "switchedOff": "Die Zugsuche ist auf dieser Instanz abgeschaltet. Trag die Fahrt von Hand ein.",
+    "changeNeeded": "Dein Ziel {{station}} liegt nicht an der Strecke dieses Zugs. Du steigst in {{stop}} um — die Weiterfahrt legst du nach dem Speichern als Anschluss an.",
+    "applyWithChange": "Bis zum Umstieg übernehmen"
   },
   "detail": {
     "loading": "Lädt …",
@@ -156,7 +159,10 @@
     "saveAndAdd": "Speichern & Anschluss eintragen",
     "banner": "Anschlusszug ab {{station}} — beide Fahrten werden über eine Buchung verbunden.",
     "title": "Verbindung",
-    "booking": "Buchung {{pnr}}"
+    "booking": "Buchung {{pnr}}",
+    "onward": "Weiterfahrt nach {{station}}: Nach dem Speichern öffnet sich der Anschluss mit diesem Ziel.",
+    "saveAndContinue": "Speichern & weiter nach {{station}}",
+    "dismissOnward": "Keine Weiterfahrt"
   },
   "trip": {
     "open": "Fahrt öffnen",
@@ -238,6 +244,35 @@
       "providerUnavailable": "Transitous hat nicht geantwortet",
       "stationOffLine": "ein Bahnhof liegt nicht auf der Strecke dieses Zuges",
       "untracedShape": "Transitous kennt für diesen Zug nur gerade Linien zwischen den Halten"
+    }
+  },
+  "import": {
+    "panelTitle": "Zugfahrt hinzufügen",
+    "panelHint": "Hast du eine Buchungsbestätigung oder ein Ticket? Zieh die Mail (.eml, .msg) oder das PDF hierher — die Fahrten werden gelesen und du bestätigst jede einzeln.",
+    "title": "Gelesene Zugfahrten prüfen",
+    "save_one": "{{count}} Fahrt speichern",
+    "save_other": "{{count}} Fahrten speichern",
+    "tariff": "Tarif",
+    "total": "Gesamtpreis",
+    "totalNotWritten": "Eine Fahrt dieser Buchung ist schon erfasst — der Gesamtpreis wird nicht noch einmal gespeichert.",
+    "takeLeg": "Fahrt {{from}} → {{to}} übernehmen",
+    "direction": {
+      "outbound": "Hinfahrt",
+      "return": "Rückfahrt"
+    },
+    "noTrain": "keine Zugnummer auf dem Ticket",
+    "duplicate": "Schon im Fahrtenbuch (gleiche Buchung, gleiche Abfahrt) — nicht angehakt.",
+    "legSaved": "Gespeichert.",
+    "unresolved": "„{{name}}“ ist im Bahnhofsverzeichnis nicht eindeutig. Wähl den Bahnhof aus:",
+    "pickStations": "Wähl für jede angehakte Fahrt beide Bahnhöfe — ohne Bahnhof ist die Uhrzeit keiner Zeitzone zuzuordnen.",
+    "saved_one": "{{count}} Zugfahrt aus dem Ticket gespeichert.",
+    "saved_other": "{{count}} Zugfahrten aus dem Ticket gespeichert.",
+    "empty": {
+      "noItinerary": "Diese Bahn-Mail nennt die Buchung {{reference}}, aber keinen Fahrtverlauf. Der steht im angehängten Ticket-PDF — lade das PDF hoch oder die Mail mit Anhang (.eml/.msg).",
+      "llmUnreachable": "In diesem Dokument wurde keine Zugfahrt erkannt: Keine Vorlage kennt das Layout, und der KI-Parser ist nicht erreichbar. Trag die Fahrt von Hand ein.",
+      "llmFailed": "Der KI-Parser hat auf dieses Dokument keine verwertbare Antwort gegeben. Trag die Fahrt von Hand ein.",
+      "demoNoLlm": "Keine Vorlage kennt dieses Ticket, und im Demo-Konto steht der KI-Parser nicht zur Verfügung.",
+      "nothingFound": "In diesem Dokument wurde keine Zugfahrt gefunden. Trag die Fahrt von Hand ein."
     }
   }
 }

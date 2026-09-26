@@ -12,6 +12,8 @@ import {
   isCruisePdfResult,
   isLodgingEmailResult,
   isLodgingPdfResult,
+  isRailEmailResult,
+  isRailPdfResult,
 } from "../../lib/api/parse";
 
 const BoardingPassScanner = lazy(() => import("../BoardingPassScanner"));
@@ -96,7 +98,7 @@ export default function FlightLookupStep({
   };
 
   const handleEmailResult = (result: ParseEmailResult, fileName?: string | null): void => {
-    if (isCruiseEmailResult(result) || isLodgingEmailResult(result)) {
+    if (isCruiseEmailResult(result) || isLodgingEmailResult(result) || isRailEmailResult(result)) {
       setError(t("flights:form.noFlightsInEmail"));
       return;
     }
@@ -117,7 +119,7 @@ export default function FlightLookupStep({
   };
 
   const handlePdfResult = (result: ParsePdfResult, fileName?: string | null): void => {
-    if (isCruisePdfResult(result) || isLodgingPdfResult(result)) {
+    if (isCruisePdfResult(result) || isLodgingPdfResult(result) || isRailPdfResult(result)) {
       setError(t("flights:form.noFlightsInEmail"));
       return;
     }

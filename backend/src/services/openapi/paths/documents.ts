@@ -192,8 +192,18 @@ const extractedValues = z.object({
   price: z.number().nullable(),
   currency: z.string().nullable().describe("ISO 4217"),
   bookingReference: z.string().nullable(),
-  seatNumber: z.string().nullable().describe("Flights only"),
+  seatNumber: z.string().nullable().describe("Flights and rail: the seat of the entry's leg"),
   seatClass: z.enum(["economy", "premium_economy", "business", "first"]).nullable(),
+  travelClass: z
+    .enum(["first", "second", "sleeper", "couchette"])
+    .nullable()
+    .optional()
+    .describe("Rail only, absent otherwise: the class the ticket states"),
+  coach: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Rail only, absent otherwise: the coach of the entry's leg"),
 });
 
 registry.registerPath({
@@ -204,7 +214,8 @@ registry.registerPath({
     "Runs the parser pipeline — with the caller's parser settings — on a kept PDF, .eml or " +
     "mail text and answers the values an entry's cost block holds, as a proposal: nothing is " +
     "written to any entry. For a flight, `flightNumber` and `departureDate` pick the leg out " +
-    "of a multi-flight booking; with several legs and no match, seat and class abstain and the " +
+    "of a multi-flight booking (for rail, `trainNumber` and `departureDate`); with several legs " +
+    "and no match, seat and class abstain and the " +
     "booking-wide values are given only where every leg agrees. `values` is null when nothing " +
     "was found, with `reason` `noText` (no readable text, e.g. a scan) or `nothingFound`. The " +
     "reading is recorded on the document. Rate-limited by the PDF or the mail parse budget, " +

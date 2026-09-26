@@ -70,7 +70,7 @@ registry.registerPath({
   summary: "Read a booking out of an email",
   description:
     "multipart/form-data with the .eml, plus a `domain` saying what to read it " +
-    "as — flight, cruise or lodging. All three are supported; omitting the field " +
+    "as — flight, cruise, lodging or rail. All four are supported; omitting the field " +
     "means flight. Returns candidates for review; nothing is stored. A document " +
     "it cannot read comes back as an empty result with a reason, not as an error " +
     "— 'no booking here' is an answer, not a failure. With `retain=true` the file is " +
@@ -85,7 +85,7 @@ registry.registerPath({
   path: "/parse-pdf",
   summary: "Read a booking out of a PDF",
   description:
-    "Same three domains as the email route — flight, cruise or lodging — and the " +
+    "Same four domains as the email route — flight, cruise, lodging or rail — and the " +
     "same contract: a proposal, never a write. JSON body with the PDF as base64. " +
     "Send `retain: true` to keep the input as a document (the answer then carries `documentId`), " +
     "or `documentId` instead of the content to read a document already kept — the path for an " +

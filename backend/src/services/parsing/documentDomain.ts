@@ -56,7 +56,7 @@ interface Signal {
 }
 
 /**
- * Weights are on one scale across all three domains, so they can be compared:
+ * Weights are on one scale across all four domains, so they can be compared:
  *
  *   5  structural — a shape only this kind of document has
  *   3  strong     — a term the other domains do not use
@@ -164,6 +164,48 @@ const SIGNALS: Record<ParserSupportedDomain, readonly Signal[]> = {
     },
     { id: "hotel-noun", pattern: /\b(hotel|pension|hostel|gasthof)\b/i, weight: 1 },
   ],
+  rail: [
+    // DB's "von X, date time Uhr" line followed by its "nach Y" line, and the
+    // Online-Ticket's Halt/Datum/Zeit table with "ab"/"an" rows: shapes only a
+    // train ticket has. The ab/an rows alone are also what a DB delay alert
+    // prints — which is why the rail PARSER, not this classifier, decides
+    // whether a rail document is a booking.
+    {
+      id: "rail-von-nach",
+      pattern: /^\s*von\s+.+,\s*\d{1,2}\.\d{1,2}\.\d{4}\s+\d{1,2}:\d{2}\s*Uhr\s*\n\s*nach\s+/im,
+      weight: 5,
+    },
+    { id: "rail-halt-table", pattern: /\bHalt\s+Datum\s+Zeit\s+Gleis\b/i, weight: 5 },
+    {
+      id: "rail-ab-an",
+      pattern:
+        /\d{1,2}\.\d{1,2}\.\d{0,4}\s+ab\s+\d{1,2}:\d{2}[\s\S]{0,300}\d{1,2}\.\d{1,2}\.\d{0,4}\s+an\s+\d{1,2}:\d{2}/i,
+      weight: 5,
+    },
+    {
+      // "öbb" cannot use \b: JavaScript's word boundary does not see "ö".
+      id: "rail-operator",
+      pattern:
+        /(deutsche bahn|deutschen bahn|bahn\.de|db fernverkehr|db vertrieb|db regio|öbb|oebb\.at|sbb\.ch|\bsbb cff\b|trainline|sncf|ouigo|trenitalia|eurostar|flixtrain|westbahn)/i,
+      weight: 3,
+    },
+    { id: "rail-order-number", pattern: /\bauftragsnummer\b/i, weight: 3 },
+    {
+      id: "rail-ticket",
+      pattern:
+        /\b(fahrkarte|fahrkarten|fahrausweis|fahrschein|zugbindung|bahncard|online-ticket|handy-ticket|sparpreis|flexpreis|billet de train|train ticket)\b/i,
+      weight: 3,
+    },
+    { id: "rail-class", pattern: /\b([12]\.\s*Klasse|Klasse:\s*[12]|[12]\.\s*Kl\.)/i, weight: 2 },
+    {
+      id: "rail-train-number",
+      pattern: /\b(ICE|IC|EC|ECE|RE|RB|IRE|TGV|RJX?|NJ|EN)\s?\d{1,5}\b/,
+      weight: 2,
+    },
+    // No bare-noun signal: "Zug" or "Bahnhof" in a tour voucher or a hotel's
+    // directions decided mails that carried no other evidence at all —
+    // measured on five non-rail mails, where a tie used to fall to flight.
+  ],
 };
 
 /**
@@ -196,7 +238,7 @@ export interface DomainDetection {
 }
 
 /**
- * Score one document against all three domains.
+ * Score one document against every parser domain.
  *
  * Ties are broken by the order of `PARSER_SUPPORTED_DOMAINS`, which puts flight
  * first — the historical default. A tie means the evidence did not decide, and
