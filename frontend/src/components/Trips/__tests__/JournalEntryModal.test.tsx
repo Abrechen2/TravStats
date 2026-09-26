@@ -5,6 +5,7 @@ import JournalEntryModal from "../JournalEntryModal";
 import { tripsApi } from "../../../lib/api";
 import { useSettingsStore } from "../../../store/settingsStore";
 import type { TripJournalEntry } from "../../../types";
+import { localToday } from "../../../lib/journalDefaultDate";
 
 vi.unmock("../../../store/settingsStore");
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -126,5 +127,45 @@ describe("JournalEntryModal", () => {
         expect.objectContaining({ photoIds: ["p9"] })
       )
     );
+  });
+  // Acceptance 2026-09-26: a new entry defaulted to today, so an entry written
+  // after the trip landed outside it.
+  describe("the day a new entry starts on", () => {
+    const dateField = (): HTMLInputElement =>
+      document.querySelector('input[type="date"]') as HTMLInputElement;
+    const open = (trip: Parameters<typeof JournalEntryModal>[0]["trip"]): void => {
+      render(
+        <JournalEntryModal
+          tripId="t1"
+          entry={null}
+          trip={trip}
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      );
+    };
+
+    it("is the trip's first day when today is outside the trip and nothing is written", () => {
+      open({ startDate: "2024-07-14T00:00:00.000Z", endDate: "2024-07-20T00:00:00.000Z" });
+      expect(dateField().value).toBe("2024-07-14");
+    });
+
+    it("is the day after the last entry when today is outside the trip", () => {
+      open({
+        startDate: "2024-07-14T00:00:00.000Z",
+        endDate: "2024-07-20T00:00:00.000Z",
+        journalEntries: [
+          { date: "2024-07-14T00:00:00.000Z" },
+          { date: "2024-07-15T00:00:00.000Z" },
+        ],
+      });
+      expect(dateField().value).toBe("2024-07-16");
+    });
+
+    it("is today while the trip is on", () => {
+      const today = localToday();
+      open({ startDate: `${today}T00:00:00.000Z`, endDate: `${today}T00:00:00.000Z` });
+      expect(dateField().value).toBe(today);
+    });
   });
 });

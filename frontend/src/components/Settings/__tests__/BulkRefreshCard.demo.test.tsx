@@ -16,10 +16,22 @@ vi.mock("../../../hooks/useIsDemoAccount", () => ({
 }));
 
 // Who is asking. The remembered refusal belongs to ONE account.
-const currentUser = vi.hoisted(() => ({ id: "user-a" as string | undefined }));
+const currentUser = vi.hoisted(() => ({
+  id: "user-a" as string | undefined,
+  providerQuotaRefused: false,
+}));
 vi.mock("../../../store/authStore", () => ({
-  useAuthStore: (selector: (s: { user: { id: string | undefined } | null }) => unknown) =>
-    selector({ user: currentUser.id === undefined ? null : { id: currentUser.id } }),
+  useAuthStore: (
+    selector: (s: {
+      user: { id: string | undefined; providerQuotaRefused: boolean } | null;
+    }) => unknown
+  ) =>
+    selector({
+      user:
+        currentUser.id === undefined
+          ? null
+          : { id: currentUser.id, providerQuotaRefused: currentUser.providerQuotaRefused },
+    }),
 }));
 
 import BulkRefreshCard from "../BulkRefreshCard";
@@ -41,6 +53,19 @@ describe("BulkRefreshCard on the shared demo account", () => {
     flightsApiMock.bulkRefreshRun.mockReset();
     window.sessionStorage.clear();
     currentUser.id = "user-a";
+    currentUser.providerQuotaRefused = false;
+  });
+
+  // Acceptance 2026-09-26: an isDemo account that is not the shared demo
+  // (the local dev admin, a preview's admin) still spent a 403 on the first
+  // visit. The session now says the server will refuse it.
+  it("asks nothing for any account the session says is refused the quota", async () => {
+    isDemoMock.current = false;
+    currentUser.providerQuotaRefused = true;
+    render(<BulkRefreshCard />);
+
+    expect(await screen.findByText("settings:apiKeys.bulkRefresh.demoBlocked")).toBeInTheDocument();
+    expect(flightsApiMock.bulkRefreshPreview).not.toHaveBeenCalled();
   });
 
   it("asks for no preview it already knows will be refused", async () => {

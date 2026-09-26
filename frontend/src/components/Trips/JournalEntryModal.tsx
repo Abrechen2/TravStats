@@ -8,11 +8,18 @@ import JournalWeatherFetch from "./JournalWeatherFetch";
 import SuggestionChips from "../common/SuggestionChips";
 import { useJournalMoods } from "../../hooks/useJournalMoods";
 import JournalPhotoPicker from "./JournalPhotoPicker";
+import {
+  defaultJournalDate,
+  localToday,
+  type JournalDaySource,
+} from "../../lib/journalDefaultDate";
 
 interface JournalEntryModalProps {
   tripId: string;
   entry: TripJournalEntry | null; // null = create
   defaultDate?: string; // pre-fill date when creating
+  /** The trip, so a new entry starts on a day inside it (lib/journalDefaultDate). */
+  trip?: JournalDaySource;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -34,6 +41,7 @@ export default function JournalEntryModal({
   tripId,
   entry,
   defaultDate,
+  trip,
   onClose,
   onSaved,
 }: JournalEntryModalProps): JSX.Element {
@@ -41,7 +49,9 @@ export default function JournalEntryModal({
   const addToast = useToastStore((s) => s.addToast);
 
   const [date, setDate] = useState(
-    toDateInput(entry?.date ?? defaultDate ?? new Date().toISOString())
+    entry
+      ? toDateInput(entry.date)
+      : (defaultDate ?? (trip ? defaultJournalDate(trip, localToday()) : localToday()))
   );
   const [title, setTitle] = useState(entry?.title ?? "");
   const [body, setBody] = useState(entry?.body ?? "");
