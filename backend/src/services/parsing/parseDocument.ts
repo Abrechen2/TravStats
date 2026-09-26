@@ -34,6 +34,9 @@ import { parseCruiseBookingText } from "../cruiseBookingParser";
 import { resolveCruiseEntities, hydrateResolvedCruises } from "../cruiseEntityResolver";
 import { parseLodgingBookingText } from "../lodging/lodgingBookingParser";
 import { bookingsToCandidates } from "../lodging/lodgingCandidates";
+import { parseRailBookingText, type RailFallbackCode } from "../rail/parser/railBookingParser";
+import { toRailCandidate, type RailImportCandidate } from "../rail/parser/railCandidates";
+import type { RailAttachment } from "../rail/parser/types";
 import { PARSER_SUPPORTED_DOMAINS, type ParserSupportedDomain } from "../../shared/domains";
 import { scoreDocument, type DomainDetection } from "./documentDomain";
 
@@ -64,6 +67,11 @@ export interface ParseDocumentInput {
    * dropping it would silently reinstate the bug that put 2005 flights in 2026.
    */
   referenceDate?: Date;
+  /**
+   * Files that came with a mail — a calendar file, a PDF ticket. Only the rail
+   * reader looks at them: a DB booking mail prints its itinerary nowhere else.
+   */
+  attachments?: RailAttachment[];
 }
 
 type CruiseBody = {
@@ -85,8 +93,21 @@ type LodgingBody = {
 
 type FlightBody = { domain: "flight" } & ParseResult;
 
+type RailBody = {
+  domain: "rail";
+  /** One booking per document; empty when nothing was read — see `fallbackCode`. */
+  bookings: RailImportCandidate[];
+  parserUsed: string;
+  ollamaAvailable: boolean;
+  /** Why nothing was read, as a stable code the client words in its own language. */
+  fallbackCode?: RailFallbackCode;
+  fallbackReason?: string;
+  /** A DB order mail's reference when it printed no ride — the ride is in its ticket. */
+  orderReference?: string | null;
+};
+
 /** The domain-shaped payload, byte-identical to what each route returned before. */
-export type ParsedDocumentBody = FlightBody | CruiseBody | LodgingBody;
+export type ParsedDocumentBody = FlightBody | CruiseBody | LodgingBody | RailBody;
 
 export interface ParseDocumentOutcome {
   /** The domain actually parsed with. */
@@ -169,6 +190,19 @@ async function parseAs(
       parserUsed: result.parserUsed,
       ollamaAvailable: result.ollamaAvailable,
       ...(result.fallbackReason !== undefined ? { fallbackReason: result.fallbackReason } : {}),
+    };
+  }
+
+  if (domain === "rail") {
+    const result = await parseRailBookingText(combined, input.attachments ?? [], input.userId);
+    return {
+      domain: "rail",
+      bookings: result.booking ? [await toRailCandidate(result.booking, input.userId)] : [],
+      parserUsed: result.parserUsed,
+      ollamaAvailable: result.ollamaAvailable,
+      ...(result.fallbackCode !== undefined ? { fallbackCode: result.fallbackCode } : {}),
+      ...(result.fallbackReason !== undefined ? { fallbackReason: result.fallbackReason } : {}),
+      ...(result.orderReference ? { orderReference: result.orderReference } : {}),
     };
   }
 

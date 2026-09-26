@@ -146,6 +146,8 @@ export const documentLimitsSchema = z.object(
 export const extractValuesBodySchema = z.object({
   domain: z.enum(PARSER_SUPPORTED_DOMAINS),
   flightNumber: z.string().trim().max(10).optional(),
+  /** Rail: the train of the entry ("578" or "ICE 578"), to pick its leg. */
+  trainNumber: z.string().trim().max(20).optional(),
   departureDate: z
     .string()
     .regex(/^\d{4}-\d{2}-\d{2}$/)

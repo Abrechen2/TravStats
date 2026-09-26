@@ -38,8 +38,47 @@ export interface ExtractedEmail {
    * Absent for plain text, and for any message whose header is unreadable.
    */
   sentAt?: Date;
+  /**
+   * The files a parser can read that came WITH the message — a calendar file
+   * and PDF tickets, bounded in number and size (`mimeMessage.ts`). A DB
+   * booking mail prints its reference in the body and its itinerary only in
+   * these, so dropping them would leave the rail parser a mail without rides.
+   * Absent when there are none.
+   */
+  attachments?: ExtractedAttachment[];
 }
 
+export interface ExtractedAttachment {
+  filename?: string;
+  mediaType: string;
+  content: Buffer;
+}
+
+/** A .msg's attachments are read for the same two kinds and bounds as an .eml's. */
+const MSG_MAX_KEPT_BYTES = 5 * 1024 * 1024;
+const MSG_MAX_KEPT_PARTS = 6;
+
+function msgAttachments(
+  msgReader: MsgReader,
+  attachments: ReadonlyArray<{ fileName?: string; attachMimeTag?: string }> | undefined
+): ExtractedAttachment[] {
+  const out: ExtractedAttachment[] = [];
+  for (const attachment of attachments ?? []) {
+    if (out.length >= MSG_MAX_KEPT_PARTS) break;
+    const filename = attachment.fileName;
+    const mediaType = attachment.attachMimeTag ?? "application/octet-stream";
+    if (!/\.(ics|pdf)$/i.test(filename ?? "") && !/calendar|ics|pdf/i.test(mediaType)) continue;
+    try {
+      const { content } = msgReader.getAttachment(attachment as never);
+      if (!content || content.length > MSG_MAX_KEPT_BYTES) continue;
+      out.push({ ...(filename ? { filename } : {}), mediaType, content: Buffer.from(content) });
+    } catch (error) {
+      // One unreadable attachment must not cost the message.
+      logger.warn({ error, filename }, "[Email Extractor] Could not read a .msg attachment");
+    }
+  }
+  return out;
+}
 /** A Date, or nothing — never an Invalid Date, which poisons every comparison. */
 function toDate(value: unknown): Date | undefined {
   if (typeof value !== "string" || value.trim() === "") return undefined;
@@ -83,11 +122,14 @@ function extractFromMsg(buffer: Buffer): ExtractedEmail {
       "[Email Extractor] Extracted .msg file"
     );
 
+    const attachments = msgAttachments(msgReader, fileData.attachments);
+
     return {
       subject,
       text: body,
       html: bodyHtml,
       sentAt,
+      ...(attachments.length > 0 ? { attachments } : {}),
       // `senderSmtpAddress` first: `senderEmail` carries an Exchange
       // distinguished name (`/O=…/CN=…`) for internal senders, which names no
       // domain at all.
@@ -154,12 +196,25 @@ function extractFromEml(content: Buffer): ExtractedEmail {
       "[Email Extractor] Extracted .eml file"
     );
 
+    const attachments: ExtractedAttachment[] = message.attachments.flatMap((a) =>
+      a.content
+        ? [
+            {
+              ...(a.filename ? { filename: a.filename } : {}),
+              mediaType: a.mediaType,
+              content: a.content,
+            },
+          ]
+        : []
+    );
+
     return {
       subject,
       text,
       html,
       sentAt,
       ...(from ? { from } : {}),
+      ...(attachments.length > 0 ? { attachments } : {}),
     };
   } catch (error) {
     logger.error({ error }, "[Email Extractor] Failed to extract .eml file");

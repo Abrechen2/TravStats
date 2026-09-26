@@ -8,6 +8,7 @@ import { registry } from "../registry";
 import { parseEmailBodySchema } from "../../../schemas/parseEmail";
 import { parseRetentionFields } from "../../../schemas/document";
 import { errorContent, flightCreateInput, flightResponse } from "./shared";
+import { PARSER_SUPPORTED_DOMAINS } from "../../../shared/domains";
 
 const parsedFlightSchema = registry.register(
   "ParsedFlight",
@@ -34,11 +35,11 @@ const domainDetectionSchema = registry.register(
   "DomainDetection",
   z
     .object({
-      domain: z.enum(["flight", "cruise", "lodging"]),
+      domain: z.enum(PARSER_SUPPORTED_DOMAINS),
       confidence: z.number().min(0).max(1),
       candidates: z.array(
         z.object({
-          domain: z.enum(["flight", "cruise", "lodging"]),
+          domain: z.enum(PARSER_SUPPORTED_DOMAINS),
           score: z.number(),
           confidence: z.number(),
           matched: z.array(z.string()).describe('Signal ids that fired, e.g. "checkin-checkout"'),
@@ -49,7 +50,7 @@ const domainDetectionSchema = registry.register(
 );
 
 const requestableDomain = z
-  .enum(["flight", "cruise", "lodging", "auto"])
+  .enum([...PARSER_SUPPORTED_DOMAINS, "auto"])
   .describe(
     "'auto' lets the server decide what the document is and report the evidence. " +
       "Text routes default to 'flight' for backwards compatibility; /parse-image " +
@@ -169,7 +170,7 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
-            domain: z.enum(["flight", "cruise", "lodging"]),
+            domain: z.enum(PARSER_SUPPORTED_DOMAINS),
             ocrConfidence: z.number(),
             ocrTextLength: z.number(),
             documentId: z

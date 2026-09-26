@@ -7,6 +7,7 @@ import { parseDocument, type ParsedDocumentBody } from "../parsing/parseDocument
 import { hasUsableText } from "../parsing/usableText";
 import { extractTextFromPdf } from "../pdfParser";
 import { readDocumentForParse, recordParse } from "./parseRetention";
+import type { RailTravelClassValue } from "../rail/parser/types";
 
 /**
  * "Take the values from this receipt" — the parser pipeline run on a document
@@ -36,6 +37,10 @@ export interface ExtractedValues {
   seatNumber: string | null;
   /** Flights only, mapped onto the four classes a flight stores. */
   seatClass: SeatClass | null;
+  /** Rail only (absent for the other domains): the class the ticket states. */
+  travelClass?: RailTravelClassValue | null;
+  /** Rail only (absent for the other domains), and only for the leg the entry is. */
+  coach?: string | null;
 }
 
 export interface ExtractValuesResult {
@@ -51,6 +56,8 @@ export interface ExtractValuesInput {
   domain: ParserSupportedDomain;
   /** Picks the leg out of a multi-flight booking. */
   flightNumber?: string;
+  /** Picks the leg out of a multi-train booking ("578" or "ICE 578"). */
+  trainNumber?: string;
   /** `YYYY-MM-DD`, the same purpose, when the number alone is ambiguous. */
   departureDate?: string;
 }
@@ -130,8 +137,51 @@ function flightValues(body: FlightBody, input: ExtractValuesInput): ExtractedVal
   };
 }
 
+type RailBody = Extract<ParsedDocumentBody, { domain: "rail" }>;
+type RailLeg = RailBody["bookings"][number]["legs"][number];
+
+/** The rail leg this entry is: by train number, then by day; with one leg, that leg. */
+function pickRailLeg(legs: RailLeg[], input: ExtractValuesInput): RailLeg | null {
+  if (legs.length === 1) return legs[0];
+  const wanted = compact(input.trainNumber);
+  const byNumber = wanted
+    ? legs.filter((l) => {
+        const number = compact(l.trainNumber ?? undefined);
+        return number !== "" && (wanted === number || wanted.endsWith(number));
+      })
+    : [];
+  const byDay = input.departureDate
+    ? (byNumber.length > 0 ? byNumber : legs).filter((l) =>
+        l.departureLocal.startsWith(input.departureDate!)
+      )
+    : [];
+  if (byDay.length === 1) return byDay[0];
+  return byNumber.length === 1 ? byNumber[0] : null;
+}
+
+/**
+ * A rail booking's total belongs to the booking, not to one leg; it is
+ * offered whichever leg the entry is — the rail parser stores it on the first
+ * leg of a connection, and the user decides here where it goes.
+ */
+function railValues(body: RailBody, input: ExtractValuesInput): ExtractedValues {
+  if (body.bookings.length !== 1) return { ...EMPTY, travelClass: null, coach: null };
+  const booking = body.bookings[0];
+  const leg = pickRailLeg(booking.legs, input);
+  return {
+    ...EMPTY,
+    price: amount(booking.price),
+    currency: currency(booking.currency),
+    bookingReference: text(booking.bookingReference),
+    travelClass: booking.travelClass,
+    seatNumber: leg ? text(leg.seat) : null,
+    coach: leg ? text(leg.coach) : null,
+  };
+}
+
 function valuesOf(body: ParsedDocumentBody, input: ExtractValuesInput): ExtractedValues {
   if (body.domain === "flight") return flightValues(body, input);
+  if (body.domain === "rail") return railValues(body, input);
   // A confirmation for two cruises or two stays names two prices; which one
   // this entry is cannot be told from the document alone.
   if (body.domain === "cruise") {
@@ -161,6 +211,7 @@ interface DocumentText {
   html?: string;
   referenceDate?: Date;
   source: "email" | "document";
+  attachments?: NonNullable<ReturnType<typeof extractEmailFromFile>["attachments"]>;
 }
 
 async function readText(userId: string, documentId: string): Promise<DocumentText> {
@@ -182,6 +233,7 @@ async function readText(userId: string, documentId: string): Promise<DocumentTex
       subject: mail.subject || undefined,
       ...(mail.html ? { html: mail.html } : {}),
       ...(mail.sentAt ? { referenceDate: mail.sentAt } : {}),
+      ...(mail.attachments ? { attachments: mail.attachments } : {}),
       source: "email",
     };
   }

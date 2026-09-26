@@ -43,7 +43,7 @@ const parsePdfSchema = parsePdfBodySchema.refine((b) => !b.pdfBase64 !== !b.docu
  *
  * Body:
  * - pdfBase64: string (required) — Base64-encoded PDF file content
- * - domain: 'flight' | 'cruise' | 'lodging' | 'auto' (default 'flight')
+ * - domain: 'flight' | 'cruise' | 'lodging' | 'rail' | 'auto' (default 'flight')
  * - retain: boolean (optional) — keep the PDF as a document; answers `documentId`
  * - documentId: string (optional) — parse a PDF already kept, instead of pdfBase64
  *
