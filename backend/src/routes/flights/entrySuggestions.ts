@@ -11,8 +11,8 @@ import { statsLimiter } from "../../middleware/rateLimit";
  * `GET /flights/entry-suggestions` — what the flight forms can offer from the
  * user's own logbook: seats they keep choosing, the flight numbers they have
  * flown on this route or with this airline, the frequent flyer number they
- * last booked this airline with, and the terminals they left this airport
- * from.
+ * last booked this airline with, the terminals they left this airport from,
+ * and (forgejo#132) each chip's usage count, their own airlines and aircraft.
  *
  * Its own router file because `routes/flights.ts` sits in the file-size
  * baseline and may not grow by a line; it is mounted BEFORE that router, or
@@ -29,6 +29,8 @@ router.use(authenticate);
 const SEAT_CAP = 5;
 const FLIGHT_NUMBER_CAP = 6;
 const TERMINAL_CAP = 4;
+const AIRLINE_CAP = 6;
+const AIRCRAFT_CAP = 5;
 /** Rows read per group before the case-insensitive merge; the merge can only
  *  shrink the list, so a small multiple of the cap keeps it full. */
 const OVERFETCH = 3;
@@ -52,12 +54,38 @@ export const entrySuggestionsQuerySchema = z.object({
   arr: airportCode,
 });
 
+/** A chip and how often the logbook holds it — the "3×" (forgejo#132 item 19). */
+export interface RankedValue {
+  value: string;
+  usageCount: number;
+}
+
+export interface RankedAirline {
+  /** The most-used spelling of the name; null when only a code was ever recorded. */
+  name: string | null;
+  iata: string | null;
+  icao: string | null;
+  usageCount: number;
+}
+
 export interface FlightEntrySuggestions {
   seats: string[];
   flightNumbers: string[];
   frequentFlyerNumber: string | null;
   departureTerminals: string[];
+  /** The three lists above with their counts, in the same order. */
+  usage: {
+    seats: RankedValue[];
+    flightNumbers: RankedValue[];
+    departureTerminals: RankedValue[];
+  };
+  /** The user's own marketing airlines, most flown first (forgejo#132 item 21). */
+  airlines: RankedAirline[];
+  /** Aircraft flown with `airline` first, then the rest of the logbook (item 21). */
+  aircraft: RankedValue[];
 }
+
+type RankedField = "seatNumber" | "flightNumber" | "terminal" | "aircraft";
 
 /** Marketing airline only: a frequent flyer number is credited to the program
  *  of the carrier that sold the ticket, not the one that flew it. */
@@ -81,17 +109,17 @@ function arrivesAt(code: string): Prisma.FlightWhereInput {
 }
 
 /** Non-null and non-blank — a cleared input is stored as "" by some paths. */
-function present(field: "seatNumber" | "flightNumber" | "terminal"): Prisma.FlightWhereInput {
+function present(field: RankedField): Prisma.FlightWhereInput {
   return { AND: [{ [field]: { not: null } }, { NOT: { [field]: "" } }] };
 }
 
 /** Distinct values of one column, most frequent first, then most recently
  *  flown. Grouped and bounded in the database. */
 async function rankedValues(
-  field: "seatNumber" | "flightNumber" | "terminal",
+  field: RankedField,
   where: Prisma.FlightWhereInput,
   cap: number
-): Promise<string[]> {
+): Promise<RankedValue[]> {
   // A column-generic groupBy defeats Prisma's result inference, so the row
   // shape is stated once here instead of cast at every read.
   const groups = (await prisma.flight.groupBy({
@@ -128,23 +156,29 @@ async function rankedValues(
   return [...merged.values()]
     .sort((a, b) => b.count - a.count || b.last - a.last)
     .slice(0, cap)
-    .map((entry) => entry.value);
+    .map((entry) => ({ value: entry.value, usageCount: entry.count }));
 }
 
-/** Keeps the first spelling of each value (the best-ranked one). */
-function dedupe(values: ReadonlyArray<string | null | undefined>, cap: number): string[] {
+/**
+ * Keeps the first spelling of each value (the best-ranked one), with the count
+ * of the list it was ranked in — a route's flight number says how often it was
+ * flown on that route, which is why it is offered first.
+ */
+function dedupe(values: ReadonlyArray<RankedValue>, cap: number): RankedValue[] {
   const seen = new Set<string>();
-  const out: string[] = [];
-  for (const raw of values) {
-    const value = raw?.trim() ?? "";
+  const out: RankedValue[] = [];
+  for (const ranked of values) {
+    const value = ranked.value.trim();
     const key = value.toUpperCase();
     if (!value || seen.has(key)) continue;
     seen.add(key);
-    out.push(value);
+    out.push({ value, usageCount: ranked.usageCount });
     if (out.length === cap) break;
   }
   return out;
 }
+
+const valuesOf = (ranked: RankedValue[]): string[] => ranked.map((r) => r.value);
 
 /** The route's own flight numbers first, then the airline's. With neither
  *  known — the lookup step asks before either exists — the overall ranking. */
@@ -153,7 +187,7 @@ async function flightNumbersFor(
   airline: string | undefined,
   dep: string | undefined,
   arr: string | undefined
-): Promise<string[]> {
+): Promise<RankedValue[]> {
   const scoped: Prisma.FlightWhereInput[] = [];
   if (dep && arr) scoped.push({ AND: [departsFrom(dep), arrivesAt(arr)] });
   if (airline) scoped.push(airlineWhere(airline));
@@ -163,6 +197,66 @@ async function flightNumbersFor(
     scoped.map((w) => rankedValues("flightNumber", { AND: [{ userId }, w] }, FLIGHT_NUMBER_CAP))
   );
   return dedupe(lists.flat(), FLIGHT_NUMBER_CAP);
+}
+
+/** The airline's own aircraft first, then the whole logbook's. */
+async function aircraftFor(userId: string, airline: string | undefined): Promise<RankedValue[]> {
+  const overall = rankedValues("aircraft", { userId }, AIRCRAFT_CAP);
+  if (!airline) return overall;
+  const own = rankedValues("aircraft", { AND: [{ userId }, airlineWhere(airline)] }, AIRCRAFT_CAP);
+  return dedupe([...(await own), ...(await overall)], AIRCRAFT_CAP);
+}
+
+const blankToNull = (v: string | null): string | null => (v && v.trim() ? v.trim() : null);
+
+/**
+ * The user's marketing airlines, most flown first, then most recently. One
+ * airline is one code: "Lufthansa", "lufthansa" and "LH" are the same row, and
+ * the most-used spelling of the name is shown. A flight with no airline at all
+ * offers nothing.
+ */
+async function airlinesFor(userId: string): Promise<RankedAirline[]> {
+  const groups = await prisma.flight.groupBy({
+    by: ["airline", "airlineIata", "airlineIcao"],
+    where: { userId },
+    _count: { _all: true },
+    _max: { departureTime: true },
+  });
+  const merged = new Map<
+    string,
+    {
+      names: Map<string, number>;
+      iata: string | null;
+      icao: string | null;
+      count: number;
+      last: number;
+    }
+  >();
+  for (const g of groups) {
+    const name = blankToNull(g.airline);
+    const iata = blankToNull(g.airlineIata)?.toUpperCase() ?? null;
+    const icao = blankToNull(g.airlineIcao)?.toUpperCase() ?? null;
+    const key = iata ?? icao ?? name?.toLowerCase();
+    if (!key) continue;
+    const entry = merged.get(key) ?? { names: new Map(), iata, icao, count: 0, last: -Infinity };
+    if (name) entry.names.set(name, (entry.names.get(name) ?? 0) + g._count._all);
+    merged.set(key, {
+      ...entry,
+      iata: entry.iata ?? iata,
+      icao: entry.icao ?? icao,
+      count: entry.count + g._count._all,
+      last: Math.max(entry.last, g._max.departureTime?.getTime() ?? -Infinity),
+    });
+  }
+  return [...merged.values()]
+    .sort((a, b) => b.count - a.count || b.last - a.last)
+    .slice(0, AIRLINE_CAP)
+    .map((e) => ({
+      name: [...e.names.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? null,
+      iata: e.iata,
+      icao: e.icao,
+      usageCount: e.count,
+    }));
 }
 
 async function frequentFlyerNumberFor(userId: string, airline: string): Promise<string | null> {
@@ -191,20 +285,26 @@ router.get(
       const userId = req.userId!;
       const { airline, dep, arr } = parsed.data;
 
-      const [seats, flightNumbers, frequentFlyerNumber, departureTerminals] = await Promise.all([
-        rankedValues("seatNumber", { userId }, SEAT_CAP),
-        flightNumbersFor(userId, airline, dep, arr),
-        airline ? frequentFlyerNumberFor(userId, airline) : Promise.resolve(null),
-        dep
-          ? rankedValues("terminal", { AND: [{ userId }, departsFrom(dep)] }, TERMINAL_CAP)
-          : Promise.resolve([]),
-      ]);
+      const [seats, flightNumbers, frequentFlyerNumber, terminals, airlines, aircraft] =
+        await Promise.all([
+          rankedValues("seatNumber", { userId }, SEAT_CAP),
+          flightNumbersFor(userId, airline, dep, arr),
+          airline ? frequentFlyerNumberFor(userId, airline) : Promise.resolve(null),
+          dep
+            ? rankedValues("terminal", { AND: [{ userId }, departsFrom(dep)] }, TERMINAL_CAP)
+            : Promise.resolve([]),
+          airlinesFor(userId),
+          aircraftFor(userId, airline),
+        ]);
 
       const body: FlightEntrySuggestions = {
-        seats,
-        flightNumbers,
+        seats: valuesOf(seats),
+        flightNumbers: valuesOf(flightNumbers),
         frequentFlyerNumber,
-        departureTerminals,
+        departureTerminals: valuesOf(terminals),
+        usage: { seats, flightNumbers, departureTerminals: terminals },
+        airlines,
+        aircraft,
       };
       res.json(body);
     } catch (err) {
