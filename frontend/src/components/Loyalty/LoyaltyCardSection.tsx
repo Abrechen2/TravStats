@@ -124,7 +124,7 @@ export default function LoyaltyCardSection({
                     ? coverageOf(card).join(", ")
                     : t(`loyalty:coversNone.${domain}`)}
                 </p>
-                <ActivityLine domain={domain} activity={card.activity} />
+                <ActivityLine domain={domain} membershipId={card.id} activity={card.activity} />
                 {card.notes && <p className="t-caption mt-1">{card.notes}</p>}
               </li>
             )

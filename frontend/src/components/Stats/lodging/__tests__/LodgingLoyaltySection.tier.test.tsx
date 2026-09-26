@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
 import type { LodgingStats } from "../../../../types/lodging";
 import { EMPTY_LODGING_STATS_BLOCKS } from "../../../../types/lodgingStatsFixture";
@@ -60,5 +61,31 @@ describe("LodgingLoyaltySection — the tier is about today, not about 2019", ()
     const row2019 = screen.getByText("2019").closest("tr") as HTMLElement;
     expect(within(row2019).getByText("8")).toBeInTheDocument();
     expect(within(row2019).getByText("3")).toBeInTheDocument();
+  });
+});
+
+describe("LodgingLoyaltySection — a programme year leads to its hotels", () => {
+  it("links the programme to the lodging list filtered to that card and year", () => {
+    const base = stats();
+    const linked = {
+      ...base,
+      loyalty: {
+        ...base.loyalty,
+        programmeYears: base.loyalty.programmeYears.map((row) => ({
+          ...row,
+          membershipId: "card-1",
+        })),
+      },
+    } as LodgingStats;
+    render(
+      <MemoryRouter>
+        <LodgingLoyaltySection stats={linked} />
+      </MemoryRouter>
+    );
+    const row2019 = screen.getByText("2019").closest("tr") as HTMLElement;
+    expect(within(row2019).getByRole("link", { name: "Marriott Bonvoy" })).toHaveAttribute(
+      "href",
+      "/lodging?membership=card-1&year=2019"
+    );
   });
 });

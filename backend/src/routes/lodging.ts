@@ -51,6 +51,8 @@ import {
 } from "../services/lodging/deleteLodgingPhotoFiles";
 import { getBaseCurrency } from "../services/fx/snapshot";
 import { assertChainsVisible } from "../services/lodging/chainScope";
+import { lodgingIdsCoveredBy } from "../services/loyalty/listFilters";
+import type { LodgingListQuery, LodgingQueryInput } from "../schemas/lodging";
 
 // Re-exported: every existing import site names this module.
 export { getBaseCurrency };
@@ -79,6 +81,12 @@ const fxPreviewQuerySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
 });
 
+/** The request, with a loyalty card's coverage resolved to hotel ids. */
+async function listQuery(q: LodgingQueryInput, userId: string): Promise<LodgingListQuery> {
+  if (q.membershipId === undefined) return q;
+  return { ...q, coveredLodgingIds: await lodgingIdsCoveredBy(userId, q.membershipId, q.year) };
+}
+
 // ---- Lodging CRUD ----
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -104,7 +112,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     // number the user reads; `listSql.parity.test.ts` holds the two together.
     const { ids, total } = await queryLodgingPage({
       userId,
-      query: parsed.data,
+      query: await listQuery(parsed.data, userId),
       baseCurrency,
     });
     const lodgings = await prisma.lodging.findMany({
@@ -154,7 +162,8 @@ router.get("/facets", async (req: AuthRequest, res: Response, next: NextFunction
     const userId = requireUser(req);
     const parsed = lodgingQuerySchema.safeParse(req.query);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
-    res.json({ success: true, data: await queryLodgingFacets({ userId, query: parsed.data }) });
+    const query = await listQuery(parsed.data, userId);
+    res.json({ success: true, data: await queryLodgingFacets({ userId, query }) });
   } catch (err) {
     next(err);
   }

@@ -1,8 +1,10 @@
 import type { JSX } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
 import type { LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
 import RankedBarList from "./RankedBarList";
+import { loyaltyListLink } from "../../Loyalty/LoyaltyListFilter";
 
 const LODGING_ACCENT = "var(--domain-lodging, #d4778f)";
 const LIST_LIMIT = 8;
@@ -147,7 +149,22 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
               <tbody>
                 {loyalty.programmeYears.map((row) => (
                   <tr key={`${row.programme}-${row.year}`}>
-                    <td className="py-1">{row.programme}</td>
+                    <td className="py-1">
+                      {/* The hotels whose stays make up this row's nights —
+                          the list the tester asked to reach from the figure. */}
+                      {row.membershipId ? (
+                        <Link
+                          to={loyaltyListLink("lodging", row.membershipId, Number(row.year))}
+                          title={t("lodging:stats.loyalty.staysLink", { year: row.year })}
+                          className="hover:underline"
+                          style={{ color: "var(--ts-accent)" }}
+                        >
+                          {row.programme}
+                        </Link>
+                      ) : (
+                        row.programme
+                      )}
+                    </td>
                     <td className="py-1">{row.year}</td>
                     <td className="py-1 text-right" style={{ fontVariantNumeric: "tabular-nums" }}>
                       {row.nights}

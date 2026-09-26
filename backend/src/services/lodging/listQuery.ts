@@ -22,7 +22,7 @@
 
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
-import type { LodgingQueryInput } from "../../schemas/lodging";
+import type { LodgingListQuery as LodgingQueryInput } from "../../schemas/lodging";
 import { LIFECYCLE_SORT_RANK } from "../../shared/lodgingLifecycle";
 import {
   lifecycleRankSql,
@@ -62,6 +62,13 @@ export function lodgingFilterSql(q: LodgingQueryInput, userId: string): Prisma.S
   const conditions: Prisma.Sql[] = [Prisma.sql`l.user_id = ${userId}`];
 
   if (q.type) conditions.push(Prisma.sql`l.type = ${q.type}`);
+  if (q.coveredLodgingIds !== undefined) {
+    conditions.push(
+      q.coveredLodgingIds.length > 0
+        ? Prisma.sql`l.id IN (${Prisma.join(q.coveredLodgingIds)})`
+        : Prisma.sql`FALSE`
+    );
+  }
   if (q.chainId !== undefined) conditions.push(Prisma.sql`l.chain_id = ${q.chainId}`);
 
   // An ISO code covers "Deutschland" AND "Germany" through the derived column;

@@ -354,6 +354,8 @@ export interface LodgingListQuery {
   search?: string;
   /** The lifecycle pill's value — see `shared/lodgingLifecycle.ts`. */
   status?: StayStatus;
+  /** Only hotels with a stay this hotel card counts (resolved on the server). */
+  membershipId?: string;
   limit?: number;
   offset?: number;
   sort?: LodgingSortKey | "checkIn";

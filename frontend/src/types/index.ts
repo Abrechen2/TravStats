@@ -482,6 +482,8 @@ export interface FlightFilters {
   q?: string;
   /** The whole carrier name, where `airline` above is a substring match. */
   airlineExact?: string;
+  /** Only the flights this frequent-flyer card counts (resolved on the server). */
+  membershipId?: string;
   /** A trip id, or `with` / `without`. */
   tripId?: string;
   /** One of the eight special-flight types, or `standard` / `special`. */

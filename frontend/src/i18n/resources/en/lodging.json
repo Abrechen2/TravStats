@@ -571,7 +571,8 @@
       "programme": "Programme",
       "year": "Year",
       "nights": "Nights",
-      "stays": "Stays"
+      "stays": "Stays",
+      "staysLink": "Show the hotels with stays under this programme in {{year}}"
     },
     "records": {
       "title": "Records",

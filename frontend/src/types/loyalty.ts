@@ -11,6 +11,11 @@ export interface MembershipActivity {
   count: number;
   nights: number | null;
   lastActivity: string | null;
+  /**
+   * The same per calendar year, newest first. An undated item counts in the
+   * totals and in no year. Optional for fixtures written before it existed.
+   */
+  years?: Array<{ year: number; count: number; nights: number | null }>;
 }
 
 export interface LoyaltyMembership {

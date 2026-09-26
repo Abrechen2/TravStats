@@ -76,7 +76,9 @@ export default function LoyaltySection(): JSX.Element {
           onChanged={() => void reload()}
           renderExtra={(m) => {
             const card = byId.get(m.id);
-            return card ? <ActivityLine domain="lodging" activity={card.activity} /> : null;
+            return card ? (
+              <ActivityLine domain="lodging" membershipId={card.id} activity={card.activity} />
+            ) : null;
           }}
         />
       );

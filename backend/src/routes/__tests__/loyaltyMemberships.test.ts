@@ -225,7 +225,12 @@ describe("Loyalty memberships API", () => {
         data: { userId, domain: "flight", programName: "M&M", airlineCodes: ["LH"] },
       });
       const res = await api().get("/api/v1/loyalty-memberships").set("Cookie", cookie);
-      expect(res.body.data[0].activity).toEqual({ count: 0, nights: null, lastActivity: null });
+      expect(res.body.data[0].activity).toEqual({
+        count: 0,
+        nights: null,
+        lastActivity: null,
+        years: [],
+      });
     });
 
     it("suggests no card from another user's frequent-flyer numbers", async () => {
@@ -263,6 +268,10 @@ describe("Loyalty memberships API", () => {
         count: 2,
         nights: null,
         lastActivity: "2025-01-02",
+        years: [
+          { year: 2025, count: 1, nights: null },
+          { year: 2024, count: 1, nights: null },
+        ],
       });
     });
 
@@ -290,6 +299,11 @@ describe("Loyalty memberships API", () => {
         count: 2,
         nights: 7,
         lastActivity: "2024-06-08",
+        // The 2023 cruise names no end, so that year has a cruise and no nights.
+        years: [
+          { year: 2024, count: 1, nights: 7 },
+          { year: 2023, count: 1, nights: null },
+        ],
       });
     });
 
@@ -320,6 +334,10 @@ describe("Loyalty memberships API", () => {
         count: 2,
         nights: 5,
         lastActivity: "2025-02-12",
+        years: [
+          { year: 2025, count: 1, nights: 2 },
+          { year: 2024, count: 1, nights: 3 },
+        ],
       });
     });
   });

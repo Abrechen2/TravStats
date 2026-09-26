@@ -30,6 +30,10 @@ export type ApiErrorCode =
   | "RATE_LIMITED"
   | "DB_UNAVAILABLE"
   | "DUPLICATE"
+  /** A list filter named a loyalty card that is not this account's, or not
+   *  of the list's kind (a hotel card on the flight list). The list says the
+   *  programme is gone instead of showing an unfiltered or empty page. */
+  | "LOYALTY_MEMBERSHIP_NOT_FOUND"
   /** A workshop template was activated before its preview had run — the
    *  parser page turns this into "run the preview", not a generic toast. */
   | "PREVIEW_REQUIRED"

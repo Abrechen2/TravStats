@@ -52,7 +52,12 @@
     "nights_one": "{{count}} night",
     "nights_other": "{{count}} nights",
     "last": "last {{date}}",
-    "none": "Nothing in your logbook that this card covers yet."
+    "none": "Nothing in your logbook that this card covers yet.",
+    "showList": {
+      "lodging": "Show hotels",
+      "flight": "Show flights"
+    },
+    "byYear": "By year"
   },
   "suggestions": {
     "open": "Take over from your flights",
@@ -61,5 +66,11 @@
     "empty": "No further frequent flyer numbers found in your flights.",
     "loadError": "The suggestions could not be loaded.",
     "adopt": "Take over"
+  },
+  "listFilter": {
+    "named": "Only entries of “{{name}}”",
+    "gone": "This loyalty programme does not exist (any more), so nothing is shown here.",
+    "unnamed": "Only entries of one loyalty programme",
+    "clear": "Remove filter"
   }
 }

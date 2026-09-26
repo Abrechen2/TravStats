@@ -571,7 +571,8 @@
       "programme": "Programm",
       "year": "Jahr",
       "nights": "Nächte",
-      "stays": "Aufenthalte"
+      "stays": "Aufenthalte",
+      "staysLink": "Hotels mit Aufenthalten dieses Programms in {{year}} anzeigen"
     },
     "records": {
       "title": "Rekorde",

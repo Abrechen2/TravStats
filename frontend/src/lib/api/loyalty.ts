@@ -18,6 +18,12 @@ export const listLoyaltyMemberships = async (): Promise<LoyaltyMembership[]> => 
   return data.data;
 };
 
+/** One card without its activity — what a list filtered by it names it by. */
+export const getLoyaltyMembership = async (id: string): Promise<LoyaltyMembership> => {
+  const { data } = await api.get<Envelope<LoyaltyMembership>>(`${BASE}/${id}`);
+  return data.data;
+};
+
 export const listFrequentFlyerSuggestions = async (): Promise<FrequentFlyerSuggestion[]> => {
   const { data } = await api.get<Envelope<FrequentFlyerSuggestion[]>>(`${BASE}/suggestions`);
   return data.data;

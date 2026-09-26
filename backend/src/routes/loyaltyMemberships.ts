@@ -118,6 +118,23 @@ router.get(
   }
 );
 
+// After `/suggestions`, or Express would read "suggestions" as an id.
+router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const card = await prisma.loyaltyMembership.findFirst({
+      where: { id: req.params.id, userId },
+      include: INCLUDE,
+    });
+    if (!card) {
+      throw new AppError("Membership not found", 404, "LOYALTY_MEMBERSHIP_NOT_FOUND");
+    }
+    res.json({ success: true, data: serialize(card) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
