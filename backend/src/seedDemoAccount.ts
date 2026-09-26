@@ -30,6 +30,7 @@ import { appVersion } from "./utils/version";
 import { checkAndUpdateAchievements } from "./utils/achievements";
 import { AVAILABLE_DOMAINS } from "./shared/domains";
 import { seedRealisticDemo } from "./seedDemo/realistic";
+import { fillSeededTimeColumns } from "./services/timeModel/seedTimeColumns";
 import { ensureDemoCatalogues, enableBetaForDemo } from "./seedDemo/instance";
 
 const DEMO_PASSWORD = "demo123";
@@ -371,6 +372,8 @@ export async function runDemoSeed(
   const userId = await ensureUser();
   await ensureUserSettings(userId, now);
   await seedRealisticDemo(userId, now);
+  // The time-model columns, derived from what the seed just wrote (ADR 0002).
+  await fillSeededTimeColumns(userId);
 
   try {
     await checkAndUpdateAchievements(userId);

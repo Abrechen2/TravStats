@@ -16,6 +16,7 @@ import { readFileSync } from "fs";
 import bcrypt from "bcrypt";
 
 import { prisma } from "../db";
+import { fillSeededTimeColumns } from "../services/timeModel/seedTimeColumns";
 
 type Section = Record<string, string[]>;
 
@@ -174,6 +175,9 @@ async function main(): Promise<void> {
     });
   }
   console.log("places:", p);
+
+  // The time-model columns, derived from what the seed just wrote (ADR 0002).
+  await fillSeededTimeColumns(user.id);
 
   await prisma.$disconnect();
 }

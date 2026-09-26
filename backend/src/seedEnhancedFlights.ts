@@ -1,4 +1,5 @@
 import { createPrismaClient } from "./prismaClient";
+import { fillSeededTimeColumns } from "./services/timeModel/seedTimeColumns";
 const prisma = createPrismaClient();
 
 // Weltweite Flughäfen
@@ -614,6 +615,8 @@ async function main() {
   await prisma.flight.createMany({
     data: flights,
   });
+  // The time-model columns, derived from what the seed just wrote (ADR 0002).
+  await fillSeededTimeColumns(user.id);
 
   console.log(`✅ Created ${flights.length} enhanced flights`);
   console.log(`   - Years covered: 2020-2025`);

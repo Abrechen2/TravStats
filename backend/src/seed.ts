@@ -1,5 +1,6 @@
 import { createPrismaClient } from "./prismaClient";
 import { hashPassword } from "./utils/password";
+import { fillSeededTimeColumns } from "./services/timeModel/seedTimeColumns";
 
 const prisma = createPrismaClient();
 
@@ -102,6 +103,8 @@ async function main() {
   await prisma.flight.createMany({
     data: flights,
   });
+  // The time-model columns, derived from what the seed just wrote (ADR 0002).
+  await fillSeededTimeColumns(user.id);
 
   console.log(`✅ Created ${flights.length} sample flights`);
   console.log("🎉 Seeding completed!");
