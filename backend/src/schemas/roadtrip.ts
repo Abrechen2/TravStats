@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { legacyDayFieldSchema } from "../shared/time/timeInput";
 
 import { LEG_MODES } from "../services/tour/tourDistance";
 import { ROADTRIP_VEHICLES, ROUTE_KINDS, TOUR_ACTIVITIES } from "../shared/tour/roadtrip";
@@ -39,6 +40,8 @@ const stationNight = z.discriminatedUnion("kind", [
   z.object({ kind: z.literal("pass") }).strict(),
 ]);
 
+const stationDay = legacyDayFieldSchema().transform((iso) => new Date(iso));
+
 const station = z
   .object({
     /** Omitted for a new station; kept so its legs survive a reorder. */
@@ -46,8 +49,11 @@ const station = z
     title: z.string().trim().min(1).max(200),
     lat: z.number().min(-90).max(90),
     lon: z.number().min(-180).max(180),
-    startDate: z.coerce.date().nullish(),
-    endDate: z.coerce.date().nullish(),
+    // A station is dated by DAYS (ADR 0002 D1): `YYYY-MM-DD`, or an
+    // offset-bearing string read as the day it writes. `z.coerce.date()` read
+    // an offset-less string in the server's zone; it is refused now.
+    startDate: stationDay.nullish(),
+    endDate: stationDay.nullish(),
     notes: z.string().max(5000).nullish(),
     night: stationNight,
   })

@@ -5,6 +5,7 @@ import { reverseGeocode } from "../geo/nominatim";
 import { recomputeLegs, type StopCoords } from "../tour/legRecompute";
 import { autoRouteNewLegs } from "../tour/routing/autoRouteLegs";
 import { STATION_SELECT, spanOf, type StationRow } from "./roadtripSummary";
+import { stationTimeColumns } from "../timeModel/tripColumns";
 
 /**
  * The phone's side of a roadtrip (companion#12, #13; owner 2026-09-24): which
@@ -182,6 +183,12 @@ export async function appendStation(
           lon: input.lon,
           startDate: dayStart(input.date),
           endDate: nightEnd(input.date, input.night, stay),
+          ...stationTimeColumns({
+            startDate: dayStart(input.date),
+            endDate: nightEnd(input.date, input.night, stay),
+            lat: input.lat,
+            lon: input.lon,
+          }),
           overnight: input.night !== "pass",
           lodgingStayId: stay?.id ?? null,
           routeId,

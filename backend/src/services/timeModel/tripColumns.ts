@@ -2,6 +2,7 @@ import { localDay } from "../../shared/time/instant";
 import { toDbDate } from "../../shared/time/localDate";
 import { zoneOf } from "../../shared/time/zoneOf";
 import { dbDayOf } from "./dayColumns";
+import { instantOfFakeUtc } from "../../shared/time/resolveInput";
 
 /**
  * A trip's span as local days (ADR 0002 phase 2, owner decision 2026-09-26
@@ -94,4 +95,33 @@ export function flightEnds(
     if (arrival) ends.push(arrival);
   }
   return { starts, ends };
+}
+
+/**
+ * A roadtrip station's time columns (ADR 0002 phase 2 dual-write). A station
+ * is dated by DAYS — the night it was slept at — held in the legacy columns
+ * as UTC midnight; the new instant is that day's start at the station, which
+ * has coordinates by construction, so its zone is known. Precision `day`.
+ */
+export function stationTimeColumns(v: {
+  startDate: Date | null;
+  endDate: Date | null;
+  lat: number | null;
+  lon: number | null;
+}): {
+  startUtc: Date | null;
+  endUtc: Date | null;
+  stopZone: string | null;
+  precision: string | null;
+} {
+  const zone = zoneOf({ lat: v.lat, lon: v.lon });
+  const at = (day: Date | null): Date | null =>
+    day && zone ? instantOfFakeUtc(dbDayOf(day), zone) : null;
+  const dated = v.startDate !== null || v.endDate !== null;
+  return {
+    startUtc: at(v.startDate),
+    endUtc: at(v.endDate),
+    stopZone: zone,
+    precision: dated ? (zone ? "day" : "unknown") : null,
+  };
 }

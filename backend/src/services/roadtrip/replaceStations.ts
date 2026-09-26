@@ -5,6 +5,7 @@ import { recomputeLegs, type StopCoords } from "../tour/legRecompute";
 import { autoRouteNewLegs } from "../tour/routing/autoRouteLegs";
 import { STATION_SELECT } from "./roadtripSummary";
 import { readRouteAndLegs, ROUTE_SELECT } from "../../routes/trips/tourRoutes";
+import { stationTimeColumns } from "../timeModel/tripColumns";
 
 export type Station = StationsInput["stations"][number];
 
@@ -92,6 +93,12 @@ export async function replaceStations(
           lon: station.lon,
           startDate: station.startDate ?? null,
           endDate: station.endDate ?? null,
+          ...stationTimeColumns({
+            startDate: station.startDate ?? null,
+            endDate: station.endDate ?? null,
+            lat: station.lat,
+            lon: station.lon,
+          }),
           notes: station.notes ?? null,
           ...nightColumns(station),
           routeId,
