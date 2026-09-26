@@ -73,12 +73,14 @@ describe("convertAviationstackTimeToUtc — format acceptance", () => {
     expect(await convertAviationstackTimeToUtc("not-a-date", "FRA")).toBeNull();
   });
 
-  it("falls back to parsing as UTC when airport has no timezone", async () => {
-    // When airport timezone can't be resolved, we still try parsing as UTC so
-    // we don't lose the data entirely. Just verify we get a non-null ISO result.
+  it("refuses with TZ_UNRESOLVED when the airport has no timezone — never UTC", async () => {
+    // Aviationstack sends the airport's wall clock. This used to be parsed as
+    // UTC "so we don't lose the data", which stored a 14:35 Berlin departure
+    // as 14:35Z — two hours off, and nothing downstream could tell (ADR 0002 D2).
     mockGetCachedAirport.mockResolvedValue({ iata: "XYZ", timezone: null });
-    const result = await convertAviationstackTimeToUtc("2026-04-14T14:35:00Z", "XYZ");
-    expect(result).toMatch(/^2026-04-14T14:35:00\.000Z$/);
+    await expect(
+      convertAviationstackTimeToUtc("2026-04-14T14:35:00Z", "XYZ")
+    ).rejects.toMatchObject({ statusCode: 422, code: "TZ_UNRESOLVED" });
   });
 });
 

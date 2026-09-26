@@ -1,5 +1,5 @@
-import { fromZonedTime } from "date-fns-tz";
-import { formatWallClockIn } from "./zonedWallClock";
+import { LocalTimeNonexistentError } from "./time/errors";
+import { toInstant } from "./time/instant";
 
 /**
  * Does this wall-clock reading exist in this timezone at all?
@@ -34,25 +34,20 @@ import { formatWallClockIn } from "./zonedWallClock";
  *
  * Backend-only, like `shared/flightChronology.ts` beside it: the frontend does
  * not validate times, so a mirror would be a copy with no second reader.
+ *
+ * @deprecated → `shared/time/instant.ts` (`toInstant` with origin "typed",
+ * ADR 0002). The rule now lives there and this is a boolean name for it,
+ * deleted in phase 6.
  */
 
-/** Length of `YYYY-MM-DDTHH:mm`; anything longer carries seconds. */
-const MINUTE_PRECISION = 16;
-
 export function wallClockExists(local: string, timeZone: string): boolean {
-  let instant: Date;
   try {
-    instant = fromZonedTime(local, timeZone);
-  } catch {
+    toInstant(local, timeZone, { origin: "typed" });
     return true;
+  } catch (error) {
+    // Only the gap is this rule's complaint. An unusable zone or a malformed
+    // reading is rejected elsewhere (`ianaTimezone`, the field's own schema),
+    // and answering "does not exist" here would blame the clock.
+    return !(error instanceof LocalTimeNonexistentError);
   }
-  const readBack = formatWallClockIn(instant, timeZone);
-  // An unusable zone (or instant) is not this rule's complaint —
-  // `ianaTimezone` already rejects it, and answering "does not exist" here
-  // would blame the clock.
-  if (readBack === null) return true;
-
-  return local.length > MINUTE_PRECISION
-    ? readBack === local
-    : readBack.slice(0, MINUTE_PRECISION) === local;
 }
