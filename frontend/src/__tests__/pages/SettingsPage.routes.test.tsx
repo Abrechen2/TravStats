@@ -103,6 +103,9 @@ vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
 vi.mock("../../components/Settings/RoutingProviderSection", () => ({
   default: () => <div data-testid="routing-provider-section" />,
 }));
+vi.mock("../../components/Settings/PersonalRoutingKeysSection", () => ({
+  default: () => <div data-testid="personal-routing-keys" />,
+}));
 // Einstellungen → Bonusprogramme loads every loyalty card on mount; these
 // cases are about the page's navigation, not about the cards.
 vi.mock("../../components/Settings/LoyaltySection", () => ({

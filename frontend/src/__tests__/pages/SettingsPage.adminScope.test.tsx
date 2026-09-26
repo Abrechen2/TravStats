@@ -108,6 +108,9 @@ vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
 vi.mock("../../components/Settings/RoutingProviderSection", () => ({
   default: () => <div data-testid="routing-provider-section" />,
 }));
+vi.mock("../../components/Settings/PersonalRoutingKeysSection", () => ({
+  default: () => <div data-testid="personal-routing-keys" />,
+}));
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-bar-stub" />,
 }));

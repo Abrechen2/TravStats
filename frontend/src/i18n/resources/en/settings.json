@@ -571,11 +571,30 @@
     "saveError": "Routing settings could not be saved",
     "openrouteservice": {
       "label": "OpenRouteService API key",
-      "description": "Free: 2000 routing requests/day. Used as the shared key for everyone until someone sets their own."
+      "description": "Free: 2000 routing requests/day. The instance's key: used by every account that has not stored its own under Settings → Services."
     },
     "graphhopper": {
       "label": "GraphHopper API key",
-      "description": "Free: 500 routing requests/day. Used as the shared key for everyone until someone sets their own."
+      "description": "Free: 500 routing requests/day. The instance's key: used by every account that has not stored its own under Settings → Services."
+    }
+  },
+  "routingPersonal": {
+    "title": "Routing for tours",
+    "description": "Which provider computes the legs of your tours is set by this instance's administration. If it stored an instance key for OpenRouteService or GraphHopper, your account uses that one and there is nothing to enter here. Otherwise you can store a key of your own – it applies to your account only.",
+    "loadError": "Your routing keys could not be loaded.",
+    "saved": "Routing keys saved.",
+    "saveError": "Your routing keys could not be saved.",
+    "openrouteservice": {
+      "label": "Your own OpenRouteService key",
+      "description": "Your account only. Free: 2000 routing requests/day.",
+      "remove": "Remove your own OpenRouteService key",
+      "removePending": "Your OpenRouteService key is removed when you save."
+    },
+    "graphhopper": {
+      "label": "Your own GraphHopper key",
+      "description": "Your account only. Free: 500 routing requests/day.",
+      "remove": "Remove your own GraphHopper key",
+      "removePending": "Your GraphHopper key is removed when you save."
     }
   },
   "import": {

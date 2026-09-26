@@ -28,7 +28,7 @@ import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
 import LoyaltySection from "../../components/Settings/LoyaltySection";
 import GeocoderSettingsCard from "../../components/Settings/GeocoderSettingsCard";
-import RoutingProviderSection from "../../components/Settings/RoutingProviderSection";
+import PersonalRoutingKeysSection from "../../components/Settings/PersonalRoutingKeysSection";
 import ImmichConnectionCard from "../../components/Settings/ImmichConnectionCard";
 import DawarichConnectionCard from "../../components/Settings/DawarichConnectionCard";
 import RailProvidersCard from "../../components/Settings/RailProvidersCard";
@@ -131,7 +131,9 @@ export default function SettingsSectionSwitch({
           {/* Routing serves tours and roadtrips only, and both went back
               behind the roadtrips beta key on 2026-09-24 — a routing card for
               a feature hidden everywhere else would offer nothing. */}
-          {toursVisible && <RoutingProviderSection isAdmin={isAdmin} />}
+          {/* The account's OWN routing keys. The instance's provider and key
+              are Administration → Externe Dienste since 2026-09-26. */}
+          {toursVisible && <PersonalRoutingKeysSection />}
           {/* Admin-only, and only where the rail domain is offered (beta). */}
           <RailProvidersCard isAdmin={isAdmin} />
           <ImmichConnectionCard />
