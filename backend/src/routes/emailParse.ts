@@ -143,6 +143,7 @@ router.post(
       res.status(described.status).json({
         error: "Email parsing failed",
         message: described.message,
+        code: described.code,
       });
     }
   }
@@ -351,6 +352,7 @@ router.post(
       res.status(described.status).json({
         error: "Email file parsing failed",
         message: described.message,
+        code: described.code,
       });
     }
   }

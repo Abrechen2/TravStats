@@ -48,7 +48,18 @@ export type ApiErrorCode =
   | "RESTORE_ARCHIVE_UNREADABLE"
   /** The archive's encrypted values belong to another instance key. The
    *  restore dialog turns this into the acknowledgement it needs. */
-  | "RESTORE_ENCRYPTION_KEY_MISMATCH";
+  | "RESTORE_ENCRYPTION_KEY_MISMATCH"
+  /** A parse needed the configured LLM and could not reach it — "try later",
+   *  not "broken". */
+  | "LLM_UNREACHABLE"
+  /** A parse failed for any other reason; the cause is in the server log. */
+  | "PARSE_FAILED"
+  /** The upload is not a readable PDF. */
+  | "INVALID_PDF"
+  /** The PDF has no usable text layer (a scan) — the image route reads it. */
+  | "PDF_NO_TEXT"
+  /** A boarding pass was read but carried no flight data. */
+  | "NO_FLIGHT_DATA";
 
 interface AuthRequest extends Request {
   user?: {

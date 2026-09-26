@@ -7,6 +7,8 @@ import { getAvailableProviders } from "../services/parsers/factory";
 import { validateBoardingPassImageBase64 } from "../utils/fileValidation";
 import { PARSER_SUPPORTED_DOMAINS } from "../shared/domains";
 import { isEmpty, readBoardingPass } from "../services/boardingPassRead";
+import type { ApiErrorCode } from "../middleware/errorHandler";
+import { describeParserError } from "../utils/parserErrors";
 import {
   assertMayRecord,
   assertRetainable,
@@ -115,7 +117,10 @@ router.post(
       const reading = await readBoardingPass({ imageBase64: validatedImage, userId });
 
       if (isEmpty(reading)) {
-        res.status(422).json({ error: "No flight data could be extracted from the boarding pass" });
+        res.status(422).json({
+          error: "No flight data could be extracted from the boarding pass",
+          code: "NO_FLIGHT_DATA" satisfies ApiErrorCode,
+        });
         return;
       }
 
@@ -200,9 +205,13 @@ router.post(
       if (sendAppError(res, error)) return;
       logger.error({ error }, "[Boarding Pass Parse] Parsing failed");
 
-      res.status(500).json({
+      // Same mapping as the other parse routes: a stable code, and no raw
+      // exception text for the scanner to print.
+      const described = describeParserError(error);
+      res.status(described.status).json({
         error: "Boarding pass parsing failed",
-        message: error instanceof Error ? error.message : "Unknown error",
+        message: described.message,
+        code: described.code,
       });
     }
   }
