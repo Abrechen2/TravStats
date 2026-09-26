@@ -2,6 +2,7 @@ import type { NextFunction, Request, Response } from "express";
 
 import type { AuthRequest } from "./auth";
 import { recheckAchievements } from "../utils/achievements";
+import { trackRecheck } from "./recheckInFlight";
 
 const WRITES = new Set(["POST", "PUT", "PATCH", "DELETE"]);
 
@@ -27,7 +28,7 @@ export function recheckAchievementsAfterWrite(
     res.on("finish", () => {
       const userId = (req as AuthRequest).userId;
       if (userId && res.statusCode < 400) {
-        void recheckAchievements(userId, `${req.method} ${req.baseUrl}${req.path}`);
+        trackRecheck(recheckAchievements(userId, `${req.method} ${req.baseUrl}${req.path}`));
       }
     });
   }
