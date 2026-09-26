@@ -101,6 +101,21 @@ describe("RailDetailPage", () => {
     expect(screen.getByText("rail:straightLine")).toBeInTheDocument();
   });
 
+  it("labels a converted ride's distance and says its time was a placeholder", async () => {
+    await renderPage(
+      detail({
+        distanceKm: 243.5,
+        distanceSource: "roadtrip",
+        externalRef: "roadtrip:s1:l1",
+        arrivalTime: null,
+      })
+    );
+    expect(screen.getByText("rail:roadtripLine")).toBeInTheDocument();
+    expect(screen.getByTestId("rail-converted-note")).toHaveTextContent(
+      "rail:detail.convertedFromRoadtrip rail:detail.convertedPlaceholder"
+    );
+  });
+
   it("lists the booking's legs, linking the others", async () => {
     const legs = [
       { id: "j1", depStationName: "Frankfurt", arrStationName: "Fulda" },

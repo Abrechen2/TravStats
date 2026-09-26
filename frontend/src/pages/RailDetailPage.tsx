@@ -17,6 +17,7 @@ import { RailRouteMap } from "../components/rail/RailRouteMap";
 import { RailConnectionLegs } from "../components/rail/RailConnectionLegs";
 import { trainLabel } from "../components/rail/RailJourneyRow";
 import { connectionDraftFrom } from "../components/rail/railFormModel";
+import { isConvertedFromRoadtrip, railDistanceNoteKey } from "../components/rail/railDistanceLabel";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { railApi } from "../lib/api/rail";
@@ -137,14 +138,8 @@ export default function RailDetailPage(): JSX.Element {
     );
   }
 
-  const distanceNote =
-    journey.distanceSource === "great_circle"
-      ? t("rail:straightLine")
-      : journey.distanceSource === "route"
-        ? t("rail:tracedLine")
-        : journey.distanceSource === "user"
-          ? t("rail:detail.typedDistance")
-          : null;
+  const distanceNoteKey = railDistanceNoteKey(journey.distanceSource, { includeTicket: true });
+  const distanceNote = distanceNoteKey ? t(distanceNoteKey) : null;
   const duration = railDurationMinutes(journey.departureTime, journey.arrivalTime);
   const price =
     journey.price !== null
@@ -210,6 +205,13 @@ export default function RailDetailPage(): JSX.Element {
           </>
         }
       />
+
+      {isConvertedFromRoadtrip(journey) && (
+        <p className="t-caption mb-4" data-testid="rail-converted-note">
+          {t("rail:detail.convertedFromRoadtrip")}
+          {journey.arrivalTime === null && ` ${t("rail:detail.convertedPlaceholder")}`}
+        </p>
+      )}
 
       <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
         <div className="flex flex-col gap-6 md:col-span-3">

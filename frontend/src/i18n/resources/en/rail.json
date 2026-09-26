@@ -78,6 +78,7 @@
     }
   },
   "tracedLine": "along the line, Transitous",
+  "roadtripLine": "along the roadtrip route",
   "station": {
     "searchPlaceholder": "Search a station, e.g. Frankfurt Hbf",
     "searching": "Searching …",
@@ -128,6 +129,8 @@
     "loading": "Loading …",
     "loadError": "The journey could not be loaded.",
     "notFound": "This journey does not exist (any more).",
+    "convertedFromRoadtrip": "Converted from a roadtrip.",
+    "convertedPlaceholder": "The departure was a placeholder (12:00 on the station's clock) and the arrival is unknown — please correct both from the ticket.",
     "back": "Back to the rail logbook",
     "distance": "Distance",
     "typedDistance": "from the ticket",
@@ -144,6 +147,7 @@
     "ticket": "Ticket",
     "route": "Route",
     "lineTraced": "Line: this train's route, taken from Transitous.",
+    "lineRoadtrip": "Line: brought over from the roadtrip — as planned, not from a timetable.",
     "lineStraight": "Line: straight line between the stations — not the train's path."
   },
   "connection": {
@@ -165,6 +169,7 @@
     "journeysDesc": "completed rides, one per train",
     "kmAll": "Rail kilometres",
     "kmTraced": "{{km}} km along the track",
+    "kmRoadtrip": "{{km}} km along roadtrip routes",
     "kmTicket": "{{km}} km from the ticket",
     "kmStraight": "{{km}} km straight line (the real track is longer)",
     "kmUnmeasured_one": "{{count}} ride without a distance",
@@ -186,6 +191,7 @@
     "delayOver": "more than {{minutes}} min",
     "longest": "Longest ride",
     "sourceTraced": "along the track",
+    "sourceRoadtrip": "along the roadtrip route",
     "sourceTicket": "from the ticket",
     "sourceStraight": "straight line",
     "byYear": "Rides per year",

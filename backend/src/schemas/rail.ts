@@ -15,9 +15,12 @@ export const RAIL_WRITE_STATUSES = ["scheduled", "cancelled"] as const;
 export const RAIL_TRAVEL_CLASSES = ["first", "second", "sleeper", "couchette"] as const;
 /**
  * great_circle = the straight line between the stations; user = typed from the
- * ticket; route = the length of the traced Transitous line the row carries.
+ * ticket; route = the length of the traced Transitous line the row carries;
+ * roadtrip = the length of the line a converted roadtrip leg brought along
+ * (routed or drawn in the roadtrip, not a timetable's trace).
  */
-export const RAIL_DISTANCE_SOURCES = ["great_circle", "user", "route"] as const;
+export const RAIL_DISTANCE_SOURCES = ["great_circle", "user", "route", "roadtrip"] as const;
+export type RailTracedDistanceSource = "route" | "roadtrip";
 /** Where the map line comes from. Phase 2 writes `straight` and `transitous`. */
 export const RAIL_GEOMETRY_SOURCES = [
   "none",

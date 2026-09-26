@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { formatStationClock, formatStationTime } from "../../lib/railTime";
 import type { RailJourney } from "../../types/rail";
 import { Icon } from "../ui/Icon";
+import { railDistanceNoteKey } from "./railDistanceLabel";
 
 interface Props {
   journey: RailJourney;
@@ -31,12 +32,8 @@ export function RailJourneyRow({ journey, onEdit, onDelete }: Props): JSX.Elemen
   const label = trainLabel(journey);
   // Each figure says what it measures: a straight line understates the
   // track, and a traced line may still not be the one the train took.
-  const kmNote =
-    journey.distanceSource === "great_circle"
-      ? t("rail:straightLine")
-      : journey.distanceSource === "route"
-        ? t("rail:tracedLine")
-        : null;
+  const kmNoteKey = railDistanceNoteKey(journey.distanceSource);
+  const kmNote = kmNoteKey ? t(kmNoteKey) : null;
   const km =
     journey.distanceKm === null
       ? null

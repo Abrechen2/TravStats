@@ -16,6 +16,7 @@ import {
 import {
   isTracedDistanceSource,
   mergeRailJourney,
+  tracedDistanceSourceFor,
   withTracedDistance,
 } from "../services/rail/railJourneyWrite";
 import {
@@ -408,7 +409,11 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       existing.distanceKm !== null
         ? existing.distanceKm
         : line && tracedLengthKm(line);
-    const state = withTracedDistance(merged, tracedKm);
+    const state = withTracedDistance(
+      merged,
+      tracedKm,
+      tracedDistanceSourceFor(written ? written.geometrySource : existing.geometrySource)
+    );
 
     const resolved =
       input.companions === undefined

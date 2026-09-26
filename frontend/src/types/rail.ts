@@ -6,8 +6,11 @@
 
 export type RailStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
 export type RailTravelClass = "first" | "second" | "sleeper" | "couchette";
-/** great_circle = straight line; user = typed; route = along the traced Transitous line. */
-export type RailDistanceSource = "great_circle" | "user" | "route";
+/**
+ * great_circle = straight line; user = typed; route = along the traced
+ * Transitous line; roadtrip = along the line a converted roadtrip leg brought.
+ */
+export type RailDistanceSource = "great_circle" | "user" | "route" | "roadtrip";
 export type RailLookupProvider = "transitous" | "db-rest";
 
 export const RAIL_TRAVEL_CLASSES: readonly RailTravelClass[] = [
@@ -64,6 +67,8 @@ export interface RailJourney {
   companions: string[];
   tripId: string | null;
   bookingId: string | null;
+  /** Import key; `roadtrip:<section>:<leg>` marks a ride converted from a roadtrip. */
+  externalRef?: string | null;
   trip?: { id: string; name: string; color: string } | null;
   createdAt: string;
   updatedAt: string;
@@ -249,6 +254,7 @@ export interface RailStats {
     totalKm: number;
     straightLineKm: number;
     tracedKm: number;
+    roadtripKm: number;
     ticketKm: number;
     unmeasuredJourneys: number;
   };

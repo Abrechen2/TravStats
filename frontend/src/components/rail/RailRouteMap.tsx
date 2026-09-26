@@ -83,7 +83,11 @@ export function RailRouteMap({ journey }: { journey: RailJourney }): JSX.Element
         </MapGL>
       </div>
       <p className="t-caption" data-testid="rail-line-source">
-        {traced ? t("rail:detail.lineTraced") : t("rail:detail.lineStraight")}
+        {traced
+          ? t("rail:detail.lineTraced")
+          : journey.geometrySource === "manual" && journey.geometry
+            ? t("rail:detail.lineRoadtrip")
+            : t("rail:detail.lineStraight")}
       </p>
     </div>
   );

@@ -54,7 +54,8 @@ const railJourney = registry.register(
         .nullable()
         .describe(
           "great_circle = straight line between the stations, not track length; " +
-            "user = typed from the ticket; route = length of the traced Transitous line"
+            "user = typed from the ticket; route = length of the traced Transitous line; " +
+            "roadtrip = length of the line a converted roadtrip leg brought along"
         ),
       geometry: z
         .array(z.tuple([z.number(), z.number()]))

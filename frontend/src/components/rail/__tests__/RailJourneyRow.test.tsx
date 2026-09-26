@@ -21,6 +21,20 @@ describe("RailJourneyRow distance label", () => {
     expect(screen.getByText(/88 km \(rail:tracedLine\)/)).toBeInTheDocument();
   });
 
+  // Review 2026-09-26, finding 7: a converted roadtrip leg read "along the
+  // track, Transitous" although Transitous never traced it.
+  it("says a converted roadtrip leg's distance runs along the roadtrip route", () => {
+    render(
+      <RailJourneyRow
+        journey={{ ...base, distanceKm: 243.5, distanceSource: "roadtrip" }}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    expect(screen.getByText(/244 km \(rail:roadtripLine\)/)).toBeInTheDocument();
+    expect(screen.queryByText(/rail:tracedLine/)).toBeNull();
+  });
+
   it("still says a measured distance is a straight line", () => {
     render(
       <RailJourneyRow

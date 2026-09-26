@@ -1,7 +1,11 @@
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 import { AppError } from "../../middleware/errorHandler";
-import type { RailStationInput, UpdateRailJourneyInput } from "../../schemas/rail";
+import type {
+  RailStationInput,
+  RailTracedDistanceSource,
+  UpdateRailJourneyInput,
+} from "../../schemas/rail";
 import { deriveRailStatus } from "../../shared/statusDerivation";
 import { wallClockExists } from "../../shared/wallClockExistence";
 import { calculateDistance } from "../../utils/geo";
@@ -230,7 +234,16 @@ function resolveDistance(
 
 /** A distance measured along a stored line rather than typed or straight. */
 export function isTracedDistanceSource(source: string | null): boolean {
-  return source === "route";
+  return source === "route" || source === "roadtrip";
+}
+
+/**
+ * What a line's length is called, by where the line came from: a converted
+ * roadtrip leg's line (`manual`) is the roadtrip's, not Transitous' — the
+ * list, detail page and statistics used to credit Transitous with it.
+ */
+export function tracedDistanceSourceFor(geometrySource: string): RailTracedDistanceSource {
+  return geometrySource === "manual" ? "roadtrip" : "route";
 }
 
 /**
@@ -240,8 +253,9 @@ export function isTracedDistanceSource(source: string | null): boolean {
  */
 export function withTracedDistance(
   state: RailJourneyState,
-  tracedKm: number | null
+  tracedKm: number | null,
+  source: RailTracedDistanceSource = "route"
 ): RailJourneyState {
   if (state.distanceSource === "user" || tracedKm === null) return state;
-  return { ...state, distanceKm: tracedKm, distanceSource: "route" };
+  return { ...state, distanceKm: tracedKm, distanceSource: source };
 }

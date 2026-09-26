@@ -78,6 +78,7 @@
     }
   },
   "tracedLine": "entlang der Strecke, Transitous",
+  "roadtripLine": "entlang der Roadtrip-Route",
   "station": {
     "searchPlaceholder": "Bahnhof suchen, z. B. Frankfurt Hbf",
     "searching": "Sucht …",
@@ -128,6 +129,8 @@
     "loading": "Lädt …",
     "loadError": "Die Fahrt konnte nicht geladen werden.",
     "notFound": "Diese Fahrt gibt es nicht (mehr).",
+    "convertedFromRoadtrip": "Aus einem Roadtrip übernommen.",
+    "convertedPlaceholder": "Die Abfahrt war ein Platzhalter (12:00 Uhr Ortszeit) und die Ankunft ist unbekannt — bitte nach dem Ticket korrigieren.",
     "back": "Zurück zum Bahn-Logbuch",
     "distance": "Entfernung",
     "typedDistance": "vom Ticket",
@@ -144,6 +147,7 @@
     "ticket": "Fahrkarte",
     "route": "Strecke",
     "lineTraced": "Linie: Streckenverlauf dieses Zuges, von Transitous übernommen.",
+    "lineRoadtrip": "Linie: aus dem Roadtrip übernommen — geplant, nicht aus dem Fahrplan.",
     "lineStraight": "Linie: Luftlinie zwischen den Bahnhöfen — nicht der Weg des Zuges."
   },
   "connection": {
@@ -165,6 +169,7 @@
     "journeysDesc": "abgeschlossene Fahrten, eine je Zug",
     "kmAll": "Bahn-Kilometer",
     "kmTraced": "{{km}} km entlang der Strecke",
+    "kmRoadtrip": "{{km}} km entlang von Roadtrip-Routen",
     "kmTicket": "{{km}} km laut Ticket",
     "kmStraight": "{{km}} km Luftlinie (die echte Strecke ist länger)",
     "kmUnmeasured_one": "{{count}} Fahrt ohne Entfernung",
@@ -186,6 +191,7 @@
     "delayOver": "mehr als {{minutes}} min",
     "longest": "Längste Fahrt",
     "sourceTraced": "entlang der Strecke",
+    "sourceRoadtrip": "entlang der Roadtrip-Route",
     "sourceTicket": "laut Ticket",
     "sourceStraight": "Luftlinie",
     "byYear": "Fahrten pro Jahr",

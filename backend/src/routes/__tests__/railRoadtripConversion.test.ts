@@ -135,10 +135,12 @@ describe("POST /rail/roadtrip-conversion/:routeId", () => {
       distanceSource: "great_circle",
       status: "completed",
     });
-    expect(straight.notes).toContain("placeholder at noon");
+    expect(straight.notes).toBeNull();
+    expect(straight.externalRef).toMatch(/^roadtrip:/);
+    // The roadtrip's line, not a Transitous trace — and labelled so.
     expect(drawn).toMatchObject({
       geometrySource: "manual",
-      distanceSource: "route",
+      distanceSource: "roadtrip",
       distanceKm: 243.5,
     });
     expect(drawn.geometry).toHaveLength(3);
@@ -173,6 +175,7 @@ describe("POST /rail/roadtrip-conversion/:routeId", () => {
     expect(res.body.data.geometrySource).toBe("manual");
     expect(res.body.data.geometry).toEqual(drawn.geometry);
     expect(res.body.data.distanceKm).toBe(drawn.distanceKm);
+    expect(res.body.data.distanceSource).toBe("roadtrip");
     expect(res.body.meta.geometry.outcome).toBe("unchanged");
   });
 

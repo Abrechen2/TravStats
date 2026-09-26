@@ -6,6 +6,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { loadCrossDomainPopulation } from "../../services/evidence/crossDomainPopulations";
+import { computeRailStats } from "../../services/rail/railStats";
 
 /**
  * GET /rail/stats (spec 2026-09-25-rail-domain, phase 2b): figures over the
@@ -125,6 +126,7 @@ describe("rail statistics", () => {
       totalKm: 877,
       straightLineKm: 330,
       tracedKm: 547,
+      roadtripKm: 0,
       ticketKm: 0,
       unmeasuredJourneys: 1,
     });
@@ -168,5 +170,31 @@ describe("rail statistics", () => {
 
   it("refuses a nonsense year", async () => {
     expect((await get("?year=abc")).status).toBe(400);
+  });
+
+  // Review 2026-09-26, finding 7: a converted roadtrip leg's length was
+  // summed as nothing in particular — it is its own figure, not "traced".
+  it("keeps kilometres along a roadtrip line apart from the traced ones", () => {
+    const ride = (distanceSource: string, distanceKm: number) => ({
+      ...base,
+      id: distanceSource,
+      status: "completed",
+      operator: null,
+      trainCategory: null,
+      trainNumber: null,
+      depStationName: "A",
+      arrStationName: "B",
+      depStationCode: null,
+      arrStationCode: null,
+      depCountry: null,
+      arrCountry: null,
+      departureTime: new Date("2025-07-05T10:00:00Z"),
+      arrivalTime: null,
+      distanceKm,
+      distanceSource,
+      delayMinutes: null,
+    });
+    const s = computeRailStats([ride("route", 100), ride("roadtrip", 243.5)]);
+    expect(s.distance).toMatchObject({ tracedKm: 100, roadtripKm: 243.5, totalKm: 343.5 });
   });
 });

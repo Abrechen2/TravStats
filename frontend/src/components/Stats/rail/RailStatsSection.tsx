@@ -165,6 +165,8 @@ export default function RailStatsSection({
               <span data-testid="rail-km-split">
                 {[
                   distance.tracedKm > 0 && t("rail:stats.kmTraced", { km: num(distance.tracedKm) }),
+                  distance.roadtripKm > 0 &&
+                    t("rail:stats.kmRoadtrip", { km: num(distance.roadtripKm) }),
                   distance.ticketKm > 0 && t("rail:stats.kmTicket", { km: num(distance.ticketKm) }),
                   distance.straightLineKm > 0 &&
                     t("rail:stats.kmStraight", { km: num(distance.straightLineKm) }),
@@ -271,6 +273,7 @@ function delayBucketLabel(t: Translate, upTo: number | null, lower: number | nul
 /** What a distance measures — the label the owner asked for (decision 7). */
 function distanceSourceLabel(t: Translate, source: string | null): string {
   if (source === "route") return t("rail:stats.sourceTraced");
+  if (source === "roadtrip") return t("rail:stats.sourceRoadtrip");
   if (source === "user") return t("rail:stats.sourceTicket");
   return t("rail:stats.sourceStraight");
 }
