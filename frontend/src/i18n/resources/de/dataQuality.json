@@ -95,6 +95,87 @@
       "resolveFailed": "Die Antwort konnte nicht gespeichert werden.",
       "dismissFailed": "Die Antwort konnte nicht gespeichert werden.",
       "runFailed": "Die Prüfung konnte nicht gestartet werden."
+    },
+    "tripSuggestions": {
+      "title": "Reise-Vorschläge",
+      "description": "Aus deinen Einträgen abgeleitet: wann du unterwegs warst und was zusammengehört. Vorschläge — angelegt oder verknüpft wird erst, wenn du übernimmst.",
+      "nameFallback": "Reise",
+      "planned": "geplant",
+      "capped": "{{shown}} von {{total}} Vorschlägen angezeigt — beantworte einige, dann rücken die nächsten nach.",
+      "truncated": "Dein Logbuch ist größer, als eine Auswertung liest. Einige Vorschläge können fehlen.",
+      "zoneUnknown_one": "Bei {{count}} Eintrag ist die Zeitzone des Ortes unbekannt — sein Tag kann um einen abweichen.",
+      "zoneUnknown_other": "Bei {{count}} Einträgen ist die Zeitzone des Ortes unbekannt — ihr Tag kann um einen abweichen.",
+      "kind": {
+        "new_trip": "Neue Reise?",
+        "assign": "Gehört zu einer Reise?",
+        "extend": "Reise verlängern?",
+        "place_visit": "Hier gewesen?"
+      },
+      "reason": {
+        "newTrip": "{{entries}}, {{nights}} fern von zu Hause",
+        "entries_one": "{{count}} Eintrag",
+        "entries_other": "{{count}} Einträge",
+        "nights_one": "{{count}} Nacht",
+        "nights_other": "{{count}} Nächte",
+        "assign_one": "{{count}} Eintrag passt zu „{{trip}}“",
+        "assign_other": "{{count}} Einträge passen zu „{{trip}}“",
+        "extend_one": "{{count}} Eintrag würde „{{trip}}“ auf {{span}} verlängern",
+        "extend_other": "{{count}} Einträge würden „{{trip}}“ auf {{span}} verlängern",
+        "placeVisit": "An diesem Tag warst du hier: „{{anchor}}“ lag {{distance}} m entfernt."
+      },
+      "signals": {
+        "pnr": "gleiche Buchungsnummer",
+        "home_loop": "Hin- und Rückflug ab Heimatflughafen",
+        "continuity": "lückenlose Anschlussflüge"
+      },
+      "creates": {
+        "new_trip": "Übernehmen legt die Reise an und verknüpft alle aufgeführten Einträge.",
+        "assign": "Übernehmen verknüpft die aufgeführten Einträge mit dieser Reise.",
+        "extend": "Übernehmen verknüpft die Einträge und setzt den Zeitraum der Reise auf die neue Spanne.",
+        "place_visit": "Übernehmen trägt einen Besuch an diesem Tag ein."
+      },
+      "edit": {
+        "name": "Name",
+        "start": "Beginn",
+        "end": "Ende",
+        "members": "Diese Einträge übernehmen",
+        "visitDay": "Tag des Besuchs"
+      },
+      "actions": {
+        "accept": "Übernehmen",
+        "acceptEdited": "So übernehmen",
+        "edit": "Bearbeiten",
+        "dismiss": "Verwerfen",
+        "retry": "Erneut laden"
+      },
+      "home": {
+        "missing": "Kein Heimatflughafen festgelegt — ohne Zuhause lässt sich nicht sagen, wann du unterwegs warst. Vorgeschlagen werden nur Reisen, die deine Flüge selbst ergeben.",
+        "link": "Heimatflughafen festlegen",
+        "estimated": "Kein Heimatflughafen festgelegt: als Zuhause gilt dein meistgeflogener Flughafen."
+      },
+      "empty": {
+        "title": "Keine Reise-Vorschläge",
+        "description": "Alles, was zusammengehört, ist schon einer Reise zugeordnet. Neue Einträge werden hier geprüft."
+      },
+      "messages": {
+        "accepted": {
+          "new_trip": "Reise angelegt und Einträge verknüpft.",
+          "assign": "Einträge mit der Reise verknüpft.",
+          "extend": "Reise verlängert und Einträge verknüpft.",
+          "place_visit": "Besuch eingetragen."
+        },
+        "dismissed": "Verworfen. Dieser Vorschlag kommt nur wieder, wenn sich seine Einträge deutlich ändern."
+      },
+      "errors": {
+        "loadFailed": "Die Reise-Vorschläge konnten nicht geladen werden.",
+        "loadFailedHint": "Das heißt nicht, dass es keine gibt. Versuche es gleich noch einmal.",
+        "acceptFailed": "Der Vorschlag konnte nicht übernommen werden. Es wurde nichts geändert.",
+        "dismissFailed": "Der Vorschlag konnte nicht verworfen werden.",
+        "stale": "Der Vorschlag hat sich inzwischen geändert — ein Eintrag wurde verschoben oder gelöscht. Es wurde nichts geändert; die Liste ist neu geladen.",
+        "selection": "Die Auswahl passt nicht zum Vorschlag. Es wurde nichts geändert.",
+        "endBeforeStart": "Das Ende liegt vor dem Beginn.",
+        "noMembers": "Wähle mindestens einen Eintrag."
+      }
     }
   },
   "flag": {

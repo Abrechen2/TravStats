@@ -37,6 +37,7 @@ import PendingUpdateCard from "../components/PendingUpdateCard";
 import StatisticsImpactPreview from "../components/StatisticsImpactPreview";
 import DataQualityFlagsSection from "../components/DataQuality/DataQualityFlagsSection";
 import PhotoJourneysTab from "../components/inbox/PhotoJourneysTab";
+import TripSuggestionsTab from "../components/inbox/TripSuggestionsTab";
 import PasswordResetRequestsSection from "../components/inbox/PasswordResetRequestsSection";
 import UnfiledDocumentsSection from "../components/inbox/UnfiledDocumentsSection";
 import { usePhotoJourneysVisible } from "../components/inbox/usePhotoJourneysVisible";
@@ -96,7 +97,7 @@ interface PendingUpdate {
  * naming it while it is hidden falls back to `review` rather than opening a tab
  * that is not in the list.
  */
-type InboxTab = "review" | "updates" | "photos";
+type InboxTab = "review" | "trips" | "updates" | "photos";
 
 interface Statistics {
   totalUpdates: number;
@@ -127,13 +128,17 @@ export default function PendingUpdatesPage(): JSX.Element {
   const tab: InboxTab =
     requestedTab === "updates"
       ? "updates"
-      : requestedTab === "photos" && photoJourneysVisible
-        ? "photos"
-        : "review";
+      : requestedTab === "trips"
+        ? "trips"
+        : requestedTab === "photos" && photoJourneysVisible
+          ? "photos"
+          : "review";
   const [openQuestions, setOpenQuestions] = useState<number | null>(null);
   const reportOpen = useCallback((n: number) => setOpenQuestions(n), []);
   const [pendingJourneys, setPendingJourneys] = useState<number | null>(null);
   const reportJourneys = useCallback((n: number) => setPendingJourneys(n), []);
+  const [tripSuggestions, setTripSuggestions] = useState<number | null>(null);
+  const reportTripSuggestions = useCallback((n: number) => setTripSuggestions(n), []);
 
   useEffect(() => {
     loadUpdates();
@@ -225,6 +230,13 @@ export default function PendingUpdatesPage(): JSX.Element {
 
   const tabs: { key: InboxTab; label: string; count: number | null }[] = [
     { key: "review", label: t("dataQuality:inbox.review.title"), count: openQuestions },
+    // The trip engine's proposals (owner, 2026-09-26). Second: answering them
+    // shapes the logbook itself, and nothing else will.
+    {
+      key: "trips",
+      label: t("dataQuality:inbox.tripSuggestions.title"),
+      count: tripSuggestions,
+    },
     {
       key: "updates",
       label: t("dataQuality:inbox.flightUpdates.title"),
@@ -306,6 +318,11 @@ export default function PendingUpdatesPage(): JSX.Element {
               less urgent than somebody unable to log in. */}
           <UnfiledDocumentsSection />
           <DataQualityFlagsSection onOpenCount={reportOpen} />
+        </div>
+
+        {/* Mounted like the review section, so the label carries its count. */}
+        <div hidden={tab !== "trips"}>
+          <TripSuggestionsTab onCount={reportTripSuggestions} />
         </div>
 
         <div hidden={tab !== "updates"}>
