@@ -75,7 +75,8 @@
       "nonexistentTime": "Diese Uhrzeit gibt es an diesem Tag nicht: Bei der Umstellung auf Sommerzeit springen die Uhren eine Stunde vor. Prüf die Zeit auf dem Ticket.",
       "invalidField": "Die Angabe „{{field}}“ wurde nicht angenommen. Bitte prüf sie.",
       "invalid": "Eine Angabe wurde nicht angenommen. Bitte prüf die Felder."
-    }
+    },
+    "suggestionsFailed": "Vorschläge aus deinen bisherigen Fahrten konnten nicht geladen werden — das Formular funktioniert trotzdem."
   },
   "tracedLine": "entlang der Strecke, Transitous",
   "roadtripLine": "entlang der Roadtrip-Route",
@@ -123,7 +124,9 @@
     "linked": "Mit einer Fahrt aus dem Fahrplan verknüpft ({{provider}}).",
     "unlink": "Verknüpfung lösen",
     "credit": "Fahrplandaten und Streckenverläufe:",
-    "switchedOff": "Die Zugsuche ist auf dieser Instanz abgeschaltet. Trag die Fahrt von Hand ein."
+    "switchedOff": "Die Zugsuche ist auf dieser Instanz abgeschaltet. Trag die Fahrt von Hand ein.",
+    "changeNeeded": "Dein Ziel {{station}} liegt nicht an der Strecke dieses Zugs. Du steigst in {{stop}} um — die Weiterfahrt legst du nach dem Speichern als Anschluss an.",
+    "applyWithChange": "Bis zum Umstieg übernehmen"
   },
   "detail": {
     "loading": "Lädt …",
@@ -155,7 +158,10 @@
     "saveAndAdd": "Speichern & Anschluss eintragen",
     "banner": "Anschlusszug ab {{station}} — beide Fahrten werden über eine Buchung verbunden.",
     "title": "Verbindung",
-    "booking": "Buchung {{pnr}}"
+    "booking": "Buchung {{pnr}}",
+    "onward": "Weiterfahrt nach {{station}}: Nach dem Speichern öffnet sich der Anschluss mit diesem Ziel.",
+    "saveAndContinue": "Speichern & weiter nach {{station}}",
+    "dismissOnward": "Keine Weiterfahrt"
   },
   "trip": {
     "open": "Fahrt öffnen",

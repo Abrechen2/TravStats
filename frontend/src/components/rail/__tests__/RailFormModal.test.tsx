@@ -42,8 +42,13 @@ const update = vi.fn();
 const searchStations = vi.fn();
 const lookup = vi.fn();
 const lookupProviders = vi.fn();
+// No chips in these tests; the chips have their own file.
+const entrySuggestions = vi.fn(() =>
+  Promise.resolve({ trains: [], operators: [], travelClass: null, coaches: [], seats: [] })
+);
 vi.mock("../../../lib/api/rail", () => ({
   railApi: {
+    entrySuggestions: (...a: unknown[]) => entrySuggestions(...(a as [])),
     create: (...a: unknown[]) => create(...a),
     update: (...a: unknown[]) => update(...a),
     searchStations: (...a: unknown[]) => searchStations(...a),

@@ -276,3 +276,18 @@ export interface RailStats {
   };
   byYear: Array<{ year: number; journeys: number; km: number }>;
 }
+
+/** A train the user has ridden, as a ticket prints it ("ICE 578"). */
+export interface RailTrainSuggestion {
+  category: string | null;
+  number: string;
+}
+
+/** `GET /rail/entry-suggestions` — chips for the rail form from the user's own rides. */
+export interface RailEntrySuggestions {
+  trains: RailTrainSuggestion[];
+  operators: string[];
+  travelClass: RailTravelClass | null;
+  coaches: string[];
+  seats: string[];
+}

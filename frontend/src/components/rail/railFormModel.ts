@@ -244,6 +244,39 @@ export function applyLookup(
   };
 }
 
+/** ~1 km in degrees: nearer than this, a picked station IS the stop. */
+const SAME_STOP_DEGREES = 0.01;
+
+/**
+ * Where the user still has to go after this train: the arrival they had
+ * already chosen, when the stop they alight at is somewhere else. That is a
+ * change of trains — the lookup found the first leg of a connection — and the
+ * form offers the rest as a second journey on the same booking. Null when the
+ * user had no arrival yet, or alights exactly there.
+ */
+export function onwardDestination(
+  draft: RailFormDraft,
+  match: NonNullable<RailLookupAnswer["match"]>,
+  arrivalIndex: number
+): RailStationDraft | null {
+  const chosen = draft.arrival;
+  const stop = match.stops[arrivalIndex];
+  if (!stop || !isStationComplete(chosen) || chosen.lat === null || chosen.lon === null) {
+    return null;
+  }
+  const apart = Math.hypot(stop.lat - chosen.lat, stop.lon - chosen.lon);
+  return apart < SAME_STOP_DEGREES ? null : chosen;
+}
+
+/**
+ * The next leg of a connection, continuing to a destination the user had
+ * already picked before the lookup split the ride (see `onwardDestination`).
+ */
+export function onwardDraftFrom(previous: RailJourney, destination: RailStationDraft | null) {
+  const next = connectionDraftFrom(previous);
+  return destination ? { ...next, arrival: destination } : next;
+}
+
 /**
  * What the form says after a save that asked for a traced line and did not
  * get one (review 2026-09-26, finding 4) — before, "saved" was all it said and

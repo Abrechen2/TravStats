@@ -75,7 +75,8 @@
       "nonexistentTime": "This time does not exist on that day: the clocks jump an hour ahead for summer time. Check the time on the ticket.",
       "invalidField": "“{{field}}” was not accepted. Please check it.",
       "invalid": "An entry was not accepted. Please check the fields."
-    }
+    },
+    "suggestionsFailed": "Suggestions from your earlier rides could not be loaded — the form works all the same."
   },
   "tracedLine": "along the line, Transitous",
   "roadtripLine": "along the roadtrip route",
@@ -123,7 +124,9 @@
     "linked": "Linked to a journey from the timetable ({{provider}}).",
     "unlink": "Unlink",
     "credit": "Timetable data and lines:",
-    "switchedOff": "The train lookup is switched off on this instance. Enter the journey by hand."
+    "switchedOff": "The train lookup is switched off on this instance. Enter the journey by hand.",
+    "changeNeeded": "Your destination {{station}} is not on this train's route. You change at {{stop}} — add the rest as a connection after saving.",
+    "applyWithChange": "Take over up to the change"
   },
   "detail": {
     "loading": "Loading …",
@@ -155,7 +158,10 @@
     "saveAndAdd": "Save & add connection",
     "banner": "Connecting train from {{station}} — both rides are joined by one booking.",
     "title": "Connection",
-    "booking": "Booking {{pnr}}"
+    "booking": "Booking {{pnr}}",
+    "onward": "Onward to {{station}}: after saving, the connection opens with this destination.",
+    "saveAndContinue": "Save & continue to {{station}}",
+    "dismissOnward": "No onward ride"
   },
   "trip": {
     "open": "Open journey",

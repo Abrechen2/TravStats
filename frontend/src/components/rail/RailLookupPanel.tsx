@@ -9,11 +9,22 @@ import type {
   RailLookupProvider,
   RailLookupProviders,
 } from "../../types/rail";
-import { applyLookup, isStationComplete, type RailFormDraft } from "./railFormModel";
+import {
+  applyLookup,
+  isStationComplete,
+  onwardDestination,
+  type RailFormDraft,
+} from "./railFormModel";
+import type { RailStationDraft } from "./RailStationField";
 
 interface Props {
   draft: RailFormDraft;
-  onApply: (next: RailFormDraft) => void;
+  /**
+   * The form after the lookup, and — when the train does not reach the
+   * arrival the user had chosen — that arrival, to continue to on a
+   * connecting train.
+   */
+  onApply: (next: RailFormDraft, onward: RailStationDraft | null) => void;
   onClearLookup: () => void;
   inputClassName: string;
 }
@@ -145,6 +156,8 @@ export function RailLookupPanel({
   };
 
   const match = state.kind === "answered" ? state.answer.match : null;
+  const onward =
+    match && arrivalIndex !== null ? onwardDestination(draft, match, arrivalIndex) : null;
 
   return (
     <div className="mb-4 rounded-md border border-border p-3" data-testid="rail-lookup">
@@ -209,15 +222,23 @@ export function RailLookupPanel({
           <p className="t-caption">
             {match.hasGeometry ? t("rail:lookup.withLine") : t("rail:lookup.withoutLine")}
           </p>
+          {onward ? (
+            <p className="text-sm" data-testid="rail-lookup-change">
+              {t("rail:lookup.changeNeeded", {
+                station: onward.name,
+                stop: match.stops[arrivalIndex]?.name ?? "",
+              })}
+            </p>
+          ) : null}
           <button
             type="button"
             className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base)"
             onClick={(): void => {
-              onApply(applyLookup(draft, match, arrivalIndex));
+              onApply(applyLookup(draft, match, arrivalIndex), onward);
               setState({ kind: "idle" });
             }}
           >
-            {t("rail:lookup.apply")}
+            {onward ? t("rail:lookup.applyWithChange") : t("rail:lookup.apply")}
           </button>
         </div>
       ) : null}

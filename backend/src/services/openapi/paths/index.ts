@@ -33,6 +33,7 @@ import "./cruises";
 import "./rail";
 import "./railLookup";
 import "./railStats";
+import "./railEntrySuggestions";
 import "./railRoadtripConversion";
 import "./lodging";
 import "./settings";
