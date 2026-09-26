@@ -133,11 +133,19 @@ export function buildAbsences(entries: readonly PresenceEntry[], homeAt: HomeAt)
   // since, not the latest: the departure that starts the next trip is also at
   // home, and measuring the layover from it would glue two trips together.
   let homeSinceT: number | null = null;
+  // Whether that first home point is the ARRIVAL of the journey that left the
+  // last away point (an inbound flight landing at home). Only then can the
+  // stop at home be a change of planes. A departure from home the next
+  // morning, with no recorded way back, still says the user was home
+  // (measured on the demo seed: ZRH on the 21st, MUC→IST on the 22nd).
+  let homeByArrival = false;
+  let lastAwayEntry: string | null = null;
 
   for (const p of points) {
     if (p.cls === "home") {
       if (homeSinceT === null || (current !== null && homeSinceT < current.lastAwayT)) {
         homeSinceT = p.t;
+        homeByArrival = p.entry.key === lastAwayEntry;
       }
       continue;
     }
@@ -147,7 +155,7 @@ export function buildAbsences(entries: readonly PresenceEntry[], homeAt: HomeAt)
       current !== null &&
       homeSinceT !== null &&
       homeSinceT >= current.lastAwayT &&
-      p.t - homeSinceT > HOME_LAYOVER_HOURS;
+      (!homeByArrival || p.t - homeSinceT > HOME_LAYOVER_HOURS);
     const bridged =
       current !== null && dayDiff(current.coveredUntil, p.point.day) <= BRIDGE_DAYS + 1;
 
@@ -165,6 +173,7 @@ export function buildAbsences(entries: readonly PresenceEntry[], homeAt: HomeAt)
     current.endDay = maxDay(current.endDay, p.point.day);
     current.coveredUntil = maxDay(current.coveredUntil, maxDay(p.point.day, p.entry.endDay));
     current.lastAwayT = Math.max(current.lastAwayT, p.t);
+    lastAwayEntry = p.entry.key;
     current.awayPoints.push(p);
     if (!claimed.has(p.entry.key)) {
       claimed.add(p.entry.key);

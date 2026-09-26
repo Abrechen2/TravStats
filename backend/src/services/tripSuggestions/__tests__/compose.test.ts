@@ -154,6 +154,31 @@ describe("composeSuggestions — new trips", () => {
     expect(out[0].members).toHaveLength(3);
   });
 
+  it("splits at a departure from home the next morning, with no way back recorded", () => {
+    const entries = [
+      ride(
+        "flight",
+        "zrh",
+        AT.MUC,
+        AT.FIRENZE,
+        { day: "2026-07-21", hour: 8 },
+        { day: "2026-07-21", hour: 10 }
+      ),
+      stay("z", AT.FIRENZE, "2026-07-21", "2026-07-22", "Florenz"),
+      ride(
+        "flight",
+        "ist",
+        AT.MUC,
+        AT.ROMA,
+        { day: "2026-07-23", hour: 7 },
+        { day: "2026-07-23", hour: 9 }
+      ),
+      stay("i", AT.ROMA, "2026-07-23", "2026-07-25", "Rom"),
+    ];
+    const out = composeSuggestions(input({ entries }));
+    expect(out.map((p) => p.startDay)).toEqual(["2026-07-23", "2026-07-21"]);
+  });
+
   it("counts an unrecorded night only far from home", () => {
     // Two lake days 80 km out, no stay: the user drove home in between.
     const lake = { lat: 47.7, lon: 12.45 };
