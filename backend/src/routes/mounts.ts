@@ -42,6 +42,7 @@ import pdfParseRoutes from "./pdfParse";
 import imageParseRoutes from "./imageParse";
 import diagnosticExportRoutes from "./diagnosticExport";
 import setupRoutes from "./setup";
+import versionRoutes from "./version";
 import adminRoutes from "./admin";
 import backupRoutes from "./backup";
 import pendingUpdatesRoutes from "./pendingUpdates";
@@ -127,6 +128,8 @@ export const apiMounts: ApiMount[] = [
   // OpenAPI spec + Swagger UI mounted FIRST so /api/v1/docs and
   // /api/v1/openapi.json don't fall through into authenticated routers.
   { id: "openapi", base: "/api/v1", router: openapiRoutes },
+  // Public and unauthenticated, like the spec: the About section reads it before login.
+  { id: "version", base: "/api/v1", router: versionRoutes },
   { id: "setup", base: "/api/v1/setup", router: setupRoutes },
   { id: "admin", base: "/api/v1/admin", router: adminRoutes },
   // Mounted BEFORE the generic /api/v1/auth routers so a future catch-all there

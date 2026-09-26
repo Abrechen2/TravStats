@@ -273,3 +273,44 @@ registry.registerPath({
     },
   },
 });
+
+const versionInfo = registry.register(
+  "VersionInfo",
+  z
+    .object({
+      version: z.string().describe("Runtime version shown to users; pre-release suffix stripped"),
+      buildVersion: z.string().describe("Raw version baked into the image, for diagnostics"),
+      latestAvailable: z
+        .string()
+        .nullable()
+        .describe("Latest stable GitHub release, or null when it could not be fetched"),
+      updateAvailable: z.boolean(),
+      releaseUrl: z.string().nullable(),
+      releaseNotes: z.string().nullable(),
+      publishedAt: z.string().nullable(),
+      tzdata: z
+        .string()
+        .nullable()
+        .describe(
+          "IANA tzdata release the server converts times with (e.g. `2025b`). A client whose " +
+            "own zone data differs still displays the server's `local`/`offset` as sent " +
+            "(ADR 0002 D3). Null only on a runtime built without ICU."
+        ),
+    })
+    .openapi("VersionInfo")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/version",
+  summary: "Server version, update availability and tzdata release",
+  description: "Public — no token needed, so a client can read it before login.",
+  tags: ["System"],
+  security: [],
+  responses: {
+    200: {
+      description: "Version information",
+      content: { "application/json": { schema: versionInfo } },
+    },
+  },
+});

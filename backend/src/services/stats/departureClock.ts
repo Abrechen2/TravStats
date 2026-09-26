@@ -82,6 +82,10 @@ export async function withDepartureClock<
  *
  * UTC midnight is a carrier, not a claim about the zone — it makes days
  * comparable and subtractable without a second timezone conversion.
+ *
+ * @deprecated → `localDay` in `shared/time` (ADR 0002), once flights store
+ * their zone (phase 3); reads through `localWallClockOf`, which converts
+ * through `shared/time` already. Deleted in phase 6.
  */
 export function airportCalendarDay(
   stored: Date,

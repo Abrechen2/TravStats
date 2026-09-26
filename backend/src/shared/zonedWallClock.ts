@@ -12,42 +12,17 @@
  * unusable zone means instead of receiving a made-up clock.
  *
  * MIRRORED at `frontend/src/shared/zonedWallClock.ts` — change both together.
+ *
+ * @deprecated → `shared/time` (`toLocal`, ADR 0002). Now a thin name over
+ * `shared/time/zonedParts.ts`, the one Intl reader; deleted in phase 6. A raw
+ * offset such as `+02:00` is no longer a usable zone here (null), because an
+ * offset is not a place.
  */
 
-/** One formatter per zone — building one costs far more than using it. */
-const formatters = new Map<string, Intl.DateTimeFormat | null>();
-
-function formatterFor(timeZone: string): Intl.DateTimeFormat | null {
-  const cached = formatters.get(timeZone);
-  if (cached !== undefined) return cached;
-  let formatter: Intl.DateTimeFormat | null;
-  try {
-    formatter = new Intl.DateTimeFormat("en-CA", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      // h23 so midnight reads 00 rather than 24.
-      hourCycle: "h23",
-    });
-  } catch {
-    formatter = null;
-  }
-  formatters.set(timeZone, formatter);
-  return formatter;
-}
+import { formatParts, isValidZone, wallClockParts } from "./time/zonedParts";
 
 export function formatWallClockIn(instant: Date, timeZone: string): string | null {
-  const formatter = formatterFor(timeZone);
-  if (!formatter || Number.isNaN(instant.getTime())) return null;
-  const parts = formatter.formatToParts(instant);
-  const value = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((p) => p.type === type)?.value ?? "";
-  return (
-    `${value("year")}-${value("month")}-${value("day")}` +
-    `T${value("hour")}:${value("minute")}:${value("second")}`
-  );
+  if (!isValidZone(timeZone)) return null;
+  const parts = wallClockParts(instant.getTime(), timeZone);
+  return parts ? formatParts(parts) : null;
 }

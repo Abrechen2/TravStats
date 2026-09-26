@@ -1,4 +1,5 @@
 import type { Request, Response } from "express";
+import { backupZone } from "../shared/time/schedulerZone";
 import { zoneSelfCheckResult } from "../shared/time/zoneOf";
 import { appVersion } from "../utils/version";
 
@@ -11,6 +12,11 @@ import { appVersion } from "../utils/version";
  * (shared/time/zoneOf.ts). Still a 200: the process serves requests and a
  * restart would not fix a broken dependency, but a probe that reads the body
  * sees it, instead of the server reading every local time as UTC in silence.
+ *
+ * `scheduler.backupZone` is the zone the backup cron runs in — the host's,
+ * read once at boot (shared/time/schedulerZone.ts). Every other job runs in
+ * UTC. Shown here because a backup that moved by an hour is otherwise only
+ * noticed when somebody looks at the timestamps.
  */
 export function healthHandler(_req: Request, res: Response): void {
   const timezone = zoneSelfCheckResult();
@@ -20,5 +26,6 @@ export function healthHandler(_req: Request, res: Response): void {
     timestamp: new Date().toISOString(),
     version: appVersion,
     checks: { timezoneLookup },
+    scheduler: { backupZone: backupZone().zone },
   });
 }

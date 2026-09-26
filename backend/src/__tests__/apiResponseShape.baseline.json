@@ -98,7 +98,8 @@
     "trips/tourTracks.ts",
     "trips/tripCountries.ts",
     "trips/tripPhotos.ts",
-    "trips/tripStops.ts"
+    "trips/tripStops.ts",
+    "version.ts"
   ],
   "enveloped": [
     "aircraft.ts",

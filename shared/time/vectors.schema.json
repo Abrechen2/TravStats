@@ -1,0 +1,285 @@
+{
+  "$schema": "https://json-schema.org/draft/2020-12/schema",
+  "$id": "https://travstats.de/schemas/time-vectors.json",
+  "title": "TravStats time-model conformance vectors (ADR 0002 D5)",
+  "description": "One file, three implementations: backend/src/shared/time, frontend/src/shared/time and the Companion's lib/time each run every case that applies to them. Rules for a runner: (1) run a case when its appliesTo (default: all three) names the runner AND the runner implements its op — the web mirror is display-only and skips toInstant/span/floatingDate; (2) compare every *utc/*Utc/now field as an instant (parse and compare epoch milliseconds), every other field as an exact string or number; (3) an expected {error} means the call must fail with exactly that stable code; (4) bump `version` on any change to a case or to this format, and a vendored copy whose version lags fails its CI. Formats: utc = RFC 3339 with Z; local input = YYYY-MM-DDTHH:mm[:ss] (no offset); local output = YYYY-MM-DDTHH:mm:ss; offset = +HH:mm / -HH:mm; day and date = YYYY-MM-DD.",
+  "type": "object",
+  "required": ["version", "minTzdata", "cases"],
+  "additionalProperties": false,
+  "properties": {
+    "$schema": { "type": "string" },
+    "version": { "type": "integer", "minimum": 1 },
+    "minTzdata": {
+      "type": "string",
+      "pattern": "^[0-9]{4}[a-z]$",
+      "description": "Oldest IANA tzdata release the expectations hold for; a runner on older data fails instead of reporting wrong cases."
+    },
+    "cases": { "type": "array", "minItems": 1, "items": { "$ref": "#/$defs/case" } }
+  },
+  "$defs": {
+    "utc": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}(\\.[0-9]{1,3})?Z$"
+    },
+    "localIn": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}(:[0-9]{2})?$"
+    },
+    "localOut": {
+      "type": "string",
+      "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}T[0-9]{2}:[0-9]{2}:[0-9]{2}$"
+    },
+    "day": { "type": "string", "pattern": "^[0-9]{4}-[0-9]{2}-[0-9]{2}$" },
+    "offset": { "type": "string", "pattern": "^[+-][0-9]{2}:[0-9]{2}$" },
+    "zone": { "type": "string", "minLength": 1 },
+    "errorCode": {
+      "enum": ["LOCAL_TIME_NONEXISTENT", "ZONE_UNKNOWN", "VALIDATION_FAILED", "TZ_UNRESOLVED"]
+    },
+    "error": {
+      "type": "object",
+      "required": ["error"],
+      "additionalProperties": false,
+      "properties": { "error": { "$ref": "#/$defs/errorCode" } }
+    },
+    "zonedLocal": {
+      "type": "object",
+      "required": ["local", "zone"],
+      "additionalProperties": false,
+      "properties": { "local": { "$ref": "#/$defs/localIn" }, "zone": { "$ref": "#/$defs/zone" } }
+    },
+    "timeValue": {
+      "type": "object",
+      "required": ["utc", "zone", "offset", "local", "precision"],
+      "additionalProperties": false,
+      "properties": {
+        "utc": { "$ref": "#/$defs/utc" },
+        "zone": { "$ref": "#/$defs/zone" },
+        "offset": { "$ref": "#/$defs/offset" },
+        "local": { "$ref": "#/$defs/localOut" },
+        "precision": { "enum": ["minute", "day", "month", "year", "unknown"] }
+      }
+    },
+    "case": {
+      "type": "object",
+      "required": ["id", "op", "input", "expect"],
+      "properties": {
+        "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
+        "op": {
+          "enum": ["toInstant", "toLocal", "localDay", "todayIn", "span", "floatingDate", "display"]
+        },
+        "appliesTo": {
+          "type": "array",
+          "minItems": 1,
+          "uniqueItems": true,
+          "items": { "enum": ["server", "web", "companion"] }
+        },
+        "note": { "type": "string" },
+        "input": { "type": "object" },
+        "expect": { "type": "object" }
+      },
+      "allOf": [
+        {
+          "if": { "properties": { "op": { "const": "toInstant" } } },
+          "then": {
+            "properties": {
+              "input": {
+                "type": "object",
+                "required": ["local", "zone"],
+                "additionalProperties": false,
+                "properties": {
+                  "local": { "$ref": "#/$defs/localIn" },
+                  "zone": { "$ref": "#/$defs/zone" },
+                  "origin": { "enum": ["typed", "machine"], "description": "default typed" },
+                  "fold": {
+                    "enum": ["earlier", "later"],
+                    "description": "default earlier (owner decision Q5)"
+                  }
+                }
+              },
+              "expect": {
+                "oneOf": [
+                  { "$ref": "#/$defs/error" },
+                  {
+                    "type": "object",
+                    "required": ["utc", "offset", "ambiguous"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "utc": { "$ref": "#/$defs/utc" },
+                      "offset": { "$ref": "#/$defs/offset" },
+                      "ambiguous": { "type": "boolean" }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "op": { "const": "toLocal" } } },
+          "then": {
+            "properties": {
+              "input": {
+                "type": "object",
+                "required": ["utc", "zone"],
+                "additionalProperties": false,
+                "properties": {
+                  "utc": { "$ref": "#/$defs/utc" },
+                  "zone": { "$ref": "#/$defs/zone" }
+                }
+              },
+              "expect": {
+                "oneOf": [
+                  { "$ref": "#/$defs/error" },
+                  {
+                    "type": "object",
+                    "required": ["local", "offset"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "local": { "$ref": "#/$defs/localOut" },
+                      "offset": { "$ref": "#/$defs/offset" }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "op": { "const": "localDay" } } },
+          "then": {
+            "properties": {
+              "input": {
+                "type": "object",
+                "required": ["utc", "zone"],
+                "additionalProperties": false,
+                "properties": {
+                  "utc": { "$ref": "#/$defs/utc" },
+                  "zone": { "$ref": "#/$defs/zone" }
+                }
+              },
+              "expect": {
+                "oneOf": [
+                  { "$ref": "#/$defs/error" },
+                  {
+                    "type": "object",
+                    "required": ["day"],
+                    "additionalProperties": false,
+                    "properties": { "day": { "$ref": "#/$defs/day" } }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "op": { "const": "todayIn" } } },
+          "then": {
+            "properties": {
+              "input": {
+                "type": "object",
+                "required": ["now", "zone"],
+                "additionalProperties": false,
+                "properties": {
+                  "now": { "$ref": "#/$defs/utc" },
+                  "zone": { "$ref": "#/$defs/zone" }
+                }
+              },
+              "expect": {
+                "type": "object",
+                "required": ["day"],
+                "additionalProperties": false,
+                "properties": { "day": { "$ref": "#/$defs/day" } }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "op": { "const": "span" } } },
+          "then": {
+            "properties": {
+              "input": {
+                "type": "object",
+                "required": ["start", "end"],
+                "additionalProperties": false,
+                "properties": {
+                  "start": { "$ref": "#/$defs/zonedLocal" },
+                  "end": { "$ref": "#/$defs/zonedLocal" }
+                }
+              },
+              "expect": {
+                "type": "object",
+                "required": ["startUtc", "endUtc", "minutes", "startDay", "endDay", "dayDiff"],
+                "additionalProperties": false,
+                "properties": {
+                  "startUtc": { "$ref": "#/$defs/utc" },
+                  "endUtc": { "$ref": "#/$defs/utc" },
+                  "minutes": {
+                    "type": "integer",
+                    "description": "end minus start, measured in UTC"
+                  },
+                  "startDay": { "$ref": "#/$defs/day" },
+                  "endDay": { "$ref": "#/$defs/day" },
+                  "dayDiff": {
+                    "type": "integer",
+                    "description": "calendar days from startDay to endDay, each in its own zone"
+                  }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "op": { "const": "floatingDate" } } },
+          "then": {
+            "properties": {
+              "input": {
+                "type": "object",
+                "required": ["date"],
+                "additionalProperties": false,
+                "properties": { "date": { "type": "string" } }
+              },
+              "expect": {
+                "oneOf": [
+                  { "$ref": "#/$defs/error" },
+                  {
+                    "type": "object",
+                    "required": ["date"],
+                    "additionalProperties": false,
+                    "properties": { "date": { "$ref": "#/$defs/day" } }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "op": { "const": "display" } } },
+          "then": {
+            "properties": {
+              "input": {
+                "type": "object",
+                "required": ["value"],
+                "additionalProperties": false,
+                "properties": { "value": { "$ref": "#/$defs/timeValue" } }
+              },
+              "expect": {
+                "type": "object",
+                "required": ["date", "time", "offset"],
+                "additionalProperties": false,
+                "properties": {
+                  "date": {
+                    "type": "string",
+                    "pattern": "^[0-9]{4}(-[0-9]{2}(-[0-9]{2})?)?$",
+                    "description": "truncated to the precision"
+                  },
+                  "time": { "type": ["string", "null"], "pattern": "^[0-9]{2}:[0-9]{2}$" },
+                  "offset": { "oneOf": [{ "$ref": "#/$defs/offset" }, { "type": "null" }] }
+                }
+              }
+            }
+          }
+        }
+      ]
+    }
+  }
+}

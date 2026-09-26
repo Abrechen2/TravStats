@@ -15,6 +15,8 @@
  * MIRRORED in `frontend/src/shared/railCounting.ts`. Change both together.
  */
 
+import { localDay } from "./time/instant";
+
 export const COUNTABLE_RAIL_STATUSES = ["completed"] as const;
 
 export interface CountableRail {
@@ -34,16 +36,12 @@ export function isCountableRail(ride: CountableRail): boolean {
  * `YYYY-MM-DD` of an instant on a station's clock. A station the server could
  * not place in a zone stored its wall clock as UTC (the spec's abstention), so
  * UTC is then the honest way back — the same rule `lib/railTime.ts` shows.
+ *
+ * @deprecated → `localDay` in `shared/time` (ADR 0002); a thin name for it
+ * until phase 6. An unknown zone name throws `ZONE_UNKNOWN`, as Intl did.
  */
 export function stationDayKey(instant: Date, timezone: string | null): string {
-  const parts = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timezone ?? "UTC",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-  }).formatToParts(instant);
-  const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
-  return `${get("year")}-${get("month")}-${get("day")}`;
+  return localDay(instant, timezone ?? "UTC");
 }
 
 export interface DatedRail {

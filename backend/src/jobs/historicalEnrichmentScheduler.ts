@@ -16,6 +16,7 @@ import {
   createHistoricalEnrichment,
 } from "../services/flightEnrichmentService";
 import { applyPendingUpdate } from "../services/pendingUpdateService";
+import { schedulerZone } from "../shared/time/schedulerZone";
 
 let schedulerRunning = false;
 let schedulerTask: cron.ScheduledTask | null = null;
@@ -281,30 +282,34 @@ export function startHistoricalEnrichmentScheduler(): void {
     },
   });
 
-  schedulerTask = cron.schedule(cronExpression, async () => {
-    try {
-      logger.info({
-        operation: "historical_enrichment_scheduler_run",
-        message: "Running scheduled historical enrichment",
-      });
+  schedulerTask = cron.schedule(
+    cronExpression,
+    async () => {
+      try {
+        logger.info({
+          operation: "historical_enrichment_scheduler_run",
+          message: "Running scheduled historical enrichment",
+        });
 
-      await processAllUsersHistoricalEnrichment();
+        await processAllUsersHistoricalEnrichment();
 
-      logger.info({
-        operation: "historical_enrichment_scheduler_run_complete",
-        message: "Scheduled historical enrichment completed",
-      });
-    } catch (error) {
-      logger.error({
-        operation: "historical_enrichment_scheduler_run_error",
-        message: "Error during scheduled historical enrichment",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-          stack: error instanceof Error ? error.stack : undefined,
-        },
-      });
-    }
-  });
+        logger.info({
+          operation: "historical_enrichment_scheduler_run_complete",
+          message: "Scheduled historical enrichment completed",
+        });
+      } catch (error) {
+        logger.error({
+          operation: "historical_enrichment_scheduler_run_error",
+          message: "Error during scheduled historical enrichment",
+          error: {
+            message: error instanceof Error ? error.message : "Unknown error",
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+        });
+      }
+    },
+    { timezone: schedulerZone("historicalEnrichment") }
+  );
 
   schedulerRunning = true;
 }

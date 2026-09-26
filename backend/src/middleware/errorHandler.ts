@@ -104,10 +104,19 @@ export type ApiErrorCode =
   | "DAWARICH_WINDOW_EMPTY"
   /** Dawarich pull: a single point in the window — too few for a track. */
   | "DAWARICH_TOO_FEW_POINTS"
-  /** The zone resolver could not answer (ADR 0002 D2) — not "this point has
-   *  no zone". A local time cannot be interpreted, so the write is refused
-   *  rather than stored as UTC — see `shared/time/zoneOf.ts`. */
+  /** This place has no zone the resolver can name (422, ADR 0002 D2) — no
+   *  catalogue zone, no usable coordinates. A local time there cannot be
+   *  interpreted, so it is refused rather than stored as UTC — see
+   *  `shared/time/zoneOf.ts`. */
   | "TZ_UNRESOLVED"
+  /** A wall clock typed by a person that its zone skips (spring-forward
+   *  gap) — see `shared/time/instant.ts`. Machine sources are never refused. */
+  | "LOCAL_TIME_NONEXISTENT"
+  /** A zone name the server's tzdata does not know (`shared/time/errors.ts`). */
+  | "ZONE_UNKNOWN"
+  /** The zone lookup itself could not run (503) — distinct from
+   *  `TZ_UNRESOLVED`, "this place has no zone" (422). */
+  | "TIMEZONE_LOOKUP_UNAVAILABLE"
   /** A tour's points are its trip's timeline stops — assigned at the trip, not replaced. */
   | "TOUR_POINTS_FROM_TRIP"
   /** Backup / restore job failures — see `services/backup/backupFailure.ts`.

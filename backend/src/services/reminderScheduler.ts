@@ -5,6 +5,7 @@ import { sendFlightReminder } from "./emailService";
 import { getCachedAirport } from "./airportCache";
 import { normalizeFlightTimeUtc, type FlightTimeSemantics } from "../utils/timezone";
 import logger from "../utils/logger";
+import { schedulerZone } from "../shared/time/schedulerZone";
 
 // Track sent reminders to avoid duplicates within the same process lifetime.
 // Key format: `${flightId}-${hoursKey}` where hoursKey is '24h' or '2h'
@@ -153,14 +154,18 @@ export function startReminderScheduler(): void {
   }
 
   // Run every 15 minutes
-  scheduledTask = cron.schedule("*/15 * * * *", () => {
-    checkAndSendReminders().catch((error: unknown) => {
-      logger.error({
-        operation: "reminder_scheduler_unhandled_error",
-        error: { message: error instanceof Error ? error.message : "Unknown error" },
+  scheduledTask = cron.schedule(
+    "*/15 * * * *",
+    () => {
+      checkAndSendReminders().catch((error: unknown) => {
+        logger.error({
+          operation: "reminder_scheduler_unhandled_error",
+          error: { message: error instanceof Error ? error.message : "Unknown error" },
+        });
       });
-    });
-  });
+    },
+    { timezone: schedulerZone("reminders") }
+  );
 
   logger.info({
     operation: "reminder_scheduler_started",

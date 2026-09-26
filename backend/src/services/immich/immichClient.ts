@@ -129,6 +129,23 @@ function toImmichError(error: unknown, context: string): ImmichError {
   return new ImmichError("protocol", `Unexpected Immich failure (${context})`);
 }
 
+/** What `fileCreatedAt` becomes when Immich sends none — the existing "absent" convention. */
+const NO_CAPTURE_TIME = new Date(0).toISOString();
+const RFC3339_OFFSET = /(?:Z|[+-]\d{2}:\d{2})$/i;
+
+/**
+ * A photo's capture time as a UTC instant (ADR 0002 D6, library boundary).
+ * Immich sends `fileCreatedAt` as RFC 3339 with an offset; it is normalised to
+ * one UTC form so ordering by string compares instants, not spellings. A value
+ * WITHOUT an offset is a camera wall clock with no zone: `new Date()` would
+ * read it in the SERVER's zone, so it is treated like a missing time instead.
+ */
+function captureInstant(value: unknown): string {
+  if (typeof value !== "string" || !RFC3339_OFFSET.test(value)) return NO_CAPTURE_TIME;
+  const ms = Date.parse(value);
+  return Number.isFinite(ms) ? new Date(ms).toISOString() : NO_CAPTURE_TIME;
+}
+
 function mapAsset(raw: unknown): ImmichAsset | null {
   // A non-string OR empty id would build `/assets//original` — drop it, for
   // symmetry with `listAlbums`'s strict `id.length > 0` filter.
@@ -142,7 +159,7 @@ function mapAsset(raw: unknown): ImmichAsset | null {
   return {
     id: raw.id,
     type: raw.type,
-    fileCreatedAt: asString(raw.fileCreatedAt, new Date(0).toISOString()),
+    fileCreatedAt: captureInstant(raw.fileCreatedAt),
     originalFileName: asString(raw.originalFileName, `${raw.id}.bin`),
     mimeType: asString(raw.originalMimeType, "application/octet-stream"),
     sizeBytes: asNumberOrNull(exif?.fileSizeInByte),

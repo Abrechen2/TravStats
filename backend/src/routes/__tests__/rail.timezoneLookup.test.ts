@@ -33,7 +33,7 @@ describe("rail write when the time zone lookup is broken", () => {
     await prisma.$disconnect();
   });
 
-  it("answers 503 TZ_UNRESOLVED and stores nothing", async () => {
+  it("answers 503 TIMEZONE_LOOKUP_UNAVAILABLE and stores nothing", async () => {
     const res = await request(app)
       .post("/api/v1/rail")
       .set("Cookie", cookie)
@@ -52,7 +52,7 @@ describe("rail write when the time zone lookup is broken", () => {
       });
 
     expect(res.status).toBe(503);
-    expect(res.body.code).toBe("TZ_UNRESOLVED");
+    expect(res.body.code).toBe("TIMEZONE_LOOKUP_UNAVAILABLE");
     expect(await prisma.railJourney.count({ where: { userId } })).toBe(0);
   });
 });

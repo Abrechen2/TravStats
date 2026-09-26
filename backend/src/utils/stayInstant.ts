@@ -29,6 +29,10 @@ import { legacyFakeUtcToRealUtc } from "./timezone";
  * screen in the one place a reader trusts to be exact. So the wall clock is
  * returned unconverted, exactly as before, and the caller cannot tell the two
  * cases apart — which is correct, because for a same-zone stay they agree.
+ *
+ * @deprecated → `shared/time` (ADR 0002): phase 2 stores the stay's zone and
+ * check-in instant (`toInstant`), and phase 6 deletes this file. The zone and
+ * the conversion already go through `zoneOf` / `legacyFakeUtcToRealUtc`.
  */
 
 export interface StayInstantSource {
@@ -43,7 +47,7 @@ export interface StayInstantSource {
 
 /**
  * The IANA zone a coordinate pair sits in, or null when it has none.
- * Throws `ZoneUnresolvedError` (TZ_UNRESOLVED) when the lookup itself is broken — that used
+ * Throws `ZoneLookupUnavailableError` (TIMEZONE_LOOKUP_UNAVAILABLE) when the lookup itself is broken — that used
  * to be swallowed here, and every stay and rail station silently got UTC.
  */
 export function timezoneOfLodging(lat?: number | null, lon?: number | null): string | null {
