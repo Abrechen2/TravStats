@@ -262,6 +262,7 @@ const shutdown = (signal: string) => async (): Promise<void> => {
   (await import("./jobs/airlineLogoRefreshScheduler")).stopAirlineLogoRefreshScheduler();
   (await import("./jobs/statusSweepScheduler")).stopStatusSweepScheduler();
   (await import("./jobs/placeAddressBackfillScheduler")).stopPlaceAddressBackfillScheduler();
+  (await import("./jobs/stayFxBackfillScheduler")).stopStayFxBackfillScheduler();
   (await import("./jobs/dataQualitySweepScheduler")).stopDataQualitySweepScheduler();
   (await import("./jobs/dawarichCountryDaySweepScheduler")).stopDawarichCountryDaySweepScheduler();
   (await import("./jobs/documentSweepScheduler")).stopDocumentSweepScheduler();
@@ -690,6 +691,10 @@ if (process.env.NODE_ENV !== "test") {
           (
             await import("./jobs/placeAddressBackfillScheduler")
           ).startPlaceAddressBackfillScheduler(),
+      ],
+      [
+        "stay_fx_backfill",
+        async () => (await import("./jobs/stayFxBackfillScheduler")).startStayFxBackfillScheduler(),
       ],
       [
         "data_quality_sweep",

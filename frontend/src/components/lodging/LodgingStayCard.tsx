@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useSettingsStore } from "../../store/settingsStore";
 import { formatRatingText, formatStayPriceDisplay } from "../../lib/lodgingFormat";
 import { formatStayPeriod, hasUnknownLength, stayNights } from "../../lib/lodgingDateDisplay";
 import type { StayMembershipSource } from "../../shared/membershipDerivation";
@@ -50,6 +51,7 @@ export function LodgingStayCard({
   membershipSource,
 }: LodgingStayCardProps): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common"]);
+  const baseCurrency = useSettingsStore((st) => st.baseCurrency);
   const nights = stayNights(stay);
   const period = formatStayPeriod(stay, i18n.language, t);
   const { original, fxReadout, marker } = formatStayPriceDisplay(
@@ -75,7 +77,8 @@ export function LodgingStayCard({
       manual: t("lodging:fx.markerManual"),
 
       none: t("lodging:fx.markerNone"),
-    }
+    },
+    baseCurrency
   );
 
   // The hover text names the same source the readout does — one derivation, so

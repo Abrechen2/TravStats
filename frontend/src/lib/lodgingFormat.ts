@@ -129,7 +129,9 @@ function formatFullDate(iso: string, _locale: string): string {
 export function formatStayPriceDisplay(
   stay: StayPriceSnapshot,
   language: string | undefined,
-  labels: FxStateLabels
+  labels: FxStateLabels,
+  /** The account's base currency — decides whether a missing snapshot matters. */
+  baseCurrency?: string
 ): StayPriceDisplay {
   const locale = localeForLanguage(language);
   const original =
@@ -150,7 +152,26 @@ export function formatStayPriceDisplay(
     // A price nothing could convert is MARKED. A stay with no price at all is
     // not: nothing was attempted, so nothing failed, and a badge there would
     // cry wolf on the most ordinary row there is.
-    return { original, fxReadout: null, marker: stay.totalPrice !== null ? labels.none : null };
+    //
+    // Nor is a price already IN the base currency: it needs no rate, and the
+    // totals count it at face value (`shared/lodgingSpendBase.ts`, rule 1).
+    // The card said "210 € · kein Kurs — not in totals" for exactly such a
+    // stay, contradicting the total beside it (browser acceptance
+    // 2026-09-26). An undated stay, or one written before its snapshot, has
+    // no snapshot and needs none. The marker follows the SAME rule the sums do.
+    const unconverted =
+      baseCurrency === undefined
+        ? stay.totalPrice !== null
+        : isUnconvertedSpend(
+            {
+              totalPrice: stay.totalPrice,
+              currency: stay.currency,
+              totalPriceBase: null,
+              fxBaseCurrency: null,
+            },
+            baseCurrency
+          );
+    return { original, fxReadout: null, marker: unconverted ? labels.none : null };
   }
 
   // A stay already priced in the base currency has a COMPLETE snapshot —
