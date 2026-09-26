@@ -140,14 +140,19 @@ export type PassportLoaderFlight = Prisma.FlightGetPayload<{
  *   list or nothing.
  */
 /**
- * Which beta-gated evidence sources a caller reads. Default: all of them, which
- * is what the passport page asks for. The country badges pass the user's
- * visible domains instead (`utils/achievementCountries.ts`), so a hidden
- * domain proves no country there.
+ * Which evidence sources a caller reads. Default: all of them, which is what
+ * the passport page asks for. The country badges ask for less
+ * (`utils/achievementCountries.ts`): rail and roadtrip only while that domain
+ * is visible to the user, and never a place or a track, because a badge is
+ * earned from curated travel records only. A source that is not read proves
+ * nothing AND lifts no tier — the fold never sees it — which is the point of
+ * leaving it out here rather than filtering rows afterwards.
  */
 export interface PassportSources {
   rail?: boolean;
   roadtrip?: boolean;
+  place?: boolean;
+  track?: boolean;
 }
 
 export async function loadPassport(
@@ -157,6 +162,8 @@ export async function loadPassport(
 ): Promise<ReturnType<typeof buildPassport>> {
   const readRail = sources.rail ?? true;
   const readRoadtrip = sources.roadtrip ?? true;
+  const readPlace = sources.place ?? true;
+  const readTrack = sources.track ?? true;
   // One clock for the whole load, so two evidence sources cannot disagree
   // about whether a visit has happened yet.
   const now = new Date();
@@ -229,10 +236,12 @@ export async function loadPassport(
         port: { select: { country: true } },
       },
     }),
-    prisma.place.findMany({
-      where: { userId, visited: true, isoCountryCode: { not: null } },
-      select: { isoCountryCode: true, visits: { select: { visitedAt: true } } },
-    }),
+    readPlace
+      ? prisma.place.findMany({
+          where: { userId, visited: true, isoCountryCode: { not: null } },
+          select: { isoCountryCode: true, visits: { select: { visitedAt: true } } },
+        })
+      : [],
     /**
      * Lodging as evidence — spec §1.2, the clearest of the four bugs. A country
      * reached by car and slept in for a week did not appear in this passport at
@@ -278,16 +287,18 @@ export async function loadPassport(
      * evidence for a reader, not an input to the rule (see
      * `./trackEvidence.ts`).
      */
-    prisma.countryDay.findMany({
-      where: { userId },
-      select: {
-        date: true,
-        countryCode: true,
-        pointCount: true,
-        airportPointCount: true,
-        partialWindow: true,
-      },
-    }),
+    readTrack
+      ? prisma.countryDay.findMany({
+          where: { userId },
+          select: {
+            date: true,
+            countryCode: true,
+            pointCount: true,
+            airportPointCount: true,
+            partialWindow: true,
+          },
+        })
+      : [],
     /**
      * Which tier the headline counts from — the user's own choice, else the
      * instance default (spec §3.2). Read HERE rather than inside
