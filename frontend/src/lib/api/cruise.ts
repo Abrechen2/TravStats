@@ -215,6 +215,15 @@ export interface PortGeocodeResult {
   failure: PortGeocodeFailure | null;
 }
 
+/**
+ * `existing: true` = the catalogue already had this ship (same IMO, or same
+ * name + cruise line); the server returned it and created nothing.
+ */
+export interface ShipCreateResult {
+  ship: Ship;
+  existing: boolean;
+}
+
 export const portsApi = {
   search: async (q: string, region?: string): Promise<Port[]> => {
     const params: Record<string, string> = {};
@@ -288,8 +297,8 @@ export const shipsApi = {
     yearBuilt?: number;
     grossTonnage?: number;
     capacity?: number;
-  }): Promise<Ship> => {
-    const { data } = await api.post<Envelope<Ship>>("/ships", input);
-    return data.data;
+  }): Promise<ShipCreateResult> => {
+    const { data } = await api.post<Envelope<Ship> & { existing?: boolean }>("/ships", input);
+    return { ship: data.data, existing: data.existing === true };
   },
 };

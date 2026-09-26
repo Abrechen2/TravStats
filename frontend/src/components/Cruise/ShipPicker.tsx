@@ -15,6 +15,10 @@ interface Props {
  * - Shows a dropdown with matches from the catalog.
  * - Offers an "add custom" flow when no exact-name match is present in results,
  *   creating a new user-added ship via `shipsApi.create`.
+ * - A failed search SAYS so. It used to show an empty list, which offered
+ *   "add ship" for a ship the catalogue had, and every such add wrote a
+ *   duplicate into the catalogue all accounts share. The server now also
+ *   answers a duplicate create with the existing ship; that is said too.
  */
 export function ShipPicker({ value, onChange }: Props): JSX.Element {
   const { t } = useTranslation("cruise");
@@ -25,23 +29,34 @@ export function ShipPicker({ value, onChange }: Props): JSX.Element {
   const [newLine, setNewLine] = useState<string>("");
   const [saving, setSaving] = useState<boolean>(false);
   const [error, setError] = useState<string | null>(null);
+  const [searchError, setSearchError] = useState<boolean>(false);
+  const [notice, setNotice] = useState<string | null>(null);
 
   useEffect(() => {
     // Don't search when the field merely shows the already-selected ship —
     // otherwise the dropdown re-opens right after a pick and on modal open.
     if (!query || query.length < 2 || query === value?.name) {
       setResults([]);
+      setSearchError(false);
       return;
     }
+    let cancelled = false;
     const handle = setTimeout(async () => {
       try {
         const r = await shipsApi.search(query);
+        if (cancelled) return;
         setResults(Array.isArray(r) ? r : []);
+        setSearchError(false);
       } catch {
+        if (cancelled) return;
         setResults([]);
+        setSearchError(true);
       }
     }, 250);
-    return (): void => clearTimeout(handle);
+    return (): void => {
+      cancelled = true;
+      clearTimeout(handle);
+    };
   }, [query, value?.name]);
 
   const exactMatch = results.some((r) => r.name.toLowerCase() === query.toLowerCase());
@@ -50,6 +65,7 @@ export function ShipPicker({ value, onChange }: Props): JSX.Element {
     onChange(ship);
     setQuery(ship.name);
     setResults([]);
+    setNotice(null);
   };
 
   const save = async (): Promise<void> => {
@@ -57,8 +73,9 @@ export function ShipPicker({ value, onChange }: Props): JSX.Element {
     setSaving(true);
     setError(null);
     try {
-      const ship = await shipsApi.create({ name: newName, cruiseLine: newLine });
+      const { ship, existing } = await shipsApi.create({ name: newName, cruiseLine: newLine });
       onChange(ship);
+      setNotice(existing ? t("picker.shipAlreadyExists", { name: ship.name }) : null);
       setQuery(ship.name);
       setResults([]);
       setShowAdd(false);
@@ -97,7 +114,17 @@ export function ShipPicker({ value, onChange }: Props): JSX.Element {
           ))}
         </ul>
       )}
-      {query.length >= 2 && query !== value?.name && !exactMatch && !showAdd && (
+      {searchError && (
+        <p role="alert" className="mt-1 text-xs text-(--danger)">
+          {t("picker.shipSearchError")}
+        </p>
+      )}
+      {notice !== null && (
+        <p role="status" className="mt-1 text-xs text-(--text-muted)">
+          {notice}
+        </p>
+      )}
+      {query.length >= 2 && query !== value?.name && !exactMatch && !searchError && !showAdd && (
         <button
           type="button"
           className="mt-2 text-xs text-(--accent) hover:underline"

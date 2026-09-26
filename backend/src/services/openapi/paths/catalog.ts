@@ -59,6 +59,12 @@ const ship = registry.register(
     .openapi("Ship")
 );
 
+const shipCreateEnvelope = z.object({
+  success: z.literal(true),
+  data: ship,
+  existing: z.boolean().describe("true = an existing catalogue ship was returned, none created"),
+});
+
 const airline = registry.register(
   "Airline",
   z
@@ -213,7 +219,9 @@ registry.registerPath({
   path: "/ships",
   summary: "Add a ship to the catalogue",
   description:
-    "Rows whose IMO already exists are skipped by re-seeding, so a user-added ship survives updates.",
+    "Rows whose IMO already exists are skipped by re-seeding, so a user-added ship survives updates. " +
+    "A request that names a ship the catalogue already has — same IMO, or same name and cruise line " +
+    "(case-insensitive) — creates nothing and answers 200 with that ship and `existing: true`.",
   tags: ["Catalogue"],
   request: {
     body: {
@@ -232,7 +240,14 @@ registry.registerPath({
     },
   },
   responses: {
-    201: { description: "Created", content: { "application/json": { schema: envelope(ship) } } },
+    200: {
+      description: "The ship already exists; nothing was created",
+      content: { "application/json": { schema: shipCreateEnvelope } },
+    },
+    201: {
+      description: "Created",
+      content: { "application/json": { schema: shipCreateEnvelope } },
+    },
     400: { description: "Validation failed", content: errorContent },
     403: { description: "Read-scoped token", content: errorContent },
   },

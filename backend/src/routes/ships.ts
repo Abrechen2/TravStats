@@ -133,17 +133,57 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   }
 });
 
+/**
+ * The catalogue row a create request would duplicate, or null.
+ *
+ * The catalogue is shared by every account, so a duplicate is everybody's
+ * problem — and the picker used to create one whenever its search failed and
+ * showed an empty list. Same IMO = same hull, always. Same name + same line
+ * (case-insensitive) = the same ship unless both carry different IMOs.
+ */
+async function findExistingShip(input: z.infer<typeof createShipSchema>) {
+  const imo = input.imo?.trim() || null;
+  if (imo) {
+    const byImo = await prisma.ship.findUnique({ where: { imo } });
+    if (byImo) return byImo;
+  }
+  const byName = await prisma.ship.findFirst({
+    where: {
+      name: { equals: input.name.trim(), mode: "insensitive" },
+      cruiseLine: { equals: input.cruiseLine.trim(), mode: "insensitive" },
+    },
+    orderBy: { id: "asc" },
+  });
+  if (byName && imo && byName.imo && byName.imo !== imo) return null;
+  return byName;
+}
+
 router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const parsed = createShipSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
+    // An existing ship is answered with 200 + `existing: true` instead of a
+    // second row — the client selects it and says so.
+    const existing = await findExistingShip(parsed.data);
+    if (existing) {
+      logger.info({ operation: "ship_create_existing", shipId: existing.id, userId: req.userId });
+      res.status(200).json({ success: true, data: existing, existing: true });
+      return;
+    }
+
     const ship = await prisma.ship.create({
-      data: { ...parsed.data, isUserAdded: true },
+      data: {
+        ...parsed.data,
+        name: parsed.data.name.trim(),
+        cruiseLine: parsed.data.cruiseLine.trim(),
+        imo: parsed.data.imo?.trim() || undefined,
+        isUserAdded: true,
+      },
     });
     invalidateCruiseEntityCache();
     logger.info({ operation: "ship_create", shipId: ship.id, userId: req.userId });
-    res.status(201).json({ success: true, data: ship });
+    res.status(201).json({ success: true, data: ship, existing: false });
   } catch (err) {
     next(err);
   }

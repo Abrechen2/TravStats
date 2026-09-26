@@ -153,7 +153,9 @@
     "via_geocoder": "Kartensuche (OpenStreetMap)",
     "searchError": "Hafensuche fehlgeschlagen - bitte erneut versuchen",
     "geocodeRateLimited": "Die Online-Hafensuche (OpenStreetMap) ist gerade ausgelastet und hat nicht geantwortet. Bitte in einer Minute erneut suchen oder den Hafen manuell anlegen.",
-    "geocodeUnavailable": "Die Online-Hafensuche (OpenStreetMap) ist gerade nicht erreichbar. Bitte später erneut suchen oder den Hafen manuell anlegen."
+    "geocodeUnavailable": "Die Online-Hafensuche (OpenStreetMap) ist gerade nicht erreichbar. Bitte später erneut suchen oder den Hafen manuell anlegen.",
+    "shipSearchError": "Schiffssuche fehlgeschlagen – bitte erneut versuchen. Solange die Suche nicht antwortet, lieber kein neues Schiff anlegen: es könnte schon im Katalog stehen.",
+    "shipAlreadyExists": "„{{name}}“ steht bereits im Katalog und wurde ausgewählt – es wurde kein zweites Schiff angelegt."
   },
   "map": {
     "layer": "Kreuzfahrten",

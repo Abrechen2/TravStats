@@ -78,6 +78,39 @@ describe("Ships API", () => {
       expect(res.body.data.cruiseLine).toBe("Test Line");
     });
 
+    // A failed search in the picker used to end in "add ship", and every such
+    // add wrote a second row into the SHARED catalogue.
+    it("returns the existing ship for the same name and line, in any case", async () => {
+      const first = await request(app)
+        .post("/api/v1/ships")
+        .set("Cookie", authCookie)
+        .send({ name: "MS Dublette", cruiseLine: "Dup Line" });
+      expect(first.status).toBe(201);
+      expect(first.body.existing).toBe(false);
+
+      const again = await request(app)
+        .post("/api/v1/ships")
+        .set("Cookie", authCookie)
+        .send({ name: " ms dublette ", cruiseLine: "DUP LINE" });
+      expect(again.status).toBe(200);
+      expect(again.body.existing).toBe(true);
+      expect(again.body.data.id).toBe(first.body.data.id);
+      expect(
+        await prisma.ship.count({ where: { name: { equals: "MS Dublette", mode: "insensitive" } } })
+      ).toBe(1);
+    });
+
+    it("returns the existing ship for a known IMO instead of failing or duplicating", async () => {
+      const sample = await prisma.ship.findFirst({ where: { imo: { not: null } } });
+      const res = await request(app)
+        .post("/api/v1/ships")
+        .set("Cookie", authCookie)
+        .send({ name: "Some Other Name", cruiseLine: "Other Line", imo: sample!.imo });
+      expect(res.status).toBe(200);
+      expect(res.body.existing).toBe(true);
+      expect(res.body.data.id).toBe(sample!.id);
+    });
+
     it("rejects empty name", async () => {
       const res = await request(app)
         .post("/api/v1/ships")

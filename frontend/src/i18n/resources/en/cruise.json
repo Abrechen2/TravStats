@@ -153,7 +153,9 @@
     "via_geocoder": "Map search (OpenStreetMap)",
     "searchError": "Port search failed - please try again",
     "geocodeRateLimited": "The online port search (OpenStreetMap) is busy and did not answer. Search again in a minute, or add the port by hand.",
-    "geocodeUnavailable": "The online port search (OpenStreetMap) cannot be reached right now. Search again later, or add the port by hand."
+    "geocodeUnavailable": "The online port search (OpenStreetMap) cannot be reached right now. Search again later, or add the port by hand.",
+    "shipSearchError": "Ship search failed – please try again. While the search is not answering, better not add a new ship: it may already be in the catalogue.",
+    "shipAlreadyExists": "\"{{name}}\" is already in the catalogue and was selected – no second ship was created."
   },
   "map": {
     "layer": "Cruises",
