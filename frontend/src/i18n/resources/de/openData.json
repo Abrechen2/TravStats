@@ -40,7 +40,24 @@
       "snow": "Schnee",
       "showers": "Schauer",
       "thunder": "Gewitter"
-    }
+    },
+    "outcome": {
+      "futureOrToday": "Für heute und kommende Tage gibt es noch kein gemessenes Wetter – es lässt sich nachtragen, sobald der Tag vorbei ist.",
+      "noData": "Für diesen Tag hat der Wetterdienst keine vollständige Messung.",
+      "timeout": "Der Wetterdienst hat nicht rechtzeitig geantwortet. Bitte später erneut versuchen.",
+      "timeoutKept": "Der Wetterdienst hat nicht rechtzeitig geantwortet – das gespeicherte Wetter bleibt stehen.",
+      "rateLimited": "Der Wetterdienst nimmt gerade keine weiteren Anfragen an. Bitte später erneut versuchen.",
+      "rateLimitedKept": "Der Wetterdienst nimmt gerade keine weiteren Anfragen an – das gespeicherte Wetter bleibt stehen.",
+      "unavailable": "Der Wetterdienst ist gerade nicht erreichbar. Bitte später erneut versuchen.",
+      "unavailableKept": "Der Wetterdienst ist gerade nicht erreichbar – das gespeicherte Wetter bleibt stehen."
+    },
+    "fillFailed_one": "Für {{count}} Eintrag hat der Wetterdienst nicht geantwortet – bitte später erneut versuchen.",
+    "fillFailed_other": "Für {{count}} Einträge hat der Wetterdienst nicht geantwortet – bitte später erneut versuchen.",
+    "fillNoPlace_one": "{{count}} Eintrag hat keinen Ort mit Koordinaten.",
+    "fillNoPlace_other": "{{count}} Einträge haben keinen Ort mit Koordinaten.",
+    "fillNotYet_one": "Für {{count}} Eintrag gibt es noch keine Messung.",
+    "fillNotYet_other": "Für {{count}} Einträge gibt es noch keine Messung.",
+    "outcomeUnknown": "Der Server meldet nicht mehr, wie das Nachtragen ausgegangen ist. Bitte die Reise neu laden."
   },
   "wikipedia": {
     "title": "Aus Wikipedia",
@@ -62,7 +79,8 @@
       "wikidataId": "Wikipedia-Verknüpfung",
       "chain": "Kette",
       "name": "Name",
-      "type": "Art"
+      "type": "Art",
+      "position": "Position (auf das gewählte Haus gesetzt)"
     },
     "nearby": {
       "search": "Unterkünfte in der Nähe suchen (OpenStreetMap)",
@@ -72,7 +90,13 @@
       "failed": "OpenStreetMap hat nicht geantwortet.",
       "distance": "{{m}} m",
       "filled": "Aus OpenStreetMap übernommen: {{fields}}",
-      "nothingNew": "„{{name}}“ gewählt — nichts Neues, die Felder waren schon ausgefüllt."
+      "nothingNew": "„{{name}}“ gewählt — nichts Neues, die Felder waren schon ausgefüllt.",
+      "restorePin": "Pin zurück auf die vorherige Position"
+    },
+    "upstream": {
+      "timeout": "OpenStreetMap hat nicht rechtzeitig geantwortet – ob es das Haus kennt, ist offen. Bitte später erneut versuchen.",
+      "rateLimited": "OpenStreetMap nimmt gerade keine weiteren Anfragen an. Bitte später erneut versuchen.",
+      "unavailable": "OpenStreetMap ist gerade nicht erreichbar – ob es das Haus kennt, ist offen."
     }
   }
 }

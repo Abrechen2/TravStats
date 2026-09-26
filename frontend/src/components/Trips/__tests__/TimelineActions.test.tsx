@@ -77,7 +77,11 @@ describe("TimelineActions", () => {
 
   it("fills the missing weather and reloads the trip", async () => {
     useSettingsStore.setState({ openDataEnabled: true });
-    vi.mocked(openDataApi.fillJournalWeather).mockResolvedValue({ filled: 1, entries: [] });
+    vi.mocked(openDataApi.fillJournalWeather).mockResolvedValue({
+      filled: 1,
+      outcomes: [{ entryId: "b", date: "2024-07-15", outcome: "observed" }],
+      entries: [],
+    });
     const onChanged = vi.fn();
     render(
       <TimelineActions

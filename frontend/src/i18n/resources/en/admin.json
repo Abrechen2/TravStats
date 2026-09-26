@@ -587,7 +587,8 @@
       "keyMismatchBody": "The stored API keys, the SMTP password and the Immich/Dawarich credentials cannot be decrypted on this instance. Put the original key back (ENCRYPTION_KEY, or encryption.key in the secrets directory) and try again — or confirm here and enter those credentials again afterwards.",
       "keyMismatchAcknowledge": "Understood: I will re-enter the credentials afterwards",
       "archiveIncomplete": "The archive is missing the part you asked to restore. Nothing was restored.",
-      "archiveUnreadable": "The archive's file part cannot be read. Nothing was restored."
+      "archiveUnreadable": "The archive's file part cannot be read. Nothing was restored.",
+      "inProgress": "Restoring …"
     },
     "settingsSaved": "Backup settings saved",
     "settingsFailed": "Failed to save backup settings",
@@ -609,7 +610,10 @@
       "deleted": "Backup deleted",
       "deleteFailed": "Failed to delete backup",
       "synced": "Backup uploaded",
-      "syncFailed": "Failed to upload backup"
+      "syncFailed": "Failed to upload backup",
+      "created": "Backup created",
+      "restored": "Backup restored",
+      "outcomeUnknown": "The server no longer reports the outcome — check the backup list before trying again."
     }
   },
   "feedback": {

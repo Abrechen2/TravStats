@@ -21,7 +21,8 @@ import { cruiseExternalRef } from "../services/importProvenance";
 import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from "../shared/statusDerivation";
 import { recomputeTripStatus } from "../services/tripStatusService";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
-import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
+import { getBaseCurrency } from "../services/fx/snapshot";
+import { refreshFxOnEdit } from "../services/fx/refreshOnEdit";
 import logger from "../utils/logger";
 
 interface GeometryFeature {
@@ -504,24 +505,21 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       resolvedCompanionsForUpdate = await resolveCompanions(userId, companions);
     }
 
-    // FX snapshot (#267) — recompute only when an input it depends on
-    // actually moved (price, currency or the start day), mirroring the same
-    // guard in `routes/flights.ts`. A stale snapshot from before this edit
-    // would misrepresent the NEW price/currency/date, so it is recomputed
-    // from the MERGED (existing + incoming) state rather than the payload
-    // alone — a currency-only PATCH must still convert the unchanged price.
-    const fxInputsChanged =
-      rest.price !== undefined || rest.currency !== undefined || nextStartDate !== undefined;
-    const fxColumns = fxInputsChanged
-      ? await fxColumnsFor(
-          {
-            amount: rest.price !== undefined ? rest.price : existing.price,
-            currency: rest.currency !== undefined ? rest.currency : existing.currency,
-            date: nextStartDate !== undefined ? nextStartDate : existing.startDate,
-          },
-          await getBaseCurrency(userId)
-        )
-      : undefined;
+    // FX snapshot (#267), from the MERGED (existing + incoming) state and
+    // compared with the STORED one — the edit dialog sends price, currency and
+    // date on every save, so "was it sent" re-snapshotted a cabin change and a
+    // failed lookup wiped a good rate (2026-09-26). See `fx/refreshOnEdit.ts`.
+    const fx = await refreshFxOnEdit(
+      { ...existing, amount: existing.price, date: existing.startDate },
+      {
+        amount: rest.price !== undefined ? rest.price : existing.price,
+        currency: rest.currency !== undefined ? rest.currency : existing.currency,
+        date: finalStartDate,
+      },
+      await getBaseCurrency(userId),
+      { cruiseId: existing.id, userId }
+    );
+    const fxColumns = fx.columns;
 
     const updated = await prisma.$transaction(async (tx) => {
       if (resolvedCompanionsForUpdate !== undefined) {
@@ -609,7 +607,8 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       });
     }
 
-    res.json({ success: true, data: updated });
+    // "keptStoredRate" / "lookupFailed": the rate could not be refreshed.
+    res.json({ success: true, data: updated, fxSnapshot: fx.outcome });
   } catch (err) {
     next(err);
   }

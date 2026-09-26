@@ -6,13 +6,18 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import { openDataLimiter } from "../middleware/rateLimit";
-import { assertOpenDataEnabled, OpenDataDisabledError } from "../services/openData/http";
+import {
+  assertOpenDataEnabled,
+  OpenDataDisabledError,
+  type OpenDataFailure,
+} from "../services/openData/http";
 import { fillTripJournalWeather, refreshJournalWeather } from "../services/openData/journalWeather";
 import { enrichLodgingFromOsm, withCatalogueChains } from "../services/openData/lodgingEnrichment";
 import { nearbyLodgings } from "../services/openData/openStreetMap";
 import { wikidataForPlace } from "../services/openData/placeWikidata";
 import { plannedElevationProfile } from "../services/openData/plannedProfile";
 import { WIKI_LANGUAGES, wikipediaSummary } from "../services/openData/wikipedia";
+import { startJob } from "../services/jobs/jobRegistry";
 import { buildRouteGeometry } from "./trips/tourLegs";
 import { resolveRoute } from "./trips/tourRoutes";
 import { resolveTrip } from "./trips/resolveTrip";
@@ -32,13 +37,33 @@ const router = Router();
 
 const langQuery = z.object({ lang: z.enum(WIKI_LANGUAGES).default("en") });
 
+/** A service that could not be asked, as a status and a code the client maps to its own copy. */
+function upstreamError(service: string, failure: OpenDataFailure): AppError {
+  switch (failure) {
+    case "timeout":
+      return new AppError(`${service} did not answer in time`, 504, "UPSTREAM_TIMEOUT");
+    case "rateLimited":
+      return new AppError(`${service} is refusing more requests`, 503, "UPSTREAM_RATE_LIMITED");
+    case "unavailable":
+      return new AppError(`${service} did not answer`, 502, "UPSTREAM_UNAVAILABLE");
+  }
+}
+
 function sendDisabled(error: unknown, res: Response): boolean {
   if (!(error instanceof OpenDataDisabledError)) return false;
   res.status(409).json({ error: "openDataDisabled", message: error.message });
   return true;
 }
 
-/** POST /trips/:id/journal/weather — fill every entry of the trip that has none yet. */
+const fillBody = z.object({ background: z.boolean().default(false) });
+
+/**
+ * POST /trips/:id/journal/weather — fill every entry of the trip that has none
+ * yet, and say per entry what came of it. One Open-Meteo call per entry, up to
+ * eight seconds each, in sequence: a long trip outlives any client timeout, so
+ * `background: true` answers 202 with a job (`journal.weather`) whose result
+ * is the synchronous body.
+ */
 router.post(
   "/trips/:id/journal/weather",
   authenticate,
@@ -48,13 +73,21 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const trip = await resolveTrip(req.userId!, req.params.id);
+      const { background } = fillBody.parse(req.body ?? {});
       await assertOpenDataEnabled();
-      const filled = await fillTripJournalWeather(trip.id);
-      const entries = await prisma.tripJournalEntry.findMany({
-        where: { tripId: trip.id },
-        orderBy: { date: "asc" },
-      });
-      res.json({ filled, entries });
+      const run = async () => {
+        const { filled, outcomes } = await fillTripJournalWeather(trip.id);
+        const entries = await prisma.tripJournalEntry.findMany({
+          where: { tripId: trip.id },
+          orderBy: { date: "asc" },
+        });
+        return { filled, outcomes, entries };
+      };
+      if (background) {
+        res.status(202).json({ jobId: startJob("journal.weather", req.userId!, run).id });
+        return;
+      }
+      res.json(await run());
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);
     }
@@ -77,7 +110,10 @@ router.post(
       });
       if (!existing) throw new AppError("Journal entry not found", 404);
       await assertOpenDataEnabled();
-      res.json({ entry: await refreshJournalWeather(existing.id) });
+      // A failed lookup keeps the stored weather, and says why it could not
+      // be refreshed — "no place" used to stand for a busy weather service.
+      const { entry, outcome } = await refreshJournalWeather(existing.id);
+      res.json({ entry, weatherOutcome: outcome });
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);
     }
@@ -171,7 +207,7 @@ router.get(
       const { lat, lon, radiusKm } = nearbyQuery.parse(req.query);
       await assertOpenDataEnabled();
       const places = await nearbyLodgings(lat, lon, radiusKm * 1000);
-      if (places === null) throw new AppError("OpenStreetMap did not answer", 502);
+      if ("failure" in places) throw upstreamError("OpenStreetMap", places.failure);
       res.json({ places: await withCatalogueChains(places) });
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);

@@ -67,7 +67,13 @@ export type ApiErrorCode =
   /** The PDF has no usable text layer (a scan) — the image route reads it. */
   | "PDF_NO_TEXT"
   /** A boarding pass was read but carried no flight data. */
-  | "NO_FLIGHT_DATA";
+  | "NO_FLIGHT_DATA"
+  /** An outside service the request depends on (OpenStreetMap, Open-Meteo)
+   *  could not be asked: it timed out, refused more requests, or did not
+   *  answer. Kept apart from "nothing found", which the UI used to say. */
+  | "UPSTREAM_TIMEOUT"
+  | "UPSTREAM_RATE_LIMITED"
+  | "UPSTREAM_UNAVAILABLE";
 
 interface AuthRequest extends Request {
   user?: {

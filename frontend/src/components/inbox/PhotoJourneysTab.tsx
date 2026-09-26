@@ -3,6 +3,7 @@ import { Link } from "react-router-dom";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { immichApi } from "../../lib/api/immich";
+import { JobLostError } from "../../lib/api/jobs";
 import { photoJourneysApi } from "../../lib/api/photoJourneys";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
@@ -151,6 +152,13 @@ export default function PhotoJourneysTab({
       await load();
     } catch (error) {
       logger.error("Failed to scan for photo journeys:", error);
+      if (error instanceof JobLostError) {
+        // The scan may well have finished and stored findings: show what is
+        // there, and say the outcome is unknown rather than "failed".
+        addToast("info", t("dataQuality:inbox.photoJourneys.messages.scanOutcomeUnknown"));
+        await load();
+        return;
+      }
       addToast("error", t("dataQuality:inbox.photoJourneys.errors.scanFailed"));
     } finally {
       setScanning(false);

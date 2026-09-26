@@ -114,6 +114,7 @@
     "documents/extractValues.ts",
     "geo.ts",
     "importBatches.ts",
+    "jobs.ts",
     "lodging.ts",
     "lodging/entrySuggestions.ts",
     "lodging/photos.ts",

@@ -3,7 +3,7 @@ import type { JSX } from "react";
 
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useTranslation } from "../../hooks/useTranslation";
-import { openDataApi, type NearbyLodging } from "../../lib/api/openData";
+import { openDataApi, openDataUpstreamFailure, type NearbyLodging } from "../../lib/api/openData";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
 import { lodgingTypeForKind } from "./lodgingFromOsm";
@@ -15,7 +15,8 @@ type Lookup =
   | { state: "idle" }
   | { state: "loading" }
   | { state: "done"; places: NearbyLodging[] }
-  | { state: "failed" };
+  /** `reason` names the upstream failure — "none nearby" is `done` with no places. */
+  | { state: "failed"; reason: "timeout" | "rateLimited" | "unavailable" };
 
 interface LodgingOsmNearbyProps {
   lat: number;
@@ -54,7 +55,12 @@ export function LodgingOsmNearby({ lat, lon, onPick }: LodgingOsmNearbyProps): J
       });
     } catch (err) {
       logger.warn("Nearby lodgings from OpenStreetMap failed", err);
-      setLookup({ state: "failed" });
+      const upstream = openDataUpstreamFailure(err);
+      setLookup({
+        state: "failed",
+        reason:
+          upstream === "clientTimeout" ? "timeout" : upstream === null ? "unavailable" : upstream,
+      });
     }
   };
 
@@ -76,7 +82,13 @@ export function LodgingOsmNearby({ lat, lon, onPick }: LodgingOsmNearbyProps): J
           : t("openData:lodging.nearby.search")}
       </button>
       {lookup.state === "failed" && (
-        <p className="text-xs text-[var(--danger)]">{t("openData:lodging.nearby.failed")}</p>
+        <p className="text-xs text-[var(--danger)]">
+          {t(
+            lookup.reason === "unavailable"
+              ? "openData:lodging.nearby.failed"
+              : `openData:lodging.upstream.${lookup.reason}`
+          )}
+        </p>
       )}
       {lookup.state === "done" && lookup.places.length === 0 && (
         <p className="text-xs text-[var(--text-muted)]">{t("openData:lodging.nearby.none")}</p>

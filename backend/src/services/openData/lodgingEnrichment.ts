@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
+import type { OpenDataFailure } from "./http";
 import { findOsmLodging, type NearbyLodging } from "./openStreetMap";
 import { starsFromOsm, websiteFromOsm } from "./osmValues";
 import { isWikidataId } from "./wikipedia";
@@ -14,8 +15,9 @@ export type EnrichedField = "stars" | "website" | "wikidataId" | "chain";
 export interface LodgingEnrichment {
   /** Whether OpenStreetMap has this house at all. */
   found: boolean;
-  /** Why nothing was looked up, when nothing was. */
-  reason: "noCoordinates" | "notFound" | null;
+  /** Why nothing was found. `notFound` is OpenStreetMap's answer; a failure
+   *  (`timeout`, `rateLimited`, `unavailable`) means it could not be asked. */
+  reason: "noCoordinates" | "notFound" | OpenDataFailure | null;
   osmRef: string | null;
   osmName: string | null;
   filled: EnrichedField[];
@@ -40,6 +42,9 @@ export async function enrichLodgingFromOsm(
 
   const hit = await findOsmLodging(lodging.lat, lodging.lon, lodging.name);
   if (!hit) return { found: false, reason: "notFound", osmRef: null, osmName: null, filled: [] };
+  if ("failure" in hit) {
+    return { found: false, reason: hit.failure, osmRef: null, osmName: null, filled: [] };
+  }
 
   const { tags } = hit;
   const stars = lodging.stars === null ? starsFromOsm(tags.stars) : null;

@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import { haversineKm } from "../../shared/geo/haversine";
 import { namesCouldBeOneHouse } from "../lodging/nameSimilarity";
-import { fetchOpenDataJson } from "./http";
+import { fetchOpenData, fetchOpenDataJson, type OpenDataFailure } from "./http";
 import { starsFromOsm, websiteFromOsm } from "./osmValues";
 
 /**
@@ -31,6 +31,10 @@ export async function osmTagsOf(
 }
 
 const OVERPASS_URL = "https://overpass-api.de/api/interpreter";
+/** The server's budget per Overpass call. The web client's timeout for these
+ *  endpoints (`OPEN_DATA_CLIENT_TIMEOUT_MS.overpass`) must stay above it. */
+export const OVERPASS_ENRICH_TIMEOUT_MS = 20_000;
+export const OVERPASS_NEARBY_TIMEOUT_MS = 25_000;
 /** How far from the stored pin the house may stand. A pin from a booking mail is rarely exact. */
 const SEARCH_RADIUS_M = 150;
 const LODGING_TOURISM =
@@ -63,20 +67,27 @@ export interface OsmLodging {
  * The name has to agree. The nearest hotel alone is a guess — two houses share
  * a street corner often enough — and a stranger's stars written into the
  * user's record would be a silent error. Of several that agree, the nearest.
+ *
+ * `{ failure }` when Overpass could not be asked — overloaded, timed out, rate
+ * limited. That is not "OpenStreetMap does not know this house", which is what
+ * the UI used to say about it (2026-09-26).
  */
 export async function findOsmLodging(
   lat: number,
   lon: number,
   name: string
-): Promise<OsmLodging | null> {
+): Promise<OsmLodging | null | { failure: OpenDataFailure }> {
   const query =
     `[out:json][timeout:15];` +
     `nwr(around:${SEARCH_RADIUS_M},${lat},${lon})["tourism"~"^(${LODGING_TOURISM})$"]["name"];` +
     `out tags center 25;`;
-  const parsed = overpassSchema.safeParse(
-    await fetchOpenDataJson("overpass", OVERPASS_URL, { form: { data: query }, timeoutMs: 20_000 })
-  );
-  if (!parsed.success) return null;
+  const answer = await fetchOpenData("overpass", OVERPASS_URL, {
+    form: { data: query },
+    timeoutMs: OVERPASS_ENRICH_TIMEOUT_MS,
+  });
+  if (!answer.ok) return { failure: answer.failure };
+  const parsed = overpassSchema.safeParse(answer.body);
+  if (!parsed.success) return { failure: "unavailable" };
 
   const candidates = parsed.data.elements.flatMap((el) => {
     const at =
@@ -119,23 +130,26 @@ export interface NearbyLodging {
  * Places to spend the night near a point (companion#12, "Campingplatz in der
  * Nähe"): named OSM features tagged as a campsite, a motorhome pitch or a
  * lodging, nearest first. Pitches and campsites before hotels at the same
- * distance, because the question is asked from a van. Null when Overpass did
- * not answer, which is not the same as an empty list.
+ * distance, because the question is asked from a van. `{ failure }` when
+ * Overpass did not answer, which is not the same as an empty list.
  */
 export async function nearbyLodgings(
   lat: number,
   lon: number,
   radiusM: number
-): Promise<NearbyLodging[] | null> {
+): Promise<NearbyLodging[] | { failure: OpenDataFailure }> {
   const radius = Math.min(Math.max(Math.round(radiusM), 100), MAX_NEARBY_RADIUS_M);
   const query =
     `[out:json][timeout:20];` +
     `nwr(around:${radius},${lat},${lon})["tourism"~"^(${NIGHT_TOURISM})$"]["name"];` +
     `out tags center 60;`;
-  const parsed = overpassSchema.safeParse(
-    await fetchOpenDataJson("overpass", OVERPASS_URL, { form: { data: query }, timeoutMs: 25_000 })
-  );
-  if (!parsed.success) return null;
+  const answer = await fetchOpenData("overpass", OVERPASS_URL, {
+    form: { data: query },
+    timeoutMs: OVERPASS_NEARBY_TIMEOUT_MS,
+  });
+  if (!answer.ok) return { failure: answer.failure };
+  const parsed = overpassSchema.safeParse(answer.body);
+  if (!parsed.success) return { failure: "unavailable" };
   const vanFirst = (kind: string): number =>
     kind === "caravan_site" || kind === "camp_site" ? 0 : 1;
   return parsed.data.elements

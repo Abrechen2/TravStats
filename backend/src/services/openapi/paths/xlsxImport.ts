@@ -10,6 +10,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { jobStartedSchema } from "./jobs";
 
 const rowOutcome = z.object({
   row: z.number().int().openapi({ description: "1-based row number as shown in Excel." }),
@@ -82,6 +83,15 @@ registry.registerPath({
           schema: z.object({
             dryRun: z.boolean().default(true),
             mode: z.enum(["add", "merge", "replace"]).default("merge"),
+            background: z
+              .boolean()
+              .default(false)
+              .openapi({
+                description:
+                  "Answer 202 with a job (poll GET /jobs/{id}) instead of holding the request " +
+                  "open. The job result is the body's `data` below; a failed safety backup " +
+                  "fails it with `backup_failed`. A large sheet can take minutes.",
+              }),
             sheets: z.array(
               z.object({
                 key: z.string().openapi({
@@ -123,6 +133,10 @@ registry.registerPath({
           }),
         },
       },
+    },
+    202: {
+      description: "Started as a background job (`background: true`)",
+      content: { "application/json": { schema: jobStartedSchema } },
     },
     400: { description: "Malformed request body" },
     401: { description: "Not authenticated" },

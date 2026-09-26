@@ -228,6 +228,7 @@
       "trip_not_linked": "Reise im Konto nicht gefunden – ohne Reise übernommen",
       "port_not_found": "Hafen nicht im Katalog – bleibt leer",
       "chain_not_found": "Kette nicht im Katalog – ohne Kette übernommen"
-    }
+    },
+    "outcomeUnknown": "Der Server meldet nicht mehr, wie der Import ausgegangen ist. Bitte deine Einträge prüfen, bevor du die Datei erneut importierst."
   }
 }

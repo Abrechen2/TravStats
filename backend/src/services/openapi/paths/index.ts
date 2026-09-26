@@ -50,3 +50,4 @@ import "./loginBackgrounds";
 import "./xlsxImport";
 import "./settingsRouting";
 import "./documents";
+import "./jobs";

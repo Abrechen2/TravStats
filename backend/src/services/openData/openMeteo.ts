@@ -1,6 +1,6 @@
 import { z } from "zod";
 
-import { fetchOpenDataJson } from "./http";
+import { fetchOpenData, fetchOpenDataJson, type OpenDataFailure } from "./http";
 
 /**
  * Open-Meteo: a day's measured weather, and ground elevations.
@@ -49,22 +49,35 @@ function daysAgo(day: string, now: Date): number {
 }
 
 /**
+ * What asking for a day's weather came to. Only `observed` carries a value;
+ * the rest say why there is none, and the difference matters to whoever holds
+ * a stored value: `futureOrToday` and `noData` are answers about the DAY,
+ * while a failure (`timeout`, `rateLimited`, `unavailable`) is an answer
+ * about the SERVICE and says nothing about the weather at all.
+ */
+export type DailyWeatherOutcome =
+  | { kind: "observed"; weather: DailyWeather }
+  | { kind: "futureOrToday" }
+  | { kind: "noData" }
+  | { kind: OpenDataFailure };
+
+/**
  * The measured weather on `day` (YYYY-MM-DD, local to the place) at a point.
  *
- * Null for today and any future day — a forecast is not what a logbook
- * records — for a day the recent service no longer keeps and the archive does
- * not yet, and for any failed or incomplete answer. Never a guess.
+ * None for today and any future day — a forecast is not what a logbook
+ * records — and none for a day the service holds no complete measurement of.
+ * Never a guess.
  */
-export async function dailyWeather(
+export async function dailyWeatherOutcome(
   lat: number,
   lon: number,
   day: string,
   now: Date = new Date()
-): Promise<DailyWeather | null> {
+): Promise<DailyWeatherOutcome> {
   const age = daysAgo(day, now);
-  if (!Number.isFinite(age) || age < 1) return null;
+  if (!Number.isFinite(age) || age < 1) return { kind: "futureOrToday" };
   const base = age > ARCHIVE_AFTER_DAYS ? ARCHIVE_URL : RECENT_URL;
-  if (base === RECENT_URL && age > RECENT_WINDOW_DAYS) return null;
+  if (base === RECENT_URL && age > RECENT_WINDOW_DAYS) return { kind: "noData" };
 
   const params = new URLSearchParams({
     latitude: lat.toFixed(4),
@@ -74,22 +87,35 @@ export async function dailyWeather(
     daily: "weather_code,temperature_2m_max,temperature_2m_min,precipitation_sum",
     timezone: "auto",
   });
-  const parsed = dailySchema.safeParse(
-    await fetchOpenDataJson("open-meteo", `${base}?${params.toString()}`)
-  );
-  if (!parsed.success) return null;
+  const answer = await fetchOpenData("open-meteo", `${base}?${params.toString()}`);
+  if (!answer.ok) return { kind: answer.failure };
+  const parsed = dailySchema.safeParse(answer.body);
+  // A body in a shape we do not know is the service misbehaving, not a day
+  // without weather.
+  if (!parsed.success) return { kind: "unavailable" };
 
   const { daily } = parsed.data;
   const i = daily.time.indexOf(day);
-  if (i < 0) return null;
+  if (i < 0) return { kind: "noData" };
   const [code, tMaxC, tMinC, precipMm] = [
     daily.weather_code[i],
     daily.temperature_2m_max[i],
     daily.temperature_2m_min[i],
     daily.precipitation_sum[i],
   ];
-  if (code == null || tMaxC == null || tMinC == null || precipMm == null) return null;
-  return { code, tMaxC, tMinC, precipMm };
+  if (code == null || tMaxC == null || tMinC == null || precipMm == null) return { kind: "noData" };
+  return { kind: "observed", weather: { code, tMaxC, tMinC, precipMm } };
+}
+
+/** The weather, or null for any reason there is none. */
+export async function dailyWeather(
+  lat: number,
+  lon: number,
+  day: string,
+  now: Date = new Date()
+): Promise<DailyWeather | null> {
+  const outcome = await dailyWeatherOutcome(lat, lon, day, now);
+  return outcome.kind === "observed" ? outcome.weather : null;
 }
 
 /**

@@ -71,11 +71,12 @@
         },
         "dismissed": "Dismissed. This burst will not be suggested again.",
         "photosLinked": "{{count}} photos linked to the visit.",
-        "photosNotLinked": "The photos could not be linked – the photo library could not be reached."
+        "photosNotLinked": "The photos could not be linked – the photo library could not be reached.",
+        "scanOutcomeUnknown": "The server no longer reports how the photo search ended. Shown is what has been found so far."
       },
       "errors": {
         "loadFailed": "The photo suggestions could not be loaded.",
-        "scanFailed": "The photo search could not be started.",
+        "scanFailed": "The photo search failed.",
         "acceptFailed": "The suggestion could not be accepted.",
         "acceptLinkFailed": {
           "trip": "The trip was created, but the suggestion could not be marked as accepted — trying again only links it.",

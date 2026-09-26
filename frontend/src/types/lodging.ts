@@ -208,6 +208,9 @@ export interface LodgingInput {
   website?: string | null;
   amenities?: string[];
   notes?: string | null;
+  /** The OSM house a "nearby" pick named ("osm:node/1"); the server stores it
+   *  only while the lodging has no reference yet. */
+  osmRef?: string;
 }
 
 export interface StayInput {

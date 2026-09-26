@@ -228,6 +228,7 @@
       "trip_not_linked": "trip not found in this account — imported without a trip",
       "port_not_found": "port not in the catalogue — left empty",
       "chain_not_found": "chain not in the catalogue — imported without a chain"
-    }
+    },
+    "outcomeUnknown": "The server no longer reports how the import ended. Check your entries before importing the file again."
   }
 }
