@@ -271,6 +271,39 @@ describe("Rail lookup API", () => {
       expect(res.body.data.distanceKm).toBeLessThan(created.distanceKm);
     });
 
+    it("says when a Transitous match was saved as a straight line, and why", async () => {
+      mock([[/api\/v6\/trip/, { error: "down" }, 503]]);
+      const down = await create(journey());
+      expect(down.body.meta.geometry).toEqual({
+        outcome: "straight",
+        geometrySource: "straight",
+        fallback: "providerUnavailable",
+      });
+      fetchMock?.restore();
+
+      __clearRailHttpCache();
+      await updateInstanceSettings({ railTransitousEnabled: false });
+      mock([]);
+      const off = await create(journey());
+      expect(off.body.meta.geometry.fallback).toBe("providerDisabled");
+    });
+
+    it("reports a clean save as traced and a plain one without a fallback", async () => {
+      tracedTrip();
+      const traced = await create(journey());
+      expect(traced.body.meta.geometry).toEqual({
+        outcome: "traced",
+        geometrySource: "transitous",
+        fallback: null,
+      });
+      const plain = await create(journey({ lookup: null }));
+      expect(plain.body.meta.geometry).toEqual({
+        outcome: "straight",
+        geometrySource: "straight",
+        fallback: null,
+      });
+    });
+
     it("drops the line with the match", async () => {
       tracedTrip();
       const created = (await create(journey())).body.data;
@@ -281,6 +314,81 @@ describe("Rail lookup API", () => {
         geometry: null,
         geometrySource: "straight",
         distanceSource: "great_circle",
+      });
+    });
+  });
+
+  /**
+   * Review 2026-09-26, finding 1: the form sends both stations and the match
+   * on EVERY save, so a seat edit used to fetch the line again and, with
+   * Transitous gone, silently save the chord over a good traced line.
+   */
+  describe("an edit and the frozen line", () => {
+    /** The whole body the edit form sends for a stored row, plus `extra`. */
+    const formBody = (row: Record<string, unknown>, extra: Record<string, unknown> = {}) => ({
+      ...journey(),
+      departureStation: { ...station(FRANKFURT), lat: row.depLat, lon: row.depLon },
+      arrivalStation: { ...station(BERLIN), lat: row.arrLat, lon: row.arrLon },
+      lookup: { provider: row.lookupProvider, ref: row.lookupRef },
+      ...extra,
+    });
+
+    it("does not fetch again when the form resends unchanged stations and match", async () => {
+      tracedTrip();
+      const created = (await create(journey())).body.data;
+      fetchMock?.restore();
+      __clearRailHttpCache();
+      const down = mock([[/api\/v6\/trip/, { error: "down" }, 503]]);
+
+      const res = await patch(created.id, formBody(created, { seat: "45" }));
+      expect(res.status).toBe(200);
+      expect(down.calls).toEqual([]);
+      expect(res.body.data).toMatchObject({
+        seat: "45",
+        geometrySource: "transitous",
+        distanceSource: "route",
+        distanceKm: created.distanceKm,
+      });
+      expect(res.body.data.geometry).toEqual(created.geometry);
+      expect(res.body.meta.geometry.outcome).toBe("unchanged");
+    });
+
+    it("keeps the traced line when a new match cannot be fetched, and says so", async () => {
+      tracedTrip();
+      const created = (await create(journey())).body.data;
+      fetchMock?.restore();
+      __clearRailHttpCache();
+      mock([[/api\/v6\/trip/, { error: "down" }, 503]]);
+
+      const res = await patch(
+        created.id,
+        formBody(created, { lookup: { provider: "transitous", ref: "another-trip" } })
+      );
+      expect(res.status).toBe(200);
+      expect(res.body.data.geometrySource).toBe("transitous");
+      expect(res.body.data.geometry).toEqual(created.geometry);
+      expect(res.body.data.distanceSource).toBe("route");
+      expect(res.body.meta.geometry).toEqual({
+        outcome: "kept",
+        geometrySource: "transitous",
+        fallback: "providerUnavailable",
+      });
+    });
+
+    it("re-cuts the stored line when a station moves along it and Transitous is off", async () => {
+      tracedTrip();
+      const created = (await create(journey())).body.data;
+      await updateInstanceSettings({ railTransitousEnabled: false });
+
+      const res = await patch(created.id, { arrivalStation: station(FULDA) });
+      expect(res.status).toBe(200);
+      const line = res.body.data.geometry;
+      expect(res.body.data.geometrySource).toBe("transitous");
+      expect(line[line.length - 1]).toEqual([FULDA.lon, FULDA.lat]);
+      expect(res.body.data.distanceKm).toBeLessThan(created.distanceKm);
+      expect(res.body.meta.geometry).toMatchObject({
+        outcome: "kept",
+        fallback: "providerDisabled",
       });
     });
   });

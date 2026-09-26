@@ -195,6 +195,27 @@ export interface RailLookupAnswer {
   attempts: Array<{ provider: RailLookupProvider; outcome: RailLookupOutcome }>;
 }
 
+/** Why a Transitous match was saved without its (new) traced line. */
+export type RailGeometryFallback =
+  "providerDisabled" | "providerUnavailable" | "stationOffLine" | "untracedShape";
+
+/**
+ * `meta.geometry` of a save: what it did to the frozen line. `kept` = a
+ * re-fetch did not deliver and the stored line stayed; `unchanged` = an edit
+ * that touched neither station nor match.
+ */
+export interface RailGeometryReport {
+  outcome: "unchanged" | "traced" | "straight" | "kept";
+  geometrySource: RailJourney["geometrySource"];
+  fallback: RailGeometryFallback | null;
+}
+
+/** A saved journey and what the save did to its line. */
+export interface RailSaveResult {
+  journey: RailJourney;
+  geometry: RailGeometryReport | null;
+}
+
 export interface RailLookupProviders {
   transitous: boolean;
   dbRest: boolean;

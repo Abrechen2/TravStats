@@ -26,6 +26,18 @@ export const RAIL_GEOMETRY_SOURCES = [
   "openrailrouting",
   "manual",
 ] as const;
+/**
+ * Why a Transitous match was saved without its traced line (the save's
+ * `meta.geometry.fallback`): switched off by the admin, not answering (or no
+ * shape), a station off the traced line, or a "trace" of station-to-station
+ * chords.
+ */
+export const RAIL_GEOMETRY_FALLBACK_REASONS = [
+  "providerDisabled",
+  "providerUnavailable",
+  "stationOffLine",
+  "untracedShape",
+] as const;
 export const RAIL_SORT_FIELDS = ["departure", "distance", "created"] as const;
 
 /**

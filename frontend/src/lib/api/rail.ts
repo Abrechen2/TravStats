@@ -5,6 +5,8 @@ import type {
   RailJourneyInput,
   RailLookupAnswer,
   RailLookupProviders,
+  RailSaveResult,
+  RailGeometryReport,
   RailStationHit,
   RailStats,
 } from "../../types/rail";
@@ -18,6 +20,8 @@ interface Envelope<T> {
   success: boolean;
   data: T;
 }
+
+type SaveEnvelope = Envelope<RailJourney> & { meta?: { geometry?: RailGeometryReport } };
 
 export interface RailPage {
   journeys: RailJourney[];
@@ -62,14 +66,15 @@ export const railApi = {
     return res.data.data;
   },
 
-  async create(input: RailJourneyInput): Promise<RailJourney> {
-    const res = await api.post<Envelope<RailJourney>>("/rail", input);
-    return res.data.data;
+  /** The saved row, and what the save did to its line (`meta.geometry`). */
+  async create(input: RailJourneyInput): Promise<RailSaveResult> {
+    const res = await api.post<SaveEnvelope>("/rail", input);
+    return { journey: res.data.data, geometry: res.data.meta?.geometry ?? null };
   },
 
-  async update(id: string, input: Partial<RailJourneyInput>): Promise<RailJourney> {
-    const res = await api.patch<Envelope<RailJourney>>(`/rail/${id}`, input);
-    return res.data.data;
+  async update(id: string, input: Partial<RailJourneyInput>): Promise<RailSaveResult> {
+    const res = await api.patch<SaveEnvelope>(`/rail/${id}`, input);
+    return { journey: res.data.data, geometry: res.data.meta?.geometry ?? null };
   },
 
   async remove(id: string): Promise<void> {

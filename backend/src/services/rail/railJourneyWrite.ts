@@ -185,6 +185,11 @@ function resolveDistance(
   return { distanceKm: greatCircleKm(coords), distanceSource: "great_circle" };
 }
 
+/** A distance measured along a stored line rather than typed or straight. */
+export function isTracedDistanceSource(source: string | null): boolean {
+  return source === "route";
+}
+
 /**
  * The distance once the line is known. A typed distance always wins; a traced
  * line's own length beats the great-circle figure, which understates track by

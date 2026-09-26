@@ -16,6 +16,7 @@ import {
   createRailJourneySchema,
   updateRailJourneySchema,
   RAIL_DISTANCE_SOURCES,
+  RAIL_GEOMETRY_FALLBACK_REASONS,
   RAIL_GEOMETRY_SOURCES,
   RAIL_SORT_FIELDS,
   RAIL_STATUSES,
@@ -120,6 +121,30 @@ const railJourneyDetail = railJourney
 
 const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.literal(true), data });
 
+/** What a save did to the frozen line — beside the row, so the row stays the row. */
+const geometryReport = z
+  .object({
+    outcome: z
+      .enum(["unchanged", "traced", "straight", "kept"])
+      .describe(
+        "unchanged = an edit that touched neither station nor match; kept = a re-fetch " +
+          "did not deliver and the frozen line stayed"
+      ),
+    geometrySource: z.enum(RAIL_GEOMETRY_SOURCES),
+    fallback: z
+      .enum(RAIL_GEOMETRY_FALLBACK_REASONS)
+      .nullable()
+      .describe("Why a Transitous match has no (new) traced line; null when none was asked for"),
+  })
+  .openapi("RailGeometryReport");
+
+const writeEnvelope = <T extends z.ZodTypeAny>(data: T) =>
+  z.object({
+    success: z.literal(true),
+    data,
+    meta: z.object({ geometry: geometryReport }),
+  });
+
 registry.registerPath({
   method: "get",
   path: "/rail",
@@ -200,7 +225,7 @@ registry.registerPath({
     "the catalogue. With `lookup` of provider `transitous` the server fetches that " +
     "trip's traced line once, cuts it to the two stations and freezes it " +
     "(`geometrySource: transitous`, distance along it); a missing, unreachable or " +
-    "chord-only line stores `straight`. Without `distanceKm` the traced or else the " +
+    "chord-only line stores `straight` and `meta.geometry.fallback` says why. Without `distanceKm` the traced or else the " +
     "great-circle distance is stored. `connectsFrom` names the leg this one continues: " +
     "the server binds both through a booking (creating one on that leg when it has " +
     "none) and files the new leg in that leg's trip unless `tripId` is sent.",
@@ -219,7 +244,7 @@ registry.registerPath({
   responses: {
     201: {
       description: "Created",
-      content: { "application/json": { schema: envelope(railJourney) } },
+      content: { "application/json": { schema: writeEnvelope(railJourney) } },
     },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Trip or booking not found", content: errorContent },
@@ -234,8 +259,10 @@ registry.registerPath({
   description:
     "Partial update. A station is replaced whole. The wall clock not sent is kept " +
     "and re-read in the (possibly new) station zone. `distanceKm: null` returns to " +
-    "the measured distance. The frozen line is fetched again only when a station or " +
-    "`lookup` changes; `lookup: null` drops it.",
+    "the measured distance. The frozen line is fetched again only when a station's " +
+    "coordinates or the `lookup` identity differ from the stored row; `lookup: null` " +
+    "drops it. A re-fetch that does not deliver keeps the stored line where it still " +
+    "runs between the stations (`meta.geometry.outcome: kept`).",
   tags: ["Rail"],
   request: {
     params: z.object({ id: z.string().uuid() }),
@@ -248,7 +275,7 @@ registry.registerPath({
   responses: {
     200: {
       description: "Updated",
-      content: { "application/json": { schema: envelope(railJourney) } },
+      content: { "application/json": { schema: writeEnvelope(railJourney) } },
     },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Not found", content: errorContent },

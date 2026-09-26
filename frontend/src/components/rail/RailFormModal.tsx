@@ -11,6 +11,7 @@ import { minorUnits } from "../../shared/currencies";
 import { railApi } from "../../lib/api/rail";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
+import { useToastStore } from "../../store/toastStore";
 import type { Trip } from "../../types";
 import { RAIL_TRAVEL_CLASSES, type RailJourney, type RailTravelClass } from "../../types/rail";
 import { StationPicker } from "./StationPicker";
@@ -19,6 +20,7 @@ import {
   canSubmit,
   connectionDraftFrom,
   draftFrom,
+  geometryNotice,
   isStationComplete,
   toRailInput,
   type RailFormDraft,
@@ -42,6 +44,9 @@ interface Props {
 const INPUT_CLASS =
   "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
 
+/** A notice about the line is read, not glanced at — longer than a "saved". */
+const NOTICE_MS = 12_000;
+
 // Native date/time pickers render their mask unreadably dark on our surface
 // without it — the same note the cruise form carries.
 const DARK_PICKER_STYLE = { colorScheme: "dark" } as const;
@@ -64,6 +69,7 @@ export function RailFormModal({
 }: Props): JSX.Element {
   const { t } = useTranslation(["rail", "common"]);
   const recentCurrencies = useRecentCurrencies();
+  const addToast = useToastStore((s) => s.addToast);
   // The dialog can move on to the next leg without closing, so what it edits
   // and what it continues are state, seeded from the props.
   const [journey, setJourney] = useState<RailJourney | null>(initialJourney);
@@ -120,9 +126,14 @@ export function RailFormModal({
     setError(null);
     try {
       const input = toRailInput(draft);
-      const saved = journey
+      const result = journey
         ? await railApi.update(journey.id, input)
         : await railApi.create(previousId ? { ...input, connectsFrom: previousId } : input);
+      const saved = result.journey;
+      const notice = geometryNotice(result.geometry);
+      if (notice) {
+        addToast(notice.level, t(notice.key, { reason: t(notice.reasonKey) }), NOTICE_MS);
+      }
       if (!thenConnect) {
         await onSaved(saved);
         return;

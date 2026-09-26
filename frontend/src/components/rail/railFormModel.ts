@@ -1,4 +1,5 @@
 import type {
+  RailGeometryReport,
   RailJourney,
   RailJourneyInput,
   RailLookupAnswer,
@@ -240,4 +241,22 @@ export function applyLookup(
     arrivalLocal: to.arrivalLocal ?? draft.arrivalLocal,
     lookup: { provider: match.provider, ref: match.ref },
   };
+}
+
+/**
+ * What the form says after a save that asked for a traced line and did not
+ * get one (review 2026-09-26, finding 4) — before, "saved" was all it said and
+ * the map quietly drew the chord. Null when there is nothing to say.
+ */
+export function geometryNotice(
+  report: RailGeometryReport | null
+): { level: "warning" | "info"; key: string; reasonKey: string } | null {
+  if (!report || report.fallback === null) return null;
+  const reasonKey = `rail:geometryNotice.reason.${report.fallback}`;
+  if (report.outcome === "straight") {
+    return { level: "warning", key: "rail:geometryNotice.straight", reasonKey };
+  }
+  if (report.outcome === "kept")
+    return { level: "info", key: "rail:geometryNotice.kept", reasonKey };
+  return null;
 }

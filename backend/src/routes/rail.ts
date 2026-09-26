@@ -12,11 +12,18 @@ import {
   type RailQueryInput,
   type UpdateRailJourneyInput,
 } from "../schemas/rail";
-import { mergeRailJourney, withTracedDistance } from "../services/rail/railJourneyWrite";
+import {
+  isTracedDistanceSource,
+  mergeRailJourney,
+  withTracedDistance,
+} from "../services/rail/railJourneyWrite";
 import {
   readStoredLine,
+  resolveEditedGeometry,
   resolveJourneyGeometry,
   tracedLengthKm,
+  type GeometryEdit,
+  type GeometryFallbackReason,
   type JourneyGeometry,
 } from "../services/rail/railGeometry";
 import { resolveStationInput } from "../services/rail/railStations";
@@ -229,7 +236,7 @@ async function withResolvedStations(
 /** The geometry columns of a write; the null line is SQL NULL, not JSON null. */
 function geometryColumns(
   lookup: { provider: string | null; ref: string | null },
-  geo: JourneyGeometry
+  geo: { geometry: JourneyGeometry["geometry"]; geometrySource: string }
 ): Prisma.RailJourneyUncheckedUpdateInput {
   return {
     lookupProvider: lookup.provider,
@@ -238,6 +245,37 @@ function geometryColumns(
       geo.geometry === null ? Prisma.DbNull : (geo.geometry as unknown as Prisma.InputJsonValue),
     geometrySource: geo.geometrySource,
   };
+}
+
+/**
+ * What a save did to the line, in `meta.geometry` beside the row (review
+ * 2026-09-26, finding 4): a Transitous match saved as a straight line used to
+ * be indistinguishable from a good save, so the form said "saved" and the map
+ * quietly drew the chord. `fallback` names why; `kept` means a re-fetch did
+ * not deliver and the frozen line stayed.
+ */
+interface GeometryReport {
+  outcome: "unchanged" | "traced" | "straight" | "kept";
+  geometrySource: string;
+  fallback: GeometryFallbackReason | null;
+}
+
+function reportOf(geo: JourneyGeometry): GeometryReport {
+  return {
+    outcome: geo.geometrySource === "straight" ? "straight" : "traced",
+    geometrySource: geo.geometrySource,
+    fallback: geo.fallback,
+  };
+}
+
+function editReport(edit: GeometryEdit, storedSource: string): GeometryReport {
+  if (edit.kind === "unchanged") {
+    return { outcome: "unchanged", geometrySource: storedSource, fallback: null };
+  }
+  if (edit.kind === "kept") {
+    return { outcome: "kept", geometrySource: edit.geometrySource, fallback: edit.fallback };
+  }
+  return reportOf(edit.geo);
 }
 
 router.post(
@@ -305,7 +343,7 @@ router.post(
       await restatusTrips(journey.tripId);
 
       logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
-      res.status(201).json({ success: true, data: journey });
+      res.status(201).json({ success: true, data: journey, meta: { geometry: reportOf(geo) } });
     } catch (err) {
       next(err);
     }
@@ -327,26 +365,34 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     // rest (an arrival moved behind an untouched departure is refused here).
     const merged = mergeRailJourney(existing, await withResolvedStations(input));
 
-    // The line is fetched again only when what it depends on moved — the
-    // stations or the matched trip. Otherwise the frozen line stays frozen.
+    // The line is fetched again only when what it depends on actually moved
+    // (resolveEditedGeometry) — the form sends both stations and the match on
+    // every save, so their presence in the body says nothing.
     const lookup =
       input.lookup !== undefined
         ? { provider: input.lookup?.provider ?? null, ref: input.lookup?.ref ?? null }
         : { provider: existing.lookupProvider, ref: existing.lookupRef };
-    const refetch =
-      input.lookup !== undefined ||
-      input.departureStation !== undefined ||
-      input.arrivalStation !== undefined;
-    const geo: JourneyGeometry | null = refetch
-      ? await resolveJourneyGeometry({
-          lookupProvider: lookup.provider,
-          lookupRef: lookup.ref,
-          dep: { lat: merged.depLat, lon: merged.depLon },
-          arr: { lat: merged.arrLat, lon: merged.arrLon },
-        })
-      : null;
-    const line = geo ? geo.geometry : readStoredLine(existing.geometry);
-    const state = withTracedDistance(merged, line && tracedLengthKm(line));
+    const edit = await resolveEditedGeometry(existing, {
+      lookup,
+      dep: { lat: merged.depLat, lon: merged.depLon },
+      arr: { lat: merged.arrLat, lon: merged.arrLon },
+    });
+    const written =
+      edit.kind === "unchanged"
+        ? null
+        : edit.kind === "kept"
+          ? { geometry: edit.line, geometrySource: edit.geometrySource }
+          : edit.geo;
+    const line = written ? written.geometry : readStoredLine(existing.geometry);
+    // An untouched line keeps the length it was stored with — a converted
+    // roadtrip leg carries the roadtrip's own figure, not its coarse polyline's.
+    const tracedKm =
+      edit.kind === "unchanged" &&
+      isTracedDistanceSource(existing.distanceSource) &&
+      existing.distanceKm !== null
+        ? existing.distanceKm
+        : line && tracedLengthKm(line);
+    const state = withTracedDistance(merged, tracedKm);
 
     const resolved =
       input.companions === undefined
@@ -388,7 +434,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           ...plainColumns(input),
           ...state,
           ...fxColumns,
-          ...(geo && geometryColumns(lookup, geo)),
+          ...(written && geometryColumns(lookup, written)),
           ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
         },
       });
@@ -399,7 +445,11 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     });
 
     await restatusTrips(existing.tripId, journey.tripId);
-    res.json({ success: true, data: journey });
+    res.json({
+      success: true,
+      data: journey,
+      meta: { geometry: editReport(edit, existing.geometrySource) },
+    });
   } catch (err) {
     next(err);
   }

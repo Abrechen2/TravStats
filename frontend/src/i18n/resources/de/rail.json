@@ -207,5 +207,15 @@
     "nothingNew": "Alle Fahrten waren schon übernommen.",
     "removed": "Der Roadtrip wurde gelöscht.",
     "error": "Die Übernahme ist fehlgeschlagen."
+  },
+  "geometryNotice": {
+    "straight": "Fahrt gespeichert, aber ohne Streckenverlauf – {{reason}}. Die Karte zeigt die Luftlinie.",
+    "kept": "Fahrt gespeichert. Der Streckenverlauf wurde nicht neu geladen – {{reason}}; der bisherige bleibt erhalten.",
+    "reason": {
+      "providerDisabled": "Transitous ist auf dieser Instanz abgeschaltet",
+      "providerUnavailable": "Transitous hat nicht geantwortet",
+      "stationOffLine": "ein Bahnhof liegt nicht auf der Strecke dieses Zuges",
+      "untracedShape": "Transitous kennt für diesen Zug nur gerade Linien zwischen den Halten"
+    }
   }
 }

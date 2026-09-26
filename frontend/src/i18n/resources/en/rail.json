@@ -207,5 +207,15 @@
     "nothingNew": "Every ride had already been taken over.",
     "removed": "The roadtrip was deleted.",
     "error": "Taking it over failed."
+  },
+  "geometryNotice": {
+    "straight": "Ride saved, but without its route – {{reason}}. The map shows the straight line.",
+    "kept": "Ride saved. The route was not loaded again – {{reason}}; the previous one is kept.",
+    "reason": {
+      "providerDisabled": "Transitous is switched off on this instance",
+      "providerUnavailable": "Transitous did not answer",
+      "stationOffLine": "a station is not on this train's route",
+      "untracedShape": "Transitous only has straight lines between this train's stops"
+    }
   }
 }
