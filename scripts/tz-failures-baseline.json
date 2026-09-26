@@ -7,9 +7,6 @@
   },
   "frontend": {
     "America/St_Johns": [],
-    "Pacific/Kiritimati": [
-      "src/components/inbox/__tests__/UnfiledDocumentsSection.test.tsx::UnfiledDocumentsSection names each document and the date it will be deleted",
-      "src/lib/galleryGrouping.test.ts::groupByDay puts photos from the same day into one group"
-    ]
+    "Pacific/Kiritimati": []
   }
 }
