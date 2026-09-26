@@ -4,11 +4,6 @@
       "count": 1
     }
   },
-  "src/routes/flightsBatch.ts": {
-    "time/no-zone-library": {
-      "count": 1
-    }
-  },
   "src/seed.ts": {
     "time/no-host-local-date": {
       "count": 3
@@ -51,11 +46,6 @@
   },
   "src/services/flightLookup/openSky.ts": {
     "time/no-host-local-date": {
-      "count": 1
-    }
-  },
-  "src/services/flights/mergedChronology.ts": {
-    "time/no-zone-library": {
       "count": 1
     }
   },

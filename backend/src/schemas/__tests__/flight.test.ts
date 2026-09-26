@@ -38,7 +38,7 @@ describe("createFlightSchema — canonical-UTC contract", () => {
 
   it("rejects an invalid IANA timezone", () => {
     expect(() => createFlightSchema.parse({ ...baseValid, depTimezone: "Berlin/Invalid" })).toThrow(
-      /Invalid IANA timezone/
+      /ZONE_UNKNOWN/
     );
   });
 
