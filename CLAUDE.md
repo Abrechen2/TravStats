@@ -723,6 +723,31 @@ check.
   shipped an invisible logo in 2.5.0-beta.1 "and every unit test passed while
   it was invisible", so changes there get a browser look, not just green
   tests.
+- **A failure must reach the user as itself — four defect classes.** On
+  2026-09-26 a tester found three roadtrip defects, a review of rail (built the
+  same week) found five more, and a sweep of every other domain found about
+  thirty, all of the same four kinds and all with green suites, because each
+  test mocked the happy path:
+  1. *A picker offers a subset* — built from a derived collection (stays)
+     instead of the entity (lodgings), so anything without the derived row
+     cannot be found, and nothing lets the user create the missing link.
+  2. *A choice does not carry its data* — picking an entity must bring
+     coordinates, name, country, time zone and ids into the form; a form that
+     waits on "location missing" after a pick is this bug.
+  3. *A provider failure becomes silent success* — an adapter returning
+     `null`/`[]`, a route answering 200 with a fallback, a dialog calling
+     `onSaved()` without reading the result, or a 10 s client timeout in front
+     of a server that may take longer. Every failure (network, 4xx/5xx, 429,
+     auth, quota, timeout, disabled, no result) gets its own reason, and the UI
+     says it. Work that can outlast the client runs as a job
+     (`services/jobs/jobRegistry.ts`) the client polls.
+  4. *A re-derivation destroys good data* — an edit re-fetches geometry, an FX
+     snapshot or weather only when its inputs changed, and a failed re-fetch
+     keeps the stored value instead of downgrading it.
+  Two smaller relatives travel with them: a server's English error string
+  shown raw in the German UI (send a stable code, map it to DE/EN copy), and
+  local-calendar logic done in UTC. **The test for a picker, a form or an
+  external call drives the failure path and asserts what the user sees.**
 - **Zod at every boundary; no `console.log`; `async/await`, never `.then()`;
   spread instead of mutation; `strict: true`.** Real, and none of them
   checked — `no-console` is explicitly `'off'` in the backend eslint config,
