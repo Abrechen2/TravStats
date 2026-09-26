@@ -100,7 +100,17 @@
     "linked": "linked accommodation",
     "change": "change",
     "cancelled": "cancelled — counts no night",
-    "fitsDate": "matches the dates"
+    "fitsDate": "matches the dates",
+    "nearbyTitle": "Stays on these dates",
+    "lodgingsTitle": "Your accommodation",
+    "lodgingNoStay": "no stay yet",
+    "back": "← Other accommodation",
+    "noStays": "This accommodation has no stay yet.",
+    "noFit": "No stay matches the station's dates.",
+    "createStay": "Create and link a stay {{from}} – {{to}}",
+    "createStayUndated": "Create and link an undated stay",
+    "createStayFailed": "The stay could not be created.",
+    "noCoords": "This accommodation has no location saved — set the station's location yourself."
   },
   "review": {
     "title_one": "One entry was classified automatically by the 2.7 update",
