@@ -1,9 +1,10 @@
 import { prisma } from "../../db";
-import { AVAILABLE_DOMAINS, type DomainKey } from "../../shared/domains";
+import type { DomainKey } from "../../shared/domains";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { mostVisitedIata } from "../../shared/photoScan";
 import { getHomeAirportAt, type HomeAirportEntry } from "../../utils/homeAirport";
 import { getCachedAirports } from "../airportCache";
+import { visibleDomainKeys } from "../domainVisibility";
 import { getInstanceSettings } from "../instanceSettingsService";
 import { loadHomeAirportHistory } from "../stats/homeAirportHistory";
 import { ROW_CAP } from "./loadTransport";
@@ -14,18 +15,6 @@ import type { Coordinate, HomeAt, HomeSource, TripContext } from "./types";
  * What the engine needs besides the entries: which domains it may read, where
  * home was, and which trips exist.
  */
-
-/**
- * Domains that sit behind the instance's beta switch, and the key that gates
- * each (`frontend/src/config/betaFeatures.ts`). The engine applies the gate on
- * the server because a proposal is SHOWN: a rail ride inside a trip suggestion
- * would put a domain on screen that the reader's instance hides everywhere
- * else. Tours share the roadtrip key, as they do in the UI (`useToursVisible`).
- */
-const BETA_GATED: Partial<Record<DomainKey, string>> = {
-  rail: "railDomain",
-  roadtrip: "roadtrips",
-};
 
 /**
  * What the engine may read for this user: their enabled domains that the
@@ -42,12 +31,12 @@ export async function readUserScope(
     }),
     getInstanceSettings(),
   ]);
-  const enabled = new Set(settings?.enabledDomains ?? ["flight"]);
   const display = (settings?.data as { display?: { timezone?: unknown } } | null)?.display;
   return {
-    domains: AVAILABLE_DOMAINS.filter(
-      (key) => enabled.has(key) && (BETA_GATED[key] === undefined || instance.betaFeaturesEnabled)
-    ),
+    // The instance's beta gate applies on the server because a proposal is
+    // SHOWN: a ride inside a trip suggestion would put a domain on screen that
+    // the reader's instance hides everywhere else.
+    domains: visibleDomainKeys(settings?.enabledDomains, instance.betaFeaturesEnabled),
     profileZone: typeof display?.timezone === "string" ? display.timezone : null,
   };
 }

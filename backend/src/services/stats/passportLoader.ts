@@ -139,10 +139,24 @@ export type PassportLoaderFlight = Prisma.FlightGetPayload<{
  *   would silently shrink the passport, so the contract is the full countable
  *   list or nothing.
  */
+/**
+ * Which beta-gated evidence sources a caller reads. Default: all of them, which
+ * is what the passport page asks for. The country badges pass the user's
+ * visible domains instead (`utils/achievementCountries.ts`), so a hidden
+ * domain proves no country there.
+ */
+export interface PassportSources {
+  rail?: boolean;
+  roadtrip?: boolean;
+}
+
 export async function loadPassport(
   userId: string,
-  prefetchedFlights?: PassportLoaderFlight[]
+  prefetchedFlights?: PassportLoaderFlight[],
+  sources: PassportSources = {}
 ): Promise<ReturnType<typeof buildPassport>> {
+  const readRail = sources.rail ?? true;
+  const readRoadtrip = sources.roadtrip ?? true;
   // One clock for the whole load, so two evidence sources cannot disagree
   // about whether a visit has happened yet.
   const now = new Date();
@@ -287,10 +301,10 @@ export async function loadPassport(
     // Stations of started roadtrips — the evidence the Stats overview already
     // counted and this passport did not. Same loader as the drill-down, so a
     // row and its page agree about which station proved a country.
-    loadRoadtripStations(userId, now),
+    readRoadtrip ? loadRoadtripStations(userId, now) : [],
     // Station ends of completed train rides — counted by the overview, and
     // until 2.7 by nothing here.
-    loadRailEnds(userId),
+    readRail ? loadRailEnds(userId) : [],
   ]);
 
   return buildPassport(
