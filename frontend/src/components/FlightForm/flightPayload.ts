@@ -1,4 +1,6 @@
 import type { Airport } from "../../lib/api";
+import { MissingZoneError } from "../../lib/api/timeInput";
+import { isValidZone } from "../../shared/time";
 import type { FlightInput } from "../../types";
 import { historicalDateShape } from "./fields/HistoricalDateFields";
 import { buildLocalString } from "./flightFormModel";
@@ -32,8 +34,10 @@ export interface FlightPayloadFields {
   terminal: string;
   gate: string;
   boardingGroup: string;
-  depTz: string;
-  arrTz: string;
+  /** The departure airport's zone; null when its record carries none. */
+  depTz: string | null;
+  /** The arrival airport's zone; null when its record carries none. */
+  arrTz: string | null;
   actualDepartureDate: string;
   actualDepartureTime: string;
   actualArrivalDate: string;
@@ -53,6 +57,24 @@ export interface FlightPayloadFields {
   frequentFlyerNumber: string | undefined;
   bookingClassLetter: string | undefined;
   coPassengers: string[];
+}
+
+/**
+ * The zone a flight time at `airport` is read in: the airport's own, and
+ * nothing else (ADR 0002, D2). The form used to fall back to the user's
+ * profile zone and then to "UTC", which stored a Tokyo departure on the
+ * reader's clock whenever an airport record lacked its zone. Null now, and
+ * `buildFlightPayload` refuses rather than guess.
+ */
+export function airportZone(airport: Pick<Airport, "timezone"> | null): string | null {
+  const zone = airport?.timezone ?? null;
+  return zone && isValidZone(zone) ? zone : null;
+}
+
+/** A time at an airport whose record has no zone cannot be sent (`TZ_UNRESOLVED`). */
+function zoneFor(field: string, zone: string | null): string {
+  if (!zone) throw new MissingZoneError(field);
+  return zone;
 }
 
 export function buildFlightPayload(fields: FlightPayloadFields): FlightInput {
@@ -161,12 +183,12 @@ export function buildFlightPayload(fields: FlightPayloadFields): FlightInput {
     departureLocal: departureDate
       ? (buildLocalString(departureDate, departureTime, { anchorDateOnly }) ?? undefined)
       : undefined,
-    depTimezone: departureDate ? depTz : undefined,
+    depTimezone: departureDate ? zoneFor("departureLocal", depTz) : undefined,
     arrivalLocal: effectiveArrivalDate
       ? (buildLocalString(effectiveArrivalDate, effectiveArrivalTime, { anchorDateOnly }) ??
         undefined)
       : undefined,
-    arrTimezone: effectiveArrivalDate ? arrTz : undefined,
+    arrTimezone: effectiveArrivalDate ? zoneFor("arrivalLocal", arrTz) : undefined,
     // Actual departure/arrival (#200) — same undefined-when-empty contract
     // as the scheduled pair above: leaving these blank must never emit an
     // empty string or null, only omit the field entirely (a flight with no
@@ -180,11 +202,11 @@ export function buildFlightPayload(fields: FlightPayloadFields): FlightInput {
     actualDepartureLocal: actualDepartureDate
       ? (buildLocalString(actualDepartureDate, actualDepartureTime) ?? undefined)
       : undefined,
-    actualDepartureTz: actualDepartureDate ? depTz : undefined,
+    actualDepartureTz: actualDepartureDate ? zoneFor("actualDepartureLocal", depTz) : undefined,
     actualArrivalLocal: actualArrivalDate
       ? (buildLocalString(actualArrivalDate, actualArrivalTime) ?? undefined)
       : undefined,
-    actualArrivalTz: actualArrivalDate ? arrTz : undefined,
+    actualArrivalTz: actualArrivalDate ? zoneFor("actualArrivalLocal", arrTz) : undefined,
     depTimeSemantics,
     arrTimeSemantics,
     status,

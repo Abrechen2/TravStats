@@ -22,7 +22,9 @@ import type { TimeEstimationWarning } from "./FlightCompleteStep";
 export type { FlightLookupResult, DuplicateFlight, FlightSubmitOptions } from "./flightFormModel";
 export { buildLocalString } from "./flightFormModel";
 import { isAlreadyImported } from "./flightFormModel";
-import { buildFlightPayload as buildFlightPayloadFrom } from "./flightPayload";
+import { airportZone, buildFlightPayload as buildFlightPayloadFrom } from "./flightPayload";
+import { flightSaveFailure } from "./flightSaveFailure";
+import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { reportBatchOutcome } from "./flightReviewBatch";
 import type { FlightLookupResult, DuplicateFlight, FlightSubmitOptions } from "./flightFormModel";
 
@@ -360,13 +362,9 @@ export function useFlightForm(
     ]
   );
 
-  // Pick the IANA timezone for a side. Airports cached in the DB carry an
-  // IANA timezone; fall back to the user's display timezone if the airport
-  // record happens to be incomplete. Settings always has a string default
-  // ("Europe/Berlin"), so the result is non-null in practice.
-  const userTz = settings?.display?.timezone || "UTC";
-  const depTz = departure?.timezone || userTz;
-  const arrTz = arrival?.timezone || userTz;
+  // A side's zone is its airport's, never a fallback (ADR 0002 D2; see airportZone).
+  const depTz = airportZone(departure);
+  const arrTz = airportZone(arrival);
 
   // Honour the user's "track aircraft registrations" opt-out: when off,
   // the lookup-derived tail number / Mode-S are dropped before submit so
@@ -522,26 +520,13 @@ export function useFlightForm(
       setTimeEstimationWarning(null);
       await maybeAssignTrip(await onSubmit(buildFlightPayload()));
     } catch (err: unknown) {
-      const errorObj = err as {
-        response?: {
-          status?: number;
-          data?: {
-            error?: string;
-            details?: { field: string; message: string }[];
-            existingFlight?: DuplicateFlight;
-          };
-        };
-      };
-      if (errorObj.response?.status === 409 && errorObj.response.data?.existingFlight) {
-        setDuplicateFlight(errorObj.response.data.existingFlight);
+      const failure = flightSaveFailure(err, t);
+      if (failure.kind === "duplicate") {
+        setDuplicateFlight(failure.existing);
         setLoading(false);
         return;
       }
-      const details = errorObj.response?.data?.details;
-      const msg = details?.length
-        ? details.map((d) => d.message).join("; ")
-        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
-      setError(msg);
+      setError(failure.message);
     } finally {
       setLoading(false);
     }
@@ -573,25 +558,12 @@ export function useFlightForm(
       prepareReturnFlightForm();
       useToastStore.getState().addToast("info", t("flights:form.returnFlightHint"));
     } catch (err: unknown) {
-      const errorObj = err as {
-        response?: {
-          status?: number;
-          data?: {
-            error?: string;
-            details?: { field: string; message: string }[];
-            existingFlight?: DuplicateFlight;
-          };
-        };
-      };
-      if (errorObj.response?.status === 409 && errorObj.response.data?.existingFlight) {
-        setDuplicateFlight(errorObj.response.data.existingFlight);
+      const failure = flightSaveFailure(err, t);
+      if (failure.kind === "duplicate") {
+        setDuplicateFlight(failure.existing);
         return;
       }
-      const details = errorObj.response?.data?.details;
-      const msg = details?.length
-        ? details.map((d) => d.message).join("; ")
-        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
-      setError(msg);
+      setError(failure.message);
     } finally {
       setLoading(false);
     }
@@ -610,14 +582,7 @@ export function useFlightForm(
       setTimeEstimationWarning(null);
       await maybeAssignTrip(await onSubmit(buildFlightPayload(), { force: true }));
     } catch (err: unknown) {
-      const errorObj = err as {
-        response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
-      };
-      const details = errorObj.response?.data?.details;
-      const msg = details?.length
-        ? details.map((d) => d.message).join("; ")
-        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
-      setError(msg);
+      setError(saveErrorMessage(err, t, "errors:saveFailed"));
     } finally {
       setLoading(false);
     }
@@ -643,14 +608,7 @@ export function useFlightForm(
       setTimeEstimationWarning(null);
       await maybeAssignTrip(await onSubmit(buildFlightPayload(), { merge: true }));
     } catch (err: unknown) {
-      const errorObj = err as {
-        response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
-      };
-      const details = errorObj.response?.data?.details;
-      const msg = details?.length
-        ? details.map((d) => d.message).join("; ")
-        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
-      setError(msg);
+      setError(saveErrorMessage(err, t, "errors:saveFailed"));
     } finally {
       setLoading(false);
     }
