@@ -275,6 +275,37 @@ registry.registerPath({
   },
 });
 
+const allianceMembers = z
+  .array(z.string().regex(/^[A-Z0-9]{2}$/))
+  .describe("IATA designators of the full members");
+
+registry.registerPath({
+  method: "get",
+  path: "/airlines/alliances",
+  summary: "Members of the three global airline alliances",
+  description:
+    "Full members only, by IATA designator — the same list the Alliance All-Star achievement reads. Affiliates fly under a member's code and are covered by it; a suspended member is left out. `asOf` is the date the membership was last checked against its sources.",
+  tags: ["Catalogue"],
+  responses: {
+    200: {
+      description: "Membership per alliance",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.object({
+              star: allianceMembers,
+              skyteam: allianceMembers,
+              oneworld: allianceMembers,
+            }),
+            asOf: z.string().describe("YYYY-MM-DD"),
+          }),
+        },
+      },
+    },
+  },
+});
+
 registry.registerPath({
   method: "post",
   path: "/airlines",

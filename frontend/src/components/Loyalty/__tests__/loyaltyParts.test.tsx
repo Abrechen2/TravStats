@@ -6,6 +6,11 @@ const api = vi.hoisted(() => ({
   updateLoyaltyMembership: vi.fn(),
 }));
 vi.mock("../../../lib/api/loyalty", () => api);
+// The flight form loads the alliance picker (forgejo#133); its own suite covers
+// it. Pending forever here, so the picker never re-renders under these tests.
+vi.mock("../../../lib/api/catalogue", () => ({
+  airlinesApi: { alliances: () => new Promise(() => {}) },
+}));
 
 import MaskedNumber, { maskNumber } from "../MaskedNumber";
 import LoyaltyCardForm from "../LoyaltyCardForm";

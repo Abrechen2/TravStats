@@ -58,3 +58,9 @@ export interface FrequentFlyerSuggestion {
   flightCount: number;
   lastUsed: string | null;
 }
+
+/** The three global airline alliances, in the order the picker shows them. */
+export const ALLIANCE_IDS = ["star", "skyteam", "oneworld"] as const;
+export type AllianceId = (typeof ALLIANCE_IDS)[number];
+/** Full members of each alliance as IATA codes — `GET /airlines/alliances` (forgejo#133). */
+export type AllianceMembers = Record<AllianceId, string[]>;

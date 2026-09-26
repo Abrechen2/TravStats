@@ -72,5 +72,13 @@
     "gone": "This loyalty programme does not exist (any more), so nothing is shown here.",
     "unnamed": "Only entries of one loyalty programme",
     "clear": "Remove filter"
+  },
+  "alliances": {
+    "label": "Add a whole alliance:",
+    "star": "Star Alliance",
+    "skyteam": "SkyTeam",
+    "oneworld": "oneworld",
+    "loadError": "The alliances could not be loaded — airline codes can still be added one by one.",
+    "tooMany": "That would be more than {{max}} airlines — a programme can cover at most {{max}}."
   }
 }
