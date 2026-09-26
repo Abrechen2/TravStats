@@ -1,8 +1,6 @@
 {
   "title": "Loyalty programmes",
-  "meta": "Hotels, airlines and cruise lines in one place — each card with what your logbook says you used it for.",
-  "noDomains": "None of your active travel types has loyalty programmes. Flights, cruises and lodging can be switched on in Settings under Modules.",
-  "jumpTo": "Jump to",
+  "noDomains": "None of your active travel types has loyalty programmes. Flights, cruises and lodging can be switched on above under Modules.",
   "sections": {
     "flight": {
       "title": "Frequent flyer programmes",
@@ -63,9 +61,5 @@
     "empty": "No further frequent flyer numbers found in your flights.",
     "loadError": "The suggestions could not be loaded.",
     "adopt": "Take over"
-  },
-  "settingsLink": {
-    "description": "Your loyalty programmes — hotels, airlines and cruise lines — live on a page of their own, grouped by travel type.",
-    "open": "Go to loyalty programmes"
   }
 }

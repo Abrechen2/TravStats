@@ -839,6 +839,7 @@
     "account": "Konto",
     "display": "Darstellung",
     "trips": "Reisen",
+    "loyalty": "Bonusprogramme",
     "data": "Daten",
     "services": "Dienste"
   },
@@ -861,6 +862,7 @@
       "modules": "Bereiche, Module, Flüge, Kreuzfahrten, Unterkünfte, Orte, Roadtrips, ein- und ausschalten",
       "countryCounting": "Länder, Land zählen, Umstieg, Transit, Länderzählung",
       "trips": "Reise, Reisen, automatisch, Buchungsnummer, Gruppieren, Reise anlegen, Reisen erkennen",
+      "loyalty": "Bonusprogramm, Mitgliedschaft, Mitgliedsnummer, Status, Hotelprogramm, Vielflieger, Meilen, Miles & More, Reederei, Punkte, Treueprogramm",
       "backup": "Backup, Sicherung, Export, Exportieren, Wiederherstellen, Download, Excel, Tabelle, JSON, Daten",
       "import": "Import, Importieren, CSV, Flightradar24, Logbuch, Hochladen",
       "notifications": "Benachrichtigung, E-Mail, SMTP, Mailserver, Erinnerung",
@@ -872,8 +874,7 @@
       "enrichment": "Anreicherung, Flugdaten nachtragen, Verspätung, historische Daten, Flugzeug",
       "autoupdate": "Automatische Updates, Flugstatus, Aktualisierung, Gate, Abflugzeit",
       "cruisePreferences": "Kreuzfahrt, Reederei, Schiff, Kabine",
-      "lodgingPreferences": "Geocoder, Adresse, Koordinaten, Nominatim, Hotelketten, Unterkunft",
-      "lodgingMemberships": "Bonusprogramm, Mitgliedschaft, Status, Hotelprogramm, Punkte, Treueprogramm"
+      "lodgingPreferences": "Geocoder, Adresse, Koordinaten, Nominatim, Hotelketten, Unterkunft"
     }
   },
   "railProviders": {

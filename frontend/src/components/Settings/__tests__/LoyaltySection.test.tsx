@@ -3,13 +3,11 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 
-import type { DomainKey } from "../../shared/domains";
-import type { LoyaltyMembership } from "../../types/loyalty";
-
-vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));
+import type { DomainKey } from "../../../shared/domains";
+import type { LoyaltyMembership } from "../../../types/loyalty";
 
 let enabled: DomainKey[] = [];
-vi.mock("../../hooks/useEnabledDomains", () => ({
+vi.mock("../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ enabled, isEnabled: (key: DomainKey) => enabled.includes(key) }),
 }));
 
@@ -20,14 +18,14 @@ const api = vi.hoisted(() => ({
   updateLoyaltyMembership: vi.fn(),
   deleteLoyaltyMembership: vi.fn(),
 }));
-vi.mock("../../lib/api/loyalty", () => api);
-vi.mock("../../lib/api/cruise", () => ({
+vi.mock("../../../lib/api/loyalty", () => api);
+vi.mock("../../../lib/api/cruise", () => ({
   cruiseApi: { facets: vi.fn().mockResolvedValue({ lines: [{ value: "AIDA", count: 2 }] }) },
 }));
 
 // The hotel section is the Settings editor, tested on its own; here it only
 // has to receive the page's per-card extras for the cards it lists.
-vi.mock("../../components/Settings/MembershipsSection", () => ({
+vi.mock("../MembershipsSection", () => ({
   default: (props: { title?: string; renderExtra?: (m: { id: string }) => ReactNode }) => (
     <div data-testid="hotel-editor">
       {props.title}
@@ -36,7 +34,7 @@ vi.mock("../../components/Settings/MembershipsSection", () => ({
   ),
 }));
 
-import LoyaltyPage from "../LoyaltyPage";
+import LoyaltySection from "../LoyaltySection";
 
 const card = (o: Partial<LoyaltyMembership>): LoyaltyMembership => ({
   id: "c1",
@@ -61,11 +59,11 @@ const card = (o: Partial<LoyaltyMembership>): LoyaltyMembership => ({
 const renderPage = () =>
   render(
     <MemoryRouter>
-      <LoyaltyPage />
+      <LoyaltySection />
     </MemoryRouter>
   );
 
-describe("LoyaltyPage", () => {
+describe("Einstellungen → Bonusprogramme (LoyaltySection)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     enabled = ["flight", "cruise", "lodging"];

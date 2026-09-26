@@ -17,6 +17,7 @@ import { PlannedSpendNote } from "../components/lodging/PlannedSpendNote";
 import { FlagImg, resolveCountryCode } from "../lib/countryFlag";
 import { logger } from "../lib/logger";
 import { useSettingsStore } from "../store/settingsStore";
+import { LOYALTY_SETTINGS_PATH } from "./Settings/settingsModel";
 
 import type { Lodging, LodgingChainDetail } from "../types/lodging";
 import { useDomainColors } from "../hooks/useDomainColors";
@@ -194,6 +195,17 @@ export default function LodgingChainDetailPage(): JSX.Element {
                 {t("lodging:chainDetail.noMembershipYet")}
               </p>
             )}
+            {/* Every programme, of every kind, is managed centrally in the
+                settings (owner, 2026-09-26); this box edits the one card that
+                covers this chain, and says where the rest are. */}
+            <Link
+              to={LOYALTY_SETTINGS_PATH}
+              data-testid="chain-loyalty-settings-link"
+              className="mt-2 inline-block text-xs hover:underline"
+              style={{ color: "var(--ts-accent)", fontWeight: 600 }}
+            >
+              {t("lodging:chainDetail.allProgrammes")}
+            </Link>
           </aside>
         </div>
 

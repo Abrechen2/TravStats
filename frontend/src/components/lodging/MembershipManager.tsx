@@ -8,10 +8,10 @@ import {
   deleteMembership,
 } from "../../lib/api/lodging";
 import { logger } from "../../lib/logger";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import type { LodgingChainRef, LodgingMembership, MembershipInput } from "../../types/lodging";
 import SuggestionChips from "../common/SuggestionChips";
 import MaskedNumber from "../Loyalty/MaskedNumber";
+import TierBadge from "../Loyalty/TierBadge";
 import {
   chainIdsOfProgram,
   programSuggestions,
@@ -106,9 +106,6 @@ export function MembershipManager({
   hideTitle = false,
 }: MembershipManagerProps): JSX.Element {
   const { t } = useTranslation(["lodging", "common"]);
-  // Where a card that leaves this chain can still be found: the loyalty page,
-  // or — while that page is behind the beta switch — the settings section.
-  const loyaltyPageVisible = useBetaFeatures().isFeatureVisible("loyaltyCenter");
   const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -377,16 +374,12 @@ export function MembershipManager({
           {visibleMemberships.map((m) => (
             <li key={m.id} data-testid={`membership-row-${m.id}`} className="text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
+                <div className="flex flex-wrap items-center gap-2">
                   <span style={{ fontWeight: 600, color: "var(--ts-text-bright)" }}>
                     {m.programName}
                   </span>
-                  {m.tier && <span className="t-caption ml-2">{m.tier}</span>}
-                  {m.membershipNumber && (
-                    <span className="ml-2">
-                      <MaskedNumber value={m.membershipNumber} />
-                    </span>
-                  )}
+                  <TierBadge tier={m.tier} />
+                  {m.membershipNumber && <MaskedNumber value={m.membershipNumber} />}
                 </div>
                 <div className="flex gap-3">
                   <button
@@ -482,11 +475,7 @@ export function MembershipManager({
 
           {leavesScopeChain && (
             <p data-testid="membership-leaves-chain" className="t-caption">
-              {t(
-                loyaltyPageVisible
-                  ? "lodging:membership.leavesThisChain"
-                  : "lodging:membership.leavesThisChainSettings"
-              )}
+              {t("lodging:membership.leavesThisChain")}
             </p>
           )}
           {formError !== null && (

@@ -39,6 +39,7 @@ const CuratedChecklistPage = lazy(() => import("./pages/CuratedChecklistPage"));
 import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
 import NavigationBar from "./components/NavigationBar";
 import { AdminOnlyNotice } from "./components/AdminOnlyNotice";
+import { LOYALTY_SETTINGS_PATH } from "./pages/Settings/settingsModel";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
@@ -49,7 +50,6 @@ const RoadtripsPage = lazy(() => import("./pages/RoadtripsPage"));
 const RoadtripDetailPage = lazy(() => import("./pages/RoadtripDetailPage"));
 const StravaCallbackPage = lazy(() => import("./pages/StravaCallbackPage"));
 const AchievementsPage = lazy(() => import("./pages/AchievementsPage"));
-const LoyaltyPage = lazy(() => import("./pages/LoyaltyPage"));
 const AdvancedStatsPage = lazy(() => import("./pages/AdvancedStatsPage"));
 const SettingsPage = lazy(() => import("./pages/SettingsPage"));
 const DesignPage = lazy(() => import("./pages/DesignPage"));
@@ -539,16 +539,14 @@ function AppContent() {
                 path="/achievements"
                 element={isAuthenticated ? <AchievementsPage /> : <Navigate to="/login" />}
               />
-              {/* Every domain's loyalty cards on one page (2.7). Not a domain
-                  itself: the page draws a section per enabled domain. */}
+              {/* The loyalty page of the 2.7 betas. Its programmes are managed
+                  in Einstellungen → Bonusprogramme since 2026-09-26; links to
+                  the old page land there. */}
               <Route
                 path="/loyalty"
                 element={
                   isAuthenticated ? (
-                    // Beta since 2026-09-26 (config/betaFeatures.ts → loyaltyCenter).
-                    <BetaFeatureRouteGuard feature="loyaltyCenter" redirectTo="/dashboard">
-                      <LoyaltyPage />
-                    </BetaFeatureRouteGuard>
+                    <Navigate to={LOYALTY_SETTINGS_PATH} replace />
                   ) : (
                     <Navigate to="/login" />
                   )

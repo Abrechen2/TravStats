@@ -67,6 +67,11 @@ vi.mock("../../components/Settings/AboutSection", () => ({
 vi.unmock("../../store/settingsStore");
 
 // Heavy siblings with their own data fetching; irrelevant to the gate.
+// Einstellungen → Bonusprogramme loads every loyalty card on mount; these
+// cases are about the page's navigation, not about the cards.
+vi.mock("../../components/Settings/LoyaltySection", () => ({
+  default: () => <div data-testid="loyalty-section-stub" />,
+}));
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-bar-stub" />,
 }));

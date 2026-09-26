@@ -1,8 +1,6 @@
 {
   "title": "Bonusprogramme",
-  "meta": "Hotels, Airlines und Reedereien an einem Ort — jede Karte mit dem, wofür du sie laut Logbuch genutzt hast.",
-  "noDomains": "Für keine deiner aktiven Reisearten gibt es Bonusprogramme. Flüge, Kreuzfahrten und Unterkünfte lassen sich in den Einstellungen unter Module einschalten.",
-  "jumpTo": "Springe zu",
+  "noDomains": "Für keine deiner aktiven Reisearten gibt es Bonusprogramme. Flüge, Kreuzfahrten und Unterkünfte lassen sich oben unter Module einschalten.",
   "sections": {
     "flight": {
       "title": "Vielfliegerprogramme",
@@ -63,9 +61,5 @@
     "empty": "Keine weiteren Vielfliegernummern in deinen Flügen gefunden.",
     "loadError": "Die Vorschläge konnten nicht geladen werden.",
     "adopt": "Übernehmen"
-  },
-  "settingsLink": {
-    "description": "Deine Bonusprogramme — Hotels, Airlines und Reedereien — verwaltest du auf einer eigenen Seite, nach Bereichen getrennt.",
-    "open": "Zu den Bonusprogrammen"
   }
 }

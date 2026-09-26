@@ -29,6 +29,7 @@ import {
   groupOfSection,
   isAdminOnlySection,
   isGeneralGroup,
+  movedSection,
   type SettingsSectionId,
 } from "./Settings/settingsModel";
 
@@ -182,11 +183,29 @@ export default function SettingsPage(): JSX.Element {
 
   if (!groupIsReachable) return <Navigate to={`/settings/${DEFAULT_GROUP}`} replace />;
 
+  // A section that moved into another group (the three per-domain loyalty
+  // sections became one): follow it rather than land on a page without it.
+  const moved = deepLinked ? movedSection(deepLinked) : null;
+  if (moved) {
+    const target = groupOfSection(moved);
+    const route = target && !isGeneralGroup(target.id) ? target.id : GENERAL_ROUTE;
+    return <Navigate to={`/settings/${route}?section=${moved}`} replace />;
+  }
+
   // Konto, Darstellung, Daten and Dienste were routes until round 4 made them
   // anchors on one page. Their URLs are in bookmarks: land on the anchor.
   if (group && isGeneralGroup(group.id) && !isGeneral) {
     const first = group.sections.find(isShown) ?? group.sections[0];
     return <Navigate to={`/settings/${GENERAL_ROUTE}?section=${first}`} replace />;
+  }
+
+  // A domain group with nothing this account may see: the lodging group of a
+  // non-admin, since its loyalty section joined Einstellungen → Bonusprogramme
+  // (2026-09-26). An empty page is no destination, so the group is no tab and
+  // its URL goes to the general page — unless a link named the admin-only
+  // section, whose explanation IS the page.
+  if (group && !isGeneral && sections.length === 0 && !deepLinkedAdminOnly) {
+    return <Navigate to={`/settings/${GENERAL_ROUTE}`} replace />;
   }
 
   const tabs = [
@@ -196,7 +215,9 @@ export default function SettingsPage(): JSX.Element {
       to: `/settings/${GENERAL_ROUTE}`,
       active: isGeneral,
     },
-    ...SETTINGS_GROUPS.filter((g) => g.domain && isEnabled(g.domain)).map((g) => ({
+    ...SETTINGS_GROUPS.filter(
+      (g) => g.domain && isEnabled(g.domain) && g.sections.some(isShown)
+    ).map((g) => ({
       id: g.id,
       label: t(g.labelKey),
       to: `/settings/${g.id}`,
@@ -351,5 +372,6 @@ function normalizeLegacySection(raw: string): string {
     apiKeys: "externalServices",
     apikeys: "externalServices",
   };
-  return Object.prototype.hasOwnProperty.call(aliases, raw) ? aliases[raw] : raw;
+  if (Object.prototype.hasOwnProperty.call(aliases, raw)) return aliases[raw];
+  return movedSection(raw) ?? raw;
 }

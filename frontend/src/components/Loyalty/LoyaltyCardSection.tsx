@@ -10,6 +10,7 @@ import ActivityLine from "./ActivityLine";
 import FrequentFlyerSuggestions from "./FrequentFlyerSuggestions";
 import LoyaltyCardForm, { type CardDomain, type CardPrefill } from "./LoyaltyCardForm";
 import MaskedNumber from "./MaskedNumber";
+import TierBadge from "./TierBadge";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 
 interface Props {
@@ -24,8 +25,8 @@ interface Props {
 type Editing = { kind: "new"; prefill?: CardPrefill } | { kind: "edit"; id: string } | null;
 
 /**
- * The frequent-flyer or cruise-line programmes, as one section of the loyalty
- * page. Kept a section of its own per domain on purpose: a tester found the
+ * The frequent-flyer or cruise-line programmes, as one block of Einstellungen
+ * → Bonusprogramme. Kept a section of its own per domain on purpose: a tester found the
  * programmes easier to read split by travel type (Discord, 2026-08-08), and
  * the owner's one page keeps that split visible instead of flattening it.
  */
@@ -96,7 +97,7 @@ export default function LoyaltyCardSection({
                     <span style={{ fontWeight: 600, color: "var(--ts-text-bright)" }}>
                       {card.programName}
                     </span>
-                    {card.tier && <span className="t-caption">{card.tier}</span>}
+                    <TierBadge tier={card.tier} />
                     {card.membershipNumber && <MaskedNumber value={card.membershipNumber} />}
                   </div>
                   <div className="flex gap-3">
