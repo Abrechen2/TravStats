@@ -41,16 +41,15 @@ export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
   {
     version: "2.7.0",
     highlights: [
-      { icon: "🎨", titleKey: "entries.v270.design.title", bodyKey: "entries.v270.design.body" },
+      {
+        icon: "🎨",
+        titleKey: "entries.v270.design.title",
+        bodyKey: "entries.v270.design.body",
+      },
       {
         icon: "🔎",
         titleKey: "entries.v270.evidence.title",
         bodyKey: "entries.v270.evidence.body",
-      },
-      {
-        icon: "📅",
-        titleKey: "entries.v270.yearCompare.title",
-        bodyKey: "entries.v270.yearCompare.body",
       },
       {
         icon: "📄",
@@ -58,16 +57,25 @@ export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
         bodyKey: "entries.v270.documents.body",
       },
       {
+        icon: "✍️",
+        titleKey: "entries.v270.entrySuggestions.title",
+        bodyKey: "entries.v270.entrySuggestions.body",
+      },
+      {
         icon: "🗺️",
         titleKey: "entries.v270.placesPassport.title",
         bodyKey: "entries.v270.placesPassport.body",
       },
       {
-        icon: "🥾",
-        titleKey: "entries.v270.toursAndSummary.title",
-        bodyKey: "entries.v270.toursAndSummary.body",
+        icon: "📥",
+        titleKey: "entries.v270.inbox.title",
+        bodyKey: "entries.v270.inbox.body",
       },
-      { icon: "📥", titleKey: "entries.v270.inbox.title", bodyKey: "entries.v270.inbox.body" },
+      {
+        icon: "🌦️",
+        titleKey: "entries.v270.summaryOpenData.title",
+        bodyKey: "entries.v270.summaryOpenData.body",
+      },
       {
         icon: "🧪",
         titleKey: "entries.v270.beta.title",

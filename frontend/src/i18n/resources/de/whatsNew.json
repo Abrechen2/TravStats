@@ -11,31 +11,31 @@
       },
       "evidence": {
         "title": "Jede Zahl zeigt, woraus sie besteht",
-        "body": "Klick auf eine Kennzahl oder eine Zeile in einer Rangliste, und ein Panel listet die Einträge, die sie ergeben haben — Flüge, Kreuzfahrten, Aufenthalte, Orte —, mit dem Beitrag jedes Eintrags. Was sich nicht zuordnen lässt, wird gesagt statt weggelassen: eine Summe ohne Kurs bleibt leer und nennt den Grund. Das Panel lässt sich als Link teilen."
-      },
-      "yearCompare": {
-        "title": "Das laufende Jahr vergleicht sich fair",
-        "body": "Bisher stand ein angefangenes Jahr gegen ein ganzes und las sich im September wie ein Einbruch. Jetzt wird das laufende Jahr mit demselben Zeitraum des Vorjahres verglichen, und die Beschriftung sagt es. Wo eine Zahl vom Server pro Jahr kommt, steht ehrlich „ggü. ganzem Jahr“. Die Vergleichszahl bewegt sich für alle, deren Jahr noch läuft."
+        "body": "Klick auf eine Kennzahl oder eine Zeile in einer Rangliste, und ein Panel listet die Einträge, die sie ergeben haben — Flüge, Kreuzfahrten, Aufenthalte, Orte —, mit dem Beitrag jedes Eintrags. Was sich nicht zuordnen lässt, wird gesagt statt weggelassen: eine Summe ohne Kurs bleibt leer und nennt den Grund. Das Panel lässt sich als Link teilen. Und das laufende Jahr vergleicht sich mit demselben Zeitraum des Vorjahres statt mit einem ganzen Jahr — im September sieht es nicht mehr wie ein Einbruch aus."
       },
       "documents": {
         "title": "Dokumente und Belege haben einen Ort",
-        "body": "Bordkarten, Hotelrechnungen und Buchungsbestätigungen liegen jetzt als Dokumente am Eintrag, zu dem sie gehören, und ein Beleg hängt an dem, was er belegt. TravStats liest jedes Dokument, das es kennt, selbst — eine fotografierte Rechnung, eine Bordkarte über ihren Strichcode, eine Booking.com-Mail über eine feste Vorlage — und legt es ab, statt es liegen zu lassen."
+        "body": "Bordkarten, Hotelrechnungen und Buchungsbestätigungen liegen jetzt als Dokumente am Eintrag, zu dem sie gehören, und ein Beleg hängt an dem, was er belegt. TravStats liest jedes Dokument, das es kennt, selbst — eine fotografierte Rechnung, eine Bordkarte über ihren Strichcode, eine Booking.com-Mail über eine feste Vorlage — und legt es ab, statt es liegen zu lassen. Hängt ein PDF oder eine Mail an einem Flug, einer Kreuzfahrt oder einem Aufenthalt, übernimmst du Preis, Währung und Buchungsnummer daraus — du siehst jeden Wert vorher und entscheidest selbst, was übernommen wird."
+      },
+      "entrySuggestions": {
+        "title": "Beim Eintragen hilft TravStats mit",
+        "body": "Formulare schlagen vor, was du schon einmal eingetragen hast: Sitz, Flugnummer, Terminal und Vielfliegernummer aus deinen Flügen, Zimmer und Verpflegung aus früheren Aufenthalten, deine Tags als Auswahl beim Tippen und deine zuletzt genutzten Währungen zuerst. Ein neuer Eintrag landet von selbst in der Reise, in deren Zeitraum er fällt; Kreuzfahrt-Stopps und Aufenthalte bekommen ihre Daten aus Start und Reise. Ein Vorschlag überschreibt nie, was du selbst getippt hast."
       },
       "placesPassport": {
-        "title": "Orte und Reisepass sind fertig",
-        "body": "Orte sind ein vollwertiger Bereich mit Listen, Checklisten und einem CSV-Import, der auch einen Google-Takeout-Export aufnimmt; der Reisepass zeigt die Länder mit ihren Belegen. Beides stand seit 2.6 hinter dem Beta-Schalter und ist jetzt einfach da — ebenso die eigene Farbe je Bereich, die eine gewöhnliche Einstellung geworden ist."
-      },
-      "toursAndSummary": {
-        "title": "Touren, KI-Zusammenfassung und Dawarich sind freigegeben",
-        "body": "Eine Reise kann gewandert, gefahren oder geradelt sein: Touren haben einen eigenen Reiter auf der Reise, mit Routeneditor. Die KI-Zusammenfassung einer Reise nennt nur noch, was in den Daten steht — kein erfundenes Hotel, kein Satz über fehlende Tage. Die Standorthistorie aus Dawarich zählt als Beleg für ein Land."
+        "title": "Orte, Reisepass und Fotos",
+        "body": "Orte sind ein vollwertiger Bereich mit Listen, Checklisten und einem CSV-Import, der auch einen Google-Takeout-Export aufnimmt; der Reisepass zeigt die Länder mit ihren Belegen. Fotos hängen jetzt auch an Orten: eine Galerie mit Titelbild, Vorschläge aus deinen Reisefotos vom selben Tag ganz in der Nähe und Bilder im Reisetagebuch. Aufenthalt, Flug und Kreuzfahrt zeigen die Reisefotos aus ihrem Zeitraum, und eine angenommene Foto-Reise bringt ihre Bilder mit."
       },
       "inbox": {
-        "title": "Posteingang mit Reitern, Logbuch blättert, App auf dem Startbildschirm",
-        "body": "Der Posteingang sortiert Flug-Updates, offene Fragen und Vorschläge in Reiter mit Statuszählern. Das Logbuch zeigt eine Seite statt aller Zeilen, die Summenleiste zählt trotzdem alles. Und TravStats lässt sich als Web-App installieren — ein Symbol auf dem Startbildschirm, ohne Browserrahmen."
+        "title": "Posteingang mit Reitern, Tabelle hin und zurück, App auf dem Startbildschirm",
+        "body": "Der Posteingang sortiert Flug-Updates, offene Fragen und Vorschläge in Reiter mit Statuszählern, das Logbuch blättert seitenweise. Die Excel-Tabelle geht in beide Richtungen: bearbeiten und wieder einlesen, oder in ein anderes Konto übertragen — Zeilen ohne ID werden in allen Bereichen neu angelegt, schon vorhandene wiedererkannt. Fotos und Dokumente reisen dabei nicht mit, die gehören ins Backup. Und TravStats lässt sich als Web-App installieren."
+      },
+      "summaryOpenData": {
+        "title": "KI-Zusammenfassung, Dawarich und offene Datendienste",
+        "body": "Die KI-Zusammenfassung einer Reise nennt nur noch, was in den Daten steht, und die Standorthistorie aus Dawarich zählt als Beleg für ein Land. Neu zum Einschalten durch einen Admin: offene Datendienste — das Wetter im Reisetagebuch von Open-Meteo und Beschreibungen aus Wikipedia bei Orten und Unterkünften. Die Dienste bleiben aus, bis jemand sie einschaltet, weil dafür Orte und Daten deiner Reisen an diese Dienste gehen."
       },
       "beta": {
-        "title": "Nur noch die App-Kopplung ist Beta",
-        "body": "Alles, was in 2.6 hinter dem Beta-Schalter lag, ist in 2.7 fertig — bis auf eines: die Kopplung mit der TravStats-Companion-App. Das Koppeln selbst funktioniert; unfertig ist die App. Der Eintrag im Register sagt, wann er zurückkommt."
+        "title": "Hinter dem Beta-Schalter: Roadtrips, Touren, Bahn",
+        "body": "Roadtrips mit Stationen an deinen Aufenthalten, Tagestouren mit Höhenprofil, die Bahn als eigener Bereich — mit Bahnhofskatalog, Suche nach Zugnummer und dem echten Streckenverlauf —, die Hotel-Anreicherung aus OpenStreetMap und die Kopplung mit der TravStats-Companion-App sind gebaut, aber noch in Prüfung. Ein Admin schaltet sie mit dem Beta-Schalter ein; jeder Eintrag im Register sagt, wann er herauskommt."
       }
     },
     "v260": {

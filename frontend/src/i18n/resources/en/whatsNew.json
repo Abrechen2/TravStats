@@ -11,31 +11,31 @@
       },
       "evidence": {
         "title": "Every number shows what it is made of",
-        "body": "Click a figure or a row in a ranking and a panel lists the entries that produced it — flights, cruises, stays, places — with each entry's share. What cannot be attributed is said rather than dropped: a total without an exchange rate stays empty and names the reason. The panel can be shared as a link."
-      },
-      "yearCompare": {
-        "title": "The running year compares fairly",
-        "body": "A part year used to stand against a whole one and read like a collapse in September. The running year is now compared with the same span of the previous year, and the label says so. Where a figure comes from the server per year, it honestly says “vs. the full year”. The comparison moves for everyone whose year is still running."
+        "body": "Click a figure or a row in a ranking and a panel lists the entries that produced it — flights, cruises, stays, places — with each entry's share. What cannot be attributed is said rather than dropped: a total without an exchange rate stays empty and names the reason. The panel can be shared as a link. And the running year compares with the same span of the previous year rather than a whole one — September no longer reads like a collapse."
       },
       "documents": {
         "title": "Documents and receipts have a home",
-        "body": "Boarding passes, hotel invoices and booking confirmations now live as documents on the entry they belong to, and a receipt is attached to what it proves. TravStats reads every document it knows — a photographed invoice, a boarding pass through its barcode, a Booking.com mail through a fixed template — and files it instead of leaving it lying around."
+        "body": "Boarding passes, hotel invoices and booking confirmations now live as documents on the entry they belong to, and a receipt is attached to what it proves. TravStats reads every document it knows — a photographed invoice, a boarding pass through its barcode, a Booking.com mail through a fixed template — and files it instead of leaving it lying around. When a PDF or an email hangs on a flight, a cruise or a stay, you can take price, currency and booking reference from it — you see every value first and decide what is taken."
+      },
+      "entrySuggestions": {
+        "title": "TravStats helps while you enter",
+        "body": "Forms suggest what you have entered before: seat, flight number, terminal and frequent-flyer number from your flights, room and board from earlier stays, your tags as a choice while you type, and your recently used currencies first. A new entry lands in the trip whose dates it falls in on its own; cruise stops and stays take their dates from the start and the trip. A suggestion never overwrites what you typed yourself."
       },
       "placesPassport": {
-        "title": "Places and the passport are finished",
-        "body": "Places are a full domain with lists, checklists and a CSV import that also takes a Google Takeout export; the passport shows countries with their evidence. Both sat behind the beta switch since 2.6 and are simply there now — as is the colour per domain, which has become an ordinary setting."
-      },
-      "toursAndSummary": {
-        "title": "Tours, the AI summary and Dawarich are released",
-        "body": "A trip can be walked, driven or cycled: tours have a tab of their own on the trip, with a route editor. The AI summary of a trip now names only what the data holds — no invented hotel, no sentence about missing days. Location history from Dawarich counts as evidence for a country."
+        "title": "Places, the passport and photos",
+        "body": "Places are a full domain with lists, checklists and a CSV import that also takes a Google Takeout export; the passport shows countries with their evidence. Photos now hang on places too: a gallery with a cover picture, suggestions from your trip photos taken the same day close by, and pictures in the trip journal. Stays, flights and cruises show the trip photos from their own time span, and an accepted photo journey brings its pictures along."
       },
       "inbox": {
-        "title": "Inbox with tabs, a logbook that pages, the app on your home screen",
-        "body": "The inbox sorts flight updates, open questions and suggestions into tabs with status counts. The logbook shows one page instead of every row while the summary strip still counts everything. And TravStats can be installed as a web app — an icon on the home screen, without the browser frame."
+        "title": "Inbox with tabs, the spreadsheet both ways, the app on your home screen",
+        "body": "The inbox sorts flight updates, open questions and suggestions into tabs with status counts, and the logbook pages. The Excel spreadsheet works both ways: edit it and read it back, or carry it into another account — rows without an ID are created in every domain, existing ones recognised. Photos and documents do not travel that way; they belong to the backup. And TravStats can be installed as a web app."
+      },
+      "summaryOpenData": {
+        "title": "The AI summary, Dawarich and open data services",
+        "body": "The AI summary of a trip now names only what the data holds, and location history from Dawarich counts as evidence for a country. New, for an admin to switch on: open data services — the weather in the trip journal from Open-Meteo and descriptions from Wikipedia on places and stays. They stay off until someone switches them on, because places and dates of your trips go to those services."
       },
       "beta": {
-        "title": "Only app pairing is still beta",
-        "body": "Everything that sat behind the beta switch in 2.6 is finished in 2.7 — except one thing: pairing with the TravStats Companion app. Pairing itself works; what is unfinished is the app. Its registry entry says when it comes back."
+        "title": "Behind the beta switch: roadtrips, tours, rail",
+        "body": "Roadtrips with stations at your stays, day tours with an elevation profile, rail as a domain of its own — with a station catalogue, a train-number lookup and the real line on the map —, hotel enrichment from OpenStreetMap and pairing with the TravStats Companion app are built but still being checked. An admin turns them on with the beta switch; each registry entry says when it comes out."
       }
     },
     "v260": {
