@@ -8,6 +8,7 @@ import AirlineLogo from "./AirlineLogo";
 import DataSourceBadges from "./DataSourceBadges";
 import SpecialTypeBadge from "./specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "./specialFlights/specialTypeMeta";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
 
 interface FlightListProps {
   flights: Flight[];
@@ -25,6 +26,7 @@ export default function FlightList({
   onDeleteFlight,
 }: FlightListProps): JSX.Element {
   const { t } = useTranslation(["flights", "common"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
 
   const getStatusBadge = (status: string): JSX.Element => {
     const colors = {
@@ -277,9 +279,10 @@ export default function FlightList({
                 </button>
 
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    if (confirm(t("flights:list.deleteConfirm"))) {
+                    const message = t("flights:list.deleteConfirm");
+                    if (await askConfirm({ message, destructive: true })) {
                       onDeleteFlight(flight.id);
                     }
                   }}
@@ -301,6 +304,7 @@ export default function FlightList({
           </div>
         );
       })}
+      {confirmDialog}
     </div>
   );
 }

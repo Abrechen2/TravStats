@@ -20,6 +20,7 @@ import { pairingApi, type PairingStart } from "../../lib/api/pairing";
 import { apiTokensApi, type ApiToken } from "../../lib/api/tokens";
 import { logger } from "../../lib/logger";
 import { formatDateTime } from "../../lib/displayFormat";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 
 /** Embedded in the QR so the app can show which server it's pairing with. */
 const SERVER_NAME = "TravStats";
@@ -60,6 +61,7 @@ function formatRemaining(totalSeconds: number): string {
 
 export default function DevicesSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const isDemo = useIsDemoAccount();
   const [devices, setDevices] = useState<ApiToken[]>([]);
   const [loading, setLoading] = useState(false);
@@ -180,7 +182,8 @@ export default function DevicesSection(): JSX.Element {
   };
 
   const handleUnpair = async (id: string): Promise<void> => {
-    if (!window.confirm(t("settings:devices.confirmUnpair"))) return;
+    const message = t("settings:devices.confirmUnpair");
+    if (!(await askConfirm({ message, destructive: true }))) return;
     try {
       await apiTokensApi.revoke(id);
       void reload();
@@ -454,6 +457,7 @@ export default function DevicesSection(): JSX.Element {
           </ul>
         )}
       </div>
+      {confirmDialog}
     </SectionCard>
   );
 }

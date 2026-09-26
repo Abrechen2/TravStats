@@ -30,6 +30,7 @@ import {
 } from "../../lib/api/tokens";
 import { logger } from "../../lib/logger";
 import { formatDateTime } from "../../lib/displayFormat";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 
 /**
  * Scopes a token may be minted with, in widening order.
@@ -47,6 +48,7 @@ const NON_ADMIN_SCOPES: ApiTokenScope[] = SCOPES.filter((scope) => scope !== "ad
 
 export default function ApiTokensSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const isDemo = useIsDemoAccount();
   const isAdmin = useAuthStore((state) => state.user?.isAdmin === true);
   const scopes = isAdmin ? SCOPES : NON_ADMIN_SCOPES;
@@ -108,7 +110,8 @@ export default function ApiTokensSection(): JSX.Element {
   };
 
   const handleRevoke = async (id: string): Promise<void> => {
-    if (!window.confirm(t("settings:apiTokens.confirmRevoke"))) return;
+    const message = t("settings:apiTokens.confirmRevoke");
+    if (!(await askConfirm({ message, destructive: true }))) return;
     try {
       await apiTokensApi.revoke(id);
       void reload();
@@ -325,6 +328,7 @@ export default function ApiTokensSection(): JSX.Element {
           </div>
         </div>
       </Modal>
+      {confirmDialog}
     </SectionCard>
   );
 }

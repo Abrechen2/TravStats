@@ -82,6 +82,9 @@ export function useDialogChrome({ open, onClose, panelRef, busy = false }: Optio
       if (!top || !panelRef.current || !top.contains(panelRef.current)) return;
 
       if (event.key === "Escape") {
+        // Claimed, so a page-level Escape handler underneath (the cruise route
+        // editor's "leave the editor") can tell the key was the dialog's.
+        event.preventDefault();
         if (!busy) onClose();
         return;
       }

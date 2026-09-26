@@ -10,6 +10,7 @@ import ActivityLine from "./ActivityLine";
 import FrequentFlyerSuggestions from "./FrequentFlyerSuggestions";
 import LoyaltyCardForm, { type CardDomain, type CardPrefill } from "./LoyaltyCardForm";
 import MaskedNumber from "./MaskedNumber";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 
 interface Props {
   domain: CardDomain;
@@ -35,6 +36,7 @@ export default function LoyaltyCardSection({
   onChanged,
 }: Props): JSX.Element {
   const { t } = useTranslation(["loyalty", "common"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const [editing, setEditing] = useState<Editing>(null);
   const [error, setError] = useState<string | null>(null);
   const [savedSignal, setSavedSignal] = useState(0);
@@ -46,7 +48,8 @@ export default function LoyaltyCardSection({
   };
 
   const remove = async (card: LoyaltyMembership): Promise<void> => {
-    if (!window.confirm(t("loyalty:confirmDelete", { name: card.programName }))) return;
+    const message = t("loyalty:confirmDelete", { name: card.programName });
+    if (!(await askConfirm({ message, destructive: true }))) return;
     setError(null);
     try {
       await deleteLoyaltyMembership(card.id);
@@ -159,6 +162,7 @@ export default function LoyaltyCardSection({
           onAdopt={(prefill) => setEditing({ kind: "new", prefill })}
         />
       )}
+      {confirmDialog}
     </SectionCard>
   );
 }

@@ -3,6 +3,7 @@ import { adminApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { logErrorCopy } from "../../components/Admin/logErrorCopy";
 import type { ToastType } from "../../store/toastStore";
+import type { ConfirmRequest } from "../../hooks/useConfirmDialog";
 import type {
   LogFileInfo,
   LoggingConfigResponse,
@@ -10,6 +11,7 @@ import type {
 } from "../../shared/logContract";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
+type AskConfirm = (request: ConfirmRequest) => Promise<boolean>;
 
 /**
  * The admin page's log section: its state and its handlers.
@@ -20,7 +22,9 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  */
 export function useLoggingAdmin(
   t: Translate,
-  addToast: (type: ToastType, message: string) => void
+  addToast: (type: ToastType, message: string) => void,
+  /** The page's in-page confirm dialog (`useConfirmDialog`), never `window.confirm`. */
+  askConfirm: AskConfirm
 ) {
   const [loggingConfig, setLoggingConfig] = useState<LoggingConfigResponse | null>(null);
   const [logFiles, setLogFiles] = useState<LogFileInfo[]>([]);
@@ -92,7 +96,8 @@ export function useLoggingAdmin(
   };
 
   const handleDeleteLogFile = async (filename: string): Promise<void> => {
-    if (!confirm(t("admin:prompts.confirmDeleteLog", { filename }))) return;
+    const message = t("admin:prompts.confirmDeleteLog", { filename });
+    if (!(await askConfirm({ message, destructive: true }))) return;
     try {
       await adminApi.deleteLogFile(filename);
       addToast("success", t("admin:toasts.logFileDeleted"));
@@ -104,7 +109,8 @@ export function useLoggingAdmin(
   };
 
   const handleCleanupLogs = async (): Promise<void> => {
-    if (!confirm(t("admin:prompts.confirmCleanupLogs"))) return;
+    const message = t("admin:prompts.confirmCleanupLogs");
+    if (!(await askConfirm({ message, destructive: true }))) return;
     try {
       const result = await adminApi.cleanupLogs();
       addToast(

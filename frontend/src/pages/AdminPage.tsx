@@ -13,6 +13,7 @@ import { DOMAINS } from "../shared/domains";
 import { useTranslation } from "../hooks/useTranslation";
 import { copyToClipboard } from "../lib/clipboard";
 import { useLoggingAdmin } from "./Admin/useLoggingAdmin";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
 import { normalizeSectionId } from "../lib/sectionAliases";
 import type { ActiveSection, TabId } from "./Admin/adminSections";
 import { TAB_FOR_SECTION, LAZY_ADMIN_SECTIONS } from "./Admin/adminSections";
@@ -45,6 +46,7 @@ function getErrorMessage(_error: unknown, fallback: string): string {
 
 export default function AdminPage(): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const addToast = useToastStore((state) => state.addToast);
   const [searchParams, setSearchParams] = useSearchParams();
   // The sections column the deep-link aligner's ResizeObserver watches (see
@@ -126,7 +128,7 @@ export default function AdminPage(): JSX.Element {
     handleDownloadLogFile,
     handleDeleteLogFile,
     handleCleanupLogs,
-  } = useLoggingAdmin(t, addToast);
+  } = useLoggingAdmin(t, addToast, askConfirm);
   const [globalApiKeys, setGlobalApiKeys] = useState<GlobalApiKeys | null>(null);
   const [savingGlobalApiKeys, setSavingGlobalApiKeys] = useState(false);
   const [ollamaTestState, setOllamaTestState] = useState<{
@@ -276,9 +278,7 @@ export default function AdminPage(): JSX.Element {
   };
 
   const handleExportData = async (): Promise<void> => {
-    if (!confirm(t("admin:prompts.confirmExport"))) {
-      return;
-    }
+    if (!(await askConfirm({ message: t("admin:prompts.confirmExport") }))) return;
     try {
       const data = await adminApi.exportAllData();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -624,6 +624,7 @@ export default function AdminPage(): JSX.Element {
           )}
         </main>
       </div>
+      {confirmDialog}
     </AppShell>
   );
 }

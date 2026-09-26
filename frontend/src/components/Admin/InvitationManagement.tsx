@@ -1,5 +1,6 @@
 import { format } from "date-fns";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 
 export interface Invitation {
   id: string;
@@ -49,9 +50,10 @@ export default function InvitationManagement({
   onRevoke,
 }: InvitationManagementProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
 
-  const handleRevoke = (id: string): void => {
-    if (window.confirm(t("admin:invitations.confirmRevoke"))) {
+  const handleRevoke = async (id: string): Promise<void> => {
+    if (await askConfirm({ message: t("admin:invitations.confirmRevoke"), destructive: true })) {
       onRevoke(id);
     }
   };
@@ -205,6 +207,7 @@ export default function InvitationManagement({
           </tbody>
         </table>
       </div>
+      {confirmDialog}
     </div>
   );
 }

@@ -16,6 +16,8 @@ import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../hooks/usePlacesVisible";
 import { useTranslation } from "../hooks/useTranslation";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
+import { DetailRow, OpenFullLink } from "../components/Trips/TimelineDetailParts";
 import type { Booking, Trip, TripJournalEntry, TripStop } from "../types";
 import TripDeleteConfirm from "../components/Trips/TripDeleteConfirm";
 import AppShell from "../components/ui/AppShell";
@@ -330,6 +332,7 @@ interface TimelineTabProps {
 
 function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
+  const { confirmDelete, confirmDialog } = useConfirmDialog();
   // Both the user's domain choice and the instance beta flag, via the one
   // hook that combines them — see hooks/usePlacesVisible.ts.
   const poiEnabled = usePlacesVisible();
@@ -412,7 +415,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
   const empty = events.length === 0;
 
   const handleDeleteJournal = async (entry: TripJournalEntry): Promise<void> => {
-    if (!window.confirm(t("trips:detail.timeline.deleteJournalConfirm"))) return;
+    if (!(await confirmDelete(t("trips:detail.timeline.deleteJournalConfirm")))) return;
     try {
       await tripsApi.deleteJournalEntry(trip.id, entry.id);
       addToast("success", t("trips:detail.timeline.deletedJournal"));
@@ -423,9 +426,8 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
   };
 
   const handleDeleteStop = async (stop: TripStop): Promise<void> => {
-    if (!window.confirm(t("trips:detail.timeline.deleteStopConfirm", { title: stop.title }))) {
-      return;
-    }
+    const question = t("trips:detail.timeline.deleteStopConfirm", { title: stop.title });
+    if (!(await confirmDelete(question))) return;
     try {
       await tripsApi.deleteStop(trip.id, stop.id);
       addToast("success", t("trips:detail.timeline.deletedStop"));
@@ -589,6 +591,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
           }}
         />
       )}
+      {confirmDialog}
     </>
   );
 }
@@ -717,36 +720,6 @@ function stopClock(value: string | null | undefined): string | null {
   const d = new Date(value);
   if (Number.isNaN(d.getTime())) return null;
   return d.toISOString().slice(11, 16);
-}
-
-function DetailRow({
-  label,
-  value,
-}: {
-  label: string;
-  value: React.ReactNode;
-}): JSX.Element | null {
-  if (value === null || value === undefined || value === "") return null;
-  return (
-    <div className="flex gap-2 text-xs py-0.5">
-      <span style={{ color: "var(--text-muted)", minWidth: 110 }}>{label}</span>
-      <span style={{ color: "var(--text-primary)" }}>{value}</span>
-    </div>
-  );
-}
-
-/** The link out of the panel. Always a sibling of the toggle button, never a
- *  child of it — see the note in ExpandableEventCard. */
-function OpenFullLink({ to, label }: { to: string; label: string }): JSX.Element {
-  return (
-    <Link
-      to={to}
-      className="inline-block mt-2 rounded-lg px-3 py-1.5 text-xs font-medium"
-      style={{ border: "1px solid var(--accent)", color: "var(--accent)" }}
-    >
-      {label} →
-    </Link>
-  );
 }
 
 function FlightCard({

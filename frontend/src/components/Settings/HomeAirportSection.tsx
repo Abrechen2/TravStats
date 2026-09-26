@@ -7,6 +7,7 @@ import { settingsApi, type HomeAirportEntry } from "../../lib/api";
 import type { Airport } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 
 function todayIso(): string {
   return new Date().toISOString().slice(0, 10);
@@ -14,6 +15,7 @@ function todayIso(): string {
 
 export default function HomeAirportSection(): JSX.Element {
   const { t } = useTranslation(["settings", "common"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const addToast = useToastStore((s) => s.addToast);
 
   const [history, setHistory] = useState<HomeAirportEntry[]>([]);
@@ -69,7 +71,8 @@ export default function HomeAirportSection(): JSX.Element {
   };
 
   const handleDelete = async (index: number): Promise<void> => {
-    if (!window.confirm(t("settings:homeAirport.confirmDelete"))) return;
+    const message = t("settings:homeAirport.confirmDelete");
+    if (!(await askConfirm({ message, destructive: true }))) return;
     setSaving(true);
     try {
       const { history: updated } = await settingsApi.deleteHomeAirport(index);
@@ -225,6 +228,7 @@ export default function HomeAirportSection(): JSX.Element {
           )}
         </>
       )}
+      {confirmDialog}
     </SectionCard>
   );
 }
