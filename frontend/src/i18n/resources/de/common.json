@@ -312,5 +312,11 @@
     "usage_one": "1-mal verwendet",
     "usage_other": "{{count}}-mal verwendet"
   },
-  "suggestionChip": "{{field}} {{value}} übernehmen"
+  "suggestionChip": "{{field}} {{value}} übernehmen",
+  "demoBetaNotice": {
+    "title": "Beta-Funktionen sind eingeschaltet",
+    "body": "In dieser Demo sind die Beta-Funktionen eingeschaltet. Was du hier siehst, kann sich noch ändern – dein Feedback ist willkommen.",
+    "listTitle": "Dazu gehören:",
+    "dismiss": "Verstanden"
+  }
 }
