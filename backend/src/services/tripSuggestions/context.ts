@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import type { DomainKey } from "../../shared/domains";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { mostVisitedIata } from "../../shared/photoScan";
+import { profileZoneFromSettings } from "../../shared/time/profileZone";
 import { getHomeAirportAt, type HomeAirportEntry } from "../../utils/homeAirport";
 import { getCachedAirports } from "../airportCache";
 import { visibleDomainKeys } from "../domainVisibility";
@@ -31,13 +32,13 @@ export async function readUserScope(
     }),
     getInstanceSettings(),
   ]);
-  const display = (settings?.data as { display?: { timezone?: unknown } } | null)?.display;
+  const profile = profileZoneFromSettings(settings?.data);
   return {
     // The instance's beta gate applies on the server because a proposal is
     // SHOWN: a ride inside a trip suggestion would put a domain on screen that
     // the reader's instance hides everywhere else.
     domains: visibleDomainKeys(settings?.enabledDomains, instance.betaFeaturesEnabled),
-    profileZone: typeof display?.timezone === "string" ? display.timezone : null,
+    profileZone: profile.source === "profile" ? profile.zone : null,
   };
 }
 
