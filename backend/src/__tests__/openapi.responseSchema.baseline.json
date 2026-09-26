@@ -32,7 +32,6 @@
   "GET /pending-updates",
   "GET /pending-updates/statistics",
   "GET /pending-updates/{id}",
-  "GET /photo-journeys",
   "GET /place-lists/curated",
   "GET /place-lists/curated/{key}/progress",
   "GET /place-lists/curated/{key}/suggestions",

@@ -126,17 +126,36 @@ router.put(
   }
 );
 
+/**
+ * What to call a finding (forgejo#132 item 20) — so a place find is not titled
+ * "Warst du hier?". Resolved from what is ALREADY stored, never by a lookup per
+ * request: the own place a `place`/`stay` finding points at, else the city and
+ * then the country the scan's reverse lookup stored. Null when none is known.
+ * The place must be the caller's; the scan only ever writes their own, but a
+ * name is read out of the database here, so the check costs nothing.
+ */
+function withNames<T extends { place: { name: string; userId: string } | null }>(
+  journey: T & { city: string | null; countryName: string | null },
+  userId: string
+) {
+  const { place, ...row } = journey;
+  const placeName = place && place.userId === userId ? place.name : null;
+  return { ...row, placeName, label: placeName ?? row.city ?? row.countryName ?? null };
+}
+
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const parsed = listQuerySchema.safeParse(req.query);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
+    const userId = req.userId!;
     const journeys = await prisma.photoJourney.findMany({
-      where: { userId: req.userId!, status: parsed.data.status },
+      where: { userId, status: parsed.data.status },
       orderBy: { startDate: "desc" },
+      include: { place: { select: { name: true, userId: true } } },
     });
 
-    res.json({ success: true, data: journeys });
+    res.json({ success: true, data: journeys.map((j) => withNames(j, userId)) });
   } catch (err) {
     next(err);
   }
