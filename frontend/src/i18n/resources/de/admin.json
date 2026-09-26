@@ -533,6 +533,10 @@
       "templateFirst": "Vorlagen zuerst, KI als Rückfall (empfohlen)",
       "llmFirst": "KI zuerst, Vorlagen als Rückfall",
       "hint": "Gilt für Flüge, Unterkünfte, Kreuzfahrten und Orte gleichermaßen. Gemessen am 17.09.2026 an 31 Flug-Mails: die Vorlagen lasen alle in unter einer Sekunde, das Sprachmodell brauchte 19 Minuten und übersah drei. „KI zuerst\" lohnt sich, wenn deine Absender von keiner Vorlage abgedeckt sind."
+    },
+    "userPermissions": {
+      "title": "Benutzerrechte",
+      "allowUserApiKeys": "Benutzer dürfen eigene API-Schlüssel für Flugdaten hinterlegen (Airlabs, Aviationstack, OpenSky)"
     }
   },
   "backup": {

@@ -22,6 +22,13 @@ interface AirportAutocompleteProps {
  * change handler compares the typed text against this to decide whether the
  * user has abandoned the selection, and a mismatch there silently clears the
  * field on the next keystroke.
+ *
+ * The name is the catalogue's, and the catalogue (OurAirports) names every
+ * airport in English — "MUC — Munich Airport" in a German UI (acceptance
+ * 2026-09-26). There is no localized name to prefer: `airportDisplayName`
+ * (backend utils/airportDisplay.ts) only shortens that English name or uses
+ * the served city from AeroDataBox, which is not localized either. A German
+ * name needs a localized source in the catalogue first.
  */
 export function airportInputLabel(airport: Pick<Airport, "iata" | "icao" | "name">): string {
   const code = airport.iata || airport.icao;

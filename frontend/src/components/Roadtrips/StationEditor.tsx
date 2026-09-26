@@ -5,6 +5,7 @@ import Button from "../ui/Button";
 import IconButton from "../ui/IconButton";
 import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useDisplayFormat } from "../../lib/displayFormat";
 import { stationAfter, stationWarnings } from "../../lib/roadtrip/roadtripView";
 import type { RoadtripStation } from "../../types/roadtrip";
 import type { TourLeg } from "../../types/tour";
@@ -69,6 +70,7 @@ export default function StationEditor({
   ) => void;
 }): JSX.Element {
   const { t } = useTranslation(["roadtrips"]);
+  const display = useDisplayFormat();
   const { drafts, status, change, flush } = useStationAutosave({
     routeId,
     initial: stations.map(toEditorStation),
@@ -194,7 +196,10 @@ export default function StationEditor({
                     {[
                       t(`roadtrips:editor.choice.${s.night.kind}.label`),
                       s.stayLabel,
-                      s.startDate?.slice(0, 10),
+                      // A station day is a calendar day: shown in the user's
+                      // date format, read in UTC so it does not shift.
+                      s.startDate &&
+                        display.date(`${s.startDate.slice(0, 10)}T00:00:00Z`, { timeZone: "UTC" }),
                     ]
                       .filter(Boolean)
                       .join(" · ")}

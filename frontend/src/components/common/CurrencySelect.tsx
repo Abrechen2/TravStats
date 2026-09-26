@@ -1,7 +1,7 @@
 import { useMemo, useState, type JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ECB_CURRENCIES, ISO_4217 } from "../../shared/currencies";
-import { getCurrencyDisplayName } from "../../lib/units";
+import { currencyOptionLabel, getCurrencyDisplayName } from "../../lib/units";
 
 interface CurrencySelectProps {
   value: string;
@@ -39,7 +39,9 @@ export default function CurrencySelect({
   "aria-label": ariaLabel,
   disabled,
 }: CurrencySelectProps): JSX.Element {
-  const { t } = useTranslation();
+  const { t, i18n } = useTranslation();
+  // The UI language names the currencies, not the browser's.
+  const locale = i18n?.language;
   const [query, setQuery] = useState("");
 
   const all = useMemo(() => (restrictTo ? [...restrictTo] : Object.keys(ISO_4217)), [restrictTo]);
@@ -59,14 +61,14 @@ export default function CurrencySelect({
     // because that is the word a user knows.
     const hit = (code: string): boolean =>
       code.toLowerCase().includes(needle) ||
-      getCurrencyDisplayName(code).toLowerCase().includes(needle);
+      getCurrencyDisplayName(code, locale).toLowerCase().includes(needle);
     return {
       frequent: frequent.filter(hit),
       rest: all.filter((c) => !frequent.includes(c) && hit(c)),
     };
-  }, [query, frequent, all]);
+  }, [query, frequent, all, locale]);
 
-  const label = (code: string): string => `${code} — ${getCurrencyDisplayName(code)}`;
+  const label = (code: string): string => currencyOptionLabel(code, locale);
 
   return (
     <div className={className}>

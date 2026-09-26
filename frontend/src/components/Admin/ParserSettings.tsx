@@ -334,7 +334,9 @@ export default function ParserSettings({
 
       {/* User API Key Permissions */}
       <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-(--text-primary) mb-2">User Permissions</h3>
+        <h3 className="text-lg font-semibold text-(--text-primary) mb-2">
+          {t("admin:parserSettings.userPermissions.title")}
+        </h3>
         <div className="flex items-center gap-3">
           <input
             type="checkbox"
@@ -346,7 +348,7 @@ export default function ParserSettings({
             className="w-4 h-4 rounded-sm border-border"
           />
           <label htmlFor="allowUserApiKeys" className="text-sm text-(--text-primary)">
-            Allow users to add their own flight data API keys (Airlabs, Aviationstack, OpenSky)
+            {t("admin:parserSettings.userPermissions.allowUserApiKeys")}
           </label>
         </div>
       </div>

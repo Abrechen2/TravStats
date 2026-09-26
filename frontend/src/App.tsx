@@ -11,6 +11,7 @@ import AirportSeedingModal from "./components/AirportSeedingModal";
 import { setupApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
+import LoadingFallback from "./components/LoadingFallback";
 import { DomainRouteGuard } from "./components/DomainRouteGuard";
 import { BetaFeatureRouteGuard } from "./components/BetaFeatureRouteGuard";
 import { useWhatsNew } from "./hooks/useWhatsNew";
@@ -65,25 +66,6 @@ const ResetPasswordPage = lazy(() => import("./pages/ResetPasswordPage"));
 const ForceChangePasswordPage = lazy(() => import("./pages/ForceChangePasswordPage"));
 const TwoFactorChallengePage = lazy(() => import("./pages/TwoFactorChallengePage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
-
-function LoadingFallback(): JSX.Element {
-  return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{ background: "var(--bg-base)" }}
-    >
-      <div className="text-center">
-        <div
-          className="text-2xl font-display font-bold mb-2"
-          style={{ color: "var(--text-primary)" }}
-        >
-          Loading...
-        </div>
-        <div style={{ color: "var(--text-muted)" }}>Please wait...</div>
-      </div>
-    </div>
-  );
-}
 
 function AppContent() {
   const { user, _hasHydrated } = useAuthStore();

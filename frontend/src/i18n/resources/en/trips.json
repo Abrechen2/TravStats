@@ -155,7 +155,9 @@
     "map": {
       "empty": "This journey has no geo data yet — add stops with coordinates or flights / cruises with route data.",
       "clickHint": "Tip: click a route or point to zoom in.",
-      "toggleProjectionHint": "Toggle between globe and flat projection"
+      "toggleProjectionHint": "Toggle between globe and flat projection",
+      "projectionGlobe": "🌐 Globe",
+      "projectionFlat": "🗺 Flat"
     },
     "logistics": {
       "flights": "Flights",
