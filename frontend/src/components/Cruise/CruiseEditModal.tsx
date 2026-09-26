@@ -1,5 +1,6 @@
 import { minorUnits } from "../../shared/currencies";
 import Modal from "../Modal";
+import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -228,10 +229,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
           : await cruiseApi.update((cruise as Cruise).id, input);
       await onSaved(saved);
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        t("form.saveError");
-      setError(msg);
+      setError(saveErrorMessage(err, t, "cruise:form.saveError"));
     } finally {
       setSaving(false);
     }

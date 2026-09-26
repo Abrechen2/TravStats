@@ -121,6 +121,14 @@
     "unknown": "Unbekannt",
     "notAvailable": "k.A."
   },
+  "saveErrors": {
+    "validation": "Einige Angaben sind ungültig. Bitte prüfe die markierten Felder und versuche es erneut.",
+    "duplicate": "Ein Eintrag mit diesen Angaben existiert bereits.",
+    "dbUnavailable": "Die Datenbank ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
+    "rateLimited": "Zu viele Anfragen in kurzer Zeit. Bitte warte einen Moment.",
+    "demo": "Im Demo-Konto lässt sich das nicht speichern.",
+    "network": "Der Server ist nicht erreichbar. Bitte prüfe die Verbindung."
+  },
   "messages": {
     "success": "Erfolg",
     "error": "Fehler",

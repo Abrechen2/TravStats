@@ -65,15 +65,36 @@ describe("CruiseEditModal", () => {
     expect(onSaved).toHaveBeenCalled();
   });
 
-  it("shows validation errors from server", async () => {
+  // The server's `error` is English prose or zod's JSON issue dump; the form
+  // printed it verbatim into a German page. It shows the code's sentence now.
+  it("shows a refused save in the reader's language, never the server's text", async () => {
     vi.mocked(cruiseApi.create).mockRejectedValue({
-      response: { data: { error: "Invalid payload" } },
+      response: {
+        status: 400,
+        data: {
+          error: '[{"code":"invalid_type","path":["cabinNumber"]}]',
+          code: "VALIDATION_FAILED",
+        },
+      },
     });
 
     render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
 
-    expect(await screen.findByText(/invalid payload/i)).toBeInTheDocument();
+    expect(await screen.findByText("common:saveErrors.validation")).toBeInTheDocument();
+    expect(screen.queryByText(/invalid_type/)).not.toBeInTheDocument();
+  });
+
+  it("falls back to the form's own message for an error without a code", async () => {
+    vi.mocked(cruiseApi.create).mockRejectedValue({
+      response: { status: 404, data: { error: "Trip not found" } },
+    });
+
+    render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+
+    expect(await screen.findByText("cruise:form.saveError")).toBeInTheDocument();
+    expect(screen.queryByText(/trip not found/i)).not.toBeInTheDocument();
   });
 
   const baseCruise: Cruise = {

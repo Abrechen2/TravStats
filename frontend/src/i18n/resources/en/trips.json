@@ -389,6 +389,16 @@
         "confirm": "Delete track"
       },
       "deleteError": "The track could not be deleted",
+      "errors": {
+        "fileTooLarge": "The file is too large for a track.",
+        "fileUnreadable": "The file cannot be read as GPX, TCX or FIT.",
+        "noTimestamps": "The recording has no timestamps, so it cannot be placed in time.",
+        "alreadyImported": "This recording is already on the tour.",
+        "noDatedStops": "This section's stops have no dates, so no time window for Dawarich can be derived.",
+        "windowInvalid": "The time window ends before it starts.",
+        "windowEmpty": "Dawarich has no location data for this time window.",
+        "tooFewPoints": "Dawarich has only one location point for this time window – too few for a track."
+      },
       "pointCount_one": "{{count}} point",
       "pointCount_other": "{{count}} points",
       "truncated": "Incomplete",

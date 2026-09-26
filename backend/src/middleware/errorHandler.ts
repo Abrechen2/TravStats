@@ -73,7 +73,26 @@ export type ApiErrorCode =
    *  answer. Kept apart from "nothing found", which the UI used to say. */
   | "UPSTREAM_TIMEOUT"
   | "UPSTREAM_RATE_LIMITED"
-  | "UPSTREAM_UNAVAILABLE";
+  | "UPSTREAM_UNAVAILABLE"
+  /** A request body failed its schema. Sent on every ZodError answer, so a
+   *  form shows its own sentence instead of zod's JSON issue dump. */
+  | "VALIDATION_FAILED"
+  /** Tour track upload: the file is over the size limit. */
+  | "TRACK_FILE_TOO_LARGE"
+  /** Tour track upload: not readable as GPX, TCX or FIT. */
+  | "TRACK_FILE_UNREADABLE"
+  /** Tour track upload: a recording without timestamps cannot be placed in time. */
+  | "TRACK_NO_TIMESTAMPS"
+  /** Tour track upload: this recording is already on the tour. */
+  | "TRACK_ALREADY_IMPORTED"
+  /** Dawarich pull: the section has no dated stops to derive a window from. */
+  | "DAWARICH_NO_DATED_STOPS"
+  /** Dawarich pull: the resolved window ends before it starts. */
+  | "DAWARICH_WINDOW_INVALID"
+  /** Dawarich pull: Dawarich answered, with no points in the window. */
+  | "DAWARICH_WINDOW_EMPTY"
+  /** Dawarich pull: a single point in the window — too few for a track. */
+  | "DAWARICH_TOO_FEW_POINTS";
 
 interface AuthRequest extends Request {
   user?: {
@@ -209,6 +228,7 @@ export const errorHandler = async (
   if (err instanceof ZodError) {
     return res.status(400).json({
       error: "Validation error",
+      code: "VALIDATION_FAILED" satisfies ApiErrorCode,
       details: err.issues.map((e) => ({
         field: e.path.join("."),
         message: e.message,

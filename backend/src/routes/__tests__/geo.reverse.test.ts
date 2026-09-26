@@ -1,5 +1,5 @@
 jest.mock("../../services/geo/nominatim", () => ({
-  reverseGeocode: jest.fn(),
+  reverseGeocodeDetailed: jest.fn(),
 }));
 
 import request from "supertest";
@@ -7,9 +7,9 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
-import { reverseGeocode } from "../../services/geo/nominatim";
+import { reverseGeocodeDetailed } from "../../services/geo/nominatim";
 
-const mockReverse = reverseGeocode as jest.Mock;
+const mockReverse = reverseGeocodeDetailed as jest.Mock;
 
 /**
  * GET /geo/reverse — coordinates → address parts, for the map-pick modal
@@ -45,10 +45,13 @@ describe("GET /api/v1/geo/reverse", () => {
 
   it("returns the resolved address parts", async () => {
     mockReverse.mockResolvedValue({
-      name: "Hotel Adlon Kempinski",
-      address: "Unter den Linden 77",
-      city: "Berlin",
-      country: "Deutschland",
+      parts: {
+        name: "Hotel Adlon Kempinski",
+        address: "Unter den Linden 77",
+        city: "Berlin",
+        country: "Deutschland",
+      },
+      degraded: false,
     });
 
     const res = await request(app)
@@ -67,13 +70,26 @@ describe("GET /api/v1/geo/reverse", () => {
   });
 
   it("answers 200 with data:null when nothing resolves — an empty sea pin is not an error", async () => {
-    mockReverse.mockResolvedValue(null);
+    mockReverse.mockResolvedValue({ parts: null, degraded: false });
 
     const res = await request(app).get("/api/v1/geo/reverse?lat=0&lon=0").set("Cookie", authCookie);
 
     expect(res.status).toBe(200);
     expect(res.body.success).toBe(true);
     expect(res.body.data).toBeNull();
+    expect(res.body.degraded).toBe(false);
+  });
+
+  it("marks a failed lookup degraded, so it is not read as open water", async () => {
+    mockReverse.mockResolvedValue({ parts: null, degraded: true });
+
+    const res = await request(app)
+      .get("/api/v1/geo/reverse?lat=52.5&lon=13.4")
+      .set("Cookie", authCookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.data).toBeNull();
+    expect(res.body.degraded).toBe(true);
   });
 
   it("rejects out-of-range coordinates with 400", async () => {

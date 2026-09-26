@@ -69,7 +69,13 @@ function handleGpxUpload(req: Request, res: Response, next: NextFunction): void 
     if (err) {
       if (err instanceof multer.MulterError && err.code === "LIMIT_FILE_SIZE") {
         const maxMb = FILE_LIMITS.GPX_TRACK_MAX_SIZE / (1024 * 1024);
-        return next(new AppError(`Track file too large — maximum size is ${maxMb} MB`, 400));
+        return next(
+          new AppError(
+            `Track file too large — maximum size is ${maxMb} MB`,
+            400,
+            "TRACK_FILE_TOO_LARGE"
+          )
+        );
       }
       const message = err instanceof Error ? err.message : "Upload failed";
       return next(new AppError(message, 400));
@@ -234,12 +240,20 @@ router.post(
 
       const file = await parseTrackFile(req.file.buffer, req.file.originalname);
       if (!file) {
-        throw new AppError("The file could not be read as GPX, TCX or FIT", 400);
+        throw new AppError(
+          "The file could not be read as GPX, TCX or FIT",
+          400,
+          "TRACK_FILE_UNREADABLE"
+        );
       }
 
       const ingested = ingestTrack(file.track);
       if (!ingested) {
-        throw new AppError("This recording has no timestamps, so it cannot be placed in time", 400);
+        throw new AppError(
+          "This recording has no timestamps, so it cannot be placed in time",
+          400,
+          "TRACK_NO_TIMESTAMPS"
+        );
       }
 
       const source = trackSource.parse(fields.data.origin ?? file.format);
@@ -260,7 +274,11 @@ router.post(
         });
       } catch (error) {
         if (isDuplicateExternalRef(error)) {
-          throw new AppError("This recording has already been imported into this tour", 409);
+          throw new AppError(
+            "This recording has already been imported into this tour",
+            409,
+            "TRACK_ALREADY_IMPORTED"
+          );
         }
         throw error;
       }
@@ -327,7 +345,7 @@ router.post(
 
       const stops = await prisma.tripStop.findMany({
         where: { routeId },
-        select: { startDate: true, endDate: true },
+        select: { startDate: true, endDate: true, lat: true, lon: true },
       });
       const window = resolveDawarichWindow(stops, {
         startedAt: body.startedAt,
@@ -336,11 +354,16 @@ router.post(
       if (!window) {
         throw new AppError(
           "This section has no dated stops to derive a time window from — provide startedAt/endedAt",
-          400
+          400,
+          "DAWARICH_NO_DATED_STOPS"
         );
       }
       if (window.startAt.getTime() > window.endAt.getTime()) {
-        throw new AppError("The resolved time window is invalid (end before start)", 400);
+        throw new AppError(
+          "The resolved time window is invalid (end before start)",
+          400,
+          "DAWARICH_WINDOW_INVALID"
+        );
       }
 
       const connection = await getDawarichConnection(userId);
@@ -367,7 +390,11 @@ router.post(
           return;
         }
         if (error instanceof EmptyDawarichWindowError) {
-          throw new AppError(error.message, 409);
+          throw new AppError(
+            error.message,
+            409,
+            error.reason === "empty" ? "DAWARICH_WINDOW_EMPTY" : "DAWARICH_TOO_FEW_POINTS"
+          );
         }
         throw error;
       }

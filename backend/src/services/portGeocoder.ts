@@ -88,17 +88,35 @@ function toPort(r: NominatimResult): GeocodedPort | null {
 }
 
 /**
- * Geocode a free-text place name into candidate ports. Returns [] on any
- * error (network, timeout, malformed response) — the caller treats this as a
- * soft fallback, never a hard failure.
+ * Why a geocode produced no candidates although it may have had some.
+ * `rate_limited` = Nominatim answered 429 (its 1 req/s policy, or a shared
+ * egress IP); `unavailable` = any other failure (network, timeout, 5xx,
+ * malformed body). A stable code, mapped to copy in the UI.
  */
-export async function geocodePort(query: string, limit = 5): Promise<GeocodedPort[]> {
+export type PortGeocodeFailure = "rate_limited" | "unavailable";
+
+export interface PortGeocodeOutcome {
+  ports: GeocodedPort[];
+  /** null = the geocoder answered; an empty `ports` then really means "no match". */
+  failure: PortGeocodeFailure | null;
+}
+
+/**
+ * Geocode a free-text place name into candidate ports.
+ *
+ * A failure is REPORTED, not folded into an empty list: before 2026-09-26 a
+ * Nominatim 429 came back as "no candidates", and the picker offered only
+ * "add the port by hand" with no hint that the lookup had not happened at
+ * all. Failures are never cached, so the next keystroke tries again.
+ */
+export async function geocodePort(query: string, limit = 5): Promise<PortGeocodeOutcome> {
   const q = query.trim();
-  if (q.length < 2) return [];
+  if (q.length < 2) return { ports: [], failure: null };
 
   const key = q.toLowerCase();
   const cached = cache.get(key);
-  if (cached && Date.now() - cached.at < CACHE_TTL_MS) return cached.ports;
+  if (cached && Date.now() - cached.at < CACHE_TTL_MS)
+    return { ports: cached.ports, failure: null };
 
   try {
     await throttle();
@@ -113,14 +131,17 @@ export async function geocodePort(query: string, limit = 5): Promise<GeocodedPor
       });
       if (!res.ok) {
         logger.warn({ status: res.status, q }, "[Port Geocoder] Nominatim non-OK response");
-        return [];
+        return { ports: [], failure: res.status === 429 ? "rate_limited" : "unavailable" };
       }
       raw = await res.json();
     } finally {
       clearTimeout(timer);
     }
 
-    if (!Array.isArray(raw)) return [];
+    if (!Array.isArray(raw)) {
+      logger.warn({ q }, "[Port Geocoder] Nominatim answered with a non-array body");
+      return { ports: [], failure: "unavailable" };
+    }
     const ports = (raw as NominatimResult[])
       .map(toPort)
       .filter((p): p is GeocodedPort => p !== null);
@@ -136,9 +157,15 @@ export async function geocodePort(query: string, limit = 5): Promise<GeocodedPor
     });
 
     cache.set(key, { at: Date.now(), ports: deduped });
-    return deduped;
+    return { ports: deduped, failure: null };
   } catch (err) {
     logger.warn({ err, q }, "[Port Geocoder] geocode failed");
-    return [];
+    return { ports: [], failure: "unavailable" };
   }
+}
+
+/** Test seam: forget cached lookups and the throttle clock. */
+export function resetPortGeocoderForTests(): void {
+  cache.clear();
+  lastRequestAt = 0;
 }

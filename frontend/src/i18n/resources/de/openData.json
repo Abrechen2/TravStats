@@ -14,7 +14,8 @@
     "distance": "Strecke",
     "ascent": "Aufstieg",
     "descent": "Abstieg",
-    "note": "Geländehöhen von Open-Meteo entlang der geplanten Strecke – berechnet, nicht gemessen."
+    "note": "Geländehöhen von Open-Meteo entlang der geplanten Strecke – berechnet, nicht gemessen.",
+    "unavailable": "Das Höhenprofil ließ sich gerade nicht berechnen – der Höhendienst (Open-Meteo) antwortet nicht. Später erneut öffnen."
   },
   "weather": {
     "measuredAt": "Wetter in {{place}}",
@@ -63,7 +64,8 @@
     "title": "Aus Wikipedia",
     "readMore": "Weiterlesen auf Wikipedia",
     "englishArticle": "Artikel auf Englisch",
-    "license": "Text: Wikipedia, CC BY-SA 4.0"
+    "license": "Text: Wikipedia, CC BY-SA 4.0",
+    "unavailable": "Wikipedia ist gerade nicht erreichbar. Später erneut öffnen."
   },
   "lodging": {
     "enrich": "Aus OpenStreetMap ergänzen",

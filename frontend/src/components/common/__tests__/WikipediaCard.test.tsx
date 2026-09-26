@@ -2,7 +2,7 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen } from "@testing-library/react";
 
 import WikipediaCard from "../WikipediaCard";
-import { openDataApi } from "../../../lib/api/openData";
+import { openDataApi, OpenDataUnavailableError } from "../../../lib/api/openData";
 import { useSettingsStore } from "../../../store/settingsStore";
 
 vi.unmock("../../../store/settingsStore");
@@ -26,7 +26,12 @@ const SUMMARY = {
 };
 
 describe("WikipediaCard", () => {
-  beforeEach(() => vi.mocked(openDataApi.placeWikipedia).mockResolvedValue(SUMMARY));
+  // A block body on purpose: an arrow that RETURNS the mock hands vitest a
+  // function, which it then runs as this hook's teardown after every test.
+  beforeEach(() => {
+    vi.mocked(openDataApi.placeWikipedia).mockReset();
+    vi.mocked(openDataApi.placeWikipedia).mockResolvedValue(SUMMARY);
+  });
 
   it("asks nobody while the instance's open data switch is off", () => {
     useSettingsStore.setState({ openDataEnabled: false });
@@ -45,6 +50,15 @@ describe("WikipediaCard", () => {
       SUMMARY.pageUrl
     );
     expect(screen.getByText("openData:wikipedia.license")).toBeInTheDocument();
+  });
+
+  // A Wikipedia outage used to make the card disappear, as if there were no
+  // article (and the server cached that for a day).
+  it("says Wikipedia is unreachable instead of disappearing", async () => {
+    useSettingsStore.setState({ openDataEnabled: true });
+    vi.mocked(openDataApi.placeWikipedia).mockRejectedValue(new OpenDataUnavailableError());
+    render(<WikipediaCard kind="place" id="p1" />);
+    expect(await screen.findByText("openData:wikipedia.unavailable")).toBeInTheDocument();
   });
 
   it("draws nothing for a thing without an article", async () => {

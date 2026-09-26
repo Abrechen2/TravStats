@@ -103,6 +103,7 @@ describe("LocationInput", () => {
       city: "Zürich",
       country: "Switzerland",
       countryCode: "CH",
+      osmValue: "city",
     });
   });
 

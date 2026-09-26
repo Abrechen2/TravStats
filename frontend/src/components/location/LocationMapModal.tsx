@@ -57,6 +57,8 @@ export function LocationMapModal({
   const [hit, setHit] = useState<PlaceSearchResult | null>(null);
   const [resolved, setResolved] = useState<ReverseGeocodeResult | null>(null);
   const [resolving, setResolving] = useState(false);
+  /** The address lookup failed — said as such, never as "no address here". */
+  const [resolveFailed, setResolveFailed] = useState(false);
   /** The named places around a MAP-placed pin — the "what is here?" list. */
   const [pois, setPois] = useState<PlaceSearchResult[]>([]);
   const [query, setQuery] = useState("");
@@ -89,6 +91,7 @@ export function LocationMapModal({
     const requestId = reverseIdRef.current + 1;
     reverseIdRef.current = requestId;
     setResolving(true);
+    setResolveFailed(false);
     const timer = window.setTimeout(() => {
       void (async (): Promise<void> => {
         try {
@@ -99,6 +102,7 @@ export function LocationMapModal({
           if (reverseIdRef.current !== requestId) return;
           logger.warn("LocationMapModal: reverse geocode failed", err);
           setResolved(null);
+          setResolveFailed(true);
         } finally {
           if (reverseIdRef.current === requestId) setResolving(false);
         }
@@ -185,6 +189,10 @@ export function LocationMapModal({
         city: hit.city,
         country: hit.country,
         countryCode: hit.countryCode,
+        // The hit's identity and OSM class travel with it, exactly as from
+        // the inline search — a choice must carry its data.
+        ...(hit.externalRef ? { externalRef: hit.externalRef } : {}),
+        ...(hit.type ? { osmValue: hit.type } : {}),
       });
       return;
     }
@@ -229,7 +237,10 @@ export function LocationMapModal({
             {draft && !resolving && addressLine && (
               <p className="truncate text-[var(--text-primary)]">{addressLine}</p>
             )}
-            {draft && !resolving && !addressLine && !hit && (
+            {draft && !resolving && !addressLine && !hit && resolveFailed && (
+              <p role="status">{t("location:mapModal.addressLookupFailed")}</p>
+            )}
+            {draft && !resolving && !addressLine && !hit && !resolveFailed && (
               <p>{t("location:mapModal.noAddress")}</p>
             )}
           </div>

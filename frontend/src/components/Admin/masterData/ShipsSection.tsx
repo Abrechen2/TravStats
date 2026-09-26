@@ -52,23 +52,26 @@ export default function ShipsSection(): JSX.Element {
     }
     setCreating(true);
     try {
-      const created = await shipsApi.create({
+      const { ship: created, existing } = await shipsApi.create({
         name: newName.trim(),
         cruiseLine: newLine.trim(),
         imo: newImo.trim() || undefined,
         yearBuilt: newYear ? Number.parseInt(newYear, 10) : undefined,
       });
-      addToast("success", t("admin:cruiseMasterData.ship.created"));
-      setShips((prev) => [created, ...prev]);
+      if (existing) {
+        // The catalogue already had it — nothing was created, so the list
+        // must not show it twice.
+        addToast("info", t("admin:cruiseMasterData.ship.alreadyExists", { name: created.name }));
+      } else {
+        addToast("success", t("admin:cruiseMasterData.ship.created"));
+        setShips((prev) => [created, ...prev]);
+      }
       setNewName("");
       setNewLine("");
       setNewImo("");
       setNewYear("");
-    } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        t("admin:cruiseMasterData.ship.createFailed");
-      addToast("error", msg);
+    } catch {
+      addToast("error", t("admin:cruiseMasterData.ship.createFailed"));
     } finally {
       setCreating(false);
     }

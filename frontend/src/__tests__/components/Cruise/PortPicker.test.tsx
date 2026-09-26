@@ -66,7 +66,7 @@ vi.mock("../../../components/location/LocationInput", () => ({
 describe("PortPicker", () => {
   beforeEach(() => {
     vi.clearAllMocks();
-    vi.mocked(portsApi.geocode).mockResolvedValue([]);
+    vi.mocked(portsApi.geocode).mockResolvedValue({ ports: [], failure: null });
   });
 
   it("searches as user types and shows results", async () => {
@@ -200,9 +200,12 @@ describe("PortPicker", () => {
   it("logs and surfaces a translated error when creating a port from a geocoded result fails", async () => {
     vi.mocked(portsApi.search).mockResolvedValue([]);
     const geocodeError = new Error("boom");
-    vi.mocked(portsApi.geocode).mockResolvedValue([
-      { name: "Sunken Port", city: null, country: null, lat: 1, lon: 2, source: "geocoder" },
-    ]);
+    vi.mocked(portsApi.geocode).mockResolvedValue({
+      ports: [
+        { name: "Sunken Port", city: null, country: null, lat: 1, lon: 2, source: "geocoder" },
+      ],
+      failure: null,
+    });
     vi.mocked(portsApi.create).mockRejectedValue(geocodeError);
     render(<PortPicker value={null} onChange={vi.fn()} />);
     await userEvent.type(screen.getByRole("combobox"), "Sunken");
@@ -248,18 +251,43 @@ describe("PortPicker", () => {
     expect(await screen.findByText("picker.searchError")).toBeInTheDocument();
   });
 
+  it("says the online port search was rate-limited instead of 'nothing found'", async () => {
+    vi.mocked(portsApi.search).mockResolvedValue([]);
+    vi.mocked(portsApi.geocode).mockResolvedValue({ ports: [], failure: "rate_limited" });
+    render(<PortPicker value={null} onChange={vi.fn()} />);
+
+    await userEvent.type(screen.getByRole("combobox"), "Portoferraio");
+
+    expect(await screen.findByText("picker.geocodeRateLimited")).toBeInTheDocument();
+    // Adding by hand stays possible — the message explains, it does not block.
+    expect(screen.getByRole("button", { name: /picker\.add_custom_port/ })).toBeInTheDocument();
+  });
+
+  it("says the online port search is unreachable on an outage", async () => {
+    vi.mocked(portsApi.search).mockResolvedValue([]);
+    vi.mocked(portsApi.geocode).mockResolvedValue({ ports: [], failure: "unavailable" });
+    render(<PortPicker value={null} onChange={vi.fn()} />);
+
+    await userEvent.type(screen.getByRole("combobox"), "Portoferraio");
+
+    expect(await screen.findByText("picker.geocodeUnavailable")).toBeInTheDocument();
+  });
+
   it("falls back to the geocoder on an empty local result and persists a picked candidate", async () => {
     vi.mocked(portsApi.search).mockResolvedValue([]);
-    vi.mocked(portsApi.geocode).mockResolvedValue([
-      {
-        name: "Portoferraio",
-        city: "Portoferraio",
-        country: "Italia",
-        lat: 42.81,
-        lon: 10.31,
-        source: "geocoder",
-      },
-    ]);
+    vi.mocked(portsApi.geocode).mockResolvedValue({
+      ports: [
+        {
+          name: "Portoferraio",
+          city: "Portoferraio",
+          country: "Italia",
+          lat: 42.81,
+          lon: 10.31,
+          source: "geocoder",
+        },
+      ],
+      failure: null,
+    });
     vi.mocked(portsApi.create).mockResolvedValue({
       id: 99001,
       name: "Portoferraio",
@@ -291,16 +319,19 @@ describe("PortPicker", () => {
 
   it("shows an error when persisting a geocoder candidate fails", async () => {
     vi.mocked(portsApi.search).mockResolvedValue([]);
-    vi.mocked(portsApi.geocode).mockResolvedValue([
-      {
-        name: "Portoferraio",
-        city: null,
-        country: null,
-        lat: 42.81,
-        lon: 10.31,
-        source: "geocoder",
-      },
-    ]);
+    vi.mocked(portsApi.geocode).mockResolvedValue({
+      ports: [
+        {
+          name: "Portoferraio",
+          city: null,
+          country: null,
+          lat: 42.81,
+          lon: 10.31,
+          source: "geocoder",
+        },
+      ],
+      failure: null,
+    });
     vi.mocked(portsApi.create).mockRejectedValue(new Error("500"));
     render(<PortPicker value={null} onChange={vi.fn()} />);
 

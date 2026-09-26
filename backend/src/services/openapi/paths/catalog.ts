@@ -34,6 +34,15 @@ const port = registry.register(
     .openapi("Port")
 );
 
+const geocodedPort = z.object({
+  name: z.string(),
+  city: z.string().nullable(),
+  country: z.string().nullable(),
+  lat: z.number(),
+  lon: z.number(),
+  source: z.literal("geocoder"),
+});
+
 const ship = registry.register(
   "Ship",
   z
@@ -49,6 +58,12 @@ const ship = registry.register(
     })
     .openapi("Ship")
 );
+
+const shipCreateEnvelope = z.object({
+  success: z.literal(true),
+  data: ship,
+  existing: z.boolean().describe("true = an existing catalogue ship was returned, none created"),
+});
 
 const airline = registry.register(
   "Airline",
@@ -98,16 +113,27 @@ registry.registerPath({
 registry.registerPath({
   method: "get",
   path: "/ports/geocode",
-  summary: "Resolve a port name to catalogue entries",
+  summary: "Geocode a port name the catalogue does not carry",
   description:
-    "Name-first lookup used by the cruise import to turn an unresolved stop into " +
-    "a matched port. Returns an empty list rather than 404 when nothing matches.",
+    "External (OpenStreetMap Nominatim) lookup for a place missing from the port catalogue. " +
+    "Candidates carry no id; POST one to /ports to persist it. Returns an empty list rather " +
+    "than 404 when nothing matches. `degraded: true` means the geocoder itself failed and the " +
+    "empty list is NOT a 'no match'; `reason` then says why (`rate_limited` | `unavailable`).",
   tags: ["Catalogue"],
-  request: { query: z.object({ q: z.string().max(200) }) },
+  request: { query: z.object({ q: z.string().max(100) }) },
   responses: {
     200: {
       description: "Candidate ports",
-      content: { "application/json": { schema: envelope(z.array(port)) } },
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(geocodedPort),
+            degraded: z.boolean(),
+            reason: z.enum(["rate_limited", "unavailable"]).optional(),
+          }),
+        },
+      },
     },
   },
 });
@@ -193,7 +219,9 @@ registry.registerPath({
   path: "/ships",
   summary: "Add a ship to the catalogue",
   description:
-    "Rows whose IMO already exists are skipped by re-seeding, so a user-added ship survives updates.",
+    "Rows whose IMO already exists are skipped by re-seeding, so a user-added ship survives updates. " +
+    "A request that names a ship the catalogue already has — same IMO, or same name and cruise line " +
+    "(case-insensitive) — creates nothing and answers 200 with that ship and `existing: true`.",
   tags: ["Catalogue"],
   request: {
     body: {
@@ -212,7 +240,14 @@ registry.registerPath({
     },
   },
   responses: {
-    201: { description: "Created", content: { "application/json": { schema: envelope(ship) } } },
+    200: {
+      description: "The ship already exists; nothing was created",
+      content: { "application/json": { schema: shipCreateEnvelope } },
+    },
+    201: {
+      description: "Created",
+      content: { "application/json": { schema: shipCreateEnvelope } },
+    },
     400: { description: "Validation failed", content: errorContent },
     403: { description: "Read-scoped token", content: errorContent },
   },
@@ -417,13 +452,18 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             success: z.literal(true),
-            data: z.object({
-              street: z.string().nullable(),
-              houseNumber: z.string().nullable(),
-              postalCode: z.string().nullable(),
-              city: z.string().nullable(),
-              country: z.string().nullable(),
-            }),
+            data: z
+              .object({
+                name: z.string().nullable().optional(),
+                address: z.string().nullable().optional(),
+                city: z.string().nullable().optional(),
+                country: z.string().nullable().optional(),
+              })
+              .nullable()
+              .describe("null = no address at this point, or (with degraded) no answer"),
+            degraded: z
+              .boolean()
+              .describe("true = the geocoder failed; a null data is then NOT 'no address'"),
           }),
         },
       },

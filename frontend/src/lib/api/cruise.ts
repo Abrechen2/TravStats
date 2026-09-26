@@ -157,11 +157,15 @@ export const cruiseApi = {
    * the result. Server caches per-port-pair routes in memory, so repeated
    * calls (and overlapping legs across cruises) are essentially free.
    */
-  getGeometryBatch: async (ids: string[]): Promise<Map<string, CruiseRouteFeatureCollection>> => {
+  getGeometryBatch: async (
+    ids: string[],
+    options: { timeoutMs?: number } = {}
+  ): Promise<Map<string, CruiseRouteFeatureCollection>> => {
     if (ids.length === 0) return new Map();
     const { data } = await api.post<Envelope<Record<string, CruiseRouteFeatureCollection>>>(
       "/cruises/geometry/batch",
-      { ids }
+      { ids },
+      options.timeoutMs !== undefined ? { timeout: options.timeoutMs } : undefined
     );
     return new Map(Object.entries(data.data));
   },
@@ -206,6 +210,24 @@ export interface GeocodedPort {
   source: "geocoder";
 }
 
+/** Why the geocoder produced no candidates — a stable server code (`/ports/geocode`). */
+export type PortGeocodeFailure = "rate_limited" | "unavailable";
+
+export interface PortGeocodeResult {
+  ports: GeocodedPort[];
+  /** null = the geocoder answered, so an empty list really is "no match". */
+  failure: PortGeocodeFailure | null;
+}
+
+/**
+ * `existing: true` = the catalogue already had this ship (same IMO, or same
+ * name + cruise line); the server returned it and created nothing.
+ */
+export interface ShipCreateResult {
+  ship: Ship;
+  existing: boolean;
+}
+
 export const portsApi = {
   search: async (q: string, region?: string): Promise<Port[]> => {
     const params: Record<string, string> = {};
@@ -223,13 +245,20 @@ export const portsApi = {
   },
   /**
    * External geocoder fallback for ports missing from the local catalog.
-   * Returns [] on error — callers treat it as a soft enhancement.
+   * A geocoder failure (Nominatim 429/outage) arrives as HTTP 200 with
+   * `degraded: true` and a `reason` code; it is passed on as `failure` so the
+   * picker can say the lookup did not happen instead of "nothing found".
    */
-  geocode: async (q: string): Promise<GeocodedPort[]> => {
-    const { data } = await api.get<Envelope<GeocodedPort[]>>("/ports/geocode", {
-      params: { q },
-    });
-    return data.data;
+  geocode: async (q: string): Promise<PortGeocodeResult> => {
+    const { data } = await api.get<
+      Envelope<GeocodedPort[]> & { degraded?: boolean; reason?: string }
+    >("/ports/geocode", { params: { q } });
+    const failure: PortGeocodeFailure | null = !data.degraded
+      ? null
+      : data.reason === "rate_limited"
+        ? "rate_limited"
+        : "unavailable";
+    return { ports: Array.isArray(data.data) ? data.data : [], failure };
   },
   create: async (input: {
     name: string;
@@ -272,8 +301,8 @@ export const shipsApi = {
     yearBuilt?: number;
     grossTonnage?: number;
     capacity?: number;
-  }): Promise<Ship> => {
-    const { data } = await api.post<Envelope<Ship>>("/ships", input);
-    return data.data;
+  }): Promise<ShipCreateResult> => {
+    const { data } = await api.post<Envelope<Ship> & { existing?: boolean }>("/ships", input);
+    return { ship: data.data, existing: data.existing === true };
   },
 };

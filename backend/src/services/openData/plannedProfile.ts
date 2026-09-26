@@ -3,6 +3,7 @@ import { createHash } from "crypto";
 import { haversineKm } from "../../shared/geo/haversine";
 import { climbAndDescent, elevationProfile } from "../tour/tracks/trackMetrics";
 import { elevationsFor } from "./openMeteo";
+import { OpenDataUnavailableError } from "./http";
 
 /**
  * The elevation profile of a tour that has not been walked yet: its planned
@@ -90,7 +91,9 @@ export async function plannedElevationProfile(
   );
   if (totalKm <= 0) return null;
   const heights = await elevationsFor(points);
-  if (heights === null) return null; // not cached: the next view may get an answer
+  // Not cached: the next view may get an answer. Thrown, not null — a null
+  // profile made the card vanish without a word while Open-Meteo was down.
+  if (heights === null) throw new OpenDataUnavailableError("open-meteo-elevation");
 
   const profile = elevationProfile(atKm, heights);
   const climb = climbAndDescent(heights);

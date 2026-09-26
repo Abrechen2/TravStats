@@ -33,6 +33,19 @@ export async function assertOpenDataEnabled(): Promise<void> {
 }
 
 /**
+ * The upstream service did not answer (network, timeout, 5xx, 429, not
+ * JSON). Distinct from "it answered: there is nothing" — an endpoint turns it
+ * into `unavailable: true`, so a card can say the service is unreachable
+ * instead of silently not appearing, and a service does not cache it.
+ */
+export class OpenDataUnavailableError extends Error {
+  constructor(public readonly service: string) {
+    super(`Open data service unavailable: ${service}`);
+    this.name = "OpenDataUnavailableError";
+  }
+}
+
+/**
  * Why a service did not answer usefully (2026-09-26). The callers that face a
  * user need it: "the service is overloaded" and "the service answered that
  * there is nothing" used to be the same null, and the UI turned both into
@@ -41,7 +54,13 @@ export async function assertOpenDataEnabled(): Promise<void> {
  */
 export type OpenDataFailure = "timeout" | "rateLimited" | "unavailable";
 
-export type OpenDataResult = { ok: true; body: unknown } | { ok: false; failure: OpenDataFailure };
+/**
+ * One result shape for every open data call. `status` is the HTTP status of a
+ * non-2xx answer, null when there was no HTTP answer at all (network, timeout,
+ * not JSON) — Wikipedia needs it to tell a 404 ("no article") from an outage.
+ */
+export type OpenDataResult =
+  { ok: true; body: unknown } | { ok: false; failure: OpenDataFailure; status: number | null };
 
 function failureOfStatus(status: number): OpenDataFailure {
   return status === 429 ? "rateLimited" : status === 504 ? "timeout" : "unavailable";
@@ -75,7 +94,7 @@ export async function fetchOpenData(
     });
     if (!response.ok) {
       logger.warn({ operation: "open_data_request", service, status: response.status });
-      return { ok: false, failure: failureOfStatus(response.status) };
+      return { ok: false, failure: failureOfStatus(response.status), status: response.status };
     }
     return { ok: true, body: (await response.json()) as unknown };
   } catch (error) {
@@ -84,7 +103,7 @@ export async function fetchOpenData(
       service,
       error: error instanceof Error ? error.message : String(error),
     });
-    return { ok: false, failure: failureOfError(error) };
+    return { ok: false, failure: failureOfError(error), status: null };
   }
 }
 

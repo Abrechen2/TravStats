@@ -1,5 +1,5 @@
 import { useEffect, useState } from "react";
-import { portsApi, type GeocodedPort } from "../../lib/api";
+import { portsApi, type GeocodedPort, type PortGeocodeFailure } from "../../lib/api";
 import type { Port } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
@@ -35,6 +35,9 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
   const [geocoded, setGeocoded] = useState<GeocodedPort[]>([]);
   const [searching, setSearching] = useState<boolean>(false);
   const [searchError, setSearchError] = useState<boolean>(false);
+  // The external geocoder was asked and could not answer (429 / outage) —
+  // said out loud, so an empty list is not read as "no such port".
+  const [geocodeFailure, setGeocodeFailure] = useState<PortGeocodeFailure | null>(null);
   const [showAdd, setShowAdd] = useState<boolean>(false);
   const [newName, setNewName] = useState<string>("");
   const [newCity, setNewCity] = useState<string>("");
@@ -73,12 +76,14 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
       setResults([]);
       setGeocoded([]);
       setSearchError(false);
+      setGeocodeFailure(null);
       return;
     }
     let cancelled = false;
     const handle = setTimeout(async () => {
       setSearching(true);
       setSearchError(false);
+      setGeocodeFailure(null);
       try {
         const r = await portsApi.search(query);
         if (cancelled) return;
@@ -88,7 +93,10 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
         // nothing — keeps it cheap and offline-first.
         if (local.length === 0) {
           const g = await portsApi.geocode(query);
-          if (!cancelled) setGeocoded(Array.isArray(g) ? g : []);
+          if (!cancelled) {
+            setGeocoded(g.ports);
+            setGeocodeFailure(g.failure);
+          }
         } else {
           setGeocoded([]);
         }
@@ -243,6 +251,15 @@ export function PortPicker({ value, onChange, label }: Props): JSX.Element {
         </ul>
       )}
       {searchError && <p className="mt-1 text-xs text-(--danger)">{t("picker.searchError")}</p>}
+      {!searchError && geocodeFailure !== null && (
+        <p role="status" className="mt-1 text-xs text-(--warning)">
+          {t(
+            geocodeFailure === "rate_limited"
+              ? "picker.geocodeRateLimited"
+              : "picker.geocodeUnavailable"
+          )}
+        </p>
+      )}
       {/* Create/persist errors — rendered HERE, not only inside the add-custom
           form: a failed geocoder-candidate save (handleSelectGeocoded) sets
           this too, and until 2026-08-02 it had no render site on that path,

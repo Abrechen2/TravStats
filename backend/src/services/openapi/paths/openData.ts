@@ -167,14 +167,16 @@ registry.registerPath({
   description:
     "Ground heights from Open-Meteo along the routed legs (or the straight chords of legs that " +
     "are not routed), read by the same climb rule a recording gets. `profile` is null when the " +
-    "line is too short or the elevation service did not answer.",
+    "line is too short, or - with `unavailable: true` - when the elevation service did not answer.",
   tags: ["Tours", "Open data"],
   request: { params: z.object({ routeId: uuid }) },
   responses: {
     200: {
       description: "Profile",
       content: {
-        "application/json": { schema: z.object({ profile: plannedProfile.nullable() }) },
+        "application/json": {
+          schema: z.object({ profile: plannedProfile.nullable(), unavailable: z.boolean() }),
+        },
       },
     },
     404: notFound,
@@ -196,7 +198,14 @@ registry.registerPath({
     200: {
       description: "Summary",
       content: {
-        "application/json": { schema: z.object({ summary: wikipediaSummary.nullable() }) },
+        "application/json": {
+          schema: z.object({
+            summary: wikipediaSummary.nullable(),
+            unavailable: z
+              .boolean()
+              .describe("true = Wikipedia/Wikidata did not answer; null is then NOT 'no article'"),
+          }),
+        },
       },
     },
     404: notFound,
@@ -216,7 +225,14 @@ registry.registerPath({
     200: {
       description: "Summary",
       content: {
-        "application/json": { schema: z.object({ summary: wikipediaSummary.nullable() }) },
+        "application/json": {
+          schema: z.object({
+            summary: wikipediaSummary.nullable(),
+            unavailable: z
+              .boolean()
+              .describe("true = Wikipedia/Wikidata did not answer; null is then NOT 'no article'"),
+          }),
+        },
       },
     },
     404: notFound,

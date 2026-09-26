@@ -42,6 +42,9 @@
     "groupByDay": "Group by day",
     "resync": "Re-sync",
     "resyncing": "Syncing… {{done}}/{{total}}",
+    "importFailed": "The import stopped – {{reason}} Photos already copied are kept.",
+    "importFailedUnknown": "An unknown error occurred while copying the photos.",
+    "importPartial": "{{failed}} of {{total}} photos could not be copied. \"Re-sync\" tries them again.",
     "badgeLink": "live",
     "badgeImport": "copy"
   },

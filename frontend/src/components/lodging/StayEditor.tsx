@@ -1,5 +1,6 @@
 import { useEffect, useId, useState } from "react";
 import type { JSX } from "react";
+import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LODGING_DATE_PRECISIONS, type LodgingDatePrecision } from "../../shared/lodgingTiming";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -383,10 +384,7 @@ export function StayEditor({
       await onSaved(saved);
     } catch (err: unknown) {
       logger.error("StayEditor: save failed", err);
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        t("lodging:stayEditor.saveError");
-      setError(msg);
+      setError(saveErrorMessage(err, t, "lodging:stayEditor.saveError"));
     } finally {
       setSaving(false);
     }

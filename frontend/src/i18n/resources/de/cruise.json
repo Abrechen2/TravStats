@@ -151,11 +151,17 @@
     "createShipError": "Schiff konnte nicht angelegt werden",
     "createPortError": "Hafen konnte nicht angelegt werden",
     "via_geocoder": "Kartensuche (OpenStreetMap)",
-    "searchError": "Hafensuche fehlgeschlagen - bitte erneut versuchen"
+    "searchError": "Hafensuche fehlgeschlagen - bitte erneut versuchen",
+    "geocodeRateLimited": "Die Online-Hafensuche (OpenStreetMap) ist gerade ausgelastet und hat nicht geantwortet. Bitte in einer Minute erneut suchen oder den Hafen manuell anlegen.",
+    "geocodeUnavailable": "Die Online-Hafensuche (OpenStreetMap) ist gerade nicht erreichbar. Bitte später erneut suchen oder den Hafen manuell anlegen.",
+    "shipSearchError": "Schiffssuche fehlgeschlagen – bitte erneut versuchen. Solange die Suche nicht antwortet, lieber kein neues Schiff anlegen: es könnte schon im Katalog stehen.",
+    "shipAlreadyExists": "„{{name}}“ steht bereits im Katalog und wurde ausgewählt – es wurde kein zweites Schiff angelegt."
   },
   "map": {
     "layer": "Kreuzfahrten",
-    "fallbackTitle": "Kreuzfahrt"
+    "fallbackTitle": "Kreuzfahrt",
+    "geometryFailed_one": "Der Seeweg von {{count}} Kreuzfahrt konnte nicht geladen werden – sie wird als gerade Linie gezeigt.",
+    "geometryFailed_other": "Die Seewege von {{count}} Kreuzfahrten konnten nicht geladen werden – sie werden als gerade Linien gezeigt."
   },
   "routeEditor": {
     "edit": "Route bearbeiten",

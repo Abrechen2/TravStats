@@ -138,6 +138,30 @@ describe("LocationMapModal", () => {
     });
   });
 
+  // A failed lookup used to read "no address found for this point" - the
+  // same words as a pin in open water.
+  it("says the address lookup failed instead of 'no address here'", async () => {
+    vi.mocked(reverseGeocode).mockRejectedValue(new Error("unavailable"));
+    render(<LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={vi.fn()} />);
+
+    await userEvent.click(screen.getByTestId("mock-map"));
+
+    expect(
+      await screen.findByText("location:mapModal.addressLookupFailed", undefined, { timeout: 2000 })
+    ).toBeInTheDocument();
+    expect(screen.queryByText("location:mapModal.noAddress")).not.toBeInTheDocument();
+  });
+
+  it("still says 'no address' for a point that really has none", async () => {
+    render(<LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={vi.fn()} />);
+
+    await userEvent.click(screen.getByTestId("mock-map"));
+
+    expect(
+      await screen.findByText("location:mapModal.noAddress", undefined, { timeout: 2000 })
+    ).toBeInTheDocument();
+  });
+
   it("a search hit inside the modal sets the pin and wins over reverse parts", async () => {
     vi.mocked(searchPlaces).mockResolvedValue({ results: [zurich], degraded: false });
     vi.mocked(reverseGeocode).mockResolvedValue(adlon);
@@ -157,6 +181,7 @@ describe("LocationMapModal", () => {
       city: "Zürich",
       country: "Switzerland",
       countryCode: "CH",
+      osmValue: "city",
     });
   });
 
@@ -241,6 +266,7 @@ describe("LocationMapModal", () => {
         city: "Berlin",
         country: "Deutschland",
         countryCode: "DE",
+        osmValue: "hotel",
       });
     });
 

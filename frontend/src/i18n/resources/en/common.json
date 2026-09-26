@@ -121,6 +121,14 @@
     "unknown": "Unknown",
     "notAvailable": "N/A"
   },
+  "saveErrors": {
+    "validation": "Some details are not valid. Please check the fields and try again.",
+    "duplicate": "An entry with these details already exists.",
+    "dbUnavailable": "The database cannot be reached right now. Please try again shortly.",
+    "rateLimited": "Too many requests in a short time. Please wait a moment.",
+    "demo": "This cannot be saved in the demo account.",
+    "network": "The server cannot be reached. Please check the connection."
+  },
   "messages": {
     "success": "Success",
     "error": "Error",

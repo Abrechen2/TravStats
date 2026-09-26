@@ -34,6 +34,7 @@
       "empty": "Keine Treffer.",
       "created": "Schiff angelegt.",
       "createFailed": "Schiff konnte nicht angelegt werden.",
+      "alreadyExists": "„{{name}}“ steht bereits im Katalog – es wurde nichts angelegt.",
       "missingFields": "Name und Reederei sind erforderlich.",
       "menuLabel": "Schiffe"
     },

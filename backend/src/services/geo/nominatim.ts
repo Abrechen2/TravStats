@@ -250,6 +250,12 @@ async function fetchAddress(
   });
   if (!res.ok) {
     logger.warn({ lat, lon, status: res.status }, "reverse geocoding non-OK");
+    // Same rule as `fetchCoordinates`: a 429/5xx/timeout says nothing about
+    // the point. Returning null here cached "no address" for the process
+    // lifetime and told the map modal the pin was in open water.
+    if (isTransientStatus(res.status)) {
+      throw new Error(`reverse geocoding provider returned ${res.status}`);
+    }
     return null;
   }
   const row = (await res.json()) as NominatimReverseRow;
@@ -303,8 +309,26 @@ async function fetchAddress(
  * because it hits the same 1 req/s Nominatim budget.
  */
 export async function reverseGeocode(lat: number, lon: number): Promise<GeocodeParts | null> {
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return null;
+  return (await reverseGeocodeDetailed(lat, lon)).parts;
+}
+
+/** `reverseGeocode` plus whether the provider failed (`degraded`) - for the map modal. */
+export interface ReverseGeocodeOutcome {
+  parts: GeocodeParts | null;
+  /**
+   * true = the lookup did not happen (429, 5xx, timeout, network). `parts`
+   * is then null for that reason, NOT because the point has no address -
+   * the modal says "could not be looked up" instead of implying open water.
+   */
+  degraded: boolean;
+}
+
+export async function reverseGeocodeDetailed(
+  lat: number,
+  lon: number
+): Promise<ReverseGeocodeOutcome> {
+  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return { parts: null, degraded: false };
+  if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return { parts: null, degraded: false };
 
   let nominatimUrl = DEFAULT_NOMINATIM_URL;
   try {
@@ -320,20 +344,20 @@ export async function reverseGeocode(lat: number, lon: number): Promise<GeocodeP
   // without rounding the cache would miss on every drag.
   const key = `${baseUrl}|${lat.toFixed(4)},${lon.toFixed(4)}`;
   const cached = reverseCache.get(key);
-  if (cached !== undefined) return cached;
+  if (cached !== undefined) return { parts: cached, degraded: false };
 
-  const task = queue.then(async () => {
+  const task = queue.then(async (): Promise<ReverseGeocodeOutcome> => {
     await throttle();
     try {
       const parts = await fetchAddress(lat, lon, baseUrl);
       reverseCache.set(key, parts);
-      return parts;
+      return { parts, degraded: false };
     } catch (error) {
       // Transient (timeout, network blip) — deliberately NOT cached, so the
       // next save retries instead of being told "no address" for the process
       // lifetime.
       logger.warn({ error, lat, lon }, "reverse geocoding failed");
-      return null;
+      return { parts: null, degraded: true };
     }
   });
   queue = task.catch(() => undefined);

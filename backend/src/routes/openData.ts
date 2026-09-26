@@ -9,6 +9,7 @@ import { openDataLimiter } from "../middleware/rateLimit";
 import {
   assertOpenDataEnabled,
   OpenDataDisabledError,
+  OpenDataUnavailableError,
   type OpenDataFailure,
 } from "../services/openData/http";
 import { fillTripJournalWeather, refreshJournalWeather } from "../services/openData/journalWeather";
@@ -46,6 +47,23 @@ function upstreamError(service: string, failure: OpenDataFailure): AppError {
       return new AppError(`${service} is refusing more requests`, 503, "UPSTREAM_RATE_LIMITED");
     case "unavailable":
       return new AppError(`${service} did not answer`, 502, "UPSTREAM_UNAVAILABLE");
+  }
+}
+
+/**
+ * Run an upstream lookup; `{ [field]: null, unavailable: true }` when the
+ * service did not answer — still 200 like /geo/search's `degraded`, so a
+ * card can say "not reachable" instead of looking like "nothing to show".
+ */
+async function orUnavailable<T>(
+  field: string,
+  lookup: () => Promise<T>
+): Promise<Record<string, T | null | boolean>> {
+  try {
+    return { [field]: await lookup(), unavailable: false };
+  } catch (error) {
+    if (error instanceof OpenDataUnavailableError) return { [field]: null, unavailable: true };
+    throw error;
   }
 }
 
@@ -130,10 +148,11 @@ router.get(
       const routeId = await resolveRoute(req.userId!, undefined, req.params.routeId);
       await assertOpenDataEnabled();
       const geometry = await buildRouteGeometry(routeId);
-      const profile = await plannedElevationProfile(
-        geometry.features.map((f) => f.geometry.coordinates)
+      res.json(
+        await orUnavailable("profile", () =>
+          plannedElevationProfile(geometry.features.map((f) => f.geometry.coordinates))
+        )
       );
-      res.json({ profile });
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);
     }
@@ -155,7 +174,9 @@ router.get(
       if (!place) throw new AppError("Place not found", 404);
       await assertOpenDataEnabled();
       const qid = await wikidataForPlace(place);
-      res.json({ summary: qid ? await wikipediaSummary(qid, lang) : null });
+      res.json(
+        await orUnavailable("summary", async () => (qid ? wikipediaSummary(qid, lang) : null))
+      );
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);
     }
@@ -176,9 +197,10 @@ router.get(
       });
       if (!lodging) throw new AppError("Lodging not found", 404);
       await assertOpenDataEnabled();
-      res.json({
-        summary: lodging.wikidataId ? await wikipediaSummary(lodging.wikidataId, lang) : null,
-      });
+      const qid = lodging.wikidataId;
+      res.json(
+        await orUnavailable("summary", async () => (qid ? wikipediaSummary(qid, lang) : null))
+      );
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);
     }
