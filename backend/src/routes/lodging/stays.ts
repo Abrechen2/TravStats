@@ -33,7 +33,9 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
     if (!lodging) throw new AppError("Lodging not found", 404);
 
     const parsed = createStaySchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    // The ZodError itself (-> `code: VALIDATION_FAILED`), not its JSON
+    // `.message`, which the stay editor used to print verbatim.
+    if (!parsed.success) throw parsed.error;
     const documentIds = await takeDocumentIds(userId, req.body);
     // The whole write — references, price, FX, derived status/rating — lives
     // in `services/lodging/stayWrites.ts`, shared with the spreadsheet import.
@@ -65,7 +67,7 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
     if (!stay) throw new AppError("Stay not found", 404);
 
     const parsed = updateStaySchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    if (!parsed.success) throw parsed.error;
     // Shared with the spreadsheet import — see `services/lodging/stayWrites.ts`.
     const updated = await updateStayRecord(userId, stay, parsed.data);
 

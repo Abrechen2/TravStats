@@ -319,7 +319,10 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
   try {
     const userId = requireUser(req);
     const parsed = createCruiseSchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    // The ZodError itself, not its `.message`: that is a JSON dump of the
+    // issues, which the edit form used to print verbatim into a German page.
+    // The error handler answers it with `code: VALIDATION_FAILED` + details.
+    if (!parsed.success) throw parsed.error;
 
     const {
       stops,
@@ -421,7 +424,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     if (!existing) throw new AppError("Cruise not found", 404);
 
     const parsed = updateCruiseSchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    if (!parsed.success) throw parsed.error;
     // Re-linking is a write too — see the create path (AUD-038).
     await assertReferencesOwned(userId, parsed.data);
 
@@ -444,7 +447,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       finalEndDate !== null &&
       finalEndDate.getTime() < finalStartDate.getTime()
     ) {
-      throw new AppError("endDate must not precede startDate", 400);
+      throw new AppError("endDate must not precede startDate", 400, "VALIDATION_FAILED");
     }
 
     // A batch id is client-supplied and is a handle into an import's undo

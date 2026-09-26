@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { saveErrorMessage } from "../lib/saveErrorMessage";
+import { TRACK_ERROR_KEYS } from "../lib/trackErrorKeys";
 
 import AppShell from "../components/ui/AppShell";
 import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
@@ -490,10 +492,13 @@ export default function TripRouteEditorPage(): JSX.Element {
         try {
           await uploadTrack(file);
         } catch (err) {
-          // A malformed GPX and a GPX with no timestamps both 400 with
-          // DIFFERENT server messages (see `toursApi.tracks.upload`'s own
-          // doc comment) — surface whichever one the server sent.
-          addToast("error", apiErrorMessage(err) ?? t("trips:tours.tracks.uploadError"));
+          // A malformed file, one without timestamps, an oversized one and a
+          // duplicate each carry their own server CODE — mapped to DE/EN copy,
+          // never the server's English prose.
+          addToast(
+            "error",
+            saveErrorMessage(err, t, "trips:tours.tracks.uploadError", TRACK_ERROR_KEYS)
+          );
         }
       })();
     },
@@ -532,10 +537,9 @@ export default function TripRouteEditorPage(): JSX.Element {
    * Pulls the section's own date span from Dawarich (an empty body — the
    * server derives the window from the section's stops). Three failure
    * shapes, per `toursApi.tracks.pullDawarich`'s doc comment: a fixed-kind
-   * 409 (`dawarichFailureKind` parses it, `notConfigured` included), or
-   * plain prose with no kind (an empty window, or no dated stops to derive
-   * one from) — the fallback branch surfaces that prose verbatim rather
-   * than a generic message.
+   * 409 (`dawarichFailureKind` parses it, `notConfigured` included), or a
+   * `code` (an empty window, too few points, no dated stops to derive one
+   * from) that `TRACK_ERROR_KEYS` turns into its own DE/EN sentence.
    */
   const handlePullDawarich = useCallback((): void => {
     void (async (): Promise<void> => {
@@ -547,7 +551,7 @@ export default function TripRouteEditorPage(): JSX.Element {
           "error",
           kind
             ? t(dawarichFailureKey(kind))
-            : (apiErrorMessage(err) ?? t("trips:tours.tracks.dawarich.error"))
+            : saveErrorMessage(err, t, "trips:tours.tracks.dawarich.error", TRACK_ERROR_KEYS)
         );
       }
     })();

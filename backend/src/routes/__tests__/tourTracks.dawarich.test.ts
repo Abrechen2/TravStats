@@ -318,6 +318,7 @@ describe("Tour tracks — pull a Dawarich window", () => {
 
     expect(res.status).toBe(409);
     expect(res.body.error).toMatch(/no location data/i);
+    expect(res.body.code).toBe("DAWARICH_WINDOW_EMPTY");
     expect(after).toBe(before);
   });
 

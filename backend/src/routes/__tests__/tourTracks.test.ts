@@ -105,6 +105,8 @@ describe("Tour tracks — upload and CRUD", () => {
 
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/could not be read as gpx/i);
+    // The client shows DE/EN copy for the code, never the English prose.
+    expect(res.body.code).toBe("TRACK_FILE_UNREADABLE");
   });
 
   it("refuses a GPX with no timestamps with 400 and a DIFFERENT message than a malformed file", async () => {
@@ -116,6 +118,7 @@ describe("Tour tracks — upload and CRUD", () => {
     expect(res.status).toBe(400);
     expect(res.body.error).toMatch(/no timestamps/i);
     expect(res.body.error.toLowerCase()).not.toContain("could not be read as gpx");
+    expect(res.body.code).toBe("TRACK_NO_TIMESTAMPS");
   });
 
   it("refuses a file above the size limit", async () => {

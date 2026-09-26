@@ -100,7 +100,16 @@ export function resolveDawarichWindow(
  * connection worked), so it gets its own error type rather than being
  * folded into one of those kinds or silently stored as a zero-point track.
  */
-export class EmptyDawarichWindowError extends Error {}
+export class EmptyDawarichWindowError extends Error {
+  constructor(
+    message: string,
+    /** `empty` = no points at all; `tooFewPoints` = one point, no track. */
+    public readonly reason: "empty" | "tooFewPoints"
+  ) {
+    super(message);
+    this.name = "EmptyDawarichWindowError";
+  }
+}
 
 /**
  * Dawarich points -> `ParsedTrack`. The client (`dawarichClient.ts`, task
@@ -145,7 +154,10 @@ export async function pullDawarichWindow(
 ): Promise<PulledDawarichTrack> {
   const { points, truncated } = await client.getPoints(window);
   if (points.length === 0) {
-    throw new EmptyDawarichWindowError("No location data was found in the requested time window");
+    throw new EmptyDawarichWindowError(
+      "No location data was found in the requested time window",
+      "empty"
+    );
   }
 
   const parsed = toParsedTrack(points);
@@ -156,7 +168,8 @@ export async function pullDawarichWindow(
     // minimum-points rule rejected a window with exactly one point — the
     // one case genuinely distinct from "no points at all" above.
     throw new EmptyDawarichWindowError(
-      "The requested time window has too few location points to form a track"
+      "The requested time window has too few location points to form a track",
+      "tooFewPoints"
     );
   }
   return { ingested, truncated };
