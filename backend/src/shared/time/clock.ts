@@ -1,4 +1,4 @@
-import { localDay } from "./instant";
+import { localDay, toLocal } from "./instant";
 
 /**
  * "Now", asked instead of read (ADR 0002 D6).
@@ -25,6 +25,18 @@ export function now(): Date {
 /** Today's calendar day (`YYYY-MM-DD`) in a zone — the user's profile zone for "today" questions (D4). */
 export function todayIn(zone: string): string {
   return localDay(now(), zone);
+}
+
+/**
+ * "Now" for a comparison against a DAY column (a stay's check-in, a cruise's
+ * start — stored as UTC midnight of the calendar day): the zone's current
+ * wall clock written as if it were UTC. Against such an anchor it answers
+ * "has that day begun in this zone", which is the profile-zone "today" D4
+ * asks for; the plain instant answers it for Greenwich. Only for day anchors
+ * — against a real instant it would be wrong by the zone's offset.
+ */
+export function dayAnchorNow(zone: string, at: Date = now()): Date {
+  return new Date(`${toLocal(at, zone).local}Z`);
 }
 
 /**

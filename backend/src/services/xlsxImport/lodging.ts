@@ -317,7 +317,7 @@ export async function importLodgingStays(sheet: IncomingSheet, ctx: Ctx): Promis
       }
       if (!ctx.dryRun) {
         try {
-          await updateStayRecord(ctx.userId, target, parsed.data);
+          await updateStayRecord(ctx.userId, target, parsed.data, "machine");
         } catch (err) {
           out.push(refusedWrite(err, rowNo, label, ctx));
           continue;
@@ -338,6 +338,7 @@ export async function importLodgingStays(sheet: IncomingSheet, ctx: Ctx): Promis
       try {
         const created = await createStayRecord(ctx.userId, lodgingId, parsed.data, {
           dataSource: "xlsx",
+          origin: "machine",
         });
         newId = created.id;
       } catch (err) {

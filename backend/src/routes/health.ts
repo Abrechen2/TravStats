@@ -13,8 +13,9 @@ import { appVersion } from "../utils/version";
  * restart would not fix a broken dependency, but a probe that reads the body
  * sees it, instead of the server reading every local time as UTC in silence.
  *
- * `scheduler.backupZone` is the zone the backup cron runs in — the host's,
- * read once at boot (shared/time/schedulerZone.ts). Every other job runs in
+ * `scheduler.backupZone` is the zone the backup cron runs in — the admin's
+ * setting, or the host's read once at boot when none is set
+ * (shared/time/schedulerZone.ts). Every other job runs in
  * UTC. Shown here because a backup that moved by an hour is otherwise only
  * noticed when somebody looks at the timestamps.
  */

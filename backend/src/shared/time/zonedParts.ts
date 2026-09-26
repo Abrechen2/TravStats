@@ -78,7 +78,12 @@ export function wallClockParts(instantMs: number, zone: string): WallClockParts 
 
 /** Wall-clock components encoded as if they were UTC — the arithmetic form of a local reading. */
 export function partsToUtcMs(p: WallClockParts): number {
-  return Date.UTC(p.year, p.month - 1, p.day, p.hour, p.minute, p.second);
+  // Not `Date.UTC(year, …)`: it reads years 0-99 as 1900-1999, so a stay
+  // dated 0001-01-01 became 1901 and passed as a real day of another century.
+  const date = new Date(0);
+  date.setUTCFullYear(p.year, p.month - 1, p.day);
+  date.setUTCHours(p.hour, p.minute, p.second, 0);
+  return date.getTime();
 }
 
 /**

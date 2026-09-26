@@ -2,7 +2,7 @@ import cron from "node-cron";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { createBackup } from "./backupService";
-import { schedulerZone } from "../shared/time/schedulerZone";
+import { schedulerZone, setAdminBackupZone } from "../shared/time/schedulerZone";
 
 const VALID_INTERVALS = ["daily", "weekly", "monthly"] as const;
 type BackupInterval = (typeof VALID_INTERVALS)[number];
@@ -23,12 +23,15 @@ async function getBackupSettings(): Promise<{
   enabled: boolean;
   interval: "daily" | "weekly" | "monthly";
   retentionDays: number;
+  /** The admin's zone for the cron expression; null = the host's (the default). */
+  zone: string | null;
 }> {
   const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
   return {
     enabled: adminSettings?.backupEnabled ?? false,
     interval: toBackupInterval(adminSettings?.backupInterval),
     retentionDays: adminSettings?.backupRetentionDays ?? 30,
+    zone: adminSettings?.backupZone ?? null,
   };
 }
 
@@ -112,7 +115,10 @@ export async function startScheduler(): Promise<void> {
     return;
   }
 
-  const { enabled: autoBackup, interval: backupInterval } = await getBackupSettings();
+  const { enabled: autoBackup, interval: backupInterval, zone } = await getBackupSettings();
+  // Adopted even while disabled, so `/health` and the admin page name the
+  // zone the NEXT schedule will use.
+  setAdminBackupZone(zone);
 
   if (!autoBackup) {
     logger.info({
@@ -177,6 +183,7 @@ export async function getScheduleStatus(): Promise<{
   running: boolean;
   cronPattern?: string;
   interval?: string;
+  timezone?: string;
 }> {
   if (!scheduledJob) {
     return { running: false };
@@ -192,5 +199,6 @@ export async function getScheduleStatus(): Promise<{
     running: true,
     cronPattern: getCronPattern(backupInterval),
     interval: backupInterval,
+    timezone: schedulerZone("backup"),
   };
 }

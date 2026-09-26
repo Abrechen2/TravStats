@@ -470,6 +470,26 @@ describe("Place lists API", () => {
       expect(place?.visits[0].visitedAt?.toISOString()).toContain("2024-06-10");
     });
 
+    it("records an accepted suggestion as the DAY it names, in Rome's zone (ADR 0002)", async () => {
+      // A suggestion's ISO string mixes meanings (a stay's UTC-midnight day, a
+      // photo's real instant); read as an instant, a stay in New York would
+      // date the visit the evening before. The evidence establishes a day.
+      await stayInRome();
+      const res = await request(app)
+        .post(`/api/v1/place-lists/curated/items/${COLOSSEUM}/tick`)
+        .set("Cookie", authCookie)
+        .send({ visitedAt: "2024-06-10T00:00:00.000Z" });
+      expect(res.status).toBe(201);
+      const visit = await prisma.placeVisit.findFirstOrThrow({
+        where: { userId, place: { curatedItemId: COLOSSEUM } },
+      });
+      expect(visit.visitedAt?.toISOString()).toBe("2024-06-10T00:00:00.000Z");
+      expect(visit.visitedAtUtc?.toISOString()).toBe("2024-06-09T22:00:00.000Z");
+      expect(visit.visitedZone).toBe("Europe/Rome");
+      expect(visit.visitedPrecision).toBe("day");
+      expect(visit.writtenVia).toBe("suggestion");
+    });
+
     it("does not stack a second identical visit when a tick is repeated", async () => {
       await stayInRome();
       const body = { visitedAt: new Date("2024-06-10").toISOString() };

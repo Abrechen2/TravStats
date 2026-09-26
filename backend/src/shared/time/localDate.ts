@@ -1,4 +1,5 @@
 import { InvalidLocalTimeError } from "./errors";
+import { partsToUtcMs } from "./zonedParts";
 
 /**
  * Calendar days at the data layer (ADR 0002 D1): a `DATE` never crosses a
@@ -22,7 +23,7 @@ export function isLocalDate(value: unknown): value is string {
   const match = DATE_PATTERN.exec(value);
   if (!match) return false;
   const [year, month, day] = match.slice(1).map(Number);
-  const check = new Date(Date.UTC(year, month - 1, day));
+  const check = new Date(partsToUtcMs({ year, month, day, hour: 0, minute: 0, second: 0 }));
   return (
     check.getUTCFullYear() === year &&
     check.getUTCMonth() + 1 === month &&
@@ -50,7 +51,7 @@ export function fromDbDate(value: Date): string {
 export function toDbDate(day: string): Date {
   if (!isLocalDate(day)) throw new InvalidLocalTimeError(day);
   const [year, month, date] = day.split("-").map(Number);
-  return new Date(Date.UTC(year, month - 1, date));
+  return new Date(partsToUtcMs({ year, month, day: date, hour: 0, minute: 0, second: 0 }));
 }
 
 /** Whole calendar days from `from` to `to` (negative when `to` is earlier). */

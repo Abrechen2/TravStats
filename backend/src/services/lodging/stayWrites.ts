@@ -25,6 +25,10 @@ import { deriveStayTotalPrice } from "../../shared/stayPricing";
 import logger from "../../utils/logger";
 import { assertReferencesOwned } from "../../utils/ownedReferences";
 import { resolveEffectiveStayDates } from "./stayPatchMerge";
+import { legacyDay, stayTimeColumns, zoneOfLodging } from "../timeModel/stayColumns";
+import type { LocalTimeOrigin } from "../../shared/time/instant";
+import { dayAnchorNow } from "../../shared/time/clock";
+import { profileZoneOf } from "../../shared/time/profileZone";
 import { getBaseCurrency } from "../fx/snapshot";
 import {
   applyFxSnapshot,
@@ -40,6 +44,20 @@ type StoredStay = Prisma.LodgingStayGetPayload<Record<string, never>>;
 /** Extra columns a caller may stamp on a new stay — provenance, never user input. */
 export interface StayProvenance {
   dataSource?: string;
+  /**
+   * Who produced the check-in/-out times: a person in the editor ("typed", a
+   * time the hotel's clock skipped is refused) or an import ("machine").
+   */
+  origin?: LocalTimeOrigin;
+}
+
+/**
+ * "Now" for a stay's status: the user's profile-zone wall clock against the
+ * UTC-midnight day anchors, so a stay completes when check-out day begins
+ * where the USER is, not in Greenwich (ADR 0002 D4).
+ */
+async function stayStatusNow(userId: string): Promise<Date> {
+  return dayAnchorNow((await profileZoneOf(userId)).zone);
 }
 
 export async function createStayRecord(
@@ -59,6 +77,16 @@ export async function createStayRecord(
   // the spread below, where Prisma would reject it as an unknown argument.
   const { manualFxRate, ...body } = data;
   const input = { ...body, totalPrice: deriveStayTotalPrice(body) };
+  const timeColumns = stayTimeColumns(
+    {
+      checkIn: legacyDay(input.checkIn),
+      checkOut: legacyDay(input.checkOut),
+      checkInTime: input.checkInTime ?? null,
+      checkOutTime: input.checkOutTime ?? null,
+    },
+    await zoneOfLodging(lodgingId),
+    provenance.origin
+  );
 
   const baseCurrency = await getBaseCurrency(userId);
   const fxOutcome = await applyFxSnapshot(input, baseCurrency);
@@ -83,6 +111,7 @@ export async function createStayRecord(
     data: {
       ...input,
       ...fxFields,
+      ...timeColumns,
       // Status follows the dates (see deriveLodgingStatus). Whatever the
       // client sent is only consulted for the one value derivation honours,
       // "cancelled" — so an old client, an importer or a stale form can no
@@ -94,6 +123,7 @@ export async function createStayRecord(
         checkIn: input.checkIn ? new Date(input.checkIn) : null,
         checkOut: input.checkOut ? new Date(input.checkOut) : null,
         current: input.status,
+        now: await stayStatusNow(userId),
       }),
       // Likewise derived, not accepted: the overall score follows the three
       // components wherever a stay is written — form, CSV, e-mail/PDF — so
@@ -122,7 +152,8 @@ export async function createStayRecord(
 export async function updateStayRecord(
   userId: string,
   stay: StoredStay,
-  data: UpdateStayData
+  data: UpdateStayData,
+  origin: LocalTimeOrigin = "typed"
 ): Promise<StoredStay> {
   // Re-linking is a write too — see the create path (AUD-038).
   await assertReferencesOwned(userId, data);
@@ -262,11 +293,30 @@ export async function updateStayRecord(
     stored: number | null
   ): number | null => (sent !== undefined ? sent : stored);
 
+  // The new time columns follow the MERGED stay — dates, times and the
+  // clears above — so a PATCH of one field re-derives from what is stored.
+  const effectiveTime = (key: "checkInTime" | "checkOutTime"): string | null => {
+    if (input[key] !== undefined) return input[key] ?? null;
+    if (key in timeClears) return null;
+    return stay[key];
+  };
+  const timeColumns = stayTimeColumns(
+    {
+      checkIn: effectiveCheckIn,
+      checkOut: effectiveCheckOut,
+      checkInTime: effectiveTime("checkInTime"),
+      checkOutTime: effectiveTime("checkOutTime"),
+    },
+    await zoneOfLodging(stay.lodgingId),
+    origin
+  );
+
   return prisma.lodgingStay.update({
     where: { id: stay.id },
     data: {
       ...input,
       ...timeClears,
+      ...timeColumns,
       // totalPrice is authoritative and derived above from the merged view,
       // so it overrides whatever `...input` carried (which may be a stale
       // re-send or absent while only the per-night price changed).
@@ -281,6 +331,7 @@ export async function updateStayRecord(
         checkIn: effectiveCheckIn,
         checkOut: effectiveCheckOut,
         current: input.status ?? stay.status,
+        now: await stayStatusNow(userId),
       }),
       // Derived from the EFFECTIVE (merged) ratings for the same reason: a
       // PATCH sending one component must score the row that will actually
