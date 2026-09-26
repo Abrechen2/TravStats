@@ -137,7 +137,10 @@ describe("PendingUpdatesPage — the photo-journey tab", () => {
       { timeout: 5000 }
     );
     expect(tab).toHaveAttribute("aria-selected", "true");
-    expect(screen.getByTestId("trip-suggestions-stub")).toBeVisible();
+    // Waited for: the page fades in, and under a loaded full run the first
+    // frames still carry an opacity near 0, which toBeVisible counts as
+    // hidden. A panel left `hidden` never becomes visible, so this still fails.
+    await waitFor(() => expect(screen.getByTestId("trip-suggestions-stub")).toBeVisible());
   });
 
   it("opens from the URL and selects itself when clicked", async () => {
