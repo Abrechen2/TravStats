@@ -23,6 +23,7 @@ import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { flightExternalRef, isDocumentImport } from "../services/importProvenance";
 import { normalizeAircraft } from "../utils/aircraftNormalize";
 import { sharedFlightCreateFields } from "../services/flights/flightCreateFields";
+import { flightEnds, segmentTripDays } from "../services/timeModel/tripColumns";
 import {
   fxColumnsFor,
   flightOwnAmount,
@@ -399,6 +400,11 @@ router.post(
               color,
               startDate: bounds.earliestStart,
               endDate: bounds.latestEnd,
+              // The local days of the first departure and last arrival (ADR 0002).
+              ...(() => {
+                const { starts, ends } = flightEnds(groupFlights);
+                return segmentTripDays(starts, ends);
+              })(),
             },
           });
           createdTripIds.push(trip.id);

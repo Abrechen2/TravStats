@@ -180,6 +180,13 @@ export interface StopPatch {
   lon?: number | null;
   notes?: string | null;
   orderIdx?: number;
+  /** ADR 0002 phase 2 dual-write columns (`routes/trips/stopTime.ts`). */
+  timeColumns?: {
+    startUtc: Date | null;
+    endUtc: Date | null;
+    stopZone: string | null;
+    precision: string | null;
+  };
 }
 
 /**
@@ -219,6 +226,7 @@ export async function updateStopAndLegs(
         ...(body.lon !== undefined && { lon: body.lon }),
         ...(body.notes !== undefined && { notes: body.notes }),
         ...(body.orderIdx !== undefined && { orderIdx: body.orderIdx }),
+        ...(body.timeColumns ?? {}),
       },
     });
 

@@ -8,6 +8,8 @@ import { recomputeTripStatus } from "../tripStatusService";
 import { invalidateTripSuggestions } from "./engine";
 import { proposalId } from "./proposals";
 import { dayColumn as dayDate } from "./time";
+import { typedTripDays } from "../timeModel/tripColumns";
+import { visitColumnsFromDay } from "../timeModel/visitColumns";
 import type { LinkableDomain, TripSuggestion } from "./types";
 
 /**
@@ -147,6 +149,7 @@ async function acceptTrip(
         color: TRIP_COLORS[tripCount % TRIP_COLORS.length],
         startDate: dayDate(startDay),
         endDate: dayDate(endDay),
+        ...typedTripDays({ startDate: dayDate(startDay), endDate: dayDate(endDay) }),
         destinationLabel: proposal.destination,
         status:
           deriveTripStatus({ earliestStart: dayDate(startDay), latestEnd: dayDate(endDay) }) ??
@@ -164,7 +167,11 @@ async function acceptTrip(
     if (proposal.kind === "extend") {
       await tx.trip.update({
         where: { id: trip.id },
-        data: { startDate: dayDate(startDay), endDate: dayDate(endDay) },
+        data: {
+          startDate: dayDate(startDay),
+          endDate: dayDate(endDay),
+          ...typedTripDays({ startDate: dayDate(startDay), endDate: dayDate(endDay) }),
+        },
       });
     }
   }
@@ -182,7 +189,7 @@ async function acceptVisit(
 ): Promise<AcceptResult> {
   const place = await tx.place.findFirst({
     where: { id: proposal.place?.id, userId },
-    select: { id: true, visited: true },
+    select: { id: true, visited: true, lat: true, lon: true },
   });
   if (!place) throw staleError();
   // The anchor's trip, when it still is the user's: a visit made during a stay
@@ -195,9 +202,11 @@ async function acceptVisit(
         })
       )?.id ?? null)
     : null;
-  const visitedAt = dayDate(edits.visitDay ?? proposal.startDay);
+  // A suggestion names a DAY: precision day, on the place's clock (ADR 0002).
+  const time = visitColumnsFromDay(edits.visitDay ?? proposal.startDay, place);
+  const visitedAt = time.visitedAt;
   const visit = await tx.placeVisit.create({
-    data: { placeId: place.id, userId, tripId, visitedAt },
+    data: { placeId: place.id, userId, tripId, ...time, writtenVia: "suggestion" },
   });
   // The places route's rule: a visit that HAPPENED promotes the place out of
   // the wishlist in the same transaction, a future one never does.

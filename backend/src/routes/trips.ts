@@ -48,6 +48,7 @@ import { resolveTrip } from "./trips/resolveTrip";
 import { refusesCoverImage } from "./trips/refusesCoverImage";
 import { toPhotoDto } from "./trips/photoDto";
 import { provenanceForWrite } from "../services/tripSummaryProvenance";
+import { typedTripDays } from "../services/timeModel/tripColumns";
 
 // Re-exported for the Immich trip routers, which import it from here.
 export { resolveTrip };
@@ -473,6 +474,7 @@ router.post(
             color,
             startDate: body.startDate,
             endDate: body.endDate,
+            ...typedTripDays(body),
             // Status derivation (spec 2026-07-17-status-from-dates) normally
             // reads linked flights/cruises, which cannot exist yet — a trip must
             // exist before anything can reference its id. Falling through to the
@@ -594,6 +596,7 @@ router.patch(
             ...(body.color !== undefined && { color: body.color }),
             ...(body.startDate !== undefined && { startDate: body.startDate }),
             ...(body.endDate !== undefined && { endDate: body.endDate }),
+            ...typedTripDays(body),
             ...(body.category !== undefined && { category: body.category }),
             ...(body.tags !== undefined && { tags: body.tags }),
             ...(resolvedCompanionsForUpdate !== undefined && {
