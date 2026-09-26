@@ -87,6 +87,12 @@ const place = registry.register(
       plannedVisitCount: z.number().int().describe("Future-dated visits, counted apart"),
       lastVisitAt: z.string().datetime().nullable().describe("Most recent completed visit"),
       continent: z.string().nullable(),
+      coverPhotoId: uuid
+        .nullable()
+        .describe(
+          "The visit photo the place page leads with (set by PUT /places/{id}/cover). Null " +
+            "means none was chosen — show the first visit photo; it is never written for the user."
+        ),
       visits: z.array(includedRow("visit")).optional().describe("Included by GET /places/{id}"),
       createdAt: z.string().datetime(),
       updatedAt: z.string().datetime(),
