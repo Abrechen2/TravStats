@@ -130,9 +130,10 @@ export async function preferNamedAirports(
       const named = namedAirportCode(code, folded, await cityOf(code));
       if (!named) continue;
       logger.info(
-        { operation: "parser_named_airport", side, from: code, to: named },
+        { operation: "parser_named_airport", side },
         "A named airport beats the city code"
       );
+      logger.debug({ operation: "parser_named_airport", side, from: code, to: named });
       next = { ...next, [side]: named };
     }
     result.push(next);

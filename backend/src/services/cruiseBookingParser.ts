@@ -427,9 +427,10 @@ export class CruiseBookingParser {
       if (!arrayMatch) {
         const preview = responseText.slice(0, 500).replace(/\s+/g, " ");
         logger.warn(
-          { model: this.model, responsePreview: preview },
+          { model: this.model, responseLength: responseText.length },
           "[Cruise Parser] No JSON array found in Ollama response"
         );
+        logger.debug({ model: this.model, responsePreview: preview });
         throw new Error("No JSON array found in Ollama response");
       }
       try {
@@ -437,13 +438,10 @@ export class CruiseBookingParser {
       } catch (err) {
         const preview = arrayMatch[0].slice(0, 500).replace(/\s+/g, " ");
         logger.warn(
-          {
-            model: this.model,
-            matchPreview: preview,
-            error: err instanceof Error ? err.message : String(err),
-          },
+          { model: this.model, error: err instanceof Error ? err.message : String(err) },
           "[Cruise Parser] JSON.parse failed on matched array"
         );
+        logger.debug({ model: this.model, matchPreview: preview });
         throw new Error("Ollama response JSON parse failed");
       }
     }
@@ -452,9 +450,10 @@ export class CruiseBookingParser {
     if (!Array.isArray(cruises)) {
       const preview = JSON.stringify(parsed).slice(0, 300);
       logger.warn(
-        { model: this.model, preview },
+        { model: this.model },
         "[Cruise Parser] Parsed JSON did not yield a cruise array"
       );
+      logger.debug({ model: this.model, preview });
       throw new Error("Ollama response did not contain a cruise array");
     }
 

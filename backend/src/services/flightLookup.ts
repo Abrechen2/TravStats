@@ -231,18 +231,13 @@ export async function lookupFlightByNumber(
   // Check cache
   const cached = flightCache.get<FlightData[]>(cacheKey);
   if (cached !== undefined) {
-    logger.info(
-      { flightNumber, date: dateStr, operation: "airlabs_cache_hit" },
-      `AirLabs cache hit for ${flightNumber} on ${dateStr}`
-    );
+    logger.info({ operation: "airlabs_cache_hit" }, "AirLabs cache hit");
     return cached;
   }
 
   try {
-    logger.info(
-      { flightNumber, date: dateStr, api: "airlabs", operation: "api_call_start" },
-      `Calling AirLabs API for ${flightNumber} on ${dateStr}`
-    );
+    logger.info({ api: "airlabs", operation: "api_call_start" }, "Calling AirLabs API");
+    logger.debug({ flightNumber, date: dateStr, api: "airlabs", operation: "api_call_start" });
     // AirLabs API endpoint for flight schedules. The query uses the UNPADDED
     // IATA form — "EK051" returns zero records where "EK51" returns the
     // flight (see toProviderFlightNumber).
@@ -256,10 +251,7 @@ export async function lookupFlightByNumber(
     });
 
     if (!response.data || !response.data.response) {
-      logger.info(
-        { flightNumber, date: dateStr, api: "airlabs", operation: "api_empty_response" },
-        `AirLabs returned no data for ${flightNumber} on ${dateStr}`
-      );
+      logger.info({ api: "airlabs", operation: "api_empty_response" }, "AirLabs returned no data");
       const isHistorical = date && date < new Date();
       flightCache.set(cacheKey, [], isHistorical ? CACHE_TTL_SECONDS : RECENT_CACHE_TTL_SECONDS);
       return [];
@@ -304,8 +296,6 @@ export async function lookupFlightByNumber(
 
     logger.info(
       {
-        flightNumber,
-        date: dateStr,
         api: "airlabs",
         resultCount: flights.length,
         hasGate: flights.some((f) => f.departure?.gate || f.arrival?.gate),
@@ -313,7 +303,7 @@ export async function lookupFlightByNumber(
         hasAircraft: flights.some((f) => f.aircraft),
         operation: "api_call_success",
       },
-      `AirLabs returned ${flights.length} result(s) for ${flightNumber} on ${dateStr}`
+      `AirLabs returned ${flights.length} result(s)`
     );
 
     // Cache the results with appropriate TTL
@@ -324,8 +314,8 @@ export async function lookupFlightByNumber(
   } catch (_error: unknown) {
     const errMsg = _error instanceof Error ? _error.message : String(_error);
     logger.warn(
-      { flightNumber, date: dateStr, api: "airlabs", error: errMsg, operation: "api_call_error" },
-      `AirLabs lookup failed for ${flightNumber}: ${errMsg}`
+      { api: "airlabs", error: errMsg, operation: "api_call_error" },
+      `AirLabs lookup failed: ${errMsg}`
     );
     return [];
   }
@@ -529,10 +519,9 @@ export async function lookupFlightDetails(
     else if (dateFilterBlocked) skipReason = "date_filter_restricted";
   }
 
+  logger.debug({ flightNumber: trimmedNumber, date, operation: "lookup_start" });
   logger.info(
     {
-      flightNumber: trimmedNumber,
-      date,
       hasAviationstack: !!aviationstackKey,
       aviationstackAvailable,
       aviationstackSkipReason: skipReason,
@@ -540,7 +529,7 @@ export async function lookupFlightDetails(
       hasOpenSky: !!openSkyCredentials,
       operation: "lookup_start",
     },
-    `Looking up ${trimmedNumber} (date=${date ?? "none"}, apis: ${aviationstackAvailable ? "aviationstack" : ""}${openSkyCredentials ? "+opensky" : ""} +airlabs)`
+    `Looking up flight (apis: ${aviationstackAvailable ? "aviationstack" : ""}${openSkyCredentials ? "+opensky" : ""} +airlabs)`
   );
   if (aviationstackAvailable) {
     // Up to two attempts: the second fires only when the first reveals a
@@ -580,15 +569,17 @@ export async function lookupFlightDetails(
         // A date-less (real-time) query returns the latest known flight for
         // the number — guard against it belonging to a different service day.
         if (result && date && omitDateFilter && result.flight_date && result.flight_date !== date) {
+          const operation = "aviationstack_date_mismatch";
           logger.warn(
-            {
-              flightNumber: trimmedNumber,
-              date,
-              resultDate: result.flight_date,
-              operation: "aviationstack_date_mismatch",
-            },
-            `Aviationstack real-time result for ${trimmedNumber} is for ${result.flight_date}, not ${date} — discarding`
+            { operation },
+            "Aviationstack real-time result is for another day — discarding"
           );
+          logger.debug({
+            flightNumber: trimmedNumber,
+            date,
+            resultDate: result.flight_date,
+            operation,
+          });
           result = undefined;
         }
 
@@ -696,11 +687,7 @@ export async function lookupFlightDetails(
           // future dates can't be served — fall through to other providers.
           markAviationstackDateFilterRestricted();
           logger.warn(
-            {
-              flightNumber: trimmedNumber,
-              date,
-              operation: "aviationstack_date_filter_restricted",
-            },
+            { operation: "aviationstack_date_filter_restricted" },
             "Aviationstack plan rejects the flight_date filter — skipping it from now on"
           );
           if (date === currentUtcDay()) {
@@ -736,13 +723,8 @@ export async function lookupFlightDetails(
     );
     if (aerodataboxResult) {
       logger.info(
-        {
-          flightNumber: trimmedNumber,
-          date,
-          api: "aerodatabox",
-          operation: "lookup_aerodatabox_hit",
-        },
-        `AeroDataBox served ${trimmedNumber} on ${date}`
+        { api: "aerodatabox", operation: "lookup_aerodatabox_hit" },
+        "AeroDataBox served"
       );
       return { ...aerodataboxResult, source: "aerodatabox" };
     }
@@ -759,17 +741,14 @@ export async function lookupFlightDetails(
   // AirLabs as the live-window fallback.
   if (departureTime && !inLiveWindow) {
     logger.info(
-      { flightNumber: trimmedNumber, date, operation: "lookup_no_result" },
-      `No data found for ${trimmedNumber} from any API (outside live window, AirLabs skipped)`
+      { operation: "lookup_no_result" },
+      "No data found from any API (outside live window, AirLabs skipped)"
     );
     return null;
   }
 
   // Fallback to AirLabs (live window, or ad-hoc lookup with no departureTime)
-  logger.info(
-    { flightNumber: trimmedNumber, date, api: "airlabs", operation: "fallback_airlabs" },
-    `Falling back to AirLabs for ${trimmedNumber}`
-  );
+  logger.info({ api: "airlabs", operation: "fallback_airlabs" }, "Falling back to AirLabs");
   const fallbackDate = date ? new Date(date) : undefined;
   // `userId` is not optional decoration here: `lookupFlightByNumber` resolves
   // its own key with `getApiKey('airlabs', userId)`, so dropping it silently
@@ -780,18 +759,12 @@ export async function lookupFlightDetails(
   if (!flights.length) {
     // Try OpenSky as last resort (requires credentials)
     if (openSkyCredentials) {
-      logger.info(
-        { flightNumber: trimmedNumber, date, api: "opensky", operation: "fallback_opensky" },
-        `Falling back to OpenSky for ${trimmedNumber}`
-      );
+      logger.info({ api: "opensky", operation: "fallback_opensky" }, "Falling back to OpenSky");
       const openSkyAuth = await getOpenSkyAuthHeaders(openSkyCredentials);
       const openSky = await lookupOpenSkyFlight(trimmedNumber, date, openSkyAuth ?? undefined);
       if (openSky) return { ...openSky, source: "opensky" };
     }
-    logger.info(
-      { flightNumber: trimmedNumber, date, operation: "lookup_no_result" },
-      `No data found for ${trimmedNumber} from any API`
-    );
+    logger.info({ operation: "lookup_no_result" }, "No data found from any API");
     return null;
   }
 
@@ -1053,12 +1026,8 @@ export async function lookupFlightWithHistorical(
   ]);
   if (!anyAirlabs && !anyAviationstack && !anyAerodatabox && !anyOpenSky) {
     logger.info(
-      {
-        flightNumber: trimmed,
-        date: requestedStr,
-        operation: "lookup_unavailable_not_configured",
-      },
-      `Lookup requested for ${trimmed} but no flight-data provider is configured`
+      { operation: "lookup_unavailable_not_configured" },
+      "Lookup requested but no flight-data provider is configured"
     );
     return { flights: [], unavailableReason: "not_configured" };
   }
@@ -1076,12 +1045,10 @@ export async function lookupFlightWithHistorical(
     if (!aviationstackKey && !aerodataboxKey) {
       logger.info(
         {
-          flightNumber: trimmed,
-          date: requestedStr,
           direction: dayDelta > 0 ? "future" : "past",
           operation: "lookup_unavailable_no_provider",
         },
-        `Lookup outside live window requested for ${trimmed} (date=${requestedStr}, direction=${dayDelta > 0 ? "future" : "past"}) but neither Aviationstack nor AeroDataBox is configured`
+        "Lookup outside live window requested but neither Aviationstack nor AeroDataBox is configured"
       );
       return { flights: [], unavailableReason: "no_provider" };
     }
@@ -1123,16 +1090,12 @@ export async function lookupFlightWithHistorical(
     const smokingGun = returnedDate === todayStr;
 
     if (strictMismatch || smokingGun) {
+      const operation = "lookup_date_mismatch";
       logger.info(
-        {
-          flightNumber: trimmed,
-          requestedDate: dateStr,
-          returnedDate,
-          today: todayStr,
-          operation: "lookup_date_mismatch",
-        },
-        `Provider ignored requested date ${dateStr} for ${trimmed} (returned ${returnedDate}); treating as no_match_api_gap`
+        { strictMismatch, smokingGun, operation },
+        "Provider ignored the requested date; treating as no_match_api_gap"
       );
+      logger.debug({ flightNumber: trimmed, requestedDate: dateStr, returnedDate, operation });
       return { flights: [], unavailableReason: "no_match_api_gap" };
     }
   }

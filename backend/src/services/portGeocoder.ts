@@ -112,7 +112,8 @@ export async function geocodePort(query: string, limit = 5): Promise<GeocodedPor
         signal: controller.signal,
       });
       if (!res.ok) {
-        logger.warn({ status: res.status, q }, "[Port Geocoder] Nominatim non-OK response");
+        logger.warn({ status: res.status }, "[Port Geocoder] Nominatim non-OK response");
+        logger.debug({ status: res.status, q }, "[Port Geocoder] Nominatim non-OK response");
         return [];
       }
       raw = await res.json();
@@ -138,7 +139,8 @@ export async function geocodePort(query: string, limit = 5): Promise<GeocodedPor
     cache.set(key, { at: Date.now(), ports: deduped });
     return deduped;
   } catch (err) {
-    logger.warn({ err, q }, "[Port Geocoder] geocode failed");
+    logger.warn({ err }, "[Port Geocoder] geocode failed");
+    logger.debug({ q }, "[Port Geocoder] geocode failed");
     return [];
   }
 }

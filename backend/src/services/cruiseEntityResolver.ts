@@ -167,9 +167,10 @@ async function resolveShip(
     return { id: best.ship.id, line: best.ship.cruiseLine };
   }
   logger.info(
-    { shipName, cruiseLine, bestScore: best.score },
+    { bestScore: best.score },
     "[Cruise Resolver] No matching ship in DB — preserving free-text via shipNameOverride"
   );
+  logger.debug({ shipName, cruiseLine }, "[Cruise Resolver] No matching ship in DB");
   return { id: null, line: cruiseLine };
 }
 

@@ -199,8 +199,8 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
     if (span > PNR_MAX_SPAN_DAYS) {
       logger.info({
         operation: "trip_detect_pnr_skip",
-        message: `Dropped PNR ${pnr} — span ${span}d > ${PNR_MAX_SPAN_DAYS}d (likely frequent-flyer ID, not a booking)`,
-        context: { userId, pnr, flightCount: dedup.length, spanDays: span },
+        message: `Dropped PNR group — span ${span}d > ${PNR_MAX_SPAN_DAYS}d (likely frequent-flyer ID, not a booking)`,
+        context: { userId, flightCount: dedup.length, spanDays: span },
       });
       continue;
     }

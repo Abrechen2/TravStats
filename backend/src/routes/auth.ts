@@ -54,11 +54,7 @@ router.post("/register", authLimiter, async (req: Request, res: Response, next: 
     // union exists to end (forgejo#88 finding 3). The predicate itself stays
     // in `schemas/auth.ts`, so both entry points ask the same question.
     if (isReservedUsername(username)) {
-      throw new AppError(
-        `The username "${username}" is reserved by this instance`,
-        400,
-        "USERNAME_RESERVED"
-      );
+      throw new AppError("This username is reserved by this instance", 400, "USERNAME_RESERVED");
     }
 
     // Check if user exists
@@ -315,7 +311,7 @@ router.post("/login", authLimiter, async (req: Request, res: Response, next: Nex
             logger.info({
               operation: "login_start_airport_seeding",
               message: "Airport seeding started after first login",
-              context: { userId: user.id, username: user.username },
+              context: { userId: user.id },
             });
           } catch (error: unknown) {
             // If another process already started seeding, ignore the error

@@ -241,18 +241,19 @@ export async function lookupFlightAerodatabox(
 
   const cached = cache.get<FlightLookupResult | null>(cacheKey);
   if (cached !== undefined) {
-    logger.info(
-      { flightNumber: normalized, date, operation: "aerodatabox_cache_hit" },
-      `AeroDataBox cache hit for ${normalized} on ${date}`
-    );
+    logger.info({ operation: "aerodatabox_cache_hit" }, "AeroDataBox cache hit");
     return cached;
   }
 
   try {
-    logger.info(
-      { flightNumber: normalized, date, api: "aerodatabox", operation: "api_call_start" },
-      `Calling AeroDataBox for ${normalized} on ${date}`
-    );
+    logger.info({ api: "aerodatabox", operation: "api_call_start" }, "Calling AeroDataBox");
+    logger.debug({
+      flightNumber: normalized,
+      date,
+      depAirportCode,
+      api: "aerodatabox",
+      operation: "api_call_start",
+    });
 
     const response = await axios.get<AerodataboxFlight[]>(
       // Unpadded IATA form — providers do not carry the leading zeros that
@@ -281,13 +282,11 @@ export async function lookupFlightAerodatabox(
     if (response.data != null && !Array.isArray(response.data)) {
       logger.warn(
         {
-          flightNumber: normalized,
-          date,
           api: "aerodatabox",
           receivedType: typeof response.data,
           operation: "unexpected_response_shape",
         },
-        `AeroDataBox answered ${normalized} on ${date} with a ${typeof response.data}, not a flight list`
+        `AeroDataBox answered with a ${typeof response.data}, not a flight list`
       );
       // Not cached: a message body is the provider's moment, not the
       // flight's absence, and a historical date would otherwise pin the
@@ -303,13 +302,11 @@ export async function lookupFlightAerodatabox(
       // rather than a question we asked imprecisely.
       logger.info(
         {
-          flightNumber: normalized,
-          date,
           api: "aerodatabox",
           returned: returned.length,
           operation: "aerodatabox_no_departure_on_date",
         },
-        `AeroDataBox returned ${returned.length} entr${returned.length === 1 ? "y" : "ies"} for ${normalized}, none departing on ${date}`
+        `AeroDataBox returned ${returned.length} entr${returned.length === 1 ? "y" : "ies"}, none departing on the requested date`
       );
     }
 
@@ -317,8 +314,8 @@ export async function lookupFlightAerodatabox(
     const picked = pickOperatorAndMarketing(atOurAirport, normalized);
     if (!picked) {
       logger.info(
-        { flightNumber: normalized, date, api: "aerodatabox", operation: "api_empty_response" },
-        `AeroDataBox returned no data for ${normalized} on ${date}`
+        { api: "aerodatabox", operation: "api_empty_response" },
+        "AeroDataBox returned no data"
       );
       const ttl = isHistoricalDate(date) ? CACHE_TTL_HISTORICAL_SECONDS : CACHE_TTL_RECENT_SECONDS;
       cache.set(cacheKey, null, ttl);
@@ -329,15 +326,13 @@ export async function lookupFlightAerodatabox(
 
     logger.info(
       {
-        flightNumber: normalized,
-        date,
         api: "aerodatabox",
         hasGate: !!(result.departure?.gate || result.arrival?.gate),
         hasTerminal: !!(result.departure?.terminal || result.arrival?.terminal),
         hasAircraft: !!result.aircraft,
         operation: "api_call_success",
       },
-      `AeroDataBox returned data for ${normalized} on ${date}`
+      "AeroDataBox returned data"
     );
 
     const ttl = isHistoricalDate(date) ? CACHE_TTL_HISTORICAL_SECONDS : CACHE_TTL_RECENT_SECONDS;
@@ -358,24 +353,18 @@ export async function lookupFlightAerodatabox(
 
     if (status === 429) {
       logger.warn(
-        { flightNumber: normalized, date, api: "aerodatabox", operation: "rate_limited" },
+        { api: "aerodatabox", status, operation: "rate_limited" },
         "AeroDataBox returned 429 — quota or per-second limit hit"
       );
     } else if (status === 401 || status === 403) {
       logger.warn(
-        { flightNumber: normalized, date, api: "aerodatabox", operation: "auth_failed" },
+        { api: "aerodatabox", status, operation: "auth_failed" },
         "AeroDataBox returned auth error — check API key"
       );
     } else {
       logger.warn(
-        {
-          flightNumber: normalized,
-          date,
-          api: "aerodatabox",
-          error: message,
-          operation: "api_call_error",
-        },
-        `AeroDataBox lookup failed for ${normalized}: ${message}`
+        { api: "aerodatabox", status, error: message, operation: "api_call_error" },
+        `AeroDataBox lookup failed: ${message}`
       );
     }
     return null;

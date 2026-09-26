@@ -441,11 +441,13 @@ export async function convertAviationstackTimeToUtc(
       /(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/
     );
     if (!dateMatch) {
+      const operation = "convert_aviationstack_time_parse_error";
       logger.warn({
-        operation: "convert_aviationstack_time_parse_error",
+        operation,
         message: "Failed to parse Aviationstack time string format",
-        context: { timeString, airportCode, timezone },
+        context: { timezone },
       });
+      logger.debug({ operation, context: { timeString, airportCode } });
       return null;
     }
 
@@ -470,10 +472,15 @@ export async function convertAviationstackTimeToUtc(
     const localDate = new Date(Date.UTC(yearNum, monthNum, dayNum, hourNum, minuteNum, secondNum));
 
     if (isNaN(localDate.getTime())) {
+      const operation = "convert_aviationstack_time_parse_error";
       logger.warn({
-        operation: "convert_aviationstack_time_parse_error",
+        operation,
         message: "Failed to create date from parsed components",
-        context: { timeString, airportCode, timezone, year, month, day, hour, minute, second },
+        context: { timezone },
+      });
+      logger.debug({
+        operation,
+        context: { timeString, airportCode, year, month, day, hour, minute, second },
       });
       return null;
     }

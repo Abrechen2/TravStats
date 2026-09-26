@@ -391,7 +391,6 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
         {
           operation: "bulk_flight_refresh_item_failed",
           flightId: candidate.id,
-          flightNumber: candidate.flightNumber,
           error: error instanceof Error ? error.message : "Unknown error",
         },
         "Bulk refresh failed for one flight"

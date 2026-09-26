@@ -106,8 +106,8 @@ export async function sendFlightReminder(
       operation: "email_reminder_sent",
       flightId: flight.id,
       hoursUntilDeparture,
-      to: user.notificationEmail,
     });
+    logger.debug({ operation: "email_reminder_sent", to: user.notificationEmail });
   } catch (error) {
     logger.error({
       operation: "email_reminder_send_failed",
@@ -178,11 +178,8 @@ export async function sendPasswordResetEmail(
       subject,
       html,
     });
-    logger.info({
-      operation: "password_reset_email_sent",
-      to,
-      username,
-    });
+    logger.info({ operation: "password_reset_email_sent" });
+    logger.debug({ operation: "password_reset_email_sent", to });
   } catch (error) {
     logger.error({
       operation: "password_reset_email_failed",
@@ -229,11 +226,8 @@ export async function sendAdminPasswordResetEmail(
       subject,
       html,
     });
-    logger.info({
-      operation: "admin_password_reset_email_sent",
-      to,
-      username,
-    });
+    logger.info({ operation: "admin_password_reset_email_sent" });
+    logger.debug({ operation: "admin_password_reset_email_sent", to });
   } catch (error) {
     logger.error({
       operation: "admin_password_reset_email_failed",
@@ -291,7 +285,8 @@ export async function sendInvitationEmail(
       subject,
       html,
     });
-    logger.info({ operation: "invitation_email_sent", to, inviter: inviterUsername });
+    logger.info({ operation: "invitation_email_sent" });
+    logger.debug({ operation: "invitation_email_sent", to });
   } catch (error) {
     logger.error({
       operation: "invitation_email_failed",

@@ -226,11 +226,11 @@ async function resolveFxOutcomes(
         {
           operation: "lodging_import_fx_lookup_failed",
           currency,
-          checkInDay: row.stay.checkIn,
           message: err instanceof Error ? err.message : String(err),
         },
         "FX pre-resolve lookup threw unexpectedly — degrading this pair to lookupFailed"
       );
+      logger.debug({ operation: "lodging_import_fx_lookup_failed", checkInDay: row.stay.checkIn });
       outcomes.set(key, { status: "lookupFailed" });
     }
   }
@@ -300,7 +300,6 @@ async function createStay(
       {
         operation: "lodging_import_price_without_currency",
         sourceRowIndex,
-        checkInDay: fields.checkIn,
       },
       "[Lodging Import] Price without a currency — importing the stay without it"
     );

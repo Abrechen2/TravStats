@@ -352,11 +352,11 @@ export class TesseractVisionParser implements IVisionParser {
         result.inferredFields = Array.from(new Set([...existing, ...parsedData.inferredFields]));
       }
 
-      logger.info(
+      logger.info({ missingFields: result.missing.length }, "[Tesseract Parser] Parsing complete");
+      logger.debug(
         {
           flightNumber: result.flightNumber,
           route: `${result.departureCode} -> ${result.arrivalCode}`,
-          missingFields: result.missing.length,
         },
         "[Tesseract Parser] Parsing complete"
       );

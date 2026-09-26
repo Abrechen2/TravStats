@@ -16,7 +16,8 @@ export function warnIfScheduledInPast(
   if (data.status !== "scheduled" || !data.departureLocal) return;
   const nowIso = new Date().toISOString().slice(0, 19);
   if (data.departureLocal < nowIso) {
-    logger.warn({
+    logger.warn({ operation: "flight_create_scheduled_in_past", userId });
+    logger.debug({
       operation: "flight_create_scheduled_in_past",
       userId,
       departureLocal: data.departureLocal,
