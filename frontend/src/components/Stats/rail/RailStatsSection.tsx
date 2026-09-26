@@ -11,6 +11,7 @@ import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
 import StatCard from "../StatCard";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
 import PeriodComparisonStrip from "../PeriodComparisonStrip";
+import { comparisonWindow, sameSpanUntil } from "../../../lib/stats/comparisonWindow";
 import type { PeriodScope } from "../useStatsPeriod";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 
@@ -48,9 +49,15 @@ export default function RailStatsSection({
     setFailed(false);
     void (async () => {
       try {
+        // Compared as the overview compares: a running year against the SAME
+        // span of the other one, never eight months against twelve (D11).
+        const until =
+          year !== null && compareYear !== null
+            ? sameSpanUntil(comparisonWindow(year, compareYear), year)
+            : null;
         const [current, prior] = await Promise.all([
-          railApi.stats(year),
-          compareYear === null ? Promise.resolve(null) : railApi.stats(compareYear),
+          railApi.stats(year, until),
+          compareYear === null ? Promise.resolve(null) : railApi.stats(compareYear, until),
         ]);
         if (cancelled) return;
         setStats(current);

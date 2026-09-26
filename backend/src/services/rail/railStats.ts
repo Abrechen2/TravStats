@@ -3,6 +3,7 @@ import {
   countableRailWhere,
   railCountries,
   railYear,
+  stationDayKey,
   type DatedRail,
 } from "../../shared/railCounting";
 import { railRideFacts } from "../../utils/railAchievements";
@@ -233,11 +234,24 @@ const STATS_SELECT = {
  * derived per row and cannot be pushed into the query; the set is one user's
  * train rides, and the select leaves out the frozen line.
  */
-export async function loadRailStats(userId: string, year: number | null): Promise<RailStats> {
+export async function loadRailStats(
+  userId: string,
+  year: number | null,
+  /** "MM-DD": count that year only up to this day, on the departure station's calendar. */
+  until: string | null = null
+): Promise<RailStats> {
   const rows = await prisma.railJourney.findMany({
     where: { userId, ...countableRailWhere() },
     select: STATS_SELECT,
     orderBy: [{ departureTime: "asc" }, { id: "asc" }],
   });
-  return computeRailStats(year === null ? rows : rows.filter((r) => railYear(r) === year));
+  if (year === null) return computeRailStats(rows);
+  const lastDay = until === null ? null : `${year}-${until}`;
+  return computeRailStats(
+    rows.filter(
+      (r) =>
+        railYear(r) === year &&
+        (lastDay === null || stationDayKey(r.departureTime, r.depTimezone) <= lastDay)
+    )
+  );
 }

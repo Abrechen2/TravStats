@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import type { RailStats } from "../../../../types/rail";
@@ -46,10 +46,47 @@ vi.mock("../../../../lib/api/rail", () => ({
 }));
 
 import RailStatsSection from "../RailStatsSection";
+import { railApi } from "../../../../lib/api/rail";
 
 const visibility = { isVisible: () => true, toggle: vi.fn(), reset: vi.fn(), hiddenCount: 0 };
 
 describe("RailStatsSection", () => {
+  // Acceptance D11 (2026-09-26): the rail tab set a running year against the
+  // whole previous one while the overview compared the same span.
+  it("compares a running year with the same span of the other, as the overview does", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 8, 26, 12));
+    try {
+      render(
+        <MemoryRouter>
+          <RailStatsSection
+            scope={{ year: 2026, compareYear: 2025 } as never}
+            visibility={visibility}
+          />
+        </MemoryRouter>
+      );
+      await waitFor(() => expect(railApi.stats).toHaveBeenCalledWith(2025, "09-26"));
+      expect(railApi.stats).toHaveBeenCalledWith(2026, "09-26");
+      await screen.findAllByText("rail:stats.journeys");
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("compares two finished years in full", async () => {
+    vi.mocked(railApi.stats).mockClear();
+    render(
+      <MemoryRouter>
+        <RailStatsSection
+          scope={{ year: 2023, compareYear: 2022 } as never}
+          visibility={visibility}
+        />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(railApi.stats).toHaveBeenCalledWith(2022, null));
+    await screen.findAllByText("rail:stats.journeys");
+  });
+
   it("labels every kilometre with what it measures", async () => {
     render(
       <MemoryRouter>

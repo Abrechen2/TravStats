@@ -175,6 +175,17 @@ describe("rail statistics", () => {
     );
   });
 
+  // Acceptance D11 (2026-09-26): the rail tab compared a running year with
+  // the whole previous one; the overview compares the same span.
+  it("counts a year only up to the day a same-span comparison ends", async () => {
+    // The 2025 rides left on 1 March and 1 June; a window ending 31 May
+    // holds the first alone.
+    expect((await get("?year=2025&until=05-31")).body.data.journeys).toBe(1);
+    expect((await get("?year=2025&until=06-01")).body.data.journeys).toBe(2);
+    expect((await get("?until=05-31")).status).toBe(400);
+    expect((await get("?year=2025&until=13-01")).status).toBe(400);
+  });
+
   it("refuses a nonsense year", async () => {
     expect((await get("?year=abc")).status).toBe(400);
   });

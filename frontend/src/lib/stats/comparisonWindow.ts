@@ -101,6 +101,15 @@ export function windowEndKeyInYear(window: ComparisonWindow, year: number): stri
 }
 
 /**
+ * Where a same-span window ends, as the "MM-DD" a server-side filter takes
+ * (`GET /rail/stats?until=`), or null for a full-year window — which needs
+ * no cut. Both years of a comparison are cut at this same month and day.
+ */
+export function sameSpanUntil(window: ComparisonWindow, year: number): string | null {
+  return window.kind === "samePeriod" ? windowEndKeyInYear(window, year).slice(5) : null;
+}
+
+/**
  * A predicate over `YYYY-MM-DD` keys: inside `year`, and on or before where
  * this window ends there. The end key is resolved ONCE — a per-day
  * `windowEndInYear` would build a Date for every day of every domain.

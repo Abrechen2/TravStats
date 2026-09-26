@@ -83,10 +83,13 @@ export const railApi = {
     await api.delete(`/rail/${id}`);
   },
 
-  /** The statistics over completed rides; `year` is the year a ride left in. */
-  async stats(year: number | null = null): Promise<RailStats> {
+  /**
+   * The statistics over completed rides; `year` is the year a ride left in.
+   * `until` ("MM-DD") cuts that year at the day a same-span comparison ends.
+   */
+  async stats(year: number | null = null, until: string | null = null): Promise<RailStats> {
     const res = await api.get<Envelope<RailStats>>("/rail/stats", {
-      params: year === null ? {} : { year },
+      params: year === null ? {} : until === null ? { year } : { year, until },
     });
     return res.data.data;
   },
