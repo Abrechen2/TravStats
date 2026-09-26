@@ -191,9 +191,12 @@ describe("RoutingProviderSection", () => {
       routingProvider: "openrouteservice",
       globalOpenrouteserviceApiKey: "abcd****wxyz",
     });
+    // The server names every outcome with a key; the card shows the key's
+    // sentence, never the English `message` (silent-failure review 2026-09-26).
     vi.mocked(adminApi.testApiKey).mockResolvedValueOnce({
       success: true,
       message: "API key is valid",
+      messageKey: "valid",
     });
 
     render(<RoutingProviderSection isAdmin={true} />);
@@ -201,18 +204,19 @@ describe("RoutingProviderSection", () => {
     await screen.findByText("settings:routing.openrouteservice.label");
     await user.click(screen.getByText("settings:apiKeys.test"));
 
-    expect(await screen.findByText("API key is valid")).toBeInTheDocument();
+    expect(await screen.findByText("settings:apiKeyTest.valid")).toBeInTheDocument();
     expect(adminApi.testApiKey).toHaveBeenCalledWith("openrouteservice", "abcd****wxyz");
 
     vi.mocked(adminApi.testApiKey).mockResolvedValueOnce({
       success: false,
       message: "API key is invalid",
+      messageKey: "invalid",
     });
     await user.click(screen.getByText("settings:apiKeys.test"));
 
-    expect(await screen.findByText("API key is invalid")).toBeInTheDocument();
+    expect(await screen.findByText("settings:apiKeyTest.invalid")).toBeInTheDocument();
     // Both outcomes rendered — the earlier success message is gone, this is
     // a REPLACEMENT of the result, not an accumulation of both.
-    expect(screen.queryByText("API key is valid")).not.toBeInTheDocument();
+    expect(screen.queryByText("settings:apiKeyTest.valid")).not.toBeInTheDocument();
   });
 });

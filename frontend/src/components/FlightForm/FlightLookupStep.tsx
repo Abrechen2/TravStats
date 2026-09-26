@@ -102,7 +102,10 @@ export default function FlightLookupStep({
     }
     const flights: ParsedBooking[] = result.flights ?? [];
     if (flights.length === 0) {
-      setError(t("flights:form.noFlightsInEmail"));
+      // "No flight" is only a finding when every reader was asked.
+      setError(
+        t(result.llmUnreachable ? "flights:form.llmUnreachable" : "flights:form.noFlightsInEmail")
+      );
       return;
     }
     void openImportBatch("email", fileName ?? null);
@@ -119,7 +122,9 @@ export default function FlightLookupStep({
       return;
     }
     if (result.flights.length === 0) {
-      setError(t("flights:form.noFlightsInEmail"));
+      setError(
+        t(result.llmUnreachable ? "flights:form.llmUnreachable" : "flights:form.noFlightsInEmail")
+      );
       return;
     }
     void openImportBatch("pdf", fileName ?? null);

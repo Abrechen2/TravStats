@@ -65,5 +65,12 @@
       "description": "For anything without a name — a viewpoint, a pitch, a bay.",
       "action": "Map"
     }
+  },
+  "errors": {
+    "llmUnreachable": "The AI parser cannot be reached right now. Please check the parser settings or try again later.",
+    "invalidPdf": "This file could not be read as a PDF.",
+    "pdfNoText": "No text could be read from this PDF – probably a scan. Please read it in as an image with the boarding-pass scanner.",
+    "rateLimited": "Too many imports in a short time. Please wait a moment and try again.",
+    "timeout": "Reading the document took too long. Please try again later."
   }
 }

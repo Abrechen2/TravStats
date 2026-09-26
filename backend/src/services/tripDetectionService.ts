@@ -47,6 +47,8 @@ import { calculateDistance } from "../utils/geo";
 import { type HomeAirportEntry, getHomeAirportAt, normalizeHistory } from "../utils/homeAirport";
 import logger from "../utils/logger";
 import { fillTripDatesFromSegments, recomputeTripStatus } from "./tripStatusService";
+import { buildTzMap } from "./stats/departureClock";
+import { localWallClockOf, type FlightTimeSemantics } from "../utils/timezone";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PNR_MAX_SPAN_DAYS = 30;
@@ -69,6 +71,8 @@ interface FlightLite {
   arrLon: number;
   flightNumber: string | null;
   status: string;
+  /** The departure's calendar day at its airport (YYYY-MM-DD), when known. */
+  localDay?: string;
 }
 
 /** One leg of a proposed trip, surfaced so the review UI can expand a
@@ -152,6 +156,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
       bookingReference: true,
       departureTime: true,
       depIata: true,
+      depIcao: true,
       arrIata: true,
       depLat: true,
       depLon: true,
@@ -159,6 +164,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
       arrLon: true,
       flightNumber: true,
       status: true,
+      depTimeSemantics: true,
     },
   });
 
@@ -167,7 +173,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
   // the user actually flew them, not in the order their default UTC
   // timestamps happen to fall. See `chainCoherentSort` for the full
   // rationale (issue #104).
-  const flights = chainCoherentSort(dbFlights);
+  const flights = chainCoherentSort(await withLocalDay(dbFlights));
 
   if (flights.length === 0) {
     return await finalizeWithCleanup(
@@ -310,6 +316,34 @@ function spanDays(flights: FlightLite[]): number {
 
 function toYmd(d: Date): string {
   return d.toISOString().slice(0, 10);
+}
+
+/**
+ * Attach each departure's calendar day at its own airport. A proposal's span
+ * and leg dates used the UTC day, so a 06:00 departure from Tokyo (21:00 UTC
+ * the evening before) started the trip a day early.
+ */
+async function withLocalDay<
+  T extends {
+    departureTime: Date | null;
+    depIata: string | null;
+    depIcao: string | null;
+    depTimeSemantics: string;
+  },
+>(rows: T[]): Promise<Array<T & { localDay?: string }>> {
+  const tzMap = await buildTzMap(rows.map((r) => ({ ...r, arrIata: null, arrIcao: null })));
+  return rows.map((r) => {
+    const zone = (r.depIata && tzMap.get(r.depIata)) || (r.depIcao && tzMap.get(r.depIcao)) || null;
+    if (!r.departureTime || !zone) return r;
+    const semantics = r.depTimeSemantics as FlightTimeSemantics;
+    return { ...r, localDay: localWallClockOf(r.departureTime, zone, semantics).date };
+  });
+}
+
+/** The day a leg departed, on its airport's calendar where that is known. */
+function legDay(f: FlightLite): string {
+  if (f.localDay) return f.localDay;
+  return f.departureTime ? toYmd(f.departureTime) : "";
 }
 
 /**
@@ -505,10 +539,8 @@ function makeProposal(
   // final arrival, which feels more natural than picking the middle leg.
   const isLoop = source === "home_loop" || origin === lastArrival;
   const destination = isLoop ? furthestFromOrigin(sorted, origin) : lastArrival;
-  const from = sorted[0]?.departureTime ? toYmd(sorted[0].departureTime) : "";
-  const to = sorted[sorted.length - 1]?.departureTime
-    ? toYmd(sorted[sorted.length - 1].departureTime as Date)
-    : "";
+  const from = sorted[0] ? legDay(sorted[0]) : "";
+  const to = sorted[sorted.length - 1] ? legDay(sorted[sorted.length - 1]) : "";
   const month = sorted[0]?.departureTime
     ? sorted[0].departureTime.toLocaleDateString("en", { month: "short", year: "numeric" })
     : "";
@@ -524,7 +556,7 @@ function makeProposal(
     span: { from, to },
     suggestedName: `${origin} ${separator} ${destination} · ${month}`,
     legs: sorted.map((f) => ({
-      date: f.departureTime ? toYmd(f.departureTime) : "",
+      date: legDay(f),
       flightNumber: f.flightNumber,
       depIata: f.depIata,
       arrIata: f.arrIata,

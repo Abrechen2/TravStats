@@ -58,6 +58,8 @@ export interface ParseResult {
   parserUsed: "regex" | "ollama";
   ollamaAvailable: boolean;
   fallbackUsed?: boolean;
+  /** Nothing found, and the configured LLM could not be asked (see ParserResult). */
+  llmUnreachable?: boolean;
 }
 
 /**
@@ -127,6 +129,7 @@ export async function parseBookingEmail(
     parserUsed: result.provider as "regex" | "ollama",
     ollamaAvailable,
     fallbackUsed: result.fallbackUsed,
+    ...(result.llmUnreachable ? { llmUnreachable: true } : {}),
   };
 }
 

@@ -62,7 +62,38 @@ describe("POST /api/v1/parse-pdf — a scan says so", () => {
 
     expect(res.status).toBe(422);
     expect(res.body.message).toContain("/parse-image");
+    // The client branches on this, not on the English message.
+    expect(res.body.code).toBe("PDF_NO_TEXT");
     expect(parseLodgingBookingText).not.toHaveBeenCalled();
+  });
+
+  it("answers INVALID_PDF without the extractor's own words", async () => {
+    extractTextFromPdf.mockRejectedValue(new Error("bad XRef entry at offset 17"));
+
+    const res = await request(app)
+      .post("/api/v1/parse-pdf")
+      .set("Cookie", cookie)
+      .send({ pdfBase64: PDF, domain: "lodging" });
+
+    expect(res.status).toBe(400);
+    expect(res.body.code).toBe("INVALID_PDF");
+    expect(JSON.stringify(res.body)).not.toContain("XRef");
+  });
+
+  it("answers a parser crash with PARSE_FAILED and no exception text", async () => {
+    extractTextFromPdf.mockResolvedValue(
+      "Hotel Adlon Berlin — Rechnung. Anreise 01.05.2024, Abreise 04.05.2024, 3 Nächte, Gesamt 402,00 EUR"
+    );
+    parseLodgingBookingText.mockRejectedValue(new Error("Cannot read properties of undefined"));
+
+    const res = await request(app)
+      .post("/api/v1/parse-pdf")
+      .set("Cookie", cookie)
+      .send({ pdfBase64: PDF, domain: "lodging" });
+
+    expect(res.status).toBe(500);
+    expect(res.body.code).toBe("PARSE_FAILED");
+    expect(JSON.stringify(res.body)).not.toContain("Cannot read properties");
   });
 
   it("still parses a PDF with a real text layer", async () => {

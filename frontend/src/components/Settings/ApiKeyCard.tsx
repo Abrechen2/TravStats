@@ -105,16 +105,21 @@ export default function ApiKeyCard({
     messageParams?: Record<string, string | number>;
   } | null>(null);
 
-  // #260: the backend names the outcome with a stable key; the English
-  // `message` is only the fallback for keys this build doesn't know (and
-  // for untranslatable upstream prose, which carries no key at all).
-  const testResultText = (result: NonNullable<typeof testResult>): string =>
-    result.messageKey
+  // #260: the backend names the outcome with a stable key, and the card
+  // shows only that. The English `message` ("getaddrinfo ENOTFOUND …") used
+  // to be printed whenever a key was missing; it is the tooltip now, a
+  // detail for whoever debugs the provider, never the sentence.
+  const testResultText = (result: NonNullable<typeof testResult>): string => {
+    const generic = t(
+      result.success ? "settings:apiKeyTest.valid" : "settings:apiKeyTest.providerError"
+    );
+    return result.messageKey
       ? t(`settings:apiKeyTest.${result.messageKey}`, {
           ...result.messageParams,
-          defaultValue: result.message,
+          defaultValue: generic,
         })
-      : result.message;
+      : generic;
+  };
 
   const handleChange = (newValue: string) => {
     setLocalValue(newValue);
@@ -171,8 +176,10 @@ export default function ApiKeyCard({
       const data = errorObj.response?.data;
       setTestResult({
         success: false,
-        message: data?.message || errorObj.message || t("settings:apiKeyTest.requestFailed"),
-        messageKey: data?.messageKey,
+        message: data?.message || errorObj.message || "",
+        // A request that failed without the server naming why is "the test
+        // failed", not axios's own English sentence.
+        messageKey: data?.messageKey ?? "requestFailed",
         messageParams: data?.messageParams,
       });
     } finally {
@@ -365,7 +372,7 @@ export default function ApiKeyCard({
           }}
         >
           <Icon name={testResult.success ? "check" : "x"} size={14} />
-          {testResultText(testResult)}
+          <span title={testResult.message || undefined}>{testResultText(testResult)}</span>
         </div>
       )}
     </div>

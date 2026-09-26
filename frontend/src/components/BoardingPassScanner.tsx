@@ -7,6 +7,7 @@ import { logger } from "../lib/logger";
 import { bcbpToScanResult } from "./bcbpToScanResult";
 
 import type { ScanResultData } from "./BoardingPassScanner.types";
+import { parseFailureMessage } from "../lib/parseErrorCopy";
 
 // Re-export so existing call-sites (`import { ScanResultData } from ".../BoardingPassScanner"`)
 // continue to compile without churn.
@@ -120,13 +121,8 @@ export default function BoardingPassScanner({
             updateScanStep(currentStep.id, { status: "error" });
           }
 
-          const axiosError = err as {
-            response?: { status?: number; data?: { error?: string } };
-            message?: string;
-          };
-          setError(
-            axiosError.response?.data?.error || axiosError.message || t("errors:boardingPassError")
-          );
+          // Never the server's English `error` or axios's own message.
+          setError(parseFailureMessage(err, t, "errors:boardingPassError"));
           setScanning(false);
         }
       };

@@ -46,6 +46,8 @@ export interface ParsePdfFlightResult {
   parserUsed: string;
   ollamaAvailable: boolean;
   fallbackUsed?: boolean;
+  /** Nothing found AND the configured AI parser could not be asked. */
+  llmUnreachable?: boolean;
   pdfTextLength: number;
   bcbpDetected: boolean;
 }

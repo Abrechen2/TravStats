@@ -18,6 +18,13 @@ const parsedData: ParsedBooking = {
   },
 };
 
+// Airport codes resolve through `getByCode` (lib/airportResolve); an unknown
+// code is its 404 — the same "not found" the old empty search result gave.
+vi.mock("../../lib/api/airports", () => ({
+  airportsApi: {
+    getByCode: vi.fn().mockRejectedValue({ response: { status: 404 } }),
+  },
+}));
 vi.mock("../../lib/api", () => ({
   airportsApi: { search: vi.fn().mockResolvedValue([]) },
   parseApi: { submitParserCorrection: vi.fn() },

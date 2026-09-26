@@ -48,6 +48,7 @@ import { sharedFlightCreateFields } from "../services/flights/flightCreateFields
 import { warnIfScheduledInPast } from "../services/flights/scheduledInPastWarning";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 import { resolveAirlineCodes } from "../utils/airlineNormalize";
+import { airlineCodeUpdate } from "../utils/airlineCodeUpdate";
 import { normalizeAircraft } from "../utils/aircraftNormalize";
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
 import { resolveDuplicateFlight } from "../services/flights/duplicateResolution";
@@ -906,49 +907,26 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
 
     const updateData: FlightUpdateData = {};
     // `!== undefined`, not truthy: an explicit null CLEARS the airline. The
-    // resolved IATA/ICAO codes must go with it — leaving them standing would
-    // keep logos and stats pointing at an airline the row no longer names.
-    if (data.airline !== undefined) {
-      updateData.airline = data.airline;
-      if (
-        data.airline === null &&
-        data.airlineIata === undefined &&
-        data.airlineIcao === undefined
-      ) {
-        updateData.airlineIata = null;
-        updateData.airlineIcao = null;
-      }
-    }
-
-    // Resolve airline codes if name provided but IATA/ICAO missing
-    let airlineIata = data.airlineIata;
-    let airlineIcao = data.airlineIcao;
-    if (data.airline && airlineIata === undefined && airlineIcao === undefined) {
-      const resolved = resolveAirlineCodes(data.airline);
-      if (resolved) {
-        airlineIata = resolved.iata ?? null;
-        airlineIcao = resolved.icao ?? null;
-      }
-    }
-    if (airlineIata !== undefined) updateData.airlineIata = airlineIata;
-    if (airlineIcao !== undefined) updateData.airlineIcao = airlineIcao;
-    if (data.operatingAirline !== undefined) {
-      updateData.operatingAirline = data.operatingAirline;
-      // Same cascade as airline above: a cleared operating airline must not
-      // leave its resolved codes behind.
-      if (
-        data.operatingAirline === null &&
-        data.operatingAirlineIata === undefined &&
-        data.operatingAirlineIcao === undefined
-      ) {
-        updateData.operatingAirlineIata = null;
-        updateData.operatingAirlineIcao = null;
-      }
-    }
-    if (data.operatingAirlineIata !== undefined)
-      updateData.operatingAirlineIata = data.operatingAirlineIata;
-    if (data.operatingAirlineIcao !== undefined)
-      updateData.operatingAirlineIcao = data.operatingAirlineIcao;
+    // codes follow the name — see airlineCodeUpdate for why a renamed
+    // operating airline no longer keeps the previous carrier's logo.
+    if (data.airline !== undefined) updateData.airline = data.airline;
+    const marketing = airlineCodeUpdate(
+      data.airline,
+      data.airlineIata,
+      data.airlineIcao,
+      existingFlight.airline
+    );
+    if (marketing.iata !== undefined) updateData.airlineIata = marketing.iata;
+    if (marketing.icao !== undefined) updateData.airlineIcao = marketing.icao;
+    if (data.operatingAirline !== undefined) updateData.operatingAirline = data.operatingAirline;
+    const operating = airlineCodeUpdate(
+      data.operatingAirline,
+      data.operatingAirlineIata,
+      data.operatingAirlineIcao,
+      existingFlight.operatingAirline
+    );
+    if (operating.iata !== undefined) updateData.operatingAirlineIata = operating.iata;
+    if (operating.icao !== undefined) updateData.operatingAirlineIcao = operating.icao;
     if (data.isCodeshare !== undefined) updateData.isCodeshare = data.isCodeshare;
     if (data.flightNumber !== undefined) updateData.flightNumber = data.flightNumber;
     if (data.callsign !== undefined) updateData.callsign = data.callsign;

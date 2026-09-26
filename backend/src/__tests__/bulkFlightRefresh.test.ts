@@ -322,3 +322,44 @@ describe("runBulkRefresh", () => {
     expect(summary.updated).toBe(1);
   }, 10000); // pacing between flights pushes us close to the default 5s
 });
+
+/**
+ * Silent-failure review 2026-09-26, finding 6: a refused key, a spent quota or
+ * a timeout used to come back as an empty lookup, and the refresh filed the
+ * leg under "the provider has no data" — the one reading that sends nobody to
+ * fix the key.
+ */
+describe("runBulkRefresh — a provider failure is a failure, not 'no data'", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    prismaMock.flight.count.mockResolvedValue(1);
+  });
+
+  it("counts the leg as failed and names the provider and why", async () => {
+    prismaMock.flight.findMany.mockResolvedValue([
+      {
+        id: "f1",
+        flightNumber: "LH401",
+        departureTime: new Date(Date.now() - 30 * 86400000),
+        depIata: "FRA",
+        depIcao: "EDDF",
+      },
+    ]);
+    flightLookupMock.lookupFlightWithHistorical.mockResolvedValue({
+      flights: [],
+      unavailableReason: "provider_failed",
+      providerFailures: [{ provider: "aerodatabox", outcome: "quota" }],
+    });
+
+    const summary = await runBulkRefresh(USER_ID);
+
+    expect(summary.noData).toBe(0);
+    expect(summary.failed).toBe(1);
+    expect(summary.results[0]).toMatchObject({
+      outcome: "failed",
+      reason: "provider_failed",
+      providerFailures: [{ provider: "aerodatabox", outcome: "quota" }],
+    });
+    expect(prismaMock.flight.update).not.toHaveBeenCalled();
+  });
+});

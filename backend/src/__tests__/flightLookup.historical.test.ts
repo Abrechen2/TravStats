@@ -41,7 +41,11 @@ const apiKeyResolverMock = {
 };
 jest.mock("../services/apiKeyResolver", () => apiKeyResolverMock);
 
+// The real calendar helpers, a catalogue that knows no airport's zone (so
+// "today" falls back to UTC here, as it did when these tests were written).
 jest.mock("../utils/timezone", () => ({
+  ...(jest.requireActual("../utils/timezone") as object),
+  getAirportTimezone: jest.fn(async () => null),
   convertAviationstackTimeToUtc: jest.fn(async (t: string) => t),
   convertAirlabsTimeToUtc: jest.fn(async (t: string) => t),
 }));

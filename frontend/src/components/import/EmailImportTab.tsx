@@ -7,7 +7,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useMinLoadingState } from "../../hooks/useMinLoadingState";
 import { GlobeLoader } from "../GlobeLoader";
 import { logger } from "../../lib/logger";
-import { extractApiErrorMessage } from "../../lib/apiError";
+import { parseFailureMessage } from "../../lib/parseErrorCopy";
 import type { ParseableImportDomain } from "./types";
 
 interface EmailImportTabProps {
@@ -74,7 +74,7 @@ export default function EmailImportTab({
           onPdfResult(result, file.name);
         } catch (err) {
           logger.error("EmailImportTab: PDF parse failed", err);
-          onError(extractApiErrorMessage(err, t("import:pdf.parseError")));
+          onError(parseFailureMessage(err, t, "import:pdf.parseError"));
         } finally {
           setDropState("idle");
         }
@@ -92,7 +92,7 @@ export default function EmailImportTab({
         onEmailResult(result, file.name);
       } catch (err) {
         logger.error("EmailImportTab: email file parse failed", err);
-        onError(extractApiErrorMessage(err, t("import:email.parseError")));
+        onError(parseFailureMessage(err, t, "import:email.parseError"));
       } finally {
         setDropState("idle");
       }
@@ -110,7 +110,7 @@ export default function EmailImportTab({
       onEmailResult(result, null);
     } catch (err) {
       logger.error("EmailImportTab: email text parse failed", err);
-      onError(extractApiErrorMessage(err, t("import:email.parseError")));
+      onError(parseFailureMessage(err, t, "import:email.parseError"));
     } finally {
       setDropState("idle");
     }

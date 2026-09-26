@@ -57,7 +57,7 @@ router.post(
       // unreachable model says "try later", where a bare 500 says "broken".
       if (err instanceof AppError) return next(err);
       const described = describeParserError(err);
-      next(new AppError(described.message, described.status));
+      next(new AppError(described.message, described.status, described.code));
     }
   }
 );

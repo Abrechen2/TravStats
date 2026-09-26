@@ -39,6 +39,7 @@ import { logger } from "../lib/logger";
 
 import type { FlightInput } from "../types";
 import type { Airport } from "../lib/api";
+import { saveFailureMessage } from "../lib/parseErrorCopy";
 
 interface FlightEditModalProps {
   flight: Flight;
@@ -437,7 +438,9 @@ export default function FlightEditModal({
 
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t("errors:updateFailed"));
+      // Not `err.message`: for a refused save that is axios's own
+      // "Request failed with status code 400", in English.
+      setError(saveFailureMessage(err, t, "errors:updateFailed"));
     } finally {
       setLoading(false);
     }

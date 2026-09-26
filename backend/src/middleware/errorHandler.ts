@@ -56,7 +56,18 @@ export type ApiErrorCode =
   | "RAIL_ARRIVAL_BEFORE_DEPARTURE"
   /** A station wall clock inside a spring-forward gap: that time never
    *  happened there. `field` is the time that does not exist. */
-  | "RAIL_LOCAL_TIME_NONEXISTENT";
+  | "RAIL_LOCAL_TIME_NONEXISTENT"
+  /** A parse needed the configured LLM and could not reach it — "try later",
+   *  not "broken". */
+  | "LLM_UNREACHABLE"
+  /** A parse failed for any other reason; the cause is in the server log. */
+  | "PARSE_FAILED"
+  /** The upload is not a readable PDF. */
+  | "INVALID_PDF"
+  /** The PDF has no usable text layer (a scan) — the image route reads it. */
+  | "PDF_NO_TEXT"
+  /** A boarding pass was read but carried no flight data. */
+  | "NO_FLIGHT_DATA";
 
 interface AuthRequest extends Request {
   user?: {

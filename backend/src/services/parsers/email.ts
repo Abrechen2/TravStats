@@ -114,6 +114,17 @@ export async function parseEmail(
    * kind justifies failing the request — see the tail of this function.
    */
   let parsedWithoutFlights: TextProvider | null = null;
+
+  /**
+   * The admin configured a model and it could not be asked — unreachable, or
+   * it failed mid-parse. Only then is an empty answer uncertain: "no flight in
+   * this mail" from the templates alone, while the reader that might have
+   * found one was down, used to come back as a plain empty list (silent-
+   * failure review 2026-09-26, finding 8). An instance without a model
+   * configured is not "unreachable" — nothing was supposed to be asked.
+   */
+  const llmConfigured = !!config.ollamaUrl && config.textFallbacks.includes("ollama");
+  let llmUnreachable = false;
   const shouldLog = await shouldLogParserOperations();
   const log = shouldLog ? parserFactoryLogger : logger;
   const textLog = shouldLog ? parserTextLogger : logger;
@@ -231,11 +242,13 @@ export async function parseEmail(
         parsedWithoutFlights = "ollama";
         logger.info("[Parser Factory] Ollama returned no flights — falling back to templates");
       } else {
+        llmUnreachable = true;
         logger.info(
           `[Parser Factory] Ollama unavailable (${ollamaAvail.reason}) — falling back to templates`
         );
       }
     } catch (err) {
+      llmUnreachable = true;
       logger.warn(
         `[Parser Factory] Ollama failed — falling back to templates: ${err instanceof Error ? err.message : String(err)}`
       );
@@ -292,6 +305,7 @@ export async function parseEmail(
           );
         }
         errors.push({ provider, error: availability.reason || "Unavailable" });
+        if (provider === "ollama" && llmConfigured) llmUnreachable = true;
         continue;
       }
 
@@ -372,6 +386,7 @@ export async function parseEmail(
         logger.warn(`[Parser Factory] Text parser '${provider}' failed: ${errorMsg}`);
       }
       errors.push({ provider, error: errorMsg });
+      if (provider === "ollama") llmUnreachable = true;
 
       // Invalidate cache for this provider
       deleteAvailabilityCacheEntry(`${provider}-default`);
@@ -390,6 +405,7 @@ export async function parseEmail(
       flights: [],
       provider: parsedWithoutFlights,
       fallbackUsed: config.textProvider !== parsedWithoutFlights,
+      ...(llmUnreachable ? { llmUnreachable: true } : {}),
     };
   }
 

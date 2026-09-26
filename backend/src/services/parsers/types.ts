@@ -165,4 +165,10 @@ export interface ParserResult {
    * Was data enriched with additional sources?
    */
   enriched?: boolean;
+
+  /**
+   * Set when nothing was found AND a configured LLM could not be asked, so
+   * the empty answer is the templates' alone, not the model's.
+   */
+  llmUnreachable?: boolean;
 }
