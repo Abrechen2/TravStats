@@ -15,7 +15,7 @@ import type {
   CabinType,
   CruiseStatus,
 } from "../../types";
-import { cruiseApi, shipsApi, tripsApi } from "../../lib/api";
+import { cruiseApi, tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ShipPicker } from "./ShipPicker";
@@ -24,7 +24,8 @@ import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import CompanionPicker from "../CompanionPicker";
 import TagInput from "../TagInput";
-import CatalogueCombobox, { type CatalogueOption } from "../FlightForm/fields/CatalogueCombobox";
+import CatalogueCombobox from "../FlightForm/fields/CatalogueCombobox";
+import { searchCruiseLineOptions } from "./cruiseLineOptions";
 import { useTripPreselection } from "../../hooks/useTripPreselection";
 import { useCruiseDateSuggestions } from "./useCruiseDateSuggestions";
 import { suggestCruiseRouteName } from "./cruiseRouteName";
@@ -70,13 +71,6 @@ const COLOR_PALETTE = [
 const toDateInput = (iso: string | null | undefined): string => (iso ? iso.slice(0, 10) : "");
 
 const fromDateInput = (date: string): string | null => (date ? `${date}T00:00:00.000Z` : null);
-
-/** Module-level so the combobox's debounce effect sees one stable function. The
- *  lines carry no catalogue id; the list position is only a React key. */
-async function searchCruiseLineOptions(q: string): Promise<CatalogueOption[]> {
-  const lines = await shipsApi.cruiseLines(q);
-  return lines.map((name, id) => ({ id, name, codes: [] }));
-}
 
 const INPUT_CLASS =
   "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
@@ -282,6 +276,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 search={searchCruiseLineOptions}
                 placeholder={t("field.line")}
                 inputClassName={INPUT_CLASS}
+                browseOnFocus
               />
             </div>
             <input
