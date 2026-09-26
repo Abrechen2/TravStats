@@ -143,7 +143,8 @@
     "rateLimited": "Zu viele Anfragen in kurzer Zeit. Bitte warte einen Moment.",
     "demo": "Im Demo-Konto lässt sich das nicht speichern.",
     "network": "Der Server ist nicht erreichbar. Bitte prüfe die Verbindung.",
-    "timezoneUnavailable": "Die Zeitzone des Ortes lässt sich auf dem Server gerade nicht bestimmen. Die Zeit wurde nicht gespeichert, damit sie nicht falsch als UTC abgelegt wird — bitte den Administrator informieren."
+    "timezoneUnavailable": "Die Zeitzone des Ortes lässt sich auf dem Server gerade nicht bestimmen. Die Zeit wurde nicht gespeichert, damit sie nicht falsch als UTC abgelegt wird — bitte den Administrator informieren.",
+    "timezoneUnresolved": "Für diesen Ort ist keine Zeitzone bekannt, weil ihm Koordinaten oder ein Katalogeintrag fehlen. Die Zeit wurde nicht gespeichert, damit sie nicht falsch als UTC abgelegt wird — bitte den Ort vervollständigen oder einen anderen wählen."
   },
   "messages": {
     "success": "Erfolg",

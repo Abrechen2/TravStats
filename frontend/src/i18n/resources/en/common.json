@@ -143,7 +143,8 @@
     "rateLimited": "Too many requests in a short time. Please wait a moment.",
     "demo": "This cannot be saved in the demo account.",
     "network": "The server cannot be reached. Please check the connection.",
-    "timezoneUnavailable": "The server cannot determine the place's time zone right now. The time was not saved, so it is not stored wrongly as UTC — please tell your administrator."
+    "timezoneUnavailable": "The server cannot determine the place's time zone right now. The time was not saved, so it is not stored wrongly as UTC — please tell your administrator.",
+    "timezoneUnresolved": "No time zone is known for this place, because it has no coordinates or catalogue entry. The time was not saved, so it is not stored wrongly as UTC — please complete the place or choose another one."
   },
   "messages": {
     "success": "Success",

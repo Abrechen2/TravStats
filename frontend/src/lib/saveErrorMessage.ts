@@ -11,7 +11,10 @@ const SHARED_CODE_KEYS: Readonly<Record<string, string>> = {
   DUPLICATE: "common:saveErrors.duplicate",
   DB_UNAVAILABLE: "common:saveErrors.dbUnavailable",
   RATE_LIMITED: "common:saveErrors.rateLimited",
-  TZ_UNRESOLVED: "common:saveErrors.timezoneUnavailable",
+  // ADR 0002 D2 keeps these two apart: 503 — the lookup itself cannot run
+  // (the server is at fault); 422 — it ran and this place has no zone.
+  TIMEZONE_LOOKUP_UNAVAILABLE: "common:saveErrors.timezoneUnavailable",
+  TZ_UNRESOLVED: "common:saveErrors.timezoneUnresolved",
 };
 
 /**

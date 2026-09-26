@@ -24,11 +24,22 @@ describe("saveErrorMessage", () => {
   it("names a broken time zone lookup instead of the generic sentence", () => {
     const err = refused(503, {
       error: "Time zone lookup unavailable: find is not a function",
-      code: "TZ_UNRESOLVED",
+      code: "TIMEZONE_LOOKUP_UNAVAILABLE",
     });
     expect(saveErrorMessage(err, t, "form.saveError")).toBe(
       "common:saveErrors.timezoneUnavailable"
     );
+  });
+
+  // ADR 0002 D2: 422 TZ_UNRESOLVED means the lookup ran and this place has no
+  // zone. Telling the user to call the administrator would be wrong — the
+  // place is what is missing, so it gets its own sentence.
+  it("says the place has no time zone, apart from a broken lookup", () => {
+    const err = refused(422, {
+      error: "This place has no time zone: no catalogue zone, no coordinates",
+      code: "TZ_UNRESOLVED",
+    });
+    expect(saveErrorMessage(err, t, "form.saveError")).toBe("common:saveErrors.timezoneUnresolved");
   });
 
   it("lets a caller's own codes win, e.g. a track without timestamps", () => {
