@@ -127,11 +127,6 @@
       "count": 5
     }
   },
-  "src/shared/wallClockExistence.ts": {
-    "time/no-zone-library": {
-      "count": 1
-    }
-  },
   "src/utils/__tests__/railHostZoneProbe.ts": {
     "time/no-host-local-date": {
       "count": 1
@@ -155,11 +150,6 @@
   "src/utils/flightMerge.ts": {
     "time/no-zone-library": {
       "count": 1
-    }
-  },
-  "src/utils/timezone.ts": {
-    "time/no-zone-library": {
-      "count": 2
     }
   }
 }
