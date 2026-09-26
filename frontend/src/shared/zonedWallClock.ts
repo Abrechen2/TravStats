@@ -12,42 +12,21 @@
  * unusable zone means instead of receiving a made-up clock.
  *
  * MIRROR of `backend/src/shared/zonedWallClock.ts` — change both together.
+ *
+ * @deprecated → shared/time (`toLocal`). Kept as a thin name until phase 6 of
+ * the time-model plan deletes it in both trees.
  */
 
-/** One formatter per zone — building one costs far more than using it. */
-const formatters = new Map<string, Intl.DateTimeFormat | null>();
+import { wallClockPartsOrNull } from "./time";
 
-function formatterFor(timeZone: string): Intl.DateTimeFormat | null {
-  const cached = formatters.get(timeZone);
-  if (cached !== undefined) return cached;
-  let formatter: Intl.DateTimeFormat | null;
-  try {
-    formatter = new Intl.DateTimeFormat("en-CA", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      // h23 so midnight reads 00 rather than 24.
-      hourCycle: "h23",
-    });
-  } catch {
-    formatter = null;
-  }
-  formatters.set(timeZone, formatter);
-  return formatter;
-}
+const pad = (n: number, width = 2): string => String(n).padStart(width, "0");
 
+/** Delegates to shared/time (ADR 0002), which owns the one zone formatter. */
 export function formatWallClockIn(instant: Date, timeZone: string): string | null {
-  const formatter = formatterFor(timeZone);
-  if (!formatter || Number.isNaN(instant.getTime())) return null;
-  const parts = formatter.formatToParts(instant);
-  const value = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((p) => p.type === type)?.value ?? "";
+  const p = wallClockPartsOrNull(instant, timeZone);
+  if (!p) return null;
   return (
-    `${value("year")}-${value("month")}-${value("day")}` +
-    `T${value("hour")}:${value("minute")}:${value("second")}`
+    `${pad(p.year, 4)}-${pad(p.month)}-${pad(p.day)}` +
+    `T${pad(p.hour)}:${pad(p.minute)}:${pad(p.second)}`
   );
 }

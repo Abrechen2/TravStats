@@ -7,7 +7,12 @@
  * airport, not the viewer's own timezone and not the UTC instant (#266). A
  * 07:00 Berlin departure is a morning flight for everyone looking at it,
  * including a reader in Los Angeles.
+ *
+ * The zone reading itself is delegated to shared/time (ADR 0002); the
+ * semantics switch below stays here until phase 6 removes the legacy
+ * fake-UTC rows it exists for.
  */
+import { wallClockPartsOrNull } from "./time";
 
 export type FlightTimeSemantics = "UTC" | "DATE_ONLY" | "LEGACY_FAKE_UTC" | "UNKNOWN";
 
@@ -43,54 +48,10 @@ function storedComponents(stored: Date): Components {
   };
 }
 
-/**
- * Formatters are cached per timezone: building one costs far more than using
- * it, and the overview reads the clock for every flight on every recompute.
- * `null` marks a timezone the runtime rejected, so an unusable string is not
- * re-tried on each row.
- */
-const wallClockFormatters = new Map<string, Intl.DateTimeFormat | null>();
-
-function wallClockFormatter(timezone: string): Intl.DateTimeFormat | null {
-  const cached = wallClockFormatters.get(timezone);
-  if (cached !== undefined) return cached;
-  let formatter: Intl.DateTimeFormat | null;
-  try {
-    // en-CA formats as YYYY-MM-DD; h23 keeps midnight at 0 rather than 24.
-    formatter = new Intl.DateTimeFormat("en-CA", {
-      timeZone: timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      hourCycle: "h23",
-    });
-  } catch {
-    formatter = null;
-  }
-  wallClockFormatters.set(timezone, formatter);
-  return formatter;
-}
-
 /** The components on the clock in `timezone`, or null if it is unusable. */
 function zonedComponents(stored: Date, timezone: string): Components | null {
-  const formatter = wallClockFormatter(timezone);
-  if (!formatter) return null;
-  try {
-    const parts = formatter.formatToParts(stored);
-    const partValue = (type: Intl.DateTimeFormatPartTypes): number =>
-      Number.parseInt(parts.find((p) => p.type === type)?.value ?? "x", 10);
-    const components = {
-      year: partValue("year"),
-      month: partValue("month"),
-      day: partValue("day"),
-      hour: partValue("hour"),
-    };
-    const complete = Object.values(components).every((v) => Number.isFinite(v));
-    return complete ? components : null;
-  } catch {
-    return null;
-  }
+  const parts = wallClockPartsOrNull(stored, timezone);
+  return parts ? { year: parts.year, month: parts.month, day: parts.day, hour: parts.hour } : null;
 }
 
 /**
