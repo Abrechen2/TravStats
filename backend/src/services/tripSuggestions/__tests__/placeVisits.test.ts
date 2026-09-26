@@ -92,6 +92,23 @@ describe("placeVisitProposals", () => {
     ]);
   });
 
+  it("asks once per place — about the latest stay — and an answer settles the earlier ones", () => {
+    const yearly = ["2023", "2024", "2025"].map((y) =>
+      stay(`f${y}`, AT.FIRENZE, `${y}-05-03`, `${y}-05-06`, "Florenz")
+    );
+    const [only] = placeVisitProposals(yearly, [cafe()]);
+    expect(placeVisitProposals(yearly, [cafe()])).toHaveLength(1);
+    expect(only.anchor?.key).toBe("lodging:f2025");
+
+    const answered = [{ kind: "place_visit", targetId: "cafe", memberKeys: ["lodging:f2025"] }];
+    expect(placeVisitProposals(yearly, [cafe()], answered)).toEqual([]);
+
+    const next = [...yearly, stay("f2026", AT.FIRENZE, "2026-05-03", "2026-05-06", "Florenz")];
+    expect(placeVisitProposals(next, [cafe()], answered).map((p) => p.anchor?.key)).toEqual([
+      "lodging:f2026",
+    ]);
+  });
+
   it("does not come back once answered", () => {
     const [shown] = placeVisitProposals([florence()], [cafe()]);
     const answered = [

@@ -2,6 +2,7 @@ import { haversineKm } from "../../shared/geo/haversine";
 import {
   AWAY_KM,
   BRIDGE_DAYS,
+  FLIGHT_SIGNAL_MAX_DAYS,
   HOME_LAYOVER_HOURS,
   IMPLIED_NIGHT_KM,
 } from "../../shared/tripSuggestionRules";
@@ -183,6 +184,19 @@ export function buildAbsences(entries: readonly PresenceEntry[], homeAt: HomeAt)
     }));
 }
 
+type Cluster = { source: SuggestionSignal; flightKeys: readonly string[] };
+
+/** Whether a flight cluster spans few enough days to be one journey (`FLIGHT_SIGNAL_MAX_DAYS`). */
+function journeyLike(cluster: Cluster, byKey: ReadonlyMap<string, PresenceEntry>): boolean {
+  const flights = cluster.flightKeys
+    .map((key) => byKey.get(key))
+    .filter((e): e is PresenceEntry => e !== undefined);
+  if (flights.length === 0) return false;
+  const start = flights.map((f) => f.startDay).reduce((a, b) => (a < b ? a : b));
+  const end = flights.map((f) => f.endDay).reduce(maxDay);
+  return dayDiff(start, end) <= FLIGHT_SIGNAL_MAX_DAYS;
+}
+
 /**
  * Absences when no home is known at all: the flight heuristics' journeys, with
  * every other entry inside a journey's days that lies within reach of one of
@@ -199,6 +213,7 @@ export function absencesFromClusters(
   const claimed = new Set<string>();
   const out: Absence[] = [];
   for (const cluster of clusters) {
+    if (!journeyLike(cluster, byKey)) continue;
     const flights = cluster.flightKeys
       .map((key) => byKey.get(key))
       .filter((e): e is PresenceEntry => e !== undefined && !claimed.has(e.key));
@@ -245,7 +260,9 @@ export function glueByFlightClusters(
   homeAt: HomeAt
 ): Absence[] {
   let result = [...absences];
+  const byKey = new Map(absences.flatMap((a) => a.entries.map((e) => [e.key, e] as const)));
   for (const cluster of clusters) {
+    if (!journeyLike(cluster, byKey)) continue;
     const wanted = new Set(cluster.flightKeys);
     const hits = result
       .map((a, i) => (a.entries.some((e) => wanted.has(e.key)) ? i : -1))

@@ -179,7 +179,11 @@ async function recordAnswer(
     kind: proposal.kind,
     status,
     targetId: proposal.trip?.id ?? proposal.place?.id ?? null,
-    memberKeys: proposal.members.map((m) => m.key),
+    // A visit proposal has no members; its anchor is what the answer settles.
+    memberKeys:
+      proposal.kind === "place_visit" && proposal.anchor
+        ? [proposal.anchor.key]
+        : proposal.members.map((m) => m.key),
     createdTripId: created.createdTripId ?? null,
     createdPlaceVisitId: created.createdPlaceVisitId ?? null,
   };

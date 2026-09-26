@@ -55,7 +55,7 @@ export function composeSuggestions(input: ComposeInput): TripSuggestion[] {
   const proposals = [
     ...proposalsFromAbsences(absences, trips, entries, homeAt),
     ...proposalsByWindow(unplaced, trips, entries, homeAt),
-    ...placeVisitProposals(entries, places),
+    ...placeVisitProposals(entries, places, answered),
   ];
   return withoutAnswered(proposals, answered).sort(
     (a, b) => b.startDay.localeCompare(a.startDay) || a.id.localeCompare(b.id)

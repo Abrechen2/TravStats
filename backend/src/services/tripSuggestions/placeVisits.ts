@@ -12,8 +12,12 @@ import type { LinkableDomain, PlaceContext, PresenceEntry, TripSuggestion } from
  * that file offers checklist TARGETS within a town's reach, this one the
  * user's OWN places within walking distance (`PLACE_VISIT_NEAR_KM`).
  *
- * One proposal per place and anchor entry, not per day: a week in a hotel
- * beside a café is one question ("during your stay at …"), not seven.
+ * One open question per PLACE, about the most recent stay, port call or ride
+ * beside it without a visit — not one per day, and not one per stay: a hotel
+ * the user returns to every year beside a café they logged once would
+ * otherwise ask eight times at once (measured on a synthetic 2000-entry
+ * account: 3,680 questions for 500 places). Answering it — yes or no — settles
+ * that place up to that day; a later stay beside it asks again.
  */
 
 /** The domains whose rows put the user on the ground at a known spot. */
@@ -34,8 +38,22 @@ interface AnchorPoint {
 
 export function placeVisitProposals(
   entries: readonly PresenceEntry[],
-  places: readonly PlaceContext[]
+  places: readonly PlaceContext[],
+  answered: readonly { kind: string; targetId: string | null; memberKeys: readonly string[] }[] = []
 ): TripSuggestion[] {
+  const dayOf = new Map(entries.map((e) => [e.key, e.startDay]));
+  // Per place, the latest anchor day the user already answered about.
+  const settledUntil = new Map<string, string>();
+  for (const a of answered) {
+    if (a.kind !== "place_visit" || a.targetId === null) continue;
+    for (const key of a.memberKeys) {
+      const day = dayOf.get(key);
+      const seen = settledUntil.get(a.targetId);
+      if (day !== undefined && (seen === undefined || day > seen))
+        settledUntil.set(a.targetId, day);
+    }
+  }
+
   const grid = new Map<string, AnchorPoint[]>();
   for (const entry of entries) {
     if (entry.state !== "happened" || !ANCHOR_DOMAINS.has(entry.domain)) continue;
@@ -66,10 +84,17 @@ export function placeVisitProposals(
       }
     }
 
-    for (const { anchor, km } of best.values()) {
+    const settled = settledUntil.get(place.id);
+    const open = [...best.values()]
+      .filter(({ anchor: { entry } }) => {
+        if (settled !== undefined && entry.startDay <= settled) return false;
+        return !place.visitDays.some((d) => d >= entry.startDay && d <= entry.endDay);
+      })
+      .sort((a, b) => b.anchor.day.localeCompare(a.anchor.day));
+    const latest = open[0];
+    if (latest) {
+      const { anchor, km } = latest;
       const { entry } = anchor;
-      const known = place.visitDays.some((d) => d >= entry.startDay && d <= entry.endDay);
-      if (known) continue;
       out.push({
         id: `place_visit:${place.id}:${entry.key}`,
         kind: "place_visit",

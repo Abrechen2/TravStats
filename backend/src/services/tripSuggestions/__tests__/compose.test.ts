@@ -210,6 +210,51 @@ describe("composeSuggestions — existing trips", () => {
   });
 });
 
+describe("composeSuggestions — guards measured on the demo account", () => {
+  it("does not glue on a flight 'loop' that spans months", () => {
+    const out = composeSuggestions(
+      input({
+        entries: [
+          ride(
+            "flight",
+            "1",
+            AT.MUC,
+            AT.LIS,
+            { day: "2025-01-10", hour: 7 },
+            { day: "2025-01-10", hour: 10 }
+          ),
+          stay("a", AT.LISBON_HOTEL, "2025-01-10", "2025-01-12", "Lissabon"),
+          stay("b", AT.LISBON_HOTEL, "2025-04-10", "2025-04-12", "Lissabon"),
+          ride(
+            "flight",
+            "2",
+            AT.LIS,
+            AT.MUC,
+            { day: "2025-04-12", hour: 12 },
+            { day: "2025-04-12", hour: 15 }
+          ),
+        ],
+        clusters: [{ source: "home_loop", flightKeys: ["flight:1", "flight:2"] }],
+      })
+    );
+    expect(out.map((p) => [p.startDay, p.endDay])).toEqual([
+      ["2025-04-10", "2025-04-12"],
+      ["2025-01-10", "2025-01-12"],
+    ]);
+  });
+
+  it("lends no window to a dateless trip whose entries span years", () => {
+    const entries = [
+      visit("old", AT.ROMA, "2021-07-21", { tripId: "t1" }),
+      visit("new", AT.ROMA, "2026-01-21", { tripId: "t1" }),
+      ...italyWeek(),
+    ];
+    const out = composeSuggestions(input({ entries, trips: [trip("t1", null, null)] }));
+    expect(out).toHaveLength(1);
+    expect(out[0].kind).toBe("new_trip");
+  });
+});
+
 describe("composeSuggestions — home over time", () => {
   it("judges each day against the home that was valid then", () => {
     const homeAt = homeFromHistory(

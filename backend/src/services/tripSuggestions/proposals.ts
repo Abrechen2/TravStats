@@ -6,6 +6,7 @@ import {
   AWAY_KM,
   MIN_NEW_TRIP_ENTRIES,
   MIN_NIGHTS_AWAY,
+  TRIP_DERIVED_WINDOW_MAX_DAYS,
   TRIP_PLAUSIBLE_KM,
   TRIP_WINDOW_PAD_DAYS,
   isMaterialChange,
@@ -88,20 +89,29 @@ export function destinationOf(entries: readonly PresenceEntry[], homeAt: HomeAt)
   return rankDestinations(evidence, 1)[0] ?? null;
 }
 
+interface TripSpan {
+  startDay: string;
+  endDay: string;
+  /** Whether the span may serve as a date window (`TRIP_DERIVED_WINDOW_MAX_DAYS`). */
+  window: boolean;
+}
+
 /** A trip's span: its own dates, widened by everything already linked to it. */
 export function tripSpans(
   trips: readonly TripContext[],
   entries: readonly PresenceEntry[]
-): Map<string, { startDay: string; endDay: string }> {
-  const spans = new Map<string, { startDay: string; endDay: string }>();
+): Map<string, TripSpan> {
+  const spans = new Map<string, TripSpan>();
+  const ownDates = new Set(trips.filter((t) => t.startDay || t.endDay).map((t) => t.id));
   const widen = (id: string, start: string, end: string): void => {
     const seen = spans.get(id);
-    spans.set(
-      id,
-      seen
-        ? { startDay: minDay(seen.startDay, start), endDay: maxDay(seen.endDay, end) }
-        : { startDay: start, endDay: end }
-    );
+    const startDay = seen ? minDay(seen.startDay, start) : start;
+    const endDay = seen ? maxDay(seen.endDay, end) : end;
+    spans.set(id, {
+      startDay,
+      endDay,
+      window: ownDates.has(id) || dayDiff(startDay, endDay) <= TRIP_DERIVED_WINDOW_MAX_DAYS,
+    });
   };
   for (const trip of trips) {
     const start = trip.startDay ?? trip.endDay;
@@ -125,10 +135,7 @@ const overlapDays = (
 };
 
 /** The existing trip an absence belongs to, if any: the one it shares entries or days with most. */
-function tripFor(
-  absence: Absence,
-  spans: Map<string, { startDay: string; endDay: string }>
-): string | null {
+function tripFor(absence: Absence, spans: Map<string, TripSpan>): string | null {
   const byMembers = new Map<string, number>();
   for (const entry of absence.entries) {
     if (entry.tripId && spans.has(entry.tripId)) {
@@ -140,6 +147,7 @@ function tripFor(
 
   let best: { id: string; days: number } | null = null;
   for (const [id, span] of spans) {
+    if (!span.window) continue;
     const window = {
       startDay: addDays(span.startDay, -TRIP_WINDOW_PAD_DAYS),
       endDay: addDays(span.endDay, TRIP_WINDOW_PAD_DAYS),
@@ -251,6 +259,7 @@ export function proposalsByWindow(
   for (const entry of unplaced) {
     if (!entry.linkable || entry.tripId !== null) continue;
     for (const [tripId, span] of spans) {
+      if (!span.window) continue;
       const start = addDays(span.startDay, -TRIP_WINDOW_PAD_DAYS);
       const end = addDays(span.endDay, TRIP_WINDOW_PAD_DAYS);
       if (entry.startDay < start || entry.endDay > end) continue;

@@ -65,6 +65,28 @@ export const BRIDGE_DAYS = 2;
  */
 export const HOME_LAYOVER_HOURS = 6;
 
+/**
+ * A flight heuristic's cluster is trusted as ONE journey only up to this span.
+ *
+ * `tripDetectionService` caps its PNR clusters at 30 days for exactly this
+ * reason (a frequent-flyer id on a year of bookings is not a booking), but its
+ * home loop has no cap: a demo account whose flights leave the home airport in
+ * January and next return to it in May became a single "loop" of four months,
+ * and gluing on it merged a year and a half of separate trips into one
+ * proposal of 491 nights (measured on the dev-admin demo seed, 2026-09-26).
+ */
+export const FLIGHT_SIGNAL_MAX_DAYS = 30;
+
+/**
+ * A trip without dates of its own lends its entries' span as a window only up
+ * to this length. Past it the span describes a collection ("Skandinavien Tour"
+ * holding four flights from 2021 to 2026 in the demo seed), not a journey, and
+ * every entry of those five years would otherwise be offered to it. Its own
+ * entries still pull their absences to it; and a trip whose dates the user set
+ * keeps them as its window however long they are.
+ */
+export const TRIP_DERIVED_WINDOW_MAX_DAYS = 60;
+
 /** The owner's threshold: at least one night away AND at least two entries. */
 export const MIN_NIGHTS_AWAY = 1;
 export const MIN_NEW_TRIP_ENTRIES = 2;
