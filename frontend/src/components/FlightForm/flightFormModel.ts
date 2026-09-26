@@ -3,6 +3,8 @@
  * (file-size debt, forgejo#59). useFlightForm re-exports the public ones, so
  * existing imports keep working.
  */
+import type { LookupAirportSide } from "../../lib/api/flightLookup";
+
 export interface FlightLookupResult {
   flightNumber: string;
   airline: string;
@@ -16,20 +18,9 @@ export interface FlightLookupResult {
   airlineIata?: string;
   /** Airline ICAO code, e.g. "DLH". AeroDataBox-only. */
   airlineIcao?: string;
-  departure: {
-    iata?: string;
-    name?: string;
-    scheduledTime?: string;
-    terminal?: string;
-    gate?: string;
-  };
-  arrival: {
-    iata?: string;
-    name?: string;
-    scheduledTime?: string;
-    terminal?: string;
-    gate?: string;
-  };
+  /** `scheduledTime` is UTC; `scheduledLocal`/`timezone` are the airport's clock. */
+  departure: LookupAirportSide;
+  arrival: LookupAirportSide;
   aircraft?: string;
   /** Tail number / aircraft registration, e.g. "D-AIHX". AeroDataBox-only. */
   aircraftRegistration?: string;

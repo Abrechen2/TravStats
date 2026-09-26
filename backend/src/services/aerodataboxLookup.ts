@@ -26,6 +26,7 @@ import { getApiKey } from "./apiKeyResolver";
 import { recordObservedQuota } from "./apiQuota";
 import logger from "../utils/logger";
 import type { FlightLookupResult } from "./flightLookup";
+import { classifyProviderError, type LookupOutcomeLog } from "./flightLookup/providerOutcome";
 import { normalizeFlightNumber, toProviderFlightNumber } from "../schemas/flight";
 
 const HOST = "aerodatabox.p.rapidapi.com";
@@ -205,7 +206,8 @@ function pickOperatorAndMarketing(
  *   - the request fails (401, 429, network)
  *   - the response is empty
  *
- * Callers should treat null as "no data — fall through" rather than as an error.
+ * Callers should treat null as "no data — fall through" rather than as an error;
+ * the optional outcome log says which of those it was.
  */
 export async function lookupFlightAerodatabox(
   flightNumber: string,
@@ -222,7 +224,9 @@ export async function lookupFlightAerodatabox(
    * a one-in-two chance. Backfilling by hand with only the date filter picked
    * the feeder and wrote its arrival time onto the long-haul row.
    */
-  depAirportCode?: string
+  depAirportCode?: string,
+  /** Receives what the provider answered — a null return alone cannot say. */
+  outcomes?: LookupOutcomeLog
 ): Promise<FlightLookupResult | null> {
   const trimmed = flightNumber.trim();
   if (!trimmed) return null;
@@ -245,6 +249,7 @@ export async function lookupFlightAerodatabox(
       { flightNumber: normalized, date, operation: "aerodatabox_cache_hit" },
       `AeroDataBox cache hit for ${normalized} on ${date}`
     );
+    outcomes?.record("aerodatabox", cached ? "ok" : "no_match");
     return cached;
   }
 
@@ -292,6 +297,7 @@ export async function lookupFlightAerodatabox(
       // Not cached: a message body is the provider's moment, not the
       // flight's absence, and a historical date would otherwise pin the
       // miss for CACHE_TTL_HISTORICAL_SECONDS.
+      outcomes?.record("aerodatabox", "provider_error");
       return null;
     }
     const returned: AerodataboxFlight[] = response.data ?? [];
@@ -322,6 +328,7 @@ export async function lookupFlightAerodatabox(
       );
       const ttl = isHistoricalDate(date) ? CACHE_TTL_HISTORICAL_SECONDS : CACHE_TTL_RECENT_SECONDS;
       cache.set(cacheKey, null, ttl);
+      outcomes?.record("aerodatabox", "no_match");
       return null;
     }
 
@@ -342,6 +349,7 @@ export async function lookupFlightAerodatabox(
 
     const ttl = isHistoricalDate(date) ? CACHE_TTL_HISTORICAL_SECONDS : CACHE_TTL_RECENT_SECONDS;
     cache.set(cacheKey, result, ttl);
+    outcomes?.record("aerodatabox", "ok");
     return result;
   } catch (error: unknown) {
     const errResponse = (
@@ -378,6 +386,7 @@ export async function lookupFlightAerodatabox(
         `AeroDataBox lookup failed for ${normalized}: ${message}`
       );
     }
+    outcomes?.record("aerodatabox", classifyProviderError(error));
     return null;
   }
 }

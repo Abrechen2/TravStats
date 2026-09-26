@@ -162,9 +162,17 @@ registry.registerPath({
   description:
     "The number is sent unpadded whatever the user typed: providers key on 'EK51' " +
     "and answer a padded 'EK051' with nothing at all. The stored spelling is kept " +
-    "and the answer mapped back onto it.",
+    "and the answer mapped back onto it. Each airport of a hit carries `timezone` and " +
+    "`scheduledLocal` (its own wall clock) beside the UTC `scheduledTime`. When no " +
+    "flight came back because a provider failed, the answer is " +
+    "`error: LOOKUP_PROVIDER_FAILED` with `providerFailures` " +
+    "(auth | quota | timeout | plan_restricted | provider_error per provider) — never " +
+    "a plain 'not found'. `tz` is the asker's IANA zone and decides what 'today' is.",
   tags: parseTag,
-  request: { params: z.object({ flightNumber: z.string() }) },
+  request: {
+    params: z.object({ flightNumber: z.string() }),
+    query: z.object({ date: z.string().optional(), tz: z.string().optional() }),
+  },
   responses: {
     200: { description: "Lookup result" },
     404: notFound,

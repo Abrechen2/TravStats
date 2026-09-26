@@ -173,7 +173,8 @@
       "aircraft": "Aircraft, terminal & gate",
       "booking": "Booking, trip & notes",
       "filledIn": "filled in"
-    }
+    },
+    "llmUnreachable": "No flight was recognised in the email – and the AI parser could not be reached. Please try again later or enter the flight manually."
   },
   "list": {
     "title": "Flights",
@@ -353,7 +354,8 @@
       "step2": "Ollama Vision automatically extracts all flight data",
       "step3": "Optional: API lookup for times & terminal/gate",
       "step4": "Works with all common boarding pass formats"
-    }
+    },
+    "noFlightData": "No flight data was recognised on the boarding pass. Please try a sharper photo or enter the flight manually."
   },
   "receipt": {
     "label": "Receipt",

@@ -65,5 +65,12 @@
       "description": "Für alles ohne Namen — Aussichtspunkt, Stellplatz, Bucht.",
       "action": "Karte"
     }
+  },
+  "errors": {
+    "llmUnreachable": "Der KI-Parser ist gerade nicht erreichbar. Bitte die Parser-Einstellungen prüfen oder später erneut versuchen.",
+    "invalidPdf": "Diese Datei ließ sich nicht als PDF lesen.",
+    "pdfNoText": "Aus diesem PDF konnte kein Text gelesen werden – vermutlich ein Scan. Bitte als Bild über den Bordkarten-Scanner einlesen.",
+    "rateLimited": "Zu viele Importe in kurzer Zeit. Bitte warte einen Moment und versuche es erneut.",
+    "timeout": "Das Einlesen hat zu lange gedauert. Bitte später erneut versuchen."
   }
 }

@@ -1,10 +1,19 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Airport, airportsApi } from "../../lib/api";
+import type { Airport } from "../../lib/api";
 import { flightsApi } from "../../lib/api/flights";
 import { tripsApi } from "../../lib/api/trips";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
+import { flightLookupApi } from "../../lib/api/flightLookup";
+import { localToday } from "../../lib/roadtrip/roadtripView";
+import { airportResolutionMessage, resolveAirportByCode } from "../../lib/airportResolve";
+import {
+  lookupEmptyMessage,
+  lookupFormTimes,
+  lookupRequestErrorMessage,
+  lookupWallClock,
+} from "./flightLookupActions";
 import { useToastStore } from "../../store/toastStore";
 import { storeHistoricalFlightTime, estimateFlightTimes } from "../../lib/timeEstimation";
 import type { Flight, FlightInput, ParsedBooking, UserAchievement } from "../../types";
@@ -122,7 +131,9 @@ export function useFlightForm(
 
   // Initialize defaults from settings
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
+    // The reader's calendar day — the UTC one made "today" yesterday until
+    // 02:00 in Germany, and the lookup searched the wrong date.
+    const today = localToday();
     setSearchDate(today);
     setDepartureDate(today);
     setArrivalDate(today);
@@ -145,12 +156,15 @@ export function useFlightForm(
     }
   }, [departureDate]);
 
-  // Clear error when step changes
+  // Clear error when step changes — unless the transition itself carries a
+  // notice (an airport the lookup could not resolve), which must survive it.
+  const stepNoticeRef = useRef<string | null>(null);
   useEffect(() => {
-    setError("");
+    setError(stepNoticeRef.current ?? "");
+    stepNoticeRef.current = null;
   }, [step]);
 
-  // Track if arrival date has been set manually
+  // Track if arrival date has been set manually (or by a picked lookup hit)
   const arrivalDateSetRef = useRef(false);
 
   // Accumulates confirmed flight inputs during multi-flight email import
@@ -221,34 +235,20 @@ export function useFlightForm(
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`/api/v1/flight-lookup/${flightNumber}?date=${searchDate}`);
-      const data = await response.json();
+      const data = await flightLookupApi.lookup<FlightLookupResult>(flightNumber, searchDate);
       if (!data.success || !data.flights || data.flights.length === 0) {
         // Stay on the input step so the error stays visible — the `step`
-        // useEffect clears errors on every transition, so jumping to
-        // "complete" here would drop the user into manual entry with no
-        // indication of what went wrong (issue #82 follow-up).
-        if (data?.error === "LOOKUP_NOT_CONFIGURED") {
-          // Nothing was searched — no provider is set up. Saying "not found"
-          // here sends the user looking for a better date instead of a key
-          // (#232).
-          setError(t("errors:lookupNotConfigured"));
-        } else if (data?.error === "LOOKUP_UNAVAILABLE") {
-          setError(t("errors:lookupOutsideLiveWindow"));
-        } else if (data?.error === "NO_FLIGHT_DATA_API_GAP") {
-          setError(t("errors:noFlightDataApiGap"));
-        } else if (data?.error === "NO_FLIGHT_DATA_FOR_DATE") {
-          setError(t("errors:noFlightDataForDate"));
-        } else {
-          setError(t("errors:noFlightsFound"));
-        }
+        // useEffect clears errors on every transition (issue #82 follow-up).
+        // "Not configured", "provider failed" and "not found" each call for
+        // a different action (#232), so each keeps its own sentence.
+        setError(lookupEmptyMessage(data, t));
         return;
       }
       setLookupResults(data.flights);
       setStep("select");
     } catch (err) {
       logger.error("Flight lookup error:", err);
-      setError(`${t("errors:lookupUnavailable")} ${t("errors:apiKeyInfo")}`);
+      setError(lookupRequestErrorMessage(err, t));
     } finally {
       setLoading(false);
     }
@@ -259,24 +259,23 @@ export function useFlightForm(
     setSelectedFlight(flight);
     setLoading(true);
     try {
-      const results = await Promise.allSettled([
-        flight.departure.iata
-          ? airportsApi.getByCode(flight.departure.iata)
-          : Promise.resolve(null),
-        flight.arrival.iata ? airportsApi.getByCode(flight.arrival.iata) : Promise.resolve(null),
-      ]);
-
-      const depAirport = results[0].status === "fulfilled" ? results[0].value : null;
-      const arrAirport = results[1].status === "fulfilled" ? results[1].value : null;
-
+      const codes = [flight.departure.iata, flight.arrival.iata];
+      const [depResolved, arrResolved] = await Promise.all(
+        codes.map((code) => (code ? resolveAirportByCode(code) : Promise.resolve(null)))
+      );
+      const depAirport = depResolved?.kind === "found" ? depResolved.airport : null;
+      const arrAirport = arrResolved?.kind === "found" ? arrResolved.airport : null;
       if (depAirport) setDeparture(depAirport);
       if (arrAirport) setArrival(arrAirport);
+      // A code the catalogue cannot give back used to leave the field empty
+      // without a word; now the form says which one and why.
+      const unresolved = [depResolved, arrResolved].flatMap((r) =>
+        r && r.kind !== "found" ? [airportResolutionMessage(r)] : []
+      );
 
       setAirline(flight.airline);
-      // Codeshare path: API marks the searched flight number as marketed
-      // by airline X but operated by airline Y. Surface Y as the operating
-      // carrier so stats can group on the real metal. For non-codeshare
-      // entries (most lookups), leave operatingAirline empty.
+      // Codeshare path: surface the operating carrier so stats can group on
+      // the real metal; non-codeshare entries leave operatingAirline empty.
       setOperatingAirline(flight.isCodeshare ? flight.operatingAirline || "" : "");
       setAircraft(flight.aircraft || "");
       setLookupCallsign(flight.callsign || "");
@@ -288,62 +287,28 @@ export function useFlightForm(
       setTerminal(flight.departure.terminal || "");
       setGate(flight.departure.gate || "");
 
-      // Auto-flag cancelled flights from the API. "diverted" gets folded
-      // into "cancelled" because the flight-status enum doesn't have a
-      // dedicated diverted bucket — user can edit later. Anything else
-      // is left to the local date heuristic.
+      // "diverted" folds into "cancelled" — the status enum has no bucket for it.
       if (flight.status === "cancelled" || flight.status === "diverted") {
         setStatus("cancelled");
       }
 
-      const applyDateTime = (
-        value?: string,
-        setters?: { setDate: (v: string) => void; setTime: (v: string) => void },
-        useSearchDate?: boolean
-      ) => {
-        if (!value || !setters) return;
-        const match = value.match(/^(\d{4}-\d{2}-\d{2})[T ]?(\d{2}:\d{2})?/);
-        if (match) {
-          if (match[1] && !useSearchDate) setters.setDate(match[1]);
-          if (match[2]) setters.setTime(match[2]);
-          return;
-        }
-        const parsed = new Date(value);
-        if (!Number.isNaN(parsed.getTime())) {
-          if (!useSearchDate) setters.setDate(parsed.toISOString().split("T")[0]);
-          setters.setTime(parsed.toTimeString().slice(0, 5));
-        }
-      };
+      // Each side on its OWN airport's clock — see lookupWallClock.
+      const times = lookupFormTimes(
+        lookupWallClock(flight.departure, depAirport?.timezone),
+        lookupWallClock(flight.arrival, arrAirport?.timezone),
+        searchDate
+      );
+      if (times.departureDate) setDepartureDate(times.departureDate);
+      if (times.departureTime) setDepartureTime(times.departureTime);
+      if (times.arrivalDate) setArrivalDate(times.arrivalDate);
+      if (times.arrivalTime) setArrivalTime(times.arrivalTime);
+      // The provider's arrival is data, not a guess: keep the duration
+      // estimator below from overwriting it once the airports land.
+      if (times.arrivalDate && times.arrivalTime) arrivalDateSetRef.current = true;
 
-      if (searchDate) {
-        setDepartureDate(searchDate);
-        applyDateTime(
-          flight.departure.scheduledTime,
-          { setDate: () => {}, setTime: setDepartureTime },
-          true
-        );
-      } else {
-        applyDateTime(flight.departure.scheduledTime, {
-          setDate: setDepartureDate,
-          setTime: setDepartureTime,
-        });
+      if (unresolved.length > 0) {
+        stepNoticeRef.current = unresolved.map((u) => t(u.key, u.params)).join(" ");
       }
-
-      applyDateTime(flight.arrival.scheduledTime, {
-        setDate: setArrivalDate,
-        setTime: setArrivalTime,
-      });
-
-      if (searchDate && flight.departure.scheduledTime && flight.arrival.scheduledTime) {
-        const depTime = new Date(flight.departure.scheduledTime);
-        const arrTime = new Date(flight.arrival.scheduledTime);
-        const duration = arrTime.getTime() - depTime.getTime();
-        const newDepTime = new Date(`${searchDate}T${departureTime || "00:00"}`);
-        const newArrTime = new Date(newDepTime.getTime() + duration);
-        setArrivalDate(newArrTime.toISOString().split("T")[0]);
-        setArrivalTime(newArrTime.toTimeString().slice(0, 5));
-      }
-
       setStep("complete");
     } catch {
       setError(t("errors:failedToLoadAirport"));

@@ -33,6 +33,7 @@
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { lookupFlightWithHistorical } from "./flightLookup";
+import type { ProviderFailure } from "./flightLookup/providerOutcome";
 import { getApiKey } from "./apiKeyResolver";
 
 /** Max flights touched per single endpoint call. Keeps the request under the
@@ -90,6 +91,12 @@ export interface BulkRefreshSummary {
      * indistinguishable — to the user and to whoever reads the logs later.
      */
     reason?: string;
+    /**
+     * With reason `provider_failed`: which provider could not answer and why.
+     * Such a leg counts as `failed`, never as `noData` — a refused key or a
+     * spent quota says nothing about whether the provider knows the flight.
+     */
+    providerFailures?: ProviderFailure[];
     error?: string;
   }>;
 }
@@ -227,14 +234,23 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
     const candidate = candidates[i];
 
     try {
-      const { flights, unavailableReason } = await lookupFlightWithHistorical(
+      const { flights, unavailableReason, providerFailures } = await lookupFlightWithHistorical(
         candidate.flightNumber,
         candidate.departureTime,
         userId,
         candidate.depIata ?? candidate.depIcao ?? undefined
       );
 
-      if (unavailableReason || flights.length === 0) {
+      if (unavailableReason === "provider_failed") {
+        summary.failed++;
+        summary.results.push({
+          flightId: candidate.id,
+          flightNumber: candidate.flightNumber,
+          outcome: "failed",
+          reason: "provider_failed",
+          providerFailures: providerFailures ?? [],
+        });
+      } else if (unavailableReason || flights.length === 0) {
         summary.noData++;
         summary.results.push({
           flightId: candidate.id,

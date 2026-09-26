@@ -453,7 +453,9 @@
     "protocol": "Unexpected response from the provider",
     "openskyMissingCredentials": "Client ID and Client Secret are required",
     "openskyInvalid": "Invalid OAuth2 credentials — please check Client ID and Client Secret",
-    "requestFailed": "Test failed"
+    "requestFailed": "Test failed",
+    "unreachable": "Provider unreachable – please check the network or DNS.",
+    "providerError": "The provider rejected the test."
   },
   "apiKeys": {
     "title": "API Keys",

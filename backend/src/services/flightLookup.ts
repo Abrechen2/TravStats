@@ -12,12 +12,19 @@
  * for live or ad-hoc lookups, and OpenSky as a final fallback.
  */
 
-import { createHash } from "crypto";
 import axios from "axios";
 import NodeCache from "node-cache";
 import { findOrCreateAirport } from "./airportLookup";
-import { getApiKey, getOpenSkyCredentials, OpenSkyCredentials } from "./apiKeyResolver";
+import { getApiKey, getOpenSkyCredentials } from "./apiKeyResolver";
 import { lookupFlightAerodatabox } from "./aerodataboxLookup";
+import { flightLookupResultToFlightData } from "./flightLookup/toFlightData";
+import { getOpenSkyAuthHeaders, lookupOpenSkyFlight } from "./flightLookup/openSky";
+import {
+  classifyAirlabsBodyError,
+  classifyProviderError,
+  LookupOutcomeLog,
+  type ProviderFailure,
+} from "./flightLookup/providerOutcome";
 import {
   convertAviationstackTimeToUtc,
   convertAirlabsTimeToUtc,
@@ -111,15 +118,6 @@ interface AviationstackApiResponse {
   data?: AviationstackFlightResult[];
 }
 
-/** OpenSky API flight result */
-interface OpenSkyFlightResult {
-  estDepartureAirport?: string;
-  estArrivalAirport?: string;
-  firstSeen?: number;
-  lastSeen?: number;
-  callsign?: string;
-}
-
 /** Airport data returned from findOrCreateAirport */
 interface AirportInfo {
   iata?: string | null;
@@ -141,28 +139,6 @@ const flightCache = new NodeCache({
   checkperiod: 600,
 });
 
-/**
- * OpenSky OAuth tokens, keyed by the credential that minted them.
- *
- * This used to be a single process-wide slot. A token is bound to ONE OpenSky
- * account, so the first caller's token was then handed to every other user:
- * their lookups ran against a stranger's account and burned that account's
- * quota, and a credential change was ignored until the old token expired
- * (AUD-102).
- *
- * The key is a hash, not the credential — a cache key ends up in heap dumps and
- * debugger views, and a client secret has no business in either. The secret is
- * part of the hash so that rotating it invalidates the entry rather than
- * silently reusing a token minted with the old one.
- */
-const openSkyTokenCache = new Map<string, { token: string; expiresAt: number }>();
-
-function openSkyTokenKey(clientId: string, clientSecret: string): string {
-  return createHash("sha256")
-    .update(`${clientId.length}:${clientId}:${clientSecret}`)
-    .digest("hex");
-}
-
 export interface FlightData {
   flightNumber: string;
   airline: string;
@@ -182,6 +158,10 @@ export interface FlightData {
     actualTime?: string;
     terminal?: string;
     gate?: string;
+    /** IANA zone of the airport — set on UI lookup results (`toFlightData`). */
+    timezone?: string;
+    /** "YYYY-MM-DDTHH:mm" wall clock at the airport, when its zone is known. */
+    scheduledLocal?: string;
   };
   arrival: {
     iata?: string;
@@ -191,6 +171,8 @@ export interface FlightData {
     actualTime?: string;
     terminal?: string;
     gate?: string;
+    timezone?: string;
+    scheduledLocal?: string;
   };
   aircraft?: string;
   aircraftIcao?: string;
@@ -212,7 +194,8 @@ export interface FlightData {
 export async function lookupFlightByNumber(
   flightNumber: string,
   date?: Date,
-  userId?: string
+  userId?: string,
+  outcomes?: LookupOutcomeLog
 ): Promise<FlightData[]> {
   const apiKey = await getApiKey("airlabs", userId);
 
@@ -235,6 +218,7 @@ export async function lookupFlightByNumber(
       { flightNumber, date: dateStr, operation: "airlabs_cache_hit" },
       `AirLabs cache hit for ${flightNumber} on ${dateStr}`
     );
+    outcomes?.record("airlabs", cached.length > 0 ? "ok" : "no_match");
     return cached;
   }
 
@@ -255,6 +239,25 @@ export async function lookupFlightByNumber(
       timeout: 5000,
     });
 
+    // AirLabs reports a refused key or a spent quota as HTTP 200 with an
+    // `error` body. Read as "no response" that became "no flight", and was
+    // even cached as such for hours.
+    const bodyFailure = classifyAirlabsBodyError(response.data);
+    if (bodyFailure) {
+      logger.warn(
+        {
+          flightNumber,
+          date: dateStr,
+          api: "airlabs",
+          failure: bodyFailure,
+          operation: "api_body_error",
+        },
+        `AirLabs refused the lookup for ${flightNumber} (${bodyFailure})`
+      );
+      outcomes?.record("airlabs", bodyFailure);
+      return [];
+    }
+
     if (!response.data || !response.data.response) {
       logger.info(
         { flightNumber, date: dateStr, api: "airlabs", operation: "api_empty_response" },
@@ -262,6 +265,7 @@ export async function lookupFlightByNumber(
       );
       const isHistorical = date && date < new Date();
       flightCache.set(cacheKey, [], isHistorical ? CACHE_TTL_SECONDS : RECENT_CACHE_TTL_SECONDS);
+      outcomes?.record("airlabs", "no_match");
       return [];
     }
 
@@ -319,7 +323,7 @@ export async function lookupFlightByNumber(
     // Cache the results with appropriate TTL
     const isHistorical = date && date < new Date();
     flightCache.set(cacheKey, flights, isHistorical ? CACHE_TTL_SECONDS : RECENT_CACHE_TTL_SECONDS);
-
+    outcomes?.record("airlabs", flights.length > 0 ? "ok" : "no_match");
     return flights;
   } catch (_error: unknown) {
     const errMsg = _error instanceof Error ? _error.message : String(_error);
@@ -327,6 +331,7 @@ export async function lookupFlightByNumber(
       { flightNumber, date: dateStr, api: "airlabs", error: errMsg, operation: "api_call_error" },
       `AirLabs lookup failed for ${flightNumber}: ${errMsg}`
     );
+    outcomes?.record("airlabs", classifyProviderError(_error));
     return [];
   }
 }
@@ -393,69 +398,6 @@ export interface FlightLookupResult {
   checkInDesk?: string | null;
 }
 
-/**
- * Resolve OpenSky auth headers (prefers OAuth2 client credentials, falls back to basic)
- */
-async function getOpenSkyAuthHeaders(
-  opts: OpenSkyCredentials
-): Promise<Record<string, string> | null> {
-  // OAuth2 client credentials
-  if (opts.clientId && opts.clientSecret) {
-    const now = Date.now();
-    const cacheKey = openSkyTokenKey(opts.clientId, opts.clientSecret);
-    const cached = openSkyTokenCache.get(cacheKey);
-    if (cached && cached.expiresAt > now + 30_000) {
-      return { Authorization: `Bearer ${cached.token}` };
-    }
-
-    try {
-      const params = new URLSearchParams({
-        grant_type: "client_credentials",
-        client_id: opts.clientId,
-        client_secret: opts.clientSecret,
-      });
-
-      const response = await axios.post(
-        "https://auth.opensky-network.org/auth/realms/opensky-network/protocol/openid-connect/token",
-        params.toString(),
-        {
-          headers: { "Content-Type": "application/x-www-form-urlencoded" },
-          timeout: 5000,
-        }
-      );
-
-      const token = response.data?.access_token as string | undefined;
-      const expiresIn = response.data?.expires_in as number | undefined;
-      if (token) {
-        const ttl = expiresIn ? expiresIn * 1000 : 30 * 60 * 1000; // default 30min
-        openSkyTokenCache.set(cacheKey, { token, expiresAt: Date.now() + ttl });
-        return { Authorization: `Bearer ${token}` };
-      }
-    } catch (err) {
-      logger.warn({
-        operation: "opensky_token_fetch",
-        message: "OpenSky OAuth token fetch failed",
-        error: err instanceof Error ? err.message : String(err),
-      });
-      // fallback to basic if provided
-    }
-  }
-
-  // Basic auth fallback. The field names are `username`/`password` because that
-  // is what `getOpenSkyCredentials` returns; this used to read `user`/`pass`,
-  // which are never set, so a fully configured basic credential produced no
-  // header and the lookup returned null without ever calling OpenSky
-  // (AUD-101). Typing the parameter as `OpenSkyCredentials` is the actual fix:
-  // an all-optional inline literal let the mismatch compile.
-  if (opts.username && opts.password) {
-    const pair = `${opts.username}:${opts.password}`;
-    const b64 = Buffer.from(pair).toString("base64");
-    return { Authorization: `Basic ${b64}` };
-  }
-
-  return null;
-}
-
 export async function lookupFlightDetails(
   flightNumber: string,
   date?: string,
@@ -464,7 +406,9 @@ export async function lookupFlightDetails(
   arrivalTime?: Date | string | null,
   /** Our flight's departure airport, where the caller knows it — see the
    *  AeroDataBox adapter for why a flight number alone is not unique. */
-  depAirportCode?: string
+  depAirportCode?: string,
+  /** Receives what each provider answered — see `providerOutcome.ts`. */
+  outcomes?: LookupOutcomeLog
 ): Promise<FlightLookupResult | null> {
   const trimmedNumber = flightNumber.trim();
   if (!trimmedNumber) return null;
@@ -592,6 +536,7 @@ export async function lookupFlightDetails(
           result = undefined;
         }
 
+        outcomes?.record("aviationstack", result ? "ok" : "no_match");
         if (result) {
           const departureCode = result.departure?.iata || result.departure?.icao;
           const arrivalCode = result.arrival?.iata || result.arrival?.icao;
@@ -677,6 +622,7 @@ export async function lookupFlightDetails(
           // Quota exhausted — back off for an hour so we don't burn through the
           // free tier's monthly budget on rapid-fire retries.
           markAviationstack429();
+          outcomes?.record("aviationstack", "quota");
           logger.warn({
             operation: "aviationstack_rate_limited",
             message: "Aviationstack returned 429 — backing off for 1 hour",
@@ -707,6 +653,7 @@ export async function lookupFlightDetails(
             omitDateFilter = true;
             continue;
           }
+          outcomes?.record("aviationstack", "plan_restricted");
           break;
         }
         logger.error({
@@ -714,6 +661,7 @@ export async function lookupFlightDetails(
           message: "Aviationstack lookup failed",
           error: err instanceof Error ? err.message : String(err),
         });
+        outcomes?.record("aviationstack", classifyProviderError(err));
         break;
       }
     }
@@ -732,7 +680,8 @@ export async function lookupFlightDetails(
       trimmedNumber,
       date,
       userId,
-      depAirportCode
+      depAirportCode,
+      outcomes
     );
     if (aerodataboxResult) {
       logger.info(
@@ -775,7 +724,7 @@ export async function lookupFlightDetails(
   // its own key with `getApiKey('airlabs', userId)`, so dropping it silently
   // demotes a user's personal key to the global one — or, where only a personal
   // key exists, to no key at all and a null result (AUD-100).
-  const flights = await lookupFlightByNumber(trimmedNumber, fallbackDate, userId);
+  const flights = await lookupFlightByNumber(trimmedNumber, fallbackDate, userId, outcomes);
 
   if (!flights.length) {
     // Try OpenSky as last resort (requires credentials)
@@ -785,7 +734,12 @@ export async function lookupFlightDetails(
         `Falling back to OpenSky for ${trimmedNumber}`
       );
       const openSkyAuth = await getOpenSkyAuthHeaders(openSkyCredentials);
-      const openSky = await lookupOpenSkyFlight(trimmedNumber, date, openSkyAuth ?? undefined);
+      const openSky = await lookupOpenSkyFlight(
+        trimmedNumber,
+        date,
+        openSkyAuth ?? undefined,
+        outcomes
+      );
       if (openSky) return { ...openSky, source: "opensky" };
     }
     logger.info(
@@ -868,55 +822,6 @@ export async function lookupFlightDetails(
   };
 }
 
-/**
- * Very lightweight OpenSky fallback (requires optional OPENSKY_USERNAME/PASSWORD)
- * Only works for recent flights and provides limited fields.
- */
-async function lookupOpenSkyFlight(
-  flightNumber: string,
-  date?: string,
-  authHeaders?: Record<string, string>
-): Promise<FlightLookupResult | null> {
-  if (!authHeaders) return null;
-
-  const callsign = flightNumber.toUpperCase();
-  const baseDate = date ? new Date(date) : new Date();
-  const begin = Math.floor(baseDate.setHours(0, 0, 0, 0) / 1000);
-  const end = begin + 24 * 60 * 60;
-
-  try {
-    const url = `https://opensky-network.org/api/flights/callsign?callsign=${callsign}&begin=${begin}&end=${end}`;
-    const response = await axios.get(url, { timeout: 6000, headers: authHeaders });
-    const result = (response.data as OpenSkyFlightResult[])[0];
-    if (!result) return null;
-
-    const [departureAirport, arrivalAirport] = await Promise.all([
-      result.estDepartureAirport
-        ? findOrCreateAirport(result.estDepartureAirport)
-        : Promise.resolve(null),
-      result.estArrivalAirport
-        ? findOrCreateAirport(result.estArrivalAirport)
-        : Promise.resolve(null),
-    ]);
-
-    return {
-      airline: getAirlineName(callsign.slice(0, 2)) || undefined,
-      flightNumber: callsign.trim(),
-      departure: departureAirport || undefined,
-      arrival: arrivalAirport || undefined,
-      departureTime: result.firstSeen ? new Date(result.firstSeen * 1000).toISOString() : undefined,
-      arrivalTime: result.lastSeen ? new Date(result.lastSeen * 1000).toISOString() : undefined,
-    };
-  } catch (err) {
-    logger.warn({
-      operation: "opensky_fallback",
-      message: "OpenSky fallback failed",
-      error: err instanceof Error ? err.message : String(err),
-    });
-    return null;
-  }
-}
-
 export interface LookupWithHistoricalResult {
   flights: FlightData[];
   /**
@@ -935,50 +840,40 @@ export interface LookupWithHistoricalResult {
    *   the issue-#82 symptom). The flight just isn't covered by the API
    *   for that date; do not blame the user for a typo.
    */
-  unavailableReason?: "not_configured" | "no_provider" | "no_match" | "no_match_api_gap";
+  unavailableReason?:
+    "not_configured" | "no_provider" | "no_match" | "no_match_api_gap" | "provider_failed";
+  /**
+   * With `'provider_failed'`: which provider could not answer, and why
+   * (`auth`, `quota`, `timeout`, `plan_restricted`, `provider_error`). Set
+   * whenever no flight came back and at least one provider FAILED rather than
+   * answered "not found" — then "no flight" is not a claim anyone made.
+   */
+  providerFailures?: ProviderFailure[];
 }
 
-/** Coerce `string | null | undefined` -> `string | undefined` (FlightData fields don't accept null). */
-const toUndef = (value: string | null | undefined): string | undefined =>
-  value === null ? undefined : value;
+export interface LookupWithHistoricalOptions {
+  /**
+   * The asking user's IANA zone, for a lookup whose departure airport is not
+   * known yet (the flight form). Decides what "today" is — see below.
+   */
+  clientTimezone?: string;
+}
 
-/** Map a `lookupFlightDetails` result onto the legacy `FlightData` shape. */
-function flightLookupResultToFlightData(
-  result: FlightLookupResult,
-  fallbackFlightNumber: string
-): FlightData {
-  return {
-    flightNumber: result.flightNumber || fallbackFlightNumber,
-    airline: result.airline || "Unknown",
-    airlineIata: result.airlineIata,
-    airlineIcao: result.airlineIcao,
-    operatingAirline: result.operatingAirline,
-    isCodeshare: result.isCodeshare,
-    callsign: result.callsign,
-    departure: {
-      iata: toUndef(result.departure?.iata),
-      icao: toUndef(result.departure?.icao),
-      name: result.departure?.name,
-      scheduledTime: result.departureTime,
-      actualTime: result.actualDeparture,
-      terminal: result.departure?.terminal,
-      gate: result.departure?.gate,
-    },
-    arrival: {
-      iata: toUndef(result.arrival?.iata),
-      icao: toUndef(result.arrival?.icao),
-      name: result.arrival?.name,
-      scheduledTime: result.arrivalTime,
-      actualTime: result.actualArrival,
-      terminal: result.arrival?.terminal,
-      gate: result.arrival?.gate,
-    },
-    aircraft: result.aircraft,
-    aircraftRegistration: result.aircraftRegistration,
-    aircraftModeS: result.aircraftModeS,
-    status: result.statusOverride,
-    distance: result.distanceKm,
-  };
+/** An IANA zone the runtime accepts, else undefined. */
+function validTimezone(zone: string | undefined): string | undefined {
+  if (!zone) return undefined;
+  try {
+    new Intl.DateTimeFormat("en-CA", { timeZone: zone });
+    return zone;
+  } catch {
+    return undefined;
+  }
+}
+
+/** The local calendar day of an instant string, falling back to its UTC day. */
+function localDayOfInstant(instant: string, zone: string | null): string {
+  const parsed = new Date(instant);
+  return Number.isNaN(parsed.getTime()) ? instant.slice(0, 10) : toLocalDateString(parsed, zone);
 }
 
 /**
@@ -1004,7 +899,8 @@ export async function lookupFlightWithHistorical(
   flightNumber: string,
   date: Date | undefined,
   userId?: string,
-  depAirportCode?: string
+  depAirportCode?: string,
+  options: LookupWithHistoricalOptions = {}
 ): Promise<LookupWithHistoricalResult> {
   const trimmed = flightNumber.trim();
   if (!trimmed) return { flights: [] };
@@ -1017,18 +913,18 @@ export async function lookupFlightWithHistorical(
   // Callers passing a user-picked calendar date (UI lookup) omit
   // depAirportCode and keep the date exactly as given.
   let localDayStr: string | undefined;
-  if (date && depAirportCode) {
-    const depTz = await getAirportTimezone(depAirportCode);
-    if (depTz) localDayStr = toLocalDateString(date, depTz);
-  }
+  const depTz = depAirportCode ? await getAirportTimezone(depAirportCode) : null;
+  if (date && depTz) localDayStr = toLocalDateString(date, depTz);
 
-  // Direction is decided on UTC-day boundaries, not on hours: "tomorrow" /
-  // "yesterday" should always count as future / past regardless of how many
-  // hours away they are at the moment of the call. The hour-based threshold
-  // earlier let "tomorrow at 00:00 UTC" slip through when called late in the
-  // day, which is exactly the issue-#82 symptom we're guarding against.
-  const now = Date.now();
-  const todayStr = new Date(now).toISOString().slice(0, 10);
+  // Direction is decided on calendar-day boundaries, not on hours: "tomorrow"
+  // / "yesterday" should always count as future / past regardless of how many
+  // hours away they are at the moment of the call (the issue-#82 symptom).
+  //
+  // WHOSE calendar: the departure airport's where it is known, else the
+  // asking user's. It used to be UTC, so at 00:30 in Germany a search for
+  // "today" was a search for tomorrow — refused as needing a paid provider.
+  const todayZone = depTz ?? validTimezone(options.clientTimezone) ?? null;
+  const todayStr = toLocalDateString(new Date(), todayZone);
   const requestedStr = localDayStr ?? (date ? date.toISOString().slice(0, 10) : undefined);
   const dayDelta = requestedStr ? dayDiff(requestedStr, todayStr) : 0;
 
@@ -1088,16 +984,33 @@ export async function lookupFlightWithHistorical(
   }
 
   const dateStr = requestedStr;
+  const outcomes = new LookupOutcomeLog();
   const result = await lookupFlightDetails(
     trimmed,
     dateStr,
     userId,
     undefined,
     undefined,
-    depAirportCode
+    depAirportCode,
+    outcomes
   );
 
   if (!result) {
+    // A provider that failed has not said "no such flight"; reporting its
+    // silence as one sends the user to re-check a number that was right.
+    const providerFailures = outcomes.failures();
+    if (providerFailures.length > 0) {
+      logger.warn(
+        {
+          flightNumber: trimmed,
+          date: dateStr,
+          providerFailures,
+          operation: "lookup_provider_failed",
+        },
+        `Lookup for ${trimmed} found nothing and ${providerFailures.length} provider(s) failed`
+      );
+      return { flights: [], unavailableReason: "provider_failed", providerFailures };
+    }
     if (isOutsideLiveWindow) {
       return { flights: [], unavailableReason: "no_match_api_gap" };
     }
@@ -1118,7 +1031,9 @@ export async function lookupFlightWithHistorical(
   //     not ask for today because we're inside isOutsideLiveWindow). Covers
   //     the off-by-one case like "yesterday" / "tomorrow" -> today.
   if (isOutsideLiveWindow && dateStr && result.departureTime) {
-    const returnedDate = result.departureTime.slice(0, 10);
+    const returnedCode = result.departure?.iata ?? result.departure?.icao ?? undefined;
+    const returnedTz = (await getAirportTimezone(returnedCode)) ?? todayZone;
+    const returnedDate = localDayOfInstant(result.departureTime, returnedTz);
     const strictMismatch = Math.abs(dayDiff(dateStr, returnedDate)) > 1;
     const smokingGun = returnedDate === todayStr;
 
@@ -1137,7 +1052,7 @@ export async function lookupFlightWithHistorical(
     }
   }
 
-  return { flights: [flightLookupResultToFlightData(result, trimmed)] };
+  return { flights: [await flightLookupResultToFlightData(result, trimmed)] };
 }
 
 // The pure field readers live in `flightLookup/fieldReaders` — see its header.

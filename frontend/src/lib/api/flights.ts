@@ -1,3 +1,4 @@
+import type { LookupProviderFailure } from "./flightLookup";
 import type {
   Flight,
   FlightFacets,
@@ -286,6 +287,8 @@ export interface BulkRefreshSummary {
     fieldsUpdated?: string[];
     /** Why nothing was written, in the provider's vocabulary. */
     reason?: string;
+    /** With reason `provider_failed`: who could not answer, and why. */
+    providerFailures?: LookupProviderFailure[];
     error?: string;
   }>;
   aerodataboxQuota?: AerodataboxQuota | null;
