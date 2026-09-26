@@ -255,7 +255,8 @@ export async function resolveCruiseEntities(parsed: ParsedCruise): Promise<Resol
     ? findBestPort({ name: parsed.arrivalPortName }, ports)
     : null;
 
-  const stops = parsed.stops.map((stop, index) => mapStop(stop, index, ports, unmatched));
+  const withEndpoints = keepUnmatchedEndpoints(parsed, departurePort, arrivalPort);
+  const stops = withEndpoints.map((stop, index) => mapStop(stop, index, ports, unmatched));
 
   const input: CruiseInput = {
     shipId: ship.id ?? undefined,
@@ -282,6 +283,42 @@ export async function resolveCruiseEntities(parsed: ParsedCruise): Promise<Resol
     unmatchedPorts: unmatched,
     flights: parsed.flights ?? [],
   };
+}
+
+/**
+ * An explicit "Abfahrt: X" / "Ankunft: Y" the catalogue cannot match used to
+ * vanish: no port id, no stop, no warning — the only record of where the
+ * cruise started was gone after import. Such a name is now kept as an
+ * unresolved stop (first / last, on the start / end date), unless one of the
+ * parsed stops already names it; the stop mapping then reports it as
+ * unmatched like any other, so the preview warns and the user can resolve it.
+ */
+function keepUnmatchedEndpoints(
+  parsed: ParsedCruise,
+  departurePort: PortCandidate | null,
+  arrivalPort: PortCandidate | null
+): ParsedCruiseStop[] {
+  const namedInStops = (name: string): boolean =>
+    parsed.stops.some(
+      (s) => !s.isAtSea && Boolean(s.portName) && nameScore(name, s.portName as string) >= 60
+    );
+  const endpoint = (name: string, date: string | undefined): ParsedCruiseStop => ({
+    dayNumber: 0, // re-sequenced by position in mapStop
+    isAtSea: false,
+    portName: name,
+    date,
+  });
+
+  const out = [...parsed.stops];
+  const dep = parsed.departurePortName?.trim();
+  if (dep && !departurePort && !namedInStops(dep)) {
+    out.unshift(endpoint(dep, parsed.startDate));
+  }
+  const arr = parsed.arrivalPortName?.trim();
+  if (arr && !arrivalPort && !namedInStops(arr)) {
+    out.push(endpoint(arr, parsed.endDate));
+  }
+  return out;
 }
 
 function mapStop(

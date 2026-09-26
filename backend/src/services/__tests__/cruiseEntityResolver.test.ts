@@ -106,6 +106,47 @@ describe("resolveCruiseEntities", () => {
     expect(stop.excursionNote ?? "").not.toContain("[unmatched:");
   });
 
+  // An explicit departure/arrival the catalogue could not match used to be
+  // dropped without a trace: no port id, no stop, no warning.
+  it("keeps an unmatched departure and arrival port as unresolved stops", async () => {
+    const cruise = baseParsedCruise({
+      departurePortName: "Atlantis Harbour",
+      arrivalPortName: "Mu Pier",
+      stops: [{ dayNumber: 1, isAtSea: false, portName: "Bergen" }],
+    });
+    const result = await resolveCruiseEntities(cruise);
+    const stops = result.input.stops!;
+    expect(stops.map((s) => s.unresolvedPortName ?? s.portId)).toEqual([
+      "Atlantis Harbour",
+      11,
+      "Mu Pier",
+    ]);
+    expect(stops[0]).toMatchObject({ isAtSea: false, portId: null, date: "2025-12-19" });
+    expect(stops[2]).toMatchObject({ isAtSea: false, portId: null, date: "2025-12-26" });
+    expect(result.unmatchedPorts).toEqual([
+      { dayNumber: 1, portName: "Atlantis Harbour" },
+      { dayNumber: 3, portName: "Mu Pier" },
+    ]);
+    expect(createCruiseSchema.safeParse(result.input).success).toBe(true);
+  });
+
+  it("does not add a departure stop the parsed stops already name", async () => {
+    const cruise = baseParsedCruise({
+      departurePortName: "Atlantis",
+      stops: [{ dayNumber: 1, isAtSea: false, portName: "Atlantis" }],
+    });
+    const result = await resolveCruiseEntities(cruise);
+    expect(result.input.stops).toHaveLength(1);
+    expect(result.unmatchedPorts).toEqual([{ dayNumber: 1, portName: "Atlantis" }]);
+  });
+
+  it("adds nothing for a departure port the catalogue matched", async () => {
+    const cruise = baseParsedCruise({ departurePortName: "Hamburg", stops: [] });
+    const result = await resolveCruiseEntities(cruise);
+    expect(result.input.departurePortId).toBe(10);
+    expect(result.input.stops).toHaveLength(0);
+  });
+
   it("degrades a non-sea stop with neither a match nor a name to a sea day (nameless LLM artifact)", async () => {
     const cruise = baseParsedCruise({
       stops: [{ dayNumber: 1, isAtSea: false }],
