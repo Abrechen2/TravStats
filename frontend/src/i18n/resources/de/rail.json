@@ -87,7 +87,8 @@
     "noHits": "Kein Bahnhof im Katalog gefunden. Wähle ihn über die Ortssuche.",
     "picked": "Aus dem Bahnhofskatalog · UIC {{code}}",
     "useGeocoder": "Nicht im Bahnhofskatalog? Über die Ortssuche wählen",
-    "backToCatalogue": "Zurück zum Bahnhofskatalog"
+    "backToCatalogue": "Zurück zum Bahnhofskatalog",
+    "noPlausibleHit": "Kein Bahnhof im Katalog passt zu „{{name}}“. Such den Bahnhof über das Feld."
   },
   "lookup": {
     "title": "Zug nachschlagen",
@@ -280,7 +281,9 @@
       "llmUnreachable": "In diesem Dokument wurde keine Zugfahrt erkannt: Keine Vorlage kennt das Layout, und der KI-Parser ist nicht erreichbar. Trag die Fahrt von Hand ein.",
       "llmFailed": "Der KI-Parser hat auf dieses Dokument keine verwertbare Antwort gegeben. Trag die Fahrt von Hand ein.",
       "demoNoLlm": "Keine Vorlage kennt dieses Ticket, und im Demo-Konto steht der KI-Parser nicht zur Verfügung.",
-      "nothingFound": "In diesem Dokument wurde keine Zugfahrt gefunden. Trag die Fahrt von Hand ein."
+      "nothingFound": "In diesem Dokument wurde keine Zugfahrt gefunden. Trag die Fahrt von Hand ein.",
+      "otherDomain": "Dieses Dokument ist keine Bahnbuchung. Importiere es dort, wo es hingehört.",
+      "looksLikeFlight": "Der KI-Parser hat statt Bahnhöfen Flughafen-Kürzel gelesen — das Dokument ist vermutlich eine Flugbuchung. Nichts wurde übernommen."
     }
   }
 }

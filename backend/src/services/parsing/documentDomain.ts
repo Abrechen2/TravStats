@@ -296,3 +296,37 @@ const round2 = (value: number): number => Math.round(value * 100) / 100;
 /** Position in the canonical domain order — the one tie-break this file uses. */
 const domainOrder = (domain: ParserSupportedDomain): number =>
   PARSER_SUPPORTED_DOMAINS.indexOf(domain);
+
+/**
+ * A share of the evidence below which the leader is not trusted to overrule
+ * the dialog the document was dropped into. Together with `SUBSTANTIAL_SCORE`
+ * it asks for a clear case: every flight confirmation in the sample corpus
+ * clears both (lowest measured: 0.59 at score 10), while a thin rail calendar
+ * file or a signal-free foreign ticket clears neither and stays with the dialog.
+ */
+const OVERRULE_CONFIDENCE = 0.5;
+
+/**
+ * The domain a document clearly IS when that is not the one it was sent for,
+ * or null when the evidence does not say so (acceptance D1, 2026-09-26: a
+ * Lufthansa mail dropped into the rail dialog came back as two "train rides"
+ * MUC→FRA with the stations "Mücka" and "Frant").
+ *
+ * Detection runs whatever the dialog, and the dialog only wins when the
+ * document is inconclusive: the leader must carry substantial evidence, a
+ * clear share of it, and at least twice the requested domain's score — so a
+ * DB confirmation that names a "Flughafen" station stays a rail document.
+ * The one home of this rule; the rail parser's model fallback asks it too.
+ */
+export function conclusiveOtherDomain(
+  detection: DomainDetection,
+  requested: ParserSupportedDomain
+): ParserSupportedDomain | null {
+  if (detection.domain === requested) return null;
+  const leader = detection.candidates.find((c) => c.domain === detection.domain);
+  const asked = detection.candidates.find((c) => c.domain === requested);
+  if (!leader || leader.score < SUBSTANTIAL_SCORE) return null;
+  if (leader.confidence < OVERRULE_CONFIDENCE) return null;
+  if ((asked?.score ?? 0) * 2 > leader.score) return null;
+  return detection.domain;
+}

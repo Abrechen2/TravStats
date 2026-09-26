@@ -110,6 +110,50 @@ export function toImportInput(
   };
 }
 
+/** Lower case, no diacritics, "ue" read as "ü", punctuation as a space — then words. */
+function stationWords(name: string): string[] {
+  return name
+    .toLowerCase()
+    .replace(/ß/g, "ss")
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/ae/g, "a")
+    .replace(/oe/g, "o")
+    .replace(/ue/g, "u")
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+}
+
+/** A cut-off word ("Flugh.") stands for a longer one — but not a stub of three letters. */
+const MIN_PREFIX = 4;
+const MIN_PREFIX_SHARE = 0.5;
+
+function wordsMatch(a: string, b: string): boolean {
+  if (a === b) return true;
+  const [short, long] = a.length <= b.length ? [a, b] : [b, a];
+  return (
+    long.startsWith(short) &&
+    short.length >= MIN_PREFIX &&
+    short.length / long.length >= MIN_PREFIX_SHARE
+  );
+}
+
+/**
+ * Whether a catalogue station is a plausible reading of the name a ticket
+ * printed — the minimum similarity a SUGGESTION must meet (acceptance D1:
+ * "MUC" was offered "Mücka", "FRA" "Frant", because the typeahead matches any
+ * word start). Every printed word of two letters or more must meet a word of
+ * the station, whole or as a real abbreviation; an airport code never does.
+ * A miss leaves the station unresolved and the user searches — never a guess.
+ */
+export function isPlausibleStation(printedName: string, stationName: string): boolean {
+  if (/^[A-Z]{3}$/.test(printedName.trim())) return false;
+  const printed = stationWords(printedName).filter((w) => w.length >= 2);
+  if (printed.length === 0) return false;
+  const station = stationWords(stationName);
+  return printed.every((word) => station.some((s) => wordsMatch(word, s)));
+}
+
 /** `2025-06-07T09:38` → `07.06.2025 09:38`, from the string — no clock involved. */
 export function wallClockLabel(local: string | null): string {
   const m = local ? /^(\d{4})-(\d{2})-(\d{2})T(\d{2}:\d{2})/.exec(local) : null;
@@ -127,6 +171,10 @@ export function emptyParseMessageKey(code: RailParseFallbackCode | undefined): s
       return "rail:import.empty.llmFailed";
     case "demoNoLlm":
       return "rail:import.empty.demoNoLlm";
+    case "otherDomain":
+      return "rail:import.empty.otherDomain";
+    case "looksLikeFlight":
+      return "rail:import.empty.looksLikeFlight";
     default:
       return "rail:import.empty.nothingFound";
   }

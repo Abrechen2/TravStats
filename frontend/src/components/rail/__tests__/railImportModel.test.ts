@@ -2,6 +2,7 @@ import { describe, expect, it } from "vitest";
 
 import {
   emptyParseMessageKey,
+  isPlausibleStation,
   isRowReady,
   rowsFrom,
   toImportInput,
@@ -54,5 +55,31 @@ describe("railImportModel", () => {
     expect(emptyParseMessageKey("noItinerary")).toBe("rail:import.empty.noItinerary");
     expect(emptyParseMessageKey("llmUnreachable")).toBe("rail:import.empty.llmUnreachable");
     expect(emptyParseMessageKey(undefined)).toBe("rail:import.empty.nothingFound");
+  });
+
+  it("words a document that is another booking, and a model that read airport codes", () => {
+    expect(emptyParseMessageKey("otherDomain")).toBe("rail:import.empty.otherDomain");
+    expect(emptyParseMessageKey("looksLikeFlight")).toBe("rail:import.empty.looksLikeFlight");
+  });
+});
+
+// Acceptance D1: the review offered "Mücka" for "MUC" and "Frant" for "FRA".
+describe("isPlausibleStation — the minimum similarity of a suggestion", () => {
+  it("never reads an airport code or a three-letter stub as a station", () => {
+    expect(isPlausibleStation("MUC", "Mücka")).toBe(false);
+    expect(isPlausibleStation("FRA", "Frant")).toBe(false);
+    expect(isPlausibleStation("Muc", "Mücka")).toBe(false);
+  });
+
+  it("accepts the same name, a transliteration and real abbreviations", () => {
+    expect(isPlausibleStation("Muenchen Hbf", "München Hbf")).toBe(true);
+    expect(isPlausibleStation("Frankfurt(M) Flugh.", "Frankfurt (Main) Flughafen Fernbf")).toBe(
+      true
+    );
+  });
+
+  it("refuses a station that shares only a word start with the printed name", () => {
+    expect(isPlausibleStation("Neufahrn", "Neu Ulm")).toBe(false);
+    expect(isPlausibleStation("Hamburg Hbf", "Hamburg-Harburg")).toBe(false);
   });
 });

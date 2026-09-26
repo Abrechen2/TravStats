@@ -13,6 +13,7 @@ import {
 import { parseDbOnlineTicket } from "./dbOnlineTicket";
 import { decodeCalendar, isCalendarAttachment, parseCalendarLegs } from "./icsCalendar";
 import { ollamaReachable, parseRailWithOllama, resolveOllamaTarget } from "./railLlmParser";
+import { conclusiveOtherDomain, scoreDocument } from "../../parsing/documentDomain";
 import type { ParsedRailBooking, ParsedRailLeg, RailAttachment } from "./types";
 
 /**
@@ -35,7 +36,11 @@ export type RailFallbackCode =
   /** The model read the document and found no provable ride. */
   | "llmFoundNothing"
   /** The shared demo account never reaches the model. */
-  | "demoNoLlm";
+  | "demoNoLlm"
+  /** The document is clearly another domain (a flight, a stay, a cruise). */
+  | "otherDomain"
+  /** The model answered with airport codes for stations — a flight read as a train. */
+  | "looksLikeFlight";
 
 export interface RailParseResult {
   booking: ParsedRailBooking | null;
@@ -167,6 +172,20 @@ export async function readRailTemplates(
 
 const DEMO_REASON = "The AI parser is not available for the shared demo account";
 
+/** "MUC", "FRA": three capitals are an airport code, never a printed station name. */
+const IATA_LIKE = /^[A-Z]{3}$/;
+
+/**
+ * A model answer whose legs run between airport codes is a flight read as a
+ * train (acceptance D1: MUC→FRA and back, offered as "Mücka" and "Frant").
+ * Refused whole rather than leg by leg — one such leg says what the document is.
+ */
+export function legsLookLikeFlights(legs: readonly ParsedRailLeg[]): boolean {
+  return legs.some(
+    (leg) => IATA_LIKE.test(leg.depStationName.trim()) || IATA_LIKE.test(leg.arrStationName.trim())
+  );
+}
+
 export async function parseRailBookingText(
   text: string,
   attachments: readonly RailAttachment[] = [],
@@ -206,6 +225,22 @@ export async function parseRailBookingText(
     );
   }
 
+  // The model runs only where the document may be a rail booking: it finds
+  // "rides" in anything it is given, so a document the classifier clearly
+  // places elsewhere never reaches it.
+  if (conclusiveOtherDomain(scoreDocument(text), "rail") !== null) {
+    const available = await isLlmAvailable(llmQuery);
+    return (
+      fromTemplate(available) ?? {
+        booking: null,
+        parserUsed: "none",
+        ollamaAvailable: available,
+        fallbackCode: "otherDomain",
+        fallbackReason: "The document reads as another kind of booking, not a rail ticket",
+      }
+    );
+  }
+
   const target = await resolveOllamaTarget();
   const reachable = await ollamaReachable(target.url);
   recordLlmProbe(target.url, reachable);
@@ -229,6 +264,17 @@ export async function parseRailBookingText(
 
   try {
     const booking = await parseRailWithOllama(cleanEmailBody(text), target);
+    if (booking && legsLookLikeFlights(booking.legs)) {
+      return (
+        fromTemplate(true) ?? {
+          booking: null,
+          parserUsed: "none",
+          ollamaAvailable: true,
+          fallbackCode: "looksLikeFlight",
+          fallbackReason: "The AI parser answered with airport codes for station names",
+        }
+      );
+    }
     if (booking) return { booking, parserUsed: "ollama", ollamaAvailable: true };
     return (
       fromTemplate(true) ?? {

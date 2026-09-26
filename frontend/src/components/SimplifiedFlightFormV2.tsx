@@ -22,6 +22,7 @@ import { useFlightForm, type FlightSubmitOptions } from "./FlightForm/useFlightF
 import { focusFirstMissingRequired } from "./FlightForm/requiredFields";
 
 import type { Flight, FlightInput, UserAchievement } from "../types";
+import type { ImportDocument } from "./import/documentHandoff";
 
 interface SimplifiedFlightFormProps {
   /** Returning the created Flight enables the post-create trip assignment
@@ -33,6 +34,8 @@ interface SimplifiedFlightFormProps {
   // parent handles closing this form and opening SpecialFlightModal.
   onPickSpecialFlight?: () => void;
   /** Open straight into the e-mail/PDF uploader (entered from the import hub). */
+  /** A document another import dialog handed over as a flight booking (D1). */
+  initialDocument?: ImportDocument | null;
 }
 
 export default function SimplifiedFlightFormV2({
@@ -40,6 +43,7 @@ export default function SimplifiedFlightFormV2({
   onCancel,
   onBatchComplete,
   onPickSpecialFlight,
+  initialDocument = null,
 }: SimplifiedFlightFormProps): JSX.Element {
   const { t } = useTranslation(["flights", "errors", "common"]);
 
@@ -200,6 +204,7 @@ export default function SimplifiedFlightFormV2({
               setOriginalEmailData={form.setOriginalEmailData}
               setShowFlightReview={form.setShowFlightReview}
               onPickSpecialFlight={onPickSpecialFlight}
+              initialDocument={initialDocument}
             />
           )}
 

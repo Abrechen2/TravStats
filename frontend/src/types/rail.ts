@@ -342,4 +342,12 @@ export interface RailImportBooking {
 
 /** Why a rail parse found nothing — a stable code, worded by the client. */
 export type RailParseFallbackCode =
-  "noItinerary" | "llmUnreachable" | "llmFailed" | "llmFoundNothing" | "demoNoLlm";
+  | "noItinerary"
+  | "llmUnreachable"
+  | "llmFailed"
+  | "llmFoundNothing"
+  | "demoNoLlm"
+  /** The document is clearly another kind of booking (D1) — see `domainMismatch`. */
+  | "otherDomain"
+  /** The model answered with airport codes for stations. */
+  | "looksLikeFlight";

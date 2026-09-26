@@ -72,5 +72,20 @@
     "pdfNoText": "No text could be read from this PDF – probably a scan. Please read it in as an image with the boarding-pass scanner.",
     "rateLimited": "Too many imports in a short time. Please wait a moment and try again.",
     "timeout": "Reading the document took too long. Please try again later."
+  },
+  "wrongDialog": {
+    "title": "Wrong import",
+    "flight": "This is a flight booking.",
+    "cruise": "This is a cruise booking.",
+    "lodging": "This is an accommodation booking.",
+    "rail": "This is a rail booking.",
+    "body": "Nothing was read here for that reason. Import the document where it belongs.",
+    "open": {
+      "flight": "Import as a flight",
+      "cruise": "Import as a cruise",
+      "lodging": "Import as accommodation",
+      "rail": "Import as a rail journey"
+    },
+    "dismiss": "Close"
   }
 }

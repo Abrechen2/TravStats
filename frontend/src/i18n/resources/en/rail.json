@@ -87,7 +87,8 @@
     "noHits": "No station found in the catalogue. Pick it through the place search.",
     "picked": "From the station catalogue · UIC {{code}}",
     "useGeocoder": "Not in the station catalogue? Pick it through the place search",
-    "backToCatalogue": "Back to the station catalogue"
+    "backToCatalogue": "Back to the station catalogue",
+    "noPlausibleHit": "No station in the catalogue matches “{{name}}”. Search for the station in the field."
   },
   "lookup": {
     "title": "Look the train up",
@@ -280,7 +281,9 @@
       "llmUnreachable": "No train ride was recognised in this document: no template knows the layout, and the AI parser is not reachable. Enter the ride by hand.",
       "llmFailed": "The AI parser gave no usable answer for this document. Enter the ride by hand.",
       "demoNoLlm": "No template knows this ticket, and the AI parser is not available to the demo account.",
-      "nothingFound": "No train ride was found in this document. Enter the ride by hand."
+      "nothingFound": "No train ride was found in this document. Enter the ride by hand.",
+      "otherDomain": "This document is not a rail booking. Import it where it belongs.",
+      "looksLikeFlight": "The AI parser read airport codes instead of stations — the document is probably a flight booking. Nothing was taken over."
     }
   }
 }

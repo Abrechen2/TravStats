@@ -3,7 +3,9 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
-import type { ParseEmailResult, ParsePdfResult } from "../../lib/api/parse";
+import type { ParseDomain, ParseEmailResult, ParsePdfResult } from "../../lib/api/parse";
+import { detectedOtherDomain, type ImportDocument } from "./documentHandoff";
+import { WrongDialogNotice } from "./WrongDialogNotice";
 import { ImportManualFooter, ImportRouteList, ImportRouteRow } from "./ImportRouteList";
 import { isParseableDomain } from "./types";
 import type { DomainImportAdapter } from "./types";
@@ -16,6 +18,20 @@ interface DomainImportPanelProps {
   /** Called once an item has been created server-side (parse → review → save). */
   onItemsCreated: () => void | Promise<void>;
   adapter: DomainImportAdapter;
+  /** A document handed over from another dialog — read on open (D1). */
+  initialDocument?: ImportDocument | null;
+  /**
+   * Opens the import the document really belongs to, with the same document.
+   * Without it the notice still says what the document is, but offers no jump.
+   */
+  onOpenOtherImport?: (domain: ParseDomain, document: ImportDocument) => void;
+  /** The imports the host can open right now (enabled and visible). */
+  openableDomains?: readonly ParseDomain[];
+}
+
+interface Mismatch {
+  detected: ParseDomain;
+  document: ImportDocument | null;
 }
 
 interface ParseState {
@@ -44,17 +60,22 @@ export default function DomainImportPanel({
   onClose,
   onItemsCreated,
   adapter,
+  initialDocument = null,
+  onOpenOtherImport,
+  openableDomains = [],
 }: DomainImportPanelProps): JSX.Element | null {
   const { t } = useTranslation(["import", "common"]);
   const addToast = useToastStore((s) => s.addToast);
   const [parseState, setParseState] = useState<ParseState | null>(null);
   const [showManual, setShowManual] = useState(false);
+  const [mismatch, setMismatch] = useState<Mismatch | null>(null);
 
   // Reset internal state every time the panel opens so successive opens start fresh.
   useEffect(() => {
     if (open) {
       setParseState(null);
       setShowManual(false);
+      setMismatch(null);
     }
   }, [open]);
 
@@ -65,18 +86,36 @@ export default function DomainImportPanel({
     [addToast]
   );
 
-  const handleEmailResult = useCallback((result: ParseEmailResult, fileName?: string | null) => {
-    setParseState({
-      kind: "email",
-      result,
-      emailMeta: { subject: result.subject, text: result.text, html: result.html },
-      sourceFileName: fileName ?? null,
-    });
-  }, []);
+  const handleEmailResult = useCallback(
+    (result: ParseEmailResult, fileName?: string | null, document?: ImportDocument) => {
+      // A document that clearly is something else is not reviewed here: the
+      // server read nothing, and says what it is instead (D1).
+      const other = detectedOtherDomain(result);
+      if (other) {
+        setMismatch({ detected: other, document: document ?? null });
+        return;
+      }
+      setParseState({
+        kind: "email",
+        result,
+        emailMeta: { subject: result.subject, text: result.text, html: result.html },
+        sourceFileName: fileName ?? null,
+      });
+    },
+    []
+  );
 
-  const handlePdfResult = useCallback((result: ParsePdfResult, fileName?: string | null) => {
-    setParseState({ kind: "pdf", result, sourceFileName: fileName ?? null });
-  }, []);
+  const handlePdfResult = useCallback(
+    (result: ParsePdfResult, fileName?: string | null, document?: ImportDocument) => {
+      const other = detectedOtherDomain(result);
+      if (other) {
+        setMismatch({ detected: other, document: document ?? null });
+        return;
+      }
+      setParseState({ kind: "pdf", result, sourceFileName: fileName ?? null });
+    },
+    []
+  );
 
   const handleReviewCommit = useCallback(async (): Promise<void> => {
     setParseState(null);
@@ -139,6 +178,7 @@ export default function DomainImportPanel({
                     onEmailResult={handleEmailResult}
                     onPdfResult={handlePdfResult}
                     onError={handleError}
+                    initialDocument={initialDocument}
                   />
                 </Suspense>
               </div>
@@ -153,6 +193,23 @@ export default function DomainImportPanel({
           />
         </div>
       </Modal>
+
+      {mismatch && (
+        <WrongDialogNotice
+          detected={mismatch.detected}
+          onDismiss={() => setMismatch(null)}
+          onOpen={
+            onOpenOtherImport && mismatch.document && openableDomains.includes(mismatch.detected)
+              ? () => {
+                  const target = mismatch;
+                  setMismatch(null);
+                  onClose();
+                  if (target.document) onOpenOtherImport(target.detected, target.document);
+                }
+              : undefined
+          }
+        />
+      )}
 
       {/* Review modal — adapter renders the domain-specific preview. */}
       {parseState &&

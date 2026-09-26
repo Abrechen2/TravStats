@@ -218,3 +218,25 @@ Einschiffung: 07. Juni 2026, Hafen Kiel
 Anreise mit der Bahn: Zug zum Schiff buchbar.
 Kabine 8215, Deck 8 (Balkonkabine)
 Seetag am 09. Juni`;
+
+/**
+ * Shaped like the Lufthansa mail of acceptance D1 ("Buchungsdetails | Abflug:
+ * 06 Mai 2024 | MUC-FRA"), dropped into the rail dialog. Synthetic: no name,
+ * reference or number from the real document.
+ */
+export const FLIGHT_MAIL_MUC_FRA = `Buchungsdetails | Abflug: 06 Mai 2024 | MUC-FRA
+
+Ihre Buchungsdetails
+Buchungscode: ZZ9K4Q
+Hinflug: Montag, 06. Mai 2024
+MUC - FRA
+Abflug 07:00 München, Terminal 2
+Ankunft 08:05 Frankfurt
+LH 2001, Economy
+Rückflug: Dienstag, 07. Mai 2024
+FRA - MUC
+Abflug 19:00 Frankfurt
+Ankunft 20:00 München
+LH 2008, Economy
+Freigepäck: 1 x 23 kg
+Online Check-in ab 23 Stunden vor Abflug`;

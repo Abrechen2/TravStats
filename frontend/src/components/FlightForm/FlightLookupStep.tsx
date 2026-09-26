@@ -16,6 +16,8 @@ import {
   isRailPdfResult,
 } from "../../lib/api/parse";
 
+import type { ImportDocument } from "../import/documentHandoff";
+
 const BoardingPassScanner = lazy(() => import("../BoardingPassScanner"));
 const EmailImportTab = lazy(() => import("../import/EmailImportTab"));
 
@@ -47,6 +49,8 @@ export interface FlightLookupStepProps {
   // card appears below the Boarding Pass card. The parent is responsible
   // for closing this form and opening the special-flight modal.
   onPickSpecialFlight?: () => void;
+  /** A document handed over from another import dialog — read on mount (D1). */
+  initialDocument?: ImportDocument | null;
 }
 
 export default function FlightLookupStep({
@@ -69,6 +73,7 @@ export default function FlightLookupStep({
   setOriginalEmailData,
   setShowFlightReview,
   onPickSpecialFlight,
+  initialDocument = null,
 }: FlightLookupStepProps): JSX.Element {
   const { t } = useTranslation(["flights", "common", "specialFlights"]);
   // No route and no airline exist yet at this step, so these are the flight
@@ -168,6 +173,7 @@ export default function FlightLookupStep({
               onEmailResult={handleEmailResult}
               onPdfResult={handlePdfResult}
               onError={(message) => setError(message)}
+              initialDocument={initialDocument}
             />
           </Suspense>
         </div>

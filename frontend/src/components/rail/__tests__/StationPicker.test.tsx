@@ -61,7 +61,28 @@ function Harness({
   );
 }
 
+const MUECKA = { ...ZURICH, id: 9, name: "Mücka", uic: "8012345", country: "DE" };
+
 describe("StationPicker", () => {
+  // Acceptance D1: opened on the printed "MUC", the review listed "Mücka".
+  it("offers no nonsense for a printed name, and says so instead of guessing", async () => {
+    searchStations.mockResolvedValue([MUECKA]);
+    const changes: RailStationDraft[] = [];
+    render(
+      <StationPicker
+        label="Ab"
+        idPrefix="dep"
+        value={{ ...EMPTY_STATION, name: "MUC" }}
+        printedName="MUC"
+        inputClassName=""
+        onChange={(next) => changes.push(next)}
+      />
+    );
+    expect(await screen.findByText("rail:station.noPlausibleHit")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Mücka/ })).not.toBeInTheDocument();
+    expect(changes).toEqual([]);
+  });
+
   beforeEach(() => {
     searchStations.mockReset();
   });

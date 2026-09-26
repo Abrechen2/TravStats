@@ -81,6 +81,8 @@ interface RailParseFields {
   fallbackReason?: string;
   /** The DB order a legless mail named. */
   orderReference?: string | null;
+  /** The document clearly is another domain; read by `detectedOtherDomain`. */
+  domainMismatch?: { detected: ParseDomain; confidence: number };
 }
 
 export interface ParsePdfRailResult extends RailParseFields {

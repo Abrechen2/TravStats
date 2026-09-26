@@ -62,6 +62,13 @@ const parseBody = {
 
 // ------------------------------------------------------------- parsing
 
+const MISMATCH_NOTE =
+  " Detection runs whatever the domain asked for: a rail, cruise or lodging request " +
+  "for a document that clearly is another kind of booking answers with an empty result " +
+  "and `domainMismatch: { detected, confidence }` (rail adds `fallbackCode: otherDomain`), " +
+  "so the client can send the user to the right import instead of showing a misreading. " +
+  "A flight request is never overruled.";
+
 const parseTag = ["Parsing"];
 
 registry.registerPath({
@@ -74,7 +81,8 @@ registry.registerPath({
     "means flight. Returns candidates for review; nothing is stored. A document " +
     "it cannot read comes back as an empty result with a reason, not as an error " +
     "— 'no booking here' is an answer, not a failure. With `retain=true` the file is " +
-    "kept as a document and the answer carries its `documentId`.",
+    "kept as a document and the answer carries its `documentId`." +
+    MISMATCH_NOTE,
   tags: parseTag,
   request: { body: parseBody },
   responses: { 200: { description: "Parse result" }, 400: badInput },
@@ -90,7 +98,8 @@ registry.registerPath({
     "Send `retain: true` to keep the input as a document (the answer then carries `documentId`), " +
     "or `documentId` instead of the content to read a document already kept — the path for an " +
     "original too large to send as base64 in a JSON body (forgejo#116). " +
-    "A PDF with no text layer answers 422 and belongs on /parse-image.",
+    "A PDF with no text layer answers 422 and belongs on /parse-image." +
+    MISMATCH_NOTE,
   tags: parseTag,
   request: {
     body: {

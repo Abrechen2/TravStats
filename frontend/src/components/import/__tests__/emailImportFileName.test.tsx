@@ -71,7 +71,10 @@ describe("EmailImportTab hands the file name on", () => {
     fireEvent.change(input as HTMLInputElement, { target: { files: [msgFile(name)] } });
 
     await waitFor(() => expect(onEmailResult).toHaveBeenCalled());
-    expect(onEmailResult).toHaveBeenCalledWith(expect.anything(), name);
+    expect(onEmailResult).toHaveBeenCalledWith(expect.anything(), name, {
+      kind: "file",
+      file: expect.any(File),
+    });
   });
 
   it("passes null for pasted text rather than inventing a name", async () => {
@@ -90,6 +93,9 @@ describe("EmailImportTab hands the file name on", () => {
     fireEvent.click(screen.getByRole("button", { name: /parse|auswerten|import:email/i }));
 
     await waitFor(() => expect(onEmailResult).toHaveBeenCalled());
-    expect(onEmailResult).toHaveBeenCalledWith(expect.anything(), null);
+    expect(onEmailResult).toHaveBeenCalledWith(expect.anything(), null, {
+      kind: "text",
+      text: expect.any(String),
+    });
   });
 });

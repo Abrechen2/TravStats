@@ -20,6 +20,7 @@ import { buildRailPrompt, promptFieldsFor } from "../railLlmParser";
 import {
   DB_CONFIRMATION_SINGLE,
   DB_ORDER_WITHOUT_ITINERARY,
+  FLIGHT_MAIL_MUC_FRA,
   FOREIGN_TICKET_THIN,
 } from "./railFixtures";
 
@@ -206,6 +207,44 @@ describe("parseRailBookingText", () => {
       expect(result).toMatchObject({ booking: null, fallbackCode: "llmFailed" });
     } finally {
       await broken.close();
+    }
+  });
+
+  // Acceptance D1: a Lufthansa mail in the rail dialog came back as two
+  // "train rides" MUC→FRA and FRA→MUC. The model is never asked for a
+  // document the classifier clearly places elsewhere.
+  it("never asks the model about a document that is clearly a flight", async () => {
+    const ollama = await fakeOllama(() =>
+      JSON.stringify({
+        legs: [{ from: "MUC", to: "FRA", departure: "2024-05-06T07:00" }],
+      })
+    );
+    mockAdmin.mockResolvedValue({ ollamaUrl: ollama.url, ollamaModel: "test-model" });
+    try {
+      const result = await parseRailBookingText(FLIGHT_MAIL_MUC_FRA);
+      expect(result).toMatchObject({ booking: null, fallbackCode: "otherDomain" });
+      expect(ollama.prompts).toHaveLength(0);
+    } finally {
+      await ollama.close();
+    }
+  });
+
+  it("refuses a model answer that runs between airport codes", async () => {
+    // Inconclusive to the classifier, so the model is asked — and answers
+    // with the airport codes the text prints, which are no stations.
+    const ticket = "Ticket\nMUC -> FRA 06.05.2024 07:00";
+    const ollama = await fakeOllama(() =>
+      JSON.stringify({
+        legs: [{ from: "MUC", to: "FRA", departure: "2024-05-06T07:00" }],
+      })
+    );
+    mockAdmin.mockResolvedValue({ ollamaUrl: ollama.url, ollamaModel: "test-model" });
+    try {
+      const result = await parseRailBookingText(ticket);
+      expect(ollama.prompts).toHaveLength(1);
+      expect(result).toMatchObject({ booking: null, fallbackCode: "looksLikeFlight" });
+    } finally {
+      await ollama.close();
     }
   });
 

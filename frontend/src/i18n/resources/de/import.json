@@ -72,5 +72,20 @@
     "pdfNoText": "Aus diesem PDF konnte kein Text gelesen werden – vermutlich ein Scan. Bitte als Bild über den Bordkarten-Scanner einlesen.",
     "rateLimited": "Zu viele Importe in kurzer Zeit. Bitte warte einen Moment und versuche es erneut.",
     "timeout": "Das Einlesen hat zu lange gedauert. Bitte später erneut versuchen."
+  },
+  "wrongDialog": {
+    "title": "Falscher Import",
+    "flight": "Das ist eine Flugbuchung.",
+    "cruise": "Das ist eine Kreuzfahrtbuchung.",
+    "lodging": "Das ist eine Unterkunftsbuchung.",
+    "rail": "Das ist eine Bahnbuchung.",
+    "body": "Hier wurde deshalb nichts ausgelesen. Importiere das Dokument dort, wo es hingehört.",
+    "open": {
+      "flight": "Als Flug importieren",
+      "cruise": "Als Kreuzfahrt importieren",
+      "lodging": "Als Unterkunft importieren",
+      "rail": "Als Bahnfahrt importieren"
+    },
+    "dismiss": "Schließen"
   }
 }

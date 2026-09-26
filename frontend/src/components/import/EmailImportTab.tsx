@@ -9,6 +9,7 @@ import { GlobeLoader } from "../GlobeLoader";
 import { logger } from "../../lib/logger";
 import { parseFailureMessage } from "../../lib/parseErrorCopy";
 import type { ParseableImportDomain } from "./types";
+import type { ImportDocument } from "./documentHandoff";
 
 interface EmailImportTabProps {
   /** Only a domain the backend can actually parse for — see `types.ts`. */
@@ -23,13 +24,26 @@ interface EmailImportTabProps {
    * the right one is guesswork. The name is null for pasted text, which has
    * no source file to name.
    */
-  onEmailResult: (result: ParseEmailResult, fileName?: string | null) => void;
+  onEmailResult: (
+    result: ParseEmailResult,
+    fileName?: string | null,
+    document?: ImportDocument
+  ) => void;
   /**
    * Called when a `.pdf` is dropped in the email tab — kept for back-compat
    * with the flight workflow that auto-detects PDFs in this tab.
    */
-  onPdfResult?: (result: ParsePdfResult, fileName?: string | null) => void;
+  onPdfResult?: (
+    result: ParsePdfResult,
+    fileName?: string | null,
+    document?: ImportDocument
+  ) => void;
   onError: (message: string) => void;
+  /**
+   * A document another dialog handed over (D1): read once on mount, exactly
+   * as if the user had dropped it here.
+   */
+  initialDocument?: ImportDocument | null;
 }
 
 type DropState = "idle" | "over" | "loading";
@@ -40,6 +54,7 @@ export default function EmailImportTab({
   onEmailResult,
   onPdfResult,
   onError,
+  initialDocument = null,
 }: EmailImportTabProps): JSX.Element {
   const { t } = useTranslation(["import", "common"]);
   const [dropState, setDropState] = useState<DropState>("idle");
@@ -71,7 +86,7 @@ export default function EmailImportTab({
           }
           const pdfBase64 = btoa(binary);
           const result = await parseApi.parsePdf(pdfBase64, domain);
-          onPdfResult(result, file.name);
+          onPdfResult(result, file.name, { kind: "file", file });
         } catch (err) {
           logger.error("EmailImportTab: PDF parse failed", err);
           onError(parseFailureMessage(err, t, "import:pdf.parseError"));
@@ -89,7 +104,7 @@ export default function EmailImportTab({
       setDropState("loading");
       try {
         const result = await parseApi.parseEmailFile(file, domain);
-        onEmailResult(result, file.name);
+        onEmailResult(result, file.name, { kind: "file", file });
       } catch (err) {
         logger.error("EmailImportTab: email file parse failed", err);
         onError(parseFailureMessage(err, t, "import:email.parseError"));
@@ -100,21 +115,42 @@ export default function EmailImportTab({
     [domain, acceptedExtensions, onEmailResult, onPdfResult, onError, t]
   );
 
-  const handleTextParse = useCallback(async (): Promise<void> => {
-    if (!emailText.trim()) return;
-    setDropState("loading");
-    try {
-      const result = await parseApi.parseEmail(emailText, undefined, domain);
-      // Pasted text has no source file, so the log row stays unnamed rather
-      // than being given a made-up one.
-      onEmailResult(result, null);
-    } catch (err) {
-      logger.error("EmailImportTab: email text parse failed", err);
-      onError(parseFailureMessage(err, t, "import:email.parseError"));
-    } finally {
-      setDropState("idle");
+  const parseText = useCallback(
+    async (text: string): Promise<void> => {
+      if (!text.trim()) return;
+      setDropState("loading");
+      try {
+        const result = await parseApi.parseEmail(text, undefined, domain);
+        // Pasted text has no source file, so the log row stays unnamed rather
+        // than being given a made-up one.
+        onEmailResult(result, null, { kind: "text", text });
+      } catch (err) {
+        logger.error("EmailImportTab: email text parse failed", err);
+        onError(parseFailureMessage(err, t, "import:email.parseError"));
+      } finally {
+        setDropState("idle");
+      }
+    },
+    [domain, onEmailResult, onError, t]
+  );
+
+  const handleTextParse = useCallback(
+    (): Promise<void> => parseText(emailText),
+    [emailText, parseText]
+  );
+
+  // A handed-over document is read once, on mount — a later re-render with
+  // new callbacks must not parse it a second time.
+  const handedOver = useRef(false);
+  useEffect(() => {
+    if (!initialDocument || handedOver.current) return;
+    handedOver.current = true;
+    if (initialDocument.kind === "file") void handleFile(initialDocument.file);
+    else {
+      setEmailText(initialDocument.text);
+      void parseText(initialDocument.text);
     }
-  }, [emailText, domain, onEmailResult, onError, t]);
+  }, [initialDocument, handleFile, parseText]);
 
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>): void => {

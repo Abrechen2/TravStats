@@ -251,6 +251,11 @@ function LegRow({
                   end === "departure" ? "rail:form.departureStation" : "rail:form.arrivalStation"
                 )}
                 idPrefix={`rail-import-${index}-${end}`}
+                printedName={
+                  end === "departure"
+                    ? leg.departureStation.printedName
+                    : leg.arrivalStation.printedName
+                }
                 value={row[end]}
                 onChange={(next): void => onStation(end, next)}
                 inputClassName={INPUT_CLASS}

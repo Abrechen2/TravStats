@@ -25,6 +25,8 @@ import { DashboardEmptyState } from "./DashboardEmptyState";
 import { PlaceFormModal } from "../places/PlaceFormModal";
 import type { Flight, FlightInput } from "../../types";
 import type { FlightSubmitOptions } from "../FlightForm/useFlightForm";
+import type { ImportDocument } from "../import/documentHandoff";
+import type { ParseDomain } from "../../lib/api/parse";
 
 interface DashboardLayoutProps {
   children: ReactNode;
@@ -58,7 +60,18 @@ export function DashboardLayout({
   const { t } = useTranslation(["dashboard", "flights"]);
   const { tab, setTab } = useDashboardRoute();
   const navigate = useNavigate();
-  const [addingDomain, setAddingDomain] = useState<AddableDomain | null>(null);
+  const [addingDomain, setAddingDomainState] = useState<AddableDomain | null>(null);
+  // A document one import dialog found to belong to another (D1): the target
+  // dialog opens with it and reads it, so the user never drops it twice.
+  const [handedOver, setHandedOver] = useState<ImportDocument | null>(null);
+  const setAddingDomain = (domain: AddableDomain | null): void => {
+    setHandedOver(null);
+    setAddingDomainState(domain);
+  };
+  const openOtherImport = (domain: ParseDomain, document: ImportDocument): void => {
+    setAddingDomainState(domain);
+    setHandedOver(document);
+  };
   const lodgingAdapter = useLodgingImportAdapter();
   const cruiseAdapter = useCruiseImportAdapter();
   const railAdapter = useRailImportAdapter();
@@ -115,6 +128,12 @@ export function DashboardLayout({
     rail: railVisible,
     tour: toursVisible,
   };
+
+  // Where a document found in the wrong dialog may be sent (D1): only to an
+  // import this menu itself would open.
+  const openableImports = (["flight", "cruise", "lodging", "rail"] as const).filter(
+    (d) => addableDomains[d]
+  );
 
   // A truly empty account: nothing in any domain. Shown only after the counts
   // have loaded, and only on the "all" landing tab — a per-domain tab already
@@ -203,6 +222,7 @@ export function DashboardLayout({
 
       {addingDomain === "flight" && (
         <SimplifiedFlightFormV2
+          initialDocument={handedOver}
           onSubmit={handleFlightCreate}
           onCancel={() => setAddingDomain(null)}
           onPickSpecialFlight={() => {
@@ -225,6 +245,9 @@ export function DashboardLayout({
         onClose={() => setAddingDomain(null)}
         onItemsCreated={() => onDataChanged?.()}
         adapter={cruiseAdapter}
+        initialDocument={addingDomain === "cruise" ? handedOver : null}
+        onOpenOtherImport={openOtherImport}
+        openableDomains={openableImports}
       />
       {/* Stays were missing from this menu entirely, although the tab strip
           right above it counts them — the menu had been hard-wired to flights
@@ -234,6 +257,9 @@ export function DashboardLayout({
         onClose={() => setAddingDomain(null)}
         onItemsCreated={() => onDataChanged?.()}
         adapter={lodgingAdapter}
+        initialDocument={addingDomain === "lodging" ? handedOver : null}
+        onOpenOtherImport={openOtherImport}
+        openableDomains={openableImports}
       />
       {/* This slot held a "not wired — domain is disabled until V2" comment
           long after the domain had shipped, so the menu offered "POI
@@ -246,6 +272,9 @@ export function DashboardLayout({
         onClose={() => setAddingDomain(null)}
         onItemsCreated={() => onDataChanged?.()}
         adapter={railAdapter}
+        initialDocument={addingDomain === "rail" ? handedOver : null}
+        onOpenOtherImport={openOtherImport}
+        openableDomains={openableImports}
       />
       {addingDomain === "poi" && (
         <PlaceFormModal
