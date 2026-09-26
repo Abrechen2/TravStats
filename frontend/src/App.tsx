@@ -18,6 +18,7 @@ import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useTelemetryConsentStep } from "./hooks/useTelemetryConsentStep";
 import { useSessionValidation } from "./hooks/useSessionValidation";
 import WhatsNewModal from "./components/WhatsNewModal";
+import ProfileZonePrompt from "./components/ProfileZonePrompt";
 import DemoBetaNotice from "./components/DemoBetaNotice";
 import UsageStatsConsentDialog from "./components/UsageStatsConsentDialog";
 
@@ -225,6 +226,10 @@ function AppContent() {
           sessionConfirmed={sessionConfirmed}
           whatsNewChecked={whatsNewChecked}
           whatsNewOpen={shouldShow}
+        />
+        <ProfileZonePrompt
+          sessionConfirmed={sessionConfirmed}
+          otherDialogOpen={!whatsNewChecked || shouldShow || consentStep.shouldShow}
         />
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">

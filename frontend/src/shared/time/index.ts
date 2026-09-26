@@ -7,6 +7,7 @@
  */
 export {
   ZoneUnknownError,
+  deviceZone,
   formatOffset,
   isValidZone,
   localDay,

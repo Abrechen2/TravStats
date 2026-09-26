@@ -905,5 +905,15 @@
     "dbRestHint": "Nur Deutschland, inoffiziell, etwa 100 Anfragen pro Minute für alle Nutzer zusammen.",
     "loadError": "Die Einstellung konnte nicht geladen werden.",
     "saveError": "Die Einstellung konnte nicht gespeichert werden."
+  },
+  "profileZone": {
+    "title": "Deine Zeitzone",
+    "body": "TravStats rechnet mit deiner Zeitzone aus, welcher Tag heute ist, ob eine Reise geplant oder schon vorbei ist und wie lange es noch bis zur Abreise dauert. Für dein Konto ist noch keine hinterlegt – bis du eine bestätigst, gilt dafür UTC. Die Zeiten deiner Reisen ändert das nicht: Die stehen immer in der Ortszeit des Flughafens, Bahnhofs oder Hafens.",
+    "proposal": "Vorschlag von deinem Gerät",
+    "confirm": "Übernehmen",
+    "later": "Später",
+    "setNow": "Zeitzone jetzt festlegen",
+    "utcHint": "Solange du keine Zeitzone bestätigt hast, rechnet TravStats „heute“ in UTC.",
+    "saveError": "Die Zeitzone konnte nicht gespeichert werden. Bitte versuche es noch einmal."
   }
 }

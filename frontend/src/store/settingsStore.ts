@@ -5,6 +5,7 @@ import { logger } from "../lib/logger";
 import { DOMAIN_KEYS, type DomainKey } from "../shared/domains";
 import { COUNTRY_TIERS, type CountryTier } from "../types/passport";
 import { useAuthStore } from "./authStore";
+import { displayForSave, useProfileZoneStore } from "./profileZoneStore";
 
 /**
  * A value off the wire read back as a tier, or null when it is not one.
@@ -463,10 +464,11 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           profile: { ...state.profile, ...updates },
         })),
-      setDisplay: (updates) =>
-        set((state) => ({
-          display: { ...state.display, ...updates },
-        })),
+      setDisplay: (updates) => {
+        // A zone the user picks is a confirmation (profileZoneStore, ADR 0002 Q1).
+        if (updates.timezone !== undefined) useProfileZoneStore.getState().markConfirmed();
+        set((state) => ({ display: { ...state.display, ...updates } }));
+      },
       setUnits: (updates) =>
         set((state) => ({
           units: { ...state.units, ...updates },
@@ -539,6 +541,7 @@ export const useSettingsStore = create<SettingsState>()(
         try {
           const remote = await settingsApi.get();
           if (remote) {
+            useProfileZoneStore.getState().noteRemote(remote);
             set((state) => {
               // Extract autoUpdate and historicalEnrichment to exclude them from store
               const remoteRecord = remote as Record<string, unknown>;
@@ -697,7 +700,8 @@ export const useSettingsStore = create<SettingsState>()(
           const results = await Promise.allSettled([
             settingsApi.update({
               profile,
-              display,
+              // Never the browser's guess as if the user had confirmed it.
+              display: displayForSave(display),
               units,
               defaults,
               notifications,
