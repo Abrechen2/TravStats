@@ -1,6 +1,5 @@
 import OpenDataCard from "../../components/Settings/OpenDataCard";
 import { useToursVisible } from "../../hooks/useToursVisible";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import type { SettingsSectionId } from "./settingsModel";
 import type { useSettingsPage } from "../../components/Settings/useSettingsPage";
 
@@ -27,10 +26,9 @@ import ImportSection from "../../components/Settings/ImportSection";
 import TripsSection from "../../components/Settings/TripsSection";
 import FeaturesSection from "../../components/Settings/FeaturesSection";
 import CruisePreferencesSection from "../../components/Settings/CruisePreferencesSection";
-import LoyaltyLinkSection from "../../components/Settings/LoyaltyLinkSection";
-import MembershipsSection from "../../components/Settings/MembershipsSection";
+import LoyaltySection from "../../components/Settings/LoyaltySection";
 import GeocoderSettingsCard from "../../components/Settings/GeocoderSettingsCard";
-import RoutingProviderSection from "../../components/Settings/RoutingProviderSection";
+import PersonalRoutingKeysSection from "../../components/Settings/PersonalRoutingKeysSection";
 import ImmichConnectionCard from "../../components/Settings/ImmichConnectionCard";
 import DawarichConnectionCard from "../../components/Settings/DawarichConnectionCard";
 import RailProvidersCard from "../../components/Settings/RailProvidersCard";
@@ -54,7 +52,6 @@ export default function SettingsSectionSwitch({
 }: SettingsSectionSwitchProps): JSX.Element | null {
   const isAdmin = page.user?.isAdmin ?? false;
   const toursVisible = useToursVisible();
-  const { isFeatureVisible } = useBetaFeatures();
 
   switch (section) {
     case "profile":
@@ -134,7 +131,9 @@ export default function SettingsSectionSwitch({
           {/* Routing serves tours and roadtrips only, and both went back
               behind the roadtrips beta key on 2026-09-24 — a routing card for
               a feature hidden everywhere else would offer nothing. */}
-          {toursVisible && <RoutingProviderSection isAdmin={isAdmin} />}
+          {/* The account's OWN routing keys. The instance's provider and key
+              are Administration → Externe Dienste since 2026-09-26. */}
+          {toursVisible && <PersonalRoutingKeysSection />}
           {/* Admin-only, and only where the rail domain is offered (beta). */}
           <RailProvidersCard isAdmin={isAdmin} />
           <ImmichConnectionCard />
@@ -178,21 +177,8 @@ export default function SettingsSectionSwitch({
     case "lodgingPreferences":
       /* Admin-only; the card itself renders null for non-admins. */
       return <GeocoderSettingsCard isAdmin={isAdmin} />;
-    // The cards themselves live on the loyalty page since 2.7; each domain
-    // keeps an entry here that leads to its section there. While that page is
-    // behind the beta switch (loyaltyCenter), the hotel cards are edited here
-    // in full, exactly as 2.6 shipped them — a pointer to a hidden page would
-    // leave them with no editor at all.
-    case "lodgingMemberships":
-      return isFeatureVisible("loyaltyCenter") ? (
-        <LoyaltyLinkSection domain="lodging" />
-      ) : (
-        <MembershipsSection />
-      );
-    case "flightMemberships":
-      return <LoyaltyLinkSection domain="flight" />;
-    case "cruiseMemberships":
-      return <LoyaltyLinkSection domain="cruise" />;
+    case "loyalty":
+      return <LoyaltySection />;
     default:
       return null;
   }

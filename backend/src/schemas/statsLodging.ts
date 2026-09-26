@@ -224,18 +224,17 @@ export const lodgingLoyaltyStatsSchema = z.object({
     .array(
       z.object({
         programme: z.string(),
-        tier: z.string().nullable().openapi({
-          description: "The card's CURRENT tier, not the tier held during that year.",
-        }),
-        tiersHeld: z
-          .array(z.string())
+        membershipId: z
+          .string()
           .nullable()
           .openapi({
             description:
-              "The tiers held during THIS year, from the card's dated status history, in the " +
-              "order reached. null: the card has no dated history (unknown); []: the history " +
-              "names no status for the year.",
+              "The card these nights ran under — what `GET /lodging?membershipId=` filters by. " +
+              "Null only for rows built before the id travelled with the stay.",
           }),
+        tier: z.string().nullable().openapi({
+          description: "The card's CURRENT tier, not the tier held during that year.",
+        }),
         year: z.string(),
         nights: z.number().int(),
         stays: z.number().int(),

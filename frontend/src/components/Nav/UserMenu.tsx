@@ -5,9 +5,6 @@ import { useClickOutside } from "../../hooks/useClickOutside";
 import { displayName, initials, type DisplayableUser } from "../../lib/userDisplay";
 import { Icon } from "../ui/Icon";
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
-import { useEnabledDomains } from "../../hooks/useEnabledDomains";
-import { LOYALTY_DOMAINS } from "../../shared/domains";
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 
 interface UserMenuProps {
   user: DisplayableUser | null | undefined;
@@ -59,7 +56,7 @@ export default function UserMenu({
   onReportBug,
   isAdmin = false,
 }: UserMenuProps): JSX.Element {
-  const { t } = useTranslation(["dashboard", "settings", "common", "loyalty"]);
+  const { t } = useTranslation(["dashboard", "settings", "common"]);
   const [open, setOpen] = useState(false);
   const containerRef = useRef<HTMLDivElement>(null);
   /**
@@ -69,12 +66,6 @@ export default function UserMenu({
    * the entry is then not drawn at all, rather than drawn and failing.
    */
   const { canInstall, promptInstall } = useInstallPrompt();
-  // The loyalty page draws a section per enabled domain that has programmes;
-  // with none of them on it would be an empty page, so it gets no entry.
-  const { isEnabled } = useEnabledDomains();
-  const { isFeatureVisible } = useBetaFeatures();
-  const hasLoyaltyDomain =
-    isFeatureVisible("loyaltyCenter") && LOYALTY_DOMAINS.some((domain) => isEnabled(domain));
 
   // Outside clicks go through the project's own hook rather than a second
   // hand-rolled document listener; Escape is added here because the hook does
@@ -148,18 +139,6 @@ export default function UserMenu({
             <Icon name="settings" size={16} />
             {t("dashboard:settings")}
           </Link>
-          {hasLoyaltyDomain && (
-            <Link
-              to="/loyalty"
-              role="menuitem"
-              onClick={() => setOpen(false)}
-              className="flex w-full items-center gap-2 px-3 py-2 text-left text-sm transition-colors hover:bg-(--ts-tile)"
-              style={{ color: "var(--ts-text)" }}
-            >
-              <Icon name="credit-card" size={16} />
-              {t("loyalty:title")}
-            </Link>
-          )}
           {isAdmin && (
             <Link
               to="/admin"

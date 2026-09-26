@@ -16,6 +16,7 @@ export const SECTION_ICON: Record<SettingsSectionId, IconName> = {
   modules: "sparkles",
   countryCounting: "book-open",
   trips: "route",
+  loyalty: "credit-card",
   backup: "database",
   import: "upload",
   notifications: "bell",
@@ -28,7 +29,4 @@ export const SECTION_ICON: Record<SettingsSectionId, IconName> = {
   autoupdate: "activity",
   cruisePreferences: "ship",
   lodgingPreferences: "map-pin",
-  lodgingMemberships: "credit-card",
-  flightMemberships: "credit-card",
-  cruiseMemberships: "credit-card",
 };

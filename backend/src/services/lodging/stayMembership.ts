@@ -13,7 +13,6 @@
  * would come to disagree about whose nights count toward a status.
  */
 import { deriveStayMembership, type MembershipCoverage } from "../../shared/membershipDerivation";
-import type { DatedTier } from "../../shared/loyaltyTiers";
 
 /** The shape a `LodgingMembership` must be loaded in for this to work. */
 export interface MembershipWithLinks {
@@ -23,18 +22,16 @@ export interface MembershipWithLinks {
   createdAt: Date;
   chains: { chainId: number }[];
   lodgings: { lodgingId: string }[];
-  /** Loaded only where a caller asks what tier a year held (the statistics). */
-  tierPeriods?: DatedTier[];
 }
 
 export interface ResolvedProgramme {
+  /** The covering card's id — what a link to "the stays of this card" names. */
+  membershipId: string | null;
   programName: string | null;
   tier: string | null;
-  /** The card's dated status history; null when it has none or was not loaded. */
-  tierPeriods: DatedTier[] | null;
 }
 
-const NO_PROGRAMME: ResolvedProgramme = { programName: null, tier: null, tierPeriods: null };
+const NO_PROGRAMME: ResolvedProgramme = { membershipId: null, programName: null, tier: null };
 
 export interface StayMembershipContext {
   coverage: MembershipCoverage[];
@@ -84,8 +81,8 @@ export function resolveStayProgramme(
   // would mean the two structures were built from different lists.
   if (!membership) return NO_PROGRAMME;
   return {
+    membershipId: membership.id,
     programName: membership.programName,
     tier: membership.tier,
-    tierPeriods: membership.tierPeriods ?? null,
   };
 }

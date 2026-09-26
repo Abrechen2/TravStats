@@ -1,28 +1,48 @@
 /**
  * What a loyalty card has been used for, read from the logbook.
  *
- * The card page shows per membership how many flights, cruises or stays it
- * covers and when the last one was. None of that is stored: it is derived
- * from the same rows every statistic reads, through the same rules —
- * `isCountableFlight` / `isCountableCruise` / `classifyStay` for "did it
- * happen", `airlineGroupKey` for "which airline was this", and
- * `deriveStayMembership` for "which hotel card covered this stay". A card
- * page that counted by a rule of its own would sooner or later disagree with
- * the statistics page about the same nights.
+ * Einstellungen → Bonusprogramme shows per card how many flights, cruises or
+ * stays it covers, the nights where the domain has them, and the same per
+ * calendar year — the tester's whole ask of an evaluation: "Nächte/Aufenthalte
+ * pro Programm völlig" (Discord, 2026-09-26). None of it is stored; "which rows
+ * does this card cover" has one home, `coverage.ts`, which the list filters
+ * behind each figure's link read too.
  *
  * Abstention: `nights` is null when no counted item says how long it was, and
  * `lastActivity` is null when no counted item names a day — never 0, never a
- * guessed date.
+ * guessed date. An item without a year counts in the totals and in no year,
+ * so the years may add up to less than the total; that is the undated rest,
+ * not a loss.
  */
-import { prisma } from "../../db";
-import { airlineGroupKey } from "../../shared/airlineNormalize";
-import { countableCruiseWhere, isCountableCruise } from "../../shared/cruiseCounting";
-import { countableFlightWhere, isCountableFlight } from "../../shared/flightCounting";
-import { classifyStay } from "../../shared/lodgingCounting";
-import { resolveStayTiming } from "../../shared/lodgingTiming";
-import { deriveStayMembership, type MembershipCoverage } from "../../shared/membershipDerivation";
 import { nightsBetween } from "../../shared/stayPricing";
-import { airlineResolvers } from "../../utils/airlineNormalize";
+import { resolveStayTiming } from "../../shared/lodgingTiming";
+import type { MembershipCoverage } from "../../shared/membershipDerivation";
+import {
+  airlineKeys,
+  cruiseCovered,
+  cruiseLineKey,
+  cruiseYear,
+  flightCovered,
+  lodgingCoverage,
+  loadCoveredCruises,
+  loadCoveredFlights,
+  loadCoveredStays,
+  stayCoveredBy,
+  stayYear,
+  type CoverageCard,
+  type CoveredCruise,
+  type CoveredFlight,
+  type CoveredStay,
+} from "./coverage";
+
+export { cruiseLineKey };
+
+export interface ActivityYear {
+  year: number;
+  count: number;
+  /** Null for flights, and for a year none of whose items names its length. */
+  nights: number | null;
+}
 
 export interface MembershipActivity {
   /** Flights, cruises or stays covered by the card that actually happened. */
@@ -31,127 +51,94 @@ export interface MembershipActivity {
   nights: number | null;
   /** The latest day of counted activity (YYYY-MM-DD), or null when none names one. */
   lastActivity: string | null;
-}
-
-export interface ActivityFlight {
-  status: string;
-  airline: string | null;
-  airlineIata: string | null;
-  airlineIcao: string | null;
-  departureTime: Date | null;
-}
-
-export interface ActivityCruise {
-  status: string;
-  /** The cruise's own line, else its ship's — the rule the cruise list draws. */
-  line: string | null;
-  startDate: Date | null;
-  endDate: Date | null;
-}
-
-export interface ActivityStay {
-  status: string;
-  checkIn: Date | null;
-  checkOut: Date | null;
-  datePrecision: string;
-  nights: number | null;
-  membershipId: string | null;
-  membershipOptOut: boolean;
-  lodgingId: string;
-  lodgingChainId: number | null;
+  /** The same per calendar year, newest first. Undated items appear in none. */
+  years: ActivityYear[];
 }
 
 const day = (d: Date): string => d.toISOString().slice(0, 10);
 
-function later(current: string | null, candidate: Date | null): string | null {
-  if (candidate === null) return current;
-  const iso = day(candidate);
-  return current === null || iso > current ? iso : current;
-}
+/** Folds covered items into the totals and the per-year rows. */
+class Tally {
+  private count = 0;
+  private nights: number | null = null;
+  private lastActivity: string | null = null;
+  private readonly years = new Map<number, ActivityYear>();
 
-/** Normalised cruise-line key: the line is free text on both sides. */
-export function cruiseLineKey(line: string | null | undefined): string | null {
-  const key = line?.trim().toLowerCase();
-  return key ? key : null;
+  add(year: number | null, nights: number | null, lastDay: Date | null): void {
+    this.count += 1;
+    if (nights !== null) this.nights = (this.nights ?? 0) + nights;
+    if (lastDay !== null) {
+      const iso = day(lastDay);
+      if (this.lastActivity === null || iso > this.lastActivity) this.lastActivity = iso;
+    }
+    if (year === null) return;
+    const row = this.years.get(year) ?? { year, count: 0, nights: null };
+    this.years.set(year, {
+      year,
+      count: row.count + 1,
+      nights: nights === null ? row.nights : (row.nights ?? 0) + nights,
+    });
+  }
+
+  result(): MembershipActivity {
+    return {
+      count: this.count,
+      nights: this.nights,
+      lastActivity: this.lastActivity,
+      years: [...this.years.values()].sort((a, b) => b.year - a.year),
+    };
+  }
 }
 
 export function flightActivity(
   airlineCodes: readonly string[],
-  flights: readonly ActivityFlight[]
+  flights: readonly CoveredFlight[]
 ): MembershipActivity {
-  const keys = new Set(airlineCodes.map((code) => `iata:${code.toUpperCase()}`));
-  let count = 0;
-  let lastActivity: string | null = null;
+  const keys = airlineKeys(airlineCodes);
+  const tally = new Tally();
   for (const flight of flights) {
-    if (!isCountableFlight(flight)) continue;
-    const key = airlineGroupKey(flight, airlineResolvers);
-    if (key === null || !keys.has(key)) continue;
-    count += 1;
-    lastActivity = later(lastActivity, flight.departureTime);
+    if (flightCovered(keys, flight)) tally.add(flight.year, null, flight.departureTime);
   }
-  return { count, nights: null, lastActivity };
+  return tally.result();
 }
 
 export function cruiseActivity(
   cruiseLines: readonly string[],
-  cruises: readonly ActivityCruise[]
+  cruises: readonly CoveredCruise[]
 ): MembershipActivity {
   const keys = new Set(cruiseLines.map(cruiseLineKey).filter((k): k is string => k !== null));
-  let count = 0;
-  let nights: number | null = null;
-  let lastActivity: string | null = null;
+  const tally = new Tally();
   for (const cruise of cruises) {
-    if (!isCountableCruise(cruise)) continue;
-    const key = cruiseLineKey(cruise.line);
-    if (key === null || !keys.has(key)) continue;
-    count += 1;
+    if (!cruiseCovered(keys, cruise)) continue;
     // A cruise without both dates says nothing about its length; it still
     // counts as a cruise, it just adds no nights.
-    if (cruise.startDate && cruise.endDate) {
-      nights = (nights ?? 0) + nightsBetween(cruise.startDate, cruise.endDate);
-    }
-    lastActivity = later(lastActivity, cruise.endDate ?? cruise.startDate);
+    const nights =
+      cruise.startDate && cruise.endDate ? nightsBetween(cruise.startDate, cruise.endDate) : null;
+    tally.add(cruiseYear(cruise), nights, cruise.endDate ?? cruise.startDate);
   }
-  return { count, nights, lastActivity };
+  return tally.result();
 }
 
 export function lodgingActivity(
   membershipId: string,
-  stays: readonly ActivityStay[],
+  stays: readonly CoveredStay[],
   coverage: MembershipCoverage[],
   now?: Date
 ): MembershipActivity {
-  let count = 0;
-  let nights: number | null = null;
-  let lastActivity: string | null = null;
+  const tally = new Tally();
   for (const stay of stays) {
-    const covering = deriveStayMembership({
-      overrideId: stay.membershipId,
-      optOut: stay.membershipOptOut,
-      lodgingId: stay.lodgingId,
-      lodgingChainId: stay.lodgingChainId,
-      memberships: coverage,
-    }).membershipId;
-    if (covering !== membershipId) continue;
-    if (classifyStay(stay, now) !== "visited") continue;
-    count += 1;
+    if (!stayCoveredBy(membershipId, stay, coverage, now)) continue;
     const timing = resolveStayTiming(stay);
-    if (timing.nightsKnown) nights = (nights ?? 0) + timing.nights;
     // A MONTH or YEAR stay stores placeholder dates; only a DAY stay names one.
-    if (timing.precision === "DAY")
-      lastActivity = later(lastActivity, stay.checkOut ?? stay.checkIn);
+    const lastDay = timing.precision === "DAY" ? (stay.checkOut ?? stay.checkIn) : null;
+    tally.add(stayYear(stay), timing.nightsKnown ? timing.nights : null, lastDay);
   }
-  return { count, nights, lastActivity };
+  return tally.result();
 }
 
-export interface ActivityCard {
-  id: string;
-  domain: string;
-  createdAt: Date;
+export interface ActivityCard extends CoverageCard {
   airlineCodes: string[];
   cruiseLines: string[];
-  chains: { chainId: number }[];
-  lodgings: { lodgingId: string }[];
 }
 
 /**
@@ -164,76 +151,18 @@ export async function loadMembershipActivity(
 ): Promise<Map<string, MembershipActivity>> {
   const has = (domain: string): boolean => cards.some((c) => c.domain === domain);
   const [flights, cruises, stays] = await Promise.all([
-    has("flight")
-      ? prisma.flight.findMany({
-          where: { userId, ...countableFlightWhere() },
-          select: {
-            status: true,
-            airline: true,
-            airlineIata: true,
-            airlineIcao: true,
-            departureTime: true,
-          },
-        })
-      : Promise.resolve([]),
-    has("cruise")
-      ? prisma.cruise.findMany({
-          where: { userId, ...countableCruiseWhere() },
-          select: {
-            status: true,
-            cruiseLine: true,
-            startDate: true,
-            endDate: true,
-            ship: { select: { cruiseLine: true } },
-          },
-        })
-      : Promise.resolve([]),
-    has("lodging")
-      ? prisma.lodgingStay.findMany({
-          where: { userId },
-          select: {
-            status: true,
-            checkIn: true,
-            checkOut: true,
-            datePrecision: true,
-            nights: true,
-            membershipId: true,
-            membershipOptOut: true,
-            lodgingId: true,
-            lodging: { select: { chainId: true } },
-          },
-        })
-      : Promise.resolve([]),
+    has("flight") ? loadCoveredFlights(userId) : Promise.resolve([]),
+    has("cruise") ? loadCoveredCruises(userId) : Promise.resolve([]),
+    has("lodging") ? loadCoveredStays(userId) : Promise.resolve([]),
   ]);
-
-  const cruiseRows: ActivityCruise[] = cruises.map((c) => ({
-    status: c.status,
-    line: c.cruiseLine ?? c.ship?.cruiseLine ?? null,
-    startDate: c.startDate,
-    endDate: c.endDate,
-  }));
-  const stayRows: ActivityStay[] = stays.map(({ lodging, ...s }) => ({
-    ...s,
-    lodgingChainId: lodging.chainId,
-  }));
-  // Every hotel card competes for a stay, exactly as in the statistics — the
-  // oldest card covering a chain wins it, so a card's count depends on the
-  // others and must be derived against all of them.
-  const coverage: MembershipCoverage[] = cards
-    .filter((c) => c.domain === "lodging")
-    .map((c) => ({
-      id: c.id,
-      createdAt: c.createdAt.toISOString(),
-      chainIds: c.chains.map((link) => link.chainId),
-      lodgingIds: c.lodgings.map((link) => link.lodgingId),
-    }));
+  const coverage = lodgingCoverage(cards);
 
   const result = new Map<string, MembershipActivity>();
   for (const card of cards) {
     if (card.domain === "flight") result.set(card.id, flightActivity(card.airlineCodes, flights));
     else if (card.domain === "cruise")
-      result.set(card.id, cruiseActivity(card.cruiseLines, cruiseRows));
-    else result.set(card.id, lodgingActivity(card.id, stayRows, coverage));
+      result.set(card.id, cruiseActivity(card.cruiseLines, cruises));
+    else result.set(card.id, lodgingActivity(card.id, stays, coverage));
   }
   return result;
 }

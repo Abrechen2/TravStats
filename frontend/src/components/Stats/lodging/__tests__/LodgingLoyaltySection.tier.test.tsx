@@ -1,17 +1,10 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
 import type { LodgingStats } from "../../../../types/lodging";
 import { EMPTY_LODGING_STATS_BLOCKS } from "../../../../types/lodgingStatsFixture";
 import LodgingLoyaltySection from "../LodgingLoyaltySection";
-
-const beta = vi.hoisted(() => ({ on: true }));
-vi.mock("../../../../hooks/useBetaFeatures", () => ({
-  useBetaFeatures: () => ({
-    betaFeaturesEnabled: beta.on,
-    isFeatureVisible: (key: string) => key === "loyaltyCenter" && beta.on,
-  }),
-}));
 
 /**
  * The status you hold TODAY is not the status you held in 2019.
@@ -22,9 +15,8 @@ vi.mock("../../../../hooks/useBetaFeatures", () => ({
  * tier, not the tier held during that year" — and the screen said the opposite
  * (Alex, 2026-08-29).
  *
- * So today's tier is stated ONCE, as a fact about now. A year names a tier
- * only from the card's dated status history (loyalty-status-history-dated,
- * 2.7) — the last block below.
+ * So today's tier is stated ONCE, as a fact about now. The dated history
+ * that named a year's tier in the 2.7 betas is gone (owner, 2026-09-26).
  */
 const stats = (): LodgingStats =>
   ({
@@ -72,48 +64,28 @@ describe("LodgingLoyaltySection — the tier is about today, not about 2019", ()
   });
 });
 
-describe("LodgingLoyaltySection — a year's tier from the dated history", () => {
-  beforeEach(() => {
-    beta.on = true;
-  });
-
-  const withHistory = (): LodgingStats => {
+describe("LodgingLoyaltySection — a programme year leads to its hotels", () => {
+  it("links the programme to the lodging list filtered to that card and year", () => {
     const base = stats();
-    return {
+    const linked = {
       ...base,
       loyalty: {
         ...base.loyalty,
-        programmeYears: [
-          { ...base.loyalty.programmeYears[0], tiersHeld: [] },
-          { ...base.loyalty.programmeYears[1], tiersHeld: ["Silver", "Gold"] },
-        ],
+        programmeYears: base.loyalty.programmeYears.map((row) => ({
+          ...row,
+          membershipId: "card-1",
+        })),
       },
     } as LodgingStats;
-  };
-
-  it("names the tiers each year held, and a dash for a year the history leaves out", () => {
-    render(<LodgingLoyaltySection stats={withHistory()} />);
-    expect(screen.getByText("lodging:stats.loyalty.tierHeld")).toBeInTheDocument();
-    const row2024 = screen.getByText("2024").closest("tr") as HTMLElement;
-    expect(within(row2024).getByText("Silver → Gold")).toBeInTheDocument();
+    render(
+      <MemoryRouter>
+        <LodgingLoyaltySection stats={linked} />
+      </MemoryRouter>
+    );
     const row2019 = screen.getByText("2019").closest("tr") as HTMLElement;
-    expect(within(row2019).getByText("—")).toBeInTheDocument();
-  });
-
-  it("draws no such column when no card has a history", () => {
-    render(<LodgingLoyaltySection stats={stats()} />);
-    expect(screen.queryByText("lodging:stats.loyalty.tierHeld")).toBeNull();
-  });
-
-  // The history is edited on the loyalty page, behind the loyaltyCenter
-  // switch since 2026-09-26; the column that reads it goes with it. The
-  // per-year nights and stays (2.6) stay.
-  it("hides the 'Status damals' column while the loyalty gate is closed", () => {
-    beta.on = false;
-    render(<LodgingLoyaltySection stats={withHistory()} />);
-    expect(screen.queryByText("lodging:stats.loyalty.tierHeld")).toBeNull();
-    expect(screen.queryByText("Silver → Gold")).toBeNull();
-    const row2024 = screen.getByText("2024").closest("tr") as HTMLElement;
-    expect(within(row2024).getByText("12")).toBeInTheDocument();
+    expect(within(row2019).getByRole("link", { name: "Marriott Bonvoy" })).toHaveAttribute(
+      "href",
+      "/lodging?membership=card-1&year=2019"
+    );
   });
 });

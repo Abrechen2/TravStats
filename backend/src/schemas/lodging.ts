@@ -325,6 +325,13 @@ export const lodgingQuerySchema = z.object({
   search: z.string().trim().min(1).max(200).optional(),
   /** The lifecycle pill's value, per shared/lodgingLifecycle.ts. */
   status: z.enum(STAY_STATUSES).optional(),
+  /**
+   * Only hotels with a stay this hotel card counts (in `year`, when given) —
+   * the link behind a card's figures. Resolved to ids before paging
+   * (`services/loyalty/listFilters.ts`); not this account's card: 404
+   * `LOYALTY_MEMBERSHIP_NOT_FOUND`.
+   */
+  membershipId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
   sort: z.enum(LODGING_SORT_KEYS).optional(),
@@ -361,4 +368,10 @@ export const updateMembershipSchema = baseMembershipSchema
 export type LodgingInput = z.infer<typeof baseLodgingSchema>;
 export type StayInput = z.infer<typeof baseStaySchema>;
 export type LodgingQueryInput = z.infer<typeof lodgingQuerySchema>;
+/**
+ * The list query as the SQL builders take it: the request, plus the hotel ids
+ * a derived filter (a loyalty card's coverage) resolved to. Absent: no such
+ * restriction; empty: nothing matches.
+ */
+export type LodgingListQuery = LodgingQueryInput & { coveredLodgingIds?: string[] };
 export type MembershipInput = z.infer<typeof baseMembershipSchema>;

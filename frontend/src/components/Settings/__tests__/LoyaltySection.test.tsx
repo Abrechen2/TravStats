@@ -3,13 +3,11 @@ import { render, screen, fireEvent, waitFor, within } from "@testing-library/rea
 import { MemoryRouter } from "react-router-dom";
 import type { ReactNode } from "react";
 
-import type { DomainKey } from "../../shared/domains";
-import type { LoyaltyMembership } from "../../types/loyalty";
-
-vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));
+import type { DomainKey } from "../../../shared/domains";
+import type { LoyaltyMembership } from "../../../types/loyalty";
 
 let enabled: DomainKey[] = [];
-vi.mock("../../hooks/useEnabledDomains", () => ({
+vi.mock("../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ enabled, isEnabled: (key: DomainKey) => enabled.includes(key) }),
 }));
 
@@ -20,14 +18,14 @@ const api = vi.hoisted(() => ({
   updateLoyaltyMembership: vi.fn(),
   deleteLoyaltyMembership: vi.fn(),
 }));
-vi.mock("../../lib/api/loyalty", () => api);
-vi.mock("../../lib/api/cruise", () => ({
+vi.mock("../../../lib/api/loyalty", () => api);
+vi.mock("../../../lib/api/cruise", () => ({
   cruiseApi: { facets: vi.fn().mockResolvedValue({ lines: [{ value: "AIDA", count: 2 }] }) },
 }));
 
 // The hotel section is the Settings editor, tested on its own; here it only
 // has to receive the page's per-card extras for the cards it lists.
-vi.mock("../../components/Settings/MembershipsSection", () => ({
+vi.mock("../MembershipsSection", () => ({
   default: (props: { title?: string; renderExtra?: (m: { id: string }) => ReactNode }) => (
     <div data-testid="hotel-editor">
       {props.title}
@@ -36,7 +34,7 @@ vi.mock("../../components/Settings/MembershipsSection", () => ({
   ),
 }));
 
-import LoyaltyPage from "../LoyaltyPage";
+import LoyaltySection from "../LoyaltySection";
 
 const card = (o: Partial<LoyaltyMembership>): LoyaltyMembership => ({
   id: "c1",
@@ -52,7 +50,6 @@ const card = (o: Partial<LoyaltyMembership>): LoyaltyMembership => ({
   chains: [],
   lodgingIds: [],
   lodgings: [],
-  tierPeriods: [],
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
   activity: { count: 12, nights: null, lastActivity: "2025-01-02" },
@@ -62,11 +59,11 @@ const card = (o: Partial<LoyaltyMembership>): LoyaltyMembership => ({
 const renderPage = () =>
   render(
     <MemoryRouter>
-      <LoyaltyPage />
+      <LoyaltySection />
     </MemoryRouter>
   );
 
-describe("LoyaltyPage", () => {
+describe("Einstellungen → Bonusprogramme (LoyaltySection)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     enabled = ["flight", "cruise", "lodging"];
@@ -114,7 +111,7 @@ describe("LoyaltyPage", () => {
     expect(within(cruise).getByText("AIDA Club")).toBeInTheDocument();
   });
 
-  it("hands the hotel editor each card's activity and status history", async () => {
+  it("hands the hotel editor each card's activity", async () => {
     api.listLoyaltyMemberships.mockResolvedValue([
       card({
         id: "hotel-card",
@@ -122,13 +119,11 @@ describe("LoyaltyPage", () => {
         programName: "Bonvoy",
         airlineCodes: [],
         activity: { count: 3, nights: 7, lastActivity: "2025-02-12" },
-        tierPeriods: [{ id: "p1", tier: "Gold", validFrom: "2024-03-01", validUntil: null }],
       }),
     ]);
     renderPage();
     const hotel = await screen.findByTestId("hotel-editor");
     await waitFor(() => expect(within(hotel).getByTestId("loyalty-activity")).toBeInTheDocument());
-    expect(within(hotel).getByTestId("tier-history-toggle-hotel-card")).toBeInTheDocument();
   });
 
   it("takes a frequent-flyer number over from the flights only once the user saves", async () => {
@@ -167,7 +162,6 @@ describe("LoyaltyPage", () => {
         notes: null,
         // Only the airlines the catalogue could name a code for.
         airlineCodes: ["LH"],
-        tierPeriods: [],
       })
     );
     // The list reloads, and the open suggestion list with it.

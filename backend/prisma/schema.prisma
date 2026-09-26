@@ -2337,7 +2337,9 @@ model LoyaltyMembership {
   domain           String   @default("lodging")
   programName      String   @map("program_name")
   membershipNumber String?  @map("membership_number")
-  /// The status held TODAY. Earlier statuses, with dates, are `tierPeriods`.
+  /// The status held TODAY, the only status a card carries. A dated history
+  /// existed in the 2.7 betas and was dropped on the tester's word
+  /// (2026-09-26): nobody needed to know when a status was reached.
   tier             String?
   notes            String?
   airlineCodes     String[] @default([]) @map("airline_codes")
@@ -2349,32 +2351,10 @@ model LoyaltyMembership {
   stays       LodgingStay[]
   chains      LodgingMembershipChain[]
   lodgings    LodgingMembershipLodging[]
-  tierPeriods LoyaltyTierPeriod[]
 
   @@unique([userId, domain, programName])
   @@index([userId])
   @@map("loyalty_memberships")
-}
-
-/// A status the card held, and when (loyalty-status-history-dated).
-///
-/// The lodging statistics printed today's tier next to every year until
-/// `d0fb0be1` stopped it — "Gold · 2019" for a status that may not have
-/// existed then. A dated row is what lets a year name the tier it truly had.
-/// `validUntil` null means "still held". Periods may overlap (a status match
-/// running alongside an earned tier is real), so nothing here forbids it.
-model LoyaltyTierPeriod {
-  id           String    @id @default(uuid())
-  membershipId String    @map("membership_id")
-  tier         String
-  validFrom    DateTime  @map("valid_from") @db.Date
-  validUntil   DateTime? @map("valid_until") @db.Date
-  createdAt    DateTime  @default(now()) @map("created_at")
-
-  membership LoyaltyMembership @relation(fields: [membershipId], references: [id], onDelete: Cascade)
-
-  @@index([membershipId])
-  @@map("loyalty_tier_periods")
 }
 
 /// Which chains a membership covers, linked BY ID.

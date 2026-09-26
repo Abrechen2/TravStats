@@ -103,6 +103,14 @@ vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
 vi.mock("../../components/Settings/RoutingProviderSection", () => ({
   default: () => <div data-testid="routing-provider-section" />,
 }));
+vi.mock("../../components/Settings/PersonalRoutingKeysSection", () => ({
+  default: () => <div data-testid="personal-routing-keys" />,
+}));
+// Einstellungen → Bonusprogramme loads every loyalty card on mount; these
+// cases are about the page's navigation, not about the cards.
+vi.mock("../../components/Settings/LoyaltySection", () => ({
+  default: () => <div data-testid="loyalty-section-stub" />,
+}));
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-bar-stub" />,
 }));
@@ -226,6 +234,25 @@ describe("SettingsPage — one route per group", () => {
     expect(
       await screen.findByRole("region", { name: SECTION_LABEL_KEY.externalServices })
     ).toBeTruthy();
+  });
+
+  // The three per-domain "Bonusprogramme" sections became ONE general section
+  // (owner, 2026-09-26). Their ids live on in links and in the 2.6 chain page.
+  it("lands an old per-domain loyalty section on Einstellungen → Bonusprogramme", async () => {
+    renderAt("/settings/lodging?section=lodgingMemberships");
+    expect(await screen.findByRole("region", { name: SECTION_LABEL_KEY.loyalty })).toBeTruthy();
+    expect(screen.getByTestId("loyalty-section-stub")).toBeTruthy();
+  });
+
+  it("lands a pre-2.7 ?section=flightMemberships link there too", async () => {
+    renderAt("/settings?section=flightMemberships");
+    expect(await screen.findByRole("region", { name: SECTION_LABEL_KEY.loyalty })).toBeTruthy();
+  });
+
+  it("keeps no loyalty section on a domain route", async () => {
+    renderAt("/settings/cruise");
+    await screen.findByRole("region", { name: SECTION_LABEL_KEY.cruisePreferences });
+    expect(screen.queryByTestId("loyalty-section-stub")).toBeNull();
   });
 
   it("lands a pre-2.7 ?tab= link on that domain's group", async () => {

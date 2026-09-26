@@ -54,7 +54,6 @@ describe("the 2.7.0 announcement describes the app that shipped", () => {
     lodgingEnrichment: [/Hotel-Anreicherung/, /hotel enrichment/],
     railDomain: [/Bahn/, /rail/],
     cruiseTracks: [/Spuren bei Kreuzfahrten/, /tracks on cruises/],
-    loyaltyCenter: [/Bonusprogramme/, /Loyalty programmes/],
   };
   it.each(Object.keys(BETA_FEATURES) as (keyof typeof BETA_FEATURES)[])(
     "the beta block names the registered beta feature %s",
@@ -66,21 +65,39 @@ describe("the 2.7.0 announcement describes the app that shipped", () => {
   );
 
   /**
-   * 2026-09-26: the owner put the loyalty page behind the switch
-   * (`loyaltyCenter`). The released "entry suggestions" block announced it in
-   * its very title; it must not promise a page most readers cannot open.
+   * 2026-09-26, later the same day: the tester said what he needs — each
+   * programme with its number and today's status, managed centrally in the
+   * settings, nights/stays per programme with the list behind them, and NO
+   * history of when a status was reached. The owner released that and dropped
+   * the gate (`loyaltyCenter` is gone from the registry). So the released
+   * block announces it where it lives, the beta block no longer does, and no
+   * block promises a status history the app does not have.
    */
+  it("keeps no loyalty gate in the registry", () => {
+    expect(Object.keys(BETA_FEATURES)).not.toContain("loyaltyCenter");
+  });
+
   it.each([
-    ["de", deWhatsNew, /Bonusprogramme|Statusverlauf/],
-    ["en", enWhatsNew, /loyalty programmes|status history/i],
+    ["de", deWhatsNew, /Einstellungen → Bonusprogramme/, /Bonusprogramme/],
+    ["en", enWhatsNew, /Settings → Loyalty programmes/, /loyalty programmes/i],
   ] as const)(
-    "the released %s block does not announce the gated loyalty page",
-    (_l, source, re) => {
-      const block = source.entries.v270.entrySuggestions;
+    "the released %s block announces the loyalty programmes where they live, the beta block not",
+    (_l, source, where, name) => {
+      expect(source.entries.v270.entrySuggestions.body).toMatch(where);
+      expect(source.entries.v270.beta.title).not.toMatch(name);
+      expect(source.entries.v270.beta.body).not.toMatch(name);
+    }
+  );
+
+  it.each([
+    ["de", deWhatsNew, /Statusverlauf|Status damals/],
+    ["en", enWhatsNew, /status history|status then/i],
+  ] as const)("no %s 2.7.0 block promises a status history", (_l, source, re) => {
+    for (const block of Object.values(source.entries.v270)) {
       expect(block.title).not.toMatch(re);
       expect(block.body).not.toMatch(re);
     }
-  );
+  });
 
   it.each([
     ["de", deWhatsNew],

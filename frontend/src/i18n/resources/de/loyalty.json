@@ -1,8 +1,6 @@
 {
   "title": "Bonusprogramme",
-  "meta": "Hotels, Airlines und Reedereien an einem Ort — jede Karte mit dem, wofür du sie laut Logbuch genutzt hast.",
-  "noDomains": "Für keine deiner aktiven Reisearten gibt es Bonusprogramme. Flüge, Kreuzfahrten und Unterkünfte lassen sich in den Einstellungen unter Module einschalten.",
-  "jumpTo": "Springe zu",
+  "noDomains": "Für keine deiner aktiven Reisearten gibt es Bonusprogramme. Flüge, Kreuzfahrten und Unterkünfte lassen sich oben unter Module einschalten.",
   "sections": {
     "flight": {
       "title": "Vielfliegerprogramme",
@@ -54,20 +52,12 @@
     "nights_one": "{{count}} Nacht",
     "nights_other": "{{count}} Nächte",
     "last": "zuletzt {{date}}",
-    "none": "Noch nichts im Logbuch, das diese Karte abdeckt."
-  },
-  "history": {
-    "toggle": "Statusverlauf ({{count}})",
-    "empty": "Noch kein datierter Status. Trägst du ein, wann du welchen Status hattest, nennt die Statistik für jedes Jahr den Status, den du damals wirklich hattest.",
-    "add": "Zeitraum hinzufügen",
-    "tier": "Status",
-    "from": "Von",
-    "until": "Bis",
-    "untilOpen": "Leer lassen, solange der Status noch gilt.",
-    "remove": "Zeitraum entfernen",
-    "invalid": "Jeder Zeitraum braucht einen Status und ein Startdatum, und das Ende darf nicht davor liegen.",
-    "save": "Verlauf speichern",
-    "saveError": "Der Statusverlauf konnte nicht gespeichert werden."
+    "none": "Noch nichts im Logbuch, das diese Karte abdeckt.",
+    "showList": {
+      "lodging": "Hotels anzeigen",
+      "flight": "Flüge anzeigen"
+    },
+    "byYear": "Nach Jahr"
   },
   "suggestions": {
     "open": "Aus deinen Flügen übernehmen",
@@ -77,8 +67,10 @@
     "loadError": "Die Vorschläge konnten nicht geladen werden.",
     "adopt": "Übernehmen"
   },
-  "settingsLink": {
-    "description": "Deine Bonusprogramme — Hotels, Airlines und Reedereien — verwaltest du auf einer eigenen Seite, nach Bereichen getrennt.",
-    "open": "Zu den Bonusprogrammen"
+  "listFilter": {
+    "named": "Nur Einträge von „{{name}}“",
+    "gone": "Dieses Bonusprogramm gibt es nicht (mehr) — deshalb wird hier nichts angezeigt.",
+    "unnamed": "Nur Einträge eines Bonusprogramms",
+    "clear": "Filter entfernen"
   }
 }

@@ -9,7 +9,6 @@ import {
   createLoyaltyMembershipSchema,
   foreignCoverage,
   updateLoyaltyMembershipSchema,
-  type TierPeriodInput,
 } from "../schemas/loyalty";
 import { type LoyaltyDomain } from "../shared/domains";
 import { assertChainsVisible } from "../services/lodging/chainScope";
@@ -42,27 +41,18 @@ const requireUser = (req: AuthRequest): string => {
 const INCLUDE = {
   chains: { include: { chain: { select: { id: true, name: true } } } },
   lodgings: { include: { lodging: { select: { id: true, name: true } } } },
-  tierPeriods: { orderBy: [{ validFrom: "asc" }, { createdAt: "asc" }] },
 } satisfies Prisma.LoyaltyMembershipInclude;
 
 type CardRow = Prisma.LoyaltyMembershipGetPayload<{ include: typeof INCLUDE }>;
 
-const day = (d: Date | null): string | null => (d ? d.toISOString().slice(0, 10) : null);
-
 function serialize(card: CardRow) {
-  const { chains, lodgings, tierPeriods, ...rest } = card;
+  const { chains, lodgings, ...rest } = card;
   return {
     ...rest,
     chainIds: chains.map((link) => link.chainId),
     chains: chains.map((link) => link.chain),
     lodgingIds: lodgings.map((link) => link.lodgingId),
     lodgings: lodgings.map((link) => link.lodging),
-    tierPeriods: tierPeriods.map((p) => ({
-      id: p.id,
-      tier: p.tier,
-      validFrom: day(p.validFrom),
-      validUntil: day(p.validUntil),
-    })),
   };
 }
 
@@ -93,13 +83,6 @@ function dedupeText(values: string[]): string[] {
   }
   return [...seen.values()];
 }
-
-const periodRows = (periods: TierPeriodInput[]) =>
-  periods.map((p) => ({
-    tier: p.tier,
-    validFrom: new Date(`${p.validFrom}T00:00:00Z`),
-    validUntil: p.validUntil ? new Date(`${p.validUntil}T00:00:00Z`) : null,
-  }));
 
 router.get("/", statsLimiter, async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
@@ -135,13 +118,30 @@ router.get(
   }
 );
 
+// After `/suggestions`, or Express would read "suggestions" as an id.
+router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const userId = requireUser(req);
+    const card = await prisma.loyaltyMembership.findFirst({
+      where: { id: req.params.id, userId },
+      include: INCLUDE,
+    });
+    if (!card) {
+      throw new AppError("Membership not found", 404, "LOYALTY_MEMBERSHIP_NOT_FOUND");
+    }
+    res.json({ success: true, data: serialize(card) });
+  } catch (err) {
+    next(err);
+  }
+});
+
 router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const parsed = createLoyaltyMembershipSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const { chainIds, lodgingIds, tierPeriods, airlineCodes, cruiseLines, ...fields } = parsed.data;
+    const { chainIds, lodgingIds, airlineCodes, cruiseLines, ...fields } = parsed.data;
     const chainLinks = await assertChainsVisible(userId, chainIds ?? []);
     const lodgingLinks = await resolveLodgingIds(lodgingIds ?? [], userId);
 
@@ -154,7 +154,6 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
           cruiseLines: dedupeText(cruiseLines ?? []),
           chains: { create: chainLinks.map((chainId) => ({ chainId })) },
           lodgings: { create: lodgingLinks.map((lodgingId) => ({ lodgingId })) },
-          tierPeriods: { create: periodRows(tierPeriods ?? []) },
         },
         include: INCLUDE,
       });
@@ -187,9 +186,9 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       throw new AppError(`A ${domain} membership cannot carry ${foreign.join(", ")}`, 400);
     }
 
-    const { chainIds, lodgingIds, tierPeriods, airlineCodes, cruiseLines, ...fields } = parsed.data;
+    const { chainIds, lodgingIds, airlineCodes, cruiseLines, ...fields } = parsed.data;
     // Absent leaves a list alone, an array replaces it — editing a tier can
-    // never unlink a chain or wipe the status history as a side effect.
+    // never unlink a chain as a side effect.
     const chainLinks = chainIds === undefined ? null : await assertChainsVisible(userId, chainIds);
     const lodgingLinks =
       lodgingIds === undefined ? null : await resolveLodgingIds(lodgingIds, userId);
@@ -204,7 +203,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
               airlineCodes: Array.from(new Set(airlineCodes)),
             }),
             ...(cruiseLines !== undefined && { cruiseLines: dedupeText(cruiseLines) }),
-            // Touched explicitly so a history-only edit still moves the
+            // Touched explicitly so a links-only edit still moves the
             // statistics fingerprint (`middleware/statsEtag.ts`).
             updatedAt: new Date(),
           },
@@ -219,12 +218,6 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           await tx.lodgingMembershipLodging.deleteMany({ where: { membershipId: existing.id } });
           await tx.lodgingMembershipLodging.createMany({
             data: lodgingLinks.map((lodgingId) => ({ membershipId: existing.id, lodgingId })),
-          });
-        }
-        if (tierPeriods !== undefined) {
-          await tx.loyaltyTierPeriod.deleteMany({ where: { membershipId: existing.id } });
-          await tx.loyaltyTierPeriod.createMany({
-            data: periodRows(tierPeriods).map((p) => ({ ...p, membershipId: existing.id })),
           });
         }
         return tx.loyaltyMembership.findUniqueOrThrow({
@@ -250,7 +243,7 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
     });
     if (!existing) throw new AppError("Membership not found", 404);
     // Stays that named this card fall back to derivation (FK SET NULL); its
-    // links and status history cascade with it.
+    // links cascade with it.
     await prisma.loyaltyMembership.delete({ where: { id: existing.id } });
     res.status(204).send();
   } catch (err) {

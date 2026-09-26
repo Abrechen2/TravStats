@@ -26,7 +26,7 @@
 
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
-import type { LodgingQueryInput } from "../../schemas/lodging";
+import type { LodgingListQuery as LodgingQueryInput } from "../../schemas/lodging";
 import { LIFECYCLE_SORT_RANK, LODGING_LIFECYCLE_STATUSES } from "../../shared/lodgingLifecycle";
 import { lodgingFilterSql } from "./listQuery";
 import { lifecycleRankSql, stayCountsSql, stayNightsSql } from "./listSql";

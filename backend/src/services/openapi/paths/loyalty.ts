@@ -26,13 +26,6 @@ const uuid = z.string().uuid();
 const tag = ["Loyalty"];
 const day = z.string().describe("YYYY-MM-DD");
 
-const tierPeriod = z.object({
-  id: uuid,
-  tier: z.string(),
-  validFrom: day,
-  validUntil: day.nullable().describe("null: still held"),
-});
-
 const activity = z
   .object({
     count: z
@@ -48,6 +41,19 @@ const activity = z
       .nullable()
       .describe("Stays and cruises only; null when no counted item names its length"),
     lastActivity: day.nullable(),
+    years: z
+      .array(
+        z.object({
+          year: z.number().int(),
+          count: z.number().int(),
+          nights: z.number().int().nullable(),
+        })
+      )
+      .describe(
+        "The same per calendar year, newest first — a flight by its departure airport's " +
+          "calendar, a stay by the year the lodging statistics file it under, a cruise by its " +
+          "start. An undated item counts in the totals and in no year."
+      ),
   })
   .describe(
     "Derived from the logbook. Flight cards match on the flight's airline identity " +
@@ -62,7 +68,6 @@ const card = z.object({
   chains: z.array(z.object({ id: z.number().int(), name: z.string() })),
   lodgingIds: z.array(uuid),
   lodgings: z.array(z.object({ id: uuid, name: z.string() })),
-  tierPeriods: z.array(tierPeriod),
 });
 
 const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.literal(true), data });
@@ -115,6 +120,21 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "get",
+  path: "/loyalty-memberships/{id}",
+  summary: "One loyalty card, without its activity",
+  description:
+    "What a list filtered by this card names it by. Another user's card and a missing one " +
+    "are the same 404, code `LOYALTY_MEMBERSHIP_NOT_FOUND`.",
+  tags: tag,
+  request: { params: z.object({ id: uuid }) },
+  responses: {
+    200: { description: "Card", content: { "application/json": { schema: envelope(card) } } },
+    404: notFound,
+  },
+});
+
+registry.registerPath({
   method: "post",
   path: "/loyalty-memberships",
   summary: "Add a loyalty card",
@@ -140,8 +160,9 @@ registry.registerPath({
   path: "/loyalty-memberships/{id}",
   summary: "Update a loyalty card",
   description:
-    "A list present in the body replaces the stored one (links, codes, lines, status " +
-    "history); an absent list is left alone. The domain cannot change.",
+    "A list present in the body replaces the stored one (links, codes, lines); an absent " +
+    "list is left alone. The domain cannot change. A card keeps one status, `tier`, the one " +
+    "held today — a dated status history is not accepted (400).",
   tags: tag,
   request: {
     params: z.object({ id: uuid }),

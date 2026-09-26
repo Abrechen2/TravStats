@@ -57,6 +57,11 @@ vi.mock("../../lib/api/lodging", () => ({
   deleteLodging: (...args: unknown[]) => deleteLodgingMock(...args),
 }));
 
+const getLoyaltyMembershipMock = vi.fn();
+vi.mock("../../lib/api/loyalty", () => ({
+  getLoyaltyMembership: (...args: unknown[]) => getLoyaltyMembershipMock(...args),
+}));
+
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-stub" />,
 }));
@@ -493,6 +498,69 @@ describe("LodgingListPage", () => {
       );
     });
     await screen.findByText("common:filters.noMatch");
+  });
+
+  // Owner, 2026-09-26: a loyalty figure links to "a list of all these
+  // nights/stays". The link names the card and the year; the filter is the
+  // server's, and the page must say it is filtered.
+  describe("opened from a loyalty figure", () => {
+    const renderLinked = (entry: string) =>
+      render(
+        <MemoryRouter initialEntries={[entry]}>
+          <LodgingListPage />
+        </MemoryRouter>
+      );
+
+    it("asks the server for that card's hotels in that year, and says so above the list", async () => {
+      getLoyaltyMembershipMock.mockResolvedValue({ id: "card-1", programName: "Bonvoy" });
+      mockFacets();
+      mockRows([]);
+      renderLinked("/lodging?membership=card-1&year=2024");
+
+      await waitFor(() =>
+        expect(listLodgingPageMock).toHaveBeenCalledWith(
+          expect.objectContaining({ membershipId: "card-1", year: 2024 })
+        )
+      );
+      expect(getLodgingFacetsMock).toHaveBeenCalledWith(
+        expect.objectContaining({ membershipId: "card-1" })
+      );
+      const notice = await screen.findByTestId("loyalty-list-filter");
+      expect(await within(notice).findByText("loyalty:listFilter.named")).toBeInTheDocument();
+      expect(getLoyaltyMembershipMock).toHaveBeenCalledWith("card-1");
+    });
+
+    it("says the programme is gone instead of pretending the list is the whole library", async () => {
+      getLoyaltyMembershipMock.mockRejectedValue({
+        response: { status: 404, data: { code: "LOYALTY_MEMBERSHIP_NOT_FOUND" } },
+      });
+      mockFacets();
+      mockRows([]);
+      renderLinked("/lodging?membership=deleted-card");
+
+      const alert = await screen.findByRole("alert");
+      expect(within(alert).getByText("loyalty:listFilter.gone")).toBeInTheDocument();
+      // The request still carries the filter; it never quietly drops it.
+      expect(listLodgingPageMock).toHaveBeenCalledWith(
+        expect.objectContaining({ membershipId: "deleted-card" })
+      );
+    });
+
+    it("drops the card filter when the reader removes it", async () => {
+      getLoyaltyMembershipMock.mockResolvedValue({ id: "card-1", programName: "Bonvoy" });
+      mockFacets();
+      mockRows([]);
+      const user = userEvent.setup();
+      renderLinked("/lodging?membership=card-1");
+
+      const notice = await screen.findByTestId("loyalty-list-filter");
+      listLodgingPageMock.mockClear();
+      await user.click(within(notice).getByText("loyalty:listFilter.clear"));
+      await waitFor(() => expect(listLodgingPageMock).toHaveBeenCalled());
+      const last = listLodgingPageMock.mock.calls[listLodgingPageMock.mock.calls.length - 1][0];
+      expect(last).not.toHaveProperty("membershipId");
+      expect(screen.queryByTestId("loyalty-list-filter")).toBeNull();
+    });
   });
 
   it("renders the empty state without crashing when there are no lodgings", async () => {

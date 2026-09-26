@@ -73,7 +73,7 @@ export async function loadLodgingStatsData(
       // Hotel cards only: a frequent-flyer card covers no stay, and a stay's
       // override can only name a lodging card (`assertMembershipOwned`).
       where: { userId, domain: "lodging" },
-      include: { chains: true, lodgings: true, tierPeriods: true },
+      include: { chains: true, lodgings: true },
     }),
   ]);
 
@@ -123,8 +123,8 @@ export async function loadLodgingStatsData(
         ratingBreakfast: s.ratingBreakfast,
         ratingService: s.ratingService,
         programName: programme.programName,
+        programMembershipId: programme.membershipId,
         membershipTier: programme.tier,
-        membershipTierPeriods: programme.tierPeriods,
       },
     };
   });

@@ -164,10 +164,6 @@
           "cruiseTracks": {
             "name": "Aufgezeichnete Spuren bei Kreuzfahrten",
             "what": "Der Abschnitt „Aufgezeichnete Spuren“ auf der Seite einer Kreuzfahrt: Eine GPS-Aufzeichnung (Datei oder Dawarich) ersetzt die berechnete Seeroute der Etappen, die sie abdeckt – auf der Karte und in den Statistiken."
-          },
-          "loyaltyCenter": {
-            "name": "Bonusprogramme-Seite",
-            "what": "Die Seite „Bonusprogramme“ im Menü unter deinem Namen: Vielflieger-, Hotel- und Reederei-Programme an einem Ort, mit Statusverlauf über die Jahre, Vorschlägen aus deinen Vielfliegernummern und der Spalte „Status damals“ in der Unterkunfts-Statistik. Hotel-Bonusprogramme bleiben auch ohne den Schalter unter Einstellungen → Unterkünfte."
           }
         }
       },

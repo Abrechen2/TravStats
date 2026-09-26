@@ -64,7 +64,7 @@ export const USER_EXPORT_SELECT = {
   lodgingStays: true,
   // Loyalty cards across domains, with the status history — the key was
   // `lodgingMemberships` before 2.7 (see the module comment).
-  loyaltyMemberships: { include: { chains: true, tierPeriods: true } },
+  loyaltyMemberships: { include: { chains: true } },
   // The user's own hotel chains (per-user since 2.7, `services/lodging/chainScope.ts`).
   // Catalogue chains (no owner) are re-seeded and stay out.
   lodgingChains: true,

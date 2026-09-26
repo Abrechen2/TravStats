@@ -503,6 +503,14 @@ export const flightQuerySchema = z.object({
    */
   airlineExact: z.string().max(200).optional(),
   /**
+   * Only the flights a frequent-flyer card counts — the link behind a card's
+   * figures in Einstellungen → Bonusprogramme. Coverage is derived (airline
+   * identity, countable status), so it is resolved to ids before paging; see
+   * `services/loyalty/listFilters.ts`. Not this account's, or not a flight
+   * card: 404 `LOYALTY_MEMBERSHIP_NOT_FOUND`.
+   */
+  membershipId: z.string().uuid().optional(),
+  /**
    * Free text over the columns the logbook row actually shows: flight number,
    * carrier name and codes, both airport codes and both airport names. OR'ed,
    * case-insensitive.

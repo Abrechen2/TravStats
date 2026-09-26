@@ -16,7 +16,15 @@ import type { BetaFeatureKey } from "../../config/betaFeatures";
  * page of settings am I on".
  */
 export type SettingsGroupId =
-  "account" | "display" | "trips" | "data" | "services" | "flight" | "cruise" | "lodging";
+  | "account"
+  | "display"
+  | "trips"
+  | "loyalty"
+  | "data"
+  | "services"
+  | "flight"
+  | "cruise"
+  | "lodging";
 
 /** Every section that can render. Ids are stable — old links carry them. */
 export type SettingsSectionId =
@@ -30,6 +38,7 @@ export type SettingsSectionId =
   | "modules"
   | "countryCounting"
   | "trips"
+  | "loyalty"
   | "backup"
   | "import"
   | "notifications"
@@ -41,10 +50,7 @@ export type SettingsSectionId =
   | "enrichment"
   | "autoupdate"
   | "cruisePreferences"
-  | "lodgingPreferences"
-  | "lodgingMemberships"
-  | "flightMemberships"
-  | "cruiseMemberships";
+  | "lodgingPreferences";
 
 export interface SettingsGroup {
   id: SettingsGroupId;
@@ -86,6 +92,15 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
     sections: ["trips"],
   },
   {
+    // Every domain's programmes in one section (owner, 2026-09-26). A general
+    // group, not a domain one: a card is the same thing in every domain, and
+    // the tester asked for ONE central place. Domain blocks inside it follow
+    // the module switches.
+    id: "loyalty",
+    labelKey: "settings:groups.loyalty",
+    sections: ["loyalty"],
+  },
+  {
     id: "data",
     labelKey: "settings:groups.data",
     sections: ["backup", "import", "notifications", "about"],
@@ -99,28 +114,19 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
     id: "flight",
     labelKey: "settings:tabs.flight",
     domain: "flight",
-    sections: [
-      "homeAirport",
-      "defaults",
-      "features",
-      "enrichment",
-      "autoupdate",
-      "flightMemberships",
-    ],
-    gatedSections: { flightMemberships: "loyaltyCenter" },
+    sections: ["homeAirport", "defaults", "features", "enrichment", "autoupdate"],
   },
   {
     id: "cruise",
     labelKey: "settings:tabs.cruise",
     domain: "cruise",
-    sections: ["cruisePreferences", "cruiseMemberships"],
-    gatedSections: { cruiseMemberships: "loyaltyCenter" },
+    sections: ["cruisePreferences"],
   },
   {
     id: "lodging",
     labelKey: "settings:tabs.lodging",
     domain: "lodging",
-    sections: ["lodgingPreferences", "lodgingMemberships"],
+    sections: ["lodgingPreferences"],
   },
 ] as const;
 
@@ -129,6 +135,7 @@ export const GENERAL_GROUP_IDS: readonly SettingsGroupId[] = [
   "account",
   "display",
   "trips",
+  "loyalty",
   "data",
   "services",
 ];
@@ -192,6 +199,28 @@ export function gateOfSection(section: SettingsSectionId): BetaFeatureKey | unde
 export function findGroup(id: string | undefined): SettingsGroup | undefined {
   return SETTINGS_GROUPS.find((g) => g.id === id);
 }
+
+/**
+ * Section ids that moved into another one. Every domain group carried its own
+ * "Bonusprogramme" section until 2026-09-26; the three are one general section
+ * now, and links naming the old ids (`/settings/lodging?section=
+ * lodgingMemberships`, a changelog, the chain page of 2.6) land on it.
+ */
+export const MOVED_SECTIONS: Readonly<Record<string, SettingsSectionId>> = {
+  lodgingMemberships: "loyalty",
+  flightMemberships: "loyalty",
+  cruiseMemberships: "loyalty",
+};
+
+/** The section an old id now lives in, or null when it never moved. */
+export function movedSection(section: string): SettingsSectionId | null {
+  return Object.prototype.hasOwnProperty.call(MOVED_SECTIONS, section)
+    ? MOVED_SECTIONS[section]
+    : null;
+}
+
+/** Where Einstellungen → Bonusprogramme lives — the target of every loyalty link. */
+export const LOYALTY_SETTINGS_PATH = "/settings/account?section=loyalty";
 
 /**
  * Which group holds a section. Built from the table above rather than written

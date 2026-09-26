@@ -1,9 +1,10 @@
 import type { JSX } from "react";
+import { Link } from "react-router-dom";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { useBetaFeatures } from "../../../hooks/useBetaFeatures";
 import type { LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
 import RankedBarList from "./RankedBarList";
+import { loyaltyListLink } from "../../Loyalty/LoyaltyListFilter";
 
 const LODGING_ACCENT = "var(--domain-lodging, #d4778f)";
 const LIST_LIMIT = 8;
@@ -42,18 +43,6 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
     },
     []
   );
-
-  // The per-year tier exists only where a card carries a dated status
-  // history (loyalty-status-history-dated). Without one the column would be
-  // blank on every row, so it is drawn only when some row can fill it.
-  // The history is edited on the loyalty page, which is behind the beta
-  // switch (loyaltyCenter) — so is the column that reads it.
-  const historyVisible = useBetaFeatures().isFeatureVisible("loyaltyCenter");
-  const hasHistory =
-    historyVisible &&
-    loyalty.programmeYears.some((row) => row.tiersHeld !== null && row.tiersHeld !== undefined);
-  const tierHeldCell = (tiers: string[] | null | undefined): string =>
-    tiers === null || tiers === undefined ? "" : tiers.length > 0 ? tiers.join(" → ") : "—";
 
   return (
     <section className="mt-8">
@@ -129,8 +118,8 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
           </h3>
           {/* The CARD's tier belongs to today, not to a year: printed beside
               every year it claimed a status that may not have existed then. So
-              it is said once, here, about now — and a year names a tier only
-              from the card's dated history, in its own column. */}
+              it is said once, here, about now. There is no per-year status:
+              the tester needs none (2026-09-26). */}
           {currentTiers.length > 0 && (
             <p className="mb-3 text-xs" style={{ color: "var(--text-muted)" }}>
               {t("lodging:stats.loyalty.currentTier")}{" "}
@@ -149,11 +138,6 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
                     {t("lodging:stats.loyalty.programme")}
                   </th>
                   <th className="pb-2 text-left font-normal">{t("lodging:stats.loyalty.year")}</th>
-                  {hasHistory && (
-                    <th className="pb-2 text-left font-normal">
-                      {t("lodging:stats.loyalty.tierHeld")}
-                    </th>
-                  )}
                   <th className="pb-2 text-right font-normal">
                     {t("lodging:stats.loyalty.nights")}
                   </th>
@@ -165,9 +149,23 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
               <tbody>
                 {loyalty.programmeYears.map((row) => (
                   <tr key={`${row.programme}-${row.year}`}>
-                    <td className="py-1">{row.programme}</td>
+                    <td className="py-1">
+                      {/* The hotels whose stays make up this row's nights —
+                          the list the tester asked to reach from the figure. */}
+                      {row.membershipId ? (
+                        <Link
+                          to={loyaltyListLink("lodging", row.membershipId, Number(row.year))}
+                          title={t("lodging:stats.loyalty.staysLink", { year: row.year })}
+                          className="hover:underline"
+                          style={{ color: "var(--ts-accent)" }}
+                        >
+                          {row.programme}
+                        </Link>
+                      ) : (
+                        row.programme
+                      )}
+                    </td>
                     <td className="py-1">{row.year}</td>
-                    {hasHistory && <td className="py-1">{tierHeldCell(row.tiersHeld)}</td>}
                     <td className="py-1 text-right" style={{ fontVariantNumeric: "tabular-nums" }}>
                       {row.nights}
                     </td>

@@ -11,6 +11,7 @@ import CreateEmailInviteModal from "../../components/Admin/CreateEmailInviteModa
 import InviteSuccessModal from "../../components/Admin/InviteSuccessModal";
 import GlobalApiKeysManager from "../../components/Admin/GlobalApiKeysManager";
 import ImmichGlobalSettings from "../../components/Admin/ImmichGlobalSettings";
+import { InstanceRoutingProviderCard } from "../../components/Settings/RoutingProviderSection";
 import ParserSettingsTab from "../../components/Admin/ParserSettings";
 import LoggingManager from "../../components/Admin/LoggingManager";
 import SmtpManager from "../../components/Admin/SmtpManager";
@@ -211,6 +212,10 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
             onGlobalApiKeysChange={props.onGlobalApiKeysChange}
             onParserSettingsChange={props.onParserApiKeySettingsChange}
           />
+          {/* Which provider routes tours, and the instance's key for it. It
+              sat on the personal settings page until 2026-09-26, where it
+              read as a personal setting (Alex, Discord). */}
+          <InstanceRoutingProviderCard />
           <ImmichGlobalSettings />
         </>
       );

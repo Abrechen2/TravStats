@@ -2,16 +2,22 @@ import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 
 /**
- * `/loyalty` sits behind the `loyaltyCenter` beta switch (owner decision
- * 2026-09-26). Rendered through the app's OWN router, as the rail route test
- * does, because a component test would stay green with the guard deleted
- * from App.tsx.
+ * `/loyalty` was the loyalty page of the 2.7 betas. Since 2026-09-26 the
+ * programmes are managed in Einstellungen → Bonusprogramme, and the old URL
+ * — in bookmarks, the beta announcement, Discord — lands there. Rendered
+ * through the app's OWN router, because a component test would stay green
+ * with the route deleted from App.tsx.
  */
-const remoteBeta = vi.hoisted(() => ({ value: true as boolean }));
-// The page itself is stubbed: this is about the route, not the page.
-vi.mock("../../pages/LoyaltyPage", () => ({
-  default: () => <div data-testid="loyalty-page-stub" />,
-}));
+const remoteBeta = vi.hoisted(() => ({ value: false as boolean }));
+// The settings page is stubbed: this is about where the route leads.
+vi.mock("../../pages/SettingsPage", async () => {
+  const { useLocation } = await import("react-router-dom");
+  const Stub = () => {
+    const location = useLocation();
+    return <div data-testid="settings-stub">{location.pathname + location.search}</div>;
+  };
+  return { default: Stub, SettingsLegacyRedirect: Stub };
+});
 vi.mock("../../pages/DashboardPage", () => ({
   default: () => <div data-testid="dashboard-stub" />,
 }));
@@ -72,22 +78,24 @@ describe("the /loyalty route", () => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomainsLoaded: true });
   });
 
-  it("opens the loyalty page where the beta switch is on", { timeout: 10000 }, async () => {
-    remoteBeta.value = true;
-    window.history.pushState({}, "", "/loyalty");
-    render(<App />);
-    await waitFor(() => expect(screen.getByTestId("loyalty-page-stub")).toBeTruthy(), {
-      timeout: 8000,
-    });
-  });
-
-  it("sends the reader to the dashboard where it is off", { timeout: 10000 }, async () => {
-    remoteBeta.value = false;
-    window.history.pushState({}, "", "/loyalty");
-    render(<App />);
-    await waitFor(() => expect(screen.getByTestId("dashboard-stub")).toBeTruthy(), {
-      timeout: 8000,
-    });
-    expect(screen.queryByTestId("loyalty-page-stub")).toBeNull();
-  });
+  it(
+    "lands on Einstellungen → Bonusprogramme, whatever the beta switch says",
+    { timeout: 10000 },
+    async () => {
+      for (const beta of [false, true]) {
+        remoteBeta.value = beta;
+        window.history.pushState({}, "", "/loyalty");
+        const { unmount } = render(<App />);
+        await waitFor(
+          () =>
+            expect(screen.getByTestId("settings-stub").textContent).toBe(
+              "/settings/account?section=loyalty"
+            ),
+          { timeout: 8000 }
+        );
+        expect(screen.queryByTestId("dashboard-stub")).toBeNull();
+        unmount();
+      }
+    }
+  );
 });

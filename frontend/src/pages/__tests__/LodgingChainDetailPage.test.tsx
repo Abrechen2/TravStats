@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { render, screen, waitFor, within } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import type { LodgingChainDetail, LodgingStay } from "../../types/lodging";
 
@@ -222,6 +222,60 @@ describe("LodgingChainDetailPage", () => {
     // PRESENCE (vs. absent when there are no siblings, tested below) is
     // what proves `sharedWithLabel` was actually computed and passed down.
     expect(screen.getByText("lodging:chainDetail.sharedWith")).toBeInTheDocument();
+  });
+
+  // Alex, 2026-09-26: "auf der Seite einer Kette … eine Box … mit dem
+  // Programm, der Mitgliedsnummer und einem Badge mit dem aktuellen Status".
+  it("boxes the covering card with its number and a badge for today's status", async () => {
+    await renderChainDetail(
+      makeDetail({
+        membership: {
+          id: "m1",
+          userId: "u1",
+          programName: "Marriott Bonvoy",
+          membershipNumber: "99887766",
+          tier: "Platinum Elite",
+          chainIds: [1],
+          chains: [{ id: 1, name: "Sheraton" }],
+          lodgingIds: [],
+          lodgings: [],
+          createdAt: "2024-01-01T00:00:00.000Z",
+          updatedAt: "2024-01-01T00:00:00.000Z",
+        },
+      })
+    );
+    const row = await screen.findByTestId("membership-row-m1");
+    expect(within(row).getByText("Marriott Bonvoy")).toBeInTheDocument();
+    expect(within(row).getByText("•••• 7766")).toBeInTheDocument();
+    expect(within(row).getByTestId("tier-badge")).toHaveTextContent("Platinum Elite");
+    // Editable in place, and the way to every other programme is named.
+    expect(within(row).getByText("common:buttons.edit")).toBeInTheDocument();
+    expect(screen.getByTestId("chain-loyalty-settings-link")).toHaveAttribute(
+      "href",
+      "/settings/account?section=loyalty"
+    );
+  });
+
+  it("draws no empty badge for a card without a status", async () => {
+    await renderChainDetail(
+      makeDetail({
+        membership: {
+          id: "m1",
+          userId: "u1",
+          programName: "Marriott Bonvoy",
+          membershipNumber: null,
+          tier: "  ",
+          chainIds: [1],
+          chains: [{ id: 1, name: "Sheraton" }],
+          lodgingIds: [],
+          lodgings: [],
+          createdAt: "2024-01-01T00:00:00.000Z",
+          updatedAt: "2024-01-01T00:00:00.000Z",
+        },
+      })
+    );
+    await screen.findByTestId("membership-row-m1");
+    expect(screen.queryByTestId("tier-badge")).toBeNull();
   });
 
   it("does not show a shared-with note when the program has no sibling chains", async () => {

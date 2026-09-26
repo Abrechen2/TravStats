@@ -31,6 +31,8 @@ export interface LodgingListFilterState {
   /** An ISO code, a raw country text, or "all" — whatever `/lodging/facets` reported. */
   country: string | "all";
   type: LodgingType | "all";
+  /** A hotel card from a loyalty link, or absent. */
+  membershipId?: string | null;
 }
 
 /** Columns that read naturally ascending on first click; the rest start descending. */
@@ -58,6 +60,7 @@ export function buildLodgingFilterQuery(state: LodgingListFilterState): LodgingL
   if (state.year !== "all") query.year = state.year;
   if (state.country !== "all") query.country = state.country;
   if (state.type !== "all") query.type = state.type;
+  if (state.membershipId) query.membershipId = state.membershipId;
   return query;
 }
 
