@@ -164,10 +164,6 @@
           "cruiseTracks": {
             "name": "Recorded tracks on cruises",
             "what": "The “Recorded tracks” section on a cruise’s page: a GPS recording (a file or Dawarich) replaces the computed sea route of the legs it covers – on the map and in the statistics."
-          },
-          "loyaltyCenter": {
-            "name": "Loyalty programmes page",
-            "what": "The “Loyalty programmes” page in the menu under your name: frequent-flyer, hotel and cruise-line programmes in one place, with the status history over the years, suggestions from your frequent-flyer numbers and the “status then” column in the lodging statistics. Hotel programmes stay under Settings → Lodging without the switch too."
           }
         }
       },
