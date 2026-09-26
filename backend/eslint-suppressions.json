@@ -49,11 +49,6 @@
       "count": 1
     }
   },
-  "src/services/importPreview.ts": {
-    "time/no-zone-library": {
-      "count": 1
-    }
-  },
   "src/services/parsers/userTemplates/deriver.ts": {
     "time/no-zoneless-format": {
       "count": 1
