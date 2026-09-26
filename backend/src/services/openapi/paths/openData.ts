@@ -65,7 +65,7 @@ const weatherOutcome = z
   ])
   .openapi({
     description:
-      "What the lookup came to. `noLocation` (no stop with coordinates covers the day), " +
+      "What the lookup came to. `noLocation` (no stop or dated stay with coordinates covers the day), " +
       "`futureOrToday` and `noData` are answers about the day and are stored (as no weather). " +
       "`timeout`, `rateLimited` and `unavailable` are answers about Open-Meteo: the stored " +
       "weather is KEPT, unless the entry's date just moved.",

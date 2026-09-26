@@ -15,29 +15,81 @@ export interface ObservedWeather extends DailyWeather {
 
 const dayOf = (d: Date): string => d.toISOString().slice(0, 10);
 
+interface DaySpan {
+  title: string;
+  lat: number;
+  lon: number;
+  start: Date;
+  end: Date | null;
+}
+
+/** A stop with coordinates and a start day, as a span. */
+async function stopSpans(tripId: string): Promise<DaySpan[]> {
+  const stops = await prisma.tripStop.findMany({
+    where: { tripId, lat: { not: null }, lon: { not: null }, startDate: { not: null } },
+    select: { title: true, lat: true, lon: true, startDate: true, endDate: true },
+  });
+  return stops.map((s) => ({
+    title: s.title,
+    lat: s.lat!,
+    lon: s.lon!,
+    start: s.startDate!,
+    end: s.endDate,
+  }));
+}
+
 /**
- * Where the trip was on `day`: a stop with coordinates whose span covers it.
- * Of several (a travel day), the one reached LAST — where the day ended and
- * the night was spent. None when no stop covers the day: a journal entry is
- * never given the weather of a place it may not have been.
+ * The trip's dated stays whose hotel has coordinates, as spans. A stay is
+ * where the night was spent — the strongest evidence of where a day was —
+ * and a trip whose itinerary lives in its stays has no stops at all:
+ * acceptance 2026-09-26 found "Wetter nachtragen" answering noLocation for a
+ * Barcelona trip with a geocoded stay, because only stops were asked.
+ * Only DAY precision counts: a "July 2011" stay does not say which day.
+ */
+async function staySpans(tripId: string): Promise<DaySpan[]> {
+  const stays = await prisma.lodgingStay.findMany({
+    where: {
+      tripId,
+      datePrecision: "DAY",
+      checkIn: { not: null },
+      status: { not: "cancelled" },
+      lodging: { lat: { not: null }, lon: { not: null } },
+    },
+    select: {
+      checkIn: true,
+      checkOut: true,
+      lodging: { select: { name: true, lat: true, lon: true } },
+    },
+  });
+  return stays.map((s) => ({
+    title: s.lodging.name,
+    lat: s.lodging.lat!,
+    lon: s.lodging.lon!,
+    start: s.checkIn!,
+    end: s.checkOut,
+  }));
+}
+
+/**
+ * Where the trip was on `day`: a stop or a stay with coordinates whose span
+ * covers it. Of several (a travel day), the one reached LAST — where the day
+ * ended and the night was spent. None when nothing covers the day: a journal
+ * entry is never given the weather of a place it may not have been.
  */
 export async function placeOfDay(
   tripId: string,
   day: string
 ): Promise<{ title: string; lat: number; lon: number } | null> {
-  const stops = await prisma.tripStop.findMany({
-    where: { tripId, lat: { not: null }, lon: { not: null }, startDate: { not: null } },
-    select: { title: true, lat: true, lon: true, startDate: true, endDate: true },
-  });
-  const covering = stops
+  const spans = [...(await stopSpans(tripId)), ...(await staySpans(tripId))];
+  const covering = spans
     .filter((s) => {
-      const start = dayOf(s.startDate!);
-      const end = s.endDate ? dayOf(s.endDate) : start;
+      const start = dayOf(s.start);
+      const end = s.end ? dayOf(s.end) : start;
       return start <= day && day <= end;
     })
-    .sort((a, b) => b.startDate!.getTime() - a.startDate!.getTime());
-  const stop = covering[0];
-  return stop ? { title: stop.title, lat: stop.lat!, lon: stop.lon! } : null;
+    .sort((a, b) => b.start.getTime() - a.start.getTime());
+  const span = covering[0];
+  return span ? { title: span.title, lat: span.lat, lon: span.lon } : null;
 }
 
 /**
