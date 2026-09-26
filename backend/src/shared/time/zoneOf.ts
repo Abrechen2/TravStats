@@ -84,9 +84,9 @@ function zoneFromCoordinates(lat: number, lon: number): string | null {
     logger.error({
       operation: "timezone_lookup_failed",
       message: "Time zone lookup failed for a valid coordinate",
-      context: { lat, lon },
       error: cause,
     });
+    logger.debug({ operation: "timezone_lookup_failed", context: { lat, lon } });
     throw new ZoneUnresolvedError(cause);
   }
 }

@@ -176,11 +176,12 @@ export async function fetchTransitousLine(tripId: string): Promise<LonLat[] | nu
     try {
       line.push(...decodePolyline(leg.legGeometry.points, leg.legGeometry.precision));
     } catch (error) {
+      // A Transitous trip id names one train on one day — an itinerary.
       logger.warn({
         operation: "rail_transitous_polyline",
-        tripId,
         error: error instanceof Error ? error.message : String(error),
       });
+      logger.debug({ operation: "rail_transitous_polyline", tripId });
       return null;
     }
   }

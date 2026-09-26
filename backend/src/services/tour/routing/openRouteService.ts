@@ -189,11 +189,12 @@ export function createOpenRouteService(
             status: response.status,
             profile,
             orsCode: code,
-            orsMessage: message,
             reason,
           },
           "openrouteservice returned a non-200 response"
         );
+        // ORS error text quotes the stop coordinates ("... of specified coordinate 1: lon lat").
+        logger.debug({ provider: "openrouteservice", orsCode: code, orsMessage: message });
         return { failure: reason };
       }
 

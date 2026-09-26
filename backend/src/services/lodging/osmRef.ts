@@ -29,13 +29,10 @@ export async function osmRefToStore(
     select: { id: true },
   });
   if (holder) {
-    logger.info({
-      operation: "lodging_osm_ref_taken",
-      userId,
-      osmRef,
-      heldBy: holder.id,
-      lodgingId: existing?.id ?? null,
-    });
+    const operation = "lodging_osm_ref_taken";
+    logger.info({ operation, userId, heldBy: holder.id, lodgingId: existing?.id ?? null });
+    // The OSM reference names the hotel — detail for debug, not the info log.
+    logger.debug({ operation, osmRef });
     return undefined;
   }
   return osmRef;

@@ -74,7 +74,8 @@ export async function enrichLodgingFromOsm(
       },
     });
   }
-  logger.info({ operation: "lodging_osm_enrichment", lodgingId, osmRef: hit.osmRef, filled });
+  logger.info({ operation: "lodging_osm_enrichment", lodgingId, filled });
+  logger.debug({ operation: "lodging_osm_enrichment", lodgingId, osmRef: hit.osmRef });
   return { found: true, reason: null, osmRef: hit.osmRef, osmName: hit.name, filled };
 }
 

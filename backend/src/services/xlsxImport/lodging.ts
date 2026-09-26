@@ -49,6 +49,7 @@ import {
   type SheetOutcome,
 } from "./types";
 import { changedOnly, droppedOrNone, enumCell } from "./values";
+import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 
 async function matchLodging(
@@ -222,15 +223,25 @@ function stayFields(raw: Record<string, string>, dropped: DroppedValue[]) {
 
 /** A write the shared stay writer refused (e.g. a time on an undated stay). */
 function refusedWrite(err: unknown, rowNo: number, label: string, ctx: Ctx): RowOutcome {
+  const operation = "xlsx_import_stay_refused";
+  // The stay writer's own refusals are fixed sentences; anything else (a
+  // Prisma error) quotes the row's values, so its text stays at debug.
   logger.warn(
     {
-      operation: "xlsx_import_stay_refused",
+      operation,
       userId: ctx.userId,
       row: rowNo,
-      message: err instanceof Error ? err.message : String(err),
+      message: err instanceof AppError ? err.message : err instanceof Error ? err.name : "unknown",
     },
     "Spreadsheet import: stay write refused"
   );
+  if (!(err instanceof AppError)) {
+    logger.debug({
+      operation,
+      row: rowNo,
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
   return errorRow(rowNo, label, "invalid_row");
 }
 

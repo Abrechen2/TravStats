@@ -140,9 +140,10 @@ function isTrustworthy(
   for (const [lon, lat] of line) {
     if (!finite(lon) || !finite(lat)) {
       logger.warn(
-        { providerId, lon, lat },
+        { providerId },
         "routing provider returned a non-finite waypoint coordinate; falling back to straight line"
       );
+      logger.debug({ providerId, lon, lat }, "non-finite waypoint coordinate");
       return false;
     }
   }

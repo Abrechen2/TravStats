@@ -150,10 +150,14 @@ describe("createOpenRouteService", () => {
     expect(result).toEqual({ failure: reason });
   });
 
-  it("logs the status and ORS's own code and message, never the key", async () => {
+  it("logs the status and ORS's own code at warn, the stop-quoting message only at debug, never the key", async () => {
     const warn = jest.spyOn(logger, "warn").mockImplementation(() => logger);
+    const debug = jest.spyOn(logger, "debug").mockImplementation(() => logger);
+    // ORS quotes the user's stop coordinates in its error text.
+    const orsText =
+      "Could not find routable point within a radius of 350.0 meters of specified coordinate 1: 13.4050 52.5200.";
     const fetchImpl = jest.fn(async () =>
-      jsonResponse(404, { error: { code: 2010, message: "Could not find routable point" } })
+      jsonResponse(404, { error: { code: 2010, message: orsText } })
     );
     const provider = createOpenRouteService(
       "super-secret-key",
@@ -163,15 +167,16 @@ describe("createOpenRouteService", () => {
     await provider.route(roadRequest());
 
     expect(warn).toHaveBeenCalledWith(
-      expect.objectContaining({
-        status: 404,
-        orsCode: 2010,
-        orsMessage: "Could not find routable point",
-      }),
+      expect.objectContaining({ status: 404, orsCode: 2010 }),
       expect.any(String)
     );
-    expect(JSON.stringify(warn.mock.calls)).not.toContain("super-secret-key");
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("52.5200");
+    expect(debug).toHaveBeenCalledWith(expect.objectContaining({ orsMessage: orsText }));
+    expect(JSON.stringify([...warn.mock.calls, ...debug.mock.calls])).not.toContain(
+      "super-secret-key"
+    );
     warn.mockRestore();
+    debug.mockRestore();
   });
 
   it("reports a provider error when the error body is not JSON", async () => {
