@@ -280,6 +280,10 @@ router.get(
           // Kept originals (forgejo#116): the rows — what each is, where it is
           // filed, what its parse read. The bytes stay out, as a photo's do.
           documents: true,
+          // The answers to trip suggestions: without them a restored account
+          // would be asked again every question it already dismissed. The
+          // suggestions themselves are derived and never stored.
+          tripSuggestionAnswers: true,
           userAchievements: {
             include: {
               achievement: true,

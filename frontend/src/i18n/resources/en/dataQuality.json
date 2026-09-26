@@ -95,6 +95,87 @@
       "resolveFailed": "Your answer could not be saved.",
       "dismissFailed": "Your answer could not be saved.",
       "runFailed": "The check could not be started."
+    },
+    "tripSuggestions": {
+      "title": "Trip suggestions",
+      "description": "Derived from your entries: when you were away and what belongs together. Suggestions only — nothing is created or linked until you accept.",
+      "nameFallback": "Trip",
+      "planned": "planned",
+      "capped": "Showing {{shown}} of {{total}} suggestions — answer some and the next ones move up.",
+      "truncated": "Your logbook is larger than one analysis reads. Some suggestions may be missing.",
+      "zoneUnknown_one": "{{count}} entry has no known time zone for its place — its day may be off by one.",
+      "zoneUnknown_other": "{{count}} entries have no known time zone for their place — their day may be off by one.",
+      "kind": {
+        "new_trip": "New trip?",
+        "assign": "Part of a trip?",
+        "extend": "Extend a trip?",
+        "place_visit": "Were you here?"
+      },
+      "reason": {
+        "newTrip": "{{entries}}, {{nights}} away from home",
+        "entries_one": "{{count}} entry",
+        "entries_other": "{{count}} entries",
+        "nights_one": "{{count}} night",
+        "nights_other": "{{count}} nights",
+        "assign_one": "{{count}} entry fits “{{trip}}”",
+        "assign_other": "{{count}} entries fit “{{trip}}”",
+        "extend_one": "{{count}} entry would extend “{{trip}}” to {{span}}",
+        "extend_other": "{{count}} entries would extend “{{trip}}” to {{span}}",
+        "placeVisit": "You were here that day: “{{anchor}}” was {{distance}} m away."
+      },
+      "signals": {
+        "pnr": "same booking reference",
+        "home_loop": "out and back from your home airport",
+        "continuity": "connecting flights without a gap"
+      },
+      "creates": {
+        "new_trip": "Accepting creates the trip and links every entry listed.",
+        "assign": "Accepting links the listed entries to this trip.",
+        "extend": "Accepting links the entries and sets the trip's dates to the new span.",
+        "place_visit": "Accepting records a visit on that day."
+      },
+      "edit": {
+        "name": "Name",
+        "start": "Start",
+        "end": "End",
+        "members": "Include these entries",
+        "visitDay": "Day of the visit"
+      },
+      "actions": {
+        "accept": "Accept",
+        "acceptEdited": "Accept as edited",
+        "edit": "Edit",
+        "dismiss": "Dismiss",
+        "retry": "Reload"
+      },
+      "home": {
+        "missing": "No home airport set — without a home there is no telling when you were away. Only trips your flights themselves form are suggested.",
+        "link": "Set your home airport",
+        "estimated": "No home airport set: your most-flown airport counts as home."
+      },
+      "empty": {
+        "title": "No trip suggestions",
+        "description": "Everything that belongs together is already in a trip. New entries are checked here."
+      },
+      "messages": {
+        "accepted": {
+          "new_trip": "Trip created and entries linked.",
+          "assign": "Entries linked to the trip.",
+          "extend": "Trip extended and entries linked.",
+          "place_visit": "Visit recorded."
+        },
+        "dismissed": "Dismissed. This suggestion only returns if its entries change substantially."
+      },
+      "errors": {
+        "loadFailed": "The trip suggestions could not be loaded.",
+        "loadFailedHint": "That does not mean there are none. Try again in a moment.",
+        "acceptFailed": "The suggestion could not be accepted. Nothing was changed.",
+        "dismissFailed": "The suggestion could not be dismissed.",
+        "stale": "The suggestion has changed in the meantime — an entry was moved or deleted. Nothing was changed; the list has been reloaded.",
+        "selection": "The selection does not match the suggestion. Nothing was changed.",
+        "endBeforeStart": "The end is before the start.",
+        "noMembers": "Choose at least one entry."
+      }
     }
   },
   "flag": {

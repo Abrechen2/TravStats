@@ -23,6 +23,7 @@ import flightRoutes from "./flights";
 import flightEntrySuggestionRoutes from "./flights/entrySuggestions";
 import upcomingRoutes from "./upcoming";
 import photoJourneyRoutes from "./photoJourneys";
+import tripSuggestionRoutes from "./tripSuggestions";
 import flightLookupRoutes from "./flightLookup";
 import statsRoutes from "./stats";
 import airportRoutes from "./airports";
@@ -157,6 +158,8 @@ export const apiMounts: ApiMount[] = [
   // so the strip never depends on which tab happens to have loaded.
   { id: "upcoming", base: "/api/v1/upcoming", router: upcomingRoutes },
   { id: "photoJourneys", base: "/api/v1/photo-journeys", router: photoJourneyRoutes },
+  // The cross-domain trip-suggestion engine's inbox tab (owner, 2026-09-26).
+  { id: "tripSuggestions", base: "/api/v1/trip-suggestions", router: tripSuggestionRoutes },
   { id: "flightLookup", base: "/api/v1/flight-lookup", router: flightLookupRoutes },
   { id: "stats", base: "/api/v1/stats", router: statsRoutes },
   { id: "airports", base: "/api/v1/airports", router: airportRoutes },

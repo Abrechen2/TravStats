@@ -3,6 +3,7 @@ import { Link, useNavigate, useLocation } from "react-router-dom";
 import { useAuthStore } from "../store/authStore";
 import { pendingUpdatesApi } from "../lib/api";
 import { dataQualityFlagsApi } from "../lib/api/dataQualityFlags";
+import { tripSuggestionsApi } from "../lib/api/tripSuggestions";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
 import DiagnosticExportModal from "./DiagnosticExportModal";
@@ -56,9 +57,10 @@ export default function NavigationBar(): JSX.Element {
   const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation(["dashboard", "common", "dataQuality"]);
-  // Two tables, one badge — the Posteingang is one page (see useNavItems).
+  // Three sources, one badge — the Posteingang is one page (see useNavItems).
   const [pendingUpdatesCount, setPendingUpdatesCount] = useState(0);
   const [openFlagCount, setOpenFlagCount] = useState(0);
+  const [tripSuggestionCount, setTripSuggestionCount] = useState(0);
   const [diagnosticModalOpen, setDiagnosticModalOpen] = useState(false);
 
   useEffect(() => {
@@ -78,6 +80,11 @@ export default function NavigationBar(): JSX.Element {
         } catch {
           logger.warn("Failed to load data-quality flag count");
         }
+        try {
+          setTripSuggestionCount(await tripSuggestionsApi.count());
+        } catch {
+          logger.warn("Failed to load trip suggestion count");
+        }
       };
       loadInboxCounts();
       const interval = setInterval(loadInboxCounts, 30000);
@@ -90,7 +97,7 @@ export default function NavigationBar(): JSX.Element {
     navigate("/login");
   };
 
-  const inboxCount = pendingUpdatesCount + openFlagCount;
+  const inboxCount = pendingUpdatesCount + openFlagCount + tripSuggestionCount;
   const { primary, more } = useNavItems();
   const inboxActive = isPathActive("/pending-updates", location.pathname);
   const inboxLabel =

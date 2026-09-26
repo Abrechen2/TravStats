@@ -54,6 +54,13 @@ vi.mock("@/lib/api/dataQualityFlags", async (importOriginal) => {
   };
 });
 
+// The trip-suggestion count joins the badge (2026-09-26); unmocked it reaches
+// the network. Hoisted so a case can put suggestions in the inbox.
+const tripSuggestionCount = vi.hoisted(() => ({ value: 0 }));
+vi.mock("@/lib/api/tripSuggestions", () => ({
+  tripSuggestionsApi: { count: vi.fn(async () => tripSuggestionCount.value) },
+}));
+
 // Use the real settingsStore so useEnabledDomains reads actual state.
 vi.unmock("../../store/settingsStore");
 
@@ -71,6 +78,7 @@ import { useSettingsStore } from "../../store/settingsStore";
 describe("NavigationBar — round-4 header", () => {
   beforeEach(() => {
     useSettingsStore.setState({ enabledDomains: ["flight", "cruise"] });
+    tripSuggestionCount.value = 0;
   });
 
   function renderNav(path = "/dashboard") {
@@ -118,6 +126,12 @@ describe("NavigationBar — round-4 header", () => {
     const inbox = screen.getByRole("link", { name: "dataQuality:inbox.nav" });
     expect(inbox.getAttribute("href")).toBe("/pending-updates");
     expect(screen.queryByTestId("inbox-dot")).toBeNull();
+  });
+
+  it("counts open trip suggestions in the Posteingang badge", async () => {
+    tripSuggestionCount.value = 3;
+    renderNav();
+    expect(await screen.findByRole("link", { name: "dataQuality:inbox.nav (3)" })).toBeTruthy();
   });
 
   it("no longer draws Bug, Support or System in the row", () => {

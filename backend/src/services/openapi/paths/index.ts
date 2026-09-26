@@ -44,6 +44,7 @@ import "./dataQuality";
 import "./accounts";
 import "./integrations";
 import "./photoJourneys";
+import "./tripSuggestions";
 import "./catalog";
 import "./misc";
 import "./countryFlags";

@@ -143,6 +143,7 @@
     "settings/profilePicture.ts",
     "ships.ts",
     "tripPhotoWindows.ts",
+    "tripSuggestions.ts",
     "upcoming.ts",
     "uploads.ts",
     "xlsxImport.ts"
