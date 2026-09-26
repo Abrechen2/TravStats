@@ -1,16 +1,19 @@
 /**
  * Posteingang — the one place the user answers questions about their data.
  *
- * Three sections, three backends, on purpose (design §3.5, owner 2026-09-02):
+ * Four sections, four backends, on purpose (design §3.5, owner 2026-09-02):
  *
  * - **Zu prüfen** — `DataQualityFlag` rows: a record whose own two sources
  *   disagree, raised as a QUESTION. Nothing has been changed and nothing is
  *   marked correct.
  * - **Flug-Updates** — `PendingFlightUpdate` rows: a provider's proposed field
  *   values for one flight, with a diff and an apply/reject decision.
+ * - **Reise-Vorschläge** — the cross-domain trip engine's proposals (owner,
+ *   2026-09-26): derived on the server from every entry, never stored; only
+ *   the user's answer is. Lives in `components/inbox/TripSuggestionsTab`.
  * - **Foto-Reisen** — `PhotoJourney` rows: a burst of photographs nothing
- *   recorded explains. The third tab, and the only one that can be absent
- *   (forgejo#94, point 1); it lives in `components/inbox/`.
+ *   recorded explains. The only tab that can be absent (forgejo#94, point 1);
+ *   it lives in `components/inbox/`.
  *
  * `PendingFlightUpdate` carries a required `flightId`, `apiSource` and
  * `expiresAt` — it is flight-shaped by construction, and 858 lines of service
@@ -92,8 +95,8 @@ interface PendingUpdate {
 }
 
 /**
- * Three tabs since forgejo#94: the third is the photo scan's findings, and it
- * is the only one that can be absent — see `usePhotoJourneysVisible`. A `?tab=`
+ * Four tabs since the trip engine (2026-09-26). The photo scan's findings are
+ * the only one that can be absent — see `usePhotoJourneysVisible`. A `?tab=`
  * naming it while it is hidden falls back to `review` rather than opening a tab
  * that is not in the list.
  */
