@@ -65,13 +65,6 @@ describe("Wave A demo guards", () => {
       const res = await request(app).get("/api/v1/diagnostic-export").set("Cookie", userCookie);
       expect(res.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
     });
-
-    it("still serves the user-scoped diagnostics bundle to the shared demo account", async () => {
-      // `/diagnostics` is the caller's OWN data, not the server's logs, so it
-      // stays open — the guard must not be widened to the whole family.
-      const res = await request(app).get("/api/v1/diagnostics").set("Cookie", demoCookie);
-      expect(res.body.error).not.toBe("DEMO_ACCOUNT_FORBIDDEN");
-    });
   });
 
   /**

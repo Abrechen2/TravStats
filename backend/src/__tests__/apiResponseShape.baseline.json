@@ -32,7 +32,6 @@
     "cruises/include.ts",
     "cruises/queryFilters.ts",
     "diagnosticExport.ts",
-    "diagnostics.ts",
     "emailParse.ts",
     "evidence.ts",
     "flightLookup.ts",
