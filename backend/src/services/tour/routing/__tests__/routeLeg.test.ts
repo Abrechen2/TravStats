@@ -1,7 +1,7 @@
 import { describe, it, expect, jest } from "@jest/globals";
 
 import { routeLegGeometry } from "../routeLeg";
-import { RouteProvider, RouteRequest, RouteResult } from "../types";
+import { RouteFailure, RouteProvider, RouteRequest, RouteResult } from "../types";
 import { haversineKm } from "../../../../shared/geo/haversine";
 
 /**
@@ -16,9 +16,11 @@ const FROM = { lat: 52.517037, lon: 13.38886 };
 const TO = { lat: 52.529407, lon: 13.397634 };
 const CHORD_KM = haversineKm(FROM, TO);
 
-function makeProvider(routeImpl: (req: RouteRequest) => Promise<RouteResult | null>): {
+function makeProvider(
+  routeImpl: (req: RouteRequest) => Promise<RouteResult | RouteFailure | null>
+): {
   provider: RouteProvider;
-  route: jest.Mock<(req: RouteRequest) => Promise<RouteResult | null>>;
+  route: jest.Mock<(req: RouteRequest) => Promise<RouteResult | RouteFailure | null>>;
 } {
   const route = jest.fn(routeImpl);
   return { provider: { id: "graphhopper", route }, route };
@@ -49,6 +51,7 @@ describe("routeLegGeometry", () => {
       source: "routed",
       confidence: "high",
       drivingMinutes: 4,
+      fallbackReason: null,
     });
     expect(route).toHaveBeenCalledTimes(1);
     expect(route).toHaveBeenCalledWith({ from: FROM, to: TO, mode: "road" });
@@ -64,7 +67,26 @@ describe("routeLegGeometry", () => {
     expect(result.waypoints).toBeNull();
     expect(result.drivingMinutes).toBeNull();
     expect(result.distanceKm).toBeCloseTo(CHORD_KM, 6);
+    expect(result.fallbackReason).toBe("provider_error");
     expect(route).toHaveBeenCalledTimes(1);
+  });
+
+  it("a provider that names its failure passes the cause on with the chord", async () => {
+    const { provider } = makeProvider(async () => ({ failure: "point_not_near_road" as const }));
+
+    const result = await routeLegGeometry(provider, { from: FROM, to: TO, mode: "road" });
+
+    expect(result.source).toBe("straight");
+    expect(result.confidence).toBe("low");
+    expect(result.fallbackReason).toBe("point_not_near_road");
+  });
+
+  it("hands the roadtrip's vehicle to the provider", async () => {
+    const { provider, route } = makeProvider(async () => null);
+
+    await routeLegGeometry(provider, { from: FROM, to: TO, mode: "road", vehicle: "bicycle" });
+
+    expect(route).toHaveBeenCalledWith({ from: FROM, to: TO, mode: "road", vehicle: "bicycle" });
   });
 
   it("case 3: provider === null uses the same straight fallback, without needing a provider at all", async () => {
@@ -76,6 +98,7 @@ describe("routeLegGeometry", () => {
       source: "straight",
       confidence: "low",
       drivingMinutes: null,
+      fallbackReason: "no_provider",
     });
   });
 

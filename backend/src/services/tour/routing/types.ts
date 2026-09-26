@@ -7,6 +7,12 @@ export interface RouteRequest {
   from: Coord;
   to: Coord;
   mode: LegMode;
+  /**
+   * The roadtrip's vehicle, when the leg belongs to one (`TripRoute.vehicle`).
+   * A provider may refine its profile by it — a bicycle roadtrip's road leg is
+   * ridden, not driven. Absent or null means "no vehicle known".
+   */
+  vehicle?: string | null;
 }
 
 /**
@@ -22,11 +28,53 @@ export interface RouteResult {
 }
 
 /**
+ * Why a leg ended up a straight chord instead of a routed line. Carried in the
+ * routing endpoints' responses so a client can say WHY ("the point is not near
+ * a road", "the key was refused") instead of a bare "no route found" — a
+ * tester pressed "Strecke berechnen" and saw nothing happen, because every one
+ * of these collapsed into the same silent straight line (2026-09-26).
+ *
+ *  - `no_provider` — the instance has no routing provider configured.
+ *  - `unroutable_mode` — ferry or rail; never sent to a road router.
+ *  - `provider_error` — network error, 5xx, unreadable answer, or an adapter
+ *    that reports failure without a cause.
+ *  - `no_route` — the provider found no route between the two points.
+ *  - `point_not_near_road` — a stop is too far from anything routable.
+ *  - `rate_limited` — the provider's quota answered 429.
+ *  - `auth` — the provider refused the key (401/403).
+ *  - `untrustworthy` — the provider answered, but its line did not anchor at
+ *    the stops or its distance was implausible (see `routeLeg.ts`).
+ */
+export const ROUTE_FALLBACK_REASONS = [
+  "no_provider",
+  "unroutable_mode",
+  "provider_error",
+  "no_route",
+  "point_not_near_road",
+  "rate_limited",
+  "auth",
+  "untrustworthy",
+] as const;
+export type RouteFallbackReason = (typeof ROUTE_FALLBACK_REASONS)[number];
+
+/** A provider's "could not route this", with the cause it could identify. */
+export interface RouteFailure {
+  failure: RouteFallbackReason;
+}
+
+export function isRouteFailure(value: RouteResult | RouteFailure | null): value is RouteFailure {
+  return value !== null && "failure" in value;
+}
+
+/**
  * A routing provider that can answer route queries.
+ *
+ * Never throws for a routing failure. `null` is "could not route this" with no
+ * cause known (read as `provider_error`); a `RouteFailure` names the cause.
  */
 export interface RouteProvider {
   readonly id: RoutingProviderId;
-  route(req: RouteRequest): Promise<RouteResult | null>;
+  route(req: RouteRequest): Promise<RouteResult | RouteFailure | null>;
 }
 
 export const ROUTING_PROVIDER_IDS = ["openrouteservice", "graphhopper", "custom"] as const;

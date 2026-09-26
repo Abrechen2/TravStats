@@ -1,7 +1,13 @@
 import { haversineKm } from "../../../shared/geo/haversine";
 import logger from "../../../utils/logger";
 import { Coord, LegMode, legDistanceKm } from "../tourDistance";
-import { isRoutableMode, RouteProvider, RouteResult } from "./types";
+import {
+  isRouteFailure,
+  isRoutableMode,
+  RouteFallbackReason,
+  RouteProvider,
+  RouteResult,
+} from "./types";
 
 /**
  * Result of routing (or deliberately not routing) a single leg.
@@ -17,6 +23,8 @@ export interface RoutedLeg {
   source: "routed" | "straight";
   confidence: "high" | "low";
   drivingMinutes: number | null;
+  /** Why this leg is a straight chord; null when the provider's line was kept. */
+  fallbackReason: RouteFallbackReason | null;
 }
 
 /**
@@ -69,10 +77,12 @@ const MIN_CHORD_FOR_SANITY_KM = 0.5;
 interface StraightFallbackArgs {
   from: Coord;
   to: Coord;
+  reason: RouteFallbackReason;
 }
 
-function straightFallback({ from, to }: StraightFallbackArgs): RoutedLeg {
+function straightFallback({ from, to, reason }: StraightFallbackArgs): RoutedLeg {
   return {
+    fallbackReason: reason,
     waypoints: null,
     distanceKm: legDistanceKm({ source: "straight", from, to }),
     source: "straight",
@@ -184,22 +194,28 @@ function isTrustworthy(
  */
 export async function routeLegGeometry(
   provider: RouteProvider | null,
-  input: { from: Coord; to: Coord; mode: LegMode }
+  input: { from: Coord; to: Coord; mode: LegMode; vehicle?: string | null }
 ): Promise<RoutedLeg> {
-  const { from, to, mode } = input;
+  const { from, to, mode, vehicle } = input;
 
-  if (!isRoutableMode(mode) || provider === null) {
-    return straightFallback({ from, to });
+  if (!isRoutableMode(mode)) {
+    return straightFallback({ from, to, reason: "unroutable_mode" });
+  }
+  if (provider === null) {
+    return straightFallback({ from, to, reason: "no_provider" });
   }
 
-  const result = await provider.route({ from, to, mode });
+  const result = await provider.route({ from, to, mode, vehicle });
   if (result === null) {
-    return straightFallback({ from, to });
+    return straightFallback({ from, to, reason: "provider_error" });
+  }
+  if (isRouteFailure(result)) {
+    return straightFallback({ from, to, reason: result.failure });
   }
 
   const chordKm = haversineKm(from, to);
   if (!isTrustworthy(result, from, to, chordKm, provider.id)) {
-    return straightFallback({ from, to });
+    return straightFallback({ from, to, reason: "untrustworthy" });
   }
 
   return {
@@ -208,5 +224,6 @@ export async function routeLegGeometry(
     source: "routed",
     confidence: "high",
     drivingMinutes: result.drivingMinutes,
+    fallbackReason: null,
   };
 }

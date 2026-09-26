@@ -9,6 +9,9 @@ import type {
   TourTrackMeta,
   LegMode,
   LegSource,
+  RouteAllResult,
+  RouteFallbackReason,
+  RouteLegResult,
 } from "../../types/tour";
 
 export interface CreateTourRouteInput {
@@ -228,20 +231,28 @@ export const toursApi = {
    * **409**, distinct from every other error this call can raise — the
    * caller must surface that as its own message, not the generic
    * "leg could not be changed" text `setLeg`'s failures use. A provider
-   * that IS configured but fails still answers 200: the returned leg's
-   * `confidence` is `"low"` and `source` reverts to `"straight"`, an
-   * honest fallback rather than an error.
+   * that IS configured but fails still answers 200 with `fallbackReason`
+   * set: a straight leg stays straight (`confidence: "low"`), any other leg
+   * is left as it was. The caller must read the reason — a 200 alone is not
+   * "routed".
    */
   routeLeg: async (
     tripId: string | undefined,
     routeId: string,
     fromStopId: string,
     toStopId: string
-  ): Promise<TourLeg> => {
-    const { data } = await api.post<{ leg: TourLeg }>(
+  ): Promise<RouteLegResult> => {
+    const { data } = await api.post<{ leg: TourLeg; fallbackReason?: RouteFallbackReason | null }>(
       `${sectionPath(tripId, routeId)}/legs/${fromStopId}/${toStopId}/route`
     );
-    return data.leg;
+    // A server from before the reason existed: a low-confidence answer is a fallback.
+    const fallbackReason =
+      data.fallbackReason !== undefined
+        ? data.fallbackReason
+        : data.leg.confidence === "low"
+          ? "provider_error"
+          : null;
+    return { leg: data.leg, fallbackReason };
   },
 
   /**
@@ -249,20 +260,19 @@ export const toursApi = {
    * (`POST .../route-all` — `backend/src/routes/trips/tourRouting.ts`).
    * Unlike `routeLeg` above, this never 409s on an unconfigured provider —
    * it degrades every routable leg to its honest straight-chord fallback
-   * and still answers 200. `routedCount`/`skippedCount` are the honest
-   * report the caller must show, never a blanket "success" toast.
+   * and still answers 200. `routedCount`/`fallbackCount`/`skippedCount` are
+   * the honest report the caller must show, never a blanket "success" toast.
    */
-  routeAll: async (
-    tripId: string | undefined,
-    routeId: string
-  ): Promise<{ route: TourRoute; legs: TourLeg[]; routedCount: number; skippedCount: number }> => {
-    const { data } = await api.post<{
-      route: TourRoute;
-      legs: TourLeg[];
-      routedCount: number;
-      skippedCount: number;
-    }>(`${sectionPath(tripId, routeId)}/route-all`);
-    return data;
+  routeAll: async (tripId: string | undefined, routeId: string): Promise<RouteAllResult> => {
+    const { data } = await api.post<
+      Omit<RouteAllResult, "fallbackCount" | "fallbackReason"> &
+        Partial<Pick<RouteAllResult, "fallbackCount" | "fallbackReason">>
+    >(`${sectionPath(tripId, routeId)}/route-all`);
+    return {
+      ...data,
+      fallbackCount: data.fallbackCount ?? 0,
+      fallbackReason: data.fallbackReason ?? null,
+    };
   },
 
   /**

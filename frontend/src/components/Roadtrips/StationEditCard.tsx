@@ -10,10 +10,21 @@ import { nextMorning } from "../../lib/roadtrip/roadtripView";
 import type { StationState } from "../../shared/tour/roadtrip";
 import StationMarker from "./StationMarker";
 import StayPicker, { type PickableStay } from "./StayPicker";
+import { isOtherPlace } from "./stayPickerModel";
 import type { EditorStation } from "./useStationAutosave";
 import type { Lodging } from "../../types/lodging";
 
 const KINDS: StationState[] = ["stay", "free", "pass"];
+
+/** Where the station's linked lodging is: picked just now, or found in the library. */
+function linkedPlace(
+  station: EditorStation,
+  lodgings: Lodging[] | null
+): { lat: number | null; lon: number | null } | null {
+  if (station.stayPlace) return station.stayPlace;
+  const lodging = lodgings?.find((l) => l.id === station.stayLodgingId);
+  return lodging ? { lat: lodging.lat ?? null, lon: lodging.lon ?? null } : null;
+}
 
 const HUE: Record<StationState, string> = {
   stay: "var(--domain-lodging)",
@@ -66,25 +77,56 @@ export default function StationEditCard({
         night: { kind: "stay", lodgingStayId: null },
         stayLabel: undefined,
         stayCancelled: false,
+        stayLodgingId: undefined,
+        stayPlace: undefined,
       });
       setPicking(true);
       return;
     }
-    onChange({ night: { kind: next }, stayLabel: undefined, stayCancelled: false });
+    onChange({
+      night: { kind: next },
+      stayLabel: undefined,
+      stayCancelled: false,
+      stayLodgingId: undefined,
+      stayPlace: undefined,
+    });
     setPicking(false);
   };
 
+  /**
+   * Linking a stay places a station that has no point yet at its lodging —
+   * without that the station waited forever on "Ort fehlt" and nothing was
+   * saved (tester 2026-09-26). A station that already has a point keeps it;
+   * the card offers the lodging's instead of moving it.
+   */
   const pickStay = (stay: PickableStay): void => {
+    const unplaced = station.lat === null || station.lon === null;
+    const lodgingPlaced = stay.lat !== null && stay.lon !== null;
     onChange({
       night: { kind: "stay", lodgingStayId: stay.id },
       stayLabel: stay.label,
       stayCancelled: stay.cancelled,
+      stayLodgingId: stay.lodgingId,
+      stayPlace: { lat: stay.lat, lon: stay.lon },
       startDate: station.startDate || stay.checkIn,
       endDate: station.endDate || stay.checkOut,
       title: station.title.trim() === "" ? stay.label : station.title,
+      ...(unplaced && lodgingPlaced ? { lat: stay.lat, lon: stay.lon } : {}),
     });
     setPicking(false);
   };
+
+  const stayPlace = kind === "stay" ? linkedPlace(station, lodgings) : null;
+  const stayUnplaced = stayPlace !== null && (stayPlace.lat === null || stayPlace.lon === null);
+  const adoptable =
+    stayPlace !== null &&
+    stayPlace.lat !== null &&
+    stayPlace.lon !== null &&
+    station.lat !== null &&
+    station.lon !== null &&
+    isOtherPlace({ lat: station.lat, lon: station.lon }, { lat: stayPlace.lat, lon: stayPlace.lon })
+      ? { lat: stayPlace.lat, lon: stayPlace.lon }
+      : null;
 
   const choiceStyle = (k: StationState): CSSProperties => {
     const on = k === kind;
@@ -239,6 +281,16 @@ export default function StationEditCard({
               <Button variant="secondary" onClick={() => setPicking(true)}>
                 {t("roadtrips:stay.change")}
               </Button>
+              {adoptable && (
+                <Button variant="secondary" onClick={() => onChange(adoptable)}>
+                  {t("roadtrips:stay.adoptPlace")}
+                </Button>
+              )}
+              {stayUnplaced && (
+                <span className="w-full" style={{ fontSize: 12, color: "var(--ts-warn)" }}>
+                  {t("roadtrips:stay.noCoords")}
+                </span>
+              )}
             </div>
           ) : (
             <StayPicker

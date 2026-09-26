@@ -100,7 +100,18 @@
     "linked": "verknüpfte Unterkunft",
     "change": "ändern",
     "cancelled": "storniert — zählt keine Nacht",
-    "fitsDate": "passt zum Datum"
+    "fitsDate": "passt zum Datum",
+    "nearbyTitle": "Aufenthalte zu diesen Daten",
+    "lodgingsTitle": "Deine Unterkünfte",
+    "lodgingNoStay": "noch kein Aufenthalt",
+    "back": "← Andere Unterkunft",
+    "noStays": "Diese Unterkunft hat noch keinen Aufenthalt.",
+    "noFit": "Kein Aufenthalt passt zu den Daten der Station.",
+    "createStay": "Aufenthalt {{from}} – {{to}} anlegen und verknüpfen",
+    "createStayUndated": "Aufenthalt ohne Datum anlegen und verknüpfen",
+    "createStayFailed": "Der Aufenthalt konnte nicht angelegt werden.",
+    "noCoords": "Für diese Unterkunft ist kein Ort gespeichert — setz den Ort der Station selbst.",
+    "adoptPlace": "Ort der Unterkunft übernehmen"
   },
   "review": {
     "title_one": "Ein Eintrag wurde beim Update auf 2.7 automatisch eingeordnet",
@@ -347,7 +358,9 @@
     "drawnHint": "Im Etappen-Editor Punkt für Punkt",
     "distance": "Strecke jetzt: {{km}} km",
     "apply": "Übernehmen",
-    "error": "Die Etappe konnte nicht gespeichert werden."
+    "error": "Die Etappe konnte nicht gespeichert werden.",
+    "fallback": "Keine Strecke berechnet. {{reason}}",
+    "fallbackKept": "Die Etappe bleibt, wie sie war. Wähle „Gerade Linie“, wenn du sie als Luftlinie speichern willst."
   },
   "trackArchive": {
     "downloadOne": "Als GPX",

@@ -100,7 +100,18 @@
     "linked": "linked accommodation",
     "change": "change",
     "cancelled": "cancelled — counts no night",
-    "fitsDate": "matches the dates"
+    "fitsDate": "matches the dates",
+    "nearbyTitle": "Stays on these dates",
+    "lodgingsTitle": "Your accommodation",
+    "lodgingNoStay": "no stay yet",
+    "back": "← Other accommodation",
+    "noStays": "This accommodation has no stay yet.",
+    "noFit": "No stay matches the station's dates.",
+    "createStay": "Create and link a stay {{from}} – {{to}}",
+    "createStayUndated": "Create and link an undated stay",
+    "createStayFailed": "The stay could not be created.",
+    "noCoords": "This accommodation has no location saved — set the station's location yourself.",
+    "adoptPlace": "Use the accommodation's location"
   },
   "review": {
     "title_one": "One entry was classified automatically by the 2.7 update",
@@ -347,7 +358,9 @@
     "drawnHint": "Point by point in the leg editor",
     "distance": "Distance now: {{km}} km",
     "apply": "Apply",
-    "error": "The leg could not be saved."
+    "error": "The leg could not be saved.",
+    "fallback": "No route calculated. {{reason}}",
+    "fallbackKept": "The leg stays as it was. Choose “Straight line” to save it as a straight line."
   },
   "trackArchive": {
     "downloadOne": "As GPX",
