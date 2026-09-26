@@ -19,6 +19,8 @@ vi.mock("../../../lib/api/documents", () => ({
 }));
 
 import TripDeleteConfirm from "../TripDeleteConfirm";
+import deTrips from "../../../i18n/resources/de/trips.json";
+import enTrips from "../../../i18n/resources/en/trips.json";
 
 function renderDialog(open: boolean, props: Partial<{ onConfirm: () => void }> = {}) {
   return render(
@@ -80,6 +82,18 @@ describe("TripDeleteConfirm", () => {
     await waitFor(() => expect(listForEntryMock).toHaveBeenCalled());
     expect(dialog.textContent).toContain("trips:deleteTripConfirm");
     expect(dialog.textContent).not.toContain("documents:deleteCascadeNote");
+  });
+
+  // Since 2026-09-26 an accepted trip suggestion files standalone day tours on
+  // the trip, and deleting the trip detaches them rather than deleting them.
+  // A sentence that still said "tours go with it" would scare a user off a
+  // delete that loses nothing of the kind — or, worse, read as a promise the
+  // next change could quietly break.
+  it.each([
+    ["de", deTrips.deleteTripConfirm, "eigenständigen Touren"],
+    ["en", enTrips.deleteTripConfirm, "standalone tours"],
+  ])("%s: says day tours with their own points stay as standalone tours", (_l, copy, kept) => {
+    expect(copy).toContain(kept);
   });
 
   it("confirms through to the caller", async () => {

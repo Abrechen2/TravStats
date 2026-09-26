@@ -515,6 +515,10 @@ describe("Roadtrips", () => {
     const tour = await prisma.tripRoute.create({
       data: { userId, tripId: trip.id, name: "Wanderung", mode: "foot", kind: "tour" },
     });
+    // Drawn over the timeline: its point is one of the trip's own stops.
+    await prisma.tripStop.create({
+      data: { tripId: trip.id, title: "Zeitleiste", lat: 58, lon: 6, routeId: tour.id },
+    });
     await request(app).delete(`/api/v1/trips/${trip.id}`).set("Cookie", cookie);
     expect(await prisma.tripRoute.findUnique({ where: { id: tour.id } })).toBeNull();
   });

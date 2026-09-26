@@ -1,6 +1,9 @@
 import { afterAll, beforeAll, beforeEach, describe, expect, it } from "@jest/globals";
+import request from "supertest";
 
+import app from "../../index";
 import { prisma } from "../../db";
+import { generateToken } from "../../utils/jwt";
 import { hashPassword } from "../../utils/password";
 import {
   getInstanceSettings,
@@ -145,6 +148,42 @@ describe("trip suggestions — tours join the trip", () => {
     expect((await prisma.lodgingStay.findUniqueOrThrow({ where: { id: hotel.id } })).tripId).toBe(
       result.tripId
     );
+  });
+
+  it("keeps the tour and its track when the trip the suggestion made is deleted", async () => {
+    await stay();
+    const hike = await tour("Fiesole", ["2025-05-04"]);
+    await prisma.tripRouteTrack.create({
+      data: {
+        routeId: hike.id,
+        source: "gpx",
+        startedAt: new Date("2025-05-04T08:00:00Z"),
+        endedAt: new Date("2025-05-04T12:00:00Z"),
+        geometry: [
+          [FLORENCE.lon, FLORENCE.lat],
+          [FIESOLE.lon, FIESOLE.lat],
+        ],
+        pointCount: 2,
+        distanceKm: 6,
+      },
+    });
+    const [proposal] = await newTrips();
+    const { tripId } = await acceptSuggestion(userId, proposal, { name: "Florenz" });
+
+    const res = await request(app)
+      .delete(`/api/v1/trips/${tripId}`)
+      .set("Cookie", `auth_token=${generateToken(userId)}`);
+    expect(res.status).toBe(204);
+
+    // The tour was standalone before the suggestion filed it; the trip was a
+    // folder around it, and deleting the folder must not delete the hike.
+    const kept = await prisma.tripRoute.findUnique({
+      where: { id: hike.id },
+      include: { stops: true, tracks: true },
+    });
+    expect(kept).toMatchObject({ tripId: null, kind: "tour" });
+    expect(kept?.stops).toHaveLength(1);
+    expect(kept?.tracks).toEqual([expect.objectContaining({ source: "gpx", distanceKm: 6 })]);
   });
 
   it("rolls everything back when the tour moved onto another trip in the meantime", async () => {

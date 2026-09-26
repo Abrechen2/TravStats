@@ -640,6 +640,14 @@ router.delete(
       // or a cruise does; the schema's cascade is right for a day tour drawn
       // over the trip's timeline and wrong for it. Its stations borrowed from
       // the timeline become its own first — they would go with the trip.
+      //
+      // A day tour whose points are all its own outlives the trip too: since
+      // 2026-09-26 an accepted trip suggestion files standalone tours on the
+      // trip it creates, and deleting that trip must not take the tour and
+      // its recorded tracks with it. Only a tour built from the trip's
+      // timeline stops still cascades — those stops go with the trip, and a
+      // tour left without them would be a route pointing at nothing. The
+      // same rule decides whether a route may change trip (tourRoutes.ts).
       await prisma.$transaction(async (tx) => {
         const roadtrips = await tx.tripRoute.findMany({
           where: { tripId: existing.id, kind: "roadtrip" },
@@ -653,6 +661,14 @@ router.delete(
           });
           await tx.tripRoute.updateMany({ where: { id: { in: ids } }, data: { tripId: null } });
         }
+        await tx.tripRoute.updateMany({
+          where: {
+            tripId: existing.id,
+            kind: "tour",
+            stops: { none: { tripId: { not: null } } },
+          },
+          data: { tripId: null },
+        });
         await tx.trip.delete({ where: { id: existing.id } });
       });
       logger.info({ tripId: req.params.id, userId }, "[Trips] Deleted trip");
