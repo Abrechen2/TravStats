@@ -99,6 +99,61 @@ registry.registerPath({
 });
 
 registry.registerPath({
+  method: "post",
+  path: "/places/visits/{visitId}/photo-suggestions/refusals",
+  summary: 'Refuse suggested photographs for a visit ("Nicht diese")',
+  description:
+    "Kept on the server, per visit, so the suggestion list leaves them out from then on — on " +
+    "every device (forgejo#132 item 13). Another visit is still offered the same picture. Same " +
+    "body as a link: a trip photo must be the caller's (anything else is skipped and counted); " +
+    "a library id is stored as given, since a refusal only ever narrows the caller's own list. " +
+    "Refusing one already refused adds nothing.",
+  tags: placesTag,
+  request: {
+    params: z.object({ visitId: uuid }),
+    body: { content: { "application/json": { schema: linkPicksSchema } } },
+  },
+  responses: {
+    200: {
+      description: "What was refused",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({ refused: z.number().int(), skipped: z.number().int() }),
+          }),
+        },
+      },
+    },
+    400: badInput,
+    404: notFound,
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/places/visits/{visitId}/photo-suggestions/refusals",
+  summary: "Offer a visit's refused photographs again",
+  description: "Removes every refusal of the visit; the next listing suggests them again.",
+  tags: placesTag,
+  request: { params: z.object({ visitId: uuid }) },
+  responses: {
+    200: {
+      description: "How many refusals were removed",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({ cleared: z.number().int() }),
+          }),
+        },
+      },
+    },
+    404: notFound,
+  },
+});
+
+registry.registerPath({
   method: "get",
   path: "/places/visits/{visitId}/photo-suggestions/library/{assetId}/file",
   summary: "Thumbnail of a suggested library photo",

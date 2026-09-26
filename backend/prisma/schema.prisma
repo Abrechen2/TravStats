@@ -103,6 +103,7 @@ model User {
   lodgingChains          LodgingChain[]
   places                 Place[]
   placeVisits            PlaceVisit[]
+  visitPhotoRefusals     VisitPhotoRefusal[]
   placeLists             PlaceList[]
   importBatches          ImportBatch[]
   companions             Companion[]
@@ -2542,6 +2543,7 @@ model PlaceVisit {
   trip  Trip? @relation(fields: [tripId], references: [id], onDelete: SetNull)
 
   photos PlaceVisitPhoto[]
+  photoRefusals VisitPhotoRefusal[]
 
   documents Document[]
 
@@ -2641,6 +2643,29 @@ model PlaceVisitPhoto {
   @@index([placeVisitId])
   @@index([tripPhotoId])
   @@map("place_visit_photos")
+}
+
+/// A photo suggestion the user refused for one visit ("Nicht diese",
+/// forgejo#132 item 13), so the suggestion list stops offering it. Per visit:
+/// the same picture may well belong to another visit. `suggestionId` is a trip
+/// photo id for kind "trip" and an Immich asset id for kind "library" — no
+/// foreign key, because a library asset lives outside this database; a trip
+/// photo deleted later leaves a refusal that simply matches nothing.
+model VisitPhotoRefusal {
+  id           String   @id @default(uuid())
+  userId       String   @map("user_id")
+  placeVisitId String   @map("place_visit_id")
+  /// "trip" | "library"
+  kind         String
+  suggestionId String   @map("suggestion_id")
+  createdAt    DateTime @default(now()) @map("created_at")
+
+  user  User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  visit PlaceVisit @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
+
+  @@unique([placeVisitId, kind, suggestionId])
+  @@index([userId])
+  @@map("visit_photo_refusals")
 }
 
 /// A user's own grouping of places — "Maccis weltweit", "Rom 2024".
