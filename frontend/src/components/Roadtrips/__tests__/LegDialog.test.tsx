@@ -10,7 +10,10 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
 }));
 vi.mock("../../../lib/api/tours", () => ({
-  toursApi: { setLeg: vi.fn(async () => ({})), routeLeg: vi.fn(async () => ({})) },
+  toursApi: {
+    setLeg: vi.fn(async () => ({})),
+    routeLeg: vi.fn(async () => ({ leg: {}, fallbackReason: null })),
+  },
 }));
 
 const LEG: TourLeg = {
@@ -27,12 +30,16 @@ const LEG: TourLeg = {
   currency: null,
 };
 
-function renderDialog(routingAvailable = true, onSaved = vi.fn()): ReturnType<typeof vi.fn> {
+function renderDialog(
+  routingAvailable = true,
+  onSaved = vi.fn(),
+  leg: TourLeg = LEG
+): ReturnType<typeof vi.fn> {
   render(
     <MemoryRouter>
       <LegDialog
         routeId="rt"
-        leg={LEG}
+        leg={leg}
         from={{ id: "a", title: "Gudvangen" }}
         to={{ id: "b", title: "Kaupanger" }}
         routingAvailable={routingAvailable}
@@ -66,6 +73,49 @@ describe("LegDialog", () => {
     fireEvent.click(screen.getByText("roadtrips:legDialog.apply"));
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(toursApi.routeLeg).toHaveBeenCalledWith(undefined, "rt", "a", "b");
+  });
+
+  it("stays open and says why when the provider could not route the leg", async () => {
+    vi.mocked(toursApi.routeLeg).mockResolvedValueOnce({
+      leg: LEG,
+      fallbackReason: "point_not_near_road",
+    });
+    const onSaved = renderDialog();
+    fireEvent.click(screen.getByRole("radio", { name: /roadtrips:legDialog.routed/ }));
+    fireEvent.click(screen.getByText("roadtrips:legDialog.apply"));
+
+    expect(await screen.findByText("roadtrips:legDialog.fallback")).toBeInTheDocument();
+    expect(screen.getByText("roadtrips:legDialog.fallbackKept")).toBeInTheDocument();
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it("does not flatten a drawn leg to a straight line before trying to route it", async () => {
+    vi.mocked(toursApi.routeLeg).mockResolvedValueOnce({ leg: LEG, fallbackReason: "no_route" });
+    renderDialog(true, vi.fn(), {
+      ...LEG,
+      source: "drawn",
+      waypoints: [
+        [6.8, 60.9],
+        [7.2, 61.2],
+      ],
+    });
+    fireEvent.click(screen.getByRole("radio", { name: /roadtrips:legDialog.routed/ }));
+    fireEvent.click(screen.getByText("roadtrips:legDialog.apply"));
+
+    await screen.findByText("roadtrips:legDialog.fallback");
+    expect(toursApi.setLeg).not.toHaveBeenCalled();
+  });
+
+  it("saves a straight line when the reader picks one", async () => {
+    const onSaved = renderDialog(true, vi.fn(), { ...LEG, source: "drawn" });
+    fireEvent.click(screen.getByRole("radio", { name: /roadtrips:legDialog.straight/ }));
+    fireEvent.click(screen.getByText("roadtrips:legDialog.apply"));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(toursApi.setLeg).toHaveBeenCalledWith(undefined, "rt", "a", "b", {
+      source: "straight",
+      mode: "road",
+    });
+    expect(toursApi.routeLeg).not.toHaveBeenCalled();
   });
 
   it("says why there is no routing when the instance has no provider", () => {

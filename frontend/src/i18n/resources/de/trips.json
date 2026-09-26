@@ -360,7 +360,18 @@
       "error": "Die Etappe konnte nicht berechnet werden",
       "allError": "Die Tour konnte nicht berechnet werden",
       "fallback": "Es wurde keine Route gefunden — die Luftlinie bleibt bestehen",
-      "result": "{{routed}} Etappen verarbeitet, {{skipped}} übersprungen"
+      "result": "{{routed}} Etappen berechnet, {{skipped}} übersprungen",
+      "resultFallback": "{{routed}} Etappen berechnet, {{fallback}} als Luftlinie belassen, {{skipped}} übersprungen. {{reason}}",
+      "reason": {
+        "no_provider": "Auf dieser Instanz ist kein Routing-Anbieter eingerichtet.",
+        "unroutable_mode": "Fähren und Bahnstrecken werden nicht entlang der Straße berechnet.",
+        "provider_error": "Der Routing-Anbieter hat nicht geantwortet oder einen Fehler gemeldet.",
+        "no_route": "Der Routing-Anbieter kennt keinen Weg zwischen diesen beiden Orten.",
+        "point_not_near_road": "Ein Ort liegt mehr als einen Kilometer von der nächsten Straße entfernt — Ort der Station prüfen.",
+        "rate_limited": "Das Anfragelimit des Routing-Anbieters ist erreicht. Später noch einmal versuchen.",
+        "auth": "Der Routing-Anbieter hat den API-Schlüssel abgelehnt — Schlüssel in den Einstellungen prüfen.",
+        "untrustworthy": "Die Antwort des Routing-Anbieters passte nicht zu den beiden Orten und wurde verworfen."
+      }
     },
     "tracks": {
       "heading": "Aufgezeichnete Tracks",

@@ -347,7 +347,9 @@
     "drawnHint": "Im Etappen-Editor Punkt für Punkt",
     "distance": "Strecke jetzt: {{km}} km",
     "apply": "Übernehmen",
-    "error": "Die Etappe konnte nicht gespeichert werden."
+    "error": "Die Etappe konnte nicht gespeichert werden.",
+    "fallback": "Keine Strecke berechnet. {{reason}}",
+    "fallbackKept": "Die Etappe bleibt, wie sie war. Wähle „Gerade Linie“, wenn du sie als Luftlinie speichern willst."
   },
   "trackArchive": {
     "downloadOne": "Als GPX",

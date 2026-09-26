@@ -360,7 +360,18 @@
       "error": "The leg could not be routed",
       "allError": "The tour could not be routed",
       "fallback": "No route could be found — kept the straight line",
-      "result": "{{routed}} legs processed, {{skipped}} skipped"
+      "result": "{{routed}} legs routed, {{skipped}} skipped",
+      "resultFallback": "{{routed}} legs routed, {{fallback}} left as straight lines, {{skipped}} skipped. {{reason}}",
+      "reason": {
+        "no_provider": "No routing provider is configured for this instance.",
+        "unroutable_mode": "Ferry and rail legs are not routed along roads.",
+        "provider_error": "The routing provider did not answer or reported an error.",
+        "no_route": "The routing provider knows no way between these two places.",
+        "point_not_near_road": "A place lies more than a kilometre from the nearest road — check the station's location.",
+        "rate_limited": "The routing provider's request limit is reached. Try again later.",
+        "auth": "The routing provider refused the API key — check the key in the settings.",
+        "untrustworthy": "The routing provider's answer did not fit the two places and was discarded."
+      }
     },
     "tracks": {
       "heading": "Recorded tracks",

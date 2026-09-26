@@ -347,7 +347,9 @@
     "drawnHint": "Point by point in the leg editor",
     "distance": "Distance now: {{km}} km",
     "apply": "Apply",
-    "error": "The leg could not be saved."
+    "error": "The leg could not be saved.",
+    "fallback": "No route calculated. {{reason}}",
+    "fallbackKept": "The leg stays as it was. Choose “Straight line” to save it as a straight line."
   },
   "trackArchive": {
     "downloadOne": "As GPX",

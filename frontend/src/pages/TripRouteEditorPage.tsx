@@ -361,7 +361,7 @@ export default function TripRouteEditorPage(): JSX.Element {
 
   const handleSetLegSource = useCallback(
     (leg: TourLeg, source: "straight" | "drawn"): void => {
-      if (!id || !routeId) return;
+      if (!routeId) return;
       void (async (): Promise<void> => {
         try {
           await toursApi.setLeg(id, routeId, leg.fromStopId, leg.toStopId, { source });
@@ -385,16 +385,28 @@ export default function TripRouteEditorPage(): JSX.Element {
    * fallback is not an error — `load()` picks up the honest result (source
    * reverts to "straight") and a distinct info toast says so, rather than
    * silently looking like nothing happened.
+   *
+   * These leg handlers need a section, not a trip: a standalone tour or
+   * roadtrip has no trip id, and until 2026-09-26 an `!id` guard made its
+   * "route" buttons return before sending anything.
    */
   const handleRouteLeg = useCallback(
     (leg: TourLeg): void => {
-      if (!id || !routeId) return;
+      if (!routeId) return;
       void (async (): Promise<void> => {
         try {
-          const routed = await toursApi.routeLeg(id, routeId, leg.fromStopId, leg.toStopId);
+          const { fallbackReason } = await toursApi.routeLeg(
+            id,
+            routeId,
+            leg.fromStopId,
+            leg.toStopId
+          );
           await load();
-          if (routed.confidence === "low") {
-            addToast("info", t("trips:tours.routing.fallback"));
+          if (fallbackReason !== null) {
+            addToast(
+              "info",
+              `${t("trips:tours.routing.fallback")} ${t(`trips:tours.routing.reason.${fallbackReason}`)}`
+            );
           }
         } catch (err) {
           if (apiErrorStatus(err) === 409) {
@@ -420,7 +432,7 @@ export default function TripRouteEditorPage(): JSX.Element {
    * that quietly routed zero legs because no provider is configured.
    */
   const handleRouteAll = useCallback((): void => {
-    if (!id || !routeId) return;
+    if (!routeId) return;
     setRoutingAllInProgress(true);
     void (async (): Promise<void> => {
       try {
@@ -429,10 +441,19 @@ export default function TripRouteEditorPage(): JSX.Element {
         if (!mountedRef.current) return;
         addToast(
           "info",
-          t("trips:tours.routing.result", {
-            routed: result.routedCount,
-            skipped: result.skippedCount,
-          })
+          result.fallbackCount > 0
+            ? t("trips:tours.routing.resultFallback", {
+                routed: result.routedCount,
+                fallback: result.fallbackCount,
+                skipped: result.skippedCount,
+                reason: result.fallbackReason
+                  ? t(`trips:tours.routing.reason.${result.fallbackReason}`)
+                  : "",
+              })
+            : t("trips:tours.routing.result", {
+                routed: result.routedCount,
+                skipped: result.skippedCount,
+              })
         );
       } catch (err) {
         addToast("error", apiErrorMessage(err) ?? t("trips:tours.routing.allError"));
@@ -444,7 +465,7 @@ export default function TripRouteEditorPage(): JSX.Element {
 
   const handleClearLeg = useCallback(
     (leg: TourLeg): void => {
-      if (!id || !routeId) return;
+      if (!routeId) return;
       void (async (): Promise<void> => {
         try {
           await toursApi.clearLeg(id, routeId, leg.fromStopId, leg.toStopId);
@@ -468,7 +489,7 @@ export default function TripRouteEditorPage(): JSX.Element {
    */
   const handleAdoptTrack = useCallback(
     (leg: TourLeg, trackId: string): void => {
-      if (!id || !routeId) return;
+      if (!routeId) return;
       void (async (): Promise<void> => {
         try {
           await toursApi.setLeg(id, routeId, leg.fromStopId, leg.toStopId, {

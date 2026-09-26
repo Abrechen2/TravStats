@@ -413,6 +413,7 @@ export default function RoadtripDetailPage(): JSX.Element {
           to={legEdit.to}
           routingAvailable={detail.routingAvailable}
           onClose={() => setLegEdit(null)}
+          onChanged={() => void load()}
           onSaved={() => {
             setLegEdit(null);
             void load();

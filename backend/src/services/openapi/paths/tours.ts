@@ -35,6 +35,7 @@ import {
 } from "../../../schemas/tour";
 import { LEG_MODES, LEG_SOURCES } from "../../../services/tour/tourDistance";
 import { kindFieldsSchema } from "../../../schemas/roadtrip";
+import { ROUTE_FALLBACK_REASONS } from "../../../services/tour/routing/types";
 import {
   STORED_ROADTRIP_VEHICLES,
   ROUTE_KINDS,
@@ -53,6 +54,16 @@ const legSource = z
       "branch, phase 3b task 5)."
   );
 const confidence = z.enum(["low", "medium", "high"]);
+const fallbackReason = z
+  .enum(ROUTE_FALLBACK_REASONS)
+  .nullable()
+  .describe(
+    "Why the leg is a straight chord instead of a routed line; null when the " +
+      "provider's line was kept. 'point_not_near_road' — a stop is too far from " +
+      "a routable road; 'no_route' — none between the points; 'auth' — the key " +
+      "was refused; 'rate_limited' — the provider's quota; 'untrustworthy' — " +
+      "the answer did not fit the stops; 'provider_error' — anything else."
+  );
 
 const tourRoute = registry.register(
   "TourRoute",
@@ -564,9 +575,10 @@ registerSectionPath({
     "instance has configured (admin settings, plus a per-user API key " +
     "where the provider needs one) and stores the result. A ferry or rail " +
     "leg, or a provider answer that does not anchor to the leg's stops or " +
-    "looks implausible, still comes back 200 — the leg falls back to its " +
-    'straight chord with `confidence: "low"`, an honest result rather ' +
-    "than an error. Only a genuinely unconfigured instance (no provider at " +
+    "looks implausible, still comes back 200 — a straight leg stays its " +
+    'straight chord with `confidence: "low"`, a drawn, adopted or routed ' +
+    "leg is left as it was, and `fallbackReason` names the cause — an " +
+    "honest result rather than an error. Only a genuinely unconfigured instance (no provider at " +
     "all) is refused, and with 409 rather than 400 — the request itself is " +
     "fine, the instance just cannot answer it.",
   tags: ["Tours"],
@@ -574,7 +586,9 @@ registerSectionPath({
   responses: {
     200: {
       description: "Leg routed (or honestly left as a straight chord)",
-      content: { "application/json": { schema: z.object({ leg: tourLeg }) } },
+      content: {
+        "application/json": { schema: z.object({ leg: tourLeg, fallbackReason }) },
+      },
     },
     404: { description: "Trip, section or leg not found", content: errorContent },
     409: {
@@ -594,9 +608,10 @@ registerSectionPath({
     "untouched. Unlike the single-leg endpoint above, an unconfigured " +
     "provider does not 409 here — every routable leg simply falls back to " +
     "its straight chord, same as an individual provider failure would, and " +
-    "the response says so honestly via `routedCount` (legs run through the " +
-    "routing pipeline, whatever the outcome) and `skippedCount` (legs left " +
-    "alone because their mode is not routable). This always answers 200: " +
+    "the response says so honestly via `routedCount` (legs the provider " +
+    "routed), `fallbackCount` (legs left a straight chord, with the first " +
+    "cause in `fallbackReason`) and `skippedCount` (legs left alone because " +
+    "their mode is not routable). This always answers 200: " +
     "routing that did not produce a route is not a request error.",
   tags: ["Tours"],
   request: { params: routeIdParams },
@@ -608,7 +623,12 @@ registerSectionPath({
           schema: z.object({
             route: tourRoute,
             legs: z.array(tourLeg),
-            routedCount: z.number().int().describe("Legs run through the routing pipeline"),
+            routedCount: z.number().int().describe("Legs the provider routed"),
+            fallbackCount: z
+              .number()
+              .int()
+              .describe("Legs sent to the provider that stayed a straight chord"),
+            fallbackReason,
             skippedCount: z.number().int().describe("Legs left alone — ferry/rail, not routable"),
           }),
         },
