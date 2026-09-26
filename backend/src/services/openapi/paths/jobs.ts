@@ -34,7 +34,10 @@ export const jobSchema = z.object({
       code: z.string().openapi({
         description:
           "Stable cause, e.g. `RESTORE_ENCRYPTION_KEY_MISMATCH`, `backup_failed`, or " +
-          "`JOB_FAILED` for an unexpected failure. Never prose.",
+          "`JOB_FAILED` for an unexpected failure. A backup/restore job names its cause: " +
+          "`BACKUP_TOOL_MISSING`, `BACKUP_DISK_FULL`, `BACKUP_PERMISSION_DENIED`, " +
+          "`BACKUP_DB_UNREACHABLE`, `BACKUP_TOOL_VERSION_MISMATCH`, else `BACKUP_FAILED` / " +
+          "`RESTORE_FAILED`. Never prose.",
       }),
       status: z.number().int().openapi({
         description: "The HTTP status the same failure would have answered synchronously.",

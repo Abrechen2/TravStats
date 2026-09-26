@@ -6,6 +6,7 @@ import { format } from "date-fns";
 import { logger } from "../../lib/logger";
 import { apiErrorMachineCode, extractApiErrorMessage } from "../../lib/apiError";
 import { JobLostError, jobErrorCode, waitForJob } from "../../lib/api/jobs";
+import { backupFailureKey } from "../../lib/backupFailure";
 import { useTranslation } from "../../hooks/useTranslation";
 // The shared frame: role=dialog, aria-modal, Escape, focus in and back out,
 // and a panel that scrolls instead of running off a 320px screen (AUD-037).
@@ -290,7 +291,7 @@ export default function BackupManagement(): JSX.Element {
         t(
           error instanceof JobLostError
             ? "admin:backup.toasts.outcomeUnknown"
-            : "admin:backup.toasts.createFailed"
+            : backupFailureKey(error, "admin:backup.toasts.createFailed")
         )
       );
     } finally {
@@ -375,7 +376,7 @@ export default function BackupManagement(): JSX.Element {
           addToast("error", t("admin:backup.restore.archiveUnreadable"));
           break;
         default:
-          addToast("error", t("admin:backup.toasts.restoreFailed"));
+          addToast("error", t(backupFailureKey(error, "admin:backup.toasts.restoreFailed")));
       }
     } finally {
       setRestoring(false);

@@ -96,7 +96,22 @@ export type ApiErrorCode =
   /** The server's time zone lookup is broken (not "this point has no zone").
    *  A local time cannot be interpreted, so the write is refused rather than
    *  stored as UTC — see `utils/geoTimezone.ts`. */
-  | "TIMEZONE_LOOKUP_UNAVAILABLE";
+  | "TIMEZONE_LOOKUP_UNAVAILABLE"
+  /** Backup / restore job failures — see `services/backup/backupFailure.ts`.
+   *  A tool (pg_dump, psql, tar) is not installed where the server runs. */
+  | "BACKUP_TOOL_MISSING"
+  /** The backup volume ran out of space. */
+  | "BACKUP_DISK_FULL"
+  /** The server may not read or write the backup directory. */
+  | "BACKUP_PERMISSION_DENIED"
+  /** The database could not be reached by the dump/restore tool. */
+  | "BACKUP_DB_UNREACHABLE"
+  /** pg_dump is older than the database server it dumps. */
+  | "BACKUP_TOOL_VERSION_MISMATCH"
+  /** A backup failed for a cause not recognised above; detail in the log. */
+  | "BACKUP_FAILED"
+  /** A restore failed for a cause not recognised above; detail in the log. */
+  | "RESTORE_FAILED";
 
 interface AuthRequest extends Request {
   user?: {

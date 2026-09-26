@@ -1,5 +1,6 @@
 import { Router, Response, NextFunction } from "express";
 import { authenticate, requireAdmin, AuthRequest } from "../middleware/auth";
+import { asBackupJobError } from "../services/backup/backupFailure";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
 import { prisma } from "../db";
@@ -150,7 +151,12 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
           dbBackupPath,
           filesBackupPath,
         },
-      }).then((backupId) => ({ backupId }))
+      }).then(
+        (backupId) => ({ backupId }),
+        (err: unknown) => {
+          throw asBackupJobError(err, "BACKUP_FAILED");
+        }
+      )
     );
 
     res.status(202).json({
@@ -360,11 +366,15 @@ router.post(
       // as the job's error code, before anything was written, exactly as they
       // did as a response.
       const job = startJob("backup.restore", req.userId!, async () => {
-        await restoreBackup(id, {
-          scope: body.scope,
-          createBackupBefore: body.createBackupBefore,
-          acceptEncryptionKeyChange: body.acceptEncryptionKeyChange,
-        });
+        try {
+          await restoreBackup(id, {
+            scope: body.scope,
+            createBackupBefore: body.createBackupBefore,
+            acceptEncryptionKeyChange: body.acceptEncryptionKeyChange,
+          });
+        } catch (err) {
+          throw asBackupJobError(err, "RESTORE_FAILED");
+        }
         return { backupId: id, scope: body.scope };
       });
 

@@ -615,6 +615,15 @@
       "created": "Backup created",
       "restored": "Backup restored",
       "outcomeUnknown": "The server no longer reports the outcome — check the backup list before trying again."
+    },
+    "failure": {
+      "BACKUP_TOOL_MISSING": "The backup tool (pg_dump, psql or tar) is not installed on the server. The official Docker image ships it — on your own installation, please install the PostgreSQL client tools.",
+      "BACKUP_DISK_FULL": "The backup drive is full. Delete old backups or enlarge the volume.",
+      "BACKUP_PERMISSION_DENIED": "The server may not read or write the backup directory. Please check the permissions of the data volume.",
+      "BACKUP_DB_UNREACHABLE": "The backup tool cannot reach the database. Please check that the database is running and the connection settings are right.",
+      "BACKUP_TOOL_VERSION_MISMATCH": "pg_dump is older than the database server. Please update the PostgreSQL client tools to the server's version.",
+      "BACKUP_FAILED": "The backup failed. The cause is in the server log.",
+      "RESTORE_FAILED": "The restore failed. The cause is in the server log."
     }
   },
   "feedback": {
