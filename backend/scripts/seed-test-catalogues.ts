@@ -16,7 +16,9 @@ import { seedAirportsFromCSV } from "../src/seedAirportsFromCSV";
 import { ensureAchievements } from "../src/data/achievements";
 
 async function backfillAirportTimezones(): Promise<number> {
-  const { find } = await import("geo-tz");
+  // The same full dataset the server derives zones from (utils/geoTimezone.ts);
+  // the package default folds zones that keep today's clock (CAMP-03).
+  const { zoneAt } = await import("../src/utils/geoTimezone");
   const airports = await prisma.airport.findMany({
     where: { timezone: null },
     select: { id: true, lat: true, lon: true },
@@ -24,7 +26,7 @@ async function backfillAirportTimezones(): Promise<number> {
 
   let updated = 0;
   for (const a of airports) {
-    const [zone] = find(a.lat, a.lon);
+    const zone = zoneAt(a.lat, a.lon);
     if (!zone) continue;
     await prisma.airport.update({ where: { id: a.id }, data: { timezone: zone } });
     updated += 1;

@@ -92,7 +92,11 @@ export type ApiErrorCode =
   /** Dawarich pull: Dawarich answered, with no points in the window. */
   | "DAWARICH_WINDOW_EMPTY"
   /** Dawarich pull: a single point in the window — too few for a track. */
-  | "DAWARICH_TOO_FEW_POINTS";
+  | "DAWARICH_TOO_FEW_POINTS"
+  /** The server's time zone lookup is broken (not "this point has no zone").
+   *  A local time cannot be interpreted, so the write is refused rather than
+   *  stored as UTC — see `utils/geoTimezone.ts`. */
+  | "TIMEZONE_LOOKUP_UNAVAILABLE";
 
 interface AuthRequest extends Request {
   user?: {

@@ -107,7 +107,7 @@ export async function refreshAirportTimezonesOnStartup(): Promise<void> {
   try {
     changed += await backfillAirportTimezones();
   } catch (error) {
-    logger.warn({
+    logger.error({
       operation: "server_start_timezone_backfill_error",
       message: "Failed to backfill airport timezones",
       error,
@@ -116,7 +116,7 @@ export async function refreshAirportTimezonesOnStartup(): Promise<void> {
   try {
     changed += await repairFoldedAirportTimezones();
   } catch (error) {
-    logger.warn({
+    logger.error({
       operation: "server_start_timezone_repair_error",
       message: "Failed to repair folded airport timezones",
       error,

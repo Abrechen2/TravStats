@@ -1,8 +1,4 @@
-// The FULL dataset. geo-tz's default is "now", which folds every zone that
-// keeps today's clock into one name: Bangkok came back as Asia/Jakarta
-// (CAMP-03). `moduleResolution: node` cannot see this exports subpath, so
-// tsconfig `paths` maps its types; Node resolves it at runtime as it is.
-import { find as findTimezone } from "geo-tz/all";
+import { zoneAt } from "../utils/geoTimezone";
 import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
@@ -594,12 +590,9 @@ export async function enrichFlightAirports(flightData: {
  * Returns null if no timezone can be determined.
  */
 export function deriveTimezone(lat: number, lon: number): string | null {
-  try {
-    const zones = findTimezone(lat, lon);
-    return zones.length > 0 ? zones[0] : null;
-  } catch {
-    return null;
-  }
+  // Null for a coordinate off the globe; a broken lookup THROWS, so neither
+  // the backfill nor the one-time repair can record "done" over nothing.
+  return zoneAt(lat, lon);
 }
 
 /**

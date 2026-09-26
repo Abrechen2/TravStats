@@ -19,6 +19,18 @@ describe("saveErrorMessage", () => {
     expect(saveErrorMessage(err, t, "form.saveError")).toBe("common:saveErrors.validation");
   });
 
+  // Acceptance 2026-09-26: a broken zone lookup stored a local time as UTC in
+  // silence. The server now refuses with a code; the form must say why.
+  it("names a broken time zone lookup instead of the generic sentence", () => {
+    const err = refused(503, {
+      error: "Time zone lookup unavailable: find is not a function",
+      code: "TIMEZONE_LOOKUP_UNAVAILABLE",
+    });
+    expect(saveErrorMessage(err, t, "form.saveError")).toBe(
+      "common:saveErrors.timezoneUnavailable"
+    );
+  });
+
   it("lets a caller's own codes win, e.g. a track without timestamps", () => {
     const err = refused(400, {
       error: "This recording has no timestamps, so it cannot be placed in time",
