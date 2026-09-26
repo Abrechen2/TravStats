@@ -20,7 +20,7 @@ const day = z.string().describe("Local calendar day, YYYY-MM-DD");
 
 const member = z.object({
   key: z.string().describe("`domain:id`"),
-  domain: z.enum(["flight", "rail", "cruise", "lodging", "place", "roadtrip"]),
+  domain: z.enum(["flight", "rail", "cruise", "lodging", "place", "roadtrip", "tour"]),
   id: z.string(),
   label: z.string(),
   startDay: day,

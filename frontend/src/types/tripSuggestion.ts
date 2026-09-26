@@ -5,7 +5,9 @@
 
 export type TripSuggestionKind = "new_trip" | "assign" | "extend" | "place_visit";
 
-export type TripSuggestionDomain = "flight" | "rail" | "cruise" | "lodging" | "place" | "roadtrip";
+/** A day tour joins the trip it happened on (owner decision 2026-09-26). */
+export type TripSuggestionDomain =
+  "flight" | "rail" | "cruise" | "lodging" | "place" | "roadtrip" | "tour";
 
 export interface TripSuggestionMember {
   /** `domain:id` — what an accept names to keep a member. */

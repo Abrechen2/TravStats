@@ -130,8 +130,11 @@ export async function loadPlaceVisits(
 }
 
 /**
- * Roadtrips (linkable: a roadtrip is the one route kind that moves onto a trip)
- * and standalone tours (presence only — the tour API keeps their points).
+ * Roadtrips and standalone tours. A roadtrip is always linkable; a tour is
+ * linkable when it is a single-day tour (owner decision 2026-09-26: day tours
+ * join the trip they happened on). A multi-day tour stays presence only. Tours
+ * already on a trip are not loaded at all — they are that trip's, and are
+ * never moved.
  */
 export async function loadRoutes(userId: string, today: string): Promise<Loaded> {
   const rows = await prisma.tripRoute.findMany({
@@ -177,15 +180,17 @@ export async function loadRoutes(userId: string, today: string): Promise<Loaded>
     if (points.length === 0) continue;
     const days = points.map((p) => p.day).sort();
     const roadtrip = row.kind === "roadtrip";
+    const startDay = days[0];
+    const endDay = days[days.length - 1];
     entries.push({
       key: `${roadtrip ? "roadtrip" : "tour"}:${row.id}`,
       domain: roadtrip ? "roadtrip" : "tour",
       id: row.id,
       tripId: row.tripId,
-      linkable: roadtrip,
-      state: datedPresence(days[days.length - 1], today) === "happened" ? "happened" : "planned",
-      startDay: days[0],
-      endDay: days[days.length - 1],
+      linkable: roadtrip || startDay === endDay,
+      state: datedPresence(endDay, today) === "happened" ? "happened" : "planned",
+      startDay,
+      endDay,
       points: [...points].sort((a, b) => a.day.localeCompare(b.day) || a.hour - b.hour),
       nights,
       label: row.name,

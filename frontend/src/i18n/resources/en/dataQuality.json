@@ -105,6 +105,7 @@
       "truncated": "Your logbook is larger than one analysis reads. Some suggestions may be missing.",
       "zoneUnknown_one": "{{count}} entry has no known time zone for its place — its day may be off by one.",
       "zoneUnknown_other": "{{count}} entries have no known time zone for their place — their day may be off by one.",
+      "tourNote": "Day tours without a trip are linked too; tours that already belong to a trip stay where they are.",
       "kind": {
         "new_trip": "New trip?",
         "assign": "Part of a trip?",

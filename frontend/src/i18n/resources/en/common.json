@@ -168,6 +168,7 @@
     "poi_desc": "Landmarks, restaurants, concerts, any place.",
     "roadtrip": "Roadtrips",
     "roadtrip_desc": "Multi-day journeys by motorhome, car or bike: stations, nights, the road between.",
+    "tour": "Tours",
     "rail": "Rail",
     "rail_desc": "Train journeys like flights: stations, train number, class, seat, kilometres. (Beta)"
   },

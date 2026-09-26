@@ -119,6 +119,10 @@ export default function TripSuggestionCard({
         </ul>
       )}
 
+      {suggestion.members.some((m) => m.domain === "tour") && (
+        <p className="t-caption mt-2">{t(`${NS}.tourNote`)}</p>
+      )}
+
       {editing ? (
         <TripSuggestionEditor
           suggestion={suggestion}

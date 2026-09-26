@@ -70,10 +70,48 @@ async function linkMembers(
     ids("roadtrip").length
       ? tx.tripRoute.updateMany({ where: { ...where("roadtrip"), kind: "roadtrip" }, data })
       : null,
+    ids("tour").length ? linkTours(tx, userId, tripId, ids("tour")) : null,
   ]);
   const linked = counts.reduce((n, c) => n + (c?.count ?? 0), 0);
   if (linked !== members.length) throw staleError();
   return linked;
+}
+
+/**
+ * Day tours join the trip through their own trip link (owner decision
+ * 2026-09-26). Only a tour with no trip, whose points are all its own, moves:
+ * a section built from a trip's timeline stops belongs to that trip. Each tour
+ * is ordered after the trip's existing sections, as `POST /tours` orders a new
+ * one, so the trip's route list keeps a total order.
+ */
+async function linkTours(
+  tx: Tx,
+  userId: string,
+  tripId: string,
+  tourIds: readonly string[]
+): Promise<{ count: number }> {
+  const last = await tx.tripRoute.findFirst({
+    where: { userId, tripId },
+    orderBy: { orderIdx: "desc" },
+    select: { orderIdx: true },
+  });
+  let orderIdx = last ? last.orderIdx + 1 : 0;
+  let count = 0;
+  for (const id of tourIds) {
+    const moved = await tx.tripRoute.updateMany({
+      where: {
+        id,
+        userId,
+        kind: "tour",
+        tripId: null,
+        stops: { none: { tripId: { not: null } } },
+      },
+      data: { tripId, orderIdx },
+    });
+    count += moved.count;
+    orderIdx += 1;
+  }
+  return { count };
 }
 
 function chosenMembers(proposal: TripSuggestion, edits: AcceptEdits): TripSuggestion["members"] {

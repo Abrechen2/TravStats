@@ -101,6 +101,40 @@ describe("TripSuggestionsTab", () => {
     expect(onCount).toHaveBeenCalledWith(1);
   });
 
+  // Owner decision 2026-09-26: a day tour joins the trip it happened on, and
+  // the card says which tours move — only those without a trip of their own.
+  it("lists a day tour as a member and says only trip-less tours move", async () => {
+    vi.mocked(tripSuggestionsApi.list).mockResolvedValue(
+      listOf([
+        {
+          ...italy,
+          members: [
+            ...italy.members,
+            {
+              key: "tour:c",
+              domain: "tour",
+              id: "c",
+              label: "Fiesole",
+              startDay: "2025-05-04",
+              endDay: "2025-05-04",
+              planned: false,
+            },
+          ],
+        },
+      ])
+    );
+    renderTab();
+    expect(await screen.findByText("Fiesole")).toBeInTheDocument();
+    expect(screen.getByText("common:domain.tour")).toBeInTheDocument();
+    expect(screen.getByText(`${NS}.tourNote`)).toBeInTheDocument();
+  });
+
+  it("says nothing about tours when no tour is a member", async () => {
+    renderTab();
+    await screen.findByText("Hotel Florenz");
+    expect(screen.queryByText(`${NS}.tourNote`)).not.toBeInTheDocument();
+  });
+
   it("accepts with the localized name, confirms, and reloads", async () => {
     vi.mocked(tripSuggestionsApi.accept).mockResolvedValue({
       tripId: "t1",

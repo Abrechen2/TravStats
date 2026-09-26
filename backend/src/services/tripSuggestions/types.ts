@@ -7,16 +7,21 @@
  * a database.
  */
 
-/** Domains whose rows can be linked to a trip by accepting a proposal. */
-export type LinkableDomain = "flight" | "rail" | "cruise" | "lodging" | "place" | "roadtrip";
+/**
+ * Domains whose rows can be linked to a trip by accepting a proposal. A tour is
+ * linkable only as a SINGLE-DAY tour with no trip yet (owner decision
+ * 2026-09-26, "tours join the trip"): it joins through its own trip link, and
+ * a tour already on a trip is never moved — the tour API refuses that too.
+ */
+export type LinkableDomain =
+  "flight" | "rail" | "cruise" | "lodging" | "place" | "roadtrip" | "tour";
 
 /**
- * Every domain that says where the user was. A standalone tour and an accepted
- * photo journey locate the user but cannot be linked: a tour's points belong to
- * the tour (the tour API refuses to move one onto a trip), and a photo journey
- * is an answer, not an entry.
+ * Every domain that says where the user was. A multi-day tour and an accepted
+ * photo journey locate the user but are never linked: a multi-day tour is a
+ * journey of its own, and a photo journey is an answer, not an entry.
  */
-export type PresenceDomain = LinkableDomain | "tour" | "photo";
+export type PresenceDomain = LinkableDomain | "photo";
 
 export interface Coordinate {
   lat: number;

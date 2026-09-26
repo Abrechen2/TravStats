@@ -105,6 +105,7 @@
       "truncated": "Dein Logbuch ist größer, als eine Auswertung liest. Einige Vorschläge können fehlen.",
       "zoneUnknown_one": "Bei {{count}} Eintrag ist die Zeitzone des Ortes unbekannt — sein Tag kann um einen abweichen.",
       "zoneUnknown_other": "Bei {{count}} Einträgen ist die Zeitzone des Ortes unbekannt — ihr Tag kann um einen abweichen.",
+      "tourNote": "Tagestouren ohne Reise werden mit verknüpft; Touren, die schon zu einer Reise gehören, bleiben, wo sie sind.",
       "kind": {
         "new_trip": "Neue Reise?",
         "assign": "Gehört zu einer Reise?",
