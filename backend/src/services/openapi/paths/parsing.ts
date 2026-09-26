@@ -104,6 +104,15 @@ registry.registerPath({
                   "now lives in services/parsers/llmAvailability.ts and " +
                   "flights, cruises and lodging all answer from it."
               ),
+            llmUnreachable: z
+              .literal(true)
+              .optional()
+              .describe(
+                "Present only when `flights` is empty AND a configured LLM could " +
+                  "not be asked (unreachable or failed mid-parse): the empty list " +
+                  "is then the templates' answer alone, not a finding that the " +
+                  "mail holds no flight."
+              ),
             subject: z.string().optional(),
             documentId: z
               .string()

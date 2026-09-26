@@ -66,6 +66,8 @@ export interface EmailParseResult {
   text?: string;
   html?: string;
   airlineNotice?: string | null;
+  /** Nothing found AND the configured AI parser could not be asked. */
+  llmUnreachable?: boolean;
 }
 
 /** Generic message response */
