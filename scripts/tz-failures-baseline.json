@@ -1,16 +1,7 @@
 {
   "backend": {
-    "America/St_Johns": [
-      "src/__tests__/utils.timezone.test.ts::convertAviationstackTimeToUtc — format acceptance accepts ISO-ish format with seconds and T separator",
-      "src/__tests__/utils.timezone.test.ts::convertAviationstackTimeToUtc — format acceptance accepts space-separator format WITHOUT seconds (the 2026-04-14 bug)",
-      "src/__tests__/utils.timezone.test.ts::convertAviationstackTimeToUtc — format acceptance accepts space-separator format with seconds",
-      "src/__tests__/utils.timezone.test.ts::convertAviationstackTimeToUtc — format acceptance strips trailing Z before parsing"
-    ],
+    "America/St_Johns": [],
     "Pacific/Kiritimati": [
-      "src/__tests__/utils.timezone.test.ts::convertAviationstackTimeToUtc — format acceptance accepts ISO-ish format with seconds and T separator",
-      "src/__tests__/utils.timezone.test.ts::convertAviationstackTimeToUtc — format acceptance accepts space-separator format WITHOUT seconds (the 2026-04-14 bug)",
-      "src/__tests__/utils.timezone.test.ts::convertAviationstackTimeToUtc — format acceptance accepts space-separator format with seconds",
-      "src/__tests__/utils.timezone.test.ts::convertAviationstackTimeToUtc — format acceptance strips trailing Z before parsing",
       "src/utils/__tests__/achievementChecks.partF.test.ts::calculateUserStats — kurios expansion counters counts Friday-the-13th, Christmas and palindrome-date flights"
     ]
   },
