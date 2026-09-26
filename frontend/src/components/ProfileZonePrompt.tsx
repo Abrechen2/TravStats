@@ -61,6 +61,7 @@ export default function ProfileZonePrompt({
   const deferKey = `${PROFILE_ZONE_DEFER_KEY_PREFIX}${userId ?? ""}`;
   const [deferred, setDeferred] = useState(() => readDeferred(deferKey));
   const [zone, setZone] = useState<string>(() => deviceZone() ?? "UTC");
+  const [followsDevice, setFollowsDevice] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const zoneGroups = useMemo(() => groupTimeZones(zone), [zone]);
@@ -79,9 +80,8 @@ export default function ProfileZonePrompt({
     setSaving(true);
     setError(null);
     try {
-      const { display } = useSettingsStore.getState();
-      // The whole display group: the server replaces a group, it does not merge it.
-      await settingsApi.update({ display: { ...display, timezone: zone } });
+      // The narrow write: only the zone (and the opt-in), merged server-side.
+      await settingsApi.updateProfileZone({ zone, followsDevice });
       // Marks the zone confirmed (profileZoneStore) and closes the dialog.
       useSettingsStore.getState().setDisplay({ timezone: zone });
     } catch (err: unknown) {
@@ -158,6 +158,15 @@ export default function ProfileZonePrompt({
             </optgroup>
           ))}
         </select>
+      </label>
+      <label className="mt-3 flex items-start gap-2 text-sm">
+        <input
+          type="checkbox"
+          className="mt-1"
+          checked={followsDevice}
+          onChange={(e) => setFollowsDevice(e.target.checked)}
+        />
+        <span>{t("settings:profileZone.followsDevice")}</span>
       </label>
       {error && (
         <p role="alert" className="mt-3 text-sm" style={{ color: "var(--danger)" }}>

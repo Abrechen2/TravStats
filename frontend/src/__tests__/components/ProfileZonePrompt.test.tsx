@@ -13,7 +13,7 @@ vi.mock("../../hooks/useTranslation", async () => {
   const { germanUseTranslationNs } = await import("../helpers/germanT");
   return { useTranslation: germanUseTranslationNs };
 });
-vi.mock("../../lib/api", () => ({ settingsApi: { update: vi.fn() } }));
+vi.mock("../../lib/api", () => ({ settingsApi: { updateProfileZone: vi.fn() } }));
 vi.mock("../../shared/time", async (importOriginal) => {
   const actual = await importOriginal<typeof import("../../shared/time")>();
   return { ...actual, deviceZone: () => "America/St_Johns" };
@@ -35,7 +35,9 @@ const prompt = (props: Partial<{ otherDialogOpen: boolean }> = {}) =>
  */
 describe("ProfileZonePrompt", () => {
   beforeEach(() => {
-    vi.mocked(settingsApi.update).mockReset().mockResolvedValue({});
+    vi.mocked(settingsApi.updateProfileZone)
+      .mockReset()
+      .mockResolvedValue({} as never);
     useProfileZoneStore.getState().reset();
     signIn();
     window.sessionStorage.clear();
@@ -68,19 +70,17 @@ describe("ProfileZonePrompt", () => {
     expect(screen.queryByText("Deine Zeitzone")).not.toBeInTheDocument();
   });
 
-  it("writes the confirmed zone with the whole display group, then never asks again", async () => {
-    useSettingsStore.setState({
-      display: { ...useSettingsStore.getState().display, theme: "dark" },
-    });
+  it("writes the confirmed zone through the narrow write, then never asks again", async () => {
     useProfileZoneStore.getState().noteRemote({ display: {} });
     const { rerender } = prompt();
     fireEvent.change(screen.getByLabelText("Vorschlag von deinem Gerät"), {
       target: { value: "Asia/Tokyo" },
     });
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
-    await waitFor(() => expect(settingsApi.update).toHaveBeenCalledTimes(1));
-    expect(vi.mocked(settingsApi.update).mock.calls[0][0]).toEqual({
-      display: expect.objectContaining({ timezone: "Asia/Tokyo", theme: "dark" }),
+    await waitFor(() => expect(settingsApi.updateProfileZone).toHaveBeenCalledTimes(1));
+    expect(settingsApi.updateProfileZone).toHaveBeenCalledWith({
+      zone: "Asia/Tokyo",
+      followsDevice: false,
     });
     await waitFor(() => expect(screen.queryByText("Deine Zeitzone")).not.toBeInTheDocument());
     expect(useProfileZoneStore.getState().status).toBe("confirmed");
@@ -90,8 +90,30 @@ describe("ProfileZonePrompt", () => {
     expect(screen.queryByText(/in UTC/)).not.toBeInTheDocument();
   });
 
+  it("the Companion's follow-the-device opt-in travels with the zone", async () => {
+    useProfileZoneStore.getState().noteRemote({ display: {} });
+    prompt();
+    fireEvent.click(screen.getByRole("checkbox", { name: /Companion-App/ }));
+    fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));
+    await waitFor(() =>
+      expect(settingsApi.updateProfileZone).toHaveBeenCalledWith({
+        zone: "America/St_Johns",
+        followsDevice: true,
+      })
+    );
+  });
+
+  it("believes the server's own verdict over a display value", () => {
+    useProfileZoneStore.getState().noteRemote({
+      display: { timezone: "Europe/Berlin" },
+      profileZone: { hasProfileZone: false },
+    });
+    prompt();
+    expect(screen.getByText("Deine Zeitzone")).toBeInTheDocument();
+  });
+
   it("a failed write stays open and says so in German", async () => {
-    vi.mocked(settingsApi.update).mockRejectedValue({ isAxiosError: true });
+    vi.mocked(settingsApi.updateProfileZone).mockRejectedValue({ isAxiosError: true });
     useProfileZoneStore.getState().noteRemote({ display: {} });
     prompt();
     fireEvent.click(screen.getByRole("button", { name: "Übernehmen" }));

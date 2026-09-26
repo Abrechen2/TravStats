@@ -914,6 +914,7 @@
     "later": "Later",
     "setNow": "Set time zone now",
     "utcHint": "Until you confirm a time zone, TravStats counts “today” in UTC.",
-    "saveError": "The time zone could not be saved. Please try again."
+    "saveError": "The time zone could not be saved. Please try again.",
+    "followsDevice": "On my phone (Companion app), keep the time zone in step with where I am."
   }
 }

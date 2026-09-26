@@ -914,6 +914,7 @@
     "later": "Später",
     "setNow": "Zeitzone jetzt festlegen",
     "utcHint": "Solange du keine Zeitzone bestätigt hast, rechnet TravStats „heute“ in UTC.",
-    "saveError": "Die Zeitzone konnte nicht gespeichert werden. Bitte versuche es noch einmal."
+    "saveError": "Die Zeitzone konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
+    "followsDevice": "Auf meinem Handy (Companion-App) soll sich die Zeitzone automatisch dem Aufenthaltsort anpassen."
   }
 }

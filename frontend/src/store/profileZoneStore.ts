@@ -29,9 +29,17 @@ interface ProfileZoneState {
 export const useProfileZoneStore = create<ProfileZoneState>((set) => ({
   status: "unknown",
   noteRemote: (remote) => {
-    const zone = (remote as { display?: { timezone?: unknown } } | null | undefined)?.display
-      ?.timezone;
-    set({ status: typeof zone === "string" && isValidZone(zone) ? "confirmed" : "missing" });
+    const body = remote as
+      | { profileZone?: { hasProfileZone?: unknown }; display?: { timezone?: unknown } }
+      | null
+      | undefined;
+    // The server's own verdict when it sends one (ADR 0002 phase 2); an older
+    // server is read the way it reads itself: a valid `display.timezone`.
+    const verdict = body?.profileZone?.hasProfileZone;
+    const zone = body?.display?.timezone;
+    const has =
+      typeof verdict === "boolean" ? verdict : typeof zone === "string" && isValidZone(zone);
+    set({ status: has ? "confirmed" : "missing" });
   },
   markConfirmed: () => set({ status: "confirmed" }),
   reset: () => set({ status: "unknown" }),
