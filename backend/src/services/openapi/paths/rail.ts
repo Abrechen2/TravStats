@@ -170,7 +170,7 @@ registry.registerPath({
         .min(1900)
         .max(2200)
         .optional()
-        .describe("Calendar year of the departure instant, read in UTC"),
+        .describe("Calendar year of the departure, on the departure station's calendar"),
       tripId: z.string().uuid().optional(),
       limit: z.coerce.number().int().min(1).max(500).optional(),
       offset: z.coerce.number().int().min(0).optional(),

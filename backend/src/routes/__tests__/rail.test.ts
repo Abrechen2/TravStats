@@ -301,6 +301,25 @@ describe("Rail journeys API", () => {
       const year = await request(app).get("/api/v1/rail?year=2025").set("Cookie", cookie);
       expect(year.body.data).toHaveLength(1);
     });
+
+    // Review 2026-09-26, finding 8: the year was read in UTC, so a ride leaving
+    // Frankfurt at 00:30 on New Year's Day (23:30Z the day before) was listed
+    // under the old year — unlike the statistics, which use the station's day.
+    it("files a ride under the year it left on its station's calendar", async () => {
+      const ride = await create({
+        ...base,
+        departureLocal: "2026-01-01T00:30",
+        arrivalLocal: "2026-01-01T04:30",
+      });
+      expect(ride.body.data.departureTime).toBe("2025-12-31T23:30:00.000Z");
+      const list = (year: number) =>
+        request(app).get(`/api/v1/rail?year=${year}`).set("Cookie", cookie);
+      expect((await list(2026)).body.data.map((j: { id: string }) => j.id)).toEqual([
+        ride.body.data.id,
+      ]);
+      expect((await list(2026)).body.meta.total).toBe(1);
+      expect((await list(2025)).body.data).toEqual([]);
+    });
   });
 
   describe("single journey", () => {

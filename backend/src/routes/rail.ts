@@ -31,6 +31,7 @@ import {
 import { resolveStationInput } from "../services/rail/railStations";
 import { bindConnection } from "../services/rail/railConnection";
 import { recomputeTripStatus } from "../services/tripStatusService";
+import { railYear } from "../shared/railCounting";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
@@ -136,19 +137,46 @@ const requireUser = (req: AuthRequest): string => {
   return req.userId;
 };
 
-function buildWhere(query: RailQueryInput, userId: string): Prisma.RailJourneyWhereInput {
+/** The farthest a station clock runs from UTC: UTC+14 ahead, UTC−12 behind. */
+const MAX_AHEAD_OF_UTC_MS = 14 * 60 * 60 * 1000;
+const MAX_BEHIND_UTC_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * The rides that left in `year` on their departure station's calendar
+ * (review 2026-09-26, finding 8) — the rule `railYear` in
+ * `shared/railCounting.ts` already applies to the statistics. The list used
+ * UTC, so a ride leaving Berlin at 00:30 on 1 January was filed under the
+ * year before. The year is derived per row, so it cannot be one SQL range:
+ * the widest UTC window any zone could put in that year is read (ids and
+ * clocks only), the rule picks the rows, and the list query takes their ids.
+ */
+async function idsDepartingInYear(userId: string, year: number): Promise<string[]> {
+  const candidates = await prisma.railJourney.findMany({
+    where: {
+      userId,
+      departureTime: {
+        gte: new Date(Date.UTC(year, 0, 1) - MAX_AHEAD_OF_UTC_MS),
+        lt: new Date(Date.UTC(year + 1, 0, 1) + MAX_BEHIND_UTC_MS),
+      },
+    },
+    select: { id: true, departureTime: true, depTimezone: true },
+  });
+  return candidates
+    .filter((r) => railYear({ ...r, arrivalTime: null, arrTimezone: null }) === year)
+    .map((r) => r.id);
+}
+
+async function buildWhere(
+  query: RailQueryInput,
+  userId: string
+): Promise<Prisma.RailJourneyWhereInput> {
   const statuses = query.status === undefined ? undefined : [query.status].flat();
   const q = query.q;
   return {
     userId,
     ...(statuses && { status: { in: statuses } }),
     ...(query.tripId && { tripId: query.tripId }),
-    ...(query.year !== undefined && {
-      departureTime: {
-        gte: new Date(Date.UTC(query.year, 0, 1)),
-        lt: new Date(Date.UTC(query.year + 1, 0, 1)),
-      },
-    }),
+    ...(query.year !== undefined && { id: { in: await idsDepartingInYear(userId, query.year) } }),
     ...(q && {
       OR: (
         [
@@ -175,7 +203,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const query = parsed.data;
     const limit = query.limit ?? DEFAULT_LIMIT;
     const offset = query.offset ?? 0;
-    const where = buildWhere(query, userId);
+    const where = await buildWhere(query, userId);
 
     const [total, data] = await Promise.all([
       prisma.railJourney.count({ where }),

@@ -156,7 +156,7 @@ export const railQuerySchema = z.object({
   status: z.union([z.enum(RAIL_STATUSES), z.array(z.enum(RAIL_STATUSES))]).optional(),
   /** Free text over operator, train, stations and booking reference. */
   q: z.string().trim().min(1).max(100).optional(),
-  /** Calendar year of the departure, read in UTC. */
+  /** Calendar year of the departure, on the departure station's calendar. */
   year: z.coerce.number().int().min(1900).max(2200).optional(),
   tripId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
