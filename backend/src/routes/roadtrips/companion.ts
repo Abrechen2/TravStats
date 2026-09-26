@@ -9,7 +9,9 @@ import {
   appendStation,
   dayContext,
   findActiveRoadtrip,
+  removeStation,
 } from "../../services/roadtrip/companionStations";
+import { AppError } from "../../middleware/errorHandler";
 import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
 import { STATION_SELECT, toStationDto } from "../../services/roadtrip/roadtripSummary";
 import logger from "../../utils/logger";
@@ -28,15 +30,23 @@ const router = Router();
 const isoDay = z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD");
 const dayQuery = z.object({ date: isoDay });
 
-const appendSchema = z
+/** `lodgingStayId` exactly when the night is a stay (forgejo#132 item 2). */
+export const appendSchema = z
   .object({
     lat: z.number().min(-90).max(90),
     lon: z.number().min(-180).max(180),
     date: isoDay,
-    night: z.enum(["pass", "free"]),
+    night: z.enum(["pass", "free", "stay"]),
+    lodgingStayId: z.string().uuid().optional(),
     title: z.string().trim().min(1).max(200).optional(),
   })
-  .strict();
+  .strict()
+  .refine((b) => (b.night === "stay") === (b.lodgingStayId !== undefined), {
+    message: 'lodgingStayId is required with night "stay" and allowed only with it',
+    path: ["lodgingStayId"],
+  });
+
+const stationParams = z.object({ id: z.string().min(1), stationId: z.string().uuid() });
 
 async function stationsAndLegs(routeId: string) {
   const [stations, legs] = await Promise.all([
@@ -103,6 +113,33 @@ router.post(
         stations,
         legs,
       });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+/**
+ * DELETE /roadtrips/:id/stations/:stationId — take ONE station off, the
+ * phone's undo after an append (forgejo#132 item 1). A station of another
+ * roadtrip or account is a 404, as is an id that is not a uuid.
+ */
+router.delete(
+  "/roadtrips/:id/stations/:stationId",
+  authenticate,
+  stationAppendLimiter,
+  requireWriteScope,
+  rejectDemo,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const userId = req.userId!;
+      const params = stationParams.safeParse(req.params);
+      if (!params.success) throw new AppError("Station not found", 404);
+      const routeId = await resolveRoadtrip(userId, params.data.id);
+      const { released } = await removeStation(userId, routeId, params.data.stationId);
+      const { stations, legs } = await stationsAndLegs(routeId);
+      logger.info({ operation: "roadtrip.stations.remove", routeId, released });
+      res.json({ removed: { id: params.data.stationId, released }, stations, legs });
     } catch (error) {
       next(error);
     }
