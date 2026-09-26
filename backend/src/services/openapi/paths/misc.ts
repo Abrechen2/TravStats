@@ -243,7 +243,17 @@ registry.registerPath({
   request: {
     params: z.object({
       kind: z.enum(["metric", "ranking", "record", "achievement"]),
-      key: z.string().min(1),
+      key: z
+        .string()
+        .min(1)
+        .describe(
+          "metric: a key of shared/evidenceMeasures.ts — e.g. the passport headline " +
+            "`passportCountryCount`, `passportAirportCount`, `passportEntryCount`, " +
+            "`passportContinentCount` (all-time only). ranking: `<dimension>:<value>` — " +
+            "`airline:iata:LH`, `airport:FRA`, `aircraftType:A320`, `country:<catalogue " +
+            "country name>` (the flight distribution tile), `passportCountry:<ISO alpha-2>` " +
+            "(one passport country's entries, counted as /stats/countries/{code} counts them)."
+        ),
     }),
     query: z.object({
       period: z.enum(["allTime", "year", "rolling12m"]).optional(),

@@ -112,6 +112,12 @@ import {
   resolveRailHighSpeedRideCount,
   resolveRailCrossBorderRideCount,
 } from "./metricEvidenceRail";
+import {
+  resolvePassportCountryCount,
+  resolvePassportContinentCount,
+  resolvePassportAirportCount,
+  resolvePassportEntryCount,
+} from "./metricEvidencePassport";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -199,6 +205,10 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   railNightTrainCount: resolveRailNightTrainCount,
   railHighSpeedRideCount: resolveRailHighSpeedRideCount,
   railCrossBorderRideCount: resolveRailCrossBorderRideCount,
+  passportCountryCount: resolvePassportCountryCount,
+  passportContinentCount: resolvePassportContinentCount,
+  passportAirportCount: resolvePassportAirportCount,
+  passportEntryCount: resolvePassportEntryCount,
   cruiseCount: resolveCruiseCount,
   cruiseDistanceKmTotal: resolveCruiseDistanceKmTotal,
   cruiseSeaDaysTotal: resolveCruiseSeaDaysTotal,
