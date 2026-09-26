@@ -170,6 +170,17 @@ describe("TripMap: the globe toggle mounts the overlay the way the globe needs i
     expect(captured[captured.length - 1].props.interleaved).toBe(true);
   });
 
+  // Acceptance D9 (2026-09-26): an empty tour or roadtrip map said "Diese
+  // Reise … Flüge / Kreuzfahrten".
+  it("says an empty map in the words of what it draws", async () => {
+    const { unmount } = render(<TripMap trip={{ stops: [], emptyKey: "trips:tours.map.empty" }} />);
+    expect(await screen.findByText("trips:tours.map.empty")).toBeInTheDocument();
+    expect(screen.queryByText("trips:detail.map.empty")).toBeNull();
+    unmount();
+    render(<TripMap trip={{ stops: [] }} />);
+    expect(await screen.findByText("trips:detail.map.empty")).toBeInTheDocument();
+  });
+
   // Acceptance 2026-09-26: the toggle read "🗺 Flat" in the German UI.
   it("labels the projection toggle through the translation, not in English", async () => {
     render(<TripMap trip={trip} />);

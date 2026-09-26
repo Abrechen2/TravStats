@@ -392,5 +392,8 @@
     "apply": "Apply {{count}}",
     "failed": "The files could not be read.",
     "tooLarge": "The ZIP is too large (at most 500 files, 200 MB unpacked, 15 MB per recording)."
+  },
+  "map": {
+    "empty": "This roadtrip has no stations with coordinates yet — add the first station."
   }
 }

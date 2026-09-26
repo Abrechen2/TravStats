@@ -299,8 +299,9 @@ export default function TripRouteEditorPage(): JSX.Element {
           lon: s.lon,
           domain: "tour",
         })),
+        emptyKey: route?.kind === "roadtrip" ? "roadtrips:map.empty" : "trips:tours.map.empty",
       },
-    [trip, sectionStops]
+    [trip, sectionStops, route?.kind]
   );
 
   const handleActivityChange = useCallback(

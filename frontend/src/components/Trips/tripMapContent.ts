@@ -8,4 +8,10 @@ import type { Trip, TripStop } from "../../types";
  */
 export type TripMapContent = Pick<Trip, "flights" | "cruises" | "lodgingStays"> & {
   stops?: ReadonlyArray<Pick<TripStop, "title" | "lat" | "lon" | "domain">>;
+  /**
+   * The sentence for an empty map, in the words of whatever is being drawn. A
+   * tour and a roadtrip page said "Diese Reise … Flüge / Kreuzfahrten" (D9).
+   * Omitted, the trip's own sentence stands.
+   */
+  emptyKey?: string;
 };

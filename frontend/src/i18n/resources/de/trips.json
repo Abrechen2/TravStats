@@ -485,6 +485,9 @@
       "date": "Datum der Tour",
       "startTime": "Startzeit",
       "saveError": "Das Datum konnte nicht gespeichert werden."
+    },
+    "map": {
+      "empty": "Diese Tour hat noch keine Punkte mit Koordinaten — füge Punkte hinzu oder lade eine Aufzeichnung hoch."
     }
   },
   "head": {

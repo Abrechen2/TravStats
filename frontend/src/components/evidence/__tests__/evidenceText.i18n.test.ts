@@ -1,6 +1,7 @@
 import { describe, it, expect, beforeAll } from "vitest";
 import i18n from "../../../i18n/config";
-import { composeI18nText, EVIDENCE_TEXT_KEYS } from "../evidenceText";
+import { composeI18nText, EVIDENCE_TEXT_KEYS, formatMeasureValue } from "../evidenceText";
+import type { EvidenceMeasure } from "../../../shared/evidence";
 
 /**
  * The one evidence test that runs the REAL translator.
@@ -52,6 +53,18 @@ describe("evidenceText against the real resources", () => {
   it("…and 'arrival' in English", async () => {
     await i18n.changeLanguage("en");
     expect(composeI18nText(AIRPORT_SUBTITLE, translate)).toBe("BCN → MUC · arrival");
+  });
+
+  // Acceptance D8 (2026-09-26): one rail ride read "1 Fahrten".
+  it("says one ride in the singular and two in the plural, in both locales", async () => {
+    const rides = (value: number): EvidenceMeasure =>
+      ({ value, unit: "rides" }) as unknown as EvidenceMeasure;
+    await i18n.changeLanguage("de");
+    expect(formatMeasureValue(rides(1), translate, "de", "EUR")).toBe("1 Fahrt");
+    expect(formatMeasureValue(rides(2), translate, "de", "EUR")).toBe("2 Fahrten");
+    await i18n.changeLanguage("en");
+    expect(formatMeasureValue(rides(1), translate, "en", "EUR")).toBe("1 ride");
+    expect(formatMeasureValue(rides(12), translate, "en", "EUR")).toBe("12 rides");
   });
 
   it("the other two roles translate too", async () => {

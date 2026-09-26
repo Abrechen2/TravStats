@@ -754,7 +754,7 @@ export default function TripMap({
           className="absolute inset-0 flex items-center justify-center text-sm pointer-events-none px-6 text-center"
           style={{ color: "var(--text-muted)", background: "rgba(13,17,23,0.5)" }}
         >
-          {t("trips:detail.map.empty")}
+          {t(trip.emptyKey ?? "trips:detail.map.empty")}
         </div>
       )}
       <button

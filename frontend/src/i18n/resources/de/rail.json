@@ -1,7 +1,7 @@
 {
   "title": "Bahn",
   "subtitle": "Deine Zugfahrten — jede Fahrt ein Eintrag, wie ein Flug.",
-  "betaNote": "Beta: Der Import von Buchungen folgt.",
+  "betaNote": "Beta. Buchungsmails, Ticket-PDFs und Kalenderdateien liest „Fahrt hinzufügen“ ein.",
   "add": "Fahrt hinzufügen",
   "empty": "Noch keine Zugfahrten. Trag deine erste Fahrt ein.",
   "loadError": "Die Zugfahrten konnten nicht geladen werden.",

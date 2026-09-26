@@ -485,6 +485,9 @@
       "date": "Date of the tour",
       "startTime": "Start time",
       "saveError": "The date could not be saved."
+    },
+    "map": {
+      "empty": "This tour has no points with coordinates yet — add points or upload a recording."
     }
   },
   "head": {

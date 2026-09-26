@@ -133,6 +133,7 @@ export default function RoadtripDetailPage(): JSX.Element {
         // the roadtrip's — the same split the markers make.
         domain: s.state === "stay" ? "hotel" : "roadtrip",
       })),
+      emptyKey: "roadtrips:map.empty",
     }),
     [detail]
   );

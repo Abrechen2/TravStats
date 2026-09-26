@@ -392,5 +392,8 @@
     "apply": "{{count}} übernehmen",
     "failed": "Die Dateien konnten nicht eingelesen werden.",
     "tooLarge": "Das ZIP ist zu groß (höchstens 500 Dateien, 200 MB entpackt, 15 MB je Aufzeichnung)."
+  },
+  "map": {
+    "empty": "Dieser Roadtrip hat noch keine Stationen mit Koordinaten — füge die erste Station hinzu."
   }
 }

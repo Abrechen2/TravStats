@@ -110,6 +110,9 @@ export function formatMeasureValue(
   }
   const number = new Intl.NumberFormat(locale).format(measure.value);
   const unitKey = `evidence:unit.${measure.unit}`;
-  const unitLabel = t(unitKey);
-  return unitLabel && unitLabel !== unitKey ? `${number} ${unitLabel}` : number;
+  // A unit without copy is left off rather than printed as its key.
+  if (!t(unitKey) || t(unitKey) === unitKey) return number;
+  // With the count, so one ride reads "1 Fahrt", not "1 Fahrten" (D8): the
+  // unit's `_one` form for one, the bare key (the plural) for every other.
+  return `${number} ${t(unitKey, { count: measure.value })}`;
 }
