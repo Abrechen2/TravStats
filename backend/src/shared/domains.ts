@@ -60,25 +60,29 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
   // that sleep at the user's stays. Stored as `TripRoute` rows with
   // `kind = "roadtrip"` — a domain in the product sense (its own page, colour,
   // enable switch), the same engine as a tour underneath. No parser target.
+  // Moss, the same hue as a day tour (round 29): roadtrip and tour are one
+  // colour, "road" in the Companion; a tour line differs by stroke width.
+  // The violet before it was the Companion's rail lavender to the digit.
   roadtrip: {
     key: "roadtrip",
     available: true,
     i18nKey: "domain.roadtrip",
     icon: "🚐",
-    color: "#a597f0",
+    color: "#a9c46a",
     routePrefix: "/roadtrips",
   },
   // Train journeys (spec 2026-09-25-rail-domain). Available, so shared code
   // iterating AVAILABLE_DOMAINS sees it; the UI additionally hides it behind
-  // the `railDomain` beta gate. Brick red: clear of flight amber, cruise teal,
-  // hotel mint, POI ink and the tour olive — see `domainColor.rail` in
-  // design/tokens.json.
+  // the `railDomain` beta gate. Lavender since round 29 (owner, 2026-09-26):
+  // the brick red before it sat beside `bad` #e65a4f, so a rail row next to a
+  // cancelled flight read the same and a late train had no colour left to say
+  // so — see `domainColor.rail` in design/tokens.json.
   rail: {
     key: "rail",
     available: true,
     i18nKey: "domain.rail",
     icon: "🚆",
-    color: "#d4655c",
+    color: "#a597e8",
     routePrefix: "/rail",
   },
 };
@@ -93,9 +97,11 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
  * has no `enabledDomains` entry, no route prefix of its own and no parser
  * target. It is a colour the map and the legend both need, and this is the one
  * place it is written. Mirrors `domainColor.tour` in `design/tokens.json` and
- * `--ts-domain-tour` in the generated theme.
+ * `--ts-domain-tour` in the generated theme. Since round 29 (2026-09-26) it
+ * equals the roadtrip default — one "road" hue; the map tells a tour from a
+ * roadtrip by its thinner line (`tourMapOverlay.tsx`).
  */
-export const TOUR_COLOR = "#8faa5f";
+export const TOUR_COLOR = "#a9c46a";
 
 export const AVAILABLE_DOMAINS: DomainKey[] = DOMAIN_KEYS.filter((k) => DOMAINS[k].available);
 

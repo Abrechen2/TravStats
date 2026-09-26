@@ -69,6 +69,8 @@ describe("index.css domain accent variables", () => {
       ["cruise", DOMAINS.cruise.color],
       ["hotel", DOMAINS.lodging.color],
       ["poi", DOMAINS.poi.color],
+      ["roadtrip", DOMAINS.roadtrip.color],
+      ["rail", DOMAINS.rail.color],
       // Not a member of DOMAINS — a tour has no gating entry, no route prefix
       // and no parser target. It is a colour the map and the legend both need,
       // and this ties the one place it is written to the token it mirrors.

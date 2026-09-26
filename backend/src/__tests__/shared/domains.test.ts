@@ -1,3 +1,5 @@
+import fs from "node:fs";
+import path from "node:path";
 import { describe, it, expect } from "@jest/globals";
 import {
   DOMAIN_KEYS,
@@ -5,6 +7,7 @@ import {
   AVAILABLE_DOMAINS,
   isValidDomain,
   getDomainDescriptor,
+  TOUR_COLOR,
   type DomainKey,
 } from "../../shared/domains";
 
@@ -44,5 +47,33 @@ describe("domain registry", () => {
   it("getDomainDescriptor returns descriptor or throws on unknown", () => {
     expect(getDomainDescriptor("flight").key).toBe("flight");
     expect(() => getDomainDescriptor("unknown" as DomainKey)).toThrow();
+  });
+});
+
+/**
+ * The backend registry is the half of the mirror nothing else checks: the
+ * frontend copy is tied to the generated theme by its own tests, this one only
+ * by a comment. Round 29 (forgejo#131) moved rail and roadtrip; a backend left
+ * on brick red would hand the old hue to anything that reads the descriptor.
+ */
+describe("domain colours agree with design/tokens.json", () => {
+  const tokens = JSON.parse(
+    fs.readFileSync(path.resolve(__dirname, "../../../../design/tokens.json"), "utf-8")
+  ) as { domainColor: Record<string, string> };
+  const tokenName: Record<DomainKey, string> = {
+    flight: "flight",
+    cruise: "cruise",
+    lodging: "hotel",
+    poi: "poi",
+    roadtrip: "roadtrip",
+    rail: "rail",
+  };
+
+  it.each(DOMAIN_KEYS)("%s", (key) => {
+    expect(DOMAINS[key].color.toLowerCase()).toBe(tokens.domainColor[tokenName[key]].toLowerCase());
+  });
+
+  it("tour", () => {
+    expect(TOUR_COLOR.toLowerCase()).toBe(tokens.domainColor.tour.toLowerCase());
   });
 });

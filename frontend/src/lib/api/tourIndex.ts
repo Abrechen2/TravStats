@@ -52,6 +52,8 @@ export interface TourGeometryEntry {
   geometry: TourGeometry;
   /** A roadtrip's line takes the roadtrip hue (2.7); absent = the tour hue. */
   rgb?: [number, number, number];
+  /** A roadtrip draws a heavier line than a day tour (see `buildTourDeckLayers`). */
+  isRoadtrip?: boolean;
 }
 
 /**

@@ -48,6 +48,7 @@ const SAMPLE: TourPathDatum = {
   ],
   color: [141, 191, 106],
   isPlaceholder: false,
+  isRoadtrip: false,
   label: "Test leg",
 };
 

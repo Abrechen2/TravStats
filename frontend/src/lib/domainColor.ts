@@ -23,7 +23,12 @@
  * keeps their choice.
  */
 
-import { AVAILABLE_DOMAINS, DOMAINS, type DomainKey } from "../shared/domains";
+import {
+  AVAILABLE_DOMAINS,
+  DOMAINS,
+  RETIRED_DOMAIN_DEFAULTS,
+  type DomainKey,
+} from "../shared/domains";
 
 /** Hex string, `#rrggbb`. Stored as text because that is what a colour input speaks. */
 export type DomainColorMap = Readonly<Record<DomainKey, string>>;
@@ -58,6 +63,33 @@ export function normalizeDomainColors(raw: unknown): DomainColorMap {
         ];
       })
     ) as Record<DomainKey, string>
+  );
+}
+
+/** Read a v1 map, turning each frozen retired default back into today's default. */
+export function migrateLegacyDomainColors(raw: unknown): DomainColorMap {
+  const colors = normalizeDomainColors(raw);
+  return Object.freeze(
+    Object.fromEntries(
+      AVAILABLE_DOMAINS.map((key) => {
+        const retired = RETIRED_DOMAIN_DEFAULTS[key] ?? [];
+        const isRetired = retired.some((hex) => hex.toLowerCase() === colors[key].toLowerCase());
+        return [key, isRetired ? BRAND_DOMAIN_COLORS[key] : colors[key]];
+      })
+    ) as Record<DomainKey, string>
+  );
+}
+
+/**
+ * Only the domains the user actually moved off the default. This is what gets
+ * stored, so a domain the user never touched follows the default when it
+ * changes, instead of keeping the one it had on the day of the first save.
+ */
+export function domainColorOverrides(colors: DomainColorMap): Partial<Record<DomainKey, string>> {
+  return Object.fromEntries(
+    AVAILABLE_DOMAINS.filter(
+      (key) => colors[key].toLowerCase() !== BRAND_DOMAIN_COLORS[key].toLowerCase()
+    ).map((key) => [key, colors[key]])
   );
 }
 
