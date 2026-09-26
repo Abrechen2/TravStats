@@ -137,6 +137,27 @@ export const BETA_FEATURES = Object.freeze({
       "The owner has added at least one real cruise recording (a Dawarich pull or a GPX export), checked the per-leg verdicts and the map against what was sailed, and accepts the feature for release.",
     reason: "beta",
   }),
+
+  /**
+   * The loyalty centre (2.7, `feat/loyalty-center`): the `/loyalty` page with
+   * every domain's programmes, its entry in the user menu, the settings
+   * pointers to it, frequent-flyer and cruise-line cards with their
+   * suggestions, the dated status history and the "Status damals" column in
+   * the lodging statistics.
+   *
+   * What 2.6 shipped stays outside the gate and must keep working with it
+   * closed: hotel memberships under Einstellungen → Unterkünfte →
+   * Bonusprogramme (`MembershipsSection`), chain linking and the per-year
+   * nights and stays. `SettingsSectionSwitch` renders that section instead of
+   * the pointer while the gate is closed. The backend and its data model are
+   * not gated.
+   */
+  loyaltyCenter: Object.freeze({
+    why: "Owner decision 2026-09-26: the programmes deliver no real data — no airline or hotel offers a public member API — so every card, number and status period is typed in by hand. The page stays in beta until testers show it is used.",
+    returnsWhen:
+      "Testers (Alex) confirm they maintain their programmes and status history on the page, or the owner releases it.",
+    reason: "beta",
+  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;

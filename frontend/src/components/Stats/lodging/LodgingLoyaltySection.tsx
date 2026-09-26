@@ -1,5 +1,6 @@
 import type { JSX } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
+import { useBetaFeatures } from "../../../hooks/useBetaFeatures";
 import type { LodgingStats } from "../../../types/lodging";
 import StatCard from "../StatCard";
 import RankedBarList from "./RankedBarList";
@@ -45,9 +46,12 @@ export default function LodgingLoyaltySection({ stats }: Props): JSX.Element {
   // The per-year tier exists only where a card carries a dated status
   // history (loyalty-status-history-dated). Without one the column would be
   // blank on every row, so it is drawn only when some row can fill it.
-  const hasHistory = loyalty.programmeYears.some(
-    (row) => row.tiersHeld !== null && row.tiersHeld !== undefined
-  );
+  // The history is edited on the loyalty page, which is behind the beta
+  // switch (loyaltyCenter) — so is the column that reads it.
+  const historyVisible = useBetaFeatures().isFeatureVisible("loyaltyCenter");
+  const hasHistory =
+    historyVisible &&
+    loyalty.programmeYears.some((row) => row.tiersHeld !== null && row.tiersHeld !== undefined);
   const tierHeldCell = (tiers: string[] | null | undefined): string =>
     tiers === null || tiers === undefined ? "" : tiers.length > 0 ? tiers.join(" → ") : "—";
 

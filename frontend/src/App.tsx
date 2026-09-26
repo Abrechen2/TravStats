@@ -543,7 +543,16 @@ function AppContent() {
                   itself: the page draws a section per enabled domain. */}
               <Route
                 path="/loyalty"
-                element={isAuthenticated ? <LoyaltyPage /> : <Navigate to="/login" />}
+                element={
+                  isAuthenticated ? (
+                    // Beta since 2026-09-26 (config/betaFeatures.ts → loyaltyCenter).
+                    <BetaFeatureRouteGuard feature="loyaltyCenter" redirectTo="/dashboard">
+                      <LoyaltyPage />
+                    </BetaFeatureRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
               />
               <Route
                 path="/stats"

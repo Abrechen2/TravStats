@@ -1,9 +1,17 @@
-import { describe, it, expect } from "vitest";
+import { describe, it, expect, vi, beforeEach } from "vitest";
 import { render, screen, within } from "@testing-library/react";
 
 import type { LodgingStats } from "../../../../types/lodging";
 import { EMPTY_LODGING_STATS_BLOCKS } from "../../../../types/lodgingStatsFixture";
 import LodgingLoyaltySection from "../LodgingLoyaltySection";
+
+const beta = vi.hoisted(() => ({ on: true }));
+vi.mock("../../../../hooks/useBetaFeatures", () => ({
+  useBetaFeatures: () => ({
+    betaFeaturesEnabled: beta.on,
+    isFeatureVisible: (key: string) => key === "loyaltyCenter" && beta.on,
+  }),
+}));
 
 /**
  * The status you hold TODAY is not the status you held in 2019.
@@ -65,6 +73,10 @@ describe("LodgingLoyaltySection — the tier is about today, not about 2019", ()
 });
 
 describe("LodgingLoyaltySection — a year's tier from the dated history", () => {
+  beforeEach(() => {
+    beta.on = true;
+  });
+
   const withHistory = (): LodgingStats => {
     const base = stats();
     return {
@@ -91,5 +103,17 @@ describe("LodgingLoyaltySection — a year's tier from the dated history", () =>
   it("draws no such column when no card has a history", () => {
     render(<LodgingLoyaltySection stats={stats()} />);
     expect(screen.queryByText("lodging:stats.loyalty.tierHeld")).toBeNull();
+  });
+
+  // The history is edited on the loyalty page, behind the loyaltyCenter
+  // switch since 2026-09-26; the column that reads it goes with it. The
+  // per-year nights and stays (2.6) stay.
+  it("hides the 'Status damals' column while the loyalty gate is closed", () => {
+    beta.on = false;
+    render(<LodgingLoyaltySection stats={withHistory()} />);
+    expect(screen.queryByText("lodging:stats.loyalty.tierHeld")).toBeNull();
+    expect(screen.queryByText("Silver → Gold")).toBeNull();
+    const row2024 = screen.getByText("2024").closest("tr") as HTMLElement;
+    expect(within(row2024).getByText("12")).toBeInTheDocument();
   });
 });

@@ -13,6 +13,14 @@ vi.mock("../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ enabled, isEnabled: (key: DomainKey) => enabled.includes(key) }),
 }));
 
+const beta = vi.hoisted(() => ({ on: true }));
+vi.mock("../../../hooks/useBetaFeatures", () => ({
+  useBetaFeatures: () => ({
+    betaFeaturesEnabled: beta.on,
+    isFeatureVisible: (key: string) => key === "loyaltyCenter" && beta.on,
+  }),
+}));
+
 import UserMenu from "../UserMenu";
 import LoyaltyLinkSection from "../../Settings/LoyaltyLinkSection";
 
@@ -27,6 +35,7 @@ const open = () => {
 
 describe("UserMenu — the loyalty page entry", () => {
   it("leads to the loyalty page when a domain with programmes is on", () => {
+    beta.on = true;
     enabled = ["cruise"];
     open();
     expect(screen.getByRole("menuitem", { name: "loyalty:title" })).toHaveAttribute(
@@ -36,7 +45,18 @@ describe("UserMenu — the loyalty page entry", () => {
   });
 
   it("is not drawn when no enabled domain has programmes — the page would be empty", () => {
+    beta.on = true;
     enabled = ["poi"];
+    open();
+    expect(screen.queryByRole("menuitem", { name: "loyalty:title" })).toBeNull();
+  });
+});
+
+// Owner decision 2026-09-26: the loyalty page is behind the beta switch.
+describe("UserMenu — the loyalty entry and the beta switch", () => {
+  it("is not drawn while the loyaltyCenter gate is closed", () => {
+    beta.on = false;
+    enabled = ["flight", "cruise", "lodging"];
     open();
     expect(screen.queryByRole("menuitem", { name: "loyalty:title" })).toBeNull();
   });
