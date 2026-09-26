@@ -54,7 +54,37 @@ export const SEED_FX_RATES: Readonly<Record<string, number>> = {
   SGD: 0.68,
   THB: 0.026,
   AUD: 0.6,
+  CHF: 1.03,
+  NOK: 0.087,
+  ISK: 0.0067,
+  PLN: 0.23,
+  HUF: 0.0026,
+  VND: 0.000037,
+  MAD: 0.092,
 };
+
+/**
+ * The same snapshot for a priced journey (flight, cruise, train ride), whose
+ * converted amount lives in `priceBase` rather than `totalPriceBase`.
+ */
+export function seedPriceFxColumns(
+  amount: number | null | undefined,
+  currency: string | null,
+  date: Date,
+  baseCurrency: string
+): {
+  priceBase: number | null;
+  fxRate: number | null;
+  fxRateDate: Date | null;
+  fxBaseCurrency: string | null;
+  fxSource: string | null;
+} {
+  const { totalPriceBase, ...rest } = seedFxColumns(
+    { totalPrice: amount ?? null, currency: currency ?? "", checkIn: date },
+    baseCurrency
+  );
+  return { priceBase: totalPriceBase, ...rest };
+}
 
 export interface SeedFxColumns {
   totalPriceBase: number | null;

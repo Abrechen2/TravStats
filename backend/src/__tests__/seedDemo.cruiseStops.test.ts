@@ -1,6 +1,6 @@
 import { prisma } from "../db";
 import { hashPassword } from "../utils/password";
-import { CRUISE_TEMPLATES, loadPools, seedCruises } from "../seedDemoAccount";
+import { CRUISE_TEMPLATES, loadPools, seedCruises } from "../seedDemo/coverageCruises";
 
 /**
  * The bulk cruise seed, checked against the rules the rest of the app holds.
