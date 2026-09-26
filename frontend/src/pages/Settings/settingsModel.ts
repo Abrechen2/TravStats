@@ -107,12 +107,14 @@ export const SETTINGS_GROUPS: readonly SettingsGroup[] = [
       "autoupdate",
       "flightMemberships",
     ],
+    gatedSections: { flightMemberships: "loyaltyCenter" },
   },
   {
     id: "cruise",
     labelKey: "settings:tabs.cruise",
     domain: "cruise",
     sections: ["cruisePreferences", "cruiseMemberships"],
+    gatedSections: { cruiseMemberships: "loyaltyCenter" },
   },
   {
     id: "lodging",

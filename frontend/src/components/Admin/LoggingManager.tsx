@@ -1,8 +1,9 @@
 import { useState } from "react";
-import { format } from "date-fns";
 import HelpIcon from "../Help/HelpIcon";
 import LogViewer from "./LogViewer";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useDisplayFormat } from "../../lib/displayFormat";
+import { formatBytes } from "../../lib/fileSize";
 import {
   LOG_LEVELS,
   type LogFileInfo,
@@ -18,12 +19,7 @@ export type LogStats = LogStatsResponse;
 const isLogLevelName = (value: string): value is LogLevelName =>
   (LOG_LEVELS as readonly string[]).includes(value);
 
-/** The stats card shows a date, or a dash when there is none to show. */
-function formatStatDate(iso: string | null): string {
-  if (!iso) return "\u2014";
-  const date = new Date(iso);
-  return Number.isNaN(date.getTime()) ? "\u2014" : format(date, "MMM d, yyyy");
-}
+const DASH = "\u2014";
 
 interface LoggingManagerProps {
   loggingConfig: LoggingConfig;
@@ -50,7 +46,12 @@ export default function LoggingManager({
   onCleanup,
   onLoggingConfigChange,
 }: LoggingManagerProps): JSX.Element {
-  const { t } = useTranslation(["admin", "common"]);
+  const { t, i18n } = useTranslation(["admin", "common"]);
+  // Dates follow the user's date format and sizes the UI language — the card
+  // printed "Sep 26, 2026" and "3.39 MB" on a German page (browser
+  // acceptance 2026-09-26). An unknown date is a dash, never "Invalid Date".
+  const fmt = useDisplayFormat();
+  const statDate = (iso: string | null): string => (iso ? fmt.date(iso) || DASH : DASH);
   const [viewerFile, setViewerFile] = useState<string | null>(null);
   // `LOG_LEVEL` in the environment pins the level; the picker would only
   // pretend otherwise (see levelPolicy.ts on the server).
@@ -140,7 +141,7 @@ export default function LoggingManager({
               {t("admin:logging.stats.totalSize")}
             </div>
             <div className="text-2xl font-bold text-(--text-primary)">
-              {(logStats.totalSize / 1024 / 1024).toFixed(2)} MB
+              {formatBytes(logStats.totalSize, i18n.language)}
             </div>
           </div>
           <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
@@ -148,7 +149,7 @@ export default function LoggingManager({
               {t("admin:logging.stats.oldestLog")}
             </div>
             <div className="text-sm font-medium text-(--text-primary)" data-testid="oldest-log">
-              {formatStatDate(logStats.oldestLogAt)}
+              {statDate(logStats.oldestLogAt)}
             </div>
           </div>
           <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
@@ -156,7 +157,7 @@ export default function LoggingManager({
               {t("admin:logging.stats.newestLog")}
             </div>
             <div className="text-sm font-medium text-(--text-primary)" data-testid="newest-log">
-              {formatStatDate(logStats.newestLogAt)}
+              {statDate(logStats.newestLogAt)}
             </div>
           </div>
         </div>
@@ -341,10 +342,10 @@ export default function LoggingManager({
                       </span>
                     </td>
                     <td className="px-4 py-3 text-sm text-(--text-primary)">
-                      {(file.size / 1024).toFixed(2)} KB
+                      {formatBytes(file.size, i18n.language)}
                     </td>
                     <td className="px-4 py-3 text-sm text-(--text-primary)">
-                      {format(new Date(file.modified), "MMM d, HH:mm")}
+                      {fmt.dateTime(file.modified) || DASH}
                     </td>
                     <td className="px-4 py-3 text-sm space-x-2">
                       <button

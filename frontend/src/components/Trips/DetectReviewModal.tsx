@@ -3,6 +3,8 @@ import { tripsApi } from "../../lib/api";
 import type { ProposedTrip, ProposedTripLeg } from "../../lib/api/trips";
 import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useDisplayFormat } from "../../lib/displayFormat";
+import { detectionSourceKey } from "../../lib/tripDetectionSource";
 
 /** The project wrapper narrows i18next's `t` to this signature. */
 type TranslateFn = (key: string, options?: Record<string, unknown>) => string;
@@ -17,12 +19,6 @@ interface ProposalState {
   selected: boolean;
   name: string;
 }
-
-const HEURISTIC_LABEL: Record<ProposedTrip["source"], string> = {
-  pnr: "PNR",
-  home_loop: "Home-Loop",
-  continuity: "Continuity",
-};
 
 const HEURISTIC_COLOR: Record<ProposedTrip["source"], { bg: string; color: string }> = {
   pnr: { bg: "rgba(74,222,128,0.15)", color: "#86efac" },
@@ -60,6 +56,10 @@ export default function DetectReviewModal({
   onCommitted,
 }: DetectReviewModalProps): JSX.Element {
   const { t } = useTranslation(["trips", "common"]);
+  const fmt = useDisplayFormat();
+  // Spans and leg dates are calendar days ("2021-01-15"); read in UTC so no
+  // viewer's zone moves them. The chip used to print the ISO string raw.
+  const day = (iso: string): string => fmt.date(iso, { timeZone: "UTC" }) || iso;
   const addToast = useToastStore((s) => s.addToast);
 
   const [state, setState] = useState<ProposalState[]>(() =>
@@ -225,21 +225,22 @@ export default function DetectReviewModal({
                       style={{ color: "var(--text-muted)" }}
                     >
                       <span
-                        className="px-1.5 py-0.5 rounded-full uppercase tracking-wide font-semibold"
+                        className="px-1.5 py-0.5 rounded-full font-semibold"
                         style={{ background: heur.bg, color: heur.color }}
+                        data-testid="detect-source-chip"
                       >
-                        {HEURISTIC_LABEL[p.source]}
+                        {t(`trips:detectBanner.sources.${detectionSourceKey(p.source)}`)}
                         {p.pnr && ` · ${p.pnr}`}
                       </span>
                       <span>
-                        {p.flightIds.length} {p.flightIds.length === 1 ? "Flug" : "Flüge"}
+                        {t("trips:detectReview.flightCount", { count: p.flightIds.length })}
                       </span>
                       <span>
                         · {p.origin} → {p.destination}
                       </span>
                       {p.span?.from && p.span?.to && (
                         <span>
-                          · {p.span.from} – {p.span.to}
+                          · {day(p.span.from)} – {day(p.span.to)}
                         </span>
                       )}
                     </div>
@@ -282,7 +283,7 @@ export default function DetectReviewModal({
                     </button>
                   )}
                 </div>
-                {hasLegs && isOpen && <LegList id={panelId} legs={p.legs} t={t} />}
+                {hasLegs && isOpen && <LegList id={panelId} legs={p.legs} t={t} day={day} />}
               </div>
             );
           })}
@@ -398,13 +399,14 @@ interface LegListProps {
   id: string;
   legs: ProposedTripLeg[];
   t: TranslateFn;
+  day: (iso: string) => string;
 }
 
 /**
  * Compact per-leg breakdown shown when a proposal card is expanded.
  * One row per leg, already ordered by departure time upstream.
  */
-function LegList({ id, legs, t }: LegListProps): JSX.Element {
+function LegList({ id, legs, t, day }: LegListProps): JSX.Element {
   return (
     <ul
       id={id}
@@ -422,7 +424,7 @@ function LegList({ id, legs, t }: LegListProps): JSX.Element {
             className="flex items-center gap-2 text-[11px]"
             style={{ color: "var(--text-muted)" }}
           >
-            <span className="tabular-nums shrink-0">{leg.date}</span>
+            <span className="tabular-nums shrink-0">{day(leg.date)}</span>
             <span className="font-semibold shrink-0" style={{ color: "var(--text-primary)" }}>
               {leg.flightNumber ?? "—"}
             </span>

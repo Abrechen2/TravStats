@@ -1,5 +1,6 @@
 import { useTranslation } from "../../hooks/useTranslation";
 import AirlineLogoRefreshButton from "./AirlineLogoRefreshButton";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 
 // ==================== SystemInfo Interfaces ====================
 
@@ -49,6 +50,7 @@ export default function SystemInfo({
   onDeleteDemoUser,
 }: SystemInfoProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
 
   return (
     <div className="space-y-6">
@@ -104,9 +106,10 @@ export default function SystemInfo({
             {t("admin:demoWarning.message")}
           </p>
           <button
-            onClick={() => {
+            onClick={async () => {
               const demoUser = users.find((u) => u.username === "demo");
-              if (demoUser && confirm(t("admin:prompts.confirmDeleteDemo"))) {
+              const message = t("admin:prompts.confirmDeleteDemo");
+              if (demoUser && (await askConfirm({ message, destructive: true }))) {
                 onDeleteDemoUser(demoUser.id);
               }
             }}
@@ -169,6 +172,7 @@ export default function SystemInfo({
         </p>
         <AirlineLogoRefreshButton />
       </div>
+      {confirmDialog}
     </div>
   );
 }

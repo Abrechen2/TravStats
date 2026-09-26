@@ -132,9 +132,30 @@ export const BETA_FEATURES = Object.freeze({
    * entry here; a cruise without recordings behaves exactly as before.
    */
   cruiseTracks: Object.freeze({
-    why: "Built on 2026-09-25 without a browser acceptance (owner: none that night). Its three thresholds — a port counts as reached within 10 km, a silence of more than 20 km between two points is a hole, and a leg whose holes exceed a quarter falls back to the sea route — were chosen from reasoning about tender ports and phones at sea, not measured on a real cruise recording. A wrong threshold would silently replace a sea route with a worse line and change the statistics.",
+    why: "Built on 2026-09-25 without a browser acceptance (owner: none that night). Its three thresholds — a port counts as reached within 10 km, a step of more than 20 km between two points is a hole (raised to three times the recording's own median step for a sparse recording since 2026-09-26, after a 41-point GPX was read as all holes), and a leg whose holes exceed a quarter falls back to the sea route — were chosen from reasoning about tender ports and phones at sea, not measured on a real cruise recording. A wrong threshold would silently replace a sea route with a worse line and change the statistics.",
     returnsWhen:
       "The owner has added at least one real cruise recording (a Dawarich pull or a GPX export), checked the per-leg verdicts and the map against what was sailed, and accepts the feature for release.",
+    reason: "beta",
+  }),
+
+  /**
+   * The loyalty centre (2.7, `feat/loyalty-center`): the `/loyalty` page with
+   * every domain's programmes, its entry in the user menu, the settings
+   * pointers to it, frequent-flyer and cruise-line cards with their
+   * suggestions, the dated status history and the "Status damals" column in
+   * the lodging statistics.
+   *
+   * What 2.6 shipped stays outside the gate and must keep working with it
+   * closed: hotel memberships under Einstellungen → Unterkünfte →
+   * Bonusprogramme (`MembershipsSection`), chain linking and the per-year
+   * nights and stays. `SettingsSectionSwitch` renders that section instead of
+   * the pointer while the gate is closed. The backend and its data model are
+   * not gated.
+   */
+  loyaltyCenter: Object.freeze({
+    why: "Owner decision 2026-09-26: the programmes deliver no real data — no airline or hotel offers a public member API — so every card, number and status period is typed in by hand. The page stays in beta until testers show it is used.",
+    returnsWhen:
+      "Testers (Alex) confirm they maintain their programmes and status history on the page, or the owner releases it.",
     reason: "beta",
   }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);

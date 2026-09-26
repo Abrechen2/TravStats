@@ -152,8 +152,13 @@ export default function DomainImportPanel({
 
   return (
     <>
+      {/* The chooser steps aside once the manual form is up. It used to stay
+          mounted underneath: its portal landed above a form that renders in
+          place (TripModal), so "empty" left the chooser on top of the form it
+          had just opened, and its × closed both (browser acceptance
+          2026-09-26). The form is the next step, not a second layer. */}
       <Modal
-        open
+        open={!showManual}
         onClose={onClose}
         title={adapter.panelTitle}
         maxWidth={672}
@@ -224,7 +229,9 @@ export default function DomainImportPanel({
       {/* Manual entry modal — adapter renders the domain-specific create form. */}
       {showManual &&
         adapter.renderManual({
-          onClose: () => setShowManual(false),
+          // Cancelling the form ends the "add" flow — the chooser was left
+          // behind on purpose, so there is nothing to fall back to.
+          onClose,
           onSaved: handleManualSaved,
         })}
     </>

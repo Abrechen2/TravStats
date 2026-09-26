@@ -114,6 +114,17 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
     </button>
   );
 
+  /**
+   * `distanceKm` is null exactly when the leg has no persisted row yet — the
+   * server's `sourceOfMethod` then falls back to "sea_route", and the badge
+   * said "Berechnete Seeroute" beside no kilometres for a route nothing had
+   * computed (browser acceptance 2026-09-26).
+   */
+  const legSourceKey = (leg: CruiseLegTrack): string =>
+    leg.distanceKm === null && leg.geometrySource !== "track"
+      ? "tracks.source.pending"
+      : `tracks.source.${leg.geometrySource}`;
+
   const verdictText = (leg: CruiseLegTrack): string | null =>
     leg.coverage === null ? null : t(`tracks.verdict.${leg.coverage.reason}`);
 
@@ -155,7 +166,7 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
                     )}
                   </span>
                   <span className="rounded-sm bg-(--bg-surface) px-1.5 py-0.5 text-xs">
-                    {t(`tracks.source.${leg.geometrySource}`)}
+                    {t(legSourceKey(leg))}
                   </span>
                   {verdictText(leg) && <span className="t-caption">{verdictText(leg)}</span>}
                   {leg.geometrySource !== "track" && (

@@ -50,6 +50,21 @@ export default [
       "react-hooks/exhaustive-deps": "off",
       "@typescript-eslint/no-unused-vars": unusedVarsRule,
       "no-unused-vars": "off",
+      // The browser's own confirm box speaks the browser's language and says "no"
+      // silently where dialogs are suppressed; 19 of them were replaced by
+      // hooks/useConfirmDialog on 2026-09-26 (browser acceptance). Keep it so.
+      "no-restricted-globals": [
+        "error",
+        { name: "confirm", message: "Use useConfirmDialog (hooks/useConfirmDialog)." },
+      ],
+      "no-restricted-properties": [
+        "error",
+        {
+          object: "window",
+          property: "confirm",
+          message: "Use useConfirmDialog (hooks/useConfirmDialog).",
+        },
+      ],
     },
   },
   {

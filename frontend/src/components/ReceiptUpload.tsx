@@ -4,6 +4,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { apiErrorCode, apiErrorMessage, DEMO_FORBIDDEN_CODE } from "../lib/apiError";
 import { documentIdFromUrl, type ExtractTarget } from "../lib/extractValues";
 import { ExtractValuesAction } from "./documents/ExtractValuesAction";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
 
 interface ReceiptUploadProps {
   currentReceiptUrl?: string | null;
@@ -20,6 +21,7 @@ export default function ReceiptUpload({
   extract,
 }: ReceiptUploadProps): JSX.Element {
   const { t } = useTranslation(["flights", "common", "errors", "settings"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const [uploading, setUploading] = useState(false);
   const [uploadProgress, setUploadProgress] = useState(0);
   const [error, setError] = useState("");
@@ -86,8 +88,8 @@ export default function ReceiptUpload({
     }
   };
 
-  const handleDelete = () => {
-    if (confirm(t("flights:receipt.deleteConfirm"))) {
+  const handleDelete = async (): Promise<void> => {
+    if (await askConfirm({ message: t("flights:receipt.deleteConfirm"), destructive: true })) {
       onDelete();
     }
   };
@@ -191,6 +193,7 @@ export default function ReceiptUpload({
       )}
 
       {error && <p className="text-sm text-red-600">{error}</p>}
+      {confirmDialog}
     </div>
   );
 }

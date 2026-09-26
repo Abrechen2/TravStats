@@ -1,4 +1,7 @@
 {
+  "confirmDialog": {
+    "title": "Please confirm"
+  },
   "buttons": {
     "save": "Save",
     "cancel": "Cancel",

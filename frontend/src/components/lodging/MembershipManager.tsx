@@ -8,6 +8,7 @@ import {
   deleteMembership,
 } from "../../lib/api/lodging";
 import { logger } from "../../lib/logger";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import type { LodgingChainRef, LodgingMembership, MembershipInput } from "../../types/lodging";
 import SuggestionChips from "../common/SuggestionChips";
 import MaskedNumber from "../Loyalty/MaskedNumber";
@@ -105,6 +106,9 @@ export function MembershipManager({
   hideTitle = false,
 }: MembershipManagerProps): JSX.Element {
   const { t } = useTranslation(["lodging", "common"]);
+  // Where a card that leaves this chain can still be found: the loyalty page,
+  // or — while that page is behind the beta switch — the settings section.
+  const loyaltyPageVisible = useBetaFeatures().isFeatureVisible("loyaltyCenter");
   const [memberships, setMemberships] = useState<LodgingMembership[]>([]);
   const [loading, setLoading] = useState<boolean>(true);
   const [loadError, setLoadError] = useState<string | null>(null);
@@ -478,7 +482,11 @@ export function MembershipManager({
 
           {leavesScopeChain && (
             <p data-testid="membership-leaves-chain" className="t-caption">
-              {t("lodging:membership.leavesThisChain")}
+              {t(
+                loyaltyPageVisible
+                  ? "lodging:membership.leavesThisChain"
+                  : "lodging:membership.leavesThisChainSettings"
+              )}
             </p>
           )}
           {formError !== null && (

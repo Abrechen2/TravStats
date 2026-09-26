@@ -1,8 +1,10 @@
 import { useState } from "react";
 import { adminApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
+import { formatBytes } from "../../lib/fileSize";
 import { logErrorCopy } from "../../components/Admin/logErrorCopy";
 import type { ToastType } from "../../store/toastStore";
+import type { ConfirmRequest } from "../../hooks/useConfirmDialog";
 import type {
   LogFileInfo,
   LoggingConfigResponse,
@@ -10,6 +12,7 @@ import type {
 } from "../../shared/logContract";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
+type AskConfirm = (request: ConfirmRequest) => Promise<boolean>;
 
 /**
  * The admin page's log section: its state and its handlers.
@@ -20,7 +23,11 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  */
 export function useLoggingAdmin(
   t: Translate,
-  addToast: (type: ToastType, message: string) => void
+  addToast: (type: ToastType, message: string) => void,
+  /** The page's in-page confirm dialog (`useConfirmDialog`), never `window.confirm`. */
+  askConfirm: AskConfirm,
+  /** UI language, for the freed size in the cleanup toast ("0 B", "3,4 MB"). */
+  language = "de"
 ) {
   const [loggingConfig, setLoggingConfig] = useState<LoggingConfigResponse | null>(null);
   const [logFiles, setLogFiles] = useState<LogFileInfo[]>([]);
@@ -92,7 +99,8 @@ export function useLoggingAdmin(
   };
 
   const handleDeleteLogFile = async (filename: string): Promise<void> => {
-    if (!confirm(t("admin:prompts.confirmDeleteLog", { filename }))) return;
+    const message = t("admin:prompts.confirmDeleteLog", { filename });
+    if (!(await askConfirm({ message, destructive: true }))) return;
     try {
       await adminApi.deleteLogFile(filename);
       addToast("success", t("admin:toasts.logFileDeleted"));
@@ -104,14 +112,15 @@ export function useLoggingAdmin(
   };
 
   const handleCleanupLogs = async (): Promise<void> => {
-    if (!confirm(t("admin:prompts.confirmCleanupLogs"))) return;
+    const message = t("admin:prompts.confirmCleanupLogs");
+    if (!(await askConfirm({ message, destructive: true }))) return;
     try {
       const result = await adminApi.cleanupLogs();
       addToast(
         "success",
         t("admin:toasts.cleanupComplete", {
           deletedCount: result.deletedCount,
-          freedMb: (result.freedBytes / 1024 / 1024).toFixed(2),
+          freed: formatBytes(result.freedBytes, language),
         })
       );
       // A file the sweep could not delete is said, not folded into success.

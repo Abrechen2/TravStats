@@ -104,7 +104,8 @@ export function StayEditorPriceSection({
       manual: t("lodging:fx.markerManual"),
 
       none: t("lodging:fx.markerNone"),
-    }
+    },
+    baseCurrency
   );
 
   return (

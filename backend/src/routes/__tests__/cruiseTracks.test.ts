@@ -201,6 +201,35 @@ describe("Cruise recorded tracks", () => {
     expect(track.distanceKm).toBeCloseTo(1.7 * KM_PER_DEG, -1);
   });
 
+  // Browser acceptance 2026-09-26: a GPX of 41 points across ~900 km — one
+  // point every ~22 km, as a phone logging hourly or an exported, thinned
+  // track produces — was stored as "0 km · covers no leg": every step was
+  // longer than the 20 km hole limit, so the whole file became holes.
+  it("measures a sparse recording instead of calling every step a hole", async () => {
+    const res = await upload(gpx(meridian(54, 58, 0.2)));
+    expect(res.status).toBe(201);
+
+    const track = await prisma.cruiseTrack.findFirstOrThrow({ where: { cruiseId } });
+    expect(track.segmentStarts as number[]).toEqual([0]);
+    expect(track.distanceKm).toBeCloseTo(4 * KM_PER_DEG, -1);
+
+    const overview = await request(app)
+      .get(`/api/v1/cruises/${cruiseId}/tracks`)
+      .set("Cookie", cookie);
+    expect(overview.body.data.tracks[0].distanceKm).toBeCloseTo(4 * KM_PER_DEG, -1);
+    expect(overview.body.data.tracks[0].coveredLegs).toEqual([0, 1]);
+    const [ab] = await legs();
+    expect(ab.method).toBe("recorded_track");
+  });
+
+  it("still marks a real hole in a sparse recording", async () => {
+    // ~22 km steps, then 1.2° (133 km) of silence.
+    const points = [...meridian(54, 55, 0.2), ...meridian(56.2, 58, 0.2)];
+    await upload(gpx(points));
+    const track = await prisma.cruiseTrack.findFirstOrThrow({ where: { cruiseId } });
+    expect(track.segmentStarts as number[]).toHaveLength(2);
+  });
+
   it("wins over a drawn line, and gives the leg back to it when removed", async () => {
     await prisma.cruiseLegRoute.create({
       data: {

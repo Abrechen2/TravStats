@@ -254,7 +254,8 @@
     "duplicateError": "This program is already on file",
     "deleteError": "Could not delete loyalty program",
     "extendExisting": "Extend \"{{name}}\" to cover this chain instead",
-    "leavesThisChain": "This chain is no longer ticked: after saving, the programme will not appear on this chain page any more. It is kept and stays reachable on the “Loyalty programmes” page in the menu under your name."
+    "leavesThisChain": "This chain is no longer ticked: after saving, the programme will not appear on this chain page any more. It is kept and stays reachable on the “Loyalty programmes” page in the menu under your name.",
+    "leavesThisChainSettings": "This chain is no longer ticked: after saving, the programme will not appear on this chain page any more. It is kept and stays reachable under Settings → Lodging → Loyalty programmes."
   },
   "chainDetail": {
     "loading": "Loading chain …",

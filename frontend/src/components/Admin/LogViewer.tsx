@@ -1,4 +1,4 @@
-import { useCallback, useEffect, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { adminApi } from "../../lib/api";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { useTranslation } from "../../hooks/useTranslation";
@@ -56,9 +56,28 @@ export default function LogViewer({
   const [page, setPage] = useState<LogReadResponse | null>(null);
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  const [shownFile, setShownFile] = useState<string | null>(selectedFile);
+  const requestSeq = useRef(0);
+
+  // A page offset and a filter belong to the file they were set on. The
+  // "view" buttons in the file table change the file without touching the
+  // picker here, so the offset of the old file survived and the new one was
+  // asked for "entries 51 onwards" of 14 — "51–50 von 14", "no matching
+  // entries" (browser acceptance 2026-09-26). Reset during render, keyed on
+  // the file, so no request ever goes out with the stale offset.
+  if (shownFile !== selectedFile) {
+    setShownFile(selectedFile);
+    setOffset(0);
+    setDraft(EMPTY_FILTERS);
+    setApplied(EMPTY_FILTERS);
+    setPage(null);
+  }
 
   const load = useCallback(
     async (filename: string, filters: Filters, from: number): Promise<void> => {
+      // Only the newest request may paint: an answer for the previous file or
+      // page arriving late must not replace the one the reader asked for.
+      const seq = ++requestSeq.current;
       setLoading(true);
       setError(null);
       try {
@@ -69,14 +88,16 @@ export default function LogViewer({
           category: filters.category.trim() || undefined,
           search: filters.search.trim() || undefined,
         });
+        if (seq !== requestSeq.current) return;
         setPage(result);
       } catch (err: unknown) {
+        if (seq !== requestSeq.current) return;
         const code = apiErrorMachineCode(err);
         const known = (LOG_ERROR_CODES as readonly string[]).includes(code ?? "");
         setPage(null);
         setError(known ? t(`admin:logging.errors.${code}`) : t("admin:logging.errors.loadFailed"));
       } finally {
-        setLoading(false);
+        if (seq === requestSeq.current) setLoading(false);
       }
     },
     [t]
@@ -105,10 +126,7 @@ export default function LogViewer({
           <select
             className={inputClass}
             value={selectedFile ?? ""}
-            onChange={(e) => {
-              setOffset(0);
-              onSelectFile(e.target.value);
-            }}
+            onChange={(e) => onSelectFile(e.target.value)}
           >
             <option value="" disabled>
               {t("admin:logging.viewer.chooseFile")}
@@ -184,13 +202,15 @@ export default function LogViewer({
             >
               {t("admin:logging.viewer.older")}
             </button>
-            <span className="text-xs text-(--text-muted)">
-              {t("admin:logging.viewer.range", {
-                from: page.offset + 1,
-                to: page.offset + page.entries.length,
-                total: page.total,
-              })}
-            </span>
+            {page.entries.length > 0 && (
+              <span className="text-xs text-(--text-muted)" data-testid="log-viewer-range">
+                {t("admin:logging.viewer.range", {
+                  from: page.offset + 1,
+                  to: page.offset + page.entries.length,
+                  total: page.total,
+                })}
+              </span>
+            )}
           </>
         )}
       </div>

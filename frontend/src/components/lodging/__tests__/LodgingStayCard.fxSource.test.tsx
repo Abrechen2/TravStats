@@ -89,4 +89,43 @@ describe("LodgingStayCard names the rate's source", () => {
       /lodging:fx\.source\s/
     );
   });
+
+  // Browser acceptance 2026-09-26: a stay priced 210 EUR in a EUR account,
+  // with no snapshot (undated, or written before one was taken), showed
+  // "kein Kurs" — "not in totals" — while the totals counted it at face value.
+  it("does not mark a base-currency price without a snapshot as unconverted", () => {
+    render(
+      <LodgingStayCard
+        stay={{
+          ...baseStay,
+          currency: "EUR",
+          totalPrice: 210,
+          totalPriceBase: null,
+          fxRate: null,
+          fxRateDate: null,
+          fxBaseCurrency: null,
+          fxSource: null,
+        }}
+      />
+    );
+    expect(screen.queryByText("lodging:fx.markerNone")).toBeNull();
+  });
+
+  it("still marks a foreign price that has no rate", () => {
+    render(
+      <LodgingStayCard
+        stay={{
+          ...baseStay,
+          currency: "USD",
+          totalPrice: 300,
+          totalPriceBase: null,
+          fxRate: null,
+          fxRateDate: null,
+          fxBaseCurrency: null,
+          fxSource: null,
+        }}
+      />
+    );
+    expect(screen.getByText("lodging:fx.markerNone")).toBeTruthy();
+  });
 });

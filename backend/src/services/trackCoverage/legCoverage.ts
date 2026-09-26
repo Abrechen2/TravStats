@@ -109,7 +109,9 @@ export const CRUISE_TRACK_ANCHOR_KM = 10;
  * recording. A GPS logger at one point a minute on a ship at 22 knots steps
  * 0.7 km; twenty kilometres of silence is a phone that lost its signal.
  * Applied at import (`splitAtLongSteps`), so the hole becomes a segment
- * boundary like any file's own `<trkseg>` break.
+ * boundary like any file's own `<trkseg>` break. It is the FLOOR of the
+ * limit: a sparse recording raises it to a multiple of its own median step
+ * (`holeThresholdKm`), or a file with one point every 22 km is all holes.
  */
 export const CRUISE_TRACK_GAP_KM = 20;
 

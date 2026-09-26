@@ -9,9 +9,15 @@ const UNITS = ["B", "KB", "MB", "GB", "TB"] as const;
  * same sentence for a file size and for an upload limit, so the function moved
  * here rather than becoming a second copy that can drift.
  */
-export function formatBytes(bytes: number): string {
+export function formatBytes(bytes: number, locale?: string): string {
   if (!Number.isFinite(bytes) || bytes <= 0) return "0 B";
   const exponent = Math.min(Math.floor(Math.log(bytes) / Math.log(1024)), UNITS.length - 1);
   const value = bytes / 1024 ** exponent;
-  return exponent === 0 ? `${value} B` : `${value.toFixed(1)} ${UNITS[exponent]}`;
+  if (exponent === 0) return `${value} B`;
+  // With a locale the number follows it — "3,4 MB" on a German page, where
+  // the admin log card printed "3.39 MB" (browser acceptance 2026-09-26).
+  const number = locale
+    ? value.toLocaleString(locale, { minimumFractionDigits: 1, maximumFractionDigits: 1 })
+    : value.toFixed(1);
+  return `${number} ${UNITS[exponent]}`;
 }

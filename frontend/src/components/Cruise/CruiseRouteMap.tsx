@@ -16,6 +16,7 @@ import { DEFAULT_CRUISE_COLORS, type CruiseColorConfig } from "../../lib/cruiseC
 import { computeBbox } from "../../utils/mapAnimationHelpers";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 import { RouteEditorOverlay } from "./RouteEditorOverlay";
 import { MapContextMenu, type MapMenuEntry } from "./MapContextMenu";
 import {
@@ -111,6 +112,13 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   // Both namespaces: the tooltip machinery speaks "map", the route editor's
   // strings live in "cruise" beside the rest of this feature's wording.
   const { t, i18n } = useTranslation(["map", "cruise"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
+  // Unsaved edits are challenged in the page's own dialog, not window.confirm.
+  const keepEdits = useCallback(
+    async (): Promise<boolean> =>
+      !(await askConfirm({ message: t("cruise:routeEditor.discardConfirm") })),
+    [askConfirm, t]
+  );
   const locale = i18n.language || "de";
   const getTooltip = useMemo(() => createMarkerTooltip(t, locale), [t, locale]);
   const mapRef = useRef<MapRef | null>(null);
@@ -358,16 +366,10 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
 
   /** Open a leg, or switch to it, guarding whatever is unsaved. */
   const enterLeg = useCallback(
-    (fromPortId: number, toPortId: number): void => {
+    async (fromPortId: number, toPortId: number): Promise<void> => {
       if (!geometry) return;
       if (editing && editing.fromPortId === fromPortId && editing.toPortId === toPortId) return;
-      if (
-        editorState &&
-        isDirty(editorState) &&
-        !window.confirm(t("cruise:routeEditor.discardConfirm"))
-      ) {
-        return;
-      }
+      if (editorState && isDirty(editorState) && (await keepEdits())) return;
       const feature = geometry.features.find(
         (f) => f.properties.fromPortId === fromPortId && f.properties.toPortId === toPortId
       );
@@ -381,7 +383,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
       setEditorState(initRouteEditor(simplifyForEditing(feature.geometry.coordinates)));
       setSaveError(false);
     },
-    [geometry, editing, editorState, t]
+    [geometry, editing, editorState, keepEdits]
   );
 
   /**
@@ -408,7 +410,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
       }
       const clicked = info.object as { fromPortId: number; toPortId: number } | undefined;
       if (!clicked) return;
-      enterLeg(clicked.fromPortId, clicked.toPortId);
+      void enterLeg(clicked.fromPortId, clicked.toPortId);
     },
     [editMode, geometry, editorState, enterLeg]
   );
@@ -420,16 +422,12 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
    * the editor entirely, so a user who opened the wrong leg had to leave and
    * come back. Named `closeLegOnly` to keep it apart from `closeEditor`.
    */
-  const closeLegOnly = useCallback((): void => {
-    setEditorState((prev) => {
-      if (prev && isDirty(prev) && !window.confirm(t("cruise:routeEditor.discardConfirm"))) {
-        return prev;
-      }
-      setEditing(null);
-      setSaveError(false);
-      return null;
-    });
-  }, [t]);
+  const closeLegOnly = useCallback(async (): Promise<void> => {
+    if (editorState && isDirty(editorState) && (await keepEdits())) return;
+    setEditorState(null);
+    setEditing(null);
+    setSaveError(false);
+  }, [editorState, keepEdits]);
 
   /**
    * Right-click: a different menu for a handle, a leg, and empty water.
@@ -494,7 +492,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
             : [
                 {
                   label: t("cruise:routeEditor.menu.editThisLeg"),
-                  onSelect: () => enterLeg(leg.fromPortId, leg.toPortId),
+                  onSelect: () => void enterLeg(leg.fromPortId, leg.toPortId),
                 },
               ],
         });
@@ -651,19 +649,13 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   };
 
   /** The one exit from edit mode — dirty work is challenged, never dropped. */
-  const onCancel = useCallback((): void => {
-    if (
-      editorState &&
-      isDirty(editorState) &&
-      !window.confirm(t("cruise:routeEditor.discardConfirm"))
-    ) {
-      return;
-    }
+  const onCancel = useCallback(async (): Promise<void> => {
+    if (editorState && isDirty(editorState) && (await keepEdits())) return;
     setEditing(null);
     setEditorState(null);
     setSaveError(false);
     switchMapSurface(false);
-  }, [editorState, t, switchMapSurface]);
+  }, [editorState, keepEdits, switchMapSurface]);
 
   /**
    * Esc leaves the editor without saving (spec §6.1), same path as Cancel, and
@@ -677,7 +669,8 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
   useEffect(() => {
     if (!editMode) return;
     const onKey = (e: KeyboardEvent): void => {
-      if (e.key === "Escape") onCancel();
+      // An Escape the discard question already took must not ask it again.
+      if (e.key === "Escape" && !e.defaultPrevented) void onCancel();
     };
     window.addEventListener("keydown", onKey);
     const previousOverflow = document.body.style.overflow;
@@ -1033,6 +1026,7 @@ export function CruiseRouteMap({ cruise }: Props): JSX.Element {
           )}
         </div>
       </div>
+      {confirmDialog}
     </div>
   );
 }

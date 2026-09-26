@@ -1,4 +1,7 @@
 {
+  "confirmDialog": {
+    "title": "Bitte bestätigen"
+  },
   "buttons": {
     "save": "Speichern",
     "cancel": "Abbrechen",

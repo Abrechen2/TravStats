@@ -7,6 +7,7 @@ import { Icon } from "../ui/Icon";
 import { useInstallPrompt } from "../../hooks/useInstallPrompt";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { LOYALTY_DOMAINS } from "../../shared/domains";
+import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 
 interface UserMenuProps {
   user: DisplayableUser | null | undefined;
@@ -71,7 +72,9 @@ export default function UserMenu({
   // The loyalty page draws a section per enabled domain that has programmes;
   // with none of them on it would be an empty page, so it gets no entry.
   const { isEnabled } = useEnabledDomains();
-  const hasLoyaltyDomain = LOYALTY_DOMAINS.some((domain) => isEnabled(domain));
+  const { isFeatureVisible } = useBetaFeatures();
+  const hasLoyaltyDomain =
+    isFeatureVisible("loyaltyCenter") && LOYALTY_DOMAINS.some((domain) => isEnabled(domain));
 
   // Outside clicks go through the project's own hook rather than a second
   // hand-rolled document listener; Escape is added here because the hook does

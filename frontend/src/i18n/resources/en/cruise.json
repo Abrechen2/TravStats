@@ -325,6 +325,7 @@
       "track": "Recording",
       "drawn": "Drawn by hand",
       "sea_route": "Computed sea route",
+      "pending": "Not computed yet",
       "chord": "Straight line"
     },
     "verdict": {

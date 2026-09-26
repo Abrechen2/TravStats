@@ -51,4 +51,27 @@ describe("ParserSettings — user permission block", () => {
     ).toBeChecked();
     expect(screen.queryByText(/Allow users to add/)).toBeNull();
   });
+
+  // Browser acceptance 2026-09-26: the built-in parser cards said "Boarding
+  // pass image parsing" and "Email booking parsing" on the German page.
+  it("describes the built-in parsers in German", () => {
+    render(
+      <ParserSettings
+        parserSettings={{
+          allowUserApiKeys: true,
+          fxCdnFallbackEnabled: false,
+          ollamaUrl: null,
+          ollamaModel: null,
+        }}
+        savingParsers={false}
+        onSave={vi.fn()}
+        onParserSettingsChange={vi.fn()}
+        onTestOllama={vi.fn()}
+        ollamaTestState={{ status: "idle" }}
+      />
+    );
+    expect(screen.getByText(adminDe.parserSettings.builtin.ocrHint)).toBeInTheDocument();
+    expect(screen.getByText(adminDe.parserSettings.builtin.templatesHint)).toBeInTheDocument();
+    expect(screen.queryByText(/image parsing|booking parsing|Regex Templates/)).toBeNull();
+  });
 });

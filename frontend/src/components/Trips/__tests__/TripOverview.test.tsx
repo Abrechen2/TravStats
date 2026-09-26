@@ -101,6 +101,8 @@ describe("TripOverview", () => {
     expect(screen.getByText("2")).toBeInTheDocument();
     const row = screen.getByText("Lufthansa LH8462 · FRA → ANC").closest("a");
     expect(row).toHaveAttribute("href", "/flights/f1");
-    expect(row?.textContent).toContain("2025-07-12");
+    // The user's date format (DD.MM.YYYY in the test store), not the ISO day.
+    expect(row?.textContent).toContain("12.07.2025");
+    expect(row?.textContent).not.toContain("2025-07-12");
   });
 });

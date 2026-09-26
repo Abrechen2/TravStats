@@ -22,7 +22,7 @@ import { FlagImg } from "../lib/countryFlag";
 import { placeCountryLabel, placeCountryCode } from "../lib/placeCountry";
 import { logger } from "../lib/logger";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
-import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
+import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { createVisit, deletePlace, deleteVisit, getPlace } from "../lib/api/places";
 import { tripsApi } from "../lib/api/trips";
 import type { Trip } from "../types";
@@ -524,7 +524,20 @@ export default function PlaceDetailPage(): JSX.Element {
         <ConfirmModal
           isOpen
           title={t("places:list.deleteTitle")}
-          message={t("places:list.deleteMessage", { name: place.name })}
+          // The same sentence as the list page, from the same helper: this call
+          // once passed no count and showed "mit {{count}} Besuchen" raw
+          // (browser acceptance 2026-09-26). Every visit goes with the place,
+          // planned ones included.
+          message={countedDeleteMessage(
+            t,
+            {
+              counted: "places:list.deleteMessage",
+              empty: "places:list.deleteMessageNoVisits",
+            },
+            place.name,
+            place.visits?.length ?? 0
+          )}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
           confirmText={t("common:buttons.delete")}
           cancelText={t("common:buttons.cancel")}
           onConfirm={() => void removePlace()}

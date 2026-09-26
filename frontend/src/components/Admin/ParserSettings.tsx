@@ -168,7 +168,9 @@ export default function ParserSettings({
             </svg>
             <div>
               <p className="text-sm font-medium text-(--text-primary)">Tesseract OCR</p>
-              <p className="text-xs text-(--text-muted)">Boarding pass image parsing</p>
+              <p className="text-xs text-(--text-muted)">
+                {t("admin:parserSettings.builtin.ocrHint")}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2 p-3 bg-(--bg-base) rounded-lg">
@@ -180,8 +182,12 @@ export default function ParserSettings({
               />
             </svg>
             <div>
-              <p className="text-sm font-medium text-(--text-primary)">Regex Templates</p>
-              <p className="text-xs text-(--text-muted)">Email booking parsing</p>
+              <p className="text-sm font-medium text-(--text-primary)">
+                {t("admin:parserSettings.builtin.templatesName")}
+              </p>
+              <p className="text-xs text-(--text-muted)">
+                {t("admin:parserSettings.builtin.templatesHint")}
+              </p>
             </div>
           </div>
         </div>

@@ -71,11 +71,14 @@ const stats: LogStatsResponse = {
 
 const noop = () => {};
 
-function renderManager(overrides: Partial<LoggingConfigResponse> = {}) {
+function renderManager(
+  overrides: Partial<LoggingConfigResponse> = {},
+  logFiles: LogFileInfo[] = files
+) {
   return render(
     <LoggingManager
       loggingConfig={{ ...config, ...overrides }}
-      logFiles={files}
+      logFiles={logFiles}
       logStats={stats}
       savingLogging={false}
       onSave={noop}
@@ -103,10 +106,20 @@ beforeEach(() => {
 });
 
 describe("LoggingManager", () => {
-  it("shows the oldest and newest log as dates, not a dash", () => {
+  // Browser acceptance 2026-09-26: "Sep 26, 2026" and "3.39 MB" on a German
+  // page. Dates follow the date-format setting (DD.MM.YYYY in the test
+  // store), sizes the UI language.
+  it("shows the oldest and newest log as dates in the user's format, not a dash", () => {
     renderManager();
-    expect(screen.getByTestId("oldest-log")).toHaveTextContent("Sep 20, 2026");
-    expect(screen.getByTestId("newest-log")).toHaveTextContent("Sep 26, 2026");
+    expect(screen.getByTestId("oldest-log")).toHaveTextContent("20.09.2026");
+    expect(screen.getByTestId("newest-log")).toHaveTextContent("26.09.2026");
+    expect(screen.queryByText(/Sep \d/)).toBeNull();
+  });
+
+  it("gives sizes with a German decimal comma", () => {
+    renderManager();
+    expect(screen.getAllByText("2,0 KB")).toHaveLength(2);
+    expect(screen.queryByText(/\d\.\d+ [KM]B/)).toBeNull();
   });
 
   it("says when LOG_LEVEL pins the level, and locks the picker", () => {
@@ -163,6 +176,58 @@ describe("the log viewer", () => {
         expect.objectContaining({ offset: 50, limit: 50 })
       )
     );
+  });
+
+  // Browser acceptance 2026-09-26: paging app.log to its second page and then
+  // pressing "Anzeigen" on a 14-line file asked that file for entries 51 on —
+  // "51–50 von 14 (neueste zuerst)" above "Keine passenden Einträge.".
+  it("starts a newly viewed file on its first page, unfiltered", async () => {
+    const errorLog: LogFileInfo = { ...files[0], filename: "error.log", category: "error" };
+    vi.mocked(adminApi.readLogFile).mockResolvedValue(page());
+    renderManager({}, [files[0], errorLog]);
+
+    const [viewApp, viewError] = screen.getAllByRole("button", { name: "Anzeigen" });
+    await userEvent.click(viewApp);
+    await screen.findByText("newest_event");
+    await userEvent.type(screen.getByRole("textbox", { name: /^Text/ }), "probe");
+    vi.mocked(adminApi.readLogFile).mockResolvedValue(page({ offset: 50 }));
+    await userEvent.click(screen.getByRole("button", { name: "Ältere" }));
+    await waitFor(() =>
+      expect(adminApi.readLogFile).toHaveBeenLastCalledWith(
+        "app.log",
+        expect.objectContaining({ offset: 50 })
+      )
+    );
+
+    // The server answers what it was asked; a stale offset would come back as
+    // an empty page at 50.
+    vi.mocked(adminApi.readLogFile).mockImplementation(async (filename, options) =>
+      (options?.offset ?? 0) === 0
+        ? page({ filename, total: 14, hasMore: false })
+        : page({ filename, entries: [], total: 14, offset: options?.offset ?? 0, hasMore: false })
+    );
+    await userEvent.click(viewError);
+
+    expect(await screen.findByText("1–2 von 14 (neueste zuerst)")).toBeInTheDocument();
+    expect(screen.queryByText(deAdmin.logging.viewer.empty)).toBeNull();
+    expect(adminApi.readLogFile).toHaveBeenLastCalledWith("error.log", {
+      offset: 0,
+      limit: 50,
+      level: undefined,
+      category: undefined,
+      search: undefined,
+    });
+    expect(screen.getByRole("textbox", { name: /^Text/ })).toHaveValue("");
+  });
+
+  it("never shows a range whose start lies past its end", async () => {
+    vi.mocked(adminApi.readLogFile).mockResolvedValue(
+      page({ entries: [], total: 14, offset: 50, hasMore: false })
+    );
+    renderManager();
+    await userEvent.click(screen.getByRole("button", { name: "Anzeigen" }));
+    await screen.findByText(deAdmin.logging.viewer.empty);
+    expect(screen.queryByText(/51–50/)).toBeNull();
   });
 
   it("sends the level, category and text filters", async () => {

@@ -39,10 +39,11 @@ vi.mock("../../../lib/logger", () => ({
 }));
 
 const addToast = vi.fn();
+const askConfirm = vi.fn(async () => true);
 
 beforeEach(() => {
   vi.clearAllMocks();
-  vi.stubGlobal("confirm", () => true);
+  askConfirm.mockResolvedValue(true);
 });
 
 describe("useLoggingAdmin — cleanup", () => {
@@ -53,16 +54,33 @@ describe("useLoggingAdmin — cleanup", () => {
       failedCount: 0,
       retentionDays: 7,
     });
-    const { result } = renderHook(() => useLoggingAdmin(deT, addToast));
+    const { result } = renderHook(() => useLoggingAdmin(deT, addToast, askConfirm));
 
     await act(() => result.current.handleCleanupLogs());
 
     expect(addToast).toHaveBeenCalledWith(
       "success",
-      "Aufräumen abgeschlossen: 3 Dateien gelöscht, 2.00 MB freigegeben"
+      "Aufräumen abgeschlossen: 3 Dateien gelöscht, 2,0 MB freigegeben"
     );
     const text = addToast.mock.calls.map((call) => call[1]).join(" ");
     expect(text).not.toMatch(/undefined|NaN/);
+  });
+
+  it("says a sweep that freed nothing without a fake precision (was '0.00 MB')", async () => {
+    vi.mocked(adminApi.cleanupLogs).mockResolvedValue({
+      deletedCount: 0,
+      freedBytes: 0,
+      failedCount: 0,
+      retentionDays: 7,
+    });
+    const { result } = renderHook(() => useLoggingAdmin(deT, addToast, askConfirm));
+
+    await act(() => result.current.handleCleanupLogs());
+
+    expect(addToast).toHaveBeenCalledWith(
+      "success",
+      "Aufräumen abgeschlossen: 0 Dateien gelöscht, 0 B freigegeben"
+    );
   });
 
   it("says when some files could not be deleted instead of reporting plain success", async () => {
@@ -72,7 +90,7 @@ describe("useLoggingAdmin — cleanup", () => {
       failedCount: 2,
       retentionDays: 7,
     });
-    const { result } = renderHook(() => useLoggingAdmin(deT, addToast));
+    const { result } = renderHook(() => useLoggingAdmin(deT, addToast, askConfirm));
 
     await act(() => result.current.handleCleanupLogs());
 
@@ -89,10 +107,29 @@ describe("useLoggingAdmin — cleanup", () => {
         config: { headers: new AxiosHeaders() },
       })
     );
-    const { result } = renderHook(() => useLoggingAdmin(deT, addToast));
+    const { result } = renderHook(() => useLoggingAdmin(deT, addToast, askConfirm));
 
     await act(() => result.current.handleDeleteLogFile("gone.log"));
 
     expect(addToast).toHaveBeenCalledWith("error", deAdmin.logging.errors.LOG_FILE_NOT_FOUND);
+  });
+
+  // Browser acceptance 2026-09-26: both questions were the browser's native
+  // box. They go through the page's own dialog now, and "no" does nothing.
+  it("asks through the page's dialog and does nothing on 'no'", async () => {
+    askConfirm.mockResolvedValue(false);
+    const native = vi.fn(() => true);
+    vi.stubGlobal("confirm", native);
+    const { result } = renderHook(() => useLoggingAdmin(deT, addToast, askConfirm));
+
+    await act(() => result.current.handleCleanupLogs());
+    await act(() => result.current.handleDeleteLogFile("app.log"));
+
+    expect(askConfirm).toHaveBeenCalledTimes(2);
+    expect(askConfirm).toHaveBeenCalledWith(expect.objectContaining({ destructive: true }));
+    expect(native).not.toHaveBeenCalled();
+    expect(adminApi.cleanupLogs).not.toHaveBeenCalled();
+    expect(adminApi.deleteLogFile).not.toHaveBeenCalled();
+    vi.unstubAllGlobals();
   });
 });

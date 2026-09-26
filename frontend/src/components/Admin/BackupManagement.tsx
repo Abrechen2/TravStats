@@ -11,6 +11,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 // The shared frame: role=dialog, aria-modal, Escape, focus in and back out,
 // and a panel that scrolls instead of running off a 320px screen (AUD-037).
 import Modal from "../Modal";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 
 interface Backup {
   id: string;
@@ -199,6 +200,7 @@ export function RestoreModal({
 
 export default function BackupManagement(): JSX.Element {
   const { t } = useTranslation(["admin", "common", "settings"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const addToast = useToastStore((state) => state.addToast);
   const [backups, setBackups] = useState<Backup[]>([]);
   const [loading, setLoading] = useState(true);
@@ -413,9 +415,8 @@ export default function BackupManagement(): JSX.Element {
   };
 
   const handleDelete = async (backup: Backup) => {
-    if (!confirm(t("admin:backup.deleteConfirm", { date: formatDate(backup.completedAt) }))) {
-      return;
-    }
+    const message = t("admin:backup.deleteConfirm", { date: formatDate(backup.completedAt) });
+    if (!(await askConfirm({ message, destructive: true }))) return;
 
     try {
       await backupApi.delete(backup.id);
@@ -749,6 +750,7 @@ export default function BackupManagement(): JSX.Element {
           restoring={restoring}
         />
       )}
+      {confirmDialog}
     </div>
   );
 }

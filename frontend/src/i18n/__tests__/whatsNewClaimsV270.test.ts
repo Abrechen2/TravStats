@@ -54,6 +54,7 @@ describe("the 2.7.0 announcement describes the app that shipped", () => {
     lodgingEnrichment: [/Hotel-Anreicherung/, /hotel enrichment/],
     railDomain: [/Bahn/, /rail/],
     cruiseTracks: [/Spuren bei Kreuzfahrten/, /tracks on cruises/],
+    loyaltyCenter: [/Bonusprogramme/, /Loyalty programmes/],
   };
   it.each(Object.keys(BETA_FEATURES) as (keyof typeof BETA_FEATURES)[])(
     "the beta block names the registered beta feature %s",
@@ -61,6 +62,23 @@ describe("the 2.7.0 announcement describes the app that shipped", () => {
       const [de, en] = betaKeyword[key];
       expect(deWhatsNew.entries.v270.beta.body).toMatch(de);
       expect(enWhatsNew.entries.v270.beta.body).toMatch(en);
+    }
+  );
+
+  /**
+   * 2026-09-26: the owner put the loyalty page behind the switch
+   * (`loyaltyCenter`). The released "entry suggestions" block announced it in
+   * its very title; it must not promise a page most readers cannot open.
+   */
+  it.each([
+    ["de", deWhatsNew, /Bonusprogramme|Statusverlauf/],
+    ["en", enWhatsNew, /loyalty programmes|status history/i],
+  ] as const)(
+    "the released %s block does not announce the gated loyalty page",
+    (_l, source, re) => {
+      const block = source.entries.v270.entrySuggestions;
+      expect(block.title).not.toMatch(re);
+      expect(block.body).not.toMatch(re);
     }
   );
 
