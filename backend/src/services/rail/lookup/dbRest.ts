@@ -54,27 +54,31 @@ const toDate = (value: string | null | undefined): Date | null => {
   return Number.isNaN(d.getTime()) ? null : d;
 };
 
-async function stopId(query: RailLookupQuery): Promise<string | "noMatch" | "unavailable"> {
+type Miss = "unavailable" | "timedOut";
+const missOf = (reason: "failed" | "outOfTime"): Miss =>
+  reason === "outOfTime" ? "timedOut" : "unavailable";
+
+async function stopId(query: RailLookupQuery): Promise<string | "noMatch" | Miss> {
   if (query.from.dbId) return query.from.dbId;
   const url =
     `${DB_REST_BASE_URL}/locations/nearby?latitude=${query.from.lat}&longitude=${query.from.lon}` +
     `&results=1&distance=${NEARBY_DISTANCE_M}&poi=false&addresses=false`;
-  const res = await fetchRailJson("db-rest", url, nearbyResponse);
-  if (!res.ok) return "unavailable";
+  const res = await fetchRailJson("db-rest", url, nearbyResponse, query.deadline);
+  if (!res.ok) return missOf(res.reason);
   return res.data[0]?.id ?? "noMatch";
 }
 
 export async function lookupDbRest(query: RailLookupQuery): Promise<ProviderResult> {
   const id = await stopId(query);
-  if (id === "noMatch" || id === "unavailable") return { outcome: id };
+  if (id === "noMatch" || id === "unavailable" || id === "timedOut") return { outcome: id };
 
   const dayStart = fromZonedTime(`${query.date}T00:00:00`, query.timezone ?? "UTC");
   const url =
     `${DB_REST_BASE_URL}/stops/${encodeURIComponent(id)}/departures` +
     `?when=${encodeURIComponent(dayStart.toISOString())}&duration=1440&results=1000` +
     `&${PRODUCTS}&remarks=false`;
-  const res = await fetchRailJson("db-rest", url, departuresResponse);
-  if (!res.ok) return { outcome: "unavailable" };
+  const res = await fetchRailJson("db-rest", url, departuresResponse, query.deadline);
+  if (!res.ok) return { outcome: missOf(res.reason) };
 
   const hit = res.data.departures.find((d) => {
     const when = toDate(d.plannedWhen);
@@ -89,8 +93,8 @@ export async function lookupDbRest(query: RailLookupQuery): Promise<ProviderResu
   const tripUrl =
     `${DB_REST_BASE_URL}/trips/${encodeURIComponent(hit.tripId)}` +
     `?stopovers=true&remarks=false&polyline=false`;
-  const trip = await fetchRailJson("db-rest", tripUrl, tripResponse);
-  if (!trip.ok) return { outcome: "unavailable" };
+  const trip = await fetchRailJson("db-rest", tripUrl, tripResponse, query.deadline);
+  if (!trip.ok) return { outcome: missOf(trip.reason) };
 
   const stops: ProviderStop[] = trip.data.trip.stopovers.flatMap((s) =>
     s.stop.location

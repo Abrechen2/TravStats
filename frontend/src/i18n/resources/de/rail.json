@@ -92,8 +92,17 @@
     "error": "Die Suche ist fehlgeschlagen. Du kannst die Fahrt von Hand eintragen.",
     "none": {
       "disabled": "Für diesen Bahnhof ist hier kein Fahrplandienst eingeschaltet.",
-      "unavailable": "Die Fahrplandienste antworten gerade nicht. Versuch es später noch einmal oder trag die Fahrt von Hand ein.",
+      "unavailable": "Keine Antwort von {{providers}} — ob dieser Zug an diesem Tag ab diesem Bahnhof fährt, ist deshalb offen. Versuch es später noch einmal oder trag die Fahrt von Hand ein.",
       "noMatch": "Im Fahrplan fährt an diesem Tag kein solcher Zug ab diesem Bahnhof. Bei einem vergangenen Tag ist das normal."
+    },
+    "outcome": {
+      "matched": "gefunden",
+      "noMatch": "kein passender Zug an diesem Tag",
+      "unavailable": "hat nicht geantwortet",
+      "timedOut": "hat nicht rechtzeitig geantwortet",
+      "skippedForTime": "nicht mehr gefragt — die Zeit für die Suche war um",
+      "disabled": "auf dieser Instanz abgeschaltet",
+      "notApplicable": "für diesen Bahnhof nicht zuständig"
     },
     "found": "Gefunden: {{train}} · {{operator}} (Quelle: {{provider}})",
     "provider": {

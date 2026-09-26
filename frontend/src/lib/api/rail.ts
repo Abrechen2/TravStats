@@ -1,4 +1,5 @@
 import { api } from "./client";
+import { API_TIMEOUTS } from "../../config/constants";
 import type {
   RailJourney,
   RailJourneyDetail,
@@ -105,7 +106,10 @@ export const railApi = {
 
   /** A train by number and day, boarded at a catalogue station or a position. */
   async lookup(query: RailLookupQuery): Promise<RailLookupAnswer> {
-    const res = await api.get<Envelope<RailLookupAnswer>>("/rail/lookup", { params: query });
+    const res = await api.get<Envelope<RailLookupAnswer>>("/rail/lookup", {
+      params: query,
+      timeout: API_TIMEOUTS.RAIL_LOOKUP,
+    });
     return res.data.data;
   },
 

@@ -92,8 +92,17 @@
     "error": "The lookup failed. You can enter the journey by hand.",
     "none": {
       "disabled": "No timetable service is switched on here for this station.",
-      "unavailable": "The timetable services are not answering right now. Try again later or enter the journey by hand.",
+      "unavailable": "No answer from {{providers}} — so whether this train runs from this station on that day is still open. Try again later or enter the ride by hand.",
       "noMatch": "The timetable has no such train from this station on that day. For a past day that is normal."
+    },
+    "outcome": {
+      "matched": "found",
+      "noMatch": "no matching train that day",
+      "unavailable": "did not answer",
+      "timedOut": "did not answer in time",
+      "skippedForTime": "not asked — the search ran out of time",
+      "disabled": "switched off on this instance",
+      "notApplicable": "does not cover this station"
     },
     "found": "Found: {{train}} · {{operator}} (source: {{provider}})",
     "provider": {

@@ -178,8 +178,18 @@ export interface RailLookupStop {
   departureLocal: string | null;
 }
 
+/**
+ * One provider's answer. `timedOut` = asked, but the lookup's 20 s budget ran
+ * out first; `skippedForTime` = not asked, the budget was spent before its turn.
+ */
 export type RailLookupOutcome =
-  "matched" | "noMatch" | "unavailable" | "disabled" | "notApplicable";
+  | "matched"
+  | "noMatch"
+  | "unavailable"
+  | "disabled"
+  | "notApplicable"
+  | "timedOut"
+  | "skippedForTime";
 
 export interface RailLookupAnswer {
   match: {
