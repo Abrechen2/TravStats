@@ -1,0 +1,98 @@
+import { describe, it, expect, vi, beforeEach } from "vitest";
+import { renderHook, act } from "@testing-library/react";
+import { AxiosError, AxiosHeaders } from "axios";
+import { useLoggingAdmin } from "../useLoggingAdmin";
+import { adminApi } from "../../../lib/api";
+import deAdmin from "../../../i18n/resources/de/admin.json";
+
+/**
+ * Audit 2026-09-26, finding 6: the cleanup toast read `filesDeleted` and
+ * `spaceFreed` while the server sent `deletedCount` — every admin read
+ * "undefined Dateien gelöscht, NaN MB freigegeben". Asserted on the German
+ * sentence the admin actually gets.
+ */
+
+function deT(key: string, options?: Record<string, unknown>): string {
+  const path = key.replace(/^admin:/, "");
+  const value = path
+    .split(".")
+    .reduce<unknown>(
+      (node, part) => (node as Record<string, unknown> | undefined)?.[part],
+      deAdmin
+    );
+  if (typeof value !== "string") return key;
+  return value.replace(/\{\{(\w+)\}\}/g, (_, name: string) => String(options?.[name]));
+}
+
+vi.mock("../../../lib/api", () => ({
+  adminApi: {
+    cleanupLogs: vi.fn(),
+    getLoggingConfig: vi.fn().mockResolvedValue({}),
+    getLogFiles: vi.fn().mockResolvedValue({ files: [] }),
+    getLogStats: vi.fn().mockResolvedValue({}),
+    deleteLogFile: vi.fn(),
+  },
+}));
+
+vi.mock("../../../lib/logger", () => ({
+  logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+}));
+
+const addToast = vi.fn();
+
+beforeEach(() => {
+  vi.clearAllMocks();
+  vi.stubGlobal("confirm", () => true);
+});
+
+describe("useLoggingAdmin — cleanup", () => {
+  it("reports how many files were deleted and how much space was freed", async () => {
+    vi.mocked(adminApi.cleanupLogs).mockResolvedValue({
+      deletedCount: 3,
+      freedBytes: 2 * 1024 * 1024,
+      failedCount: 0,
+      retentionDays: 7,
+    });
+    const { result } = renderHook(() => useLoggingAdmin(deT, addToast));
+
+    await act(() => result.current.handleCleanupLogs());
+
+    expect(addToast).toHaveBeenCalledWith(
+      "success",
+      "Aufräumen abgeschlossen: 3 Dateien gelöscht, 2.00 MB freigegeben"
+    );
+    const text = addToast.mock.calls.map((call) => call[1]).join(" ");
+    expect(text).not.toMatch(/undefined|NaN/);
+  });
+
+  it("says when some files could not be deleted instead of reporting plain success", async () => {
+    vi.mocked(adminApi.cleanupLogs).mockResolvedValue({
+      deletedCount: 1,
+      freedBytes: 1024,
+      failedCount: 2,
+      retentionDays: 7,
+    });
+    const { result } = renderHook(() => useLoggingAdmin(deT, addToast));
+
+    await act(() => result.current.handleCleanupLogs());
+
+    expect(addToast).toHaveBeenCalledWith("warning", "2 Dateien konnten nicht gelöscht werden.");
+  });
+
+  it("maps a delete failure's stable code to German, never the server's English", async () => {
+    vi.mocked(adminApi.deleteLogFile).mockRejectedValue(
+      new AxiosError("Request failed", "ERR_BAD_REQUEST", undefined, undefined, {
+        status: 404,
+        statusText: "",
+        data: { error: "Log file not found", code: "LOG_FILE_NOT_FOUND" },
+        headers: {},
+        config: { headers: new AxiosHeaders() },
+      })
+    );
+    const { result } = renderHook(() => useLoggingAdmin(deT, addToast));
+
+    await act(() => result.current.handleDeleteLogFile("gone.log"));
+
+    expect(addToast).toHaveBeenCalledWith("error", deAdmin.logging.errors.LOG_FILE_NOT_FOUND);
+  });
+});

@@ -431,14 +431,15 @@
     "logFileDownloadFailed": "Failed to download log file",
     "logFileDeleted": "Log file deleted successfully!",
     "logFileDeletFailed": "Failed to delete log file",
-    "cleanupComplete": "Cleanup complete! Deleted {{filesDeleted}} files, freed {{spaceFreed}} MB",
+    "cleanupComplete": "Cleanup complete: deleted {{deletedCount}} files, freed {{freedMb}} MB",
     "cleanupFailed": "Failed to cleanup logs",
     "ollamaTestSuccess": "Ollama reachable – {{count}} model(s) found",
     "ollamaTestFailed": "Ollama connection failed",
     "enabled": "enabled",
     "disabled": "disabled",
     "twoFactorReset": "Two-factor has been reset",
-    "twoFactorResetFailed": "Two-factor could not be reset"
+    "twoFactorResetFailed": "Two-factor could not be reset",
+    "cleanupPartial": "{{failedCount}} files could not be deleted."
   },
   "prompts": {
     "enterEmail": "Enter email (optional):",
@@ -474,16 +475,18 @@
       "warn": "Warning",
       "info": "Info (Default)",
       "debug": "Debug (Verbose)",
-      "trace": "Trace (Very Verbose)"
+      "trace": "Trace (Very Verbose)",
+      "pinned": "Pinned to “{{level}}” by the LOG_LEVEL environment variable. The setting here is saved but takes effect only once LOG_LEVEL is removed.",
+      "effective": "In effect: {{level}}"
     },
     "retention": {
       "label": "Log Retention (Days)",
-      "hint": "Log files older than this will be automatically deleted"
+      "hint": "Log files older than this are deleted automatically every day and at startup."
     },
     "categories": {
       "http": {
         "label": "Log HTTP Requests",
-        "hint": "Log all HTTP requests with timing, IP, user, and status (category: http)"
+        "hint": "Log every HTTP request with its path (without query string), status, duration and IP (category: http)"
       },
       "database": {
         "label": "Log Database Queries",
@@ -492,7 +495,8 @@
       "parser": {
         "label": "Log Parser Operations",
         "hint": "Log LLM operations with provider details (category: parser)"
-      }
+      },
+      "verboseOnly": "These logs are written only while the log level is Debug or Trace."
     },
     "files": {
       "title": "Log Files",
@@ -504,7 +508,36 @@
       "colModified": "Modified",
       "colActions": "Actions",
       "download": "Download",
-      "delete": "Delete"
+      "delete": "Delete",
+      "view": "View"
+    },
+    "viewer": {
+      "title": "View log entries",
+      "file": "File",
+      "chooseFile": "Choose a file",
+      "level": "Level",
+      "levelAll": "All levels",
+      "category": "Category",
+      "categoryPlaceholder": "e.g. security",
+      "search": "Text",
+      "searchPlaceholder": "Search term",
+      "apply": "Apply filters",
+      "newer": "Newer",
+      "older": "Older",
+      "range": "{{from}}–{{to}} of {{total}} (newest first)",
+      "empty": "No matching entries.",
+      "loading": "Loading entries …",
+      "colTime": "Time",
+      "colLevel": "Level",
+      "colCategory": "Category",
+      "colEvent": "Event / message",
+      "details": "Details"
+    },
+    "errors": {
+      "LOG_FILE_INVALID_NAME": "Invalid file name.",
+      "LOG_FILE_NOT_FOUND": "The log file no longer exists – it was probably rotated or deleted.",
+      "LOG_FILE_UNREADABLE": "The log file could not be read.",
+      "loadFailed": "Could not load log entries."
     }
   },
   "parserSettings": {

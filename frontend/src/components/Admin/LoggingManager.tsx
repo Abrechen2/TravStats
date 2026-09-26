@@ -1,30 +1,28 @@
+import { useState } from "react";
 import { format } from "date-fns";
 import HelpIcon from "../Help/HelpIcon";
+import LogViewer from "./LogViewer";
 import { useTranslation } from "../../hooks/useTranslation";
+import {
+  LOG_LEVELS,
+  type LogFileInfo,
+  type LoggingConfigResponse,
+  type LogLevelName,
+  type LogStatsResponse,
+} from "../../shared/logContract";
 
-export interface LoggingConfig {
-  logLevel: string;
-  logHttpRequests: boolean;
-  logDatabaseQueries: boolean;
-  logParserOperations: boolean;
-  maxLogFileSize: number;
-  logRetentionDays: number;
-}
+export type LoggingConfig = LoggingConfigResponse;
+export type LogFile = LogFileInfo;
+export type LogStats = LogStatsResponse;
 
-export interface LogFile {
-  filename: string;
-  size: number;
-  category: string;
-  created: string;
-  modified: string;
-}
+const isLogLevelName = (value: string): value is LogLevelName =>
+  (LOG_LEVELS as readonly string[]).includes(value);
 
-export interface LogStats {
-  totalSize: number;
-  fileCount: number;
-  categories: Record<string, { fileCount: number; totalSize: number }>;
-  oldestLog: string;
-  newestLog: string;
+/** The stats card shows a date, or a dash when there is none to show. */
+function formatStatDate(iso: string | null): string {
+  if (!iso) return "\u2014";
+  const date = new Date(iso);
+  return Number.isNaN(date.getTime()) ? "\u2014" : format(date, "MMM d, yyyy");
 }
 
 interface LoggingManagerProps {
@@ -53,6 +51,12 @@ export default function LoggingManager({
   onLoggingConfigChange,
 }: LoggingManagerProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
+  const [viewerFile, setViewerFile] = useState<string | null>(null);
+  // `LOG_LEVEL` in the environment pins the level; the picker would only
+  // pretend otherwise (see levelPolicy.ts on the server).
+  const pinned = loggingConfig.logLevelSource === "environment";
+  const verbose =
+    loggingConfig.effectiveLogLevel === "debug" || loggingConfig.effectiveLogLevel === "trace";
 
   return (
     <div className="space-y-6">
@@ -70,7 +74,8 @@ export default function LoggingManager({
         <div className="flex gap-2">
           <button
             onClick={onToggleDebug}
-            className="px-4 py-2 rounded-lg transition font-medium"
+            disabled={pinned}
+            className="px-4 py-2 rounded-lg transition font-medium disabled:opacity-50"
             style={{
               background: loggingConfig.logLevel === "debug" ? "var(--warning)" : "var(--accent)",
               color: "#0d1117",
@@ -90,8 +95,8 @@ export default function LoggingManager({
         </div>
       </div>
 
-      {/* Debug Mode Warning */}
-      {loggingConfig.logLevel === "debug" && (
+      {/* Debug Mode Warning — about the level in force, not the stored one */}
+      {verbose && (
         <div
           className="border rounded-lg p-4"
           style={{ background: "var(--bg-elevated)", borderColor: "var(--color-amber)" }}
@@ -142,32 +147,16 @@ export default function LoggingManager({
             <div className="text-(--text-muted) text-sm mb-1">
               {t("admin:logging.stats.oldestLog")}
             </div>
-            <div className="text-sm font-medium text-(--text-primary)">
-              {(() => {
-                try {
-                  return logStats.oldestLog
-                    ? format(new Date(logStats.oldestLog), "MMM d, yyyy")
-                    : "\u2014";
-                } catch {
-                  return "\u2014";
-                }
-              })()}
+            <div className="text-sm font-medium text-(--text-primary)" data-testid="oldest-log">
+              {formatStatDate(logStats.oldestLogAt)}
             </div>
           </div>
           <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
             <div className="text-(--text-muted) text-sm mb-1">
               {t("admin:logging.stats.newestLog")}
             </div>
-            <div className="text-sm font-medium text-(--text-primary)">
-              {(() => {
-                try {
-                  return logStats.newestLog
-                    ? format(new Date(logStats.newestLog), "MMM d, yyyy")
-                    : "\u2014";
-                } catch {
-                  return "\u2014";
-                }
-              })()}
+            <div className="text-sm font-medium text-(--text-primary)" data-testid="newest-log">
+              {formatStatDate(logStats.newestLogAt)}
             </div>
           </div>
         </div>
@@ -180,15 +169,22 @@ export default function LoggingManager({
         </h3>
         <div className="grid grid-cols-1 md:grid-cols-2 gap-4 mb-4">
           <div>
-            <label className="flex items-center gap-1.5 text-sm font-medium text-(--text-primary) mb-2">
+            <label
+              htmlFor="admin-log-level"
+              className="flex items-center gap-1.5 text-sm font-medium text-(--text-primary) mb-2"
+            >
               {t("admin:logging.level.label")}
               <HelpIcon content={t("admin:logging.help.levels")} position="top" />
             </label>
             <select
+              id="admin-log-level"
               value={loggingConfig.logLevel}
-              onChange={(e) =>
-                onLoggingConfigChange({ ...loggingConfig, logLevel: e.target.value })
-              }
+              disabled={pinned}
+              onChange={(e) => {
+                const level = e.target.value;
+                if (isLogLevelName(level))
+                  onLoggingConfigChange({ ...loggingConfig, logLevel: level });
+              }}
               className="w-full px-3 py-2 bg-(--bg-surface) border border-border rounded-lg text-(--text-primary)"
             >
               <option value="error">{t("admin:logging.level.error")}</option>
@@ -197,7 +193,17 @@ export default function LoggingManager({
               <option value="debug">{t("admin:logging.level.debug")}</option>
               <option value="trace">{t("admin:logging.level.trace")}</option>
             </select>
-            <p className="text-xs text-(--text-muted) mt-1">{t("admin:logging.level.hint")}</p>
+            {pinned ? (
+              <p
+                className="text-xs mt-1"
+                style={{ color: "var(--warning, #e0921f)" }}
+                data-testid="log-level-pinned"
+              >
+                {t("admin:logging.level.pinned", { level: loggingConfig.effectiveLogLevel })}
+              </p>
+            ) : (
+              <p className="text-xs text-(--text-muted) mt-1">{t("admin:logging.level.hint")}</p>
+            )}
           </div>
           <div>
             <label className="block text-sm font-medium text-(--text-primary) mb-2">
@@ -220,6 +226,7 @@ export default function LoggingManager({
           </div>
         </div>
         <div className="space-y-3">
+          <p className="text-xs text-(--text-muted)">{t("admin:logging.categories.verboseOnly")}</p>
           <label className="flex items-start gap-3">
             <input
               type="checkbox"
@@ -341,6 +348,12 @@ export default function LoggingManager({
                     </td>
                     <td className="px-4 py-3 text-sm space-x-2">
                       <button
+                        onClick={() => setViewerFile(file.filename)}
+                        className="text-(--accent) hover:text-(--accent)"
+                      >
+                        {t("admin:logging.files.view")}
+                      </button>
+                      <button
                         onClick={() => onDownload(file.filename)}
                         className="text-(--accent) hover:text-(--accent)"
                       >
@@ -360,6 +373,8 @@ export default function LoggingManager({
           </div>
         )}
       </div>
+
+      <LogViewer files={logFiles} selectedFile={viewerFile} onSelectFile={setViewerFile} />
     </div>
   );
 }

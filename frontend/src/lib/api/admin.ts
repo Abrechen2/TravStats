@@ -2,13 +2,18 @@ import { api } from "./client";
 import type {
   ApiKeyTestResponse,
   ExportAllDataResponse,
-  LogEntry,
-  LogSearchResult,
   MessageResponse,
   SmtpConfigInput,
   SmtpConfigResponse,
 } from "./types";
 import type { RoutingProviderId } from "../../types/tour";
+import type {
+  LogCleanupResult,
+  LogFilesResponse,
+  LoggingConfigResponse,
+  LogReadResponse,
+  LogStatsResponse,
+} from "../../shared/logContract";
 import type { CountryTier } from "../../types/passport";
 
 export interface InstanceSettings {
@@ -457,153 +462,73 @@ export const adminApi = {
     return data;
   },
 
-  // Logging API
-  getLoggingConfig: async (): Promise<{
-    logLevel: string;
-    logHttpRequests: boolean;
-    logDatabaseQueries: boolean;
-    logParserOperations: boolean;
-    maxLogFileSize: number;
-    logRetentionDays: number;
-  }> => {
-    const { data } = await api.get<{
-      logLevel: string;
-      logHttpRequests: boolean;
-      logDatabaseQueries: boolean;
-      logParserOperations: boolean;
-      maxLogFileSize: number;
-      logRetentionDays: number;
-    }>("/admin/logging/config");
+  // Logging API — every shape here is `shared/logContract.ts`, the file the
+  // backend answers with. The two used to be described separately and drifted
+  // (the cleanup toast read fields the server never sent).
+  getLoggingConfig: async (): Promise<LoggingConfigResponse> => {
+    const { data } = await api.get<LoggingConfigResponse>("/admin/logging/config");
     return data;
   },
 
-  updateLoggingConfig: async (config: {
-    logLevel?: string;
-    logHttpRequests?: boolean;
-    logDatabaseQueries?: boolean;
-    logParserOperations?: boolean;
-    maxLogFileSize?: number;
-    logRetentionDays?: number;
-  }): Promise<MessageResponse> => {
-    const { data } = await api.put<MessageResponse>("/admin/logging/config", config);
+  updateLoggingConfig: async (
+    config: Partial<Omit<LoggingConfigResponse, "effectiveLogLevel" | "logLevelSource">>
+  ): Promise<{ message: string; config: LoggingConfigResponse }> => {
+    const { data } = await api.put<{ message: string; config: LoggingConfigResponse }>(
+      "/admin/logging/config",
+      config
+    );
     return data;
   },
 
   toggleDebugLogging: async (
     enabled: boolean
-  ): Promise<{
-    enabled: boolean;
-    message: string;
-  }> => {
-    const { data } = await api.post<{
-      enabled: boolean;
-      message: string;
-    }>("/admin/logging/toggle-debug", { enabled });
+  ): Promise<{ message: string; config: LoggingConfigResponse }> => {
+    const { data } = await api.post<{ message: string; config: LoggingConfigResponse }>(
+      "/admin/logging/toggle-debug",
+      { enabled }
+    );
     return data;
   },
 
-  getLogFiles: async (): Promise<{
-    files: Array<{
-      filename: string;
-      size: number;
-      category: string;
-      created: string;
-      modified: string;
-    }>;
-  }> => {
-    const { data } = await api.get<{
-      files: Array<{
-        filename: string;
-        size: number;
-        category: string;
-        created: string;
-        modified: string;
-      }>;
-    }>("/admin/logging/files");
+  getLogFiles: async (): Promise<LogFilesResponse> => {
+    const { data } = await api.get<LogFilesResponse>("/admin/logging/files");
     return data;
   },
 
-  getLogFileContent: async (
+  /** One page of a file, newest first. */
+  readLogFile: async (
     filename: string,
-    params?: {
-      level?: string;
-      category?: string;
-      search?: string;
-      offset?: number;
-      limit?: number;
-    }
-  ): Promise<{
-    logs: LogEntry[];
-    total: number;
-    offset: number;
-    limit: number;
-  }> => {
-    const { data } = await api.get<{
-      logs: LogEntry[];
-      total: number;
-      offset: number;
-      limit: number;
-    }>(`/admin/logging/files/${filename}`, { params });
+    params: { level?: string; category?: string; search?: string; offset?: number; limit?: number }
+  ): Promise<LogReadResponse> => {
+    const { data } = await api.get<LogReadResponse>(
+      `/admin/logging/files/${encodeURIComponent(filename)}`,
+      { params }
+    );
     return data;
   },
 
   downloadLogFile: async (filename: string): Promise<Blob> => {
-    const response = await api.get<Blob>(`/admin/logging/files/${filename}/download`, {
-      responseType: "blob",
-    });
+    const response = await api.get<Blob>(
+      `/admin/logging/files/${encodeURIComponent(filename)}/download`,
+      { responseType: "blob" }
+    );
     return response.data;
   },
 
   deleteLogFile: async (filename: string): Promise<MessageResponse> => {
-    const { data } = await api.delete<MessageResponse>(`/admin/logging/files/${filename}`);
+    const { data } = await api.delete<MessageResponse>(
+      `/admin/logging/files/${encodeURIComponent(filename)}`
+    );
     return data;
   },
 
-  getLogStats: async (): Promise<{
-    totalSize: number;
-    fileCount: number;
-    categories: Record<string, { fileCount: number; totalSize: number }>;
-    oldestLog: string;
-    newestLog: string;
-  }> => {
-    const { data } = await api.get<{
-      totalSize: number;
-      fileCount: number;
-      categories: Record<string, { fileCount: number; totalSize: number }>;
-      oldestLog: string;
-      newestLog: string;
-    }>("/admin/logging/stats");
+  getLogStats: async (): Promise<LogStatsResponse> => {
+    const { data } = await api.get<LogStatsResponse>("/admin/logging/stats");
     return data;
   },
 
-  cleanupLogs: async (): Promise<{
-    message: string;
-    filesDeleted: number;
-    spaceFreed: number;
-  }> => {
-    const { data } = await api.post<{
-      message: string;
-      filesDeleted: number;
-      spaceFreed: number;
-    }>("/admin/logging/cleanup");
-    return data;
-  },
-
-  searchLogs: async (params: {
-    query: string;
-    level?: string;
-    category?: string;
-    fromDate?: string;
-    toDate?: string;
-    limit?: number;
-  }): Promise<{
-    results: LogSearchResult[];
-    total: number;
-  }> => {
-    const { data } = await api.get<{
-      results: LogSearchResult[];
-      total: number;
-    }>("/admin/logging/search", { params });
+  cleanupLogs: async (): Promise<LogCleanupResult> => {
+    const { data } = await api.post<LogCleanupResult>("/admin/logging/cleanup");
     return data;
   },
 

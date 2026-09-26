@@ -431,14 +431,15 @@
     "logFileDownloadFailed": "Fehler beim Herunterladen der Log-Datei",
     "logFileDeleted": "Log-Datei erfolgreich gelöscht!",
     "logFileDeletFailed": "Fehler beim Löschen der Log-Datei",
-    "cleanupComplete": "Aufräumen abgeschlossen! {{filesDeleted}} Dateien gelöscht, {{spaceFreed}} MB freigegeben",
+    "cleanupComplete": "Aufräumen abgeschlossen: {{deletedCount}} Dateien gelöscht, {{freedMb}} MB freigegeben",
     "cleanupFailed": "Fehler beim Aufräumen der Logs",
     "ollamaTestSuccess": "Ollama erreichbar – {{count}} Modell(e) gefunden",
     "ollamaTestFailed": "Verbindung zu Ollama fehlgeschlagen",
     "enabled": "aktiviert",
     "disabled": "deaktiviert",
     "twoFactorReset": "Zwei-Faktor wurde zurückgesetzt",
-    "twoFactorResetFailed": "Zwei-Faktor konnte nicht zurückgesetzt werden"
+    "twoFactorResetFailed": "Zwei-Faktor konnte nicht zurückgesetzt werden",
+    "cleanupPartial": "{{failedCount}} Dateien konnten nicht gelöscht werden."
   },
   "prompts": {
     "enterEmail": "E-Mail eingeben (optional):",
@@ -474,16 +475,18 @@
       "warn": "Warning",
       "info": "Info (Standard)",
       "debug": "Debug (Ausführlich)",
-      "trace": "Trace (Sehr ausführlich)"
+      "trace": "Trace (Sehr ausführlich)",
+      "pinned": "Durch die Umgebungsvariable LOG_LEVEL auf „{{level}}“ festgelegt. Die Einstellung hier wird gespeichert, wirkt aber erst, wenn LOG_LEVEL entfernt wird.",
+      "effective": "Aktiv: {{level}}"
     },
     "retention": {
       "label": "Log-Aufbewahrung (Tage)",
-      "hint": "Log-Dateien die älter als dieser Wert sind werden automatisch gelöscht"
+      "hint": "Log-Dateien, die älter sind, werden täglich und beim Start automatisch gelöscht."
     },
     "categories": {
       "http": {
         "label": "HTTP-Anfragen protokollieren",
-        "hint": "Alle HTTP-Anfragen mit Timing, IP, Benutzer und Status protokollieren (Kategorie: http)"
+        "hint": "Jede HTTP-Anfrage mit Pfad (ohne Query-String), Status, Dauer und IP protokollieren (Kategorie: http)"
       },
       "database": {
         "label": "Datenbankabfragen protokollieren",
@@ -492,7 +495,8 @@
       "parser": {
         "label": "Parser-Operationen protokollieren",
         "hint": "LLM-Operationen mit Provider-Details protokollieren (Kategorie: parser)"
-      }
+      },
+      "verboseOnly": "Diese Protokolle werden nur geschrieben, solange das Log-Level Debug oder Trace ist."
     },
     "files": {
       "title": "Log-Dateien",
@@ -504,7 +508,36 @@
       "colModified": "Geändert",
       "colActions": "Aktionen",
       "download": "Herunterladen",
-      "delete": "Löschen"
+      "delete": "Löschen",
+      "view": "Anzeigen"
+    },
+    "viewer": {
+      "title": "Log-Einträge ansehen",
+      "file": "Datei",
+      "chooseFile": "Datei wählen",
+      "level": "Level",
+      "levelAll": "Alle Level",
+      "category": "Kategorie",
+      "categoryPlaceholder": "z. B. security",
+      "search": "Text",
+      "searchPlaceholder": "Suchbegriff",
+      "apply": "Filtern",
+      "newer": "Neuere",
+      "older": "Ältere",
+      "range": "{{from}}–{{to}} von {{total}} (neueste zuerst)",
+      "empty": "Keine passenden Einträge.",
+      "loading": "Lade Einträge …",
+      "colTime": "Zeit",
+      "colLevel": "Level",
+      "colCategory": "Kategorie",
+      "colEvent": "Ereignis / Meldung",
+      "details": "Details"
+    },
+    "errors": {
+      "LOG_FILE_INVALID_NAME": "Ungültiger Dateiname.",
+      "LOG_FILE_NOT_FOUND": "Die Log-Datei existiert nicht mehr – vermutlich wurde sie rotiert oder gelöscht.",
+      "LOG_FILE_UNREADABLE": "Die Log-Datei konnte nicht gelesen werden.",
+      "loadFailed": "Log-Einträge konnten nicht geladen werden."
     }
   },
   "parserSettings": {

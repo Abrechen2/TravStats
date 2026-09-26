@@ -1,9 +1,56 @@
 import Modal from "./Modal";
 import { useEffect, useState } from "react";
+import axios from "axios";
 import { useTranslation } from "../hooks/useTranslation";
-import { diagnosticExportApi, type DiagnosticBundle } from "../lib/api/diagnosticExport";
+import { diagnosticExportApi } from "../lib/api/diagnosticExport";
+import { versionApi } from "../lib/api/version";
+import { apiErrorMachineCode } from "../lib/apiError";
+import { BETA_FEATURE_KEYS } from "../config/betaFeatures";
+import type { DiagnosticBundle } from "../shared/logContract";
 import { useToastStore } from "../store/toastStore";
 import { logger } from "../lib/logger";
+
+/**
+ * "Fehler melden": the diagnostic bundle for a PUBLIC GitHub issue.
+ *
+ * The bundle is an allowlist of structured fields (server side:
+ * `services/diagnosticExport.ts`), and this modal shows the exact JSON that
+ * will be downloaded before anything leaves the machine. The text above it
+ * says what is included and what is not — it used to promise "all personal
+ * data removed" over a negative-list scrubber that leaked names and PNRs.
+ *
+ * When the export fails the issue can still be reported: the button opens the
+ * prefilled issue anyway and the modal says why there is no attachment.
+ */
+
+const ISSUE_URL = "https://github.com/Abrechen2/TravStats/issues/new";
+
+/** What is downloaded: the server's bundle plus the client's own beta keys. */
+type DiagnosticDownload = DiagnosticBundle & { client: { betaFeatureKeys: string[] } };
+
+type ExportState =
+  | { status: "loading" }
+  | { status: "ready"; download: DiagnosticDownload }
+  | { status: "failed"; reasonKey: string; httpStatus: number | null };
+
+const SECTIONS = ["domains", "settings", "counts", "database", "logs"] as const;
+
+function failureOf(err: unknown): { reasonKey: string; httpStatus: number | null } {
+  const status = axios.isAxiosError(err) ? (err.response?.status ?? null) : null;
+  if (apiErrorMachineCode(err) === "DIAGNOSTIC_EXPORT_REJECTED") {
+    return { reasonKey: "rejected", httpStatus: status };
+  }
+  if (status === 429) return { reasonKey: "rateLimited", httpStatus: status };
+  if (status === 403) return { reasonKey: "forbidden", httpStatus: status };
+  if (status === null) return { reasonKey: "network", httpStatus: null };
+  return { reasonKey: "server", httpStatus: status };
+}
+
+function issueUrl(version: string | null): string {
+  const params = new URLSearchParams({ template: "bug.yml", labels: "bug" });
+  if (version) params.set("version", version);
+  return `${ISSUE_URL}?${params.toString()}`;
+}
 
 interface DiagnosticExportModalProps {
   isOpen: boolean;
@@ -16,32 +63,29 @@ export default function DiagnosticExportModal({
 }: DiagnosticExportModalProps): JSX.Element | null {
   const { t } = useTranslation(["common"]);
   const addToast = useToastStore((s) => s.addToast);
-  const [bundle, setBundle] = useState<DiagnosticBundle | null>(null);
-  const [loading, setLoading] = useState(false);
+  const [state, setState] = useState<ExportState>({ status: "loading" });
 
   // Only re-fetch when the modal opens. addToast and t are intentionally
-  // omitted from deps — they are unstable across renders and would cause the
-  // bundle to be re-fetched on every parent re-render, instantly tripping the
-  // 10/hour rate limit. Same issue pattern as the settings-page auto-save.
+  // omitted from deps — they are unstable across renders and would re-fetch
+  // on every parent re-render, instantly tripping the 10/hour rate limit.
   useEffect(() => {
     if (!isOpen) return;
     let cancelled = false;
-    setLoading(true);
-    setBundle(null);
-    diagnosticExportApi
-      .fetch()
-      .then((b) => {
-        if (!cancelled) setBundle(b);
-      })
-      .catch((err: unknown) => {
+    setState({ status: "loading" });
+    const load = async (): Promise<void> => {
+      try {
+        const bundle = await diagnosticExportApi.fetch();
+        if (cancelled) return;
+        setState({
+          status: "ready",
+          download: { ...bundle, client: { betaFeatureKeys: [...BETA_FEATURE_KEYS] } },
+        });
+      } catch (err: unknown) {
         logger.error("Failed to generate diagnostic bundle:", err);
-        if (!cancelled) {
-          addToast("error", t("common:diagnostic.error"));
-        }
-      })
-      .finally(() => {
-        if (!cancelled) setLoading(false);
-      });
+        if (!cancelled) setState({ status: "failed", ...failureOf(err) });
+      }
+    };
+    void load();
     return () => {
       cancelled = true;
     };
@@ -49,12 +93,14 @@ export default function DiagnosticExportModal({
 
   if (!isOpen) return null;
 
-  const bundleText = bundle ? JSON.stringify(bundle, null, 2) : "";
+  const bundleText = state.status === "ready" ? JSON.stringify(state.download, null, 2) : "";
+  const reasonText =
+    state.status === "failed"
+      ? t(`common:diagnostic.reasons.${state.reasonKey}`, { status: state.httpStatus ?? "" })
+      : "";
 
-  // navigator.clipboard requires a secure context (HTTPS or localhost).
-  // The TravStats prod box currently serves over plain HTTP, so we fall
-  // back to the legacy execCommand approach when the API is missing.
-  // This helper THROWS on failure so callers can decide how to react.
+  // navigator.clipboard requires a secure context (HTTPS or localhost); plain
+  // HTTP LAN instances fall back to execCommand. Throws on failure.
   const handleCopyInternal = async (): Promise<void> => {
     if (window.isSecureContext && navigator.clipboard?.writeText) {
       await navigator.clipboard.writeText(bundleText);
@@ -82,25 +128,6 @@ export default function DiagnosticExportModal({
     }
   };
 
-  const handleReportBug = (): void => {
-    if (!bundle) return;
-
-    // The bundle carries log tails (24h app + 7d error), so it is usually too
-    // large to paste into GitHub's form field ("more characters than allowed").
-    // Download it instead so the user can drag the .json file into the report —
-    // the bug template supports attaching it. (#157)
-    handleDownload();
-
-    const url =
-      "https://github.com/Abrechen2/TravStats/issues/new" +
-      "?template=bug.yml" +
-      `&version=${encodeURIComponent(bundle.version)}` +
-      "&labels=bug";
-    window.open(url, "_blank", "noopener,noreferrer");
-
-    addToast("info", t("common:diagnostic.reportBugOpened"));
-  };
-
   const handleDownload = (): void => {
     const blob = new Blob([bundleText], { type: "application/json" });
     const url = URL.createObjectURL(blob);
@@ -112,6 +139,34 @@ export default function DiagnosticExportModal({
     document.body.removeChild(link);
     URL.revokeObjectURL(url);
   };
+
+  const handleReportBug = async (): Promise<void> => {
+    if (state.status === "ready") {
+      // Usually too large for GitHub's form field, so it is downloaded to be
+      // dragged into the report (#157).
+      handleDownload();
+      window.open(issueUrl(state.download.app.version), "_blank", "noopener,noreferrer");
+      addToast("info", t("common:diagnostic.reportBugOpened"));
+      return;
+    }
+    // The export failed: the issue still gets reported, without an attachment.
+    let version: string | null = null;
+    try {
+      version = (await versionApi.get()).version;
+    } catch (err: unknown) {
+      logger.error("Version lookup for the bug report failed:", err);
+    }
+    window.open(issueUrl(version), "_blank", "noopener,noreferrer");
+    addToast("warning", t("common:diagnostic.exportFailedToast"));
+  };
+
+  const failedSections =
+    state.status === "ready"
+      ? SECTIONS.flatMap((name) => {
+          const section = state.download[name];
+          return section.status === "failed" ? [{ name, code: section.errorCode }] : [];
+        })
+      : [];
 
   return (
     <Modal
@@ -129,7 +184,7 @@ export default function DiagnosticExportModal({
           >
             {t("common:buttons.close")}
           </button>
-          {bundle && (
+          {state.status === "ready" && (
             <>
               <button
                 onClick={handleDownload}
@@ -156,8 +211,8 @@ export default function DiagnosticExportModal({
             </>
           )}
           <button
-            onClick={handleReportBug}
-            disabled={!bundle}
+            onClick={() => void handleReportBug()}
+            disabled={state.status === "loading"}
             title={t("common:diagnostic.reportBugHint")}
             className="btn-primary px-3 py-1.5 text-sm"
           >
@@ -167,38 +222,59 @@ export default function DiagnosticExportModal({
       }
     >
       <div>
-        <p className="text-sm mb-3" style={{ color: "var(--text-muted)" }}>
+        <p className="text-sm mb-2" style={{ color: "var(--text-muted)" }}>
           {t("common:diagnostic.description")}
         </p>
         <ul
-          className="text-xs list-disc list-inside mb-4 space-y-1"
+          className="text-xs list-disc list-inside mb-2 space-y-1"
           style={{ color: "var(--text-muted)" }}
         >
-          <li>{t("common:diagnostic.scrubList.ip")}</li>
-          <li>{t("common:diagnostic.scrubList.email")}</li>
-          <li>{t("common:diagnostic.scrubList.tokens")}</li>
-          <li>{t("common:diagnostic.scrubList.uuids")}</li>
+          <li>{t("common:diagnostic.includes.versions")}</li>
+          <li>{t("common:diagnostic.includes.settings")}</li>
+          <li>{t("common:diagnostic.includes.counts")}</li>
+          <li>{t("common:diagnostic.includes.events")}</li>
         </ul>
+        <p className="text-xs mb-4" style={{ color: "var(--text-muted)" }}>
+          {t("common:diagnostic.excludes")}
+        </p>
 
-        {loading && (
+        {state.status === "loading" && (
           <div className="text-sm" style={{ color: "var(--text-muted)" }}>
             {t("common:diagnostic.generating")}
           </div>
         )}
 
-        {bundle && (
-          <textarea
-            readOnly
-            value={bundleText}
-            className="w-full font-mono text-xs p-3 rounded-sm resize-none"
-            style={{
-              background: "var(--bg-elevated)",
-              color: "var(--text-primary)",
-              border: "1px solid var(--color-border)",
-              minHeight: 300,
-              maxHeight: 400,
-            }}
-          />
+        {state.status === "failed" && (
+          <p role="alert" className="text-sm" style={{ color: "var(--danger)" }}>
+            {t("common:diagnostic.exportFailed", { reason: reasonText })}
+          </p>
+        )}
+
+        {failedSections.map(({ name, code }) => (
+          <p key={name} role="status" className="text-xs mb-2" style={{ color: "var(--warning)" }}>
+            {t("common:diagnostic.failedSection", { section: name, code })}
+          </p>
+        ))}
+
+        {state.status === "ready" && (
+          <>
+            <p className="text-xs mb-1" style={{ color: "var(--text-muted)" }}>
+              {t("common:diagnostic.previewLabel")}
+            </p>
+            <textarea
+              readOnly
+              aria-label={t("common:diagnostic.previewLabel")}
+              value={bundleText}
+              className="w-full font-mono text-xs p-3 rounded-sm resize-none"
+              style={{
+                background: "var(--bg-elevated)",
+                color: "var(--text-primary)",
+                border: "1px solid var(--color-border)",
+                minHeight: 300,
+                maxHeight: 400,
+              }}
+            />
+          </>
         )}
       </div>
     </Modal>
