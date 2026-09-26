@@ -24,6 +24,8 @@ import {
   sha256Hex,
   writeDocumentFile,
 } from "./documentStore";
+import type { ExtractedValues } from "./documentValues";
+import { storedReading } from "./storedReading";
 
 /**
  * Kept originals, filed with the entry they produced (forgejo#116).
@@ -589,6 +591,12 @@ export interface DocumentDto {
   createdAt: string;
   linkedAt: string | null;
   url: string;
+  /**
+   * The values the stored parse reading holds, booking-wide (no leg picked);
+   * null when there is no usable reading. Read from `parsedPayload`, never by
+   * parsing again (forgejo#132 item 3).
+   */
+  parsedValues: ExtractedValues | null;
 }
 
 /** `toDocumentDto` plus the date the sweep will take it. */
@@ -618,5 +626,6 @@ export function toDocumentDto(document: Document): DocumentDto {
     createdAt: document.createdAt.toISOString(),
     linkedAt: document.linkedAt ? document.linkedAt.toISOString() : null,
     url: `/api/v1/documents/${document.id}/file`,
+    parsedValues: storedReading(document).values,
   };
 }

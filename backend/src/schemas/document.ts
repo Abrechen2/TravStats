@@ -80,6 +80,25 @@ export const updateDocumentSchema = z
   })
   .strict();
 
+/** The cost-block values of a parser reading — `ExtractedValues` in services/documents/documentValues.ts. */
+export const extractedValuesSchema = z.object({
+  price: z.number().nullable(),
+  currency: z.string().nullable().describe("ISO 4217"),
+  bookingReference: z.string().nullable(),
+  seatNumber: z.string().nullable().describe("Flights and rail: the seat of the entry's leg"),
+  seatClass: z.enum(["economy", "premium_economy", "business", "first"]).nullable(),
+  travelClass: z
+    .enum(["first", "second", "sleeper", "couchette"])
+    .nullable()
+    .optional()
+    .describe("Rail only, absent otherwise: the class the ticket states"),
+  coach: z
+    .string()
+    .nullable()
+    .optional()
+    .describe("Rail only, absent otherwise: the coach of the entry's leg"),
+});
+
 /** Mirrors `toDocumentDto` in services/documents/documentService.ts. */
 export const documentDtoSchema = z.object({
   id: uuid,
@@ -97,6 +116,14 @@ export const documentDtoSchema = z.object({
   createdAt: z.string(),
   linkedAt: z.string().nullable(),
   url: z.string(),
+  parsedValues: extractedValuesSchema
+    .nullable()
+    .describe(
+      "The values the reading stored on this document holds, booking-wide: with several legs, " +
+        "seat and class abstain (GET /documents/{id}/stored-values picks a leg). Null when the " +
+        "document was never parsed, its reading has an unknown shape, or it holds none of them. " +
+        "Read from the stored reading — no parser runs."
+    ),
 });
 
 /**
@@ -153,3 +180,9 @@ export const extractValuesBodySchema = z.object({
     .regex(/^\d{4}-\d{2}-\d{2}$/)
     .optional(),
 });
+
+/**
+ * Leg hints for the reading already stored on a document (forgejo#132 item 3):
+ * the extract-values body without its domain, which the stored reading names.
+ */
+export const storedValuesQuerySchema = extractValuesBodySchema.omit({ domain: true }).strict();
