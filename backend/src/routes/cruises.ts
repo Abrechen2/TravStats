@@ -25,6 +25,9 @@ import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { getBaseCurrency } from "../services/fx/snapshot";
 import { refreshFxOnEdit } from "../services/fx/refreshOnEdit";
 import logger from "../utils/logger";
+import { cruiseDayColumns, stopColumnsFromRequest } from "../services/timeModel/cruiseColumns";
+import { dayAnchorNow } from "../shared/time/clock";
+import { profileZoneOf } from "../shared/time/profileZone";
 
 const router = Router();
 router.use(authenticate);
@@ -263,7 +266,11 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     const cruise = await createCruiseRecord(
       userId,
       { ...rest, stops, startDate, endDate, tripId, bookingId, status, companions },
-      { importBatchId: batchId, externalRef }
+      {
+        importBatchId: batchId,
+        externalRef,
+        request: { userId, viaToken: Boolean(req.apiToken) },
+      }
     );
     await linkDocuments(userId, documentIds, { type: "cruise", id: cruise.id });
 
@@ -362,8 +369,22 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         startDate: finalStartDate,
         endDate: finalEndDate,
         current: requestedStatus ?? existing.status,
+        now: dayAnchorNow((await profileZoneOf(userId)).zone),
       });
     }
+
+    // ADR 0002 phase 2 dual-write from the MERGED cruise, resolved before the
+    // transaction so a refused stop time changes nothing.
+    const dayColumns = await cruiseDayColumns({
+      startDate: finalStartDate,
+      endDate: finalEndDate,
+      departurePortId:
+        rest.departurePortId !== undefined ? rest.departurePortId : existing.departurePortId,
+      arrivalPortId: rest.arrivalPortId !== undefined ? rest.arrivalPortId : existing.arrivalPortId,
+    });
+    const stopTimes = stops
+      ? await stopColumnsFromRequest(stops, { userId, viaToken: Boolean(req.apiToken) })
+      : [];
 
     // Replace rather than append — an update always carries the FULL
     // companion list for the cruise, so stale links must go. Resolution
@@ -417,6 +438,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           status: effectiveStatus,
           startDate: nextStartDate,
           endDate: nextEndDate,
+          ...dayColumns,
           ...(resolvedCompanionsForUpdate !== undefined && {
             companions: resolvedCompanionsForUpdate.map((c) => c.displayName),
           }),
@@ -427,14 +449,12 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         await tx.cruiseStop.deleteMany({ where: { cruiseId: existing.id } });
         if (stops.length > 0) {
           await tx.cruiseStop.createMany({
-            data: stops.map((s) => ({
+            data: stops.map((s, index) => ({
               cruiseId: existing.id,
               portId: s.portId ?? null,
               dayNumber: s.dayNumber,
-              date: s.date ? new Date(s.date) : null,
               isAtSea: s.isAtSea,
-              arrivalTime: s.arrivalTime ? new Date(s.arrivalTime) : null,
-              departureTime: s.departureTime ? new Date(s.departureTime) : null,
+              ...stopTimes[index],
               excursionNote: s.excursionNote ?? null,
               unresolvedPortName: s.unresolvedPortName ?? null,
             })),

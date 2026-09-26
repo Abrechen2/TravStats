@@ -36,7 +36,16 @@ export type TimeFieldInput =
       /** Written with a literal `Z` — the shape a fake-UTC web write had. */
       bareZ: boolean;
     }
-  | { kind: "date"; date: string };
+  | { kind: "date"; date: string }
+  | {
+      /**
+       * An offset-less wall clock sent as a bare string, where the field
+       * allows it (`tokenWallClockString`). Only a TOKEN client may send it —
+       * the resolver refuses it from a browser session.
+       */
+      kind: "wallClockString";
+      local: string;
+    };
 
 /** An ISO datetime WITH an offset or `Z`: the date part, and whether it is `Z`. */
 const OFFSET_ISO =
@@ -62,7 +71,17 @@ export interface TimeFieldOptions {
    * `{local}` may leave out both `zone` and `placeRef`.
    */
   impliedPlace?: boolean;
+  /**
+   * Keep an offset-less string as the place's wall clock instead of refusing
+   * it in the schema. Only where a released token client relays one: the
+   * Companion posts the cruise parser's stop times ("2026-06-17T08:00") as
+   * they came, and refusing them would break its mail capture until it moves
+   * to `{local}` (companion#24). The resolver still refuses it from a browser.
+   */
+  tokenWallClockString?: boolean;
 }
+
+const WALL_CLOCK_STRING = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}(?::\d{2})?)$/;
 
 /** An instant-kind field: a typed wall clock, a machine instant, or (optionally) a day. */
 export function timeFieldSchema(options: TimeFieldOptions = {}) {
@@ -78,6 +97,8 @@ export function timeFieldSchema(options: TimeFieldOptions = {}) {
       }
       const instant = offsetInstant(value);
       if (instant) return { kind: "instant", utc: instant.utc, bareZ: instant.bareZ };
+      const wallClock = options.tokenWallClockString ? WALL_CLOCK_STRING.exec(value) : null;
+      if (wallClock) return { kind: "wallClockString", local: `${wallClock[1]}T${wallClock[2]}` };
       ctx.addIssue({
         code: "custom",
         message: OFFSETLESS.test(value) ? SHAPE_REQUIRED : "not a time value",

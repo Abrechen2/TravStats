@@ -2,6 +2,7 @@ import { z } from "./zod";
 import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
 import { CRUISE_SORT_FIELDS } from "../shared/cruiseListOrder";
+import { legacyDayFieldSchema, timeFieldSchema } from "../shared/time/timeInput";
 
 export const CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
 const STATUSES = ["scheduled", "flown", "cancelled", "historical"] as const;
@@ -29,23 +30,30 @@ const emptyToNull = z
   .optional()
   .transform((v) => (v === "" ? null : v));
 
-// Accept partial datetimes and coerce them to full ISO 8601. The cruise
-// booking parser emits times like "2026-06-17T08:00" (no seconds/offset),
-// which a strict `z.string().datetime()` rejects — and unedited stops in the
-// import preview keep that raw value. Coerce any parseable string to a full
-// ISO string; genuinely invalid strings fall through to the strict check.
-const isoDateTime = z.preprocess((v) => {
-  // An OMITTED field and an explicit "clear this" are different requests, and
-  // collapsing both to `undefined` made the second impossible: a PATCH with
-  // `startDate: null` answered 200 and changed nothing, for ever (AUD-089).
-  // `null` and the empty string both mean the user removed the value — an
-  // emptied input arrives as "" — so both become an explicit null, and only a
-  // genuinely absent key stays `undefined`.
-  if (v === null || v === "") return null;
-  if (typeof v !== "string") return undefined;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? v : d.toISOString();
-}, z.string().datetime().nullable().optional());
+// An OMITTED field and an explicit "clear this" are different requests, and
+// collapsing both to `undefined` made the second impossible: a PATCH with
+// `startDate: null` answered 200 and changed nothing, for ever (AUD-089).
+// `null` and the empty string both mean the user removed the value — an
+// emptied input arrives as "" — so both become an explicit null, and only a
+// genuinely absent key stays `undefined`.
+const emptyAsNull = (v: unknown): unknown => (v === "" ? null : v);
+
+// Cruise days (start, end, a stop's date) are CALENDAR DAYS at the port (ADR
+// 0002 D1): `YYYY-MM-DD`, or an offset-bearing string read as the day it
+// writes. They used to be parsed with `new Date(v)`, so an offset-less
+// "2026-06-17T08:00" was read in the server's own zone; it is now refused
+// with TIME_SHAPE_REQUIRED. Handed on as the UTC-midnight legacy anchor.
+const cruiseDay = z.preprocess(emptyAsNull, legacyDayFieldSchema().nullable().optional());
+
+// A port call's arrival/departure: the PORT's wall clock — `{local}` (zone
+// from the stop's port), `{local, zone}`, or an offset-bearing instant from a
+// token client. The Companion still relays the cruise parser's offset-less
+// strings, which are the port's wall clock too; a browser sending one is
+// refused (companion#24 moves the app to `{local}`).
+const stopTime = z.preprocess(
+  emptyAsNull,
+  timeFieldSchema({ impliedPlace: true, tokenWallClockString: true }).nullable().optional()
+);
 
 export const cruiseStopSchema = z
   .object({
@@ -53,12 +61,11 @@ export const cruiseStopSchema = z
     dayNumber: z.number().int().min(1).max(365),
     // Calendar date of the stop. Booking confirmations list a date per stop
     // (often without clock times), so this captures it even when arrival/
-    // departure times are absent. Coerced to a full ISO instant via isoDateTime
-    // ("2027-10-08" -> "2027-10-08T00:00:00.000Z").
-    date: isoDateTime,
+    // departure times are absent ("2027-10-08" -> "2027-10-08T00:00:00.000Z").
+    date: cruiseDay,
     isAtSea: z.boolean().default(false),
-    arrivalTime: isoDateTime,
-    departureTime: isoDateTime,
+    arrivalTime: stopTime,
+    departureTime: stopTime,
     excursionNote: z.string().max(500).optional(),
     // Third stop state: an imported port whose name could not be matched to the
     // catalog. Carried as a name-only stop (no portId, not a sea day) so it is
@@ -107,8 +114,8 @@ const baseCruiseSchema = z.object({
     .transform((v) => (v ? v : v === undefined ? undefined : null)),
   departurePortId: z.number().int().positive().nullable().optional(),
   arrivalPortId: z.number().int().positive().nullable().optional(),
-  startDate: isoDateTime,
-  endDate: isoDateTime,
+  startDate: cruiseDay,
+  endDate: cruiseDay,
   status: z.enum(STATUSES).default("scheduled"),
   cabinNumber: z.string().max(20).nullable().optional(),
   cabinType: z.enum(CABIN_TYPES).nullable().optional(),
@@ -204,7 +211,12 @@ export const cruiseQuerySchema = z.object({
   order: z.enum(["asc", "desc"]).default("desc"),
 });
 
-export type CruiseInput = z.infer<typeof baseCruiseSchema>;
+/**
+ * A cruise as a client SENDS it (the wire input), which is what the parser
+ * hands back for the import preview — not the parsed output, whose times are
+ * resolved `TimeFieldInput`s (ADR 0002 phase 2).
+ */
+export type CruiseInput = z.input<typeof baseCruiseSchema>;
 export type CruiseQueryInput = z.infer<typeof cruiseQuerySchema>;
 
 /** One `[lon, lat]` pair, in GeoJSON order. */

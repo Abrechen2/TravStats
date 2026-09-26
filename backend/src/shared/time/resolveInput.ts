@@ -126,6 +126,15 @@ export async function resolveTimeField(
     };
   }
 
+  if (input.kind === "wallClockString") {
+    // Only the Companion relays these (see `tokenWallClockString`); from a
+    // browser it is the shape the host used to read in its own zone.
+    if (!ctx.viaToken) throw new TimeShapeRequiredError(ctx.field);
+    const zone = requirePlaceZone(ctx);
+    const { utc, ambiguous } = toInstant(input.local, zone, { origin: "machine" });
+    return { utc, zone, local: toLocal(utc, zone).local, precision: "minute", ambiguous };
+  }
+
   if (input.kind === "date") {
     const zone = requirePlaceZone(ctx);
     // The day's start at the place: a machine reading, so a zone whose

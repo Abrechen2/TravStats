@@ -22,6 +22,14 @@ import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from "../../shared/statusDeriv
 import { recomputeTripStatus } from "../tripStatusService";
 import { resolveCompanions, linkRowsFor } from "../companionService";
 import { fxColumnsFor, getBaseCurrency } from "../fx/snapshot";
+import {
+  cruiseDayColumns,
+  stopColumnsForImport,
+  stopColumnsFromRequest,
+  type StopRequestContext,
+} from "../timeModel/cruiseColumns";
+import { dayAnchorNow } from "../../shared/time/clock";
+import { profileZoneOf } from "../../shared/time/profileZone";
 
 export type CreateCruiseData = Omit<z.infer<typeof createCruiseSchema>, "importBatchId">;
 
@@ -29,6 +37,12 @@ export interface CruiseProvenance {
   importBatchId?: string | null;
   externalRef?: string | null;
   dataSource?: string;
+  /**
+   * The request the cruise came in (ADR 0002 phase 2): its stop times are
+   * the ports' wall clocks, or instants from a token. Absent for an import,
+   * whose time cells are legacy fake-UTC values an export wrote.
+   */
+  request?: StopRequestContext;
 }
 
 export async function createCruiseRecord(
@@ -47,7 +61,27 @@ export async function createCruiseRecord(
   // schema's 'scheduled' default) is derived from the dates being written.
   const effectiveStatus = (CRUISE_PASSTHROUGH as readonly string[]).includes(status)
     ? status
-    : deriveCruiseStatus({ startDate: startDateUtc, endDate: endDateUtc, current: status });
+    : deriveCruiseStatus({
+        startDate: startDateUtc,
+        endDate: endDateUtc,
+        current: status,
+        // Day anchors against the user's profile-zone clock (ADR 0002 D4).
+        now: dayAnchorNow((await profileZoneOf(userId)).zone),
+      });
+
+  // ADR 0002 phase 2 dual-write, resolved BEFORE the transaction so a refused
+  // time (a skipped hour, a stale bundle's fake UTC) writes nothing.
+  const dayColumns = await cruiseDayColumns({
+    startDate: startDateUtc,
+    endDate: endDateUtc,
+    departurePortId: rest.departurePortId ?? null,
+    arrivalPortId: rest.arrivalPortId ?? null,
+  });
+  const stopTimes = stops
+    ? provenance.request
+      ? await stopColumnsFromRequest(stops, provenance.request)
+      : await stopColumnsForImport(stops)
+    : [];
 
   // Resolve companion names to Companion entities up front (find-or-create
   // is idempotent via companionService, so it's safe to run outside the
@@ -80,6 +114,7 @@ export async function createCruiseRecord(
         status: effectiveStatus,
         startDate: startDateUtc,
         endDate: endDateUtc,
+        ...dayColumns,
         tripId: tripId ?? null,
         bookingId: bookingId ?? null,
         // Dual write: resolved display names keep this legacy array in
@@ -101,14 +136,12 @@ export async function createCruiseRecord(
 
     if (stops && stops.length > 0) {
       await tx.cruiseStop.createMany({
-        data: stops.map((s) => ({
+        data: stops.map((s, index) => ({
           cruiseId: created.id,
           portId: s.portId ?? null,
           dayNumber: s.dayNumber,
-          date: s.date ? new Date(s.date) : null,
           isAtSea: s.isAtSea,
-          arrivalTime: s.arrivalTime ? new Date(s.arrivalTime) : null,
-          departureTime: s.departureTime ? new Date(s.departureTime) : null,
+          ...stopTimes[index],
           excursionNote: s.excursionNote ?? null,
           unresolvedPortName: s.unresolvedPortName ?? null,
         })),

@@ -23,6 +23,12 @@ import { prisma } from "../../db";
 import { CABIN_TYPES, createCruiseSchema, cruiseStopSchema } from "../../schemas/cruise";
 import { toCabinType } from "../cruise/cabinType";
 import { createCruiseRecord } from "../cruise/createCruise";
+import {
+  cruiseDayColumns,
+  legacyDateOf,
+  portZones,
+  stopColumnsFromLegacy,
+} from "../timeModel/cruiseColumns";
 import { cruiseFxColumnsIfChanged, findCruiseForFxMerge, fxRefreshNote } from "./fxSnapshot";
 import * as cell from "./cells";
 import {
@@ -243,6 +249,18 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
         const fxNote = fxRefreshNote(fx);
         if (fxNote) extra.notes = [...(extra.notes ?? []), fxNote];
       }
+      // The DATE columns follow the days the row writes (ADR 0002 dual-write).
+      if ("startDate" in data || "endDate" in data) {
+        Object.assign(
+          data,
+          await cruiseDayColumns({
+            startDate: (data.startDate as Date | undefined) ?? stored.startDate,
+            endDate: (data.endDate as Date | undefined) ?? stored.endDate,
+            departurePortId: stored.departurePortId,
+            arrivalPortId: stored.arrivalPortId,
+          })
+        );
+      }
       if (!ctx.dryRun) {
         const companions = companionsChanged
           ? await resolveCompanionCell(ctx.userId, companionNames)
@@ -337,9 +355,28 @@ export async function importCruiseStops(sheet: IncomingSheet, ctx: Ctx): Promise
       isAtSea: parsed.data.isAtSea,
       portId: parsed.data.portId ?? null,
       unresolvedPortName: parsed.data.unresolvedPortName ?? null,
-      arrivalTime: parsed.data.arrivalTime ? new Date(parsed.data.arrivalTime) : null,
-      departureTime: parsed.data.departureTime ? new Date(parsed.data.departureTime) : null,
+      // The cells are the legacy fake-UTC values an export wrote (ADR 0002).
+      arrivalTime: legacyDateOf(parsed.data.arrivalTime),
+      departureTime: legacyDateOf(parsed.data.departureTime),
       excursionNote: parsed.data.excursionNote ?? null,
+    };
+    const stopZone = stop.portId
+      ? ((await portZones([stop.portId])).get(stop.portId) ?? null)
+      : null;
+    /** The new time columns for the stop's final legacy values (dual-write). */
+    const newTimeColumns = (legacy: {
+      date: Date | null;
+      arrivalTime: Date | null;
+      departureTime: Date | null;
+    }) => {
+      const {
+        arrivalUtc,
+        departureUtc,
+        stopZone: zone,
+        stopDate,
+        timePrecision,
+      } = stopColumnsFromLegacy(legacy, stopZone);
+      return { arrivalUtc, departureUtc, stopZone: zone, stopDate, timePrecision };
     };
 
     // A stop has no userId of its own; ownership is its cruise's.
@@ -403,9 +440,18 @@ export async function importCruiseStops(sheet: IncomingSheet, ctx: Ctx): Promise
         continue;
       }
       if (!ctx.dryRun) {
+        const merged = { ...stored, ...triple, ...optional };
         await prisma.cruiseStop.update({
           where: { id: target.id },
-          data: { ...triple, ...changedOnly(optional, stored) },
+          data: {
+            ...triple,
+            ...changedOnly(optional, stored),
+            ...newTimeColumns({
+              date: stored.date,
+              arrivalTime: merged.arrivalTime ?? null,
+              departureTime: merged.departureTime ?? null,
+            }),
+          },
         });
         ctx.touchedCruises.add(target.cruiseId);
         ctx.wrote = true;
@@ -417,7 +463,15 @@ export async function importCruiseStops(sheet: IncomingSheet, ctx: Ctx): Promise
     let newId: string | null = null;
     if (!ctx.dryRun && cruiseId) {
       const created = await prisma.cruiseStop.create({
-        data: { ...stop, cruiseId },
+        data: {
+          ...stop,
+          ...newTimeColumns({
+            date: null,
+            arrivalTime: stop.arrivalTime,
+            departureTime: stop.departureTime,
+          }),
+          cruiseId,
+        },
         select: { id: true },
       });
       newId = created.id;
