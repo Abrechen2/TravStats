@@ -166,6 +166,20 @@ export function flightSheet(t: T): SheetSpec<Flight> {
         value: (f) => refCell(f.trip?.name, f.tripId),
       },
       {
+        key: "companions",
+        header: t("xlsx:columns.companions"),
+        kind: "text",
+        width: 24,
+        value: (f) => (f.companions ?? []).join(", "),
+      },
+      {
+        key: "tags",
+        header: t("xlsx:columns.tags"),
+        kind: "text",
+        width: 20,
+        value: (f) => (f.tags ?? []).join(", "),
+      },
+      {
         key: "notes",
         header: t("xlsx:columns.notes"),
         kind: "text",
