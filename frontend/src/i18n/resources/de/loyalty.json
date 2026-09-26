@@ -56,19 +56,6 @@
     "last": "zuletzt {{date}}",
     "none": "Noch nichts im Logbuch, das diese Karte abdeckt."
   },
-  "history": {
-    "toggle": "Statusverlauf ({{count}})",
-    "empty": "Noch kein datierter Status. Trägst du ein, wann du welchen Status hattest, nennt die Statistik für jedes Jahr den Status, den du damals wirklich hattest.",
-    "add": "Zeitraum hinzufügen",
-    "tier": "Status",
-    "from": "Von",
-    "until": "Bis",
-    "untilOpen": "Leer lassen, solange der Status noch gilt.",
-    "remove": "Zeitraum entfernen",
-    "invalid": "Jeder Zeitraum braucht einen Status und ein Startdatum, und das Ende darf nicht davor liegen.",
-    "save": "Verlauf speichern",
-    "saveError": "Der Statusverlauf konnte nicht gespeichert werden."
-  },
   "suggestions": {
     "open": "Aus deinen Flügen übernehmen",
     "title": "In deinen Flügen gefunden",

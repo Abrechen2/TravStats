@@ -482,15 +482,13 @@ export interface LodgingStats {
 /** Nights under one programme in one calendar year — the unit hotel status is counted in. */
 export interface LodgingProgrammeYear {
   programme: string;
+  /**
+   * The card these nights ran under; the lodging list filters by it. Optional
+   * only for fixtures written before the field existed.
+   */
+  membershipId?: string | null;
   /** The card's current tier, not the tier held during that year. */
   tier: string | null;
-  /**
-   * The tiers held during THIS year, from the card's dated status history.
-   * null: the card has no history, so nothing is known about the year; []:
-   * the history names no status for it. Optional only for fixtures written
-   * before the field existed — the server always sends it.
-   */
-  tiersHeld?: string[] | null;
   year: string;
   nights: number;
   stays: number;

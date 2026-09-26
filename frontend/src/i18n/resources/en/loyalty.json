@@ -56,19 +56,6 @@
     "last": "last {{date}}",
     "none": "Nothing in your logbook that this card covers yet."
   },
-  "history": {
-    "toggle": "Status history ({{count}})",
-    "empty": "No dated status yet. Record when you held which status, and the statistics name for each year the status you actually held then.",
-    "add": "Add period",
-    "tier": "Status",
-    "from": "From",
-    "until": "Until",
-    "untilOpen": "Leave empty while the status still holds.",
-    "remove": "Remove period",
-    "invalid": "Every period needs a status and a start date, and its end may not lie before it.",
-    "save": "Save history",
-    "saveError": "The status history could not be saved."
-  },
   "suggestions": {
     "open": "Take over from your flights",
     "title": "Found in your flights",

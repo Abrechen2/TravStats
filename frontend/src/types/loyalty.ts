@@ -2,15 +2,6 @@
 import type { LoyaltyDomain } from "../shared/domains";
 import type { LodgingChainRef, LodgingRef } from "./lodging";
 
-/** A status the card held, and when. `validUntil` null: still held. */
-export interface TierPeriod {
-  id?: string;
-  tier: string;
-  /** YYYY-MM-DD */
-  validFrom: string;
-  validUntil: string | null;
-}
-
 /**
  * What the card was used for, derived from the logbook by the counting rules
  * the statistics use. `nights` is null for flight cards and whenever no
@@ -28,7 +19,7 @@ export interface LoyaltyMembership {
   domain: LoyaltyDomain;
   programName: string;
   membershipNumber: string | null;
-  /** The status held today. */
+  /** The status held today, the only one a card keeps: there is no dated history. */
   tier: string | null;
   notes: string | null;
   /** Flight cards: IATA codes of the airlines the card covers. */
@@ -40,7 +31,6 @@ export interface LoyaltyMembership {
   chains: LodgingChainRef[];
   lodgingIds: string[];
   lodgings: LodgingRef[];
-  tierPeriods: TierPeriod[];
   createdAt: string;
   updatedAt: string;
   /** Present on the list; absent on a create/update answer. */
@@ -54,8 +44,6 @@ export interface LoyaltyMembershipInput {
   notes?: string | null;
   airlineCodes?: string[];
   cruiseLines?: string[];
-  /** Present replaces the stored history; absent leaves it alone. */
-  tierPeriods?: Array<Omit<TierPeriod, "id">>;
 }
 
 export interface FrequentFlyerSuggestion {

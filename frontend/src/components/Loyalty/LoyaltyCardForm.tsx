@@ -5,9 +5,7 @@ import { createLoyaltyMembership, updateLoyaltyMembership } from "../../lib/api/
 import { logger } from "../../lib/logger";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import type { LoyaltyMembership, LoyaltyMembershipInput } from "../../types/loyalty";
-import TierHistoryEditor from "./TierHistoryEditor";
 import ValueChips from "./ValueChips";
-import { draftsToPeriods, toDrafts, type TierPeriodDraft } from "./tierHistory";
 
 /** The two domains whose cards this form edits; hotel cards keep their own editor. */
 export type CardDomain = "flight" | "cruise";
@@ -55,8 +53,6 @@ export default function LoyaltyCardForm({
   const [coverage, setCoverage] = useState<string[]>(
     card ? (domain === "flight" ? card.airlineCodes : card.cruiseLines) : (prefill?.coverage ?? [])
   );
-  const [drafts, setDrafts] = useState<TierPeriodDraft[]>(toDrafts(card?.tierPeriods ?? []));
-  const [historyInvalid, setHistoryInvalid] = useState(false);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
 
@@ -68,16 +64,13 @@ export default function LoyaltyCardForm({
   };
 
   const submit = async (): Promise<void> => {
-    const tierPeriods = draftsToPeriods(drafts);
-    setHistoryInvalid(tierPeriods === null);
-    if (tierPeriods === null || programName.trim() === "") return;
+    if (programName.trim() === "") return;
     const input: LoyaltyMembershipInput = {
       programName: programName.trim(),
       membershipNumber: membershipNumber.trim() || null,
       tier: tier.trim() || null,
       notes: notes.trim() || null,
       ...(domain === "flight" ? { airlineCodes: coverage } : { cruiseLines: coverage }),
-      tierPeriods,
     };
     setSaving(true);
     setError(null);
@@ -145,7 +138,6 @@ export default function LoyaltyCardForm({
         className="input"
         rows={2}
       />
-      <TierHistoryEditor drafts={drafts} onChange={setDrafts} invalid={historyInvalid} />
       {error !== null && (
         <p className="t-caption" role="alert" style={{ color: "var(--ts-bad)" }}>
           {error}

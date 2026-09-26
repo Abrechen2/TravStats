@@ -138,48 +138,32 @@ describe("Loyalty memberships API", () => {
       expect((await send("flight")).status).toBe(409);
     });
 
-    it("replaces the dated status history only when one is sent", async () => {
+    it("keeps one current status and no dated history (owner, 2026-09-26)", async () => {
       const created = await api()
         .post("/api/v1/loyalty-memberships")
         .set("Cookie", cookie)
-        .send({
-          domain: "lodging",
-          programName: "Bonvoy",
-          tier: "Gold",
-          tierPeriods: [
-            { tier: "Gold", validFrom: "2024-03-01" },
-            { tier: "Silver", validFrom: "2022-01-01", validUntil: "2024-02-29" },
-          ],
-        });
+        .send({ domain: "lodging", programName: "Bonvoy", tier: "Gold" });
       expect(created.status).toBe(201);
-      expect(created.body.data.tierPeriods.map((p: { tier: string }) => p.tier)).toEqual([
-        "Silver",
-        "Gold",
-      ]);
+      expect(created.body.data.tier).toBe("Gold");
+      expect(created.body.data).not.toHaveProperty("tierPeriods");
 
-      const tierOnly = await api()
+      const upgraded = await api()
         .patch(`/api/v1/loyalty-memberships/${created.body.data.id}`)
         .set("Cookie", cookie)
         .send({ tier: "Platinum" });
-      expect(tierOnly.body.data.tierPeriods).toHaveLength(2);
+      expect(upgraded.status).toBe(200);
+      expect(upgraded.body.data.tier).toBe("Platinum");
 
-      const cleared = await api()
+      // A client still sending the retired history is told so, not ignored.
+      const history = await api()
         .patch(`/api/v1/loyalty-memberships/${created.body.data.id}`)
         .set("Cookie", cookie)
-        .send({ tierPeriods: [] });
-      expect(cleared.body.data.tierPeriods).toEqual([]);
-    });
-
-    it("rejects a period that ends before it starts", async () => {
-      const res = await api()
-        .post("/api/v1/loyalty-memberships")
-        .set("Cookie", cookie)
-        .send({
-          domain: "lodging",
-          programName: "Bonvoy",
-          tierPeriods: [{ tier: "Gold", validFrom: "2024-03-01", validUntil: "2024-02-01" }],
-        });
-      expect(res.status).toBe(400);
+        .send({ tierPeriods: [{ tier: "Gold", validFrom: "2024-03-01" }] });
+      expect(history.status).toBe(400);
+      const stored = await prisma.loyaltyMembership.findUniqueOrThrow({
+        where: { id: created.body.data.id },
+      });
+      expect(stored.tier).toBe("Platinum");
     });
   });
 

@@ -5,7 +5,6 @@ import AppShell from "../components/ui/AppShell";
 import PageHeader from "../components/ui/PageHeader";
 import ActivityLine from "../components/Loyalty/ActivityLine";
 import LoyaltyCardSection from "../components/Loyalty/LoyaltyCardSection";
-import TierHistoryToggle from "../components/Loyalty/TierHistoryToggle";
 import MembershipsSection from "../components/Settings/MembershipsSection";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
 import { useTranslation } from "../hooks/useTranslation";
@@ -87,16 +86,7 @@ export default function LoyaltyPage(): JSX.Element {
           onChanged={() => void reload()}
           renderExtra={(m) => {
             const card = byId.get(m.id);
-            return card ? (
-              <>
-                <ActivityLine domain="lodging" activity={card.activity} />
-                <TierHistoryToggle
-                  membershipId={card.id}
-                  periods={card.tierPeriods}
-                  onSaved={() => void reload()}
-                />
-              </>
-            ) : null;
+            return card ? <ActivityLine domain="lodging" activity={card.activity} /> : null;
           }}
         />
       );

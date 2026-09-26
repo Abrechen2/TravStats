@@ -52,7 +52,6 @@ const card = (o: Partial<LoyaltyMembership>): LoyaltyMembership => ({
   chains: [],
   lodgingIds: [],
   lodgings: [],
-  tierPeriods: [],
   createdAt: "2026-01-01T00:00:00Z",
   updatedAt: "2026-01-01T00:00:00Z",
   activity: { count: 12, nights: null, lastActivity: "2025-01-02" },
@@ -114,7 +113,7 @@ describe("LoyaltyPage", () => {
     expect(within(cruise).getByText("AIDA Club")).toBeInTheDocument();
   });
 
-  it("hands the hotel editor each card's activity and status history", async () => {
+  it("hands the hotel editor each card's activity", async () => {
     api.listLoyaltyMemberships.mockResolvedValue([
       card({
         id: "hotel-card",
@@ -122,13 +121,11 @@ describe("LoyaltyPage", () => {
         programName: "Bonvoy",
         airlineCodes: [],
         activity: { count: 3, nights: 7, lastActivity: "2025-02-12" },
-        tierPeriods: [{ id: "p1", tier: "Gold", validFrom: "2024-03-01", validUntil: null }],
       }),
     ]);
     renderPage();
     const hotel = await screen.findByTestId("hotel-editor");
     await waitFor(() => expect(within(hotel).getByTestId("loyalty-activity")).toBeInTheDocument());
-    expect(within(hotel).getByTestId("tier-history-toggle-hotel-card")).toBeInTheDocument();
   });
 
   it("takes a frequent-flyer number over from the flights only once the user saves", async () => {
@@ -167,7 +164,6 @@ describe("LoyaltyPage", () => {
         notes: null,
         // Only the airlines the catalogue could name a code for.
         airlineCodes: ["LH"],
-        tierPeriods: [],
       })
     );
     // The list reloads, and the open suggestion list with it.

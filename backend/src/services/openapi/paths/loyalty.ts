@@ -26,13 +26,6 @@ const uuid = z.string().uuid();
 const tag = ["Loyalty"];
 const day = z.string().describe("YYYY-MM-DD");
 
-const tierPeriod = z.object({
-  id: uuid,
-  tier: z.string(),
-  validFrom: day,
-  validUntil: day.nullable().describe("null: still held"),
-});
-
 const activity = z
   .object({
     count: z
@@ -62,7 +55,6 @@ const card = z.object({
   chains: z.array(z.object({ id: z.number().int(), name: z.string() })),
   lodgingIds: z.array(uuid),
   lodgings: z.array(z.object({ id: uuid, name: z.string() })),
-  tierPeriods: z.array(tierPeriod),
 });
 
 const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.literal(true), data });

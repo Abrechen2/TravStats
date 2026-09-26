@@ -858,7 +858,7 @@ export const CRUISE_TEMPLATES: readonly CruiseTemplate[] = [
  *   CruiseCompanion, CruiseLeg, CruiseLegRoute, CruiseTrack (Cruise) ·
  *   FlightCompanion (Flight/Companion) · ImmichImportJob (TripImmichAlbum) ·
  *   LodgingPhoto (Lodging) · LodgingMembershipChain,
- *   LodgingMembershipLodging, LoyaltyTierPeriod (LoyaltyMembership) · PlaceListEntry
+ *   LodgingMembershipLodging (LoyaltyMembership) · PlaceListEntry
  *   (PlaceList/Place) · PlaceVisitPhoto (PlaceVisit) · TripCompanion,
  *   TripImmichAlbum, TripPhoto (Trip) · TripRouteLeg, TripRouteTrack
  *   (TripRoute)
@@ -950,7 +950,7 @@ async function wipeDemoUser(userId: string): Promise<void> {
   await prisma.countryDay.deleteMany({ where: { userId } });
   await prisma.dataQualityFlag.deleteMany({ where: { userId } });
   await prisma.dawarichSweepState.deleteMany({ where: { userId } });
-  await prisma.loyaltyMembership.deleteMany({ where: { userId } }); // links and tier periods cascade
+  await prisma.loyaltyMembership.deleteMany({ where: { userId } }); // links cascade
   await prisma.pairingCode.deleteMany({ where: { userId } });
   await prisma.parseTrainingLog.deleteMany({ where: { userId } });
   await prisma.parserTemplate.deleteMany({ where: { userId } });

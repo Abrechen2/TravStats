@@ -226,36 +226,26 @@ describe("lodgingNightsRanked", () => {
   });
 });
 
-// loyalty-status-history-dated: a year names the tier the card held THEN,
-// read from its dated history — never today's tier printed beside 2019.
-describe("lodging loyalty — the tier a year held", () => {
-  const periods = [
-    { tier: "Silver", validFrom: new Date("2022-03-01"), validUntil: new Date("2024-02-29") },
-    { tier: "Gold", validFrom: new Date("2024-03-01"), validUntil: null },
-  ];
-  const underCard = (checkIn: string, checkOut: string, withHistory: boolean) =>
+// A programme year names its card, so the statistics can link to the stays
+// they count (owner, 2026-09-26: nights per programme, with the list behind it).
+describe("lodging loyalty — the card behind a programme year", () => {
+  const underCard = (checkIn: string, checkOut: string) =>
     nightsAt("Marriott", {
       programName: "Marriott Bonvoy",
+      programMembershipId: "card-1",
       membershipTier: "Gold",
-      membershipTierPeriods: withHistory ? periods : null,
       checkIn: new Date(checkIn),
       checkOut: new Date(checkOut),
     });
 
-  it("names each year's tiers from the dated history, in the order reached", () => {
+  it("carries the card id and today's tier on every year's row", () => {
     const l = loyalty([
-      underCard("2021-05-01", "2021-05-03", true),
-      underCard("2023-05-01", "2023-05-03", true),
-      underCard("2024-05-01", "2024-05-03", true),
+      underCard("2023-05-01", "2023-05-03"),
+      underCard("2024-05-01", "2024-05-04"),
     ]);
-    const held = Object.fromEntries(l.programmeYears.map((p) => [p.year, p.tiersHeld]));
-    expect(held).toEqual({ "2021": [], "2023": ["Silver"], "2024": ["Silver", "Gold"] });
-  });
-
-  it("says nothing about a year when the card has no dated history", () => {
-    const l = loyalty([underCard("2021-05-01", "2021-05-03", false)]);
-    expect(l.programmeYears[0].tiersHeld).toBeNull();
-    // Today's tier still travels on the row, labelled as today's.
-    expect(l.programmeYears[0].tier).toBe("Gold");
+    expect(l.programmeYears.map((p) => [p.year, p.membershipId, p.tier, p.nights])).toEqual([
+      ["2024", "card-1", "Gold", 3],
+      ["2023", "card-1", "Gold", 2],
+    ]);
   });
 });

@@ -12,12 +12,6 @@ import { LOYALTY_DOMAINS, type LoyaltyDomain } from "../shared/domains";
  * covering nothing, and the page would have nowhere to show or remove it.
  */
 
-/** A calendar day, as the date inputs send it. */
-const isoDay = z
-  .string()
-  .regex(/^\d{4}-\d{2}-\d{2}$/, "Expected YYYY-MM-DD")
-  .refine((v) => !Number.isNaN(Date.parse(`${v}T00:00:00Z`)), "Not a calendar date");
-
 /** Two letters or digits — the shape of an IATA airline designator. */
 const iataAirline = z
   .string()
@@ -25,31 +19,18 @@ const iataAirline = z
   .toUpperCase()
   .regex(/^[A-Z0-9]{2}$/, "Expected a two-character IATA airline code");
 
-export const tierPeriodSchema = z
-  .object({
-    tier: z.string().trim().min(1).max(40),
-    validFrom: isoDay,
-    /** Absent or null: still held. */
-    validUntil: isoDay.nullable().optional(),
-  })
-  .refine((p) => !p.validUntil || p.validUntil >= p.validFrom, {
-    message: "validUntil lies before validFrom",
-    path: ["validUntil"],
-  });
-
 // Limits match the lodging schema's where the field is the same field, so a
 // card saved through either router fits the other.
 const cardFields = {
   programName: z.string().trim().min(1).max(120),
   membershipNumber: z.string().trim().max(60).nullable().optional(),
+  /** The status held today — the only status a card keeps (no dated history). */
   tier: z.string().trim().max(40).nullable().optional(),
   notes: z.string().max(2000).nullable().optional(),
   airlineCodes: z.array(iataAirline).max(50).optional(),
   cruiseLines: z.array(z.string().trim().min(1).max(120)).max(50).optional(),
   chainIds: z.array(z.number().int().positive()).max(100).optional(),
   lodgingIds: z.array(z.string().uuid()).max(500).optional(),
-  /** Present replaces the whole history; absent leaves it alone. */
-  tierPeriods: z.array(tierPeriodSchema).max(50).optional(),
 };
 
 type CardFields = { [K in keyof typeof cardFields]?: unknown };
@@ -108,4 +89,3 @@ export const updateLoyaltyMembershipSchema = z
 
 export type CreateLoyaltyMembershipInput = z.infer<typeof createLoyaltyMembershipSchema>;
 export type UpdateLoyaltyMembershipInput = z.infer<typeof updateLoyaltyMembershipSchema>;
-export type TierPeriodInput = z.infer<typeof tierPeriodSchema>;
