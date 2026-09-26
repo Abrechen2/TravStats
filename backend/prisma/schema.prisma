@@ -1424,6 +1424,16 @@ model Trip {
   companions       String[]  @default([])
   notes            String? // markdown long-form
   summary          String? // optional, may be LLM-generated later
+  /// Who wrote `summary` (forgejo#132 item 8): "llm" (POST /trips/:id/summarize)
+  /// or "user" (typed on create or PATCH). NULL = unknown — every summary
+  /// written before the column existed, which may have been either, and a
+  /// trip without a summary. Never back-filled as "user".
+  summarySource    String?   @map("summary_source")
+  /// When the model wrote the current summary; NULL unless `summarySource` is "llm".
+  summaryGeneratedAt DateTime? @map("summary_generated_at")
+  /// How many entries (flights, cruises, stays, place visits, stops, journal
+  /// entries) the model was given; NULL unless `summarySource` is "llm".
+  summaryEntryCount Int?     @map("summary_entry_count")
   originLabel      String?   @map("origin_label")
   destinationLabel String?   @map("destination_label")
   coverImageUrl    String?   @map("cover_image_url")

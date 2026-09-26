@@ -456,7 +456,10 @@ registry.registerPath({
     "Asks the instance's Ollama (Admin → Parser, or OLLAMA_URL) for a three-paragraph " +
     "summary built from the trip's flights, cruises, stays, place visits, stops and " +
     "journal, in the requested language, and STORES it on the trip — the next read of " +
-    "the trip carries it. Rate-limited like the parsers; a run can take minutes.",
+    'the trip carries it, with `summarySource` "llm", `summaryGeneratedAt` and ' +
+    "`summaryEntryCount`. A person's edit through PATCH (a CHANGED text) turns the source " +
+    'to "user" and clears the other two; null in all three is unknown — every summary ' +
+    "written before 2.7. Rate-limited like the parsers; a run can take minutes.",
   tags: ["Trips"],
   request: {
     params: tripId,
@@ -483,6 +486,17 @@ registry.registerPath({
             model: z.string(),
             language: z.enum(["de", "en"]),
             durationMs: z.number().int(),
+            summarySource: z
+              .literal("llm")
+              .describe("Stored on the trip with the text, as are the two fields below"),
+            summaryGeneratedAt: z.string().datetime(),
+            summaryEntryCount: z
+              .number()
+              .int()
+              .describe(
+                "Entries the model was given: flights, cruises, stays, place visits, stops and " +
+                  "journal entries"
+              ),
           }),
         },
       },
