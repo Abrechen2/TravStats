@@ -1,6 +1,7 @@
 import { useState } from "react";
 import { adminApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
+import { formatBytes } from "../../lib/fileSize";
 import { logErrorCopy } from "../../components/Admin/logErrorCopy";
 import type { ToastType } from "../../store/toastStore";
 import type { ConfirmRequest } from "../../hooks/useConfirmDialog";
@@ -24,7 +25,9 @@ export function useLoggingAdmin(
   t: Translate,
   addToast: (type: ToastType, message: string) => void,
   /** The page's in-page confirm dialog (`useConfirmDialog`), never `window.confirm`. */
-  askConfirm: AskConfirm
+  askConfirm: AskConfirm,
+  /** UI language, for the freed size in the cleanup toast ("0 B", "3,4 MB"). */
+  language = "de"
 ) {
   const [loggingConfig, setLoggingConfig] = useState<LoggingConfigResponse | null>(null);
   const [logFiles, setLogFiles] = useState<LogFileInfo[]>([]);
@@ -117,7 +120,7 @@ export function useLoggingAdmin(
         "success",
         t("admin:toasts.cleanupComplete", {
           deletedCount: result.deletedCount,
-          freedMb: (result.freedBytes / 1024 / 1024).toFixed(2),
+          freed: formatBytes(result.freedBytes, language),
         })
       );
       // A file the sweep could not delete is said, not folded into success.

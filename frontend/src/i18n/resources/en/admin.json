@@ -432,7 +432,7 @@
     "logFileDownloadFailed": "Failed to download log file",
     "logFileDeleted": "Log file deleted successfully!",
     "logFileDeletFailed": "Failed to delete log file",
-    "cleanupComplete": "Cleanup complete: deleted {{deletedCount}} files, freed {{freedMb}} MB",
+    "cleanupComplete": "Cleanup complete: deleted {{deletedCount}} files, freed {{freed}}",
     "cleanupFailed": "Failed to cleanup logs",
     "ollamaTestSuccess": "Ollama reachable – {{count}} model(s) found",
     "ollamaTestFailed": "Ollama connection failed",
@@ -542,6 +542,11 @@
     }
   },
   "parserSettings": {
+    "builtin": {
+      "ocrHint": "Reads boarding passes from images",
+      "templatesName": "Templates (regex)",
+      "templatesHint": "Reads booking emails from known senders"
+    },
     "title": "Global Parser Configuration",
     "description": "Default parsers for all users. Local ones are free; cloud AI costs per request and needs a key.",
     "defaultSettings": "Default Settings",

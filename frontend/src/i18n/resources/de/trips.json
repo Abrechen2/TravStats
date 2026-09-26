@@ -16,6 +16,7 @@
   "deleteTrip": "Reise löschen",
   "removeFromTrip": "Aus Reise entfernen",
   "deleteTripConfirm": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, aus ihren Stationen gebauten Touren mit ihren aufgezeichneten Tracks und den hier abgelegten Dokumenten. Flüge, Kreuzfahrten, Unterkünfte und Roadtrips bleiben erhalten, ebenso Tagestouren mit eigenen Punkten — sie werden zu eigenständigen Touren.",
+  "deleteTripConfirmWithRail": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, aus ihren Stationen gebauten Touren mit ihren aufgezeichneten Tracks und den hier abgelegten Dokumenten. Flüge, Kreuzfahrten, Bahnfahrten, Unterkünfte und Roadtrips bleiben erhalten, ebenso Tagestouren mit eigenen Punkten — sie werden zu eigenständigen Touren.",
   "showOnMap": "Auf Karte",
   "flightCount_one": "{{count}} Flug",
   "flightCount_other": "{{count}} Flüge",
@@ -280,6 +281,8 @@
     "summary": "{{trips}} ausgewählt · {{flights}} Flüge werden zugeordnet",
     "commit": "{{count}} Reisen erstellen",
     "discard": "Verwerfen",
+    "flightCount_one": "{{count}} Flug",
+    "flightCount_other": "{{count}} Flüge",
     "expandLegs": "Flüge anzeigen",
     "collapseLegs": "Flüge ausblenden",
     "legStatus": {

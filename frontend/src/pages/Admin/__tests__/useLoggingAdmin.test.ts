@@ -60,10 +60,27 @@ describe("useLoggingAdmin — cleanup", () => {
 
     expect(addToast).toHaveBeenCalledWith(
       "success",
-      "Aufräumen abgeschlossen: 3 Dateien gelöscht, 2.00 MB freigegeben"
+      "Aufräumen abgeschlossen: 3 Dateien gelöscht, 2,0 MB freigegeben"
     );
     const text = addToast.mock.calls.map((call) => call[1]).join(" ");
     expect(text).not.toMatch(/undefined|NaN/);
+  });
+
+  it("says a sweep that freed nothing without a fake precision (was '0.00 MB')", async () => {
+    vi.mocked(adminApi.cleanupLogs).mockResolvedValue({
+      deletedCount: 0,
+      freedBytes: 0,
+      failedCount: 0,
+      retentionDays: 7,
+    });
+    const { result } = renderHook(() => useLoggingAdmin(deT, addToast, askConfirm));
+
+    await act(() => result.current.handleCleanupLogs());
+
+    expect(addToast).toHaveBeenCalledWith(
+      "success",
+      "Aufräumen abgeschlossen: 0 Dateien gelöscht, 0 B freigegeben"
+    );
   });
 
   it("says when some files could not be deleted instead of reporting plain success", async () => {

@@ -16,6 +16,7 @@
   "deleteTrip": "Delete Journey",
   "removeFromTrip": "Remove from journey",
   "deleteTripConfirm": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the documents filed here. Flights, cruises, stays and roadtrips are kept, and so are day tours with points of their own — they become standalone tours.",
+  "deleteTripConfirmWithRail": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the documents filed here. Flights, cruises, rail journeys, stays and roadtrips are kept, and so are day tours with points of their own — they become standalone tours.",
   "showOnMap": "Show on Map",
   "flightCount_one": "{{count}} Flight",
   "flightCount_other": "{{count}} Flights",
@@ -280,6 +281,8 @@
     "summary": "{{trips}} selected · {{flights}} flights to be linked",
     "commit": "Create {{count}} journeys",
     "discard": "Discard",
+    "flightCount_one": "{{count}} flight",
+    "flightCount_other": "{{count}} flights",
     "expandLegs": "Show flights",
     "collapseLegs": "Hide flights",
     "legStatus": {

@@ -45,7 +45,7 @@ function getErrorMessage(_error: unknown, fallback: string): string {
 // ==================== Admin Page Component ====================
 
 export default function AdminPage(): JSX.Element {
-  const { t } = useTranslation(["admin", "common"]);
+  const { t, i18n } = useTranslation(["admin", "common"]);
   const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const addToast = useToastStore((state) => state.addToast);
   const [searchParams, setSearchParams] = useSearchParams();
@@ -128,7 +128,7 @@ export default function AdminPage(): JSX.Element {
     handleDownloadLogFile,
     handleDeleteLogFile,
     handleCleanupLogs,
-  } = useLoggingAdmin(t, addToast, askConfirm);
+  } = useLoggingAdmin(t, addToast, askConfirm, i18n.language);
   const [globalApiKeys, setGlobalApiKeys] = useState<GlobalApiKeys | null>(null);
   const [savingGlobalApiKeys, setSavingGlobalApiKeys] = useState(false);
   const [ollamaTestState, setOllamaTestState] = useState<{

@@ -432,7 +432,7 @@
     "logFileDownloadFailed": "Fehler beim Herunterladen der Log-Datei",
     "logFileDeleted": "Log-Datei erfolgreich gelöscht!",
     "logFileDeletFailed": "Fehler beim Löschen der Log-Datei",
-    "cleanupComplete": "Aufräumen abgeschlossen: {{deletedCount}} Dateien gelöscht, {{freedMb}} MB freigegeben",
+    "cleanupComplete": "Aufräumen abgeschlossen: {{deletedCount}} Dateien gelöscht, {{freed}} freigegeben",
     "cleanupFailed": "Fehler beim Aufräumen der Logs",
     "ollamaTestSuccess": "Ollama erreichbar – {{count}} Modell(e) gefunden",
     "ollamaTestFailed": "Verbindung zu Ollama fehlgeschlagen",
@@ -542,6 +542,11 @@
     }
   },
   "parserSettings": {
+    "builtin": {
+      "ocrHint": "Liest Bordkarten aus Bildern",
+      "templatesName": "Vorlagen (Regex)",
+      "templatesHint": "Liest Buchungs-E-Mails bekannter Anbieter"
+    },
     "title": "Globale Parser-Konfiguration",
     "description": "Standard-Parser für alle Benutzer. Lokale Verfahren sind kostenlos, Cloud-KI kostet je Anfrage und braucht einen Schlüssel.",
     "defaultSettings": "Standard-Einstellungen",

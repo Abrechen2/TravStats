@@ -6,7 +6,7 @@ import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import type { Trip } from "../../types";
 import { sumByCurrency, tripCostSources } from "../../lib/bookingCost";
-import { formatIsoDate } from "../../lib/dateUtils";
+import { formatDate } from "../../lib/displayFormat";
 import { formatCurrency } from "../../lib/units";
 import { statusPillStyle } from "../table/statusPillStyle";
 import { Icon, type IconName } from "../ui/Icon";
@@ -132,8 +132,10 @@ function EntryList({
   );
 }
 
+// In the user's date format (Settings → Display), read in UTC as before. It
+// printed the ISO day ("2021-01-15") on a German page until 2026-09-26.
 const dateOf = (iso: string | null | undefined): string | null =>
-  iso ? formatIsoDate(iso, "UTC") : null;
+  iso ? formatDate(iso, { timeZone: "UTC" }) || null : null;
 
 /**
  * The overview tab of a trip, round 4 ("Reise Detail"): three figures, the

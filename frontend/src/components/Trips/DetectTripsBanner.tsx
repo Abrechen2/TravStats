@@ -2,6 +2,7 @@ import { useEffect, useState } from "react";
 import { tripsApi } from "../../lib/api";
 import type { DetectTripsResult } from "../../lib/api/trips";
 import { useTranslation } from "../../hooks/useTranslation";
+import { detectionSourceKey } from "../../lib/tripDetectionSource";
 import DetectReviewModal from "./DetectReviewModal";
 
 interface Props {
@@ -53,7 +54,7 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
     {} as Record<string, number>
   );
   const sourceLabels = Object.entries(sourceCounts)
-    .map(([src, n]) => `${t(`trips:detectBanner.sources.${formatSourceName(src)}`)} (${n})`)
+    .map(([src, n]) => `${t(`trips:detectBanner.sources.${detectionSourceKey(src)}`)} (${n})`)
     .join(" · ");
 
   return (
@@ -113,22 +114,4 @@ export default function DetectTripsBanner({ onChange }: Props): JSX.Element | nu
       )}
     </>
   );
-}
-
-/**
- * The i18n key of a detection source. The banner used to print the
- * implementation names — "PNR-Cluster · Home-Loop · Continuity" — on a
- * German page (CT106 audit B11).
- */
-function formatSourceName(src: string): string {
-  switch (src) {
-    case "pnr":
-      return "pnr";
-    case "home_loop":
-      return "homeLoop";
-    case "continuity":
-      return "continuity";
-    default:
-      return "other";
-  }
 }

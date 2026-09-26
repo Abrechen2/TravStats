@@ -106,10 +106,20 @@ beforeEach(() => {
 });
 
 describe("LoggingManager", () => {
-  it("shows the oldest and newest log as dates, not a dash", () => {
+  // Browser acceptance 2026-09-26: "Sep 26, 2026" and "3.39 MB" on a German
+  // page. Dates follow the date-format setting (DD.MM.YYYY in the test
+  // store), sizes the UI language.
+  it("shows the oldest and newest log as dates in the user's format, not a dash", () => {
     renderManager();
-    expect(screen.getByTestId("oldest-log")).toHaveTextContent("Sep 20, 2026");
-    expect(screen.getByTestId("newest-log")).toHaveTextContent("Sep 26, 2026");
+    expect(screen.getByTestId("oldest-log")).toHaveTextContent("20.09.2026");
+    expect(screen.getByTestId("newest-log")).toHaveTextContent("26.09.2026");
+    expect(screen.queryByText(/Sep \d/)).toBeNull();
+  });
+
+  it("gives sizes with a German decimal comma", () => {
+    renderManager();
+    expect(screen.getAllByText("2,0 KB")).toHaveLength(2);
+    expect(screen.queryByText(/\d\.\d+ [KM]B/)).toBeNull();
   });
 
   it("says when LOG_LEVEL pins the level, and locks the picker", () => {
