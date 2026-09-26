@@ -25,6 +25,7 @@ import { loadAirportCountries, loadHomeIatas, passportAirportCodes } from "./pas
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { classifyVisit } from "../../shared/placeCounting";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
+import { loadRailEnds } from "./railEvidenceLoader";
 
 /**
  * @param code the requested country, an ISO alpha-2 code or an English name
@@ -56,7 +57,7 @@ export async function loadCountryDetail(
 
   // The same sources the passport counts, so the row and the page can only ever
   // agree.
-  const [airportCountries, portCalls, places, lodgings, countryDays, homeIatas, stations] =
+  const [airportCountries, portCalls, places, lodgings, countryDays, homeIatas, stations, rail] =
     await Promise.all([
       loadAirportCountries(passportAirportCodes(flights)),
       prisma.cruiseStop.findMany({
@@ -118,6 +119,8 @@ export async function loadCountryDetail(
       loadHomeIatas(userId),
       // The sixth: roadtrip stations, from the loader the passport reads too.
       loadRoadtripStations(userId, now),
+      // The seventh: train station ends, from the loader the passport reads too.
+      loadRailEnds(userId),
     ]);
 
   return buildCountryDetail(
@@ -166,6 +169,7 @@ export async function loadCountryDetail(
       pointCount: row.pointCount,
     })),
     undefined,
-    stations
+    stations,
+    rail
   );
 }

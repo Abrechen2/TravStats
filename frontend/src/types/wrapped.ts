@@ -48,6 +48,12 @@ export interface Wrapped {
    */
   newCountries: number;
   cruises: number;
+  /** Completed train rides that left in this year, on their station's calendar. */
+  railRides: number;
+  /** Their kilometres, every distance source together. */
+  railKm: number;
+  /** The part of `railKm` measured as the straight line — shown as such. */
+  railStraightLineKm: number;
   /** Null when no flight of the year named a carrier. */
   topAirline: WrappedAirline | null;
   /** The year's most-flown PAIR, codes sorted — not a direction. */

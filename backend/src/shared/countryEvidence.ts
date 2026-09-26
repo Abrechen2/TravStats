@@ -238,8 +238,12 @@ export function parseCountryTier(value: unknown): CountryTier | null {
  * `roadtrip` is a station of a roadtrip that has started (2.7). It is the one
  * curated kind that can produce `transited`: a station driven through records
  * the road crossing no flight, cruise or house ever could.
+ *
+ * `rail` is a station end of a completed train ride (2.7): the traveller stood
+ * on the ground there. A change of trains grades `transited`, never
+ * `connection` — see `services/stats/railEvidence.ts`.
  */
-export type EvidenceKind = "flight" | "lodging" | "port" | "place" | "roadtrip" | "track";
+export type EvidenceKind = "flight" | "lodging" | "port" | "place" | "rail" | "roadtrip" | "track";
 
 /**
  * How long the traveller was on the ground in a country — spec §3.4b.

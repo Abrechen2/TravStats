@@ -37,6 +37,7 @@ import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/ti
 import { buildTravelRecords } from "../services/stats/records";
 import { enrichFlightsWithAirportFacts } from "../services/flightAirportFacts";
 import { countableFlightWhere } from "../shared/flightCounting";
+import { loadWrappedDomains } from "../services/stats/wrappedDomains";
 import {
   resolveWindow,
   bucketSeries,
@@ -950,7 +951,7 @@ router.get(
       // One scan, not two: `loadPassport` reads the same countable flights of
       // the same user and is handed these rows (forgejo#49). `arrivalTime` and
       // `arrTimeSemantics` are here only because it needs them.
-      const [flights, cruises] = await Promise.all([
+      const [flights, domains] = await Promise.all([
         prisma.flight.findMany({
           where: { userId, ...countableFlightWhere() },
           select: {
@@ -971,10 +972,7 @@ router.get(
             status: true,
           },
         }),
-        prisma.cruise.findMany({
-          where: { userId, ...countableFlightWhere() },
-          select: { startDate: true, status: true },
-        }),
+        loadWrappedDomains(userId),
       ]);
 
       // For `newCountries` only — the passport already decides what counts as
@@ -1000,9 +998,10 @@ router.get(
               : localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).year,
           distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
         })),
-        cruises,
+        domains.cruises,
         passport.countries,
-        parsed.data.year ?? null
+        parsed.data.year ?? null,
+        domains.rail
       );
 
       if (!wrapped) {

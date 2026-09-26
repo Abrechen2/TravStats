@@ -269,3 +269,33 @@ describe("buildWrapped", () => {
     expect(thin?.topAirline).toBeNull();
   });
 });
+
+/**
+ * Rail (2.7): a year of train rides is a year with a story, and its kilometres
+ * say how much of them is the straight line (owner decision 7).
+ */
+describe("buildWrapped — rail", () => {
+  it("tells a rail-only year, counting its rides and kilometres", () => {
+    const wrapped = buildWrapped([], [], [], null, [
+      { year: 2025, distanceKm: 420.4, distanceSource: "route" },
+      { year: 2025, distanceKm: 300.2, distanceSource: "great_circle" },
+      { year: 2025, distanceKm: null, distanceSource: null },
+      { year: 2024, distanceKm: 100, distanceSource: "user" },
+    ]);
+    expect(wrapped).toMatchObject({
+      year: 2025,
+      availableYears: [2024, 2025],
+      flights: 0,
+      rank: "other",
+      railRides: 3,
+      railKm: 721,
+      railStraightLineKm: 300,
+    });
+    const parsed = wrappedSchema.safeParse(wrapped);
+    expect(parsed.success ? null : parsed.error.issues).toBeNull();
+  });
+
+  it("reports no rail for an account without rides", () => {
+    expect(buildWrapped([flight()], [], [])).toMatchObject({ railRides: 0, railKm: 0 });
+  });
+});
