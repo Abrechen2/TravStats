@@ -2,6 +2,7 @@ import cron from "node-cron";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { createBackup } from "./backupService";
+import { schedulerZone } from "../shared/time/schedulerZone";
 
 const VALID_INTERVALS = ["daily", "weekly", "monthly"] as const;
 type BackupInterval = (typeof VALID_INTERVALS)[number];
@@ -128,11 +129,16 @@ export async function startScheduler(): Promise<void> {
     message: "Starting backup scheduler",
     cronPattern,
     interval: backupInterval,
+    timezone: schedulerZone("backup"),
   });
 
-  scheduledJob = cron.schedule(cronPattern, async () => {
-    await checkAndRunBackup();
-  });
+  scheduledJob = cron.schedule(
+    cronPattern,
+    async () => {
+      await checkAndRunBackup();
+    },
+    { timezone: schedulerZone("backup") }
+  );
 
   scheduledJob.start();
 

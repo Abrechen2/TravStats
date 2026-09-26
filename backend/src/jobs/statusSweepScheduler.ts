@@ -9,6 +9,7 @@
 import cron from "node-cron";
 import logger from "../utils/logger";
 import { sweepStatuses } from "../services/statusSweep";
+import { schedulerZone } from "../shared/time/schedulerZone";
 
 const CRON_EXPRESSION = "0 * * * *";
 
@@ -16,13 +17,17 @@ let schedulerTask: cron.ScheduledTask | null = null;
 
 export function startStatusSweepScheduler(): void {
   if (schedulerTask) return;
-  schedulerTask = cron.schedule(CRON_EXPRESSION, async () => {
-    try {
-      await sweepStatuses();
-    } catch (error) {
-      logger.warn({ operation: "status_sweep_error", error }, "Hourly status sweep failed");
-    }
-  });
+  schedulerTask = cron.schedule(
+    CRON_EXPRESSION,
+    async () => {
+      try {
+        await sweepStatuses();
+      } catch (error) {
+        logger.warn({ operation: "status_sweep_error", error }, "Hourly status sweep failed");
+      }
+    },
+    { timezone: schedulerZone("statusSweep") }
+  );
   logger.info(
     { operation: "status_sweep_scheduler_started", cron: CRON_EXPRESSION },
     "status sweep scheduler started"

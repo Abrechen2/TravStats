@@ -8,6 +8,7 @@ import cron from "node-cron";
 import { checkAndUpdateAllFlights } from "../services/flightAutoUpdate";
 import { cleanupExpiredUpdates } from "../services/pendingUpdateService";
 import logger from "../utils/logger";
+import { schedulerZone } from "../shared/time/schedulerZone";
 
 let schedulerRunning = false;
 let schedulerTask: cron.ScheduledTask | null = null;
@@ -36,38 +37,42 @@ export function startFlightUpdateScheduler(intervalMinutes: number = 15): void {
     },
   });
 
-  schedulerTask = cron.schedule(cronExpression, async () => {
-    try {
-      logger.info({
-        operation: "scheduler_run",
-        message: "Running scheduled flight update check",
-      });
+  schedulerTask = cron.schedule(
+    cronExpression,
+    async () => {
+      try {
+        logger.info({
+          operation: "scheduler_run",
+          message: "Running scheduled flight update check",
+        });
 
-      // Check and update flights
-      const updatesCreated = await checkAndUpdateAllFlights();
+        // Check and update flights
+        const updatesCreated = await checkAndUpdateAllFlights();
 
-      // Cleanup expired updates
-      const expiredCount = await cleanupExpiredUpdates();
+        // Cleanup expired updates
+        const expiredCount = await cleanupExpiredUpdates();
 
-      logger.info({
-        operation: "scheduler_run_complete",
-        message: "Scheduled flight update check completed",
-        context: {
-          updatesCreated,
-          expiredCount,
-        },
-      });
-    } catch (error) {
-      logger.error({
-        operation: "scheduler_run_error",
-        message: "Error during scheduled flight update check",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-          stack: error instanceof Error ? error.stack : undefined,
-        },
-      });
-    }
-  });
+        logger.info({
+          operation: "scheduler_run_complete",
+          message: "Scheduled flight update check completed",
+          context: {
+            updatesCreated,
+            expiredCount,
+          },
+        });
+      } catch (error) {
+        logger.error({
+          operation: "scheduler_run_error",
+          message: "Error during scheduled flight update check",
+          error: {
+            message: error instanceof Error ? error.message : "Unknown error",
+            stack: error instanceof Error ? error.stack : undefined,
+          },
+        });
+      }
+    },
+    { timezone: schedulerZone("flightUpdate") }
+  );
 
   schedulerRunning = true;
 }

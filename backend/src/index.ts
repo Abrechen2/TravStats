@@ -11,9 +11,9 @@ import { requestLoggerMiddleware } from "./middleware/requestLogger";
 import { prisma } from "./db";
 import logger from "./utils/logger";
 import { DATABASE_URL } from "./utils/database";
-import { appVersion, buildVersion } from "./utils/version";
 import { resolveTrustProxy } from "./utils/trustProxy";
 import { runZoneSelfCheck } from "./shared/time/zoneOf";
+import { backupZone } from "./shared/time/schedulerZone";
 import { healthHandler } from "./routes/health";
 import { templateRegistry } from "./services/parsers/templates/registry";
 import { seedPortsFromCSV } from "./seedPortsFromCSV";
@@ -148,8 +148,8 @@ app.use(cookieParser());
 // Request logging middleware (with correlation IDs)
 app.use(requestLoggerMiddleware);
 
-// Version detection: single source of truth is /app/backend/VERSION,
-// loaded by ./utils/version. The Dockerfile writes that file from the
+// Version detection (routes/version.ts): single source of truth is
+// /app/backend/VERSION, loaded by ./utils/version. The Dockerfile writes that file from the
 // build-arg (carries any `-rc.N` / `-security-rc.N` suffix). `appVersion`
 // is the cleaned display string with pre-release suffix stripped, so a
 // byte-identical RC promoted to `:latest` shows the clean release version
@@ -176,27 +176,7 @@ app.use("/api", (_req, res, next) => {
 app.get("/health", healthHandler);
 app.get("/api/v1/health", healthHandler);
 
-// Public version endpoint — unauthenticated so the About section can
-// show the right version even before login. Returns both the runtime
-// version (what the user sees) and the build version baked into the
-// image (kept for diagnostics, only shown when it differs). Also
-// surfaces the latest stable GitHub release so the UI can show an
-// update banner. Network failures degrade to latestAvailable=null so
-// air-gapped installs simply hide the banner.
-app.get("/api/v1/version", async (_req, res) => {
-  const { getCachedLatestRelease, isUpdateAvailable } = await import("./services/updateChecker");
-  const latest = await getCachedLatestRelease();
-
-  res.json({
-    version: appVersion,
-    buildVersion,
-    latestAvailable: latest?.latestAvailable ?? null,
-    updateAvailable: latest ? isUpdateAvailable(appVersion, latest.latestAvailable) : false,
-    releaseUrl: latest?.releaseUrl ?? null,
-    releaseNotes: latest?.releaseNotes ?? null,
-    publishedAt: latest?.publishedAt ?? null,
-  });
-});
+// The public version endpoint lives in routes/version.ts (mount table).
 
 // Public parser-capabilities endpoint. Lets the email import UI say why a
 // parse may be templates-only — no model configured, or one switched off.
@@ -585,6 +565,8 @@ if (process.env.NODE_ENV !== "test") {
     // The zone lookup every local time depends on. A failure is logged at
     // error level and turns /health "degraded"; it does not stop the boot.
     runZoneSelfCheck();
+    // Pin the backup job's zone to the host's at boot, logged once.
+    backupZone();
 
     // Airport zones: fill the missing ones, and once per instance re-derive
     // the ones geo-tz's old default folded together (CAMP-03).

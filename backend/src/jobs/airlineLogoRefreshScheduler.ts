@@ -15,6 +15,7 @@ import {
   LOGO_MAX_AGE_MS,
   RETRY_BACKOFF_MS,
 } from "../services/airlineLogo/airlineLogoService";
+import { schedulerZone } from "../shared/time/schedulerZone";
 
 // 3 AM UTC. node-cron reads the container clock, and both containers run
 // TZ=UTC (see the timezone note in CLAUDE.local.md) — so this really is 3 AM UTC.
@@ -66,9 +67,13 @@ export async function sweepStaleLogos(): Promise<{ checked: number; refreshed: n
 
 export function startAirlineLogoRefreshScheduler(): void {
   if (schedulerTask) return;
-  schedulerTask = cron.schedule(CRON_EXPRESSION, () => {
-    void sweepStaleLogos();
-  });
+  schedulerTask = cron.schedule(
+    CRON_EXPRESSION,
+    () => {
+      void sweepStaleLogos();
+    },
+    { timezone: schedulerZone("airlineLogoRefresh") }
+  );
   logger.info(
     { operation: "logo_scheduler_started", cron: CRON_EXPRESSION },
     "airline logo refresh scheduler started"

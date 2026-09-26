@@ -21,6 +21,7 @@ import cron from "node-cron";
 import { sweepDocuments } from "../services/documents/documentService";
 import { migrateLegacyReceipts, reconcileReceiptDocuments } from "../services/documents/receipts";
 import logger from "../utils/logger";
+import { schedulerZone } from "../shared/time/schedulerZone";
 
 const CRON_EXPRESSION = "25 * * * *";
 
@@ -48,9 +49,13 @@ export async function runDocumentSweep(): Promise<void> {
 
 export function startDocumentSweepScheduler(): void {
   if (schedulerTask) return;
-  schedulerTask = cron.schedule(CRON_EXPRESSION, () => {
-    void runDocumentSweep();
-  });
+  schedulerTask = cron.schedule(
+    CRON_EXPRESSION,
+    () => {
+      void runDocumentSweep();
+    },
+    { timezone: schedulerZone("documentSweep") }
+  );
   // Once at start as well, so receipts from before 2.7 move without waiting
   // for the first :25.
   void runDocumentSweep();

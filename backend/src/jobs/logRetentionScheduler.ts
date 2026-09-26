@@ -16,6 +16,7 @@ import cron from "node-cron";
 
 import { enforceLogRetention } from "../services/logRetention";
 import logger from "../utils/logger";
+import { schedulerZone } from "../shared/time/schedulerZone";
 
 const CRON_EXPRESSION = "45 3 * * *";
 
@@ -32,9 +33,13 @@ export async function runLogRetention(): Promise<void> {
 
 export function startLogRetentionScheduler(): void {
   if (schedulerTask) return;
-  schedulerTask = cron.schedule(CRON_EXPRESSION, () => {
-    void runLogRetention();
-  });
+  schedulerTask = cron.schedule(
+    CRON_EXPRESSION,
+    () => {
+      void runLogRetention();
+    },
+    { timezone: schedulerZone("logRetention") }
+  );
   void runLogRetention();
   logger.info({ operation: "log_retention_scheduler_started", cron: CRON_EXPRESSION });
 }
