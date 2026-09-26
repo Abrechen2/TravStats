@@ -8,6 +8,7 @@ import {
   geocodeAddress,
   resolveCoordinates,
   reverseGeocode,
+  reverseGeocodeDetailed,
   completeAddressFromCoordinates,
 } from "../nominatim";
 import { resolveGeocoderUrls } from "../../instanceSettingsService";
@@ -233,6 +234,23 @@ describe("nominatim geocoder", () => {
       city: "Berlin",
       country: "Deutschland",
     });
+  });
+
+  // A 429 used to come back as "no address" AND be cached for the process
+  // lifetime - the map modal then showed a city pin as if it were open water.
+  it("reports a rate-limited reverse lookup as degraded and does not cache it", async () => {
+    const fetchMock = jest
+      .fn()
+      .mockResolvedValueOnce({ ok: false, status: 429, json: async () => ({}) })
+      .mockResolvedValueOnce(reverseResponse({ city: "Hamburg", country: "Deutschland" }));
+    global.fetch = fetchMock as unknown as typeof fetch;
+
+    expect(await reverseGeocodeDetailed(53.55, 9.99)).toEqual({ parts: null, degraded: true });
+    expect(await reverseGeocodeDetailed(53.55, 9.99)).toEqual({
+      parts: { address: null, city: "Hamburg", country: "Deutschland" },
+      degraded: false,
+    });
+    expect(fetchMock).toHaveBeenCalledTimes(2);
   });
 
   it("reads the settlement from town/village/municipality, not just city", async () => {

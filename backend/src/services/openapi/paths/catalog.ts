@@ -452,13 +452,18 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             success: z.literal(true),
-            data: z.object({
-              street: z.string().nullable(),
-              houseNumber: z.string().nullable(),
-              postalCode: z.string().nullable(),
-              city: z.string().nullable(),
-              country: z.string().nullable(),
-            }),
+            data: z
+              .object({
+                name: z.string().nullable().optional(),
+                address: z.string().nullable().optional(),
+                city: z.string().nullable().optional(),
+                country: z.string().nullable().optional(),
+              })
+              .nullable()
+              .describe("null = no address at this point, or (with degraded) no answer"),
+            degraded: z
+              .boolean()
+              .describe("true = the geocoder failed; a null data is then NOT 'no address'"),
           }),
         },
       },

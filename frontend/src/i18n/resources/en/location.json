@@ -23,6 +23,7 @@
     "cancel": "Cancel",
     "resolving": "Resolving address…",
     "noAddress": "No address found for this point",
+    "addressLookupFailed": "The address could not be looked up right now – the address service is not answering. The point itself is still used.",
     "nearby": "Nearby"
   },
   "outOfRange": "Latitude must be between −90 and 90, longitude between −180 and 180.",
