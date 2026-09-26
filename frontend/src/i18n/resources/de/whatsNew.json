@@ -10,8 +10,8 @@
         "body": "TravStats sieht jetzt aus wie die Companion-App: dieselben Farben, Abstände und Schriften, eine Seitenüberschrift je Seite, ein Dunkelmodus, der aus den Farbtokens kommt statt aus Sonderregeln. Die Einstellungen sind nach Gruppen aufgeteilt: Flüge, Kreuzfahrten und Unterkünfte haben je eine eigene Adresse, Konto, Darstellung, Daten und Dienste sind Abschnitte auf der Allgemein-Seite. Der Admin-Bereich ist eine eigene Seite daneben — kein Untermenü mehr."
       },
       "evidence": {
-        "title": "Jede Zahl zeigt, woraus sie besteht",
-        "body": "Klick auf eine Kennzahl oder eine Zeile in einer Rangliste, und ein Panel listet die Einträge, die sie ergeben haben — Flüge, Kreuzfahrten, Aufenthalte, Orte —, mit dem Beitrag jedes Eintrags. Was sich nicht zuordnen lässt, wird gesagt statt weggelassen: eine Summe ohne Kurs bleibt leer und nennt den Grund. Das Panel lässt sich als Link teilen. Und das laufende Jahr vergleicht sich mit demselben Zeitraum des Vorjahres statt mit einem ganzen Jahr — im September sieht es nicht mehr wie ein Einbruch aus."
+        "title": "Jede Zahl zeigt, woraus sie besteht – und jeder Fehler, warum",
+        "body": "Klick auf eine Kennzahl oder eine Zeile in einer Rangliste, und ein Panel listet die Einträge, die sie ergeben haben — Flüge, Kreuzfahrten, Aufenthalte, Orte —, mit dem Beitrag jedes Eintrags. Was sich nicht zuordnen lässt, wird gesagt statt weggelassen: eine Summe ohne Kurs bleibt leer und nennt den Grund. Das Panel lässt sich als Link teilen. Und das laufende Jahr vergleicht sich mit demselben Zeitraum des Vorjahres statt mit einem ganzen Jahr — im September sieht es nicht mehr wie ein Einbruch aus. Und wenn etwas nicht klappt – ein Dienst antwortet nicht, ein Kontingent ist aufgebraucht, eine Sicherung scheitert –, sagt TravStats jetzt, warum, statt still so zu tun, als wäre nichts gewesen."
       },
       "documents": {
         "title": "Dokumente und Belege haben einen Ort",
@@ -26,8 +26,8 @@
         "body": "Orte sind ein vollwertiger Bereich mit Listen, Checklisten und einem CSV-Import, der auch einen Google-Takeout-Export aufnimmt; der Reisepass zeigt die Länder mit ihren Belegen. Fotos hängen jetzt auch an Orten: eine Galerie mit Titelbild, Vorschläge aus deinen Reisefotos vom selben Tag ganz in der Nähe und Bilder im Reisetagebuch. Aufenthalt, Flug und Kreuzfahrt zeigen die Reisefotos aus ihrem Zeitraum, und eine angenommene Foto-Reise bringt ihre Bilder mit."
       },
       "inbox": {
-        "title": "Posteingang mit Reitern, Tabelle hin und zurück, App auf dem Startbildschirm",
-        "body": "Der Posteingang sortiert Flug-Updates, offene Fragen und Vorschläge in Reiter mit Statuszählern, das Logbuch blättert seitenweise. Die Excel-Tabelle geht in beide Richtungen: bearbeiten und wieder einlesen, oder in ein anderes Konto übertragen — Zeilen ohne ID werden in allen Bereichen neu angelegt, schon vorhandene wiedererkannt. Fotos und Dokumente reisen dabei nicht mit, die gehören ins Backup. Und TravStats lässt sich als Web-App installieren."
+        "title": "Posteingang mit Reise-Vorschlägen, die Tabelle hin und zurück",
+        "body": "Der Posteingang sortiert Flug-Updates, offene Fragen und Vorschläge in Reiter mit Statuszählern, das Logbuch blättert seitenweise. Neu ist der Reiter „Reise-Vorschläge“: TravStats liest aus Flügen, Kreuzfahrten, Aufenthalten und Ortsbesuchen, wann du unterwegs warst, und schlägt eine neue Reise vor – oder die Reise, zu der die Einträge gehören. Du übernimmst, bearbeitest oder verwirfst; angelegt wird erst, wenn du übernimmst, und eine Antwort gilt auch nach einem Export. Die Excel-Tabelle geht in beide Richtungen: bearbeiten und wieder einlesen, oder in ein anderes Konto übertragen. Und TravStats lässt sich als Web-App installieren."
       },
       "summaryOpenData": {
         "title": "KI-Zusammenfassung, Dawarich und offene Datendienste",
@@ -35,7 +35,7 @@
       },
       "beta": {
         "title": "Hinter dem Beta-Schalter: Roadtrips, Touren, Bahn",
-        "body": "Roadtrips mit Stationen an deinen Aufenthalten, Tagestouren mit Höhenprofil, die Bahn als eigener Bereich — mit Bahnhofskatalog, Suche nach Zugnummer und dem echten Streckenverlauf —, die Hotel-Anreicherung aus OpenStreetMap und die Kopplung mit der TravStats-Companion-App sind gebaut, aber noch in Prüfung. Ein Admin schaltet sie mit dem Beta-Schalter ein; jeder Eintrag im Register sagt, wann er herauskommt."
+        "body": "Roadtrips mit Stationen an deinen Aufenthalten, Tagestouren mit Höhenprofil, die Bahn als eigener Bereich – mit Bahnhofskatalog, Suche nach Zugnummer, dem echten Streckenverlauf, Bahntickets und Buchungsmails zum Einlesen und eigenen Bahn-Erfolgen –, die Hotel-Anreicherung aus OpenStreetMap und die Kopplung mit der TravStats-Companion-App sind gebaut, aber noch in Prüfung. Ist der Schalter an, zählen Länder, die du nur per Zug oder Roadtrip erreicht hast, auch für die Länder-Erfolge, und Tagestouren kommen in die Reise-Vorschläge. Ein Admin schaltet alles mit dem Beta-Schalter ein; jeder Eintrag im Register sagt, wann er herauskommt."
       }
     },
     "v260": {

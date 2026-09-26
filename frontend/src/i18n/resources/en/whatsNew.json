@@ -10,8 +10,8 @@
         "body": "TravStats now looks like the Companion app: the same colours, spacing and type, one heading per page, a dark mode that comes from the colour tokens instead of special rules. Settings are split into groups: flights, cruises and lodging each have an address of their own, while account, display, data and services are sections on the general page. The admin area is a page of its own beside them — no longer a submenu."
       },
       "evidence": {
-        "title": "Every number shows what it is made of",
-        "body": "Click a figure or a row in a ranking and a panel lists the entries that produced it — flights, cruises, stays, places — with each entry's share. What cannot be attributed is said rather than dropped: a total without an exchange rate stays empty and names the reason. The panel can be shared as a link. And the running year compares with the same span of the previous year rather than a whole one — September no longer reads like a collapse."
+        "title": "Every number shows what it is made of – and every failure why",
+        "body": "Click a figure or a row in a ranking and a panel lists the entries that produced it — flights, cruises, stays, places — with each entry's share. What cannot be attributed is said rather than dropped: a total without an exchange rate stays empty and names the reason. The panel can be shared as a link. And the running year compares with the same span of the previous year rather than a whole one — September no longer reads like a collapse. And when something does not work – a service does not answer, a quota is used up, a backup fails – TravStats now says why instead of quietly carrying on as if nothing happened."
       },
       "documents": {
         "title": "Documents and receipts have a home",
@@ -26,8 +26,8 @@
         "body": "Places are a full domain with lists, checklists and a CSV import that also takes a Google Takeout export; the passport shows countries with their evidence. Photos now hang on places too: a gallery with a cover picture, suggestions from your trip photos taken the same day close by, and pictures in the trip journal. Stays, flights and cruises show the trip photos from their own time span, and an accepted photo journey brings its pictures along."
       },
       "inbox": {
-        "title": "Inbox with tabs, the spreadsheet both ways, the app on your home screen",
-        "body": "The inbox sorts flight updates, open questions and suggestions into tabs with status counts, and the logbook pages. The Excel spreadsheet works both ways: edit it and read it back, or carry it into another account — rows without an ID are created in every domain, existing ones recognised. Photos and documents do not travel that way; they belong to the backup. And TravStats can be installed as a web app."
+        "title": "Inbox with trip suggestions, the spreadsheet both ways",
+        "body": "The inbox sorts flight updates, open questions and suggestions into tabs with status counts, and the logbook pages. New is the “Trip suggestions” tab: TravStats reads from flights, cruises, stays and place visits when you were away, and proposes a new trip – or the trip the entries belong to. You accept, edit or dismiss; nothing is created until you accept, and an answer survives an export. The Excel spreadsheet works both ways: edit it and read it back, or carry it into another account. And TravStats can be installed as a web app."
       },
       "summaryOpenData": {
         "title": "The AI summary, Dawarich and open data services",
@@ -35,7 +35,7 @@
       },
       "beta": {
         "title": "Behind the beta switch: roadtrips, tours, rail",
-        "body": "Roadtrips with stations at your stays, day tours with an elevation profile, rail as a domain of its own — with a station catalogue, a train-number lookup and the real line on the map —, hotel enrichment from OpenStreetMap and pairing with the TravStats Companion app are built but still being checked. An admin turns them on with the beta switch; each registry entry says when it comes out."
+        "body": "Roadtrips with stations at your stays, day tours with an elevation profile, rail as a domain of its own – with a station catalogue, a train-number lookup, the real line on the map, tickets and booking mails to import and rail achievements of its own –, hotel enrichment from OpenStreetMap and pairing with the TravStats Companion app are built but still being checked. With the switch on, countries you reached only by train or on a roadtrip count toward the country achievements too, and day tours join the trip suggestions. An admin turns it all on with the beta switch; each registry entry says when it comes out."
       }
     },
     "v260": {
