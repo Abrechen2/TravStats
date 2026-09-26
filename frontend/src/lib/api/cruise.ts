@@ -1,6 +1,6 @@
 import { api } from "./client";
 import { logger } from "../logger";
-import type { Cruise, CruiseInput, Port, Ship } from "../../types";
+import type { Cruise, CruiseWriteBody, Port, Ship } from "../../types";
 import type { CruiseSortField } from "../../shared/cruiseListOrder";
 
 /** The server's own maximum per request (`cruiseQuerySchema`). */
@@ -181,11 +181,11 @@ export const cruiseApi = {
     );
     return new Map(Object.entries(data.data));
   },
-  create: async (input: CruiseInput): Promise<Cruise> => {
+  create: async (input: CruiseWriteBody): Promise<Cruise> => {
     const { data } = await api.post<Envelope<Cruise>>("/cruises", input);
     return data.data;
   },
-  update: async (id: string, input: CruiseInput): Promise<Cruise> => {
+  update: async (id: string, input: CruiseWriteBody): Promise<Cruise> => {
     const { data } = await api.patch<Envelope<Cruise>>(`/cruises/${id}`, input);
     return data.data;
   },

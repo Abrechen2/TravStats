@@ -1,6 +1,8 @@
 import { minorUnits } from "../../shared/currencies";
 import Modal from "../Modal";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
+import { cruiseStopToWire } from "./cruiseStopWire";
+import { dayInput } from "../../lib/api/timeInput";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -8,6 +10,7 @@ import { useState, useEffect } from "react";
 import type {
   Cruise,
   CruiseInput,
+  CruiseWriteBody,
   Trip,
   CruiseStopInput,
   Ship,
@@ -70,7 +73,9 @@ const COLOR_PALETTE = [
 //      UTC instant keeps the round-trip stable and timezone-neutral.
 const toDateInput = (iso: string | null | undefined): string => (iso ? iso.slice(0, 10) : "");
 
-const fromDateInput = (date: string): string | null => (date ? `${date}T00:00:00.000Z` : null);
+// Sent as the bare day (ADR 0002): a day is not an instant, and the server
+// stores it as a DATE — no midnight-UTC anchor to drift across zones.
+const fromDateInput = (date: string): string | null => dayInput(date);
 
 const INPUT_CLASS =
   "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
@@ -185,7 +190,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
     setSaving(true);
     setError(null);
     try {
-      const input: CruiseInput = {
+      const input: CruiseWriteBody = {
         shipId: ship?.id ?? null,
         // null = explicit clear; undefined would tell the server "keep the
         // old value" and make blanking any of these a silent no-op in edit
@@ -213,9 +218,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         // including as []: omitting the field when the user removed every
         // stop would silently keep the old stops (the server reads absence
         // as "don't touch").
-        stops: stops.map(
-          ({ port: _port, originalDay: _originalDay, dateSource: _dateSource, ...rest }) => rest
-        ),
+        stops: stops.map(cruiseStopToWire),
       };
       const saved =
         mode === "create"

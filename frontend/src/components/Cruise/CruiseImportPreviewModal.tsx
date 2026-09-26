@@ -6,6 +6,7 @@ import type { ParsedCruiseEntry, ParsedFlightSuggestion } from "../../lib/api/pa
 import type {
   CabinType,
   CruiseInput,
+  CruiseWriteBody,
   CruiseStatus,
   CruiseStopInput,
   FlightInput,
@@ -21,7 +22,10 @@ import { flightsApi } from "../../lib/api/flights";
 import { tripsApi } from "../../lib/api/trips";
 import { createImportBatch } from "../../lib/api/importBatches";
 import { useToastStore } from "../../store/toastStore";
-import { useSettingsStore } from "../../store/settingsStore";
+import { airportZone } from "../FlightForm/flightPayload";
+import { MissingZoneError, dayInput } from "../../lib/api/timeInput";
+import { saveErrorMessage } from "../../lib/saveErrorMessage";
+import { cruiseStopToWire } from "./cruiseStopWire";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { ShipPicker } from "./ShipPicker";
@@ -49,12 +53,16 @@ const INPUT =
   "w-full rounded-md border border-border bg-(--bg-surface) px-2 py-1.5 text-sm text-(--text-primary) focus:border-(--accent) focus:outline-hidden";
 
 const dateOnly = (iso: string | null | undefined): string => (iso ? iso.slice(0, 10) : "");
-const toIsoNoon = (d: string): string | undefined => (d ? `${d}T12:00:00.000Z` : undefined);
+// A cruise's first/last day travels as a bare `YYYY-MM-DD` (ADR 0002).
+const toDay = (d: string): string | undefined => dayInput(d) ?? undefined;
 
 interface EntryData {
-  input: CruiseInput;
+  input: CruiseWriteBody;
   flightInputs: FlightInput[];
   tripLabel: string;
+  /** A time whose place brings no zone (a portless stop, a zoneless airport):
+   *  the save refuses with its sentence before writing anything. */
+  timeError?: MissingZoneError;
 }
 
 /**
@@ -107,7 +115,8 @@ export function CruiseImportPreviewModal({
   const addToast = useToastStore((s) => s.addToast);
   const [saving, setSaving] = useState(false);
   const [entryData, setEntryData] = useState<EntryData[]>(() =>
-    entries.map((e) => ({ input: e.input, flightInputs: [], tripLabel: "" }))
+    // Placeholder until each card's effect builds the write body on mount.
+    entries.map((e) => ({ input: { ...e.input, stops: [] }, flightInputs: [], tripLabel: "" }))
   );
   const anyFlightsDetected = entries.some((e) => (e.flights?.length ?? 0) > 0);
   const [groupAsTrip, setGroupAsTrip] = useState(anyFlightsDetected || entries.length > 1);
@@ -122,6 +131,11 @@ export function CruiseImportPreviewModal({
   const showTripToggle = anyFlightsDetected || entries.length > 1;
 
   const handleSave = async (): Promise<void> => {
+    const timeError = entryData.find((e) => e.timeError)?.timeError;
+    if (timeError) {
+      addToast("error", saveErrorMessage(timeError, t, "cruise:import.saveError"));
+      return;
+    }
     setSaving(true);
     try {
       const allFlights = entryData.flatMap((e) => e.flightInputs);
@@ -183,7 +197,7 @@ export function CruiseImportPreviewModal({
       await onSaved();
     } catch (err: unknown) {
       logger.error("CruiseImportPreviewModal: save failed", err);
-      addToast("error", t("cruise:import.saveError"));
+      addToast("error", saveErrorMessage(err, t, "cruise:import.saveError"));
     } finally {
       setSaving(false);
     }
@@ -351,15 +365,15 @@ function CruiseImportEntryEditor({
   }, []);
 
   useEffect(() => {
-    const builtInput: CruiseInput = {
+    const builtInput: CruiseWriteBody = {
       shipId: ship?.id ?? undefined,
       shipNameOverride: ship ? undefined : (overrideName ?? undefined),
       cruiseLine: cruiseLine.trim() || undefined,
       routeName: routeName.trim() || undefined,
       departurePortId: departurePort?.id ?? undefined,
       arrivalPortId: arrivalPort?.id ?? undefined,
-      startDate: toIsoNoon(startDate),
-      endDate: toIsoNoon(endDate),
+      startDate: toDay(startDate),
+      endDate: toDay(endDate),
       status,
       cabinNumber: cabinNumber.trim() || undefined,
       cabinType: cabinType || undefined,
@@ -367,12 +381,16 @@ function CruiseImportEntryEditor({
       bookingReference: bookingReference.trim() || undefined,
       price: price ? Number(price) : undefined,
       currency: (currency as CruiseInput["currency"]) || undefined,
-      stops: stops.map(
-        ({ port: _port, originalDay: _originalDay, dateSource: _dateSource, ...rest }) => rest
-      ),
+      stops: [],
     };
+    let timeError: MissingZoneError | undefined;
+    try {
+      builtInput.stops = stops.map(cruiseStopToWire);
+    } catch (err: unknown) {
+      if (!(err instanceof MissingZoneError)) throw err;
+      timeError = err;
+    }
 
-    const userTz = useSettingsStore.getState().display?.timezone || "UTC";
     const flightInputs: FlightInput[] = flights
       .filter((f) => f.include && f.depAirport && f.arrAirport && f.date)
       .map((f): FlightInput => {
@@ -384,10 +402,11 @@ function CruiseImportEntryEditor({
           departure: dep,
           arrival: arr,
           // Tentative fly & cruise flight: known calendar date, unknown time.
+          // Each airport's own zone; none means the save refuses (no UTC guess).
           departureLocal: `${f.date}T00:00`,
-          depTimezone: dep.timezone || userTz,
+          depTimezone: airportZone(dep) ?? undefined,
           arrivalLocal: `${f.date}T00:00`,
-          arrTimezone: arr.timezone || userTz,
+          arrTimezone: airportZone(arr) ?? undefined,
           depTimeSemantics: "DATE_ONLY",
           arrTimeSemantics: "DATE_ONLY",
           status: "scheduled",
@@ -404,7 +423,10 @@ function CruiseImportEntryEditor({
     const shipName = ship?.name ?? overrideName ?? "";
     const tripLabel = shipName ? `${shipName}${startDate ? ` ${startDate.slice(0, 4)}` : ""}` : "";
 
-    onChange(index, { input: builtInput, flightInputs, tripLabel });
+    if (!timeError && flightInputs.some((f) => !f.depTimezone || !f.arrTimezone)) {
+      timeError = new MissingZoneError("flights");
+    }
+    onChange(index, { input: builtInput, flightInputs, tripLabel, timeError });
   }, [
     ship,
     cruiseLine,
