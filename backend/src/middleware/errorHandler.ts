@@ -48,7 +48,13 @@ export type ApiErrorCode =
   | "RESTORE_ARCHIVE_UNREADABLE"
   /** The archive's encrypted values belong to another instance key. The
    *  restore dialog turns this into the acknowledgement it needs. */
-  | "RESTORE_ENCRYPTION_KEY_MISMATCH";
+  | "RESTORE_ENCRYPTION_KEY_MISMATCH"
+  /** An outside service the request depends on (OpenStreetMap, Open-Meteo)
+   *  could not be asked: it timed out, refused more requests, or did not
+   *  answer. Kept apart from "nothing found", which the UI used to say. */
+  | "UPSTREAM_TIMEOUT"
+  | "UPSTREAM_RATE_LIMITED"
+  | "UPSTREAM_UNAVAILABLE";
 
 interface AuthRequest extends Request {
   user?: {

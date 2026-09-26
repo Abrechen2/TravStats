@@ -16,6 +16,7 @@ import { prisma } from "../../db";
 import type { Prisma } from "../../prisma";
 import type { LodgingInput } from "../../schemas/lodging";
 import { resolveCountryCode } from "../../shared/geo/countryCode";
+import { osmRefToStore } from "./osmRef";
 
 /** Coordinates/address a caller resolved before the write (the form geocodes). */
 export interface LodgingLocationPatch {
@@ -31,7 +32,9 @@ export async function createLodgingRecord<I extends Prisma.LodgingInclude>(
   input: LodgingInput & { visited?: boolean },
   opts: { dataSource: string; location?: LodgingLocationPatch; include?: I }
 ): Promise<Prisma.LodgingGetPayload<{ include: I }>> {
-  const created = { ...input, ...(opts.location ?? {}) };
+  const { osmRef, ...fields } = input;
+  const created = { ...fields, ...(opts.location ?? {}) };
+  const externalRef = await osmRefToStore(userId, osmRef);
   // Typed as the plain args, not through the generic `I`: with the 2.7 schema
   // TypeScript gives up comparing the generic include ("excessive stack
   // depth"). The result is re-typed below, where `I` is what callers read.
@@ -39,6 +42,7 @@ export async function createLodgingRecord<I extends Prisma.LodgingInclude>(
     data: {
       ...created,
       isoCountryCode: resolveCountryCode(created.country ?? null),
+      ...(externalRef !== undefined && { externalRef }),
       userId,
       dataSource: opts.dataSource,
     },

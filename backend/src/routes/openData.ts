@@ -6,7 +6,11 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { rejectDemo } from "../middleware/demoGuard";
 import { AppError } from "../middleware/errorHandler";
 import { openDataLimiter } from "../middleware/rateLimit";
-import { assertOpenDataEnabled, OpenDataDisabledError } from "../services/openData/http";
+import {
+  assertOpenDataEnabled,
+  OpenDataDisabledError,
+  type OpenDataFailure,
+} from "../services/openData/http";
 import { fillTripJournalWeather, refreshJournalWeather } from "../services/openData/journalWeather";
 import { enrichLodgingFromOsm, withCatalogueChains } from "../services/openData/lodgingEnrichment";
 import { nearbyLodgings } from "../services/openData/openStreetMap";
@@ -32,6 +36,18 @@ import { resolveTrip } from "./trips/resolveTrip";
 const router = Router();
 
 const langQuery = z.object({ lang: z.enum(WIKI_LANGUAGES).default("en") });
+
+/** A service that could not be asked, as a status and a code the client maps to its own copy. */
+function upstreamError(service: string, failure: OpenDataFailure): AppError {
+  switch (failure) {
+    case "timeout":
+      return new AppError(`${service} did not answer in time`, 504, "UPSTREAM_TIMEOUT");
+    case "rateLimited":
+      return new AppError(`${service} is refusing more requests`, 503, "UPSTREAM_RATE_LIMITED");
+    case "unavailable":
+      return new AppError(`${service} did not answer`, 502, "UPSTREAM_UNAVAILABLE");
+  }
+}
 
 function sendDisabled(error: unknown, res: Response): boolean {
   if (!(error instanceof OpenDataDisabledError)) return false;
@@ -191,7 +207,7 @@ router.get(
       const { lat, lon, radiusKm } = nearbyQuery.parse(req.query);
       await assertOpenDataEnabled();
       const places = await nearbyLodgings(lat, lon, radiusKm * 1000);
-      if (places === null) throw new AppError("OpenStreetMap did not answer", 502);
+      if ("failure" in places) throw upstreamError("OpenStreetMap", places.failure);
       res.json({ places: await withCatalogueChains(places) });
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);

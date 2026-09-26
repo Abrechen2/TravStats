@@ -79,7 +79,8 @@
       "wikidataId": "Wikipedia-Verknüpfung",
       "chain": "Kette",
       "name": "Name",
-      "type": "Art"
+      "type": "Art",
+      "position": "Position (auf das gewählte Haus gesetzt)"
     },
     "nearby": {
       "search": "Unterkünfte in der Nähe suchen (OpenStreetMap)",
@@ -89,7 +90,13 @@
       "failed": "OpenStreetMap hat nicht geantwortet.",
       "distance": "{{m}} m",
       "filled": "Aus OpenStreetMap übernommen: {{fields}}",
-      "nothingNew": "„{{name}}“ gewählt — nichts Neues, die Felder waren schon ausgefüllt."
+      "nothingNew": "„{{name}}“ gewählt — nichts Neues, die Felder waren schon ausgefüllt.",
+      "restorePin": "Pin zurück auf die vorherige Position"
+    },
+    "upstream": {
+      "timeout": "OpenStreetMap hat nicht rechtzeitig geantwortet – ob es das Haus kennt, ist offen. Bitte später erneut versuchen.",
+      "rateLimited": "OpenStreetMap nimmt gerade keine weiteren Anfragen an. Bitte später erneut versuchen.",
+      "unavailable": "OpenStreetMap ist gerade nicht erreichbar – ob es das Haus kennt, ist offen."
     }
   }
 }

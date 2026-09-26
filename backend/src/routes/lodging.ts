@@ -37,6 +37,7 @@ export {
 } from "../services/lodging/listView";
 import staysRouter from "./lodging/stays";
 import { createLodgingRecord } from "../services/lodging/createLodging";
+import { osmRefToStore } from "../services/lodging/osmRef";
 import {
   createLodgingSchema,
   updateLodgingSchema,
@@ -258,7 +259,8 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
 
     const parsed = updateLodgingSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
-    const input = parsed.data;
+    const { osmRef, ...input } = parsed.data;
+    const externalRef = await osmRefToStore(userId, osmRef, existing);
 
     // See resolveLocation in lodgingGeocode.ts: geocodes when the address
     // changed OR the row still has no pin, and reverse-fills any address
@@ -276,6 +278,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         ...(patched.country !== undefined
           ? { isoCountryCode: resolveCountryCode(patched.country) }
           : {}),
+        ...(externalRef !== undefined && { externalRef }),
       },
       include: LODGING_INCLUDE,
     });

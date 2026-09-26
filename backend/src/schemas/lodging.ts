@@ -5,6 +5,8 @@ import { LODGING_DATE_PRECISIONS } from "../shared/lodgingTiming";
 import { partialForUpdate } from "./partialUpdate";
 
 export const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
+/** An OpenStreetMap element reference, as the nearby search and the place picker write it. */
+export const OSM_REF_PATTERN = /^osm:(node|way|relation)\/\d+$/;
 export const BOARD_TYPES = ["none", "breakfast", "half", "full", "all_inclusive"] as const;
 // `in_progress` joined the vocabulary when lodging status became derived from
 // the dates (Alex, 2026-07-12) — a stay whose check-in has passed but whose
@@ -81,6 +83,10 @@ const baseLodgingSchema = z.object({
       .optional()
   ),
   amenities: z.array(z.string().max(60)).max(50).optional(),
+  /** The OpenStreetMap element the form's "lodgings nearby" pick named
+   *  ("osm:node/240109189"). Stored as `externalRef` only while the row has
+   *  none — see `services/lodging/osmRef.ts`. */
+  osmRef: z.string().regex(OSM_REF_PATTERN, "osmRef must look like osm:node/123").optional(),
   notes: z
     .string()
     .transform((v) => v.replace(/<[^>]*>/g, ""))

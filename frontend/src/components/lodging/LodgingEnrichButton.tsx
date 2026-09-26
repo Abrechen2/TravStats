@@ -4,7 +4,7 @@ import type { JSX } from "react";
 import Button from "../ui/Button";
 import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useTranslation } from "../../hooks/useTranslation";
-import { openDataApi } from "../../lib/api/openData";
+import { openDataApi, openDataUpstreamFailure } from "../../lib/api/openData";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
 import { useToastStore } from "../../store/toastStore";
@@ -15,6 +15,14 @@ import { useToastStore } from "../../store/toastStore";
  * it filled, or why it found nothing — a silent "done" would leave the reader
  * guessing whether anything happened.
  */
+const UPSTREAM_REASONS = new Set(["timeout", "rateLimited", "unavailable"]);
+
+function isUpstreamReason(
+  reason: string | null
+): reason is "timeout" | "rateLimited" | "unavailable" {
+  return reason !== null && UPSTREAM_REASONS.has(reason);
+}
+
 export default function LodgingEnrichButton({
   lodgingId,
   onDone,
@@ -34,7 +42,11 @@ export default function LodgingEnrichButton({
     setBusy(true);
     try {
       const result = await openDataApi.enrichLodging(lodgingId);
-      if (!result.found) {
+      if (!result.found && isUpstreamReason(result.reason)) {
+        // Overpass could not be asked. Saying "OpenStreetMap does not know
+        // this house" here — as it used to — was a claim nobody had checked.
+        addToast("error", t(`openData:lodging.upstream.${result.reason}`));
+      } else if (!result.found) {
         addToast(
           "info",
           t(
@@ -52,7 +64,15 @@ export default function LodgingEnrichButton({
       }
     } catch (err) {
       logger.warn("Enriching the lodging from OpenStreetMap failed", err);
-      addToast("error", t("openData:lodging.failed"));
+      const upstream = openDataUpstreamFailure(err);
+      addToast(
+        "error",
+        t(
+          upstream === null
+            ? "openData:lodging.failed"
+            : `openData:lodging.upstream.${upstream === "clientTimeout" ? "timeout" : upstream}`
+        )
+      );
     } finally {
       setBusy(false);
     }

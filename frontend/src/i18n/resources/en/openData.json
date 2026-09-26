@@ -79,7 +79,8 @@
       "wikidataId": "Wikipedia link",
       "chain": "chain",
       "name": "name",
-      "type": "type"
+      "type": "type",
+      "position": "position (moved onto the chosen house)"
     },
     "nearby": {
       "search": "Find lodgings nearby (OpenStreetMap)",
@@ -89,7 +90,13 @@
       "failed": "OpenStreetMap did not answer.",
       "distance": "{{m}} m",
       "filled": "Taken from OpenStreetMap: {{fields}}",
-      "nothingNew": "Picked “{{name}}” — nothing new, the fields were already filled."
+      "nothingNew": "Picked “{{name}}” — nothing new, the fields were already filled.",
+      "restorePin": "Move the pin back to where it was"
+    },
+    "upstream": {
+      "timeout": "OpenStreetMap did not answer in time – whether it knows the house is still open. Please try again later.",
+      "rateLimited": "OpenStreetMap is not taking more requests right now. Please try again later.",
+      "unavailable": "OpenStreetMap cannot be reached right now – whether it knows the house is still open."
     }
   }
 }

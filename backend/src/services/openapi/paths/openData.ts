@@ -240,7 +240,14 @@ registry.registerPath({
         "application/json": {
           schema: z.object({
             found: z.boolean(),
-            reason: z.enum(["noCoordinates", "notFound"]).nullable(),
+            reason: z
+              .enum(["noCoordinates", "notFound", "timeout", "rateLimited", "unavailable"])
+              .nullable()
+              .openapi({
+                description:
+                  "`notFound` is OpenStreetMap's answer. `timeout`, `rateLimited` and " +
+                  "`unavailable` mean Overpass could not be asked — nothing is known either way.",
+              }),
             osmRef: z.string().nullable(),
             osmName: z.string().nullable(),
             filled: z.array(z.enum(["stars", "website", "wikidataId", "chain"])),
@@ -307,6 +314,17 @@ registry.registerPath({
     },
     400: { description: "Validation failed", content: errorContent },
     409: disabled,
-    502: { description: "OpenStreetMap did not answer", content: errorContent },
+    502: {
+      description: "OpenStreetMap did not answer (code UPSTREAM_UNAVAILABLE)",
+      content: errorContent,
+    },
+    503: {
+      description: "OpenStreetMap refuses more requests for now (code UPSTREAM_RATE_LIMITED)",
+      content: errorContent,
+    },
+    504: {
+      description: "OpenStreetMap did not answer in time (code UPSTREAM_TIMEOUT)",
+      content: errorContent,
+    },
   },
 });
