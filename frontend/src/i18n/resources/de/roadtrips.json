@@ -110,7 +110,8 @@
     "createStay": "Aufenthalt {{from}} – {{to}} anlegen und verknüpfen",
     "createStayUndated": "Aufenthalt ohne Datum anlegen und verknüpfen",
     "createStayFailed": "Der Aufenthalt konnte nicht angelegt werden.",
-    "noCoords": "Für diese Unterkunft ist kein Ort gespeichert — setz den Ort der Station selbst."
+    "noCoords": "Für diese Unterkunft ist kein Ort gespeichert — setz den Ort der Station selbst.",
+    "adoptPlace": "Ort der Unterkunft übernehmen"
   },
   "review": {
     "title_one": "Ein Eintrag wurde beim Update auf 2.7 automatisch eingeordnet",

@@ -29,6 +29,8 @@ vi.mock("../../../lib/api/lodging", () => ({
     {
       id: "l1",
       name: "Mosvangen Camping",
+      lat: 58.95,
+      lon: 5.72,
       stays: [
         {
           id: "stay-1",
@@ -158,9 +160,40 @@ describe("StationEditor", () => {
       target: { value: "mos" },
     });
     await pause(); // the lodging library arrives
-    fireEvent.click(screen.getByText(/Mosvangen Camping/));
+    fireEvent.click(screen.getByText(/Mosvangen Camping ·/));
     await pause();
     expect(sent()[1].night).toEqual({ kind: "stay", lodgingStayId: "stay-1" });
+  });
+
+  it("places a station without a point at the lodging it links, so the save stops waiting", async () => {
+    renderEditor("new");
+    fireEvent.click(screen.getByRole("radio", { name: /roadtrips:editor.choice.stay.label/ }));
+    await pause(); // the lodging library arrives
+    expect(roadtripsApi.replaceStations).not.toHaveBeenCalled();
+
+    fireEvent.click(screen.getByText(/Mosvangen Camping ·/));
+    await pause();
+
+    expect(sent()[1]).toMatchObject({
+      title: "Mosvangen Camping",
+      lat: 58.95,
+      lon: 5.72,
+      night: { kind: "stay", lodgingStayId: "stay-1" },
+    });
+  });
+
+  it("keeps a station's own point and offers the lodging's instead", async () => {
+    renderEditor("new");
+    fireEvent.click(screen.getByText("pick-location")); // Stavanger, 2 km from the campsite
+    fireEvent.click(screen.getByRole("radio", { name: /roadtrips:editor.choice.stay.label/ }));
+    await pause();
+    fireEvent.click(screen.getByText(/Mosvangen Camping ·/));
+    await pause();
+    expect(sent()[1]).toMatchObject({ lat: 58.97, lon: 5.73 });
+
+    fireEvent.click(screen.getByText("roadtrips:stay.adoptPlace"));
+    await pause();
+    expect(sent(1)[1]).toMatchObject({ lat: 58.95, lon: 5.72 });
   });
 
   it("takes a removal back when asked", async () => {

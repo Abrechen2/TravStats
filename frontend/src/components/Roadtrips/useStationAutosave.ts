@@ -12,6 +12,13 @@ export interface EditorStation extends StationDraft {
   key: string;
   stayLabel?: string;
   stayCancelled?: boolean;
+  /** The linked stay's lodging, to find where it is in the lodging library. */
+  stayLodgingId?: string;
+  /**
+   * Where the lodging picked in this session is. A lodging made by the picker
+   * is not in the library the editor loaded, so its point travels here.
+   */
+  stayPlace?: { lat: number | null; lon: number | null };
 }
 
 /**
@@ -52,6 +59,7 @@ export function toEditorStation(s: RoadtripStation): EditorStation {
           ? { kind: "free" }
           : { kind: "pass" },
     stayLabel: s.stay?.lodgingName,
+    stayLodgingId: s.stay?.lodgingId,
     stayCancelled: s.stay?.status === "cancelled",
   };
 }

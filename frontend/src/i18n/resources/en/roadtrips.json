@@ -110,7 +110,8 @@
     "createStay": "Create and link a stay {{from}} – {{to}}",
     "createStayUndated": "Create and link an undated stay",
     "createStayFailed": "The stay could not be created.",
-    "noCoords": "This accommodation has no location saved — set the station's location yourself."
+    "noCoords": "This accommodation has no location saved — set the station's location yourself.",
+    "adoptPlace": "Use the accommodation's location"
   },
   "review": {
     "title_one": "One entry was classified automatically by the 2.7 update",
