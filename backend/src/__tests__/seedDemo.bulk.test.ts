@@ -66,4 +66,26 @@ describe("seedBulk", () => {
       expect(stay.fxBaseCurrency).toBeNull();
     }
   });
+
+  /**
+   * The bulk stays carried fixed calendar years (2017–2025), so every year the
+   * demo aged: its newest stay drifted further into the past each January. They
+   * are relative to the current year now; seeded "in 2040", the newest stay is
+   * in 2039 and none is older than nine years.
+   */
+  it("places every stay relative to the year it is seeded in", async () => {
+    await prisma.user.deleteMany({ where: { username: "seedBulkFutureUser" } });
+    const future = await prisma.user.create({
+      data: { username: "seedBulkFutureUser", passwordHash: "x" },
+    });
+    try {
+      await seedBulk(future.id, new Date("2040-07-01T00:00:00Z"));
+      const stays = await prisma.lodgingStay.findMany({ where: { userId: future.id } });
+      const years = stays.map((s) => s.checkIn.getUTCFullYear());
+      expect(Math.max(...years)).toBe(2039);
+      expect(Math.min(...years)).toBeGreaterThanOrEqual(2031);
+    } finally {
+      await prisma.user.deleteMany({ where: { id: future.id } });
+    }
+  });
 });

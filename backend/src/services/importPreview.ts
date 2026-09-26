@@ -1,4 +1,5 @@
-import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
+import { fromZonedTime } from "date-fns-tz";
+import { formatWallClockIn } from "../shared/zonedWallClock";
 import { prisma } from "../db";
 import { getCachedAirport } from "./airportCache";
 import { normalizeFlightNumber } from "../schemas/flight";
@@ -153,7 +154,9 @@ export async function buildPreviewRows(
         }
 
         if (isValidDate(arrUtc)) {
-          arrivalLocalCorrected = formatInTimeZone(arrUtc, arrTz, "yyyy-MM-dd'T'HH:mm:ss");
+          const wall = formatWallClockIn(arrUtc, arrTz);
+          if (wall === null) throw new Error(`unusable arrival zone ${arrTz}`);
+          arrivalLocalCorrected = wall;
         }
       } catch (err) {
         logger.warn({

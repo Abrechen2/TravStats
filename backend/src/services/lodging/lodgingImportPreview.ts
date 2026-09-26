@@ -1,3 +1,4 @@
+import { visibleChainsWhere } from "./chainScope";
 import { namesCouldBeOneHouse } from "./nameSimilarity";
 import { prisma } from "../../db";
 import { findNearbyLodgings } from "./proximityMatch";
@@ -474,7 +475,9 @@ export async function buildLodgingPreviewRows(
         bookingReference: true,
       },
     }),
-    prisma.lodgingChain.findMany({ select: { name: true } }),
+    // The chains THIS user can link to — catalogue and own. Another
+    // account's chain is unknown here, exactly as it is at commit time.
+    prisma.lodgingChain.findMany({ where: visibleChainsWhere(userId), select: { name: true } }),
   ]);
 
   const byExternalRef = new Map<string, ExistingLodging>();

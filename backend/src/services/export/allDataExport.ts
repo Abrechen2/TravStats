@@ -10,6 +10,13 @@ import { prisma } from "../../db";
  *
  * It is NOT the restore path (that is a pg_dump, see `services/backup/`). It is
  * a human-readable dump, so credential material stays out on purpose.
+ *
+ * Nothing in TravStats reads this file back — no import, no restore, no
+ * Companion path (checked 2026-09-26). That matters for one renamed key: since
+ * 2.7 the loyalty cards travel as `loyaltyMemberships` (owner, 2026-09-26);
+ * exports written before carry the same rows as `lodgingMemberships`. The day a
+ * reader is added it must accept both keys, preferring the new one, and prove
+ * it with an old-shape fixture.
  */
 export const USER_EXPORT_SELECT = {
   id: true,
@@ -30,7 +37,7 @@ export const USER_EXPORT_SELECT = {
   // Travel data — the point of the export. Companion LINKS travel with their
   // record: the companions list alone says who, never on which journey.
   flights: { include: { companionLinks: true } },
-  cruises: { include: { stops: true, legs: true, companionLinks: true } },
+  cruises: { include: { stops: true, legs: true, tracks: true, companionLinks: true } },
   trips: {
     include: {
       stops: true,
@@ -55,7 +62,12 @@ export const USER_EXPORT_SELECT = {
   bookings: true,
   lodgings: { include: { photos: true, membershipLinks: true } },
   lodgingStays: true,
-  lodgingMemberships: { include: { chains: true } },
+  // Loyalty cards across domains, with the status history — the key was
+  // `lodgingMemberships` before 2.7 (see the module comment).
+  loyaltyMemberships: { include: { chains: true, tierPeriods: true } },
+  // The user's own hotel chains (per-user since 2.7, `services/lodging/chainScope.ts`).
+  // Catalogue chains (no owner) are re-seeded and stay out.
+  lodgingChains: true,
   places: true,
   placeVisits: { include: { photos: true } },
   placeLists: { include: { entries: true } },
@@ -139,7 +151,9 @@ export async function loadUserAddedCatalogue(): Promise<{
       prisma.aircraft.findMany({ where }),
       prisma.ship.findMany({ where }),
       prisma.port.findMany({ where }),
-      prisma.lodgingChain.findMany({ where }),
+      // An owned chain travels with its user (`lodgingChains` above); only an
+      // owner-less user-added row would be lost otherwise.
+      prisma.lodgingChain.findMany({ where: { ...where, userId: null } }),
     ]);
   return {
     userAddedRailStations: railStations,

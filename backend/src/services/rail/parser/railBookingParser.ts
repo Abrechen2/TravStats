@@ -1,5 +1,5 @@
 import logger from "../../../utils/logger";
-import { isSharedDemoUser } from "../../../utils/sharedDemo";
+import { llmRefusalFor } from "../../llm/llmGate";
 import { getParserOrder } from "../../parserSettings";
 import { isLlmAvailable, recordLlmProbe } from "../../parsers/llmAvailability";
 import { cleanEmailBody } from "../../parsers/shared/utils";
@@ -37,6 +37,8 @@ export type RailFallbackCode =
   | "llmFoundNothing"
   /** The shared demo account never reaches the model. */
   | "demoNoLlm"
+  /** An admin has switched the language model off (`services/llm/llmGate.ts`). */
+  | "llmDisabled"
   /** The document is clearly another domain (a flight, a stay, a cruise). */
   | "otherDomain"
   /** The model answered with airport codes for stations — a flight read as a train. */
@@ -170,8 +172,6 @@ export async function readRailTemplates(
   };
 }
 
-const DEMO_REASON = "The AI parser is not available for the shared demo account";
-
 /** "MUC", "FRA": three capitals are an airport code, never a printed station name. */
 const IATA_LIKE = /^[A-Z]{3}$/;
 
@@ -213,14 +213,17 @@ export async function parseRailBookingText(
       ? { booking: templates.booking, parserUsed: "template", ollamaAvailable }
       : null;
 
-  if (userId !== undefined && (await isSharedDemoUser(userId))) {
+  // The admin switch and the shared-demo denial, asked in the one place every
+  // parser asks them (`llmGate.ts`) — the rail fallback is a model call too.
+  const refusal = await llmRefusalFor(userId);
+  if (refusal) {
     return (
       fromTemplate(false) ?? {
         booking: null,
         parserUsed: "none",
         ollamaAvailable: false,
-        fallbackCode: "demoNoLlm",
-        fallbackReason: DEMO_REASON,
+        fallbackCode: refusal.kind === "shared_demo" ? "demoNoLlm" : "llmDisabled",
+        fallbackReason: refusal.reason,
       }
     );
   }

@@ -14,7 +14,7 @@ jest.mock("../../db", () => ({
     lodging: { findMany: mockLodgingFindMany },
     user: { findUnique: mockUserFindUnique },
     userSettings: { findUnique: mockSettingsFindUnique },
-    lodgingMembership: { findMany: mockMembershipFindMany },
+    loyaltyMembership: { findMany: mockMembershipFindMany },
   },
 }));
 jest.mock("../../middleware/auth", () => ({

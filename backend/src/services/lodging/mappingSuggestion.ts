@@ -1,6 +1,7 @@
 import http from "http";
 import https from "https";
 import logger from "../../utils/logger";
+import { assertLlmEnabled, isLlmEnabledByAdmin } from "../llm/llmGate";
 import { getAdminParserSettings } from "../parserSettings";
 
 export const LODGING_CSV_FIELDS = [
@@ -296,6 +297,9 @@ export async function suggestLodgingCsvMapping(
   sampleRows: Record<string, string>[],
   options?: MappingSuggestionOptions
 ): Promise<LodgingCsvMapping> {
+  // Switched off by the admin: `{}` is the answer this function already gives
+  // for "no suggestion", and the client's heuristic takes over from there.
+  if (!(await isLlmEnabledByAdmin())) return {};
   try {
     const { url, model } = await resolveOptions(options);
     const body = JSON.stringify({
@@ -310,6 +314,7 @@ export async function suggestLodgingCsvMapping(
       options: { temperature: 0, num_ctx: 4096 },
     });
 
+    await assertLlmEnabled();
     const raw = await postJson(`${url}/api/generate`, body);
 
     const envelope = safeJsonParse(raw, "envelope");

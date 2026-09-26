@@ -55,8 +55,11 @@ export async function assertMembershipOwned(
   userId: string
 ): Promise<void> {
   if (!membershipId) return;
-  const membership = await prisma.lodgingMembership.findFirst({
-    where: { id: membershipId, userId },
+  const membership = await prisma.loyaltyMembership.findFirst({
+    // A stay runs under a HOTEL card. A frequent-flyer card is the user's
+    // too, but naming it on a stay would credit hotel nights to an airline
+    // programme, so it is "not found" here like any foreign id.
+    where: { id: membershipId, userId, domain: "lodging" },
     select: { id: true },
   });
   if (!membership) throw new AppError("Membership not found", 404);

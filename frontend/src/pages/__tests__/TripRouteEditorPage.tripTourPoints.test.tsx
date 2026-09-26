@@ -46,6 +46,10 @@ vi.mock("../../hooks/useTourTracks", () => ({
     dawarichAvailable: false,
   }),
 }));
+// Coverage is asked of the server (2.7) — not what this suite is about.
+vi.mock("../../hooks/useTourTrackCoverage", () => ({
+  useTourTrackCoverage: () => ({ coveringTrackByLegId: new Map(), known: true }),
+}));
 vi.mock("../../lib/api", async (importOriginal) => {
   const original = await importOriginal<typeof import("../../lib/api")>();
   return { ...original, tripsApi: { ...original.tripsApi, getById: vi.fn() } };

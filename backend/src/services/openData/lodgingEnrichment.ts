@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { findVisibleChainByName, visibleChainsWhere } from "../lodging/chainScope";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 import type { OpenDataFailure } from "./http";
@@ -54,12 +55,7 @@ export async function enrichLodgingFromOsm(
     lodging.wikidataId === null && isWikidataId(tags.wikidata) ? tags.wikidata : null;
   const brand = tags.brand?.trim();
   const chain =
-    lodging.chainId === null && brand
-      ? await prisma.lodgingChain.findFirst({
-          where: { name: { equals: brand, mode: "insensitive" } },
-          select: { id: true },
-        })
-      : null;
+    lodging.chainId === null && brand ? await findVisibleChainByName(userId, brand) : null;
 
   const filled: EnrichedField[] = [
     ...(stars !== null ? (["stars"] as const) : []),
@@ -109,6 +105,7 @@ export type NearbyLodgingWithChain = NearbyLodging & {
  * one is left for the user rather than created. One query for the whole list.
  */
 export async function withCatalogueChains(
+  userId: string,
   places: NearbyLodging[]
 ): Promise<NearbyLodgingWithChain[]> {
   const brands = [...new Set(places.flatMap((p) => (p.brand ? [p.brand] : [])))];
@@ -116,7 +113,16 @@ export async function withCatalogueChains(
     brands.length === 0
       ? []
       : await prisma.lodgingChain.findMany({
-          where: { OR: brands.map((b) => ({ name: { equals: b, mode: "insensitive" as const } })) },
+          where: {
+            AND: [
+              visibleChainsWhere(userId),
+              { OR: brands.map((b) => ({ name: { equals: b, mode: "insensitive" as const } })) },
+            ],
+          },
+          // Own rows first, catalogue rows LAST: the map below keeps the last
+          // entry per name, so the catalogue chain wins a name clash — the
+          // same precedence as `findVisibleChainByName`.
+          orderBy: [{ userId: { sort: "desc", nulls: "last" } }, { id: "asc" }],
           select: CHAIN_SELECT,
           take: brands.length * 2,
         });

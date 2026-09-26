@@ -7,6 +7,7 @@ import {
   LLM_MAX_RESPONSE_BYTES,
   llmParseTimeoutMs,
 } from "../../http/llmTimeout";
+import { assertLlmEnabled } from "../../llm/llmGate";
 import { getAdminParserSettings } from "../../parserSettings";
 import { foldStationName } from "../railStations";
 import {
@@ -249,6 +250,8 @@ export async function parseRailWithOllama(
     );
   }
   const fields = promptFieldsFor(snippet);
+  // Fail closed if a caller skipped `llmRefusalFor` (see llmGate.ts).
+  await assertLlmEnabled();
   const raw = await requestTextWithDeadline({
     url: `${target.url}/api/generate`,
     method: "POST",

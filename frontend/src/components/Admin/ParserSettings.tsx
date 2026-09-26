@@ -10,6 +10,9 @@ export interface ParserSettingsData {
   /** Who reads a booking document first, in every domain. Absent on a backend
    *  older than 2.7, which always read templates last for flights. */
   parserOrder?: ParserOrder;
+  /** Whether any language model may be asked (Admin → "KI-Modell"). Absent on
+   *  a backend older than 2.7, which had no switch — read as on. */
+  llmEnabled?: boolean;
   ollamaUrl: string | null;
   ollamaModel: string | null;
 }
@@ -182,6 +185,33 @@ export default function ParserSettings({
             </div>
           </div>
         </div>
+      </div>
+
+      {/* The switch sits ABOVE the Ollama card on purpose: it overrides
+          everything in it, including an OLLAMA_URL set in the environment,
+          which the card below cannot show. Owner decision 2026-09-25. */}
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-(--text-primary) mb-2">
+          {t("admin:parserSettings.llmSwitch.title")}
+        </h3>
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="llmEnabled"
+            data-testid="llm-enabled-toggle"
+            checked={parserSettings.llmEnabled ?? true}
+            onChange={(e): void =>
+              onParserSettingsChange({ ...parserSettings, llmEnabled: e.target.checked })
+            }
+            className="w-4 h-4 rounded-sm border-border"
+          />
+          <label htmlFor="llmEnabled" className="text-sm text-(--text-primary)">
+            {t("admin:parserSettings.llmSwitch.label")}
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-(--text-muted)">
+          {t("admin:parserSettings.llmSwitch.hint")}
+        </p>
       </div>
 
       {/* Ollama LLM Parser */}

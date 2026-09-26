@@ -8,6 +8,7 @@ import {
   llmParseTimeoutMs,
 } from "../../http/llmTimeout";
 import logger from "../../../utils/logger";
+import { assertLlmEnabled } from "../../llm/llmGate";
 
 /**
  * @param referenceDate The point a year-less date should be read against —
@@ -227,6 +228,8 @@ export class OllamaTextParser implements ITextParser {
       "[Ollama Text Parser] Sending email to Ollama"
     );
 
+    // Fail closed if a caller skipped `llmRefusalFor` (see llmGate.ts).
+    await assertLlmEnabled();
     const raw = await fetchJson(`${this.url}/api/generate`, body);
     const response: unknown = JSON.parse(raw);
 

@@ -5,6 +5,9 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
 /** The server's stable parse-failure codes → the reader's language. */
 const CODE_KEYS: Record<string, string> = {
   LLM_UNREACHABLE: "import:errors.llmUnreachable",
+  // Also a 503, but a decision rather than an outage — the status fallback
+  // below would call it "unreachable".
+  LLM_DISABLED: "import:errors.llmDisabled",
   INVALID_PDF: "import:errors.invalidPdf",
   PDF_NO_TEXT: "import:errors.pdfNoText",
   NO_FLIGHT_DATA: "flights:scanner.noFlightData",

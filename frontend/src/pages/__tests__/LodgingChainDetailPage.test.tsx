@@ -215,7 +215,8 @@ describe("LodgingChainDetailPage", () => {
 
     // One card, several brands — the membership is not chain-specific.
     expect(await screen.findByText("Gold")).toBeInTheDocument();
-    expect(screen.getByText("#12345")).toBeInTheDocument();
+    // Masked since 2.7 (the loyalty page): the tail identifies the card.
+    expect(screen.getByText("•••• 2345")).toBeInTheDocument();
     // The global test i18n mock doesn't interpolate `t()` args, so the
     // "shared with {{chains}}" note renders as its raw key here — its
     // PRESENCE (vs. absent when there are no siblings, tested below) is

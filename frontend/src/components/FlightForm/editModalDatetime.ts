@@ -1,4 +1,4 @@
-import { formatInTimeZone } from "date-fns-tz";
+import { formatWallClockIn } from "../../shared/zonedWallClock";
 
 /** The three pure date helpers of FlightEditModal, moved out so the modal
  *  stays under the 800-line ratchet (`scripts/check-file-size.mjs`). They
@@ -34,10 +34,11 @@ export function splitZonedDatetime(iso: string | null, tz: string): DateTimePart
   if (!iso) return { date: "", time: "" };
   const d = new Date(iso);
   if (isNaN(d.getTime())) return { date: "", time: "" };
-  return {
-    date: formatInTimeZone(d, tz, "yyyy-MM-dd"),
-    time: formatInTimeZone(d, tz, "HH:mm"),
-  };
+  // Not `formatInTimeZone`: it is an hour off whenever the airport's reading
+  // falls into the BROWSER's own DST gap (see `shared/zonedWallClock.ts`).
+  const wall = formatWallClockIn(d, tz);
+  if (wall === null) throw new RangeError(`Invalid time zone: ${tz}`);
+  return { date: wall.slice(0, 10), time: wall.slice(11, 16) };
 }
 
 /** For a historical flight the date field holds a SHAPE string ("YYYY",

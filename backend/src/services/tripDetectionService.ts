@@ -49,15 +49,20 @@ import logger from "../utils/logger";
 import { fillTripDatesFromSegments, recomputeTripStatus } from "./tripStatusService";
 import { buildTzMap } from "./stats/departureClock";
 import { localWallClockOf, type FlightTimeSemantics } from "../utils/timezone";
+import {
+  MIN_DETECTED_TRIP_FLIGHTS,
+  tripNameLanguageOf,
+  tripNameMonth,
+  type TripNameLanguage,
+} from "./trip/tripGrouping";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PNR_MAX_SPAN_DAYS = 30;
 const CONTINUITY_GAP_DAYS = 7;
 const OPEN_JAW_KM = 200; // arr-IATA → next-dep-IATA same metro area
-// "Rule of Three": a simple out-and-back booking (2 legs) is a booking,
-// not a journey — never propose a trip for it. Only multi-leg clusters
-// (>= 3 flights) are journey-shaped enough to suggest a trip container.
-const MIN_TRIP_FLIGHTS = 3;
+// "Rule of Three" — see `trip/tripGrouping.ts` for why the batch import's
+// booking-based grouping deliberately starts at two.
+const MIN_TRIP_FLIGHTS = MIN_DETECTED_TRIP_FLIGHTS;
 
 interface FlightLite {
   id: string;
@@ -183,7 +188,9 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
     );
   }
 
-  const homeHistory = await loadHomeHistory(userId);
+  const settingsData = await loadSettingsData(userId);
+  const homeHistory = homeHistoryOf(settingsData);
+  const language = tripNameLanguageOf(settingsData);
 
   const claimed = new Set<string>();
   const proposed: ProposedTrip[] = [];
@@ -203,7 +210,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
       });
       continue;
     }
-    proposed.push(makeProposal("pnr", dedup, pnr));
+    proposed.push(makeProposal("pnr", dedup, pnr, language));
     dedup.forEach((f) => claimed.add(f.id));
   }
 
@@ -213,7 +220,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
   const remaining1 = flights.filter((f) => !claimed.has(f.id));
   for (const cluster of findHomeLoops(remaining1, homeHistory)) {
     if (cluster.length < MIN_TRIP_FLIGHTS) continue;
-    proposed.push(makeProposal("home_loop", cluster, null));
+    proposed.push(makeProposal("home_loop", cluster, null, language));
     cluster.forEach((f) => claimed.add(f.id));
   }
 
@@ -221,7 +228,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
   const remaining2 = flights.filter((f) => !claimed.has(f.id));
   for (const cluster of findContinuityClusters(remaining2)) {
     if (cluster.length < MIN_TRIP_FLIGHTS) continue;
-    proposed.push(makeProposal("continuity", cluster, null));
+    proposed.push(makeProposal("continuity", cluster, null, language));
     cluster.forEach((f) => claimed.add(f.id));
   }
 
@@ -524,7 +531,8 @@ function sortDayByChain<T extends FlightLite>(day: T[]): T[] {
 function makeProposal(
   source: ProposedTrip["source"],
   flights: FlightLite[],
-  pnr: string | null
+  pnr: string | null,
+  language: TripNameLanguage
 ): ProposedTrip {
   const sorted = [...flights].sort(
     (a, b) => (a.departureTime?.getTime() ?? 0) - (b.departureTime?.getTime() ?? 0)
@@ -541,9 +549,7 @@ function makeProposal(
   const destination = isLoop ? furthestFromOrigin(sorted, origin) : lastArrival;
   const from = sorted[0] ? legDay(sorted[0]) : "";
   const to = sorted[sorted.length - 1] ? legDay(sorted[sorted.length - 1]) : "";
-  const month = sorted[0]?.departureTime
-    ? sorted[0].departureTime.toLocaleDateString("en", { month: "short", year: "numeric" })
-    : "";
+  const month = sorted[0]?.departureTime ? tripNameMonth(sorted[0].departureTime, language) : "";
   // Round-trip arrow for loops, en-dash for one-way. The arrow is a
   // light visual cue that the trip starts and ends at home.
   const separator = isLoop ? "↺" : "–";
@@ -693,11 +699,14 @@ async function finalizeWithCleanup(
   };
 }
 
-// ─── Home history loader ──────────────────────────────────────────────
+// ─── Settings: home history + name language ──────────────────────────────────────────────
 
-async function loadHomeHistory(userId: string): Promise<HomeAirportEntry[] | null> {
+async function loadSettingsData(userId: string): Promise<Prisma.JsonObject | null> {
   const settings = await prisma.userSettings.findUnique({ where: { userId } });
-  const data = settings?.data as Prisma.JsonObject | null | undefined;
+  return (settings?.data as Prisma.JsonObject | null | undefined) ?? null;
+}
+
+function homeHistoryOf(data: Prisma.JsonObject | null): HomeAirportEntry[] | null {
   if (!data) return null;
   const raw = data["homeAirportHistory"];
   // `normalizeHistory` validates + sorts; entries with bad shape are dropped.

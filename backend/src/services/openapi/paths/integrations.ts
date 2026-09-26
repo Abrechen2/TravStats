@@ -397,7 +397,7 @@ const lodgingTag = ["Lodging"];
 registry.registerPath({
   method: "get",
   path: "/lodging-chains",
-  summary: "Hotel chains in the catalogue",
+  summary: "Hotel chains the caller can see: the catalogue plus their own",
   tags: lodgingTag,
   responses: { 200: { description: "Chains" } },
 });
@@ -414,7 +414,7 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/lodging-chains",
-  summary: "Add a chain the catalogue does not have",
+  summary: "Add a chain as the caller's own (200 with the existing row when the name is known)",
   tags: lodgingTag,
   responses: { 201: { description: "Created" }, 400: badInput },
 });
@@ -510,9 +510,14 @@ registry.registerPath({
   method: "get",
   path: "/diagnostic-export",
   summary: "A support bundle about this instance",
-  description: "Redacted: no keys, no passwords, no user content.",
+  description:
+    "Redacted: no keys, no passwords, no user content. Admins only — the log " +
+    "tails span every account on the instance.",
   tags: miscTag,
-  responses: { 200: { description: "Diagnostics" } },
+  responses: {
+    200: { description: "Diagnostics" },
+    403: { description: "Not an admin", content: errorContent },
+  },
 });
 
 registry.registerPath({

@@ -77,6 +77,14 @@ const trackTableUntouched = async (): Promise<() => Promise<void>> => {
   };
 };
 
+/** Same for the cruise recording table (2.7). */
+const cruiseTrackTableUntouched = async (): Promise<() => Promise<void>> => {
+  const before = await prisma.cruiseTrack.count();
+  return async () => {
+    expect(await prisma.cruiseTrack.count()).toBe(before);
+  };
+};
+
 interface UploadCase {
   name: string;
   path: string;
@@ -164,6 +172,16 @@ const uploads: UploadCase[] = [
     filename: "track.gpx",
     buffer: GPX,
     snapshotStorage: trackTableUntouched,
+  },
+  {
+    // The cruise recording upload (2.7) reaches the same multer and the same
+    // parsers as the tour one, and stores the same kind of location history.
+    name: "cruise recording",
+    path: `/api/v1/cruises/${NIL}/tracks`,
+    field: "file",
+    filename: "voyage.gpx",
+    buffer: GPX,
+    snapshotStorage: cruiseTrackTableUntouched,
   },
 ];
 

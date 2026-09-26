@@ -1,5 +1,4 @@
 import { Router, Response, NextFunction } from "express";
-import { Prisma } from "../prisma";
 import { z } from "zod";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
@@ -13,9 +12,11 @@ import { createCruiseRecord } from "../services/cruise/createCruise";
 import { cruiseListHandler } from "./cruises/list";
 import { cruiseFacetsHandler } from "./cruises/facets";
 import { checkAndUpdateAchievements } from "../utils/achievements";
-import { buildEffectivePortSequence } from "../shared/cruise/portSequence";
-import { buildLegRouteOverrideMap, portLegRouteKey } from "../shared/cruise/legRouteKey";
-import { computeSchematicRoute } from "../services/schematicRouter";
+import {
+  buildCruiseGeometry,
+  CRUISE_GEOMETRY_INCLUDE,
+  type GeometryFeatureCollection,
+} from "../services/cruise/cruiseGeometry";
 import { recomputeLegsForCruise } from "../services/cruiseDistance/cruiseLegService";
 import { cruiseExternalRef } from "../services/importProvenance";
 import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from "../shared/statusDerivation";
@@ -24,126 +25,6 @@ import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { getBaseCurrency } from "../services/fx/snapshot";
 import { refreshFxOnEdit } from "../services/fx/refreshOnEdit";
 import logger from "../utils/logger";
-
-interface GeometryFeature {
-  type: "Feature";
-  geometry: { type: "LineString"; coordinates: [number, number][] };
-  properties: {
-    fromPortId: number;
-    toPortId: number;
-    routed: boolean;
-    protectedPrefixCount: number;
-    protectedSuffixCount: number;
-    method: "short_hop" | "maritime_graph" | "coarse_a_star" | "direct" | "manual_polyline";
-  };
-}
-
-interface GeometryFeatureCollection {
-  type: "FeatureCollection";
-  features: GeometryFeature[];
-}
-
-type CruiseStopWithPort = Prisma.CruiseStopGetPayload<{ include: { port: true } }>;
-type PortRow = Prisma.PortGetPayload<Record<string, never>>;
-
-interface CruiseGeometryInput {
-  stops: CruiseStopWithPort[];
-  departurePort: PortRow | null;
-  arrivalPort: PortRow | null;
-  legRoutes?: Array<{
-    fromKind: string;
-    fromRef: string;
-    toKind: string;
-    toRef: string;
-    waypoints: unknown;
-  }>;
-}
-
-/**
- * Compute the GeoJSON FeatureCollection for one cruise's itinerary.
- * The route covers departure port → port-call stops → arrival port;
- * each consecutive port-pair becomes one LineString. Sea-day and
- * unmatched stops are skipped — they don't contribute legs. The
- * underlying `computeSchematicRoute` is cached, so calling this in a
- * batch over the same set of port-pairs is essentially free after the
- * first miss.
- */
-async function buildCruiseGeometry(
-  cruise: CruiseGeometryInput
-): Promise<{ collection: GeometryFeatureCollection; routedLegs: number; directLegs: number }> {
-  const portCalls = cruise.stops
-    .filter((s) => !s.isAtSea && s.port !== null)
-    .map((s) => s.port as PortRow);
-  const ordered = buildEffectivePortSequence(cruise.departurePort, portCalls, cruise.arrivalPort);
-  const features: GeometryFeature[] = [];
-  let routedLegs = 0;
-  let directLegs = 0;
-
-  // The stored line wins. It has to be the same source the distance came from
-  // (services/cruiseDistance/cruiseLegService.ts), or the map and the
-  // statistics would quietly disagree.
-  const overrideByLeg = buildLegRouteOverrideMap(cruise.legRoutes ?? []);
-
-  for (let i = 0; i < ordered.length - 1; i++) {
-    const a = ordered[i];
-    const b = ordered[i + 1];
-
-    const manual = overrideByLeg.get(portLegRouteKey(a.id, b.id));
-    if (manual && manual.length >= 2) {
-      features.push({
-        type: "Feature",
-        geometry: { type: "LineString", coordinates: manual },
-        properties: {
-          fromPortId: a.id,
-          toPortId: b.id,
-          routed: false,
-          protectedPrefixCount: 0,
-          protectedSuffixCount: 0,
-          method: "manual_polyline",
-        },
-      });
-      directLegs++;
-      continue;
-    }
-
-    const route = await computeSchematicRoute(
-      {
-        id: a.id,
-        name: a.name,
-        city: a.city,
-        country: a.country,
-        unlocode: a.unlocode,
-        lat: a.lat,
-        lon: a.lon,
-      },
-      {
-        id: b.id,
-        name: b.name,
-        city: b.city,
-        country: b.country,
-        unlocode: b.unlocode,
-        lat: b.lat,
-        lon: b.lon,
-      }
-    );
-    features.push({
-      type: "Feature",
-      geometry: { type: "LineString", coordinates: route.waypoints },
-      properties: {
-        fromPortId: a.id,
-        toPortId: b.id,
-        routed: route.routed,
-        protectedPrefixCount: route.protectedPrefixCount,
-        protectedSuffixCount: route.protectedSuffixCount,
-        method: route.method,
-      },
-    });
-    if (route.routed) routedLegs++;
-    else directLegs++;
-  }
-
-  return { collection: { type: "FeatureCollection", features }, routedLegs, directLegs };
-}
 
 const router = Router();
 router.use(authenticate);
@@ -236,12 +117,7 @@ router.post(
 
       const cruises = await prisma.cruise.findMany({
         where: { id: { in: parsed.data.ids }, userId },
-        include: {
-          stops: { include: { port: true }, orderBy: { dayNumber: "asc" as const } },
-          departurePort: true,
-          arrivalPort: true,
-          legRoutes: true,
-        },
+        include: CRUISE_GEOMETRY_INCLUDE,
       });
 
       const computedAt = Date.now();
@@ -287,12 +163,7 @@ router.get(
       const userId = requireUser(req);
       const cruise = await prisma.cruise.findFirst({
         where: { id: req.params.id, userId },
-        include: {
-          stops: { include: { port: true }, orderBy: { dayNumber: "asc" as const } },
-          departurePort: true,
-          arrivalPort: true,
-          legRoutes: true,
-        },
+        include: CRUISE_GEOMETRY_INCLUDE,
       });
       if (!cruise) throw new AppError("Cruise not found", 404);
 

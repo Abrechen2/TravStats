@@ -160,6 +160,10 @@
           "railDomain": {
             "name": "Rail",
             "what": "The Rail area: a logbook for train journeys with a station catalogue, train lookup, map, statistics and Excel import and export. A roadtrip with “Rail” as its vehicle can be taken over as train rides."
+          },
+          "cruiseTracks": {
+            "name": "Recorded tracks on cruises",
+            "what": "The “Recorded tracks” section on a cruise’s page: a GPS recording (a file or Dawarich) replaces the computed sea route of the legs it covers – on the map and in the statistics."
           }
         }
       },
@@ -512,6 +516,11 @@
     "visionParser": "Default Vision Parser (Boarding Pass)",
     "textParser": "Default Text Parser (Email)",
     "autoHelp": "Auto mode automatically selects the best available parser",
+    "llmSwitch": {
+      "title": "AI model",
+      "label": "Use the AI model (reading bookings and trip summaries)",
+      "hint": "Off: TravStats asks no language model at all – not even when an Ollama URL is entered above or OLLAMA_URL is set. Bookings are then read with the built-in templates only."
+    },
     "ollama": {
       "title": "Ollama LLM Parser",
       "description": "Ollama runs locally or on your network and analyzes booking confirmations with an LLM. Ideal for multi-stop and complex emails.",

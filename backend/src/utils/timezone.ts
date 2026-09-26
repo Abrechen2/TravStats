@@ -4,7 +4,7 @@
  * Functions for converting flight times between local airport time and UTC
  */
 
-import { toZonedTime, fromZonedTime, formatInTimeZone } from "date-fns-tz";
+import { toZonedTime, fromZonedTime } from "date-fns-tz";
 import { getCachedAirport } from "../services/airportCache";
 import logger from "./logger";
 
@@ -169,7 +169,10 @@ export function localWallClockOf(
  *          → returns 2026-05-01T08:30:00Z (the real UTC instant of "10:30 Berlin").
  */
 export function legacyFakeUtcToRealUtc(stored: Date, tz: string): Date {
-  const wall = formatInTimeZone(stored, "UTC", "yyyy-MM-dd'T'HH:mm:ss");
+  // The stored components ARE the wall clock; reading them off the ISO string
+  // avoids `formatInTimeZone`, which slides an hour when the reading falls
+  // into the host's own DST gap (see `shared/zonedWallClock.ts`).
+  const wall = stored.toISOString().slice(0, 19);
   return fromZonedTime(wall, tz);
 }
 

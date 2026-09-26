@@ -4,6 +4,7 @@ import { registry } from "../registry";
 import { errorContent } from "./shared";
 import { pullDawarichTrackSchema, TRACK_SOURCES } from "../../../schemas/tour";
 import { registerSectionPath, routeIdParams } from "./tours";
+import { trackVerdict } from "./cruiseTracks";
 
 /**
  * The recorded tracks of a tour section.
@@ -337,5 +338,41 @@ registry.registerPath({
     400: { description: "No file, or an invalid dryRun", content: errorContent },
     413: { description: "An archive past the unpacking limits", content: errorContent },
     429: { description: "Too many archive requests", content: errorContent },
+  },
+});
+
+/* ────────────────────────────  track coverage  ──────────────────────────── */
+
+registerSectionPath({
+  method: "get",
+  path: "/trips/{id}/routes/{routeId}/legs/track-coverage",
+  summary: "Which recording covers each leg of a section",
+  description:
+    "The server's verdict per leg: the first recording, oldest-started first, that " +
+    "PUT …/legs/{fromStopId}/{toStopId} with source 'track' would adopt — within 1 km of " +
+    "both stops and not across an unrecorded stretch — or the most useful reason none does. " +
+    "`verdict` is null for a section without recordings, or a leg whose stops lost their " +
+    "coordinates. Replaces the browser-side check that fetched every track's geometry.",
+  tags: ["Tours"],
+  request: { params: routeIdParams },
+  responses: {
+    200: {
+      description: "Verdict per leg",
+      content: {
+        "application/json": {
+          schema: z.object({
+            coverage: z.array(
+              z.object({
+                legId: z.string().uuid(),
+                fromStopId: z.string().uuid(),
+                toStopId: z.string().uuid(),
+                verdict: trackVerdict.nullable(),
+              })
+            ),
+          }),
+        },
+      },
+    },
+    404: { description: "Trip or section not found", content: errorContent },
   },
 });

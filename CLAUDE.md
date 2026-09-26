@@ -359,7 +359,27 @@ enforced, and merely practised** below.
   token). Set `withCredentials: true` on every Axios instance.
 - **Prisma migrations** — schema changes always via
   `npx prisma migrate dev` (never manually), and `npm run check:drift` must
-  stay green.
+  stay green. **One documented exception kind: a rename Prisma cannot see.**
+  `20260925230000_loyalty_memberships` (lodging_memberships →
+  loyalty_memberships) is hand-written, because `migrate dev` reads a renamed
+  model as "drop the old table, create a new one" — every card, and with it
+  every stay's link to its card, would be gone. The rule for any such
+  migration: it ships with a test that replays the file against rows in the
+  OLD shape and asserts they survive
+  (`backend/src/__tests__/migration.loyaltyMemberships.test.ts` is the
+  template), and `check:drift` stays green afterwards, so the hand-written SQL
+  and `schema.prisma` provably describe the same database.
+- **`partialIndexes` preview feature (since 2.7)** — `schema.prisma` enables
+  it so a partial unique index can be declared: the lodging-chain catalogue is
+  unique by name among its owner-less rows only
+  (`@@unique([name], where: raw("user_id IS NULL"))`), which a plain
+  `(user_id, name)` unique cannot hold because Postgres treats NULLs as
+  distinct. It also makes Prisma see the hand-written partial index on
+  `flights` (2026-05-03), which is now declared in the schema — without that
+  line the next migration would drop it. If `check:drift` ever reports a
+  partial index as a difference, treat it the way a postgis diff was treated
+  under `postgresqlExtensions`: a real signal (the feature or a declaration
+  went missing), not noise to be migrated away.
 - **React hooks** — `useTranslation` is imported from
   `'../hooks/useTranslation'` (a project wrapper), not directly from
   `react-i18next`.

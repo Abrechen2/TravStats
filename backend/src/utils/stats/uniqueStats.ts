@@ -8,7 +8,8 @@ import {
   continentsTouchedBy,
   countRoundTrips,
   crossesDateLine,
-  crossesHemisphere,
+  changesEastWestHemisphere,
+  crossesEquator,
   crossesLocalMidnight,
   departureEndpointCode,
   departureTimezoneOf,
@@ -97,10 +98,8 @@ export async function calculateUniqueStats(
 
   const timeTravelFlights = flownFlights.filter((f) => isTimeTravelFlight(f, timezoneMap)).length;
 
-  // Equator crossings — geographic, time-insensitive. Note that this is the
-  // same rule as the hemisphere hop below, and always has been; see
-  // `flightPredicates.ts` on why one predicate now serves both tiles.
-  const equatorCrossings = countableFlights.filter(crossesHemisphere).length;
+  // Equator crossings (north↔south) — geographic, time-insensitive.
+  const equatorCrossings = countableFlights.filter(crossesEquator).length;
 
   // Arctic circle flights (north of 66.5°) — geographic, time-insensitive.
   const arcticFlights = countableFlights.filter(isArcticFlight).length;
@@ -288,11 +287,10 @@ export async function calculateUniqueStats(
     });
   }
 
-  // Hemisphere hopper — flights crossing between northern and southern
-  // hemisphere. Geographic, time-insensitive. The SAME predicate as the
-  // equator crossing above: two tiles, one rule, and therefore always the
-  // same number.
-  const hemisphereHops = countableFlights.filter(crossesHemisphere).length;
+  // Hemisphere hopper — east↔west changes across the prime meridian or the
+  // antimeridian (owner, 2026-09-25). Until then it repeated the equator
+  // rule, so the two tiles always showed the same number.
+  const hemisphereHops = countableFlights.filter(changesEastWestHemisphere).length;
 
   // Date line crosser — flights crossing the International Date Line (180°
   // longitude). Geographic, time-insensitive.

@@ -347,6 +347,8 @@ export type RailParseFallbackCode =
   | "llmFailed"
   | "llmFoundNothing"
   | "demoNoLlm"
+  /** An admin has switched the language model off. */
+  | "llmDisabled"
   /** The document is clearly another kind of booking (D1) — see `domainMismatch`. */
   | "otherDomain"
   /** The model answered with airport codes for stations. */

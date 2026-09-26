@@ -230,7 +230,7 @@ router.get(
       await assertOpenDataEnabled();
       const places = await nearbyLodgings(lat, lon, radiusKm * 1000);
       if ("failure" in places) throw upstreamError("OpenStreetMap", places.failure);
-      res.json({ places: await withCatalogueChains(places) });
+      res.json({ places: await withCatalogueChains(req.userId!, places) });
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);
     }

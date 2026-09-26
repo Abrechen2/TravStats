@@ -19,10 +19,12 @@ vi.mock("../../lib/api", async (importOriginal) => {
   };
 });
 
-// Mock the auth store so we have a predictable logged-in user.
+// Mock the auth store so we have a predictable logged-in user; `isAdmin` is
+// switched per test.
+const authState = vi.hoisted(() => ({ isAdmin: false }));
 vi.mock("../../store/authStore", () => ({
   useAuthStore: () => ({
-    user: { id: "u1", username: "tester", email: "t@t.de", isAdmin: false },
+    user: { id: "u1", username: "tester", email: "t@t.de", isAdmin: authState.isAdmin },
     logout: vi.fn().mockResolvedValue(undefined),
   }),
 }));
@@ -77,6 +79,7 @@ import { useSettingsStore } from "../../store/settingsStore";
 // menu spoke English in the German UI), so they match raw keys now too.
 describe("NavigationBar — round-4 header", () => {
   beforeEach(() => {
+    authState.isAdmin = false;
     useSettingsStore.setState({ enabledDomains: ["flight", "cruise"] });
     tripSuggestionCount.value = 0;
   });
@@ -142,10 +145,20 @@ describe("NavigationBar — round-4 header", () => {
   });
 
   it("reaches settings, the bug report and support through the account menu", () => {
+    authState.isAdmin = true;
     renderNav();
     fireEvent.click(screen.getByRole("button", { name: /userMenu\.label/ }));
     expect(screen.getByRole("menuitem", { name: /dashboard:settings/ })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: /diagnostic\.reportBug/ })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: /support\.donate/ })).toBeTruthy();
+  });
+
+  // Owner 2026-09-25: the diagnostic bundle is admins-only on the server, so
+  // an ordinary account must not be offered an entry that can only fail.
+  it("offers no diagnostic bug report to an ordinary account", () => {
+    renderNav();
+    fireEvent.click(screen.getByRole("button", { name: /userMenu\.label/ }));
+    expect(screen.getByRole("menuitem", { name: /dashboard:settings/ })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: /diagnostic\.reportBug/ })).toBeNull();
   });
 });

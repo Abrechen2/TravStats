@@ -10,6 +10,10 @@
       "title": "Kein LLM-Parser verfügbar",
       "body": "Es ist kein LLM (Ollama, OpenAI, Claude) konfiguriert. Der Regex-Fallback erkennt nur die häufigsten Buchungsformate; manuelle Korrekturen sind häufiger nötig."
     },
+    "llmDisabled": {
+      "title": "KI-Parser abgeschaltet",
+      "body": "Der Administrator hat das KI-Modell abgeschaltet. Buchungen werden nur mit den eingebauten Vorlagen gelesen; was keine Vorlage kennt, ergänzt du von Hand."
+    },
     "pasteFirst": "Füge zuerst den Text der E-Mail ein."
   },
   "pdf": {
@@ -68,6 +72,7 @@
   },
   "errors": {
     "llmUnreachable": "Der KI-Parser ist gerade nicht erreichbar. Bitte die Parser-Einstellungen prüfen oder später erneut versuchen.",
+    "llmDisabled": "Der Administrator hat den KI-Parser abgeschaltet. Was keine eingebaute Vorlage kennt, ergänzt du von Hand.",
     "invalidPdf": "Diese Datei ließ sich nicht als PDF lesen.",
     "pdfNoText": "Aus diesem PDF konnte kein Text gelesen werden – vermutlich ein Scan. Bitte als Bild über den Bordkarten-Scanner einlesen.",
     "rateLimited": "Zu viele Importe in kurzer Zeit. Bitte warte einen Moment und versuche es erneut.",

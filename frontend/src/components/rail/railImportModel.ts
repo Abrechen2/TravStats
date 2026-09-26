@@ -171,6 +171,8 @@ export function emptyParseMessageKey(code: RailParseFallbackCode | undefined): s
       return "rail:import.empty.llmFailed";
     case "demoNoLlm":
       return "rail:import.empty.demoNoLlm";
+    case "llmDisabled":
+      return "rail:import.empty.llmDisabled";
     case "otherDomain":
       return "rail:import.empty.otherDomain";
     case "looksLikeFlight":

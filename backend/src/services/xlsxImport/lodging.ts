@@ -141,7 +141,7 @@ export async function importLodging(sheet: IncomingSheet, ctx: Ctx): Promise<She
     }
 
     const chainName = cell.text(raw.chain);
-    const chainId = await findChainId(chainName);
+    const chainId = await findChainId(ctx.userId, chainName);
     const notes = chainName && !chainId ? ["chain_not_found"] : undefined;
     const dropped: DroppedValue[] = [];
     const type = enumCell(raw.type, LODGING_TYPES, "type", dropped);

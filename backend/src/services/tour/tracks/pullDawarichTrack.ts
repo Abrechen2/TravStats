@@ -150,7 +150,10 @@ export interface PulledDawarichTrack {
  */
 export async function pullDawarichWindow(
   client: DawarichClient,
-  window: DawarichPointsWindow
+  window: DawarichPointsWindow,
+  /** A step between parsing and ingestion. A cruise pull marks the hours a
+   *  phone at sea had no signal (`splitAtLongSteps`); a tour pull has none. */
+  prepare: (parsed: ParsedTrack) => ParsedTrack = (parsed) => parsed
 ): Promise<PulledDawarichTrack> {
   const { points, truncated } = await client.getPoints(window);
   if (points.length === 0) {
@@ -160,7 +163,7 @@ export async function pullDawarichWindow(
     );
   }
 
-  const parsed = toParsedTrack(points);
+  const parsed = prepare(toParsedTrack(points));
   const ingested = ingestTrack(parsed);
   if (!ingested) {
     // Reachable: `parsed.startedAt`/`endedAt` are always set above (from

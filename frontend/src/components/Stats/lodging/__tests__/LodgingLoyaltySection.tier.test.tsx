@@ -14,10 +14,9 @@ import LodgingLoyaltySection from "../LodgingLoyaltySection";
  * tier, not the tier held during that year" — and the screen said the opposite
  * (Alex, 2026-08-29).
  *
- * There is no dated status history to draw on, and inventing one would be a
- * feature rather than a correction. So the tier is stated ONCE, as a fact about
- * now, and the year rows carry only what is genuinely per-year: nights and
- * stays.
+ * So today's tier is stated ONCE, as a fact about now. A year names a tier
+ * only from the card's dated status history (loyalty-status-history-dated,
+ * 2.7) — the last block below.
  */
 const stats = (): LodgingStats =>
   ({
@@ -62,5 +61,35 @@ describe("LodgingLoyaltySection — the tier is about today, not about 2019", ()
     const row2019 = screen.getByText("2019").closest("tr") as HTMLElement;
     expect(within(row2019).getByText("8")).toBeInTheDocument();
     expect(within(row2019).getByText("3")).toBeInTheDocument();
+  });
+});
+
+describe("LodgingLoyaltySection — a year's tier from the dated history", () => {
+  const withHistory = (): LodgingStats => {
+    const base = stats();
+    return {
+      ...base,
+      loyalty: {
+        ...base.loyalty,
+        programmeYears: [
+          { ...base.loyalty.programmeYears[0], tiersHeld: [] },
+          { ...base.loyalty.programmeYears[1], tiersHeld: ["Silver", "Gold"] },
+        ],
+      },
+    } as LodgingStats;
+  };
+
+  it("names the tiers each year held, and a dash for a year the history leaves out", () => {
+    render(<LodgingLoyaltySection stats={withHistory()} />);
+    expect(screen.getByText("lodging:stats.loyalty.tierHeld")).toBeInTheDocument();
+    const row2024 = screen.getByText("2024").closest("tr") as HTMLElement;
+    expect(within(row2024).getByText("Silver → Gold")).toBeInTheDocument();
+    const row2019 = screen.getByText("2019").closest("tr") as HTMLElement;
+    expect(within(row2019).getByText("—")).toBeInTheDocument();
+  });
+
+  it("draws no such column when no card has a history", () => {
+    render(<LodgingLoyaltySection stats={stats()} />);
+    expect(screen.queryByText("lodging:stats.loyalty.tierHeld")).toBeNull();
   });
 });

@@ -10,6 +10,10 @@
       "title": "No LLM parser available",
       "body": "No LLM (Ollama, OpenAI, Claude) is configured. The regex fallback only recognises the most common booking formats; manual corrections will be needed more often."
     },
+    "llmDisabled": {
+      "title": "AI parser switched off",
+      "body": "The administrator has switched the AI model off. Bookings are read with the built-in templates only; anything no template knows you fill in by hand."
+    },
     "pasteFirst": "Paste the text of the e-mail first."
   },
   "pdf": {
@@ -68,6 +72,7 @@
   },
   "errors": {
     "llmUnreachable": "The AI parser cannot be reached right now. Please check the parser settings or try again later.",
+    "llmDisabled": "The administrator has switched the AI parser off. Anything no built-in template knows, you add by hand.",
     "invalidPdf": "This file could not be read as a PDF.",
     "pdfNoText": "No text could be read from this PDF – probably a scan. Please read it in as an image with the boarding-pass scanner.",
     "rateLimited": "Too many imports in a short time. Please wait a moment and try again.",

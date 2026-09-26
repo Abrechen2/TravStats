@@ -1,17 +1,28 @@
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
-const findUniqueUserSettings = jest.fn();
+/** What the user configured — the fixture every case sets. */
+const userSettingsRow = jest.fn();
+/** The direct `userSettings.findUnique` — served from the same fixture. */
+const findUniqueUserSettings = jest.fn(async () => userSettingsRow());
 const findFirstAdminSettings = jest.fn();
 
-const findUniqueUser = jest.fn();
+/**
+ * The resolver reads the caller and their settings in ONE `user.findUnique`
+ * (who the caller is matters since the 2026-09-17 review, finding A2: the
+ * SHARED demo account resolves no connection at all). The fake builds that row
+ * from `userSettingsRow`, so each case below still states only what the
+ * user configured; `callerRow` says who they are — an ordinary account unless
+ * a case says otherwise.
+ */
+let callerRow: { isDemo: boolean; username: string } | null;
+const findUniqueUser = jest.fn(async () =>
+  callerRow ? { ...callerRow, settings: await userSettingsRow() } : null
+);
 
 jest.mock("../db", () => ({
   prisma: {
     userSettings: { findUnique: findUniqueUserSettings },
     adminSettings: { findFirst: findFirstAdminSettings },
-    // The resolver asks who the caller is since the 2026-09-17 review
-    // (finding A2): the SHARED demo account resolves no connection at
-    // all. Every case here is an ordinary account, so the row says so.
     user: { findUnique: findUniqueUser },
   },
 }));
@@ -29,14 +40,14 @@ beforeEach(() => {
   jest.clearAllMocks();
   delete process.env.IMMICH_BASE_URL;
   delete process.env.IMMICH_API_KEY;
-  findUniqueUser.mockResolvedValue({ isDemo: false, username: "someone" });
-  findUniqueUserSettings.mockResolvedValue(null);
+  callerRow = { isDemo: false, username: "someone" };
+  userSettingsRow.mockResolvedValue(null);
   findFirstAdminSettings.mockResolvedValue(null);
 });
 
 describe("getImmichConnection priority", () => {
   it("prefers the user tier and decrypts the key", async () => {
-    findUniqueUserSettings.mockResolvedValue({
+    userSettingsRow.mockResolvedValue({
       immichBaseUrl: "https://user.lan/",
       immichApiKey: "enc:user-key",
     });
@@ -53,7 +64,7 @@ describe("getImmichConnection priority", () => {
   });
 
   it("falls through to global when the user tier has a URL but no key", async () => {
-    findUniqueUserSettings.mockResolvedValue({
+    userSettingsRow.mockResolvedValue({
       immichBaseUrl: "https://user.lan",
       immichApiKey: null,
     });
@@ -88,7 +99,7 @@ describe("getImmichConnection priority", () => {
       decryptApiKey: jest.Mock;
     };
     decryptApiKey.mockReturnValueOnce(null); // user key is corrupt
-    findUniqueUserSettings.mockResolvedValue({
+    userSettingsRow.mockResolvedValue({
       immichBaseUrl: "https://user.lan",
       immichApiKey: "enc:broken",
     });
@@ -99,7 +110,7 @@ describe("getImmichConnection priority", () => {
   });
 
   it("skips a tier whose base URL is unusable rather than throwing", async () => {
-    findUniqueUserSettings.mockResolvedValue({
+    userSettingsRow.mockResolvedValue({
       immichBaseUrl: "file:///etc/passwd",
       immichApiKey: "enc:user-key",
     });
@@ -110,7 +121,7 @@ describe("getImmichConnection priority", () => {
   });
 
   it("ignores the user tier entirely when no userId is given", async () => {
-    findUniqueUserSettings.mockResolvedValue({
+    userSettingsRow.mockResolvedValue({
       immichBaseUrl: "https://user.lan",
       immichApiKey: "enc:user-key",
     });
@@ -120,22 +131,56 @@ describe("getImmichConnection priority", () => {
     });
 
     await expect(getImmichConnection()).resolves.toMatchObject({ source: "global" });
+    expect(findUniqueUser).not.toHaveBeenCalled();
+  });
+
+  it("resolves an ordinary user's own connection with a single read", async () => {
+    // The demo check used to be a query of its own in front of the settings
+    // read — two round trips on every Immich request, thumbnails included.
+    userSettingsRow.mockResolvedValue({
+      immichBaseUrl: "https://user.lan",
+      immichApiKey: "enc:user-key",
+    });
+
+    await expect(getImmichConnection("u1")).resolves.toMatchObject({ source: "user" });
+    expect(findUniqueUser).toHaveBeenCalledTimes(1);
     expect(findUniqueUserSettings).not.toHaveBeenCalled();
+    expect(findFirstAdminSettings).not.toHaveBeenCalled();
+  });
+
+  it("resolves nothing for the shared demo account, not even the global tier", async () => {
+    callerRow = { isDemo: true, username: "demo" };
+    findFirstAdminSettings.mockResolvedValue({
+      globalImmichBaseUrl: "https://global.lan",
+      globalImmichApiKey: "enc:global-key",
+    });
+
+    await expect(getImmichConnection("demo-id")).resolves.toBeNull();
+    expect(findFirstAdminSettings).not.toHaveBeenCalled();
+  });
+
+  it("falls through to the global tier for an unknown user id", async () => {
+    callerRow = null;
+    findFirstAdminSettings.mockResolvedValue({
+      globalImmichBaseUrl: "https://global.lan",
+      globalImmichApiKey: "enc:global-key",
+    });
+
+    await expect(getImmichConnection("gone")).resolves.toMatchObject({ source: "global" });
   });
 });
 
 describe("getImmichDefaultMode", () => {
   it("returns the stored mode", async () => {
-    findUniqueUserSettings.mockResolvedValue({ immichDefaultMode: "import" });
+    userSettingsRow.mockResolvedValue({ immichDefaultMode: "import" });
     await expect(getImmichDefaultMode("u1")).resolves.toBe("import");
   });
 
   it("defaults to link when unset or invalid", async () => {
-    findUniqueUserSettings.mockResolvedValue({ immichDefaultMode: "nonsense" });
+    userSettingsRow.mockResolvedValue({ immichDefaultMode: "nonsense" });
     await expect(getImmichDefaultMode("u1")).resolves.toBe("link");
 
-    findUniqueUser.mockResolvedValue({ isDemo: false, username: "someone" });
-    findUniqueUserSettings.mockResolvedValue(null);
+    userSettingsRow.mockResolvedValue(null);
     await expect(getImmichDefaultMode("u1")).resolves.toBe("link");
   });
 });

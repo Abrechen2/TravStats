@@ -101,7 +101,7 @@ describe("GET /api/v1/admin/export/all-data", () => {
       "bookings",
       "lodgings",
       "lodgingStays",
-      "lodgingMemberships",
+      "loyaltyMemberships",
       "places",
       "placeVisits",
       "placeLists",
@@ -113,6 +113,11 @@ describe("GET /api/v1/admin/export/all-data", () => {
     ]) {
       expect(Object.prototype.hasOwnProperty.call(user, domain)).toBe(true);
     }
+
+    // Owner, 2026-09-26: the cards travel under their 2.7 name only. Nothing
+    // reads this file back (see `services/export/allDataExport.ts`); a reader
+    // added later must still accept the old key from older files.
+    expect(user).not.toHaveProperty("lodgingMemberships");
 
     // And the seeded rows actually came through, so the keys are not empty
     // shells from a select that silently matched nothing.

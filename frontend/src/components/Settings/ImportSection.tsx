@@ -4,9 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { AVAILABLE_DOMAINS, DOMAINS, type DomainKey } from "../../shared/domains";
 import { SectionCard, SectionTitle } from "./SettingsShared";
-import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
-import { useSettingsStore } from "../../store/settingsStore";
 import { Fr24ImportTile } from "../import/Fr24ImportTile";
 import { GenericCsvImportTile } from "../import/GenericCsvImportTile";
 import { LodgingCsvImportTile } from "../import/LodgingCsvImportTile";
@@ -38,8 +36,6 @@ export default function ImportSection(): JSX.Element {
   // the same two conditions the nav and the dashboard tab apply, kept in one
   // hook so this page cannot drift from them (see hooks/usePlacesVisible.ts).
   const placesVisible = usePlacesVisible();
-  const autoCreateTrips = useSettingsStore((s) => s.autoCreateTrips);
-  const setAutoCreateTrips = useSettingsStore((s) => s.setAutoCreateTrips);
 
   // The log and the tiles live on the SAME page, so a commit here must reach
   // the log — it loads once on mount, and without this signal a fresh import
@@ -78,17 +74,9 @@ export default function ImportSection(): JSX.Element {
         title={t("settings:import.title")}
         description={t("settings:import.description")}
       />
-      {/* Import behaviour, not an import route: whether flights sharing a
-          booking reference silently become a trip + booking. Persists
-          immediately via the store's setter (like the base currency). */}
+      {/* Whether flights sharing a booking reference become a trip lives in
+          the "Reisen" section (TripsSection) — one setting, one place. */}
       <SettingRows>
-        <Switch
-          id="import-auto-create-trips"
-          checked={autoCreateTrips}
-          onChange={setAutoCreateTrips}
-          label={t("settings:import.autoCreateTrips.label")}
-          sub={t("settings:import.autoCreateTrips.description")}
-        />
         {groups.map((key) => {
           const tiles = listImporters[key] ?? [];
           return (

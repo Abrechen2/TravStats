@@ -1,6 +1,7 @@
 import logger from "../../utils/logger";
 import { zoneOf } from "../../shared/time/zoneOf";
 import { localWallClockOf, type FlightTimeSemantics } from "../../utils/timezone";
+import { formatWallClockIn } from "../../shared/zonedWallClock";
 
 /**
  * Every time question the trip-suggestion engine asks, in one file — so that
@@ -99,18 +100,12 @@ export function placeClock(
  */
 export function todayIn(profileZone: string | null, now: Date = new Date()): string {
   if (profileZone) {
-    try {
-      return new Intl.DateTimeFormat("en-CA", {
-        timeZone: profileZone,
-        year: "numeric",
-        month: "2-digit",
-        day: "2-digit",
-      }).format(now);
-    } catch (error) {
-      // An unknown zone name in the profile: said in the log, and the same day
-      // the server uses stands in rather than failing the whole inbox.
-      logger.warn({ error, profileZone }, "[TripSuggestions] Unknown profile zone");
-    }
+    // Read through the one instant-to-wall-clock home (`shared/zonedWallClock.ts`).
+    const wall = formatWallClockIn(now, profileZone);
+    if (wall) return wall.slice(0, 10);
+    // An unknown zone name in the profile: said in the log, and the same day
+    // the server uses stands in rather than failing the whole inbox.
+    logger.warn({ profileZone }, "[TripSuggestions] Unknown profile zone");
   }
   return storedDay(now);
 }

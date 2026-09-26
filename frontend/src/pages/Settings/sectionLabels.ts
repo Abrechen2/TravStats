@@ -16,6 +16,7 @@ export const SECTION_LABEL_KEY: Record<SettingsSectionId, string> = {
   domainColors: "settings:domainColors.title",
   modules: "common:settings.modules.title",
   countryCounting: "settings:countryCounting.title",
+  trips: "settings:trips.title",
   backup: "settings:backup.title",
   import: "settings:import.title",
   notifications: "settings:notifications.title",
@@ -29,4 +30,6 @@ export const SECTION_LABEL_KEY: Record<SettingsSectionId, string> = {
   cruisePreferences: "settings:cruisePreferences.title",
   lodgingPreferences: "settings:lodgingPreferences.geocoder.title",
   lodgingMemberships: "settings:memberships.title",
+  flightMemberships: "settings:memberships.title",
+  cruiseMemberships: "settings:memberships.title",
 };

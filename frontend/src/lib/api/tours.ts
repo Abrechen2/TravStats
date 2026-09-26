@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { TourLegTrackCoverage } from "../../types/trackCoverage";
 import type { RoadtripVehicle, TourActivity } from "../../shared/tour/roadtrip";
 import type {
   TourRoute,
@@ -334,6 +335,21 @@ export const toursApi = {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
       return data.track;
+    },
+
+    /**
+     * Per leg, which recording covers it — decided on the server by the same
+     * rule the adoption `PUT` applies, so the editor offers `track` exactly
+     * where adopting it will succeed.
+     */
+    coverage: async (
+      tripId: string | undefined,
+      routeId: string
+    ): Promise<TourLegTrackCoverage[]> => {
+      const { data } = await api.get<{ coverage: TourLegTrackCoverage[] }>(
+        `${sectionPath(tripId, routeId)}/legs/track-coverage`
+      );
+      return data.coverage;
     },
 
     remove: async (tripId: string | undefined, routeId: string, trackId: string): Promise<void> => {

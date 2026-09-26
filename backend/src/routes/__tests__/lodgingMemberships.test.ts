@@ -11,7 +11,7 @@ describe("Lodging Memberships API", () => {
   let otherUserId: string;
 
   beforeAll(async () => {
-    await prisma.lodgingMembership.deleteMany({
+    await prisma.loyaltyMembership.deleteMany({
       where: { user: { username: { in: ["lodgingmembertest", "lodgingmemberother"] } } },
     });
     await prisma.user.deleteMany({
@@ -32,7 +32,7 @@ describe("Lodging Memberships API", () => {
   });
 
   afterAll(async () => {
-    await prisma.lodgingMembership.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+    await prisma.loyaltyMembership.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.user.deleteMany({ where: { id: { in: [userId, otherUserId] } } });
     await prisma.$disconnect();
   });
@@ -64,7 +64,7 @@ describe("Lodging Memberships API", () => {
     });
 
     afterEach(async () => {
-      await prisma.lodgingMembership.deleteMany({ where: { userId } });
+      await prisma.loyaltyMembership.deleteMany({ where: { userId } });
     });
 
     it("creates a membership covering several chains and returns them", async () => {
@@ -88,7 +88,7 @@ describe("Lodging Memberships API", () => {
         .send({ programName: "Bad Link", chainIds: [999999] });
 
       expect(res.status).toBe(400);
-      expect(await prisma.lodgingMembership.count({ where: { userId } })).toBe(0);
+      expect(await prisma.loyaltyMembership.count({ where: { userId } })).toBe(0);
     });
 
     it("keeps the links when a PATCH does not mention chainIds", async () => {
@@ -160,7 +160,7 @@ describe("Lodging Memberships API", () => {
         .set("Cookie", authCookie);
 
       expect(chain.body.data.membership).toBeNull();
-      await prisma.lodgingMembership.deleteMany({ where: { userId: otherUserId } });
+      await prisma.loyaltyMembership.deleteMany({ where: { userId: otherUserId } });
     });
 
     it("deletes the links with the membership, never the catalogue chains", async () => {
@@ -236,7 +236,7 @@ describe("Lodging Memberships API", () => {
     let membershipId: string;
 
     beforeAll(async () => {
-      const created = await prisma.lodgingMembership.create({
+      const created = await prisma.loyaltyMembership.create({
         data: { userId, programName: "IHG One Rewards", tier: "Silver" },
       });
       membershipId = created.id;
@@ -257,7 +257,7 @@ describe("Lodging Memberships API", () => {
         .set("Cookie", otherAuthCookie)
         .send({ tier: "Hacked" });
       expect(res.status).toBe(404);
-      const still = await prisma.lodgingMembership.findUnique({ where: { id: membershipId } });
+      const still = await prisma.loyaltyMembership.findUnique({ where: { id: membershipId } });
       expect(still?.tier).toBe("Gold");
     });
 
@@ -274,7 +274,7 @@ describe("Lodging Memberships API", () => {
         .delete(`/api/v1/lodging-memberships/${membershipId}`)
         .set("Cookie", otherAuthCookie);
       expect(res.status).toBe(404);
-      const still = await prisma.lodgingMembership.findUnique({ where: { id: membershipId } });
+      const still = await prisma.loyaltyMembership.findUnique({ where: { id: membershipId } });
       expect(still).not.toBeNull();
     });
 
@@ -291,14 +291,14 @@ describe("Lodging Memberships API", () => {
         .delete(`/api/v1/lodging-memberships/${membershipId}`)
         .set("Cookie", authCookie);
       expect(res.status).toBe(204);
-      const gone = await prisma.lodgingMembership.findUnique({ where: { id: membershipId } });
+      const gone = await prisma.loyaltyMembership.findUnique({ where: { id: membershipId } });
       expect(gone).toBeNull();
     });
   });
 
   describe("GET /api/v1/lodging-memberships — listing is scoped to the caller", () => {
     it("does not list another user's memberships", async () => {
-      await prisma.lodgingMembership.create({
+      await prisma.loyaltyMembership.create({
         data: { userId: otherUserId, programName: "Accor Live Limitless" },
       });
       const res = await request(app).get("/api/v1/lodging-memberships").set("Cookie", authCookie);
@@ -342,7 +342,7 @@ describe("Lodging Memberships API", () => {
         .set("Cookie", authCookie)
         .send({ programName: "Foreign Coverage", lodgingIds: [foreignHotelId] });
       expect(res.status).toBe(400);
-      const leaked = await prisma.lodgingMembership.findFirst({
+      const leaked = await prisma.loyaltyMembership.findFirst({
         where: { userId, programName: "Foreign Coverage" },
       });
       expect(leaked).toBeNull();

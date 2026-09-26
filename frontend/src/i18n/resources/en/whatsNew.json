@@ -18,8 +18,8 @@
         "body": "Boarding passes, hotel invoices and booking confirmations now live as documents on the entry they belong to, and a receipt is attached to what it proves. TravStats reads every document it knows — a photographed invoice, a boarding pass through its barcode, a Booking.com mail through a fixed template — and files it instead of leaving it lying around. When a PDF or an email hangs on a flight, a cruise or a stay, you can take price, currency and booking reference from it — you see every value first and decide what is taken."
       },
       "entrySuggestions": {
-        "title": "TravStats helps while you enter",
-        "body": "Forms suggest what you have entered before: seat, flight number, terminal and frequent-flyer number from your flights, room and board from earlier stays, your tags as a choice while you type, and your recently used currencies first. A new entry lands in the trip whose dates it falls in on its own; cruise stops and stays take their dates from the start and the trip. A suggestion never overwrites what you typed yourself."
+        "title": "TravStats helps while you enter – and your loyalty programmes have a page of their own",
+        "body": "Forms suggest what you have entered before: seat, flight number, terminal and frequent-flyer number from your flights, room and board from earlier stays, your tags as a choice while you type, and your recently used currencies first. A new entry lands in the trip whose dates it falls in on its own; cruise stops and stays take their dates from the start and the trip. A suggestion never overwrites what you typed yourself. New is the “Loyalty programmes” page in the menu under your name: frequent-flyer, hotel and cruise-line programmes in one place, split by domain, with the status history over the years – frequent-flyer numbers you entered on flights show up there. Hotel chains you create are now yours alone: other accounts on the same instance do not see them."
       },
       "placesPassport": {
         "title": "Places, the passport and photos",
@@ -30,12 +30,12 @@
         "body": "The inbox sorts flight updates, open questions and suggestions into tabs with status counts, and the logbook pages. New is the “Trip suggestions” tab: TravStats reads from flights, cruises, stays and place visits when you were away, and proposes a new trip – or the trip the entries belong to. You accept, edit or dismiss – nothing is created until you accept. The Excel spreadsheet works both ways: edit it and read it back, or carry it into another account. And TravStats can be installed as a web app."
       },
       "summaryOpenData": {
-        "title": "The AI summary, Dawarich and open data services",
-        "body": "The AI summary of a trip now names only what the data holds, and location history from Dawarich counts as evidence for a country. New, for an admin to switch on: open data services — the weather in the trip journal from Open-Meteo and descriptions from Wikipedia on places and stays. They stay off until someone switches them on, because places and dates of your trips go to those services."
+        "title": "The AI summary, the AI switch, Dawarich and open data services",
+        "body": "The AI summary of a trip now names only what the data holds, and location history from Dawarich counts as evidence for a country. New, for an admin to switch on: open data services — the weather in the trip journal from Open-Meteo and descriptions from Wikipedia on places and stays. They stay off until someone switches them on, because places and dates of your trips go to those services. The other way round, an admin can switch the AI parser off entirely: TravStats then reads bookings with its built-in templates only, no text goes to a language model, not even a trip summary – and an import says that this is a setting, not a server that is down."
       },
       "beta": {
-        "title": "Behind the beta switch: roadtrips, tours, rail",
-        "body": "Roadtrips with stations at your stays, day tours with an elevation profile, rail as a domain of its own – with a station catalogue, a train-number lookup, the real line on the map, tickets and booking mails to import and rail achievements of its own –, hotel enrichment from OpenStreetMap and pairing with the TravStats Companion app are built but still being checked. With the switch on, countries you reached only by train or on a roadtrip count toward the country achievements too, and day tours join the trip suggestions. An admin turns it all on with the beta switch; each registry entry says when it comes out."
+        "title": "Behind the beta switch: roadtrips, tours, rail, cruise tracks",
+        "body": "Roadtrips with stations at your stays, day tours with an elevation profile, rail as a domain of its own – with a station catalogue, a train-number lookup, the real line on the map, tickets and booking mails to import and rail achievements of its own –, recorded tracks on cruises – a GPS recording replaces the computed sea route of the legs it covers –, hotel enrichment from OpenStreetMap and pairing with the TravStats Companion app are built but still being checked. With the switch on, countries you reached only by train or on a roadtrip count toward the country achievements too, and day tours join the trip suggestions. An admin turns it all on with the beta switch; each registry entry says when it comes out."
       }
     },
     "v260": {

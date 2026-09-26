@@ -19,6 +19,7 @@
  */
 
 import { prisma } from "../../db";
+import { findVisibleChainByName } from "../lodging/chainScope";
 import { type Ctx, type ParentKind, isPending, labelForms, norm, dayOf } from "./context";
 import * as cell from "./cells";
 
@@ -186,13 +187,13 @@ export async function findShipId(name: string | undefined): Promise<number | nul
   return ship?.id ?? null;
 }
 
-/** An existing chain by name. Never creates one — the catalogue does not grow
- *  behind the user's back from a spreadsheet, same rule as the CSV import. */
-export async function findChainId(name: string | undefined): Promise<number | null> {
+/** An existing chain by name — catalogue or the user's own. Never creates
+ *  one: the list does not grow behind the user's back from a spreadsheet,
+ *  same rule as the CSV import. */
+export async function findChainId(
+  userId: string,
+  name: string | undefined
+): Promise<number | null> {
   if (!name) return null;
-  const chain = await prisma.lodgingChain.findFirst({
-    where: { name: { equals: name, mode: "insensitive" } },
-    select: { id: true },
-  });
-  return chain?.id ?? null;
+  return (await findVisibleChainByName(userId, name))?.id ?? null;
 }

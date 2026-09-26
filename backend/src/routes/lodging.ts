@@ -50,6 +50,7 @@ import {
   removeLodgingPhotoFiles,
 } from "../services/lodging/deleteLodgingPhotoFiles";
 import { getBaseCurrency } from "../services/fx/snapshot";
+import { assertChainsVisible } from "../services/lodging/chainScope";
 
 // Re-exported: every existing import site names this module.
 export { getBaseCurrency };
@@ -260,6 +261,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const parsed = updateLodgingSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
     const { osmRef, ...input } = parsed.data;
+    if (input.chainId != null) await assertChainsVisible(userId, [input.chainId]);
     const externalRef = await osmRefToStore(userId, osmRef, existing);
 
     // See resolveLocation in lodgingGeocode.ts: geocodes when the address

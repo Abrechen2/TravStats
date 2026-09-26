@@ -117,6 +117,23 @@ describe("parseRailBookingText", () => {
     }
   });
 
+  it("never reaches the model when an admin has switched it off", async () => {
+    const ollama = await fakeOllama(() => "{}");
+    mockAdmin.mockResolvedValue({
+      ollamaUrl: ollama.url,
+      ollamaModel: "test-model",
+      llmEnabled: false,
+    });
+    try {
+      const result = await parseRailBookingText(FOREIGN_TICKET_THIN, [], "some-user");
+      expect(result.fallbackCode).toBe("llmDisabled");
+      expect(result.ollamaAvailable).toBe(false);
+      expect(ollama.prompts).toHaveLength(0);
+    } finally {
+      await ollama.close();
+    }
+  });
+
   it("keeps a thin ticket's leg but drops the train the model invented", async () => {
     const ollama = await fakeOllama(() =>
       JSON.stringify({

@@ -40,6 +40,7 @@ import type { RailAttachment } from "../rail/parser/types";
 import { PARSER_SUPPORTED_DOMAINS, type ParserSupportedDomain } from "../../shared/domains";
 import { isLlmAvailable } from "../parsers/llmAvailability";
 import { conclusiveOtherDomain, scoreDocument, type DomainDetection } from "./documentDomain";
+import { isLlmEnabledByAdmin } from "../llm/llmGate";
 
 /** What a caller may ask for. `auto` is the addition — see the header. */
 export const REQUESTABLE_DOMAINS = [...PARSER_SUPPORTED_DOMAINS, "auto"] as const;
@@ -122,8 +123,15 @@ type RailBody = {
   domainMismatch?: DomainMismatch;
 };
 
-/** The domain-shaped payload, byte-identical to what each route returned before. */
-export type ParsedDocumentBody = FlightBody | CruiseBody | LodgingBody | RailBody;
+type DomainBody = FlightBody | CruiseBody | LodgingBody | RailBody;
+
+/**
+ * The domain-shaped payload, plus one field every domain shares:
+ * `llmDisabledByAdmin`, so a templates-only answer can say it was a decision
+ * (`services/llm/llmGate.ts`) rather than an unreachable model — which is what
+ * `ollamaAvailable: false` alone cannot tell apart.
+ */
+export type ParsedDocumentBody = DomainBody & { llmDisabledByAdmin: boolean };
 
 export interface ParseDocumentOutcome {
   /** The domain actually parsed with. */
@@ -191,7 +199,7 @@ async function mismatchBody(
   domain: ParserSupportedDomain,
   mismatch: DomainMismatch,
   userId: string | undefined
-): Promise<ParsedDocumentBody> {
+): Promise<DomainBody> {
   const ollamaAvailable = await isLlmAvailable(userId !== undefined ? { userId } : {});
   const common = {
     parserUsed: "none",
@@ -210,9 +218,12 @@ export async function parseDocument(input: ParseDocumentInput): Promise<ParseDoc
   const { domain, detection } = resolveDomain(input.domain, combined);
 
   const mismatch = mismatchFor(input.domain, domain, combined);
-  const body = mismatch
-    ? await mismatchBody(domain, mismatch, input.userId)
-    : await parseAs(domain, input, combined);
+  const body = {
+    ...(mismatch
+      ? await mismatchBody(domain, mismatch, input.userId)
+      : await parseAs(domain, input, combined)),
+    llmDisabledByAdmin: !(await isLlmEnabledByAdmin()),
+  };
 
   return {
     domain,
@@ -226,7 +237,7 @@ async function parseAs(
   domain: ParserSupportedDomain,
   input: ParseDocumentInput,
   combined: string
-): Promise<ParsedDocumentBody> {
+): Promise<DomainBody> {
   if (domain === "cruise") {
     // The userId is what lets the parser refuse the ADMIN's Ollama to the
     // shared demo account (security audit of 2026-09-19, finding 3). The flight

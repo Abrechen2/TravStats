@@ -31,6 +31,24 @@ describe("railJourneyWrite", () => {
     expect(instantToWallClock(instant, "Europe/Paris")).toBe("2026-03-29T01:30");
   });
 
+  it("reads a station clock that falls in the HOST's own DST gap without sliding an hour", () => {
+    // formatInTimeZone (date-fns-tz 3.2.0) built the reading as a host-local
+    // Date: with the host in Berlin, 02:30 on 30 March 2025 does not exist
+    // there, so a zone-less (UTC) journey read back as 03:30 — and an edit
+    // that did not touch the departure moved it an hour on save.
+    const originalTz = process.env.TZ;
+    process.env.TZ = "Europe/Berlin";
+    try {
+      expect(instantToWallClock(new Date("2025-03-30T02:30:00Z"), null)).toBe("2025-03-30T02:30");
+      expect(instantToWallClock(new Date("2025-03-29T17:30:00Z"), "Asia/Tokyo")).toBe(
+        "2025-03-30T02:30"
+      );
+    } finally {
+      if (originalTz === undefined) delete process.env.TZ;
+      else process.env.TZ = originalTz;
+    }
+  });
+
   it("measures Frankfurt to Paris as a straight line of about 478 km", () => {
     const km = greatCircleKm({ depLat: 50.1071, depLon: 8.6632, arrLat: 48.8768, arrLon: 2.3591 });
     expect(km).toBeGreaterThan(470);

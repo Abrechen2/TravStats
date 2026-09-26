@@ -219,29 +219,13 @@ describe("ImportSection — lists only", () => {
 });
 
 /**
- * Silent trip auto-creation is import behaviour, so its switch lives on the
- * import hub (board item trip-auto-creation-not-switchable). The toggle
- * persists immediately through the store's setter — no save button.
+ * The automatic-trip switch moved to its own "Reisen" settings section
+ * (owner, 2026-08-23: one setting, one place — against "show it in both").
  */
-describe("ImportSection — auto-trip toggle", () => {
-  beforeEach(() => {
+describe("ImportSection — no trip settings", () => {
+  it("no longer carries the automatic-trip switch", () => {
     useSettingsStore.setState({ enabledDomains: ["flight"], autoCreateTrips: true });
-  });
-
-  it("renders the toggle checked when autoCreateTrips is on", () => {
     render(<ImportSection />);
-    const toggle = screen.getByLabelText(
-      "settings:import.autoCreateTrips.label"
-    ) as HTMLInputElement;
-    expect(toggle.checked).toBe(true);
-  });
-
-  it("clicking the toggle flips the store setting", async () => {
-    const user = userEvent.setup();
-    render(<ImportSection />);
-
-    await user.click(screen.getByLabelText("settings:import.autoCreateTrips.label"));
-
-    expect(useSettingsStore.getState().autoCreateTrips).toBe(false);
+    expect(screen.queryByLabelText(/autoCreateTrips/)).toBeNull();
   });
 });

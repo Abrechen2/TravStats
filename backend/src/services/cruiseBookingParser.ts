@@ -7,7 +7,7 @@ import {
 } from "./http/llmTimeout";
 import logger from "../utils/logger";
 import { getAdminParserSettings, getParserOrder } from "./parserSettings";
-import { isSharedDemoUser } from "../utils/sharedDemo";
+import { assertLlmEnabled, llmRefusalFor } from "./llm/llmGate";
 import { parseTuiCruisesConfirmation } from "./cruise/tuiCruisesTemplate";
 import { isLlmAvailable, recordLlmProbe } from "./parsers/llmAvailability";
 
@@ -397,6 +397,8 @@ export class CruiseBookingParser {
       "[Cruise Parser] Sending text to Ollama"
     );
 
+    // Fail closed if a caller skipped `llmRefusalFor` (see llmGate.ts).
+    await assertLlmEnabled();
     const raw = await fetchJson(`${this.url}/api/generate`, body);
     const response: unknown = JSON.parse(raw);
     if (typeof response !== "object" || response === null || !("response" in response)) {
@@ -480,14 +482,6 @@ function unwrapCruiseArray(parsed: unknown): unknown[] | null {
   return null;
 }
 
-/**
- * What the shared demo account is told instead of an Ollama endpoint. Stated
- * once, in both booking parsers, so the two domains answer a visitor the same
- * way.
- */
-export const DEMO_NO_LLM_REASON =
-  "The AI parser is not available for the shared demo account — only the built-in templates were tried.";
-
 let cachedParser: CruiseBookingParser | undefined;
 
 export function getCruiseBookingParser(options?: CruiseBookingParserOptions): CruiseBookingParser {
@@ -498,9 +492,9 @@ export function getCruiseBookingParser(options?: CruiseBookingParserOptions): Cr
 export async function parseCruiseBookingText(
   text: string,
   options?: CruiseBookingParserOptions,
-  /** Who is asking. Only the shared demo account is treated differently — see
-   *  the guard below; every other value, including `undefined`, parses as
-   *  before. */
+  /** Who is asking. Only the shared demo account is treated differently
+   *  (`llmRefusalFor` below); every other value, including `undefined`, is
+   *  subject to the admin switch alone. */
   userId?: string
 ): Promise<CruiseParseResult> {
   // Resolve the Ollama endpoint from admin settings first, mirroring the flight
@@ -542,24 +536,19 @@ export async function parseCruiseBookingText(
   }
 
   /**
-   * The SHARED demo account never reaches the model — one of the three places a
-   * parse falls through from a template to the LLM (security audit of
-   * 2026-09-19, finding 3). `resolveCruiseParserOptions` below hands back the
-   * ADMIN's Ollama for whoever asks, so on a public preview whose demo password
-   * is printed on the login page this is the operator's hardware answering
-   * strangers, minutes per document, while the summarize route is guarded
-   * against precisely that.
+   * A refused caller never reaches the model — the admin switch (owner
+   * decision 2026-09-25) or the SHARED demo account (security audit of
+   * 2026-09-19, finding 3), both answered by `llmRefusalFor`.
+   * `resolveCruiseParserOptions` below hands back the ADMIN's Ollama, or
+   * `OLLAMA_URL`, for whoever asks, so this has to come before it.
    *
-   * The AIDA and TUI templates above are what a visitor came to try and cost
-   * nothing, so they run untouched; this is the step after them. The answer is
-   * the one an instance with no model configured already gives — the same shape
-   * as `services/immich/immichResolver.ts` returning `null` — so the routes
-   * take their existing "template only / not recognised" path and no new error
-   * exists. The reason names the account rather than the endpoint: an
-   * unreachable-Ollama reason quotes the admin's URL, which is not the shared
-   * account's business.
+   * The AIDA and TUI templates are free and run untouched; this is the step
+   * after them. The answer is the one an instance with no model configured
+   * already gives, so the routes take their existing "template only / not
+   * recognised" path, and `fallbackReason` says which refusal it was.
    */
-  if (userId !== undefined && (await isSharedDemoUser(userId))) {
+  const refusal = await llmRefusalFor(userId);
+  if (refusal) {
     // Under `llm_first` the template has not been tried yet.
     const templated = order === "llm_first" ? parseTuiCruisesConfirmation(text) : [];
     if (templated.length > 0) {
@@ -569,7 +558,7 @@ export async function parseCruiseBookingText(
       cruises: [],
       parserUsed: "none",
       ollamaAvailable: false,
-      fallbackReason: DEMO_NO_LLM_REASON,
+      fallbackReason: refusal.reason,
     };
   }
 

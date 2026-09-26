@@ -472,7 +472,7 @@
     "mostCountriesInDay": "Most Countries in One Day",
     "mostCountriesInDayDesc": "{{count}} countries on {{date}}",
     "hemisphereHops": "Hemisphere Hopper",
-    "hemisphereHopsDesc": "Crossed between northern and southern hemisphere {{count}}×",
+    "hemisphereHopsDesc": "Switched between eastern and western hemisphere {{count}}× (prime meridian or date line)",
     "dateLineCrossings": "Date Line Crossings",
     "dateLineCrossingsDesc": "Crossed the International Date Line {{count}}×",
     "continentalExplorer": "Continental Explorer",
