@@ -151,7 +151,9 @@
     "createShipError": "Could not create the ship",
     "createPortError": "Could not create the port",
     "via_geocoder": "Map search (OpenStreetMap)",
-    "searchError": "Port search failed - please try again"
+    "searchError": "Port search failed - please try again",
+    "geocodeRateLimited": "The online port search (OpenStreetMap) is busy and did not answer. Search again in a minute, or add the port by hand.",
+    "geocodeUnavailable": "The online port search (OpenStreetMap) cannot be reached right now. Search again later, or add the port by hand."
   },
   "map": {
     "layer": "Cruises",

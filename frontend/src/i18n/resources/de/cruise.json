@@ -151,7 +151,9 @@
     "createShipError": "Schiff konnte nicht angelegt werden",
     "createPortError": "Hafen konnte nicht angelegt werden",
     "via_geocoder": "Kartensuche (OpenStreetMap)",
-    "searchError": "Hafensuche fehlgeschlagen - bitte erneut versuchen"
+    "searchError": "Hafensuche fehlgeschlagen - bitte erneut versuchen",
+    "geocodeRateLimited": "Die Online-Hafensuche (OpenStreetMap) ist gerade ausgelastet und hat nicht geantwortet. Bitte in einer Minute erneut suchen oder den Hafen manuell anlegen.",
+    "geocodeUnavailable": "Die Online-Hafensuche (OpenStreetMap) ist gerade nicht erreichbar. Bitte später erneut suchen oder den Hafen manuell anlegen."
   },
   "map": {
     "layer": "Kreuzfahrten",

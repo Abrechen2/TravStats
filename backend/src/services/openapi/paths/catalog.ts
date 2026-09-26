@@ -34,6 +34,15 @@ const port = registry.register(
     .openapi("Port")
 );
 
+const geocodedPort = z.object({
+  name: z.string(),
+  city: z.string().nullable(),
+  country: z.string().nullable(),
+  lat: z.number(),
+  lon: z.number(),
+  source: z.literal("geocoder"),
+});
+
 const ship = registry.register(
   "Ship",
   z
@@ -98,16 +107,27 @@ registry.registerPath({
 registry.registerPath({
   method: "get",
   path: "/ports/geocode",
-  summary: "Resolve a port name to catalogue entries",
+  summary: "Geocode a port name the catalogue does not carry",
   description:
-    "Name-first lookup used by the cruise import to turn an unresolved stop into " +
-    "a matched port. Returns an empty list rather than 404 when nothing matches.",
+    "External (OpenStreetMap Nominatim) lookup for a place missing from the port catalogue. " +
+    "Candidates carry no id; POST one to /ports to persist it. Returns an empty list rather " +
+    "than 404 when nothing matches. `degraded: true` means the geocoder itself failed and the " +
+    "empty list is NOT a 'no match'; `reason` then says why (`rate_limited` | `unavailable`).",
   tags: ["Catalogue"],
-  request: { query: z.object({ q: z.string().max(200) }) },
+  request: { query: z.object({ q: z.string().max(100) }) },
   responses: {
     200: {
       description: "Candidate ports",
-      content: { "application/json": { schema: envelope(z.array(port)) } },
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(geocodedPort),
+            degraded: z.boolean(),
+            reason: z.enum(["rate_limited", "unavailable"]).optional(),
+          }),
+        },
+      },
     },
   },
 });

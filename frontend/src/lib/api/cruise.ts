@@ -206,6 +206,15 @@ export interface GeocodedPort {
   source: "geocoder";
 }
 
+/** Why the geocoder produced no candidates — a stable server code (`/ports/geocode`). */
+export type PortGeocodeFailure = "rate_limited" | "unavailable";
+
+export interface PortGeocodeResult {
+  ports: GeocodedPort[];
+  /** null = the geocoder answered, so an empty list really is "no match". */
+  failure: PortGeocodeFailure | null;
+}
+
 export const portsApi = {
   search: async (q: string, region?: string): Promise<Port[]> => {
     const params: Record<string, string> = {};
@@ -223,13 +232,20 @@ export const portsApi = {
   },
   /**
    * External geocoder fallback for ports missing from the local catalog.
-   * Returns [] on error — callers treat it as a soft enhancement.
+   * A geocoder failure (Nominatim 429/outage) arrives as HTTP 200 with
+   * `degraded: true` and a `reason` code; it is passed on as `failure` so the
+   * picker can say the lookup did not happen instead of "nothing found".
    */
-  geocode: async (q: string): Promise<GeocodedPort[]> => {
-    const { data } = await api.get<Envelope<GeocodedPort[]>>("/ports/geocode", {
-      params: { q },
-    });
-    return data.data;
+  geocode: async (q: string): Promise<PortGeocodeResult> => {
+    const { data } = await api.get<
+      Envelope<GeocodedPort[]> & { degraded?: boolean; reason?: string }
+    >("/ports/geocode", { params: { q } });
+    const failure: PortGeocodeFailure | null = !data.degraded
+      ? null
+      : data.reason === "rate_limited"
+        ? "rate_limited"
+        : "unavailable";
+    return { ports: Array.isArray(data.data) ? data.data : [], failure };
   },
   create: async (input: {
     name: string;

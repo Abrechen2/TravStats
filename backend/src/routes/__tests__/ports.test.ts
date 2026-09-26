@@ -129,23 +129,38 @@ describe("Ports API", () => {
     });
 
     it("returns geocoder candidates for a name the catalog does not carry", async () => {
-      jest.mocked(geocodePort).mockResolvedValue([
-        {
-          name: "Portoferraio",
-          city: "Portoferraio",
-          country: "Italia",
-          lat: 42.81,
-          lon: 10.31,
-          source: "geocoder",
-        },
-      ]);
+      jest.mocked(geocodePort).mockResolvedValue({
+        ports: [
+          {
+            name: "Portoferraio",
+            city: "Portoferraio",
+            country: "Italia",
+            lat: 42.81,
+            lon: 10.31,
+            source: "geocoder",
+          },
+        ],
+        failure: null,
+      });
       const res = await request(app)
         .get("/api/v1/ports/geocode?q=Portoferraio")
         .set("Cookie", authCookie);
       expect(res.status).toBe(200);
       expect(res.body.data).toHaveLength(1);
       expect(res.body.data[0].source).toBe("geocoder");
+      expect(res.body.degraded).toBe(false);
       expect(geocodePort).toHaveBeenCalledWith("Portoferraio");
+    });
+
+    it("says the geocoder was rate-limited instead of answering 'no match'", async () => {
+      jest.mocked(geocodePort).mockResolvedValue({ ports: [], failure: "rate_limited" });
+      const res = await request(app)
+        .get("/api/v1/ports/geocode?q=Portoferraio")
+        .set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.data).toEqual([]);
+      expect(res.body.degraded).toBe(true);
+      expect(res.body.reason).toBe("rate_limited");
     });
 
     it("returns an empty list for a sub-2-char query without calling the geocoder", async () => {
