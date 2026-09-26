@@ -325,6 +325,7 @@
       "track": "Aufzeichnung",
       "drawn": "Von Hand gezeichnet",
       "sea_route": "Berechnete Seeroute",
+      "pending": "Noch nicht berechnet",
       "chord": "Luftlinie"
     },
     "verdict": {

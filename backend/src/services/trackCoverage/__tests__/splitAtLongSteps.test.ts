@@ -1,4 +1,4 @@
-import { splitAtLongSteps } from "../splitAtLongSteps";
+import { holeThresholdKm, splitAtLongSteps } from "../splitAtLongSteps";
 import { ingestTrack } from "../../tour/tracks/ingestTrack";
 import type { ParsedTrack } from "../../tour/tracks/parseGpx";
 
@@ -40,5 +40,18 @@ describe("splitAtLongSteps", () => {
     // 4 × 0.02° recorded ≈ 8.9 km; the 0.9° jump (100 km) only in the joined one.
     expect(split.distanceKm).toBeCloseTo(4 * 0.02 * 111.2, 0);
     expect(joined.distanceKm - split.distanceKm).toBeCloseTo(0.9 * 111.2, 0);
+  });
+
+  it("raises the limit for a recording whose own steps are longer than it", () => {
+    // One point every 0.2° (~22 km): a thinned export, not a signal loss.
+    const sparse = Array.from({ length: 21 }, (_, i): [number, number] => [5, 54 + i * 0.2]);
+    expect(holeThresholdKm(parsed(sparse), 20)).toBeCloseTo(3 * 0.2 * 111.2, 0);
+    const split = splitAtLongSteps(parsed(sparse), 20);
+    expect(split.segmentStarts).toEqual([0]);
+    expect(ingestTrack(split)!.distanceKm).toBeCloseTo(4 * 111.2, -1);
+  });
+
+  it("keeps the floor for a dense recording", () => {
+    expect(holeThresholdKm(parsed(points), 20)).toBe(20);
   });
 });

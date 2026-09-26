@@ -108,6 +108,20 @@ describe("CruiseTracksPanel", () => {
     expect(screen.getByText("tracks.coversLegs:1")).toBeTruthy();
   });
 
+  // Browser acceptance 2026-09-26: a leg without a computed row showed
+  // "Berechnete Seeroute" and no kilometres — a claim nothing had made.
+  it("does not call a leg computed before it has been", async () => {
+    overviewMock.mockResolvedValue({
+      ...OVERVIEW,
+      legs: [{ ...OVERVIEW.legs[0], distanceKm: null, coverage: null }],
+    });
+    render(<CruiseTracksPanel cruiseId="c1" onChanged={vi.fn()} />);
+    const leg = await screen.findByTestId("cruise-leg-0");
+    expect(within(leg).getByText("tracks.source.pending")).toBeTruthy();
+    expect(within(leg).queryByText("tracks.source.sea_route")).toBeNull();
+    expect(within(leg).queryByText(/km/)).toBeNull();
+  });
+
   it("does not offer a Dawarich pull that can only fail", async () => {
     render(<CruiseTracksPanel cruiseId="c1" onChanged={vi.fn()} />);
     await screen.findByTestId("cruise-leg-0");
