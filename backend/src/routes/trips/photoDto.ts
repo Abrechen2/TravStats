@@ -4,6 +4,9 @@ export interface PhotoDto {
   url: string;
   caption: string | null;
   takenAt: string | null;
+  /** Where it was taken, from the import or the upload; null when not stored (forgejo#132 item 11). */
+  lat: number | null;
+  lon: number | null;
   sortIdx: number;
   mimetype: string;
   sizeBytes: number;
@@ -15,6 +18,8 @@ export function toPhotoDto(p: {
   tripId: string;
   caption: string | null;
   takenAt: Date | null;
+  lat: number | null;
+  lon: number | null;
   sortIdx: number;
   mimetype: string;
   sizeBytes: number;
@@ -25,6 +30,8 @@ export function toPhotoDto(p: {
     url: `/api/v1/trips/${p.tripId}/photos/${p.id}/file`,
     caption: p.caption,
     takenAt: p.takenAt?.toISOString() ?? null,
+    lat: p.lat,
+    lon: p.lon,
     sortIdx: p.sortIdx,
     mimetype: p.mimetype,
     sizeBytes: p.sizeBytes,

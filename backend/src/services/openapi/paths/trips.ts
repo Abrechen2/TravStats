@@ -377,6 +377,11 @@ registry.registerPath({
                 url: z.string(),
                 caption: z.string().nullable(),
                 takenAt: z.string().nullable(),
+                lat: z
+                  .number()
+                  .nullable()
+                  .describe("Where it was taken (import or upload); null when not stored"),
+                lon: z.number().nullable(),
                 sortIdx: z.number().int(),
                 mimetype: z.string(),
                 sizeBytes: z.number().int(),

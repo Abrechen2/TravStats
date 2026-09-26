@@ -38,6 +38,30 @@ const notFound = { description: "Not found", content: errorContent };
 const deleted = { description: "Deleted" };
 const uuid = z.string().uuid();
 
+/** A visit photo as `toPhotoDto` (routes/places/visitPhotoDto.ts) sends it. */
+const visitPhoto = z.object({
+  id: z.string().uuid(),
+  url: z.string(),
+  caption: z.string().nullable(),
+  sortIdx: z.number().int(),
+  mimetype: z.string(),
+  sizeBytes: z.number().int(),
+  immichAssetId: z.string().nullable(),
+  createdAt: z.string(),
+  takenAt: z
+    .string()
+    .nullable()
+    .describe(
+      "When it was taken: the row's own capture time, else — for a photo picked from the " +
+        "trip's gallery — that trip photo's. Null when neither holds it; never the upload time."
+    ),
+  lat: z
+    .number()
+    .nullable()
+    .describe("Where it was taken — only a picked trip photo stores that; null otherwise"),
+  lon: z.number().nullable(),
+});
+
 const place = registry.register(
   "Place",
   z
@@ -269,7 +293,17 @@ registry.registerPath({
   summary: "Photos of one visit",
   tags: placesTag,
   request: { params: z.object({ visitId: uuid }) },
-  responses: { 200: { description: "Photos" }, 404: notFound },
+  responses: {
+    200: {
+      description: "Photos",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.literal(true), data: z.array(visitPhoto) }),
+        },
+      },
+    },
+    404: notFound,
+  },
 });
 
 registry.registerPath({
