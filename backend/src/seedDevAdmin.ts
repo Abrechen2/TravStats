@@ -14,7 +14,7 @@
 import { Prisma } from "./prisma";
 import { prisma } from "./db";
 import { seedDemoUser } from "./seedDemoUser";
-import { loadPools, seedCruises } from "./seedDemoAccount";
+import { loadPools, seedCruises } from "./seedDemo/coverageCruises";
 
 void (async () => {
   await seedDemoUser({

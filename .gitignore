@@ -207,3 +207,6 @@ docs/audit-*/block*-e2e-production-artifacts/
 # `prisma generate`, which `postinstall` and the Docker build both run —
 # committing 6.9 MB of it would only give the schema a second, staler home.
 backend/src/generated/
+
+# Raw router answers cached by scripts/demo/generateDemoGeometry.ts (regenerable).
+backend/scripts/demo/.cache/
