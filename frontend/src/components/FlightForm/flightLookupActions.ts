@@ -7,6 +7,7 @@
 import type { FlightLookupResponse, LookupAirportSide } from "../../lib/api/flightLookup";
 import { apiErrorCode, DEMO_FORBIDDEN_CODE } from "../../lib/apiError";
 import { providerFailureLines } from "../../lib/flightLookupFailure";
+import { formatWallClockIn } from "../../shared/zonedWallClock";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -51,25 +52,10 @@ export interface WallClock {
 const LOCAL_PATTERN = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/;
 const HAS_ZONE = /(?:Z|[+-]\d{2}:?\d{2})$/;
 
+/** Through `shared/zonedWallClock.ts`, the one home for "instant to wall clock". */
 function wallClockIn(instant: Date, timezone: string): WallClock | null {
-  try {
-    const parts = new Intl.DateTimeFormat("en-CA", {
-      timeZone: timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      hourCycle: "h23",
-    }).formatToParts(instant);
-    const get = (type: string): string => parts.find((p) => p.type === type)?.value ?? "";
-    return {
-      date: `${get("year")}-${get("month")}-${get("day")}`,
-      time: `${get("hour")}:${get("minute")}`,
-    };
-  } catch {
-    return null;
-  }
+  const wall = formatWallClockIn(instant, timezone);
+  return wall ? { date: wall.slice(0, 10), time: wall.slice(11, 16) } : null;
 }
 
 /**

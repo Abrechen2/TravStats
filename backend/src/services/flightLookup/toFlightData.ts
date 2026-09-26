@@ -12,7 +12,7 @@
  * or the browser's clock.
  */
 
-import { formatInTimeZone } from "date-fns-tz";
+import { formatWallClockIn } from "../../shared/zonedWallClock";
 import { getAirportTimezone } from "../../utils/timezone";
 import type { FlightData, FlightLookupResult } from "../flightLookup";
 
@@ -33,7 +33,10 @@ export async function airportClock(
   if (!instant || !HAS_ZONE.test(instant)) return { timezone };
   const parsed = new Date(instant);
   if (Number.isNaN(parsed.getTime())) return { timezone };
-  return { timezone, scheduledLocal: formatInTimeZone(parsed, timezone, "yyyy-MM-dd'T'HH:mm") };
+  // shared/zonedWallClock is the one home for "instant to wall clock" (Intl,
+  // not formatInTimeZone, which slid readings in the host's own DST gap).
+  const wall = formatWallClockIn(parsed, timezone);
+  return wall ? { timezone, scheduledLocal: wall.slice(0, 16) } : { timezone };
 }
 
 /** Map a `lookupFlightDetails` result onto the legacy `FlightData` shape. */

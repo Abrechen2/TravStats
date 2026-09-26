@@ -1,4 +1,4 @@
-import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
+import { fromZonedTime } from "date-fns-tz";
 
 import { AppError } from "../../middleware/errorHandler";
 import type {
@@ -8,6 +8,7 @@ import type {
 } from "../../schemas/rail";
 import { deriveRailStatus } from "../../shared/statusDerivation";
 import { wallClockExists } from "../../shared/wallClockExistence";
+import { formatWallClockIn } from "../../shared/zonedWallClock";
 import { calculateDistance } from "../../utils/geo";
 import { timezoneOfLodging } from "../../utils/stayInstant";
 
@@ -101,10 +102,6 @@ export function wallClockToInstant(wall: string, timezone: string | null): Date 
  * ride into "arrival before departure". Same rule and same check
  * (`shared/wallClockExistence.ts`) the flight schema applies; the repeated
  * autumn hour is a real time and passes.
- *
- * TODO(merge fix/night-small-2026-09-25): that branch reads wall clocks back
- * through `shared/zonedWallClock.ts`; `instantToWallClock` below should use it
- * when the branch lands.
  */
 function sentWallClockToInstant(
   wall: string,
@@ -122,9 +119,17 @@ function sentWallClockToInstant(
   return wallClockToInstant(wall, timezone);
 }
 
-/** The inverse: what the station clock read at `instant`. */
+/**
+ * The inverse: what the station clock read at `instant`, as `YYYY-MM-DDTHH:mm`.
+ * Read through `shared/zonedWallClock.ts` — the one home for "instant to wall
+ * clock", because `formatInTimeZone` slid a reading inside the HOST's own
+ * spring-forward gap by an hour. A zone the runtime rejects reads as UTC, the
+ * same fallback a station without a zone gets.
+ */
 export function instantToWallClock(instant: Date, timezone: string | null): string {
-  return formatInTimeZone(instant, timezone ?? "UTC", "yyyy-MM-dd'T'HH:mm");
+  const wall = formatWallClockIn(instant, timezone ?? "UTC") ?? formatWallClockIn(instant, "UTC");
+  if (!wall) throw new RangeError("instantToWallClock: invalid instant");
+  return wall.slice(0, 16);
 }
 
 /** Great-circle kilometres, one decimal — enough for a statistic, honest about being straight. */

@@ -8,26 +8,18 @@
  * stored as the wall clock read as UTC, so UTC is the honest way back.
  */
 
-function parts(iso: string, timeZone: string | null): Record<string, string> {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timeZone ?? "UTC",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  });
-  return Object.fromEntries(
-    formatter.formatToParts(new Date(iso)).map((part) => [part.type, part.value])
-  );
-}
+import { formatWallClockIn } from "../shared/zonedWallClock";
 
-/** `YYYY-MM-DDTHH:mm` on the station's clock — what a `datetime-local` input takes. */
+/**
+ * `YYYY-MM-DDTHH:mm` on the station's clock — what a `datetime-local` input
+ * takes. Read through `shared/zonedWallClock.ts`, the one home for "instant to
+ * wall clock"; a zone the runtime rejects reads as UTC, like a missing one.
+ */
 export function toStationWallClock(iso: string | null, timeZone: string | null): string {
   if (!iso) return "";
-  const p = parts(iso, timeZone);
-  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+  const instant = new Date(iso);
+  const wall = formatWallClockIn(instant, timeZone ?? "UTC") ?? formatWallClockIn(instant, "UTC");
+  return wall ? wall.slice(0, 16) : "";
 }
 
 /** Date and time for display, on the station's clock, in the reader's locale. */
