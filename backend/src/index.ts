@@ -269,6 +269,7 @@ const shutdown = (signal: string) => async (): Promise<void> => {
   (await import("./jobs/dawarichCountryDaySweepScheduler")).stopDawarichCountryDaySweepScheduler();
   (await import("./jobs/documentSweepScheduler")).stopDocumentSweepScheduler();
   (await import("./jobs/photoJourneyScanScheduler")).stopPhotoJourneyScanScheduler();
+  (await import("./jobs/logRetentionScheduler")).stopLogRetentionScheduler();
   await prisma.$disconnect();
   process.exit(0);
 };
@@ -286,6 +287,16 @@ if (process.env.NODE_ENV !== "test") {
       environment: process.env.NODE_ENV,
       nodeVersion: process.version,
     });
+
+    // The admin's logging settings — level, category files, HTTP/query logs —
+    // are applied to the running loggers before anything else logs. They used
+    // to be stored and never applied (audit 2026-09-26).
+    try {
+      const { applyLoggingConfig } = await import("./services/loggingConfig");
+      await applyLoggingConfig();
+    } catch (error) {
+      logger.warn({ operation: "server_start_logging_config_error", error });
+    }
 
     // Ensure achievement definitions are present (idempotent upsert)
     try {
@@ -701,6 +712,11 @@ if (process.env.NODE_ENV !== "test") {
         "photo_journey_scan",
         async () =>
           (await import("./jobs/photoJourneyScanScheduler")).startPhotoJourneyScanScheduler(),
+      ],
+      // Log retention, daily 03:45 and once now.
+      [
+        "log_retention",
+        async () => (await import("./jobs/logRetentionScheduler")).startLogRetentionScheduler(),
       ],
       [
         "reminder",

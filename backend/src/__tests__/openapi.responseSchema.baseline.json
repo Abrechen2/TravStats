@@ -12,7 +12,6 @@
   "GET /backup/cloud/list",
   "GET /backup/status",
   "GET /backup/{id}",
-  "GET /diagnostic-export",
   "GET /flight-lookup/{flightNumber}",
   "GET /flights/enrichment-candidates",
   "GET /flights/geo",

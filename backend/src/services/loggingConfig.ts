@@ -1,191 +1,157 @@
-import { prisma, setDbQueryLoggingEnabled } from "../db";
-import { systemLogger } from "../utils/logger";
+import { prisma } from "../db";
+import logger, {
+  CATEGORY_FILES,
+  FileCategory,
+  setCategoryFileEnabled,
+  setLoggerLevel,
+} from "../utils/logger";
 import { CACHE_TTL, LOGGING_DEFAULTS } from "../config/constants";
 import { ensureAdminSettingsRow } from "./adminSettingsRow";
+import { LoggingConfigResponse, LogLevelName } from "../shared/logContract";
+import { isLogLevel, isVerboseLevel, resolveEffectiveLogLevel } from "../utils/logging/levelPolicy";
+import { setLoggingRuntimeFlags } from "../utils/logging/runtimeFlags";
+import { setRotationSizeMb } from "../utils/logging/fileStreams";
 
 /**
- * Logging Configuration Service
+ * Logging configuration: stored in `admin_settings`, APPLIED to the running
+ * loggers by `applyLoggingConfig()`.
  *
- * Manages logging settings from AdminSettings database.
- * Provides caching to avoid excessive database queries.
+ * Until 2026-09-26 the settings were only stored. The level an admin picked
+ * never reached a logger, the category switches never reached a file, and the
+ * request logger kept a five-minute cache of its own that a save did not clear.
  */
 
-export interface LogConfig {
-  logLevel: string;
-  maxLogFileSize: number;
-  maxLogFiles: number;
-  logHttpRequests: boolean;
-  logDatabaseQueries: boolean;
-  logParserOperations: boolean;
-  logRetentionDays: number;
+export type LogConfig = LoggingConfigResponse;
+
+let configCache: LogConfig | null = null;
+let cacheTimestamp = 0;
+
+function configFrom(
+  settings: {
+    logLevel?: string | null;
+    maxLogFileSize?: number | null;
+    maxLogFiles?: number | null;
+    logHttpRequests?: boolean | null;
+    logDatabaseQueries?: boolean | null;
+    logParserOperations?: boolean | null;
+    logRetentionDays?: number | null;
+  } | null
+): LogConfig {
+  const stored: LogLevelName = isLogLevel(settings?.logLevel) ? settings.logLevel : "info";
+  // Without a row the stored level is unknown, not "info": the default applies.
+  const effective = resolveEffectiveLogLevel(settings ? stored : undefined);
+  return {
+    logLevel: stored,
+    effectiveLogLevel: effective.level,
+    logLevelSource: effective.source,
+    maxLogFileSize: settings?.maxLogFileSize ?? LOGGING_DEFAULTS.MAX_LOG_FILE_SIZE_MB,
+    maxLogFiles: settings?.maxLogFiles ?? LOGGING_DEFAULTS.MAX_LOG_FILES,
+    logHttpRequests: settings?.logHttpRequests ?? false,
+    logDatabaseQueries: settings?.logDatabaseQueries ?? false,
+    logParserOperations: settings?.logParserOperations ?? false,
+    logRetentionDays: settings?.logRetentionDays ?? LOGGING_DEFAULTS.LOG_RETENTION_DAYS,
+  };
 }
 
-// Cache for logging config (5 minute TTL to reduce DB load)
-let configCache: LogConfig | null = null;
-let cacheTimestamp: number = 0;
-const LOGGING_CACHE_TTL = CACHE_TTL.LOGGING_CONFIG;
-
-/**
- * Get current logging configuration from database
- * Uses caching to minimize DB queries
- */
+/** Current configuration, cached for `CACHE_TTL.LOGGING_CONFIG`. */
 export async function getLoggingConfig(): Promise<LogConfig> {
   const now = Date.now();
-
-  // Return cached config if still valid
-  if (configCache && now - cacheTimestamp < LOGGING_CACHE_TTL) {
-    return configCache;
-  }
+  if (configCache && now - cacheTimestamp < CACHE_TTL.LOGGING_CONFIG) return configCache;
 
   try {
     const settings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
-
-    const config: LogConfig = {
-      logLevel: settings?.logLevel ?? "info",
-      maxLogFileSize: settings?.maxLogFileSize ?? LOGGING_DEFAULTS.MAX_LOG_FILE_SIZE_MB,
-      maxLogFiles: settings?.maxLogFiles ?? LOGGING_DEFAULTS.MAX_LOG_FILES,
-      logHttpRequests: settings?.logHttpRequests ?? false,
-      logDatabaseQueries: settings?.logDatabaseQueries ?? false,
-      logParserOperations: settings?.logParserOperations ?? false,
-      logRetentionDays: settings?.logRetentionDays ?? LOGGING_DEFAULTS.LOG_RETENTION_DAYS,
-    };
-
-    // Update cache
-    configCache = config;
+    configCache = configFrom(settings);
     cacheTimestamp = now;
-
-    return config;
+    return configCache;
   } catch (error) {
-    systemLogger.error({
-      operation: "get_logging_config_failed",
-      error: {
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    });
-
-    // Return defaults on error
-    return {
-      logLevel: "info",
-      maxLogFileSize: LOGGING_DEFAULTS.MAX_LOG_FILE_SIZE_MB,
-      maxLogFiles: LOGGING_DEFAULTS.MAX_LOG_FILES,
-      logHttpRequests: false,
-      logDatabaseQueries: false,
-      logParserOperations: false,
-      logRetentionDays: LOGGING_DEFAULTS.LOG_RETENTION_DAYS,
-    };
+    logger.error({ operation: "get_logging_config_failed", error });
+    // Not cached: the next call tries the database again.
+    return configFrom(null);
   }
 }
 
-/**
- * Update logging configuration in database
- * Invalidates cache to ensure fresh reads
- */
-export async function updateLoggingConfig(updates: Partial<LogConfig>): Promise<LogConfig> {
-  try {
-    // One row, created under a lock if the instance has none. This ran at
-    // boot, so it was one of the two racers that could split the singleton.
-    const settings = await prisma.adminSettings.update({
-      where: { id: await ensureAdminSettingsRow() },
-      data: updates,
-    });
-
-    // Invalidate cache
-    configCache = null;
-
-    // Mirror to the sync flag in db.ts so the prisma middleware picks up
-    // the new value immediately without waiting for the 30s refresh tick.
-    const isDebugLevel = settings.logLevel === "debug" || settings.logLevel === "trace";
-    setDbQueryLoggingEnabled(Boolean(settings.logDatabaseQueries) && isDebugLevel);
-
-    systemLogger.info({
-      operation: "logging_config_updated",
-      context: {
-        updates,
-      },
-    });
-
-    // Return fresh config
-    return getLoggingConfig();
-  } catch (error) {
-    systemLogger.error({
-      operation: "update_logging_config_failed",
-      error: {
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    });
-    throw error;
-  }
-}
-
-/**
- * Toggle debug logging on/off (convenience method)
- * Sets logLevel to 'debug' when enabled, 'info' when disabled
- */
-export async function toggleDebugLogging(enabled: boolean): Promise<void> {
-  await updateLoggingConfig({ logLevel: enabled ? "debug" : "info" });
-
-  systemLogger.info({
-    operation: "debug_logging_toggled",
-    context: {
-      enabled,
-    },
+/** Store new settings and apply them to the running loggers at once. */
+export async function updateLoggingConfig(
+  updates: Partial<Omit<LogConfig, "effectiveLogLevel" | "logLevelSource">>
+): Promise<LogConfig> {
+  await prisma.adminSettings.update({
+    where: { id: await ensureAdminSettingsRow() },
+    data: updates,
   });
+  invalidateCache();
+  const applied = await applyLoggingConfig();
+  logger.info({
+    operation: "logging_config_updated",
+    context: { changed: Object.keys(updates), effectiveLogLevel: applied.effectiveLogLevel },
+  });
+  return applied;
+}
+
+export async function toggleDebugLogging(enabled: boolean): Promise<LogConfig> {
+  return updateLoggingConfig({ logLevel: enabled ? "debug" : "info" });
 }
 
 /**
- * Check if debug logging is currently enabled
- * Fast check with caching
+ * Push a configuration into the running process: the level into every logger,
+ * the category switches into their files, the hot-path flags into the request
+ * logger and the query log. Called at boot and after every change.
+ *
+ * Returns the configuration that is now in force.
  */
-export async function isDebugEnabled(): Promise<boolean> {
+export async function applyLoggingConfig(): Promise<LogConfig> {
   const config = await getLoggingConfig();
-  return config.logLevel === "debug" || config.logLevel === "trace";
+  const verbose = isVerboseLevel(config.effectiveLogLevel);
+
+  setLoggerLevel(config.effectiveLogLevel);
+  setRotationSizeMb(config.maxLogFileSize);
+
+  const wanted: Record<FileCategory, boolean> = {
+    // Security events are always written: they are warnings, and the file is
+    // the one an admin opens after something went wrong.
+    security: true,
+    http: verbose && config.logHttpRequests,
+    database: verbose && config.logDatabaseQueries,
+    parser: verbose && config.logParserOperations,
+    "parser-vision": verbose && config.logParserOperations,
+    "parser-text": verbose && config.logParserOperations,
+    "parser-factory": verbose && config.logParserOperations,
+  };
+  const unavailable: string[] = [];
+  for (const category of Object.keys(CATEGORY_FILES) as FileCategory[]) {
+    const attached = setCategoryFileEnabled(category, wanted[category]);
+    if (wanted[category] && !attached) unavailable.push(category);
+  }
+  if (unavailable.length > 0) {
+    logger.warn({ operation: "log_category_files_unavailable", context: { unavailable } });
+  }
+
+  setLoggingRuntimeFlags({
+    httpRequests: wanted.http,
+    databaseQueries: wanted.database,
+  });
+  return config;
 }
 
-/**
- * Check if HTTP request logging is enabled
- */
+export async function isDebugEnabled(): Promise<boolean> {
+  return isVerboseLevel((await getLoggingConfig()).effectiveLogLevel);
+}
+
 export async function shouldLogHttpRequests(): Promise<boolean> {
   const config = await getLoggingConfig();
-  const isDebugLevel = config.logLevel === "debug" || config.logLevel === "trace";
-  return config.logHttpRequests && isDebugLevel;
+  return config.logHttpRequests && isVerboseLevel(config.effectiveLogLevel);
 }
 
-/**
- * Check if database query logging is enabled
- */
 export async function shouldLogDatabaseQueries(): Promise<boolean> {
   const config = await getLoggingConfig();
-  const isDebugLevel = config.logLevel === "debug" || config.logLevel === "trace";
-  return config.logDatabaseQueries && isDebugLevel;
+  return config.logDatabaseQueries && isVerboseLevel(config.effectiveLogLevel);
 }
 
-/**
- * Check if parser operation logging is enabled
- */
 export async function shouldLogParserOperations(): Promise<boolean> {
   const config = await getLoggingConfig();
-  const isDebugLevel = config.logLevel === "debug" || config.logLevel === "trace";
-  return config.logParserOperations && isDebugLevel;
+  return config.logParserOperations && isVerboseLevel(config.effectiveLogLevel);
 }
 
-/**
- * Invalidate configuration cache (use after manual DB updates)
- */
 export function invalidateCache(): void {
   configCache = null;
   cacheTimestamp = 0;
-}
-
-/**
- * Invalidate configuration cache and reinitialize logger streams
- * Call this after updating logging config to apply changes immediately
- */
-export async function invalidateCacheAndReinit(): Promise<void> {
-  invalidateCache();
-
-  // Reinitialize logger streams with new config
-  const { reinitializeCategoryStreams } = await import("../utils/logger");
-  await reinitializeCategoryStreams();
 }

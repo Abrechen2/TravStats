@@ -1,83 +1,51 @@
 import pino from "pino";
-import { createStream } from "rotating-file-stream";
-import path from "path";
 import { v4 as uuidv4 } from "uuid";
-import { Request } from "express";
-import { getLoggingConfig } from "../services/loggingConfig";
+import { LogLevelName } from "../shared/logContract";
+import { closeFileStream, getFileStream } from "./logging/fileStreams";
+import { resolveEffectiveLogLevel } from "./logging/levelPolicy";
 
 /**
- * AI-Optimized Structured Logger with Rolling File Support
+ * Structured JSON logging: one root logger plus stable category loggers.
  *
- * Features:
- * - Multi-transport (console + rotating files)
- * - Category-based logging (http, database, parser, security)
- * - Performance tracking with PerformanceTracker class
- * - Request correlation IDs
- * - Sensitive data redaction
- * - AI-friendly structured JSON format
+ * Every line goes to the console and to `app.log`; error and above also to
+ * `error.log`. A category logger additionally writes its own file
+ * (`security.log`, `http.log`, …) once that file is switched on by
+ * `setCategoryFileEnabled` — which `applyLoggingConfig()` does at boot and on
+ * every settings change.
+ *
+ * The category loggers are created ONCE, here, and never replaced. Until
+ * 2026-09-26 they were bound at import to a stream set built before the
+ * category streams existed, and "re-initialising" built new loggers nobody
+ * held a reference to — so `security.log`, `http.log` and `database.log`
+ * stayed at 0 bytes on every instance. Now the destination of each logger is a
+ * multistream that is updated in place, so the exported constant is the
+ * logger that writes the file.
+ *
+ * The level is applied the same way: `setLoggerLevel` sets the root AND every
+ * category logger, because pino does not propagate a level change.
  */
 
-// Log directory path
-const LOG_DIR = path.join(process.cwd(), "..", "data", "logs");
+const consoleDestination: pino.DestinationStream =
+  process.env.NODE_ENV === "development"
+    ? pino.transport({
+        target: "pino-pretty",
+        options: { colorize: true, translateTime: "HH:MM:ss Z", ignore: "pid,hostname" },
+      })
+    : process.stdout;
 
-// Create rotating file stream with error handling
-function createRotatingStream(
-  category: string,
-  maxSizeMB: number = 10,
-  maxFiles: number = 7
-): NodeJS.WritableStream | null {
-  try {
-    const stream = createStream(`${category}.log`, {
-      size: `${maxSizeMB}M`, // Rotate at configured size
-      interval: "1d", // Daily rotation
-      path: LOG_DIR,
-      compress: "gzip", // Compress rotated files
-      maxFiles, // Keep configured number of files
-    });
+const initialLevel = resolveEffectiveLogLevel(null).level;
 
-    // Register error handler to prevent unhandled errors from crashing the process
-    stream.on("error", (error: NodeJS.ErrnoException) => {
-      // Check if it's a permission error
-      if (error.code === "EACCES" || error.code === "EPERM") {
-        console.warn(`[Logger] Permission denied for log file ${category}.log: ${error.message}`);
-        console.warn(`[Logger] File logging disabled for ${category} - using console only`);
-      } else {
-        console.warn(`[Logger] Error writing to log file ${category}.log: ${error.message}`);
-      }
-
-      // Close the stream gracefully
-      try {
-        if (typeof (stream as NodeJS.WritableStream & { end?: () => void }).end === "function") {
-          (stream as NodeJS.WritableStream & { end: () => void }).end();
-        }
-      } catch (_closeError) {
-        // Ignore errors when closing
-      }
-    });
-
-    return stream;
-  } catch (error: unknown) {
-    // If stream creation fails (e.g., permission denied), log warning and return null
-    const errMsg = error instanceof Error ? error.message : String(error);
-    console.warn(`[Logger] Could not create rotating stream for ${category}.log:`, errMsg);
-    console.warn(`[Logger] File logging disabled for ${category} - using console only`);
-    return null;
-  }
-}
-
-// Cache for dynamic category streams
-const categoryStreams: Map<string, pino.StreamEntry> = new Map();
-
-// Pino configuration for AI-optimized output
 const pinoConfig: pino.LoggerOptions = {
-  level: process.env.LOG_LEVEL || (process.env.NODE_ENV === "production" ? "info" : "debug"),
+  level: initialLevel,
 
-  // Serializers run before the `log` formatter and turn Error instances into
-  // plain, enumerable objects. Without this, `logger.error({ error }, ...)`
-  // logged `"error":{}` because an Error's `message`/`stack` are
-  // non-enumerable and JSON.stringify drops them. We map both the standard
-  // `err` key and the project-wide `error` convention; non-Error values pass
-  // through untouched so existing `{ error: someObject }` sites are unaffected.
+  // No hostname, no pid: neither helps read a log, and both identified the
+  // machine in every exported bundle.
+  base: null,
+
+  // Serializers turn Error instances into plain, enumerable objects. Without
+  // this, `logger.error({ error }, ...)` logged `"error":{}` because an Error's
+  // `message`/`stack` are non-enumerable. Both `err` and the project-wide
+  // `error` key are mapped; non-Error values pass through untouched.
   serializers: {
     err: pino.stdSerializers.err,
     error: (value: unknown) => (value instanceof Error ? pino.stdSerializers.err(value) : value),
@@ -85,31 +53,22 @@ const pinoConfig: pino.LoggerOptions = {
 
   formatters: {
     level: (label) => ({ level: label }),
-
-    // Custom formatter for AI-friendly structure
+    // `category` is written exactly once. It used to come from a child
+    // binding AND from this formatter ("general"), so every category line
+    // carried the key twice and a JSON reader kept the second — "general" —
+    // which is why filtering the log by category found nothing.
     log: (obj: Record<string, unknown>) => {
-      // Restructure for AI consumption
-      const { msg, time, level, category, context, performance, error, requestId, ...rest } = obj;
-
-      const result: Record<string, unknown> = {
-        timestamp: time ? new Date(time as number).toISOString() : new Date().toISOString(),
-        level,
-        category: category || "general",
-        message: msg,
+      const { msg, category, ...rest } = obj;
+      return {
+        category: typeof category === "string" && category ? category : "general",
+        ...(msg !== undefined ? { message: msg } : {}),
+        ...rest,
       };
-
-      if (context) result.context = context;
-      if (performance) result.performance = performance;
-      if (requestId) result.requestId = requestId;
-      if (error) result.error = error;
-
-      return { ...result, ...rest };
     },
   },
 
-  timestamp: pino.stdTimeFunctions.isoTime,
+  timestamp: () => `,"timestamp":"${new Date().toISOString()}"`,
 
-  // Redact sensitive fields
   redact: {
     paths: [
       "password",
@@ -141,519 +100,114 @@ const pinoConfig: pino.LoggerOptions = {
   },
 };
 
-// Create streams array
-const streams: pino.StreamEntry[] = [
-  // Console stream (always enabled)
-  {
-    level: "trace",
-    stream:
-      process.env.NODE_ENV === "development"
-        ? pino.transport({
-            target: "pino-pretty",
-            options: {
-              colorize: true,
-              translateTime: "HH:MM:ss Z",
-              ignore: "pid,hostname",
-            },
-          })
-        : process.stdout,
-  },
-];
-
-// Add file streams (always enabled for error logging, debug mode adds more)
-try {
-  // Ensure log directory exists
-  const fs = require("fs");
-  try {
-    if (!fs.existsSync(LOG_DIR)) {
-      fs.mkdirSync(LOG_DIR, { recursive: true, mode: 0o755 });
-    }
-  } catch (mkdirError: unknown) {
-    // If directory creation fails (e.g., permission denied), log warning but continue
-    // The application will still work with console-only logging
-    const errMsg = mkdirError instanceof Error ? mkdirError.message : String(mkdirError);
-    console.warn(`Could not create log directory ${LOG_DIR}:`, errMsg);
-    console.warn("Logging to files disabled - using console only");
-    // Don't throw - allow application to continue with console logging
-  }
-
-  // Only add file streams if directory exists and is writable
-  if (fs.existsSync(LOG_DIR)) {
-    try {
-      // Test write permissions by creating a test file
-      const testFile = require("path").join(LOG_DIR, ".write-test");
-      try {
-        fs.writeFileSync(testFile, "test");
-        fs.unlinkSync(testFile);
-      } catch {
-        // Directory exists but not writable - skip file streams
-        throw new Error("Log directory is not writable");
-      }
-
-      // App log (all levels) - always enabled
-      const appStream = createRotatingStream("app");
-      if (appStream) {
-        streams.push({
-          level: "trace",
-          stream: appStream,
-        });
-      }
-
-      // Error log (errors only) - always enabled
-      const errorStream = createRotatingStream("error");
-      if (errorStream) {
-        streams.push({
-          level: "error",
-          stream: errorStream,
-        });
-      }
-    } catch (streamError: unknown) {
-      const errMsg = streamError instanceof Error ? streamError.message : String(streamError);
-      console.warn("Could not create log file streams:", errMsg);
-      console.warn("Logging to files disabled - using console only");
-    }
-  }
-
-  // Category-specific logs will be added dynamically via initializeCategoryStreams()
-} catch (error) {
-  console.warn("Could not create log file streams:", error);
+/** Console, app.log and error.log — the destinations every logger shares. */
+function baseStreams(): pino.StreamEntry[] {
+  const entries: pino.StreamEntry[] = [{ level: "trace", stream: consoleDestination }];
+  const app = getFileStream("app");
+  if (app) entries.push({ level: "trace", stream: app });
+  const error = getFileStream("error");
+  if (error) entries.push({ level: "error", stream: error });
+  return entries;
 }
 
-// Create multi-stream logger
-const logger = pino(pinoConfig, pino.multistream(streams));
+const logger = pino(pinoConfig, pino.multistream(baseStreams()));
 
 export default logger;
 
 /**
- * Initialize category-based log streams based on configuration
- * Called on startup and when config changes
+ * The category files and the lowest level each accepts. Security is always
+ * on (see `applyLoggingConfig`); the rest follow the admin's switches.
  */
-export async function initializeCategoryStreams(): Promise<void> {
-  try {
-    const config = await getLoggingConfig();
-    const fs = require("fs");
+export const CATEGORY_FILES = {
+  http: "debug",
+  database: "debug",
+  parser: "debug",
+  "parser-vision": "debug",
+  "parser-text": "debug",
+  "parser-factory": "debug",
+  security: "warn",
+} as const satisfies Record<string, pino.Level>;
 
-    // Ensure log directory exists
-    try {
-      if (!fs.existsSync(LOG_DIR)) {
-        fs.mkdirSync(LOG_DIR, { recursive: true, mode: 0o755 });
-      }
-    } catch (mkdirError: unknown) {
-      // If directory creation fails, skip category streams
-      const errMsg = mkdirError instanceof Error ? mkdirError.message : String(mkdirError);
-      console.warn(`Could not create log directory ${LOG_DIR}:`, errMsg);
-      return;
-    }
+export type FileCategory = keyof typeof CATEGORY_FILES;
 
-    // Only proceed if directory exists and is writable
-    if (!fs.existsSync(LOG_DIR)) {
-      return;
-    }
+/**
+ * pino's multistream at runtime also has `remove(id)` and the `lastId` that
+ * `add` assigned — both used here to swap a category file in place — but its
+ * type declarations omit them. `categoryLogger.test.ts` exercises both against
+ * the real implementation, so a pino upgrade that drops them fails there.
+ */
+type MutableMultiStream = pino.MultiStreamRes & {
+  lastId: number;
+  remove(id: number): pino.MultiStreamRes;
+};
 
-    // Clear existing category streams
-    categoryStreams.clear();
+interface CategoryLogger {
+  logger: pino.Logger;
+  destination: MutableMultiStream;
+  /** The id of the attached category-file entry, when there is one. */
+  fileEntryId: number | null;
+}
 
-    // Always create security log (security events should always be logged)
-    const securityStream = createRotatingStream(
-      "security",
-      config.maxLogFileSize,
-      config.maxLogFiles
-    );
-    if (securityStream) {
-      categoryStreams.set("security", {
-        level: "warn", // Only warnings and errors for security
-        stream: securityStream,
-      });
-    }
+const categoryLoggers = new Map<string, CategoryLogger>();
 
-    // Parser logs (if enabled)
-    if (
-      config.logParserOperations &&
-      (config.logLevel === "debug" || config.logLevel === "trace")
-    ) {
-      // Main parser log (all parser operations)
-      const parserStream = createRotatingStream(
-        "parser",
-        config.maxLogFileSize,
-        config.maxLogFiles
-      );
-      if (parserStream) {
-        categoryStreams.set("parser", {
-          level: "debug",
-          stream: parserStream,
-        });
-      }
+function createCategoryLogger(category: string): pino.Logger {
+  const destination = pino.multistream(baseStreams()) as MutableMultiStream;
+  const categoryLogger = pino({ ...pinoConfig, mixin: () => ({ category }) }, destination);
+  categoryLoggers.set(category, { logger: categoryLogger, destination, fileEntryId: null });
+  return categoryLogger;
+}
 
-      // Detailed parser category logs
-      const parserVisionStream = createRotatingStream(
-        "parser-vision",
-        config.maxLogFileSize,
-        config.maxLogFiles
-      );
-      if (parserVisionStream) {
-        categoryStreams.set("parser-vision", {
-          level: "debug",
-          stream: parserVisionStream,
-        });
-      }
+export const httpLogger = createCategoryLogger("http");
+export const dbLogger = createCategoryLogger("database");
+export const parserLogger = createCategoryLogger("parser");
+export const parserVisionLogger = createCategoryLogger("parser-vision");
+export const parserTextLogger = createCategoryLogger("parser-text");
+export const parserFactoryLogger = createCategoryLogger("parser-factory");
+export const securityLogger = createCategoryLogger("security");
+export const systemLogger = createCategoryLogger("system");
 
-      const parserTextStream = createRotatingStream(
-        "parser-text",
-        config.maxLogFileSize,
-        config.maxLogFiles
-      );
-      if (parserTextStream) {
-        categoryStreams.set("parser-text", {
-          level: "debug",
-          stream: parserTextStream,
-        });
-      }
-
-      const parserFactoryStream = createRotatingStream(
-        "parser-factory",
-        config.maxLogFileSize,
-        config.maxLogFiles
-      );
-      if (parserFactoryStream) {
-        categoryStreams.set("parser-factory", {
-          level: "debug",
-          stream: parserFactoryStream,
-        });
-      }
-    }
-
-    // HTTP logs (if enabled)
-    if (config.logHttpRequests && (config.logLevel === "debug" || config.logLevel === "trace")) {
-      const httpStream = createRotatingStream("http", config.maxLogFileSize, config.maxLogFiles);
-      if (httpStream) {
-        categoryStreams.set("http", {
-          level: "debug",
-          stream: httpStream,
-        });
-      }
-    }
-
-    // Database logs (if enabled)
-    if (config.logDatabaseQueries && (config.logLevel === "debug" || config.logLevel === "trace")) {
-      const databaseStream = createRotatingStream(
-        "database",
-        config.maxLogFileSize,
-        config.maxLogFiles
-      );
-      if (databaseStream) {
-        categoryStreams.set("database", {
-          level: "debug",
-          stream: databaseStream,
-        });
-      }
-    }
-  } catch (error) {
-    console.warn("Could not initialize category streams:", error);
+/** Apply one level to the root logger and every category logger. */
+export function setLoggerLevel(level: LogLevelName): void {
+  logger.level = level;
+  for (const { logger: categoryLogger } of categoryLoggers.values()) {
+    categoryLogger.level = level;
   }
 }
 
 /**
- * Reinitialize category streams (called after config changes)
- * This will reset the logger cache so new loggers are created with updated streams
+ * Attach or detach a category's own file. Idempotent. Returns whether the
+ * file is attached afterwards — false when it was asked for and the directory
+ * cannot be written, which the caller reports instead of assuming success.
  */
-export async function reinitializeCategoryStreams(): Promise<void> {
-  // Close existing streams before creating new ones
-  for (const streamEntry of categoryStreams.values()) {
-    if (
-      streamEntry.stream &&
-      typeof (streamEntry.stream as NodeJS.WritableStream & { end?: () => void }).end === "function"
-    ) {
-      (streamEntry.stream as NodeJS.WritableStream & { end: () => void }).end();
-    }
+export function setCategoryFileEnabled(category: FileCategory, enabled: boolean): boolean {
+  const entry = categoryLoggers.get(category);
+  if (!entry) return false;
+
+  if (enabled) {
+    if (entry.fileEntryId !== null) return true;
+    const stream = getFileStream(category);
+    if (!stream) return false;
+    entry.destination.add({ level: CATEGORY_FILES[category], stream });
+    entry.fileEntryId = entry.destination.lastId;
+    return true;
   }
 
-  // Reset logger cache
-  resetCategoryLoggerCache();
-
-  // Initialize new streams
-  await initializeCategoryStreams();
+  if (entry.fileEntryId !== null) {
+    entry.destination.remove(entry.fileEntryId);
+    entry.fileEntryId = null;
+    closeFileStream(category);
+  }
+  return false;
 }
 
-/**
- * Create streams array for a category logger
- * Includes console, category-specific file stream (if enabled), and base app/error streams
- */
-function createCategoryStreams(category: string): pino.StreamEntry[] {
-  const categoryStreamsArray: pino.StreamEntry[] = [
-    // Always include console
-    {
-      level: "trace",
-      stream:
-        process.env.NODE_ENV === "development"
-          ? pino.transport({
-              target: "pino-pretty",
-              options: {
-                colorize: true,
-                translateTime: "HH:MM:ss Z",
-                ignore: "pid,hostname",
-              },
-            })
-          : process.stdout,
-    },
-  ];
-
-  // Add category-specific file stream if available
-  const categoryStream = categoryStreams.get(category);
-  if (categoryStream) {
-    categoryStreamsArray.push(categoryStream);
-  }
-
-  // Also add to main app.log and error.log (always available)
-  try {
-    const fs = require("fs");
-    if (fs.existsSync(LOG_DIR)) {
-      const appStream = createRotatingStream("app");
-      const errorStream = createRotatingStream("error");
-      if (appStream) {
-        categoryStreamsArray.push({ level: "trace", stream: appStream });
-      }
-      if (errorStream) {
-        categoryStreamsArray.push({ level: "error", stream: errorStream });
-      }
-    }
-  } catch (_error) {
-    // Ignore errors for base streams
-  }
-
-  return categoryStreamsArray;
+/** Categories whose own file is attached right now. */
+export function attachedCategoryFiles(): string[] {
+  return [...categoryLoggers.entries()]
+    .filter(([, entry]) => entry.fileEntryId !== null)
+    .map(([category]) => category);
 }
 
-/**
- * Category logger cache - stores created loggers
- */
-const categoryLoggerCache = new Map<string, pino.Logger>();
-
-/**
- * Get or create a category logger
- * Loggers are created lazily and cached
- */
-function getCategoryLogger(category: string): pino.Logger {
-  if (!categoryLoggerCache.has(category)) {
-    const streams = createCategoryStreams(category);
-    const categoryLogger = pino(pinoConfig, pino.multistream(streams));
-    categoryLoggerCache.set(category, categoryLogger.child({ category }));
-  }
-  return categoryLoggerCache.get(category)!;
-}
-
-/**
- * Reset category logger cache (called after stream reinitialization)
- */
-function resetCategoryLoggerCache(): void {
-  categoryLoggerCache.clear();
-}
-
-/**
- * Category-specific loggers
- * These provide structured logging with automatic category tagging
- * and dedicated file streams when enabled in config
- *
- * Loggers are created lazily on first use and cached.
- * After reinitializeCategoryStreams(), the cache is cleared and new loggers
- * will be created with updated streams on next use.
- *
- * These loggers use the base logger but will also write to category-specific
- * files when streams are initialized via initializeCategoryStreams().
- */
-export const httpLogger = getCategoryLogger("http");
-export const dbLogger = getCategoryLogger("database");
-export const parserLogger = getCategoryLogger("parser");
-export const parserVisionLogger = getCategoryLogger("parser-vision");
-export const parserTextLogger = getCategoryLogger("parser-text");
-export const parserFactoryLogger = getCategoryLogger("parser-factory");
-export const securityLogger = getCategoryLogger("security");
-export const systemLogger = getCategoryLogger("system");
-
-/**
- * Performance Tracker for measuring operation duration
- *
- * Usage:
- * const tracker = new PerformanceTracker('email_parse', { userId, provider: 'ollama' });
- * try {
- *   const result = await parseEmail(...);
- *   tracker.finish({ success: true, flightCount: result.length });
- * } catch (error) {
- *   tracker.finish({ success: false, error: error.message });
- * }
- */
-export class PerformanceTracker {
-  private startTime: number;
-  private startMemory: number;
-  private operation: string;
-  private context: Record<string, unknown>;
-  private loggerInstance: pino.Logger;
-
-  constructor(
-    operation: string,
-    context?: Record<string, unknown>,
-    loggerInstance: pino.Logger = logger
-  ) {
-    this.operation = operation;
-    this.context = context || {};
-    this.startTime = Date.now();
-    this.startMemory = process.memoryUsage().heapUsed;
-    this.loggerInstance = loggerInstance;
-
-    // Log operation start
-    this.loggerInstance.debug({
-      operation: `${operation}_start`,
-      context: this.context,
-      performance: {
-        startTime: new Date(this.startTime).toISOString(),
-        memoryUsed: this.formatBytes(this.startMemory),
-      },
-    });
-  }
-
-  /**
-   * Finish tracking and log results
-   */
-  finish(metadata?: Record<string, unknown>): void {
-    const duration = Date.now() - this.startTime;
-    const endMemory = process.memoryUsage().heapUsed;
-    const memoryDelta = endMemory - this.startMemory;
-
-    this.loggerInstance.debug({
-      operation: `${this.operation}_complete`,
-      context: this.context,
-      performance: {
-        duration,
-        memoryUsed: this.formatBytes(endMemory),
-        memoryDelta: this.formatBytes(memoryDelta),
-      },
-      ...(metadata && { metadata }),
-    });
-  }
-
-  private formatBytes(bytes: number): string {
-    return `${(bytes / 1024 / 1024).toFixed(2)} MB`;
-  }
-}
-
-/**
- * Generate unique request correlation ID
- */
+/** Generate a request correlation id. */
 export function generateRequestId(): string {
   return `req-${uuidv4().substring(0, 8)}`;
-}
-
-/**
- * Extract request context for logging
- */
-interface RequestWithContext extends Request {
-  user?: { id: string };
-  requestId?: string;
-}
-
-export function enrichWithRequest(req: Request): Record<string, unknown> {
-  const reqWithCtx = req as RequestWithContext;
-  return {
-    method: req.method,
-    url: req.url,
-    ip: req.ip,
-    userAgent: req.get("user-agent"),
-    userId: reqWithCtx.user?.id,
-    requestId: reqWithCtx.requestId,
-  };
-}
-
-/**
- * Log HTTP request/response (legacy helper, prefer requestLogger middleware)
- */
-export function logRequest(req: Request, res: { statusCode: number }, duration: number): void {
-  const reqWithCtx = req as RequestWithContext;
-  httpLogger.info({
-    operation: "http_request",
-    context: {
-      method: req.method,
-      url: req.url,
-      status: res.statusCode,
-      ip: req.ip,
-      userAgent: req.get("user-agent"),
-      userId: reqWithCtx.user?.id,
-    },
-    performance: {
-      duration,
-    },
-  });
-}
-
-/**
- * Log database query (legacy helper, prefer Prisma middleware)
- */
-export function logQuery(query: string, duration: number): void {
-  dbLogger.debug({
-    operation: "database_query",
-    context: {
-      query,
-    },
-    performance: {
-      duration,
-    },
-  });
-}
-
-/**
- * Log external API call
- */
-export function logApiCall(
-  service: string,
-  endpoint: string,
-  duration: number,
-  success: boolean
-): void {
-  logger.info({
-    category: "api_call",
-    operation: "external_api_call",
-    context: {
-      service,
-      endpoint,
-      success,
-    },
-    performance: {
-      duration,
-    },
-  });
-}
-
-/**
- * Log achievement unlock
- */
-export function logAchievement(
-  userId: string,
-  achievementId: string,
-  achievementName: string
-): void {
-  logger.info({
-    category: "achievement",
-    operation: "achievement_unlock",
-    context: {
-      userId,
-      achievementId,
-      achievementName,
-    },
-  });
-}
-
-/**
- * Log security event
- */
-export function logSecurityEvent(
-  type: "rate_limit" | "auth_failure" | "invalid_token" | "admin_action" | "suspicious_activity",
-  ip: string,
-  details?: Record<string, unknown>
-): void {
-  securityLogger.warn({
-    operation: "security_event",
-    context: {
-      eventType: type,
-      ip,
-      ...details,
-    },
-  });
 }
