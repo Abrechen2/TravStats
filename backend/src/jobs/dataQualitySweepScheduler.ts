@@ -22,6 +22,7 @@
  * | 03:00 | airline logo refresh sweep |
  * | 03:00–03:59 | usage-stats ping (jittered across the hour) |
  * | 03:20 | place address backfill |
+ * | 03:45 | log retention (logRetentionScheduler.ts) |
  * | every :00 | hourly status sweep |
  * | **04:10** | **this** |
  * | 04:40 | Dawarich country-day sweep |

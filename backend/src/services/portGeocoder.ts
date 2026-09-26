@@ -130,7 +130,8 @@ export async function geocodePort(query: string, limit = 5): Promise<PortGeocode
         signal: controller.signal,
       });
       if (!res.ok) {
-        logger.warn({ status: res.status, q }, "[Port Geocoder] Nominatim non-OK response");
+        logger.warn({ status: res.status }, "[Port Geocoder] Nominatim non-OK response");
+        logger.debug({ status: res.status, q }, "[Port Geocoder] Nominatim non-OK response");
         return { ports: [], failure: res.status === 429 ? "rate_limited" : "unavailable" };
       }
       raw = await res.json();
@@ -159,7 +160,8 @@ export async function geocodePort(query: string, limit = 5): Promise<PortGeocode
     cache.set(key, { at: Date.now(), ports: deduped });
     return { ports: deduped, failure: null };
   } catch (err) {
-    logger.warn({ err, q }, "[Port Geocoder] geocode failed");
+    logger.warn({ err }, "[Port Geocoder] geocode failed");
+    logger.debug({ q }, "[Port Geocoder] geocode failed");
     return { ports: [], failure: "unavailable" };
   }
 }

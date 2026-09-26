@@ -108,7 +108,6 @@ export async function processUserHistoricalEnrichment(userId: string): Promise<{
                 context: {
                   pendingUpdateId,
                   flightId: flight.id,
-                  flightNumber: flight.flightNumber,
                   userId,
                 },
               });

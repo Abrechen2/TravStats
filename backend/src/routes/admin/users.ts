@@ -30,11 +30,7 @@ router.post("/users", async (req: AuthRequest, res: Response, next: NextFunction
     // other way an account is created, and the demo seeder cannot tell the two
     // apart afterwards (data-integrity audit 2026-09-19, finding 1).
     if (isReservedUsername(payload.username)) {
-      throw new AppError(
-        `The username "${payload.username}" is reserved by this instance`,
-        400,
-        "USERNAME_RESERVED"
-      );
+      throw new AppError("This username is reserved by this instance", 400, "USERNAME_RESERVED");
     }
 
     const existing = await prisma.user.findUnique({ where: { username: payload.username } });
@@ -185,7 +181,6 @@ router.delete("/users/:id", async (req: AuthRequest, res: Response, next: NextFu
       operation: "admin_delete_user",
       adminId: req.userId,
       targetUserId: id,
-      targetUsername: user.username,
     });
 
     res.json({ message: "User deleted", userId: id });
@@ -322,7 +317,6 @@ router.post(
         operation: "admin_two_factor_disabled",
         adminId: req.userId,
         targetUserId: id,
-        targetUsername: user.username,
       });
       res.json({ disabled: true });
     } catch (error) {

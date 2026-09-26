@@ -4,6 +4,7 @@ import { AppError } from "./errorHandler";
 import { JWT_SECRET } from "../utils/jwtSecret";
 import { prisma } from "../db";
 import { securityLogger } from "../utils/logger";
+import { requestPathForLog } from "../utils/logging/requestPath";
 import { isSharedDemoAccount } from "../utils/sharedDemo";
 import {
   ApiTokenScope,
@@ -74,7 +75,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
           reason: "no_token",
           ip: req.ip,
           userAgent: req.get("user-agent"),
-          url: req.url,
+          path: requestPathForLog(req),
         },
       });
       throw new AppError("No token provided", 401);
@@ -99,7 +100,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
           userId: decoded.userId,
           ip: req.ip,
           userAgent: req.get("user-agent"),
-          url: req.url,
+          path: requestPathForLog(req),
         },
       });
       throw new AppError("Invalid token - user not found", 401);
@@ -128,7 +129,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
             reason: "session_revoked",
             userId: user.id,
             ip: req.ip,
-            url: req.url,
+            path: requestPathForLog(req),
           },
         });
         throw new AppError("Session expired - please sign in again", 401);
@@ -144,7 +145,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
           userId: decoded.userId,
           ip: req.ip,
           userAgent: req.get("user-agent"),
-          url: req.url,
+          path: requestPathForLog(req),
         },
       });
       throw new AppError("Account has been deactivated", 403);
@@ -163,7 +164,7 @@ export const authenticate = async (req: AuthRequest, res: Response, next: NextFu
           reason: error.message,
           ip: req.ip,
           userAgent: req.get("user-agent"),
-          url: req.url,
+          path: requestPathForLog(req),
         },
       });
       next(new AppError("Invalid token", 401));
@@ -192,7 +193,7 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
         reason: "malformed_pat",
         ip: req.ip,
         userAgent: req.get("user-agent"),
-        url: req.url,
+        path: requestPathForLog(req),
       },
     });
     throw new AppError("Invalid API token", 401);
@@ -213,7 +214,7 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
         reason: "unknown_pat",
         ip: req.ip,
         userAgent: req.get("user-agent"),
-        url: req.url,
+        path: requestPathForLog(req),
       },
     });
     throw new AppError("Invalid API token", 401);
@@ -229,7 +230,7 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
         tokenId: token.id,
         userId: token.userId,
         ip: req.ip,
-        url: req.url,
+        path: requestPathForLog(req),
       },
     });
     throw new AppError("API token revoked", 401);
@@ -252,7 +253,7 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
         tokenId: token.id,
         userId: token.userId,
         ip: req.ip,
-        url: req.url,
+        path: requestPathForLog(req),
       },
     });
     throw new AppError("Invalid API token", 401);
@@ -321,7 +322,7 @@ export const requireBrowserSession = (
       eventType: "pat_browser_only_blocked",
       tokenId: req.apiToken.id,
       userId: req.userId,
-      url: req.url,
+      path: requestPathForLog(req),
     },
   });
   next(new AppError("This action requires a browser session, not an API token", 403));
@@ -343,7 +344,7 @@ export function writeScopeDenial(req: AuthRequest): AppError | null {
       reason: "pat_scope_insufficient",
       tokenId: req.apiToken.id,
       userId: req.userId,
-      url: req.url,
+      path: requestPathForLog(req),
     },
   });
   return new AppError("API token lacks write scope", 403);
@@ -394,7 +395,7 @@ export const requireAdmin = async (req: AuthRequest, res: Response, next: NextFu
           userId: req.userId,
           ip: req.ip,
           userAgent: req.get("user-agent"),
-          url: req.url,
+          path: requestPathForLog(req),
         },
       });
       throw new AppError("Admin access required", 403);

@@ -10,15 +10,17 @@ const router = Router();
 /**
  * GET /api/v1/diagnostic-export
  *
- * Returns a PII-scrubbed JSON bundle an admin can attach to a GitHub issue.
- * Authenticated (the endpoint reads server log files, which are not public),
- * rate-limited, and never persisted. The bundle's identity has been stripped
- * so the reader of the issue sees no user IDs, IPs, emails, tokens, etc.
+ * Returns the diagnostic bundle an admin attaches to a public GitHub issue:
+ * an allowlist of structured fields only (versions, platform, settings that
+ * are booleans/numbers/enums, counts, migration status, and log events reduced
+ * to time/level/category/event key/error code/`file:line`) — see
+ * `services/diagnosticExport.ts`. Authenticated, rate-limited, never persisted.
  *
  * Refused for the SHARED demo account (independent review, 2026-09-17,
  * finding A1). The bundle is server-wide, not caller-scoped: the log tails
  * carry every account's activity, and the scrubber removes identity, not
- * content — flight numbers, routes and timestamps survive it. On a public
+ * content. (Since 2026-09-26 the bundle is an allowlist, but the refusal
+ * stays: it is the shared account, and the log is still the instance's.) On a public
  * instance the demo password is printed on the login page, so without this
  * the whole instance's log is one authenticated GET away from anybody.
  * `rejectDemo`, not `rejectDemoWrites`: this is a GET, and reading is
@@ -27,8 +29,7 @@ const router = Router();
  * Admins only (owner decision, 2026-09-25). The demo refusal alone left every
  * ordinary account able to download every OTHER account's scrubbed activity;
  * an instance's logs belong to whoever runs the instance. `rejectDemo` stays
- * in front so the shared login keeps its own, explicit refusal code. The
- * user-scoped `/diagnostics` snapshot is the caller's own data and stays open.
+ * in front so the shared login keeps its own, explicit refusal code.
  */
 router.get(
   "/diagnostic-export",
@@ -38,13 +39,14 @@ router.get(
   diagnosticExportLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const bundle = await buildDiagnosticBundle(req.userId!);
+      const bundle = await buildDiagnosticBundle();
       logger.info({
         operation: "diagnostic_export",
         userId: req.userId,
         context: {
-          appTailSize: bundle.logs.appTail.length,
-          errorTailSize: bundle.logs.errorTail.length,
+          failedSections: Object.entries(bundle)
+            .filter(([, value]) => (value as { status?: string })?.status === "failed")
+            .map(([name]) => name),
         },
       });
 

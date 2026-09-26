@@ -301,7 +301,7 @@ export async function deriveTemplateFromAnnotation(
       },
     });
 
-    logger.info({ templateId: created.id, domain, name }, "TemplateDeriver: derived new template");
+    logger.info({ templateId: created.id, domain }, "TemplateDeriver: derived new template");
     return { status: "derived", templateId: created.id, domain };
   } catch (err: unknown) {
     logger.error({ err, trainingDataId }, "TemplateDeriver: unexpected error");

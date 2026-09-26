@@ -122,10 +122,15 @@ export async function parseBoardingPass(
             provider,
             fallbackUsed,
             parseDuration,
-            flightNumber: flight.flightNumber,
-            route: `${flight.departureCode} → ${flight.arrivalCode}`,
             missingFields: flight.missing.length,
             quality: calculateParserQuality([flight]),
+          },
+        });
+        visionLog.debug({
+          operation: "vision_parse_success",
+          context: {
+            flightNumber: flight.flightNumber,
+            route: `${flight.departureCode} → ${flight.arrivalCode}`,
           },
         });
       } else {

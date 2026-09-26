@@ -15,6 +15,7 @@ import { registry } from "../registry";
 import { errorContent } from "./shared";
 import { PARSER_SUPPORTED_DOMAINS } from "../../../shared/domains";
 import { parseRetentionFields } from "../../../schemas/document";
+import { diagnosticBundleSchema } from "../../diagnostics/bundleSchema";
 
 const badInput = { description: "Invalid input", content: errorContent };
 const notFound = { description: "Not found", content: errorContent };
@@ -511,12 +512,25 @@ registry.registerPath({
   path: "/diagnostic-export",
   summary: "A support bundle about this instance",
   description:
-    "Redacted: no keys, no passwords, no user content. Admins only — the log " +
-    "tails span every account on the instance.",
+    "An allowlist of structured fields for a public bug report: versions, " +
+    "platform, per-domain account counts, non-secret settings (booleans, " +
+    "numbers, closed enums), row counts, migration status, and recent log " +
+    "events reduced to time, level, category, event key, error code/class and " +
+    "`file:line` frames. No log text, names, URLs, query strings or values. A " +
+    'section that could not be collected is `{status: "failed", errorCode}`. ' +
+    "Admins only — the log spans every account on the instance.",
   tags: miscTag,
   responses: {
-    200: { description: "Diagnostics" },
+    200: {
+      description: "Diagnostic bundle",
+      content: { "application/json": { schema: diagnosticBundleSchema } },
+    },
     403: { description: "Not an admin", content: errorContent },
+    429: { description: "Rate-limited", content: errorContent },
+    500: {
+      description: "The bundle failed its own allowlist (`DIAGNOSTIC_EXPORT_REJECTED`)",
+      content: errorContent,
+    },
   },
 });
 

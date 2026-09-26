@@ -212,9 +212,10 @@ function normalizeBooking(
   }
   if (!ISO_DAY_RE.test(checkIn) || !ISO_DAY_RE.test(checkOut)) {
     logger.info(
-      { operation: "lodging_candidate_discarded", checkIn, checkOut },
+      { operation: "lodging_candidate_discarded" },
       "[Lodging Parser] Discarded a model answer whose dates were not ISO days"
     );
+    logger.debug({ operation: "lodging_candidate_discarded", checkIn, checkOut });
     return null;
   }
 

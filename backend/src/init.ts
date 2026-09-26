@@ -335,32 +335,6 @@ async function init() {
       });
     }
 
-    // Step 7: Initialize category-based log streams
-    console.log("7️⃣  Initializing category-based log streams...");
-    logger.info({
-      operation: "init_log_streams",
-      message: "Initializing category-based log streams",
-    });
-    try {
-      const { initializeCategoryStreams } = await import("./utils/logger");
-      await initializeCategoryStreams();
-      console.log("   ✅ Category log streams initialized\n");
-      logger.info({
-        operation: "init_log_streams_success",
-        message: "Category log streams initialized successfully",
-      });
-    } catch (error) {
-      console.error("   ⚠️  Failed to initialize category log streams");
-      console.error("   Category-specific logging may not work correctly.\n");
-      logger.warn({
-        operation: "init_log_streams_error",
-        message: "Failed to initialize category log streams",
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-    }
-
     console.log("✅ Initialization complete!\n");
     console.log("📝 Next steps:");
     console.log("   - Development: npm run dev");

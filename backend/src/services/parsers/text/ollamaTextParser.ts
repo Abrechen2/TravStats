@@ -256,9 +256,10 @@ export class OllamaTextParser implements ITextParser {
     if (!jsonMatch) {
       const preview = responseText.slice(0, 500).replace(/\s+/g, " ");
       logger.warn(
-        { model: this.model, responsePreview: preview },
+        { model: this.model, responseLength: responseText.length },
         "[Ollama Text Parser] No JSON array found — response did not contain a top-level array"
       );
+      logger.debug({ model: this.model, responsePreview: preview });
       throw new Error("No JSON array found in Ollama response");
     }
 
@@ -268,13 +269,10 @@ export class OllamaTextParser implements ITextParser {
     } catch (err) {
       const preview = jsonMatch[0].slice(0, 500).replace(/\s+/g, " ");
       logger.warn(
-        {
-          model: this.model,
-          matchPreview: preview,
-          error: err instanceof Error ? err.message : String(err),
-        },
+        { model: this.model, error: err instanceof Error ? err.message : String(err) },
         "[Ollama Text Parser] JSON.parse failed on matched array"
       );
+      logger.debug({ model: this.model, matchPreview: preview });
       throw new Error("Ollama response JSON parse failed");
     }
     if (!Array.isArray(flights)) {

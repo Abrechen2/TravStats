@@ -154,7 +154,6 @@ export async function parseEmail(
     log.info({
       operation: "parse_email_start",
       context: {
-        subject,
         textLength: text.length,
         cleanedTextLength: cleanedText.length,
         htmlLength: html ? html.length : 0,

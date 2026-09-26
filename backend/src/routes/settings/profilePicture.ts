@@ -69,7 +69,6 @@ router.post(
           message: "Profile picture validation failed",
           context: {
             userId,
-            filename: req.file.originalname,
             mimetype: req.file.mimetype,
             reason: validation.reason,
           },

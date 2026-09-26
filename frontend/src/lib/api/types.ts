@@ -292,25 +292,7 @@ export interface PendingUpdate {
 
 // ==================== Log / Feedback Interfaces ====================
 
-export interface LogEntry {
-  timestamp: string;
-  level: string;
-  category: string;
-  message: string;
-  context?: Record<string, unknown>;
-  performance?: Record<string, unknown>;
-  requestId?: string;
-  error?: Record<string, unknown>;
-}
-
-export interface LogSearchResult {
-  filename: string;
-  timestamp: string;
-  level: string;
-  category: string;
-  message: string;
-  context?: Record<string, unknown>;
-}
+// The log area's shapes live in `shared/logContract.ts`.
 
 export interface ParserFeedbackEntry {
   id: string;

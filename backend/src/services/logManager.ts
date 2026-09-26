@@ -1,49 +1,28 @@
 import fs from "fs";
 import path from "path";
-import { promisify } from "util";
 import readline from "readline";
 import zlib from "zlib";
-import { systemLogger } from "../utils/logger";
-import { getLoggingConfig } from "./loggingConfig";
-
-const readdir = promisify(fs.readdir);
-const stat = promisify(fs.stat);
-const unlink = promisify(fs.unlink);
+import { AppError } from "../middleware/errorHandler";
+import {
+  LogFileEntry,
+  LogFileInfo,
+  LogReadResponse,
+  LogStatsResponse,
+} from "../shared/logContract";
+import { getLogDir, isSafeLogFileName, parseLogFileName } from "../utils/logging/logFiles";
 
 /**
- * Log Manager Service
+ * The admin log area: list, read, delete and summarise the log files.
  *
- * Handles log file operations:
- * - List log files with metadata
- * - Read and filter log entries
- * - Delete log files
- * - Cleanup old logs based on retention policy
- * - Get statistics
+ * Retention (deleting old files) lives in `logRetention.ts`; the window reader
+ * the diagnostic export uses lives in `logWindow.ts`.
+ *
+ * Every failure a reader can meet is an `AppError` with a stable code —
+ * `LOG_FILE_INVALID_NAME` (400), `LOG_FILE_NOT_FOUND` (404),
+ * `LOG_FILE_UNREADABLE` (500) — which the admin page maps to its own German
+ * and English sentences. It used to be a bare `Error`, i.e. a 500 whose
+ * English message the German page printed as it was.
  */
-
-const LOG_DIR = path.join(process.cwd(), "..", "data", "logs");
-
-export interface LogFileMetadata {
-  filename: string;
-  category: string;
-  size: number;
-  sizeFormatted: string;
-  created: Date;
-  modified: Date;
-  entryCount?: number;
-}
-
-export interface LogEntry {
-  timestamp?: string;
-  level: string;
-  category: string;
-  message: string;
-  context?: Record<string, unknown>;
-  performance?: Record<string, unknown>;
-  error?: Record<string, unknown>;
-  requestId?: string;
-  [key: string]: unknown;
-}
 
 export interface ReadOptions {
   offset?: number;
@@ -53,489 +32,178 @@ export interface ReadOptions {
   search?: string;
 }
 
-export interface LogStats {
-  totalSize: number;
-  totalSizeFormatted: string;
-  fileCount: number;
-  oldestLog?: string;
-  newestLog?: string;
-  categoryBreakdown: Record<string, number>;
-}
+const DEFAULT_READ_LIMIT = 100;
 
-/**
- * Format bytes to human-readable size
- */
-function formatBytes(bytes: number): string {
-  const units = ["B", "KB", "MB", "GB"];
-  let size = bytes;
-  let unitIndex = 0;
-
-  while (size >= 1024 && unitIndex < units.length - 1) {
-    size /= 1024;
-    unitIndex++;
+/** The absolute path of a log file, after the traversal guard. */
+export function resolveLogFile(filename: string): string {
+  if (!isSafeLogFileName(filename)) {
+    throw new AppError("Invalid log file name", 400, "LOG_FILE_INVALID_NAME");
   }
-
-  return `${size.toFixed(2)} ${units[unitIndex]}`;
-}
-
-/**
- * Extract category from filename (e.g., "app-2025-12-06.log" => "app")
- */
-function extractCategory(filename: string): string {
-  const match = filename.match(/^([a-z]+)(-\d{4}-\d{2}-\d{2})?\.log/);
-  return match ? match[1] : "unknown";
-}
-
-/**
- * Validate filename to prevent path traversal attacks
- */
-function validateFilename(filename: string): boolean {
-  // Only allow alphanumeric, dash, dot (for .log extension)
-  const validPattern = /^[a-zA-Z0-9\-.]+\.log(\.gz)?$/;
-  return validPattern.test(filename) && !filename.includes("..");
-}
-
-/**
- * Get full path to log file after validation
- */
-function getLogFilePath(filename: string): string {
-  if (!validateFilename(filename)) {
-    throw new Error("Invalid filename: potential path traversal detected");
+  const filepath = path.join(getLogDir(), filename);
+  if (!fs.existsSync(filepath)) {
+    throw new AppError("Log file not found", 404, "LOG_FILE_NOT_FOUND");
   }
-  return path.join(LOG_DIR, filename);
+  return filepath;
 }
 
-/**
- * List all log files with metadata
- */
-export async function listLogFiles(): Promise<LogFileMetadata[]> {
+/** Plain or gzip — the reader does not care which. */
+export function openLogLines(filepath: string): readline.Interface {
+  const raw = fs.createReadStream(filepath);
+  if (!filepath.endsWith(".gz"))
+    return readline.createInterface({ input: raw, crlfDelay: Infinity });
+  const gunzip = zlib.createGunzip();
+  // `pipe` does not forward errors; the reader must see a failed read, not EOF.
+  raw.on("error", (error) => gunzip.destroy(error));
+  return readline.createInterface({ input: raw.pipe(gunzip), crlfDelay: Infinity });
+}
+
+/** Parse one line; null for blank or malformed lines. */
+export function parseLogLine(line: string): LogFileEntry | null {
+  if (!line.trim()) return null;
   try {
-    // Ensure log directory exists
-    if (!fs.existsSync(LOG_DIR)) {
-      return [];
-    }
+    const parsed: unknown = JSON.parse(line);
+    return parsed && typeof parsed === "object" && !Array.isArray(parsed)
+      ? (parsed as LogFileEntry)
+      : null;
+  } catch {
+    return null;
+  }
+}
 
-    const files = await readdir(LOG_DIR);
-    const logFiles = files.filter((f) => f.endsWith(".log") || f.endsWith(".log.gz"));
+/** When a line was written — `timestamp` since 2026-09-26, `time` before. */
+export function entryTime(entry: LogFileEntry): number {
+  return Date.parse(String(entry.timestamp ?? entry.time ?? ""));
+}
 
-    const metadata: LogFileMetadata[] = await Promise.all(
-      logFiles.map(async (filename) => {
-        const filepath = path.join(LOG_DIR, filename);
-        const stats = await stat(filepath);
+export async function listLogFiles(): Promise<LogFileInfo[]> {
+  const dir = getLogDir();
+  if (!fs.existsSync(dir)) return [];
 
+  const names = (await fs.promises.readdir(dir)).filter((name) => parseLogFileName(name));
+  const files = await Promise.all(
+    names.map(async (filename): Promise<LogFileInfo | null> => {
+      try {
+        const stats = await fs.promises.stat(path.join(dir, filename));
+        const parsed = parseLogFileName(filename)!;
         return {
           filename,
-          category: extractCategory(filename),
+          category: parsed.stream,
           size: stats.size,
-          sizeFormatted: formatBytes(stats.size),
-          created: stats.birthtime,
-          modified: stats.mtime,
+          created: stats.birthtime.toISOString(),
+          modified: stats.mtime.toISOString(),
+          compressed: parsed.compressed,
         };
-      })
-    );
+      } catch {
+        // Rotated or deleted between readdir and stat — not a file any more.
+        return null;
+      }
+    })
+  );
+  return files
+    .filter((file): file is LogFileInfo => file !== null)
+    .sort((a, b) => Date.parse(b.modified) - Date.parse(a.modified));
+}
 
-    // Sort by modified date (newest first)
-    metadata.sort((a, b) => b.modified.getTime() - a.modified.getTime());
-
-    return metadata;
-  } catch (error) {
-    systemLogger.error({
-      operation: "list_log_files_failed",
-      error: {
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    });
-    throw error;
-  }
+function matches(entry: LogFileEntry, line: string, options: ReadOptions): boolean {
+  if (options.level && entry.level !== options.level) return false;
+  if (options.category && entry.category !== options.category) return false;
+  if (options.search && !line.toLowerCase().includes(options.search.toLowerCase())) return false;
+  return true;
 }
 
 /**
- * Read log file with filtering and pagination
+ * One page of a file's entries, NEWEST first, with the total that matched.
+ *
+ * Files are chronological, so the newest page is at the end: every matching
+ * line is counted, and only the last `offset + limit` are kept in a ring.
  */
 export async function readLogFile(
   filename: string,
   options: ReadOptions = {}
-): Promise<LogEntry[]> {
-  const { offset = 0, limit = 100, level, category, search } = options;
+): Promise<LogReadResponse> {
+  const offset = options.offset ?? 0;
+  const limit = options.limit ?? DEFAULT_READ_LIMIT;
+  const filepath = resolveLogFile(filename);
+  const keep = offset + limit;
 
+  // A fixed-size ring of the newest `keep` matches; slot `total % keep`
+  // is overwritten as the file goes on.
+  const ring: LogFileEntry[] = new Array(keep);
+  let total = 0;
   try {
-    const filepath = getLogFilePath(filename);
-
-    // Check if file exists
-    if (!fs.existsSync(filepath)) {
-      throw new Error(`Log file not found: ${filename}`);
+    for await (const line of openLogLines(filepath)) {
+      const entry = parseLogLine(line);
+      if (!entry || !matches(entry, line, options)) continue;
+      ring[total % keep] = entry;
+      total++;
     }
-
-    // Cannot read gzipped files directly (would need decompression)
-    if (filename.endsWith(".gz")) {
-      throw new Error("Cannot read compressed log files. Download and decompress first.");
-    }
-
-    const entries: LogEntry[] = [];
-    let skipped = 0;
-    let collected = 0;
-
-    const fileStream = fs.createReadStream(filepath);
-    const rl = readline.createInterface({
-      input: fileStream,
-      crlfDelay: Infinity,
-    });
-
-    for await (const line of rl) {
-      if (!line.trim()) continue;
-
-      try {
-        const entry: LogEntry = JSON.parse(line);
-
-        // Apply filters
-        if (level && entry.level !== level) continue;
-        if (category && entry.category !== category) continue;
-        if (search && !JSON.stringify(entry).toLowerCase().includes(search.toLowerCase())) continue;
-
-        // Apply pagination
-        if (skipped < offset) {
-          skipped++;
-          continue;
-        }
-
-        if (collected >= limit) {
-          break;
-        }
-
-        entries.push(entry);
-        collected++;
-      } catch (_parseError) {
-        // Skip malformed log lines
-        continue;
-      }
-    }
-
-    return entries;
-  } catch (error) {
-    systemLogger.error({
-      operation: "read_log_file_failed",
-      context: {
-        filename,
-        options,
-      },
-      error: {
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    });
-    throw error;
-  }
-}
-
-/**
- * Options for readLogWindow — capped so a flooded log can't blow up the
- * diagnostic bundle.
- */
-export interface ReadWindowOptions {
-  maxEntries?: number;
-  maxBytes?: number;
-}
-
-const DEFAULT_MAX_ENTRIES = 5000;
-const DEFAULT_MAX_BYTES = 2 * 1024 * 1024; // 2 MiB of JSON
-
-/**
- * Read a time-bounded window of log entries for a given prefix
- * ('app' | 'error'). Scans the active file plus rotated .gz files
- * newest-first and stops as soon as it encounters an entry older than the
- * cutoff (logs are chronological). Respects caps on entry count and
- * approximate JSON size (measured in UTF-16 code units of the source line
- * — cheap, and close enough to bytes for log-sized ASCII-majority
- * payloads). The first cap to be hit wins.
- */
-export async function readLogWindow(
-  prefix: "app" | "error",
-  windowMs: number,
-  opts: ReadWindowOptions = {}
-): Promise<LogEntry[]> {
-  const maxEntries = opts.maxEntries ?? DEFAULT_MAX_ENTRIES;
-  const maxBytes = opts.maxBytes ?? DEFAULT_MAX_BYTES;
-  const cutoffMs = Date.now() - windowMs;
-
-  // Newest-first file ordering: active file, then rotated .gz by mtime desc.
-  const candidates = await listLogFiles();
-  const ordered = candidates
-    .filter((f) => {
-      if (f.filename === `${prefix}.log`) return true;
-      if (!f.filename.endsWith(`.log.gz`)) return false;
-      // Accept either `<prefix>-<date>.log.gz` or `<date...>-<prefix>.log.gz`.
-      // The dash separator prevents prefix collisions like `errorapp.log.gz`
-      // matching for prefix="error".
-      return f.filename.startsWith(`${prefix}-`) || f.filename.endsWith(`-${prefix}.log.gz`);
-    })
-    .sort((a, b) => {
-      // Active file (no extension before .log) always wins
-      if (a.filename === `${prefix}.log`) return -1;
-      if (b.filename === `${prefix}.log`) return 1;
-      return b.modified.getTime() - a.modified.getTime();
-    });
-
-  const entries: LogEntry[] = [];
-  let charBudget = 0;
-
-  outer: for (const file of ordered) {
-    const filepath = path.join(LOG_DIR, file.filename);
-    let anyInsideWindow = false;
-
-    try {
-      const stream = file.filename.endsWith(".gz")
-        ? fs.createReadStream(filepath).pipe(zlib.createGunzip())
-        : fs.createReadStream(filepath);
-      const rl = readline.createInterface({ input: stream, crlfDelay: Infinity });
-
-      for await (const line of rl) {
-        if (!line.trim()) continue;
-        let parsed: LogEntry;
-        try {
-          parsed = JSON.parse(line) as LogEntry;
-        } catch {
-          continue;
-        }
-        if (
-          typeof parsed.timestamp === "string" &&
-          typeof parsed.time === "string" &&
-          parsed.timestamp === parsed.time
-        ) {
-          delete parsed.timestamp;
-        }
-        const entryTime = Date.parse(String(parsed.time ?? parsed.timestamp ?? ""));
-        if (!Number.isFinite(entryTime) || entryTime < cutoffMs) continue;
-        anyInsideWindow = true;
-
-        const encoded = line.length;
-        if (entries.length >= maxEntries || charBudget + encoded > maxBytes) {
-          rl.close();
-          break outer;
-        }
-        entries.push(parsed);
-        charBudget += encoded;
-      }
-    } catch (error) {
-      systemLogger.warn({
-        operation: "read_log_window_file_failed",
-        context: { filename: file.filename },
-        error: {
-          message: error instanceof Error ? error.message : "Unknown error",
-        },
-      });
-      // Continue with the next (older) file
-      continue;
-    }
-
-    // If this (older) file had no in-window entries, older files are safe to skip.
-    // The active file is always read regardless.
-    if (!anyInsideWindow && file.filename !== `${prefix}.log`) break;
+  } catch {
+    throw new AppError("Log file could not be read", 500, "LOG_FILE_UNREADABLE");
   }
 
-  return entries;
+  const entries: LogFileEntry[] = [];
+  for (let i = offset; i < Math.min(offset + limit, total); i++) {
+    entries.push(ring[(total - 1 - i) % keep]);
+  }
+  return { filename, entries, total, offset, limit, hasMore: offset + entries.length < total };
 }
 
-/**
- * Delete a specific log file
- */
 export async function deleteLogFile(filename: string): Promise<void> {
-  try {
-    const filepath = getLogFilePath(filename);
-
-    if (!fs.existsSync(filepath)) {
-      throw new Error(`Log file not found: ${filename}`);
-    }
-
-    await unlink(filepath);
-
-    systemLogger.info({
-      operation: "log_file_deleted",
-      context: {
-        filename,
-      },
-    });
-  } catch (error) {
-    systemLogger.error({
-      operation: "delete_log_file_failed",
-      context: {
-        filename,
-      },
-      error: {
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    });
-    throw error;
-  }
+  const filepath = resolveLogFile(filename);
+  await fs.promises.unlink(filepath);
 }
 
-/**
- * Cleanup old log files based on retention policy
- */
-export async function cleanupOldLogs(): Promise<number> {
-  try {
-    const config = await getLoggingConfig();
-    const retentionMs = config.logRetentionDays * 24 * 60 * 60 * 1000;
-    const cutoffDate = new Date(Date.now() - retentionMs);
-
-    const files = await listLogFiles();
-    let deletedCount = 0;
-
-    for (const file of files) {
-      if (file.modified < cutoffDate) {
-        try {
-          await deleteLogFile(file.filename);
-          deletedCount++;
-        } catch (error) {
-          // Log error but continue cleanup
-          systemLogger.warn({
-            operation: "cleanup_file_failed",
-            context: {
-              filename: file.filename,
-            },
-            error: {
-              message: error instanceof Error ? error.message : "Unknown error",
-            },
-          });
-        }
-      }
-    }
-
-    if (deletedCount > 0) {
-      systemLogger.info({
-        operation: "log_cleanup_completed",
-        context: {
-          deletedCount,
-          retentionDays: config.logRetentionDays,
-        },
-      });
-    }
-
-    return deletedCount;
-  } catch (error) {
-    systemLogger.error({
-      operation: "cleanup_old_logs_failed",
-      error: {
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    });
-    throw error;
+export async function getLogStats(): Promise<LogStatsResponse> {
+  const files = await listLogFiles();
+  const categoryBreakdown: Record<string, number> = {};
+  let totalSize = 0;
+  let oldest: string | null = null;
+  let newest: string | null = null;
+  for (const file of files) {
+    totalSize += file.size;
+    categoryBreakdown[file.category] = (categoryBreakdown[file.category] ?? 0) + 1;
+    if (!oldest || file.modified < oldest) oldest = file.modified;
+    if (!newest || file.modified > newest) newest = file.modified;
   }
+  return {
+    totalSize,
+    fileCount: files.length,
+    oldestLogAt: oldest,
+    newestLogAt: newest,
+    categoryBreakdown,
+  };
 }
 
-/**
- * Get logging statistics
- */
-export async function getLogStats(): Promise<LogStats> {
-  try {
-    const files = await listLogFiles();
-
-    if (files.length === 0) {
-      return {
-        totalSize: 0,
-        totalSizeFormatted: "0 B",
-        fileCount: 0,
-        categoryBreakdown: {},
-      };
-    }
-
-    const totalSize = files.reduce((sum, file) => sum + file.size, 0);
-    const categoryBreakdown: Record<string, number> = {};
-
-    files.forEach((file) => {
-      if (!categoryBreakdown[file.category]) {
-        categoryBreakdown[file.category] = 0;
-      }
-      categoryBreakdown[file.category]++;
-    });
-
-    // Sort files by modified date
-    files.sort((a, b) => a.modified.getTime() - b.modified.getTime());
-
-    return {
-      totalSize,
-      totalSizeFormatted: formatBytes(totalSize),
-      fileCount: files.length,
-      oldestLog: files[0]?.filename,
-      newestLog: files[files.length - 1]?.filename,
-      categoryBreakdown,
-    };
-  } catch (error) {
-    systemLogger.error({
-      operation: "get_log_stats_failed",
-      error: {
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-      },
-    });
-    throw error;
-  }
-}
-
-/**
- * Search across all log files (expensive operation, use sparingly)
- */
+/** Search the newest files (plain and compressed) — at most 10 files, 1000 hits. */
 export async function searchLogs(query: {
   query?: string;
   level?: string;
   category?: string;
   startDate?: Date;
   endDate?: Date;
-}): Promise<LogEntry[]> {
-  try {
-    const files = await listLogFiles();
-    const results: LogEntry[] = [];
+}): Promise<LogFileEntry[]> {
+  const files = (await listLogFiles()).filter((file) => {
+    const modified = Date.parse(file.modified);
+    if (query.startDate && modified < query.startDate.getTime()) return false;
+    if (query.endDate && modified > query.endDate.getTime()) return false;
+    return true;
+  });
 
-    // Filter files by date range
-    let filesToSearch = files;
-    if (query.startDate || query.endDate) {
-      filesToSearch = files.filter((file) => {
-        if (query.startDate && file.modified < query.startDate) return false;
-        if (query.endDate && file.modified > query.endDate) return false;
-        return true;
-      });
-    }
-
-    // Search each file (limit to 10 files to prevent abuse)
-    for (const file of filesToSearch.slice(0, 10)) {
-      if (file.filename.endsWith(".gz")) continue; // Skip compressed files
-
-      const entries = await readLogFile(file.filename, {
-        limit: 1000, // Max 1000 entries per file
-        level: query.level,
-        category: query.category,
-        search: query.query,
-      });
-
-      results.push(...entries);
-
-      // Limit total results to 1000
-      if (results.length >= 1000) {
-        break;
-      }
-    }
-
-    return results;
-  } catch (error) {
-    systemLogger.error({
-      operation: "search_logs_failed",
-      context: {
-        query,
-      },
-      error: {
-        message: error instanceof Error ? error.message : "Unknown error",
-        stack: error instanceof Error ? error.stack : undefined,
-      },
+  const results: LogFileEntry[] = [];
+  for (const file of files.slice(0, 10)) {
+    const page = await readLogFile(file.filename, {
+      limit: 1000,
+      level: query.level,
+      category: query.category,
+      search: query.query,
     });
-    throw error;
+    results.push(...page.entries);
+    if (results.length >= 1000) break;
   }
+  return results.slice(0, 1000);
 }
 
-/**
- * Get path to log file (for download endpoints)
- */
-export function getLogFilePathForDownload(filename: string): string {
-  return getLogFilePath(filename);
+/** Content type for a download: gzip for a rotated file, NDJSON otherwise. */
+export function logFileContentType(filename: string): string {
+  return filename.endsWith(".gz") ? "application/gzip" : "application/x-ndjson";
 }

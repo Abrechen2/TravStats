@@ -80,11 +80,7 @@ router.post("/initialize", authLimiter, async (req: Request, res: Response, next
     // — that account is the administrator, and `CREATE_DEMO_USER` on the same
     // boot would have met it before the flag existed to protect it.
     if (isReservedUsername(username)) {
-      throw new AppError(
-        `The username "${username}" is reserved by this instance`,
-        400,
-        "USERNAME_RESERVED"
-      );
+      throw new AppError("This username is reserved by this instance", 400, "USERNAME_RESERVED");
     }
 
     // Hashing stays outside the lock: it is the slow part and it needs nothing

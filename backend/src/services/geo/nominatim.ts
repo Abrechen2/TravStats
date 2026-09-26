@@ -156,7 +156,8 @@ async function fetchCoordinates(query: string, baseUrl: string): Promise<Coordin
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!res.ok) {
-    logger.warn({ query, status: res.status }, "geocoding lookup non-OK");
+    logger.warn({ status: res.status }, "geocoding lookup non-OK");
+    logger.debug({ query, status: res.status }, "geocoding lookup non-OK");
     // A 5xx, a 429 or a timeout says nothing about the place — it says the
     // provider is having a moment. Returning null here made the caller cache
     // it as a confirmed miss for the life of the process, so one bad minute
@@ -169,12 +170,14 @@ async function fetchCoordinates(query: string, baseUrl: string): Promise<Coordin
   }
   const rows = (await res.json()) as NominatimRow[];
   if (!Array.isArray(rows) || rows.length === 0) {
-    logger.warn({ query }, "geocoding found no results");
+    logger.warn("geocoding found no results");
+    logger.debug({ query }, "geocoding found no results");
     return null;
   }
   const coords = parseRow(rows[0]);
   if (coords === null) {
-    logger.warn({ query, row: rows[0] }, "geocoding response had unparseable coordinates");
+    logger.warn("geocoding response had unparseable coordinates");
+    logger.debug({ query, row: rows[0] }, "geocoding response had unparseable coordinates");
   }
   return coords;
 }
@@ -220,7 +223,8 @@ export async function geocodeAddress(parts: GeocodeParts): Promise<Coordinates |
       cache.set(key, coords);
       return coords;
     } catch (error) {
-      logger.warn({ error, query }, "geocoding failed");
+      logger.warn({ error }, "geocoding failed");
+      logger.debug({ query }, "geocoding failed");
       return null;
     }
   });
@@ -249,7 +253,8 @@ async function fetchAddress(
     signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
   });
   if (!res.ok) {
-    logger.warn({ lat, lon, status: res.status }, "reverse geocoding non-OK");
+    logger.warn({ status: res.status }, "reverse geocoding non-OK");
+    logger.debug({ lat, lon, status: res.status }, "reverse geocoding non-OK");
     // Same rule as `fetchCoordinates`: a 429/5xx/timeout says nothing about
     // the point. Returning null here cached "no address" for the process
     // lifetime and told the map modal the pin was in open water.
@@ -261,7 +266,8 @@ async function fetchAddress(
   const row = (await res.json()) as NominatimReverseRow;
   const a = row?.address;
   if (!a) {
-    logger.warn({ lat, lon }, "reverse geocoding returned no address block");
+    logger.warn("reverse geocoding returned no address block");
+    logger.debug({ lat, lon }, "reverse geocoding returned no address block");
     return null;
   }
   // Nominatim names the settlement differently by place type, so all four
@@ -356,7 +362,8 @@ export async function reverseGeocodeDetailed(
       // Transient (timeout, network blip) — deliberately NOT cached, so the
       // next save retries instead of being told "no address" for the process
       // lifetime.
-      logger.warn({ error, lat, lon }, "reverse geocoding failed");
+      logger.warn({ error }, "reverse geocoding failed");
+      logger.debug({ lat, lon }, "reverse geocoding failed");
       return { parts: null, degraded: true };
     }
   });

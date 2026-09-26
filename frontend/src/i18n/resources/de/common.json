@@ -46,19 +46,31 @@
     "reportBugOpened": "Bundle heruntergeladen – die .json-Datei im neuen Tab in den Report ziehen",
     "reportBugHint": "Öffnet GitHub mit vorausgefülltem Fehler-Template und lädt das Diagnose-Bundle zum Anhängen herunter (zum Einfügen meist zu groß)",
     "title": "Diagnose-Export für GitHub-Issue",
-    "description": "Lade ein bereinigtes Diagnose-Paket herunter, das du einem GitHub-Issue anhängen kannst. Das Paket enthält die letzten Log-Einträge sowie System- und Versionsinfos. Alle persönlichen Daten wurden entfernt:",
-    "scrubList": {
-      "ip": "IP-Adressen → <redacted:ip>",
-      "email": "E-Mail-Adressen → <redacted:email>",
-      "tokens": "JWT-Tokens → <redacted:jwt>",
-      "uuids": "UUIDs (User-IDs, Flug-IDs) → <redacted:uuid>"
-    },
+    "description": "Erzeugt ein Diagnose-Paket, das du einem GitHub-Issue anhängen kannst. Es wird nur aus festen, strukturierten Feldern gebaut:",
     "generating": "Erzeuge Diagnose-Paket...",
     "copy": "In Zwischenablage kopieren",
     "copied": "Diagnose-Paket kopiert – bitte ins GitHub-Issue einfügen",
     "copyFailed": "Kopieren fehlgeschlagen",
     "download": "Als Datei speichern",
-    "error": "Diagnose-Export fehlgeschlagen"
+    "error": "Diagnose-Export fehlgeschlagen",
+    "includes": {
+      "versions": "App- und Build-Version, Node-Version, Betriebssystem und Architektur",
+      "settings": "Instanz-Einstellungen als Schalter, Zahlen und feste Auswahlwerte – und nur, ob eine Integration eingerichtet ist, nie ihre Adresse oder ihr Schlüssel",
+      "counts": "Anzahlen: Konten je aktiviertem Bereich, Einträge je Tabelle, Stand der Datenbank-Migrationen",
+      "events": "Log-Ereignisse der letzten 24 Stunden (Fehler: 7 Tage) als Zeitpunkt, Level, Kategorie, Ereignisschlüssel, Fehlercode und -klasse und Code-Stelle (Dateiname:Zeile)"
+    },
+    "excludes": "Nicht enthalten: Log-Texte, Namen, Benutzernamen, E-Mail-Adressen, Buchungscodes, Flüge und Orte, URLs mit Query-Strings, IP-Adressen, Rechnername, Verzeichnispfade und alle Werte aus Anfragen.",
+    "previewLabel": "Vorschau – genau diese Datei wird heruntergeladen:",
+    "failedSection": "Abschnitt „{{section}}“ konnte nicht erfasst werden (Code {{code}}) und ist im Paket als fehlgeschlagen markiert.",
+    "exportFailed": "Das Diagnose-Paket konnte nicht erzeugt werden: {{reason}}. „Fehler melden“ öffnet das GitHub-Issue trotzdem – dann ohne Anhang.",
+    "exportFailedToast": "Issue ohne Diagnose-Paket geöffnet – der Export ist fehlgeschlagen.",
+    "reasons": {
+      "rateLimited": "zu viele Exporte in kurzer Zeit, bitte später erneut versuchen",
+      "forbidden": "nur Administratoren dürfen ein Diagnose-Paket erzeugen",
+      "rejected": "das Paket hat die eigene Prüfliste nicht bestanden und wurde zurückgehalten",
+      "network": "der Server ist nicht erreichbar",
+      "server": "Serverfehler (HTTP {{status}})"
+    }
   },
   "accessibility": {
     "close": "Schließen",

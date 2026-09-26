@@ -55,12 +55,14 @@ export class RegexTextParser implements ITextParser {
       const flights = this.parseMultipleFlights(source);
 
       logger.info(
+        { flightCount: flights.length, missing: flights.map((f) => f.missing.length) },
+        "[Regex Parser] Parsing complete"
+      );
+      logger.debug(
         {
-          flightCount: flights.length,
           flights: flights.map((f) => ({
             flightNumber: f.flightNumber,
             route: `${f.departureCode} → ${f.arrivalCode}`,
-            missing: f.missing.length,
           })),
         },
         "[Regex Parser] Parsing complete"
@@ -68,7 +70,8 @@ export class RegexTextParser implements ITextParser {
 
       return flights;
     } catch (error) {
-      logger.error({ error, subject }, "[Regex Parser] Unexpected error during parsing");
+      logger.error({ error }, "[Regex Parser] Unexpected error during parsing");
+      logger.debug({ subject }, "[Regex Parser] Unexpected error during parsing");
       throw error;
     }
   }

@@ -7,6 +7,7 @@ import { prisma } from "../../db";
 import { createApiTokenSchema, type SanitizedApiToken } from "../../schemas/apiToken";
 import { generateApiToken } from "../../utils/apiTokens";
 import logger, { securityLogger } from "../../utils/logger";
+import { requestPathForLog } from "../../utils/logging/requestPath";
 
 /**
  * Personal Access Token (PAT) management routes.
@@ -34,7 +35,7 @@ router.use((req: AuthRequest, _res: Response, next: NextFunction) => {
         eventType: "pat_self_management_blocked",
         tokenId: req.apiToken.id,
         userId: req.userId,
-        url: req.url,
+        path: requestPathForLog(req),
       },
     });
     next(new AppError("Token management requires a browser session, not an API token", 403));

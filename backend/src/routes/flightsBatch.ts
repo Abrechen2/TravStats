@@ -65,7 +65,8 @@ router.post(
       const nowIso = new Date().toISOString().slice(0, 19);
       for (const data of parsedFlights) {
         if (data.status === "scheduled" && data.departureLocal && data.departureLocal < nowIso) {
-          logger.warn({
+          logger.warn({ operation: "flight_batch_scheduled_in_past", userId });
+          logger.debug({
             operation: "flight_batch_scheduled_in_past",
             userId,
             departureLocal: data.departureLocal,
@@ -444,7 +445,7 @@ router.post(
           });
 
           logger.info(
-            { tripId: trip.id, pnr, flightCount: flightIds.length },
+            { tripId: trip.id, flightCount: flightIds.length },
             "[Batch] Auto-created trip from PNR group"
           );
         }

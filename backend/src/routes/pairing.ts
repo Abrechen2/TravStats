@@ -15,6 +15,7 @@ import {
 import { getPublicBaseUrl } from "../services/instanceSettingsService";
 import { generateApiToken } from "../utils/apiTokens";
 import { securityLogger } from "../utils/logger";
+import { requestPathForLog } from "../utils/logging/requestPath";
 
 /**
  * Device-pairing routes, mounted at /api/v1/pairing.
@@ -67,7 +68,7 @@ const cookieOnly = (req: AuthRequest, _res: Response, next: NextFunction): void 
         eventType: "pat_pairing_blocked",
         tokenId: req.apiToken.id,
         userId: req.userId,
-        url: req.url,
+        path: requestPathForLog(req),
       },
     });
     next(new AppError("Device pairing requires a browser session, not an API token", 403));
@@ -139,7 +140,7 @@ router.post(
             eventType: "pairing_claim_rejected",
             reason: claim.outcome,
             ip: req.ip,
-            url: req.url,
+            path: requestPathForLog(req),
           },
         });
         // A code this instance never minted almost always means the phone is

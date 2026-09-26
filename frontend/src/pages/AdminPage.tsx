@@ -2,7 +2,6 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useToastStore } from "../store/toastStore";
 import { adminApi } from "../lib/api";
-import axios from "axios";
 import { logger } from "../lib/logger";
 import AppShell from "../components/ui/AppShell";
 import PageHeader from "../components/ui/PageHeader";
@@ -13,6 +12,7 @@ import { useSectionInView } from "../hooks/useSectionInView";
 import { DOMAINS } from "../shared/domains";
 import { useTranslation } from "../hooks/useTranslation";
 import { copyToClipboard } from "../lib/clipboard";
+import { useLoggingAdmin } from "./Admin/useLoggingAdmin";
 import { normalizeSectionId } from "../lib/sectionAliases";
 import type { ActiveSection, TabId } from "./Admin/adminSections";
 import { TAB_FOR_SECTION, LAZY_ADMIN_SECTIONS } from "./Admin/adminSections";
@@ -27,19 +27,17 @@ import type { SystemInfoData, AdminUser } from "../components/Admin/SystemInfo";
 import type { Invitation } from "../components/Admin/InvitationManagement";
 import type { GlobalApiKeys, ParserApiKeySettings } from "../components/Admin/GlobalApiKeysManager";
 import type { ParserSettingsData } from "../components/Admin/ParserSettings";
-import type { LoggingConfig, LogFile, LogStats } from "../components/Admin/LoggingManager";
 
 // ==================== Helpers ====================
 
-interface ApiErrorResponse {
-  error?: string;
-  message?: string;
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    return error.response?.data?.error || error.response?.data?.message || fallback;
-  }
+/**
+ * The toast text for a failed admin call: the caller's own sentence in the
+ * reader's language. Never the server's `error` field — that is English
+ * prose written for a log, and printing it put English into the German page.
+ * Sections that can tell failures apart map the server's stable `code`
+ * themselves (the log section: `logErrorCopy`).
+ */
+function getErrorMessage(_error: unknown, fallback: string): string {
   return fallback;
 }
 
@@ -59,9 +57,6 @@ export default function AdminPage(): JSX.Element {
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [parserSettings, setParserSettings] = useState<ParserSettingsData | null>(null);
-  const [loggingConfig, setLoggingConfig] = useState<LoggingConfig | null>(null);
-  const [logFiles, setLogFiles] = useState<LogFile[]>([]);
-  const [logStats, setLogStats] = useState<LogStats | null>(null);
   const [loading, setLoading] = useState(true);
   // Tab state + URL sync + drift guard live in the shared useDomainTabs
   // hook. Filtered by enabledDomains, URL param "tab", activeTab resets
@@ -119,7 +114,19 @@ export default function AdminPage(): JSX.Element {
     "all" | "active" | "used" | "expired"
   >("active");
   const [savingParsers, setSavingParsers] = useState(false);
-  const [savingLogging, setSavingLogging] = useState(false);
+  const {
+    loggingConfig,
+    setLoggingConfig,
+    logFiles,
+    logStats,
+    savingLogging,
+    loadLoggingData,
+    handleToggleDebugLogging,
+    handleSaveLoggingConfig,
+    handleDownloadLogFile,
+    handleDeleteLogFile,
+    handleCleanupLogs,
+  } = useLoggingAdmin(t, addToast);
   const [globalApiKeys, setGlobalApiKeys] = useState<GlobalApiKeys | null>(null);
   const [savingGlobalApiKeys, setSavingGlobalApiKeys] = useState(false);
   const [ollamaTestState, setOllamaTestState] = useState<{
@@ -159,21 +166,6 @@ export default function AdminPage(): JSX.Element {
       setGlobalApiKeys(data);
     } catch (error) {
       logger.error("Failed to load global API keys:", error);
-    }
-  };
-
-  const loadLoggingData = async (): Promise<void> => {
-    try {
-      const [configData, filesData, statsData] = await Promise.all([
-        adminApi.getLoggingConfig(),
-        adminApi.getLogFiles(),
-        adminApi.getLogStats(),
-      ]);
-      setLoggingConfig(configData);
-      setLogFiles(filesData.files);
-      setLogStats(statsData);
-    } catch (error) {
-      logger.error("Failed to load logging data:", error);
     }
   };
 
@@ -372,88 +364,6 @@ export default function AdminPage(): JSX.Element {
         status: "error",
         message: getErrorMessage(error, t("admin:toasts.ollamaTestFailed")),
       });
-    }
-  };
-
-  const handleToggleDebugLogging = async (): Promise<void> => {
-    if (!loggingConfig) return;
-    const newState = loggingConfig.logLevel !== "debug";
-    try {
-      await adminApi.toggleDebugLogging(newState);
-      await loadLoggingData();
-      addToast(
-        "success",
-        t("admin:toasts.debugLoggingToggled", {
-          state: newState ? t("admin:toasts.enabled") : t("admin:toasts.disabled"),
-        })
-      );
-    } catch (error: unknown) {
-      logger.error("Failed to toggle debug logging:", error);
-      addToast("error", getErrorMessage(error, t("admin:toasts.debugLoggingFailed")));
-    }
-  };
-
-  const handleSaveLoggingConfig = async (): Promise<void> => {
-    if (!loggingConfig) return;
-    setSavingLogging(true);
-    try {
-      await adminApi.updateLoggingConfig(loggingConfig);
-      addToast("success", t("admin:toasts.loggingConfigSaved"));
-      await loadLoggingData();
-    } catch (error: unknown) {
-      logger.error("Failed to save logging config:", error);
-      addToast("error", getErrorMessage(error, t("admin:toasts.loggingConfigFailed")));
-    } finally {
-      setSavingLogging(false);
-    }
-  };
-
-  const handleDownloadLogFile = async (filename: string): Promise<void> => {
-    try {
-      const blob = await adminApi.downloadLogFile(filename);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (error: unknown) {
-      logger.error("Failed to download log file:", error);
-      addToast("error", getErrorMessage(error, t("admin:toasts.logFileDownloadFailed")));
-    }
-  };
-
-  const handleDeleteLogFile = async (filename: string): Promise<void> => {
-    if (!confirm(t("admin:prompts.confirmDeleteLog", { filename }))) {
-      return;
-    }
-    try {
-      await adminApi.deleteLogFile(filename);
-      addToast("success", t("admin:toasts.logFileDeleted"));
-      await loadLoggingData();
-    } catch (error: unknown) {
-      logger.error("Failed to delete log file:", error);
-      addToast("error", getErrorMessage(error, t("admin:toasts.logFileDeletFailed")));
-    }
-  };
-
-  const handleCleanupLogs = async (): Promise<void> => {
-    if (!confirm(t("admin:prompts.confirmCleanupLogs"))) {
-      return;
-    }
-    try {
-      const result = await adminApi.cleanupLogs();
-      addToast(
-        "success",
-        t("admin:toasts.cleanupComplete", {
-          filesDeleted: result.filesDeleted,
-          spaceFreed: (result.spaceFreed / 1024 / 1024).toFixed(2),
-        })
-      );
-      await loadLoggingData();
-    } catch (error: unknown) {
-      logger.error("Failed to cleanup logs:", error);
-      addToast("error", getErrorMessage(error, t("admin:toasts.cleanupFailed")));
     }
   };
 

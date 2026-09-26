@@ -41,7 +41,6 @@ import boardingpassMatchRoutes from "./boardingpassMatch";
 import pdfParseRoutes from "./pdfParse";
 import imageParseRoutes from "./imageParse";
 import diagnosticExportRoutes from "./diagnosticExport";
-import diagnosticsRoutes from "./diagnostics";
 import setupRoutes from "./setup";
 import adminRoutes from "./admin";
 import backupRoutes from "./backup";
@@ -183,7 +182,6 @@ export const apiMounts: ApiMount[] = [
   { id: "pdfParse", base: "/api/v1", router: pdfParseRoutes },
   { id: "imageParse", base: "/api/v1", router: imageParseRoutes },
   { id: "diagnosticExport", base: "/api/v1", router: diagnosticExportRoutes },
-  { id: "diagnostics", base: "/api/v1", router: diagnosticsRoutes },
   { id: "parserTemplates", base: "/api/v1/parser-templates", router: parserTemplatesRoutes },
   { id: "backup", base: "/api/v1/backup", router: backupRoutes },
   { id: "pendingUpdates", base: "/api/v1/pending-updates", router: pendingUpdatesRoutes },

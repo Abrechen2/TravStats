@@ -3,6 +3,7 @@ import { MulterError } from "multer";
 import { ZodError } from "zod";
 import { Prisma } from "../prisma";
 import logger from "../utils/logger";
+import { requestPathForLog } from "../utils/logging/requestPath";
 import { isDebugEnabled } from "../services/loggingConfig";
 
 export interface ApiError extends Error {
@@ -125,7 +126,16 @@ export type ApiErrorCode =
   /** An admin has turned the language model off (`services/llm/llmGate.ts`).
    *  Kept apart from a plain 503 so the UI can say "switched off" rather than
    *  send the reader to check whether Ollama is running. */
-  | "LLM_DISABLED";
+  | "LLM_DISABLED"
+  /** The admin log area (`routes/admin/logging.ts`): a name that fails the
+   *  traversal guard (400), a file that is not there (404), a file that could
+   *  not be read or decompressed (500). */
+  | "LOG_FILE_INVALID_NAME"
+  | "LOG_FILE_NOT_FOUND"
+  | "LOG_FILE_UNREADABLE"
+  /** The diagnostic export built a bundle that failed its own allowlist
+   *  schema and refused to send it (`services/diagnosticExport.ts`). */
+  | "DIAGNOSTIC_EXPORT_REJECTED";
 
 interface AuthRequest extends Request {
   user?: {
@@ -222,15 +232,14 @@ export const errorHandler = async (
     category: "error",
     operation: "error_handler",
     message: err.message,
+    // The path without its query string, and no username: both carried names,
+    // search terms and booking references into error.log (audit 2026-09-26).
     context: {
       method: req.method,
-      url: req.url,
-      path: req.path,
-      query: req.query,
+      path: requestPathForLog(req),
       ip: req.ip,
       userAgent: req.get("user-agent"),
       userId: req.user?.id,
-      username: req.user?.username,
       requestId: req.requestId,
       errorCategory,
       statusCode,

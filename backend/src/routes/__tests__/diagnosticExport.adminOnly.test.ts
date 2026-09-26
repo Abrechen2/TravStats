@@ -47,11 +47,16 @@ describe("GET /diagnostic-export is admin-only", () => {
   it("serves the bundle to an admin", async () => {
     const res = await request(app).get("/api/v1/diagnostic-export").set("Cookie", adminCookie);
     expect(res.status).toBe(200);
+    expect(res.body.schema).toBe("travstats-diagnostic/2");
     expect(res.body.logs).toBeDefined();
   });
 
-  it("leaves the user-scoped diagnostics snapshot open to an ordinary account", async () => {
+  // `/diagnostics` returned up to 100 of the caller's flights with seats,
+  // prices and descriptions unredacted, and nothing called it — not the web
+  // app, not the Companion (checked 2026-09-26). It was removed rather than
+  // given a second allowlist.
+  it("no longer serves the removed per-user /diagnostics snapshot", async () => {
     const res = await request(app).get("/api/v1/diagnostics").set("Cookie", userCookie);
-    expect(res.status).toBe(200);
+    expect(res.status).toBe(404);
   });
 });

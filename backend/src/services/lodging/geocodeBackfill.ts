@@ -194,13 +194,10 @@ async function resolveCoordinates(row: GeocodeSubject): Promise<ResolvedCoordina
     };
     if (agreesWithRow(row, candidate)) return candidate;
     logger.info(
-      {
-        operation: "lodging_geocode_contradicted",
-        name: row.name,
-        source: "photon",
-      },
+      { operation: "lodging_geocode_contradicted", source: "photon" },
       "photon hit contradicts the row's own city/country — falling through"
     );
+    logger.debug({ operation: "lodging_geocode_contradicted", name: row.name });
   }
 
   const nominatim = await geocodeAddress({
@@ -228,9 +225,10 @@ async function resolveCoordinates(row: GeocodeSubject): Promise<ResolvedCoordina
     };
     if (!agreesWithRow(row, candidate)) {
       logger.info(
-        { operation: "google_places_contradicts_row", lodging: row.name },
+        { operation: "google_places_contradicts_row" },
         "Discarding a Places hit that lands in a different place than the row says"
       );
+      logger.debug({ operation: "google_places_contradicts_row", lodging: row.name });
       return null;
     }
     return candidate;

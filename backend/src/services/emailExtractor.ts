@@ -253,7 +253,6 @@ export function extractEmailFromFile(file: Buffer | string, filename: string): E
 
   logger.info(
     {
-      filename,
       extension,
       isBuffer: Buffer.isBuffer(file),
       size: Buffer.isBuffer(file) ? file.length : file.length,

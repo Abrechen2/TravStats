@@ -1,74 +1,36 @@
 import { createPrismaClient } from "./prismaClient";
-import { dbLogger } from "./utils/logger";
-import { shouldLogDatabaseQueries } from "./services/loggingConfig";
+import logger, { dbLogger } from "./utils/logger";
+import { toLoggable } from "./utils/logging/toLoggable";
+import { getLoggingRuntimeFlags } from "./utils/logging/runtimeFlags";
 
 const basePrisma = createPrismaClient({
   log: process.env.NODE_ENV === "development" ? ["query", "error", "warn"] : ["error"],
 });
 
-// Sync flag refreshed every 30s in the background. The previous middleware
-// awaited shouldLogDatabaseQueries() on every query, which adds a microtask
-// per call even when the underlying value comes from a cache. Reading a
-// boolean is free; the refresh runs out-of-band.
-let dbQueryLoggingEnabled = false;
-let dbQueryLoggingTimer: NodeJS.Timeout | null = null;
-
-async function refreshDbQueryLoggingFlag(): Promise<void> {
-  try {
-    dbQueryLoggingEnabled = await shouldLogDatabaseQueries();
-  } catch {
-    dbQueryLoggingEnabled = false;
-  }
-}
-
-// Exported so update endpoints can flip the flag immediately rather than
-// waiting up to 30s for the next refresh.
-export function setDbQueryLoggingEnabled(enabled: boolean): void {
-  dbQueryLoggingEnabled = enabled;
-}
-
 /**
- * Sanitize Prisma query arguments to remove sensitive data
+ * Write one query-log line, and never let it fail the query.
+ *
+ * With "log database queries" on, creating a user answered 500 and created
+ * nobody (audit 2026-09-26): the argument clone here was
+ * `JSON.parse(JSON.stringify(args))`, which throws on the BigInt of a passkey
+ * counter, and the throw came out of the query. `toLoggable` cannot throw on
+ * a value; this catch covers everything else (a logger that cannot write) and
+ * says so through the root logger instead of failing the request it describes.
  */
-function sanitizeArgs(args: unknown): unknown {
-  if (!args) return args;
-
-  // Clone to avoid mutating original
-  const sanitized = JSON.parse(JSON.stringify(args)) as Record<string, unknown>;
-
-  // Redact sensitive fields
-  const sensitiveFields = [
-    "password",
-    "passwordHash",
-    "password_hash",
-    "token",
-    "apiKey",
-    "api_key",
-    "openaiApiKey",
-    "claudeApiKey",
-    "globalOpenaiApiKey",
-    "globalClaudeApiKey",
-  ];
-
-  function redactRecursive(obj: unknown): unknown {
-    if (typeof obj !== "object" || obj === null) return obj;
-
-    if (Array.isArray(obj)) {
-      return obj.map(redactRecursive);
+function logQuerySafely(write: () => void, model: string | undefined, operation: string): void {
+  try {
+    write();
+  } catch (error) {
+    try {
+      logger.warn({
+        operation: "database_query_log_failed",
+        context: { model, action: operation },
+        error: { name: error instanceof Error ? error.name : typeof error },
+      });
+    } catch {
+      // The logger itself is broken; there is nowhere left to say it.
     }
-
-    const result: Record<string, unknown> = {};
-    for (const [key, value] of Object.entries(obj as Record<string, unknown>)) {
-      if (sensitiveFields.includes(key)) {
-        result[key] = "[REDACTED]";
-      } else {
-        result[key] = redactRecursive(value);
-      }
-    }
-    return result;
   }
-
-  return redactRecursive(sanitized);
 }
 
 /**
@@ -107,9 +69,16 @@ export function observeQueries(observer: (query: ObservedQuery) => void): () => 
  * This was `prisma.$use(...)` until Prisma 7 removed client middleware
  * outright. An extension is the documented replacement and is applied at
  * construction rather than bolted on afterwards, which is why the exported
- * singleton is built here at the foot of the file instead of at the top: the
- * extension body reads `dbQueryLoggingEnabled` and `sanitizeArgs`, and both
- * have to exist above it.
+ * singleton is built here at the foot of the file.
+ *
+ * Whether queries are logged is a synchronous flag (`runtimeFlags`), set by
+ * `applyLoggingConfig()` at boot and on every settings change — this module
+ * no longer asks the database about itself, which is what used to tie `db`
+ * and `loggingConfig` into an import cycle.
+ *
+ * Query ARGUMENTS carry user data (names, notes, booking references), so they
+ * are written only while the admin has query logging switched on; a failing
+ * query is always logged, with its model and operation but without them.
  *
  * `query.$allOperations` — not `query.$allModels.$allOperations` — because the
  * middleware it replaces also saw raw queries, where `model` is undefined.
@@ -121,94 +90,91 @@ export const prisma = basePrisma.$extends({
       // Before the call, matching the old middleware: it recorded on the way
       // in, so a query that throws is still counted.
       for (const observer of queryObservers) observer({ model, operation });
+      const verbose = getLoggingRuntimeFlags().databaseQueries;
 
       try {
         const result = await query(args);
-
-        // IMPORTANT: Exclude adminSettings queries from logging to prevent infinite recursion
-        // (shouldLogDatabaseQueries() itself queries adminSettings)
-        if (model !== "AdminSettings") {
-          if (dbQueryLoggingEnabled) {
-            const duration = Date.now() - startTime;
-            const resultCount = Array.isArray(result) ? result.length : result ? 1 : 0;
-
-            dbLogger.debug({
-              operation: "database_query",
-              message: `${model}.${operation}`,
-              context: {
-                model,
-                action: operation,
-                args: sanitizeArgs(args),
-                resultCount,
-              },
-              performance: {
-                duration,
-              },
-            });
-          }
+        if (verbose) {
+          logQuerySafely(
+            () =>
+              dbLogger.debug({
+                operation: "database_query",
+                message: `${model}.${operation}`,
+                context: {
+                  model,
+                  action: operation,
+                  args: toLoggable(args),
+                  resultCount: Array.isArray(result) ? result.length : result ? 1 : 0,
+                },
+                performance: { duration: Date.now() - startTime },
+              }),
+            model,
+            operation
+          );
         }
-
         return result;
       } catch (error) {
-        const duration = Date.now() - startTime;
-
-        // Always log errors, regardless of logging settings (except adminSettings to avoid recursion)
-        if (model !== "AdminSettings") {
-          const errorMessage = error instanceof Error ? error.message : "Unknown error";
-
-          // Check if it's a database connection error (expected during startup/shutdown)
-          const isConnectionError =
-            errorMessage.includes("Can't reach database server") ||
-            errorMessage.includes("database system is shutting down") ||
-            errorMessage.includes("Connection refused") ||
-            errorMessage.includes("ECONNREFUSED") ||
-            errorMessage.includes("P1001") || // Prisma connection error code
-            errorMessage.includes("P1000") || // Prisma authentication error (can happen during connection)
-            errorMessage.includes("P1017"); // Prisma server closed connection
-
-          if (isConnectionError) {
-            // Log connection errors as warning - these are expected during startup/shutdown
-            dbLogger.warn({
-              operation: "database_connection_error",
-              message: `${model}.${operation} - database not available (this is normal during startup/shutdown)`,
-              context: {
-                model,
-                action: operation,
-                args: sanitizeArgs(args),
-              },
-              performance: {
-                duration,
-              },
-              error: {
-                message: errorMessage,
-              },
-            });
-          } else {
-            // Log other errors as error
-            dbLogger.error({
-              operation: "database_query_error",
-              message: `${model}.${operation} failed`,
-              context: {
-                model,
-                action: operation,
-                args: sanitizeArgs(args),
-              },
-              performance: {
-                duration,
-              },
-              error: {
-                message: errorMessage,
-                stack: error instanceof Error ? error.stack : undefined,
-              },
-            });
-          }
-        }
-
+        logQuerySafely(
+          () => logQueryFailure(error, model, operation, verbose ? args : undefined, startTime),
+          model,
+          operation
+        );
         throw error;
       }
     },
   },
 });
+
+const CONNECTION_ERROR_MARKERS = [
+  "Can't reach database server",
+  "database system is shutting down",
+  "Connection refused",
+  "ECONNREFUSED",
+  "P1001", // Prisma: cannot reach the server
+  "P1000", // Prisma: authentication failed (happens while connecting)
+  "P1017", // Prisma: server closed the connection
+];
+
+function logQueryFailure(
+  error: unknown,
+  model: string | undefined,
+  operation: string,
+  args: unknown,
+  startTime: number
+): void {
+  const errorMessage = error instanceof Error ? error.message : "Unknown error";
+  const code = (error as { code?: unknown })?.code;
+  const entry = {
+    context: {
+      model,
+      action: operation,
+      ...(args !== undefined ? { args: toLoggable(args) } : {}),
+    },
+    performance: { duration: Date.now() - startTime },
+  };
+
+  // Connection errors are expected during startup and shutdown: a warning.
+  if (CONNECTION_ERROR_MARKERS.some((marker) => errorMessage.includes(marker))) {
+    dbLogger.warn({
+      ...entry,
+      operation: "database_connection_error",
+      message: `${model}.${operation} - database not available`,
+      error: { code: typeof code === "string" ? code : undefined, message: errorMessage },
+    });
+    return;
+  }
+  dbLogger.error({
+    ...entry,
+    operation: "database_query_error",
+    message: `${model}.${operation} failed`,
+    error: {
+      name: error instanceof Error ? error.name : undefined,
+      code: typeof code === "string" ? code : undefined,
+      message: errorMessage,
+      stack: error instanceof Error ? error.stack : undefined,
+    },
+  });
+}
 
 /**
  * The exported client's type, which is NOT `PrismaClient`: `$extends` returns a
@@ -231,23 +197,3 @@ export type DbTransaction = Omit<
   Db,
   "$connect" | "$disconnect" | "$on" | "$transaction" | "$use" | "$extends"
 >;
-
-/**
- * Start the refresh loop LAST, and never above `prisma`.
- *
- * `shouldLogDatabaseQueries()` reads `adminSettings` through this very module,
- * so `loggingConfig` and `db` form a cycle. Under CommonJS that resolves
- * lazily and is fine — as long as `prisma` is already assigned when the first
- * call happens. It was, while the client was built at the top of the file;
- * moving the export below the extension broke it, and a production boot logged
- * "Cannot read properties of undefined (reading 'adminSettings')" on every
- * process that loaded this module. The `catch` hid the consequence, not the
- * noise.
- */
-if (process.env.NODE_ENV !== "test") {
-  void refreshDbQueryLoggingFlag();
-  dbQueryLoggingTimer = setInterval(() => {
-    void refreshDbQueryLoggingFlag();
-  }, 30_000);
-  dbQueryLoggingTimer.unref();
-}

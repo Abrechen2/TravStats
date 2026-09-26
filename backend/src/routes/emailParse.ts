@@ -237,7 +237,6 @@ router.post(
           operation: "email_upload_validation_failed",
           message: "Email file validation failed",
           context: {
-            filename: file.originalname,
             mimetype: file.mimetype,
             extension: ext,
             reason: validation.reason,
@@ -251,9 +250,9 @@ router.post(
 
       logger.info(
         {
-          filename: file.originalname,
           size: file.size,
           mimetype: file.mimetype,
+          extension: ext,
         },
         `[Email Parse File] Parsing email file for user ${userId}`
       );

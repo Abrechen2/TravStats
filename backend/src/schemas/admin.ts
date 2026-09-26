@@ -20,6 +20,8 @@ export const toggleDebugLoggingSchema = z.object({
   enabled: z.boolean(),
 });
 
+const logCategory = z.string().regex(/^[a-z][a-z0-9_-]{0,39}$/);
+
 /**
  * Schema for log file reading options
  */
@@ -27,9 +29,9 @@ export const readLogFileQuerySchema = z.object({
   offset: z.coerce.number().min(0).optional(),
   limit: z.coerce.number().min(1).max(1000).optional(),
   level: z.enum(["error", "warn", "info", "debug", "trace"]).optional(),
-  category: z
-    .enum(["general", "http", "database", "parser", "security", "error", "system"])
-    .optional(),
+  // Any category a logger writes (`parser-text`, `achievement`, …) — the old
+  // closed list could not filter for half of them. The shape bounds it.
+  category: logCategory.optional(),
   search: z.string().max(200).optional(),
 });
 
@@ -39,9 +41,7 @@ export const readLogFileQuerySchema = z.object({
 export const searchLogsQuerySchema = z.object({
   query: z.string().max(200).optional(),
   level: z.enum(["error", "warn", "info", "debug", "trace"]).optional(),
-  category: z
-    .enum(["general", "http", "database", "parser", "security", "error", "system"])
-    .optional(),
+  category: logCategory.optional(),
   startDate: z.coerce.date().optional(),
   endDate: z.coerce.date().optional(),
 });

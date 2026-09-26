@@ -46,19 +46,31 @@
     "reportBugOpened": "Bundle downloaded — drag the .json file into the report in the new tab",
     "reportBugHint": "Opens GitHub with a pre-filled issue and downloads the diagnostic bundle to attach (it's usually too large to paste)",
     "title": "Diagnostic export for a GitHub issue",
-    "description": "Download a scrubbed diagnostic bundle you can attach to a GitHub issue. The bundle contains the latest log entries plus system and version info. All personal data has been removed:",
-    "scrubList": {
-      "ip": "IP addresses → <redacted:ip>",
-      "email": "Email addresses → <redacted:email>",
-      "tokens": "JWT tokens → <redacted:jwt>",
-      "uuids": "UUIDs (user IDs, flight IDs) → <redacted:uuid>"
-    },
+    "description": "Builds a diagnostic bundle you can attach to a GitHub issue. It is made only from fixed, structured fields:",
     "generating": "Generating diagnostic bundle...",
     "copy": "Copy to clipboard",
     "copied": "Bundle copied – paste it into the GitHub issue",
     "copyFailed": "Copy to clipboard failed",
     "download": "Download as file",
-    "error": "Diagnostic export failed"
+    "error": "Diagnostic export failed",
+    "includes": {
+      "versions": "App and build version, Node version, operating system and architecture",
+      "settings": "Instance settings as switches, numbers and fixed choices – and only whether an integration is set up, never its address or key",
+      "counts": "Counts: accounts per enabled domain, entries per table, database migration status",
+      "events": "Log events of the last 24 hours (errors: 7 days) as time, level, category, event key, error code and class, and code location (file name:line)"
+    },
+    "excludes": "Not included: log text, names, usernames, email addresses, booking codes, flights and places, URLs with query strings, IP addresses, host name, directory paths, and any value from a request.",
+    "previewLabel": "Preview – exactly this file is downloaded:",
+    "failedSection": "Section “{{section}}” could not be collected (code {{code}}) and is marked as failed in the bundle.",
+    "exportFailed": "The diagnostic bundle could not be created: {{reason}}. “Report bug” still opens the GitHub issue – without an attachment.",
+    "exportFailedToast": "Issue opened without a diagnostic bundle – the export failed.",
+    "reasons": {
+      "rateLimited": "too many exports in a short time, please try again later",
+      "forbidden": "only administrators may create a diagnostic bundle",
+      "rejected": "the bundle failed its own checklist and was withheld",
+      "network": "the server cannot be reached",
+      "server": "server error (HTTP {{status}})"
+    }
   },
   "accessibility": {
     "close": "Close",

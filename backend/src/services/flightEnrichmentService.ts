@@ -291,7 +291,6 @@ export async function aggregateFlightData(
         operation: "aggregate_flight_data_insufficient",
         message: "Not enough reference flights for aggregation",
         context: {
-          flightNumber,
           referenceFlightsCount: referenceFlights.length,
           minFlights: effectiveMinFlights,
           mode,
@@ -407,7 +406,7 @@ export async function aggregateFlightData(
     logger.error({
       operation: "aggregate_flight_data_error",
       message: "Failed to aggregate flight data",
-      context: { flightNumber, excludeFlightId },
+      context: { excludeFlightId },
       error: {
         message: error instanceof Error ? error.message : "Unknown error",
         stack: error instanceof Error ? error.stack : undefined,
