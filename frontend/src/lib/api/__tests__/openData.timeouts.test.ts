@@ -1,7 +1,8 @@
 import { describe, it, expect, vi, afterEach } from "vitest";
 
 import { api } from "../client";
-import { openDataApi, OPEN_DATA_CLIENT_TIMEOUT_MS } from "../openData";
+import { API_TIMEOUTS } from "../../../config/constants";
+import { openDataApi } from "../openData";
 
 /**
  * The browser must not give up before the server (silent-failure fixes,
@@ -36,6 +37,6 @@ describe("open data client timeouts cover the server's budget", () => {
     await openDataApi.refreshEntryWeather("t1", "e1");
     const config = post.mock.calls[0][2] as { timeout?: number };
     expect(config.timeout).toBeGreaterThan(SERVER_WEATHER_BUDGET_MS);
-    expect(OPEN_DATA_CLIENT_TIMEOUT_MS.weather).toBe(config.timeout);
+    expect(API_TIMEOUTS.OPEN_DATA_WEATHER).toBe(config.timeout);
   });
 });

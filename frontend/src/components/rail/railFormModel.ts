@@ -1,3 +1,4 @@
+import { saveErrorKey } from "../../lib/saveErrorMessage";
 import type {
   RailGeometryReport,
   RailJourney,
@@ -320,6 +321,9 @@ export function saveErrorFrom(err: unknown): RailSaveError {
         : { key: "rail:form.errors.invalid", field: null };
     }
     default:
-      return { key: "rail:form.saveError", field: null };
+      // Everything that is not a rail field code reads through the shared
+      // save rule (validation, duplicate, database down, demo, rate limit,
+      // no network), so the rail dialog says what every other form says.
+      return { key: saveErrorKey(err, "rail:form.saveError"), field: null };
   }
 }

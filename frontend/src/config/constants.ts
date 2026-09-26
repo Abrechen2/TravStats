@@ -18,6 +18,14 @@ export const API_TIMEOUTS = {
   // 36 s in the worst case. The 10 s default gave up first and told the user
   // the search was unavailable while the server was still answering.
   FLIGHT_LOOKUP: 60000,
+  // Open data calls that cover the server's own budget (2026-09-26). The
+  // default ten seconds is shorter than Overpass's 20-25 s and than an
+  // Open-Meteo call plus the database, so the browser gave up first and the UI
+  // said "OpenStreetMap does not know this house" about a server still asking.
+  /** Server: one Open-Meteo request, 8 s. */
+  OPEN_DATA_WEATHER: 20000,
+  /** Server: Overpass up to 25 s (nearby) or 20 s plus the OSM API (enrich). */
+  OPEN_DATA_OVERPASS: 45000,
 } as const;
 
 // ========== CRUISE SEA-ROUTE GEOMETRY ==========

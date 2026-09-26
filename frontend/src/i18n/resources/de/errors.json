@@ -38,7 +38,5 @@
   "lookupDemoForbidden": "Im Demo-Konto ist die Flugsuche abgeschaltet, um das API-Kontingent zu schonen. Bitte trage den Flug manuell ein.",
   "lookupFailed": "Die Flugsuche ist fehlgeschlagen. Bitte versuche es später erneut oder trage den Flug manuell ein.",
   "airportNotInCatalogue": "Flughafen {{code}} ist nicht im Katalog – bitte manuell auswählen.",
-  "airportLoadFailedCode": "Flughafen {{code}} konnte nicht geladen werden – bitte erneut versuchen oder manuell auswählen.",
-  "saveRejected": "Die Änderung wurde nicht angenommen – bitte die Eingaben prüfen.",
-  "tooManyRequests": "Zu viele Anfragen in kurzer Zeit. Bitte warte einen Moment und versuche es erneut."
+  "airportLoadFailedCode": "Flughafen {{code}} konnte nicht geladen werden – bitte erneut versuchen oder manuell auswählen."
 }

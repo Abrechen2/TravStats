@@ -38,7 +38,5 @@
   "lookupDemoForbidden": "Flight search is switched off for the demo account to protect the API quota. Please enter the flight manually.",
   "lookupFailed": "The flight search failed. Please try again later or enter the flight manually.",
   "airportNotInCatalogue": "Airport {{code}} is not in the catalogue – please pick it manually.",
-  "airportLoadFailedCode": "Airport {{code}} could not be loaded – please try again or pick it manually.",
-  "saveRejected": "The change was not accepted – please check your input.",
-  "tooManyRequests": "Too many requests in a short time. Please wait a moment and try again."
+  "airportLoadFailedCode": "Airport {{code}} could not be loaded – please try again or pick it manually."
 }

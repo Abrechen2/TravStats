@@ -77,7 +77,7 @@ describe("FlightEditModal — a refused save says so in the reader's language", 
   it("shows the rejection sentence, not axios's status text", async () => {
     const onSave = vi.fn().mockRejectedValue(
       Object.assign(new Error("Request failed with status code 400"), {
-        response: { status: 400, data: { error: "Validation error" } },
+        response: { status: 400, data: { error: "Validation error", code: "VALIDATION_FAILED" } },
       })
     );
     render(<FlightEditModal flight={FLIGHT} isOpen onClose={() => {}} onSave={onSave} />);
@@ -89,7 +89,7 @@ describe("FlightEditModal — a refused save says so in the reader's language", 
 
     await userEvent.click(await screen.findByRole("button", { name: /speichern|save/i }));
 
-    expect(await screen.findByText("errors:saveRejected")).toBeInTheDocument();
+    expect(await screen.findByText("common:saveErrors.validation")).toBeInTheDocument();
     expect(screen.queryByText(/status code 400/)).toBeNull();
   });
 });

@@ -31,18 +31,3 @@ export function parseFailureMessage(err: unknown, t: Translate, fallbackKey: str
   }
   return t(fallbackKey);
 }
-
-/**
- * What to tell the reader when saving a record failed — never axios's
- * "Request failed with status code 400".
- */
-export function saveFailureMessage(err: unknown, t: Translate, fallbackKey: string): string {
-  const e = err as { response?: { status?: number } } | undefined;
-  const status = e?.response?.status;
-  if (!e?.response) return t(fallbackKey);
-  if (status === 400) return t("errors:saveRejected");
-  if (status === 403) return t("errors:forbidden");
-  if (status === 404) return t("errors:notFound");
-  if (status === 429) return t("errors:tooManyRequests");
-  return t(fallbackKey);
-}

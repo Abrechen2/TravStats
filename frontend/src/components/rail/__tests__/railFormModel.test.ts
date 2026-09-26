@@ -265,4 +265,11 @@ describe("saveErrorFrom", () => {
     });
     expect(saveErrorFrom(new Error("Network Error")).key).toBe("rail:form.saveError");
   });
+  it("reads a refusal that is not a rail field code through the shared save rule", () => {
+    expect(saveErrorFrom(refusal({ code: "DUPLICATE" }))).toEqual({
+      key: "common:saveErrors.duplicate",
+      field: null,
+    });
+    expect(saveErrorFrom({ isAxiosError: true }).key).toBe("common:saveErrors.network");
+  });
 });

@@ -28,16 +28,29 @@ export function saveErrorMessage(
   fallbackKey: string,
   extraCodeKeys: Readonly<Record<string, string>> = {}
 ): string {
+  return t(saveErrorKey(err, fallbackKey, extraCodeKeys));
+}
+
+/**
+ * The translation KEY `saveErrorMessage` shows — for a form that keeps the key
+ * (and a field) in its own state, such as the rail editor. One rule, one home:
+ * every save dialog reads a failure through here.
+ */
+export function saveErrorKey(
+  err: unknown,
+  fallbackKey: string,
+  extraCodeKeys: Readonly<Record<string, string>> = {}
+): string {
   const code = apiErrorMachineCode(err);
   if (code) {
     const key = extraCodeKeys[code] ?? SHARED_CODE_KEYS[code];
-    if (key) return t(key);
+    if (key) return key;
   }
-  if (apiErrorCode(err) === DEMO_FORBIDDEN_CODE) return t("common:saveErrors.demo");
+  if (apiErrorCode(err) === DEMO_FORBIDDEN_CODE) return "common:saveErrors.demo";
   const response = (err as { response?: { status?: number } } | null)?.response;
-  if (response?.status === 429) return t(SHARED_CODE_KEYS.RATE_LIMITED);
+  if (response?.status === 429) return SHARED_CODE_KEYS.RATE_LIMITED;
   if (err !== null && typeof err === "object" && "isAxiosError" in err && !response) {
-    return t("common:saveErrors.network");
+    return "common:saveErrors.network";
   }
-  return t(fallbackKey);
+  return fallbackKey;
 }

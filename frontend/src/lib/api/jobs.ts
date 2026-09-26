@@ -1,5 +1,6 @@
 import { isAxiosError } from "axios";
 
+import { apiErrorMachineCode } from "../apiError";
 import { api } from "./client";
 
 /**
@@ -95,9 +96,5 @@ export async function waitForJob<T>(
 /** The failure's stable code, from a job or a synchronous refusal alike. */
 export function jobErrorCode(err: unknown): string | null {
   if (err instanceof JobFailedError) return err.code;
-  if (isAxiosError(err)) {
-    const body = err.response?.data as { code?: unknown; error?: unknown } | undefined;
-    if (typeof body?.code === "string") return body.code;
-  }
-  return null;
+  return apiErrorMachineCode(err);
 }

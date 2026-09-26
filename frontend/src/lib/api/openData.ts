@@ -1,5 +1,6 @@
 import { isAxiosError } from "axios";
 
+import { API_TIMEOUTS } from "../../config/constants";
 import { api } from "./client";
 import { waitForJob } from "./jobs";
 import type { TripJournalEntry } from "../../types";
@@ -100,19 +101,6 @@ export interface NearbyLodging {
   chain: LodgingChain | null;
 }
 
-/**
- * Per-call client timeouts that cover the server's own budget (2026-09-26).
- * The default ten seconds is shorter than Overpass's 20–25 s and than an
- * Open-Meteo call plus the database, so the browser gave up first and the UI
- * said "OpenStreetMap does not know this house" about a server still asking.
- */
-export const OPEN_DATA_CLIENT_TIMEOUT_MS = {
-  /** Server: one Open-Meteo request, 8 s. */
-  weather: 20_000,
-  /** Server: Overpass up to 25 s (nearby) or 20 s plus the OSM API (enrich). */
-  overpass: 45_000,
-} as const;
-
 /** Why the server could not ask an open data service (`code` of a 502/503/504). */
 export type OpenDataUpstreamFailure = "timeout" | "rateLimited" | "unavailable";
 
@@ -164,7 +152,7 @@ export const openDataApi = {
   ): Promise<{ entry: TripJournalEntry; weatherOutcome: WeatherOutcome }> =>
     (
       await api.post(`/trips/${tripId}/journal/${entryId}/weather`, undefined, {
-        timeout: OPEN_DATA_CLIENT_TIMEOUT_MS.weather,
+        timeout: API_TIMEOUTS.OPEN_DATA_WEATHER,
       })
     ).data,
 
@@ -190,14 +178,14 @@ export const openDataApi = {
     (
       await api.get("/nearby/lodging", {
         params: { lat, lon, radiusKm },
-        timeout: OPEN_DATA_CLIENT_TIMEOUT_MS.overpass,
+        timeout: API_TIMEOUTS.OPEN_DATA_OVERPASS,
       })
     ).data.places,
 
   enrichLodging: async (lodgingId: string): Promise<LodgingEnrichment> =>
     (
       await api.post(`/lodging/${lodgingId}/enrich`, undefined, {
-        timeout: OPEN_DATA_CLIENT_TIMEOUT_MS.overpass,
+        timeout: API_TIMEOUTS.OPEN_DATA_OVERPASS,
       })
     ).data,
 };

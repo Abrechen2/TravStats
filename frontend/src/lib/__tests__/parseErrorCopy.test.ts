@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { parseFailureMessage, saveFailureMessage } from "../parseErrorCopy";
+import { parseFailureMessage } from "../parseErrorCopy";
 
 /** `t` echoes the key, so each assertion names the sentence the reader gets. */
 const t = (key: string): string => key;
@@ -31,19 +31,6 @@ describe("parseFailureMessage — codes, not prose", () => {
     const err = httpError(500, { error: "Boarding pass parsing failed", message: "boom" });
     expect(parseFailureMessage(err, t, "errors:boardingPassError")).toBe(
       "errors:boardingPassError"
-    );
-  });
-});
-
-describe("saveFailureMessage", () => {
-  it("turns a 400 into the rejection sentence", () => {
-    expect(saveFailureMessage(httpError(400), t, "errors:updateFailed")).toBe(
-      "errors:saveRejected"
-    );
-  });
-  it("keeps its fallback for a failure without a response", () => {
-    expect(saveFailureMessage(new Error("Network Error"), t, "errors:updateFailed")).toBe(
-      "errors:updateFailed"
     );
   });
 });
