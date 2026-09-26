@@ -16,7 +16,6 @@ import { deletePlacePhotoFile } from "../middleware/upload";
 import logger from "../utils/logger";
 import { toPhotoDto, VISIT_PHOTO_INCLUDE } from "./places/visitPhotoDto";
 import { visitTimeColumns } from "./places/visitTime";
-import { writtenViaOf } from "../services/timeModel/writtenVia";
 import { timeErrorFromZod } from "../shared/time/errors";
 import {
   createPlaceSchema,
@@ -449,7 +448,11 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
     }
     const input = parsed.data;
     await assertTripOwned(input.tripId, userId);
-    const time = await visitTimeColumns(input.visitedAt ?? null, place, req);
+    const { columns: time, writtenVia } = await visitTimeColumns(
+      input.visitedAt ?? null,
+      place,
+      req
+    );
     const documentIds = await takeDocumentIds(userId, req.body);
 
     // Recording a visit that HAPPENED is the statement "I was here", so it
@@ -477,7 +480,7 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
           userId,
           tripId: input.tripId ?? null,
           ...time,
-          writtenVia: writtenViaOf(req),
+          writtenVia,
           orderIdx: input.orderIdx ?? 0,
           notes: input.notes ?? null,
           rating: input.rating ?? null,
@@ -520,11 +523,10 @@ router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: N
     if (input.visitedAt !== undefined) {
       const place = await prisma.place.findUniqueOrThrow({
         where: { id: existing.placeId },
-        select: { lat: true, lon: true },
+        select: { id: true, lat: true, lon: true },
       });
-      Object.assign(data, await visitTimeColumns(input.visitedAt, place, req), {
-        writtenVia: writtenViaOf(req),
-      });
+      const { columns, writtenVia } = await visitTimeColumns(input.visitedAt, place, req);
+      Object.assign(data, columns, { writtenVia });
     }
     if (input.orderIdx !== undefined) data.orderIdx = input.orderIdx;
     if (input.notes !== undefined) data.notes = input.notes;

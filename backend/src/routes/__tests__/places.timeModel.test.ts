@@ -103,6 +103,37 @@ describe("Place visits — time model (phase 2)", () => {
     expect(await prisma.placeVisit.count({ where: { userId } })).toBe(0);
   });
 
+  it("accepts a photo journey's own start from the browser — the inbox accept keeps working", async () => {
+    // The web inbox creates the visit of an accepted photo journey with the
+    // journey's start: an EXIF instant the server holds, not a fake-UTC clock.
+    const start = new Date("2025-07-03T12:30:05.000Z");
+    await prisma.photoJourney.create({
+      data: {
+        userId,
+        placeId,
+        kind: "place",
+        startDate: start,
+        endDate: new Date("2025-07-03T15:00:00.000Z"),
+        photoCount: 4,
+        locatedCount: 4,
+        lat: ROME.lat,
+        lon: ROME.lon,
+        fingerprint: "time-model-test",
+        previewAssetIds: [],
+      },
+    });
+    try {
+      const res = await post({ visitedAt: start.toISOString() });
+      expect(res.status).toBe(201);
+      const row = await prisma.placeVisit.findUniqueOrThrow({ where: { id: res.body.data.id } });
+      expect(row.visitedAtUtc?.toISOString()).toBe("2025-07-03T12:30:05.000Z");
+      expect(row.visitedAt?.toISOString()).toBe("2025-07-03T14:30:05.000Z");
+      expect(row.writtenVia).toBe("suggestion");
+    } finally {
+      await prisma.photoJourney.deleteMany({ where: { userId } });
+    }
+  });
+
   it("accepts the same ISO-Z from the Companion as the real instant it is", async () => {
     const bearer = await mintWriteToken(userId, { deviceId: "phone-1" });
     const res = await post({ visitedAt: "2025-07-03T12:30:00.000Z" }, { bearer });
