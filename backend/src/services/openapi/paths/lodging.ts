@@ -516,7 +516,38 @@ registry.registerPath({
   summary: "Photographs of a lodging",
   tags: lodgingPhotoTag,
   request: { params: z.object({ lodgingId: uuid }) },
-  responses: { 200: { description: "Photos, in the user's order" }, 404: notFound },
+  responses: {
+    200: {
+      description: "Photos, in the user's order",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(
+              z.object({
+                id: uuid,
+                url: z.string(),
+                caption: z.string().nullable(),
+                sortIdx: z.number().int(),
+                mimetype: z.string(),
+                sizeBytes: z.number().int(),
+                createdAt: z.string(),
+                takenAt: z
+                  .null()
+                  .describe(
+                    "Always null: a lodging photo stores neither when nor where it was " +
+                      "taken. Present so every photo reads the same; never the upload time."
+                  ),
+                lat: z.null(),
+                lon: z.null(),
+              })
+            ),
+          }),
+        },
+      },
+    },
+    404: notFound,
+  },
 });
 
 registry.registerPath({

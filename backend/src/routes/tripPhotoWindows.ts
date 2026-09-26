@@ -9,7 +9,7 @@ import {
   flightTripPhotos,
   lodgingTripPhotos,
   railTripPhotos,
-  type WindowPhoto,
+  type WindowResult,
 } from "../services/photos/tripPhotoWindows";
 
 /**
@@ -25,16 +25,16 @@ const router = Router();
 
 const idParams = z.object({ id: z.string().uuid() });
 
-type Finder = (userId: string, id: string) => Promise<WindowPhoto[] | null>;
+type Finder = (userId: string, id: string) => Promise<WindowResult | null>;
 
 function windowRoute(finder: Finder, notFound: string) {
   return async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const params = idParams.safeParse(req.params);
       if (!params.success) throw new AppError("Invalid id", 400);
-      const photos = await finder(req.userId!, params.data.id);
-      if (photos === null) throw new AppError(notFound, 404);
-      res.json({ success: true, data: { photos } });
+      const result = await finder(req.userId!, params.data.id);
+      if (result === null) throw new AppError(notFound, 404);
+      res.json({ success: true, data: result });
     } catch (err) {
       next(err);
     }

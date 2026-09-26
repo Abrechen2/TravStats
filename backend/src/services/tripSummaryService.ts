@@ -5,6 +5,7 @@ import { prisma } from "../db";
 import logger from "../utils/logger";
 import { getAdminParserSettings } from "./parserSettings";
 import { assertLlmEnabled } from "./llm/llmGate";
+import { llmProvenance } from "./tripSummaryProvenance";
 
 /**
  * LLM-generated trip summaries.
@@ -631,6 +632,23 @@ export interface SummariseResult {
   model: string;
   language: SummaryLanguage;
   durationMs: number;
+  /** Always "llm" here — the provenance stored with the text (forgejo#132 item 8). */
+  summarySource: "llm";
+  summaryGeneratedAt: string;
+  /** The entries the brief handed the model: flights, cruises, stays, visits, stops, journal. */
+  summaryEntryCount: number;
+}
+
+/** How many entries a brief hands the model — the "n" of "aus n Einträgen". */
+export function briefEntryCount(brief: SummaryBrief): number {
+  return (
+    brief.flights.length +
+    brief.cruises.length +
+    brief.stays.length +
+    brief.places.length +
+    brief.stops.length +
+    brief.journal.length
+  );
 }
 
 /**
@@ -682,7 +700,16 @@ ${closing}`
     "[Trip Summary] Generated successfully"
   );
 
-  await prisma.trip.update({ where: { id: tripId }, data: { summary } });
+  const provenance = llmProvenance(briefEntryCount(brief));
+  await prisma.trip.update({ where: { id: tripId }, data: { summary, ...provenance } });
 
-  return { summary, model: target.model, language, durationMs };
+  return {
+    summary,
+    model: target.model,
+    language,
+    durationMs,
+    summarySource: "llm",
+    summaryGeneratedAt: provenance.summaryGeneratedAt!.toISOString(),
+    summaryEntryCount: provenance.summaryEntryCount!,
+  };
 }

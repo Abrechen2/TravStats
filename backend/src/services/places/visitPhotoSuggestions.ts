@@ -12,6 +12,7 @@ import { getImmichConnection } from "../immich/immichResolver";
 import { ImmichError, type ImmichAsset, type ImmichErrorKind } from "../immich/types";
 import { PHOTO_RADIUS_KM } from "./visitDateSuggestions";
 import { linkImmichAssetsToVisit } from "./visitPhotoLinks";
+import { refusedIds } from "./visitPhotoRefusals";
 
 /**
  * Photographs a place visit could show, found in the user's own records
@@ -105,6 +106,12 @@ async function tripPhotosNear(userId: string, a: VisitAnchor): Promise<TripPhoto
         WHERE v.place_visit_id = ${a.id}
           AND (v.trip_photo_id = ph.id OR v.immich_asset_id = ph.immich_asset_id)
       )
+      -- Refused for this visit ("Nicht diese"): left out in SQL, so a refusal
+      -- does not eat into the cap and hide a photo that was never refused.
+      AND NOT EXISTS (
+        SELECT 1 FROM visit_photo_refusals r
+        WHERE r.place_visit_id = ${a.id} AND r.kind = 'trip' AND r.suggestion_id = ph.id
+      )
     ORDER BY ph.taken_at ASC
     LIMIT ${SUGGESTION_CAP}
   `);
@@ -163,13 +170,14 @@ export async function visitPhotoSuggestionsFor(
   if (anchor === null) return null;
   if (anchor === "undated") return { day: null, suggestions: [], library: "ok" };
 
-  const [tripRows, library, linked] = await Promise.all([
+  const [tripRows, library, linked, refused] = await Promise.all([
     tripPhotosNear(userId, anchor),
     libraryAssetsNear(userId, anchor),
     prisma.placeVisitPhoto.findMany({
       where: { placeVisitId: visitId, immichAssetId: { not: null } },
       select: { immichAssetId: true },
     }),
+    refusedIds(visitId),
   ]);
 
   const fromTrips: VisitPhotoSuggestion[] = tripRows.map((row) => ({
@@ -180,8 +188,9 @@ export async function visitPhotoSuggestionsFor(
     distanceM: Math.round(row.distanceKm * 1000),
   }));
   // A library photo that is already a trip photo, or already on the visit, is
-  // the same picture twice.
+  // the same picture twice; one refused for this visit is not offered again.
   const seen = new Set<string>([
+    ...refused.library,
     ...tripRows.flatMap((row) => (row.immichAssetId ? [row.immichAssetId] : [])),
     ...linked.flatMap((row) => (row.immichAssetId ? [row.immichAssetId] : [])),
   ]);

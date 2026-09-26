@@ -14,7 +14,21 @@ export interface PhotoDto {
   sizeBytes: number;
   immichAssetId: string | null;
   createdAt: string;
+  /**
+   * When and where it was taken (forgejo#132 item 11). A visit photo stores
+   * only its capture time; a photo PICKED from the trip's gallery is that trip
+   * photo, so its position — and its time, where the row has none — are the
+   * trip photo's. Null when neither holds it; never the upload time.
+   */
+  takenAt: string | null;
+  lat: number | null;
+  lon: number | null;
 }
+
+/** What a visit photo query includes so the DTO can read a picked trip photo. */
+export const VISIT_PHOTO_INCLUDE = {
+  tripPhoto: { select: { lat: true, lon: true, takenAt: true } },
+} as const;
 
 export function toPhotoDto(photo: {
   id: string;
@@ -25,7 +39,10 @@ export function toPhotoDto(photo: {
   sizeBytes: number;
   immichAssetId: string | null;
   createdAt: Date;
+  takenAt: Date | null;
+  tripPhoto?: { lat: number | null; lon: number | null; takenAt: Date | null } | null;
 }): PhotoDto {
+  const taken = photo.takenAt ?? photo.tripPhoto?.takenAt ?? null;
   return {
     id: photo.id,
     url: `/api/v1/places/visits/${photo.placeVisitId}/photos/${photo.id}/file`,
@@ -35,5 +52,8 @@ export function toPhotoDto(photo: {
     sizeBytes: photo.sizeBytes,
     immichAssetId: photo.immichAssetId,
     createdAt: photo.createdAt.toISOString(),
+    takenAt: taken?.toISOString() ?? null,
+    lat: photo.tripPhoto?.lat ?? null,
+    lon: photo.tripPhoto?.lon ?? null,
   };
 }
