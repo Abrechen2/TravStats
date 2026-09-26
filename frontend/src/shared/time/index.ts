@@ -18,7 +18,9 @@ export {
 } from "./zone";
 export { now, setClockForTests, todayIn } from "./clock";
 export {
+  displayParts,
   formatTimeValue,
+  type DisplayParts,
   type LocalDateValue,
   type LocalTimeInput,
   type TimePrecision,

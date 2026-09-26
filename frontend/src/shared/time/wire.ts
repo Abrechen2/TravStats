@@ -21,7 +21,7 @@ export interface TimeValue {
   zone: string | null;
   /** Offset in force at that instant, e.g. `+02:00`. */
   offset: string;
-  /** Wall clock at the place, `YYYY-MM-DDTHH:mm`. Display this. */
+  /** Wall clock at the place, `YYYY-MM-DDTHH:mm:ss`. Display this. */
   local: string;
   precision: TimePrecision;
 }
@@ -68,6 +68,48 @@ function parseLocal(local: string): LocalComponents | null {
   };
 }
 
+/**
+ * What a TimeValue shows, as strings and cut to its precision: `date` is
+ * `YYYY-MM-DD`, `YYYY-MM` or `YYYY`; `time` (`HH:mm`) and `offset` only for
+ * a minute-precise value. Taken from the payload's own `local`/`offset`, so a
+ * zone the browser does not know changes nothing. This is the part the shared
+ * vectors pin (op `display`); `formatTimeValue` only dresses it in a locale.
+ */
+export interface DisplayParts {
+  date: string;
+  time: string | null;
+  offset: string | null;
+}
+
+const pad = (n: number, width = 2): string => String(n).padStart(width, "0");
+
+function effectivePrecision(value: TimeValue, parsed: LocalComponents): TimePrecision {
+  return value.precision === "minute" && !parsed.hasTime ? "day" : value.precision;
+}
+
+/** Null only for a `local` that is not a wall clock at all. */
+export function displayParts(value: TimeValue): DisplayParts | null {
+  const parsed = parseLocal(value.local);
+  if (!parsed) return null;
+  const year = pad(parsed.year, 4);
+  const month = `${year}-${pad(parsed.month)}`;
+  switch (effectivePrecision(value, parsed)) {
+    case "minute":
+      return {
+        date: `${month}-${pad(parsed.day)}`,
+        time: `${pad(parsed.hour)}:${pad(parsed.minute)}`,
+        offset: value.offset,
+      };
+    case "month":
+      return { date: month, time: null, offset: null };
+    case "year":
+      return { date: year, time: null, offset: null };
+    default:
+      // "day", and "unknown" (Q4: the date is kept, the time of day is not shown).
+      return { date: `${month}-${pad(parsed.day)}`, time: null, offset: null };
+  }
+}
+
 const DISPLAY_OPTIONS: Record<TimePrecision, Intl.DateTimeFormatOptions> = {
   minute: { dateStyle: "medium", timeStyle: "short" },
   day: { dateStyle: "medium" },
@@ -87,8 +129,7 @@ const DISPLAY_OPTIONS: Record<TimePrecision, Intl.DateTimeFormatOptions> = {
 export function formatTimeValue(value: TimeValue, locale: string): string {
   const parsed = parseLocal(value.local);
   if (!parsed) return value.local;
-  const precision: TimePrecision =
-    value.precision === "minute" && !parsed.hasTime ? "day" : value.precision;
+  const precision = effectivePrecision(value, parsed);
   const at = new Date(
     Date.UTC(parsed.year, parsed.month - 1, parsed.day, parsed.hour, parsed.minute)
   );

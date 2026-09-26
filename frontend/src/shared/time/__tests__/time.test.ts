@@ -49,47 +49,49 @@ describe.each(HOST_ZONES)("shared/time with the host in %s", (hostZone, hostOffs
 
   it("reads an instant in the place's zone, whatever the host", () => {
     expect(toLocal("2027-01-14T18:45:00Z", "Asia/Kolkata")).toEqual({
-      local: "2027-01-15T00:15",
+      local: "2027-01-15T00:15:00",
       offset: "+05:30",
     });
     expect(toLocal("2027-01-14T23:59:00Z", "Asia/Kathmandu")).toEqual({
-      local: "2027-01-15T05:44",
+      local: "2027-01-15T05:44:00",
       offset: "+05:45",
     });
-    expect(toLocal(new Date("2027-06-01T01:00:00Z"), "Asia/Tokyo").local).toBe("2027-06-01T10:00");
+    expect(toLocal(new Date("2027-06-01T01:00:00Z"), "Asia/Tokyo").local).toBe(
+      "2027-06-01T10:00:00"
+    );
   });
 
   it("reads a moment inside a DST gap as the post-gap clock (machine source)", () => {
     expect(toLocal("2027-03-28T01:30:00Z", "Europe/Berlin")).toEqual({
-      local: "2027-03-28T03:30",
+      local: "2027-03-28T03:30:00",
       offset: "+02:00",
     });
   });
 
   it("reads both sides of the repeated hour with their own offsets", () => {
     expect(toLocal("2027-10-31T00:30:00Z", "Europe/Berlin")).toEqual({
-      local: "2027-10-31T02:30",
+      local: "2027-10-31T02:30:00",
       offset: "+02:00",
     });
     expect(toLocal("2027-10-31T01:30:00Z", "Europe/Berlin")).toEqual({
-      local: "2027-10-31T02:30",
+      local: "2027-10-31T02:30:00",
       offset: "+01:00",
     });
   });
 
   it("follows historical zone changes (Samoa 2011, Moscow, Istanbul)", () => {
     expect(toLocal("2011-12-30T09:00:00Z", "Pacific/Apia")).toEqual({
-      local: "2011-12-29T23:00",
+      local: "2011-12-29T23:00:00",
       offset: "-10:00",
     });
     expect(toLocal("2011-12-30T10:00:00Z", "Pacific/Apia")).toEqual({
-      local: "2011-12-31T00:00",
+      local: "2011-12-31T00:00:00",
       offset: "+14:00",
     });
     expect(toLocal("2012-07-01T12:00:00Z", "Europe/Moscow").offset).toBe("+04:00");
     expect(toLocal("2015-07-01T12:00:00Z", "Europe/Moscow").offset).toBe("+03:00");
     expect(toLocal("2016-11-15T12:00:00Z", "Europe/Istanbul")).toEqual({
-      local: "2016-11-15T15:00",
+      local: "2016-11-15T15:00:00",
       offset: "+03:00",
     });
     expect(toLocal("2015-11-15T12:00:00Z", "Europe/Istanbul").offset).toBe("+02:00");
@@ -132,7 +134,7 @@ describe.each(HOST_ZONES)("shared/time with the host in %s", (hostZone, hostOffs
       utc: "2027-03-28T01:30:00Z",
       zone: "Mars/Olympus",
       offset: "+02:00",
-      local: "2027-03-28T03:30",
+      local: "2027-03-28T03:30:00",
       precision: "minute",
     };
     const shown = formatTimeValue(value, "en-GB");
@@ -145,7 +147,7 @@ describe.each(HOST_ZONES)("shared/time with the host in %s", (hostZone, hostOffs
       utc: "2027-05-01T20:00:00Z",
       zone: "Pacific/Kiritimati",
       offset: "+14:00",
-      local: "2027-05-02T10:00",
+      local: "2027-05-02T10:00:00",
       precision: "day",
     };
     expect(formatTimeValue(base, "en-GB")).toBe("2 May 2027");
@@ -155,11 +157,12 @@ describe.each(HOST_ZONES)("shared/time with the host in %s", (hostZone, hostOffs
     expect(formatTimeValue({ ...base, local: "garbled" }, "de-DE")).toBe("garbled");
   });
 
-  it("formats offsets, including historical second offsets", () => {
+  it("formats offsets as RFC 3339 does, to the minute", () => {
     expect(formatOffset(0)).toBe("+00:00");
-    expect(formatOffset(-12600)).toBe("-03:30");
-    expect(formatOffset(20700)).toBe("+05:45");
-    expect(formatOffset(3208)).toBe("+00:53:28");
+    expect(formatOffset(-12_600_000)).toBe("-03:30");
+    expect(formatOffset(20_700_000)).toBe("+05:45");
+    // Amsterdam's pre-1937 +00:19:32 rounds, as the server's does.
+    expect(formatOffset(1_172_000)).toBe("+00:20");
   });
 
   it("the older helpers now read through shared/time and agree with it", () => {

@@ -116,18 +116,19 @@ function datePart(p: WallClockParts): string {
   return `${pad(p.year, 4)}-${pad(p.month)}-${pad(p.day)}`;
 }
 
-/** "+05:45", "-03:30", "+00:00" — seconds only where a historical zone had them. */
-export function formatOffset(offsetSeconds: number): string {
-  const sign = offsetSeconds < 0 ? "-" : "+";
-  const abs = Math.abs(offsetSeconds);
-  const hours = Math.floor(abs / 3600);
-  const minutes = Math.floor((abs % 3600) / 60);
-  const seconds = abs % 60;
-  return `${sign}${pad(hours)}:${pad(minutes)}${seconds ? `:${pad(seconds)}` : ""}`;
+/**
+ * An offset as RFC 3339 writes it: `+05:45`, `-03:30`, `+00:00`. Minutes
+ * only, as the server writes it — RFC 3339 has no seconds field, and the only
+ * offsets with seconds are pre-1900 local mean times no travel record carries.
+ */
+export function formatOffset(offsetMs: number): string {
+  const sign = offsetMs < 0 ? "-" : "+";
+  const totalMinutes = Math.round(Math.abs(offsetMs) / 60_000);
+  return `${sign}${pad(Math.floor(totalMinutes / 60))}:${pad(totalMinutes % 60)}`;
 }
 
-/** Seconds the clock in `zone` is ahead of UTC at `instant`. */
-function offsetSecondsAt(instant: Date, parts: WallClockParts): number {
+/** Milliseconds the clock in `zone` is ahead of UTC at `instant`. */
+function offsetMsAt(instant: Date, parts: WallClockParts): number {
   const wallAsUtc = Date.UTC(
     parts.year,
     parts.month - 1,
@@ -136,13 +137,13 @@ function offsetSecondsAt(instant: Date, parts: WallClockParts): number {
     parts.minute,
     parts.second
   );
-  const instantSeconds = Math.floor(instant.getTime() / 1000) * 1000;
-  return Math.round((wallAsUtc - instantSeconds) / 1000);
+  // The formatter drops milliseconds, so compare against the whole second.
+  return wallAsUtc - Math.floor(instant.getTime() / 1000) * 1000;
 }
 
 /** What `toLocal` answers: the wall clock and the offset in force. */
 export interface LocalReading {
-  /** `YYYY-MM-DDTHH:mm`, the shape the write API accepts (D3). */
+  /** `YYYY-MM-DDTHH:mm:ss` as the place's clock showed it. */
   local: string;
   /** The offset in force at that instant, e.g. `+02:00`. */
   offset: string;
@@ -158,8 +159,8 @@ export function toLocal(utc: InstantLike, zone: string): LocalReading {
   const instant = toDate(utc);
   const parts = wallClockParts(instant, zone);
   return {
-    local: `${datePart(parts)}T${pad(parts.hour)}:${pad(parts.minute)}`,
-    offset: formatOffset(offsetSecondsAt(instant, parts)),
+    local: `${datePart(parts)}T${pad(parts.hour)}:${pad(parts.minute)}:${pad(parts.second)}`,
+    offset: formatOffset(offsetMsAt(instant, parts)),
   };
 }
 
