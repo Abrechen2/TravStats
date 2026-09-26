@@ -1048,6 +1048,10 @@ model Backup {
   startedAt       DateTime? @map("started_at")
   completedAt     DateTime? @map("completed_at")
   errorMessage    String?   @map("error_message")
+  /// Why a failed backup failed, as a stable code the admin page words
+  /// (services/backup/backupFailure.ts). The message is English for the log;
+  /// the row showed no reason at all once the transient toast was gone (D12).
+  errorCode       String?   @map("error_code")
   metadata        Json? // JSON: userCount, flightCount, etc.
   syncedToCloud   Boolean   @default(false) @map("synced_to_cloud")
   cloudSyncAt     DateTime? @map("cloud_sync_at")

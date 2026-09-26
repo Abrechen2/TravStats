@@ -15,6 +15,7 @@ import { archiveUploads, getMetadata } from "./backup/backupFiles";
 import { restoreBackup as restoreBackupImpl } from "./backup/backupRestore";
 import { syncToCloudIfEnabled } from "./cloudSyncService";
 import { AppError } from "../middleware/errorHandler";
+import { backupFailureCode, backupRowFailureCode } from "./backup/backupFailure";
 
 // Re-export types for backward compatibility
 export type { BackupOptions, RestoreOptions } from "./backup/backupConfig";
@@ -247,6 +248,8 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
       data: {
         status: "failed",
         errorMessage: error instanceof Error ? error.message : "Unknown error",
+        // The reason the history row shows, after the toast is gone (D12).
+        errorCode: backupFailureCode(error) ?? "BACKUP_FAILED",
         completedAt: new Date(),
       },
     });
@@ -306,9 +309,11 @@ export async function createBackup(options: BackupOptions = {}): Promise<string>
  * List all backups
  */
 export async function listBackups(): Promise<Backup[]> {
-  return prisma.backup.findMany({
+  const rows = await prisma.backup.findMany({
     orderBy: { createdAt: "desc" },
   });
+  // A row from before the column still says why, from its message (D12).
+  return rows.map((row) => ({ ...row, errorCode: backupRowFailureCode(row) }));
 }
 
 /**

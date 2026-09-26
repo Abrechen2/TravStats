@@ -6,7 +6,7 @@ import { format } from "date-fns";
 import { logger } from "../../lib/logger";
 import { apiErrorMachineCode, extractApiErrorMessage } from "../../lib/apiError";
 import { JobLostError, jobErrorCode, waitForJob } from "../../lib/api/jobs";
-import { backupFailureKey } from "../../lib/backupFailure";
+import { backupFailureKey, backupRowFailureKey } from "../../lib/backupFailure";
 import { useTranslation } from "../../hooks/useTranslation";
 // The shared frame: role=dialog, aria-modal, Escape, focus in and back out,
 // and a panel that scrolls instead of running off a 320px screen (AUD-037).
@@ -22,6 +22,8 @@ interface Backup {
   startedAt: string | null;
   completedAt: string | null;
   errorMessage: string | null;
+  /** Why a failed backup failed — a code, worded by `backupRowFailureKey`. */
+  errorCode?: string | null;
   metadata: Record<string, unknown> | null;
   syncedToCloud: boolean;
   cloudSyncAt: string | null;
@@ -648,6 +650,11 @@ export default function BackupManagement(): JSX.Element {
                     <span className="text-sm font-medium" style={getStatusStyle(backup.status)}>
                       {getStatusText(backup.status)}
                     </span>
+                    {backup.status === "failed" && (
+                      <p className="mt-1 max-w-xs whitespace-normal text-xs text-(--text-muted)">
+                        {t(backupRowFailureKey(backup.errorCode))}
+                      </p>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
                     {backup.status === "completed" ? formatSize(backup.size) : "-"}

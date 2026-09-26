@@ -118,6 +118,8 @@ export type ApiErrorCode =
   | "BACKUP_TOOL_VERSION_MISMATCH"
   /** A backup failed for a cause not recognised above; detail in the log. */
   | "BACKUP_FAILED"
+  /** A backup the server was stopped or restored in the middle of (stored on the row). */
+  | "BACKUP_INTERRUPTED"
   /** A restore failed for a cause not recognised above; detail in the log. */
   | "RESTORE_FAILED";
 

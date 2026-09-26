@@ -627,7 +627,8 @@
       "BACKUP_DB_UNREACHABLE": "Das Backup-Werkzeug erreicht die Datenbank nicht. Bitte prüfen, ob die Datenbank läuft und die Verbindungsdaten stimmen.",
       "BACKUP_TOOL_VERSION_MISMATCH": "pg_dump ist älter als der Datenbankserver. Bitte die PostgreSQL-Client-Werkzeuge auf die Version des Servers aktualisieren.",
       "BACKUP_FAILED": "Das Backup ist fehlgeschlagen. Die Ursache steht im Server-Log.",
-      "RESTORE_FAILED": "Die Wiederherstellung ist fehlgeschlagen. Die Ursache steht im Server-Log."
+      "RESTORE_FAILED": "Die Wiederherstellung ist fehlgeschlagen. Die Ursache steht im Server-Log.",
+      "BACKUP_INTERRUPTED": "Das Backup wurde abgebrochen, weil der Server neu gestartet oder eine Wiederherstellung eingespielt wurde. Einfach neu starten."
     }
   },
   "feedback": {

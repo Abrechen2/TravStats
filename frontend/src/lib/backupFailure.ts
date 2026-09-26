@@ -14,8 +14,18 @@ const BACKUP_FAILURE_CODES: ReadonlySet<string> = new Set([
   "BACKUP_DB_UNREACHABLE",
   "BACKUP_TOOL_VERSION_MISMATCH",
   "BACKUP_FAILED",
+  "BACKUP_INTERRUPTED",
   "RESTORE_FAILED",
 ]);
+
+/**
+ * The sentence for a failed backup ROW in the history, from the code the row
+ * stores (D12: the row said "Fehlgeschlagen" and nothing else once the toast
+ * was gone). An unknown or missing code reads as the generic failure.
+ */
+export function backupRowFailureKey(code: string | null | undefined): string {
+  return `admin:backup.failure.${code && BACKUP_FAILURE_CODES.has(code) ? code : "BACKUP_FAILED"}`;
+}
 
 /** The translation key for a failed backup/restore job, else `fallbackKey`. */
 export function backupFailureKey(err: unknown, fallbackKey: string): string {

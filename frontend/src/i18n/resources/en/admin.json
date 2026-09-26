@@ -627,7 +627,8 @@
       "BACKUP_DB_UNREACHABLE": "The backup tool cannot reach the database. Please check that the database is running and the connection settings are right.",
       "BACKUP_TOOL_VERSION_MISMATCH": "pg_dump is older than the database server. Please update the PostgreSQL client tools to the server's version.",
       "BACKUP_FAILED": "The backup failed. The cause is in the server log.",
-      "RESTORE_FAILED": "The restore failed. The cause is in the server log."
+      "RESTORE_FAILED": "The restore failed. The cause is in the server log.",
+      "BACKUP_INTERRUPTED": "The backup was cut off because the server restarted or a restore was applied. Simply start it again."
     }
   },
   "feedback": {

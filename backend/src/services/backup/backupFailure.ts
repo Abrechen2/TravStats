@@ -39,6 +39,27 @@ export function backupFailureCode(err: unknown): ApiErrorCode | null {
  * passes through untouched; anything else gets the recognised cause, else the
  * operation's generic code — never the bare JOB_FAILED.
  */
+/** A backup the server was stopped or restored in the middle of (`reconcileBackups.ts`). */
+const INTERRUPTED_PREFIX = "Interrupted:";
+
+/**
+ * The reason code a failed backup ROW carries (acceptance D12, 2026-09-26: a
+ * failed row in the history showed no reason once the toast was gone). The
+ * stored code where the row has one; for a row written before the column,
+ * the code its English message still yields — the same rules as the job's.
+ * Null for a row that did not fail.
+ */
+export function backupRowFailureCode(row: {
+  status: string;
+  errorCode: string | null;
+  errorMessage: string | null;
+}): string | null {
+  if (row.status !== "failed") return null;
+  if (row.errorCode) return row.errorCode;
+  if (row.errorMessage?.startsWith(INTERRUPTED_PREFIX)) return "BACKUP_INTERRUPTED";
+  return backupFailureCode(row.errorMessage ?? "") ?? "BACKUP_FAILED";
+}
+
 export function asBackupJobError(
   err: unknown,
   fallback: "BACKUP_FAILED" | "RESTORE_FAILED"
