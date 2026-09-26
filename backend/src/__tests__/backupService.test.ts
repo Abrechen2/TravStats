@@ -68,6 +68,7 @@ const MOCK_BACKUP = {
   startedAt: null,
   completedAt: new Date("2026-01-01T00:05:00Z"),
   errorMessage: null,
+  errorCode: null,
   metadata: null,
   syncedToCloud: false,
   cloudSyncAt: null,
