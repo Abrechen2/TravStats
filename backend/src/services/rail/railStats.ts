@@ -83,6 +83,14 @@ export interface RailStats {
     recordedJourneys: number;
     /** One count per bucket: <= 0 (on time), <= 5, <= 15, <= 30, <= 60, > 60. */
     buckets: Array<{ upToMinutes: number | null; count: number }>;
+    /**
+     * Mean delay over `recordedJourneys`, one decimal, early arrivals counted
+     * as the negative figures they are — the rule flight punctuality uses
+     * (`services/punctualityStats.ts`). NULL when no ride carries a delay: a
+     * 0 there would say "always on time" about rides nobody timed, which is
+     * the confusion the bucket split already refuses.
+     */
+    averageMinutes: number | null;
   };
   byYear: Array<{ year: number; journeys: number; km: number }>;
   /**
@@ -134,7 +142,13 @@ function delayBuckets(rows: readonly RailStatsRow[]): RailStats["delays"] {
     }).length;
     return { upToMinutes: upTo, count };
   });
-  return { recordedJourneys: recorded.length, buckets };
+  const averageMinutes =
+    recorded.length === 0
+      ? null
+      : Math.round(
+          (recorded.reduce((sum, r) => sum + (r.delayMinutes as number), 0) / recorded.length) * 10
+        ) / 10;
+  return { recordedJourneys: recorded.length, buckets, averageMinutes };
 }
 
 function rideKinds(rows: readonly RailStatsRow[]): RailStats["rideKinds"] {

@@ -28,6 +28,7 @@ const STATS: RailStats = {
   },
   delays: {
     recordedJourneys: 1,
+    averageMinutes: 4,
     buckets: [
       { upToMinutes: 0, count: 0 },
       { upToMinutes: 5, count: 1 },
