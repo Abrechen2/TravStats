@@ -48,9 +48,9 @@
   --ts-domain-cruise: #4aa6b0;
   --ts-domain-hotel: #5ec2b2;
   --ts-domain-poi: #e7e3dc;
-  --ts-domain-tour: #8faa5f;
-  --ts-domain-roadtrip: #a597f0;
-  --ts-domain-rail: #d4655c;
+  --ts-domain-tour: #a9c46a;
+  --ts-domain-roadtrip: #a9c46a;
+  --ts-domain-rail: #a597e8;
 
   /* Status — always a pill, never plain text (DESIGN_SYSTEM.md §2.6) */
   --ts-status-pending: #6fa0d6;

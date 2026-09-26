@@ -120,7 +120,7 @@ export function useDashboardTours(
     const kindById = new Map(tours.map((t) => [t.id, t.kind]));
     const roadtripRgb = hexToRgb(roadtripHex);
     return Array.from(geometryById.values()).map((g) =>
-      kindById.get(g.routeId) === "roadtrip" ? { ...g, rgb: roadtripRgb } : g
+      kindById.get(g.routeId) === "roadtrip" ? { ...g, rgb: roadtripRgb, isRoadtrip: true } : g
     );
   }, [geometryById, tours, roadtripHex]);
 

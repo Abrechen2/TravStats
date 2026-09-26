@@ -40,9 +40,9 @@ export const tokens = {
     "cruise": "#4aa6b0",
     "hotel": "#5ec2b2",
     "poi": "#e7e3dc",
-    "tour": "#8faa5f",
-    "roadtrip": "#a597f0",
-    "rail": "#d4655c"
+    "tour": "#a9c46a",
+    "roadtrip": "#a9c46a",
+    "rail": "#a597e8"
   },
   "statusColor": {
     "pending": "#6fa0d6",

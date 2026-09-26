@@ -95,7 +95,8 @@ export function buildTourLegendRows(
  * map renders via `MapContainer3D`'s `extraLayers` prop. Numbers match
  * `TripMap.tsx`'s own tour-path layer exactly (see its doc comment
  * ~line 401): alpha 170/2px for a `straight` placeholder chord, 255/3.5px
- * for real geometry, `widthMinPixels: 2` as the floor. Measured in a
+ * for real geometry (2.5px for a day tour since round 29 — see
+ * `tourPathWidth`), `widthMinPixels: 2` as the floor. Measured in a
  * browser against this dark basemap — alpha 70 at 1.5px drew ZERO pixels,
  * not merely "subtle". Do not lower these again.
  */
@@ -125,6 +126,21 @@ export function buildTourLegendRows(
 export const TOUR_PATH_GLOBE_ALTITUDE_M = 5_000;
 
 /**
+ * Line width in pixels. A straight placeholder chord is the thinnest (a claim
+ * about the data). A measured day tour is thinner than a measured roadtrip:
+ * since round 29 (2026-09-26) both default to the one "road" moss, the
+ * Companion's rule is that a tour line is the thinner one, and on the "Alle"
+ * map the two lie side by side — without this they are indistinguishable.
+ * Nothing drops below 2 px (see the alpha/width note on `buildTourDeckLayers`).
+ */
+export const TOUR_LINE_WIDTH_PX = { placeholder: 2, tour: 2.5, roadtrip: 3.5 } as const;
+
+export function tourPathWidth(d: Pick<TourPathDatum, "isPlaceholder" | "isRoadtrip">): number {
+  if (d.isPlaceholder) return TOUR_LINE_WIDTH_PX.placeholder;
+  return d.isRoadtrip ? TOUR_LINE_WIDTH_PX.roadtrip : TOUR_LINE_WIDTH_PX.tour;
+}
+
+/**
  * `altitudeM` is 0 for the flat map (the default — `d.path`'s raw 2-D
  * coordinates render fine there, and lifting them would be a pointless
  * behaviour change) and `TOUR_PATH_GLOBE_ALTITUDE_M` for the globe (see
@@ -144,7 +160,7 @@ export function buildTourDeckLayers(pathData: readonly TourPathDatum[], altitude
           : d.path.map(([lng, lat]) => [lng, lat, altitudeM] as [number, number, number]),
       getColor: (d) =>
         [...d.color, d.isPlaceholder ? 170 : 255] as [number, number, number, number],
-      getWidth: (d) => (d.isPlaceholder ? 2 : 3.5),
+      getWidth: tourPathWidth,
       widthUnits: "pixels",
       widthMinPixels: 2,
       pickable: true,
