@@ -1,5 +1,3 @@
-import { fromZonedTime } from "date-fns-tz";
-
 import { AppError } from "../../middleware/errorHandler";
 import type {
   RailStationInput,
@@ -7,10 +5,11 @@ import type {
   UpdateRailJourneyInput,
 } from "../../schemas/rail";
 import { deriveRailStatus } from "../../shared/statusDerivation";
-import { wallClockExists } from "../../shared/wallClockExistence";
+import { LocalTimeNonexistentError, TzUnresolvedError } from "../../shared/time/errors";
+import { toInstant } from "../../shared/time/instant";
+import { zoneOf } from "../../shared/time/zoneOf";
 import { formatWallClockIn } from "../../shared/zonedWallClock";
 import { calculateDistance } from "../../utils/geo";
-import { timezoneOfLodging } from "../../utils/stayInstant";
 
 /**
  * The write rules of a rail journey, in one place for create and update
@@ -39,6 +38,9 @@ export interface RailJourneyState {
   arrTimezone: string | null;
   departureTime: Date;
   arrivalTime: Date | null;
+  /** ADR 0002: minute when a wall clock was converted, null for no time. */
+  depPrecision?: string | null;
+  arrPrecision?: string | null;
   distanceKm: number | null;
   distanceSource: string | null;
   status: string;
@@ -70,7 +72,7 @@ type StationColumns<P extends "dep" | "arr"> = {
  */
 export function stationColumns<P extends "dep" | "arr">(
   prefix: P,
-  station: RailStationInput
+  station: RailStationInput & { catalogueZone?: string | null }
 ): StationColumns<P> {
   return {
     [`${prefix}StationName`]: station.name,
@@ -79,19 +81,28 @@ export function stationColumns<P extends "dep" | "arr">(
     [`${prefix}Lat`]: station.lat,
     [`${prefix}Lon`]: station.lon,
     [`${prefix}Country`]: station.country ?? null,
-    [`${prefix}Timezone`]: timezoneOfLodging(station.lat, station.lon),
+    // The station catalogue's zone first, its coordinates second (ADR 0002 D2).
+    [`${prefix}Timezone`]: zoneOf({
+      catalogueZone: station.catalogueZone,
+      lat: station.lat,
+      lon: station.lon,
+    }),
   } as StationColumns<P>;
 }
 
 /**
- * The instant a station's wall clock names. A station in no zone (none exists
- * on land, but the lookup can abstain) keeps the wall clock as UTC — the same
- * fallback a stay without coordinates gets, and the zone column stays null so
- * nothing downstream pretends to know better.
+ * The instant a station's wall clock names, read back from a STORED row or a
+ * seed: a machine reading through `shared/time` (a skipped hour is not
+ * refused). A stored row without a zone was written as UTC and is read back
+ * as UTC — the one place this fallback survives, because it only restores
+ * what that row already holds. A clock a request SENDS goes through
+ * `sentWallClockToInstant`, which never falls back.
  */
 export function wallClockToInstant(wall: string, timezone: string | null): Date {
   const normalised = wall.length === 16 ? `${wall}:00` : wall;
-  return timezone ? fromZonedTime(normalised, timezone) : new Date(`${normalised}Z`);
+  return timezone
+    ? toInstant(normalised, timezone, { origin: "machine" }).utc
+    : new Date(`${normalised}Z`);
 }
 
 /**
@@ -108,7 +119,15 @@ function sentWallClockToInstant(
   timezone: string | null,
   field: "departureLocal" | "arrivalLocal"
 ): Date {
-  if (timezone && !wallClockExists(wall.length === 16 ? `${wall}:00` : wall, timezone)) {
+  // A station the resolver cannot place in a zone has no clock to read the
+  // time on; it used to be read as UTC in silence (ADR 0002 D2).
+  if (!timezone) throw new TzUnresolvedError("the station has no zone", field);
+  try {
+    return toInstant(wall, timezone, { origin: "typed" }).utc;
+  } catch (error) {
+    if (!(error instanceof LocalTimeNonexistentError)) throw error;
+    // Rail keeps the code its form already maps (400, RAIL_…); the general
+    // LOCAL_TIME_NONEXISTENT is the same statement for every other domain.
     throw new AppError(
       `${wall} does not exist in ${timezone} — the clocks skip that hour on this day`,
       400,
@@ -116,7 +135,6 @@ function sentWallClockToInstant(
       field
     );
   }
-  return wallClockToInstant(wall, timezone);
 }
 
 /**
@@ -198,7 +216,17 @@ export function mergeRailJourney(
   const requested = input.status ?? existing?.status ?? "scheduled";
   const status = deriveRailStatus({ departureTime, arrivalTime, current: requested, now });
 
-  return { ...dep, ...arr, departureTime, arrivalTime, distanceKm, distanceSource, status };
+  return {
+    ...dep,
+    ...arr,
+    departureTime,
+    arrivalTime,
+    depPrecision: "minute",
+    arrPrecision: arrivalTime ? "minute" : null,
+    distanceKm,
+    distanceSource,
+    status,
+  };
 }
 
 function pickStation<P extends "dep" | "arr">(row: RailJourneyState, prefix: P): StationColumns<P> {
