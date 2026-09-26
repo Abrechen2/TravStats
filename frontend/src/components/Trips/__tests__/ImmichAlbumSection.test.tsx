@@ -467,4 +467,56 @@ describe("ImmichAlbumSection", () => {
       vi.useRealTimers();
     }
   });
+  // An import that failed, or left photos behind, used to end silently: the
+  // button simply became clickable again.
+  describe("says how a finished import ended", () => {
+    const job = (over: Record<string, unknown>) => ({
+      job: {
+        status: "running",
+        totalAssets: 3,
+        processedAssets: 1,
+        failedAssets: 0,
+        error: null,
+        ...over,
+      },
+    });
+
+    it("reports a failed run", async () => {
+      getImportJob
+        .mockResolvedValueOnce(job({})) // mount probe: running
+        .mockResolvedValue(job({ status: "failed", error: "unreachable" }));
+
+      render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
+
+      expect(
+        await screen.findByText("albums.importFailed", undefined, { timeout: 4000 })
+      ).toBeInTheDocument();
+    });
+
+    it("reports photos that did not come across in an otherwise completed run", async () => {
+      getImportJob
+        .mockResolvedValueOnce(job({}))
+        .mockResolvedValue(job({ status: "completed", processedAssets: 2, failedAssets: 1 }));
+
+      render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
+
+      expect(
+        await screen.findByText("albums.importPartial", undefined, { timeout: 4000 })
+      ).toBeInTheDocument();
+    });
+
+    it("says nothing after a clean run", async () => {
+      getImportJob
+        .mockResolvedValueOnce(job({}))
+        .mockResolvedValue(job({ status: "completed", processedAssets: 3 }));
+
+      render(<ImmichAlbumSection tripId="trip-1" album={IMPORT_ALBUM} onChanged={vi.fn()} />);
+
+      await waitFor(
+        () => expect(screen.getByRole("button", { name: "albums.resync" })).toBeEnabled(),
+        { timeout: 4000 }
+      );
+      expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+    });
+  });
 });
