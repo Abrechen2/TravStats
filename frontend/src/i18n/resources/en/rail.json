@@ -69,7 +69,13 @@
     "cancel": "Cancel",
     "save": "Save",
     "saving": "Saving …",
-    "saveError": "The journey could not be saved."
+    "saveError": "The journey could not be saved.",
+    "errors": {
+      "arrivalBeforeDeparture": "The arrival is before the departure. If the train runs overnight, give the arrival the next day's date.",
+      "nonexistentTime": "This time does not exist on that day: the clocks jump an hour ahead for summer time. Check the time on the ticket.",
+      "invalidField": "“{{field}}” was not accepted. Please check it.",
+      "invalid": "An entry was not accepted. Please check the fields."
+    }
   },
   "tracedLine": "along the line, Transitous",
   "station": {

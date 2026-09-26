@@ -117,6 +117,67 @@ describe("Rail journeys API", () => {
       expect(wrong.status).toBe(400);
     });
 
+    // Review 2026-09-26, finding 5: the form printed the server's English
+    // prose ("arrival must not precede departure", a Zod JSON dump) to a
+    // German reader. The server now names a stable code and the field.
+    it("refuses with a stable code and the field it belongs to", async () => {
+      const early = await create({ ...base, arrivalLocal: "2026-07-01T07:00" });
+      expect(early.status).toBe(400);
+      expect(early.body).toMatchObject({
+        code: "RAIL_ARRIVAL_BEFORE_DEPARTURE",
+        field: "arrivalLocal",
+      });
+
+      const noPosition = await create({
+        ...base,
+        departureStation: { name: "Frankfurt", lat: 50.1 },
+      });
+      expect(noPosition.status).toBe(400);
+      expect(noPosition.body).toMatchObject({
+        code: "RAIL_INVALID_INPUT",
+        field: "departureStation",
+      });
+    });
+
+    // Finding 6: 02:30 on 29 March 2026 never happened in Frankfurt — the
+    // clocks jump from 02:00 to 03:00. It was stored as 00:30Z and shown as
+    // 01:30, and an arrival in the gap could read as before its departure.
+    it("refuses a station time that the spring-forward change skipped", async () => {
+      const gap = await create({
+        ...base,
+        departureLocal: "2026-03-29T02:30",
+        arrivalLocal: "2026-03-29T06:30",
+      });
+      expect(gap.status).toBe(400);
+      expect(gap.body).toMatchObject({
+        code: "RAIL_LOCAL_TIME_NONEXISTENT",
+        field: "departureLocal",
+      });
+
+      const arrivalInGap = await create({
+        ...base,
+        arrivalStation: { ...FRANKFURT, name: "Frankfurt Süd", lat: 50.0993, lon: 8.6863 },
+        departureLocal: "2026-03-29T01:50",
+        arrivalLocal: "2026-03-29T02:30",
+      });
+      expect(arrivalInGap.status).toBe(400);
+      expect(arrivalInGap.body).toMatchObject({
+        code: "RAIL_LOCAL_TIME_NONEXISTENT",
+        field: "arrivalLocal",
+      });
+
+      // A night train across the change is fine: 23:00 CET to 03:30 CEST.
+      const night = await create({
+        ...base,
+        departureLocal: "2026-03-28T23:00",
+        arrivalLocal: "2026-03-29T03:30",
+        arrivalStation: { ...FRANKFURT, name: "Frankfurt Süd", lat: 50.0993, lon: 8.6863 },
+      });
+      expect(night.status).toBe(201);
+      expect(night.body.data.departureTime).toBe("2026-03-28T22:00:00.000Z");
+      expect(night.body.data.arrivalTime).toBe("2026-03-29T01:30:00.000Z");
+    });
+
     it("measures the great-circle distance and says that it did", async () => {
       const res = await create(base);
       expect(res.body.data.distanceSource).toBe("great_circle");

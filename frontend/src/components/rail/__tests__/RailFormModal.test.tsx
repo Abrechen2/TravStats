@@ -169,9 +169,17 @@ describe("RailFormModal", () => {
     expect(trip.value).toBe("");
   });
 
-  it("shows the server's refusal instead of closing", async () => {
+  // Review 2026-09-26, finding 5: the English prose of the server ended up
+  // in the German form. The form reads the code and puts it by the field.
+  it("puts a refused arrival beside the arrival field, in the reader's words", async () => {
     create.mockRejectedValue({
-      response: { data: { error: "arrival must not precede departure" } },
+      response: {
+        data: {
+          error: "arrival must not precede departure",
+          code: "RAIL_ARRIVAL_BEFORE_DEPARTURE",
+          field: "arrivalLocal",
+        },
+      },
     });
     const onSaved = vi.fn();
     render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);
@@ -180,10 +188,23 @@ describe("RailFormModal", () => {
       target: { value: "2026-07-01T08:15" },
     });
     fireEvent.click(saveButton());
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "arrival must not precede departure"
-    );
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("rail:form.errors.arrivalBeforeDeparture");
+    expect(alert).not.toHaveTextContent("arrival must not precede departure");
+    expect(alert.id).toBe("rail-arrivalLocal-error");
+    expect(screen.getByLabelText("rail:form.arrivalTime")).toHaveAttribute("aria-invalid", "true");
     expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it("never shows a refusal's raw prose, even without a code", async () => {
+    create.mockRejectedValue({ response: { data: { error: '[{"code":"invalid_type"}]' } } });
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText("rail:form.departureTime"), {
+      target: { value: "2026-07-01T08:15" },
+    });
+    fireEvent.click(saveButton());
+    expect(await screen.findByRole("alert")).toHaveTextContent("rail:form.saveError");
   });
 
   it("sends a catalogue pick with its id and code, and a looked-up train with its match", async () => {

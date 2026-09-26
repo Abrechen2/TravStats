@@ -69,7 +69,13 @@
     "cancel": "Abbrechen",
     "save": "Speichern",
     "saving": "Speichert …",
-    "saveError": "Die Fahrt konnte nicht gespeichert werden."
+    "saveError": "Die Fahrt konnte nicht gespeichert werden.",
+    "errors": {
+      "arrivalBeforeDeparture": "Die Ankunft liegt vor der Abfahrt. Fährt der Zug über Nacht, trag bei der Ankunft das Datum des nächsten Tages ein.",
+      "nonexistentTime": "Diese Uhrzeit gibt es an diesem Tag nicht: Bei der Umstellung auf Sommerzeit springen die Uhren eine Stunde vor. Prüf die Zeit auf dem Ticket.",
+      "invalidField": "Die Angabe „{{field}}“ wurde nicht angenommen. Bitte prüf sie.",
+      "invalid": "Eine Angabe wurde nicht angenommen. Bitte prüf die Felder."
+    }
   },
   "tracedLine": "entlang der Strecke, Transitous",
   "station": {

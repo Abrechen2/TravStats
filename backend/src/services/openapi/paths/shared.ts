@@ -24,6 +24,14 @@ export const errorResponse = registry.register(
     .object({
       error: z.string().openapi({ example: "Invalid input" }),
       details: z.array(z.string()).optional(),
+      code: z
+        .string()
+        .optional()
+        .describe("Stable machine-readable cause, where the route names one (ApiErrorCode)"),
+      field: z
+        .string()
+        .optional()
+        .describe("The request field the cause belongs to, where the route names one"),
     })
     .openapi("Error")
 );

@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import type { z } from "zod";
 
 import { prisma } from "../db";
 import { Prisma } from "../prisma";
@@ -113,6 +114,21 @@ const router = Router();
 router.use(authenticate);
 // Method-aware: GET passes through, so read-only tokens keep read access.
 router.use(requireWriteScope);
+
+/**
+ * A refused write body as a stable code plus the first offending field
+ * (`departureStation`, not `departureStation.lat`) — the form maps both to
+ * its own sentence in the reader's language; the Zod prose is for the log.
+ */
+function invalidInput(error: z.ZodError): AppError {
+  const field = error.issues[0]?.path[0];
+  return new AppError(
+    error.message,
+    400,
+    "RAIL_INVALID_INPUT",
+    typeof field === "string" ? field : undefined
+  );
+}
 
 const requireUser = (req: AuthRequest): string => {
   if (!req.userId) throw new AppError("Not authenticated", 401);
@@ -285,7 +301,7 @@ router.post(
     try {
       const userId = requireUser(req);
       const parsed = createRailJourneySchema.safeParse(req.body);
-      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+      if (!parsed.success) throw invalidInput(parsed.error);
       const { connectsFrom, ...input } = parsed.data;
       // Prisma proves a trip or booking EXISTS, never whose it is (AUD-038).
       await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
@@ -357,7 +373,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     if (!existing) throw new AppError("Rail journey not found", 404);
 
     const parsed = updateRailJourneySchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    if (!parsed.success) throw invalidInput(parsed.error);
     const input = parsed.data;
     await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
 
