@@ -197,6 +197,53 @@ jobs:
         run: node scripts/check-coverage.mjs frontend
 
   # ---------------------------------------------------------------------
+  # REQUIRED from day one (time-model plan, phase 1; ADR 0002 D6).
+  #
+  # The same Vitest suite with the host in UTC+14 and UTC-3:30. Every suite
+  # here was written on a host in UTC or Europe/Berlin and never ran anywhere
+  # else, so a result that silently depends on the reader's zone could not
+  # turn red. Here it does.
+  #
+  # Not "all green": the tests that are red under each zone TODAY are listed in
+  # scripts/tz-failures-baseline.json, and check-tz-ratchet.mjs fails on any
+  # failure NOT on that list and on any listed test that now passes. The list
+  # only shrinks. Vitest's own exit code is recorded, not obeyed - the ratchet
+  # is the verdict, and it fails on a report that ran nothing, so a crashed
+  # run cannot pass. No coverage here: the coverage ratchet stays with the
+  # UTC job above.
+  # ---------------------------------------------------------------------
+  frontend-tests-tz:
+    name: Frontend tests (Vitest, TZ=${{ matrix.tz }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tz: [Pacific/Kiritimati, America/St_Johns]
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: frontend/package-lock.json
+
+      - name: Install dependencies
+        run: cd frontend && npm ci
+
+      - name: Vitest under the odd zone
+        env:
+          TZ: ${{ matrix.tz }}
+        run: |
+          cd frontend
+          code=0
+          npx vitest --run --reporter=dot --reporter=json --outputFile.json=tz-report.json || code=$?
+          echo "vitest exited ${code}; the odd-zone ratchet below is the verdict"
+
+      - name: Odd-zone ratchet
+        run: node scripts/check-tz-ratchet.mjs frontend "${{ matrix.tz }}" frontend/tz-report.json
+
+  # ---------------------------------------------------------------------
   # REQUIRED since 2026-09-16 (owner decision). Until then this job was
   # advisory; the history below is why, and what changed.
   #
@@ -411,6 +458,83 @@ jobs:
       # CI's figure rather than widening the tolerance.
       - name: Coverage ratchet
         run: node scripts/check-coverage.mjs backend
+
+  # ---------------------------------------------------------------------
+  # REQUIRED from day one (time-model plan, phase 1; ADR 0002 D6).
+  #
+  # The backend suite once more per odd zone, sharded like the job above. Only
+  # the Jest step runs under the odd TZ: migrations and the catalogue seed run
+  # as in the UTC job, so the one variable is the zone the code under test
+  # sees. The PostGIS service itself stays in UTC, as production's does.
+  #
+  # A shard knows only its own files, so check-tz-ratchet.mjs judges a listed
+  # test stale only when its file ran in that shard. Jest's exit code is
+  # recorded, not obeyed; the ratchet is the verdict and fails on a missing or
+  # empty report. No coverage and no artifact: the coverage merge below reads
+  # only `backend-coverage-*` from the UTC shards and is untouched by this job.
+  # ---------------------------------------------------------------------
+  backend-tests-tz:
+    name: Backend tests (Jest ${{ matrix.shard }}/4, TZ=${{ matrix.tz }})
+    runs-on: ubuntu-latest
+    strategy:
+      fail-fast: false
+      matrix:
+        tz: [Pacific/Kiritimati, America/St_Johns]
+        shard: [1, 2, 3, 4]
+
+    services:
+      postgres:
+        # Same throwaway PostGIS as the UTC shards.
+        image: postgis/postgis:16-3.4
+        env:
+          POSTGRES_USER: travstats_ci
+          POSTGRES_PASSWORD: travstats_ci
+          POSTGRES_DB: travstats_ci
+        ports:
+          - 5432:5432
+        options: >-
+          --health-cmd "pg_isready -U travstats_ci"
+          --health-interval 10s
+          --health-timeout 5s
+          --health-retries 10
+
+    env:
+      DATABASE_URL: postgresql://travstats_ci:travstats_ci@localhost:5432/travstats_ci?connection_limit=5
+      NODE_ENV: test
+      # Throwaway CI literals, same values and reasons as backend-tests.
+      JWT_SECRET: ci-only-jwt-secret-not-used-anywhere-else-0000
+      ENCRYPTION_KEY: "0123456789abcdef0123456789abcdef0123456789abcdef0123456789abcdef"
+      TRAVSTATS_ALLOW_DESTRUCTIVE_TESTS: "1"
+
+    steps:
+      - uses: actions/checkout@v7
+
+      - uses: actions/setup-node@v7
+        with:
+          node-version: "22"
+          cache: npm
+          cache-dependency-path: backend/package-lock.json
+
+      - name: Install dependencies
+        run: cd backend && npm ci
+
+      - name: Apply migrations
+        run: cd backend && npx prisma migrate deploy
+
+      - name: Seed test catalogues
+        run: cd backend && npx tsx scripts/seed-test-catalogues.ts
+
+      - name: Jest under the odd zone
+        env:
+          TZ: ${{ matrix.tz }}
+        run: |
+          cd backend
+          code=0
+          npx jest --ci --forceExit --shard=${{ matrix.shard }}/4 --json --outputFile=tz-report.json || code=$?
+          echo "jest exited ${code}; the odd-zone ratchet below is the verdict"
+
+      - name: Odd-zone ratchet
+        run: node scripts/check-tz-ratchet.mjs backend "${{ matrix.tz }}" backend/tz-report.json
 
   # ---------------------------------------------------------------------
   # E2E (Playwright, Chromium) — added 2026-09-16 (forgejo#28).
