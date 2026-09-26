@@ -19,6 +19,11 @@ const api = vi.hoisted(() => ({
   deleteLoyaltyMembership: vi.fn(),
 }));
 vi.mock("../../../lib/api/loyalty", () => api);
+// The flight card form loads the alliance picker (forgejo#133), covered by its
+// own suite; pending forever here so it never re-renders under these tests.
+vi.mock("../../../lib/api/catalogue", () => ({
+  airlinesApi: { alliances: () => new Promise(() => {}) },
+}));
 vi.mock("../../../lib/api/cruise", () => ({
   cruiseApi: { facets: vi.fn().mockResolvedValue({ lines: [{ value: "AIDA", count: 2 }] }) },
 }));

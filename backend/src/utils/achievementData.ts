@@ -8,6 +8,13 @@
  * airlines via ICAO / IATA code or upper-cased display name).
  */
 
+import {
+  ALLIANCE_IDS,
+  ALLIANCE_MEMBERS,
+  allianceOfIata,
+  type AllianceId,
+} from "../data/airlineAlliances";
+
 /** IATA codes of airports on ocean-island territories (not exhaustive). */
 export const ISLAND_AIRPORTS: ReadonlySet<string> = new Set([
   // Atlantic
@@ -183,84 +190,69 @@ export const JUMBO_SUBSTRINGS: readonly string[] = ["B747", "747", "BOEING 747"]
 export const B777_SUBSTRINGS: readonly string[] = ["B777", "777", "BOEING 777"];
 
 /**
- * Airline ↔ alliance mapping. Keys are matched case-insensitively against
- * the Flight.airline field (display name or IATA code).
+ * Display names the logbook stores for alliance members, mapped to their IATA
+ * designator. Membership itself is NOT decided here: it is read from
+ * `data/airlineAlliances.ts`, the one list the loyalty pickers read too
+ * (forgejo#133). A name only says which carrier is meant.
  */
-export const AIRLINE_ALLIANCES: Record<string, "star" | "skyteam" | "oneworld"> = {
-  // Star Alliance
-  LUFTHANSA: "star",
-  LH: "star",
-  UNITED: "star",
-  UA: "star",
-  SWISS: "star",
-  LX: "star",
-  AUSTRIAN: "star",
-  OS: "star",
-  "AIR CANADA": "star",
-  AC: "star",
-  "ALL NIPPON": "star",
-  NH: "star",
-  ANA: "star",
-  "SINGAPORE AIRLINES": "star",
-  SQ: "star",
-  "TURKISH AIRLINES": "star",
-  TK: "star",
-  "THAI AIRWAYS": "star",
-  TG: "star",
-  ETHIOPIAN: "star",
-  ET: "star",
-  COPA: "star",
-  CM: "star",
-  BRUSSELS: "star",
-  SN: "star",
-  TAP: "star",
-  TP: "star",
-
-  // SkyTeam
-  "AIR FRANCE": "skyteam",
-  AF: "skyteam",
-  KLM: "skyteam",
-  KL: "skyteam",
-  DELTA: "skyteam",
-  DL: "skyteam",
-  "KOREAN AIR": "skyteam",
-  KE: "skyteam",
-  "CHINA EASTERN": "skyteam",
-  MU: "skyteam",
-  "VIRGIN ATLANTIC": "skyteam",
-  VS: "skyteam",
-  ITA: "skyteam",
-  AZ: "skyteam",
-  SAUDIA: "skyteam",
-  SV: "skyteam",
-  KENYA: "skyteam",
-  KQ: "skyteam",
-
-  // oneworld
-  "BRITISH AIRWAYS": "oneworld",
-  BA: "oneworld",
-  IBERIA: "oneworld",
-  IB: "oneworld",
-  "AMERICAN AIRLINES": "oneworld",
-  AA: "oneworld",
-  QATAR: "oneworld",
-  QR: "oneworld",
-  "CATHAY PACIFIC": "oneworld",
-  CX: "oneworld",
-  "JAPAN AIRLINES": "oneworld",
-  JL: "oneworld",
-  JAL: "oneworld",
-  QANTAS: "oneworld",
-  QF: "oneworld",
-  FINNAIR: "oneworld",
-  AY: "oneworld",
-  "MALAYSIA AIRLINES": "oneworld",
-  MH: "oneworld",
-  "ROYAL JORDANIAN": "oneworld",
-  RJ: "oneworld",
-  "SRI LANKAN": "oneworld",
-  UL: "oneworld",
+const ALLIANCE_NAME_TO_IATA: Readonly<Record<string, string>> = {
+  LUFTHANSA: "LH",
+  UNITED: "UA",
+  SWISS: "LX",
+  AUSTRIAN: "OS",
+  "AIR CANADA": "AC",
+  "ALL NIPPON": "NH",
+  ANA: "NH",
+  "SINGAPORE AIRLINES": "SQ",
+  "TURKISH AIRLINES": "TK",
+  "THAI AIRWAYS": "TG",
+  ETHIOPIAN: "ET",
+  COPA: "CM",
+  BRUSSELS: "SN",
+  TAP: "TP",
+  ITA: "AZ",
+  "AIR FRANCE": "AF",
+  KLM: "KL",
+  DELTA: "DL",
+  "KOREAN AIR": "KE",
+  "CHINA EASTERN": "MU",
+  "VIRGIN ATLANTIC": "VS",
+  SAUDIA: "SV",
+  KENYA: "KQ",
+  SAS: "SK",
+  SCANDINAVIAN: "SK",
+  "BRITISH AIRWAYS": "BA",
+  IBERIA: "IB",
+  "AMERICAN AIRLINES": "AA",
+  AMERICAN: "AA",
+  QATAR: "QR",
+  "CATHAY PACIFIC": "CX",
+  "JAPAN AIRLINES": "JL",
+  JAL: "JL",
+  QANTAS: "QF",
+  FINNAIR: "AY",
+  "MALAYSIA AIRLINES": "MH",
+  "ROYAL JORDANIAN": "RJ",
+  "SRI LANKAN": "UL",
+  SRILANKAN: "UL",
 };
+
+/**
+ * Airline ↔ alliance mapping. Keys are matched case-insensitively against
+ * the Flight.airline field (display name or IATA code). Derived — every
+ * member's code, plus the display names above resolved through it.
+ */
+export const AIRLINE_ALLIANCES: Readonly<Record<string, AllianceId>> = Object.freeze({
+  ...Object.fromEntries(
+    ALLIANCE_IDS.flatMap((id) => ALLIANCE_MEMBERS[id].map((code) => [code, id] as const))
+  ),
+  ...Object.fromEntries(
+    Object.entries(ALLIANCE_NAME_TO_IATA).flatMap(([name, code]) => {
+      const alliance = allianceOfIata(code);
+      return alliance ? [[name, alliance] as const] : [];
+    })
+  ),
+});
 
 /** Low-cost carriers (used by LOWCOST_CHAMPION). */
 export const LOW_COST_CARRIERS: ReadonlySet<string> = new Set([

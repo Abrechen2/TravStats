@@ -58,6 +58,30 @@ describe("Airlines API", () => {
     });
   });
 
+  // forgejo#133: a loyalty picker offers a whole alliance instead of typed codes.
+  describe("GET /api/v1/airlines/alliances", () => {
+    it("lists each alliance's members as IATA codes", async () => {
+      const res = await request(app).get("/api/v1/airlines/alliances").set("Cookie", authCookie);
+      expect(res.status).toBe(200);
+      expect(res.body.success).toBe(true);
+      const { star, skyteam, oneworld } = res.body.data;
+      expect(star).toEqual(expect.arrayContaining(["LH", "UA", "AZ"]));
+      expect(skyteam).toEqual(expect.arrayContaining(["AF", "DL", "SK"]));
+      expect(oneworld).toEqual(expect.arrayContaining(["BA", "AA", "WY"]));
+      // SAS changed sides in 2024 — the list must not carry it twice.
+      expect(star).not.toContain("SK");
+      for (const code of [...star, ...skyteam, ...oneworld]) {
+        expect(code).toMatch(/^[A-Z0-9]{2}$/);
+      }
+      expect(res.body.asOf).toMatch(/^\d{4}-\d{2}-\d{2}$/);
+    });
+
+    it("requires authentication", async () => {
+      const res = await request(app).get("/api/v1/airlines/alliances");
+      expect(res.status).toBe(401);
+    });
+  });
+
   describe("POST /api/v1/airlines", () => {
     it("creates a user-added airline", async () => {
       const res = await request(app)

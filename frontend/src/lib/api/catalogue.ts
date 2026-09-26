@@ -1,5 +1,6 @@
 import { api } from "./client";
 import type { Aircraft, Airline } from "../../types";
+import type { AllianceMembers } from "../../types/loyalty";
 
 interface Envelope<T> {
   success: boolean;
@@ -42,6 +43,11 @@ export const airlinesApi = {
   },
   create: async (input: AirlineInput): Promise<Airline> => {
     const { data } = await api.post<Envelope<Airline>>("/airlines", input);
+    return data.data;
+  },
+  /** Full members of each alliance, as IATA codes (forgejo#133). */
+  alliances: async (): Promise<AllianceMembers> => {
+    const { data } = await api.get<Envelope<AllianceMembers>>("/airlines/alliances");
     return data.data;
   },
 };

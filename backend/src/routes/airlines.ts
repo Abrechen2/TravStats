@@ -9,6 +9,7 @@ import {
   preloadAirlineCatalog,
 } from "../services/airlineCatalogCache";
 import logger from "../utils/logger";
+import { ALLIANCE_MEMBERS, ALLIANCE_MEMBERSHIP_AS_OF } from "../data/airlineAlliances";
 
 // No rate limiter: an authenticated typeahead over an in-process catalog cache
 // (`airlineCatalogCache`) plus a one-row insert — the search does not even
@@ -69,6 +70,15 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   } catch (err) {
     next(err);
   }
+});
+
+// forgejo#133: a loyalty programme that covers a whole alliance is picked as
+// one, instead of the user typing two dozen codes. Static reference data — the
+// same list the Alliance All-Star achievement reads — so there is nothing to
+// fail but the request itself. `asOf` says when the membership was last
+// checked, because alliances do change members.
+router.get("/alliances", (_req: AuthRequest, res: Response) => {
+  res.json({ success: true, data: ALLIANCE_MEMBERS, asOf: ALLIANCE_MEMBERSHIP_AS_OF });
 });
 
 router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
