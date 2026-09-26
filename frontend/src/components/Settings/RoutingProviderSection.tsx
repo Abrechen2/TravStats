@@ -91,7 +91,6 @@ export default function RoutingProviderSection({
       logger.error("Failed to load routing provider settings", err);
       setLoadStatus("error");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

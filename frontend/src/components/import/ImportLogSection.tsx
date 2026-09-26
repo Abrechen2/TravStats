@@ -162,7 +162,6 @@ export function ImportLogSection({ onReverted, reloadKey }: Props): JSX.Element 
     // `reloadKey` is an opaque re-fetch trigger driven by the parent page's
     // own reload cycle (a new import landing elsewhere on the page) — it is
     // intentionally not otherwise read here.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [load, reloadKey]);
 
   const handleRevert = useCallback(

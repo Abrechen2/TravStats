@@ -82,7 +82,7 @@ export default function PendingUpdateCard({
   onApply,
   onReject,
   onEdit,
-  onSelect: _onSelect, // eslint-disable-line @typescript-eslint/no-unused-vars
+  onSelect: _onSelect,
   isSelected,
 }: PendingUpdateCardProps): JSX.Element {
   const { t } = useTranslation(["common", "pendingUpdates"]);

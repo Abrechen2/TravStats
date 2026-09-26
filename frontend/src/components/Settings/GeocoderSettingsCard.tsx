@@ -73,7 +73,6 @@ export default function GeocoderSettingsCard({
       logger.error("Failed to load geocoder settings", err);
       setLoadStatus("error");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

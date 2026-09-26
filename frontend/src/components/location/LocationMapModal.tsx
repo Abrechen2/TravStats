@@ -78,7 +78,6 @@ export function LocationMapModal({
     setQuery("");
     // The parent's value is only read at open — while the modal is up, the
     // draft is the single source of truth.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [open]);
 
   const lang = i18n.language?.split("-")[0];

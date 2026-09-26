@@ -111,7 +111,6 @@ export default function InstanceSettings(): JSX.Element {
     // `t`/`addToast` here re-ran it on re-renders (their identity is not
     // guaranteed stable), and every re-run overwrote whatever the admin was
     // typing with the server's values — the form was uneditable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   const handleSave = async (e: React.FormEvent) => {

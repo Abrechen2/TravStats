@@ -121,7 +121,7 @@ export default function BulkRefreshCard(): JSX.Element | null {
       return;
     }
     void loadPreview();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadPreview is re-created each render; these two are the real inputs
+    // loadPreview is re-created each render; these two are the real inputs
   }, [isSharedDemo, quotaRefused, userId]);
 
   const handleRun = async (): Promise<void> => {

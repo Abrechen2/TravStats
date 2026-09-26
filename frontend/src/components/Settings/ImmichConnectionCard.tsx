@@ -52,7 +52,6 @@ export default function ImmichConnectionCard(): JSX.Element {
     // render (useTranslation does not memoize it), so including it here
     // would re-run this effect — and re-fetch + re-apply the stored
     // connection, clobbering in-progress edits — on every keystroke.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [apply]);
 
   const handleSave = async (): Promise<void> => {

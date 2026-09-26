@@ -30,7 +30,6 @@ interface ApiKeysFormState {
   openskyClientSecret: string;
 }
 
-// eslint-disable-next-line @typescript-eslint/explicit-function-return-type
 export function useSettingsPage() {
   const { t } = useTranslation(["settings", "common"]);
   const { user } = useAuthStore();

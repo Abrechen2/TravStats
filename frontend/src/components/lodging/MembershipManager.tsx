@@ -144,7 +144,6 @@ export function MembershipManager({
     void load();
     // Intentionally load-once on mount — `onChanged` is a callback prop, not
     // reactive state this effect should re-run on.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -152,7 +151,6 @@ export function MembershipManager({
     // mount-time load above; it only reloads on a genuine external bump.
     if (reloadSignal === undefined) return;
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadSignal]);
 
   // The list this component actually renders — every membership when unscoped,

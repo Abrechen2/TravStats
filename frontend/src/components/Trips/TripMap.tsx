@@ -649,7 +649,6 @@ export default function TripMap({
     didFit.current = true;
     // `projection` is read, not depended on: this runs once, on load, when it
     // is still "mercator". The switch does its own fit.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapLoaded, bboxPoints, fitTrip]);
 
   /* ---- Globe / Mercator toggle ---- */

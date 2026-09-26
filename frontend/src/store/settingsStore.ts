@@ -542,7 +542,6 @@ export const useSettingsStore = create<SettingsState>()(
             set((state) => {
               // Extract autoUpdate and historicalEnrichment to exclude them from store
               const remoteRecord = remote as Record<string, unknown>;
-              /* eslint-disable @typescript-eslint/no-unused-vars */
               const {
                 autoUpdate: _au,
                 historicalEnrichment: _he,
@@ -550,7 +549,6 @@ export const useSettingsStore = create<SettingsState>()(
                 backup: _backup,
                 ...remoteWithoutDirectFields
               } = remoteRecord;
-              /* eslint-enable @typescript-eslint/no-unused-vars */
               // Shallow-merge each settings group instead of replacing it
               // wholesale. The backend's seed defaults intentionally omit
               // browser-detectable fields (display.language / timezone /

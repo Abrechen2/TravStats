@@ -44,13 +44,6 @@ export default [
     ignores: ["dist/**", "node_modules/**"],
   },
   {
-    // ESLint 9 reports a stale `eslint-disable` comment by default; ESLint 8,
-    // which this tree ran until the time-model ratchet needed bulk
-    // suppressions, did not. Kept off so the version bump changes no verdict;
-    // the 28 stale directives it would report are a cleanup of their own.
-    linterOptions: { reportUnusedDisableDirectives: "off" },
-  },
-  {
     ...js.configs.recommended,
     languageOptions: {
       ...js.configs.recommended.languageOptions,

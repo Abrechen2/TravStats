@@ -78,7 +78,6 @@ vi.mock("react-map-gl/maplibre", async () => {
     ReactMod.useImperativeHandle(ref, () => ({ getMap: () => fakeMap }), []);
     ReactMod.useEffect(() => {
       props.onLoad?.({ target: fakeMap });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     return ReactMod.createElement("div", { "data-testid": "fake-map" }, props.children);
   });
