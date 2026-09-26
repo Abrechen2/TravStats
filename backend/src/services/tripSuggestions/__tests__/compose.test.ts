@@ -195,6 +195,51 @@ describe("composeSuggestions — new trips", () => {
   });
 });
 
+// Acceptance D3 (2026-09-26): a cruise 28.10.–04.11. that began the day the
+// flight home landed (a layover longer than a change of planes) was an absence
+// of its own — a single entry, so no proposal — and the trip accepted for the
+// flight then offered to "extend" itself by it. Entries sharing a day are one
+// journey.
+describe("composeSuggestions — an entry overlapping the absence", () => {
+  const spainAndCruise = () => [
+    ride(
+      "flight",
+      "out",
+      AT.MUC,
+      AT.LIS,
+      { day: "2025-10-24", hour: 8 },
+      { day: "2025-10-24", hour: 11 }
+    ),
+    stay("lisbon", AT.LISBON_HOTEL, "2025-10-24", "2025-10-27", "Lissabon"),
+    ride(
+      "flight",
+      "home",
+      AT.LIS,
+      AT.MUC,
+      { day: "2025-10-28", hour: 5 },
+      { day: "2025-10-28", hour: 8 }
+    ),
+    cruise("north", [
+      { at: AT.KIEL, day: "2025-10-28" },
+      { at: AT.OSLO, day: "2025-10-30" },
+      { at: AT.COPENHAGEN, day: "2025-11-02" },
+      { at: AT.KIEL, day: "2025-11-04" },
+    ]),
+  ];
+
+  it("takes the overlapping cruise into the proposal and spans its days", () => {
+    const out = composeSuggestions(input({ entries: spainAndCruise() }));
+
+    expect(out).toHaveLength(1);
+    expect(out[0]).toMatchObject({
+      kind: "new_trip",
+      startDay: "2025-10-24",
+      endDay: "2025-11-04",
+    });
+    expect(out[0].members.map((m) => m.key)).toContain("cruise:north");
+  });
+});
+
 describe("composeSuggestions — existing trips", () => {
   it("never proposes a new trip for entries already in one", () => {
     const entries = italyWeek().map((e) => ({ ...e, tripId: "t1" }));

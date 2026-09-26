@@ -147,8 +147,20 @@ describe("/api/v1/trip-suggestions", () => {
     expect(
       (await prisma.placeVisit.findUniqueOrThrow({ where: { id: visit.id } })).tripId
     ).toBeNull();
-    const decision = await prisma.tripSuggestionDecision.findFirstOrThrow({ where: { userId } });
+    const decision = await prisma.tripSuggestionDecision.findFirstOrThrow({
+      where: { userId, status: "accepted" },
+    });
     expect(decision).toMatchObject({ status: "accepted", createdTripId: tripId });
+
+    // Acceptance D3: the unticked visit is an answer too — it does not come
+    // straight back as "belongs to a trip?" for the trip just created.
+    const after = (await list()).suggestions;
+    expect(after.flatMap((s) => s.members.map((m) => m.key))).not.toContain(`place:${visit.id}`);
+    expect(
+      await prisma.tripSuggestionDecision.findFirst({
+        where: { userId, status: "dismissed", targetId: tripId },
+      })
+    ).toMatchObject({ kind: "assign", memberKeys: [`place:${visit.id}`] });
   });
 
   it("rolls everything back when one member moved in the meantime", async () => {

@@ -193,6 +193,55 @@ export function buildAbsences(entries: readonly PresenceEntry[], homeAt: HomeAt)
     }));
 }
 
+/** The days an absence's entries cover — wider than its away points when an entry is. */
+function entrySpan(absence: Absence): { startDay: string; endDay: string } {
+  return {
+    startDay: absence.entries.map((e) => e.startDay).reduce(minDay, absence.startDay),
+    endDay: absence.entries.map((e) => e.endDay).reduce(maxDay, absence.endDay),
+  };
+}
+
+const minDay = (a: string, b: string): string => (a < b ? a : b);
+
+/**
+ * One journey per stretch of days: absences whose entries share a day are one
+ * absence, and an absence spans every day its entries cover (acceptance D3,
+ * 2026-09-26). A cruise 28.10.–04.11. that began the evening a flight brought
+ * the user home was an absence of its own — one entry, so no proposal — and
+ * the trip accepted for the flight then offered to "extend" itself by the
+ * cruise. The user cannot be on two journeys on the same day; an entry that
+ * overlaps the window is a member of it, not a later afterthought.
+ */
+export function mergeOverlapping(absences: readonly Absence[], homeAt: HomeAt): Absence[] {
+  const spans = absences
+    .map((a) => ({ absence: a, ...entrySpan(a) }))
+    .sort((a, b) => a.startDay.localeCompare(b.startDay));
+  const merged: { absences: Absence[]; startDay: string; endDay: string }[] = [];
+  for (const s of spans) {
+    const last = merged[merged.length - 1];
+    if (last && s.startDay <= last.endDay) {
+      last.absences.push(s.absence);
+      last.endDay = maxDay(last.endDay, s.endDay);
+    } else {
+      merged.push({ absences: [s.absence], startDay: s.startDay, endDay: s.endDay });
+    }
+  }
+  return merged.map(({ absences: group, startDay, endDay }) => {
+    const entries = group.flatMap((a) => a.entries);
+    const awayPoints = classifyPoints(entries, homeAt).filter((p) => p.cls === "away");
+    return {
+      startDay,
+      endDay,
+      entries,
+      nights:
+        group.length === 1 && startDay === group[0].startDay && endDay === group[0].endDay
+          ? group[0].nights
+          : countNights(startDay, endDay, entries, awayPoints),
+      signals: new Set<SuggestionSignal>(group.flatMap((a) => [...a.signals])),
+    };
+  });
+}
+
 type Cluster = { source: SuggestionSignal; flightKeys: readonly string[] };
 
 /** Whether a flight cluster spans few enough days to be one journey (`FLIGHT_SIGNAL_MAX_DAYS`). */

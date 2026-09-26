@@ -6,6 +6,7 @@ import { classifyVisit } from "../../shared/placeCounting";
 import { recheckAchievements } from "../../utils/achievements";
 import { recomputeTripStatus } from "../tripStatusService";
 import { invalidateTripSuggestions } from "./engine";
+import { proposalId } from "./proposals";
 import { dayColumn as dayDate } from "./time";
 import type { LinkableDomain, TripSuggestion } from "./types";
 
@@ -169,6 +170,7 @@ async function acceptTrip(
   }
   const linked = await linkMembers(tx, userId, tripId, members);
   await recordAnswer(tx, userId, proposal, "accepted", { createdTripId: tripId });
+  await recordDeclined(tx, userId, tripId, proposal, members);
   return { tripId, placeVisitId: null, linked };
 }
 
@@ -228,6 +230,39 @@ async function recordAnswer(
   await tx.tripSuggestionDecision.upsert({
     where: { userId_fingerprint: { userId, fingerprint: proposal.id } },
     create: { userId, fingerprint: proposal.id, ...data },
+    update: data,
+  });
+}
+
+/**
+ * Members the user unticked before accepting are an answer too: "not part of
+ * this trip" (acceptance D3, 2026-09-26 — a deselected TGV ride came straight
+ * back as "Gehört zu einer Reise?" for the trip just created). Recorded as a
+ * dismissed link to that trip, so the assign/extend family for the trip leaves
+ * them alone until the logbook changes materially (`withoutAnswered`).
+ */
+async function recordDeclined(
+  tx: Tx,
+  userId: string,
+  tripId: string,
+  proposal: TripSuggestion,
+  chosen: TripSuggestion["members"]
+): Promise<void> {
+  const taken = new Set(chosen.map((m) => m.key));
+  const declined = proposal.members.filter((m) => !taken.has(m.key)).map((m) => m.key);
+  if (declined.length === 0) return;
+  const fingerprint = proposalId("assign", tripId, declined);
+  const data = {
+    kind: "assign",
+    status: "dismissed",
+    targetId: tripId,
+    memberKeys: declined,
+    createdTripId: null,
+    createdPlaceVisitId: null,
+  };
+  await tx.tripSuggestionDecision.upsert({
+    where: { userId_fingerprint: { userId, fingerprint } },
+    create: { userId, fingerprint, ...data },
     update: data,
   });
 }

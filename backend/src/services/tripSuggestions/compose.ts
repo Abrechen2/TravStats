@@ -1,5 +1,10 @@
 import { TRIP_PLAUSIBLE_KM } from "../../shared/tripSuggestionRules";
-import { absencesFromClusters, buildAbsences, glueByFlightClusters } from "./absences";
+import {
+  absencesFromClusters,
+  buildAbsences,
+  glueByFlightClusters,
+  mergeOverlapping,
+} from "./absences";
 import { placeVisitProposals } from "./placeVisits";
 import {
   proposalsByWindow,
@@ -42,7 +47,10 @@ export function composeSuggestions(input: ComposeInput): TripSuggestion[] {
   const { entries, trips, places, homeAt, homeKnown, clusters, answered } = input;
 
   const absences = homeKnown
-    ? glueByFlightClusters(buildAbsences(entries, homeAt), clusters, homeAt)
+    ? mergeOverlapping(
+        glueByFlightClusters(buildAbsences(entries, homeAt), clusters, homeAt),
+        homeAt
+      )
     : absencesFromClusters(entries, clusters, TRIP_PLAUSIBLE_KM);
 
   const placed = new Set(absences.flatMap((a) => a.entries.map((e) => e.key)));
