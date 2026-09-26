@@ -56,6 +56,7 @@ import { flightExternalRef, isDocumentImport } from "../services/importProvenanc
 import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from "../shared/statusDerivation";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, flightOwnAmount, getBaseCurrency } from "../services/fx/snapshot";
+import { refreshFxOnEdit } from "../services/fx/refreshOnEdit";
 
 const router = Router();
 
@@ -1152,32 +1153,26 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       );
     }
 
-    // FX snapshot (#267). Recomputed only when an input to it actually moved —
-    // price, taxes, fees, currency or the departure day. Rewriting it on every
-    // PATCH would re-date a snapshot that has not changed, and a snapshot's
-    // whole value is that its rate belongs to a specific day.
-    const fxInputsChanged =
-      data.price !== undefined ||
-      data.taxes !== undefined ||
-      data.fees !== undefined ||
-      data.currency !== undefined ||
-      updateData.departureTime !== undefined;
-    if (fxInputsChanged) {
-      const merged = {
-        price: data.price !== undefined ? data.price : existingFlight.price,
-        taxes: data.taxes !== undefined ? data.taxes : existingFlight.taxes,
-        fees: data.fees !== undefined ? data.fees : existingFlight.fees,
-      };
-      const fxColumns = await fxColumnsFor(
-        {
-          amount: flightOwnAmount(merged),
-          currency: data.currency !== undefined ? data.currency : existingFlight.currency,
-          date: updateData.departureTime ?? existingFlight.departureTime,
-        },
-        await getBaseCurrency(userId)
-      );
-      Object.assign(updateData, fxColumns);
-    }
+    // FX snapshot (#267), compared with the STORED row — the edit dialog sends
+    // price, currency and date on every save, so "was it sent" re-snapshotted
+    // a seat change and a failed lookup wiped a good rate. See refreshOnEdit.
+    const pick = <K extends "price" | "taxes" | "fees" | "currency">(k: K) =>
+      data[k] !== undefined ? data[k] : existingFlight[k];
+    const fx = await refreshFxOnEdit(
+      {
+        ...existingFlight,
+        amount: flightOwnAmount(existingFlight),
+        date: existingFlight.departureTime,
+      },
+      {
+        amount: flightOwnAmount({ price: pick("price"), taxes: pick("taxes"), fees: pick("fees") }),
+        currency: pick("currency") ?? null,
+        date: (updateData.departureTime as Date | undefined) ?? existingFlight.departureTime,
+      },
+      await getBaseCurrency(userId),
+      { flightId: existingFlight.id, userId }
+    );
+    Object.assign(updateData, fx.columns);
 
     const flight = await prisma.$transaction(async (tx) => {
       if (resolvedCompanionsForUpdate !== undefined) {
@@ -1219,6 +1214,8 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     res.json({
       flight: await withAirportFacts(flight),
       newAchievements: newAchievements.length > 0 ? newAchievements : undefined,
+      // "keptStoredRate" / "lookupFailed" tell the client the rate could not be refreshed.
+      fxSnapshot: fx.outcome,
     });
   } catch (error) {
     next(error);

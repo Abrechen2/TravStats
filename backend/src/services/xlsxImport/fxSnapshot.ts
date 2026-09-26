@@ -15,6 +15,17 @@
 
 import { prisma } from "../../db";
 import { fxColumnsFor, getBaseCurrency, flightOwnAmount, type FxColumns } from "../fx/snapshot";
+import { refreshFxOnEdit, type FxRefresh, type StoredFx } from "../fx/refreshOnEdit";
+
+type StoredSnapshot = Omit<StoredFx, "amount" | "currency" | "date">;
+
+/** The row note an FX refresh that could not look up a rate leaves behind —
+ *  the row is applied, and the sheet's reader learns the rate is not new. */
+export function fxRefreshNote(refresh: FxRefresh): string | null {
+  if (refresh.outcome === "keptStoredRate") return "fx_kept_stored_rate";
+  if (refresh.outcome === "lookupFailed") return "fx_lookup_failed";
+  return null;
+}
 
 interface Incoming {
   price: number | undefined;
@@ -30,23 +41,27 @@ export function findCruiseForFxMerge(id: string, userId: string) {
   });
 }
 
-/** Recomputes a cruise's FX columns, or `{}` (leave untouched) when none of
- *  price/currency/startDate was actually mentioned in the row. */
+/** A cruise's FX columns after the row, compared with the stored ones — see
+ *  `fx/refreshOnEdit.ts`: nothing moves unless an input really changed, and a
+ *  failed lookup keeps the stored rate where it still applies. */
 export async function cruiseFxColumnsIfChanged(
   userId: string,
   incoming: Incoming & { startDate: Date | undefined },
-  existing: { price: number | null; currency: string | null; startDate: Date | null }
-): Promise<Partial<FxColumns>> {
-  if (incoming.price === undefined && incoming.currency === undefined && !incoming.startDate) {
-    return {};
+  existing: StoredSnapshot & {
+    price: number | null;
+    currency: string | null;
+    startDate: Date | null;
   }
-  return fxColumnsFor(
+): Promise<FxRefresh> {
+  return refreshFxOnEdit(
+    { ...existing, amount: existing.price, date: existing.startDate },
     {
       amount: incoming.price !== undefined ? incoming.price : existing.price,
       currency: incoming.currency !== undefined ? incoming.currency : existing.currency,
       date: incoming.startDate ?? existing.startDate,
     },
-    await getBaseCurrency(userId)
+    await getBaseCurrency(userId),
+    { source: "xlsx_import", userId }
   );
 }
 
@@ -56,18 +71,16 @@ export async function cruiseFxColumnsIfChanged(
 export async function flightFxColumnsIfChanged(
   userId: string,
   incoming: Incoming & { departureTime: Date | undefined },
-  existing: {
+  existing: StoredSnapshot & {
     price: number | null;
     taxes: number | null;
     fees: number | null;
     currency: string | null;
     departureTime: Date | null;
   }
-): Promise<Partial<FxColumns>> {
-  if (incoming.price === undefined && incoming.currency === undefined && !incoming.departureTime) {
-    return {};
-  }
-  return fxColumnsFor(
+): Promise<FxRefresh> {
+  return refreshFxOnEdit(
+    { ...existing, amount: flightOwnAmount(existing), date: existing.departureTime },
     {
       amount: flightOwnAmount({
         price: incoming.price !== undefined ? incoming.price : existing.price,
@@ -77,7 +90,8 @@ export async function flightFxColumnsIfChanged(
       currency: incoming.currency !== undefined ? incoming.currency : existing.currency,
       date: incoming.departureTime ?? existing.departureTime,
     },
-    await getBaseCurrency(userId)
+    await getBaseCurrency(userId),
+    { source: "xlsx_import", userId }
   );
 }
 

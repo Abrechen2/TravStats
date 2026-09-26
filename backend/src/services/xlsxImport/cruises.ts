@@ -23,7 +23,7 @@ import { prisma } from "../../db";
 import { CABIN_TYPES, createCruiseSchema, cruiseStopSchema } from "../../schemas/cruise";
 import { toCabinType } from "../cruise/cabinType";
 import { createCruiseRecord } from "../cruise/createCruise";
-import { cruiseFxColumnsIfChanged, findCruiseForFxMerge } from "./fxSnapshot";
+import { cruiseFxColumnsIfChanged, findCruiseForFxMerge, fxRefreshNote } from "./fxSnapshot";
 import * as cell from "./cells";
 import {
   MATCHED,
@@ -227,16 +227,18 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
         continue;
       }
       // FX snapshot (fix round 1, finding 3) — see `xlsxImport/fxSnapshot.ts`.
-      // Only when a column it reads actually changed.
+      // Only when a column it reads actually changed. The start is the one
+      // the row WRITES (its clock kept from the stored row), not the bare day
+      // the cell holds — comparing the day re-snapshotted every exported row.
       if ("price" in data || "currency" in data || "startDate" in data) {
-        Object.assign(
-          data,
-          await cruiseFxColumnsIfChanged(
-            ctx.userId,
-            { price, currency, startDate: startDateValue },
-            stored
-          )
+        const fx = await cruiseFxColumnsIfChanged(
+          ctx.userId,
+          { price, currency, startDate: fields.startDate as Date | undefined },
+          stored
         );
+        Object.assign(data, fx.columns);
+        const fxNote = fxRefreshNote(fx);
+        if (fxNote) extra.notes = [...(extra.notes ?? []), fxNote];
       }
       if (!ctx.dryRun) await prisma.cruise.update({ where: { id: targetId }, data });
       ctx.wrote = ctx.wrote || !ctx.dryRun;

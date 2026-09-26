@@ -17,7 +17,7 @@
 
 import { prisma } from "../../db";
 import { findOrCreateAirport } from "../airportLookup";
-import { flightFxColumnsIfChanged, flightFxColumnsForCreate } from "./fxSnapshot";
+import { flightFxColumnsIfChanged, flightFxColumnsForCreate, fxRefreshNote } from "./fxSnapshot";
 import * as cell from "./cells";
 import { MATCHED, type Ctx, dayRange, definedOnly, errorRow, keepDespiteError } from "./context";
 import { pruneMissing } from "./prune";
@@ -176,20 +176,30 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
       if (dep && "depIata" in data) Object.assign(data, airportColumns("dep", dep));
       if (arr && "arrIata" in data) Object.assign(data, airportColumns("arr", arr));
       // FX snapshot (fix round 1, finding 3) — see `xlsxImport/fxSnapshot.ts`.
-      // Only when a column it reads actually changed.
+      // Only when a column it reads actually changed; a failed lookup keeps
+      // the stored rate and says so on the row.
+      let fxNote: string | null = null;
       if ("price" in data || "currency" in data || "departureTime" in data) {
-        Object.assign(
-          data,
-          await flightFxColumnsIfChanged(
-            ctx.userId,
-            { price, currency, departureTime: departureTimeValue },
-            stored
-          )
+        const fx = await flightFxColumnsIfChanged(
+          ctx.userId,
+          { price, currency, departureTime: departureTimeValue },
+          stored
         );
+        Object.assign(data, fx.columns);
+        fxNote = fxRefreshNote(fx);
       }
       if (!ctx.dryRun) await prisma.flight.update({ where: { id: targetId }, data });
       ctx.wrote = ctx.wrote || !ctx.dryRun;
-      out.push({ row: rowNo, action: "update", id: targetId, label, message, ...extra });
+      const rowNotes = fxNote ? [...(extra.notes ?? []), fxNote] : extra.notes;
+      out.push({
+        row: rowNo,
+        action: "update",
+        id: targetId,
+        label,
+        message,
+        ...extra,
+        notes: rowNotes,
+      });
       continue;
     }
 
