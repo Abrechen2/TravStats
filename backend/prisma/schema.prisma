@@ -102,6 +102,7 @@ model User {
   importBatches          ImportBatch[]
   companions             Companion[]
   photoJourneys          PhotoJourney[]
+  tripSuggestionAnswers  TripSuggestionDecision[]
   dataQualityFlags       DataQualityFlag[]
   countryDays            CountryDay[]
   dawarichSweepState     DawarichSweepState?
@@ -2840,6 +2841,43 @@ model PhotoJourney {
   @@index([userId, status])
   @@index([startDate])
   @@map("photo_journeys")
+}
+
+/// The user's answer to one trip suggestion (owner decision 2026-09-26).
+///
+/// The suggestions themselves are never stored: the engine derives them from
+/// the logbook on demand (`services/tripSuggestions/`), so a stored copy could
+/// only go stale. What must survive is the ANSWER — a dismissed proposal must
+/// not come back on the next visit, and that needs memory.
+///
+/// A dismissal is matched by member set, not by id alone: `memberKeys` holds
+/// the `domain:id` of every entry the proposal carried when it was answered,
+/// and a later proposal is suppressed while it still overlaps that set by at
+/// least half (`shared/tripSuggestionRules.ts`, `isMaterialChange`).
+model TripSuggestionDecision {
+  id                  String   @id @default(uuid())
+  userId              String   @map("user_id")
+  /// new_trip | assign | extend | place_visit
+  kind                String
+  /// The proposal's stable id at the time it was answered.
+  fingerprint         String
+  /// accepted | dismissed
+  status              String
+  /// assign/extend: the trip it targeted. place_visit: the place.
+  targetId            String?  @map("target_id")
+  memberKeys          String[] @map("member_keys")
+  /// What accepting created, for the record. No foreign key: the trip may be
+  /// deleted later, and the answer stays an answer.
+  createdTripId       String?  @map("created_trip_id")
+  createdPlaceVisitId String?  @map("created_place_visit_id")
+  createdAt           DateTime @default(now()) @map("created_at")
+  updatedAt           DateTime @updatedAt @map("updated_at")
+
+  user User @relation(fields: [userId], references: [id], onDelete: Cascade)
+
+  @@unique([userId, fingerprint])
+  @@index([userId, status])
+  @@map("trip_suggestion_decisions")
 }
 
 /// Who owns a file on disk, recorded when it is uploaded.

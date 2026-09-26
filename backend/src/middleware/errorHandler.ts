@@ -74,6 +74,12 @@ export type ApiErrorCode =
   | "UPSTREAM_TIMEOUT"
   | "UPSTREAM_RATE_LIMITED"
   | "UPSTREAM_UNAVAILABLE"
+  /** A trip suggestion changed between being shown and being answered — an
+   *  entry moved onto a trip, the trip or place was deleted. Reload, not retry. */
+  | "TRIP_SUGGESTION_STALE"
+  /** An accepted trip suggestion named members it does not hold, none at all,
+   *  or an end before its start. */
+  | "TRIP_SUGGESTION_SELECTION_INVALID"
   /** A request body failed its schema. Sent on every ZodError answer, so a
    *  form shows its own sentence instead of zod's JSON issue dump. */
   | "VALIDATION_FAILED"

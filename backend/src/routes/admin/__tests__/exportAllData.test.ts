@@ -106,6 +106,28 @@ describe("GET /api/v1/admin/export/all-data", () => {
     expect(user.companions).toHaveLength(1);
   });
 
+  // Trip suggestions (2026-09-26): the ANSWERS travel with the account, or a
+  // restored one is asked again every question it already dismissed.
+  it("carries the answered trip suggestions", async () => {
+    await prisma.tripSuggestionDecision.create({
+      data: {
+        userId: createdUserIds[0],
+        kind: "new_trip",
+        fingerprint: "new_trip:-:export-test",
+        status: "dismissed",
+        memberKeys: ["lodging:a", "lodging:b"],
+      },
+    });
+    const res = await request(app)
+      .get("/api/v1/admin/export/all-data")
+      .set("Cookie", adminCookie)
+      .expect(200);
+    const user = res.body.users.find((u: { id: string }) => u.id === createdUserIds[0]);
+    expect(user.tripSuggestionAnswers).toEqual([
+      expect.objectContaining({ status: "dismissed", memberKeys: ["lodging:a", "lodging:b"] }),
+    ]);
+  });
+
   // Rail (spec 2026-09-25-rail-domain, phase 2b): the rides, and the stations
   // users added — which live outside any user and are not re-seeded.
   it("carries the rail rides and the user-added rail stations", async () => {
