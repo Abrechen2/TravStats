@@ -13,22 +13,31 @@ jest.mock("../../services/flightLookup", () => ({
 
 import app from "../../index";
 import { prisma } from "../../db";
+import { hashPassword } from "../../utils/password";
+import { generateToken } from "../../utils/jwt";
+
+const USERNAME = "lookup-provider-failed";
 
 describe("GET /flight-lookup/:flightNumber — provider failure", () => {
-  let cookie: string[];
+  let cookie: string;
 
+  // Only this suite's own rows: the backend suite runs files in parallel on
+  // one database, so a bare userSettings.deleteMany() wiped other files'
+  // settings mid-test.
   const clean = async (): Promise<void> => {
-    await prisma.userSettings.deleteMany();
-    await prisma.user.deleteMany({ where: { username: "lookup-provider-failed" } });
+    await prisma.userSettings.deleteMany({ where: { user: { username: USERNAME } } });
+    await prisma.user.deleteMany({ where: { username: USERNAME } });
   };
 
   beforeAll(async () => {
     await clean();
-    const registration = await request(app)
-      .post("/api/v1/auth/register")
-      .send({ username: "lookup-provider-failed", password: "password123" })
-      .expect(201);
-    cookie = registration.headers["set-cookie"] as unknown as string[];
+    // Created directly, not through /auth/register: with ALLOW_REGISTRATION
+    // off in the test env, registration only succeeds for the FIRST user, so
+    // this file failed with 403 whenever another file's user existed first.
+    const user = await prisma.user.create({
+      data: { username: USERNAME, passwordHash: await hashPassword("password123") },
+    });
+    cookie = `auth_token=${generateToken(user.id)}`;
   });
 
   afterAll(async () => {
