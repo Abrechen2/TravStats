@@ -480,6 +480,11 @@
       "saveErrorOffline": "No connection to the server — the points were not saved.",
       "saveErrorInvalid": "The points were refused: every point needs a name and valid coordinates.",
       "saveErrorGone": "This tour no longer exists."
+    },
+    "day": {
+      "date": "Date of the tour",
+      "startTime": "Start time",
+      "saveError": "The date could not be saved."
     }
   },
   "head": {

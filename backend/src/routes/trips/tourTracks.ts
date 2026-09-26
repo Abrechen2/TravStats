@@ -22,6 +22,7 @@ import { getDawarichConnection } from "../../services/dawarich/dawarichResolver"
 import { DawarichError } from "../../services/dawarich/errors";
 import { resolveRouteFromRequest } from "./tourRoutes";
 import logger from "../../utils/logger";
+import { prefillTourDateFromTrack } from "../../services/tour/tourDay";
 
 /**
  * Recorded tracks for a tour route section (Phase 3b, task 4) — split out
@@ -282,6 +283,8 @@ router.post(
         }
         throw error;
       }
+      // A day tour with no date takes the recording's day (D2).
+      await prefillTourDateFromTrack(routeId, track);
 
       logger.info({
         operation: "tour.track.create",
@@ -413,6 +416,8 @@ router.post(
           truncated,
         },
       });
+      // A day tour with no date takes the recording's day (D2).
+      await prefillTourDateFromTrack(routeId, track);
 
       logger.info({
         operation: "tour.track.pullDawarich",

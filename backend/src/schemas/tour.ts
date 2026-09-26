@@ -3,6 +3,7 @@ import { z } from "./zod";
 import { LEG_MODES } from "../services/tour/tourDistance";
 import { ROUTING_PROVIDER_IDS } from "../services/tour/routing/types";
 import { TOUR_ACTIVITIES } from "../shared/tour/roadtrip";
+import { tourDayFields } from "./roadtrip";
 
 /**
  * Validation for the tour endpoints.
@@ -262,6 +263,7 @@ export const createTourSchema = createRouteSchema.extend({
    * workout import sends when the day belongs to a roadtrip (companion#13).
    */
   anchorStopId: z.string().uuid().nullish(),
+  ...tourDayFields,
 });
 
 /**

@@ -6,6 +6,7 @@ import { parseTrackFile } from "./parseTrackFile";
 import { ingestTrack } from "./ingestTrack";
 import { ingestedTrackColumns } from "./trackRow";
 import { readArchiveBlock, restoredTrackColumns, type ArchiveBlock } from "./gpxArchive";
+import { prefillTourDateFromTrack } from "../tourDay";
 
 /**
  * Recordings from files — one GPX/TCX/FIT, or many out of a ZIP — each placed
@@ -242,6 +243,8 @@ export async function importTrackArchive(
           externalRef,
         },
       });
+      // A day tour with no date takes the recording's day (D2).
+      await prefillTourDateFromTrack(route.id, columns as { startedAt: Date; geometry: unknown });
     }
     takenInRun.add(externalRef);
     takenInRun.add(`${route.id}|${externalRef}`);

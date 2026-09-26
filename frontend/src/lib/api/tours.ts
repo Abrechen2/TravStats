@@ -19,6 +19,9 @@ export interface CreateTourRouteInput {
   mode: LegMode;
   /** What the day tour was (2.7). */
   activity?: TourActivity | null;
+  /** The local day it happened, "YYYY-MM-DD", and when it started, "HH:MM" (D2). */
+  date?: string | null;
+  startTime?: string | null;
 }
 
 /** One authored point of a standalone tour. `id` identifies an existing
@@ -46,6 +49,9 @@ export interface UpdateTourRouteInput {
   anchorStopId?: string | null;
   /** Only a roadtrip may move between trips; the server refuses it for a tour. */
   tripId?: string | null;
+  /** Tour only: its day (null clears it and the start time) and start time (D2). */
+  date?: string | null;
+  startTime?: string | null;
 }
 
 // `drivingMinutes`/`tollCost`/`currency` are nullable AND optional: sending

@@ -81,6 +81,10 @@ export interface TourRoute {
   anchorStopId: string | null;
   /** Set on rows the 2.7 migration classified by rule, until confirmed or switched. */
   kindAssignedAutomatically: boolean;
+  /** Tour only: the local day it happened, "YYYY-MM-DD" (D2). */
+  date?: string | null;
+  /** Tour only: when on that day it started, local "HH:MM". */
+  startTime?: string | null;
 }
 
 export interface TourStop {

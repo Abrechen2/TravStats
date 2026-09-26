@@ -35,6 +35,9 @@ export interface TourSummary {
   movingSeconds: number | null;
   trackCount: number;
   stopCount: number;
+  /** A day tour's own day and start time (D2). */
+  date?: string | null;
+  startTime?: string | null;
   startDate: string | null;
   endDate: string | null;
 }

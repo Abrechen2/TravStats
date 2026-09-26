@@ -14,6 +14,7 @@ import { TOUR_COLOR } from "../shared/domains";
 import { TOUR_ACTIVITIES, type TourActivity } from "../shared/tour/roadtrip";
 import TourStopAssigner from "../components/Trips/TourStopAssigner";
 import TourPointEditor from "../components/Trips/TourPointEditor";
+import TourDayEditor from "../components/Trips/TourDayEditor";
 import { editsOwnPoints, tourPointsSaveErrorKey } from "../components/Trips/tourPointsSave";
 import TourLegList from "../components/Trips/TourLegList";
 import TourTrackList from "../components/Trips/TourTrackList";
@@ -660,6 +661,9 @@ export default function TripRouteEditorPage(): JSX.Element {
                   </option>
                 ))}
               </select>
+            )}
+            {route.kind === "tour" && (
+              <TourDayEditor route={route} tripId={id} onSaved={setRoute} />
             )}
             <span>
               {t(`trips:tours.mode.${route.mode}`)} ·{" "}

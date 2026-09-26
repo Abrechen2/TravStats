@@ -69,7 +69,28 @@ export const kindSwitchSchema = z.object({
 });
 
 /** The kind-specific fields PATCH `/tours/:routeId` accepts beside the general ones. */
+/** A calendar day as "YYYY-MM-DD" that exists (no 2026-02-30). */
+const calendarDay = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((d) => new Date(`${d}T00:00:00Z`).toISOString().startsWith(d), "Not a calendar day");
+
+/**
+ * A day tour's day and start time (acceptance D2, 2026-09-26) — the place's
+ * local day and the time of that day, as the user entered them. See
+ * `services/tour/tourDay.ts`.
+ */
+export const tourDayFields = {
+  date: calendarDay.nullable().optional(),
+  startTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .nullable()
+    .optional(),
+};
+
 export const kindFieldsSchema = z.object({
+  ...tourDayFields,
   activity: z.enum(TOUR_ACTIVITIES).nullable().optional(),
   vehicle: z.enum(ROADTRIP_VEHICLES).nullable().optional(),
   vehicleName: z.string().trim().min(1).max(120).nullable().optional(),

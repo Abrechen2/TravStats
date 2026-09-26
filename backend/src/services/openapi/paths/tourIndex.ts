@@ -71,12 +71,24 @@ const tourSummary = registry.register(
       movingSeconds: z.number().nullable(),
       trackCount: z.number().int(),
       stopCount: z.number().int(),
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .nullable()
+        .describe(
+          "Tour only: the local day the day tour happened (YYYY-MM-DD) — set by the user, or prefilled from its first recording's start day"
+        ),
+      startTime: z
+        .string()
+        .regex(/^\d{2}:\d{2}$/)
+        .nullable()
+        .describe("Tour only: when on that day it started, local time HH:MM"),
       startDate: z
         .string()
         .datetime()
         .nullable()
         .describe(
-          "Earliest dated stop's startDate. Null if no stop in the section carries a date."
+          "The tour's own date when set; else the earliest dated stop's startDate; else its first recording's start. Null when none says."
         ),
       endDate: z
         .string()
@@ -106,6 +118,8 @@ const tourSummary = registry.register(
         movingSeconds: null,
         trackCount: 0,
         stopCount: 2,
+        date: null,
+        startTime: null,
         startDate: "2024-07-01T00:00:00.000Z",
         endDate: "2024-07-05T00:00:00.000Z",
       },

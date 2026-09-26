@@ -2,6 +2,7 @@ import { prisma } from "../../db";
 import { datedPresence, stayPresence, visitPresence } from "../../shared/tripSuggestionRules";
 import { ROW_CAP, type Loaded } from "./loadTransport";
 import { daysBetween, storedDay } from "./time";
+import { firstVertex, recordedDay } from "../tour/tourDay";
 import type { PlaceContext, PresenceEntry, PresencePoint } from "./types";
 
 /**
@@ -146,8 +147,10 @@ export async function loadRoutes(userId: string, today: string): Promise<Loaded>
       tripId: true,
       kind: true,
       name: true,
+      tourDate: true,
       stops: {
-        where: { startDate: { not: null }, lat: { not: null }, lon: { not: null } },
+        where: { lat: { not: null }, lon: { not: null } },
+        orderBy: { routeOrderIdx: "asc" },
         select: {
           title: true,
           startDate: true,
@@ -157,17 +160,26 @@ export async function loadRoutes(userId: string, today: string): Promise<Loaded>
           overnight: true,
         },
       },
+      tracks: {
+        orderBy: { startedAt: "asc" },
+        take: 1,
+        select: { startedAt: true, geometry: true },
+      },
     },
   });
   const entries: PresenceEntry[] = [];
   for (const row of rows.slice(0, ROW_CAP)) {
     const points: PresencePoint[] = [];
     const nights: string[] = [];
+    // A day tour's points carry no dates of their own: the tour's day places
+    // them, or its recording's day where none is set (acceptance D2).
+    const tourDay = row.kind === "tour" ? dayOfTour(row) : null;
     for (const stop of row.stops) {
+      if (!tourDay && !stop.startDate) continue;
       // A station's dates are local wall clocks (ADR 0002: fake UTC), so the
       // stored day is the place's day.
-      const start = storedDay(stop.startDate as Date);
-      const end = stop.endDate ? storedDay(stop.endDate) : start;
+      const start = tourDay?.day ?? storedDay(stop.startDate as Date);
+      const end = !tourDay && stop.endDate ? storedDay(stop.endDate) : start;
       const last = end > start ? end : start;
       const at = { lat: stop.lat as number, lon: stop.lon as number };
       points.push({ ...at, day: start, hour: 12 });
@@ -177,6 +189,9 @@ export async function loadRoutes(userId: string, today: string): Promise<Loaded>
         nights.push(...(slept.length > 0 ? slept : stop.overnight ? [start] : []));
       }
     }
+    // A recording with no points: where it started is where the tour was.
+    const recordedAt = tourDay && points.length === 0 ? firstVertex(row.tracks[0]?.geometry) : null;
+    if (tourDay && recordedAt) points.push({ ...recordedAt, day: tourDay.day, hour: 12 });
     if (points.length === 0) continue;
     const days = points.map((p) => p.day).sort();
     const roadtrip = row.kind === "roadtrip";
@@ -196,9 +211,29 @@ export async function loadRoutes(userId: string, today: string): Promise<Loaded>
       label: row.name,
       city: row.stops[row.stops.length - 1]?.title ?? null,
       country: null,
+      ...(tourDay?.zoneUnknown ? { zoneUnknown: true } : {}),
     });
   }
   return { entries, truncated: rows.length > ROW_CAP };
+}
+
+/**
+ * The day a day tour happened: the day the user set, else the local day its
+ * first recording started at the place it started. A recording whose place has
+ * no known zone falls to its UTC day, flagged as such (ADR 0002), never passed
+ * off as the local one.
+ */
+function dayOfTour(row: {
+  tourDate: Date | null;
+  tracks: { startedAt: Date; geometry: unknown }[];
+}): { day: string; zoneUnknown: boolean } | null {
+  if (row.tourDate) return { day: storedDay(row.tourDate), zoneUnknown: false };
+  const track = row.tracks[0];
+  if (!track) return null;
+  const local = recordedDay(track.startedAt, track.geometry);
+  return local
+    ? { day: local, zoneUnknown: false }
+    : { day: storedDay(track.startedAt), zoneUnknown: true };
 }
 
 /**

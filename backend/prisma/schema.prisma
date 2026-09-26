@@ -1623,6 +1623,17 @@ model TripRoute {
   /// Set on rows the 2.7 migration classified by rule. The UI lists them
   /// once so a misfiled row can be moved; confirming or switching clears it.
   kindAssignedAutomatically Boolean @default(false) @map("kind_assigned_automatically")
+  /// Tour only: the local day the day tour happened, at its place (ADR 0002:
+  /// a DATE, crossing code boundaries as "YYYY-MM-DD"). Set by the user, or
+  /// prefilled from the first recorded track's start. Without it a standalone
+  /// tour had no day at all, and the trip suggestions could never place it
+  /// (acceptance D2, 2026-09-26).
+  tourDate                  DateTime? @map("tour_date") @db.Date
+  /// Tour only: when on `tourDate` it started, in minutes after local
+  /// midnight at its place, as the user entered it. A tour is created before
+  /// it has a point, so no zone can be resolved at write time; the instant is
+  /// derived from the place when needed, never stored beside this.
+  tourStartMinute           Int?      @map("tour_start_minute")
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")

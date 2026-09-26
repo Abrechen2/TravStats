@@ -46,6 +46,9 @@ export default function ToursPage(): JSX.Element {
   const [newName, setNewName] = useState("");
   const [newMode, setNewMode] = useState<LegMode>(DEFAULT_MODE);
   const [newActivity, setNewActivity] = useState<TourActivity | "">("hike");
+  // The day tour's day and start (D2) — optional; a recording can fill the day later.
+  const [newDate, setNewDate] = useState("");
+  const [newStartTime, setNewStartTime] = useState("");
   const { isEnabled } = useEnabledDomains();
   const stravaConnected = useStravaConnected();
   const [stravaOpen, setStravaOpen] = useState(false);
@@ -88,6 +91,7 @@ export default function ToursPage(): JSX.Element {
         name,
         mode: newMode,
         activity: newActivity === "" ? null : newActivity,
+        ...(newDate ? { date: newDate, startTime: newStartTime || null } : {}),
       });
       if (!mountedRef.current) return;
       // Re-read rather than append: the list is ordered by the owning
@@ -97,6 +101,8 @@ export default function ToursPage(): JSX.Element {
       setNewName("");
       setNewMode(DEFAULT_MODE);
       setNewActivity("hike");
+      setNewDate("");
+      setNewStartTime("");
       setCreating(false);
     } catch {
       if (mountedRef.current) addToast("error", t("trips:tours.createError"));
@@ -178,6 +184,21 @@ export default function ToursPage(): JSX.Element {
               </option>
             ))}
           </select>
+          <input
+            type="date"
+            value={newDate}
+            onChange={(e) => setNewDate(e.target.value)}
+            aria-label={t("trips:tours.day.date")}
+            className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
+          />
+          <input
+            type="time"
+            value={newStartTime}
+            disabled={!newDate}
+            onChange={(e) => setNewStartTime(e.target.value)}
+            aria-label={t("trips:tours.day.startTime")}
+            className="rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
+          />
           <select
             value={newMode}
             onChange={(e) => setNewMode(e.target.value as LegMode)}

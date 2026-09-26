@@ -94,6 +94,18 @@ const tourRoute = registry.register(
         .describe(
           "True for rows the 2.7 migration classified by rule and nobody has confirmed or switched yet"
         ),
+      date: z
+        .string()
+        .regex(/^\d{4}-\d{2}-\d{2}$/)
+        .nullable()
+        .describe(
+          "Tour only: the local day the day tour happened (YYYY-MM-DD) — set by the user, or prefilled from its first recording's start day"
+        ),
+      startTime: z
+        .string()
+        .regex(/^\d{2}:\d{2}$/)
+        .nullable()
+        .describe("Tour only: when on that day it started, local time HH:MM"),
       orderIdx: z.number().int(),
       color: z.string().nullable(),
       notes: z.string().nullable(),

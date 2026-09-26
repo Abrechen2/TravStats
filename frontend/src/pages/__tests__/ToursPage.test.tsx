@@ -125,6 +125,41 @@ describe("the tours page", () => {
     await waitFor(() => expect(tourIndexApi.list).toHaveBeenCalledTimes(2));
   });
 
+  // Acceptance D2: "Neue Tour" had no date, so a standalone day tour could
+  // never be placed by the trip suggestions.
+  it("creates a day tour with its date and start time", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([]);
+    vi.mocked(toursApi.createStandalone).mockResolvedValue({
+      id: "t-4",
+    } as unknown as Awaited<ReturnType<typeof toursApi.createStandalone>>);
+
+    renderPage();
+    await waitFor(() => expect(tourIndexApi.list).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByText("trips:tours.newTour"));
+    fireEvent.change(screen.getByLabelText("trips:tours.namePlaceholder"), {
+      target: { value: "Fiesole" },
+    });
+    fireEvent.change(screen.getByLabelText("trips:tours.day.date"), {
+      target: { value: "2025-05-04" },
+    });
+    fireEvent.change(screen.getByLabelText("trips:tours.day.startTime"), {
+      target: { value: "08:30" },
+    });
+    fireEvent.click(screen.getByText("trips:tours.save"));
+
+    await waitFor(() =>
+      expect(toursApi.createStandalone).toHaveBeenCalledWith({
+        name: "Fiesole",
+        mode: "road",
+        activity: "hike",
+        date: "2025-05-04",
+        startTime: "08:30",
+      })
+    );
+    await waitFor(() => expect(tourIndexApi.list).toHaveBeenCalledTimes(2));
+  });
+
   it("offers no rail mode, matching the trip page's own list", async () => {
     vi.mocked(tourIndexApi.list).mockResolvedValue([]);
     renderPage();

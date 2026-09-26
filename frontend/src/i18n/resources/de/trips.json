@@ -480,6 +480,11 @@
       "saveErrorOffline": "Keine Verbindung zum Server — die Punkte wurden nicht gespeichert.",
       "saveErrorInvalid": "Die Punkte wurden abgelehnt: Jeder Punkt braucht einen Namen und gültige Koordinaten.",
       "saveErrorGone": "Diese Tour gibt es nicht mehr."
+    },
+    "day": {
+      "date": "Datum der Tour",
+      "startTime": "Startzeit",
+      "saveError": "Das Datum konnte nicht gespeichert werden."
     }
   },
   "head": {
