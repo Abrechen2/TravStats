@@ -49,7 +49,10 @@ describe("backupScheduler", () => {
 
     await startScheduler();
 
-    expect(mockSchedule).toHaveBeenCalledWith("0 2 * * *", expect.any(Function));
+    expect(mockSchedule).toHaveBeenCalledWith("0 2 * * *", expect.any(Function), {
+      // The backup keeps the host's zone, read once at boot (schedulerZone.ts).
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
   });
 
   it("starts scheduler with weekly cron pattern when backupInterval is weekly", async () => {
@@ -62,7 +65,10 @@ describe("backupScheduler", () => {
 
     await startScheduler();
 
-    expect(mockSchedule).toHaveBeenCalledWith("0 2 * * 0", expect.any(Function));
+    expect(mockSchedule).toHaveBeenCalledWith("0 2 * * 0", expect.any(Function), {
+      // The backup keeps the host's zone, read once at boot (schedulerZone.ts).
+      timezone: Intl.DateTimeFormat().resolvedOptions().timeZone,
+    });
   });
 
   it("uses default values when adminSettings row is null", async () => {
