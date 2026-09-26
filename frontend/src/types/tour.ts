@@ -92,6 +92,8 @@ export interface TourStop {
   /** Returned by every read and write of a section's stops; optional so a
    *  stop built locally need not invent one. */
   notes?: string | null;
+  /** Null for a point the tour owns; set for a trip timeline stop it draws on. */
+  tripId?: string | null;
 }
 
 export interface TourLeg {

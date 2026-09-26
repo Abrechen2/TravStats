@@ -3,7 +3,7 @@ import { Router, Response, NextFunction } from "express";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { tourPointsSchema } from "../../schemas/tour";
 import { replaceTourPoints } from "../../services/tour/replaceTourPoints";
-import { resolveRoute, toDto, toLegDto } from "./tourRoutes";
+import { resolveRouteFromRequest, toDto, toLegDto } from "./tourRoutes";
 
 /**
  * The point list of a STANDALONE tour — one that belongs to no trip.
@@ -18,13 +18,15 @@ import { resolveRoute, toDto, toLegDto } from "./tourRoutes";
 const router = Router();
 
 router.put(
-  "/tours/:routeId/points",
+  // The trip path serves a day tour that joined a trip and kept its own
+  // points (acceptance D5): the trip page edits it where it now lives.
+  ["/tours/:routeId/points", "/trips/:id/routes/:routeId/points"],
   authenticate,
   requireWriteScope,
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const routeId = await resolveRoute(userId, undefined, req.params.routeId);
+      const routeId = await resolveRouteFromRequest(userId, req);
       const { points } = tourPointsSchema.parse(req.body);
       const { route, stops, legs } = await replaceTourPoints(userId, routeId, points);
       res.json({ route: toDto(route), stops, legs: legs.map(toLegDto) });

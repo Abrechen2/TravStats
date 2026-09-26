@@ -141,6 +141,12 @@ const tourStop = registry.register(
       lon: z.number(),
       notes: z.string().nullable(),
       routeOrderIdx: z.number().int().describe("0-based position within the section"),
+      tripId: z
+        .string()
+        .uuid()
+        .nullable()
+        .optional()
+        .describe("Null for a point the tour owns; set for a trip timeline stop it draws on"),
     })
     .openapi("TourRouteStop")
 );
@@ -680,38 +686,54 @@ registry.registerPath({
   },
 });
 
-registry.registerPath({
-  method: "put",
-  path: "/tours/{routeId}/points",
-  summary: "Replace a standalone tour's points",
-  description:
-    "The complete, ordered point list, written in one go: added, moved, " +
-    "removed and renumbered together. A section that belongs to a TRIP draws " +
-    "its vertices from that trip's timeline instead (`PUT " +
-    "/trips/{id}/routes/{routeId}/stops`) and this endpoint refuses it with " +
-    "409 — the two are edited differently on purpose.",
-  tags: ["Tours"],
-  request: {
-    params: z.object({ routeId: z.string().uuid() }),
-    body: { content: { "application/json": { schema: tourPointsInput } } },
+const tourPointsPaths = [
+  { path: "/tours/{routeId}/points", params: z.object({ routeId: z.string().uuid() }) },
+  {
+    path: "/trips/{id}/routes/{routeId}/points",
+    params: z.object({ id: z.string().uuid(), routeId: z.string().uuid() }),
   },
-  responses: {
-    200: {
-      description: "The tour, its points in order, and the recomputed legs",
-      content: {
-        "application/json": {
-          schema: z.object({
-            route: tourRoute,
-            stops: z.array(tourStop),
-            legs: z.array(tourLeg),
-          }),
+] as const;
+
+for (const { path, params } of tourPointsPaths) registerTourPoints(path, params);
+
+function registerTourPoints(path: string, params: z.ZodObject<z.ZodRawShape>): void {
+  registry.registerPath({
+    method: "put",
+    path,
+    summary: "Replace a tour's own points",
+    description:
+      "The complete, ordered point list, written in one go: added, moved, " +
+      "removed and renumbered together. A section built from a TRIP's timeline " +
+      "stops is assigned instead (`PUT /trips/{id}/routes/{routeId}/stops`) and " +
+      "this endpoint refuses it with 409 `TOUR_POINTS_FROM_TRIP`. A day tour that " +
+      "joined a trip keeps points of its own and stays editable here, also as " +
+      "`PUT /trips/{id}/routes/{routeId}/points`.",
+    tags: ["Tours"],
+    request: {
+      params,
+      body: { content: { "application/json": { schema: tourPointsInput } } },
+    },
+    responses: {
+      200: {
+        description: "The tour, its points in order, and the recomputed legs",
+        content: {
+          "application/json": {
+            schema: z.object({
+              route: tourRoute,
+              stops: z.array(tourStop),
+              legs: z.array(tourLeg),
+            }),
+          },
         },
       },
+      400: { description: "Validation failed", content: errorContent },
+      404: { description: "Tour not found", content: errorContent },
+      409: {
+        description: "The tour is built from its trip's stops (code TOUR_POINTS_FROM_TRIP)",
+        content: errorContent,
+      },
     },
-    400: { description: "Validation failed", content: errorContent },
-    404: { description: "Tour not found", content: errorContent },
-    409: { description: "This tour belongs to a trip", content: errorContent },
-  },
-});
+  });
+}
 
 export { legMode, tourLeg, tourRoute, tourRouteGeometry };

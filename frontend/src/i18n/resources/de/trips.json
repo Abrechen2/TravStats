@@ -475,7 +475,11 @@
       "save": "Punkte speichern",
       "incomplete": "Jeder Punkt braucht einen Namen und beide Koordinaten.",
       "saveError": "Die Punkte konnten nicht gespeichert werden.",
-      "heading": "Punkte"
+      "heading": "Punkte",
+      "saveErrorFromTrip": "Diese Tour besteht aus Stationen ihrer Reise. Ordne die Stationen in der Reise zu.",
+      "saveErrorOffline": "Keine Verbindung zum Server — die Punkte wurden nicht gespeichert.",
+      "saveErrorInvalid": "Die Punkte wurden abgelehnt: Jeder Punkt braucht einen Namen und gültige Koordinaten.",
+      "saveErrorGone": "Diese Tour gibt es nicht mehr."
     }
   },
   "head": {

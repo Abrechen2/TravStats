@@ -14,6 +14,7 @@ import { TOUR_COLOR } from "../shared/domains";
 import { TOUR_ACTIVITIES, type TourActivity } from "../shared/tour/roadtrip";
 import TourStopAssigner from "../components/Trips/TourStopAssigner";
 import TourPointEditor from "../components/Trips/TourPointEditor";
+import { editsOwnPoints, tourPointsSaveErrorKey } from "../components/Trips/tourPointsSave";
 import TourLegList from "../components/Trips/TourLegList";
 import TourTrackList from "../components/Trips/TourTrackList";
 import { useTranslation } from "../hooks/useTranslation";
@@ -104,6 +105,7 @@ export default function TripRouteEditorPage(): JSX.Element {
      only points there are. */
   const [sectionStops, setSectionStops] = useState<TourStop[]>([]);
   const [savingPoints, setSavingPoints] = useState(false);
+  const [pointsError, setPointsError] = useState<string | null>(null);
   const [geometry, setGeometry] = useState<TourGeometry | null>(null);
   // Whether a routing provider is configured and usable right now — see
   // `routingAvailable` on `toursApi.get()`. Defaults to `false` (never a
@@ -323,8 +325,9 @@ export default function TripRouteEditorPage(): JSX.Element {
     async (points: TourPointInput[]): Promise<void> => {
       if (!routeId) return;
       setSavingPoints(true);
+      setPointsError(null);
       try {
-        const result = await toursApi.replacePoints(routeId, points);
+        const result = await toursApi.replacePoints(id, routeId, points);
         if (!mountedRef.current) return;
         setRoute(result.route);
         setSectionStops(result.stops);
@@ -332,13 +335,17 @@ export default function TripRouteEditorPage(): JSX.Element {
         // The geometry is derived from the legs that just changed; it is
         // the one thing the write does not return.
         setGeometry(await toursApi.geometry(undefined, routeId));
-      } catch {
-        if (mountedRef.current) addToast("error", t("trips:tours.points.saveError"));
+      } catch (err) {
+        logger.warn("TripRouteEditorPage: saving the points failed", err);
+        if (!mountedRef.current) return;
+        const message = t(tourPointsSaveErrorKey(err));
+        setPointsError(message);
+        addToast("error", message);
       } finally {
         if (mountedRef.current) setSavingPoints(false);
       }
     },
-    [routeId, addToast, t]
+    [id, routeId, addToast, t]
   );
 
   const handleAssignChange = useCallback(
@@ -614,6 +621,7 @@ export default function TripRouteEditorPage(): JSX.Element {
     );
   }
 
+  const ownPoints = editsOwnPoints(trip !== null, sectionStops);
   return (
     <AppShell width="list">
       <div className="space-y-6">
@@ -690,9 +698,9 @@ export default function TripRouteEditorPage(): JSX.Element {
 
         <section>
           <h2 className="text-lg font-semibold mb-3">
-            {trip === null ? t("trips:tours.points.heading") : t("trips:tours.stopsHeading")}
+            {ownPoints ? t("trips:tours.points.heading") : t("trips:tours.stopsHeading")}
           </h2>
-          {trip === null ? (
+          {ownPoints ? (
             <TourPointEditor
               points={sectionStops.map((s) => ({
                 id: s.id,
@@ -701,6 +709,7 @@ export default function TripRouteEditorPage(): JSX.Element {
                 lon: s.lon ?? NaN,
               }))}
               saving={savingPoints}
+              error={pointsError}
               onSave={(points) => void handleSavePoints(points)}
             />
           ) : (

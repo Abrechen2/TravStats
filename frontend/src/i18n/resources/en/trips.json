@@ -475,7 +475,11 @@
       "save": "Save points",
       "incomplete": "Every point needs a name and both coordinates.",
       "saveError": "The points could not be saved.",
-      "heading": "Points"
+      "heading": "Points",
+      "saveErrorFromTrip": "This tour is built from its trip's stops. Assign the stops in the trip.",
+      "saveErrorOffline": "No connection to the server — the points were not saved.",
+      "saveErrorInvalid": "The points were refused: every point needs a name and valid coordinates.",
+      "saveErrorGone": "This tour no longer exists."
     }
   },
   "head": {

@@ -9,6 +9,8 @@ interface TourPointEditorProps {
   points: TourPointInput[];
   saving: boolean;
   onSave: (points: TourPointInput[]) => void;
+  /** Why the last save was refused, already worded — shown beside the button. */
+  error?: string | null;
 }
 
 /**
@@ -31,6 +33,7 @@ export default function TourPointEditor({
   points,
   saving,
   onSave,
+  error = null,
 }: TourPointEditorProps): JSX.Element {
   const { t } = useTranslation(["trips", "common"]);
   const [draft, setDraft] = useState<TourPointInput[]>(points);
@@ -143,6 +146,11 @@ export default function TourPointEditor({
         {incomplete && (
           <span className="text-xs" style={{ color: "var(--warning)" }}>
             {t("trips:tours.points.incomplete")}
+          </span>
+        )}
+        {error && (
+          <span role="alert" className="text-xs" style={{ color: "var(--danger)" }}>
+            {error}
           </span>
         )}
       </div>

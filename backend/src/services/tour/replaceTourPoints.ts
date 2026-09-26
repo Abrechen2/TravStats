@@ -21,6 +21,8 @@ export const TOUR_POINT_SELECT = {
   lon: true,
   notes: true,
   routeOrderIdx: true,
+  /** Null for a point the tour owns; set for a trip's timeline stop it draws on. */
+  tripId: true,
 } as const;
 
 /**
@@ -33,13 +35,29 @@ export const TOUR_POINT_SELECT = {
  * endpoint, and for the same reason: a half-applied list leaves legs pointing
  * at points that are no longer in the tour.
  *
- * It refuses a tour that HAS a trip, rather than quietly doing something
- * reasonable. Those points are the trip's timeline stops, edited at the trip;
+ * It refuses a tour whose points are a trip's TIMELINE stops, rather than
+ * quietly doing something reasonable: those are edited at the trip, and
  * silently writing a second, trip-less copy of one is exactly the duplicate
- * this split avoids.
+ * this split avoids. A day tour that JOINED a trip keeps points of its own
+ * (owner decision 2026-09-26 — it moves through its own trip link, its
+ * points stay trip-less), and those remain editable here: refusing them was
+ * acceptance finding D5, a 409 on every save of a linked tour.
  *
  * `routeId` must already be resolved as the caller's tour.
  */
+/**
+ * Whether a tour on a trip carries points of its own — at least one, and none
+ * that is a trip timeline stop. An empty section on a trip is not a tour that
+ * joined it: it is a section waiting for the trip's stops.
+ */
+async function hasOwnPoints(routeId: string): Promise<boolean> {
+  const [own, fromTrip] = await Promise.all([
+    prisma.tripStop.count({ where: { routeId, tripId: null } }),
+    prisma.tripStop.count({ where: { routeId, tripId: { not: null } } }),
+  ]);
+  return own > 0 && fromTrip === 0;
+}
+
 export async function replaceTourPoints(
   userId: string,
   routeId: string,
@@ -49,10 +67,11 @@ export async function replaceTourPoints(
     where: { id: routeId },
     select: { tripId: true, mode: true },
   });
-  if (section.tripId !== null) {
+  if (section.tripId !== null && !(await hasOwnPoints(routeId))) {
     throw new AppError(
-      "This tour belongs to a trip — assign its stops through the trip instead",
-      409
+      "This tour is built from its trip's stops — assign them through the trip instead",
+      409,
+      "TOUR_POINTS_FROM_TRIP"
     );
   }
 

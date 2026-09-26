@@ -109,16 +109,19 @@ export const toursApi = {
   },
 
   /**
-   * Replaces a standalone tour's ENTIRE point list — added, moved, removed
-   * and renumbered in one write. A tour that belongs to a trip answers 409:
-   * there the vertices come from the trip's timeline (`assignStops`).
+   * Replaces a tour's ENTIRE point list — added, moved, removed and
+   * renumbered in one write. A standalone tour, or a day tour that joined a
+   * trip with its own points (then under the trip's path). A section built
+   * from a trip's timeline answers 409 `TOUR_POINTS_FROM_TRIP`: its
+   * vertices are assigned (`assignStops`).
    */
   replacePoints: async (
+    tripId: string | undefined,
     routeId: string,
     points: TourPointInput[]
   ): Promise<{ route: TourRoute; stops: TourStop[]; legs: TourLeg[] }> => {
     const { data } = await api.put<{ route: TourRoute; stops: TourStop[]; legs: TourLeg[] }>(
-      `/tours/${routeId}/points`,
+      `${sectionPath(tripId, routeId)}/points`,
       { points }
     );
     return data;

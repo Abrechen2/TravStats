@@ -103,6 +103,8 @@ export type ApiErrorCode =
    *  no zone". A local time cannot be interpreted, so the write is refused
    *  rather than stored as UTC — see `shared/time/zoneOf.ts`. */
   | "TZ_UNRESOLVED"
+  /** A tour's points are its trip's timeline stops — assigned at the trip, not replaced. */
+  | "TOUR_POINTS_FROM_TRIP"
   /** Backup / restore job failures — see `services/backup/backupFailure.ts`.
    *  A tool (pg_dump, psql, tar) is not installed where the server runs. */
   | "BACKUP_TOOL_MISSING"

@@ -394,7 +394,15 @@ router.get(
         prisma.tripStop.findMany({
           where: { routeId },
           orderBy: { routeOrderIdx: "asc" },
-          select: { id: true, title: true, lat: true, lon: true, notes: true, routeOrderIdx: true },
+          select: {
+            id: true,
+            title: true,
+            lat: true,
+            lon: true,
+            notes: true,
+            routeOrderIdx: true,
+            tripId: true,
+          },
         }),
         prisma.tripRouteLeg.findMany({
           where: { routeId },
