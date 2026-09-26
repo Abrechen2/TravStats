@@ -6,6 +6,12 @@ import adminRoutes from "../index";
 import { prisma } from "../../../db";
 import { hashPassword } from "../../../utils/password";
 import { generateToken } from "../../../utils/jwt";
+import { readFileSync } from "fs";
+import path from "path";
+import {
+  EXPORT_EXCLUDED_USER_RELATIONS,
+  USER_EXPORT_SELECT,
+} from "../../../services/export/allDataExport";
 
 /**
  * `GET /admin/export/all-data` calls itself "export all data" and
@@ -235,5 +241,75 @@ describe("GET /api/v1/admin/export/all-data", () => {
         tracks: [expect.objectContaining({ source: "gpx", ascentM: 120 })],
       }),
     ]);
+  });
+
+  /**
+   * The guard that keeps the file honest as tables are added: every list
+   * relation on `User` in the schema is either exported or named, with its
+   * reason, in `EXPORT_EXCLUDED_USER_RELATIONS`. Read from `schema.prisma`
+   * itself, so a new user-owned table fails here the day it is added.
+   */
+  it("exports or explicitly excludes every user-owned relation in the schema", () => {
+    const schema = readFileSync(
+      path.resolve(__dirname, "../../../../prisma/schema.prisma"),
+      "utf8"
+    );
+    const userModel = schema.match(/^model User \{([\s\S]*?)^\}/m)?.[1] ?? "";
+    const relations = [...userModel.matchAll(/^\s+(\w+)\s+\w+\[\]/gm)].map((m) => m[1]);
+    expect(relations.length).toBeGreaterThan(20);
+    const covered = new Set([
+      ...Object.keys(USER_EXPORT_SELECT),
+      ...Object.keys(EXPORT_EXCLUDED_USER_RELATIONS),
+    ]);
+    expect(relations.filter((r) => !covered.has(r))).toEqual([]);
+  });
+
+  it("carries a flight's companions, a user-added port and the measured country-days", async () => {
+    const userId = createdUserIds[0];
+    const companion = await prisma.companion.findFirstOrThrow({ where: { userId } });
+    const flight = await prisma.flight.create({
+      data: {
+        userId,
+        depLat: 50.03,
+        depLon: 8.56,
+        arrLat: 51.47,
+        arrLon: -0.45,
+        departureTime: new Date("2025-01-10T08:00:00Z"),
+        status: "flown",
+      },
+    });
+    await prisma.flightCompanion.create({
+      data: { flightId: flight.id, companionId: companion.id, position: 0 },
+    });
+    const port = await prisma.port.create({
+      data: { name: `Export test port ${Date.now()}`, lat: 1, lon: 2, isUserAdded: true },
+    });
+    await prisma.countryDay.create({
+      data: {
+        userId,
+        date: new Date("2025-01-10T00:00:00Z"),
+        countryCode: "GB",
+        pointCount: 3,
+        spanKm: 4.5,
+        source: "dawarich",
+      },
+    });
+    try {
+      const res = await request(app)
+        .get("/api/v1/admin/export/all-data")
+        .set("Cookie", adminCookie)
+        .expect(200);
+      const me = res.body.users.find((u: { id: string }) => u.id === userId);
+      expect(me.flights[0].companionLinks).toEqual([
+        expect.objectContaining({ companionId: companion.id }),
+      ]);
+      expect(me.countryDays).toEqual([expect.objectContaining({ countryCode: "GB" })]);
+      expect(res.body.userAddedPorts.map((p: { id: number }) => p.id)).toContain(port.id);
+      for (const key of ["receiptUploads", "importBatches", "parserTemplates", "photoJourneys"]) {
+        expect(Object.prototype.hasOwnProperty.call(me, key)).toBe(true);
+      }
+    } finally {
+      await prisma.port.delete({ where: { id: port.id } });
+    }
   });
 });
