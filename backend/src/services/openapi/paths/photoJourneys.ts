@@ -11,6 +11,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { errorContent } from "./shared";
+import { jobStartedSchema } from "./jobs";
 
 const badInput = { description: "Invalid input", content: errorContent };
 const notFound = { description: "Not found", content: errorContent };
@@ -77,8 +78,48 @@ registry.registerPath({
   method: "post",
   path: "/photo-journeys/scan",
   summary: "Scan photos for journeys",
+  description:
+    "Reads the library in the window (default: the last ten years) and reverse-geocodes what " +
+    "no record explains; forty seconds is the floor. With `background: true` it answers 202 " +
+    "with a job (poll GET /jobs/{id}) whose result is the 200 body's `data`.",
   tags: miscTag,
-  responses: { 202: { description: "Scan started" } },
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            since: z.string().datetime().optional(),
+            until: z.string().datetime().optional(),
+            background: z.boolean().default(false),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Scanned, or `scanned: false` when the account has no Immich",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              scanned: z.boolean(),
+              reason: z.literal("immich-not-configured").optional(),
+              photosSeen: z.number().int().optional(),
+              truncated: z.boolean().optional(),
+              created: z.number().int().optional(),
+              updated: z.number().int().optional(),
+            }),
+          }),
+        },
+      },
+    },
+    202: {
+      description: "Started as a background job (`background: true`)",
+      content: { "application/json": { schema: jobStartedSchema } },
+    },
+  },
 });
 
 registry.registerPath({

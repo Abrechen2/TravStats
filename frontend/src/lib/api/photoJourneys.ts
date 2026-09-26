@@ -1,4 +1,5 @@
 import { API_URL, api } from "./client";
+import { waitForJob } from "./jobs";
 import type { PhotoJourney, PhotoJourneyStatus } from "../../types/photoJourney";
 
 /**
@@ -94,10 +95,17 @@ export const photoJourneysApi = {
    * is ten years and every surviving cluster may cost a reverse lookup, which
    * at Nominatim's 1 req/s makes forty seconds the FLOOR. Never call it on
    * mount — it is a button.
+   *
+   * Runs as a server job (2026-09-26): held open as one request, the
+   * ten-second client timeout announced "scan failed" while the server went
+   * on and stored its findings. Throws `JobLostError` when the outcome can no
+   * longer be learned — which is not a failure.
    */
   scan: async (): Promise<PhotoJourneyScanResult> => {
-    const { data } = await api.post<Envelope<PhotoJourneyScanResult>>("/photo-journeys/scan", {});
-    return data.data;
+    const { data } = await api.post<Envelope<{ jobId: string }>>("/photo-journeys/scan", {
+      background: true,
+    });
+    return waitForJob<PhotoJourneyScanResult>(data.data.jobId);
   },
 
   accept: async (

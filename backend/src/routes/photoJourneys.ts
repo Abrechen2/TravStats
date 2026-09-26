@@ -7,6 +7,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { immichImportLimiter } from "../middleware/rateLimit";
 import { scanPhotoJourneys } from "../services/photoJourneys/scan";
 import { attachJourneyPhotosToVisit } from "../services/places/visitPhotoLinks";
+import { startJob } from "../services/jobs/jobRegistry";
 
 const router = Router();
 router.use(authenticate);
@@ -40,6 +41,11 @@ const scanBodySchema = z.object({
   /** ISO dates. Both optional; the default window is the last ten years. */
   since: z.string().datetime().optional(),
   until: z.string().datetime().optional(),
+  /** Answer 202 with a job instead of holding the request open (2026-09-26).
+   *  Forty seconds is the scan's FLOOR (see below) against a browser that
+   *  gives up after ten, so the web client announced "scan failed" while the
+   *  server stored its findings. The Companion keeps the synchronous call. */
+  background: z.boolean().default(false),
 });
 
 const patchBodySchema = z.object({
@@ -218,20 +224,23 @@ router.post(
         throw new AppError("since must be before until", 400);
       }
 
-      const outcome = await scanPhotoJourneys(req.userId!, { since, until });
+      const userId = req.userId!;
+      const run = async () => {
+        const outcome = await scanPhotoJourneys(userId, { since, until });
+        // Not an error: an account without Immich is a normal account, and
+        // a 4xx here would make the Companion show a failure for a feature
+        // the user simply has not connected.
+        return outcome.kind === "no-immich"
+          ? { scanned: false as const, reason: "immich-not-configured" as const }
+          : { scanned: true as const, ...outcome };
+      };
 
-      // Not an error: an account without Immich is a normal account, and
-      // a 4xx here would make the Companion show a failure for a feature
-      // the user simply has not connected.
-      if (outcome.kind === "no-immich") {
-        res.json({
-          success: true,
-          data: { scanned: false, reason: "immich-not-configured" },
-        });
+      if (parsed.data.background) {
+        const job = startJob("photoJourneys.scan", userId, run);
+        res.status(202).json({ success: true, data: { jobId: job.id } });
         return;
       }
-
-      res.json({ success: true, data: { scanned: true, ...outcome } });
+      res.json({ success: true, data: await run() });
     } catch (err) {
       next(err);
     }

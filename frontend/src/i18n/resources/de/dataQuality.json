@@ -71,11 +71,12 @@
         },
         "dismissed": "Verworfen. Diese Fotoserie wird nicht mehr vorgeschlagen.",
         "photosLinked": "{{count}} Fotos mit dem Besuch verknüpft.",
-        "photosNotLinked": "Die Fotos konnten nicht verknüpft werden – die Fotobibliothek war nicht erreichbar."
+        "photosNotLinked": "Die Fotos konnten nicht verknüpft werden – die Fotobibliothek war nicht erreichbar.",
+        "scanOutcomeUnknown": "Der Server meldet das Ergebnis der Foto-Suche nicht mehr. Angezeigt ist, was bisher gefunden wurde."
       },
       "errors": {
         "loadFailed": "Die Foto-Vorschläge konnten nicht geladen werden.",
-        "scanFailed": "Die Foto-Suche konnte nicht gestartet werden.",
+        "scanFailed": "Die Foto-Suche ist fehlgeschlagen.",
         "acceptFailed": "Der Vorschlag konnte nicht übernommen werden.",
         "acceptLinkFailed": {
           "trip": "Die Reise wurde angelegt, aber der Vorschlag konnte nicht als übernommen markiert werden — noch einmal versuchen verknüpft nur.",
