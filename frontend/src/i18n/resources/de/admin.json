@@ -587,7 +587,8 @@
       "keyMismatchBody": "Die gespeicherten API-Schlüssel, das SMTP-Passwort und die Immich-/Dawarich-Zugänge lassen sich auf dieser Instanz nicht entschlüsseln. Lege den ursprünglichen Schlüssel zurück (ENCRYPTION_KEY bzw. encryption.key im Secrets-Verzeichnis) und versuche es erneut — oder bestätige hier und trage die Zugänge danach neu ein.",
       "keyMismatchAcknowledge": "Verstanden: Zugangsdaten danach neu eintragen",
       "archiveIncomplete": "Dem Archiv fehlt der angeforderte Teil. Es wurde nichts wiederhergestellt.",
-      "archiveUnreadable": "Der Dateiteil des Archivs lässt sich nicht lesen. Es wurde nichts wiederhergestellt."
+      "archiveUnreadable": "Der Dateiteil des Archivs lässt sich nicht lesen. Es wurde nichts wiederhergestellt.",
+      "inProgress": "Wird wiederhergestellt …"
     },
     "settingsSaved": "Backup-Einstellungen gespeichert",
     "settingsFailed": "Fehler beim Speichern der Einstellungen",
@@ -609,7 +610,10 @@
       "deleted": "Backup gelöscht",
       "deleteFailed": "Fehler beim Löschen des Backups",
       "synced": "Backup hochgeladen",
-      "syncFailed": "Hochladen des Backups fehlgeschlagen"
+      "syncFailed": "Hochladen des Backups fehlgeschlagen",
+      "created": "Backup erstellt",
+      "restored": "Backup wiederhergestellt",
+      "outcomeUnknown": "Der Server meldet den Ausgang nicht mehr — bitte die Backup-Liste prüfen, bevor du es erneut versuchst."
     }
   },
   "feedback": {

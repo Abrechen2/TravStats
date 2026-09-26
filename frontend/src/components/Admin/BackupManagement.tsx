@@ -5,6 +5,7 @@ import { useToastStore } from "../../store/toastStore";
 import { format } from "date-fns";
 import { logger } from "../../lib/logger";
 import { apiErrorMachineCode, extractApiErrorMessage } from "../../lib/apiError";
+import { JobLostError, jobErrorCode, waitForJob } from "../../lib/api/jobs";
 import { useTranslation } from "../../hooks/useTranslation";
 // The shared frame: role=dialog, aria-modal, Escape, focus in and back out,
 // and a panel that scrolls instead of running off a 320px screen (AUD-037).
@@ -44,6 +45,8 @@ interface RestoreModalProps {
    * decision, not an error message.
    */
   encryptionKeyMismatch?: boolean;
+  /** The restore job is running: the dialog says so and cannot be sent twice. */
+  restoring?: boolean;
 }
 
 /** Exported for its own test — the dialog contract is worth holding on its
@@ -53,6 +56,7 @@ export function RestoreModal({
   onClose,
   onConfirm,
   encryptionKeyMismatch = false,
+  restoring = false,
 }: RestoreModalProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const [scope, setScope] = useState<"full" | "database" | "files">("full");
@@ -89,20 +93,23 @@ export function RestoreModal({
     <Modal
       open
       onClose={onClose}
+      busy={restoring}
       title={<span style={{ color: "var(--danger)" }}>⚠️ {t("admin:backup.restore.title")}</span>}
       maxWidth={672}
       closeLabel={t("common:buttons.cancel")}
       footer={
         <>
-          <button onClick={onClose} className="btn-secondary">
+          <button onClick={onClose} disabled={restoring} className="btn-secondary">
             {t("common:buttons.cancel")}
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!mayConfirm}
+            disabled={!mayConfirm || restoring}
             className="btn-danger disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t("admin:backup.restore.confirmButton")}
+            {restoring
+              ? t("admin:backup.restore.inProgress")
+              : t("admin:backup.restore.confirmButton")}
           </button>
         </>
       }
@@ -193,6 +200,7 @@ export default function BackupManagement(): JSX.Element {
   const [backups, setBackups] = useState<Backup[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [restoreModal, setRestoreModal] = useState<Backup | null>(null);
   /** Set when the server refused the last restore over the encryption key.
    *  Cleared whenever the dialog opens or closes, so an acknowledgement can
@@ -266,19 +274,29 @@ export default function BackupManagement(): JSX.Element {
   }, []);
 
   const handleCreateBackup = async () => {
+    // A job, not a request held open: the dump takes minutes, and a ten-second
+    // timeout used to announce "failed" over a backup that went on to finish.
     try {
       setCreating(true);
-      await backupApi.create({ type: "full" });
-      addToast("success", t("admin:backup.toasts.started"));
-      setTimeout(() => {
-        loadBackups();
-        loadStatus();
-      }, 1000);
+      const { jobId } = await backupApi.create({ type: "full" });
+      addToast("info", t("admin:backup.toasts.started"));
+      void loadBackups();
+      await waitForJob(jobId);
+      addToast("success", t("admin:backup.toasts.created"));
     } catch (error) {
       logger.error("Failed to create backup:", error);
-      addToast("error", t("admin:backup.toasts.createFailed"));
+      addToast(
+        "error",
+        t(
+          error instanceof JobLostError
+            ? "admin:backup.toasts.outcomeUnknown"
+            : "admin:backup.toasts.createFailed"
+        )
+      );
     } finally {
       setCreating(false);
+      void loadBackups();
+      void loadStatus();
     }
   };
 
@@ -321,26 +339,31 @@ export default function BackupManagement(): JSX.Element {
   ) => {
     if (!restoreModal) return;
 
+    // The dialog stays open, busy, until the job has an outcome: the admin
+    // reads the REAL result — the restore used to report "failed" after ten
+    // seconds while it completed, and the retry met a 409.
+    setRestoring(true);
     try {
-      await backupApi.restore(restoreModal.id, {
+      const { jobId } = await backupApi.restore(restoreModal.id, {
         scope,
         createBackupBefore,
         acceptEncryptionKeyChange,
       });
-      addToast("success", t("admin:backup.toasts.restoring"));
+      await waitForJob(jobId);
+      addToast("success", t("admin:backup.toasts.restored"));
       setRestoreModal(null);
       setKeyMismatch(false);
-      setTimeout(() => {
-        loadBackups();
-        loadStatus();
-      }, 2000);
     } catch (error) {
       logger.error("Failed to restore backup:", error);
       // The preflight refusals each say something the generic toast cannot,
       // and two of them are the whole point of refusing: nothing was written.
       // A single "restore failed" over an archive whose credentials merely
       // cannot be decrypted would send the admin looking for a broken file.
-      switch (apiErrorMachineCode(error)) {
+      if (error instanceof JobLostError) {
+        addToast("error", t("admin:backup.toasts.outcomeUnknown"));
+        return;
+      }
+      switch (jobErrorCode(error) ?? apiErrorMachineCode(error)) {
         case "RESTORE_ENCRYPTION_KEY_MISMATCH":
           // Modal stays open — it now asks for the acknowledgement.
           setKeyMismatch(true);
@@ -354,6 +377,10 @@ export default function BackupManagement(): JSX.Element {
         default:
           addToast("error", t("admin:backup.toasts.restoreFailed"));
       }
+    } finally {
+      setRestoring(false);
+      void loadBackups();
+      void loadStatus();
     }
   };
 
@@ -711,6 +738,7 @@ export default function BackupManagement(): JSX.Element {
           }}
           onConfirm={handleRestore}
           encryptionKeyMismatch={keyMismatch}
+          restoring={restoring}
         />
       )}
     </div>

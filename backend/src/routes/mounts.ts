@@ -103,6 +103,7 @@ import openapiRoutes from "./openapi";
 import importRoutes from "./import";
 import pairingRoutes from "./pairing";
 import appSettingsRoutes from "./appSettings";
+import jobRoutes from "./jobs";
 import geoRoutes from "./geo";
 import documentRoutes from "./documents";
 import tripPhotoWindowRoutes from "./tripPhotoWindows";
@@ -313,4 +314,6 @@ export const apiMounts: ApiMount[] = [
   { id: "pairing", base: "/api/v1/pairing", router: pairingRoutes },
   { id: "appSettings", base: "/api/v1/app-settings", router: appSettingsRoutes },
   { id: "geo", base: "/api/v1/geo", router: geoRoutes },
+  // Background jobs a long-running request started (backup, restore, import, scans).
+  { id: "jobs", base: "/api/v1/jobs", router: jobRoutes },
 ];
