@@ -150,4 +150,41 @@ describe("CruiseEditModal — time model", () => {
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
     expect(await screen.findByText(/lade die Seite neu/)).toBeInTheDocument();
   });
+
+  // Q5: the repeated hour saves the earlier occurrence unless the user says
+  // otherwise; the form says so next to the field and offers the later one.
+  it("offers the later occurrence of a repeated hour and sends fold: later", async () => {
+    vi.mocked(cruiseApi.update).mockResolvedValue(cruise([]));
+    const fold = portCall({
+      date: "2027-10-31T00:00:00.000Z",
+      arrivalTime: "2027-10-31T02:30:00.000Z",
+    });
+    render(
+      <CruiseEditModal mode="edit" cruise={cruise([fold])} onClose={vi.fn()} onSaved={vi.fn()} />
+    );
+    expect(
+      screen.getByText(/zweimal \(Zeitumstellung\). Gespeichert wird die frühere/)
+    ).toBeInTheDocument();
+    await userEvent.click(screen.getByRole("checkbox", { name: "Die spätere meinen" }));
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
+    expect(vi.mocked(cruiseApi.update).mock.calls[0][1].stops?.[0].arrivalTime).toEqual({
+      local: "2027-10-31T02:30",
+      zone: "Europe/Oslo",
+      fold: "later",
+    });
+  });
+
+  it("warns before saving when a typed port time falls into the gap", async () => {
+    const gap = portCall({
+      date: "2027-03-28T00:00:00.000Z",
+      arrivalTime: "2027-03-28T02:30:00.000Z",
+    });
+    render(
+      <CruiseEditModal mode="edit" cruise={cruise([gap])} onClose={vi.fn()} onSaved={vi.fn()} />
+    );
+    expect(await screen.findByRole("alert")).toHaveTextContent(/gibt es an dem Tag dort nicht/);
+    await waitFor(() => expect(tripsApi.getAll).toHaveBeenCalled());
+    await waitFor(() => expect(companionsApi.list).toHaveBeenCalled());
+  });
 });

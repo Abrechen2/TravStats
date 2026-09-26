@@ -7,7 +7,8 @@ const WALL_CLOCK = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/;
 function stopTime(
   stop: CruiseStopInput,
   value: string | null | undefined,
-  field: string
+  field: string,
+  fold: "later" | undefined
 ): LocalTimeInput | null | undefined {
   if (value === undefined) return undefined;
   if (value === null || value === "") return null;
@@ -18,7 +19,7 @@ function stopTime(
     ref: stop.portId !== null ? { kind: "port", id: String(stop.portId) } : null,
   });
   if (!source) throw new MissingZoneError(field);
-  return localTimeInput(field, `${match[1]}T${match[2]}`, source);
+  return localTimeInput(field, `${match[1]}T${match[2]}`, source, fold);
 }
 
 /**
@@ -40,6 +41,8 @@ export function cruiseStopToWire(stop: CruiseStopInput, index: number): CruiseSt
     port: _port,
     originalDay: _originalDay,
     dateSource: _dateSource,
+    arrivalFold,
+    departureFold,
     date,
     arrivalTime,
     departureTime,
@@ -47,8 +50,8 @@ export function cruiseStopToWire(stop: CruiseStopInput, index: number): CruiseSt
   } = stop;
   const wire: CruiseStopWire = { ...rest };
   if (date !== undefined) wire.date = date === null ? null : dayInput(date.slice(0, 10));
-  const arrival = stopTime(stop, arrivalTime, `stops.${index}.arrivalTime`);
-  const departure = stopTime(stop, departureTime, `stops.${index}.departureTime`);
+  const arrival = stopTime(stop, arrivalTime, `stops.${index}.arrivalTime`, arrivalFold);
+  const departure = stopTime(stop, departureTime, `stops.${index}.departureTime`, departureFold);
   if (arrival !== undefined) wire.arrivalTime = arrival;
   if (departure !== undefined) wire.departureTime = departure;
   return wire;

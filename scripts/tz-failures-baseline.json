@@ -6,14 +6,8 @@
     ]
   },
   "frontend": {
-    "America/St_Johns": [
-      "src/__tests__/components/FlightEditModal.test.tsx::FlightEditModal historical date precision hides the stored day-01 of an UNKNOWN flight and adding a real day upgrades to DATE_ONLY"
-    ],
+    "America/St_Johns": [],
     "Pacific/Kiritimati": [
-      "src/__tests__/components/FlightEditModal.test.tsx::FlightEditModal historical date precision changing the year keeps the known day instead of rewriting it to 01",
-      "src/__tests__/components/FlightEditModal.test.tsx::FlightEditModal historical date precision shows the known day of a DATE_ONLY flight in a day picker",
-      "src/__tests__/components/FlightEditModal.test.tsx::FlightEditModal leaving and entering historical unchecking it and entering times submits the clock, without DATE_ONLY semantics and no longer historical",
-      "src/__tests__/components/FlightEditModal.test.tsx::FlightEditModal leaving and entering historical unchecking it reveals the date and time inputs, keeping the known day",
       "src/components/inbox/__tests__/UnfiledDocumentsSection.test.tsx::UnfiledDocumentsSection names each document and the date it will be deleted",
       "src/lib/galleryGrouping.test.ts::groupByDay puts photos from the same day into one group"
     ]

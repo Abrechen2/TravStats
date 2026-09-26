@@ -322,5 +322,10 @@
     "body": "This demo runs with the beta features switched on. What you see here may still change – your feedback is welcome.",
     "listTitle": "These include:",
     "dismiss": "Got it"
+  },
+  "clockChange": {
+    "gap": "This time does not exist on that day at this place (clock change). Please choose a time before or after it.",
+    "repeated": "This time occurs twice on that day at this place (clock change). The earlier one is saved.",
+    "later": "I mean the later one"
   }
 }

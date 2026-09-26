@@ -322,5 +322,10 @@
     "body": "In dieser Demo sind die Beta-Funktionen eingeschaltet. Was du hier siehst, kann sich noch ändern – dein Feedback ist willkommen.",
     "listTitle": "Dazu gehören:",
     "dismiss": "Verstanden"
+  },
+  "clockChange": {
+    "gap": "Diese Uhrzeit gibt es an dem Tag dort nicht (Zeitumstellung). Bitte wähle eine Uhrzeit davor oder danach.",
+    "repeated": "Diese Uhrzeit gibt es an dem Tag dort zweimal (Zeitumstellung). Gespeichert wird die frühere.",
+    "later": "Die spätere meinen"
   }
 }

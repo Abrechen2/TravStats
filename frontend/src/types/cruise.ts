@@ -108,6 +108,10 @@ export interface CruiseStopInput {
    *  start date and the day number (keeps following both), `"user"` = typed
    *  (never touched again), `undefined` = as loaded. Stripped on submit. */
   dateSource?: "derived" | "user";
+  /** UI-only: the later occurrence of a repeated hour was meant (ADR 0002
+   *  Q5). Sent as the time's `fold`, stripped from the stop itself. */
+  arrivalFold?: "later";
+  departureFold?: "later";
 }
 
 export interface CruiseInput {
@@ -155,7 +159,14 @@ export type CruiseWriteBody = Omit<CruiseInput, "stops"> & { stops?: CruiseStopW
  */
 export type CruiseStopWire = Omit<
   CruiseStopInput,
-  "port" | "originalDay" | "dateSource" | "date" | "arrivalTime" | "departureTime"
+  | "port"
+  | "originalDay"
+  | "dateSource"
+  | "date"
+  | "arrivalTime"
+  | "departureTime"
+  | "arrivalFold"
+  | "departureFold"
 > & {
   date?: string | null;
   arrivalTime?: LocalTimeInput | null;
