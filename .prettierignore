@@ -25,6 +25,11 @@ backend/src/generated/
 frontend/src/theme/tokens.css
 frontend/src/theme/tokens.ts
 
+# Written by ESLint itself (`--suppress-rule` / `--prune-suppressions`), the
+# time-model lint baselines. Reformatting them would turn every prune into a
+# format-check failure.
+**/eslint-suppressions.json
+
 # Written back at runtime by the template registry, with JSON.stringify.
 backend/src/services/parsers/templates/**/*.json
 
