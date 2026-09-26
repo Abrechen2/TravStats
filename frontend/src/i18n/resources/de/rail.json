@@ -208,7 +208,15 @@
       "delays": "Verspätungen",
       "records": "Rekorde",
       "years": "Fahrten pro Jahr"
-    }
+    },
+    "nightTrains": "Nachtzüge",
+    "nightTrainsDesc": "Schlaf- oder Liegewagen, Nachtzug-Gattung oder über Nacht unterwegs",
+    "highSpeed": "Hochgeschwindigkeit",
+    "highSpeedDesc": "ICE, TGV, Frecciarossa, AVE, Railjet …",
+    "crossBorder": "Grenzüberschreitend",
+    "crossBorderDesc": "Abfahrt und Ankunft in verschiedenen Ländern",
+    "operatorsCount": "Bahngesellschaften",
+    "operatorsCountDesc": "verschiedene, Schreibweisen zusammengefasst"
   },
   "roadtripConversion": {
     "title": "Als Bahnfahrten übernehmen",

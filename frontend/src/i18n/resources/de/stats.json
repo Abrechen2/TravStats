@@ -724,7 +724,10 @@
     "topRouteDesc_one": "{{count}} Flug, beide Richtungen zusammen",
     "topRouteDesc_other": "{{count}} Flüge, beide Richtungen zusammen",
     "noRoute": "Keine Strecke ableitbar.",
-    "none": "—"
+    "none": "—",
+    "rail": "Bahnfahrten",
+    "railDesc": "{{km}} km mit der Bahn",
+    "railDescStraight": "{{km}} km mit der Bahn, davon {{straight}} km Luftlinie"
   },
   "period": {
     "emptyYear": "Für {{year}} ist hier nichts erfasst."

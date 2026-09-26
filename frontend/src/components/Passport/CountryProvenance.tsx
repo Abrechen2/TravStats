@@ -62,6 +62,8 @@ const linkFor = (entry: CountryTimelineEntry): string => {
     case "roadtrip":
       // Stations are edited on their roadtrip; there is no page of their own.
       return `/roadtrips/${entry.roadtripId}`;
+    case "rail":
+      return `/rail/${entry.rideId}`;
     case "track":
       // There is no record to open — a country-day is a reduction of a
       // location history, not something anybody typed. What CAN be reached is
@@ -98,6 +100,9 @@ const labelFor = (
       // Both names, and no words between them to translate: the station says
       // where, the roadtrip is what the link opens.
       return `${entry.stationTitle} · ${entry.roadtripName}`;
+    case "rail":
+      // The station in this country, then the ride the link opens.
+      return `${entry.stationName} · ${entry.rideLabel}`;
     case "track":
       // The two observable facts, and no verdict between them (§8.3): how many
       // days were recorded, and how thinly. A phrase like "GPS-measured" would

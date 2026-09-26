@@ -38,6 +38,7 @@ const STATS: RailStats = {
     ],
   },
   byYear: [{ year: 2025, journeys: 3, km: 1000 }],
+  rideKinds: { nightTrains: 1, highSpeed: 2, crossBorder: 1, operators: 2 },
 };
 
 vi.mock("../../../../lib/api/rail", () => ({
@@ -79,5 +80,23 @@ describe("RailStatsSection", () => {
     );
     const link = await screen.findByRole("link", { name: /Wien Hbf/ });
     expect(link.getAttribute("href")).toBe(`/rail/${STATS.longest!.id}`);
+  });
+
+  it("shows the kinds of ride the rail badges count, each opening the rides behind it", async () => {
+    render(
+      <MemoryRouter>
+        <RailStatsSection
+          scope={{ year: null, compareYear: null } as never}
+          visibility={visibility}
+        />
+      </MemoryRouter>
+    );
+    const kinds = await screen.findByTestId("rail-ride-kinds");
+    for (const label of ["nightTrains", "highSpeed", "crossBorder", "operatorsCount"]) {
+      expect(kinds.textContent).toContain(`rail:stats.${label}`);
+    }
+    // Every figure there — and the three headline ones — is an evidence trigger.
+    const triggers = screen.getAllByRole("button").filter((b) => b.getAttribute("aria-haspopup"));
+    expect(triggers.length).toBe(7);
   });
 });

@@ -49,6 +49,7 @@ import {
   type SheetOutcome,
 } from "./types";
 import { changedOnly, droppedOrNone, enumCell, keepStoredClock } from "./values";
+import { companionsDiffer, resolveCompanionCell, updateWithCompanions } from "./companionLinks";
 
 /** Statuses the write schema accepts. `in_progress` is derived and stored,
  *  never written — an exported one is dropped and re-derived from the dates. */
@@ -209,9 +210,10 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
         currency,
         notes: cell.text(raw.notes),
         tags: cell.list(raw.tags),
-        companions: cell.list(raw.companions),
         tripId: trip.tripId,
       };
+      // Names AND link rows, as the form writes them (see `./companionLinks`).
+      const companionNames = cell.list(raw.companions);
       const stored = await prisma.cruise.findUniqueOrThrow({ where: { id: targetId } });
       fields.startDate = keepStoredClock(startDateValue, raw.startDate, stored.startDate);
       fields.endDate = keepStoredClock(
@@ -220,9 +222,10 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
         stored.endDate
       );
       const data: Record<string, unknown> = changedOnly(definedOnly(fields), stored);
+      const companionsChanged = companionsDiffer(companionNames, stored);
       const rowNotes = notes.length > 0 ? notes : undefined;
       const extra = { notes: rowNotes, dropped: droppedOrNone(dropped) };
-      if (Object.keys(data).length === 0) {
+      if (Object.keys(data).length === 0 && !companionsChanged) {
         out.push({ row: rowNo, action: "skip", id: targetId, label, message, ...extra });
         continue;
       }
@@ -240,7 +243,12 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
         const fxNote = fxRefreshNote(fx);
         if (fxNote) extra.notes = [...(extra.notes ?? []), fxNote];
       }
-      if (!ctx.dryRun) await prisma.cruise.update({ where: { id: targetId }, data });
+      if (!ctx.dryRun) {
+        const companions = companionsChanged
+          ? await resolveCompanionCell(ctx.userId, companionNames)
+          : undefined;
+        await updateWithCompanions("cruise", targetId, data, companions);
+      }
       ctx.wrote = ctx.wrote || !ctx.dryRun;
       out.push({ row: rowNo, action: "update", id: targetId, label, message, ...extra });
       continue;

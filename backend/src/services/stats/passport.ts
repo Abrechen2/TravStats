@@ -103,6 +103,7 @@ import {
 import { FLOWN, flightEvidence, isoDayOf, type PassportFlight } from "./flightEvidence";
 import { trackEvidence, type CountryDayRow } from "./trackEvidence";
 import { roadtripEvidence, type PassportRoadtripStation } from "./roadtripEvidence";
+import { railEvidence, type RailEnd } from "./railEvidence";
 import { countEvidencePerCountry } from "./evidenceCountry";
 import { lodgingStampsPerCountry, type LodgingStamp, type StampLodging } from "./lodgingStamp";
 
@@ -182,10 +183,14 @@ export type PassportLodging = StampLodging;
 export type PassportEvidence = EvidenceKind;
 
 const EVIDENCE_RANK: Record<PassportEvidence, number> = {
-  flight: 6,
-  port: 5,
-  place: 4,
-  lodging: 3,
+  flight: 7,
+  port: 6,
+  place: 5,
+  lodging: 4,
+  // A train station: below every older kind, so no country an account
+  // without rail already shows changes its label; above a roadtrip station,
+  // because a ride is a dated ticket rather than a pin on a route.
+  rail: 3,
   // Below the house, so a country already labelled by its stay keeps that
   // label; above the track, because a station is a record somebody typed and
   // can open, which a country-day is not.
@@ -420,7 +425,9 @@ export function buildPassport(
    * night, days and country (`./roadtripEvidence.ts`). Before this the Stats
    * overview counted a roadtrip's countries while the passport did not.
    */
-  roadtripStations: readonly PassportRoadtripStation[] = []
+  roadtripStations: readonly PassportRoadtripStation[] = [],
+  /** Station ends of completed train rides, graded by `./railEvidence.ts`. */
+  railEnds: readonly RailEnd[] = []
 ): Passport {
   const thisYear = now.getUTCFullYear();
   const home = new Set(homeIatas.map((c) => c.toUpperCase()));
@@ -627,6 +634,7 @@ export function buildPassport(
     // Like a track it raises its own rows through the loop below — a country
     // reached only by campervan has no other record to be found under.
     ...roadtripEvidence(roadtripStations),
+    ...railEvidence(railEnds),
   ]);
 
   for (const row of evidence) {
@@ -746,6 +754,7 @@ export function buildPassport(
         port: countries.filter((c) => c.evidence === "port").length,
         place: countries.filter((c) => c.evidence === "place").length,
         lodging: countries.filter((c) => c.evidence === "lodging").length,
+        rail: countries.filter((c) => c.evidence === "rail").length,
         roadtrip: countries.filter((c) => c.evidence === "roadtrip").length,
         track: countries.filter((c) => c.evidence === "track").length,
       },

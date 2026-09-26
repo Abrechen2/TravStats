@@ -20,7 +20,12 @@ import type { AuthRequest } from "./auth";
  *
  *  - every per-user table the stats routes read: row COUNT (catches a delete)
  *    and max(updated_at) (catches an insert or an edit). `flights`,
- *    `cruise_stops` and `user_achievements` got the column for this;
+ *    `cruise_stops` and `user_achievements` got the column for this. Rail
+ *    rides, roadtrips and tours (routes, stations, legs, recordings) and a
+ *    trip's journal and photos (the travel account reads both) were missing
+ *    until 2026-09-26, so a new train ride answered 304 with the old rail
+ *    tab. A recording is never edited in place, so its `created_at` plus the
+ *    count is its whole history;
  *  - the user's settings (base currency, home airport, timezone) and
  *    birthdate, and the instance settings;
  *  - the build and the process start, so a deploy or a catalogue re-seed on
@@ -54,6 +59,13 @@ function fingerprintQuery(userId: string): Prisma.Sql {
     UNION ALL SELECT 'places', count(*), max(updated_at) FROM places WHERE user_id = ${userId}
     UNION ALL SELECT 'place_visits', count(*), max(updated_at) FROM place_visits WHERE user_id = ${userId}
     UNION ALL SELECT 'country_days', count(*), max(updated_at) FROM country_days WHERE user_id = ${userId}
+    UNION ALL SELECT 'rail_journeys', count(*), max(updated_at) FROM rail_journeys WHERE user_id = ${userId}
+    UNION ALL SELECT 'trip_routes', count(*), max(updated_at) FROM trip_routes WHERE user_id = ${userId}
+    UNION ALL SELECT 'trip_stops', count(*), max(s.updated_at) FROM trip_stops s LEFT JOIN trip_routes r ON r.id = s.route_id LEFT JOIN trips t ON t.id = s.trip_id WHERE r.user_id = ${userId} OR t.user_id = ${userId}
+    UNION ALL SELECT 'trip_route_legs', count(*), max(l.updated_at) FROM trip_route_legs l JOIN trip_routes r ON r.id = l.route_id WHERE r.user_id = ${userId}
+    UNION ALL SELECT 'trip_route_tracks', count(*), max(k.created_at) FROM trip_route_tracks k JOIN trip_routes r ON r.id = k.route_id WHERE r.user_id = ${userId}
+    UNION ALL SELECT 'trip_journal_entries', count(*), max(j.updated_at) FROM trip_journal_entries j JOIN trips t ON t.id = j.trip_id WHERE t.user_id = ${userId}
+    UNION ALL SELECT 'trip_photos', count(*), max(p.created_at) FROM trip_photos p JOIN trips t ON t.id = p.trip_id WHERE t.user_id = ${userId}
     UNION ALL SELECT 'user_achievements', count(*), max(updated_at) FROM user_achievements WHERE user_id = ${userId}
     UNION ALL SELECT 'user_settings', count(*), max(updated_at) FROM user_settings WHERE user_id = ${userId}
     UNION ALL SELECT 'admin_settings', count(*), max(updated_at) FROM admin_settings

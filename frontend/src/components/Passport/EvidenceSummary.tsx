@@ -58,6 +58,10 @@ export default function EvidenceSummary({
     { kind: "place" as const, count: summary.byEvidence.place },
     { kind: "lodging" as const, count: summary.byEvidence.lodging },
     // Drawn only where it is not a permanent zero, like the track below.
+    // Rail (2.7) the same way: absent from an account that never took a train.
+    ...((summary.byEvidence.rail ?? 0) > 0
+      ? [{ kind: "rail" as const, count: summary.byEvidence.rail }]
+      : []),
     ...(summary.byEvidence.roadtrip > 0
       ? [{ kind: "roadtrip" as const, count: summary.byEvidence.roadtrip }]
       : []),

@@ -80,6 +80,17 @@ export interface WrappedCruise {
   status: string;
 }
 
+/**
+ * A counted train ride (2.7), already filed under the year it left on its
+ * departure station's calendar (`shared/railCounting.railYear`) by the loader.
+ */
+export interface WrappedRail {
+  year: number;
+  /** Null when the ride measured no distance — it counts as a ride, never as 0 km. */
+  distanceKm: number | null;
+  distanceSource: string | null;
+}
+
 /** What the passport already knows about a country, and all this needs of it. */
 export interface WrappedCountry {
   firstYear: number | null;
@@ -118,7 +129,8 @@ export function buildWrapped(
   flights: readonly WrappedFlight[],
   cruises: readonly WrappedCruise[],
   countries: readonly WrappedCountry[],
-  requestedYear: number | null = null
+  requestedYear: number | null = null,
+  rail: readonly WrappedRail[] = []
 ): Wrapped | null {
   const flown = flights.filter((f) => FLOWN.has(f.status) && f.departureTime !== null);
   const sailed = cruises.filter((c) => FLOWN.has(c.status) && c.startDate !== null);
@@ -136,9 +148,10 @@ export function buildWrapped(
     cruisesPerYear.set(year, (cruisesPerYear.get(year) ?? 0) + 1);
   }
 
-  const availableYears = [...new Set([...flightsPerYear.keys(), ...cruisesPerYear.keys()])].sort(
-    (a, b) => a - b
-  );
+  // A year with only train rides has a story too.
+  const availableYears = [
+    ...new Set([...flightsPerYear.keys(), ...cruisesPerYear.keys(), ...rail.map((r) => r.year)]),
+  ].sort((a, b) => a - b);
   if (availableYears.length === 0) return null;
 
   // Rule 1: read off the data. An explicitly requested year is honoured even
@@ -185,6 +198,10 @@ export function buildWrapped(
     (a, b) => b[1].flights - a[1].flights || a[0].localeCompare(b[0])
   )[0];
 
+  const railInYear = rail.filter((r) => r.year === year);
+  const railKmOf = (rides: readonly WrappedRail[]): number =>
+    Math.round(rides.reduce((sum, r) => sum + (r.distanceKm ?? 0), 0));
+
   // A year with no flights has no flying rank to hold. Calling it 'top'
   // because nothing beat it would let a cruise-only year headline as the
   // biggest flying year of somebody's life.
@@ -211,6 +228,10 @@ export function buildWrapped(
     // the passport does not count, and neither number would explain the other.
     newCountries: countries.filter((c) => c.counted && c.firstYear === year).length,
     cruises: cruisesPerYear.get(year) ?? 0,
+    railRides: railInYear.length,
+    railKm: railKmOf(railInYear),
+    // Owner decision 7 (rail spec): straight-line km are shown as such.
+    railStraightLineKm: railKmOf(railInYear.filter((r) => r.distanceSource === "great_circle")),
     topAirline:
       topAirline === undefined
         ? null

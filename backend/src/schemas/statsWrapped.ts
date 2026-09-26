@@ -42,6 +42,17 @@ export const wrappedSchema = z.object({
         "sits next to.",
     }),
   cruises: z.number().int(),
+  railRides: z.number().int().openapi({
+    description: "Completed train rides that left in this year, on their station's calendar.",
+  }),
+  railKm: z.number().openapi({
+    description: "Their kilometres, every distance source together; a ride without one adds none.",
+  }),
+  railStraightLineKm: z.number().openapi({
+    description:
+      "The part of `railKm` measured as the straight line between the stations, which " +
+      "understates the track — shown as such, never folded in silently.",
+  }),
   topAirline: z
     .object({
       name: z.string(),

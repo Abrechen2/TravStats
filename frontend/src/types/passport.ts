@@ -83,7 +83,8 @@ export function countryTierChoicesFor(
  * held a day up — travels as a number, and the UI shows the number rather than
  * inventing a word for it.
  */
-export type PassportEvidenceKind = "flight" | "lodging" | "port" | "place" | "roadtrip" | "track";
+export type PassportEvidenceKind =
+  "flight" | "lodging" | "port" | "place" | "rail" | "roadtrip" | "track";
 
 /**
  * How long the traveller was on the ground in a country — spec §3.4b, mirrored
@@ -275,6 +276,14 @@ export type CountryTimelineEntry =
       stationId: string;
       stationTitle: string;
     }
+  /** A completed train ride with a station in this country; the link opens the ride. */
+  | {
+      kind: "rail";
+      date: string | null;
+      rideId: string;
+      rideLabel: string;
+      stationName: string;
+    }
   /**
    * Measured presence — ONE entry for the whole country, not one per day, and
    * the only entry with no record behind it to open. What can be opened is the
@@ -308,6 +317,8 @@ export interface CountryDetail {
   lodgings: number;
   /** Stations of started roadtrips standing in this country. */
   roadtripStations: number;
+  /** Completed train rides with a station in this country. */
+  railRides: number;
   /** Distinct days a location history placed the traveller here. Zero on an
    *  account with none, which is most of them. */
   trackDays: number;

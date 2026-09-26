@@ -228,7 +228,7 @@ app.get("/api/v1/parser-capabilities", async (_req, res, next) => {
 // OpenAPI coverage guard can walk exactly what the app serves. Order is
 // significant; the reasons are documented next to each entry there.
 app.use(
-  ["/api/v1/roadtrips", "/api/v1/tours", "/api/v1/trips/:id/routes"],
+  ["/api/v1/roadtrips", "/api/v1/tours", "/api/v1/trips/:id/routes", "/api/v1/rail"],
   recheckAchievementsAfterWrite
 );
 for (const { base, router } of apiMounts) {

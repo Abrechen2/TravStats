@@ -7,6 +7,7 @@ import { startAirportSeeding, getSeedingStatus } from "../../services/airportSee
 import { sweepStaleLogos } from "../../jobs/airlineLogoRefreshScheduler";
 import logger from "../../utils/logger";
 import { appVersion, buildVersion } from "../../utils/version";
+import { USER_EXPORT_SELECT, loadUserAddedCatalogue } from "../../services/export/allDataExport";
 
 const router = Router();
 
@@ -233,96 +234,17 @@ router.get(
   adminExportLimiter,
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
-      const users = await prisma.user.findMany({
-        select: {
-          id: true,
-          username: true,
-          firstName: true,
-          lastName: true,
-          isAdmin: true,
-          isActive: true,
-          invitedBy: true,
-          createdAt: true,
-          birthdate: true,
-          notificationEmail: true,
-          notifyBefore24h: true,
-          notifyBefore2h: true,
-          // Deliberately excluded: passwordHash, resetToken/changeToken and their
-          // expiries, every twoFactor* column, webauthnCredentials,
-          // twoFactorRecoveryCodes, apiTokens, pairingCodes.
-
-          // Travel data — the point of the export.
-          flights: true,
-          cruises: { include: { stops: true, legs: true } },
-          trips: { include: { stops: true, journalEntries: true, photos: true } },
-          // Tours and roadtrips from the user's side, not the trip's: one with
-          // no trip is reachable from nowhere else, stations and recordings
-          // with it. A trip-borrowed station appears under both — twice is
-          // honest, missing is not.
-          tourRoutes: {
-            include: {
-              stops: { orderBy: { routeOrderIdx: "asc" } },
-              legs: true,
-              tracks: true,
-            },
-          },
-          bookings: true,
-          lodgings: true,
-          lodgingStays: true,
-          lodgingMemberships: true,
-          places: true,
-          placeVisits: { include: { photos: true } },
-          placeLists: { include: { entries: true } },
-          // Rail (spec 2026-09-25-rail-domain): the rides with their companion
-          // links, frozen line included — it cannot be fetched again for a past day.
-          railJourneys: { include: { companionLinks: true } },
-          companions: true,
-          // Kept originals (forgejo#116): the rows — what each is, where it is
-          // filed, what its parse read. The bytes stay out, as a photo's do.
-          documents: true,
-          // The answers to trip suggestions: without them a restored account
-          // would be asked again every question it already dismissed. The
-          // suggestions themselves are derived and never stored.
-          tripSuggestionAnswers: true,
-          userAchievements: {
-            include: {
-              achievement: true,
-            },
-          },
-          // Field-by-field: the stored API keys are not part of a data export.
-          settings: {
-            select: {
-              enabledDomains: true,
-              baseCurrency: true,
-              data: true,
-              appPrefs: true,
-              autoCreateTrips: true,
-              preferredVisionParser: true,
-              preferredTextParser: true,
-              immichDefaultMode: true,
-              autoUpdateEnabled: true,
-              autoUpdateRequireApproval: true,
-              historicalEnrichmentEnabled: true,
-              createdAt: true,
-              updatedAt: true,
-            },
-          },
-        },
-      });
-
-      // Stations a user added belong to no user, but exist nowhere else: the
-      // Trainline catalogue is re-seeded from the vendored file, these are not.
-      const userAddedRailStations = await prisma.railStation.findMany({
-        where: { isUserAdded: true },
-        orderBy: { id: "asc" },
-      });
+      // What each user's record carries, and what it leaves out and why, is
+      // one module the export test holds against the schema.
+      const users = await prisma.user.findMany({ select: USER_EXPORT_SELECT });
+      const catalogue = await loadUserAddedCatalogue();
 
       const { instanceName } = await getInstanceSettings();
       const exportData = {
         exportedAt: new Date().toISOString(),
         instanceName,
         users,
-        userAddedRailStations,
+        ...catalogue,
       };
 
       const exportFilename = `travstats-backup-${Date.now()}.json`;

@@ -67,7 +67,9 @@
     "lodgings": "lodgings",
     "places": "places",
     "cities": "cities",
-    "lists": "lists"
+    "lists": "lists",
+    "rides": "rides",
+    "operators": "operators"
   },
   "evidence.metric.flightCount": "Number of flights",
   "evidence.metric.flightTimeMinutes": "Total flight time",
@@ -166,5 +168,12 @@
   "evidence.ranking.country": "Country {{country}}",
   "evidence.ranking.aircraftType": "Aircraft type {{aircraft}}",
   "evidence.subtitle.notConverted": "Not converted: {{amount}} {{currency}}",
-  "evidence.subtitle.nightsUnknown": "Length of stay not known"
+  "evidence.subtitle.nightsUnknown": "Length of stay not known",
+  "evidence.metric.railRideCount": "Train rides",
+  "evidence.metric.railDistanceKmTotal": "Rail kilometres",
+  "evidence.metric.railCountriesCount": "Countries by train",
+  "evidence.metric.railOperatorsCount": "Operators",
+  "evidence.metric.railNightTrainCount": "Night trains",
+  "evidence.metric.railHighSpeedRideCount": "High-speed rides",
+  "evidence.metric.railCrossBorderRideCount": "Rides across a border"
 }

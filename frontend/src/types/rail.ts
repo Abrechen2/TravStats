@@ -275,6 +275,8 @@ export interface RailStats {
     buckets: Array<{ upToMinutes: number | null; count: number }>;
   };
   byYear: Array<{ year: number; journeys: number; km: number }>;
+  /** Rides of a kind, counted by the rule the rail badges use. */
+  rideKinds: { nightTrains: number; highSpeed: number; crossBorder: number; operators: number };
 }
 
 /** A train the user has ridden, as a ticket prints it ("ICE 578"). */

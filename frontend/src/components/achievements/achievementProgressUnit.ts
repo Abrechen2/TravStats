@@ -30,6 +30,11 @@ export const ACHIEVEMENT_PROGRESS_UNIT: Record<string, string> = {
   lodging_independent_nights: "nights",
   lodging_five_star_nights: "nights",
   lodging_all_inclusive_nights: "nights",
+  roadtrip_km: "km",
+  roadtrip_longest_km: "km",
+  roadtrip_free_nights: "nights",
+  rail_km: "km",
+  rail_longest_km: "km",
 };
 
 /** The unit i18n suffix for a rule, or null when the number counts itself. */

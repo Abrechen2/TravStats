@@ -30,6 +30,7 @@ const detail: CountryDetail = {
   places: 0,
   lodgings: 0,
   roadtripStations: 2,
+  railRides: 0,
   trackDays: 0,
   anchor: null,
   timeline: [

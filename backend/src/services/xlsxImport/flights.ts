@@ -31,6 +31,8 @@ import {
   type SheetOutcome,
 } from "./types";
 import { changedOnly, droppedOrNone, enumCell } from "./values";
+import { companionsDiffer, resolveCompanionCell, updateWithCompanions } from "./companionLinks";
+import { linkRowsFor } from "../companionService";
 
 /** Statuses a spreadsheet may set. Anything else is refused rather than
  *  coerced — silently turning a typo into "flown" changes what is counted, and
@@ -128,6 +130,8 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
     const seatClass = enumCell(raw.seatClass, SEAT_CLASSES, "seatClass", dropped);
     const category = enumCell(raw.category, CATEGORIES, "category", dropped);
     const extra = { notes, dropped: droppedOrNone(dropped) };
+    // Companions are written as the form writes them — names AND link rows.
+    const companionNames = cell.list(raw.companions);
 
     const fields: Record<string, unknown> = {
       airline,
@@ -144,6 +148,7 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
       currency,
       category,
       notes: cell.text(raw.notes),
+      tags: cell.list(raw.tags),
       tripId: trip.tripId,
       // The code is what the sheet says; the airport columns follow it only
       // when it changed (below), so an untouched code never moves a flight.
@@ -169,7 +174,8 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
       }
       const stored = owned ?? (await prisma.flight.findUniqueOrThrow({ where: { id: targetId } }));
       const data: Record<string, unknown> = changedOnly(definedOnly(fields), stored);
-      if (Object.keys(data).length === 0) {
+      const companionsChanged = companionsDiffer(companionNames, stored);
+      if (Object.keys(data).length === 0 && !companionsChanged) {
         out.push({ row: rowNo, action: "skip", id: targetId, label, message, ...extra });
         continue;
       }
@@ -188,7 +194,12 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
         Object.assign(data, fx.columns);
         fxNote = fxRefreshNote(fx);
       }
-      if (!ctx.dryRun) await prisma.flight.update({ where: { id: targetId }, data });
+      if (!ctx.dryRun) {
+        const companions = companionsChanged
+          ? await resolveCompanionCell(ctx.userId, companionNames)
+          : undefined;
+        await updateWithCompanions("flight", targetId, data, companions);
+      }
       ctx.wrote = ctx.wrote || !ctx.dryRun;
       const rowNotes = fxNote ? [...(extra.notes ?? []), fxNote] : extra.notes;
       out.push({
@@ -219,38 +230,50 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
 
     let newId: string | null = null;
     if (!ctx.dryRun) {
-      const created = await prisma.flight.create({
-        data: {
-          userId: ctx.userId,
-          airline,
-          flightNumber,
-          depIata: dep.iata,
-          depIcao: dep.icao,
-          depName: dep.name,
-          depLat: dep.lat,
-          depLon: dep.lon,
-          arrIata: arr.iata,
-          arrIcao: arr.icao,
-          arrName: arr.name,
-          arrLat: arr.lat,
-          arrLon: arr.lon,
-          departureTime: departureTimeValue ?? null,
-          arrivalTime: arrivalTime ? new Date(arrivalTime) : null,
-          status: status ?? "flown",
-          aircraft: cell.text(raw.aircraft) ?? null,
-          aircraftRegistration: cell.text(raw.aircraftRegistration) ?? null,
-          seatNumber: cell.text(raw.seatNumber) ?? null,
-          seatClass: seatClass ?? null,
-          bookingReference: cell.text(raw.bookingReference) ?? null,
-          category: category ?? null,
-          price: price ?? null,
-          currency: currency ?? null,
-          notes: cell.text(raw.notes) ?? null,
-          dataSource: "xlsx",
-          ...newFxColumns,
-          ...(trip.tripId ? { tripId: trip.tripId } : {}),
-        },
-        select: { id: true },
+      const companions = await resolveCompanionCell(ctx.userId, companionNames);
+      const created = await prisma.$transaction(async (tx) => {
+        const row = await tx.flight.create({
+          data: {
+            userId: ctx.userId,
+            airline,
+            flightNumber,
+            depIata: dep.iata,
+            depIcao: dep.icao,
+            depName: dep.name,
+            depLat: dep.lat,
+            depLon: dep.lon,
+            arrIata: arr.iata,
+            arrIcao: arr.icao,
+            arrName: arr.name,
+            arrLat: arr.lat,
+            arrLon: arr.lon,
+            departureTime: departureTimeValue ?? null,
+            arrivalTime: arrivalTime ? new Date(arrivalTime) : null,
+            status: status ?? "flown",
+            aircraft: cell.text(raw.aircraft) ?? null,
+            aircraftRegistration: cell.text(raw.aircraftRegistration) ?? null,
+            seatNumber: cell.text(raw.seatNumber) ?? null,
+            seatClass: seatClass ?? null,
+            bookingReference: cell.text(raw.bookingReference) ?? null,
+            category: category ?? null,
+            price: price ?? null,
+            currency: currency ?? null,
+            notes: cell.text(raw.notes) ?? null,
+            dataSource: "xlsx",
+            tags: cell.list(raw.tags) ?? [],
+            companions: companions?.names ?? [],
+            ...newFxColumns,
+            ...(trip.tripId ? { tripId: trip.tripId } : {}),
+          },
+          select: { id: true },
+        });
+        if (companions && companions.ids.length > 0) {
+          await tx.flightCompanion.createMany({
+            data: linkRowsFor(companions.ids).map((link) => ({ ...link, flightId: row.id })),
+            skipDuplicates: true,
+          });
+        }
+        return row;
       });
       newId = created.id;
       seen.add(created.id);

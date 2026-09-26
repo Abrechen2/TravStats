@@ -36,7 +36,8 @@
     "port": "Port call",
     "place": "Place",
     "roadtrip": "Road trip",
-    "track": "Location history"
+    "track": "Location history",
+    "rail": "Train"
   },
   "value": {
     "dash": "—",

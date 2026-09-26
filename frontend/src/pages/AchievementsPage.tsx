@@ -16,6 +16,7 @@ import { useLocale } from "../hooks/useLocale";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { useRailVisible } from "../hooks/useRailVisible";
 import { countAchievements } from "../lib/achievementCounts";
 import { AVAILABLE_DOMAINS, type DomainKey } from "../shared/domains";
 
@@ -34,6 +35,17 @@ export function filterAchievementsByDomain(
   return achievements.filter(
     (a) => a.domain === "shared" || enabled.includes(a.domain as DomainKey)
   );
+}
+
+/**
+ * The domains whose badges this reader sees: their enabled ones, minus rail
+ * while the `railDomain` beta gate is closed. Rail is the one domain the
+ * enabled list does not gate itself (roadtrips are dropped inside
+ * `useEnabledDomains`), and a rail badge must not show on an instance where
+ * rail does not exist — `useRailVisible` is that rule's one home.
+ */
+export function achievementDomains(enabled: DomainKey[], railVisible: boolean): DomainKey[] {
+  return railVisible ? enabled : enabled.filter((d) => d !== "rail");
 }
 
 const TIERS = ["bronze", "silver", "gold", "platinum", "diamond"] as const;
@@ -107,7 +119,12 @@ export default function AchievementsPage(): JSX.Element {
   const { t } = useTranslation(["achievements", "common"]);
   const locale = useLocale();
   const { addToast } = useToastStore();
-  const { enabled } = useEnabledDomains();
+  const { enabled: enabledDomains } = useEnabledDomains();
+  const railVisible = useRailVisible();
+  const enabled = useMemo(
+    () => achievementDomains(enabledDomains, railVisible),
+    [enabledDomains, railVisible]
+  );
   const [achievements, setAchievements] = useState<Achievement[]>([]);
   /** The card whose detail dialog is open, or null (#330). */
   const [selected, setSelected] = useState<Achievement | null>(null);
@@ -320,7 +337,7 @@ export default function AchievementsPage(): JSX.Element {
           </Pill>
           {/* Rail has no achievements yet (its spec, phase 2) — a chip for it
               would open an empty list. */}
-          {AVAILABLE_DOMAINS.filter((d) => d !== "rail" && enabled.includes(d)).map((d) => (
+          {AVAILABLE_DOMAINS.filter((d) => enabled.includes(d)).map((d) => (
             <Pill key={d} active={selectedDomain === d} onClick={() => setSelectedDomain(d)}>
               {t(DOMAIN_LABEL[d])}
             </Pill>

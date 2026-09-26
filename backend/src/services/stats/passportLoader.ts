@@ -31,6 +31,7 @@ import { buildPassport } from "./passport";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { classifyVisit } from "../../shared/placeCounting";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
+import { loadRailEnds } from "./railEvidenceLoader";
 
 /**
  * The airport codes a passport-shaped flight row touches, deduplicated.
@@ -200,7 +201,7 @@ export async function loadPassport(
    * "Deutschland" and "Germany" are one country and only the code knows that.
    */
   // prettier-ignore
-  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations] = await Promise.all([
+  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations, railEnds] = await Promise.all([
     loadAirportCountries(passportAirportCodes(flights)),
     prisma.cruiseStop.findMany({
       where: {
@@ -287,6 +288,9 @@ export async function loadPassport(
     // counted and this passport did not. Same loader as the drill-down, so a
     // row and its page agree about which station proved a country.
     loadRoadtripStations(userId, now),
+    // Station ends of completed train rides — counted by the overview, and
+    // until 2.7 by nothing here.
+    loadRailEnds(userId),
   ]);
 
   return buildPassport(
@@ -330,6 +334,7 @@ export async function loadPassport(
       airportPointCount: row.airportPointCount,
       partialWindow: row.partialWindow,
     })),
-    roadtripStations
+    roadtripStations,
+    railEnds
   );
 }

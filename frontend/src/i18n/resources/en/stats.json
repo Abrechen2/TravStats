@@ -724,7 +724,10 @@
     "topRouteDesc_one": "{{count}} flight, both directions together",
     "topRouteDesc_other": "{{count}} flights, both directions together",
     "noRoute": "No route derivable.",
-    "none": "—"
+    "none": "—",
+    "rail": "Train rides",
+    "railDesc": "{{km}} km by train",
+    "railDescStraight": "{{km}} km by train, {{straight}} km of it straight line"
   },
   "period": {
     "emptyYear": "Nothing recorded here for {{year}}."

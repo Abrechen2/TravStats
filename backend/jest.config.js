@@ -21,6 +21,8 @@ module.exports = {
   globalSetup: "<rootDir>/jest.globalSetup.ts",
   // Caps the Prisma pool before any client is built — see jest.setup.ts.
   setupFiles: ["<rootDir>/jest.setup.ts"],
+  // Waits for after-write achievement rechecks between tests (recheckInFlight.ts).
+  setupFilesAfterEnv: ["<rootDir>/jest.afterEnv.ts"],
   roots: ["<rootDir>/src"],
   // Narrowed to the `.test.ts`/`.spec.ts` suffix (2026-09-18, evidence panel
   // Task 4): the old `**/__tests__/**/*.ts` ran EVERY file under a

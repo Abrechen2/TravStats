@@ -1225,6 +1225,70 @@
     "ROADTRIP_COUNTRIES_3": {
       "name": "Border hopper",
       "description": "Three countries on a single roadtrip"
+    },
+    "RAIL_FIRST": {
+      "name": "All aboard",
+      "description": "Took your first train ride"
+    },
+    "RAIL_25": {
+      "name": "Regular on the train",
+      "description": "Took 25 train rides"
+    },
+    "RAIL_100": {
+      "name": "Rail enthusiast",
+      "description": "Took 100 train rides"
+    },
+    "RAIL_KM_1000": {
+      "name": "A thousand kilometres of track",
+      "description": "Travelled 1,000 km by train"
+    },
+    "RAIL_KM_10000": {
+      "name": "Iron road",
+      "description": "Travelled 10,000 km by train"
+    },
+    "RAIL_KM_40075": {
+      "name": "Around the world on rails",
+      "description": "Travelled 40,075 km by train – once around the Earth"
+    },
+    "RAIL_LONG_1000": {
+      "name": "Long haul on rails",
+      "description": "A single train ride over 1,000 km"
+    },
+    "RAIL_COUNTRIES_3": {
+      "name": "Across the continent by train",
+      "description": "Reached stations in three countries"
+    },
+    "RAIL_COUNTRIES_10": {
+      "name": "A continent on rails",
+      "description": "Reached stations in ten countries"
+    },
+    "RAIL_CROSS_BORDER_1": {
+      "name": "Over the border",
+      "description": "Rode a train from one country into another"
+    },
+    "RAIL_CROSS_BORDER_10": {
+      "name": "Borderless",
+      "description": "Ten train rides across a border"
+    },
+    "RAIL_NIGHT_1": {
+      "name": "Sleeper romance",
+      "description": "Your first ride on a night train"
+    },
+    "RAIL_NIGHT_10": {
+      "name": "Nights on rails",
+      "description": "Ten rides on a night train"
+    },
+    "RAIL_HIGH_SPEED_1": {
+      "name": "At 300 km/h",
+      "description": "Your first ride on a high-speed train (ICE, TGV, Frecciarossa …)"
+    },
+    "RAIL_HIGH_SPEED_25": {
+      "name": "High-speed regular",
+      "description": "25 rides on high-speed trains"
+    },
+    "RAIL_OPERATORS_5": {
+      "name": "Operator collector",
+      "description": "Travelled with five different rail operators"
     }
   },
   "header": {

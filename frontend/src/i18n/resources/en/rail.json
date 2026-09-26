@@ -208,7 +208,15 @@
       "delays": "Delays",
       "records": "Records",
       "years": "Rides per year"
-    }
+    },
+    "nightTrains": "Night trains",
+    "nightTrainsDesc": "sleeper or couchette, a night-train category, or overnight on board",
+    "highSpeed": "High-speed",
+    "highSpeedDesc": "ICE, TGV, Frecciarossa, AVE, Railjet …",
+    "crossBorder": "Across a border",
+    "crossBorderDesc": "departure and arrival in different countries",
+    "operatorsCount": "Operators",
+    "operatorsCountDesc": "distinct, spellings merged"
   },
   "roadtripConversion": {
     "title": "Take over as train rides",

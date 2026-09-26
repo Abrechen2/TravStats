@@ -1225,6 +1225,70 @@
     "ROADTRIP_COUNTRIES_3": {
       "name": "Grenzgänger",
       "description": "Drei Länder auf einem einzigen Roadtrip"
+    },
+    "RAIL_FIRST": {
+      "name": "Einsteigen, bitte",
+      "description": "Die erste Bahnfahrt unternommen"
+    },
+    "RAIL_25": {
+      "name": "Stammgast im Zug",
+      "description": "25 Bahnfahrten unternommen"
+    },
+    "RAIL_100": {
+      "name": "Bahnfahrer aus Leidenschaft",
+      "description": "100 Bahnfahrten unternommen"
+    },
+    "RAIL_KM_1000": {
+      "name": "Tausend Kilometer Schiene",
+      "description": "1.000 km mit der Bahn zurückgelegt"
+    },
+    "RAIL_KM_10000": {
+      "name": "Schienenstrang",
+      "description": "10.000 km mit der Bahn zurückgelegt"
+    },
+    "RAIL_KM_40075": {
+      "name": "Einmal um die Welt auf Schienen",
+      "description": "40.075 km mit der Bahn zurückgelegt – einmal der Erdumfang"
+    },
+    "RAIL_LONG_1000": {
+      "name": "Langstrecke auf Schienen",
+      "description": "Eine einzelne Bahnfahrt über 1.000 km"
+    },
+    "RAIL_COUNTRIES_3": {
+      "name": "Auf Schienen durch Europa",
+      "description": "Bahnhöfe in drei Ländern erreicht"
+    },
+    "RAIL_COUNTRIES_10": {
+      "name": "Kontinent auf Schienen",
+      "description": "Bahnhöfe in zehn Ländern erreicht"
+    },
+    "RAIL_CROSS_BORDER_1": {
+      "name": "Über die Grenze",
+      "description": "Mit dem Zug von einem Land in ein anderes gefahren"
+    },
+    "RAIL_CROSS_BORDER_10": {
+      "name": "Grenzenlos unterwegs",
+      "description": "Zehn grenzüberschreitende Bahnfahrten"
+    },
+    "RAIL_NIGHT_1": {
+      "name": "Schlafwagenromantik",
+      "description": "Die erste Fahrt mit dem Nachtzug"
+    },
+    "RAIL_NIGHT_10": {
+      "name": "Nachts auf Schienen",
+      "description": "Zehn Fahrten mit dem Nachtzug"
+    },
+    "RAIL_HIGH_SPEED_1": {
+      "name": "Mit Tempo 300",
+      "description": "Die erste Fahrt mit einem Hochgeschwindigkeitszug (ICE, TGV, Frecciarossa …)"
+    },
+    "RAIL_HIGH_SPEED_25": {
+      "name": "Hochgeschwindigkeits-Vielfahrer",
+      "description": "25 Fahrten mit Hochgeschwindigkeitszügen"
+    },
+    "RAIL_OPERATORS_5": {
+      "name": "Bahngesellschaften-Sammler",
+      "description": "Mit fünf verschiedenen Bahngesellschaften gefahren"
     }
   },
   "header": {

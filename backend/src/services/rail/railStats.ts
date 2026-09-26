@@ -5,6 +5,7 @@ import {
   railYear,
   type DatedRail,
 } from "../../shared/railCounting";
+import { railRideFacts } from "../../utils/railAchievements";
 
 /**
  * The rail statistics (spec 2026-09-25-rail-domain, phase 2b), computed from
@@ -41,6 +42,8 @@ export interface RailStatsRow extends DatedRail {
   distanceKm: number | null;
   distanceSource: string | null;
   delayMinutes: number | null;
+  /** Optional only so hand-built rows in tests need not name it; the query selects it. */
+  travelClass?: string | null;
 }
 
 export interface Ranked {
@@ -81,6 +84,13 @@ export interface RailStats {
     buckets: Array<{ upToMinutes: number | null; count: number }>;
   };
   byYear: Array<{ year: number; journeys: number; km: number }>;
+  /**
+   * Rides of a kind, by the rule the rail badges count them with
+   * (`shared/railRideKinds.ts` via `railRideFacts`), and the number of
+   * distinct operators (spelling folded) — so this tab and the badges never
+   * disagree about how many night trains there were.
+   */
+  rideKinds: { nightTrains: number; highSpeed: number; crossBorder: number; operators: number };
 }
 
 function rank(values: Array<string | null>): Ranked[] {
@@ -124,6 +134,16 @@ function delayBuckets(rows: readonly RailStatsRow[]): RailStats["delays"] {
     return { upToMinutes: upTo, count };
   });
   return { recordedJourneys: recorded.length, buckets };
+}
+
+function rideKinds(rows: readonly RailStatsRow[]): RailStats["rideKinds"] {
+  const facts = rows.map((r) => railRideFacts({ ...r, travelClass: r.travelClass ?? null }));
+  return {
+    nightTrains: facts.filter((f) => f.isNightTrain).length,
+    highSpeed: facts.filter((f) => f.isHighSpeed).length,
+    crossBorder: facts.filter((f) => f.isCrossBorder).length,
+    operators: new Set(facts.flatMap((f) => (f.operator ? [f.operator] : []))).size,
+  };
 }
 
 export function computeRailStats(rows: readonly RailStatsRow[]): RailStats {
@@ -182,6 +202,7 @@ export function computeRailStats(rows: readonly RailStatsRow[]): RailStats {
     byYear: [...years.entries()]
       .map(([year, v]) => ({ year, ...v }))
       .sort((a, b) => a.year - b.year),
+    rideKinds: rideKinds(rows),
   };
 }
 
@@ -203,6 +224,7 @@ const STATS_SELECT = {
   distanceKm: true,
   distanceSource: true,
   delayMinutes: true,
+  travelClass: true,
 } as const;
 
 /**
