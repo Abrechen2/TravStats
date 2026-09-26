@@ -22,7 +22,7 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
-import { errorContent } from "./shared";
+import { errorContent, timeRefused } from "./shared";
 import {
   createLodgingSchema,
   lodgingQuerySchema,
@@ -425,6 +425,7 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     201: { description: "Created", content: { "application/json": { schema: stay } } },
     400: { description: "Invalid input", content: errorContent },
     404: { description: "Lodging not found", content: errorContent },
@@ -441,6 +442,7 @@ registry.registerPath({
     body: { content: { "application/json": { schema: stayUpdateInput } }, required: true },
   },
   responses: {
+    422: timeRefused,
     200: { description: "Updated", content: { "application/json": { schema: stay } } },
     400: { description: "Invalid input", content: errorContent },
     404: { description: "Not found", content: errorContent },

@@ -24,7 +24,7 @@ import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { createVisitSchema } from "../../../schemas/place";
-import { errorContent } from "./shared";
+import { errorContent, timeRefused } from "./shared";
 import {
   createPlaceListSchema,
   updatePlaceListSchema,
@@ -228,7 +228,7 @@ registry.registerPath({
       },
     },
   },
-  responses: { 201: { description: "Created" }, 400: badInput, 404: notFound },
+  responses: { 422: timeRefused, 201: { description: "Created" }, 400: badInput, 404: notFound },
 });
 
 const visitDateSuggestion = z.object({
@@ -281,7 +281,7 @@ registry.registerPath({
   summary: "Update a visit",
   tags: placesTag,
   request: { params: z.object({ visitId: uuid }) },
-  responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },
+  responses: { 422: timeRefused, 200: { description: "Updated" }, 400: badInput, 404: notFound },
 });
 
 registry.registerPath({

@@ -15,7 +15,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { documentIdsBodySchema } from "../../../schemas/document";
-import { errorContent, tripResponse } from "./shared";
+import { errorContent, tripResponse, timeRefused } from "./shared";
 import {
   createTripSchema,
   updateTripSchema,
@@ -237,6 +237,7 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     201: { description: "Created", content: { "application/json": { schema: tripResponse } } },
     400: badInput,
   },
@@ -252,6 +253,7 @@ registry.registerPath({
     body: { content: { "application/json": { schema: tripUpdateInput } }, required: true },
   },
   responses: {
+    422: timeRefused,
     200: { description: "Updated", content: { "application/json": { schema: tripResponse } } },
     400: badInput,
     404: notFound,
@@ -299,7 +301,7 @@ registry.registerPath({
     params: tripId,
     body: { content: { "application/json": { schema: stopCreateInput } }, required: true },
   },
-  responses: { 201: { description: "Created" }, 400: badInput, 404: notFound },
+  responses: { 422: timeRefused, 201: { description: "Created" }, 400: badInput, 404: notFound },
 });
 
 registry.registerPath({
@@ -311,7 +313,7 @@ registry.registerPath({
     params: z.object({ id: z.string().uuid(), stopId: z.string().uuid() }),
     body: { content: { "application/json": { schema: stopUpdateInput } }, required: true },
   },
-  responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },
+  responses: { 422: timeRefused, 200: { description: "Updated" }, 400: badInput, 404: notFound },
 });
 
 registry.registerPath({
@@ -332,7 +334,7 @@ registry.registerPath({
     params: tripId,
     body: { content: { "application/json": { schema: journalCreateInput } }, required: true },
   },
-  responses: { 201: { description: "Created" }, 400: badInput, 404: notFound },
+  responses: { 422: timeRefused, 201: { description: "Created" }, 400: badInput, 404: notFound },
 });
 
 registry.registerPath({
@@ -344,7 +346,7 @@ registry.registerPath({
     params: z.object({ id: z.string().uuid(), entryId: z.string().uuid() }),
     body: { content: { "application/json": { schema: journalUpdateInput } }, required: true },
   },
-  responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },
+  responses: { 422: timeRefused, 200: { description: "Updated" }, 400: badInput, 404: notFound },
 });
 
 registry.registerPath({

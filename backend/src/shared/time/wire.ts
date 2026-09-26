@@ -24,6 +24,13 @@ export type PlaceRefKind = (typeof PLACE_REF_KINDS)[number];
 
 const LOCAL_WALL_CLOCK = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}(:\d{2})?$/;
 
+const LOCAL_TIME_INPUT_DESCRIPTION =
+  "A wall clock as the ticket shows it (ADR 0002 D3) and where its zone comes from: " +
+  "`zone` (IANA) or `placeRef` (a catalogue row or place the server resolves) — exactly one, " +
+  "except on a field whose entity already names a place (a visit, a port call, a trip stop), " +
+  "where both may be left out and the server reads that place's zone. " +
+  "`fold: later` picks the second occurrence of a repeated autumn hour.";
+
 /** The fields of a typed time, before the rule on where its zone comes from. */
 export const localTimeInputBaseSchema = z.strictObject({
   local: z.string().regex(LOCAL_WALL_CLOCK, "local must be YYYY-MM-DDTHH:mm[:ss] without offset"),
@@ -41,12 +48,7 @@ export const localTimeInputSchema = localTimeInputBaseSchema
   .refine((v) => (v.zone === undefined) !== (v.placeRef === undefined), {
     message: "exactly one of zone or placeRef",
   })
-  .openapi("LocalTimeInput", {
-    description:
-      "A wall clock as the ticket shows it (ADR 0002 D3) and where its zone comes from: " +
-      "`zone` (IANA) or `placeRef` (a catalogue row or place the server resolves). " +
-      "`fold: later` picks the second occurrence of a repeated autumn hour.",
-  });
+  .openapi("LocalTimeInput", { description: LOCAL_TIME_INPUT_DESCRIPTION });
 
 /**
  * The same shape for a field whose ENTITY already names a place — a visit to
@@ -54,10 +56,14 @@ export const localTimeInputSchema = localTimeInputBaseSchema
  * both be left out, and the server reads the zone of that place. At most one,
  * still: two could disagree.
  */
-export const localTimeAtPlaceInputSchema = localTimeInputBaseSchema.refine(
-  (v) => v.zone === undefined || v.placeRef === undefined,
-  { message: "at most one of zone or placeRef" }
-);
+export const localTimeAtPlaceInputSchema = localTimeInputBaseSchema
+  .refine((v) => v.zone === undefined || v.placeRef === undefined, {
+    message: "at most one of zone or placeRef",
+  })
+  // The same JSON shape as `LocalTimeInput` (a refine is invisible to JSON
+  // Schema), so the spec points at the one component; each field's own
+  // description says whether the zone may be left to the entity's place.
+  .openapi("LocalTimeInput", { description: LOCAL_TIME_INPUT_DESCRIPTION });
 export type LocalTimeInput = z.infer<typeof localTimeInputSchema>;
 
 /** A calendar day, `YYYY-MM-DD` — a real one (2027-02-29 is refused). */
