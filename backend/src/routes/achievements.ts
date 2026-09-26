@@ -6,6 +6,12 @@ import { checkAndUpdateAchievements } from "../utils/achievements";
 import { resolveRank } from "../utils/achievementRank";
 import { isAchievementHeld } from "../utils/achievementHeld";
 import { achievements as catalogueDefinitions } from "../data/achievements";
+import {
+  achievementVisibility,
+  loadAchievementVisibility,
+} from "../services/achievementVisibility";
+import { visibleDomainKeys } from "../services/domainVisibility";
+import { getInstanceSettings } from "../services/instanceSettingsService";
 
 const router = Router();
 
@@ -31,20 +37,26 @@ router.use(requireWriteScope);
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
+    // A badge of a hidden domain is neither listed, counted nor scored (D4).
+    const visible = await loadAchievementVisibility(userId);
 
     // Get all achievements
-    const achievements = await prisma.achievement.findMany({
-      where: {
-        code: { not: { startsWith: TEST_ACHIEVEMENT_PREFIX } },
-      },
-      orderBy: [{ category: "asc" }, { tier: "asc" }, { requirement: "asc" }],
-    });
+    const achievements = (
+      await prisma.achievement.findMany({
+        where: {
+          code: { not: { startsWith: TEST_ACHIEVEMENT_PREFIX } },
+        },
+        orderBy: [{ category: "asc" }, { tier: "asc" }, { requirement: "asc" }],
+      })
+    ).filter((a) => visible(a.domain));
 
     // Get user's unlocked achievements
-    const userAchievements = await prisma.userAchievement.findMany({
-      where: { userId },
-      include: { achievement: true },
-    });
+    const userAchievements = (
+      await prisma.userAchievement.findMany({
+        where: { userId },
+        include: { achievement: true },
+      })
+    ).filter((ua) => visible(ua.achievement.domain));
 
     // Create a map for quick lookup
     const userAchievementMap = new Map(userAchievements.map((ua) => [ua.achievementId, ua]));
@@ -153,7 +165,9 @@ router.get("/recent", async (req: AuthRequest, res: Response, next: NextFunction
     // the live measure. A badge whose measure has dipped below its requirement
     // leaves this list; its `unlockedAt` stays in the database, and it comes
     // back here at that original date if the measure recovers.
+    const visible = await loadAchievementVisibility(userId);
     const recentAchievements = allRecent
+      .filter((ua) => visible(ua.achievement.domain))
       .filter((ua) => isAchievementHeld(ua, ua.achievement.requirement))
       .slice(0, limit);
 
@@ -173,7 +187,12 @@ router.post("/check", statsLimiter, async (req: AuthRequest, res: Response, next
   try {
     const userId = req.userId!;
 
-    const newlyUnlocked = await checkAndUpdateAchievements(userId);
+    const visible = await loadAchievementVisibility(userId);
+    // Unlocked all the same — a hidden domain's badge is kept for the day it
+    // shows — but not announced while its domain is out of sight.
+    const newlyUnlocked = (await checkAndUpdateAchievements(userId)).filter((ua) =>
+      visible(ua.achievement.domain)
+    );
 
     res.json({
       message: "Achievement check completed",
@@ -219,6 +238,7 @@ router.get(
             select: {
               points: true,
               requirement: true,
+              domain: true,
             },
           },
           user: {
@@ -243,7 +263,13 @@ router.get(
         }
       >();
 
+      // Each entry by its own user's visibility — the same rule as that
+      // user's own page, so the board never scores a hidden domain (D4).
+      const visibleFor = await leaderboardVisibility([
+        ...new Set(userAchievements.map((ua) => ua.userId)),
+      ]);
       for (const ua of userAchievements) {
+        if (!visibleFor(ua.userId)(ua.achievement.domain)) continue;
         if (!isAchievementHeld(ua, ua.achievement.requirement)) continue;
 
         const userId = ua.userId;
@@ -276,5 +302,30 @@ router.get(
     }
   }
 );
+
+/** One visibility rule per user on the board, read in two queries, not one per user. */
+async function leaderboardVisibility(
+  userIds: readonly string[]
+): Promise<(userId: string) => (domain: string) => boolean> {
+  const [settings, instance] = await Promise.all([
+    prisma.userSettings.findMany({
+      where: { userId: { in: [...userIds] } },
+      select: { userId: true, enabledDomains: true },
+    }),
+    getInstanceSettings(),
+  ]);
+  const byUser = new Map(settings.map((s) => [s.userId, s.enabledDomains]));
+  const cache = new Map<string, (domain: string) => boolean>();
+  return (userId) => {
+    let rule = cache.get(userId);
+    if (!rule) {
+      rule = achievementVisibility(
+        visibleDomainKeys(byUser.get(userId), instance.betaFeaturesEnabled)
+      );
+      cache.set(userId, rule);
+    }
+    return rule;
+  };
+}
 
 export default router;
