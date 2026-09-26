@@ -151,8 +151,10 @@ registry.registerPath({
   summary: "The next item across every enabled domain",
   description:
     "One entry per domain the user has enabled — next flight, cruise, stay, train — " +
-    "plus the next trip, sorted by start. Domains the user has switched off are " +
-    "absent rather than empty. An account with no settings row is treated as " +
+    "plus the next trip, sorted by start. Domains the user cannot see are absent " +
+    "rather than empty: switched off by the user, OR hidden by the instance's beta " +
+    "switch (rail while `betaFeaturesEnabled` is false) — a client need not apply " +
+    "that check itself. An account with no settings row is treated as " +
     "flights-only, matching the column default.",
   tags: ["Dashboard"],
   responses: {
