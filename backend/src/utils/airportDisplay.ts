@@ -48,6 +48,46 @@ export interface AirportNameSource {
   municipalityName?: string | null;
 }
 
+/** An Italian-style province code after a municipality: "Ferno (VA)". */
+const PROVINCE_CODE = /\s*\([A-Z]{2}\)\s*$/;
+/** Any parenthetical after a name: "Paris (Roissy-en-France, Val-d'Oise)". */
+const PARENTHETICAL = /\s*\(.*\)\s*$/;
+
+const words = (s: string): string[] =>
+  s
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .split(/[^\p{L}\p{N}]+/u)
+    .filter(Boolean);
+
+/**
+ * The CITY an airport serves, for naming a destination ("Barcelona", not
+ * "Josep Tarradellas Barcelona-El Prat" — acceptance D10, 2026-09-26), or
+ * null when the catalogue cannot say — the caller then names the airport.
+ *
+ * `municipalityName` is the served city when present. `city` is trusted where
+ * the header above shows it is: a plain city, or a city before a long
+ * parenthetical (CDG "Paris (Roissy-en-France, …)"). A municipality with a
+ * province code (MXP "Ferno (VA)") is where the runway lies, and is used only
+ * when the airport's own name repeats it.
+ */
+export function airportCityName(
+  airport: (AirportNameSource & { city?: string | null }) | undefined | null
+): string | null {
+  const municipality = airport?.municipalityName?.trim();
+  if (municipality) return municipality;
+  const raw = airport?.city?.trim();
+  if (!raw) return null;
+  if (PROVINCE_CODE.test(raw)) {
+    const town = raw.replace(PROVINCE_CODE, "").trim();
+    const name = words(airport?.name ?? "");
+    return town && words(town).every((w) => name.includes(w)) ? town : null;
+  }
+  const city = raw.replace(PARENTHETICAL, "").trim();
+  return city.length > 0 ? city : null;
+}
+
 /**
  * A short, human-readable name for an airport, or `null` when the row carries
  * nothing usable — the caller decides whether to fall back to the code. Never

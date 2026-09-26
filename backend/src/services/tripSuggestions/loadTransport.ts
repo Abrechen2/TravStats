@@ -1,6 +1,6 @@
 import { prisma } from "../../db";
 import { cruisePresence, flightPresence, railPresence } from "../../shared/tripSuggestionRules";
-import { airportDisplayName } from "../../utils/airportDisplay";
+import { airportCityName, airportDisplayName } from "../../utils/airportDisplay";
 import type { FlightTimeSemantics } from "../../utils/timezone";
 import { getCachedAirports } from "../airportCache";
 import { addDays, daysBetween, placeClock, placeZone, storedDay } from "./time";
@@ -97,9 +97,14 @@ export async function loadFlights(userId: string): Promise<Loaded> {
       points,
       nights: overnight(out.day, inn.day),
       label: [row.flightNumber, `${depCode} → ${arrCode}`].filter(Boolean).join(" "),
-      city: airportDisplayName(arr),
+      // A destination is named by the city an airport serves (D10); the
+      // airport's own name only where the catalogue cannot say.
+      city: airportCityName(arr) ?? airportDisplayName(arr),
       country: arr?.country ?? null,
-      pointCities: [airportDisplayName(dep), airportDisplayName(arr)],
+      pointCities: [
+        airportCityName(dep) ?? airportDisplayName(dep),
+        airportCityName(arr) ?? airportDisplayName(arr),
+      ],
       zoneUnknown: !out.zoneKnown || !inn.zoneKnown,
       pnr: row.bookingReference,
     });
@@ -107,14 +112,20 @@ export async function loadFlights(userId: string): Promise<Loaded> {
   return { entries, truncated: rows.length > ROW_CAP };
 }
 
-/** "Roma Termini" → "Roma", "München Hbf" → "München": a station names its city first. */
+/**
+ * "Roma Termini" → "Roma", "München Hbf" → "München", "Frankfurt(Main)Hbf" →
+ * "Frankfurt", "Paris Gare de Lyon" → "Paris", "Zürich HB" → "Zürich": a
+ * station names its city first (D10 — a trip was named after a station).
+ */
 export function stationCity(name: string): string | null {
   const trimmed = name
-    .replace(/\s*\(.*\)\s*$/, "")
+    .replace(/\s*\([^)]*\)\s*/g, " ")
+    .replace(/\s+(gare|bahnhof|station|stazione|estación|estacion)\b.*$/i, "")
     .replace(
-      /[\s-]+(hbf\.?|hauptbahnhof|centrale|centraal|central|termini|station|bahnhof|gare|s\.\s?m\.\s?n\.)$/i,
+      /[\s-]+(hbf\.?|hauptbahnhof|hb|sbb|centrale|centraal|central|termini|s\.\s?m\.\s?n\.)$/i,
       ""
     )
+    .replace(/\s+/g, " ")
     .trim();
   return trimmed.length > 0 ? trimmed : null;
 }
