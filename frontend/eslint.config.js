@@ -3,6 +3,11 @@ import globals from "globals";
 import tseslint from "typescript-eslint";
 import pluginReact from "eslint-plugin-react";
 import pluginReactHooks from "eslint-plugin-react-hooks";
+import {
+  timePlugin,
+  timeRulesEverywhere,
+  timeRulesStatusFiles,
+} from "../scripts/eslint/timeRules.mjs";
 
 const reactRecommended = pluginReact.configs.flat?.recommended ?? pluginReact.configs.recommended;
 
@@ -16,9 +21,34 @@ const unusedVarsRule = [
   },
 ];
 
+/**
+ * Files that decide a day or a status ("past or planned", "today", counting
+ * windows). They must not read the clock themselves (ADR 0002, D6): `now` is a
+ * parameter or comes from shared/time, so a test can pin it across midnight.
+ */
+const STATUS_FILES = [
+  "src/shared/statusDerivation.ts",
+  "src/shared/placeCounting.ts",
+  "src/shared/lodgingLifecycle.ts",
+  "src/shared/lodgingCounting.ts",
+  "src/shared/cruiseCounting.ts",
+  "src/shared/railCounting.ts",
+  "src/shared/flightCounting.ts",
+  "src/lib/journalDefaultDate.ts",
+  "src/lib/stats/periodScope.ts",
+  "src/lib/stats/comparisonWindow.ts",
+];
+
 export default [
   {
     ignores: ["dist/**", "node_modules/**"],
+  },
+  {
+    // ESLint 9 reports a stale `eslint-disable` comment by default; ESLint 8,
+    // which this tree ran until the time-model ratchet needed bulk
+    // suppressions, did not. Kept off so the version bump changes no verdict;
+    // the 28 stale directives it would report are a cleanup of their own.
+    linterOptions: { reportUnusedDisableDirectives: "off" },
   },
   {
     ...js.configs.recommended,
@@ -66,6 +96,23 @@ export default [
         },
       ],
     },
+  },
+  {
+    // The time model's host-zone rules (ADR 0002, D6; scripts/eslint/timeRules.mjs).
+    // shared/time is the one module allowed to talk to zones. Tests are left
+    // out: they build fixtures in whatever zone they like, and the odd-zone CI
+    // runs (TZ=Pacific/Kiritimati, America/St_Johns) are what catch a test
+    // whose verdict depends on the host. Today's offenders are frozen in
+    // eslint-suppressions.json; that list only shrinks.
+    files: ["src/**/*.{ts,tsx}"],
+    ignores: ["src/shared/time/**", "src/**/__tests__/**", "src/**/*.{test,spec}.{ts,tsx}"],
+    plugins: { time: timePlugin },
+    rules: timeRulesEverywhere,
+  },
+  {
+    files: STATUS_FILES,
+    plugins: { time: timePlugin },
+    rules: timeRulesStatusFiles,
   },
   {
     files: ["**/*.d.ts"],

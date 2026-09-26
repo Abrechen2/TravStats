@@ -598,14 +598,18 @@ checked by nothing until now — is broken by 21 files, the largest at 2161.
 | 2FA is asked before a forced password change | `backend/src/routes/__tests__/twoFactor.login.test.ts` — "asks for the second factor even when a password change is also due" |
 | No private key, no conflict marker, no >15 MB blob in a commit | `.pre-commit-config.yaml` |
 | A router answers in ONE response shape — bare or `{success, data}` — per `docs/adr/0001-api-response-shape.md` | `backend/src/__tests__/apiResponseShape.ratchet.test.ts` vs `apiResponseShape.baseline.json` — a new router file must be assigned a family; a bare-family router gains no envelope; the twelve frozen leaks only shrink |
+| Nothing outside `shared/time/` reads the host's zone — host-local `Date` getters/setters, `new Date(y, m, …)`, `toLocale*String`/`Intl.DateTimeFormat` without `timeZone`, date-fns `format` / date-fns-tz, and the clock in status files (ADR 0002, D6) | `scripts/eslint/timeRules.mjs` — `time/no-host-local-date`, `time/no-zoneless-format`, `time/no-zone-library`, `time/no-ambient-now` — as errors in both eslint configs, with today's offenders frozen per tree in `eslint-suppressions.json` (ESLint bulk suppressions: a new offender fails, a fixed one leaves a stale entry that fails until `--prune-suppressions`). Rules and ratchet tested in `frontend/src/__tests__/lint/timeRules.test.ts` |
+| A test's verdict does not depend on the host's zone | `frontend-tests-tz` / `backend-tests-tz` in both workflows re-run the suites under `TZ=Pacific/Kiritimati` and `TZ=America/St_Johns`; `scripts/check-tz-ratchet.mjs` vs `scripts/tz-failures-baseline.json` fails on a new failure and on a listed test that now passes |
+| Server and web answer every time question the same way | `shared/time/vectors.json`, run by `backend/src/shared/time/__tests__/vectors*.test.ts` and `frontend/src/shared/time/__tests__/vectors.test.ts`, each also under the two odd zones |
 
-Four of these are **ratchets** carrying a list of today's offenders — file
-size, OpenAPI coverage, OpenAPI response schemas, response-shape leaks. Each
+Six of these are **ratchets** carrying a list of today's offenders — file
+size, OpenAPI coverage, OpenAPI response schemas, response-shape leaks, the
+time lint suppressions and the odd-zone failures. Each
 fails on a *stale* entry as well as a new one, so the list can only ever
-shrink. The act ratchet is a fifth and the one exception: it fails on a new
+shrink. The act ratchet is a seventh and the one exception: it fails on a new
 offender but only PRINTS on a stale entry, because the thing it measures is
 timing-dependent and a flaky guard is worse than a weak one. The coverage
-ratchet is a sixth and holds a number rather than a list: a fall of more than
+ratchet is an eighth and holds a number rather than a list: a fall of more than
 0.25 pp fails, a rise only prints a request to `--update`, and `--update`
 refuses to lower. The frontend figure counts EVERY source file
 (`coverage.include`); without that, v8 left the 93 untested modules out of the

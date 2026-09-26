@@ -1,6 +1,30 @@
 import js from "@eslint/js";
 import tsPlugin from "@typescript-eslint/eslint-plugin";
 import tsParser from "@typescript-eslint/parser";
+import {
+  timePlugin,
+  timeRulesEverywhere,
+  timeRulesStatusFiles,
+} from "../scripts/eslint/timeRules.mjs";
+
+/**
+ * Files that decide a day or a status ("past or planned", "today", counting
+ * windows). They must not read the clock themselves (ADR 0002, D6): `now` is a
+ * parameter or comes from shared/time's clock, so a test can pin it across
+ * midnight.
+ */
+const STATUS_FILES = [
+  "src/shared/statusDerivation.ts",
+  "src/shared/placeCounting.ts",
+  "src/shared/lodgingLifecycle.ts",
+  "src/shared/lodgingCounting.ts",
+  "src/shared/cruiseCounting.ts",
+  "src/shared/railCounting.ts",
+  "src/shared/flightCounting.ts",
+  "src/shared/flightChronology.ts",
+  "src/services/statusSweep.ts",
+  "src/jobs/statusSweepScheduler.ts",
+];
 
 export default [
   js.configs.recommended,
@@ -52,6 +76,22 @@ export default [
       "preserve-caught-error": "off", // ~50 sites need cause chaining — defer to a dedicated cleanup pass
       "no-useless-assignment": "off", // Several pre-existing cases — defer cleanup
     },
+  },
+  {
+    // The time model's host-zone rules (ADR 0002, D6; scripts/eslint/timeRules.mjs),
+    // as errors. shared/time is the one module allowed to talk to zones. Tests
+    // are ignored below for every rule; the odd-zone CI runs catch a test whose
+    // verdict depends on the host. Today's offenders are frozen in
+    // eslint-suppressions.json, a list that only shrinks.
+    files: ["src/**/*.ts"],
+    ignores: ["src/shared/time/**"],
+    plugins: { time: timePlugin },
+    rules: timeRulesEverywhere,
+  },
+  {
+    files: STATUS_FILES,
+    plugins: { time: timePlugin },
+    rules: timeRulesStatusFiles,
   },
   {
     ignores: [
