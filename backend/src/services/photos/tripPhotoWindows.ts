@@ -27,6 +27,36 @@ export interface WindowPhoto {
   url: string;
   caption: string | null;
   takenAt: string | null;
+  /** Where it was taken; null when the photo stores no position (forgejo#132 item 11). */
+  lat: number | null;
+  lon: number | null;
+}
+
+/**
+ * The rule that found the photos, so a client can say it ("am Tag des
+ * Aufenthalts, im Umkreis von 500 m") instead of guessing it (forgejo#132
+ * item 10). `instant` ranges are ISO instants; `localDay` and `utcDay` ranges
+ * are calendar days, inclusive — read in `timeZone`, or in UTC for `utcDay`.
+ */
+export interface PhotoWindow {
+  basis: "instant" | "localDay" | "utcDay";
+  ranges: Array<{ from: string; to: string }>;
+  timeZone: string | null;
+  /** Lodging only: how far from `center` a photo may have been taken. */
+  radiusKm: number | null;
+  center: { lat: number; lon: number } | null;
+}
+
+/** Why an entry has no window — it shows nothing rather than guessing. */
+export type WindowAbstention = "notOnTrip" | "noCoordinates" | "noDates" | "notRealInstants";
+
+export interface WindowResult {
+  photos: WindowPhoto[];
+  /** Every photo the window matches; more than `photos.length` when capped. */
+  total: number;
+  limit: number;
+  window: PhotoWindow | null;
+  reason: WindowAbstention | null;
 }
 
 interface Row {
@@ -34,6 +64,9 @@ interface Row {
   tripId: string;
   caption: string | null;
   takenAt: Date | null;
+  lat: number | null;
+  lon: number | null;
+  total: bigint;
 }
 
 function toWindowPhoto(row: Row): WindowPhoto {
@@ -42,13 +75,30 @@ function toWindowPhoto(row: Row): WindowPhoto {
     url: `/api/v1/trips/${row.tripId}/photos/${row.id}/file`,
     caption: row.caption,
     takenAt: row.takenAt?.toISOString() ?? null,
+    lat: row.lat,
+    lon: row.lon,
   };
 }
 
-/** The caller's photos (never a cover), newest-last, bounded in SQL. */
-async function photosWhere(userId: string, where: Prisma.Sql): Promise<WindowPhoto[]> {
+function abstain(reason: WindowAbstention): WindowResult {
+  return { photos: [], total: 0, limit: WINDOW_PHOTO_CAP, window: null, reason };
+}
+
+const dayOf = (d: Date): string => d.toISOString().slice(0, 10);
+
+/**
+ * The caller's photos (never a cover), newest-last, bounded in SQL. The total
+ * is counted in the same query (`COUNT(*) OVER ()` runs before the LIMIT), so
+ * "alle 48" is never said of a window that holds more.
+ */
+async function photosWhere(
+  userId: string,
+  where: Prisma.Sql,
+  window: PhotoWindow
+): Promise<WindowResult> {
   const rows = await prisma.$queryRaw<Row[]>(Prisma.sql`
-    SELECT ph.id, ph.trip_id AS "tripId", ph.caption, ph.taken_at AS "takenAt"
+    SELECT ph.id, ph.trip_id AS "tripId", ph.caption, ph.taken_at AS "takenAt",
+           ph.lat, ph.lon, COUNT(*) OVER () AS total
     FROM trip_photos ph
     JOIN trips t ON t.id = ph.trip_id
     WHERE t.user_id = ${userId}
@@ -58,23 +108,51 @@ async function photosWhere(userId: string, where: Prisma.Sql): Promise<WindowPho
     ORDER BY ph.taken_at ASC
     LIMIT ${WINDOW_PHOTO_CAP}
   `);
-  return rows.map(toWindowPhoto);
+  return {
+    photos: rows.map(toWindowPhoto),
+    total: rows.length > 0 ? Number(rows[0].total) : 0,
+    limit: WINDOW_PHOTO_CAP,
+    window,
+    reason: null,
+  };
 }
+
+const instantWindow = (from: Date, to: Date): PhotoWindow => ({
+  basis: "instant",
+  ranges: [{ from: from.toISOString(), to: to.toISOString() }],
+  timeZone: null,
+  radiusKm: null,
+  center: null,
+});
 
 /** Null when the lodging is not the caller's. */
 export async function lodgingTripPhotos(
   userId: string,
   lodgingId: string
-): Promise<WindowPhoto[] | null> {
+): Promise<WindowResult | null> {
   const lodging = await prisma.lodging.findFirst({
     where: { id: lodgingId, userId },
     select: { id: true, lat: true, lon: true },
   });
   if (!lodging) return null;
-  if (lodging.lat === null || lodging.lon === null) return [];
+  if (lodging.lat === null || lodging.lon === null) return abstain("noCoordinates");
   const anchor = { lat: lodging.lat, lon: lodging.lon };
   const tz = timezoneOfLodging(lodging.lat, lodging.lon);
   const day = localDay(Prisma.sql`ph.taken_at`, tz);
+  const stays = await prisma.lodgingStay.findMany({
+    where: { lodgingId: lodging.id, userId, checkIn: { not: null }, status: { not: "cancelled" } },
+    select: { checkIn: true, checkOut: true },
+    orderBy: { checkIn: "asc" },
+  });
+  const window: PhotoWindow = {
+    basis: tz ? "localDay" : "utcDay",
+    ranges: stays.flatMap((s) =>
+      s.checkIn ? [{ from: dayOf(s.checkIn), to: dayOf(s.checkOut ?? s.checkIn) }] : []
+    ),
+    timeZone: tz,
+    radiusKm: LODGING_PHOTO_RADIUS_KM,
+    center: anchor,
+  };
 
   // A stay's check-in and check-out carry the local calendar day already (the
   // same reading the visit-date chips use), so only the photo is converted.
@@ -91,7 +169,8 @@ export async function lodgingTripPhotos(
           AND s.status <> 'cancelled'
           AND ${day} BETWEEN to_char(s.check_in, 'YYYY-MM-DD')
                          AND to_char(coalesce(s.check_out, s.check_in), 'YYYY-MM-DD')
-      )`
+      )`,
+    window
   );
 }
 
@@ -103,7 +182,7 @@ export async function lodgingTripPhotos(
 export async function flightTripPhotos(
   userId: string,
   flightId: string
-): Promise<WindowPhoto[] | null> {
+): Promise<WindowResult | null> {
   const flight = await prisma.flight.findFirst({
     where: { id: flightId, userId },
     select: {
@@ -116,12 +195,16 @@ export async function flightTripPhotos(
   });
   if (!flight) return null;
   const { tripId, departureTime, arrivalTime } = flight;
-  if (!tripId || !departureTime || !arrivalTime) return [];
-  if (flight.depTimeSemantics !== "UTC" || flight.arrTimeSemantics !== "UTC") return [];
+  if (!tripId) return abstain("notOnTrip");
+  if (!departureTime || !arrivalTime) return abstain("noDates");
+  if (flight.depTimeSemantics !== "UTC" || flight.arrTimeSemantics !== "UTC") {
+    return abstain("notRealInstants");
+  }
   return photosWhere(
     userId,
     Prisma.sql`ph.trip_id = ${tripId}
-      AND ph.taken_at BETWEEN ${departureTime} AND ${arrivalTime}`
+      AND ph.taken_at BETWEEN ${departureTime} AND ${arrivalTime}`,
+    instantWindow(departureTime, arrivalTime)
   );
 }
 
@@ -133,20 +216,28 @@ export async function flightTripPhotos(
 export async function cruiseTripPhotos(
   userId: string,
   cruiseId: string
-): Promise<WindowPhoto[] | null> {
+): Promise<WindowResult | null> {
   const cruise = await prisma.cruise.findFirst({
     where: { id: cruiseId, userId },
     select: { tripId: true, startDate: true, endDate: true },
   });
   if (!cruise) return null;
   const { tripId, startDate, endDate } = cruise;
-  if (!tripId || !startDate) return [];
-  const first = startDate.toISOString().slice(0, 10);
-  const last = (endDate ?? startDate).toISOString().slice(0, 10);
+  if (!tripId) return abstain("notOnTrip");
+  if (!startDate) return abstain("noDates");
+  const first = dayOf(startDate);
+  const last = dayOf(endDate ?? startDate);
   return photosWhere(
     userId,
     Prisma.sql`ph.trip_id = ${tripId}
-      AND ${localDay(Prisma.sql`ph.taken_at`, null)} BETWEEN ${first} AND ${last}`
+      AND ${localDay(Prisma.sql`ph.taken_at`, null)} BETWEEN ${first} AND ${last}`,
+    {
+      basis: "utcDay",
+      ranges: [{ from: first, to: last }],
+      timeZone: null,
+      radiusKm: null,
+      center: null,
+    }
   );
 }
 
@@ -159,7 +250,7 @@ export async function cruiseTripPhotos(
 export async function railTripPhotos(
   userId: string,
   railJourneyId: string
-): Promise<WindowPhoto[] | null> {
+): Promise<WindowResult | null> {
   const ride = await prisma.railJourney.findFirst({
     where: { id: railJourneyId, userId },
     select: {
@@ -172,10 +263,13 @@ export async function railTripPhotos(
   });
   if (!ride) return null;
   const { tripId, departureTime, arrivalTime } = ride;
-  if (!tripId || !arrivalTime || !ride.depTimezone || !ride.arrTimezone) return [];
+  if (!tripId) return abstain("notOnTrip");
+  if (!arrivalTime) return abstain("noDates");
+  if (!ride.depTimezone || !ride.arrTimezone) return abstain("notRealInstants");
   return photosWhere(
     userId,
     Prisma.sql`ph.trip_id = ${tripId}
-      AND ph.taken_at BETWEEN ${departureTime} AND ${arrivalTime}`
+      AND ph.taken_at BETWEEN ${departureTime} AND ${arrivalTime}`,
+    instantWindow(departureTime, arrivalTime)
   );
 }

@@ -149,7 +149,7 @@ registry.registerPath({
 
 const windowPhotos = {
   200: {
-    description: "Photos, oldest first, at most 48",
+    description: "Photos, oldest first, at most 48, with the rule that found them",
     content: {
       "application/json": {
         schema: z.object({
@@ -161,8 +161,40 @@ const windowPhotos = {
                 url: z.string(),
                 caption: z.string().nullable(),
                 takenAt: z.string().nullable(),
+                lat: z.number().nullable().describe("Where it was taken; null when not stored"),
+                lon: z.number().nullable(),
               })
             ),
+            total: z
+              .number()
+              .int()
+              .describe("Every photo the window matches — more than `photos` when capped"),
+            limit: z.number().int().describe("The cap on `photos` (48)"),
+            window: z
+              .object({
+                basis: z
+                  .enum(["instant", "localDay", "utcDay"])
+                  .describe(
+                    "`instant`: ranges are ISO instants. `localDay`: calendar days, inclusive, " +
+                      "read in `timeZone`. `utcDay`: calendar days read in UTC."
+                  ),
+                ranges: z.array(z.object({ from: z.string(), to: z.string() })),
+                timeZone: z.string().nullable(),
+                radiusKm: z
+                  .number()
+                  .nullable()
+                  .describe("Lodging only: how far from `center` a photo may have been taken"),
+                center: z.object({ lat: z.number(), lon: z.number() }).nullable(),
+              })
+              .nullable()
+              .describe("The rule that found the photos; null when the entry has none"),
+            reason: z
+              .enum(["notOnTrip", "noCoordinates", "noDates", "notRealInstants"])
+              .nullable()
+              .describe(
+                "Why `window` is null: the entry is on no trip, the lodging has no position, " +
+                  "the entry has no dates, or its times are wall clocks rather than instants"
+              ),
           }),
         }),
       },
