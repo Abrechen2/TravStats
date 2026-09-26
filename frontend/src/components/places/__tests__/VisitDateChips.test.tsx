@@ -26,6 +26,8 @@ describe("VisitDateChips", () => {
     getVisitDateSuggestions.mockResolvedValue(SUGGESTIONS);
   });
 
+  // Acceptance 2026-09-26: the chips read "2024-05-10" in a German UI set to
+  // DD.MM.YYYY. The day follows the user's date format; the pick stays ISO.
   it("offers each suggested date with where it came from, and picks on click", async () => {
     const onPick = vi.fn();
     const user = userEvent.setup();
@@ -33,9 +35,9 @@ describe("VisitDateChips", () => {
 
     const chips = await screen.findAllByRole("button", { name: /suggestionChip/ });
     expect(chips.map((c) => c.textContent)).toEqual([
-      "2024-05-10 · Hotel Forum",
-      "2024-05-09 · places:detail.dateSuggestionArrival · places:detail.dateSuggestionPhotos",
-      "2023-07-01 · places:detail.dateSuggestionPhotos",
+      "10.05.2024 · Hotel Forum",
+      "09.05.2024 · places:detail.dateSuggestionArrival · places:detail.dateSuggestionPhotos",
+      "01.07.2023 · places:detail.dateSuggestionPhotos",
     ]);
     expect(getVisitDateSuggestions).toHaveBeenCalledWith("p1", null);
 

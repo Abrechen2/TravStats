@@ -10,6 +10,8 @@ export interface User {
   isAdmin: boolean;
   /** The SHARED demo account of a public instance — settings the server refuses are explained, not offered. NOT the raw `isDemo` column, which `seedDemoUser` sets on ordinary accounts too (backend utils/sharedDemo.ts). */
   isSharedDemo?: boolean;
+  /** The server refuses this account the instance's provider quota (every `isDemo` row — backend middleware/demoGuard.ts `rejectDemoQuota`). */
+  providerQuotaRefused?: boolean;
 }
 
 export interface Airport {

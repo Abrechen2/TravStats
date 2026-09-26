@@ -25,6 +25,8 @@ import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { ShipPicker } from "./ShipPicker";
+import CatalogueCombobox from "../FlightForm/fields/CatalogueCombobox";
+import { searchCruiseLineOptions } from "./cruiseLineOptions";
 import { PortPicker } from "./PortPicker";
 import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
@@ -574,10 +576,13 @@ function CruiseImportEntryEditor({
       </div>
 
       <Field label={t("field.line")}>
-        <input
+        <CatalogueCombobox
+          ariaLabel={t("field.line")}
           value={cruiseLine}
-          onChange={(e): void => setCruiseLine(e.target.value)}
-          className={INPUT}
+          onChange={setCruiseLine}
+          search={searchCruiseLineOptions}
+          inputClassName={INPUT}
+          browseOnFocus
         />
       </Field>
 

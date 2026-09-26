@@ -127,7 +127,8 @@
     "dbUnavailable": "The database cannot be reached right now. Please try again shortly.",
     "rateLimited": "Too many requests in a short time. Please wait a moment.",
     "demo": "This cannot be saved in the demo account.",
-    "network": "The server cannot be reached. Please check the connection."
+    "network": "The server cannot be reached. Please check the connection.",
+    "timezoneUnavailable": "The server cannot determine the place's time zone right now. The time was not saved, so it is not stored wrongly as UTC — please tell your administrator."
   },
   "messages": {
     "success": "Success",

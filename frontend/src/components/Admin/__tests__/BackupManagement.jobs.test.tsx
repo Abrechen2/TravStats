@@ -173,4 +173,34 @@ describe("backup and restore report the job's real outcome", () => {
       expect(addToast).toHaveBeenCalledWith("success", adminDe.backup.toasts.created)
     );
   });
+  // Acceptance 2026-09-26: the job failed with "spawn pg_dump ENOENT" in the
+  // server log, and the page said only "Fehler beim Erstellen des Backups".
+  it("a backup that fails for a missing pg_dump says what is missing", async () => {
+    mockGets([{ status: "failed", error: { code: "BACKUP_TOOL_MISSING", status: 500 } }]);
+    vi.spyOn(api, "post").mockResolvedValue({
+      data: { success: true, data: { jobId: "job-1", backupId: "backup-2" } },
+    } as never);
+
+    render(<BackupManagement />);
+    fireEvent.click(await screen.findByRole("button", { name: adminDe.backup.createNow }));
+
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith("error", adminDe.backup.failure.BACKUP_TOOL_MISSING)
+    );
+    expect(addToast).not.toHaveBeenCalledWith("error", adminDe.backup.toasts.createFailed);
+  });
+
+  it("a restore that runs out of disk says the drive is full", async () => {
+    mockGets([{ status: "failed", error: { code: "BACKUP_DISK_FULL", status: 500 } }]);
+    vi.spyOn(api, "post").mockResolvedValue({
+      data: { success: true, data: { jobId: "job-1" } },
+    } as never);
+
+    render(<BackupManagement />);
+    await confirmRestore();
+
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith("error", adminDe.backup.failure.BACKUP_DISK_FULL)
+    );
+  });
 });

@@ -1,7 +1,8 @@
 import { render, screen, fireEvent, within } from "@testing-library/react";
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import CurrencySelect from "../CurrencySelect";
 import { ECB_CURRENCIES } from "../../../shared/currencies";
+import { getCurrencyDisplayName } from "../../../lib/units";
 
 // The global react-i18next mock returns the KEY, so groups are addressed by
 // their key rather than by the German word a user would read.
@@ -48,5 +49,30 @@ describe("CurrencySelect", () => {
     render(<CurrencySelect value="EUR" onChange={onChange} recent={["EUR", "NOK"]} />);
     fireEvent.change(screen.getByRole("combobox"), { target: { value: "NOK" } });
     expect(onChange).toHaveBeenCalledWith("NOK");
+  });
+  describe("a code the browser's ICU does not name yet", () => {
+    afterEach(() => vi.restoreAllMocks());
+
+    /** An older ICU: knows EUR, answers SLE and ZWG with the bare code. */
+    function olderIcu(): void {
+      const Real = Intl.DisplayNames;
+      vi.spyOn(Intl, "DisplayNames").mockImplementation(function (
+        locales?: string | string[],
+        options?: Intl.DisplayNamesOptions
+      ) {
+        const real = new Real(locales, options as Intl.DisplayNamesOptions);
+        return { of: (c: string) => (c === "SLE" || c === "ZWG" ? c : real.of(c)) };
+      } as unknown as typeof Intl.DisplayNames);
+    }
+
+    // Acceptance 2026-09-26: the picker offered "SLE — SLE" and "ZWG — ZWG".
+    it("names it from the fallback table, never code — code", () => {
+      olderIcu();
+      render(<CurrencySelect value="ZWG" onChange={vi.fn()} recent={["SLE"]} />);
+      expect(screen.queryByText("SLE — SLE")).toBeNull();
+      expect(screen.queryByText("ZWG — ZWG")).toBeNull();
+      expect(getCurrencyDisplayName("ZWG", "de")).toBe("Simbabwe-Gold");
+      expect(getCurrencyDisplayName("SLE", "en")).toBe("Sierra Leonean leone");
+    });
   });
 });

@@ -551,7 +551,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
         <JournalEntryModal
           tripId={trip.id}
           entry={editingJournal}
-          defaultDate={trip.startDate ?? undefined}
+          trip={trip}
           onClose={() => {
             setAdding(null);
             setEditingJournal(null);

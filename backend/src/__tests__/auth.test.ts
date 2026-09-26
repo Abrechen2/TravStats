@@ -108,6 +108,28 @@ describe("Auth API", () => {
       expect(response.body.user.username).toBe("testuser4");
     });
 
+    // Acceptance 2026-09-26: the settings page spent a 403 on every isDemo
+    // account to learn what the server already knew. The session says it.
+    it("says whether the account is refused the provider quota", async () => {
+      const registration = await request(app)
+        .post("/api/v1/auth/register")
+        .send({ username: "testuser-quota", password: "password123" })
+        .expect(201);
+      const me = () =>
+        request(app).get("/api/v1/auth/me").set("Cookie", registration.headers["set-cookie"]);
+
+      expect((await me().expect(200)).body.user.providerQuotaRefused).toBe(false);
+      await prisma.user.update({
+        where: { username: "testuser-quota" },
+        data: { isDemo: true },
+      });
+      const body = (await me().expect(200)).body.user;
+      expect(body.providerQuotaRefused).toBe(true);
+      // Still not the raw flag, and not the shared-demo answer (finding C1).
+      expect(body).not.toHaveProperty("isDemo");
+      expect(body.isSharedDemo).toBe(false);
+    });
+
     it("should never expose the password hash", async () => {
       const registration = await request(app)
         .post("/api/v1/auth/register")

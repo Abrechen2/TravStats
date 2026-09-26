@@ -213,6 +213,36 @@ function stationFromStop(stop: RailLookupStop): RailStationDraft {
   };
 }
 
+/** The user's value when they typed one, else the timetable's. */
+function fillOnly(typed: string, fromTimetable: string | null): string {
+  return typed.trim() !== "" ? typed : (fromTimetable ?? typed);
+}
+
+/** A typed value the lookup kept although the timetable says otherwise. */
+export interface RailLookupKeptField {
+  field: "operator" | "trainCategory";
+  yours: string;
+  timetable: string;
+}
+
+/** Where `applyLookup` kept the user's value over a different timetable one. */
+export function lookupKeptFields(
+  draft: RailFormDraft,
+  match: NonNullable<RailLookupAnswer["match"]>
+): RailLookupKeptField[] {
+  const fields = [
+    ["operator", draft.operator, match.operator],
+    ["trainCategory", draft.trainCategory, match.trainCategory],
+  ] as const;
+  return fields.flatMap(([field, typed, timetable]) => {
+    const yours = typed.trim();
+    if (yours === "" || !timetable || yours.toLowerCase() === timetable.trim().toLowerCase()) {
+      return [];
+    }
+    return [{ field, yours, timetable }];
+  });
+}
+
 /**
  * Take a lookup's answer over into the form: the train, the boarding stop
  * and the chosen alighting stop with their planned times, and the match
@@ -220,6 +250,14 @@ function stationFromStop(stop: RailLookupStop): RailStationDraft {
  * What the timetable cannot know — seat, price, delay, notes — is left as
  * the user had it. A planned time the provider did not give leaves the
  * user's own time standing rather than blanking it.
+ *
+ * The operator and the category are FILLED, never replaced: a user who typed
+ * "ÖBB" for a Railjet running on German track knows who they travelled with,
+ * and the timetable's "Deutsche Bahn AG" overwrote it (acceptance 2026-09-26).
+ * `lookupKeptFields` says where the two disagree, so the panel can show it.
+ * The number is the query itself, so the timetable's split of it ("ICE 696"
+ * into ICE + 696) is taken; the stations and times belong to the stop the
+ * user picked in the panel, which is the choice "Übernehmen" confirms.
  */
 export function applyLookup(
   draft: RailFormDraft,
@@ -233,8 +271,8 @@ export function applyLookup(
   }
   return {
     ...draft,
-    operator: match.operator ?? draft.operator,
-    trainCategory: match.trainCategory ?? draft.trainCategory,
+    operator: fillOnly(draft.operator, match.operator),
+    trainCategory: fillOnly(draft.trainCategory, match.trainCategory),
     trainNumber: match.trainNumber ?? draft.trainNumber,
     departure: stationFromStop(from),
     arrival: stationFromStop(to),

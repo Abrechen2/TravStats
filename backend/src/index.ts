@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import dotenv from "dotenv";
@@ -13,6 +13,8 @@ import logger from "./utils/logger";
 import { DATABASE_URL } from "./utils/database";
 import { appVersion, buildVersion } from "./utils/version";
 import { resolveTrustProxy } from "./utils/trustProxy";
+import { runZoneSelfCheck } from "./shared/time/zoneOf";
+import { healthHandler } from "./routes/health";
 import { templateRegistry } from "./services/parsers/templates/registry";
 import { seedPortsFromCSV } from "./seedPortsFromCSV";
 import { seedShipsFromCSV } from "./seedShipsFromCSV";
@@ -170,12 +172,7 @@ app.use("/api", (_req, res, next) => {
   next();
 });
 
-// Health check — mounted at both `/health` (legacy, used by the Dockerfile
-// HEALTHCHECK and the nginx upstream probe) and `/api/v1/health` (versioned,
-// matches the public-API URL convention documented for external callers).
-const healthHandler = (_req: Request, res: Response) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString(), version: appVersion });
-};
+// Health check — see routes/health.ts (reports a broken time zone lookup).
 app.get("/health", healthHandler);
 app.get("/api/v1/health", healthHandler);
 
@@ -586,6 +583,10 @@ if (process.env.NODE_ENV !== "test") {
         error,
       });
     }
+
+    // The zone lookup every local time depends on. A failure is logged at
+    // error level and turns /health "degraded"; it does not stop the boot.
+    runZoneSelfCheck();
 
     // Airport zones: fill the missing ones, and once per instance re-derive
     // the ones geo-tz's old default folded together (CAMP-03).

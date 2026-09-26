@@ -533,6 +533,10 @@
       "templateFirst": "Vorlagen zuerst, KI als Rückfall (empfohlen)",
       "llmFirst": "KI zuerst, Vorlagen als Rückfall",
       "hint": "Gilt für Flüge, Unterkünfte, Kreuzfahrten und Orte gleichermaßen. Gemessen am 17.09.2026 an 31 Flug-Mails: die Vorlagen lasen alle in unter einer Sekunde, das Sprachmodell brauchte 19 Minuten und übersah drei. „KI zuerst\" lohnt sich, wenn deine Absender von keiner Vorlage abgedeckt sind."
+    },
+    "userPermissions": {
+      "title": "Benutzerrechte",
+      "allowUserApiKeys": "Benutzer dürfen eigene API-Schlüssel für Flugdaten hinterlegen (Airlabs, Aviationstack, OpenSky)"
     }
   },
   "backup": {
@@ -615,6 +619,15 @@
       "created": "Backup erstellt",
       "restored": "Backup wiederhergestellt",
       "outcomeUnknown": "Der Server meldet den Ausgang nicht mehr — bitte die Backup-Liste prüfen, bevor du es erneut versuchst."
+    },
+    "failure": {
+      "BACKUP_TOOL_MISSING": "Das Backup-Werkzeug (pg_dump, psql oder tar) ist auf dem Server nicht installiert. Im offiziellen Docker-Image ist es enthalten – bei einer eigenen Installation bitte die PostgreSQL-Client-Werkzeuge installieren.",
+      "BACKUP_DISK_FULL": "Auf dem Backup-Laufwerk ist kein Platz mehr. Alte Backups löschen oder das Volume vergrößern.",
+      "BACKUP_PERMISSION_DENIED": "Der Server darf das Backup-Verzeichnis nicht lesen oder beschreiben. Bitte die Rechte des Daten-Volumes prüfen.",
+      "BACKUP_DB_UNREACHABLE": "Das Backup-Werkzeug erreicht die Datenbank nicht. Bitte prüfen, ob die Datenbank läuft und die Verbindungsdaten stimmen.",
+      "BACKUP_TOOL_VERSION_MISMATCH": "pg_dump ist älter als der Datenbankserver. Bitte die PostgreSQL-Client-Werkzeuge auf die Version des Servers aktualisieren.",
+      "BACKUP_FAILED": "Das Backup ist fehlgeschlagen. Die Ursache steht im Server-Log.",
+      "RESTORE_FAILED": "Die Wiederherstellung ist fehlgeschlagen. Die Ursache steht im Server-Log."
     }
   },
   "feedback": {

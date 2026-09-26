@@ -109,15 +109,52 @@ export function getDistanceLabel(unit: DistanceUnit, t: (key: string) => string)
  * "Indische Rupie"). Falls back to the raw code if Intl.DisplayNames is
  * unavailable or rejects the input.
  */
+/**
+ * Names for the ISO 4217 codes introduced since 2016, which a browser's ICU
+ * may not know yet — the picker then read "SLE — SLE" and "ZWG — ZWG"
+ * (acceptance 2026-09-26). Used only when Intl answers with the bare code.
+ */
+const RECENT_CURRENCY_NAMES: Readonly<Record<"de" | "en", Readonly<Record<string, string>>>> = {
+  de: {
+    BYN: "Belarus-Rubel",
+    MRU: "Mauretanischer Ouguiya",
+    SLE: "Sierra-leonischer Leone",
+    STN: "São-toméischer Dobra",
+    VES: "Venezolanischer Bolívar",
+    ZWG: "Simbabwe-Gold",
+  },
+  en: {
+    BYN: "Belarusian ruble",
+    MRU: "Mauritanian ouguiya",
+    SLE: "Sierra Leonean leone",
+    STN: "São Tomé and Príncipe dobra",
+    VES: "Venezuelan bolívar",
+    ZWG: "Zimbabwe Gold",
+  },
+};
+
+/**
+ * The currency's name in `locale`, or the bare code when no name is known.
+ * Intl first; for a code it does not know, the table above.
+ */
 export function getCurrencyDisplayName(code: string, locale?: string): string {
+  const tag = locale || navigator.language || "en";
+  let name: string | undefined;
   try {
-    const dn = new Intl.DisplayNames([locale || navigator.language || "en"], {
-      type: "currency",
-    });
-    return dn.of(code) || code;
+    name = new Intl.DisplayNames([tag], { type: "currency" }).of(code);
   } catch {
-    return code;
+    // An invalid locale or code — the table and the bare code still answer.
+    name = undefined;
   }
+  if (name && name !== code) return name;
+  const language = tag.toLowerCase().startsWith("de") ? "de" : "en";
+  return RECENT_CURRENCY_NAMES[language][code] ?? code;
+}
+
+/** "EUR — Euro"; just the code when no name is known, never "SLE — SLE". */
+export function currencyOptionLabel(code: string, locale?: string): string {
+  const name = getCurrencyDisplayName(code, locale);
+  return name === code ? code : `${code} — ${name}`;
 }
 
 // Locale hints for the few currencies whose default Intl formatting differs

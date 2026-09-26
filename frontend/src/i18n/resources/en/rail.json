@@ -120,6 +120,7 @@
     "withLine": "When you save, the line from Transitous is taken over and kept with the journey.",
     "withoutLine": "This source traces no line — the map shows the straight line.",
     "apply": "Take over",
+    "kept": "{{field}}: your entry “{{yours}}” was kept (timetable: {{timetable}}).",
     "linked": "Linked to a journey from the timetable ({{provider}}).",
     "unlink": "Unlink",
     "credit": "Timetable data and lines:",

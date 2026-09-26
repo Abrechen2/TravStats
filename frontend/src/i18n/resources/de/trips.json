@@ -155,7 +155,9 @@
     "map": {
       "empty": "Diese Reise hat noch keine Geo-Daten — füge Stopps mit Koordinaten oder Flüge / Kreuzfahrten mit Routendaten hinzu.",
       "clickHint": "Tipp: Auf eine Route oder einen Punkt klicken, um zu zoomen.",
-      "toggleProjectionHint": "Zwischen Globus und flacher Karte umschalten"
+      "toggleProjectionHint": "Zwischen Globus und flacher Karte umschalten",
+      "projectionGlobe": "🌐 Globus",
+      "projectionFlat": "🗺 Flach"
     },
     "logistics": {
       "flights": "Flüge",

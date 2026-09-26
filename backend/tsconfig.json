@@ -11,7 +11,6 @@
     "forceConsistentCasingInFileNames": true,
     "resolveJsonModule": true,
     "moduleResolution": "node",
-    "paths": { "geo-tz/all": ["./node_modules/geo-tz/dist/find-all.d.ts"] },
     "declaration": true,
     "declarationMap": true,
     "sourceMap": true,

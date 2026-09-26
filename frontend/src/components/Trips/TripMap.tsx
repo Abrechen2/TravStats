@@ -770,7 +770,7 @@ export default function TripMap({
         aria-pressed={projection === "globe"}
         title={t("trips:detail.map.toggleProjectionHint")}
       >
-        {projection === "globe" ? "🌐 Globe" : "🗺 Flat"}
+        {t(`trips:detail.map.${projection === "globe" ? "projectionGlobe" : "projectionFlat"}`)}
       </button>
       <div
         className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-mono"

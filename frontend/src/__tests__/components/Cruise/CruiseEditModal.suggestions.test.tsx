@@ -263,4 +263,42 @@ describe("CruiseEditModal — entry suggestions", () => {
       expect((await savedPayload()).tags).toEqual(["Fjords", "Sea days"]);
     });
   });
+  // Acceptance 2026-09-26: the edit dialog, opened on a cruise with a line,
+  // offered no other line — the combobox only searched for what the field
+  // already said, so it read as a plain text field. Create and edit now list
+  // the lines on focus alike.
+  describe("cruise line", () => {
+    const LINES = ["AIDA Cruises", "Hurtigruten", "TUI Cruises"];
+    beforeEach(() => {
+      vi.mocked(shipsApi.cruiseLines).mockImplementation(async (q?: string) =>
+        LINES.filter((l) => l.toLowerCase().includes((q ?? "").toLowerCase()))
+      );
+    });
+
+    it.each(["create", "edit"] as const)(
+      "offers the other lines on focus in %s mode",
+      async (mode) => {
+        const cruise =
+          mode === "edit"
+            ? ({
+                id: "c1",
+                cruiseLine: "AIDA Cruises",
+                startDate: "2026-01-01T00:00:00.000Z",
+                endDate: "2026-01-08T00:00:00.000Z",
+                status: "scheduled",
+                currency: "EUR",
+                tags: [],
+                companions: [],
+                stops: [],
+              } as unknown as Cruise)
+            : undefined;
+        render(<CruiseEditModal mode={mode} cruise={cruise} onClose={vi.fn()} onSaved={vi.fn()} />);
+        await act(async () => {
+          fireEvent.focus(screen.getByLabelText("field.line"));
+        });
+        expect(await screen.findByRole("button", { name: "TUI Cruises" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Hurtigruten" })).toBeInTheDocument();
+      }
+    );
+  });
 });

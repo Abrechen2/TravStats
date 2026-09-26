@@ -5,6 +5,7 @@ import userEvent from "@testing-library/user-event";
 import type { Place } from "../../../types/place";
 
 const createPlaceMock = vi.fn();
+const hit = vi.hoisted(() => ({ type: "attraction" }));
 
 vi.mock("../../../lib/api/places", () => ({
   createPlace: (...a: unknown[]) => createPlaceMock(...a),
@@ -34,7 +35,7 @@ vi.mock("../../location/LocationInput", async () => {
               name: "Kolosseum",
               lat: 41.89,
               lon: 12.49,
-              type: "attraction",
+              type: hit.type,
             })
           )
         }
@@ -57,20 +58,26 @@ describe("PlaceFormModal — category guess from a search hit", () => {
     createPlaceMock.mockReset().mockResolvedValue({ id: "p1", name: "Kolosseum" } as Place);
   });
 
-  it("sets the category from the hit's OSM value and saves it", async () => {
-    const user = userEvent.setup();
-    render(<PlaceFormModal place={null} onClose={() => {}} onSaved={() => {}} />);
+  // Acceptance 2026-09-26: Photon answers "Kolosseum, Rom" as
+  // historic/archaeological_site, which the map did not know — "Sonstiges".
+  it.each(["attraction", "archaeological_site", "place_of_worship", "monument"])(
+    "sets the category from the hit's OSM value (%s) and saves it",
+    async (type) => {
+      hit.type = type;
+      const user = userEvent.setup();
+      render(<PlaceFormModal place={null} onClose={() => {}} onSaved={() => {}} />);
 
-    await user.click(screen.getByTestId("pick-location"));
+      await user.click(screen.getByTestId("pick-location"));
 
-    const select = screen.getByDisplayValue(/places:categories\.landmark/) as HTMLSelectElement;
-    expect(select.value).toBe("landmark");
+      const select = screen.getByDisplayValue(/places:categories\.landmark/) as HTMLSelectElement;
+      expect(select.value).toBe("landmark");
 
-    await user.click(screen.getByText("common:buttons.save"));
-    await waitFor(() => expect(createPlaceMock).toHaveBeenCalled());
-    expect(createPlaceMock.mock.calls[0][0]).toMatchObject({
-      name: "Kolosseum",
-      category: "landmark",
-    });
-  });
+      await user.click(screen.getByText("common:buttons.save"));
+      await waitFor(() => expect(createPlaceMock).toHaveBeenCalled());
+      expect(createPlaceMock.mock.calls[0][0]).toMatchObject({
+        name: "Kolosseum",
+        category: "landmark",
+      });
+    }
+  );
 });

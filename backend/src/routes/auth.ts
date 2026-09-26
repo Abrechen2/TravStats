@@ -355,6 +355,10 @@ router.post("/login", authLimiter, async (req: Request, res: Response, next: Nex
         // refuses; sending the raw flag hid them from the preview's own
         // admin, alex and claude too (finding C1).
         isSharedDemo: isSharedDemoAccount(user),
+        // What `rejectDemoQuota` refuses: EVERY isDemo account, not only the
+        // shared one. Named for the one thing it decides, so the client skips
+        // a request it knows will be a 403 (acceptance 2026-09-26).
+        providerQuotaRefused: user.isDemo === true,
         // The header greets by first name and falls back to the username
         // (#241). Sending it with the login response means the greeting is
         // right on the first paint instead of flashing the username.
@@ -395,7 +399,11 @@ router.get("/me", authenticate, async (req: AuthRequest, res: Response, next: Ne
 
     const { isDemo, ...rest } = user;
     res.json({
-      user: { ...rest, isSharedDemo: isSharedDemoAccount({ isDemo, username: user.username }) },
+      user: {
+        ...rest,
+        isSharedDemo: isSharedDemoAccount({ isDemo, username: user.username }),
+        providerQuotaRefused: isDemo === true,
+      },
     });
   } catch (error) {
     next(error);

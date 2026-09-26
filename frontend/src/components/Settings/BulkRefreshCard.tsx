@@ -111,15 +111,18 @@ export default function BulkRefreshCard(): JSX.Element | null {
    * admin), and only the shared one is visible from here.
    */
   const isSharedDemo = useIsDemoAccount();
+  // Every isDemo account is refused, not only the shared one; the session says
+  // so since 2026-09-26, so the first visit no longer spends a 403 to learn it.
+  const quotaRefused = useAuthStore((s) => s.user?.providerQuotaRefused === true);
 
   useEffect(() => {
-    if (isSharedDemo || wasQuotaRefused(userId)) {
+    if (isSharedDemo || quotaRefused || wasQuotaRefused(userId)) {
       setDemoBlocked(true);
       return;
     }
     void loadPreview();
     // eslint-disable-next-line react-hooks/exhaustive-deps -- loadPreview is re-created each render; these two are the real inputs
-  }, [isSharedDemo, userId]);
+  }, [isSharedDemo, quotaRefused, userId]);
 
   const handleRun = async (): Promise<void> => {
     setRunning(true);

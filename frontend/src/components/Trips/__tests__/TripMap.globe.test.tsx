@@ -170,6 +170,18 @@ describe("TripMap: the globe toggle mounts the overlay the way the globe needs i
     expect(captured[captured.length - 1].props.interleaved).toBe(true);
   });
 
+  // Acceptance 2026-09-26: the toggle read "🗺 Flat" in the German UI.
+  it("labels the projection toggle through the translation, not in English", async () => {
+    render(<TripMap trip={trip} />);
+    const toggle = await screen.findByRole("button", { pressed: false });
+    expect(toggle).toHaveTextContent("trips:detail.map.projectionFlat");
+    expect(toggle).not.toHaveTextContent("🗺 Flat");
+    await toggleToGlobe();
+    expect(await screen.findByRole("button", { pressed: true })).toHaveTextContent(
+      "trips:detail.map.projectionGlobe"
+    );
+  });
+
   it("rebuilds the overlay AFTER the projection changed, never before", async () => {
     render(<TripMap trip={trip} />);
     await waitFor(() => expect(captured.length).toBeGreaterThan(0));

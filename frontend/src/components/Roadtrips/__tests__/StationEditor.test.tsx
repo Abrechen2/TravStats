@@ -110,6 +110,15 @@ describe("StationEditor", () => {
     vi.clearAllMocks();
   });
 
+  // Acceptance 2026-09-26: a station row read "2026-07-12" in a German UI set
+  // to DD.MM.YYYY. The day follows the user's date format.
+  it("shows a station's day in the user's date format, not as ISO", async () => {
+    renderEditor();
+    await pause();
+    expect(screen.getByText(/12\.07\.2026/)).toBeInTheDocument();
+    expect(screen.queryByText(/2026-07-12/)).toBeNull();
+  });
+
   it("holds a new station back until it has a place, then saves it as a free night after the pause", async () => {
     renderEditor("new");
     await pause();

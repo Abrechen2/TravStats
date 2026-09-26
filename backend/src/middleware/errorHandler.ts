@@ -92,7 +92,26 @@ export type ApiErrorCode =
   /** Dawarich pull: Dawarich answered, with no points in the window. */
   | "DAWARICH_WINDOW_EMPTY"
   /** Dawarich pull: a single point in the window — too few for a track. */
-  | "DAWARICH_TOO_FEW_POINTS";
+  | "DAWARICH_TOO_FEW_POINTS"
+  /** The zone resolver could not answer (ADR 0002 D2) — not "this point has
+   *  no zone". A local time cannot be interpreted, so the write is refused
+   *  rather than stored as UTC — see `shared/time/zoneOf.ts`. */
+  | "TZ_UNRESOLVED"
+  /** Backup / restore job failures — see `services/backup/backupFailure.ts`.
+   *  A tool (pg_dump, psql, tar) is not installed where the server runs. */
+  | "BACKUP_TOOL_MISSING"
+  /** The backup volume ran out of space. */
+  | "BACKUP_DISK_FULL"
+  /** The server may not read or write the backup directory. */
+  | "BACKUP_PERMISSION_DENIED"
+  /** The database could not be reached by the dump/restore tool. */
+  | "BACKUP_DB_UNREACHABLE"
+  /** pg_dump is older than the database server it dumps. */
+  | "BACKUP_TOOL_VERSION_MISMATCH"
+  /** A backup failed for a cause not recognised above; detail in the log. */
+  | "BACKUP_FAILED"
+  /** A restore failed for a cause not recognised above; detail in the log. */
+  | "RESTORE_FAILED";
 
 interface AuthRequest extends Request {
   user?: {

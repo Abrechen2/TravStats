@@ -2,7 +2,9 @@
  * the parent under the project's file-size guideline. Purely presentational:
  * all state (open/closed, active index, results) lives in the parent. */
 import type { JSX } from "react";
+import { useTranslation } from "../../hooks/useTranslation";
 import type { PlaceSearchResult } from "../../lib/api/geo";
+import { categoryFromOsmValue } from "../../shared/placeCategories";
 
 export interface LocationSuggestionsProps {
   listboxId: string;
@@ -24,6 +26,22 @@ function formatHitLabel(hit: PlaceSearchResult): string {
   return parts.join(", ");
 }
 
+/**
+ * The line under a hit that tells two same-named hits apart (acceptance
+ * 2026-09-26: two "Kolosseum, Rom" rows, one the monument, one not): what
+ * kind of place it is, in the reader's language, and where exactly. The raw
+ * OSM value is never shown — it is English and a key, not copy; a value no
+ * category knows simply goes unnamed.
+ */
+function hitDetail(hit: PlaceSearchResult, categoryLabel: (key: string) => string): string {
+  const category = categoryFromOsmValue(hit.type);
+  const parts: string[] = [];
+  if (category !== "other") parts.push(categoryLabel(category));
+  if (hit.address && hit.address !== hit.name) parts.push(hit.address);
+  if (hit.district && hit.district !== hit.city) parts.push(hit.district);
+  return parts.join(" · ");
+}
+
 export function LocationSuggestions({
   listboxId,
   idPrefix,
@@ -36,6 +54,8 @@ export function LocationSuggestions({
   errorLabel,
   noResultsLabel,
 }: LocationSuggestionsProps): JSX.Element {
+  const { t } = useTranslation(["places"]);
+  const categoryLabel = (key: string): string => t(`places:categories.${key}`);
   return (
     <div
       id={listboxId}
@@ -75,6 +95,15 @@ export function LocationSuggestions({
             }}
           >
             {formatHitLabel(hit)}
+            {hitDetail(hit, categoryLabel) ? (
+              <span
+                className="block text-xs"
+                style={{ color: "var(--text-muted)" }}
+                data-testid={`${idPrefix}-option-${index}-detail`}
+              >
+                {hitDetail(hit, categoryLabel)}
+              </span>
+            ) : null}
           </button>
         ))}
     </div>

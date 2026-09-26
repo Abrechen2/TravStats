@@ -66,6 +66,9 @@ export interface PlaceResult {
    */
   externalRef?: string;
   address?: string;
+  /** The part of town (Photon `district`, else `locality`) — what tells two
+   *  same-named hits in one city apart in the picker. */
+  district?: string;
   city?: string;
   country?: string;
   countryCode?: string;
@@ -101,6 +104,8 @@ const photonFeatureSchema = z
         name: z.string().optional(),
         street: z.string().optional(),
         housenumber: z.string().optional(),
+        district: z.string().optional(),
+        locality: z.string().optional(),
         city: z.string().optional(),
         country: z.string().optional(),
         countrycode: z.string().optional(),
@@ -180,6 +185,7 @@ function normalizeFeature(feature: PhotonFeature): PlaceResult | null {
     name: props.name,
     externalRef: osmRef(props),
     address: buildAddress(props),
+    district: props.district ?? props.locality,
     city: props.city,
     country: props.country,
     countryCode: props.countrycode,
