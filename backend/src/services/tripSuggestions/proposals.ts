@@ -8,9 +8,9 @@ import {
   MIN_NIGHTS_AWAY,
   TRIP_PLAUSIBLE_KM,
   TRIP_WINDOW_PAD_DAYS,
-  addDays,
   isMaterialChange,
 } from "../../shared/tripSuggestionRules";
+import { addDays, dayDiff } from "./time";
 import type { Absence } from "./absences";
 import type {
   HomeAt,
@@ -121,7 +121,7 @@ const overlapDays = (
 ): number => {
   const start = maxDay(a.startDay, b.startDay);
   const end = minDay(a.endDay, b.endDay);
-  return start > end ? 0 : Math.round((Date.parse(end) - Date.parse(start)) / 86_400_000) + 1;
+  return start > end ? 0 : dayDiff(start, end) + 1;
 };
 
 /** The existing trip an absence belongs to, if any: the one it shares entries or days with most. */
@@ -204,6 +204,7 @@ export function proposalsFromAbsences(
         endDay,
         nights: absence.nights,
         signals,
+        zoneUnknown: absence.entries.filter((e) => e.zoneUnknown).length,
         trip: tripById.get(tripId),
         ...(stretches && {
           newSpan: {
@@ -222,6 +223,7 @@ export function proposalsFromAbsences(
       endDay: absence.endDay,
       nights: absence.nights,
       signals,
+      zoneUnknown: absence.entries.filter((e) => e.zoneUnknown).length,
     });
   }
   return out;
@@ -267,6 +269,7 @@ export function proposalsByWindow(
     endDay: members.map((e) => e.endDay).reduce(maxDay),
     nights: null,
     signals: [],
+    zoneUnknown: members.filter((e) => e.zoneUnknown).length,
     trip: tripById.get(tripId),
   }));
 }

@@ -7,6 +7,7 @@ import { getCachedAirports } from "../airportCache";
 import { getInstanceSettings } from "../instanceSettingsService";
 import { loadHomeAirportHistory } from "../stats/homeAirportHistory";
 import { ROW_CAP } from "./loadTransport";
+import { storedDay } from "./time";
 import type { Coordinate, HomeAt, HomeSource, TripContext } from "./types";
 
 /**
@@ -26,16 +27,29 @@ const BETA_GATED: Partial<Record<DomainKey, string>> = {
   roadtrip: "roadtrips",
 };
 
-/** The user's enabled domains that the instance also shows, in registry order. */
-export async function readableDomains(userId: string): Promise<DomainKey[]> {
+/**
+ * What the engine may read for this user: their enabled domains that the
+ * instance also shows, in registry order — and their profile zone, which
+ * decides "today" (ADR 0002, D4).
+ */
+export async function readUserScope(
+  userId: string
+): Promise<{ domains: DomainKey[]; profileZone: string | null }> {
   const [settings, instance] = await Promise.all([
-    prisma.userSettings.findUnique({ where: { userId }, select: { enabledDomains: true } }),
+    prisma.userSettings.findUnique({
+      where: { userId },
+      select: { enabledDomains: true, data: true },
+    }),
     getInstanceSettings(),
   ]);
   const enabled = new Set(settings?.enabledDomains ?? ["flight"]);
-  return AVAILABLE_DOMAINS.filter(
-    (key) => enabled.has(key) && (BETA_GATED[key] === undefined || instance.betaFeaturesEnabled)
-  );
+  const display = (settings?.data as { display?: { timezone?: unknown } } | null)?.display;
+  return {
+    domains: AVAILABLE_DOMAINS.filter(
+      (key) => enabled.has(key) && (BETA_GATED[key] === undefined || instance.betaFeaturesEnabled)
+    ),
+    profileZone: typeof display?.timezone === "string" ? display.timezone : null,
+  };
 }
 
 /**
@@ -91,7 +105,7 @@ export async function loadTrips(userId: string): Promise<TripContext[]> {
   return rows.map((t) => ({
     id: t.id,
     name: t.name,
-    startDay: t.startDate ? t.startDate.toISOString().slice(0, 10) : null,
-    endDay: t.endDate ? t.endDate.toISOString().slice(0, 10) : null,
+    startDay: t.startDate ? storedDay(t.startDate) : null,
+    endDay: t.endDate ? storedDay(t.endDate) : null,
   }));
 }

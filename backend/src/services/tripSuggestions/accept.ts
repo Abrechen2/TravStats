@@ -6,6 +6,7 @@ import { classifyVisit } from "../../shared/placeCounting";
 import { recheckAchievements } from "../../utils/achievements";
 import { recomputeTripStatus } from "../tripStatusService";
 import { invalidateTripSuggestions } from "./engine";
+import { dayColumn as dayDate } from "./time";
 import type { LinkableDomain, TripSuggestion } from "./types";
 
 /**
@@ -46,8 +47,6 @@ const selectionError = (): AppError =>
     400,
     "TRIP_SUGGESTION_SELECTION_INVALID"
   );
-
-const dayDate = (day: string): Date => new Date(`${day}T00:00:00Z`);
 
 type Tx = DbTransaction;
 

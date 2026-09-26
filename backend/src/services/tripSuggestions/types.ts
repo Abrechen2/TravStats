@@ -60,6 +60,11 @@ export interface PresenceEntry {
    * the AWAY ends only — a return flight's arrival city is home.
    */
   pointCities?: readonly (string | null)[];
+  /**
+   * The place's zone was not known, so the entry's days are its UTC days and
+   * may be one off (ADR 0002: flagged, never silently assumed).
+   */
+  zoneUnknown?: boolean;
   /** A flight's booking reference — the PNR signal. */
   pnr?: string | null;
 }
@@ -111,6 +116,8 @@ export interface TripSuggestion {
   /** The most-visited destination, for the name ("Lissabon", "Italien"). */
   destination: string | null;
   signals: SuggestionSignal[];
+  /** Entries of the absence whose zone was unknown — their day may be one off. */
+  zoneUnknown: number;
   members: SuggestionMember[];
   /** assign / extend: the trip the entries belong to. */
   trip?: TripContext;

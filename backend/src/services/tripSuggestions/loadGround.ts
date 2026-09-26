@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { datedPresence, stayPresence, visitPresence } from "../../shared/tripSuggestionRules";
 import { ROW_CAP, type Loaded } from "./loadTransport";
+import { daysBetween, storedDay } from "./time";
 import type { PlaceContext, PresenceEntry, PresencePoint } from "./types";
 
 /**
@@ -11,18 +12,6 @@ import type { PlaceContext, PresenceEntry, PresencePoint } from "./types";
  * (see `PresencePoint.hour`). An entry without a coordinate cannot say where the
  * user was and is left out rather than guessed.
  */
-
-const ymd = (d: Date): string => d.toISOString().slice(0, 10);
-
-function daysBetween(startDay: string, endDay: string): string[] {
-  const out: string[] = [];
-  for (let t = Date.parse(`${startDay}T00:00:00Z`); ; t += 86_400_000) {
-    const day = new Date(t).toISOString().slice(0, 10);
-    if (day >= endDay) break;
-    out.push(day);
-  }
-  return out;
-}
 
 export async function loadStays(userId: string): Promise<Loaded> {
   const rows = await prisma.lodgingStay.findMany({
@@ -48,8 +37,8 @@ export async function loadStays(userId: string): Promise<Loaded> {
     if (lodging.lat === null || lodging.lon === null || !row.checkIn) continue;
     const state = stayPresence(row, lodging.visited);
     if (state === "excluded") continue;
-    const startDay = ymd(row.checkIn);
-    const endDay = row.checkOut ? ymd(row.checkOut) : startDay;
+    const startDay = storedDay(row.checkIn);
+    const endDay = row.checkOut ? storedDay(row.checkOut) : startDay;
     const at = { lat: lodging.lat, lon: lodging.lon };
     const points: PresencePoint[] =
       endDay > startDay
@@ -108,7 +97,9 @@ export async function loadPlaceVisits(
   const entries: PresenceEntry[] = [];
   for (const row of visits.slice(0, ROW_CAP)) {
     if (!row.visitedAt) continue;
-    const day = ymd(row.visitedAt);
+    // Written as a wall clock by the web and as an instant by the Companion;
+    // the date is kept either way (ADR 0002, Q4).
+    const day = storedDay(row.visitedAt);
     entries.push({
       key: `place:${row.id}`,
       domain: "place",
@@ -132,7 +123,7 @@ export async function loadPlaceVisits(
       name: p.name,
       lat: p.lat,
       lon: p.lon,
-      visitDays: p.visits.flatMap((v) => (v.visitedAt ? [ymd(v.visitedAt)] : [])),
+      visitDays: p.visits.flatMap((v) => (v.visitedAt ? [storedDay(v.visitedAt)] : [])),
     })),
     truncated: visits.length > ROW_CAP || places.length > ROW_CAP,
   };
@@ -142,7 +133,7 @@ export async function loadPlaceVisits(
  * Roadtrips (linkable: a roadtrip is the one route kind that moves onto a trip)
  * and standalone tours (presence only — the tour API keeps their points).
  */
-export async function loadRoutes(userId: string): Promise<Loaded> {
+export async function loadRoutes(userId: string, today: string): Promise<Loaded> {
   const rows = await prisma.tripRoute.findMany({
     where: { userId, OR: [{ kind: "roadtrip" }, { kind: "tour", tripId: null }] },
     orderBy: { id: "asc" },
@@ -169,20 +160,21 @@ export async function loadRoutes(userId: string): Promise<Loaded> {
   for (const row of rows.slice(0, ROW_CAP)) {
     const points: PresencePoint[] = [];
     const nights: string[] = [];
-    let last: Date | null = null as Date | null;
     for (const stop of row.stops) {
-      const start = stop.startDate as Date;
-      const end = stop.endDate && stop.endDate > start ? stop.endDate : start;
+      // A station's dates are local wall clocks (ADR 0002: fake UTC), so the
+      // stored day is the place's day.
+      const start = storedDay(stop.startDate as Date);
+      const end = stop.endDate ? storedDay(stop.endDate) : start;
+      const last = end > start ? end : start;
       const at = { lat: stop.lat as number, lon: stop.lon as number };
-      points.push({ ...at, day: ymd(start), hour: 12 });
-      if (ymd(end) !== ymd(start)) points.push({ ...at, day: ymd(end), hour: 10 });
+      points.push({ ...at, day: start, hour: 12 });
+      if (last !== start) points.push({ ...at, day: last, hour: 10 });
       if (row.kind === "roadtrip") {
-        const slept = daysBetween(ymd(start), ymd(end));
-        nights.push(...(slept.length > 0 ? slept : stop.overnight ? [ymd(start)] : []));
+        const slept = daysBetween(start, last);
+        nights.push(...(slept.length > 0 ? slept : stop.overnight ? [start] : []));
       }
-      last = last === null || end > last ? end : last;
     }
-    if (points.length === 0 || last === null) continue;
+    if (points.length === 0) continue;
     const days = points.map((p) => p.day).sort();
     const roadtrip = row.kind === "roadtrip";
     entries.push({
@@ -191,7 +183,7 @@ export async function loadRoutes(userId: string): Promise<Loaded> {
       id: row.id,
       tripId: row.tripId,
       linkable: roadtrip,
-      state: datedPresence(last) === "happened" ? "happened" : "planned",
+      state: datedPresence(days[days.length - 1], today) === "happened" ? "happened" : "planned",
       startDay: days[0],
       endDay: days[days.length - 1],
       points: [...points].sort((a, b) => a.day.localeCompare(b.day) || a.hour - b.hour),
@@ -232,8 +224,10 @@ export async function loadAcceptedPhotoJourneys(userId: string): Promise<Loaded>
     },
   });
   const entries = rows.slice(0, ROW_CAP).map((row): PresenceEntry => {
-    const startDay = ymd(row.startDate);
-    const endDay = ymd(row.endDate);
+    // Photo times are instants and a journey stores no zone: its days are UTC
+    // days, flagged as such rather than passed off as local ones.
+    const startDay = storedDay(row.startDate);
+    const endDay = storedDay(row.endDate);
     return {
       key: `photo:${row.id}`,
       domain: "photo",
@@ -251,6 +245,7 @@ export async function loadAcceptedPhotoJourneys(userId: string): Promise<Loaded>
       label: row.city ?? row.countryName ?? "",
       city: row.city,
       country: row.countryName,
+      zoneUnknown: true,
     };
   });
   return { entries, truncated: rows.length > ROW_CAP };

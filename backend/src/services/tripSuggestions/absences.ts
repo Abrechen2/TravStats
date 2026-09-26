@@ -4,10 +4,8 @@ import {
   BRIDGE_DAYS,
   HOME_LAYOVER_HOURS,
   IMPLIED_NIGHT_KM,
-  addDays,
-  dayDiff,
-  dayNumber,
 } from "../../shared/tripSuggestionRules";
+import { addDays, dayDiff, dayNumber } from "./time";
 import type { HomeAt, PresenceEntry, PresencePoint, SuggestionSignal } from "./types";
 
 /**

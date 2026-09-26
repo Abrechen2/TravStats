@@ -79,6 +79,7 @@ export function placeVisitProposals(
         planned: false,
         destination: place.name,
         signals: [],
+        zoneUnknown: entry.zoneUnknown ? 1 : 0,
         members: [],
         place: { id: place.id, name: place.name },
         anchor: {

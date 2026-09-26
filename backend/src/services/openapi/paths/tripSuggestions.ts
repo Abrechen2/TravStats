@@ -37,6 +37,10 @@ const suggestion = z.object({
   planned: z.boolean().describe("Every member is still ahead"),
   destination: z.string().nullable(),
   signals: z.array(z.enum(["pnr", "home_loop", "continuity"])),
+  zoneUnknown: z
+    .number()
+    .int()
+    .describe("Entries whose place had no known time zone; their day may be one off (ADR 0002)"),
   members: z.array(member),
   trip: z
     .object({

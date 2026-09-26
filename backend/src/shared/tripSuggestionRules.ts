@@ -142,9 +142,13 @@ export function visitPresence(visit: { visitedAt: Date | null }, now?: Date): Pr
   return classifyVisit(visit, now) === "visited" ? "happened" : "planned";
 }
 
-/** A dated station or tour point: past is travel, future is a plan. */
-export function datedPresence(at: Date, now: Date = new Date()): PresenceState {
-  return at.getTime() <= now.getTime() ? "happened" : "planned";
+/**
+ * A dated station or tour point: its day against today in the user's profile
+ * zone (ADR 0002, D4) — both are `YYYY-MM-DD` keys, so the comparison is a
+ * string one. Today itself is still in progress, so it counts as happened.
+ */
+export function datedPresence(day: string, today: string): PresenceState {
+  return day <= today ? "happened" : "planned";
 }
 
 // ---------------------------------------------------------------- dismissal
@@ -162,22 +166,4 @@ export function jaccard(a: readonly string[], b: readonly string[]): number {
 /** Whether a proposal differs enough from an answered one to be asked again. */
 export function isMaterialChange(answered: readonly string[], current: readonly string[]): boolean {
   return jaccard(answered, current) < MATERIAL_CHANGE_JACCARD;
-}
-
-// ---------------------------------------------------------------- calendar
-
-const DAY_MS = 86_400_000;
-
-/** Days since the epoch for a `YYYY-MM-DD` key. */
-export function dayNumber(day: string): number {
-  return Math.floor(Date.parse(`${day}T00:00:00Z`) / DAY_MS);
-}
-
-/** `b - a` in whole days. */
-export function dayDiff(a: string, b: string): number {
-  return dayNumber(b) - dayNumber(a);
-}
-
-export function addDays(day: string, n: number): string {
-  return new Date((dayNumber(day) + n) * DAY_MS).toISOString().slice(0, 10);
 }

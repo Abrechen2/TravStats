@@ -1,8 +1,9 @@
 import { prisma } from "../../db";
 import { cruisePresence, flightPresence, railPresence } from "../../shared/tripSuggestionRules";
 import { airportDisplayName } from "../../utils/airportDisplay";
-import { localWallClockOf, type FlightTimeSemantics } from "../../utils/timezone";
+import type { FlightTimeSemantics } from "../../utils/timezone";
 import { getCachedAirports } from "../airportCache";
+import { addDays, daysBetween, placeClock, storedDay } from "./time";
 import type { PresenceEntry, PresencePoint } from "./types";
 
 /**
@@ -18,19 +19,6 @@ export const ROW_CAP = 10_000;
 export interface Loaded {
   entries: PresenceEntry[];
   truncated: boolean;
-}
-
-const ymd = (d: Date): string => d.toISOString().slice(0, 10);
-
-/** Local day and hour of a stored time; a date-only time sorts at `fallbackHour`. */
-function wall(
-  at: Date,
-  timezone: string | null,
-  semantics: FlightTimeSemantics,
-  fallbackHour: number
-): { day: string; hour: number } {
-  const clock = localWallClockOf(at, timezone, semantics);
-  return { day: clock.date, hour: clock.hour ?? fallbackHour };
 }
 
 function span(points: readonly PresencePoint[]): { startDay: string; endDay: string } {
@@ -78,23 +66,23 @@ export async function loadFlights(userId: string): Promise<Loaded> {
     if (state === "excluded" || !row.departureTime) continue;
     const dep = at(row.depIata, row.depIcao);
     const arr = at(row.arrIata, row.arrIcao);
-    const out = wall(
+    const out = placeClock(
       row.departureTime,
       dep?.timezone ?? null,
       row.depTimeSemantics as FlightTimeSemantics,
       8
     );
     const inn = row.arrivalTime
-      ? wall(
+      ? placeClock(
           row.arrivalTime,
           arr?.timezone ?? null,
           row.arrTimeSemantics as FlightTimeSemantics,
           12
         )
-      : { day: out.day, hour: Math.min(23, out.hour + 2) };
+      : { day: out.day, hour: Math.min(23, out.hour + 2), zoneKnown: out.zoneKnown };
     const points: PresencePoint[] = [
-      { lat: row.depLat, lon: row.depLon, ...out },
-      { lat: row.arrLat, lon: row.arrLon, ...inn },
+      { lat: row.depLat, lon: row.depLon, day: out.day, hour: out.hour },
+      { lat: row.arrLat, lon: row.arrLon, day: inn.day, hour: inn.hour },
     ];
     const depCode = row.depIata ?? row.depIcao ?? "?";
     const arrCode = row.arrIata ?? row.arrIcao ?? "?";
@@ -112,6 +100,7 @@ export async function loadFlights(userId: string): Promise<Loaded> {
       city: airportDisplayName(arr),
       country: arr?.country ?? null,
       pointCities: [airportDisplayName(dep), airportDisplayName(arr)],
+      zoneUnknown: !out.zoneKnown || !inn.zoneKnown,
       pnr: row.bookingReference,
     });
   }
@@ -161,13 +150,13 @@ export async function loadRail(userId: string): Promise<Loaded> {
     const state = railPresence(row);
     if (state === "excluded") continue;
     // A ride's instants are real ones (the server read the ticket in the station's zone).
-    const out = wall(row.departureTime, row.depTimezone, "UTC", 8);
+    const out = placeClock(row.departureTime, row.depTimezone, "UTC", 8);
     const inn = row.arrivalTime
-      ? wall(row.arrivalTime, row.arrTimezone, "UTC", 12)
-      : { day: out.day, hour: Math.min(23, out.hour + 1) };
+      ? placeClock(row.arrivalTime, row.arrTimezone, "UTC", 12)
+      : { day: out.day, hour: Math.min(23, out.hour + 1), zoneKnown: out.zoneKnown };
     const points: PresencePoint[] = [
-      { lat: row.depLat, lon: row.depLon, ...out },
-      { lat: row.arrLat, lon: row.arrLon, ...inn },
+      { lat: row.depLat, lon: row.depLon, day: out.day, hour: out.hour },
+      { lat: row.arrLat, lon: row.arrLon, day: inn.day, hour: inn.hour },
     ];
     const train = [row.trainCategory, row.trainNumber].filter(Boolean).join(" ");
     entries.push({
@@ -184,6 +173,7 @@ export async function loadRail(userId: string): Promise<Loaded> {
       city: stationCity(row.arrStationName),
       country: row.arrCountry,
       pointCities: [stationCity(row.depStationName), stationCity(row.arrStationName)],
+      zoneUnknown: !out.zoneKnown || !inn.zoneKnown,
       pnr: row.bookingReference,
     });
   }
@@ -219,8 +209,8 @@ export async function loadCruises(userId: string): Promise<Loaded> {
   for (const row of rows.slice(0, ROW_CAP)) {
     const state = cruisePresence(row);
     if (state === "excluded" || !row.startDate) continue;
-    const startDay = ymd(row.startDate);
-    const endDay = row.endDate ? ymd(row.endDate) : startDay;
+    const startDay = storedDay(row.startDate);
+    const endDay = row.endDate ? storedDay(row.endDate) : startDay;
     const points: PresencePoint[] = [];
     const cities: (string | null)[] = [];
     if (row.departurePort) {
@@ -229,9 +219,9 @@ export async function loadCruises(userId: string): Promise<Loaded> {
     }
     for (const stop of row.stops) {
       if (!stop.port) continue;
-      const day = stop.date
-        ? ymd(stop.date)
-        : ymd(new Date(row.startDate.getTime() + (stop.dayNumber - 1) * 86_400_000));
+      // `dayNumber` is the day of the cruise (forgejo#126), so an undated
+      // stop sits that many days after embarkation.
+      const day = stop.date ? storedDay(stop.date) : addDays(startDay, stop.dayNumber - 1);
       points.push({ lat: stop.port.lat, lon: stop.port.lon, day, hour: 12 });
       cities.push(stop.port.city ?? stop.port.name);
     }
@@ -240,10 +230,7 @@ export async function loadCruises(userId: string): Promise<Loaded> {
       cities.push(row.arrivalPort.city ?? row.arrivalPort.name);
     }
     if (points.length === 0) continue;
-    const nights: string[] = [];
-    for (let t = row.startDate.getTime(); ymd(new Date(t)) < endDay; t += 86_400_000) {
-      nights.push(ymd(new Date(t)));
-    }
+    const nights = daysBetween(startDay, endDay);
     entries.push({
       key: `cruise:${row.id}`,
       domain: "cruise",
