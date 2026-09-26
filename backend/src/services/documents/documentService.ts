@@ -26,6 +26,7 @@ import {
 } from "./documentStore";
 import type { ExtractedValues } from "./documentValues";
 import { storedReading } from "./storedReading";
+import { countPdfPages } from "../pdfPageCount";
 
 /**
  * Kept originals, filed with the entry they produced (forgejo#116).
@@ -325,6 +326,7 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
     }
   }
 
+  const pageCount = detected.format === "pdf" ? await countPdfPages(input.buffer) : null;
   const storedName = newStoredName(detected.extension);
   await writeDocumentFile(storedName, input.buffer);
   try {
@@ -336,6 +338,7 @@ export async function createDocument(input: CreateDocumentInput): Promise<Create
         mimetype: detected.mimetype,
         sizeBytes: input.buffer.length,
         sha256,
+        pageCount,
         format: detected.format,
         kind: input.kind ?? null,
         issuedOn: input.issuedOn ?? null,
@@ -581,6 +584,8 @@ export interface DocumentDto {
   mimetype: string;
   sizeBytes: number;
   sha256: string;
+  /** Pages of a PDF, counted at upload; null when unknown (every non-PDF, older rows). */
+  pageCount: number | null;
   originalName: string | null;
   /** What to call it on screen: the client's name, or a generic one with the right extension. */
   displayName: string;
@@ -617,6 +622,7 @@ export function toDocumentDto(document: Document): DocumentDto {
     mimetype: document.mimetype,
     sizeBytes: document.sizeBytes,
     sha256: document.sha256,
+    pageCount: document.pageCount,
     originalName: document.originalName,
     displayName: document.originalName ?? `document${path.extname(document.storedName)}`,
     issuedOn: document.issuedOn ? document.issuedOn.toISOString().slice(0, 10) : null,

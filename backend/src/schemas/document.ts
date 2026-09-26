@@ -107,6 +107,15 @@ export const documentDtoSchema = z.object({
   mimetype: z.string(),
   sizeBytes: z.number().int(),
   sha256: z.string(),
+  pageCount: z
+    .number()
+    .int()
+    .positive()
+    .nullable()
+    .describe(
+      "Pages of a PDF, counted from its bytes when it was kept. Null when unknown: every " +
+        "non-PDF, a PDF whose page tree could not be read, and documents kept before 2.7. Never 0."
+    ),
   originalName: z.string().nullable(),
   displayName: z.string(),
   issuedOn: z.string().nullable(),

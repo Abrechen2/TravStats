@@ -3051,6 +3051,10 @@ model Document {
   sizeBytes    Int     @map("size_bytes")
   /// SHA-256 of the stored bytes, hex, computed by the server.
   sha256       String
+  /// Pages of a PDF, counted from its bytes when it was kept (forgejo#132
+  /// item 4). NULL when unknown — every non-PDF, a PDF whose page tree could
+  /// not be read, and every row kept before the column existed. Never 0.
+  pageCount    Int?    @map("page_count")
 
   /// The FILE: image | pdf | eml | emailText | pkpass.
   format        String
