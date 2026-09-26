@@ -24,7 +24,7 @@ describe("saveErrorMessage", () => {
   it("names a broken time zone lookup instead of the generic sentence", () => {
     const err = refused(503, {
       error: "Time zone lookup unavailable: find is not a function",
-      code: "TIMEZONE_LOOKUP_UNAVAILABLE",
+      code: "TZ_UNRESOLVED",
     });
     expect(saveErrorMessage(err, t, "form.saveError")).toBe(
       "common:saveErrors.timezoneUnavailable"

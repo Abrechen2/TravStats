@@ -13,13 +13,13 @@ import path from "path";
  * TSX, the loader that broke.
  */
 
-const BACKEND_ROOT = path.resolve(__dirname, "../../..");
+const BACKEND_ROOT = path.resolve(__dirname, "../../../..");
 
-describe("geoTimezone under the loaders that run it", () => {
+describe("zoneOf under the loaders that run it", () => {
   it("answers a known coordinate when loaded through tsx (npm run dev)", () => {
     const script =
-      'const g = require("./src/utils/geoTimezone");' +
-      "process.stdout.write(JSON.stringify({ zone: g.zoneAt(52.52, 13.405), check: g.runTimezoneSelfCheck() }));" +
+      'const g = require("./src/shared/time/zoneOf");' +
+      "process.stdout.write(JSON.stringify({ zone: g.zoneOf({ lat: 52.52, lon: 13.405 }), check: g.runZoneSelfCheck() }));" +
       "process.exit(0);";
     const out = execFileSync(
       process.execPath,
@@ -31,37 +31,39 @@ describe("geoTimezone under the loaders that run it", () => {
   }, 60_000);
 });
 
-describe("geoTimezone when the lookup is broken", () => {
+describe("zoneOf when the lookup is broken", () => {
   afterEach(() => {
     jest.resetModules();
     jest.dontMock("geo-tz/dist/find-all");
   });
 
-  function loadWithBrokenFind(): typeof import("../geoTimezone") {
+  function loadWithBrokenFind(): typeof import("../zoneOf") {
     jest.resetModules();
     jest.doMock("geo-tz/dist/find-all", () => ({ find: undefined }));
-    return require("../geoTimezone") as typeof import("../geoTimezone");
+    return require("../zoneOf") as typeof import("../zoneOf");
   }
 
   it("throws a coded error instead of answering 'no zone'", () => {
-    const { zoneAt } = loadWithBrokenFind();
-    expect(() => zoneAt(41.39, 2.17)).toThrow(
-      expect.objectContaining({ statusCode: 503, code: "TIMEZONE_LOOKUP_UNAVAILABLE" })
+    const { zoneOf } = loadWithBrokenFind();
+    expect(() => zoneOf({ lat: 41.39, lon: 2.17 })).toThrow(
+      expect.objectContaining({ statusCode: 503, code: "TZ_UNRESOLVED" })
     );
   });
 
   it("still abstains without an error on coordinates that are not a place", () => {
-    const { zoneAt } = loadWithBrokenFind();
-    expect(zoneAt(null, null)).toBeNull();
-    expect(zoneAt(999, 999)).toBeNull();
+    const { zoneOf } = loadWithBrokenFind();
+    expect(zoneOf({ lat: null, lon: null })).toBeNull();
+    expect(zoneOf({ lat: 999, lon: 999 })).toBeNull();
+    // A catalogue zone answers without the coordinate path at all.
+    expect(zoneOf({ catalogueZone: "Europe/Vienna", lat: 48.2, lon: 16.37 })).toBe("Europe/Vienna");
   });
 
   it("marks the boot self-check failed, and /health degraded", () => {
     const geo = loadWithBrokenFind();
-    expect(geo.runTimezoneSelfCheck()).toEqual({ ok: false, reason: expect.any(String) });
+    expect(geo.runZoneSelfCheck()).toEqual({ ok: false, reason: expect.any(String) });
 
     const { healthHandler } =
-      require("../../routes/health") as typeof import("../../routes/health");
+      require("../../../routes/health") as typeof import("../../../routes/health");
     const json = jest.fn();
     healthHandler({} as never, { json } as never);
     expect(json).toHaveBeenCalledWith(
@@ -70,11 +72,18 @@ describe("geoTimezone when the lookup is broken", () => {
   });
 });
 
-describe("geoTimezone with the real dataset", () => {
+describe("zoneOf with the real dataset", () => {
+  it("prefers a catalogue zone Intl knows, and ignores one it does not", () => {
+    const { zoneOf } = require("../zoneOf") as typeof import("../zoneOf");
+    expect(zoneOf({ catalogueZone: "Asia/Kolkata", lat: 52.52, lon: 13.405 })).toBe("Asia/Kolkata");
+    expect(zoneOf({ catalogueZone: "Mars/Olympus", lat: 52.52, lon: 13.405 })).toBe(
+      "Europe/Berlin"
+    );
+  });
+
   it("names the full-dataset zone, not the folded one (CAMP-03)", () => {
-    const { zoneAt, runTimezoneSelfCheck } =
-      require("../geoTimezone") as typeof import("../geoTimezone");
-    expect(zoneAt(13.69, 100.75)).toBe("Asia/Bangkok");
-    expect(runTimezoneSelfCheck()).toEqual({ ok: true });
+    const { zoneOf, runZoneSelfCheck } = require("../zoneOf") as typeof import("../zoneOf");
+    expect(zoneOf({ lat: 13.69, lon: 100.75 })).toBe("Asia/Bangkok");
+    expect(runZoneSelfCheck()).toEqual({ ok: true });
   });
 });

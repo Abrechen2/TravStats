@@ -13,7 +13,7 @@ import logger from "./utils/logger";
 import { DATABASE_URL } from "./utils/database";
 import { appVersion, buildVersion } from "./utils/version";
 import { resolveTrustProxy } from "./utils/trustProxy";
-import { runTimezoneSelfCheck } from "./utils/geoTimezone";
+import { runZoneSelfCheck } from "./shared/time/zoneOf";
 import { healthHandler } from "./routes/health";
 import { templateRegistry } from "./services/parsers/templates/registry";
 import { seedPortsFromCSV } from "./seedPortsFromCSV";
@@ -586,7 +586,7 @@ if (process.env.NODE_ENV !== "test") {
 
     // The zone lookup every local time depends on. A failure is logged at
     // error level and turns /health "degraded"; it does not stop the boot.
-    runTimezoneSelfCheck();
+    runZoneSelfCheck();
 
     // Airport zones: fill the missing ones, and once per instance re-derive
     // the ones geo-tz's old default folded together (CAMP-03).

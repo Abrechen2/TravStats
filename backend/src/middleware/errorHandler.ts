@@ -93,10 +93,10 @@ export type ApiErrorCode =
   | "DAWARICH_WINDOW_EMPTY"
   /** Dawarich pull: a single point in the window — too few for a track. */
   | "DAWARICH_TOO_FEW_POINTS"
-  /** The server's time zone lookup is broken (not "this point has no zone").
-   *  A local time cannot be interpreted, so the write is refused rather than
-   *  stored as UTC — see `utils/geoTimezone.ts`. */
-  | "TIMEZONE_LOOKUP_UNAVAILABLE"
+  /** The zone resolver could not answer (ADR 0002 D2) — not "this point has
+   *  no zone". A local time cannot be interpreted, so the write is refused
+   *  rather than stored as UTC — see `shared/time/zoneOf.ts`. */
+  | "TZ_UNRESOLVED"
   /** Backup / restore job failures — see `services/backup/backupFailure.ts`.
    *  A tool (pg_dump, psql, tar) is not installed where the server runs. */
   | "BACKUP_TOOL_MISSING"

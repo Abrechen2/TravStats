@@ -1,4 +1,4 @@
-import { zoneAt } from "./geoTimezone";
+import { zoneOf } from "../shared/time/zoneOf";
 import { legacyFakeUtcToRealUtc } from "./timezone";
 
 /**
@@ -43,11 +43,11 @@ export interface StayInstantSource {
 
 /**
  * The IANA zone a coordinate pair sits in, or null when it has none.
- * Throws `TimezoneLookupError` when the lookup itself is broken — that used
+ * Throws `ZoneUnresolvedError` (TZ_UNRESOLVED) when the lookup itself is broken — that used
  * to be swallowed here, and every stay and rail station silently got UTC.
  */
 export function timezoneOfLodging(lat?: number | null, lon?: number | null): string | null {
-  return zoneAt(lat, lon);
+  return zoneOf({ lat, lon });
 }
 
 /**

@@ -11,7 +11,7 @@ const SHARED_CODE_KEYS: Readonly<Record<string, string>> = {
   DUPLICATE: "common:saveErrors.duplicate",
   DB_UNAVAILABLE: "common:saveErrors.dbUnavailable",
   RATE_LIMITED: "common:saveErrors.rateLimited",
-  TIMEZONE_LOOKUP_UNAVAILABLE: "common:saveErrors.timezoneUnavailable",
+  TZ_UNRESOLVED: "common:saveErrors.timezoneUnavailable",
 };
 
 /**

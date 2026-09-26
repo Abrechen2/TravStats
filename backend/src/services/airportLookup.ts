@@ -1,4 +1,4 @@
-import { zoneAt } from "../utils/geoTimezone";
+import { zoneOf } from "../shared/time/zoneOf";
 import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
@@ -592,7 +592,7 @@ export async function enrichFlightAirports(flightData: {
 export function deriveTimezone(lat: number, lon: number): string | null {
   // Null for a coordinate off the globe; a broken lookup THROWS, so neither
   // the backfill nor the one-time repair can record "done" over nothing.
-  return zoneAt(lat, lon);
+  return zoneOf({ lat, lon });
 }
 
 /**

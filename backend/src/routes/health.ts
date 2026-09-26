@@ -1,5 +1,5 @@
 import type { Request, Response } from "express";
-import { timezoneSelfCheckResult } from "../utils/geoTimezone";
+import { zoneSelfCheckResult } from "../shared/time/zoneOf";
 import { appVersion } from "../utils/version";
 
 /**
@@ -8,12 +8,12 @@ import { appVersion } from "../utils/version";
  * matches the public-API URL convention documented for external callers).
  *
  * `degraded` when the boot self-check found the time zone lookup broken
- * (utils/geoTimezone.ts). Still a 200: the process serves requests and a
+ * (shared/time/zoneOf.ts). Still a 200: the process serves requests and a
  * restart would not fix a broken dependency, but a probe that reads the body
  * sees it, instead of the server reading every local time as UTC in silence.
  */
 export function healthHandler(_req: Request, res: Response): void {
-  const timezone = timezoneSelfCheckResult();
+  const timezone = zoneSelfCheckResult();
   const timezoneLookup = timezone === null ? "pending" : timezone.ok ? "ok" : "failed";
   res.json({
     status: timezoneLookup === "failed" ? "degraded" : "ok",
