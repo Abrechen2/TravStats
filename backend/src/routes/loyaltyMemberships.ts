@@ -74,11 +74,14 @@ async function resolveLodgingIds(lodgingIds: string[], userId: string): Promise<
   return unique;
 }
 
-/** Same text twice is one entry — "AIDA Cruises" and "aida cruises " cover the same line. */
+/**
+ * Same text twice is one entry — "AIDA Cruises" and "aida cruises " cover the
+ * same line, "DB  Fernverkehr" and "db fernverkehr" the same operator.
+ */
 function dedupeText(values: string[]): string[] {
   const seen = new Map<string, string>();
   for (const v of values) {
-    const key = v.trim().toLowerCase();
+    const key = v.trim().replace(/\s+/g, " ").toLowerCase();
     if (key && !seen.has(key)) seen.set(key, v.trim());
   }
   return [...seen.values()];
@@ -141,7 +144,8 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     const parsed = createLoyaltyMembershipSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
-    const { chainIds, lodgingIds, airlineCodes, cruiseLines, ...fields } = parsed.data;
+    const { chainIds, lodgingIds, airlineCodes, cruiseLines, railOperators, ...fields } =
+      parsed.data;
     const chainLinks = await assertChainsVisible(userId, chainIds ?? []);
     const lodgingLinks = await resolveLodgingIds(lodgingIds ?? [], userId);
 
@@ -152,6 +156,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
           userId,
           airlineCodes: Array.from(new Set(airlineCodes ?? [])),
           cruiseLines: dedupeText(cruiseLines ?? []),
+          railOperators: dedupeText(railOperators ?? []),
           chains: { create: chainLinks.map((chainId) => ({ chainId })) },
           lodgings: { create: lodgingLinks.map((lodgingId) => ({ lodgingId })) },
         },
@@ -186,7 +191,8 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       throw new AppError(`A ${domain} membership cannot carry ${foreign.join(", ")}`, 400);
     }
 
-    const { chainIds, lodgingIds, airlineCodes, cruiseLines, ...fields } = parsed.data;
+    const { chainIds, lodgingIds, airlineCodes, cruiseLines, railOperators, ...fields } =
+      parsed.data;
     // Absent leaves a list alone, an array replaces it — editing a tier can
     // never unlink a chain as a side effect.
     const chainLinks = chainIds === undefined ? null : await assertChainsVisible(userId, chainIds);
@@ -203,6 +209,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
               airlineCodes: Array.from(new Set(airlineCodes)),
             }),
             ...(cruiseLines !== undefined && { cruiseLines: dedupeText(cruiseLines) }),
+            ...(railOperators !== undefined && { railOperators: dedupeText(railOperators) }),
             // Touched explicitly so a links-only edit still moves the
             // statistics fingerprint (`middleware/statsEtag.ts`).
             updatedAt: new Date(),

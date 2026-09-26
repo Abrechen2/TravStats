@@ -5,6 +5,7 @@ import { getCachedAirports } from "../services/airportCache";
 import { airportDisplayName } from "../utils/airportDisplay";
 import { stayStartsAt } from "../utils/stayInstant";
 import type { DomainKey } from "../shared/domains";
+import { loadVisibleDomains } from "../services/domainVisibility";
 
 // No rate limiter, and deliberately so — for the same reason `stats.ts` has
 // none, arrived at from the other side. This route exists BECAUSE the tab strip
@@ -220,8 +221,8 @@ async function nextStay(userId: string): Promise<UpcomingEntry | null> {
 /**
  * The next train (spec 2026-09-25-rail-domain). The departure is a real
  * instant — the server read the ticket's clock in the station's zone — so the
- * date rule is the flight's, unchanged. The rail beta switch is the CLIENT's
- * to apply: this route answers by the user's domains, as for every domain.
+ * date rule is the flight's, unchanged. Asked only while rail is VISIBLE — the
+ * user's switch and the instance's beta switch together (see the route below).
  */
 async function nextRail(userId: string): Promise<UpcomingEntry | null> {
   const ride = await prisma.railJourney.findFirst({
@@ -279,21 +280,22 @@ async function nextTrip(userId: string): Promise<UpcomingEntry | null> {
  * GET /api/v1/upcoming
  *
  * `entries` holds at most one entry per domain, soonest first, and ONLY for
- * domains the user has switched on — a disabled domain must not surface
- * anywhere (CLAUDE.md's domain-gating rule), and enforcing that here means a
- * client cannot forget to. Trips are always considered: a trip is the frame
- * around the others, not a domain of its own.
+ * domains the user can SEE — switched on by the user AND not hidden by the
+ * instance's beta switch (`services/domainVisibility.ts`). A disabled domain
+ * must not surface anywhere (CLAUDE.md's domain-gating rule), and enforcing
+ * that here means a client cannot forget to: this route used to apply only the
+ * user's half and leave the beta half to the client, so a client without that
+ * check showed the next train on an instance whose rail is off (forgejo#132
+ * item 18). Trips are always considered: a trip is the frame around the
+ * others, not a domain of its own.
  */
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = req.userId!;
-    const settings = await prisma.userSettings.findUnique({
-      where: { userId },
-      select: { enabledDomains: true },
-    });
     // No settings row is a fresh account, which the schema defaults to
-    // flights — matching the column default rather than guessing "all".
-    const enabled = new Set(settings?.enabledDomains ?? ["flight"]);
+    // flights — `visibleDomainKeys` matches the column default rather than
+    // guessing "all".
+    const enabled = new Set(await loadVisibleDomains(userId));
 
     const found = await Promise.all([
       enabled.has("flight") ? nextFlight(userId) : null,

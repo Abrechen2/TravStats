@@ -31,6 +31,8 @@ export interface LoyaltyMembership {
   airlineCodes: string[];
   /** Cruise cards: the cruise lines the card covers, as the cruises name them. */
   cruiseLines: string[];
+  /** Rail cards: the operators the card covers, as the rides name them. */
+  railOperators: string[];
   /** Hotel cards: chains and independent hotels, linked by id. */
   chainIds: number[];
   chains: LodgingChainRef[];
@@ -49,6 +51,7 @@ export interface LoyaltyMembershipInput {
   notes?: string | null;
   airlineCodes?: string[];
   cruiseLines?: string[];
+  railOperators?: string[];
 }
 
 export interface FrequentFlyerSuggestion {

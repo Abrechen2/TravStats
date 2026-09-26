@@ -27,6 +27,10 @@ import { classifyVisit } from "../../shared/placeCounting";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
 import { loadRailEnds } from "./railEvidenceLoader";
 
+/** Every argument `buildCountryDetail` takes after the country code, in its order. */
+export type CountryDetailInputs =
+  Parameters<typeof buildCountryDetail> extends [string, ...infer Rest] ? Rest : never;
+
 /**
  * @param code the requested country, an ISO alpha-2 code or an English name
  * @returns null when nothing evidences it — the route's 404
@@ -35,6 +39,21 @@ export async function loadCountryDetail(
   userId: string,
   code: string
 ): Promise<CountryDetail | null> {
+  return buildCountryDetail(code, ...(await loadCountryDetailInputs(userId)));
+}
+
+/**
+ * The rows every country's drill-down is built from, read ONCE for the whole
+ * account. Split out of `loadCountryDetail` so the passport's evidence
+ * (`services/evidence/metricEvidencePassport.ts`, forgejo#132 items 5 and 6)
+ * can ask the drill-down's own question for every country without reading the
+ * database once per country — and without a second copy of these queries,
+ * which is how a row and its evidence would start to disagree.
+ *
+ * The timeline limit is left at its default; a caller that needs every row
+ * replaces that one argument.
+ */
+export async function loadCountryDetailInputs(userId: string): Promise<CountryDetailInputs> {
   // One clock for the whole load, so two evidence sources cannot disagree
   // about whether a visit has happened yet.
   const now = new Date();
@@ -123,8 +142,7 @@ export async function loadCountryDetail(
       loadRailEnds(userId),
     ]);
 
-  return buildCountryDetail(
-    code,
+  return [
     flights,
     airportCountries,
     homeIatas,
@@ -170,6 +188,6 @@ export async function loadCountryDetail(
     })),
     undefined,
     stations,
-    rail
-  );
+    rail,
+  ];
 }

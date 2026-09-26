@@ -29,6 +29,8 @@ const cardFields = {
   notes: z.string().max(2000).nullable().optional(),
   airlineCodes: z.array(iataAirline).max(50).optional(),
   cruiseLines: z.array(z.string().trim().min(1).max(120)).max(50).optional(),
+  /** Rail cards: operators as the rides name them ("DB Fernverkehr"). */
+  railOperators: z.array(z.string().trim().min(1).max(120)).max(50).optional(),
   chainIds: z.array(z.number().int().positive()).max(100).optional(),
   lodgingIds: z.array(z.string().uuid()).max(500).optional(),
 };
@@ -40,10 +42,12 @@ const COVERAGE_FIELDS: Record<LoyaltyDomain, ReadonlyArray<keyof CardFields>> = 
   flight: ["airlineCodes"],
   cruise: ["cruiseLines"],
   lodging: ["chainIds", "lodgingIds"],
+  rail: ["railOperators"],
 };
 const ALL_COVERAGE: ReadonlyArray<keyof CardFields> = [
   "airlineCodes",
   "cruiseLines",
+  "railOperators",
   "chainIds",
   "lodgingIds",
 ];

@@ -273,6 +273,8 @@ export interface RailStats {
   delays: {
     recordedJourneys: number;
     buckets: Array<{ upToMinutes: number | null; count: number }>;
+    /** Mean over the recorded rides; null when none carries a delay — never 0. */
+    averageMinutes: number | null;
   };
   byYear: Array<{ year: number; journeys: number; km: number }>;
   /** Rides of a kind, counted by the rule the rail badges use. */

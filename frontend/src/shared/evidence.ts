@@ -152,6 +152,14 @@ export const RANKING_DIMENSIONS = [
   "country",
   "continent",
   "aircraftType",
+  /**
+   * One passport country's entries, keyed by its ISO code and counted by the
+   * rule of `/stats/countries/:code` (forgejo#132 item 6). Deliberately a
+   * dimension of its own rather than a change to `country`, whose value is
+   * the airport catalogue's country NAME because it backs the flight
+   * distribution tile — two rules for two tiles, each kept.
+   */
+  "passportCountry",
 ] as const;
 export type RankingDimension = (typeof RANKING_DIMENSIONS)[number];
 

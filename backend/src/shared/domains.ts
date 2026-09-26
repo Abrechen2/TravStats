@@ -133,14 +133,17 @@ export function getDomainDescriptor(key: DomainKey): DomainDescriptor {
 
 /**
  * Domains that carry loyalty programmes (owner, 2026-09-25): hotel cards,
- * frequent-flyer cards and cruise-line clubs, all on one page. The vocabulary
- * of `LoyaltyMembership.domain`; the database holds it too, with a CHECK
- * constraint (migration `20260925230000_loyalty_memberships`), so a domain
- * added here needs that constraint widened in the same change.
+ * frequent-flyer cards and cruise-line clubs, all on one page — and rail
+ * programmes such as BahnBonus (forgejo#132 item 23). The vocabulary of
+ * `LoyaltyMembership.domain`; the database holds it too, with a CHECK
+ * constraint (migrations `20260925230000_loyalty_memberships` and
+ * `20260926210438_loyalty_rail_domain`), so a domain added here needs that
+ * constraint widened in the same change.
  */
 export const LOYALTY_DOMAINS = [
   "flight",
   "cruise",
   "lodging",
+  "rail",
 ] as const satisfies readonly DomainKey[];
 export type LoyaltyDomain = (typeof LOYALTY_DOMAINS)[number];
