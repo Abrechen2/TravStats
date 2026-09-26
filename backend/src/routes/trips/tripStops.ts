@@ -188,7 +188,8 @@ router.post(
       // The day's measured weather, where the instance allows open data and a
       // stop of the trip says where the day was spent. Best effort: the entry
       // is saved either way.
-      res.status(201).json({ entry: await refreshJournalWeather(entry.id) });
+      const weather = await refreshJournalWeather(entry.id);
+      res.status(201).json({ entry: weather.entry, weatherOutcome: weather.outcome });
     } catch (error) {
       next(error);
     }
@@ -227,7 +228,14 @@ router.patch(
       // A new date is a new day: its weather replaces the old one's.
       const dayMoved = entry.date.getTime() !== existing.date.getTime();
       const needsWeather = dayMoved || entry.observedWeather === null;
-      res.json({ entry: needsWeather ? await refreshJournalWeather(entry.id) : entry });
+      if (!needsWeather) {
+        res.json({ entry });
+        return;
+      }
+      // The stored value belongs to the OLD day once the date moved, so a
+      // failed lookup for the new one must not leave it standing.
+      const weather = await refreshJournalWeather(entry.id, { storedIsForAnotherDay: dayMoved });
+      res.json({ entry: weather.entry, weatherOutcome: weather.outcome });
     } catch (error) {
       next(error);
     }

@@ -13,6 +13,7 @@ import { nearbyLodgings } from "../services/openData/openStreetMap";
 import { wikidataForPlace } from "../services/openData/placeWikidata";
 import { plannedElevationProfile } from "../services/openData/plannedProfile";
 import { WIKI_LANGUAGES, wikipediaSummary } from "../services/openData/wikipedia";
+import { startJob } from "../services/jobs/jobRegistry";
 import { buildRouteGeometry } from "./trips/tourLegs";
 import { resolveRoute } from "./trips/tourRoutes";
 import { resolveTrip } from "./trips/resolveTrip";
@@ -38,7 +39,15 @@ function sendDisabled(error: unknown, res: Response): boolean {
   return true;
 }
 
-/** POST /trips/:id/journal/weather — fill every entry of the trip that has none yet. */
+const fillBody = z.object({ background: z.boolean().default(false) });
+
+/**
+ * POST /trips/:id/journal/weather — fill every entry of the trip that has none
+ * yet, and say per entry what came of it. One Open-Meteo call per entry, up to
+ * eight seconds each, in sequence: a long trip outlives any client timeout, so
+ * `background: true` answers 202 with a job (`journal.weather`) whose result
+ * is the synchronous body.
+ */
 router.post(
   "/trips/:id/journal/weather",
   authenticate,
@@ -48,13 +57,21 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const trip = await resolveTrip(req.userId!, req.params.id);
+      const { background } = fillBody.parse(req.body ?? {});
       await assertOpenDataEnabled();
-      const filled = await fillTripJournalWeather(trip.id);
-      const entries = await prisma.tripJournalEntry.findMany({
-        where: { tripId: trip.id },
-        orderBy: { date: "asc" },
-      });
-      res.json({ filled, entries });
+      const run = async () => {
+        const { filled, outcomes } = await fillTripJournalWeather(trip.id);
+        const entries = await prisma.tripJournalEntry.findMany({
+          where: { tripId: trip.id },
+          orderBy: { date: "asc" },
+        });
+        return { filled, outcomes, entries };
+      };
+      if (background) {
+        res.status(202).json({ jobId: startJob("journal.weather", req.userId!, run).id });
+        return;
+      }
+      res.json(await run());
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);
     }
@@ -77,7 +94,10 @@ router.post(
       });
       if (!existing) throw new AppError("Journal entry not found", 404);
       await assertOpenDataEnabled();
-      res.json({ entry: await refreshJournalWeather(existing.id) });
+      // A failed lookup keeps the stored weather, and says why it could not
+      // be refreshed — "no place" used to stand for a busy weather service.
+      const { entry, outcome } = await refreshJournalWeather(existing.id);
+      res.json({ entry, weatherOutcome: outcome });
     } catch (error) {
       if (!sendDisabled(error, res)) next(error);
     }

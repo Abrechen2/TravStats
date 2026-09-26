@@ -52,6 +52,25 @@ const journalEntry = z.object({
   updatedAt: z.string(),
 });
 
+const weatherOutcome = z
+  .enum([
+    "observed",
+    "noLocation",
+    "futureOrToday",
+    "noData",
+    "timeout",
+    "rateLimited",
+    "unavailable",
+    "disabled",
+  ])
+  .openapi({
+    description:
+      "What the lookup came to. `noLocation` (no stop with coordinates covers the day), " +
+      "`futureOrToday` and `noData` are answers about the day and are stored (as no weather). " +
+      "`timeout`, `rateLimited` and `unavailable` are answers about Open-Meteo: the stored " +
+      "weather is KEPT, unless the entry's date just moved.",
+  });
+
 const plannedProfile = registry.register(
   "PlannedElevationProfile",
   z
@@ -85,17 +104,36 @@ registry.registerPath({
   summary: "Fill the measured weather of every diary entry that has none",
   description:
     "Each entry is placed at the trip stop whose span covers its day (the one reached last on " +
-    "a travel day); an entry with no such stop, today's, or a future one stays without.",
+    "a travel day); an entry with no such stop, today's, or a future one stays without. " +
+    "`outcomes` says per entry asked what came of it. One lookup per entry in sequence, so " +
+    "`background: true` answers 202 with a job (poll GET /jobs/{id}) whose result is the 200 body.",
   tags: ["Trips", "Open data"],
-  request: { params: z.object({ id: uuid }) },
+  request: {
+    params: z.object({ id: uuid }),
+    body: {
+      content: {
+        "application/json": { schema: z.object({ background: z.boolean().default(false) }) },
+      },
+    },
+  },
   responses: {
     200: {
       description: "Filled",
       content: {
         "application/json": {
-          schema: z.object({ filled: z.number().int(), entries: z.array(journalEntry) }),
+          schema: z.object({
+            filled: z.number().int(),
+            outcomes: z.array(
+              z.object({ entryId: uuid, date: z.string(), outcome: weatherOutcome })
+            ),
+            entries: z.array(journalEntry),
+          }),
         },
       },
+    },
+    202: {
+      description: "Started as a background job",
+      content: { "application/json": { schema: z.object({ jobId: uuid }) } },
     },
     404: notFound,
     409: disabled,
@@ -110,8 +148,12 @@ registry.registerPath({
   request: { params: z.object({ id: uuid, entryId: uuid }) },
   responses: {
     200: {
-      description: "The entry as stored",
-      content: { "application/json": { schema: z.object({ entry: journalEntry }) } },
+      description: "The entry as stored, and what the lookup came to",
+      content: {
+        "application/json": {
+          schema: z.object({ entry: journalEntry, weatherOutcome }),
+        },
+      },
     },
     404: notFound,
     409: disabled,

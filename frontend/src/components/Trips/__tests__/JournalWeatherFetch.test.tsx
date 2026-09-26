@@ -93,8 +93,8 @@ describe("JournalWeatherFetch", () => {
 
   it("fetches this entry's weather and offers it, without writing the author's field", async () => {
     vi.mocked(openDataApi.refreshEntryWeather).mockResolvedValue({
-      ...saved,
-      observedWeather: measured,
+      entry: { ...saved, observedWeather: measured },
+      weatherOutcome: "observed",
     });
     const onPick = renderFetch();
 
@@ -113,13 +113,47 @@ describe("JournalWeatherFetch", () => {
 
   it("says so when the trip knows no place for the day", async () => {
     vi.mocked(openDataApi.refreshEntryWeather).mockResolvedValue({
-      ...saved,
-      observedWeather: null,
+      entry: { ...saved, observedWeather: null },
+      weatherOutcome: "noLocation",
     });
     renderFetch();
 
     fireEvent.click(screen.getByRole("button", { name: "openData:weather.fetchOne" }));
 
     await waitFor(() => expect(screen.getByText("openData:weather.noPlace")).toBeInTheDocument());
+  });
+
+  // Silent-failure fixes, 2026-09-26: a busy Open-Meteo used to delete the
+  // stored weather and read "no place with coordinates"; so did an entry
+  // dated today.
+  it("keeps showing the stored weather when the weather service is busy, and says why", async () => {
+    vi.mocked(openDataApi.refreshEntryWeather).mockResolvedValue({
+      entry: { ...saved, observedWeather: measured },
+      weatherOutcome: "rateLimited",
+    });
+    renderFetch({ entry: { ...saved, observedWeather: measured } });
+
+    fireEvent.click(screen.getByRole("button", { name: "openData:weather.fetchOne" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("openData:weather.outcome.rateLimitedKept")).toBeInTheDocument()
+    );
+    expect(screen.getByText(/openData:weather\.measuredAt\(Stavanger\)/)).toBeInTheDocument();
+    expect(screen.queryByText("openData:weather.noPlace")).toBeNull();
+  });
+
+  it("tells an entry of today that its weather is not measured yet, not that it has no place", async () => {
+    vi.mocked(openDataApi.refreshEntryWeather).mockResolvedValue({
+      entry: saved,
+      weatherOutcome: "futureOrToday",
+    });
+    renderFetch();
+
+    fireEvent.click(screen.getByRole("button", { name: "openData:weather.fetchOne" }));
+
+    await waitFor(() =>
+      expect(screen.getByText("openData:weather.outcome.futureOrToday")).toBeInTheDocument()
+    );
+    expect(screen.queryByText("openData:weather.noPlace")).toBeNull();
   });
 });
