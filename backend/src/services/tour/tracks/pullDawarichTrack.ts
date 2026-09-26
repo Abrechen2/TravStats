@@ -3,7 +3,8 @@ import type {
   DawarichPoint,
   DawarichPointsWindow,
 } from "../../dawarich/dawarichClient";
-import { tripDateBounds } from "../../../shared/statusDerivation";
+import { timezoneOfLodging } from "../../../utils/stayInstant";
+import { legacyFakeUtcToRealUtc } from "../../../utils/timezone";
 import { ingestTrack, IngestedTrack } from "./ingestTrack";
 import type { ParsedTrack } from "./parseGpx";
 
@@ -20,6 +21,9 @@ import type { ParsedTrack } from "./parseGpx";
 export interface SectionStopDates {
   startDate: Date | null;
   endDate: Date | null;
+  /** The stop's position — whose clock its dates are written in. */
+  lat?: number | null;
+  lon?: number | null;
 }
 
 /** Caller-supplied override for either side of the window, or both. */
@@ -28,18 +32,37 @@ export interface DawarichWindowOverride {
   endedAt?: Date;
 }
 
+const DAY_MS = 24 * 60 * 60 * 1000;
+
+/** Midnight UTC is the stop time model's "only the day is known" (frontend `joinDateTimeInput`). */
+function isDayOnly(d: Date): boolean {
+  return d.getUTCHours() === 0 && d.getUTCMinutes() === 0 && d.getUTCSeconds() === 0;
+}
+
+/**
+ * A stop's stored value is the stop's LOCAL wall clock written as UTC (the
+ * stop time model: the user typed 08:00 in Bergen and sees 08:00). Dawarich
+ * points are real instants, so the value is re-read in the stop's own zone.
+ * A stop without coordinates has no zone to borrow and stays as stored.
+ */
+function toInstant(wallClock: Date, stop: SectionStopDates): Date {
+  const zone = timezoneOfLodging(stop.lat, stop.lon);
+  return zone ? legacyFakeUtcToRealUtc(wallClock, zone) : wallClock;
+}
+
 /**
  * Resolve the actual `[startAt, endAt]` window to pull from Dawarich: an
  * explicit override wins per side; whichever side is NOT overridden falls
- * back to the section's own date span, derived from its stops.
+ * back to the section's own span, derived from its stops — the earliest
+ * start and the latest end (a one-ended stop contributes its one date to
+ * both sides, the same rule `tripDateBounds` applies to cruises).
  *
- * That fallback reuses `tripDateBounds` (`shared/statusDerivation.ts`)
- * rather than a second earliest-start/latest-end implementation —
- * `TripStop`'s `{startDate, endDate}` shape is structurally identical to
- * the cruise shape that function already accepts, and its two rules
- * (earliest start, latest end, a one-ended row still contributes a
- * point-in-time bound) apply to a section's stops completely unchanged.
- * `flights` is passed as `[]` since a section has no flights of its own.
+ * The span is a LOCAL-calendar one. Until 2026-09-26 the stored day anchors
+ * were used as UTC instants: a one-day tour asked Dawarich for
+ * 00:00Z–00:00Z, an empty window that answered "no location data", and a
+ * multi-day tour never pulled its last day. A day-only end now runs to the
+ * NEXT local midnight (exclusive), a day-only start from its own local
+ * midnight, and a timed value is that wall clock in the stop's zone.
  *
  * Returns `null` when neither an override nor a dated stop can supply a
  * given side — there is nothing to pull, and the caller (the route) turns
@@ -52,9 +75,21 @@ export function resolveDawarichWindow(
   stops: SectionStopDates[],
   override: DawarichWindowOverride
 ): { startAt: Date; endAt: Date } | null {
-  const bounds = tripDateBounds([], stops);
-  const startAt = override.startedAt ?? bounds.earliestStart;
-  const endAt = override.endedAt ?? bounds.latestEnd;
+  let first: { at: Date; stop: SectionStopDates } | null = null;
+  let last: { at: Date; stop: SectionStopDates } | null = null;
+  for (const stop of stops) {
+    const s = stop.startDate ?? stop.endDate;
+    const e = stop.endDate ?? stop.startDate;
+    if (s && (!first || s.getTime() < first.at.getTime())) first = { at: s, stop };
+    if (e && (!last || e.getTime() > last.at.getTime())) last = { at: e, stop };
+  }
+
+  const startAt = override.startedAt ?? (first ? toInstant(first.at, first.stop) : null);
+  const endAt =
+    override.endedAt ??
+    (last
+      ? toInstant(isDayOnly(last.at) ? new Date(last.at.getTime() + DAY_MS) : last.at, last.stop)
+      : null);
   if (startAt === null || endAt === null) return null;
   return { startAt, endAt };
 }

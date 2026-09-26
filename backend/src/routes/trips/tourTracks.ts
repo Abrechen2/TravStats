@@ -327,7 +327,7 @@ router.post(
 
       const stops = await prisma.tripStop.findMany({
         where: { routeId },
-        select: { startDate: true, endDate: true },
+        select: { startDate: true, endDate: true, lat: true, lon: true },
       });
       const window = resolveDawarichWindow(stops, {
         startedAt: body.startedAt,

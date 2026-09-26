@@ -173,10 +173,32 @@ describe("Tour tracks — pull a Dawarich window", () => {
 
     // The default window came from the section's own dated stops (Bergen
     // T_OLD, Voss T_NEW) — assert the OUTGOING request actually asked for
-    // that span, proving the "one click" default really ran.
+    // that span, proving the "one click" default really ran. A stop's time
+    // is its local wall clock (08:00 in Bergen = 06:00Z in June).
     const calledUrl = new URL((global.fetch as jest.Mock).mock.calls[0][0] as string);
-    expect(calledUrl.searchParams.get("start_at")).toBe(T_OLD.toISOString());
-    expect(calledUrl.searchParams.get("end_at")).toBe(T_NEW.toISOString());
+    expect(calledUrl.searchParams.get("start_at")).toBe("2026-06-01T06:00:00.000Z");
+    expect(calledUrl.searchParams.get("end_at")).toBe("2026-06-01T06:10:00.000Z");
+  });
+
+  // A one-day tour with day-only stops asked Dawarich for 00:00Z–00:00Z —
+  // an empty window — and the user was told there was no location data.
+  it("pulls the whole local day of a one-day tour with day-only stops", async () => {
+    await seedUserConnection();
+    await prisma.tripStop.updateMany({
+      where: { routeId },
+      data: {
+        startDate: new Date("2026-06-01T00:00:00Z"),
+        endDate: new Date("2026-06-01T00:00:00Z"),
+      },
+    });
+    (global.fetch as jest.Mock).mockResolvedValueOnce(fakeOkResponse(NEWEST_FIRST_POINTS));
+
+    const res = await pull();
+
+    expect(res.status).toBe(201);
+    const calledUrl = new URL((global.fetch as jest.Mock).mock.calls[0][0] as string);
+    expect(calledUrl.searchParams.get("start_at")).toBe("2026-05-31T22:00:00.000Z");
+    expect(calledUrl.searchParams.get("end_at")).toBe("2026-06-01T22:00:00.000Z");
   });
 
   it("stores the geometry in ascending time order although the fixture arrives newest-first", async () => {
