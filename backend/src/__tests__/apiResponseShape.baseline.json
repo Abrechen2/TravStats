@@ -44,6 +44,7 @@
     "flights/listOrder.ts",
     "flights/queryFilters.ts",
     "flightsBatch.ts",
+    "health.ts",
     "imageParse.ts",
     "immich/assetProxy.ts",
     "immich/tripAlbums.ts",
