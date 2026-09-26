@@ -319,12 +319,15 @@ describe("RailFormModal", () => {
             departureLocal: "2026-09-26T09:13",
           },
           {
-            name: "München Hbf",
-            lat: 48.1402,
-            lon: 11.5586,
+            // The arrival the form already holds: a train that ends elsewhere
+            // is a change of trains, and the panel offers "apply with change"
+            // instead — a different path, tested on its own.
+            name: "Paris Est",
+            lat: 48.8768,
+            lon: 2.3591,
             stationId: null,
             code: null,
-            country: "DE",
+            country: "FR",
             arrivalLocal: "2026-09-26T12:58",
             departureLocal: null,
           },
