@@ -1,8 +1,13 @@
 import { formatInTimeZone, fromZonedTime } from "date-fns-tz";
 
 import { AppError } from "../../middleware/errorHandler";
-import type { RailStationInput, UpdateRailJourneyInput } from "../../schemas/rail";
+import type {
+  RailStationInput,
+  RailTracedDistanceSource,
+  UpdateRailJourneyInput,
+} from "../../schemas/rail";
 import { deriveRailStatus } from "../../shared/statusDerivation";
+import { wallClockExists } from "../../shared/wallClockExistence";
 import { calculateDistance } from "../../utils/geo";
 import { timezoneOfLodging } from "../../utils/stayInstant";
 
@@ -88,6 +93,35 @@ export function wallClockToInstant(wall: string, timezone: string | null): Date 
   return timezone ? fromZonedTime(normalised, timezone) : new Date(`${normalised}Z`);
 }
 
+/**
+ * A wall clock the USER sent, as an instant — refused when that clock never
+ * showed it. On a spring-forward day one hour does not exist (02:30 on
+ * 29 March 2026 in Europe/Berlin); `fromZonedTime` answers anyway, with an
+ * instant an hour off, which read back as 01:30 and could even turn a valid
+ * ride into "arrival before departure". Same rule and same check
+ * (`shared/wallClockExistence.ts`) the flight schema applies; the repeated
+ * autumn hour is a real time and passes.
+ *
+ * TODO(merge fix/night-small-2026-09-25): that branch reads wall clocks back
+ * through `shared/zonedWallClock.ts`; `instantToWallClock` below should use it
+ * when the branch lands.
+ */
+function sentWallClockToInstant(
+  wall: string,
+  timezone: string | null,
+  field: "departureLocal" | "arrivalLocal"
+): Date {
+  if (timezone && !wallClockExists(wall.length === 16 ? `${wall}:00` : wall, timezone)) {
+    throw new AppError(
+      `${wall} does not exist in ${timezone} — the clocks skip that hour on this day`,
+      400,
+      "RAIL_LOCAL_TIME_NONEXISTENT",
+      field
+    );
+  }
+  return wallClockToInstant(wall, timezone);
+}
+
 /** The inverse: what the station clock read at `instant`. */
 export function instantToWallClock(instant: Date, timezone: string | null): string {
   return formatInTimeZone(instant, timezone ?? "UTC", "yyyy-MM-dd'T'HH:mm");
@@ -135,10 +169,23 @@ export function mergeRailJourney(
         ? instantToWallClock(existing.arrivalTime, existing.arrTimezone)
         : null;
 
-  const departureTime = wallClockToInstant(departureWall, dep.depTimezone);
-  const arrivalTime = arrivalWall ? wallClockToInstant(arrivalWall, arr.arrTimezone) : null;
+  // A clock read back from the stored instant exists by construction; only a
+  // clock the request sent can name a skipped hour.
+  const departureTime = input.departureLocal
+    ? sentWallClockToInstant(departureWall, dep.depTimezone, "departureLocal")
+    : wallClockToInstant(departureWall, dep.depTimezone);
+  const arrivalTime = !arrivalWall
+    ? null
+    : input.arrivalLocal
+      ? sentWallClockToInstant(arrivalWall, arr.arrTimezone, "arrivalLocal")
+      : wallClockToInstant(arrivalWall, arr.arrTimezone);
   if (arrivalTime && arrivalTime.getTime() < departureTime.getTime()) {
-    throw new AppError("arrival must not precede departure", 400);
+    throw new AppError(
+      "arrival must not precede departure",
+      400,
+      "RAIL_ARRIVAL_BEFORE_DEPARTURE",
+      "arrivalLocal"
+    );
   }
 
   const { distanceKm, distanceSource } = resolveDistance(existing, input, { ...dep, ...arr });
@@ -185,6 +232,20 @@ function resolveDistance(
   return { distanceKm: greatCircleKm(coords), distanceSource: "great_circle" };
 }
 
+/** A distance measured along a stored line rather than typed or straight. */
+export function isTracedDistanceSource(source: string | null): boolean {
+  return source === "route" || source === "roadtrip";
+}
+
+/**
+ * What a line's length is called, by where the line came from: a converted
+ * roadtrip leg's line (`manual`) is the roadtrip's, not Transitous' — the
+ * list, detail page and statistics used to credit Transitous with it.
+ */
+export function tracedDistanceSourceFor(geometrySource: string): RailTracedDistanceSource {
+  return geometrySource === "manual" ? "roadtrip" : "route";
+}
+
 /**
  * The distance once the line is known. A typed distance always wins; a traced
  * line's own length beats the great-circle figure, which understates track by
@@ -192,8 +253,9 @@ function resolveDistance(
  */
 export function withTracedDistance(
   state: RailJourneyState,
-  tracedKm: number | null
+  tracedKm: number | null,
+  source: RailTracedDistanceSource = "route"
 ): RailJourneyState {
   if (state.distanceSource === "user" || tracedKm === null) return state;
-  return { ...state, distanceKm: tracedKm, distanceSource: "route" };
+  return { ...state, distanceKm: tracedKm, distanceSource: source };
 }

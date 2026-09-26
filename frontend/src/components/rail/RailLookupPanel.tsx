@@ -3,7 +3,12 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { railApi, type RailLookupQuery } from "../../lib/api/rail";
 import { logger } from "../../lib/logger";
-import type { RailLookupAnswer, RailLookupProviders } from "../../types/rail";
+import type {
+  RailLookupAnswer,
+  RailLookupOutcome,
+  RailLookupProvider,
+  RailLookupProviders,
+} from "../../types/rail";
 import { applyLookup, isStationComplete, type RailFormDraft } from "./railFormModel";
 
 interface Props {
@@ -44,12 +49,28 @@ export function lookupQueryFrom(draft: RailFormDraft, date: string): RailLookupQ
   };
 }
 
-/** Why nothing came back, in the words the user needs. */
-export function noMatchReason(answer: RailLookupAnswer): "disabled" | "unavailable" | "noMatch" {
+/** Outcomes that say nothing about the train — the provider gave no answer. */
+const UNANSWERED: readonly RailLookupOutcome[] = ["unavailable", "timedOut", "skippedForTime"];
+
+/**
+ * Why nothing came back, in the words the user needs. "No such train" is
+ * claimed only when every provider that could answer did answer: one that did
+ * not (down, too slow, or not asked for lack of time) leaves the question open,
+ * and the message names it — a db-rest 503 behind a Transitous miss used to
+ * disappear into "no such train" (review 2026-09-26, finding 3).
+ */
+export function noMatchReason(answer: RailLookupAnswer): {
+  kind: "disabled" | "unavailable" | "noMatch";
+  silent: RailLookupProvider[];
+} {
+  const silent = answer.attempts
+    .filter((a) => UNANSWERED.includes(a.outcome))
+    .map((a) => a.provider);
   const outcomes = answer.attempts.map((a) => a.outcome);
-  if (outcomes.every((o) => o === "disabled" || o === "notApplicable")) return "disabled";
-  if (outcomes.includes("unavailable") && !outcomes.includes("noMatch")) return "unavailable";
-  return "noMatch";
+  if (outcomes.every((o) => o === "disabled" || o === "notApplicable")) {
+    return { kind: "disabled", silent };
+  }
+  return { kind: silent.length > 0 ? "unavailable" : "noMatch", silent };
 }
 
 /** The stop to preselect: the one the user already chose, else the train's last. */
@@ -157,11 +178,7 @@ export function RailLookupPanel({
           {t("rail:lookup.error")}
         </p>
       ) : null}
-      {state.kind === "answered" && !match ? (
-        <p role="status" className="mt-2 text-sm">
-          {t(`rail:lookup.none.${noMatchReason(state.answer)}`)}
-        </p>
-      ) : null}
+      {state.kind === "answered" && !match ? <NoMatch answer={state.answer} t={t} /> : null}
 
       {match && arrivalIndex !== null ? (
         <div className="mt-2 space-y-2" role="status">
@@ -228,6 +245,26 @@ export function RailLookupPanel({
           </a>
         </p>
       ) : null}
+    </div>
+  );
+}
+
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/** The miss, and underneath it what each provider said — never a bare "failed". */
+function NoMatch({ answer, t }: { answer: RailLookupAnswer; t: Translate }): JSX.Element {
+  const reason = noMatchReason(answer);
+  const providers = reason.silent.map((p) => t(`rail:lookup.provider.${p}`)).join(", ");
+  return (
+    <div role="status" className="mt-2 text-sm">
+      <p>{t(`rail:lookup.none.${reason.kind}`, { providers })}</p>
+      <ul className="t-caption mt-1" data-testid="rail-lookup-attempts">
+        {answer.attempts.map((a) => (
+          <li key={a.provider}>
+            {t(`rail:lookup.provider.${a.provider}`)}: {t(`rail:lookup.outcome.${a.outcome}`)}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

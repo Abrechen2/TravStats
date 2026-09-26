@@ -135,14 +135,48 @@ describe("POST /rail/roadtrip-conversion/:routeId", () => {
       distanceSource: "great_circle",
       status: "completed",
     });
-    expect(straight.notes).toContain("placeholder at noon");
+    expect(straight.notes).toBeNull();
+    expect(straight.externalRef).toMatch(/^roadtrip:/);
+    // The roadtrip's line, not a Transitous trace — and labelled so.
     expect(drawn).toMatchObject({
       geometrySource: "manual",
-      distanceSource: "route",
+      distanceSource: "roadtrip",
       distanceKm: 243.5,
     });
     expect(drawn.geometry).toHaveLength(3);
     expect(await prisma.tripRoute.count({ where: { id: routeId } })).toBe(1);
+  });
+
+  it("keeps a converted ride's line when the edit form corrects its placeholder time", async () => {
+    // Review 2026-09-26, finding 1: the form resends both stations and the
+    // (empty) match with every save; that must not re-resolve the line.
+    const { routeId } = await railSection();
+    await request(app).post(url(routeId)).set("Cookie", cookie).send({}).expect(200);
+    const drawn = await prisma.railJourney.findFirstOrThrow({
+      where: { userId, geometrySource: "manual" },
+    });
+    const stationOf = (p: "dep" | "arr") => ({
+      name: p === "dep" ? drawn.depStationName : drawn.arrStationName,
+      lat: p === "dep" ? drawn.depLat : drawn.arrLat,
+      lon: p === "dep" ? drawn.depLon : drawn.arrLon,
+      stationId: p === "dep" ? drawn.depStationId : drawn.arrStationId,
+    });
+    const res = await request(app)
+      .patch(`/api/v1/rail/${drawn.id}`)
+      .set("Cookie", cookie)
+      .send({
+        departureStation: stationOf("dep"),
+        arrivalStation: stationOf("arr"),
+        departureLocal: "2025-07-05T09:37",
+        arrivalLocal: "2025-07-05T12:19",
+        lookup: null,
+      });
+    expect(res.status).toBe(200);
+    expect(res.body.data.geometrySource).toBe("manual");
+    expect(res.body.data.geometry).toEqual(drawn.geometry);
+    expect(res.body.data.distanceKm).toBe(drawn.distanceKm);
+    expect(res.body.data.distanceSource).toBe("roadtrip");
+    expect(res.body.meta.geometry.outcome).toBe("unchanged");
   });
 
   it("writes nothing twice, and removes the section only when told to", async () => {

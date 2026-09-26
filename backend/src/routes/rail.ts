@@ -1,4 +1,5 @@
 import { Router, Response, NextFunction } from "express";
+import type { z } from "zod";
 
 import { prisma } from "../db";
 import { Prisma } from "../prisma";
@@ -12,16 +13,25 @@ import {
   type RailQueryInput,
   type UpdateRailJourneyInput,
 } from "../schemas/rail";
-import { mergeRailJourney, withTracedDistance } from "../services/rail/railJourneyWrite";
+import {
+  isTracedDistanceSource,
+  mergeRailJourney,
+  tracedDistanceSourceFor,
+  withTracedDistance,
+} from "../services/rail/railJourneyWrite";
 import {
   readStoredLine,
+  resolveEditedGeometry,
   resolveJourneyGeometry,
   tracedLengthKm,
+  type GeometryEdit,
+  type GeometryFallbackReason,
   type JourneyGeometry,
 } from "../services/rail/railGeometry";
 import { resolveStationInput } from "../services/rail/railStations";
 import { bindConnection } from "../services/rail/railConnection";
 import { recomputeTripStatus } from "../services/tripStatusService";
+import { railYear } from "../shared/railCounting";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
@@ -107,24 +117,66 @@ router.use(authenticate);
 // Method-aware: GET passes through, so read-only tokens keep read access.
 router.use(requireWriteScope);
 
+/**
+ * A refused write body as a stable code plus the first offending field
+ * (`departureStation`, not `departureStation.lat`) — the form maps both to
+ * its own sentence in the reader's language; the Zod prose is for the log.
+ */
+function invalidInput(error: z.ZodError): AppError {
+  const field = error.issues[0]?.path[0];
+  return new AppError(
+    error.message,
+    400,
+    "RAIL_INVALID_INPUT",
+    typeof field === "string" ? field : undefined
+  );
+}
+
 const requireUser = (req: AuthRequest): string => {
   if (!req.userId) throw new AppError("Not authenticated", 401);
   return req.userId;
 };
 
-function buildWhere(query: RailQueryInput, userId: string): Prisma.RailJourneyWhereInput {
+/** The farthest a station clock runs from UTC: UTC+14 ahead, UTC−12 behind. */
+const MAX_AHEAD_OF_UTC_MS = 14 * 60 * 60 * 1000;
+const MAX_BEHIND_UTC_MS = 12 * 60 * 60 * 1000;
+
+/**
+ * The rides that left in `year` on their departure station's calendar
+ * (review 2026-09-26, finding 8) — the rule `railYear` in
+ * `shared/railCounting.ts` already applies to the statistics. The list used
+ * UTC, so a ride leaving Berlin at 00:30 on 1 January was filed under the
+ * year before. The year is derived per row, so it cannot be one SQL range:
+ * the widest UTC window any zone could put in that year is read (ids and
+ * clocks only), the rule picks the rows, and the list query takes their ids.
+ */
+async function idsDepartingInYear(userId: string, year: number): Promise<string[]> {
+  const candidates = await prisma.railJourney.findMany({
+    where: {
+      userId,
+      departureTime: {
+        gte: new Date(Date.UTC(year, 0, 1) - MAX_AHEAD_OF_UTC_MS),
+        lt: new Date(Date.UTC(year + 1, 0, 1) + MAX_BEHIND_UTC_MS),
+      },
+    },
+    select: { id: true, departureTime: true, depTimezone: true },
+  });
+  return candidates
+    .filter((r) => railYear({ ...r, arrivalTime: null, arrTimezone: null }) === year)
+    .map((r) => r.id);
+}
+
+async function buildWhere(
+  query: RailQueryInput,
+  userId: string
+): Promise<Prisma.RailJourneyWhereInput> {
   const statuses = query.status === undefined ? undefined : [query.status].flat();
   const q = query.q;
   return {
     userId,
     ...(statuses && { status: { in: statuses } }),
     ...(query.tripId && { tripId: query.tripId }),
-    ...(query.year !== undefined && {
-      departureTime: {
-        gte: new Date(Date.UTC(query.year, 0, 1)),
-        lt: new Date(Date.UTC(query.year + 1, 0, 1)),
-      },
-    }),
+    ...(query.year !== undefined && { id: { in: await idsDepartingInYear(userId, query.year) } }),
     ...(q && {
       OR: (
         [
@@ -151,7 +203,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const query = parsed.data;
     const limit = query.limit ?? DEFAULT_LIMIT;
     const offset = query.offset ?? 0;
-    const where = buildWhere(query, userId);
+    const where = await buildWhere(query, userId);
 
     const [total, data] = await Promise.all([
       prisma.railJourney.count({ where }),
@@ -229,7 +281,7 @@ async function withResolvedStations(
 /** The geometry columns of a write; the null line is SQL NULL, not JSON null. */
 function geometryColumns(
   lookup: { provider: string | null; ref: string | null },
-  geo: JourneyGeometry
+  geo: { geometry: JourneyGeometry["geometry"]; geometrySource: string }
 ): Prisma.RailJourneyUncheckedUpdateInput {
   return {
     lookupProvider: lookup.provider,
@@ -240,6 +292,37 @@ function geometryColumns(
   };
 }
 
+/**
+ * What a save did to the line, in `meta.geometry` beside the row (review
+ * 2026-09-26, finding 4): a Transitous match saved as a straight line used to
+ * be indistinguishable from a good save, so the form said "saved" and the map
+ * quietly drew the chord. `fallback` names why; `kept` means a re-fetch did
+ * not deliver and the frozen line stayed.
+ */
+interface GeometryReport {
+  outcome: "unchanged" | "traced" | "straight" | "kept";
+  geometrySource: string;
+  fallback: GeometryFallbackReason | null;
+}
+
+function reportOf(geo: JourneyGeometry): GeometryReport {
+  return {
+    outcome: geo.geometrySource === "straight" ? "straight" : "traced",
+    geometrySource: geo.geometrySource,
+    fallback: geo.fallback,
+  };
+}
+
+function editReport(edit: GeometryEdit, storedSource: string): GeometryReport {
+  if (edit.kind === "unchanged") {
+    return { outcome: "unchanged", geometrySource: storedSource, fallback: null };
+  }
+  if (edit.kind === "kept") {
+    return { outcome: "kept", geometrySource: edit.geometrySource, fallback: edit.fallback };
+  }
+  return reportOf(edit.geo);
+}
+
 router.post(
   "/",
   railCreationLimiter,
@@ -247,7 +330,7 @@ router.post(
     try {
       const userId = requireUser(req);
       const parsed = createRailJourneySchema.safeParse(req.body);
-      if (!parsed.success) throw new AppError(parsed.error.message, 400);
+      if (!parsed.success) throw invalidInput(parsed.error);
       const { connectsFrom, ...input } = parsed.data;
       // Prisma proves a trip or booking EXISTS, never whose it is (AUD-038).
       await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
@@ -305,7 +388,7 @@ router.post(
       await restatusTrips(journey.tripId);
 
       logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
-      res.status(201).json({ success: true, data: journey });
+      res.status(201).json({ success: true, data: journey, meta: { geometry: reportOf(geo) } });
     } catch (err) {
       next(err);
     }
@@ -319,7 +402,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     if (!existing) throw new AppError("Rail journey not found", 404);
 
     const parsed = updateRailJourneySchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    if (!parsed.success) throw invalidInput(parsed.error);
     const input = parsed.data;
     await assertReferencesOwned(userId, { tripId: input.tripId, bookingId: input.bookingId });
 
@@ -327,26 +410,38 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     // rest (an arrival moved behind an untouched departure is refused here).
     const merged = mergeRailJourney(existing, await withResolvedStations(input));
 
-    // The line is fetched again only when what it depends on moved — the
-    // stations or the matched trip. Otherwise the frozen line stays frozen.
+    // The line is fetched again only when what it depends on actually moved
+    // (resolveEditedGeometry) — the form sends both stations and the match on
+    // every save, so their presence in the body says nothing.
     const lookup =
       input.lookup !== undefined
         ? { provider: input.lookup?.provider ?? null, ref: input.lookup?.ref ?? null }
         : { provider: existing.lookupProvider, ref: existing.lookupRef };
-    const refetch =
-      input.lookup !== undefined ||
-      input.departureStation !== undefined ||
-      input.arrivalStation !== undefined;
-    const geo: JourneyGeometry | null = refetch
-      ? await resolveJourneyGeometry({
-          lookupProvider: lookup.provider,
-          lookupRef: lookup.ref,
-          dep: { lat: merged.depLat, lon: merged.depLon },
-          arr: { lat: merged.arrLat, lon: merged.arrLon },
-        })
-      : null;
-    const line = geo ? geo.geometry : readStoredLine(existing.geometry);
-    const state = withTracedDistance(merged, line && tracedLengthKm(line));
+    const edit = await resolveEditedGeometry(existing, {
+      lookup,
+      dep: { lat: merged.depLat, lon: merged.depLon },
+      arr: { lat: merged.arrLat, lon: merged.arrLon },
+    });
+    const written =
+      edit.kind === "unchanged"
+        ? null
+        : edit.kind === "kept"
+          ? { geometry: edit.line, geometrySource: edit.geometrySource }
+          : edit.geo;
+    const line = written ? written.geometry : readStoredLine(existing.geometry);
+    // An untouched line keeps the length it was stored with — a converted
+    // roadtrip leg carries the roadtrip's own figure, not its coarse polyline's.
+    const tracedKm =
+      edit.kind === "unchanged" &&
+      isTracedDistanceSource(existing.distanceSource) &&
+      existing.distanceKm !== null
+        ? existing.distanceKm
+        : line && tracedLengthKm(line);
+    const state = withTracedDistance(
+      merged,
+      tracedKm,
+      tracedDistanceSourceFor(written ? written.geometrySource : existing.geometrySource)
+    );
 
     const resolved =
       input.companions === undefined
@@ -388,7 +483,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           ...plainColumns(input),
           ...state,
           ...fxColumns,
-          ...(geo && geometryColumns(lookup, geo)),
+          ...(written && geometryColumns(lookup, written)),
           ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
         },
       });
@@ -399,7 +494,11 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     });
 
     await restatusTrips(existing.tripId, journey.tripId);
-    res.json({ success: true, data: journey });
+    res.json({
+      success: true,
+      data: journey,
+      meta: { geometry: editReport(edit, existing.geometrySource) },
+    });
   } catch (err) {
     next(err);
   }

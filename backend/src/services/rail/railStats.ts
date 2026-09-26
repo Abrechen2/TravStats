@@ -56,6 +56,8 @@ export interface RailStats {
     straightLineKm: number;
     /** route — along the traced Transitous line */
     tracedKm: number;
+    /** roadtrip — along the line a converted roadtrip leg brought */
+    roadtripKm: number;
     /** user — typed from the ticket */
     ticketKm: number;
     /** Rides with no distance at all — out of every km figure. */
@@ -151,6 +153,7 @@ export function computeRailStats(rows: readonly RailStatsRow[]): RailStats {
       totalKm: measured.reduce((sum, r) => sum + (r.distanceKm as number), 0),
       straightLineKm: sumKm("great_circle"),
       tracedKm: sumKm("route"),
+      roadtripKm: sumKm("roadtrip"),
       ticketKm: sumKm("user"),
       unmeasuredJourneys: rows.length - measured.length,
     },

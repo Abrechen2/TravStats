@@ -10,6 +10,7 @@ const STATS: RailStats = {
     totalKm: 1000,
     straightLineKm: 400,
     tracedKm: 550,
+    roadtripKm: 120,
     ticketKm: 50,
     unmeasuredJourneys: 1,
   },
@@ -60,6 +61,8 @@ describe("RailStatsSection", () => {
     const split = await screen.findByTestId("rail-km-split");
     // Test i18n renders keys: each source appears under its own label.
     expect(split.textContent).toContain("rail:stats.kmTraced");
+    // Review 2026-09-26, finding 7: roadtrip lines are their own source.
+    expect(split.textContent).toContain("rail:stats.kmRoadtrip");
     expect(split.textContent).toContain("rail:stats.kmTicket");
     expect(split.textContent).toContain("rail:stats.kmStraight");
     expect(split.textContent).toContain("rail:stats.kmUnmeasured");

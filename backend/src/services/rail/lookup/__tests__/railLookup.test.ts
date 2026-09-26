@@ -249,4 +249,35 @@ describe("lookupTrain", () => {
     await ask();
     expect(m.calls).toHaveLength(before);
   });
+
+  // Review 2026-09-26, finding 2: six windows plus the trip plus db-rest,
+  // 8 s each, used to run far past the client's 10 s timeout and end in a
+  // generic "the search failed" with no word about which service was slow.
+  it("stops at its time budget and says which provider it cut short or skipped", async () => {
+    let clock = Date.parse("2026-09-26T08:00:00Z");
+    const now = jest.spyOn(Date, "now").mockImplementation(() => clock);
+    try {
+      const m = mock([
+        [
+          /stoptimes/,
+          () => {
+            clock += 6_000; // every window answers, slowly, without the train
+            return { stopTimes: [] };
+          },
+        ],
+      ]);
+      const answer = await ask();
+
+      expect(answer.match).toBeNull();
+      expect(answer.attempts).toEqual([
+        { provider: "transitous", outcome: "timedOut" },
+        { provider: "db-rest", outcome: "skippedForTime" },
+      ]);
+      // 20 s at 6 s a window: the fifth is never started, db-rest never asked.
+      expect(m.calls.filter((u) => u.includes("stoptimes"))).toHaveLength(4);
+      expect(m.calls.some((u) => u.includes("db.transport.rest"))).toBe(false);
+    } finally {
+      now.mockRestore();
+    }
+  });
 });

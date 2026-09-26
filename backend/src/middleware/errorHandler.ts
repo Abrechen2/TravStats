@@ -48,7 +48,15 @@ export type ApiErrorCode =
   | "RESTORE_ARCHIVE_UNREADABLE"
   /** The archive's encrypted values belong to another instance key. The
    *  restore dialog turns this into the acknowledgement it needs. */
-  | "RESTORE_ENCRYPTION_KEY_MISMATCH";
+  | "RESTORE_ENCRYPTION_KEY_MISMATCH"
+  /** A rail write body failed validation; `field` names the first field. */
+  | "RAIL_INVALID_INPUT"
+  /** A rail arrival instant before its departure — usually a night train
+   *  whose arrival kept the departure's date. `field` is `arrivalLocal`. */
+  | "RAIL_ARRIVAL_BEFORE_DEPARTURE"
+  /** A station wall clock inside a spring-forward gap: that time never
+   *  happened there. `field` is the time that does not exist. */
+  | "RAIL_LOCAL_TIME_NONEXISTENT";
 
 interface AuthRequest extends Request {
   user?: {
@@ -226,6 +234,8 @@ export const errorHandler = async (
     // login form printed "Invalid credentials" into a German page). The code
     // is what a client is meant to branch on.
     ...(isAppError(err) && err.code ? { code: err.code } : {}),
+    // Which input the cause belongs to, so a form can put it beside that field.
+    ...(isAppError(err) && err.field ? { field: err.field } : {}),
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };
@@ -248,10 +258,18 @@ export class AppError extends Error {
    */
   code?: ApiErrorCode;
 
-  constructor(message: string, statusCode: number = 500, code?: ApiErrorCode) {
+  /**
+   * The request field the cause belongs to (`arrivalLocal`,
+   * `departureStation`), for a form that shows the message beside it.
+   * Only meaningful with a `code` — the prose is still not for readers.
+   */
+  field?: string;
+
+  constructor(message: string, statusCode: number = 500, code?: ApiErrorCode, field?: string) {
     super(message);
     this.statusCode = statusCode;
     this.code = code;
+    this.field = field;
     this.name = "AppError";
   }
 }

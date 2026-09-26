@@ -15,9 +15,12 @@ export const RAIL_WRITE_STATUSES = ["scheduled", "cancelled"] as const;
 export const RAIL_TRAVEL_CLASSES = ["first", "second", "sleeper", "couchette"] as const;
 /**
  * great_circle = the straight line between the stations; user = typed from the
- * ticket; route = the length of the traced Transitous line the row carries.
+ * ticket; route = the length of the traced Transitous line the row carries;
+ * roadtrip = the length of the line a converted roadtrip leg brought along
+ * (routed or drawn in the roadtrip, not a timetable's trace).
  */
-export const RAIL_DISTANCE_SOURCES = ["great_circle", "user", "route"] as const;
+export const RAIL_DISTANCE_SOURCES = ["great_circle", "user", "route", "roadtrip"] as const;
+export type RailTracedDistanceSource = "route" | "roadtrip";
 /** Where the map line comes from. Phase 2 writes `straight` and `transitous`. */
 export const RAIL_GEOMETRY_SOURCES = [
   "none",
@@ -25,6 +28,18 @@ export const RAIL_GEOMETRY_SOURCES = [
   "transitous",
   "openrailrouting",
   "manual",
+] as const;
+/**
+ * Why a Transitous match was saved without its traced line (the save's
+ * `meta.geometry.fallback`): switched off by the admin, not answering (or no
+ * shape), a station off the traced line, or a "trace" of station-to-station
+ * chords.
+ */
+export const RAIL_GEOMETRY_FALLBACK_REASONS = [
+  "providerDisabled",
+  "providerUnavailable",
+  "stationOffLine",
+  "untracedShape",
 ] as const;
 export const RAIL_SORT_FIELDS = ["departure", "distance", "created"] as const;
 
@@ -141,7 +156,7 @@ export const railQuerySchema = z.object({
   status: z.union([z.enum(RAIL_STATUSES), z.array(z.enum(RAIL_STATUSES))]).optional(),
   /** Free text over operator, train, stations and booking reference. */
   q: z.string().trim().min(1).max(100).optional(),
-  /** Calendar year of the departure, read in UTC. */
+  /** Calendar year of the departure, on the departure station's calendar. */
   year: z.coerce.number().int().min(1900).max(2200).optional(),
   tripId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),

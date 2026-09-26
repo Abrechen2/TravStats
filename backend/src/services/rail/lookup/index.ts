@@ -5,6 +5,7 @@ import { instantToWallClock } from "../railJourneyWrite";
 import { catalogueStationAt, findStation } from "../railStations";
 import { lookupDbRest } from "./dbRest";
 import { lookupTransitous } from "./transitous";
+import { hasTimeLeft, lookupDeadline } from "./railHttp";
 import { parseTrainNumber } from "./trainNumber";
 import type {
   ProviderResult,
@@ -101,7 +102,15 @@ async function toLookupStop(stop: ProviderStop): Promise<RailLookupStop> {
   };
 }
 
-export async function lookupTrain(input: RailLookupInput): Promise<RailLookupAnswer> {
+/**
+ * `budgetMs` bounds the whole chain (`RAIL_LOOKUP_BUDGET_MS` by default): a
+ * provider whose turn comes after the budget is spent is reported
+ * `skippedForTime`, one cut short mid-way `timedOut` — never a silent miss.
+ */
+export async function lookupTrain(
+  input: RailLookupInput,
+  options: { budgetMs?: number } = {}
+): Promise<RailLookupAnswer> {
   const parsed = parseTrainNumber(input.trainNumber, input.category);
   if (!parsed) throw new AppError("trainNumber carries no number", 400);
 
@@ -115,6 +124,7 @@ export async function lookupTrain(input: RailLookupInput): Promise<RailLookupAns
     date: input.date,
     from,
     timezone: timezoneOfLodging(from.lat, from.lon),
+    deadline: lookupDeadline(options.budgetMs),
   };
 
   const switches = await railProviderSwitches();
@@ -126,6 +136,10 @@ export async function lookupTrain(input: RailLookupInput): Promise<RailLookupAns
     }
     if (!provider.applies(station?.country ?? null)) {
       attempts.push({ provider: provider.id, outcome: "notApplicable" });
+      continue;
+    }
+    if (!hasTimeLeft(query.deadline)) {
+      attempts.push({ provider: provider.id, outcome: "skippedForTime" });
       continue;
     }
     const result = await provider.run(query);

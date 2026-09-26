@@ -69,9 +69,16 @@
     "cancel": "Abbrechen",
     "save": "Speichern",
     "saving": "Speichert …",
-    "saveError": "Die Fahrt konnte nicht gespeichert werden."
+    "saveError": "Die Fahrt konnte nicht gespeichert werden.",
+    "errors": {
+      "arrivalBeforeDeparture": "Die Ankunft liegt vor der Abfahrt. Fährt der Zug über Nacht, trag bei der Ankunft das Datum des nächsten Tages ein.",
+      "nonexistentTime": "Diese Uhrzeit gibt es an diesem Tag nicht: Bei der Umstellung auf Sommerzeit springen die Uhren eine Stunde vor. Prüf die Zeit auf dem Ticket.",
+      "invalidField": "Die Angabe „{{field}}“ wurde nicht angenommen. Bitte prüf sie.",
+      "invalid": "Eine Angabe wurde nicht angenommen. Bitte prüf die Felder."
+    }
   },
   "tracedLine": "entlang der Strecke, Transitous",
+  "roadtripLine": "entlang der Roadtrip-Route",
   "station": {
     "searchPlaceholder": "Bahnhof suchen, z. B. Frankfurt Hbf",
     "searching": "Sucht …",
@@ -92,8 +99,17 @@
     "error": "Die Suche ist fehlgeschlagen. Du kannst die Fahrt von Hand eintragen.",
     "none": {
       "disabled": "Für diesen Bahnhof ist hier kein Fahrplandienst eingeschaltet.",
-      "unavailable": "Die Fahrplandienste antworten gerade nicht. Versuch es später noch einmal oder trag die Fahrt von Hand ein.",
+      "unavailable": "Keine Antwort von {{providers}} — ob dieser Zug an diesem Tag ab diesem Bahnhof fährt, ist deshalb offen. Versuch es später noch einmal oder trag die Fahrt von Hand ein.",
       "noMatch": "Im Fahrplan fährt an diesem Tag kein solcher Zug ab diesem Bahnhof. Bei einem vergangenen Tag ist das normal."
+    },
+    "outcome": {
+      "matched": "gefunden",
+      "noMatch": "kein passender Zug an diesem Tag",
+      "unavailable": "hat nicht geantwortet",
+      "timedOut": "hat nicht rechtzeitig geantwortet",
+      "skippedForTime": "nicht mehr gefragt — die Zeit für die Suche war um",
+      "disabled": "auf dieser Instanz abgeschaltet",
+      "notApplicable": "für diesen Bahnhof nicht zuständig"
     },
     "found": "Gefunden: {{train}} · {{operator}} (Quelle: {{provider}})",
     "provider": {
@@ -113,6 +129,8 @@
     "loading": "Lädt …",
     "loadError": "Die Fahrt konnte nicht geladen werden.",
     "notFound": "Diese Fahrt gibt es nicht (mehr).",
+    "convertedFromRoadtrip": "Aus einem Roadtrip übernommen.",
+    "convertedPlaceholder": "Die Abfahrt war ein Platzhalter (12:00 Uhr Ortszeit) und die Ankunft ist unbekannt — bitte nach dem Ticket korrigieren.",
     "back": "Zurück zum Bahn-Logbuch",
     "distance": "Entfernung",
     "typedDistance": "vom Ticket",
@@ -129,6 +147,7 @@
     "ticket": "Fahrkarte",
     "route": "Strecke",
     "lineTraced": "Linie: Streckenverlauf dieses Zuges, von Transitous übernommen.",
+    "lineRoadtrip": "Linie: aus dem Roadtrip übernommen — geplant, nicht aus dem Fahrplan.",
     "lineStraight": "Linie: Luftlinie zwischen den Bahnhöfen — nicht der Weg des Zuges."
   },
   "connection": {
@@ -150,6 +169,7 @@
     "journeysDesc": "abgeschlossene Fahrten, eine je Zug",
     "kmAll": "Bahn-Kilometer",
     "kmTraced": "{{km}} km entlang der Strecke",
+    "kmRoadtrip": "{{km}} km entlang von Roadtrip-Routen",
     "kmTicket": "{{km}} km laut Ticket",
     "kmStraight": "{{km}} km Luftlinie (die echte Strecke ist länger)",
     "kmUnmeasured_one": "{{count}} Fahrt ohne Entfernung",
@@ -171,6 +191,7 @@
     "delayOver": "mehr als {{minutes}} min",
     "longest": "Längste Fahrt",
     "sourceTraced": "entlang der Strecke",
+    "sourceRoadtrip": "entlang der Roadtrip-Route",
     "sourceTicket": "laut Ticket",
     "sourceStraight": "Luftlinie",
     "byYear": "Fahrten pro Jahr",
@@ -207,5 +228,15 @@
     "nothingNew": "Alle Fahrten waren schon übernommen.",
     "removed": "Der Roadtrip wurde gelöscht.",
     "error": "Die Übernahme ist fehlgeschlagen."
+  },
+  "geometryNotice": {
+    "straight": "Fahrt gespeichert, aber ohne Streckenverlauf – {{reason}}. Die Karte zeigt die Luftlinie.",
+    "kept": "Fahrt gespeichert. Der Streckenverlauf wurde nicht neu geladen – {{reason}}; der bisherige bleibt erhalten.",
+    "reason": {
+      "providerDisabled": "Transitous ist auf dieser Instanz abgeschaltet",
+      "providerUnavailable": "Transitous hat nicht geantwortet",
+      "stationOffLine": "ein Bahnhof liegt nicht auf der Strecke dieses Zuges",
+      "untracedShape": "Transitous kennt für diesen Zug nur gerade Linien zwischen den Halten"
+    }
   }
 }

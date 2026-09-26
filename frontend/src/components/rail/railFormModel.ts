@@ -1,4 +1,5 @@
 import type {
+  RailGeometryReport,
   RailJourney,
   RailJourneyInput,
   RailLookupAnswer,
@@ -240,4 +241,85 @@ export function applyLookup(
     arrivalLocal: to.arrivalLocal ?? draft.arrivalLocal,
     lookup: { provider: match.provider, ref: match.ref },
   };
+}
+
+/**
+ * What the form says after a save that asked for a traced line and did not
+ * get one (review 2026-09-26, finding 4) — before, "saved" was all it said and
+ * the map quietly drew the chord. Null when there is nothing to say.
+ */
+export function geometryNotice(
+  report: RailGeometryReport | null
+): { level: "warning" | "info"; key: string; reasonKey: string } | null {
+  if (!report || report.fallback === null) return null;
+  const reasonKey = `rail:geometryNotice.reason.${report.fallback}`;
+  if (report.outcome === "straight") {
+    return { level: "warning", key: "rail:geometryNotice.straight", reasonKey };
+  }
+  if (report.outcome === "kept")
+    return { level: "info", key: "rail:geometryNotice.kept", reasonKey };
+  return null;
+}
+
+/** The form fields a refusal can be shown beside. */
+export type RailFormErrorField = "departureLocal" | "arrivalLocal";
+
+/** A refused save as the form shows it: a message key, maybe beside one field. */
+export interface RailSaveError {
+  key: string;
+  field: RailFormErrorField | null;
+  /** For `invalidField`: the label of the field the server named. */
+  fieldLabelKey?: string;
+}
+
+/** The server's field names, as the form labels them. */
+const FIELD_LABEL_KEYS: Record<string, string> = {
+  operator: "rail:form.operator",
+  trainCategory: "rail:form.category",
+  trainNumber: "rail:form.number",
+  departureStation: "rail:form.departureStation",
+  arrivalStation: "rail:form.arrivalStation",
+  departureLocal: "rail:form.departureTime",
+  arrivalLocal: "rail:form.arrivalTime",
+  distanceKm: "rail:form.distance",
+  travelClass: "rail:form.class",
+  coach: "rail:form.coach",
+  seat: "rail:form.seatNumber",
+  delayMinutes: "rail:form.delay",
+  bookingReference: "rail:form.bookingReference",
+  price: "rail:form.price",
+  currency: "rail:form.currency",
+  tags: "rail:form.tags",
+  companions: "rail:form.companions",
+  tripId: "rail:form.trip",
+  notes: "rail:form.notes",
+};
+
+const TIME_FIELDS: readonly string[] = ["departureLocal", "arrivalLocal"];
+
+/**
+ * A failed save, read by its stable `code` and `field` (review 2026-09-26,
+ * finding 5). The server's `error` prose is English and written for a log —
+ * it is never shown; an unknown refusal gets the generic sentence.
+ */
+export function saveErrorFrom(err: unknown): RailSaveError {
+  const data = (err as { response?: { data?: { code?: unknown; field?: unknown } } })?.response
+    ?.data;
+  const code = typeof data?.code === "string" ? data.code : null;
+  const field = typeof data?.field === "string" ? data.field : null;
+  const timeField = field && TIME_FIELDS.includes(field) ? (field as RailFormErrorField) : null;
+  switch (code) {
+    case "RAIL_ARRIVAL_BEFORE_DEPARTURE":
+      return { key: "rail:form.errors.arrivalBeforeDeparture", field: "arrivalLocal" };
+    case "RAIL_LOCAL_TIME_NONEXISTENT":
+      return { key: "rail:form.errors.nonexistentTime", field: timeField };
+    case "RAIL_INVALID_INPUT": {
+      const fieldLabelKey = field ? FIELD_LABEL_KEYS[field] : undefined;
+      return fieldLabelKey
+        ? { key: "rail:form.errors.invalidField", field: timeField, fieldLabelKey }
+        : { key: "rail:form.errors.invalid", field: null };
+    }
+    default:
+      return { key: "rail:form.saveError", field: null };
+  }
 }

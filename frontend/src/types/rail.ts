@@ -6,8 +6,11 @@
 
 export type RailStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
 export type RailTravelClass = "first" | "second" | "sleeper" | "couchette";
-/** great_circle = straight line; user = typed; route = along the traced Transitous line. */
-export type RailDistanceSource = "great_circle" | "user" | "route";
+/**
+ * great_circle = straight line; user = typed; route = along the traced
+ * Transitous line; roadtrip = along the line a converted roadtrip leg brought.
+ */
+export type RailDistanceSource = "great_circle" | "user" | "route" | "roadtrip";
 export type RailLookupProvider = "transitous" | "db-rest";
 
 export const RAIL_TRAVEL_CLASSES: readonly RailTravelClass[] = [
@@ -64,6 +67,8 @@ export interface RailJourney {
   companions: string[];
   tripId: string | null;
   bookingId: string | null;
+  /** Import key; `roadtrip:<section>:<leg>` marks a ride converted from a roadtrip. */
+  externalRef?: string | null;
   trip?: { id: string; name: string; color: string } | null;
   createdAt: string;
   updatedAt: string;
@@ -178,8 +183,18 @@ export interface RailLookupStop {
   departureLocal: string | null;
 }
 
+/**
+ * One provider's answer. `timedOut` = asked, but the lookup's 20 s budget ran
+ * out first; `skippedForTime` = not asked, the budget was spent before its turn.
+ */
 export type RailLookupOutcome =
-  "matched" | "noMatch" | "unavailable" | "disabled" | "notApplicable";
+  | "matched"
+  | "noMatch"
+  | "unavailable"
+  | "disabled"
+  | "notApplicable"
+  | "timedOut"
+  | "skippedForTime";
 
 export interface RailLookupAnswer {
   match: {
@@ -193,6 +208,27 @@ export interface RailLookupAnswer {
     hasGeometry: boolean;
   } | null;
   attempts: Array<{ provider: RailLookupProvider; outcome: RailLookupOutcome }>;
+}
+
+/** Why a Transitous match was saved without its (new) traced line. */
+export type RailGeometryFallback =
+  "providerDisabled" | "providerUnavailable" | "stationOffLine" | "untracedShape";
+
+/**
+ * `meta.geometry` of a save: what it did to the frozen line. `kept` = a
+ * re-fetch did not deliver and the stored line stayed; `unchanged` = an edit
+ * that touched neither station nor match.
+ */
+export interface RailGeometryReport {
+  outcome: "unchanged" | "traced" | "straight" | "kept";
+  geometrySource: RailJourney["geometrySource"];
+  fallback: RailGeometryFallback | null;
+}
+
+/** A saved journey and what the save did to its line. */
+export interface RailSaveResult {
+  journey: RailJourney;
+  geometry: RailGeometryReport | null;
 }
 
 export interface RailLookupProviders {
@@ -218,6 +254,7 @@ export interface RailStats {
     totalKm: number;
     straightLineKm: number;
     tracedKm: number;
+    roadtripKm: number;
     ticketKm: number;
     unmeasuredJourneys: number;
   };

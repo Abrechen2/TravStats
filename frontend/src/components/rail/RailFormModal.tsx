@@ -11,6 +11,7 @@ import { minorUnits } from "../../shared/currencies";
 import { railApi } from "../../lib/api/rail";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
+import { useToastStore } from "../../store/toastStore";
 import type { Trip } from "../../types";
 import { RAIL_TRAVEL_CLASSES, type RailJourney, type RailTravelClass } from "../../types/rail";
 import { StationPicker } from "./StationPicker";
@@ -19,9 +20,12 @@ import {
   canSubmit,
   connectionDraftFrom,
   draftFrom,
+  geometryNotice,
   isStationComplete,
+  saveErrorFrom,
   toRailInput,
   type RailFormDraft,
+  type RailSaveError,
 } from "./railFormModel";
 
 interface Props {
@@ -41,6 +45,9 @@ interface Props {
 
 const INPUT_CLASS =
   "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
+
+/** A notice about the line is read, not glanced at — longer than a "saved". */
+const NOTICE_MS = 12_000;
 
 // Native date/time pickers render their mask unreadably dark on our surface
 // without it — the same note the cruise form carries.
@@ -64,6 +71,7 @@ export function RailFormModal({
 }: Props): JSX.Element {
   const { t } = useTranslation(["rail", "common"]);
   const recentCurrencies = useRecentCurrencies();
+  const addToast = useToastStore((s) => s.addToast);
   // The dialog can move on to the next leg without closing, so what it edits
   // and what it continues are state, seeded from the props.
   const [journey, setJourney] = useState<RailJourney | null>(initialJourney);
@@ -78,7 +86,7 @@ export function RailFormModal({
   const [depValid, setDepValid] = useState(true);
   const [arrValid, setArrValid] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RailSaveError | null>(null);
 
   const set = <K extends keyof RailFormDraft>(key: K, value: RailFormDraft[K]): void =>
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -109,6 +117,24 @@ export function RailFormModal({
   });
 
   const ready = canSubmit(draft) && depValid && arrValid;
+  const errorText =
+    error === null
+      ? null
+      : t(error.key, error.fieldLabelKey ? { field: t(error.fieldLabelKey) } : undefined);
+  /** The refusal shown under a time field, with the input marked invalid. */
+  const fieldError = (field: "departureLocal" | "arrivalLocal") =>
+    error?.field === field
+      ? {
+          input: { "aria-invalid": true, "aria-describedby": `rail-${field}-error` } as const,
+          message: (
+            <p id={`rail-${field}-error`} role="alert" className="mt-1 text-sm text-(--danger)">
+              {errorText}
+            </p>
+          ),
+        }
+      : { input: {}, message: null };
+  const depError = fieldError("departureLocal");
+  const arrError = fieldError("arrivalLocal");
 
   const previousId = typeof connectsFrom === "string" ? connectsFrom : connectsFrom?.id;
   const previousStation =
@@ -120,9 +146,14 @@ export function RailFormModal({
     setError(null);
     try {
       const input = toRailInput(draft);
-      const saved = journey
+      const result = journey
         ? await railApi.update(journey.id, input)
         : await railApi.create(previousId ? { ...input, connectsFrom: previousId } : input);
+      const saved = result.journey;
+      const notice = geometryNotice(result.geometry);
+      if (notice) {
+        addToast(notice.level, t(notice.key, { reason: t(notice.reasonKey) }), NOTICE_MS);
+      }
       if (!thenConnect) {
         await onSaved(saved);
         return;
@@ -136,8 +167,7 @@ export function RailFormModal({
       setFormKey((k) => k + 1);
     } catch (err: unknown) {
       logger.error("RailFormModal: save failed", err);
-      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(message ?? t("rail:form.saveError"));
+      setError(saveErrorFrom(err));
     } finally {
       setSaving(false);
     }
@@ -243,26 +273,34 @@ export function RailFormModal({
             />
           </div>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="text-sm">
-              {t("rail:form.departureTime")}
-              <input
-                type="datetime-local"
-                className={`mt-1 ${INPUT_CLASS}`}
-                style={DARK_PICKER_STYLE}
-                value={draft.departureLocal}
-                onChange={(e): void => set("departureLocal", e.target.value)}
-              />
-            </label>
-            <label className="text-sm">
-              {t("rail:form.arrivalTime")}
-              <input
-                type="datetime-local"
-                className={`mt-1 ${INPUT_CLASS}`}
-                style={DARK_PICKER_STYLE}
-                value={draft.arrivalLocal}
-                onChange={(e): void => set("arrivalLocal", e.target.value)}
-              />
-            </label>
+            <div>
+              <label className="block text-sm">
+                {t("rail:form.departureTime")}
+                <input
+                  type="datetime-local"
+                  className={`mt-1 ${INPUT_CLASS}`}
+                  style={DARK_PICKER_STYLE}
+                  value={draft.departureLocal}
+                  onChange={(e): void => set("departureLocal", e.target.value)}
+                  {...depError.input}
+                />
+              </label>
+              {depError.message}
+            </div>
+            <div>
+              <label className="block text-sm">
+                {t("rail:form.arrivalTime")}
+                <input
+                  type="datetime-local"
+                  className={`mt-1 ${INPUT_CLASS}`}
+                  style={DARK_PICKER_STYLE}
+                  value={draft.arrivalLocal}
+                  onChange={(e): void => set("arrivalLocal", e.target.value)}
+                  {...arrError.input}
+                />
+              </label>
+              {arrError.message}
+            </div>
           </div>
           <p className="mt-2 text-xs text-(--text-muted)">{t("rail:form.timeHint")}</p>
           <label className="mt-3 block text-sm">
@@ -398,12 +436,12 @@ export function RailFormModal({
         {!(isStationComplete(draft.departure) && isStationComplete(draft.arrival)) && (
           <p className="mb-3 text-sm text-(--text-muted)">{t("rail:form.stationMissing")}</p>
         )}
-        {error !== null && (
+        {error !== null && error.field === null && (
           <div
             role="alert"
             className="mb-3 rounded-md border border-(--danger)/50 bg-(--danger)/10 px-3 py-2 text-sm text-(--danger)"
           >
-            {error}
+            {errorText}
           </div>
         )}
       </div>
