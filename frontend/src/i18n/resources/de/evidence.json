@@ -67,7 +67,9 @@
     "lodgings": "Unterkünfte",
     "places": "Orte",
     "cities": "Städte",
-    "lists": "Listen"
+    "lists": "Listen",
+    "rides": "Fahrten",
+    "operators": "Bahngesellschaften"
   },
   "evidence.metric.flightCount": "Anzahl Flüge",
   "evidence.metric.flightTimeMinutes": "Flugzeit gesamt",
@@ -166,5 +168,12 @@
   "evidence.ranking.country": "Land {{country}}",
   "evidence.ranking.aircraftType": "Flugzeugtyp {{aircraft}}",
   "evidence.subtitle.notConverted": "Nicht umgerechnet: {{amount}} {{currency}}",
-  "evidence.subtitle.nightsUnknown": "Länge des Aufenthalts nicht bekannt"
+  "evidence.subtitle.nightsUnknown": "Länge des Aufenthalts nicht bekannt",
+  "evidence.metric.railRideCount": "Bahnfahrten",
+  "evidence.metric.railDistanceKmTotal": "Bahn-Kilometer",
+  "evidence.metric.railCountriesCount": "Länder per Bahn",
+  "evidence.metric.railOperatorsCount": "Bahngesellschaften",
+  "evidence.metric.railNightTrainCount": "Nachtzüge",
+  "evidence.metric.railHighSpeedRideCount": "Hochgeschwindigkeitsfahrten",
+  "evidence.metric.railCrossBorderRideCount": "Grenzüberschreitende Fahrten"
 }

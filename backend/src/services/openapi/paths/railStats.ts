@@ -59,6 +59,14 @@ const railStats = registry.register(
       byYear: z.array(
         z.object({ year: z.number().int(), journeys: z.number().int(), km: z.number() })
       ),
+      rideKinds: z
+        .object({
+          nightTrains: z.number().int(),
+          highSpeed: z.number().int(),
+          crossBorder: z.number().int().describe("Both stations' countries known and different"),
+          operators: z.number().int().describe("Distinct operators, spelling folded"),
+        })
+        .describe("Rides of a kind, counted by the rule the rail badges use"),
     })
     .openapi("RailStats")
 );

@@ -150,6 +150,13 @@ describe("rail statistics", () => {
     expect(s.countries).toEqual(["AT", "CH", "DE"]);
   });
 
+  it("counts the kinds of ride by the rule the rail badges use", async () => {
+    const s = (await get()).body.data;
+    // NJ Wien → Zürich is the night train; both ICEs are high-speed;
+    // Frankfurt → Basel and Wien → Zürich cross a border; two operators.
+    expect(s.rideKinds).toEqual({ nightTrains: 1, highSpeed: 2, crossBorder: 2, operators: 2 });
+  });
+
   it("files a night train under the year it left, on its station's calendar", async () => {
     const y2024 = (await get("?year=2024")).body.data;
     expect(y2024.journeys).toBe(1);

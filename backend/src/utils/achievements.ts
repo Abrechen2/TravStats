@@ -1,5 +1,6 @@
 import { prisma } from "../db";
 import { calculateRoadtripAchievementStats } from "./roadtripAchievements";
+import { calculateRailAchievementStats } from "./railAchievements";
 import logger from "./logger";
 import {
   applyAchievementWrites,
@@ -679,7 +680,8 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       existingAchievementMap,
       augmentedStats,
       flights as FlightData[],
-      await calculateRoadtripAchievementStats(userId)
+      await calculateRoadtripAchievementStats(userId),
+      await calculateRailAchievementStats(userId)
     );
 
     // `return await`, not `return`: a bare return would hand the promise out

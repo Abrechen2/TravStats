@@ -78,6 +78,18 @@ export const ACHIEVEMENT_EVIDENCE_KEY: Record<string, string> = {
   place_visits_count: "placeVisitCount",
   place_countries: "placeCountriesCount",
   place_cities: "placeCitiesCount",
+
+  // Rail (2.7) — the badges and these measures fold the same rides through
+  // `utils/railAchievements.ts`, so progress and panel are one number.
+  // `rail_longest_km` is absent: the longest ride is an extremum, which
+  // release 1 does not serve; the rail tab names that ride as its record.
+  rail_count: "railRideCount",
+  rail_km: "railDistanceKmTotal",
+  rail_countries: "railCountriesCount",
+  rail_operators: "railOperatorsCount",
+  rail_night_trains: "railNightTrainCount",
+  rail_high_speed: "railHighSpeedRideCount",
+  rail_cross_border: "railCrossBorderRideCount",
 };
 
 /** The served measure behind this rule, or null when nobody can list it yet. */

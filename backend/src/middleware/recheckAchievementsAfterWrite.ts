@@ -10,6 +10,8 @@ const WRITES = new Set(["POST", "PUT", "PATCH", "DELETE"]);
  * with every station, leg and kind change, and those writes are spread over
  * a dozen handlers under /roadtrips, /tours and /trips/:id/routes. Without
  * this the badges only caught up on the next flight, stay or place write.
+ * Rail badges (2.7) ride the same mount over /rail: its router, like the
+ * roadtrip ones, never calls the engine itself.
  *
  * The check runs AFTER the response, never before it: the station editor
  * saves on every pause, and a reader should not wait for the whole

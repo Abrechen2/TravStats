@@ -2,7 +2,7 @@
  * Achievement definitions for TravStats
  * These are core application data that must always be available.
  *
- * The seed array is split across sibling files (Part A through Part G) to
+ * The seed array is split across sibling files (Part A through Part J) to
  * keep every source file under the 800-line limit mandated by CLAUDE.md.
  * This file composes them into the single `achievements` export consumed
  * by the rest of the codebase.
@@ -19,13 +19,14 @@ import { seedsPartF } from "./achievementSeeds/partF";
 import { seedsPartG } from "./achievementSeeds/partG";
 import { seedsPartH } from "./achievementSeeds/partH";
 import { seedsPartI } from "./achievementSeeds/partI";
+import { seedsPartJ } from "./achievementSeeds/partJ";
 
 export interface AchievementDefinition {
   code: string;
   name: string;
   description: string;
   category: string;
-  domain: "flight" | "cruise" | "lodging" | "poi" | "roadtrip" | "shared";
+  domain: "flight" | "cruise" | "lodging" | "poi" | "roadtrip" | "rail" | "shared";
   icon: string;
   tier: string;
   requirement: number;
@@ -44,6 +45,7 @@ export const achievements: AchievementDefinition[] = [
   ...seedsPartG,
   ...seedsPartH,
   ...seedsPartI,
+  ...seedsPartJ,
 ];
 
 /**

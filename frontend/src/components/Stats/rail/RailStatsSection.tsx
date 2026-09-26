@@ -12,6 +12,7 @@ import StatCard from "../StatCard";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
 import PeriodComparisonStrip from "../PeriodComparisonStrip";
 import type { PeriodScope } from "../useStatsPeriod";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 
 /**
  * The rail numbers on the statistics page (spec 2026-09-25-rail-domain, 2b).
@@ -72,6 +73,16 @@ export default function RailStatsSection({
   const num = (n: number, digits = 0): string =>
     n.toLocaleString(locale, { maximumFractionDigits: digits });
   const show = visibility.isVisible;
+  // The population these figures show — lifetime by default, else the year
+  // pill. The seven rail measures accept exactly those two.
+  const evidenceScope: EvidenceScopeParams =
+    year === null ? { period: "allTime" } : { period: "year", year };
+  const railEvidence = (key: string, renderedValue: number) => ({
+    kind: "metric" as const,
+    key,
+    scope: evidenceScope,
+    renderedValue,
+  });
 
   const comparison =
     previous && year !== null && compareYear !== null ? (
@@ -85,20 +96,25 @@ export default function RailStatsSection({
               label: t("rail:stats.journeys"),
               current: stats.journeys,
               previous: previous.journeys,
+              evidenceKey: "railRideCount",
             },
             {
               key: "km",
               label: t("rail:stats.kmAll"),
               current: Math.round(stats.distance.totalKm),
               previous: Math.round(previous.distance.totalKm),
+              evidenceKey: "railDistanceKmTotal",
             },
             {
               key: "countries",
               label: t("rail:stats.countries"),
               current: stats.countries.length,
               previous: previous.countries.length,
+              evidenceKey: "railCountriesCount",
             },
           ]}
+          // Drawn only with a year chosen, so the scope is never `allTime`.
+          evidence={{ scope: { period: "year", year } }}
         />
       </div>
     ) : null;
@@ -155,12 +171,14 @@ export default function RailStatsSection({
             title={t("rail:stats.journeys")}
             value={num(stats.journeys)}
             description={t("rail:stats.journeysDesc")}
+            evidence={railEvidence("railRideCount", stats.journeys)}
           />
           <StatCard
             accent={accent}
             valueSize="md"
             title={t("rail:stats.kmAll")}
             value={`${num(distance.totalKm)} km`}
+            evidence={railEvidence("railDistanceKmTotal", distance.totalKm)}
             description={
               <span data-testid="rail-km-split">
                 {[
@@ -194,7 +212,33 @@ export default function RailStatsSection({
             title={t("rail:stats.countries")}
             value={num(stats.countries.length)}
             description={stats.countries.map((c) => regionNames?.of(c) ?? c).join(", ")}
+            evidence={railEvidence("railCountriesCount", stats.countries.length)}
           />
+        </div>
+      )}
+      {show("kpis") && (
+        <div
+          className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4"
+          data-testid="rail-ride-kinds"
+        >
+          {(
+            [
+              ["nightTrains", "railNightTrainCount", stats.rideKinds.nightTrains],
+              ["highSpeed", "railHighSpeedRideCount", stats.rideKinds.highSpeed],
+              ["crossBorder", "railCrossBorderRideCount", stats.rideKinds.crossBorder],
+              ["operatorsCount", "railOperatorsCount", stats.rideKinds.operators],
+            ] as const
+          ).map(([label, key, value]) => (
+            <StatCard
+              key={key}
+              accent={accent}
+              valueSize="md"
+              title={t(`rail:stats.${label}`)}
+              value={num(value)}
+              description={t(`rail:stats.${label}Desc`)}
+              evidence={railEvidence(key, value)}
+            />
+          ))}
         </div>
       )}
       {show("rankings") && (
