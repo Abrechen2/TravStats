@@ -13,33 +13,23 @@
 // The file subpath is both a real file for tsc and an entry in geo-tz's
 // `exports`, so tsc, tsx, jest and plain node all load the same module.
 import * as geoTz from "geo-tz/dist/find-all";
-import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
+import { TzUnresolvedError, ZoneLookupUnavailableError } from "./errors";
+import { isValidZone } from "./zonedParts";
 
 /**
  * "Which zone is this place in" — the one resolver (ADR 0002, D2).
  *
- * Phase 1 of the time model: every zone derived from a place goes through
- * `zoneOf`, which never falls back to the server's, the browser's or a
- * profile's zone. `timezoneOfLodging` (utils/stayInstant.ts) and the airport
+ * Every zone derived from a place goes through here, and it never falls back
+ * to the server's, the browser's, the device's or a profile's zone: a wall
+ * clock read in the wrong zone is a wrong number on screen that nothing
+ * flags. `timezoneOfLodging` (utils/stayInstant.ts) and the airport
  * `deriveTimezone` are thin names for it that later phases retire.
+ *
+ * Two failures, kept apart (see `errors.ts`): the place has no zone
+ * (`TzUnresolvedError`, 422 `TZ_UNRESOLVED`), and the lookup cannot run
+ * (`ZoneLookupUnavailableError`, 503 `TIMEZONE_LOOKUP_UNAVAILABLE`).
  */
-
-/**
- * The resolver could not run — not "this point has no zone". Thrown so that
- * no caller can mistake a broken lookup for open ocean and read a wall clock
- * as UTC. A 503, because the request was fine and the server is not.
- */
-export class ZoneUnresolvedError extends AppError {
-  constructor(cause: unknown) {
-    super(
-      `Time zone could not be resolved: ${cause instanceof Error ? cause.message : String(cause)}`,
-      503,
-      "TZ_UNRESOLVED"
-    );
-    this.name = "ZoneUnresolvedError";
-  }
-}
 
 /** A place as the resolver reads it. */
 export interface ZonePlace {
@@ -47,17 +37,6 @@ export interface ZonePlace {
   catalogueZone?: string | null;
   lat?: number | null;
   lon?: number | null;
-}
-
-function isKnownZone(zone: string): boolean {
-  try {
-    new Intl.DateTimeFormat("en-US", { timeZone: zone });
-    return true;
-  } catch {
-    // Intl throws RangeError for a zone it does not know — the answer here,
-    // not a failure: the catalogue value is unusable, so coordinates decide.
-    return false;
-  }
 }
 
 function onTheGlobe(lat: number, lon: number): boolean {
@@ -71,7 +50,7 @@ function onTheGlobe(lat: number, lon: number): boolean {
   );
 }
 
-/** geo-tz's answer for a valid coordinate; throws `ZoneUnresolvedError` when it cannot run. */
+/** geo-tz's answer for a valid coordinate; throws `ZoneLookupUnavailableError` when it cannot run. */
 function zoneFromCoordinates(lat: number, lon: number): string | null {
   try {
     if (typeof geoTz.find !== "function") {
@@ -87,25 +66,52 @@ function zoneFromCoordinates(lat: number, lon: number): string | null {
       error: cause,
     });
     logger.debug({ operation: "timezone_lookup_failed", context: { lat, lon } });
-    throw new ZoneUnresolvedError(cause);
+    throw new ZoneLookupUnavailableError(cause);
   }
+}
+
+export type ZoneSource = "catalogue" | "coordinates";
+
+export interface ResolvedZone {
+  zone: string;
+  source: ZoneSource;
 }
 
 /**
  * The IANA zone of a place: the catalogue's zone first (when it names one
- * Intl knows), its coordinates through geo-tz second.
+ * this runtime knows), its coordinates through geo-tz second.
  *
- * Null ONLY for an answer: no usable catalogue zone and no coordinates, or a
- * coordinate off the globe. A lookup that cannot run logs at error level and
- * throws `ZoneUnresolvedError` (`TZ_UNRESOLVED`) — a wall clock read as UTC
- * is a wrong number on screen, which is worse than a refused request.
+ * Throws `TzUnresolvedError` when the place has none — no usable catalogue
+ * zone and no coordinates, a coordinate off the globe, or a point geo-tz
+ * places in no zone — and `ZoneLookupUnavailableError` when the lookup
+ * cannot run. The caller that can live without a zone stores the value with
+ * precision `unknown` (D2); none may substitute UTC.
+ */
+export function resolveZone(place: ZonePlace): ResolvedZone {
+  const { catalogueZone, lat, lon } = place;
+  if (isValidZone(catalogueZone)) return { zone: catalogueZone, source: "catalogue" };
+  if (typeof lat !== "number" || typeof lon !== "number") {
+    throw new TzUnresolvedError("no catalogue zone and no coordinates");
+  }
+  if (!onTheGlobe(lat, lon)) throw new TzUnresolvedError("coordinates off the globe");
+  const zone = zoneFromCoordinates(lat, lon);
+  if (!zone) throw new TzUnresolvedError("no zone at these coordinates");
+  return { zone, source: "coordinates" };
+}
+
+/**
+ * `resolveZone` for a caller that abstains: null when the place HAS no zone.
+ * A lookup that cannot run still throws (`TIMEZONE_LOOKUP_UNAVAILABLE`) — a
+ * broken lookup is never "no zone", which is how rail journeys and hotel
+ * countdowns once read local wall clocks as UTC.
  */
 export function zoneOf(place: ZonePlace): string | null {
-  const { catalogueZone, lat, lon } = place;
-  if (catalogueZone && isKnownZone(catalogueZone)) return catalogueZone;
-  if (typeof lat !== "number" || typeof lon !== "number") return null;
-  if (!onTheGlobe(lat, lon)) return null;
-  return zoneFromCoordinates(lat, lon);
+  try {
+    return resolveZone(place).zone;
+  } catch (error) {
+    if (error instanceof TzUnresolvedError) return null;
+    throw error;
+  }
 }
 
 /** A coordinate whose zone is known and will not move: Berlin. */

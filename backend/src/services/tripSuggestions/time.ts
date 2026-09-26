@@ -62,7 +62,7 @@ export function dayColumn(day: string): Date {
  * The zone of a place the engine reads an instant at, through the one
  * resolver (ADR 0002, D2): the catalogue row's zone when Intl knows it, the
  * coordinates otherwise. Null only when neither can answer; a resolver that
- * cannot run throws `TZ_UNRESOLVED` instead of letting a day be read in UTC.
+ * cannot run throws `TIMEZONE_LOOKUP_UNAVAILABLE` instead of letting a day be read in UTC.
  */
 export function placeZone(
   catalogueZone: string | null | undefined,

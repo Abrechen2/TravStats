@@ -46,7 +46,7 @@ describe("zoneOf when the lookup is broken", () => {
   it("throws a coded error instead of answering 'no zone'", () => {
     const { zoneOf } = loadWithBrokenFind();
     expect(() => zoneOf({ lat: 41.39, lon: 2.17 })).toThrow(
-      expect.objectContaining({ statusCode: 503, code: "TZ_UNRESOLVED" })
+      expect.objectContaining({ statusCode: 503, code: "TIMEZONE_LOOKUP_UNAVAILABLE" })
     );
   });
 
@@ -85,5 +85,29 @@ describe("zoneOf with the real dataset", () => {
     const { zoneOf, runZoneSelfCheck } = require("../zoneOf") as typeof import("../zoneOf");
     expect(zoneOf({ lat: 13.69, lon: 100.75 })).toBe("Asia/Bangkok");
     expect(runZoneSelfCheck()).toEqual({ ok: true });
+  });
+});
+
+describe("resolveZone — the strict form", () => {
+  it("names where the zone came from", () => {
+    const { resolveZone } = require("../zoneOf") as typeof import("../zoneOf");
+    expect(resolveZone({ catalogueZone: "Asia/Kolkata", lat: 52.52, lon: 13.405 })).toEqual({
+      zone: "Asia/Kolkata",
+      source: "catalogue",
+    });
+    expect(resolveZone({ lat: 52.52, lon: 13.405 })).toEqual({
+      zone: "Europe/Berlin",
+      source: "coordinates",
+    });
+  });
+
+  it("refuses a place with no zone as 422 TZ_UNRESOLVED — never UTC", () => {
+    const { resolveZone, zoneOf } = require("../zoneOf") as typeof import("../zoneOf");
+    for (const place of [{}, { lat: 999, lon: 0 }, { catalogueZone: "+02:00" }]) {
+      expect(() => resolveZone(place)).toThrow(
+        expect.objectContaining({ statusCode: 422, code: "TZ_UNRESOLVED" })
+      );
+      expect(zoneOf(place)).toBeNull();
+    }
   });
 });

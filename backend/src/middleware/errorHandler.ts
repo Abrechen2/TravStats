@@ -104,9 +104,10 @@ export type ApiErrorCode =
   | "DAWARICH_WINDOW_EMPTY"
   /** Dawarich pull: a single point in the window — too few for a track. */
   | "DAWARICH_TOO_FEW_POINTS"
-  /** The zone resolver could not answer (ADR 0002 D2) — not "this point has
-   *  no zone". A local time cannot be interpreted, so the write is refused
-   *  rather than stored as UTC — see `shared/time/zoneOf.ts`. */
+  /** This place has no zone the resolver can name (422, ADR 0002 D2) — no
+   *  catalogue zone, no usable coordinates. A local time there cannot be
+   *  interpreted, so it is refused rather than stored as UTC — see
+   *  `shared/time/zoneOf.ts`. */
   | "TZ_UNRESOLVED"
   /** A wall clock typed by a person that its zone skips (spring-forward
    *  gap) — see `shared/time/instant.ts`. Machine sources are never refused. */

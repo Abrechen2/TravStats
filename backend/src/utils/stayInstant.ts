@@ -43,7 +43,7 @@ export interface StayInstantSource {
 
 /**
  * The IANA zone a coordinate pair sits in, or null when it has none.
- * Throws `ZoneUnresolvedError` (TZ_UNRESOLVED) when the lookup itself is broken — that used
+ * Throws `ZoneLookupUnavailableError` (TIMEZONE_LOOKUP_UNAVAILABLE) when the lookup itself is broken — that used
  * to be swallowed here, and every stay and rail station silently got UTC.
  */
 export function timezoneOfLodging(lat?: number | null, lon?: number | null): string | null {
