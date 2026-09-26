@@ -22,6 +22,8 @@ import { Prisma } from "../../prisma";
 import { airlineGroupKey } from "../../shared/airlineNormalize";
 import { countableCruiseWhere, isCountableCruise } from "../../shared/cruiseCounting";
 import { countableFlightWhere, isCountableFlight } from "../../shared/flightCounting";
+import { countableRailWhere, isCountableRail, stationDayKey } from "../../shared/railCounting";
+import { operatorKey } from "../../shared/railRideKinds";
 import { classifyStay } from "../../shared/lodgingCounting";
 import { resolveStayTiming } from "../../shared/lodgingTiming";
 import { deriveStayMembership, type MembershipCoverage } from "../../shared/membershipDerivation";
@@ -46,6 +48,14 @@ export interface CoveredCruise {
   line: string | null;
   startDate: Date | null;
   endDate: Date | null;
+}
+
+/** A train ride as a rail card reads it (forgejo#132 item 23). */
+export interface CoveredRide {
+  status: string;
+  operator: string | null;
+  /** `YYYY-MM-DD` it left on, on the departure station's calendar. */
+  day: string;
 }
 
 export interface CoveredStay {
@@ -208,4 +218,28 @@ export async function loadCoveredStays(userId: string): Promise<CoveredStay[]> {
     },
   });
   return rows.map(({ lodging, ...s }) => ({ ...s, lodgingChainId: lodging.chainId }));
+}
+
+/**
+ * A rail card covers the counted rides (`shared/railCounting.ts`: completed)
+ * whose operator it names, spelling folded the way the rail badges fold it
+ * (`operatorKey`) — "DB  Fernverkehr" and "db fernverkehr" are one operator.
+ * A ride that names no operator is covered by no card.
+ */
+export function rideCovered(keys: ReadonlySet<string>, ride: CoveredRide): boolean {
+  if (!isCountableRail(ride)) return false;
+  const key = operatorKey(ride.operator);
+  return key !== null && keys.has(key);
+}
+
+export async function loadCoveredRides(userId: string): Promise<CoveredRide[]> {
+  const rows = await prisma.railJourney.findMany({
+    where: { userId, ...countableRailWhere() },
+    select: { status: true, operator: true, departureTime: true, depTimezone: true },
+  });
+  return rows.map((r) => ({
+    status: r.status,
+    operator: r.operator,
+    day: stationDayKey(r.departureTime, r.depTimezone),
+  }));
 }

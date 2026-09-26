@@ -32,14 +32,18 @@ const activity = z
       .number()
       .int()
       .describe(
-        "Flights, cruises or stays covered by the card that happened — the counting rules of " +
-          "shared/flightCounting, cruiseCounting and lodgingCounting"
+        "Flights, cruises, stays or train rides covered by the card that happened — the " +
+          "counting rules of shared/flightCounting, cruiseCounting, lodgingCounting and " +
+          "railCounting"
       ),
     nights: z
       .number()
       .int()
       .nullable()
-      .describe("Stays and cruises only; null when no counted item names its length"),
+      .describe(
+        "Stays and cruises only (null for flight and rail cards); null when no counted item " +
+          "names its length"
+      ),
     lastActivity: day.nullable(),
     years: z
       .array(
@@ -51,14 +55,16 @@ const activity = z
       )
       .describe(
         "The same per calendar year, newest first — a flight by its departure airport's " +
-          "calendar, a stay by the year the lodging statistics file it under, a cruise by its " +
-          "start. An undated item counts in the totals and in no year."
+          "calendar, a train ride by its departure station's, a stay by the year the lodging " +
+          "statistics file it under, a cruise by its start. An undated item counts in the " +
+          "totals and in no year."
       ),
   })
   .describe(
     "Derived from the logbook. Flight cards match on the flight's airline identity " +
-      "(IATA code), cruise cards on the cruise line, hotel cards through the stay's card " +
-      "derivation (chain, hotel, override)."
+      "(IATA code), cruise cards on the cruise line, rail cards on the ride's operator " +
+      "(spelling folded), hotel cards through the stay's card derivation (chain, hotel, " +
+      "override)."
   );
 
 const card = z.object({

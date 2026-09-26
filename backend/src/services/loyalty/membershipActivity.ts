@@ -16,6 +16,7 @@
  */
 import { nightsBetween } from "../../shared/stayPricing";
 import { resolveStayTiming } from "../../shared/lodgingTiming";
+import { operatorKey } from "../../shared/railRideKinds";
 import type { MembershipCoverage } from "../../shared/membershipDerivation";
 import {
   airlineKeys,
@@ -26,12 +27,15 @@ import {
   lodgingCoverage,
   loadCoveredCruises,
   loadCoveredFlights,
+  loadCoveredRides,
   loadCoveredStays,
+  rideCovered,
   stayCoveredBy,
   stayYear,
   type CoverageCard,
   type CoveredCruise,
   type CoveredFlight,
+  type CoveredRide,
   type CoveredStay,
 } from "./coverage";
 
@@ -119,6 +123,22 @@ export function cruiseActivity(
   return tally.result();
 }
 
+/** Rides by the card's operators; a ride has no nights, like a flight. */
+export function railActivity(
+  railOperators: readonly string[],
+  rides: readonly CoveredRide[]
+): MembershipActivity {
+  const keys = new Set(railOperators.map(operatorKey).filter((k): k is string => k !== null));
+  const tally = new Tally();
+  for (const ride of rides) {
+    if (!rideCovered(keys, ride)) continue;
+    // The station's calendar day, carried as UTC midnight so `Tally` prints it
+    // back unchanged.
+    tally.add(Number(ride.day.slice(0, 4)), null, new Date(`${ride.day}T00:00:00Z`));
+  }
+  return tally.result();
+}
+
 export function lodgingActivity(
   membershipId: string,
   stays: readonly CoveredStay[],
@@ -139,6 +159,7 @@ export function lodgingActivity(
 export interface ActivityCard extends CoverageCard {
   airlineCodes: string[];
   cruiseLines: string[];
+  railOperators: string[];
 }
 
 /**
@@ -150,10 +171,11 @@ export async function loadMembershipActivity(
   cards: readonly ActivityCard[]
 ): Promise<Map<string, MembershipActivity>> {
   const has = (domain: string): boolean => cards.some((c) => c.domain === domain);
-  const [flights, cruises, stays] = await Promise.all([
+  const [flights, cruises, stays, rides] = await Promise.all([
     has("flight") ? loadCoveredFlights(userId) : Promise.resolve([]),
     has("cruise") ? loadCoveredCruises(userId) : Promise.resolve([]),
     has("lodging") ? loadCoveredStays(userId) : Promise.resolve([]),
+    has("rail") ? loadCoveredRides(userId) : Promise.resolve([]),
   ]);
   const coverage = lodgingCoverage(cards);
 
@@ -162,6 +184,7 @@ export async function loadMembershipActivity(
     if (card.domain === "flight") result.set(card.id, flightActivity(card.airlineCodes, flights));
     else if (card.domain === "cruise")
       result.set(card.id, cruiseActivity(card.cruiseLines, cruises));
+    else if (card.domain === "rail") result.set(card.id, railActivity(card.railOperators, rides));
     else result.set(card.id, lodgingActivity(card.id, stays, coverage));
   }
   return result;

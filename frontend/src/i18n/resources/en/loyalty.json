@@ -13,6 +13,10 @@
     "lodging": {
       "title": "Hotel programmes",
       "description": "With the chains and single hotels they cover."
+    },
+    "rail": {
+      "title": "Rail programmes",
+      "description": "Your rail operators' loyalty programmes, e.g. BahnBonus — with the operators they cover."
     }
   },
   "empty": "No programmes added yet.",
@@ -31,12 +35,15 @@
     "airlineCodesHint": "Two-character IATA code, e.g. LH — Enter adds it.",
     "cruiseLines": "Covers cruise lines",
     "cruiseLinesHint": "Spelled as in your cruises — Enter adds it.",
+    "railOperators": "Covers rail operators",
+    "railOperatorsHint": "Spelled as in your train rides, e.g. DB Fernverkehr — Enter adds it.",
     "removeValue": "Remove {{value}}",
     "invalidCode": "An IATA airline code has exactly two letters or digits."
   },
   "coversNone": {
     "flight": "not assigned to any airline yet",
-    "cruise": "not assigned to any cruise line yet"
+    "cruise": "not assigned to any cruise line yet",
+    "rail": "not assigned to any rail operator yet"
   },
   "number": {
     "show": "Show number",
@@ -47,6 +54,8 @@
     "flight_other": "{{count}} flights",
     "cruise_one": "{{count}} cruise",
     "cruise_other": "{{count}} cruises",
+    "rail_one": "{{count}} train ride",
+    "rail_other": "{{count}} train rides",
     "lodging_one": "{{count}} stay",
     "lodging_other": "{{count}} stays",
     "nights_one": "{{count}} night",

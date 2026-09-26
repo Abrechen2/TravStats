@@ -4,6 +4,7 @@ import ActivityLine from "../Loyalty/ActivityLine";
 import LoyaltyCardSection from "../Loyalty/LoyaltyCardSection";
 import MembershipsSection from "./MembershipsSection";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { useRailVisible } from "../../hooks/useRailVisible";
 import { useTranslation } from "../../hooks/useTranslation";
 import { cruiseApi } from "../../lib/api/cruise";
 import { listLoyaltyMemberships } from "../../lib/api/loyalty";
@@ -26,7 +27,7 @@ export const loyaltySectionId = (domain: LoyaltyDomain): string => `loyalty-${do
  *
  * The hotel block IS the 2.6 hotel editor (`MembershipsSection`: chains,
  * single hotels, the stay editor's cards) — one editor for hotel cards, not a
- * second one beside it. The airline and cruise-line blocks are
+ * second one beside it. The airline, cruise-line and rail blocks are
  * `LoyaltyCardSection`.
  */
 export default function LoyaltySection(): JSX.Element {
@@ -36,7 +37,14 @@ export default function LoyaltySection(): JSX.Element {
   const [loadError, setLoadError] = useState(false);
   const [cruiseLines, setCruiseLines] = useState<string[]>([]);
 
-  const domains = useMemo(() => LOYALTY_DOMAINS.filter((d) => isEnabled(d)), [isEnabled]);
+  // Rail asks the rail rule — the user's switch AND the instance's beta gate —
+  // so a BahnBonus block never appears where the rail domain is hidden
+  // (forgejo#132 item 23). The others only need the user's switch.
+  const railVisible = useRailVisible();
+  const domains = useMemo(
+    () => LOYALTY_DOMAINS.filter((d) => (d === "rail" ? railVisible : isEnabled(d))),
+    [isEnabled, railVisible]
+  );
 
   const reload = useCallback(async (): Promise<void> => {
     try {

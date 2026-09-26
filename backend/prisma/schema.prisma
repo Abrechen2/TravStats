@@ -2323,7 +2323,9 @@ model LodgingChain {
 /// lodging links chains and hotels by id (the two link tables below), a
 /// flight card lists IATA codes (a code is the airline's identity —
 /// `shared/airlineNormalize.ts`), a cruise card lists cruise-line names (there
-/// is no cruise-line catalogue; a cruise names its line as text). A column for
+/// is no cruise-line catalogue; a cruise names its line as text), a rail card
+/// lists operators as the rides name them (forgejo#132 item 23 — BahnBonus and
+/// the like; no operator catalogue exists either). A column for
 /// another domain's coverage stays empty, and the write path refuses to fill
 /// it (`schemas/loyalty.ts`).
 ///
@@ -2344,6 +2346,7 @@ model LoyaltyMembership {
   notes            String?
   airlineCodes     String[] @default([]) @map("airline_codes")
   cruiseLines      String[] @default([]) @map("cruise_lines")
+  railOperators    String[] @default([]) @map("rail_operators")
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 

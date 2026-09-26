@@ -13,6 +13,10 @@
     "lodging": {
       "title": "Hotelprogramme",
       "description": "Mit den Ketten und einzelnen Hotels, für die sie gelten."
+    },
+    "rail": {
+      "title": "Bahnprogramme",
+      "description": "Bonusprogramme deiner Bahnen, z. B. BahnBonus — mit den Bahnunternehmen, für die sie gelten."
     }
   },
   "empty": "Noch keine Programme hinterlegt.",
@@ -31,12 +35,15 @@
     "airlineCodesHint": "IATA-Code mit zwei Zeichen, z. B. LH — Enter fügt hinzu.",
     "cruiseLines": "Gilt für Reedereien",
     "cruiseLinesHint": "So geschrieben wie in deinen Kreuzfahrten — Enter fügt hinzu.",
+    "railOperators": "Gilt für Bahnunternehmen",
+    "railOperatorsHint": "So geschrieben wie in deinen Bahnfahrten, z. B. DB Fernverkehr — Enter fügt hinzu.",
     "removeValue": "{{value}} entfernen",
     "invalidCode": "Ein IATA-Airline-Code hat genau zwei Buchstaben oder Ziffern."
   },
   "coversNone": {
     "flight": "noch keiner Airline zugeordnet",
-    "cruise": "noch keiner Reederei zugeordnet"
+    "cruise": "noch keiner Reederei zugeordnet",
+    "rail": "noch keinem Bahnunternehmen zugeordnet"
   },
   "number": {
     "show": "Nummer anzeigen",
@@ -47,6 +54,8 @@
     "flight_other": "{{count}} Flüge",
     "cruise_one": "{{count}} Kreuzfahrt",
     "cruise_other": "{{count}} Kreuzfahrten",
+    "rail_one": "{{count}} Bahnfahrt",
+    "rail_other": "{{count}} Bahnfahrten",
     "lodging_one": "{{count}} Aufenthalt",
     "lodging_other": "{{count}} Aufenthalte",
     "nights_one": "{{count}} Nacht",

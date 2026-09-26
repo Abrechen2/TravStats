@@ -25,6 +25,7 @@ describe("Loyalty memberships API", () => {
     await prisma.flight.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.cruise.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
     await prisma.lodging.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
+    await prisma.railJourney.deleteMany({ where: { userId: { in: [userId, otherUserId] } } });
   };
 
   const flight = (o: Record<string, unknown>) =>
@@ -339,6 +340,73 @@ describe("Loyalty memberships API", () => {
           { year: 2024, count: 1, nights: 3 },
         ],
       });
+    });
+  });
+
+  /**
+   * forgejo#132 item 23: a rail programme (BahnBonus) is a card like the
+   * others. It covers the counted rides whose operator it names — spelling
+   * folded as the rail badges fold it — and nothing another domain owns.
+   */
+  describe("rail cards", () => {
+    const ride = (o: Record<string, unknown>) =>
+      prisma.railJourney.create({
+        data: {
+          userId,
+          status: "completed",
+          operator: "DB Fernverkehr",
+          depStationName: "Frankfurt (Main) Hbf",
+          depLat: 50.107,
+          depLon: 8.663,
+          depTimezone: "Europe/Berlin",
+          arrStationName: "Köln Hbf",
+          arrLat: 50.943,
+          arrLon: 6.959,
+          arrTimezone: "Europe/Berlin",
+          departureTime: new Date("2024-05-01T08:00:00Z"),
+          ...o,
+        },
+      });
+
+    it("counts completed rides by the card's operators, per year on the station's calendar", async () => {
+      await ride({});
+      // 23:30 UTC on New Year's Eve is already 2025 in Frankfurt.
+      await ride({ operator: "db  fernverkehr", departureTime: new Date("2024-12-31T23:30:00Z") });
+      await ride({ operator: "ÖBB" });
+      await ride({ status: "cancelled" });
+      const created = await api()
+        .post("/api/v1/loyalty-memberships")
+        .set("Cookie", cookie)
+        .send({ domain: "rail", programName: "BahnBonus", railOperators: ["DB Fernverkehr"] });
+      expect(created.status).toBe(201);
+      expect(created.body.data).toMatchObject({
+        domain: "rail",
+        railOperators: ["DB Fernverkehr"],
+      });
+
+      const res = await api().get("/api/v1/loyalty-memberships").set("Cookie", cookie);
+      expect(res.body.data[0].activity).toEqual({
+        count: 2,
+        nights: null,
+        lastActivity: "2025-01-01",
+        years: [
+          { year: 2025, count: 1, nights: null },
+          { year: 2024, count: 1, nights: null },
+        ],
+      });
+    });
+
+    it("refuses another domain's coverage on a rail card, and rail coverage elsewhere", async () => {
+      const onRail = await api()
+        .post("/api/v1/loyalty-memberships")
+        .set("Cookie", cookie)
+        .send({ domain: "rail", programName: "BahnBonus", airlineCodes: ["LH"] });
+      expect(onRail.status).toBe(400);
+      const onFlight = await api()
+        .post("/api/v1/loyalty-memberships")
+        .set("Cookie", cookie)
+        .send({ domain: "flight", programName: "M&M", railOperators: ["DB Fernverkehr"] });
+      expect(onFlight.status).toBe(400);
     });
   });
 

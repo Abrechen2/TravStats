@@ -9,6 +9,7 @@ import { SectionCard, SectionTitle } from "../Settings/SettingsShared";
 import ActivityLine from "./ActivityLine";
 import FrequentFlyerSuggestions from "./FrequentFlyerSuggestions";
 import LoyaltyCardForm, { type CardDomain, type CardPrefill } from "./LoyaltyCardForm";
+import { coverageOf } from "./cardCoverage";
 import MaskedNumber from "./MaskedNumber";
 import TierBadge from "./TierBadge";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
@@ -60,9 +61,6 @@ export default function LoyaltyCardSection({
       setError(saveErrorMessage(err, t, "loyalty:deleteError"));
     }
   };
-
-  const coverageOf = (card: LoyaltyMembership): string[] =>
-    domain === "flight" ? card.airlineCodes : card.cruiseLines;
 
   return (
     <SectionCard>
@@ -120,8 +118,8 @@ export default function LoyaltyCardSection({
                   </div>
                 </div>
                 <p className="t-caption mt-1">
-                  {coverageOf(card).length > 0
-                    ? coverageOf(card).join(", ")
+                  {coverageOf(domain, card).length > 0
+                    ? coverageOf(domain, card).join(", ")
                     : t(`loyalty:coversNone.${domain}`)}
                 </p>
                 <ActivityLine domain={domain} membershipId={card.id} activity={card.activity} />

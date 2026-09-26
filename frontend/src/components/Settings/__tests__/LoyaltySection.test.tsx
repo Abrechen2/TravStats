@@ -11,6 +11,11 @@ vi.mock("../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ enabled, isEnabled: (key: DomainKey) => enabled.includes(key) }),
 }));
 
+// Rail's own visibility rule — the user's switch AND the instance's beta gate —
+// stubbed so each case states which half it is about.
+let railVisible = false;
+vi.mock("../../../hooks/useRailVisible", () => ({ useRailVisible: () => railVisible }));
+
 const api = vi.hoisted(() => ({
   listLoyaltyMemberships: vi.fn(),
   listFrequentFlyerSuggestions: vi.fn(),
@@ -51,6 +56,7 @@ const card = (o: Partial<LoyaltyMembership>): LoyaltyMembership => ({
   notes: null,
   airlineCodes: ["LH", "LX"],
   cruiseLines: [],
+  railOperators: [],
   chainIds: [],
   chains: [],
   lodgingIds: [],
@@ -72,7 +78,37 @@ describe("Einstellungen → Bonusprogramme (LoyaltySection)", () => {
   beforeEach(() => {
     vi.clearAllMocks();
     enabled = ["flight", "cruise", "lodging"];
+    railVisible = false;
     api.listLoyaltyMemberships.mockResolvedValue([]);
+  });
+
+  /**
+   * forgejo#132 item 23: rail programmes (BahnBonus) get a block — but only
+   * where the rail domain is visible. A user who switched rail on, on an
+   * instance whose beta gate hides it, must not see a rail block.
+   */
+  it("draws the rail block only while rail is visible, and lists its operators", async () => {
+    enabled = ["flight", "rail"];
+    api.listLoyaltyMemberships.mockResolvedValue([
+      card({
+        id: "r1",
+        domain: "rail",
+        programName: "BahnBonus",
+        airlineCodes: [],
+        railOperators: ["DB Fernverkehr"],
+        activity: { count: 3, nights: null, lastActivity: "2025-05-01" },
+      }),
+    ]);
+    const { unmount } = renderPage();
+    expect(await screen.findByTestId("loyalty-flight")).toBeInTheDocument();
+    expect(screen.queryByTestId("loyalty-rail")).toBeNull();
+    unmount();
+
+    railVisible = true;
+    renderPage();
+    const block = await screen.findByTestId("loyalty-rail");
+    expect(within(block).getByText("BahnBonus")).toBeInTheDocument();
+    expect(within(block).getByText("DB Fernverkehr")).toBeInTheDocument();
   });
 
   it("draws a section for each enabled domain with programmes, and none for the others", async () => {
