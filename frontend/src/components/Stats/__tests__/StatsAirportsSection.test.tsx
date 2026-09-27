@@ -7,6 +7,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (k: string, opts?: { total?: number }) =>
       opts?.total !== undefined ? `${k}:${opts.total}` : k,
+    i18n: { language: "de" },
   }),
 }));
 
@@ -52,5 +53,48 @@ describe("StatsAirportsSection — continents tile", () => {
     expect(screen.getByText("common:continents.europe")).toBeInTheDocument();
     expect(screen.getByText("common:continents.northAmerica")).toBeInTheDocument();
     expect(screen.getByText("common:continents.antarctica")).toBeInTheDocument();
+  });
+});
+
+// The server sends ISO 3166-1 alpha-2 codes, never names — TOP-LÄNDER printed
+// "DE 141 Flüge" raw (silent-fix sweep 2026-09-27, same defect class as
+// EvidenceEntryRow / the passport page). The fixtures use real codes so the
+// test exercises the same resolution the browser does.
+describe("StatsAirportsSection — country names", () => {
+  const withCountries: AirportStats = {
+    ...stats,
+    topCountries: [
+      { country: "DE", count: 12 },
+      { country: "GB", count: 4 },
+    ],
+    newThisYear: [{ code: "MUC", name: null, country: "DE", firstVisitDate: "2026-01-02" }],
+    rarestAirports: [{ code: "LHR", name: null, country: "GB" }],
+  };
+
+  it("names the top countries in the reader's language, not their ISO codes", () => {
+    render(
+      <MemoryRouter>
+        <StatsAirportsSection airportStats={withCountries} />
+      </MemoryRouter>
+    );
+
+    expect(screen.getAllByText("Deutschland").length).toBeGreaterThan(0);
+    expect(screen.getAllByText("Vereinigtes Königreich").length).toBeGreaterThan(0);
+    expect(screen.queryByText("DE")).not.toBeInTheDocument();
+    expect(screen.queryByText("GB")).not.toBeInTheDocument();
+  });
+
+  it("falls back to the country name, not the ISO code, when an airport has no name", () => {
+    render(
+      <MemoryRouter>
+        <StatsAirportsSection airportStats={withCountries} />
+      </MemoryRouter>
+    );
+
+    // "Deutschland" already asserted above (topCountries) — this proves the
+    // SAME text also covers the newThisYear/rarestAirports name fallback,
+    // which used to print the bare code as the airport's own label.
+    expect(screen.getAllByText("Deutschland").length).toBeGreaterThan(1);
+    expect(screen.getAllByText("Vereinigtes Königreich").length).toBeGreaterThan(1);
   });
 });
