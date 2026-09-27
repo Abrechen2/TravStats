@@ -21,7 +21,14 @@
       },
       "empty": {
         "title": "Nothing to review",
-        "description": "None of your records currently has two pieces of information that disagree."
+        "description": "Nothing is open right now: no contradictions and no questions about time."
+      },
+      "contradictions": {
+        "title": "Contradictions"
+      },
+      "time": {
+        "title": "Questions about time",
+        "description": "Something is missing here to show a time correctly: the place's time zone, the time of day or the exact day. We don't guess — add it if you know it, or leave it as it is."
       }
     },
     "photoJourneys": {
