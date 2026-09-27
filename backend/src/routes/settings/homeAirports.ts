@@ -89,7 +89,9 @@ router.get(
         res.status(400).json({ error: "HOME_NEARBY_INVALID", issues: parsed.error.issues });
         return;
       }
-      res.json({ airports: await findNearbyHomeAirports(parsed.data.lat, parsed.data.lon) });
+      res.json({
+        airports: await findNearbyHomeAirports(req.userId!, parsed.data.lat, parsed.data.lon),
+      });
     } catch (error) {
       next(error);
     }
