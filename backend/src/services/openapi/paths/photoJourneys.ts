@@ -54,6 +54,18 @@ registry.registerPath({
                   .string()
                   .nullable()
                   .describe("What to call the finding: placeName, else city, else countryName"),
+                startDay: z
+                  .string()
+                  .nullable()
+                  .describe(
+                    "The first photo's calendar day (YYYY-MM-DD) where it was taken; null when the position has no zone"
+                  ),
+                endDay: z
+                  .string()
+                  .nullable()
+                  .describe(
+                    "The last photo's calendar day where it was taken; null without a zone"
+                  ),
               })
             ),
           }),

@@ -1,4 +1,6 @@
 import { Router, Response, NextFunction } from "express";
+import { localDay } from "../shared/time/instant";
+import { zoneOfCoordinates } from "../shared/time/resolveInput";
 import { z } from "zod";
 
 import { prisma } from "../db";
@@ -143,6 +145,24 @@ function withNames<T extends { place: { name: string; userId: string } | null }>
   return { ...row, placeName, label: placeName ?? row.city ?? row.countryName ?? null };
 }
 
+/**
+ * The finding's first and last day on the clock where its photos were taken
+ * (ADR 0002 D4: a calendar day is the place's question). Accepting a trip
+ * finding creates the trip with these days; the first photo's instant, read
+ * as a day, is its UTC date — a Tokyo trip whose first photo was taken at
+ * 01:00 on 2 May started on 1 May. Null when the position has no zone.
+ */
+function withLocalDays<T extends { startDate: Date; endDate: Date; lat: number; lon: number }>(
+  journey: T
+): T & { startDay: string | null; endDay: string | null } {
+  const zone = zoneOfCoordinates(journey.lat, journey.lon);
+  return {
+    ...journey,
+    startDay: zone ? localDay(journey.startDate, zone) : null,
+    endDay: zone ? localDay(journey.endDate, zone) : null,
+  };
+}
+
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const parsed = listQuerySchema.safeParse(req.query);
@@ -155,7 +175,10 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       include: { place: { select: { name: true, userId: true } } },
     });
 
-    res.json({ success: true, data: journeys.map((j) => withNames(j, userId)) });
+    res.json({
+      success: true,
+      data: journeys.map((j) => withLocalDays(withNames(j, userId))),
+    });
   } catch (err) {
     next(err);
   }

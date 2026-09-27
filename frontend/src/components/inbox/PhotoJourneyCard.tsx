@@ -59,10 +59,14 @@ export default function PhotoJourneyCard({
   const thumbIndexes = journey.previewAssetIds
     .slice(0, MAX_PREVIEW_THUMBS)
     .map((_, index) => index);
+  // The days where the photos were taken, as the server reads them (ADR 0002
+  // D4); the instants only from a server that does not send them yet.
+  const first = journey.startDay ?? journey.startDate;
+  const last = journey.endDay ?? journey.endDate;
   const span =
-    journey.startDate.slice(0, 10) === journey.endDate.slice(0, 10)
-      ? format.date(journey.startDate)
-      : `${format.date(journey.startDate)} – ${format.date(journey.endDate)}`;
+    first.slice(0, 10) === last.slice(0, 10)
+      ? format.date(first)
+      : `${format.date(first)} – ${format.date(last)}`;
 
   const facts = [
     t("dataQuality:inbox.photoJourneys.facts.photos", { photos: journey.photoCount }),

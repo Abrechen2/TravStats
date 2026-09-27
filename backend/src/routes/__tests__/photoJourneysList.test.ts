@@ -87,4 +87,23 @@ describe("GET /api/v1/photo-journeys names its findings", () => {
     expect(res.body.data[1]).toMatchObject({ city: "Porto", countryName: "Portugal" });
     expect(reverseGeocode).not.toHaveBeenCalled();
   });
+
+  // ADR 0002 D4: which calendar day a finding belongs to is the PLACE's
+  // question. Accepting a trip finding creates the trip with these days; the
+  // web used to send the first photo's instant, and the server kept its UTC
+  // date - a Tokyo trip whose first photo was taken at 01:00 on 2 May started
+  // on 1 May.
+  it("gives each finding its first and last day on the clock where the photos were taken", async () => {
+    const tokyo = await journey({
+      kind: "trip",
+      city: "Tokio",
+      lat: 35.68,
+      lon: 139.76,
+      startDate: new Date("2027-05-01T16:00:00Z"),
+      endDate: new Date("2027-05-04T16:30:00Z"),
+    });
+    const res = await request(app).get("/api/v1/photo-journeys").set("Cookie", cookie);
+    const row = res.body.data.find((j: { id: string }) => j.id === tokyo.id);
+    expect(row).toMatchObject({ startDay: "2027-05-02", endDay: "2027-05-05" });
+  });
 });
