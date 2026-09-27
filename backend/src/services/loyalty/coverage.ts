@@ -235,12 +235,15 @@ export function rideCovered(keys: ReadonlySet<string>, ride: CoveredRide): boole
   return key !== null && keys.has(key);
 }
 
-export async function loadCoveredRides(userId: string): Promise<CoveredRide[]> {
+export async function loadCoveredRides(
+  userId: string
+): Promise<Array<CoveredRide & { id: string }>> {
   const rows = await prisma.railJourney.findMany({
     where: { userId, ...countableRailWhere() },
-    select: { status: true, operator: true, departureTime: true, depTimezone: true },
+    select: { id: true, status: true, operator: true, departureTime: true, depTimezone: true },
   });
   return rows.map((r) => ({
+    id: r.id,
     status: r.status,
     operator: r.operator,
     day: stationDayKey(r.departureTime, r.depTimezone),

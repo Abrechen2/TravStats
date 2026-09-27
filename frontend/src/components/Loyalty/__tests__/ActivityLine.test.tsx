@@ -54,6 +54,26 @@ describe("ActivityLine — per programme, per year, with the list behind each fi
     ).toHaveAttribute("href", "/flights?membership=card-2&year=2023");
   });
 
+  // Acceptance 2026-09-26: the rail block had neither the list link nor
+  // year links, while hotel and flight had both.
+  it("links a rail card's total and each year to the rail list", () => {
+    renderLine({
+      domain: "rail",
+      membershipId: "card-4",
+      activity: { ...activity, nights: null, years: [{ year: 2025, count: 4, nights: null }] },
+    });
+    expect(screen.getByTestId("loyalty-activity-list")).toHaveAttribute(
+      "href",
+      "/rail?membership=card-4"
+    );
+    expect(screen.getByTestId("loyalty-activity-list")).toHaveTextContent(
+      "loyalty:activity.showList.rail"
+    );
+    expect(
+      within(screen.getByTestId("loyalty-activity-year-2025")).getByRole("link")
+    ).toHaveAttribute("href", "/rail?membership=card-4&year=2025");
+  });
+
   it("gives a cruise card its figures without a link the cruise list could not honour", () => {
     renderLine({ domain: "cruise", membershipId: "card-3", activity });
     expect(screen.getByTestId("loyalty-activity-year-2025")).toBeInTheDocument();

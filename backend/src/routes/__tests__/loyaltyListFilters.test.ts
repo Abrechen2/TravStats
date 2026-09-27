@@ -54,6 +54,7 @@ describe("loyalty figures per year, and the lists behind them", () => {
     const ids = [userId, otherUserId];
     await prisma.loyaltyMembership.deleteMany({ where: { userId: { in: ids } } });
     await prisma.flight.deleteMany({ where: { userId: { in: ids } } });
+    await prisma.railJourney.deleteMany({ where: { userId: { in: ids } } });
     await prisma.lodging.deleteMany({ where: { userId: { in: ids } } });
   };
 
@@ -217,6 +218,68 @@ describe("loyalty figures per year, and the lists behind them", () => {
         (l: { name: string }) => l.name === "Chain Hamburg"
       );
       expect(plainHamburg.stayCount).toBe(3);
+    });
+  });
+
+  // Acceptance 2026-09-26: the rail block had no "Bahnfahrten anzeigen" and
+  // its year rows were not links — the hotel and flight blocks had both.
+  describe("rail cards", () => {
+    const ride = (operator: string, departure: string, status = "completed") =>
+      prisma.railJourney.create({
+        data: {
+          userId,
+          operator,
+          depStationName: "Köln Hbf",
+          arrStationName: "Frankfurt (Main) Hbf",
+          depLat: 50.94,
+          depLon: 6.96,
+          arrLat: 50.11,
+          arrLon: 8.66,
+          departureTime: new Date(departure),
+          depTimezone: "Europe/Berlin",
+          status,
+        },
+      });
+
+    it("lists the rides the card counts, and the year link narrows them the same way", async () => {
+      const db2025 = await ride("DB Fernverkehr", "2025-05-01T08:00:00Z");
+      const db2024 = await ride("db  fernverkehr", "2024-12-31T23:30:00Z"); // 2025 in Berlin
+      await ride("SBB", "2025-06-01T08:00:00Z");
+      await ride("DB Fernverkehr", "2099-01-01T08:00:00Z", "planned");
+      const card = await prisma.loyaltyMembership.create({
+        data: {
+          userId,
+          domain: "rail",
+          programName: "BahnBonus",
+          railOperators: ["DB Fernverkehr"],
+        },
+      });
+
+      const cards = await api().get("/api/v1/loyalty-memberships").set("Cookie", cookie);
+      expect(cards.body.data[0].activity.years).toEqual([{ year: 2025, count: 2, nights: null }]);
+
+      const all = await api().get(`/api/v1/rail?membershipId=${card.id}`).set("Cookie", cookie);
+      expect(all.status).toBe(200);
+      expect(all.body.data.map((r: { id: string }) => r.id).sort()).toEqual(
+        [db2025.id, db2024.id].sort()
+      );
+      expect(all.body.meta.total).toBe(2);
+
+      const in2025 = await api()
+        .get(`/api/v1/rail?membershipId=${card.id}&year=2025`)
+        .set("Cookie", cookie);
+      expect(in2025.body.meta.total).toBe(2);
+
+      const flightCard = await prisma.loyaltyMembership.create({
+        data: { userId, domain: "flight", programName: "M&M", airlineCodes: ["LH"] },
+      });
+      const wrong = await api()
+        .get(`/api/v1/rail?membershipId=${flightCard.id}`)
+        .set("Cookie", cookie);
+      expect({ status: wrong.status, code: wrong.body.code }).toEqual({
+        status: 404,
+        code: "LOYALTY_MEMBERSHIP_NOT_FOUND",
+      });
     });
   });
 
