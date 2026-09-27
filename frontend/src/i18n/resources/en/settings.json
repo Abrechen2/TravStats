@@ -266,8 +266,8 @@
       "48h": "48h before"
     },
     "email": "Notification email",
-    "before24h": "24h before departure",
-    "before2h": "2h before departure",
+    "before24h": "24h before",
+    "before2h": "2h before",
     "save": "Save",
     "saved": "Saved!",
     "smtpTitle": "SMTP Configuration",
@@ -297,8 +297,8 @@
       "sender": "The From email should match the SMTP server's domain — otherwise mails are frequently flagged as spam. SPF/DKIM DNS records improve deliverability."
     },
     "emailSub": "Where reminders go; empty = none",
-    "before24hSub": "A reminder one day before departure",
-    "before2hSub": "A reminder shortly before departure",
+    "before24hSub": "One day before — for flights, cruises and train journeys; the morning of check-in for lodging",
+    "before2hSub": "Shortly before — for flights, cruises and train journeys",
     "saveFailed": "Notification preferences could not be saved"
   },
   "privacy": {
