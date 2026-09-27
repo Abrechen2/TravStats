@@ -1,5 +1,5 @@
 import { create } from "zustand";
-import { AVAILABLE_DOMAINS, isValidDomain, type DomainKey } from "../shared/domains";
+import { AVAILABLE_DOMAINS, type DomainKey } from "../shared/domains";
 
 export interface TimeRange {
   readonly from: string | null; // ISO yyyy-mm-dd
@@ -66,47 +66,10 @@ const EMPTY_TIME: TimeRange = { from: null, to: null };
 // availability and filter availability stay in sync.
 const ALL_DOMAINS: readonly DomainKey[] = AVAILABLE_DOMAINS;
 
-/**
- * The "Alle" tab's domain chips are remembered per viewer, in this browser
- * only (tester 2026-09-26). What is stored is the HIDDEN set, not the shown
- * one: a domain added in a later release then starts visible instead of
- * silently missing from a map that was filtered before it existed. Storage
- * can throw (private window, blocked site data); the filter then simply
- * starts full and forgets, which is the right degradation for a convenience.
- */
-const HIDDEN_DOMAINS_KEY = "dashboard.hiddenDomains";
-
-function readHiddenDomains(): DomainKey[] {
-  try {
-    const raw = window.localStorage.getItem(HIDDEN_DOMAINS_KEY);
-    if (raw === null) return [];
-    const parsed: unknown = JSON.parse(raw);
-    if (!Array.isArray(parsed)) return [];
-    return parsed.filter((key): key is DomainKey => typeof key === "string" && isValidDomain(key));
-  } catch {
-    return [];
-  }
-}
-
-function writeHiddenDomains(shown: readonly DomainKey[]): void {
-  try {
-    const hidden = ALL_DOMAINS.filter((key) => !shown.includes(key));
-    if (hidden.length === 0) window.localStorage.removeItem(HIDDEN_DOMAINS_KEY);
-    else window.localStorage.setItem(HIDDEN_DOMAINS_KEY, JSON.stringify(hidden));
-  } catch {
-    // Not remembered; the choice still applies for this visit.
-  }
-}
-
-function initialDomains(): readonly DomainKey[] {
-  const hidden = readHiddenDomains();
-  return ALL_DOMAINS.filter((key) => !hidden.includes(key));
-}
-
 export const useDashboardFilterStore = create<DashboardFilterState>((set) => ({
   time: EMPTY_TIME,
   year: null,
-  domains: initialDomains(),
+  domains: ALL_DOMAINS,
   flight: {},
   cruise: {},
   poi: {},
@@ -116,15 +79,11 @@ export const useDashboardFilterStore = create<DashboardFilterState>((set) => ({
       year,
       time: year === null ? EMPTY_TIME : { from: `${year}-01-01`, to: `${year}-12-31` },
     }),
-  setDomains: (domains) => {
-    writeHiddenDomains(domains);
-    set({ domains });
-  },
+  setDomains: (domains) => set({ domains }),
   setFlightFilter: (patch) => set((s) => ({ flight: { ...s.flight, ...patch } })),
   setCruiseFilter: (patch) => set((s) => ({ cruise: { ...s.cruise, ...patch } })),
   setPoiFilter: (patch) => set((s) => ({ poi: { ...s.poi, ...patch } })),
-  reset: () => {
-    writeHiddenDomains(ALL_DOMAINS);
+  reset: () =>
     set({
       time: EMPTY_TIME,
       year: null,
@@ -132,8 +91,7 @@ export const useDashboardFilterStore = create<DashboardFilterState>((set) => ({
       flight: {},
       cruise: {},
       poi: {},
-    });
-  },
+    }),
 }));
 
 /**
