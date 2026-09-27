@@ -158,6 +158,19 @@ describe("the 2.7.0 announcement describes the app that shipped", () => {
     expect(s.entries.v270.beta.body).toMatch(re);
   });
 
+  /**
+   * beta.17: the AI provider choice is released (admin settings, not gated), so
+   * it is announced in a released block — and the announcement must not hide
+   * that a cloud provider needs the admin's explicit consent.
+   */
+  it.each([
+    ["de", deWhatsNew, /OpenAI-kompatibler KI-Anbieter[^.]*ausdrücklich zustimmt/],
+    ["en", enWhatsNew, /OpenAI-compatible AI provider[^.]*explicitly agrees/],
+  ] as const)("the %s announcement names the provider choice and its consent", (_l, s, re) => {
+    expect(s.entries.v270.summaryOpenData.body).toMatch(re);
+    expect(s.entries.v270.beta.body).not.toMatch(/OpenAI/);
+  });
+
   it.each([
     ["design", "de"],
     ["design", "en"],

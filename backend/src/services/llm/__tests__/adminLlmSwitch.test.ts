@@ -211,7 +211,12 @@ describe("with the model switched OFF", () => {
 
   it("parser-capabilities reports the switch, not a missing model", async () => {
     const res = await request(app).get("/api/v1/parser-capabilities").expect(200);
-    expect(res.body).toEqual({ hasLlm: false, llmDisabledByAdmin: true });
+    expect(res.body).toEqual({
+      hasLlm: false,
+      llmDisabledByAdmin: true,
+      llmRefusal: "disabled_by_admin",
+      llmProvider: null,
+    });
   });
 });
 
@@ -245,7 +250,13 @@ describe("with the model switched ON (controls: the harness does see calls)", ()
 
   it("parser-capabilities reports a model", async () => {
     const res = await request(app).get("/api/v1/parser-capabilities").expect(200);
-    expect(res.body).toEqual({ hasLlm: true, llmDisabledByAdmin: false });
+    expect(res.body).toEqual({
+      hasLlm: true,
+      llmDisabledByAdmin: false,
+      llmRefusal: null,
+      // A loopback Ollama is local: no host is named to the public endpoint.
+      llmProvider: { kind: "ollama", model: "switch-model", isCloud: false, host: null },
+    });
   });
 });
 

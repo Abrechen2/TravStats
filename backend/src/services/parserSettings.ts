@@ -24,6 +24,14 @@ export interface AdminParserSettings {
   parserOrder?: string | null;
   /** The admin switch — see `services/llm/llmGate.ts`, its only reader. */
   llmEnabled?: boolean;
+  /** "ollama" | "openai_compatible" — resolved by `services/llm/llmProvider.ts`. */
+  llmProvider?: string | null;
+  openaiCompatBaseUrl?: string | null;
+  openaiCompatModel?: string | null;
+  /** Decrypted. Never logged, never returned by an API (masked there). */
+  openaiCompatApiKey?: string | null;
+  /** Consent to send documents to a provider outside the local network. */
+  llmCloudOptIn?: boolean;
 }
 
 /**
@@ -95,6 +103,11 @@ export async function getAdminParserSettings(): Promise<AdminParserSettings | nu
     ollamaVisionModel: settings.ollamaVisionModel,
     parserOrder: settings.parserOrder,
     llmEnabled: settings.llmEnabled,
+    llmProvider: settings.llmProvider,
+    openaiCompatBaseUrl: settings.openaiCompatBaseUrl,
+    openaiCompatModel: settings.openaiCompatModel,
+    openaiCompatApiKey: decryptApiKey(settings.openaiCompatApiKey),
+    llmCloudOptIn: settings.llmCloudOptIn,
   };
 }
 

@@ -87,6 +87,8 @@ const pinoConfig: pino.LoggerOptions = {
       "claudeApiKey",
       "globalOpenaiApiKey",
       "globalClaudeApiKey",
+      "openaiCompatApiKey",
+      "*.openaiCompatApiKey",
       "*.password",
       "*.passwordHash",
       "*.token",

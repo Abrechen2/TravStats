@@ -886,6 +886,24 @@ model AdminSettings {
   ollamaModel       String? @map("ollama_model")
   ollamaVisionModel String? @map("ollama_vision_model")
 
+  /// Which language-model service the parsers, the CSV mapping suggestion and
+  /// the trip summary talk to: "ollama" (native API, the default and what every
+  /// instance used before) or "openai_compatible" (any `/chat/completions`
+  /// endpoint — OpenAI, OpenRouter, Ollama Cloud, a LAN vLLM). A bare string,
+  /// validated by Zod at the boundary; `services/llm/llmProvider.ts` owns the set.
+  llmProvider         String  @default("ollama") @map("llm_provider")
+  /// Base URL of the OpenAI-compatible endpoint, INCLUDING its version path
+  /// (e.g. https://api.openai.com/v1). https, except on a local/LAN host
+  /// (`services/llm/llmEndpoint.ts`).
+  openaiCompatBaseUrl String? @map("openai_compat_base_url")
+  openaiCompatModel   String? @map("openai_compat_model")
+  /// Encrypted at application level, masked on read — same as the other keys.
+  openaiCompatApiKey  String? @map("openai_compat_api_key")
+  /// The admin's explicit consent that booking documents may be sent to a
+  /// provider OUTSIDE the local network. Off by default: without it a cloud
+  /// endpoint is never asked, whatever else is configured (`llmGate.ts`).
+  llmCloudOptIn       Boolean @default(false) @map("llm_cloud_opt_in")
+
   // Backup schedule configuration (overrides AUTO_BACKUP_ENABLED / BACKUP_INTERVAL env vars)
   backupEnabled       Boolean @default(false) @map("backup_enabled")
   backupInterval      String  @default("weekly") @map("backup_interval")

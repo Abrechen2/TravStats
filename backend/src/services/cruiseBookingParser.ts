@@ -1,14 +1,18 @@
 import { type CurrencyCode, isCurrencyCode } from "../shared/currencies";
 import { parseLocal } from "../shared/time/instant";
-import { requestTextWithDeadline } from "./http/boundedHttp";
-import {
-  LLM_AVAILABILITY_TIMEOUT_MS,
-  LLM_MAX_RESPONSE_BYTES,
-  llmParseTimeoutMs,
-} from "./http/llmTimeout";
+import { llmParseTimeoutMs } from "./http/llmTimeout";
 import logger from "../utils/logger";
-import { getAdminParserSettings, getParserOrder } from "./parserSettings";
-import { assertLlmEnabled, llmRefusalFor } from "./llm/llmGate";
+import { getParserOrder } from "./parserSettings";
+import { llmRefusalFor } from "./llm/llmGate";
+import {
+  describeLlmTarget,
+  llmGenerate,
+  llmProbe,
+  llmProviderLabel,
+  ollamaTarget,
+  resolveLlmTarget,
+  type LlmTarget,
+} from "./llm/llmProvider";
 import { parseTuiCruisesConfirmation } from "./cruise/tuiCruisesTemplate";
 import { isLlmAvailable, recordLlmProbe } from "./parsers/llmAvailability";
 
@@ -125,34 +129,6 @@ EXAMPLE OUTPUT:
 // `format: "json"` plus a one-shot example in the system prompt extracts real
 // values reliably. The schema is kept here as a comment for future
 // revisitation if we want stricter enforcement.
-
-/**
- * Byte-for-byte the same pair the flight text parser carried, and with the
- * same two defects — see the note in `parsers/text/ollamaTextParser.ts`. A
- * non-200 answer was accepted as a result (SRV-LLM-HTTP-001), and the 300 s
- * inactivity timer outlived the request it belonged to (SRV-LLM-TIMEOUT-001).
- * Both now go through the one deadline-bound client.
- */
-function fetchJson(url: string, body: string): Promise<string> {
-  return requestTextWithDeadline({
-    url,
-    method: "POST",
-    body,
-    timeoutMs: llmParseTimeoutMs(),
-    maxResponseBytes: LLM_MAX_RESPONSE_BYTES,
-    label: "Ollama request",
-  });
-}
-
-function fetchGet(url: string): Promise<string> {
-  return requestTextWithDeadline({
-    url,
-    method: "GET",
-    timeoutMs: LLM_AVAILABILITY_TIMEOUT_MS,
-    maxResponseBytes: LLM_MAX_RESPONSE_BYTES,
-    label: "Ollama availability check",
-  });
-}
 
 function isCabinType(value: unknown): value is CruiseCabinType {
   return typeof value === "string" && (CRUISE_CABIN_TYPES as readonly string[]).includes(value);
@@ -372,68 +348,62 @@ function normalizeCruise(raw: RawCruise, sourceText: string): ParsedCruise {
 }
 
 export interface CruiseBookingParserOptions {
+  /** An explicit Ollama endpoint (tests); wins over the admin's provider. */
   url?: string;
   model?: string;
+  /** A resolved provider target (`llm/llmProvider.ts`); wins over url/model. */
+  target?: LlmTarget;
 }
 
 export class CruiseBookingParser {
-  private readonly url: string;
-  private readonly model: string;
+  readonly target: LlmTarget;
 
   constructor(options: CruiseBookingParserOptions = {}) {
-    this.url = options.url ?? process.env.OLLAMA_URL ?? "http://localhost:11434";
-    this.model = options.model ?? process.env.OLLAMA_MODEL ?? "gemma3:12b";
+    this.target = options.target ?? ollamaTarget(options.url, options.model);
   }
 
-  /** The resolved Ollama base URL this parser will talk to (for diagnostics). */
+  /** The resolved base URL this parser will talk to (for diagnostics). */
   get endpoint(): string {
-    return this.url;
+    return this.target.url;
   }
+
+  /** The provider, as a parse result may name it. */
+  get provider(): ReturnType<typeof describeLlmTarget> {
+    return describeLlmTarget(this.target);
+  }
+
+  /** Why the last probe failed — protocol and status, never a body. */
+  lastProbeError: string | undefined;
 
   async checkAvailability(): Promise<boolean> {
-    try {
-      const res = await fetchGet(`${this.url}/api/tags`);
-      const parsed: unknown = JSON.parse(res);
-      return typeof parsed === "object" && parsed !== null && "models" in parsed;
-    } catch {
-      return false;
-    }
+    const probe = await llmProbe(this.target);
+    this.lastProbeError = probe.error;
+    return probe.reachable;
   }
 
   async parseText(text: string): Promise<ParsedCruise[]> {
     // Cruise PDFs can be 5+ pages with full itineraries. Use a generous slice
     // but cap to keep token cost predictable on gemma3:12b.
     const snippet = text.slice(0, 12_000);
-    // `format: "json"` constrains gemma3:12b to emit valid JSON. Without it,
-    // the model regularly ignores the "JSON only" instruction in the system
-    // prompt and falls back to a markdown breakdown of the booking. We accept
-    // either a top-level array or a single object/wrapper and unwrap below.
-    const body = JSON.stringify({
-      model: this.model,
-      system: CRUISE_SYSTEM_PROMPT,
-      prompt: `Extract every cruise from this booking confirmation text. Output JSON in the shape shown in the EXAMPLE OUTPUT block in the system prompt — a top-level object with a "cruises" array. If you cannot find a value, use null. Do NOT emit placeholder strings.\n\nDOCUMENT:\n${snippet}`,
-      stream: false,
-      think: false,
-      format: "json",
-      options: { temperature: 0, num_ctx: 8192 },
-    });
-
+    // A JSON-object answer (Ollama `format: "json"`, OpenAI `json_object`):
+    // without it gemma3:12b regularly ignores the "JSON only" instruction and
+    // answers with a markdown breakdown. A top-level array or a wrapper object
+    // are both unwrapped below.
     logger.info(
-      { model: this.model, url: this.url, chars: snippet.length },
-      "[Cruise Parser] Sending text to Ollama"
+      { provider: this.provider.kind, model: this.target.model, chars: snippet.length },
+      "[Cruise Parser] Sending text to the model"
     );
 
-    // Fail closed if a caller skipped `llmRefusalFor` (see llmGate.ts).
-    await assertLlmEnabled();
-    const raw = await fetchJson(`${this.url}/api/generate`, body);
-    const response: unknown = JSON.parse(raw);
-    if (typeof response !== "object" || response === null || !("response" in response)) {
-      throw new Error("Invalid Ollama response structure");
-    }
-    const responseText = (response as Record<string, unknown>).response;
-    if (typeof responseText !== "string") {
-      throw new Error("Ollama response.response is not a string");
-    }
+    const responseText = await llmGenerate(this.target, {
+      system: CRUISE_SYSTEM_PROMPT,
+      prompt: `Extract every cruise from this booking confirmation text. Output JSON in the shape shown in the EXAMPLE OUTPUT block in the system prompt — a top-level object with a "cruises" array. If you cannot find a value, use null. Do NOT emit placeholder strings.
+
+DOCUMENT:
+${snippet}`,
+      temperature: 0,
+      json: true,
+      timeoutMs: llmParseTimeoutMs(),
+    });
 
     const cleaned = responseText
       .replace(/<think>[\s\S]*?<\/think>/gi, "")
@@ -453,10 +423,10 @@ export class CruiseBookingParser {
       if (!arrayMatch) {
         const preview = responseText.slice(0, 500).replace(/\s+/g, " ");
         logger.warn(
-          { model: this.model, responseLength: responseText.length },
+          { model: this.target.model, responseLength: responseText.length },
           "[Cruise Parser] No JSON array found in Ollama response"
         );
-        logger.debug({ model: this.model, responsePreview: preview });
+        logger.debug({ model: this.target.model, responsePreview: preview });
         throw new Error("No JSON array found in Ollama response");
       }
       try {
@@ -464,10 +434,10 @@ export class CruiseBookingParser {
       } catch (err) {
         const preview = arrayMatch[0].slice(0, 500).replace(/\s+/g, " ");
         logger.warn(
-          { model: this.model, error: err instanceof Error ? err.message : String(err) },
+          { model: this.target.model, error: err instanceof Error ? err.message : String(err) },
           "[Cruise Parser] JSON.parse failed on matched array"
         );
-        logger.debug({ model: this.model, matchPreview: preview });
+        logger.debug({ model: this.target.model, matchPreview: preview });
         throw new Error("Ollama response JSON parse failed");
       }
     }
@@ -476,10 +446,10 @@ export class CruiseBookingParser {
     if (!Array.isArray(cruises)) {
       const preview = JSON.stringify(parsed).slice(0, 300);
       logger.warn(
-        { model: this.model },
+        { model: this.target.model },
         "[Cruise Parser] Parsed JSON did not yield a cruise array"
       );
-      logger.debug({ model: this.model, preview });
+      logger.debug({ model: this.target.model, preview });
       throw new Error("Ollama response did not contain a cruise array");
     }
 
@@ -587,8 +557,7 @@ export async function parseCruiseBookingText(
     };
   }
 
-  const resolved = await resolveCruiseParserOptions(options);
-  const parser = getCruiseBookingParser(resolved);
+  const parser = getCruiseBookingParser(await resolveCruiseParserOptions(options));
   // This probe IS the health probe `ollamaAvailable` reports on, so it is fed
   // back into the shared cache rather than measured twice per parse.
   const ollamaAvailable = await parser.checkAvailability();
@@ -605,11 +574,33 @@ export async function parseCruiseBookingText(
       parserUsed: "none",
       ollamaAvailable: false,
       fallbackReason:
-        `Ollama is not reachable at ${parser.endpoint} — ` +
-        `check the parser configuration in Settings (Ollama URL / model).`,
+        `${llmProviderLabel(parser.target)} is not reachable at ${parser.endpoint} — ` +
+        `check the parser configuration in Settings (${parser.lastProbeError ?? "no answer"}).`,
     };
   }
-  const cruises = await parser.parseText(text);
+  let cruises: ParsedCruise[];
+  try {
+    cruises = await parser.parseText(text);
+  } catch (err) {
+    // A provider that answered the probe and then failed (timeout, HTTP 4xx/5xx,
+    // an answer that is not a cruise) is a failure the user is told about, not
+    // an empty success — and it must not cost a booking the template can read.
+    const reason = err instanceof Error ? err.message : String(err);
+    logger.warn(
+      { err: reason, provider: parser.provider.kind },
+      "[Cruise Parser] Model parse failed"
+    );
+    const templated = order === "llm_first" ? parseTuiCruisesConfirmation(text) : [];
+    if (templated.length > 0) {
+      return { cruises: templated, parserUsed: "template", ollamaAvailable: true };
+    }
+    return {
+      cruises: [],
+      parserUsed: "none",
+      ollamaAvailable: true,
+      fallbackReason: `The AI parser failed: ${reason}`,
+    };
+  }
   if (cruises.length === 0 && order === "llm_first") {
     // Same rule as lodging: the model finding nothing is not a reason to
     // leave a template hit on the table.
@@ -622,25 +613,17 @@ export async function parseCruiseBookingText(
 }
 
 /**
- * Merge explicit options over admin-configured settings over env/defaults.
- * Returns undefined when nothing is configured so the constructor applies its
- * own env/localhost fallback unchanged.
+ * Explicit options (tests) over the admin's provider over env/defaults — the
+ * one resolution every model caller shares (`llm/llmProvider.ts`).
  */
 async function resolveCruiseParserOptions(
   options?: CruiseBookingParserOptions
-): Promise<CruiseBookingParserOptions | undefined> {
-  if (options?.url && options?.model) return options;
-  let adminUrl: string | undefined;
-  let adminModel: string | undefined;
-  try {
-    const admin = await getAdminParserSettings();
-    adminUrl = admin?.ollamaUrl ?? undefined;
-    adminModel = admin?.ollamaModel ?? undefined;
-  } catch (err) {
-    logger.warn({ err }, "[Cruise Parser] Failed to load admin parser settings");
-  }
-  return {
-    url: options?.url ?? adminUrl ?? process.env.OLLAMA_URL ?? undefined,
-    model: options?.model ?? adminModel ?? process.env.OLLAMA_MODEL ?? undefined,
-  };
+): Promise<CruiseBookingParserOptions> {
+  if (options?.target) return options;
+  const target = await resolveLlmTarget({
+    ...(options?.url !== undefined ? { url: options.url } : {}),
+    ...(options?.model !== undefined ? { model: options.model } : {}),
+    withDefaults: true,
+  });
+  return target ? { target } : {};
 }

@@ -124,6 +124,23 @@ registry.registerPath({
                   "whose model is unreachable, which `ollamaAvailable: false` " +
                   "alone cannot."
               ),
+            llmProvider: z
+              .object({
+                kind: z.enum(["ollama", "openai_compatible"]),
+                model: z.string(),
+                isCloud: z.boolean(),
+                host: z
+                  .string()
+                  .nullable()
+                  .describe("Named only for a provider outside the local network"),
+              })
+              .nullable()
+              .optional()
+              .describe(
+                "The language-model provider that read this document, when the " +
+                  'model did (`parserUsed: "ollama"` is the historical name for ' +
+                  "that, whichever provider it was); null otherwise."
+              ),
             subject: z.string().optional(),
             documentId: z
               .string()

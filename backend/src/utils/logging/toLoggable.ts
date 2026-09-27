@@ -27,6 +27,7 @@ const SENSITIVE_KEYS = new Set([
   "claudeApiKey",
   "globalOpenaiApiKey",
   "globalClaudeApiKey",
+  "openaiCompatApiKey",
 ]);
 
 function isSensitiveKey(key: string): boolean {

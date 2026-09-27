@@ -5,6 +5,14 @@ import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../db";
 import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
+import { AppError } from "../../middleware/errorHandler";
+import { encryptUnlessMasked, looksMasked, maskKey } from "../../utils/maskedKey";
+import { decryptApiKey } from "../../utils/encryption";
+import { checkLlmBaseUrl } from "../../services/llm/llmEndpoint";
+import { LLM_PROVIDER_KINDS, llmProbe } from "../../services/llm/llmProvider";
+import { clearAvailabilityCache } from "../../services/parsers/config";
+import { clearLlmAvailabilityCache } from "../../services/parsers/llmAvailability";
+import type { AdminSettings } from "../../prisma";
 
 interface ParserSettingsUpdateData {
   allowUserApiKeys?: boolean;
@@ -13,6 +21,55 @@ interface ParserSettingsUpdateData {
   llmEnabled?: boolean;
   ollamaUrl?: string | null;
   ollamaModel?: string | null;
+  llmProvider?: string;
+  openaiCompatBaseUrl?: string | null;
+  openaiCompatModel?: string | null;
+  openaiCompatApiKey?: string | null;
+  llmCloudOptIn?: boolean;
+}
+
+/**
+ * A base URL as the admin typed it, validated by the one endpoint rule
+ * (`llm/llmEndpoint.ts`): https, except on a local/LAN host. The problem is a
+ * stable code the admin UI words; an empty string clears the field.
+ */
+function normalizeProviderBaseUrl(raw: string | null | undefined): string | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null || raw.trim() === "") return null;
+  const check = checkLlmBaseUrl(raw);
+  if (check.ok) return check.url;
+  throw new AppError(
+    `Invalid AI provider base URL: ${check.problem}`,
+    400,
+    check.problem === "https_required" ? "LLM_BASE_URL_HTTPS_REQUIRED" : "LLM_BASE_URL_INVALID",
+    "openaiCompatBaseUrl"
+  );
+}
+
+/** Whether the saved OpenAI-compatible endpoint is outside the local network. */
+function providerIsCloud(settings: AdminSettings): boolean {
+  if (!settings.openaiCompatBaseUrl) return false;
+  const check = checkLlmBaseUrl(settings.openaiCompatBaseUrl);
+  return check.ok && !check.isLocal;
+}
+
+/** The settings as the admin page reads them — the key only ever masked. */
+function serializeParserSettings(settings: AdminSettings) {
+  return {
+    allowUserApiKeys: settings.allowUserApiKeys,
+    fxCdnFallbackEnabled: settings.fxCdnFallbackEnabled,
+    allowUserFlightApiKeys: settings.allowUserFlightApiKeys,
+    parserOrder: settings.parserOrder ?? "template_first",
+    llmEnabled: settings.llmEnabled,
+    ollamaUrl: settings.ollamaUrl ?? null,
+    ollamaModel: settings.ollamaModel ?? null,
+    llmProvider: settings.llmProvider,
+    openaiCompatBaseUrl: settings.openaiCompatBaseUrl ?? null,
+    openaiCompatModel: settings.openaiCompatModel ?? null,
+    openaiCompatApiKey: maskKey(settings.openaiCompatApiKey) ?? null,
+    openaiCompatIsCloud: providerIsCloud(settings),
+    llmCloudOptIn: settings.llmCloudOptIn,
+  };
 }
 
 const parserSettingsSchema = z.object({
@@ -31,6 +88,15 @@ const parserSettingsSchema = z.object({
   llmEnabled: z.boolean().optional(),
   ollamaUrl: z.string().url("Must be a valid URL").optional().nullable(),
   ollamaModel: z.string().min(1).max(100).optional().nullable(),
+  // Which protocol the model speaks (`llm/llmProvider.ts`). Ollama stays the
+  // default; an OpenAI-compatible endpoint is chosen explicitly.
+  llmProvider: z.enum(LLM_PROVIDER_KINDS).optional(),
+  openaiCompatBaseUrl: z.string().max(500).optional().nullable(),
+  openaiCompatModel: z.string().max(200).optional().nullable(),
+  // Masked echo ("abcd****wxyz") = unchanged; "" / null = clear.
+  openaiCompatApiKey: z.string().max(1000).optional().nullable(),
+  // Consent to send booking documents to a provider outside the local network.
+  llmCloudOptIn: z.boolean().optional(),
 });
 
 const router = Router();
@@ -45,15 +111,7 @@ router.get("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
       where: { id: await ensureAdminSettingsRow() },
     });
 
-    res.json({
-      allowUserApiKeys: adminSettings.allowUserApiKeys,
-      fxCdnFallbackEnabled: adminSettings.fxCdnFallbackEnabled,
-      allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys,
-      parserOrder: adminSettings.parserOrder ?? "template_first",
-      llmEnabled: adminSettings.llmEnabled,
-      ollamaUrl: adminSettings.ollamaUrl ?? null,
-      ollamaModel: adminSettings.ollamaModel ?? null,
-    });
+    res.json(serializeParserSettings(adminSettings));
   } catch (error) {
     next(error);
   }
@@ -69,6 +127,11 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
       llmEnabled,
       ollamaUrl,
       ollamaModel,
+      llmProvider,
+      openaiCompatBaseUrl,
+      openaiCompatModel,
+      openaiCompatApiKey,
+      llmCloudOptIn,
     } = parserSettingsSchema.parse(req.body);
 
     let adminSettings;
@@ -93,6 +156,17 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
     if (ollamaModel !== undefined) {
       updateData.ollamaModel = ollamaModel;
     }
+    if (llmProvider !== undefined) updateData.llmProvider = llmProvider;
+    const baseUrl = normalizeProviderBaseUrl(openaiCompatBaseUrl);
+    if (baseUrl !== undefined) updateData.openaiCompatBaseUrl = baseUrl;
+    if (openaiCompatModel !== undefined) {
+      updateData.openaiCompatModel = openaiCompatModel?.trim() || null;
+    }
+    if (openaiCompatApiKey !== undefined) {
+      const encrypted = encryptUnlessMasked(openaiCompatApiKey);
+      if (encrypted !== undefined) updateData.openaiCompatApiKey = encrypted;
+    }
+    if (llmCloudOptIn !== undefined) updateData.llmCloudOptIn = llmCloudOptIn;
 
     // Always an update against the one row. The create branch this replaces
     // dropped `updateData` on the floor, so a PUT that happened to be the
@@ -102,16 +176,77 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
       data: updateData,
     });
 
+    // A provider switch must be felt by the very next parse, not after the
+    // five-minute availability cache has run out on the old endpoint.
+    clearAvailabilityCache();
+    clearLlmAvailabilityCache();
+
     res.json({
       message: "Parser settings updated successfully",
-      settings: {
-        allowUserApiKeys: adminSettings.allowUserApiKeys,
-        fxCdnFallbackEnabled: adminSettings.fxCdnFallbackEnabled,
-        parserOrder: adminSettings.parserOrder ?? "template_first",
-        llmEnabled: adminSettings.llmEnabled,
-        ollamaUrl: adminSettings.ollamaUrl ?? null,
-        ollamaModel: adminSettings.ollamaModel ?? null,
-      },
+      settings: serializeParserSettings(adminSettings),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * "Verbindung testen" for an OpenAI-compatible provider: `GET {baseUrl}/models`
+ * with the key. It carries no document — only the key — so it runs before the
+ * cloud opt-in, which is exactly when an admin needs it. The answer is a
+ * stable `errorCode` the UI words; `detail` is the protocol/status line
+ * (never a response body, never the key). `ok`, not `success`: this router
+ * is in the bare family (ADR 0001), and its frozen envelope leaks only shrink.
+ */
+router.post("/test-llm-provider", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { baseUrl, model, apiKey } = z
+      .object({
+        baseUrl: z.string().min(1).max(500),
+        model: z.string().max(200).optional().nullable(),
+        apiKey: z.string().max(1000).optional().nullable(),
+      })
+      .parse(req.body);
+
+    const check = checkLlmBaseUrl(baseUrl);
+    if (!check.ok) {
+      res.json({ ok: false, errorCode: check.problem });
+      return;
+    }
+    let key = apiKey ?? null;
+    if (looksMasked(key)) {
+      const stored = await prisma.adminSettings.findUnique({
+        where: { id: await ensureAdminSettingsRow() },
+        select: { openaiCompatApiKey: true },
+      });
+      key = decryptApiKey(stored?.openaiCompatApiKey ?? null);
+    }
+
+    const probe = await llmProbe({
+      kind: "openai_compatible",
+      url: check.url,
+      model: model ?? "",
+      ...(key ? { apiKey: key } : {}),
+      isCloud: !check.isLocal,
+    });
+    if (!probe.reachable) {
+      const auth = /HTTP 40[13]\b/.test(probe.error ?? "");
+      res.json({
+        ok: false,
+        errorCode: auth ? "auth" : "unreachable",
+        detail: probe.error ?? null,
+        isCloud: !check.isLocal,
+      });
+      return;
+    }
+    const wanted = model?.trim();
+    res.json({
+      ok: true,
+      isCloud: !check.isLocal,
+      modelCount: probe.models.length,
+      // null = the endpoint lists no models (some proxies do not), which is
+      // not the same as "your model is missing".
+      modelFound: wanted && probe.models.length > 0 ? probe.models.includes(wanted) : null,
     });
   } catch (error) {
     next(error);

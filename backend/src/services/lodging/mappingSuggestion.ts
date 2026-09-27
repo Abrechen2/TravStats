@@ -1,8 +1,6 @@
-import http from "http";
-import https from "https";
 import logger from "../../utils/logger";
-import { assertLlmEnabled, isLlmEnabledByAdmin } from "../llm/llmGate";
-import { getAdminParserSettings } from "../parserSettings";
+import { llmRefusalFor } from "../llm/llmGate";
+import { llmGenerate, ollamaTarget, resolveLlmTarget, type LlmTarget } from "../llm/llmProvider";
 
 export const LODGING_CSV_FIELDS = [
   "name",
@@ -39,10 +37,6 @@ export interface MappingSuggestionOptions {
 // gets the header heuristic instead of a spinner.
 const DEFAULT_SUGGEST_TIMEOUT_MS = 20_000;
 
-// The response is always a small JSON mapping object — cap it generously so a
-// misbehaving endpoint can never make us buffer an unbounded stream in memory.
-const MAX_RESPONSE_BYTES = 2_000_000;
-
 /**
  * Generate-request timeout, overridable via `LODGING_MAPPING_TIMEOUT_MS`
  * (test-only escape hatch — production always gets the 20s default). Read at
@@ -68,107 +62,16 @@ Omit a field entirely if no header fits — NEVER invent a header, NEVER map two
 Hints: German headers are common. "Hotel"/"Name"/"Unterkunft" -> name. "Anreise"/"Check-in" -> checkIn. "Abreise" -> checkOut. "Bew. Zimmer"/"Bewertung Zimmer" -> ratingRoom. "Bew. Frühstück" -> ratingBreakfast. "Kette"/"Marke" -> chainName. "Straße"/"Adresse" -> address. "PLZ" belongs with address, not city. "Ort"/"Stadt" -> city. "Land" -> country. "Sterne" -> stars. "Preis"/"Gesamtpreis" -> totalPrice. "place_id"/"Google Place ID" -> googlePlaceId.`;
 
 /**
- * POST the request with a HARD deadline: `timeoutMs` after the request
- * starts, the connection is torn down unconditionally. This is deliberately
- * NOT `req.setTimeout()` — that API resets on every byte of socket activity,
- * so a server trickling bytes could stall past the budget indefinitely,
- * which is exactly what "never in the critical path" forbids. The response
- * body is also capped at `MAX_RESPONSE_BYTES` and the status code is
- * checked explicitly — neither is left to downstream JSON-shape checks to
- * catch by coincidence.
+ * Explicit options (tests) over the admin's provider over env over the
+ * localhost default — the one resolution every model caller shares.
  */
-function postJson(url: string, body: string): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const isHttps = parsed.protocol === "https:";
-    const lib = isHttps ? https : http;
-    const timeoutMs = getSuggestTimeoutMs();
-    let settled = false;
-    let deadline: NodeJS.Timeout | undefined;
-
-    const settle = (fn: () => void): void => {
-      if (settled) return;
-      settled = true;
-      if (deadline) clearTimeout(deadline);
-      fn();
-    };
-
-    const req = lib.request(
-      {
-        hostname: parsed.hostname,
-        port: parsed.port || (isHttps ? 443 : 80),
-        path: parsed.pathname + (parsed.search ?? ""),
-        method: "POST",
-        headers: {
-          "Content-Type": "application/json",
-          "Content-Length": Buffer.byteLength(body),
-        },
-      },
-      (res) => {
-        let data = "";
-        let receivedBytes = 0;
-        res.on("data", (chunk: Buffer) => {
-          if (settled) return;
-          receivedBytes += chunk.length;
-          if (receivedBytes > MAX_RESPONSE_BYTES) {
-            settle(() =>
-              reject(new Error(`Mapping suggestion response exceeded ${MAX_RESPONSE_BYTES} bytes`))
-            );
-            req.destroy();
-            return;
-          }
-          data += chunk;
-        });
-        res.on("end", () => {
-          if (settled) return;
-          const statusCode = res.statusCode ?? 0;
-          if (statusCode !== 200) {
-            settle(() => reject(new Error(`Ollama returned HTTP ${statusCode}`)));
-            return;
-          }
-          settle(() => resolve(data));
-        });
-      }
-    );
-
-    deadline = setTimeout(() => {
-      settle(() => reject(new Error(`Mapping suggestion timeout after ${timeoutMs}ms`)));
-      req.destroy();
-    }, timeoutMs);
-
-    req.on("error", (err) => {
-      settle(() => reject(err));
-    });
-    req.write(body);
-    req.end();
+async function resolveTarget(options?: MappingSuggestionOptions): Promise<LlmTarget> {
+  const target = await resolveLlmTarget({
+    ...(options?.url !== undefined ? { url: options.url } : {}),
+    ...(options?.model !== undefined ? { model: options.model } : {}),
+    withDefaults: true,
   });
-}
-
-/**
- * Merge explicit options over admin_settings over env over the localhost
- * default — the exact precedence `parseLodgingBookingText` in
- * `lodgingBookingParser.ts` uses. A correctly configured remote Ollama must
- * never be bypassed in favour of localhost, and a fully-specified caller
- * (tests) must never be overridden by whatever is in the database.
- */
-async function resolveOptions(
-  options?: MappingSuggestionOptions
-): Promise<Required<MappingSuggestionOptions>> {
-  let adminUrl: string | undefined;
-  let adminModel: string | undefined;
-  if (!options?.url || !options?.model) {
-    try {
-      const admin = await getAdminParserSettings();
-      adminUrl = admin?.ollamaUrl ?? undefined;
-      adminModel = admin?.ollamaModel ?? undefined;
-    } catch (err) {
-      logger.warn({ err }, "[Lodging Mapping] Failed to load admin parser settings");
-    }
-  }
-  return {
-    url: options?.url ?? adminUrl ?? process.env.OLLAMA_URL ?? "http://localhost:11434",
-    model: options?.model ?? adminModel ?? process.env.OLLAMA_MODEL ?? "gemma3:12b",
-  };
+  return target ?? ollamaTarget(options?.url, options?.model);
 }
 
 function isLodgingField(value: string): value is LodgingCsvField {
@@ -299,49 +202,26 @@ export async function suggestLodgingCsvMapping(
 ): Promise<LodgingCsvMapping> {
   // Switched off by the admin: `{}` is the answer this function already gives
   // for "no suggestion", and the client's heuristic takes over from there.
-  if (!(await isLlmEnabledByAdmin())) return {};
+  // A cloud provider without the admin's consent, or an incomplete one, is
+  // the same "no suggestion" answer — and the rows never leave the instance.
+  if (await llmRefusalFor()) return {};
   try {
-    const { url, model } = await resolveOptions(options);
-    const body = JSON.stringify({
-      model,
+    const target = await resolveTarget(options);
+    // The deadline-bound client (`http/boundedHttp.ts`) behind `llmGenerate`
+    // is the hard wall-clock budget this advisory call needs; its errors and
+    // an envelope that is not the protocol's shape both land in the catch
+    // below, which degrades to `{}`.
+    const text = await llmGenerate(target, {
       system: SYSTEM_PROMPT,
-      prompt: `CSV headers: ${JSON.stringify(headers)}\nSample rows: ${JSON.stringify(
-        sampleRows.slice(0, 3)
-      )}\n\nReturn the mapping JSON.`,
-      stream: false,
-      think: false,
-      format: "json",
-      options: { temperature: 0, num_ctx: 4096 },
+      prompt: `CSV headers: ${JSON.stringify(headers)}
+Sample rows: ${JSON.stringify(sampleRows.slice(0, 3))}
+
+Return the mapping JSON.`,
+      temperature: 0,
+      json: true,
+      timeoutMs: getSuggestTimeoutMs(),
+      label: "Mapping suggestion",
     });
-
-    await assertLlmEnabled();
-    const raw = await postJson(`${url}/api/generate`, body);
-
-    const envelope = safeJsonParse(raw, "envelope");
-    if (envelope === PARSE_FAILED) return {};
-    if (typeof envelope !== "object" || envelope === null || !("response" in envelope)) {
-      logger.warn(
-        {
-          operation: "lodging_mapping_suggest_failed",
-          stage: "envelope",
-          reason: "unexpected_shape",
-        },
-        "[Lodging Mapping] Ollama response envelope had an unexpected shape — degrading to empty mapping"
-      );
-      return {};
-    }
-    const text = (envelope as Record<string, unknown>).response;
-    if (typeof text !== "string") {
-      logger.warn(
-        {
-          operation: "lodging_mapping_suggest_failed",
-          stage: "envelope",
-          reason: "response_not_string",
-        },
-        "[Lodging Mapping] Ollama response.response was not a string — degrading to empty mapping"
-      );
-      return {};
-    }
 
     const cleaned = text
       .replace(/<think>[\s\S]*?<\/think>/gi, "")

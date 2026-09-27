@@ -147,6 +147,14 @@ export type ApiErrorCode =
    *  Kept apart from a plain 503 so the UI can say "switched off" rather than
    *  send the reader to check whether Ollama is running. */
   | "LLM_DISABLED"
+  /** The provider is outside the local network and the admin has not opted
+   *  in to sending documents there (`llmGate.assertLlmCloudConsent`). */
+  | "LLM_CLOUD_NOT_CONSENTED"
+  /** An AI provider base URL an admin typed is malformed / not http(s) /
+   *  carries credentials, or is plain http to a host outside the local
+   *  network (`llm/llmEndpoint.ts`). */
+  | "LLM_BASE_URL_INVALID"
+  | "LLM_BASE_URL_HTTPS_REQUIRED"
   /** The admin log area (`routes/admin/logging.ts`): a name that fails the
    *  traversal guard (400), a file that is not there (404), a file that could
    *  not be read or decompressed (500). */

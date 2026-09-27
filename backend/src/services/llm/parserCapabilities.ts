@@ -1,4 +1,7 @@
 import { getParserConfig } from "../parsers/config";
+import { llmTargetOf } from "../parsers/llmTarget";
+import { describeLlmTarget, type LlmProviderInfo } from "./llmProvider";
+import type { LlmRefusalKind } from "./llmGate";
 
 export interface ParserCapabilities {
   /** A model is configured AND allowed — what the import screen warns about. */
@@ -10,6 +13,17 @@ export interface ParserCapabilities {
    * templates-only is a decision, not a fault.
    */
   llmDisabledByAdmin: boolean;
+  /**
+   * Why the model is not asked, when it was taken away rather than never set
+   * up — including a cloud provider without the admin's consent. Null when
+   * the model is allowed (or none is configured).
+   */
+  llmRefusal: LlmRefusalKind | null;
+  /**
+   * Which provider reads a document the templates do not know, so the import
+   * screen can say where the text goes BEFORE it is sent. Null without a model.
+   */
+  llmProvider: LlmProviderInfo | null;
 }
 
 /**
@@ -24,8 +38,11 @@ export interface ParserCapabilities {
  */
 export async function getParserCapabilities(): Promise<ParserCapabilities> {
   const config = await getParserConfig();
+  const target = llmTargetOf(config);
   return {
-    hasLlm: Boolean(config.ollamaUrl && config.ollamaModel),
+    hasLlm: Boolean(target?.url && target.model),
     llmDisabledByAdmin: config.llmRefusal?.kind === "disabled_by_admin",
+    llmRefusal: config.llmRefusal?.kind ?? null,
+    llmProvider: target ? describeLlmTarget(target) : null,
   };
 }

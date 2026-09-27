@@ -6,6 +6,7 @@ import logger, {
 } from "../../utils/logger";
 import { shouldLogParserOperations } from "../loggingConfig";
 import { checkProviderAvailability } from "./config";
+import { llmTargetOf } from "./llmTarget";
 
 // Import vision parsers
 import { getTesseractParser } from "./vision/tesseractParser";
@@ -13,7 +14,7 @@ import { getManualParser } from "./vision/manualParser";
 
 // Import text parsers
 import { getRegexParser } from "./text/regexParser";
-import { getOllamaTextParser } from "./text/ollamaTextParser";
+import { getLlmTextParser, getOllamaTextParser } from "./text/ollamaTextParser";
 
 /**
  * Get vision parser instance by provider
@@ -36,8 +37,10 @@ export function getTextParserInstance(provider: TextProvider, config?: ParserCon
   switch (provider) {
     case "regex":
       return getRegexParser();
-    case "ollama":
-      return getOllamaTextParser(config?.ollamaUrl, config?.ollamaModel);
+    case "ollama": {
+      const target = llmTargetOf(config);
+      return target ? getLlmTextParser(target) : getOllamaTextParser();
+    }
     default:
       throw new Error(`Unknown text provider: ${provider}`);
   }

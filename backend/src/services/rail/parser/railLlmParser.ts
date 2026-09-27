@@ -1,14 +1,8 @@
 import { z } from "zod";
 
 import logger from "../../../utils/logger";
-import { requestTextWithDeadline } from "../../http/boundedHttp";
-import {
-  LLM_AVAILABILITY_TIMEOUT_MS,
-  LLM_MAX_RESPONSE_BYTES,
-  llmParseTimeoutMs,
-} from "../../http/llmTimeout";
-import { assertLlmEnabled } from "../../llm/llmGate";
-import { getAdminParserSettings } from "../../parserSettings";
+import { llmParseTimeoutMs } from "../../http/llmTimeout";
+import { llmGenerate, ollamaTarget, resolveLlmTarget, type LlmTarget } from "../../llm/llmProvider";
 import { foldStationName } from "../railStations";
 import {
   amountOf,
@@ -196,51 +190,18 @@ export function bookingFromAnswer(
   };
 }
 
-export interface OllamaTarget {
-  url: string;
-  model: string;
-}
-
-/** Admin settings over env over the localhost default — the lodging precedence. */
-export async function resolveOllamaTarget(): Promise<OllamaTarget> {
-  let adminUrl: string | undefined;
-  let adminModel: string | undefined;
-  try {
-    const admin = await getAdminParserSettings();
-    adminUrl = admin?.ollamaUrl ?? undefined;
-    adminModel = admin?.ollamaModel ?? undefined;
-  } catch (err) {
-    logger.warn({ err }, "[Rail Parser] Failed to load admin parser settings");
-  }
-  return {
-    url: adminUrl ?? process.env.OLLAMA_URL ?? "http://localhost:11434",
-    model: adminModel ?? process.env.OLLAMA_MODEL ?? "gemma3:12b",
-  };
-}
-
-export async function ollamaReachable(url: string): Promise<boolean> {
-  try {
-    const body = await requestTextWithDeadline({
-      url: `${url}/api/tags`,
-      method: "GET",
-      timeoutMs: LLM_AVAILABILITY_TIMEOUT_MS,
-      maxResponseBytes: LLM_MAX_RESPONSE_BYTES,
-      label: "Ollama availability check",
-    });
-    const parsed: unknown = JSON.parse(body);
-    return typeof parsed === "object" && parsed !== null && "models" in parsed;
-  } catch {
-    return false;
-  }
+/** The admin's provider over env over the localhost default — shared resolution. */
+export async function resolveRailLlmTarget(): Promise<LlmTarget> {
+  return (await resolveLlmTarget({ withDefaults: true })) ?? ollamaTarget();
 }
 
 /**
  * One generate request. Throws on transport or shape failures — the caller
  * turns each into its own reason; an answer with no provable leg is `null`.
  */
-export async function parseRailWithOllama(
+export async function parseRailWithLlm(
   text: string,
-  target: OllamaTarget
+  target: LlmTarget
 ): Promise<ParsedRailBooking | null> {
   const snippet = text.slice(0, LLM_TEXT_MAX_CHARS);
   if (text.length > LLM_TEXT_MAX_CHARS) {
@@ -250,30 +211,16 @@ export async function parseRailWithOllama(
     );
   }
   const fields = promptFieldsFor(snippet);
-  // Fail closed if a caller skipped `llmRefusalFor` (see llmGate.ts).
-  await assertLlmEnabled();
-  const raw = await requestTextWithDeadline({
-    url: `${target.url}/api/generate`,
-    method: "POST",
-    body: JSON.stringify({
-      model: target.model,
-      system: buildRailPrompt(fields),
-      prompt: `Extract the train rides from this ticket.\n\nDOCUMENT:\n${snippet}`,
-      stream: false,
-      think: false,
-      format: "json",
-      options: { temperature: 0, num_ctx: 8192 },
-    }),
+  const response = await llmGenerate(target, {
+    system: buildRailPrompt(fields),
+    prompt: `Extract the train rides from this ticket.
+
+DOCUMENT:
+${snippet}`,
+    temperature: 0,
+    json: true,
     timeoutMs: llmParseTimeoutMs("RAIL_OLLAMA_TIMEOUT_MS"),
-    maxResponseBytes: LLM_MAX_RESPONSE_BYTES,
-    label: "Ollama request",
   });
-  const envelope: unknown = JSON.parse(raw);
-  const response =
-    typeof envelope === "object" && envelope !== null
-      ? (envelope as Record<string, unknown>).response
-      : undefined;
-  if (typeof response !== "string") throw new Error("Invalid Ollama response structure");
   const cleaned = response
     .replace(/<think>[\s\S]*?<\/think>/gi, "")
     .replace(/```(?:json)?\s*([\s\S]*?)```/gi, "$1")

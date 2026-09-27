@@ -585,6 +585,48 @@
     "userPermissions": {
       "title": "User permissions",
       "allowUserApiKeys": "Allow users to add their own flight data API keys (Airlabs, Aviationstack, OpenSky)"
+    },
+    "provider": {
+      "title": "AI provider",
+      "description": "Who reads the bookings no template knows? Ollama runs in your own house; an OpenAI-compatible provider can be your own server or a cloud service. Both get the same instructions.",
+      "ollama": "Ollama (local or on your network)",
+      "openaiCompatible": "OpenAI-compatible (OpenAI, OpenRouter, Ollama Cloud, your own server)",
+      "baseUrlLabel": "Base URL (with version path)",
+      "baseUrlPlaceholder": "https://api.openai.com/v1",
+      "baseUrlHint": "Outside your network only with https://. Examples: https://api.openai.com/v1, https://openrouter.ai/api/v1, https://ollama.com/v1",
+      "modelLabel": "Model",
+      "modelPlaceholder": "gpt-4o-mini",
+      "keyLabel": "API key",
+      "keyPlaceholder": "sk-…",
+      "keyHint": "Stored encrypted and never shown again — only the first and last four characters.",
+      "testButton": "Test connection",
+      "testing": "Testing …",
+      "test": {
+        "ok": "Connected — the provider offers {{count}} models.",
+        "okModelMissing": "Connected, but this provider does not offer the model “{{model}}”.",
+        "okNoList": "Connected. The provider lists no models — check the model name yourself.",
+        "cloud": "This provider is outside your network.",
+        "errors": {
+          "invalid_url": "That is not a valid URL.",
+          "unsupported_protocol": "Only http:// or https:// is possible.",
+          "credentials_in_url": "Credentials do not belong in the URL — enter the key in the “API key” field.",
+          "https_required": "A provider outside your network needs https://.",
+          "auth": "The provider rejected the API key.",
+          "unreachable": "The provider is not reachable. Check the URL and the network.",
+          "failed": "The connection test failed."
+        }
+      },
+      "saveErrors": {
+        "LLM_BASE_URL_HTTPS_REQUIRED": "An AI provider outside your network needs https://. Nothing was saved.",
+        "LLM_BASE_URL_INVALID": "The AI provider's base URL is invalid. Nothing was saved."
+      },
+      "cloud": {
+        "title": "Send bookings to a cloud provider",
+        "warning": "If the AI provider is outside your network, TravStats sends it the text of the email or PDF (up to 12,000 characters) for every booking no template knows — including names, booking numbers, travel dates and prices. For a trip summary it sends the trip's data (flights, cruises, stays, places, notes, journal), for a CSV import the column names and three sample rows. What the provider does with it is governed by its terms, not by TravStats.",
+        "label": "I agree that this data is sent to an AI provider outside my network.",
+        "hint": "Off (default): a provider outside your network is never asked, not even an Ollama at a public address — only the built-in templates apply. The “AI model” switch above always wins.",
+        "inactive": "The saved provider is outside your network. Until you agree, the AI parser stays off."
+      }
     }
   },
   "backup": {

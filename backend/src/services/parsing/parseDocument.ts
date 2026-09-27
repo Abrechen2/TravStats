@@ -41,6 +41,7 @@ import { PARSER_SUPPORTED_DOMAINS, type ParserSupportedDomain } from "../../shar
 import { isLlmAvailable } from "../parsers/llmAvailability";
 import { conclusiveOtherDomain, scoreDocument, type DomainDetection } from "./documentDomain";
 import { isLlmEnabledByAdmin } from "../llm/llmGate";
+import { describeLlmTarget, resolveLlmTarget, type LlmProviderInfo } from "../llm/llmProvider";
 
 /** What a caller may ask for. `auto` is the addition — see the header. */
 export const REQUESTABLE_DOMAINS = [...PARSER_SUPPORTED_DOMAINS, "auto"] as const;
@@ -131,7 +132,22 @@ type DomainBody = FlightBody | CruiseBody | LodgingBody | RailBody;
  * (`services/llm/llmGate.ts`) rather than an unreachable model — which is what
  * `ollamaAvailable: false` alone cannot tell apart.
  */
-export type ParsedDocumentBody = DomainBody & { llmDisabledByAdmin: boolean };
+export type ParsedDocumentBody = DomainBody & {
+  llmDisabledByAdmin: boolean;
+  /**
+   * The provider that read the document, when the language model did
+   * (`parserUsed === "ollama"` — the historical name for "the model read it",
+   * whichever provider that is). Null otherwise. A cloud provider is named by
+   * host, so the user sees where their booking went.
+   */
+  llmProvider: LlmProviderInfo | null;
+};
+
+async function llmProviderFor(parserUsed: string): Promise<LlmProviderInfo | null> {
+  if (parserUsed !== "ollama") return null;
+  const target = await resolveLlmTarget({ withDefaults: true });
+  return target ? describeLlmTarget(target) : null;
+}
 
 export interface ParseDocumentOutcome {
   /** The domain actually parsed with. */
@@ -218,11 +234,13 @@ export async function parseDocument(input: ParseDocumentInput): Promise<ParseDoc
   const { domain, detection } = resolveDomain(input.domain, combined);
 
   const mismatch = mismatchFor(input.domain, domain, combined);
+  const domainBody = mismatch
+    ? await mismatchBody(domain, mismatch, input.userId)
+    : await parseAs(domain, input, combined);
   const body = {
-    ...(mismatch
-      ? await mismatchBody(domain, mismatch, input.userId)
-      : await parseAs(domain, input, combined)),
+    ...domainBody,
     llmDisabledByAdmin: !(await isLlmEnabledByAdmin()),
+    llmProvider: await llmProviderFor(domainBody.parserUsed),
   };
 
   return {
