@@ -78,7 +78,7 @@ function run(c: VectorCase): Record<string, unknown> {
 
 describe("the vector file", () => {
   it("is one this runner understands, on tzdata at least as new as it needs", () => {
-    expect(vectors.version).toBe(1);
+    expect(vectors.version).toBe(2);
     const tz = process.versions.tz;
     expect(tz, "Node reports no tzdata version").toBeTruthy();
     expect((tz as string) >= vectors.minTzdata).toBe(true);

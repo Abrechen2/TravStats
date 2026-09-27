@@ -31,7 +31,17 @@ describe("shared/time/vectors.json — the format", () => {
   it("covers every op the server implements", () => {
     const serverOps = new Set(file.cases.filter(appliesToServer).map((c) => c.op));
     expect([...serverOps].sort()).toEqual(
-      ["floatingDate", "localDay", "span", "toInstant", "toLocal", "todayIn"].sort()
+      [
+        "fakeUtc",
+        "floatingDate",
+        "legacyDay",
+        "localDay",
+        "span",
+        "toInstant",
+        "toLocal",
+        "todayIn",
+        "visitWriter",
+      ].sort()
     );
   });
 });
