@@ -33,7 +33,7 @@ import {
   resolveOllamaTarget,
 } from "../services/tripSummaryService";
 import { emailParseLimiter } from "../middleware/rateLimit";
-import { assertLlmEnabled } from "../services/llm/llmGate";
+import { assertLlmCloudConsent, assertLlmEnabled } from "../services/llm/llmGate";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { mostExpensiveTrip } from "../services/trip/tripCostSuperlative";
 import { TRIPS_LIST_INCLUDE, TRIP_RAIL_SELECT } from "../services/trip/tripsListInclude";
@@ -771,13 +771,16 @@ router.post(
       // Switched off by the admin: refused as LLM_DISABLED before any probe,
       // so the client can tell "turned off" from "unreachable" below.
       await assertLlmEnabled();
-      // The admin's Ollama (parser settings), then the environment — the same
-      // resolution the parsers use, so one configured Ollama serves both.
+      // The admin's provider (parser settings), then the environment — the
+      // same resolution the parsers use, so one configured model serves both.
       const target = await resolveOllamaTarget();
+      // A cloud provider without the admin's consent is refused before the
+      // probe, with its own code — the brief is personal travel data.
+      await assertLlmCloudConsent(target);
       const ollamaUp = await checkOllamaAvailable(target);
       if (!ollamaUp) {
         throw new AppError(
-          "LLM service unavailable. Configure Ollama under Admin → Parser and ensure the model is pulled.",
+          "LLM service unavailable. Configure the AI provider under Admin → Parser and ensure the model is available.",
           503
         );
       }

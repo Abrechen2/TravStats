@@ -42,8 +42,10 @@ describe("tripSummaryService", () => {
       process.env.OLLAMA_URL = "http://env:11434";
       process.env.OLLAMA_MODEL = "env-model";
       await expect(resolveOllamaTarget()).resolves.toEqual({
+        kind: "ollama",
         url: "http://mac-mini:11434",
         model: "gemma3:27b",
+        isCloud: false,
       });
     });
 
@@ -52,8 +54,10 @@ describe("tripSummaryService", () => {
       process.env.OLLAMA_URL = "http://env:11434";
       delete process.env.OLLAMA_MODEL;
       await expect(resolveOllamaTarget()).resolves.toEqual({
+        kind: "ollama",
         url: "http://env:11434",
         model: "gemma3:12b",
+        isCloud: false,
       });
     });
   });

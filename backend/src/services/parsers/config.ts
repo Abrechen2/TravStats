@@ -7,8 +7,8 @@ import {
   ParserConfig,
 } from "./types";
 import logger from "../../utils/logger";
-import { getAdminParserSettings } from "../parserSettings";
 import { llmRefusalFor } from "../llm/llmGate";
+import { resolveLlmTarget } from "../llm/llmProvider";
 
 // Availability cache (5 minutes TTL)
 const availabilityCache = new Map<
@@ -80,10 +80,9 @@ export async function getParserConfig(
   _adminSettings?: Record<string, unknown>,
   userId?: string
 ): Promise<ParserConfig> {
-  const adminSettings = await getAdminParserSettings();
-
-  const ollamaUrl = adminSettings?.ollamaUrl ?? process.env.OLLAMA_URL ?? undefined;
-  const ollamaModel = adminSettings?.ollamaModel ?? process.env.OLLAMA_MODEL ?? undefined;
+  // No localhost default here: an instance with nothing configured has no
+  // model, and `hasLlm`/`llmConfigured` must say so.
+  const target = await resolveLlmTarget();
 
   /**
    * A refused caller gets a config with no model in it — the admin switch
@@ -114,8 +113,11 @@ export async function getParserConfig(
     textFallbacks: noLlm
       ? getDefaultTextFallbackChain().filter((provider) => provider !== "ollama")
       : getDefaultTextFallbackChain(),
-    ollamaUrl: noLlm ? undefined : (ollamaUrl ?? undefined),
-    ollamaModel: noLlm ? undefined : (ollamaModel ?? undefined),
+    ...(noLlm || !target ? {} : { llmTarget: target }),
+    // Kept for readers that predate the provider choice; only an Ollama
+    // target has an Ollama URL.
+    ollamaUrl: noLlm || target?.kind !== "ollama" ? undefined : target.url,
+    ollamaModel: noLlm || target?.kind !== "ollama" ? undefined : target.model,
     ...(llmRefusal ? { llmRefusal } : {}),
     userId,
   };

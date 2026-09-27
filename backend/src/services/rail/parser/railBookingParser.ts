@@ -1,5 +1,5 @@
 import logger from "../../../utils/logger";
-import { llmRefusalFor } from "../../llm/llmGate";
+import { llmRefusalFor, type LlmRefusalKind } from "../../llm/llmGate";
 import { getParserOrder } from "../../parserSettings";
 import { isLlmAvailable, recordLlmProbe } from "../../parsers/llmAvailability";
 import { cleanEmailBody } from "../../parsers/shared/utils";
@@ -12,7 +12,8 @@ import {
 } from "./dbConfirmation";
 import { parseDbOnlineTicket } from "./dbOnlineTicket";
 import { decodeCalendar, isCalendarAttachment, parseCalendarLegs } from "./icsCalendar";
-import { ollamaReachable, parseRailWithOllama, resolveOllamaTarget } from "./railLlmParser";
+import { parseRailWithLlm, resolveRailLlmTarget } from "./railLlmParser";
+import { llmProbe, llmProviderLabel } from "../../llm/llmProvider";
 import { conclusiveOtherDomain, scoreDocument } from "../../parsing/documentDomain";
 import type { ParsedRailBooking, ParsedRailLeg, RailAttachment } from "./types";
 
@@ -39,10 +40,22 @@ export type RailFallbackCode =
   | "demoNoLlm"
   /** An admin has switched the language model off (`services/llm/llmGate.ts`). */
   | "llmDisabled"
+  /** The provider is outside the local network and the admin has not opted in. */
+  | "llmCloudNotConsented"
+  /** OpenAI-compatible is chosen but its base URL or model is missing. */
+  | "llmProviderIncomplete"
   /** The document is clearly another domain (a flight, a stay, a cruise). */
   | "otherDomain"
   /** The model answered with airport codes for stations — a flight read as a train. */
   | "looksLikeFlight";
+
+/** Each refusal kind the gate knows, as the code the client words. */
+const REFUSAL_CODES: Record<LlmRefusalKind, RailFallbackCode> = {
+  disabled_by_admin: "llmDisabled",
+  shared_demo: "demoNoLlm",
+  cloud_not_consented: "llmCloudNotConsented",
+  provider_incomplete: "llmProviderIncomplete",
+};
 
 export interface RailParseResult {
   booking: ParsedRailBooking | null;
@@ -222,7 +235,7 @@ export async function parseRailBookingText(
         booking: null,
         parserUsed: "none",
         ollamaAvailable: false,
-        fallbackCode: refusal.kind === "shared_demo" ? "demoNoLlm" : "llmDisabled",
+        fallbackCode: REFUSAL_CODES[refusal.kind],
         fallbackReason: refusal.reason,
       }
     );
@@ -244,8 +257,9 @@ export async function parseRailBookingText(
     );
   }
 
-  const target = await resolveOllamaTarget();
-  const reachable = await ollamaReachable(target.url);
+  const target = await resolveRailLlmTarget();
+  const probe = await llmProbe(target);
+  const reachable = probe.reachable;
   recordLlmProbe(target.url, reachable);
   if (!reachable) {
     return (
@@ -259,14 +273,17 @@ export async function parseRailBookingText(
           ? noItinerary
           : {
               fallbackCode: "llmUnreachable" as const,
-              fallbackReason: `Ollama is not reachable at ${target.url}`,
+              fallbackReason:
+                target.kind === "openai_compatible"
+                  ? `${llmProviderLabel(target)} is not reachable (${probe.error ?? "no answer"})`
+                  : `Ollama is not reachable at ${target.url}`,
             }),
       }
     );
   }
 
   try {
-    const booking = await parseRailWithOllama(cleanEmailBody(text), target);
+    const booking = await parseRailWithLlm(cleanEmailBody(text), target);
     if (booking && legsLookLikeFlights(booking.legs)) {
       return (
         fromTemplate(true) ?? {

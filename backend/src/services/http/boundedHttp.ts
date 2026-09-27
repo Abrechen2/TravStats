@@ -40,6 +40,12 @@ export interface BoundedRequestOptions {
   maxResponseBytes: number;
   /** Names the caller in error messages ("Ollama request", "Mapping suggestion"). */
   label: string;
+  /**
+   * Extra request headers (an `Authorization` bearer for an OpenAI-compatible
+   * provider). Never echoed into an error message — only `label` and the
+   * status code are.
+   */
+  headers?: Record<string, string>;
 }
 
 export function requestTextWithDeadline(options: BoundedRequestOptions): Promise<string> {
@@ -58,10 +64,15 @@ export function requestTextWithDeadline(options: BoundedRequestOptions): Promise
     };
     const fail = (err: Error): void => settle(() => reject(err));
 
-    const headers: http.OutgoingHttpHeaders =
-      options.body === undefined
+    const headers: http.OutgoingHttpHeaders = {
+      ...(options.headers ?? {}),
+      ...(options.body === undefined
         ? {}
-        : { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(options.body) };
+        : {
+            "Content-Type": "application/json",
+            "Content-Length": Buffer.byteLength(options.body),
+          }),
+    };
 
     const req = lib.request(
       {

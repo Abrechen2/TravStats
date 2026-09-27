@@ -45,7 +45,10 @@ describe("GET /parser-capabilities", () => {
 
   it("reports an LLM that is configured through the environment", async () => {
     await clearAdminOllama();
-    process.env.OLLAMA_URL = "http://192.0.2.10:11434";
+    // A LAN address: since beta.17 a model outside the local network (192.0.2.x
+    // is public TEST-NET) needs the admin's cloud consent first — that case is
+    // `llmEndpoint.test.ts`'s, not this one's.
+    process.env.OLLAMA_URL = "http://192.168.0.10:11434";
     process.env.OLLAMA_MODEL = "gemma3:12b";
 
     const res = await request(app).get("/api/v1/parser-capabilities").expect(200);

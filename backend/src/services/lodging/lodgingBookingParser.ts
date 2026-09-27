@@ -1,6 +1,5 @@
 import logger from "../../utils/logger";
-import { requestTextWithDeadline } from "../http/boundedHttp";
-import { LLM_AVAILABILITY_TIMEOUT_MS, llmParseTimeoutMs } from "../http/llmTimeout";
+import { llmParseTimeoutMs } from "../http/llmTimeout";
 import {
   splitPostcodeFromCity,
   cleanText,
@@ -9,14 +8,22 @@ import {
 } from "./lodgingFieldNormalization";
 import { cleanEmailBody } from "../parsers/shared/utils";
 import { documentSectionFor, parseAmount, reconcileTotalPrice } from "./documentTotal";
-import { getAdminParserSettings, getParserOrder } from "../parserSettings";
+import { getParserOrder } from "../parserSettings";
 import { LODGING_TEMPLATES } from "./templates/builtins";
 import { applyLodgingTemplate } from "./templates/engine";
 import { loadActiveLodgingTemplates } from "../parsers/userTemplates/lodgingTemplates";
 import type { LodgingTemplate } from "./templates/types";
 import { LODGING_TYPES } from "../../schemas/lodging";
 import { isCurrencyCode } from "../../shared/currencies";
-import { assertLlmEnabled, llmRefusalFor } from "../llm/llmGate";
+import { llmRefusalFor } from "../llm/llmGate";
+import {
+  llmGenerate,
+  llmProbe,
+  llmProviderLabel,
+  ollamaTarget,
+  resolveLlmTarget,
+  type LlmTarget,
+} from "../llm/llmProvider";
 import { isLlmAvailable, recordLlmProbe } from "../parsers/llmAvailability";
 import {
   isBookingComConfirmation,
@@ -48,8 +55,6 @@ export interface LodgingParseResult {
    */
   fallbackReason?: string;
 }
-
-const AVAILABILITY_TIMEOUT_MS = LLM_AVAILABILITY_TIMEOUT_MS;
 
 /**
  * Generate-request timeout. The default is the SHARED one now (see
@@ -100,60 +105,19 @@ A BOOKING object has these fields:
 EXAMPLE OUTPUT:
 {"bookings":[{"hotelName":"Novina Sleep Inn Herzogenaurach","checkIn":"2026-03-08","checkOut":"2026-03-09","nights":1,"roomCategory":"Doppelzimmer","address":"Beethovenstraße 4","postcode":"91074","city":"Herzogenaurach","country":"Deutschland","totalPrice":89.00,"pricePerNight":89.00,"currency":"EUR","board":"Breakfast","adults":2,"children":0,"confirmationNumber":"260308233983","type":"hotel","chainName":null}]}`;
 
-// A generate answer is one JSON document of a few kilobytes; anything near
-// this is a server misbehaving, not a long confirmation.
-const MAX_RESPONSE_BYTES = 2_000_000;
-
-// Both go through the deadline-bound client (AUD-058): the previous
-// `req.setTimeout` was an inactivity timer that a trickling server reset on
-// every byte, and a response cut off mid-body never settled the promise at
-// all — so the "never a dead end" promise below was not being kept.
-function postJson(url: string, body: string): Promise<string> {
-  return requestTextWithDeadline({
-    url,
-    method: "POST",
-    body,
-    timeoutMs: getOllamaTimeoutMs(),
-    maxResponseBytes: MAX_RESPONSE_BYTES,
-    label: "Ollama request",
-  });
-}
-
-function getText(url: string): Promise<string> {
-  return requestTextWithDeadline({
-    url,
-    method: "GET",
-    timeoutMs: AVAILABILITY_TIMEOUT_MS,
-    maxResponseBytes: MAX_RESPONSE_BYTES,
-    label: "Ollama availability check",
-  });
-}
-
 /**
- * Merge explicit options over admin_settings over env over the localhost
- * default — the exact precedence `resolveCruiseParserOptions` in
- * `cruiseBookingParser.ts` uses. A correctly configured remote Ollama must
- * never be bypassed in favour of localhost, and a fully-specified caller
- * (tests) must never be overridden by whatever is in the database.
+ * Explicit options (tests) over the admin's provider over env over the
+ * localhost default — the one resolution every model caller shares
+ * (`llm/llmProvider.ts`). A fully-specified caller is never overridden by
+ * whatever is in the database.
  */
-async function resolveOptions(
-  options?: LodgingBookingParserOptions
-): Promise<Required<LodgingBookingParserOptions>> {
-  let adminUrl: string | undefined;
-  let adminModel: string | undefined;
-  if (!options?.url || !options?.model) {
-    try {
-      const admin = await getAdminParserSettings();
-      adminUrl = admin?.ollamaUrl ?? undefined;
-      adminModel = admin?.ollamaModel ?? undefined;
-    } catch (err) {
-      logger.warn({ err }, "[Lodging Parser] Failed to load admin parser settings");
-    }
-  }
-  return {
-    url: options?.url ?? adminUrl ?? process.env.OLLAMA_URL ?? "http://localhost:11434",
-    model: options?.model ?? adminModel ?? process.env.OLLAMA_MODEL ?? "gemma3:12b",
-  };
+async function resolveTarget(options?: LodgingBookingParserOptions): Promise<LlmTarget> {
+  const target = await resolveLlmTarget({
+    ...(options?.url !== undefined ? { url: options.url } : {}),
+    ...(options?.model !== undefined ? { model: options.model } : {}),
+    withDefaults: true,
+  });
+  return target ?? ollamaTarget(options?.url, options?.model);
 }
 
 function asString(value: unknown): string | null {
@@ -323,16 +287,6 @@ function unwrapBookings(parsed: unknown): unknown[] {
   return [];
 }
 
-async function checkAvailability(url: string): Promise<boolean> {
-  try {
-    const res = await getText(`${url}/api/tags`);
-    const parsed: unknown = JSON.parse(res);
-    return typeof parsed === "object" && parsed !== null && "models" in parsed;
-  } catch {
-    return false;
-  }
-}
-
 /**
  * How much of a document the model is shown. Mirrors EMAIL_SNIPPET_MAX_CHARS on
  * the flight side; kept as a named constant so the two can be compared at a
@@ -340,11 +294,7 @@ async function checkAvailability(url: string): Promise<boolean> {
  */
 const LODGING_SNIPPET_MAX_CHARS = 12_000;
 
-async function parseWithOllama(
-  text: string,
-  url: string,
-  model: string
-): Promise<ParsedLodgingBooking[]> {
+async function parseWithModel(text: string, target: LlmTarget): Promise<ParsedLodgingBooking[]> {
   // Same window as the flight parser, and — like it since 2.5.2 — a truncation
   // is LOGGED. The lodging side cut silently, so a confirmation whose booking
   // table sat past the window came back as "no booking found" with nothing to
@@ -356,25 +306,16 @@ async function parseWithOllama(
       "[Lodging Parser] Document truncated before the model saw it"
     );
   }
-  const body = JSON.stringify({
-    model,
+  const responseText = await llmGenerate(target, {
     system: LODGING_SYSTEM_PROMPT,
-    prompt: `Extract every hotel booking from this confirmation. Output JSON in the shape shown in the EXAMPLE OUTPUT block. If you cannot find a value, use null.\n\nDOCUMENT:\n${snippet}`,
-    stream: false,
-    think: false,
-    format: "json",
-    options: { temperature: 0, num_ctx: 8192 },
-  });
+    prompt: `Extract every hotel booking from this confirmation. Output JSON in the shape shown in the EXAMPLE OUTPUT block. If you cannot find a value, use null.
 
-  // Fail closed if a caller skipped `llmRefusalFor` (see llmGate.ts).
-  await assertLlmEnabled();
-  const raw = await postJson(`${url}/api/generate`, body);
-  const response: unknown = JSON.parse(raw);
-  if (typeof response !== "object" || response === null || !("response" in response)) {
-    throw new Error("Invalid Ollama response structure");
-  }
-  const responseText = (response as Record<string, unknown>).response;
-  if (typeof responseText !== "string") throw new Error("Ollama response.response is not a string");
+DOCUMENT:
+${snippet}`,
+    temperature: 0,
+    json: true,
+    timeoutMs: getOllamaTimeoutMs(),
+  });
 
   const cleaned = responseText
     .replace(/<think>[\s\S]*?<\/think>/gi, "")
@@ -498,7 +439,7 @@ export async function parseLodgingBookingText(
   /**
    * A refused caller never reaches the model — the admin switch (owner
    * decision 2026-09-25) or the SHARED demo account (security audit of
-   * 2026-09-19, finding 3), both answered by `llmRefusalFor`. `resolveOptions`
+   * 2026-09-19, finding 3), both answered by `llmRefusalFor`. `resolveTarget`
    * below hands back the ADMIN's Ollama, or `OLLAMA_URL`, for whoever asks, so
    * this has to come before it.
    *
@@ -523,10 +464,12 @@ export async function parseLodgingBookingText(
     };
   }
 
-  const { url, model } = await resolveOptions(options);
+  const target = await resolveTarget(options);
+  const { url, model } = target;
   // This probe IS the health probe `ollamaAvailable` reports on, so it is fed
   // back into the shared cache rather than measured twice per parse.
-  const ollamaAvailable = await checkAvailability(url);
+  const probe = await llmProbe(target);
+  const ollamaAvailable = probe.reachable;
   recordLlmProbe(url, ollamaAvailable);
   if (!ollamaAvailable) {
     // An unreachable model must never cost a mail the template could read:
@@ -544,7 +487,10 @@ export async function parseLodgingBookingText(
       bookings: [],
       parserUsed: "none",
       ollamaAvailable: false,
-      fallbackReason: `Ollama is not reachable at ${url}`,
+      fallbackReason:
+        target.kind === "openai_compatible"
+          ? `${llmProviderLabel(target)} is not reachable (${probe.error ?? "no answer"})`
+          : `Ollama is not reachable at ${url}`,
     };
   }
 
@@ -566,7 +512,7 @@ export async function parseLodgingBookingText(
     // `cleanEmailBody` is what the flight parser has always applied to its body;
     // this side only ever used `cleanText` on individual field VALUES. So this
     // is the flight parser's own treatment, not a new idea.
-    const bookings = await parseWithOllama(cleanEmailBody(text), url, model);
+    const bookings = await parseWithModel(cleanEmailBody(text), target);
     if (bookings.length === 0) {
       // Same rule as above: the model finding nothing is not a reason to
       // leave a template hit on the table.

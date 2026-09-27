@@ -1,4 +1,5 @@
 import type { LlmRefusal } from "../llm/llmGate";
+import type { LlmTarget } from "../llm/llmProvider";
 import { ParsedBooking } from "../bookingParser";
 
 /**
@@ -126,6 +127,13 @@ export interface ParserConfig {
    * TextParseOptions.
    */
   referenceDate?: Date;
+
+  /**
+   * The resolved model endpoint (`services/llm/llmProvider.ts`) — Ollama or an
+   * OpenAI-compatible provider. Read it through `llmTargetOf`, which also
+   * accepts a config that names only `ollamaUrl`/`ollamaModel`.
+   */
+  llmTarget?: LlmTarget;
 
   /**
    * Ollama server URL — overrides OLLAMA_URL env var

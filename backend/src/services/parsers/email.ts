@@ -9,6 +9,7 @@ import { shouldLogParserOperations } from "../loggingConfig";
 import { extractFlightDataFromText, cleanEmailBody } from "./shared/utils";
 import { getAirlineName } from "../flightLookup";
 import { checkProviderAvailability, deleteAvailabilityCacheEntry } from "./config";
+import { llmTargetOf } from "./llmTarget";
 import { getTextParserInstance } from "./providers";
 import { calculateParserQuality } from "./boardingPass";
 import { findMatchingTemplate } from "./userTemplates/matcher";
@@ -123,7 +124,7 @@ export async function parseEmail(
    * failure review 2026-09-26, finding 8). An instance without a model
    * configured is not "unreachable" — nothing was supposed to be asked.
    */
-  const llmConfigured = !!config.ollamaUrl && config.textFallbacks.includes("ollama");
+  const llmConfigured = llmTargetOf(config) !== null && config.textFallbacks.includes("ollama");
   let llmUnreachable = false;
   const shouldLog = await shouldLogParserOperations();
   const log = shouldLog ? parserFactoryLogger : logger;
@@ -207,7 +208,7 @@ export async function parseEmail(
   // three. The default is therefore template-first; an instance whose senders
   // no template knows can still put the model in front.
   const ollamaConfigured =
-    !!config.ollamaUrl &&
+    llmTargetOf(config) !== null &&
     config.textFallbacks.includes("ollama") &&
     (await getParserOrder()) === "llm_first";
 

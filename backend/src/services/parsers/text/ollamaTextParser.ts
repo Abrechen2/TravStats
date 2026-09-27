@@ -1,14 +1,16 @@
 import { ITextParser, ProviderAvailability, TextProvider, TextParseOptions } from "../types";
 import { ParsedBooking } from "../../bookingParser";
 import { isPlausibleLegArrival } from "../shared/legTiming";
-import { requestTextWithDeadline } from "../../http/boundedHttp";
-import {
-  LLM_AVAILABILITY_TIMEOUT_MS,
-  LLM_MAX_RESPONSE_BYTES,
-  llmParseTimeoutMs,
-} from "../../http/llmTimeout";
+import { llmParseTimeoutMs } from "../../http/llmTimeout";
 import logger from "../../../utils/logger";
-import { assertLlmEnabled } from "../../llm/llmGate";
+import {
+  describeLlmTarget,
+  llmGenerate,
+  llmProbe,
+  llmProviderLabel,
+  ollamaTarget,
+  type LlmTarget,
+} from "../../llm/llmProvider";
 
 /**
  * @param referenceDate The point a year-less date should be read against —
@@ -63,44 +65,6 @@ Inference reporting:
 
 const EMAIL_SNIPPET_MAX_CHARS = 12_000;
 
-/**
- * Both calls go through the deadline-bound client, which the lodging parser
- * already used (AUD-058). The hand-rolled pair that stood here checked
- * NOTHING: it resolved with whatever body arrived, whatever the status line
- * said, and its `req.setTimeout` was an inactivity timer against a 300 s
- * budget no HTTP request survives.
- *
- * Both halves were measured on 2.7.0-beta.13 (2026-09-20):
- *
- * - SRV-LLM-HTTP-001 — a provider answering `HTTP 503` with a plausible body
- *   had its candidate accepted, and `/parse-email` reported `parserUsed=ollama`
- *   with HTTP 200. A refusal read as a result.
- * - SRV-LLM-TIMEOUT-001 — a provider that accepted the request and never
- *   answered had the whole request killed by the proxy at 60 s while this
- *   parser still had four minutes of patience left, so neither a parser error
- *   nor the regex fallback ever reached the caller.
- */
-function fetchJson(url: string, body: string): Promise<string> {
-  return requestTextWithDeadline({
-    url,
-    method: "POST",
-    body,
-    timeoutMs: llmParseTimeoutMs(),
-    maxResponseBytes: LLM_MAX_RESPONSE_BYTES,
-    label: "Ollama request",
-  });
-}
-
-function fetchGet(url: string): Promise<string> {
-  return requestTextWithDeadline({
-    url,
-    method: "GET",
-    timeoutMs: LLM_AVAILABILITY_TIMEOUT_MS,
-    maxResponseBytes: LLM_MAX_RESPONSE_BYTES,
-    label: "Ollama availability check",
-  });
-}
-
 function mapSeatClass(raw: string | null | undefined): string | undefined {
   if (!raw) return undefined;
   const lower = raw.toLowerCase();
@@ -153,33 +117,29 @@ function sanitizeInferredFields(raw: unknown): string[] | undefined {
   return seen.size > 0 ? [...seen] : undefined;
 }
 
+/**
+ * The flight text parser's model step. The class keeps its historical name —
+ * `parserUsed: "ollama"` means "the language model read it" in every domain's
+ * API, whichever provider that model sits behind (`llm/llmProvider.ts`); the
+ * provider itself is reported separately as `llmProvider`.
+ */
 export class OllamaTextParser implements ITextParser {
   readonly provider: TextProvider = "ollama";
-  private readonly url: string;
-  private readonly model: string;
+  private readonly target: LlmTarget;
 
-  constructor(url?: string, model?: string) {
-    this.url = url ?? process.env.OLLAMA_URL ?? "http://localhost:11434";
-    this.model = model ?? process.env.OLLAMA_MODEL ?? "gemma3:12b";
+  constructor(urlOrTarget?: string | LlmTarget, model?: string) {
+    this.target = typeof urlOrTarget === "object" ? urlOrTarget : ollamaTarget(urlOrTarget, model);
   }
 
   async checkAvailability(): Promise<ProviderAvailability> {
-    try {
-      const res = await fetchGet(`${this.url}/api/tags`);
-      const parsed: unknown = JSON.parse(res);
-      if (typeof parsed === "object" && parsed !== null && "models" in parsed) {
-        return {
-          available: true,
-          metadata: { url: this.url, model: this.model },
-        };
-      }
-      return { available: false, reason: "Unexpected Ollama response" };
-    } catch (err) {
-      return {
-        available: false,
-        reason: `Ollama not reachable at ${this.url}: ${err instanceof Error ? err.message : String(err)}`,
-      };
+    const probe = await llmProbe(this.target);
+    if (probe.reachable) {
+      return { available: true, metadata: { ...describeLlmTarget(this.target) } };
     }
+    return {
+      available: false,
+      reason: `${llmProviderLabel(this.target)} not reachable: ${probe.error ?? "no answer"}`,
+    };
   }
 
   async parseEmail(
@@ -202,45 +162,19 @@ export class OllamaTextParser implements ITextParser {
     }
     const userPrompt = `Subject: ${subject}\n\n${emailSnippet}`;
 
-    // `think: false` disables chain-of-thought generation on reasoning models
-    // like qwen3. Older Ollama versions ignore the field, so it is safe to
-    // always send. Combined with `/no_think` in the system prompt this avoids
-    // `<think>…</think>` blocks that bloat the response and occasionally break
-    // JSON extraction.
-    const body = JSON.stringify({
-      model: this.model,
-      system: buildSystemPrompt(options?.referenceDate),
-      prompt: userPrompt,
-      stream: false,
-      think: false,
-      // num_ctx MUST match the other two parsers (lodging, cruise). Ollama keys a
-      // loaded model on its context size, so two parsers asking for different
-      // sizes make every alternation unload and reload 9.9 GB. Measured against
-      // the real host on 2026-08-16: a request that matches the loaded instance
-      // answers in 7 s, one that forces the reload did not answer within 240 s —
-      // which is why a hotel confirmation timed out and "could not be read"
-      // whenever a flight had been parsed before it.
-      options: { temperature: 0.1, num_ctx: 8192 },
-    });
-
     logger.info(
-      { model: this.model, url: this.url },
-      "[Ollama Text Parser] Sending email to Ollama"
+      { provider: describeLlmTarget(this.target).kind, model: this.target.model },
+      "[LLM Text Parser] Sending email to the model"
     );
 
-    // Fail closed if a caller skipped `llmRefusalFor` (see llmGate.ts).
-    await assertLlmEnabled();
-    const raw = await fetchJson(`${this.url}/api/generate`, body);
-    const response: unknown = JSON.parse(raw);
-
-    if (typeof response !== "object" || response === null || !("response" in response)) {
-      throw new Error("Invalid Ollama response structure");
-    }
-
-    const responseText = (response as Record<string, unknown>).response;
-    if (typeof responseText !== "string") {
-      throw new Error("Ollama response.response is not a string");
-    }
+    const responseText = await llmGenerate(this.target, {
+      system: buildSystemPrompt(options?.referenceDate),
+      prompt: userPrompt,
+      temperature: 0.1,
+      // The answer is a top-level ARRAY — a JSON-object mode would forbid it.
+      json: false,
+      timeoutMs: llmParseTimeoutMs(),
+    });
 
     // Strip reasoning / thinking blocks that qwen3-class models sometimes
     // emit even with `think: false` and `/no_think`. Without this, greedy
@@ -256,10 +190,10 @@ export class OllamaTextParser implements ITextParser {
     if (!jsonMatch) {
       const preview = responseText.slice(0, 500).replace(/\s+/g, " ");
       logger.warn(
-        { model: this.model, responseLength: responseText.length },
+        { model: this.target.model, responseLength: responseText.length },
         "[Ollama Text Parser] No JSON array found — response did not contain a top-level array"
       );
-      logger.debug({ model: this.model, responsePreview: preview });
+      logger.debug({ model: this.target.model, responsePreview: preview });
       throw new Error("No JSON array found in Ollama response");
     }
 
@@ -269,10 +203,10 @@ export class OllamaTextParser implements ITextParser {
     } catch (err) {
       const preview = jsonMatch[0].slice(0, 500).replace(/\s+/g, " ");
       logger.warn(
-        { model: this.model, error: err instanceof Error ? err.message : String(err) },
+        { model: this.target.model, error: err instanceof Error ? err.message : String(err) },
         "[Ollama Text Parser] JSON.parse failed on matched array"
       );
-      logger.debug({ model: this.model, matchPreview: preview });
+      logger.debug({ model: this.target.model, matchPreview: preview });
       throw new Error("Ollama response JSON parse failed");
     }
     if (!Array.isArray(flights)) {
@@ -340,6 +274,16 @@ export class OllamaTextParser implements ITextParser {
 }
 
 const instanceCache = new Map<string, OllamaTextParser>();
+
+/** One parser per endpoint + model + protocol. */
+export function getLlmTextParser(target: LlmTarget): OllamaTextParser {
+  const key = `${target.kind ?? "ollama"}::${target.url}::${target.model}::${target.apiKey ? "key" : "nokey"}`;
+  const cached = instanceCache.get(key);
+  if (cached) return cached;
+  const parser = new OllamaTextParser(target);
+  instanceCache.set(key, parser);
+  return parser;
+}
 
 export function getOllamaTextParser(url?: string, model?: string): OllamaTextParser {
   const key = `${url ?? "default"}::${model ?? "default"}`;

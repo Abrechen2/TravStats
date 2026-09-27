@@ -1,9 +1,13 @@
-import http from "http";
-import https from "https";
 import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
-import { getAdminParserSettings } from "./parserSettings";
+import {
+  llmGenerate,
+  llmProbe,
+  ollamaTarget,
+  resolveLlmTarget,
+  type LlmTarget,
+} from "./llm/llmProvider";
 import { assertLlmEnabled } from "./llm/llmGate";
 import { llmProvenance } from "./tripSummaryProvenance";
 
@@ -28,34 +32,21 @@ import { llmProvenance } from "./tripSummaryProvenance";
 
 export type SummaryLanguage = "de" | "en";
 
-export interface OllamaTarget {
-  url: string;
-  model: string;
-}
-
-const DEFAULT_OLLAMA_URL = "http://localhost:11434";
-const DEFAULT_OLLAMA_MODEL = "gemma3:12b";
+/** Kept as a name for the summary's callers; it is the shared provider target. */
+export type OllamaTarget = LlmTarget;
 
 /**
- * The Ollama the summary talks to: the admin's parser settings first, then
- * the environment, then the defaults every other Ollama caller here assumes.
- * Same precedence as `getParserConfig` — an admin who pointed the parsers at
- * the Mac mini has pointed the summary there too, without a second setting.
+ * The model the summary talks to: the admin's provider choice (parser
+ * settings), then the environment, then the defaults — the one resolution
+ * every model caller shares (`llm/llmProvider.ts`). An admin who pointed the
+ * parsers somewhere has pointed the summary there too, without a second
+ * setting.
  */
-export async function resolveOllamaTarget(): Promise<OllamaTarget> {
-  const admin = await getAdminParserSettings();
-  return {
-    url: admin?.ollamaUrl ?? process.env.OLLAMA_URL ?? DEFAULT_OLLAMA_URL,
-    model: admin?.ollamaModel ?? process.env.OLLAMA_MODEL ?? DEFAULT_OLLAMA_MODEL,
-  };
+export async function resolveOllamaTarget(): Promise<LlmTarget> {
+  return (await resolveLlmTarget({ withDefaults: true })) ?? ollamaTarget();
 }
 
 const DEFAULT_GENERATE_TIMEOUT_MS = 180_000;
-/** A summary is a few paragraphs; anything near this is a misbehaving endpoint. */
-const MAX_RESPONSE_BYTES = 2_000_000;
-/** Same window the document parsers use in spirit; kept apart from their parity
- *  guard on purpose (different workload, runs at a different time). */
-const NUM_CTX = 8192;
 
 /**
  * Generation deadline, overridable through `TRIP_SUMMARY_TIMEOUT_MS` (a test
@@ -501,123 +492,26 @@ export interface GenerateRequest {
 export type GenerateFn = (target: OllamaTarget, request: GenerateRequest) => Promise<string>;
 
 /**
- * POST with a HARD deadline. Deliberately not `req.setTimeout()` — that
- * resets on every byte of socket activity, so a server trickling tokens could
- * stall past the budget indefinitely. The body is capped and the status code
- * is checked explicitly rather than left to the JSON parse to catch.
+ * The production `GenerateFn`: the configured provider, non-streaming. Same
+ * context window as every other caller (`LLM_NUM_CTX`), so a summary never
+ * forces Ollama to reload the model a parse just loaded.
  */
-function postJson(url: string, body: string, timeoutMs: number): Promise<string> {
-  return new Promise((resolve, reject) => {
-    const parsed = new URL(url);
-    const isHttps = parsed.protocol === "https:";
-    const lib = isHttps ? https : http;
-    let settled = false;
-    let deadline: NodeJS.Timeout | undefined;
-
-    const settle = (fn: () => void): void => {
-      if (settled) return;
-      settled = true;
-      if (deadline) clearTimeout(deadline);
-      fn();
-    };
-
-    const req = lib.request(
-      {
-        hostname: parsed.hostname,
-        port: parsed.port || (isHttps ? 443 : 80),
-        path: parsed.pathname + (parsed.search ?? ""),
-        method: "POST",
-        headers: { "Content-Type": "application/json", "Content-Length": Buffer.byteLength(body) },
-      },
-      (res) => {
-        let data = "";
-        let received = 0;
-        res.on("data", (chunk: Buffer) => {
-          if (settled) return;
-          received += chunk.length;
-          if (received > MAX_RESPONSE_BYTES) {
-            settle(() => reject(new Error(`Ollama response exceeded ${MAX_RESPONSE_BYTES} bytes`)));
-            req.destroy();
-            return;
-          }
-          data += chunk;
-        });
-        res.on("end", () => {
-          if (settled) return;
-          const status = res.statusCode ?? 0;
-          if (status !== 200) {
-            settle(() => reject(new Error(`Ollama returned HTTP ${status}`)));
-            return;
-          }
-          settle(() => resolve(data));
-        });
-      }
-    );
-
-    deadline = setTimeout(() => {
-      settle(() => reject(new Error(`Trip summary timeout after ${timeoutMs}ms`)));
-      req.destroy();
-    }, timeoutMs);
-
-    req.on("error", (err) => settle(() => reject(err)));
-    req.write(body);
-    req.end();
-  });
-}
-
-/** The production `GenerateFn`: Ollama's `/api/generate`, non-streaming. */
 export const ollamaGenerate: GenerateFn = async (target, { system, prompt }) => {
-  const body = JSON.stringify({
-    model: target.model,
+  const text = await llmGenerate(target, {
     system,
     prompt,
-    stream: false,
-    think: false,
-    options: { temperature: 0.6, num_ctx: NUM_CTX },
+    temperature: 0.6,
+    json: false,
+    timeoutMs: getGenerateTimeoutMs(),
+    label: "Trip summary",
   });
-  await assertLlmEnabled();
-  const raw = await postJson(`${target.url}/api/generate`, body, getGenerateTimeoutMs());
-  const response: unknown = JSON.parse(raw);
-  if (typeof response !== "object" || response === null || !("response" in response)) {
-    throw new Error("Invalid Ollama response structure");
-  }
-  const text = (response as Record<string, unknown>).response;
-  if (typeof text !== "string" || !text.trim()) {
-    throw new Error("Ollama returned empty summary");
-  }
+  if (!text.trim()) throw new Error("The model returned an empty summary");
   return text;
 };
 
-/** `GET /api/tags` answers within five seconds, or the model is not there. */
-export async function checkOllamaAvailable(target: OllamaTarget): Promise<boolean> {
-  try {
-    const raw = await new Promise<string>((resolve, reject) => {
-      const parsed = new URL(`${target.url}/api/tags`);
-      const lib = parsed.protocol === "https:" ? https : http;
-      const req = lib.request(
-        {
-          hostname: parsed.hostname,
-          port: parsed.port || (parsed.protocol === "https:" ? 443 : 80),
-          path: parsed.pathname,
-          method: "GET",
-        },
-        (res) => {
-          let data = "";
-          res.on("data", (chunk: string) => {
-            data += chunk;
-          });
-          res.on("end", () => resolve(data));
-        }
-      );
-      req.setTimeout(5_000, () => req.destroy(new Error("Ollama availability check timeout")));
-      req.on("error", reject);
-      req.end();
-    });
-    const parsed: unknown = JSON.parse(raw);
-    return typeof parsed === "object" && parsed !== null && "models" in parsed;
-  } catch {
-    return false;
-  }
+/** The endpoint answers its availability probe within five seconds, or the model is not there. */
+export async function checkOllamaAvailable(target: LlmTarget): Promise<boolean> {
+  return (await llmProbe(target)).reachable;
 }
 
 export interface SummariseOptions {
@@ -676,8 +570,14 @@ export async function summariseTrip(
   const briefJson = JSON.stringify(compactBrief(brief), null, 2);
   const startedAt = Date.now();
   logger.info(
-    { model: target.model, url: target.url, tripId, language, briefBytes: briefJson.length },
-    "[Trip Summary] Sending brief to Ollama"
+    {
+      model: target.model,
+      provider: target.kind ?? "ollama",
+      tripId,
+      language,
+      briefBytes: briefJson.length,
+    },
+    "[Trip Summary] Sending brief to the model"
   );
 
   const raw = await generate(target, {
