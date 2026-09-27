@@ -29,6 +29,7 @@ import { cruiseDayColumns, stopColumnsFromRequest } from "../services/timeModel/
 import { keepStoredDay } from "../services/timeModel/dayColumns";
 import { dayAnchorNow } from "../shared/time/clock";
 import { profileZoneOf } from "../shared/time/profileZone";
+import { withCruiseTimes } from "../services/cruise/timesDto";
 
 const router = Router();
 router.use(authenticate);
@@ -57,7 +58,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       include: CRUISE_INCLUDE,
     });
     if (!cruise) throw new AppError("Cruise not found", 404);
-    res.json({ success: true, data: cruise });
+    res.json({ success: true, data: withCruiseTimes(cruise) });
   } catch (err) {
     next(err);
   }
@@ -291,7 +292,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     }
 
     logger.info({ operation: "cruise_create", cruiseId: cruise.id, userId });
-    res.status(201).json({ success: true, data: cruise });
+    res.status(201).json({ success: true, data: withCruiseTimes(cruise) });
   } catch (err) {
     next(err);
   }
@@ -509,7 +510,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     }
 
     // "keptStoredRate" / "lookupFailed": the rate could not be refreshed.
-    res.json({ success: true, data: updated, fxSnapshot: fx.outcome });
+    res.json({ success: true, data: withCruiseTimes(updated), fxSnapshot: fx.outcome });
   } catch (err) {
     next(err);
   }

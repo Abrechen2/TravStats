@@ -1,3 +1,4 @@
+import { withCruiseTimes } from "../../services/cruise/timesDto";
 import type { NextFunction, Response } from "express";
 
 import { prisma } from "../../db";
@@ -75,7 +76,7 @@ export const cruiseListHandler = async (
     const byId = new Map(cruises.map((cruise) => [cruise.id, cruise]));
     const data = pageIds.flatMap((id) => {
       const cruise = byId.get(id);
-      return cruise ? [cruise] : [];
+      return cruise ? [withCruiseTimes(cruise)] : [];
     });
 
     res.json({ success: true, data, meta: { total: rows.length, limit, offset } });

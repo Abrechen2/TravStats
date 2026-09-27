@@ -1,6 +1,5 @@
-import { legacyDayOf } from "../../shared/time/legacyValues";
-import { fromDbDate } from "../../shared/time/localDate";
-import { serializeDay, serializeTime, type LocalDateValue } from "../../shared/time/wire";
+import { serializeTime, type LocalDateValue } from "../../shared/time/wire";
+import { readDay } from "../timeModel/readDay";
 import type { StayTimes } from "../../schemas/times";
 
 /**
@@ -10,9 +9,8 @@ import type { StayTimes } from "../../schemas/times";
  *
  * The days are read from the `DATE` columns (`check_in_date`, …) and go out as
  * `YYYY-MM-DD`, never as a UTC midnight a client could shift by its own zone.
- * A stay the backfill has not reached yet still has only its legacy anchor;
- * that anchor is read by the backfill's own rule (`legacyDayOf`), and an
- * anchor that rule cannot place without guessing goes out as `unknown`.
+ * A stay the backfill has not reached yet is read from its legacy anchor
+ * (`readDay`).
  */
 export interface StayTimeColumns {
   checkIn: Date | null;
@@ -47,11 +45,7 @@ function stayDay(
   zone: string | null,
   precision: DayPrecision | null
 ): LocalDateValue | null {
-  if (precision === null) return null;
-  if (day) return serializeDay(fromDbDate(day), zone, precision);
-  if (!legacy) return null;
-  const reading = legacyDayOf(legacy);
-  return serializeDay(reading.day, zone, reading.ambiguous ? "unknown" : precision);
+  return precision === null ? null : readDay(day, legacy, zone, precision);
 }
 
 export function stayTimes(s: StayTimeColumns): StayTimes {
