@@ -148,9 +148,10 @@ describe("Rail journeys API", () => {
         departureLocal: "2026-03-29T02:30",
         arrivalLocal: "2026-03-29T06:30",
       });
-      expect(gap.status).toBe(400);
+      // The time model's general refusal (ADR 0002 D3), not a rail dialect.
+      expect(gap.status).toBe(422);
       expect(gap.body).toMatchObject({
-        code: "RAIL_LOCAL_TIME_NONEXISTENT",
+        code: "LOCAL_TIME_NONEXISTENT",
         field: "departureLocal",
       });
 
@@ -160,9 +161,9 @@ describe("Rail journeys API", () => {
         departureLocal: "2026-03-29T01:50",
         arrivalLocal: "2026-03-29T02:30",
       });
-      expect(arrivalInGap.status).toBe(400);
+      expect(arrivalInGap.status).toBe(422);
       expect(arrivalInGap.body).toMatchObject({
-        code: "RAIL_LOCAL_TIME_NONEXISTENT",
+        code: "LOCAL_TIME_NONEXISTENT",
         field: "arrivalLocal",
       });
 

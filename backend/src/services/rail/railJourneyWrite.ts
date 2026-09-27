@@ -126,14 +126,10 @@ function sentWallClockToInstant(
     return toInstant(wall, timezone, { origin: "typed" }).utc;
   } catch (error) {
     if (!(error instanceof LocalTimeNonexistentError)) throw error;
-    // Rail keeps the code its form already maps (400, RAIL_…); the general
-    // LOCAL_TIME_NONEXISTENT is the same statement for every other domain.
-    throw new AppError(
-      `${wall} does not exist in ${timezone} — the clocks skip that hour on this day`,
-      400,
-      "RAIL_LOCAL_TIME_NONEXISTENT",
-      field
-    );
+    // The time model's general refusal (422 LOCAL_TIME_NONEXISTENT, ADR 0002
+    // D3), naming the field. Rail answered 400 RAIL_LOCAL_TIME_NONEXISTENT
+    // until phase 4; the web maps both codes, the Companion neither.
+    throw new LocalTimeNonexistentError(wall, timezone, field);
   }
 }
 
