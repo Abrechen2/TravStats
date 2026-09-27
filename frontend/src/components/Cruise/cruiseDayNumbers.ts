@@ -35,6 +35,18 @@ function addDays(isoDate: string, days: number): string | null {
 }
 
 /**
+ * The calendar day ("YYYY-MM-DD") of a day of the cruise: day 1 is the start
+ * date. Null without a readable start date or a day number.
+ */
+export function dateOfCruiseDay(
+  startDate: string | null | undefined,
+  dayNumber: number | null | undefined
+): string | null {
+  if (!startDate || !dayNumber || dayNumber < 1) return null;
+  return addDays(startDate.slice(0, 10), dayNumber - 1);
+}
+
+/**
  * The calendar date of each stop, derived from the cruise's start date and the
  * stop's day of the cruise: day 1 is the start date, day 8 a week later.
  *

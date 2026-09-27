@@ -108,6 +108,23 @@ describe("CruiseTracksPanel", () => {
     expect(screen.getByText("tracks.coversLegs:1")).toBeTruthy();
   });
 
+  // Acceptance 2026-09-26: the recording row read "10.1.2022" where every
+  // other date on the page reads "10.01.2022".
+  it("dates a recording in the reader's date format", async () => {
+    overviewMock.mockResolvedValue({
+      ...OVERVIEW,
+      tracks: [
+        {
+          ...OVERVIEW.tracks[0],
+          startedAt: "2022-01-10T08:00:00.000Z",
+          endedAt: "2022-01-11T08:00:00.000Z",
+        },
+      ],
+    });
+    render(<CruiseTracksPanel cruiseId="c1" onChanged={vi.fn()} />);
+    expect(await screen.findByText(/10\.01\.2022 – 11\.01\.2022/)).toBeTruthy();
+  });
+
   // Browser acceptance 2026-09-26: a leg without a computed row showed
   // "Berechnete Seeroute" and no kilometres — a claim nothing had made.
   it("does not call a leg computed before it has been", async () => {
