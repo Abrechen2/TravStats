@@ -266,8 +266,8 @@
       "48h": "48h vorher"
     },
     "email": "Benachrichtigungs-E-Mail",
-    "before24h": "24h vor Abflug",
-    "before2h": "2h vor Abflug",
+    "before24h": "24h vorher",
+    "before2h": "2h vorher",
     "save": "Speichern",
     "saved": "Gespeichert!",
     "smtpTitle": "SMTP-Konfiguration",
@@ -297,8 +297,8 @@
       "sender": "Die Absender-E-Mail sollte zur Domain des SMTP-Servers passen — sonst werden Mails häufig als Spam markiert. SPF/DKIM-Einträge im DNS erhöhen die Zustellbarkeit."
     },
     "emailSub": "Wohin Erinnerungen gehen; leer = keine",
-    "before24hSub": "Erinnerung einen Tag vor dem Abflug",
-    "before2hSub": "Erinnerung kurz vor dem Abflug",
+    "before24hSub": "Einen Tag vorher — für Flüge, Kreuzfahrten und Zugfahrten; am Morgen des Check-ins für Unterkünfte",
+    "before2hSub": "Kurz vorher — für Flüge, Kreuzfahrten und Zugfahrten",
     "saveFailed": "Benachrichtigungen konnten nicht gespeichert werden"
   },
   "privacy": {

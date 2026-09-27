@@ -35,6 +35,15 @@ jest.mock("../utils/logger", () => ({
 
 jest.mock("../routes/admin/smtp", () => ({ SMTP_CONFIG_ID: 1 }));
 
+// The redesigned reminder builders (2026-09-27) resolve the app's own base
+// URL for the entity link and the settings-page footer link — mocked here
+// exactly like the flight/cruise/rail/lodging reminder content tests
+// (`emailService.reminders.test.ts`) do.
+const mockGetInstanceSettings = jest.fn();
+jest.mock("../services/instanceSettingsService", () => ({
+  getInstanceSettings: mockGetInstanceSettings,
+}));
+
 // Import service after mocks are registered
 import {
   sendFlightReminder,
@@ -48,17 +57,29 @@ import { prisma } from "../db";
 const mockFindUnique = prisma.smtpConfig.findUnique as jest.Mock;
 const mockCreateTransport = nodemailer.createTransport as jest.Mock;
 
+// Shape of `FlightReminderData` (services/emailService.ts) since the
+// 2026-09-27 redesign: `departure`/`arrival` are `TimeValue`s (already
+// resolved to the airport's local clock, see shared/time/wire.ts), not a raw
+// `departureTime`. Content-level coverage (local time, language, cruise/
+// rail/lodging) lives in `emailService.reminders.test.ts`; this file only
+// re-covers the pre-existing send/skip/throw contract for every builder.
 const MOCK_FLIGHT = {
   id: "flight-1",
+  tripId: null,
   flightNumber: "LH103",
+  airline: null,
+  aircraft: null,
+  seatNumber: null,
   depName: "Munich Airport",
   depIata: "MUC",
   arrName: "Frankfurt Airport",
   arrIata: "FRA",
-  departureTime: new Date("2026-05-01T10:00:00Z"),
+  departure: null,
+  arrival: null,
+  durationMinutes: null,
 };
 
-const MOCK_USER = { notificationEmail: "user@example.com" };
+const MOCK_USER = { notificationEmail: "user@example.com", settingsData: null };
 
 const MOCK_SMTP_CONFIG = {
   id: 1,
@@ -79,11 +100,12 @@ describe("emailService", () => {
     jest.clearAllMocks();
     // Always return the same persistent transporter so we can inspect its mocks
     mockCreateTransport.mockReturnValue(mockTransporter);
+    mockGetInstanceSettings.mockResolvedValue({ frontendUrl: "https://travstats.test" });
   });
 
   describe("sendFlightReminder", () => {
     it("skips send when user has no notification email", async () => {
-      await sendFlightReminder(MOCK_FLIGHT, { notificationEmail: null }, 24);
+      await sendFlightReminder(MOCK_FLIGHT, { notificationEmail: null, settingsData: null }, 24);
 
       expect(mockFindUnique).not.toHaveBeenCalled();
       expect(mockTransporter.sendMail).not.toHaveBeenCalled();
