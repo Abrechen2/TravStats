@@ -20,8 +20,13 @@ import { polylineDistanceKm } from "./polylineDistance";
 import { CRUISE_TRACK_COVERAGE_SELECT, resolveRecordedLegs } from "./recordedLegs";
 import type { PortPoint } from "./types";
 
-/** Bumps when the orchestrator's calculator chain or chaining logic changes. */
-export const ORCHESTRATOR_VERSION = "1.0.0";
+/**
+ * Bumps when the orchestrator's calculator chain or chaining logic changes.
+ * Every row carries it as `routerVersion`, which is what the boot backfill
+ * (`scripts/backfillCruiseLegs.ts`) compares: a bump recomputes every cruise.
+ * 1.1.0 (2026-09-27): sea legs are measured along the drawn route.
+ */
+export const ORCHESTRATOR_VERSION = "1.1.0";
 
 /** `cruise_legs.method` of a leg measured along a recording (2.7). */
 export const RECORDED_TRACK_METHOD = "recorded_track";
@@ -55,12 +60,18 @@ export async function recomputeLegsForCruise(
     lon: number;
     unlocode: string | null;
     region: string | null;
+    name: string;
+    city: string | null;
+    country: string | null;
   }): PortPoint => ({
     id: p.id,
     lat: p.lat,
     lon: p.lon,
     unlocode: p.unlocode,
     region: p.region,
+    name: p.name,
+    city: p.city,
+    country: p.country,
   });
 
   const portCallPorts = stops
@@ -142,7 +153,9 @@ export async function recomputeLegsForCruise(
       toPortId: to.id,
       distanceKm: computed.distanceKm,
       method: computed.method,
-      routerVersion: computed.routerVersion,
+      // The orchestrator's version, not the calculator's: it is what the
+      // backfill compares, and the chain is what decides a leg's number.
+      routerVersion: ORCHESTRATOR_VERSION,
       dataVersion: computed.dataVersion,
       confidence: computed.confidence,
       notes: computed.notes,

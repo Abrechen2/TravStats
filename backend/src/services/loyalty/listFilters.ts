@@ -16,12 +16,15 @@ import { prisma } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import type { Prisma } from "../../prisma";
 import type { LoyaltyDomain } from "../../shared/domains";
+import { operatorKey } from "../../shared/railRideKinds";
 import {
   airlineKeys,
   flightCovered,
   lodgingCoverage,
   loadCoveredFlights,
+  loadCoveredRides,
   loadCoveredStays,
+  rideCovered,
   stayCoveredBy,
   stayYear,
 } from "./coverage";
@@ -35,7 +38,7 @@ import {
 async function ownedCard(userId: string, membershipId: string, domain: LoyaltyDomain) {
   const card = await prisma.loyaltyMembership.findFirst({
     where: { id: membershipId, userId, domain },
-    select: { id: true, airlineCodes: true },
+    select: { id: true, airlineCodes: true, railOperators: true },
   });
   if (!card) {
     throw new AppError("Loyalty membership not found", 404, "LOYALTY_MEMBERSHIP_NOT_FOUND");
@@ -44,14 +47,16 @@ async function ownedCard(userId: string, membershipId: string, domain: LoyaltyDo
 }
 
 /**
- * The hotels with at least one stay this card counts — in `year` when given,
- * by the year the statistics file the stay under.
+ * The stays this card counts — in `year` when given, by the year the
+ * statistics file the stay under — and the hotels they belong to. The list
+ * restricts its rows to the hotels AND its figures to the stays, so a list
+ * opened from a card's figure repeats that figure.
  */
-export async function lodgingIdsCoveredBy(
+export async function lodgingStaysCoveredBy(
   userId: string,
   membershipId: string,
   year?: number
-): Promise<string[]> {
+): Promise<{ lodgingIds: string[]; stayIds: string[] }> {
   await ownedCard(userId, membershipId, "lodging");
   const [cards, stays] = await Promise.all([
     prisma.loyaltyMembership.findMany({
@@ -67,13 +72,24 @@ export async function lodgingIdsCoveredBy(
     loadCoveredStays(userId),
   ]);
   const coverage = lodgingCoverage(cards);
-  const ids = new Set<string>();
+  const lodgingIds = new Set<string>();
+  const stayIds: string[] = [];
   for (const stay of stays) {
     if (!stayCoveredBy(membershipId, stay, coverage)) continue;
     if (year !== undefined && stayYear(stay) !== year) continue;
-    ids.add(stay.lodgingId);
+    lodgingIds.add(stay.lodgingId);
+    stayIds.push(stay.id);
   }
-  return [...ids];
+  return { lodgingIds: [...lodgingIds], stayIds };
+}
+
+/** The hotels with at least one stay this card counts (see above). */
+export async function lodgingIdsCoveredBy(
+  userId: string,
+  membershipId: string,
+  year?: number
+): Promise<string[]> {
+  return (await lodgingStaysCoveredBy(userId, membershipId, year)).lodgingIds;
 }
 
 /**
@@ -90,4 +106,16 @@ export async function flightIdsCoveredBy(
   const keys = airlineKeys(card.airlineCodes);
   const flights = await loadCoveredFlights(userId, where);
   return flights.filter((f) => flightCovered(keys, f)).map((f) => f.id);
+}
+
+/**
+ * The rides this card counts — its operators', counted rides only: the rows
+ * behind a rail card's figures, as `railActivity` counts them. The year is
+ * left to the rail list's own filter, which reads the same station calendar.
+ */
+export async function railIdsCoveredBy(userId: string, membershipId: string): Promise<string[]> {
+  const card = await ownedCard(userId, membershipId, "rail");
+  const keys = new Set(card.railOperators.map(operatorKey).filter((k): k is string => k !== null));
+  const rides = await loadCoveredRides(userId);
+  return rides.filter((r) => rideCovered(keys, r)).map((r) => r.id);
 }

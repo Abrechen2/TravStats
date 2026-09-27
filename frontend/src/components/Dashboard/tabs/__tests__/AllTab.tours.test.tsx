@@ -220,8 +220,13 @@ describe("AllTab: tour lines and legend on the dashboard map", () => {
     );
 
     await waitFor(() => {
-      expect(screen.getByText("trips:tours.mode.road")).toBeInTheDocument();
+      expect(screen.getByText("dashboard:legend.tour · trips:tours.mode.road")).toBeInTheDocument();
     });
+    // Acceptance 2026-09-26: every mode was listed, so "Bahn" stood twice —
+    // once in the tour hue, once as the rail domain. Only modes on the map.
+    for (const absent of ["rail", "ferry", "foot", "bike"]) {
+      expect(screen.queryByText(`dashboard:legend.tour · trips:tours.mode.${absent}`)).toBeNull();
+    }
     // Neither transient state is shown once the data has actually arrived.
     expect(screen.queryByText("dashboard:tours.loading")).not.toBeInTheDocument();
     expect(screen.queryByText("dashboard:tours.loadError")).not.toBeInTheDocument();
@@ -241,7 +246,9 @@ describe("AllTab: tour lines and legend on the dashboard map", () => {
 
     expect(screen.getByText("dashboard:tours.loading")).toBeInTheDocument();
     expect(screen.queryByText("dashboard:tours.loadError")).not.toBeInTheDocument();
-    expect(screen.queryByText("trips:tours.mode.road")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("dashboard:legend.tour · trips:tours.mode.road")
+    ).not.toBeInTheDocument();
   });
 
   // The case that matters most: a failed request must render something a
@@ -276,7 +283,9 @@ describe("AllTab: tour lines and legend on the dashboard map", () => {
 
     expect(screen.queryByText("dashboard:tours.loading")).not.toBeInTheDocument();
     expect(screen.queryByText("dashboard:tours.loadError")).not.toBeInTheDocument();
-    expect(screen.queryByText("trips:tours.mode.road")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("dashboard:legend.tour · trips:tours.mode.road")
+    ).not.toBeInTheDocument();
   });
 
   it("does not draw tour lines or legend in journey mode", async () => {
@@ -302,7 +311,9 @@ describe("AllTab: tour lines and legend on the dashboard map", () => {
     const lastProps = mapProps[mapProps.length - 1];
     const extraLayers = lastProps.extraLayers as Array<{ id: string }>;
     expect(extraLayers.some((layer) => layer.id === "dashboard-tour-paths")).toBe(false);
-    expect(screen.queryByText("trips:tours.mode.road")).not.toBeInTheDocument();
+    expect(
+      screen.queryByText("dashboard:legend.tour · trips:tours.mode.road")
+    ).not.toBeInTheDocument();
   });
 
   // Fix round 2 (2026-08-30, browser verification): globe mode drew

@@ -29,7 +29,7 @@ import TimelineActions from "../components/Trips/TimelineActions";
 import JournalViewModal from "../components/Trips/JournalViewModal";
 import StopModal from "../components/Trips/StopModal";
 import BookingEditModal from "../components/Trips/BookingEditModal";
-import TripMap from "../components/Trips/TripMap";
+import TripMapWithTours from "../components/Trips/TripMapWithTours";
 import TripGallery from "../components/Trips/TripGallery";
 import TourSectionList from "../components/Trips/TourSectionList";
 import { useToursVisible } from "../hooks/useToursVisible";
@@ -219,7 +219,7 @@ export default function TripDetailPage(): JSX.Element {
             language={i18n.language}
           />
         )}
-        {tab === "map" && <TripMap trip={shownTrip} />}
+        {tab === "map" && <TripMapWithTours trip={shownTrip} />}
         {tab === "gallery" && (
           <TripGallery
             tripId={shownTrip.id}

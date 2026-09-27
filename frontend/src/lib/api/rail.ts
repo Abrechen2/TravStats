@@ -33,6 +33,8 @@ export interface RailPage {
 export interface RailListQuery {
   q?: string;
   year?: number;
+  /** A rail loyalty card: only the rides it counts. */
+  membershipId?: string;
   status?: string;
   sort?: "departure" | "distance" | "created";
   order?: "asc" | "desc";

@@ -22,9 +22,10 @@ const LINK_STYLE = { color: "var(--ts-accent)", fontWeight: 600 } as const;
  *
  * The figures come from the server, derived by the statistics' counting rules;
  * this only words them. A part the server abstained on (null nights, no dated
- * activity) is left out rather than printed as 0. Each figure of a hotel or
- * flight card links to the list filtered to exactly the rows it counted; the
- * cruise list has no such filter, so a cruise card's figures are text.
+ * activity) is left out rather than printed as 0. Each figure of a hotel,
+ * flight or rail card links to the list filtered to exactly the rows it
+ * counted; the cruise list has no such filter, so a cruise card's figures are
+ * text.
  */
 export default function ActivityLine({
   domain,
@@ -54,7 +55,8 @@ export default function ActivityLine({
       t("loyalty:activity.last", { date: formatDate(activity.lastActivity, { timeZone: "UTC" }) })
     );
   }
-  const listDomain = domain === "lodging" || domain === "flight" ? domain : null;
+  const listDomain =
+    domain === "lodging" || domain === "flight" || domain === "rail" ? domain : null;
   const linkTo = (year?: number): string | null =>
     listDomain !== null && membershipId !== undefined
       ? loyaltyListLink(listDomain, membershipId, year)

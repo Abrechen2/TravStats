@@ -9,19 +9,28 @@ import { logger } from "../../lib/logger";
 export const LOYALTY_FILTER_PARAM = "membership";
 export const LOYALTY_YEAR_PARAM = "year";
 
+/** The lists a loyalty figure can open. */
+export type LoyaltyListDomain = "flight" | "lodging" | "rail";
+
+const LIST_PATH: Record<LoyaltyListDomain, string> = {
+  flight: "/flights",
+  lodging: "/lodging",
+  rail: "/rail",
+};
+
 /**
- * Where a loyalty figure's link leads: the lodging or flight list, filtered
- * on the server to the rows the figure counted (`?membership=<id>`, with
- * `&year=` for a per-year figure). Cruise cards have no such list filter.
+ * Where a loyalty figure's link leads: the lodging, flight or rail list,
+ * filtered on the server to the rows the figure counted (`?membership=<id>`,
+ * with `&year=` for a per-year figure). Cruise cards have no such list filter.
  */
 export function loyaltyListLink(
-  domain: "flight" | "lodging",
+  domain: LoyaltyListDomain,
   membershipId: string,
   year?: number
 ): string {
   const params = new URLSearchParams({ [LOYALTY_FILTER_PARAM]: membershipId });
   if (year !== undefined) params.set(LOYALTY_YEAR_PARAM, String(year));
-  return `${domain === "flight" ? "/flights" : "/lodging"}?${params.toString()}`;
+  return `${LIST_PATH[domain]}?${params.toString()}`;
 }
 
 /**
@@ -63,6 +72,12 @@ function errorCode(err: unknown): string | undefined {
 interface NoticeProps {
   membershipId: string;
   onClear: () => void;
+  /**
+   * The year the link named, for a list with no year filter of its own to
+   * show it in (rail) — a filter nobody can see is how a list looks like it
+   * lost data.
+   */
+  year?: number | null;
 }
 
 /**
@@ -74,7 +89,7 @@ interface NoticeProps {
  * link) says so in words; the list request answers the same 404, so the page
  * shows no rows rather than every row.
  */
-export function LoyaltyFilterNotice({ membershipId, onClear }: NoticeProps): JSX.Element {
+export function LoyaltyFilterNotice({ membershipId, onClear, year }: NoticeProps): JSX.Element {
   const { t } = useTranslation(["loyalty"]);
   const [state, setState] = useState<CardState>({ kind: "loading" });
 
@@ -114,7 +129,12 @@ export function LoyaltyFilterNotice({ membershipId, onClear }: NoticeProps): JSX
       className="flex flex-wrap items-center gap-3 text-sm"
       style={{ color: state.kind === "gone" ? "var(--ts-bad)" : "var(--ts-text)" }}
     >
-      <span>{text}</span>
+      <span>
+        {text}
+        {year !== null && year !== undefined && state.kind !== "gone"
+          ? ` · ${t("loyalty:listFilter.inYear", { year })}`
+          : ""}
+      </span>
       <button
         type="button"
         onClick={onClear}

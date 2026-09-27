@@ -52,7 +52,7 @@ export default function AdminPage(): JSX.Element {
   // The sections column the deep-link aligner's ResizeObserver watches (see
   // the effect below) — any lazy section growing past its placeholder height
   // changes this element's size.
-  const mainRef = useRef<HTMLElement>(null);
+  const mainRef = useRef<HTMLDivElement>(null);
 
   // State
   const [systemInfo, setSystemInfo] = useState<SystemInfoData | null>(null);
@@ -556,7 +556,7 @@ export default function AdminPage(): JSX.Element {
           />
         </div>
 
-        <main ref={mainRef} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
+        <div ref={mainRef} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
           {/* The scope line is the counterpart of the one in user settings:
               everything here is instance-wide. */}
           <PageHeader title={`${t("admin:title")} · ${currentLabel}`} meta={t("admin:scopeHint")} />
@@ -622,7 +622,7 @@ export default function AdminPage(): JSX.Element {
               </AdminSection>
             )
           )}
-        </main>
+        </div>
       </div>
       {confirmDialog}
     </AppShell>

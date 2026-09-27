@@ -318,7 +318,8 @@
     "lodgingIndependent": "Independent",
     "title": "Key",
     "railTraced": "Rail · route (Transitous)",
-    "railStraight": "Rail · straight line"
+    "railStraight": "Rail · straight line",
+    "tour": "Tour"
   },
   "userMenu": {
     "label": "Account menu"

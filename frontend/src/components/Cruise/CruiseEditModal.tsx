@@ -175,6 +175,22 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // What the server needs before it creates a cruise (`cruiseHasIdentity` and
+  // the start-date rule in backend schemas/cruise.ts): the form names the
+  // missing field instead of sending an empty row and showing a generic error.
+  // Create only, like the server: an existing row is edited as it is. Shown
+  // once a save was tried, and gone the moment the field is filled.
+  const [saveTried, setSaveTried] = useState(false);
+  const lacksIdentity =
+    mode === "create" &&
+    !ship &&
+    !routeName.trim() &&
+    !cruiseLine.trim() &&
+    !departurePort &&
+    !cruise?.shipNameOverride?.trim();
+  const lacksStart = mode === "create" && !startDate;
+  const identityMissing = saveTried && lacksIdentity;
+  const startMissing = saveTried && lacksStart;
 
   const onShipPicked = (s: Ship): void => {
     setShip(s);
@@ -182,6 +198,8 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
   };
 
   const submit = async (): Promise<void> => {
+    setSaveTried(true);
+    if (lacksIdentity || lacksStart) return;
     setSaving(true);
     setError(null);
     try {
@@ -285,7 +303,14 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
               value={routeName}
               onChange={(e): void => setRouteName(e.target.value)}
               placeholder={t("field.routeName")}
+              aria-invalid={identityMissing || undefined}
+              aria-describedby={identityMissing ? "cruise-identity-error" : undefined}
             />
+            {identityMissing && (
+              <p id="cruise-identity-error" role="alert" className="mt-1 text-xs text-(--danger)">
+                {t("form.identityRequired")}
+              </p>
+            )}
             {/* Offered, never written on its own: a route name is the user's
                 wording, and the ports only say what it could be. */}
             {routeNameSuggestion && (
@@ -305,6 +330,8 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 style={DARK_PICKER_STYLE}
                 value={startDate}
                 onChange={(e): void => setStartDate(e.target.value)}
+                aria-invalid={startMissing || undefined}
+                aria-describedby={startMissing ? "cruise-start-error" : undefined}
               />
               <input
                 type="date"
@@ -315,6 +342,11 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 onChange={(e): void => onEndDateChange(e.target.value)}
               />
             </div>
+            {startMissing && (
+              <p id="cruise-start-error" role="alert" className="mt-1 text-xs text-(--danger)">
+                {t("form.startDateRequired")}
+              </p>
+            )}
             {/* #status-from-dates: cruise write paths derive scheduled/
                   in_progress/flown from the dates — a select just let the UI
                   set a value the backend would immediately overwrite. Only

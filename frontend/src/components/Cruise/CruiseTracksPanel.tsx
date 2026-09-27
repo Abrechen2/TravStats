@@ -8,6 +8,7 @@ import { dawarichFailureKey, dawarichFailureKind } from "../../lib/api/dawarich"
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { TRACK_ERROR_KEYS } from "../../lib/trackErrorKeys";
+import { useDisplayFormat } from "../../lib/displayFormat";
 import { useToastStore } from "../../store/toastStore";
 import type { CruiseLegTrack, CruiseTrackMeta } from "../../types/cruiseTracks";
 
@@ -48,8 +49,10 @@ export default function CruiseTracksPanel({ cruiseId, onChanged }: Props): JSX.E
 
   const km = (value: number): string =>
     value.toLocaleString(i18n.language, { maximumFractionDigits: 0 });
-  const day = (iso: string): string =>
-    new Date(iso).toLocaleDateString(i18n.language, { timeZone: "UTC" });
+  // The reader's date format, like every other date on the page — the browser's
+  // own printed "10.1.2022" beside "10.01.2022" (acceptance run, 2026-09-26).
+  const format = useDisplayFormat();
+  const day = (iso: string): string => format.date(iso, { timeZone: "UTC" });
 
   const onFile = (file: File): void => {
     void (async () => {

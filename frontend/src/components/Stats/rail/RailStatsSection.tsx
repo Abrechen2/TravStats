@@ -40,12 +40,21 @@ export default function RailStatsSection({
   const accent = colorOf("rail");
   const { year, compareYear } = scope;
   const [stats, setStats] = useState<RailStats | null>(null);
-  const [previous, setPrevious] = useState<RailStats | null>(null);
+  // The comparison pair, each cut to the same span when a year is running.
+  // Separate from `stats`: the section's headline is always the WHOLE selected
+  // year — cutting it too would show 2025 up to today's date when 2025 is set
+  // against a running 2026 (the defect 4c0ee381 fixed on the overview).
+  const [pair, setPair] = useState<{
+    current: RailStats;
+    previous: RailStats;
+    samePeriod: boolean;
+  } | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setStats(null);
+    setPair(null);
     setFailed(false);
     void (async () => {
       try {
@@ -55,13 +64,18 @@ export default function RailStatsSection({
           year !== null && compareYear !== null
             ? sameSpanUntil(comparisonWindow(year, compareYear), year)
             : null;
-        const [current, prior] = await Promise.all([
-          railApi.stats(year, until),
+        const [whole, cut, prior] = await Promise.all([
+          railApi.stats(year, null),
+          until === null ? Promise.resolve(null) : railApi.stats(year, until),
           compareYear === null ? Promise.resolve(null) : railApi.stats(compareYear, until),
         ]);
         if (cancelled) return;
-        setStats(current);
-        setPrevious(prior);
+        setStats(whole);
+        setPair(
+          prior === null
+            ? null
+            : { current: cut ?? whole, previous: prior, samePeriod: cut !== null }
+        );
       } catch (err) {
         logger.error("RailStatsSection: fetch failed", err);
         // A failed load says so; zeros would claim "you never took a train".
@@ -92,31 +106,32 @@ export default function RailStatsSection({
   });
 
   const comparison =
-    previous && year !== null && compareYear !== null ? (
+    pair && year !== null && compareYear !== null ? (
       <div className="mb-8">
         <PeriodComparisonStrip
           year={year}
           compareYear={compareYear}
+          samePeriod={pair.samePeriod}
           rows={[
             {
               key: "journeys",
               label: t("rail:stats.journeys"),
-              current: stats.journeys,
-              previous: previous.journeys,
+              current: pair.current.journeys,
+              previous: pair.previous.journeys,
               evidenceKey: "railRideCount",
             },
             {
               key: "km",
               label: t("rail:stats.kmAll"),
-              current: Math.round(stats.distance.totalKm),
-              previous: Math.round(previous.distance.totalKm),
+              current: Math.round(pair.current.distance.totalKm),
+              previous: Math.round(pair.previous.distance.totalKm),
               evidenceKey: "railDistanceKmTotal",
             },
             {
               key: "countries",
               label: t("rail:stats.countries"),
-              current: stats.countries.length,
-              previous: previous.countries.length,
+              current: pair.current.countries.length,
+              previous: pair.previous.countries.length,
               evidenceKey: "railCountriesCount",
             },
           ]}

@@ -491,7 +491,8 @@
       "saveError": "The date could not be saved."
     },
     "map": {
-      "empty": "This tour has no points with coordinates yet — add points or upload a recording."
+      "empty": "This tour has no points with coordinates yet — add points or upload a recording.",
+      "loadError": "This trip's tours could not be loaded — so the map does not show them."
     }
   },
   "head": {

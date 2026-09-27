@@ -172,6 +172,14 @@ registry.registerPath({
         .optional()
         .describe("Calendar year of the departure, on the departure station's calendar"),
       tripId: z.string().uuid().optional(),
+      membershipId: z
+        .string()
+        .uuid()
+        .optional()
+        .describe(
+          "A rail loyalty card: only the rides it counts. 404 LOYALTY_MEMBERSHIP_NOT_FOUND " +
+            "for a card that is not the caller's rail card"
+        ),
       limit: z.coerce.number().int().min(1).max(500).optional(),
       offset: z.coerce.number().int().min(0).optional(),
       sort: z.enum(RAIL_SORT_FIELDS).optional(),

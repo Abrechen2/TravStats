@@ -37,6 +37,7 @@ import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import logger from "../utils/logger";
+import { railIdsCoveredBy } from "../services/loyalty/listFilters";
 
 /**
  * Rail journeys — one row per train ride (spec
@@ -177,6 +178,11 @@ async function buildWhere(
     ...(statuses && { status: { in: statuses } }),
     ...(query.tripId && { tripId: query.tripId }),
     ...(query.year !== undefined && { id: { in: await idsDepartingInYear(userId, query.year) } }),
+    // The card's rides, AND-ed with the year above: two `id` clauses, so the
+    // second goes through AND rather than overwriting the first.
+    ...(query.membershipId !== undefined && {
+      AND: [{ id: { in: await railIdsCoveredBy(userId, query.membershipId) } }],
+    }),
     ...(q && {
       OR: (
         [

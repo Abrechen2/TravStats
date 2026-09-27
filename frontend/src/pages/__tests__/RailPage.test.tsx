@@ -56,6 +56,10 @@ vi.mock("../../lib/api/rail", () => ({
   },
 }));
 
+vi.mock("../../lib/api/loyalty", () => ({
+  getLoyaltyMembership: vi.fn(async () => ({ programName: "BahnBonus" })),
+}));
+
 import { MemoryRouter } from "react-router-dom";
 
 import RailPage from "../RailPage";
@@ -192,5 +196,26 @@ describe("RailPage", () => {
     await waitFor(() => expect(remove).toHaveBeenCalledWith("j1"));
     expect(await screen.findByText("rail:empty")).toBeInTheDocument();
     expect(addToast).toHaveBeenCalledWith("success", "rail:deleted");
+  });
+});
+
+// Acceptance 2026-09-26: a rail card's figure had nowhere to lead. The list
+// opens on the card's rides, in the linked year, and says so above them.
+describe("RailPage — opened from a rail card's figure", () => {
+  it("asks for the card's rides in that year and names both above the list", async () => {
+    list.mockReset().mockResolvedValue({ journeys: [journey()], total: 1 });
+    render(
+      <MemoryRouter initialEntries={["/rail?membership=card-9&year=2025"]}>
+        <RailPage />
+      </MemoryRouter>
+    );
+    await waitFor(() =>
+      expect(list).toHaveBeenCalledWith(
+        expect.objectContaining({ membershipId: "card-9", year: 2025 })
+      )
+    );
+    const notice = await screen.findByTestId("loyalty-list-filter");
+    await waitFor(() => expect(notice).toHaveTextContent("loyalty:listFilter.named"));
+    expect(notice).toHaveTextContent("loyalty:listFilter.inYear");
   });
 });

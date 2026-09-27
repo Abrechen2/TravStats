@@ -51,7 +51,7 @@ import {
 } from "../services/lodging/deleteLodgingPhotoFiles";
 import { getBaseCurrency } from "../services/fx/snapshot";
 import { assertChainsVisible } from "../services/lodging/chainScope";
-import { lodgingIdsCoveredBy } from "../services/loyalty/listFilters";
+import { lodgingStaysCoveredBy } from "../services/loyalty/listFilters";
 import type { LodgingListQuery, LodgingQueryInput } from "../schemas/lodging";
 
 // Re-exported: every existing import site names this module.
@@ -84,7 +84,8 @@ const fxPreviewQuerySchema = z.object({
 /** The request, with a loyalty card's coverage resolved to hotel ids. */
 async function listQuery(q: LodgingQueryInput, userId: string): Promise<LodgingListQuery> {
   if (q.membershipId === undefined) return q;
-  return { ...q, coveredLodgingIds: await lodgingIdsCoveredBy(userId, q.membershipId, q.year) };
+  const covered = await lodgingStaysCoveredBy(userId, q.membershipId, q.year);
+  return { ...q, coveredLodgingIds: covered.lodgingIds, countedStayIds: covered.stayIds };
 }
 
 // ---- Lodging CRUD ----
@@ -110,11 +111,11 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     // are read here and their figures still derived by `computeAggregates`
     // from the shared rules, so the SQL never becomes a second source for a
     // number the user reads; `listSql.parity.test.ts` holds the two together.
-    const { ids, total } = await queryLodgingPage({
-      userId,
-      query: await listQuery(parsed.data, userId),
-      baseCurrency,
-    });
+    const query = await listQuery(parsed.data, userId);
+    const { ids, total } = await queryLodgingPage({ userId, query, baseCurrency });
+    // A loyalty link counts only the card's stays (`countedStayIds`); the row
+    // keeps every stay it has, but its figures read the counted ones.
+    const counted = query.countedStayIds ? new Set(query.countedStayIds) : null;
     const lodgings = await prisma.lodging.findMany({
       // `userId` as well as the ids, although the query that produced them was
       // already scoped to this account. Ownership belongs in the query that
@@ -132,7 +133,15 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       const lodging = byId.get(id);
       return lodging === undefined
         ? []
-        : [{ ...lodging, ...computeAggregates(lodging.stays, baseCurrency) }];
+        : [
+            {
+              ...lodging,
+              ...computeAggregates(
+                counted ? lodging.stays.filter((s) => counted.has(s.id)) : lodging.stays,
+                baseCurrency
+              ),
+            },
+          ];
     });
 
     // `meta.total` is the count of the FULL filtered set, before the page
