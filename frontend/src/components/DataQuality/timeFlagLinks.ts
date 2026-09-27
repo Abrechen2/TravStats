@@ -5,6 +5,7 @@ import {
   TIME_FLAG_KINDS,
   type TimeFlagEntityType,
   type TimeFlagKind,
+  type TimeParentType,
 } from "../../types/timeMigration";
 
 /**
@@ -16,7 +17,8 @@ import {
  * - **cruise_stop** → the cruise editor, which holds the stops: a sea day or
  *   an unmatched port gets its port there.
  * - **trip_stop / trip_journal_entry** → that one stop or entry on the trip
- *   timeline.
+ *   timeline (`tripId`); a tour's own point → the tour editor, inside the
+ *   tour's trip when it has one.
  * - **place_visit** → for a missing zone the PLACE editor (the zone comes
  *   from the place's coordinates; a visit has none of its own); for an
  *   unknown time of day or an uncertain day, that visit's editor.
@@ -32,12 +34,17 @@ export function isTimeFlagEntityType(value: string): value is TimeFlagEntityType
   return (TIME_FLAG_ENTITY_TYPES as readonly string[]).includes(value);
 }
 
-export function timeValueEditorPath(
-  entityType: TimeFlagEntityType,
-  entityId: string,
-  parentId: string | null,
-  kind: TimeFlagKind
-): string | null {
+/** The row a time question is about, and where it lives — the subject, or a report row. */
+export interface TimeRowLink {
+  entityType: TimeFlagEntityType;
+  entityId: string;
+  parentType: TimeParentType | null;
+  parentId: string | null;
+  tripId: string | null;
+}
+
+export function timeValueEditorPath(link: TimeRowLink, kind: TimeFlagKind): string | null {
+  const { entityType, entityId, parentType, parentId, tripId } = link;
   const edit = `${EDIT_PARAM.edit}=1`;
   switch (entityType) {
     case "flight":
@@ -53,10 +60,18 @@ export function timeValueEditorPath(
     case "cruise_stop":
       return parentId ? `/cruises/${parentId}?${edit}` : null;
     case "trip_stop":
-      return parentId ? `/trips/${parentId}?tab=timeline&${EDIT_PARAM.editStop}=${entityId}` : null;
+      // A tour's own point is edited in the tour editor — inside the tour's
+      // trip when it has one; every other stop on its trip's timeline.
+      if (parentType === "tour") {
+        if (!parentId) return null;
+        return tripId ? `/trips/${tripId}/route/${parentId}` : `/tours/${parentId}`;
+      }
+      return (tripId ?? parentId)
+        ? `/trips/${tripId ?? parentId}?tab=timeline&${EDIT_PARAM.editStop}=${entityId}`
+        : null;
     case "trip_journal_entry":
-      return parentId
-        ? `/trips/${parentId}?tab=timeline&${EDIT_PARAM.editJournal}=${entityId}`
+      return (tripId ?? parentId)
+        ? `/trips/${tripId ?? parentId}?tab=timeline&${EDIT_PARAM.editJournal}=${entityId}`
         : null;
     case "lodging_stay":
       return parentId ? `/lodging/${parentId}?${EDIT_PARAM.editStay}=${entityId}` : null;
@@ -79,7 +94,15 @@ export function isTimeFlagKind(kind: string): kind is TimeFlagKind {
  */
 export function timeFlagEditorPath(flag: DataQualityFlag): string | null {
   if (!isTimeFlagKind(flag.kind) || !isTimeFlagEntityType(flag.entityType)) return null;
-  const parentId =
-    flag.subject && "parentId" in flag.subject ? (flag.subject.parentId ?? null) : null;
-  return timeValueEditorPath(flag.entityType, flag.entityId, parentId, flag.kind);
+  const subject = flag.subject && "parentId" in flag.subject ? flag.subject : null;
+  return timeValueEditorPath(
+    {
+      entityType: flag.entityType,
+      entityId: flag.entityId,
+      parentType: subject?.parentType ?? null,
+      parentId: subject?.parentId ?? null,
+      tripId: subject?.tripId ?? null,
+    },
+    flag.kind
+  );
 }

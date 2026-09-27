@@ -7,6 +7,7 @@ import type { DataQualityFlag } from "../../types/dataQuality";
 import type {
   TimeFlagEntityType,
   TimeFlagKind,
+  TimeParentType,
   TimeQuestionDetails,
 } from "../../types/timeMigration";
 
@@ -31,7 +32,8 @@ function timeFlag(
   entityType: TimeFlagEntityType,
   parentId: string | null,
   field: Partial<Field> = {},
-  label = "Eintrag"
+  label = "Eintrag",
+  link: { parentType?: TimeParentType | null; tripId?: string | null } = {}
 ): DataQualityFlag {
   return {
     id: `flag-${kind}-${entityType}`,
@@ -41,7 +43,14 @@ function timeFlag(
     createdAt: "2026-09-27T08:00:00.000Z",
     resolvedAt: null,
     kind,
-    subject: { entityType, entityId: "row-1", label, parentId },
+    subject: {
+      entityType,
+      entityId: "row-1",
+      label,
+      parentId,
+      parentType: link.parentType ?? null,
+      tripId: link.tripId ?? null,
+    },
     details: {
       table: "flights",
       fields: [
@@ -127,6 +136,49 @@ describe("time questions in the inbox", () => {
   ] as const)("a %s opens its editor", (entityType, parentId, action, href) => {
     renderCard(timeFlag("time_zone_unresolved", entityType, parentId));
     expect(editorLink(action)).toHaveAttribute("href", href);
+  });
+
+  it("opens a tour's own point in the tour editor - inside its trip, or standalone", () => {
+    const { unmount } = renderCard(
+      timeFlag("time_zone_unresolved", "trip_stop", "tour-1", {}, "Aussichtspunkt", {
+        parentType: "tour",
+        tripId: "t1",
+      })
+    );
+    expect(editorLink("Halt bearbeiten")).toHaveAttribute("href", "/trips/t1/route/tour-1");
+    unmount();
+
+    renderCard(
+      timeFlag("time_zone_unresolved", "trip_stop", "tour-1", {}, "Aussichtspunkt", {
+        parentType: "tour",
+        tripId: null,
+      })
+    );
+    expect(editorLink("Halt bearbeiten")).toHaveAttribute("href", "/tours/tour-1");
+  });
+
+  it("opens a stop and a journal entry on the trip the server names", () => {
+    const { unmount } = renderCard(
+      timeFlag("time_zone_unresolved", "trip_stop", "t1", {}, "Glencoe", {
+        parentType: "trip",
+        tripId: "t1",
+      })
+    );
+    expect(editorLink("Halt bearbeiten")).toHaveAttribute(
+      "href",
+      "/trips/t1?tab=timeline&editStop=row-1"
+    );
+    unmount();
+    renderCard(
+      timeFlag("time_day_ambiguous", "trip_journal_entry", "t1", {}, "Tag 3", {
+        parentType: "trip",
+        tripId: "t1",
+      })
+    );
+    expect(editorLink("Eintrag bearbeiten")).toHaveAttribute(
+      "href",
+      "/trips/t1?tab=timeline&editJournal=row-1"
+    );
   });
 
   it("asks about an uncertain day, and shows the kept day in the place's zone", () => {

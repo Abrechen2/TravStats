@@ -1,8 +1,10 @@
 import { z } from "zod";
 
 import {
+  TIME_FLAG_ENTITY_TYPES,
   TIME_FLAG_KINDS,
   TIME_MIGRATION_REASONS,
+  TIME_PARENT_TYPES,
   TIME_MIGRATION_TABLES,
   type ReResolveApply,
   type ReResolveDryRun,
@@ -37,7 +39,14 @@ export class TimeMigrationContractError extends Error {
 
 const count = z.number().int().nonnegative();
 const table = z.enum(TIME_MIGRATION_TABLES);
-const reason = z.enum(TIME_MIGRATION_REASONS);
+/**
+ * A reason this build has no word for (a newer server) becomes `"other"`
+ * instead of failing the report: every other number on the screen is still
+ * true, and the row still says it is open. Null stays null — the server sends
+ * it for a ledger reason it does not know itself.
+ */
+const reason = z.enum([...TIME_MIGRATION_REASONS, "other"]).catch("other");
+const flagKind = z.enum(TIME_FLAG_KINDS);
 const reResolveTable = z.enum([
   "flights",
   "rail_journeys",
@@ -75,7 +84,7 @@ const reportSchema = z.object({
     open: count,
     resolved: count,
     dismissed: count,
-    byKind: z.array(z.object({ kind: z.enum(TIME_FLAG_KINDS), open: count })),
+    byKind: z.array(z.object({ kind: flagKind, open: count })),
   }),
   openRows: z.array(
     z.object({
@@ -84,10 +93,16 @@ const reportSchema = z.object({
       userId: z.string().nullable(),
       column: z.string(),
       rule: z.string(),
-      reason: reason.nullable(),
+      reason: z.null().or(reason),
       legacyValue: z.string().nullable(),
       newValue: z.string().nullable(),
       zone: z.string().nullable(),
+      entityType: z.enum(TIME_FLAG_ENTITY_TYPES),
+      parentType: z.enum(TIME_PARENT_TYPES).nullable(),
+      parentId: z.string().nullable(),
+      tripId: z.string().nullable(),
+      flagId: z.string().nullable(),
+      kind: flagKind.nullable(),
     })
   ),
   openRowsTruncated: z.boolean(),

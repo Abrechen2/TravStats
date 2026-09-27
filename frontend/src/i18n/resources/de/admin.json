@@ -820,7 +820,8 @@
       "writer_unknown": "Nicht feststellbar, ob Web oder App die Zeit geschrieben hat",
       "date_only_day_differs": "Nur Datum – der Ortstag weicht vom UTC-Tag ab",
       "day_anchor_ambiguous": "Nicht eindeutig, welcher Kalendertag gemeint ist",
-      "instant_without_zone": "Ohne Zeitzone des Bahnhofs gespeichert"
+      "instant_without_zone": "Ohne Zeitzone des Bahnhofs gespeichert",
+      "other": "ein Grund, den diese Version noch nicht kennt"
     },
     "columns": {
       "departure": "Abfahrt/Abflug",
@@ -912,6 +913,7 @@
         "title_one": "{{count}} offene Angabe",
         "title_other": "{{count}} offene Angaben",
         "answer": "Im Posteingang beantworten",
+        "openEditor": "Im Editor öffnen",
         "otherInbox": "im Posteingang von {{user}}",
         "unknownOwner": "Konto nicht zuzuordnen",
         "truncated": "Nicht alle offenen Angaben sind aufgelistet – die Zahlen oben zählen alle."

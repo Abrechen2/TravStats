@@ -12,6 +12,7 @@ import type {
   TimeMigrationOpenRow,
   TimeMigrationReport as Report,
 } from "../../../types/timeMigration";
+import { timeValueEditorPath } from "../../DataQuality/timeFlagLinks";
 import Button from "../../ui/Button";
 import StatTile from "../../ui/StatTile";
 import {
@@ -230,7 +231,7 @@ function OpenRows({
               </span>
             )}
             <span className="ml-auto text-sm">
-              <Owner userId={row.userId} viewerId={viewerId} users={users} />
+              <Owner row={row} viewerId={viewerId} users={users} />
             </span>
           </li>
         ))}
@@ -241,28 +242,49 @@ function OpenRows({
 }
 
 /**
- * Who answers the row. The admin's own rows link to their inbox, where the
- * question carries the editor; another account's row is that user's to
- * answer, and the line says whose.
+ * Who answers the row. The admin's own row opens straight in the editor that
+ * fills it (the same one its inbox question opens); a row whose editor cannot
+ * be named still reaches the inbox. Another account's row is that user's to
+ * answer — its records are not the admin's to open — and the line says whose.
  */
 function Owner({
-  userId,
+  row,
   viewerId,
   users,
 }: {
-  userId: string | null;
+  row: TimeMigrationOpenRow;
   viewerId: string | undefined;
   users: ReportUser[];
 }): JSX.Element {
   const { t } = useTranslation(["admin"]);
-  if (userId !== null && userId === viewerId) {
+  if (row.userId !== null && row.userId === viewerId) {
+    const editor = timeValueEditorPath(
+      {
+        entityType: row.entityType,
+        entityId: row.rowId,
+        parentType: row.parentType,
+        parentId: row.parentId,
+        tripId: row.tripId,
+      },
+      // Without a known question the row's own editor, not its place's.
+      row.kind ?? "time_precision_unknown"
+    );
     return (
-      <Link to={INBOX_PATH} className="underline" style={{ color: "var(--ts-accent)" }}>
-        {t("admin:timeModel.report.openRows.answer")}
-      </Link>
+      <span className="flex flex-wrap gap-x-3">
+        {editor && (
+          <Link to={editor} className="underline" style={{ color: "var(--ts-accent)" }}>
+            {t("admin:timeModel.report.openRows.openEditor")}
+          </Link>
+        )}
+        {(row.flagId || !editor) && (
+          <Link to={INBOX_PATH} className="underline" style={{ color: "var(--ts-accent)" }}>
+            {t("admin:timeModel.report.openRows.answer")}
+          </Link>
+        )}
+      </span>
     );
   }
-  const username = users.find((u) => u.id === userId)?.username;
+  const username = users.find((u) => u.id === row.userId)?.username;
   return (
     <span className="t-caption">
       {username

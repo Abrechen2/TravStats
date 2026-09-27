@@ -1,4 +1,9 @@
-import type { TimeFlagEntityType, TimeFlagKind, TimeQuestionDetails } from "./timeMigration";
+import type {
+  TimeFlagEntityType,
+  TimeFlagKind,
+  TimeParentType,
+  TimeQuestionDetails,
+} from "./timeMigration";
 
 /**
  * The data-quality inbox, as the frontend reads it.
@@ -77,6 +82,10 @@ export interface TimeValueRecord {
   label: string;
   /** The record it is edited on; null where the row is its own page. */
   parentId: string | null;
+  /** What `parentId` names. */
+  parentType: TimeParentType | null;
+  /** The trip the row belongs to; for a tour's own point, the tour's trip. */
+  tripId: string | null;
 }
 
 /** What the geocoder said against what the address says. */

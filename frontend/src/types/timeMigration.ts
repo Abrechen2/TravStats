@@ -46,6 +46,13 @@ export const TIME_MIGRATION_REASONS = [
 ] as const;
 export type TimeMigrationReason = (typeof TIME_MIGRATION_REASONS)[number];
 
+/**
+ * A reason as the report screen holds it: a code a server newer than this
+ * build sends is read as `"other"` (it still gets a sentence and still counts),
+ * never as a reason to throw the whole report away.
+ */
+export type TimeMigrationReportReason = TimeMigrationReason | "other";
+
 export type TimeMigrationStatus = "open" | "resolved";
 export type BackfillState = "pending" | "running" | "completed" | "failed";
 export type UnchangedDomain = "tours" | "track_windows" | "loyalty" | "country_days" | "photos";
@@ -74,7 +81,8 @@ export const TIME_FLAG_ENTITY_TYPES = [
 export type TimeFlagEntityType = (typeof TIME_FLAG_ENTITY_TYPES)[number];
 
 /** The record a row is edited on. */
-export type TimeParentType = "place" | "cruise" | "trip" | "tour" | "lodging";
+export const TIME_PARENT_TYPES = ["place", "cruise", "trip", "tour", "lodging"] as const;
+export type TimeParentType = (typeof TIME_PARENT_TYPES)[number];
 
 export interface TimeMigrationTableReport {
   table: TimeMigrationTable;
@@ -83,7 +91,7 @@ export interface TimeMigrationTableReport {
   /** Filled by a phase-2 write path or a seed before the backfill came; left unchanged. */
   alreadyFilled: number;
   rules: Array<{ rule: string; status: TimeMigrationStatus; count: number }>;
-  reasons: Array<{ reason: TimeMigrationReason; count: number }>;
+  reasons: Array<{ reason: TimeMigrationReportReason; count: number }>;
 }
 
 export interface TimeMigrationOpenRow {
@@ -92,7 +100,8 @@ export interface TimeMigrationOpenRow {
   userId: string | null;
   column: string;
   rule: string;
-  reason: TimeMigrationReason | null;
+  /** Null: the server itself does not know the ledger's reason. */
+  reason: TimeMigrationReportReason | null;
   legacyValue: string | null;
   newValue: string | null;
   zone: string | null;
@@ -103,6 +112,8 @@ export interface TimeMigrationOpenRow {
   tripId: string | null;
   /** The inbox question this row raised; null when none. */
   flagId: string | null;
+  /** Which question it is — decides the editor that answers it; null with `reason`. */
+  kind: TimeFlagKind | null;
 }
 
 export interface TimeMigrationReport {

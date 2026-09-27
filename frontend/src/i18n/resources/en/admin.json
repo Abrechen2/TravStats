@@ -820,7 +820,8 @@
       "writer_unknown": "Could not tell whether the web or the app wrote the time",
       "date_only_day_differs": "Date only – the local day differs from the UTC day",
       "day_anchor_ambiguous": "Not certain which calendar day is meant",
-      "instant_without_zone": "Stored without the station's time zone"
+      "instant_without_zone": "Stored without the station's time zone",
+      "other": "a reason this version does not know yet"
     },
     "columns": {
       "departure": "Departure",
@@ -912,6 +913,7 @@
         "title_one": "{{count}} open value",
         "title_other": "{{count}} open values",
         "answer": "Answer in the inbox",
+        "openEditor": "Open the editor",
         "otherInbox": "in {{user}}'s inbox",
         "unknownOwner": "account not identifiable",
         "truncated": "Not every open value is listed – the numbers above count them all."

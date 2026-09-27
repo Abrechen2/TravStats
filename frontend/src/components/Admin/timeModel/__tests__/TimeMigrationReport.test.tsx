@@ -74,6 +74,12 @@ const REPORT: Report = {
       legacyValue: "2024-05-02T14:30:00.000Z",
       newValue: null,
       zone: "Europe/Berlin",
+      entityType: "place_visit",
+      parentType: "place",
+      parentId: "p1",
+      tripId: null,
+      flagId: "flag-v1",
+      kind: "time_precision_unknown",
     },
     {
       table: "flights",
@@ -85,6 +91,12 @@ const REPORT: Report = {
       legacyValue: "2019-03-01T06:00:00.000Z",
       newValue: null,
       zone: null,
+      entityType: "flight",
+      parentType: null,
+      parentId: null,
+      tripId: null,
+      flagId: "flag-f9",
+      kind: "time_zone_unresolved",
     },
     {
       table: "flights",
@@ -96,6 +108,12 @@ const REPORT: Report = {
       legacyValue: null,
       newValue: null,
       zone: null,
+      entityType: "flight",
+      parentType: null,
+      parentId: null,
+      tripId: null,
+      flagId: null,
+      kind: "time_zone_unresolved",
     },
   ],
   openRowsTruncated: true,
@@ -173,19 +191,102 @@ describe("time-migration report — what the admin reads", () => {
     expect(screen.getAllByText("flight.fake_utc").length).toBe(2);
   });
 
-  it("sends the admin to their own inbox, and names the owner of anyone else's row", async () => {
+  it("opens the admin's own row in its editor, and names the owner of anyone else's row", async () => {
     answer(REPORT);
     renderReport();
 
-    expect(await screen.findByRole("link", { name: "Im Posteingang beantworten" })).toHaveAttribute(
+    // Straight to the visit's editor on its place - not just to the inbox.
+    expect(await screen.findByRole("link", { name: "Im Editor öffnen" })).toHaveAttribute(
+      "href",
+      "/places/p1?editVisit=v1"
+    );
+    // The row raised a question, so the inbox is offered too.
+    expect(screen.getByRole("link", { name: "Im Posteingang beantworten" })).toHaveAttribute(
       "href",
       "/pending-updates"
     );
+    // Another account's records are not the admin's to open.
+    expect(screen.getAllByRole("link", { name: "Im Editor öffnen" })).toHaveLength(1);
     expect(screen.getByText("im Posteingang von alex")).toBeInTheDocument();
     expect(screen.getByText("Konto nicht zuzuordnen")).toBeInTheDocument();
     expect(
       screen.getByText("Nicht alle offenen Angaben sind aufgelistet – die Zahlen oben zählen alle.")
     ).toBeInTheDocument();
+  });
+
+  it("sends a visit with no zone to its place, and a tour's own point to the tour editor", async () => {
+    const own = { userId: "admin-1", legacyValue: null, newValue: null, zone: null, flagId: null };
+    answer({
+      ...REPORT,
+      openRows: [
+        {
+          ...own,
+          table: "place_visits",
+          rowId: "v2",
+          column: "visited_at",
+          rule: "visit.no_zone",
+          reason: "no_position",
+          entityType: "place_visit",
+          parentType: "place",
+          parentId: "p2",
+          tripId: null,
+          kind: "time_zone_unresolved",
+        },
+        {
+          ...own,
+          table: "trip_stops",
+          rowId: "s1",
+          column: "start_date",
+          rule: "trip_stop.no_zone",
+          reason: "no_position",
+          entityType: "trip_stop",
+          parentType: "tour",
+          parentId: "tour-1",
+          tripId: "t1",
+          kind: "time_zone_unresolved",
+        },
+      ],
+      openRowsTruncated: false,
+    });
+    renderReport();
+
+    const links = await screen.findAllByRole("link", { name: "Im Editor öffnen" });
+    expect(links.map((l) => l.getAttribute("href"))).toEqual([
+      "/places/p2?edit=1",
+      "/trips/t1/route/tour-1",
+    ]);
+    // No question was raised for these rows: no inbox link to a question that is not there.
+    expect(screen.queryByRole("link", { name: "Im Posteingang beantworten" })).toBeNull();
+  });
+
+  it("reads a reason code this build does not know as 'other' instead of failing the report", async () => {
+    answer({
+      ...REPORT,
+      tables: [
+        {
+          ...REPORT.tables[0],
+          reasons: [{ reason: "a_reason_from_a_newer_server", count: 1 }],
+        },
+      ],
+      openRows: [
+        { ...REPORT.openRows[1], reason: "a_reason_from_a_newer_server" },
+        // The server sends null for a ledger reason it does not know itself.
+        { ...REPORT.openRows[2], reason: null, kind: null },
+      ],
+    });
+    renderReport();
+
+    // The report is there - the numbers are not thrown away for one word.
+    expect(await screen.findByText(/Einträge wurden umgerechnet/)).toBeInTheDocument();
+    const byReason = screen.getByRole("table", { name: "Offen nach Grund" });
+    expect(
+      within(byReason).getByText("ein Grund, den diese Version noch nicht kennt")
+    ).toBeInTheDocument();
+    expect(
+      screen.getByText(/Abfahrt\/Abflug · ein Grund, den diese Version noch nicht kennt/)
+    ).toBeInTheDocument();
+    expect(screen.getByText(/· ohne Grund/)).toBeInTheDocument();
+    expect(screen.queryByText(/Die Antwort des Servers hat eine Form/)).toBeNull();
   });
 
   it("says the report could not be loaded — and shows no zeros", async () => {

@@ -24,10 +24,10 @@ export interface JobView<T = unknown> {
   result: T | null;
   error: { code: string; status: number } | null;
   /**
-   * How far a job that counts its work has got. Optional: most jobs do not
-   * report it, and a screen must then say "running" rather than "0 %".
+   * How far a job that counts its work has got; null for a job that does not
+   * report it — a screen must then say "running" rather than "0 %".
    */
-  progress?: { done: number; total: number } | null;
+  progress: { done: number; total: number } | null;
 }
 
 /** The job finished and failed. `code` is the server's stable cause. */

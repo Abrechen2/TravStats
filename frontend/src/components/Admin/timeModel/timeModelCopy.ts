@@ -51,8 +51,9 @@ function label(t: T, list: readonly string[], group: string, code: string): stri
 
 export const tableLabel = (t: T, code: string): string =>
   label(t, TIME_MIGRATION_TABLES, "tables", code);
+/** `"other"` is what the report reads a reason this build does not know as. */
 export const reasonLabel = (t: T, code: string): string =>
-  label(t, TIME_MIGRATION_REASONS, "reasons", code);
+  label(t, [...TIME_MIGRATION_REASONS, "other"], "reasons", code);
 export const columnLabel = (t: T, code: string): string => label(t, COLUMNS, "columns", code);
 export const backfillErrorLabel = (t: T, code: string): string =>
   label(t, BACKFILL_ERRORS, "backfillErrors", code);
