@@ -4,7 +4,10 @@ import { MemoryRouter } from "react-router-dom";
 import EvidenceEntryRow from "../EvidenceEntryRow";
 import type { EvidenceEntry } from "../../../shared/evidence";
 
-afterEach(cleanup);
+afterEach(() => {
+  cleanup();
+  i18nState.language = "en";
+});
 
 /**
  * The global `react-i18next` mock (setup.ts) returns the raw key and drops
@@ -13,6 +16,8 @@ afterEach(cleanup);
  * test can assert on the composed text rather than just "some string
  * rendered" — the same override pattern `DomainTabStrip.test.tsx` uses.
  */
+const i18nState = vi.hoisted(() => ({ language: "en" }));
+
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
     t: (key: string, options?: Record<string, unknown>) => {
@@ -20,7 +25,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
       const { ns: _ns, keySeparator: _ks, ...values } = options;
       return Object.keys(values).length ? `${key}(${JSON.stringify(values)})` : key;
     },
-    i18n: { language: "en", changeLanguage: vi.fn(), isInitialized: true },
+    i18n: { language: i18nState.language, changeLanguage: vi.fn(), isInitialized: true },
     ready: true,
   }),
 }));
@@ -37,11 +42,15 @@ function baseEntry(overrides: Partial<EvidenceEntry> = {}): EvidenceEntry {
   };
 }
 
-function renderRow(entry: EvidenceEntry, aggregation: "sum" | "distinct" = "sum") {
+function renderRow(
+  entry: EvidenceEntry,
+  aggregation: "sum" | "distinct" = "sum",
+  unit = "flights"
+) {
   return render(
     <MemoryRouter>
       <ul>
-        <EvidenceEntryRow entry={entry} aggregation={aggregation} />
+        <EvidenceEntryRow entry={entry} aggregation={aggregation} unit={unit} />
       </ul>
     </MemoryRouter>
   );
@@ -124,6 +133,43 @@ describe("EvidenceEntryRow", () => {
     expect(
       screen.getByText('evidence:entry.credits({"list":"DE, Hotel Sport"})')
     ).toBeInTheDocument();
+  });
+
+  /**
+   * A country measure credits ISO codes, and a row that also named its other
+   * units printed "belegt: DE, Hotel Sport" — a code beside a name. The code
+   * is the union's identity; the reader gets the country in their language.
+   */
+  it("a country credit without a label renders the country's name in German", () => {
+    i18nState.language = "de";
+    renderRow(
+      baseEntry({
+        contribution: undefined,
+        credits: ["DE", "lodging-7"],
+        creditLabels: { "lodging-7": "Hotel Sport" },
+      }),
+      "distinct",
+      "countries"
+    );
+    expect(
+      screen.getByText('evidence:entry.credits({"list":"Deutschland, Hotel Sport"})')
+    ).toBeInTheDocument();
+  });
+
+  it("a country credit without a label renders the country's name in English", () => {
+    renderRow(
+      baseEntry({ contribution: undefined, credits: ["DE", "FR"] }),
+      "distinct",
+      "countries"
+    );
+    expect(
+      screen.getByText('evidence:entry.credits({"list":"Germany, France"})')
+    ).toBeInTheDocument();
+  });
+
+  it("only a country measure reads its credits as countries — airline 'BA' is not Bosnia", () => {
+    renderRow(baseEntry({ contribution: undefined, credits: ["BA"] }), "distinct", "airlines");
+    expect(screen.getByText('evidence:entry.credits({"list":"BA"})')).toBeInTheDocument();
   });
 
   it("an undated entry says so rather than looking like a missing date", () => {

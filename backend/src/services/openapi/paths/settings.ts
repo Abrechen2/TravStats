@@ -187,7 +187,9 @@ registry.registerPath({
   summary: "Airports near a residence, nearest first",
   description:
     "An offer for the settings page, not the list of allowed airports: open airports with an " +
-    "IATA code within 150 km, at most six. Any airport can be added through the airport search.",
+    "IATA code within 150 km, at most six. Airports without scheduled service (air bases, " +
+    "business fields) are left out unless the user has a non-cancelled flight from or to " +
+    "them. Any airport can be added through the airport search.",
   tags: settingsTag,
   request: { query: nearbyHomeAirportsQuerySchema },
   responses: {
