@@ -387,12 +387,33 @@ export async function runDemoSeed(
 ): Promise<{ userId: string; counts: Record<string, number> }> {
   const userId = await ensureUser();
   await ensureUserSettings(userId, now);
-  await seedRealisticDemo(userId, now);
+  // The badges are replayed trip by trip, in the order the trips happened,
+  // each stamped with the last day of the trip that earned it (board item
+  // realistic-demo-account (c)): one run at the end dated every badge with
+  // the seed day, and a ten-year traveller whose every badge is from this
+  // morning is the demo's tell. A trip after `now` stamps `now` — a booking
+  // is made today. Live users are untouched: only this call passes a date.
+  let replayFailed = false;
+  const replay = async (day: Date): Promise<void> => {
+    if (replayFailed) return;
+    try {
+      // The engine reads the time-model columns (birthday, local days).
+      await fillSeededTimeColumns(userId);
+      await checkAndUpdateAchievements(userId, { unlockedAt: day });
+    } catch (err) {
+      // Same trade as the run below: badges are not worth failing the seed.
+      // The replay stops, and the final run dates what is left with today.
+      replayFailed = true;
+      console.warn("   ! achievement replay failed, remaining badges dated today:", err);
+    }
+  };
+  await seedRealisticDemo(userId, now, { afterTrip: replay });
   // The time-model columns, derived from what the seed just wrote (ADR 0002).
   await fillSeededTimeColumns(userId);
 
   try {
-    await checkAndUpdateAchievements(userId);
+    // What the trips did not earn — lists, home places — was earned today.
+    await checkAndUpdateAchievements(userId, { unlockedAt: now });
   } catch (err) {
     // Achievement recompute is nice-to-have — not worth failing the seed.
     console.warn("   ! achievement recompute failed:", err);

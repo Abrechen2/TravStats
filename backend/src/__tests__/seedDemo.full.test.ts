@@ -63,5 +63,35 @@ describe("the standard demo seed", () => {
       journal: 0,
       rail: 0,
     });
+
+    // Board item realistic-demo-account (c): every badge used to carry the
+    // seed day. The seed replays its trips in order and dates each badge with
+    // the last day of the trip that earned it.
+    const badges = await prisma.userAchievement.findMany({
+      where: { userId },
+      include: { achievement: true },
+    });
+    const earned = badges.filter((b) => b.unlockedAt !== null);
+    expect(earned.length).toBeGreaterThan(50);
+    const seedDay = new Date().toISOString().slice(0, 10);
+    const days = new Set(earned.map((b) => b.unlockedAt!.toISOString().slice(0, 10)));
+    expect(days.size).toBeGreaterThan(20);
+    expect(earned.filter((b) => b.unlockedAt!.toISOString().startsWith(seedDay))).toEqual([]);
+    expect(earned.filter((b) => b.unlockedAt!.getTime() > Date.now())).toEqual([]);
+    // A replay must not leave a badge dated but not held (a measure that rose
+    // mid-replay and fell by the end would read "last held on …").
+    expect(
+      earned.filter((b) => b.progress < b.achievement.requirement).map((b) => b.achievement.code)
+    ).toEqual([]);
+    // The first flight's badge is dated with that flight's trip, not today.
+    const firstFlown = await prisma.flight.findFirstOrThrow({
+      where: { userId, status: { in: ["flown", "historical"] } },
+      orderBy: { departureTime: "asc" },
+      include: { trip: true },
+    });
+    const firstFlightBadge = earned.find((b) => b.achievement.code === "FIRST_FLIGHT");
+    expect(firstFlightBadge?.unlockedAt!.getTime()).toBe(
+      firstFlown.trip!.endDate!.getTime() + 12 * 3_600_000
+    );
   }, 240_000);
 });
