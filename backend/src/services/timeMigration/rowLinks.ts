@@ -132,13 +132,27 @@ const LOADERS: Record<TimeFlagEntityType, Loader> = {
           route: { select: { tripId: true } },
         },
       })
-    ).map((s) => ({
-      id: s.id,
-      label: s.title,
-      parentType: s.routeId ? ("tour" as const) : ("trip" as const),
-      parentId: s.routeId ?? s.tripId,
-      tripId: s.tripId ?? s.route?.tripId ?? null,
-    })),
+    ).map((s) =>
+      // A stop on a trip is edited on that trip's timeline — also when it is a
+      // point of a tour, because the timeline's stop editor is where its time
+      // is. Only a tour's own point (no trip of its own) is edited in the tour
+      // editor, which opens inside the tour's trip when it has one.
+      s.tripId
+        ? {
+            id: s.id,
+            label: s.title,
+            parentType: "trip" as const,
+            parentId: s.tripId,
+            tripId: s.tripId,
+          }
+        : {
+            id: s.id,
+            label: s.title,
+            parentType: s.routeId ? ("tour" as const) : null,
+            parentId: s.routeId,
+            tripId: s.route?.tripId ?? null,
+          }
+    ),
   trip_journal_entry: async (ids, userId) =>
     (
       await prisma.tripJournalEntry.findMany({

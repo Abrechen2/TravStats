@@ -161,6 +161,7 @@ async function openRows(): Promise<Pick<TimeMigrationReport, "openRows" | "openR
   return {
     openRows: rows.map((r) => {
       const reason = isReason(r.reason) ? r.reason : null;
+      const kind = reason ? kindOf(reason) : null;
       const link = links.get(`${r.table} ${r.rowId}`);
       return {
         table: r.table,
@@ -176,7 +177,8 @@ async function openRows(): Promise<Pick<TimeMigrationReport, "openRows" | "openR
         parentType: link?.parentType ?? null,
         parentId: link?.parentId ?? null,
         tripId: link?.tripId ?? null,
-        flagId: reason ? (flags.get(`${r.entityType} ${r.rowId} ${kindOf(reason)}`) ?? null) : null,
+        flagId: kind ? (flags.get(`${r.entityType} ${r.rowId} ${kind}`) ?? null) : null,
+        kind,
       };
     }),
     openRowsTruncated: ledger.length > OPEN_ROWS_CAP,

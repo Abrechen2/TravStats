@@ -166,11 +166,72 @@ describe("GET /api/v1/admin/time-migration/report", () => {
         parentId: tour.id,
         tripId: trip.id,
         flagId: flag.id,
+        kind: "time_zone_unresolved",
       });
     } finally {
       await prisma.dataQualityFlag.deleteMany({ where: { userId } });
       await prisma.trip.delete({ where: { id: trip.id } });
     }
+  });
+  it("sends a timeline stop that is also a tour's point to the trip timeline, not the tour", async () => {
+    // The trip timeline edits a stop that sits on the trip; the tour editor
+    // edits only the tour's own points. A stop that is both is a timeline stop.
+    const trip = await prisma.trip.create({ data: { userId, name: "Schottland" } });
+    const tour = await prisma.tripRoute.create({
+      data: { userId, tripId: trip.id, name: "Highlands", mode: "car" },
+    });
+    const stop = await prisma.tripStop.create({
+      data: { tripId: trip.id, routeId: tour.id, title: "Glencoe" },
+    });
+    await prisma.timeMigrationLedger.create({
+      data: {
+        tableName: "trip_stops",
+        rowId: stop.id,
+        columnName: "start_date",
+        rule: "trip_stop.no_zone",
+        status: "open",
+        reason: "writer_unknown",
+        userId,
+      },
+    });
+    try {
+      const res = await request(app)
+        .get("/api/v1/admin/time-migration/report")
+        .set("Cookie", adminCookie);
+      const report = timeMigrationReportSchema.parse(res.body);
+      expect(report.openRows.find((r) => r.rowId === stop.id)).toMatchObject({
+        parentType: "trip",
+        parentId: trip.id,
+        tripId: trip.id,
+        kind: "time_precision_unknown",
+        flagId: null,
+      });
+    } finally {
+      await prisma.trip.delete({ where: { id: trip.id } });
+    }
+  });
+
+  it("an open row with a reason this server does not know has no reason and no kind", async () => {
+    await prisma.timeMigrationLedger.create({
+      data: {
+        tableName: "flights",
+        rowId: "f-future",
+        columnName: "departure",
+        rule: "flight.future_rule",
+        status: "open",
+        reason: "a_reason_from_the_future",
+        userId,
+      },
+    });
+    const res = await request(app)
+      .get("/api/v1/admin/time-migration/report")
+      .set("Cookie", adminCookie);
+    const report = timeMigrationReportSchema.parse(res.body);
+    expect(report.openRows.find((r) => r.rowId === "f-future")).toMatchObject({
+      reason: null,
+      kind: null,
+      flagId: null,
+    });
   });
 });
 

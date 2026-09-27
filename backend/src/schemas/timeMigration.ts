@@ -160,6 +160,13 @@ export const timeMigrationTableReportSchema = z.object({
   reasons: z.array(z.object({ reason: timeMigrationReasonSchema, count })),
 });
 
+export const TIME_FLAG_KINDS = [
+  "time_zone_unresolved",
+  "time_precision_unknown",
+  "time_day_ambiguous",
+] as const;
+export const timeFlagKindSchema = z.enum(TIME_FLAG_KINDS);
+
 export const timeMigrationOpenRowSchema = z.object({
   table: timeMigrationTableSchema,
   rowId: z.string(),
@@ -180,14 +187,13 @@ export const timeMigrationOpenRowSchema = z.object({
   tripId: z.string().nullable(),
   /** The inbox question this open row raised, whatever its status; null when none (yet). */
   flagId: z.string().uuid().nullable(),
+  /**
+   * The inbox question this row is (the kind decides which editor answers it,
+   * e.g. a visit's missing zone is set on its place); null when `reason` is.
+   */
+  kind: timeFlagKindSchema.nullable(),
 });
 export type TimeMigrationOpenRow = z.infer<typeof timeMigrationOpenRowSchema>;
-
-export const TIME_FLAG_KINDS = [
-  "time_zone_unresolved",
-  "time_precision_unknown",
-  "time_day_ambiguous",
-] as const;
 
 export const timeMigrationReportSchema = z
   .object({
@@ -207,7 +213,7 @@ export const timeMigrationReportSchema = z
       open: count,
       resolved: count,
       dismissed: count,
-      byKind: z.array(z.object({ kind: z.enum(TIME_FLAG_KINDS), open: count })),
+      byKind: z.array(z.object({ kind: timeFlagKindSchema, open: count })),
     }),
     /** Every open ledger row, oldest table first; capped (see `openRowsTruncated`). */
     openRows: z.array(timeMigrationOpenRowSchema),
