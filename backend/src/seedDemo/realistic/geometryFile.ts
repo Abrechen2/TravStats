@@ -5,10 +5,9 @@ import zlib from "zlib";
 import { decodePolyline } from "../../services/rail/railGeometryMath";
 
 /**
- * The shape of the two generated geometry files in `seedData/demo/`, and the
- * one reader and writer of them. The generator
- * (`scripts/demo/generateDemoGeometry.ts`) writes them once, with the network;
- * the seed only ever reads them, without it.
+ * The shape of the generated geometry files in `seedData/demo/`, and the one
+ * reader and writer of them. The generators (`scripts/demo/generateDemo*.ts`)
+ * write them once, with the network; the seed only ever reads them, without it.
  */
 
 /** Precision of every encoded line: five decimals, about a metre. */
@@ -35,9 +34,18 @@ export interface StoredTrack {
   t: number[];
 }
 
+/** One train ride's line over the rail network, keyed by `railRouteKey`. */
+export interface StoredRailLine {
+  /** Encoded polyline, simplified to ~20 m, from the first station to the second. */
+  w: string;
+  /** Routed length in km, measured on the router's full-resolution line. */
+  km: number;
+}
+
 export const GEOMETRY_DIR = path.resolve(__dirname, "..", "..", "seedData", "demo");
 export const LEGS_FILE = "roadtrip-legs.json.gz";
 export const TRACKS_FILE = "tour-tracks.json.gz";
+export const RAIL_FILE = "rail-lines.json.gz";
 
 export function readGeometryFile<T>(file: string, dir: string = GEOMETRY_DIR): Record<string, T> {
   const raw = zlib.gunzipSync(fs.readFileSync(path.join(dir, file))).toString("utf-8");

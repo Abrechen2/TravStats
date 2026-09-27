@@ -2,7 +2,7 @@ import { prisma } from "../../db";
 import type { Prisma } from "../../prisma";
 import { calculateCo2Kg, toSeatClass } from "../../services/co2Calculator";
 import { linkRowsFor } from "../../services/companionService";
-import { greatCircleKm, stationColumns } from "../../services/rail/railJourneyWrite";
+import { stationColumns } from "../../services/rail/railJourneyWrite";
 import { deriveFlightStatus, deriveRailStatus } from "../../shared/statusDerivation";
 import { normalizeFlightNumber } from "../../schemas/flight";
 import { seedPriceFxColumns } from "../stayFx";
@@ -10,6 +10,7 @@ import { AIRLINES } from "./data/airlines";
 import { STATIONS } from "./data/stations";
 import type { FlightSpec, RailSpec } from "./data/types";
 import { companionIds, type AirportRow, type SeedContext } from "./context";
+import { demoRailLine } from "./railLines";
 import { addDays, localInstant } from "./time";
 
 /**
@@ -160,7 +161,7 @@ export async function writeRail(
       current: "scheduled",
       now: ctx.now,
     });
-    const coords = { depLat: from.lat, depLon: from.lon, arrLat: to.lat, arrLon: to.lon };
+    const line = demoRailLine(spec.from, spec.to);
     const currency = spec.price === undefined ? null : (spec.currency ?? "EUR");
     const journey = await prisma.railJourney.create({
       data: {
@@ -187,11 +188,13 @@ export async function writeRail(
         }),
         departureTime,
         arrivalTime,
-        // No traced line was ever fetched for these, so the distance is the
-        // straight one and says so — the same honesty a ride logged by hand has.
-        distanceKm: greatCircleKm(coords),
-        distanceSource: "great_circle",
-        geometrySource: "straight",
+        // Routed once, offline, over the OSM rail network (BRouter) and
+        // labelled so — the map says "routed", never "from the timetable" —
+        // and measured along that line, as a routed journey is.
+        geometry: line.geometry as unknown as Prisma.InputJsonValue,
+        geometrySource: "brouter",
+        distanceKm: line.km,
+        distanceSource: "route",
         travelClass: spec.cls,
         coach: spec.coach ?? null,
         seat: spec.seat ?? null,
