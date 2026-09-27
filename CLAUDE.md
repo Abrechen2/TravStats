@@ -368,7 +368,10 @@ enforced, and merely practised** below.
   OLD shape and asserts they survive
   (`backend/src/__tests__/migration.loyaltyMemberships.test.ts` is the
   template), and `check:drift` stays green afterwards, so the hand-written SQL
-  and `schema.prisma` provably describe the same database.
+  and `schema.prisma` provably describe the same database. The time model's
+  `20260927014000_time_model_backfill_marker` is the second one: its
+  migration, `rollback.sql` and `undo-backfill.sql` are replayed by
+  `backend/src/__tests__/migration.timeModelBackfillMarker.test.ts`.
 - **`partialIndexes` preview feature (since 2.7)** — `schema.prisma` enables
   it so a partial unique index can be declared: the lodging-chain catalogue is
   unique by name among its owner-less rows only
