@@ -144,10 +144,17 @@ const count = z.number().int().nonnegative();
 
 export const timeMigrationTableReportSchema = z.object({
   table: timeMigrationTableSchema,
-  /** Rows the backfill converted, every value resolved. */
+  /** Rows the backfill converted without a question, every value resolved. */
   converted: count,
-  /** Rows with at least one value left open. */
+  /** Rows with at least one value still open. */
   open: count,
+  /**
+   * Rows the backfill left open that have been ANSWERED since — the user gave
+   * the row a zone or a time through any editor, dismissed the question, or
+   * deleted the row (phase 4, `settleTimeLedger`). `open + answered` is what
+   * the backfill left open; `open` is what still waits.
+   */
+  answered: count,
   /**
    * Rows whose new columns were already filled when the backfill came — by a
    * phase-2 write path or a seed (the demo account) — and which it therefore

@@ -52,6 +52,10 @@ describe("GET /api/v1/admin/time-migration/report", () => {
   });
 
   it("counts rows, rules and reasons from the ledger and lists every open row", async () => {
+    // The open row must exist: a deleted row answers its question (phase 4).
+    const openFlight = await prisma.flight.create({
+      data: { userId, depLat: 0, depLon: 0, arrLat: 0, arrLon: 0, status: "flown" },
+    });
     await prisma.timeMigrationLedger.createMany({
       data: [
         // One flight converted on both ends, one left open on one end.
@@ -73,7 +77,7 @@ describe("GET /api/v1/admin/time-migration/report", () => {
         },
         {
           tableName: "flights",
-          rowId: "f-open",
+          rowId: openFlight.id,
           columnName: "departure",
           rule: "flight.instant_kept",
           status: "resolved",
@@ -81,7 +85,7 @@ describe("GET /api/v1/admin/time-migration/report", () => {
         },
         {
           tableName: "flights",
-          rowId: "f-open",
+          rowId: openFlight.id,
           columnName: "arrival",
           rule: "flight.zone_unresolved",
           status: "open",
@@ -110,7 +114,7 @@ describe("GET /api/v1/admin/time-migration/report", () => {
     expect(report.openRows).toEqual([
       expect.objectContaining({
         table: "flights",
-        rowId: "f-open",
+        rowId: openFlight.id,
         column: "arrival",
         reason: "no_position",
         legacyValue: "2027-05-02T10:00:00.000Z",
@@ -183,7 +187,7 @@ describe("GET /api/v1/admin/time-migration/report", () => {
       data: { userId, tripId: trip.id, name: "Highlands", mode: "car" },
     });
     const stop = await prisma.tripStop.create({
-      data: { tripId: trip.id, routeId: tour.id, title: "Glencoe" },
+      data: { tripId: trip.id, routeId: tour.id, title: "Glencoe", precision: "unknown" },
     });
     await prisma.timeMigrationLedger.create({
       data: {
@@ -236,6 +240,100 @@ describe("GET /api/v1/admin/time-migration/report", () => {
       // The flight row no longer exists: nothing to name, and no guess.
       label: null,
     });
+  });
+});
+
+describe("the ledger follows the answers (phase 4)", () => {
+  const report = async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/time-migration/report")
+      .set("Cookie", adminCookie);
+    expect(res.status).toBe(200);
+    return timeMigrationReportSchema.parse(res.body);
+  };
+  const openLedger = (tableName: string, rowId: string, columnName: string, reason: string) =>
+    prisma.timeMigrationLedger.create({
+      data: { tableName, rowId, columnName, rule: "test.open", status: "open", reason, userId },
+    });
+
+  it("counts a question answered through an editor as answered, no longer open", async () => {
+    const flight = await prisma.flight.create({
+      data: { userId, depLat: 0, depLon: 0, arrLat: 0, arrLon: 0, status: "flown" },
+    });
+    await openLedger("flights", flight.id, "departure", "no_position");
+    expect((await report()).tables.find((t) => t.table === "flights")).toMatchObject({
+      open: 1,
+      answered: 0,
+    });
+
+    // The owner gives the departure its airport through the flight editor.
+    const put = await request(app)
+      .put(`/api/v1/flights/${flight.id}`)
+      .set("Cookie", userCookie)
+      .send({
+        departure: { iata: "FRA", lat: 50.030241, lon: 8.561096 },
+        departureLocal: "2019-05-02T10:00",
+      });
+    expect(put.status).toBe(200);
+
+    const after = await report();
+    expect(after.tables.find((t) => t.table === "flights")).toMatchObject({
+      open: 0,
+      answered: 1,
+    });
+    expect(after.openRows.find((r) => r.rowId === flight.id)).toBeUndefined();
+    const ledger = await prisma.timeMigrationLedger.findFirstOrThrow({
+      where: { rowId: flight.id },
+    });
+    expect(ledger.status).toBe("resolved");
+  });
+
+  it("settles a dismissed question and a deleted row, and keeps an unanswered one open", async () => {
+    const trip = await prisma.trip.create({ data: { userId, name: "Ledger" } });
+    const kept = await prisma.tripStop.create({
+      data: { tripId: trip.id, title: "Still open", precision: "unknown" },
+    });
+    const dismissed = await prisma.tripStop.create({
+      data: { tripId: trip.id, title: "This day is right", precision: "unknown" },
+    });
+    await openLedger("trip_stops", kept.id, "start_date", "writer_unknown");
+    await openLedger("trip_stops", dismissed.id, "start_date", "writer_unknown");
+    await openLedger(
+      "trip_stops",
+      "00000000-0000-0000-0000-000000000000",
+      "start_date",
+      "writer_unknown"
+    );
+    await prisma.dataQualityFlag.create({
+      data: {
+        userId,
+        entityType: "trip_stop",
+        entityId: dismissed.id,
+        kind: "time_precision_unknown",
+        status: "dismissed",
+        details: { table: "trip_stops", fields: [] },
+      },
+    });
+    try {
+      // The inbox pass settles the owner's rows on its own, before any report.
+      const { runDataQualityChecks } = await import("../../../services/dataQuality");
+      await runDataQualityChecks(userId);
+      const rows = await prisma.timeMigrationLedger.findMany({
+        where: { tableName: "trip_stops" },
+        select: { rowId: true, status: true },
+      });
+      const statusOf = (id: string) => rows.find((r) => r.rowId === id)?.status;
+      expect(statusOf(kept.id)).toBe("open");
+      expect(statusOf(dismissed.id)).toBe("resolved");
+      expect(statusOf("00000000-0000-0000-0000-000000000000")).toBe("resolved");
+      expect((await report()).tables.find((t) => t.table === "trip_stops")).toMatchObject({
+        open: 1,
+        answered: 2,
+      });
+    } finally {
+      await prisma.dataQualityFlag.deleteMany({ where: { userId } });
+      await prisma.trip.delete({ where: { id: trip.id } });
+    }
   });
 });
 
