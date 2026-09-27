@@ -76,6 +76,19 @@ export { checkAchievement } from "./achievementChecks";
  */
 const runningPerUser = new Map<string, Promise<UserAchievementWithRelation[]>>();
 
+export interface AchievementCheckOptions {
+  /**
+   * The date a badge first unlocked by THIS run is stamped with. Every live
+   * caller leaves it out: a badge earned by a save is earned now. Only the
+   * demo seed passes it, replaying its trips in order and stamping each badge
+   * with the day of the trip that earned it (`seedDemoAccount.ts`) — a seed
+   * writes ten years in half a minute, and "unlocked on the seed day" for
+   * every badge was the tell (board item realistic-demo-account (c)). It
+   * never moves a date a row already carries.
+   */
+  unlockedAt?: Date;
+}
+
 /**
  * Check and update achievements for a user
  * Returns newly unlocked achievements
@@ -84,16 +97,17 @@ const runningPerUser = new Map<string, Promise<UserAchievementWithRelation[]>>()
  * Serialised per user — see `runningPerUser`. A caller still gets its own result
  * and its own rejection; it may simply wait for a run already under way.
  */
-export function checkAndUpdateAchievements(userId: string): Promise<UserAchievementWithRelation[]> {
+export function checkAndUpdateAchievements(
+  userId: string,
+  options: AchievementCheckOptions = {}
+): Promise<UserAchievementWithRelation[]> {
   const previous = runningPerUser.get(userId);
+  const run = () => runAchievementCheck(userId, options.unlockedAt ?? new Date());
 
   // Both branches run the check: a failed run must not stop the queue behind it.
   const started: Promise<UserAchievementWithRelation[]> = previous
-    ? previous.then(
-        () => runAchievementCheck(userId),
-        () => runAchievementCheck(userId)
-      )
-    : runAchievementCheck(userId);
+    ? previous.then(run, run)
+    : run();
 
   // Only clear the slot if nothing newer has taken it, or a later caller's run
   // would drop out of the chain and could overlap after all.
@@ -134,7 +148,10 @@ export async function recheckAchievements(userId: string, after: string): Promis
   }
 }
 
-async function runAchievementCheck(userId: string): Promise<UserAchievementWithRelation[]> {
+async function runAchievementCheck(
+  userId: string,
+  unlockedAt: Date
+): Promise<UserAchievementWithRelation[]> {
   try {
     // Get all achievements
     const allAchievements = await prisma.achievement.findMany();
@@ -652,7 +669,7 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
 
     // `return await`, not `return`: a bare return would hand the promise out
     // past the catch below, and a failed write would stop being logged here.
-    return await applyAchievementWrites(userId, plan, allAchievements.length);
+    return await applyAchievementWrites(userId, plan, allAchievements.length, unlockedAt);
   } catch (error) {
     logger.error({
       operation: "check_and_update_achievements",

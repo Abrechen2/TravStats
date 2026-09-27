@@ -19,6 +19,7 @@
 import fs from "fs";
 import path from "path";
 
+import { cachedFetchJson } from "./cachedFetch";
 import { simplifyDegrees } from "../../src/services/schematicRouter";
 import { haversineKm } from "../../src/shared/geo/haversine";
 import {
@@ -39,44 +40,12 @@ import {
   type TrackSpec,
 } from "../../src/seedDemo/realistic/data/routeSpecs";
 
-const USER_AGENT = "TravStats-demo-geometry/1.0 (one-off generator for the demo account)";
-const PAUSE_MS = 1500;
-const CACHE_DIR = path.resolve(__dirname, ".cache");
-const REFETCH = process.argv.includes("--refetch");
-
 /** Simplification of a driven leg: ~30 m, and never more than this many points. */
 const LEG_TOLERANCE_DEG = 0.0003;
 const LEG_MAX_POINTS = 1200;
 
 /** A GPS logger writes a point every few seconds; this is the spacing we densify to. */
 const MAX_SPACING_M = { hike: 20, bike: 35 } as const;
-
-type Json = Record<string, unknown>;
-
-const sleep = (ms: number) => new Promise((resolve) => setTimeout(resolve, ms));
-
-async function cachedFetchJson(url: string, cacheKey: string): Promise<Json> {
-  const file = path.join(CACHE_DIR, `${cacheKey.replace(/[^a-z0-9#-]/gi, "_")}.json`);
-  if (!REFETCH && fs.existsSync(file)) return JSON.parse(fs.readFileSync(file, "utf-8")) as Json;
-  await sleep(PAUSE_MS);
-  let res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
-  // A per-minute quota (Open-Meteo counts each coordinate): wait it out and
-  // ask once more, rather than hammering or giving up.
-  for (let attempt = 0; res.status === 429 && attempt < 12; attempt++) {
-    const hourly = (await res.clone().text()).includes("Hourly");
-    process.stdout.write(
-      `  ${cacheKey}: rate-limited (${hourly ? "hourly" : "per minute"}), waiting\n`
-    );
-    await sleep(hourly ? 600_000 : 65_000);
-    res = await fetch(url, { headers: { "User-Agent": USER_AGENT } });
-  }
-  if (!res.ok) throw new Error(`${cacheKey}: ${url} answered ${res.status} ${await res.text()}`);
-  const body = (await res.json()) as Json;
-  fs.mkdirSync(CACHE_DIR, { recursive: true });
-  fs.writeFileSync(file, JSON.stringify(body));
-  process.stdout.write(`  fetched ${cacheKey}\n`);
-  return body;
-}
 
 function lineKm(line: ReadonlyArray<readonly [number, number]>): number {
   let km = 0;

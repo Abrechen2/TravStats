@@ -78,6 +78,12 @@ export interface InstanceSettings {
   railTransitousEnabled: boolean;
   railDbRestEnabled: boolean;
   /**
+   * Base URL of a self-hosted OpenRailRouting, or null (the default): off.
+   * No ENV fallback — a rail line routed on a host nobody configured in the
+   * admin page would be a line nobody can explain.
+   */
+  railRoutingUrl: string | null;
+  /**
    * Whether the instance may ask open data services on its users' behalf
    * (Open-Meteo, Wikipedia/Wikidata, OpenStreetMap Overpass). OFF by default:
    * every call sends a place and a date to a third party. Admin-settable only.
@@ -138,6 +144,7 @@ export async function getInstanceSettings(): Promise<InstanceSettings> {
     openDataEnabled: row.openDataEnabled,
     railTransitousEnabled: row.railTransitousEnabled,
     railDbRestEnabled: row.railDbRestEnabled,
+    railRoutingUrl: row.railRoutingUrl ?? null,
   };
 }
 
@@ -202,6 +209,9 @@ export async function updateInstanceSettings(
       }),
       ...(patch.railDbRestEnabled !== undefined && {
         railDbRestEnabled: patch.railDbRestEnabled,
+      }),
+      ...(patch.railRoutingUrl !== undefined && {
+        railRoutingUrl: patch.railRoutingUrl || null,
       }),
     },
   });

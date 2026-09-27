@@ -15,31 +15,42 @@ export const RAIL_WRITE_STATUSES = ["scheduled", "cancelled"] as const;
 export const RAIL_TRAVEL_CLASSES = ["first", "second", "sleeper", "couchette"] as const;
 /**
  * great_circle = the straight line between the stations; user = typed from the
- * ticket; route = the length of the traced Transitous line the row carries;
+ * ticket; route = the length of the line the row carries — the traced
+ * Transitous line, or one routed over the tracks (OpenRailRouting, BRouter);
  * roadtrip = the length of the line a converted roadtrip leg brought along
  * (routed or drawn in the roadtrip, not a timetable's trace).
  */
 export const RAIL_DISTANCE_SOURCES = ["great_circle", "user", "route", "roadtrip"] as const;
 export type RailTracedDistanceSource = "route" | "roadtrip";
-/** Where the map line comes from. Phase 2 writes `straight` and `transitous`. */
+/**
+ * Where the map line comes from: the chord, the train's Transitous trace, a
+ * line routed over the tracks by the instance's OpenRailRouting, a roadtrip's
+ * line (`manual`), or `brouter` — the demo account's lines, routed over the
+ * OSM rail network once, offline, by BRouter's rail profile.
+ */
 export const RAIL_GEOMETRY_SOURCES = [
   "none",
   "straight",
   "transitous",
   "openrailrouting",
+  "brouter",
   "manual",
 ] as const;
 /**
- * Why a Transitous match was saved without its traced line (the save's
- * `meta.geometry.fallback`): switched off by the admin, not answering (or no
- * shape), a station off the traced line, or a "trace" of station-to-station
- * chords.
+ * Why a journey was saved without the line it asked for (the save's
+ * `meta.geometry.fallback`). For a Transitous match: switched off by the
+ * admin, not answering (or no shape), a station off the traced line, or a
+ * "trace" of station-to-station chords. For the instance's OpenRailRouting:
+ * not answering (down, timed out, an answer that is no line) or no connection
+ * between the stations on its network.
  */
 export const RAIL_GEOMETRY_FALLBACK_REASONS = [
   "providerDisabled",
   "providerUnavailable",
   "stationOffLine",
   "untracedShape",
+  "railRoutingUnavailable",
+  "railRoutingNoRoute",
 ] as const;
 export const RAIL_SORT_FIELDS = ["departure", "distance", "created"] as const;
 
@@ -228,3 +239,43 @@ export type RailStationInput = z.infer<typeof railStationSchema>;
 export type CreateRailJourneyInput = z.infer<typeof createRailJourneySchema>;
 export type UpdateRailJourneyInput = z.infer<typeof updateRailJourneySchema>;
 export type RailQueryInput = z.infer<typeof railQuerySchema>;
+
+/**
+ * The admin's OpenRailRouting base URL: http(s) only, no credentials (the
+ * settings answer echoes the URL, so a password in it would be shown to every
+ * admin page load), no query or fragment, trailing slash trimmed. Like the
+ * custom OSRM URL (`normalizeRoutingCustomUrl`) it may name a LAN host on
+ * purpose — the service is self-hosted by design.
+ */
+export function normalizeRailRoutingUrl(raw: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw.trim());
+  } catch {
+    throw new Error("is not a valid URL");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("must use http:// or https://");
+  }
+  if (parsed.username || parsed.password) throw new Error("must not carry credentials");
+  if (parsed.search || parsed.hash) throw new Error("must not carry a query or fragment");
+  return `${parsed.protocol}//${parsed.host}${parsed.pathname.replace(/\/+$/, "")}`;
+}
+
+/** "" clears the setting (null); anything else must normalise. */
+export const railRoutingUrlField = z
+  .string()
+  .trim()
+  .max(500)
+  .transform((raw, ctx) => {
+    if (raw === "") return null;
+    try {
+      return normalizeRailRoutingUrl(raw);
+    } catch (error) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `OpenRailRouting URL ${error instanceof Error ? error.message : "is not a valid URL"}`,
+      });
+      return z.NEVER;
+    }
+  });

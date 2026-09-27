@@ -63,7 +63,8 @@ const railJourney = registry.register(
         .nullable()
         .describe(
           "great_circle = straight line between the stations, not track length; " +
-            "user = typed from the ticket; route = length of the traced Transitous line; " +
+            "user = typed from the ticket; route = length of the traced Transitous line or " +
+            "of the line routed over the tracks; " +
             "roadtrip = length of the line a converted roadtrip leg brought along"
         ),
       geometry: z
@@ -141,16 +142,20 @@ const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.lite
 const geometryReport = z
   .object({
     outcome: z
-      .enum(["unchanged", "traced", "straight", "kept"])
+      .enum(["unchanged", "traced", "routed", "straight", "kept"])
       .describe(
-        "unchanged = an edit that touched neither station nor match; kept = a re-fetch " +
-          "did not deliver and the frozen line stayed"
+        "unchanged = an edit that touched neither station nor match; traced = the train's " +
+          "Transitous trace; routed = a line over the tracks from the instance's " +
+          "OpenRailRouting; kept = a re-fetch did not deliver and the frozen line stayed"
       ),
     geometrySource: z.enum(RAIL_GEOMETRY_SOURCES),
     fallback: z
       .enum(RAIL_GEOMETRY_FALLBACK_REASONS)
       .nullable()
-      .describe("Why a Transitous match has no (new) traced line; null when none was asked for"),
+      .describe(
+        "Why the line asked for was not delivered — a Transitous trace, or the " +
+          "OpenRailRouting line (`railRouting*`); null when nothing asked for failed"
+      ),
   })
   .openapi("RailGeometryReport");
 
@@ -249,7 +254,11 @@ registry.registerPath({
     "the catalogue. With `lookup` of provider `transitous` the server fetches that " +
     "trip's traced line once, cuts it to the two stations and freezes it " +
     "(`geometrySource: transitous`, distance along it); a missing, unreachable or " +
-    "chord-only line stores `straight` and `meta.geometry.fallback` says why. Without `distanceKm` the traced or else the " +
+    "chord-only line stores `straight` and `meta.geometry.fallback` says why. Without a " +
+    "trace, and only where the admin configured an OpenRailRouting, the line is routed " +
+    "over the tracks between the stations in one request (`geometrySource: " +
+    "openrailrouting`); its failure stores `straight` with a `railRouting*` fallback. " +
+    "Without `distanceKm` the traced or routed, else the " +
     "great-circle distance is stored. `connectsFrom` names the leg this one continues: " +
     "the server binds both through a booking (creating one on that leg when it has " +
     "none) and files the new leg in that leg's trip unless `tripId` is sent.",

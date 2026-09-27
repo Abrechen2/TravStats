@@ -8,6 +8,7 @@ import {
   buildRailPaths,
   buildRailStations,
   isTracedRailLine,
+  isTrackRoutedRailLine,
   railPathOf,
 } from "../layers/railPathsLayer";
 import { hexToRgb } from "../../lib/domainColor";
@@ -85,9 +86,15 @@ export function RailRouteMap({ journey }: { journey: RailJourney }): JSX.Element
       <p className="t-caption" data-testid="rail-line-source">
         {traced
           ? t("rail:detail.lineTraced")
-          : journey.geometrySource === "manual" && journey.geometry
-            ? t("rail:detail.lineRoadtrip")
-            : t("rail:detail.lineStraight")}
+          : isTrackRoutedRailLine(journey)
+            ? t(
+                journey.geometrySource === "brouter"
+                  ? "rail:detail.lineRoutedDemo"
+                  : "rail:detail.lineRouted"
+              )
+            : journey.geometrySource === "manual" && journey.geometry
+              ? t("rail:detail.lineRoadtrip")
+              : t("rail:detail.lineStraight")}
       </p>
     </div>
   );

@@ -5,6 +5,8 @@ import { seedRealisticDemo, type RealisticCounts } from "../seedDemo/realistic";
 import { SPECIAL_FLIGHT_TYPES } from "../schemas/flight";
 import { classifyLodging, classifyStay } from "../shared/lodgingCounting";
 import { computeTripSuggestions } from "../services/tripSuggestions/engine";
+import { isTracedShape } from "../services/rail/railGeometryMath";
+import { greatCircleKm } from "../services/rail/railJourneyWrite";
 
 /**
  * The realistic demo account (owner request 2026-09-26), checked against what
@@ -117,6 +119,32 @@ describe("the realistic demo account", () => {
       }
     }
     expect(routes.flatMap((r) => r.legs).some((l) => l.mode === "ferry")).toBe(true);
+  });
+
+  // Board item realistic-demo-account (a): the 44 rides were stored as chords.
+  it("draws every train ride over the tracks, labelled as routed, and measures along it", async () => {
+    const rides = await prisma.railJourney.findMany({ where: { userId } });
+    expect(rides).toHaveLength(counts.rail);
+    expect(rides.length).toBeGreaterThanOrEqual(44);
+    for (const ride of rides) {
+      expect(ride.geometrySource).toBe("brouter");
+      expect(ride.distanceSource).toBe("route");
+      const line = ride.geometry as Array<[number, number]>;
+      expect(line.length).toBeGreaterThan(20);
+      // From the departure station to the arrival station, not the reverse.
+      expect(line[0]).toEqual([ride.depLon, ride.depLat]);
+      expect(line[line.length - 1]).toEqual([ride.arrLon, ride.arrLat]);
+      expect(isTracedShape(line)).toBe(true);
+      // Along the tracks: longer than the chord, never absurdly so. The Albula
+      // line St. Moritz – Chur is the longest ratio by nature (90 km of track
+      // for a 46 km chord, loops and spiral tunnels); a detour to the wrong
+      // bank of the Rhine measured 1.75 and a wrong Shinkansen snap 2.4.
+      const chord = greatCircleKm(ride);
+      expect(ride.distanceKm!).toBeGreaterThan(chord);
+      expect(ride.distanceKm!).toBeLessThan(
+        chord * (ride.arrStationName === "Chur" || ride.depStationName === "Chur" ? 2 : 1.7)
+      );
+    }
   });
 
   it("stores recordings with elevation, a moving time shorter than the day, and a measured distance", async () => {

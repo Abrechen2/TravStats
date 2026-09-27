@@ -58,7 +58,7 @@ export interface RailJourney {
   distanceSource: RailDistanceSource | null;
   /** `[lon, lat]` points frozen at logging time; null = straight line. */
   geometry: [number, number][] | null;
-  geometrySource: "none" | "straight" | "transitous" | "openrailrouting" | "manual";
+  geometrySource: "none" | "straight" | "transitous" | "openrailrouting" | "brouter" | "manual";
   actualDepartureTime: string | null;
   actualArrivalTime: string | null;
   lookupProvider: RailLookupProvider | null;
@@ -227,7 +227,12 @@ export interface RailLookupAnswer {
 
 /** Why a Transitous match was saved without its (new) traced line. */
 export type RailGeometryFallback =
-  "providerDisabled" | "providerUnavailable" | "stationOffLine" | "untracedShape";
+  | "providerDisabled"
+  | "providerUnavailable"
+  | "stationOffLine"
+  | "untracedShape"
+  | "railRoutingUnavailable"
+  | "railRoutingNoRoute";
 
 /**
  * `meta.geometry` of a save: what it did to the frozen line. `kept` = a
@@ -235,7 +240,8 @@ export type RailGeometryFallback =
  * that touched neither station nor match.
  */
 export interface RailGeometryReport {
-  outcome: "unchanged" | "traced" | "straight" | "kept";
+  /** `routed` = a line over the tracks from the instance's OpenRailRouting. */
+  outcome: "unchanged" | "traced" | "routed" | "straight" | "kept";
   geometrySource: RailJourney["geometrySource"];
   fallback: RailGeometryFallback | null;
 }

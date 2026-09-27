@@ -69,6 +69,19 @@ export function isTracedRailLine(journey: RailPathSource): boolean {
 }
 
 /**
+ * A line routed over the OSM rail network — by the instance's OpenRailRouting,
+ * or offline by BRouter for the demo account. Not the train's own trace, but
+ * a path along real tracks, so it is drawn as firmly as one.
+ */
+export function isTrackRoutedRailLine(journey: RailPathSource): boolean {
+  return (
+    (journey.geometrySource === "openrailrouting" || journey.geometrySource === "brouter") &&
+    journey.geometry !== null &&
+    journey.geometry.length >= 2
+  );
+}
+
+/**
  * A cancelled train never ran, so it draws no line — the same reading every
  * rail statistic takes of it.
  */
@@ -78,7 +91,7 @@ export function buildRailPaths(journeys: readonly RailPathSource[]): RailPathDat
     .map((j) => ({
       id: j.id,
       path: railPathOf(j),
-      traced: isTracedRailLine(j),
+      traced: isTracedRailLine(j) || isTrackRoutedRailLine(j),
       label: `${j.depStationName} → ${j.arrStationName}`,
     }));
 }

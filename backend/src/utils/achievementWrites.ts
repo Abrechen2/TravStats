@@ -203,7 +203,9 @@ export function planAchievementWrites(
 export async function applyAchievementWrites(
   userId: string,
   plan: AchievementWritePlan,
-  achievementCount: number
+  achievementCount: number,
+  /** Stamped on a badge this plan unlocks for the first time — see `AchievementCheckOptions`. */
+  unlockedAt: Date = new Date()
 ): Promise<UserAchievementWithRelation[]> {
   const newlyUnlocked: UserAchievementWithRelation[] = [];
 
@@ -236,13 +238,13 @@ export async function applyAchievementWrites(
                 // came back, which is a return and not a first time. No other
                 // write touches the column, and nothing clears it (owner's
                 // ruling, 2026-09-20).
-                ...(write.hadUnlockDate ? {} : { unlockedAt: new Date() }),
+                ...(write.hadUnlockDate ? {} : { unlockedAt }),
               },
               create: {
                 userId,
                 achievementId: write.achievementId,
                 progress: write.requirement,
-                unlockedAt: new Date(),
+                unlockedAt,
               },
               include: { achievement: true },
             });

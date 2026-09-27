@@ -331,6 +331,9 @@ export function geometryNotice(
   }
   if (report.outcome === "kept")
     return { level: "info", key: "rail:geometryNotice.kept", reasonKey };
+  // A trace was asked for and the line was routed over the tracks instead.
+  if (report.outcome === "routed")
+    return { level: "info", key: "rail:geometryNotice.routed", reasonKey };
   return null;
 }
 

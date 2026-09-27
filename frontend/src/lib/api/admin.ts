@@ -44,7 +44,17 @@ export interface InstanceSettings {
   /** May the rail train lookup ask Transitous / db-rest (both on by default). */
   railTransitousEnabled: boolean;
   railDbRestEnabled: boolean;
+  /** A self-hosted OpenRailRouting for rail lines; null = off. Absent before 2.7. */
+  railRoutingUrl?: string | null;
 }
+
+/**
+ * The OpenRailRouting test (`POST /admin/instance-settings/rail-routing/test`):
+ * a stable code on failure, which the card maps to DE/EN copy.
+ */
+export type RailRoutingTestResult =
+  | { ok: true; profile: string; dataDate: string | null }
+  | { ok: false; code: "notConfigured" | "unreachable" | "notOpenRailRouting" | "profileMissing" };
 
 /**
  * Whether the SAVED configuration actually yields working passkeys. Derived by
@@ -78,6 +88,8 @@ export interface InstanceSettingsPatch {
   countryThreshold?: CountryTier;
   railTransitousEnabled?: boolean;
   railDbRestEnabled?: boolean;
+  /** "" switches OpenRailRouting off. */
+  railRoutingUrl?: string;
 }
 
 /**
@@ -621,6 +633,15 @@ export const adminApi = {
     patch: InstanceSettingsPatch
   ): Promise<InstanceSettingsResponse> => {
     const { data } = await api.put<InstanceSettingsResponse>("/admin/instance-settings", patch);
+    return data;
+  },
+
+  /** Tests `url` (typed, not yet saved) or, without it, the saved URL. */
+  testRailRouting: async (url?: string): Promise<RailRoutingTestResult> => {
+    const { data } = await api.post<RailRoutingTestResult>(
+      "/admin/instance-settings/rail-routing/test",
+      url ? { url } : {}
+    );
     return data;
   },
 

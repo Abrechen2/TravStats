@@ -415,6 +415,52 @@ describe("RailFormModal", () => {
     ]);
   });
 
+  it("says when the line was routed over the tracks because the trace failed", async () => {
+    useToastStore.getState().clearToasts();
+    create.mockResolvedValue({
+      journey: { id: "new" },
+      geometry: {
+        outcome: "routed",
+        geometrySource: "openrailrouting",
+        fallback: "providerUnavailable",
+      },
+    });
+    const onSaved = vi.fn();
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText("rail:form.departureTime"), {
+      target: { value: "2026-07-01T08:15" },
+    });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith({ id: "new" }));
+    expect(useToastStore.getState().toasts).toEqual([
+      expect.objectContaining({ type: "info", message: "rail:geometryNotice.routed" }),
+    ]);
+  });
+
+  it("warns when the instance's rail router failed and the chord was kept", async () => {
+    useToastStore.getState().clearToasts();
+    create.mockResolvedValue({
+      journey: { id: "new" },
+      geometry: {
+        outcome: "straight",
+        geometrySource: "straight",
+        fallback: "railRoutingUnavailable",
+      },
+    });
+    const onSaved = vi.fn();
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText("rail:form.departureTime"), {
+      target: { value: "2026-07-01T08:15" },
+    });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(useToastStore.getState().toasts).toEqual([
+      expect.objectContaining({ type: "warning", message: "rail:geometryNotice.straight" }),
+    ]);
+  });
+
   it("says nothing extra when no traced line was asked for", async () => {
     useToastStore.getState().clearToasts();
     create.mockResolvedValue({

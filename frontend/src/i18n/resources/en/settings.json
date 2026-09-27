@@ -934,6 +934,24 @@
     "loadError": "The setting could not be loaded.",
     "saveError": "The setting could not be saved."
   },
+  "railRouting": {
+    "label": "Rail router (OpenRailRouting)",
+    "hint": "Address of a self-hosted OpenRailRouting instance. Empty = off. A ride without a Transitous route then gets a line over the rail network when it is saved.",
+    "save": "Save address",
+    "saved": "Saved. New and edited rides without a Transitous route are routed over the rail network.",
+    "switchedOff": "Saved. The rail router is off.",
+    "saveError": "The address could not be saved.",
+    "invalidUrl": "That is not a valid address: http(s), no credentials, no ? part.",
+    "testButton": "Test connection",
+    "test": {
+      "ok": "Connected. Profile {{profile}}, map data of {{date}}.",
+      "notConfigured": "No address has been entered.",
+      "unreachable": "No service answers at this address.",
+      "notOpenRailRouting": "The service answers, but it is not an OpenRailRouting.",
+      "profileMissing": "This OpenRailRouting has no \"all_tracks\" profile – TravStats cannot route without it.",
+      "requestFailed": "The test could not be run."
+    }
+  },
   "profileZone": {
     "title": "Your time zone",
     "body": "TravStats uses your time zone to work out which day today is, whether a trip is planned or already over, and how long until you leave. Your account has none yet — until you confirm one, UTC is used for this. It does not change the times of your trips: those always show the local time of the airport, station or port.",
