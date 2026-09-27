@@ -24,6 +24,8 @@ import { logger } from "../lib/logger";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { createVisit, deletePlace, deleteVisit, getPlace } from "../lib/api/places";
+import { wallClockInput } from "../lib/api/timeInput";
+import { saveErrorMessage } from "../lib/saveErrorMessage";
 import { tripsApi } from "../lib/api/trips";
 import type { Trip } from "../types";
 import { useToastStore } from "../store/toastStore";
@@ -116,10 +118,14 @@ export default function PlaceDetailPage(): JSX.Element {
   const submitVisit = useCallback(async (): Promise<void> => {
     if (!place) return;
     try {
-      // A date with no time is stored at midnight UTC — the timezone-naive
-      // wall-clock convention lib/tripTimeline.ts documents. An empty date is
-      // sent as null, which is a valid visit ("I was here, no idea when").
-      const visitedAt = visitDate ? `${visitDate}T${visitTime || "00:00"}:00.000Z` : null;
+      // The wall clock as typed, at THIS place: the server resolves the place's
+      // zone and stores the instant (ADR 0002, D3). A date without a time is
+      // sent as the day alone — it used to become midnight "UTC", a fake
+      // instant the Companion's real ones could not be told apart from. An
+      // empty date is null, a valid visit ("I was here, no idea when").
+      const visitedAt = wallClockInput("visitedAt", visitDate, visitTime, {
+        placeRef: { kind: "place", id: place.id },
+      });
       await createVisit(place.id, {
         visitedAt,
         notes: visitNotes.trim() || null,
@@ -134,7 +140,7 @@ export default function PlaceDetailPage(): JSX.Element {
       await load();
     } catch (err: unknown) {
       logger.error({ err }, "PlaceDetailPage: add visit failed");
-      addToast("error", t("places:detail.visitFailed"));
+      addToast("error", saveErrorMessage(err, t, "places:detail.visitFailed"));
     }
   }, [place, visitDate, visitTime, visitNotes, visitTripId, addToast, t, load]);
 

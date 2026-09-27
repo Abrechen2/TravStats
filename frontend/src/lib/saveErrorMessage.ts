@@ -1,4 +1,5 @@
 import { apiErrorCode, apiErrorMachineCode, DEMO_FORBIDDEN_CODE } from "./apiError";
+import { MissingZoneError } from "./api/timeInput";
 
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
@@ -15,6 +16,13 @@ const SHARED_CODE_KEYS: Readonly<Record<string, string>> = {
   // (the server is at fault); 422 — it ran and this place has no zone.
   TIMEZONE_LOOKUP_UNAVAILABLE: "common:saveErrors.timezoneUnavailable",
   TZ_UNRESOLVED: "common:saveErrors.timezoneUnresolved",
+  // The time model's refusals (ADR 0002, D3). A typed hour the clock change
+  // skips; a zone name the server's tzdata does not know; and a body in the
+  // pre-time-model shape — which only a browser still running the bundle
+  // from before the update sends, so the sentence asks for a reload.
+  LOCAL_TIME_NONEXISTENT: "common:saveErrors.localTimeNonexistent",
+  ZONE_UNKNOWN: "common:saveErrors.zoneUnknown",
+  TIME_SHAPE_REQUIRED: "common:saveErrors.staleBundle",
 };
 
 /**
@@ -45,6 +53,8 @@ export function saveErrorKey(
   fallbackKey: string,
   extraCodeKeys: Readonly<Record<string, string>> = {}
 ): string {
+  // Refused before the request: the picked place brought no zone source.
+  if (err instanceof MissingZoneError) return SHARED_CODE_KEYS.TZ_UNRESOLVED;
   const code = apiErrorMachineCode(err);
   if (code) {
     const key = extraCodeKeys[code] ?? SHARED_CODE_KEYS[code];

@@ -74,10 +74,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       await waitFor(() => expect(stopDates()).toEqual(["2026-07-01", "2026-07-02"]));
 
       const payload = await savedPayload();
-      expect(payload.stops?.map((s) => s.date)).toEqual([
-        "2026-07-01T00:00:00.000Z",
-        "2026-07-02T00:00:00.000Z",
-      ]);
+      expect(payload.stops?.map((s) => s.date)).toEqual(["2026-07-01", "2026-07-02"]);
       // UI-only bookkeeping never reaches the server.
       expect(payload.stops?.every((s) => !("dateSource" in s))).toBe(true);
     });
@@ -156,7 +153,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       await userEvent.click(add);
 
       expect(endInput().value).toBe("2026-07-10");
-      expect((await savedPayload()).endDate).toBe("2026-07-10T00:00:00.000Z");
+      expect((await savedPayload()).endDate).toBe("2026-07-10");
     });
 
     it("never replaces the end date an existing cruise was loaded with", async () => {

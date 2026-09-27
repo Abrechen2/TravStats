@@ -5,6 +5,9 @@ import type { FlightInput, ParsedBooking } from "../types";
 import type { Airport } from "../lib/api";
 import { airportResolutionMessage, resolveAirportByCode } from "../lib/airportResolve";
 import { useSettingsStore } from "../store/settingsStore";
+import { airportZone } from "./FlightForm/flightPayload";
+import { MissingZoneError } from "../lib/api/timeInput";
+import { saveErrorMessage } from "../lib/saveErrorMessage";
 import { useTranslation } from "../hooks/useTranslation";
 import { RequiredMark } from "./FlightForm/requiredFields";
 import { filterEmailText } from "../lib/filterEmailText";
@@ -269,11 +272,11 @@ export default function FlightReviewModal({
     setLoading(true);
 
     try {
-      // Pick IANA tz from the airport record; fall back to user display tz if
-      // the airport entry is incomplete. Server converts local + tz → real UTC.
-      const userTz = useSettingsStore.getState().display?.timezone || "UTC";
-      const depTz = departureAirport.timezone || userTz;
-      const arrTz = arrivalAirport.timezone || userTz;
+      // The airports' own zones, or a refusal (ADR 0002 D2) — no profile/UTC fallback.
+      const depTz = airportZone(departureAirport);
+      const arrTz = airportZone(arrivalAirport);
+      if (!depTz) throw new MissingZoneError("departureLocal");
+      if (!arrTz) throw new MissingZoneError("arrivalLocal");
 
       const flightInput: FlightInput = {
         airline,
@@ -302,8 +305,8 @@ export default function FlightReviewModal({
       await onConfirm(flightInput);
       // onConfirm handles closing the modal or moving to next flight
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { error?: string } }; message?: string };
-      setError(error.response?.data?.error || error.message || t("errors:saveFailed"));
+      // A code becomes a sentence; never the server's English text or axios's.
+      setError(saveErrorMessage(err, t, "errors:saveFailed"));
     } finally {
       setLoading(false);
     }

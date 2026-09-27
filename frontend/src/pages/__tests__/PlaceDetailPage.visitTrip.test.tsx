@@ -105,7 +105,7 @@ describe("PlaceDetailPage — attaching a visit to a trip", () => {
     await waitFor(() =>
       expect(createVisit).toHaveBeenCalledWith(
         "p1",
-        expect.objectContaining({ visitedAt: "2026-05-02T00:00:00.000Z" })
+        expect.objectContaining({ visitedAt: "2026-05-02" })
       )
     );
   });

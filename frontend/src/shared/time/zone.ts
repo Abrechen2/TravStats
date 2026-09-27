@@ -168,3 +168,18 @@ export function toLocal(utc: InstantLike, zone: string): LocalReading {
 export function localDay(utc: InstantLike, zone: string): string {
   return datePart(wallClockParts(toDate(utc), zone));
 }
+
+/**
+ * The zone this device's clock is set to, or null when the runtime will not
+ * say. Only ever a PROPOSAL — for the profile-zone prompt (ADR 0002 Q1) — and
+ * never the zone of a place: where something happened is the server's
+ * question, and the reader's device is not where it happened.
+ */
+export function deviceZone(): string | null {
+  try {
+    const zone = new Intl.DateTimeFormat().resolvedOptions().timeZone;
+    return zone && isValidZone(zone) ? zone : null;
+  } catch {
+    return null;
+  }
+}

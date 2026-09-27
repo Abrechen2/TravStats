@@ -43,6 +43,16 @@ export interface HomeAirportEntry {
   toDate: string | null; // YYYY-MM-DD, null = currently active
 }
 
+/** `GET /settings` → `profileZone`: the zone that answers "today" (ADR 0002 D4/Q1). */
+export interface ProfileZoneView {
+  zone: string;
+  /** `default-utc`: the account has no usable zone and "today" is UTC. */
+  source: "profile" | "default-utc";
+  /** False until the user confirms a zone — the web asks at the next login. */
+  hasProfileZone: boolean;
+  followsDevice: boolean;
+}
+
 // Settings API
 export const settingsApi = {
   get: async (): Promise<UserSettings> => {
@@ -51,6 +61,21 @@ export const settingsApi = {
   },
   update: async (payload: Partial<UserSettings>): Promise<UserSettings> => {
     const { data } = await api.put<UserSettings>("/settings", payload);
+    return data;
+  },
+  /**
+   * The profile zone alone (ADR 0002 Q1), merged server-side into `display`
+   * so nothing else in that group is touched. `followsDevice` is the opt-in
+   * for the Companion to keep the zone in step with the phone.
+   */
+  updateProfileZone: async (payload: {
+    zone: string;
+    followsDevice?: boolean;
+  }): Promise<{ profileZone: ProfileZoneView }> => {
+    const { data } = await api.put<{ profileZone: ProfileZoneView }>(
+      "/settings/profile-zone",
+      payload
+    );
     return data;
   },
   getParserSettings: async (): Promise<{

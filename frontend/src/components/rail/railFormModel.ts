@@ -383,7 +383,9 @@ export function saveErrorFrom(err: unknown): RailSaveError {
   switch (code) {
     case "RAIL_ARRIVAL_BEFORE_DEPARTURE":
       return { key: "rail:form.errors.arrivalBeforeDeparture", field: "arrivalLocal" };
+    // The rail code and the time model's general one (ADR 0002, D3).
     case "RAIL_LOCAL_TIME_NONEXISTENT":
+    case "LOCAL_TIME_NONEXISTENT":
       return { key: "rail:form.errors.nonexistentTime", field: timeField };
     case "RAIL_INVALID_INPUT": {
       const fieldLabelKey = field ? FIELD_LABEL_KEYS[field] : undefined;

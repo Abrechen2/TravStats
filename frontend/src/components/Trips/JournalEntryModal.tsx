@@ -1,3 +1,5 @@
+import { dayInput } from "../../lib/api/timeInput";
+import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import Modal from "../Modal";
 import { useEffect, useState } from "react";
 import type { TripJournalEntry } from "../../types";
@@ -32,9 +34,9 @@ function toDateInput(iso: string | null | undefined): string {
 }
 
 function fromDateInput(value: string): string {
-  // Trip-day journals are calendar dates — pin to UTC midnight so the
-  // backend stores a stable instant regardless of the browser's TZ.
-  return new Date(value + "T00:00:00.000Z").toISOString();
+  // A journal day is a calendar date and travels as one, `YYYY-MM-DD`
+  // (ADR 0002): no instant, so no zone can move it.
+  return dayInput(value) ?? value;
 }
 
 export default function JournalEntryModal({
@@ -95,8 +97,9 @@ export default function JournalEntryModal({
         });
       }
       onSaved();
-    } catch {
-      addToast("error", entry ? t("trips:toasts.updateError") : t("trips:toasts.createError"));
+    } catch (err: unknown) {
+      const fallback = entry ? "trips:toasts.updateError" : "trips:toasts.createError";
+      addToast("error", saveErrorMessage(err, t, fallback));
     } finally {
       setSaving(false);
     }

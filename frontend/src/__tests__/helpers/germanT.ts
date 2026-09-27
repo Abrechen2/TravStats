@@ -45,3 +45,17 @@ export function germanUseTranslation(): {
     ready: true,
   };
 }
+
+/**
+ * Like `germanUseTranslation`, but honouring the namespaces the component
+ * asks for — `useTranslation("cruise")` then `t("form.save")` resolves in
+ * `cruise`, as react-i18next does, instead of in the default `common`.
+ */
+export function germanUseTranslationNs(
+  ns?: string | readonly string[]
+): ReturnType<typeof germanUseTranslation> {
+  const namespaces = ns === undefined ? undefined : typeof ns === "string" ? [ns] : [...ns];
+  const t = ((key: string, options?: Record<string, unknown>) =>
+    germanT(key, { ...(namespaces ? { ns: namespaces } : {}), ...options })) as TFunction;
+  return { ...germanUseTranslation(), t };
+}

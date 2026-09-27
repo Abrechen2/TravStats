@@ -905,5 +905,16 @@
     "dbRestHint": "Germany only, unofficial, about 100 requests a minute for all its users together.",
     "loadError": "The setting could not be loaded.",
     "saveError": "The setting could not be saved."
+  },
+  "profileZone": {
+    "title": "Your time zone",
+    "body": "TravStats uses your time zone to work out which day today is, whether a trip is planned or already over, and how long until you leave. Your account has none yet — until you confirm one, UTC is used for this. It does not change the times of your trips: those always show the local time of the airport, station or port.",
+    "proposal": "Suggested by your device",
+    "confirm": "Use this zone",
+    "later": "Later",
+    "setNow": "Set time zone now",
+    "utcHint": "Until you confirm a time zone, TravStats counts “today” in UTC.",
+    "saveError": "The time zone could not be saved. Please try again.",
+    "followsDevice": "On my phone (Companion app), keep the time zone in step with where I am."
   }
 }

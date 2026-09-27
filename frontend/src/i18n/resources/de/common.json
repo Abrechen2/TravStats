@@ -144,7 +144,10 @@
     "demo": "Im Demo-Konto lässt sich das nicht speichern.",
     "network": "Der Server ist nicht erreichbar. Bitte prüfe die Verbindung.",
     "timezoneUnavailable": "Die Zeitzone des Ortes lässt sich auf dem Server gerade nicht bestimmen. Die Zeit wurde nicht gespeichert, damit sie nicht falsch als UTC abgelegt wird — bitte den Administrator informieren.",
-    "timezoneUnresolved": "Für diesen Ort ist keine Zeitzone bekannt, weil ihm Koordinaten oder ein Katalogeintrag fehlen. Die Zeit wurde nicht gespeichert, damit sie nicht falsch als UTC abgelegt wird — bitte den Ort vervollständigen oder einen anderen wählen."
+    "timezoneUnresolved": "Für diesen Ort ist keine Zeitzone bekannt, weil ihm Koordinaten oder ein Katalogeintrag fehlen. Die Zeit wurde nicht gespeichert, damit sie nicht falsch als UTC abgelegt wird — bitte den Ort vervollständigen oder einen anderen wählen.",
+    "localTimeNonexistent": "Diese Uhrzeit gibt es an dem Tag dort nicht (Zeitumstellung). Bitte wähle eine Uhrzeit davor oder danach.",
+    "zoneUnknown": "Diese Zeitzone kennt der Server nicht. Bitte wähle den Ort noch einmal aus oder informiere den Administrator.",
+    "staleBundle": "Die Seite ist älter als der Server und hat die Zeit im alten Format geschickt. Nichts wurde gespeichert — bitte lade die Seite neu und speichere noch einmal."
   },
   "messages": {
     "success": "Erfolg",
@@ -319,5 +322,10 @@
     "body": "In dieser Demo sind die Beta-Funktionen eingeschaltet. Was du hier siehst, kann sich noch ändern – dein Feedback ist willkommen.",
     "listTitle": "Dazu gehören:",
     "dismiss": "Verstanden"
+  },
+  "clockChange": {
+    "gap": "Diese Uhrzeit gibt es an dem Tag dort nicht (Zeitumstellung). Bitte wähle eine Uhrzeit davor oder danach.",
+    "repeated": "Diese Uhrzeit gibt es an dem Tag dort zweimal (Zeitumstellung). Gespeichert wird die frühere.",
+    "later": "Die spätere meinen"
   }
 }

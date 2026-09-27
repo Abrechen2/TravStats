@@ -1,5 +1,6 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
 import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { useToastStore } from "../../../store/toastStore";
 
 import JournalEntryModal from "../JournalEntryModal";
 import { tripsApi } from "../../../lib/api";
@@ -167,5 +168,54 @@ describe("JournalEntryModal", () => {
       open({ startDate: `${today}T00:00:00.000Z`, endDate: `${today}T00:00:00.000Z` });
       expect(dateField().value).toBe(today);
     });
+  });
+});
+
+/** A journal day under the time model (ADR 0002): a date, not an instant. */
+describe("JournalEntryModal — time model", () => {
+  beforeEach(() => {
+    useSettingsStore.setState({ openDataEnabled: true });
+    useToastStore.setState({ toasts: [] });
+    vi.mocked(tripsApi.createJournalEntry).mockReset();
+  });
+
+  const write = (): void => {
+    render(
+      <JournalEntryModal
+        tripId="t1"
+        entry={null}
+        defaultDate="2024-07-15"
+        onClose={vi.fn()}
+        onSaved={vi.fn()}
+      />
+    );
+    fireEvent.change(screen.getByPlaceholderText("trips:journalModal.bodyPlaceholder"), {
+      target: { value: "Ein Tag" },
+    });
+    fireEvent.click(screen.getByText("trips:journalModal.save"));
+  };
+
+  it("sends the day as YYYY-MM-DD, not as a midnight-UTC instant", async () => {
+    vi.mocked(tripsApi.createJournalEntry).mockResolvedValue(saved);
+    write();
+    await waitFor(() =>
+      expect(tripsApi.createJournalEntry).toHaveBeenCalledWith(
+        "t1",
+        expect.objectContaining({ date: "2024-07-15" })
+      )
+    );
+  });
+
+  it("a stale page's refusal asks for a reload instead of the generic toast", async () => {
+    vi.mocked(tripsApi.createJournalEntry).mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 422, data: { error: "x", code: "TIME_SHAPE_REQUIRED" } },
+    });
+    write();
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.map((toast) => toast.message)).toContain(
+        "common:saveErrors.staleBundle"
+      )
+    );
   });
 });

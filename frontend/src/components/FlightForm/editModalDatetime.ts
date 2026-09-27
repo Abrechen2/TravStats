@@ -1,4 +1,6 @@
 import { formatWallClockIn } from "../../shared/zonedWallClock";
+import { MissingZoneError } from "../../lib/api/timeInput";
+import type { Flight } from "../../types";
 
 /** The three pure date helpers of FlightEditModal, moved out so the modal
  *  stays under the 800-line ratchet (`scripts/check-file-size.mjs`). They
@@ -50,4 +52,100 @@ export function splitZonedDatetime(iso: string | null, tz: string): DateTimePart
  *  to 01 like the old year+month-only block did. */
 export function historicalShapeFor(fullDate: string, semantics?: string): string {
   return semantics === "UNKNOWN" ? fullDate.slice(0, 7) : fullDate;
+}
+
+/** The eight date/time inputs of the edit modal, as strings. */
+export interface EditTimeInputs {
+  departureDate: string;
+  departureTime: string;
+  arrivalDate: string;
+  arrivalTime: string;
+  actualDepartureDate: string;
+  actualDepartureTime: string;
+  actualArrivalDate: string;
+  actualArrivalTime: string;
+}
+
+const TIME_INPUT_KEYS: readonly (keyof EditTimeInputs)[] = [
+  "departureDate",
+  "departureTime",
+  "arrivalDate",
+  "arrivalTime",
+  "actualDepartureDate",
+  "actualDepartureTime",
+  "actualArrivalDate",
+  "actualArrivalTime",
+];
+
+/**
+ * The zones the edit modal submits its times in — the airports' own, and only
+ * once both resolved (ADR 0002, D2).
+ *
+ * Before hydration the inputs hold a browser-local seed, and the modal used to
+ * send them with the browser's zone: the instant came out right, but the
+ * flight would be written with the reader's zone as its departure zone, and
+ * an airport that never resolves left that for good. Now:
+ * - hydrated → the two airport zones;
+ * - not hydrated and no time touched (the inputs still equal one of the
+ *   `unchanged` renderings: the browser seed, or the airport-local reading
+ *   from before a later lookup failed) → null: the modal sends no time at
+ *   all, so the server keeps what it stored (an edit of the notes moves
+ *   nothing);
+ * - not hydrated and a time changed → `MissingZoneError`, shown as the
+ *   TZ_UNRESOLVED sentence, instead of a guessed zone.
+ */
+export function editSubmitZones(
+  zones: { hydrated: boolean; depTz: string; arrTz: string },
+  current: EditTimeInputs,
+  unchanged: readonly EditTimeInputs[]
+): { dep: string; arr: string } | null {
+  if (zones.hydrated) return { dep: zones.depTz, arr: zones.arrTz };
+  const same = (base: EditTimeInputs) => TIME_INPUT_KEYS.every((key) => current[key] === base[key]);
+  if (unchanged.some(same)) return null;
+  throw new MissingZoneError(
+    TIME_INPUT_KEYS.find((key) => current[key] !== unchanged[0]?.[key]) ?? "departureDate"
+  );
+}
+
+type StoredTimes = Pick<
+  Flight,
+  | "status"
+  | "departureTime"
+  | "arrivalTime"
+  | "actualDeparture"
+  | "actualArrival"
+  | "depTimeSemantics"
+>;
+
+/**
+ * The eight inputs as the stored instants read in the two airport zones —
+ * what the modal's hydration effect shows, and what `editSubmitZones` treats
+ * as "not touched" once a later lookup failed. All eight in one object, so a
+ * caller can only ever apply them together (never a half-converted pair).
+ * Historical flights re-derive the SHAPE string against the airport-local
+ * calendar date, which fixes the month-boundary shift of the browser seed.
+ */
+export function airportLocalInputs(
+  flight: StoredTimes,
+  depTz: string,
+  arrTz: string
+): EditTimeInputs {
+  const isHistorical = flight.status === "historical";
+  const dep = splitZonedDatetime(flight.departureTime, depTz);
+  const arr = splitZonedDatetime(flight.arrivalTime, arrTz);
+  // Actual departure is read at the departure airport, actual arrival at the
+  // arrival airport — mirroring the scheduled pair (#200).
+  const actualDep = splitZonedDatetime(flight.actualDeparture ?? null, depTz);
+  const actualArr = splitZonedDatetime(flight.actualArrival ?? null, arrTz);
+  const shape = historicalShapeFor(dep.date, flight.depTimeSemantics);
+  return {
+    departureDate: isHistorical ? shape : dep.date,
+    departureTime: isHistorical ? "" : dep.time,
+    arrivalDate: isHistorical ? shape : arr.date,
+    arrivalTime: isHistorical ? "" : arr.time,
+    actualDepartureDate: actualDep.date,
+    actualDepartureTime: actualDep.time,
+    actualArrivalDate: actualArr.date,
+    actualArrivalTime: actualArr.time,
+  };
 }

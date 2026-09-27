@@ -1,5 +1,5 @@
 import type { Flight, FlightInput } from "../types";
-import type { Cruise, CruiseInput } from "../types/cruise";
+import type { Cruise, CruiseWriteBody } from "../types/cruise";
 import type { RailJourney, RailJourneyInput } from "../types/rail";
 import type { CurrencyCode } from "../shared/currencies";
 import type {
@@ -66,7 +66,7 @@ export function flightExtractTarget(
 
 export function cruiseExtractTarget(
   cruise: Cruise,
-  save: (updates: CruiseInput) => Promise<void>
+  save: (updates: CruiseWriteBody) => Promise<void>
 ): ExtractTarget {
   return {
     domain: "cruise",
@@ -82,7 +82,7 @@ export function cruiseExtractTarget(
           bookingReference: values.bookingReference,
           // The server only proposes ISO 4217 codes (`isCurrencyCode`).
           currency: (values.currency ?? undefined) as CurrencyCode | undefined,
-        }) as CruiseInput
+        }) as CruiseWriteBody
       ),
   };
 }

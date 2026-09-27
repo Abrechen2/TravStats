@@ -144,7 +144,10 @@
     "demo": "This cannot be saved in the demo account.",
     "network": "The server cannot be reached. Please check the connection.",
     "timezoneUnavailable": "The server cannot determine the place's time zone right now. The time was not saved, so it is not stored wrongly as UTC — please tell your administrator.",
-    "timezoneUnresolved": "No time zone is known for this place, because it has no coordinates or catalogue entry. The time was not saved, so it is not stored wrongly as UTC — please complete the place or choose another one."
+    "timezoneUnresolved": "No time zone is known for this place, because it has no coordinates or catalogue entry. The time was not saved, so it is not stored wrongly as UTC — please complete the place or choose another one.",
+    "localTimeNonexistent": "This time does not exist on that day at this place (clock change). Please choose a time before or after it.",
+    "zoneUnknown": "The server does not know this time zone. Please pick the place again or tell your administrator.",
+    "staleBundle": "This page is older than the server and sent the time in the old format. Nothing was saved — please reload the page and save again."
   },
   "messages": {
     "success": "Success",
@@ -319,5 +322,10 @@
     "body": "This demo runs with the beta features switched on. What you see here may still change – your feedback is welcome.",
     "listTitle": "These include:",
     "dismiss": "Got it"
+  },
+  "clockChange": {
+    "gap": "This time does not exist on that day at this place (clock change). Please choose a time before or after it.",
+    "repeated": "This time occurs twice on that day at this place (clock change). The earlier one is saved.",
+    "later": "I mean the later one"
   }
 }
