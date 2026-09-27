@@ -115,6 +115,49 @@ describe("the 2.7.0 announcement describes the app that shipped", () => {
     expect(body).not.toMatch(/Google-Maps-Listen|Google Maps lists/i);
   });
 
+  /**
+   * 2026-09-27, before beta.16. Three things landed that a reader of the
+   * released blocks must not be sent looking for, because they sit behind the
+   * `roadtrips` / `railDomain` gates: the tours on a trip's map, the routing
+   * section in Administration → Externe Dienste, and BahnBonus cards. They are
+   * named in the beta block, and only there.
+   */
+  it.each([
+    ["de", deWhatsNew],
+    ["en", enWhatsNew],
+  ] as const)("no released %s block names a gated tour, routing or rail feature", (_l, source) => {
+    for (const [name, block] of Object.entries(source.entries.v270)) {
+      if (name === "beta") continue;
+      expect(block.body).not.toMatch(/Touren|\btours?\b|Routing|BahnBonus/i);
+    }
+    expect(source.entries.v270.beta.body).toMatch(/routing/i);
+    expect(source.entries.v270.beta.body).toMatch(/BahnBonus/);
+  });
+
+  /**
+   * The sea-route change (cruise legs measured along the drawn route instead of
+   * falling back to the chord) moves every reader's cruise kilometres. A number
+   * that changes without a word reads as a bug; the announcement says it.
+   */
+  it.each([
+    ["de", deWhatsNew, /Kreuzfahrt-Kilometer[^.]*steigen/],
+    ["en", enWhatsNew, /cruise kilometres[^.]*go up/],
+  ] as const)("the %s announcement says cruise kilometres go up", (_l, source, re) => {
+    expect(source.entries.v270.evidence.body).toMatch(re);
+  });
+
+  /**
+   * The image now seeds the demo account on a first install, and that seed
+   * switches the instance's beta features on (97edf80cc). An administrator of a
+   * fresh instance must learn that from the announcement, not by surprise.
+   */
+  it.each([
+    ["de", deWhatsNew, /Demo-Konto[^]*neue Installation[^.]*Beta-Schalter ein/],
+    ["en", enWhatsNew, /demo account[^]*new installation[^.]*beta switch on/],
+  ] as const)("the %s beta block says a new install turns beta on with the demo", (_l, s, re) => {
+    expect(s.entries.v270.beta.body).toMatch(re);
+  });
+
   it.each([
     ["design", "de"],
     ["design", "en"],
