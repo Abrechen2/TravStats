@@ -1,12 +1,16 @@
-import { useState } from "react";
+import { useEffect, useState } from "react";
 import { useNavigate } from "react-router-dom";
-import { settingsApi, setupApi, versionApi } from "../lib/api";
+import { authApi, settingsApi, setupApi, versionApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import DomainPickerStep from "../components/Setup/DomainPickerStep";
 import UsageStatsConsentCard from "../components/UsageStatsConsentCard";
 import type { DomainKey } from "../shared/domains";
 import { logger } from "../lib/logger";
+
+/** The shared demo account's fixed, published credentials (`seedDemoAccount.ts`). */
+const DEMO_USERNAME = "demo";
+const DEMO_PASSWORD = "demo123";
 
 export default function SetupPage(): JSX.Element {
   const navigate = useNavigate();
@@ -24,6 +28,46 @@ export default function SetupPage(): JSX.Element {
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const [success, setSuccess] = useState(false);
+
+  // Whether the shared demo account can be offered before any admin exists
+  // (owner, 2026-09-27: "Demo soll auch ohne Admin gehen" / "vor setup muss
+  // es eine Demo Option geben"). Fetched the same way LoginPage learns
+  // `publicDemoLogin` — fail closed, so a broken request just hides the
+  // section instead of drawing a button that cannot work.
+  const [demoAccountAvailable, setDemoAccountAvailable] = useState(false);
+  const [demoLoading, setDemoLoading] = useState(false);
+  const [demoError, setDemoError] = useState("");
+
+  useEffect(() => {
+    setupApi
+      .getStatus()
+      .then((status) => setDemoAccountAvailable(status.demoAccountAvailable === true))
+      .catch(() => setDemoAccountAvailable(false));
+  }, []);
+
+  const handleDemoLogin = async (): Promise<void> => {
+    setDemoError("");
+    setDemoLoading(true);
+    try {
+      // The SAME login call the ordinary sign-in page uses — no second
+      // credential path for the demo button to drift from.
+      const result = await authApi.login(DEMO_USERNAME, DEMO_PASSWORD);
+      if ("user" in result) {
+        setAuth(result.user);
+        navigate("/");
+      } else {
+        // The shared demo account is not expected to carry 2FA or a forced
+        // password change. If it ever does, this button cannot resolve that
+        // on its own — say so rather than doing nothing.
+        setDemoError(t("setup:demo.error"));
+      }
+    } catch (err) {
+      logger.debug("demo login from setup failed", err);
+      setDemoError(t("setup:demo.error"));
+    } finally {
+      setDemoLoading(false);
+    }
+  };
 
   const handleSubmit = async (e: React.FormEvent) => {
     e.preventDefault();
@@ -104,6 +148,37 @@ export default function SetupPage(): JSX.Element {
           <p className="text-sm text-center text-(--text-muted) mb-6">
             🔒 {t("setup:privacy.items.dataStays")}
           </p>
+
+          {!success && demoAccountAvailable && (
+            <div
+              className="rounded-lg p-4 mb-6"
+              style={{ background: "var(--bg-muted)", border: "1px dashed var(--color-border)" }}
+            >
+              <h2 className="text-sm font-semibold mb-1 text-(--text-primary)">
+                {t("setup:demo.title")}
+              </h2>
+              <p className="text-xs text-(--text-muted) mb-3">{t("setup:demo.description")}</p>
+              {demoError && (
+                <p className="text-xs mb-2" style={{ color: "var(--danger)" }} role="alert">
+                  {demoError}
+                </p>
+              )}
+              <button
+                type="button"
+                onClick={() => void handleDemoLogin()}
+                disabled={demoLoading}
+                className="btn-secondary w-full py-2 text-sm font-medium disabled:opacity-50 disabled:cursor-not-allowed"
+              >
+                {demoLoading ? t("setup:demo.loading") : t("setup:demo.cta")}
+              </button>
+            </div>
+          )}
+
+          {!success && demoAccountAvailable && (
+            <p className="text-xs text-center text-(--text-muted) mb-4">
+              {t("setup:sections.admin")}
+            </p>
+          )}
 
           {success ? (
             <div className="space-y-4">

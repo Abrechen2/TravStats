@@ -15,6 +15,13 @@
     "instance": "Instance settings",
     "instanceHint": "Can be changed any time from the admin area later."
   },
+  "demo": {
+    "title": "Try the demo",
+    "description": "A shared, temporary account to explore the app – setting up the instance is still needed for real use.",
+    "cta": "Try the demo",
+    "loading": "Signing in...",
+    "error": "Demo sign-in failed. Please try again."
+  },
   "form": {
     "instanceName": {
       "label": "Instance Name",

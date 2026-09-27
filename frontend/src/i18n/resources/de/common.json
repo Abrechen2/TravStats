@@ -327,6 +327,10 @@
     "listTitle": "Dazu gehören:",
     "dismiss": "Verstanden"
   },
+  "setupIncompleteBanner": {
+    "message": "Diese Instanz ist noch nicht eingerichtet.",
+    "link": "Zur Einrichtung"
+  },
   "clockChange": {
     "gap": "Diese Uhrzeit gibt es an dem Tag dort nicht (Zeitumstellung). Bitte wähle eine Uhrzeit davor oder danach.",
     "repeated": "Diese Uhrzeit gibt es an dem Tag dort zweimal (Zeitumstellung). Gespeichert wird die frühere.",

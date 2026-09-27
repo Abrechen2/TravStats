@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence, MotionConfig } from "framer-motion";
 import { useEffect, useState, Suspense, lazy } from "react";
 import { useAuthStore } from "./store/authStore";
@@ -17,9 +17,11 @@ import { BetaFeatureRouteGuard } from "./components/BetaFeatureRouteGuard";
 import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useTelemetryConsentStep } from "./hooks/useTelemetryConsentStep";
 import { useSessionValidation } from "./hooks/useSessionValidation";
+import { useSetupRedirect } from "./hooks/useSetupRedirect";
 import WhatsNewModal from "./components/WhatsNewModal";
 import ProfileZonePrompt from "./components/ProfileZonePrompt";
 import DemoBetaNotice from "./components/DemoBetaNotice";
+import SetupIncompleteBanner from "./components/SetupIncompleteBanner";
 import UsageStatsConsentDialog from "./components/UsageStatsConsentDialog";
 
 // Lazy load pages for code splitting
@@ -75,7 +77,6 @@ function AppContent() {
   const isAuthenticated = !!user;
   const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
   const language = useSettingsStore((s) => s.display.language);
-  const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation("common");
   // A persisted user is only a CLAIM until the server confirms the cookie.
@@ -85,7 +86,7 @@ function AppContent() {
   const { sessionChecked } = useSessionValidation();
   const sessionConfirmed = isAuthenticated && sessionChecked;
   const { entry, shouldShow, checked: whatsNewChecked, dismiss } = useWhatsNew(sessionConfirmed);
-  const [setupChecked, setSetupChecked] = useState(false);
+  const { setupChecked, requiresSetup } = useSetupRedirect({ sessionChecked, isAuthenticated });
   const [showSeedingModal, setShowSeedingModal] = useState(false);
 
   // Usage-stats consent is instance-wide, so only an admin may answer it, and
@@ -109,25 +110,6 @@ function AppContent() {
       }
     }
   }, [language]);
-
-  // Check setup status on app load
-  useEffect(() => {
-    const checkSetup = async () => {
-      try {
-        const { requiresSetup } = await setupApi.getStatus();
-        if (requiresSetup) {
-          navigate("/setup");
-        }
-      } catch (error) {
-        logger.error("Setup status check failed:", error);
-      } finally {
-        setSetupChecked(true);
-      }
-    };
-
-    // Always check setup status first
-    checkSetup();
-  }, [navigate]);
 
   // Load remote settings only after setup check is complete and user is logged in
   useEffect(() => {
@@ -219,6 +201,7 @@ function AppContent() {
       >
         <Toast />
         <AirportSeedingBanner />
+        <SetupIncompleteBanner sessionConfirmed={sessionConfirmed} requiresSetup={requiresSetup} />
         <AirportSeedingModal isOpen={showSeedingModal} onClose={handleCloseSeedingModal} />
         <WhatsNewModal isOpen={shouldShow} entry={entry} onClose={() => void dismiss()} />
         <UsageStatsConsentDialog isOpen={consentStep.shouldShow} onClose={consentStep.close} />

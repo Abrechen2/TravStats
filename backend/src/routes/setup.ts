@@ -12,6 +12,7 @@ import { getSeedingStatus } from "../services/airportSeedingService";
 import { updateInstanceSettings } from "../services/instanceSettingsService";
 import { authLimiter } from "../middleware/rateLimit";
 import { DOMAIN_KEYS, type DomainKey } from "../shared/domains";
+import { DEMO_USERNAME, isSharedDemoAccount } from "../utils/sharedDemo";
 import logger from "../utils/logger";
 
 const initializeSchema = z.object({
@@ -41,9 +42,23 @@ router.get("/status", async (req: Request, res: Response, next: NextFunction) =>
     // Setup is complete if at least one admin user exists
     const setupComplete = adminCount > 0;
 
+    // Whether the setup screen may offer "try the demo" before an admin
+    // exists (owner, 2026-09-27: "Demo soll auch ohne Admin gehen"). The
+    // shared demo account is the SAME predicate the rest of the app uses
+    // (`isSharedDemoAccount`) — username alone is not enough, because that
+    // name can exist on a row that predates the reservation without
+    // carrying the flag, and the login button below hands out the fixed
+    // demo123 password, which only ever belongs to that row.
+    const demoUser = await prisma.user.findUnique({
+      where: { username: DEMO_USERNAME },
+      select: { isDemo: true, username: true },
+    });
+    const demoAccountAvailable = demoUser ? isSharedDemoAccount(demoUser) : false;
+
     res.json({
       setupComplete,
       requiresSetup: !setupComplete,
+      demoAccountAvailable,
       // Read at request time, not from the cached env schema — the test flips
       // it per case, and a real instance is never restarted just for this flag.
       publicDemoLogin: process.env.PUBLIC_DEMO_LOGIN === "true",
