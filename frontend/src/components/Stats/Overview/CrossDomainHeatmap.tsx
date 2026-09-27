@@ -9,6 +9,7 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { isWithData } from "./aggregate";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { needsOutline } from "../../../lib/domainColor";
+import { daysInMonth as daysInCalendarMonth } from "../../../shared/time";
 
 interface Props {
   statsMap: DomainStatsMap;
@@ -95,7 +96,7 @@ export default function CrossDomainHeatmap({ statsMap, visible, year }: Props): 
             </div>
           ))}
           {months.map((mLabel, mIndex) => {
-            const daysInMonth = new Date(year, mIndex + 1, 0).getDate();
+            const daysInMonth = daysInCalendarMonth(year, mIndex + 1);
             return (
               <FragmentRow
                 key={mLabel}

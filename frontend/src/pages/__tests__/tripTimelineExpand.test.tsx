@@ -22,6 +22,7 @@ function setup(over: Partial<React.ComponentProps<typeof ExpandableEventCard>> =
     title: "Mein Schiff 4",
     subtitle: "12.05. → 19.05.",
     date: "2026-05-12T00:00:00.000Z",
+    dateLabel: "12.05.2026",
     expanded: false,
     onToggle,
     detailsLabel: "trips:detail.timeline.showDetails",

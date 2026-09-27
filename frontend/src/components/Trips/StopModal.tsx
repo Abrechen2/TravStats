@@ -6,14 +6,15 @@ import { useToastStore } from "../../store/toastStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { LocationInput } from "../location/LocationInput";
 import type { LocationCoordinates, LocationSelection } from "../location/LocationInput";
-import { splitDateTimeInput } from "../../lib/tripTimeline";
+import { splitTimeValue } from "../../lib/tripTimeline";
+import { tripStopEnd, tripStopStart } from "../../lib/entityTimes";
 import { tripStopTime } from "../../lib/tripStopTime";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
 
 interface StopModalProps {
   tripId: string;
   stop: TripStop | null; // null = create
-  defaultDate?: string; // pre-fill startDate when creating
+  defaultDate?: string; // `YYYY-MM-DD` — pre-fills the start day when creating
   onClose: () => void;
   onSaved: () => void;
 }
@@ -37,8 +38,10 @@ export default function StopModal({
 
   const [title, setTitle] = useState(stop?.title ?? "");
   const [domain, setDomain] = useState<string>(stop?.domain ?? "poi");
-  const initialStart = splitDateTimeInput(stop?.startDate ?? defaultDate ?? null);
-  const initialEnd = splitDateTimeInput(stop?.endDate ?? null);
+  const initialStart = stop
+    ? splitTimeValue(tripStopStart(stop))
+    : { date: defaultDate ?? "", time: "" };
+  const initialEnd = splitTimeValue(stop ? tripStopEnd(stop) : null);
   const [startDate, setStartDate] = useState(initialStart.date);
   const [startTime, setStartTime] = useState(initialStart.time);
   const [endDate, setEndDate] = useState(initialEnd.date);
@@ -56,8 +59,8 @@ export default function StopModal({
     if (!stop) return;
     setTitle(stop.title);
     setDomain(stop.domain ?? "poi");
-    const start = splitDateTimeInput(stop.startDate);
-    const end = splitDateTimeInput(stop.endDate);
+    const start = splitTimeValue(tripStopStart(stop));
+    const end = splitTimeValue(tripStopEnd(stop));
     setStartDate(start.date);
     setStartTime(start.time);
     setEndDate(end.date);

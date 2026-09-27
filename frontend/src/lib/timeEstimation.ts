@@ -6,7 +6,7 @@
  * 2. Heuristic calculations (85% accurate)
  */
 
-import { fromZonedTime, toZonedTime } from "date-fns-tz";
+import { toLocal } from "../shared/time";
 import { calculateDistance } from "./geo";
 import { logger } from "./logger";
 
@@ -153,22 +153,18 @@ export function estimateDurationHeuristic(
 }
 
 /**
- * Add minutes to time string (HH:MM format)
- * Uses local time consistently (flight times are always in local airport time)
+ * Add minutes to a wall clock (HH:MM) — pure wall-clock arithmetic. The
+ * components are placed on a UTC instant and read back with UTC getters, so
+ * the HOST zone (and its own DST gap) cannot shift the result; the old
+ * host-local `new Date(y, m, d, h, mi)` slid an hour on the host's
+ * spring-forward night.
  */
 function addMinutesToTime(timeStr: string, minutes: number, dateStr: string): string {
   const [hours, mins] = timeStr.split(":").map(Number);
-
-  // Parse date correctly: "2025-06-07" should be treated as local date, not UTC
-  // Split and use Date constructor with year, month, day to avoid timezone issues
   const [year, month, day] = dateStr.split("-").map(Number);
-  const date = new Date(year, month - 1, day, hours, mins, 0, 0);
-
-  // Add minutes
-  date.setMinutes(date.getMinutes() + minutes);
-
-  const resultHours = String(date.getHours()).padStart(2, "0");
-  const resultMins = String(date.getMinutes()).padStart(2, "0");
+  const date = new Date(Date.UTC(year, month - 1, day, hours, mins) + minutes * 60_000);
+  const resultHours = String(date.getUTCHours()).padStart(2, "0");
+  const resultMins = String(date.getUTCMinutes()).padStart(2, "0");
   return `${resultHours}:${resultMins}`;
 }
 
@@ -267,6 +263,28 @@ function formatDate(y: number, m: number, d: number): string {
   return `${y}-${pad2(m)}-${pad2(d)}`;
 }
 
+/** "+05:45" → milliseconds ahead of UTC. */
+function offsetMs(offset: string): number {
+  const m = /^([+-])(\d{2}):(\d{2})$/.exec(offset);
+  if (!m) throw new RangeError(`Not an offset: ${offset}`);
+  const ms = (Number(m[2]) * 60 + Number(m[3])) * 60_000;
+  return m[1] === "-" ? -ms : ms;
+}
+
+/**
+ * The instant a wall clock names in `zone` — for an ESTIMATE only (the
+ * server converts every saved time itself, ADR 0002 D3). Two passes of
+ * "wall − offset at the guess" settle on the offset in force; in a DST gap it
+ * lands on one side of it, which is good enough for a suggested arrival.
+ */
+function estimateInstant(dateYmd: string, hhmm: string, zone: string): number {
+  const [y, mo, d] = dateYmd.split("-").map(Number);
+  const [h, mi] = hhmm.split(":").map(Number);
+  const wall = Date.UTC(y, mo - 1, d, h, mi);
+  const first = wall - offsetMs(toLocal(wall, zone).offset);
+  return wall - offsetMs(toLocal(first, zone).offset);
+}
+
 function daysBetween(fromYmd: string, toYmd: string): number {
   const [fy, fm, fd] = fromYmd.split("-").map(Number);
   const [ty, tm, td] = toYmd.split("-").map(Number);
@@ -301,17 +319,12 @@ export function estimateArrivalFromDeparture(params: EstimateArrivalParams): Est
       // Treat "YYYY-MM-DDTHH:mm" as local time in the departure timezone,
       // convert to a real UTC instant, add the duration, then convert into
       // the arrival timezone to read the wall-clock arrival time/date.
-      const depLocalString = `${departureDate}T${departureTime}:00`;
-      const depUtc = fromZonedTime(depLocalString, departureTimezone as string);
-      const arrUtc = new Date(depUtc.getTime() + durationMinutes * 60 * 1000);
-      const arrLocal = toZonedTime(arrUtc, arrivalTimezone as string);
-
-      const arrivalDate = formatDate(
-        arrLocal.getFullYear(),
-        arrLocal.getMonth() + 1,
-        arrLocal.getDate()
-      );
-      const arrivalTime = `${pad2(arrLocal.getHours())}:${pad2(arrLocal.getMinutes())}`;
+      const depUtc = estimateInstant(departureDate, departureTime, departureTimezone as string);
+      const arrUtc = depUtc + durationMinutes * 60 * 1000;
+      // The arrival airport's clock, read by shared/time — never the host's.
+      const arrLocal = toLocal(arrUtc, arrivalTimezone as string).local;
+      const arrivalDate = arrLocal.slice(0, 10);
+      const arrivalTime = arrLocal.slice(11, 16);
       const dayOffset = Math.max(0, daysBetween(departureDate, arrivalDate));
 
       return {

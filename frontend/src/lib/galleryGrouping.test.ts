@@ -51,3 +51,20 @@ describe("groupByDay", () => {
     expect(groups[1].assets[1].index).toBe(2);
   });
 });
+
+/**
+ * The day is the profile zone's (ADR 0002 Q1), passed in — never the
+ * browser's. 22:30Z and 23:30Z on 1 May are the 2nd in Kiritimati and still
+ * the 1st in St John's, whatever zone the machine running this is set to.
+ */
+describe("groupByDay — in the profile zone", () => {
+  const evening = [
+    { id: "a", takenAt: "2026-05-01T22:30:00.000Z" },
+    { id: "b", takenAt: "2026-05-01T23:30:00.000Z" },
+  ];
+
+  it("files an evening's photos under the zone's own day", () => {
+    expect(groupByDay(evening, "Pacific/Kiritimati").map((g) => g.day)).toEqual(["2026-05-02"]);
+    expect(groupByDay(evening, "America/St_Johns").map((g) => g.day)).toEqual(["2026-05-01"]);
+  });
+});

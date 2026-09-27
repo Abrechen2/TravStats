@@ -2,6 +2,7 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { adminApi } from "../../lib/api";
 import { apiErrorMachineCode } from "../../lib/apiError";
 import { useTranslation } from "../../hooks/useTranslation";
+import { todayZoneNow } from "../../hooks/useTodayZone";
 import {
   LOG_ERROR_CODES,
   LOG_LEVELS,
@@ -37,7 +38,10 @@ const EMPTY_FILTERS: Filters = { level: "", category: "", search: "" };
 function entryTimeLabel(entry: LogFileEntry, locale: string): string {
   const raw = entry.timestamp ?? entry.time;
   const time = typeof raw === "string" ? new Date(raw) : null;
-  return time && !Number.isNaN(time.getTime()) ? time.toLocaleString(locale) : "—";
+  // A log line belongs to no place: the profile clock (ADR 0002 Q1), never the host's.
+  return time && !Number.isNaN(time.getTime())
+    ? time.toLocaleString(locale, { timeZone: todayZoneNow() })
+    : "—";
 }
 
 function entryEvent(entry: LogFileEntry): string {

@@ -1,14 +1,20 @@
 import { useEffect, useMemo, useState } from "react";
 import { Link, useNavigate, useParams, useSearchParams } from "react-router-dom";
 import { tripsApi } from "../lib/api";
-import { formatDateInTimezone } from "../lib/dateUtils";
-import { formatDate } from "../lib/displayFormat";
+import { formatLocalClock, formatLocalDate, formatTimeValueShown } from "../lib/displayFormat";
+import {
+  cruiseStart,
+  cruiseStopArrival,
+  cruiseStopDeparture,
+  flightDeparture,
+  tripStart,
+} from "../lib/entityTimes";
+import { clockOf, type TimeValue } from "../shared/time";
 import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { sumByCurrency } from "../lib/bookingCost";
 import { formatAmount, formatCurrency } from "../lib/units";
 import { assessStayPlausibility } from "../shared/stayPlausibility";
-import { useSettingsStore } from "../store/settingsStore";
 import { computeRailStates } from "../lib/timelineRail";
 import { buildTimelineEvents, type TimelineEvent } from "../lib/tripTimelineEvents";
 import { ExpandableEventCard } from "../components/Trip/ExpandableEventCard";
@@ -329,7 +335,7 @@ interface TimelineTabProps {
   trip: Trip;
   onChanged: () => void;
   t: ReturnType<typeof useTranslation>["t"];
-  /** Drives the UTC date/time formatting of stop cards — see lib/tripTimeline.ts. */
+  /** The UI language, for the cards that format amounts. */
   language: string | undefined;
 }
 
@@ -389,12 +395,9 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
     if (entry) setEditingJournal(entry);
     else addToast("error", t("trips:detail.journalEntryNotFound"));
   });
-  // Only a fallback: a flight whose airport record lacks an IANA zone.
-  const userTz = useSettingsStore((s) => s.display?.timezone) || "UTC";
-
   const events = useMemo<TimelineEvent[]>(
-    () => buildTimelineEvents(trip, placeVisits, userTz),
-    [trip, placeVisits, userTz]
+    () => buildTimelineEvents(trip, placeVisits),
+    [trip, placeVisits]
   );
 
   // Cross-domain geo sanity (#6): a stay whose hotel sits far from every trip
@@ -531,24 +534,28 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
                 />
                 {ev.kind === "flight" && <FlightCard ev={ev} language={language} t={t} />}
                 {ev.kind === "cruise" && <CruiseCard ev={ev} language={language} t={t} />}
-                {ev.kind === "rail" && <RailTripCard journey={ev.journey} date={ev.date} />}
+                {ev.kind === "rail" && (
+                  <RailTripCard
+                    journey={ev.journey}
+                    date={ev.date}
+                    dateLabel={formatTimelineDate(ev.when)}
+                  />
+                )}
                 {(ev.kind === "lodging-checkin" || ev.kind === "lodging-checkout") && (
                   <LodgingCheckCard
                     ev={ev}
                     t={t}
-                    language={language}
                     implausible={implausibleStayIds.has(ev.stay.id)}
                   />
                 )}
                 {ev.kind === "stop" && (
                   <StopCard
                     ev={ev}
-                    language={language}
                     onEdit={() => setEditingStop(ev.stop)}
                     onDelete={() => void handleDeleteStop(ev.stop)}
                   />
                 )}
-                {ev.kind === "place-visit" && <PlaceVisitCard ev={ev} language={language} />}
+                {ev.kind === "place-visit" && <PlaceVisitCard ev={ev} />}
                 {ev.kind === "journal" && (
                   <JournalCard
                     ev={ev}
@@ -594,7 +601,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
         <StopModal
           tripId={trip.id}
           stop={editingStop}
-          defaultDate={trip.startDate ?? undefined}
+          defaultDate={tripStart(trip)?.date}
           onClose={() => {
             setAdding(null);
             setEditingStop(null);
@@ -648,14 +655,8 @@ function EventCard({
   subtitle?: string | null;
   meta?: React.ReactNode;
   date: string;
-  /**
-   * Overrides the rendered date text. Stops pass a UTC-formatted label with
-   * their time of day (#175) — their `date` is a WALL CLOCK, not an instant.
-   * Everything else keeps `toLocaleDateString()`, deliberately: a flight's
-   * `departureTime` IS a real instant, and forcing it to UTC here could show
-   * the wrong calendar day for a departure near midnight local.
-   */
-  dateLabel?: string;
+  /** The date text on the PLACE's clock (`formatTimelineDate(ev.when)`), never the reader's. */
+  dateLabel: string;
   actions?: React.ReactNode;
 }): JSX.Element {
   return (
@@ -691,7 +692,7 @@ function EventCard({
           style={{ color: "var(--text-muted)" }}
           dateTime={date}
         >
-          {dateLabel ?? formatDate(date)}
+          {dateLabel}
         </time>
         {actions}
       </div>
@@ -699,15 +700,6 @@ function EventCard({
   );
 }
 
-/**
- * The clock time of a cruise stop.
- *
- * A stop's arrival/departure is a UTC-pinned WALL CLOCK, like the stop's date
- * itself — the ship's local time, stored at UTC so it cannot drift. Rendering
- * it in the viewer's zone would move Barcelona's 12:00 departure by an hour for
- * a reader in London. The raw value is a full ISO timestamp, which is what
- * reached the screen before this existed.
- */
 /**
  * The four cabin types the schema names. Anything else is shown as stored.
  *
@@ -730,11 +722,25 @@ export function cabinLabel(
     : value;
 }
 
-function stopClock(value: string | null | undefined): string | null {
-  if (!value) return null;
-  const d = new Date(value);
-  if (Number.isNaN(d.getTime())) return null;
-  return d.toISOString().slice(11, 16);
+/** The logistics table's day for a flight: its departure airport's, not the reader's. */
+function formatFlightDay(f: Parameters<typeof flightDeparture>[0]): string {
+  const dep = flightDeparture(f);
+  return dep ? formatTimeValueShown(dep, { dateOnly: true }) : "—";
+}
+
+function formatCruiseDay(c: Parameters<typeof cruiseStart>[0]): string {
+  const start = cruiseStart(c);
+  return start ? formatLocalDate(start.date) : "—";
+}
+
+/**
+ * The clock time of a cruise stop, on the PORT's clock (the value's `local`).
+ * Read in the viewer's zone, Barcelona's 12:00 departure moved by an hour for
+ * a reader in London.
+ */
+function stopClock(value: TimeValue | null): string | null {
+  const clock = value ? clockOf(value) : null;
+  return clock ? formatLocalClock(clock) : null;
 }
 
 function FlightCard({
@@ -759,6 +765,7 @@ function FlightCard({
       title={ev.title}
       subtitle={ev.subtitle}
       date={ev.date}
+      dateLabel={formatTimelineDate(ev.when)}
       expanded={open}
       onToggle={() => setOpen((v) => !v)}
       detailsLabel={t("trips:detail.timeline.showDetails")}
@@ -799,11 +806,7 @@ function CruiseCard({
       title={ev.title}
       subtitle={ev.subtitle}
       date={ev.date}
-      // A cruise start date is a UTC-pinned calendar day, like a stop and a
-      // diary entry — same formatting, so one timeline never shows two date
-      // styles side by side. Only FlightCard keeps local formatting, because
-      // a departure time is a genuine instant.
-      dateLabel={formatTimelineDate(ev.date, language)}
+      dateLabel={formatTimelineDate(ev.when)}
       expanded={open}
       onToggle={() => setOpen((v) => !v)}
       detailsLabel={t("trips:detail.timeline.showDetails")}
@@ -847,7 +850,7 @@ function CruiseCard({
                 </span>
                 {(stop.arrivalTime || stop.departureTime) && (
                   <span className="font-mono ml-auto" style={{ color: "var(--text-muted)" }}>
-                    {[stopClock(stop.arrivalTime), stopClock(stop.departureTime)]
+                    {[stopClock(cruiseStopArrival(stop)), stopClock(cruiseStopDeparture(stop))]
                       .filter(Boolean)
                       .join(" – ")}
                   </span>
@@ -873,12 +876,10 @@ function CruiseCard({
 function LodgingCheckCard({
   ev,
   t,
-  language,
   implausible = false,
 }: {
   ev: Extract<TimelineEvent, { kind: "lodging-checkin" | "lodging-checkout" }>;
   t: ReturnType<typeof useTranslation>["t"];
-  language: string | undefined;
   /** #6: hotel sits far from every trip leg — shown on the check-in entry. */
   implausible?: boolean;
 }): JSX.Element {
@@ -888,10 +889,9 @@ function LodgingCheckCard({
     isCheckIn ? "trips:detail.timeline.lodgingCheckIn" : "trips:detail.timeline.lodgingCheckOut",
     { name: stay.lodging.name }
   );
-  // Check-in/out are stored as the calendar day at UTC midnight and we capture no
-  // time of day. Rendering them in local time would print a meaningless "02:00" and,
-  // west of UTC, shift the day backwards.
-  const subtitle = formatDateInTimezone(ev.date, "UTC");
+  // A stay is a DAY at the hotel; read in the viewer's zone it printed a
+  // meaningless "02:00" and, west of UTC, the day before.
+  const subtitle = formatTimelineDate(ev.when);
   // Only on the check-in entry, so the hint appears once per stay, not twice.
   const showHint = implausible && isCheckIn;
   return (
@@ -905,7 +905,7 @@ function LodgingCheckCard({
           showHint ? `${subtitle} · ⚠︎ ${t("trips:detail.timeline.lodgingFarFromTrip")}` : subtitle
         }
         date={ev.date}
-        dateLabel={formatTimelineDate(ev.date, language)}
+        dateLabel={formatTimelineDate(ev.when)}
       />
     </Link>
   );
@@ -913,12 +913,10 @@ function LodgingCheckCard({
 
 function StopCard({
   ev,
-  language,
   onEdit,
   onDelete,
 }: {
   ev: Extract<TimelineEvent, { kind: "stop" }>;
-  language: string | undefined;
   onEdit: () => void;
   onDelete: () => void;
 }): JSX.Element {
@@ -937,7 +935,7 @@ function StopCard({
       subtitle={subtitle}
       meta={s.notes ?? undefined}
       date={ev.date}
-      dateLabel={formatTimelineDate(ev.date, language)}
+      dateLabel={formatTimelineDate(ev.when)}
       actions={<RowActions onEdit={onEdit} onDelete={onDelete} />}
     />
   );
@@ -950,10 +948,8 @@ function StopCard({
  */
 function PlaceVisitCard({
   ev,
-  language,
 }: {
   ev: Extract<TimelineEvent, { kind: "place-visit" }>;
-  language: string | undefined;
 }): JSX.Element {
   const { place, visit } = ev;
   const where = [place.city, place.country].filter(Boolean).join(", ");
@@ -966,11 +962,7 @@ function PlaceVisitCard({
       subtitle={where || null}
       meta={visit.notes ?? undefined}
       date={ev.date}
-      // A visit time is a WALL CLOCK at the place, exactly like a stop's —
-      // formatted in UTC for the reason lib/tripTimeline.ts documents at
-      // length. Using toLocaleString here would shift #175's ordering off by
-      // the reader's offset.
-      dateLabel={formatTimelineDate(ev.date, language)}
+      dateLabel={formatTimelineDate(ev.when)}
     />
   );
 }
@@ -1028,7 +1020,7 @@ function LogisticsTab({
                     className="px-4 py-2.5 whitespace-nowrap"
                     style={{ color: "var(--text-muted)" }}
                   >
-                    {f.departureTime ? formatDate(f.departureTime) : "—"}
+                    {formatFlightDay(f)}
                   </td>
                   <td className="px-4 py-2.5 font-mono">
                     {f.depIata ?? "???"} → {f.arrIata ?? "???"}
@@ -1071,7 +1063,7 @@ function LogisticsTab({
                     className="px-4 py-2.5 whitespace-nowrap"
                     style={{ color: "var(--text-muted)" }}
                   >
-                    {c.startDate ? formatDate(c.startDate) : "—"}
+                    {formatCruiseDay(c)}
                   </td>
                   <td className="px-4 py-2.5">{c.cruiseLine ?? "Kreuzfahrt"}</td>
                   <td className="px-4 py-2.5 text-right">

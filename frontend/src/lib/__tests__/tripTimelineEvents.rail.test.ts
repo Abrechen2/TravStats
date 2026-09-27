@@ -56,8 +56,7 @@ describe("buildTimelineEvents — rail", () => {
           } as NonNullable<Trip["flights"]>[number],
         ],
       }),
-      [],
-      "UTC"
+      []
     );
     expect(events.map((e) => e.id)).toEqual(["rail-r1", "flight-f1", "rail-r2"]);
     const first = events[0];
@@ -66,6 +65,6 @@ describe("buildTimelineEvents — rail", () => {
   });
 
   it("adds nothing for a trip without rides — the domain's absence is not an entry", () => {
-    expect(buildTimelineEvents(trip({ railJourneys: undefined }), [], "UTC")).toEqual([]);
+    expect(buildTimelineEvents(trip({ railJourneys: undefined }), [])).toEqual([]);
   });
 });

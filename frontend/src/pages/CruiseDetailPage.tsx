@@ -22,7 +22,9 @@ import { Icon } from "../components/ui/Icon";
 import Button from "../components/ui/Button";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
-import { formatDateInTimezone } from "../lib/dateUtils";
+import { formatLocalDate } from "../lib/displayFormat";
+import { cruiseEnd, cruiseStart } from "../lib/entityTimes";
+import type { LocalDateValue } from "../shared/time";
 import { formatAmount } from "../lib/units";
 import { useToastStore } from "../store/toastStore";
 import { cruiseExtractTarget } from "../lib/extractTargets";
@@ -36,10 +38,8 @@ import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import CruiseTracksPanel from "../components/Cruise/CruiseTracksPanel";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
 
-const fmtDate = (iso: string | null): string => {
-  if (!iso) return "—";
-  return formatDateInTimezone(iso, "UTC");
-};
+/** A cruise day at its port, in the user's format — never moved by the reader's zone. */
+const fmtDate = (day: LocalDateValue | null): string => (day ? formatLocalDate(day.date) : "—");
 
 export default function CruiseDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -163,13 +163,10 @@ export default function CruiseDetailPage(): JSX.Element {
   const seaDays = cruise.stops.filter((s) => s.isAtSea).length;
 
   const shipName = cruise.ship?.name ?? cruise.shipNameOverride ?? "—";
+  const start = cruiseStart(cruise);
+  const end = cruiseEnd(cruise);
   const nights =
-    cruise.startDate && cruise.endDate
-      ? Math.round(
-          (Date.parse(cruise.endDate.slice(0, 10)) - Date.parse(cruise.startDate.slice(0, 10))) /
-            86_400_000
-        )
-      : null;
+    start && end ? Math.round((Date.parse(end.date) - Date.parse(start.date)) / 86_400_000) : null;
   const countries = new Set(
     buildEffectiveTimeline(cruise)
       .map((entry) => entry.port?.country)
@@ -219,9 +216,7 @@ export default function CruiseDetailPage(): JSX.Element {
         title={[shipName, cruise.routeName].filter(Boolean).join(" · ")}
         meta={[
           cruise.cruiseLine ?? cruise.ship?.cruiseLine,
-          cruise.startDate && cruise.endDate
-            ? `${fmtDate(cruise.startDate)} – ${fmtDate(cruise.endDate)}`
-            : null,
+          start && end ? `${fmtDate(start)} – ${fmtDate(end)}` : null,
           cruise.departurePort && cruise.arrivalPort
             ? `${cruise.departurePort.name} → ${cruise.arrivalPort.name}`
             : null,

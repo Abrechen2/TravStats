@@ -1,6 +1,8 @@
 import { resolveStayTiming, type LodgingDatePrecision } from "../shared/lodgingTiming";
 import type { LodgingStay } from "../types/lodging";
-import { formatDate } from "./displayFormat";
+import type { StayTimes } from "../types/times";
+import { formatLocalDate } from "./displayFormat";
+import { stayCheckIn, stayCheckOut } from "./entityTimes";
 
 /**
  * How a stay's dates are WRITTEN, given how much of them is known.
@@ -10,6 +12,10 @@ import { formatDate } from "./displayFormat";
  * in a chart and in a list: a stay recorded as "July 2011" must not appear as
  * "01.07.2011 – 01.07.2011" anywhere, because a reader would take that for a
  * one-day stay somebody dated exactly.
+ *
+ * The days are the HOTEL's (`times.checkIn.date`, ADR 0002) — `YYYY-MM-DD`
+ * strings, read through `lib/entityTimes.ts`. No zone is consulted, so no
+ * reader west of UTC sees the day before.
  */
 
 /** Shape needed to render a period — a `LodgingStay`, or anything with the same four fields. */
@@ -18,19 +24,24 @@ export interface DisplayableStay {
   checkOut: string | null;
   datePrecision: LodgingDatePrecision | string;
   nights: number | null;
+  times?: StayTimes;
 }
 
-function toDate(value: string | null): Date | null {
-  if (value === null) return null;
-  const d = new Date(value);
+/** A `YYYY-MM-DD` day as the UTC midnight `resolveStayTiming` computes with. */
+function toDate(day: string | null | undefined): Date | null {
+  if (!day) return null;
+  const d = new Date(`${day}T00:00:00.000Z`);
   return Number.isNaN(d.getTime()) ? null : d;
 }
+
+const checkInDay = (stay: DisplayableStay): string | null => stayCheckIn(stay)?.date ?? null;
+const checkOutDay = (stay: DisplayableStay): string | null => stayCheckOut(stay)?.date ?? null;
 
 /** Nights as the rollup counts them — dates when they can say, the explicit field otherwise. */
 export function stayNights(stay: DisplayableStay): number {
   return resolveStayTiming({
-    checkIn: toDate(stay.checkIn),
-    checkOut: toDate(stay.checkOut),
+    checkIn: toDate(checkInDay(stay)),
+    checkOut: toDate(checkOutDay(stay)),
     datePrecision: String(stay.datePrecision),
     nights: stay.nights,
   }).nights;
@@ -39,8 +50,8 @@ export function stayNights(stay: DisplayableStay): number {
 /** True when nothing in the record says how long the stay was. */
 export function hasUnknownLength(stay: DisplayableStay): boolean {
   return !resolveStayTiming({
-    checkIn: toDate(stay.checkIn),
-    checkOut: toDate(stay.checkOut),
+    checkIn: toDate(checkInDay(stay)),
+    checkOut: toDate(checkOutDay(stay)),
     datePrecision: String(stay.datePrecision),
     nights: stay.nights,
   }).nightsKnown;
@@ -62,8 +73,10 @@ export function formatStayPeriod(
   locale: string,
   t: (key: string) => string
 ): StayPeriodParts {
-  const checkIn = toDate(stay.checkIn);
-  const checkOut = toDate(stay.checkOut);
+  const inDay = checkInDay(stay);
+  const outDay = checkOutDay(stay);
+  const checkIn = toDate(inDay);
+  const checkOut = toDate(outDay);
   const timing = resolveStayTiming({
     checkIn,
     checkOut,
@@ -73,19 +86,19 @@ export function formatStayPeriod(
 
   // The user's date format (Settings → Display). `locale` still names the month
   // for a month-precision stay below, where there is no day order to choose.
-  const day = (d: Date): string => formatDate(d, { timeZone: "UTC" });
+  const day = (d: string): string => formatLocalDate(d);
 
   switch (timing.precision) {
     case "DAY": {
-      if (checkIn !== null && checkOut !== null) {
-        return { label: `${day(checkIn)} – ${day(checkOut)}`, precision: "DAY" };
+      if (inDay !== null && outDay !== null) {
+        return { label: `${day(inDay)} – ${day(outDay)}`, precision: "DAY" };
       }
       // One end only. "from the 14th" and "until the 16th" are different
       // sentences, and rendering either as a range would invent the other.
-      if (checkIn !== null) {
-        return { label: `${t("lodging:period.from")} ${day(checkIn)}`, precision: "DAY" };
+      if (inDay !== null) {
+        return { label: `${t("lodging:period.from")} ${day(inDay)}`, precision: "DAY" };
       }
-      return { label: `${t("lodging:period.until")} ${day(checkOut!)}`, precision: "DAY" };
+      return { label: `${t("lodging:period.until")} ${day(outDay ?? "")}`, precision: "DAY" };
     }
     case "MONTH": {
       const anchor = timing.anchor!;
@@ -106,8 +119,12 @@ export function formatStayPeriod(
   }
 }
 
+type DisplayableStayTimes = Pick<DisplayableStay, "times">;
+
 /** Sort key for a list ordered by date; undated stays sort last, not to the top on a NaN. */
-export function staySortKey(stay: Pick<LodgingStay, "checkIn">): number {
-  const d = toDate(stay.checkIn);
+export function staySortKey(
+  stay: Pick<LodgingStay, "checkIn" | "checkOut"> & DisplayableStayTimes
+): number {
+  const d = toDate(stayCheckIn(stay)?.date);
   return d === null ? Number.NEGATIVE_INFINITY : d.getTime();
 }

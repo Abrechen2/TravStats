@@ -1,5 +1,6 @@
 import type { CurrencyCode } from "../shared/currencies";
 import type { LodgingDatePrecision } from "../shared/lodgingTiming";
+import type { StayTimes } from "./times";
 // Frontend view of the `lodging` domain (hotels + campsites). Mirrors
 // backend/prisma/schema.prisma (`Lodging`, `LodgingStay`, `LodgingChain`,
 // `LodgingMembership`) and backend/src/schemas/lodging.ts (enums + input
@@ -84,6 +85,8 @@ export interface LodgingStay {
   checkInTime: string | null;
   checkOutTime: string | null;
   datePrecision: LodgingDatePrecision;
+  /** ADR 0002 phase 4 — read through lib/entityTimes.ts. */
+  times?: StayTimes;
   /** Explicit night count, for when the dates cannot supply one. */
   nights: number | null;
   status: StayStatus;

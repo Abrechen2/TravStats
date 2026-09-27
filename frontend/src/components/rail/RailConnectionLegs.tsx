@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatStationClock, formatStationTime } from "../../lib/railTime";
+import { formatRailSpan } from "../../lib/railTime";
 import type { RailBookingLeg } from "../../types/rail";
 
 interface Props {
@@ -24,11 +24,7 @@ export function RailConnectionLegs({ currentId, legs, pnr }: Props): JSX.Element
       <ol className="flex flex-col gap-1" data-testid="rail-connection-legs">
         {legs.map((leg, index) => {
           const train = [leg.trainCategory, leg.trainNumber].filter(Boolean).join(" ");
-          const when = `${formatStationTime(leg.departureTime, leg.depTimezone, locale)}${
-            leg.arrivalTime
-              ? ` – ${formatStationClock(leg.arrivalTime, leg.arrTimezone, locale)}`
-              : ""
-          }`;
+          const when = formatRailSpan(leg, locale);
           const label = `${index + 1}. ${leg.depStationName} → ${leg.arrStationName}`;
           return (
             <li key={leg.id} className="text-sm">

@@ -69,6 +69,14 @@ import { usePlacesAccess } from "../hooks/usePlacesVisible";
 import { useRailOffered } from "../hooks/useRailVisible";
 import { parseStatsTab, resolveStatsTab, visibleStatsTabs } from "./statsTabAccess";
 import type { DomainKey } from "../shared/domains";
+import { flightDeparture } from "../lib/entityTimes";
+import { dayOf, weekdayOf } from "../shared/time";
+
+/** A flight's day AT ITS DEPARTURE AIRPORT (ADR 0002) — weekday, month and year are read from it. */
+function departureDay(flight: Flight): string | null {
+  const departure = flightDeparture(flight);
+  return departure ? dayOf(departure) : null;
+}
 
 export default function AdvancedStatsPage(): JSX.Element {
   const { t } = useTranslation(["stats", "common"]);
@@ -422,8 +430,9 @@ export default function AdvancedStatsPage(): JSX.Element {
   ];
   const flightsPerWeekday = flights.reduce(
     (acc, flight) => {
-      if (!flight.departureTime) return acc;
-      const weekday = new Date(flight.departureTime).getDay();
+      const day = departureDay(flight);
+      if (!day) return acc;
+      const weekday = weekdayOf(day);
       acc[weekday] = (acc[weekday] || 0) + 1;
       return acc;
     },
@@ -451,8 +460,9 @@ export default function AdvancedStatsPage(): JSX.Element {
   ];
   const flightsPerMonthOfYear = flights.reduce(
     (acc, flight) => {
-      if (!flight.departureTime) return acc;
-      const month = new Date(flight.departureTime).getMonth();
+      const day = departureDay(flight);
+      if (!day) return acc;
+      const month = Number(day.slice(5, 7)) - 1;
       acc[month] = (acc[month] || 0) + 1;
       return acc;
     },
@@ -488,9 +498,9 @@ export default function AdvancedStatsPage(): JSX.Element {
   const yearsActive: number[] = [
     ...new Set(
       flights
-        .filter((f) => f.departureTime != null)
-        .map((f) => new Date(f.departureTime!).getFullYear())
-        .filter((y) => !isNaN(y))
+        .map((f) => departureDay(f))
+        .filter((day): day is string => day !== null)
+        .map((day) => Number(day.slice(0, 4)))
     ),
   ];
 
@@ -502,7 +512,7 @@ export default function AdvancedStatsPage(): JSX.Element {
     setGeneratingPdf(true);
     try {
       const yearFlights = flights.filter(
-        (f) => f.departureTime && new Date(f.departureTime).getFullYear() === selectedYear
+        (f) => departureDay(f)?.slice(0, 4) === String(selectedYear)
       );
       const pdfUnits = units.distanceUnit === "miles" ? "mi" : "km";
       await generateYearReportPdf({

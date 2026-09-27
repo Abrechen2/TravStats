@@ -1,4 +1,5 @@
-import { formatDate } from "../../lib/displayFormat";
+import { formatTimeValueShown } from "../../lib/displayFormat";
+import type { TimeValue } from "../../shared/time";
 
 /**
  * The flights list's date, in one place — shared by `TimeCell` and the narrow
@@ -8,9 +9,8 @@ import { formatDate } from "../../lib/displayFormat";
  * decision E7, taken when the four logbooks each invented their own format
  * (audit B11) — but a tester reported on 2026-09-17 that the table ignored the
  * format they had chosen in Settings, and the setting solves the same problem
- * better: `YYYY-MM-DD` is one of the three it offers. `lang` stays in the
- * signature so callers did not have to change shape; it is unused, because the
- * reader's locale is not what decides this any more.
+ * better: `YYYY-MM-DD` is one of the three it offers. The day is the
+ * departure airport's, from the value's own `local` (ADR 0002).
  */
-export const flightDateFmt = (iso: string, tz: string, _lang?: string): string =>
-  formatDate(iso, { timeZone: tz });
+export const flightDateFmt = (value: TimeValue): string =>
+  formatTimeValueShown(value, { dateOnly: true });

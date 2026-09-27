@@ -8,8 +8,13 @@ interface Props {
   local: string;
   /** The place's zone, when the pick brought one; without it the server decides. */
   zone: string | null | undefined;
-  fold: Fold | undefined;
-  onFoldChange: (fold: "later" | undefined) => void;
+  fold?: Fold;
+  /**
+   * Omitted where the server cannot yet take the later occurrence: the notice
+   * then only says which one is saved, rather than offering a choice the
+   * save would drop.
+   */
+  onFoldChange?: (fold: "later" | undefined) => void;
 }
 
 /**
@@ -36,14 +41,16 @@ export function ClockChangeNotice({ local, zone, fold, onFoldChange }: Props): J
   return (
     <div className="mt-1 text-xs" style={{ color: "var(--text-muted)" }}>
       <p style={{ margin: 0 }}>{t("common:clockChange.repeated")}</p>
-      <label className="mt-1 flex items-center gap-2">
-        <input
-          type="checkbox"
-          checked={fold === "later"}
-          onChange={(e) => onFoldChange(e.target.checked ? "later" : undefined)}
-        />
-        {t("common:clockChange.later")}
-      </label>
+      {onFoldChange && (
+        <label className="mt-1 flex items-center gap-2">
+          <input
+            type="checkbox"
+            checked={fold === "later"}
+            onChange={(e) => onFoldChange(e.target.checked ? "later" : undefined)}
+          />
+          {t("common:clockChange.later")}
+        </label>
+      )}
     </div>
   );
 }

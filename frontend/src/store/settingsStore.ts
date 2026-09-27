@@ -6,6 +6,7 @@ import { DOMAIN_KEYS, type DomainKey } from "../shared/domains";
 import { COUNTRY_TIERS, type CountryTier } from "../types/passport";
 import { useAuthStore } from "./authStore";
 import { displayForSave, useProfileZoneStore } from "./profileZoneStore";
+import { deviceZone } from "../shared/time";
 
 /**
  * A value off the wire read back as a tier, or null when it is not one.
@@ -281,13 +282,9 @@ const detectInitialLanguage = (): LanguagePreference => {
   const tag = navigator.language?.split("-")[0];
   return tag === "de" ? "de" : "en";
 };
-const detectInitialTimezone = (): string => {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Berlin";
-  } catch {
-    return "Europe/Berlin";
-  }
-};
+// Only a PROPOSAL for the profile zone (ADR 0002 Q1) — shared/time's
+// `deviceZone()` reads the device's zone; the user confirms it.
+const detectInitialTimezone = (): string => deviceZone() ?? "Europe/Berlin";
 const detectInitialDateFormat = (): DateFormat => {
   if (typeof navigator === "undefined") return "DD.MM.YYYY";
   const region = navigator.language?.toLowerCase();

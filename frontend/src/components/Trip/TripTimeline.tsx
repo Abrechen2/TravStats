@@ -1,13 +1,14 @@
 import { JSX } from "react";
 import { DOMAINS, type DomainKey } from "../../shared/domains";
-import { formatDateInTimezone } from "../../lib/dateUtils";
+import { formatLocalDate } from "../../lib/displayFormat";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useTranslation } from "../../hooks/useTranslation";
 
 export interface TimelineEvent {
   id: string;
   domain: DomainKey;
-  date: string; // ISO date
+  /** The day at the place, `YYYY-MM-DD` (a longer ISO string is cut to its date). */
+  date: string;
   title: string;
   subtitle?: string;
   meta?: string;
@@ -73,7 +74,7 @@ export default function TripTimeline({ events }: TripTimelineProps): JSX.Element
               style={{ color: "var(--text-muted)" }}
               dateTime={ev.date}
             >
-              {formatDateInTimezone(ev.date, "UTC")}
+              {formatLocalDate(ev.date)}
             </time>
           </li>
         );

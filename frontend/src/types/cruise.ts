@@ -1,5 +1,6 @@
 import type { LocalTimeInput } from "../shared/time";
 import type { CurrencyCode } from "../shared/currencies";
+import type { CruiseStopTimes, CruiseTimes } from "./times";
 export interface Ship {
   id: number;
   name: string;
@@ -43,6 +44,8 @@ export interface CruiseStop {
   arrivalUtc?: string | null;
   departureUtc?: string | null;
   stopZone?: string | null;
+  /** ADR 0002 phase 4 — read through lib/entityTimes.ts. */
+  times?: CruiseStopTimes;
 }
 
 export type CruiseStatus = "scheduled" | "in_progress" | "flown" | "cancelled" | "historical";
@@ -84,6 +87,7 @@ export interface Cruise {
   trip?: { id: string; name: string; color: string } | null;
   bookingId: string | null;
   stops: CruiseStop[];
+  times?: CruiseTimes;
   createdAt: string;
   updatedAt: string;
 }

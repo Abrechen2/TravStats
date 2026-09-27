@@ -1,5 +1,6 @@
 import type { TripPhoto } from "./index";
 import type { ObservedWeather } from "./openData";
+import type { JournalTimes } from "./times";
 
 /**
  * A diary entry of a trip. Its own module since the entry gained photos: the
@@ -21,6 +22,8 @@ export interface TripJournalEntry {
    * Present on the trip detail; absent from the entry a save answers with.
    */
   photos?: TripPhoto[];
+  /** ADR 0002 phase 4 — read through lib/entityTimes.ts. */
+  times?: JournalTimes;
   createdAt: string;
   updatedAt: string;
 }

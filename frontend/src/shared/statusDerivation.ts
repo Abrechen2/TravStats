@@ -1,3 +1,5 @@
+// "Now" from the injectable clock (ADR 0002 D6) — the backend mirror reads `new Date()`; same instant, pinnable here.
+import { now as clockNow } from "./time";
 /**
  * Frontend MIRROR of the lodging half of `backend/src/shared/statusDerivation.ts`,
  * following the same backend/frontend mirror convention as `shared/domains.ts`.
@@ -45,7 +47,7 @@ export function deriveFlightStatus(input: {
 }): string {
   const { departureTime, arrivalTime, current, passthrough = true } = input;
   if (passthrough && (FLIGHT_PASSTHROUGH as readonly string[]).includes(current)) return current;
-  const nowMs = (input.now ?? new Date()).getTime();
+  const nowMs = (input.now ?? clockNow()).getTime();
   if (arrivalTime != null) {
     return nowMs - arrivalTime.getTime() > FLIGHT_ARRIVAL_SLACK_HOURS * HOUR_MS
       ? "flown"
@@ -76,7 +78,7 @@ export function deriveLodgingStatus(input: {
   const { checkIn, checkOut, current } = input;
   if ((LODGING_PASSTHROUGH as readonly string[]).includes(current)) return current;
   if (checkIn == null && checkOut == null) return current;
-  const nowMs = (input.now ?? new Date()).getTime();
+  const nowMs = (input.now ?? clockNow()).getTime();
   const start = checkIn ?? checkOut!;
   const end = checkOut ?? checkIn!;
   if (nowMs < start.getTime()) return "scheduled";

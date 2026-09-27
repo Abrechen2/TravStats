@@ -4,7 +4,7 @@ import TimesFields from "./FlightForm/fields/TimesFields";
 import HistoricalToggleField from "./FlightForm/fields/HistoricalToggleField";
 import { applyHistoricalToggle } from "./FlightForm/historicalToggle";
 import {
-  splitLocalDatetime,
+  seedTimes,
   historicalShapeFor,
   editSubmitZones,
   airportLocalInputs,
@@ -42,6 +42,8 @@ import { logger } from "../lib/logger";
 import type { FlightInput } from "../types";
 import type { Airport } from "../lib/api";
 import { saveErrorMessage } from "../lib/saveErrorMessage";
+import { flightArrival, flightDeparture } from "../lib/entityTimes";
+import { foldFields, storedFlightFolds, wallOf, type FlightFolds } from "../lib/flightFolds";
 
 interface FlightEditModalProps {
   flight: Flight;
@@ -78,13 +80,8 @@ export default function FlightEditModal({
 
   const buildFormData = (f: Flight) => {
     const isHistorical = f.status === "historical";
-    const dep = splitLocalDatetime(f.departureTime);
-    const arr = splitLocalDatetime(f.arrivalTime);
-    // Actual departure/arrival (#200) — same browser-local seed as
-    // dep/arr above, re-derived as airport-local by the hydration effect
-    // below. Empty when the flight has no recorded actual time yet.
-    const actualDep = splitLocalDatetime(f.actualDeparture ?? null);
-    const actualArr = splitLocalDatetime(f.actualArrival ?? null);
+    // The airports' own clocks from `times`; actual times (#200) empty when none.
+    const { dep, arr, actualDep, actualArr } = seedTimes(f);
     return {
       airline: f.airline || "",
       operatingAirline: f.operatingAirline || "",
@@ -131,6 +128,10 @@ export default function FlightEditModal({
   };
 
   const [formData, setFormData] = useState(buildFormData(flight));
+  // Q5: the occurrence of a repeated hour the flight was stored with, re-sent unless changed.
+  const [folds, setFolds] = useState<FlightFolds>(() =>
+    storedFlightFolds(flightDeparture(flight), flightArrival(flight))
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const addToast = useToastStore((s) => s.addToast);
@@ -144,15 +145,14 @@ export default function FlightEditModal({
     () => buildFlightAirports(flight).arrival
   );
 
-  // Airport timezones for the departure/arrival fields. The datetime-local
-  // inputs are seeded browser-local by buildFormData, then re-rendered as
-  // airport-local once useAirportLocalTimes resolves both zones (see the
-  // sync effect below). `hydrated` tracks whether the inputs currently hold
-  // airport-local values, so submit pairs them with the matching timezone
-  // basis (no-op edits round-trip losslessly instead of drifting when
-  // browser tz != airport tz).
-  // Only the zone the unhydrated seed is SHOWN in; never submitted (editSubmitZones).
-  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  // Airport timezones for the departure/arrival fields. The inputs are seeded
+  // from `times` (the airports' clocks) by buildFormData and re-derived once
+  // useAirportLocalTimes resolves both zones (the sync effect below);
+  // `hydrated` says whether that happened, so submit pairs them with the
+  // matching zones. Before it, the hook reports a placeholder zone that is
+  // never submitted (editSubmitZones) nor used for a notice — not the
+  // browser's, which is no airport's.
+  const browserTz = "UTC";
   const {
     depTimezone: depTz,
     arrTimezone: arrTz,
@@ -298,13 +298,11 @@ export default function FlightEditModal({
         ...(last ? [airportLocalInputs(flight, last.dep, last.arr)] : []),
       ]);
 
-      // Historical flights carry their precision in the date SHAPE (see the
-      // HistoricalDateFields block) — mirror the create form's semantics
-      // derivation. ALWAYS sent alongside departureLocal for historical
-      // flights, never conditionally: the server treats a departureLocal
-      // without explicit semantics as a real time edit and flips the column
-      // to UTC (the implicit branch flights.test.ts pins) — which the
-      // browser UAT caught silently downgrading DATE_ONLY on a year change.
+      // Historical flights carry their precision in the date SHAPE — the
+      // create form's derivation. ALWAYS sent with departureLocal: without
+      // explicit semantics the server reads a real time edit and flips the
+      // column to UTC (flights.test.ts pins it) — which the browser UAT caught
+      // silently downgrading DATE_ONLY on a year change.
       const histShape =
         formData.status === "historical" ? historicalDateShape(formData.departureDate) : "unknown";
       const sendSemantics: FlightInput["depTimeSemantics"] =
@@ -327,9 +325,7 @@ export default function FlightEditModal({
         flightNumber: formData.flightNumber || null,
         aircraft: formData.aircraft || null,
         status: formData.status as FlightInput["status"],
-        // "" (the "(optional)" choice) maps to null — an explicit CLEAR on the
-        // wire. `undefined` would omit the field and the server would keep the
-        // old value while the UI showed it removed.
+        // "" (the "(optional)" choice) is null too — the same explicit CLEAR.
         category: (formData.category || null) as FlightInput["category"],
         seatClass: (formData.seatClass || null) as FlightInput["seatClass"],
         seatNumber: formData.seatNumber || null,
@@ -391,6 +387,11 @@ export default function FlightEditModal({
               ? null
               : undefined,
           actualArrivalTz: formData.actualArrivalDate ? zones.arr : undefined,
+          ...foldFields(
+            folds,
+            wallOf(formData.departureDate, formData.departureTime, zones.dep),
+            wallOf(formData.arrivalDate, formData.arrivalTime, zones.arr)
+          ),
         }),
       };
 
@@ -533,6 +534,11 @@ export default function FlightEditModal({
               actualArrDate: formData.actualArrivalDate,
               actualArrTime: formData.actualArrivalTime,
             }}
+            clockChange={
+              hydrated
+                ? { depZone: depTz, arrZone: arrTz, folds, onFoldsChange: setFolds }
+                : undefined
+            }
             onActualChange={(next) =>
               setFormData((prev) => ({
                 ...prev,

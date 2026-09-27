@@ -4,19 +4,21 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { getFlightDuration } from "../../lib/flightDuration";
 import { formatDurationWithEstimate } from "../../lib/formatters";
 import { Icon } from "../ui/Icon";
+import YourTimeHint from "../time/YourTimeHint";
+import {
+  flightActualArrival,
+  flightActualDeparture,
+  flightArrival,
+  flightDeparture,
+} from "../../lib/entityTimes";
+import { formatLocalClock } from "../../lib/displayFormat";
+import { clockOf, readsAsUtc, type TimeValue } from "../../shared/time";
 
-/** HH:MM on the airport's clock. */
-function clock(iso: string | null | undefined, tz: string | null | undefined): string | null {
-  if (!iso) return null;
-  try {
-    return new Intl.DateTimeFormat("de-DE", {
-      hour: "2-digit",
-      minute: "2-digit",
-      timeZone: tz || "UTC",
-    }).format(new Date(iso));
-  } catch {
-    return null;
-  }
+/** HH:MM on the airport's clock — the server's `local` — "UTC" where it has no zone. */
+function clock(value: TimeValue | null): string | null {
+  const hhmm = value ? clockOf(value) : null;
+  if (!value || !hhmm) return null;
+  return `${formatLocalClock(hhmm)}${readsAsUtc(value) ? " UTC" : ""}`;
 }
 
 function End({
@@ -24,12 +26,15 @@ function End({
   name,
   planned,
   actual,
+  hintFor,
   align,
 }: {
   code: string;
   name?: string;
   planned: string | null;
   actual: string | null;
+  /** The value the "your time" hint reads (Q2). */
+  hintFor: TimeValue | null;
   align: "start" | "end";
 }): JSX.Element {
   const { t } = useTranslation(["flights"]);
@@ -66,6 +71,7 @@ function End({
           ) : null}
         </span>
       ) : null}
+      <YourTimeHint value={hintFor} />
     </div>
   );
 }
@@ -101,8 +107,9 @@ export default function FlightRouteHero({
       <End
         code={flight.depIata || flight.depIcao || "—"}
         name={flight.depName}
-        planned={clock(flight.departureTime, flight.depTimezone)}
-        actual={clock(flight.actualDeparture, flight.depTimezone)}
+        planned={clock(flightDeparture(flight))}
+        actual={clock(flightActualDeparture(flight))}
+        hintFor={flightActualDeparture(flight) ?? flightDeparture(flight)}
         align="start"
       />
       <div className="flex flex-col items-center" style={{ gap: 6, color: "var(--ts-accent)" }}>
@@ -120,8 +127,9 @@ export default function FlightRouteHero({
       <End
         code={flight.arrIata || flight.arrIcao || "—"}
         name={flight.arrName}
-        planned={clock(flight.arrivalTime, flight.arrTimezone)}
-        actual={clock(flight.actualArrival, flight.arrTimezone)}
+        planned={clock(flightArrival(flight))}
+        actual={clock(flightActualArrival(flight))}
+        hintFor={flightActualArrival(flight) ?? flightArrival(flight)}
         align="end"
       />
     </div>

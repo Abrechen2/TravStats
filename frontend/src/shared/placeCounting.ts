@@ -1,3 +1,5 @@
+// "Now" from the injectable clock (ADR 0002 D6) — the backend mirror reads `new Date()`; same instant, pinnable here.
+import { now as clockNow } from "./time";
 /**
  * Single source of truth for "does this place count?".
  *
@@ -54,7 +56,7 @@ function toDate(value: Date | string | null): Date | null {
  * a date. Treating the gap as "planned" would quietly drop real history out of
  * every total, which is the failure mode this rule exists to prevent.
  */
-export function classifyVisit(visit: CountableVisit, now: Date = new Date()): PlaceCountState {
+export function classifyVisit(visit: CountableVisit, now: Date = clockNow()): PlaceCountState {
   const at = toDate(visit.visitedAt);
   if (at === null) return "visited";
   return at.getTime() > now.getTime() ? "planned" : "visited";
@@ -92,7 +94,7 @@ export function visitYear(visit: CountableVisit): number | null {
 export function visitCountsForYear(
   visit: CountableVisit,
   year: number,
-  now: Date = new Date()
+  now: Date = clockNow()
 ): boolean {
   return visitYear(visit) === year && classifyVisit(visit, now) === "visited";
 }
@@ -130,7 +132,7 @@ export function countVisitedPlaces(places: readonly CountablePlace[]): number {
  */
 export function countCompletedVisits(
   visits: readonly CountableVisit[],
-  now: Date = new Date()
+  now: Date = clockNow()
 ): number {
   return visits.reduce((n, v) => (classifyVisit(v, now) === "visited" ? n + 1 : n), 0);
 }

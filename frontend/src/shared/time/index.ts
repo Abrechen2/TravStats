@@ -28,3 +28,20 @@ export {
   type TimeValue,
 } from "./wire";
 export { classifyWallClock, storedFold, type WallClockKind } from "./wallClock";
+export {
+  localDateFromDayColumn,
+  readsAsUtc,
+  timeValueAtZone,
+  timeValueFromWallClock,
+} from "./legacy";
+export { clockOf, dayOf, viewerReading } from "./reading";
+export { supportedZones } from "./zoneList";
+export {
+  addDays,
+  dayParts,
+  dayString,
+  daysBetween,
+  daysInMonth,
+  formatDayLong,
+  weekdayOf,
+} from "./calendar";

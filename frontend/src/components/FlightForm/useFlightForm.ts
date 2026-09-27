@@ -6,7 +6,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
 import { flightLookupApi } from "../../lib/api/flightLookup";
-import { localToday } from "../../lib/roadtrip/roadtripView";
+import { todayIn } from "../../shared/time";
+import { todayZoneNow } from "../../hooks/useTodayZone";
 import { airportResolutionMessage, resolveAirportByCode } from "../../lib/airportResolve";
 import {
   lookupEmptyMessage,
@@ -27,11 +28,12 @@ import { flightSaveFailure } from "./flightSaveFailure";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { reportBatchOutcome } from "./flightReviewBatch";
 import type { FlightLookupResult, DuplicateFlight, FlightSubmitOptions } from "./flightFormModel";
+import type { FlightFolds } from "../../lib/flightFolds";
+import { shiftWallClock } from "../../lib/wallClockMath";
 
 export function useFlightForm(
-  // Returning the created Flight is what makes the post-create trip
-  // assignment possible; `void` keeps older callers valid (they simply get
-  // no assignment).
+  // Returning the created Flight makes the post-create trip assignment
+  // possible; `void` keeps older callers valid (they get no assignment).
   onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<Flight | void>,
   onCancel: () => void,
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void
@@ -81,11 +83,10 @@ export function useFlightForm(
   const [departureTime, setDepartureTime] = useState("12:00");
   const [arrivalDate, setArrivalDate] = useState("");
   const [arrivalTime, setArrivalTime] = useState("14:00");
-  // Actual departure/arrival (#200) — empty by default: a freshly created
-  // flight has no recorded actual time until the user (or live tracking,
-  // out of scope here) fills it in. Kept empty rather than defaulted like
-  // departureTime/arrivalTime above, since "no value yet" must stay
-  // distinguishable from "midday" — see buildFlightPayload below.
+  // The later occurrence of a repeated hour, per end (Q5) — see lib/flightFolds.ts.
+  const [folds, setFolds] = useState<FlightFolds>({});
+  // Actual departure/arrival (#200) — empty by default, not "midday": a new
+  // flight has no recorded actual time until the user fills it in.
   const [actualDepartureDate, setActualDepartureDate] = useState("");
   const [actualDepartureTime, setActualDepartureTime] = useState("");
   const [actualArrivalDate, setActualArrivalDate] = useState("");
@@ -93,10 +94,8 @@ export function useFlightForm(
   const [airline, setAirline] = useState("");
   const [operatingAirline, setOperatingAirline] = useState("");
   const [aircraft, setAircraft] = useState("");
-  // Lookup-derived metadata that is persisted on submit but not directly
-  // surfaced in the form UI: callsign + tail number / Mode-S identifiers
-  // come from AeroDataBox automatically and only appear in the flight
-  // detail view post-save. The user can still edit them later.
+  // Lookup-derived metadata persisted on submit but not shown in the form
+  // (callsign, tail number, Mode-S from AeroDataBox); editable on the detail view.
   const [lookupCallsign, setLookupCallsign] = useState("");
   const [lookupAircraftRegistration, setLookupAircraftRegistration] = useState("");
   const [lookupAircraftModeS, setLookupAircraftModeS] = useState("");
@@ -133,9 +132,8 @@ export function useFlightForm(
 
   // Initialize defaults from settings
   useEffect(() => {
-    // The reader's calendar day — the UTC one made "today" yesterday until
-    // 02:00 in Germany, and the lookup searched the wrong date.
-    const today = localToday();
+    // Today in the profile zone (Q1) — neither UTC nor the browser's.
+    const today = todayIn(todayZoneNow());
     setSearchDate(today);
     setDepartureDate(today);
     setArrivalDate(today);
@@ -150,12 +148,8 @@ export function useFlightForm(
   // Auto-set status based on date (skip when historical is active)
   useEffect(() => {
     if (status === "historical") return;
-    if (departureDate) {
-      const depDate = new Date(departureDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      setStatus(depDate < today ? "flown" : "scheduled");
-    }
+    // Both `YYYY-MM-DD`: before today in the profile zone (Q1) is flown.
+    if (departureDate) setStatus(departureDate < todayIn(todayZoneNow()) ? "flown" : "scheduled");
   }, [departureDate]);
 
   // Clear error when step changes — unless the transition itself carries a
@@ -192,9 +186,9 @@ export function useFlightForm(
         // "Departure = Boarding + 30min", telling the user their times came
         // from an input they never gave and sending them looking for a field
         // that does not exist on this form (#235).
-        const depDateTime = new Date(`${departureDate}T${departureTime}`);
-        depDateTime.setMinutes(depDateTime.getMinutes() - 30);
-        const boardingTime = `${String(depDateTime.getHours()).padStart(2, "0")}:${String(depDateTime.getMinutes()).padStart(2, "0")}`;
+        // Wall-clock arithmetic, not the browser's clock (lib/wallClockMath.ts).
+        const boardingTime =
+          shiftWallClock(departureDate, departureTime, -30)?.time ?? departureTime;
 
         const estimation = estimateFlightTimes(
           boardingTime,
@@ -218,10 +212,11 @@ export function useFlightForm(
           sampleCount: estimation.sampleCount,
         });
       } catch {
-        const depDateTime = new Date(`${departureDate}T${departureTime}`);
-        const arrDateTime = new Date(depDateTime.getTime() + 2 * 60 * 60 * 1000);
-        setArrivalDate(arrDateTime.toISOString().split("T")[0]);
-        setArrivalTime(arrDateTime.toTimeString().slice(0, 5));
+        // Two hours on the ticket's clock — the old code took the UTC date
+        // and the browser's time, a different day east of UTC.
+        const arr = shiftWallClock(departureDate, departureTime, 120);
+        setArrivalDate(arr?.date ?? departureDate);
+        setArrivalTime(arr?.time ?? departureTime);
         arrivalDateSetRef.current = true;
         setTimeEstimationWarning({ show: true, source: "heuristic", confidence: "low" });
       }
@@ -417,13 +412,13 @@ export function useFlightForm(
       frequentFlyerNumber,
       bookingClassLetter,
       coPassengers,
+      folds,
     });
 
   const storeHistoricalData = () => {
     if (flightNumber && departureTime && arrivalTime && departure?.iata && arrival?.iata) {
-      const depDate = new Date(`${departureDate}T${departureTime}`);
-      depDate.setMinutes(depDate.getMinutes() - 30);
-      const estimatedBoardingTime = `${String(depDate.getHours()).padStart(2, "0")}:${String(depDate.getMinutes()).padStart(2, "0")}`;
+      const estimatedBoardingTime =
+        shiftWallClock(departureDate, departureTime, -30)?.time ?? departureTime;
       storeHistoricalFlightTime(
         flightNumber,
         departure.iata,
@@ -755,6 +750,7 @@ export function useFlightForm(
     companions,
     coPassengers,
     canSubmit,
+    folds,
     // Setters
     setLoading,
     setError,
@@ -776,6 +772,7 @@ export function useFlightForm(
     setDepartureTime,
     setArrivalDate,
     setArrivalTime,
+    setFolds,
     setActualDepartureDate,
     setActualDepartureTime,
     setActualArrivalDate,

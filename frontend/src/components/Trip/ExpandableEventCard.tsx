@@ -16,7 +16,6 @@
 
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatDate } from "../../lib/displayFormat";
 
 export interface ExpandableEventCardProps {
   icon: string;
@@ -25,8 +24,11 @@ export interface ExpandableEventCardProps {
   title: string;
   subtitle?: string | null;
   date: string;
-  /** Overrides the rendered date text, exactly as the plain EventCard's does. */
-  dateLabel?: string;
+  /**
+   * The date text, on the PLACE's clock (`formatTimelineDate(ev.when)`). Required:
+   * a fallback that formatted `date` would read it in the viewer's zone.
+   */
+  dateLabel: string;
   expanded: boolean;
   onToggle: () => void;
   /** Accessible name for the toggle, e.g. "show details". */
@@ -84,7 +86,7 @@ export function ExpandableEventCard({
             style={{ color: "var(--text-muted)" }}
             dateTime={date}
           >
-            {dateLabel ?? formatDate(date)}
+            {dateLabel}
           </time>
           <span
             aria-hidden="true"

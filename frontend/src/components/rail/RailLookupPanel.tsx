@@ -3,6 +3,8 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { railApi, type RailLookupQuery } from "../../lib/api/rail";
 import { logger } from "../../lib/logger";
+import { todayZoneNow } from "../../hooks/useTodayZone";
+import { todayIn } from "../../shared/time";
 import type {
   RailLookupAnswer,
   RailLookupOutcome,
@@ -39,11 +41,8 @@ type LookupState =
   | { kind: "answered"; answer: RailLookupAnswer }
   | { kind: "error" };
 
-const todayIso = (): string => {
-  const d = new Date();
-  const pad = (n: number): string => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
+/** Today in the profile zone (ADR 0002 Q1), not the browser's. */
+const todayIso = (): string => todayIn(todayZoneNow());
 
 /** The lookup's query from the form, or null while something it needs is missing. */
 export function lookupQueryFrom(draft: RailFormDraft, date: string): RailLookupQuery | null {

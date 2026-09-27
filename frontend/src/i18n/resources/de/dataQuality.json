@@ -21,7 +21,14 @@
       },
       "empty": {
         "title": "Nichts zu prüfen",
-        "description": "Bei keinem deiner Einträge widersprechen sich gerade zwei Angaben."
+        "description": "Gerade ist nichts offen: keine Widersprüche und keine Fragen zur Zeit."
+      },
+      "contradictions": {
+        "title": "Widersprüche"
+      },
+      "time": {
+        "title": "Fragen zur Zeit",
+        "description": "Hier fehlt uns etwas, um eine Zeit richtig anzuzeigen: die Zeitzone des Ortes, die Uhrzeit oder der genaue Tag. Wir raten nicht – ergänze es, wenn du es weißt, oder lass es so."
       }
     },
     "photoJourneys": {

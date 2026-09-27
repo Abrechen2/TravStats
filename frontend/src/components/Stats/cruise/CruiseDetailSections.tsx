@@ -64,8 +64,16 @@ const shipName = (cruise: {
   cruiseLine?: string | null;
 }): string => cruise.shipNameOverride || cruise.ship?.name || cruise.cruiseLine || "—";
 
+// A cruise day is a calendar day at UTC midnight (`YYYY-MM-DD…`); read in UTC
+// so no reader's zone moves it into the month before (ADR 0002).
 const shortDate = (iso: string | null, locale: string): string =>
-  iso ? new Date(iso).toLocaleDateString(locale, { year: "numeric", month: "short" }) : "—";
+  iso
+    ? new Date(`${iso.slice(0, 10)}T00:00:00.000Z`).toLocaleDateString(locale, {
+        year: "numeric",
+        month: "short",
+        timeZone: "UTC",
+      })
+    : "—";
 
 /**
  * When the cruises happened — the block the cruise tab never had.

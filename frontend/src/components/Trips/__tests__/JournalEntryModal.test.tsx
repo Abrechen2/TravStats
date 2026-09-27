@@ -1,12 +1,13 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
-import { fireEvent, render, screen, waitFor } from "@testing-library/react";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
+import { cleanup, fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { useToastStore } from "../../../store/toastStore";
 
 import JournalEntryModal from "../JournalEntryModal";
 import { tripsApi } from "../../../lib/api";
 import { useSettingsStore } from "../../../store/settingsStore";
 import type { TripJournalEntry } from "../../../types";
-import { localToday } from "../../../lib/journalDefaultDate";
+import { setClockForTests, todayIn } from "../../../shared/time";
+import { useProfileZoneStore } from "../../../store/profileZoneStore";
 
 vi.unmock("../../../store/settingsStore");
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -164,9 +165,68 @@ describe("JournalEntryModal", () => {
     });
 
     it("is today while the trip is on", () => {
-      const today = localToday();
+      const today = todayIn("UTC");
       open({ startDate: `${today}T00:00:00.000Z`, endDate: `${today}T00:00:00.000Z` });
       expect(dateField().value).toBe(today);
+    });
+  });
+
+  /**
+   * "Today" is the PROFILE zone's day (ADR 0002 Q1), not the browser's. At
+   * 23:30 UTC on 24 September it is already the 25th in Berlin and still the
+   * 24th in New York; a diary written that evening belongs on the profile's
+   * day whatever zone the laptop is set to.
+   */
+  describe("today is the profile zone's day", () => {
+    afterEach(() => {
+      // Unmount first: resetting a store the modal subscribes to would
+      // otherwise update a mounted component outside act().
+      cleanup();
+      setClockForTests(null);
+      useProfileZoneStore.setState({ status: "unknown" });
+    });
+
+    const UNDATED = { startDate: null, endDate: null };
+    const openAt = (zone: string): void => {
+      setClockForTests("2026-09-24T23:30:00.000Z");
+      useProfileZoneStore.setState({ status: "confirmed" });
+      useSettingsStore.setState((s) => ({ display: { ...s.display, timezone: zone } }));
+      render(
+        <JournalEntryModal
+          tripId="t1"
+          entry={null}
+          trip={UNDATED}
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      );
+    };
+    const dateField = (): HTMLInputElement =>
+      document.querySelector('input[type="date"]') as HTMLInputElement;
+
+    it("defaults to the 25th for a user in Berlin", () => {
+      openAt("Europe/Berlin");
+      expect(dateField().value).toBe("2026-09-25");
+    });
+
+    it("defaults to the 24th for a user in New York", () => {
+      openAt("America/New_York");
+      expect(dateField().value).toBe("2026-09-24");
+    });
+
+    it("answers in UTC until the profile zone is confirmed", () => {
+      setClockForTests("2026-09-24T23:30:00.000Z");
+      useProfileZoneStore.setState({ status: "missing" });
+      render(
+        <JournalEntryModal
+          tripId="t1"
+          entry={null}
+          trip={UNDATED}
+          onClose={vi.fn()}
+          onSaved={vi.fn()}
+        />
+      );
+      expect(dateField().value).toBe("2026-09-24");
     });
   });
 });

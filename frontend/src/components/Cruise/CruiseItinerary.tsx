@@ -2,14 +2,17 @@ import type { JSX } from "react";
 import type { Cruise } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { buildEffectiveTimeline } from "./cruisePorts";
+import { cruiseStopArrival, cruiseStopDeparture } from "../../lib/entityTimes";
+import { formatLocalClock } from "../../lib/displayFormat";
+import { clockOf, type TimeValue } from "../../shared/time";
 
 /**
- * HH:MM as entered. Stop times are wall-clock values stored with a Z suffix
- * (the stops editor reads and writes `slice(0, 16)`), so converting them into
- * the port's zone would shift every time — Miami's 00:00 became 19:00.
+ * HH:MM on the PORT's clock — the value's `local` (ADR 0002). Converting a
+ * stop time into any other zone shifted every time: Miami's 00:00 became 19:00.
  */
-function clock(iso: string | null | undefined): string | null {
-  return iso && iso.length >= 16 ? iso.slice(11, 16) : null;
+function clock(value: TimeValue | null): string | null {
+  const hhmm = value ? clockOf(value) : null;
+  return hhmm ? formatLocalClock(hhmm) : null;
 }
 
 /** DD.MM. — the year is in the head already. */
@@ -35,8 +38,8 @@ export default function CruiseItinerary({ cruise }: { cruise: Cruise }): JSX.Ele
   return (
     <ol className="flex flex-col">
       {entries.map((entry, index) => {
-        const arrive = clock(entry.stop?.arrivalTime);
-        const depart = clock(entry.stop?.departureTime);
+        const arrive = entry.stop ? clock(cruiseStopArrival(entry.stop)) : null;
+        const depart = entry.stop ? clock(cruiseStopDeparture(entry.stop)) : null;
         const title = entry.isAtSea
           ? t("stops.at_sea")
           : (entry.port?.name ?? entry.unresolvedPortName ?? "—");

@@ -2,6 +2,8 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { RequiredMark } from "../requiredFields";
 import CopyActionButton from "../CopyActionButton";
 import HelpIcon from "../../Help/HelpIcon";
+import { ClockChangeNotice } from "../../common/ClockChangeNotice";
+import type { FlightFolds } from "../../../lib/flightFolds";
 
 /** The four date/time inputs a flight leg needs, always kept in the SAME
  *  timezone basis by the caller — see FlightEditModal's hydration effect for
@@ -90,6 +92,17 @@ interface TimesFieldsProps {
    * design, and a half-filled pair is refused by `canSubmit`, not by a star.
    */
   markRequired?: boolean;
+  /**
+   * The airports' zones and the chosen folds: with them, a time in a clock
+   * change says so beside the field and a repeated hour offers "die spätere
+   * meinen" (Q5, `lib/flightFolds.ts`). Without, nothing is shown.
+   */
+  clockChange?: {
+    depZone: string | null | undefined;
+    arrZone: string | null | undefined;
+    folds: FlightFolds;
+    onFoldsChange: (folds: FlightFolds) => void;
+  };
 }
 
 /** Parse a "YYYY-MM-DD" + "HH:mm" pair into an offset-free millisecond
@@ -120,6 +133,7 @@ export default function TimesFields({
   actualValue,
   onActualChange,
   markRequired = false,
+  clockChange,
 }: TimesFieldsProps): JSX.Element {
   const { t } = useTranslation(["flights"]);
 
@@ -253,6 +267,16 @@ export default function TimesFields({
             value={value.depTime}
             onChange={(e) => onChange({ ...value, depTime: e.target.value })}
           />
+          {clockChange && (
+            <ClockChangeNotice
+              local={value.depDate && value.depTime ? `${value.depDate}T${value.depTime}` : ""}
+              zone={clockChange.depZone}
+              fold={clockChange.folds.dep}
+              onFoldChange={(fold) =>
+                clockChange.onFoldsChange({ ...clockChange.folds, dep: fold })
+              }
+            />
+          )}
         </div>
         <div>
           {/* The copy button is a SIBLING of the label, never nested inside
@@ -328,6 +352,16 @@ export default function TimesFields({
             value={value.arrTime}
             onChange={(e) => onChange({ ...value, arrTime: e.target.value })}
           />
+          {clockChange && (
+            <ClockChangeNotice
+              local={value.arrDate && value.arrTime ? `${value.arrDate}T${value.arrTime}` : ""}
+              zone={clockChange.arrZone}
+              fold={clockChange.folds.arr}
+              onFoldChange={(fold) =>
+                clockChange.onFoldsChange({ ...clockChange.folds, arr: fold })
+              }
+            />
+          )}
         </div>
       </div>
       {showActualTimes && actualValue && onActualChange && (

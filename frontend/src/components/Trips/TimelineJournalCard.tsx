@@ -67,7 +67,7 @@ export function JournalCard({
       title={headline}
       subtitle={meta ?? null}
       date={ev.date}
-      dateLabel={formatTimelineDate(ev.date, language)}
+      dateLabel={formatTimelineDate(ev.when)}
       expanded={open}
       onToggle={() => setOpen((v) => !v)}
       detailsLabel={t("trips:detail.timeline.showDetails")}

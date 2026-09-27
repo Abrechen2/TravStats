@@ -9,6 +9,7 @@ import FlightStatusCell from "./FlightStatusCell";
 import SourceInfoDot from "./SourceInfoDot";
 import TripBadgeCell from "./TripBadgeCell";
 import { flightDateFmt } from "./flightDateFormat";
+import { flightDeparture } from "../../lib/entityTimes";
 import SpecialTypeBadge from "../specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "../specialFlights/specialTypeMeta";
 import type { FlightColumnId } from "./flightColumns";
@@ -71,13 +72,12 @@ export function FlightRow({
   columns,
   cells,
   durationText,
-  language,
   onOpen,
   actions,
 }: Props): JSX.Element {
-  const departure = flight.departureTime;
+  const departure = flightDeparture(flight);
   const summary = [
-    departure ? flightDateFmt(departure, flight.depTimezone || "UTC", language) : null,
+    departure ? flightDateFmt(departure) : null,
     flight.flightNumber || null,
     durationText || null,
   ]

@@ -6,6 +6,7 @@ import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import { countUniquePorts, countUnresolvedPorts } from "./cruisePorts";
 import { formatAmount } from "../../lib/units";
 import { useDisplayFormat } from "../../lib/displayFormat";
+import { cruiseEnd, cruiseStart } from "../../lib/entityTimes";
 import { TableRow, type TableColumn } from "../ui/Table";
 
 export type CruiseColumnId =
@@ -52,8 +53,9 @@ export function CruiseRow({ cruise, onOpen, actions, columns }: Props): JSX.Elem
   // audit 2026-09-19, Alex 10). UTC stays: the value is a calendar day, not an
   // instant, and the viewer's own zone would move a sailing by a day.
   const display = useDisplayFormat();
-  const fmtDate = (iso: string | null): string =>
-    iso ? display.date(iso, { timeZone: "UTC" }) : "—";
+  // The embarkation and disembarkation days at their ports (`times`).
+  const fmtDay = (day: { date: string } | null): string =>
+    day ? display.localDate(day.date) : "—";
   const portsCount = countUniquePorts(cruise);
   const unresolvedCount = countUnresolvedPorts(cruise);
   const displayLine = cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? "—";
@@ -67,7 +69,7 @@ export function CruiseRow({ cruise, onOpen, actions, columns }: Props): JSX.Elem
   const cell: Record<CruiseColumnId, ReactNode> = {
     ship: displayShip,
     line: displayLine,
-    dates: `${fmtDate(cruise.startDate)} – ${fmtDate(cruise.endDate)}`,
+    dates: `${fmtDay(cruiseStart(cruise))} – ${fmtDay(cruiseEnd(cruise))}`,
     ports: (
       <>
         {portsCount}

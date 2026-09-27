@@ -9,6 +9,8 @@
 
 import { logger } from "../logger";
 import { resolveAirlineDisplay } from "../airlineUtils";
+import { todayIn } from "../../shared/time";
+import { todayZoneNow } from "../../hooks/useTodayZone";
 
 // ---------------------------------------------------------------------------
 // Types
@@ -65,7 +67,9 @@ export function julianDateToDate(julianDate: string): string {
   const dayOfYear = parseInt(julianDate, 10);
   logger.debug("Julian day conversion: Input day of year =", dayOfYear);
 
-  const year = new Date().getFullYear();
+  // "Today" in the profile zone (ADR 0002 Q1), never the host's clock.
+  const todayKey = todayIn(todayZoneNow());
+  const year = Number(todayKey.slice(0, 4));
   logger.debug("Current year:", year);
 
   // Create date from day of year using UTC to avoid timezone issues
@@ -74,8 +78,7 @@ export function julianDateToDate(julianDate: string): string {
   logger.debug("Calculated date (before year adjustment):", date.toISOString().split("T")[0]);
 
   // Calculate days difference from today
-  const today = new Date();
-  today.setHours(0, 0, 0, 0); // Normalize to midnight
+  const today = new Date(`${todayKey}T00:00:00.000Z`); // the same UTC basis as `date`
   const diffDays = Math.floor((date.getTime() - today.getTime()) / (1000 * 60 * 60 * 24));
 
   logger.debug("Days difference from today:", diffDays);

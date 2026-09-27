@@ -1,7 +1,13 @@
 import { formatWallClockIn } from "../../shared/zonedWallClock";
 import { MissingZoneError } from "../../lib/api/timeInput";
 import type { Flight } from "../../types";
-import { isValidZone } from "../../shared/time";
+import { clockOf, dayOf, isValidZone, type TimeValue } from "../../shared/time";
+import {
+  flightActualArrival,
+  flightActualDeparture,
+  flightArrival,
+  flightDeparture,
+} from "../../lib/entityTimes";
 
 /** The three pure date helpers of FlightEditModal, moved out so the modal
  *  stays under the 800-line ratchet (`scripts/check-file-size.mjs`). They
@@ -13,18 +19,26 @@ export interface DateTimeParts {
   time: string;
 }
 
-/** Split a UTC instant into separate `YYYY-MM-DD` / `HH:MM` strings in the
- *  BROWSER's local timezone. Used only as the initial seed before the
- *  airport timezones resolve — see the modal's hydration effect, which
- *  re-derives both parts as airport-local from the SAME source instant. */
-export function splitLocalDatetime(iso: string | null): DateTimeParts {
-  if (!iso) return { date: "", time: "" };
-  const d = new Date(iso);
-  if (isNaN(d.getTime())) return { date: "", time: "" };
-  const pad = (n: number) => String(n).padStart(2, "0");
+/** A value's `YYYY-MM-DD` / `HH:MM` on its own clock (`local`), empty parts for none. */
+export function seedParts(value: TimeValue | null): DateTimeParts {
+  return value ? { date: dayOf(value), time: clockOf(value) ?? "" } : { date: "", time: "" };
+}
+
+/**
+ * The four inputs' first reading: the server's airport-local clocks
+ * (`times`, ADR 0002) — no longer the BROWSER's zone, which put a Tokyo
+ * departure on the reader's clock until the airport lookup answered. The
+ * modal's hydration effect still re-derives them from the stored instants
+ * once both airport zones resolve; with `times` the two readings agree.
+ */
+export function seedTimes(
+  f: Flight
+): Record<"dep" | "arr" | "actualDep" | "actualArr", DateTimeParts> {
   return {
-    date: `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`,
-    time: `${pad(d.getHours())}:${pad(d.getMinutes())}`,
+    dep: seedParts(flightDeparture(f)),
+    arr: seedParts(flightArrival(f)),
+    actualDep: seedParts(flightActualDeparture(f)),
+    actualArr: seedParts(flightActualArrival(f)),
   };
 }
 

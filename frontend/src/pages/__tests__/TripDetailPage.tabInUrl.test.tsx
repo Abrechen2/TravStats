@@ -162,7 +162,7 @@ describe("a diary entry on the trip timeline", () => {
           tripId: "trip-1",
           title: "Ankunft",
           body: "Der **erste** Tag am Meer.",
-          entryDate: "2024-05-13T00:00:00.000Z",
+          date: "2024-05-13T00:00:00.000Z",
           weather: null,
           mood: null,
           createdAt: "2024-05-13T00:00:00.000Z",

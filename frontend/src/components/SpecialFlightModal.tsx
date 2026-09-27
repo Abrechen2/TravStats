@@ -20,6 +20,8 @@ import type { Airport } from "../lib/api";
 import { flightsApi } from "../lib/api/flights";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
+import { flightArrival, flightDeparture } from "../lib/entityTimes";
+import { datetimeLocalOf, shiftWallClock } from "../lib/wallClockMath";
 import {
   CommonTimeAndMetaFields,
   EventFields,
@@ -67,18 +69,6 @@ function classifyEventSubtype(t: string | null | undefined): EventSubtype {
   if (t === "aurora") return "aurora";
   if (t === "eclipse") return "eclipse";
   return "other";
-}
-
-/** Convert ISO UTC string to the `YYYY-MM-DDTHH:mm` format expected by
- *  `<input type="datetime-local">` (local-tz formatted). */
-function toLocalDatetime(iso: string | null | undefined): string {
-  if (!iso) return "";
-  const d = new Date(iso);
-  if (Number.isNaN(d.getTime())) return "";
-  const pad = (n: number): string => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-    d.getHours()
-  )}:${pad(d.getMinutes())}`;
 }
 
 /** Re-hydrate an Airport from a Flight's departure / arrival columns. */
@@ -155,8 +145,9 @@ export default function SpecialFlightModal({
     setKind(k);
     setDepartureAirport(airportFromFlight(flight, "departure"));
     setArrivalAirport(airportFromFlight(flight, "arrival"));
-    setDepartureTime(toLocalDatetime(flight.departureTime));
-    setArrivalTime(toLocalDatetime(flight.arrivalTime));
+    // The airports' clocks (`times`), not the browser's — lib/wallClockMath.ts.
+    setDepartureTime(datetimeLocalOf(flightDeparture(flight)));
+    setArrivalTime(datetimeLocalOf(flightArrival(flight)));
     setNotes(flight.notes ?? "");
     setTagsCsv((flight.tags ?? []).join(", "));
     setCompanions(flight.companions ?? []);
@@ -237,13 +228,8 @@ export default function SpecialFlightModal({
   // same shape. Tz-naive — purely arithmetic on the local clock, which is
   // exactly what the canonical-UTC submit contract wants for arrivalLocal.
   const addMinutesToLocal = (local: string, minutes: number): string => {
-    const d = new Date(local);
-    if (Number.isNaN(d.getTime())) return local;
-    d.setMinutes(d.getMinutes() + minutes);
-    const pad = (n: number): string => String(n).padStart(2, "0");
-    return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}T${pad(
-      d.getHours()
-    )}:${pad(d.getMinutes())}`;
+    const shifted = shiftWallClock(local.slice(0, 10), local.slice(11, 16), minutes);
+    return shifted ? `${shifted.date}T${shifted.time}` : local;
   };
 
   // Resolve times into the V2 canonical-UTC submit contract shape: pairs of

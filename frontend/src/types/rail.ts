@@ -4,6 +4,8 @@
  * (`RailJourney`) and the write body (`schemas/rail.ts`).
  */
 
+import type { RailTimes } from "./times";
+
 export type RailStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
 export type RailTravelClass = "first" | "second" | "sleeper" | "couchette";
 /**
@@ -70,6 +72,8 @@ export interface RailJourney {
   /** Import key; `roadtrip:<section>:<leg>` marks a ride converted from a roadtrip. */
   externalRef?: string | null;
   trip?: { id: string; name: string; color: string } | null;
+  /** ADR 0002 phase 4 — read through lib/entityTimes.ts. */
+  times?: RailTimes;
   createdAt: string;
   updatedAt: string;
 }
@@ -91,6 +95,7 @@ export type TripRailJourney = Pick<
   | "arrTimezone"
   | "departureTime"
   | "arrivalTime"
+  | "times"
   | "distanceKm"
   | "distanceSource"
   | "status"
@@ -112,6 +117,7 @@ export interface RailBookingLeg {
   trainCategory: string | null;
   trainNumber: string | null;
   status: RailStatus;
+  times?: RailTimes;
 }
 
 /** A single journey read: the row plus the booking that binds its connection. */

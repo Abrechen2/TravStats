@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatStationClock, formatStationTime } from "../../lib/railTime";
+import { formatRailSpan } from "../../lib/railTime";
 import type { RailJourney } from "../../types/rail";
 import { Icon } from "../ui/Icon";
 import { railDistanceNoteKey } from "./railDistanceLabel";
@@ -45,16 +45,9 @@ export function RailJourneyRow({ journey, onEdit, onDelete }: Props): JSX.Elemen
         ? t("rail:delay", { minutes: journey.delayMinutes })
         : t("rail:onTime");
 
-  const details = [
-    `${formatStationTime(journey.departureTime, journey.depTimezone, locale)}${
-      journey.arrivalTime
-        ? ` – ${formatStationClock(journey.arrivalTime, journey.arrTimezone, locale)}`
-        : ""
-    }`,
-    label,
-    km,
-    delay,
-  ].filter((part): part is string => Boolean(part));
+  const details = [formatRailSpan(journey, locale), label, km, delay].filter(
+    (part): part is string => Boolean(part)
+  );
 
   return (
     <li

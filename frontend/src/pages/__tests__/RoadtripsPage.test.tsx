@@ -67,7 +67,7 @@ function renderPage(): void {
 describe("RoadtripsPage", () => {
   beforeEach(() => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date(2026, 8, 25, 12));
+    vi.setSystemTime(new Date("2026-09-25T12:00:00.000Z")); // an instant, not the host's noon
   });
   afterEach(() => {
     vi.useRealTimers();

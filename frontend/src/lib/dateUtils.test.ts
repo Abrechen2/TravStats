@@ -1,56 +1,17 @@
 import { describe, it, expect } from "vitest";
-import { formatDateInTimezone, formatDateTimeInTimezone, formatTimeInTimezone } from "./dateUtils";
-
-describe("dateUtils", () => {
-  const date = new Date("2026-05-01T10:00:00Z"); // 10:00 UTC
-
-  it("formats date in UTC timezone", () => {
-    const result = formatDateInTimezone(date, "UTC");
-    expect(result).toBe("01.05.2026");
-  });
-
-  it("formats date in Berlin timezone (UTC+2 in summer)", () => {
-    const result = formatDateInTimezone(date, "Europe/Berlin");
-    expect(result).toBe("01.05.2026");
-  });
-
-  it("formats datetime with time component", () => {
-    const result = formatDateTimeInTimezone(date, "UTC");
-    expect(result).toContain("10:00");
-  });
-
-  it("handles string date input", () => {
-    const result = formatDateInTimezone("2026-05-01T10:00:00Z", "UTC");
-    expect(result).toBe("01.05.2026");
-  });
-
-  it("returns fallback for invalid date", () => {
-    const result = formatDateInTimezone("not-a-date", "UTC");
-    expect(result).toBe("—");
-  });
-
-  it("falls back to UTC for invalid timezone", () => {
-    const result = formatDateInTimezone(date, "Invalid/Timezone");
-    // Should not throw — returns a valid date string
-    expect(result).toMatch(/\d{2}\.\d{2}\.\d{4}/);
-  });
-
-  it("formats time-only with formatTimeInTimezone", () => {
-    const result = formatTimeInTimezone(date, "UTC");
-    expect(result).toContain("10:00");
-  });
-});
+import { formatIsoDate } from "./dateUtils";
 
 describe("formatIsoDate (E7: ISO dates in tables)", () => {
-  it("prints YYYY-MM-DD in the given zone, not the viewer's", async () => {
-    const { formatIsoDate } = await import("./dateUtils");
-    // 23:30 UTC on Jan 14 is already Jan 15 in Tokyo.
-    expect(formatIsoDate("2027-01-14T23:30:00Z", "UTC")).toBe("2027-01-14");
-    expect(formatIsoDate("2027-01-14T23:30:00Z", "Asia/Tokyo")).toBe("2027-01-15");
+  it("passes a place's day through unchanged", () => {
+    expect(formatIsoDate("2027-01-15")).toBe("2027-01-15");
   });
 
-  it("falls back to UTC for a zone the runtime does not know", async () => {
-    const { formatIsoDate } = await import("./dateUtils");
-    expect(formatIsoDate("2027-01-14T10:00:00Z", "Not/AZone")).toBe("2027-01-14");
+  it("reads an instant without a place on the UTC clock, whatever the reader's zone", () => {
+    expect(formatIsoDate("2027-01-14T23:30:00Z")).toBe("2027-01-14");
+    expect(formatIsoDate(new Date("2027-01-14T23:30:00Z"))).toBe("2027-01-14");
+  });
+
+  it("returns the dash for an unusable value", () => {
+    expect(formatIsoDate("not-a-date")).toBe("—");
   });
 });

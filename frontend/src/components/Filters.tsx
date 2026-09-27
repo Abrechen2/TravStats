@@ -5,6 +5,8 @@ import type { Flight, FlightFilters } from "../types";
 import { API_LIMITS } from "../lib/constants";
 import { useTranslation } from "../hooks/useTranslation";
 import { logger } from "../lib/logger";
+import { flightDeparture } from "../lib/entityTimes";
+import { dayOf } from "../shared/time";
 interface FiltersProps {
   onFilterChange: (filters: FlightFilters & { minRouteCount?: number }) => void;
   /**
@@ -88,8 +90,10 @@ export default function Filters({
         const airlineMap = new Map<string, number>();
 
         allFlights.forEach((flight) => {
-          if (!flight.departureTime) return;
-          const year = new Date(flight.departureTime).getFullYear();
+          // The year at the departure airport (`times`, ADR 0002), not the reader's.
+          const departure = flightDeparture(flight);
+          if (!departure) return;
+          const year = Number(dayOf(departure).slice(0, 4));
           years.add(year);
 
           if (flight.airline) {
@@ -120,14 +124,15 @@ export default function Filters({
     if (yearFilter || monthFilter) {
       if (yearFilter && monthFilter) {
         // Specific month and year
-        const startDate = new Date(yearFilter, monthFilter - 1, 1);
-        const endDate = new Date(yearFilter, monthFilter, 0, 23, 59, 59);
+        // Calendar bounds in UTC — never the host zone's midnight.
+        const startDate = new Date(Date.UTC(yearFilter, monthFilter - 1, 1));
+        const endDate = new Date(Date.UTC(yearFilter, monthFilter, 0, 23, 59, 59));
         filters.fromDate = startDate.toISOString();
         filters.toDate = endDate.toISOString();
       } else if (yearFilter) {
         // Whole year
-        const startDate = new Date(yearFilter, 0, 1);
-        const endDate = new Date(yearFilter, 11, 31, 23, 59, 59);
+        const startDate = new Date(Date.UTC(yearFilter, 0, 1));
+        const endDate = new Date(Date.UTC(yearFilter, 11, 31, 23, 59, 59));
         filters.fromDate = startDate.toISOString();
         filters.toDate = endDate.toISOString();
       }

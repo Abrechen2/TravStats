@@ -236,6 +236,8 @@ export default function SimplifiedFlightFormV2({
               setDepartureTime={form.setDepartureTime}
               setArrivalDate={form.setArrivalDate}
               setArrivalTime={form.setArrivalTime}
+              folds={form.folds}
+              setFolds={form.setFolds}
               actualDepartureDate={form.actualDepartureDate}
               actualDepartureTime={form.actualDepartureTime}
               actualArrivalDate={form.actualArrivalDate}
