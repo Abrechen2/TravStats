@@ -1,8 +1,10 @@
 import { prisma } from "../../db";
 import { getBaseCurrency } from "../../services/fx/snapshot";
 import { resolveCompanions } from "../../services/companionService";
+import { calculateDistance } from "../../utils/geo";
 import { ROADTRIPS, TOURS } from "./data/routeSpecs";
 import { STATIONS } from "./data/stations";
+import type { StationSpec } from "./data/stations";
 import type { TripSpec } from "./data/types";
 import { USER_CHAIN } from "./data/lodgings";
 
@@ -106,16 +108,50 @@ async function loadShips(
   return byName;
 }
 
-async function loadStations(): Promise<Map<string, number>> {
-  const uics = Object.values(STATIONS).flatMap((s) => (s.uic ? [s.uic] : []));
+/**
+ * A catalogue row is trusted for a demo station's uic only when it sits
+ * within this distance of the demo's own recorded position. The catalogue
+ * models most named stations as children of their city node (`parentSourceId`
+ * set) — a `parentSourceId: null` filter here once excluded exactly the rows
+ * this seed needs (Köln Hbf, Berlin Hbf, …) and matched only the rare
+ * parent-less leftovers instead, which is how Berlin Hbf's mistyped code
+ * once matched "Offenbach (Main) Ost", 350 km away: that row had no parent,
+ * so it passed a filter the real Berlin Hbf failed. This guard replaces that
+ * filter with a check on what the uic is actually FOR — a same-city sanity
+ * check, not a hierarchy guess — so a wrong or colliding code fails to a
+ * null link (the seed's existing abstention convention) instead of a wrong
+ * one.
+ */
+const SAME_STATION_KM = 10;
+
+export function nearbyStationId(
+  candidate: { id: number; lat: number; lon: number } | undefined,
+  expected: Pick<StationSpec, "lat" | "lon">
+): number | null {
+  if (!candidate) return null;
+  const km = calculateDistance(expected.lat, expected.lon, candidate.lat, candidate.lon);
+  return km <= SAME_STATION_KM ? candidate.id : null;
+}
+
+export async function loadStations(): Promise<Map<string, number>> {
+  const specs = Object.values(STATIONS).filter(
+    (s): s is StationSpec & { uic: string } => s.uic !== null
+  );
+  const uics = [...new Set(specs.map((s) => s.uic))];
   const rows = await prisma.railStation.findMany({
-    where: { uic: { in: uics }, parentSourceId: null },
-    select: { id: true, uic: true },
+    where: { uic: { in: uics } },
+    select: { id: true, uic: true, lat: true, lon: true },
     orderBy: { id: "asc" },
   });
-  const byUic = new Map<string, number>();
-  for (const row of rows) if (row.uic && !byUic.has(row.uic)) byUic.set(row.uic, row.id);
-  return byUic;
+  const byUic = new Map<string, { id: number; lat: number; lon: number }>();
+  for (const row of rows) if (row.uic && !byUic.has(row.uic)) byUic.set(row.uic, row);
+
+  const result = new Map<string, number>();
+  for (const spec of specs) {
+    const id = nearbyStationId(byUic.get(spec.uic), spec);
+    if (id !== null) result.set(spec.uic, id);
+  }
+  return result;
 }
 
 async function loadCurated(
