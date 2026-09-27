@@ -591,6 +591,9 @@
     "noData": "No flights yet",
     "loading": "Loading..."
   },
+  "reportActions": {
+    "label": "Reports"
+  },
   "yearReport": {
     "btn": "PDF Year Report",
     "generating": "Generating PDF...",
