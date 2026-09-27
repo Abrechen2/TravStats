@@ -134,7 +134,7 @@ const coordinate = z
   .describe("[lon, lat] in GeoJSON order");
 
 export const createRouteSchema = z.object({
-  name: z.string().min(1).max(200),
+  name: z.string().trim().min(1).max(200),
   mode: z.enum(LEG_MODES),
   color: z
     .string()
@@ -146,7 +146,7 @@ export const createRouteSchema = z.object({
 });
 
 export const updateRouteSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
+  name: z.string().trim().min(1).max(200).optional(),
   mode: z.enum(LEG_MODES).optional(),
   color: z
     .string()
@@ -286,7 +286,7 @@ export const tourPointsSchema = z.object({
         /** Omitted for a new point; an existing point keeps its id so its
          *  legs survive a reorder (legs are keyed by endpoint stop). */
         id: z.string().uuid().optional(),
-        title: z.string().min(1).max(200),
+        title: z.string().trim().min(1).max(200),
         lat: z.number().min(-90).max(90),
         lon: z.number().min(-180).max(180),
       })

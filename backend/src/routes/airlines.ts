@@ -32,10 +32,10 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
-const createAirlineSchema = z.object({
+export const createAirlineSchema = z.object({
   iata: z.string().min(2).max(3).optional(),
   icao: z.string().min(3).max(4).optional(),
-  name: z.string().min(1).max(120),
+  name: z.string().trim().min(1).max(120),
   callsign: z.string().max(120).optional(),
   country: z.string().max(120).optional(),
 });

@@ -48,6 +48,30 @@ export const achievements: AchievementDefinition[] = [
   ...seedsPartJ,
 ];
 
+type DefinitionFields = Omit<Required<AchievementDefinition>, "code">;
+
+/** The columns a seed definition owns — everything but the key. */
+function definitionFields(a: AchievementDefinition): DefinitionFields {
+  return {
+    name: a.name,
+    description: a.description,
+    category: a.category,
+    domain: a.domain,
+    icon: a.icon,
+    tier: a.tier,
+    requirement: a.requirement,
+    requirementType: a.requirementType,
+    points: a.points,
+    isHidden: a.isHidden ?? false,
+  };
+}
+
+function differs(row: Record<string, unknown>, wanted: DefinitionFields): boolean {
+  return (Object.keys(wanted) as Array<keyof DefinitionFields>).some(
+    (key) => row[key] !== wanted[key]
+  );
+}
+
 /**
  * Ensure all achievements are present in the database
  * This function is idempotent and can be safely called multiple times
@@ -60,53 +84,43 @@ export async function ensureAchievements(): Promise<void> {
   });
 
   try {
-    const existingCount = await prisma.achievement.count();
+    // One read, then a write only where a row is missing or differs. This
+    // used to be a findUnique plus an unconditional upsert per definition:
+    // ~600 round trips, all writes, on every boot and in the beforeAll of
+    // every achievement suite — measured at 0.9 s on an idle box and past
+    // Jest's 5 s hook timeout under a loaded full run.
+    // `data/__tests__/ensureAchievements.queries.test.ts` pins the count.
+    const stored = new Map(
+      (await prisma.achievement.findMany()).map((row) => [row.code, row] as const)
+    );
+    const existingCount = stored.size;
 
     // NO early return on a matching count: seed edits that only change
     // points, tier or copy (no new codes) keep the row count identical, and
     // the old `existingCount === achievements.length` short-circuit silently
     // froze such edits forever on any install whose count happened to match.
     // Several seed comments rely on "upserted on every boot" being true —
-    // this loop is what makes it true.
+    // this loop is what makes it true: every drifted field is rewritten.
     if (existingCount > 0) {
       logger.info({
         operation: "ensure_achievements_updating",
-        message: `Found ${existingCount} existing achievements, upserting all definitions...`,
+        message: `Found ${existingCount} existing achievements, syncing all definitions...`,
         context: { existingCount, expectedCount: achievements.length },
       });
     }
 
-    // Upsert all achievements
     let created = 0;
     let updated = 0;
 
     for (const achievement of achievements) {
-      // Check if achievement already exists
-      const existing = await prisma.achievement.findUnique({
-        where: { code: achievement.code },
-      });
-
-      await prisma.achievement.upsert({
-        where: { code: achievement.code },
-        update: {
-          name: achievement.name,
-          description: achievement.description,
-          category: achievement.category,
-          domain: achievement.domain,
-          icon: achievement.icon,
-          tier: achievement.tier,
-          requirement: achievement.requirement,
-          requirementType: achievement.requirementType,
-          points: achievement.points,
-          isHidden: achievement.isHidden || false,
-        },
-        create: achievement,
-      });
-
-      if (existing) {
-        updated++;
-      } else {
+      const current = definitionFields(achievement);
+      const row = stored.get(achievement.code);
+      if (!row) {
+        await prisma.achievement.create({ data: { code: achievement.code, ...current } });
         created++;
+      } else if (differs(row, current)) {
+        await prisma.achievement.update({ where: { code: achievement.code }, data: current });
+        updated++;
       }
     }
 

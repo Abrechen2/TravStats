@@ -244,3 +244,32 @@ describe("TourSectionList", () => {
     expect(toursApi.list).not.toHaveBeenCalled();
   });
 });
+
+// A name of only spaces used to leave the save button greyed out with no word
+// of why, and the server took "   " when anything else sent it. The form now
+// says what is missing at the field and sends nothing.
+describe("TourSectionList — a tour needs a name", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    mockRoadtripDomain.mockReturnValue(true);
+  });
+
+  it("names the missing field instead of saving a blank tour", async () => {
+    vi.mocked(toursApi.list).mockResolvedValue([]);
+    renderList("t1");
+    await waitFor(() => expect(toursApi.list).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByText("trips:tours.newSection"));
+    const input = screen.getByPlaceholderText("trips:tours.namePlaceholder");
+    fireEvent.change(input, { target: { value: "   " } });
+    fireEvent.click(screen.getByText("trips:tours.save"));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("trips:tours.nameRequired");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(toursApi.create).not.toHaveBeenCalled();
+
+    // Typing a name takes the message away again.
+    fireEvent.change(input, { target: { value: "Jütland" } });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
