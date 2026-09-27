@@ -27,7 +27,11 @@ const envSchema = z.object({
   JWT_SECRET: z.string().min(32).optional(),
   JWT_EXPIRES_IN: z.string().default('7d'),
   ENCRYPTION_KEY: z.string().length(64).regex(/^[0-9a-fA-F]+$/).optional(),
-  COOKIE_SECURE: z.string().transform((val) => val === 'true').default('true'),
+  // Interpreted ONLY by utils/session.ts `getCookieSecure` (empty = unset =
+  // auto-detect, "false" = never, anything else = always). This schema used to
+  // turn it into a boolean with a default of `true` — a second, contradicting
+  // rule that nothing read.
+  COOKIE_SECURE: z.string().optional(),
 
   // CORS
   CORS_ORIGIN: z.string().default('http://localhost:3000'),
