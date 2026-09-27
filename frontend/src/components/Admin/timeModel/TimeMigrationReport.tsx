@@ -13,7 +13,7 @@ import type {
   TimeMigrationOutcome,
   TimeMigrationReport as Report,
   TimeMigrationUnresolvedRow,
-} from "../../../types/timeMigration";
+} from "../../../types/timeMigrationDraft";
 import Button from "../../ui/Button";
 import StatTile from "../../ui/StatTile";
 import { isTimeFlagEntityType, timeValueEditorPath } from "../../DataQuality/timeFlagLinks";

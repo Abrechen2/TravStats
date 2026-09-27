@@ -5,7 +5,7 @@ import { MemoryRouter } from "react-router-dom";
 import { api } from "../../../../lib/api/client";
 import { useAuthStore } from "../../../../store/authStore";
 import type { User } from "../../../../types";
-import type { TimeMigrationReport as Report } from "../../../../types/timeMigration";
+import type { TimeMigrationReport as Report } from "../../../../types/timeMigrationDraft";
 import TimeMigrationReport from "../TimeMigrationReport";
 
 /**

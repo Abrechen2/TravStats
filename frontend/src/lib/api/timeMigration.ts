@@ -5,7 +5,7 @@ import type {
   TimeMigrationReport,
   ZoneReResolveApplyResult,
   ZoneReResolveDryRun,
-} from "../../types/timeMigration";
+} from "../../types/timeMigrationDraft";
 import { api } from "./client";
 import { type JobView, waitForJob } from "./jobs";
 

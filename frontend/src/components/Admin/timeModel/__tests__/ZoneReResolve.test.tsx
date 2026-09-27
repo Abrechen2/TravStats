@@ -4,7 +4,7 @@ import userEvent from "@testing-library/user-event";
 
 import { API_TIMEOUTS } from "../../../../config/constants";
 import { api } from "../../../../lib/api/client";
-import type { ZoneReResolveDryRun } from "../../../../types/timeMigration";
+import type { ZoneReResolveDryRun } from "../../../../types/timeMigrationDraft";
 import ZoneReResolve from "../ZoneReResolve";
 
 /**

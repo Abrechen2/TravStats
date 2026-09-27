@@ -6,7 +6,10 @@ import { useTranslation } from "../../../hooks/useTranslation";
 import { JobLostError, jobErrorCode } from "../../../lib/api/jobs";
 import { logger } from "../../../lib/logger";
 import { timeMigrationApi } from "../../../lib/api/timeMigration";
-import type { ZoneReResolveApplyResult, ZoneReResolveDryRun } from "../../../types/timeMigration";
+import type {
+  ZoneReResolveApplyResult,
+  ZoneReResolveDryRun,
+} from "../../../types/timeMigrationDraft";
 import Button from "../../ui/Button";
 import { fieldLabel, formatOffsetDelta, tableLabel, timeModelErrorCopy } from "./timeModelCopy";
 
