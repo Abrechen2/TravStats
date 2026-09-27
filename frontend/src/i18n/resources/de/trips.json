@@ -491,7 +491,8 @@
       "saveError": "Das Datum konnte nicht gespeichert werden."
     },
     "map": {
-      "empty": "Diese Tour hat noch keine Punkte mit Koordinaten — füge Punkte hinzu oder lade eine Aufzeichnung hoch."
+      "empty": "Diese Tour hat noch keine Punkte mit Koordinaten — füge Punkte hinzu oder lade eine Aufzeichnung hoch.",
+      "loadError": "Die Touren dieser Reise konnten nicht geladen werden — die Karte zeigt sie deshalb nicht."
     }
   },
   "head": {
