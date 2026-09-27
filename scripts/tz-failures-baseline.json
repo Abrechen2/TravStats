@@ -1,9 +1,7 @@
 {
   "backend": {
     "America/St_Johns": [],
-    "Pacific/Kiritimati": [
-      "src/utils/__tests__/achievementChecks.partF.test.ts::calculateUserStats — kurios expansion counters counts Friday-the-13th, Christmas and palindrome-date flights"
-    ]
+    "Pacific/Kiritimati": []
   },
   "frontend": {
     "America/St_Johns": [
