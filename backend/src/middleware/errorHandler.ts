@@ -117,6 +117,11 @@ export type ApiErrorCode =
   /** The zone lookup itself could not run (503) — distinct from
    *  `TZ_UNRESOLVED`, "this place has no zone" (422). */
   | "TIMEZONE_LOOKUP_UNAVAILABLE"
+  /** A time sent in a shape the server may not interpret (ADR 0002 D3): an
+   *  offset-less datetime string, or — from a browser session — a bare ISO-Z
+   *  on a field that used to hold the place's wall clock as fake UTC (a web
+   *  bundle from before the deploy). `field` names it; the page should reload. */
+  | "TIME_SHAPE_REQUIRED"
   /** A tour's points are its trip's timeline stops — assigned at the trip, not replaced. */
   | "TOUR_POINTS_FROM_TRIP"
   /** Backup / restore job failures — see `services/backup/backupFailure.ts`.
@@ -281,6 +286,17 @@ export const errorHandler = async (
 
   // Zod validation errors
   if (err instanceof ZodError) {
+    // A time-model refusal is a 422 with its own code and field (ADR 0002),
+    // not the generic 400 — a client has to tell "send {local, zone}" from
+    // "this field is missing".
+    const timeIssue = zodTimeIssue(err);
+    if (timeIssue) {
+      return res.status(422).json({
+        error: "Time field refused",
+        code: timeIssue.code,
+        field: timeIssue.field,
+      });
+    }
     return res.status(400).json({
       error: "Validation error",
       code: "VALIDATION_FAILED" satisfies ApiErrorCode,
@@ -331,6 +347,43 @@ export const errorHandler = async (
     ...(process.env.NODE_ENV === "development" && { stack: err.stack }),
   });
 };
+
+/**
+ * The time-model codes a zod issue may carry as its message (ADR 0002). Lives
+ * here, not in `shared/time/errors.ts`, because that module extends `AppError`
+ * and importing it from this file would be a load-order cycle.
+ */
+export const ZOD_TIME_CODES: readonly ApiErrorCode[] = [
+  "TIME_SHAPE_REQUIRED",
+  "ZONE_UNKNOWN",
+  "LOCAL_TIME_NONEXISTENT",
+  "TZ_UNRESOLVED",
+];
+
+interface ZodIssueLike {
+  message: string;
+  path: PropertyKey[];
+  errors?: ZodIssueLike[][];
+}
+
+/** The first time-model refusal inside a ZodError (descending into union branches), or null. */
+export function zodTimeIssue(
+  err: ZodError,
+  issues: readonly ZodIssueLike[] = err.issues as unknown as ZodIssueLike[],
+  prefix: PropertyKey[] = []
+): { code: ApiErrorCode; field: string } | null {
+  for (const issue of issues) {
+    const path = [...prefix, ...issue.path];
+    if ((ZOD_TIME_CODES as readonly string[]).includes(issue.message)) {
+      return { code: issue.message as ApiErrorCode, field: path.map(String).join(".") };
+    }
+    for (const branch of issue.errors ?? []) {
+      const nested = zodTimeIssue(err, branch, path);
+      if (nested) return nested;
+    }
+  }
+  return null;
+}
 
 function isAppError(err: unknown): err is AppError {
   return err instanceof AppError;

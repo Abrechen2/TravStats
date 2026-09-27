@@ -18,6 +18,7 @@ import { normalizeLodgingName, stayChanges } from "./lodgingImportPreview";
 import { deriveStayOverallRating } from "../../shared/ratingDerivation";
 import { minorUnits } from "../../shared/currencies";
 import { findOrCreateOwnChain, findVisibleChainByName } from "./chainScope";
+import { stayTimeColumns, zoneOfLodging } from "../timeModel/stayColumns";
 
 /**
  * A small, STABLE set of client-safe failure codes (finding: raw exception
@@ -311,13 +312,21 @@ async function createStay(
   // is correct data this way, not an error.
   const fx = resolveFxFields(fxOutcome);
 
+  const checkOut = toDate(fields.checkOut);
   await prisma.lodgingStay.create({
     data: {
       userId,
       batchId,
       lodgingId,
       checkIn,
-      checkOut: toDate(fields.checkOut),
+      checkOut,
+      // ADR 0002 phase 2 dual-write. A mail names days, never a check-in
+      // clock, so the instants stay null; an import is a machine reading.
+      ...stayTimeColumns(
+        { checkIn, checkOut, checkInTime: null, checkOutTime: null },
+        await zoneOfLodging(lodgingId),
+        "machine"
+      ),
       status: "completed",
       roomCategory: fields.roomCategory ?? null,
       board: fields.board ?? null,
@@ -415,6 +424,8 @@ async function updateStay(
       externalRef: true,
       checkIn: true,
       checkOut: true,
+      checkInTime: true,
+      checkOutTime: true,
       roomCategory: true,
       board: true,
       guests: true,
@@ -487,6 +498,26 @@ async function updateStay(
   const rateDayMoved = changes.some((c) => c.field === "checkIn");
   if (canSnapshot && (moneyMoved || rateDayMoved)) {
     Object.assign(data, resolveFxFields(fxOutcome));
+  }
+
+  // The new time columns follow the merged days (ADR 0002 phase 2); the
+  // stored check-in/-out clocks stay the user's.
+  if (changes.some((c) => c.field === "checkIn" || c.field === "checkOut")) {
+    const dayMoved = (field: "checkIn" | "checkOut"): boolean =>
+      changes.some((c) => c.field === field);
+    Object.assign(
+      data,
+      stayTimeColumns(
+        {
+          checkIn: dayMoved("checkIn") ? toDate(fields.checkIn) : stored.checkIn,
+          checkOut: dayMoved("checkOut") ? toDate(fields.checkOut) : stored.checkOut,
+          checkInTime: stored.checkInTime,
+          checkOutTime: stored.checkOutTime,
+        },
+        await zoneOfLodging(stored.lodgingId),
+        "machine"
+      )
+    );
   }
 
   await prisma.lodgingStay.update({ where: { id: stored.id }, data });

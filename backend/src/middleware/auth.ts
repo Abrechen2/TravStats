@@ -24,6 +24,8 @@ export interface AuthRequest extends Request {
   apiToken?: {
     id: string;
     scope: ApiTokenScope;
+    /** Set when the token was minted by device pairing — the Companion. */
+    deviceId?: string | null;
   };
   /**
    * Is this the SHARED demo account — `isDemo` AND the published username?
@@ -264,7 +266,11 @@ async function authenticateWithApiToken(req: AuthRequest, plaintext: string): Pr
   }
 
   req.userId = token.userId;
-  req.apiToken = { id: token.id, scope: token.scope as ApiTokenScope };
+  req.apiToken = {
+    id: token.id,
+    scope: token.scope as ApiTokenScope,
+    deviceId: token.deviceId,
+  };
   req.isSharedDemo = isSharedDemoAccount(token.user);
 
   // Bump last-used metadata fire-and-forget. A failure here MUST NOT

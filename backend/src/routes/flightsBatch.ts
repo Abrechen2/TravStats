@@ -1,5 +1,4 @@
 import { Router, Response, NextFunction } from "express";
-import { fromZonedTime } from "date-fns-tz";
 import { prisma } from "../db";
 import { AuthRequest } from "../middleware/auth";
 import { batchCreationLimiter } from "../middleware/rateLimit";
@@ -23,6 +22,7 @@ import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { flightExternalRef, isDocumentImport } from "../services/importProvenance";
 import { normalizeAircraft } from "../utils/aircraftNormalize";
 import { sharedFlightCreateFields } from "../services/flights/flightCreateFields";
+import { flightEnds, segmentTripDays } from "../services/timeModel/tripColumns";
 import {
   fxColumnsFor,
   flightOwnAmount,
@@ -30,10 +30,8 @@ import {
   type FxColumns,
 } from "../services/fx/snapshot";
 
-function toUtcDate(local: string | null | undefined, tz: string | null | undefined): Date | null {
-  if (!local || !tz) return null;
-  return fromZonedTime(local, tz);
-}
+import { toUtcDate } from "../services/flights/mergedChronology";
+import { flightZoneColumns } from "./flights/timeInput";
 
 const router = Router();
 
@@ -209,8 +207,8 @@ router.post(
         // Create all flights
         const flights = [];
         for (const { data, enriched, resolvedCompanions, fx, externalRef } of enrichedDataList) {
-          const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
-          const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
+          const departureUtc = toUtcDate(data.departureLocal, data.depTimezone, data.departureFold);
+          const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone, data.arrivalFold);
           const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
           const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
           // The status field is a client-sent HINT, not the source of truth
@@ -243,6 +241,8 @@ router.post(
               userId,
               externalRef,
               importBatchId,
+              // The zone each end was written with (ADR 0002 phase 2).
+              ...(await flightZoneColumns(data, enriched)),
               airline: data.airline,
               airlineIata: data.airlineIata ?? resolvedAirline?.iata,
               airlineIcao: data.airlineIcao ?? resolvedAirline?.icao,
@@ -399,6 +399,11 @@ router.post(
               color,
               startDate: bounds.earliestStart,
               endDate: bounds.latestEnd,
+              // The local days of the first departure and last arrival (ADR 0002).
+              ...(() => {
+                const { starts, ends } = flightEnds(groupFlights);
+                return segmentTripDays(starts, ends);
+              })(),
             },
           });
           createdTripIds.push(trip.id);

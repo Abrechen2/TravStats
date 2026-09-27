@@ -19,7 +19,8 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent } from "./shared";
+import { errorContent, timeRefused } from "./shared";
+import { profileZoneBodySchema, profileZoneViewSchema } from "../../settings/profileZoneSettings";
 
 const settingsTag = ["Settings"];
 const badInput = { description: "Invalid input", content: errorContent };
@@ -73,7 +74,31 @@ registry.registerPath({
     "everywhere and deletes nothing — the data is waiting if it is switched " +
     "back on.",
   tags: settingsTag,
-  responses: { 200: { description: "Saved" }, 400: badInput },
+  responses: { 422: timeRefused, 200: { description: "Saved" }, 400: badInput },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/settings/profile-zone",
+  summary: "Set the zone that answers 'today' for this account",
+  description:
+    "The profile zone (ADR 0002 D4/Q1): the zone every status, countdown and " +
+    "'past or planned' of this account is answered in. Written into the same " +
+    "`display.timezone` that `PUT /settings` writes, without replacing the rest of " +
+    "`display`. `GET /settings` reports it as `profileZone`; `hasProfileZone: false` " +
+    "is the account the web asks at its next login. `followsDevice` is the " +
+    "Companion's opt-in to keep the zone in step with the phone.",
+  tags: settingsTag,
+  request: { body: { content: { "application/json": { schema: profileZoneBodySchema } } } },
+  responses: {
+    200: {
+      description: "Saved",
+      content: {
+        "application/json": { schema: z.object({ profileZone: profileZoneViewSchema }) },
+      },
+    },
+    422: timeRefused,
+  },
 });
 
 registry.registerPath({
@@ -89,7 +114,7 @@ registry.registerPath({
   path: "/settings/profile",
   summary: "Update the user's profile",
   tags: settingsTag,
-  responses: { 200: { description: "Saved" }, 400: badInput },
+  responses: { 422: timeRefused, 200: { description: "Saved" }, 400: badInput },
 });
 
 registry.registerPath({

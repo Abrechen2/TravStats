@@ -15,6 +15,7 @@ import { Prisma } from "./prisma";
 import { prisma } from "./db";
 import { seedDemoUser } from "./seedDemoUser";
 import { loadPools, seedCruises } from "./seedDemo/coverageCruises";
+import { fillSeededTimeColumns } from "./services/timeModel/seedTimeColumns";
 
 void (async () => {
   await seedDemoUser({
@@ -54,6 +55,7 @@ void (async () => {
     const { ships, ports } = await loadPools();
     await prisma.cruise.deleteMany({ where: { userId: admin.id } });
     await seedCruises(admin.id, ships, ports);
+    await fillSeededTimeColumns(admin.id);
 
     // Ollama parser config (cruise/flight booking import). Read from env so
     // the machine-specific URL stays out of the repo (see CLAUDE.local.md).

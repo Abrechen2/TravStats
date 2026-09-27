@@ -3,6 +3,7 @@ import { isCurrencyCode } from "../shared/currencies";
 import { receiptUrlValidator } from "./receiptUrl";
 import { LODGING_DATE_PRECISIONS } from "../shared/lodgingTiming";
 import { partialForUpdate } from "./partialUpdate";
+import { legacyDayFieldSchema } from "../shared/time/timeInput";
 
 export const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
 /** An OpenStreetMap element reference, as the nearby search and the place picker write it. */
@@ -39,12 +40,13 @@ export const currencyField = z
  */
 export const MAX_STAY_SPAN_NIGHTS = 3650;
 
-// Accept partial datetimes and coerce them to full ISO 8601, mirroring schemas/cruise.ts.
-const isoDateTimeRequired = z.preprocess((v) => {
-  if (typeof v !== "string" || v === "") return v;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? v : d.toISOString();
-}, z.string().datetime());
+// A stay's check-in and check-out are CALENDAR DAYS at the hotel (ADR 0002
+// D1): `YYYY-MM-DD`, or an offset-bearing ISO string read as the day it
+// writes. An offset-less datetime used to be parsed with `new Date(v)` — the
+// server's own zone decided which day was stored — and is now refused with
+// TIME_SHAPE_REQUIRED. Handed on as the UTC-midnight anchor the legacy
+// columns hold; `stayColumns.ts` derives the new DATE columns from it.
+const stayDay = legacyDayFieldSchema();
 
 // `.nullable()` on every field a user can explicitly CLEAR in the editors
 // (finding 4) — an emitted `null` must round-trip as "delete this value",
@@ -116,8 +118,8 @@ const baseStaySchema = z.object({
   // you slept, and rating/price/board/room/membership all live on the STAY, so
   // without a dateless stay those had nowhere to go. `datePrecision` says what
   // the dates that ARE here actually mean — see shared/lodgingTiming.ts.
-  checkIn: isoDateTimeRequired.nullable().optional(),
-  checkOut: isoDateTimeRequired.nullable().optional(),
+  checkIn: stayDay.nullable().optional(),
+  checkOut: stayDay.nullable().optional(),
   // Optional wall-clock times ("HH:mm", hotel-local like the dates) for the
   // day anchors above. Kept separate from checkIn/checkOut on purpose: the
   // FX snapshot, night counting and status derivation all key on the

@@ -12,7 +12,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent } from "./shared";
+import { errorContent, timeRefused } from "./shared";
 import { PARSER_SUPPORTED_DOMAINS } from "../../../shared/domains";
 import { parseRetentionFields } from "../../../schemas/document";
 import { diagnosticBundleSchema } from "../../diagnostics/bundleSchema";
@@ -576,7 +576,7 @@ registry.registerPath({
   summary: "Tick a checklist item",
   tags: ["Places"],
   request: { params: z.object({ itemId: z.string() }) },
-  responses: { 200: { description: "Ticked" }, 404: notFound },
+  responses: { 422: timeRefused, 200: { description: "Ticked" }, 404: notFound },
 });
 
 registry.registerPath({

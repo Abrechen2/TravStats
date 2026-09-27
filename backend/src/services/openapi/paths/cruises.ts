@@ -12,7 +12,7 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
-import { errorContent } from "./shared";
+import { errorContent, timeRefused } from "./shared";
 import { CRUISE_QUERY_STATUSES } from "../../../schemas/cruise";
 import { CRUISE_SORT_FIELDS } from "../../../shared/cruiseListOrder";
 import {
@@ -254,6 +254,7 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     201: { description: "Created", content: { "application/json": { schema: envelope(cruise) } } },
     400: { description: "Validation failed", content: errorContent },
     409: { description: "A cruise from the same import already exists", content: errorContent },
@@ -275,6 +276,7 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     200: { description: "Updated", content: { "application/json": { schema: envelope(cruise) } } },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Not found", content: errorContent },

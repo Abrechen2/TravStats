@@ -33,6 +33,7 @@ import {
 import { changedOnly, droppedOrNone, enumCell } from "./values";
 import { companionsDiffer, resolveCompanionCell, updateWithCompanions } from "./companionLinks";
 import { linkRowsFor } from "../companionService";
+import { zoneOf } from "../../shared/time/zoneOf";
 
 /** Statuses a spreadsheet may set. Anything else is refused rather than
  *  coerced — silently turning a typo into "flown" changes what is counted, and
@@ -54,6 +55,8 @@ function airportColumns(end: "dep" | "arr", a: Airport): Record<string, unknown>
     [`${end}Name`]: a.name,
     [`${end}Lat`]: a.lat,
     [`${end}Lon`]: a.lon,
+    // The zone the end is read in, frozen with the airport (ADR 0002).
+    [`${end}Timezone`]: zoneOf({ catalogueZone: a.timezone, lat: a.lat, lon: a.lon }),
   };
 }
 
@@ -181,6 +184,9 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
       }
       if (dep && "depIata" in data) Object.assign(data, airportColumns("dep", dep));
       if (arr && "arrIata" in data) Object.assign(data, airportColumns("arr", arr));
+      // The sheet's times are real instants (flights are UTC since the repair).
+      if ("departureTime" in data) data.depPrecision = departureTimeValue ? "minute" : null;
+      if ("arrivalTime" in data) data.arrPrecision = arrivalTime ? "minute" : null;
       // FX snapshot (fix round 1, finding 3) — see `xlsxImport/fxSnapshot.ts`.
       // Only when a column it reads actually changed; a failed lookup keeps
       // the stored rate and says so on the row.
@@ -249,6 +255,10 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
             arrLon: arr.lon,
             departureTime: departureTimeValue ?? null,
             arrivalTime: arrivalTime ? new Date(arrivalTime) : null,
+            depTimezone: airportColumns("dep", dep).depTimezone as string | null,
+            arrTimezone: airportColumns("arr", arr).arrTimezone as string | null,
+            depPrecision: departureTimeValue ? "minute" : null,
+            arrPrecision: arrivalTime ? "minute" : null,
             status: status ?? "flown",
             aircraft: cell.text(raw.aircraft) ?? null,
             aircraftRegistration: cell.text(raw.aircraftRegistration) ?? null,

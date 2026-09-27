@@ -15,6 +15,8 @@ import { classifyVisit } from "../shared/placeCounting";
 import { deletePlacePhotoFile } from "../middleware/upload";
 import logger from "../utils/logger";
 import { toPhotoDto, VISIT_PHOTO_INCLUDE } from "./places/visitPhotoDto";
+import { visitTimeColumns } from "./places/visitTime";
+import { timeErrorFromZod } from "../shared/time/errors";
 import {
   createPlaceSchema,
   updatePlaceSchema,
@@ -441,9 +443,16 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
     if (!place) throw new AppError("Place not found", 404);
 
     const parsed = createVisitSchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    if (!parsed.success) {
+      throw timeErrorFromZod(parsed.error) ?? new AppError(parsed.error.message, 400);
+    }
     const input = parsed.data;
     await assertTripOwned(input.tripId, userId);
+    const { columns: time, writtenVia } = await visitTimeColumns(
+      input.visitedAt ?? null,
+      place,
+      req
+    );
     const documentIds = await takeDocumentIds(userId, req.body);
 
     // Recording a visit that HAPPENED is the statement "I was here", so it
@@ -462,8 +471,7 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
     // false. A place may legitimately be visited with no visit rows at all
     // ("I have been to that Maccis, no idea when"), and recomputing the flag
     // from the visits would erase exactly that.
-    const visitedAt = input.visitedAt ? new Date(input.visitedAt) : null;
-    const happened = classifyVisit({ visitedAt }) === "visited";
+    const happened = classifyVisit({ visitedAt: time.visitedAt }) === "visited";
 
     const writes: Prisma.PrismaPromise<unknown>[] = [
       prisma.placeVisit.create({
@@ -471,7 +479,8 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
           placeId: place.id,
           userId,
           tripId: input.tripId ?? null,
-          visitedAt,
+          ...time,
+          writtenVia,
           orderIdx: input.orderIdx ?? 0,
           notes: input.notes ?? null,
           rating: input.rating ?? null,
@@ -504,13 +513,20 @@ router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: N
     if (!existing) throw new AppError("Visit not found", 404);
 
     const parsed = updateVisitSchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    if (!parsed.success) {
+      throw timeErrorFromZod(parsed.error) ?? new AppError(parsed.error.message, 400);
+    }
     const input = parsed.data;
     if (input.tripId !== undefined) await assertTripOwned(input.tripId, userId);
 
     const data: Prisma.PlaceVisitUpdateInput = {};
     if (input.visitedAt !== undefined) {
-      data.visitedAt = input.visitedAt ? new Date(input.visitedAt) : null;
+      const place = await prisma.place.findUniqueOrThrow({
+        where: { id: existing.placeId },
+        select: { id: true, lat: true, lon: true },
+      });
+      const { columns, writtenVia } = await visitTimeColumns(input.visitedAt, place, req);
+      Object.assign(data, columns, { writtenVia });
     }
     if (input.orderIdx !== undefined) data.orderIdx = input.orderIdx;
     if (input.notes !== undefined) data.notes = input.notes;

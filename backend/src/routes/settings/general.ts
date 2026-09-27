@@ -15,6 +15,12 @@ import { DOMAIN_KEYS, type DomainKey } from "../../shared/domains";
 import { ECB_CURRENCIES } from "../../shared/currencies";
 import { COUNTRY_TIERS, parseCountryTier, type CountryTier } from "../../shared/countryEvidence";
 import { getInstanceSettings } from "../../services/instanceSettingsService";
+import {
+  profileZoneBodySchema,
+  profileZoneView,
+  saveProfileZone,
+} from "../../services/settings/profileZoneSettings";
+import { isValidZone } from "../../shared/time/zonedParts";
 
 const router = Router();
 
@@ -69,7 +75,13 @@ const settingsSchema = z
       .object({
         theme: z.enum(["light", "dark"]).optional(),
         language: z.enum(["de", "en"]).optional(),
-        timezone: z.string().optional(),
+        // A name this runtime's tzdata does not know used to be stored and
+        // then read as "no zone" by every status — refused instead (ADR 0002).
+        timezone: z
+          .string()
+          .refine((zone) => isValidZone(zone), "ZONE_UNKNOWN")
+          .optional(),
+        timezoneFollowsDevice: z.boolean().optional(),
         dateFormat: z.enum(["DD.MM.YYYY", "MM/DD/YYYY", "YYYY-MM-DD"]).optional(),
         timeFormat: z.enum(["24h", "12h"]).optional(),
       })
@@ -275,6 +287,7 @@ function buildSettingsResponse(
     openDataEnabled: extra.openDataEnabled,
     instanceCountryThreshold: extra.countryThreshold,
     hasCountryTracks: extra.hasCountryTracks,
+    profileZone: profileZoneView(baseData),
   };
 }
 
@@ -358,6 +371,19 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     next(error);
   }
 });
+
+// PUT /profile-zone — the zone alone, merged into `display` (ADR 0002 Q1).
+router.put(
+  "/profile-zone",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const body = profileZoneBodySchema.parse(req.body);
+      res.json({ profileZone: await saveProfileZone(req.userId!, body) });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 // PUT /
 router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {

@@ -39,6 +39,7 @@ import {
   type SheetOutcome,
 } from "./types";
 import { changedOnly, droppedOrNone, enumCell, keepStoredClock } from "./values";
+import { visitColumnsFromFakeUtc } from "../timeModel/visitColumns";
 
 const COORD_DECIMALS = 4;
 const sameCoord = (a: number | null, b: number | undefined): boolean =>
@@ -64,6 +65,15 @@ async function matchPlace(
       : norm(c.city) === norm(f.city)
   );
   return hit?.id ?? null;
+}
+
+/** A spreadsheet visit's time columns, read through its place's zone. */
+async function importedVisitColumns(placeId: string, visitedAt: Date | null) {
+  const place = await prisma.place.findUniqueOrThrow({
+    where: { id: placeId },
+    select: { lat: true, lon: true },
+  });
+  return { ...visitColumnsFromFakeUtc(visitedAt, place), writtenVia: "import" as const };
 }
 
 export async function importPlaces(sheet: IncomingSheet, ctx: Ctx): Promise<SheetOutcome> {
@@ -271,6 +281,14 @@ export async function importPlaceVisits(sheet: IncomingSheet, ctx: Ctx): Promise
         out.push({ row: rowNo, action: "skip", id: targetId, label, message });
         continue;
       }
+      // The cell is the legacy value an export wrote (the place's wall clock),
+      // so the new columns are read through the place's zone (ADR 0002).
+      if ("visitedAt" in data && !ctx.dryRun) {
+        Object.assign(
+          data,
+          await importedVisitColumns(stored.placeId, data.visitedAt as Date | null)
+        );
+      }
       if (!ctx.dryRun) await prisma.placeVisit.update({ where: { id: targetId }, data });
       ctx.wrote = ctx.wrote || !ctx.dryRun;
       out.push({ row: rowNo, action: "update", id: targetId, label, message });
@@ -283,7 +301,7 @@ export async function importPlaceVisits(sheet: IncomingSheet, ctx: Ctx): Promise
         data: {
           userId: ctx.userId,
           placeId,
-          visitedAt: visitedAt ? new Date(visitedAt) : null,
+          ...(await importedVisitColumns(placeId, visitedAt ? new Date(visitedAt) : null)),
           rating: rating ?? null,
           notes: fields.notes ?? null,
         },

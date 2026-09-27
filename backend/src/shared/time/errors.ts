@@ -1,4 +1,5 @@
-import { AppError } from "../../middleware/errorHandler";
+import type { ZodError } from "zod";
+import { AppError, zodTimeIssue } from "../../middleware/errorHandler";
 
 /**
  * The refusals of the time model (ADR 0002 D2/D3). Each carries a stable
@@ -14,8 +15,8 @@ import { AppError } from "../../middleware/errorHandler";
 
 /** A wall clock typed by a person that the zone skips (spring-forward gap). */
 export class LocalTimeNonexistentError extends AppError {
-  constructor(local: string, zone: string) {
-    super(`${local} does not exist in ${zone}`, 422, "LOCAL_TIME_NONEXISTENT");
+  constructor(local: string, zone: string, field?: string) {
+    super(`${local} does not exist in ${zone}`, 422, "LOCAL_TIME_NONEXISTENT", field);
     this.name = "LocalTimeNonexistentError";
   }
 }
@@ -30,8 +31,8 @@ export class ZoneUnknownError extends AppError {
 
 /** The place has no zone the resolver can name. */
 export class TzUnresolvedError extends AppError {
-  constructor(reason: string) {
-    super(`This place has no time zone: ${reason}`, 422, "TZ_UNRESOLVED");
+  constructor(reason: string, field?: string) {
+    super(`This place has no time zone: ${reason}`, 422, "TZ_UNRESOLVED", field);
     this.name = "TzUnresolvedError";
   }
 }
@@ -54,4 +55,36 @@ export class InvalidLocalTimeError extends AppError {
     super(`Not a valid local date or time: ${value}`, 422, "VALIDATION_FAILED");
     this.name = "InvalidLocalTimeError";
   }
+}
+
+/**
+ * A time sent in a shape the server may not interpret (ADR 0002 D3, phase 2):
+ * an offset-less datetime string, which the host would read in its own zone,
+ * or — from a browser session — a bare ISO-Z on a field that used to store
+ * the place's wall clock as fake UTC. The second is what a web bundle cached
+ * from before the deploy sends; read as an instant it would move every visit
+ * by the place's offset, so it is refused and the page is told to reload.
+ */
+export class TimeShapeRequiredError extends AppError {
+  constructor(field?: string) {
+    super(
+      "Send a time as {local, zone} or {local, placeRef}, a day as YYYY-MM-DD",
+      422,
+      "TIME_SHAPE_REQUIRED",
+      field
+    );
+    this.name = "TimeShapeRequiredError";
+  }
+}
+
+/**
+ * The 422 a ZodError stands for when one of its issues is a time-model
+ * refusal, or null. Routes that turn a failed `safeParse` into their own 400
+ * ask this first, so a client gets `TIME_SHAPE_REQUIRED` / `ZONE_UNKNOWN` and
+ * the field instead of zod's prose.
+ */
+export function timeErrorFromZod(error: ZodError): AppError | null {
+  const found = zodTimeIssue(error);
+  if (!found) return null;
+  return new AppError(`Time field refused: ${found.code}`, 422, found.code, found.field);
 }

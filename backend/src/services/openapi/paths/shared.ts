@@ -11,6 +11,7 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { createFlightSchema, updateFlightSchema, airportSchema } from "../../../schemas/flight";
+import { localDateInputSchema, localTimeInputSchema } from "../../../shared/time/wire";
 import {
   apiTokenScopeSchema,
   createApiTokenSchema,
@@ -202,4 +203,46 @@ registry.register("CreatedApiToken", createdApiTokenSchema.openapi("CreatedApiTo
 
 export const errorContent = {
   "application/json": { schema: errorResponse },
+};
+
+/*
+ * The time model's wire shapes (ADR 0002 D3, phase 2). Registered once here so
+ * every request body that takes a time points at the same definition, and the
+ * web, the Companion and scripts build against one contract.
+ */
+registry.register("LocalTimeInput", localTimeInputSchema);
+registry.register("LocalDateInput", localDateInputSchema);
+
+/** A time-model refusal: always 422, always a code, the offending field named. */
+export const timeErrorResponse = registry.register(
+  "TimeError",
+  z
+    .object({
+      error: z.string().describe("English prose for a log — not for a reader"),
+      code: z
+        .enum(["TIME_SHAPE_REQUIRED", "LOCAL_TIME_NONEXISTENT", "TZ_UNRESOLVED", "ZONE_UNKNOWN"])
+        .describe(
+          "TIME_SHAPE_REQUIRED: send {local, zone} / {local, placeRef} or a day as YYYY-MM-DD — " +
+            "an offset-less datetime, or a browser's bare ISO-Z on a field that used to hold " +
+            "fake UTC (a stale page: reload). LOCAL_TIME_NONEXISTENT: a typed wall clock the " +
+            "zone skips (spring-forward gap). TZ_UNRESOLVED: the place has no zone. " +
+            "ZONE_UNKNOWN: a zone name the server's tzdata does not know. The lookup being " +
+            "down is a different answer: 503 TIMEZONE_LOOKUP_UNAVAILABLE."
+        ),
+      field: z
+        .string()
+        .optional()
+        .describe("The request field, e.g. `visitedAt`, `stops.0.arrivalTime`"),
+    })
+    .openapi("TimeError")
+);
+
+export const timeErrorContent = {
+  "application/json": { schema: timeErrorResponse },
+};
+
+/** The 422 a write path that takes a time answers with. */
+export const timeRefused = {
+  description: "A time refused by the time model (ADR 0002)",
+  content: timeErrorContent,
 };

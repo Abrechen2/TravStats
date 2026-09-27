@@ -502,6 +502,10 @@ describe("place visits", () => {
     const visit = await prisma.placeVisit.findFirst({ where: { userId: ownerId } });
     expect(visit?.placeId).toBe(ownPlaceId);
     expect(visit?.notes).toBe("Bestellung");
+    // ADR 0002: the imported wall clock, read on the place's clock, and who wrote it.
+    expect(visit?.writtenVia).toBe("import");
+    expect(visit?.visitedZone).not.toBeNull();
+    expect(visit?.visitedAtUtc).not.toBeNull();
   });
 
   it("refuses to hang a visit on someone else's place", async () => {

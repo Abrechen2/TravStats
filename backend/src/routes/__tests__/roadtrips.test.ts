@@ -121,6 +121,30 @@ describe("Roadtrips", () => {
       placesSlept: 2,
     });
     expect(res.body.legs).toHaveLength(2);
+    // ADR 0002 dual-write: a station's days, read at the station.
+    const stavanger = await prisma.tripStop.findUniqueOrThrow({
+      where: { id: res.body.stations[1].id },
+    });
+    expect(stavanger.stopZone).toBe("Europe/Oslo");
+    expect(stavanger.startUtc?.toISOString()).toBe("2026-07-13T22:00:00.000Z");
+    expect(stavanger.endUtc?.toISOString()).toBe("2026-07-15T22:00:00.000Z");
+    expect(stavanger.precision).toBe("day");
+  });
+
+  it("refuses an offset-less station date with 422 TIME_SHAPE_REQUIRED", async () => {
+    const res = await stations().send({
+      stations: [
+        {
+          title: "Bergen",
+          lat: 60.39,
+          lon: 5.32,
+          startDate: "2026-07-12T23:30",
+          night: { kind: "pass" },
+        },
+      ],
+    });
+    expect(res.status).toBe(422);
+    expect(res.body).toMatchObject({ code: "TIME_SHAPE_REQUIRED", field: "stations.0.startDate" });
   });
 
   it("refuses a stay that belongs to someone else", async () => {

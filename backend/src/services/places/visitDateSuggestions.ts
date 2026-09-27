@@ -1,7 +1,8 @@
 import { prisma } from "../../db";
 import { Prisma } from "../../prisma";
 import { localDay, withinKm } from "../../utils/sqlGeo";
-import { timezoneOfLodging } from "../../utils/stayInstant";
+import { localDay as localDayOf } from "../../shared/time/instant";
+import { zoneOf } from "../../shared/time/zoneOf";
 
 /**
  * Dates a visit to a place could carry, read from the user's own logbook.
@@ -236,18 +237,30 @@ export async function visitDateSuggestionsFor(
       id: true,
       lat: true,
       lon: true,
-      visits: { where: { visitedAt: { not: null } }, select: { visitedAt: true } },
+      visits: {
+        where: { visitedAt: { not: null } },
+        select: { visitedAt: true, visitedAtUtc: true, visitedZone: true },
+      },
     },
   });
   if (!place) return null;
 
-  const tz = timezoneOfLodging(place.lat, place.lon);
+  const tz = zoneOf({ lat: place.lat, lon: place.lon });
   const [entries, photos] = await Promise.all([
     entryDays(userId, place, tz, tripId),
     photoDays(userId, place, tz),
   ]);
 
-  const recorded = new Set(place.visits.map((v) => v.visitedAt!.toISOString().slice(0, 10)));
+  // The day a visit was on AT THE PLACE: from the stored instant and zone
+  // where phase 2 wrote them (ADR 0002); the legacy column otherwise, whose
+  // UTC date is the place's day for a web-written row.
+  const recorded = new Set(
+    place.visits.map((v) =>
+      v.visitedAtUtc && v.visitedZone
+        ? localDayOf(v.visitedAtUtc, v.visitedZone)
+        : v.visitedAt!.toISOString().slice(0, 10)
+    )
+  );
   const byDate = new Map<string, VisitDateSuggestion>();
   for (const s of entries) {
     if (!recorded.has(s.date) && !byDate.has(s.date)) byDate.set(s.date, s);

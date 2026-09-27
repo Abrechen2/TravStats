@@ -1,6 +1,5 @@
-import { fromZonedTime } from "date-fns-tz";
-
 import { AppError } from "../../middleware/errorHandler";
+import { toInstant, type Fold } from "../../shared/time/instant";
 
 /**
  * An UPDATE has to be judged on what it leaves behind, not on what it sent.
@@ -23,6 +22,8 @@ export interface ChronologyPatch {
   arrTimezone?: string | null;
   depTimeSemantics?: string | null;
   arrTimeSemantics?: string | null;
+  departureFold?: Fold | null;
+  arrivalFold?: Fold | null;
 }
 
 export interface StoredFlightTimes {
@@ -33,17 +34,21 @@ export interface StoredFlightTimes {
 }
 
 /**
- * A paired (local wall-clock + IANA zone) input as a real UTC instant.
- * Null when either side is missing — the schema's `requirePairedTimezone`
- * already enforces that a present local string carries a zone.
+ * A paired (local wall-clock + IANA zone) input as a real UTC instant,
+ * through `shared/time` (ADR 0002). Null when either side is missing — the
+ * schema's `requirePairedTimezone` already enforces that a present local
+ * string carries a zone. A repeated autumn hour is the earlier occurrence
+ * unless `fold` says later (owner decision Q5); `fromZonedTime` picked one
+ * without saying which. A typed hour the zone skipped throws
+ * LOCAL_TIME_NONEXISTENT — the schema already refuses it, this is the guard.
  */
 export function toUtcDate(
   local: string | null | undefined,
-  tz: string | null | undefined
+  tz: string | null | undefined,
+  fold?: Fold | null
 ): Date | null {
   if (!local || !tz) return null;
-  const instant = fromZonedTime(local, tz);
-  return Number.isNaN(instant.getTime()) ? null : instant;
+  return toInstant(local, tz, { fold: fold ?? undefined, origin: "typed" }).utc;
 }
 
 /**
@@ -62,11 +67,11 @@ export function assertMergedChronology(data: ChronologyPatch, existing: StoredFl
 
   const departure =
     data.departureLocal !== undefined
-      ? toUtcDate(data.departureLocal, data.depTimezone)
+      ? toUtcDate(data.departureLocal, data.depTimezone, data.departureFold)
       : existing.departureTime;
   const arrival =
     data.arrivalLocal !== undefined
-      ? toUtcDate(data.arrivalLocal, data.arrTimezone)
+      ? toUtcDate(data.arrivalLocal, data.arrTimezone, data.arrivalFold)
       : existing.arrivalTime;
 
   if (departure && arrival && arrival.getTime() < departure.getTime()) {

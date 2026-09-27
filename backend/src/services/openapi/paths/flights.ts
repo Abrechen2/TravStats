@@ -5,7 +5,13 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent, flightCreateInput, flightUpdateInput, flightResponse } from "./shared";
+import {
+  errorContent,
+  flightCreateInput,
+  flightUpdateInput,
+  flightResponse,
+  timeRefused,
+} from "./shared";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { FLIGHT_SORT_FIELDS } from "../../../schemas/flight";
 
@@ -236,6 +242,7 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     201: {
       description: "Flight created",
       content: {
@@ -268,6 +275,7 @@ registry.registerPath({
     body: { content: { "application/json": { schema: flightUpdateInput } } },
   },
   responses: {
+    422: timeRefused,
     200: {
       description: "Flight updated",
       content: { "application/json": { schema: flightResponse } },

@@ -11,7 +11,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent } from "./shared";
+import { errorContent, timeRefused } from "./shared";
 import { tourLeg, tourRoute } from "./tours";
 import { createRoadtripSchema, kindSwitchSchema, stationsSchema } from "../../../schemas/roadtrip";
 import {
@@ -210,6 +210,7 @@ registry.registerPath({
     body: { content: { "application/json": { schema: stationsSchema } } },
   },
   responses: {
+    422: timeRefused,
     200: {
       description: "The roadtrip after the write",
       content: {
@@ -336,6 +337,7 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     200: {
       description: "Already there (a resend)",
       content: {

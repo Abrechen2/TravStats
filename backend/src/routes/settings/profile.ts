@@ -2,6 +2,8 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../db";
+import { dayFieldSchema } from "../../shared/time/timeInput";
+import { toDbDate } from "../../shared/time/localDate";
 
 const router = Router();
 
@@ -9,12 +11,10 @@ const router = Router();
 // Currently just birthdate — used by the BIRTHDAY_FLIGHT achievement to
 // match a flight's departure month+day against the user.
 const profileSchema = z.object({
-  // Accept YYYY-MM-DD or a full ISO datetime; null clears the field.
-  birthdate: z
-    .string()
-    .regex(/^\d{4}-\d{2}-\d{2}(T.*)?$/, "Expected YYYY-MM-DD")
-    .nullable()
-    .optional(),
+  // `YYYY-MM-DD`, or an ISO string with an offset (read as the day it
+  // writes); null clears the field. An offset-less datetime is refused with
+  // TIME_SHAPE_REQUIRED — the host would have decided which day it was.
+  birthdate: dayFieldSchema().nullable().optional(),
 });
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -53,18 +53,23 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
 
     const data = profileSchema.parse(req.body);
 
-    const updateData: { birthdate?: Date | null } = {};
+    // A birthday is a FLOATING day (ADR 0002 D1): the same date everywhere,
+    // no zone. `birthDay` holds it as a DATE; the legacy `birthdate` keeps
+    // its noon-UTC shape, which kept month+day comparisons stable whatever
+    // zone the server ran in, until phase 6 drops it.
+    const updateData: {
+      birthdate?: Date | null;
+      birthDay?: Date | null;
+      birthPrecision?: string | null;
+    } = {};
     if (data.birthdate === null) {
-      updateData.birthdate = null;
+      Object.assign(updateData, { birthdate: null, birthDay: null, birthPrecision: null });
     } else if (typeof data.birthdate === "string") {
-      // Normalize to date-only at noon UTC so local-TZ comparisons against
-      // departure-time month+day stay correct regardless of server TZ.
-      const d = new Date(`${data.birthdate.slice(0, 10)}T12:00:00.000Z`);
-      if (isNaN(d.getTime())) {
-        res.status(400).json({ error: "Invalid birthdate" });
-        return;
-      }
-      updateData.birthdate = d;
+      Object.assign(updateData, {
+        birthdate: new Date(`${data.birthdate}T12:00:00.000Z`),
+        birthDay: toDbDate(data.birthdate),
+        birthPrecision: "day",
+      });
     }
 
     const user = await prisma.user.update({

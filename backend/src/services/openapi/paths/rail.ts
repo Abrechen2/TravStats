@@ -10,7 +10,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
-import { errorContent } from "./shared";
+import { errorContent, timeRefused } from "./shared";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import {
   createRailJourneySchema,
@@ -243,6 +243,7 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     201: {
       description: "Created",
       content: { "application/json": { schema: writeEnvelope(railJourney) } },
@@ -274,6 +275,7 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     200: {
       description: "Updated",
       content: { "application/json": { schema: writeEnvelope(railJourney) } },

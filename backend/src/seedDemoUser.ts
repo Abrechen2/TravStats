@@ -2,6 +2,7 @@ import { prisma } from "./db";
 import { hashPassword } from "./utils/password";
 import { deriveStayOverallRating } from "./shared/ratingDerivation";
 import { createDemoRail } from "./seedDemo/seedRail";
+import { fillSeededTimeColumns } from "./services/timeModel/seedTimeColumns";
 
 // Weltweite Flughäfen für realistische Routen
 const airports = [
@@ -1610,6 +1611,9 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
     // Train rides (rail spec, phase 2b) — behind the railDomain beta gate.
     console.log("🚆 Creating demo train rides...");
     await createDemoRail(demoUser.id);
+
+    // The time-model columns, derived from what the seed just wrote (ADR 0002).
+    await fillSeededTimeColumns(demoUser.id);
 
     console.log("");
     console.log(`✅ User "${username}" setup complete!`);

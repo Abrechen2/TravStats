@@ -97,6 +97,11 @@ describe("roadtrips from the phone", () => {
       expect(last.id).toBe(res.body.station.id);
       // The leg from the old last station to the new one exists.
       expect(res.body.legs.some((l: { toStopId: string }) => l.toStopId === last.id)).toBe(true);
+      // ADR 0002 dual-write: the night's day starts at the station's midnight.
+      const row = await prisma.tripStop.findUniqueOrThrow({ where: { id: last.id } });
+      expect(row.stopZone).toBe("Europe/Oslo");
+      expect(row.startUtc?.toISOString()).toBe("2025-07-20T22:00:00.000Z");
+      expect(row.precision).toBe("day");
     });
 
     it("answers a resend with the station it already made, and adds nothing", async () => {

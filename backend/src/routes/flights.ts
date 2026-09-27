@@ -39,6 +39,7 @@ import {
   type EnrichableFlight,
 } from "../services/flightAirportFacts";
 import { withAirportTimezones } from "../services/flightTimezoneDefaults";
+import { airportChanged, flightZoneColumns, withStoredZones } from "./flights/timeInput";
 import {
   buildAirportCoordinateIndex,
   resolveAirportCoordinate,
@@ -194,8 +195,8 @@ router.post(
 
       warnIfScheduledInPast(userId, data);
 
-      const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
-      const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
+      const departureUtc = toUtcDate(data.departureLocal, data.depTimezone, data.departureFold);
+      const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone, data.arrivalFold);
       const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
       const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
 
@@ -292,12 +293,14 @@ router.post(
         },
         await getBaseCurrency(userId)
       );
+      const zoneColumns = await flightZoneColumns(data, enriched);
 
       const flight = await prisma.$transaction(async (tx) => {
         const created = await tx.flight.create({
           data: {
             userId,
             externalRef,
+            ...zoneColumns,
             importBatchId,
             airline: data.airline,
             airlineIata,
@@ -841,8 +844,6 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const data = updateFlightSchema.parse(await withAirportTimezones(req.body));
-
     // Check if flight exists and belongs to user
     const existingFlight = await prisma.flight.findFirst({
       where: { id, userId },
@@ -851,6 +852,10 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     if (!existingFlight) {
       throw new AppError("Flight not found", 404);
     }
+    // A wall clock at an unchanged airport is read in the zone the flight was
+    // WRITTEN with, not today's catalogue zone (ADR 0002, class 4).
+    const body = withStoredZones(req.body, existingFlight);
+    const data = updateFlightSchema.parse(await withAirportTimezones(body));
 
     // The schema can only see the BODY. A PUT that moves only the departure
     // has to be checked against the arrival that stays behind — sending a
@@ -1018,8 +1023,20 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     // Resolve any incoming local+tz pairs to canonical real UTC. A null pair
     // means the field was not in this update; an empty string is treated the
     // same — clients should clear actualDeparture by passing null explicitly.
-    const incomingDepUtc = toUtcDate(data.departureLocal, data.depTimezone);
-    const incomingArrUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
+    const incomingDepUtc = toUtcDate(data.departureLocal, data.depTimezone, data.departureFold);
+    const incomingArrUtc = toUtcDate(data.arrivalLocal, data.arrTimezone, data.arrivalFold);
+    const changed = (end: "departure" | "arrival") => airportChanged(body, end, existingFlight);
+    Object.assign(
+      updateData,
+      await flightZoneColumns(
+        data,
+        {
+          departure: changed("departure") ? enrichedDeparture : null,
+          arrival: changed("arrival") ? enrichedArrival : null,
+        },
+        existingFlight
+      )
+    );
     const incomingActualDepUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
     const incomingActualArrUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
 

@@ -135,7 +135,9 @@ export async function catalogueStationAt(lat: number, lon: number): Promise<Rail
  * exists to prevent. The name stays the client's, which is the catalogue's
  * name unless the user reworded it. An unknown id is refused, not ignored.
  */
-export async function resolveStationInput(station: RailStationInput): Promise<RailStationInput> {
+export async function resolveStationInput(
+  station: RailStationInput
+): Promise<RailStationInput & { catalogueZone?: string | null }> {
   if (station.stationId === undefined || station.stationId === null) {
     return { ...station, stationId: null };
   }
@@ -147,5 +149,7 @@ export async function resolveStationInput(station: RailStationInput): Promise<Ra
     lat: row.lat,
     lon: row.lon,
     country: row.country ?? station.country ?? null,
+    // The catalogue's zone is read first, the coordinates second (ADR 0002 D2).
+    catalogueZone: row.timezone ?? null,
   };
 }

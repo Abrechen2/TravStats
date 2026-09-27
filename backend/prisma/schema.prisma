@@ -50,6 +50,12 @@ model User {
   // Birthday for the BIRTHDAY_FLIGHT achievement. Only month+day are used;
   // the full DateTime lets us round-trip a year if the user enters one.
   birthdate              DateTime?                @map("birthdate")
+  /// ADR 0002 phase 2 (dual-write): the birthday as a floating calendar day —
+  /// no zone, it means the same day everywhere. `birthdate` keeps its old
+  /// meaning (UTC midnight) until phase 6 drops it.
+  birthDay               DateTime?                @map("birth_day") @db.Date
+  /// day | unknown — how much of `birthDay` the user actually gave.
+  birthPrecision         String?                  @map("birth_precision")
   resetToken             String?                  @unique @map("reset_token")
   resetTokenExpiry       DateTime?                @map("reset_token_expiry")
   mustChangePassword     Boolean                  @default(false) @map("must_change_password")
@@ -425,6 +431,15 @@ model Flight {
   // from Prisma default to 'UTC'.
   depTimeSemantics     String    @default("UTC") @map("dep_time_semantics")
   arrTimeSemantics     String    @default("UTC") @map("arr_time_semantics")
+  /// ADR 0002: the IANA zone each end was WRITTEN with, frozen. Reads used to
+  /// join the airport catalogue, so a catalogue correction moved the displayed
+  /// time of every past flight there. Re-derived only when the airport itself
+  /// changes (`routes/flights/timeInput.ts`). Null = not yet backfilled (3b).
+  depTimezone          String?   @map("dep_timezone")
+  arrTimezone          String?   @map("arr_timezone")
+  /// minute | day | unknown (`shared/time/wire.ts` TIME_PRECISIONS).
+  depPrecision         String?   @map("dep_precision")
+  arrPrecision         String?   @map("arr_precision")
   lastModifiedBy       String?   @map("last_modified_by") // 'user', 'auto_update', 'historical_enrichment', 'api'
   enrichmentHistory    Json?     @map("enrichment_history") // Array of enrichment events [{type, timestamp, confidence?, source?}]
 
@@ -875,6 +890,11 @@ model AdminSettings {
   backupEnabled       Boolean @default(false) @map("backup_enabled")
   backupInterval      String  @default("weekly") @map("backup_interval")
   backupRetentionDays Int     @default(30) @map("backup_retention_days")
+  /// IANA zone the backup cron expression is read in (owner decision
+  /// 2026-09-26). Null = the host zone the process booted with, which is what
+  /// every instance ran in before the setting existed — so an upgrade keeps
+  /// its backup hour.
+  backupZone          String? @map("backup_zone")
 
   // Instance configuration — supersedes INSTANCE_NAME / MAX_USERS /
   // ALLOW_REGISTRATION / FRONTEND_URL ENV variables. ENV is read as fallback
@@ -1192,6 +1212,8 @@ model DataQualityFlag {
 /// After this table exists the count is a cheap read and catching up costs one
 /// window, which is the whole reason §8.4 asks for it.
 model CountryDay {
+  /// ADR 0002 Q3: a documented exception to the time model — a UTC day,
+  /// because a raw GPS point has no zone of its own. No zone column on purpose.
   id          String   @id @default(uuid())
   userId      String   @map("user_id")
   /// The UTC calendar day, at midnight UTC.
@@ -1420,6 +1442,13 @@ model Trip {
   startDate        DateTime? @map("start_date")
   endDate          DateTime? @map("end_date")
   status           String    @default("planned") // planned | in_progress | completed
+  /// ADR 0002 phase 2 dual-write: the local days of the first departure and
+  /// the last arrival (owner decision 2026-09-26, plan open point 1), with the
+  /// zone each belongs to. Null zone = a day typed without a place to anchor it.
+  startDay         DateTime? @map("start_day") @db.Date
+  endDay           DateTime? @map("end_day") @db.Date
+  startZone        String?   @map("start_zone")
+  endZone          String?   @map("end_zone")
   category         String? // vacation | business | weekend | family | other
   tags             String[]  @default([])
   companions       String[]  @default([])
@@ -1555,6 +1584,15 @@ model TripStop {
   endDate       DateTime? @map("end_date")
   lat           Float?
   lon           Float?
+  /// ADR 0002 phase 2 dual-write: `startDate`/`endDate` keep their old
+  /// meaning (the stop's wall clock stored as if it were UTC); these hold the
+  /// real instants, the zone of the stop (its coordinates or the entry it
+  /// wraps) and the precision. Null zone + precision `unknown` = no place to
+  /// read a clock at.
+  startUtc      DateTime? @map("start_utc")
+  endUtc        DateTime? @map("end_utc")
+  stopZone      String?   @map("stop_zone")
+  precision     String?
   notes         String?
   /// Route membership. NULL means what every stop is today: a timeline
   /// point that produces no kilometres. Set means it is a vertex of that
@@ -1792,6 +1830,9 @@ model TripJournalEntry {
   tripId          String   @map("trip_id")
   date            DateTime
   title           String?
+  /// ADR 0002 phase 2 dual-write: the journal day as a calendar day. `date`
+  /// keeps its UTC-midnight meaning until phase 6.
+  day             DateTime? @db.Date
   body            String
   mood            String?
   weather         String?
@@ -1877,6 +1918,12 @@ model Cruise {
   routeName        String?   @map("route_name")
   startDate        DateTime? @map("start_date")
   endDate          DateTime? @map("end_date")
+  /// ADR 0002 phase 2 dual-write: embarkation and disembarkation as local
+  /// days, with the zone of the departure / arrival port.
+  startDay         DateTime? @map("start_day") @db.Date
+  endDay           DateTime? @map("end_day") @db.Date
+  startZone        String?   @map("start_zone")
+  endZone          String?   @map("end_zone")
   status           String    @default("scheduled")
   cabinNumber      String?   @map("cabin_number")
   cabinType        String?   @map("cabin_type")
@@ -2078,6 +2125,16 @@ model CruiseStop {
   arrivalTime        DateTime? @map("arrival_time")
   departureTime      DateTime? @map("departure_time")
   /// Read by the statistics ETag (forgejo#50).
+  /// ADR 0002 phase 2 dual-write: `arrivalTime`/`departureTime` keep their
+  /// old meaning (the port's wall clock stored as if it were UTC) and `date`
+  /// its UTC-midnight day; these hold the real instants, the port's zone,
+  /// the call's local day and the precision. A sea day or an unresolved port
+  /// has no zone: its times stay in the legacy columns, precision `unknown`.
+  arrivalUtc         DateTime? @map("arrival_utc")
+  departureUtc       DateTime? @map("departure_utc")
+  stopZone           String?   @map("stop_zone")
+  stopDate           DateTime? @map("stop_date") @db.Date
+  timePrecision      String?   @map("time_precision")
   updatedAt          DateTime  @default(now()) @updatedAt @map("updated_at")
   excursionNote      String?   @map("excursion_note")
   // Third stop state: a port whose name could not be matched to the catalog on
@@ -2215,6 +2272,15 @@ model LodgingStay {
   /// 2026-08-18: a planned hotel should not "begin" at midnight.
   checkInTime      String?   @map("check_in_time")
   checkOutTime     String?   @map("check_out_time")
+  /// ADR 0002 phase 2 dual-write: the check-in/-out days as calendar days,
+  /// the instants they begin/end (day + time in the hotel's zone; null
+  /// without a time or without a zone) and the hotel's zone. The legacy
+  /// columns above keep their meaning until phase 6.
+  checkInDate      DateTime? @map("check_in_date") @db.Date
+  checkOutDate     DateTime? @map("check_out_date") @db.Date
+  checkInAt        DateTime? @map("check_in_at")
+  checkOutAt       DateTime? @map("check_out_at")
+  stayZone         String?   @map("stay_zone")
   /// How much of the date is actually known: DAY (both dates real) | MONTH
   /// ("July 2011", stored as the 1st) | YEAR ("some time in 2011", stored as
   /// 1 January) | NONE (no idea, both dates null).
@@ -2529,6 +2595,17 @@ model PlaceVisit {
   /// visit yet and is excluded from every count — see shared/placeCounting.ts.
   visitedAt DateTime? @map("visited_at")
 
+  /// ADR 0002 phase 2 dual-write. `visitedAt` above is a MIXED column — the web
+  /// wrote the place's wall clock as fake UTC, the Companion a real instant —
+  /// so new writes keep its web meaning, and these carry the truth: the real
+  /// instant, the place's zone, the precision (`day` for a visit known only
+  /// to the day) and who wrote the row (web | companion | import | suggestion
+  /// | api), which the phase-3b backfill cannot recover for older rows (Q4).
+  visitedAtUtc     DateTime? @map("visited_at_utc")
+  visitedZone      String?   @map("visited_zone")
+  visitedPrecision String?   @map("visited_precision")
+  writtenVia       String?   @map("written_via")
+
   /// Tie-break inside a day when two visits share a timestamp, or when
   /// visitedAt is null and the user dragged them into an order.
   orderIdx Int @default(0) @map("order_idx")
@@ -2554,6 +2631,7 @@ model PlaceVisit {
   @@index([placeId])
   @@index([tripId])
   @@index([userId, visitedAt])
+  @@index([userId, visitedAtUtc])
   @@map("place_visits")
 }
 
@@ -3191,6 +3269,9 @@ model RailJourney {
   /// server converts it with the station's zone.
   departureTime DateTime  @map("departure_time")
   arrivalTime   DateTime? @map("arrival_time")
+  /// ADR 0002: minute | day | unknown. Null = written before the column existed.
+  depPrecision  String?   @map("dep_precision")
+  arrPrecision  String?   @map("arr_precision")
 
   /// great_circle | user | null. Great-circle understates track length; the
   /// source is kept so a statistic can say which it is showing.
@@ -3313,4 +3394,26 @@ model RailJourneyCompanion {
   @@id([railJourneyId, companionId])
   @@index([companionId])
   @@map("rail_journey_companions")
+}
+
+/// ADR 0002 phase 3: every legacy value the time-model backfill converted or
+/// could not convert, with the rule it applied. The backfill writes only new
+/// columns and this ledger; nothing here is read by the product. `status`
+/// open = a row the owner must look at (no zone, ambiguous day), resolved =
+/// converted.
+model TimeMigrationLedger {
+  id          String   @id @default(uuid())
+  tableName   String   @map("table_name")
+  rowId       String   @map("row_id")
+  columnName  String   @map("column_name")
+  legacyValue String?  @map("legacy_value")
+  newValue    String?  @map("new_value")
+  zone        String?
+  rule        String
+  status      String   @default("open")
+  createdAt   DateTime @default(now()) @map("created_at")
+
+  @@index([tableName, rowId])
+  @@index([status])
+  @@map("time_migration_ledger")
 }
