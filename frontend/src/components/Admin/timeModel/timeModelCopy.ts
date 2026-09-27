@@ -1,87 +1,47 @@
 import { JobLostError, jobErrorCode } from "../../../lib/api/jobs";
 import { TimeMigrationContractError } from "../../../lib/api/timeMigration";
+import {
+  TIME_MIGRATION_REASONS,
+  TIME_MIGRATION_TABLES,
+  type UnchangedDomain,
+  type UnchangedWhy,
+} from "../../../types/timeMigration";
 
 type T = (key: string, options?: Record<string, unknown>) => string;
 
 /**
- * Words for the codes the time-migration report and the re-resolution speak.
+ * Words for the codes the time-migration report, the re-resolution and the
+ * inbox's time questions speak (ADR 0002, plan Phase 3b).
  *
- * The server sends codes (`place_visit`, `legacy_fake_utc`, `no_position`);
- * the admin reads sentences. A code this build has no copy for is shown as
- * "unknown (code)" — the code stays visible so the admin can still ask about
- * it, and it is never dressed up as a sentence it is not.
- *
- * The lists are the vocabulary of plan Phase 3b as written; the backend half
- * owns the codes, and one it adds later degrades to the "unknown" line
- * instead of a raw key.
+ * Tables and reasons are closed vocabularies (`types/timeMigration.ts`, the
+ * backend's mirror) and each has DE/EN copy. A code outside them — a server
+ * newer than this build — is shown as "unknown (code)": still visible, so the
+ * admin can ask about it, and never dressed up as a sentence it is not.
+ * Columns are not a closed list; the ones a reader meets are named, any other
+ * is the admin's code and the user's plain "a time value".
  */
-const TABLES = [
-  "flight",
-  "place_visit",
-  "cruise_stop",
-  "trip_stop",
-  "lodging_stay",
-  "cruise",
-  "trip",
-  "journal_entry",
-  "user",
-] as const;
-
-const RULES = [
-  "catalogue_zone",
-  "coordinate_zone",
-  "utc_kept",
-  "legacy_fake_utc",
-  "date_only",
-  "place_zone",
-  "port_zone",
-  "written_via",
-  "before_companion",
-  "sub_minute_instant",
-  "http_log",
-  "precision_unknown",
-  "day_midnight",
-  "day_shifted",
-  "day_ambiguous",
-  "lodging_check_in",
-] as const;
-
-const REASONS = [
-  "no_position",
-  "no_zone",
-  "no_coordinates",
-  "sea_day",
-  "unresolved_port",
-  "writer_unknown",
-  "ambiguous_day",
-  "local_day_differs",
-] as const;
-
-const FIELDS = [
+const COLUMNS = [
   "departure",
   "arrival",
-  "visitedAt",
-  "arrivalTime",
-  "departureTime",
+  "visited_at",
+  "arrival_time",
+  "departure_time",
   "date",
-  "startDate",
-  "endDate",
-  "checkIn",
-  "checkOut",
+  "day",
+  "start_date",
+  "end_date",
+  "check_in",
+  "check_out",
+  "birthdate",
 ] as const;
 
-/** Server codes a failed call can carry that this screen has words for. */
-const ERROR_CODES = [
-  "DRY_RUN_NOT_FOUND",
-  "DRY_RUN_EXPIRED",
-  "DRY_RUN_STALE",
-  "RE_RESOLVE_RUNNING",
-  "TIME_MIGRATION_RUNNING",
-] as const;
+/** Codes a failed call can carry that these screens have words for. */
+const ERROR_CODES = ["DRY_RUN_NOT_FOUND", "RE_RESOLVE_RUNNING"] as const;
 
-function known(list: readonly string[], code: string): boolean {
-  return list.includes(code);
-}
+/** Codes a failed backfill run reports in `backfill.lastError`. */
+const BACKFILL_ERRORS = ["TIMEZONE_LOOKUP_UNAVAILABLE", "JOB_FAILED"] as const;
+
+const known = (list: readonly string[], code: string): boolean => list.includes(code);
 
 function label(t: T, list: readonly string[], group: string, code: string): string {
   return known(list, code)
@@ -89,10 +49,22 @@ function label(t: T, list: readonly string[], group: string, code: string): stri
     : t("admin:timeModel.unknownCode", { code });
 }
 
-export const tableLabel = (t: T, code: string): string => label(t, TABLES, "tables", code);
-export const ruleLabel = (t: T, code: string): string => label(t, RULES, "rules", code);
-export const reasonLabel = (t: T, code: string): string => label(t, REASONS, "reasons", code);
-export const fieldLabel = (t: T, code: string): string => label(t, FIELDS, "fields", code);
+export const tableLabel = (t: T, code: string): string =>
+  label(t, TIME_MIGRATION_TABLES, "tables", code);
+export const reasonLabel = (t: T, code: string): string =>
+  label(t, TIME_MIGRATION_REASONS, "reasons", code);
+export const columnLabel = (t: T, code: string): string => label(t, COLUMNS, "columns", code);
+export const backfillErrorLabel = (t: T, code: string): string =>
+  label(t, BACKFILL_ERRORS, "backfillErrors", code);
+export const unchangedLabel = (t: T, domain: UnchangedDomain, why: UnchangedWhy): string =>
+  t("admin:timeModel.report.unchanged.item", {
+    domain: t(`admin:timeModel.report.unchanged.domains.${domain}`),
+    why: t(`admin:timeModel.report.unchanged.why.${why}`),
+  });
+
+/** For the inbox: a column the reader has no word for is "a time value", not a code. */
+export const columnLabelForUser = (t: T, code: string): string =>
+  known(COLUMNS, code) ? t(`admin:timeModel.columns.${code}`) : t("admin:timeModel.columns.other");
 
 /**
  * The sentence for a failed call. Never the server's prose and never axios'
@@ -113,14 +85,13 @@ export function timeModelErrorCopy(err: unknown, t: T, fallbackKey: string): str
 }
 
 /**
- * An offset change as "+1:00 h" / "−0:30 h". Computed by the server; this
- * only prints it, with a real minus sign so a negative delta is not read as a
- * dash.
+ * An offset change as "+1:00 h" / "−0:30 h" — computed by the server, only
+ * printed here, with a real minus sign so a negative delta is not read as a
+ * dash. Null (a zone with no instant to measure at) is said in words.
  */
-export function formatOffsetDelta(minutes: number): string {
+export function formatOffsetDelta(minutes: number | null, t: T): string {
+  if (minutes === null) return t("admin:timeModel.reResolve.noInstant");
   const sign = minutes > 0 ? "+" : minutes < 0 ? "−" : "±";
   const abs = Math.abs(minutes);
-  const hours = Math.floor(abs / 60);
-  const rest = String(abs % 60).padStart(2, "0");
-  return `${sign}${hours}:${rest} h`;
+  return `${sign}${Math.floor(abs / 60)}:${String(abs % 60).padStart(2, "0")} h`;
 }

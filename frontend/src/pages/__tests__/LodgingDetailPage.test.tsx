@@ -870,3 +870,44 @@ describe("LodgingDetailPage", () => {
     await waitFor(() => expect(dialog.textContent).toContain("documents:deleteCascadeNote"));
   });
 });
+
+describe("LodgingDetailPage — ?editStay from the inbox", () => {
+  beforeEach(() => {
+    getLodgingMock.mockReset();
+    listMembershipsMock.mockResolvedValue([]);
+    tripsGetAllMock.mockResolvedValue([]);
+    listForEntryMock.mockResolvedValue([]);
+    useToastStore.setState({ toasts: [] });
+  });
+
+  function renderAt(entry: string): void {
+    render(
+      <MemoryRouter initialEntries={[entry]}>
+        <Routes>
+          <Route path="/lodging/:id" element={<LodgingDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+  }
+
+  // The inbox's link for a stay whose days or check-in time the time-model
+  // migration left open (ADR 0002, plan Phase 3b; timeFlagLinks.ts).
+  it("opens that stay's editor once the lodging has loaded", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging());
+    renderAt("/lodging/lodging-1?editStay=stay-1");
+
+    expect(await screen.findByRole("dialog")).toBeInTheDocument();
+  });
+
+  it("says the stay is gone instead of opening an editor for a new one", async () => {
+    getLodgingMock.mockResolvedValue(makeLodging());
+    renderAt("/lodging/lodging-1?editStay=gone");
+
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.map((toast) => toast.message)).toContain(
+        "lodging:detail.stayNotFound"
+      )
+    );
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+  });
+});

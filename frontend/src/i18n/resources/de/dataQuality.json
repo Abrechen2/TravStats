@@ -191,7 +191,13 @@
       "flight": "Flug",
       "cruise_stop": "Kreuzfahrt-Halt",
       "trip_stop": "Reise-Halt",
-      "place_visit": "Ortsbesuch"
+      "place_visit": "Ortsbesuch",
+      "rail_journey": "Bahnfahrt",
+      "cruise": "Kreuzfahrt",
+      "trip": "Reise",
+      "trip_journal_entry": "Tagebucheintrag",
+      "lodging_stay": "Aufenthalt",
+      "profile": "Profil"
     },
     "status": {
       "open": "Offen",
@@ -245,6 +251,10 @@
     "time_precision_unknown": {
       "title": "Uhrzeit unbekannt",
       "question": "Das Datum ist erhalten, aber es ließ sich nicht feststellen, zu welcher Uhrzeit das war. Wenn du sie weißt, trag sie ein."
+    },
+    "time_day_ambiguous": {
+      "title": "Tag nicht eindeutig",
+      "question": "Es ist nicht sicher, welcher Kalendertag gemeint ist. Übernommen wurde der gespeicherte Tag – prüfe ihn und korrigiere ihn, falls nötig."
     }
   },
   "passwordResets": {
@@ -266,21 +276,21 @@
   "time": {
     "field": "Angabe",
     "reason": "Grund",
-    "day": "Datum",
+    "stored": "Gespeichert (ohne Zeitzone)",
+    "kept": "Übernommen",
     "noEditor": "Der Eintrag, über den sich das bearbeiten ließe, ist nicht mehr auffindbar.",
     "action": {
-      "time_zone_unresolved": {
-        "flight": "Flug bearbeiten",
-        "cruise_stop": "Kreuzfahrt bearbeiten",
-        "trip_stop": "Halt bearbeiten",
-        "place_visit": "Ort bearbeiten"
-      },
-      "time_precision_unknown": {
-        "flight": "Flug bearbeiten",
-        "cruise_stop": "Kreuzfahrt bearbeiten",
-        "trip_stop": "Halt bearbeiten",
-        "place_visit": "Besuch bearbeiten"
-      }
+      "flight": "Flug bearbeiten",
+      "rail_journey": "Bahnfahrt bearbeiten",
+      "place_visit": "Besuch bearbeiten",
+      "place_visit_zone": "Ort bearbeiten",
+      "cruise": "Kreuzfahrt bearbeiten",
+      "cruise_stop": "Kreuzfahrt bearbeiten",
+      "trip": "Reise bearbeiten",
+      "trip_stop": "Halt bearbeiten",
+      "trip_journal_entry": "Eintrag bearbeiten",
+      "lodging_stay": "Aufenthalt bearbeiten",
+      "profile": "Profil bearbeiten"
     }
   }
 }

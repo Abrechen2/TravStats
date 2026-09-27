@@ -9,35 +9,33 @@ import { timeMigrationApi } from "../../../lib/api/timeMigration";
 import { useAuthStore } from "../../../store/authStore";
 import { useSettingsStore } from "../../../store/settingsStore";
 import type {
-  TimeMigrationCount,
-  TimeMigrationOutcome,
+  TimeMigrationOpenRow,
   TimeMigrationReport as Report,
-  TimeMigrationUnresolvedRow,
-} from "../../../types/timeMigrationDraft";
+} from "../../../types/timeMigration";
 import Button from "../../ui/Button";
 import StatTile from "../../ui/StatTile";
-import { isTimeFlagEntityType, timeValueEditorPath } from "../../DataQuality/timeFlagLinks";
 import {
-  fieldLabel,
+  backfillErrorLabel,
+  columnLabel,
   reasonLabel,
-  ruleLabel,
   tableLabel,
   timeModelErrorCopy,
+  unchangedLabel,
 } from "./timeModelCopy";
+import { TimeMigrationTables } from "./TimeMigrationTables";
 
 /**
  * What the time-model backfill did on this instance (ADR 0002, plan Phase 3b)
  * — the report the owner reads and signs off before a promotion.
  *
- * It has to say three things and never blur them: what was CONVERTED (a value
- * written into the new columns), what was KEPT (already meant what it said),
- * and what was LEFT (nothing written, flagged to its owner). And it has to
- * say when it does not know: a report that failed to load is a sentence and a
- * retry, never a row of zeros — "0 unresolved" over a failed request is the
- * exact lie this screen exists to prevent.
+ * It has to say three things and never blur them: which rows were CONVERTED,
+ * which already held the new values and were LEFT AS THEY WERE, and which are
+ * OPEN (nothing guessed, a question in the owner's inbox) — plus what the
+ * backfill deliberately never touches. And it has to say when it does not
+ * know: a report that failed to load, or has not run yet, is a sentence,
+ * never a row of zeros — "0 open" over a failed request is the exact lie this
+ * screen exists to prevent.
  */
-
-const OUTCOMES: TimeMigrationOutcome[] = ["converted", "kept", "unresolved"];
 
 const PANEL = {
   background: "var(--ts-surface)",
@@ -45,20 +43,25 @@ const PANEL = {
   borderRadius: "var(--ts-radius-card)",
 } as const;
 
+/** The inbox, where the owner of an open row answers its question. */
+const INBOX_PATH = "/pending-updates";
+
 // The failure is kept as the error, not as a sentence: the words are chosen
 // at render time, in the reader's current language.
 type Load =
   { state: "loading" } | { state: "failed"; error: unknown } | { state: "ok"; report: Report };
 
-function totalsOf(counts: TimeMigrationCount[]): Record<TimeMigrationOutcome, number> {
-  return counts.reduce((acc, c) => ({ ...acc, [c.outcome]: acc[c.outcome] + c.count }), {
-    converted: 0,
-    kept: 0,
-    unresolved: 0,
-  } as Record<TimeMigrationOutcome, number>);
+export interface ReportUser {
+  id: string;
+  username: string;
 }
 
-export default function TimeMigrationReport(): JSX.Element {
+export default function TimeMigrationReport({
+  users = [],
+}: {
+  /** The instance's accounts, to name the owner of an open row. */
+  users?: ReportUser[];
+}): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const [load, setLoad] = useState<Load>({ state: "loading" });
 
@@ -103,173 +106,168 @@ export default function TimeMigrationReport(): JSX.Element {
         </div>
       )}
 
-      {load.state === "ok" && <ReportBody report={load.report} />}
+      {load.state === "ok" && <ReportBody report={load.report} users={users} />}
     </div>
   );
 }
 
-function ReportBody({ report }: { report: Report }): JSX.Element {
+function ReportBody({ report, users }: { report: Report; users: ReportUser[] }): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const format = useDisplayFormat();
   const profileZone = useSettingsStore((s) => s.display?.timezone) || undefined;
-  const totals = useMemo(() => totalsOf(report.counts), [report.counts]);
+  const totals = useMemo(
+    () =>
+      report.tables.reduce(
+        (acc, row) => ({
+          converted: acc.converted + row.converted,
+          alreadyFilled: acc.alreadyFilled + row.alreadyFilled,
+          open: acc.open + row.open,
+        }),
+        { converted: 0, alreadyFilled: 0, open: 0 }
+      ),
+    [report.tables]
+  );
+  const { backfill } = report;
 
-  if (report.status === "not_run") {
-    return <p>{t("admin:timeModel.report.status.not_run")}</p>;
-  }
-  if (report.status === "running") {
-    return <p>{t("admin:timeModel.report.status.running")}</p>;
-  }
+  // Before a run there is nothing to count, and during one the numbers are a
+  // moving target — either way a sentence, not a table of zeros.
+  if (backfill.state === "pending") return <p>{t("admin:timeModel.report.status.pending")}</p>;
+  if (backfill.state === "running") return <p>{t("admin:timeModel.report.status.running")}</p>;
 
   return (
     <div className="flex flex-col gap-5">
-      {report.status === "failed" ? (
+      {backfill.state === "failed" ? (
         <p role="alert" style={{ color: "var(--ts-bad)", fontWeight: 600 }}>
-          {t("admin:timeModel.report.status.failed")}
+          {t("admin:timeModel.report.status.failed", {
+            error: backfill.lastError
+              ? backfillErrorLabel(t, backfill.lastError)
+              : t("admin:timeModel.report.status.noErrorCode"),
+          })}
         </p>
       ) : (
         <p>
-          {t("admin:timeModel.report.status.done", {
-            when: report.ranAt ? format.dateTime(report.ranAt, { timeZone: profileZone }) : "—",
+          {t("admin:timeModel.report.status.completed", {
+            when: backfill.completedAt
+              ? format.dateTime(backfill.completedAt, { timeZone: profileZone })
+              : "—",
+            tzdata: backfill.tzdata ?? "—",
           })}
         </p>
       )}
 
       <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-        {OUTCOMES.map((outcome) => (
-          <StatTile
-            key={outcome}
-            value={totals[outcome]}
-            label={t(`admin:timeModel.report.outcomes.${outcome}`)}
-          />
-        ))}
+        <StatTile value={totals.converted} label={t("admin:timeModel.report.outcomes.converted")} />
+        <StatTile
+          value={totals.alreadyFilled}
+          label={t("admin:timeModel.report.outcomes.alreadyFilled")}
+        />
+        <StatTile value={totals.open} label={t("admin:timeModel.report.outcomes.open")} />
       </div>
 
       {/* The statement the owner signs off on, in words rather than numbers. */}
       <ul className="t-caption flex list-disc flex-col gap-1 pl-5">
         <li>{t("admin:timeModel.report.statement.converted", { count: totals.converted })}</li>
-        <li>{t("admin:timeModel.report.statement.kept", { count: totals.kept })}</li>
-        <li>{t("admin:timeModel.report.statement.unresolved", { count: totals.unresolved })}</li>
+        <li>
+          {t("admin:timeModel.report.statement.alreadyFilled", { count: totals.alreadyFilled })}
+        </li>
+        <li>{t("admin:timeModel.report.statement.open", { count: totals.open })}</li>
+        <li>
+          {t("admin:timeModel.report.statement.flags", {
+            open: report.flags.open,
+            resolved: report.flags.resolved,
+            dismissed: report.flags.dismissed,
+          })}
+        </li>
         <li>{t("admin:timeModel.report.statement.legacyUntouched")}</li>
+        {report.unchanged.length > 0 && (
+          <li>
+            {t("admin:timeModel.report.unchanged.title")}{" "}
+            {report.unchanged.map((u) => unchangedLabel(t, u.domain, u.why)).join(" · ")}
+          </li>
+        )}
       </ul>
 
-      {report.counts.length > 0 && <CountTable counts={report.counts} />}
+      <TimeMigrationTables tables={report.tables} />
 
-      <UnresolvedList rows={report.unresolved} total={report.unresolvedTotal} />
+      <OpenRows rows={report.openRows} truncated={report.openRowsTruncated} users={users} />
     </div>
   );
 }
 
-function CountTable({ counts }: { counts: TimeMigrationCount[] }): JSX.Element {
-  const { t } = useTranslation(["admin"]);
-  return (
-    <div className="overflow-x-auto">
-      <table className="w-full text-sm">
-        <caption className="t-label-mono mb-2 text-left">
-          {t("admin:timeModel.report.table.caption")}
-        </caption>
-        <thead>
-          <tr style={{ color: "var(--ts-muted)" }}>
-            <th className="py-1 pr-3 text-left">{t("admin:timeModel.report.table.table")}</th>
-            <th className="py-1 pr-3 text-left">{t("admin:timeModel.report.table.rule")}</th>
-            <th className="py-1 pr-3 text-left">{t("admin:timeModel.report.table.reason")}</th>
-            <th className="py-1 pr-3 text-left">{t("admin:timeModel.report.table.outcome")}</th>
-            <th className="py-1 text-right">{t("admin:timeModel.report.table.count")}</th>
-          </tr>
-        </thead>
-        <tbody>
-          {counts.map((c) => (
-            <tr
-              key={`${c.table}|${c.rule}|${c.reason ?? ""}|${c.outcome}`}
-              style={{ borderTop: "1px solid var(--ts-border)" }}
-            >
-              <td className="py-1 pr-3">{tableLabel(t, c.table)}</td>
-              <td className="py-1 pr-3">{ruleLabel(t, c.rule)}</td>
-              <td className="py-1 pr-3">{c.reason ? reasonLabel(t, c.reason) : "—"}</td>
-              <td className="py-1 pr-3">{t(`admin:timeModel.report.outcomes.${c.outcome}`)}</td>
-              <td className="py-1 text-right" style={{ fontFamily: "var(--ts-font-mono)" }}>
-                {c.count}
-              </td>
-            </tr>
-          ))}
-        </tbody>
-      </table>
-    </div>
-  );
-}
-
-function UnresolvedList({
+function OpenRows({
   rows,
-  total,
+  truncated,
+  users,
 }: {
-  rows: TimeMigrationUnresolvedRow[];
-  total: number;
+  rows: TimeMigrationOpenRow[];
+  truncated: boolean;
+  users: ReportUser[];
 }): JSX.Element | null {
   const { t } = useTranslation(["admin"]);
   const viewerId = useAuthStore((s) => s.user?.id);
-  if (total === 0) return null;
+  if (rows.length === 0) return null;
 
   return (
     <section className="flex flex-col gap-2">
-      <h4 className="t-label-mono">{t("admin:timeModel.report.unresolved.title", { total })}</h4>
+      <h4 className="t-label-mono">
+        {t("admin:timeModel.report.openRows.title", { count: rows.length })}
+      </h4>
       <ul className="flex flex-col">
         {rows.map((row) => (
           <li
-            key={`${row.table}|${row.entityId}|${row.field}`}
+            key={`${row.table}|${row.rowId}|${row.column}`}
             className="flex flex-wrap items-baseline gap-x-3 gap-y-1 py-2"
             style={{ borderTop: "1px solid var(--ts-border)" }}
           >
-            <span style={{ fontWeight: 600 }}>
-              {row.label || t("admin:timeModel.report.unresolved.unnamed")}
-            </span>
+            <span style={{ fontWeight: 600 }}>{tableLabel(t, row.table)}</span>
             <span className="t-caption">
-              {tableLabel(t, row.table)} · {fieldLabel(t, row.field)} · {reasonLabel(t, row.reason)}
+              {columnLabel(t, row.column)} ·{" "}
+              {row.reason ? reasonLabel(t, row.reason) : t("admin:timeModel.report.noReason")}
             </span>
+            {row.legacyValue && (
+              <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
+                {row.legacyValue}
+              </span>
+            )}
             <span className="ml-auto text-sm">
-              <FixLink row={row} viewerId={viewerId} />
+              <Owner userId={row.userId} viewerId={viewerId} users={users} />
             </span>
           </li>
         ))}
       </ul>
-      {total > rows.length && (
-        <p className="t-caption">
-          {t("admin:timeModel.report.unresolved.more", { shown: rows.length, total })}
-        </p>
-      )}
+      {truncated && <p className="t-caption">{t("admin:timeModel.report.openRows.truncated")}</p>}
     </section>
   );
 }
 
 /**
- * Where the row gets fixed. The admin can open the editor for their own rows
- * only; another user's row is fixed by that user, from their inbox, and the
- * line says whose inbox. A row with no editor to reach says that too.
+ * Who answers the row. The admin's own rows link to their inbox, where the
+ * question carries the editor; another account's row is that user's to
+ * answer, and the line says whose.
  */
-function FixLink({
-  row,
+function Owner({
+  userId,
   viewerId,
+  users,
 }: {
-  row: TimeMigrationUnresolvedRow;
+  userId: string | null;
   viewerId: string | undefined;
+  users: ReportUser[];
 }): JSX.Element {
   const { t } = useTranslation(["admin"]);
-  if (row.ownerId !== viewerId) {
+  if (userId !== null && userId === viewerId) {
     return (
-      <span className="t-caption">
-        {t("admin:timeModel.report.unresolved.otherInbox", { user: row.ownerUsername })}
-      </span>
+      <Link to={INBOX_PATH} className="underline" style={{ color: "var(--ts-accent)" }}>
+        {t("admin:timeModel.report.openRows.answer")}
+      </Link>
     );
   }
-  const path =
-    row.flagKind && isTimeFlagEntityType(row.table)
-      ? timeValueEditorPath(row.table, row.entityId, row.parentId, row.flagKind)
-      : null;
-  if (!path) {
-    return <span className="t-caption">{t("admin:timeModel.report.unresolved.noEditor")}</span>;
-  }
+  const username = users.find((u) => u.id === userId)?.username;
   return (
-    <Link to={path} className="underline" style={{ color: "var(--ts-accent)" }}>
-      {t("admin:timeModel.report.unresolved.fix")}
-    </Link>
+    <span className="t-caption">
+      {username
+        ? t("admin:timeModel.report.openRows.otherInbox", { user: username })
+        : t("admin:timeModel.report.openRows.unknownOwner")}
+    </span>
   );
 }

@@ -3,15 +3,12 @@ import type { JSX } from "react";
 
 import { useConfirmDialog } from "../../../hooks/useConfirmDialog";
 import { useTranslation } from "../../../hooks/useTranslation";
-import { JobLostError, jobErrorCode } from "../../../lib/api/jobs";
+import { JobLostError, jobErrorCode, type JobView } from "../../../lib/api/jobs";
 import { logger } from "../../../lib/logger";
 import { timeMigrationApi } from "../../../lib/api/timeMigration";
-import type {
-  ZoneReResolveApplyResult,
-  ZoneReResolveDryRun,
-} from "../../../types/timeMigrationDraft";
+import type { ReResolveApply, ReResolveDryRun } from "../../../types/timeMigration";
 import Button from "../../ui/Button";
-import { fieldLabel, formatOffsetDelta, tableLabel, timeModelErrorCopy } from "./timeModelCopy";
+import { columnLabel, formatOffsetDelta, tableLabel, timeModelErrorCopy } from "./timeModelCopy";
 
 /**
  * Re-running the zone resolver over stored values (ADR 0002, D2).
@@ -20,27 +17,24 @@ import { fieldLabel, formatOffsetDelta, tableLabel, timeModelErrorCopy } from ".
  * does not move history. This is the deliberate way to move it: a dry run
  * lists every row whose zone the resolver would now answer differently and by
  * how much its local clock would shift; "Anwenden" sends that dry run's id and
- * nothing else, so what is written is exactly what the admin read. The apply
- * runs as a job — it can outlast any request — and the screen follows it to
- * its real outcome.
+ * nothing else, so what is written is exactly what the admin read. Both steps
+ * run as server jobs and the screen follows each to its real outcome.
  *
- * Refusals the server can give (the dry run expired, or the data moved under
- * it) drop the dry run on screen: its id is spent, and a second click on the
- * same button would only be refused again.
+ * A dry run the server no longer knows, and an apply whose outcome was lost,
+ * drop the dry run on screen: its id is spent, and a second click on the same
+ * button would only be refused — or apply twice.
  */
 
-const SPENT_DRY_RUN_CODES = ["DRY_RUN_NOT_FOUND", "DRY_RUN_EXPIRED", "DRY_RUN_STALE"];
+const SPENT_DRY_RUN_CODES = ["DRY_RUN_NOT_FOUND"];
+
+type Progress = { done: number; total: number } | null;
 
 type Phase =
   | { name: "idle" }
-  | { name: "dryRunning" }
-  | { name: "reviewed"; dryRun: ZoneReResolveDryRun }
-  | {
-      name: "applying";
-      dryRun: ZoneReResolveDryRun;
-      progress: { done: number; total: number } | null;
-    }
-  | { name: "applied"; result: ZoneReResolveApplyResult };
+  | { name: "dryRunning"; progress: Progress }
+  | { name: "reviewed"; dryRun: ReResolveDryRun }
+  | { name: "applying"; dryRun: ReResolveDryRun; progress: Progress }
+  | { name: "applied"; result: ReResolveApply };
 
 const PANEL = {
   background: "var(--ts-surface)",
@@ -48,41 +42,47 @@ const PANEL = {
   borderRadius: "var(--ts-radius-card)",
 } as const;
 
+const progressOf = (job: JobView<unknown>): Progress => job.progress ?? null;
+
 export default function ZoneReResolve(): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const { confirm, confirmDialog } = useConfirmDialog();
   const [phase, setPhase] = useState<Phase>({ name: "idle" });
-  const [error, setError] = useState<string | null>(null);
+  // Kept as the error; the sentence is chosen at render time.
+  const [error, setError] = useState<{ err: unknown; fallback: string } | null>(null);
 
   const runDryRun = async (): Promise<void> => {
     setError(null);
-    setPhase({ name: "dryRunning" });
+    setPhase({ name: "dryRunning", progress: null });
     try {
-      setPhase({ name: "reviewed", dryRun: await timeMigrationApi.dryRunReResolve() });
+      const dryRun = await timeMigrationApi.dryRunReResolve((job) =>
+        setPhase({ name: "dryRunning", progress: progressOf(job) })
+      );
+      setPhase({ name: "reviewed", dryRun });
     } catch (err: unknown) {
       logger.error({ err }, "ZoneReResolve: dry run failed");
-      setError(timeModelErrorCopy(err, t, "admin:timeModel.reResolve.errors.dryRunFailed"));
+      setError({ err, fallback: "admin:timeModel.reResolve.errors.dryRunFailed" });
       setPhase({ name: "idle" });
     }
   };
 
-  const apply = async (dryRun: ZoneReResolveDryRun): Promise<void> => {
+  const apply = async (dryRun: ReResolveDryRun, changes: number): Promise<void> => {
     const ok = await confirm({
       title: t("admin:timeModel.reResolve.confirm.title"),
-      message: t("admin:timeModel.reResolve.confirm.message", { count: dryRun.changesTotal }),
+      message: t("admin:timeModel.reResolve.confirm.message", { count: changes }),
       confirmText: t("admin:timeModel.reResolve.apply"),
     });
     if (!ok) return;
     setError(null);
     setPhase({ name: "applying", dryRun, progress: null });
     try {
-      const result = await timeMigrationApi.applyReResolve(dryRun.dryRunId, (job) => {
-        if (job.progress) setPhase({ name: "applying", dryRun, progress: job.progress });
-      });
+      const result = await timeMigrationApi.applyReResolve(dryRun.dryRunId, (job) =>
+        setPhase({ name: "applying", dryRun, progress: progressOf(job) })
+      );
       setPhase({ name: "applied", result });
     } catch (err: unknown) {
       logger.error({ err }, "ZoneReResolve: apply failed");
-      setError(timeModelErrorCopy(err, t, "admin:timeModel.reResolve.errors.applyFailed"));
+      setError({ err, fallback: "admin:timeModel.reResolve.errors.applyFailed" });
       // A lost job may have written everything: re-applying the same id is
       // not the way to find out, a fresh dry run is.
       const code = jobErrorCode(err);
@@ -112,20 +112,18 @@ export default function ZoneReResolve(): JSX.Element {
 
       {error && (
         <p role="alert" style={{ color: "var(--ts-bad)", fontWeight: 600 }}>
-          {error}
+          {timeModelErrorCopy(error.err, t, error.fallback)}
         </p>
       )}
 
-      {phase.name === "dryRunning" && (
-        <p className="t-caption">{t("admin:timeModel.reResolve.dryRunningHint")}</p>
-      )}
+      {phase.name === "dryRunning" && <ProgressLine progress={phase.progress} />}
 
       {(phase.name === "reviewed" || phase.name === "applying") && (
         <DryRunResult
           dryRun={phase.dryRun}
           applying={phase.name === "applying"}
           progress={phase.name === "applying" ? phase.progress : null}
-          onApply={() => void apply(phase.dryRun)}
+          onApply={(changes) => void apply(phase.dryRun, changes)}
         />
       )}
 
@@ -133,12 +131,23 @@ export default function ZoneReResolve(): JSX.Element {
         <p role="status">
           {t("admin:timeModel.reResolve.applied", {
             applied: phase.result.applied,
-            skipped: phase.result.skipped,
+            skipped: phase.result.skippedChanged,
           })}
         </p>
       )}
       {confirmDialog}
     </div>
+  );
+}
+
+function ProgressLine({ progress }: { progress: Progress }): JSX.Element {
+  const { t } = useTranslation(["admin"]);
+  return (
+    <span className="t-caption" role="status">
+      {progress
+        ? t("admin:timeModel.reResolve.progress", { done: progress.done, total: progress.total })
+        : t("admin:timeModel.reResolve.progressUnknown")}
+    </span>
   );
 }
 
@@ -148,28 +157,33 @@ function DryRunResult({
   progress,
   onApply,
 }: {
-  dryRun: ZoneReResolveDryRun;
+  dryRun: ReResolveDryRun;
   applying: boolean;
-  progress: { done: number; total: number } | null;
-  onApply: () => void;
+  progress: Progress;
+  onApply: (changes: number) => void;
 }): JSX.Element {
   const { t } = useTranslation(["admin"]);
+  const sum = (key: "checked" | "changes" | "unresolvable"): number =>
+    dryRun.tables.reduce((acc, row) => acc + row[key], 0);
+  const changes = sum("changes");
+  const unresolvable = sum("unresolvable");
 
   return (
     <div className="flex flex-col gap-3">
       <p>
         {t("admin:timeModel.reResolve.summary", {
-          scanned: dryRun.scanned,
-          changes: dryRun.changesTotal,
+          checked: sum("checked"),
+          changes,
+          tzdata: dryRun.tzdata ?? "—",
         })}
       </p>
-      {dryRun.unresolvable > 0 && (
+      {unresolvable > 0 && (
         <p className="t-caption">
-          {t("admin:timeModel.reResolve.unresolvable", { count: dryRun.unresolvable })}
+          {t("admin:timeModel.reResolve.unresolvable", { count: unresolvable })}
         </p>
       )}
 
-      {dryRun.changesTotal === 0 ? (
+      {changes === 0 ? (
         <p>{t("admin:timeModel.reResolve.noChanges")}</p>
       ) : (
         <>
@@ -190,50 +204,46 @@ function DryRunResult({
               <tbody>
                 {dryRun.changes.map((c) => (
                   <tr
-                    key={`${c.table}|${c.entityId}|${c.field}`}
+                    key={`${c.table}|${c.rowId}|${c.column}`}
                     style={{ borderTop: "1px solid var(--ts-border)" }}
                   >
                     <td className="py-1 pr-3">
-                      <div>{c.label || t("admin:timeModel.report.unresolved.unnamed")}</div>
-                      <div className="t-caption">
-                        {tableLabel(t, c.table)} · {fieldLabel(t, c.field)}
+                      <div>
+                        {tableLabel(t, c.table)} · {columnLabel(t, c.column)}
+                      </div>
+                      <div className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
+                        {c.rowId}
                       </div>
                     </td>
                     <td className="py-1 pr-3" style={{ fontFamily: "var(--ts-font-mono)" }}>
-                      {c.fromZone}
+                      {c.storedZone}
                     </td>
                     <td className="py-1 pr-3" style={{ fontFamily: "var(--ts-font-mono)" }}>
-                      {c.toZone}
+                      {c.resolvedZone}
                     </td>
                     <td className="py-1 text-right" style={{ fontFamily: "var(--ts-font-mono)" }}>
-                      {formatOffsetDelta(c.offsetDeltaMinutes)}
+                      {formatOffsetDelta(c.offsetDeltaMinutes, t)}
                     </td>
                   </tr>
                 ))}
               </tbody>
             </table>
           </div>
-          {dryRun.changesTotal > dryRun.changes.length && (
+          {dryRun.changesTruncated && (
             <p className="t-caption">
-              {t("admin:timeModel.reResolve.more", {
+              {t("admin:timeModel.reResolve.truncated", {
                 shown: dryRun.changes.length,
-                total: dryRun.changesTotal,
+                total: changes,
               })}
             </p>
           )}
           <div className="flex flex-wrap items-center gap-3">
-            <Button variant="primary" onClick={onApply} disabled={applying}>
+            <Button variant="primary" onClick={() => onApply(changes)} disabled={applying}>
               {applying
                 ? t("admin:timeModel.reResolve.applying")
                 : t("admin:timeModel.reResolve.apply")}
             </Button>
-            {applying && (
-              <span className="t-caption" role="status">
-                {progress
-                  ? t("admin:timeModel.reResolve.progress", progress)
-                  : t("admin:timeModel.reResolve.progressUnknown")}
-              </span>
-            )}
+            {applying && <ProgressLine progress={progress} />}
           </div>
         </>
       )}

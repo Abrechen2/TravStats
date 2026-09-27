@@ -97,7 +97,8 @@
     "deleteConfirmMessageNoStays": "“{{name}}” will be permanently deleted.",
     "backToLogbook": "Logbook · Stays",
     "location": "Location",
-    "nights": "Nights"
+    "nights": "Nights",
+    "stayNotFound": "This stay no longer exists at this lodging."
   },
   "field": {
     "name": "Name",

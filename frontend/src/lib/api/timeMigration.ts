@@ -1,24 +1,30 @@
 import { z } from "zod";
 
-import { API_TIMEOUTS } from "../../config/constants";
-import type {
-  TimeMigrationReport,
-  ZoneReResolveApplyResult,
-  ZoneReResolveDryRun,
-} from "../../types/timeMigrationDraft";
+import {
+  TIME_FLAG_KINDS,
+  TIME_MIGRATION_REASONS,
+  TIME_MIGRATION_TABLES,
+  type ReResolveApply,
+  type ReResolveDryRun,
+  type TimeMigrationReport,
+} from "../../types/timeMigration";
 import { api } from "./client";
 import { type JobView, waitForJob } from "./jobs";
 
 /**
- * The admin half of the time-model migration (ADR 0002, plan Phase 3b):
- * the migration report, and the zone re-resolution (D2) as a dry run the
- * admin reads before anything is written.
+ * The admin half of the time-model migration (ADR 0002, plan Phase 3b): the
+ * migration report, and the zone re-resolution (D2) — a dry run the admin
+ * reads, then an apply that names that dry run. Both run as jobs on the
+ * server; the client follows each to its outcome instead of giving up first.
  *
  * Every answer is parsed, not cast. A table of zeros is the known way this
  * kind of screen lies ("Nullen über Fehlermeldung"): a server that renamed a
- * field would otherwise render as "0 converted, 0 unresolved" — a clean bill
- * of health for a run nobody can see. A shape this build does not know throws
+ * field would otherwise render as "0 converted, 0 open" — a clean bill of
+ * health for a run nobody can see. A shape this build does not know throws
  * `TimeMigrationContractError`, and the screen says the answer was unreadable.
+ *
+ * The schemas mirror `backend/src/schemas/timeMigration.ts`; the admin router
+ * answers bare (ADR 0001).
  */
 
 /** The answer arrived but is not the shape this build reads. */
@@ -29,122 +35,146 @@ export class TimeMigrationContractError extends Error {
   }
 }
 
-const countSchema = z.object({
-  table: z.string().min(1),
-  rule: z.string().min(1),
-  reason: z.string().min(1).nullable(),
-  outcome: z.enum(["converted", "kept", "unresolved"]),
-  count: z.number().int().nonnegative(),
-});
-
-const unresolvedRowSchema = z.object({
-  table: z.string().min(1),
-  entityId: z.string().min(1),
-  parentId: z.string().min(1).nullable(),
-  field: z.string().min(1),
-  reason: z.string().min(1),
-  flagId: z.string().min(1).nullable(),
-  flagKind: z.enum(["time_zone_unresolved", "time_precision_unknown"]).nullable(),
-  label: z.string().nullable(),
-  ownerId: z.string().min(1),
-  ownerUsername: z.string(),
-});
+const count = z.number().int().nonnegative();
+const table = z.enum(TIME_MIGRATION_TABLES);
+const reason = z.enum(TIME_MIGRATION_REASONS);
+const reResolveTable = z.enum([
+  "flights",
+  "rail_journeys",
+  "place_visits",
+  "cruise_stops",
+  "cruises",
+  "trip_stops",
+  "lodging_stays",
+]);
 
 const reportSchema = z.object({
-  status: z.enum(["not_run", "running", "done", "failed"]),
-  ranAt: z.string().nullable(),
-  counts: z.array(countSchema),
-  unresolved: z.array(unresolvedRowSchema),
-  unresolvedTotal: z.number().int().nonnegative(),
-});
-
-const changeSchema = z.object({
-  table: z.string().min(1),
-  entityId: z.string().min(1),
-  parentId: z.string().min(1).nullable(),
-  field: z.string().min(1),
-  label: z.string().nullable(),
-  fromZone: z.string().min(1),
-  toZone: z.string().min(1),
-  at: z.string().min(1),
-  offsetDeltaMinutes: z.number().int(),
+  backfill: z.object({
+    state: z.enum(["pending", "running", "completed", "failed"]),
+    completedAt: z.string().nullable(),
+    lastError: z.string().nullable(),
+    tzdata: z.string().nullable(),
+  }),
+  tables: z.array(
+    z.object({
+      table,
+      converted: count,
+      open: count,
+      alreadyFilled: count,
+      rules: z.array(z.object({ rule: z.string(), status: z.enum(["open", "resolved"]), count })),
+      reasons: z.array(z.object({ reason, count })),
+    })
+  ),
+  unchanged: z.array(
+    z.object({
+      domain: z.enum(["tours", "track_windows", "loyalty", "country_days", "photos"]),
+      why: z.enum(["already_dates", "already_instants", "no_time_columns", "utc_by_decision"]),
+    })
+  ),
+  flags: z.object({
+    open: count,
+    resolved: count,
+    dismissed: count,
+    byKind: z.array(z.object({ kind: z.enum(TIME_FLAG_KINDS), open: count })),
+  }),
+  openRows: z.array(
+    z.object({
+      table,
+      rowId: z.string(),
+      userId: z.string().nullable(),
+      column: z.string(),
+      rule: z.string(),
+      reason: reason.nullable(),
+      legacyValue: z.string().nullable(),
+      newValue: z.string().nullable(),
+      zone: z.string().nullable(),
+    })
+  ),
+  openRowsTruncated: z.boolean(),
 });
 
 const dryRunSchema = z.object({
   dryRunId: z.string().min(1),
+  tzdata: z.string().nullable(),
   createdAt: z.string(),
-  expiresAt: z.string().nullable(),
-  scanned: z.number().int().nonnegative(),
-  changes: z.array(changeSchema),
-  changesTotal: z.number().int().nonnegative(),
-  unresolvable: z.number().int().nonnegative(),
+  expiresAt: z.string(),
+  tables: z.array(
+    z.object({ table: reResolveTable, checked: count, changes: count, unresolvable: count })
+  ),
+  changes: z.array(
+    z.object({
+      table: reResolveTable,
+      rowId: z.string(),
+      column: z.string(),
+      storedZone: z.string(),
+      resolvedZone: z.string(),
+      instant: z.string().nullable(),
+      offsetDeltaMinutes: z.number().int().nullable(),
+    })
+  ),
+  changesTruncated: z.boolean(),
 });
 
-const applyStartSchema = z.object({ jobId: z.string().min(1) });
+const applySchema = z.object({ dryRunId: z.string(), applied: count, skippedChanged: count });
 
-const applyResultSchema = z.object({
-  applied: z.number().int().nonnegative(),
-  skipped: z.number().int().nonnegative(),
-});
-
-/**
- * The payload of a response, whichever family its router speaks (ADR 0001).
- * Admin routers answer bare; the job-start routes elsewhere envelope. The
- * backend half of Phase 3b picks the family — the parse after this is what
- * keeps a wrong guess from rendering as data.
- */
-function payloadOf(body: unknown): unknown {
-  if (
-    typeof body === "object" &&
-    body !== null &&
-    "success" in body &&
-    "data" in body &&
-    (body as { success: unknown }).success === true
-  ) {
-    return (body as { data: unknown }).data;
-  }
-  return body;
-}
+const jobStartSchema = z.object({ jobId: z.string().min(1) });
 
 function parse<T>(schema: z.ZodType<T>, body: unknown, what: string): T {
-  const result = schema.safeParse(payloadOf(body));
+  const result = schema.safeParse(body);
   if (!result.success) throw new TimeMigrationContractError(what);
   return result.data;
 }
 
+type OnPoll = (job: JobView<unknown>) => void;
+
+/** Start a job with `POST path`, follow it, and parse what it produced. */
+async function runJob<T>(
+  path: string,
+  body: unknown,
+  params: Record<string, string> | undefined,
+  schema: z.ZodType<T>,
+  what: string,
+  onPoll?: OnPoll
+): Promise<T> {
+  const { data } = await api.post<unknown>(path, body, params ? { params } : undefined);
+  const { jobId } = parse(jobStartSchema, data, what);
+  return parse(schema, await waitForJob<unknown>(jobId, { onPoll }), what);
+}
+
 export const timeMigrationApi = {
-  /** `GET /admin/time-migration/report` — what the backfill converted and left. */
+  /** `GET /admin/time-migration/report` — what the backfill converted and left open. */
   getReport: async (): Promise<TimeMigrationReport> => {
     const { data } = await api.get<unknown>("/admin/time-migration/report");
     return parse(reportSchema, data, "report");
   },
 
   /**
-   * `POST /admin/time-zones/re-resolve?dryRun=true` — the rows whose stored
-   * zone the resolver would now answer differently. Writes nothing.
+   * `POST /admin/time-zones/re-resolve?dryRun=true` → job whose result lists
+   * the rows whose stored zone the resolver would now answer differently.
+   * Writes nothing.
    */
-  dryRunReResolve: async (): Promise<ZoneReResolveDryRun> => {
-    const { data } = await api.post<unknown>("/admin/time-zones/re-resolve", undefined, {
-      params: { dryRun: true },
-      timeout: API_TIMEOUTS.ZONE_RE_RESOLVE_DRY_RUN,
-    });
-    return parse(dryRunSchema, data, "dry run");
-  },
+  dryRunReResolve: (onPoll?: OnPoll): Promise<ReResolveDryRun> =>
+    runJob(
+      "/admin/time-zones/re-resolve",
+      undefined,
+      { dryRun: "true" },
+      dryRunSchema,
+      "dry run",
+      onPoll
+    ),
 
   /**
-   * `POST /admin/time-zones/re-resolve/apply` with the dry run's id, then the
-   * job's outcome. The apply refuses without an id, so what is written is
-   * exactly what the admin read.
+   * `POST /admin/time-zones/re-resolve/apply` `{dryRunId}` → job. The server
+   * applies exactly the changes of that dry run, so what is written is what
+   * the admin read.
    */
-  applyReResolve: async (
-    dryRunId: string,
-    onPoll?: (job: JobView<unknown>) => void
-  ): Promise<ZoneReResolveApplyResult> => {
-    const { data } = await api.post<unknown>("/admin/time-zones/re-resolve/apply", {
-      dryRunId,
-    });
-    const { jobId } = parse(applyStartSchema, data, "apply");
-    const result = await waitForJob<unknown>(jobId, { onPoll });
-    return parse(applyResultSchema, result, "apply result");
-  },
+  applyReResolve: (dryRunId: string, onPoll?: OnPoll): Promise<ReResolveApply> =>
+    runJob(
+      "/admin/time-zones/re-resolve/apply",
+      { dryRunId },
+      undefined,
+      applySchema,
+      "apply",
+      onPoll
+    ),
 };

@@ -43,6 +43,15 @@ vi.mock("../../components/Trips/StopModal", () => ({
   ),
 }));
 
+vi.mock("../../components/Trips/JournalEntryModal", () => ({
+  default: ({ entry }: { entry: { id: string } | null }) => (
+    <div data-testid="journal-editor">{entry?.id ?? "new"}</div>
+  ),
+}));
+vi.mock("../../components/Trips/TripModal", () => ({
+  default: () => <div data-testid="trip-editor" />,
+}));
+
 import TripDetailPage from "../TripDetailPage";
 
 function makeTrip(): Trip {
@@ -85,7 +94,17 @@ function makeTrip(): Trip {
         notes: null,
       },
     ],
-    journalEntries: [],
+    journalEntries: [
+      {
+        id: "j1",
+        tripId: "trip-1",
+        date: "2024-05-13T00:00:00.000Z",
+        title: "Ankunft",
+        body: null,
+        createdAt: "2024-05-13T00:00:00.000Z",
+        updatedAt: "2024-05-13T00:00:00.000Z",
+      },
+    ],
     photos: [],
     lodgingStays: [],
     bookings: [],
@@ -135,5 +154,29 @@ describe("the trip page opens a stop's editor from a link", () => {
       expect(toasts.addToast).toHaveBeenCalledWith("error", "trips:detail.stopNotFound")
     );
     expect(screen.queryByTestId("stop-editor")).not.toBeInTheDocument();
+  });
+});
+
+describe("the trip page opens its own and a journal entry's editor from a link", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("?edit=1 opens the trip editor", async () => {
+    await renderAt("/trips/trip-1?edit=1");
+    expect(await screen.findByTestId("trip-editor")).toBeInTheDocument();
+  });
+
+  it("?editJournal opens exactly that entry's editor", async () => {
+    await renderAt("/trips/trip-1?tab=timeline&editJournal=j1");
+    expect(await screen.findByTestId("journal-editor")).toHaveTextContent("j1");
+  });
+
+  it("says a journal entry is gone instead of opening an empty editor", async () => {
+    await renderAt("/trips/trip-1?tab=timeline&editJournal=gone");
+    await waitFor(() =>
+      expect(toasts.addToast).toHaveBeenCalledWith("error", "trips:detail.journalEntryNotFound")
+    );
+    expect(screen.queryByTestId("journal-editor")).not.toBeInTheDocument();
   });
 });

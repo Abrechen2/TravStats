@@ -22,7 +22,11 @@ vi.mock("../../components/documents/DocumentsSection", () => ({
 vi.mock("../../components/rail/RailRouteMap", () => ({
   RailRouteMap: () => <div data-testid="map-stub" />,
 }));
-vi.mock("../../components/rail/RailFormModal", () => ({ RailFormModal: () => null }));
+vi.mock("../../components/rail/RailFormModal", () => ({
+  RailFormModal: ({ journey }: { journey: { id: string } | null }) => (
+    <div data-testid="rail-editor">{journey?.id ?? "new"}</div>
+  ),
+}));
 vi.mock("../../components/common/TripPhotoWindowStrip", () => ({
   default: ({ entry, id }: { entry: string; id: string }) => (
     <div data-testid="photo-window-stub">{`${entry}:${id}`}</div>
@@ -153,5 +157,31 @@ describe("RailDetailPage", () => {
       </MemoryRouter>
     );
     expect(await screen.findByRole("alert")).toHaveTextContent("rail:detail.loadError");
+  });
+});
+
+describe("RailDetailPage — ?edit=1 from the inbox", () => {
+  beforeEach(() => {
+    getMock.mockReset();
+  });
+
+  // The inbox's link for a journey whose zone or time the time-model
+  // migration left open (ADR 0002, plan Phase 3b; timeFlagLinks.ts).
+  it("opens the journey's own editor once it has loaded", async () => {
+    const journey = detail();
+    getMock.mockResolvedValue(journey);
+    render(
+      <MemoryRouter initialEntries={[`/rail/${journey.id}?edit=1`]}>
+        <Routes>
+          <Route path="/rail/:id" element={<RailDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByTestId("rail-editor")).toHaveTextContent(journey.id);
+  });
+
+  it("opens no editor without the parameter", async () => {
+    await renderPage(detail());
+    expect(screen.queryByTestId("rail-editor")).not.toBeInTheDocument();
   });
 });

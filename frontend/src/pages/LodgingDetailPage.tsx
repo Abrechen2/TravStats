@@ -33,6 +33,7 @@ import {
   singleOriginalCurrencySpend,
 } from "../lib/lodgingFormat";
 import { logger } from "../lib/logger";
+import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
@@ -142,6 +143,14 @@ export default function LodgingDetailPage(): JSX.Element {
       cancelled = true;
     };
   }, [id, reloadKey]);
+
+  // `?editStay=<id>` — the inbox asking for a stay's days or check-in time
+  // (timeFlagLinks.ts).
+  useEditDeepLink(EDIT_PARAM.editStay, lodging !== null, (stayId) => {
+    const stay = lodging?.stays.find((s) => s.id === stayId);
+    if (stay) setEditingStay(stay);
+    else addToast("error", t("lodging:detail.stayNotFound"));
+  });
 
   useEffect(() => {
     let cancelled = false;

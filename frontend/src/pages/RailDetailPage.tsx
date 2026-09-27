@@ -27,6 +27,7 @@ import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { formatAmount } from "../lib/units";
 import { formatStationTime, railDurationMinutes } from "../lib/railTime";
 import { logger } from "../lib/logger";
+import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { useToastStore } from "../store/toastStore";
 import type { RailJourney, RailJourneyDetail } from "../types/rail";
 
@@ -85,6 +86,9 @@ export default function RailDetailPage(): JSX.Element {
       cancelled = true;
     };
   }, [id, reloadKey]);
+
+  // `?edit=1` — the inbox asking for a journey's zone or time (timeFlagLinks.ts).
+  useEditDeepLink(EDIT_PARAM.edit, journey !== null, () => setEditing({ mode: "edit" }));
 
   const handleDelete = async (): Promise<void> => {
     if (!journey) return;

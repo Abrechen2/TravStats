@@ -799,66 +799,55 @@
   "timeModel": {
     "unknownCode": "unknown ({{code}})",
     "tables": {
-      "flight": "Flight",
-      "place_visit": "Place visit",
-      "cruise_stop": "Cruise stop",
-      "trip_stop": "Trip stop",
-      "lodging_stay": "Stay",
-      "cruise": "Cruise",
-      "trip": "Trip",
-      "journal_entry": "Travel journal",
-      "user": "User"
-    },
-    "rules": {
-      "catalogue_zone": "Zone from the catalogue (airport, port, station)",
-      "coordinate_zone": "Zone from the coordinates",
-      "utc_kept": "Already a real instant – kept",
-      "legacy_fake_utc": "Local time stored as UTC – converted",
-      "date_only": "Date only – stored as a day",
-      "place_zone": "Zone of the place",
-      "port_zone": "Zone of the port",
-      "written_via": "Write path recorded",
-      "before_companion": "Written before the Companion app – local time",
-      "sub_minute_instant": "Accurate to the second – a real instant from the app",
-      "http_log": "Write path from the server log",
-      "precision_unknown": "Write path unknown – time of day unknown",
-      "day_midnight": "Midnight UTC – that day",
-      "day_shifted": "Not midnight – day determined",
-      "day_ambiguous": "Not midnight – day ambiguous",
-      "lodging_check_in": "Check-in time in the stay's zone"
+      "flights": "Flights",
+      "rail_journeys": "Rail journeys",
+      "place_visits": "Place visits",
+      "cruise_stops": "Cruise stops",
+      "cruises": "Cruises",
+      "trip_stops": "Trip stops",
+      "trips": "Trips",
+      "trip_journal_entries": "Travel journal",
+      "lodging_stays": "Stays",
+      "users": "Profiles"
     },
     "reasons": {
-      "no_position": "No position (0, 0)",
-      "no_zone": "No time zone could be found",
-      "no_coordinates": "No coordinates",
-      "sea_day": "Sea day – no place",
-      "unresolved_port": "Port not matched",
-      "writer_unknown": "Could not tell who wrote the value",
-      "ambiguous_day": "Day ambiguous",
-      "local_day_differs": "Local day differs from the UTC day"
+      "no_position": "No position (missing or 0, 0)",
+      "zone_unresolved": "No time zone is known at this position",
+      "port_unresolved": "Port not matched",
+      "sea_day_time": "Sea day with a time – at sea there is no time zone",
+      "semantics_unknown": "Unclear whether the time is local or UTC",
+      "local_time_nonexistent": "This time did not exist there (clock change)",
+      "writer_unknown": "Could not tell whether the web or the app wrote the time",
+      "date_only_day_differs": "Date only – the local day differs from the UTC day",
+      "day_anchor_ambiguous": "Not certain which calendar day is meant",
+      "instant_without_zone": "Stored without the station's time zone"
     },
-    "fields": {
+    "columns": {
       "departure": "Departure",
       "arrival": "Arrival",
-      "visitedAt": "Visit time",
-      "arrivalTime": "Arrival",
-      "departureTime": "Departure",
+      "visited_at": "Visit time",
+      "arrival_time": "Arrival",
+      "departure_time": "Departure",
       "date": "Date",
-      "startDate": "Start",
-      "endDate": "End",
-      "checkIn": "Check-in",
-      "checkOut": "Check-out"
+      "day": "Day",
+      "start_date": "Start",
+      "end_date": "End",
+      "check_in": "Check-in",
+      "check_out": "Check-out",
+      "birthdate": "Birthday",
+      "other": "Time value"
+    },
+    "backfillErrors": {
+      "TIMEZONE_LOOKUP_UNAVAILABLE": "the time zone lookup was unavailable",
+      "JOB_FAILED": "the run stopped with an error"
     },
     "errors": {
       "unreadable": "The server answered in a shape this version of the interface cannot read. Nothing is shown rather than numbers that are wrong.",
-      "outcomeUnknown": "The server no longer reports the outcome (probably a restart). Whether it was applied is unknown – a new dry run shows what is still open.",
+      "outcomeUnknown": "The server no longer reports the outcome (probably a restart). Whether anything was written is unknown – a new dry run shows what is still open.",
       "forbidden": "You need admin rights for this.",
       "notAvailable": "This server does not know the time model migration yet.",
-      "DRY_RUN_NOT_FOUND": "The server no longer knows this dry run. Nothing was written – start a new one.",
-      "DRY_RUN_EXPIRED": "The dry run has expired. Nothing was written – start a new one and check the list again.",
-      "DRY_RUN_STALE": "Entries have changed since the dry run. Nothing was written – start a new dry run.",
-      "RE_RESOLVE_RUNNING": "A re-resolution is already running. Wait until it has finished.",
-      "TIME_MIGRATION_RUNNING": "The time model migration is still running. Try again afterwards."
+      "DRY_RUN_NOT_FOUND": "The server no longer knows this dry run (expired or after a restart). Nothing was written – start a new one.",
+      "RE_RESOLVE_RUNNING": "A re-resolution is already running. Wait until it has finished."
     },
     "report": {
       "title": "Time migration – report",
@@ -870,40 +859,62 @@
         "notAVerdict": "That does not mean nothing was migrated – only that the report cannot be fetched right now."
       },
       "status": {
-        "not_run": "The migration has not run on this instance yet. It runs once on the next server start.",
+        "pending": "The migration has not run on this instance yet. It runs once on the next server start.",
         "running": "The migration is running. Reload the report once it has finished.",
-        "failed": "The migration stopped. What was converted until then is listed below; the original values are unchanged.",
-        "done": "The migration ran on {{when}}."
+        "failed": "The migration stopped: {{error}}. What was converted until then is listed below; the original values are unchanged.",
+        "noErrorCode": "no reason given",
+        "completed": "The migration ran on {{when}} (time zone data {{tzdata}})."
       },
       "outcomes": {
         "converted": "Converted",
-        "kept": "Kept",
-        "unresolved": "Not migrated"
+        "alreadyFilled": "Already in the new format",
+        "open": "Open"
       },
       "statement": {
-        "converted_one": "{{count}} value was converted and written to the new columns.",
-        "converted_other": "{{count}} values were converted and written to the new columns.",
-        "kept_one": "{{count}} value was already stored correctly; only its time zone and precision were added.",
-        "kept_other": "{{count}} values were already stored correctly; only their time zone and precision were added.",
-        "unresolved_one": "{{count}} value was not migrated – nothing was guessed. It is a question in its owner's inbox.",
-        "unresolved_other": "{{count}} values were not migrated – nothing was guessed. Each is a question in its owner's inbox.",
+        "converted_one": "{{count}} entry was converted; the new values are in columns of their own.",
+        "converted_other": "{{count}} entries were converted; the new values are in columns of their own.",
+        "alreadyFilled_one": "{{count}} entry already had the new values (newly created or from the demo) and was left unchanged.",
+        "alreadyFilled_other": "{{count}} entries already had the new values (newly created or from the demo) and were left unchanged.",
+        "open_one": "{{count}} entry was not fully migrated – nothing was guessed. Every open value is a question in its owner's inbox.",
+        "open_other": "{{count}} entries were not fully migrated – nothing was guessed. Every open value is a question in its owner's inbox.",
+        "flags": "Questions in the inbox: {{open}} open · {{resolved}} reported corrected · {{dismissed}} confirmed as correct",
         "legacyUntouched": "The original columns were not changed. Every conversion is logged and can be undone."
       },
-      "table": {
-        "caption": "By table and rule",
-        "table": "Table",
-        "rule": "Rule",
-        "reason": "Reason",
-        "outcome": "Outcome",
-        "count": "Count"
+      "unchanged": {
+        "title": "Deliberately left alone:",
+        "item": "{{domain}} ({{why}})",
+        "domains": {
+          "tours": "Tours",
+          "track_windows": "Track time windows",
+          "loyalty": "Loyalty programmes",
+          "country_days": "Country days",
+          "photos": "Photos"
+        },
+        "why": {
+          "already_dates": "already plain days",
+          "already_instants": "already real instants",
+          "no_time_columns": "no time values",
+          "utc_by_decision": "UTC days by decision"
+        }
       },
-      "unresolved": {
-        "title": "Not migrated ({{total}})",
-        "unnamed": "Unnamed entry",
-        "fix": "Fill in",
+      "tables": {
+        "caption": "By table",
+        "table": "Table",
+        "reasonsCaption": "Open by reason",
+        "rulesCaption": "Rules in detail"
+      },
+      "ruleStatus": {
+        "open": "open",
+        "resolved": "converted"
+      },
+      "noReason": "no reason",
+      "openRows": {
+        "title_one": "{{count}} open value",
+        "title_other": "{{count}} open values",
+        "answer": "Answer in the inbox",
         "otherInbox": "in {{user}}'s inbox",
-        "noEditor": "not editable here",
-        "more": "{{shown}} of {{total}} shown."
+        "unknownOwner": "account not identifiable",
+        "truncated": "Not every open value is listed – the numbers above count them all."
       }
     },
     "reResolve": {
@@ -911,10 +922,11 @@
       "description": "Every time carries the zone it was stored with. If a place was corrected or a country changed its time zone, a dry run shows which entries would get a different zone and how far their local time would shift. Nothing is written until you apply.",
       "dryRun": "Start dry run",
       "dryRunning": "Dry run running …",
-      "dryRunningHint": "With many entries this can take a minute or two.",
-      "summary": "Checked: {{scanned}} · Zone would change: {{changes}}",
-      "unresolvable_one": "{{count}} entry cannot be resolved to any zone – it stays as stored.",
-      "unresolvable_other": "{{count}} entries cannot be resolved to any zone – they stay as stored.",
+      "progress": "{{done}} of {{total}} checked",
+      "progressUnknown": "Running – with many entries this can take a minute or two.",
+      "summary": "Checked: {{checked}} · Zone would change: {{changes}} · Time zone data {{tzdata}}",
+      "unresolvable_one": "{{count}} entry cannot be resolved to a zone now – it stays as stored.",
+      "unresolvable_other": "{{count}} entries cannot be resolved to a zone now – they stay as stored.",
       "noChanges": "No time zone would change. There is nothing to apply.",
       "table": {
         "entry": "Entry",
@@ -922,15 +934,14 @@
         "to": "New",
         "delta": "Local time"
       },
-      "more": "{{shown}} of {{total}} changes shown. All {{total}} are applied.",
+      "truncated": "{{shown}} of {{total}} changes shown. All {{total}} are applied.",
+      "noInstant": "no time of day",
       "apply": "Apply",
       "applying": "Applying …",
-      "progress": "{{done}} of {{total}} entries",
-      "progressUnknown": "Running …",
       "confirm": {
         "title": "Re-resolve time zones?",
-        "message_one": "{{count}} entry gets the new zone from the dry run. Its local time shifts by the difference shown.",
-        "message_other": "{{count}} entries get the new zone from the dry run. Their local time shifts by the difference shown."
+        "message_one": "{{count}} entry gets the new zone from the dry run. Its local time shifts by the difference shown; the stored instant stays.",
+        "message_other": "{{count}} entries get the new zone from the dry run. Their local time shifts by the difference shown; the stored instants stay."
       },
       "applied": "Applied: {{applied}} · Skipped because changed since the dry run: {{skipped}}",
       "errors": {

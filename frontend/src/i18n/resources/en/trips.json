@@ -193,7 +193,8 @@
       "atSea": "Day at sea",
       "openJournal": "Open in full"
     },
-    "stopNotFound": "This stop no longer exists on this trip."
+    "stopNotFound": "This stop no longer exists on this trip.",
+    "journalEntryNotFound": "This journal entry no longer exists on this trip."
   },
   "journalModal": {
     "createTitle": "Journal Entry",

@@ -12,12 +12,16 @@ import { useSearchParams } from "react-router-dom";
  * the parameter, so a reload or a Back does not open it a second time.
  */
 export const EDIT_PARAM = {
-  /** Flight, cruise, place: open the record's own editor. */
+  /** Flight, rail journey, cruise, trip, place: open the record's own editor. */
   edit: "edit",
   /** Trip: open the editor of the stop with this id. */
   editStop: "editStop",
   /** Place: open the editor of the visit with this id. */
   editVisit: "editVisit",
+  /** Trip: open the editor of the journal entry with this id. */
+  editJournal: "editJournal",
+  /** Lodging: open the editor of the stay with this id. */
+  editStay: "editStay",
 } as const;
 
 export type EditParam = (typeof EDIT_PARAM)[keyof typeof EDIT_PARAM];

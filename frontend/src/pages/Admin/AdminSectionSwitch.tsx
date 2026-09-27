@@ -290,7 +290,7 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
       );
 
     case "timeModel":
-      return <TimeModelSection />;
+      return <TimeModelSection users={props.users} />;
 
     case "smtp":
       return (

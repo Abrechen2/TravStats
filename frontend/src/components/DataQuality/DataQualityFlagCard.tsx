@@ -6,7 +6,7 @@ import type { DataQualityFlag } from "../../types/dataQuality";
 
 import FlagContradiction from "./FlagContradiction";
 import { flaggedRecordPath } from "./flagLinks";
-import { isTimeFlagEntityType, timeValueEditorPath } from "./timeFlagLinks";
+import { isTimeFlagEntityType, isTimeFlagKind, timeFlagEditorPath } from "./timeFlagLinks";
 
 /**
  * One open question about one record.
@@ -53,21 +53,8 @@ import { isTimeFlagEntityType, timeValueEditorPath } from "./timeFlagLinks";
  */
 function subjectPathOf(flag: DataQualityFlag): string | null {
   if (flag.entityType === "country") return null;
-  if (isTimeFlagEntityType(flag.entityType)) {
-    const kind =
-      flag.kind === "time_precision_unknown" ? "time_precision_unknown" : "time_zone_unresolved";
-    const parentId =
-      flag.kind === "time_zone_unresolved" || flag.kind === "time_precision_unknown"
-        ? flag.details.parentId
-        : null;
-    return timeValueEditorPath(flag.entityType, flag.entityId, parentId, kind);
-  }
+  if (isTimeFlagEntityType(flag.entityType)) return timeFlagEditorPath(flag);
   return flaggedRecordPath({ entityType: flag.entityType, entityId: flag.entityId, label: "" });
-}
-
-/** A time flag asks for a missing value; there are no two sides to weigh. */
-function isTimeFlag(flag: DataQualityFlag): boolean {
-  return flag.kind === "time_zone_unresolved" || flag.kind === "time_precision_unknown";
 }
 
 /**
@@ -155,7 +142,7 @@ export default function DataQualityFlagCard({
       <FlagContradiction flag={flag} />
 
       <p className="text-xs mt-3" style={{ color: "var(--text-muted)" }}>
-        {isTimeFlag(flag)
+        {isTimeFlagKind(flag.kind)
           ? t("dataQuality:flag.timeUnchanged")
           : t("dataQuality:flag.neitherIsCorrect")}
       </p>

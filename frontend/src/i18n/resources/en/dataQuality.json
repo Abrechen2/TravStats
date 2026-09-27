@@ -191,7 +191,13 @@
       "flight": "Flight",
       "cruise_stop": "Cruise stop",
       "trip_stop": "Trip stop",
-      "place_visit": "Place visit"
+      "place_visit": "Place visit",
+      "rail_journey": "Rail journey",
+      "cruise": "Cruise",
+      "trip": "Trip",
+      "trip_journal_entry": "Journal entry",
+      "lodging_stay": "Stay",
+      "profile": "Profile"
     },
     "status": {
       "open": "Open",
@@ -245,6 +251,10 @@
     "time_precision_unknown": {
       "title": "Time of day unknown",
       "question": "The date is kept, but it could not be established at what time of day this was. If you know it, enter it."
+    },
+    "time_day_ambiguous": {
+      "title": "Day uncertain",
+      "question": "It is not certain which calendar day is meant. The stored day was kept – check it and correct it if needed."
     }
   },
   "passwordResets": {
@@ -266,21 +276,21 @@
   "time": {
     "field": "Value",
     "reason": "Reason",
-    "day": "Date",
+    "stored": "Stored (without time zone)",
+    "kept": "Kept",
     "noEditor": "The entry this could be edited through can no longer be found.",
     "action": {
-      "time_zone_unresolved": {
-        "flight": "Edit flight",
-        "cruise_stop": "Edit cruise",
-        "trip_stop": "Edit stop",
-        "place_visit": "Edit place"
-      },
-      "time_precision_unknown": {
-        "flight": "Edit flight",
-        "cruise_stop": "Edit cruise",
-        "trip_stop": "Edit stop",
-        "place_visit": "Edit visit"
-      }
+      "flight": "Edit flight",
+      "rail_journey": "Edit rail journey",
+      "place_visit": "Edit visit",
+      "place_visit_zone": "Edit place",
+      "cruise": "Edit cruise",
+      "cruise_stop": "Edit cruise",
+      "trip": "Edit trip",
+      "trip_stop": "Edit stop",
+      "trip_journal_entry": "Edit entry",
+      "lodging_stay": "Edit stay",
+      "profile": "Edit profile"
     }
   }
 }

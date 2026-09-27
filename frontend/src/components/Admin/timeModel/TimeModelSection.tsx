@@ -1,6 +1,6 @@
 import type { JSX } from "react";
 
-import TimeMigrationReport from "./TimeMigrationReport";
+import TimeMigrationReport, { type ReportUser } from "./TimeMigrationReport";
 import ZoneReResolve from "./ZoneReResolve";
 
 /**
@@ -8,10 +8,10 @@ import ZoneReResolve from "./ZoneReResolve";
  * owner signs off before a promotion) and the deliberate way to move a frozen
  * zone later (ADR 0002, D2). Instance-wide, like every admin section.
  */
-export default function TimeModelSection(): JSX.Element {
+export default function TimeModelSection({ users }: { users: ReportUser[] }): JSX.Element {
   return (
     <div className="flex flex-col gap-6">
-      <TimeMigrationReport />
+      <TimeMigrationReport users={users} />
       <ZoneReResolve />
     </div>
   );

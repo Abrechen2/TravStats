@@ -202,15 +202,12 @@ export default function FlagContradiction({ flag }: { flag: DataQualityFlag }): 
     );
   }
 
-  if (flag.kind === "time_zone_unresolved" || flag.kind === "time_precision_unknown") {
-    return (
-      <TimeValueFlag
-        kind={flag.kind}
-        entityType={flag.entityType}
-        entityId={flag.entityId}
-        details={flag.details}
-      />
-    );
+  if (
+    flag.kind === "time_zone_unresolved" ||
+    flag.kind === "time_precision_unknown" ||
+    flag.kind === "time_day_ambiguous"
+  ) {
+    return <TimeValueFlag flag={flag} />;
   }
 
   // A `kind` this build has no rendering for — a server running a check newer
