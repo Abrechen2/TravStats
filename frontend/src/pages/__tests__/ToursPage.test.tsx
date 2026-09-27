@@ -197,3 +197,29 @@ describe("the tours page", () => {
     expect(screen.getByText("Süd-Norwegen")).toBeInTheDocument();
   });
 });
+
+// A name of only spaces used to leave the save button greyed out with no word
+// of why. The form now says what is missing at the field and sends nothing.
+describe("the tours page — a tour needs a name", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+  });
+
+  it("names the missing field instead of saving a blank tour", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([]);
+    renderPage();
+    await waitFor(() => expect(tourIndexApi.list).toHaveBeenCalled());
+
+    fireEvent.click(screen.getByText("trips:tours.newTour"));
+    const input = screen.getByLabelText("trips:tours.namePlaceholder");
+    fireEvent.change(input, { target: { value: "   " } });
+    fireEvent.click(screen.getByText("trips:tours.save"));
+
+    expect(screen.getByRole("alert")).toHaveTextContent("trips:tours.nameRequired");
+    expect(input).toHaveAttribute("aria-invalid", "true");
+    expect(toursApi.createStandalone).not.toHaveBeenCalled();
+
+    fireEvent.change(input, { target: { value: "Besseggen" } });
+    expect(screen.queryByRole("alert")).not.toBeInTheDocument();
+  });
+});
