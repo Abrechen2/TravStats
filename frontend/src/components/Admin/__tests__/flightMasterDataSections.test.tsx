@@ -18,6 +18,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
       const raw = resolve(adminDe, namespaced);
       return typeof raw === "string" ? raw : key;
     },
+    i18n: { language: "de" },
   }),
 }));
 
@@ -126,6 +127,10 @@ describe("flight master-data sections", () => {
     );
     expect(await within(section).findByText("Uetersen")).toBeInTheDocument();
     expect(within(section).getByText("Benutzerdefiniert")).toBeInTheDocument();
+    // The server sends the ISO code ("DE"); the admin list must name the
+    // country, not print the code raw (silent-fix sweep 2026-09-27).
+    expect(within(section).getByText("(Deutschland)")).toBeInTheDocument();
+    expect(within(section).queryByText("(DE)")).not.toBeInTheDocument();
     await waitFor(() => expect(airportSearch).toHaveBeenCalledWith("ue"));
 
     // Create: name + coordinates are enough (codeless private airfield).

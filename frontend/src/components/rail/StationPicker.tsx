@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { railApi } from "../../lib/api/rail";
 import { logger } from "../../lib/logger";
 import type { RailStationHit } from "../../types/rail";
+import { countryName } from "../../shared/geo/countryCode";
 import { EMPTY_STATION, RailStationField, type RailStationDraft } from "./RailStationField";
 import { isPlausibleStation } from "./railImportModel";
 import { StationShortCode } from "./StationShortCode";
@@ -62,7 +63,7 @@ export function StationPicker({
   inputClassName,
   printedName,
 }: Props): JSX.Element {
-  const { t } = useTranslation(["rail"]);
+  const { t, i18n } = useTranslation(["rail"]);
   // A station already chosen through the geocoder opens in that mode, so an
   // edit shows what was picked instead of an empty search.
   const [mode, setMode] = useState<"catalogue" | "geocoder">(
@@ -204,7 +205,9 @@ export function StationPicker({
                   <StationShortCode code={hit.shortCode} />
                 </span>
                 <span className="t-caption">
-                  {[hit.country, hit.uic].filter(Boolean).join(" · ")}
+                  {[countryName(hit.country, i18n.language) || hit.country, hit.uic]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </span>
               </button>
             </li>
