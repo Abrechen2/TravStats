@@ -50,7 +50,10 @@ describe("RoadtripStatsSection — year against compare year", () => {
     );
     const strip = await screen.findByRole("region", { name: "stats:yearFilter.scopeLabel" });
     // 2 roadtrips, 1 500 km, 3 countries in 2025.
-    expect(strip.textContent).toContain("1,500");
+    // A distance with its unit on both sides — "Strecke 2.620" read as a bare
+    // number (acceptance run, 2026-09-26).
+    expect(strip.textContent).toContain("1,500 km");
+    expect(strip.textContent).toContain("800 km (2024)");
     expect(strip.textContent).toMatch(/roadtrips:stats\.count\s*2/);
   });
 
