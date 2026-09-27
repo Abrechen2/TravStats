@@ -13,7 +13,8 @@
     "training": "Training Config",
     "logging": "Logging",
     "backups": "Instanz-Backups",
-    "smtp": "E-Mail / SMTP"
+    "smtp": "E-Mail / SMTP",
+    "timeModel": "Zeitmodell"
   },
   "tabs2": {
     "general": "Allgemein",
@@ -794,5 +795,148 @@
     "removeFailed": "Entfernen fehlgeschlagen.",
     "replacesShipped": "Deine Bilder ersetzen die mitgelieferten vollständig. Lösche alle, um wieder zu den mitgelieferten zurückzukehren.",
     "hint": "Am besten wirken dunkle Hochformat-Fotos mit ruhiger linker Hälfte — dort steht der Text. Auf hellen Fotos wird die Schrift schwer lesbar."
+  },
+  "timeModel": {
+    "unknownCode": "unbekannt ({{code}})",
+    "tables": {
+      "flight": "Flug",
+      "place_visit": "Ortsbesuch",
+      "cruise_stop": "Kreuzfahrt-Halt",
+      "trip_stop": "Reise-Halt",
+      "lodging_stay": "Aufenthalt",
+      "cruise": "Kreuzfahrt",
+      "trip": "Reise",
+      "journal_entry": "Reisetagebuch",
+      "user": "Benutzer"
+    },
+    "rules": {
+      "catalogue_zone": "Zone aus dem Katalog (Flughafen, Hafen, Bahnhof)",
+      "coordinate_zone": "Zone aus den Koordinaten",
+      "utc_kept": "Schon ein echter Zeitpunkt – übernommen",
+      "legacy_fake_utc": "Ortszeit, die als UTC gespeichert war – umgerechnet",
+      "date_only": "Nur ein Datum – als Tag gespeichert",
+      "place_zone": "Zone des Ortes",
+      "port_zone": "Zone des Hafens",
+      "written_via": "Schreibweg ist vermerkt",
+      "before_companion": "Vor der Companion-App geschrieben – Ortszeit",
+      "sub_minute_instant": "Sekundengenau – echter Zeitpunkt aus der App",
+      "http_log": "Schreibweg aus dem Server-Log",
+      "precision_unknown": "Schreibweg unbekannt – Uhrzeit unbekannt",
+      "day_midnight": "Mitternacht UTC – dieser Tag",
+      "day_shifted": "Nicht Mitternacht – Tag eindeutig bestimmt",
+      "day_ambiguous": "Nicht Mitternacht – Tag nicht eindeutig",
+      "lodging_check_in": "Check-in-Zeit in der Zone der Unterkunft"
+    },
+    "reasons": {
+      "no_position": "Keine Position (0, 0)",
+      "no_zone": "Keine Zeitzone auffindbar",
+      "no_coordinates": "Keine Koordinaten",
+      "sea_day": "Seetag – kein Ort",
+      "unresolved_port": "Hafen nicht zugeordnet",
+      "writer_unknown": "Nicht feststellbar, wer den Wert geschrieben hat",
+      "ambiguous_day": "Tag nicht eindeutig",
+      "local_day_differs": "Ortstag weicht vom UTC-Tag ab"
+    },
+    "fields": {
+      "departure": "Abflug",
+      "arrival": "Ankunft",
+      "visitedAt": "Besuchszeit",
+      "arrivalTime": "Ankunft",
+      "departureTime": "Abfahrt",
+      "date": "Datum",
+      "startDate": "Beginn",
+      "endDate": "Ende",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out"
+    },
+    "errors": {
+      "unreadable": "Die Antwort des Servers hat eine Form, die diese Version der Oberfläche nicht lesen kann. Angezeigt wird deshalb nichts – statt Zahlen, die nicht stimmen.",
+      "outcomeUnknown": "Der Server meldet das Ergebnis nicht mehr (vermutlich ein Neustart). Ob angewendet wurde, ist unbekannt – ein neuer Probelauf zeigt, was noch offen ist.",
+      "forbidden": "Dafür brauchst du Admin-Rechte.",
+      "notAvailable": "Dieser Server kennt die Umstellung auf das neue Zeitmodell noch nicht.",
+      "DRY_RUN_NOT_FOUND": "Diesen Probelauf kennt der Server nicht mehr. Es wurde nichts geschrieben – starte einen neuen.",
+      "DRY_RUN_EXPIRED": "Der Probelauf ist abgelaufen. Es wurde nichts geschrieben – starte einen neuen und prüfe die Liste erneut.",
+      "DRY_RUN_STALE": "Seit dem Probelauf haben sich Einträge geändert. Es wurde nichts geschrieben – starte einen neuen Probelauf.",
+      "RE_RESOLVE_RUNNING": "Es läuft bereits eine Neuzuordnung. Warte, bis sie fertig ist.",
+      "TIME_MIGRATION_RUNNING": "Die Umstellung auf das neue Zeitmodell läuft noch. Versuche es danach erneut."
+    },
+    "report": {
+      "title": "Zeitumstellung – Bericht",
+      "description": "Was die Umstellung auf das neue Zeitmodell auf dieser Instanz umgerechnet hat – und was nicht.",
+      "reload": "Neu laden",
+      "loading": "Bericht wird geladen …",
+      "errors": {
+        "loadFailed": "Der Bericht konnte nicht geladen werden.",
+        "notAVerdict": "Das heißt nicht, dass nichts umgestellt wurde – nur, dass der Bericht gerade nicht abrufbar ist."
+      },
+      "status": {
+        "not_run": "Die Umstellung ist auf dieser Instanz noch nicht gelaufen. Sie startet einmal beim nächsten Serverstart.",
+        "running": "Die Umstellung läuft gerade. Lade den Bericht neu, wenn sie fertig ist.",
+        "failed": "Die Umstellung ist abgebrochen. Was bis dahin umgerechnet wurde, steht unten; die ursprünglichen Werte sind unverändert.",
+        "done": "Die Umstellung lief am {{when}}."
+      },
+      "outcomes": {
+        "converted": "Umgerechnet",
+        "kept": "Übernommen",
+        "unresolved": "Nicht umgestellt"
+      },
+      "statement": {
+        "converted_one": "{{count}} Wert wurde umgerechnet und in die neuen Spalten geschrieben.",
+        "converted_other": "{{count}} Werte wurden umgerechnet und in die neuen Spalten geschrieben.",
+        "kept_one": "{{count}} Wert war schon richtig gespeichert; ergänzt wurden nur Zeitzone und Genauigkeit.",
+        "kept_other": "{{count}} Werte waren schon richtig gespeichert; ergänzt wurden nur Zeitzone und Genauigkeit.",
+        "unresolved_one": "{{count}} Wert wurde nicht umgestellt – nichts wurde geraten. Er steht als Frage im Posteingang seines Besitzers.",
+        "unresolved_other": "{{count}} Werte wurden nicht umgestellt – nichts wurde geraten. Jeder steht als Frage im Posteingang seines Besitzers.",
+        "legacyUntouched": "Die ursprünglichen Spalten wurden nicht verändert. Jede Umrechnung ist protokolliert und lässt sich zurücknehmen."
+      },
+      "table": {
+        "caption": "Nach Tabelle und Regel",
+        "table": "Tabelle",
+        "rule": "Regel",
+        "reason": "Grund",
+        "outcome": "Ergebnis",
+        "count": "Anzahl"
+      },
+      "unresolved": {
+        "title": "Nicht umgestellt ({{total}})",
+        "unnamed": "Eintrag ohne Namen",
+        "fix": "Ergänzen",
+        "otherInbox": "im Posteingang von {{user}}",
+        "noEditor": "hier nicht bearbeitbar",
+        "more": "{{shown}} von {{total}} angezeigt."
+      }
+    },
+    "reResolve": {
+      "title": "Zeitzonen neu zuordnen",
+      "description": "Jede Zeit trägt die Zone, mit der sie gespeichert wurde. Wurde ein Ort korrigiert oder hat ein Land seine Zeitzone geändert, zeigt ein Probelauf, welche Einträge eine andere Zone bekämen und um wie viel sich ihre Ortszeit verschiebt. Geschrieben wird erst, wenn du anwendest.",
+      "dryRun": "Probelauf starten",
+      "dryRunning": "Probelauf läuft …",
+      "dryRunningHint": "Bei vielen Einträgen kann das ein bis zwei Minuten dauern.",
+      "summary": "Geprüft: {{scanned}} · Zone würde sich ändern: {{changes}}",
+      "unresolvable_one": "{{count}} Eintrag lässt sich keiner Zone zuordnen – er bleibt, wie er gespeichert ist.",
+      "unresolvable_other": "{{count}} Einträge lassen sich keiner Zone zuordnen – sie bleiben, wie sie gespeichert sind.",
+      "noChanges": "Keine Zeitzone würde sich ändern. Es gibt nichts anzuwenden.",
+      "table": {
+        "entry": "Eintrag",
+        "from": "Bisher",
+        "to": "Neu",
+        "delta": "Ortszeit"
+      },
+      "more": "{{shown}} von {{total}} Änderungen angezeigt. Angewendet werden alle {{total}}.",
+      "apply": "Anwenden",
+      "applying": "Wird angewendet …",
+      "progress": "{{done}} von {{total}} Einträgen",
+      "progressUnknown": "Läuft …",
+      "confirm": {
+        "title": "Zeitzonen neu zuordnen?",
+        "message_one": "{{count}} Eintrag bekommt die neue Zone aus dem Probelauf. Seine Ortszeit verschiebt sich um die gezeigte Differenz.",
+        "message_other": "{{count}} Einträge bekommen die neue Zone aus dem Probelauf. Ihre Ortszeit verschiebt sich um die gezeigte Differenz."
+      },
+      "applied": "Angewendet: {{applied}} · Übersprungen, weil seit dem Probelauf geändert: {{skipped}}",
+      "errors": {
+        "dryRunFailed": "Der Probelauf ist fehlgeschlagen. Es wurde nichts geändert.",
+        "applyFailed": "Die Neuzuordnung ist fehlgeschlagen. Ein neuer Probelauf zeigt, was noch offen ist."
+      }
+    }
   }
 }

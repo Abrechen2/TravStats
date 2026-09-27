@@ -23,6 +23,7 @@ const SECTION_ICON: Record<string, IconName> = {
   parsers: "sparkles",
   logging: "list",
   backups: "database",
+  timeModel: "clock",
   smtp: "mail",
   shipsMasterData: "ship",
   portsMasterData: "anchor",

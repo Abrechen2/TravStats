@@ -26,6 +26,14 @@ export const API_TIMEOUTS = {
   OPEN_DATA_WEATHER: 20000,
   /** Server: Overpass up to 25 s (nearby) or 20 s plus the OSM API (enrich). */
   OPEN_DATA_OVERPASS: 45000,
+  /**
+   * The admin zone re-resolution dry run (ADR 0002 D2) re-runs the zone
+   * resolver over every stored place-bound time value and answers in one
+   * request. The server's own bound belongs to the backend half of Phase 3b;
+   * two minutes covers a large instance, where the default ten seconds would
+   * report a failure for a scan still running.
+   */
+  ZONE_RE_RESOLVE_DRY_RUN: 120000,
 } as const;
 
 // ========== CRUISE SEA-ROUTE GEOMETRY ==========

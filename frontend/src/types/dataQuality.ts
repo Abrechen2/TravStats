@@ -12,15 +12,22 @@
  * borrowing it here would answer a question the user is being asked.
  */
 
-/** What a flag is about. `country` is not a row — the ISO code is the subject. */
-export type DataQualityEntityType = "lodging" | "place" | "country";
+/**
+ * What a flag is about. `country` is not a row — the ISO code is the subject.
+ * The last four arrived with the time-model migration (ADR 0002, plan Phase
+ * 3b): a time value the migration could not convert is flagged on its row.
+ */
+export type DataQualityEntityType =
+  "lodging" | "place" | "country" | "flight" | "cruise_stop" | "trip_stop" | "place_visit";
 
 /** Which check fired. */
 export type DataQualityFlagKind =
   | "address_country_mismatch"
   | "undated_country_evidence"
   | "stay_dates_reversed"
-  | "coordinates_outside_country";
+  | "coordinates_outside_country"
+  | "time_zone_unresolved"
+  | "time_precision_unknown";
 
 /**
  * `resolved` and `dismissed` are NOT two spellings of "done" — the UI must keep
@@ -54,7 +61,20 @@ export interface FlaggedRecord {
  * to print. Reading `label` off a subject therefore always yields display text,
  * and a country has no `label` to read by mistake.
  */
-export type DataQualityFlagSubject = FlaggedRecord | { entityType: "country"; countryCode: string };
+export type DataQualityFlagSubject =
+  FlaggedRecord | TimeValueRecord | { entityType: "country"; countryCode: string };
+
+/**
+ * The row a time flag is about. Kept apart from `FlaggedRecord` because it is
+ * reached differently: a stop or a visit is edited through its parent record,
+ * whose id travels in the flag's `details.parentId` — see `timeFlagLinks.ts`.
+ */
+export interface TimeValueRecord {
+  entityType: "flight" | "cruise_stop" | "trip_stop" | "place_visit";
+  entityId: string;
+  /** What to call it on screen. The user's own text, never a code. */
+  label: string;
+}
 
 /** What the geocoder said against what the address says. */
 export interface AddressCountryMismatchDetails {
@@ -91,12 +111,35 @@ export interface CoordinatesOutsideCountryDetails {
   lon: number;
 }
 
+/**
+ * A time value the migration left as it was (ADR 0002, plan Phase 3b).
+ *
+ * Shared by both time kinds: `time_zone_unresolved` (no zone could be found,
+ * so nothing was converted) and `time_precision_unknown` (the day is kept,
+ * the time of day is not known). Not a disagreement between two values — a
+ * gap only the user can fill, which is why the card sends them to the editor.
+ *
+ * PROVISIONAL: shaped from the plan while the backend half was being built;
+ * the backend's `schemas/dataQualityFlag.ts` is the contract once it lands.
+ */
+export interface TimeValueFlagDetails {
+  /** Which value on the row (`departure`, `visitedAt`, …). */
+  field: string;
+  /** Why the migration stopped (`no_zone`, `writer_unknown`, …). */
+  reason: string;
+  /** The record the row is edited through — cruise, trip or place. */
+  parentId: string | null;
+  /** The calendar day that was kept, `YYYY-MM-DD`; null if none is known. */
+  localDay: string | null;
+}
+
 /** Every detail shape, as a union. Only useful where `kind` is already known. */
 export type DataQualityFlagDetails =
   | AddressCountryMismatchDetails
   | UndatedCountryEvidenceDetails
   | StayDatesReversedDetails
-  | CoordinatesOutsideCountryDetails;
+  | CoordinatesOutsideCountryDetails
+  | TimeValueFlagDetails;
 
 /**
  * Everything a flag carries that does not depend on its `kind`.
@@ -148,6 +191,10 @@ export type DataQualityFlag =
   | (DataQualityFlagBase & {
       kind: "coordinates_outside_country";
       details: CoordinatesOutsideCountryDetails;
+    })
+  | (DataQualityFlagBase & {
+      kind: "time_zone_unresolved" | "time_precision_unknown";
+      details: TimeValueFlagDetails;
     });
 
 /** What `POST /data-quality-flags/run` answers. */

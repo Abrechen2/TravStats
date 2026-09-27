@@ -187,7 +187,11 @@
     "entityType": {
       "lodging": "Unterkunft",
       "place": "Ort",
-      "country": "Land"
+      "country": "Land",
+      "flight": "Flug",
+      "cruise_stop": "Kreuzfahrt-Halt",
+      "trip_stop": "Reise-Halt",
+      "place_visit": "Ortsbesuch"
     },
     "status": {
       "open": "Offen",
@@ -203,7 +207,8 @@
         "label": "Das stimmt so",
         "hint": "Am Eintrag ist nichts zu ändern. Diese Frage wird nie wieder gestellt."
       }
-    }
+    },
+    "timeUnchanged": "Am Eintrag wurde nichts geändert. Die Zeit steht, wie sie gespeichert war, bis du sie ergänzt."
   },
   "kinds": {
     "address_country_mismatch": {
@@ -232,6 +237,14 @@
       "question": "Die gespeicherten Koordinaten liegen in einem anderen Land als dem, das am Eintrag steht. Was stimmt – der Punkt oder das Land?",
       "stored": "Gespeichertes Land",
       "fromCoordinates": "Land laut Koordinaten"
+    },
+    "time_zone_unresolved": {
+      "title": "Zeitzone unbekannt",
+      "question": "Für diese Zeit ließ sich keine Zeitzone finden, deshalb wurde sie bei der Umstellung nicht umgerechnet. Wo war das? Ergänze den Ort – dann stimmt auch die Uhrzeit."
+    },
+    "time_precision_unknown": {
+      "title": "Uhrzeit unbekannt",
+      "question": "Das Datum ist erhalten, aber es ließ sich nicht feststellen, zu welcher Uhrzeit das war. Wenn du sie weißt, trag sie ein."
     }
   },
   "passwordResets": {
@@ -249,5 +262,25 @@
     "uploaded": "Hochgeladen am",
     "deletesOn": "Wird gelöscht am",
     "open": "Öffnen"
+  },
+  "time": {
+    "field": "Angabe",
+    "reason": "Grund",
+    "day": "Datum",
+    "noEditor": "Der Eintrag, über den sich das bearbeiten ließe, ist nicht mehr auffindbar.",
+    "action": {
+      "time_zone_unresolved": {
+        "flight": "Flug bearbeiten",
+        "cruise_stop": "Kreuzfahrt bearbeiten",
+        "trip_stop": "Halt bearbeiten",
+        "place_visit": "Ort bearbeiten"
+      },
+      "time_precision_unknown": {
+        "flight": "Flug bearbeiten",
+        "cruise_stop": "Kreuzfahrt bearbeiten",
+        "trip_stop": "Halt bearbeiten",
+        "place_visit": "Besuch bearbeiten"
+      }
+    }
   }
 }

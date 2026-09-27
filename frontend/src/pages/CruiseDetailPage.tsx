@@ -31,6 +31,7 @@ import DocumentsSection from "../components/documents/DocumentsSection";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
+import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import CruiseTracksPanel from "../components/Cruise/CruiseTracksPanel";
 import { useBetaFeatures } from "../hooks/useBetaFeatures";
@@ -117,6 +118,10 @@ export default function CruiseDetailPage(): JSX.Element {
       cancelled = true;
     };
   }, [id, reloadKey]);
+
+  // `?edit=1` — the inbox sending the user to a stop whose port or time the
+  // time-model migration could not resolve; the stops live in this editor.
+  useEditDeepLink(EDIT_PARAM.edit, cruise !== null, () => setEditing(true));
 
   if (loading) {
     return (

@@ -6,6 +6,7 @@ export type ActiveSection =
   | "parsers"
   | "logging"
   | "backups"
+  | "timeModel"
   | "externalServices"
   | "smtp"
   | "shipsMasterData"
@@ -35,6 +36,7 @@ export const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
   externalServices: "general",
   logging: "general",
   backups: "general",
+  timeModel: "general",
   smtp: "general",
   parsers: "general",
   shipsMasterData: "cruise",
@@ -60,6 +62,7 @@ export const TAB_FOR_SECTION: Record<ActiveSection, TabId> = {
 export const LAZY_ADMIN_SECTIONS: ReadonlySet<ActiveSection> = new Set([
   "instance",
   "backups",
+  "timeModel",
   "smtp",
   "externalServices",
   "logging",

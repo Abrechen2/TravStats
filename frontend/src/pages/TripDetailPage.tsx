@@ -4,6 +4,7 @@ import { tripsApi } from "../lib/api";
 import { formatDateInTimezone } from "../lib/dateUtils";
 import { formatDate } from "../lib/displayFormat";
 import { logger } from "../lib/logger";
+import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { sumByCurrency } from "../lib/bookingCost";
 import { formatAmount, formatCurrency } from "../lib/units";
 import { assessStayPlausibility } from "../shared/stayPlausibility";
@@ -374,6 +375,12 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
   const [editingJournal, setEditingJournal] = useState<TripJournalEntry | null>(null);
   const [viewingJournal, setViewingJournal] = useState<TripJournalEntry | null>(null);
   const [editingStop, setEditingStop] = useState<TripStop | null>(null);
+  // `?editStop=<id>` — the inbox asking for a stop's zone or time (timeFlagLinks.ts).
+  useEditDeepLink(EDIT_PARAM.editStop, true, (stopId) => {
+    const stop = trip.stops?.find((s) => s.id === stopId);
+    if (stop) setEditingStop(stop);
+    else addToast("error", t("trips:detail.stopNotFound"));
+  });
   // Only a fallback: a flight whose airport record lacks an IANA zone.
   const userTz = useSettingsStore((s) => s.display?.timezone) || "UTC";
 

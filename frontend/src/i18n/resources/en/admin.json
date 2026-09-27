@@ -13,7 +13,8 @@
     "training": "Training Config",
     "logging": "Logging",
     "backups": "Instance backups",
-    "smtp": "Email / SMTP"
+    "smtp": "Email / SMTP",
+    "timeModel": "Time model"
   },
   "tabs2": {
     "general": "General",
@@ -794,5 +795,148 @@
     "removeFailed": "Could not remove the image.",
     "replacesShipped": "Your images replace the shipped ones entirely. Remove them all to go back to the shipped set.",
     "hint": "Dark portrait photographs with a quiet left half work best — that is where the text sits. On bright ones the text becomes hard to read."
+  },
+  "timeModel": {
+    "unknownCode": "unknown ({{code}})",
+    "tables": {
+      "flight": "Flight",
+      "place_visit": "Place visit",
+      "cruise_stop": "Cruise stop",
+      "trip_stop": "Trip stop",
+      "lodging_stay": "Stay",
+      "cruise": "Cruise",
+      "trip": "Trip",
+      "journal_entry": "Travel journal",
+      "user": "User"
+    },
+    "rules": {
+      "catalogue_zone": "Zone from the catalogue (airport, port, station)",
+      "coordinate_zone": "Zone from the coordinates",
+      "utc_kept": "Already a real instant – kept",
+      "legacy_fake_utc": "Local time stored as UTC – converted",
+      "date_only": "Date only – stored as a day",
+      "place_zone": "Zone of the place",
+      "port_zone": "Zone of the port",
+      "written_via": "Write path recorded",
+      "before_companion": "Written before the Companion app – local time",
+      "sub_minute_instant": "Accurate to the second – a real instant from the app",
+      "http_log": "Write path from the server log",
+      "precision_unknown": "Write path unknown – time of day unknown",
+      "day_midnight": "Midnight UTC – that day",
+      "day_shifted": "Not midnight – day determined",
+      "day_ambiguous": "Not midnight – day ambiguous",
+      "lodging_check_in": "Check-in time in the stay's zone"
+    },
+    "reasons": {
+      "no_position": "No position (0, 0)",
+      "no_zone": "No time zone could be found",
+      "no_coordinates": "No coordinates",
+      "sea_day": "Sea day – no place",
+      "unresolved_port": "Port not matched",
+      "writer_unknown": "Could not tell who wrote the value",
+      "ambiguous_day": "Day ambiguous",
+      "local_day_differs": "Local day differs from the UTC day"
+    },
+    "fields": {
+      "departure": "Departure",
+      "arrival": "Arrival",
+      "visitedAt": "Visit time",
+      "arrivalTime": "Arrival",
+      "departureTime": "Departure",
+      "date": "Date",
+      "startDate": "Start",
+      "endDate": "End",
+      "checkIn": "Check-in",
+      "checkOut": "Check-out"
+    },
+    "errors": {
+      "unreadable": "The server answered in a shape this version of the interface cannot read. Nothing is shown rather than numbers that are wrong.",
+      "outcomeUnknown": "The server no longer reports the outcome (probably a restart). Whether it was applied is unknown – a new dry run shows what is still open.",
+      "forbidden": "You need admin rights for this.",
+      "notAvailable": "This server does not know the time model migration yet.",
+      "DRY_RUN_NOT_FOUND": "The server no longer knows this dry run. Nothing was written – start a new one.",
+      "DRY_RUN_EXPIRED": "The dry run has expired. Nothing was written – start a new one and check the list again.",
+      "DRY_RUN_STALE": "Entries have changed since the dry run. Nothing was written – start a new dry run.",
+      "RE_RESOLVE_RUNNING": "A re-resolution is already running. Wait until it has finished.",
+      "TIME_MIGRATION_RUNNING": "The time model migration is still running. Try again afterwards."
+    },
+    "report": {
+      "title": "Time migration – report",
+      "description": "What the migration to the new time model converted on this instance – and what it did not.",
+      "reload": "Reload",
+      "loading": "Loading report …",
+      "errors": {
+        "loadFailed": "The report could not be loaded.",
+        "notAVerdict": "That does not mean nothing was migrated – only that the report cannot be fetched right now."
+      },
+      "status": {
+        "not_run": "The migration has not run on this instance yet. It runs once on the next server start.",
+        "running": "The migration is running. Reload the report once it has finished.",
+        "failed": "The migration stopped. What was converted until then is listed below; the original values are unchanged.",
+        "done": "The migration ran on {{when}}."
+      },
+      "outcomes": {
+        "converted": "Converted",
+        "kept": "Kept",
+        "unresolved": "Not migrated"
+      },
+      "statement": {
+        "converted_one": "{{count}} value was converted and written to the new columns.",
+        "converted_other": "{{count}} values were converted and written to the new columns.",
+        "kept_one": "{{count}} value was already stored correctly; only its time zone and precision were added.",
+        "kept_other": "{{count}} values were already stored correctly; only their time zone and precision were added.",
+        "unresolved_one": "{{count}} value was not migrated – nothing was guessed. It is a question in its owner's inbox.",
+        "unresolved_other": "{{count}} values were not migrated – nothing was guessed. Each is a question in its owner's inbox.",
+        "legacyUntouched": "The original columns were not changed. Every conversion is logged and can be undone."
+      },
+      "table": {
+        "caption": "By table and rule",
+        "table": "Table",
+        "rule": "Rule",
+        "reason": "Reason",
+        "outcome": "Outcome",
+        "count": "Count"
+      },
+      "unresolved": {
+        "title": "Not migrated ({{total}})",
+        "unnamed": "Unnamed entry",
+        "fix": "Fill in",
+        "otherInbox": "in {{user}}'s inbox",
+        "noEditor": "not editable here",
+        "more": "{{shown}} of {{total}} shown."
+      }
+    },
+    "reResolve": {
+      "title": "Re-resolve time zones",
+      "description": "Every time carries the zone it was stored with. If a place was corrected or a country changed its time zone, a dry run shows which entries would get a different zone and how far their local time would shift. Nothing is written until you apply.",
+      "dryRun": "Start dry run",
+      "dryRunning": "Dry run running …",
+      "dryRunningHint": "With many entries this can take a minute or two.",
+      "summary": "Checked: {{scanned}} · Zone would change: {{changes}}",
+      "unresolvable_one": "{{count}} entry cannot be resolved to any zone – it stays as stored.",
+      "unresolvable_other": "{{count}} entries cannot be resolved to any zone – they stay as stored.",
+      "noChanges": "No time zone would change. There is nothing to apply.",
+      "table": {
+        "entry": "Entry",
+        "from": "Before",
+        "to": "New",
+        "delta": "Local time"
+      },
+      "more": "{{shown}} of {{total}} changes shown. All {{total}} are applied.",
+      "apply": "Apply",
+      "applying": "Applying …",
+      "progress": "{{done}} of {{total}} entries",
+      "progressUnknown": "Running …",
+      "confirm": {
+        "title": "Re-resolve time zones?",
+        "message_one": "{{count}} entry gets the new zone from the dry run. Its local time shifts by the difference shown.",
+        "message_other": "{{count}} entries get the new zone from the dry run. Their local time shifts by the difference shown."
+      },
+      "applied": "Applied: {{applied}} · Skipped because changed since the dry run: {{skipped}}",
+      "errors": {
+        "dryRunFailed": "The dry run failed. Nothing was changed.",
+        "applyFailed": "The re-resolution failed. A new dry run shows what is still open."
+      }
+    }
   }
 }
