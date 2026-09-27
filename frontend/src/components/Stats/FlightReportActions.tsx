@@ -30,7 +30,7 @@ export default function FlightReportActions({
     <div
       role="group"
       aria-label={t("stats:reportActions.label")}
-      className="mb-4 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:justify-end"
+      className="mb-4 grid grid-cols-1 gap-3 sm:flex sm:flex-wrap sm:items-center sm:justify-end"
     >
       <Button variant="primary" onClick={onGenerateCertificate} icon={<span aria-hidden>✈</span>}>
         {t("stats:certificate.generate")}

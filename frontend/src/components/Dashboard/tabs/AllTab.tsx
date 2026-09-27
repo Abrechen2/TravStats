@@ -70,6 +70,7 @@ import { initialLegendOpen, isPhoneViewport } from "./legendInitialState";
 import { SidebarToggle } from "../SidebarToggle";
 import { Icon } from "../../ui/Icon";
 import { useDomainColors } from "../../../hooks/useDomainColors";
+import DomainFilterChips from "../DomainFilterChips";
 
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
@@ -748,6 +749,7 @@ export function AllTab(): JSX.Element {
         />
         {activityToggle}
         {legendTable}
+        <DomainFilterChips />
         {journeySelector}
         {activityPanel}
         {editModal}
@@ -777,6 +779,7 @@ export function AllTab(): JSX.Element {
       />
       {activityToggle}
       {legendTable}
+      <DomainFilterChips />
       {tourStatusOverlay}
       {activityPanel}
       {editModal}
