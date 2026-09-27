@@ -15,6 +15,13 @@
     "instance": "Instanz-Einstellungen",
     "instanceHint": "Können später jederzeit im Admin-Bereich geändert werden."
   },
+  "demo": {
+    "title": "Demo ausprobieren",
+    "description": "Ein geteiltes, temporäres Konto zum Ausprobieren der App – für den echten Einsatz richte die Instanz trotzdem ein.",
+    "cta": "Demo ausprobieren",
+    "loading": "Wird angemeldet...",
+    "error": "Demo-Anmeldung fehlgeschlagen. Bitte versuche es erneut."
+  },
   "form": {
     "instanceName": {
       "label": "Instanz-Name",

@@ -327,6 +327,10 @@
     "listTitle": "These include:",
     "dismiss": "Got it"
   },
+  "setupIncompleteBanner": {
+    "message": "This instance has not been set up yet.",
+    "link": "Go to setup"
+  },
   "clockChange": {
     "gap": "This time does not exist on that day at this place (clock change). Please choose a time before or after it.",
     "repeated": "This time occurs twice on that day at this place (clock change). The earlier one is saved.",
