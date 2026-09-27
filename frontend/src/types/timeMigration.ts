@@ -114,6 +114,8 @@ export interface TimeMigrationOpenRow {
   flagId: string | null;
   /** Which question it is — decides the editor that answers it; null with `reason`. */
   kind: TimeFlagKind | null;
+  /** The row's own name (a flight's route, a stop's title); null when the row is gone. */
+  label: string | null;
 }
 
 export interface TimeMigrationReport {

@@ -32,7 +32,17 @@ const COLUMNS = [
   "end_date",
   "check_in",
   "check_out",
+  "check_in_time",
+  "check_out_time",
   "birthdate",
+  // The zone columns the re-resolution names (services/timeMigration/reResolve.ts).
+  "dep_timezone",
+  "arr_timezone",
+  "visited_zone",
+  "stop_zone",
+  "start_zone",
+  "end_zone",
+  "stay_zone",
 ] as const;
 
 /** Codes a failed call can carry that these screens have words for. */

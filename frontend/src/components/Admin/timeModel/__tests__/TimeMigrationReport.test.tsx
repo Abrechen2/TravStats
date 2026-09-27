@@ -80,6 +80,7 @@ const REPORT: Report = {
       tripId: null,
       flagId: "flag-v1",
       kind: "time_precision_unknown",
+      label: "Kolosseum",
     },
     {
       table: "flights",
@@ -97,6 +98,7 @@ const REPORT: Report = {
       tripId: null,
       flagId: "flag-f9",
       kind: "time_zone_unresolved",
+      label: "LH 2462 MUC → CPH",
     },
     {
       table: "flights",
@@ -114,6 +116,7 @@ const REPORT: Report = {
       tripId: null,
       flagId: null,
       kind: "time_zone_unresolved",
+      label: null,
     },
   ],
   openRowsTruncated: true,
@@ -215,7 +218,14 @@ describe("time-migration report — what the admin reads", () => {
   });
 
   it("sends a visit with no zone to its place, and a tour's own point to the tour editor", async () => {
-    const own = { userId: "admin-1", legacyValue: null, newValue: null, zone: null, flagId: null };
+    const own = {
+      userId: "admin-1",
+      legacyValue: null,
+      newValue: null,
+      zone: null,
+      flagId: null,
+      label: null,
+    };
     answer({
       ...REPORT,
       openRows: [
@@ -287,6 +297,34 @@ describe("time-migration report — what the admin reads", () => {
     ).toBeInTheDocument();
     expect(screen.getByText(/· ohne Grund/)).toBeInTheDocument();
     expect(screen.queryByText(/Die Antwort des Servers hat eine Form/)).toBeNull();
+  });
+
+  it("names each open row and every column the backfill writes, never as an unknown code", async () => {
+    answer({
+      ...REPORT,
+      openRows: [
+        { ...REPORT.openRows[0] },
+        {
+          ...REPORT.openRows[0],
+          table: "lodging_stays",
+          rowId: "st1",
+          column: "check_in_time",
+          rule: "lodging.no_zone",
+          reason: "no_position",
+          entityType: "lodging_stay",
+          parentType: "lodging",
+          parentId: "l1",
+          kind: "time_zone_unresolved",
+          label: "Pension ohne Ort",
+        },
+      ],
+    });
+    renderReport();
+
+    expect(await screen.findByText("Kolosseum")).toBeInTheDocument();
+    expect(screen.getByText("Pension ohne Ort")).toBeInTheDocument();
+    expect(screen.getByText(/Check-in-Uhrzeit · Keine Position/)).toBeInTheDocument();
+    expect(screen.queryByText(/unbekannt \(check_in_time\)/)).toBeNull();
   });
 
   it("says the report could not be loaded — and shows no zeros", async () => {

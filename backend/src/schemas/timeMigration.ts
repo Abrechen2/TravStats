@@ -192,6 +192,8 @@ export const timeMigrationOpenRowSchema = z.object({
    * e.g. a visit's missing zone is set on its place); null when `reason` is.
    */
   kind: timeFlagKindSchema.nullable(),
+  /** The row's own name (a flight's route, a stop's title); null when the row is gone. */
+  label: z.string().nullable(),
 });
 export type TimeMigrationOpenRow = z.infer<typeof timeMigrationOpenRowSchema>;
 

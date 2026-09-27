@@ -103,6 +103,7 @@ const reportSchema = z.object({
       tripId: z.string().nullable(),
       flagId: z.string().nullable(),
       kind: flagKind.nullable(),
+      label: z.string().nullable(),
     })
   ),
   openRowsTruncated: z.boolean(),

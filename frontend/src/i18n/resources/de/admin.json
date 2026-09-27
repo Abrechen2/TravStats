@@ -836,6 +836,15 @@
       "check_in": "Check-in",
       "check_out": "Check-out",
       "birthdate": "Geburtstag",
+      "check_in_time": "Check-in-Uhrzeit",
+      "check_out_time": "Check-out-Uhrzeit",
+      "dep_timezone": "Zeitzone Abflug",
+      "arr_timezone": "Zeitzone Ankunft",
+      "visited_zone": "Zeitzone des Besuchs",
+      "stop_zone": "Zeitzone des Halts",
+      "start_zone": "Zeitzone Beginn",
+      "end_zone": "Zeitzone Ende",
+      "stay_zone": "Zeitzone des Aufenthalts",
       "other": "Zeitangabe"
     },
     "backfillErrors": {

@@ -167,6 +167,8 @@ describe("GET /api/v1/admin/time-migration/report", () => {
         tripId: trip.id,
         flagId: flag.id,
         kind: "time_zone_unresolved",
+        // The row is named, so the admin can tell twenty open stops apart.
+        label: "Irgendwo",
       });
     } finally {
       await prisma.dataQualityFlag.deleteMany({ where: { userId } });
@@ -231,6 +233,8 @@ describe("GET /api/v1/admin/time-migration/report", () => {
       reason: null,
       kind: null,
       flagId: null,
+      // The flight row no longer exists: nothing to name, and no guess.
+      label: null,
     });
   });
 });

@@ -33,7 +33,8 @@ const DRY_RUN: ReResolveDryRun = {
     {
       table: "flights",
       rowId: "f1",
-      column: "departure",
+      // The columns the server really names: the zone columns (reResolve.ts).
+      column: "dep_timezone",
       storedZone: "Europe/Kiev",
       resolvedZone: "Europe/Kyiv",
       instant: "2024-05-02T06:10:00.000Z",
@@ -42,7 +43,7 @@ const DRY_RUN: ReResolveDryRun = {
     {
       table: "place_visits",
       rowId: "v1",
-      column: "visited_at",
+      column: "visited_zone",
       storedZone: "Africa/Tripoli",
       resolvedZone: "Africa/Cairo",
       instant: "2024-05-03T09:00:00.000Z",
@@ -51,7 +52,7 @@ const DRY_RUN: ReResolveDryRun = {
     {
       table: "trip_stops",
       rowId: "s1",
-      column: "start_date",
+      column: "stop_zone",
       storedZone: "Asia/Kolkata",
       resolvedZone: "Asia/Kathmandu",
       instant: "2024-05-04T09:00:00.000Z",
@@ -159,7 +160,10 @@ describe("zone re-resolution — dry run, then apply exactly that dry run", () =
     expect(post).toHaveBeenCalledWith("/admin/time-zones/re-resolve", undefined, {
       params: { dryRun: "true" },
     });
-    expect(screen.getByText("Ortsbesuche · Besuchszeit")).toBeInTheDocument();
+    expect(screen.getByText("Ortsbesuche · Zeitzone des Besuchs")).toBeInTheDocument();
+    expect(screen.getByText("Flüge · Zeitzone Abflug")).toBeInTheDocument();
+    expect(screen.getByText("Reise-Halte · Zeitzone des Halts")).toBeInTheDocument();
+    expect(screen.queryByText(/unbekannt \(/)).toBeNull();
     expect(screen.getByText("Africa/Tripoli")).toBeInTheDocument();
     expect(screen.getByText("Africa/Cairo")).toBeInTheDocument();
     expect(screen.getByText("+1:00 h")).toBeInTheDocument();

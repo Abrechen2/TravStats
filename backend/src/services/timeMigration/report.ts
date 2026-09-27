@@ -179,6 +179,7 @@ async function openRows(): Promise<Pick<TimeMigrationReport, "openRows" | "openR
         tripId: link?.tripId ?? null,
         flagId: kind ? (flags.get(`${r.entityType} ${r.rowId} ${kind}`) ?? null) : null,
         kind,
+        label: link?.label ?? null,
       };
     }),
     openRowsTruncated: ledger.length > OPEN_ROWS_CAP,

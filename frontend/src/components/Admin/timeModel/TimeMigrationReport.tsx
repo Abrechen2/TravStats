@@ -221,6 +221,7 @@ function OpenRows({
             style={{ borderTop: "1px solid var(--ts-border)" }}
           >
             <span style={{ fontWeight: 600 }}>{tableLabel(t, row.table)}</span>
+            {row.label && <span>{row.label}</span>}
             <span className="t-caption">
               {columnLabel(t, row.column)} ·{" "}
               {row.reason ? reasonLabel(t, row.reason) : t("admin:timeModel.report.noReason")}
