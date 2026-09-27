@@ -88,9 +88,11 @@ export function TripSummaryPanel({
       const message =
         response?.data?.code === "LLM_DISABLED"
           ? t("trips:summary.disabled")
-          : status === 503
-            ? t("trips:summary.unavailable")
-            : t("trips:summary.error");
+          : response?.data?.code === "LLM_CLOUD_NOT_CONSENTED"
+            ? t("trips:summary.cloudNotConsented")
+            : status === 503
+              ? t("trips:summary.unavailable")
+              : t("trips:summary.error");
       addToast("error", message);
     } finally {
       setGenerating(false);

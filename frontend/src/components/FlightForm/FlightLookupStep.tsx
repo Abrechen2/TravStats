@@ -17,6 +17,8 @@ import {
 } from "../../lib/api/parse";
 
 import type { ImportDocument } from "../import/documentHandoff";
+import { useToastStore } from "../../store/toastStore";
+import { llmProviderOfResult, readByMessage } from "../../lib/llmProviderCopy";
 
 const BoardingPassScanner = lazy(() => import("../BoardingPassScanner"));
 const EmailImportTab = lazy(() => import("../import/EmailImportTab"));
@@ -75,7 +77,13 @@ export default function FlightLookupStep({
   onPickSpecialFlight,
   initialDocument = null,
 }: FlightLookupStepProps): JSX.Element {
-  const { t } = useTranslation(["flights", "common", "specialFlights"]);
+  const { t } = useTranslation(["flights", "common", "specialFlights", "import"]);
+  const addToast = useToastStore((s) => s.addToast);
+  /** Which model read the mail, when one did (beta.17) — a cloud one by host. */
+  const announceProvider = (result: unknown): void => {
+    const provider = llmProviderOfResult(result);
+    if (provider) addToast("info", readByMessage(provider, t));
+  };
   // No route and no airline exist yet at this step, so these are the flight
   // numbers the user flies most overall — the commute, the route home.
   const { flightNumbers: flightNumberSuggestions } = useFlightEntrySuggestions({});
@@ -115,6 +123,7 @@ export default function FlightLookupStep({
       );
       return;
     }
+    announceProvider(result);
     void openImportBatch("email", fileName ?? null);
     setParsedFlights(flights);
     setCurrentFlightIndex(0);
@@ -134,6 +143,7 @@ export default function FlightLookupStep({
       );
       return;
     }
+    announceProvider(result);
     void openImportBatch("pdf", fileName ?? null);
     setParsedFlights(result.flights);
     setCurrentFlightIndex(0);

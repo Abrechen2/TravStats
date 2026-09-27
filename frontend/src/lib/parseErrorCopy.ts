@@ -8,6 +8,7 @@ const CODE_KEYS: Record<string, string> = {
   // Also a 503, but a decision rather than an outage — the status fallback
   // below would call it "unreachable".
   LLM_DISABLED: "import:errors.llmDisabled",
+  LLM_CLOUD_NOT_CONSENTED: "import:errors.llmCloudNotConsented",
   INVALID_PDF: "import:errors.invalidPdf",
   PDF_NO_TEXT: "import:errors.pdfNoText",
   NO_FLIGHT_DATA: "flights:scanner.noFlightData",

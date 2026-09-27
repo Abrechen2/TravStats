@@ -303,7 +303,8 @@
     "generated": "Summary created",
     "error": "Summary failed",
     "unavailable": "AI service unreachable. The admin sets up Ollama under Admin → Parser.",
-    "disabled": "AI summaries are switched off – the admin has turned the AI model off under Admin → Parser."
+    "disabled": "AI summaries are switched off – the admin has turned the AI model off under Admin → Parser.",
+    "cloudNotConsented": "The AI provider is outside the network, and the administrator has not agreed to sending trip data there."
   },
   "gallery": {
     "title": "Gallery",

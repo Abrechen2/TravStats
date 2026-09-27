@@ -284,7 +284,9 @@
       "llmDisabled": "Keine Vorlage kennt dieses Ticket, und der KI-Parser ist vom Administrator abgeschaltet.",
       "nothingFound": "In diesem Dokument wurde keine Zugfahrt gefunden. Trag die Fahrt von Hand ein.",
       "otherDomain": "Dieses Dokument ist keine Bahnbuchung. Importiere es dort, wo es hingehört.",
-      "looksLikeFlight": "Der KI-Parser hat statt Bahnhöfen Flughafen-Kürzel gelesen — das Dokument ist vermutlich eine Flugbuchung. Nichts wurde übernommen."
+      "looksLikeFlight": "Der KI-Parser hat statt Bahnhöfen Flughafen-Kürzel gelesen — das Dokument ist vermutlich eine Flugbuchung. Nichts wurde übernommen.",
+      "llmCloudNotConsented": "Keine Vorlage kennt dieses Ticket, und der KI-Anbieter liegt außerhalb des Netzwerks, ohne dass der Administrator dem Senden zugestimmt hat.",
+      "llmProviderIncomplete": "Keine Vorlage kennt dieses Ticket, und der KI-Anbieter ist nicht vollständig eingerichtet."
     }
   }
 }

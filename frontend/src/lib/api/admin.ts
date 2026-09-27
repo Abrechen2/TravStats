@@ -86,6 +86,49 @@ export interface InstanceSettingsPatch {
  */
 export type ParserOrder = "template_first" | "llm_first";
 
+/** Which protocol the instance's language model speaks (backend `llm/llmProvider.ts`). */
+export type LlmProviderKind = "ollama" | "openai_compatible";
+
+export interface AdminParserSettingsResponse {
+  allowUserApiKeys: boolean;
+  fxCdnFallbackEnabled: boolean;
+  /** Who reads a booking document first, in every domain. Absent on a
+   *  backend older than 2.7 — treat a missing value as "template_first". */
+  parserOrder?: ParserOrder;
+  /** The "KI-Parser aus" switch; absent on a backend older than 2.7 (= on). */
+  llmEnabled?: boolean;
+  ollamaUrl: string | null;
+  ollamaModel: string | null;
+  /** Absent before beta.17 — read as "ollama". */
+  llmProvider?: LlmProviderKind;
+  openaiCompatBaseUrl?: string | null;
+  openaiCompatModel?: string | null;
+  /** Masked ("abcd****wxyz") or null — the key itself never leaves the server. */
+  openaiCompatApiKey?: string | null;
+  /** The SAVED endpoint is outside the local network. */
+  openaiCompatIsCloud?: boolean;
+  llmCloudOptIn?: boolean;
+}
+
+/** Stable codes the admin page words itself (`test.errors.*`). */
+export type LlmProviderTestErrorCode =
+  | "invalid_url"
+  | "unsupported_protocol"
+  | "credentials_in_url"
+  | "https_required"
+  | "auth"
+  | "unreachable";
+
+export type LlmProviderTestResult =
+  | { ok: true; isCloud: boolean; modelCount: number; modelFound: boolean | null }
+  | {
+      ok: false;
+      errorCode: LlmProviderTestErrorCode;
+      /** Protocol/status line for the log — never shown raw. */
+      detail?: string | null;
+      isCloud?: boolean;
+    };
+
 /**
  * One password-reset request waiting for an administrator (forgejo#88, point 2).
  * Only reachable with an admin session — see `routes/admin/passwordResetRequests.ts`.
@@ -302,25 +345,8 @@ export const adminApi = {
     return data;
   },
 
-  getAdminParserSettings: async (): Promise<{
-    allowUserApiKeys: boolean;
-    fxCdnFallbackEnabled: boolean;
-    /** Who reads a booking document first, in every domain. Absent on a
-     *  backend older than 2.7 — treat a missing value as "template_first". */
-    parserOrder?: ParserOrder;
-    /** The "KI-Parser aus" switch; absent on a backend older than 2.7 (= on). */
-    llmEnabled?: boolean;
-    ollamaUrl: string | null;
-    ollamaModel: string | null;
-  }> => {
-    const { data } = await api.get<{
-      allowUserApiKeys: boolean;
-      fxCdnFallbackEnabled: boolean;
-      parserOrder?: ParserOrder;
-      llmEnabled?: boolean;
-      ollamaUrl: string | null;
-      ollamaModel: string | null;
-    }>("/admin/parser-settings");
+  getAdminParserSettings: async (): Promise<AdminParserSettingsResponse> => {
+    const { data } = await api.get<AdminParserSettingsResponse>("/admin/parser-settings");
     return data;
   },
 
@@ -331,8 +357,24 @@ export const adminApi = {
     llmEnabled?: boolean;
     ollamaUrl?: string | null;
     ollamaModel?: string | null;
+    llmProvider?: LlmProviderKind;
+    openaiCompatBaseUrl?: string | null;
+    openaiCompatModel?: string | null;
+    /** The masked echo from the GET keeps the stored key; "" / null clears it. */
+    openaiCompatApiKey?: string | null;
+    llmCloudOptIn?: boolean;
   }): Promise<MessageResponse> => {
     const { data } = await api.put<MessageResponse>("/admin/parser-settings", settings);
+    return data;
+  },
+
+  /** "Verbindung testen" for an OpenAI-compatible provider — sends only the key, no document. */
+  testLlmProvider: async (input: {
+    baseUrl: string;
+    model: string | null;
+    apiKey: string | null;
+  }): Promise<LlmProviderTestResult> => {
+    const { data } = await api.post<LlmProviderTestResult>("/admin/test-llm-provider", input);
     return data;
   },
 

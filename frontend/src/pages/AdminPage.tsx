@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useToastStore } from "../store/toastStore";
 import { adminApi } from "../lib/api";
 import { logger } from "../lib/logger";
+import { apiErrorMachineCode } from "../lib/apiError";
 import AppShell from "../components/ui/AppShell";
 import PageHeader from "../components/ui/PageHeader";
 import AdminIndex from "../components/Admin/AdminIndex";
@@ -327,9 +328,18 @@ export default function AdminPage(): JSX.Element {
     try {
       await adminApi.updateAdminParserSettings(parserSettings);
       addToast("success", t("admin:toasts.parserSettingsSaved"));
+      // Re-read: the key comes back masked and "is this a cloud endpoint" is
+      // the server's answer for what was actually stored.
+      setParserSettings(await adminApi.getAdminParserSettings());
     } catch (error: unknown) {
       logger.error("Failed to save parser settings:", error);
-      addToast("error", getErrorMessage(error, t("admin:toasts.parserSettingsFailed")));
+      const code = apiErrorMachineCode(error);
+      addToast(
+        "error",
+        code === "LLM_BASE_URL_HTTPS_REQUIRED" || code === "LLM_BASE_URL_INVALID"
+          ? t(`admin:parserSettings.provider.saveErrors.${code}`)
+          : getErrorMessage(error, t("admin:toasts.parserSettingsFailed"))
+      );
     } finally {
       setSavingParsers(false);
     }

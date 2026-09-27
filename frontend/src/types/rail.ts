@@ -357,6 +357,10 @@ export type RailParseFallbackCode =
   | "demoNoLlm"
   /** An admin has switched the language model off. */
   | "llmDisabled"
+  /** A provider outside the network, without the admin's consent. */
+  | "llmCloudNotConsented"
+  /** The OpenAI-compatible provider is missing its base URL or model. */
+  | "llmProviderIncomplete"
   /** The document is clearly another kind of booking (D1) — see `domainMismatch`. */
   | "otherDomain"
   /** The model answered with airport codes for stations. */

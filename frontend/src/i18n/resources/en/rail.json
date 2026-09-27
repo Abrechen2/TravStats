@@ -284,7 +284,9 @@
       "llmDisabled": "No template knows this ticket, and the administrator has switched the AI parser off.",
       "nothingFound": "No train ride was found in this document. Enter the ride by hand.",
       "otherDomain": "This document is not a rail booking. Import it where it belongs.",
-      "looksLikeFlight": "The AI parser read airport codes instead of stations — the document is probably a flight booking. Nothing was taken over."
+      "looksLikeFlight": "The AI parser read airport codes instead of stations — the document is probably a flight booking. Nothing was taken over.",
+      "llmCloudNotConsented": "No template knows this ticket, and the AI provider is outside the network without the administrator's consent to send it there.",
+      "llmProviderIncomplete": "No template knows this ticket, and the AI provider is not fully set up."
     }
   }
 }

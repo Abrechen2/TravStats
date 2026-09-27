@@ -10,6 +10,36 @@ import { logger } from "../../lib/logger";
 import { parseFailureMessage } from "../../lib/parseErrorCopy";
 import type { ParseableImportDomain } from "./types";
 import type { ImportDocument } from "./documentHandoff";
+import {
+  parseLlmProviderInfo,
+  providerDisclosure,
+  type LlmProviderInfo,
+} from "../../lib/llmProviderCopy";
+
+/** What `/parser-capabilities` says about the model — absent fields are older backends. */
+interface Capabilities {
+  hasLlm: boolean;
+  llmDisabledByAdmin?: boolean;
+  llmRefusal?: string | null;
+  llmProvider?: unknown;
+}
+
+type LlmState =
+  | { kind: "unknown" }
+  | { kind: "disabled" }
+  | { kind: "cloudNotConsented" }
+  | { kind: "providerIncomplete" }
+  | { kind: "none" }
+  | { kind: "available"; provider: LlmProviderInfo | null };
+
+function llmStateOf(data: Capabilities | undefined): LlmState {
+  if (!data) return { kind: "unknown" };
+  if (data.llmDisabledByAdmin) return { kind: "disabled" };
+  if (data.llmRefusal === "cloud_not_consented") return { kind: "cloudNotConsented" };
+  if (data.llmRefusal === "provider_incomplete") return { kind: "providerIncomplete" };
+  if (!data.hasLlm) return { kind: "none" };
+  return { kind: "available", provider: parseLlmProviderInfo(data.llmProvider) };
+}
 
 interface EmailImportTabProps {
   /** Only a domain the backend can actually parse for — see `types.ts`. */
@@ -59,18 +89,19 @@ export default function EmailImportTab({
   const { t } = useTranslation(["import", "common"]);
   const [dropState, setDropState] = useState<DropState>("idle");
   const [emailText, setEmailText] = useState("");
-  // `"disabled"`: an admin switched the model off (Admin → Parser). Kept apart
-  // from `false`, because "none is configured" and "turned off on purpose"
-  // are two different sentences to the person about to import.
-  const [hasLlm, setHasLlm] = useState<boolean | "disabled" | null>(null);
+  // Each absence of the model is its own sentence to the person about to
+  // import: none configured, switched off on purpose, a cloud provider the
+  // admin has not agreed to, or an incomplete setup. And when a model IS
+  // there, where the text goes — before it is sent (beta.17).
+  const [llm, setLlm] = useState<LlmState>({ kind: "unknown" });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const showLoader = useMinLoadingState(dropState === "loading", 2000);
 
   useEffect(() => {
     api
-      .get<{ hasLlm: boolean; llmDisabledByAdmin?: boolean }>("/parser-capabilities")
-      .then(({ data }) => setHasLlm(data?.llmDisabledByAdmin ? "disabled" : Boolean(data?.hasLlm)))
-      .catch(() => setHasLlm(null));
+      .get<Capabilities>("/parser-capabilities")
+      .then(({ data }) => setLlm(llmStateOf(data)))
+      .catch(() => setLlm({ kind: "unknown" }));
   }, []);
 
   const handleFile = useCallback(
@@ -167,7 +198,7 @@ export default function EmailImportTab({
 
   return (
     <div className="flex flex-col gap-4">
-      {hasLlm === "disabled" && (
+      {llm.kind === "disabled" && (
         <div
           data-testid="llm-disabled-notice"
           className="text-sm text-(--text-muted) bg-(--bg-surface) border border-(--color-border) rounded-lg px-4 py-3"
@@ -176,11 +207,25 @@ export default function EmailImportTab({
           <p>{t("import:email.llmDisabled.body")}</p>
         </div>
       )}
-      {hasLlm === false && (
+      {(llm.kind === "cloudNotConsented" || llm.kind === "providerIncomplete") && (
+        <div
+          data-testid="llm-provider-refusal"
+          className="text-sm text-amber-300 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3"
+        >
+          <p className="font-medium mb-1">{t(`import:email.${llm.kind}.title`)}</p>
+          <p>{t(`import:email.${llm.kind}.body`)}</p>
+        </div>
+      )}
+      {llm.kind === "none" && (
         <div className="text-sm text-amber-300 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3">
           <p className="font-medium mb-1">{t("import:email.regexWarning.title")}</p>
           <p className="whitespace-pre-line">{t("import:email.regexWarning.body")}</p>
         </div>
+      )}
+      {llm.kind === "available" && llm.provider && (
+        <p data-testid="llm-provider-disclosure" className="text-xs text-(--text-muted)">
+          {providerDisclosure(llm.provider, t)}
+        </p>
       )}
 
       {showLoader ? (

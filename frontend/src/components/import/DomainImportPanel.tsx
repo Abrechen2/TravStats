@@ -8,6 +8,7 @@ import { detectedOtherDomain, type ImportDocument } from "./documentHandoff";
 import { WrongDialogNotice } from "./WrongDialogNotice";
 import { ImportManualFooter, ImportRouteList, ImportRouteRow } from "./ImportRouteList";
 import { isParseableDomain } from "./types";
+import { llmProviderOfResult, readByMessage } from "../../lib/llmProviderCopy";
 import type { DomainImportAdapter } from "./types";
 
 const EmailImportTab = lazy(() => import("./EmailImportTab"));
@@ -86,6 +87,16 @@ export default function DomainImportPanel({
     [addToast]
   );
 
+  // Which model read the document, when one did — a cloud provider by host,
+  // so the user sees where their booking went (beta.17).
+  const announceProvider = useCallback(
+    (result: unknown) => {
+      const provider = llmProviderOfResult(result);
+      if (provider) addToast("info", readByMessage(provider, t));
+    },
+    [addToast, t]
+  );
+
   const handleEmailResult = useCallback(
     (result: ParseEmailResult, fileName?: string | null, document?: ImportDocument) => {
       // A document that clearly is something else is not reviewed here: the
@@ -95,6 +106,7 @@ export default function DomainImportPanel({
         setMismatch({ detected: other, document: document ?? null });
         return;
       }
+      announceProvider(result);
       setParseState({
         kind: "email",
         result,
@@ -102,7 +114,7 @@ export default function DomainImportPanel({
         sourceFileName: fileName ?? null,
       });
     },
-    []
+    [announceProvider]
   );
 
   const handlePdfResult = useCallback(
@@ -112,9 +124,10 @@ export default function DomainImportPanel({
         setMismatch({ detected: other, document: document ?? null });
         return;
       }
+      announceProvider(result);
       setParseState({ kind: "pdf", result, sourceFileName: fileName ?? null });
     },
-    []
+    [announceProvider]
   );
 
   const handleReviewCommit = useCallback(async (): Promise<void> => {
