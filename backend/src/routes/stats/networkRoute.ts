@@ -23,7 +23,7 @@ import {
 } from "../../schemas/statsNetworkRoute";
 import { getCachedAirports } from "../../services/airportCache";
 import type { AirportData } from "../../services/airportLookup";
-import { withDepartureClock } from "../../services/stats/departureClock";
+import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "../../services/stats/departureClock";
 import { buildNetworkRouteDetail } from "../../services/stats/networkRoute";
 import { airlineResolvers } from "../../utils/airlineNormalize";
 import logger from "../../utils/logger";
@@ -52,17 +52,13 @@ router.get("/:a/:b", async (req: AuthRequest, res: Response, next: NextFunction)
         airline: true,
         airlineIata: true,
         airlineIcao: true,
-        depIata: true,
-        depIcao: true,
+        ...FLIGHT_CLOCK_SELECT,
         depLat: true,
         depLon: true,
-        arrIata: true,
-        arrIcao: true,
         arrLat: true,
         arrLon: true,
         departureTime: true,
         arrivalTime: true,
-        depTimeSemantics: true,
         status: true,
       },
     });

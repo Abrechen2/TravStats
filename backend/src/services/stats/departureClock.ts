@@ -15,6 +15,40 @@
 
 import { getCachedAirports } from "../airportCache";
 import { localWallClockOf, type FlightTimeSemantics } from "../../utils/timezone";
+import logger from "../../utils/logger";
+
+/**
+ * The columns a flight's clock is read from — the airport codes the catalogue
+ * answers for, the semantics tag, and the zones the flight was STORED with.
+ * Spread into every statistics select, so no reader can forget the stored
+ * zones and fall back to today's catalogue (ADR 0002 phase 4).
+ */
+export const FLIGHT_CLOCK_SELECT = {
+  depIata: true,
+  depIcao: true,
+  arrIata: true,
+  arrIcao: true,
+  depTimeSemantics: true,
+  depTimezone: true,
+  arrTimezone: true,
+} as const;
+
+/**
+ * The zone one end of a flight is read in: the zone it was written with
+ * (frozen since ADR 0002 phase 2, backfilled in 3b) — so a catalogue
+ * correction no longer moves which day or year a past flight counts in — and
+ * only for a row that stored none, today's catalogue zone by IATA, then ICAO.
+ */
+export function flightEndZone(
+  stored: string | null | undefined,
+  tzMap: ReadonlyMap<string, string>,
+  iata: string | null,
+  icao: string | null
+): string | null {
+  return (
+    stored || (iata ? tzMap.get(iata) : undefined) || (icao ? tzMap.get(icao) : undefined) || null
+  );
+}
 
 /**
  * A UTC-timezone map for a set of flight rows (mirrors computeSummary).
@@ -43,13 +77,15 @@ export async function buildTzMap(
     for (const [code, data] of airports.entries()) {
       if (data?.timezone) map.set(code, data.timezone);
     }
-  } catch {
-    // timezone lookup failed — durations fall back to naïve diff
+  } catch (error) {
+    // Durations fall back to a naive diff and a row without a stored zone is
+    // read in UTC — logged, so a broken catalogue is not a silent shift.
+    logger.warn({ operation: "departure_clock_catalogue_failed", error });
   }
   return map;
 }
 
-/** Attach the departure airport's timezone to each row. */
+/** Attach the departure's zone to each row — stored first, see `flightEndZone`. */
 export async function withDepartureClock<
   T extends {
     depIata: string | null;
@@ -57,6 +93,8 @@ export async function withDepartureClock<
     arrIata: string | null;
     arrIcao: string | null;
     depTimeSemantics: string;
+    /** The stored zone; absent from a select that predates it (then the catalogue answers). */
+    depTimezone?: string | null;
   },
 >(
   rows: T[]
@@ -64,10 +102,7 @@ export async function withDepartureClock<
   const tzMap = await buildTzMap(rows);
   return rows.map((f) => ({
     ...f,
-    depTimezone:
-      (f.depIata ? tzMap.get(f.depIata) : undefined) ??
-      (f.depIcao ? tzMap.get(f.depIcao) : undefined) ??
-      null,
+    depTimezone: flightEndZone(f.depTimezone, tzMap, f.depIata, f.depIcao),
     depTimeSemantics: f.depTimeSemantics as FlightTimeSemantics,
   }));
 }
