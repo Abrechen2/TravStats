@@ -42,6 +42,8 @@ import { logger } from "../lib/logger";
 import type { FlightInput } from "../types";
 import type { Airport } from "../lib/api";
 import { saveErrorMessage } from "../lib/saveErrorMessage";
+import { flightArrival, flightDeparture } from "../lib/entityTimes";
+import { foldFields, storedFlightFolds, wallOf, type FlightFolds } from "../lib/flightFolds";
 
 interface FlightEditModalProps {
   flight: Flight;
@@ -131,6 +133,10 @@ export default function FlightEditModal({
   };
 
   const [formData, setFormData] = useState(buildFormData(flight));
+  // Q5: the occurrence of a repeated hour the flight was stored with, re-sent unless changed.
+  const [folds, setFolds] = useState<FlightFolds>(() =>
+    storedFlightFolds(flightDeparture(flight), flightArrival(flight))
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const addToast = useToastStore((s) => s.addToast);
@@ -298,13 +304,11 @@ export default function FlightEditModal({
         ...(last ? [airportLocalInputs(flight, last.dep, last.arr)] : []),
       ]);
 
-      // Historical flights carry their precision in the date SHAPE (see the
-      // HistoricalDateFields block) — mirror the create form's semantics
-      // derivation. ALWAYS sent alongside departureLocal for historical
-      // flights, never conditionally: the server treats a departureLocal
-      // without explicit semantics as a real time edit and flips the column
-      // to UTC (the implicit branch flights.test.ts pins) — which the
-      // browser UAT caught silently downgrading DATE_ONLY on a year change.
+      // Historical flights carry their precision in the date SHAPE — the
+      // create form's derivation. ALWAYS sent with departureLocal: without
+      // explicit semantics the server reads a real time edit and flips the
+      // column to UTC (flights.test.ts pins it) — which the browser UAT caught
+      // silently downgrading DATE_ONLY on a year change.
       const histShape =
         formData.status === "historical" ? historicalDateShape(formData.departureDate) : "unknown";
       const sendSemantics: FlightInput["depTimeSemantics"] =
@@ -327,9 +331,7 @@ export default function FlightEditModal({
         flightNumber: formData.flightNumber || null,
         aircraft: formData.aircraft || null,
         status: formData.status as FlightInput["status"],
-        // "" (the "(optional)" choice) maps to null — an explicit CLEAR on the
-        // wire. `undefined` would omit the field and the server would keep the
-        // old value while the UI showed it removed.
+        // "" (the "(optional)" choice) is null too — the same explicit CLEAR.
         category: (formData.category || null) as FlightInput["category"],
         seatClass: (formData.seatClass || null) as FlightInput["seatClass"],
         seatNumber: formData.seatNumber || null,
@@ -391,6 +393,11 @@ export default function FlightEditModal({
               ? null
               : undefined,
           actualArrivalTz: formData.actualArrivalDate ? zones.arr : undefined,
+          ...foldFields(
+            folds,
+            wallOf(formData.departureDate, formData.departureTime, zones.dep),
+            wallOf(formData.arrivalDate, formData.arrivalTime, zones.arr)
+          ),
         }),
       };
 
@@ -533,6 +540,11 @@ export default function FlightEditModal({
               actualArrDate: formData.actualArrivalDate,
               actualArrTime: formData.actualArrivalTime,
             }}
+            clockChange={
+              hydrated
+                ? { depZone: depTz, arrZone: arrTz, folds, onFoldsChange: setFolds }
+                : undefined
+            }
             onActualChange={(next) =>
               setFormData((prev) => ({
                 ...prev,

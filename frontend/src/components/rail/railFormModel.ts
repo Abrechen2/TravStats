@@ -401,3 +401,23 @@ export function saveErrorFrom(err: unknown): RailSaveError {
       return { key: saveErrorKey(err, "rail:form.saveError"), field: null };
   }
 }
+
+/**
+ * The zone a station's typed time is on, where the form can know it: the
+ * stored journey's zone (its `times`), while the station is still the one it
+ * was stored with. A new pick has no zone here — the server finds it from the
+ * coordinates — so the clock-change notice then stays silent and the server's
+ * verdict stands.
+ */
+export function knownStationZone(
+  journey: RailJourney | null,
+  end: "dep" | "arr",
+  station: RailStationDraft | null
+): string | null {
+  if (!journey || !station) return null;
+  const lat = end === "dep" ? journey.depLat : journey.arrLat;
+  const lon = end === "dep" ? journey.depLon : journey.arrLon;
+  if (station.lat !== lat || station.lon !== lon) return null;
+  const value = end === "dep" ? railDeparture(journey) : railArrival(journey);
+  return value?.zone ?? null;
+}

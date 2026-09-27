@@ -15,6 +15,7 @@ import { useToastStore } from "../../store/toastStore";
 import type { Trip } from "../../types";
 import { RAIL_TRAVEL_CLASSES, type RailJourney, type RailTravelClass } from "../../types/rail";
 import SuggestionChips from "../common/SuggestionChips";
+import { ClockChangeNotice } from "../common/ClockChangeNotice";
 import { trainLabel, useRailEntrySuggestions } from "../../hooks/useRailEntrySuggestions";
 import { StationPicker } from "./StationPicker";
 import { RailLookupPanel } from "./RailLookupPanel";
@@ -25,6 +26,7 @@ import {
   draftFrom,
   geometryNotice,
   isStationComplete,
+  knownStationZone,
   onwardDraftFrom,
   saveErrorFrom,
   toRailInput,
@@ -361,6 +363,12 @@ export function RailFormModal({
                 />
               </label>
               {depError.message}
+              {/* Notice only: the rail write path cannot take `fold` yet, so no
+                  "later" choice is offered that the save would drop. */}
+              <ClockChangeNotice
+                local={draft.departureLocal}
+                zone={knownStationZone(journey, "dep", draft.departure)}
+              />
             </div>
             <div>
               <label className="block text-sm">
@@ -375,6 +383,10 @@ export function RailFormModal({
                 />
               </label>
               {arrError.message}
+              <ClockChangeNotice
+                local={draft.arrivalLocal}
+                zone={knownStationZone(journey, "arr", draft.arrival)}
+              />
             </div>
           </div>
           <p className="mt-2 text-xs text-(--text-muted)">{t("rail:form.timeHint")}</p>

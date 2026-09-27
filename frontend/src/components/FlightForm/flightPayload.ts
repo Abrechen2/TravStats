@@ -4,6 +4,7 @@ import { isValidZone } from "../../shared/time";
 import type { FlightInput } from "../../types";
 import { historicalDateShape } from "./fields/HistoricalDateFields";
 import { buildLocalString } from "./flightFormModel";
+import { foldFields, type FlightFoldFields, type FlightFolds } from "../../lib/flightFolds";
 
 /**
  * The create-form state turned into the POST body — a pure function of the
@@ -57,6 +58,8 @@ export interface FlightPayloadFields {
   frequentFlyerNumber: string | undefined;
   bookingClassLetter: string | undefined;
   coPassengers: string[];
+  /** The later occurrence of a repeated hour, per end (Q5). */
+  folds?: FlightFolds;
 }
 
 /**
@@ -77,7 +80,7 @@ function zoneFor(field: string, zone: string | null): string {
   return zone;
 }
 
-export function buildFlightPayload(fields: FlightPayloadFields): FlightInput {
+export function buildFlightPayload(fields: FlightPayloadFields): FlightInput & FlightFoldFields {
   const {
     status,
     departureDate,
@@ -123,6 +126,7 @@ export function buildFlightPayload(fields: FlightPayloadFields): FlightInput {
     frequentFlyerNumber,
     bookingClassLetter,
     coPassengers,
+    folds = {},
   } = fields;
   // For historical flights, derive time-semantics from the date-precision shape.
   // DATE_ONLY when the user knows the real calendar date but not the time;
@@ -142,6 +146,14 @@ export function buildFlightPayload(fields: FlightPayloadFields): FlightInput {
 
   // Only a historical row may anchor a bare day to noon; see buildLocalString.
   const anchorDateOnly = status === "historical";
+
+  const departureLocal = departureDate
+    ? (buildLocalString(departureDate, departureTime, { anchorDateOnly }) ?? undefined)
+    : undefined;
+  const arrivalLocal = effectiveArrivalDate
+    ? (buildLocalString(effectiveArrivalDate, effectiveArrivalTime, { anchorDateOnly }) ??
+      undefined)
+    : undefined;
 
   return {
     departure: {
@@ -180,15 +192,16 @@ export function buildFlightPayload(fields: FlightPayloadFields): FlightInput {
     // Server converts {departureLocal, depTimezone} -> real UTC via fromZonedTime.
     // No browser-side `new Date(...).toISOString()` — that would leak the
     // browser's local TZ into the payload.
-    departureLocal: departureDate
-      ? (buildLocalString(departureDate, departureTime, { anchorDateOnly }) ?? undefined)
-      : undefined,
+    departureLocal,
     depTimezone: departureDate ? zoneFor("departureLocal", depTz) : undefined,
-    arrivalLocal: effectiveArrivalDate
-      ? (buildLocalString(effectiveArrivalDate, effectiveArrivalTime, { anchorDateOnly }) ??
-        undefined)
-      : undefined,
+    arrivalLocal,
     arrTimezone: effectiveArrivalDate ? zoneFor("arrivalLocal", arrTz) : undefined,
+    // "Die spätere meinen" (Q5), only while the sent time is repeated there.
+    ...foldFields(
+      folds,
+      { local: departureLocal, zone: depTz },
+      { local: arrivalLocal, zone: arrTz }
+    ),
     // Actual departure/arrival (#200) — same undefined-when-empty contract
     // as the scheduled pair above: leaving these blank must never emit an
     // empty string or null, only omit the field entirely (a flight with no

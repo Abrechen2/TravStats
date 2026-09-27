@@ -27,11 +27,11 @@ import { flightSaveFailure } from "./flightSaveFailure";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { reportBatchOutcome } from "./flightReviewBatch";
 import type { FlightLookupResult, DuplicateFlight, FlightSubmitOptions } from "./flightFormModel";
+import type { FlightFolds } from "../../lib/flightFolds";
 
 export function useFlightForm(
-  // Returning the created Flight is what makes the post-create trip
-  // assignment possible; `void` keeps older callers valid (they simply get
-  // no assignment).
+  // Returning the created Flight makes the post-create trip assignment
+  // possible; `void` keeps older callers valid (they get no assignment).
   onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<Flight | void>,
   onCancel: () => void,
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void
@@ -81,11 +81,10 @@ export function useFlightForm(
   const [departureTime, setDepartureTime] = useState("12:00");
   const [arrivalDate, setArrivalDate] = useState("");
   const [arrivalTime, setArrivalTime] = useState("14:00");
-  // Actual departure/arrival (#200) — empty by default: a freshly created
-  // flight has no recorded actual time until the user (or live tracking,
-  // out of scope here) fills it in. Kept empty rather than defaulted like
-  // departureTime/arrivalTime above, since "no value yet" must stay
-  // distinguishable from "midday" — see buildFlightPayload below.
+  // The later occurrence of a repeated hour, per end (Q5) — see lib/flightFolds.ts.
+  const [folds, setFolds] = useState<FlightFolds>({});
+  // Actual departure/arrival (#200) — empty by default, not "midday": a new
+  // flight has no recorded actual time until the user fills it in.
   const [actualDepartureDate, setActualDepartureDate] = useState("");
   const [actualDepartureTime, setActualDepartureTime] = useState("");
   const [actualArrivalDate, setActualArrivalDate] = useState("");
@@ -93,10 +92,8 @@ export function useFlightForm(
   const [airline, setAirline] = useState("");
   const [operatingAirline, setOperatingAirline] = useState("");
   const [aircraft, setAircraft] = useState("");
-  // Lookup-derived metadata that is persisted on submit but not directly
-  // surfaced in the form UI: callsign + tail number / Mode-S identifiers
-  // come from AeroDataBox automatically and only appear in the flight
-  // detail view post-save. The user can still edit them later.
+  // Lookup-derived metadata persisted on submit but not shown in the form
+  // (callsign, tail number, Mode-S from AeroDataBox); editable on the detail view.
   const [lookupCallsign, setLookupCallsign] = useState("");
   const [lookupAircraftRegistration, setLookupAircraftRegistration] = useState("");
   const [lookupAircraftModeS, setLookupAircraftModeS] = useState("");
@@ -417,6 +414,7 @@ export function useFlightForm(
       frequentFlyerNumber,
       bookingClassLetter,
       coPassengers,
+      folds,
     });
 
   const storeHistoricalData = () => {
@@ -755,6 +753,7 @@ export function useFlightForm(
     companions,
     coPassengers,
     canSubmit,
+    folds,
     // Setters
     setLoading,
     setError,
@@ -776,6 +775,7 @@ export function useFlightForm(
     setDepartureTime,
     setArrivalDate,
     setArrivalTime,
+    setFolds,
     setActualDepartureDate,
     setActualDepartureTime,
     setActualArrivalDate,
