@@ -6,7 +6,7 @@ import type {
 } from "../../schemas/rail";
 import { deriveRailStatus } from "../../shared/statusDerivation";
 import { LocalTimeNonexistentError, TzUnresolvedError } from "../../shared/time/errors";
-import { toInstant } from "../../shared/time/instant";
+import { toInstant, type Fold } from "../../shared/time/instant";
 import { zoneOf } from "../../shared/time/zoneOf";
 import { formatWallClockIn } from "../../shared/zonedWallClock";
 import { calculateDistance } from "../../utils/geo";
@@ -117,13 +117,14 @@ export function wallClockToInstant(wall: string, timezone: string | null): Date 
 function sentWallClockToInstant(
   wall: string,
   timezone: string | null,
-  field: "departureLocal" | "arrivalLocal"
+  field: "departureLocal" | "arrivalLocal",
+  fold: Fold | null | undefined
 ): Date {
   // A station the resolver cannot place in a zone has no clock to read the
   // time on; it used to be read as UTC in silence (ADR 0002 D2).
   if (!timezone) throw new TzUnresolvedError("the station has no zone", field);
   try {
-    return toInstant(wall, timezone, { origin: "typed" }).utc;
+    return toInstant(wall, timezone, { origin: "typed", fold: fold ?? "earlier" }).utc;
   } catch (error) {
     if (!(error instanceof LocalTimeNonexistentError)) throw error;
     // The time model's general refusal (422 LOCAL_TIME_NONEXISTENT, ADR 0002
@@ -189,15 +190,21 @@ export function mergeRailJourney(
         : null;
 
   // A clock read back from the stored instant exists by construction; only a
-  // clock the request sent can name a skipped hour.
+  // clock the request sent can name a skipped hour. A side whose clock AND
+  // station were not sent keeps its stored instant: re-reading its wall clock
+  // would put a ride in the repeated autumn hour back at the earlier one.
   const departureTime = input.departureLocal
-    ? sentWallClockToInstant(departureWall, dep.depTimezone, "departureLocal")
-    : wallClockToInstant(departureWall, dep.depTimezone);
+    ? sentWallClockToInstant(departureWall, dep.depTimezone, "departureLocal", input.departureFold)
+    : existing && !input.departureStation
+      ? existing.departureTime
+      : wallClockToInstant(departureWall, dep.depTimezone);
   const arrivalTime = !arrivalWall
     ? null
     : input.arrivalLocal
-      ? sentWallClockToInstant(arrivalWall, arr.arrTimezone, "arrivalLocal")
-      : wallClockToInstant(arrivalWall, arr.arrTimezone);
+      ? sentWallClockToInstant(arrivalWall, arr.arrTimezone, "arrivalLocal", input.arrivalFold)
+      : existing?.arrivalTime && !input.arrivalStation
+        ? existing.arrivalTime
+        : wallClockToInstant(arrivalWall, arr.arrTimezone);
   if (arrivalTime && arrivalTime.getTime() < departureTime.getTime()) {
     throw new AppError(
       "arrival must not precede departure",

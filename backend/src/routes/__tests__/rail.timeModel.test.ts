@@ -121,4 +121,47 @@ describe("Rail — time model (phase 2)", () => {
       zoneSource: null,
     });
   });
+
+  describe("the repeated autumn hour", () => {
+    // 02:30 on 25 October 2026 happens twice in Paris: at 00:30Z (+02:00) and
+    // at 01:30Z (+01:00).
+    const ride = (extra: Record<string, unknown>) =>
+      request(app)
+        .post("/api/v1/rail")
+        .set("Cookie", cookie)
+        .send({
+          operator: "Test",
+          departureStation: PARIS,
+          arrivalStation: { name: "Lyon", lat: 45.7606, lon: 4.8594, country: "FR" },
+          departureLocal: "2026-10-25T02:30",
+          ...extra,
+        });
+
+    it("stores the earlier occurrence by default and the later one on departureFold: later", async () => {
+      const earlier = await ride({});
+      expect(earlier.status).toBe(201);
+      expect(earlier.body.data.times.departure.utc).toBe("2026-10-25T00:30:00.000Z");
+      const later = await ride({ departureFold: "later" });
+      expect(later.status).toBe(201);
+      expect(later.body.data.times.departure).toMatchObject({
+        utc: "2026-10-25T01:30:00.000Z",
+        offset: "+01:00",
+        local: "2026-10-25T02:30:00",
+      });
+
+      // An edit of anything else keeps the later hour, not the re-read earlier one.
+      const edit = await request(app)
+        .patch(`/api/v1/rail/${later.body.data.id}`)
+        .set("Cookie", cookie)
+        .send({ notes: "Nachtzug" });
+      expect(edit.status).toBe(200);
+      expect(edit.body.data.times.departure.utc).toBe("2026-10-25T01:30:00.000Z");
+    });
+
+    it("refuses a misspelt fold instead of dropping it and storing the earlier hour", async () => {
+      const res = await ride({ departureFolds: "later" });
+      expect(res.status).toBe(400);
+      expect(res.body).toMatchObject({ code: "RAIL_INVALID_INPUT", field: "departureFolds" });
+    });
+  });
 });

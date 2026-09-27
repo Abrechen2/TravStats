@@ -8,6 +8,7 @@ import { railCreationLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import {
   createRailJourneySchema,
+  strayFoldKey,
   railQuerySchema,
   updateRailJourneySchema,
   type RailQueryInput,
@@ -118,6 +119,11 @@ async function restatusTrips(...tripIds: Array<string | null | undefined>): Prom
   }
 }
 
+/** A misspelt `…Fold` is refused, not dropped — see `strayFoldKey`. */
+function refuseStrayFold(body: unknown): void {
+  const key = strayFoldKey(body);
+  if (key) throw new AppError(`Unknown field ${key}`, 400, "RAIL_INVALID_INPUT", key);
+}
 const router = Router();
 router.use(authenticate);
 // Method-aware: GET passes through, so read-only tokens keep read access.
@@ -255,6 +261,8 @@ function plainColumns(
   | "arrivalStation"
   | "departureLocal"
   | "arrivalLocal"
+  | "departureFold"
+  | "arrivalFold"
   | "distanceKm"
   | "status"
   | "companions"
@@ -265,6 +273,8 @@ function plainColumns(
     arrivalStation: _arr,
     departureLocal: _depLocal,
     arrivalLocal: _arrLocal,
+    departureFold: _depFold,
+    arrivalFold: _arrFold,
     distanceKm: _distance,
     status: _status,
     companions: _companions,
@@ -340,6 +350,7 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = requireUser(req);
+      refuseStrayFold(req.body);
       const parsed = createRailJourneySchema.safeParse(req.body);
       if (!parsed.success) throw invalidInput(parsed.error);
       const { connectsFrom, ...input } = parsed.data;
@@ -414,6 +425,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const existing = await prisma.railJourney.findFirst({ where: { id: req.params.id, userId } });
     if (!existing) throw new AppError("Rail journey not found", 404);
 
+    refuseStrayFold(req.body);
     const parsed = updateRailJourneySchema.safeParse(req.body);
     if (!parsed.success) throw invalidInput(parsed.error);
     const input = parsed.data;
