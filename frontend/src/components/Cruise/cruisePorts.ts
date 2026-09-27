@@ -1,5 +1,7 @@
 import type { Cruise, CruiseStop, Port } from "../../types";
 import { dateOfCruiseDay } from "./cruiseDayNumbers";
+import { cruiseEnd, cruiseStart, cruiseStopArrival, cruiseStopDay } from "../../lib/entityTimes";
+import { dayOf } from "../../shared/time";
 
 /**
  * Shared port-sequence helpers for cruise surfaces.
@@ -144,9 +146,18 @@ export interface EffectiveTimelineEntry {
   isAtSea: boolean;
   /** Unresolved port name when this entry is an unresolved stop, else null. */
   unresolvedPortName: string | null;
-  /** Best-known date for the entry (ISO string) or null. */
+  /** Best-known day for the entry at its port (`YYYY-MM-DD`) or null. */
   date: string | null;
   excursionNote: string | null;
+}
+
+function stopDay(cruise: Cruise, stop: CruiseStop): string | null {
+  const arrival = cruiseStopArrival(stop);
+  return (
+    cruiseStopDay(stop)?.date ??
+    (arrival ? dayOf(arrival) : null) ??
+    dateOfCruiseDay(cruiseStart(cruise)?.date, stop.dayNumber)
+  );
 }
 
 /**
@@ -165,7 +176,8 @@ export function buildEffectiveTimeline(cruise: Cruise): EffectiveTimelineEntry[]
     // older stops imported before the date field existed, then to the day of
     // the cruise — a sea day has neither, and its row stood without a date
     // between two dated ports (acceptance run, 2026-09-26).
-    date: stop.date ?? stop.arrivalTime ?? dateOfCruiseDay(cruise.startDate, stop.dayNumber),
+    // All three are the PORT's day (`times`, ADR 0002), never the reader's.
+    date: stopDay(cruise, stop),
     excursionNote: stop.excursionNote ?? null,
   }));
 
@@ -179,7 +191,7 @@ export function buildEffectiveTimeline(cruise: Cruise): EffectiveTimelineEntry[]
       port: cruise.departurePort,
       isAtSea: false,
       unresolvedPortName: null,
-      date: cruise.startDate,
+      date: cruiseStart(cruise)?.date ?? null,
       excursionNote: null,
     });
   }
@@ -190,7 +202,7 @@ export function buildEffectiveTimeline(cruise: Cruise): EffectiveTimelineEntry[]
       port: cruise.arrivalPort,
       isAtSea: false,
       unresolvedPortName: null,
-      date: cruise.endDate,
+      date: cruiseEnd(cruise)?.date ?? null,
       excursionNote: null,
     });
   }

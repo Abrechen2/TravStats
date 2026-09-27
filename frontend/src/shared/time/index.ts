@@ -35,3 +35,4 @@ export {
   timeValueFromWallClock,
 } from "./legacy";
 export { clockOf, dayOf, viewerReading } from "./reading";
+export { supportedZones } from "./zoneList";

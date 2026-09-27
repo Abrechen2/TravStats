@@ -1,9 +1,9 @@
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
-import { differenceInCalendarDays } from "date-fns";
 import type { useTranslation } from "../../hooks/useTranslation";
 import type { Trip } from "../../types";
-import { formatDateInTimezone } from "../../lib/dateUtils";
+import { formatLocalDate } from "../../lib/displayFormat";
+import { tripEnd, tripStart } from "../../lib/entityTimes";
 import { FlagImg } from "../../lib/countryFlag";
 import { countryName } from "../../shared/geo/countryCode";
 import { statusPillStyle } from "../table/statusPillStyle";
@@ -41,13 +41,16 @@ export default function TripHead({
   onEdit,
   onDelete,
 }: TripHeadProps): JSX.Element {
+  // The trip's days at its places (`times`), never moved by the reader's zone.
+  const start = tripStart(trip)?.date;
+  const end = tripEnd(trip)?.date;
   const days =
-    trip.startDate && trip.endDate
-      ? differenceInCalendarDays(new Date(trip.endDate), new Date(trip.startDate)) + 1
+    start && end
+      ? Math.round(
+          (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / 86_400_000
+        ) + 1
       : null;
-  const range = [trip.startDate, trip.endDate]
-    .filter((d): d is string => Boolean(d))
-    .map((d) => formatDateInTimezone(d, "UTC"));
+  const range = [start, end].filter((d): d is string => Boolean(d)).map((d) => formatLocalDate(d));
   const meta = [
     range.length === 2 && range[0] !== range[1] ? `${range[0]} – ${range[1]}` : range[0],
     days !== null && days > 0 ? t("trips:head.days", { count: days }) : null,

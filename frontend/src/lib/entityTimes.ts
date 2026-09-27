@@ -42,16 +42,20 @@ function flightPrecision(semantics: Semantics, stored: unknown): TimePrecision {
   return "minute";
 }
 
-type FlightLike = Pick<
-  Flight,
-  | "departureTime"
-  | "arrivalTime"
-  | "depTimezone"
-  | "arrTimezone"
-  | "depTimeSemantics"
-  | "arrTimeSemantics"
-> &
-  Partial<Pick<Flight, "actualDeparture" | "actualArrival" | "times">>;
+type FlightLike = Partial<
+  Pick<
+    Flight,
+    | "departureTime"
+    | "arrivalTime"
+    | "depTimezone"
+    | "arrTimezone"
+    | "depTimeSemantics"
+    | "arrTimeSemantics"
+    | "actualDeparture"
+    | "actualArrival"
+    | "times"
+  >
+>;
 
 function flightEnd(flight: FlightLike, end: "dep" | "arr", actual: boolean): TimeValue | null {
   const times = flight.times;
@@ -65,7 +69,11 @@ function flightEnd(flight: FlightLike, end: "dep" | "arr", actual: boolean): Tim
   if (fromServer) return fromServer;
   const row = flight as Maybe<FlightLike>;
   const semantics = end === "dep" ? flight.depTimeSemantics : flight.arrTimeSemantics;
-  const zone = end === "dep" ? flight.depTimezone : flight.arrTimezone;
+  // A reported time is read on the same airport clock as the planned one —
+  // the zone the server sent with it where it did.
+  const scheduled = end === "dep" ? times?.departure : times?.arrival;
+  const zone =
+    (actual ? scheduled?.zone : null) ?? (end === "dep" ? flight.depTimezone : flight.arrTimezone);
   const utc = actual
     ? end === "dep"
       ? flight.actualDeparture
@@ -73,7 +81,8 @@ function flightEnd(flight: FlightLike, end: "dep" | "arr", actual: boolean): Tim
     : end === "dep"
       ? flight.departureTime
       : flight.arrivalTime;
-  if (!actual && semantics === "LEGACY_FAKE_UTC" && !zone) return timeValueFromWallClock(utc);
+  // A fake-UTC column holds the airport's wall clock: shown as it is.
+  if (!actual && semantics === "LEGACY_FAKE_UTC") return timeValueFromWallClock(utc);
   const precision = actual
     ? "minute"
     : flightPrecision(semantics, row[end === "dep" ? "depPrecision" : "arrPrecision"]);
@@ -98,10 +107,12 @@ export function railArrival(j: RailLike): TimeValue | null {
   return j.times?.arrival ?? timeValueAtZone(j.arrivalTime, j.arrTimezone);
 }
 export function railActualDeparture(j: RailLike): TimeValue | null {
-  return j.times?.actualDeparture ?? timeValueAtZone(j.actualDepartureTime, j.depTimezone);
+  const zone = j.times?.departure?.zone ?? j.depTimezone;
+  return j.times?.actualDeparture ?? timeValueAtZone(j.actualDepartureTime, zone);
 }
 export function railActualArrival(j: RailLike): TimeValue | null {
-  return j.times?.actualArrival ?? timeValueAtZone(j.actualArrivalTime, j.arrTimezone);
+  const zone = j.times?.arrival?.zone ?? j.arrTimezone;
+  return j.times?.actualArrival ?? timeValueAtZone(j.actualArrivalTime, zone);
 }
 
 type StayLike = Pick<LodgingStay, "checkIn" | "checkOut"> & Partial<Pick<LodgingStay, "times">>;

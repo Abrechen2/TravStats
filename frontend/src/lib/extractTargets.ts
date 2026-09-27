@@ -1,4 +1,6 @@
 import type { Flight, FlightInput } from "../types";
+import { flightDeparture, railDeparture } from "./entityTimes";
+import { dayOf } from "../shared/time";
 import type { Cruise, CruiseWriteBody } from "../types/cruise";
 import type { RailJourney, RailJourneyInput } from "../types/rail";
 import type { CurrencyCode } from "../shared/currencies";
@@ -15,19 +17,10 @@ import type {
  * entry is already stored — a form builds its own target from its state.
  */
 
-/** The calendar day a flight departs, in the departure airport's zone. */
-export function departureDay(
-  flight: Pick<Flight, "departureTime" | "depTimezone">
-): string | undefined {
-  if (!flight.departureTime) return undefined;
-  const date = new Date(flight.departureTime);
-  if (Number.isNaN(date.getTime())) return undefined;
-  try {
-    // en-CA formats as YYYY-MM-DD.
-    return new Intl.DateTimeFormat("en-CA", { timeZone: flight.depTimezone || "UTC" }).format(date);
-  } catch {
-    return flight.departureTime.slice(0, 10);
-  }
+/** The calendar day a flight departs, at the departure airport (its `times.departure.local`). */
+export function departureDay(flight: Parameters<typeof flightDeparture>[0]): string | undefined {
+  const departure = flightDeparture(flight);
+  return departure ? dayOf(departure) : undefined;
 }
 
 /** Only the ticked values; a null never leaves as "clear this field". */
@@ -97,10 +90,8 @@ export function railExtractTarget(
   save: (updates: Partial<RailJourneyInput>) => Promise<void>
 ): ExtractTarget {
   const train = [journey.trainCategory, journey.trainNumber].filter(Boolean).join(" ");
-  const day = departureDay({
-    departureTime: journey.departureTime,
-    depTimezone: journey.depTimezone,
-  });
+  const departure = railDeparture(journey);
+  const day = departure ? dayOf(departure) : undefined;
   return {
     domain: "rail",
     ...(train ? { trainNumber: train } : {}),
@@ -138,7 +129,8 @@ export interface AppliedValues {
 
 /** The two hints that pick a stored flight's leg out of a multi-flight booking. */
 export function flightHints(
-  flight: Pick<Flight, "flightNumber" | "departureTime" | "depTimezone">
+  flight: Pick<Flight, "flightNumber" | "departureTime" | "depTimezone"> &
+    Partial<Pick<Flight, "times">>
 ): { flightNumber?: string; departureDate?: string } {
   return { flightNumber: flight.flightNumber || undefined, departureDate: departureDay(flight) };
 }

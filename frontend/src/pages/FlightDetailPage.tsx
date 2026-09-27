@@ -7,7 +7,15 @@ import DetailSection from "../components/ui/DetailSection";
 import PeopleList from "../components/ui/PeopleList";
 import FlightRouteHero from "../components/flightsTable/FlightRouteHero";
 import { resolveAirlineIata } from "../lib/airlineUtils";
-import { formatDateInTimezone, formatDateTimeInTimezone } from "../lib/dateUtils";
+import { formatTimeValueShown } from "../lib/displayFormat";
+import {
+  flightActualArrival,
+  flightActualDeparture,
+  flightArrival,
+  flightDeparture,
+} from "../lib/entityTimes";
+import { yourTimeText } from "../lib/yourTime";
+import { readsAsUtc, type TimeValue } from "../shared/time";
 import Button from "../components/ui/Button";
 import SpecialTypeBadge from "../components/specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "../components/specialFlights/specialTypeMeta";
@@ -56,6 +64,7 @@ export default function FlightDetailPage(): JSX.Element {
   const { t, i18n } = useTranslation(["flights", "common", "trips", "specialFlights"]);
   const addToast = useToastStore((s) => s.addToast);
   const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
+  const viewerZone = useSettingsStore((state) => state.display?.timezone);
 
   const [flight, setFlight] = useState<Flight | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -182,9 +191,19 @@ export default function FlightDetailPage(): JSX.Element {
           i18n.language
         )} ${getDistanceLabel(distanceUnit, t)}`
       : null;
-  /** A time in prose and a detail grid: DD.MM.YYYY, HH:MM on the airport's clock (E7). */
-  const when = (iso: string | null | undefined, tz: string | null | undefined): string | null =>
-    iso ? formatDateTimeInTimezone(iso, tz || "UTC", flight.depTimeSemantics) : null;
+  /**
+   * A time in the detail grid: the airport's day and clock as the server read
+   * it (`times.*.local`, ADR 0002), cut to its precision, "UTC" where the
+   * airport has no known zone, and the user's own clock as a hint (Q2).
+   */
+  const when = (value: TimeValue | null): string | null => {
+    if (!value) return null;
+    const shown = `${formatTimeValueShown(value)}${readsAsUtc(value) ? " UTC" : ""}`;
+    const hint = yourTimeText(value, viewerZone, t);
+    return hint ? `${shown} · ${hint}` : shown;
+  };
+  const departure = flightDeparture(flight);
+  const arrival = flightArrival(flight);
 
   return (
     <AppShell width="list">
@@ -208,9 +227,7 @@ export default function FlightDetailPage(): JSX.Element {
           </>
         }
         meta={[
-          flight.departureTime
-            ? formatDateInTimezone(flight.departureTime, flight.depTimezone || "UTC")
-            : null,
+          departure ? formatTimeValueShown(departure, { dateOnly: true }) : null,
           flight.aircraft,
           flight.aircraftRegistration,
         ]
@@ -238,22 +255,22 @@ export default function FlightDetailPage(): JSX.Element {
             facts={[
               {
                 label: t("flights:detail.departurePlanned"),
-                value: when(flight.departureTime, flight.depTimezone),
+                value: when(departure),
                 mono: true,
               },
               {
                 label: t("flights:detail.departureActual"),
-                value: when(flight.actualDeparture, flight.depTimezone),
+                value: when(flightActualDeparture(flight)),
                 mono: true,
               },
               {
                 label: t("flights:detail.arrivalPlanned"),
-                value: when(flight.arrivalTime, flight.arrTimezone),
+                value: when(arrival),
                 mono: true,
               },
               {
                 label: t("flights:detail.arrivalActual"),
-                value: when(flight.actualArrival, flight.arrTimezone),
+                value: when(flightActualArrival(flight)),
                 mono: true,
               },
               {
@@ -266,9 +283,7 @@ export default function FlightDetailPage(): JSX.Element {
               {
                 label: t("flights:detail.timezones"),
                 value:
-                  flight.depTimezone && flight.arrTimezone
-                    ? `${flight.depTimezone} → ${flight.arrTimezone}`
-                    : null,
+                  departure?.zone && arrival?.zone ? `${departure.zone} → ${arrival.zone}` : null,
               },
             ]}
           />

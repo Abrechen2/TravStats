@@ -24,6 +24,12 @@ export interface TimeValue {
   /** Wall clock at the place, `YYYY-MM-DDTHH:mm:ss`. Display this. */
   local: string;
   precision: TimePrecision;
+  /**
+   * `stored`: the zone was frozen with the value (D2). `catalogue`: an old
+   * flight read in today's airport catalogue zone. Null with `zone: null`.
+   * Optional: the web's own legacy readers (`legacy.ts`) do not set it.
+   */
+  zoneSource?: "stored" | "catalogue" | null;
 }
 
 /** A calendar day, as the place knew it (a stay night, a cruise day). */

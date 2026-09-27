@@ -349,7 +349,7 @@ export default function PlacesListPage(): JSX.Element {
 
   const formatDate = useCallback(
     // ISO in the table (E7). A visit is a calendar date, stored as UTC midnight.
-    (iso: string | null): string => (iso ? formatIsoDate(iso, "UTC") : "—"),
+    (iso: string | null): string => (iso ? formatIsoDate(iso) : "—"),
     []
   );
 
