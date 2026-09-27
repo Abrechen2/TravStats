@@ -170,7 +170,11 @@
     "tomorrow": "Tomorrow",
     "thisWeek": "This week",
     "thisMonth": "This month",
-    "thisYear": "This year"
+    "thisYear": "This year",
+    "yourTime": "your time: {{time}}",
+    "yourTimeTitle": "The same moment in your time zone ({{zone}}). The local time at the place is always shown.",
+    "utcFallback": "UTC",
+    "utcFallbackTitle": "No time zone is known for this place — the time is UTC, not local time."
   },
   "sort": {
     "ascending": "ascending",

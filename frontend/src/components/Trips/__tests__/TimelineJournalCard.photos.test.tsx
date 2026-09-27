@@ -1,3 +1,4 @@
+import { dayAsTimeValue } from "../../../lib/tripTimeline";
 import { describe, it, expect, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
@@ -38,7 +39,15 @@ describe("JournalCard photos", () => {
   it("shows the entry's photos when the entry is opened", async () => {
     render(
       <JournalCard
-        ev={{ id: "j-e1", kind: "journal", date: entry.date, entry } as never}
+        ev={
+          {
+            id: "j-e1",
+            kind: "journal",
+            date: entry.date,
+            when: dayAsTimeValue({ date: "2024-07-15", zone: null, precision: "day" }),
+            entry,
+          } as never
+        }
         language="de"
         onView={vi.fn()}
         onEdit={vi.fn()}

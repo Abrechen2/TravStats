@@ -8,6 +8,7 @@ import type {
   RailTravelClass,
 } from "../../types/rail";
 import { toStationWallClock } from "../../lib/railTime";
+import { railArrival, railDeparture } from "../../lib/entityTimes";
 import { EMPTY_STATION, type RailStationDraft } from "./RailStationField";
 
 /**
@@ -88,8 +89,8 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
       stationId: journey.arrStationId,
     },
     // Read back on each station's own clock — the time the ticket printed.
-    departureLocal: toStationWallClock(journey.departureTime, journey.depTimezone),
-    arrivalLocal: toStationWallClock(journey.arrivalTime, journey.arrTimezone),
+    departureLocal: toStationWallClock(railDeparture(journey)),
+    arrivalLocal: toStationWallClock(railArrival(journey)),
     distanceKm:
       journey.distanceSource === "user" && journey.distanceKm !== null
         ? String(journey.distanceKm)

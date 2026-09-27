@@ -1,6 +1,23 @@
-import { formatDateTimeInTimezone } from "./dateUtils";
-import { formatDate } from "./displayFormat";
-import { compareTimelineEvents, isSupersededByPlaceVisit } from "./tripTimeline";
+import { formatLocalDate, formatTimeValueShown } from "./displayFormat";
+import {
+  cruiseEnd,
+  cruiseStart,
+  flightArrival,
+  flightDeparture,
+  journalDay,
+  railDeparture,
+  stayCheckIn,
+  stayCheckOut,
+  tripStopStart,
+  visitTime,
+} from "./entityTimes";
+import {
+  compareTimelineEvents,
+  dayAsTimeValue,
+  hasExplicitTime,
+  isSupersededByPlaceVisit,
+} from "./tripTimeline";
+import { readsAsUtc, timeValueAtZone, type TimeValue } from "../shared/time";
 import type { Trip, TripJournalEntry, TripStop } from "../types";
 import type { Place, PlaceVisit } from "../types/place";
 import type { TripRailJourney } from "../types/rail";
@@ -10,12 +27,18 @@ import type { TripRailJourney } from "../types/rail";
  * chronology. Moved out of `pages/TripDetailPage.tsx`, which is over the
  * 800-line limit and frozen at its size, when rail journeys joined the
  * timeline (spec 2026-09-25-rail-domain, phase 2b).
+ *
+ * Every entry's `when` is a `TimeValue` from `lib/entityTimes.ts`: the
+ * place's own clock to show and group by, the instant to order within a day
+ * (ADR 0002). No entry is read in the viewer's zone.
  */
 export type TimelineEvent =
   | {
       id: string;
       kind: "flight";
+      /** `when.utc` — kept for callers that only need an instant to compare. */
       date: string;
+      when: TimeValue;
       title: string;
       subtitle: string | null;
       /** The row itself, so the entry can open in place. It is already on the
@@ -25,7 +48,9 @@ export type TimelineEvent =
   | {
       id: string;
       kind: "cruise";
+      /** `when.utc` — kept for callers that only need an instant to compare. */
       date: string;
+      when: TimeValue;
       title: string;
       subtitle: string | null;
       cruise: NonNullable<Trip["cruises"]>[number];
@@ -33,141 +58,178 @@ export type TimelineEvent =
   | {
       id: string;
       kind: "stop";
+      /** `when.utc` — kept for callers that only need an instant to compare. */
       date: string;
+      when: TimeValue;
       stop: TripStop;
     }
   | {
       id: string;
       kind: "journal";
+      /** `when.utc` — kept for callers that only need an instant to compare. */
       date: string;
+      when: TimeValue;
       entry: TripJournalEntry;
     }
   | {
       id: string;
       kind: "lodging-checkin" | "lodging-checkout";
+      /** `when.utc` — kept for callers that only need an instant to compare. */
       date: string;
+      when: TimeValue;
       stay: NonNullable<Trip["lodgingStays"]>[number];
     }
   | {
       id: string;
       kind: "rail";
+      /** `when.utc` — kept for callers that only need an instant to compare. */
       date: string;
+      when: TimeValue;
       journey: TripRailJourney;
     }
   | {
       id: string;
       kind: "place-visit";
+      /** `when.utc` — kept for callers that only need an instant to compare. */
       date: string;
+      when: TimeValue;
       place: Place;
       visit: PlaceVisit;
     };
 
-/** Rail journeys as entries: one per ride, at its departure instant. */
+/** Rail journeys as entries: one per ride, at its departure. */
 function railEvents(trip: Trip): TimelineEvent[] {
-  return (trip.railJourneys ?? []).map((journey) => ({
-    id: `rail-${journey.id}`,
-    kind: "rail" as const,
-    date: journey.departureTime,
-    journey,
-  }));
+  const out: TimelineEvent[] = [];
+  for (const journey of trip.railJourneys ?? []) {
+    const when = railDeparture(journey);
+    if (!when) continue;
+    out.push({ id: `rail-${journey.id}`, kind: "rail", date: when.utc, when, journey });
+  }
+  return out;
 }
 
-export function buildTimelineEvents(
-  trip: Trip,
-  placeVisits: ReadonlyArray<{ place: Place; visit: PlaceVisit }>,
-  userTz: string
-): TimelineEvent[] {
-  const out: TimelineEvent[] = [...railEvents(trip)];
+/** One end of a flight as the subtitle shows it: on its airport's clock, "UTC" where no zone is known. */
+function flightEndLabel(value: TimeValue): string {
+  const shown = formatTimeValueShown(value);
+  return readsAsUtc(value) && hasExplicitTime(value) ? `${shown} UTC` : shown;
+}
+
+function flightEvents(trip: Trip): TimelineEvent[] {
+  const out: TimelineEvent[] = [];
   for (const f of trip.flights ?? []) {
-    if (!f.departureTime) continue;
+    const when = flightDeparture(f);
+    if (!when) continue;
+    const arrival = flightArrival(f);
     out.push({
       id: `flight-${f.id}`,
       kind: "flight",
-      date: f.departureTime,
+      date: when.utc,
+      when,
       title: `${f.depIata ?? "???"} → ${f.arrIata ?? "???"}`,
-      // Airport-local, not the viewer's clock. `toLocaleString()` rendered a
-      // JFK arrival in Europe/Berlin, so the same flight read 13:45 in the
-      // flights table and 19:45 here — six hours apart from the boarding
-      // pass. Each end is formatted against its own airport's zone, with the
-      // stored time semantics so a DATE_ONLY historical row keeps its date.
-      subtitle: f.arrivalTime
-        ? `${formatDateTimeInTimezone(f.departureTime, f.depTimezone || userTz, f.depTimeSemantics)} → ${formatDateTimeInTimezone(f.arrivalTime, f.arrTimezone || userTz, f.arrTimeSemantics)}`
-        : formatDateTimeInTimezone(f.departureTime, f.depTimezone || userTz, f.depTimeSemantics),
+      // Each end on its own airport's clock (the server's `local`), never the
+      // viewer's: `toLocaleString()` once put a JFK arrival six hours off the
+      // boarding pass here.
+      subtitle: arrival
+        ? `${flightEndLabel(when)} → ${flightEndLabel(arrival)}`
+        : flightEndLabel(when),
       flight: f,
     });
   }
+  return out;
+}
+
+function cruiseEvents(trip: Trip): TimelineEvent[] {
+  const out: TimelineEvent[] = [];
   for (const c of trip.cruises ?? []) {
-    if (!c.startDate) continue;
+    const start = cruiseStart(c);
+    if (!start) continue;
+    const end = cruiseEnd(c);
+    const when = dayAsTimeValue(start);
     out.push({
       id: `cruise-${c.id}`,
       kind: "cruise",
-      date: c.startDate,
+      date: when.utc,
+      when,
       title: c.cruiseLine ?? "Kreuzfahrt",
-      subtitle: c.endDate
-        ? `${formatDate(c.startDate)} → ${formatDate(c.endDate)}`
-        : formatDate(c.startDate),
+      subtitle: end
+        ? `${formatLocalDate(start.date)} → ${formatLocalDate(end.date)}`
+        : formatLocalDate(start.date),
       cruise: c,
     });
   }
+  return out;
+}
+
+function stopEvents(trip: Trip): TimelineEvent[] {
+  const out: TimelineEvent[] = [];
   for (const s of trip.stops ?? []) {
     // A migrated POI stop is drawn as its PlaceVisit instead. Both rows
     // exist between the backfill and the delete release, so without this
     // every migrated POI would appear twice — see isSupersededByPlaceVisit.
     if (isSupersededByPlaceVisit(s)) continue;
-    out.push({
-      id: `stop-${s.id}`,
-      kind: "stop",
-      date: s.startDate ?? s.createdAt,
-      stop: s,
-    });
+    // A stop without a date sits on the day it was written down (UTC, the
+    // only day a creation instant has), without a clock.
+    const when = tripStopStart(s) ?? timeValueAtZone(s.createdAt, null, "day");
+    if (!when) continue;
+    out.push({ id: `stop-${s.id}`, kind: "stop", date: when.utc, when, stop: s });
   }
+  return out;
+}
+
+function lodgingEvents(trip: Trip): TimelineEvent[] {
+  // Each linked stay renders as TWO timeline entries — a check-in and a
+  // check-out — so the hotel is visible in the trip's chronology. An undated
+  // stay has no place on one; it still shows in the lodging list below.
+  const out: TimelineEvent[] = [];
+  for (const s of trip.lodgingStays ?? []) {
+    const checkIn = stayCheckIn(s);
+    const checkOut = stayCheckOut(s);
+    const inWhen = s.times?.checkInAt ?? (checkIn ? dayAsTimeValue(checkIn) : null);
+    const outWhen = s.times?.checkOutAt ?? (checkOut ? dayAsTimeValue(checkOut) : null);
+    if (inWhen) {
+      const id = `lodging-checkin-${s.id}`;
+      out.push({ id, kind: "lodging-checkin", date: inWhen.utc, when: inWhen, stay: s });
+    }
+    if (outWhen) {
+      const id = `lodging-checkout-${s.id}`;
+      out.push({ id, kind: "lodging-checkout", date: outWhen.utc, when: outWhen, stay: s });
+    }
+  }
+  return out;
+}
+
+export function buildTimelineEvents(
+  trip: Trip,
+  placeVisits: ReadonlyArray<{ place: Place; visit: PlaceVisit }>
+): TimelineEvent[] {
+  const out: TimelineEvent[] = [
+    ...railEvents(trip),
+    ...flightEvents(trip),
+    ...cruiseEvents(trip),
+    ...stopEvents(trip),
+  ];
   for (const { place, visit } of placeVisits) {
     // An undated visit has no place on a chronology; it still shows on the
     // place itself. Same rule an undated lodging stay already follows.
-    if (!visit.visitedAt) continue;
+    const when = visitTime(visit);
+    if (!when) continue;
     out.push({
       id: `place-visit-${visit.id}`,
       kind: "place-visit",
-      date: visit.visitedAt,
+      date: when.utc,
+      when,
       place,
       visit,
     });
   }
   for (const e of trip.journalEntries ?? []) {
-    out.push({
-      id: `journal-${e.id}`,
-      kind: "journal",
-      date: e.date,
-      entry: e,
-    });
+    const day = journalDay(e);
+    if (!day) continue;
+    const when = dayAsTimeValue(day);
+    out.push({ id: `journal-${e.id}`, kind: "journal", date: when.utc, when, entry: e });
   }
-  // Each linked stay renders as TWO timeline entries — a check-in and a
-  // check-out — mirroring how TripStop entries already work, so the
-  // hotel is actually visible in the trip's chronology instead of
-  // disappearing once it's assigned (the spec gap this closes).
-  for (const s of trip.lodgingStays ?? []) {
-    // A timeline is ordered by date, so an undated stay has no place on one.
-    // It is still shown on the trip — in the lodging list below, which needs
-    // no chronology — rather than being dropped from the page.
-    if (s.checkIn !== null) {
-      out.push({
-        id: `lodging-checkin-${s.id}`,
-        kind: "lodging-checkin",
-        date: s.checkIn,
-        stay: s,
-      });
-    }
-    if (s.checkOut !== null) {
-      out.push({
-        id: `lodging-checkout-${s.id}`,
-        kind: "lodging-checkout",
-        date: s.checkOut,
-        stay: s,
-      });
-    }
-  }
-  // #175: ordered by time of day, with a day's diary entry last. See
-  // compareTimelineEvents — the tie-break rules and the reason they exist
-  // live there, not here.
+  out.push(...lodgingEvents(trip));
+  // #175: grouped by the place's day, ordered within it, a day's diary entry
+  // last. See compareTimelineEvents — the rules and why they exist live there.
   return out.sort(compareTimelineEvents);
 }

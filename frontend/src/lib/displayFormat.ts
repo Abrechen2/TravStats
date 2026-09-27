@@ -1,5 +1,6 @@
 import { useMemo } from "react";
 
+import { displayParts, type TimeValue } from "../shared/time";
 import { useSettingsStore, type DisplaySettings } from "../store/settingsStore";
 
 /**
@@ -126,6 +127,49 @@ export function formatDateTimeWith(
   return day ? `${day} ${formatTimeWith(prefs, input, options)}` : "";
 }
 
+/**
+ * A PLACE's day, from a `YYYY-MM-DD…` string (a `TimeValue.local`, a
+ * `LocalDateValue.date`), in the user's format. The components are placed on
+ * a UTC instant and read back in UTC, so neither the reader's zone nor any
+ * zone name can move the day (ADR 0002, D3: display `local` as it is).
+ */
+export function formatLocalDateWith(
+  prefs: DisplayFormatPrefs,
+  local: string,
+  options: Omit<FormatOptions, "timeZone"> = {}
+): string {
+  const m = /^(\d{4})-(\d{2})-(\d{2})/.exec(local);
+  if (!m) return "";
+  const at = Date.UTC(Number(m[1]), Number(m[2]) - 1, Number(m[3]));
+  return formatDateWith(prefs, at, { ...options, timeZone: "UTC" });
+}
+
+/** A place's clock (`HH:mm` or a `…THH:mm…` wall clock) on the user's 24h/12h clock. */
+export function formatLocalClockWith(prefs: DisplayFormatPrefs, local: string): string {
+  const m = /(?:^|T)(\d{2}):(\d{2})/.exec(local);
+  if (!m) return "";
+  return formatTimeWith(prefs, Date.UTC(2000, 0, 1, Number(m[1]), Number(m[2])), {
+    timeZone: "UTC",
+  });
+}
+
+/**
+ * A `TimeValue` as the place saw it, cut to its precision: the date, plus
+ * the clock when the value knows its time of day. `dateOnly` drops the clock.
+ */
+export function formatTimeValueWith(
+  prefs: DisplayFormatPrefs,
+  value: TimeValue,
+  options: Omit<FormatOptions, "timeZone"> & { dateOnly?: boolean } = {}
+): string {
+  const parts = displayParts(value);
+  if (!parts) return value.local;
+  const { dateOnly, ...dateOptions } = options;
+  const day =
+    parts.date.length === 10 ? formatLocalDateWith(prefs, parts.date, dateOptions) : parts.date;
+  return parts.time && !dateOnly ? `${day} ${formatLocalClockWith(prefs, parts.time)}` : day;
+}
+
 /** The preference as the store holds it right now — for code that cannot use a hook. */
 export function currentDisplayFormat(): DisplayFormatPrefs {
   const display = useSettingsStore.getState?.().display;
@@ -146,6 +190,15 @@ export interface DisplayFormatter {
   date: (input: DateInput, options?: FormatOptions) => string;
   time: (input: DateInput, options?: FormatOptions) => string;
   dateTime: (input: DateInput, options?: FormatOptions) => string;
+  /** A place's day (`YYYY-MM-DD…`), never moved by the reader's zone. */
+  localDate: (local: string, options?: Omit<FormatOptions, "timeZone">) => string;
+  /** A place's clock (`HH:mm` / `…THH:mm`). */
+  localClock: (local: string) => string;
+  /** A `TimeValue` as the place saw it, cut to its precision. */
+  timeValue: (
+    value: TimeValue,
+    options?: Omit<FormatOptions, "timeZone"> & { dateOnly?: boolean }
+  ) => string;
 }
 
 /** The formatters, re-rendering the component when the user changes the setting. */
@@ -163,6 +216,23 @@ export function useDisplayFormat(): DisplayFormatter {
       date: (input, options) => formatDateWith(prefs, input, withLanguage(options)),
       time: (input, options) => formatTimeWith(prefs, input, withLanguage(options)),
       dateTime: (input, options) => formatDateTimeWith(prefs, input, withLanguage(options)),
+      localDate: (local, options) =>
+        formatLocalDateWith(prefs, local, withLanguage(options) as Omit<FormatOptions, "timeZone">),
+      localClock: (local) => formatLocalClockWith(prefs, local),
+      timeValue: (value, options) =>
+        formatTimeValueWith(prefs, value, {
+          language: language === "de" ? "de" : "en",
+          ...options,
+        }),
     };
   }, [dateFormat, timeFormat, language]);
 }
+
+export const formatLocalDate = (local: string, options?: Omit<FormatOptions, "timeZone">): string =>
+  formatLocalDateWith(currentDisplayFormat(), local, options);
+export const formatLocalClock = (local: string): string =>
+  formatLocalClockWith(currentDisplayFormat(), local);
+export const formatTimeValueShown = (
+  value: TimeValue,
+  options?: Omit<FormatOptions, "timeZone"> & { dateOnly?: boolean }
+): string => formatTimeValueWith(currentDisplayFormat(), value, options);

@@ -32,7 +32,8 @@ import type { Trip } from "../types";
 import { useToastStore } from "../store/toastStore";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
 import { classifyVisit } from "../shared/placeCounting";
-import { splitDateTimeInput } from "../lib/tripTimeline";
+import { splitTimeValue } from "../lib/tripTimeline";
+import { visitTime as visitTimeOf } from "../lib/entityTimes";
 import type { Place, PlaceVisit } from "../types/place";
 
 export default function PlaceDetailPage(): JSX.Element {
@@ -160,7 +161,7 @@ export default function PlaceDetailPage(): JSX.Element {
 
   /** Opens the visit form on an existing visit, filled as the list shows it. */
   const openVisitEditor = useCallback((visit: PlaceVisit): void => {
-    const { date, time } = splitDateTimeInput(visit.visitedAt);
+    const { date, time } = splitTimeValue(visitTimeOf(visit));
     setVisitDate(date);
     setVisitTime(time);
     setVisitNotes(visit.notes ?? "");
@@ -242,8 +243,9 @@ export default function PlaceDetailPage(): JSX.Element {
   // ISO date in the visit list, as every table row in round 4 (E7).
   const formatVisit = useCallback(
     (v: PlaceVisit): string => {
-      if (!v.visitedAt) return t("places:detail.undated");
-      const { date, time } = splitDateTimeInput(v.visitedAt);
+      const shown = visitTimeOf(v);
+      if (!shown) return t("places:detail.undated");
+      const { date, time } = splitTimeValue(shown);
       return time ? `${date} ${time}` : date;
     },
     [t]

@@ -26,6 +26,15 @@ import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { formatAmount } from "../lib/units";
 import { formatStationTime, railDurationMinutes } from "../lib/railTime";
+import {
+  railActualArrival,
+  railActualDeparture,
+  railArrival,
+  railDeparture,
+} from "../lib/entityTimes";
+import { yourTimeText } from "../lib/yourTime";
+import type { TimeValue } from "../shared/time";
+import { useSettingsStore } from "../store/settingsStore";
 import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { useToastStore } from "../store/toastStore";
@@ -53,6 +62,7 @@ export default function RailDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
   const { t, i18n } = useTranslation(["rail", "common", "trips", "documents"]);
+  const viewerZone = useSettingsStore((s) => s.display?.timezone);
   const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
   const addToast = useToastStore((s) => s.addToast);
   const [journey, setJourney] = useState<RailJourneyDetail | null>(null);
@@ -145,7 +155,8 @@ export default function RailDetailPage(): JSX.Element {
 
   const distanceNoteKey = railDistanceNoteKey(journey.distanceSource, { includeTicket: true });
   const distanceNote = distanceNoteKey ? t(distanceNoteKey) : null;
-  const duration = railDurationMinutes(journey.departureTime, journey.arrivalTime);
+  const departure = railDeparture(journey);
+  const duration = departure ? railDurationMinutes(departure, railArrival(journey)) : null;
   const price =
     journey.price !== null
       ? formatAmount(journey.price, journey.currency, { language: i18n.language })
@@ -175,8 +186,13 @@ export default function RailDetailPage(): JSX.Element {
       : []),
   ];
 
-  const stationTime = (iso: string | null, zone: string | null): string | null =>
-    iso ? `${formatStationTime(iso, zone, locale)}${zone ? ` (${zone})` : ""}` : null;
+  // The station's clock, its zone named, and the user's own clock as a hint (Q2).
+  const stationTime = (value: TimeValue | null): string | null => {
+    if (!value) return null;
+    const hint = yourTimeText(value, viewerZone, t);
+    const zone = value.zone ? ` (${value.zone})` : "";
+    return `${formatStationTime(value, locale)}${zone}${hint ? ` · ${hint}` : ""}`;
+  };
 
   return (
     <AppShell width="list">
@@ -186,10 +202,7 @@ export default function RailDetailPage(): JSX.Element {
         domain="rail"
         icon={<Icon name="train-front" size={24} />}
         title={`${journey.depStationName} → ${journey.arrStationName}`}
-        meta={[
-          trainLabel(journey),
-          formatStationTime(journey.departureTime, journey.depTimezone, locale),
-        ]
+        meta={[trainLabel(journey), departure ? formatStationTime(departure, locale) : null]
           .filter(Boolean)
           .join(" · ")}
         hero={kpis.length > 0 ? <DetailKpis items={kpis} /> : undefined}
@@ -225,19 +238,19 @@ export default function RailDetailPage(): JSX.Element {
             facts={[
               {
                 label: t("rail:detail.plannedDeparture"),
-                value: stationTime(journey.departureTime, journey.depTimezone),
+                value: stationTime(departure),
               },
               {
                 label: t("rail:detail.plannedArrival"),
-                value: stationTime(journey.arrivalTime, journey.arrTimezone),
+                value: stationTime(railArrival(journey)),
               },
               {
                 label: t("rail:detail.actualDeparture"),
-                value: stationTime(journey.actualDepartureTime, journey.depTimezone),
+                value: stationTime(railActualDeparture(journey)),
               },
               {
                 label: t("rail:detail.actualArrival"),
-                value: stationTime(journey.actualArrivalTime, journey.arrTimezone),
+                value: stationTime(railActualArrival(journey)),
               },
               { label: t("rail:detail.delay"), value: delayText },
             ]}
