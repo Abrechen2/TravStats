@@ -1,3 +1,5 @@
+import { birthdayOf } from "../services/timeModel/readDay";
+import { departureClockOf } from "./timezone";
 import { prisma } from "../db";
 import { calculateRoadtripAchievementStats } from "./roadtripAchievements";
 import { calculateRailAchievementStats } from "./railAchievements";
@@ -141,7 +143,7 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     // (Birthday Flight needs month+day of birthdate).
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { birthdate: true },
+      select: { birthdate: true, birthDay: true },
     });
 
     // Get user's existing achievements
@@ -238,7 +240,15 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
           lat: true,
           lon: true,
           curatedItemId: true,
-          visits: { select: { visitedAt: true, rating: true, tripId: true } },
+          visits: {
+            select: {
+              visitedAt: true,
+              visitedAtUtc: true,
+              visitedZone: true,
+              rating: true,
+              tripId: true,
+            },
+          },
         },
       }),
     ]);
@@ -287,19 +297,16 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       if (arrContinent) scheduledContinents.add(arrContinent);
     }
 
-    // Birthday Flight — count flown flights whose departureTime month+day
-    // matches the user's stored birthdate (year irrelevant).
+    // Birthday Flight — count flown flights that departed on the birthday
+    // (year irrelevant), on the departure airport's calendar (ADR 0002 D4).
     let birthdayFlights = stats.birthdayFlights;
-    if (user?.birthdate) {
-      const bMonth = user.birthdate.getMonth();
-      const bDay = user.birthdate.getDate();
-      birthdayFlights = flights.filter(
-        (f) =>
-          f.status === "flown" &&
-          f.departureTime &&
-          f.departureTime.getMonth() === bMonth &&
-          f.departureTime.getDate() === bDay
-      ).length;
+    const birthday = birthdayOf(user);
+    if (birthday) {
+      birthdayFlights = flights.filter((f) => {
+        if (f.status !== "flown" || !f.departureTime) return false;
+        const clock = departureClockOf(f.departureTime, f);
+        return clock.month + 1 === birthday.month && clock.day === birthday.day;
+      }).length;
     }
 
     // Schedule Keeper — max scheduled-flights count inside any rolling 30-day window.
@@ -325,9 +332,7 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     }
 
     // Cruise stats (multi-domain V1) — computed separately from flight stats.
-    const userBirthday = user?.birthdate
-      ? { month: user.birthdate.getMonth() + 1, day: user.birthdate.getDate() }
-      : undefined;
+    const userBirthday = birthdayOf(user);
 
     const cruiseStatsInput: CruiseStatsInput[] = cruises.map((c) => ({
       id: c.id,

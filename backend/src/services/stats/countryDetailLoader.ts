@@ -97,7 +97,7 @@ export async function loadCountryDetailInputs(userId: string): Promise<CountryDe
           id: true,
           name: true,
           isoCountryCode: true,
-          visits: { select: { visitedAt: true } },
+          visits: { select: { visitedAt: true, visitedAtUtc: true, visitedZone: true } },
         },
       }),
       // The fourth source, and the one the owner's instruction is about: a house

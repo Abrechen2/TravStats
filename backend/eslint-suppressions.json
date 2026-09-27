@@ -59,44 +59,9 @@
       "count": 1
     }
   },
-  "src/services/stats/cruiseStatsData.ts": {
-    "time/no-host-local-date": {
-      "count": 2
-    }
-  },
-  "src/shared/flightChronology.ts": {
-    "time/no-ambient-now": {
-      "count": 1
-    }
-  },
-  "src/shared/placeCounting.ts": {
-    "time/no-ambient-now": {
-      "count": 3
-    }
-  },
-  "src/shared/statusDerivation.ts": {
-    "time/no-ambient-now": {
-      "count": 5
-    }
-  },
   "src/utils/__tests__/railHostZoneProbe.ts": {
     "time/no-host-local-date": {
       "count": 1
-    }
-  },
-  "src/utils/achievementChecks.ts": {
-    "time/no-host-local-date": {
-      "count": 5
-    }
-  },
-  "src/utils/achievementStats.ts": {
-    "time/no-host-local-date": {
-      "count": 10
-    }
-  },
-  "src/utils/achievements.ts": {
-    "time/no-host-local-date": {
-      "count": 6
     }
   }
 }

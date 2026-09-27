@@ -17,7 +17,7 @@ import {
 import { assertMergedTripDates } from "../services/trip/tripDateOrder";
 import logger from "../utils/logger";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
-import { deriveTripStatus } from "../shared/statusDerivation";
+import { statusFromOwnDates } from "../services/trips/ownDatesStatus";
 
 import { detectTrips } from "../services/tripDetectionService";
 import { recomputeTripStatus } from "../services/tripStatusService";
@@ -488,10 +488,7 @@ router.post(
             // auto-trip creation, trip detection).
             status:
               body.status ??
-              deriveTripStatus({
-                earliestStart: body.startDate ?? null,
-                latestEnd: body.endDate ?? null,
-              }) ??
+              (await statusFromOwnDates(userId, body.startDate, body.endDate)) ??
               undefined,
             category: body.category,
             tags: body.tags,

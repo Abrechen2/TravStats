@@ -181,3 +181,40 @@ describe("calculateUserStats — the departure airport's clock, not the process 
     expect(Array.from(asBerlin.monthsWithFlights)).toEqual(["2024-04"]);
   });
 });
+
+describe("calculateUserStats — calendar days on the airports' calendars (ADR 0002 phase 4)", () => {
+  it("counts a New Year's Eve departure by the departure airport's date, not the host's", async () => {
+    // 23:30 on 31 December in Singapore (15:30Z), landing two hours later at
+    // 01:30 on 1 January there: airborne over New Year on the airports'
+    // calendars. Read in UTC (or Honolulu) both ends are still 31 December.
+    const flight = {
+      ...makeFlight({
+        depIata: "SIN",
+        arrIata: "SIN",
+        departureTime: new Date("2024-12-31T15:30:00Z"),
+      }),
+      depTimezone: "Asia/Singapore",
+      arrTimezone: "Asia/Singapore",
+    };
+    const asUtc = await statsUnder("UTC", [flight]);
+    const asHonolulu = await statsUnder("Pacific/Honolulu", [flight]);
+    expect(asUtc.nyeAirborne).toBe(1);
+    expect(asHonolulu.nyeAirborne).toBe(1);
+  });
+
+  it("reads the stored zone before today's catalogue", async () => {
+    // Departs 23:30Z on 28 February 2024: 29 February on Singapore's clock
+    // (07:30), but the flight was stored with a zone on UTC's calendar.
+    const flight = {
+      ...makeFlight({
+        depIata: "SIN",
+        arrIata: "FRA",
+        departureTime: new Date("2024-02-28T23:30:00Z"),
+      }),
+      depTimezone: "Atlantic/Reykjavik",
+    };
+    expect((await statsUnder("UTC", [flight])).leapDayFlights).toBe(0);
+    const catalogueOnly = { ...flight, depTimezone: null };
+    expect((await statsUnder("UTC", [catalogueOnly])).leapDayFlights).toBe(1);
+  });
+});

@@ -32,7 +32,7 @@ const PLACE_SELECT = {
   city: true,
   isoCountryCode: true,
   visited: true,
-  visits: { select: { id: true, visitedAt: true } },
+  visits: { select: { id: true, visitedAt: true, visitedAtUtc: true, visitedZone: true } },
 } as const;
 
 type PlaceRow = {

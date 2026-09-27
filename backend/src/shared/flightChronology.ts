@@ -1,3 +1,4 @@
+import { now as clockNow } from "./time/clock";
 import { machineInstant } from "./time/instant";
 
 /**
@@ -110,7 +111,7 @@ export function chronologyProblem(data: ChronologyInput): ChronologyProblem | nu
 export function departsInFuture(
   departureLocal: string | null | undefined,
   depTimezone: string | null | undefined,
-  now: Date = new Date()
+  now: Date = clockNow()
 ): boolean {
   if (!departureLocal) return false;
   const instant = toInstant(departureLocal, depTimezone);

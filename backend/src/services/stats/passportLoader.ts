@@ -238,7 +238,7 @@ export async function loadPassport(
     readPlace
       ? prisma.place.findMany({
           where: { userId, visited: true, isoCountryCode: { not: null } },
-          select: { isoCountryCode: true, visits: { select: { visitedAt: true } } },
+          select: { isoCountryCode: true, visits: { select: { visitedAt: true, visitedAtUtc: true, visitedZone: true } } },
         })
       : [],
     /**

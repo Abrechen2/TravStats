@@ -3,6 +3,8 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import { setClockForTests } from "../../shared/time/clock";
+import { recomputeTripStatus } from "../../services/tripStatusService";
 
 /**
  * ADR 0002 phase 2 for trips: a stop's times are read on the stop's clock
@@ -18,6 +20,7 @@ describe("Trips — time model (phase 2)", () => {
 
   const cleanup = async (): Promise<void> => {
     await prisma.trip.deleteMany({ where: { user: { username: USER } } });
+    await prisma.userSettings.deleteMany({ where: { user: { username: USER } } });
     await prisma.place.deleteMany({ where: { user: { username: USER } } });
     await prisma.user.deleteMany({ where: { username: USER } });
   };
@@ -220,5 +223,32 @@ describe("Trips — time model (phase 2)", () => {
       zoneSource: "stored",
     });
     await prisma.flight.deleteMany({ where: { userId } });
+  });
+
+  it("answers a new trip's status on the owner's calendar, not Greenwich's (D4)", async () => {
+    await prisma.userSettings.upsert({
+      where: { userId },
+      create: { userId, data: { display: { timezone: "Pacific/Kiritimati" } } },
+      update: { data: { display: { timezone: "Pacific/Kiritimati" } } },
+    });
+    // 11:00Z on 1 January is already 01:00 on 2 January in Kiritimati (+14).
+    setClockForTests("2027-01-01T11:00:00Z");
+    try {
+      const res = await request(app)
+        .post("/api/v1/trips")
+        .set("Cookie", cookie)
+        .send({ name: "Line Islands", startDate: "2027-01-02", endDate: "2027-01-05" });
+      expect(res.status).toBe(201);
+      expect(res.body.trip.status).toBe("in_progress");
+
+      // The recompute and the sweep answer the same way — one rule.
+      await prisma.trip.update({ where: { id: res.body.trip.id }, data: { status: "planned" } });
+      await recomputeTripStatus(res.body.trip.id);
+      const row = await prisma.trip.findUniqueOrThrow({ where: { id: res.body.trip.id } });
+      expect(row.status).toBe("in_progress");
+    } finally {
+      setClockForTests(null);
+      await prisma.userSettings.deleteMany({ where: { userId } });
+    }
   });
 });

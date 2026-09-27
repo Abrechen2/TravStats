@@ -24,3 +24,18 @@ export function readDay(
   const reading = legacyDayOf(legacy);
   return serializeDay(reading.day, zone, reading.ambiguous ? "unknown" : precision);
 }
+
+/**
+ * A birthday's month (1-12) and day — a FLOATING date (ADR 0002 D1): the same
+ * day everywhere, read from `birth_day`, else the legacy anchor by the
+ * backfill's rule. Never through a host-local getter, which moved a birthday
+ * stored at UTC midnight to the day before on any host west of UTC.
+ */
+export function birthdayOf(
+  user: { birthDay?: Date | null; birthdate?: Date | null } | null | undefined
+): { month: number; day: number } | undefined {
+  const day = readDay(user?.birthDay ?? null, user?.birthdate ?? null, null);
+  return day
+    ? { month: Number(day.date.slice(5, 7)), day: Number(day.date.slice(8, 10)) }
+    : undefined;
+}
