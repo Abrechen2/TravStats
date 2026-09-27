@@ -318,6 +318,8 @@
     "lodgingIndependent": "Unabhängig",
     "title": "Legende",
     "railTraced": "Bahn · Streckenverlauf (Transitous)",
+    "railRouted": "Bahn · Streckenverlauf (OpenRailRouting)",
+    "railBrouter": "Bahn · Streckenverlauf (BRouter)",
     "railStraight": "Bahn · Luftlinie",
     "tour": "Tour"
   },

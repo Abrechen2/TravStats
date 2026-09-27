@@ -318,6 +318,8 @@
     "lodgingIndependent": "Independent",
     "title": "Key",
     "railTraced": "Rail · route (Transitous)",
+    "railRouted": "Rail · route (OpenRailRouting)",
+    "railBrouter": "Rail · route (BRouter)",
     "railStraight": "Rail · straight line",
     "tour": "Tour"
   },

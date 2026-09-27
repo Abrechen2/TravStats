@@ -45,6 +45,24 @@ describe("railPathsLayer", () => {
     expect(chord.traced).toBe(false);
   });
 
+  // A BRouter (demo) or OpenRailRouting line is drawn as firmly as a trace,
+  // but neither IS a trace — the legend once called all three "Transitous"
+  // (silent-fix sweep 2026-09-27). `source` is the field that keeps a legend
+  // honest about which one actually drew the line.
+  it("tells a Transitous trace apart from an OpenRailRouting or BRouter line, and from the chord", () => {
+    const [transitous] = buildRailPaths([traced]);
+    expect(transitous.source).toBe("transitous");
+
+    const [openrailrouting] = buildRailPaths([{ ...traced, geometrySource: "openrailrouting" }]);
+    expect(openrailrouting.source).toBe("openrailrouting");
+
+    const [brouter] = buildRailPaths([{ ...traced, geometrySource: "brouter" }]);
+    expect(brouter.source).toBe("brouter");
+
+    const [chord] = buildRailPaths([straight]);
+    expect(chord.source).toBe("straight");
+  });
+
   it("draws no line for a cancelled train, which never ran", () => {
     expect(buildRailPaths([{ ...traced, status: "cancelled" }])).toEqual([]);
     expect(buildRailStations([{ ...traced, status: "cancelled" }])).toEqual([]);

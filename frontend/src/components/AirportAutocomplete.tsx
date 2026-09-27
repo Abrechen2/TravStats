@@ -3,6 +3,7 @@ import { airportsApi, Airport, setupApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { RequiredMark } from "./FlightForm/requiredFields";
+import { countryName } from "../shared/geo/countryCode";
 
 interface AirportAutocompleteProps {
   value?: Airport | null;
@@ -43,7 +44,7 @@ export default function AirportAutocomplete({
   placeholder,
   required = false,
 }: AirportAutocompleteProps): JSX.Element {
-  const { t } = useTranslation(["flights", "common"]);
+  const { t, i18n } = useTranslation(["flights", "common"]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Airport[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -293,9 +294,15 @@ export default function AirportAutocomplete({
                       )}
                     </div>
                     <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      {airport.city && airport.country && `${airport.city}, ${airport.country}`}
-                      {airport.city && !airport.country && airport.city}
-                      {!airport.city && airport.country && airport.country}
+                      {(() => {
+                        // The server sends an ISO 3166-1 alpha-2 code, never a
+                        // name — a country name belongs to the reader's
+                        // language.
+                        const country =
+                          countryName(airport.country, i18n.language) || airport.country;
+                        if (airport.city && country) return `${airport.city}, ${country}`;
+                        return airport.city || country;
+                      })()}
                     </div>
                   </div>
                 </div>

@@ -180,4 +180,16 @@ describe("StationPicker", () => {
     expect(screen.getAllByTestId("station-short-code").map((el) => el.textContent)).toEqual(["KK"]);
     expect(screen.getByRole("button", { name: /Köln Hbf/ }).textContent).toContain("KK");
   });
+
+  // The catalogue's `country` is an ISO 3166-1 alpha-2 code, never a name —
+  // the caption printed it raw ("CH · 8503000") (silent-fix sweep 2026-09-27).
+  it("names the hit's country instead of printing its ISO code", async () => {
+    searchStations.mockResolvedValue([ZURICH]);
+    render(<Harness changes={[]} />);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "zurich hb" } });
+
+    const hit = await screen.findByRole("button", { name: /Zürich HB/ });
+    expect(hit.textContent).toContain("Schweiz");
+    expect(hit.textContent).not.toContain("CH ·");
+  });
 });

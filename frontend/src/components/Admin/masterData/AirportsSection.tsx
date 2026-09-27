@@ -4,6 +4,7 @@ import type { Airport } from "../../../lib/api";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useToastStore } from "../../../store/toastStore";
 import { logger } from "../../../lib/logger";
+import { countryName } from "../../../shared/geo/countryCode";
 
 /**
  * Admin master data for airports (#191). Codes are optional on purpose — a
@@ -12,7 +13,7 @@ import { logger } from "../../../lib/logger";
  * is derived server-side from the coordinates.
  */
 export default function AirportsSection(): JSX.Element {
-  const { t } = useTranslation(["admin", "common"]);
+  const { t, i18n } = useTranslation(["admin", "common"]);
   const addToast = useToastStore((s) => s.addToast);
   const [airports, setAirports] = useState<Airport[]>([]);
   const [query, setQuery] = useState<string>("");
@@ -215,7 +216,12 @@ export default function AirportsSection(): JSX.Element {
               <div>
                 <span className="font-medium text-(--text-primary)">{a.name}</span>
                 {a.city && <span className="text-(--text-muted)"> · {a.city}</span>}
-                {a.country && <span className="text-(--text-muted)"> ({a.country})</span>}
+                {a.country && (
+                  <span className="text-(--text-muted)">
+                    {" "}
+                    ({countryName(a.country, i18n.language) || a.country})
+                  </span>
+                )}
               </div>
               <div className="flex items-center gap-2 text-xs">
                 {a.isUserAdded && (

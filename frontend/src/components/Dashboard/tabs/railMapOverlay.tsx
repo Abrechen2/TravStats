@@ -7,6 +7,7 @@ import {
   buildRailStations,
   RAIL_PATH_GLOBE_ALTITUDE_M,
   type RailPathSource,
+  type RailPathSourceKind,
 } from "../../layers/railPathsLayer";
 import { hexToRgb } from "../../../lib/domainColor";
 import { legendRow, type LegendRowFn } from "./allTabLegendRows";
@@ -38,9 +39,22 @@ export function buildRailMapLayers(
 }
 
 /**
- * One row per kind of line actually on the map: the traced line and the
- * straight line are different claims, so the key names both, and only the ones
- * that are drawn.
+ * One legend key per actual line source, so a translation key never claims a
+ * different source than the one that drew the line — "(Transitous)" for
+ * every firmly-drawn line used to cover BRouter's offline demo routing and a
+ * self-hosted OpenRailRouting too, neither of which is Transitous.
+ */
+const SOURCE_KEYS: Record<RailPathSourceKind, string> = {
+  transitous: "dashboard:legend.railTraced",
+  openrailrouting: "dashboard:legend.railRouted",
+  brouter: "dashboard:legend.railBrouter",
+  straight: "dashboard:legend.railStraight",
+};
+
+/**
+ * One row per kind of line actually on the map — Transitous, OpenRailRouting,
+ * BRouter and the straight-line chord are different claims, so each gets its
+ * own key, and only the ones actually drawn appear.
  */
 export function buildRailLegendRows(
   journeys: readonly RailPathSource[],
@@ -51,13 +65,10 @@ export function buildRailLegendRows(
   const paths = buildRailPaths(journeys);
   const rows: JSX.Element[] = [];
   const [r, g, b] = hexToRgb(colorHex);
-  if (paths.some((p) => p.traced)) {
-    rows.push(legendRow(`rgb(${r},${g},${b})`, t("dashboard:legend.railTraced"), "rail-traced"));
-  }
-  if (paths.some((p) => !p.traced)) {
-    rows.push(
-      legendRow(`rgba(${r},${g},${b},0.67)`, t("dashboard:legend.railStraight"), "rail-straight")
-    );
+  for (const source of ["transitous", "openrailrouting", "brouter", "straight"] as const) {
+    if (!paths.some((p) => p.source === source)) continue;
+    const rgba = source === "straight" ? `rgba(${r},${g},${b},0.67)` : `rgb(${r},${g},${b})`;
+    rows.push(legendRow(rgba, t(SOURCE_KEYS[source]), `rail-${source}`));
   }
   return rows;
 }

@@ -32,11 +32,20 @@ export type RailPathSource = Pick<
   | "status"
 >;
 
+/**
+ * What actually drew the line, for a legend that must not call every traced
+ * line "Transitous" — a demo/BRouter line and an OpenRailRouting line are
+ * both drawn firmly (`traced`), but neither is the train's own trace.
+ */
+export type RailPathSourceKind = "transitous" | "openrailrouting" | "brouter" | "straight";
+
 export interface RailPathDatum {
   id: string;
   path: Array<[number, number]>;
-  /** True when the line follows the train (Transitous); false for a chord. */
+  /** True when the line follows real track (Transitous or routed); false for a chord. */
   traced: boolean;
+  /** Which of the four the line actually is — see `RailPathSourceKind`. */
+  source: RailPathSourceKind;
   label: string;
 }
 
@@ -81,6 +90,15 @@ export function isTrackRoutedRailLine(journey: RailPathSource): boolean {
   );
 }
 
+/** The legend/caption kind a journey's line actually is — see `RailPathSourceKind`. */
+export function railPathSourceKind(journey: RailPathSource): RailPathSourceKind {
+  if (isTracedRailLine(journey)) return "transitous";
+  if (isTrackRoutedRailLine(journey)) {
+    return journey.geometrySource === "brouter" ? "brouter" : "openrailrouting";
+  }
+  return "straight";
+}
+
 /**
  * A cancelled train never ran, so it draws no line — the same reading every
  * rail statistic takes of it.
@@ -88,12 +106,16 @@ export function isTrackRoutedRailLine(journey: RailPathSource): boolean {
 export function buildRailPaths(journeys: readonly RailPathSource[]): RailPathDatum[] {
   return journeys
     .filter((j) => j.status !== "cancelled")
-    .map((j) => ({
-      id: j.id,
-      path: railPathOf(j),
-      traced: isTracedRailLine(j) || isTrackRoutedRailLine(j),
-      label: `${j.depStationName} → ${j.arrStationName}`,
-    }));
+    .map((j) => {
+      const source = railPathSourceKind(j);
+      return {
+        id: j.id,
+        path: railPathOf(j),
+        traced: source !== "straight",
+        source,
+        label: `${j.depStationName} → ${j.arrStationName}`,
+      };
+    });
 }
 
 /** Each station once, however many journeys start or end there. */
