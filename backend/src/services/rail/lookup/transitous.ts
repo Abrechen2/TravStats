@@ -1,4 +1,4 @@
-import { fromZonedTime } from "date-fns-tz";
+import { startOfDayAt } from "../../../shared/time/legacyValues";
 import { z } from "zod";
 
 import logger from "../../../utils/logger";
@@ -107,7 +107,7 @@ async function fetchTrip(
 async function findDeparture(
   query: RailLookupQuery
 ): Promise<{ tripId: string } | "noMatch" | Miss> {
-  const dayStart = fromZonedTime(`${query.date}T00:00:00`, query.timezone ?? "UTC");
+  const dayStart = startOfDayAt(query.date, query.timezone);
   for (let w = 0; w < WINDOWS_PER_DAY; w++) {
     const time = new Date(dayStart.getTime() + w * WINDOW_S * 1000).toISOString();
     const url =

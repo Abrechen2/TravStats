@@ -1,4 +1,4 @@
-import { fromZonedTime } from "date-fns-tz";
+import { machineInstant } from "./time/instant";
 
 /**
  * Does this flight arrive after it departs?
@@ -27,7 +27,7 @@ import { fromZonedTime } from "date-fns-tz";
  * pushed the placeholder arrival before the placeholder departure.
  *
  * Backend-only for now: the frontend does not validate chronology, so a mirror
- * would be a copy with no second reader. `date-fns-tz` is present on both
+ * would be a copy with no second reader. `shared/time` is mirrored on both
  * sides if that changes.
  */
 
@@ -62,9 +62,7 @@ function isDateOnly(data: ChronologyInput): boolean {
 
 /** A wall-clock string plus its zone as a real instant, or null when either is absent. */
 function toInstant(local: string | null | undefined, tz: string | null | undefined): Date | null {
-  if (!local || !tz) return null;
-  const instant = fromZonedTime(local, tz);
-  return Number.isNaN(instant.getTime()) ? null : instant;
+  return machineInstant(local, tz);
 }
 
 /**

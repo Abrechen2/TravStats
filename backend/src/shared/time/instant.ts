@@ -150,3 +150,24 @@ export function toLocal(utc: Date | string, zone: string): LocalResult {
 export function localDay(utc: Date | string, zone: string): string {
   return toLocal(utc, zone).local.slice(0, 10);
 }
+
+/**
+ * `toInstant` for a MACHINE reading — a parsed booking, a provider's
+ * timetable, a merge of fields another path already validated — where a
+ * reading that is not a wall clock, or a zone this runtime does not know, is
+ * "no instant" rather than a request error. Null then; the caller skips the
+ * value instead of storing an Invalid Date. A spring-forward gap is placed,
+ * never refused (D3: machine sources are not refused for a gap).
+ */
+export function machineInstant(
+  local: string | null | undefined,
+  zone: string | null | undefined
+): Date | null {
+  if (!local || !zone || !isValidZone(zone)) return null;
+  try {
+    return toInstant(local, zone, { origin: "machine" }).utc;
+  } catch (error) {
+    if (error instanceof InvalidLocalTimeError) return null;
+    throw error;
+  }
+}
