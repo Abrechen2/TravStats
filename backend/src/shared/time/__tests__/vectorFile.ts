@@ -118,6 +118,53 @@ const displayCase = z.strictObject({
   }),
 });
 
+/** Phase-3b backfill rules (server only): a legacy day column. */
+const legacyDayCase = z.strictObject({
+  ...base,
+  op: z.literal("legacyDay"),
+  input: z.strictObject({ anchor: utc }),
+  expect: z.strictObject({
+    day,
+    rule: z.enum([
+      "utc_midnight",
+      "noon_anchor",
+      "east_host_midnight",
+      "west_host_midnight",
+      "ambiguous_host_offset",
+    ]),
+    ambiguous: z.boolean(),
+  }),
+});
+
+/** Phase-3b backfill rules: a wall clock stored as fake UTC, read at its place. */
+const fakeUtcCase = z.strictObject({
+  ...base,
+  op: z.literal("fakeUtc"),
+  input: z.strictObject({ stored: utc, zone }),
+  expect: z.union([errorExpect, z.strictObject({ utc, offset, ambiguous: z.boolean() })]),
+});
+
+/** Phase-3b backfill rules: who wrote a legacy place visit (Q4). */
+const visitWriterCase = z.strictObject({
+  ...base,
+  op: z.literal("visitWriter"),
+  input: z.strictObject({
+    stored: utc,
+    createdAt: utc,
+    zone: zone.nullable(),
+    writtenVia: z.string().optional(),
+    firstDeviceAt: utc.optional(),
+  }),
+  expect: z.strictObject({
+    writer: z.enum(["web", "companion", "unknown"]),
+    rule: z.string(),
+    utc: utc.nullable(),
+    precision: z.enum(["minute", "day", "unknown"]),
+    day: day.nullable(),
+    reason: z.string().nullable(),
+  }),
+});
+
 export const vectorCase = z.discriminatedUnion("op", [
   toInstantCase,
   toLocalCase,
@@ -126,6 +173,9 @@ export const vectorCase = z.discriminatedUnion("op", [
   spanCase,
   floatingDateCase,
   displayCase,
+  legacyDayCase,
+  fakeUtcCase,
+  visitWriterCase,
 ]);
 
 export const VECTOR_OPS = [
@@ -136,6 +186,9 @@ export const VECTOR_OPS = [
   "span",
   "floatingDate",
   "display",
+  "legacyDay",
+  "fakeUtc",
+  "visitWriter",
 ] as const;
 
 export const vectorFile = z.strictObject({

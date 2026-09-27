@@ -2,7 +2,7 @@
   "$schema": "https://json-schema.org/draft/2020-12/schema",
   "$id": "https://travstats.de/schemas/time-vectors.json",
   "title": "TravStats time-model conformance vectors (ADR 0002 D5)",
-  "description": "One file, three implementations: backend/src/shared/time, frontend/src/shared/time and the Companion's lib/time each run every case that applies to them. Rules for a runner: (1) run a case when its appliesTo (default: all three) names the runner AND the runner implements its op — the web mirror is display-only and skips toInstant/span/floatingDate; (2) compare every *utc/*Utc/now field as an instant (parse and compare epoch milliseconds), every other field as an exact string or number; (3) an expected {error} means the call must fail with exactly that stable code; (4) bump `version` on any change to a case or to this format, and a vendored copy whose version lags fails its CI. Formats: utc = RFC 3339 with Z; local input = YYYY-MM-DDTHH:mm[:ss] (no offset); local output = YYYY-MM-DDTHH:mm:ss; offset = +HH:mm / -HH:mm; day and date = YYYY-MM-DD.",
+  "description": "One file, three implementations: backend/src/shared/time, frontend/src/shared/time and the Companion's lib/time each run every case that applies to them. Rules for a runner: (1) run a case when its appliesTo (default: all three) names the runner AND the runner implements its op — the web mirror is display-only and skips toInstant/span/floatingDate, and the three legacy-reading ops (legacyDay, fakeUtc, visitWriter) are the server's phase-3b backfill rules, so their cases say appliesTo [server]; (2) compare every *utc/*Utc/now field as an instant (parse and compare epoch milliseconds), every other field as an exact string or number; (3) an expected {error} means the call must fail with exactly that stable code; (4) bump `version` on any change to a case or to this format, and a vendored copy whose version lags fails its CI. Formats: utc = RFC 3339 with Z; local input = YYYY-MM-DDTHH:mm[:ss] (no offset); local output = YYYY-MM-DDTHH:mm:ss; offset = +HH:mm / -HH:mm; day and date = YYYY-MM-DD.",
   "type": "object",
   "required": ["version", "minTzdata", "cases"],
   "additionalProperties": false,
@@ -65,7 +65,18 @@
       "properties": {
         "id": { "type": "string", "pattern": "^[a-z0-9-]+$" },
         "op": {
-          "enum": ["toInstant", "toLocal", "localDay", "todayIn", "span", "floatingDate", "display"]
+          "enum": [
+            "toInstant",
+            "toLocal",
+            "localDay",
+            "todayIn",
+            "span",
+            "floatingDate",
+            "display",
+            "legacyDay",
+            "fakeUtc",
+            "visitWriter"
+          ]
         },
         "appliesTo": {
           "type": "array",
@@ -274,6 +285,100 @@
                   },
                   "time": { "type": ["string", "null"], "pattern": "^[0-9]{2}:[0-9]{2}$" },
                   "offset": { "oneOf": [{ "$ref": "#/$defs/offset" }, { "type": "null" }] }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "op": { "const": "legacyDay" } } },
+          "then": {
+            "properties": {
+              "input": {
+                "type": "object",
+                "required": ["anchor"],
+                "additionalProperties": false,
+                "properties": { "anchor": { "$ref": "#/$defs/utc" } }
+              },
+              "expect": {
+                "type": "object",
+                "required": ["day", "rule", "ambiguous"],
+                "additionalProperties": false,
+                "properties": {
+                  "day": { "$ref": "#/$defs/day" },
+                  "rule": {
+                    "enum": [
+                      "utc_midnight",
+                      "noon_anchor",
+                      "east_host_midnight",
+                      "west_host_midnight",
+                      "ambiguous_host_offset"
+                    ]
+                  },
+                  "ambiguous": { "type": "boolean" }
+                }
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "op": { "const": "fakeUtc" } } },
+          "then": {
+            "properties": {
+              "input": {
+                "type": "object",
+                "required": ["stored", "zone"],
+                "additionalProperties": false,
+                "properties": {
+                  "stored": { "$ref": "#/$defs/utc" },
+                  "zone": { "$ref": "#/$defs/zone" }
+                }
+              },
+              "expect": {
+                "oneOf": [
+                  { "$ref": "#/$defs/error" },
+                  {
+                    "type": "object",
+                    "required": ["utc", "offset", "ambiguous"],
+                    "additionalProperties": false,
+                    "properties": {
+                      "utc": { "$ref": "#/$defs/utc" },
+                      "offset": { "$ref": "#/$defs/offset" },
+                      "ambiguous": { "type": "boolean" }
+                    }
+                  }
+                ]
+              }
+            }
+          }
+        },
+        {
+          "if": { "properties": { "op": { "const": "visitWriter" } } },
+          "then": {
+            "properties": {
+              "input": {
+                "type": "object",
+                "required": ["stored", "createdAt", "zone"],
+                "additionalProperties": false,
+                "properties": {
+                  "stored": { "$ref": "#/$defs/utc" },
+                  "createdAt": { "$ref": "#/$defs/utc" },
+                  "zone": { "oneOf": [{ "$ref": "#/$defs/zone" }, { "type": "null" }] },
+                  "writtenVia": { "type": "string" },
+                  "firstDeviceAt": { "$ref": "#/$defs/utc" }
+                }
+              },
+              "expect": {
+                "type": "object",
+                "required": ["writer", "rule", "utc", "precision", "day", "reason"],
+                "additionalProperties": false,
+                "properties": {
+                  "writer": { "enum": ["web", "companion", "unknown"] },
+                  "rule": { "type": "string" },
+                  "utc": { "oneOf": [{ "$ref": "#/$defs/utc" }, { "type": "null" }] },
+                  "precision": { "enum": ["minute", "day", "unknown"] },
+                  "day": { "oneOf": [{ "$ref": "#/$defs/day" }, { "type": "null" }] },
+                  "reason": { "type": ["string", "null"] }
                 }
               }
             }

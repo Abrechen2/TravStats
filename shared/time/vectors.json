@@ -1,6 +1,6 @@
 {
   "$schema": "./vectors.schema.json",
-  "version": 1,
+  "version": 2,
   "minTzdata": "2025a",
   "cases": [
     {
@@ -452,6 +452,298 @@
       "op": "toInstant",
       "input": { "local": "2027-06-01T12:00:00", "zone": "UTC" },
       "expect": { "utc": "2027-06-01T12:00:00Z", "offset": "+00:00", "ambiguous": false }
+    },
+    {
+      "id": "day-utc-midnight",
+      "op": "legacyDay",
+      "appliesTo": ["server"],
+      "input": { "anchor": "2027-05-02T00:00:00Z" },
+      "expect": { "day": "2027-05-02", "rule": "utc_midnight", "ambiguous": false }
+    },
+    {
+      "id": "day-noon-anchor",
+      "op": "legacyDay",
+      "appliesTo": ["server"],
+      "note": "birthday route, cruise import and spreadsheet round-trip write the day at UTC noon",
+      "input": { "anchor": "2027-05-02T12:00:00Z" },
+      "expect": { "day": "2027-05-02", "rule": "noon_anchor", "ambiguous": false }
+    },
+    {
+      "id": "day-east-host-berlin",
+      "op": "legacyDay",
+      "appliesTo": ["server"],
+      "note": "midnight of 05-02 parsed on a host at UTC+2",
+      "input": { "anchor": "2027-05-01T22:00:00Z" },
+      "expect": { "day": "2027-05-02", "rule": "east_host_midnight", "ambiguous": false }
+    },
+    {
+      "id": "day-east-host-kolkata",
+      "op": "legacyDay",
+      "appliesTo": ["server"],
+      "input": { "anchor": "2027-05-01T18:30:00Z" },
+      "expect": { "day": "2027-05-02", "rule": "east_host_midnight", "ambiguous": false }
+    },
+    {
+      "id": "day-west-host-new-york",
+      "op": "legacyDay",
+      "appliesTo": ["server"],
+      "input": { "anchor": "2027-05-02T04:00:00Z" },
+      "expect": { "day": "2027-05-02", "rule": "west_host_midnight", "ambiguous": false }
+    },
+    {
+      "id": "day-west-host-marquesas",
+      "op": "legacyDay",
+      "appliesTo": ["server"],
+      "input": { "anchor": "2027-05-02T09:30:00Z" },
+      "expect": { "day": "2027-05-02", "rule": "west_host_midnight", "ambiguous": false }
+    },
+    {
+      "id": "day-ambiguous-ten",
+      "op": "legacyDay",
+      "appliesTo": ["server"],
+      "note": "a host at +14 (next day) or at -10 (same day): not decided, the UTC date is kept and reported",
+      "input": { "anchor": "2027-05-02T10:00:00Z" },
+      "expect": { "day": "2027-05-02", "rule": "ambiguous_host_offset", "ambiguous": true }
+    },
+    {
+      "id": "day-ambiguous-eleven",
+      "op": "legacyDay",
+      "appliesTo": ["server"],
+      "input": { "anchor": "2027-05-01T11:00:00Z" },
+      "expect": { "day": "2027-05-01", "rule": "ambiguous_host_offset", "ambiguous": true }
+    },
+    {
+      "id": "fake-utc-berlin-summer",
+      "op": "fakeUtc",
+      "appliesTo": ["server"],
+      "input": { "stored": "2027-07-10T14:30:00Z", "zone": "Europe/Berlin" },
+      "expect": { "utc": "2027-07-10T12:30:00Z", "offset": "+02:00", "ambiguous": false }
+    },
+    {
+      "id": "fake-utc-tokyo",
+      "op": "fakeUtc",
+      "appliesTo": ["server"],
+      "input": { "stored": "2027-06-01T10:00:00Z", "zone": "Asia/Tokyo" },
+      "expect": { "utc": "2027-06-01T01:00:00Z", "offset": "+09:00", "ambiguous": false }
+    },
+    {
+      "id": "fake-utc-berlin-gap",
+      "op": "fakeUtc",
+      "appliesTo": ["server"],
+      "note": "a stored wall clock the zone skipped is not placed anywhere; the backfill reports it",
+      "input": { "stored": "2027-03-28T02:30:00Z", "zone": "Europe/Berlin" },
+      "expect": { "error": "LOCAL_TIME_NONEXISTENT" }
+    },
+    {
+      "id": "fake-utc-berlin-fold",
+      "op": "fakeUtc",
+      "appliesTo": ["server"],
+      "note": "Q5: the earlier occurrence",
+      "input": { "stored": "2027-10-31T02:30:00Z", "zone": "Europe/Berlin" },
+      "expect": { "utc": "2027-10-31T00:30:00Z", "offset": "+02:00", "ambiguous": true }
+    },
+    {
+      "id": "fake-utc-kathmandu",
+      "op": "fakeUtc",
+      "appliesTo": ["server"],
+      "input": { "stored": "2027-01-15T05:44:00Z", "zone": "Asia/Kathmandu" },
+      "expect": { "utc": "2027-01-14T23:59:00Z", "offset": "+05:45", "ambiguous": false }
+    },
+    {
+      "id": "fake-utc-new-york",
+      "op": "fakeUtc",
+      "appliesTo": ["server"],
+      "input": { "stored": "2026-06-01T08:00:00.000Z", "zone": "America/New_York" },
+      "expect": { "utc": "2026-06-01T12:00:00Z", "offset": "-04:00", "ambiguous": false }
+    },
+    {
+      "id": "visit-web-before-companion",
+      "op": "visitWriter",
+      "appliesTo": ["server"],
+      "input": {
+        "stored": "2026-07-01T14:00:00.000Z",
+        "createdAt": "2026-07-01T20:00:00Z",
+        "zone": "Europe/Rome"
+      },
+      "expect": {
+        "writer": "web",
+        "rule": "visit.before_companion",
+        "utc": "2026-07-01T12:00:00Z",
+        "precision": "minute",
+        "day": "2026-07-01",
+        "reason": null
+      }
+    },
+    {
+      "id": "visit-web-day-only",
+      "op": "visitWriter",
+      "appliesTo": ["server"],
+      "note": "the web wrote a visit without a time as T00:00",
+      "input": {
+        "stored": "2026-07-01T00:00:00.000Z",
+        "createdAt": "2026-07-02T09:00:00Z",
+        "zone": "Europe/Rome"
+      },
+      "expect": {
+        "writer": "web",
+        "rule": "visit.before_companion",
+        "utc": "2026-06-30T22:00:00Z",
+        "precision": "day",
+        "day": "2026-07-01",
+        "reason": null
+      }
+    },
+    {
+      "id": "visit-before-first-device",
+      "op": "visitWriter",
+      "appliesTo": ["server"],
+      "input": {
+        "stored": "2026-09-05T15:00:00.000Z",
+        "createdAt": "2026-09-05T16:00:00Z",
+        "zone": "Europe/Rome",
+        "firstDeviceAt": "2026-09-10T00:00:00Z"
+      },
+      "expect": {
+        "writer": "web",
+        "rule": "visit.before_companion",
+        "utc": "2026-09-05T13:00:00Z",
+        "precision": "minute",
+        "day": "2026-09-05",
+        "reason": null
+      }
+    },
+    {
+      "id": "visit-companion-instant",
+      "op": "visitWriter",
+      "appliesTo": ["server"],
+      "input": {
+        "stored": "2026-09-12T08:15:42.123Z",
+        "createdAt": "2026-09-12T08:15:43Z",
+        "zone": "Europe/Rome",
+        "firstDeviceAt": "2026-09-01T00:00:00Z"
+      },
+      "expect": {
+        "writer": "companion",
+        "rule": "visit.companion_instant",
+        "utc": "2026-09-12T08:15:42.123Z",
+        "precision": "minute",
+        "day": "2026-09-12",
+        "reason": null
+      }
+    },
+    {
+      "id": "visit-unknown-writer",
+      "op": "visitWriter",
+      "appliesTo": ["server"],
+      "note": "Q4: the date is kept (its UTC date, not local midnight), the time of day is unknown",
+      "input": {
+        "stored": "2026-09-12T14:00:00.000Z",
+        "createdAt": "2026-09-13T00:00:00Z",
+        "zone": "Asia/Tokyo",
+        "firstDeviceAt": "2026-09-01T00:00:00Z"
+      },
+      "expect": {
+        "writer": "unknown",
+        "rule": "visit.writer_unknown",
+        "utc": "2026-09-11T15:00:00Z",
+        "precision": "unknown",
+        "day": "2026-09-12",
+        "reason": "writer_unknown"
+      }
+    },
+    {
+      "id": "visit-unknown-local-midnight",
+      "op": "visitWriter",
+      "appliesTo": ["server"],
+      "note": "reads as the place's local midnight: that local day",
+      "input": {
+        "stored": "2026-09-11T15:00:00.000Z",
+        "createdAt": "2026-09-13T00:00:00Z",
+        "zone": "Asia/Tokyo",
+        "firstDeviceAt": "2026-09-01T00:00:00Z"
+      },
+      "expect": {
+        "writer": "unknown",
+        "rule": "visit.writer_unknown",
+        "utc": "2026-09-11T15:00:00Z",
+        "precision": "unknown",
+        "day": "2026-09-12",
+        "reason": "writer_unknown"
+      }
+    },
+    {
+      "id": "visit-written-via-companion",
+      "op": "visitWriter",
+      "appliesTo": ["server"],
+      "input": {
+        "stored": "2026-09-20T10:00:00.000Z",
+        "createdAt": "2026-09-20T10:00:01Z",
+        "zone": "Europe/Rome",
+        "writtenVia": "companion"
+      },
+      "expect": {
+        "writer": "companion",
+        "rule": "visit.written_via",
+        "utc": "2026-09-20T10:00:00Z",
+        "precision": "minute",
+        "day": "2026-09-20",
+        "reason": null
+      }
+    },
+    {
+      "id": "visit-no-device-with-seconds",
+      "op": "visitWriter",
+      "appliesTo": ["server"],
+      "note": "seconds say Companion, no device on record says web: not decided",
+      "input": {
+        "stored": "2026-09-15T10:00:30.000Z",
+        "createdAt": "2026-09-15T10:00:31Z",
+        "zone": "Europe/Rome"
+      },
+      "expect": {
+        "writer": "unknown",
+        "rule": "visit.writer_unknown",
+        "utc": "2026-09-14T22:00:00Z",
+        "precision": "unknown",
+        "day": "2026-09-15",
+        "reason": "writer_unknown"
+      }
+    },
+    {
+      "id": "visit-web-in-gap",
+      "op": "visitWriter",
+      "appliesTo": ["server"],
+      "input": {
+        "stored": "2027-03-28T02:30:00.000Z",
+        "createdAt": "2026-07-01T00:00:00Z",
+        "zone": "Europe/Berlin"
+      },
+      "expect": {
+        "writer": "web",
+        "rule": "visit.before_companion",
+        "utc": "2027-03-27T23:00:00Z",
+        "precision": "unknown",
+        "day": "2027-03-28",
+        "reason": "local_time_nonexistent"
+      }
+    },
+    {
+      "id": "visit-no-zone",
+      "op": "visitWriter",
+      "appliesTo": ["server"],
+      "input": {
+        "stored": "2026-07-01T14:00:00.000Z",
+        "createdAt": "2026-07-01T20:00:00Z",
+        "zone": null
+      },
+      "expect": {
+        "writer": "web",
+        "rule": "visit.zone_unresolved",
+        "utc": null,
+        "precision": "unknown",
+        "day": null,
+        "reason": "zone_unresolved"
+      }
     }
   ]
 }

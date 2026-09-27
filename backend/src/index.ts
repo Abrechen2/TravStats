@@ -573,6 +573,20 @@ if (process.env.NODE_ENV !== "test") {
     const { refreshAirportTimezonesOnStartup } = await import("./services/airportTimezoneRepair");
     await refreshAirportTimezonesOnStartup();
 
+    // ADR 0002 phase 3b: convert pre-time-model rows once, after the airport
+    // zones above (a flight's zone is read from that catalogue). A job, so
+    // the boot is not held up; the admin report says how it went.
+    try {
+      const { startTimeModelBackfillAtBoot } = await import("./services/timeMigration/runner");
+      await startTimeModelBackfillAtBoot();
+    } catch (error) {
+      logger.error({
+        operation: "time_model_backfill_start_error",
+        message: "Could not start the time-model backfill",
+        error,
+      });
+    }
+
     // Converge stored temporal statuses with the dates on boot (idempotent —
     // same logic as the hourly sweep, see services/statusSweep.ts).
     try {
