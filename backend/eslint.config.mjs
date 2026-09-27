@@ -81,10 +81,13 @@ export default [
     // The time model's host-zone rules (ADR 0002, D6; scripts/eslint/timeRules.mjs),
     // as errors. shared/time is the one module allowed to talk to zones. Tests
     // are ignored below for every rule; the odd-zone CI runs catch a test whose
-    // verdict depends on the host. Today's offenders are frozen in
-    // eslint-suppressions.json, a list that only shrinks.
+    // verdict depends on the host. The backend's suppression list reached zero
+    // in phase 4 and was deleted: a new offender fails outright.
     files: ["src/**/*.ts"],
-    ignores: ["src/shared/time/**"],
+    // `__tests__/` helpers (fixtures, CLI probes) are test code like the
+    // `*.test.ts` files ignored below — one of them reads the host's zone ON
+    // PURPOSE, to prove a result does not depend on it.
+    ignores: ["src/shared/time/**", "src/**/__tests__/**"],
     plugins: { time: timePlugin },
     rules: timeRulesEverywhere,
   },

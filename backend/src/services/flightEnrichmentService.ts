@@ -135,8 +135,8 @@ export async function findEnrichmentCandidates(
 
     const now = new Date();
     const MAX_ENRICHMENT_AGE_YEARS = 10;
-    const maxAgeDate = new Date();
-    maxAgeDate.setFullYear(maxAgeDate.getFullYear() - MAX_ENRICHMENT_AGE_YEARS);
+    const maxAgeDate = new Date(now);
+    maxAgeDate.setUTCFullYear(maxAgeDate.getUTCFullYear() - MAX_ENRICHMENT_AGE_YEARS);
 
     // Find flights without accepted pending updates.
     //

@@ -503,9 +503,8 @@ async function createParserFeedbackEvents(userId: string) {
   // Generate 18 feedback events over the last 60 days
   for (let i = 0; i < 18; i++) {
     const daysAgo = Math.floor(Math.random() * 60);
-    const createdAt = new Date(now);
-    createdAt.setDate(createdAt.getDate() - daysAgo);
-    createdAt.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
+    const createdAt = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+    createdAt.setUTCHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
 
     const provider = providers[Math.floor(Math.random() * providers.length)];
     const sourceType = sourceTypes[Math.floor(Math.random() * sourceTypes.length)];
@@ -1522,16 +1521,16 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
           startDate.getTime() + Math.random() * (pastEnd.getTime() - startDate.getTime())
         );
       }
-      departureTime.setHours(
+      // UTC hours: the seed must write the same rows on every host.
+      departureTime.setUTCHours(
         Math.floor(Math.random() * 20) + 4,
         Math.floor(Math.random() * 60),
         0,
         0
       );
 
-      const arrivalTime = new Date(departureTime);
-      arrivalTime.setHours(arrivalTime.getHours() + Math.floor(item.duration));
-      arrivalTime.setMinutes(arrivalTime.getMinutes() + Math.floor((item.duration % 1) * 60));
+      const durationMin = Math.floor(item.duration) * 60 + Math.floor((item.duration % 1) * 60);
+      const arrivalTime = new Date(departureTime.getTime() + durationMin * 60 * 1000);
 
       const depAirport = airports.find((a) => a.iata === item.dep)!;
       const arrAirport = airports.find((a) => a.iata === item.arr)!;
