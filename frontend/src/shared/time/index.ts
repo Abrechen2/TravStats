@@ -27,4 +27,4 @@ export {
   type TimePrecision,
   type TimeValue,
 } from "./wire";
-export { classifyWallClock, type WallClockKind } from "./wallClock";
+export { classifyWallClock, storedFold, type WallClockKind } from "./wallClock";

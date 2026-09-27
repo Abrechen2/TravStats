@@ -1,6 +1,5 @@
 import { describe, expect, it } from "vitest";
-import { cruiseStopToWire } from "../cruiseStopWire";
-import { MissingZoneError } from "../../../lib/api/timeInput";
+import { cruiseStopToWire, storedStopFold } from "../cruiseStopWire";
 import type { CruiseStopInput, Port } from "../../../types";
 
 const port = (timezone: string | null): Port => ({
@@ -43,10 +42,24 @@ describe("cruiseStopToWire — a port call in the time model's write shape", () 
     });
   });
 
-  it("a time on a stop with no port is refused, never written as UTC", () => {
-    expect(() => cruiseStopToWire(stop({ portId: null, unresolvedPortName: "Flåm" }), 3)).toThrow(
-      MissingZoneError
-    );
+  it("a time on a stop with no port goes as a bare wall clock the server keeps unzoned, never as UTC", () => {
+    const wire = cruiseStopToWire(stop({ portId: null, unresolvedPortName: "Flåm" }), 3);
+    expect(wire.arrivalTime).toEqual({
+      local: expect.stringMatching(/^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}$/),
+    });
+  });
+
+  it("reads a stored later occurrence back from the instant, and nothing else", () => {
+    expect(
+      storedStopFold("2027-10-31T02:30:00.000Z", "2027-10-31T01:30:00.000Z", "Europe/Berlin")
+    ).toBe("later");
+    expect(
+      storedStopFold("2027-10-31T02:30:00.000Z", "2027-10-31T00:30:00.000Z", "Europe/Berlin")
+    ).toBeUndefined();
+    expect(
+      storedStopFold("2027-06-02T08:00:00.000Z", "2027-06-02T06:00:00.000Z", "Europe/Berlin")
+    ).toBeUndefined();
+    expect(storedStopFold("2027-10-31T02:30:00.000Z", null, "Europe/Berlin")).toBeUndefined();
   });
 
   it("a stop without times sends none, and cleared times go as null", () => {

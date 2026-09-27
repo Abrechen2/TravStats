@@ -39,6 +39,10 @@ export interface CruiseStop {
   excursionNote: string | null;
   /** Set on an unresolved port: name-only stop, portId=null, isAtSea=false. */
   unresolvedPortName: string | null;
+  /** The real instants and the port's zone (ADR 0002 phase 2); absent on older rows. */
+  arrivalUtc?: string | null;
+  departureUtc?: string | null;
+  stopZone?: string | null;
 }
 
 export type CruiseStatus = "scheduled" | "in_progress" | "flown" | "cancelled" | "historical";

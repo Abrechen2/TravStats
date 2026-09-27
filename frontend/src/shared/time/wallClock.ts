@@ -64,3 +64,35 @@ export function classifyWallClock(local: string, zone: string): WallClockKind | 
   if (matches.size === 0) return "gap";
   return matches.size > 1 ? "repeated" : "ok";
 }
+
+/**
+ * Which occurrence of a repeated hour a stored instant is: `"later"` when
+ * `local` exists twice in `zone` and `instant` is the second one, else
+ * undefined. A form that only keeps the wall clock reads this back so an
+ * edit that does not touch the time resends the occurrence that was stored
+ * instead of silently falling back to the earlier one (Q5).
+ */
+export function storedFold(
+  local: string,
+  zone: string,
+  instant: string | null | undefined
+): "later" | undefined {
+  if (!instant || classifyWallClock(local, zone) !== "repeated") return undefined;
+  const match = LOCAL.exec(local);
+  const ms = Date.parse(instant);
+  if (!match || Number.isNaN(ms)) return undefined;
+  const [, y, mo, d, h, mi, s] = match;
+  const wall = Date.UTC(
+    Number(y),
+    Number(mo) - 1,
+    Number(d),
+    Number(h),
+    Number(mi),
+    Number(s ?? 0)
+  );
+  const before = offsetAt(wall - DAY_MS, zone);
+  const after = offsetAt(wall + DAY_MS, zone);
+  if (before === null || after === null) return undefined;
+  // The later occurrence is read with the smaller offset (the clock went back).
+  return ms === wall - Math.min(before, after) ? "later" : undefined;
+}

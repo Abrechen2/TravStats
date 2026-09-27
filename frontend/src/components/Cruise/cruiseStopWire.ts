@@ -1,6 +1,6 @@
 import type { CruiseStopInput, CruiseStopWire } from "../../types";
-import { MissingZoneError, dayInput, localTimeInput, zoneSourceOf } from "../../lib/api/timeInput";
-import type { LocalTimeInput } from "../../shared/time";
+import { dayInput, localTimeInput, zoneSourceOf } from "../../lib/api/timeInput";
+import { storedFold, type LocalTimeInput } from "../../shared/time";
 
 const WALL_CLOCK = /^(\d{4}-\d{2}-\d{2})T(\d{2}:\d{2})/;
 
@@ -18,8 +18,26 @@ function stopTime(
     timezone: stop.port?.timezone ?? null,
     ref: stop.portId !== null ? { kind: "port", id: String(stop.portId) } : null,
   });
-  if (!source) throw new MissingZoneError(field);
-  return localTimeInput(field, `${match[1]}T${match[2]}`, source, fold);
+  const local = `${match[1]}T${match[2]}`;
+  // No port, no zone: the server keeps the typed wall clock with precision
+  // `unknown` until the port is resolved — never a UTC guess (D2).
+  if (!source) return { local };
+  return localTimeInput(field, local, source, fold);
+}
+
+/**
+ * The occurrence a stored port time is, for the editor's "later" checkbox:
+ * the legacy column keeps only the wall clock, the instant says which of a
+ * repeated hour's two it was.
+ */
+export function storedStopFold(
+  wallClock: string | null | undefined,
+  instant: string | null | undefined,
+  zone: string | null | undefined
+): "later" | undefined {
+  const match = wallClock ? WALL_CLOCK.exec(wallClock) : null;
+  if (!match || !zone) return undefined;
+  return storedFold(`${match[1]}T${match[2]}`, zone, instant);
 }
 
 /**
@@ -32,8 +50,9 @@ function stopTime(
  * - an arrival/departure as `{ local, zone }` when the picked port carries its
  *   zone, else `{ local, placeRef: port }` for the server to resolve;
  * - a time on a stop without a port (a sea day, an unresolved import) has no
- *   place to take a zone from: refused here as `TZ_UNRESOLVED` rather than
- *   written as UTC, which is what the fake-UTC string was.
+ *   place to take a zone from: sent as `{ local }` alone, which the server
+ *   keeps as a wall clock with precision `unknown` — not refused, which made
+ *   an imported cruise with an unresolved port unsavable, and not UTC.
  * The UI-only fields (`port`, `originalDay`, `dateSource`) are dropped.
  */
 export function cruiseStopToWire(stop: CruiseStopInput, index: number): CruiseStopWire {

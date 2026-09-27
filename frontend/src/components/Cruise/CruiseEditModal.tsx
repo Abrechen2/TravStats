@@ -1,7 +1,7 @@
 import { minorUnits } from "../../shared/currencies";
 import Modal from "../Modal";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
-import { cruiseStopToWire } from "./cruiseStopWire";
+import { cruiseStopToWire, storedStopFold } from "./cruiseStopWire";
 import { dayInput } from "../../lib/api/timeInput";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
@@ -113,6 +113,8 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       isAtSea: s.isAtSea,
       arrivalTime: s.arrivalTime,
       departureTime: s.departureTime,
+      arrivalFold: storedStopFold(s.arrivalTime, s.arrivalUtc, s.stopZone),
+      departureFold: storedStopFold(s.departureTime, s.departureUtc, s.stopZone),
       excursionNote: s.excursionNote ?? undefined,
       unresolvedPortName: s.unresolvedPortName,
     }))

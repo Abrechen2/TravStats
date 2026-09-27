@@ -108,7 +108,9 @@ describe("CruiseImportPreviewModal — time model", () => {
     expect(body.endDate).toBe("2027-06-08");
   });
 
-  it("refuses a stop time without a port, in German, and writes nothing", async () => {
+  // The server keeps an unresolved port's time as a wall clock, precision
+  // `unknown`; refusing it here made every such import unsavable.
+  it("imports a stop time at an unresolved port as a bare wall clock", async () => {
     const withUnresolved = entry({
       input: {
         ...entry({}).input,
@@ -128,13 +130,13 @@ describe("CruiseImportPreviewModal — time model", () => {
       <CruiseImportPreviewModal entries={[withUnresolved]} onCancel={vi.fn()} onSaved={vi.fn()} />
     );
     await userEvent.click(saveButton());
-    await waitFor(() =>
-      expect(toasts.addToast).toHaveBeenCalledWith(
-        "error",
-        expect.stringMatching(/keine Zeitzone bekannt/)
-      )
-    );
-    expect(cruiseApi.create).not.toHaveBeenCalled();
+    await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
+    expect(vi.mocked(cruiseApi.create).mock.calls[0][0].stops?.[0]).toMatchObject({
+      portId: null,
+      unresolvedPortName: "Flåm",
+      arrivalTime: { local: "2027-06-03T08:00" },
+    });
+    expect(toasts.addToast).not.toHaveBeenCalledWith("error", expect.anything());
   });
 
   it("refuses a fly & cruise flight whose airport has no zone instead of using the profile's", async () => {

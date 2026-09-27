@@ -112,7 +112,12 @@ describe("CruiseEditModal — time model", () => {
     });
   });
 
-  it("a time on a stop without a port is refused in German instead of saved as UTC", async () => {
+  // The server keeps a portless stop's typed time as a wall clock with
+  // precision `unknown` (no UTC guess, ADR 0002 D2) until the port is resolved.
+  // Refusing it here made every imported cruise with an unresolved port that
+  // carries a time unsavable — the import preview and any later edit alike.
+  it("sends a time on a stop without a port as a bare wall clock, for the server to keep unzoned", async () => {
+    vi.mocked(cruiseApi.update).mockResolvedValue(cruise([]));
     const unresolved = portCall({ portId: null, port: null, unresolvedPortName: "Flåm" });
     render(
       <CruiseEditModal
@@ -123,8 +128,38 @@ describe("CruiseEditModal — time model", () => {
       />
     );
     await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
-    expect(await screen.findByText(/keine Zeitzone bekannt/)).toBeInTheDocument();
-    expect(cruiseApi.update).not.toHaveBeenCalled();
+    await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
+    expect(vi.mocked(cruiseApi.update).mock.calls[0][1].stops?.[0]).toMatchObject({
+      portId: null,
+      unresolvedPortName: "Flåm",
+      arrivalTime: { local: "2027-06-02T08:00" },
+    });
+    expect(screen.queryByText(/keine Zeitzone bekannt/)).not.toBeInTheDocument();
+  });
+
+  // A stored "later" occurrence must survive an edit that does not touch the
+  // time: the legacy column holds only the wall clock, so without reading the
+  // stored instant back the form resent the earlier hour and moved the call
+  // an hour (defect class 4).
+  it("keeps a stored later occurrence of a repeated hour on an unrelated edit", async () => {
+    vi.mocked(cruiseApi.update).mockResolvedValue(cruise([]));
+    const later = portCall({
+      date: "2027-10-31T00:00:00.000Z",
+      arrivalTime: "2027-10-31T02:30:00.000Z",
+      arrivalUtc: "2027-10-31T01:30:00.000Z",
+      stopZone: "Europe/Oslo",
+    });
+    render(
+      <CruiseEditModal mode="edit" cruise={cruise([later])} onClose={vi.fn()} onSaved={vi.fn()} />
+    );
+    expect(screen.getByRole("checkbox", { name: "Die spätere meinen" })).toBeChecked();
+    await userEvent.click(screen.getByRole("button", { name: "Speichern" }));
+    await waitFor(() => expect(cruiseApi.update).toHaveBeenCalled());
+    expect(vi.mocked(cruiseApi.update).mock.calls[0][1].stops?.[0].arrivalTime).toEqual({
+      local: "2027-10-31T02:30",
+      zone: "Europe/Oslo",
+      fold: "later",
+    });
   });
 
   it("shows the server's gap refusal and the stale-bundle refusal in German", async () => {
