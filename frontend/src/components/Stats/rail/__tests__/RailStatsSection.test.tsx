@@ -56,7 +56,8 @@ describe("RailStatsSection", () => {
   // whole previous one while the overview compared the same span.
   it("compares a running year with the same span of the other, as the overview does", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date(2026, 8, 26, 12));
+    // Noon UTC: "today" is the profile zone's day (UTC until confirmed), not the host's.
+    vi.setSystemTime(new Date(Date.UTC(2026, 8, 26, 12)));
     try {
       render(
         <MemoryRouter>
@@ -83,7 +84,8 @@ describe("RailStatsSection", () => {
   // span but the section's own figures stay the whole of 2025.
   it("keeps the selected year whole when only the compare year is running", async () => {
     vi.useFakeTimers({ toFake: ["Date"] });
-    vi.setSystemTime(new Date(2026, 8, 26, 12));
+    // Noon UTC: "today" is the profile zone's day (UTC until confirmed), not the host's.
+    vi.setSystemTime(new Date(Date.UTC(2026, 8, 26, 12)));
     vi.mocked(railApi.stats).mockClear();
     try {
       render(

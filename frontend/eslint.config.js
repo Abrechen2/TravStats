@@ -95,8 +95,9 @@ export default [
     // shared/time is the one module allowed to talk to zones. Tests are left
     // out: they build fixtures in whatever zone they like, and the odd-zone CI
     // runs (TZ=Pacific/Kiritimati, America/St_Johns) are what catch a test
-    // whose verdict depends on the host. Today's offenders are frozen in
-    // eslint-suppressions.json; that list only shrinks.
+    // whose verdict depends on the host. The web tree has no offenders left
+    // (phase 4 drove the 159 frozen ones to zero and deleted
+    // eslint-suppressions.json): a new one fails outright.
     files: ["src/**/*.{ts,tsx}"],
     ignores: ["src/shared/time/**", "src/**/__tests__/**", "src/**/*.{test,spec}.{ts,tsx}"],
     plugins: { time: timePlugin },

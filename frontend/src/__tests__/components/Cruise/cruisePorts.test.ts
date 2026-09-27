@@ -97,8 +97,8 @@ describe("buildEffectiveTimeline", () => {
       "Southampton",
       "Lisbon",
     ]);
-    expect(timeline[0].date).toBe(cruise.startDate);
-    expect(timeline[timeline.length - 1].date).toBe(cruise.endDate);
+    expect(timeline[0].date).toBe(cruise.startDate?.slice(0, 10)); // the port's day, `YYYY-MM-DD` (ADR 0002)
+    expect(timeline[timeline.length - 1].date).toBe(cruise.endDate?.slice(0, 10));
   });
 
   it("prefers the explicit per-stop date over the arrival timestamp (#132)", () => {
@@ -109,9 +109,9 @@ describe("buildEffectiveTimeline", () => {
       ],
     });
     const timeline = buildEffectiveTimeline(cruise);
-    expect(timeline[0].date).toBe("2027-10-08T00:00:00.000Z");
+    expect(timeline[0].date).toBe("2027-10-08");
     // Falls back to arrivalTime when date is absent (legacy stops).
-    expect(timeline[1].date).toBe("2027-10-09T08:00:00.000Z");
+    expect(timeline[1].date).toBe("2027-10-09");
   });
 
   it("skips departure/arrival entries that duplicate the first/last port call", () => {

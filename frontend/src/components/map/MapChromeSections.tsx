@@ -32,11 +32,14 @@ import {
 } from "./controlPanelKit";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useRailVisible } from "../../hooks/useRailVisible";
+import { todayZoneNow } from "../../hooks/useTodayZone";
+import { todayIn } from "../../shared/time";
 
 const YEAR_RANGE_BACK = 14;
 
+/** Back from the year it is in the profile zone (ADR 0002 Q1). */
 function buildYearOptions(): number[] {
-  const current = new Date().getFullYear();
+  const current = Number(todayIn(todayZoneNow()).slice(0, 4));
   const out: number[] = [];
   for (let y = current; y >= current - YEAR_RANGE_BACK; y -= 1) out.push(y);
   return out;

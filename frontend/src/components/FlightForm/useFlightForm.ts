@@ -29,6 +29,7 @@ import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { reportBatchOutcome } from "./flightReviewBatch";
 import type { FlightLookupResult, DuplicateFlight, FlightSubmitOptions } from "./flightFormModel";
 import type { FlightFolds } from "../../lib/flightFolds";
+import { shiftWallClock } from "../../lib/wallClockMath";
 
 export function useFlightForm(
   // Returning the created Flight makes the post-create trip assignment
@@ -185,9 +186,9 @@ export function useFlightForm(
         // "Departure = Boarding + 30min", telling the user their times came
         // from an input they never gave and sending them looking for a field
         // that does not exist on this form (#235).
-        const depDateTime = new Date(`${departureDate}T${departureTime}`);
-        depDateTime.setMinutes(depDateTime.getMinutes() - 30);
-        const boardingTime = `${String(depDateTime.getHours()).padStart(2, "0")}:${String(depDateTime.getMinutes()).padStart(2, "0")}`;
+        // Wall-clock arithmetic, not the browser's clock (lib/wallClockMath.ts).
+        const boardingTime =
+          shiftWallClock(departureDate, departureTime, -30)?.time ?? departureTime;
 
         const estimation = estimateFlightTimes(
           boardingTime,
@@ -211,10 +212,11 @@ export function useFlightForm(
           sampleCount: estimation.sampleCount,
         });
       } catch {
-        const depDateTime = new Date(`${departureDate}T${departureTime}`);
-        const arrDateTime = new Date(depDateTime.getTime() + 2 * 60 * 60 * 1000);
-        setArrivalDate(arrDateTime.toISOString().split("T")[0]);
-        setArrivalTime(arrDateTime.toTimeString().slice(0, 5));
+        // Two hours on the ticket's clock — the old code took the UTC date
+        // and the browser's time, a different day east of UTC.
+        const arr = shiftWallClock(departureDate, departureTime, 120);
+        setArrivalDate(arr?.date ?? departureDate);
+        setArrivalTime(arr?.time ?? departureTime);
         arrivalDateSetRef.current = true;
         setTimeEstimationWarning({ show: true, source: "heuristic", confidence: "low" });
       }
@@ -415,9 +417,8 @@ export function useFlightForm(
 
   const storeHistoricalData = () => {
     if (flightNumber && departureTime && arrivalTime && departure?.iata && arrival?.iata) {
-      const depDate = new Date(`${departureDate}T${departureTime}`);
-      depDate.setMinutes(depDate.getMinutes() - 30);
-      const estimatedBoardingTime = `${String(depDate.getHours()).padStart(2, "0")}:${String(depDate.getMinutes()).padStart(2, "0")}`;
+      const estimatedBoardingTime =
+        shiftWallClock(departureDate, departureTime, -30)?.time ?? departureTime;
       storeHistoricalFlightTime(
         flightNumber,
         departure.iata,

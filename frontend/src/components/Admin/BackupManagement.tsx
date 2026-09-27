@@ -4,7 +4,7 @@ import { useState, useEffect } from "react";
 import { backupApi, adminApi } from "../../lib/api";
 import type { BackupScheduleSettings } from "../../lib/api/backup";
 import { useToastStore } from "../../store/toastStore";
-import { format } from "date-fns";
+import { profileDateTime } from "../../lib/profileInstant";
 import { logger } from "../../lib/logger";
 import { apiErrorMachineCode, extractApiErrorMessage } from "../../lib/apiError";
 import { JobLostError, jobErrorCode, waitForJob } from "../../lib/api/jobs";
@@ -78,7 +78,8 @@ export function RestoreModal({
       if (isNaN(date.getTime())) {
         return t("common:labels.unknown");
       }
-      return format(date, "dd.MM.yyyy HH:mm");
+      // A backup belongs to no place: the user's profile clock (ADR 0002 Q1).
+      return profileDateTime(date) ?? t("common:labels.unknown");
     } catch {
       return t("common:labels.unknown");
     }
@@ -451,7 +452,8 @@ export default function BackupManagement(): JSX.Element {
       if (isNaN(date.getTime())) {
         return t("common:labels.unknown");
       }
-      return format(date, "dd.MM.yyyy HH:mm");
+      // A backup belongs to no place: the user's profile clock (ADR 0002 Q1).
+      return profileDateTime(date) ?? t("common:labels.unknown");
     } catch (error) {
       logger.warn("Failed to format date:", dateString, error);
       return t("common:labels.unknown");
@@ -465,7 +467,7 @@ export default function BackupManagement(): JSX.Element {
       if (isNaN(date.getTime())) {
         return t("common:labels.unknown");
       }
-      return format(date, "dd.MM.yyyy HH:mm:ss");
+      return profileDateTime(date, { seconds: true }) ?? t("common:labels.unknown");
     } catch (error) {
       logger.warn("Failed to format date:", dateString, error);
       return t("common:labels.unknown");

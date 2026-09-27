@@ -2,6 +2,7 @@ import { useMemo } from "react";
 
 import { displayParts, type TimeValue } from "../shared/time";
 import { useSettingsStore, type DisplaySettings } from "../store/settingsStore";
+import { todayZoneNow } from "../hooks/useTodayZone";
 
 /**
  * Dates and times on screen, in the format the user chose.
@@ -31,7 +32,12 @@ export interface DisplayFormatPrefs {
 }
 
 export interface FormatOptions {
-  /** IANA zone the instant is shown in; the viewer's own zone when omitted. */
+  /**
+   * IANA zone the instant is shown in. Omitted: the user's PROFILE zone (UTC
+   * until confirmed, ADR 0002 Q1) — never the browser's, which is where the
+   * reader happens to sit, not a zone anyone chose. A time at a PLACE never
+   * comes here without its zone: it is `local`, see `formatTimeValueWith`.
+   */
   timeZone?: string;
   /** Prefix the short weekday name, in the UI language ("Fr 02.10.2026"). */
   weekday?: boolean;
@@ -53,6 +59,19 @@ function toDate(input: DateInput): Date | null {
   return Number.isNaN(date.getTime()) ? null : date;
 }
 
+const BARE_DAY = /^\d{4}-\d{2}-\d{2}$/;
+
+/**
+ * The zone a value is read in. A bare `YYYY-MM-DD` is a calendar day, not an
+ * instant: `new Date("2026-05-01")` is UTC midnight, so it is read in UTC —
+ * in any other zone west of UTC it was the day before. Anything else is an
+ * instant, shown in the caller's zone or the profile zone.
+ */
+function zoneFor(input: DateInput, options: FormatOptions): string {
+  if (typeof input === "string" && BARE_DAY.test(input)) return "UTC";
+  return options.timeZone ?? todayZoneNow();
+}
+
 function calendarParts(date: Date, timeZone?: string): { y: string; m: string; d: string } {
   const parts = new Intl.DateTimeFormat("en-CA", {
     timeZone,
@@ -72,7 +91,8 @@ export function formatDateWith(
 ): string {
   const date = toDate(input);
   if (!date) return "";
-  const { y, m, d } = calendarParts(date, options.timeZone);
+  const timeZone = zoneFor(input, options);
+  const { y, m, d } = calendarParts(date, timeZone);
   const year = options.shortYear && prefs.dateFormat !== "YYYY-MM-DD" ? y.slice(-2) : y;
   const core = options.omitYear
     ? prefs.dateFormat === "MM/DD/YYYY"
@@ -88,7 +108,7 @@ export function formatDateWith(
   if (!options.weekday) return core;
   const weekday = new Intl.DateTimeFormat(options.language ?? "en", {
     weekday: "short",
-    timeZone: options.timeZone,
+    timeZone,
   })
     .format(date)
     .replace(/\.$/, "");
@@ -103,18 +123,19 @@ export function formatTimeWith(
 ): string {
   const date = toDate(input);
   if (!date) return "";
+  const timeZone = zoneFor(input, options);
   return prefs.timeFormat === "12h"
     ? new Intl.DateTimeFormat("en-US", {
         hour: "numeric",
         minute: "2-digit",
         hour12: true,
-        timeZone: options.timeZone,
+        timeZone,
       }).format(date)
     : new Intl.DateTimeFormat("en-GB", {
         hour: "2-digit",
         minute: "2-digit",
         hourCycle: "h23",
-        timeZone: options.timeZone,
+        timeZone,
       }).format(date);
 }
 

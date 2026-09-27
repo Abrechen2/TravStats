@@ -217,7 +217,9 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
   const showGroups = groupByDayEnabled && hasDates;
 
   const dayLabel = (day: string): string =>
-    new Date(`${day}T00:00:00`).toLocaleDateString(locale, {
+    // `day` is a `YYYY-MM-DD` key; read in UTC so the reader's zone cannot move it.
+    new Date(`${day}T00:00:00.000Z`).toLocaleDateString(locale, {
+      timeZone: "UTC",
       weekday: "long",
       day: "numeric",
       month: "long",

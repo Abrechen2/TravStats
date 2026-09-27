@@ -4,6 +4,8 @@ import { continentI18nKey } from "../../lib/continentLabel";
 import StatCard from "./StatCard";
 import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
+import { todayZoneNow } from "../../hooks/useTodayZone";
+import { todayIn } from "../../shared/time";
 
 /** Every ranking dimension this section resolves is `allTime`-only — see `rankingEvidence.ts` on the backend. */
 const ALL_TIME = { period: "allTime" as const };
@@ -248,7 +250,9 @@ export default function StatsAirportsSection({
             className="text-sm font-semibold mb-3 uppercase tracking-wide"
             style={{ color: "var(--text-muted)" }}
           >
-            {t("stats:airportStats.newThisYear", { year: new Date().getFullYear() })}
+            {t("stats:airportStats.newThisYear", {
+              year: Number(todayIn(todayZoneNow()).slice(0, 4)),
+            })}
           </h3>
           {newThisYear.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>

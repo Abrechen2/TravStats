@@ -1,6 +1,6 @@
 import type { Currency } from "../../lib/units";
 import { formatCurrency } from "../../lib/units";
-import { formatDate } from "../../lib/displayFormat";
+import { formatLocalDate } from "../../lib/displayFormat";
 import type { EvidenceEntry, EvidenceMeasure } from "../../shared/evidence";
 
 /**
@@ -72,23 +72,31 @@ export function composeI18nText(value: I18nOrText, t: Translator): string {
   return t(value.key, { ...values, ns: "evidence", keySeparator: false });
 }
 
-/** `null` — an undated entry — is rendered by the caller, not here. */
+/**
+ * `null` — an undated entry — is rendered by the caller, not here.
+ *
+ * The server already applied the surface's clock rule; the day is the
+ * value's own `YYYY-MM-DD` (ADR 0002), placed on a UTC instant and read back
+ * in UTC, so the reader's zone cannot move it — read in the host zone, a
+ * "2026-03" month drew as February west of UTC.
+ */
 export function formatEvidenceDate(date: EvidenceEntry["date"], language: string): string | null {
   if (!date) return null;
+  const [y, m, d] = date.value.slice(0, 10).split("-").map(Number);
+  const at = new Date(Date.UTC(y, (m || 1) - 1, d || 1));
+  const locale = language === "de" ? "de-DE" : "en-GB";
   switch (date.precision) {
     case "day":
-      // The user's own date-format preference, same as everywhere else on the
-      // frontend (`lib/displayFormat.ts`), rather than a fixed locale.
-      return formatDate(date.value);
+      // The user's own date-format preference (`lib/displayFormat.ts`).
+      return formatLocalDate(date.value);
     case "month":
-      return new Intl.DateTimeFormat(language === "de" ? "de-DE" : "en-GB", {
+      return new Intl.DateTimeFormat(locale, {
         year: "numeric",
         month: "long",
-      }).format(new Date(date.value));
+        timeZone: "UTC",
+      }).format(at);
     case "year":
-      return new Intl.DateTimeFormat(language === "de" ? "de-DE" : "en-GB", {
-        year: "numeric",
-      }).format(new Date(date.value));
+      return new Intl.DateTimeFormat(locale, { year: "numeric", timeZone: "UTC" }).format(at);
   }
 }
 

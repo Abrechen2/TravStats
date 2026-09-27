@@ -4,7 +4,7 @@ import TimesFields from "./FlightForm/fields/TimesFields";
 import HistoricalToggleField from "./FlightForm/fields/HistoricalToggleField";
 import { applyHistoricalToggle } from "./FlightForm/historicalToggle";
 import {
-  splitLocalDatetime,
+  seedTimes,
   historicalShapeFor,
   editSubmitZones,
   airportLocalInputs,
@@ -80,13 +80,8 @@ export default function FlightEditModal({
 
   const buildFormData = (f: Flight) => {
     const isHistorical = f.status === "historical";
-    const dep = splitLocalDatetime(f.departureTime);
-    const arr = splitLocalDatetime(f.arrivalTime);
-    // Actual departure/arrival (#200) — same browser-local seed as
-    // dep/arr above, re-derived as airport-local by the hydration effect
-    // below. Empty when the flight has no recorded actual time yet.
-    const actualDep = splitLocalDatetime(f.actualDeparture ?? null);
-    const actualArr = splitLocalDatetime(f.actualArrival ?? null);
+    // The airports' own clocks from `times`; actual times (#200) empty when none.
+    const { dep, arr, actualDep, actualArr } = seedTimes(f);
     return {
       airline: f.airline || "",
       operatingAirline: f.operatingAirline || "",
@@ -150,15 +145,14 @@ export default function FlightEditModal({
     () => buildFlightAirports(flight).arrival
   );
 
-  // Airport timezones for the departure/arrival fields. The datetime-local
-  // inputs are seeded browser-local by buildFormData, then re-rendered as
-  // airport-local once useAirportLocalTimes resolves both zones (see the
-  // sync effect below). `hydrated` tracks whether the inputs currently hold
-  // airport-local values, so submit pairs them with the matching timezone
-  // basis (no-op edits round-trip losslessly instead of drifting when
-  // browser tz != airport tz).
-  // Only the zone the unhydrated seed is SHOWN in; never submitted (editSubmitZones).
-  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone || "UTC";
+  // Airport timezones for the departure/arrival fields. The inputs are seeded
+  // from `times` (the airports' clocks) by buildFormData and re-derived once
+  // useAirportLocalTimes resolves both zones (the sync effect below);
+  // `hydrated` says whether that happened, so submit pairs them with the
+  // matching zones. Before it, the hook reports a placeholder zone that is
+  // never submitted (editSubmitZones) nor used for a notice — not the
+  // browser's, which is no airport's.
+  const browserTz = "UTC";
   const {
     depTimezone: depTz,
     arrTimezone: arrTz,

@@ -1,7 +1,17 @@
-import { describe, expect, it } from "vitest";
-import { formatLocalClockWith, formatLocalDateWith, formatTimeValueWith } from "../displayFormat";
+import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
+import {
+  formatDateWith,
+  formatLocalClockWith,
+  formatLocalDateWith,
+  formatTimeValueWith,
+} from "../displayFormat";
+import { useProfileZoneStore } from "../../store/profileZoneStore";
+import { useSettingsStore } from "../../store/settingsStore";
 import { yourTimeText } from "../yourTime";
 import type { TimeValue } from "../../shared/time";
+
+// The real store: the default display zone is read from it.
+vi.unmock("../../store/settingsStore");
 
 /**
  * A place's time in the user's format (Settings → Display), from `local` —
@@ -42,6 +52,10 @@ describe("local formatting", () => {
 });
 
 describe("yourTimeText — the optional hint beside a place's time (Q2)", () => {
+  beforeEach(() => {
+    useSettingsStore.setState((st) => ({ display: { ...st.display, dateFormat: "DD.MM.YYYY" } }));
+  });
+
   const t = (key: string, options?: Record<string, unknown>) => `${key}|${String(options?.time)}`;
 
   it("names the viewer's clock, and the day when it differs", () => {
@@ -53,5 +67,28 @@ describe("yourTimeText — the optional hint beside a place's time (Q2)", () => 
 
   it("is absent when the viewer is on the place's clock", () => {
     expect(yourTimeText(kiritimatiEvening, "Pacific/Kiritimati", t)).toBeNull();
+  });
+});
+
+describe("an instant without a place — the profile zone, never the browser's", () => {
+  afterEach(() => {
+    useProfileZoneStore.setState({ status: "unknown" });
+  });
+
+  it("reads a bare day as that day, whatever the reader's zone", () => {
+    // `new Date("2026-05-01")` is UTC midnight: read in St John's it was 30 April.
+    expect(formatDateWith(de, "2026-05-01")).toBe("01.05.2026");
+  });
+
+  it("shows an unlock instant on the confirmed profile clock", () => {
+    useProfileZoneStore.setState({ status: "confirmed" });
+    useSettingsStore.setState((s) => ({ display: { ...s.display, timezone: "Asia/Tokyo" } }));
+    // 20:00Z is already the 13th in Tokyo.
+    expect(formatDateWith(de, "2026-08-12T20:00:00Z")).toBe("13.08.2026");
+  });
+
+  it("answers in UTC until the profile zone is confirmed", () => {
+    useProfileZoneStore.setState({ status: "missing" });
+    expect(formatDateWith(de, "2026-08-12T20:00:00Z")).toBe("12.08.2026");
   });
 });

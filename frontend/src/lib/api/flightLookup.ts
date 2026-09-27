@@ -1,5 +1,6 @@
 import { API_TIMEOUTS } from "../../config/constants";
 import { api } from "./client";
+import { todayZoneNow } from "../../hooks/useTodayZone";
 
 /** A provider that could not answer, as the server names it. */
 export interface LookupProviderFailure {
@@ -31,21 +32,16 @@ export interface FlightLookupResponse<T> {
   providerFailures?: LookupProviderFailure[];
 }
 
-/** The asker's zone, so the server knows what "today" is for them. */
-function browserTimezone(): string | undefined {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone;
-  } catch {
-    return undefined;
-  }
-}
-
 export const flightLookupApi = {
   lookup: async <T>(flightNumber: string, date: string): Promise<FlightLookupResponse<T>> => {
     const { data } = await api.get<FlightLookupResponse<T>>(
       `/flight-lookup/${encodeURIComponent(flightNumber)}`,
       {
-        params: { ...(date ? { date } : {}), tz: browserTimezone() },
+        params: {
+          ...(date ? { date } : {}), // The zone "today" is answered in (ADR 0002 Q1): the confirmed profile
+          // zone, else UTC — the same day on every device, not the browser's.
+          tz: todayZoneNow(),
+        },
         timeout: API_TIMEOUTS.FLIGHT_LOOKUP,
       }
     );

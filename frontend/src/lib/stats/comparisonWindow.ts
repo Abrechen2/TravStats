@@ -22,21 +22,25 @@
  * set against eight months — the same defect with the sides swapped, which a
  * rule that only looked at the selected year could not see.
  *
- * `today` is a parameter, never `Date.now()` read inside, so a test can pin
- * September. Everything here works in LOCAL calendar parts, because the day
- * keys it is compared against are wall-clock dates each domain already decided
- * (a flight's departure airport, a stay's UTC check-in) — re-reading them as
- * instants here would apply a fifth clock to four domains that each chose one.
+ * `today` is a `YYYY-MM-DD` parameter — by default today in the user's
+ * PROFILE zone (ADR 0002 Q1), never the host's clock — so a test can pin
+ * September. Every end is a calendar day held as a UTC-midnight Date and read
+ * with UTC getters only, because the day keys it is compared against are
+ * wall-clock dates each domain already decided (a flight's departure airport,
+ * a stay's check-in) — reading them in the host zone would apply a fifth clock
+ * to four domains that each chose one.
  */
 import { crossDomainDayKey, dayKeyInYear } from "../../shared/crossDomainCounting";
+import { todayIn } from "../../shared/time";
+import { todayZoneNow } from "../../hooks/useTodayZone";
 
 export type ComparisonKind = "fullYear" | "samePeriod";
 
 export interface ComparisonWindow {
   kind: ComparisonKind;
-  /** Inclusive last day the selected year may count. */
+  /** Inclusive last day the selected year may count (UTC midnight — read with getUTC*). */
   currentEnd: Date;
-  /** Inclusive last day the compare year may count. */
+  /** Inclusive last day the compare year may count (UTC midnight — read with getUTC*). */
   previousEnd: Date;
   /**
    * The year that is not over — the reason this is a same-period window, and
@@ -62,11 +66,12 @@ export interface ComparisonWindow {
 export function comparisonWindow(
   selectedYear: number,
   compareYear: number | null,
-  today: Date = new Date()
+  today: string = todayIn(todayZoneNow())
 ): ComparisonWindow {
   const otherYear = compareYear ?? selectedYear - 1;
   const latestYear = Math.max(selectedYear, otherYear);
-  if (latestYear < today.getFullYear()) {
+  const [todayYear, todayMonth, todayDay] = today.slice(0, 10).split("-").map(Number);
+  if (latestYear < todayYear) {
     return {
       kind: "fullYear",
       currentEnd: lastDayOfYear(selectedYear),
@@ -74,8 +79,8 @@ export function comparisonWindow(
       runningYear: null,
     };
   }
-  const month = today.getMonth();
-  const day = today.getDate();
+  const month = todayMonth - 1;
+  const day = todayDay;
   return {
     kind: "samePeriod",
     currentEnd: sameDayIn(selectedYear, month, day),
@@ -87,7 +92,7 @@ export function comparisonWindow(
 /** Where this window ends inside an arbitrary year — the compare year included. */
 export function windowEndInYear(window: ComparisonWindow, year: number): Date {
   if (window.kind === "fullYear") return lastDayOfYear(year);
-  return sameDayIn(year, window.currentEnd.getMonth(), window.currentEnd.getDate());
+  return sameDayIn(year, window.currentEnd.getUTCMonth(), window.currentEnd.getUTCDate());
 }
 
 /**
@@ -97,7 +102,7 @@ export function windowEndInYear(window: ComparisonWindow, year: number): Date {
  */
 export function windowEndKeyInYear(window: ComparisonWindow, year: number): string {
   const end = windowEndInYear(window, year);
-  return crossDomainDayKey(end.getFullYear(), end.getMonth() + 1, end.getDate());
+  return crossDomainDayKey(end.getUTCFullYear(), end.getUTCMonth() + 1, end.getUTCDate());
 }
 
 /**
@@ -155,15 +160,15 @@ export function eventsInWindow(
 }
 
 function lastDayOfYear(year: number): Date {
-  return new Date(year, 11, 31);
+  return new Date(Date.UTC(year, 11, 31));
 }
 
 function sameDayIn(year: number, month0: number, day: number): Date {
-  // 29 February has no counterpart in a common year. `new Date(2025, 1, 29)`
+  // 29 February has no counterpart in a common year. `Date.UTC(2025, 1, 29)`
   // rolls forward to 1 March, which would push the window a day PAST the one
   // the reader is standing on and silently count a 1 March event into a window
   // that is supposed to end on 29 February. Clamp to the last day of the month
   // — 28 February — instead.
-  const lastOfMonth = new Date(year, month0 + 1, 0).getDate();
-  return new Date(year, month0, Math.min(day, lastOfMonth));
+  const lastOfMonth = new Date(Date.UTC(year, month0 + 1, 0)).getUTCDate();
+  return new Date(Date.UTC(year, month0, Math.min(day, lastOfMonth)));
 }

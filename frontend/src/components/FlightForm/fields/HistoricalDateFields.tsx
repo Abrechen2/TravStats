@@ -1,4 +1,13 @@
 import { useTranslation } from "../../../hooks/useTranslation";
+import { todayZoneNow } from "../../../hooks/useTodayZone";
+import { todayIn } from "../../../shared/time";
+
+/** This year in the profile zone (Q1) — the default a year-less pick falls back to. */
+const thisYear = (): string => todayIn(todayZoneNow()).slice(0, 4);
+
+/** Days in (year, month 1-12): day 0 of the next month, read in UTC so no zone moves it. */
+const daysInMonth = (year: number, month: number): number =>
+  new Date(Date.UTC(year, month, 0)).getUTCDate();
 
 /** Year / month / day pickers for a historical flight's date, shared between
  *  the create form (`FlightCompleteStep`) and the edit modal.
@@ -60,12 +69,7 @@ export default function HistoricalDateFields({
   const dayPadded = dayMatch?.[1] ?? "";
   const dayValue = dayPadded ? String(parseInt(dayPadded, 10)) : "";
 
-  // Returns how many days are in (year, month) where month is 1-12.
-  // new Date(year, month, 0) gives the last day of the prior month
-  // when month is treated as 1-based (JS idiom).
-  const daysInMonth = (year: number, month: number): number => new Date(year, month, 0).getDate();
-
-  const numYear = yearStr ? parseInt(yearStr, 10) : new Date().getFullYear();
+  const numYear = parseInt(yearStr || thisYear(), 10);
   const numMonth = monthValue ? parseInt(monthValue, 10) : 0;
   const maxDay = numMonth > 0 ? daysInMonth(numYear, numMonth) : 31;
 
@@ -118,7 +122,7 @@ export default function HistoricalDateFields({
           value={monthValue}
           onChange={(e) => {
             const m = e.target.value;
-            const y = yearStr || String(new Date().getFullYear());
+            const y = yearStr || thisYear();
             if (!m) {
               // Month cleared — drop back to year-only (also clears day)
               onChange(yearStr ? yearStr : "");
@@ -137,7 +141,10 @@ export default function HistoricalDateFields({
           <option value="">{t("flights:historicalMonthNone")}</option>
           {Array.from({ length: 12 }, (_, i) => (
             <option key={i + 1} value={String(i + 1)}>
-              {new Date(2000, i).toLocaleDateString(i18n.language, { month: "long" })}
+              {new Date(Date.UTC(2000, i, 1)).toLocaleDateString(i18n.language, {
+                month: "long",
+                timeZone: "UTC",
+              })}
             </option>
           ))}
         </select>
@@ -152,7 +159,7 @@ export default function HistoricalDateFields({
           disabled={!monthValue}
           onChange={(e) => {
             const d = e.target.value;
-            const y = yearStr || String(new Date().getFullYear());
+            const y = yearStr || thisYear();
             if (!d) {
               // Day cleared — transition back to YYYY-MM
               onChange(`${y}-${monthPadded}`);

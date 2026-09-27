@@ -1,4 +1,4 @@
-import { format } from "date-fns";
+import { formatInProfileZone } from "../../lib/profileInstant";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 
@@ -138,7 +138,12 @@ export default function InvitationManagement({
                   </td>
                   <td className="px-4 py-3 text-sm">{invitation.creator.username}</td>
                   <td className="px-4 py-3 text-sm">
-                    {format(new Date(invitation.expiresAt), "MMM d, yyyy")}
+                    {/* No place: the profile clock (ADR 0002 Q1), in date-fns' old en-US shape. */}
+                    {formatInProfileZone(invitation.expiresAt, "en-US", {
+                      month: "short",
+                      day: "numeric",
+                      year: "numeric",
+                    })}
                   </td>
                   <td className="px-4 py-3 text-sm">
                     {invitation.user?.username ?? <span className="text-(--text-muted)">—</span>}
@@ -147,7 +152,10 @@ export default function InvitationManagement({
                     {status === "used" ? (
                       <span className="px-2 py-1 text-xs font-semibold rounded-full bg-(--bg-elevated)">
                         {t("admin:invitations.status.usedOn", {
-                          date: format(new Date(invitation.usedAt!), "MMM d"),
+                          date: formatInProfileZone(invitation.usedAt!, "en-US", {
+                            month: "short",
+                            day: "numeric",
+                          }),
                         })}
                       </span>
                     ) : status === "expired" ? (

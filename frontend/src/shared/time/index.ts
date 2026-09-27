@@ -36,3 +36,12 @@ export {
 } from "./legacy";
 export { clockOf, dayOf, viewerReading } from "./reading";
 export { supportedZones } from "./zoneList";
+export {
+  addDays,
+  dayParts,
+  dayString,
+  daysBetween,
+  daysInMonth,
+  formatDayLong,
+  weekdayOf,
+} from "./calendar";

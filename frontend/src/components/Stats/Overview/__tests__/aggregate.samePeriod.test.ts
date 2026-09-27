@@ -11,7 +11,7 @@ import { comparisonWindow } from "../../../../lib/stats/comparisonWindow";
 import { aggregate, delta } from "../aggregate";
 
 /** Local parts, not an ISO instant: the window works in calendar days. */
-const SEPTEMBER_18_2026 = new Date(2026, 8, 18);
+const SEPTEMBER_18_2026 = "2026-09-18";
 
 function daysIn(year: number, month1: number, count: number): Record<string, number> {
   const out: Record<string, number> = {};
