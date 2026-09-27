@@ -42,6 +42,19 @@ export function newStationKey(): string {
   return `new-${Date.now()}-${keySeq}`;
 }
 
+/**
+ * The night a loaded station is edited as. Every state maps to itself: a
+ * route correction read as "pass" would be saved back as a counted, named
+ * station on the next autosave (tester 2026-09-26).
+ */
+function nightOf(s: RoadtripStation): EditorStation["night"] {
+  if (s.state === "stay" && s.lodgingStayId)
+    return { kind: "stay", lodgingStayId: s.lodgingStayId };
+  if (s.state === "free") return { kind: "free" };
+  if (s.state === "via") return { kind: "via" };
+  return { kind: "pass" };
+}
+
 export function toEditorStation(s: RoadtripStation): EditorStation {
   return {
     key: s.id,
@@ -52,12 +65,7 @@ export function toEditorStation(s: RoadtripStation): EditorStation {
     startDate: s.startDate,
     endDate: s.endDate,
     notes: s.notes,
-    night:
-      s.state === "stay" && s.lodgingStayId
-        ? { kind: "stay", lodgingStayId: s.lodgingStayId }
-        : s.state === "free"
-          ? { kind: "free" }
-          : { kind: "pass" },
+    night: nightOf(s),
     stayLabel: s.stay?.lodgingName,
     stayLodgingId: s.stay?.lodgingId,
     stayCancelled: s.stay?.status === "cancelled",

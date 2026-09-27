@@ -135,7 +135,9 @@ export default function StationEditor({
   const legBetween = (a: EditorStation, b: EditorStation): TourLeg | undefined =>
     a.id && b.id ? legs.find((l) => l.fromStopId === a.id && l.toStopId === b.id) : undefined;
 
-  const name = (s: EditorStation): string => s.title.trim() || t("roadtrips:editor.unnamed");
+  const name = (s: EditorStation): string =>
+    s.title.trim() ||
+    (s.night.kind === "via" ? t("roadtrips:night.via") : t("roadtrips:editor.unnamed"));
   const warnings = stationWarnings(drafts);
 
   return (

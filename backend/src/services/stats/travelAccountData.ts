@@ -174,6 +174,7 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
         id: true,
         name: true,
         stops: {
+          where: { viaPoint: false },
           select: {
             id: true,
             title: true,

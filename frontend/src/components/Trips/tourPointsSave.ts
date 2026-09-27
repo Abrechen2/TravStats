@@ -23,6 +23,9 @@ export function tourPointsSaveErrorKey(err: unknown): string {
   if (apiErrorMachineCode(err) === "TOUR_POINTS_FROM_TRIP") {
     return "trips:tours.points.saveErrorFromTrip";
   }
+  if (apiErrorMachineCode(err) === "VIA_POINT_HAS_NIGHT") {
+    return "trips:tours.points.saveErrorViaNight";
+  }
   const status = (err as { response?: { status?: number } } | undefined)?.response?.status;
   if (status === undefined) return "trips:tours.points.saveErrorOffline";
   if (status === 400) return "trips:tours.points.saveErrorInvalid";

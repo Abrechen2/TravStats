@@ -35,7 +35,9 @@ export async function loadRoadtripStations(
     select: {
       id: true,
       name: true,
+      // Stations only — a route correction is no evidence of presence.
       stops: {
+        where: { viaPoint: false },
         select: {
           id: true,
           title: true,

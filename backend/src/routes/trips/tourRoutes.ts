@@ -160,7 +160,8 @@ export function toLegDto(leg: {
 /** Exported for `routes/trips/tourRouting.ts` — see `toDto` above. */
 export const ROUTE_SELECT = {
   legs: { select: { mode: true, distanceKm: true } },
-  _count: { select: { stops: true } },
+  // Stations, not route corrections (via points): the count is what a list shows.
+  _count: { select: { stops: { where: { viaPoint: false } } } },
 } as const;
 
 /**
@@ -413,6 +414,7 @@ router.get(
             notes: true,
             routeOrderIdx: true,
             tripId: true,
+            viaPoint: true,
           },
         }),
         prisma.tripRouteLeg.findMany({

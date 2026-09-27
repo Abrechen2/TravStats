@@ -98,6 +98,8 @@ export interface TourStop {
   notes?: string | null;
   /** Null for a point the tour owns; set for a trip timeline stop it draws on. */
   tripId?: string | null;
+  /** A route correction: the route bends through it; not a stop (tester 2026-09-26). */
+  viaPoint?: boolean;
 }
 
 export interface TourLeg {

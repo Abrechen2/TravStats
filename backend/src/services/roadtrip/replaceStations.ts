@@ -9,15 +9,24 @@ import { stationTimeColumns } from "../timeModel/tripColumns";
 
 export type Station = StationsInput["stations"][number];
 
-/** The two columns a station's night is stored in — see `TripStop.overnight`. */
-function nightColumns(station: Station): { lodgingStayId: string | null; overnight: boolean } {
+/**
+ * The columns a station's night is stored in — see `TripStop.overnight` and
+ * `TripStop.viaPoint`.
+ */
+function nightColumns(station: Station): {
+  lodgingStayId: string | null;
+  overnight: boolean;
+  viaPoint: boolean;
+} {
   switch (station.night.kind) {
     case "stay":
-      return { lodgingStayId: station.night.lodgingStayId, overnight: true };
+      return { lodgingStayId: station.night.lodgingStayId, overnight: true, viaPoint: false };
     case "free":
-      return { lodgingStayId: null, overnight: true };
+      return { lodgingStayId: null, overnight: true, viaPoint: false };
     case "pass":
-      return { lodgingStayId: null, overnight: false };
+      return { lodgingStayId: null, overnight: false, viaPoint: false };
+    case "via":
+      return { lodgingStayId: null, overnight: false, viaPoint: true };
   }
 }
 
@@ -74,11 +83,27 @@ export async function replaceStations(
 
   const result = await prisma.$transaction(
     async (tx) => {
-      const existing = await tx.tripStop.findMany({ where: { routeId }, select: { id: true } });
+      const existing = await tx.tripStop.findMany({
+        where: { routeId },
+        select: { id: true, tripId: true },
+      });
       const known = new Set(existing.map((s) => s.id));
       const unknown = givenIds.find((id) => !known.has(id));
       if (unknown !== undefined) {
         throw new AppError("A station id does not belong to this roadtrip", 400);
+      }
+      // A trip's timeline stop is a place the traveller was; turning it into
+      // a nameless bend in the line would take it off the trip's timeline
+      // without saying so. A route correction is always a point of its own.
+      const onTimeline = new Set(existing.flatMap((s) => (s.tripId !== null ? [s.id] : [])));
+      if (
+        stations.some((s) => s.night.kind === "via" && s.id !== undefined && onTimeline.has(s.id))
+      ) {
+        throw new AppError(
+          "A stop of the trip's timeline cannot become a route correction",
+          400,
+          "VIA_POINT_ON_TIMELINE"
+        );
       }
 
       // Free every position first: `@@unique([routeId, routeOrderIdx])`
@@ -122,7 +147,7 @@ export async function replaceStations(
       // roadtrip-owned one is deleted with its legs.
       await tx.tripStop.updateMany({
         where: { routeId, routeOrderIdx: null, tripId: { not: null } },
-        data: { routeId: null, lodgingStayId: null, overnight: false },
+        data: { routeId: null, lodgingStayId: null, overnight: false, viaPoint: false },
       });
       await tx.tripStop.deleteMany({ where: { routeId, routeOrderIdx: null } });
 

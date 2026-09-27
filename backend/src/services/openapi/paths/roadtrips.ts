@@ -96,7 +96,12 @@ const station = registry.register(
       order: z.number().int().nullable(),
       state: z
         .enum(STATION_STATES)
-        .describe("stay = night at a linked stay, free = night without one, pass = no night"),
+        .describe(
+          "stay = night at a linked stay, free = night without one, pass = no night, " +
+            "via = a route correction: the legs run through it, but it is not a station " +
+            "(no name needed, no date, left out of every count). The list, the phone and " +
+            "the statistics never return a via point; only this roadtrip's own detail does."
+        ),
       lodgingStayId: z.string().uuid().nullable(),
       stay: z
         .object({
@@ -205,7 +210,9 @@ registry.registerPath({
   description:
     "Adds, moves, removes and re-links in one write; legs are recomputed in the same " +
     "transaction and keyed by endpoint station. Each station's night is exactly one of " +
-    "`stay` (with the caller's own `lodgingStayId`), `free` or `pass`. A timeline stop " +
+    "`stay` (with the caller's own `lodgingStayId`), `free`, `pass` or `via` (a route " +
+    "correction with no date and possibly no name; 400 `VIA_POINT_ON_TIMELINE` for a " +
+    "trip's timeline stop). A timeline stop " +
     "dropped from the list goes back to its trip rather than being deleted.",
   tags: ["Roadtrips"],
   request: {

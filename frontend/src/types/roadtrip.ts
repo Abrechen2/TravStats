@@ -104,7 +104,11 @@ export interface RoadtripDetail {
 
 /** A station's night as the station list accepts it. */
 export type StationNightInput =
-  { kind: "stay"; lodgingStayId: string } | { kind: "free" } | { kind: "pass" };
+  | { kind: "stay"; lodgingStayId: string }
+  | { kind: "free" }
+  | { kind: "pass" }
+  /** A route correction: the route bends through it; no name, no date, no count. */
+  | { kind: "via" };
 
 export interface StationInput {
   /** Omitted for a new station. */

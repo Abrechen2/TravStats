@@ -14,6 +14,7 @@ import {
 import { AppError } from "../../middleware/errorHandler";
 import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
 import { STATION_SELECT, toStationDto } from "../../services/roadtrip/roadtripSummary";
+import { foldViaPoints } from "../../shared/tour/viaPoints";
 import logger from "../../utils/logger";
 import { toDto, toLegDto, ROUTE_SELECT } from "../trips/tourRoutes";
 
@@ -60,7 +61,10 @@ async function stationsAndLegs(routeId: string) {
       orderBy: { fromStop: { routeOrderIdx: "asc" } },
     }),
   ]);
-  return { stations: stations.map(toStationDto), legs: legs.map(toLegDto) };
+  // The phone lists stations: route corrections are folded out and the legs
+  // through them merged, so it sees A → B with the line still bent.
+  const folded = foldViaPoints(stations, legs);
+  return { stations: folded.stations.map(toStationDto), legs: folded.legs.map(toLegDto) };
 }
 
 /** GET /roadtrips/active?date=YYYY-MM-DD — the roadtrip running on the phone's local date. */

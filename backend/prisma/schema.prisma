@@ -1616,6 +1616,14 @@ model TripStop {
   /// stored enum plus the SetNull above would need a CHECK that the cascade
   /// itself then violates (the trap migration 20260921195505 met).
   overnight     Boolean   @default(false)
+  /// A route correction ("Streckenkorrektur", tester 2026-09-26): a point
+  /// with no name of its own that exists only to bend the route between its
+  /// neighbours. Legs run through it like through any vertex, so distances
+  /// and routing honour it; everything that COUNTS stations (the station
+  /// count, countries, nights, days away, achievements, the phone's list, the
+  /// dashboard markers) leaves it out. Never overnight and never a stay —
+  /// `trip_stops_via_point_passes` holds that in the database.
+  viaPoint      Boolean   @default(false) @map("via_point")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 

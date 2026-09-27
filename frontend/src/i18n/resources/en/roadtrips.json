@@ -70,7 +70,8 @@
   "night": {
     "stay": "Accommodation",
     "free": "Night without accommodation",
-    "pass": "Pass-through"
+    "pass": "Pass-through",
+    "via": "Route correction"
   },
   "stations": {
     "title": "Stations",
@@ -318,6 +319,10 @@
       "pass": {
         "label": "Pass-through",
         "hint": "Just passed by, no night"
+      },
+      "via": {
+        "label": "Route correction",
+        "hint": "No stop: the route runs through here, no name and not counted"
       }
     },
     "place": "Place",
@@ -342,7 +347,8 @@
       "noDeparture": "{{name}}: departure missing",
       "noStay": "{{name}}: stay not linked yet"
     },
-    "warningsNote": "Hints only — everything is saved anyway. Only a station without a place or without its linked stay waits."
+    "warningsNote": "Hints only — everything is saved anyway. Only a station without a place or without its linked stay waits.",
+    "viaNote": "Only shapes the route: not shown as a station on maps or in lists, and counted nowhere."
   },
   "legDialog": {
     "title": "Leg",

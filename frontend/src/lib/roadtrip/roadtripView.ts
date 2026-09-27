@@ -205,6 +205,11 @@ export function stationWarnings(drafts: readonly StationDraft[]): StationWarning
   const out: StationWarning[] = [];
   let lastDay: string | null = null;
   drafts.forEach((d, index) => {
+    // A route correction needs a point and nothing else: no name, no day.
+    if (d.night.kind === "via") {
+      if (d.lat === null || d.lon === null) out.push({ kind: "noPlace", index });
+      return;
+    }
     if (d.lat === null || d.lon === null || d.title.trim() === "") {
       out.push({ kind: "noPlace", index });
     }
@@ -228,7 +233,8 @@ export function isSavable(
   d: StationDraft
 ): d is StationDraft & { lat: number; lon: number; night: StationNightInput } {
   const stayLinked = d.night.kind !== "stay" || Boolean(d.night.lodgingStayId);
-  return d.title.trim() !== "" && d.lat !== null && d.lon !== null && stayLinked;
+  const named = d.night.kind === "via" || d.title.trim() !== "";
+  return named && d.lat !== null && d.lon !== null && stayLinked;
 }
 
 /** The morning after a day, for the "left next morning" shortcut. */

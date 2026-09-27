@@ -26,6 +26,29 @@ export default function StationMarker({
   const box = size === "sm" ? 18 : 22;
   const ring = selected ? "0 0 0 2px var(--ts-bg), 0 0 0 4px var(--ts-text-bright)" : undefined;
 
+  if (state === "via") {
+    // A route correction: a small diamond, the shape of "a bend", not a stop.
+    const d = size === "sm" ? 8 : 10;
+    return (
+      <span
+        aria-hidden
+        className="flex items-center justify-center"
+        style={{ width: box, height: box }}
+      >
+        <span
+          style={{
+            width: d,
+            height: d,
+            transform: "rotate(45deg)",
+            border: "2px solid var(--ts-muted)",
+            background: "transparent",
+            boxShadow: ring,
+          }}
+        />
+      </span>
+    );
+  }
+
   if (state === "pass") {
     const d = size === "sm" ? 10 : 14;
     return (

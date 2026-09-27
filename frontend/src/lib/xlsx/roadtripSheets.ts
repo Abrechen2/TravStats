@@ -266,7 +266,7 @@ export function roadtripStationSheet(t: T): SheetSpec<RoadtripStationRow> {
         width: 12,
         value: (s) => s.endDate,
       },
-      // stay / free / pass — the words the importer reads, listed in the hint.
+      // stay / free / pass / via — the words the importer reads, listed in the hint.
       {
         key: "night",
         header: t("xlsx:columns.night"),

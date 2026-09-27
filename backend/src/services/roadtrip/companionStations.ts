@@ -4,7 +4,8 @@ import { haversineKm } from "../../shared/geo/haversine";
 import { reverseGeocode } from "../geo/nominatim";
 import { recomputeLegs, type StopCoords } from "../tour/legRecompute";
 import { autoRouteNewLegs } from "../tour/routing/autoRouteLegs";
-import { STATION_SELECT, spanOf, type StationRow } from "./roadtripSummary";
+import { STATION_SELECT, STATIONS_ONLY, spanOf, type StationRow } from "./roadtripSummary";
+import { isStation } from "../../shared/tour/roadtrip";
 import { stationTimeColumns } from "../timeModel/tripColumns";
 
 /**
@@ -53,8 +54,9 @@ export async function findActiveRoadtrip(
 
   let best: { routeId: string; start: string; stations: StationRow[] } | null = null;
   for (const { id } of routes) {
+    // Stations only: the phone lists them, and a route correction is not one.
     const stations = await prisma.tripStop.findMany({
-      where: { routeId: id },
+      where: { routeId: id, ...STATIONS_ONLY },
       orderBy: { routeOrderIdx: "asc" },
       select: STATION_SELECT,
     });
@@ -151,7 +153,9 @@ export async function appendStation(
     select: { ...STATION_SELECT, lat: true, lon: true, routeOrderIdx: true },
   });
 
-  const same = stations.find((s) => {
+  // Every point stays in `stations` — the new leg must run from the last
+  // one, correction or not — but only a station can be the one a resend means.
+  const same = stations.filter(isStation).find((s) => {
     const { from } = stationSpan(s);
     return (
       from === input.date &&
@@ -166,7 +170,7 @@ export async function appendStation(
   const title =
     input.title?.trim() ||
     stay?.lodgingName.trim().slice(0, 200) ||
-    (await placeName(input.lat, input.lon, `Station ${stations.length + 1}`));
+    (await placeName(input.lat, input.lon, `Station ${stations.filter(isStation).length + 1}`));
   const { mode } = await prisma.tripRoute.findUniqueOrThrow({
     where: { id: routeId },
     select: { mode: true },
@@ -291,7 +295,7 @@ export async function dayContext(
   });
 
   const candidates = await prisma.tripStop.findMany({
-    where: { route: { userId, kind: "roadtrip" } },
+    where: { route: { userId, kind: "roadtrip" }, ...STATIONS_ONLY },
     select: {
       ...STATION_SELECT,
       route: { select: { id: true, name: true } },

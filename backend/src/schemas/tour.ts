@@ -283,14 +283,26 @@ export const createTourSchema = createRouteSchema.extend({
 export const tourPointsSchema = z.object({
   points: z
     .array(
-      z.object({
-        /** Omitted for a new point; an existing point keeps its id so its
-         *  legs survive a reorder (legs are keyed by endpoint stop). */
-        id: z.string().uuid().optional(),
-        title: z.string().trim().min(1).max(200),
-        lat: z.number().min(-90).max(90),
-        lon: z.number().min(-180).max(180),
-      })
+      z
+        .object({
+          /** Omitted for a new point; an existing point keeps its id so its
+           *  legs survive a reorder (legs are keyed by endpoint stop). */
+          id: z.string().uuid().optional(),
+          // Required for a point; a route correction may leave it empty.
+          title: z.string().trim().max(200),
+          lat: z.number().min(-90).max(90),
+          lon: z.number().min(-180).max(180),
+          /**
+           * A route correction ("Streckenkorrektur", tester 2026-09-26): the
+           * route bends through it, nothing counts it. Absent leaves a stored
+           * point's flag as it is — the spreadsheet does not carry it.
+           */
+          via: z.boolean().optional(),
+        })
+        .refine((p) => p.via === true || p.title.length > 0, {
+          message: "A point needs a name",
+          path: ["title"],
+        })
     )
     .max(500),
 });
