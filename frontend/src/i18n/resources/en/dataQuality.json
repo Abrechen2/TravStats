@@ -29,6 +29,10 @@
       "time": {
         "title": "Questions about time",
         "description": "Something is missing here to show a time correctly: the place's time zone, the time of day or the exact day. We don't guess — add it if you know it, or leave it as it is."
+      },
+      "home": {
+        "title": "Home",
+        "description": "Your home is not fully set up yet. Nothing changes until you confirm it."
       }
     },
     "photoJourneys": {
@@ -204,7 +208,8 @@
       "trip": "Trip",
       "trip_journal_entry": "Journal entry",
       "lodging_stay": "Stay",
-      "profile": "Profile"
+      "profile": "Profile",
+      "home": "Home"
     },
     "status": {
       "open": "Open",
@@ -221,7 +226,8 @@
         "hint": "There is nothing to change on the record. This question will never be asked again."
       }
     },
-    "timeUnchanged": "Nothing was changed on the entry. The time stays as it was stored until you fill it in."
+    "timeUnchanged": "Nothing was changed on the entry. The time stays as it was stored until you fill it in.",
+    "homeSubject": "Your home"
   },
   "kinds": {
     "address_country_mismatch": {
@@ -262,6 +268,13 @@
     "time_day_ambiguous": {
       "title": "Day uncertain",
       "question": "It is not certain which calendar day is meant. The stored day was kept – check it and correct it if needed."
+    },
+    "home_residence_unconfirmed": {
+      "title": "Confirm residence",
+      "question": "Confirm where you live and pick further home airports?",
+      "body": "So far TravStats only knows your home airport ({{airports}}) and measures distances from there. Confirm where you live and pick up to three airports you fly from.",
+      "unchanged": "Until you confirm, every statistic stays exactly as it was.",
+      "action": "Set up your home"
     }
   },
   "passwordResets": {

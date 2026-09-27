@@ -6,6 +6,7 @@ import type { DataQualityFlag } from "../../types/dataQuality";
 
 import FlagContradiction from "./FlagContradiction";
 import { flaggedRecordPath } from "./flagLinks";
+import { HOME_SETTINGS_PATH } from "./HomeResidenceFlag";
 import { isTimeFlagEntityType, isTimeFlagKind, timeFlagEditorPath } from "./timeFlagLinks";
 
 /**
@@ -53,6 +54,7 @@ import { isTimeFlagEntityType, isTimeFlagKind, timeFlagEditorPath } from "./time
  */
 function subjectPathOf(flag: DataQualityFlag): string | null {
   if (flag.entityType === "country") return null;
+  if (flag.entityType === "home") return HOME_SETTINGS_PATH;
   if (isTimeFlagEntityType(flag.entityType)) return timeFlagEditorPath(flag);
   return flaggedRecordPath({ entityType: flag.entityType, entityId: flag.entityId, label: "" });
 }
@@ -68,11 +70,14 @@ function subjectPathOf(flag: DataQualityFlag): string | null {
 function subjectLabelOf(
   flag: DataQualityFlag,
   countryLabel: (code: string) => string,
-  unnamed: string
+  unnamed: string,
+  home: string
 ): string {
   const subject = flag.subject;
   if (subject?.entityType === "country") return countryLabel(subject.countryCode);
   if (flag.entityType === "country") return countryLabel(flag.entityId);
+  // The account's home has no name on the wire; the reader's language names it.
+  if (subject?.entityType === "home" || flag.entityType === "home") return home;
   return subject?.label || unnamed;
 }
 
@@ -104,7 +109,12 @@ export default function DataQualityFlagCard({
   // page that throws, not an expected state. A country has no page at all.
   const subjectPath = subjectPathOf(flag);
 
-  const subjectLabel = subjectLabelOf(flag, countryLabel, t("dataQuality:flag.unnamedRecord"));
+  const subjectLabel = subjectLabelOf(
+    flag,
+    countryLabel,
+    t("dataQuality:flag.unnamedRecord"),
+    t("dataQuality:flag.homeSubject")
+  );
 
   return (
     <div
@@ -144,7 +154,9 @@ export default function DataQualityFlagCard({
       <p className="text-xs mt-3" style={{ color: "var(--text-muted)" }}>
         {isTimeFlagKind(flag.kind)
           ? t("dataQuality:flag.timeUnchanged")
-          : t("dataQuality:flag.neitherIsCorrect")}
+          : flag.kind === "home_residence_unconfirmed"
+            ? t("dataQuality:kinds.home_residence_unconfirmed.unchanged")
+            : t("dataQuality:flag.neitherIsCorrect")}
       </p>
 
       {flag.status === "open" && (

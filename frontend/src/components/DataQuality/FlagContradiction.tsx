@@ -6,6 +6,7 @@ import type { DataQualityFlag, FlaggedRecord } from "../../types/dataQuality";
 
 import { flaggedRecordPath } from "./flagLinks";
 import TimeValueFlag from "./TimeValueFlag";
+import HomeResidenceFlag from "./HomeResidenceFlag";
 import { formatDate as formatUserDate } from "../../lib/displayFormat";
 
 /**
@@ -208,6 +209,10 @@ export default function FlagContradiction({ flag }: { flag: DataQualityFlag }): 
     flag.kind === "time_day_ambiguous"
   ) {
     return <TimeValueFlag flag={flag} />;
+  }
+
+  if (flag.kind === "home_residence_unconfirmed") {
+    return <HomeResidenceFlag details={flag.details} />;
   }
 
   // A `kind` this build has no rendering for — a server running a check newer

@@ -37,10 +37,52 @@ export type ApiProvider = "aerodatabox" | "airlabs" | "aviationstack" | "opensky
 
 export type ApiKeyQuotasResponse = Record<ApiProvider, ProviderQuota>;
 
+/** The old one-airport shape — still served (derived from the periods) for older clients. */
 export interface HomeAirportEntry {
   iata: string;
   fromDate: string; // YYYY-MM-DD
   toDate: string | null; // YYYY-MM-DD, null = currently active
+}
+
+/**
+ * "Zuhause" (owner decision 2026-09-27): where the user lived and which
+ * airports they flew from, by date. Mirrors `backend/src/schemas/home.ts`.
+ */
+export interface HomeResidence {
+  name: string;
+  lat: number;
+  lon: number;
+  placeRef?: string | null;
+}
+
+export interface HomeAirportChoice {
+  code: string;
+  primary: boolean;
+}
+
+export interface HomePeriod {
+  /** Inclusive start, YYYY-MM-DD. */
+  fromDate: string;
+  /** Exclusive end, YYYY-MM-DD; null for the home that runs now. */
+  toDate: string | null;
+  /** Null only on a migrated period whose airport the catalogue does not know. */
+  residence: HomeResidence | null;
+  /** False on a period migrated from the old shape until the user confirms it. */
+  residenceConfirmed: boolean;
+  /** One to three, exactly one primary. */
+  airports: HomeAirportChoice[];
+}
+
+export interface HomeAirportsResponse {
+  history: HomeAirportEntry[];
+  periods: HomePeriod[];
+}
+
+export interface NearbyHomeAirport {
+  code: string;
+  name: string;
+  city: string | null;
+  distanceKm: number;
 }
 
 /** `GET /settings` → `profileZone`: the zone that answers "today" (ADR 0002 D4/Q1). */
@@ -146,35 +188,23 @@ export const settingsApi = {
   deleteProfilePicture: async (): Promise<void> => {
     await api.delete("/settings/profile-picture");
   },
-  getHomeAirports: async (): Promise<{ history: HomeAirportEntry[] }> => {
-    const { data } = await api.get<{ history: HomeAirportEntry[] }>("/settings/home-airports");
+  getHomeAirports: async (): Promise<HomeAirportsResponse> => {
+    const { data } = await api.get<HomeAirportsResponse>("/settings/home-airports");
     return data;
   },
-  setHomeAirport: async (payload: {
-    iata: string;
-    fromDate?: string;
-  }): Promise<{ history: HomeAirportEntry[] }> => {
-    const { data } = await api.post<{ history: HomeAirportEntry[] }>(
-      "/settings/home-airports",
-      payload
-    );
+  /** Replace every home period at once; refused with `HOME_PERIODS_INVALID` / `HOME_AIRPORT_UNKNOWN`. */
+  saveHomePeriods: async (periods: HomePeriod[]): Promise<HomeAirportsResponse> => {
+    const { data } = await api.put<HomeAirportsResponse>("/settings/home-airports/periods", {
+      periods,
+    });
     return data;
   },
-  updateHomeAirport: async (
-    index: number,
-    patch: Partial<HomeAirportEntry>
-  ): Promise<{ history: HomeAirportEntry[] }> => {
-    const { data } = await api.patch<{ history: HomeAirportEntry[] }>(
-      `/settings/home-airports/${index}`,
-      patch
+  nearbyHomeAirports: async (lat: number, lon: number): Promise<NearbyHomeAirport[]> => {
+    const { data } = await api.get<{ airports: NearbyHomeAirport[] }>(
+      "/settings/home-airports/nearby",
+      { params: { lat, lon } }
     );
-    return data;
-  },
-  deleteHomeAirport: async (index: number): Promise<{ history: HomeAirportEntry[] }> => {
-    const { data } = await api.delete<{ history: HomeAirportEntry[] }>(
-      `/settings/home-airports/${index}`
-    );
-    return data;
+    return data.airports;
   },
   getApiKeys: async (): Promise<{
     airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
