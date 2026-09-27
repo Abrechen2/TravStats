@@ -17,6 +17,7 @@
  * cannot carry both.
  */
 
+import { stayTimesSchema } from "../../../schemas/times";
 import { z } from "zod";
 
 import { registry } from "../registry";
@@ -95,6 +96,7 @@ const stay = registry.register(
       bookingId: z.string().uuid().nullable(),
       createdAt: z.string().datetime(),
       updatedAt: z.string().datetime(),
+      times: stayTimesSchema,
     })
     .describe(
       "One visit to a lodging. Everything episodic lives here rather than on the " +
