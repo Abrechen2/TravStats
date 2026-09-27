@@ -12,7 +12,13 @@ import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { createFlightSchema, updateFlightSchema, airportSchema } from "../../../schemas/flight";
 import { localDateInputSchema, localTimeInputSchema } from "../../../shared/time/wire";
-import { TIMES_SCHEMAS, flightTimesSchema } from "../../../schemas/times";
+import {
+  TIMES_SCHEMAS,
+  flightTimesSchema,
+  journalEntryTimesSchema,
+  tripStopTimesSchema,
+  tripTimesSchema,
+} from "../../../schemas/times";
 import {
   apiTokenScopeSchema,
   createApiTokenSchema,
@@ -161,6 +167,38 @@ export const airportResponse = registry.register(
     .openapi("Airport")
 );
 
+/** A timeline stop, as the stop routes and GET /trips/{id} return it. */
+export const tripStopResponse = registry.register(
+  "TripStop",
+  z
+    .object({
+      ...prismaColumns("TripStop"),
+      startDate: z
+        .string()
+        .datetime()
+        .nullable()
+        .describe("Legacy: the stop's wall clock stored as if it were UTC. Read `times.start`."),
+      endDate: z.string().datetime().nullable(),
+      times: tripStopTimesSchema,
+    })
+    .openapi("TripStop")
+);
+
+/** A diary entry, as the journal routes and GET /trips/{id} return it. */
+export const tripJournalEntryResponse = registry.register(
+  "TripJournalEntry",
+  z
+    .object({
+      ...prismaColumns("TripJournalEntry"),
+      times: journalEntryTimesSchema,
+      photos: z
+        .array(z.record(z.string(), z.unknown()))
+        .optional()
+        .describe("GET /trips/{id}: the photos the entry shows, in the gallery's shape"),
+    })
+    .openapi("TripJournalEntry")
+);
+
 export const tripResponse = registry.register(
   "Trip",
   z
@@ -190,6 +228,11 @@ export const tripResponse = registry.register(
       cruises: z.array(includedRow("cruise")).optional(),
       lodgingStays: z.array(includedRow("stay")).optional(),
       bookings: z.array(includedRow("booking")).optional(),
+      stops: z.array(tripStopResponse).optional().describe("GET /trips/{id}"),
+      journalEntries: z.array(tripJournalEntryResponse).optional().describe("GET /trips/{id}"),
+      times: tripTimesSchema
+        .optional()
+        .describe("The trip's first and last day; on the list, detail, create and update"),
     })
     .openapi("Trip")
 );

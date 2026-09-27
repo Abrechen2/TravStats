@@ -147,4 +147,78 @@ describe("Trips — time model (phase 2)", () => {
     expect(res.status).toBe(422);
     expect(res.body).toMatchObject({ code: "TIME_SHAPE_REQUIRED", field: "startDate" });
   });
+
+  it("hands the trip, its stops and its diary out with times (phase 4)", async () => {
+    const stop = await addStop({
+      title: "Kyoto",
+      lat: 35.0116,
+      lon: 135.7681,
+      startDate: { local: "2027-04-02T09:00" },
+    });
+    expect(stop.body.stop.times.start).toEqual({
+      utc: "2027-04-02T00:00:00.000Z",
+      zone: "Asia/Tokyo",
+      offset: "+09:00",
+      local: "2027-04-02T09:00:00",
+      precision: "minute",
+      zoneSource: "stored",
+    });
+    const entry = await request(app)
+      .post(`/api/v1/trips/${tripId}/journal`)
+      .set("Cookie", cookie)
+      .send({ date: "2027-04-02", body: "Tempel" });
+    expect(entry.status).toBe(201);
+    expect(entry.body.entry.times.day).toEqual({
+      date: "2027-04-02",
+      zone: null,
+      precision: "day",
+    });
+    await prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        startDate: new Date("2027-04-01T00:00:00.000Z"),
+        startDay: new Date("2027-04-01T00:00:00.000Z"),
+        startZone: "Asia/Tokyo",
+      },
+    });
+
+    const detail = await request(app).get(`/api/v1/trips/${tripId}`).set("Cookie", cookie);
+    expect(detail.status).toBe(200);
+    expect(detail.body.trip.times.start).toEqual({
+      date: "2027-04-01",
+      zone: "Asia/Tokyo",
+      precision: "day",
+    });
+    expect(detail.body.trip.stops[0].times.start.local).toBe("2027-04-02T09:00:00");
+    expect(detail.body.trip.journalEntries[0].times.day.date).toBe("2027-04-02");
+    const list = await request(app).get("/api/v1/trips").set("Cookie", cookie);
+    expect(list.body.trips.find((t: { id: string }) => t.id === tripId).times.start.date).toBe(
+      "2027-04-01"
+    );
+  });
+
+  it("shows a trip's flight in the zone it was STORED with, not today's catalogue", async () => {
+    await prisma.flight.create({
+      data: {
+        userId,
+        tripId,
+        depIata: "FRA",
+        depLat: 50.030241,
+        depLon: 8.561096,
+        arrLat: 35.764722,
+        arrLon: 140.386389,
+        departureTime: new Date("2027-04-01T08:00:00Z"),
+        depTimezone: "Europe/Lisbon",
+        status: "flown",
+      },
+    });
+    const detail = await request(app).get(`/api/v1/trips/${tripId}`).set("Cookie", cookie);
+    const [flight] = detail.body.trip.flights;
+    expect(flight.depTimezone).toBe("Europe/Lisbon");
+    expect(flight.times.departure).toMatchObject({
+      local: "2027-04-01T09:00:00",
+      zoneSource: "stored",
+    });
+    await prisma.flight.deleteMany({ where: { userId } });
+  });
 });

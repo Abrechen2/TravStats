@@ -129,6 +129,11 @@ describe("Roadtrips", () => {
     expect(stavanger.startUtc?.toISOString()).toBe("2026-07-13T22:00:00.000Z");
     expect(stavanger.endUtc?.toISOString()).toBe("2026-07-15T22:00:00.000Z");
     expect(stavanger.precision).toBe("day");
+    // Phase 4: the same days on the wire, as the station's calendar knew them.
+    expect(res.body.stations[1].times).toEqual({
+      start: { date: "2026-07-14", zone: "Europe/Oslo", precision: "day" },
+      end: { date: "2026-07-16", zone: "Europe/Oslo", precision: "day" },
+    });
   });
 
   it("refuses an offset-less station date with 422 TIME_SHAPE_REQUIRED", async () => {

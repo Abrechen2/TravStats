@@ -10,6 +10,7 @@ import { toCountryCode } from "../../shared/countryEvidence";
  */
 
 /** The stay fields a station needs to show and count its night. */
+import { stationTimes } from "./timesDto";
 export const STATION_STAY_SELECT = {
   id: true,
   lodgingId: true,
@@ -30,6 +31,9 @@ export const STATION_SELECT = {
   lon: true,
   startDate: true,
   endDate: true,
+  startUtc: true,
+  endUtc: true,
+  stopZone: true,
   notes: true,
   routeOrderIdx: true,
   overnight: true,
@@ -44,6 +48,9 @@ export interface StationRow {
   lon: number | null;
   startDate: Date | null;
   endDate: Date | null;
+  startUtc: Date | null;
+  endUtc: Date | null;
+  stopZone: string | null;
   notes: string | null;
   routeOrderIdx: number | null;
   overnight: boolean;
@@ -115,6 +122,7 @@ export function toStationDto(s: StationRow): Record<string, unknown> {
     lon: s.lon,
     startDate: s.startDate,
     endDate: s.endDate,
+    times: stationTimes(s),
     notes: s.notes,
     order: s.routeOrderIdx,
     state: stationState(s),

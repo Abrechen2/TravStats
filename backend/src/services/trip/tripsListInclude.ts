@@ -28,6 +28,11 @@ export const TRIP_RAIL_SELECT = {
   arrTimezone: true,
   departureTime: true,
   arrivalTime: true,
+  // What the ride's `times` are built from (ADR 0002 phase 4).
+  depPrecision: true,
+  arrPrecision: true,
+  actualDepartureTime: true,
+  actualArrivalTime: true,
   distanceKm: true,
   distanceSource: true,
   status: true,
