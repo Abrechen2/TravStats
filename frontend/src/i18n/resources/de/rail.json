@@ -154,7 +154,9 @@
     "route": "Strecke",
     "lineTraced": "Linie: Streckenverlauf dieses Zuges, von Transitous übernommen.",
     "lineRoadtrip": "Linie: aus dem Roadtrip übernommen — geplant, nicht aus dem Fahrplan.",
-    "lineStraight": "Linie: Luftlinie zwischen den Bahnhöfen — nicht der Weg des Zuges."
+    "lineStraight": "Linie: Luftlinie zwischen den Bahnhöfen — nicht der Weg des Zuges.",
+    "lineRouted": "Linie: über das Gleisnetz berechnet (OpenRailRouting, OpenStreetMap) — der wahrscheinliche Weg, nicht aus dem Fahrplan.",
+    "lineRoutedDemo": "Linie: über das Gleisnetz berechnet (BRouter, OpenStreetMap) — der wahrscheinliche Weg, nicht aus dem Fahrplan."
   },
   "connection": {
     "add": "Anschluss hinzufügen",
@@ -249,11 +251,14 @@
   "geometryNotice": {
     "straight": "Fahrt gespeichert, aber ohne Streckenverlauf – {{reason}}. Die Karte zeigt die Luftlinie.",
     "kept": "Fahrt gespeichert. Der Streckenverlauf wurde nicht neu geladen – {{reason}}; der bisherige bleibt erhalten.",
+    "routed": "Fahrt gespeichert. Den Streckenverlauf dieses Zuges gab es nicht – {{reason}}; die Linie ist stattdessen über das Gleisnetz berechnet.",
     "reason": {
       "providerDisabled": "Transitous ist auf dieser Instanz abgeschaltet",
       "providerUnavailable": "Transitous hat nicht geantwortet",
       "stationOffLine": "ein Bahnhof liegt nicht auf der Strecke dieses Zuges",
-      "untracedShape": "Transitous kennt für diesen Zug nur gerade Linien zwischen den Halten"
+      "untracedShape": "Transitous kennt für diesen Zug nur gerade Linien zwischen den Halten",
+      "railRoutingUnavailable": "der Streckenrouter (OpenRailRouting) dieser Instanz hat nicht geantwortet",
+      "railRoutingNoRoute": "der Streckenrouter (OpenRailRouting) kennt keine Gleisverbindung zwischen diesen Bahnhöfen"
     }
   },
   "import": {

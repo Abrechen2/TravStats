@@ -328,14 +328,19 @@ function geometryColumns(
  * not deliver and the frozen line stayed.
  */
 interface GeometryReport {
-  outcome: "unchanged" | "traced" | "straight" | "kept";
+  outcome: "unchanged" | "traced" | "routed" | "straight" | "kept";
   geometrySource: string;
   fallback: GeometryFallbackReason | null;
 }
 
 function reportOf(geo: JourneyGeometry): GeometryReport {
   return {
-    outcome: geo.geometrySource === "straight" ? "straight" : "traced",
+    outcome:
+      geo.geometrySource === "straight"
+        ? "straight"
+        : geo.geometrySource === "openrailrouting"
+          ? "routed"
+          : "traced",
     geometrySource: geo.geometrySource,
     fallback: geo.fallback,
   };

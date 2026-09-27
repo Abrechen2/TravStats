@@ -154,7 +154,9 @@
     "route": "Route",
     "lineTraced": "Line: this train's route, taken from Transitous.",
     "lineRoadtrip": "Line: brought over from the roadtrip — as planned, not from a timetable.",
-    "lineStraight": "Line: straight line between the stations — not the train's path."
+    "lineStraight": "Line: straight line between the stations — not the train's path.",
+    "lineRouted": "Line: routed over the rail network (OpenRailRouting, OpenStreetMap) — the likely path, not from a timetable.",
+    "lineRoutedDemo": "Line: routed over the rail network (BRouter, OpenStreetMap) — the likely path, not from a timetable."
   },
   "connection": {
     "add": "Add connection",
@@ -249,11 +251,14 @@
   "geometryNotice": {
     "straight": "Ride saved, but without its route – {{reason}}. The map shows the straight line.",
     "kept": "Ride saved. The route was not loaded again – {{reason}}; the previous one is kept.",
+    "routed": "Ride saved. This train's own route was not available – {{reason}}; the line was routed over the rail network instead.",
     "reason": {
       "providerDisabled": "Transitous is switched off on this instance",
       "providerUnavailable": "Transitous did not answer",
       "stationOffLine": "a station is not on this train's route",
-      "untracedShape": "Transitous only has straight lines between this train's stops"
+      "untracedShape": "Transitous only has straight lines between this train's stops",
+      "railRoutingUnavailable": "this instance's rail router (OpenRailRouting) did not answer",
+      "railRoutingNoRoute": "the rail router (OpenRailRouting) knows no track connection between these stations"
     }
   },
   "import": {

@@ -32,6 +32,19 @@ describe("railPathsLayer", () => {
     expect(path.path.length).toBeGreaterThan(2);
   });
 
+  it("draws a line routed over the tracks as firmly as a trace, whoever routed it", () => {
+    for (const geometrySource of ["openrailrouting", "brouter"] as const) {
+      const [path] = buildRailPaths([{ ...traced, geometrySource }]);
+      expect(path.traced).toBe(true);
+      expect(path.path).toEqual(traced.geometry);
+    }
+    // A routed source without a line is still the chord.
+    const [chord] = buildRailPaths([
+      { ...traced, geometrySource: "openrailrouting", geometry: null },
+    ]);
+    expect(chord.traced).toBe(false);
+  });
+
   it("draws no line for a cancelled train, which never ran", () => {
     expect(buildRailPaths([{ ...traced, status: "cancelled" }])).toEqual([]);
     expect(buildRailStations([{ ...traced, status: "cancelled" }])).toEqual([]);

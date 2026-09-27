@@ -995,6 +995,13 @@ model AdminSettings {
   /// instance must not talk to third parties switches either off here.
   railTransitousEnabled Boolean @default(true) @map("rail_transitous_enabled")
   railDbRestEnabled     Boolean @default(true) @map("rail_db_rest_enabled")
+  /// Base URL of a self-hosted OpenRailRouting (GraphHopper on the OSM rail
+  /// network). Null = off, the default: a rail journey without a Transitous
+  /// trace then keeps the straight line and says so. When set, such a journey
+  /// gets its line routed over the tracks between its stations, once, when it
+  /// is saved (services/rail/openRailRouting.ts). Same threat model as
+  /// `routingCustomUrl`: admin-supplied, may be a LAN host by design.
+  railRoutingUrl        String? @map("rail_routing_url")
 
   // Off-site backup sync via WebDAV — supersedes WEBDAV_* ENV variables.
   // webdavPasswordEncrypted is AES-GCM via encryptApiKey() — never stored plain.
@@ -3304,9 +3311,10 @@ model RailJourney {
   /// logged and frozen with it — a timetable changes, the ride that happened
   /// does not. Null = draw the chord between the two stations.
   geometry       Json?
-  /// straight | transitous | openrailrouting | manual (| none for a row that
-  /// cannot be drawn). Kept because a line routed over the TRACKS may not be
-  /// the line the train took, and the map has to be able to say which it shows.
+  /// straight | transitous | openrailrouting | brouter | manual (| none for a
+  /// row that cannot be drawn). `brouter` is the demo account's line, routed
+  /// offline once. Kept because a line routed over the TRACKS may not be the
+  /// line the train took, and the map has to be able to say which it shows.
   geometrySource String @default("straight") @map("geometry_source")
 
   /// What actually happened, when known: captured on the day or typed. A past

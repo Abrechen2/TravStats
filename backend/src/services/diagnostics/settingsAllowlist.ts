@@ -65,6 +65,7 @@ export const ADMIN_SETTINGS_ALLOWLIST: Readonly<Record<string, Rule>> = {
   aerodataboxKeyConfigured: present("globalAerodataboxApiKey"),
   openskyConfigured: present("globalOpenskyClientId"),
   googlePlacesKeyConfigured: present("globalGooglePlacesApiKey"),
+  railRoutingConfigured: present("railRoutingUrl"),
 };
 
 export type SettingValue = boolean | number | string | null;

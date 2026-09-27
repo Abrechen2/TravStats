@@ -934,6 +934,24 @@
     "loadError": "Die Einstellung konnte nicht geladen werden.",
     "saveError": "Die Einstellung konnte nicht gespeichert werden."
   },
+  "railRouting": {
+    "label": "Streckenrouter (OpenRailRouting)",
+    "hint": "Adresse einer selbst betriebenen OpenRailRouting-Instanz. Leer = aus. Eine Fahrt ohne Streckenverlauf von Transitous bekommt damit beim Speichern eine Linie über das Gleisnetz.",
+    "save": "Adresse speichern",
+    "saved": "Gespeichert. Neue und geänderte Fahrten ohne Transitous-Verlauf werden über das Gleisnetz geführt.",
+    "switchedOff": "Gespeichert. Der Streckenrouter ist aus.",
+    "saveError": "Die Adresse konnte nicht gespeichert werden.",
+    "invalidUrl": "Das ist keine gültige Adresse: http(s), ohne Zugangsdaten, ohne ?-Teil.",
+    "testButton": "Verbindung testen",
+    "test": {
+      "ok": "Verbunden. Profil {{profile}}, Kartenstand {{date}}.",
+      "notConfigured": "Es ist keine Adresse eingetragen.",
+      "unreachable": "Unter dieser Adresse antwortet kein Dienst.",
+      "notOpenRailRouting": "Der Dienst antwortet, ist aber kein OpenRailRouting.",
+      "profileMissing": "Dieses OpenRailRouting hat kein Profil „all_tracks“ – ohne das kann TravStats keine Strecken berechnen.",
+      "requestFailed": "Der Test konnte nicht ausgeführt werden."
+    }
+  },
   "profileZone": {
     "title": "Deine Zeitzone",
     "body": "TravStats rechnet mit deiner Zeitzone aus, welcher Tag heute ist, ob eine Reise geplant oder schon vorbei ist und wie lange es noch bis zur Abreise dauert. Für dein Konto ist noch keine hinterlegt – bis du eine bestätigst, gilt dafür UTC. Die Zeiten deiner Reisen ändert das nicht: Die stehen immer in der Ortszeit des Flughafens, Bahnhofs oder Hafens.",
