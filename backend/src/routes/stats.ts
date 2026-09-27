@@ -60,7 +60,7 @@ import { statsEtag } from "../middleware/statsEtag";
 import { computeSeatStats } from "../services/stats/seatStats";
 import { computeCountryStats } from "../services/stats/countryStats";
 import { computeAirlineRanking } from "../services/stats/airlineRanking";
-import { loadHomeAirportHistory } from "../services/stats/homeAirportHistory";
+import { loadHomePeriods } from "../services/home/homeStore";
 
 const router = Router();
 
@@ -169,8 +169,8 @@ router.get("/hero", async (req: AuthRequest, res: Response, next: NextFunction):
     const passport = await loadPassport(userId, flights);
     const datedFlights = await withDepartureClock(flights);
 
-    // homeAirportHistory=[] is deliberate: this endpoint only reads
-    // airportCount, which doesn't depend on home-airport history — only the
+    // No home periods, deliberately: this endpoint only reads
+    // airportCount, which doesn't depend on home — only the
     // unused farthestFromHome field does. Skips /airports's extra
     // userSettings.findUnique lookup.
     const [airportStats, funStats] = await Promise.all([
@@ -683,13 +683,13 @@ router.get(
         },
       });
 
-      // Load home airport history so layovers exclude returns to home-at-that-date.
-      const homeHistory = await loadHomeAirportHistory(userId);
+      // Home by date, so layovers exclude returns to any home airport of that date.
+      const homePeriods = await loadHomePeriods(userId);
 
       // Calculate unique stats with error handling - continue even if airport data fails
       let uniqueStats;
       try {
-        uniqueStats = await calculateUniqueStats(await withDepartureClock(flights), homeHistory);
+        uniqueStats = await calculateUniqueStats(await withDepartureClock(flights), homePeriods);
       } catch (statsError) {
         // If stats calculation fails (e.g., database issues), return partial stats
         logger.error({
@@ -780,9 +780,9 @@ router.get(
         },
       });
 
-      const homeHistory = await loadHomeAirportHistory(userId);
+      const homePeriods = await loadHomePeriods(userId);
 
-      const stats = await calculateAirportStats(await withDepartureClock(flights), homeHistory);
+      const stats = await calculateAirportStats(await withDepartureClock(flights), homePeriods);
       res.json(stats);
     } catch (error) {
       next(error);

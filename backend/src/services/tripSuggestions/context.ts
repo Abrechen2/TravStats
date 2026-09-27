@@ -3,14 +3,14 @@ import type { DomainKey } from "../../shared/domains";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { mostVisitedIata } from "../../shared/photoScan";
 import { profileZoneFromSettings } from "../../shared/time/profileZone";
-import { getHomeAirportAt, type HomeAirportEntry } from "../../utils/homeAirport";
+import { residenceAt, type HomePeriod } from "../../utils/homeAirport";
 import { getCachedAirports } from "../airportCache";
 import { visibleDomainKeys } from "../domainVisibility";
 import { getInstanceSettings } from "../instanceSettingsService";
-import { loadHomeAirportHistory } from "../stats/homeAirportHistory";
+import { loadHomePeriods } from "../home/homeStore";
 import { ROW_CAP } from "./loadTransport";
 import { storedDay } from "./time";
-import type { Coordinate, HomeAt, HomeSource, TripContext } from "./types";
+import type { HomeAt, HomeSource, TripContext } from "./types";
 
 /**
  * What the engine needs besides the entries: which domains it may read, where
@@ -43,33 +43,26 @@ export async function readUserScope(
 }
 
 /**
- * Home by date, from the recorded home-airport history.
+ * Home by date: the RESIDENCE of the period covering the day — "away" is a
+ * distance question, and measuring it from an airport made DUS "away" for
+ * somebody living in Köln (owner decision 2026-09-27). An unconfirmed period
+ * migrated from the old shape sits at its airport, so its answers are the
+ * ones the airport always gave.
  *
  * Days BEFORE the first recorded home take the first home: the history starts
  * on the day the user first set it, and treating every earlier day as "no home"
  * would silence all the travel that happened before the setting existed. A gap
  * the history itself leaves stays unknown.
  */
-export function homeFromHistory(
-  history: readonly HomeAirportEntry[],
-  coords: ReadonlyMap<string, Coordinate>
-): HomeAt {
-  if (history.length === 0) return () => null;
-  const first = history[0];
-  return (day) => {
-    const iata = getHomeAirportAt([...history], day) ?? (day < first.fromDate ? first.iata : null);
-    return iata ? (coords.get(iata) ?? null) : null;
-  };
+export function homeFromPeriods(periods: readonly HomePeriod[]): HomeAt {
+  if (periods.length === 0) return () => null;
+  const first = periods[0];
+  return (day) => residenceAt(periods, day < first.fromDate ? first.fromDate : day);
 }
 
 export async function resolveHome(userId: string): Promise<{ homeAt: HomeAt; source: HomeSource }> {
-  const history = await loadHomeAirportHistory(userId);
-  if (history.length > 0) {
-    const airports = await getCachedAirports([...new Set(history.map((h) => h.iata))]);
-    const coords = new Map<string, Coordinate>();
-    for (const [code, a] of airports) coords.set(code, { lat: a.lat, lon: a.lon });
-    return { homeAt: homeFromHistory(history, coords), source: "history" };
-  }
+  const periods = await loadHomePeriods(userId);
+  if (periods.length > 0) return { homeAt: homeFromPeriods(periods), source: "history" };
   // No home set: the most-visited airport of the FLOWN flights stands in — the
   // photo scan's rule (`shared/photoScan.ts`). A booked connection says nothing
   // about where somebody lives.

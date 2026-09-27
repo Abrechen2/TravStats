@@ -55,7 +55,6 @@
   "PATCH /parser-templates/{id}",
   "PATCH /places/visits/{visitId}/photos/{photoId}",
   "PATCH /places/{id}",
-  "PATCH /settings/home-airports/{index}",
   "PATCH /trips/bookings/{id}",
   "PATCH /trips/{id}/photos/{photoId}",
   "POST /airports/enrich",

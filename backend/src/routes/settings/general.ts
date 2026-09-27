@@ -21,6 +21,7 @@ import {
   saveProfileZone,
 } from "../../services/settings/profileZoneSettings";
 import { isValidZone } from "../../shared/time/zonedParts";
+import { homeSettingsView } from "../../services/home/homeStore";
 
 const router = Router();
 
@@ -231,6 +232,8 @@ function buildSettingsResponse(
     firstName: string | null;
     lastName: string | null;
   },
+  /** Home, read through the one home module (`services/home/homeStore.ts`). */
+  home: Awaited<ReturnType<typeof homeSettingsView>>,
   record: {
     data: Prisma.JsonValue;
     autoUpdateEnabled: boolean;
@@ -254,6 +257,9 @@ function buildSettingsResponse(
 
   return {
     ...baseData,
+    // After the spread: an old blob holds only the legacy key, and both keys
+    // are answered from the periods it migrates to.
+    ...home,
     // The name is not in the blob — it is read from the user row and merged in
     // here, so the settings page and the header cannot drift apart (#241).
     profile: {
@@ -353,12 +359,22 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
           historicalEnrichmentMaxPerDay: 50,
         },
       });
-      const response = buildSettingsResponse(extra, name, created);
+      const response = buildSettingsResponse(
+        extra,
+        name,
+        await homeSettingsView(created.data),
+        created
+      );
       res.json(response);
       return;
     }
 
-    const response = buildSettingsResponse(extra, name, existing);
+    const response = buildSettingsResponse(
+      extra,
+      name,
+      await homeSettingsView(existing.data),
+      existing
+    );
 
     logger.info({
       operation: "get_settings_response",
@@ -602,6 +618,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const response = buildSettingsResponse(
       extra,
       { firstName: savedName?.firstName ?? null, lastName: savedName?.lastName ?? null },
+      await homeSettingsView(saved.data),
       saved
     );
     res.json(response);

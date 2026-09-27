@@ -35,8 +35,10 @@ import { ensureDemoCatalogues, enableBetaForDemo } from "./seedDemo/instance";
 
 const DEMO_PASSWORD = "demo123";
 
-/** The airport the demo traveller flies from, and since when. */
+/** Where the demo traveller lives, and the two airports they fly from — CGN the default. */
+const HOME_RESIDENCE = { name: "Köln", lat: 50.9375, lon: 6.9603 };
 const HOME_AIRPORT = "CGN";
+const SECOND_HOME_AIRPORT = "DUS";
 
 // ---------------------------------------------------------- main seed logic
 
@@ -326,9 +328,23 @@ export async function ensureUserSettings(userId: string, now: Date = new Date())
     defaultCategory: "vacation",
     welcomeSeen: true,
     whatsNewSeenVersion: appVersion,
-    // Home is Köln/Bonn, for the whole of the account's history: the layover
-    // detection, "away from home" in the trip suggestions and the statistics'
-    // home column all read it.
+    // Home is Köln, flying from CGN and DUS, for the whole of the account's
+    // history: home loops and layovers read the airports, "away from home" in
+    // the trip suggestions and "farthest from home" measure from the
+    // residence. Confirmed, so the demo does not ask its own inbox question;
+    // the legacy key beside it is the mirror the server itself writes.
+    homePeriods: [
+      {
+        fromDate: `${now.getUTCFullYear() - 10}-01-01`,
+        toDate: null,
+        residence: HOME_RESIDENCE,
+        residenceConfirmed: true,
+        airports: [
+          { code: HOME_AIRPORT, primary: true },
+          { code: SECOND_HOME_AIRPORT, primary: false },
+        ],
+      },
+    ],
     homeAirportHistory: [
       { iata: HOME_AIRPORT, fromDate: `${now.getUTCFullYear() - 10}-01-01`, toDate: null },
     ],

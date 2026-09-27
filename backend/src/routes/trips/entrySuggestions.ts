@@ -5,9 +5,9 @@ import { prisma } from "../../db";
 import { authenticate, type AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { statsLimiter } from "../../middleware/rateLimit";
-import { loadHomeAirportHistory } from "../../services/stats/homeAirportHistory";
+import { loadHomePeriods } from "../../services/home/homeStore";
 import { airportCityName, airportDisplayName } from "../../utils/airportDisplay";
-import { getCurrentHomeAirport, getHomeAirportAt } from "../../utils/homeAirport";
+import { currentPrimaryAirport, isHomeAirportAt, type HomePeriod } from "../../utils/homeAirport";
 
 /**
  * `GET /trips/entry-suggestions` — what the trip form can offer for its two
@@ -129,7 +129,7 @@ function ymd(date: Date | null): string | null {
 async function destinationsOf(
   userId: string,
   tripId: string,
-  homeHistory: Awaited<ReturnType<typeof loadHomeAirportHistory>>
+  homePeriods: readonly HomePeriod[]
 ): Promise<string[]> {
   const trip = await prisma.trip.findFirst({
     where: { id: tripId, userId },
@@ -156,13 +156,15 @@ async function destinationsOf(
   });
   if (!trip) throw new AppError("Trip not found", 404);
 
-  // A flight home, or back to where the trip set out, arrives at the origin —
-  // counting it would make every round trip's destination its own start.
+  // A flight home — to ANY home airport of that date — or back to where the
+  // trip set out arrives at the origin; counting it would make every round
+  // trip's destination its own start (and Köln the destination of a trip
+  // that left from DUS and came back to CGN).
   const start = trip.flights[0]?.depIata ?? null;
   const outbound = trip.flights.filter((f) => {
     if (!f.arrIata) return Boolean(f.arrName);
-    const home = getHomeAirportAt(homeHistory, ymd(f.departureTime) ?? "");
-    return f.arrIata !== start && f.arrIata !== home;
+    const atHome = isHomeAirportAt(homePeriods, ymd(f.departureTime) ?? "", f.arrIata);
+    return f.arrIata !== start && !atHome;
   });
   const names = await airportNames(
     outbound.map((f) => f.arrIata).filter((c): c is string => Boolean(c))
@@ -196,11 +198,12 @@ router.get(
       const userId = req.userId!;
       const { tripId } = parsed.data;
 
-      const homeHistory = await loadHomeAirportHistory(userId);
-      const home = getCurrentHomeAirport(homeHistory);
+      // The origin prefill is the PRIMARY airport of the home that runs now.
+      const homePeriods = await loadHomePeriods(userId);
+      const home = currentPrimaryAirport(homePeriods);
       const [homeNames, destinations] = await Promise.all([
         home ? airportNames([home]) : Promise.resolve(new Map<string, string>()),
-        tripId ? destinationsOf(userId, tripId, homeHistory) : Promise.resolve([]),
+        tripId ? destinationsOf(userId, tripId, homePeriods) : Promise.resolve([]),
       ]);
       const homeName = home ? homeNames.get(home) : undefined;
 

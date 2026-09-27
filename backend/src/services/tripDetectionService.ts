@@ -17,9 +17,10 @@
  *      original /flights/batch heuristic would falsely glue together.
  *      → AUTO-LINK (intent is unambiguous: shared PNR = shared booking).
  *
- *   2. Home loop — sequences that start and end at the user's home
- *      airport (using `getHomeAirportAt(date)` so historical home moves
- *      are respected). Catches the Hawaii 2013 case (HNL→LIH→KOA→OGG
+ *   2. Home loop — sequences that start and end at one of the user's home
+ *      airports (the set active at that date, so historical home moves
+ *      are respected, and CGN → … → DUS closes a loop for someone who
+ *      flies from both). Catches the Hawaii 2013 case (HNL→LIH→KOA→OGG
  *      over 3 weeks with separate carriers and PNRs but a clear MUC→…→MUC
  *      shape).
  *      → PROPOSE (caller decides whether to commit).
@@ -44,7 +45,8 @@ import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import { TRIP_COLORS } from "../schemas/trip";
 import { calculateDistance } from "../utils/geo";
-import { type HomeAirportEntry, getHomeAirportAt, normalizeHistory } from "../utils/homeAirport";
+import { type HomePeriod, homeAirportsAt } from "../utils/homeAirport";
+import { homePeriodsFromData } from "./home/homeStore";
 import logger from "../utils/logger";
 import { fillTripDatesFromSegments, recomputeTripStatus } from "./tripStatusService";
 import { buildTzMap } from "./stats/departureClock";
@@ -189,7 +191,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
   }
 
   const settingsData = await loadSettingsData(userId);
-  const homeHistory = homeHistoryOf(settingsData);
+  const homePeriods = await homePeriodsFromData(settingsData);
   const language = tripNameLanguageOf(settingsData);
 
   const claimed = new Set<string>();
@@ -218,7 +220,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
   // so their flights remain visible to stage 3 (where they still can't
   // form a >= MIN_TRIP_FLIGHTS cluster on their own, but may extend one).
   const remaining1 = flights.filter((f) => !claimed.has(f.id));
-  for (const cluster of findHomeLoops(remaining1, homeHistory)) {
+  for (const cluster of findHomeLoops(remaining1, homePeriods)) {
     if (cluster.length < MIN_TRIP_FLIGHTS) continue;
     proposed.push(makeProposal("home_loop", cluster, null, language));
     cluster.forEach((f) => claimed.add(f.id));
@@ -354,35 +356,36 @@ function legDay(f: FlightLite): string {
 }
 
 /**
- * Find sequences of flights that start AND end at the user's home airport
- * (looked up at each flight's date — so historical home-moves are
- * respected). Returns each loop as a contiguous slice; flights between
+ * Find sequences of flights that start AND end at one of the user's home
+ * airports (the set active at the first flight's date — so historical
+ * home-moves are respected, and a loop may close at a different home
+ * airport than it left from). Returns each loop as a contiguous slice; flights between
  * loops are left for stage 3.
  */
-function findHomeLoops(flights: FlightLite[], history: HomeAirportEntry[] | null): FlightLite[][] {
+function findHomeLoops(flights: FlightLite[], periods: readonly HomePeriod[]): FlightLite[][] {
   const loops: FlightLite[][] = [];
   let current: FlightLite[] = [];
-  let loopHome: string | null = null;
+  let loopHomes: ReadonlySet<string> = new Set();
 
   for (const f of flights) {
     if (!f.departureTime || !f.depIata || !f.arrIata) continue;
-    const home = getHomeAirportAt(history, toYmd(f.departureTime));
-    if (!home) continue;
+    const homes = homeAirportsAt(periods, toYmd(f.departureTime));
+    if (homes.size === 0) continue;
 
     if (current.length === 0) {
-      if (f.depIata === home) {
+      if (homes.has(f.depIata)) {
         current = [f];
-        loopHome = home;
+        loopHomes = homes;
       }
       continue;
     }
 
     current.push(f);
-    if (f.arrIata === loopHome) {
+    if (loopHomes.has(f.arrIata)) {
       // Loop closes
       loops.push(current);
       current = [];
-      loopHome = null;
+      loopHomes = new Set();
     }
   }
 
@@ -704,11 +707,4 @@ async function finalizeWithCleanup(
 async function loadSettingsData(userId: string): Promise<Prisma.JsonObject | null> {
   const settings = await prisma.userSettings.findUnique({ where: { userId } });
   return (settings?.data as Prisma.JsonObject | null | undefined) ?? null;
-}
-
-function homeHistoryOf(data: Prisma.JsonObject | null): HomeAirportEntry[] | null {
-  if (!data) return null;
-  const raw = data["homeAirportHistory"];
-  // `normalizeHistory` validates + sorts; entries with bad shape are dropped.
-  return normalizeHistory(raw);
 }

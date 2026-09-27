@@ -1,7 +1,8 @@
 import { describe, expect, it } from "@jest/globals";
 
 import { composeSuggestions } from "../compose";
-import { homeFromHistory } from "../context";
+import { homeFromPeriods } from "../context";
+import { periodsFromLegacy, type HomeAirportEntry } from "../../../utils/homeAirport";
 import { AT, cruise, input, ride, stay, trip, visit } from "./fixtures";
 
 /**
@@ -325,18 +326,21 @@ describe("composeSuggestions — guards measured on the demo account", () => {
   });
 });
 
+/** Home periods migrated from the old one-airport shape, residence at the airport. */
+const homeAtAirports = (history: HomeAirportEntry[]) =>
+  homeFromPeriods(
+    periodsFromLegacy(history, (code) => {
+      const at = AT[code as keyof typeof AT];
+      return at ? { ...at, name: code } : null;
+    })
+  );
+
 describe("composeSuggestions — home over time", () => {
   it("judges each day against the home that was valid then", () => {
-    const homeAt = homeFromHistory(
-      [
-        { iata: "MUC", fromDate: "2020-01-01", toDate: "2024-01-01" },
-        { iata: "BER", fromDate: "2024-01-01", toDate: null },
-      ],
-      new Map([
-        ["MUC", AT.MUC],
-        ["BER", AT.BER],
-      ])
-    );
+    const homeAt = homeAtAirports([
+      { iata: "MUC", fromDate: "2020-01-01", toDate: "2024-01-01" },
+      { iata: "BER", fromDate: "2024-01-01", toDate: null },
+    ]);
     const berlin = (id: string, from: string, to: string) => stay(id, AT.BER, from, to, "Berlin");
     const berlinVisit = (id: string, day: string) => visit(id, AT.BER, day);
 
@@ -349,10 +353,7 @@ describe("composeSuggestions — home over time", () => {
   });
 
   it("takes the first home for days before the history begins", () => {
-    const homeAt = homeFromHistory(
-      [{ iata: "MUC", fromDate: "2025-01-01", toDate: null }],
-      new Map([["MUC", AT.MUC]])
-    );
+    const homeAt = homeAtAirports([{ iata: "MUC", fromDate: "2025-01-01", toDate: null }]);
     expect(homeAt("2019-06-01")).toEqual(AT.MUC);
   });
 });

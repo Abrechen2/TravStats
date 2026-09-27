@@ -43,8 +43,16 @@ export const DATA_QUALITY_ENTITY_TYPES = [
   "lodging",
   "place",
   "country",
+  /**
+   * The account's home (residence + home airports). Not a row either: one
+   * question per account, `entityId` the constant `HOME_FLAG_ENTITY_ID`.
+   */
+  "home",
   ...TIME_FLAG_ENTITY_TYPES,
 ] as const;
+
+/** The one `entityId` a `home` flag carries — one question per account, not per period. */
+export const HOME_FLAG_ENTITY_ID = "residence";
 export const dataQualityEntityTypeSchema = z.enum(DATA_QUALITY_ENTITY_TYPES);
 export type DataQualityEntityType = (typeof DATA_QUALITY_ENTITY_TYPES)[number];
 
@@ -75,6 +83,12 @@ export const DATA_QUALITY_FLAG_KINDS = [
   "time_precision_unknown",
   /** Time model: which calendar day a stored value names is not certain. */
   "time_day_ambiguous",
+  /**
+   * Home: a period migrated from the old one-airport shape — its residence is
+   * the airport, unconfirmed ("Wohnort bestätigen und weitere Heimatflughäfen
+   * wählen?"). Statistics measure from that airport until the user answers.
+   */
+  "home_residence_unconfirmed",
 ] as const;
 export const dataQualityFlagKindSchema = z.enum(DATA_QUALITY_FLAG_KINDS);
 export type DataQualityFlagKind = (typeof DATA_QUALITY_FLAG_KINDS)[number];
@@ -140,6 +154,11 @@ export const dataQualityFlagSubjectSchema = z.discriminatedUnion("entityType", [
     entityType: z.literal("country"),
     /** ISO 3166-1 alpha-2. The identity AND the whole payload — a country has no name here. */
     countryCode: z.string(),
+  }),
+  /** The account's home. No label: the web names it ("Dein Zuhause") in the reader's language. */
+  z.object({
+    entityType: z.literal("home"),
+    entityId: z.string(),
   }),
   /**
    * A row a time-model question is about. `label` is the row's own text (a
@@ -230,6 +249,15 @@ export const timeQuestionDetailsSchema = z.object({
 export type TimeQuestionDetails = z.infer<typeof timeQuestionDetailsSchema>;
 
 /**
+ * The home airports of the unconfirmed periods, oldest period first, each
+ * once — what the question names ("bisher nur MUC, CGN").
+ */
+export const homeResidenceUnconfirmedDetailsSchema = z.object({
+  airports: z.array(z.string()),
+  periods: z.number().int().min(1),
+});
+
+/**
  * The `kind` → `details` pairing, stated once and enforced everywhere.
  *
  * This used to be a bare `z.union` of the three detail shapes, which validated
@@ -277,6 +305,10 @@ const timeDayAmbiguousPayload = z.object({
   kind: z.literal("time_day_ambiguous"),
   details: timeQuestionDetailsSchema,
 });
+const homeResidenceUnconfirmedPayload = z.object({
+  kind: z.literal("home_residence_unconfirmed"),
+  details: homeResidenceUnconfirmedDetailsSchema,
+});
 
 /**
  * A `kind` with the `details` that kind implies, and nothing else.
@@ -293,6 +325,7 @@ export const dataQualityFlagPayloadSchema = z.discriminatedUnion("kind", [
   timeZoneUnresolvedPayload,
   timePrecisionUnknownPayload,
   timeDayAmbiguousPayload,
+  homeResidenceUnconfirmedPayload,
 ]);
 export type DataQualityFlagPayload = z.infer<typeof dataQualityFlagPayloadSchema>;
 
@@ -350,6 +383,7 @@ export const dataQualityFlagSchema = z.discriminatedUnion("kind", [
   timeZoneUnresolvedPayload.merge(dataQualityFlagBase),
   timePrecisionUnknownPayload.merge(dataQualityFlagBase),
   timeDayAmbiguousPayload.merge(dataQualityFlagBase),
+  homeResidenceUnconfirmedPayload.merge(dataQualityFlagBase),
 ]);
 export type DataQualityFlagView = z.infer<typeof dataQualityFlagSchema>;
 

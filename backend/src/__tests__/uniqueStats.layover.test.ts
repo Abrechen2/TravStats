@@ -1,5 +1,8 @@
 import { calculateUniqueStats } from "../utils/statsCalculator";
 import type { FlightData } from "../utils/statsCalculator";
+import { periodsFromLegacy, type HomeAirportEntry } from "../utils/homeAirport";
+
+const periods = (history: HomeAirportEntry[]) => periodsFromLegacy(history, () => null);
 
 // The airport cache is hit for timezone/country metadata. For layover tests
 // we don't need that data, so mocking the module keeps the test independent
@@ -111,7 +114,7 @@ describe("calculateUniqueStats — layover handling", () => {
       }),
     ];
 
-    return calculateUniqueStats(flights, homeHistory).then((result) => {
+    return calculateUniqueStats(flights, periods(homeHistory)).then((result) => {
       expect(result.longestLayover).toBeNull();
       expect(result.shortestLayover).toBeNull();
     });
@@ -140,7 +143,7 @@ describe("calculateUniqueStats — layover handling", () => {
       }),
     ];
 
-    return calculateUniqueStats(flights, homeHistory).then((result) => {
+    return calculateUniqueStats(flights, periods(homeHistory)).then((result) => {
       expect(result.longestLayover).not.toBeNull();
       expect(result.longestLayover?.from).toBe("MUC");
       expect(result.longestLayover?.hours).toBeCloseTo(4, 1);

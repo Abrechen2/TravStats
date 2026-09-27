@@ -153,8 +153,10 @@ export async function listFlags(
     const subject: DataQualityFlagSubject | undefined =
       flag.entityType === "country"
         ? { entityType: "country", countryCode: flag.entityId }
-        : (subjects.get(`${flag.entityType} ${flag.entityId}`) ??
-          timeSubjects.get(`${flag.entityType} ${flag.entityId}`));
+        : flag.entityType === "home"
+          ? { entityType: "home", entityId: flag.entityId }
+          : (subjects.get(`${flag.entityType} ${flag.entityId}`) ??
+            timeSubjects.get(`${flag.entityType} ${flag.entityId}`));
     const view = toView(flag, subject);
     if (view) views.push(view);
   }

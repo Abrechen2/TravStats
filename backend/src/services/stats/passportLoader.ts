@@ -18,13 +18,13 @@ import type { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { getCachedAirports } from "../airportCache";
 import { countableFlightWhere } from "../../shared/flightCounting";
-import { normalizeHistory } from "../../utils/homeAirport";
+import { allHomeAirports } from "../../utils/homeAirport";
+import { loadHomePeriods } from "../home/homeStore";
 import {
   localWallClockOf,
   normalizeFlightTimeUtc,
   type FlightTimeSemantics,
 } from "../../utils/timezone";
-import type { SettingsDataJson } from "../../routes/settings/types";
 import { countryThresholdFor } from "../countryThresholdResolver";
 import {
   FLIGHT_CLOCK_SELECT,
@@ -83,17 +83,9 @@ export async function loadAirportCountries(codes: string[]): Promise<Map<string,
   );
 }
 
-/** The user's home airport codes, newest history first. */
+/** Every home airport the user ever had, newest period first — membership, not just the primary. */
 export async function loadHomeIatas(userId: string): Promise<string[]> {
-  const homeSettings = await prisma.userSettings.findUnique({
-    where: { userId },
-    select: { data: true },
-  });
-  const historyData =
-    homeSettings?.data && typeof homeSettings.data === "object"
-      ? (homeSettings.data as SettingsDataJson).homeAirportHistory
-      : undefined;
-  return normalizeHistory(historyData).map((entry) => entry.iata);
+  return allHomeAirports(await loadHomePeriods(userId));
 }
 
 /**

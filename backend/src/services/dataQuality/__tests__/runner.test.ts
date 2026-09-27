@@ -103,6 +103,7 @@ const noCoordinates = () => ({
   countryLookup: { countryAt: () => null, codes: new Set<string>() },
   // No time-model questions: the backfill check stays silent here.
   timeQuestions: [],
+  homePeriods: [],
 });
 
 /** One house whose stay runs backwards — the least arguable finding there is. */

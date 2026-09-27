@@ -4,7 +4,8 @@ import logger from "../utils/logger";
 import type { CruiseInput } from "../schemas/cruise";
 import type { ParsedCruise, ParsedCruiseStop, ParsedFlight } from "./cruiseBookingParser";
 import { findNearestAirport, type AirportData } from "./airportLookup";
-import { getCurrentHomeAirport, normalizeHistory } from "../utils/homeAirport";
+import { currentPrimaryAirport } from "../utils/homeAirport";
+import { loadHomePeriods } from "./home/homeStore";
 import { expandPortSearchTerms } from "./portExonyms";
 
 // In-memory cache for ship + port candidate lists. Both tables are populated
@@ -400,11 +401,8 @@ const PORT_AIRPORT_RADIUS_KM = 250;
 
 async function getHomeAirport(userId: string | undefined): Promise<AirportData | null> {
   if (!userId) return null;
-  const settings = await prisma.userSettings.findUnique({ where: { userId } });
-  const history = normalizeHistory(
-    (settings?.data as { homeAirportHistory?: unknown } | null)?.homeAirportHistory
-  );
-  const iata = getCurrentHomeAirport(history);
+  // The home leg of a fly & cruise starts at the PRIMARY home airport.
+  const iata = currentPrimaryAirport(await loadHomePeriods(userId));
   if (!iata) return null;
   return prisma.airport.findFirst({ where: { iata, isClosed: false } });
 }
