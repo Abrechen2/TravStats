@@ -15,6 +15,28 @@ function hoursMinutes(seconds: number): string {
 }
 
 /**
+ * One profile over several recordings: each one's `[km, m]` pairs shifted by
+ * the distance of the recordings before it. Null unless every recording has
+ * loaded and carries a profile.
+ */
+export function stitchProfiles(
+  ordered: readonly TourTrackMeta[],
+  details: readonly TourTrack[] | null
+): Array<[number, number]> | null {
+  if (!details || ordered.length === 0) return null;
+  const byId = new Map(details.map((d) => [d.id, d]));
+  const out: Array<[number, number]> = [];
+  let offset = 0;
+  for (const meta of ordered) {
+    const profile = byId.get(meta.id)?.elevationProfile;
+    if (!profile || profile.length === 0) return null;
+    for (const [km, m] of profile) out.push([offset + km, m]);
+    offset += meta.distanceKm;
+  }
+  return out;
+}
+
+/**
  * What a day tour is read by (design 2026-09-24, planning page "Entwurf 2"):
  * distance, climb, time out and time moving, with the elevation profile
  * beside them. A hike is read in metres of height, not in kilometres.
@@ -24,10 +46,12 @@ function hoursMinutes(seconds: number): string {
  * track with no elevation did not climb nothing, and a sum over the ones that
  * do would pass a part off as the whole day.
  *
- * The profile is drawn from the FIRST recording's detail call, the only one
- * that carries the profile (sampled from the raw points, so a summit the
- * simplified line dropped is still on it); a tour of several recordings is rare, and drawing
- * one profile honestly beats stitching several with gaps between them.
+ * The profile runs over EVERY recording, in the order they were made, each
+ * one's kilometres continuing where the one before ended — so its axis ends
+ * where the distance figure beside it does. It used to be the first
+ * recording's only: the four-day Mosel tour read "200,6 km" above a profile
+ * ending at "61,7 km" (acceptance run, 2026-09-26). A recording without a
+ * profile leaves the whole profile out, as a missing figure does.
  */
 export default function TourRecordingSummary({
   tracks,
@@ -44,23 +68,24 @@ export default function TourRecordingSummary({
   const { t, i18n } = useTranslation(["roadtrips", "trips"]);
   const nf = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 });
   const nf0 = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 0 });
-  const [detail, setDetail] = useState<TourTrack | null>(null);
-  const firstId = tracks[0]?.id ?? null;
+  const [details, setDetails] = useState<TourTrack[] | null>(null);
+  const ordered = [...tracks].sort((a, b) => Date.parse(a.startedAt) - Date.parse(b.startedAt));
+  const idsKey = ordered.map((tr) => tr.id).join(",");
 
   useEffect(() => {
-    if (!firstId) {
-      setDetail(null);
+    const ids = idsKey === "" ? [] : idsKey.split(",");
+    if (ids.length === 0) {
+      setDetails(null);
       return;
     }
     let cancelled = false;
-    toursApi.tracks
-      .get(tripId, routeId, firstId)
-      .then((d) => !cancelled && setDetail(d))
-      .catch((err: unknown) => logger.warn("Loading the recording for its profile failed", err));
+    Promise.all(ids.map((id) => toursApi.tracks.get(tripId, routeId, id)))
+      .then((all) => !cancelled && setDetails(all))
+      .catch((err: unknown) => logger.warn("Loading the recordings for their profile failed", err));
     return () => {
       cancelled = true;
     };
-  }, [tripId, routeId, firstId]);
+  }, [tripId, routeId, idsKey]);
 
   if (tracks.length === 0) return null;
 
@@ -102,7 +127,7 @@ export default function TourRecordingSummary({
           </div>
         ))}
       </dl>
-      <ElevationProfileChart points={detail?.elevationProfile} accent={accent} />
+      <ElevationProfileChart points={stitchProfiles(ordered, details)} accent={accent} />
     </section>
   );
 }
