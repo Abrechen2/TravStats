@@ -1,0 +1,175 @@
+import request from "supertest";
+import type { Express } from "express";
+
+import { timeMigrationReportSchema } from "../../../schemas/timeMigration";
+
+/**
+ * `GET /admin/time-migration/report` and the inbox side of a time question
+ * (ADR 0002 phase 3b), end to end: what the admin page and the inbox receive.
+ */
+
+const APP_IMPORT_TIMEOUT_MS = 60_000;
+
+let app: Express;
+let prisma: typeof import("../../../db").prisma;
+let adminId: string;
+let userId: string;
+let adminCookie: string;
+let userCookie: string;
+
+beforeAll(async () => {
+  app = (await import("../../../index")).default;
+  prisma = (await import("../../../db")).prisma;
+  const { hashPassword } = await import("../../../utils/password");
+  const { generateToken } = await import("../../../utils/jwt");
+  await prisma.user.deleteMany({ where: { username: { in: ["tmReportAdmin", "tmReportUser"] } } });
+  const passwordHash = await hashPassword("pw123456");
+  const admin = await prisma.user.create({
+    data: { username: "tmReportAdmin", passwordHash, isAdmin: true },
+  });
+  const user = await prisma.user.create({ data: { username: "tmReportUser", passwordHash } });
+  adminId = admin.id;
+  userId = user.id;
+  adminCookie = `auth_token=${generateToken(admin.id)}`;
+  userCookie = `auth_token=${generateToken(user.id)}`;
+}, APP_IMPORT_TIMEOUT_MS);
+
+beforeEach(async () => {
+  await prisma.timeMigrationLedger.deleteMany({});
+});
+
+afterAll(async () => {
+  await prisma.timeMigrationLedger.deleteMany({});
+  await prisma.user.deleteMany({ where: { id: { in: [adminId, userId] } } });
+});
+
+describe("GET /api/v1/admin/time-migration/report", () => {
+  it("is refused to a non-admin", async () => {
+    const res = await request(app)
+      .get("/api/v1/admin/time-migration/report")
+      .set("Cookie", userCookie);
+    expect(res.status).toBe(403);
+  });
+
+  it("counts rows, rules and reasons from the ledger and lists every open row", async () => {
+    await prisma.timeMigrationLedger.createMany({
+      data: [
+        // One flight converted on both ends, one left open on one end.
+        {
+          tableName: "flights",
+          rowId: "f-ok",
+          columnName: "departure",
+          rule: "flight.instant_kept",
+          status: "resolved",
+          userId,
+        },
+        {
+          tableName: "flights",
+          rowId: "f-ok",
+          columnName: "arrival",
+          rule: "flight.instant_kept",
+          status: "resolved",
+          userId,
+        },
+        {
+          tableName: "flights",
+          rowId: "f-open",
+          columnName: "departure",
+          rule: "flight.instant_kept",
+          status: "resolved",
+          userId,
+        },
+        {
+          tableName: "flights",
+          rowId: "f-open",
+          columnName: "arrival",
+          rule: "flight.zone_unresolved",
+          status: "open",
+          reason: "no_position",
+          legacyValue: "2027-05-02T10:00:00.000Z",
+          userId,
+        },
+      ],
+    });
+
+    const res = await request(app)
+      .get("/api/v1/admin/time-migration/report")
+      .set("Cookie", adminCookie);
+
+    expect(res.status).toBe(200);
+    const report = timeMigrationReportSchema.parse(res.body);
+    const flights = report.tables.find((t) => t.table === "flights");
+    expect(flights).toMatchObject({ converted: 1, open: 1 });
+    expect(flights?.reasons).toEqual([{ reason: "no_position", count: 1 }]);
+    expect(flights?.rules).toEqual(
+      expect.arrayContaining([
+        { rule: "flight.instant_kept", status: "resolved", count: 3 },
+        { rule: "flight.zone_unresolved", status: "open", count: 1 },
+      ])
+    );
+    expect(report.openRows).toEqual([
+      expect.objectContaining({
+        table: "flights",
+        rowId: "f-open",
+        column: "arrival",
+        reason: "no_position",
+        legacyValue: "2027-05-02T10:00:00.000Z",
+        userId,
+      }),
+    ]);
+    expect(report.openRowsTruncated).toBe(false);
+    expect(report.unchanged.map((u) => u.domain).sort()).toEqual(
+      ["country_days", "loyalty", "photos", "tours", "track_windows"].sort()
+    );
+  });
+});
+
+describe("a time question in the inbox", () => {
+  it("names the row and the record it is edited on", async () => {
+    const place = await prisma.place.create({
+      data: { userId, name: "Kolosseum", lat: 41.89, lon: 12.49 },
+    });
+    const visit = await prisma.placeVisit.create({
+      data: { userId, placeId: place.id, visitedAt: new Date("2026-08-30T14:00:00.000Z") },
+    });
+    await prisma.dataQualityFlag.create({
+      data: {
+        userId,
+        entityType: "place_visit",
+        entityId: visit.id,
+        kind: "time_precision_unknown",
+        details: {
+          table: "place_visits",
+          fields: [
+            {
+              column: "visited_at",
+              reason: "writer_unknown",
+              legacyValue: "2026-08-30T14:00:00.000Z",
+              keptValue: "2026-08-30",
+              zone: "Europe/Rome",
+            },
+          ],
+        },
+      },
+    });
+    try {
+      const res = await request(app).get("/api/v1/data-quality-flags").set("Cookie", userCookie);
+      expect(res.status).toBe(200);
+      const flags = res.body.flags as Array<Record<string, unknown>>;
+      expect(flags).toEqual([
+        expect.objectContaining({
+          kind: "time_precision_unknown",
+          subject: {
+            entityType: "place_visit",
+            entityId: visit.id,
+            label: "Kolosseum",
+            parentId: place.id,
+          },
+        }),
+      ]);
+    } finally {
+      await prisma.dataQualityFlag.deleteMany({ where: { userId } });
+      await prisma.place.delete({ where: { id: place.id } });
+    }
+  });
+});

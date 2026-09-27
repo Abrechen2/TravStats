@@ -23,7 +23,14 @@ import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 
 export type JobKind =
-  "backup.create" | "backup.restore" | "xlsx.import" | "photoJourneys.scan" | "journal.weather";
+  | "backup.create"
+  | "backup.restore"
+  | "xlsx.import"
+  | "photoJourneys.scan"
+  | "journal.weather"
+  | "timeModel.backfill"
+  | "timeZones.reResolveDryRun"
+  | "timeZones.reResolveApply";
 
 export type JobStatus = "running" | "succeeded" | "failed";
 

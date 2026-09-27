@@ -15,6 +15,7 @@ import dawarichAdminRouter from "./dawarich";
 import stravaAdminRouter from "./strava";
 import usageStatsRouter from "./usageStats";
 import passwordResetRequestsRouter from "./passwordResetRequests";
+import timeMigrationRouter from "./timeMigration";
 
 const router = Router();
 
@@ -53,5 +54,6 @@ router.use("/dawarich", dawarichAdminRouter);
 router.use("/strava", stravaAdminRouter);
 router.use("/", usageStatsRouter);
 router.use("/", passwordResetRequestsRouter);
+router.use("/", timeMigrationRouter);
 
 export default router;
