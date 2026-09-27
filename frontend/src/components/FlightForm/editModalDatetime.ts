@@ -1,6 +1,7 @@
 import { formatWallClockIn } from "../../shared/zonedWallClock";
 import { MissingZoneError } from "../../lib/api/timeInput";
 import type { Flight } from "../../types";
+import { isValidZone } from "../../shared/time";
 
 /** The three pure date helpers of FlightEditModal, moved out so the modal
  *  stays under the 800-line ratchet (`scripts/check-file-size.mjs`). They
@@ -148,4 +149,26 @@ export function airportLocalInputs(
     actualArrivalDate: actualArr.date,
     actualArrivalTime: actualArr.time,
   };
+}
+
+/**
+ * The zone a flight end was WRITTEN with, while the form still names that
+ * airport (ADR 0002 D2). The server stores it and does not re-derive it; the
+ * modal reads and resends the end's times in it, so an edit of the seat no
+ * longer swaps the stored zone for whatever the catalogue says today. A new
+ * or changed airport, or a flight written before the zone was stored, has
+ * none: null, and the airport lookup answers.
+ */
+export function storedZoneAt(
+  picked: { iata?: string | null; icao?: string | null } | null,
+  iata: string | null | undefined,
+  icao: string | null | undefined,
+  zone: string | null | undefined
+): string | null {
+  if (!picked || !zone || !isValidZone(zone)) return null;
+  const same = (a: string | null | undefined, b: string | null | undefined) =>
+    Boolean(a) && Boolean(b) && a!.toUpperCase() === b!.toUpperCase();
+  const pickedCode = picked.iata || picked.icao;
+  if (!pickedCode) return null;
+  return same(picked.iata, iata) || (!picked.iata && same(picked.icao, icao)) ? zone : null;
 }

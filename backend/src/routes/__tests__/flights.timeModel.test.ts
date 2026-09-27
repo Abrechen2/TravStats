@@ -92,6 +92,26 @@ describe("Flights — time model (phase 2)", () => {
     expect(row.departureTime?.toISOString()).toBe("2027-07-01T12:30:00.000Z");
   });
 
+  it("answers a read with the zone the flight was written with, so an edit form resends it", async () => {
+    // The edit modal reads a flight's times in the zone the read gives it and
+    // resends them with that zone. When the read joined today's catalogue
+    // instead, a seat-only edit wrote the catalogue zone over the stored one.
+    const res = await create({
+      departureLocal: "2027-07-01T13:30",
+      arrivalLocal: "2027-07-02T08:30",
+    });
+    const id = res.body.id ?? res.body.flight?.id;
+    await prisma.flight.update({ where: { id }, data: { depTimezone: "Europe/Lisbon" } });
+    const one = await request(app).get(`/api/v1/flights/${id}`).set("Cookie", cookie);
+    expect(one.status).toBe(200);
+    const flight = one.body.flight ?? one.body;
+    expect(flight.depTimezone).toBe("Europe/Lisbon");
+    expect(flight.arrTimezone).toBe("Asia/Tokyo");
+    const list = await request(app).get("/api/v1/flights").set("Cookie", cookie);
+    const rows = list.body.flights ?? list.body.data ?? list.body;
+    expect(rows.find((f: { id: string }) => f.id === id).depTimezone).toBe("Europe/Lisbon");
+  });
+
   it("re-derives the zone when the airport changes", async () => {
     const res = await create({
       departureLocal: "2027-07-01T13:30",

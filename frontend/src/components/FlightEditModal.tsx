@@ -8,6 +8,7 @@ import {
   historicalShapeFor,
   editSubmitZones,
   airportLocalInputs,
+  storedZoneAt,
 } from "./FlightForm/editModalDatetime";
 import Modal from "./Modal";
 import RouteFields from "./FlightForm/fields/RouteFields";
@@ -161,6 +162,13 @@ export default function FlightEditModal({
     depCode: departureAirport?.iata || departureAirport?.icao || null,
     arrCode: arrivalAirport?.iata || arrivalAirport?.icao || null,
     browserTimezone: browserTz,
+    depKnownZone: storedZoneAt(
+      departureAirport,
+      flight.depIata,
+      flight.depIcao,
+      flight.depTimezone
+    ),
+    arrKnownZone: storedZoneAt(arrivalAirport, flight.arrIata, flight.arrIcao, flight.arrTimezone),
   });
 
   // The airport zones the inputs were last rendered in (hydration effect).

@@ -131,6 +131,28 @@ describe("FlightEditModal — time model", () => {
     expect(onSave).not.toHaveBeenCalled();
   });
 
+  it("reads and resends an unchanged airport's times in the zone the flight was written with, not today's catalogue zone", async () => {
+    // The catalogue says Berlin today; the flight was written with London.
+    // A seat edit used to resend the catalogue zone and so rewrote the stored
+    // zone of the flight (defect class 4: a re-derivation destroys stored data).
+    airportMocks.getByCode.mockResolvedValue({ timezone: "Europe/Berlin" });
+    const onSave = vi.fn().mockResolvedValue(undefined);
+    const written = { ...flight, depTimezone: "Europe/London", arrTimezone: "Europe/London" };
+    render(<FlightEditModal flight={written} isOpen onClose={vi.fn()} onSave={onSave} />);
+    await waitFor(() =>
+      expect((document.getElementById("editDepartureTime") as HTMLInputElement).value).toBe("11:00")
+    );
+    fireEvent.click(screen.getByText("Änderungen speichern"));
+    await waitFor(() => expect(onSave).toHaveBeenCalled());
+    const [, updates] = onSave.mock.calls[0];
+    expect(updates).toMatchObject({
+      departureLocal: "2026-06-01T11:00",
+      depTimezone: "Europe/London",
+      arrivalLocal: "2026-06-01T12:00",
+      arrTimezone: "Europe/London",
+    });
+  });
+
   it("sends the airports' zones once they resolved, and shows the gap refusal in German", async () => {
     airportMocks.getByCode.mockResolvedValue({ timezone: "Europe/Berlin" });
     const onSave = vi.fn().mockRejectedValue({

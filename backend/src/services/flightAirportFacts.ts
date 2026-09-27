@@ -1,8 +1,10 @@
 /**
  * The airport-derived fields every flight read path owes its callers.
  *
- * A flight row stores UTC plus time semantics and carries no zone of its own,
- * so rendering a departure in ITS airport's clock needs the catalogue. The
+ * A flight row stores UTC plus time semantics; since ADR 0002 phase 2 it also
+ * stores the zone each end was written with, which wins. Rows written before
+ * that carry none, and rendering them in their airport's clock needs the
+ * catalogue. The
  * same lookup answers two more questions for free: which countries the flight
  * touched, and how long it actually took once both zones are accounted for.
  *
@@ -27,6 +29,9 @@ export interface EnrichableFlight {
   arrivalTime: Date | null;
   depTimeSemantics: string;
   arrTimeSemantics: string;
+  /** The zone the end was WRITTEN with (ADR 0002 phase 2); absent on narrow selects. */
+  depTimezone?: string | null;
+  arrTimezone?: string | null;
 }
 
 export interface AirportFacts {
@@ -76,8 +81,12 @@ export async function enrichFlightsWithAirportFacts<T extends EnrichableFlight>(
   ): string | null => (iata && map.get(iata)) || (icao && map.get(icao)) || null;
 
   return flights.map((f) => {
-    const depTimezone = lookup(tzMap, f.depIata, f.depIcao);
-    const arrTimezone = lookup(tzMap, f.arrIata, f.arrIcao);
+    // The stored zone first (ADR 0002 D2): it is what the times were written
+    // in, and an edit form resends the zone a read hands it — answering with
+    // today's catalogue instead let a seat edit overwrite the stored zone.
+    // The catalogue only answers for a row written before zones were stored.
+    const depTimezone = f.depTimezone || lookup(tzMap, f.depIata, f.depIcao);
+    const arrTimezone = f.arrTimezone || lookup(tzMap, f.arrIata, f.arrIcao);
     const rawDuration =
       f.departureTime && f.arrivalTime
         ? tzAwareDurationMinutes(
