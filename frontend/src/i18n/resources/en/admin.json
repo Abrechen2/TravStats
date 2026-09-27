@@ -562,9 +562,12 @@
     },
     "ollama": {
       "title": "Ollama LLM Parser",
-      "description": "Ollama runs locally or on your network and analyzes booking confirmations with an LLM. Ideal for multi-stop and complex emails.",
+      "description": "Ollama runs locally or on your network and analyzes booking confirmations with an LLM. Ideal for multi-stop and complex emails. Always tried first when a URL is set — no consent needed within your network.",
       "urlLabel": "Ollama URL",
       "urlPlaceholder": "http://localhost:11434",
+      "remoteOptIn": {
+        "label": "I agree that booking data is sent to this address if it is outside my network."
+      },
       "modelLabel": "Model",
       "modelPlaceholder": "gemma3:12b",
       "testButton": "Test Connection",
@@ -588,14 +591,17 @@
     },
     "provider": {
       "title": "AI provider",
-      "description": "Who reads the bookings no template knows? Ollama runs in your own house; an OpenAI-compatible provider can be your own server or a cloud service. Both get the same instructions.",
-      "ollama": "Ollama (local or on your network)",
-      "openaiCompatible": "OpenAI-compatible (OpenAI, OpenRouter, Ollama Cloud, your own server)",
+      "description": "Who reads the bookings no template knows? Ollama is always tried first when it is configured — local or on your network, no consent of its own needed (except for an address outside your network). If Ollama does not answer, TravStats asks the enabled cloud providers below, in order. Every cloud provider needs its OWN key and its OWN consent — allowing OpenAI does not allow Anthropic or Google.",
+      "chain": {
+        "title": "Cloud provider priority",
+        "hint": "If Ollama does not answer (not configured, or not reachable), TravStats tries these providers in order — but only the ones with BOTH a key AND consent. A provider missing either is skipped, never tried. A provider that answers ends the chain — even with a thin answer.",
+        "moveUp": "Move up",
+        "moveDown": "Move down"
+      },
       "baseUrlLabel": "Base URL (with version path)",
       "baseUrlPlaceholder": "https://api.openai.com/v1",
-      "baseUrlHint": "Outside your network only with https://. Examples: https://api.openai.com/v1, https://openrouter.ai/api/v1, https://ollama.com/v1",
+      "baseUrlHint": "Outside your network only with https://. Examples: https://openrouter.ai/api/v1, https://ollama.com/v1",
       "modelLabel": "Model",
-      "modelPlaceholder": "gpt-4o-mini",
       "keyLabel": "API key",
       "keyPlaceholder": "sk-…",
       "keyHint": "Stored encrypted and never shown again — only the first and last four characters.",
@@ -620,12 +626,47 @@
         "LLM_BASE_URL_HTTPS_REQUIRED": "An AI provider outside your network needs https://. Nothing was saved.",
         "LLM_BASE_URL_INVALID": "The AI provider's base URL is invalid. Nothing was saved."
       },
-      "cloud": {
-        "title": "Send bookings to a cloud provider",
-        "warning": "If the AI provider is outside your network, TravStats sends it the text of the email or PDF (up to 12,000 characters) for every booking no template knows — including names, booking numbers, travel dates and prices. For a trip summary it sends the trip's data (flights, cruises, stays, places, notes, journal), for a CSV import the column names and three sample rows. What the provider does with it is governed by its terms, not by TravStats.",
-        "label": "I agree that this data is sent to an AI provider outside my network.",
-        "hint": "Off (default): a provider outside your network is never asked, not even an Ollama at a public address — only the built-in templates apply. The “AI model” switch above always wins.",
-        "inactive": "The saved provider is outside your network. Until you agree, the AI parser stays off."
+      "slots": {
+        "openai": {
+          "name": "OpenAI",
+          "modelPlaceholder": "gpt-4o-mini",
+          "consent": {
+            "title": "Send bookings to OpenAI",
+            "warning": "Your booking mails are sent to OpenAI's servers (USA) — up to 12,000 characters of the email or PDF, for every booking no template knows, including names, booking numbers, travel dates and prices. What OpenAI does with it is governed by its own terms, not by TravStats.",
+            "label": "I agree that this data is sent to OpenAI.",
+            "inactive": "OpenAI is configured but not yet consented to — without consent, OpenAI is never asked."
+          }
+        },
+        "anthropic": {
+          "name": "Anthropic",
+          "modelPlaceholder": "claude-3-5-haiku-latest",
+          "consent": {
+            "title": "Send bookings to Anthropic",
+            "warning": "Your booking mails are sent to Anthropic's servers (USA) — up to 12,000 characters of the email or PDF, for every booking no template knows, including names, booking numbers, travel dates and prices. What Anthropic does with it is governed by its own terms, not by TravStats.",
+            "label": "I agree that this data is sent to Anthropic.",
+            "inactive": "Anthropic is configured but not yet consented to — without consent, Anthropic is never asked."
+          }
+        },
+        "google": {
+          "name": "Google",
+          "modelPlaceholder": "gemini-2.0-flash",
+          "consent": {
+            "title": "Send bookings to Google",
+            "warning": "Your booking mails are sent to Google's servers (USA) — up to 12,000 characters of the email or PDF, for every booking no template knows, including names, booking numbers, travel dates and prices. What Google does with it is governed by its own terms, not by TravStats.",
+            "label": "I agree that this data is sent to Google.",
+            "inactive": "Google is configured but not yet consented to — without consent, Google is never asked."
+          }
+        },
+        "custom": {
+          "name": "Custom provider (OpenAI-compatible)",
+          "hint": "Your own server or a cloud service with an OpenAI-compatible interface — OpenRouter, Ollama Cloud, a LAN vLLM/LM Studio.",
+          "consent": {
+            "title": "Send bookings to this provider",
+            "warning": "If this provider is outside your network, TravStats sends it the text of the email or PDF (up to 12,000 characters) for every booking no template knows — including names, booking numbers, travel dates and prices. What the provider does with it is governed by its terms, not by TravStats.",
+            "label": "I agree that this data is sent to this provider.",
+            "inactive": "The saved provider is outside your network. Until you agree, this provider stays out of the chain."
+          }
+        }
       }
     }
   },

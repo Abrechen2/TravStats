@@ -116,11 +116,10 @@ beforeAll(async () => {
       parserOrder: row.parserOrder,
       ollamaUrl: row.ollamaUrl,
       ollamaModel: row.ollamaModel,
-      llmProvider: row.llmProvider,
       openaiCompatBaseUrl: row.openaiCompatBaseUrl,
       openaiCompatModel: row.openaiCompatModel,
       openaiCompatApiKey: row.openaiCompatApiKey,
-      llmCloudOptIn: row.llmCloudOptIn,
+      llmCustomOptIn: row.llmCustomOptIn,
     };
   } else {
     adminSettingsId = (await prisma.adminSettings.create({ data: {} })).id;
@@ -159,15 +158,14 @@ beforeEach(async () => {
     parserOrder: "template_first",
     ollamaUrl: null,
     ollamaModel: null,
-    llmProvider: "openai_compatible",
     openaiCompatBaseUrl: base,
     openaiCompatModel: "gpt-test",
     openaiCompatApiKey: encryptApiKey(SECRET_KEY),
-    llmCloudOptIn: false,
+    llmCustomOptIn: false,
   });
 });
 
-describe("an OpenAI-compatible provider reads a document the templates do not know", () => {
+describe("the custom slot (beta.17's openai_compatible) reads a document the templates do not know", () => {
   it("sends the same prompt to /chat/completions with the key, and the stay comes back", async () => {
     const result = await parseLodgingBookingText(HOTEL_MAIL, undefined, userId);
 
@@ -198,7 +196,7 @@ describe("an OpenAI-compatible provider reads a document the templates do not kn
     });
     expect(outcome.body.parserUsed).toBe("ollama");
     expect(outcome.body.llmProvider).toEqual({
-      kind: "openai_compatible",
+      kind: "custom",
       model: "gpt-test",
       isCloud: false,
       host: null,
@@ -234,7 +232,7 @@ describe("an OpenAI-compatible provider reads a document the templates do not kn
 
 describe("a provider outside the local network needs the admin's consent", () => {
   beforeEach(() =>
-    configure({ openaiCompatBaseUrl: "https://api.provider.example/v1", llmCloudOptIn: false })
+    configure({ openaiCompatBaseUrl: "https://api.provider.example/v1", llmCustomOptIn: false })
   );
 
   it("lodging: templates only, the reason names the missing consent, nothing is sent", async () => {
@@ -291,21 +289,21 @@ describe("admin settings for the provider", () => {
     const get = await request(app).get("/api/v1/admin/parser-settings").set("Cookie", adminCookie);
     expect(get.body.openaiCompatBaseUrl).toBe("https://api.provider.example/v1");
     expect(get.body.openaiCompatIsCloud).toBe(true);
-    expect(get.body.llmCloudOptIn).toBe(false);
+    expect(get.body.llmCustomOptIn).toBe(false);
   });
 
   it("'Verbindung testen' tells a rejected key apart from an unreachable host", async () => {
     const bad = await request(app)
       .post("/api/v1/admin/test-llm-provider")
       .set("Cookie", adminCookie)
-      .send({ baseUrl: base, model: "gpt-test", apiKey: "sk-wrong-000000000000" });
+      .send({ kind: "custom", baseUrl: base, model: "gpt-test", apiKey: "sk-wrong-000000000000" });
     expect(bad.body).toMatchObject({ ok: false, errorCode: "auth" });
 
     const good = await request(app)
       .post("/api/v1/admin/test-llm-provider")
       .set("Cookie", adminCookie)
       // The masked echo tests the STORED key.
-      .send({ baseUrl: base, model: "gpt-test", apiKey: "sk-t****cdef" });
+      .send({ kind: "custom", baseUrl: base, model: "gpt-test", apiKey: "sk-t****cdef" });
     expect(good.body).toMatchObject({ ok: true, modelFound: true, isCloud: false });
     expect(seen.every((r) => r.url === "/v1/models")).toBe(true);
   });

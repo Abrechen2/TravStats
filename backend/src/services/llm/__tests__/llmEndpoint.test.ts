@@ -80,29 +80,26 @@ describe("llmRefusalFor — the provider half", () => {
     else process.env.OLLAMA_URL = savedEnv;
   });
 
-  it("refuses a cloud endpoint without the opt-in", async () => {
+  it("refuses the custom slot without its own opt-in", async () => {
     settings({
-      llmProvider: "openai_compatible",
       openaiCompatBaseUrl: "https://api.openai.com/v1",
       openaiCompatModel: "gpt-4o-mini",
-      llmCloudOptIn: false,
+      llmCustomOptIn: false,
     });
     await expect(llmRefusalFor()).resolves.toMatchObject({ kind: "cloud_not_consented" });
   });
 
   it("allows it with the opt-in", async () => {
     settings({
-      llmProvider: "openai_compatible",
       openaiCompatBaseUrl: "https://api.openai.com/v1",
       openaiCompatModel: "gpt-4o-mini",
-      llmCloudOptIn: true,
+      llmCustomOptIn: true,
     });
     await expect(llmRefusalFor()).resolves.toBeNull();
   });
 
   it("needs no opt-in for a LAN endpoint", async () => {
     settings({
-      llmProvider: "openai_compatible",
       openaiCompatBaseUrl: "http://192.168.178.155:8000/v1",
       openaiCompatModel: "qwen",
     });
@@ -111,13 +108,12 @@ describe("llmRefusalFor — the provider half", () => {
 
   it("names an incomplete setup instead of quietly using nothing", async () => {
     settings({
-      llmProvider: "openai_compatible",
       openaiCompatBaseUrl: "https://api.openai.com/v1",
     });
     await expect(llmRefusalFor()).resolves.toMatchObject({ kind: "provider_incomplete" });
   });
 
-  it("holds an Ollama at a public host to the same consent", async () => {
+  it("holds an Ollama at a public host to its own consent", async () => {
     settings({ ollamaUrl: "https://ollama.example.org", ollamaModel: "gemma3:12b" });
     await expect(llmRefusalFor()).resolves.toMatchObject({ kind: "cloud_not_consented" });
   });
@@ -127,13 +123,35 @@ describe("llmRefusalFor — the provider half", () => {
     await expect(llmRefusalFor()).resolves.toBeNull();
   });
 
+  it("a granted OpenAI consent does not enable Anthropic", async () => {
+    settings({
+      llmAnthropicApiKey: "encrypted-key",
+      llmAnthropicOptIn: false,
+      llmOpenaiApiKey: "encrypted-key-2",
+      llmOpenaiOptIn: true,
+    });
+    // Something IS eligible (OpenAI) — so a caller resolving the chain gets a
+    // target, and `llmRefusalFor` (the pre-flight, chain-wide question) says
+    // nothing is refused. Per-slot isolation is what `assertLlmCloudConsent`
+    // in `llmProvider.pipeline.test.ts` pins: Anthropic itself is never asked
+    // just because OpenAI was allowed.
+    await expect(llmRefusalFor()).resolves.toBeNull();
+  });
+
+  it("configured-but-unconsented fixed slots still refuse — consent, not just a key", async () => {
+    settings({
+      llmAnthropicApiKey: "encrypted-key",
+      llmAnthropicOptIn: false,
+    });
+    await expect(llmRefusalFor()).resolves.toMatchObject({ kind: "cloud_not_consented" });
+  });
+
   it("the admin switch still wins over everything", async () => {
     settings({
       llmEnabled: false,
-      llmProvider: "openai_compatible",
       openaiCompatBaseUrl: "https://api.openai.com/v1",
       openaiCompatModel: "gpt-4o-mini",
-      llmCloudOptIn: true,
+      llmCustomOptIn: true,
     });
     await expect(llmRefusalFor()).resolves.toMatchObject({ kind: "disabled_by_admin" });
   });

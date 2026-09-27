@@ -9,8 +9,9 @@ import path from "path";
  * next year by someone who never heard of it would send documents to the
  * model with the switch off, and nothing would look different. So this scans
  * the source for the endpoints that make a model GENERATE — Ollama's
- * `/api/generate`, `/api/chat`, `/api/embed(dings)` and the OpenAI-compatible
- * `/chat/completions` — and requires:
+ * `/api/generate`, `/api/chat`, `/api/embed(dings)`, the OpenAI-compatible
+ * `/chat/completions` (openai/google/custom) and Anthropic's `/messages` —
+ * and requires:
  *
  *  1. that only the provider module names one (`llm/llmProvider.ts`). The six
  *     callers used to carry their own request each; a seventh that names an
@@ -31,7 +32,7 @@ import path from "path";
  */
 
 const SRC_ROOT = path.resolve(__dirname, "../../..");
-const MODEL_ENDPOINT = /\/(?:api\/(?:generate|chat|embed(?:dings)?)|chat\/completions)\b/g;
+const MODEL_ENDPOINT = /\/(?:api\/(?:generate|chat|embed(?:dings)?)|chat\/completions|messages)\b/g;
 const GUARD_CALL = /\bawait assertMayAsk\(target\)/g;
 
 function sourceFiles(dir: string): string[] {
@@ -86,8 +87,8 @@ describe("every language-model request passes the admin switch and the cloud con
     expect(callers.map((c) => c.file)).toEqual(["services/llm/llmProvider.ts"]);
   });
 
-  it("names both protocols' generate endpoints there — the scan is not vacuous", () => {
-    expect(callers[0]?.endpoints).toBe(2);
+  it("names all three protocols' generate endpoints there — the scan is not vacuous", () => {
+    expect(callers[0]?.endpoints).toBe(3);
   });
 
   it.each(callers.map((c) => [c.file, c] as const))(
@@ -97,8 +98,11 @@ describe("every language-model request passes the admin switch and the cloud con
     }
   );
 
-  it.each(MODEL_CALLERS)("%s asks the model through llmGenerate", (file) => {
-    const source = files.find((f) => f.file === file);
-    expect(source?.code).toMatch(/\bllmGenerate\(/);
-  });
+  it.each(MODEL_CALLERS)(
+    "%s asks the model through llmGenerate (or the fallback-chain llmGenerateChain, which calls it)",
+    (file) => {
+      const source = files.find((f) => f.file === file);
+      expect(source?.code).toMatch(/\bllmGenerate(?:Chain)?\(/);
+    }
+  );
 });

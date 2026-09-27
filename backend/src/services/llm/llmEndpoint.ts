@@ -10,8 +10,8 @@ import net from "net";
  * is where Ollama has always lived here, over plain http, and nothing about a
  * document sent there leaves the house. Every other host is somebody else's
  * computer: it must be https, because the request carries an API key and a
- * booking mail, and it needs the admin's explicit cloud opt-in
- * (`llmCloudOptIn`, enforced in `llmGate.ts`).
+ * booking mail, and it needs that SLOT's own explicit cloud opt-in
+ * (`llm_openai_opt_in` etc., enforced in `llmGate.ts`).
  *
  * The classification reads the NAME, not a DNS answer: a public name that
  * happens to resolve into the LAN is still treated as cloud. That errs toward
@@ -21,6 +21,40 @@ import net from "net";
  * the admin sets this URL, and a LAN model server is the primary use case —
  * the same reasoning as `normalizeImmichBaseUrl`.
  */
+
+/**
+ * The five provider slots (beta.18): `ollama` stays local-first with no
+ * consent needed for the common case; `openai`, `anthropic` and `google` are
+ * fixed cloud endpoints, each gated by its OWN admin consent
+ * (`llm_openai_opt_in` etc.) rather than one blanket flag — an admin who
+ * allowed OpenAI has said nothing about Anthropic. `custom` is the
+ * free-form OpenAI-compatible slot (OpenRouter, Ollama Cloud, a LAN
+ * vLLM/LM Studio) that used to be the only cloud option, under the name
+ * `openai_compatible`; the beta.17 migration maps existing rows onto it.
+ *
+ * Defined here, not in `llmProvider.ts`, so `llmGate.ts` can import the type
+ * without a cycle: `llmProvider.ts` already imports `llmGate.ts`'s asserts,
+ * and `llmGate.ts` needs the kind vocabulary too (per-slot consent).
+ */
+export const LLM_PROVIDER_KINDS = ["ollama", "openai", "anthropic", "google", "custom"] as const;
+export type LlmProviderKind = (typeof LLM_PROVIDER_KINDS)[number];
+
+export function isLlmProviderKind(value: unknown): value is LlmProviderKind {
+  return typeof value === "string" && (LLM_PROVIDER_KINDS as readonly string[]).includes(value);
+}
+
+/** The admin's configured kind, with an unknown/legacy value read as Ollama. */
+export function activeProviderKind(raw: string | null | undefined): LlmProviderKind {
+  return isLlmProviderKind(raw) ? raw : "ollama";
+}
+
+/** The four kinds a fallback chain may carry after Ollama — each needs its own consent. */
+export const CLOUD_PROVIDER_KINDS = ["openai", "anthropic", "google", "custom"] as const;
+export type CloudProviderKind = (typeof CLOUD_PROVIDER_KINDS)[number];
+
+export function isCloudProviderKind(value: unknown): value is CloudProviderKind {
+  return typeof value === "string" && (CLOUD_PROVIDER_KINDS as readonly string[]).includes(value);
+}
 
 const LOCAL_SUFFIXES = [".local", ".lan", ".home.arpa", ".internal", ".localhost"];
 

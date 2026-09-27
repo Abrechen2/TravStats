@@ -50,7 +50,7 @@ describe("EmailImportTab — the AI provider", () => {
       llmDisabledByAdmin: false,
       llmRefusal: null,
       llmProvider: {
-        kind: "openai_compatible",
+        kind: "custom",
         model: "gpt-4o-mini",
         isCloud: true,
         host: "api.openai.com",
@@ -94,7 +94,7 @@ describe("EmailImportTab — the AI provider", () => {
 });
 
 describe("llmProviderOfResult", () => {
-  const provider = { kind: "openai_compatible", model: "m", isCloud: true, host: "h.example" };
+  const provider = { kind: "custom", model: "m", isCloud: true, host: "h.example" };
 
   it("names the provider only when the model read the document", () => {
     expect(llmProviderOfResult({ parserUsed: "ollama", llmProvider: provider })).toEqual(provider);

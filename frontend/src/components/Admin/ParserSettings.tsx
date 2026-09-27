@@ -1,7 +1,7 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi } from "../../lib/api";
-import type { LlmProviderKind, ParserOrder } from "../../lib/api/admin";
+import type { CloudProviderKind, ParserOrder } from "../../lib/api/admin";
 import LlmProviderSettings from "./LlmProviderSettings";
 
 export interface ParserSettingsData {
@@ -16,15 +16,30 @@ export interface ParserSettingsData {
   llmEnabled?: boolean;
   ollamaUrl: string | null;
   ollamaModel: string | null;
-  /** Which protocol the model speaks — absent before beta.17 (= Ollama). */
-  llmProvider?: LlmProviderKind;
+  /** Consent for a REMOTE Ollama only. */
+  llmOllamaOptIn?: boolean;
+  /** The admin's priority among the four cloud slots (beta.18: a fallback
+   *  CHAIN, not one picked "active" provider — absent before beta.18). */
+  llmProviderOrder?: CloudProviderKind[];
+
+  /** The `custom` slot (beta.17's `openai_compatible`) — a free-form base URL. */
   openaiCompatBaseUrl?: string | null;
   openaiCompatModel?: string | null;
   /** The masked echo of the stored key, or what the admin typed. */
   openaiCompatApiKey?: string | null;
   /** Read-only: the SAVED endpoint is outside the local network. */
   openaiCompatIsCloud?: boolean;
-  llmCloudOptIn?: boolean;
+  llmCustomOptIn?: boolean;
+
+  llmOpenaiModel?: string | null;
+  llmOpenaiApiKey?: string | null;
+  llmOpenaiOptIn?: boolean;
+  llmAnthropicModel?: string | null;
+  llmAnthropicApiKey?: string | null;
+  llmAnthropicOptIn?: boolean;
+  llmGoogleModel?: string | null;
+  llmGoogleApiKey?: string | null;
+  llmGoogleOptIn?: boolean;
 }
 
 interface OllamaModel {
@@ -235,165 +250,176 @@ export default function ParserSettings({
         onParserSettingsChange={onParserSettingsChange}
       />
 
-      {/* Ollama LLM Parser — only while Ollama is the chosen provider. */}
-      {(parserSettings.llmProvider ?? "ollama") === "ollama" && (
-        <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
-          <div className="flex items-center justify-between mb-2">
-            <h3 className="text-lg font-semibold text-(--text-primary)">
-              {t("admin:parserSettings.ollama.title")}
-            </h3>
-            {ollamaTestState.status !== "idle" && (
-              <span
-                className="text-xs font-medium px-2 py-1 rounded-full"
-                style={{
-                  background:
-                    ollamaTestState.status === "ok"
-                      ? "rgba(63,185,80,0.15)"
-                      : ollamaTestState.status === "warn"
-                        ? "rgba(210,153,34,0.15)"
-                        : ollamaTestState.status === "error"
-                          ? "rgba(248,81,73,0.15)"
-                          : "var(--bg-elevated)",
-                  color:
-                    ollamaTestState.status === "ok"
-                      ? "var(--success)"
-                      : ollamaTestState.status === "warn"
-                        ? "var(--warning)"
-                        : ollamaTestState.status === "error"
-                          ? "var(--danger)"
-                          : "var(--text-muted)",
-                }}
-              >
-                {ollamaTestState.status === "ok" &&
-                  t("admin:parserSettings.ollama.statusConnected")}
-                {ollamaTestState.status === "warn" &&
-                  t("admin:parserSettings.ollama.modelNotFound")}
-                {ollamaTestState.status === "error" &&
-                  t("admin:parserSettings.ollama.statusDisconnected")}
-                {ollamaTestState.status === "loading" && t("admin:parserSettings.ollama.testing")}
-              </span>
-            )}
+      {/* Ollama LLM Parser — always shown: Ollama is implicitly the first
+          slot in the fallback chain whenever it is configured, never one of
+          several "chosen" providers. */}
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <div className="flex items-center justify-between mb-2">
+          <h3 className="text-lg font-semibold text-(--text-primary)">
+            {t("admin:parserSettings.ollama.title")}
+          </h3>
+          {ollamaTestState.status !== "idle" && (
+            <span
+              className="text-xs font-medium px-2 py-1 rounded-full"
+              style={{
+                background:
+                  ollamaTestState.status === "ok"
+                    ? "rgba(63,185,80,0.15)"
+                    : ollamaTestState.status === "warn"
+                      ? "rgba(210,153,34,0.15)"
+                      : ollamaTestState.status === "error"
+                        ? "rgba(248,81,73,0.15)"
+                        : "var(--bg-elevated)",
+                color:
+                  ollamaTestState.status === "ok"
+                    ? "var(--success)"
+                    : ollamaTestState.status === "warn"
+                      ? "var(--warning)"
+                      : ollamaTestState.status === "error"
+                        ? "var(--danger)"
+                        : "var(--text-muted)",
+              }}
+            >
+              {ollamaTestState.status === "ok" && t("admin:parserSettings.ollama.statusConnected")}
+              {ollamaTestState.status === "warn" && t("admin:parserSettings.ollama.modelNotFound")}
+              {ollamaTestState.status === "error" &&
+                t("admin:parserSettings.ollama.statusDisconnected")}
+              {ollamaTestState.status === "loading" && t("admin:parserSettings.ollama.testing")}
+            </span>
+          )}
+        </div>
+        <p className="text-sm text-(--text-muted) mb-4">
+          {t("admin:parserSettings.ollama.description")}
+        </p>
+        <div className="space-y-3">
+          {/* URL input */}
+          <div>
+            <label className="block text-xs font-medium text-(--text-muted) mb-1">
+              {t("admin:parserSettings.ollama.urlLabel")}
+            </label>
+            <input
+              type="url"
+              value={parserSettings.ollamaUrl ?? ""}
+              onChange={(e) =>
+                onParserSettingsChange({ ...parserSettings, ollamaUrl: e.target.value || null })
+              }
+              placeholder={t("admin:parserSettings.ollama.urlPlaceholder")}
+              className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+            />
           </div>
-          <p className="text-sm text-(--text-muted) mb-4">
-            {t("admin:parserSettings.ollama.description")}
-          </p>
-          <div className="space-y-3">
-            {/* URL input */}
-            <div>
-              <label className="block text-xs font-medium text-(--text-muted) mb-1">
-                {t("admin:parserSettings.ollama.urlLabel")}
-              </label>
-              <input
-                type="url"
-                value={parserSettings.ollamaUrl ?? ""}
+
+          {/* Only matters for an Ollama OUTSIDE the local network — the
+                normal local/LAN case never asks for this. */}
+          <label className="flex items-start gap-2 text-xs text-(--text-muted)">
+            <input
+              type="checkbox"
+              data-testid="llm-ollama-remote-opt-in"
+              checked={parserSettings.llmOllamaOptIn === true}
+              onChange={(e) =>
+                onParserSettingsChange({ ...parserSettings, llmOllamaOptIn: e.target.checked })
+              }
+              className="mt-0.5 w-4 h-4 rounded-sm border-border"
+            />
+            {t("admin:parserSettings.ollama.remoteOptIn.label")}
+          </label>
+
+          {/* Model selector — dropdown of available models */}
+          <div>
+            <label className="block text-xs font-medium text-(--text-muted) mb-1">
+              {t("admin:parserSettings.ollama.modelLabel")}
+            </label>
+            {models.length > 0 ? (
+              <select
+                value={parserSettings.ollamaModel ?? ""}
                 onChange={(e) =>
-                  onParserSettingsChange({ ...parserSettings, ollamaUrl: e.target.value || null })
+                  onParserSettingsChange({
+                    ...parserSettings,
+                    ollamaModel: e.target.value || null,
+                  })
                 }
-                placeholder={t("admin:parserSettings.ollama.urlPlaceholder")}
+                className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+              >
+                <option value="">-- Select model --</option>
+                {models.map((m) => (
+                  <option key={m.name} value={m.name}>
+                    {m.name} ({formatSize(m.size)})
+                  </option>
+                ))}
+              </select>
+            ) : (
+              <input
+                type="text"
+                value={parserSettings.ollamaModel ?? ""}
+                onChange={(e) =>
+                  onParserSettingsChange({
+                    ...parserSettings,
+                    ollamaModel: e.target.value || null,
+                  })
+                }
+                placeholder={
+                  modelsLoading
+                    ? "Loading models..."
+                    : parserSettings.ollamaUrl
+                      ? "No models found — enter name or pull below"
+                      : t("admin:parserSettings.ollama.modelPlaceholder")
+                }
                 className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
               />
-            </div>
+            )}
+            {modelsLoading && (
+              <p className="text-xs text-(--text-muted) mt-1">Loading available models...</p>
+            )}
+          </div>
 
-            {/* Model selector — dropdown of available models */}
-            <div>
+          {/* Pull model section */}
+          {parserSettings.ollamaUrl && (
+            <div className="border border-dashed border-border rounded-lg p-3">
               <label className="block text-xs font-medium text-(--text-muted) mb-1">
-                {t("admin:parserSettings.ollama.modelLabel")}
+                Download a model
               </label>
-              {models.length > 0 ? (
-                <select
-                  value={parserSettings.ollamaModel ?? ""}
-                  onChange={(e) =>
-                    onParserSettingsChange({
-                      ...parserSettings,
-                      ollamaModel: e.target.value || null,
-                    })
-                  }
-                  className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                >
-                  <option value="">-- Select model --</option>
-                  {models.map((m) => (
-                    <option key={m.name} value={m.name}>
-                      {m.name} ({formatSize(m.size)})
-                    </option>
-                  ))}
-                </select>
-              ) : (
+              <div className="flex gap-2">
                 <input
                   type="text"
-                  value={parserSettings.ollamaModel ?? ""}
-                  onChange={(e) =>
-                    onParserSettingsChange({
-                      ...parserSettings,
-                      ollamaModel: e.target.value || null,
-                    })
-                  }
-                  placeholder={
-                    modelsLoading
-                      ? "Loading models..."
-                      : parserSettings.ollamaUrl
-                        ? "No models found — enter name or pull below"
-                        : t("admin:parserSettings.ollama.modelPlaceholder")
-                  }
-                  className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                  value={pullModel}
+                  onChange={(e) => setPullModel(e.target.value)}
+                  placeholder="e.g. gemma3:12b, llama3.1:8b"
+                  className="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
+                  disabled={pulling}
                 />
-              )}
-              {modelsLoading && (
-                <p className="text-xs text-(--text-muted) mt-1">Loading available models...</p>
+                <button
+                  onClick={handlePull}
+                  disabled={pulling || !pullModel.trim()}
+                  className="px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white rounded-lg transition whitespace-nowrap"
+                >
+                  {pulling ? "Pulling..." : "Pull"}
+                </button>
+              </div>
+              {pullStatus && (
+                <p className={`text-xs mt-1 ${pullStatus.ok ? "text-green-600" : "text-red-500"}`}>
+                  {pullStatus.message}
+                </p>
               )}
             </div>
+          )}
 
-            {/* Pull model section */}
-            {parserSettings.ollamaUrl && (
-              <div className="border border-dashed border-border rounded-lg p-3">
-                <label className="block text-xs font-medium text-(--text-muted) mb-1">
-                  Download a model
-                </label>
-                <div className="flex gap-2">
-                  <input
-                    type="text"
-                    value={pullModel}
-                    onChange={(e) => setPullModel(e.target.value)}
-                    placeholder="e.g. gemma3:12b, llama3.1:8b"
-                    className="flex-1 px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
-                    disabled={pulling}
-                  />
-                  <button
-                    onClick={handlePull}
-                    disabled={pulling || !pullModel.trim()}
-                    className="px-4 py-2 text-sm bg-amber-600 hover:bg-amber-700 disabled:bg-gray-400 text-white rounded-lg transition whitespace-nowrap"
-                  >
-                    {pulling ? "Pulling..." : "Pull"}
-                  </button>
-                </div>
-                {pullStatus && (
-                  <p
-                    className={`text-xs mt-1 ${pullStatus.ok ? "text-green-600" : "text-red-500"}`}
-                  >
-                    {pullStatus.message}
-                  </p>
-                )}
-              </div>
-            )}
-
-            {ollamaTestState.message && (
-              <p className="text-xs text-(--text-muted) mt-1">{ollamaTestState.message}</p>
-            )}
-            <button
-              onClick={onTestOllama}
-              disabled={
-                ollamaTestState.status === "loading" ||
-                !parserSettings.ollamaUrl ||
-                !parserSettings.ollamaModel
-              }
-              className="mt-1 px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-(--bg-base) disabled:opacity-50 transition"
-            >
-              {ollamaTestState.status === "loading"
-                ? t("admin:parserSettings.ollama.testing")
-                : t("admin:parserSettings.ollama.testButton")}
-            </button>
-          </div>
+          {ollamaTestState.message && (
+            <p className="text-xs text-(--text-muted) mt-1">{ollamaTestState.message}</p>
+          )}
+          <button
+            onClick={onTestOllama}
+            disabled={
+              ollamaTestState.status === "loading" ||
+              !parserSettings.ollamaUrl ||
+              !parserSettings.ollamaModel
+            }
+            className="mt-1 px-3 py-1.5 text-sm border border-border rounded-lg hover:bg-(--bg-base) disabled:opacity-50 transition"
+          >
+            {ollamaTestState.status === "loading"
+              ? t("admin:parserSettings.ollama.testing")
+              : t("admin:parserSettings.ollama.testButton")}
+          </button>
         </div>
-      )}
+      </div>
 
       {/* User API Key Permissions */}
       <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
