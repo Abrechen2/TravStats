@@ -63,6 +63,31 @@ describe("RailTab", () => {
     expect(extraLayers.current.length).toBe(2);
   });
 
+  // Silent-fix sweep 2026-09-27: a BRouter line (the demo account's routed
+  // rides) or an OpenRailRouting line was labelled "(Transitous)" in the
+  // legend even though neither is the train's own trace.
+  it("names a BRouter-routed line by its own source, not Transitous", async () => {
+    list.mockResolvedValue({
+      journeys: [makeRailJourney({ geometrySource: "brouter" })],
+      total: 1,
+    });
+    renderTab();
+    const legend = await screen.findByTestId("rail-legend");
+    expect(legend).toHaveTextContent("dashboard:legend.railBrouter");
+    expect(legend).not.toHaveTextContent("dashboard:legend.railTraced");
+  });
+
+  it("names an OpenRailRouting line by its own source, not Transitous", async () => {
+    list.mockResolvedValue({
+      journeys: [makeRailJourney({ geometrySource: "openrailrouting" })],
+      total: 1,
+    });
+    renderTab();
+    const legend = await screen.findByTestId("rail-legend");
+    expect(legend).toHaveTextContent("dashboard:legend.railRouted");
+    expect(legend).not.toHaveTextContent("dashboard:legend.railTraced");
+  });
+
   it("says a failed load instead of drawing an empty map", async () => {
     list.mockRejectedValue(new Error("network"));
     renderTab();
