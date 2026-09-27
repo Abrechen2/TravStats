@@ -307,7 +307,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
               aria-describedby={identityMissing ? "cruise-identity-error" : undefined}
             />
             {identityMissing && (
-              <p id="cruise-identity-error" role="alert" className="mt-1 text-xs text-red-400">
+              <p id="cruise-identity-error" role="alert" className="mt-1 text-xs text-(--danger)">
                 {t("form.identityRequired")}
               </p>
             )}
@@ -343,7 +343,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
               />
             </div>
             {startMissing && (
-              <p id="cruise-start-error" role="alert" className="mt-1 text-xs text-red-400">
+              <p id="cruise-start-error" role="alert" className="mt-1 text-xs text-(--danger)">
                 {t("form.startDateRequired")}
               </p>
             )}
