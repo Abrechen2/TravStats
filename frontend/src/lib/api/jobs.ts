@@ -23,6 +23,11 @@ export interface JobView<T = unknown> {
   finishedAt: string | null;
   result: T | null;
   error: { code: string; status: number } | null;
+  /**
+   * How far a job that counts its work has got. Optional: most jobs do not
+   * report it, and a screen must then say "running" rather than "0 %".
+   */
+  progress?: { done: number; total: number } | null;
 }
 
 /** The job finished and failed. `code` is the server's stable cause. */
@@ -68,7 +73,12 @@ const sleep = (ms: number): Promise<void> => new Promise((resolve) => setTimeout
  */
 export async function waitForJob<T>(
   jobId: string,
-  options: { intervalMs?: number; maxMisses?: number } = {}
+  options: {
+    intervalMs?: number;
+    maxMisses?: number;
+    /** Called with every job view the poll reads, e.g. to show progress. */
+    onPoll?: (job: JobView<T>) => void;
+  } = {}
 ): Promise<T> {
   const intervalMs = options.intervalMs ?? JOB_POLL_INTERVAL_MS;
   const maxMisses = options.maxMisses ?? JOB_POLL_MAX_MISSES;
@@ -78,6 +88,7 @@ export async function waitForJob<T>(
     try {
       job = await getJob<T>(jobId);
       misses = 0;
+      options.onPoll?.(job);
     } catch (err) {
       // 404: the server does not know the job (restarted). Anything else is
       // a poll that did not get through; the job itself is unaffected.

@@ -192,7 +192,9 @@
       "itinerary": "Etappen",
       "atSea": "Seetag",
       "openJournal": "Ganz öffnen"
-    }
+    },
+    "stopNotFound": "Diesen Halt gibt es in dieser Reise nicht mehr.",
+    "journalEntryNotFound": "Diesen Tagebucheintrag gibt es in dieser Reise nicht mehr."
   },
   "journalModal": {
     "createTitle": "Tagebuch-Eintrag",

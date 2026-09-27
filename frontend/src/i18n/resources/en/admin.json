@@ -13,7 +13,8 @@
     "training": "Training Config",
     "logging": "Logging",
     "backups": "Instance backups",
-    "smtp": "Email / SMTP"
+    "smtp": "Email / SMTP",
+    "timeModel": "Time model"
   },
   "tabs2": {
     "general": "General",
@@ -794,5 +795,159 @@
     "removeFailed": "Could not remove the image.",
     "replacesShipped": "Your images replace the shipped ones entirely. Remove them all to go back to the shipped set.",
     "hint": "Dark portrait photographs with a quiet left half work best — that is where the text sits. On bright ones the text becomes hard to read."
+  },
+  "timeModel": {
+    "unknownCode": "unknown ({{code}})",
+    "tables": {
+      "flights": "Flights",
+      "rail_journeys": "Rail journeys",
+      "place_visits": "Place visits",
+      "cruise_stops": "Cruise stops",
+      "cruises": "Cruises",
+      "trip_stops": "Trip stops",
+      "trips": "Trips",
+      "trip_journal_entries": "Travel journal",
+      "lodging_stays": "Stays",
+      "users": "Profiles"
+    },
+    "reasons": {
+      "no_position": "No position (missing or 0, 0)",
+      "zone_unresolved": "No time zone is known at this position",
+      "port_unresolved": "Port not matched",
+      "sea_day_time": "Sea day with a time – at sea there is no time zone",
+      "semantics_unknown": "Unclear whether the time is local or UTC",
+      "local_time_nonexistent": "This time did not exist there (clock change)",
+      "writer_unknown": "Could not tell whether the web or the app wrote the time",
+      "date_only_day_differs": "Date only – the local day differs from the UTC day",
+      "day_anchor_ambiguous": "Not certain which calendar day is meant",
+      "instant_without_zone": "Stored without the station's time zone"
+    },
+    "columns": {
+      "departure": "Departure",
+      "arrival": "Arrival",
+      "visited_at": "Visit time",
+      "arrival_time": "Arrival",
+      "departure_time": "Departure",
+      "date": "Date",
+      "day": "Day",
+      "start_date": "Start",
+      "end_date": "End",
+      "check_in": "Check-in",
+      "check_out": "Check-out",
+      "birthdate": "Birthday",
+      "other": "Time value"
+    },
+    "backfillErrors": {
+      "TIMEZONE_LOOKUP_UNAVAILABLE": "the time zone lookup was unavailable",
+      "JOB_FAILED": "the run stopped with an error"
+    },
+    "errors": {
+      "unreadable": "The server answered in a shape this version of the interface cannot read. Nothing is shown rather than numbers that are wrong.",
+      "outcomeUnknown": "The server no longer reports the outcome (probably a restart). Whether anything was written is unknown – a new dry run shows what is still open.",
+      "forbidden": "You need admin rights for this.",
+      "notAvailable": "This server does not know the time model migration yet.",
+      "DRY_RUN_NOT_FOUND": "The server no longer knows this dry run (expired or after a restart). Nothing was written – start a new one.",
+      "RE_RESOLVE_RUNNING": "A re-resolution is already running. Wait until it has finished."
+    },
+    "report": {
+      "title": "Time migration – report",
+      "description": "What the migration to the new time model converted on this instance – and what it did not.",
+      "reload": "Reload",
+      "loading": "Loading report …",
+      "errors": {
+        "loadFailed": "The report could not be loaded.",
+        "notAVerdict": "That does not mean nothing was migrated – only that the report cannot be fetched right now."
+      },
+      "status": {
+        "pending": "The migration has not run on this instance yet. It runs once on the next server start.",
+        "running": "The migration is running. Reload the report once it has finished.",
+        "failed": "The migration stopped: {{error}}. What was converted until then is listed below; the original values are unchanged.",
+        "noErrorCode": "no reason given",
+        "completed": "The migration ran on {{when}} (time zone data {{tzdata}})."
+      },
+      "outcomes": {
+        "converted": "Converted",
+        "alreadyFilled": "Already in the new format",
+        "open": "Open"
+      },
+      "statement": {
+        "converted_one": "{{count}} entry was converted; the new values are in columns of their own.",
+        "converted_other": "{{count}} entries were converted; the new values are in columns of their own.",
+        "alreadyFilled_one": "{{count}} entry already had the new values (newly created or from the demo) and was left unchanged.",
+        "alreadyFilled_other": "{{count}} entries already had the new values (newly created or from the demo) and were left unchanged.",
+        "open_one": "{{count}} entry was not fully migrated – nothing was guessed. Every open value is a question in its owner's inbox.",
+        "open_other": "{{count}} entries were not fully migrated – nothing was guessed. Every open value is a question in its owner's inbox.",
+        "flags": "Questions in the inbox: {{open}} open · {{resolved}} reported corrected · {{dismissed}} confirmed as correct",
+        "legacyUntouched": "The original columns were not changed. Every conversion is logged and can be undone."
+      },
+      "unchanged": {
+        "title": "Deliberately left alone:",
+        "item": "{{domain}} ({{why}})",
+        "domains": {
+          "tours": "Tours",
+          "track_windows": "Track time windows",
+          "loyalty": "Loyalty programmes",
+          "country_days": "Country days",
+          "photos": "Photos"
+        },
+        "why": {
+          "already_dates": "already plain days",
+          "already_instants": "already real instants",
+          "no_time_columns": "no time values",
+          "utc_by_decision": "UTC days by decision"
+        }
+      },
+      "tables": {
+        "caption": "By table",
+        "table": "Table",
+        "reasonsCaption": "Open by reason",
+        "rulesCaption": "Rules in detail"
+      },
+      "ruleStatus": {
+        "open": "open",
+        "resolved": "converted"
+      },
+      "noReason": "no reason",
+      "openRows": {
+        "title_one": "{{count}} open value",
+        "title_other": "{{count}} open values",
+        "answer": "Answer in the inbox",
+        "otherInbox": "in {{user}}'s inbox",
+        "unknownOwner": "account not identifiable",
+        "truncated": "Not every open value is listed – the numbers above count them all."
+      }
+    },
+    "reResolve": {
+      "title": "Re-resolve time zones",
+      "description": "Every time carries the zone it was stored with. If a place was corrected or a country changed its time zone, a dry run shows which entries would get a different zone and how far their local time would shift. Nothing is written until you apply.",
+      "dryRun": "Start dry run",
+      "dryRunning": "Dry run running …",
+      "progress": "{{done}} of {{total}} checked",
+      "progressUnknown": "Running – with many entries this can take a minute or two.",
+      "summary": "Checked: {{checked}} · Zone would change: {{changes}} · Time zone data {{tzdata}}",
+      "unresolvable_one": "{{count}} entry cannot be resolved to a zone now – it stays as stored.",
+      "unresolvable_other": "{{count}} entries cannot be resolved to a zone now – they stay as stored.",
+      "noChanges": "No time zone would change. There is nothing to apply.",
+      "table": {
+        "entry": "Entry",
+        "from": "Before",
+        "to": "New",
+        "delta": "Local time"
+      },
+      "truncated": "{{shown}} of {{total}} changes shown. All {{total}} are applied.",
+      "noInstant": "no time of day",
+      "apply": "Apply",
+      "applying": "Applying …",
+      "confirm": {
+        "title": "Re-resolve time zones?",
+        "message_one": "{{count}} entry gets the new zone from the dry run. Its local time shifts by the difference shown; the stored instant stays.",
+        "message_other": "{{count}} entries get the new zone from the dry run. Their local time shifts by the difference shown; the stored instants stay."
+      },
+      "applied": "Applied: {{applied}} · Skipped because changed since the dry run: {{skipped}}",
+      "errors": {
+        "dryRunFailed": "The dry run failed. Nothing was changed.",
+        "applyFailed": "The re-resolution failed. A new dry run shows what is still open."
+      }
+    }
   }
 }

@@ -4,6 +4,7 @@ import { tripsApi } from "../lib/api";
 import { formatDateInTimezone } from "../lib/dateUtils";
 import { formatDate } from "../lib/displayFormat";
 import { logger } from "../lib/logger";
+import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { sumByCurrency } from "../lib/bookingCost";
 import { formatAmount, formatCurrency } from "../lib/units";
 import { assessStayPlausibility } from "../shared/stayPlausibility";
@@ -141,6 +142,8 @@ export default function TripDetailPage(): JSX.Element {
   useEffect(() => {
     void load();
   }, [id]);
+  // `?edit=1` — the inbox asking for the trip's own days (timeFlagLinks.ts).
+  useEditDeepLink(EDIT_PARAM.edit, trip !== null, () => setEditing(true));
 
   const handleDelete = async (): Promise<void> => {
     if (!trip) return;
@@ -374,6 +377,18 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
   const [editingJournal, setEditingJournal] = useState<TripJournalEntry | null>(null);
   const [viewingJournal, setViewingJournal] = useState<TripJournalEntry | null>(null);
   const [editingStop, setEditingStop] = useState<TripStop | null>(null);
+  // `?editStop=` / `?editJournal=` — the inbox asking for a stop's or an
+  // entry's zone, time or day (timeFlagLinks.ts).
+  useEditDeepLink(EDIT_PARAM.editStop, true, (stopId) => {
+    const stop = trip.stops?.find((s) => s.id === stopId);
+    if (stop) setEditingStop(stop);
+    else addToast("error", t("trips:detail.stopNotFound"));
+  });
+  useEditDeepLink(EDIT_PARAM.editJournal, true, (entryId) => {
+    const entry = trip.journalEntries?.find((j) => j.id === entryId);
+    if (entry) setEditingJournal(entry);
+    else addToast("error", t("trips:detail.journalEntryNotFound"));
+  });
   // Only a fallback: a flight whose airport record lacks an IANA zone.
   const userTz = useSettingsStore((s) => s.display?.timezone) || "UTC";
 

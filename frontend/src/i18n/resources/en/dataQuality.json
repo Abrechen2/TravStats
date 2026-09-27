@@ -187,7 +187,17 @@
     "entityType": {
       "lodging": "Lodging",
       "place": "Place",
-      "country": "Country"
+      "country": "Country",
+      "flight": "Flight",
+      "cruise_stop": "Cruise stop",
+      "trip_stop": "Trip stop",
+      "place_visit": "Place visit",
+      "rail_journey": "Rail journey",
+      "cruise": "Cruise",
+      "trip": "Trip",
+      "trip_journal_entry": "Journal entry",
+      "lodging_stay": "Stay",
+      "profile": "Profile"
     },
     "status": {
       "open": "Open",
@@ -203,7 +213,8 @@
         "label": "This is correct as it is",
         "hint": "There is nothing to change on the record. This question will never be asked again."
       }
-    }
+    },
+    "timeUnchanged": "Nothing was changed on the entry. The time stays as it was stored until you fill it in."
   },
   "kinds": {
     "address_country_mismatch": {
@@ -232,6 +243,18 @@
       "question": "The stored coordinates fall inside a different country than the one on the record. Which is right – the point or the country?",
       "stored": "Stored country",
       "fromCoordinates": "Country at the coordinates"
+    },
+    "time_zone_unresolved": {
+      "title": "Time zone unknown",
+      "question": "No time zone could be found for this time, so the migration did not convert it. Where was this? Fill in the place – then the time of day is right too."
+    },
+    "time_precision_unknown": {
+      "title": "Time of day unknown",
+      "question": "The date is kept, but it could not be established at what time of day this was. If you know it, enter it."
+    },
+    "time_day_ambiguous": {
+      "title": "Day uncertain",
+      "question": "It is not certain which calendar day is meant. The stored day was kept – check it and correct it if needed."
     }
   },
   "passwordResets": {
@@ -249,5 +272,25 @@
     "uploaded": "Uploaded on",
     "deletesOn": "Will be deleted on",
     "open": "Open"
+  },
+  "time": {
+    "field": "Value",
+    "reason": "Reason",
+    "stored": "Stored (without time zone)",
+    "kept": "Kept",
+    "noEditor": "The entry this could be edited through can no longer be found.",
+    "action": {
+      "flight": "Edit flight",
+      "rail_journey": "Edit rail journey",
+      "place_visit": "Edit visit",
+      "place_visit_zone": "Edit place",
+      "cruise": "Edit cruise",
+      "cruise_stop": "Edit cruise",
+      "trip": "Edit trip",
+      "trip_stop": "Edit stop",
+      "trip_journal_entry": "Edit entry",
+      "lodging_stay": "Edit stay",
+      "profile": "Edit profile"
+    }
   }
 }

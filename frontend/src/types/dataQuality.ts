@@ -1,3 +1,5 @@
+import type { TimeFlagEntityType, TimeFlagKind, TimeQuestionDetails } from "./timeMigration";
+
 /**
  * The data-quality inbox, as the frontend reads it.
  *
@@ -12,15 +14,20 @@
  * borrowing it here would answer a question the user is being asked.
  */
 
-/** What a flag is about. `country` is not a row — the ISO code is the subject. */
-export type DataQualityEntityType = "lodging" | "place" | "country";
+/**
+ * What a flag is about. `country` is not a row — the ISO code is the subject.
+ * The time-model migration (ADR 0002, phase 3b) adds the rows a time value
+ * lives on (`TimeFlagEntityType`): each open value is flagged on its own row.
+ */
+export type DataQualityEntityType = "lodging" | "place" | "country" | TimeFlagEntityType;
 
 /** Which check fired. */
 export type DataQualityFlagKind =
   | "address_country_mismatch"
   | "undated_country_evidence"
   | "stay_dates_reversed"
-  | "coordinates_outside_country";
+  | "coordinates_outside_country"
+  | TimeFlagKind;
 
 /**
  * `resolved` and `dismissed` are NOT two spellings of "done" — the UI must keep
@@ -54,7 +61,23 @@ export interface FlaggedRecord {
  * to print. Reading `label` off a subject therefore always yields display text,
  * and a country has no `label` to read by mistake.
  */
-export type DataQualityFlagSubject = FlaggedRecord | { entityType: "country"; countryCode: string };
+export type DataQualityFlagSubject =
+  FlaggedRecord | TimeValueRecord | { entityType: "country"; countryCode: string };
+
+/**
+ * The row a time flag is about. Kept apart from `FlaggedRecord` because it is
+ * reached differently: a stop, a visit or a stay is edited through its parent
+ * record, whose id travels as `parentId` — see `timeFlagLinks.ts`. Mirrors the
+ * backend's `TimeFlagSubject` (`types/timeMigration.ts`).
+ */
+export interface TimeValueRecord {
+  entityType: TimeFlagEntityType;
+  entityId: string;
+  /** What to call it on screen. The user's own text, never a code. */
+  label: string;
+  /** The record it is edited on; null where the row is its own page. */
+  parentId: string | null;
+}
 
 /** What the geocoder said against what the address says. */
 export interface AddressCountryMismatchDetails {
@@ -96,7 +119,8 @@ export type DataQualityFlagDetails =
   | AddressCountryMismatchDetails
   | UndatedCountryEvidenceDetails
   | StayDatesReversedDetails
-  | CoordinatesOutsideCountryDetails;
+  | CoordinatesOutsideCountryDetails
+  | TimeQuestionDetails;
 
 /**
  * Everything a flag carries that does not depend on its `kind`.
@@ -148,6 +172,10 @@ export type DataQualityFlag =
   | (DataQualityFlagBase & {
       kind: "coordinates_outside_country";
       details: CoordinatesOutsideCountryDetails;
+    })
+  | (DataQualityFlagBase & {
+      kind: TimeFlagKind;
+      details: TimeQuestionDetails;
     });
 
 /** What `POST /data-quality-flags/run` answers. */

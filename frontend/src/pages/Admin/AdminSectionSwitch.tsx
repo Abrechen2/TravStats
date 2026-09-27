@@ -20,6 +20,7 @@ import PortsSection from "../../components/Admin/masterData/PortsSection";
 import AirlinesSection from "../../components/Admin/masterData/AirlinesSection";
 import AircraftSection from "../../components/Admin/masterData/AircraftSection";
 import AirportsSection from "../../components/Admin/masterData/AirportsSection";
+import TimeModelSection from "../../components/Admin/timeModel/TimeModelSection";
 import type { ActiveSection } from "./adminSections";
 
 import type { SystemInfoData, AdminUser } from "../../components/Admin/SystemInfo";
@@ -287,6 +288,9 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
           </div>
         </div>
       );
+
+    case "timeModel":
+      return <TimeModelSection users={props.users} />;
 
     case "smtp":
       return (

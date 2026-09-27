@@ -23,7 +23,8 @@ import { placeCountryLabel, placeCountryCode } from "../lib/placeCountry";
 import { logger } from "../lib/logger";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
-import { createVisit, deletePlace, deleteVisit, getPlace } from "../lib/api/places";
+import { createVisit, deletePlace, deleteVisit, getPlace, updateVisit } from "../lib/api/places";
+import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { wallClockInput } from "../lib/api/timeInput";
 import { saveErrorMessage } from "../lib/saveErrorMessage";
 import { tripsApi } from "../lib/api/trips";
@@ -75,6 +76,10 @@ export default function PlaceDetailPage(): JSX.Element {
    * SET it, so a place could never be attached to a trip from the interface.
    * Lodging offers the same choice on a stay. */
   const [visitTripId, setVisitTripId] = useState("");
+  /** The visit the form edits; null while it adds a new one. The web had no
+   *  way to correct a visit's date or time until the time-model migration
+   *  began asking users for the time of day it could not establish. */
+  const [editingVisitId, setEditingVisitId] = useState<string | null>(null);
   const [trips, setTrips] = useState<Trip[]>([]);
 
   const load = useCallback(async (): Promise<void> => {
@@ -126,23 +131,67 @@ export default function PlaceDetailPage(): JSX.Element {
       const visitedAt = wallClockInput("visitedAt", visitDate, visitTime, {
         placeRef: { kind: "place", id: place.id },
       });
-      await createVisit(place.id, {
-        visitedAt,
-        notes: visitNotes.trim() || null,
-        tripId: visitTripId || null,
-      });
-      addToast("success", t("places:detail.visitAdded"));
+      const input = { visitedAt, notes: visitNotes.trim() || null, tripId: visitTripId || null };
+      if (editingVisitId) await updateVisit(editingVisitId, input);
+      else await createVisit(place.id, input);
+      addToast(
+        "success",
+        t(editingVisitId ? "places:detail.visitUpdated" : "places:detail.visitAdded")
+      );
       setAddingVisit(false);
+      setEditingVisitId(null);
       setVisitDate("");
       setVisitTime("");
       setVisitNotes("");
       setVisitTripId("");
       await load();
     } catch (err: unknown) {
-      logger.error({ err }, "PlaceDetailPage: add visit failed");
-      addToast("error", saveErrorMessage(err, t, "places:detail.visitFailed"));
+      logger.error({ err }, "PlaceDetailPage: saving the visit failed");
+      addToast(
+        "error",
+        saveErrorMessage(
+          err,
+          t,
+          editingVisitId ? "places:detail.visitUpdateFailed" : "places:detail.visitFailed"
+        )
+      );
     }
-  }, [place, visitDate, visitTime, visitNotes, visitTripId, addToast, t, load]);
+  }, [place, editingVisitId, visitDate, visitTime, visitNotes, visitTripId, addToast, t, load]);
+
+  /** Opens the visit form on an existing visit, filled as the list shows it. */
+  const openVisitEditor = useCallback((visit: PlaceVisit): void => {
+    const { date, time } = splitDateTimeInput(visit.visitedAt);
+    setVisitDate(date);
+    setVisitTime(time);
+    setVisitNotes(visit.notes ?? "");
+    setVisitTripId(visit.tripId ?? "");
+    setEditingVisitId(visit.id);
+    setAddingVisit(true);
+  }, []);
+
+  // Closing an EDIT drops its values, so "+ Besuch" afterwards starts empty
+  // instead of offering the edited visit as a new one. A half-typed new visit
+  // is kept, as it always was.
+  const closeVisitForm = (): void => {
+    if (editingVisitId) {
+      setVisitDate("");
+      setVisitTime("");
+      setVisitNotes("");
+      setVisitTripId("");
+    }
+    setAddingVisit(false);
+    setEditingVisitId(null);
+  };
+
+  // `?edit=1` opens the place form (a missing zone comes from the place's
+  // coordinates), `?editVisit=<id>` that visit's form — the inbox's two links
+  // for a time the time-model migration could not resolve (timeFlagLinks.ts).
+  useEditDeepLink(EDIT_PARAM.edit, place !== null, () => setEditing(true));
+  useEditDeepLink(EDIT_PARAM.editVisit, place !== null, (visitId) => {
+    const visit = place?.visits?.find((v) => v.id === visitId);
+    if (visit) openVisitEditor(visit);
+    else addToast("error", t("places:detail.visitNotFound"));
+  });
 
   // The trip list for the selector above. Loaded once, not per open: the
   // choice is offered on every visit form and re-fetching on each toggle
@@ -281,6 +330,11 @@ export default function PlaceDetailPage(): JSX.Element {
           )}
           <RowActions>
             <RowActionButton
+              icon="edit"
+              label={t("places:detail.editVisit")}
+              onClick={() => openVisitEditor(v)}
+            />
+            <RowActionButton
               icon="delete"
               label={t("common:buttons.delete")}
               onClick={() => setConfirmVisitDelete(v)}
@@ -348,13 +402,23 @@ export default function PlaceDetailPage(): JSX.Element {
               <h2 className="t-label-mono">
                 {t("places:detail.visits")} · {visitCount}
               </h2>
-              <Button variant="primary" onClick={() => setAddingVisit((v) => !v)}>
+              <Button
+                variant="primary"
+                onClick={() => {
+                  if (addingVisit) return closeVisitForm();
+                  setEditingVisitId(null);
+                  setAddingVisit(true);
+                }}
+              >
                 + {t("places:detail.addVisit")}
               </Button>
             </div>
 
             {addingVisit && (
               <div className="rounded-[var(--ts-radius-card)] p-4" style={PANEL}>
+                {editingVisitId && (
+                  <h3 className="t-label-mono mb-3">{t("places:detail.editVisit")}</h3>
+                )}
                 <div className="grid grid-cols-2 gap-3">
                   <label className="flex flex-col gap-1">
                     <span className="t-caption">{t("places:detail.date")}</span>
@@ -408,9 +472,7 @@ export default function PlaceDetailPage(): JSX.Element {
                     people: a date is optional, and a future one does not count. */}
                 <p className="t-caption mt-2">{t("places:detail.dateHint")}</p>
                 <div className="mt-3 flex justify-end gap-2">
-                  <Button onClick={() => setAddingVisit(false)}>
-                    {t("common:buttons.cancel")}
-                  </Button>
+                  <Button onClick={closeVisitForm}>{t("common:buttons.cancel")}</Button>
                   <Button variant="primary" onClick={() => void submitVisit()}>
                     {t("common:buttons.save")}
                   </Button>

@@ -6,6 +6,7 @@ import type { DataQualityFlag } from "../../types/dataQuality";
 
 import FlagContradiction from "./FlagContradiction";
 import { flaggedRecordPath } from "./flagLinks";
+import { isTimeFlagEntityType, isTimeFlagKind, timeFlagEditorPath } from "./timeFlagLinks";
 
 /**
  * One open question about one record.
@@ -45,6 +46,16 @@ import { flaggedRecordPath } from "./flagLinks";
  * two branches here, not one field read twice, and a code is never printed where
  * a name belongs: an ISO code `Intl` cannot name says so in words.
  */
+
+/**
+ * Where the subject's name links to: the record's page, or — for a time value
+ * the migration left open — the editor that can fill it. A country has no page.
+ */
+function subjectPathOf(flag: DataQualityFlag): string | null {
+  if (flag.entityType === "country") return null;
+  if (isTimeFlagEntityType(flag.entityType)) return timeFlagEditorPath(flag);
+  return flaggedRecordPath({ entityType: flag.entityType, entityId: flag.entityId, label: "" });
+}
 
 /**
  * What to call the subject on screen.
@@ -91,14 +102,7 @@ export default function DataQualityFlagCard({
   // still reaches its record (design §3.4) and only loses its name. The server
   // drops such a flag rather than shipping it, so this is a guard against a
   // page that throws, not an expected state. A country has no page at all.
-  const subjectPath =
-    flag.entityType === "country"
-      ? null
-      : flaggedRecordPath({
-          entityType: flag.entityType,
-          entityId: flag.entityId,
-          label: "",
-        });
+  const subjectPath = subjectPathOf(flag);
 
   const subjectLabel = subjectLabelOf(flag, countryLabel, t("dataQuality:flag.unnamedRecord"));
 
@@ -138,7 +142,9 @@ export default function DataQualityFlagCard({
       <FlagContradiction flag={flag} />
 
       <p className="text-xs mt-3" style={{ color: "var(--text-muted)" }}>
-        {t("dataQuality:flag.neitherIsCorrect")}
+        {isTimeFlagKind(flag.kind)
+          ? t("dataQuality:flag.timeUnchanged")
+          : t("dataQuality:flag.neitherIsCorrect")}
       </p>
 
       {flag.status === "open" && (

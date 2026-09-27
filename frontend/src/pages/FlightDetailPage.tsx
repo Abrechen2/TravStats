@@ -27,6 +27,7 @@ import { convertDistance, formatAmount, getDistanceLabel } from "../lib/units";
 import { useSettingsStore } from "../store/settingsStore";
 import { formatDurationWithEstimate } from "../lib/formatters";
 import { logger } from "../lib/logger";
+import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { useToastStore } from "../store/toastStore";
 import type { Flight, FlightInput, Trip } from "../types";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
@@ -113,6 +114,12 @@ export default function FlightDetailPage(): JSX.Element {
       cancelled = true;
     };
   }, [flight?.tripId]);
+
+  // `?edit=1` — the inbox sending the user here to fill in a time or an
+  // airport the time-model migration could not resolve (timeFlagLinks.ts).
+  useEditDeepLink(EDIT_PARAM.edit, flight !== null, () =>
+    flight?.specialType ? setEditingSpecial(true) : setEditing(true)
+  );
 
   const handleDelete = useCallback(async (): Promise<void> => {
     if (!flight) return;

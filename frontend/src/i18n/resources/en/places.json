@@ -118,7 +118,11 @@
     "visitTrip": "Trip",
     "visitNoTrip": "Not linked to a trip",
     "coordinates": "Coordinates",
-    "backToLogbook": "Logbook · Places"
+    "backToLogbook": "Logbook · Places",
+    "editVisit": "Edit visit",
+    "visitUpdated": "Visit saved.",
+    "visitUpdateFailed": "The visit could not be saved.",
+    "visitNotFound": "This visit no longer exists at this place."
   },
   "lists": {
     "title": "Lists",

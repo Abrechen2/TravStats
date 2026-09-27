@@ -13,7 +13,8 @@
     "training": "Training Config",
     "logging": "Logging",
     "backups": "Instanz-Backups",
-    "smtp": "E-Mail / SMTP"
+    "smtp": "E-Mail / SMTP",
+    "timeModel": "Zeitmodell"
   },
   "tabs2": {
     "general": "Allgemein",
@@ -794,5 +795,159 @@
     "removeFailed": "Entfernen fehlgeschlagen.",
     "replacesShipped": "Deine Bilder ersetzen die mitgelieferten vollständig. Lösche alle, um wieder zu den mitgelieferten zurückzukehren.",
     "hint": "Am besten wirken dunkle Hochformat-Fotos mit ruhiger linker Hälfte — dort steht der Text. Auf hellen Fotos wird die Schrift schwer lesbar."
+  },
+  "timeModel": {
+    "unknownCode": "unbekannt ({{code}})",
+    "tables": {
+      "flights": "Flüge",
+      "rail_journeys": "Bahnfahrten",
+      "place_visits": "Ortsbesuche",
+      "cruise_stops": "Kreuzfahrt-Halte",
+      "cruises": "Kreuzfahrten",
+      "trip_stops": "Reise-Halte",
+      "trips": "Reisen",
+      "trip_journal_entries": "Reisetagebuch",
+      "lodging_stays": "Aufenthalte",
+      "users": "Profile"
+    },
+    "reasons": {
+      "no_position": "Keine Position (fehlt oder 0, 0)",
+      "zone_unresolved": "An dieser Position ist keine Zeitzone bekannt",
+      "port_unresolved": "Hafen nicht zugeordnet",
+      "sea_day_time": "Seetag mit Uhrzeit – auf See gibt es keine Zeitzone",
+      "semantics_unknown": "Unklar, ob die Zeit Orts- oder UTC-Zeit ist",
+      "local_time_nonexistent": "Diese Uhrzeit gab es dort nicht (Zeitumstellung)",
+      "writer_unknown": "Nicht feststellbar, ob Web oder App die Zeit geschrieben hat",
+      "date_only_day_differs": "Nur Datum – der Ortstag weicht vom UTC-Tag ab",
+      "day_anchor_ambiguous": "Nicht eindeutig, welcher Kalendertag gemeint ist",
+      "instant_without_zone": "Ohne Zeitzone des Bahnhofs gespeichert"
+    },
+    "columns": {
+      "departure": "Abfahrt/Abflug",
+      "arrival": "Ankunft",
+      "visited_at": "Besuchszeit",
+      "arrival_time": "Ankunft",
+      "departure_time": "Abfahrt",
+      "date": "Datum",
+      "day": "Tag",
+      "start_date": "Beginn",
+      "end_date": "Ende",
+      "check_in": "Check-in",
+      "check_out": "Check-out",
+      "birthdate": "Geburtstag",
+      "other": "Zeitangabe"
+    },
+    "backfillErrors": {
+      "TIMEZONE_LOOKUP_UNAVAILABLE": "Die Zeitzonen-Suche war nicht verfügbar",
+      "JOB_FAILED": "Der Lauf ist mit einem Fehler abgebrochen"
+    },
+    "errors": {
+      "unreadable": "Die Antwort des Servers hat eine Form, die diese Version der Oberfläche nicht lesen kann. Angezeigt wird deshalb nichts – statt Zahlen, die nicht stimmen.",
+      "outcomeUnknown": "Der Server meldet das Ergebnis nicht mehr (vermutlich ein Neustart). Ob etwas geschrieben wurde, ist unbekannt – ein neuer Probelauf zeigt, was noch offen ist.",
+      "forbidden": "Dafür brauchst du Admin-Rechte.",
+      "notAvailable": "Dieser Server kennt die Umstellung auf das neue Zeitmodell noch nicht.",
+      "DRY_RUN_NOT_FOUND": "Diesen Probelauf kennt der Server nicht mehr (abgelaufen oder nach einem Neustart). Es wurde nichts geschrieben – starte einen neuen.",
+      "RE_RESOLVE_RUNNING": "Es läuft bereits eine Neuzuordnung. Warte, bis sie fertig ist."
+    },
+    "report": {
+      "title": "Zeitumstellung – Bericht",
+      "description": "Was die Umstellung auf das neue Zeitmodell auf dieser Instanz umgerechnet hat – und was nicht.",
+      "reload": "Neu laden",
+      "loading": "Bericht wird geladen …",
+      "errors": {
+        "loadFailed": "Der Bericht konnte nicht geladen werden.",
+        "notAVerdict": "Das heißt nicht, dass nichts umgestellt wurde – nur, dass der Bericht gerade nicht abrufbar ist."
+      },
+      "status": {
+        "pending": "Die Umstellung ist auf dieser Instanz noch nicht gelaufen. Das geschieht einmal beim nächsten Serverstart.",
+        "running": "Die Umstellung läuft gerade. Lade den Bericht neu, wenn sie fertig ist.",
+        "failed": "Die Umstellung ist abgebrochen: {{error}}. Was bis dahin umgerechnet wurde, steht unten; die ursprünglichen Werte sind unverändert.",
+        "noErrorCode": "ohne Angabe eines Grundes",
+        "completed": "Die Umstellung lief am {{when}} (Zeitzonendaten {{tzdata}})."
+      },
+      "outcomes": {
+        "converted": "Umgerechnet",
+        "alreadyFilled": "Schon im neuen Format",
+        "open": "Offen"
+      },
+      "statement": {
+        "converted_one": "{{count}} Eintrag wurde umgerechnet; die neuen Werte stehen in eigenen Spalten.",
+        "converted_other": "{{count}} Einträge wurden umgerechnet; die neuen Werte stehen in eigenen Spalten.",
+        "alreadyFilled_one": "{{count}} Eintrag hatte die neuen Werte schon (neu angelegt oder aus der Demo) und blieb unverändert.",
+        "alreadyFilled_other": "{{count}} Einträge hatten die neuen Werte schon (neu angelegt oder aus der Demo) und blieben unverändert.",
+        "open_one": "{{count}} Eintrag wurde nicht vollständig umgestellt – nichts wurde geraten. Jede offene Angabe steht als Frage im Posteingang ihres Besitzers.",
+        "open_other": "{{count}} Einträge wurden nicht vollständig umgestellt – nichts wurde geraten. Jede offene Angabe steht als Frage im Posteingang ihres Besitzers.",
+        "flags": "Fragen im Posteingang: {{open}} offen · {{resolved}} als korrigiert gemeldet · {{dismissed}} als richtig bestätigt",
+        "legacyUntouched": "Die ursprünglichen Spalten wurden nicht verändert. Jede Umrechnung ist protokolliert und lässt sich zurücknehmen."
+      },
+      "unchanged": {
+        "title": "Bewusst nicht angefasst:",
+        "item": "{{domain}} ({{why}})",
+        "domains": {
+          "tours": "Touren",
+          "track_windows": "Track-Zeitfenster",
+          "loyalty": "Treueprogramme",
+          "country_days": "Ländertage",
+          "photos": "Fotos"
+        },
+        "why": {
+          "already_dates": "schon reine Tagesdaten",
+          "already_instants": "schon echte Zeitpunkte",
+          "no_time_columns": "ohne Zeitangaben",
+          "utc_by_decision": "bewusst UTC-Tage"
+        }
+      },
+      "tables": {
+        "caption": "Nach Tabelle",
+        "table": "Tabelle",
+        "reasonsCaption": "Offen nach Grund",
+        "rulesCaption": "Regeln im Einzelnen"
+      },
+      "ruleStatus": {
+        "open": "offen",
+        "resolved": "umgerechnet"
+      },
+      "noReason": "ohne Grund",
+      "openRows": {
+        "title_one": "{{count}} offene Angabe",
+        "title_other": "{{count}} offene Angaben",
+        "answer": "Im Posteingang beantworten",
+        "otherInbox": "im Posteingang von {{user}}",
+        "unknownOwner": "Konto nicht zuzuordnen",
+        "truncated": "Nicht alle offenen Angaben sind aufgelistet – die Zahlen oben zählen alle."
+      }
+    },
+    "reResolve": {
+      "title": "Zeitzonen neu zuordnen",
+      "description": "Jede Zeit trägt die Zone, mit der sie gespeichert wurde. Wurde ein Ort korrigiert oder hat ein Land seine Zeitzone geändert, zeigt ein Probelauf, welche Einträge eine andere Zone bekämen und um wie viel sich ihre Ortszeit verschiebt. Geschrieben wird erst, wenn du anwendest.",
+      "dryRun": "Probelauf starten",
+      "dryRunning": "Probelauf läuft …",
+      "progress": "{{done}} von {{total}} geprüft",
+      "progressUnknown": "Läuft – bei vielen Einträgen kann das ein bis zwei Minuten dauern.",
+      "summary": "Geprüft: {{checked}} · Zone würde sich ändern: {{changes}} · Zeitzonendaten {{tzdata}}",
+      "unresolvable_one": "{{count}} Eintrag lässt sich jetzt keiner Zone zuordnen – er bleibt, wie er gespeichert ist.",
+      "unresolvable_other": "{{count}} Einträge lassen sich jetzt keiner Zone zuordnen – sie bleiben, wie sie gespeichert sind.",
+      "noChanges": "Keine Zeitzone würde sich ändern. Es gibt nichts anzuwenden.",
+      "table": {
+        "entry": "Eintrag",
+        "from": "Bisher",
+        "to": "Neu",
+        "delta": "Ortszeit"
+      },
+      "truncated": "{{shown}} von {{total}} Änderungen angezeigt. Angewendet werden alle {{total}}.",
+      "noInstant": "ohne Uhrzeit",
+      "apply": "Anwenden",
+      "applying": "Wird angewendet …",
+      "confirm": {
+        "title": "Zeitzonen neu zuordnen?",
+        "message_one": "{{count}} Eintrag bekommt die neue Zone aus dem Probelauf. Seine Ortszeit verschiebt sich um die gezeigte Differenz; der gespeicherte Zeitpunkt bleibt.",
+        "message_other": "{{count}} Einträge bekommen die neue Zone aus dem Probelauf. Die Ortszeit verschiebt sich jeweils um die gezeigte Differenz; die gespeicherten Zeitpunkte bleiben."
+      },
+      "applied": "Angewendet: {{applied}} · Übersprungen, weil seit dem Probelauf geändert: {{skipped}}",
+      "errors": {
+        "dryRunFailed": "Der Probelauf ist fehlgeschlagen. Es wurde nichts geändert.",
+        "applyFailed": "Die Neuzuordnung ist fehlgeschlagen. Ein neuer Probelauf zeigt, was noch offen ist."
+      }
+    }
   }
 }

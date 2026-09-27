@@ -118,7 +118,11 @@
     "visitTrip": "Reise",
     "visitNoTrip": "Keiner Reise zugeordnet",
     "coordinates": "Koordinaten",
-    "backToLogbook": "Logbuch · Orte"
+    "backToLogbook": "Logbuch · Orte",
+    "editVisit": "Besuch bearbeiten",
+    "visitUpdated": "Besuch gespeichert.",
+    "visitUpdateFailed": "Der Besuch konnte nicht gespeichert werden.",
+    "visitNotFound": "Diesen Besuch gibt es an diesem Ort nicht mehr."
   },
   "lists": {
     "title": "Listen",

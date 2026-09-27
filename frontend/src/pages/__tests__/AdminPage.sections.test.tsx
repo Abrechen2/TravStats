@@ -126,6 +126,7 @@ describe("AdminPage — one page, anchor jumps", () => {
       "parsers",
       "logging",
       "backups",
+      "timeModel",
       "smtp",
     ]) {
       expect(document.getElementById(`admin-${id}`)).not.toBeNull();

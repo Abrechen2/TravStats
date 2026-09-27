@@ -384,6 +384,7 @@ export default function AdminPage(): JSX.Element {
     { id: "parsers", label: t("admin:tabs.parsers") },
     { id: "logging", label: t("admin:tabs.logging") },
     { id: "backups", label: t("admin:tabs.backups") },
+    { id: "timeModel", label: t("admin:tabs.timeModel") },
     { id: "smtp", label: t("admin:tabs.smtp") },
     {
       id: "shipsMasterData",
