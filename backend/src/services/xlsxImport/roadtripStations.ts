@@ -53,6 +53,7 @@ function storedStations(roadtripId: string) {
       lodgingStayId: true,
       overnight: true,
       viaPoint: true,
+      placeId: true,
     },
   });
 }
@@ -62,7 +63,9 @@ function storedNight(s: Stored): Station["night"] {
   // would turn it into a pass-through station on every import.
   if (s.viaPoint) return { kind: "via" };
   if (s.lodgingStayId) return { kind: "stay", lodgingStayId: s.lodgingStayId };
-  return { kind: s.overnight ? "free" : "pass" };
+  if (s.overnight) return { kind: "free" };
+  // The sheet has no place column: a pass-through keeps the place it names.
+  return s.placeId ? { kind: "pass", placeId: s.placeId } : { kind: "pass" };
 }
 
 function toStation(s: Stored): Station {
@@ -120,14 +123,18 @@ function parseStationRow(
   if (!title && !isVia) return { error: errorRow(rowNo, label, "station_needs_title") };
   const stayId = cell.ref(raw.lodgingStayId);
   if (kind === "stay" && !stayId) return { error: errorRow(rowNo, label, "station_needs_stay") };
+  // A cell that repeats the stored kind keeps what the kind carries and the
+  // sheet cannot (a pass-through's place): re-deriving it from the word alone
+  // would drop the link on every round trip.
+  const storedKind = known ? storedNight(known) : null;
   const night: Station["night"] =
     kind === "stay"
       ? { kind: "stay", lodgingStayId: stayId as string }
       : kind
-        ? { kind }
-        : known
-          ? storedNight(known)
-          : { kind: "pass" };
+        ? storedKind?.kind === kind
+          ? storedKind
+          : { kind }
+        : (storedKind ?? { kind: "pass" });
 
   const startDate = cell.isoDate(raw.startDate);
   const endDate = cell.isoDate(raw.endDate);

@@ -52,6 +52,8 @@ export const STATION_SELECT = {
   viaPoint: true,
   lodgingStayId: true,
   lodgingStay: { select: STATION_STAY_SELECT },
+  placeId: true,
+  place: { select: { id: true, name: true, category: true } },
 } as const;
 
 /**
@@ -76,6 +78,8 @@ export interface StationRow {
   routeOrderIdx: number | null;
   overnight: boolean;
   viaPoint: boolean;
+  placeId: string | null;
+  place: { id: string; name: string; category: string } | null;
   lodgingStayId: string | null;
   lodgingStay: {
     id: string;
@@ -155,6 +159,9 @@ export function toStationDto(s: StationRow): Record<string, unknown> {
     order: s.routeOrderIdx,
     state: stationState(s),
     lodgingStayId: s.lodgingStayId,
+    // The place a pass-through passed (tester 2026-09-26); null elsewhere.
+    placeId: s.placeId,
+    place: s.place,
     stay: stay
       ? {
           id: stay.id,

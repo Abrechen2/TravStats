@@ -72,6 +72,9 @@ export interface RoadtripStation {
   order: number | null;
   state: StationState;
   lodgingStayId: string | null;
+  /** A pass-through only: the user's own place it passed (tester 2026-09-26). */
+  placeId?: string | null;
+  place?: { id: string; name: string; category: string } | null;
   stay: StationStay | null;
 }
 
@@ -106,7 +109,8 @@ export interface RoadtripDetail {
 export type StationNightInput =
   | { kind: "stay"; lodgingStayId: string }
   | { kind: "free" }
-  | { kind: "pass" }
+  /** A pass-through may name one of the user's places. */
+  | { kind: "pass"; placeId?: string | null }
   /** A route correction: the route bends through it; no name, no date, no count. */
   | { kind: "via" };
 

@@ -19,6 +19,8 @@ export interface EditorStation extends StationDraft {
    * is not in the library the editor loaded, so its point travels here.
    */
   stayPlace?: { lat: number | null; lon: number | null };
+  /** The name of the place a pass-through names, for the card. */
+  placeLabel?: string;
 }
 
 /**
@@ -52,7 +54,9 @@ function nightOf(s: RoadtripStation): EditorStation["night"] {
     return { kind: "stay", lodgingStayId: s.lodgingStayId };
   if (s.state === "free") return { kind: "free" };
   if (s.state === "via") return { kind: "via" };
-  return { kind: "pass" };
+  // The place travels with the night: dropping it here would unlink it on
+  // the next autosave of any other change.
+  return s.placeId ? { kind: "pass", placeId: s.placeId } : { kind: "pass" };
 }
 
 export function toEditorStation(s: RoadtripStation): EditorStation {
@@ -69,6 +73,7 @@ export function toEditorStation(s: RoadtripStation): EditorStation {
     stayLabel: s.stay?.lodgingName,
     stayLodgingId: s.stay?.lodgingId,
     stayCancelled: s.stay?.status === "cancelled",
+    placeLabel: s.place?.name,
   };
 }
 

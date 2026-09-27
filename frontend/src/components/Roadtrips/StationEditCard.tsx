@@ -10,6 +10,9 @@ import { nextMorning } from "../../lib/roadtrip/roadtripView";
 import type { StationState } from "../../shared/tour/roadtrip";
 import StationMarker from "./StationMarker";
 import StayPicker, { type PickableStay } from "./StayPicker";
+import PassPlacePicker from "./PassPlacePicker";
+import { usePlacesVisible } from "../../hooks/usePlacesVisible";
+import type { Place } from "../../types/place";
 import { isOtherPlace } from "./stayPickerModel";
 import type { EditorStation } from "./useStationAutosave";
 import type { Lodging } from "../../types/lodging";
@@ -66,6 +69,9 @@ export default function StationEditCard({
   const display = useDisplayFormat();
   const kind = station.night.kind;
   const [picking, setPicking] = useState(kind === "stay" && !station.night.lodgingStayId);
+  const placesVisible = usePlacesVisible();
+  const linkedPlaceId = station.night.kind === "pass" ? (station.night.placeId ?? null) : null;
+  const [pickingPlace, setPickingPlace] = useState(false);
   const arrival = dayInput(station.startDate);
   const departure = dayInput(station.endDate);
   const idBase = `station-${station.key}`;
@@ -88,6 +94,7 @@ export default function StationEditCard({
       night: { kind: next },
       // A route correction carries no day (the server refuses one).
       ...(next === "via" ? { startDate: null, endDate: null } : {}),
+      placeLabel: undefined,
       stayLabel: undefined,
       stayCancelled: false,
       stayLodgingId: undefined,
@@ -117,6 +124,21 @@ export default function StationEditCard({
       ...(unplaced && lodgingPlaced ? { lat: stay.lat, lon: stay.lon } : {}),
     });
     setPicking(false);
+  };
+
+  /**
+   * Linking a place names a pass-through that has no name yet and places one
+   * that has no point yet — the same courtesy a picked stay gets.
+   */
+  const pickPlace = (place: Place): void => {
+    const unplaced = station.lat === null || station.lon === null;
+    onChange({
+      night: { kind: "pass", placeId: place.id },
+      placeLabel: place.name,
+      title: station.title.trim() === "" ? place.name : station.title,
+      ...(unplaced ? { lat: place.lat, lon: place.lon } : {}),
+    });
+    setPickingPlace(false);
   };
 
   const stayPlace = kind === "stay" ? linkedPlace(station, lodgings) : null;
@@ -310,6 +332,36 @@ export default function StationEditCard({
               lodgings={lodgings}
               onPick={pickStay}
             />
+          )}
+        </div>
+      )}
+
+      {kind === "pass" && placesVisible && (
+        <div
+          className="flex flex-col"
+          style={{ gap: 10, paddingTop: 14, borderTop: "1px solid var(--ts-border)" }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 700 }}>{t("roadtrips:place.heading")}</span>
+          {linkedPlaceId && !pickingPlace ? (
+            <div className="flex flex-wrap items-center" style={{ gap: 10 }}>
+              <span style={{ fontWeight: 700 }}>
+                {station.placeLabel ?? t("roadtrips:place.linked")}
+              </span>
+              <Button variant="secondary" onClick={() => setPickingPlace(true)}>
+                {t("roadtrips:place.change")}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => onChange({ night: { kind: "pass" }, placeLabel: undefined })}
+              >
+                {t("roadtrips:place.remove")}
+              </Button>
+            </div>
+          ) : (
+            <>
+              <span className="t-caption">{t("roadtrips:place.hint")}</span>
+              <PassPlacePicker near={{ lat: station.lat, lon: station.lon }} onPick={pickPlace} />
+            </>
           )}
         </div>
       )}

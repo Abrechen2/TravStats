@@ -213,6 +213,11 @@ export default function StationTimeline({
                       {s.stay.lodgingName}
                     </Link>
                   )}
+                  {s.place && (
+                    <Link to={`/places/${s.place.id}`} style={{ color: "var(--domain-poi)" }}>
+                      {s.place.name}
+                    </Link>
+                  )}
                   {night && (
                     <span style={{ color: night.warn ? "var(--ts-warn)" : "var(--ts-muted)" }}>
                       {night.text}

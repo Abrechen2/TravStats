@@ -401,5 +401,17 @@
   },
   "map": {
     "empty": "This roadtrip has no stations with coordinates yet — add the first station."
+  },
+  "place": {
+    "heading": "Which place?",
+    "hint": "Optional: one of your places you passed.",
+    "search": "Search places",
+    "loading": "Loading places …",
+    "loadError": "Your places could not be loaded — linking one is not possible right now.",
+    "none": "You have not added any places yet.",
+    "noMatch": "No place matches the search.",
+    "change": "Choose another place",
+    "remove": "Unlink",
+    "linked": "Linked place"
   }
 }

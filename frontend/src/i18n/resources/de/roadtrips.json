@@ -401,5 +401,17 @@
   },
   "map": {
     "empty": "Dieser Roadtrip hat noch keine Stationen mit Koordinaten — füge die erste Station hinzu."
+  },
+  "place": {
+    "heading": "Welcher Ort?",
+    "hint": "Optional: einer deiner Orte, an dem du vorbeigekommen bist.",
+    "search": "Orte durchsuchen",
+    "loading": "Orte werden geladen …",
+    "loadError": "Deine Orte konnten nicht geladen werden — die Verknüpfung ist gerade nicht möglich.",
+    "none": "Du hast noch keine Orte angelegt.",
+    "noMatch": "Kein Ort passt zur Suche.",
+    "change": "Anderen Ort wählen",
+    "remove": "Verknüpfung lösen",
+    "linked": "Verknüpfter Ort"
   }
 }

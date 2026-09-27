@@ -103,6 +103,12 @@ const station = registry.register(
             "the statistics never return a via point; only this roadtrip's own detail does."
         ),
       lodgingStayId: z.string().uuid().nullable(),
+      placeId: z
+        .string()
+        .uuid()
+        .nullable()
+        .describe("A pass-through only: the caller's own place (POI) it passed"),
+      place: z.object({ id: z.string().uuid(), name: z.string(), category: z.string() }).nullable(),
       stay: z
         .object({
           id: z.string().uuid(),
@@ -210,7 +216,8 @@ registry.registerPath({
   description:
     "Adds, moves, removes and re-links in one write; legs are recomputed in the same " +
     "transaction and keyed by endpoint station. Each station's night is exactly one of " +
-    "`stay` (with the caller's own `lodgingStayId`), `free`, `pass` or `via` (a route " +
+    "`stay` (with the caller's own `lodgingStayId`), `free`, `pass` (optionally with the " +
+    "caller's own `placeId`; 404 for another account's place) or `via` (a route " +
     "correction with no date and possibly no name; 400 `VIA_POINT_ON_TIMELINE` for a " +
     "trip's timeline stop). A timeline stop " +
     "dropped from the list goes back to its trip rather than being deleted.",

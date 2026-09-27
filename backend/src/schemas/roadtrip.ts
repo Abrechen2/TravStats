@@ -37,7 +37,9 @@ const stationNight = z.discriminatedUnion("kind", [
   // `.strict()`: a free or pass night that names a stay is a contradiction,
   // refused rather than silently stripped into something the caller did not say.
   z.object({ kind: z.literal("free") }).strict(),
-  z.object({ kind: z.literal("pass") }).strict(),
+  // A pass-through may name the user's own place it passed (tester
+  // 2026-09-26), as a stay night names its stay.
+  z.object({ kind: z.literal("pass"), placeId: z.string().uuid().nullish() }).strict(),
   // A route correction (tester 2026-09-26): no night, no stay, no name
   // needed — the route bends through it and nothing counts it.
   z.object({ kind: z.literal("via") }).strict(),

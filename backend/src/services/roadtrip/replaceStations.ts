@@ -17,17 +17,47 @@ function nightColumns(station: Station): {
   lodgingStayId: string | null;
   overnight: boolean;
   viaPoint: boolean;
+  placeId: string | null;
 } {
   switch (station.night.kind) {
     case "stay":
-      return { lodgingStayId: station.night.lodgingStayId, overnight: true, viaPoint: false };
+      return {
+        lodgingStayId: station.night.lodgingStayId,
+        overnight: true,
+        viaPoint: false,
+        placeId: null,
+      };
     case "free":
-      return { lodgingStayId: null, overnight: true, viaPoint: false };
+      return { lodgingStayId: null, overnight: true, viaPoint: false, placeId: null };
     case "pass":
-      return { lodgingStayId: null, overnight: false, viaPoint: false };
+      return {
+        lodgingStayId: null,
+        overnight: false,
+        viaPoint: false,
+        placeId: station.night.placeId ?? null,
+      };
     case "via":
-      return { lodgingStayId: null, overnight: false, viaPoint: true };
+      return { lodgingStayId: null, overnight: false, viaPoint: true, placeId: null };
   }
+}
+
+/**
+ * Every linked place must be the caller's — the same rule, and the same 404,
+ * as the stays: a foreign key proves the place exists, not whose it is, and
+ * the station would read its name back.
+ */
+export async function assertPlacesOwned(
+  userId: string,
+  stations: readonly Station[]
+): Promise<void> {
+  const ids = [
+    ...new Set(
+      stations.flatMap((s) => (s.night.kind === "pass" && s.night.placeId ? [s.night.placeId] : []))
+    ),
+  ];
+  if (ids.length === 0) return;
+  const owned = await prisma.place.count({ where: { id: { in: ids }, userId } });
+  if (owned !== ids.length) throw new AppError("Place not found", 404);
 }
 
 /**
@@ -76,6 +106,7 @@ export async function replaceStations(
     throw new AppError("A station may appear once — a return visit is its own station", 400);
   }
   await assertStaysOwned(userId, stations);
+  await assertPlacesOwned(userId, stations);
 
   const mode = (
     await prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, select: { mode: true } })
@@ -147,7 +178,13 @@ export async function replaceStations(
       // roadtrip-owned one is deleted with its legs.
       await tx.tripStop.updateMany({
         where: { routeId, routeOrderIdx: null, tripId: { not: null } },
-        data: { routeId: null, lodgingStayId: null, overnight: false, viaPoint: false },
+        data: {
+          routeId: null,
+          lodgingStayId: null,
+          overnight: false,
+          viaPoint: false,
+          placeId: null,
+        },
       });
       await tx.tripStop.deleteMany({ where: { routeId, routeOrderIdx: null } });
 
