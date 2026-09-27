@@ -1,8 +1,12 @@
 import { z } from "./zod";
 import {
+  TIME_FLAG_ENTITY_TYPES,
   TIME_FLAG_KINDS,
+  timeFlagEntityTypeSchema,
   timeMigrationReasonSchema,
   timeMigrationTableSchema,
+  timeParentTypeSchema,
+  type TimeFlagEntityType,
 } from "./timeMigration";
 
 /**
@@ -33,26 +37,7 @@ import {
  * the finding. The records that proved it travel in `details.records`, so §3.4's
  * "one click away and editable" still holds.
  */
-/**
- * The rows a time-model question (ADR 0002 phase 3b) can be about. One flag
- * per affected ROW: a flight, a single visit, a single port call — not the
- * place or cruise it belongs to, because each row is corrected on its own.
- * `profile` is the account itself (its birthday).
- */
-export const TIME_FLAG_ENTITY_TYPES = [
-  "flight",
-  "rail_journey",
-  "place_visit",
-  "cruise",
-  "cruise_stop",
-  "trip",
-  "trip_stop",
-  "trip_journal_entry",
-  "lodging_stay",
-  "profile",
-] as const;
-export const timeFlagEntityTypeSchema = z.enum(TIME_FLAG_ENTITY_TYPES);
-export type TimeFlagEntityType = (typeof TIME_FLAG_ENTITY_TYPES)[number];
+export { TIME_FLAG_ENTITY_TYPES, timeFlagEntityTypeSchema, type TimeFlagEntityType };
 
 export const DATA_QUALITY_ENTITY_TYPES = [
   "lodging",
@@ -168,6 +153,10 @@ export const dataQualityFlagSubjectSchema = z.discriminatedUnion("entityType", [
     entityId: z.string(),
     label: z.string(),
     parentId: z.string().nullable(),
+    /** What `parentId` names (`place`, `cruise`, `trip`, `tour`, `lodging`). */
+    parentType: timeParentTypeSchema.nullable(),
+    /** The trip the row belongs to; for a tour's stop, the tour's trip. */
+    tripId: z.string().nullable(),
   }),
 ]);
 export type DataQualityFlagSubject = z.infer<typeof dataQualityFlagSubjectSchema>;

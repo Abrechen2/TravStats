@@ -73,6 +73,9 @@ export const TIME_FLAG_ENTITY_TYPES = [
 ] as const;
 export type TimeFlagEntityType = (typeof TIME_FLAG_ENTITY_TYPES)[number];
 
+/** The record a row is edited on. */
+export type TimeParentType = "place" | "cruise" | "trip" | "tour" | "lodging";
+
 export interface TimeMigrationTableReport {
   table: TimeMigrationTable;
   converted: number;
@@ -93,6 +96,13 @@ export interface TimeMigrationOpenRow {
   legacyValue: string | null;
   newValue: string | null;
   zone: string | null;
+  entityType: TimeFlagEntityType;
+  parentType: TimeParentType | null;
+  parentId: string | null;
+  /** The trip the row belongs to — for a tour's stop, the tour's trip. */
+  tripId: string | null;
+  /** The inbox question this row raised; null when none. */
+  flagId: string | null;
 }
 
 export interface TimeMigrationReport {
@@ -169,4 +179,6 @@ export interface TimeFlagSubject {
   entityId: string;
   label: string;
   parentId: string | null;
+  parentType: TimeParentType | null;
+  tripId: string | null;
 }

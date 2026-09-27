@@ -62,6 +62,55 @@ export const TIME_MIGRATION_REASONS = [
 export const timeMigrationReasonSchema = z.enum(TIME_MIGRATION_REASONS);
 export type TimeMigrationReason = (typeof TIME_MIGRATION_REASONS)[number];
 
+/**
+ * The rows a time question can be about. One per table: a flight, a single
+ * visit, a single port call — not the place or cruise it belongs to, because
+ * each row is corrected on its own. `profile` is the account itself (its
+ * birthday).
+ */
+export const TIME_FLAG_ENTITY_TYPES = [
+  "flight",
+  "rail_journey",
+  "place_visit",
+  "cruise",
+  "cruise_stop",
+  "trip",
+  "trip_stop",
+  "trip_journal_entry",
+  "lodging_stay",
+  "profile",
+] as const;
+export const timeFlagEntityTypeSchema = z.enum(TIME_FLAG_ENTITY_TYPES);
+export type TimeFlagEntityType = (typeof TIME_FLAG_ENTITY_TYPES)[number];
+
+/** The ledger table a time-question entity type lives in. */
+export const TABLE_OF_ENTITY: Record<TimeFlagEntityType, TimeMigrationTable> = {
+  flight: "flights",
+  rail_journey: "rail_journeys",
+  place_visit: "place_visits",
+  cruise: "cruises",
+  cruise_stop: "cruise_stops",
+  trip: "trips",
+  trip_stop: "trip_stops",
+  trip_journal_entry: "trip_journal_entries",
+  lodging_stay: "lodging_stays",
+  profile: "users",
+};
+
+/** The time-question entity type of a ledger table. */
+export const ENTITY_OF_TABLE = Object.fromEntries(
+  Object.entries(TABLE_OF_ENTITY).map(([entity, table]) => [table, entity])
+) as Record<TimeMigrationTable, TimeFlagEntityType>;
+
+/**
+ * The record a row is edited on: the place of a visit, the cruise of a port
+ * call, the tour or trip of a stop, the trip of a journal entry, the lodging
+ * of a stay. Null where the row is its own page.
+ */
+export const TIME_PARENT_TYPES = ["place", "cruise", "trip", "tour", "lodging"] as const;
+export const timeParentTypeSchema = z.enum(TIME_PARENT_TYPES);
+export type TimeParentType = (typeof TIME_PARENT_TYPES)[number];
+
 export const TIME_MIGRATION_STATUSES = ["open", "resolved"] as const;
 export const timeMigrationStatusSchema = z.enum(TIME_MIGRATION_STATUSES);
 export type TimeMigrationStatus = (typeof TIME_MIGRATION_STATUSES)[number];
@@ -123,6 +172,14 @@ export const timeMigrationOpenRowSchema = z.object({
   /** What the new column now holds; null when it was left empty. */
   newValue: z.string().nullable(),
   zone: z.string().nullable(),
+  /** The row as an inbox subject, and where it is edited (added after 5f09b4c8b). */
+  entityType: timeFlagEntityTypeSchema,
+  parentType: timeParentTypeSchema.nullable(),
+  parentId: z.string().nullable(),
+  /** The trip the row belongs to — for a tour's stop, the tour's trip; null when none. */
+  tripId: z.string().nullable(),
+  /** The inbox question this open row raised, whatever its status; null when none (yet). */
+  flagId: z.string().uuid().nullable(),
 });
 export type TimeMigrationOpenRow = z.infer<typeof timeMigrationOpenRowSchema>;
 

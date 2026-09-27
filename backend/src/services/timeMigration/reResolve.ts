@@ -11,6 +11,7 @@ import type {
 import { RE_RESOLVE_TABLES } from "../../schemas/timeMigration";
 import { toLocal } from "../../shared/time/instant";
 import logger from "../../utils/logger";
+import type { ReportProgress } from "../jobs/jobRegistry";
 import { placeZone } from "./core";
 import { catalogueZones, flightEndPlace } from "./flights";
 import { zoneOfStop } from "./tripStops";
@@ -264,15 +265,25 @@ function deltaAt(instant: Date | null, from: string, to: string): number | null 
   return offsetMinutes(toLocal(instant, to).offset) - offsetMinutes(toLocal(instant, from).offset);
 }
 
-export async function reResolveDryRun(now: Date = new Date()): Promise<ReResolveDryRun> {
+const noProgress: ReportProgress = () => undefined;
+
+export async function reResolveDryRun(
+  now: Date = new Date(),
+  reportProgress: ReportProgress = noProgress
+): Promise<ReResolveDryRun> {
   const tables: ReResolveDryRun["tables"] = [];
   const all: ReResolveChange[] = [];
   const fields = new Map<string, string>();
-  for (const table of RE_RESOLVE_TABLES) {
-    const stored = await LOADERS[table]();
+  const byTable: Array<[ReResolveTable, StoredZone[]]> = [];
+  for (const table of RE_RESOLVE_TABLES) byTable.push([table, await LOADERS[table]()]);
+  const total = byTable.reduce((sum, [, stored]) => sum + stored.length, 0);
+  let done = 0;
+  reportProgress(done, total);
+  for (const [table, stored] of byTable) {
     let changes = 0;
     let unresolvable = 0;
     for (const s of stored) {
+      reportProgress(++done, total);
       // A lookup that cannot RUN throws here and fails the job: never "no change".
       const resolved = placeZone(s.place).zone;
       if (!resolved) {
@@ -342,12 +353,17 @@ const UPDATERS: Record<ReResolveTable, ZoneUpdater> = {
     prisma.lodgingStay.updateMany({ where: { id, [field]: from }, data: { [field]: to } }),
 };
 
-export async function applyReResolve(dryRunId: string): Promise<ReResolveApply> {
+export async function applyReResolve(
+  dryRunId: string,
+  reportProgress: ReportProgress = noProgress
+): Promise<ReResolveApply> {
   requireDryRun(dryRunId);
   const run = dryRuns.get(dryRunId) as StoredDryRun;
   let applied = 0;
   let skippedChanged = 0;
-  for (const change of run.all) {
+  reportProgress(0, run.all.length);
+  for (const [index, change] of run.all.entries()) {
+    reportProgress(index + 1, run.all.length);
     const field = run.fields.get(`${change.table} ${change.column}`) as string;
     const { count } = await UPDATERS[change.table](
       change.rowId,

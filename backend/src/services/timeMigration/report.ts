@@ -1,6 +1,7 @@
 import { prisma } from "../../db";
 import { TIME_FLAG_KINDS } from "../../schemas/timeMigration";
 import {
+  ENTITY_OF_TABLE,
   TIME_MIGRATION_REASONS,
   TIME_MIGRATION_TABLES,
   type TimeMigrationReason,
@@ -8,6 +9,8 @@ import {
   type TimeMigrationStatus,
   type TimeMigrationTable,
 } from "../../schemas/timeMigration";
+import { kindOf } from "./openQuestions";
+import { loadRowLinks, type RowLink } from "./rowLinks";
 import { backfillRunState } from "./state";
 import { FILLED_SQL } from "./tables";
 
@@ -112,28 +115,71 @@ async function flagCounts(): Promise<TimeMigrationReport["flags"]> {
   };
 }
 
+/** The inbox question per open row: `"<entityType> <rowId> <kind>"` → flag id. */
+async function flagIds(
+  rows: ReadonlyArray<{ entityType: string; rowId: string }>
+): Promise<Map<string, string>> {
+  if (rows.length === 0) return new Map();
+  const flags = await prisma.dataQualityFlag.findMany({
+    where: {
+      kind: { in: [...TIME_FLAG_KINDS] },
+      entityId: { in: [...new Set(rows.map((r) => r.rowId))] },
+    },
+    select: { id: true, entityType: true, entityId: true, kind: true },
+  });
+  return new Map(flags.map((f) => [`${f.entityType} ${f.entityId} ${f.kind}`, f.id]));
+}
+
+/** Where each open row is edited — admin-wide, so not scoped to an account. */
+async function linksOf(
+  rows: ReadonlyArray<{ table: TimeMigrationTable; rowId: string }>
+): Promise<Map<string, RowLink>> {
+  const links = new Map<string, RowLink>();
+  for (const table of TIME_MIGRATION_TABLES) {
+    const ids = [...new Set(rows.filter((r) => r.table === table).map((r) => r.rowId))];
+    for (const [id, link] of await loadRowLinks(ENTITY_OF_TABLE[table], ids, null)) {
+      links.set(`${table} ${id}`, link);
+    }
+  }
+  return links;
+}
+
 async function openRows(): Promise<Pick<TimeMigrationReport, "openRows" | "openRowsTruncated">> {
-  const rows = await prisma.timeMigrationLedger.findMany({
+  const ledger = await prisma.timeMigrationLedger.findMany({
     where: { status: "open" },
     orderBy: [{ tableName: "asc" }, { createdAt: "asc" }, { id: "asc" }],
     take: OPEN_ROWS_CAP + 1,
   });
+  const rows = ledger
+    .slice(0, OPEN_ROWS_CAP)
+    .filter((r) => isTable(r.tableName))
+    .map((r) => {
+      const table = r.tableName as TimeMigrationTable;
+      return { ...r, table, entityType: ENTITY_OF_TABLE[table] };
+    });
+  const [links, flags] = await Promise.all([linksOf(rows), flagIds(rows)]);
   return {
-    openRows: rows
-      .slice(0, OPEN_ROWS_CAP)
-      .filter((r) => isTable(r.tableName))
-      .map((r) => ({
-        table: r.tableName as TimeMigrationTable,
+    openRows: rows.map((r) => {
+      const reason = isReason(r.reason) ? r.reason : null;
+      const link = links.get(`${r.table} ${r.rowId}`);
+      return {
+        table: r.table,
         rowId: r.rowId,
         userId: r.userId,
         column: r.columnName,
         rule: r.rule,
-        reason: isReason(r.reason) ? r.reason : null,
+        reason,
         legacyValue: r.legacyValue,
         newValue: r.newValue,
         zone: r.zone,
-      })),
-    openRowsTruncated: rows.length > OPEN_ROWS_CAP,
+        entityType: r.entityType,
+        parentType: link?.parentType ?? null,
+        parentId: link?.parentId ?? null,
+        tripId: link?.tripId ?? null,
+        flagId: reason ? (flags.get(`${r.entityType} ${r.rowId} ${kindOf(reason)}`) ?? null) : null,
+      };
+    }),
+    openRowsTruncated: ledger.length > OPEN_ROWS_CAP,
   };
 }
 

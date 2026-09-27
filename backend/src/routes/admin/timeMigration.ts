@@ -52,7 +52,9 @@ router.post("/time-zones/re-resolve", (req: AuthRequest, res: Response, next: Ne
     // Only the dry run lives here; applying is its own endpoint and needs its id.
     reResolveQuerySchema.parse(req.query);
     refuseWhileRunning();
-    const job = startJob("timeZones.reResolveDryRun", req.userId!, () => reResolveDryRun());
+    const job = startJob("timeZones.reResolveDryRun", req.userId!, (progress) =>
+      reResolveDryRun(new Date(), progress)
+    );
     res.status(202).json({ jobId: job.id });
   } catch (error) {
     next(error);
@@ -66,7 +68,9 @@ router.post(
       const { dryRunId } = reResolveApplyBodySchema.parse(req.body);
       requireDryRun(dryRunId);
       refuseWhileRunning();
-      const job = startJob("timeZones.reResolveApply", req.userId!, () => applyReResolve(dryRunId));
+      const job = startJob("timeZones.reResolveApply", req.userId!, (progress) =>
+        applyReResolve(dryRunId, progress)
+      );
       res.status(202).json({ jobId: job.id });
     } catch (error) {
       next(error);

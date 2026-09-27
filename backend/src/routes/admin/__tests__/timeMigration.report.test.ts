@@ -122,6 +122,56 @@ describe("GET /api/v1/admin/time-migration/report", () => {
       ["country_days", "loyalty", "photos", "tours", "track_windows"].sort()
     );
   });
+
+  it("links an open row to its editor: a tour's stop names the tour and the tour's trip, and its question", async () => {
+    const trip = await prisma.trip.create({ data: { userId, name: "Norwegen" } });
+    const tour = await prisma.tripRoute.create({
+      data: { userId, tripId: trip.id, name: "Küste", mode: "car" },
+    });
+    const stop = await prisma.tripStop.create({
+      data: {
+        routeId: tour.id,
+        title: "Irgendwo",
+        startDate: new Date("2026-05-04T09:00:00.000Z"),
+      },
+    });
+    await prisma.timeMigrationLedger.create({
+      data: {
+        tableName: "trip_stops",
+        rowId: stop.id,
+        columnName: "start_date",
+        rule: "trip_stop.no_zone",
+        status: "open",
+        reason: "no_position",
+        userId,
+      },
+    });
+    const flag = await prisma.dataQualityFlag.create({
+      data: {
+        userId,
+        entityType: "trip_stop",
+        entityId: stop.id,
+        kind: "time_zone_unresolved",
+        details: { table: "trip_stops", fields: [] },
+      },
+    });
+    try {
+      const res = await request(app)
+        .get("/api/v1/admin/time-migration/report")
+        .set("Cookie", adminCookie);
+      const report = timeMigrationReportSchema.parse(res.body);
+      expect(report.openRows.find((r) => r.rowId === stop.id)).toMatchObject({
+        entityType: "trip_stop",
+        parentType: "tour",
+        parentId: tour.id,
+        tripId: trip.id,
+        flagId: flag.id,
+      });
+    } finally {
+      await prisma.dataQualityFlag.deleteMany({ where: { userId } });
+      await prisma.trip.delete({ where: { id: trip.id } });
+    }
+  });
 });
 
 describe("a time question in the inbox", () => {
@@ -164,6 +214,8 @@ describe("a time question in the inbox", () => {
             entityId: visit.id,
             label: "Kolosseum",
             parentId: place.id,
+            parentType: "place",
+            tripId: null,
           },
         }),
       ]);

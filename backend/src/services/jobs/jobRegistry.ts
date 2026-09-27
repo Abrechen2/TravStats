@@ -52,7 +52,17 @@ export interface JobView {
   /** The work's own answer; null until it has succeeded. */
   result: unknown;
   error: JobError | null;
+  /** How far a job that reports it has got; null for a job that does not. */
+  progress: JobProgress | null;
 }
+
+export interface JobProgress {
+  done: number;
+  total: number;
+}
+
+/** Handed to the work: call it as the work advances. */
+export type ReportProgress = (done: number, total: number) => void;
 
 interface JobRecord extends JobView {
   ownerId: string;
@@ -67,7 +77,7 @@ const jobs = new Map<string, JobRecord>();
 
 function toView(job: JobRecord): JobView {
   const { ownerId: _ownerId, ...view } = job;
-  return view;
+  return { ...view, progress: view.progress ? { ...view.progress } : null };
 }
 
 function prune(now: number): void {
@@ -98,7 +108,11 @@ export function jobErrorOf(err: unknown): JobError {
  * resolved value becomes `result`; a throw becomes `error`, and is logged with
  * its detail here, because nobody is awaiting the promise to log it.
  */
-export function startJob<T>(kind: JobKind, ownerId: string, work: () => Promise<T>): JobView {
+export function startJob<T>(
+  kind: JobKind,
+  ownerId: string,
+  work: (reportProgress: ReportProgress) => Promise<T>
+): JobView {
   prune(Date.now());
   const job: JobRecord = {
     id: randomUUID(),
@@ -109,12 +123,16 @@ export function startJob<T>(kind: JobKind, ownerId: string, work: () => Promise<
     finishedAt: null,
     result: null,
     error: null,
+    progress: null,
   };
   jobs.set(job.id, job);
+  const reportProgress: ReportProgress = (done, total) => {
+    job.progress = { done, total };
+  };
   // Deferred one tick so a synchronous throw inside `work` still lands in the
   // job rather than in the request that started it.
   void Promise.resolve()
-    .then(work)
+    .then(() => work(reportProgress))
     .then(
       (result) => {
         job.status = "succeeded";

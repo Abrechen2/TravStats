@@ -5,6 +5,7 @@ import type {
   TimeQuestionDetails,
 } from "../../schemas/dataQualityFlag";
 import {
+  ENTITY_OF_TABLE,
   TIME_MIGRATION_TABLES,
   type TimeMigrationReason,
   type TimeMigrationTable,
@@ -36,19 +37,6 @@ export interface TimeQuestion {
   kind: TimeFlagKind;
   details: TimeQuestionDetails;
 }
-
-const ENTITY_OF: Record<TimeMigrationTable, TimeFlagEntityType> = {
-  flights: "flight",
-  rail_journeys: "rail_journey",
-  place_visits: "place_visit",
-  cruise_stops: "cruise_stop",
-  cruises: "cruise",
-  trip_stops: "trip_stop",
-  trips: "trip",
-  trip_journal_entries: "trip_journal_entry",
-  lodging_stays: "lodging_stay",
-  users: "profile",
-};
 
 export function kindOf(reason: TimeMigrationReason): TimeFlagKind {
   switch (reason) {
@@ -236,7 +224,7 @@ export async function loadOpenTimeQuestions(userId: string): Promise<TimeQuestio
       const kind = kindOf(reason);
       const key = `${table} ${l.rowId} ${kind}`;
       const question = questions.get(key) ?? {
-        entityType: ENTITY_OF[table],
+        entityType: ENTITY_OF_TABLE[table],
         entityId: l.rowId,
         kind,
         details: { table, fields: [] },

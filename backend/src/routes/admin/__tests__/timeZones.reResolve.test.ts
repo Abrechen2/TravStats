@@ -106,6 +106,9 @@ describe("POST /api/v1/admin/time-zones/re-resolve", () => {
     expect(started.status).toBe(202);
     const job = await runJob(started.body.jobId);
     expect(job.status).toBe("succeeded");
+    const progress = job.progress as { done: number; total: number };
+    expect(progress.total).toBeGreaterThanOrEqual(2);
+    expect(progress.done).toBe(progress.total);
     const dryRun = reResolveDryRunSchema.parse(job.result);
 
     const mine = dryRun.changes.filter((c) => c.rowId === flightId || c.rowId === visitId);
