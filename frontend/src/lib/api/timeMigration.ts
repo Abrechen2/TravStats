@@ -69,6 +69,7 @@ const reportSchema = z.object({
       table,
       converted: count,
       open: count,
+      answered: count,
       alreadyFilled: count,
       rules: z.array(z.object({ rule: z.string(), status: z.enum(["open", "resolved"]), count })),
       reasons: z.array(z.object({ reason, count })),

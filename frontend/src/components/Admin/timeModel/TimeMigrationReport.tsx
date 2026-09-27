@@ -122,9 +122,10 @@ function ReportBody({ report, users }: { report: Report; users: ReportUser[] }):
         (acc, row) => ({
           converted: acc.converted + row.converted,
           alreadyFilled: acc.alreadyFilled + row.alreadyFilled,
+          answered: acc.answered + row.answered,
           open: acc.open + row.open,
         }),
-        { converted: 0, alreadyFilled: 0, open: 0 }
+        { converted: 0, alreadyFilled: 0, answered: 0, open: 0 }
       ),
     [report.tables]
   );
@@ -156,12 +157,13 @@ function ReportBody({ report, users }: { report: Report; users: ReportUser[] }):
         </p>
       )}
 
-      <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
+      <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
         <StatTile value={totals.converted} label={t("admin:timeModel.report.outcomes.converted")} />
         <StatTile
           value={totals.alreadyFilled}
           label={t("admin:timeModel.report.outcomes.alreadyFilled")}
         />
+        <StatTile value={totals.answered} label={t("admin:timeModel.report.outcomes.answered")} />
         <StatTile value={totals.open} label={t("admin:timeModel.report.outcomes.open")} />
       </div>
 
@@ -171,6 +173,7 @@ function ReportBody({ report, users }: { report: Report; users: ReportUser[] }):
         <li>
           {t("admin:timeModel.report.statement.alreadyFilled", { count: totals.alreadyFilled })}
         </li>
+        <li>{t("admin:timeModel.report.statement.answered", { count: totals.answered })}</li>
         <li>{t("admin:timeModel.report.statement.open", { count: totals.open })}</li>
         <li>
           {t("admin:timeModel.report.statement.flags", {

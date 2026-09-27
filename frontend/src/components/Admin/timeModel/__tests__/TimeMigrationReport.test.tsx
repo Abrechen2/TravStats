@@ -22,7 +22,14 @@ vi.mock("../../../../hooks/useTranslation", async () => {
   return { useTranslation: germanUseTranslationNs };
 });
 
-const EMPTY_TABLE = { converted: 0, open: 0, alreadyFilled: 0, rules: [], reasons: [] };
+const EMPTY_TABLE = {
+  converted: 0,
+  open: 0,
+  answered: 0,
+  alreadyFilled: 0,
+  rules: [],
+  reasons: [],
+};
 
 const REPORT: Report = {
   backfill: {
@@ -36,6 +43,7 @@ const REPORT: Report = {
       table: "flights",
       converted: 41,
       open: 1,
+      answered: 2,
       alreadyFilled: 3,
       rules: [
         { rule: "flight.fake_utc", status: "resolved", count: 41 },
@@ -47,6 +55,7 @@ const REPORT: Report = {
       table: "place_visits",
       converted: 10,
       open: 4,
+      answered: 5,
       alreadyFilled: 0,
       rules: [{ rule: "visit.writer_unknown", status: "open", count: 4 }],
       reasons: [{ reason: "writer_unknown", count: 4 }],
@@ -175,6 +184,39 @@ describe("time-migration report — what the admin reads", () => {
       screen.getByText(/Ländertage \(bewusst UTC-Tage\) · Touren \(schon reine Tagesdaten\)/)
     ).toBeInTheDocument();
     expect(screen.getByText(/Zeitzonendaten 2025b/)).toBeInTheDocument();
+  });
+
+  it("says how many of the questions the migration left open were answered since", async () => {
+    answer(REPORT);
+    renderReport();
+
+    // `open` is what still waits; without `answered` an admin cannot tell a
+    // question the user settled from one the backfill never asked.
+    expect(
+      await screen.findByText(
+        "7 Einträge, die die Umstellung offen ließ, sind seither beantwortet – Zeitzone oder Uhrzeit ergänzt, die Frage bestätigt oder der Eintrag gelöscht."
+      )
+    ).toBeInTheDocument();
+    const byTable = screen.getByRole("table", { name: "Nach Tabelle" });
+    expect(
+      within(byTable).getByRole("columnheader", { name: "Seither beantwortet" })
+    ).toBeInTheDocument();
+    const flightsRow = within(byTable).getByText("Flüge").closest("tr") as HTMLElement;
+    expect(
+      within(flightsRow)
+        .getAllByRole("cell")
+        .map((c) => c.textContent)
+    ).toEqual(["Flüge", "41", "3", "2", "1"]);
+  });
+
+  it("refuses a report whose tables do not say what was answered", async () => {
+    // A server that drops `answered` would otherwise read as "nothing answered".
+    const { answered: _dropped, ...withoutAnswered } = REPORT.tables[0];
+    answer({ ...REPORT, tables: [withoutAnswered] });
+    renderReport();
+
+    expect(await screen.findByText(/Die Antwort des Servers hat eine Form/)).toBeInTheDocument();
+    expect(screen.queryByText(/seither beantwortet/)).toBeNull();
   });
 
   it("counts per table, per reason, and lists the rules by their code", async () => {

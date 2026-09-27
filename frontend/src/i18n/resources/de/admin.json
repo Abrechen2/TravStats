@@ -878,6 +878,7 @@
       "outcomes": {
         "converted": "Umgerechnet",
         "alreadyFilled": "Schon im neuen Format",
+        "answered": "Seither beantwortet",
         "open": "Offen"
       },
       "statement": {
@@ -885,6 +886,8 @@
         "converted_other": "{{count}} Einträge wurden umgerechnet; die neuen Werte stehen in eigenen Spalten.",
         "alreadyFilled_one": "{{count}} Eintrag hatte die neuen Werte schon (neu angelegt oder aus der Demo) und blieb unverändert.",
         "alreadyFilled_other": "{{count}} Einträge hatten die neuen Werte schon (neu angelegt oder aus der Demo) und blieben unverändert.",
+        "answered_one": "{{count}} Eintrag, den die Umstellung offen ließ, ist seither beantwortet – Zeitzone oder Uhrzeit ergänzt, die Frage bestätigt oder der Eintrag gelöscht.",
+        "answered_other": "{{count}} Einträge, die die Umstellung offen ließ, sind seither beantwortet – Zeitzone oder Uhrzeit ergänzt, die Frage bestätigt oder der Eintrag gelöscht.",
         "open_one": "{{count}} Eintrag wurde nicht vollständig umgestellt – nichts wurde geraten. Jede offene Angabe steht als Frage im Posteingang ihres Besitzers.",
         "open_other": "{{count}} Einträge wurden nicht vollständig umgestellt – nichts wurde geraten. Jede offene Angabe steht als Frage im Posteingang ihres Besitzers.",
         "flags": "Fragen im Posteingang: {{open}} offen · {{resolved}} als korrigiert gemeldet · {{dismissed}} als richtig bestätigt",

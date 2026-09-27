@@ -41,6 +41,9 @@ export function TimeMigrationTables({
             <th className={`${CELL} text-right`}>
               {t("admin:timeModel.report.outcomes.alreadyFilled")}
             </th>
+            <th className={`${CELL} text-right`}>
+              {t("admin:timeModel.report.outcomes.answered")}
+            </th>
             <th className="py-1 text-right">{t("admin:timeModel.report.outcomes.open")}</th>
           </tr>
         </thead>
@@ -53,6 +56,9 @@ export function TimeMigrationTables({
               </td>
               <td className={`${CELL} text-right`} style={NUM}>
                 {row.alreadyFilled}
+              </td>
+              <td className={`${CELL} text-right`} style={NUM}>
+                {row.answered}
               </td>
               <td className="py-1 text-right" style={NUM}>
                 {row.open}

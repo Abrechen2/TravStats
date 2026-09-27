@@ -878,6 +878,7 @@
       "outcomes": {
         "converted": "Converted",
         "alreadyFilled": "Already in the new format",
+        "answered": "Answered since",
         "open": "Open"
       },
       "statement": {
@@ -885,6 +886,8 @@
         "converted_other": "{{count}} entries were converted; the new values are in columns of their own.",
         "alreadyFilled_one": "{{count}} entry already had the new values (newly created or from the demo) and was left unchanged.",
         "alreadyFilled_other": "{{count}} entries already had the new values (newly created or from the demo) and were left unchanged.",
+        "answered_one": "{{count}} entry the migration left open has been answered since – a zone or time added, the question confirmed, or the entry deleted.",
+        "answered_other": "{{count}} entries the migration left open have been answered since – a zone or time added, the question confirmed, or the entry deleted.",
         "open_one": "{{count}} entry was not fully migrated – nothing was guessed. Every open value is a question in its owner's inbox.",
         "open_other": "{{count}} entries were not fully migrated – nothing was guessed. Every open value is a question in its owner's inbox.",
         "flags": "Questions in the inbox: {{open}} open · {{resolved}} reported corrected · {{dismissed}} confirmed as correct",

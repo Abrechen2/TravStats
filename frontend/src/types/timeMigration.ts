@@ -87,7 +87,14 @@ export type TimeParentType = (typeof TIME_PARENT_TYPES)[number];
 export interface TimeMigrationTableReport {
   table: TimeMigrationTable;
   converted: number;
+  /** Rows with a value still open — what still waits. */
   open: number;
+  /**
+   * Rows the backfill left open that were answered since (a zone or time added
+   * through any editor, the question dismissed, or the row deleted).
+   * `open + answered` is what the backfill left open.
+   */
+  answered: number;
   /** Filled by a phase-2 write path or a seed before the backfill came; left unchanged. */
   alreadyFilled: number;
   rules: Array<{ rule: string; status: TimeMigrationStatus; count: number }>;
