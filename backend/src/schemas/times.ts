@@ -65,6 +65,13 @@ export const visitTimesSchema = z
   .openapi("VisitTimes");
 export type VisitTimes = z.infer<typeof visitTimesSchema>;
 
+export const placeTimesSchema = z
+  .object({
+    lastVisit: time.describe("The most recent completed visit, as that visit's own TimeValue."),
+  })
+  .openapi("PlaceTimes");
+export type PlaceTimes = z.infer<typeof placeTimesSchema>;
+
 export const cruiseTimesSchema = z
   .object({ start: day, end: day })
   .openapi("CruiseTimes", { description: "Embarkation and disembarkation days at their ports." });
@@ -107,6 +114,7 @@ export const TIMES_SCHEMAS = {
   RailTimes: railTimesSchema,
   StayTimes: stayTimesSchema,
   VisitTimes: visitTimesSchema,
+  PlaceTimes: placeTimesSchema,
   CruiseTimes: cruiseTimesSchema,
   CruiseStopTimes: cruiseStopTimesSchema,
   TripTimes: tripTimesSchema,

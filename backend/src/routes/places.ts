@@ -42,6 +42,11 @@ const requireUser = (req: AuthRequest): string => {
   return req.userId;
 };
 
+import { visitTime, withVisitTimes } from "../services/places/timesDto";
+import type { PlaceTimes, VisitTimes } from "../schemas/times";
+
+type PlaceVisit = PlaceRow["visits"][number];
+
 export const PLACE_INCLUDE = { visits: true } satisfies Prisma.PlaceInclude;
 export type PlaceRow = Prisma.PlaceGetPayload<{ include: typeof PLACE_INCLUDE }>;
 
@@ -65,6 +70,8 @@ interface PlaceAggregates {
   plannedVisitCount: number;
   /** Most recent COMPLETED visit; null when undated or never visited. */
   lastVisitAt: Date | null;
+  /** The same visit's time as a TimeValue (ADR 0002 phase 4). */
+  times: PlaceTimes;
   /**
    * Derived, never stored. Resolved from the country code with the coordinates
    * as the fallback, through the same module the achievement engine uses — so
@@ -81,6 +88,7 @@ function computeAggregates(
   let visitCount = 0;
   let plannedVisitCount = 0;
   let lastVisitAt: Date | null = null;
+  let lastVisit: PlaceRow["visits"][number] | null = null;
 
   for (const v of visits) {
     if (classifyVisit(v, now) === "planned") {
@@ -90,12 +98,14 @@ function computeAggregates(
     visitCount += 1;
     if (v.visitedAt && (lastVisitAt === null || v.visitedAt > lastVisitAt)) {
       lastVisitAt = v.visitedAt;
+      lastVisit = v;
     }
   }
   return {
     visitCount,
     plannedVisitCount,
     lastVisitAt,
+    times: { lastVisit: lastVisit ? visitTime(lastVisit) : null },
     continent: getContinent(place.lat, place.lon, place.isoCountryCode),
   };
 }
@@ -114,8 +124,17 @@ function decorate<
     lon: number;
     isoCountryCode: string | null;
   },
->(place: T, now = new Date()): T & PlaceAggregates {
-  return { ...place, ...computeAggregates(place, place.visits, now) };
+>(
+  place: T,
+  now = new Date()
+): Omit<T, "visits"> & {
+  visits: Array<T["visits"][number] & { times: VisitTimes }>;
+} & PlaceAggregates {
+  return {
+    ...place,
+    visits: place.visits.map((v) => withVisitTimes(v as T["visits"][number])),
+    ...computeAggregates(place, place.visits, now),
+  };
 }
 
 /**
@@ -498,7 +517,7 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
 
     await recheckAchievements(userId, "visit create");
 
-    res.status(201).json({ success: true, data: visit });
+    res.status(201).json({ success: true, data: withVisitTimes(visit as PlaceVisit) });
   } catch (error) {
     next(error);
   }
@@ -549,7 +568,7 @@ router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: N
 
     await recheckAchievements(userId, "visit update");
 
-    res.json({ success: true, data: visit });
+    res.json({ success: true, data: withVisitTimes(visit) });
   } catch (error) {
     next(error);
   }
