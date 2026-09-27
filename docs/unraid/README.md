@@ -134,16 +134,34 @@ asked to pin a specific image tag instead of `latest`, and to confirm
 
 ### Icon
 
-The brand mark is **vendored into the template repo** as
-[`icon.svg`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/icon.svg),
-byte-identical to `docs/images/logo.svg` here. Template and icon live in the
-same repo on purpose — the `<Icon>` URL then cannot be broken by a
-restructure of the application repo. `my-travstats-db.xml` follows the same
-rule with `icon-travstats-db.svg`.
+The brand mark is **vendored into the template repo**, source design in
+[`icon.svg`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/icon.svg)
+(byte-identical to `docs/images/logo.svg` here). Template and icon live in
+the same repo on purpose — the `<Icon>` URL then cannot be broken by a
+restructure of the application repo.
 
-SVG is fine: around 120 of the ~4100 apps in the CA feed ship an SVG icon.
-A PNG on a non-transparent background is only worth producing for looks —
-the current mark is 120 × 140, so Unraid's square tile letterboxes it.
+**`my-travstats.xml`'s `<Icon>` points at
+[`icon.png`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/icon.png),
+not the SVG** (since 2026-09-27). Found by a tester: `icon.svg` sets its "TS"
+/ "V1.0" labels in `font-family="Inter, ..."` / `"ui-monospace, ..."` —
+Unraid's own SVG→PNG icon-cache renderer has no access to those fonts and
+produced illegible text on his box, even though the URL itself resolved
+correctly (200, `image/svg+xml` — the historical branch-case trap below was
+ruled out first). `icon.png` is the same design rendered once with the text
+already baked to pixels, so no renderer's font availability matters again.
+`icon.svg` stays in the repo as the editable source.
+
+`my-travstats-db.xml` still points at
+[`icon-travstats-db.svg`](https://raw.githubusercontent.com/Abrechen2/docker-templates/main/icon-travstats-db.svg)
+— it draws no text at all (a database/globe glyph only), so it is not
+subject to this failure mode. If that ever turns out wrong too, render it
+the same way `icon.png` was rendered.
+
+Around 120 of the ~4100 apps in the CA feed ship an SVG icon at all, so SVG
+generally works there — this was one SVG with a font dependency, not a
+reason to distrust SVG icons in general. A PNG on a non-transparent
+background is only worth producing for looks otherwise — the current mark
+is 120 × 140, so Unraid's square tile letterboxes it.
 
 **The trap that already cost us a logo:** the `<Icon>` URL pointed at branch
 `Main` on `Abrechen2/TravStats` while the default branch is `main`.
