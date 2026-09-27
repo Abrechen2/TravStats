@@ -14,16 +14,24 @@ const changeTokenMaxAgeMs = 10 * 60 * 1000; // 10 minutes
 /**
  * Determine whether the auth cookie must carry `secure`.
  *
- * `COOKIE_SECURE` wins when set. Otherwise secure cookies are used only in
- * production AND behind HTTPS — `req.protocol` is trustworthy because Express
- * is started with trust proxy.
+ * This is the ONE place `COOKIE_SECURE` is interpreted (config/env.ts only
+ * checks that it is a string). A non-empty value wins. Otherwise secure
+ * cookies are used only in production AND behind HTTPS — `req.protocol` is
+ * trustworthy because Express is started with trust proxy.
  */
 export function getCookieSecure(req: Request): boolean {
-  // NOTE the polarity: any value other than the literal "false" means secure.
-  // Kept exactly as it was when this moved out of routes/auth.ts — flipping it
-  // to `=== "true"` would silently turn COOKIE_SECURE=1 into an insecure cookie.
-  if (process.env.COOKIE_SECURE !== undefined) {
-    return process.env.COOKIE_SECURE !== "false";
+  // Empty and whitespace mean "not set". docker-compose.prod.yml passes
+  // `COOKIE_SECURE: ${COOKIE_SECURE:-}`, so a user who sets nothing hands the
+  // container "" — defined, but nobody's choice. 2.6.2 read that as "secure",
+  // and a fresh install reached over plain http on a LAN address got a cookie
+  // the browser refuses to store: login said 200, the next request "No token
+  // provided", and the admin could never sign in.
+  const override = process.env.COOKIE_SECURE?.trim();
+  if (override) {
+    // NOTE the polarity: any value other than the literal "false" means secure.
+    // Kept exactly as it was when this moved out of routes/auth.ts — flipping it
+    // to `=== "true"` would silently turn COOKIE_SECURE=1 into an insecure cookie.
+    return override !== "false";
   }
   if (process.env.NODE_ENV === "production") {
     return req.protocol === "https" || req.get("x-forwarded-proto") === "https";

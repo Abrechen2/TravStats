@@ -102,8 +102,11 @@ services:
       # set DATABASE_URL directly to point at an external Postgres instance.
       DATABASE_URL: ${DATABASE_URL:-postgresql://flights:${DB_PASSWORD}@db:5432/flights}
 
-      # Secure-cookie auto-detect via X-Forwarded-Proto works behind any
-      # standard reverse proxy. Override only if your proxy doesn't set it.
+      # Leave COOKIE_SECURE unset (or empty) to auto-detect: the cookie is
+      # marked Secure only when the request arrived over https (directly or
+      # via X-Forwarded-Proto). An empty value counts as unset since 2.6.3 —
+      # 2.6.2 read it as "true", so a plain-http LAN install could not sign in.
+      # Set "false" to never mark it Secure, any other value to always do so.
       COOKIE_SECURE: ${COOKIE_SECURE:-}
 
       # CORS stays disabled (same-origin) unless an override is provided.
