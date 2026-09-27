@@ -37,7 +37,12 @@ const stationNight = z.discriminatedUnion("kind", [
   // `.strict()`: a free or pass night that names a stay is a contradiction,
   // refused rather than silently stripped into something the caller did not say.
   z.object({ kind: z.literal("free") }).strict(),
-  z.object({ kind: z.literal("pass") }).strict(),
+  // A pass-through may name the user's own place it passed (tester
+  // 2026-09-26), as a stay night names its stay.
+  z.object({ kind: z.literal("pass"), placeId: z.string().uuid().nullish() }).strict(),
+  // A route correction (tester 2026-09-26): no night, no stay, no name
+  // needed — the route bends through it and nothing counts it.
+  z.object({ kind: z.literal("via") }).strict(),
 ]);
 
 const stationDay = legacyDayFieldSchema().transform((iso) => new Date(iso));
@@ -46,7 +51,8 @@ const station = z
   .object({
     /** Omitted for a new station; kept so its legs survive a reorder. */
     id: z.string().uuid().optional(),
-    title: z.string().trim().min(1).max(200),
+    // Required for a station; a via point may leave it empty.
+    title: z.string().trim().max(200),
     lat: z.number().min(-90).max(90),
     lon: z.number().min(-180).max(180),
     // A station is dated by DAYS (ADR 0002 D1): `YYYY-MM-DD`, or an
@@ -60,6 +66,16 @@ const station = z
   .refine((s) => !s.startDate || !s.endDate || s.endDate.getTime() >= s.startDate.getTime(), {
     message: "A station cannot end before it starts",
     path: ["endDate"],
+  })
+  .refine((s) => s.night.kind === "via" || s.title.length > 0, {
+    message: "A station needs a name",
+    path: ["title"],
+  })
+  // A via point is a bend in the line, not a place the traveller was at a
+  // time: a date on it would put it into days-away and the timeline.
+  .refine((s) => s.night.kind !== "via" || (!s.startDate && !s.endDate), {
+    message: "A route correction carries no date",
+    path: ["startDate"],
   });
 
 /** The complete, ordered station list; replaces whatever was there. */

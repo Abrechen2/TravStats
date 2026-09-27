@@ -10,9 +10,9 @@
 // CommonJS (tsconfig `"module": "commonjs"`), and an ESM client would throw
 // `ReferenceError: exports is not defined` the moment `dist/index.js` loaded it.
 generator client {
-  provider     = "prisma-client"
-  output       = "../src/generated/prisma"
-  moduleFormat = "cjs"
+  provider        = "prisma-client"
+  output          = "../src/generated/prisma"
+  moduleFormat    = "cjs"
   // `partialIndexes`: the chain catalogue is unique by name among its
   // catalogue rows only (`LodgingChain`, user_id IS NULL) — Postgres treats
   // NULLs as distinct, so a plain (name, user_id) unique would not hold it.
@@ -905,14 +905,14 @@ model AdminSettings {
   llmCloudOptIn       Boolean @default(false) @map("llm_cloud_opt_in")
 
   // Backup schedule configuration (overrides AUTO_BACKUP_ENABLED / BACKUP_INTERVAL env vars)
-  backupEnabled       Boolean @default(false) @map("backup_enabled")
-  backupInterval      String  @default("weekly") @map("backup_interval")
-  backupRetentionDays Int     @default(30) @map("backup_retention_days")
+  backupEnabled       Boolean   @default(false) @map("backup_enabled")
+  backupInterval      String    @default("weekly") @map("backup_interval")
+  backupRetentionDays Int       @default(30) @map("backup_retention_days")
   /// IANA zone the backup cron expression is read in (owner decision
   /// 2026-09-26). Null = the host zone the process booted with, which is what
   /// every instance ran in before the setting existed — so an upgrade keeps
   /// its backup hour.
-  backupZone          String? @map("backup_zone")
+  backupZone          String?   @map("backup_zone")
   /// ADR 0002 phase 3b: when the time-model backfill finished on this
   /// instance. Null = it has not run (or did not finish), and the next boot
   /// runs it; set = never again. Not a lock: the backfill is idempotent.
@@ -1461,36 +1461,36 @@ model Trip {
 
   // Phase-1 metadata redesign — see migration 20260509120000_trip_metadata.
   // All optional / defaulted so legacy rows stay valid.
-  startDate        DateTime? @map("start_date")
-  endDate          DateTime? @map("end_date")
-  status           String    @default("planned") // planned | in_progress | completed
+  startDate          DateTime? @map("start_date")
+  endDate            DateTime? @map("end_date")
+  status             String    @default("planned") // planned | in_progress | completed
   /// ADR 0002 phase 2 dual-write: the local days of the first departure and
   /// the last arrival (owner decision 2026-09-26, plan open point 1), with the
   /// zone each belongs to. Null zone = a day typed without a place to anchor it.
-  startDay         DateTime? @map("start_day") @db.Date
-  endDay           DateTime? @map("end_day") @db.Date
-  startZone        String?   @map("start_zone")
-  endZone          String?   @map("end_zone")
-  category         String? // vacation | business | weekend | family | other
-  tags             String[]  @default([])
-  companions       String[]  @default([])
-  notes            String? // markdown long-form
-  summary          String? // optional, may be LLM-generated later
+  startDay           DateTime? @map("start_day") @db.Date
+  endDay             DateTime? @map("end_day") @db.Date
+  startZone          String?   @map("start_zone")
+  endZone            String?   @map("end_zone")
+  category           String? // vacation | business | weekend | family | other
+  tags               String[]  @default([])
+  companions         String[]  @default([])
+  notes              String? // markdown long-form
+  summary            String? // optional, may be LLM-generated later
   /// Who wrote `summary` (forgejo#132 item 8): "llm" (POST /trips/:id/summarize)
   /// or "user" (typed on create or PATCH). NULL = unknown — every summary
   /// written before the column existed, which may have been either, and a
   /// trip without a summary. Never back-filled as "user".
-  summarySource    String?   @map("summary_source")
+  summarySource      String?   @map("summary_source")
   /// When the model wrote the current summary; NULL unless `summarySource` is "llm".
   summaryGeneratedAt DateTime? @map("summary_generated_at")
   /// How many entries (flights, cruises, stays, place visits, stops, journal
   /// entries) the model was given; NULL unless `summarySource` is "llm".
-  summaryEntryCount Int?     @map("summary_entry_count")
-  originLabel      String?   @map("origin_label")
-  destinationLabel String?   @map("destination_label")
-  coverImageUrl    String?   @map("cover_image_url")
-  icon             String?
-  countries        String[]  @default([])
+  summaryEntryCount  Int?      @map("summary_entry_count")
+  originLabel        String?   @map("origin_label")
+  destinationLabel   String?   @map("destination_label")
+  coverImageUrl      String?   @map("cover_image_url")
+  icon               String?
+  countries          String[]  @default([])
 
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
@@ -1634,6 +1634,19 @@ model TripStop {
   /// stored enum plus the SetNull above would need a CHECK that the cascade
   /// itself then violates (the trap migration 20260921195505 met).
   overnight     Boolean   @default(false)
+  /// A route correction ("Streckenkorrektur", tester 2026-09-26): a point
+  /// with no name of its own that exists only to bend the route between its
+  /// neighbours. Legs run through it like through any vertex, so distances
+  /// and routing honour it; everything that COUNTS stations (the station
+  /// count, countries, nights, days away, achievements, the phone's list, the
+  /// dashboard markers) leaves it out. Never overnight and never a stay —
+  /// `trip_stops_via_point_passes` holds that in the database.
+  viaPoint      Boolean   @default(false) @map("via_point")
+  /// Roadtrip pass-through: the user's own place (POI) it passed, as a stay
+  /// station names its stay (tester 2026-09-26). SetNull — deleting the
+  /// place leaves the pass-through standing. Only on a pass-through:
+  /// `trip_stops_place_on_pass` holds that in the database.
+  placeId       String?   @map("place_id")
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
@@ -1658,6 +1671,7 @@ model TripStop {
   legsFrom      TripRouteLeg[] @relation("LegFrom")
   legsTo        TripRouteLeg[] @relation("LegTo")
   lodgingStay   LodgingStay?   @relation(fields: [lodgingStayId], references: [id], onDelete: SetNull)
+  place         Place?         @relation(fields: [placeId], references: [id], onDelete: SetNull)
   /// Tours that started from this station ("Preikestolen, from Mosvangen").
   anchoredTours TripRoute[]    @relation("TourAnchor")
 
@@ -1666,6 +1680,7 @@ model TripStop {
   @@index([tripId, orderIdx])
   @@index([routeId])
   @@index([lodgingStayId])
+  @@index([placeId])
   @@map("trip_stops")
 }
 
@@ -1703,19 +1718,19 @@ model TripRoute {
   /// "tour" | "roadtrip" (design 2026-09-24). Decides which page owns the
   /// row and which of the fields below mean anything; every leg, track and
   /// routing feature is kind-agnostic, which is the point of one engine.
-  kind                      String  @default("tour")
+  kind                      String    @default("tour")
   /// Tour only: hike | walk | run | bike | mtb | ski | paddle | climb | other.
   activity                  String?
   /// Roadtrip only: motorhome | campervan | caravan | car | motorcycle |
   /// bicycle | rail | other. A free field on purpose (owner, 2026-09-24): a
   /// vehicle catalog waits until someone asks for per-vehicle figures.
   vehicle                   String?
-  vehicleName               String? @map("vehicle_name")
+  vehicleName               String?   @map("vehicle_name")
   /// Tour only: the roadtrip station this day trip set out from.
-  anchorStopId              String? @map("anchor_stop_id")
+  anchorStopId              String?   @map("anchor_stop_id")
   /// Set on rows the 2.7 migration classified by rule. The UI lists them
   /// once so a misfiled row can be moved; confirming or switching clears it.
-  kindAssignedAutomatically Boolean @default(false) @map("kind_assigned_automatically")
+  kindAssignedAutomatically Boolean   @default(false) @map("kind_assigned_automatically")
   /// Tour only: the local day the day tour happened, at its place (ADR 0002:
   /// a DATE, crossing code boundaries as "YYYY-MM-DD"). Set by the user, or
   /// prefilled from the first recorded track's start. Without it a standalone
@@ -1848,8 +1863,8 @@ model TripRouteTrack {
 }
 
 model TripJournalEntry {
-  id              String   @id @default(uuid())
-  tripId          String   @map("trip_id")
+  id              String    @id @default(uuid())
+  tripId          String    @map("trip_id")
   date            DateTime
   title           String?
   /// ADR 0002 phase 2 dual-write: the journal day as a calendar day. `date`
@@ -1863,9 +1878,9 @@ model TripJournalEntry {
   /// Kept apart from `weather`, which is the author's own words and is counted
   /// as such by the trip statistics. Null until fetched, or when no stop of
   /// the trip gives that day a place.
-  observedWeather Json?    @map("observed_weather")
-  createdAt       DateTime @default(now()) @map("created_at")
-  updatedAt       DateTime @updatedAt @map("updated_at")
+  observedWeather Json?     @map("observed_weather")
+  createdAt       DateTime  @default(now()) @map("created_at")
+  updatedAt       DateTime  @updatedAt @map("updated_at")
 
   trip   Trip                @relation(fields: [tripId], references: [id], onDelete: Cascade)
   photos JournalEntryPhoto[]
@@ -2449,10 +2464,10 @@ model LoyaltyMembership {
   createdAt        DateTime @default(now()) @map("created_at")
   updatedAt        DateTime @updatedAt @map("updated_at")
 
-  user        User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
-  stays       LodgingStay[]
-  chains      LodgingMembershipChain[]
-  lodgings    LodgingMembershipLodging[]
+  user     User                       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  stays    LodgingStay[]
+  chains   LodgingMembershipChain[]
+  lodgings LodgingMembershipLodging[]
 
   @@unique([userId, domain, programName])
   @@index([userId])
@@ -2582,12 +2597,14 @@ model Place {
   createdAt DateTime @default(now()) @map("created_at")
   updatedAt DateTime @updatedAt @map("updated_at")
 
-  user          User             @relation(fields: [userId], references: [id], onDelete: Cascade)
-  batch         ImportBatch?     @relation(fields: [batchId], references: [id], onDelete: SetNull)
-  coverPhoto    PlaceVisitPhoto? @relation("PlaceCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
-  visits        PlaceVisit[]
-  listEntries   PlaceListEntry[]
-  photoJourneys PhotoJourney[]
+  user             User             @relation(fields: [userId], references: [id], onDelete: Cascade)
+  batch            ImportBatch?     @relation(fields: [batchId], references: [id], onDelete: SetNull)
+  coverPhoto       PlaceVisitPhoto? @relation("PlaceCover", fields: [coverPhotoId], references: [id], onDelete: SetNull)
+  visits           PlaceVisit[]
+  /// Roadtrip pass-throughs that name this place. The place does not own them.
+  roadtripStations TripStop[]
+  listEntries      PlaceListEntry[]
+  photoJourneys    PhotoJourney[]
 
   @@unique([userId, externalRef])
   @@unique([userId, curatedItemId])
@@ -2644,7 +2661,7 @@ model PlaceVisit {
   /// evidence that the user stood in front of the Colosseum.
   trip  Trip? @relation(fields: [tripId], references: [id], onDelete: SetNull)
 
-  photos PlaceVisitPhoto[]
+  photos        PlaceVisitPhoto[]
   photoRefusals VisitPhotoRefusal[]
 
   documents Document[]

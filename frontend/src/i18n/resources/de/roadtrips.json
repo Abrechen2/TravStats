@@ -70,7 +70,8 @@
   "night": {
     "stay": "Unterkunft",
     "free": "Übernachtung ohne Unterkunft",
-    "pass": "Durchfahrt"
+    "pass": "Durchfahrt",
+    "via": "Streckenkorrektur"
   },
   "stations": {
     "title": "Stationen",
@@ -141,7 +142,8 @@
     "listEmpty": "Noch keine Roadtrips.",
     "emptyTitle": "Noch kein Roadtrip auf der Karte",
     "emptyBody": "Leg einen Roadtrip mit seinen Stationen an — die Strecke erscheint dann hier.",
-    "emptyCta": "Roadtrip anlegen"
+    "emptyCta": "Roadtrip anlegen",
+    "stationsLoadError": "Die Stationen konnten nicht geladen werden — die Karte zeigt nur die Strecken."
   },
   "stats": {
     "count": "Roadtrips",
@@ -318,6 +320,10 @@
       "pass": {
         "label": "Durchfahrt",
         "hint": "Nur vorbeigekommen, keine Nacht"
+      },
+      "via": {
+        "label": "Streckenkorrektur",
+        "hint": "Kein Halt: die Route führt hier durch, ohne Namen und ohne Zählung"
       }
     },
     "place": "Ort",
@@ -342,7 +348,8 @@
       "noDeparture": "{{name}}: Abfahrt fehlt",
       "noStay": "{{name}}: Unterkunft noch nicht verknüpft"
     },
-    "warningsNote": "Nur Hinweise — gespeichert wird trotzdem. Nur eine Station ohne Ort oder ohne verknüpfte Unterkunft wartet."
+    "warningsNote": "Nur Hinweise — gespeichert wird trotzdem. Nur eine Station ohne Ort oder ohne verknüpfte Unterkunft wartet.",
+    "viaNote": "Nur für die Linienführung: erscheint nicht als Station auf Karten und in Listen und zählt nirgends mit."
   },
   "legDialog": {
     "title": "Etappe",
@@ -395,5 +402,17 @@
   },
   "map": {
     "empty": "Dieser Roadtrip hat noch keine Stationen mit Koordinaten — füge die erste Station hinzu."
+  },
+  "place": {
+    "heading": "Welcher Ort?",
+    "hint": "Optional: einer deiner Orte, an dem du vorbeigekommen bist.",
+    "search": "Orte durchsuchen",
+    "loading": "Orte werden geladen …",
+    "loadError": "Deine Orte konnten nicht geladen werden — die Verknüpfung ist gerade nicht möglich.",
+    "none": "Du hast noch keine Orte angelegt.",
+    "noMatch": "Kein Ort passt zur Suche.",
+    "change": "Anderen Ort wählen",
+    "remove": "Verknüpfung lösen",
+    "linked": "Verknüpfter Ort"
   }
 }

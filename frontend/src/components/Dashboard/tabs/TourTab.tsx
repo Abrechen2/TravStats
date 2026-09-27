@@ -21,6 +21,12 @@ import MapContainer3D from "../../MapContainer3D";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
 import { SidebarToggle } from "../SidebarToggle";
 import { MapEmptyOverlay } from "./MapEmptyOverlay";
+import { useRoadtripStations } from "../../../hooks/useRoadtripStations";
+import { buildRoadtripStationLayers } from "../../layers/roadtripStationsLayer";
+import { hexToRgb } from "../../../lib/domainColor";
+
+/** A pass-through is no night: drawn in a neutral grey, as the timeline does. */
+const PASS_RGB: [number, number, number] = [139, 148, 158];
 
 function isLegMode(value: string): value is LegMode {
   return (LEG_MODES as readonly string[]).includes(value);
@@ -80,10 +86,36 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
   // doc comment (tourMapOverlay.tsx) for why an unlifted path is invisible
   // there (fix round 2, found in a real browser: routes mode drew the line,
   // globe mode drew nothing under a legend that still claimed data).
-  const tourLayers = useMemo<Layer[]>(
-    () => buildTourDeckLayers(tourPathData, visMode === "globe" ? TOUR_PATH_GLOBE_ALTITUDE_M : 0),
-    [tourPathData, visMode]
-  );
+  // The roadtrips' own stations, over their lines (tester 2026-09-26).
+  const roadtripStations = useRoadtripStations(isRoadtrip);
+  const lodgingHex = colorOf("lodging");
+  const roadtripHex = colorOf("roadtrip");
+  const tourLayers = useMemo<Layer[]>(() => {
+    const altitude = visMode === "globe" ? TOUR_PATH_GLOBE_ALTITUDE_M : 0;
+    return [
+      ...buildTourDeckLayers(tourPathData, altitude),
+      ...buildRoadtripStationLayers(
+        roadtripStations.stations,
+        { stay: hexToRgb(lodgingHex), free: hexToRgb(roadtripHex), pass: PASS_RGB },
+        altitude
+      ),
+    ];
+  }, [tourPathData, visMode, roadtripStations.stations, lodgingHex, roadtripHex]);
+  const shownStates = new Set(roadtripStations.stations.map((s) => s.state));
+  const stationLegend = (["stay", "free", "pass"] as const)
+    .filter((state) => shownStates.has(state))
+    .map((state) =>
+      legendRow(
+        state === "stay"
+          ? lodgingHex
+          : state === "free"
+            ? roadtripHex
+            : `rgb(${PASS_RGB.join(",")})`,
+        t(`roadtrips:night.${state}`),
+        `station-${state}`,
+        "dot"
+      )
+    );
 
   // The same swatch-JSX builder AllTab.tsx's "Alle" map legend uses —
   // shared in `./allTabLegendRows.tsx` since the fix-round review
@@ -232,7 +264,7 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
         </div>
       )}
 
-      {tourLegend.hasData && (
+      {(tourLegend.hasData || stationLegend.length > 0) && (
         <div
           style={{
             position: "absolute",
@@ -252,6 +284,28 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
           }}
         >
           {tourLegend.rows}
+          {stationLegend}
+        </div>
+      )}
+
+      {roadtripStations.failed && (
+        <div
+          role="status"
+          style={{
+            position: "absolute",
+            top: 56,
+            left: "50%",
+            transform: "translateX(-50%)",
+            zIndex: 30,
+            padding: "6px 12px",
+            borderRadius: 10,
+            background: "rgba(22,27,34,0.9)",
+            border: "1px solid var(--color-border)",
+            color: "var(--warning)",
+            fontSize: 12,
+          }}
+        >
+          {t("roadtrips:dashboard.stationsLoadError")}
         </div>
       )}
 

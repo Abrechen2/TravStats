@@ -488,7 +488,10 @@
       "saveErrorFromTrip": "This tour is built from its trip's stops. Assign the stops in the trip.",
       "saveErrorOffline": "No connection to the server — the points were not saved.",
       "saveErrorInvalid": "The points were refused: every point needs a name and valid coordinates.",
-      "saveErrorGone": "This tour no longer exists."
+      "saveErrorGone": "This tour no longer exists.",
+      "via": "Route correction",
+      "viaHint": "Only shapes the route — needs no name and does not count as a point.",
+      "saveErrorViaNight": "A point with a night cannot be a route correction — change it on the roadtrip page."
     },
     "day": {
       "date": "Date of the tour",

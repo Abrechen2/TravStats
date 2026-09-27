@@ -159,6 +159,13 @@ const tourStop = registry.register(
         .nullable()
         .optional()
         .describe("Null for a point the tour owns; set for a trip timeline stop it draws on"),
+      viaPoint: z
+        .boolean()
+        .optional()
+        .describe(
+          "A route correction: the legs run through it, but it is no stop — not counted, " +
+            "may have an empty title"
+        ),
     })
     .openapi("TourRouteStop")
 );

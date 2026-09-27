@@ -92,7 +92,8 @@ const TOUR_SUMMARY_SELECT = {
   },
   trip: { select: { name: true } },
   legs: { select: { distanceKm: true } },
-  _count: { select: { stops: true } },
+  // Stations, not route corrections (via points): the count is what a list shows.
+  _count: { select: { stops: { where: { viaPoint: false } } } },
   stops: { select: { startDate: true, endDate: true } },
 } as const;
 

@@ -12,6 +12,7 @@ import {
 } from "../../lib/roadtrip/roadtripView";
 import type { RoadtripDayTour, RoadtripStation } from "../../types/roadtrip";
 import type { TourLeg } from "../../types/tour";
+import { foldViaPoints } from "../../shared/tour/viaPoints";
 import StationMarker from "./StationMarker";
 
 const CHIP: CSSProperties = {
@@ -37,6 +38,8 @@ const STATE_CHIP: Record<RoadtripStation["state"], CSSProperties> = {
     color: "var(--domain-roadtrip)",
   },
   pass: { ...CHIP, border: "1px solid var(--ts-border)", color: "var(--ts-muted)" },
+  // Never drawn: the timeline folds corrections out. Present for the type.
+  via: { ...CHIP, border: "1px dashed var(--ts-border)", color: "var(--ts-muted)" },
 };
 
 /** The line between two stations carries the leg's pattern: road solid, ferry dotted. */
@@ -65,8 +68,8 @@ function legLine(leg: TourLeg, planned: boolean): CSSProperties {
  * it on the map — and in edit mode a leg opens its own dialog.
  */
 export default function StationTimeline({
-  stations,
-  legs,
+  stations: points,
+  legs: pointLegs,
   tours,
   startDate,
   today,
@@ -90,6 +93,11 @@ export default function StationTimeline({
   const { t, i18n } = useTranslation(["roadtrips"]);
   const display = useDisplayFormat();
   const nf = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 0 });
+  // Route corrections are not stations: the timeline lists stations, and the
+  // leg across a correction is one leg with the whole distance (tester
+  // 2026-09-26). A folded leg is not one the leg dialog can edit as a whole.
+  const { stations, legs } = foldViaPoints(points, pointLegs);
+  const original = new Set(pointLegs.map((l) => `${l.id}:${l.toStopId}`));
   const legFrom = new Map(legs.map((l) => [l.fromStopId, l]));
   const rows = stationRows(stations, startDate, today);
 
@@ -205,6 +213,11 @@ export default function StationTimeline({
                       {s.stay.lodgingName}
                     </Link>
                   )}
+                  {s.place && (
+                    <Link to={`/places/${s.place.id}`} style={{ color: "var(--domain-poi)" }}>
+                      {s.place.name}
+                    </Link>
+                  )}
                   {night && (
                     <span style={{ color: night.warn ? "var(--ts-warn)" : "var(--ts-muted)" }}>
                       {night.text}
@@ -273,7 +286,11 @@ export default function StationTimeline({
                   leg={leg}
                   km={nf.format(leg.distanceKm)}
                   duration={leg.drivingMinutes !== null ? duration(leg.drivingMinutes) : null}
-                  onEdit={onEditLeg ? () => onEditLeg(leg, s, next) : undefined}
+                  onEdit={
+                    onEditLeg && original.has(`${leg.id}:${leg.toStopId}`)
+                      ? () => onEditLeg(leg, s, next)
+                      : undefined
+                  }
                 />
               </div>
             )}

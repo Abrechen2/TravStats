@@ -149,7 +149,7 @@ export async function loadRoutes(userId: string, today: string): Promise<Loaded>
       name: true,
       tourDate: true,
       stops: {
-        where: { lat: { not: null }, lon: { not: null } },
+        where: { lat: { not: null }, lon: { not: null }, viaPoint: false },
         orderBy: { routeOrderIdx: "asc" },
         select: {
           title: true,

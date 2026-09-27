@@ -126,6 +126,10 @@ export type ApiErrorCode =
   | "TIME_SHAPE_REQUIRED"
   /** A tour's points are its trip's timeline stops — assigned at the trip, not replaced. */
   | "TOUR_POINTS_FROM_TRIP"
+  /** A trip's timeline stop was sent as a route correction (via point). */
+  | "VIA_POINT_ON_TIMELINE"
+  /** A roadtrip station with a night was sent as a route correction. */
+  | "VIA_POINT_HAS_NIGHT"
   /** Backup / restore job failures — see `services/backup/backupFailure.ts`.
    *  A tool (pg_dump, psql, tar) is not installed where the server runs. */
   | "BACKUP_TOOL_MISSING"

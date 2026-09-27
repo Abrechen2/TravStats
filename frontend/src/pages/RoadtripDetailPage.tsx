@@ -128,14 +128,17 @@ export default function RoadtripDetailPage(): JSX.Element {
 
   const mapContent = useMemo<TripMapContent>(
     () => ({
-      stops: (detail?.stations ?? []).map((s) => ({
-        title: s.title,
-        lat: s.lat,
-        lon: s.lon,
-        // A night at a stay is drawn in the stay's colour, everything else in
-        // the roadtrip's — the same split the markers make.
-        domain: s.state === "stay" ? "hotel" : "roadtrip",
-      })),
+      // Route corrections shape the line only; they are no station marker.
+      stops: (detail?.stations ?? [])
+        .filter((s) => s.state !== "via")
+        .map((s) => ({
+          title: s.title,
+          lat: s.lat,
+          lon: s.lon,
+          // A night at a stay is drawn in the stay's colour, everything else in
+          // the roadtrip's — the same split the markers make.
+          domain: s.state === "stay" ? "hotel" : "roadtrip",
+        })),
       emptyKey: "roadtrips:map.empty",
     }),
     [detail]

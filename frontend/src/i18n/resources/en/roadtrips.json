@@ -70,7 +70,8 @@
   "night": {
     "stay": "Accommodation",
     "free": "Night without accommodation",
-    "pass": "Pass-through"
+    "pass": "Pass-through",
+    "via": "Route correction"
   },
   "stations": {
     "title": "Stations",
@@ -141,7 +142,8 @@
     "listEmpty": "No roadtrips yet.",
     "emptyTitle": "No roadtrip on the map yet",
     "emptyBody": "Create a roadtrip with its stations — its route then appears here.",
-    "emptyCta": "Create roadtrip"
+    "emptyCta": "Create roadtrip",
+    "stationsLoadError": "The stations could not be loaded — the map shows the routes only."
   },
   "stats": {
     "count": "Roadtrips",
@@ -318,6 +320,10 @@
       "pass": {
         "label": "Pass-through",
         "hint": "Just passed by, no night"
+      },
+      "via": {
+        "label": "Route correction",
+        "hint": "No stop: the route runs through here, no name and not counted"
       }
     },
     "place": "Place",
@@ -342,7 +348,8 @@
       "noDeparture": "{{name}}: departure missing",
       "noStay": "{{name}}: stay not linked yet"
     },
-    "warningsNote": "Hints only — everything is saved anyway. Only a station without a place or without its linked stay waits."
+    "warningsNote": "Hints only — everything is saved anyway. Only a station without a place or without its linked stay waits.",
+    "viaNote": "Only shapes the route: not shown as a station on maps or in lists, and counted nowhere."
   },
   "legDialog": {
     "title": "Leg",
@@ -395,5 +402,17 @@
   },
   "map": {
     "empty": "This roadtrip has no stations with coordinates yet — add the first station."
+  },
+  "place": {
+    "heading": "Which place?",
+    "hint": "Optional: one of your places you passed.",
+    "search": "Search places",
+    "loading": "Loading places …",
+    "loadError": "Your places could not be loaded — linking one is not possible right now.",
+    "none": "You have not added any places yet.",
+    "noMatch": "No place matches the search.",
+    "change": "Choose another place",
+    "remove": "Unlink",
+    "linked": "Linked place"
   }
 }

@@ -431,6 +431,7 @@ async function loadRoadtrips(userId: string): Promise<CrossDomainPopulation> {
       id: true,
       name: true,
       stops: {
+        where: { viaPoint: false },
         select: {
           lat: true,
           lon: true,

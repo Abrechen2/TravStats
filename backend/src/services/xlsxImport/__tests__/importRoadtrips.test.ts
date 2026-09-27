@@ -312,6 +312,48 @@ describe("spreadsheet import — roadtrips", () => {
     expect(await prisma.tripRouteLeg.count({ where: { routeId: id } })).toBe(3);
   });
 
+  it("keeps a route correction a correction when the file names another station", async () => {
+    // Tester 2026-09-26: a via point is stored as its own flag. Re-deriving
+    // it from the night columns on import would make it a pass-through
+    // station — a counted, named stop — the next time anyone imports.
+    const { id, stationIds } = await roadtripWith(["Hamburg", "", "Kristiansand"]);
+    await prisma.tripStop.update({ where: { id: stationIds[1] }, data: { viaPoint: true } });
+    const ref = `Norwegen [${id}]`;
+    const [outcome] = await importSheets(
+      [
+        {
+          key: "roadtripStations",
+          rows: [
+            {
+              id: stationIds[2],
+              roadtripId: ref,
+              order: "3",
+              title: "Kristiansand Camping",
+              lat: "58.15",
+              lon: "8",
+              night: "free",
+            },
+            // A new correction written in the file itself, with no name.
+            { roadtripId: ref, order: "2.5", title: "", lat: "57.5", lon: "9.9", night: "via" },
+          ],
+        },
+      ],
+      ctx()
+    );
+    expect(outcome).toMatchObject({ errors: 0 });
+    const stops = await prisma.tripStop.findMany({
+      where: { routeId: id },
+      orderBy: { routeOrderIdx: "asc" },
+      select: { title: true, viaPoint: true },
+    });
+    expect(stops).toEqual([
+      { title: "Hamburg", viaPoint: false },
+      { title: "", viaPoint: true },
+      { title: "", viaPoint: true },
+      { title: "Kristiansand Camping", viaPoint: false },
+    ]);
+  });
+
   it("removes the stations a replace file leaves out, and says so in the preview first", async () => {
     const { id, stationIds } = await roadtripWith(["Hamburg", "Hirtshals"]);
     const sheet = {

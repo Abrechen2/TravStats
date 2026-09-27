@@ -32,6 +32,8 @@ export interface TourPointInput {
   title: string;
   lat: number;
   lon: number;
+  /** A route correction ("Streckenkorrektur"): may have no name, is never counted. */
+  via?: boolean;
 }
 
 // PATCH semantics: explicit `null` clears `color`, `undefined` leaves it

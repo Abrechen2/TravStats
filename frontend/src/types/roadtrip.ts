@@ -46,6 +46,14 @@ export interface RoadtripSummary extends RoadtripNights {
   countries: string[];
   /** Station points as `[lon, lat]`, in travel order — the list's route sketch. */
   points: Array<[number, number]>;
+  /** The placed stations in travel order, for map markers; never a route correction. */
+  stations?: Array<{
+    id: string;
+    title: string;
+    lat: number;
+    lon: number;
+    state: "stay" | "free" | "pass";
+  }>;
 }
 
 export interface StationStay {
@@ -72,6 +80,9 @@ export interface RoadtripStation {
   order: number | null;
   state: StationState;
   lodgingStayId: string | null;
+  /** A pass-through only: the user's own place it passed (tester 2026-09-26). */
+  placeId?: string | null;
+  place?: { id: string; name: string; category: string } | null;
   stay: StationStay | null;
 }
 
@@ -104,7 +115,12 @@ export interface RoadtripDetail {
 
 /** A station's night as the station list accepts it. */
 export type StationNightInput =
-  { kind: "stay"; lodgingStayId: string } | { kind: "free" } | { kind: "pass" };
+  | { kind: "stay"; lodgingStayId: string }
+  | { kind: "free" }
+  /** A pass-through may name one of the user's places. */
+  | { kind: "pass"; placeId?: string | null }
+  /** A route correction: the route bends through it; no name, no date, no count. */
+  | { kind: "via" };
 
 export interface StationInput {
   /** Omitted for a new station. */

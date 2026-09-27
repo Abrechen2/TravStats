@@ -23,6 +23,8 @@ export const TOUR_POINT_SELECT = {
   routeOrderIdx: true,
   /** Null for a point the tour owns; set for a trip's timeline stop it draws on. */
   tripId: true,
+  /** A route correction: drawn through, never counted (tester 2026-09-26). */
+  viaPoint: true,
 } as const;
 
 /**
@@ -85,11 +87,27 @@ export async function replaceTourPoints(
       // Every id the body names must already be a point of THIS tour.
       // Without this an id from a stranger's tour would be adopted by the
       // update below, which filters on the id alone.
-      const existing = await tx.tripStop.findMany({ where: { routeId }, select: { id: true } });
+      const existing = await tx.tripStop.findMany({
+        where: { routeId },
+        select: { id: true, overnight: true, lodgingStayId: true },
+      });
       const known = new Set(existing.map((s) => s.id));
       const unknown = givenIds.find((id) => !known.has(id));
       if (unknown !== undefined) {
         throw new AppError("A point id does not belong to this tour", 400);
+      }
+      // A roadtrip station with a night keeps it: this editor knows no
+      // nights, so turning such a station into a correction here would
+      // delete the night without anyone having seen it.
+      const withNight = new Set(
+        existing.flatMap((s) => (s.overnight || s.lodgingStayId !== null ? [s.id] : []))
+      );
+      if (points.some((p) => p.via === true && p.id !== undefined && withNight.has(p.id))) {
+        throw new AppError(
+          "A station with a night cannot become a route correction",
+          400,
+          "VIA_POINT_HAS_NIGHT"
+        );
       }
 
       // Clear the NUMBERING before writing the new one, or
@@ -107,6 +125,7 @@ export async function replaceTourPoints(
           lat: point.lat,
           lon: point.lon,
           ...(point.notes !== undefined ? { notes: point.notes } : {}),
+          ...(point.via !== undefined ? { viaPoint: point.via } : {}),
           routeId,
           routeOrderIdx: index,
         };

@@ -20,7 +20,7 @@ import { useDashboardRoute } from "../../hooks/useDashboardRoute";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useDashboardFilterStore } from "../../store/dashboardFilterStore";
 import { TAB_MODE_REGISTRY, type DashboardMode } from "../../types/dashboard";
-import { AVAILABLE_DOMAINS, DOMAINS, type DomainKey } from "../../shared/domains";
+import { AVAILABLE_DOMAINS } from "../../shared/domains";
 import {
   SectionLabel,
   SegControl,
@@ -30,7 +30,6 @@ import {
   TEXT,
   PANEL_OPTION_STYLE,
 } from "./controlPanelKit";
-import { useDomainColors } from "../../hooks/useDomainColors";
 import { useRailVisible } from "../../hooks/useRailVisible";
 import { todayZoneNow } from "../../hooks/useTodayZone";
 import { todayIn } from "../../shared/time";
@@ -63,7 +62,6 @@ function Section({
 }
 
 export function MapChromeSections(): JSX.Element {
-  const { colorOf } = useDomainColors();
   const { t } = useTranslation(["dashboard", "common"]);
   const { tab, mode, setMode } = useDashboardRoute();
   const { isEnabled } = useEnabledDomains();
@@ -71,7 +69,6 @@ export function MapChromeSections(): JSX.Element {
   const year = useDashboardFilterStore((s) => s.year);
   const setYear = useDashboardFilterStore((s) => s.setYear);
   const domains = useDashboardFilterStore((s) => s.domains);
-  const setDomains = useDashboardFilterStore((s) => s.setDomains);
   const resetFilter = useDashboardFilterStore((s) => s.reset);
 
   const modes = TAB_MODE_REGISTRY[tab].modes;
@@ -86,11 +83,6 @@ export function MapChromeSections(): JSX.Element {
   const yearActive = year !== null;
   const domainsFiltered = tab === "all" && domainOptions.some((key) => !domains.includes(key));
   const filterActive = yearActive || domainsFiltered;
-
-  const toggleDomain = (key: DomainKey): void => {
-    const next = domains.includes(key) ? domains.filter((d) => d !== key) : [...domains, key];
-    setDomains(next);
-  };
 
   return (
     <>
@@ -144,37 +136,9 @@ export function MapChromeSections(): JSX.Element {
               </select>
             </label>
 
-            {tab === "all" && (
-              <div className="flex flex-col gap-1">
-                <span style={{ color: "rgba(241,245,249,0.55)" }} className="text-[10px]">
-                  {t("dashboard:filter.domains")}
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {domainOptions.map((key) => {
-                    const active = domains.includes(key);
-                    const descriptor = DOMAINS[key];
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        aria-pressed={active}
-                        onClick={() => toggleDomain(key)}
-                        className="cursor-pointer rounded-full px-2.5 py-1 text-[11px] transition-colors"
-                        style={{
-                          background: active ? colorOf(descriptor.key) : "transparent",
-                          color: active ? "#0d1117" : "rgba(241,245,249,0.6)",
-                          border: `1px solid ${active ? colorOf(descriptor.key) : BORDER}`,
-                          fontWeight: active ? 600 : 400,
-                        }}
-                      >
-                        {t(`common:${descriptor.i18nKey}`)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
-
+            {/* The domain chips moved onto the "Alle" map itself
+                (`DomainFilterChips`, tester 2026-09-26); the reset below
+                still clears them with the year. */}
             {filterActive && (
               <button
                 type="button"

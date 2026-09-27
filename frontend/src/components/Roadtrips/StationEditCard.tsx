@@ -10,11 +10,14 @@ import { nextMorning } from "../../lib/roadtrip/roadtripView";
 import type { StationState } from "../../shared/tour/roadtrip";
 import StationMarker from "./StationMarker";
 import StayPicker, { type PickableStay } from "./StayPicker";
+import PassPlacePicker from "./PassPlacePicker";
+import { usePlacesVisible } from "../../hooks/usePlacesVisible";
+import type { Place } from "../../types/place";
 import { isOtherPlace } from "./stayPickerModel";
 import type { EditorStation } from "./useStationAutosave";
 import type { Lodging } from "../../types/lodging";
 
-const KINDS: StationState[] = ["stay", "free", "pass"];
+const KINDS: StationState[] = ["stay", "free", "pass", "via"];
 
 /** Where the station's linked lodging is: picked just now, or found in the library. */
 function linkedPlace(
@@ -30,6 +33,7 @@ const HUE: Record<StationState, string> = {
   stay: "var(--domain-lodging)",
   free: "var(--domain-roadtrip)",
   pass: "var(--ts-muted)",
+  via: "var(--ts-muted)",
 };
 
 /** `YYYY-MM-DD` for a date input from whatever the draft holds. */
@@ -65,6 +69,9 @@ export default function StationEditCard({
   const display = useDisplayFormat();
   const kind = station.night.kind;
   const [picking, setPicking] = useState(kind === "stay" && !station.night.lodgingStayId);
+  const placesVisible = usePlacesVisible();
+  const linkedPlaceId = station.night.kind === "pass" ? (station.night.placeId ?? null) : null;
+  const [pickingPlace, setPickingPlace] = useState(false);
   const arrival = dayInput(station.startDate);
   const departure = dayInput(station.endDate);
   const idBase = `station-${station.key}`;
@@ -85,6 +92,9 @@ export default function StationEditCard({
     }
     onChange({
       night: { kind: next },
+      // A route correction carries no day (the server refuses one).
+      ...(next === "via" ? { startDate: null, endDate: null } : {}),
+      placeLabel: undefined,
       stayLabel: undefined,
       stayCancelled: false,
       stayLodgingId: undefined,
@@ -114,6 +124,21 @@ export default function StationEditCard({
       ...(unplaced && lodgingPlaced ? { lat: stay.lat, lon: stay.lon } : {}),
     });
     setPicking(false);
+  };
+
+  /**
+   * Linking a place names a pass-through that has no name yet and places one
+   * that has no point yet — the same courtesy a picked stay gets.
+   */
+  const pickPlace = (place: Place): void => {
+    const unplaced = station.lat === null || station.lon === null;
+    onChange({
+      night: { kind: "pass", placeId: place.id },
+      placeLabel: place.name,
+      title: station.title.trim() === "" ? place.name : station.title,
+      ...(unplaced ? { lat: place.lat, lon: place.lon } : {}),
+    });
+    setPickingPlace(false);
   };
 
   const stayPlace = kind === "stay" ? linkedPlace(station, lodgings) : null;
@@ -160,7 +185,8 @@ export default function StationEditCard({
       <div className="flex items-center" style={{ gap: 12 }}>
         <StationMarker state={kind} cancelled={station.stayCancelled} />
         <span style={{ fontSize: 18, fontWeight: 800, color: "var(--ts-text-bright)" }}>
-          {station.title.trim() || t("roadtrips:editor.unnamed")}
+          {station.title.trim() ||
+            (kind === "via" ? t("roadtrips:night.via") : t("roadtrips:editor.unnamed"))}
         </span>
         <span className="t-caption">{t("roadtrips:editor.stationOf", { n: position, total })}</span>
       </div>
@@ -172,7 +198,7 @@ export default function StationEditCard({
         <div
           role="radiogroup"
           aria-label={t("roadtrips:editor.whatHere")}
-          className="grid sm:grid-cols-3"
+          className="grid grid-cols-2 lg:grid-cols-4"
           style={{ gap: 10 }}
         >
           {KINDS.map((k) => (
@@ -207,7 +233,9 @@ export default function StationEditCard({
           onChange({
             lat: sel.lat,
             lon: sel.lon,
-            title: station.title.trim() === "" && sel.name ? sel.name : station.title,
+            // A correction stays nameless unless the reader types one.
+            title:
+              station.title.trim() === "" && sel.name && kind !== "via" ? sel.name : station.title,
           })
         }
       />
@@ -219,32 +247,35 @@ export default function StationEditCard({
         />
       </Field>
 
-      <div className="grid sm:grid-cols-2" style={{ gap: 10 }}>
-        <Field
-          label={kind === "pass" ? t("roadtrips:editor.date") : t("roadtrips:editor.arrival")}
-          htmlFor={`${idBase}-start`}
-        >
-          <Input
-            id={`${idBase}-start`}
-            type="date"
-            value={arrival}
-            onChange={(e) => onChange({ startDate: e.target.value || null })}
-          />
-        </Field>
-        {kind !== "pass" && (
-          <Field label={t("roadtrips:editor.departure")} htmlFor={`${idBase}-end`}>
+      {kind === "via" && <p className="t-caption">{t("roadtrips:editor.viaNote")}</p>}
+      {kind !== "via" && (
+        <div className="grid sm:grid-cols-2" style={{ gap: 10 }}>
+          <Field
+            label={kind === "pass" ? t("roadtrips:editor.date") : t("roadtrips:editor.arrival")}
+            htmlFor={`${idBase}-start`}
+          >
             <Input
-              id={`${idBase}-end`}
+              id={`${idBase}-start`}
               type="date"
-              value={departure}
-              min={arrival || undefined}
-              invalid={arrival !== "" && departure === ""}
-              onChange={(e) => onChange({ endDate: e.target.value || null })}
+              value={arrival}
+              onChange={(e) => onChange({ startDate: e.target.value || null })}
             />
           </Field>
-        )}
-      </div>
-      {kind !== "pass" && arrival !== "" && departure === "" && (
+          {kind !== "pass" && (
+            <Field label={t("roadtrips:editor.departure")} htmlFor={`${idBase}-end`}>
+              <Input
+                id={`${idBase}-end`}
+                type="date"
+                value={departure}
+                min={arrival || undefined}
+                invalid={arrival !== "" && departure === ""}
+                onChange={(e) => onChange({ endDate: e.target.value || null })}
+              />
+            </Field>
+          )}
+        </div>
+      )}
+      {kind !== "pass" && kind !== "via" && arrival !== "" && departure === "" && (
         <div
           className="flex flex-wrap items-center"
           style={{ gap: 10, fontSize: 13, color: "var(--ts-warn)" }}
@@ -301,6 +332,36 @@ export default function StationEditCard({
               lodgings={lodgings}
               onPick={pickStay}
             />
+          )}
+        </div>
+      )}
+
+      {kind === "pass" && placesVisible && (
+        <div
+          className="flex flex-col"
+          style={{ gap: 10, paddingTop: 14, borderTop: "1px solid var(--ts-border)" }}
+        >
+          <span style={{ fontSize: 14, fontWeight: 700 }}>{t("roadtrips:place.heading")}</span>
+          {linkedPlaceId && !pickingPlace ? (
+            <div className="flex flex-wrap items-center" style={{ gap: 10 }}>
+              <span style={{ fontWeight: 700 }}>
+                {station.placeLabel ?? t("roadtrips:place.linked")}
+              </span>
+              <Button variant="secondary" onClick={() => setPickingPlace(true)}>
+                {t("roadtrips:place.change")}
+              </Button>
+              <Button
+                variant="secondary"
+                onClick={() => onChange({ night: { kind: "pass" }, placeLabel: undefined })}
+              >
+                {t("roadtrips:place.remove")}
+              </Button>
+            </div>
+          ) : (
+            <>
+              <span className="t-caption">{t("roadtrips:place.hint")}</span>
+              <PassPlacePicker near={{ lat: station.lat, lon: station.lon }} onPick={pickPlace} />
+            </>
           )}
         </div>
       )}

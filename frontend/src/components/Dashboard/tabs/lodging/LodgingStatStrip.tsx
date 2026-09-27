@@ -7,8 +7,10 @@ import type { LodgingStats } from "../../../../types/lodging";
 import type { EvidenceScopeParams } from "../../../evidence/useEvidence";
 import EvidenceTrigger from "../../../Stats/EvidenceTrigger";
 import { lodgingSpendNothingConverted } from "../../../../lib/lodgingSpendConverted";
+import StatCard from "../../../Stats/StatCard";
+import { useDomainColors } from "../../../../hooks/useDomainColors";
 
-export type LodgingStatStripVariant = "overlay" | "inline";
+export type LodgingStatStripVariant = "overlay" | "inline" | "cards";
 
 interface LodgingStatStripProps {
   stats: LodgingStats;
@@ -17,6 +19,10 @@ interface LodgingStatStripProps {
    * "inline" is a plain row above the list-page table, matching the
    * mockup's screen-① stat strip (no absolute positioning, a bottom
    * hairline instead of a card border).
+   * "cards" is the statistics page: the same card grid every other domain
+   * tab draws its KPIs in. The inline row there put evidence buttons (which
+   * carry `width: 100%`) into a wrapping flex row, so each figure took a
+   * whole line and the six stood in one column (tester, 2026-09-26).
    */
   variant?: LodgingStatStripVariant;
   /**
@@ -71,6 +77,7 @@ export function LodgingStatStrip({
   // with `units.currency` would show the correctly-computed number under the
   // wrong currency symbol whenever a user has changed that preference.
   const baseCurrency = useSettingsStore((s) => s.baseCurrency);
+  const accent = useDomainColors().colorOf("lodging");
   const ratingLabel =
     stats.avgRatingOverall !== null
       ? `★ ${stats.avgRatingOverall.toFixed(1)}`
@@ -161,6 +168,41 @@ export function LodgingStatStrip({
     { key: "rating", value: ratingLabel, label: t("dashboard:lodgingTab.stats.rating") },
   ];
 
+  const shown = cells.filter((cell) => !omit.includes(cell.key));
+
+  if (variant === "cards") {
+    return (
+      <div
+        className="grid grid-cols-2 gap-4 md:gap-6 lg:grid-cols-3"
+        data-testid="lodging-stat-strip"
+        data-variant={variant}
+      >
+        {shown.map((cell) => (
+          <StatCard
+            key={cell.key}
+            title={cell.label}
+            value={cell.value}
+            valueSize="md"
+            accent={accent}
+            description={
+              cell.sub ? <span data-testid="lodging-stat-strip-spend-sub">{cell.sub}</span> : null
+            }
+            evidence={
+              evidenceScope && cell.evidenceKey
+                ? {
+                    kind: "metric",
+                    key: cell.evidenceKey,
+                    scope: evidenceScope,
+                    renderedValue: cell.renderedValue ?? null,
+                  }
+                : undefined
+            }
+          />
+        ))}
+      </div>
+    );
+  }
+
   const containerStyle: CSSProperties =
     variant === "overlay"
       ? {
@@ -190,63 +232,61 @@ export function LodgingStatStrip({
 
   return (
     <div style={containerStyle} data-testid="lodging-stat-strip" data-variant={variant}>
-      {cells
-        .filter((cell) => !omit.includes(cell.key))
-        .map((cell) => {
-          const body = (
-            <>
-              <strong
-                style={{
-                  fontSize: valueFontSize,
-                  color: "var(--text-primary)",
-                  fontVariantNumeric: "tabular-nums",
-                }}
-              >
-                {cell.value}
-              </strong>
-              <span
-                style={{
-                  fontSize: 10,
-                  textTransform: "uppercase",
-                  letterSpacing: "0.04em",
-                  color: "var(--text-muted)",
-                }}
-              >
-                {cell.label}
-              </span>
-              {cell.sub && (
-                <span
-                  data-testid="lodging-stat-strip-spend-sub"
-                  style={{ fontSize: 10, color: "var(--fx,#6ab7d8)", marginTop: 1 }}
-                >
-                  {cell.sub}
-                </span>
-              )}
-            </>
-          );
-          if (!evidenceScope || !cell.evidenceKey) {
-            return (
-              <div key={cell.key} style={cellStyle}>
-                {body}
-              </div>
-            );
-          }
-          // Tailwind's preflight zeroes a button's border and background, so
-          // the cell keeps its layout and gains a keyboard-operable trigger.
-          return (
-            <EvidenceTrigger
-              key={cell.key}
-              kind="metric"
-              evidenceKey={cell.evidenceKey}
-              scope={evidenceScope}
-              renderedValue={cell.renderedValue ?? null}
-              label={cell.label}
-              style={cellStyle}
+      {shown.map((cell) => {
+        const body = (
+          <>
+            <strong
+              style={{
+                fontSize: valueFontSize,
+                color: "var(--text-primary)",
+                fontVariantNumeric: "tabular-nums",
+              }}
             >
+              {cell.value}
+            </strong>
+            <span
+              style={{
+                fontSize: 10,
+                textTransform: "uppercase",
+                letterSpacing: "0.04em",
+                color: "var(--text-muted)",
+              }}
+            >
+              {cell.label}
+            </span>
+            {cell.sub && (
+              <span
+                data-testid="lodging-stat-strip-spend-sub"
+                style={{ fontSize: 10, color: "var(--fx,#6ab7d8)", marginTop: 1 }}
+              >
+                {cell.sub}
+              </span>
+            )}
+          </>
+        );
+        if (!evidenceScope || !cell.evidenceKey) {
+          return (
+            <div key={cell.key} style={cellStyle}>
               {body}
-            </EvidenceTrigger>
+            </div>
           );
-        })}
+        }
+        // Tailwind's preflight zeroes a button's border and background, so
+        // the cell keeps its layout and gains a keyboard-operable trigger.
+        return (
+          <EvidenceTrigger
+            key={cell.key}
+            kind="metric"
+            evidenceKey={cell.evidenceKey}
+            scope={evidenceScope}
+            renderedValue={cell.renderedValue ?? null}
+            label={cell.label}
+            style={cellStyle}
+          >
+            {body}
+          </EvidenceTrigger>
+        );
+      })}
     </div>
   );
 }

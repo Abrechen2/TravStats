@@ -33,6 +33,10 @@ describe("tourPointsSaveErrorKey — a refused save in the reader's words", () =
     expect(tourPointsSaveErrorKey(refused(409, "TOUR_POINTS_FROM_TRIP"))).toBe(
       "trips:tours.points.saveErrorFromTrip"
     );
+    // A station with a night sent as a route correction (tester 2026-09-26).
+    expect(tourPointsSaveErrorKey(refused(400, "VIA_POINT_HAS_NIGHT"))).toBe(
+      "trips:tours.points.saveErrorViaNight"
+    );
     expect(tourPointsSaveErrorKey(refused(400))).toBe("trips:tours.points.saveErrorInvalid");
     expect(tourPointsSaveErrorKey(refused(404))).toBe("trips:tours.points.saveErrorGone");
     expect(tourPointsSaveErrorKey(refused(500))).toBe("trips:tours.points.saveError");

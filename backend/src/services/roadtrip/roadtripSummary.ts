@@ -1,4 +1,9 @@
-import { countRoadtripNights, stationState, type RoadtripNights } from "../../shared/tour/roadtrip";
+import {
+  countRoadtripNights,
+  isStation,
+  stationState,
+  type RoadtripNights,
+} from "../../shared/tour/roadtrip";
 import { drivenKm, travelledKm } from "../tour/tourDistance";
 import type { CountryResolver } from "../geo/countryFromCoordinates";
 import { toCountryCode } from "../../shared/countryEvidence";
@@ -44,9 +49,20 @@ export const STATION_SELECT = {
   notes: true,
   routeOrderIdx: true,
   overnight: true,
+  viaPoint: true,
   lodgingStayId: true,
   lodgingStay: { select: STATION_STAY_SELECT },
+  placeId: true,
+  place: { select: { id: true, name: true, category: true } },
 } as const;
+
+/**
+ * The relation filter for readers that want STATIONS only — every count, the
+ * phone's list, the statistics. A route correction (`viaPoint`) is a bend in
+ * the line, not a place; the editor and the leg writer are the only readers
+ * that must see it.
+ */
+export const STATIONS_ONLY = { viaPoint: false } as const;
 
 export interface StationRow {
   id: string;
@@ -61,6 +77,9 @@ export interface StationRow {
   notes: string | null;
   routeOrderIdx: number | null;
   overnight: boolean;
+  viaPoint: boolean;
+  placeId: string | null;
+  place: { id: string; name: string; category: string } | null;
   lodgingStayId: string | null;
   lodgingStay: {
     id: string;
@@ -91,6 +110,7 @@ export function nightsOf(stations: readonly StationRow[]): RoadtripNights {
     stations.map((s) => ({
       lodgingStayId: s.lodgingStayId,
       overnight: s.overnight,
+      viaPoint: s.viaPoint,
       startDate: s.startDate,
       endDate: s.endDate,
       stay: s.lodgingStay
@@ -116,7 +136,7 @@ export function spanOf(stations: readonly StationRow[]): {
 } {
   let start: Date | null = null;
   let end: Date | null = null;
-  for (const s of stations) {
+  for (const s of stations.filter(isStation)) {
     const from = s.startDate ?? s.lodgingStay?.checkIn ?? null;
     const to = s.endDate ?? s.lodgingStay?.checkOut ?? from;
     if (from && (!start || from < start)) start = from;
@@ -139,6 +159,9 @@ export function toStationDto(s: StationRow): Record<string, unknown> {
     order: s.routeOrderIdx,
     state: stationState(s),
     lodgingStayId: s.lodgingStayId,
+    // The place a pass-through passed (tester 2026-09-26); null elsewhere.
+    placeId: s.placeId,
+    place: s.place,
     stay: stay
       ? {
           id: stay.id,
@@ -185,12 +208,15 @@ export function stationCountries(
   stations: ReadonlyArray<{
     lat: number | null;
     lon: number | null;
+    viaPoint?: boolean;
     lodgingStay: { lodging: { isoCountryCode: string | null } } | null;
   }>,
   resolver: Pick<CountryResolver, "countryAt">
 ): string[] {
   const touched = new Set<string>();
-  for (const s of stations) {
+  // A route correction's country is one driven through at most, never one
+  // the traveller stopped in (tester 2026-09-26).
+  for (const s of stations.filter(isStation)) {
     const fromPoint = s.lat !== null && s.lon !== null ? resolver.countryAt(s.lat, s.lon) : null;
     const code = fromPoint ?? toCountryCode(s.lodgingStay?.lodging.isoCountryCode ?? null);
     if (code) touched.add(code);
@@ -204,6 +230,7 @@ export function toRoadtripSummary(
   countries: string[]
 ): Record<string, unknown> {
   const nights = nightsOf(row.stops);
+  const stations = row.stops.filter(isStation);
   return {
     id: row.id,
     kind: "roadtrip",
@@ -220,10 +247,18 @@ export function toRoadtripSummary(
     drivenKm: drivenKm(row.legs),
     startOdometerKm: row.startOdometerKm,
     endOdometerKm: row.endOdometerKm,
-    stationCount: row.stops.length,
+    stationCount: stations.length,
     // `[lon, lat]` in travel order, for the list's route sketch; a station
-    // without a point has nothing to draw and is left out.
-    points: row.stops.flatMap((s) => (s.lat !== null && s.lon !== null ? [[s.lon, s.lat]] : [])),
+    // without a point has nothing to draw and is left out, and so is a route
+    // correction — the sketch marks stations.
+    points: stations.flatMap((s) => (s.lat !== null && s.lon !== null ? [[s.lon, s.lat]] : [])),
+    // The stations themselves, for the dashboard map's markers (tester
+    // 2026-09-26): placed ones only, never a route correction.
+    stations: stations.flatMap((s) =>
+      s.lat !== null && s.lon !== null
+        ? [{ id: s.id, title: s.title, lat: s.lat, lon: s.lon, state: stationState(s) }]
+        : []
+    ),
     nights: nights.nights,
     stayNights: nights.stayNights,
     freeNights: nights.freeNights,

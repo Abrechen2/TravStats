@@ -281,12 +281,15 @@ export default function TripRouteEditorPage(): JSX.Element {
   const mapContent = useMemo<TripMapContent>(
     () =>
       trip ?? {
-        stops: sectionStops.map((s) => ({
-          title: s.title,
-          lat: s.lat,
-          lon: s.lon,
-          domain: "tour",
-        })),
+        // A route correction bends the line; it is not a stop to mark.
+        stops: sectionStops
+          .filter((s) => s.viaPoint !== true)
+          .map((s) => ({
+            title: s.title,
+            lat: s.lat,
+            lon: s.lon,
+            domain: "tour",
+          })),
         emptyKey: route?.kind === "roadtrip" ? "roadtrips:map.empty" : "trips:tours.map.empty",
       },
     [trip, sectionStops, route?.kind]
@@ -700,6 +703,7 @@ export default function TripRouteEditorPage(): JSX.Element {
                 title: s.title,
                 lat: s.lat ?? NaN,
                 lon: s.lon ?? NaN,
+                via: s.viaPoint === true,
               }))}
               saving={savingPoints}
               error={pointsError}
