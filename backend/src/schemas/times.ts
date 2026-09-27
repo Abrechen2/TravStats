@@ -21,17 +21,26 @@ const time = timeValueSchema.nullable();
 const day = localDateValueSchema.nullable();
 
 export const flightTimesSchema = z
-  .object({ departure: time, arrival: time })
+  .object({
+    departure: time,
+    arrival: time,
+    actualDeparture: time.describe(
+      "Off-block as a provider reported it, at the departure airport."
+    ),
+    actualArrival: time,
+    runwayDeparture: time.describe("Wheels-up as a provider reported it."),
+    runwayArrival: time,
+  })
   .openapi("FlightTimes", {
     description:
-      "Departure and arrival at their airports. `zoneSource: catalogue` marks a flight " +
-      "written before zones were stored, read in today's catalogue zone.",
+      "Scheduled and reported times at their airports. `zoneSource: catalogue` marks a " +
+      "flight written before zones were stored, read in today's catalogue zone.",
   });
 export type FlightTimes = z.infer<typeof flightTimesSchema>;
 
 export const railTimesSchema = z
-  .object({ departure: time, arrival: time })
-  .openapi("RailTimes", { description: "Departure and arrival at their stations." });
+  .object({ departure: time, arrival: time, actualDeparture: time, actualArrival: time })
+  .openapi("RailTimes", { description: "Planned and actual times at their stations." });
 export type RailTimes = z.infer<typeof railTimesSchema>;
 
 export const stayTimesSchema = z

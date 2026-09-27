@@ -22,6 +22,7 @@ import {
   RAIL_STATUSES,
   RAIL_TRAVEL_CLASSES,
 } from "../../../schemas/rail";
+import { railTimesSchema } from "../../../schemas/times";
 
 const railJourney = registry.register(
   "RailJourney",
@@ -87,6 +88,7 @@ const railJourney = registry.register(
         .nullable()
         .describe("Arrival delay; null = not recorded, 0 = on time"),
       trip: includedRow("trip (id, name, color)").nullable().optional(),
+      times: railTimesSchema,
     })
     .openapi("RailJourney")
 );
@@ -100,9 +102,14 @@ const railBookingLeg = z.object({
   arrivalTime: z.string().datetime().nullable(),
   depTimezone: z.string().nullable(),
   arrTimezone: z.string().nullable(),
+  depPrecision: z.string().nullable(),
+  arrPrecision: z.string().nullable(),
+  actualDepartureTime: z.string().datetime().nullable(),
+  actualArrivalTime: z.string().datetime().nullable(),
   trainCategory: z.string().nullable(),
   trainNumber: z.string().nullable(),
   status: z.enum(RAIL_STATUSES),
+  times: railTimesSchema,
 });
 
 const railJourneyDetail = railJourney

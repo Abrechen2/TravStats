@@ -38,6 +38,7 @@ import { linkDocuments, takeDocumentIds } from "../services/documents/documentSe
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import logger from "../utils/logger";
 import { railIdsCoveredBy } from "../services/loyalty/listFilters";
+import { withRailDetailTimes, withRailTimes } from "../services/rail/timesDto";
 
 /**
  * Rail journeys — one row per train ride (spec
@@ -73,6 +74,10 @@ export const RAIL_DETAIL_INCLUDE = {
           arrivalTime: true,
           depTimezone: true,
           arrTimezone: true,
+          depPrecision: true,
+          arrPrecision: true,
+          actualDepartureTime: true,
+          actualArrivalTime: true,
           trainCategory: true,
           trainNumber: true,
           status: true,
@@ -221,7 +226,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         skip: offset,
       }),
     ]);
-    res.json({ success: true, data, meta: { total, limit, offset } });
+    res.json({ success: true, data: data.map(withRailTimes), meta: { total, limit, offset } });
   } catch (err) {
     next(err);
   }
@@ -235,7 +240,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       include: RAIL_DETAIL_INCLUDE,
     });
     if (!journey) throw new AppError("Rail journey not found", 404);
-    res.json({ success: true, data: journey });
+    res.json({ success: true, data: withRailDetailTimes(journey) });
   } catch (err) {
     next(err);
   }
@@ -394,7 +399,9 @@ router.post(
       await restatusTrips(journey.tripId);
 
       logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
-      res.status(201).json({ success: true, data: journey, meta: { geometry: reportOf(geo) } });
+      res
+        .status(201)
+        .json({ success: true, data: withRailTimes(journey), meta: { geometry: reportOf(geo) } });
     } catch (err) {
       next(err);
     }
@@ -502,7 +509,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     await restatusTrips(existing.tripId, journey.tripId);
     res.json({
       success: true,
-      data: journey,
+      data: withRailTimes(journey),
       meta: { geometry: editReport(edit, existing.geometrySource) },
     });
   } catch (err) {

@@ -62,8 +62,14 @@ describe("Flights — times (phase 4)", () => {
       arrTimezone: "Asia/Tokyo",
       depPrecision: "minute",
       arrPrecision: "minute",
+      actualDeparture: new Date("2027-07-01T11:52:00Z"),
     });
     const times = await read(f.id);
+    expect(times.actualDeparture).toMatchObject({
+      local: "2027-07-01T12:52:00",
+      zone: "Europe/Lisbon",
+    });
+    expect(times.runwayArrival).toBeNull();
     expect(times.departure).toEqual({
       utc: "2027-07-01T11:30:00.000Z",
       zone: "Europe/Lisbon",
