@@ -11,13 +11,8 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { createFlightSchema, updateFlightSchema, airportSchema } from "../../../schemas/flight";
-import {
-  localDateInputSchema,
-  localDateValueSchema,
-  localTimeInputSchema,
-  timeValueSchema,
-} from "../../../shared/time/wire";
-import { TIMES_SCHEMAS } from "../../../schemas/times";
+import { localDateInputSchema, localTimeInputSchema } from "../../../shared/time/wire";
+import { TIMES_SCHEMAS, flightTimesSchema } from "../../../schemas/times";
 import {
   apiTokenScopeSchema,
   createApiTokenSchema,
@@ -93,18 +88,16 @@ export const flightResponse = registry.register(
       notes: z.string().nullable(),
       createdAt: z.string().datetime(),
 
-      // Derived from the airport catalogue at read time, not stored on the row.
       // Every endpoint that returns a flight fills these in; a client may rely
       // on them being present wherever a Flight appears.
       depTimezone: z
         .string()
         .nullable()
         .describe(
-          "IANA zone of the departure airport. A flight stores UTC and carries no " +
-            "zone of its own, so this is what lets a client show the time on the " +
-            "clock the traveller actually read. Null means the airport is not in " +
-            "the catalogue — then the time is UTC and should be labelled as such, " +
-            "never shown bare as if it were local."
+          "Legacy: the zone the departure was stored with, or — for a flight written " +
+            "before zones were stored — today's catalogue zone of the airport. Read " +
+            "`times.departure` instead: it says which of the two it is (`zoneSource`). " +
+            "Null means no zone is known; the time is then UTC and must be labelled so."
         ),
       arrTimezone: z.string().nullable().describe("IANA zone of the arrival airport."),
       depCountry: z.string().nullable().describe("ISO country of the departure airport."),
@@ -136,6 +129,7 @@ export const flightResponse = registry.register(
             "the flight is unassigned; absent on the write routes, which return the " +
             "bare row."
         ),
+      times: flightTimesSchema,
       durationMinutes: z
         .number()
         .int()
@@ -224,8 +218,8 @@ registry.register("LocalDateInput", localDateInputSchema);
  * these two, so one component describes every time value a response carries.
  * `__tests__/openapi.timeShape.ratchet.test.ts` holds responses to it.
  */
-registry.register("TimeValue", timeValueSchema);
-registry.register("LocalDateValue", localDateValueSchema);
+// TimeValue and LocalDateValue themselves are registered in `registry.ts`,
+// before anything that nests them — see the note there.
 for (const [name, schema] of Object.entries(TIMES_SCHEMAS)) registry.register(name, schema);
 
 /** A time-model refusal: always 422, always a code, the offending field named. */

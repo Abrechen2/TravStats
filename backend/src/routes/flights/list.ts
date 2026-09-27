@@ -3,7 +3,7 @@ import type { NextFunction, Response } from "express";
 import { prisma } from "../../db";
 import type { AuthRequest } from "../../middleware/auth";
 import { flightQuerySchema } from "../../schemas/flight";
-import { enrichFlightsWithAirportFacts } from "../../services/flightAirportFacts";
+import { enrichFlightsForClients } from "../../services/flightAirportFacts";
 import { buildFlightOrderBy } from "./listOrder";
 import { normalizeQueryParams, resolveFlightWhere, splitMultiValue } from "./queryFilters";
 
@@ -74,7 +74,7 @@ export const flightListHandler = async (
     // LEGACY_FAKE_UTC pair stores (forgejo#45). A null here still means
     // "no duration" (#106A: a DATE_ONLY row's 12:00 is a placeholder, not a
     // clock) and the display layer draws its labelled estimate — never a 0.
-    const enrichedFlights = await enrichFlightsWithAirportFacts(flights);
+    const enrichedFlights = await enrichFlightsForClients(flights);
 
     res.json({
       flights: enrichedFlights,
