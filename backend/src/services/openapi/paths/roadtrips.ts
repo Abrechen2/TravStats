@@ -8,7 +8,7 @@
  * list, and moving a row between the two pages.
  */
 
-import { roadtripStationTimesSchema } from "../../../schemas/times";
+import { roadtripStationTimesSchema, stayTimesSchema } from "../../../schemas/times";
 import { z } from "zod";
 
 import { registry } from "../registry";
@@ -108,6 +108,7 @@ const station = registry.register(
           country: z.string().nullable(),
           checkIn: z.string().datetime().nullable(),
           checkOut: z.string().datetime().nullable(),
+          times: stayTimesSchema,
           nights: z.number().int().nullable(),
           status: z.string(),
         })
