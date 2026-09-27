@@ -1,6 +1,7 @@
 import { Prisma } from "../../prisma";
 
 import type { CountryTier } from "../../shared/countryEvidence";
+import type { HomePeriod } from "../../utils/homeAirport";
 
 // ---- Interfaces for settings data stored as JSON ----
 
@@ -45,7 +46,9 @@ export interface SettingsDataJson {
     checkInReminder?: boolean;
     featureUpdates?: boolean;
   };
-  /** Chronological list of home airports. See backend/src/utils/homeAirport.ts. */
+  /** Home periods — residence + home airports by date. See backend/src/utils/homeAirport.ts. */
+  homePeriods?: HomePeriod[];
+  /** The old one-airport list, written as a mirror of `homePeriods`' primaries. */
   homeAirportHistory?: Array<{
     iata: string;
     fromDate: string; // YYYY-MM-DD

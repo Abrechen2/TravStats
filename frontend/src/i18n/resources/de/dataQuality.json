@@ -29,6 +29,10 @@
       "time": {
         "title": "Fragen zur Zeit",
         "description": "Hier fehlt uns etwas, um eine Zeit richtig anzuzeigen: die Zeitzone des Ortes, die Uhrzeit oder der genaue Tag. Wir raten nicht – ergänze es, wenn du es weißt, oder lass es so."
+      },
+      "home": {
+        "title": "Zuhause",
+        "description": "Dein Zuhause ist noch nicht vollständig eingerichtet. Wir ändern nichts, bis du es bestätigst."
       }
     },
     "photoJourneys": {
@@ -204,7 +208,8 @@
       "trip": "Reise",
       "trip_journal_entry": "Tagebucheintrag",
       "lodging_stay": "Aufenthalt",
-      "profile": "Profil"
+      "profile": "Profil",
+      "home": "Zuhause"
     },
     "status": {
       "open": "Offen",
@@ -221,7 +226,8 @@
         "hint": "Am Eintrag ist nichts zu ändern. Diese Frage wird nie wieder gestellt."
       }
     },
-    "timeUnchanged": "Am Eintrag wurde nichts geändert. Die Zeit steht, wie sie gespeichert war, bis du sie ergänzt."
+    "timeUnchanged": "Am Eintrag wurde nichts geändert. Die Zeit steht, wie sie gespeichert war, bis du sie ergänzt.",
+    "homeSubject": "Dein Zuhause"
   },
   "kinds": {
     "address_country_mismatch": {
@@ -262,6 +268,13 @@
     "time_day_ambiguous": {
       "title": "Tag nicht eindeutig",
       "question": "Es ist nicht sicher, welcher Kalendertag gemeint ist. Übernommen wurde der gespeicherte Tag – prüfe ihn und korrigiere ihn, falls nötig."
+    },
+    "home_residence_unconfirmed": {
+      "title": "Wohnort bestätigen",
+      "question": "Wohnort bestätigen und weitere Heimatflughäfen wählen?",
+      "body": "Bisher kennt TravStats nur deinen Heimatflughafen ({{airports}}) und misst Abstände von dort aus. Bestätige, wo du wohnst, und wähle bis zu drei Flughäfen, von denen du fliegst.",
+      "unchanged": "Bis du bestätigst, rechnen alle Statistiken genau wie bisher.",
+      "action": "Zuhause einrichten"
     }
   },
   "passwordResets": {

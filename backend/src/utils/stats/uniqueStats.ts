@@ -25,7 +25,7 @@ import {
 } from "./flightPredicates";
 import type { AirportData } from "../../services/airportLookup";
 import type { FlightData, UniqueStats } from "./types";
-import { HomeAirportEntry, getHomeAirportAt } from "../homeAirport";
+import { type HomePeriod, isHomeAirportAt } from "../homeAirport";
 import { isCountableFlight } from "../../shared/flightCounting";
 
 /** Max duration counted as a "layover". Anything longer is a stopover / trip gap. */
@@ -56,7 +56,7 @@ const LAYOVER_CAP_HOURS = 24;
  */
 export async function calculateUniqueStats(
   flights: FlightData[],
-  homeAirportHistory: HomeAirportEntry[] = []
+  homePeriods: readonly HomePeriod[] = []
 ): Promise<UniqueStats> {
   // Time-sensitive subset — both times must be present.
   const flownFlights = flights.filter(
@@ -385,10 +385,10 @@ export async function calculateUniqueStats(
       // Same airport for end-of-current and start-of-next?
       if (currentArrCode !== nextDepCode) continue;
 
-      // Exclude the home airport active at the time of arrival.
+      // Exclude every home airport active at the time of arrival — a change of
+      // planes at DUS is a trip home for someone who flies from CGN and DUS.
       const arrivalDay = new Date(current.arrivalTime).toISOString().slice(0, 10);
-      const homeAtArrival = getHomeAirportAt(homeAirportHistory, arrivalDay);
-      if (homeAtArrival && homeAtArrival === currentArrCode) continue;
+      if (isHomeAirportAt(homePeriods, arrivalDay, currentArrCode)) continue;
 
       const layoverHours =
         (new Date(next.departureTime).getTime() - new Date(current.arrivalTime).getTime()) /

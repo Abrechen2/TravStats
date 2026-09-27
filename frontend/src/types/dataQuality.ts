@@ -24,7 +24,7 @@ import type {
  * The time-model migration (ADR 0002, phase 3b) adds the rows a time value
  * lives on (`TimeFlagEntityType`): each open value is flagged on its own row.
  */
-export type DataQualityEntityType = "lodging" | "place" | "country" | TimeFlagEntityType;
+export type DataQualityEntityType = "lodging" | "place" | "country" | "home" | TimeFlagEntityType;
 
 /** Which check fired. */
 export type DataQualityFlagKind =
@@ -32,6 +32,7 @@ export type DataQualityFlagKind =
   | "undated_country_evidence"
   | "stay_dates_reversed"
   | "coordinates_outside_country"
+  | "home_residence_unconfirmed"
   | TimeFlagKind;
 
 /**
@@ -67,7 +68,10 @@ export interface FlaggedRecord {
  * and a country has no `label` to read by mistake.
  */
 export type DataQualityFlagSubject =
-  FlaggedRecord | TimeValueRecord | { entityType: "country"; countryCode: string };
+  | FlaggedRecord
+  | TimeValueRecord
+  | { entityType: "country"; countryCode: string }
+  | { entityType: "home"; entityId: string };
 
 /**
  * The row a time flag is about. Kept apart from `FlaggedRecord` because it is
@@ -123,12 +127,23 @@ export interface CoordinatesOutsideCountryDetails {
   lon: number;
 }
 
+/**
+ * "Wohnort bestätigen und weitere Heimatflughäfen wählen?" — one question per
+ * account while a home period still has the residence it was migrated with.
+ */
+export interface HomeResidenceUnconfirmedDetails {
+  /** The home airports of the unconfirmed periods, oldest first. */
+  airports: string[];
+  periods: number;
+}
+
 /** Every detail shape, as a union. Only useful where `kind` is already known. */
 export type DataQualityFlagDetails =
   | AddressCountryMismatchDetails
   | UndatedCountryEvidenceDetails
   | StayDatesReversedDetails
   | CoordinatesOutsideCountryDetails
+  | HomeResidenceUnconfirmedDetails
   | TimeQuestionDetails;
 
 /**
@@ -181,6 +196,10 @@ export type DataQualityFlag =
   | (DataQualityFlagBase & {
       kind: "coordinates_outside_country";
       details: CoordinatesOutsideCountryDetails;
+    })
+  | (DataQualityFlagBase & {
+      kind: "home_residence_unconfirmed";
+      details: HomeResidenceUnconfirmedDetails;
     })
   | (DataQualityFlagBase & {
       kind: TimeFlagKind;

@@ -40,12 +40,12 @@ import { runDataQualityChecks } from "./dataQuality";
  */
 
 /** Which seam kicked the run. Only used for the log line. */
-export type DataQualityTrigger = "lodging_import" | "place_import";
+export type DataQualityTrigger = "lodging_import" | "place_import" | "home_settings";
 
 export interface DataQualityTriggerContext {
   trigger: DataQualityTrigger;
-  /** The import batch the rows arrived in, so a flag can be traced to its cause. */
-  batchId: string;
+  /** The import batch the rows arrived in, so a flag can be traced to its cause. None for a settings change. */
+  batchId?: string;
 }
 
 /**

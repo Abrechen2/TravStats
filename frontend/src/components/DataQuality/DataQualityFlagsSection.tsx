@@ -41,6 +41,10 @@ const STATUS_OPTIONS: (DataQualityFlagStatus | "all")[] = [
 const isTimeQuestion = (flag: DataQualityFlag): boolean =>
   (TIME_FLAG_KINDS as readonly string[]).includes(flag.kind);
 
+/** The home question (owner decision 2026-09-27) is not a contradiction either: nothing is set yet. */
+const isHomeQuestion = (flag: DataQualityFlag): boolean =>
+  flag.kind === "home_residence_unconfirmed";
+
 export default function DataQualityFlagsSection({
   onOpenCount,
 }: {
@@ -177,7 +181,11 @@ export default function DataQualityFlagsSection({
         </div>
       ) : (
         [
-          { key: "contradictions", items: flags.filter((f) => !isTimeQuestion(f)) },
+          {
+            key: "contradictions",
+            items: flags.filter((f) => !isTimeQuestion(f) && !isHomeQuestion(f)),
+          },
+          { key: "home", items: flags.filter(isHomeQuestion) },
           { key: "time", items: flags.filter(isTimeQuestion) },
         ]
           .filter((group) => group.items.length > 0)
@@ -197,9 +205,9 @@ export default function DataQualityFlagsSection({
                 </h3>
               )}
               <p className="t-caption mb-4">
-                {group.key === "time"
-                  ? t("dataQuality:inbox.review.time.description")
-                  : t("dataQuality:inbox.review.description")}
+                {group.key === "contradictions"
+                  ? t("dataQuality:inbox.review.description")
+                  : t(`dataQuality:inbox.review.${group.key}.description`)}
               </p>
               <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
                 {group.items.map((flag) => (
