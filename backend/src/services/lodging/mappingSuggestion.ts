@@ -1,6 +1,6 @@
 import logger from "../../utils/logger";
 import { llmRefusalFor } from "../llm/llmGate";
-import { llmGenerate, ollamaTarget, resolveLlmTarget, type LlmTarget } from "../llm/llmProvider";
+import { llmGenerateChain } from "../llm/llmProvider";
 
 export const LODGING_CSV_FIELDS = [
   "name",
@@ -60,19 +60,6 @@ Every value MUST be one of the CSV headers given, copied VERBATIM.
 Omit a field entirely if no header fits — NEVER invent a header, NEVER map two fields to the same header.
 
 Hints: German headers are common. "Hotel"/"Name"/"Unterkunft" -> name. "Anreise"/"Check-in" -> checkIn. "Abreise" -> checkOut. "Bew. Zimmer"/"Bewertung Zimmer" -> ratingRoom. "Bew. Frühstück" -> ratingBreakfast. "Kette"/"Marke" -> chainName. "Straße"/"Adresse" -> address. "PLZ" belongs with address, not city. "Ort"/"Stadt" -> city. "Land" -> country. "Sterne" -> stars. "Preis"/"Gesamtpreis" -> totalPrice. "place_id"/"Google Place ID" -> googlePlaceId.`;
-
-/**
- * Explicit options (tests) over the admin's provider over env over the
- * localhost default — the one resolution every model caller shares.
- */
-async function resolveTarget(options?: MappingSuggestionOptions): Promise<LlmTarget> {
-  const target = await resolveLlmTarget({
-    ...(options?.url !== undefined ? { url: options.url } : {}),
-    ...(options?.model !== undefined ? { model: options.model } : {}),
-    withDefaults: true,
-  });
-  return target ?? ollamaTarget(options?.url, options?.model);
-}
 
 function isLodgingField(value: string): value is LodgingCsvField {
   return (LODGING_CSV_FIELDS as readonly string[]).includes(value);
@@ -206,22 +193,30 @@ export async function suggestLodgingCsvMapping(
   // the same "no suggestion" answer — and the rows never leave the instance.
   if (await llmRefusalFor()) return {};
   try {
-    const target = await resolveTarget(options);
-    // The deadline-bound client (`http/boundedHttp.ts`) behind `llmGenerate`
-    // is the hard wall-clock budget this advisory call needs; its errors and
-    // an envelope that is not the protocol's shape both land in the catch
-    // below, which degrades to `{}`.
-    const text = await llmGenerate(target, {
-      system: SYSTEM_PROMPT,
-      prompt: `CSV headers: ${JSON.stringify(headers)}
+    // `llmGenerateChain` tries Ollama first, then the enabled+consented cloud
+    // slots in the admin's priority order — ONLY on a connectivity/protocol
+    // failure (`http/boundedHttp.ts`'s deadline, a non-2xx, an unparsable
+    // envelope). A slot that answers, however poor, stops the chain there.
+    // Every attempt is logged; the catch below (which degrades to `{}`) only
+    // fires once the WHOLE chain has failed.
+    const { text } = await llmGenerateChain(
+      {
+        system: SYSTEM_PROMPT,
+        prompt: `CSV headers: ${JSON.stringify(headers)}
 Sample rows: ${JSON.stringify(sampleRows.slice(0, 3))}
 
 Return the mapping JSON.`,
-      temperature: 0,
-      json: true,
-      timeoutMs: getSuggestTimeoutMs(),
-      label: "Mapping suggestion",
-    });
+        temperature: 0,
+        json: true,
+        timeoutMs: getSuggestTimeoutMs(),
+        label: "Mapping suggestion",
+      },
+      {
+        ...(options?.url !== undefined ? { url: options.url } : {}),
+        ...(options?.model !== undefined ? { model: options.model } : {}),
+        withDefaults: true,
+      }
+    );
 
     const cleaned = text
       .replace(/<think>[\s\S]*?<\/think>/gi, "")

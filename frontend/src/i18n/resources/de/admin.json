@@ -562,9 +562,12 @@
     },
     "ollama": {
       "title": "Ollama LLM Parser",
-      "description": "Ollama läuft lokal oder im Netzwerk und analysiert Buchungsbestätigungen mit einem LLM. Ideal für Multi-Stopp und komplexe E-Mails.",
+      "description": "Ollama läuft lokal oder im Netzwerk und analysiert Buchungsbestätigungen mit einem LLM. Ideal für Multi-Stopp und komplexe E-Mails. Wird immer zuerst versucht, wenn eine URL eingetragen ist — innerhalb deines Netzwerks ohne Zustimmung.",
       "urlLabel": "Ollama URL",
       "urlPlaceholder": "http://localhost:11434",
+      "remoteOptIn": {
+        "label": "Ich stimme zu, dass Buchungsdaten an diese Adresse gesendet werden, falls sie außerhalb meines Netzwerks liegt."
+      },
       "modelLabel": "Modell",
       "modelPlaceholder": "gemma3:12b",
       "testButton": "Verbindung testen",
@@ -588,14 +591,17 @@
     },
     "provider": {
       "title": "KI-Anbieter",
-      "description": "Wer liest die Buchungen, die keine Vorlage kennt? Ollama läuft bei dir im Haus; ein OpenAI-kompatibler Anbieter kann ein eigener Server oder ein Cloud-Dienst sein. Beide bekommen dieselben Anweisungen.",
-      "ollama": "Ollama (lokal oder im Netzwerk)",
-      "openaiCompatible": "OpenAI-kompatibel (OpenAI, OpenRouter, Ollama Cloud, eigener Server)",
+      "description": "Wer liest die Buchungen, die keine Vorlage kennt? Ollama läuft immer zuerst, wenn es konfiguriert ist — lokal oder im Netzwerk, ohne eigene Zustimmung (außer bei einer Adresse außerhalb deines Netzwerks). Antwortet Ollama nicht, fragt TravStats der Reihe nach die freigegebenen Cloud-Anbieter unten. Jeder Cloud-Anbieter braucht seinen EIGENEN Schlüssel und seine EIGENE Zustimmung — eine Freigabe für OpenAI gilt nicht für Anthropic oder Google.",
+      "chain": {
+        "title": "Rangfolge der Cloud-Anbieter",
+        "hint": "Antwortet Ollama nicht (nicht konfiguriert oder nicht erreichbar), versucht TravStats diese Anbieter der Reihe nach — aber nur, wenn Schlüssel UND Zustimmung vorliegen. Ein Anbieter ohne beides wird übersprungen, nie versucht. Ein Anbieter, der antwortet, beendet die Kette — auch bei einer mageren Antwort.",
+        "moveUp": "Nach oben",
+        "moveDown": "Nach unten"
+      },
       "baseUrlLabel": "Basis-URL (mit Versionspfad)",
       "baseUrlPlaceholder": "https://api.openai.com/v1",
-      "baseUrlHint": "Außerhalb deines Netzwerks nur mit https://. Beispiele: https://api.openai.com/v1, https://openrouter.ai/api/v1, https://ollama.com/v1",
+      "baseUrlHint": "Außerhalb deines Netzwerks nur mit https://. Beispiele: https://openrouter.ai/api/v1, https://ollama.com/v1",
       "modelLabel": "Modell",
-      "modelPlaceholder": "gpt-4o-mini",
       "keyLabel": "API-Schlüssel",
       "keyPlaceholder": "sk-…",
       "keyHint": "Wird verschlüsselt gespeichert und nie wieder angezeigt — nur die ersten und letzten vier Zeichen.",
@@ -620,12 +626,47 @@
         "LLM_BASE_URL_HTTPS_REQUIRED": "Ein KI-Anbieter außerhalb deines Netzwerks braucht https://. Nichts wurde gespeichert.",
         "LLM_BASE_URL_INVALID": "Die Basis-URL des KI-Anbieters ist ungültig. Nichts wurde gespeichert."
       },
-      "cloud": {
-        "title": "Buchungen an einen Cloud-Anbieter senden",
-        "warning": "Liegt der KI-Anbieter außerhalb deines Netzwerks, schickt TravStats ihm für jede Buchung, die keine Vorlage kennt, den Text der E-Mail oder des PDFs (bis zu 12.000 Zeichen) — mit Namen, Buchungsnummern, Reisedaten und Preisen. Für eine Reise-Zusammenfassung gehen die Daten der Reise hin (Flüge, Kreuzfahrten, Unterkünfte, Orte, Notizen, Tagebuch), für einen CSV-Import die Spaltennamen und drei Beispielzeilen. Was der Anbieter damit tut, regeln seine Bedingungen, nicht TravStats.",
-        "label": "Ich stimme zu, dass diese Daten an einen KI-Anbieter außerhalb meines Netzwerks gesendet werden.",
-        "hint": "Aus (Standard): Ein Anbieter außerhalb deines Netzwerks wird nie gefragt, auch kein Ollama unter einer öffentlichen Adresse — es gelten nur die eingebauten Vorlagen. Der Schalter „KI-Modell“ oben hat immer Vorrang.",
-        "inactive": "Der gespeicherte Anbieter liegt außerhalb deines Netzwerks. Solange du nicht zustimmst, bleibt der KI-Parser aus."
+      "slots": {
+        "openai": {
+          "name": "OpenAI",
+          "modelPlaceholder": "gpt-4o-mini",
+          "consent": {
+            "title": "Buchungen an OpenAI senden",
+            "warning": "Deine Buchungsmails werden an OpenAI-Server (USA) gesendet — für jede Buchung, die keine Vorlage kennt, bis zu 12.000 Zeichen der E-Mail oder des PDFs, mit Namen, Buchungsnummern, Reisedaten und Preisen. Was OpenAI damit tut, regeln seine eigenen Bedingungen, nicht TravStats.",
+            "label": "Ich stimme zu, dass diese Daten an OpenAI gesendet werden.",
+            "inactive": "OpenAI ist eingerichtet, aber noch nicht freigegeben — ohne Zustimmung wird OpenAI nie gefragt."
+          }
+        },
+        "anthropic": {
+          "name": "Anthropic",
+          "modelPlaceholder": "claude-3-5-haiku-latest",
+          "consent": {
+            "title": "Buchungen an Anthropic senden",
+            "warning": "Deine Buchungsmails werden an Anthropic-Server (USA) gesendet — für jede Buchung, die keine Vorlage kennt, bis zu 12.000 Zeichen der E-Mail oder des PDFs, mit Namen, Buchungsnummern, Reisedaten und Preisen. Was Anthropic damit tut, regeln seine eigenen Bedingungen, nicht TravStats.",
+            "label": "Ich stimme zu, dass diese Daten an Anthropic gesendet werden.",
+            "inactive": "Anthropic ist eingerichtet, aber noch nicht freigegeben — ohne Zustimmung wird Anthropic nie gefragt."
+          }
+        },
+        "google": {
+          "name": "Google",
+          "modelPlaceholder": "gemini-2.0-flash",
+          "consent": {
+            "title": "Buchungen an Google senden",
+            "warning": "Deine Buchungsmails werden an Google-Server (USA) gesendet — für jede Buchung, die keine Vorlage kennt, bis zu 12.000 Zeichen der E-Mail oder des PDFs, mit Namen, Buchungsnummern, Reisedaten und Preisen. Was Google damit tut, regeln seine eigenen Bedingungen, nicht TravStats.",
+            "label": "Ich stimme zu, dass diese Daten an Google gesendet werden.",
+            "inactive": "Google ist eingerichtet, aber noch nicht freigegeben — ohne Zustimmung wird Google nie gefragt."
+          }
+        },
+        "custom": {
+          "name": "Eigener Anbieter (OpenAI-kompatibel)",
+          "hint": "Ein eigener Server oder ein Cloud-Dienst mit OpenAI-kompatibler Schnittstelle — OpenRouter, Ollama Cloud, ein LAN-vLLM/LM Studio.",
+          "consent": {
+            "title": "Buchungen an diesen Anbieter senden",
+            "warning": "Liegt dieser Anbieter außerhalb deines Netzwerks, schickt TravStats ihm für jede Buchung, die keine Vorlage kennt, den Text der E-Mail oder des PDFs (bis zu 12.000 Zeichen) — mit Namen, Buchungsnummern, Reisedaten und Preisen. Was der Anbieter damit tut, regeln seine Bedingungen, nicht TravStats.",
+            "label": "Ich stimme zu, dass diese Daten an diesen Anbieter gesendet werden.",
+            "inactive": "Der gespeicherte Anbieter liegt außerhalb deines Netzwerks. Solange du nicht zustimmst, bleibt dieser Anbieter außen vor."
+          }
+        }
       }
     }
   },

@@ -98,8 +98,21 @@ export interface InstanceSettingsPatch {
  */
 export type ParserOrder = "template_first" | "llm_first";
 
-/** Which protocol the instance's language model speaks (backend `llm/llmProvider.ts`). */
-export type LlmProviderKind = "ollama" | "openai_compatible";
+/**
+ * Which protocol the instance's language model speaks (backend
+ * `llm/llmProvider.ts`). beta.18: `openai_compatible` was renamed `custom`
+ * (a free-form base URL — OpenRouter, Ollama Cloud, a LAN vLLM/LM Studio) and
+ * three FIXED-endpoint named slots were added, each with its own key/model/
+ * consent. There is no longer a single "active" kind on the admin settings —
+ * `llmProvider.ts` resolves a FALLBACK CHAIN (Ollama first, then the
+ * enabled+consented cloud slots in `llmProviderOrder`) — `kind` here still
+ * names which protocol actually answered a given parse.
+ */
+export type LlmProviderKind = "ollama" | "openai" | "anthropic" | "google" | "custom";
+
+/** The four cloud slots an admin may enable and order (Ollama is implicit, always first). */
+export const CLOUD_PROVIDER_KINDS = ["openai", "anthropic", "google", "custom"] as const;
+export type CloudProviderKind = (typeof CLOUD_PROVIDER_KINDS)[number];
 
 export interface AdminParserSettingsResponse {
   allowUserApiKeys: boolean;
@@ -111,15 +124,32 @@ export interface AdminParserSettingsResponse {
   llmEnabled?: boolean;
   ollamaUrl: string | null;
   ollamaModel: string | null;
-  /** Absent before beta.17 — read as "ollama". */
-  llmProvider?: LlmProviderKind;
+  /** Consent for a REMOTE Ollama only — the local/LAN case never needs this. */
+  llmOllamaOptIn?: boolean;
+  /** The admin's priority among the four cloud slots — always all four, in order. */
+  llmProviderOrder?: CloudProviderKind[];
+
+  /** The `custom` slot (beta.17's `openai_compatible`) — a free-form base URL. */
   openaiCompatBaseUrl?: string | null;
   openaiCompatModel?: string | null;
   /** Masked ("abcd****wxyz") or null — the key itself never leaves the server. */
   openaiCompatApiKey?: string | null;
   /** The SAVED endpoint is outside the local network. */
   openaiCompatIsCloud?: boolean;
-  llmCloudOptIn?: boolean;
+  llmCustomOptIn?: boolean;
+
+  /** OpenAI — fixed endpoint, key + model only. */
+  llmOpenaiModel?: string | null;
+  llmOpenaiApiKey?: string | null;
+  llmOpenaiOptIn?: boolean;
+  /** Anthropic — native Messages API, fixed endpoint, key + model only. */
+  llmAnthropicModel?: string | null;
+  llmAnthropicApiKey?: string | null;
+  llmAnthropicOptIn?: boolean;
+  /** Google — Gemini's own OpenAI-compatible endpoint, fixed, key + model only. */
+  llmGoogleModel?: string | null;
+  llmGoogleApiKey?: string | null;
+  llmGoogleOptIn?: boolean;
 }
 
 /** Stable codes the admin page words itself (`test.errors.*`). */
@@ -369,20 +399,35 @@ export const adminApi = {
     llmEnabled?: boolean;
     ollamaUrl?: string | null;
     ollamaModel?: string | null;
-    llmProvider?: LlmProviderKind;
+    llmOllamaOptIn?: boolean;
+    llmProviderOrder?: CloudProviderKind[];
     openaiCompatBaseUrl?: string | null;
     openaiCompatModel?: string | null;
     /** The masked echo from the GET keeps the stored key; "" / null clears it. */
     openaiCompatApiKey?: string | null;
-    llmCloudOptIn?: boolean;
+    llmCustomOptIn?: boolean;
+    llmOpenaiApiKey?: string | null;
+    llmOpenaiModel?: string | null;
+    llmOpenaiOptIn?: boolean;
+    llmAnthropicApiKey?: string | null;
+    llmAnthropicModel?: string | null;
+    llmAnthropicOptIn?: boolean;
+    llmGoogleApiKey?: string | null;
+    llmGoogleModel?: string | null;
+    llmGoogleOptIn?: boolean;
   }): Promise<MessageResponse> => {
     const { data } = await api.put<MessageResponse>("/admin/parser-settings", settings);
     return data;
   },
 
-  /** "Verbindung testen" for an OpenAI-compatible provider — sends only the key, no document. */
+  /**
+   * "Verbindung testen" for a cloud slot — sends only the key, no document.
+   * `openai`/`anthropic`/`google` use their fixed base URL server-side;
+   * `baseUrl` is only read (and required) for `kind: "custom"`.
+   */
   testLlmProvider: async (input: {
-    baseUrl: string;
+    kind: CloudProviderKind;
+    baseUrl?: string | null;
     model: string | null;
     apiKey: string | null;
   }): Promise<LlmProviderTestResult> => {

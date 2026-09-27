@@ -274,7 +274,7 @@ export async function parseRailBookingText(
           : {
               fallbackCode: "llmUnreachable" as const,
               fallbackReason:
-                target.kind === "openai_compatible"
+                target.kind !== "ollama"
                   ? `${llmProviderLabel(target)} is not reachable (${probe.error ?? "no answer"})`
                   : `Ollama is not reachable at ${target.url}`,
             }),

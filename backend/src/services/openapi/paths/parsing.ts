@@ -126,7 +126,7 @@ registry.registerPath({
               ),
             llmProvider: z
               .object({
-                kind: z.enum(["ollama", "openai_compatible"]),
+                kind: z.enum(["ollama", "openai", "anthropic", "google", "custom"]),
                 model: z.string(),
                 isCloud: z.boolean(),
                 host: z

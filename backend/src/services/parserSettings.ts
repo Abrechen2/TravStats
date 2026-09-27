@@ -24,14 +24,49 @@ export interface AdminParserSettings {
   parserOrder?: string | null;
   /** The admin switch — see `services/llm/llmGate.ts`, its only reader. */
   llmEnabled?: boolean;
-  /** "ollama" | "openai_compatible" — resolved by `services/llm/llmProvider.ts`. */
-  llmProvider?: string | null;
+  /**
+   * Consent for a REMOTE Ollama (the common local case never needs one). Its
+   * own flag rather than borrowed from any cloud slot — "ollama" is a fifth
+   * protocol kind, not a company, but a public host is still somebody else's
+   * computer.
+   */
+  llmOllamaOptIn?: boolean;
+
+  /**
+   * The `custom` slot (beta.17's `openai_compatible`): a free-form
+   * OpenAI-compatible base URL — OpenRouter, Ollama Cloud, a LAN vLLM/LM
+   * Studio. Field names kept from beta.17 on purpose: the beta.18 migration
+   * maps existing rows onto this slot verbatim, without moving the URL/model/
+   * key into new columns.
+   */
   openaiCompatBaseUrl?: string | null;
   openaiCompatModel?: string | null;
   /** Decrypted. Never logged, never returned by an API (masked there). */
   openaiCompatApiKey?: string | null;
-  /** Consent to send documents to a provider outside the local network. */
-  llmCloudOptIn?: boolean;
+  /** The custom slot's OWN consent — replaces beta.17's single `llmCloudOptIn`. */
+  llmCustomOptIn?: boolean;
+
+  /** OpenAI — fixed endpoint (`services/llm/llmProvider.ts` `OPENAI_BASE_URL`), key + model only. */
+  llmOpenaiApiKey?: string | null;
+  llmOpenaiModel?: string | null;
+  llmOpenaiOptIn?: boolean;
+
+  /** Anthropic — native Messages API, fixed endpoint, key + model only. */
+  llmAnthropicApiKey?: string | null;
+  llmAnthropicModel?: string | null;
+  llmAnthropicOptIn?: boolean;
+
+  /** Google — Gemini's own OpenAI-compatible endpoint, fixed, key + model only. */
+  llmGoogleApiKey?: string | null;
+  llmGoogleModel?: string | null;
+  llmGoogleOptIn?: boolean;
+
+  /**
+   * The admin's priority among the four cloud slots, comma-separated
+   * (`services/llm/llmProvider.ts` `parseProviderOrder`). Ollama is not in
+   * this list — it is implicitly always tried first when eligible.
+   */
+  llmProviderOrder?: string | null;
 }
 
 /**
@@ -103,11 +138,21 @@ export async function getAdminParserSettings(): Promise<AdminParserSettings | nu
     ollamaVisionModel: settings.ollamaVisionModel,
     parserOrder: settings.parserOrder,
     llmEnabled: settings.llmEnabled,
-    llmProvider: settings.llmProvider,
+    llmOllamaOptIn: settings.llmOllamaOptIn,
     openaiCompatBaseUrl: settings.openaiCompatBaseUrl,
     openaiCompatModel: settings.openaiCompatModel,
     openaiCompatApiKey: decryptApiKey(settings.openaiCompatApiKey),
-    llmCloudOptIn: settings.llmCloudOptIn,
+    llmCustomOptIn: settings.llmCustomOptIn,
+    llmOpenaiApiKey: decryptApiKey(settings.llmOpenaiApiKey),
+    llmOpenaiModel: settings.llmOpenaiModel,
+    llmOpenaiOptIn: settings.llmOpenaiOptIn,
+    llmAnthropicApiKey: decryptApiKey(settings.llmAnthropicApiKey),
+    llmAnthropicModel: settings.llmAnthropicModel,
+    llmAnthropicOptIn: settings.llmAnthropicOptIn,
+    llmGoogleApiKey: decryptApiKey(settings.llmGoogleApiKey),
+    llmGoogleModel: settings.llmGoogleModel,
+    llmGoogleOptIn: settings.llmGoogleOptIn,
+    llmProviderOrder: settings.llmProviderOrder,
   };
 }
 

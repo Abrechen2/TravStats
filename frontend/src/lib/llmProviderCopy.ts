@@ -7,11 +7,19 @@ type Translate = (key: string, options?: Record<string, unknown>) => string;
  * needs to know about where a booking went.
  */
 export interface LlmProviderInfo {
-  kind: "ollama" | "openai_compatible";
+  kind: "ollama" | "openai" | "anthropic" | "google" | "custom";
   model: string;
   isCloud: boolean;
   host: string | null;
 }
+
+const KNOWN_KINDS: ReadonlySet<string> = new Set([
+  "ollama",
+  "openai",
+  "anthropic",
+  "google",
+  "custom",
+]);
 
 function isRecord(value: unknown): value is Record<string, unknown> {
   return typeof value === "object" && value !== null;
@@ -21,9 +29,14 @@ function isRecord(value: unknown): value is Record<string, unknown> {
 export function parseLlmProviderInfo(value: unknown): LlmProviderInfo | null {
   if (!isRecord(value)) return null;
   const { kind, model, isCloud, host } = value;
-  if (kind !== "ollama" && kind !== "openai_compatible") return null;
+  if (typeof kind !== "string" || !KNOWN_KINDS.has(kind)) return null;
   if (typeof model !== "string" || typeof isCloud !== "boolean") return null;
-  return { kind, model, isCloud, host: typeof host === "string" && host ? host : null };
+  return {
+    kind: kind as LlmProviderInfo["kind"],
+    model,
+    isCloud,
+    host: typeof host === "string" && host ? host : null,
+  };
 }
 
 /**

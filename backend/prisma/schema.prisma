@@ -885,24 +885,51 @@ model AdminSettings {
   ollamaUrl         String? @map("ollama_url")
   ollamaModel       String? @map("ollama_model")
   ollamaVisionModel String? @map("ollama_vision_model")
+  /// Consent for a REMOTE Ollama (the common local case never needs one) —
+  /// its own flag, never borrowed from a cloud slot's consent.
+  llmOllamaOptIn    Boolean @default(false) @map("llm_ollama_opt_in")
 
-  /// Which language-model service the parsers, the CSV mapping suggestion and
-  /// the trip summary talk to: "ollama" (native API, the default and what every
-  /// instance used before) or "openai_compatible" (any `/chat/completions`
-  /// endpoint — OpenAI, OpenRouter, Ollama Cloud, a LAN vLLM). A bare string,
-  /// validated by Zod at the boundary; `services/llm/llmProvider.ts` owns the set.
-  llmProvider         String  @default("ollama") @map("llm_provider")
-  /// Base URL of the OpenAI-compatible endpoint, INCLUDING its version path
-  /// (e.g. https://api.openai.com/v1). https, except on a local/LAN host
-  /// (`services/llm/llmEndpoint.ts`).
+  /// beta.18: the fallback CHAIN's own priority among the four cloud slots,
+  /// comma-separated (`services/llm/llmProvider.ts` `parseProviderOrder`).
+  /// Ollama is not in this list — it is implicitly always tried first when it
+  /// has an eligible endpoint. Replaced the single admin-picked "active
+  /// provider" (`llmProvider`, beta.17): every enabled+consented slot is now
+  /// tried in this order on a connectivity failure, not chosen exclusively.
+  llmProviderOrder String @default("openai,anthropic,google,custom") @map("llm_provider_order")
+
+  /// The `custom` slot (beta.17's `openai_compatible`): a free-form
+  /// OpenAI-compatible endpoint — OpenRouter, Ollama Cloud, a LAN vLLM/LM
+  /// Studio. Base URL INCLUDES its version path (e.g. https://api.openai.com/v1).
+  /// https, except on a local/LAN host (`services/llm/llmEndpoint.ts`). Column
+  /// names kept from beta.17 on purpose — the beta.18 migration maps existing
+  /// rows onto this slot verbatim.
   openaiCompatBaseUrl String? @map("openai_compat_base_url")
   openaiCompatModel   String? @map("openai_compat_model")
   /// Encrypted at application level, masked on read — same as the other keys.
   openaiCompatApiKey  String? @map("openai_compat_api_key")
-  /// The admin's explicit consent that booking documents may be sent to a
-  /// provider OUTSIDE the local network. Off by default: without it a cloud
-  /// endpoint is never asked, whatever else is configured (`llmGate.ts`).
-  llmCloudOptIn       Boolean @default(false) @map("llm_cloud_opt_in")
+  /// The custom slot's OWN consent. Replaces beta.17's single `llmCloudOptIn`
+  /// — the beta.18 migration copies that one flag onto this column, since it
+  /// only ever gated this slot; the three NAMED cloud slots below start
+  /// unconsented, never inheriting it.
+  llmCustomOptIn      Boolean @default(false) @map("llm_custom_opt_in")
+
+  /// OpenAI — fixed endpoint (`services/llm/llmProvider.ts` `OPENAI_BASE_URL`),
+  /// so only a key and a model are asked for; no base-URL field.
+  llmOpenaiApiKey String?  @map("llm_openai_api_key")
+  llmOpenaiModel  String?  @map("llm_openai_model")
+  llmOpenaiOptIn  Boolean  @default(false) @map("llm_openai_opt_in")
+
+  /// Anthropic — native Messages API (`services/llm/llmProvider.ts`
+  /// `ANTHROPIC_BASE_URL`, `generateWithAnthropic`), fixed endpoint.
+  llmAnthropicApiKey String?  @map("llm_anthropic_api_key")
+  llmAnthropicModel  String?  @map("llm_anthropic_model")
+  llmAnthropicOptIn  Boolean  @default(false) @map("llm_anthropic_opt_in")
+
+  /// Google — Gemini's own OpenAI-compatible endpoint (`GOOGLE_BASE_URL`),
+  /// fixed, reusing the same request path as OpenAI/custom.
+  llmGoogleApiKey String?  @map("llm_google_api_key")
+  llmGoogleModel  String?  @map("llm_google_model")
+  llmGoogleOptIn  Boolean  @default(false) @map("llm_google_opt_in")
 
   // Backup schedule configuration (overrides AUTO_BACKUP_ENABLED / BACKUP_INTERVAL env vars)
   backupEnabled       Boolean   @default(false) @map("backup_enabled")
