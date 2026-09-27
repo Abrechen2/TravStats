@@ -349,5 +349,39 @@
     "loading": "Loading train journeys …",
     "loadError": "The train journeys could not be loaded.",
     "empty": "No train journeys yet."
+  },
+  "domainFilter": {
+    "button": {
+      "label": "Domains · {{visible}}/{{total}}"
+    },
+    "panel": {
+      "title": "On the map",
+      "all": "All",
+      "none": "None",
+      "persist": "Applies instantly · remembered on this device"
+    },
+    "row": {
+      "only": "Only",
+      "onlyTooltip": "Show only this domain"
+    },
+    "betaBadge": {
+      "tooltip": "Beta feature of this instance"
+    },
+    "link": {
+      "badge": "Link",
+      "note": "Selection from a shared link — not saved. Your own selection is unchanged.",
+      "adopt": "Keep as mine",
+      "mine": "My selection"
+    },
+    "empty": {
+      "title": "No domain selected",
+      "body": "The map is empty because every domain is unticked.",
+      "showAll": "Show all",
+      "openFilter": "Open selection"
+    },
+    "sheet": {
+      "title": "Domains",
+      "done": "Done"
+    }
   }
 }
