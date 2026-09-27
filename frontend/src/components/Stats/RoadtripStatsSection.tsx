@@ -80,6 +80,8 @@ export default function RoadtripStatsSection({
             label: t("roadtrips:stats.distance"),
             current: Math.round(scoped.reduce((s, r) => s + r.distanceKm, 0)),
             previous: Math.round(compared.reduce((s, r) => s + r.distanceKm, 0)),
+            // A distance says its unit, as the tile below does ("2.620 km").
+            format: (n: number): string => `${nf.format(n)} km`,
           },
           {
             key: "countries",

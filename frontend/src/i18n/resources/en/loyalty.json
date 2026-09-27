@@ -64,7 +64,8 @@
     "none": "Nothing in your logbook that this card covers yet.",
     "showList": {
       "lodging": "Show hotels",
-      "flight": "Show flights"
+      "flight": "Show flights",
+      "rail": "Show train rides"
     },
     "byYear": "By year"
   },
@@ -80,7 +81,8 @@
     "named": "Only entries of “{{name}}”",
     "gone": "This loyalty programme does not exist (any more), so nothing is shown here.",
     "unnamed": "Only entries of one loyalty programme",
-    "clear": "Remove filter"
+    "clear": "Remove filter",
+    "inYear": "in {{year}}"
   },
   "alliances": {
     "label": "Add a whole alliance:",

@@ -6,7 +6,7 @@ import { authenticate, type AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { statsLimiter } from "../../middleware/rateLimit";
 import { loadHomeAirportHistory } from "../../services/stats/homeAirportHistory";
-import { airportDisplayName } from "../../utils/airportDisplay";
+import { airportCityName, airportDisplayName } from "../../utils/airportDisplay";
 import { getCurrentHomeAirport, getHomeAirportAt } from "../../utils/homeAirport";
 
 /**
@@ -96,19 +96,24 @@ export function rankDestinations(evidence: readonly DestinationEvidence[], cap: 
 }
 
 /**
- * Reader-facing names of airports by code; the catalogue's `city` is not one.
- * IATA or ICAO, because a home airport is stored as ICAO when it has no IATA.
+ * Reader-facing place names of airports by code — the city an airport serves,
+ * the rule the trip suggestions name a destination by (`airportCityName`,
+ * acceptance D10), and the airport's short name only where the catalogue
+ * cannot say. "Herkunft" is a place: it offered "Cologne Bonn", the English
+ * airport name, where the catalogue's city reads "Köln (Cologne)" (acceptance
+ * run, 2026-09-26). IATA or ICAO, because a home airport is stored as ICAO
+ * when it has no IATA.
  */
 async function airportNames(codes: readonly string[]): Promise<Map<string, string>> {
   const unique = [...new Set(codes)];
   if (unique.length === 0) return new Map();
   const rows = await prisma.airport.findMany({
     where: { OR: [{ iata: { in: unique } }, { icao: { in: unique } }], isClosed: false },
-    select: { iata: true, icao: true, name: true, municipalityName: true },
+    select: { iata: true, icao: true, name: true, city: true, municipalityName: true },
   });
   const names = new Map<string, string>();
   for (const row of rows) {
-    const name = airportDisplayName(row);
+    const name = airportCityName(row) ?? airportDisplayName(row);
     if (!name) continue;
     for (const code of [row.iata, row.icao]) {
       if (code && unique.includes(code) && !names.has(code)) names.set(code, name);

@@ -216,7 +216,9 @@
     "createTitle": "New cruise",
     "editTitle": "Edit cruise",
     "saveError": "Could not save the cruise",
-    "routeNameSuggestion": "Use suggestion: {{name}}"
+    "routeNameSuggestion": "Use suggestion: {{name}}",
+    "identityRequired": "Enter a ship, a route name, a cruise line or the departure port – otherwise the cruise cannot be recognised.",
+    "startDateRequired": "Enter the departure date."
   },
   "add": {
     "title": "Add cruise"

@@ -155,8 +155,47 @@ async function routeTrail(track: TrackSpec, profile: string): Promise<Point3[]> 
   const features = body.features as Array<{ geometry: { coordinates: number[][] } }>;
   if (!features?.length) throw new Error(`${track.key}: BRouter returned no track`);
   const path2d = features[0].geometry.coordinates.map(([lon, lat]) => [lon, lat] as const);
-  const elevations = await elevationsFor(track.key, path2d);
+  const elevations = smoothElevations(path2d, await elevationsFor(track.key, path2d));
   return path2d.map(([lon, lat], i) => [lon, lat, elevations[i]]);
+}
+
+/** Half-width of the running median over the DEM samples, in metres along the line. */
+const ELEVATION_MEDIAN_HALF_M = 500;
+
+/**
+ * A running median over ±`ELEVATION_MEDIAN_HALF_M` of the line.
+ *
+ * A 90 m DEM cell beside a river is half valley wall: the Mosel cycle path,
+ * which sits a few metres above the water from Trier to Koblenz, came out of
+ * the raw samples with steps of up to 75 m between neighbours and "Aufstieg
+ * 6.283 m" over its four days (acceptance run, 2026-09-26) — noise the 5 m
+ * hysteresis in `trackMetrics.ts` rightly keeps, because it is far above any
+ * logger's jitter. Measured against BRouter's own filtered ascent: the Mosel
+ * falls from 6,283 m to about 950 m, and the mountain hikes stay within
+ * about 20 % of it (Alta Via day 1: 813 m against 870 m).
+ */
+function smoothElevations(
+  points: ReadonlyArray<readonly [number, number]>,
+  elevations: readonly number[]
+): number[] {
+  const along = [0];
+  for (let i = 1; i < points.length; i++) {
+    const [lon0, lat0] = points[i - 1];
+    const [lon1, lat1] = points[i];
+    along.push(
+      along[i - 1] + haversineKm({ lat: lat0, lon: lon0 }, { lat: lat1, lon: lon1 }) * 1000
+    );
+  }
+  const out: number[] = [];
+  let lo = 0;
+  let hi = 0;
+  for (let i = 0; i < points.length; i++) {
+    while (along[i] - along[lo] > ELEVATION_MEDIAN_HALF_M) lo++;
+    while (hi < points.length - 1 && along[hi + 1] - along[i] <= ELEVATION_MEDIAN_HALF_M) hi++;
+    const window = elevations.slice(lo, hi + 1).sort((a, b) => a - b);
+    out.push(window[Math.floor((window.length - 1) / 2)]);
+  }
+  return out;
 }
 
 /**

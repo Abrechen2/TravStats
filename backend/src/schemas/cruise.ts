@@ -156,13 +156,48 @@ const baseCruiseSchema = z.object({
   stops: z.array(cruiseStopSchema).max(60).optional(),
 });
 
-export const createCruiseSchema = baseCruiseSchema.refine(
-  (data) => {
-    if (!data.startDate || !data.endDate) return true;
-    return new Date(data.endDate).getTime() >= new Date(data.startDate).getTime();
-  },
-  { message: "endDate must not precede startDate", path: ["endDate"] }
-);
+/**
+ * What a new cruise must carry to exist at all: WHAT sailed — a catalogue
+ * ship, a free-text ship name, the itinerary's name, the line or the port it
+ * left from — and WHEN it set out. Without it `POST /cruises {}` answered 201 and the list grew a row
+ * reading "— | — – — | 0" (acceptance run, 2026-09-26): a cruise nobody could
+ * recognise, that counted in no year, and that an import could never match
+ * again (`matchCruise` in xlsxImport keys on the start date, so an undated
+ * row was re-created on every re-import). The end date stays optional — a
+ * booking often knows only the embarkation day.
+ */
+export function cruiseHasIdentity(data: {
+  shipId?: number | null;
+  shipNameOverride?: string | null;
+  routeName?: string | null;
+  cruiseLine?: string | null;
+  departurePortId?: number | null;
+}): boolean {
+  return (
+    (data.departurePortId !== null && data.departurePortId !== undefined) ||
+    (data.shipId !== null && data.shipId !== undefined) ||
+    Boolean(data.shipNameOverride?.trim()) ||
+    Boolean(data.routeName?.trim()) ||
+    Boolean(data.cruiseLine?.trim())
+  );
+}
+
+export const createCruiseSchema = baseCruiseSchema
+  .refine(
+    (data) => {
+      if (!data.startDate || !data.endDate) return true;
+      return new Date(data.endDate).getTime() >= new Date(data.startDate).getTime();
+    },
+    { message: "endDate must not precede startDate", path: ["endDate"] }
+  )
+  .refine(cruiseHasIdentity, {
+    message: "A cruise needs a ship, a route name, a cruise line or a departure port",
+    path: ["shipId"],
+  })
+  .refine((data) => Boolean(data.startDate), {
+    message: "A cruise needs a start date",
+    path: ["startDate"],
+  });
 
 export const updateCruiseSchema = partialForUpdate(baseCruiseSchema).refine(
   (data) => Object.keys(data).length > 0,

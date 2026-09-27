@@ -54,8 +54,8 @@ export interface TourLegendState {
 export interface TourFetchState {
   toursLoading: boolean;
   toursLoadError: boolean;
-  /** Only `kind` is read — roadtrips get their own legend row (2.7). */
-  tours: ReadonlyArray<{ kind?: string }>;
+  /** `kind` — roadtrips get their own legend row (2.7) — and each tour's `mode`. */
+  tours: ReadonlyArray<{ kind?: string; mode?: string }>;
 }
 
 /**
@@ -78,13 +78,24 @@ export function buildTourLegendRows(
     showTours && !fetch.toursLoading && !fetch.toursLoadError && fetch.tours.length > 0;
   if (!hasData) return { hasData, rows: [] };
   const hasRoadtrips = fetch.tours.some((tour) => tour.kind === "roadtrip");
-  const hasTours = fetch.tours.some((tour) => tour.kind !== "roadtrip");
+  // Only the means of transport that are ON this map, each named as a tour's:
+  // every mode was listed whether any tour used it, so "Bahn" stood in the
+  // tour hue AND again as the rail domain's "Bahn · Luftlinie" (acceptance
+  // run, 2026-09-26). "Tour · Bahn" is a day tour by train; "Bahn" is a ride.
+  const shownModes = new Set(
+    fetch.tours.filter((tour) => tour.kind !== "roadtrip").map((tour) => tour.mode)
+  );
+  const tourWord = t("dashboard:legend.tour");
   const rows = [
-    ...(hasTours
-      ? buildTourLegend().map((row) =>
-          legendRow(rgbCss(row.color), t(TOUR_LEGEND_LABEL_KEY[row.mode]), `tour-${row.mode}`)
+    ...buildTourLegend()
+      .filter((row) => shownModes.has(row.mode))
+      .map((row) =>
+        legendRow(
+          rgbCss(row.color),
+          `${tourWord} · ${t(TOUR_LEGEND_LABEL_KEY[row.mode])}`,
+          `tour-${row.mode}`
         )
-      : []),
+      ),
     ...(hasRoadtrips && roadtrip ? [legendRow(roadtrip.color, roadtrip.label, "roadtrip")] : []),
   ];
   return { hasData, rows };

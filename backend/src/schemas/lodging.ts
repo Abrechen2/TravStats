@@ -375,5 +375,14 @@ export type LodgingQueryInput = z.infer<typeof lodgingQuerySchema>;
  * a derived filter (a loyalty card's coverage) resolved to. Absent: no such
  * restriction; empty: nothing matches.
  */
-export type LodgingListQuery = LodgingQueryInput & { coveredLodgingIds?: string[] };
+export type LodgingListQuery = LodgingQueryInput & {
+  coveredLodgingIds?: string[];
+  /**
+   * The stays a loyalty card counts (in the linked year, when there is one).
+   * Present: only these stays feed the row figures, the sort aggregates and
+   * the summary, so the list opened from "2021: 3 Aufenthalte · 9 Nächte"
+   * reads 3 and 9 — not every stay the covered hotels ever had.
+   */
+  countedStayIds?: string[];
+};
 export type MembershipInput = z.infer<typeof baseMembershipSchema>;

@@ -1,4 +1,5 @@
 import type { Cruise, CruiseStop, Port } from "../../types";
+import { dateOfCruiseDay } from "./cruiseDayNumbers";
 
 /**
  * Shared port-sequence helpers for cruise surfaces.
@@ -161,8 +162,10 @@ export function buildEffectiveTimeline(cruise: Cruise): EffectiveTimelineEntry[]
     isAtSea: stop.isAtSea,
     unresolvedPortName: stop.unresolvedPortName ?? null,
     // Prefer the explicit per-stop date; fall back to the arrival timestamp for
-    // older stops imported before the date field existed.
-    date: stop.date ?? stop.arrivalTime ?? null,
+    // older stops imported before the date field existed, then to the day of
+    // the cruise — a sea day has neither, and its row stood without a date
+    // between two dated ports (acceptance run, 2026-09-26).
+    date: stop.date ?? stop.arrivalTime ?? dateOfCruiseDay(cruise.startDate, stop.dayNumber),
     excursionNote: stop.excursionNote ?? null,
   }));
 

@@ -1,7 +1,7 @@
 import type { JSX } from "react";
 import type { Achievement } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatIsoDate } from "../../lib/dateUtils";
+import { useDisplayFormat } from "../../lib/displayFormat";
 
 /**
  * Tier colours, from the token layer.
@@ -43,6 +43,9 @@ export default function AchievementCard({
   onOpen?: () => void;
 }): JSX.Element {
   const { t } = useTranslation(["achievements"]);
+  // The reader's date format, as the detail modal already uses — the card
+  // printed "2026-09-26" (acceptance run, 2026-09-26).
+  const format = useDisplayFormat();
   const isMystery = Boolean(achievement.isHidden) && !achievement.isUnlocked;
   const tier = TIER_COLOR[achievement.tier] ?? "var(--ts-muted)";
   const color = achievement.isUnlocked ? tier : "var(--ts-muted)";
@@ -103,7 +106,7 @@ export default function AchievementCard({
           <span style={{ color: "var(--ts-text)" }}>
             {achievement.isUnlocked
               ? achievement.unlockedAt
-                ? formatIsoDate(achievement.unlockedAt)
+                ? format.date(achievement.unlockedAt)
                 : null
               : isMystery
                 ? null
@@ -120,7 +123,7 @@ export default function AchievementCard({
           // "???" would give away that the user once solved it.
           <p className="t-caption" data-testid="achievement-last-held">
             {t("achievements:progress.lastHeld", {
-              date: formatIsoDate(achievement.unlockedAt),
+              date: format.date(achievement.unlockedAt),
             })}
           </p>
         )}

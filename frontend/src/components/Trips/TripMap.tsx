@@ -128,7 +128,7 @@ interface TripMapProps {
 
 // Stable module-level default. `tourGeometries = []` inline in the props
 // destructuring would allocate a NEW array reference on every render where
-// the caller omits the prop (TripDetailPage.tsx renders `<TripMap trip={...} />`
+// the caller omits the prop (any caller rendering `<TripMap trip={...} />`
 // with no `tourGeometries` at all) — a fresh reference invalidates the
 // `layers` useMemo below every single render, defeating the dependency array
 // entirely even though it lists `tourGeometries` correctly.

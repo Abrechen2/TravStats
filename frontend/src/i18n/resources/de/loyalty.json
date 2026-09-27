@@ -64,7 +64,8 @@
     "none": "Noch nichts im Logbuch, das diese Karte abdeckt.",
     "showList": {
       "lodging": "Hotels anzeigen",
-      "flight": "Flüge anzeigen"
+      "flight": "Flüge anzeigen",
+      "rail": "Bahnfahrten anzeigen"
     },
     "byYear": "Nach Jahr"
   },
@@ -80,7 +81,8 @@
     "named": "Nur Einträge von „{{name}}“",
     "gone": "Dieses Bonusprogramm gibt es nicht (mehr) — deshalb wird hier nichts angezeigt.",
     "unnamed": "Nur Einträge eines Bonusprogramms",
-    "clear": "Filter entfernen"
+    "clear": "Filter entfernen",
+    "inYear": "im Jahr {{year}}"
   },
   "alliances": {
     "label": "Ganze Allianz hinzufügen:",

@@ -159,6 +159,8 @@ export const railQuerySchema = z.object({
   /** Calendar year of the departure, on the departure station's calendar. */
   year: z.coerce.number().int().min(1900).max(2200).optional(),
   tripId: z.string().uuid().optional(),
+  /** A rail loyalty card: only the rides it counts (the link behind its figures). */
+  membershipId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
   sort: z.enum(RAIL_SORT_FIELDS).default("departure"),

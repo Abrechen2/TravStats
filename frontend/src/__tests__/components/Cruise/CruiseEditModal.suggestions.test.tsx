@@ -46,6 +46,11 @@ const stopDates = (): string[] =>
   screen.getAllByLabelText("stops.date").map((el) => (el as HTMLInputElement).value);
 
 async function savedPayload(): Promise<Parameters<typeof cruiseApi.create>[0]> {
+  // A new cruise needs something that sailed and a start date before it is sent.
+  const routeName = screen.getByLabelText("field.routeName") as HTMLInputElement;
+  if (!routeName.value) fireEvent.change(routeName, { target: { value: "Nordland" } });
+  const depart = screen.getAllByLabelText("field.depart")[0] as HTMLInputElement;
+  if (!depart.value) fireEvent.change(depart, { target: { value: "2026-07-01" } });
   await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
   await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
   const calls = vi.mocked(cruiseApi.create).mock.calls;

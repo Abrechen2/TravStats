@@ -16,6 +16,7 @@ import { rankDestinations } from "../trips/entrySuggestions";
 // Codes no real catalogue row uses, so the test owns every airport it reads.
 const HOME = "Q7H";
 const AWAY = "Q7A";
+const COLOGNE = "Q7K";
 
 describe("rankDestinations", () => {
   it("ranks by count, then by the order the trip got there, case-insensitively", () => {
@@ -78,15 +79,18 @@ describe("GET /api/v1/trips/entry-suggestions", () => {
 
     await prisma.airport.createMany({
       data: [
-        // The municipality trap: `city` is where the runway sits, not the city.
+        // The municipality trap (#332): `city` is where the runway sits, and
+        // the airport's own name does not repeat it ("Ferno (VA)" for MXP).
         {
           iata: HOME,
           name: "Testhausen International Airport",
-          city: "Runwaydorf",
+          city: "Runwaydorf (RW)",
           lat: 0,
           lon: 0,
         },
-        { iata: AWAY, name: "Farville Airport", city: "Nowhere", lat: 1, lon: 1 },
+        { iata: AWAY, name: "Farville Airport", city: "Nowhere (NW)", lat: 1, lon: 1 },
+        // Cologne as the catalogue has it: English name, the served city first.
+        { iata: COLOGNE, name: "Cologne Bonn Airport", city: "Köln (Cologne)", lat: 3, lon: 3 },
       ],
     });
     await prisma.userSettings.upsert({
@@ -161,13 +165,36 @@ describe("GET /api/v1/trips/entry-suggestions", () => {
   afterAll(async () => {
     await prisma.user.deleteMany({ where: { id: { in: [user.id, other.id] } } });
     await prisma.port.deleteMany({ where: { id: portId } });
-    await prisma.airport.deleteMany({ where: { iata: { in: [HOME, AWAY] } } });
+    await prisma.airport.deleteMany({ where: { iata: { in: [HOME, AWAY, COLOGNE] } } });
   });
 
   it("offers the home airport by its name, not by its municipality", async () => {
     const res = await suggest();
     expect(res.status).toBe(200);
     expect(res.body).toEqual({ origins: ["Testhausen"], destinations: [] });
+  });
+
+  // Acceptance 2026-09-26: "Leer anlegen" offered "Cologne Bonn" — the English
+  // airport name — as the origin in a German form. Herkunft is a place, named
+  // by the city the airport serves, as trip suggestions already are (D10).
+  it("offers a home airport by the city it serves where the catalogue says so", async () => {
+    await prisma.userSettings.update({
+      where: { userId: user.id },
+      data: {
+        data: { homeAirportHistory: [{ iata: COLOGNE, fromDate: "2000-01-01", toDate: null }] },
+      },
+    });
+    try {
+      const res = await suggest();
+      expect(res.body.origins).toEqual(["Köln"]);
+    } finally {
+      await prisma.userSettings.update({
+        where: { userId: user.id },
+        data: {
+          data: { homeAirportHistory: [{ iata: HOME, fromDate: "2000-01-01", toDate: null }] },
+        },
+      });
+    }
   });
 
   it("offers the trip's destinations: stays, the cruise's end port, the outbound flight", async () => {

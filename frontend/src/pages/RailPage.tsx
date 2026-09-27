@@ -7,6 +7,7 @@ import { RailFormModal } from "../components/rail/RailFormModal";
 import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useRailImportAdapter } from "../components/import/adapters/railAdapter";
 import { RailJourneyRow } from "../components/rail/RailJourneyRow";
+import { LoyaltyFilterNotice, useLoyaltyListFilter } from "../components/Loyalty/LoyaltyListFilter";
 import { useTranslation } from "../hooks/useTranslation";
 import { railApi } from "../lib/api/rail";
 import { logger } from "../lib/logger";
@@ -37,6 +38,11 @@ export default function RailPage(): JSX.Element {
   const [deleting, setDeleting] = useState(false);
   const [adding, setAdding] = useState(false);
   const railAdapter = useRailImportAdapter();
+  // A rail card's figure opens this list on the rides it counted
+  // (`?membership=…&year=…`); there is no year filter here to seed, so the
+  // notice names the year.
+  const loyaltyFilter = useLoyaltyListFilter();
+  const { membershipId, linkedYear } = loyaltyFilter;
 
   useEffect(() => {
     const handle = setTimeout(() => setQuery(search.trim()), SEARCH_DEBOUNCE_MS);
@@ -47,7 +53,13 @@ export default function RailPage(): JSX.Element {
     async (offset: number): Promise<void> => {
       setLoading(true);
       try {
-        const page = await railApi.list({ q: query || undefined, limit: PAGE_SIZE, offset });
+        const page = await railApi.list({
+          q: query || undefined,
+          membershipId: membershipId ?? undefined,
+          year: membershipId !== null && linkedYear !== null ? linkedYear : undefined,
+          limit: PAGE_SIZE,
+          offset,
+        });
         setJourneys((prev) => (offset === 0 ? page.journeys : [...prev, ...page.journeys]));
         setTotal(page.total);
         setLoadFailed(false);
@@ -59,7 +71,7 @@ export default function RailPage(): JSX.Element {
         setLoading(false);
       }
     },
-    [query]
+    [query, membershipId, linkedYear]
   );
 
   useEffect(() => {
@@ -105,6 +117,15 @@ export default function RailPage(): JSX.Element {
         <p className="t-caption mb-4">
           {t("rail:subtitle")} {t("rail:betaNote")}
         </p>
+        {membershipId !== null && (
+          <div className="mb-3">
+            <LoyaltyFilterNotice
+              membershipId={membershipId}
+              year={linkedYear}
+              onClear={loyaltyFilter.clear}
+            />
+          </div>
+        )}
         <input
           type="search"
           aria-label={t("rail:search")}
