@@ -128,4 +128,55 @@ describe("Lodging stays — time model (phase 2)", () => {
       setClockForTests(null);
     }
   });
+
+  it("hands the stay out with its days as YYYY-MM-DD and its hours on the hotel's clock (phase 4)", async () => {
+    const res = await post(tokyoId, {
+      checkIn: "2027-08-02",
+      checkOut: "2027-08-04",
+      checkInTime: "15:00",
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.data.times).toEqual({
+      checkIn: { date: "2027-08-02", zone: "Asia/Tokyo", precision: "day" },
+      checkOut: { date: "2027-08-04", zone: "Asia/Tokyo", precision: "day" },
+      checkInAt: {
+        utc: "2027-08-02T06:00:00.000Z",
+        zone: "Asia/Tokyo",
+        offset: "+09:00",
+        local: "2027-08-02T15:00:00",
+        precision: "minute",
+        zoneSource: "stored",
+      },
+      checkOutAt: null,
+    });
+    const detail = await request(app).get(`/api/v1/lodging/${tokyoId}`).set("Cookie", cookie);
+    const stay = detail.body.data.stays.find((s: { id: string }) => s.id === res.body.data.id);
+    expect(stay.times.checkOut.date).toBe("2027-08-04");
+    const list = await request(app).get("/api/v1/lodging").set("Cookie", cookie);
+    const row = list.body.data.find((l: { id: string }) => l.id === tokyoId);
+    expect(row.stays.every((s: { times?: unknown }) => s.times !== undefined)).toBe(true);
+  });
+
+  it("says a vague stay's precision and reads a not-yet-migrated anchor by the backfill's rule", async () => {
+    const vague = await prisma.lodgingStay.create({
+      data: {
+        userId,
+        lodgingId: berlinId,
+        checkIn: new Date("2011-07-01T00:00:00.000Z"),
+        datePrecision: "MONTH",
+      },
+    });
+    // A day written by a host at UTC+2 before the time model: 22:00 the evening before.
+    const legacy = await prisma.lodgingStay.create({
+      data: { userId, lodgingId: berlinId, checkIn: new Date("2019-05-01T22:00:00.000Z") },
+    });
+    const detail = await request(app).get(`/api/v1/lodging/${berlinId}`).set("Cookie", cookie);
+    const byId = (id: string) => detail.body.data.stays.find((s: { id: string }) => s.id === id);
+    expect(byId(vague.id).times.checkIn).toEqual({
+      date: "2011-07-01",
+      zone: null,
+      precision: "month",
+    });
+    expect(byId(legacy.id).times.checkIn.date).toBe("2019-05-02");
+  });
 });

@@ -28,6 +28,7 @@ import { dbDayOf } from "../../services/timeModel/dayColumns";
  * `resolveTrip`.
  */
 
+import { withJournalEntryTimes, withTripStopTimes } from "../../services/trips/timesDto";
 const router = Router();
 
 /* ─────────── Stops ─────────── */
@@ -69,7 +70,7 @@ router.post(
           orderIdx: body.orderIdx ?? 0,
         },
       });
-      res.status(201).json({ stop });
+      res.status(201).json({ stop: withTripStopTimes(stop) });
     } catch (error) {
       next(error);
     }
@@ -123,7 +124,7 @@ router.patch(
         { ...rest, ...times },
         existing
       );
-      res.json({ stop });
+      res.json({ stop: withTripStopTimes(stop) });
     } catch (error) {
       next(error);
     }
@@ -224,7 +225,9 @@ router.post(
       // stop of the trip says where the day was spent. Best effort: the entry
       // is saved either way.
       const weather = await refreshJournalWeather(entry.id);
-      res.status(201).json({ entry: weather.entry, weatherOutcome: weather.outcome });
+      res
+        .status(201)
+        .json({ entry: withJournalEntryTimes(weather.entry), weatherOutcome: weather.outcome });
     } catch (error) {
       next(error);
     }
@@ -264,13 +267,13 @@ router.patch(
       const dayMoved = entry.date.getTime() !== existing.date.getTime();
       const needsWeather = dayMoved || entry.observedWeather === null;
       if (!needsWeather) {
-        res.json({ entry });
+        res.json({ entry: withJournalEntryTimes(entry) });
         return;
       }
       // The stored value belongs to the OLD day once the date moved, so a
       // failed lookup for the new one must not leave it standing.
       const weather = await refreshJournalWeather(entry.id, { storedIsForAnotherDay: dayMoved });
-      res.json({ entry: weather.entry, weatherOutcome: weather.outcome });
+      res.json({ entry: withJournalEntryTimes(weather.entry), weatherOutcome: weather.outcome });
     } catch (error) {
       next(error);
     }

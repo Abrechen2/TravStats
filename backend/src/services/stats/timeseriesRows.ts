@@ -16,7 +16,12 @@ import { measuredDurationMinutes } from "../../utils/flightDurationColumn";
 import { resolveFlightDuration } from "../../shared/flightDuration";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import type { DatedRow } from "../../utils/stats/timeseries";
-import { airportCalendarDay, buildTzMap } from "./departureClock";
+import {
+  FLIGHT_CLOCK_SELECT,
+  airportCalendarDay,
+  buildTzMap,
+  flightEndZone,
+} from "./departureClock";
 
 const DAY_MS = 24 * 60 * 60 * 1000;
 
@@ -50,17 +55,13 @@ export async function fetchFlightDatedRows(
     },
     select: {
       id: true,
-      depIata: true,
-      depIcao: true,
+      ...FLIGHT_CLOCK_SELECT,
       depLat: true,
       depLon: true,
-      arrIata: true,
-      arrIcao: true,
       arrLat: true,
       arrLon: true,
       departureTime: true,
       arrivalTime: true,
-      depTimeSemantics: true,
       arrTimeSemantics: true,
       durationMinutes: true,
       status: true,
@@ -68,10 +69,8 @@ export async function fetchFlightDatedRows(
   });
   const tzMap = await buildTzMap(rows);
   return rows.map((f) => {
-    const depTz =
-      (f.depIata && tzMap.get(f.depIata)) || (f.depIcao && tzMap.get(f.depIcao)) || null;
-    const arrTz =
-      (f.arrIata && tzMap.get(f.arrIata)) || (f.arrIcao && tzMap.get(f.arrIcao)) || null;
+    const depTz = flightEndZone(f.depTimezone, tzMap, f.depIata, f.depIcao);
+    const arrTz = flightEndZone(f.arrTimezone, tzMap, f.arrIata, f.arrIcao);
     const measuredMin = f.status === "flown" ? measuredDurationMinutes(f, depTz, arrTz) : null;
     // Same rule as `/stats/summary` and the overview card (#268): measured
     // where there are clocks, estimated from the coordinates where there are

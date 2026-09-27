@@ -49,6 +49,9 @@ import { refusesCoverImage } from "./trips/refusesCoverImage";
 import { toPhotoDto } from "./trips/photoDto";
 import { provenanceForWrite } from "../services/tripSummaryProvenance";
 import { typedTripDays } from "../services/timeModel/tripColumns";
+import { enrichFlightsForClients } from "../services/flightAirportFacts";
+import { withTripTimes } from "../services/trips/timesDto";
+import { withTripDetailTimes } from "../services/trips/tripDetailTimes";
 
 // Re-exported for the Immich trip routers, which import it from here.
 export { resolveTrip };
@@ -165,7 +168,7 @@ router.get(
       const mostExpensive = includeInsights ? await mostExpensiveTrip(userId) : undefined;
       res.json({
         trips: trips.map((t) => ({
-          ...t,
+          ...withTripTimes(t),
           cruises: t.cruises.map((c) => ({
             ...c,
             distanceKm: Math.round(distanceByCruise.get(c.id) ?? 0),
@@ -414,11 +417,8 @@ router.get(
         lodgingCountriesByTrip([trip.id]),
         roadtripCountriesByTrip([trip.id]),
       ]);
-      const flights = trip.flights.map((f) => ({
-        ...f,
-        depTimezone: (f.depIata && facts.get(f.depIata)?.timezone) || null,
-        arrTimezone: (f.arrIata && facts.get(f.arrIata)?.timezone) || null,
-      }));
+      // The stored zone first, then the catalogue — with `times` (ADR 0002).
+      const flights = await enrichFlightsForClients(trip.flights);
       const countries = tripCountries(
         trip.countries,
         trip.flights,
@@ -432,7 +432,9 @@ router.get(
         ...entry,
         photos: links.map((link) => toPhotoDto(link.tripPhoto)),
       }));
-      res.json({ trip: { ...trip, photos, flights, countries, journalEntries } });
+      res.json({
+        trip: withTripDetailTimes({ ...trip, photos, flights, countries, journalEntries }),
+      });
     } catch (error) {
       next(error);
     }
@@ -523,7 +525,7 @@ router.post(
       await linkDocuments(userId, documentIds, { type: "trip", id: trip.id });
 
       logger.info({ tripId: trip.id, userId }, "[Trips] Created trip");
-      res.status(201).json({ trip });
+      res.status(201).json({ trip: withTripTimes(trip) });
     } catch (error) {
       next(error);
     }
@@ -623,7 +625,7 @@ router.patch(
       // Moving a trip's own dates moves its status, and this handler never
       // recomputed at all (AUD-024). After the transaction, like every other
       // caller: the derivation reads the row it is about to judge.
-      res.json({ trip: await restatusIfDatesMoved(trip, body) });
+      res.json({ trip: withTripTimes(await restatusIfDatesMoved(trip, body)) });
     } catch (error) {
       next(error);
     }

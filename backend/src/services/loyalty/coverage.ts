@@ -29,7 +29,11 @@ import { resolveStayTiming } from "../../shared/lodgingTiming";
 import { deriveStayMembership, type MembershipCoverage } from "../../shared/membershipDerivation";
 import { airlineResolvers } from "../../utils/airlineNormalize";
 import type { FlightTimeSemantics } from "../../utils/timezone";
-import { airportCalendarDay, withDepartureClock } from "../stats/departureClock";
+import {
+  FLIGHT_CLOCK_SELECT,
+  airportCalendarDay,
+  withDepartureClock,
+} from "../stats/departureClock";
 
 export interface CoveredFlight {
   id: string;
@@ -158,11 +162,7 @@ export async function loadCoveredFlights(
       airlineIata: true,
       airlineIcao: true,
       departureTime: true,
-      depIata: true,
-      depIcao: true,
-      arrIata: true,
-      arrIcao: true,
-      depTimeSemantics: true,
+      ...FLIGHT_CLOCK_SELECT,
     },
   });
   const clocked = await withDepartureClock(rows);

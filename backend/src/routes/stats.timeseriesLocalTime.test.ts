@@ -189,6 +189,26 @@ describe("GET /api/v1/stats/timeseries — buckets read the clock at the departu
     expect(totalsOf(res.body, "current").count).toBe(1);
   });
 
+  it("reads the day in the zone the flight was STORED with, not today's catalogue", async () => {
+    // ADR 0002 phase 4: the flight was written when its airport's zone was
+    // UTC+4 (Dubai's). If the catalogue later says Bangkok, the stored zone
+    // still decides — a catalogue correction must not move history. 23:00Z
+    // on 31 December is 03:00 on 1 January at +4: the new year either way
+    // round would hide the rule, so the stored zone here is one that keeps
+    // the OLD year (Los Angeles, 15:00 on 31 December).
+    mockFlightFindMany.mockResolvedValue([
+      flightRow("BKK", "SIN", "2025-12-31T23:00:00Z", { depTimezone: "America/Los_Angeles" }),
+    ]);
+
+    const res = await request(app).get(
+      "/api/v1/stats/timeseries?domain=flight&granularity=year&fromDate=2025-01-01&toDate=2027-01-01"
+    );
+
+    expect(res.status).toBe(200);
+    expect(bucketOf(res.body, "2025").count).toBe(1);
+    expect(bucketOf(res.body, "2026").count).toBe(0);
+  });
+
   it("keeps a late-evening Los Angeles departure on 31 December in the old year", async () => {
     // The mirror image, west of UTC. 22:00 on 31 December in Los Angeles
     // (PST, UTC-8) is already 06:00 on 1 January in UTC. Reading the stored

@@ -69,4 +69,56 @@ describe("Rail — time model (phase 2)", () => {
     expect(row.depPrecision).toBe("minute");
     expect(row.arrPrecision).toBe("minute");
   });
+
+  it("hands the ride out with times on the station's clock, on every read path", async () => {
+    const res = await request(app)
+      .post("/api/v1/rail")
+      .set("Cookie", cookie)
+      .send({
+        operator: "Test",
+        departureStation: { stationId, name: "TM Catalogue Zone", lat: 50.1071, lon: 8.6632 },
+        arrivalStation: PARIS,
+        departureLocal: "2027-07-02T08:15",
+        arrivalLocal: "2027-07-02T12:09",
+      });
+    expect(res.status).toBe(201);
+    expect(res.body.data.times.departure).toEqual({
+      utc: "2027-07-02T07:15:00.000Z",
+      zone: "Europe/London",
+      offset: "+01:00",
+      local: "2027-07-02T08:15:00",
+      precision: "minute",
+      zoneSource: "stored",
+    });
+    expect(res.body.data.times.actualArrival).toBeNull();
+    const id = res.body.data.id;
+
+    const detail = await request(app).get(`/api/v1/rail/${id}`).set("Cookie", cookie);
+    expect(detail.body.data.times.arrival.local).toBe("2027-07-02T12:09:00");
+    const list = await request(app).get("/api/v1/rail").set("Cookie", cookie);
+    const listed = list.body.data.find((j: { id: string }) => j.id === id);
+    expect(listed.times.arrival).toMatchObject({ zone: "Europe/Paris", offset: "+02:00" });
+  });
+
+  it("shows a ride stored without a zone as UTC, labelled — never as the station's clock", async () => {
+    const res = await request(app)
+      .post("/api/v1/rail")
+      .set("Cookie", cookie)
+      .send({
+        operator: "Test",
+        departureStation: { stationId, name: "TM Catalogue Zone", lat: 50.1071, lon: 8.6632 },
+        arrivalStation: PARIS,
+        departureLocal: "2027-07-03T08:15",
+      });
+    const id = res.body.data.id;
+    // A ride written before phase 2 kept no zone.
+    await prisma.railJourney.update({ where: { id }, data: { depTimezone: null } });
+    const detail = await request(app).get(`/api/v1/rail/${id}`).set("Cookie", cookie);
+    expect(detail.body.data.times.departure).toMatchObject({
+      zone: null,
+      offset: "+00:00",
+      local: "2027-07-03T07:15:00",
+      zoneSource: null,
+    });
+  });
 });

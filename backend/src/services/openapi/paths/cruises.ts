@@ -7,6 +7,7 @@
  * that assumes one shape for the whole API breaks on the other.
  */
 
+import { cruiseStopTimesSchema, cruiseTimesSchema } from "../../../schemas/times";
 import { z } from "zod";
 
 import { registry } from "../registry";
@@ -40,6 +41,7 @@ const cruiseStop = registry.register(
       departureTime: z.string().datetime().nullable(),
       excursionNote: z.string().nullable(),
       port: includedRow("port").nullable().optional(),
+      times: cruiseStopTimesSchema,
     })
     .describe(
       "A stop is exactly one of three states: a matched port (portId set, " +
@@ -93,6 +95,7 @@ const cruise = registry.register(
       trip: includedRow("trip (id, name, color)").nullable().optional(),
       legs: z.array(includedRow("leg")).optional(),
       createdAt: z.string().datetime(),
+      times: cruiseTimesSchema,
     })
     .openapi("Cruise")
 );

@@ -22,7 +22,7 @@ import {
   emptyDurationTotals,
   resolveFlightDuration,
 } from "../../shared/flightDuration";
-import { withDepartureClock } from "./departureClock";
+import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "./departureClock";
 import { countableFlightWhere } from "../../shared/flightCounting";
 import { mergeAirlineCounts } from "../../utils/airlineNormalize";
 import { computeDedupedTotalCost } from "../../utils/stats/dedupedCost";
@@ -144,12 +144,8 @@ async function flightIdsDepartingInLocalYear(userId: string, year: number): Prom
     },
     select: {
       id: true,
-      depIata: true,
-      depIcao: true,
-      arrIata: true,
-      arrIcao: true,
+      ...FLIGHT_CLOCK_SELECT,
       departureTime: true,
-      depTimeSemantics: true,
     },
   });
 
@@ -221,17 +217,13 @@ export async function computeSummary(
         where: geoWhere,
         select: {
           id: true,
-          depIata: true,
-          depIcao: true,
+          ...FLIGHT_CLOCK_SELECT,
           depLat: true,
           depLon: true,
-          arrIata: true,
-          arrIcao: true,
           arrLat: true,
           arrLon: true,
           departureTime: true,
           arrivalTime: true,
-          depTimeSemantics: true,
           arrTimeSemantics: true,
           // The stored measurement (forgejo#45). The semantics columns above
           // stay selected because they decide whether it can be trusted.

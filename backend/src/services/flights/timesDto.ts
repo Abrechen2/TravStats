@@ -41,6 +41,10 @@ export interface FlightTimeColumns {
   arrTimezone: string | null;
   depPrecision: string | null;
   arrPrecision: string | null;
+  actualDeparture: Date | null;
+  actualArrival: Date | null;
+  runwayDepartureTime: Date | null;
+  runwayArrivalTime: Date | null;
 }
 
 /** Today's catalogue zone of each airport — consulted only for a row without a stored zone. */
@@ -84,7 +88,19 @@ function endTime(
   return serializeTime(time, zone, precision, source);
 }
 
+/** A provider's reading (real UTC, never a wall clock) at one end's zone. */
+function reported(
+  time: Date | null,
+  stored: string | null,
+  catalogue: string | null
+): TimeValue | null {
+  if (!time) return null;
+  return serializeTime(time, stored ?? catalogue, "minute", stored ? "stored" : "catalogue");
+}
+
 export function flightTimes(flight: FlightTimeColumns, catalogue: CatalogueZones): FlightTimes {
+  const dep = (time: Date | null) => reported(time, flight.depTimezone, catalogue.dep);
+  const arr = (time: Date | null) => reported(time, flight.arrTimezone, catalogue.arr);
   return {
     departure: endTime(
       flight.departureTime,
@@ -98,5 +114,9 @@ export function flightTimes(flight: FlightTimeColumns, catalogue: CatalogueZones
       { zone: flight.arrTimezone, precision: flight.arrPrecision },
       catalogue.arr
     ),
+    actualDeparture: dep(flight.actualDeparture),
+    actualArrival: arr(flight.actualArrival),
+    runwayDeparture: dep(flight.runwayDepartureTime),
+    runwayArrival: arr(flight.runwayArrivalTime),
   };
 }
