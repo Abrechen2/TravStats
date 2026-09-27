@@ -34,9 +34,9 @@ import { estimateRoute } from "../services/routeEstimationService";
 import { calculateCo2Kg, haversineKm, toSeatClass } from "../services/co2Calculator";
 import { getCachedAirports, compareAirportAuthority } from "../services/airportCache";
 import {
-  enrichFlightsWithAirportFacts,
+  enrichFlightsForClients,
   type AirportFacts,
-  type EnrichableFlight,
+  type ClientFlight,
 } from "../services/flightAirportFacts";
 import { withAirportTimezones } from "../services/flightTimezoneDefaults";
 import { airportChanged, flightZoneColumns, withStoredZones } from "./flights/timeInput";
@@ -525,8 +525,8 @@ router.get("/next", async (req: AuthRequest, res: Response, next: NextFunction) 
  * `/stats/records`, which passes a deliberately narrow projection. The column
  * keeps earning its place where the catalogue is NOT already loaded.
  */
-async function withAirportFacts<T extends EnrichableFlight>(flight: T): Promise<T & AirportFacts> {
-  const [enriched] = await enrichFlightsWithAirportFacts([flight]);
+async function withAirportFacts<T extends ClientFlight>(flight: T): Promise<T & AirportFacts> {
+  const [enriched] = await enrichFlightsForClients([flight]);
   return enriched;
 }
 
