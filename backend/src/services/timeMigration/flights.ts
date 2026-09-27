@@ -41,7 +41,9 @@ interface FlightRow {
 }
 
 /** Active airports first, then closed ones — a code can name both. */
-async function catalogueZones(rows: FlightRow[]): Promise<Map<string, string>> {
+export async function catalogueZones(
+  rows: Array<Pick<FlightRow, "depIata" | "depIcao" | "arrIata" | "arrIcao">>
+): Promise<Map<string, string>> {
   const codes = new Set<string>();
   for (const r of rows) {
     for (const code of [r.depIata, r.depIcao, r.arrIata, r.arrIcao]) {
@@ -70,18 +72,30 @@ interface EndResult {
   entry: LedgerEntry;
 }
 
-function readEnd(row: FlightRow, end: End, catalogue: Map<string, string>): EndResult {
+/** An airport end as the resolver reads it: catalogue by IATA, then ICAO, then coordinates. */
+export function flightEndPlace(
+  row: Pick<
+    FlightRow,
+    "depIata" | "depIcao" | "arrIata" | "arrIcao" | "depLat" | "depLon" | "arrLat" | "arrLon"
+  >,
+  end: End,
+  catalogue: Map<string, string>
+): { catalogueZone: string | null; lat: number; lon: number } {
   const iata = (end === "dep" ? row.depIata : row.arrIata)?.toUpperCase();
   const icao = (end === "dep" ? row.depIcao : row.arrIcao)?.toUpperCase();
   const catalogueZone =
     (iata ? catalogue.get(`iata:${iata}`) : undefined) ??
     (icao ? catalogue.get(`icao:${icao}`) : undefined) ??
     null;
-  const place = placeZone({
+  return {
     catalogueZone,
     lat: end === "dep" ? row.depLat : row.arrLat,
     lon: end === "dep" ? row.depLon : row.arrLon,
-  });
+  };
+}
+
+function readEnd(row: FlightRow, end: End, catalogue: Map<string, string>): EndResult {
+  const place = placeZone(flightEndPlace(row, end, catalogue));
   const time = end === "dep" ? row.departureTime : row.arrivalTime;
   const semantics = end === "dep" ? row.depTimeSemantics : row.arrTimeSemantics;
   const columnName = end === "dep" ? "departure" : "arrival";

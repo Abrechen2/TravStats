@@ -88,6 +88,11 @@ export type ApiErrorCode =
   /** A request body failed its schema. Sent on every ZodError answer, so a
    *  form shows its own sentence instead of zod's JSON issue dump. */
   | "VALIDATION_FAILED"
+  /** Time-zone re-resolution (ADR 0002 D2): `apply` named a dry run that
+   *  does not exist or expired — run the dry run again. */
+  | "DRY_RUN_NOT_FOUND"
+  /** A re-resolution or the time-model backfill is already running. */
+  | "RE_RESOLVE_RUNNING"
   /** Tour track upload: the file is over the size limit. */
   | "TRACK_FILE_TOO_LARGE"
   /** Tour track upload: not readable as GPX, TCX or FIT. */

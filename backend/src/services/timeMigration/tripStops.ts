@@ -60,7 +60,9 @@ async function wrappedPlace(
   return flight ? { lat: flight.depLat, lon: flight.depLon } : null;
 }
 
-async function zoneOfStop(stop: StopRow): Promise<PlaceZone> {
+export async function zoneOfStop(
+  stop: Pick<StopRow, "lat" | "lon" | "sourceId">
+): Promise<PlaceZone> {
   const own = placeZone({ lat: stop.lat, lon: stop.lon });
   if (own.zone || own.reason !== "no_position" || !stop.sourceId) return own;
   const wrapped = await wrappedPlace(stop.sourceId);
