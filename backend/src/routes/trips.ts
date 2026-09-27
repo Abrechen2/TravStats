@@ -48,7 +48,7 @@ import { resolveTrip } from "./trips/resolveTrip";
 import { refusesCoverImage } from "./trips/refusesCoverImage";
 import { toPhotoDto } from "./trips/photoDto";
 import { provenanceForWrite } from "../services/tripSummaryProvenance";
-import { typedTripDays } from "../services/timeModel/tripColumns";
+import { editedTripDays, typedTripDays } from "../services/timeModel/tripColumns";
 import { enrichFlightsForClients } from "../services/flightAirportFacts";
 import { withTripTimes } from "../services/trips/timesDto";
 import { withTripDetailTimes } from "../services/trips/tripDetailTimes";
@@ -549,6 +549,7 @@ router.patch(
       // before the stored start would otherwise answer 200 and store a trip
       // that ends before it begins (SRV-TRIP-DATE-001).
       assertMergedTripDates(body, existing);
+      const days = editedTripDays(body, existing);
 
       // Status derivation (spec 2026-07-17-status-from-dates): the schema
       // still ACCEPTS `status` for API compat (never a 400), but the route
@@ -593,9 +594,7 @@ router.patch(
               description: body.description,
             }),
             ...(body.color !== undefined && { color: body.color }),
-            ...(body.startDate !== undefined && { startDate: body.startDate }),
-            ...(body.endDate !== undefined && { endDate: body.endDate }),
-            ...typedTripDays(body),
+            ...days,
             ...(body.category !== undefined && { category: body.category }),
             ...(body.tags !== undefined && { tags: body.tags }),
             ...(resolvedCompanionsForUpdate !== undefined && {
@@ -622,7 +621,7 @@ router.patch(
       // Moving a trip's own dates moves its status, and this handler never
       // recomputed at all (AUD-024). After the transaction, like every other
       // caller: the derivation reads the row it is about to judge.
-      res.json({ trip: withTripTimes(await restatusIfDatesMoved(trip, body)) });
+      res.json({ trip: withTripTimes(await restatusIfDatesMoved(trip, days)) });
     } catch (error) {
       next(error);
     }

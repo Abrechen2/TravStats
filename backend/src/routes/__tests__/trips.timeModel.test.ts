@@ -251,4 +251,41 @@ describe("Trips — time model (phase 2)", () => {
       await prisma.userSettings.deleteMany({ where: { userId } });
     }
   });
+
+  it("keeps a resent trip day's stored anchor and zone; a changed day is a typed day", async () => {
+    // The span was derived from a flight: the anchor is the departure
+    // instant, the day is its local day in Tokyo.
+    await prisma.trip.update({
+      where: { id: tripId },
+      data: {
+        startDate: new Date("2027-04-01T22:00:00.000Z"),
+        startDay: new Date("2027-04-02T00:00:00.000Z"),
+        startZone: "Asia/Tokyo",
+        status: "planned",
+      },
+    });
+    const same = await request(app)
+      .patch(`/api/v1/trips/${tripId}`)
+      .set("Cookie", cookie)
+      .send({ name: "Japan 2027", startDate: "2027-04-02" });
+    expect(same.status).toBe(200);
+    let row = await prisma.trip.findUniqueOrThrow({ where: { id: tripId } });
+    expect(row.startDate?.toISOString()).toBe("2027-04-01T22:00:00.000Z");
+    expect(row.startZone).toBe("Asia/Tokyo");
+    expect(same.body.trip.times.start).toEqual({
+      date: "2027-04-02",
+      zone: "Asia/Tokyo",
+      precision: "day",
+    });
+
+    const moved = await request(app)
+      .patch(`/api/v1/trips/${tripId}`)
+      .set("Cookie", cookie)
+      .send({ startDate: "2027-04-05" });
+    expect(moved.status).toBe(200);
+    row = await prisma.trip.findUniqueOrThrow({ where: { id: tripId } });
+    expect(row.startDate?.toISOString()).toBe("2027-04-05T00:00:00.000Z");
+    expect(row.startDay?.toISOString()).toBe("2027-04-05T00:00:00.000Z");
+    expect(row.startZone).toBeNull();
+  });
 });

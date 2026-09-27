@@ -1,5 +1,5 @@
 import { localDay } from "../../shared/time/instant";
-import { toDbDate } from "../../shared/time/localDate";
+import { fromDbDate, toDbDate } from "../../shared/time/localDate";
 import { zoneOf } from "../../shared/time/zoneOf";
 import { dbDayOf } from "./dayColumns";
 import { instantOfFakeUtc } from "../../shared/time/resolveInput";
@@ -32,6 +32,43 @@ export function typedTripDays(body: {
       endDay: body.endDate ? dbDayOf(body.endDate) : null,
       endZone: null,
     }),
+  };
+}
+
+/** What a trip row holds of its span — the legacy anchors and the day columns. */
+export interface StoredTripDays {
+  startDate: Date | null;
+  endDate: Date | null;
+  startDay: Date | null;
+  endDay: Date | null;
+}
+
+/**
+ * The span columns a trip EDIT writes (ADR 0002, defect class 4). A day the
+ * client sends back unchanged keeps what is stored — the anchor (often the
+ * first departure's instant, not a midnight), the `DATE` and its ZONE — so a
+ * form that resends the whole trip neither drops the zone the span was
+ * derived with nor "moves" the dates and re-runs the status. The day compared
+ * is the stored local day (`start_day`), the one a client is shown; only a
+ * row without it falls back to the anchor's UTC date. A changed day is a
+ * typed day: UTC-midnight anchor, `DATE`, no zone (`typedTripDays`).
+ */
+export function editedTripDays(
+  body: { startDate?: Date | null; endDate?: Date | null },
+  stored: StoredTripDays
+): { startDate?: Date | null; endDate?: Date | null } & TripDayColumns {
+  const unchanged = (sent: Date | null | undefined, anchor: Date | null, day: Date | null) =>
+    sent != null &&
+    anchor != null &&
+    sent.toISOString().slice(0, 10) === (day ? fromDbDate(day) : anchor.toISOString().slice(0, 10));
+  const start = unchanged(body.startDate, stored.startDate, stored.startDay)
+    ? undefined
+    : body.startDate;
+  const end = unchanged(body.endDate, stored.endDate, stored.endDay) ? undefined : body.endDate;
+  return {
+    ...(start !== undefined && { startDate: start }),
+    ...(end !== undefined && { endDate: end }),
+    ...typedTripDays({ startDate: start, endDate: end }),
   };
 }
 
