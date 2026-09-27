@@ -40,6 +40,13 @@ export interface RailJourney {
   arrStationName: string;
   arrStationCode: string | null;
   arrStationId: number | null;
+  /**
+   * DB station code (Ril 100, "KK") of the catalogue row each station was
+   * picked from; null when unknown or picked from the geocoder — never derived.
+   * Absent on rows that do not carry it (a trip's journey list).
+   */
+  depStationShortCode?: string | null;
+  arrStationShortCode?: string | null;
   arrLat: number;
   arrLon: number;
   arrCountry: string | null;
@@ -171,6 +178,8 @@ export interface RailStationHit {
   name: string;
   uic: string | null;
   dbId: string | null;
+  /** DB station code (Ril 100); null when no source names one. */
+  shortCode: string | null;
   lat: number;
   lon: number;
   country: string | null;

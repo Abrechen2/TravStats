@@ -6,6 +6,7 @@ import { logger } from "../../lib/logger";
 import type { RailStationHit } from "../../types/rail";
 import { EMPTY_STATION, RailStationField, type RailStationDraft } from "./RailStationField";
 import { isPlausibleStation } from "./railImportModel";
+import { StationShortCode } from "./StationShortCode";
 
 interface Props {
   label: string;
@@ -198,7 +199,10 @@ export function StationPicker({
                 className="flex w-full justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-base)"
                 onClick={(): void => pick(hit)}
               >
-                <span>{hit.name}</span>
+                <span>
+                  {hit.name}
+                  <StationShortCode code={hit.shortCode} />
+                </span>
                 <span className="t-caption">
                   {[hit.country, hit.uic].filter(Boolean).join(" · ")}
                 </span>

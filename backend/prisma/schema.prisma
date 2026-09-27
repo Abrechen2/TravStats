@@ -3371,6 +3371,10 @@ model RailStation {
   /// Deutsche Bahn's EVA number (Trainline `db_id`) — how db-rest names a stop.
   /// Not the UIC code: Frankfurt (Main) Hbf is UIC 8011068 but EVA 8000105.
   dbId           String? @map("db_id")
+  /// DB station code ("Ril 100" / DS100 — KK for Köln Hbf), from
+  /// data/rail/station_codes.csv (OpenStation + Wikidata, CC0). Null when
+  /// neither source names one; never derived.
+  shortCode      String? @map("short_code")
   lat            Float
   lon            Float
   country        String?

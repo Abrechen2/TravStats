@@ -41,6 +41,14 @@ const railJourney = registry.register(
           "Catalogue row (GET /rail/stations) the station was picked from; null = geocoder"
         ),
       arrStationId: z.number().int().nullable(),
+      depStationShortCode: z
+        .string()
+        .nullable()
+        .describe(
+          "DB station code of the catalogue row (Ril 100, 'KK'); null for a geocoder pick " +
+            "or a station no source names — never derived"
+        ),
+      arrStationShortCode: z.string().nullable(),
       depCountry: z.string().nullable().describe("ISO 3166-1 alpha-2; null when unknown"),
       depTimezone: z
         .string()

@@ -32,6 +32,7 @@ const ZURICH = {
   name: "Zürich HB",
   uic: "8503000",
   dbId: "8503000",
+  shortCode: null as string | null,
   lat: 47.378177,
   lon: 8.540192,
   country: "CH",
@@ -165,5 +166,18 @@ describe("StationPicker", () => {
     expect(
       screen.getByRole("button", { name: "rail:station.backToCatalogue" })
     ).toBeInTheDocument();
+  });
+
+  // forgejo#132 item 16: the list names the DB code where one is known.
+  it("shows a hit's short code beside its name, and none where it is unknown", async () => {
+    searchStations.mockResolvedValue([
+      { ...ZURICH, id: 2, name: "Köln Hbf", uic: "8015458", dbId: "8000207", shortCode: "KK" },
+      { ...ZURICH, id: 3, name: "Köln Süd", shortCode: null },
+    ]);
+    render(<Harness changes={[]} />);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "koeln" } });
+    await screen.findByRole("button", { name: /Köln Süd/ });
+    expect(screen.getAllByTestId("station-short-code").map((el) => el.textContent)).toEqual(["KK"]);
+    expect(screen.getByRole("button", { name: /Köln Hbf/ }).textContent).toContain("KK");
   });
 });

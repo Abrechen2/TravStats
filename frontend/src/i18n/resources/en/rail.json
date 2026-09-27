@@ -88,7 +88,8 @@
     "picked": "From the station catalogue · UIC {{code}}",
     "useGeocoder": "Not in the station catalogue? Pick it through the place search",
     "backToCatalogue": "Back to the station catalogue",
-    "noPlausibleHit": "No station in the catalogue matches “{{name}}”. Search for the station in the field."
+    "noPlausibleHit": "No station in the catalogue matches “{{name}}”. Search for the station in the field.",
+    "shortCodeTitle": "DB station code {{code}}"
   },
   "lookup": {
     "title": "Look the train up",

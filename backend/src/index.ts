@@ -19,6 +19,7 @@ import { templateRegistry } from "./services/parsers/templates/registry";
 import { seedPortsFromCSV } from "./seedPortsFromCSV";
 import { seedShipsFromCSV } from "./seedShipsFromCSV";
 import { seedRailStations } from "./seedRailStations";
+import { seedRailStationCodes } from "./seedRailStationCodes";
 import { seedLodgingChainsFromCSV } from "./seedLodgingChainsFromCSV";
 import { seedCuratedPlacesFromCSV } from "./seedCuratedPlacesFromCSV";
 import { seedAirlinesFromData } from "./seedAirlinesFromData";
@@ -297,6 +298,8 @@ if (process.env.NODE_ENV !== "test") {
       ["ports", seedPortsFromCSV],
       ["ships", seedShipsFromCSV],
       ["rail_stations", seedRailStations],
+      // After the catalogue: it writes onto the rows the line above inserted.
+      ["rail_station_codes", seedRailStationCodes],
       ["lodging_chains", seedLodgingChainsFromCSV],
     ];
     for (const [name, seed] of catalogueSeeds) {
