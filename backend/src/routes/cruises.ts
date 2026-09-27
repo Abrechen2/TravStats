@@ -26,6 +26,7 @@ import { getBaseCurrency } from "../services/fx/snapshot";
 import { refreshFxOnEdit } from "../services/fx/refreshOnEdit";
 import logger from "../utils/logger";
 import { cruiseDayColumns, stopColumnsFromRequest } from "../services/timeModel/cruiseColumns";
+import { keepStoredDay } from "../services/timeModel/dayColumns";
 import { dayAnchorNow } from "../shared/time/clock";
 import { profileZoneOf } from "../shared/time/profileZone";
 
@@ -309,9 +310,15 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
 
     const { stops, startDate, endDate, status: requestedStatus, companions, ...rest } = parsed.data;
 
-    const nextStartDate =
-      startDate === undefined ? undefined : startDate ? new Date(startDate) : null;
-    const nextEndDate = endDate === undefined ? undefined : endDate ? new Date(endDate) : null;
+    // A resent day keeps the stored anchor (see `keepStoredDay`).
+    const nextStartDate = keepStoredDay(
+      startDate === undefined ? undefined : startDate ? new Date(startDate) : null,
+      existing.startDate
+    );
+    const nextEndDate = keepStoredDay(
+      endDate === undefined ? undefined : endDate ? new Date(endDate) : null,
+      existing.endDate
+    );
 
     // The MERGED state, not the payload. `createCruiseSchema` refuses an end
     // before a start; the update schema saw only the fields that arrived, so

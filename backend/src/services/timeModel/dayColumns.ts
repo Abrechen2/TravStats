@@ -18,15 +18,18 @@ export function dbDayOrNull(anchor: Date | null | undefined): Date | null {
 }
 
 /**
- * The new day columns for a PATCH-style write: a key that was not sent
- * (`undefined`) stays out of the result, so an update never clears a day it
- * did not touch.
+ * A day an UPDATE sent, as the legacy anchor to store: the stored anchor when
+ * it already names that day. Day inputs now arrive as UTC midnight, while
+ * older rows (the cruise import wrote noon) hold another hour of the same day;
+ * rewriting that hour would read as "the date changed" to every comparison
+ * that keys on the anchor — the FX snapshot re-ran on a cabin-only edit and,
+ * with the lookup down, kept its old rate while reporting a change (defect
+ * class 4: a re-derivation must not act on data that did not move).
  */
-export function dayPatch<K extends string>(
-  key: K,
-  anchor: Date | string | null | undefined
-): Partial<Record<K, Date | null>> {
-  if (anchor === undefined) return {};
-  const value = anchor === null ? null : dbDayOf(new Date(anchor));
-  return { [key]: value } as Partial<Record<K, Date | null>>;
+export function keepStoredDay(
+  sent: Date | null | undefined,
+  stored: Date | null
+): Date | null | undefined {
+  if (!sent || !stored) return sent;
+  return sent.toISOString().slice(0, 10) === stored.toISOString().slice(0, 10) ? stored : sent;
 }
