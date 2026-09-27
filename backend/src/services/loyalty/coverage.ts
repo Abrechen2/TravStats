@@ -202,10 +202,13 @@ export async function loadCoveredCruises(userId: string): Promise<CoveredCruise[
   }));
 }
 
-export async function loadCoveredStays(userId: string): Promise<CoveredStay[]> {
+export async function loadCoveredStays(
+  userId: string
+): Promise<Array<CoveredStay & { id: string }>> {
   const rows = await prisma.lodgingStay.findMany({
     where: { userId },
     select: {
+      id: true,
       status: true,
       checkIn: true,
       checkOut: true,

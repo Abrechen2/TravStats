@@ -44,14 +44,16 @@ async function ownedCard(userId: string, membershipId: string, domain: LoyaltyDo
 }
 
 /**
- * The hotels with at least one stay this card counts — in `year` when given,
- * by the year the statistics file the stay under.
+ * The stays this card counts — in `year` when given, by the year the
+ * statistics file the stay under — and the hotels they belong to. The list
+ * restricts its rows to the hotels AND its figures to the stays, so a list
+ * opened from a card's figure repeats that figure.
  */
-export async function lodgingIdsCoveredBy(
+export async function lodgingStaysCoveredBy(
   userId: string,
   membershipId: string,
   year?: number
-): Promise<string[]> {
+): Promise<{ lodgingIds: string[]; stayIds: string[] }> {
   await ownedCard(userId, membershipId, "lodging");
   const [cards, stays] = await Promise.all([
     prisma.loyaltyMembership.findMany({
@@ -67,13 +69,24 @@ export async function lodgingIdsCoveredBy(
     loadCoveredStays(userId),
   ]);
   const coverage = lodgingCoverage(cards);
-  const ids = new Set<string>();
+  const lodgingIds = new Set<string>();
+  const stayIds: string[] = [];
   for (const stay of stays) {
     if (!stayCoveredBy(membershipId, stay, coverage)) continue;
     if (year !== undefined && stayYear(stay) !== year) continue;
-    ids.add(stay.lodgingId);
+    lodgingIds.add(stay.lodgingId);
+    stayIds.push(stay.id);
   }
-  return [...ids];
+  return { lodgingIds: [...lodgingIds], stayIds };
+}
+
+/** The hotels with at least one stay this card counts (see above). */
+export async function lodgingIdsCoveredBy(
+  userId: string,
+  membershipId: string,
+  year?: number
+): Promise<string[]> {
+  return (await lodgingStaysCoveredBy(userId, membershipId, year)).lodgingIds;
 }
 
 /**

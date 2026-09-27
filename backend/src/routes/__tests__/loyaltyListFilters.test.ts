@@ -164,6 +164,62 @@ describe("loyalty figures per year, and the lists behind them", () => {
     });
   });
 
+  // Acceptance 2026-09-26: "2021: 3 Aufenthalte · 9 Nächte" opened a list
+  // whose header read "5 Aufenthalte · 12 Übernachtungen" and whose Hamburg
+  // row counted every stay the hotel ever had. The list repeats the figure.
+  describe("the figures behind a card's year link", () => {
+    it("counts only the card's stays in that year — row, sort and summary", async () => {
+      const hamburg = await hotel("Chain Hamburg", chainId);
+      const munich = await hotel("Chain Munich", chainId);
+      await stay(hamburg.id, "2021-03-01", "2021-03-05"); // 4 nights, counted
+      await stay(hamburg.id, "2022-06-01", "2022-06-02"); // other year
+      await stay(hamburg.id, "2023-06-01", "2023-06-02"); // other year
+      await stay(munich.id, "2021-09-10", "2021-09-15"); // 5 nights, counted
+      await stay(munich.id, "2020-01-01", "2020-01-03"); // other year
+      const card = await prisma.loyaltyMembership.create({
+        data: {
+          userId,
+          domain: "lodging",
+          programName: "Bonvoy",
+          chains: { create: [{ chainId }] },
+        },
+      });
+
+      const cards = await api().get("/api/v1/loyalty-memberships").set("Cookie", cookie);
+      const figure2021 = cards.body.data[0].activity.years.find(
+        (y: { year: number }) => y.year === 2021
+      );
+      expect(figure2021).toEqual({ year: 2021, count: 2, nights: 9 });
+
+      const list = await api()
+        .get(`/api/v1/lodging?membershipId=${card.id}&year=2021&sort=stays`)
+        .set("Cookie", cookie);
+      const rows = Object.fromEntries(
+        list.body.data.map((l: { name: string; stayCount: number; nights: number }) => [
+          l.name,
+          { stays: l.stayCount, nights: l.nights },
+        ])
+      );
+      expect(rows).toEqual({
+        "Chain Hamburg": { stays: 1, nights: 4 },
+        "Chain Munich": { stays: 1, nights: 5 },
+      });
+
+      const facets = await api()
+        .get(`/api/v1/lodging/facets?membershipId=${card.id}&year=2021`)
+        .set("Cookie", cookie);
+      expect(facets.body.data.summary).toMatchObject({ lodgings: 2, stays: 2, nights: 9 });
+
+      // Without the card, the year filter still selects houses and counts all
+      // of their stays — the list's own rule (listQuery.ts), unchanged.
+      const plain = await api().get("/api/v1/lodging?year=2021").set("Cookie", cookie);
+      const plainHamburg = plain.body.data.find(
+        (l: { name: string }) => l.name === "Chain Hamburg"
+      );
+      expect(plainHamburg.stayCount).toBe(3);
+    });
+  });
+
   describe("a card that is not there", () => {
     it("answers 404 with a stable code rather than an unfiltered or empty list", async () => {
       const theirs = await prisma.loyaltyMembership.create({
