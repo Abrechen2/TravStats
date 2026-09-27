@@ -299,6 +299,8 @@
     "stored": "Stored (without time zone)",
     "kept": "Kept",
     "noEditor": "The entry this could be edited through can no longer be found.",
+    "domainOff": "The “{{domain}}” area is switched off. Switch it on in the settings to answer this question.",
+    "domainOffAction": "Area settings",
     "action": {
       "flight": "Edit flight",
       "rail_journey": "Edit rail journey",

@@ -299,6 +299,8 @@
     "stored": "Gespeichert (ohne Zeitzone)",
     "kept": "Übernommen",
     "noEditor": "Der Eintrag, über den sich das bearbeiten ließe, ist nicht mehr auffindbar.",
+    "domainOff": "Der Bereich „{{domain}}“ ist ausgeschaltet. Schalte ihn in den Einstellungen ein, um diese Frage zu beantworten.",
+    "domainOffAction": "Bereiche einstellen",
     "action": {
       "flight": "Flug bearbeiten",
       "rail_journey": "Bahnfahrt bearbeiten",
