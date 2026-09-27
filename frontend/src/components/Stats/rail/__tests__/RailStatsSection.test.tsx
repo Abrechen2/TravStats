@@ -69,6 +69,39 @@ describe("RailStatsSection", () => {
       await waitFor(() => expect(railApi.stats).toHaveBeenCalledWith(2025, "09-26"));
       expect(railApi.stats).toHaveBeenCalledWith(2026, "09-26");
       await screen.findAllByText("rail:stats.journeys");
+      // Acceptance 2026-09-26: the strip compared the same span and SAID
+      // "ggü. ganzem Jahr 2025". The label now names what the numbers are.
+      expect(screen.getByText("stats:yearFilter.vsSamePeriod")).toBeInTheDocument();
+      expect(screen.queryByText("stats:yearFilter.vsFullYear")).not.toBeInTheDocument();
+      expect(screen.queryByText("stats:yearFilter.partialYearNote")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // With 2025 selected against a running 2026, the pair is cut to the same
+  // span but the section's own figures stay the whole of 2025.
+  it("keeps the selected year whole when only the compare year is running", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    vi.setSystemTime(new Date(2026, 8, 26, 12));
+    vi.mocked(railApi.stats).mockClear();
+    try {
+      render(
+        <MemoryRouter>
+          <RailStatsSection
+            scope={{ year: 2025, compareYear: 2026 } as never}
+            visibility={visibility}
+          />
+        </MemoryRouter>
+      );
+      await screen.findAllByText("rail:stats.journeys");
+      expect(vi.mocked(railApi.stats).mock.calls).toEqual(
+        expect.arrayContaining([
+          [2025, null],
+          [2025, "09-26"],
+          [2026, "09-26"],
+        ])
+      );
     } finally {
       vi.useRealTimers();
     }
@@ -86,6 +119,7 @@ describe("RailStatsSection", () => {
     );
     await waitFor(() => expect(railApi.stats).toHaveBeenCalledWith(2022, null));
     await screen.findAllByText("rail:stats.journeys");
+    expect(screen.getByText("stats:yearFilter.vs")).toBeInTheDocument();
   });
 
   it("labels every kilometre with what it measures", async () => {
