@@ -206,6 +206,15 @@ describe("Cruises API", () => {
       expect(res.status).toBe(400);
     });
 
+    // Acceptance 2026-09-26: an empty form saved a row "— | — – — | 0".
+    it("refuses an empty cruise and stores nothing", async () => {
+      const before = await prisma.cruise.count({ where: { userId } });
+      const res = await request(app).post("/api/v1/cruises").set("Cookie", authCookie).send({});
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe("VALIDATION_FAILED");
+      expect(await prisma.cruise.count({ where: { userId } })).toBe(before);
+    });
+
     it("requires authentication", async () => {
       const res = await request(app).post("/api/v1/cruises").send({ cruiseLine: "X" });
       expect(res.status).toBe(401);

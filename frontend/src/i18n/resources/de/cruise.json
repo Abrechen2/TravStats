@@ -216,7 +216,9 @@
     "createTitle": "Neue Kreuzfahrt",
     "editTitle": "Kreuzfahrt bearbeiten",
     "saveError": "Kreuzfahrt konnte nicht gespeichert werden",
-    "routeNameSuggestion": "Vorschlag übernehmen: {{name}}"
+    "routeNameSuggestion": "Vorschlag übernehmen: {{name}}",
+    "identityRequired": "Gib ein Schiff, einen Routennamen, eine Reederei oder den Abfahrtshafen an – sonst lässt sich die Kreuzfahrt nicht wiedererkennen.",
+    "startDateRequired": "Gib das Abfahrtsdatum an."
   },
   "add": {
     "title": "Kreuzfahrt hinzufügen"
