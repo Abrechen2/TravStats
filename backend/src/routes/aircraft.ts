@@ -28,9 +28,9 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
-const createAircraftSchema = z.object({
+export const createAircraftSchema = z.object({
   icao: z.string().min(3).max(4).optional(),
-  name: z.string().min(1).max(120),
+  name: z.string().trim().min(1).max(120),
 });
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {

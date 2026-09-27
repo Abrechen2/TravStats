@@ -71,9 +71,9 @@ const tripsListQuerySchema = z.object({
     .transform((v) => v === "true"),
 });
 
-const reviewProposalSchema = z.object({
+export const reviewProposalSchema = z.object({
   flightIds: z.array(z.string().uuid()).min(2),
-  name: z.string().min(1).max(200),
+  name: z.string().trim().min(1).max(200),
   pnr: z.string().max(20).nullable().optional(),
   source: z.enum(["pnr", "home_loop", "continuity"]).optional(),
 });
@@ -299,9 +299,9 @@ const dissolveTripsSchema = z.object({
   tripIds: z.array(z.string().uuid()).min(1).max(500),
 });
 
-const mergeTripsSchema = z.object({
+export const mergeTripsSchema = z.object({
   tripIds: z.array(z.string().uuid()).min(2).max(100),
-  name: z.string().min(1).max(200).optional(),
+  name: z.string().trim().min(1).max(200).optional(),
   targetId: z.string().uuid().optional(),
 });
 

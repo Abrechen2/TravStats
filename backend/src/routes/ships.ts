@@ -31,10 +31,10 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(100),
 });
 
-const createShipSchema = z.object({
-  name: z.string().min(1).max(120),
+export const createShipSchema = z.object({
+  name: z.string().trim().min(1).max(120),
   imo: z.string().max(10).optional(),
-  cruiseLine: z.string().min(1).max(120),
+  cruiseLine: z.string().trim().min(1).max(120),
   yearBuilt: z.number().int().min(1800).max(2100).optional(),
   grossTonnage: z.number().int().min(0).optional(),
   capacity: z.number().int().min(0).optional(),

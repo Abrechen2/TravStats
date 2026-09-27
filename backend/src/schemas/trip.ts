@@ -53,7 +53,7 @@ function stopTimesInOrder(start: unknown, end: unknown): boolean {
     (t.kind === "date" ? `${t.date}T00:00` : (t.local ?? "")).slice(0, 16);
   return wall(b) >= wall(a);
 }
-const STRING_LIST = z.array(z.string().min(1).max(80)).max(40);
+const STRING_LIST = z.array(z.string().trim().min(1).max(80)).max(40);
 const COUNTRY_LIST = z.array(z.string().regex(/^[A-Z]{2}$/, "ISO 3166-1 alpha-2")).max(60);
 
 export const TRIP_DATE_ORDER_MESSAGE = "endDate must not precede startDate";
@@ -86,7 +86,7 @@ const DATE_ORDER_ISSUE = { message: TRIP_DATE_ORDER_MESSAGE, path: ["endDate"] }
 
 export const createTripSchema = z
   .object({
-    name: z.string().min(1).max(200),
+    name: z.string().trim().min(1).max(200),
     description: z.string().max(1000).optional(),
     color: HEX_COLOR.optional(),
     // Phase-1 metadata redesign — every field optional on create.
@@ -111,7 +111,7 @@ export const createTripSchema = z
 // patch — keeps the contract small).
 export const updateTripSchema = z
   .object({
-    name: z.string().min(1).max(200).optional(),
+    name: z.string().trim().min(1).max(200).optional(),
     description: z.string().max(1000).nullable().optional(),
     color: HEX_COLOR.optional(),
     startDate: ISO_DATE.nullable().optional(),
@@ -172,7 +172,7 @@ export type TripCategory = (typeof TRIP_CATEGORIES)[number];
 
 export const createStopSchema = z
   .object({
-    title: z.string().min(1).max(200),
+    title: z.string().trim().min(1).max(200),
     domain: z.string().max(40).optional(),
     sourceId: z.string().max(120).optional(),
     description: z.string().max(2000).optional(),
@@ -187,7 +187,7 @@ export const createStopSchema = z
 
 export const updateStopSchema = z
   .object({
-    title: z.string().min(1).max(200).optional(),
+    title: z.string().trim().min(1).max(200).optional(),
     domain: z.string().max(40).nullable().optional(),
     sourceId: z.string().max(120).nullable().optional(),
     description: z.string().max(2000).nullable().optional(),

@@ -28,8 +28,8 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(100),
 });
 
-const createPortSchema = z.object({
-  name: z.string().min(1).max(120),
+export const createPortSchema = z.object({
+  name: z.string().trim().min(1).max(120),
   city: z.string().max(120).optional(),
   country: z.string().max(120).optional(),
   unlocode: z.string().max(10).optional(),

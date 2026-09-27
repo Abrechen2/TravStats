@@ -54,6 +54,10 @@ export default function ToursPage(): JSX.Element {
   const [stravaOpen, setStravaOpen] = useState(false);
   const navigate = useNavigate();
   const [saving, setSaving] = useState(false);
+  // A name of only whitespace is refused by the server (schemas/tour.ts);
+  // the form says so at the field once a save was tried.
+  const [saveTried, setSaveTried] = useState(false);
+  const showNameMissing = saveTried && !newName.trim();
   const [pendingDelete, setPendingDelete] = useState<TourSummary | null>(null);
 
   const mountedRef = useRef(true);
@@ -84,6 +88,7 @@ export default function ToursPage(): JSX.Element {
 
   const handleCreate = async (): Promise<void> => {
     const name = newName.trim();
+    setSaveTried(true);
     if (!name) return;
     setSaving(true);
     try {
@@ -99,6 +104,7 @@ export default function ToursPage(): JSX.Element {
       // is the server's answer, not something to guess locally.
       await load();
       setNewName("");
+      setSaveTried(false);
       setNewMode(DEFAULT_MODE);
       setNewActivity("hike");
       setNewDate("");
@@ -142,7 +148,10 @@ export default function ToursPage(): JSX.Element {
           <button
             type="button"
             className="rounded-sm border border-(--color-border) px-3 py-1.5 text-sm hover:bg-(--bg-surface)"
-            onClick={() => setCreating((v) => !v)}
+            onClick={() => {
+              setCreating((v) => !v);
+              setSaveTried(false);
+            }}
           >
             {t("trips:tours.newTour")}
           </button>
@@ -169,6 +178,8 @@ export default function ToursPage(): JSX.Element {
             onChange={(e) => setNewName(e.target.value)}
             placeholder={t("trips:tours.namePlaceholder")}
             aria-label={t("trips:tours.namePlaceholder")}
+            aria-invalid={showNameMissing || undefined}
+            aria-describedby={showNameMissing ? "tour-name-error" : undefined}
             className="min-w-48 flex-1 rounded-sm border border-(--color-border) bg-transparent px-2 py-1 text-sm"
           />
           <select
@@ -213,12 +224,17 @@ export default function ToursPage(): JSX.Element {
           </select>
           <button
             type="button"
-            disabled={saving || !newName.trim()}
+            disabled={saving}
             className="rounded-sm bg-(--accent) px-3 py-1.5 text-sm text-white disabled:opacity-40"
             onClick={() => void handleCreate()}
           >
             {t("trips:tours.save")}
           </button>
+          {showNameMissing && (
+            <p id="tour-name-error" role="alert" className="basis-full text-xs text-(--danger)">
+              {t("trips:tours.nameRequired")}
+            </p>
+          )}
         </div>
       )}
 
