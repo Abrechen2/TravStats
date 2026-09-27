@@ -142,7 +142,8 @@
     "listEmpty": "No roadtrips yet.",
     "emptyTitle": "No roadtrip on the map yet",
     "emptyBody": "Create a roadtrip with its stations — its route then appears here.",
-    "emptyCta": "Create roadtrip"
+    "emptyCta": "Create roadtrip",
+    "stationsLoadError": "The stations could not be loaded — the map shows the routes only."
   },
   "stats": {
     "count": "Roadtrips",

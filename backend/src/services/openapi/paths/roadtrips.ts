@@ -67,6 +67,19 @@ const roadtripSummary = registry.register(
       points: z
         .array(z.tuple([z.number(), z.number()]))
         .describe("Station coordinates as [lon, lat], in travel order"),
+      stations: z
+        .array(
+          z.object({
+            id: z.string().uuid(),
+            title: z.string(),
+            lat: z.number(),
+            lon: z.number(),
+            state: z.enum(["stay", "free", "pass"]),
+          })
+        )
+        .describe(
+          "The placed stations in travel order, for map markers. Never a route correction."
+        ),
       nights: z.number().int(),
       stayNights: z.number().int(),
       freeNights: z.number().int(),

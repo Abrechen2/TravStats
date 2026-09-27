@@ -142,7 +142,8 @@
     "listEmpty": "Noch keine Roadtrips.",
     "emptyTitle": "Noch kein Roadtrip auf der Karte",
     "emptyBody": "Leg einen Roadtrip mit seinen Stationen an — die Strecke erscheint dann hier.",
-    "emptyCta": "Roadtrip anlegen"
+    "emptyCta": "Roadtrip anlegen",
+    "stationsLoadError": "Die Stationen konnten nicht geladen werden — die Karte zeigt nur die Strecken."
   },
   "stats": {
     "count": "Roadtrips",

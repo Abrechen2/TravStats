@@ -46,6 +46,14 @@ export interface RoadtripSummary extends RoadtripNights {
   countries: string[];
   /** Station points as `[lon, lat]`, in travel order — the list's route sketch. */
   points: Array<[number, number]>;
+  /** The placed stations in travel order, for map markers; never a route correction. */
+  stations?: Array<{
+    id: string;
+    title: string;
+    lat: number;
+    lon: number;
+    state: "stay" | "free" | "pass";
+  }>;
 }
 
 export interface StationStay {

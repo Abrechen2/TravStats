@@ -252,6 +252,13 @@ export function toRoadtripSummary(
     // without a point has nothing to draw and is left out, and so is a route
     // correction — the sketch marks stations.
     points: stations.flatMap((s) => (s.lat !== null && s.lon !== null ? [[s.lon, s.lat]] : [])),
+    // The stations themselves, for the dashboard map's markers (tester
+    // 2026-09-26): placed ones only, never a route correction.
+    stations: stations.flatMap((s) =>
+      s.lat !== null && s.lon !== null
+        ? [{ id: s.id, title: s.title, lat: s.lat, lon: s.lon, state: stationState(s) }]
+        : []
+    ),
     nights: nights.nights,
     stayNights: nights.stayNights,
     freeNights: nights.freeNights,

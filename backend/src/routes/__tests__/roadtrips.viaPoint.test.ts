@@ -78,6 +78,12 @@ describe("Roadtrip route corrections", () => {
     const summary = res.body.roadtrips.find((r: { id: string }) => r.id === roadtripId);
     expect(summary.stationCount).toBe(2);
     expect(summary.points).toHaveLength(2);
+    // The dashboard map draws the stations themselves (tester 2026-09-26),
+    // with their state and name — never the correction.
+    expect(summary.stations).toEqual([
+      expect.objectContaining({ title: "Hamburg", state: "pass", lat: 53.55, lon: 9.99 }),
+      expect.objectContaining({ title: "Kristiansand", state: "free", lat: 58.15, lon: 8 }),
+    ]);
     expect(summary.countries).toEqual(["DE", "NO"]);
     const detail = await request(app).get(`/api/v1/roadtrips/${roadtripId}`).set("Cookie", cookie);
     expect(detail.body.countries).toEqual(["DE", "NO"]);
