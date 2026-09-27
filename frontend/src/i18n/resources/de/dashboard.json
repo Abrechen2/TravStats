@@ -318,7 +318,8 @@
     "lodgingIndependent": "Unabhängig",
     "title": "Legende",
     "railTraced": "Bahn · Streckenverlauf (Transitous)",
-    "railStraight": "Bahn · Luftlinie"
+    "railStraight": "Bahn · Luftlinie",
+    "tour": "Tour"
   },
   "userMenu": {
     "label": "Konto-Menü"
