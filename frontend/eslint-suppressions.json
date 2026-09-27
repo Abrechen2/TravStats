@@ -52,7 +52,7 @@
   },
   "src/components/FlightForm/useFlightForm.ts": {
     "time/no-host-local-date": {
-      "count": 9
+      "count": 8
     }
   },
   "src/components/FlightList.tsx": {
@@ -144,19 +144,6 @@
     }
   },
   "src/lib/galleryGrouping.ts": {
-    "time/no-host-local-date": {
-      "count": 3
-    }
-  },
-  "src/lib/journalDefaultDate.ts": {
-    "time/no-ambient-now": {
-      "count": 1
-    },
-    "time/no-host-local-date": {
-      "count": 3
-    }
-  },
-  "src/lib/roadtrip/roadtripView.ts": {
     "time/no-host-local-date": {
       "count": 3
     }

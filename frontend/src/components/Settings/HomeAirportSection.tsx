@@ -8,9 +8,12 @@ import type { Airport } from "../../lib/api";
 import { useToastStore } from "../../store/toastStore";
 import { logger } from "../../lib/logger";
 import { useConfirmDialog } from "../../hooks/useConfirmDialog";
+import { todayZoneNow } from "../../hooks/useTodayZone";
+import { todayIn } from "../../shared/time";
 
+/** Today in the profile zone (ADR 0002 Q1) — the UTC day was yesterday's until morning east of UTC. */
 function todayIso(): string {
-  return new Date().toISOString().slice(0, 10);
+  return todayIn(todayZoneNow());
 }
 
 export default function HomeAirportSection(): JSX.Element {

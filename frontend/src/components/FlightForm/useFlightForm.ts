@@ -6,7 +6,8 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
 import { flightLookupApi } from "../../lib/api/flightLookup";
-import { localToday } from "../../lib/roadtrip/roadtripView";
+import { todayIn } from "../../shared/time";
+import { todayZoneNow } from "../../hooks/useTodayZone";
 import { airportResolutionMessage, resolveAirportByCode } from "../../lib/airportResolve";
 import {
   lookupEmptyMessage,
@@ -130,9 +131,8 @@ export function useFlightForm(
 
   // Initialize defaults from settings
   useEffect(() => {
-    // The reader's calendar day — the UTC one made "today" yesterday until
-    // 02:00 in Germany, and the lookup searched the wrong date.
-    const today = localToday();
+    // Today in the profile zone (Q1) — neither UTC nor the browser's.
+    const today = todayIn(todayZoneNow());
     setSearchDate(today);
     setDepartureDate(today);
     setArrivalDate(today);
@@ -147,12 +147,8 @@ export function useFlightForm(
   // Auto-set status based on date (skip when historical is active)
   useEffect(() => {
     if (status === "historical") return;
-    if (departureDate) {
-      const depDate = new Date(departureDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      setStatus(depDate < today ? "flown" : "scheduled");
-    }
+    // Both `YYYY-MM-DD`: before today in the profile zone (Q1) is flown.
+    if (departureDate) setStatus(departureDate < todayIn(todayZoneNow()) ? "flown" : "scheduled");
   }, [departureDate]);
 
   // Clear error when step changes — unless the transition itself carries a

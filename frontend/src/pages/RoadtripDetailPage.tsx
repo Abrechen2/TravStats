@@ -26,7 +26,9 @@ import { useDisplayFormat } from "../lib/displayFormat";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { hexToRgb } from "../lib/domainColor";
 import { logger } from "../lib/logger";
-import { dayNumber, localToday, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
+import { dayNumber, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
+import { useTodayZone } from "../hooks/useTodayZone";
+import { todayIn } from "../shared/time";
 import { useToastStore } from "../store/toastStore";
 import type { RoadtripDetail, RoadtripStation } from "../types/roadtrip";
 import type { TourGeometry, TourLeg } from "../types/tour";
@@ -63,7 +65,8 @@ export default function RoadtripDetailPage(): JSX.Element {
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
   const roadtripColor = useDomainColors().colorOf("roadtrip");
-  const today = useMemo(() => localToday(), []);
+  const todayZone = useTodayZone();
+  const today = useMemo(() => todayIn(todayZone), [todayZone]);
 
   const arrival = params.get("station");
   const [editorStart] = useState<EditorStart>(

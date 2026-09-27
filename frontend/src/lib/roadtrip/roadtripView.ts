@@ -22,13 +22,6 @@ export function dayKey(iso: string | null | undefined): string | null {
   return iso ? iso.slice(0, 10) : null;
 }
 
-/** The reader's local calendar day. */
-export function localToday(now: Date = new Date()): string {
-  const m = String(now.getMonth() + 1).padStart(2, "0");
-  const d = String(now.getDate()).padStart(2, "0");
-  return `${now.getFullYear()}-${m}-${d}`;
-}
-
 function daysBetween(a: string, b: string): number {
   return Math.round((Date.parse(b) - Date.parse(a)) / DAY_MS);
 }

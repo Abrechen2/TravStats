@@ -13,10 +13,14 @@ export function useTodayZone(): string {
   return todayZoneFrom(status, zone);
 }
 
-/** The same answer outside React (event handlers, plain helpers). */
+/**
+ * The same answer outside React (event handlers, plain helpers). `getState`
+ * is optional-called because many tests mock the stores as bare hooks —
+ * the same guard `currentDisplayFormat` carries.
+ */
 export function todayZoneNow(): string {
   return todayZoneFrom(
-    useProfileZoneStore.getState().status,
-    useSettingsStore.getState().display?.timezone
+    useProfileZoneStore.getState?.().status ?? "unknown",
+    useSettingsStore.getState?.().display?.timezone
   );
 }

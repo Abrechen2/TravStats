@@ -1,4 +1,6 @@
 import { dayInput } from "../../lib/api/timeInput";
+import { useTodayZone } from "../../hooks/useTodayZone";
+import { todayIn } from "../../shared/time";
 import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import Modal from "../Modal";
 import { useEffect, useState } from "react";
@@ -10,11 +12,7 @@ import JournalWeatherFetch from "./JournalWeatherFetch";
 import SuggestionChips from "../common/SuggestionChips";
 import { useJournalMoods } from "../../hooks/useJournalMoods";
 import JournalPhotoPicker from "./JournalPhotoPicker";
-import {
-  defaultJournalDate,
-  localToday,
-  type JournalDaySource,
-} from "../../lib/journalDefaultDate";
+import { defaultJournalDate, type JournalDaySource } from "../../lib/journalDefaultDate";
 
 interface JournalEntryModalProps {
   tripId: string;
@@ -50,10 +48,12 @@ export default function JournalEntryModal({
   const { t } = useTranslation(["trips", "common"]);
   const addToast = useToastStore((s) => s.addToast);
 
+  // "Today" in the profile zone (Q1), never the browser's.
+  const today = todayIn(useTodayZone());
   const [date, setDate] = useState(
     entry
       ? toDateInput(entry.date)
-      : (defaultDate ?? (trip ? defaultJournalDate(trip, localToday()) : localToday()))
+      : (defaultDate ?? (trip ? defaultJournalDate(trip, today) : today))
   );
   const [title, setTitle] = useState(entry?.title ?? "");
   const [body, setBody] = useState(entry?.body ?? "");

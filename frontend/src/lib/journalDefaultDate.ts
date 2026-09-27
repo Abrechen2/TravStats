@@ -4,6 +4,10 @@
  * it). Today while the trip is on; otherwise the day after the last entry,
  * so a diary written up afterwards moves forward one day per entry; failing
  * that, the trip's first day. Days are "YYYY-MM-DD" calendar days.
+ *
+ * `today` is the caller's, asked in the user's PROFILE zone
+ * (`todayIn(useTodayZone())`, ADR 0002 Q1) — not the browser's: a laptop still
+ * on home time must not file tonight's entry under yesterday.
  */
 export interface JournalDaySource {
   startDate: string | null;
@@ -17,12 +21,6 @@ function nextDay(value: string): string {
   const d = new Date(`${value}T00:00:00Z`);
   d.setUTCDate(d.getUTCDate() + 1);
   return d.toISOString().slice(0, 10);
-}
-
-/** The viewer's own calendar day — "today" is where the writer is. */
-export function localToday(now: Date = new Date()): string {
-  const pad = (n: number): string => String(n).padStart(2, "0");
-  return `${now.getFullYear()}-${pad(now.getMonth() + 1)}-${pad(now.getDate())}`;
 }
 
 export function defaultJournalDate(trip: JournalDaySource, today: string): string {
