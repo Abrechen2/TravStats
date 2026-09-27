@@ -52,7 +52,7 @@ const journalEntry = z.object({
   updatedAt: z.string(),
 });
 
-const weatherOutcome = z
+export const weatherOutcome = z
   .enum([
     "observed",
     "noLocation",

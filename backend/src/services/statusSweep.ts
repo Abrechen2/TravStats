@@ -20,6 +20,15 @@ type UserScope = { userId: { in: string[] } } | { userId: { notIn: string[] } };
  * group per profile zone, and one UTC group for everyone else — accounts with
  * no usable zone, which `profileZoneOf` also answers in UTC.
  */
+/**
+ * Every user's profile zone. A user without one is absent and reads "today"
+ * in UTC — the documented default (`profileZone.ts`), never a place's zone.
+ */
+async function profileZonesByUser(): Promise<Map<string, string>> {
+  const rows = await prisma.userSettings.findMany({ select: { userId: true, data: true } });
+  return new Map(rows.map((row) => [row.userId, profileZoneFromSettings(row.data).zone]));
+}
+
 async function profileZoneScopes(): Promise<Array<{ zone: string; scope: UserScope }>> {
   const rows = await prisma.userSettings.findMany({ select: { userId: true, data: true } });
   const byZone = new Map<string, string[]>();
@@ -218,10 +227,13 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
     data: { status: "scheduled" },
   });
 
-  // Trips: recompute from segment date bounds, update diffs only
+  // Trips: recompute from segment date bounds, update diffs only. A trip's
+  // days begin in its owner's profile zone (ADR 0002 D4, `tripStatusBounds`).
+  const zoneOfUser = await profileZonesByUser();
   const trips = await prisma.trip.findMany({
     select: {
       id: true,
+      userId: true,
       status: true,
       startDate: true,
       endDate: true,
@@ -248,6 +260,7 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
       railJourneys: trip.railJourneys,
       ownStartDate: trip.startDate,
       ownEndDate: trip.endDate,
+      zone: zoneOfUser.get(trip.userId) ?? "UTC",
     });
     const derived = deriveTripStatus({ ...bounds, now });
     if (derived != null && derived !== trip.status) {

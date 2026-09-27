@@ -1,3 +1,4 @@
+import { birthdayOf } from "../timeModel/readDay";
 /**
  * The rows `GET /stats/cruise` is built from, loaded once.
  *
@@ -78,7 +79,7 @@ export async function loadCruiseStatsData(
   statuses: CruiseStatusScope = "sailed"
 ): Promise<CruiseStatsData> {
   const [user, cruises] = await Promise.all([
-    prisma.user.findUnique({ where: { id: userId }, select: { birthdate: true } }),
+    prisma.user.findUnique({ where: { id: userId }, select: { birthdate: true, birthDay: true } }),
     prisma.cruise.findMany({
       where: {
         userId,
@@ -141,13 +142,9 @@ export async function loadCruiseStatsData(
     },
   }));
 
-  // `calculateCruiseStats` expects {month, day} for the birthday-at-sea flag.
-  // `Date#getMonth()` is 0-11 and `rangeContainsMonthDay` expects 1-12 —
-  // without the +1 a January birthday matched nothing and every other was off
-  // by a month (found by a Codex audit).
-  const userBirthday = user?.birthdate
-    ? { month: user.birthdate.getMonth() + 1, day: user.birthdate.getDate() }
-    : undefined;
+  // `calculateCruiseStats` expects {month (1-12), day} for the
+  // birthday-at-sea flag — a floating date, read by `birthdayOf`.
+  const userBirthday = birthdayOf(user);
 
   return { rows, userBirthday };
 }

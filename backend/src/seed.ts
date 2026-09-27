@@ -68,9 +68,9 @@ async function main() {
 
     // Random date in the last 6 months
     const daysAgo = Math.floor(Math.random() * 180);
-    const departureTime = new Date();
-    departureTime.setDate(departureTime.getDate() - daysAgo);
-    departureTime.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
+    // On the instant (UTC), never the seeding host's calendar.
+    const departureTime = new Date(Date.now() - daysAgo * 24 * 60 * 60 * 1000);
+    departureTime.setUTCHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
 
     // Flight duration: 1-8 hours
     const durationHours = Math.random() * 7 + 1;

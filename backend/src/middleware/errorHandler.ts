@@ -59,9 +59,6 @@ export type ApiErrorCode =
   /** A rail arrival instant before its departure — usually a night train
    *  whose arrival kept the departure's date. `field` is `arrivalLocal`. */
   | "RAIL_ARRIVAL_BEFORE_DEPARTURE"
-  /** A station wall clock inside a spring-forward gap: that time never
-   *  happened there. `field` is the time that does not exist. */
-  | "RAIL_LOCAL_TIME_NONEXISTENT"
   /** A parse needed the configured LLM and could not reach it — "try later",
    *  not "broken". */
   | "LLM_UNREACHABLE"

@@ -309,8 +309,10 @@ export async function createPendingUpdate(
     };
 
     // Calculate expiry (24 hours from now or after flight ends, whichever is later)
-    const flightEnd = flight.arrivalTime ? new Date(flight.arrivalTime) : new Date();
-    flightEnd.setHours(flightEnd.getHours() + FLIGHT_ACTIVE_BUFFER_HOURS);
+    const flightEnd = new Date(
+      (flight.arrivalTime ? flight.arrivalTime.getTime() : Date.now()) +
+        FLIGHT_ACTIVE_BUFFER_HOURS * 60 * 60 * 1000
+    );
     const expiresAt = new Date(Math.max(Date.now() + 24 * 60 * 60 * 1000, flightEnd.getTime()));
 
     // Calculate statistics impact

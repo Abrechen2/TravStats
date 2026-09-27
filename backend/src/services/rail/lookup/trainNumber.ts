@@ -50,8 +50,8 @@ export function labelMatches(
  * for 2024-06-01 at Frankfurt Hbf came back with trains of 2026-08-25). An
  * answer for another day is no answer.
  */
-export function isOnDay(instant: Date, date: string, timezone: string | null): boolean {
-  const wall = formatWallClockIn(instant, timezone ?? "UTC");
+export function isOnDay(instant: Date, date: string, timezone: string): boolean {
+  const wall = formatWallClockIn(instant, timezone);
   if (wall === null) throw new RangeError(`Invalid time zone: ${timezone}`);
   return wall.slice(0, 10) === date;
 }

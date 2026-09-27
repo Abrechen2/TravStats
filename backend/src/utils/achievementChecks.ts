@@ -3,6 +3,7 @@
 
 import type { Achievement } from "../prisma";
 import { calculateDistance } from "./geo";
+import { departureClockOf } from "./timezone";
 import type { FlightData, UserStats } from "./achievementStats";
 
 /**
@@ -770,6 +771,7 @@ export function checkAchievement(
   return { isUnlocked, progress };
 }
 
+const monthNumber = (key: string): number => Number(key.slice(0, 4)) * 12 + Number(key.slice(5));
 function checkConsecutiveMonths(monthsWithFlights: Set<string>): number {
   if (monthsWithFlights.size === 0) return 0;
 
@@ -778,13 +780,9 @@ function checkConsecutiveMonths(monthsWithFlights: Set<string>): number {
   let currentConsecutive = 1;
 
   for (let i = 1; i < sortedMonths.length; i++) {
-    const prevDate = new Date(sortedMonths[i - 1] + "-01");
-    const currDate = new Date(sortedMonths[i] + "-01");
-
-    // Check if next month
-    const monthDiff =
-      (currDate.getFullYear() - prevDate.getFullYear()) * 12 +
-      (currDate.getMonth() - prevDate.getMonth());
+    // "YYYY-MM" keys as month counts — read as Dates, "2024-03-01" on a host
+    // west of UTC was February.
+    const monthDiff = monthNumber(sortedMonths[i]) - monthNumber(sortedMonths[i - 1]);
 
     if (monthDiff === 1) {
       currentConsecutive++;
@@ -853,7 +851,7 @@ function checkAllSeasons(flights: FlightData[]): number {
   const seasons = new Set<number>();
   for (const flight of flights) {
     if (!flight.departureTime) continue;
-    const month = flight.departureTime.getMonth(); // 0-11
+    const { month } = departureClockOf(flight.departureTime, flight); // 0-11, airport's calendar
     if (month >= 2 && month <= 4) seasons.add(0); // Spring (Mar-May)
     if (month >= 5 && month <= 7) seasons.add(1); // Summer (Jun-Aug)
     if (month >= 8 && month <= 10) seasons.add(2); // Fall (Sep-Nov)

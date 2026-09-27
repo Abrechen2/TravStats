@@ -9,7 +9,7 @@ import {
   type TimeMigrationStatus,
   type TimeMigrationTable,
 } from "../../schemas/timeMigration";
-import { kindOf } from "./openQuestions";
+import { kindOf, settleTimeLedger } from "./openQuestions";
 import { loadRowLinks, type RowLink } from "./rowLinks";
 import { backfillRunState } from "./state";
 import { FILLED_SQL } from "./tables";
@@ -30,18 +30,30 @@ const isTable = (value: string): value is TimeMigrationTable =>
 const isReason = (value: string | null): value is TimeMigrationReason =>
   value !== null && (TIME_MIGRATION_REASONS as readonly string[]).includes(value);
 
-async function rowCounts(): Promise<Map<string, { open: number; converted: number }>> {
+interface RowCounts {
+  open: number;
+  converted: number;
+  answered: number;
+}
+
+async function rowCounts(): Promise<Map<string, RowCounts>> {
   const rows = await prisma.$queryRaw<
-    Array<{ table_name: string; open: bigint; converted: bigint }>
+    Array<{ table_name: string; open: bigint; converted: bigint; answered: bigint }>
   >`
     SELECT table_name,
-           count(*) FILTER (WHERE has_open)     AS open,
-           count(*) FILTER (WHERE NOT has_open) AS converted
-      FROM (SELECT table_name, row_id, bool_or(status = 'open') AS has_open
+           count(*) FILTER (WHERE has_open)                      AS open,
+           count(*) FILTER (WHERE NOT has_open AND NOT asked)    AS converted,
+           count(*) FILTER (WHERE NOT has_open AND asked)        AS answered
+      FROM (SELECT table_name, row_id,
+                   bool_or(status = 'open')     AS has_open,
+                   bool_or(reason IS NOT NULL)  AS asked
               FROM time_migration_ledger GROUP BY table_name, row_id) per_row
      GROUP BY table_name`;
   return new Map(
-    rows.map((r) => [r.table_name, { open: Number(r.open), converted: Number(r.converted) }])
+    rows.map((r) => [
+      r.table_name,
+      { open: Number(r.open), converted: Number(r.converted), answered: Number(r.answered) },
+    ])
   );
 }
 
@@ -78,6 +90,7 @@ async function tableReports(): Promise<TimeMigrationReport["tables"]> {
       table,
       converted: counts.get(table)?.converted ?? 0,
       open: counts.get(table)?.open ?? 0,
+      answered: counts.get(table)?.answered ?? 0,
       alreadyFilled: await alreadyFilled(table),
       rules: byRule
         .filter((r) => r.tableName === table)
@@ -205,6 +218,9 @@ function backfillSummary(completedAt: Date | null): TimeMigrationReport["backfil
 }
 
 export async function buildTimeMigrationReport(): Promise<TimeMigrationReport> {
+  // Settle every account first: a question answered since the last inbox pass
+  // must not still be counted open here (the owner's report "Offen" count).
+  await settleTimeLedger(null);
   const settings = await prisma.adminSettings.findFirst({
     orderBy: { id: "asc" },
     select: { timeModelBackfillAt: true },

@@ -32,6 +32,7 @@ import {
 
 import { toUtcDate } from "../services/flights/mergedChronology";
 import { flightZoneColumns } from "./flights/timeInput";
+import { enrichFlightsForClients } from "../services/flightAirportFacts";
 
 const router = Router();
 
@@ -494,7 +495,7 @@ router.post(
       }
 
       res.status(201).json({
-        flights: createdFlights,
+        flights: await enrichFlightsForClients(createdFlights),
         count: createdFlights.length,
         skipped,
         newAchievements: newAchievements.length > 0 ? newAchievements : undefined,

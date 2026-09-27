@@ -252,11 +252,14 @@ export async function sendInvitationEmail(
 
   const transporter = createTransporterFromConfig(config);
   const subject = "TravStats — Einladung";
-  const expiresText = expiresAt.toLocaleDateString("de-DE", {
+  // The invitee has no profile zone yet, and the expiry is checked against
+  // the instant — so the day is named in UTC, and says so.
+  const expiresText = `${expiresAt.toLocaleDateString("de-DE", {
     year: "numeric",
     month: "long",
     day: "numeric",
-  });
+    timeZone: "UTC",
+  })} (UTC)`;
   const html = `
 <!DOCTYPE html>
 <html>

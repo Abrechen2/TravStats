@@ -1,6 +1,6 @@
 import { getInstanceSettings } from "../../instanceSettingsService";
 import { AppError } from "../../../middleware/errorHandler";
-import { timezoneOfLodging } from "../../../utils/stayInstant";
+import { resolveZone, zoneOf } from "../../../shared/time/zoneOf";
 import { instantToWallClock } from "../railJourneyWrite";
 import { catalogueStationAt, findStation } from "../railStations";
 import { lookupDbRest } from "./dbRest";
@@ -89,7 +89,9 @@ const CHAIN: readonly Provider[] = [
 
 async function toLookupStop(stop: ProviderStop): Promise<RailLookupStop> {
   const catalogue = await catalogueStationAt(stop.lat, stop.lon);
-  const zone = timezoneOfLodging(stop.lat, stop.lon);
+  // The catalogue's zone first (ADR 0002 D2). A stop with none has no local
+  // clock to show: its times are left out, never shown as a UTC reading.
+  const zone = zoneOf({ catalogueZone: catalogue?.timezone, lat: stop.lat, lon: stop.lon });
   return {
     name: stop.name,
     lat: stop.lat,
@@ -97,8 +99,10 @@ async function toLookupStop(stop: ProviderStop): Promise<RailLookupStop> {
     stationId: catalogue?.id ?? null,
     code: catalogue?.uic ?? null,
     country: catalogue?.country ?? null,
-    arrivalLocal: stop.plannedArrival ? instantToWallClock(stop.plannedArrival, zone) : null,
-    departureLocal: stop.plannedDeparture ? instantToWallClock(stop.plannedDeparture, zone) : null,
+    arrivalLocal:
+      stop.plannedArrival && zone ? instantToWallClock(stop.plannedArrival, zone) : null,
+    departureLocal:
+      stop.plannedDeparture && zone ? instantToWallClock(stop.plannedDeparture, zone) : null,
   };
 }
 
@@ -123,7 +127,7 @@ export async function lookupTrain(
     ...parsed,
     date: input.date,
     from,
-    timezone: timezoneOfLodging(from.lat, from.lon),
+    timezone: resolveZone({ catalogueZone: station?.timezone, lat: from.lat, lon: from.lon }).zone,
     deadline: lookupDeadline(options.budgetMs),
   };
 

@@ -1,3 +1,6 @@
+import { localDay } from "./time/instant";
+import { isValidZone } from "./time/zonedParts";
+import { now as clockNow } from "./time/clock";
 /**
  * Single source of truth for "does this place count?".
  *
@@ -38,6 +41,14 @@ export interface CountablePlace {
 
 export interface CountableVisit {
   visitedAt: Date | string | null;
+  /**
+   * The real instant (ADR 0002). `visitedAt` is a mixed legacy column — the
+   * web's wall clock as fake UTC beside the Companion's instant — so where the
+   * instant exists it is what "has this visit happened yet" is asked of.
+   */
+  visitedAtUtc?: Date | string | null;
+  /** The zone stored with the visit — the place's clock its day is read on. */
+  visitedZone?: string | null;
 }
 
 function toDate(value: Date | string | null): Date | null {
@@ -54,22 +65,26 @@ function toDate(value: Date | string | null): Date | null {
  * a date. Treating the gap as "planned" would quietly drop real history out of
  * every total, which is the failure mode this rule exists to prevent.
  */
-export function classifyVisit(visit: CountableVisit, now: Date = new Date()): PlaceCountState {
-  const at = toDate(visit.visitedAt);
+export function classifyVisit(visit: CountableVisit, now: Date = clockNow()): PlaceCountState {
+  const at = toDate(visit.visitedAtUtc ?? visit.visitedAt);
   if (at === null) return "visited";
   return at.getTime() > now.getTime() ? "planned" : "visited";
 }
 
 /**
- * The UTC year a visit falls in, or null when it carries no readable date.
+ * The year a visit falls in, or null when it carries no readable date.
  *
- * UTC, never local: the year an event belongs to is decided the same way for
- * every domain (`utils/stats/domainYear.ts` for the server rollups,
- * `Overview/aggregate.ts` for the cross-domain strip), and a browser west of
- * UTC reading a New Year's Eve visit locally would file it in the other year
- * than the overview beside it.
+ * On the PLACE's calendar (ADR 0002 D4): the visit's instant read in the zone
+ * stored with it. Never the reader's zone — a browser west of UTC reading a
+ * New Year's Eve visit locally would file it in the other year than the
+ * overview beside it. A visit the backfill has not reached has only the legacy
+ * column, whose UTC date is the web's wall-clock date (Q4 keeps that date).
  */
 export function visitYear(visit: CountableVisit): number | null {
+  const instant = toDate(visit.visitedAtUtc ?? null);
+  if (instant && visit.visitedZone && isValidZone(visit.visitedZone)) {
+    return Number(localDay(instant, visit.visitedZone).slice(0, 4));
+  }
   const at = toDate(visit.visitedAt);
   return at === null ? null : at.getUTCFullYear();
 }
@@ -92,7 +107,7 @@ export function visitYear(visit: CountableVisit): number | null {
 export function visitCountsForYear(
   visit: CountableVisit,
   year: number,
-  now: Date = new Date()
+  now: Date = clockNow()
 ): boolean {
   return visitYear(visit) === year && classifyVisit(visit, now) === "visited";
 }
@@ -130,7 +145,7 @@ export function countVisitedPlaces(places: readonly CountablePlace[]): number {
  */
 export function countCompletedVisits(
   visits: readonly CountableVisit[],
-  now: Date = new Date()
+  now: Date = clockNow()
 ): number {
   return visits.reduce((n, v) => (classifyVisit(v, now) === "visited" ? n + 1 : n), 0);
 }

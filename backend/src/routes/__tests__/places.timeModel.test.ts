@@ -158,4 +158,34 @@ describe("Place visits — time model (phase 2)", () => {
     expect(row.visitedAtUtc?.toISOString()).toBe("2025-12-01T08:00:00.000Z");
     expect(row.writtenVia).toBe("web");
   });
+
+  it("hands a visit out on the place's clock, not the fake-UTC legacy column (phase 4)", async () => {
+    const res = await post({ visitedAt: { local: "2025-07-03T14:30" } });
+    expect(res.status).toBe(201);
+    expect(res.body.data.times.visitedAt).toEqual({
+      utc: "2025-07-03T12:30:00.000Z",
+      zone: "Europe/Rome",
+      offset: "+02:00",
+      local: "2025-07-03T14:30:00",
+      precision: "minute",
+      zoneSource: "stored",
+    });
+    const detail = await request(app).get(`/api/v1/places/${placeId}`).set("Cookie", cookie);
+    expect(detail.body.data.visits[0].times.visitedAt.local).toBe("2025-07-03T14:30:00");
+    expect(detail.body.data.times.lastVisit.local).toBe("2025-07-03T14:30:00");
+  });
+
+  it("gives a visit the backfill has not reached its date only — the writer is unknown (Q4)", async () => {
+    // A Companion instant in the mixed legacy column, nothing in the new ones.
+    await prisma.placeVisit.create({
+      data: { placeId, userId, visitedAt: new Date("2025-07-03T12:30:17.123Z") },
+    });
+    const list = await request(app).get("/api/v1/places").set("Cookie", cookie);
+    const place = list.body.data.find((p: { id: string }) => p.id === placeId);
+    expect(place.visits[0].times.visitedAt).toMatchObject({
+      zone: null,
+      precision: "unknown",
+      local: "2025-07-03T12:30:17",
+    });
+  });
 });

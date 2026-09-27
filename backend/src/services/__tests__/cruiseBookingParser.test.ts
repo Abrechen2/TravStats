@@ -67,6 +67,33 @@ describe("CruiseBookingParser", () => {
     expect(await parser.checkAvailability()).toBe(true);
   });
 
+  it("hands a port call's clock on as the port's wall clock, converted at the boundary (ADR 0002)", async () => {
+    mock.setResponse({
+      response: JSON.stringify([
+        {
+          shipName: "AIDAnova",
+          startDate: "2027-03-27",
+          endDate: "2027-04-03",
+          stops: [
+            // An appended Z is the model's habit, not an instant: the booking
+            // printed 08:00 at the port.
+            { isAtSea: false, portName: "Hamburg", departureTime: "2027-03-27T18:00:00Z" },
+            { isAtSea: false, portName: "Bergen", arrivalTime: "2027-03-29 8:00" },
+            { isAtSea: false, portName: "Oslo", arrivalTime: "2027-03-31T25:00" },
+            { isAtSea: false, portName: "Kiel", arrivalTime: "gegen Mittag" },
+          ],
+        },
+      ]),
+    });
+    const [cruise] = await parser.parseText("AIDA Buchungsbestätigung …");
+    expect(cruise.stops.map((s) => [s.arrivalTime, s.departureTime])).toEqual([
+      [undefined, "2027-03-27T18:00"],
+      ["2027-03-29T08:00", undefined],
+      [undefined, undefined],
+      [undefined, undefined],
+    ]);
+  });
+
   it("parses a TUI Mein Schiff cruise with stops + cabin info", async () => {
     mock.setResponse({
       response: JSON.stringify([

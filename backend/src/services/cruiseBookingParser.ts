@@ -1,4 +1,5 @@
 import { type CurrencyCode, isCurrencyCode } from "../shared/currencies";
+import { parseLocal } from "../shared/time/instant";
 import { requestTextWithDeadline } from "./http/boundedHttp";
 import {
   LLM_AVAILABILITY_TIMEOUT_MS,
@@ -279,6 +280,31 @@ function normalizeDateString(value: unknown): string | undefined {
   return s;
 }
 
+const PORT_CLOCK = /^(\d{4}-\d{2}-\d{2})[T ](\d{1,2}):(\d{2})/;
+
+/**
+ * A port call's clock as the booking shows it, converted at the parser
+ * boundary (ADR 0002 D6): `YYYY-MM-DDTHH:mm`, the PORT's wall clock — the one
+ * shape the cruise write path reads on the port's zone. The model is asked for
+ * exactly that, and sometimes answers with a space, a one-digit hour, seconds
+ * or a `Z`/offset tacked on; the digits are what the confirmation printed, so
+ * they are kept and the rest dropped — an appended `Z` read as an instant
+ * would move every call by the port's offset. Anything that is not a real
+ * wall clock (`25:00`, `2027-02-30`, prose) is left out rather than stored.
+ */
+function portWallClock(value: unknown): string | undefined {
+  const match = PORT_CLOCK.exec(asString(value) ?? "");
+  if (!match) return undefined;
+  const local = `${match[1]}T${match[2].padStart(2, "0")}:${match[3]}`;
+  try {
+    parseLocal(local);
+    return local;
+  } catch {
+    // Not a real wall clock: no value, never an Invalid Date downstream.
+    return undefined;
+  }
+}
+
 function normalizeStop(raw: RawCruiseStop, index: number): ParsedCruiseStop {
   const isAtSea = asBoolean(raw.isAtSea);
   const dayNumber = asNumber(raw.dayNumber);
@@ -289,8 +315,8 @@ function normalizeStop(raw: RawCruiseStop, index: number): ParsedCruiseStop {
     dayNumber: dayNumber !== undefined && dayNumber > 0 ? Math.floor(dayNumber) : index + 1,
     date: normalizeDateString(raw.date),
     isAtSea,
-    arrivalTime: asString(raw.arrivalTime),
-    departureTime: asString(raw.departureTime),
+    arrivalTime: portWallClock(raw.arrivalTime),
+    departureTime: portWallClock(raw.departureTime),
     excursionNote: asString(raw.excursionNote),
   };
 }

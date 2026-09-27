@@ -91,6 +91,23 @@ export const railStationSchema = z.object({
     .optional(),
 });
 
+const foldField = z.enum(["earlier", "later"]).nullable().optional();
+
+/** The fold keys a rail write understands — see `strayFoldKey`. */
+export const RAIL_FOLD_KEYS = ["departureFold", "arrivalFold"] as const;
+
+/**
+ * A `…Fold` key the rail schema does not know (`arrivalFolds`, `depFold`).
+ * zod strips unknown keys, so a misspelt fold would be dropped without a word
+ * and the ride stored at the EARLIER hour the user just said was wrong; the
+ * route refuses it instead. Null when there is none.
+ */
+export function strayFoldKey(body: unknown): string | null {
+  if (typeof body !== "object" || body === null) return null;
+  const known: readonly string[] = RAIL_FOLD_KEYS;
+  return Object.keys(body).find((key) => /fold/i.test(key) && !known.includes(key)) ?? null;
+}
+
 const baseRailSchema = z.object({
   operator: optionalText(100),
   trainCategory: optionalText(20),
@@ -99,6 +116,13 @@ const baseRailSchema = z.object({
   arrivalStation: railStationSchema,
   departureLocal: wallClock,
   arrivalLocal: wallClock.nullable().optional(),
+  /**
+   * Which occurrence of a station clock the zone shows twice (the autumn
+   * hour): `earlier` by default, `later` for the second (ADR 0002, Q5) — the
+   * same choice the flight form offers.
+   */
+  departureFold: foldField,
+  arrivalFold: foldField,
   /**
    * Only for a distance the user read off the ticket. Absent or null means
    * "measure it": the server stores the great-circle distance and says so.

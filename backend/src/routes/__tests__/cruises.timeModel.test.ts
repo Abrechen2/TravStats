@@ -188,4 +188,71 @@ describe("Cruises — time model (phase 2)", () => {
     expect(cruise.startZone).toBe("America/New_York");
     expect(cruise.stops[0].departureUtc?.toISOString()).toBe("2027-08-02T20:00:00.000Z");
   });
+
+  it("hands a cruise out with its days and port calls on the ports' clocks (phase 4)", async () => {
+    const res = await create({
+      startDate: "2027-08-01",
+      endDate: "2027-08-08",
+      departurePortId: hamburg,
+      arrivalPortId: newYork,
+      stops: [
+        {
+          portId: bergen,
+          dayNumber: 3,
+          isAtSea: false,
+          date: "2027-08-03",
+          arrivalTime: { local: "2027-08-03T08:00" },
+        },
+        { portId: null, dayNumber: 4, isAtSea: true, date: "2027-08-04" },
+      ],
+    });
+    expect(res.status).toBe(201);
+    expect(res.body.data.times).toEqual({
+      start: { date: "2027-08-01", zone: "Europe/Berlin", precision: "day" },
+      end: { date: "2027-08-08", zone: "America/New_York", precision: "day" },
+    });
+    const detail = await request(app)
+      .get(`/api/v1/cruises/${res.body.data.id}`)
+      .set("Cookie", cookie);
+    const [call, sea] = detail.body.data.stops;
+    expect(call.times).toEqual({
+      date: { date: "2027-08-03", zone: "Europe/Oslo", precision: "day" },
+      arrival: {
+        utc: "2027-08-03T06:00:00.000Z",
+        zone: "Europe/Oslo",
+        offset: "+02:00",
+        local: "2027-08-03T08:00:00",
+        precision: "minute",
+        zoneSource: "stored",
+      },
+      departure: null,
+    });
+    expect(sea.times.date).toEqual({ date: "2027-08-04", zone: null, precision: "day" });
+    const list = await request(app).get("/api/v1/cruises").set("Cookie", cookie);
+    const row = list.body.data.find((c: { id: string }) => c.id === res.body.data.id);
+    expect(row.times.start.date).toBe("2027-08-01");
+    expect(row.stops[0].times.arrival.local).toBe("2027-08-03T08:00:00");
+  });
+
+  it("never passes a fake-UTC wall clock without a zone off as an instant", async () => {
+    const res = await create({
+      stops: [{ portId: null, dayNumber: 1, isAtSea: true, date: "2027-03-27" }],
+    });
+    const stop = await prisma.cruiseStop.findFirstOrThrow({
+      where: { cruiseId: res.body.data.id },
+    });
+    // A sea day written before the time model, carrying a clock time.
+    await prisma.cruiseStop.update({
+      where: { id: stop.id },
+      data: { arrivalTime: new Date("2027-03-27T09:00:00.000Z"), arrivalUtc: null },
+    });
+    const detail = await request(app)
+      .get(`/api/v1/cruises/${res.body.data.id}`)
+      .set("Cookie", cookie);
+    expect(detail.body.data.stops[0].times.arrival).toMatchObject({
+      zone: null,
+      precision: "unknown",
+      local: "2027-03-27T09:00:00",
+    });
+  });
 });

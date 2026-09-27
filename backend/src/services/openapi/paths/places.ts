@@ -16,6 +16,7 @@
  * while its colour, symbol and order stay the user's.
  */
 
+import { placeTimesSchema, visitTimesSchema } from "../../../schemas/times";
 import { z } from "zod";
 
 import { placeImportCommitSchema, placeImportPreviewSchema } from "../../../schemas/placeImport";
@@ -62,6 +63,25 @@ const visitPhoto = z.object({
   lon: z.number().nullable(),
 });
 
+const placeVisit = registry.register(
+  "PlaceVisit",
+  z
+    .object({
+      ...prismaColumns("PlaceVisit"),
+      visitedAt: z
+        .string()
+        .datetime()
+        .nullable()
+        .describe(
+          "Legacy and mixed: the web stored the place's wall clock here as if it were UTC, " +
+            "the Companion a real instant. Read `times.visitedAt`."
+        ),
+      times: visitTimesSchema,
+      photos: z.array(visitPhoto).optional().describe("The visit's photos; GET /places/{id} only"),
+    })
+    .openapi("PlaceVisit")
+);
+
 const place = registry.register(
   "Place",
   z
@@ -93,7 +113,11 @@ const place = registry.register(
           "The visit photo the place page leads with (set by PUT /places/{id}/cover). Null " +
             "means none was chosen — show the first visit photo; it is never written for the user."
         ),
-      visits: z.array(includedRow("visit")).optional().describe("Included by GET /places/{id}"),
+      visits: z
+        .array(placeVisit)
+        .optional()
+        .describe("Every visit, each with its `times`; GET /places/{id} adds each visit's photos"),
+      times: placeTimesSchema,
       createdAt: z.string().datetime(),
       updatedAt: z.string().datetime(),
     })
@@ -228,7 +252,17 @@ registry.registerPath({
       },
     },
   },
-  responses: { 422: timeRefused, 201: { description: "Created" }, 400: badInput, 404: notFound },
+  responses: {
+    422: timeRefused,
+    201: {
+      description: "Created",
+      content: {
+        "application/json": { schema: z.object({ success: z.literal(true), data: placeVisit }) },
+      },
+    },
+    400: badInput,
+    404: notFound,
+  },
 });
 
 const visitDateSuggestion = z.object({
@@ -281,7 +315,17 @@ registry.registerPath({
   summary: "Update a visit",
   tags: placesTag,
   request: { params: z.object({ visitId: uuid }) },
-  responses: { 422: timeRefused, 200: { description: "Updated" }, 400: badInput, 404: notFound },
+  responses: {
+    422: timeRefused,
+    200: {
+      description: "Updated",
+      content: {
+        "application/json": { schema: z.object({ success: z.literal(true), data: placeVisit }) },
+      },
+    },
+    400: badInput,
+    404: notFound,
+  },
 });
 
 registry.registerPath({

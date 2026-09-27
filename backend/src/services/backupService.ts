@@ -382,8 +382,9 @@ export async function restoreBackup(id: string, options: RestoreOptions): Promis
 export async function cleanupOldBackups(): Promise<number> {
   const adminSettings = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
   const retentionDays = adminSettings?.backupRetentionDays ?? RETENTION_DAYS;
-  const cutoffDate = new Date();
-  cutoffDate.setDate(cutoffDate.getDate() - retentionDays);
+  // Whole days of 24 h, measured on the instant — a host-local `setDate`
+  // made the cutoff depend on the server's zone and its DST dates.
+  const cutoffDate = new Date(Date.now() - retentionDays * 24 * 60 * 60 * 1000);
 
   const oldBackups = await prisma.backup.findMany({
     where: {

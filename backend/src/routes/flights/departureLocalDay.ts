@@ -1,6 +1,11 @@
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
-import { airportCalendarDay, buildTzMap } from "../../services/stats/departureClock";
+import {
+  FLIGHT_CLOCK_SELECT,
+  airportCalendarDay,
+  buildTzMap,
+  flightEndZone,
+} from "../../services/stats/departureClock";
 import type { FlightTimeSemantics } from "../../utils/timezone";
 
 /**
@@ -17,10 +22,10 @@ import type { FlightTimeSemantics } from "../../utils/timezone";
  * by `stats.timeseriesLocalTime.test.ts`). Three surfaces, two answers.
  *
  * WHY THIS IS NOT SQL. The obvious fix is an expression in the `where`:
- * `EXTRACT(YEAR FROM (departure_time AT TIME ZONE dep_timezone))`. There is
- * no `dep_timezone` column. `depTimezone` is attached at READ time by
- * `services/flightAirportFacts.ts`, resolved from the airports catalogue by
- * IATA then ICAO, and picking the right catalogue row is itself a rule —
+ * `EXTRACT(YEAR FROM (departure_time AT TIME ZONE dep_timezone))`. Since
+ * ADR 0002 a flight stores `dep_timezone`, but a row that stored none is
+ * still read in its airport's catalogue zone (`flightEndZone`), resolved by
+ * IATA then ICAO — and picking the right catalogue row is itself a rule —
  * `compareAirportAuthority`, which prefers an open airport over a closed
  * predecessor sharing the code (MUC-Riem, TXL, THF) and a real ICAO over a
  * placeholder. A SQL version would have to restate that ranking, the
@@ -42,11 +47,7 @@ import type { FlightTimeSemantics } from "../../utils/timezone";
 const DEPARTURE_CLOCK_SELECT = {
   id: true,
   departureTime: true,
-  depIata: true,
-  depIcao: true,
-  arrIata: true,
-  arrIcao: true,
-  depTimeSemantics: true,
+  ...FLIGHT_CLOCK_SELECT,
 } as const;
 
 export interface LocalDeparture {
@@ -78,11 +79,8 @@ export async function loadLocalDepartures(
   const departures: LocalDeparture[] = [];
   for (const row of rows) {
     if (!row.departureTime) continue;
-    // IATA before ICAO, the same order `flightAirportFacts` resolves in.
-    const timezone =
-      (row.depIata ? tzMap.get(row.depIata) : undefined) ??
-      (row.depIcao ? tzMap.get(row.depIcao) : undefined) ??
-      null;
+    // The stored zone, then IATA before ICAO — `flightEndZone`.
+    const timezone = flightEndZone(row.depTimezone, tzMap, row.depIata, row.depIcao);
     const day = airportCalendarDay(
       row.departureTime,
       timezone,

@@ -1,4 +1,4 @@
-import { fromZonedTime } from "date-fns-tz";
+import { startOfDayAt } from "../../../shared/time/legacyValues";
 import { z } from "zod";
 
 import { fetchRailJson } from "./railHttp";
@@ -72,7 +72,7 @@ export async function lookupDbRest(query: RailLookupQuery): Promise<ProviderResu
   const id = await stopId(query);
   if (id === "noMatch" || id === "unavailable" || id === "timedOut") return { outcome: id };
 
-  const dayStart = fromZonedTime(`${query.date}T00:00:00`, query.timezone ?? "UTC");
+  const dayStart = startOfDayAt(query.date, query.timezone);
   const url =
     `${DB_REST_BASE_URL}/stops/${encodeURIComponent(id)}/departures` +
     `?when=${encodeURIComponent(dayStart.toISOString())}&duration=1440&results=1000` +

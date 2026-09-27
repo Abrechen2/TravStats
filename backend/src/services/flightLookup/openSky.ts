@@ -127,8 +127,10 @@ export async function lookupOpenSkyFlight(
   }
 
   const callsign = flightNumber.toUpperCase();
-  const baseDate = date ? new Date(date) : new Date();
-  const begin = Math.floor(baseDate.setHours(0, 0, 0, 0) / 1000);
+  // The UTC day of `date` (today without one): OpenSky searches by instant,
+  // and midnight of the SERVER's zone made the window depend on the host.
+  const day = date ?? new Date().toISOString().slice(0, 10);
+  const begin = Math.floor(Date.parse(`${day.slice(0, 10)}T00:00:00.000Z`) / 1000);
   const end = begin + 24 * 60 * 60;
 
   try {

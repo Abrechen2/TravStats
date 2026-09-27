@@ -8,6 +8,7 @@ import { railCreationLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import {
   createRailJourneySchema,
+  strayFoldKey,
   railQuerySchema,
   updateRailJourneySchema,
   type RailQueryInput,
@@ -38,6 +39,7 @@ import { linkDocuments, takeDocumentIds } from "../services/documents/documentSe
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import logger from "../utils/logger";
 import { railIdsCoveredBy } from "../services/loyalty/listFilters";
+import { withRailDetailTimes, withRailTimes } from "../services/rail/timesDto";
 
 /**
  * Rail journeys — one row per train ride (spec
@@ -73,6 +75,10 @@ export const RAIL_DETAIL_INCLUDE = {
           arrivalTime: true,
           depTimezone: true,
           arrTimezone: true,
+          depPrecision: true,
+          arrPrecision: true,
+          actualDepartureTime: true,
+          actualArrivalTime: true,
           trainCategory: true,
           trainNumber: true,
           status: true,
@@ -113,6 +119,11 @@ async function restatusTrips(...tripIds: Array<string | null | undefined>): Prom
   }
 }
 
+/** A misspelt `…Fold` is refused, not dropped — see `strayFoldKey`. */
+function refuseStrayFold(body: unknown): void {
+  const key = strayFoldKey(body);
+  if (key) throw new AppError(`Unknown field ${key}`, 400, "RAIL_INVALID_INPUT", key);
+}
 const router = Router();
 router.use(authenticate);
 // Method-aware: GET passes through, so read-only tokens keep read access.
@@ -221,7 +232,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         skip: offset,
       }),
     ]);
-    res.json({ success: true, data, meta: { total, limit, offset } });
+    res.json({ success: true, data: data.map(withRailTimes), meta: { total, limit, offset } });
   } catch (err) {
     next(err);
   }
@@ -235,7 +246,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       include: RAIL_DETAIL_INCLUDE,
     });
     if (!journey) throw new AppError("Rail journey not found", 404);
-    res.json({ success: true, data: journey });
+    res.json({ success: true, data: withRailDetailTimes(journey) });
   } catch (err) {
     next(err);
   }
@@ -250,6 +261,8 @@ function plainColumns(
   | "arrivalStation"
   | "departureLocal"
   | "arrivalLocal"
+  | "departureFold"
+  | "arrivalFold"
   | "distanceKm"
   | "status"
   | "companions"
@@ -260,6 +273,8 @@ function plainColumns(
     arrivalStation: _arr,
     departureLocal: _depLocal,
     arrivalLocal: _arrLocal,
+    departureFold: _depFold,
+    arrivalFold: _arrFold,
     distanceKm: _distance,
     status: _status,
     companions: _companions,
@@ -335,6 +350,7 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const userId = requireUser(req);
+      refuseStrayFold(req.body);
       const parsed = createRailJourneySchema.safeParse(req.body);
       if (!parsed.success) throw invalidInput(parsed.error);
       const { connectsFrom, ...input } = parsed.data;
@@ -394,7 +410,9 @@ router.post(
       await restatusTrips(journey.tripId);
 
       logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
-      res.status(201).json({ success: true, data: journey, meta: { geometry: reportOf(geo) } });
+      res
+        .status(201)
+        .json({ success: true, data: withRailTimes(journey), meta: { geometry: reportOf(geo) } });
     } catch (err) {
       next(err);
     }
@@ -407,6 +425,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const existing = await prisma.railJourney.findFirst({ where: { id: req.params.id, userId } });
     if (!existing) throw new AppError("Rail journey not found", 404);
 
+    refuseStrayFold(req.body);
     const parsed = updateRailJourneySchema.safeParse(req.body);
     if (!parsed.success) throw invalidInput(parsed.error);
     const input = parsed.data;
@@ -502,7 +521,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     await restatusTrips(existing.tripId, journey.tripId);
     res.json({
       success: true,
-      data: journey,
+      data: withRailTimes(journey),
       meta: { geometry: editReport(edit, existing.geometrySource) },
     });
   } catch (err) {

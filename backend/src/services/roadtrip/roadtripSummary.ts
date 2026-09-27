@@ -2,6 +2,8 @@ import { countRoadtripNights, stationState, type RoadtripNights } from "../../sh
 import { drivenKm, travelledKm } from "../tour/tourDistance";
 import type { CountryResolver } from "../geo/countryFromCoordinates";
 import { toCountryCode } from "../../shared/countryEvidence";
+import { stayTimes } from "../lodging/timesDto";
+import { stationTimes } from "./timesDto";
 
 /**
  * What a roadtrip page and list say about one roadtrip, derived from rows the
@@ -15,6 +17,12 @@ export const STATION_STAY_SELECT = {
   lodgingId: true,
   checkIn: true,
   checkOut: true,
+  // What the stay's `times` are built from (ADR 0002 phase 4).
+  checkInDate: true,
+  checkOutDate: true,
+  checkInAt: true,
+  checkOutAt: true,
+  stayZone: true,
   datePrecision: true,
   nights: true,
   status: true,
@@ -30,6 +38,9 @@ export const STATION_SELECT = {
   lon: true,
   startDate: true,
   endDate: true,
+  startUtc: true,
+  endUtc: true,
+  stopZone: true,
   notes: true,
   routeOrderIdx: true,
   overnight: true,
@@ -44,6 +55,9 @@ export interface StationRow {
   lon: number | null;
   startDate: Date | null;
   endDate: Date | null;
+  startUtc: Date | null;
+  endUtc: Date | null;
+  stopZone: string | null;
   notes: string | null;
   routeOrderIdx: number | null;
   overnight: boolean;
@@ -53,6 +67,11 @@ export interface StationRow {
     lodgingId: string;
     checkIn: Date | null;
     checkOut: Date | null;
+    checkInDate: Date | null;
+    checkOutDate: Date | null;
+    checkInAt: Date | null;
+    checkOutAt: Date | null;
+    stayZone: string | null;
     datePrecision: string;
     nights: number | null;
     status: string;
@@ -115,6 +134,7 @@ export function toStationDto(s: StationRow): Record<string, unknown> {
     lon: s.lon,
     startDate: s.startDate,
     endDate: s.endDate,
+    times: stationTimes(s),
     notes: s.notes,
     order: s.routeOrderIdx,
     state: stationState(s),
@@ -129,6 +149,7 @@ export function toStationDto(s: StationRow): Record<string, unknown> {
           country: stay.lodging.country,
           checkIn: stay.checkIn,
           checkOut: stay.checkOut,
+          times: stayTimes(stay),
           nights: stay.nights,
           status: stay.status,
         }

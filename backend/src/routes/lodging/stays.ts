@@ -21,6 +21,7 @@ import { createStaySchema, updateStaySchema } from "../../schemas/lodging";
 import logger from "../../utils/logger";
 import { requireUser } from "../../middleware/auth";
 import { createStayRecord, updateStayRecord } from "../../services/lodging/stayWrites";
+import { withStayTimes } from "../../services/lodging/timesDto";
 
 const router = Router();
 
@@ -49,7 +50,7 @@ router.post("/:id/stays", async (req: AuthRequest, res: Response, next: NextFunc
       lodgingId: lodging.id,
       userId,
     });
-    res.status(201).json({ success: true, data: stay });
+    res.status(201).json({ success: true, data: withStayTimes(stay) });
   } catch (err) {
     next(err);
   }
@@ -72,7 +73,7 @@ router.patch("/:id/stays/:stayId", async (req: AuthRequest, res: Response, next:
     const updated = await updateStayRecord(userId, stay, parsed.data);
 
     await recheckAchievements(userId, "lodging");
-    res.json({ success: true, data: updated });
+    res.json({ success: true, data: withStayTimes(updated) });
   } catch (err) {
     next(err);
   }

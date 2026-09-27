@@ -3404,7 +3404,8 @@ model RailJourneyCompanion {
 /// could not convert, with the rule it applied. The backfill writes only new
 /// columns and this ledger; nothing here is read by the product. `status`
 /// open = a row the owner must look at (no zone, ambiguous day), resolved =
-/// converted.
+/// converted, or answered since (a write gave the row its zone or time, the
+/// question was dismissed, the row was deleted — `settleTimeLedger`).
 model TimeMigrationLedger {
   id          String   @id @default(uuid())
   tableName   String   @map("table_name")

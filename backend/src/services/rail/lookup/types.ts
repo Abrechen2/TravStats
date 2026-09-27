@@ -32,8 +32,12 @@ export interface RailLookupQuery {
   date: string;
   /** The boarding station. */
   from: { lat: number; lon: number; dbId: string | null };
-  /** The boarding station's IANA zone; null means "read the day in UTC". */
-  timezone: string | null;
+  /**
+   * The boarding station's IANA zone — the catalogue's, else its coordinates'
+   * (`resolveZone`). Never a UTC stand-in: a lookup that cannot say which day
+   * "the 26th" is at the station refuses with TZ_UNRESOLVED instead.
+   */
+  timezone: string;
   /** When the whole lookup must have answered by — see `railHttp.ts`. */
   deadline: RailDeadline;
 }

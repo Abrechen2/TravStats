@@ -559,7 +559,7 @@ async function main() {
     const hour = Math.floor(Math.random() * 24);
     const minute = Math.floor(Math.random() * 60);
 
-    const departureTime = new Date(year, month, day, hour, minute);
+    const departureTime = new Date(Date.UTC(year, month, day, hour, minute));
     const arrivalTime = new Date(departureTime.getTime() + durationHours * 60 * 60 * 1000);
 
     // Sitzklasse (70% Economy, 20% Business, 8% Premium Economy, 2% First)

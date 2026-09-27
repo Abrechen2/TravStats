@@ -36,6 +36,7 @@ export {
   type LodgingListItem,
 } from "../services/lodging/listView";
 import staysRouter from "./lodging/stays";
+import { withLodgingStayTimes } from "../services/lodging/timesDto";
 import { createLodgingRecord } from "../services/lodging/createLodging";
 import { osmRefToStore } from "../services/lodging/osmRef";
 import {
@@ -135,7 +136,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         ? []
         : [
             {
-              ...lodging,
+              ...withLodgingStayTimes(lodging),
               ...computeAggregates(
                 counted ? lodging.stays.filter((s) => counted.has(s.id)) : lodging.stays,
                 baseCurrency
@@ -231,7 +232,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     const baseCurrency = await getBaseCurrency(userId);
     res.json({
       success: true,
-      data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) },
+      data: { ...withLodgingStayTimes(lodging), ...computeAggregates(lodging.stays, baseCurrency) },
     });
   } catch (err) {
     next(err);
@@ -263,7 +264,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     const baseCurrency = await getBaseCurrency(userId);
     res.status(201).json({
       success: true,
-      data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) },
+      data: { ...withLodgingStayTimes(lodging), ...computeAggregates(lodging.stays, baseCurrency) },
     });
   } catch (err) {
     next(err);
@@ -305,7 +306,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     const baseCurrency = await getBaseCurrency(userId);
     res.json({
       success: true,
-      data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) },
+      data: { ...withLodgingStayTimes(lodging), ...computeAggregates(lodging.stays, baseCurrency) },
     });
   } catch (err) {
     next(err);

@@ -26,7 +26,12 @@ import {
 } from "../../utils/timezone";
 import type { SettingsDataJson } from "../../routes/settings/types";
 import { countryThresholdFor } from "../countryThresholdResolver";
-import { buildTzMap, withDepartureClock } from "./departureClock";
+import {
+  FLIGHT_CLOCK_SELECT,
+  buildTzMap,
+  flightEndZone,
+  withDepartureClock,
+} from "./departureClock";
 import { buildPassport } from "./passport";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { classifyVisit } from "../../shared/placeCounting";
@@ -108,17 +113,13 @@ export async function loadHomeIatas(userId: string): Promise<string[]> {
  * (forgejo#49).
  */
 export const PASSPORT_FLIGHT_SELECT = {
-  depIata: true,
-  depIcao: true,
+  ...FLIGHT_CLOCK_SELECT,
   depLat: true,
   depLon: true,
-  arrIata: true,
-  arrIcao: true,
   arrLat: true,
   arrLon: true,
   departureTime: true,
   arrivalTime: true,
-  depTimeSemantics: true,
   arrTimeSemantics: true,
   status: true,
 } as const;
@@ -197,8 +198,6 @@ export async function loadPassport(
    * touch every "when did I fly" figure on the server for one new column here.
    */
   const [dated, tzMap] = await Promise.all([withDepartureClock(flights), buildTzMap(flights)]);
-  const zoneOf = (iata: string | null, icao: string | null): string | null =>
-    (iata ? tzMap.get(iata) : undefined) ?? (icao ? tzMap.get(icao) : undefined) ?? null;
 
   const passportFlights = dated.map((f) => ({
     ...f,
@@ -209,7 +208,7 @@ export async function loadPassport(
     arrivalInstant: realInstant(
       f.arrivalTime,
       f.arrTimeSemantics as FlightTimeSemantics,
-      zoneOf(f.arrIata, f.arrIcao)
+      flightEndZone(f.arrTimezone, tzMap, f.arrIata, f.arrIcao)
     ),
   }));
 
@@ -239,7 +238,7 @@ export async function loadPassport(
     readPlace
       ? prisma.place.findMany({
           where: { userId, visited: true, isoCountryCode: { not: null } },
-          select: { isoCountryCode: true, visits: { select: { visitedAt: true } } },
+          select: { isoCountryCode: true, visits: { select: { visitedAt: true, visitedAtUtc: true, visitedZone: true } } },
         })
       : [],
     /**

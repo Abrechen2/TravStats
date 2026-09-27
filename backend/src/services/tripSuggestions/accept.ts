@@ -1,7 +1,7 @@
 import { prisma, type DbTransaction } from "../../db";
 import { AppError } from "../../middleware/errorHandler";
 import { TRIP_COLORS } from "../../schemas/trip";
-import { deriveTripStatus } from "../../shared/statusDerivation";
+import { statusFromOwnDates } from "../trips/ownDatesStatus";
 import { classifyVisit } from "../../shared/placeCounting";
 import { recheckAchievements } from "../../utils/achievements";
 import { recomputeTripStatus } from "../tripStatusService";
@@ -151,9 +151,7 @@ async function acceptTrip(
         endDate: dayDate(endDay),
         ...typedTripDays({ startDate: dayDate(startDay), endDate: dayDate(endDay) }),
         destinationLabel: proposal.destination,
-        status:
-          deriveTripStatus({ earliestStart: dayDate(startDay), latestEnd: dayDate(endDay) }) ??
-          undefined,
+        status: (await statusFromOwnDates(userId, dayDate(startDay), dayDate(endDay))) ?? undefined,
       },
     });
     tripId = trip.id;

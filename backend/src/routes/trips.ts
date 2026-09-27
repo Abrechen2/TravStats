@@ -17,7 +17,7 @@ import {
 import { assertMergedTripDates } from "../services/trip/tripDateOrder";
 import logger from "../utils/logger";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
-import { deriveTripStatus } from "../shared/statusDerivation";
+import { statusFromOwnDates } from "../services/trips/ownDatesStatus";
 
 import { detectTrips } from "../services/tripDetectionService";
 import { recomputeTripStatus } from "../services/tripStatusService";
@@ -48,7 +48,10 @@ import { resolveTrip } from "./trips/resolveTrip";
 import { refusesCoverImage } from "./trips/refusesCoverImage";
 import { toPhotoDto } from "./trips/photoDto";
 import { provenanceForWrite } from "../services/tripSummaryProvenance";
-import { typedTripDays } from "../services/timeModel/tripColumns";
+import { editedTripDays, typedTripDays } from "../services/timeModel/tripColumns";
+import { enrichFlightsForClients } from "../services/flightAirportFacts";
+import { withTripTimes } from "../services/trips/timesDto";
+import { withTripDetailTimes } from "../services/trips/tripDetailTimes";
 
 // Re-exported for the Immich trip routers, which import it from here.
 export { resolveTrip };
@@ -165,7 +168,7 @@ router.get(
       const mostExpensive = includeInsights ? await mostExpensiveTrip(userId) : undefined;
       res.json({
         trips: trips.map((t) => ({
-          ...t,
+          ...withTripTimes(t),
           cruises: t.cruises.map((c) => ({
             ...c,
             distanceKm: Math.round(distanceByCruise.get(c.id) ?? 0),
@@ -414,11 +417,8 @@ router.get(
         lodgingCountriesByTrip([trip.id]),
         roadtripCountriesByTrip([trip.id]),
       ]);
-      const flights = trip.flights.map((f) => ({
-        ...f,
-        depTimezone: (f.depIata && facts.get(f.depIata)?.timezone) || null,
-        arrTimezone: (f.arrIata && facts.get(f.arrIata)?.timezone) || null,
-      }));
+      // The stored zone first, then the catalogue — with `times` (ADR 0002).
+      const flights = await enrichFlightsForClients(trip.flights);
       const countries = tripCountries(
         trip.countries,
         trip.flights,
@@ -432,7 +432,9 @@ router.get(
         ...entry,
         photos: links.map((link) => toPhotoDto(link.tripPhoto)),
       }));
-      res.json({ trip: { ...trip, photos, flights, countries, journalEntries } });
+      res.json({
+        trip: withTripDetailTimes({ ...trip, photos, flights, countries, journalEntries }),
+      });
     } catch (error) {
       next(error);
     }
@@ -486,10 +488,7 @@ router.post(
             // auto-trip creation, trip detection).
             status:
               body.status ??
-              deriveTripStatus({
-                earliestStart: body.startDate ?? null,
-                latestEnd: body.endDate ?? null,
-              }) ??
+              (await statusFromOwnDates(userId, body.startDate, body.endDate)) ??
               undefined,
             category: body.category,
             tags: body.tags,
@@ -523,7 +522,7 @@ router.post(
       await linkDocuments(userId, documentIds, { type: "trip", id: trip.id });
 
       logger.info({ tripId: trip.id, userId }, "[Trips] Created trip");
-      res.status(201).json({ trip });
+      res.status(201).json({ trip: withTripTimes(trip) });
     } catch (error) {
       next(error);
     }
@@ -550,6 +549,7 @@ router.patch(
       // before the stored start would otherwise answer 200 and store a trip
       // that ends before it begins (SRV-TRIP-DATE-001).
       assertMergedTripDates(body, existing);
+      const days = editedTripDays(body, existing);
 
       // Status derivation (spec 2026-07-17-status-from-dates): the schema
       // still ACCEPTS `status` for API compat (never a 400), but the route
@@ -594,9 +594,7 @@ router.patch(
               description: body.description,
             }),
             ...(body.color !== undefined && { color: body.color }),
-            ...(body.startDate !== undefined && { startDate: body.startDate }),
-            ...(body.endDate !== undefined && { endDate: body.endDate }),
-            ...typedTripDays(body),
+            ...days,
             ...(body.category !== undefined && { category: body.category }),
             ...(body.tags !== undefined && { tags: body.tags }),
             ...(resolvedCompanionsForUpdate !== undefined && {
@@ -623,7 +621,7 @@ router.patch(
       // Moving a trip's own dates moves its status, and this handler never
       // recomputed at all (AUD-024). After the transaction, like every other
       // caller: the derivation reads the row it is about to judge.
-      res.json({ trip: await restatusIfDatesMoved(trip, body) });
+      res.json({ trip: withTripTimes(await restatusIfDatesMoved(trip, days)) });
     } catch (error) {
       next(error);
     }

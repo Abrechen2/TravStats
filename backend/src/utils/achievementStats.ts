@@ -52,6 +52,10 @@ export interface FlightData {
   arrivalTime: Date | null;
   /** Whether the clocks are evidence — see `shared/flightDuration.ts`. */
   depTimeSemantics?: string | null;
+  arrTimeSemantics?: string | null;
+  /** The zones the flight was stored with (ADR 0002); the catalogue answers without them. */
+  depTimezone?: string | null;
+  arrTimezone?: string | null;
   status: string;
   /** Sonder-Flug discriminator — `null` for normal scheduled flights. */
   specialType: string | null;
@@ -562,7 +566,7 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
     const depClock = flight.departureTime
       ? localWallClockOf(
           flight.departureTime,
-          airportMap.get(depCode || "")?.timezone ?? null,
+          flight.depTimezone || depAirport?.timezone || null,
           (flight.depTimeSemantics as FlightTimeSemantics) || "UNKNOWN"
         )
       : null;
@@ -676,21 +680,23 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
       if (diffMin >= 60) stats.delayedFlights++;
     }
 
-    // NYE airborne — a flight whose arrival is in a different calendar year than departure
-    if (flight.departureTime && flight.arrivalTime) {
-      const dep = flight.departureTime;
-      const arr = flight.arrivalTime;
-      if (dep.getMonth() === 11 && dep.getDate() === 31 && arr.getFullYear() > dep.getFullYear()) {
+    // NYE airborne — leaves on 31 December and lands in the next year, each
+    // day on its own airport's calendar (ADR 0002 D4), never the server's.
+    if (depClock && flight.arrivalTime) {
+      const arrClock = localWallClockOf(
+        flight.arrivalTime,
+        flight.arrTimezone || arrAirport?.timezone || null,
+        (flight.arrTimeSemantics as FlightTimeSemantics) || "UNKNOWN"
+      );
+      if (depClock.month === 11 && depClock.day === 31 && arrClock.year > depClock.year) {
         stats.nyeAirborne++;
       }
-      if (dep.getMonth() === 1 && dep.getDate() === 29) stats.leapDayFlights++;
     }
 
-    // Calendar-observance easter eggs (month is 0-indexed)
-    if (flight.departureTime) {
-      const d = flight.departureTime;
-      const month = d.getMonth();
-      const day = d.getDate();
+    // Calendar-observance easter eggs (month is 0-indexed), on the departure airport's calendar
+    if (depClock) {
+      const { month, day } = depClock;
+      if (month === 1 && day === 29) stats.leapDayFlights++;
       if (month === 11 && day === 7) stats.icaoDayFlights++; // 7 Dec — ICAO Day
       if (month === 7 && day === 19) stats.wrightDayFlights++; // 19 Aug — National Aviation Day
       if (month === 4 && day === 4) stats.mayFourthFlights++; // 4 May — Star Wars Day
@@ -703,9 +709,9 @@ export async function calculateUserStats(flights: FlightData[]): Promise<UserSta
       }
       if (month === 9 && day === 31) stats.halloweenFlights++; // 31 Oct — Halloween
       if (month === 11 && (day === 24 || day === 25)) stats.xmasFlights++; // Christmas
-      if (day === 13 && d.getDay() === 5) stats.friday13Flights++; // Friday the 13th
+      if (day === 13 && depClock.weekday === 5) stats.friday13Flights++; // Friday the 13th
       // Palindrome date: DDMMYYYY reads the same reversed (e.g. 22.02.2022).
-      const dateDigits = `${String(day).padStart(2, "0")}${String(month + 1).padStart(2, "0")}${d.getFullYear()}`;
+      const dateDigits = `${String(day).padStart(2, "0")}${String(month + 1).padStart(2, "0")}${depClock.year}`;
       if (dateDigits === dateDigits.split("").reverse().join("")) {
         stats.palindromeFlights++;
       }

@@ -184,7 +184,7 @@ function deriveFlightPatterns(sample: SampleAnnotations): TemplatePatterns {
 }
 
 function derivedName(issuer: string): string {
-  return `${issuer} (abgeleitet am ${new Date().toLocaleDateString("de-DE")})`;
+  return `${issuer} (abgeleitet am ${new Date().toLocaleDateString("de-DE", { timeZone: "UTC" })})`;
 }
 
 /**

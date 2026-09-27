@@ -1,6 +1,6 @@
 import { prisma } from "../../db";
 import { countableFlightWhere } from "../../shared/flightCounting";
-import { withDepartureClock } from "../stats/departureClock";
+import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "../stats/departureClock";
 import type { FlightTimeSemantics } from "../../utils/timezone";
 
 /**
@@ -131,11 +131,7 @@ export async function loadClockedFlightRows(userId: string): Promise<FlightClock
       id: true,
       departureTime: true,
       arrivalTime: true,
-      depIata: true,
-      depIcao: true,
-      arrIata: true,
-      arrIcao: true,
-      depTimeSemantics: true,
+      ...FLIGHT_CLOCK_SELECT,
     },
   });
   const dated = await withDepartureClock(rows);

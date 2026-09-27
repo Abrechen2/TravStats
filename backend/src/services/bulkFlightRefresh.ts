@@ -39,6 +39,9 @@ import { getApiKey } from "./apiKeyResolver";
 /** Max flights touched per single endpoint call. Keeps the request under the
  *  default Express 60 s timeout (≈13 s at 500 ms pacing) and gives the user
  *  visible progress without an SSE channel. */
+
+/** A window of whole 24-hour days, measured on the instant — never the host's calendar. */
+const DAY_MS = 24 * 60 * 60 * 1000;
 export const MAX_PER_CALL = 25;
 
 /** Pacing between provider calls — half a second is generous enough that
@@ -124,8 +127,7 @@ export async function findBulkRefreshCandidates(
   limit: number = MAX_PER_CALL
 ): Promise<BulkRefreshCandidate[]> {
   const now = new Date();
-  const earliest = new Date(now);
-  earliest.setDate(earliest.getDate() - HISTORICAL_WINDOW_DAYS);
+  const earliest = new Date(now.getTime() - HISTORICAL_WINDOW_DAYS * DAY_MS);
 
   const flights = await prisma.flight.findMany({
     where: {
@@ -198,8 +200,7 @@ export async function hasHistoricalProvider(userId: string): Promise<boolean> {
  */
 export async function countBulkRefreshCandidates(userId: string): Promise<number> {
   const now = new Date();
-  const earliest = new Date(now);
-  earliest.setDate(earliest.getDate() - HISTORICAL_WINDOW_DAYS);
+  const earliest = new Date(now.getTime() - HISTORICAL_WINDOW_DAYS * DAY_MS);
 
   return prisma.flight.count({
     where: {

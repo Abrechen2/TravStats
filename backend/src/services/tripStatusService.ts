@@ -1,3 +1,4 @@
+import { profileZoneOf } from "../shared/time/profileZone";
 import { prisma } from "../db";
 import { deriveTripStatus, tripDateBounds, tripStatusBounds } from "../shared/statusDerivation";
 import { flightEnds, segmentTripDays, typedTripDays } from "./timeModel/tripColumns";
@@ -81,6 +82,7 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
   const trip = await prisma.trip.findUnique({
     where: { id: tripId },
     select: {
+      userId: true,
       status: true,
       startDate: true,
       endDate: true,
@@ -107,6 +109,7 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
     railJourneys: trip.railJourneys,
     ownStartDate: trip.startDate,
     ownEndDate: trip.endDate,
+    zone: (await profileZoneOf(trip.userId)).zone,
   });
   const derived = deriveTripStatus(bounds);
   if (derived == null || derived === trip.status) return;

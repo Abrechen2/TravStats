@@ -36,6 +36,8 @@ export interface LocalWallClock {
   year: number;
   /** 0-11, matching Date#getMonth. */
   month: number;
+  /** Day of the month, 1-31. */
+  day: number;
   /** 0 = Sunday … 6 = Saturday, matching Date#getDay. */
   weekday: number;
   /** 0-23, or null when the stored time is a DATE_ONLY placeholder. */
@@ -107,11 +109,28 @@ export function localWallClockOf(
     date: `${year}-${pad(month)}-${pad(day)}`,
     year,
     month: month - 1,
+    day,
     // Derived from the local calendar date rather than parsed from a locale
     // weekday name, which would depend on the formatter's language.
     weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay(),
     hour: semantics === "DATE_ONLY" ? null : hour,
   };
+}
+
+/**
+ * A flight's departure on its airport's clock, in the zone the flight was
+ * STORED with (ADR 0002 phase 4) — never the host's, and never today's
+ * catalogue for a flight that has its own.
+ */
+export function departureClockOf(
+  departureTime: Date,
+  flight: { depTimezone?: string | null; depTimeSemantics?: string | null }
+): LocalWallClock {
+  return localWallClockOf(
+    departureTime,
+    flight.depTimezone,
+    (flight.depTimeSemantics as FlightTimeSemantics | null | undefined) || "UNKNOWN"
+  );
 }
 
 /**

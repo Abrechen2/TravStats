@@ -1,5 +1,6 @@
 import { z } from "../../schemas/zod";
 import { toLocal } from "./instant";
+import { InvalidLocalTimeError } from "./errors";
 import { isLocalDate } from "./localDate";
 import { isValidZone } from "./zonedParts";
 
@@ -75,22 +76,40 @@ export const localDateInputSchema = z
     example: "2027-05-02",
   });
 
+/**
+ * Where the zone of a value came from. `stored`: frozen with the value when it
+ * was written (the rule, D2). `catalogue`: a flight written before zones were
+ * stored, whose zone is read from today's airport catalogue — a catalogue
+ * correction would move it, so it says so. Null when the value has no zone.
+ */
+export const ZONE_SOURCES = ["stored", "catalogue"] as const;
+export type ZoneSource = (typeof ZONE_SOURCES)[number];
+
+/**
+ * An instant at a place (D3 "out"). Clients display `local` as is and use
+ * `utc` only to sort and to measure.
+ *
+ * `zone` null: the place has no zone anyone could name. `local` and `offset`
+ * are then the UTC reading (`+00:00`) — shown as UTC, labelled, never passed
+ * off as the place's clock — and `zoneSource` is null too.
+ */
 export interface TimeValue {
   /** RFC 3339 instant in UTC. */
   utc: string;
-  /** IANA zone of the place, frozen at write time. */
-  zone: string;
+  /** IANA zone of the place, frozen at write time; null where none is known. */
+  zone: string | null;
   /** Offset in force at `utc`, e.g. `+05:45` — enough to build an RFC 3339 string without a zone library. */
   offset: string;
   /** `YYYY-MM-DDTHH:mm:ss` as the place's clock showed it. */
   local: string;
   precision: TimePrecision;
+  zoneSource: ZoneSource | null;
 }
 
 export interface LocalDateValue {
   /** `YYYY-MM-DD`. */
   date: string;
-  /** The zone the day belongs to; null for a floating date (a birthday). */
+  /** The zone the day belongs to; null for a floating date (a birthday) or a day with no known place. */
   zone: string | null;
   precision: Exclude<TimePrecision, "minute">;
 }
@@ -98,9 +117,83 @@ export interface LocalDateValue {
 /** The outbound shape of an instant stored with its place's zone. */
 export function serializeTime(
   utc: Date,
-  zone: string,
-  precision: TimePrecision = "minute"
+  zone: string | null,
+  precision: TimePrecision = "minute",
+  zoneSource: ZoneSource = "stored"
 ): TimeValue {
+  if (zone === null) {
+    return {
+      utc: utc.toISOString(),
+      zone: null,
+      offset: "+00:00",
+      local: utc.toISOString().slice(0, 19),
+      precision,
+      zoneSource: null,
+    };
+  }
   const { local, offset } = toLocal(utc, zone);
-  return { utc: utc.toISOString(), zone, offset, local, precision };
+  return { utc: utc.toISOString(), zone, offset, local, precision, zoneSource };
 }
+
+/** The outbound shape of a calendar day (`YYYY-MM-DD`). */
+export function serializeDay(
+  date: string,
+  zone: string | null,
+  precision: LocalDateValue["precision"] = "day"
+): LocalDateValue {
+  if (!isLocalDate(date)) throw new InvalidLocalTimeError(date);
+  return { date, zone, precision };
+}
+
+const OFFSET = /^[+-]\d{2}:\d{2}$/;
+const LOCAL_READING = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}$/;
+
+export const timeValueSchema = z
+  .object({
+    utc: z
+      .string()
+      .datetime()
+      .describe("The instant, RFC 3339 in UTC. Sort and measure with this only."),
+    zone: z
+      .string()
+      .nullable()
+      .describe(
+        "IANA zone of the place, frozen when the value was written. Null: the place has no " +
+          "known zone — `local`/`offset` are then the UTC reading and must be labelled as UTC."
+      ),
+    offset: z.string().regex(OFFSET).describe("Offset in force at `utc`, e.g. `+05:45`."),
+    local: z
+      .string()
+      .regex(LOCAL_READING)
+      .describe(
+        "`YYYY-MM-DDTHH:mm:ss` as the place's clock showed it. Display this, cut to `precision`."
+      ),
+    precision: z
+      .enum(TIME_PRECISIONS)
+      .describe(
+        "How much of the value is known; `unknown` keeps the date, not the time of day (Q4)."
+      ),
+    zoneSource: z
+      .enum(ZONE_SOURCES)
+      .nullable()
+      .describe(
+        "`stored`: the zone was frozen with the value. `catalogue`: an old flight whose zone " +
+          "is read from today's airport catalogue. Null when `zone` is null."
+      ),
+  })
+  .openapi("TimeValue", { description: "An instant at a place (ADR 0002 D3)." });
+
+export const localDateValueSchema = z
+  .object({
+    date: z.string().date().describe("The calendar day at the place, `YYYY-MM-DD`."),
+    zone: z
+      .string()
+      .nullable()
+      .describe(
+        "The zone the day belongs to; null for a floating date or a day with no known place."
+      ),
+    precision: z.enum(["day", "month", "year", "unknown"]),
+  })
+  .openapi("LocalDateValue", {
+    description: "A calendar day as the place knew it (ADR 0002 D1); never a JS midnight.",
+  });
