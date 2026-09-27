@@ -87,9 +87,8 @@ export default function StopModal({
     if (!title.trim()) return;
     setSaving(true);
     try {
-      const hasPosition = lat !== null && lon !== null;
-      const start = tripStopTime("startDate", startDate, startTime, hasPosition);
-      const end = tripStopTime("endDate", endDate, endTime, hasPosition);
+      const start = tripStopTime(startDate, startTime);
+      const end = tripStopTime(endDate, endTime);
       if (stop) {
         await tripsApi.updateStop(tripId, stop.id, {
           title: title.trim(),

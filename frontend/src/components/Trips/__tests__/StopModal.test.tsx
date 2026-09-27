@@ -203,9 +203,13 @@ describe("StopModal", () => {
     expect(payload.lat).toBe(47.3769);
   });
 
-  // ADR 0002 D2: a time needs a place to take its zone from. Without a
-  // position it used to be stored as "UTC" in silence.
-  it("refuses a time on a stop without a position instead of storing it as UTC", async () => {
+  // ADR 0002 D2: the SERVER finds a stop's zone — its coordinates, else the
+  // entry it wraps — and without either keeps the typed time as a wall clock
+  // with precision `unknown`, never as UTC. Refusing it here left every
+  // stored placeless stop with a time uneditable (even its title), and every
+  // wrapped stop without coordinates, whose zone the server does know.
+  it("sends a time on a stop without a position as a bare wall clock for the server to place", async () => {
+    vi.mocked(tripsApi.createStop).mockResolvedValue({ ...baseStop, id: "new-stop" });
     render(<StopModal tripId="trip-1" stop={null} onClose={vi.fn()} onSaved={vi.fn()} />);
     fireEvent.change(screen.getByPlaceholderText("trips:stopModal.titlePlaceholder"), {
       target: { value: "Irgendwo" },
@@ -218,12 +222,13 @@ describe("StopModal", () => {
     });
     await userEvent.click(screen.getByText("trips:stopModal.save"));
 
-    await waitFor(() =>
-      expect(useToastStore.getState().toasts.map((toast) => toast.message)).toContain(
-        "common:saveErrors.timezoneUnresolved"
-      )
+    await waitFor(() => expect(tripsApi.createStop).toHaveBeenCalled());
+    expect(vi.mocked(tripsApi.createStop).mock.calls[0][1]).toMatchObject({
+      startDate: { local: "2026-05-01T14:30" },
+    });
+    expect(useToastStore.getState().toasts.map((toast) => toast.message)).not.toContain(
+      "common:saveErrors.timezoneUnresolved"
     );
-    expect(tripsApi.createStop).not.toHaveBeenCalled();
   });
 
   it("shows the server's refusals as their sentences, not the generic toast", async () => {
