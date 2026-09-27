@@ -2,6 +2,8 @@ import { AppError } from "../../../middleware/errorHandler";
 import { setClockForTests, todayIn } from "../clock";
 import { localDay, toInstant, toLocal } from "../instant";
 import { daysBetween, fromDbDate, toDbDate } from "../localDate";
+import { fakeUtcToInstant, legacyDayOf } from "../legacyValues";
+import { readLegacyVisit } from "../../../services/timeMigration/visitRule";
 import type { VectorCase, VectorFile } from "./vectorFile";
 
 /**
@@ -18,6 +20,9 @@ const SERVER_OPS = new Set<VectorCase["op"]>([
   "todayIn",
   "span",
   "floatingDate",
+  "legacyDay",
+  "fakeUtc",
+  "visitWriter",
 ]);
 
 export function appliesToServer(c: VectorCase): boolean {
@@ -35,6 +40,7 @@ const iso = (d: Date): string => d.toISOString();
 
 /** Instants are compared as instants, everything else exactly (schema rule 2). */
 function sameInstant(a: unknown, b: unknown): boolean {
+  if (a === null && b === null) return true;
   return typeof a === "string" && typeof b === "string" && Date.parse(a) === Date.parse(b);
 }
 
@@ -88,6 +94,24 @@ function evaluate(c: VectorCase): Record<string, unknown> {
       return { date: fromDbDate(toDbDate(c.input.date)) };
     case "display":
       throw new Error("display is a client op");
+    case "legacyDay":
+      return { ...legacyDayOf(new Date(c.input.anchor)) };
+    case "fakeUtc": {
+      const r = fakeUtcToInstant(new Date(c.input.stored), c.input.zone);
+      if (r.status === "nonexistent") return { error: "LOCAL_TIME_NONEXISTENT" };
+      return { utc: iso(r.utc), offset: r.offset, ambiguous: r.ambiguous };
+    }
+    case "visitWriter": {
+      const { stored, createdAt, zone, writtenVia, firstDeviceAt } = c.input;
+      const r = readLegacyVisit({
+        stored: new Date(stored),
+        createdAt: new Date(createdAt),
+        zone,
+        writtenVia: writtenVia ?? null,
+        firstDeviceAt: firstDeviceAt ? new Date(firstDeviceAt) : null,
+      });
+      return { ...r, utc: r.utc ? iso(r.utc) : null };
+    }
   }
 }
 

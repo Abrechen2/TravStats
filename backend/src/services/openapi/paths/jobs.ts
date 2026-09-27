@@ -20,6 +20,9 @@ export const jobSchema = z.object({
     "xlsx.import",
     "photoJourneys.scan",
     "journal.weather",
+    "timeModel.backfill",
+    "timeZones.reResolveDryRun",
+    "timeZones.reResolveApply",
   ]),
   status: z.enum(["running", "succeeded", "failed"]),
   startedAt: z.string().datetime(),
@@ -44,6 +47,14 @@ export const jobSchema = z.object({
       }),
     })
     .nullable(),
+  progress: z
+    .object({ done: z.number().int(), total: z.number().int() })
+    .nullable()
+    .openapi({
+      description:
+        "How far a job that reports progress has got (the zone re-resolution does); " +
+        "null for one that does not.",
+    }),
 });
 
 /** The 202 body of an endpoint that started a job. */

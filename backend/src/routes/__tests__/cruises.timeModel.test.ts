@@ -53,7 +53,7 @@ describe("Cruises — time model (phase 2)", () => {
     const req = request(app).post("/api/v1/cruises");
     if (bearer) req.set("Authorization", bearer);
     else req.set("Cookie", cookie);
-    return req.send({ shipNameOverride: "MS Test", ...body });
+    return req.send({ shipNameOverride: "MS Test", startDate: "2027-03-27", ...body });
   };
 
   it("reads a stop's wall clock on its port's clock and dual-writes both meanings", async () => {

@@ -7,6 +7,7 @@ import type { AddressBearingRecord } from "./checks/addressCountryMismatch";
 import type { CoordinateCountryLookup, LocatedRecord } from "./checks/coordinatesOutsideCountry";
 import type { CountryTouch } from "./checks/undatedCountryEvidence";
 import type { LodgingWithStays } from "./checks/stayDatesReversed";
+import { loadOpenTimeQuestions, type TimeQuestion } from "../timeMigration/openQuestions";
 
 /**
  * Everything the checks need from one account, read once.
@@ -46,6 +47,8 @@ export interface AccountSnapshot {
    * not a state to degrade into.
    */
   countryLookup: CoordinateCountryLookup;
+  /** The time-model backfill's questions that still stand (ADR 0002 phase 3b). */
+  timeQuestions: TimeQuestion[];
 }
 
 /**
@@ -248,5 +251,6 @@ export async function loadAccountSnapshot(
     countryTouches,
     locatedRecords,
     countryLookup,
+    timeQuestions: await loadOpenTimeQuestions(userId),
   };
 }

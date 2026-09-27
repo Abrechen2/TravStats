@@ -9,6 +9,7 @@ import {
   type FlaggedRecord,
 } from "../../schemas/dataQualityFlag";
 import logger from "../../utils/logger";
+import { resolveTimeSubjects } from "./timeSubjects";
 
 /**
  * Reading and answering the data-quality inbox.
@@ -141,6 +142,7 @@ export async function listFlags(
   });
 
   const subjects = await resolveSubjects(userId, flags);
+  const timeSubjects = await resolveTimeSubjects(userId, flags);
 
   const views: DataQualityFlagView[] = [];
   for (const flag of flags) {
@@ -151,7 +153,8 @@ export async function listFlags(
     const subject: DataQualityFlagSubject | undefined =
       flag.entityType === "country"
         ? { entityType: "country", countryCode: flag.entityId }
-        : subjects.get(`${flag.entityType} ${flag.entityId}`);
+        : (subjects.get(`${flag.entityType} ${flag.entityId}`) ??
+          timeSubjects.get(`${flag.entityType} ${flag.entityId}`));
     const view = toView(flag, subject);
     if (view) views.push(view);
   }
