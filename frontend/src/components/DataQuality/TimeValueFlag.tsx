@@ -1,10 +1,13 @@
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 
+import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useTranslation } from "../../hooks/useTranslation";
 import { type DisplayFormatter, useDisplayFormat } from "../../lib/displayFormat";
+import type { DomainKey } from "../../shared/domains";
+import { useSettingsStore } from "../../store/settingsStore";
 import type { DataQualityFlag } from "../../types/dataQuality";
-import type { TimeFlagKind } from "../../types/timeMigration";
+import type { TimeFlagEntityType, TimeFlagKind } from "../../types/timeMigration";
 import { columnLabelForUser, reasonLabel } from "../Admin/timeModel/timeModelCopy";
 import { timeFlagEditorPath } from "./timeFlagLinks";
 
@@ -36,14 +39,74 @@ function storedText(value: string, zone: string | null, format: DisplayFormatter
     : format.dateTime(value, { timeZone: "UTC" });
 }
 
+/**
+ * Reasons whose kept value is a calendar day stored as a placeholder instant
+ * (a date-only flight): the record shows the placeholder's own UTC date, so
+ * the question shows that day too. Read in the airport's zone it became
+ * "31.03.2009 22:00 (America/New_York)" beside a flight showing 01.04.2009,
+ * under a sentence saying the stored day was kept (Beta data, 2.7.0-beta.16).
+ */
+const KEPT_AS_DAY: ReadonlySet<string> = new Set(["date_only_day_differs"]);
+
+/**
+ * Reasons whose kept value has a day but no known time of day: the record
+ * shows the date only, so a clock here ("12.05.2024 00:00") would be one
+ * nobody entered.
+ */
+const KEPT_WITHOUT_TIME: ReadonlySet<string> = new Set([
+  "writer_unknown",
+  "semantics_unknown",
+  "local_time_nonexistent",
+]);
+
+function keptText(
+  value: string,
+  zone: string | null,
+  reason: string,
+  format: DisplayFormatter
+): string {
+  if (!DAY_ONLY.test(value) && !Number.isNaN(Date.parse(value))) {
+    if (KEPT_AS_DAY.has(reason)) return format.date(value, { timeZone: "UTC" });
+    if (KEPT_WITHOUT_TIME.has(reason) && zone) {
+      return `${format.date(value, { timeZone: zone })} (${zone})`;
+    }
+  }
+  return storedText(value, zone, format);
+}
+
+/**
+ * The domain whose pages hold the editor for a row; null where the editor is
+ * never behind a domain switch (trips, the profile).
+ */
+const DOMAIN_OF: Record<TimeFlagEntityType, DomainKey | null> = {
+  flight: "flight",
+  rail_journey: "rail",
+  place_visit: "poi",
+  cruise: "cruise",
+  cruise_stop: "cruise",
+  lodging_stay: "lodging",
+  trip: null,
+  trip_stop: null,
+  trip_journal_entry: null,
+  profile: null,
+};
+
 export default function TimeValueFlag({
   flag,
 }: {
   flag: DataQualityFlag & { kind: TimeFlagKind };
 }): JSX.Element {
-  const { t } = useTranslation(["dataQuality", "admin"]);
+  const { t } = useTranslation(["dataQuality", "admin", "dashboard"]);
   const format = useDisplayFormat();
   const path = timeFlagEditorPath(flag);
+  // A question about a switched-off domain would link to a page that only says
+  // "Bereich deaktiviert" (measured: 47 visit questions in an account with
+  // places off). Only once the reader's domains are known — before that the
+  // store holds a placeholder list.
+  const domainsLoaded = useSettingsStore((s) => s.enabledDomainsLoaded) === true;
+  const { isEnabled } = useEnabledDomains();
+  const domain = DOMAIN_OF[flag.entityType as TimeFlagEntityType] ?? null;
+  const domainOff = domainsLoaded && domain !== null && !isEnabled(domain);
   const actionKey =
     flag.entityType === "place_visit" && flag.kind === "time_zone_unresolved"
       ? "place_visit_zone"
@@ -73,12 +136,23 @@ export default function TimeValueFlag({
           {field.keptValue && (
             <>
               <dt style={{ color: "var(--text-muted)" }}>{t("dataQuality:time.kept")}</dt>
-              <dd>{storedText(field.keptValue, field.zone, format)}</dd>
+              <dd>{keptText(field.keptValue, field.zone, field.reason, format)}</dd>
             </>
           )}
         </dl>
       ))}
-      {path ? (
+      {domainOff && domain ? (
+        <div className="space-y-2">
+          <p className="text-xs" style={{ color: "var(--text-muted)" }}>
+            {t("dataQuality:time.domainOff", {
+              domain: t(`dashboard:tabStrip.tabs.${domain}`),
+            })}
+          </p>
+          <Link to="/settings#modules" className="btn-secondary inline-block">
+            {t("dataQuality:time.domainOffAction")}
+          </Link>
+        </div>
+      ) : path ? (
         <Link to={path} className="btn-secondary inline-block">
           {t(`dataQuality:time.action.${actionKey}`)}
         </Link>

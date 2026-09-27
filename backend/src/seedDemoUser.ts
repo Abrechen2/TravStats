@@ -1,5 +1,6 @@
 import { prisma } from "./db";
 import { hashPassword } from "./utils/password";
+import { DEMO_USERNAME } from "./utils/sharedDemo";
 import { deriveStayOverallRating } from "./shared/ratingDerivation";
 import { createDemoRail } from "./seedDemo/seedRail";
 import { fillSeededTimeColumns } from "./services/timeModel/seedTimeColumns";
@@ -1291,6 +1292,14 @@ export interface SeedDemoOptions {
    * be recovered idempotently.
    */
   resetCredentials?: boolean;
+  /**
+   * Marks the row as sample data (`users.is_demo`). Defaults to true only for
+   * the shared demo username: the preview's `admin`, `alex` and `claude` and
+   * the local dev admin are seeded with sample flights too, but they are
+   * accounts their owners log into, not the shared demo. Flagging them made
+   * every one of them read as "the demo" to anything that asks the flag.
+   */
+  isDemo?: boolean;
 }
 
 export async function seedDemoUser(options: SeedDemoOptions = {}) {
@@ -1298,6 +1307,7 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
   const password = options.password ?? "demo123";
   const isAdmin = options.isAdmin ?? false;
   const resetCredentials = options.resetCredentials ?? false;
+  const isDemo = options.isDemo ?? username === DEMO_USERNAME;
 
   console.log(
     `🔐 Creating ${isAdmin ? "admin" : "demo"} user "${username}" with sample flights...`
@@ -1318,7 +1328,7 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
           passwordHash,
           isAdmin,
           mustChangePassword: false,
-          isDemo: true,
+          isDemo,
         },
       });
 
@@ -1339,7 +1349,7 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
             passwordHash,
             isAdmin,
             mustChangePassword: false,
-            isDemo: true,
+            isDemo,
           },
         });
         console.log(`🔄 Reset credentials → password: ${password}, isAdmin: ${isAdmin}`);

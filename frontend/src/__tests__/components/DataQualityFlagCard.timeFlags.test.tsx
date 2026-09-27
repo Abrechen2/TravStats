@@ -1,8 +1,9 @@
-import { describe, expect, it, vi } from "vitest";
+import { afterEach, describe, expect, it, vi } from "vitest";
 import { render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import DataQualityFlagCard from "../../components/DataQuality/DataQualityFlagCard";
+import { useSettingsStore } from "../../store/settingsStore";
 import type { DataQualityFlag } from "../../types/dataQuality";
 import type {
   TimeFlagEntityType,
@@ -218,5 +219,95 @@ describe("time questions in the inbox", () => {
     expect(screen.getByText("unbekannt (a_newer_reason)")).toBeInTheDocument();
     expect(screen.getByText("Zeitangabe")).toBeInTheDocument();
     expect(screen.queryByText("some_new_column")).not.toBeInTheDocument();
+  });
+});
+
+/**
+ * Measured on a copy of the Beta server's data after 2.7.0-beta.16 ran its
+ * backfill: the inbox showed a date-only flight's kept value as
+ * "31.03.2009 22:00 (America/New_York)" while the flight itself shows
+ * 01.04.2009 and the question says the stored day was kept; and a visit whose
+ * time of day is unknown as "12.05.2024 00:00", a clock nobody entered.
+ */
+describe("the kept value of a time question reads as what the record shows", () => {
+  it("shows a date-only flight's kept day as its own day, without a clock", () => {
+    renderCard(
+      timeFlag("time_day_ambiguous", "flight", null, {
+        column: "departure",
+        reason: "date_only_day_differs",
+        legacyValue: "2009-04-01T02:00:00.000Z",
+        keptValue: "2009-04-01T02:00:00.000Z",
+        zone: "America/New_York",
+      })
+    );
+    expect(screen.getByText("01.04.2009")).toBeInTheDocument();
+    expect(screen.queryByText(/31\.03\.2009/)).not.toBeInTheDocument();
+  });
+
+  it("shows a visit whose time of day is unknown as its day in the place's zone", () => {
+    renderCard(
+      timeFlag("time_precision_unknown", "place_visit", "p1", {
+        column: "visited_at",
+        reason: "writer_unknown",
+        legacyValue: "2024-05-12T10:00:00.000Z",
+        keptValue: "2024-05-11T22:00:00.000Z",
+        zone: "Europe/Madrid",
+      })
+    );
+    expect(screen.getByText("12.05.2024 (Europe/Madrid)")).toBeInTheDocument();
+    expect(screen.queryByText(/00:00 \(Europe\/Madrid\)/)).not.toBeInTheDocument();
+  });
+
+  it("shows an unclassified flight time as its local day only", () => {
+    renderCard(
+      timeFlag("time_precision_unknown", "flight", null, {
+        column: "arrival",
+        reason: "semantics_unknown",
+        legacyValue: "2026-04-16T20:30:00.000Z",
+        keptValue: "2026-04-16T20:30:00.000Z",
+        zone: "Europe/Madrid",
+      })
+    );
+    expect(screen.getByText("16.04.2026 (Europe/Madrid)")).toBeInTheDocument();
+    expect(screen.queryByText(/22:30/)).not.toBeInTheDocument();
+  });
+});
+
+describe("a time question about a domain the reader switched off", () => {
+  // The suite-wide store mock (__tests__/setup.ts) hands every selector one
+  // shared state object; these cases set the reader's domains on it and take
+  // them off again.
+  const state = useSettingsStore.getState() as unknown as Record<string, unknown>;
+  const setDomains = (enabledDomains: string[]) =>
+    Object.assign(state, { enabledDomains, enabledDomainsLoaded: true });
+  afterEach(() => {
+    delete state.enabledDomains;
+    delete state.enabledDomainsLoaded;
+  });
+
+  it("says the domain is off and where to switch it on, instead of a link to a closed page", () => {
+    setDomains(["flight"]);
+    renderCard(
+      timeFlag("time_precision_unknown", "place_visit", "p1", {
+        column: "visited_at",
+        reason: "writer_unknown",
+        keptValue: "2024-05-11T22:00:00.000Z",
+        zone: "Europe/Madrid",
+      })
+    );
+    expect(screen.queryByRole("link", { name: "Besuch bearbeiten" })).not.toBeInTheDocument();
+    expect(screen.getByText(/Der Bereich „Orte“ ist ausgeschaltet/)).toBeInTheDocument();
+    expect(editorLink("Bereiche einstellen")).toHaveAttribute("href", "/settings#modules");
+  });
+
+  it("keeps the editor link while the domain is on", () => {
+    setDomains(["flight", "poi"]);
+    renderCard(
+      timeFlag("time_precision_unknown", "place_visit", "p1", {
+        column: "visited_at",
+        reason: "writer_unknown",
+      })
+    );
+    expect(editorLink("Besuch bearbeiten")).toHaveAttribute("href", "/places/p1?editVisit=row-1");
   });
 });
