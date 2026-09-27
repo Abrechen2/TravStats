@@ -1,4 +1,4 @@
-import { localDateInputSchema, localTimeInputSchema, serializeTime } from "../wire";
+import { localDateInputSchema, localTimeInputSchema, serializeDay, serializeTime } from "../wire";
 
 /**
  * The wire shapes phase 2 builds on (ADR 0002 D3). The point of the input
@@ -51,6 +51,44 @@ describe("serializeTime", () => {
       offset: "+05:45",
       local: "2027-01-15T05:44:00",
       precision: "minute",
+      zoneSource: "stored",
     });
+  });
+
+  it("says a zone came from today's catalogue instead of passing it off as stored", () => {
+    expect(
+      serializeTime(new Date("2027-06-01T08:00:00Z"), "Europe/Berlin", "minute", "catalogue")
+    ).toMatchObject({
+      zone: "Europe/Berlin",
+      zoneSource: "catalogue",
+      local: "2027-06-01T10:00:00",
+    });
+  });
+
+  it("shows an instant with no known zone as UTC, labelled, never as a place's clock", () => {
+    expect(serializeTime(new Date("2027-06-01T08:00:00Z"), null)).toEqual({
+      utc: "2027-06-01T08:00:00.000Z",
+      zone: null,
+      offset: "+00:00",
+      local: "2027-06-01T08:00:00",
+      precision: "minute",
+      zoneSource: null,
+    });
+  });
+});
+
+describe("serializeDay", () => {
+  it("carries a calendar day as YYYY-MM-DD with its zone and precision", () => {
+    expect(serializeDay("2027-05-02", "Pacific/Kiritimati")).toEqual({
+      date: "2027-05-02",
+      zone: "Pacific/Kiritimati",
+      precision: "day",
+    });
+    expect(serializeDay("2011-07-01", null, "month").precision).toBe("month");
+  });
+
+  it("refuses something that is not a real day", () => {
+    expect(() => serializeDay("2027-02-30", null)).toThrow();
+    expect(() => serializeDay("2027-05-02T00:00:00.000Z", null)).toThrow();
   });
 });

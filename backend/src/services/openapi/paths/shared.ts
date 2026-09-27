@@ -11,7 +11,13 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { createFlightSchema, updateFlightSchema, airportSchema } from "../../../schemas/flight";
-import { localDateInputSchema, localTimeInputSchema } from "../../../shared/time/wire";
+import {
+  localDateInputSchema,
+  localDateValueSchema,
+  localTimeInputSchema,
+  timeValueSchema,
+} from "../../../shared/time/wire";
+import { TIMES_SCHEMAS } from "../../../schemas/times";
 import {
   apiTokenScopeSchema,
   createApiTokenSchema,
@@ -212,6 +218,15 @@ export const errorContent = {
  */
 registry.register("LocalTimeInput", localTimeInputSchema);
 registry.register("LocalDateInput", localDateInputSchema);
+
+/*
+ * And the read side (phase 4): every entity's `times` object is built from
+ * these two, so one component describes every time value a response carries.
+ * `__tests__/openapi.timeShape.ratchet.test.ts` holds responses to it.
+ */
+registry.register("TimeValue", timeValueSchema);
+registry.register("LocalDateValue", localDateValueSchema);
+for (const [name, schema] of Object.entries(TIMES_SCHEMAS)) registry.register(name, schema);
 
 /** A time-model refusal: always 422, always a code, the offending field named. */
 export const timeErrorResponse = registry.register(
