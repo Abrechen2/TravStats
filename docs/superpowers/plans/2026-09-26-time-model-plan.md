@@ -228,6 +228,29 @@ instant); `times` objects `{utc, zone, offset, local, precision}`; `ambiguous: t
 flag (Q1 opt-in); `written_via=companion` from the PAT; `shared/time/vectors.json` with a `version` header the
 Companion CI checks.
 
+### Contract summary for companion#24 (as built by the end of phase 4)
+
+**Read.** Every entity carries a `times` object beside its legacy fields (flights, rail, stays, visits,
+cruises and their stops, trips, trip stops, journal entries, roadtrip stations). An instant is a `TimeValue`
+`{utc, zone, offset, local, precision, zoneSource}`: display `local` as is, use `utc` only to sort and measure,
+`offset` builds RFC 3339 without a zone library. `zone: null` means no zone is known — `local` is
+then the UTC reading and must be labelled as UTC. `zoneSource: "catalogue"` marks an old flight read in
+today's airport zone. A day is a `LocalDateValue` `{date, zone, precision}`; precision `unknown` keeps the
+day and drops the time of day. A missing value is `null`, never a placeholder.
+
+**Write.** A typed time is `{local: "YYYY-MM-DDTHH:mm[:ss]", zone}` or `{local, placeRef: {kind: airport |
+railStation | port | place, id}}` — exactly one, except where the entity names its place (visit, port call,
+trip stop): there both may be omitted. `fold: "later"` picks the second occurrence of a repeated autumn hour
+(default earlier). A day is `YYYY-MM-DD`. A PAT client may still send an offset-bearing ISO string (a machine
+instant) and, for cruise stops only, the parser's offset-less wall clock; everything else offset-less is refused.
+
+**Errors** (422 unless noted, body `{error, code, field?}`): `LOCAL_TIME_NONEXISTENT`, `TZ_UNRESOLVED`,
+`ZONE_UNKNOWN`, `TIME_SHAPE_REQUIRED`, `VALIDATION_FAILED`; `TIMEZONE_LOOKUP_UNAVAILABLE` is 503 — retry,
+never read it as "no zone".
+
+**Conformance.** `GET /api/v1/version` returns `tzdata`; `shared/time/vectors.json` is `version: 2` with
+`minTzdata`, and the Companion's CI runs it and pins the version.
+
 ## Phase 6 — removal (after companion#24 ships) — M, one agent
 
 1. Migration `time_model_drop_legacy` (precondition: `pg_dump` + restore rehearsed on the RC server): drop the
