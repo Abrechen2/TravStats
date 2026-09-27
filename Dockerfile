@@ -165,6 +165,9 @@ COPY backend/data/openflights/planes.dat ./data/openflights/planes.dat
 # licence file, read by the boot seeder (seedRailStations.ts) via __dirname
 # from dist/ to /app/backend/data/rail. Without it the seeder skips with
 # `file_missing` and the station picker only ever finds geocoder results.
+# The same directory carries station_codes.csv (DB short codes, CC0, built by
+# scripts/build-rail-station-codes.mjs); without it every station answers
+# shortCode null and the boot log warns `seed_rail_station_codes_missing`.
 COPY backend/data/rail ./data/rail
 # Developer scripts, copied as-is. NOTE: these are .ts files and the image
 # has neither tsx nor the src/ tree they import from, so they do NOT run

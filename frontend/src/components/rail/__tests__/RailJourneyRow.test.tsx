@@ -61,3 +61,29 @@ describe("RailJourneyRow link", () => {
     );
   });
 });
+
+// forgejo#132 item 16: the DB station code beside each name, never a guess.
+describe("RailJourneyRow station codes", () => {
+  it("shows each station's short code beside its name", () => {
+    render(
+      <RailJourneyRow
+        journey={{ ...base, depStationShortCode: "FF", arrStationShortCode: "FFU" }}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    const codes = screen.getAllByTestId("station-short-code").map((el) => el.textContent);
+    expect(codes).toEqual(["FF", "FFU"]);
+  });
+
+  it("shows no code where none is known", () => {
+    render(
+      <RailJourneyRow
+        journey={{ ...base, depStationShortCode: "FF", arrStationShortCode: null }}
+        onEdit={vi.fn()}
+        onDelete={vi.fn()}
+      />
+    );
+    expect(screen.getAllByTestId("station-short-code").map((el) => el.textContent)).toEqual(["FF"]);
+  });
+});

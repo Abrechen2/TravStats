@@ -5,6 +5,7 @@ import { formatRailSpan } from "../../lib/railTime";
 import type { RailJourney } from "../../types/rail";
 import { Icon } from "../ui/Icon";
 import { railDistanceNoteKey } from "./railDistanceLabel";
+import { StationShortCode } from "./StationShortCode";
 
 interface Props {
   journey: RailJourney;
@@ -61,7 +62,9 @@ export function RailJourneyRow({ journey, onEdit, onDelete }: Props): JSX.Elemen
         </span>
         <div className="min-w-0">
           <Link to={`/rail/${journey.id}`} className="font-semibold hover:underline">
-            {journey.depStationName} → {journey.arrStationName}
+            {journey.depStationName}
+            <StationShortCode code={journey.depStationShortCode} /> → {journey.arrStationName}
+            <StationShortCode code={journey.arrStationShortCode} />
           </Link>
           <div className="t-caption">{details.join(" · ")}</div>
           {journey.trip ? <div className="t-caption">{journey.trip.name}</div> : null}

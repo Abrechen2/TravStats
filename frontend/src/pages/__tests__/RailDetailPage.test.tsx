@@ -184,4 +184,18 @@ describe("RailDetailPage — ?edit=1 from the inbox", () => {
     await renderPage(detail());
     expect(screen.queryByTestId("rail-editor")).not.toBeInTheDocument();
   });
+
+  // forgejo#132 item 16.
+  it("names the stations' short codes under the title", async () => {
+    await renderPage(detail({ depStationShortCode: "FF", arrStationShortCode: "FFU" }));
+    expect(screen.getAllByTestId("station-short-code").map((el) => el.textContent)).toEqual([
+      "FF",
+      "FFU",
+    ]);
+  });
+
+  it("names no code for stations no source knows", async () => {
+    await renderPage(detail({ depStationShortCode: null, arrStationShortCode: null }));
+    expect(screen.queryByTestId("station-short-code")).toBeNull();
+  });
 });

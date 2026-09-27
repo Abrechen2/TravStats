@@ -39,6 +39,7 @@ import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { useToastStore } from "../store/toastStore";
 import type { RailJourney, RailJourneyDetail } from "../types/rail";
+import { StationShortCode } from "../components/rail/StationShortCode";
 
 type Editing = { mode: "edit" } | { mode: "connection" } | null;
 
@@ -202,6 +203,25 @@ export default function RailDetailPage(): JSX.Element {
         domain="rail"
         icon={<Icon name="train-front" size={24} />}
         title={`${journey.depStationName} → ${journey.arrStationName}`}
+        subtitle={
+          // The DB codes, in the title's order, where the catalogue knows them;
+          // a dash for an unknown one, and no line at all when neither is known.
+          journey.depStationShortCode || journey.arrStationShortCode ? (
+            <span data-testid="rail-detail-station-codes">
+              {journey.depStationShortCode ? (
+                <StationShortCode code={journey.depStationShortCode} />
+              ) : (
+                "–"
+              )}
+              {" → "}
+              {journey.arrStationShortCode ? (
+                <StationShortCode code={journey.arrStationShortCode} />
+              ) : (
+                "–"
+              )}
+            </span>
+          ) : undefined
+        }
         meta={[trainLabel(journey), departure ? formatStationTime(departure, locale) : null]
           .filter(Boolean)
           .join(" · ")}

@@ -2,6 +2,7 @@ import { seedCuratedPlacesFromCSV } from "../seedCuratedPlacesFromCSV";
 import { seedLodgingChainsFromCSV } from "../seedLodgingChainsFromCSV";
 import { seedPortsFromCSV } from "../seedPortsFromCSV";
 import { seedRailStations } from "../seedRailStations";
+import { seedRailStationCodes } from "../seedRailStationCodes";
 import { seedShipsFromCSV } from "../seedShipsFromCSV";
 import { getInstanceSettings, updateInstanceSettings } from "../services/instanceSettingsService";
 import logger from "../utils/logger";
@@ -29,6 +30,7 @@ export async function ensureDemoCatalogues(): Promise<void> {
     ["lodging_chains", seedLodgingChainsFromCSV],
     ["curated_places", seedCuratedPlacesFromCSV],
     ["rail_stations", seedRailStations],
+    ["rail_station_codes", seedRailStationCodes],
   ];
   for (const [name, seed] of seeds) {
     try {

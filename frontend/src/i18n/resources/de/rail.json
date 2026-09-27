@@ -88,7 +88,8 @@
     "picked": "Aus dem Bahnhofskatalog · UIC {{code}}",
     "useGeocoder": "Nicht im Bahnhofskatalog? Über die Ortssuche wählen",
     "backToCatalogue": "Zurück zum Bahnhofskatalog",
-    "noPlausibleHit": "Kein Bahnhof im Katalog passt zu „{{name}}“. Such den Bahnhof über das Feld."
+    "noPlausibleHit": "Kein Bahnhof im Katalog passt zu „{{name}}“. Such den Bahnhof über das Feld.",
+    "shortCodeTitle": "DB-Stationskürzel {{code}}"
   },
   "lookup": {
     "title": "Zug nachschlagen",
