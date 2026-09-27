@@ -36,6 +36,8 @@ CLAUDE.local.md
 # would have shipped 1247 rows of vendored data with no record of where they
 # came from.
 !backend/src/seedData/*.md
+# Provenance of the vendored station-code table (CC0 statements, the SPARQL).
+!backend/data/rail/*.SOURCES.md
 
 # Private: audit findings, internal plans, personal notes — never commit
 .private/
