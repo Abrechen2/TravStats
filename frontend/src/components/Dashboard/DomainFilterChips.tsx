@@ -65,7 +65,7 @@ export default function DomainFilterChips(): JSX.Element | null {
             className="shrink-0 cursor-pointer rounded-full px-3 py-1 text-xs whitespace-nowrap transition-colors"
             style={{
               background: active ? colour : "transparent",
-              color: active ? "#0d1117" : "var(--text-muted)",
+              color: active ? "var(--ts-bg)" : "var(--text-muted)",
               border: `1px solid ${active ? colour : "var(--color-border)"}`,
               fontWeight: active ? 600 : 400,
             }}
