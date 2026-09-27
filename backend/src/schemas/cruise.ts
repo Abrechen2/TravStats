@@ -2,7 +2,11 @@ import { z } from "./zod";
 import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
 import { CRUISE_SORT_FIELDS } from "../shared/cruiseListOrder";
-import { legacyDayFieldSchema, timeFieldSchema } from "../shared/time/timeInput";
+import {
+  instantFieldSchema,
+  legacyDayFieldSchema,
+  timeFieldSchema,
+} from "../shared/time/timeInput";
 
 export const CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
 const STATUSES = ["scheduled", "flown", "cancelled", "historical"] as const;
@@ -274,8 +278,8 @@ export const cruiseTrackUploadFieldsSchema = z.object({
 export const pullCruiseDawarichSchema = z
   .object({
     legOrdinal: z.number().int().min(0).max(500).optional(),
-    startedAt: z.coerce.date().optional(),
-    endedAt: z.coerce.date().optional(),
+    startedAt: instantFieldSchema().optional(),
+    endedAt: instantFieldSchema().optional(),
   })
   .strict()
   .refine((v) => !v.startedAt || !v.endedAt || v.endedAt.getTime() >= v.startedAt.getTime(), {

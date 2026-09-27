@@ -150,3 +150,29 @@ export function dayFieldSchema() {
 export function legacyDayFieldSchema() {
   return dayFieldSchema().transform((day) => `${day}T00:00:00.000Z`);
 }
+
+/**
+ * A MACHINE instant (a track window, a sync cursor): an ISO string with an
+ * offset or `Z`, handed on as a `Date`. `z.coerce.date()` used to take an
+ * offset-less string and read it in the server's zone; that is refused now
+ * with TIME_SHAPE_REQUIRED.
+ */
+export function instantFieldSchema() {
+  return z
+    .string()
+    .transform((value, ctx): Date => {
+      const instant = offsetInstant(value);
+      if (instant) return instant.utc;
+      ctx.addIssue({
+        code: "custom",
+        message: OFFSETLESS.test(value) || isLocalDate(value) ? SHAPE_REQUIRED : "not an instant",
+      });
+      return z.NEVER;
+    })
+    .openapi({
+      type: "string",
+      format: "date-time",
+      description:
+        "An instant with an offset or `Z`; an offset-less datetime is refused (422 TIME_SHAPE_REQUIRED).",
+    });
+}

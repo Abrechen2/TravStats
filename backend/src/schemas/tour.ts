@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { instantFieldSchema } from "../shared/time/timeInput";
 
 import { LEG_MODES } from "../services/tour/tourDistance";
 import { ROUTING_PROVIDER_IDS } from "../services/tour/routing/types";
@@ -84,8 +85,8 @@ export type TrackSource = (typeof TRACK_SOURCES)[number];
  */
 export const pullDawarichTrackSchema = z
   .object({
-    startedAt: z.coerce.date().optional(),
-    endedAt: z.coerce.date().optional(),
+    startedAt: instantFieldSchema().optional(),
+    endedAt: instantFieldSchema().optional(),
   })
   .strict()
   .refine((v) => !v.startedAt || !v.endedAt || v.endedAt.getTime() >= v.startedAt.getTime(), {

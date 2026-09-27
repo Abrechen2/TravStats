@@ -1,5 +1,10 @@
 import { z } from "zod";
-import { dayFieldSchema, legacyDayFieldSchema, timeFieldSchema } from "../timeInput";
+import {
+  dayFieldSchema,
+  instantFieldSchema,
+  legacyDayFieldSchema,
+  timeFieldSchema,
+} from "../timeInput";
 import { fakeUtcOf, instantOfFakeUtc, resolveTimeField } from "../resolveInput";
 import { timeErrorFromZod } from "../errors";
 
@@ -154,5 +159,15 @@ describe("years before 100", () => {
   it("are real years, not 1900 + n (Date.UTC's two-digit rule)", () => {
     expect(dayFieldSchema().parse("0001-01-01")).toBe("0001-01-01");
     expect(dayFieldSchema().parse("0001-01-01T00:00:00.000Z")).toBe("0001-01-01");
+  });
+});
+
+describe("instantFieldSchema", () => {
+  it("takes an instant with an offset and refuses one without", () => {
+    const schema = instantFieldSchema();
+    expect(schema.parse("2027-07-01T10:00:00+02:00").toISOString()).toBe(
+      "2027-07-01T08:00:00.000Z"
+    );
+    expect(codeOf(schema, "2027-07-01T10:00").code).toBe("TIME_SHAPE_REQUIRED");
   });
 });
