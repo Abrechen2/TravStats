@@ -1,3 +1,5 @@
+import BackupZoneField from "./BackupZoneField";
+import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { useState, useEffect } from "react";
 import { backupApi, adminApi } from "../../lib/api";
 import type { BackupScheduleSettings } from "../../lib/api/backup";
@@ -308,11 +310,17 @@ export default function BackupManagement(): JSX.Element {
   const handleSaveBackupSettings = async (): Promise<void> => {
     setSavingSettings(true);
     try {
-      const updated = await backupApi.updateBackupSettings(backupSettings);
+      const { backupEnabled, backupInterval, backupRetentionDays, backupZone } = backupSettings;
+      const updated = await backupApi.updateBackupSettings({
+        backupEnabled,
+        backupInterval,
+        backupRetentionDays,
+        backupZone: backupZone ?? null,
+      });
       setBackupSettings(updated);
       addToast("success", t("admin:backup.settingsSaved"));
     } catch (err: unknown) {
-      addToast("error", t("admin:backup.settingsFailed"));
+      addToast("error", saveErrorMessage(err, t, "admin:backup.settingsFailed"));
       logger.error("Failed to save backup settings", err);
     } finally {
       setSavingSettings(false);
@@ -592,6 +600,12 @@ export default function BackupManagement(): JSX.Element {
               />
             </div>
           </div>
+          <BackupZoneField
+            value={backupSettings.backupZone ?? null}
+            effective={backupSettings.backupZoneEffective ?? null}
+            hostZone={backupSettings.hostZone ?? null}
+            onChange={(zone) => setBackupSettings({ ...backupSettings, backupZone: zone })}
+          />
         </div>
       </div>
 

@@ -5,6 +5,12 @@ export interface BackupScheduleSettings {
   backupEnabled: boolean;
   backupInterval: "daily" | "weekly" | "monthly";
   backupRetentionDays: number;
+  /** The zone the backup hour is read in; null = the server's own zone (ADR 0002). */
+  backupZone?: string | null;
+  /** Server-reported: the zone the scheduler actually runs in. */
+  backupZoneEffective?: string;
+  /** Server-reported: the server's own zone, the default. */
+  hostZone?: string;
 }
 
 export const backupApi = {

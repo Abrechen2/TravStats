@@ -646,10 +646,13 @@
     "settingsFailed": "Fehler beim Speichern der Einstellungen",
     "schedule": {
       "title": "Automatisches Backup",
-      "description": "Geplante Backups laufen um 2:00 UTC – je nach Intervall täglich, sonntags oder am 1. des Monats.",
+      "description": "Geplante Backups laufen um 2:00 Uhr in der unten gewählten Zeitzone – je nach Intervall täglich, sonntags oder am 1. des Monats.",
       "enableAutoBackup": "Automatisches Backup aktivieren",
       "interval": "Intervall",
-      "retentionDays": "Aufbewahrung (Tage)"
+      "retentionDays": "Aufbewahrung (Tage)",
+      "zone": "Zeitzone der Backup-Uhrzeit",
+      "zoneHost": "Zeitzone des Servers ({{zone}})",
+      "zoneEffective": "Backups laufen um 2:00 Uhr in {{zone}}."
     },
     "toasts": {
       "loadFailed": "Fehler beim Laden der Backups",
