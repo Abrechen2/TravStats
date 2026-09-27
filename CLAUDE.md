@@ -42,14 +42,21 @@ for `/deploy`. Dev branches never deploy.
 
 ### Who writes to `main` (since 2026-09-25)
 
-"No PRs" above describes the Claude sessions, not everyone. `main` now has
+> **Paperclip is out of service since 2026-09-27** (owner). Nothing arrives
+> through Forgejo pull requests any more, so `main` has two writers again: the
+> owner and the Claude sessions. The Paperclip rows and rules below are kept
+> as the record of how it worked and what to restore if it comes back — they
+> bind nobody while it is off. Rules 1 and 2 stay in force regardless: two
+> remotes can still disagree.
+
+"No PRs" above describes the Claude sessions, not everyone. `main` had
 three writers, and a plan computed against it minutes ago can be stale:
 
 | Writer | Route into `main` |
 |---|---|
 | The owner | Direct merge or push |
 | Claude sessions (PC, CT142) | Local merge on the owner's release decision, no PR |
-| **Paperclip agents** (CT 145, commits as `paperclip-bot`) | **Forgejo pull requests**; merged only by the owner |
+| ~~Paperclip agents~~ (CT 145, commits as `paperclip-bot`) — out of service since 2026-09-27 | Forgejo pull requests; merged only by the owner |
 
 On 2026-09-25 two Paperclip PRs were merged into `main` on Forgejo while a
 Claude session was integrating branches against the same `main`, and five
@@ -65,8 +72,9 @@ Hence:
    merge commit. Forgejo's default "Merge pull request #128" becomes, once
    the commit reaches GitHub, a link to GitHub #128 — a different thing (see
    the reference rules under *Three trackers* below).
-4. **`.forgejo/workflows/` is Paperclip's CI work**; change it through a PR or
-   with the owner, not in passing.
+4. **`.forgejo/workflows/`** was Paperclip's CI work (change it through a PR
+   or with the owner). While Paperclip is off it is ordinary repo config —
+   still change it deliberately, since the homelab runner executes it.
 5. **Paperclip work that matters for a release gets a Leitstand item.** The
    board reads issues, not PRs, so an unrecorded PR is invisible there.
 
@@ -602,7 +610,7 @@ checked by nothing until now — is broken by 21 files, the largest at 2161.
 | No private key, no conflict marker, no >15 MB blob in a commit | `.pre-commit-config.yaml` |
 | A router answers in ONE response shape — bare or `{success, data}` — per `docs/adr/0001-api-response-shape.md` | `backend/src/__tests__/apiResponseShape.ratchet.test.ts` vs `apiResponseShape.baseline.json` — a new router file must be assigned a family; a bare-family router gains no envelope; the twelve frozen leaks only shrink |
 | Nothing outside `shared/time/` reads the host's zone — host-local `Date` getters/setters, `new Date(y, m, …)`, `toLocale*String`/`Intl.DateTimeFormat` without `timeZone`, date-fns `format` / date-fns-tz, and the clock in status files (ADR 0002, D6) | `scripts/eslint/timeRules.mjs` — `time/no-host-local-date`, `time/no-zoneless-format`, `time/no-zone-library`, `time/no-ambient-now` — as errors in both eslint configs. Both trees reached zero offenders in phase 4 and their `eslint-suppressions.json` files are gone, so a new offender fails outright; a tree that ever needs to freeze offenders again uses ESLint bulk suppressions in its own `eslint-suppressions.json` (a fixed one leaves a stale entry that fails until `--prune-suppressions`). Rules and ratchet tested in `frontend/src/__tests__/lint/timeRules.test.ts` |
-| A test's verdict does not depend on the host's zone | `frontend-tests-tz` / `backend-tests-tz` in `.github/workflows/ci.yml` re-run (the Forgejo workflow is Paperclip's and does not carry them — owner, 2026-09-27) the suites under `TZ=Pacific/Kiritimati` and `TZ=America/St_Johns`; `scripts/check-tz-ratchet.mjs` vs `scripts/tz-failures-baseline.json` fails on a new failure and on a listed test that now passes |
+| A test's verdict does not depend on the host's zone | `frontend-tests-tz` / `backend-tests-tz` in `.github/workflows/ci.yml` re-run (the Forgejo workflow, written by Paperclip, does not carry them — owner, 2026-09-27) the suites under `TZ=Pacific/Kiritimati` and `TZ=America/St_Johns`; `scripts/check-tz-ratchet.mjs` vs `scripts/tz-failures-baseline.json` fails on a new failure and on a listed test that now passes |
 | Server and web answer every time question the same way | `shared/time/vectors.json`, run by `backend/src/shared/time/__tests__/vectors*.test.ts` and `frontend/src/shared/time/__tests__/vectors.test.ts`, each also under the two odd zones |
 
 Six of these are **ratchets** carrying a list of today's offenders — file
@@ -812,7 +820,8 @@ from it, so the divergence is recorded here.
 
 - **Which CI gates a merge.** Since 2026-09-25 there are two: GitHub Actions
   (`.github/workflows/ci.yml`, described above) and the homelab Forgejo runner
-  (`.forgejo/workflows/ci.yml`, Paperclip). Until the owner decides, a merge
+  (`.forgejo/workflows/ci.yml`, written by Paperclip, which is out of service
+  since 2026-09-27; the runner itself still runs). Until the owner decides, a merge
   needs both green — a second red job that everyone learns to ignore is how
   the database jobs stayed broken unnoticed in September.
 
