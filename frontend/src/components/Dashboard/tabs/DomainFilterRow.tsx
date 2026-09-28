@@ -13,9 +13,14 @@ export const FILTER_ROW_ICON: Record<FilterDomainKey, IconName> = {
   roadtrip: "caravan",
 };
 
-const ROW_HEIGHT_DESKTOP = 40;
-const ROW_HEIGHT_PHONE = 52;
-const TOUCH_TARGET_PHONE = 44;
+/**
+ * Sizes follow the INPUT, not the width. A 40 px row and a 21 px "Nur" button
+ * are fine under a mouse and too small under a thumb, and an iPad is both wide
+ * and touch-operated — see `useCoarsePointer`.
+ */
+const ROW_HEIGHT_MOUSE = 40;
+const ROW_HEIGHT_TOUCH = 52;
+const TOUCH_TARGET = 44;
 
 export interface DomainFilterRowProps {
   row: DomainFilterRowData;
@@ -24,7 +29,12 @@ export interface DomainFilterRowProps {
   onlyLabel: string;
   onlyTooltip: string;
   betaTooltip: string;
-  phone: boolean;
+  /**
+   * Finger-sized targets — true on any touch device, iPads included. The row
+   * needs no width flag: the sheet/dropdown choice is the PANEL's business,
+   * and every size in here follows the pointer instead.
+   */
+  touch: boolean;
   onToggle: (key: FilterDomainKey) => void;
   onIsolate: (key: FilterDomainKey) => void;
   rowRef: (el: HTMLDivElement | null) => void;
@@ -45,13 +55,13 @@ export function DomainFilterRow({
   onlyLabel,
   onlyTooltip,
   betaTooltip,
-  phone,
+  touch,
   onToggle,
   onIsolate,
   rowRef,
   onKeyDown,
 }: DomainFilterRowProps): JSX.Element {
-  const height = phone ? ROW_HEIGHT_PHONE : ROW_HEIGHT_DESKTOP;
+  const height = touch ? ROW_HEIGHT_TOUCH : ROW_HEIGHT_MOUSE;
 
   return (
     <div
@@ -147,11 +157,11 @@ export function DomainFilterRow({
           background: "transparent",
           border: "none",
           color: "var(--ts-accent)",
-          fontSize: phone ? 13 : 11.5,
+          fontSize: touch ? 13 : 11.5,
           fontWeight: 600,
-          padding: phone ? "0 10px" : "2px 6px",
-          minHeight: phone ? TOUCH_TARGET_PHONE : undefined,
-          minWidth: phone ? TOUCH_TARGET_PHONE : undefined,
+          padding: touch ? "0 10px" : "2px 6px",
+          minHeight: touch ? TOUCH_TARGET : undefined,
+          minWidth: touch ? TOUCH_TARGET : undefined,
         }}
       >
         {onlyLabel}

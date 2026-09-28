@@ -173,6 +173,41 @@ describe("DomainFilterButton", () => {
    * have no equivalent on "Alle". Isolating without navigating would have
    * shown one domain and still withheld everything it can be looked at with.
    */
+  /**
+   * A tablet is wide AND touched. The width test alone called every iPad a
+   * desktop and served 40 px rows with a 36×21 px "Nur" button — measured on
+   * 768×1024, 1024×768, 820×1180 and 1194×834 before this split existed.
+   * Since the browser build targets iPads (owner, 2026-09-28: the phone is the
+   * Companion's job), the size follows the POINTER and the layout follows the
+   * width.
+   */
+  it("gives a touch device finger-sized rows even at desktop width", async () => {
+    const user = userEvent.setup();
+    // Wide viewport, coarse pointer — an iPad.
+    window.matchMedia = ((query: string) => ({
+      matches: query.includes("pointer: coarse"),
+      media: query,
+      onchange: null,
+      addEventListener: () => {},
+      removeEventListener: () => {},
+      addListener: () => {},
+      removeListener: () => {},
+      dispatchEvent: () => false,
+    })) as unknown as typeof window.matchMedia;
+
+    render(<Controlled />, { wrapper: Wrapper });
+    await user.click(screen.getByRole("button", { name: /Domänen/ }));
+
+    // The dropdown, not the sheet — the width still decides that.
+    expect(screen.getByRole("dialog")).not.toHaveAttribute("aria-modal", "true");
+    // But the rows and the "Nur" target are the large ones.
+    expect(screen.getByRole("checkbox", { name: "Flüge" })).toHaveStyle({ minHeight: "52px" });
+    const only = within(screen.getByRole("checkbox", { name: "Flüge" })).getByRole("button", {
+      name: "Nur",
+    });
+    expect(only).toHaveStyle({ minHeight: "44px", minWidth: "44px" });
+  });
+
   it('"Nur" opens that domain\'s own view', async () => {
     const user = userEvent.setup();
     render(<Controlled />, { wrapper: NavWrapper });

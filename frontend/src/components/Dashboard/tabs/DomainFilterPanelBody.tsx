@@ -12,6 +12,8 @@ import { DomainFilterRow } from "./DomainFilterRow";
 export interface DomainFilterPanelBodyProps {
   filter: DashboardDomainFilterResult;
   phone: boolean;
+  /** Finger-sized targets, independent of the sheet/dropdown choice. */
+  touch: boolean;
   /** Row to focus once the panel/sheet mounts — the design's "Fokus auf erste Zeile". */
   autoFocusKey: FilterDomainKey | null;
   onEscape: () => void;
@@ -35,6 +37,7 @@ function rowLabel(t: (key: string) => string, key: FilterDomainKey): string {
 export function DomainFilterPanelBody({
   filter,
   phone,
+  touch,
   autoFocusKey,
   onEscape,
   onAdopted,
@@ -87,7 +90,7 @@ export function DomainFilterPanelBody({
           onlyLabel={onlyLabel}
           onlyTooltip={onlyTooltip}
           betaTooltip={betaTooltip}
-          phone={phone}
+          touch={touch}
           onToggle={filter.toggle}
           onIsolate={filter.isolate}
           onKeyDown={handleRowKeyDown}
@@ -201,7 +204,7 @@ export function DomainFilterPanelBody({
 
   const persistHint = (
     <div
-      style={{ fontSize: 11, color: "var(--ts-muted)", padding: phone ? "8px 10px" : "6px 2px 0" }}
+      style={{ fontSize: 11, color: "var(--ts-muted)", padding: touch ? "8px 10px" : "6px 2px 0" }}
     >
       {t("dashboard:domainFilter.panel.persist")}
     </div>

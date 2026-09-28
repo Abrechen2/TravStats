@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import { useEffect, useRef, useState } from "react";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useIsPhoneViewport } from "../../../hooks/useIsPhoneViewport";
+import { useCoarsePointer } from "../../../hooks/useCoarsePointer";
 import { useDashboardDomainFilter } from "../../../hooks/useDashboardDomainFilter";
 import { Icon } from "../../ui/Icon";
 import { DomainFilterPanelBody } from "./DomainFilterPanelBody";
@@ -32,6 +33,9 @@ export function DomainFilterButton({
 }: DomainFilterButtonProps): JSX.Element {
   const { t } = useTranslation(["dashboard"]);
   const phone = useIsPhoneViewport();
+  // Layout comes from the width, target size from the pointer: an iPad is a
+  // wide screen operated by a thumb, so it gets the dropdown AND large rows.
+  const touch = useCoarsePointer() || phone;
   const filter = useDashboardDomainFilter(tourCount);
   const buttonRef = useRef<HTMLButtonElement>(null);
   const panelRef = useRef<HTMLDivElement>(null);
@@ -155,6 +159,7 @@ export function DomainFilterButton({
         <DomainFilterPanelBody
           filter={filter}
           phone
+          touch={touch}
           autoFocusKey={autoFocusKey}
           onEscape={() => close(true)}
           onAdopted={() => close(false)}
@@ -187,6 +192,7 @@ export function DomainFilterButton({
       <DomainFilterPanelBody
         filter={filter}
         phone={false}
+        touch={touch}
         autoFocusKey={autoFocusKey}
         onEscape={() => close(true)}
         onAdopted={() => close(false)}

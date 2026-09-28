@@ -828,13 +828,37 @@ from it, so the divergence is recorded here.
 The 800-line number was ratified on 2026-09-05. Thirteen design-system decisions from the same day
 are recorded, with the owner's answer to each, in
 `ClaudeDesign/handoff/2026-09-05-web-redesign-rueckmeldung.md` §9 — read
-that table before re-opening any of them (dashboard tabs stay; tours are ONE
-domain colour; the parser goes into the beta registry; settings become one
-route per group; companions and tags extend to all four domains). One of the
-thirteen has since been reversed by the owner and the table says so: no. 4,
-`domainColors`, was ruled to stay behind the beta badge on 2026-09-05 and
-ruled out from behind it on 2026-09-09, because the goal for 2.7 is that
-nothing is left in the beta registry at all.
+that table before re-opening any of them (tours are ONE domain colour; the
+parser goes into the beta registry; settings become one route per group;
+companions and tags extend to all four domains). TWO of the thirteen have
+since been reversed by the owner:
+
+- No. 4, `domainColors`, was ruled to stay behind the beta badge on
+  2026-09-05 and ruled out from behind it on 2026-09-09, because the goal for
+  2.7 is that nothing is left in the beta registry at all. The table says so.
+- **"Dashboard tabs stay" was reversed on 2026-09-28**: the domain strip is
+  hidden, and the six-row domain filter answers "what is on the map" in its
+  place. The tab ROUTES are untouched — `/dashboard/:tab` still resolves, so
+  every bookmark keeps working — but the strip was the only way to reach them
+  from the page, so "Nur" in the filter navigates there instead. That is not
+  cosmetic: eight map modes exist on a single-domain view and nowhere else
+  (stats-map, trips, itinerary, port-frequency, nights, chains, markers,
+  sea-routes), because `TAB_MODE_REGISTRY` keys modes by tab. A filter that
+  only hid layers would have made those unreachable.
+  `DomainTabStrip.tsx` and `NextUpEntry.tsx` are still in the tree, unused by
+  the app, as the way back.
+
+Two standing rules came out of the same day, and they are about the browser
+build's target rather than any one screen:
+
+- **The web build is drawn for iPads.** The phone is the Companion's job
+  (owner, 2026-09-28), so a phone-width regression is not a release blocker
+  while a tablet one is.
+- **Touch sizing follows the POINTER, not the width** (`useCoarsePointer`).
+  A tablet is wide and finger-operated at once, so a width test alone served
+  every iPad 40 px rows and a 36×21 px button — measured on four iPad
+  viewports. The sheet/dropdown choice still follows the width
+  (`useIsPhoneViewport`); only the target sizes follow the input.
 
 ## Version
 
