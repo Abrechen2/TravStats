@@ -1,6 +1,6 @@
 // Dashboard chrome, folded into the in-map control panel.
 //
-// The Modus switcher and the year/domain Filter used to live in a toolbar
+// The Modus switcher and the year Filter used to live in a toolbar
 // above the map (DashboardControlsBar + DashboardFilterDropdown). That
 // toolbar is gone — every dashboard mode renders a map with this panel, so
 // the panel is the control surface for these two. These sections sit at the
@@ -13,14 +13,16 @@
 //
 // Everything here reads global state directly (react-router route + the
 // dashboardFilterStore), so there is no prop-drilling through the map tree.
+//
+// Domain visibility is NOT here. It was, as a row of pills, until 2026-09-28;
+// it now belongs to the "Domänen · x/y" filter on the map, which is the one
+// place that answers "what is on the map".
 
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDashboardRoute } from "../../hooks/useDashboardRoute";
-import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useDashboardFilterStore } from "../../store/dashboardFilterStore";
 import { TAB_MODE_REGISTRY, type DashboardMode } from "../../types/dashboard";
-import { AVAILABLE_DOMAINS, DOMAINS, type DomainKey } from "../../shared/domains";
 import {
   SectionLabel,
   SegControl,
@@ -30,8 +32,6 @@ import {
   TEXT,
   PANEL_OPTION_STYLE,
 } from "./controlPanelKit";
-import { useDomainColors } from "../../hooks/useDomainColors";
-import { useRailVisible } from "../../hooks/useRailVisible";
 import { todayZoneNow } from "../../hooks/useTodayZone";
 import { todayIn } from "../../shared/time";
 
@@ -63,34 +63,19 @@ function Section({
 }
 
 export function MapChromeSections(): JSX.Element {
-  const { colorOf } = useDomainColors();
   const { t } = useTranslation(["dashboard", "common"]);
   const { tab, mode, setMode } = useDashboardRoute();
-  const { isEnabled } = useEnabledDomains();
 
   const year = useDashboardFilterStore((s) => s.year);
   const setYear = useDashboardFilterStore((s) => s.setYear);
-  const domains = useDashboardFilterStore((s) => s.domains);
-  const setDomains = useDashboardFilterStore((s) => s.setDomains);
   const resetFilter = useDashboardFilterStore((s) => s.reset);
 
   const modes = TAB_MODE_REGISTRY[tab].modes;
   const yearOptions = buildYearOptions();
 
-  // Rail's chip follows the rail layer: only where its beta switch is on
-  // (owner rule 2026-09-25) and the user has the domain.
-  const railVisible = useRailVisible();
-  const domainOptions = AVAILABLE_DOMAINS.filter(
-    (key) => (key !== "rail" || railVisible) && isEnabled(key)
-  );
-  const yearActive = year !== null;
-  const domainsFiltered = tab === "all" && domainOptions.some((key) => !domains.includes(key));
-  const filterActive = yearActive || domainsFiltered;
-
-  const toggleDomain = (key: DomainKey): void => {
-    const next = domains.includes(key) ? domains.filter((d) => d !== key) : [...domains, key];
-    setDomains(next);
-  };
+  // The year is the only filter this panel still owns, so it alone decides
+  // whether "reset" has anything to reset.
+  const filterActive = year !== null;
 
   return (
     <>
@@ -107,8 +92,7 @@ export function MapChromeSections(): JSX.Element {
 
       {/* Filter -- hidden entirely on the tour tab: the year select has no
           effect on `useDashboardTours` (no date param exists on that
-          endpoint, see TourTab.tsx's own concerns section), and the domain
-          pills are already `tab === "all"`-only above. A control that
+          endpoint, see TourTab.tsx's own concerns section). A control that
           visibly does nothing is the same defect this feature's tour
           legend was fixed for -- offering it here would be the same lie
           about a different control (fix-round review, 2026-08-30). */}
@@ -144,36 +128,16 @@ export function MapChromeSections(): JSX.Element {
               </select>
             </label>
 
-            {tab === "all" && (
-              <div className="flex flex-col gap-1">
-                <span style={{ color: "rgba(241,245,249,0.55)" }} className="text-[10px]">
-                  {t("dashboard:filter.domains")}
-                </span>
-                <div className="flex flex-wrap gap-1">
-                  {domainOptions.map((key) => {
-                    const active = domains.includes(key);
-                    const descriptor = DOMAINS[key];
-                    return (
-                      <button
-                        key={key}
-                        type="button"
-                        aria-pressed={active}
-                        onClick={() => toggleDomain(key)}
-                        className="cursor-pointer rounded-full px-2.5 py-1 text-[11px] transition-colors"
-                        style={{
-                          background: active ? colorOf(descriptor.key) : "transparent",
-                          color: active ? "#0d1117" : "rgba(241,245,249,0.6)",
-                          border: `1px solid ${active ? colorOf(descriptor.key) : BORDER}`,
-                          fontWeight: active ? 600 : 400,
-                        }}
-                      >
-                        {t(`common:${descriptor.i18nKey}`)}
-                      </button>
-                    );
-                  })}
-                </div>
-              </div>
-            )}
+            {/* The domain pills that used to sit here are gone (owner,
+                2026-09-28). Domain visibility has ONE owner now: the
+                "Domänen · x/y" filter on the map. Two controls for one
+                question could contradict each other, and the losing one was
+                this: it was a second place to hide a domain, invisible from
+                the filter that claims to say what is on the map.
+
+                Its stored set had to go with it, not just the buttons — a
+                domain someone had deselected here would otherwise have stayed
+                hidden forever, with no control left to bring it back. */}
 
             {filterActive && (
               <button
