@@ -186,7 +186,7 @@
     "to": "Nach",
     "aircraft": "Flugzeug",
     "deleteConfirm": "Möchtest du diesen Flug wirklich löschen?",
-    "wholeListHint": "Ein ganzes Logbuch auf einmal?"
+    "wholeListHint": "Eine ganze Liste auf einmal?"
   },
   "table": {
     "title": "Flugliste",

@@ -152,11 +152,10 @@ export function AllTab(): JSX.Element {
   // Global dashboard filter — year populates `time.from/to`, domain
   // pill row toggles flight/cruise visibility on the Alle tab. The pill
   // filter is intersected with the user's enabledDomains: a disabled
-  // domain must never surface here, regardless of the pill state (the
-  // pill store defaults to AVAILABLE_DOMAINS, not the user's setting).
+  // domain must never surface here. The map-options pills that used to be a
+  // second gate went on 2026-09-28; the domain filter is the only one now.
   const { isEnabled } = useEnabledDomains();
   const filterTime = useDashboardFilterStore((s) => s.time);
-  const filterDomains = useDashboardFilterStore((s) => s.domains);
   const placeColorConfig = usePlaceColorStore((st) => st.config);
   // POI asks `usePlacesVisible`, the one home of the places rule — the user's
   // domain choice alone since 2026-09-05 (the instance beta flag used to be a
@@ -168,7 +167,7 @@ export function AllTab(): JSX.Element {
   // Tours are beta again (2026-09-24): nothing is fetched while the key is closed.
   const toursVisible = useToursVisible();
   const dashboardTours = useDashboardTours(toursVisible);
-  // The "Alle" tab's domain-filter (decision 2026-09-27); `rail` stays out.
+  // The "Alle" tab's domain-filter (decision 2026-09-27; `rail` joined 2026-09-28).
   const { domainFilter, dayTourCount, visible } = useAllTabDomainVisibility(dashboardTours.tours);
   const [domainFilterOpen, setDomainFilterOpen] = useState(false);
   // Keyed on the hook's stable arrays, not its result object, which is new
@@ -498,8 +497,11 @@ export function AllTab(): JSX.Element {
   // sphere mesh and draws zero pixels there (fix round 2, found in a real
   // browser). `visMode` already resolves "globe" vs "routes"/"heatmap"/
   // "journey" a few lines up.
-  // Rail rides beside the tours, behind every rail gate plus the domain chip.
-  const railOn = useRailVisible() && showTours && filterDomains.includes("rail");
+  // Rail rides beside the tours, behind every rail gate plus its own filter
+  // row. It used to read the map-options domain chip; that control was
+  // removed on 2026-09-28 and rail became the filter's seventh row in the
+  // same change, so the switch moved rather than disappearing.
+  const railOn = useRailVisible() && showTours && domainFilter.isVisible("rail");
   const rail = useRailOverlay(railOn, visMode === "globe", t);
   const tourLayers = useMemo<Layer[]>(
     () => [

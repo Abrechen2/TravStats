@@ -3,7 +3,7 @@ import { Icon, type IconName } from "../../ui/Icon";
 import type { DomainFilterRow as DomainFilterRowData } from "../../../hooks/useDashboardDomainFilter";
 import type { FilterDomainKey } from "../../../shared/dashboardDomainFilter";
 
-/** Same glyphs `DomainTabStrip` uses for these six — one visual vocabulary. */
+/** Same glyphs `DomainTabStrip` uses for these seven — one visual vocabulary. */
 export const FILTER_ROW_ICON: Record<FilterDomainKey, IconName> = {
   flight: "plane",
   cruise: "ship",
@@ -11,6 +11,7 @@ export const FILTER_ROW_ICON: Record<FilterDomainKey, IconName> = {
   poi: "map-pin",
   tour: "route",
   roadtrip: "caravan",
+  rail: "train-front",
 };
 
 /**

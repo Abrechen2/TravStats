@@ -451,16 +451,6 @@ export default function LodgingListPage(): JSX.Element {
           </div>
         </div>
 
-        <p className="mb-4 text-xs text-(--text-muted)">
-          {t("lodging:list.wholeListHint")}{" "}
-          <Link
-            to="/settings/data?section=import"
-            className="underline underline-offset-4 hover:text-(--text-primary)"
-          >
-            {t("settings:import.openHub")}
-          </Link>
-        </p>
-
         {/* Was `LodgingStatStrip`, which renders the backend rollup over the
             WHOLE library — correct on the dashboard, contradictory here: it
             showed the spend of 60 hotels above a table filtered down to seven,
@@ -472,6 +462,16 @@ export default function LodgingListPage(): JSX.Element {
           filteredLabel={t("common:filters.filtered")}
           unknown={loading || loadError}
         />
+
+        <p className="mb-4 text-xs text-(--text-muted)">
+          {t("lodging:list.wholeListHint")}{" "}
+          <Link
+            to="/settings/data?section=import"
+            className="underline underline-offset-4 hover:text-(--text-primary)"
+          >
+            {t("settings:import.openHub")}
+          </Link>
+        </p>
 
         {loyaltyFilter.membershipId !== null && (
           <div className="mb-3">

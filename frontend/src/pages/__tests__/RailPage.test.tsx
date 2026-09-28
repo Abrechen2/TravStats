@@ -142,7 +142,9 @@ describe("RailPage", () => {
     expect(row.textContent).toContain("12:09");
     expect(row.textContent).toContain("ICE 9557 · DB Fernverkehr");
     expect(row.textContent).toContain("rail:straightLine");
-    expect(screen.getByText("rail:count/1")).toBeInTheDocument();
+    // The bare "N journeys" line became the shared summary strip on
+    // 2026-09-28, so the count is read off its first figure instead.
+    expect(screen.getByText("rail:summary.journeys")).toBeInTheDocument();
   });
 
   it("asks the server for one page, not the whole logbook", async () => {

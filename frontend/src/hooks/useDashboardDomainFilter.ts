@@ -2,6 +2,7 @@ import { useEffect, useMemo } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useEnabledDomains } from "./useEnabledDomains";
 import { useToursVisible } from "./useToursVisible";
+import { useRailVisible } from "./useRailVisible";
 import { useDashboardCountsStore } from "../store/dashboardCountsStore";
 import { useDashboardDomainFilterStore } from "../store/dashboardDomainFilterStore";
 import { useDashboardRoute } from "./useDashboardRoute";
@@ -42,15 +43,14 @@ export interface DashboardDomainFilterResult {
 }
 
 /**
- * The two domains still behind the `roadtrips` beta key
- * (`config/betaFeatures.ts`) — the only beta-gated members of the six-row
- * filter. flight/cruise/lodging/poi carry no beta entry at all, and `rail`
- * (its own `railDomain` key) is outside this filter's scope entirely (see
- * `shared/dashboardDomainFilter.ts`). A row only reaches `rows` once its own
- * gate is open, so this flag is purely informational — "still labelled beta
- * on this instance", not a second gate.
+ * The rows still carrying a beta label: `tour` and `roadtrip` behind the
+ * `roadtrips` key, and `rail` behind its own `railDomain` key
+ * (`config/betaFeatures.ts`). flight/cruise/lodging/poi carry no beta entry
+ * at all. A row only reaches `rows` once its own gate is open, so this flag
+ * is purely informational — "still labelled beta on this instance", not a
+ * second gate.
  */
-const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip"]);
+const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip", "rail"]);
 
 /**
  * Drives the "Alle" tab's domain-filter button/panel: which of the six rows
@@ -66,6 +66,7 @@ const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip"]);
 export function useDashboardDomainFilter(tourCount: number | null): DashboardDomainFilterResult {
   const { isEnabled } = useEnabledDomains();
   const toursVisible = useToursVisible();
+  const railVisible = useRailVisible();
   const counts = useDashboardCountsStore((s) => s.counts);
   const [search] = useSearchParams();
   const { tab, setTab } = useDashboardRoute();
@@ -121,6 +122,9 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       poi: isEnabled("poi"),
       tour: toursVisible,
       roadtrip: isEnabled("roadtrip"),
+      // Both halves of rail's own gate live in `useRailVisible`: the instance
+      // beta switch AND the user's domain.
+      rail: railVisible,
     };
     const rowCount: Record<FilterDomainKey, number | null> = {
       flight: counts.flight,
@@ -129,6 +133,7 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       poi: counts.poi,
       tour: tourCount,
       roadtrip: counts.roadtrip,
+      rail: counts.rail,
     };
     return FILTER_DOMAIN_ORDER.filter((key) => available[key]).map((key) => ({
       key,
@@ -136,7 +141,7 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       count: rowCount[key],
       beta: BETA_ROWS.has(key),
     }));
-  }, [isEnabled, toursVisible, counts, tourCount, effectiveHidden]);
+  }, [isEnabled, toursVisible, railVisible, counts, tourCount, effectiveHidden]);
 
   const visibleCount = rows.filter((r) => r.visible).length;
   const totalCount = rows.length;

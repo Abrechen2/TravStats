@@ -9,6 +9,7 @@ import PageHeader from "../components/ui/PageHeader";
 import { Input, Select } from "../components/ui/Field";
 import { Icon } from "../components/ui/Icon";
 import { SectionLabel } from "../components/ui/StatTile";
+import LogbookTabs from "../components/table/LogbookTabs";
 import KindReviewNotice from "../components/Roadtrips/KindReviewNotice";
 import NewRoadtripDialog from "../components/Roadtrips/NewRoadtripDialog";
 import RoadtripCard from "../components/Roadtrips/RoadtripCard";
@@ -112,6 +113,10 @@ export default function RoadtripsPage(): JSX.Element {
 
   return (
     <AppShell width="table">
+      {/* Every other logbook page has carried these since round 4; this one
+          was missed, so a reader who reached roadtrips had no way back to
+          another area except the header menu (owner, 2026-09-28). */}
+      <LogbookTabs />
       <PageHeader title={t("roadtrips:pageTitle")} actions={newButton} />
 
       <KindReviewNotice onChanged={() => void load()} />

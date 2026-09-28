@@ -2,6 +2,8 @@ import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 import AppShell from "../components/ui/AppShell";
 import LogbookTabs from "../components/table/LogbookTabs";
+import ListSummaryStrip from "../components/table/ListSummaryStrip";
+import { railSummaryFigures } from "../lib/rail/railSummaryFigures";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { RailFormModal } from "../components/rail/RailFormModal";
 import DomainImportPanel from "../components/import/DomainImportPanel";
@@ -143,7 +145,21 @@ export default function RailPage(): JSX.Element {
           <p className="py-6 text-(--text-muted)">{t("rail:empty")}</p>
         ) : (
           <>
-            <p className="t-caption">{t("rail:count", { count: total })}</p>
+            {/* The same strip the flight and cruise lists carry, so the
+                logbook reads alike across areas (owner, 2026-09-28). It
+                replaces the bare "N journeys" line, whose number it already
+                carries as its first figure. */}
+            <ListSummaryStrip
+              figures={railSummaryFigures(journeys, {
+                journeys: t("rail:summary.journeys"),
+                operators: t("rail:summary.operators"),
+                stations: t("rail:summary.stations"),
+                withoutOperator: (count: number) => t("rail:summary.withoutOperator", { count }),
+              })}
+              filtered={search.trim().length > 0}
+              filteredLabel={t("common:filters.filtered")}
+              unknown={loading}
+            />
             <ul>
               {journeys.map((journey) => (
                 <RailJourneyRow

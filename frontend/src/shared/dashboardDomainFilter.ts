@@ -1,17 +1,20 @@
 /**
- * The dashboard domain filter's own vocabulary — six rows, fixed order.
+ * The dashboard domain filter's own vocabulary — seven rows, fixed order.
  *
  * ClaudeDesign/handoff/2026-09-27-dashboard-domain-filter-rueckmeldung.md,
  * decision 5: "Reihenfolge fest, wie die heutigen Tabs: Flüge, Kreuzfahrten,
- * Unterkünfte, Orte, Touren, Roadtrips." `rail` is deliberately NOT a member
- * — the design's six decisions name exactly these six, and the filter (and
- * this increment) does not cover rail. Visibility of the Bahn layer on the
- * "Alle" map stays governed by the pre-existing `dashboardFilterStore`
- * mechanism (map-options sidebar), untouched by this feature.
+ * Unterkünfte, Orte, Touren, Roadtrips."
+ *
+ * `rail` was left out of that list and joined on 2026-09-28 (owner: "Bahn
+ * fehlt im Filter"). Leaving it out had stopped being tenable twice over:
+ * rail is a domain with a tab, a logbook and a map layer like any other, and
+ * the control that DID govern its layer — the map-options domain pills — was
+ * removed the same day, so without this row the Bahn layer had no switch at
+ * all. It goes last because that is where its tab sits.
  *
  * `tour` has no `DomainKey` of its own (`shared/domains.ts`) — a day tour is
  * not a domain in the gating sense, it is a colour the map needs. This type
- * is therefore its own six-key union, not `DomainKey`.
+ * is therefore its own union, not `DomainKey`.
  */
 export const FILTER_DOMAIN_ORDER = [
   "flight",
@@ -20,6 +23,7 @@ export const FILTER_DOMAIN_ORDER = [
   "poi",
   "tour",
   "roadtrip",
+  "rail",
 ] as const;
 
 export type FilterDomainKey = (typeof FILTER_DOMAIN_ORDER)[number];

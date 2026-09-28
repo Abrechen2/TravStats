@@ -294,5 +294,12 @@
       "llmCloudNotConsented": "Keine Vorlage kennt dieses Ticket, und der KI-Anbieter liegt außerhalb des Netzwerks, ohne dass der Administrator dem Senden zugestimmt hat.",
       "llmProviderIncomplete": "Keine Vorlage kennt dieses Ticket, und der KI-Anbieter ist nicht vollständig eingerichtet."
     }
+  },
+  "summary": {
+    "journeys": "Fahrten",
+    "operators": "Betreiber",
+    "stations": "Bahnhöfe",
+    "withoutOperator_one": "{{count}} ohne Betreiber",
+    "withoutOperator_other": "{{count}} ohne Betreiber"
   }
 }

@@ -294,5 +294,12 @@
       "llmCloudNotConsented": "No template knows this ticket, and the AI provider is outside the network without the administrator's consent to send it there.",
       "llmProviderIncomplete": "No template knows this ticket, and the AI provider is not fully set up."
     }
+  },
+  "summary": {
+    "journeys": "Journeys",
+    "operators": "Operators",
+    "stations": "Stations",
+    "withoutOperator_one": "{{count}} without an operator",
+    "withoutOperator_other": "{{count}} without an operator"
   }
 }
