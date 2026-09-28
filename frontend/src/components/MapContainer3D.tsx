@@ -368,9 +368,25 @@ export default function MapContainer3D({
 
       {/* Bottom-right: filter FAB only. The in-map mode FAB was removed —
           mode switching lives solely in the top "Modus" dropdown (the FAB
-          duplicated it). */}
+          duplicated it).
+
+          z-[35], not z-20: this slot sat at z-20 while it was empty, and the
+          moment AllTab mounted the domain filter into it the panel opened
+          UNDER the map legend — `AllTab.tsx`'s key is a later sibling of this
+          component at zIndex 30, and a z-index on a positioned element makes a
+          stacking context, so the panel's own zIndex 40 could not climb out of
+          a z-20 parent. Measured in the browser on 2026-09-27: all six "Nur"
+          buttons and the right ~45% of every row were unhittable, with the
+          legend expanded, which is its default on desktop. No unit test saw
+          it — jsdom has no layout — so this number is verified by clicking,
+          not by a green suite.
+
+          35 keeps the globe's chrome ladder intact (GlobeStatsCard.tsx spells
+          it out: labels 20, stats card 30, coachmark 40, pinned popup 50): the
+          filter now clears the key but still yields to the two overlays that
+          answer one moment and then go away. */}
       {filterSlot && (
-        <div className="absolute bottom-4 right-4 z-20 flex flex-col items-end gap-2">
+        <div className="absolute bottom-4 right-4 z-[35] flex flex-col items-end gap-2">
           {filterSlot}
         </div>
       )}
