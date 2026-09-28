@@ -13,6 +13,22 @@ import { SMTP_CONFIG_ID } from "./admin/smtp";
 import { sendPasswordResetEmail } from "../services/emailService";
 import { getInstanceSettings } from "../services/instanceSettingsService";
 import { isSharedDemoAccount } from "../utils/sharedDemo";
+
+/**
+ * The shared demo account's password is not its holder's to change: the login
+ * is published on the front page, so every visitor is "the holder", and the
+ * first one to set a password locks out all the others.
+ *
+ * 403 rather than the 400 the surrounding token errors use — the token may be
+ * perfectly valid; it is the ACCOUNT that is out of bounds, and saying
+ * "invalid token" for a valid one would send an administrator hunting the
+ * wrong thing.
+ */
+function assertNotSharedDemo(user: { isDemo: boolean; username: string }): void {
+  if (isSharedDemoAccount(user)) {
+    throw new AppError("The shared demo account's password cannot be changed", 403);
+  }
+}
 import { recordPasswordResetRequest } from "../services/passwordResetRequestService";
 import logger from "../utils/logger";
 
@@ -182,6 +198,15 @@ router.post(
         throw new AppError("Invalid or expired reset token", 400);
       }
 
+      // Belt and braces with the `/forgot-password` guard above, which already
+      // refuses to SEND the shared demo a link. This one refuses to honour a
+      // token that exists anyway — one issued before that guard, or one that
+      // leaked. Measured on the public preview on 2026-09-28: the demo
+      // account's `sessionEpoch` stood at 22, i.e. its password had been
+      // changed twenty-two times, and every change signs every other visitor
+      // out of the account the front page advertises.
+      assertNotSharedDemo(user);
+
       const newHash = await hashPassword(newPassword);
 
       await prisma.user.update({
@@ -230,6 +255,12 @@ router.post(
       if (!user) {
         throw new AppError("Invalid or expired change token", 400);
       }
+
+      // Same rule as the reset route. This one matters more: the change token
+      // is handed out at LOGIN to anyone whose account carries
+      // `mustChangePassword`, and the shared demo's login is published — so
+      // setting that flag on it would let any visitor take the account over.
+      assertNotSharedDemo(user);
 
       const newHash = await hashPassword(newPassword);
 

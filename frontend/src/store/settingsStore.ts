@@ -7,6 +7,7 @@ import { COUNTRY_TIERS, type CountryTier } from "../types/passport";
 import { useAuthStore } from "./authStore";
 import { displayForSave, useProfileZoneStore } from "./profileZoneStore";
 import { deviceZone } from "../shared/time";
+import { persistSetting } from "./persistSetting";
 
 /**
  * A value off the wire read back as a tier, or null when it is not one.
@@ -487,26 +488,28 @@ export const useSettingsStore = create<SettingsState>()(
       syncBetaFeaturesEnabled: (enabled) => set({ betaFeaturesEnabled: enabled }),
       syncOpenDataEnabled: (enabled) => set({ openDataEnabled: enabled }),
       setEnabledDomains: (keys) => {
+        const prev = get().enabledDomains;
         set({ enabledDomains: keys });
-        void settingsApi.update({ enabledDomains: keys });
+        persistSetting({ enabledDomains: keys }, () => set({ enabledDomains: prev }), "domains");
       },
       setBaseCurrency: (currency) => {
+        const prev = get().baseCurrency;
         set({ baseCurrency: currency });
-        settingsApi.update({ baseCurrency: currency }).catch((error: unknown) => {
-          logger.warn("Failed to save base currency", error);
-        });
+        persistSetting({ baseCurrency: currency }, () => set({ baseCurrency: prev }), "currency");
       },
       setAutoCreateTrips: (enabled) => {
+        const prev = get().autoCreateTrips;
         set({ autoCreateTrips: enabled });
-        settingsApi.update({ autoCreateTrips: enabled }).catch((error: unknown) => {
-          logger.warn("Failed to save autoCreateTrips", error);
-        });
+        persistSetting({ autoCreateTrips: enabled }, () => set({ autoCreateTrips: prev }), "trips");
       },
       setCountryThreshold: (tier) => {
+        const prev = get().countryThreshold;
         set({ countryThreshold: tier });
-        settingsApi.update({ countryThreshold: tier }).catch((error: unknown) => {
-          logger.warn("Failed to save countryThreshold", error);
-        });
+        persistSetting(
+          { countryThreshold: tier },
+          () => set({ countryThreshold: prev }),
+          "threshold"
+        );
       },
       loadApiKeysStatus: async () => {
         try {
