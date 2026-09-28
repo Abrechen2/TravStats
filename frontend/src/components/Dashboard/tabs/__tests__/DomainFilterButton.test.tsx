@@ -2,7 +2,7 @@ import { describe, it, expect, beforeEach, vi } from "vitest";
 import { useState } from "react";
 import { render, screen, fireEvent, within } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
-import { MemoryRouter, Routes, Route } from "react-router-dom";
+import { MemoryRouter, Routes, Route, useLocation } from "react-router-dom";
 import type { ReactNode } from "react";
 import { DomainFilterButton } from "../DomainFilterButton";
 import { DomainFilterEmptyOverlay } from "../DomainFilterEmptyOverlay";
@@ -48,11 +48,37 @@ vi.mock("../../../../hooks/useTranslation", () => ({
   }),
 }));
 
+/** Reads the current path out, so a test can assert where "Nur" navigated. */
+function LocationProbe(): JSX.Element {
+  const location = useLocation();
+  return <span data-testid="path">{location.pathname}</span>;
+}
+
 function Wrapper({ children }: { children: ReactNode }): JSX.Element {
   return (
     <MemoryRouter initialEntries={["/dashboard"]}>
       <Routes>
         <Route path="/dashboard" element={children} />
+      </Routes>
+    </MemoryRouter>
+  );
+}
+
+/**
+ * For the tests that follow a navigation. Kept apart from `Wrapper` because
+ * the probe renders a node, and one suite below asserts an EMPTY container.
+ *
+ * The `:tab` route matters: since "Nur" became the way into a domain's own
+ * view, clicking it navigates, and without that route the panel would simply
+ * unmount mid-test.
+ */
+function NavWrapper({ children }: { children: ReactNode }): JSX.Element {
+  return (
+    <MemoryRouter initialEntries={["/dashboard"]}>
+      <LocationProbe />
+      <Routes>
+        <Route path="/dashboard" element={children} />
+        <Route path="/dashboard/:tab" element={children} />
       </Routes>
     </MemoryRouter>
   );
@@ -139,9 +165,17 @@ describe("DomainFilterButton", () => {
     expect(button).toHaveFocus();
   });
 
-  it('"Nur" isolates a single domain', async () => {
+  /**
+   * "Nur" used to hide the other five rows in place. It now opens that
+   * domain's OWN view, because that is the only state in which the domain's
+   * own map modes exist at all — `TAB_MODE_REGISTRY` keys them by tab, and
+   * eight of them (Hafen-Häufigkeit, Reiseverlauf, Nächte, Ketten, Trips …)
+   * have no equivalent on "Alle". Isolating without navigating would have
+   * shown one domain and still withheld everything it can be looked at with.
+   */
+  it('"Nur" opens that domain\'s own view', async () => {
     const user = userEvent.setup();
-    render(<Controlled />, { wrapper: Wrapper });
+    render(<Controlled />, { wrapper: NavWrapper });
     await user.click(screen.getByRole("button", { name: /Domänen/ }));
     const cruiseOnly = within(screen.getByRole("checkbox", { name: "Kreuzfahrten" })).getByRole(
       "button",
@@ -149,14 +183,32 @@ describe("DomainFilterButton", () => {
     );
     await user.click(cruiseOnly);
 
-    expect(screen.getByRole("checkbox", { name: "Flüge" })).toHaveAttribute(
-      "aria-checked",
-      "false"
+    expect(screen.getByTestId("path")).toHaveTextContent("/dashboard/cruise");
+  });
+
+  /**
+   * The claim is "derived", not "stored": on a single-domain view the rows
+   * come from the ROUTE, and the persisted set — which belongs to "Alle" —
+   * is left exactly as the reader left it. Asserted on the button's own
+   * count plus the untouched store, rather than by reopening the panel,
+   * because the panel closes with the navigation.
+   */
+  it("a single-domain view derives its rows from the route, leaving storage alone", async () => {
+    const user = userEvent.setup();
+    useDashboardDomainFilterStore.setState({ hidden: new Set(["lodging"]), linkHidden: null });
+    render(<Controlled />, { wrapper: NavWrapper });
+    await user.click(screen.getByRole("button", { name: /Domänen/ }));
+    await user.click(
+      within(screen.getByRole("checkbox", { name: "Kreuzfahrten" })).getByRole("button", {
+        name: "Nur",
+      })
     );
-    expect(screen.getByRole("checkbox", { name: "Kreuzfahrten" })).toHaveAttribute(
-      "aria-checked",
-      "true"
-    );
+
+    expect(screen.getByTestId("path")).toHaveTextContent("/dashboard/cruise");
+    // One of six visible, derived from the route.
+    expect(screen.getByRole("button", { name: /Domänen · 1\/6/ })).toBeInTheDocument();
+    // And the reader's own "Alle" selection is still theirs.
+    expect([...useDashboardDomainFilterStore.getState().hidden]).toEqual(["lodging"]);
   });
 
   it('"Alle" and "Keine" toggle every row at once', async () => {

@@ -46,7 +46,17 @@ export function GlobeStatsCard({ stats, t }: GlobeStatsCardProps): JSX.Element |
        mount order happened to be — so moving this element a few lines up, or
        extracting it into a component as this branch did, would have put an
        always-on panel over the popup the reader clicked. */
-    <div className="absolute top-16 right-4 z-30" style={{ pointerEvents: "auto" }}>
+    /* `top` comes from `--ts-map-chrome-top`, which DashboardLayout sets to
+       the bottom of whatever sits above this card in the map's right column
+       ("Als Nächstes", when there is one). It falls back to the 4rem this card
+       always used, so a map rendered outside that layout is unchanged. Without
+       it the two cards drew on top of each other the moment the next-up card
+       moved into this column — the stats card's own heading was hidden and
+       only its last two rows showed (browser check, 2026-09-28). */
+    <div
+      className="absolute right-4 z-30"
+      style={{ top: "var(--ts-map-chrome-top, 4rem)", pointerEvents: "auto" }}
+    >
       <div
         className="rounded-xl p-3 text-xs"
         style={{

@@ -11,7 +11,7 @@ export interface DomainFilterButtonProps {
   /** Day-tour count (roadtrips excluded) — see `useDashboardDomainFilter`'s
    *  own doc comment for why the caller supplies this instead of the hook
    *  fetching it a second time. */
-  tourCount: number;
+  tourCount: number | null;
   open: boolean;
   onOpenChange: (open: boolean) => void;
 }

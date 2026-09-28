@@ -66,6 +66,14 @@ interface DashboardDomainFilterState {
   showAll(): void;
   showNone(): void;
   isolate(key: FilterDomainKey): void;
+  /**
+   * Sets the whole selection at once from the VISIBLE keys.
+   *
+   * Needed since the filter also drives the route: leaving a single-domain
+   * view by ticking a second domain lands on "Alle" with exactly those two
+   * visible, which is one state change, not a replay of toggles.
+   */
+  setVisible(visible: ReadonlySet<FilterDomainKey>): void;
   /** Enters link mode with the sender's VISIBLE set turned into a hidden set. */
   enterLink(visible: ReadonlySet<FilterDomainKey>): void;
   /** "Als meine merken" — persists the link's current state as the reader's own. */
@@ -95,6 +103,13 @@ export const useDashboardDomainFilterStore = create<DashboardDomainFilterState>(
       if (s.linkHidden !== null) return { linkHidden: ALL_HIDDEN };
       persist(ALL_HIDDEN);
       return { hidden: ALL_HIDDEN };
+    }),
+  setVisible: (visible) =>
+    set((s) => {
+      const hidden = new Set(FILTER_DOMAIN_ORDER.filter((k) => !visible.has(k)));
+      if (s.linkHidden !== null) return { linkHidden: hidden };
+      persist(hidden);
+      return { hidden };
     }),
   isolate: (key) =>
     set((s) => {

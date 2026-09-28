@@ -1,5 +1,5 @@
 import { describe, it, expect, beforeEach, vi } from "vitest";
-import { render, screen, waitFor, within, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { MemoryRouter, Routes, Route, useLocation, useNavigate } from "react-router-dom";
 
 /**
@@ -117,9 +117,20 @@ function renderDashboard(): ReturnType<typeof render> {
 // The test setup's global `react-i18next` mock returns the translation key
 // verbatim (see `src/__tests__/setup.ts`), so the tab's accessible name is
 // the raw i18n key rather than the German label a real render would show.
-function flightBadge(): HTMLElement {
-  const tab = screen.getByRole("tab", { name: /tabStrip\.tabs\.flight/i });
-  return within(tab).getByText(String(flightsTotal));
+/**
+ * The count is read from the STORE, not from a badge.
+ *
+ * It used to be read from the tab strip's own badge — the surface the tester
+ * reported. That strip is gone (owner, 2026-09-28): the domain filter answers
+ * "what is on the map" now, and it is where the counts are shown. What the
+ * bug was actually about never was the badge, though: it was WHERE the counts
+ * live, because `App.tsx` remounts this page on every tab change. So the test
+ * keeps its remount machinery and asserts the surviving state directly, which
+ * is true of every surface that reads it rather than only of the one that is
+ * currently drawn.
+ */
+function flightCount(): number {
+  return useDashboardCountsStore.getState().counts.flight;
 }
 
 beforeEach(() => {
@@ -130,12 +141,12 @@ beforeEach(() => {
   useDashboardCountsStore.getState().reset();
 });
 
-describe("DashboardPage: tab strip counts survive a tab change", () => {
-  it("keeps showing the loaded flight count across a tab switch instead of flashing to zero", async () => {
+describe("DashboardPage: domain counts survive a tab change", () => {
+  it("keeps the loaded flight count across a tab switch instead of flashing to zero", async () => {
     renderDashboard();
 
     // Wait for the initial count fetch to resolve on /dashboard/flight.
-    await waitFor(() => expect(flightBadge()).toBeInTheDocument());
+    await waitFor(() => expect(flightCount()).toBe(flightsTotal));
 
     // A plain `fireEvent.click` (RTL wraps it in a SYNCHRONOUS `act`, not an
     // async one) flushes the navigation, the `Routes` remount and the first
@@ -145,10 +156,10 @@ describe("DashboardPage: tab strip counts survive a tab change", () => {
     // show the zeroed initial state, one tick before the refetch resolves.
     fireEvent.click(screen.getByRole("button", { name: "go-/dashboard/cruise" }));
 
-    expect(flightBadge()).toBeInTheDocument();
+    expect(flightCount()).toBe(flightsTotal);
 
     // Drain the refetch that the remounted DashboardPage kicked off, so no
     // state update lands after this test has already returned.
-    await waitFor(() => expect(flightBadge()).toBeInTheDocument());
+    await waitFor(() => expect(flightCount()).toBe(flightsTotal));
   });
 });

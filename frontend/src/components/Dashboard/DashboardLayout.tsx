@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useEffect, useLayoutEffect, useRef, useState } from "react";
 import { useToursVisible } from "../../hooks/useToursVisible";
 import { useNavigate } from "react-router-dom";
 import AppShell from "../ui/AppShell";
@@ -16,7 +16,8 @@ import { logger } from "../../lib/logger";
 import SimplifiedFlightFormV2 from "../SimplifiedFlightFormV2";
 import SpecialFlightModal from "../SpecialFlightModal";
 import { useCruiseImportAdapter } from "../import/adapters/cruiseAdapter";
-import { DomainTabStrip } from "./DomainTabStrip";
+import { MapNextUpCard } from "./MapNextUpCard";
+import { DomainFilterButton } from "./tabs/DomainFilterButton";
 import { AddDomainPicker, type AddableDomain } from "./AddDomainPicker";
 import { isValidDomain } from "../../shared/domains";
 import DomainImportPanel from "../import/DomainImportPanel";
@@ -52,13 +53,15 @@ interface DashboardLayoutProps {
 export function DashboardLayout({
   children,
   counts,
-  scheduledCounts,
   onDataChanged,
   countsLoaded = false,
 }: DashboardLayoutProps): JSX.Element {
   // Ensures the dashboard namespace is loaded for children that use t("dashboard:...")
   const { t } = useTranslation(["dashboard", "flights"]);
-  const { tab, setTab } = useDashboardRoute();
+  // `setTab` and `scheduledCounts` were the domain strip's alone and go unused
+  // with it; both stay in the props/route API because the strip's own routes
+  // (`/dashboard/:tab`) are untouched and still set the tab.
+  const { tab } = useDashboardRoute();
   const navigate = useNavigate();
   const [addingDomain, setAddingDomainState] = useState<AddableDomain | null>(null);
   // A document one import dialog found to belong to another (D1): the target
@@ -100,6 +103,46 @@ export function DashboardLayout({
     // `counts` changes whenever the page refetches after a create — the cheapest
     // honest trigger for "something might now be sooner than what is shown".
   }, [counts, railVisible]);
+
+  // On a domain tab, that domain's next entry; on "Alle", the soonest of all —
+  // including the trip, which belongs to no single tab. `upcoming` arrives
+  // sorted, so "the soonest" is simply the first one. Moved here verbatim from
+  // DomainTabStrip, which used to own both the choice and the rendering.
+  //
+  // `isValidDomain(tab)` narrows `tab` from `DashboardTab` to `DomainKey`
+  // before the comparison: the two unions only partially overlap ("tour" and
+  // "all" are tabs that are no domain, "trip" is an entry domain that is no
+  // tab), so comparing them directly was only accidentally correct.
+  const nextUp =
+    tab === "all"
+      ? upcoming[0]
+      : isValidDomain(tab)
+        ? upcoming.find((entry) => entry.domain === tab)
+        : undefined;
+  // Read once per render rather than per card, so the label and any future
+  // sibling agree on "now".
+  const nowMs = Date.now();
+
+  // What sits BELOW "Als Nächstes" in the map's right column (the stats card)
+  // has to start under it. Measured rather than hard-coded: the card grows a
+  // line for a secondary and another for a trip name, so a fixed offset would
+  // either overlap it or leave a gap, depending on the entry.
+  const [domainFilterOpen, setDomainFilterOpen] = useState(false);
+  const nextUpRef = useRef<HTMLDivElement | null>(null);
+  const [chromeTop, setChromeTop] = useState<number | null>(null);
+  useLayoutEffect(() => {
+    if (!nextUp) {
+      setChromeTop(null);
+      return;
+    }
+    const el = nextUpRef.current;
+    if (!el) return;
+    const measure = (): void => setChromeTop(64 + el.offsetHeight + 8);
+    measure();
+    const ro = new ResizeObserver(measure);
+    ro.observe(el);
+    return () => ro.disconnect();
+  }, [nextUp]);
 
   const enabledDomains = {
     flight: isEnabled("flight"),
@@ -174,24 +217,64 @@ export function DashboardLayout({
 
   return (
     <AppShell width="full" viewport className="flex flex-col">
-      <DomainTabStrip
-        active={tab}
-        counts={counts}
-        scheduledCounts={scheduledCounts}
-        enabled={enabledDomains}
-        onSelect={setTab}
-        upcoming={upcoming}
-      />
+      {/* The domain strip that used to sit here is hidden (owner, 2026-09-28):
+          the six-row domain filter on the map now answers "what is on the
+          map", which is what the strip's counts were mostly read for. Its
+          "Als Nächstes" line moved with it, into the map's right column as
+          `Dashboard.dc.html` draws it (Als Nächstes → Sichtbar → Legende).
+
+          Nothing about the tab ROUTES changed: `/dashboard/:tab` still
+          resolves and `useDashboardRoute` still sets `tab`, so a bookmark
+          into a single-domain tab keeps working. What is gone is the only
+          in-page way to REACH those tabs — see the handover note. */}
       {/* Modus / Filter moved into the in-map control panel (MapChromeSections)
           — the map is the control surface for those. The "+ hinzufügen"
           action is a separate floating overlay, top-right over the map: a
           single button everywhere, opening a domain picker on the "Alle"
           tab (several domains could apply) or going straight to that tab's
           own domain on a single-domain tab. */}
-      <div style={{ flex: 1, position: "relative", overflow: "hidden" }}>
+      <div
+        style={
+          {
+            flex: 1,
+            position: "relative",
+            overflow: "hidden",
+            // Read by GlobeStatsCard (and anything else that stacks under the
+            // top of the map's right column).
+            ...(chromeTop !== null ? { "--ts-map-chrome-top": `${chromeTop}px` } : {}),
+          } as React.CSSProperties
+        }
+      >
         {children}
         {isEmpty && tab === "all" && (
           <DashboardEmptyState onAddFlight={() => setAddingDomain("flight")} />
+        )}
+        {/* Als Nächstes, at the top of the map's right column. `top: 64`
+            clears the "+ hinzufügen" button above it, the same offset
+            GlobeStatsCard uses for the same reason. z-30 puts it in the
+            chrome band, below the domain filter (35) so an open filter panel
+            is never covered by it. */}
+        {nextUp && (
+          <div ref={nextUpRef} style={{ position: "absolute", top: 64, right: 16, zIndex: 30 }}>
+            <MapNextUpCard entry={nextUp} nowMs={nowMs} />
+          </div>
+        )}
+        {/* On a single-domain view the filter is the ONLY way back — the tab
+            strip that used to offer "Alle" is gone. "Alle" tabs keep their own
+            instance inside the map (AllTab's `filterSlot`), where the tour
+            count is real; here it is unknown and the tour row shows no number
+            rather than a wrong 0.
+
+            z-35 matches the slot's own level, so it clears AllTab's key for
+            the same reason. */}
+        {tab !== "all" && (
+          <div style={{ position: "absolute", bottom: 16, right: 16, zIndex: 35 }}>
+            <DomainFilterButton
+              tourCount={null}
+              open={domainFilterOpen}
+              onOpenChange={setDomainFilterOpen}
+            />
+          </div>
         )}
         <div style={{ position: "absolute", top: 16, right: 16, zIndex: 30 }}>
           {tab === "all" ? (

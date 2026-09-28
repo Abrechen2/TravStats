@@ -4,8 +4,10 @@ import { useEnabledDomains } from "./useEnabledDomains";
 import { useToursVisible } from "./useToursVisible";
 import { useDashboardCountsStore } from "../store/dashboardCountsStore";
 import { useDashboardDomainFilterStore } from "../store/dashboardDomainFilterStore";
+import { useDashboardRoute } from "./useDashboardRoute";
 import {
   FILTER_DOMAIN_ORDER,
+  isFilterDomainKey,
   parseDomainsParam,
   type FilterDomainKey,
 } from "../shared/dashboardDomainFilter";
@@ -13,7 +15,8 @@ import {
 export interface DomainFilterRow {
   readonly key: FilterDomainKey;
   readonly visible: boolean;
-  readonly count: number;
+  /** `null` where the surface cannot know it — see DomainFilterRow. */
+  readonly count: number | null;
   /** Row carries the "Beta" badge — decision: instance beta-registry membership,
    *  not a gate (a row this hook returns already passed the gate). */
   readonly beta: boolean;
@@ -60,18 +63,18 @@ const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip"]);
  * `useDashboardTours` for the map layers — fetching it a second time here
  * would be the exact N+1 `useDashboardTours`'s own doc comment warns against.
  */
-export function useDashboardDomainFilter(tourCount: number): DashboardDomainFilterResult {
+export function useDashboardDomainFilter(tourCount: number | null): DashboardDomainFilterResult {
   const { isEnabled } = useEnabledDomains();
   const toursVisible = useToursVisible();
   const counts = useDashboardCountsStore((s) => s.counts);
   const [search] = useSearchParams();
+  const { tab, setTab } = useDashboardRoute();
 
   const hidden = useDashboardDomainFilterStore((s) => s.hidden);
   const linkHidden = useDashboardDomainFilterStore((s) => s.linkHidden);
   const toggle = useDashboardDomainFilterStore((s) => s.toggle);
   const showAll = useDashboardDomainFilterStore((s) => s.showAll);
   const showNone = useDashboardDomainFilterStore((s) => s.showNone);
-  const isolate = useDashboardDomainFilterStore((s) => s.isolate);
   const enterLink = useDashboardDomainFilterStore((s) => s.enterLink);
   const exitLink = useDashboardDomainFilterStore((s) => s.exitLink);
   const adoptLink = useDashboardDomainFilterStore((s) => s.adoptLink);
@@ -91,7 +94,24 @@ export function useDashboardDomainFilter(tourCount: number): DashboardDomainFilt
     enterLink(parseDomainsParam(domainsParam) ?? new Set());
   }, [domainsParam]);
 
-  const effectiveHidden = linkHidden ?? hidden;
+  const setVisible = useDashboardDomainFilterStore((s) => s.setVisible);
+
+  /**
+   * A single-domain view IS a selection of one — the route and the filter are
+   * two readings of the same question ("what do I want to see"), so on
+   * `/dashboard/cruise` the rows are DERIVED from the route rather than read
+   * from storage. Without this the two could contradict each other: a stored
+   * set hiding cruises while the cruise view is on screen.
+   *
+   * Which is also why "Nur" navigates (below): a domain on its own is the one
+   * state in which that domain's own map modes — Hafen-Häufigkeit, Nächte,
+   * Trips, the eight views "Alle" has no equivalent for — can be offered at
+   * all. `TAB_MODE_REGISTRY` keys them by tab, so the tab has to move.
+   */
+  const routeDomain = tab !== "all" && isFilterDomainKey(tab) ? tab : null;
+  const effectiveHidden = routeDomain
+    ? new Set(FILTER_DOMAIN_ORDER.filter((k) => k !== routeDomain))
+    : (linkHidden ?? hidden);
 
   const rows = useMemo<DomainFilterRow[]>(() => {
     const available: Record<FilterDomainKey, boolean> = {
@@ -102,7 +122,7 @@ export function useDashboardDomainFilter(tourCount: number): DashboardDomainFilt
       tour: toursVisible,
       roadtrip: isEnabled("roadtrip"),
     };
-    const rowCount: Record<FilterDomainKey, number> = {
+    const rowCount: Record<FilterDomainKey, number | null> = {
       flight: counts.flight,
       cruise: counts.cruise,
       lodging: counts.lodging,
@@ -121,6 +141,26 @@ export function useDashboardDomainFilter(tourCount: number): DashboardDomainFilt
   const visibleCount = rows.filter((r) => r.visible).length;
   const totalCount = rows.length;
 
+  /**
+   * The selection decides the route: exactly one domain means that domain's
+   * own view, anything else means "Alle". Every action below goes through
+   * here, so the two can never disagree.
+   */
+  const applyVisible = (next: ReadonlySet<FilterDomainKey>): void => {
+    const visible = rows.map((r) => r.key).filter((k) => next.has(k));
+    // One domain: its own view. The stored set is deliberately NOT written —
+    // it belongs to "Alle", and a reader who goes Back should find the
+    // selection they left there, not one this navigation invented.
+    if (visible.length === 1) {
+      setTab(visible[0]);
+      return;
+    }
+    setVisible(next);
+    if (tab !== "all") setTab("all");
+  };
+
+  const visibleNow = new Set(rows.filter((r) => r.visible).map((r) => r.key));
+
   return {
     rows,
     visibleCount,
@@ -128,10 +168,31 @@ export function useDashboardDomainFilter(tourCount: number): DashboardDomainFilt
     isEmpty: totalCount > 0 && visibleCount === 0,
     isLinkMode: linkHidden !== null,
     isVisible: (key) => !effectiveHidden.has(key),
-    toggle,
-    showAll,
-    showNone,
-    isolate,
+    // On "Alle" a tick is plain visibility, as before. On a single-domain view
+    // there is no stored set to edit — a tick there means "and this one too",
+    // which is two domains, which is "Alle".
+    toggle: (key) => {
+      if (routeDomain === null) {
+        toggle(key);
+        return;
+      }
+      const next = new Set(visibleNow);
+      if (next.has(key)) next.delete(key);
+      else next.add(key);
+      applyVisible(next);
+    },
+    showAll: () => {
+      showAll();
+      if (tab !== "all") setTab("all");
+    },
+    showNone: () => {
+      showNone();
+      if (tab !== "all") setTab("all");
+    },
+    // Decision 4's one click, now also the door to that domain's own modes.
+    // Leaves the stored "Alle" selection alone, for the same reason
+    // `applyVisible` does.
+    isolate: (key) => setTab(key),
     adoptLink,
     viewOwnSelection: exitLink,
   };

@@ -129,7 +129,11 @@ export function DomainFilterRow({
           textAlign: "right",
         }}
       >
-        {row.count}
+        {/* `null` = this surface cannot know the number (the single-domain
+            views do not fetch the tour list). Blank, never 0 — a 0 beside a
+            domain that has entries is a wrong number, and this file's whole
+            job is to say what is on the map. */}
+        {row.count ?? ""}
       </span>
       <button
         type="button"
