@@ -250,7 +250,7 @@ interface AddressParts {
  * code carries the city. Everything before it is the street (which may include
  * a district, as in the Berlin sample — preserved rather than dropped).
  */
-function parseLage(raw: string | null): AddressParts {
+export function parseLage(raw: string | null): AddressParts {
   if (!raw) return { address: null, postcode: null, city: null, country: null };
   const segments = raw
     .split(",")
@@ -286,8 +286,9 @@ function parseLage(raw: string | null): AddressParts {
     };
   }
 
-  // NL codes look like "2718 RL"; DE/AT/CH are 4-5 digits.
-  const postcodeRe = /^(\d{4,5}(?:\s+[A-Z]{2})?)\s+(.+)$/;
+  // NL codes look like "2718 RL"; DE/AT/CH are 4-5 digits; CZ/SK/SE/GR write
+  // "767 01".
+  const postcodeRe = /^(\d{3}\s\d{2}|\d{4,5}(?:\s+[A-Z]{2})?)\s+(.+)$/;
   for (let i = rest.length - 1; i >= 0; i--) {
     const m = rest[i].match(postcodeRe);
     if (m) {
@@ -317,15 +318,21 @@ function parseLage(raw: string | null): AddressParts {
       country,
     };
   }
+  // A plus-code or bare code in the city slot ("F869C3J") is not a city —
+  // the UAE line put one there, and it became the stay's city.
+  const codeShaped = /^(?=.*\d)[A-Z0-9+]{4,}$/;
+  const cityRest =
+    rest.length >= 2 && codeShaped.test(rest[rest.length - 1]) ? rest.slice(0, -1) : rest;
+
   // The last segment before the country is the city — but not always ONLY
   // the city. "188973 Singapur" has six digits, which `postcodeRe` above does
   // not admit, and "BW 78467 Konstanz" starts with a state abbreviation; both
   // reached the database verbatim (forgejo#85). The shared splitter takes
   // the code off and keeps it for the address.
-  const lastSegment = rest[rest.length - 1] ?? null;
+  const lastSegment = cityRest[cityRest.length - 1] ?? null;
   const split = splitPostcodeFromCity(lastSegment);
   return {
-    address: rest.slice(0, -1).join(", ") || null,
+    address: cityRest.slice(0, -1).join(", ") || null,
     postcode: split.postcode,
     city: split.city,
     country,

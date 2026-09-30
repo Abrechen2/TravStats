@@ -4,6 +4,7 @@ import { extractEmailFromFile } from "../services/emailExtractor";
 import {
   isBookingComConfirmation,
   parseBookingComEmail,
+  parseLage,
   type ParsedLodgingBooking,
 } from "../services/lodging/bookingComTemplate";
 
@@ -457,5 +458,31 @@ describe("Booking.com template parser (synthetic)", () => {
     expect(r).not.toBeNull();
     expect(r?.totalPrice).toBeNull();
     expect(r?.missing).toContain("totalPrice");
+  });
+});
+
+describe("the location line with foreign postcodes", () => {
+  it("reads a Czech postcode with an inner space", () => {
+    expect(parseLage("Náměstí 1, 767 01 Kroměříž, Tschechien")).toEqual({
+      address: "Náměstí 1",
+      postcode: "767 01",
+      city: "Kroměříž",
+      country: "Tschechien",
+    });
+  });
+
+  it("does not take a plus-code for the city", () => {
+    const parts = parseLage("West Corniche Road, Abu Dhabi, F869C3J, Vereinigte Arabische Emirate");
+    expect(parts.city).toBe("Abu Dhabi");
+    expect(parts.country).toBe("Vereinigte Arabische Emirate");
+  });
+
+  it("reads a German line exactly as before", () => {
+    expect(parseLage("Musterstraße 1, 80331 München, Deutschland")).toEqual({
+      address: "Musterstraße 1",
+      postcode: "80331",
+      city: "München",
+      country: "Deutschland",
+    });
   });
 });
