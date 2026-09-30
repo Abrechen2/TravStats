@@ -105,10 +105,11 @@ exactly as an unread one does today.
 
 ### 3.1.4 Lufthansa connections
 
-The two information mails carry the legs only in their `.ics` attachments. The LH
-reader reads calendar attachments when present and returns one segment per `VEVENT`
-with a flight number; without them it declines instead of emitting one leg with no
-flight number.
+The two information mails carry the legs only in their `.ics` attachments. Package 1
+makes an airline template decline any result with a leg that has no flight number, so
+the numberless direct flight is no longer proposed. Reading the legs from the `.ics`
+attachments — one segment per `VEVENT` — belongs to package 2, because attachments
+reach the parser only there (§4).
 
 ### 3.1.5 Booking.com location line
 
