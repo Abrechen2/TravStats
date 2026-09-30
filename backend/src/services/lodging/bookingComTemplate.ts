@@ -307,7 +307,10 @@ export function parseLage(raw: string | null): AddressParts {
   // L-5836, Luxemburg". The loop above finds nothing, and the fallback below
   // would then report "L-5836" as the city. Recognise a segment that is
   // NOTHING BUT a postal code and read the city off the segment before it.
-  const bareCodeRe = /^(?:[A-Z]{1,2}-)?\d{4,5}$/;
+  // The spaced CZ/SK form does the same: "…, Kroměříž, 767 01, Tschechische
+  // Republik" — unrecognised, "767 01" became the city "767" (corpus
+  // 2026-09-30).
+  const bareCodeRe = /^(?:(?:[A-Z]{1,2}-)?\d{4,5}|\d{3}\s\d{2})$/;
   for (let i = rest.length - 1; i >= 1; i--) {
     if (!bareCodeRe.test(rest[i])) continue;
     const address = rest.slice(0, i - 1).join(", ");

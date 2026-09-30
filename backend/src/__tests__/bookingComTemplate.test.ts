@@ -471,6 +471,19 @@ describe("the location line with foreign postcodes", () => {
     });
   });
 
+  it("reads a Czech postcode written as its own segment after the city", () => {
+    // The shape the real Czech confirmation prints (corpus 2026-09-30), with
+    // an invented street: the code stands alone, AFTER the city — the
+    // Luxembourg shape, but spaced. Unrecognised, it fell to the fallback,
+    // which read "767 01" as the city "767" with a district number "01".
+    expect(parseLage("Lipová 12/3, Kroměříž, 767 01, Tschechische Republik")).toEqual({
+      address: "Lipová 12/3",
+      postcode: "767 01",
+      city: "Kroměříž",
+      country: "Tschechische Republik",
+    });
+  });
+
   it("does not take a plus-code for the city", () => {
     const parts = parseLage("West Corniche Road, Abu Dhabi, F869C3J, Vereinigte Arabische Emirate");
     expect(parts.city).toBe("Abu Dhabi");
