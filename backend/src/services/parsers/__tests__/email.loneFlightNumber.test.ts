@@ -10,8 +10,14 @@
  * A unit test of the evidence rule alone would not have caught this and does
  * not prove it fixed, because the report is about the whole chain: the regex
  * parser still PRODUCES the candidate, and the gate is what must refuse it.
- * So this drives the real `RegexTextParser` through the real factory, and the
- * control probe below keeps it from passing as a factory that returns nothing.
+ * So this drives the real `RegexTextParser` through the real factory.
+ *
+ * Task 3 (2026-09-30) reversed the two "still returns the flight" probes
+ * below: the corpus measurement behind that task found that a flight number
+ * with a date but no route — the exact shape the #291 fix deliberately
+ * spared — was how the Emirates and Egyptair mails in the same corpus got
+ * read WRONG. See those tests for the detail; the rule now is a route AND
+ * a date for every leg, not flight-number-alone-is-better-than-nothing.
  */
 import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 
@@ -96,17 +102,26 @@ describe("a lone flight number out of a non-booking mail (#291)", () => {
     expect(result.flights).toEqual([]);
   });
 
-  it("still returns the flight when a clock time stands beside the number", async () => {
-    // The control probe, and the case the rule must not cost us: no route, no
-    // booking vocabulary, and still unmistakably a flight.
+  it("declines a clock time with no date and no route beside the number", async () => {
+    // Was "still returns the flight when a clock time stands beside the
+    // number" — kept a flight number with neither a route nor a full date
+    // as a deliberate exception. Task 3 (2026-09-30), measured on the same
+    // owner corpus this file's #291 fix drew from, found that exact shape —
+    // a flight number with less than full evidence — was how the Emirates
+    // and Egyptair mails got read WRONG. The generic reader now requires a
+    // route and a date for every leg, so this abstains instead.
     const result = await parseEmail("Erinnerung", "LH400 um 07:35", undefined, config);
 
-    expect(result.flights.map((f) => f.flightNumber)).toEqual(["LH400"]);
+    expect(result.flights).toEqual([]);
   });
 
-  it("still returns the flight when the mail says it is a booking", async () => {
-    // The Emirates shape from the corpus: an onward leg whose route the parser
-    // never recovers, kept whole by the subject line alone.
+  it("declines the Emirates shape — a flight number and a date, but no route", async () => {
+    // Was "still returns the flight when the mail says it is a booking",
+    // and its own comment named this "the Emirates shape from the corpus:
+    // an onward leg whose route the parser never recovers". Task 3
+    // (2026-09-30) is the fix for exactly that measurement — every leg the
+    // generic reader returns now needs a route, so a flight number kept
+    // alive by the subject line alone is no longer enough.
     const result = await parseEmail(
       "Ihre Buchung ist bestätigt - JLNBLW",
       "EK051 am 05. Februar 2022",
@@ -114,6 +129,6 @@ describe("a lone flight number out of a non-booking mail (#291)", () => {
       config
     );
 
-    expect(result.flights.map((f) => f.flightNumber)).toEqual(["EK051"]);
+    expect(result.flights).toEqual([]);
   });
 });

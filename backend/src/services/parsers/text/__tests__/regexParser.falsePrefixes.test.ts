@@ -44,9 +44,15 @@ describe("German filler words do not become flight numbers", () => {
   it("still reads a real labelled flight number", async () => {
     // The guard must not become so broad that a booking stops parsing — the
     // archived Air France and Lufthansa confirmations still resolve their legs.
+    //
+    // Task 3 (2026-09-30): the generic reader now also requires a complete
+    // leg (a route AND a date), not just a flight number, so the fixture
+    // carries "Von:"/"Nach:" labels and a full date alongside the time —
+    // the original text only had a time and no labelled route, which the
+    // false-prefix guard was never the thing testing.
     const flights = await parser.parseEmail(
       "Ihr Flug mit Lufthansa",
-      "Flug: LH117\nMünchen (MUC) nach Frankfurt (FRA)\nAbflug: 09:55",
+      "Flug: LH117\nVon: München (MUC)\nNach: Frankfurt (FRA)\nAbflug: 09.06.2027 09:55",
       undefined
     );
 
@@ -74,6 +80,19 @@ describe("German filler words do not become flight numbers", () => {
 describe("the real flight wins over what is printed around it", () => {
   const parser = new RegexTextParser();
 
+  /**
+   * Task 3 (2026-09-30): this tab-table itinerary format prints its airport
+   * codes as "Place - Flughafen (MUC)" with no "Von:"/"Nach:" label and no
+   * lowercase "von X nach Y" phrase, so `extractAirportCodes` has never
+   * recovered a route from it — a pre-existing gap in that extractor, not
+   * something this task touches. The generic reader's evidence gate now
+   * requires a route, so this document — precedence bug fixed or not — has
+   * always had only a flight number and is correctly declined as a whole.
+   * The precedence question (EK0050 over the price line and the weekday)
+   * is still answered by `chosen`/`candidates` inside
+   * `parseBookingEmailRegex`; what changed is that a flight number alone no
+   * longer earns the document a result.
+   */
   const CONFIRMATION = [
     "Buchungsbestätigung",
     "Flug\t 2 Passagiere, Economy, Sparpreis\t EUR 934,00",
@@ -83,17 +102,9 @@ describe("the real flight wins over what is printed around it", () => {
     "Mo\t24-Feb-14 23:15\t Dubai - Internationaler Flughafen (DXB)",
   ].join("\n");
 
-  it("reads the flight number, not the weekday beside the date", async () => {
-    const flights = await parser.parseEmail("Buchungsbestätigung", CONFIRMATION, undefined);
-    const numbers = flights.map((f) => f.flightNumber);
-
-    expect(numbers).toContain("EK0050");
-    expect(numbers).not.toContain("MO24");
-  });
-
-  it("reads the flight number, not the fare printed above it", async () => {
+  it("declines the document, since it never recovers a route for EK0050", async () => {
     const flights = await parser.parseEmail("Buchungsbestätigung", CONFIRMATION, undefined);
 
-    expect(flights.map((f) => f.flightNumber)).not.toContain("EUR934");
+    expect(flights).toEqual([]);
   });
 });

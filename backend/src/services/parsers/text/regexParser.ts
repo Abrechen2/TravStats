@@ -15,6 +15,27 @@ import { extractAllTimePairs, extractLabeledDates } from "./regexDateExtractor";
 import { extractSharedPNR, findPNRInSource } from "./regexPnrExtractor";
 
 /**
+ * The generic reader has no knowledge of any sender, so a leg is only real
+ * when it carries everything a flight is: a flight number, two DIFFERENT
+ * airports from the IATA list and a date. Measured 2026-09-30: every one of
+ * the four corpus mails it read, it read wrong.
+ */
+export function segmentHasEvidence(f: ParsedBooking): boolean {
+  const dep = f.departureCode;
+  const arr = f.arrivalCode;
+  const date = f.departureTime ? Date.parse(f.departureTime) : Number.NaN;
+  return Boolean(
+    f.flightNumber &&
+    dep &&
+    arr &&
+    dep !== arr &&
+    isValidIATACode(dep) &&
+    isValidIATACode(arr) &&
+    Number.isFinite(date)
+  );
+}
+
+/**
  * Regex-based Text Parser
  *
  * Fast, free, local parser using pattern matching for email parsing.
@@ -91,6 +112,23 @@ export class RegexTextParser implements ITextParser {
       );
       return "";
     }
+  }
+
+  /**
+   * A generic-reader candidate is returned only when EVERY leg it found has
+   * full evidence. One incomplete leg among several is not a partial
+   * result worth keeping — it is a round trip or multi-leg booking
+   * presented as something it is not, so the whole document is declined.
+   */
+  private withEvidence(flights: ParsedBooking[]): ParsedBooking[] {
+    if (flights.length === 0) return [];
+    if (flights.every(segmentHasEvidence)) return flights;
+    logger.debug({
+      operation: "regex_parser_insufficient_evidence",
+      reason: "generic_insufficient_evidence",
+      legs: flights.length,
+    });
+    return [];
   }
 
   /**
@@ -232,10 +270,10 @@ export class RegexTextParser implements ITextParser {
         return [];
       }
 
-      return [singleFlight];
+      return this.withEvidence([singleFlight]);
     }
 
-    return flights;
+    return this.withEvidence(flights);
   }
 
   /**

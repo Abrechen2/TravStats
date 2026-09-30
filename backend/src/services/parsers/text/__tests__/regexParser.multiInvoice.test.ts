@@ -40,17 +40,19 @@ describe("regex parsing of a document holding two invoices", () => {
     "Total: EUR 123,45",
   ].join("\n");
 
-  it("does not report a flight that arrives five days before it departs", async () => {
+  it("declines the document — it has a date but never an airport code", async () => {
+    // Before Task 3 (2026-09-30) this asserted the candidate came back with
+    // a real departure and no borrowed arrival. That was true, but it was
+    // also a partial result: TWO_INVOICES never names an airport anywhere,
+    // so the candidate had no route either. The generic reader's evidence
+    // gate now requires a route in addition to a date, so this document —
+    // arrival-inversion fixed or not — is declined as a whole. The arrival
+    // inversion itself stays covered below by `isPlausibleLegArrival` and
+    // by "reports the arrival it dropped as missing" against
+    // `normalizeParsedBooking` directly.
     const flights = await new RegexTextParser().parseEmail("Invoices", TWO_INVOICES);
 
-    expect(flights).not.toHaveLength(0);
-    for (const flight of flights) {
-      expect(flight.departureTime).toBeDefined();
-      // The departure is real; what cannot be true is the arrival that was
-      // borrowed from the other invoice.
-      expect(flight.arrivalTime).toBeUndefined();
-      expect(flight.missing).toContain("arrivalTime");
-    }
+    expect(flights).toEqual([]);
   });
 
   it("never reads the booking reference out of the word 'Reference' itself", () => {
