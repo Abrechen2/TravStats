@@ -14,51 +14,76 @@ import {
 import { extractAllTimePairs, extractLabeledDates } from "./regexDateExtractor";
 import { extractSharedPNR, findPNRInSource } from "./regexPnrExtractor";
 
-/**
- * The generic reader has no knowledge of any sender, so a leg only counts
- * as a flight when it carries a flight number, a real date, and a route
- * that is either fully present or fully absent.
- *
- * A route pins a leg down to one specific flight, so once a route is there
- * it has to be right: exactly one end (a "half route") is incomplete, and
- * the same airport at both ends is a wrong read, not a partial one — the
- * Emirates/Egyptair corpus that motivated this task turned tour-operator
- * invoices into "WHO→WHO" exactly this way. Either shape returns false
- * regardless of the date. A route that IS fully present and valid still
- * needs a real date beside it — a routed leg with no date, or one
- * unparseable, is the other named wrong read ("date-less legs"): a date
- * scraped from the wrong sentence (Forgejo #17's "ERSETZT RECHNUNG VOM")
- * looks exactly like a good one, so the defence is requiring a route AND a
- * date to agree, not trusting either alone.
- *
- * A route-less candidate — GitHub #291's shape, a bare flight number with
- * nothing beside it — is NOT decided here. A flight number without a route
- * is incomplete, not wrong: the flight lookup fills the route in later. Who
- * actually decides whether to keep it is `withEvidence` below, which defers
- * a LONE such candidate to `shared/evidence.ts`'s established, text-aware
- * `hasFlightEvidence`/`hasSecondWitness` gate — already wired into
- * `email.ts` for every provider, and pointedly NOT swayed by a bare date
- * either ("#17, #35 and #291 are all marketing mail carrying a date"). This
- * function always answers `false` for that shape on its own — asking it for
- * a date here would just re-decide #291 worse, without the source text this
- * function never receives.
- *
- * Measured 2026-09-30: every one of the four corpus mails the generic
- * reader answered, it answered wrong (Emirates, Egyptair).
- */
-export function segmentHasEvidence(f: ParsedBooking): boolean {
-  if (!f.flightNumber) return false;
+type RouteShape = "absent" | "complete" | "broken";
 
+/**
+ * A leg's route is absent (neither end), complete (two DIFFERENT known
+ * airports, compared case-insensitively), or broken — one end only, an end
+ * that is no known airport, or the same airport twice. A broken route is a
+ * wrong read, not a partial one: the corpus turned tour-operator invoices into
+ * "WHO→WHO" and an Egyptair e-ticket into "EMD→EMD" exactly this way.
+ */
+function routeShape(f: ParsedBooking): RouteShape {
   const dep = f.departureCode;
   const arr = f.arrivalCode;
-  const routeAbsent = !dep && !arr;
-  const routeComplete = Boolean(
-    dep && arr && dep !== arr && isValidIATACode(dep) && isValidIATACode(arr)
-  );
-  if (!routeAbsent && !routeComplete) return false; // exactly one end, or same airport twice
+  if (!dep && !arr) return "absent";
+  if (!dep || !arr) return "broken";
+  if (!isValidIATACode(dep) || !isValidIATACode(arr)) return "broken";
+  return dep.toUpperCase() === arr.toUpperCase() ? "broken" : "complete";
+}
 
-  const date = f.departureTime ? Date.parse(f.departureTime) : Number.NaN;
-  return Number.isFinite(date);
+/**
+ * The generic reader knows no sender, so a leg counts only when it can defend
+ * itself: it carries a flight number OR a complete route — and a route, once
+ * either end is there, must be complete (see {@link routeShape}).
+ *
+ * Why not more:
+ * - No date. `parsers.text.test.ts` pins that "FRA → JFK" alone, and a
+ *   flight number with its route but no date, are candidates — a confirmation
+ *   that names only the airports is common, and dropping it trades one silent
+ *   failure for another. Requiring a date here broke exactly those (Task 6
+ *   measurement, 2026-09-30).
+ * - No route for a flight number. A number without a route is INCOMPLETE, not
+ *   wrong: the flight lookup fills the route in later. Whether a LONE such
+ *   number is a flight at all is decided by the #291 second-witness gate in
+ *   `shared/evidence.ts`, which reads the mail's text this function never sees.
+ *
+ * What a single leg cannot show — a number paired with the wrong route — is
+ * decided per document in `withEvidence`.
+ */
+export function segmentHasEvidence(f: ParsedBooking): boolean {
+  const shape = routeShape(f);
+  if (shape === "broken") return false;
+  return shape === "complete" || Boolean(f.flightNumber);
+}
+
+/**
+ * Why a document is declined whole, or null when it stands. For one leg this
+ * is just {@link segmentHasEvidence}; the other two checks need two legs.
+ *
+ * The multi-leg paths pair flight numbers with routes and dates by POSITION,
+ * so a document is only as good as that pairing. Two shapes show it failed:
+ * - routed and route-less legs mixed (Emirates: the outbound route printed,
+ *   the onward legs' not) — which number the one route belongs to is a guess;
+ * - one flight number on two different routes (Lufthansa connection: one
+ *   number found for two routes, and the return leg's number handed to the
+ *   outbound leg too) — a confidently wrong number, worse than none.
+ */
+function documentDefect(flights: ParsedBooking[]): string | null {
+  if (!flights.every(segmentHasEvidence)) return "leg_without_evidence";
+
+  const shapes = new Set(flights.map(routeShape));
+  if (shapes.has("complete") && shapes.has("absent")) return "mixed_routed_and_routeless_legs";
+
+  const routesByNumber = new Map<string, Set<string>>();
+  for (const f of flights) {
+    if (!f.flightNumber) continue;
+    const route = `${f.departureCode ?? ""}>${f.arrivalCode ?? ""}`.toUpperCase();
+    const key = f.flightNumber.toUpperCase();
+    routesByNumber.set(key, new Set([...(routesByNumber.get(key) ?? []), route]));
+  }
+  const repeated = [...routesByNumber.values()].some((routes) => routes.size > 1);
+  return repeated ? "flight_number_on_two_routes" : null;
 }
 
 /**
@@ -141,38 +166,23 @@ export class RegexTextParser implements ITextParser {
   }
 
   /**
-   * A generic-reader candidate is returned only when EVERY leg it found has
-   * full evidence — with one deliberate exception: a SINGLE candidate that
-   * is a lone flight number, no route on either end. That shape is GitHub
-   * #291's territory, not this task's, and `segmentHasEvidence` above
-   * always answers `false` for it on its own. Re-deciding it here, more
-   * bluntly and without the mail's raw text, would cost the #291 control
-   * probes ("LH400 um 07:35", "EK051 am 05. Februar 2022" — a real flight
-   * number with no route recoverable at all) for no matching gain: the
-   * existing `hasFlightEvidence`/`hasSecondWitness` gate in
-   * `shared/evidence.ts`, already applied to every provider's output in
-   * `email.ts`, is what actually decides a lone number, against the source
-   * text this function never sees.
+   * The one gate every result of this reader passes (`parseEmail` is its only
+   * entry point, and both return paths of `parseMultipleFlights` end here).
    *
-   * Deliberately scoped to exactly ONE candidate: a multi-leg document —
-   * the round-trip and cross-invoice corpus defect this task targets — still
-   * needs every leg it returns to earn its own place, so a route-less,
-   * date-less leg AMONG SEVERAL still declines the whole document below.
+   * One candidate stands when {@link segmentHasEvidence} says so — a
+   * same-airport or half route declines it; a route-less flight number is
+   * returned and left to the #291 second-witness gate in `shared/evidence.ts`.
+   * Several legs stand only together: see {@link documentDefect}.
    */
   private withEvidence(flights: ParsedBooking[]): ParsedBooking[] {
     if (flights.length === 0) return [];
 
-    const isLoneFlightNumber =
-      flights.length === 1 &&
-      Boolean(flights[0].flightNumber) &&
-      !flights[0].departureCode &&
-      !flights[0].arrivalCode;
-    if (isLoneFlightNumber) return flights;
+    const reason = documentDefect(flights);
+    if (reason === null) return flights;
 
-    if (flights.every(segmentHasEvidence)) return flights;
     logger.debug({
       operation: "regex_parser_insufficient_evidence",
-      reason: "generic_insufficient_evidence",
+      reason,
       legs: flights.length,
     });
     return [];
