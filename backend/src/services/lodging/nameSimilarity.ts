@@ -18,6 +18,8 @@
  * country — before treating them as one.
  */
 
+import { BRAND_TOKENS, LOCATION_TOKENS } from "./nameTokens";
+
 /**
  * Words that decorate a hotel name rather than identify it, plus the company
  * suffixes a register demands and a booking mail never prints.
@@ -133,6 +135,18 @@ export function sharedSignificantTokens(nameA: string, nameB: string): string[] 
   return strictTokens(nameA).filter((token) => other.has(token));
 }
 
+/** What the caller knows beyond the two names. */
+export interface SameHouseContext {
+  /** City names known for either record. In the same city they prove nothing. */
+  places?: ReadonlyArray<string | null | undefined>;
+  /**
+   * Coordinates already put both within a short radius (the OSM enrichment
+   * searches around the hotel's own pin). The place is proven, so brand and
+   * place words count as they always did.
+   */
+  nearby?: boolean;
+}
+
 /**
  * Could these two names be one house?
  *
@@ -150,19 +164,34 @@ export function sharedSignificantTokens(nameA: string, nameB: string): string[] 
  *   Palace Mandarin Oriental"), or the shorter name's identifying words all
  *   inside the longer one and at least two of them ("Krafft Basel" ⊂ "Hotel
  *   Krafft Basel"). One word alone is not identity without a place.
+ * - Place words (same city only), location decoration and brands are removed
+ *   before counting (`nameTokens.ts`), unless `nearby` says coordinates
+ *   already proved the place.
  */
 export function namesCouldBeOneHouse(
   nameA: string,
   nameB: string,
-  sameCity: boolean | null
+  sameCity: boolean | null,
+  context: SameHouseContext = {}
 ): boolean {
   if (sameCity === false) return false;
-  const shared = sharedSignificantTokens(nameA, nameB);
+
+  const placeTokens = new Set(
+    sameCity === true ? (context.places ?? []).flatMap((p) => (p ? strictTokens(p) : [])) : []
+  );
+  const identity = (tokens: string[]): string[] =>
+    context.nearby
+      ? tokens
+      : tokens.filter(
+          (t) => !placeTokens.has(t) && !LOCATION_TOKENS.has(t) && !BRAND_TOKENS.has(t)
+        );
+
+  const shared = identity(sharedSignificantTokens(nameA, nameB));
   if (sameCity === true) return shared.length >= 1;
 
   if (shared.length >= 2) return true;
-  const a = strictTokens(nameA);
-  const b = strictTokens(nameB);
+  const a = identity(strictTokens(nameA));
+  const b = identity(strictTokens(nameB));
   const [shorter, longer] = a.length <= b.length ? [a, new Set(b)] : [b, new Set(a)];
   return shorter.length >= 2 && shorter.every((t) => longer.has(t));
 }
