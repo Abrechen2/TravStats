@@ -196,7 +196,12 @@ export function proposeLodgingMatch(
   let best: { candidate: StoredLodging; shared: number; sameCity: boolean | null } | null = null;
   for (const candidate of stored) {
     const sameCity = citiesAgree(candidate.city, incoming.city);
-    if (!namesCouldBeOneHouse(candidate.name, incoming.name, sameCity)) continue;
+    if (
+      !namesCouldBeOneHouse(candidate.name, incoming.name, sameCity, {
+        places: [candidate.city, incoming.city],
+      })
+    )
+      continue;
     const shared = sharedSignificantTokens(candidate.name, incoming.name).length;
     if (best === null || shared > best.shared) {
       best = { candidate, shared, sameCity };

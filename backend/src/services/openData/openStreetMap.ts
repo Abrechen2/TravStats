@@ -93,7 +93,8 @@ export async function findOsmLodging(
     const at =
       el.center ?? (el.lat != null && el.lon != null ? { lat: el.lat, lon: el.lon } : null);
     const osmName = el.tags?.name;
-    if (!at || !osmName || !namesCouldBeOneHouse(name, osmName, true)) return [];
+    // The search runs around this hotel's own pin, so the place is proven.
+    if (!at || !osmName || !namesCouldBeOneHouse(name, osmName, true, { nearby: true })) return [];
     return [
       {
         osmRef: `osm:${el.type}/${el.id}`,

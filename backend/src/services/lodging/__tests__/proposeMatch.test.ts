@@ -146,4 +146,17 @@ describe("proposeLodgingMatch", () => {
   it("answers create for an empty library", () => {
     expect(proposeLodgingMatch([], { name: "Anything" }).action).toBe("create");
   });
+
+  // Found in prod 2026-09-30: an ALL Accor booking for "Novotel Basel City"
+  // was imported as a stay at "Hotel Krafft Basel" because the matcher took
+  // the shared word "basel" — the shared city, not a shared identity — as
+  // proof the two names named one house.
+  it("does not propose a same-city hotel that shares only the city's name", () => {
+    const result = proposeLodgingMatch(
+      [house({ id: "krafft", name: "Hotel Krafft Basel", city: "Basel" })],
+      { name: "Novotel Basel City", city: "Basel" }
+    );
+
+    expect(result.action).not.toBe("merge");
+  });
 });
