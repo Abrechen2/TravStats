@@ -97,11 +97,16 @@ Oriental", unknown city → yes.
 
 The generic fallback read Berge & Meer invoices and Emirates mails into plausible
 wrong flights ("WHO→WHO", a date taken from "ERSETZT RECHNUNG VOM", missing
-segments). It keeps running, but a segment is only returned when it carries a flight
-number, two **different** IATA codes that exist in the airport catalogue, and a date
-read from the segment's own line. Anything less declines with reason
-`generic_insufficient_evidence`. A document the generic reader declines falls through
-exactly as an unread one does today.
+segments). It keeps running, but a leg is only returned when it carries a flight
+number and a date, and its route is either complete — two **different** known
+airports — or absent. A route-less leg is incomplete rather than wrong: the flight
+lookup fills the route later, and the GitHub #291 controls ("LH400 um 07:35") rely on
+exactly that. A half route, a same-airport route or a date-less leg declines, and one
+such leg declines the whole document (reason `generic_insufficient_evidence`). A
+single route-less candidate is left to the existing #291 second-witness gate
+(`shared/evidence.ts`). A document the generic reader declines falls through exactly
+as an unread one does today. (Amended 2026-09-30 during implementation; the first
+draft required a route on every leg and would have reversed the #291 controls.)
 
 ### 3.1.4 Lufthansa connections
 
