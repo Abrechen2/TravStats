@@ -4,7 +4,12 @@ All notable changes to TravStats are documented here.
 
 Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
-## [2.6.3] - 2026-09-10
+## [Unreleased]
+
+> Written for 2.6.3-rc.1 (2026-09-10), which was never promoted. None of this
+> shipped in 2.6.3 — the 2.6.3 that shipped is the hotfix below. It ships with
+> the next release from `main`.
+
 
 A second instance audited the tree from the outside and reported forty-two
 findings; forty are fixed here, along with a crash found separately. Nothing
@@ -137,6 +142,35 @@ change figures that are already on screen; they are named below.
 - **The map keeps its colours.** The map rendering library stays on its current
   major version behind a compatibility bridge; the newer one draws every arc
   white.
+
+## [2.6.3] - 2026-09-27
+
+A fix for a sign-in failure on new installations, and the matching fix for
+installations behind an HTTPS reverse proxy.
+
+### Fixed
+- **A fresh install reached over plain HTTP can sign in again.** Opening
+  TravStats at a LAN address such as `http://192.168.0.10:3000`, the setup
+  wizard and the login both answered "success", and the very next page said
+  "No token provided" — the administrator could never get in. The bundled
+  `docker-compose.prod.yml` passes `COOKIE_SECURE` through as an empty value
+  when you set nothing, and the server read that empty value as "always mark
+  the session cookie Secure". Browsers refuse to store a Secure cookie on a
+  plain-http page, so the session was thrown away the moment it was issued.
+  It went unnoticed because `localhost` counts as secure in every browser. An
+  empty `COOKIE_SECURE` now means what the compose file always said it means:
+  detect it — the cookie is marked Secure only when the request arrived over
+  HTTPS, directly or through a reverse proxy that sends
+  `X-Forwarded-Proto: https`. `COOKIE_SECURE=false` and `COOKIE_SECURE=true`
+  behave as before. If you worked around this with `COOKIE_SECURE=false` and
+  reach TravStats over HTTPS, remove that line again so the cookie is Secure.
+- **Behind an HTTPS reverse proxy the session cookie is marked Secure without
+  configuration.** The web server inside the container replaced the proxy's
+  `X-Forwarded-Proto: https` with its own `http`, so automatic detection could
+  never see HTTPS. Until now that was hidden by the empty `COOKIE_SECURE` above,
+  which forced Secure on everyone; with that fixed, the container now keeps the
+  scheme your proxy reports, and falls back to its own when the proxy sends
+  none. A proxy that does not send the header still needs `COOKIE_SECURE=true`.
 
 ## [2.6.2] - 2026-09-07
 
