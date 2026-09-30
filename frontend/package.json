@@ -35,7 +35,7 @@
     "emoji-picker-element": "^1.29.1",
     "emoji-picker-element-data": "^1.8.0",
     "exceljs": "^4.4.0",
-    "framer-motion": "^12.34.3",
+    "framer-motion": "^13.4.0",
     "i18next": "^26.4.2",
     "jspdf": "^4.1.0",
     "jspdf-autotable": "^5.0.7",
