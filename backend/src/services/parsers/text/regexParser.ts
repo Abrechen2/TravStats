@@ -59,7 +59,7 @@ export function segmentHasEvidence(f: ParsedBooking): boolean {
 
 /**
  * Why a document is declined whole, or null when it stands. For one leg this
- * is just {@link segmentHasEvidence}; the other two checks need two legs.
+ * is just {@link segmentHasEvidence}; the other checks need two legs.
  *
  * The multi-leg paths pair flight numbers with routes and dates by POSITION,
  * so a document is only as good as that pairing. Two shapes show it failed:
@@ -67,9 +67,14 @@ export function segmentHasEvidence(f: ParsedBooking): boolean {
  *   the onward legs' not) — which number the one route belongs to is a guess;
  * - one flight number on two different routes (Lufthansa connection: one
  *   number found for two routes, and the return leg's number handed to the
- *   outbound leg too) — a confidently wrong number, worse than none.
+ *   outbound leg too) — a confidently wrong number, worse than none;
+ * - departures that run backwards ({@link datesRunForward}).
+ *
+ * Exported for its tests: the mixed shape can no longer be produced from text
+ * by this reader (routes are only paired one per number), but the check stays
+ * as the guard should a pairing path reintroduce it.
  */
-function documentDefect(flights: ParsedBooking[]): string | null {
+export function documentDefect(flights: ParsedBooking[]): string | null {
   if (!flights.every(segmentHasEvidence)) return "leg_without_evidence";
 
   const shapes = new Set(flights.map(routeShape));
@@ -83,7 +88,22 @@ function documentDefect(flights: ParsedBooking[]): string | null {
     routesByNumber.set(key, new Set([...(routesByNumber.get(key) ?? []), route]));
   }
   const repeated = [...routesByNumber.values()].some((routes) => routes.size > 1);
-  return repeated ? "flight_number_on_two_routes" : null;
+  if (repeated) return "flight_number_on_two_routes";
+
+  return datesRunForward(flights) ? null : "legs_out_of_date_order";
+}
+
+/**
+ * Legs are read in travel order, so their departures must not go backwards.
+ * An undated leg is skipped, not counted against the order. Invoice 1C895383
+ * (corpus 2026-09-30) dated its return leg eight months before the outbound —
+ * a date taken from elsewhere in the document and paired by position.
+ */
+function datesRunForward(flights: ParsedBooking[]): boolean {
+  const times = flights
+    .map((f) => (f.departureTime ? Date.parse(f.departureTime) : Number.NaN))
+    .filter((t) => Number.isFinite(t));
+  return times.every((t, i) => i === 0 || t >= times[i - 1]);
 }
 
 /**
@@ -241,8 +261,12 @@ export class RegexTextParser implements ITextParser {
           bookingReference: sharedPnr,
         };
 
-        // Try to find route for this flight (use airport pairs in order)
-        if (airportPairs.length > i) {
+        // Routes go to numbers by position ONLY when there is one route per
+        // number. With fewer (or more) routes the pairing is a guess: the
+        // Emirates layout yields one pair — its itinerary summary line,
+        // "MUC SYD" — for four numbers, and the first number took a route that
+        // is not its own. Every leg stays route-less then; the lookup fills it.
+        if (airportPairs.length === uniqueFlights.length) {
           const departure = airportPairs[i].departure;
           const arrival = airportPairs[i].arrival;
           flightData.departureCode =

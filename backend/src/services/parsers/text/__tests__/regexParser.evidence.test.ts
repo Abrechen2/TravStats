@@ -1,4 +1,4 @@
-import { getRegexParser, segmentHasEvidence } from "../regexParser";
+import { documentDefect, getRegexParser, segmentHasEvidence } from "../regexParser";
 
 /**
  * Corpus 2026-09-30: the generic reader turned tour-operator invoices and
@@ -112,11 +112,13 @@ describe("the generic flight reader earns its result", () => {
     expect(await getRegexParser().parseEmail("Rechnung", text)).toEqual([]);
   });
 
-  it("declines a document that mixes routed and route-less legs", async () => {
+  it("does not pin the one route it found on one of several numbers", async () => {
     // The Emirates shape: the outbound leg's route is printed, the onward
-    // legs' are not. Positional pairing cannot say which number belongs to
-    // the one route it found. Both legs are dated, so a date is not what
-    // decides it.
+    // legs' are not. With fewer routes than flight numbers the positional
+    // pairing cannot say which number a route belongs to, so every leg comes
+    // out route-less — uniform, and completed by the flight lookup — instead
+    // of the first number taking a route that may be someone else's (round 2,
+    // ruling A; round 1 declined the whole document here).
     const text = [
       "Flug: QR 070",
       "Von: Frankfurt (FRA)",
@@ -127,7 +129,50 @@ describe("the generic flight reader earns its result", () => {
       "Abflug: 16.11.2027 02:15",
       "Ankunft: 16.11.2027 22:40",
     ].join("\n");
-    expect(await getRegexParser().parseEmail("Ihre Reise", text)).toEqual([]);
+    const flights = await getRegexParser().parseEmail("Ihre Reise", text);
+    expect(
+      flights.map((f) => [f.flightNumber, f.departureCode ?? null, f.arrivalCode ?? null])
+    ).toEqual([
+      ["QR070", null, null],
+      ["QR908", null, null],
+    ]);
+  });
+
+  it("still declines mixed routed and route-less legs, whichever path made them", () => {
+    expect(
+      documentDefect([
+        { flightNumber: "QR70", departureCode: "FRA", arrivalCode: "DOH" },
+        { flightNumber: "QR908" },
+      ] as never)
+    ).toBe("mixed_routed_and_routeless_legs");
+  });
+
+  it("declines legs whose dates run backwards", async () => {
+    // The 1C895383 invoice shape (invented here): a route-only round trip
+    // whose return leg took a date from elsewhere in the document, eight
+    // months before the outbound. Legs are listed in travel order; a return
+    // that departs before the outbound is a mis-paired date.
+    const text = [
+      "Von: Frankfurt (FRA)",
+      "Nach: Doha (DOH)",
+      "Abflug: 15.11.2027 10:35",
+      "Ankunft: 15.11.2027 17:05",
+      "Von: Doha (DOH)",
+      "Nach: Frankfurt (FRA)",
+      "Abflug: 28.03.2027 02:46",
+      "Ankunft: 28.03.2027 07:10",
+    ].join("\n");
+    expect(await getRegexParser().parseEmail("Rechnung", text)).toEqual([]);
+  });
+
+  it("does not count an undated leg against the order", () => {
+    expect(
+      documentDefect([
+        { flightNumber: "QR70", departureTime: "2027-11-15T10:35" },
+        { flightNumber: "QR908" },
+        { flightNumber: "QR909", departureTime: "2027-11-15T10:35" },
+      ] as never)
+    ).toBeNull();
   });
 
   it("declines a document that puts one flight number on two different routes", async () => {
