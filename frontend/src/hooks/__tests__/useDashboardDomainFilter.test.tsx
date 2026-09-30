@@ -7,7 +7,7 @@ import { useDashboardDomainFilterStore } from "../../store/dashboardDomainFilter
 import { useDashboardCountsStore } from "../../store/dashboardCountsStore";
 import { useSettingsStore } from "../../store/settingsStore";
 
-// Real stores: `enabledDomains`/`betaFeaturesEnabled` decide which of the six
+// Real stores: `enabledDomains`/`betaFeaturesEnabled` decide which of the seven
 // rows exist at all, which is exactly what this suite is testing.
 vi.unmock("../../store/settingsStore");
 
@@ -62,10 +62,23 @@ describe("useDashboardDomainFilter", () => {
     expect(tourRow?.beta).toBe(true);
   });
 
-  it("rail never appears — it is outside this filter's six-domain scope", () => {
+  it("rail is the seventh row, last and beta-labelled, once its gate and the domain are on", () => {
     useSettingsStore.setState({
       enabledDomains: ["flight", "cruise", "lodging", "poi", "roadtrip", "rail"],
       betaFeaturesEnabled: true,
+    });
+    const { result } = renderHook(() => useDashboardDomainFilter(0), {
+      wrapper: wrapper(["/dashboard"]),
+    });
+    const keys = result.current.rows.map((r) => r.key);
+    expect(keys).toEqual(["flight", "cruise", "lodging", "poi", "tour", "roadtrip", "rail"]);
+    expect(result.current.rows.find((r) => r.key === "rail")?.beta).toBe(true);
+  });
+
+  it("rail stays out while its beta gate is closed, even when the domain is enabled", () => {
+    useSettingsStore.setState({
+      enabledDomains: ["flight", "cruise", "lodging", "poi", "rail"],
+      betaFeaturesEnabled: false,
     });
     const { result } = renderHook(() => useDashboardDomainFilter(0), {
       wrapper: wrapper(["/dashboard"]),

@@ -9,10 +9,11 @@ import {
 
 /**
  * The dashboard domain filter's own persisted state — the "Alle" tab's
- * six-row checkbox filter (ClaudeDesign/handoff/2026-09-27-dashboard-domain-
- * filter-rueckmeldung.md). Separate from `dashboardFilterStore`, which
- * belongs to the untouched map-options sidebar (`MapChromeSections.tsx`) and
- * additionally covers `rail`, outside this filter's six-domain scope.
+ * checkbox filter (ClaudeDesign/handoff/2026-09-27-dashboard-domain-
+ * filter-rueckmeldung.md), seven rows since `rail` joined on 2026-09-28.
+ * Separate from `dashboardFilterStore`, which now holds only the year/time
+ * filter: its domain pills were removed the same day, leaving this store the
+ * one owner of "is this domain on the map".
  *
  * `hidden` is a viewer preference — wrapped in try/catch throughout, per the
  * artifact-storage convention: a blocked/full localStorage must never break
