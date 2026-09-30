@@ -26,10 +26,25 @@ import type { ParsedBooking } from "../../bookingParser";
  * the provider managed to fill in.
  */
 export function hasFlightEvidence(booking: Partial<ParsedBooking>, sourceText: string): boolean {
+  if (isSameAirportRoute(booking)) return false;
   const hasRoute = Boolean(booking.departureCode && booking.arrivalCode);
   if (hasRoute) return true;
   if (!isCredibleFlightNumber(booking.flightNumber)) return false;
   return hasSecondWitness(booking.flightNumber ?? "", sourceText);
+}
+
+/**
+ * A leg from an airport to itself is a wrong read, not a partial one, and it
+ * is refused outright rather than falling back to the flight number: keeping
+ * the number would return the invented route with it. Corpus 2026-09-30 — two
+ * invoices as "GF086 WHO→WHO", an e-ticket as "MS787 EMD→EMD". Checked here
+ * because this gate sees every provider's answer AFTER the post-processing
+ * that can add a route, which is where the WHO→WHO one came from.
+ */
+function isSameAirportRoute(booking: Partial<ParsedBooking>): boolean {
+  const dep = booking.departureCode?.trim().toUpperCase();
+  const arr = booking.arrivalCode?.trim().toUpperCase();
+  return Boolean(dep && arr && dep === arr);
 }
 
 /**
