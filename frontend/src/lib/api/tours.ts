@@ -1,4 +1,5 @@
 import { api } from "./client";
+import type { TourLegTrackCoverage } from "../../types/trackCoverage";
 import type { RoadtripVehicle, TourActivity } from "../../shared/tour/roadtrip";
 import type {
   TourRoute,
@@ -9,6 +10,9 @@ import type {
   TourTrackMeta,
   LegMode,
   LegSource,
+  RouteAllResult,
+  RouteFallbackReason,
+  RouteLegResult,
 } from "../../types/tour";
 
 export interface CreateTourRouteInput {
@@ -16,6 +20,9 @@ export interface CreateTourRouteInput {
   mode: LegMode;
   /** What the day tour was (2.7). */
   activity?: TourActivity | null;
+  /** The local day it happened, "YYYY-MM-DD", and when it started, "HH:MM" (D2). */
+  date?: string | null;
+  startTime?: string | null;
 }
 
 /** One authored point of a standalone tour. `id` identifies an existing
@@ -25,6 +32,8 @@ export interface TourPointInput {
   title: string;
   lat: number;
   lon: number;
+  /** A route correction ("Streckenkorrektur"): may have no name, is never counted. */
+  via?: boolean;
 }
 
 // PATCH semantics: explicit `null` clears `color`, `undefined` leaves it
@@ -43,6 +52,9 @@ export interface UpdateTourRouteInput {
   anchorStopId?: string | null;
   /** Only a roadtrip may move between trips; the server refuses it for a tour. */
   tripId?: string | null;
+  /** Tour only: its day (null clears it and the start time) and start time (D2). */
+  date?: string | null;
+  startTime?: string | null;
 }
 
 // `drivingMinutes`/`tollCost`/`currency` are nullable AND optional: sending
@@ -106,16 +118,19 @@ export const toursApi = {
   },
 
   /**
-   * Replaces a standalone tour's ENTIRE point list — added, moved, removed
-   * and renumbered in one write. A tour that belongs to a trip answers 409:
-   * there the vertices come from the trip's timeline (`assignStops`).
+   * Replaces a tour's ENTIRE point list — added, moved, removed and
+   * renumbered in one write. A standalone tour, or a day tour that joined a
+   * trip with its own points (then under the trip's path). A section built
+   * from a trip's timeline answers 409 `TOUR_POINTS_FROM_TRIP`: its
+   * vertices are assigned (`assignStops`).
    */
   replacePoints: async (
+    tripId: string | undefined,
     routeId: string,
     points: TourPointInput[]
   ): Promise<{ route: TourRoute; stops: TourStop[]; legs: TourLeg[] }> => {
     const { data } = await api.put<{ route: TourRoute; stops: TourStop[]; legs: TourLeg[] }>(
-      `/tours/${routeId}/points`,
+      `${sectionPath(tripId, routeId)}/points`,
       { points }
     );
     return data;
@@ -228,20 +243,28 @@ export const toursApi = {
    * **409**, distinct from every other error this call can raise — the
    * caller must surface that as its own message, not the generic
    * "leg could not be changed" text `setLeg`'s failures use. A provider
-   * that IS configured but fails still answers 200: the returned leg's
-   * `confidence` is `"low"` and `source` reverts to `"straight"`, an
-   * honest fallback rather than an error.
+   * that IS configured but fails still answers 200 with `fallbackReason`
+   * set: a straight leg stays straight (`confidence: "low"`), any other leg
+   * is left as it was. The caller must read the reason — a 200 alone is not
+   * "routed".
    */
   routeLeg: async (
     tripId: string | undefined,
     routeId: string,
     fromStopId: string,
     toStopId: string
-  ): Promise<TourLeg> => {
-    const { data } = await api.post<{ leg: TourLeg }>(
+  ): Promise<RouteLegResult> => {
+    const { data } = await api.post<{ leg: TourLeg; fallbackReason?: RouteFallbackReason | null }>(
       `${sectionPath(tripId, routeId)}/legs/${fromStopId}/${toStopId}/route`
     );
-    return data.leg;
+    // A server from before the reason existed: a low-confidence answer is a fallback.
+    const fallbackReason =
+      data.fallbackReason !== undefined
+        ? data.fallbackReason
+        : data.leg.confidence === "low"
+          ? "provider_error"
+          : null;
+    return { leg: data.leg, fallbackReason };
   },
 
   /**
@@ -249,20 +272,19 @@ export const toursApi = {
    * (`POST .../route-all` — `backend/src/routes/trips/tourRouting.ts`).
    * Unlike `routeLeg` above, this never 409s on an unconfigured provider —
    * it degrades every routable leg to its honest straight-chord fallback
-   * and still answers 200. `routedCount`/`skippedCount` are the honest
-   * report the caller must show, never a blanket "success" toast.
+   * and still answers 200. `routedCount`/`fallbackCount`/`skippedCount` are
+   * the honest report the caller must show, never a blanket "success" toast.
    */
-  routeAll: async (
-    tripId: string | undefined,
-    routeId: string
-  ): Promise<{ route: TourRoute; legs: TourLeg[]; routedCount: number; skippedCount: number }> => {
-    const { data } = await api.post<{
-      route: TourRoute;
-      legs: TourLeg[];
-      routedCount: number;
-      skippedCount: number;
-    }>(`${sectionPath(tripId, routeId)}/route-all`);
-    return data;
+  routeAll: async (tripId: string | undefined, routeId: string): Promise<RouteAllResult> => {
+    const { data } = await api.post<
+      Omit<RouteAllResult, "fallbackCount" | "fallbackReason"> &
+        Partial<Pick<RouteAllResult, "fallbackCount" | "fallbackReason">>
+    >(`${sectionPath(tripId, routeId)}/route-all`);
+    return {
+      ...data,
+      fallbackCount: data.fallbackCount ?? 0,
+      fallbackReason: data.fallbackReason ?? null,
+    };
   },
 
   /**
@@ -315,6 +337,21 @@ export const toursApi = {
         { headers: { "Content-Type": "multipart/form-data" } }
       );
       return data.track;
+    },
+
+    /**
+     * Per leg, which recording covers it — decided on the server by the same
+     * rule the adoption `PUT` applies, so the editor offers `track` exactly
+     * where adopting it will succeed.
+     */
+    coverage: async (
+      tripId: string | undefined,
+      routeId: string
+    ): Promise<TourLegTrackCoverage[]> => {
+      const { data } = await api.get<{ coverage: TourLegTrackCoverage[] }>(
+        `${sectionPath(tripId, routeId)}/legs/track-coverage`
+      );
+      return data.coverage;
     },
 
     remove: async (tripId: string | undefined, routeId: string, trackId: string): Promise<void> => {

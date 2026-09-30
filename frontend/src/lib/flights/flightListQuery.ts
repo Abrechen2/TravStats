@@ -30,6 +30,8 @@ export interface FlightListFilterState {
   /** A trip id, "with", "without", or "all". */
   trip: string;
   special: SpecialTypeFilter;
+  /** A frequent-flyer card from a loyalty link, or absent. */
+  membershipId?: string | null;
 }
 
 export interface FlightListSortState {
@@ -56,6 +58,7 @@ export function buildFlightFilterQuery(state: FlightListFilterState): FlightFilt
   if (state.airline !== "all") query.airlineExact = state.airline;
   if (state.trip !== "all") query.tripId = state.trip;
   if (state.special !== "all") query.specialType = state.special;
+  if (state.membershipId) query.membershipId = state.membershipId;
   return query;
 }
 

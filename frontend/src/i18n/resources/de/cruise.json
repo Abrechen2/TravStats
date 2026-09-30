@@ -151,11 +151,17 @@
     "createShipError": "Schiff konnte nicht angelegt werden",
     "createPortError": "Hafen konnte nicht angelegt werden",
     "via_geocoder": "Kartensuche (OpenStreetMap)",
-    "searchError": "Hafensuche fehlgeschlagen - bitte erneut versuchen"
+    "searchError": "Hafensuche fehlgeschlagen - bitte erneut versuchen",
+    "geocodeRateLimited": "Die Online-Hafensuche (OpenStreetMap) ist gerade ausgelastet und hat nicht geantwortet. Bitte in einer Minute erneut suchen oder den Hafen manuell anlegen.",
+    "geocodeUnavailable": "Die Online-Hafensuche (OpenStreetMap) ist gerade nicht erreichbar. Bitte später erneut suchen oder den Hafen manuell anlegen.",
+    "shipSearchError": "Schiffssuche fehlgeschlagen – bitte erneut versuchen. Solange die Suche nicht antwortet, lieber kein neues Schiff anlegen: es könnte schon im Katalog stehen.",
+    "shipAlreadyExists": "„{{name}}“ steht bereits im Katalog und wurde ausgewählt – es wurde kein zweites Schiff angelegt."
   },
   "map": {
     "layer": "Kreuzfahrten",
-    "fallbackTitle": "Kreuzfahrt"
+    "fallbackTitle": "Kreuzfahrt",
+    "geometryFailed_one": "Der Seeweg von {{count}} Kreuzfahrt konnte nicht geladen werden – sie wird als gerade Linie gezeigt.",
+    "geometryFailed_other": "Die Seewege von {{count}} Kreuzfahrten konnten nicht geladen werden – sie werden als gerade Linien gezeigt."
   },
   "routeEditor": {
     "edit": "Route bearbeiten",
@@ -210,7 +216,9 @@
     "createTitle": "Neue Kreuzfahrt",
     "editTitle": "Kreuzfahrt bearbeiten",
     "saveError": "Kreuzfahrt konnte nicht gespeichert werden",
-    "routeNameSuggestion": "Vorschlag übernehmen: {{name}}"
+    "routeNameSuggestion": "Vorschlag übernehmen: {{name}}",
+    "identityRequired": "Gib ein Schiff, einen Routennamen, eine Reederei oder den Abfahrtshafen an – sonst lässt sich die Kreuzfahrt nicht wiedererkennen.",
+    "startDateRequired": "Gib das Abfahrtsdatum an."
   },
   "add": {
     "title": "Kreuzfahrt hinzufügen"
@@ -299,5 +307,49 @@
       "noCompanions": "Keine Mitreisenden erfasst.",
       "more": "+ {{count}} weitere"
     }
+  },
+  "tracks": {
+    "title": "Aufgezeichnete Spuren",
+    "intro": "Eine GPS-Aufzeichnung ersetzt die berechnete Seeroute einer Etappe, wenn sie beide Häfen in Fahrtrichtung erreicht (bis 10 km Abstand, etwa auf Reede) und höchstens ein Viertel der Strecke fehlt. Fehlende Stücke werden per Luftlinie überbrückt und mitgezählt.",
+    "upload": "Spur hochladen (GPX, TCX, FIT)",
+    "uploading": "Wird hochgeladen …",
+    "pullVoyage": "Ganze Reise aus Dawarich laden",
+    "pullLeg": "Aus Dawarich laden",
+    "pulling": "Wird geladen …",
+    "addToLeg": "Spur hinzufügen",
+    "dawarichUnavailable": "Dawarich ist nicht verbunden (Einstellungen → Integrationen).",
+    "loading": "Spuren werden geladen …",
+    "loadError": "Die Spuren konnten nicht geladen werden.",
+    "legsTitle": "Etappen",
+    "listTitle": "Spuren",
+    "empty": "Noch keine Spur für diese Kreuzfahrt.",
+    "source": {
+      "track": "Aufzeichnung",
+      "drawn": "Von Hand gezeichnet",
+      "sea_route": "Berechnete Seeroute",
+      "pending": "Noch nicht berechnet",
+      "chord": "Luftlinie"
+    },
+    "verdict": {
+      "complete": "Vollständig aufgezeichnet",
+      "bridgedGaps": "Aufgezeichnet, kurze Lücken per Luftlinie überbrückt",
+      "recordingGap": "Aufzeichnung zwischen den Häfen unterbrochen",
+      "tooManyGaps": "Zu viel der Strecke fehlt in der Aufzeichnung",
+      "missesFrom": "Aufzeichnung beginnt erst nach der Abfahrt",
+      "missesTo": "Aufzeichnung endet vor der Ankunft",
+      "missesBoth": "Keine Aufzeichnung für diese Etappe"
+    },
+    "coversNone": "Deckt keine Etappe ab",
+    "coversLegs_one": "Deckt eine Etappe ab",
+    "coversLegs_other": "Deckt {{count}} Etappen ab",
+    "truncated": "Unvollständig (Dawarich-Abruf gekürzt)",
+    "remove": "Entfernen",
+    "removeConfirmTitle": "Spur entfernen?",
+    "removeConfirmMessage": "Die Spur vom {{from}} bis {{to}} wird entfernt. Die Etappen dieser Spur fallen auf die gezeichnete Linie oder die berechnete Seeroute zurück. Die hochgeladene Datei ist nicht gespeichert – nur ihre Punkte.",
+    "added": "Spur gespeichert",
+    "removed": "Spur entfernt",
+    "saveError": "Die Spur konnte nicht gespeichert werden.",
+    "alreadyImported": "Diese Aufzeichnung ist bereits bei der Kreuzfahrt.",
+    "removeError": "Die Spur konnte nicht entfernt werden."
   }
 }

@@ -9,6 +9,7 @@ import {
   preloadAirlineCatalog,
 } from "../services/airlineCatalogCache";
 import logger from "../utils/logger";
+import { ALLIANCE_MEMBERS, ALLIANCE_MEMBERSHIP_AS_OF } from "../data/airlineAlliances";
 
 // No rate limiter: an authenticated typeahead over an in-process catalog cache
 // (`airlineCatalogCache`) plus a one-row insert — the search does not even
@@ -31,10 +32,10 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(100).default(50),
 });
 
-const createAirlineSchema = z.object({
+export const createAirlineSchema = z.object({
   iata: z.string().min(2).max(3).optional(),
   icao: z.string().min(3).max(4).optional(),
-  name: z.string().min(1).max(120),
+  name: z.string().trim().min(1).max(120),
   callsign: z.string().max(120).optional(),
   country: z.string().max(120).optional(),
 });
@@ -69,6 +70,15 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   } catch (err) {
     next(err);
   }
+});
+
+// forgejo#133: a loyalty programme that covers a whole alliance is picked as
+// one, instead of the user typing two dozen codes. Static reference data — the
+// same list the Alliance All-Star achievement reads — so there is nothing to
+// fail but the request itself. `asOf` says when the membership was last
+// checked, because alliances do change members.
+router.get("/alliances", (_req: AuthRequest, res: Response) => {
+  res.json({ success: true, data: ALLIANCE_MEMBERS, asOf: ALLIANCE_MEMBERSHIP_AS_OF });
 });
 
 router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {

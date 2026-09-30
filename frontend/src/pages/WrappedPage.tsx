@@ -7,6 +7,7 @@ import StatCard from "../components/Stats/StatCard";
 import StatsSectionsLoadError from "../components/Stats/StatsSectionsLoadError";
 import { useTranslation } from "../hooks/useTranslation";
 import { useEnabledDomains } from "../hooks/useEnabledDomains";
+import { useRailVisible } from "../hooks/useRailVisible";
 import { statsApi } from "../lib/api";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { formatDistance, localeForLanguage } from "../lib/units";
@@ -54,6 +55,8 @@ export default function WrappedPage(): JSX.Element {
 
   const flightsOn = isEnabled("flight");
   const cruisesOn = isEnabled("cruise");
+  // Rail sits behind its beta gate as well as the user's own switch.
+  const railOn = useRailVisible();
   const locale = localeForLanguage(i18n.language);
   const count = (value: number): string => value.toLocaleString(locale);
 
@@ -206,7 +209,9 @@ export default function WrappedPage(): JSX.Element {
               no flights used to fail this test and draw a grid reading
               "Flüge 0 / Strecke 0 km" — every figure on screen a zero, and the
               one number that was not zero hidden. */}
-          {(cruisesOn ? wrapped.flights === 0 && wrapped.cruises === 0 : wrapped.flights === 0) ? (
+          {wrapped.flights === 0 &&
+          (!cruisesOn || wrapped.cruises === 0) &&
+          (!railOn || (wrapped.railRides ?? 0) === 0) ? (
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
               {t("stats:wrapped.emptyYear", { year: wrapped.year })}
             </p>
@@ -244,6 +249,21 @@ export default function WrappedPage(): JSX.Element {
                   title={t("stats:wrapped.cruises")}
                   value={count(wrapped.cruises)}
                   description={t("stats:wrapped.cruisesDesc")}
+                />
+              )}
+              {/* Train rides, where rail is visible — the same rule as cruises. */}
+              {railOn && (
+                <StatCard
+                  title={t("stats:wrapped.rail")}
+                  value={count(wrapped.railRides ?? 0)}
+                  description={
+                    (wrapped.railStraightLineKm ?? 0) > 0
+                      ? t("stats:wrapped.railDescStraight", {
+                          km: count(wrapped.railKm),
+                          straight: count(wrapped.railStraightLineKm),
+                        })
+                      : t("stats:wrapped.railDesc", { km: count(wrapped.railKm ?? 0) })
+                  }
                 />
               )}
               {wrapped.topAirline !== null && (

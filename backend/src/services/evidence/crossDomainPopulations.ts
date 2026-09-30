@@ -362,7 +362,7 @@ async function loadPlaces(userId: string): Promise<CrossDomainPopulation> {
       name: true,
       isoCountryCode: true,
       visited: true,
-      visits: { select: { id: true, visitedAt: true } },
+      visits: { select: { id: true, visitedAt: true, visitedAtUtc: true, visitedZone: true } },
     },
   });
 
@@ -431,6 +431,7 @@ async function loadRoadtrips(userId: string): Promise<CrossDomainPopulation> {
       id: true,
       name: true,
       stops: {
+        where: { viaPoint: false },
         select: {
           lat: true,
           lon: true,

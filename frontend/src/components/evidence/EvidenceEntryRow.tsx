@@ -3,6 +3,11 @@ import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { Aggregation, EvidenceEntry } from "../../shared/evidence";
 import { composeI18nText, formatEvidenceDate } from "./evidenceText";
+import { countryName } from "../Passport/countryName";
+
+/** The `measure.unit` whose credits are ISO 3166-1 alpha-2 country codes. */
+const COUNTRY_UNIT = "countries";
+const ISO_COUNTRY_CODE = /^[A-Z]{2}$/;
 
 interface EvidenceEntryRowProps {
   entry: EvidenceEntry;
@@ -14,6 +19,12 @@ interface EvidenceEntryRowProps {
    * decision this component owns.
    */
   aggregation: Aggregation;
+  /**
+   * `measure.unit` — says what a credit key IS. Only a country measure's keys
+   * are country codes; an airline measure credits "BA", which is British
+   * Airways and not Bosnia.
+   */
+  unit: string;
 }
 
 /**
@@ -29,6 +40,7 @@ interface EvidenceEntryRowProps {
 export default function EvidenceEntryRow({
   entry,
   aggregation,
+  unit,
 }: EvidenceEntryRowProps): JSX.Element {
   const { t, i18n } = useTranslation(["evidence"]);
 
@@ -46,14 +58,16 @@ export default function EvidenceEntryRow({
   // A credit is an IDENTITY key — that is what makes two rows witnessing the
   // same unit count once — and for an entity-keyed measure it is a UUID. What
   // the reader needs is its name, so the row prints `creditLabels[key]` where
-  // the backend supplied one and the key itself where it did not: "MUC", "DE"
-  // and "Europe" are already words, and a lookup for them would be a second
-  // opinion about what an airport is called.
+  // the backend supplied one. A country code is the exception among the keys
+  // that are already words ("MUC", "Europe"): the server never names a country
+  // (the name belongs to the reader's language), so "DE" printed raw beside
+  // "Hotel Sport" — the client names it, through the passport's own helper.
+  const creditName = (key: string): string =>
+    entry.creditLabels?.[key] ??
+    (unit === COUNTRY_UNIT && ISO_COUNTRY_CODE.test(key) ? countryName(key, i18n.language) : key);
   const creditsText =
     aggregation === "distinct" && entry.credits
-      ? t("evidence:entry.credits", {
-          list: entry.credits.map((key) => entry.creditLabels?.[key] ?? key).join(", "),
-        })
+      ? t("evidence:entry.credits", { list: entry.credits.map(creditName).join(", ") })
       : null;
 
   const body = (

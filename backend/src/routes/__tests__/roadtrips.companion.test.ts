@@ -97,6 +97,11 @@ describe("roadtrips from the phone", () => {
       expect(last.id).toBe(res.body.station.id);
       // The leg from the old last station to the new one exists.
       expect(res.body.legs.some((l: { toStopId: string }) => l.toStopId === last.id)).toBe(true);
+      // ADR 0002 dual-write: the night's day starts at the station's midnight.
+      const row = await prisma.tripStop.findUniqueOrThrow({ where: { id: last.id } });
+      expect(row.stopZone).toBe("Europe/Oslo");
+      expect(row.startUtc?.toISOString()).toBe("2025-07-20T22:00:00.000Z");
+      expect(row.precision).toBe("day");
     });
 
     it("answers a resend with the station it already made, and adds nothing", async () => {
@@ -121,7 +126,7 @@ describe("roadtrips from the phone", () => {
       expect(unnamed.body.station.title).toMatch(/^Station \d+$/);
     });
 
-    it("refuses a stay, which only the web links, and another account's roadtrip", async () => {
+    it("refuses a stay without its stay id, and another account's roadtrip", async () => {
       expect((await append({ lat: 62, lon: 6, date: "2025-07-24", night: "stay" })).status).toBe(
         400
       );
@@ -131,6 +136,180 @@ describe("roadtrips from the phone", () => {
     });
   });
 
+  /** A stay of `owner` at Geiranger, 25.–27.07.2025 (forgejo#132 item 2). */
+  async function geirangerStay(owner: string): Promise<string> {
+    const lodging = await prisma.lodging.create({
+      data: {
+        userId: owner,
+        type: "campsite",
+        name: "Geiranger Camping",
+        lat: 62.1,
+        lon: 7.2,
+        city: "Geiranger",
+        country: "Norway",
+        isoCountryCode: "NO",
+        visited: true,
+      },
+    });
+    const stay = await prisma.lodgingStay.create({
+      data: {
+        userId: owner,
+        lodgingId: lodging.id,
+        checkIn: new Date("2025-07-25T00:00:00Z"),
+        checkOut: new Date("2025-07-27T00:00:00Z"),
+        datePrecision: "DAY",
+        nights: 2,
+        status: "completed",
+      },
+    });
+    return stay.id;
+  }
+
+  describe("POST /roadtrips/:id/stations with a stay (forgejo#132 item 2)", () => {
+    const append = (body: Record<string, unknown>, c = cookie) =>
+      request(app).post(`/api/v1/roadtrips/${norwayId}/stations`).set("Cookie", c).send(body);
+
+    it("appends a stay station linked to the caller's stay, named and dated by it", async () => {
+      mockReverse.mockResolvedValue({ city: "Somewhere else" });
+      const stayId = await geirangerStay(userId);
+      const res = await append({
+        lat: 62.101,
+        lon: 7.201,
+        date: "2025-07-25",
+        night: "stay",
+        lodgingStayId: stayId,
+      });
+      expect(res.status).toBe(201);
+      expect(res.body.station).toMatchObject({
+        title: "Geiranger Camping",
+        state: "stay",
+        lodgingStayId: stayId,
+      });
+      expect(res.body.station.endDate.slice(0, 10)).toBe("2025-07-27");
+      // The reverse geocoder is not asked when the stay names the place.
+      expect(mockReverse).not.toHaveBeenCalled();
+    });
+
+    it("refuses another account's stay, and a stay id on a night that is not a stay", async () => {
+      const otherId = (await prisma.user.findUniqueOrThrow({ where: { username: "rtphone2" } })).id;
+      const foreign = await geirangerStay(otherId);
+      const before = await prisma.tripStop.count({ where: { routeId: norwayId } });
+      const res = await append({
+        lat: 62.3,
+        lon: 7.3,
+        date: "2025-07-26",
+        night: "stay",
+        lodgingStayId: foreign,
+      });
+      expect(res.status).toBe(404);
+      expect(res.body.error).toBe("Stay not found");
+      expect(await prisma.tripStop.count({ where: { routeId: norwayId } })).toBe(before);
+
+      const mixed = await append({
+        lat: 62.3,
+        lon: 7.3,
+        date: "2025-07-26",
+        night: "free",
+        lodgingStayId: foreign,
+      });
+      expect(mixed.status).toBe(400);
+    });
+  });
+
+  describe("DELETE /roadtrips/:id/stations/:stationId (forgejo#132 item 1)", () => {
+    const remove = (stationId: string, c = cookie, routeId = norwayId) =>
+      request(app).delete(`/api/v1/roadtrips/${routeId}/stations/${stationId}`).set("Cookie", c);
+
+    it("removes the station the phone just appended, and leaves no leg to it", async () => {
+      mockReverse.mockResolvedValue(null);
+      const added = await request(app)
+        .post(`/api/v1/roadtrips/${norwayId}/stations`)
+        .set("Cookie", cookie)
+        .send({ lat: 61.9, lon: 6.7, date: "2025-07-28", night: "free", title: "Undo me" });
+      expect(added.status).toBe(201);
+      const id = added.body.station.id;
+      const before = added.body.stations.length;
+
+      const res = await remove(id);
+      expect(res.status).toBe(200);
+      expect(res.body.removed).toEqual({ id, released: false });
+      expect(res.body.stations).toHaveLength(before - 1);
+      expect(res.body.stations.some((s: { id: string }) => s.id === id)).toBe(false);
+      expect(res.body.stations.map((s: { order: number }) => s.order)).toEqual([
+        ...Array(before - 1).keys(),
+      ]);
+      expect(
+        res.body.legs.some(
+          (l: { fromStopId: string; toStopId: string }) => l.fromStopId === id || l.toStopId === id
+        )
+      ).toBe(false);
+      expect(await prisma.tripStop.findUnique({ where: { id } })).toBeNull();
+    });
+
+    it("renumbers and re-links when a station in the middle goes", async () => {
+      const stations = await prisma.tripStop.findMany({
+        where: { routeId: norwayId },
+        orderBy: { routeOrderIdx: "asc" },
+      });
+      const middle = stations.find(
+        (s, i) => s.tripId === null && i > 0 && i < stations.length - 1
+      )!;
+      const at = stations.indexOf(middle);
+      const prev = stations[at - 1];
+      const next = stations[at + 1];
+
+      const res = await remove(middle.id);
+      expect(res.status).toBe(200);
+      expect(res.body.stations.map((s: { order: number }) => s.order)).toEqual([
+        ...Array(stations.length - 1).keys(),
+      ]);
+      expect(
+        res.body.legs.some(
+          (l: { fromStopId: string; toStopId: string }) =>
+            l.fromStopId === prev.id && l.toStopId === next.id
+        )
+      ).toBe(true);
+    });
+
+    it("releases a trip's timeline stop back to the trip instead of deleting it", async () => {
+      const trip = await prisma.trip.findFirstOrThrow({ where: { userId } });
+      const last = await prisma.tripStop.aggregate({
+        where: { routeId: norwayId },
+        _max: { routeOrderIdx: true },
+      });
+      const stop = await prisma.tripStop.create({
+        data: {
+          tripId: trip.id,
+          title: "Timeline stop",
+          lat: 61.5,
+          lon: 6.5,
+          routeId: norwayId,
+          routeOrderIdx: (last._max.routeOrderIdx ?? -1) + 1,
+          overnight: true,
+        },
+      });
+      const res = await remove(stop.id);
+      expect(res.status).toBe(200);
+      expect(res.body.removed).toEqual({ id: stop.id, released: true });
+      const kept = await prisma.tripStop.findUniqueOrThrow({ where: { id: stop.id } });
+      expect(kept).toMatchObject({ tripId: trip.id, routeId: null, routeOrderIdx: null });
+    });
+
+    it("answers 404 for another account, another roadtrip's station and an unknown id", async () => {
+      const station = await prisma.tripStop.findFirstOrThrow({ where: { routeId: norwayId } });
+      expect((await remove(station.id, otherCookie)).status).toBe(404);
+
+      const alps = await prisma.tripRoute.findFirstOrThrow({
+        where: { userId, name: "Demo: Alpen mit dem Campervan" },
+      });
+      const wrongRoute = await remove(station.id, cookie, alps.id);
+      expect(wrongRoute.status).toBe(404);
+      expect(wrongRoute.body.error).toBe("Station not found");
+      expect(await prisma.tripStop.findUnique({ where: { id: station.id } })).not.toBeNull();
+
+      expect((await remove("00000000-0000-4000-8000-000000000000")).status).toBe(404);
+    });
+  });
   describe("GET /day-context", () => {
     it("names the trip and the roadtrip station of a day", async () => {
       const res = await request(app)

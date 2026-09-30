@@ -225,3 +225,27 @@ describe("lodgingNightsRanked", () => {
     expect(calculateLodgingStats([], NOW).loyalty.lodgingNightsRanked).toEqual([]);
   });
 });
+
+// A programme year names its card, so the statistics can link to the stays
+// they count (owner, 2026-09-26: nights per programme, with the list behind it).
+describe("lodging loyalty — the card behind a programme year", () => {
+  const underCard = (checkIn: string, checkOut: string) =>
+    nightsAt("Marriott", {
+      programName: "Marriott Bonvoy",
+      programMembershipId: "card-1",
+      membershipTier: "Gold",
+      checkIn: new Date(checkIn),
+      checkOut: new Date(checkOut),
+    });
+
+  it("carries the card id and today's tier on every year's row", () => {
+    const l = loyalty([
+      underCard("2023-05-01", "2023-05-03"),
+      underCard("2024-05-01", "2024-05-04"),
+    ]);
+    expect(l.programmeYears.map((p) => [p.year, p.membershipId, p.tier, p.nights])).toEqual([
+      ["2024", "card-1", "Gold", 3],
+      ["2023", "card-1", "Gold", 2],
+    ]);
+  });
+});

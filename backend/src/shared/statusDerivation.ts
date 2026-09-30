@@ -1,3 +1,5 @@
+import { now as clockNow } from "./time/clock";
+import { legacyDayOf, startOfDayAt } from "./time/legacyValues";
 /**
  * Single source of truth for temporal status derivation (spec
  * 2026-07-17-status-from-dates). The stored status columns are a CACHE of
@@ -37,7 +39,7 @@ export function deriveFlightStatus(input: {
 }): string {
   const { departureTime, arrivalTime, current } = input;
   if ((FLIGHT_PASSTHROUGH as readonly string[]).includes(current)) return current;
-  const nowMs = (input.now ?? new Date()).getTime();
+  const nowMs = (input.now ?? clockNow()).getTime();
   if (arrivalTime != null) {
     return nowMs - arrivalTime.getTime() > FLIGHT_ARRIVAL_SLACK_HOURS * H ? "flown" : "scheduled";
   }
@@ -57,7 +59,7 @@ export function deriveCruiseStatus(input: {
 }): string {
   const { startDate, endDate, current } = input;
   if ((CRUISE_PASSTHROUGH as readonly string[]).includes(current)) return current;
-  const nowMs = (input.now ?? new Date()).getTime();
+  const nowMs = (input.now ?? clockNow()).getTime();
   const slack = CRUISE_SLACK_HOURS * H;
   if (startDate == null && endDate == null) return current;
   if (startDate != null && nowMs < startDate.getTime()) return "scheduled";
@@ -105,7 +107,7 @@ export function deriveLodgingStatus(input: {
   const { checkIn, checkOut, current } = input;
   if ((LODGING_PASSTHROUGH as readonly string[]).includes(current)) return current;
   if (checkIn == null && checkOut == null) return current;
-  const nowMs = (input.now ?? new Date()).getTime();
+  const nowMs = (input.now ?? clockNow()).getTime();
   // A one-ended stay still has a defensible position on the timeline: treat the
   // missing end as the known start and vice versa, exactly as deriveTripStatus
   // does, rather than falling back to the stored value and leaving a dated row
@@ -135,7 +137,7 @@ export function deriveRailStatus(input: {
 }): string {
   const { departureTime, arrivalTime, current } = input;
   if ((RAIL_PASSTHROUGH as readonly string[]).includes(current)) return current;
-  const nowMs = (input.now ?? new Date()).getTime();
+  const nowMs = (input.now ?? clockNow()).getTime();
   const end = arrivalTime ?? departureTime;
   if (nowMs < departureTime.getTime()) return "scheduled";
   if (nowMs >= end.getTime()) return "completed";
@@ -193,6 +195,14 @@ export function tripDateBounds(
  * The two are never mixed. The own dates are a PLAN and the segments are the
  * record; unioning them would let a stale plan widen a real journey, which is
  * the confusion this ordering exists to avoid.
+ *
+ * **Days begin in the user's profile zone** (ADR 0002 D4). Flights and rides
+ * are instants; stays, cruises, stations and the trip's own dates are DAYS,
+ * stored as UTC-midnight anchors. A day anchor is read as the instant that
+ * day begins in `zone`, so "has the trip begun" is answered on the user's
+ * calendar — a Kiritimati account's trip starts fourteen hours before it
+ * would in Greenwich — and the bounds are all instants, comparable with the
+ * clock.
  */
 export function tripStatusBounds(input: {
   flights: Array<{ departureTime: Date | null; arrivalTime: Date | null }>;
@@ -205,19 +215,27 @@ export function tripStatusBounds(input: {
   railJourneys?: Array<{ departureTime: Date; arrivalTime: Date | null }>;
   ownStartDate: Date | null;
   ownEndDate: Date | null;
+  /** The user's profile zone — where a day anchor begins. */
+  zone: string;
 }): { earliestStart: Date | null; latestEnd: Date | null } {
-  const stays = (input.lodgingStays ?? []).map((s) => ({
-    startDate: s.checkIn,
-    endDate: s.checkOut,
-  }));
-  const stations = (input.roadtrips ?? []).flatMap((r) => r.stops);
+  const begins = (anchor: Date | null): Date | null =>
+    anchor && startOfDayAt(legacyDayOf(anchor).day, input.zone);
+  const days = (span: { startDate: Date | null; endDate: Date | null }) => ({
+    startDate: begins(span.startDate),
+    endDate: begins(span.endDate),
+  });
+  const stays = (input.lodgingStays ?? []).map((s) =>
+    days({ startDate: s.checkIn, endDate: s.checkOut })
+  );
+  const stations = (input.roadtrips ?? []).flatMap((r) => r.stops).map(days);
+  const cruises = input.cruises.map(days);
   const held = tripDateBounds(
     [...input.flights, ...(input.railJourneys ?? [])],
-    [...input.cruises, ...stays, ...stations]
+    [...cruises, ...stays, ...stations]
   );
   if (held.earliestStart != null || held.latestEnd != null) return held;
 
-  return { earliestStart: input.ownStartDate, latestEnd: input.ownEndDate };
+  return { earliestStart: begins(input.ownStartDate), latestEnd: begins(input.ownEndDate) };
 }
 
 export function deriveTripStatus(input: {
@@ -227,7 +245,7 @@ export function deriveTripStatus(input: {
 }): "planned" | "in_progress" | "completed" | null {
   const { earliestStart, latestEnd } = input;
   if (earliestStart == null && latestEnd == null) return null;
-  const nowMs = (input.now ?? new Date()).getTime();
+  const nowMs = (input.now ?? clockNow()).getTime();
   const start = earliestStart ?? latestEnd!;
   const end = latestEnd ?? earliestStart!;
   if (nowMs < start.getTime()) return "planned";

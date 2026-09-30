@@ -16,6 +16,7 @@
  * while its colour, symbol and order stay the user's.
  */
 
+import { placeTimesSchema, visitTimesSchema } from "../../../schemas/times";
 import { z } from "zod";
 
 import { placeImportCommitSchema, placeImportPreviewSchema } from "../../../schemas/placeImport";
@@ -24,7 +25,7 @@ import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { createVisitSchema } from "../../../schemas/place";
-import { errorContent } from "./shared";
+import { errorContent, timeRefused } from "./shared";
 import {
   createPlaceListSchema,
   updatePlaceListSchema,
@@ -37,6 +38,49 @@ const badInput = { description: "Invalid input", content: errorContent };
 const notFound = { description: "Not found", content: errorContent };
 const deleted = { description: "Deleted" };
 const uuid = z.string().uuid();
+
+/** A visit photo as `toPhotoDto` (routes/places/visitPhotoDto.ts) sends it. */
+const visitPhoto = z.object({
+  id: z.string().uuid(),
+  url: z.string(),
+  caption: z.string().nullable(),
+  sortIdx: z.number().int(),
+  mimetype: z.string(),
+  sizeBytes: z.number().int(),
+  immichAssetId: z.string().nullable(),
+  createdAt: z.string(),
+  takenAt: z
+    .string()
+    .nullable()
+    .describe(
+      "When it was taken: the row's own capture time, else — for a photo picked from the " +
+        "trip's gallery — that trip photo's. Null when neither holds it; never the upload time."
+    ),
+  lat: z
+    .number()
+    .nullable()
+    .describe("Where it was taken — only a picked trip photo stores that; null otherwise"),
+  lon: z.number().nullable(),
+});
+
+const placeVisit = registry.register(
+  "PlaceVisit",
+  z
+    .object({
+      ...prismaColumns("PlaceVisit"),
+      visitedAt: z
+        .string()
+        .datetime()
+        .nullable()
+        .describe(
+          "Legacy and mixed: the web stored the place's wall clock here as if it were UTC, " +
+            "the Companion a real instant. Read `times.visitedAt`."
+        ),
+      times: visitTimesSchema,
+      photos: z.array(visitPhoto).optional().describe("The visit's photos; GET /places/{id} only"),
+    })
+    .openapi("PlaceVisit")
+);
 
 const place = registry.register(
   "Place",
@@ -63,7 +107,17 @@ const place = registry.register(
       plannedVisitCount: z.number().int().describe("Future-dated visits, counted apart"),
       lastVisitAt: z.string().datetime().nullable().describe("Most recent completed visit"),
       continent: z.string().nullable(),
-      visits: z.array(includedRow("visit")).optional().describe("Included by GET /places/{id}"),
+      coverPhotoId: uuid
+        .nullable()
+        .describe(
+          "The visit photo the place page leads with (set by PUT /places/{id}/cover). Null " +
+            "means none was chosen — show the first visit photo; it is never written for the user."
+        ),
+      visits: z
+        .array(placeVisit)
+        .optional()
+        .describe("Every visit, each with its `times`; GET /places/{id} adds each visit's photos"),
+      times: placeTimesSchema,
       createdAt: z.string().datetime(),
       updatedAt: z.string().datetime(),
     })
@@ -198,7 +252,17 @@ registry.registerPath({
       },
     },
   },
-  responses: { 201: { description: "Created" }, 400: badInput, 404: notFound },
+  responses: {
+    422: timeRefused,
+    201: {
+      description: "Created",
+      content: {
+        "application/json": { schema: z.object({ success: z.literal(true), data: placeVisit }) },
+      },
+    },
+    400: badInput,
+    404: notFound,
+  },
 });
 
 const visitDateSuggestion = z.object({
@@ -251,7 +315,17 @@ registry.registerPath({
   summary: "Update a visit",
   tags: placesTag,
   request: { params: z.object({ visitId: uuid }) },
-  responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },
+  responses: {
+    422: timeRefused,
+    200: {
+      description: "Updated",
+      content: {
+        "application/json": { schema: z.object({ success: z.literal(true), data: placeVisit }) },
+      },
+    },
+    400: badInput,
+    404: notFound,
+  },
 });
 
 registry.registerPath({
@@ -269,7 +343,17 @@ registry.registerPath({
   summary: "Photos of one visit",
   tags: placesTag,
   request: { params: z.object({ visitId: uuid }) },
-  responses: { 200: { description: "Photos" }, 404: notFound },
+  responses: {
+    200: {
+      description: "Photos",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.literal(true), data: z.array(visitPhoto) }),
+        },
+      },
+    },
+    404: notFound,
+  },
 });
 
 registry.registerPath({

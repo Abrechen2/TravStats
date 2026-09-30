@@ -4,9 +4,10 @@ import { z } from "zod";
 import { authenticate, requireWriteScope, type AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { emailParseLimiter, pdfParseLimiter } from "../../middleware/rateLimit";
-import { extractValuesBodySchema } from "../../schemas/document";
+import { extractValuesBodySchema, storedValuesQuerySchema } from "../../schemas/document";
 import { getOwnDocument } from "../../services/documents/documentService";
 import { extractDocumentValues } from "../../services/documents/extractValues";
+import { storedReading } from "../../services/documents/storedReading";
 import { describeParserError } from "../../utils/parserErrors";
 
 /**
@@ -57,7 +58,29 @@ router.post(
       // unreachable model says "try later", where a bare 500 says "broken".
       if (err instanceof AppError) return next(err);
       const described = describeParserError(err);
-      next(new AppError(described.message, described.status));
+      next(new AppError(described.message, described.status, described.code));
+    }
+  }
+);
+
+/**
+ * `GET /documents/:id/stored-values` — the same values, read from the reading
+ * ALREADY stored on the document, with the same leg hints (forgejo#132 item 3).
+ * No parser runs, so no parse budget is spent and a read token may ask.
+ */
+router.get(
+  "/documents/:id/stored-values",
+  authenticate,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const params = extractValuesParamsSchema.safeParse(req.params);
+      if (!params.success) throw new AppError("Invalid document id", 400);
+      const hints = storedValuesQuerySchema.safeParse(req.query);
+      if (!hints.success) throw new AppError(hints.error.message, 400);
+      const document = await getOwnDocument(req.userId!, params.data.id);
+      res.json({ success: true, data: storedReading(document, hints.data) });
+    } catch (err) {
+      next(err);
     }
   }
 );

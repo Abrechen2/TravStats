@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, fireEvent } from "@testing-library/react";
+import { render, screen, fireEvent, waitFor } from "@testing-library/react";
 import InvitationManagement, { Invitation } from "../../../components/Admin/InvitationManagement";
 
 vi.mock("../../../hooks/useTranslation", () => ({
@@ -74,7 +74,7 @@ describe("InvitationManagement", () => {
     expect(screen.getByRole("button", { name: /actions\.resendEmail/i })).toBeInTheDocument();
   });
 
-  it("fires onRevoke when revoke button clicked", () => {
+  it("fires onRevoke once the in-page question is confirmed", async () => {
     const onRevoke = vi.fn();
     render(
       <InvitationManagement
@@ -89,11 +89,11 @@ describe("InvitationManagement", () => {
       />
     );
 
-    const originalConfirm = window.confirm;
-    window.confirm = vi.fn(() => true);
     fireEvent.click(screen.getByRole("button", { name: /actions\.revoke/i }));
-    expect(onRevoke).toHaveBeenCalledWith(BASE_INVITE.id);
-    window.confirm = originalConfirm;
+    // Asked in the page's own dialog, not the browser's box.
+    expect(onRevoke).not.toHaveBeenCalled();
+    fireEvent.click(await screen.findByRole("button", { name: "common:buttons.delete" }));
+    await waitFor(() => expect(onRevoke).toHaveBeenCalledWith(BASE_INVITE.id));
   });
 
   it("renders used-by username for a consumed invitation", () => {

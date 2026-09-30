@@ -1,4 +1,7 @@
-import { formatDateInTimezone } from "../../../lib/dateUtils";
+import { formatLocalDate } from "../../../lib/displayFormat";
+import { cruiseStart, flightDeparture, visitTime } from "../../../lib/entityTimes";
+import { dayOf } from "../../../shared/time";
+import type { Flight } from "../../../types";
 import { latestStayDayOf } from "../../../lib/lodgingLatestStay";
 import type { GeoJSONFeature } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
@@ -60,13 +63,14 @@ function readProp<T>(obj: Record<string, unknown>, key: string): T | undefined {
   return obj[key] as T | undefined;
 }
 
-/** "2026-05-20T08:00:00Z" -> "2026-05-20"; anything unusable -> "". */
-function isoDay(value: string | null | undefined): string {
-  return typeof value === "string" && value.length >= 10 ? value.slice(0, 10) : "";
-}
-
-function display(sortDate: string, iso: string | null): string {
-  return sortDate ? formatDateInTimezone(iso ?? sortDate, "UTC") : "—";
+/**
+ * The row's day is the PLACE's day (ADR 0002): a flight's at its departure
+ * airport, a cruise's at its port, a visit's at the place — from `times`, or
+ * the legacy fields read through `lib/entityTimes.ts`. Never the UTC date of
+ * an instant: a Haneda departure at 01:00 on the 1st is on the 1st.
+ */
+function display(sortDate: string): string {
+  return sortDate ? formatLocalDate(sortDate) : "—";
 }
 
 function joinParts(...parts: (string | null | undefined)[]): string | null {
@@ -84,8 +88,13 @@ export function flightToItem(feature: GeoJSONFeature, index: number, t: Translat
   const status = readProp<string>(props, "status");
   // Historical flights can have no departure time; leaving sortDate empty puts
   // them at the bottom instead of pretending they happened at the epoch.
-  const departureTime = readProp<string | null>(props, "departureTime") ?? "";
-  const sortDate = isoDay(departureTime);
+  const departure = flightDeparture({
+    departureTime: readProp<string | null>(props, "departureTime") ?? null,
+    depTimezone: readProp<string | null>(props, "depTimezone") ?? null,
+    depTimeSemantics: readProp<Flight["depTimeSemantics"]>(props, "depTimeSemantics"),
+    times: readProp<Flight["times"]>(props, "times"),
+  });
+  const sortDate = departure ? dayOf(departure) : "";
 
   return {
     id: `f-${flightId || index}`,
@@ -94,14 +103,14 @@ export function flightToItem(feature: GeoJSONFeature, index: number, t: Translat
     sublabel: joinParts(airline, flightNumber),
     meta: status === "scheduled" ? t("flights:status.scheduled") : null,
     sortDate,
-    displayDate: display(sortDate, departureTime),
+    displayDate: display(sortDate),
     mappable: true,
     payload: { flightId },
   };
 }
 
 export function cruiseToItem(cruise: Cruise, t: Translate): ActivityItem {
-  const sortDate = isoDay(cruise.startDate);
+  const sortDate = cruiseStart(cruise)?.date ?? "";
   const ports = cruise.stops?.filter((s) => !s.isAtSea).length ?? 0;
   return {
     id: `c-${cruise.id}`,
@@ -114,7 +123,7 @@ export function cruiseToItem(cruise: Cruise, t: Translate): ActivityItem {
     sublabel: cruise.cruiseLine ?? cruise.ship?.cruiseLine ?? null,
     meta: ports > 0 ? t("dashboard:sidebar.portsCount", { count: ports }) : null,
     sortDate,
-    displayDate: display(sortDate, cruise.startDate ?? null),
+    displayDate: display(sortDate),
     mappable: true,
     payload: { cruise },
   };
@@ -141,7 +150,7 @@ export function lodgingToItem(lodging: Lodging, t: Translate): ActivityItem {
     sublabel: joinParts(lodging.chain?.name, lodging.city),
     meta: nights > 0 ? t("lodging:field.nightsCount", { count: nights }) : null,
     sortDate: newest,
-    displayDate: display(newest, newest || null),
+    displayDate: display(newest),
     // A hotel whose location never resolved has no pin to focus. The row stays
     // in the list and still leads to its detail page — see LodgingListPanel,
     // which has marked this case since #259.
@@ -159,7 +168,8 @@ export function lodgingToItem(lodging: Lodging, t: Translate): ActivityItem {
 export function placeToItem(place: Place, t: Translate): ActivityItem {
   let newest = "";
   for (const visit of place.visits ?? []) {
-    const day = isoDay(visit.visitedAt);
+    const when = visitTime(visit);
+    const day = when ? dayOf(when) : "";
     if (day && day > newest) newest = day;
   }
 
@@ -176,7 +186,7 @@ export function placeToItem(place: Place, t: Translate): ActivityItem {
           ? null
           : t("places:list.status.wishlist"),
     sortDate: newest,
-    displayDate: display(newest, newest || null),
+    displayDate: display(newest),
     // lat/lon are NOT NULL on Place — a place that cannot be drawn is not creatable.
     mappable: true,
     payload: { place },

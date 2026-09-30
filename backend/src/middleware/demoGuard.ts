@@ -62,8 +62,9 @@ export function rejectDemoWrites(req: AuthRequest, res: Response, next: NextFunc
  * A DIFFERENT question, on purpose: may this account spend the instance's
  * external-API quota?
  *
- * Every `isDemo` account is sample data — the preview's `admin`, `alex` and
- * `claude`, the local dev admin, and the shared `demo` alike. A bulk
+ * Every `isDemo` account is sample data — the shared `demo`, and any account
+ * an older `seedDemoUser` flagged before it stopped flagging the preview's
+ * `admin`, `alex` and `claude` and the local dev admin (2.7.0-beta.17). A bulk
  * historical refresh over a hundred seeded flights costs real RapidAPI calls
  * for rows nobody will read, so all of them are refused here, not only the
  * shared one. That is why this is not `rejectDemo` with a different message.

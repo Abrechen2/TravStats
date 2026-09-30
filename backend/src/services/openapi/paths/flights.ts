@@ -5,7 +5,13 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent, flightCreateInput, flightUpdateInput, flightResponse } from "./shared";
+import {
+  errorContent,
+  flightCreateInput,
+  flightUpdateInput,
+  flightResponse,
+  timeRefused,
+} from "./shared";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { FLIGHT_SORT_FIELDS } from "../../../schemas/flight";
 
@@ -84,6 +90,8 @@ registry.registerPath({
   },
 });
 
+const rankedValue = z.object({ value: z.string(), usageCount: z.number().int() });
+
 const facetOption = <T extends z.ZodTypeAny>(value: T) =>
   z.object({ value, count: z.number().int() });
 
@@ -97,7 +105,11 @@ registry.registerPath({
     "Flight numbers favour the route (`dep` + `arr`), then the airline; with neither given " +
     "they are the overall ranking. The frequent flyer number is the one from the latest " +
     "flight with the same marketing airline, null without `airline` or without a match. " +
-    "Terminals need `dep`. Suggestions only — nothing here is written.",
+    "Terminals need `dep`. `usage` repeats those three lists with how often each was used, " +
+    "in the same order (a flight number counts within the scope it was ranked in: the route, " +
+    "then the airline). `airlines` are the user's own marketing airlines and `aircraft` the " +
+    "aircraft they flew — the airline's first when `airline` is given. Suggestions only — " +
+    "nothing here is written.",
   tags: ["Flights"],
   request: {
     query: z.object({
@@ -116,6 +128,23 @@ registry.registerPath({
             flightNumbers: z.array(z.string()),
             frequentFlyerNumber: z.string().nullable(),
             departureTerminals: z.array(z.string()),
+            usage: z.object({
+              seats: z.array(rankedValue),
+              flightNumbers: z.array(rankedValue),
+              departureTerminals: z.array(rankedValue),
+            }),
+            airlines: z.array(
+              z.object({
+                name: z
+                  .string()
+                  .nullable()
+                  .describe("Most-used spelling; null when only a code was recorded"),
+                iata: z.string().nullable(),
+                icao: z.string().nullable(),
+                usageCount: z.number().int(),
+              })
+            ),
+            aircraft: z.array(rankedValue),
           }),
         },
       },
@@ -213,6 +242,7 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     201: {
       description: "Flight created",
       content: {
@@ -245,6 +275,7 @@ registry.registerPath({
     body: { content: { "application/json": { schema: flightUpdateInput } } },
   },
   responses: {
+    422: timeRefused,
     200: {
       description: "Flight updated",
       content: { "application/json": { schema: flightResponse } },

@@ -2,6 +2,8 @@ import { create } from "zustand";
 
 import {
   BRAND_DOMAIN_COLORS,
+  domainColorOverrides,
+  migrateLegacyDomainColors,
   normalizeDomainColors,
   type DomainColorMap,
 } from "../lib/domainColor";
@@ -20,8 +22,15 @@ import type { DomainKey } from "../shared/domains";
  * means the choice does not follow the user to another device; a server-side
  * setting would, and is the obvious later step. It is called out here rather
  * than left to be discovered.
+ *
+ * v2 stores only the overrides. v1 stored the whole map, which froze every
+ * untouched domain at the default of the day it was saved — so the round-29
+ * rail and roadtrip hues (forgejo#131) would never have reached anyone who had
+ * ever moved a picker. v1 is still read once, through the retired-defaults
+ * table, and the next save writes v2.
  */
-const KEY = "domainColors.v1";
+const KEY = "domainColors.v2";
+const LEGACY_KEY = "domainColors.v1";
 
 interface DomainColorState {
   colors: DomainColorMap;
@@ -34,8 +43,10 @@ function load(): DomainColorMap {
   if (typeof window === "undefined") return BRAND_DOMAIN_COLORS;
   try {
     const raw = window.localStorage.getItem(KEY);
-    if (!raw) return BRAND_DOMAIN_COLORS;
-    return normalizeDomainColors(JSON.parse(raw) as unknown);
+    if (raw) return normalizeDomainColors(JSON.parse(raw) as unknown);
+    const legacy = window.localStorage.getItem(LEGACY_KEY);
+    if (legacy) return migrateLegacyDomainColors(JSON.parse(legacy) as unknown);
+    return BRAND_DOMAIN_COLORS;
   } catch {
     // Unreadable storage is not a reason to show a colourless app.
     return BRAND_DOMAIN_COLORS;
@@ -45,7 +56,7 @@ function load(): DomainColorMap {
 function persist(colors: DomainColorMap): void {
   if (typeof window === "undefined") return;
   try {
-    window.localStorage.setItem(KEY, JSON.stringify(colors));
+    window.localStorage.setItem(KEY, JSON.stringify(domainColorOverrides(colors)));
   } catch {
     /* private mode, quota, blocked site data — the choice simply does not survive a reload */
   }

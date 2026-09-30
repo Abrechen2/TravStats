@@ -1,5 +1,15 @@
 import { describe, it, expect } from "vitest";
-import { compareTimelineEvents, isSupersededByPlaceVisit } from "../tripTimeline";
+import { compareTimelineEvents, dayAsTimeValue, isSupersededByPlaceVisit } from "../tripTimeline";
+import type { TimeValue } from "../../shared/time";
+
+const at = (local: string): TimeValue => ({
+  utc: `${local}.000Z`,
+  zone: "Europe/Rome",
+  offset: "+02:00",
+  local,
+  precision: "minute",
+});
+const diaryDay = dayAsTimeValue({ date: "2025-05-03", zone: null, precision: "day" });
 
 /**
  * The POI backfill copies `TripStop{domain:'poi'}` rows into Place +
@@ -38,18 +48,18 @@ describe("isSupersededByPlaceVisit: which trip stops the backfill replaced", () 
 describe("place-visit events keep the #175 ordering", () => {
   it("orders three place visits on one day by time, journal last", () => {
     const events = [
-      { id: "j", kind: "journal", date: "2025-05-03T00:00:00.000Z" },
-      { id: "c", kind: "place-visit", date: "2025-05-03T14:30:00.000Z" },
-      { id: "a", kind: "place-visit", date: "2025-05-03T10:00:00.000Z" },
-      { id: "b", kind: "place-visit", date: "2025-05-03T12:30:00.000Z" },
+      { id: "j", kind: "journal", when: diaryDay },
+      { id: "c", kind: "place-visit", when: at("2025-05-03T14:30:00") },
+      { id: "a", kind: "place-visit", when: at("2025-05-03T10:00:00") },
+      { id: "b", kind: "place-visit", when: at("2025-05-03T12:30:00") },
     ];
     expect([...events].sort(compareTimelineEvents).map((e) => e.id)).toEqual(["a", "b", "c", "j"]);
   });
 
   it("does not drag a visit across a day boundary", () => {
     const events = [
-      { id: "day2-early", kind: "place-visit", date: "2025-05-04T09:00:00.000Z" },
-      { id: "day1-late", kind: "place-visit", date: "2025-05-03T22:00:00.000Z" },
+      { id: "day2-early", kind: "place-visit", when: at("2025-05-04T09:00:00") },
+      { id: "day1-late", kind: "place-visit", when: at("2025-05-03T22:00:00") },
     ];
     expect([...events].sort(compareTimelineEvents).map((e) => e.id)).toEqual([
       "day1-late",

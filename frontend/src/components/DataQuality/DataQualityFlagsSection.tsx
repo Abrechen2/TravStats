@@ -5,6 +5,7 @@ import { dataQualityFlagsApi } from "../../lib/api/dataQualityFlags";
 import { logger } from "../../lib/logger";
 import { useToastStore } from "../../store/toastStore";
 import type { DataQualityFlag, DataQualityFlagStatus } from "../../types/dataQuality";
+import { TIME_FLAG_KINDS } from "../../types/timeMigration";
 
 import DataQualityFlagCard from "./DataQualityFlagCard";
 import Button from "../ui/Button";
@@ -29,6 +30,20 @@ const STATUS_OPTIONS: (DataQualityFlagStatus | "all")[] = [
   "dismissed",
   "all",
 ] as const;
+
+/**
+ * The time model's questions (ADR 0002 phase 3b: a zone that could not be
+ * resolved, a time of day nobody knows, a day two readings disagree on) are
+ * not contradictions — nothing disagrees, something is missing. They get
+ * their own heading and sentence; the contradiction sentence ("zwei Angaben
+ * widersprechen sich") above them was simply untrue.
+ */
+const isTimeQuestion = (flag: DataQualityFlag): boolean =>
+  (TIME_FLAG_KINDS as readonly string[]).includes(flag.kind);
+
+/** The home question (owner decision 2026-09-27) is not a contradiction either: nothing is set yet. */
+const isHomeQuestion = (flag: DataQualityFlag): boolean =>
+  flag.kind === "home_residence_unconfirmed";
 
 export default function DataQualityFlagsSection({
   onOpenCount,
@@ -111,9 +126,9 @@ export default function DataQualityFlagsSection({
 
   return (
     <section>
-      {/* Round 4: the tab above names the section, so it keeps only its
-          sentence; the status select became pills, the recheck sits right. */}
-      <p className="t-caption mb-4">{t("dataQuality:inbox.review.description")}</p>
+      {/* Round 4: the tab above names the section; the status select became
+          pills, the recheck sits right. Each group below carries its own
+          sentence, so the intro says what its cards are. */}
       <div className="mb-5 flex flex-wrap items-center justify-between gap-3">
         <div
           role="group"
@@ -165,17 +180,48 @@ export default function DataQualityFlagsSection({
           <p className="t-caption mt-1">{t("dataQuality:inbox.review.empty.description")}</p>
         </div>
       ) : (
-        <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
-          {flags.map((flag) => (
-            <DataQualityFlagCard
-              key={flag.id}
-              flag={flag}
-              busy={busyId === flag.id}
-              onResolve={() => void handleResolve(flag.id)}
-              onDismiss={() => void handleDismiss(flag.id)}
-            />
-          ))}
-        </div>
+        [
+          {
+            key: "contradictions",
+            items: flags.filter((f) => !isTimeQuestion(f) && !isHomeQuestion(f)),
+          },
+          { key: "home", items: flags.filter(isHomeQuestion) },
+          { key: "time", items: flags.filter(isTimeQuestion) },
+        ]
+          .filter((group) => group.items.length > 0)
+          .map((group, index, groups) => (
+            <div
+              key={group.key}
+              className={index > 0 ? "mt-8" : undefined}
+              data-testid={`flag-group-${group.key}`}
+            >
+              {/* A heading only when both kinds are on the page. */}
+              {groups.length > 1 && (
+                <h3
+                  className="mb-1"
+                  style={{ fontSize: 15, fontWeight: 700, color: "var(--ts-text-bright)" }}
+                >
+                  {t(`dataQuality:inbox.review.${group.key}.title`)}
+                </h3>
+              )}
+              <p className="t-caption mb-4">
+                {group.key === "contradictions"
+                  ? t("dataQuality:inbox.review.description")
+                  : t(`dataQuality:inbox.review.${group.key}.description`)}
+              </p>
+              <div className="grid grid-cols-1 gap-4 md:grid-cols-2 xl:grid-cols-3">
+                {group.items.map((flag) => (
+                  <DataQualityFlagCard
+                    key={flag.id}
+                    flag={flag}
+                    busy={busyId === flag.id}
+                    onResolve={() => void handleResolve(flag.id)}
+                    onDismiss={() => void handleDismiss(flag.id)}
+                  />
+                ))}
+              </div>
+            </div>
+          ))
       )}
     </section>
   );

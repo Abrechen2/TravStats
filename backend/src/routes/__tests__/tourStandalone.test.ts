@@ -164,6 +164,44 @@ describe("a standalone tour", () => {
     // writing a second, trip-less copy of one is the duplicate this split
     // exists to avoid.
     expect(res.status).toBe(409);
+    // A code the client words in German, and no stack outside development
+    // (acceptance D5: the UI got English text plus a stack and showed nothing).
+    expect(res.body.code).toBe("TOUR_POINTS_FROM_TRIP");
+    expect(res.body).not.toHaveProperty("stack");
+  });
+
+  // Acceptance D5: a day tour that joined a trip (trip suggestion, owner
+  // decision 2026-09-26) keeps its own points — and every save of them
+  // answered 409 "This tour belongs to a trip".
+  it("keeps the points of a day tour that joined a trip editable, on both paths", async () => {
+    const id = await createStandalone("Tagestour");
+    await request(app)
+      .put(`/api/v1/tours/${id}/points`)
+      .set("Cookie", cookie)
+      .send({ points: [{ title: "Start", lat: 61.5, lon: 8.8 }] });
+    await prisma.tripRoute.update({ where: { id }, data: { tripId } });
+
+    const standalonePath = await request(app)
+      .put(`/api/v1/tours/${id}/points`)
+      .set("Cookie", cookie)
+      .send({
+        points: [
+          { title: "Start", lat: 61.5, lon: 8.8 },
+          { title: "Gipfel", lat: 61.52, lon: 8.85 },
+        ],
+      });
+    expect(standalonePath.status).toBe(200);
+    expect(standalonePath.body.stops.map((s: { title: string }) => s.title)).toEqual([
+      "Start",
+      "Gipfel",
+    ]);
+
+    const tripPath = await request(app)
+      .put(`/api/v1/trips/${tripId}/routes/${id}/points`)
+      .set("Cookie", cookie)
+      .send({ points: [{ title: "Nur Start", lat: 61.5, lon: 8.8 }] });
+    expect(tripPath.status).toBe(200);
+    expect(tripPath.body.stops).toEqual([expect.objectContaining({ tripId: null })]);
   });
 
   it("deletes its own points with it, and leaves a trip's stops alone", async () => {

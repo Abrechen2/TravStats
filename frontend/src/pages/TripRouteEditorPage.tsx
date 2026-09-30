@@ -1,5 +1,7 @@
 import { useCallback, useEffect, useMemo, useRef, useState } from "react";
 import { Link, useParams } from "react-router-dom";
+import { saveErrorMessage } from "../lib/saveErrorMessage";
+import { TRACK_ERROR_KEYS } from "../lib/trackErrorKeys";
 
 import AppShell from "../components/ui/AppShell";
 import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
@@ -12,17 +14,19 @@ import { TOUR_COLOR } from "../shared/domains";
 import { TOUR_ACTIVITIES, type TourActivity } from "../shared/tour/roadtrip";
 import TourStopAssigner from "../components/Trips/TourStopAssigner";
 import TourPointEditor from "../components/Trips/TourPointEditor";
+import TourDayEditor from "../components/Trips/TourDayEditor";
+import { editsOwnPoints, tourPointsSaveErrorKey } from "../components/Trips/tourPointsSave";
 import TourLegList from "../components/Trips/TourLegList";
 import TourTrackList from "../components/Trips/TourTrackList";
 import { useTranslation } from "../hooks/useTranslation";
 import { useTourTracks } from "../hooks/useTourTracks";
+import { useTourTrackCoverage } from "../hooks/useTourTrackCoverage";
 import { tripsApi } from "../lib/api";
 import { toursApi, type TourPointInput } from "../lib/api/tours";
 import { trackArchiveApi } from "../lib/api/trackArchive";
 import { downloadBlob } from "../lib/export";
 import { dawarichFailureKey, dawarichFailureKind } from "../lib/api/dawarich";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
-import { findCoveringTrackId } from "../lib/trackCoverage";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { Trip, TripStop } from "../types";
@@ -102,6 +106,7 @@ export default function TripRouteEditorPage(): JSX.Element {
      only points there are. */
   const [sectionStops, setSectionStops] = useState<TourStop[]>([]);
   const [savingPoints, setSavingPoints] = useState(false);
+  const [pointsError, setPointsError] = useState<string | null>(null);
   const [geometry, setGeometry] = useState<TourGeometry | null>(null);
   // Whether a routing provider is configured and usable right now — see
   // `routingAvailable` on `toursApi.get()`. Defaults to `false` (never a
@@ -206,32 +211,20 @@ export default function TripRouteEditorPage(): JSX.Element {
     return map;
   }, [assignerStops]);
 
-  const stopCoordById = useMemo(() => {
-    const map = new Map<string, { lat: number; lon: number }>();
-    for (const s of assignerStops) {
-      if (s.lat !== null && s.lon !== null) map.set(s.id, { lat: s.lat, lon: s.lon });
-    }
-    return map;
-  }, [assignerStops]);
-
   /**
    * legId -> id of the recorded track that covers it, powering
-   * `TourLegList`'s "track" option gate. See `lib/trackCoverage.ts` —
-   * `tracksWithGeometry` is already in `toursApi.tracks.list`'s
-   * oldest-started-first order, so "first match" there is a deterministic
-   * choice, not an arbitrary one.
+   * `TourLegList`'s "track" option gate — decided on the server by the rule
+   * the adoption itself applies. Asked again whenever the legs or the
+   * recordings change.
    */
-  const trackCoverageByLegId = useMemo(() => {
-    const map = new Map<string, string>();
-    for (const leg of legs) {
-      const from = stopCoordById.get(leg.fromStopId);
-      const to = stopCoordById.get(leg.toStopId);
-      if (!from || !to) continue;
-      const trackId = findCoveringTrackId(tracksWithGeometry, from, to);
-      if (trackId) map.set(leg.id, trackId);
-    }
-    return map;
-  }, [legs, stopCoordById, tracksWithGeometry]);
+  const coverageKey = `${legs.map((l) => `${l.id}:${l.fromStopId}:${l.toStopId}`).join(",")}|${tracks
+    .map((tr) => tr.id)
+    .join(",")}`;
+  const { coveringTrackByLegId: trackCoverageByLegId, known: coverageKnown } = useTourTrackCoverage(
+    id,
+    routeId,
+    coverageKey
+  );
 
   // `TripMap` was specifically changed to protect its layer `useMemo` with a
   // stable default (`NO_TOUR_GEOMETRIES`) when no `tourGeometries` prop is
@@ -288,14 +281,18 @@ export default function TripRouteEditorPage(): JSX.Element {
   const mapContent = useMemo<TripMapContent>(
     () =>
       trip ?? {
-        stops: sectionStops.map((s) => ({
-          title: s.title,
-          lat: s.lat,
-          lon: s.lon,
-          domain: "tour",
-        })),
+        // A route correction bends the line; it is not a stop to mark.
+        stops: sectionStops
+          .filter((s) => s.viaPoint !== true)
+          .map((s) => ({
+            title: s.title,
+            lat: s.lat,
+            lon: s.lon,
+            domain: "tour",
+          })),
+        emptyKey: route?.kind === "roadtrip" ? "roadtrips:map.empty" : "trips:tours.map.empty",
       },
-    [trip, sectionStops]
+    [trip, sectionStops, route?.kind]
   );
 
   const handleActivityChange = useCallback(
@@ -321,8 +318,9 @@ export default function TripRouteEditorPage(): JSX.Element {
     async (points: TourPointInput[]): Promise<void> => {
       if (!routeId) return;
       setSavingPoints(true);
+      setPointsError(null);
       try {
-        const result = await toursApi.replacePoints(routeId, points);
+        const result = await toursApi.replacePoints(id, routeId, points);
         if (!mountedRef.current) return;
         setRoute(result.route);
         setSectionStops(result.stops);
@@ -330,13 +328,17 @@ export default function TripRouteEditorPage(): JSX.Element {
         // The geometry is derived from the legs that just changed; it is
         // the one thing the write does not return.
         setGeometry(await toursApi.geometry(undefined, routeId));
-      } catch {
-        if (mountedRef.current) addToast("error", t("trips:tours.points.saveError"));
+      } catch (err) {
+        logger.warn("TripRouteEditorPage: saving the points failed", err);
+        if (!mountedRef.current) return;
+        const message = t(tourPointsSaveErrorKey(err));
+        setPointsError(message);
+        addToast("error", message);
       } finally {
         if (mountedRef.current) setSavingPoints(false);
       }
     },
-    [routeId, addToast, t]
+    [id, routeId, addToast, t]
   );
 
   const handleAssignChange = useCallback(
@@ -361,7 +363,7 @@ export default function TripRouteEditorPage(): JSX.Element {
 
   const handleSetLegSource = useCallback(
     (leg: TourLeg, source: "straight" | "drawn"): void => {
-      if (!id || !routeId) return;
+      if (!routeId) return;
       void (async (): Promise<void> => {
         try {
           await toursApi.setLeg(id, routeId, leg.fromStopId, leg.toStopId, { source });
@@ -385,16 +387,28 @@ export default function TripRouteEditorPage(): JSX.Element {
    * fallback is not an error — `load()` picks up the honest result (source
    * reverts to "straight") and a distinct info toast says so, rather than
    * silently looking like nothing happened.
+   *
+   * These leg handlers need a section, not a trip: a standalone tour or
+   * roadtrip has no trip id, and until 2026-09-26 an `!id` guard made its
+   * "route" buttons return before sending anything.
    */
   const handleRouteLeg = useCallback(
     (leg: TourLeg): void => {
-      if (!id || !routeId) return;
+      if (!routeId) return;
       void (async (): Promise<void> => {
         try {
-          const routed = await toursApi.routeLeg(id, routeId, leg.fromStopId, leg.toStopId);
+          const { fallbackReason } = await toursApi.routeLeg(
+            id,
+            routeId,
+            leg.fromStopId,
+            leg.toStopId
+          );
           await load();
-          if (routed.confidence === "low") {
-            addToast("info", t("trips:tours.routing.fallback"));
+          if (fallbackReason !== null) {
+            addToast(
+              "info",
+              `${t("trips:tours.routing.fallback")} ${t(`trips:tours.routing.reason.${fallbackReason}`)}`
+            );
           }
         } catch (err) {
           if (apiErrorStatus(err) === 409) {
@@ -420,7 +434,7 @@ export default function TripRouteEditorPage(): JSX.Element {
    * that quietly routed zero legs because no provider is configured.
    */
   const handleRouteAll = useCallback((): void => {
-    if (!id || !routeId) return;
+    if (!routeId) return;
     setRoutingAllInProgress(true);
     void (async (): Promise<void> => {
       try {
@@ -429,10 +443,19 @@ export default function TripRouteEditorPage(): JSX.Element {
         if (!mountedRef.current) return;
         addToast(
           "info",
-          t("trips:tours.routing.result", {
-            routed: result.routedCount,
-            skipped: result.skippedCount,
-          })
+          result.fallbackCount > 0
+            ? t("trips:tours.routing.resultFallback", {
+                routed: result.routedCount,
+                fallback: result.fallbackCount,
+                skipped: result.skippedCount,
+                reason: result.fallbackReason
+                  ? t(`trips:tours.routing.reason.${result.fallbackReason}`)
+                  : "",
+              })
+            : t("trips:tours.routing.result", {
+                routed: result.routedCount,
+                skipped: result.skippedCount,
+              })
         );
       } catch (err) {
         addToast("error", apiErrorMessage(err) ?? t("trips:tours.routing.allError"));
@@ -444,7 +467,7 @@ export default function TripRouteEditorPage(): JSX.Element {
 
   const handleClearLeg = useCallback(
     (leg: TourLeg): void => {
-      if (!id || !routeId) return;
+      if (!routeId) return;
       void (async (): Promise<void> => {
         try {
           await toursApi.clearLeg(id, routeId, leg.fromStopId, leg.toStopId);
@@ -468,7 +491,7 @@ export default function TripRouteEditorPage(): JSX.Element {
    */
   const handleAdoptTrack = useCallback(
     (leg: TourLeg, trackId: string): void => {
-      if (!id || !routeId) return;
+      if (!routeId) return;
       void (async (): Promise<void> => {
         try {
           await toursApi.setLeg(id, routeId, leg.fromStopId, leg.toStopId, {
@@ -490,10 +513,13 @@ export default function TripRouteEditorPage(): JSX.Element {
         try {
           await uploadTrack(file);
         } catch (err) {
-          // A malformed GPX and a GPX with no timestamps both 400 with
-          // DIFFERENT server messages (see `toursApi.tracks.upload`'s own
-          // doc comment) — surface whichever one the server sent.
-          addToast("error", apiErrorMessage(err) ?? t("trips:tours.tracks.uploadError"));
+          // A malformed file, one without timestamps, an oversized one and a
+          // duplicate each carry their own server CODE — mapped to DE/EN copy,
+          // never the server's English prose.
+          addToast(
+            "error",
+            saveErrorMessage(err, t, "trips:tours.tracks.uploadError", TRACK_ERROR_KEYS)
+          );
         }
       })();
     },
@@ -532,10 +558,9 @@ export default function TripRouteEditorPage(): JSX.Element {
    * Pulls the section's own date span from Dawarich (an empty body — the
    * server derives the window from the section's stops). Three failure
    * shapes, per `toursApi.tracks.pullDawarich`'s doc comment: a fixed-kind
-   * 409 (`dawarichFailureKind` parses it, `notConfigured` included), or
-   * plain prose with no kind (an empty window, or no dated stops to derive
-   * one from) — the fallback branch surfaces that prose verbatim rather
-   * than a generic message.
+   * 409 (`dawarichFailureKind` parses it, `notConfigured` included), or a
+   * `code` (an empty window, too few points, no dated stops to derive one
+   * from) that `TRACK_ERROR_KEYS` turns into its own DE/EN sentence.
    */
   const handlePullDawarich = useCallback((): void => {
     void (async (): Promise<void> => {
@@ -547,7 +572,7 @@ export default function TripRouteEditorPage(): JSX.Element {
           "error",
           kind
             ? t(dawarichFailureKey(kind))
-            : (apiErrorMessage(err) ?? t("trips:tours.tracks.dawarich.error"))
+            : saveErrorMessage(err, t, "trips:tours.tracks.dawarich.error", TRACK_ERROR_KEYS)
         );
       }
     })();
@@ -589,6 +614,7 @@ export default function TripRouteEditorPage(): JSX.Element {
     );
   }
 
+  const ownPoints = editsOwnPoints(trip !== null, sectionStops);
   return (
     <AppShell width="list">
       <div className="space-y-6">
@@ -628,6 +654,9 @@ export default function TripRouteEditorPage(): JSX.Element {
                 ))}
               </select>
             )}
+            {route.kind === "tour" && (
+              <TourDayEditor route={route} tripId={id} onSaved={setRoute} />
+            )}
             <span>
               {t(`trips:tours.mode.${route.mode}`)} ·{" "}
               {/* A day tour is measured by its recording once it has one. */}
@@ -665,17 +694,19 @@ export default function TripRouteEditorPage(): JSX.Element {
 
         <section>
           <h2 className="text-lg font-semibold mb-3">
-            {trip === null ? t("trips:tours.points.heading") : t("trips:tours.stopsHeading")}
+            {ownPoints ? t("trips:tours.points.heading") : t("trips:tours.stopsHeading")}
           </h2>
-          {trip === null ? (
+          {ownPoints ? (
             <TourPointEditor
               points={sectionStops.map((s) => ({
                 id: s.id,
                 title: s.title,
                 lat: s.lat ?? NaN,
                 lon: s.lon ?? NaN,
+                via: s.viaPoint === true,
               }))}
               saving={savingPoints}
+              error={pointsError}
               onSave={(points) => void handleSavePoints(points)}
             />
           ) : (
@@ -692,7 +723,7 @@ export default function TripRouteEditorPage(): JSX.Element {
             onSetSource={handleSetLegSource}
             onRoute={handleRouteLeg}
             trackCoverageByLegId={trackCoverageByLegId}
-            tracksKnown={tracksKnown}
+            tracksKnown={coverageKnown && tracksKnown}
             onAdoptTrack={handleAdoptTrack}
             onClear={handleClearLeg}
             onRouteAll={handleRouteAll}

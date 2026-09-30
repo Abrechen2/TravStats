@@ -8,10 +8,11 @@
  * list, and moving a row between the two pages.
  */
 
+import { roadtripStationTimesSchema, stayTimesSchema } from "../../../schemas/times";
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent } from "./shared";
+import { errorContent, timeRefused } from "./shared";
 import { tourLeg, tourRoute } from "./tours";
 import { createRoadtripSchema, kindSwitchSchema, stationsSchema } from "../../../schemas/roadtrip";
 import {
@@ -66,6 +67,19 @@ const roadtripSummary = registry.register(
       points: z
         .array(z.tuple([z.number(), z.number()]))
         .describe("Station coordinates as [lon, lat], in travel order"),
+      stations: z
+        .array(
+          z.object({
+            id: z.string().uuid(),
+            title: z.string(),
+            lat: z.number(),
+            lon: z.number(),
+            state: z.enum(["stay", "free", "pass"]),
+          })
+        )
+        .describe(
+          "The placed stations in travel order, for map markers. Never a route correction."
+        ),
       nights: z.number().int(),
       stayNights: z.number().int(),
       freeNights: z.number().int(),
@@ -90,12 +104,24 @@ const station = registry.register(
       lon: z.number().nullable(),
       startDate: z.string().datetime().nullable(),
       endDate: z.string().datetime().nullable(),
+      times: roadtripStationTimesSchema,
       notes: z.string().nullable(),
       order: z.number().int().nullable(),
       state: z
         .enum(STATION_STATES)
-        .describe("stay = night at a linked stay, free = night without one, pass = no night"),
+        .describe(
+          "stay = night at a linked stay, free = night without one, pass = no night, " +
+            "via = a route correction: the legs run through it, but it is not a station " +
+            "(no name needed, no date, left out of every count). The list, the phone and " +
+            "the statistics never return a via point; only this roadtrip's own detail does."
+        ),
       lodgingStayId: z.string().uuid().nullable(),
+      placeId: z
+        .string()
+        .uuid()
+        .nullable()
+        .describe("A pass-through only: the caller's own place (POI) it passed"),
+      place: z.object({ id: z.string().uuid(), name: z.string(), category: z.string() }).nullable(),
       stay: z
         .object({
           id: z.string().uuid(),
@@ -106,6 +132,7 @@ const station = registry.register(
           country: z.string().nullable(),
           checkIn: z.string().datetime().nullable(),
           checkOut: z.string().datetime().nullable(),
+          times: stayTimesSchema,
           nights: z.number().int().nullable(),
           status: z.string(),
         })
@@ -202,7 +229,10 @@ registry.registerPath({
   description:
     "Adds, moves, removes and re-links in one write; legs are recomputed in the same " +
     "transaction and keyed by endpoint station. Each station's night is exactly one of " +
-    "`stay` (with the caller's own `lodgingStayId`), `free` or `pass`. A timeline stop " +
+    "`stay` (with the caller's own `lodgingStayId`), `free`, `pass` (optionally with the " +
+    "caller's own `placeId`; 404 for another account's place) or `via` (a route " +
+    "correction with no date and possibly no name; 400 `VIA_POINT_ON_TIMELINE` for a " +
+    "trip's timeline stop). A timeline stop " +
     "dropped from the list goes back to its trip rather than being deleted.",
   tags: ["Roadtrips"],
   request: {
@@ -210,6 +240,7 @@ registry.registerPath({
     body: { content: { "application/json": { schema: stationsSchema } } },
   },
   responses: {
+    422: timeRefused,
     200: {
       description: "The roadtrip after the write",
       content: {
@@ -306,8 +337,10 @@ registry.registerPath({
     "The phone never sends the whole list (that is the web's PUT): it appends. Without a " +
     "`title` the server names the place by reverse geocoding. A free night covers `date` to " +
     "the next day. Idempotent for an outbox: a station of this roadtrip on the same day within " +
-    "150 m answers 200 with that station instead of adding a second one. Legs are recomputed " +
-    "and routed like a web save.",
+    "150 m answers 200 with that station, unchanged, instead of adding a second one. Legs are " +
+    "recomputed and routed like a web save. A `stay` night links the caller's stay: the " +
+    "station runs to its check-out (the next day when that lies before `date`) and, without a " +
+    "`title`, takes the lodging's name.",
   tags: ["Roadtrips"],
   request: {
     params: idParams,
@@ -318,7 +351,15 @@ registry.registerPath({
             lat: z.number(),
             lon: z.number(),
             date: isoDay,
-            night: z.enum(["pass", "free"]),
+            night: z.enum(["pass", "free", "stay"]),
+            lodgingStayId: z
+              .string()
+              .uuid()
+              .optional()
+              .describe(
+                'The caller\'s own stay; required with night "stay" and refused otherwise. ' +
+                  "Another account's stay is a 404."
+              ),
             title: z.string().optional(),
           }),
         },
@@ -326,6 +367,7 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     200: {
       description: "Already there (a resend)",
       content: {
@@ -344,6 +386,39 @@ registry.registerPath({
     },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Roadtrip not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/roadtrips/{id}/stations/{stationId}",
+  summary: "Take ONE station off a roadtrip (the phone's undo)",
+  description:
+    "Any station of the caller's roadtrip — no column records who made a station, so " +
+    '"phone-appended only" cannot be told from the data. A trip\'s timeline stop goes back ' +
+    "to its trip (`released: true`); a roadtrip-owned station is deleted. The rest are " +
+    "renumbered and the legs recomputed, so its two neighbours are joined by one leg.",
+  tags: ["Roadtrips"],
+  request: { params: z.object({ id: z.string().uuid(), stationId: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "The roadtrip's stations and legs after the removal",
+      content: {
+        "application/json": {
+          schema: z.object({
+            removed: z.object({
+              id: z.string().uuid(),
+              released: z
+                .boolean()
+                .describe("True when the stop stays on its trip's timeline, false when deleted"),
+            }),
+            stations: z.array(station),
+            legs: z.array(tourLeg),
+          }),
+        },
+      },
+    },
+    404: { description: "Roadtrip or station not found", content: errorContent },
   },
 });
 

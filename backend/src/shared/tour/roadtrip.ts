@@ -60,18 +60,30 @@ export const STORED_ROADTRIP_VEHICLES = [
 export type StoredRoadtripVehicle = RoadtripVehicle | LegacyRoadtripVehicle;
 
 /**
- * A station is exactly one of three things. Derived from two columns and
- * never stored as an enum — see `TripStop.overnight` in schema.prisma.
+ * A point on a roadtrip is exactly one of four things. Derived from three
+ * columns and never stored as an enum — see `TripStop.overnight` and
+ * `TripStop.viaPoint` in schema.prisma.
+ *
+ * `via` is a route correction (tester 2026-09-26): the route bends through
+ * it, but it is not a station — nothing that counts stations counts it.
  */
-export const STATION_STATES = ["stay", "free", "pass"] as const;
+export const STATION_STATES = ["stay", "free", "pass", "via"] as const;
 export type StationState = (typeof STATION_STATES)[number];
 
 export function stationState(stop: {
   lodgingStayId: string | null;
   overnight: boolean;
+  /** Absent on rows read without the column; such a row is never a via point. */
+  viaPoint?: boolean;
 }): StationState {
+  if (stop.viaPoint === true) return "via";
   if (stop.lodgingStayId !== null) return "stay";
   return stop.overnight ? "free" : "pass";
+}
+
+/** Whether a point is a real station — what every count, list and marker asks. */
+export function isStation(stop: { viaPoint?: boolean }): boolean {
+  return stop.viaPoint !== true;
 }
 
 const DAY_MS = 24 * 60 * 60 * 1000;
@@ -85,6 +97,7 @@ function daySpan(from: Date, to: Date): number {
 export interface CountableStation {
   lodgingStayId: string | null;
   overnight: boolean;
+  viaPoint?: boolean;
   startDate: Date | null;
   endDate: Date | null;
   /**
@@ -123,7 +136,7 @@ export function countRoadtripNights(stations: readonly CountableStation[]): Road
 
   for (const station of stations) {
     const state = stationState(station);
-    if (state === "pass") continue;
+    if (state === "pass" || state === "via") continue;
 
     if (state === "stay") {
       const id = station.lodgingStayId as string;

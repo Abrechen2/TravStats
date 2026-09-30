@@ -3,6 +3,7 @@ import type { JSX } from "react";
 import ConfirmModal from "../Training/ConfirmModal";
 import { useDocumentCount } from "../../hooks/useDocumentCount";
 import { useTranslation } from "../../hooks/useTranslation";
+import { useRailVisible } from "../../hooks/useRailVisible";
 import { DELETE_BUTTON_CLASS, withDocumentNote } from "../../lib/deleteConfirm";
 
 interface Props {
@@ -42,6 +43,11 @@ export default function TripDeleteConfirm({
 }: Props): JSX.Element {
   const { t } = useTranslation(["trips", "common", "documents"]);
   const documentCount = useDocumentCount(isOpen ? { type: "trip", id: tripId } : null);
+  // Rail journeys survive a trip (`RailJourney.trip` is SetNull) and the
+  // sentence said so for every other domain but them (browser acceptance
+  // 2026-09-26). Named only where the rail domain is shown at all.
+  const railVisible = useRailVisible();
+  const messageKey = railVisible ? "trips:deleteTripConfirmWithRail" : "trips:deleteTripConfirm";
 
   return (
     <ConfirmModal
@@ -49,7 +55,7 @@ export default function TripDeleteConfirm({
       onClose={onClose}
       onConfirm={onConfirm}
       title={t("trips:deleteTripConfirmTitle")}
-      message={withDocumentNote(t("trips:deleteTripConfirm", { name: tripName }), t, documentCount)}
+      message={withDocumentNote(t(messageKey, { name: tripName }), t, documentCount)}
       confirmText={t("trips:deleteTrip")}
       cancelText={t("trips:modal.cancel")}
       confirmButtonClass={DELETE_BUTTON_CLASS}

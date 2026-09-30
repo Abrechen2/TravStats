@@ -23,6 +23,9 @@ const railStats = registry.register(
             .number()
             .describe("great_circle — the straight line, which understates the track"),
           tracedKm: z.number().describe("route — along the traced Transitous line"),
+          roadtripKm: z
+            .number()
+            .describe("roadtrip — along the line a converted roadtrip leg brought along"),
           ticketKm: z.number().describe("user — typed from the ticket"),
           unmeasuredJourneys: z.number().int().describe("Rides with no distance at all"),
         })
@@ -52,10 +55,25 @@ const railStats = registry.register(
         buckets: z.array(
           z.object({ upToMinutes: z.number().int().nullable(), count: z.number().int() })
         ),
+        averageMinutes: z
+          .number()
+          .nullable()
+          .describe(
+            "Mean delay over the recorded rides, one decimal, early arrivals negative. " +
+              "Null when no ride carries a delay — never 0, which would claim on time."
+          ),
       }),
       byYear: z.array(
         z.object({ year: z.number().int(), journeys: z.number().int(), km: z.number() })
       ),
+      rideKinds: z
+        .object({
+          nightTrains: z.number().int(),
+          highSpeed: z.number().int(),
+          crossBorder: z.number().int().describe("Both stations' countries known and different"),
+          operators: z.number().int().describe("Distinct operators, spelling folded"),
+        })
+        .describe("Rides of a kind, counted by the rule the rail badges use"),
     })
     .openapi("RailStats")
 );

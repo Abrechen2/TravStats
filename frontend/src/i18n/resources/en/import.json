@@ -10,7 +10,23 @@
       "title": "No LLM parser available",
       "body": "No LLM (Ollama, OpenAI, Claude) is configured. The regex fallback only recognises the most common booking formats; manual corrections will be needed more often."
     },
-    "pasteFirst": "Paste the text of the e-mail first."
+    "llmDisabled": {
+      "title": "AI parser switched off",
+      "body": "The administrator has switched the AI model off. Bookings are read with the built-in templates only; anything no template knows you fill in by hand."
+    },
+    "pasteFirst": "Paste the text of the e-mail first.",
+    "provider": {
+      "local": "Anything no template knows is read by the AI model {{model}} on your network.",
+      "cloud": "Anything no template knows is sent to {{host}} ({{model}}) to be read — a cloud provider outside this instance."
+    },
+    "cloudNotConsented": {
+      "title": "AI parser awaiting consent",
+      "body": "The configured AI provider is outside the network, and the administrator has not agreed to sending bookings there. Bookings are read with the built-in templates only."
+    },
+    "providerIncomplete": {
+      "title": "AI provider not fully set up",
+      "body": "The OpenAI-compatible provider is missing its base URL or model. Until the administrator completes it, bookings are read with the built-in templates only."
+    }
   },
   "pdf": {
     "dropZone": "Drop PDF here or click",
@@ -65,5 +81,33 @@
       "description": "For anything without a name — a viewpoint, a pitch, a bay.",
       "action": "Map"
     }
+  },
+  "errors": {
+    "llmUnreachable": "The AI parser cannot be reached right now. Please check the parser settings or try again later.",
+    "llmDisabled": "The administrator has switched the AI parser off. Anything no built-in template knows, you add by hand.",
+    "invalidPdf": "This file could not be read as a PDF.",
+    "pdfNoText": "No text could be read from this PDF – probably a scan. Please read it in as an image with the boarding-pass scanner.",
+    "rateLimited": "Too many imports in a short time. Please wait a moment and try again.",
+    "timeout": "Reading the document took too long. Please try again later.",
+    "llmCloudNotConsented": "The AI provider is outside the network, and the administrator has not agreed to sending documents there."
+  },
+  "wrongDialog": {
+    "title": "Wrong import",
+    "flight": "This is a flight booking.",
+    "cruise": "This is a cruise booking.",
+    "lodging": "This is an accommodation booking.",
+    "rail": "This is a rail booking.",
+    "body": "Nothing was read here for that reason. Import the document where it belongs.",
+    "open": {
+      "flight": "Import as a flight",
+      "cruise": "Import as a cruise",
+      "lodging": "Import as accommodation",
+      "rail": "Import as a rail journey"
+    },
+    "dismiss": "Close"
+  },
+  "readBy": {
+    "local": "Read by the AI model {{model}} on your network.",
+    "cloud": "Read by the AI model {{model}} at {{host}} (cloud provider)."
   }
 }

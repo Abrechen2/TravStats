@@ -26,8 +26,24 @@ import { flightsApi, type AerodataboxQuota, type BulkRefreshSummary } from "../.
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useAuthStore } from "../../store/authStore";
 import { rememberQuotaRefused, wasQuotaRefused } from "../../lib/bulkRefreshRefusal";
+import type { LookupProviderFailure } from "../../lib/api/flightLookup";
+import { providerFailureLines } from "../../lib/flightLookupFailure";
 
 const MAX_PER_BATCH = 25;
+
+/** Distinct provider failures across the batch, as reader-facing lines. */
+function summaryProviderFailures(
+  summary: BulkRefreshSummary,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string[] {
+  const seen = new Map<string, LookupProviderFailure>();
+  for (const result of summary.results) {
+    for (const failure of result.providerFailures ?? []) {
+      seen.set(`${failure.provider}:${failure.outcome}`, failure);
+    }
+  }
+  return providerFailureLines([...seen.values()], t);
+}
 
 export default function BulkRefreshCard(): JSX.Element | null {
   const { t } = useTranslation(["settings", "common"]);
@@ -95,15 +111,18 @@ export default function BulkRefreshCard(): JSX.Element | null {
    * admin), and only the shared one is visible from here.
    */
   const isSharedDemo = useIsDemoAccount();
+  // Every isDemo account is refused, not only the shared one; the session says
+  // so since 2026-09-26, so the first visit no longer spends a 403 to learn it.
+  const quotaRefused = useAuthStore((s) => s.user?.providerQuotaRefused === true);
 
   useEffect(() => {
-    if (isSharedDemo || wasQuotaRefused(userId)) {
+    if (isSharedDemo || quotaRefused || wasQuotaRefused(userId)) {
       setDemoBlocked(true);
       return;
     }
     void loadPreview();
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- loadPreview is re-created each render; these two are the real inputs
-  }, [isSharedDemo, userId]);
+    // loadPreview is re-created each render; these two are the real inputs
+  }, [isSharedDemo, quotaRefused, userId]);
 
   const handleRun = async (): Promise<void> => {
     setRunning(true);
@@ -255,6 +274,13 @@ export default function BulkRefreshCard(): JSX.Element | null {
                 {t("settings:apiKeys.bulkRefresh.summaryFailed", { count: lastSummary.failed })}
               </li>
             )}
+            {/* A refused key or a spent quota is named, once per provider —
+                these legs used to be counted as "no provider data". */}
+            {summaryProviderFailures(lastSummary, t).map((line) => (
+              <li key={line} style={{ color: "var(--ts-bad)" }}>
+                {line}
+              </li>
+            ))}
           </ul>
           {lastSummary.remaining > 0 && (
             <div className="mt-2 text-xs text-(--text-muted)">

@@ -22,7 +22,7 @@
 
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
-import type { LodgingQueryInput } from "../../schemas/lodging";
+import type { LodgingListQuery as LodgingQueryInput } from "../../schemas/lodging";
 import { LIFECYCLE_SORT_RANK } from "../../shared/lodgingLifecycle";
 import {
   lifecycleRankSql,
@@ -62,6 +62,13 @@ export function lodgingFilterSql(q: LodgingQueryInput, userId: string): Prisma.S
   const conditions: Prisma.Sql[] = [Prisma.sql`l.user_id = ${userId}`];
 
   if (q.type) conditions.push(Prisma.sql`l.type = ${q.type}`);
+  if (q.coveredLodgingIds !== undefined) {
+    conditions.push(
+      q.coveredLodgingIds.length > 0
+        ? Prisma.sql`l.id IN (${Prisma.join(q.coveredLodgingIds)})`
+        : Prisma.sql`FALSE`
+    );
+  }
   if (q.chainId !== undefined) conditions.push(Prisma.sql`l.chain_id = ${q.chainId}`);
 
   // An ISO code covers "Deutschland" AND "Germany" through the derived column;
@@ -105,6 +112,22 @@ export function lodgingFilterSql(q: LodgingQueryInput, userId: string): Prisma.S
   }
 
   return Prisma.join(conditions, " AND ");
+}
+
+/**
+ * The stay condition every FIGURE is counted under: the counting rule, and —
+ * behind a loyalty link — only the stays the card counts. A condition on the
+ * figures, never on the JOIN, so a house's lifecycle and rating still read
+ * all of its stays.
+ */
+export function countedStaysSql(q: LodgingQueryInput, now: Date): Prisma.Sql {
+  const counts = stayCountsSql(now);
+  if (q.countedStayIds === undefined) return counts;
+  const scope =
+    q.countedStayIds.length > 0
+      ? Prisma.sql`s.id IN (${Prisma.join(q.countedStayIds)})`
+      : Prisma.sql`FALSE`;
+  return Prisma.sql`(${counts}) AND ${scope}`;
 }
 
 /**
@@ -167,7 +190,7 @@ export async function queryLodgingPage(params: {
 }): Promise<LodgingPage> {
   const { userId, query, baseCurrency } = params;
   const now = params.now ?? new Date();
-  const counts = stayCountsSql(now);
+  const counts = countedStaysSql(query, now);
   const limit = Math.min(query.limit ?? LODGING_LIST_DEFAULT_LIMIT, LODGING_LIST_MAX_LIMIT);
   const offset = query.offset ?? 0;
   const order = query.order ?? defaultOrderFor(query.sort);

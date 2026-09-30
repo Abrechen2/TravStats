@@ -3,9 +3,12 @@ import { lazy, Suspense, useCallback, useEffect, useMemo, useState } from "react
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useToastStore } from "../../store/toastStore";
-import type { ParseEmailResult, ParsePdfResult } from "../../lib/api/parse";
+import type { ParseDomain, ParseEmailResult, ParsePdfResult } from "../../lib/api/parse";
+import { detectedOtherDomain, type ImportDocument } from "./documentHandoff";
+import { WrongDialogNotice } from "./WrongDialogNotice";
 import { ImportManualFooter, ImportRouteList, ImportRouteRow } from "./ImportRouteList";
 import { isParseableDomain } from "./types";
+import { llmProviderOfResult, readByMessage } from "../../lib/llmProviderCopy";
 import type { DomainImportAdapter } from "./types";
 
 const EmailImportTab = lazy(() => import("./EmailImportTab"));
@@ -16,6 +19,20 @@ interface DomainImportPanelProps {
   /** Called once an item has been created server-side (parse → review → save). */
   onItemsCreated: () => void | Promise<void>;
   adapter: DomainImportAdapter;
+  /** A document handed over from another dialog — read on open (D1). */
+  initialDocument?: ImportDocument | null;
+  /**
+   * Opens the import the document really belongs to, with the same document.
+   * Without it the notice still says what the document is, but offers no jump.
+   */
+  onOpenOtherImport?: (domain: ParseDomain, document: ImportDocument) => void;
+  /** The imports the host can open right now (enabled and visible). */
+  openableDomains?: readonly ParseDomain[];
+}
+
+interface Mismatch {
+  detected: ParseDomain;
+  document: ImportDocument | null;
 }
 
 interface ParseState {
@@ -44,17 +61,22 @@ export default function DomainImportPanel({
   onClose,
   onItemsCreated,
   adapter,
+  initialDocument = null,
+  onOpenOtherImport,
+  openableDomains = [],
 }: DomainImportPanelProps): JSX.Element | null {
   const { t } = useTranslation(["import", "common"]);
   const addToast = useToastStore((s) => s.addToast);
   const [parseState, setParseState] = useState<ParseState | null>(null);
   const [showManual, setShowManual] = useState(false);
+  const [mismatch, setMismatch] = useState<Mismatch | null>(null);
 
   // Reset internal state every time the panel opens so successive opens start fresh.
   useEffect(() => {
     if (open) {
       setParseState(null);
       setShowManual(false);
+      setMismatch(null);
     }
   }, [open]);
 
@@ -65,18 +87,48 @@ export default function DomainImportPanel({
     [addToast]
   );
 
-  const handleEmailResult = useCallback((result: ParseEmailResult, fileName?: string | null) => {
-    setParseState({
-      kind: "email",
-      result,
-      emailMeta: { subject: result.subject, text: result.text, html: result.html },
-      sourceFileName: fileName ?? null,
-    });
-  }, []);
+  // Which model read the document, when one did — a cloud provider by host,
+  // so the user sees where their booking went (beta.17).
+  const announceProvider = useCallback(
+    (result: unknown) => {
+      const provider = llmProviderOfResult(result);
+      if (provider) addToast("info", readByMessage(provider, t));
+    },
+    [addToast, t]
+  );
 
-  const handlePdfResult = useCallback((result: ParsePdfResult, fileName?: string | null) => {
-    setParseState({ kind: "pdf", result, sourceFileName: fileName ?? null });
-  }, []);
+  const handleEmailResult = useCallback(
+    (result: ParseEmailResult, fileName?: string | null, document?: ImportDocument) => {
+      // A document that clearly is something else is not reviewed here: the
+      // server read nothing, and says what it is instead (D1).
+      const other = detectedOtherDomain(result);
+      if (other) {
+        setMismatch({ detected: other, document: document ?? null });
+        return;
+      }
+      announceProvider(result);
+      setParseState({
+        kind: "email",
+        result,
+        emailMeta: { subject: result.subject, text: result.text, html: result.html },
+        sourceFileName: fileName ?? null,
+      });
+    },
+    [announceProvider]
+  );
+
+  const handlePdfResult = useCallback(
+    (result: ParsePdfResult, fileName?: string | null, document?: ImportDocument) => {
+      const other = detectedOtherDomain(result);
+      if (other) {
+        setMismatch({ detected: other, document: document ?? null });
+        return;
+      }
+      announceProvider(result);
+      setParseState({ kind: "pdf", result, sourceFileName: fileName ?? null });
+    },
+    [announceProvider]
+  );
 
   const handleReviewCommit = useCallback(async (): Promise<void> => {
     setParseState(null);
@@ -113,8 +165,13 @@ export default function DomainImportPanel({
 
   return (
     <>
+      {/* The chooser steps aside once the manual form is up. It used to stay
+          mounted underneath: its portal landed above a form that renders in
+          place (TripModal), so "empty" left the chooser on top of the form it
+          had just opened, and its × closed both (browser acceptance
+          2026-09-26). The form is the next step, not a second layer. */}
       <Modal
-        open
+        open={!showManual}
         onClose={onClose}
         title={adapter.panelTitle}
         maxWidth={672}
@@ -139,6 +196,7 @@ export default function DomainImportPanel({
                     onEmailResult={handleEmailResult}
                     onPdfResult={handlePdfResult}
                     onError={handleError}
+                    initialDocument={initialDocument}
                   />
                 </Suspense>
               </div>
@@ -154,6 +212,23 @@ export default function DomainImportPanel({
         </div>
       </Modal>
 
+      {mismatch && (
+        <WrongDialogNotice
+          detected={mismatch.detected}
+          onDismiss={() => setMismatch(null)}
+          onOpen={
+            onOpenOtherImport && mismatch.document && openableDomains.includes(mismatch.detected)
+              ? () => {
+                  const target = mismatch;
+                  setMismatch(null);
+                  onClose();
+                  if (target.document) onOpenOtherImport(target.detected, target.document);
+                }
+              : undefined
+          }
+        />
+      )}
+
       {/* Review modal — adapter renders the domain-specific preview. */}
       {parseState &&
         adapter.renderReviewModal({
@@ -167,7 +242,9 @@ export default function DomainImportPanel({
       {/* Manual entry modal — adapter renders the domain-specific create form. */}
       {showManual &&
         adapter.renderManual({
-          onClose: () => setShowManual(false),
+          // Cancelling the form ends the "add" flow — the chooser was left
+          // behind on purpose, so there is nothing to fall back to.
+          onClose,
           onSaved: handleManualSaved,
         })}
     </>

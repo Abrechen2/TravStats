@@ -34,14 +34,18 @@ describe("trip schemas — a span must not end before it starts", () => {
   });
 
   it("accepts a trip with only one end known", () => {
-    expect(createTripSchema.safeParse({ name: "Offen", startDate: "2025-08-10Z" }).success).toBe(
+    expect(createTripSchema.safeParse({ name: "Offen", startDate: "2025-08-10" }).success).toBe(
       true
     );
     expect(updateTripSchema.safeParse({ endDate: "2025-08-01T00:00:00Z" }).success).toBe(true);
   });
 
   it("applies the same rule to a trip stop", () => {
-    const inverted = { title: "Rom", startDate: "2025-08-10T00:00:00Z", endDate: "2025-08-01Z" };
+    const inverted = {
+      title: "Rom",
+      startDate: { local: "2025-08-10T09:00" },
+      endDate: "2025-08-01",
+    };
     expect(createStopSchema.safeParse(inverted).success).toBe(false);
     expect(
       updateStopSchema.safeParse({
@@ -49,5 +53,23 @@ describe("trip schemas — a span must not end before it starts", () => {
         endDate: "2025-08-01T00:00:00Z",
       }).success
     ).toBe(false);
+  });
+});
+
+describe("trip schemas — days, not the host's reading of a datetime (ADR 0002)", () => {
+  it("refuses an offset-less datetime for a trip day with TIME_SHAPE_REQUIRED", () => {
+    // `z.coerce.date()` read "2025-08-10T00:30" in the server's zone, so a
+    // host east of UTC stored 9 August.
+    const r = createTripSchema.safeParse({ name: "Sommer", startDate: "2025-08-10T00:30" });
+    expect(r.success).toBe(false);
+    if (!r.success) expect(r.error.issues[0].message).toBe("TIME_SHAPE_REQUIRED");
+  });
+
+  it("keeps the day an offset-bearing string writes", () => {
+    const r = createTripSchema.safeParse({
+      name: "Sommer",
+      startDate: "2025-08-10T00:00:00+02:00",
+    });
+    expect(r.success && r.data.startDate?.toISOString()).toBe("2025-08-10T00:00:00.000Z");
   });
 });

@@ -97,7 +97,8 @@
     "deleteConfirmMessageNoStays": "“{{name}}” will be permanently deleted.",
     "backToLogbook": "Logbook · Stays",
     "location": "Location",
-    "nights": "Nights"
+    "nights": "Nights",
+    "stayNotFound": "This stay no longer exists at this lodging."
   },
   "field": {
     "name": "Name",
@@ -254,7 +255,7 @@
     "duplicateError": "This program is already on file",
     "deleteError": "Could not delete loyalty program",
     "extendExisting": "Extend \"{{name}}\" to cover this chain instead",
-    "leavesThisChain": "This chain is no longer ticked: after saving, the programme will not appear on this chain page any more. It is kept and stays reachable under “Manage loyalty programmes”."
+    "leavesThisChain": "This chain is no longer ticked: after saving, the programme will not appear on this chain page any more. It is kept and stays reachable under Settings → Loyalty programmes."
   },
   "chainDetail": {
     "loading": "Loading chain …",
@@ -270,7 +271,8 @@
       "nights": "Nights",
       "spend": "Spend",
       "rating": "Avg. rating"
-    }
+    },
+    "allProgrammes": "All loyalty programmes in Settings"
   },
   "import": {
     "preview": {
@@ -570,7 +572,8 @@
       "programme": "Programme",
       "year": "Year",
       "nights": "Nights",
-      "stays": "Stays"
+      "stays": "Stays",
+      "staysLink": "Show the hotels with stays under this programme in {{year}}"
     },
     "records": {
       "title": "Records",

@@ -151,11 +151,17 @@
     "createShipError": "Could not create the ship",
     "createPortError": "Could not create the port",
     "via_geocoder": "Map search (OpenStreetMap)",
-    "searchError": "Port search failed - please try again"
+    "searchError": "Port search failed - please try again",
+    "geocodeRateLimited": "The online port search (OpenStreetMap) is busy and did not answer. Search again in a minute, or add the port by hand.",
+    "geocodeUnavailable": "The online port search (OpenStreetMap) cannot be reached right now. Search again later, or add the port by hand.",
+    "shipSearchError": "Ship search failed – please try again. While the search is not answering, better not add a new ship: it may already be in the catalogue.",
+    "shipAlreadyExists": "\"{{name}}\" is already in the catalogue and was selected – no second ship was created."
   },
   "map": {
     "layer": "Cruises",
-    "fallbackTitle": "Cruise"
+    "fallbackTitle": "Cruise",
+    "geometryFailed_one": "The sea route of {{count}} cruise could not be loaded – it is shown as a straight line.",
+    "geometryFailed_other": "The sea routes of {{count}} cruises could not be loaded – they are shown as straight lines."
   },
   "routeEditor": {
     "edit": "Edit route",
@@ -210,7 +216,9 @@
     "createTitle": "New cruise",
     "editTitle": "Edit cruise",
     "saveError": "Could not save the cruise",
-    "routeNameSuggestion": "Use suggestion: {{name}}"
+    "routeNameSuggestion": "Use suggestion: {{name}}",
+    "identityRequired": "Enter a ship, a route name, a cruise line or the departure port – otherwise the cruise cannot be recognised.",
+    "startDateRequired": "Enter the departure date."
   },
   "add": {
     "title": "Add cruise"
@@ -299,5 +307,49 @@
       "noCompanions": "No companions recorded.",
       "more": "+ {{count}} more"
     }
+  },
+  "tracks": {
+    "title": "Recorded tracks",
+    "intro": "A GPS recording replaces a leg's computed sea route when it reaches both ports in sailing order (within 10 km, e.g. at anchor) and at most a quarter of the way is missing. Missing stretches are bridged with a straight line and counted.",
+    "upload": "Upload track (GPX, TCX, FIT)",
+    "uploading": "Uploading …",
+    "pullVoyage": "Load whole voyage from Dawarich",
+    "pullLeg": "Load from Dawarich",
+    "pulling": "Loading …",
+    "addToLeg": "Add track",
+    "dawarichUnavailable": "Dawarich is not connected (Settings → Integrations).",
+    "loading": "Loading tracks …",
+    "loadError": "The tracks could not be loaded.",
+    "legsTitle": "Legs",
+    "listTitle": "Tracks",
+    "empty": "No track for this cruise yet.",
+    "source": {
+      "track": "Recording",
+      "drawn": "Drawn by hand",
+      "sea_route": "Computed sea route",
+      "pending": "Not computed yet",
+      "chord": "Straight line"
+    },
+    "verdict": {
+      "complete": "Recorded end to end",
+      "bridgedGaps": "Recorded, short gaps bridged with a straight line",
+      "recordingGap": "Recording interrupted between the ports",
+      "tooManyGaps": "Too much of the way is missing from the recording",
+      "missesFrom": "Recording starts after departure",
+      "missesTo": "Recording ends before arrival",
+      "missesBoth": "No recording for this leg"
+    },
+    "coversNone": "Covers no leg",
+    "coversLegs_one": "Covers one leg",
+    "coversLegs_other": "Covers {{count}} legs",
+    "truncated": "Incomplete (Dawarich pull cut short)",
+    "remove": "Remove",
+    "removeConfirmTitle": "Remove track?",
+    "removeConfirmMessage": "The track from {{from}} to {{to}} will be removed. Its legs fall back to the drawn line or the computed sea route. The uploaded file itself is not kept – only its points.",
+    "added": "Track saved",
+    "removed": "Track removed",
+    "saveError": "The track could not be saved.",
+    "alreadyImported": "This recording is already on the cruise.",
+    "removeError": "The track could not be removed."
   }
 }

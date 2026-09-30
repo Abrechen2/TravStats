@@ -4,6 +4,7 @@ import userEvent from "@testing-library/user-event";
 import StopModal from "../StopModal";
 import { tripsApi } from "../../../lib/api";
 import type { TripStop } from "../../../types";
+import { useToastStore } from "../../../store/toastStore";
 import type { LocationCoordinates, LocationSelection } from "../../location/LocationInput";
 
 vi.mock("../../../lib/api", () => ({
@@ -63,6 +64,7 @@ const baseStop: TripStop = {
 describe("StopModal", () => {
   beforeEach(() => {
     vi.clearAllMocks();
+    useToastStore.setState({ toasts: [] });
   });
 
   it("creates a stop with the entered title and no coords (coords stay optional)", async () => {
@@ -184,6 +186,7 @@ describe("StopModal", () => {
     fireEvent.change(screen.getByPlaceholderText("trips:stopModal.titlePlaceholder"), {
       target: { value: "Louvre" },
     });
+    await userEvent.click(screen.getByText("mock-select-location"));
     fireEvent.change(screen.getByLabelText("trips:stopModal.startDateLabel"), {
       target: { value: "2026-05-01" },
     });
@@ -193,10 +196,55 @@ describe("StopModal", () => {
     await userEvent.click(screen.getByText("trips:stopModal.save"));
 
     await waitFor(() => expect(tripsApi.createStop).toHaveBeenCalled());
-    // The wall clock the user typed, pinned to UTC so it round-trips for every
-    // viewer — see the time model in lib/tripTimeline.ts.
-    expect(vi.mocked(tripsApi.createStop).mock.calls[0][1].startDate).toBe(
-      "2026-05-01T14:30:00.000Z"
+    // The wall clock the user typed, as `{ local }` (ADR 0002 D3): the server
+    // places it in the zone of the stop's own position, sent beside it.
+    const [, payload] = vi.mocked(tripsApi.createStop).mock.calls[0];
+    expect(payload.startDate).toEqual({ local: "2026-05-01T14:30" });
+    expect(payload.lat).toBe(47.3769);
+  });
+
+  // ADR 0002 D2: the SERVER finds a stop's zone — its coordinates, else the
+  // entry it wraps — and without either keeps the typed time as a wall clock
+  // with precision `unknown`, never as UTC. Refusing it here left every
+  // stored placeless stop with a time uneditable (even its title), and every
+  // wrapped stop without coordinates, whose zone the server does know.
+  it("sends a time on a stop without a position as a bare wall clock for the server to place", async () => {
+    vi.mocked(tripsApi.createStop).mockResolvedValue({ ...baseStop, id: "new-stop" });
+    render(<StopModal tripId="trip-1" stop={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText("trips:stopModal.titlePlaceholder"), {
+      target: { value: "Irgendwo" },
+    });
+    fireEvent.change(screen.getByLabelText("trips:stopModal.startDateLabel"), {
+      target: { value: "2026-05-01" },
+    });
+    fireEvent.change(screen.getByLabelText("trips:stopModal.startTimeLabel"), {
+      target: { value: "14:30" },
+    });
+    await userEvent.click(screen.getByText("trips:stopModal.save"));
+
+    await waitFor(() => expect(tripsApi.createStop).toHaveBeenCalled());
+    expect(vi.mocked(tripsApi.createStop).mock.calls[0][1]).toMatchObject({
+      startDate: { local: "2026-05-01T14:30" },
+    });
+    expect(useToastStore.getState().toasts.map((toast) => toast.message)).not.toContain(
+      "common:saveErrors.timezoneUnresolved"
+    );
+  });
+
+  it("shows the server's refusals as their sentences, not the generic toast", async () => {
+    vi.mocked(tripsApi.createStop).mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 422, data: { error: "x", code: "TIME_SHAPE_REQUIRED" } },
+    });
+    render(<StopModal tripId="trip-1" stop={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText("trips:stopModal.titlePlaceholder"), {
+      target: { value: "Louvre" },
+    });
+    await userEvent.click(screen.getByText("trips:stopModal.save"));
+    await waitFor(() =>
+      expect(useToastStore.getState().toasts.map((toast) => toast.message)).toContain(
+        "common:saveErrors.staleBundle"
+      )
     );
   });
 
@@ -214,11 +262,9 @@ describe("StopModal", () => {
     await userEvent.click(screen.getByText("trips:stopModal.save"));
 
     await waitFor(() => expect(tripsApi.createStop).toHaveBeenCalled());
-    // Midnight UTC is the date-only convention; the time field must not be
-    // mandatory just because it now exists.
-    expect(vi.mocked(tripsApi.createStop).mock.calls[0][1].startDate).toBe(
-      "2026-05-01T00:00:00.000Z"
-    );
+    // The day alone (ADR 0002): the time field must not be mandatory just
+    // because it exists, and no midnight is invented for it.
+    expect(vi.mocked(tripsApi.createStop).mock.calls[0][1].startDate).toBe("2026-05-01");
   });
 
   it("seeds both fields from a stored time and round-trips it unchanged", async () => {
@@ -227,7 +273,7 @@ describe("StopModal", () => {
     render(
       <StopModal
         tripId="trip-1"
-        stop={{ ...baseStop, startDate: "2026-05-01T09:15:00.000Z" }}
+        stop={{ ...baseStop, startDate: "2026-05-01T09:15:00.000Z", lat: 48.86, lon: 2.34 }}
         onClose={vi.fn()}
         onSaved={vi.fn()}
       />
@@ -243,9 +289,9 @@ describe("StopModal", () => {
     // Saving without touching anything must not shift the time.
     await userEvent.click(screen.getByText("trips:stopModal.save"));
     await waitFor(() => expect(tripsApi.updateStop).toHaveBeenCalled());
-    expect(vi.mocked(tripsApi.updateStop).mock.calls[0][2].startDate).toBe(
-      "2026-05-01T09:15:00.000Z"
-    );
+    expect(vi.mocked(tripsApi.updateStop).mock.calls[0][2].startDate).toEqual({
+      local: "2026-05-01T09:15",
+    });
   });
 
   it("shows an empty time field for a stored date-only stop, not 00:00", async () => {

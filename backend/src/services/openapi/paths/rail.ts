@@ -10,17 +10,19 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
-import { errorContent } from "./shared";
+import { errorContent, timeRefused } from "./shared";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import {
   createRailJourneySchema,
   updateRailJourneySchema,
   RAIL_DISTANCE_SOURCES,
+  RAIL_GEOMETRY_FALLBACK_REASONS,
   RAIL_GEOMETRY_SOURCES,
   RAIL_SORT_FIELDS,
   RAIL_STATUSES,
   RAIL_TRAVEL_CLASSES,
 } from "../../../schemas/rail";
+import { railTimesSchema } from "../../../schemas/times";
 
 const railJourney = registry.register(
   "RailJourney",
@@ -39,6 +41,14 @@ const railJourney = registry.register(
           "Catalogue row (GET /rail/stations) the station was picked from; null = geocoder"
         ),
       arrStationId: z.number().int().nullable(),
+      depStationShortCode: z
+        .string()
+        .nullable()
+        .describe(
+          "DB station code of the catalogue row (Ril 100, 'KK'); null for a geocoder pick " +
+            "or a station no source names — never derived"
+        ),
+      arrStationShortCode: z.string().nullable(),
       depCountry: z.string().nullable().describe("ISO 3166-1 alpha-2; null when unknown"),
       depTimezone: z
         .string()
@@ -53,7 +63,9 @@ const railJourney = registry.register(
         .nullable()
         .describe(
           "great_circle = straight line between the stations, not track length; " +
-            "user = typed from the ticket; route = length of the traced Transitous line"
+            "user = typed from the ticket; route = length of the traced Transitous line or " +
+            "of the line routed over the tracks; " +
+            "roadtrip = length of the line a converted roadtrip leg brought along"
         ),
       geometry: z
         .array(z.tuple([z.number(), z.number()]))
@@ -85,6 +97,7 @@ const railJourney = registry.register(
         .nullable()
         .describe("Arrival delay; null = not recorded, 0 = on time"),
       trip: includedRow("trip (id, name, color)").nullable().optional(),
+      times: railTimesSchema,
     })
     .openapi("RailJourney")
 );
@@ -98,9 +111,14 @@ const railBookingLeg = z.object({
   arrivalTime: z.string().datetime().nullable(),
   depTimezone: z.string().nullable(),
   arrTimezone: z.string().nullable(),
+  depPrecision: z.string().nullable(),
+  arrPrecision: z.string().nullable(),
+  actualDepartureTime: z.string().datetime().nullable(),
+  actualArrivalTime: z.string().datetime().nullable(),
   trainCategory: z.string().nullable(),
   trainNumber: z.string().nullable(),
   status: z.enum(RAIL_STATUSES),
+  times: railTimesSchema,
 });
 
 const railJourneyDetail = railJourney
@@ -119,6 +137,34 @@ const railJourneyDetail = railJourney
   .openapi("RailJourneyDetail");
 
 const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.literal(true), data });
+
+/** What a save did to the frozen line — beside the row, so the row stays the row. */
+const geometryReport = z
+  .object({
+    outcome: z
+      .enum(["unchanged", "traced", "routed", "straight", "kept"])
+      .describe(
+        "unchanged = an edit that touched neither station nor match; traced = the train's " +
+          "Transitous trace; routed = a line over the tracks from the instance's " +
+          "OpenRailRouting; kept = a re-fetch did not deliver and the frozen line stayed"
+      ),
+    geometrySource: z.enum(RAIL_GEOMETRY_SOURCES),
+    fallback: z
+      .enum(RAIL_GEOMETRY_FALLBACK_REASONS)
+      .nullable()
+      .describe(
+        "Why the line asked for was not delivered — a Transitous trace, or the " +
+          "OpenRailRouting line (`railRouting*`); null when nothing asked for failed"
+      ),
+  })
+  .openapi("RailGeometryReport");
+
+const writeEnvelope = <T extends z.ZodTypeAny>(data: T) =>
+  z.object({
+    success: z.literal(true),
+    data,
+    meta: z.object({ geometry: geometryReport }),
+  });
 
 registry.registerPath({
   method: "get",
@@ -144,8 +190,16 @@ registry.registerPath({
         .min(1900)
         .max(2200)
         .optional()
-        .describe("Calendar year of the departure instant, read in UTC"),
+        .describe("Calendar year of the departure, on the departure station's calendar"),
       tripId: z.string().uuid().optional(),
+      membershipId: z
+        .string()
+        .uuid()
+        .optional()
+        .describe(
+          "A rail loyalty card: only the rides it counts. 404 LOYALTY_MEMBERSHIP_NOT_FOUND " +
+            "for a card that is not the caller's rail card"
+        ),
       limit: z.coerce.number().int().min(1).max(500).optional(),
       offset: z.coerce.number().int().min(0).optional(),
       sort: z.enum(RAIL_SORT_FIELDS).optional(),
@@ -200,7 +254,11 @@ registry.registerPath({
     "the catalogue. With `lookup` of provider `transitous` the server fetches that " +
     "trip's traced line once, cuts it to the two stations and freezes it " +
     "(`geometrySource: transitous`, distance along it); a missing, unreachable or " +
-    "chord-only line stores `straight`. Without `distanceKm` the traced or else the " +
+    "chord-only line stores `straight` and `meta.geometry.fallback` says why. Without a " +
+    "trace, and only where the admin configured an OpenRailRouting, the line is routed " +
+    "over the tracks between the stations in one request (`geometrySource: " +
+    "openrailrouting`); its failure stores `straight` with a `railRouting*` fallback. " +
+    "Without `distanceKm` the traced or routed, else the " +
     "great-circle distance is stored. `connectsFrom` names the leg this one continues: " +
     "the server binds both through a booking (creating one on that leg when it has " +
     "none) and files the new leg in that leg's trip unless `tripId` is sent.",
@@ -217,9 +275,10 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     201: {
       description: "Created",
-      content: { "application/json": { schema: envelope(railJourney) } },
+      content: { "application/json": { schema: writeEnvelope(railJourney) } },
     },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Trip or booking not found", content: errorContent },
@@ -234,8 +293,10 @@ registry.registerPath({
   description:
     "Partial update. A station is replaced whole. The wall clock not sent is kept " +
     "and re-read in the (possibly new) station zone. `distanceKm: null` returns to " +
-    "the measured distance. The frozen line is fetched again only when a station or " +
-    "`lookup` changes; `lookup: null` drops it.",
+    "the measured distance. The frozen line is fetched again only when a station's " +
+    "coordinates or the `lookup` identity differ from the stored row; `lookup: null` " +
+    "drops it. A re-fetch that does not deliver keeps the stored line where it still " +
+    "runs between the stations (`meta.geometry.outcome: kept`).",
   tags: ["Rail"],
   request: {
     params: z.object({ id: z.string().uuid() }),
@@ -246,9 +307,10 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     200: {
       description: "Updated",
-      content: { "application/json": { schema: envelope(railJourney) } },
+      content: { "application/json": { schema: writeEnvelope(railJourney) } },
     },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Not found", content: errorContent },

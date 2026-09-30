@@ -1,4 +1,5 @@
 import { createPrismaClient } from "./prismaClient";
+import { fillSeededTimeColumns } from "./services/timeModel/seedTimeColumns";
 const prisma = createPrismaClient();
 
 // Weltweite Flughäfen
@@ -558,7 +559,7 @@ async function main() {
     const hour = Math.floor(Math.random() * 24);
     const minute = Math.floor(Math.random() * 60);
 
-    const departureTime = new Date(year, month, day, hour, minute);
+    const departureTime = new Date(Date.UTC(year, month, day, hour, minute));
     const arrivalTime = new Date(departureTime.getTime() + durationHours * 60 * 60 * 1000);
 
     // Sitzklasse (70% Economy, 20% Business, 8% Premium Economy, 2% First)
@@ -614,6 +615,8 @@ async function main() {
   await prisma.flight.createMany({
     data: flights,
   });
+  // The time-model columns, derived from what the seed just wrote (ADR 0002).
+  await fillSeededTimeColumns(user.id);
 
   console.log(`✅ Created ${flights.length} enhanced flights`);
   console.log(`   - Years covered: 2020-2025`);

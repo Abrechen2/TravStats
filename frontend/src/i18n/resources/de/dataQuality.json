@@ -21,7 +21,18 @@
       },
       "empty": {
         "title": "Nichts zu prüfen",
-        "description": "Bei keinem deiner Einträge widersprechen sich gerade zwei Angaben."
+        "description": "Gerade ist nichts offen: keine Widersprüche und keine Fragen zur Zeit."
+      },
+      "contradictions": {
+        "title": "Widersprüche"
+      },
+      "time": {
+        "title": "Fragen zur Zeit",
+        "description": "Hier fehlt uns etwas, um eine Zeit richtig anzuzeigen: die Zeitzone des Ortes, die Uhrzeit oder der genaue Tag. Wir raten nicht – ergänze es, wenn du es weißt, oder lass es so."
+      },
+      "home": {
+        "title": "Zuhause",
+        "description": "Dein Zuhause ist noch nicht vollständig eingerichtet. Wir ändern nichts, bis du es bestätigst."
       }
     },
     "photoJourneys": {
@@ -71,11 +82,12 @@
         },
         "dismissed": "Verworfen. Diese Fotoserie wird nicht mehr vorgeschlagen.",
         "photosLinked": "{{count}} Fotos mit dem Besuch verknüpft.",
-        "photosNotLinked": "Die Fotos konnten nicht verknüpft werden – die Fotobibliothek war nicht erreichbar."
+        "photosNotLinked": "Die Fotos konnten nicht verknüpft werden – die Fotobibliothek war nicht erreichbar.",
+        "scanOutcomeUnknown": "Der Server meldet das Ergebnis der Foto-Suche nicht mehr. Angezeigt ist, was bisher gefunden wurde."
       },
       "errors": {
         "loadFailed": "Die Foto-Vorschläge konnten nicht geladen werden.",
-        "scanFailed": "Die Foto-Suche konnte nicht gestartet werden.",
+        "scanFailed": "Die Foto-Suche ist fehlgeschlagen.",
         "acceptFailed": "Der Vorschlag konnte nicht übernommen werden.",
         "acceptLinkFailed": {
           "trip": "Die Reise wurde angelegt, aber der Vorschlag konnte nicht als übernommen markiert werden — noch einmal versuchen verknüpft nur.",
@@ -94,6 +106,88 @@
       "resolveFailed": "Die Antwort konnte nicht gespeichert werden.",
       "dismissFailed": "Die Antwort konnte nicht gespeichert werden.",
       "runFailed": "Die Prüfung konnte nicht gestartet werden."
+    },
+    "tripSuggestions": {
+      "title": "Reise-Vorschläge",
+      "description": "Aus deinen Einträgen abgeleitet: wann du unterwegs warst und was zusammengehört. Vorschläge — angelegt oder verknüpft wird erst, wenn du übernimmst.",
+      "nameFallback": "Reise",
+      "planned": "geplant",
+      "capped": "{{shown}} von {{total}} Vorschlägen angezeigt — beantworte einige, dann rücken die nächsten nach.",
+      "truncated": "Dein Logbuch ist größer, als eine Auswertung liest. Einige Vorschläge können fehlen.",
+      "zoneUnknown_one": "Bei {{count}} Eintrag ist die Zeitzone des Ortes unbekannt — sein Tag kann um einen abweichen.",
+      "zoneUnknown_other": "Bei {{count}} Einträgen ist die Zeitzone des Ortes unbekannt — ihr Tag kann um einen abweichen.",
+      "tourNote": "Tagestouren ohne Reise werden mit verknüpft; Touren, die schon zu einer Reise gehören, bleiben, wo sie sind.",
+      "kind": {
+        "new_trip": "Neue Reise?",
+        "assign": "Gehört zu einer Reise?",
+        "extend": "Reise verlängern?",
+        "place_visit": "Hier gewesen?"
+      },
+      "reason": {
+        "newTrip": "{{entries}}, {{nights}} fern von zu Hause",
+        "entries_one": "{{count}} Eintrag",
+        "entries_other": "{{count}} Einträge",
+        "nights_one": "{{count}} Nacht",
+        "nights_other": "{{count}} Nächte",
+        "assign_one": "{{count}} Eintrag passt zu „{{trip}}“",
+        "assign_other": "{{count}} Einträge passen zu „{{trip}}“",
+        "extend_one": "{{count}} Eintrag würde „{{trip}}“ auf {{span}} verlängern",
+        "extend_other": "{{count}} Einträge würden „{{trip}}“ auf {{span}} verlängern",
+        "placeVisit": "An diesem Tag warst du hier: „{{anchor}}“ lag {{distance}} m entfernt."
+      },
+      "signals": {
+        "pnr": "gleiche Buchungsnummer",
+        "home_loop": "Hin- und Rückflug ab Heimatflughafen",
+        "continuity": "lückenlose Anschlussflüge"
+      },
+      "creates": {
+        "new_trip": "Übernehmen legt die Reise an und verknüpft alle aufgeführten Einträge.",
+        "assign": "Übernehmen verknüpft die aufgeführten Einträge mit dieser Reise.",
+        "extend": "Übernehmen verknüpft die Einträge und setzt den Zeitraum der Reise auf die neue Spanne.",
+        "place_visit": "Übernehmen trägt einen Besuch an diesem Tag ein."
+      },
+      "edit": {
+        "name": "Name",
+        "start": "Beginn",
+        "end": "Ende",
+        "members": "Diese Einträge übernehmen",
+        "visitDay": "Tag des Besuchs"
+      },
+      "actions": {
+        "accept": "Übernehmen",
+        "acceptEdited": "So übernehmen",
+        "edit": "Bearbeiten",
+        "dismiss": "Verwerfen",
+        "retry": "Erneut laden"
+      },
+      "home": {
+        "missing": "Kein Heimatflughafen festgelegt — ohne Zuhause lässt sich nicht sagen, wann du unterwegs warst. Vorgeschlagen werden nur Reisen, die deine Flüge selbst ergeben.",
+        "link": "Heimatflughafen festlegen",
+        "estimated": "Kein Heimatflughafen festgelegt: als Zuhause gilt dein meistgeflogener Flughafen."
+      },
+      "empty": {
+        "title": "Keine Reise-Vorschläge",
+        "description": "Alles, was zusammengehört, ist schon einer Reise zugeordnet. Neue Einträge werden hier geprüft."
+      },
+      "messages": {
+        "accepted": {
+          "new_trip": "Reise angelegt und Einträge verknüpft.",
+          "assign": "Einträge mit der Reise verknüpft.",
+          "extend": "Reise verlängert und Einträge verknüpft.",
+          "place_visit": "Besuch eingetragen."
+        },
+        "dismissed": "Verworfen. Dieser Vorschlag kommt nur wieder, wenn sich seine Einträge deutlich ändern."
+      },
+      "errors": {
+        "loadFailed": "Die Reise-Vorschläge konnten nicht geladen werden.",
+        "loadFailedHint": "Das heißt nicht, dass es keine gibt. Versuche es gleich noch einmal.",
+        "acceptFailed": "Der Vorschlag konnte nicht übernommen werden. Es wurde nichts geändert.",
+        "dismissFailed": "Der Vorschlag konnte nicht verworfen werden.",
+        "stale": "Der Vorschlag hat sich inzwischen geändert — ein Eintrag wurde verschoben oder gelöscht. Es wurde nichts geändert; die Liste ist neu geladen.",
+        "selection": "Die Auswahl passt nicht zum Vorschlag. Es wurde nichts geändert.",
+        "endBeforeStart": "Das Ende liegt vor dem Beginn.",
+        "noMembers": "Wähle mindestens einen Eintrag."
+      }
     }
   },
   "flag": {
@@ -104,7 +198,18 @@
     "entityType": {
       "lodging": "Unterkunft",
       "place": "Ort",
-      "country": "Land"
+      "country": "Land",
+      "flight": "Flug",
+      "cruise_stop": "Kreuzfahrt-Halt",
+      "trip_stop": "Reise-Halt",
+      "place_visit": "Ortsbesuch",
+      "rail_journey": "Bahnfahrt",
+      "cruise": "Kreuzfahrt",
+      "trip": "Reise",
+      "trip_journal_entry": "Tagebucheintrag",
+      "lodging_stay": "Aufenthalt",
+      "profile": "Profil",
+      "home": "Zuhause"
     },
     "status": {
       "open": "Offen",
@@ -120,7 +225,9 @@
         "label": "Das stimmt so",
         "hint": "Am Eintrag ist nichts zu ändern. Diese Frage wird nie wieder gestellt."
       }
-    }
+    },
+    "timeUnchanged": "Am Eintrag wurde nichts geändert. Die Zeit steht, wie sie gespeichert war, bis du sie ergänzt.",
+    "homeSubject": "Dein Zuhause"
   },
   "kinds": {
     "address_country_mismatch": {
@@ -149,6 +256,25 @@
       "question": "Die gespeicherten Koordinaten liegen in einem anderen Land als dem, das am Eintrag steht. Was stimmt – der Punkt oder das Land?",
       "stored": "Gespeichertes Land",
       "fromCoordinates": "Land laut Koordinaten"
+    },
+    "time_zone_unresolved": {
+      "title": "Zeitzone unbekannt",
+      "question": "Für diese Zeit ließ sich keine Zeitzone finden, deshalb wurde sie bei der Umstellung nicht umgerechnet. Wo war das? Ergänze den Ort – dann stimmt auch die Uhrzeit."
+    },
+    "time_precision_unknown": {
+      "title": "Uhrzeit unbekannt",
+      "question": "Das Datum ist erhalten, aber es ließ sich nicht feststellen, zu welcher Uhrzeit das war. Wenn du sie weißt, trag sie ein."
+    },
+    "time_day_ambiguous": {
+      "title": "Tag nicht eindeutig",
+      "question": "Es ist nicht sicher, welcher Kalendertag gemeint ist. Übernommen wurde der gespeicherte Tag – prüfe ihn und korrigiere ihn, falls nötig."
+    },
+    "home_residence_unconfirmed": {
+      "title": "Wohnort bestätigen",
+      "question": "Wohnort bestätigen und weitere Heimatflughäfen wählen?",
+      "body": "Bisher kennt TravStats nur deinen Heimatflughafen ({{airports}}) und misst Abstände von dort aus. Bestätige, wo du wohnst, und wähle bis zu drei Flughäfen, von denen du fliegst.",
+      "unchanged": "Bis du bestätigst, rechnen alle Statistiken genau wie bisher.",
+      "action": "Zuhause einrichten"
     }
   },
   "passwordResets": {
@@ -166,5 +292,27 @@
     "uploaded": "Hochgeladen am",
     "deletesOn": "Wird gelöscht am",
     "open": "Öffnen"
+  },
+  "time": {
+    "field": "Angabe",
+    "reason": "Grund",
+    "stored": "Gespeichert (ohne Zeitzone)",
+    "kept": "Übernommen",
+    "noEditor": "Der Eintrag, über den sich das bearbeiten ließe, ist nicht mehr auffindbar.",
+    "domainOff": "Der Bereich „{{domain}}“ ist ausgeschaltet. Schalte ihn in den Einstellungen ein, um diese Frage zu beantworten.",
+    "domainOffAction": "Bereiche einstellen",
+    "action": {
+      "flight": "Flug bearbeiten",
+      "rail_journey": "Bahnfahrt bearbeiten",
+      "place_visit": "Besuch bearbeiten",
+      "place_visit_zone": "Ort bearbeiten",
+      "cruise": "Kreuzfahrt bearbeiten",
+      "cruise_stop": "Kreuzfahrt bearbeiten",
+      "trip": "Reise bearbeiten",
+      "trip_stop": "Halt bearbeiten",
+      "trip_journal_entry": "Eintrag bearbeiten",
+      "lodging_stay": "Aufenthalt bearbeiten",
+      "profile": "Profil bearbeiten"
+    }
   }
 }

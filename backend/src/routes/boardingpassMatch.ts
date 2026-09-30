@@ -1,5 +1,7 @@
 import { Router, Response } from "express";
-import { fromZonedTime } from "date-fns-tz";
+import { startOfDayAt } from "../shared/time/legacyValues";
+import { isLocalDate } from "../shared/time/localDate";
+import { isValidZone } from "../shared/time/zonedParts";
 import { z } from "zod";
 
 import { authenticate, AuthRequest } from "../middleware/auth";
@@ -259,19 +261,19 @@ export async function findExistingFlight(args: {
     if (byPnr) return byPnr;
   }
 
-  if (flightNumber && date) {
-    const localDayStart = depTimezone
-      ? fromZonedTime(`${date}T00:00`, depTimezone)
+  if (flightNumber && date && isLocalDate(date)) {
+    // The pass's day on the departure airport's clock. Without a zone the
+    // search window is the UTC day — a lookup window, never a stored value.
+    const localDayStart = isValidZone(depTimezone)
+      ? startOfDayAt(date, depTimezone)
       : new Date(`${date}T00:00:00.000Z`);
-    if (!Number.isNaN(localDayStart.getTime())) {
-      const localDayEnd = new Date(localDayStart.getTime() + 24 * 60 * 60 * 1000);
-      const candidates = await prisma.flight.findMany({
-        where: { userId, departureTime: { gte: localDayStart, lt: localDayEnd } },
-        select: MATCH_SELECT,
-      });
-      const target = normalize(flightNumber);
-      return candidates.find((c) => c.flightNumber && normalize(c.flightNumber) === target) ?? null;
-    }
+    const localDayEnd = new Date(localDayStart.getTime() + 24 * 60 * 60 * 1000);
+    const candidates = await prisma.flight.findMany({
+      where: { userId, departureTime: { gte: localDayStart, lt: localDayEnd } },
+      select: MATCH_SELECT,
+    });
+    const target = normalize(flightNumber);
+    return candidates.find((c) => c.flightNumber && normalize(c.flightNumber) === target) ?? null;
   }
 
   return null;

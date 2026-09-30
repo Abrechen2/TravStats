@@ -56,6 +56,15 @@ interface PhotoDto {
   mimetype: string;
   sizeBytes: number;
   createdAt: string;
+  /**
+   * Always null: a lodging photo stores neither where nor when it was taken
+   * (no EXIF reader, no column). Present so every photo DTO reads the same,
+   * and null rather than the upload time or the house's position — a guess
+   * is worse than a gap (forgejo#132 item 11).
+   */
+  takenAt: null;
+  lat: null;
+  lon: null;
 }
 
 function toPhotoDto(photo: {
@@ -75,6 +84,9 @@ function toPhotoDto(photo: {
     mimetype: photo.mimetype,
     sizeBytes: photo.sizeBytes,
     createdAt: photo.createdAt.toISOString(),
+    takenAt: null,
+    lat: null,
+    lon: null,
   };
 }
 

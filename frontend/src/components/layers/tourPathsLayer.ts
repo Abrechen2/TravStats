@@ -32,6 +32,12 @@ export interface TourPathDatum {
   path: Array<[number, number]>;
   color: [number, number, number];
   isPlaceholder: boolean;
+  /**
+   * Since round 29 (2026-09-26) a roadtrip and a day tour share one hue by
+   * default, so the line itself has to tell them apart — a roadtrip is drawn
+   * heavier. Colour cannot carry it: the user may even paint both alike.
+   */
+  isRoadtrip: boolean;
   label: string;
 }
 
@@ -42,6 +48,7 @@ export function buildTourPaths(
     geometry: TourGeometry;
     /** Overrides the tour hue — a roadtrip's line is drawn in its domain colour (2.7). */
     rgb?: [number, number, number];
+    isRoadtrip?: boolean;
   }[]
 ): TourPathDatum[] {
   const out: TourPathDatum[] = [];
@@ -54,6 +61,7 @@ export function buildTourPaths(
         path,
         color: g.rgb ?? TOUR_RGB,
         isPlaceholder: f.properties.source === "straight",
+        isRoadtrip: g.isRoadtrip === true,
         label: `${g.name} · ${Math.round(f.properties.distanceKm)} km`,
       });
     }

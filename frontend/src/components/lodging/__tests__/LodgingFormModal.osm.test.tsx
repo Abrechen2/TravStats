@@ -194,3 +194,59 @@ describe("LodgingFormModal — lodgings nearby from OpenStreetMap", () => {
     expect(await screen.findByText("openData:lodging.nearby.failed")).toBeInTheDocument();
   });
 });
+
+// Silent-failure fixes, 2026-09-26: a pick did not carry its data. The pin
+// stayed on the search point, and the OSM identity of the chosen house was
+// dropped; an overloaded Overpass read like any other failure.
+describe("LodgingFormModal — a nearby pick carries its position and identity", () => {
+  beforeEach(() => {
+    vi.clearAllMocks();
+    useSettingsStore.setState({ betaFeaturesEnabled: true, openDataEnabled: true });
+    vi.mocked(openDataApi.nearbyLodgings).mockResolvedValue([ADLON, CAMPING]);
+  });
+
+  it("moves the pin onto the picked house and sends which house it is", async () => {
+    vi.mocked(createLodging).mockResolvedValue(baseLodging);
+    render(<LodgingFormModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+    await userEvent.click(screen.getByText("mock-select-location"));
+    await userEvent.click(screen.getByText(SEARCH));
+    await userEvent.click(await screen.findByText("Adlon Kempinski"));
+
+    expect(screen.getByRole("status")).toHaveTextContent("openData:lodging.nearby.filled");
+    await userEvent.click(screen.getByText("common:buttons.save"));
+    await waitFor(() => expect(createLodging).toHaveBeenCalled());
+    expect(vi.mocked(createLodging).mock.calls[0][0]).toMatchObject({
+      lat: ADLON.lat,
+      lon: ADLON.lon,
+      osmRef: "osm:node/1",
+    });
+  });
+
+  it("can put the pin back where it was, and keeps the picked identity", async () => {
+    vi.mocked(createLodging).mockResolvedValue(baseLodging);
+    render(<LodgingFormModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+    await userEvent.click(screen.getByText("mock-select-location"));
+    await userEvent.click(screen.getByText(SEARCH));
+    await userEvent.click(await screen.findByText("Adlon Kempinski"));
+    await userEvent.click(screen.getByText("openData:lodging.nearby.restorePin"));
+
+    await userEvent.click(screen.getByText("common:buttons.save"));
+    await waitFor(() => expect(createLodging).toHaveBeenCalled());
+    expect(vi.mocked(createLodging).mock.calls[0][0]).toMatchObject({
+      lat: SELECTION.lat,
+      lon: SELECTION.lon,
+      osmRef: "osm:node/1",
+    });
+  });
+
+  it("says Overpass is refusing requests instead of a generic failure", async () => {
+    vi.mocked(openDataApi.nearbyLodgings).mockRejectedValue({
+      isAxiosError: true,
+      response: { status: 503, data: { code: "UPSTREAM_RATE_LIMITED" } },
+    });
+    render(<LodgingFormModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+    await userEvent.click(screen.getByText("mock-select-location"));
+    await userEvent.click(screen.getByText(SEARCH));
+    expect(await screen.findByText("openData:lodging.upstream.rateLimited")).toBeInTheDocument();
+  });
+});

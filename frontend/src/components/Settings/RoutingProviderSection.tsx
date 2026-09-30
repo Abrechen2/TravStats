@@ -5,6 +5,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { ROUTING_PROVIDER_IDS, type RoutingProviderId } from "../../types/tour";
+import { useToursVisible } from "../../hooks/useToursVisible";
 
 type LoadStatus = "loading" | "error" | "ready";
 
@@ -18,6 +19,18 @@ interface RoutingProviderSectionProps {
 }
 
 /**
+ * The instance's routing card as Administration → Externe Dienste shows it.
+ *
+ * Routing serves tours and roadtrips only, both behind the `roadtrips` beta
+ * key since 2026-09-24 — a card for a feature hidden everywhere else would
+ * offer nothing, so it follows that gate here as it did on the settings page.
+ */
+export function InstanceRoutingProviderCard(): JSX.Element | null {
+  const toursVisible = useToursVisible();
+  return toursVisible ? <RoutingProviderSection isAdmin /> : null;
+}
+
+/**
  * Admin-only "Routing provider" card (Task 7, phase 3): which provider
  * powers "Route this leg" / "Route the whole section" across every tour on
  * the instance, plus that provider's own connection field.
@@ -26,8 +39,10 @@ interface RoutingProviderSectionProps {
  * `routingCustomUrl` live only on `AdminSettings` (see
  * `backend/src/services/tour/routing/resolveProvider.ts`'s own doc
  * comment). What a per-user key CAN override is which OpenRouteService/
- * GraphHopper key is actually used — that per-user override already has
- * no dedicated UI here either; only the operator's global key is offered.
+ * GraphHopper key is actually used: that is `PersonalRoutingKeysSection` on
+ * the personal settings page. This card holds the INSTANCE's key, and lives
+ * in Administration → Externe Dienste since 2026-09-26 — on the personal
+ * page it read as a personal setting that applied "to everyone".
  *
  * Follows the established `GeocoderSettingsCard` shape for this same
  * problem (another admin-only setting embedded in the general Settings
@@ -76,7 +91,6 @@ export default function RoutingProviderSection({
       logger.error("Failed to load routing provider settings", err);
       setLoadStatus("error");
     }
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {

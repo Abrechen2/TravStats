@@ -2,13 +2,18 @@ import { api } from "./client";
 import type {
   ApiKeyTestResponse,
   ExportAllDataResponse,
-  LogEntry,
-  LogSearchResult,
   MessageResponse,
   SmtpConfigInput,
   SmtpConfigResponse,
 } from "./types";
 import type { RoutingProviderId } from "../../types/tour";
+import type {
+  LogCleanupResult,
+  LogFilesResponse,
+  LoggingConfigResponse,
+  LogReadResponse,
+  LogStatsResponse,
+} from "../../shared/logContract";
 import type { CountryTier } from "../../types/passport";
 
 export interface InstanceSettings {
@@ -39,7 +44,17 @@ export interface InstanceSettings {
   /** May the rail train lookup ask Transitous / db-rest (both on by default). */
   railTransitousEnabled: boolean;
   railDbRestEnabled: boolean;
+  /** A self-hosted OpenRailRouting for rail lines; null = off. Absent before 2.7. */
+  railRoutingUrl?: string | null;
 }
+
+/**
+ * The OpenRailRouting test (`POST /admin/instance-settings/rail-routing/test`):
+ * a stable code on failure, which the card maps to DE/EN copy.
+ */
+export type RailRoutingTestResult =
+  | { ok: true; profile: string; dataDate: string | null }
+  | { ok: false; code: "notConfigured" | "unreachable" | "notOpenRailRouting" | "profileMissing" };
 
 /**
  * Whether the SAVED configuration actually yields working passkeys. Derived by
@@ -73,6 +88,8 @@ export interface InstanceSettingsPatch {
   countryThreshold?: CountryTier;
   railTransitousEnabled?: boolean;
   railDbRestEnabled?: boolean;
+  /** "" switches OpenRailRouting off. */
+  railRoutingUrl?: string;
 }
 
 /**
@@ -80,6 +97,79 @@ export interface InstanceSettingsPatch {
  * (backend `getParserOrder`). Default `template_first`, measured 2026-09-17.
  */
 export type ParserOrder = "template_first" | "llm_first";
+
+/**
+ * Which protocol the instance's language model speaks (backend
+ * `llm/llmProvider.ts`). beta.18: `openai_compatible` was renamed `custom`
+ * (a free-form base URL — OpenRouter, Ollama Cloud, a LAN vLLM/LM Studio) and
+ * three FIXED-endpoint named slots were added, each with its own key/model/
+ * consent. There is no longer a single "active" kind on the admin settings —
+ * `llmProvider.ts` resolves a FALLBACK CHAIN (Ollama first, then the
+ * enabled+consented cloud slots in `llmProviderOrder`) — `kind` here still
+ * names which protocol actually answered a given parse.
+ */
+export type LlmProviderKind = "ollama" | "openai" | "anthropic" | "google" | "custom";
+
+/** The four cloud slots an admin may enable and order (Ollama is implicit, always first). */
+export const CLOUD_PROVIDER_KINDS = ["openai", "anthropic", "google", "custom"] as const;
+export type CloudProviderKind = (typeof CLOUD_PROVIDER_KINDS)[number];
+
+export interface AdminParserSettingsResponse {
+  allowUserApiKeys: boolean;
+  fxCdnFallbackEnabled: boolean;
+  /** Who reads a booking document first, in every domain. Absent on a
+   *  backend older than 2.7 — treat a missing value as "template_first". */
+  parserOrder?: ParserOrder;
+  /** The "KI-Parser aus" switch; absent on a backend older than 2.7 (= on). */
+  llmEnabled?: boolean;
+  ollamaUrl: string | null;
+  ollamaModel: string | null;
+  /** Consent for a REMOTE Ollama only — the local/LAN case never needs this. */
+  llmOllamaOptIn?: boolean;
+  /** The admin's priority among the four cloud slots — always all four, in order. */
+  llmProviderOrder?: CloudProviderKind[];
+
+  /** The `custom` slot (beta.17's `openai_compatible`) — a free-form base URL. */
+  openaiCompatBaseUrl?: string | null;
+  openaiCompatModel?: string | null;
+  /** Masked ("abcd****wxyz") or null — the key itself never leaves the server. */
+  openaiCompatApiKey?: string | null;
+  /** The SAVED endpoint is outside the local network. */
+  openaiCompatIsCloud?: boolean;
+  llmCustomOptIn?: boolean;
+
+  /** OpenAI — fixed endpoint, key + model only. */
+  llmOpenaiModel?: string | null;
+  llmOpenaiApiKey?: string | null;
+  llmOpenaiOptIn?: boolean;
+  /** Anthropic — native Messages API, fixed endpoint, key + model only. */
+  llmAnthropicModel?: string | null;
+  llmAnthropicApiKey?: string | null;
+  llmAnthropicOptIn?: boolean;
+  /** Google — Gemini's own OpenAI-compatible endpoint, fixed, key + model only. */
+  llmGoogleModel?: string | null;
+  llmGoogleApiKey?: string | null;
+  llmGoogleOptIn?: boolean;
+}
+
+/** Stable codes the admin page words itself (`test.errors.*`). */
+export type LlmProviderTestErrorCode =
+  | "invalid_url"
+  | "unsupported_protocol"
+  | "credentials_in_url"
+  | "https_required"
+  | "auth"
+  | "unreachable";
+
+export type LlmProviderTestResult =
+  | { ok: true; isCloud: boolean; modelCount: number; modelFound: boolean | null }
+  | {
+      ok: false;
+      errorCode: LlmProviderTestErrorCode;
+      /** Protocol/status line for the log — never shown raw. */
+      detail?: string | null;
+      isCloud?: boolean;
+    };
 
 /**
  * One password-reset request waiting for an administrator (forgejo#88, point 2).
@@ -297,22 +387,8 @@ export const adminApi = {
     return data;
   },
 
-  getAdminParserSettings: async (): Promise<{
-    allowUserApiKeys: boolean;
-    fxCdnFallbackEnabled: boolean;
-    /** Who reads a booking document first, in every domain. Absent on a
-     *  backend older than 2.7 — treat a missing value as "template_first". */
-    parserOrder?: ParserOrder;
-    ollamaUrl: string | null;
-    ollamaModel: string | null;
-  }> => {
-    const { data } = await api.get<{
-      allowUserApiKeys: boolean;
-      fxCdnFallbackEnabled: boolean;
-      parserOrder?: ParserOrder;
-      ollamaUrl: string | null;
-      ollamaModel: string | null;
-    }>("/admin/parser-settings");
+  getAdminParserSettings: async (): Promise<AdminParserSettingsResponse> => {
+    const { data } = await api.get<AdminParserSettingsResponse>("/admin/parser-settings");
     return data;
   },
 
@@ -320,10 +396,42 @@ export const adminApi = {
     allowUserApiKeys?: boolean;
     fxCdnFallbackEnabled?: boolean;
     parserOrder?: ParserOrder;
+    llmEnabled?: boolean;
     ollamaUrl?: string | null;
     ollamaModel?: string | null;
+    llmOllamaOptIn?: boolean;
+    llmProviderOrder?: CloudProviderKind[];
+    openaiCompatBaseUrl?: string | null;
+    openaiCompatModel?: string | null;
+    /** The masked echo from the GET keeps the stored key; "" / null clears it. */
+    openaiCompatApiKey?: string | null;
+    llmCustomOptIn?: boolean;
+    llmOpenaiApiKey?: string | null;
+    llmOpenaiModel?: string | null;
+    llmOpenaiOptIn?: boolean;
+    llmAnthropicApiKey?: string | null;
+    llmAnthropicModel?: string | null;
+    llmAnthropicOptIn?: boolean;
+    llmGoogleApiKey?: string | null;
+    llmGoogleModel?: string | null;
+    llmGoogleOptIn?: boolean;
   }): Promise<MessageResponse> => {
     const { data } = await api.put<MessageResponse>("/admin/parser-settings", settings);
+    return data;
+  },
+
+  /**
+   * "Verbindung testen" for a cloud slot — sends only the key, no document.
+   * `openai`/`anthropic`/`google` use their fixed base URL server-side;
+   * `baseUrl` is only read (and required) for `kind: "custom"`.
+   */
+  testLlmProvider: async (input: {
+    kind: CloudProviderKind;
+    baseUrl?: string | null;
+    model: string | null;
+    apiKey: string | null;
+  }): Promise<LlmProviderTestResult> => {
+    const { data } = await api.post<LlmProviderTestResult>("/admin/test-llm-provider", input);
     return data;
   },
 
@@ -453,153 +561,73 @@ export const adminApi = {
     return data;
   },
 
-  // Logging API
-  getLoggingConfig: async (): Promise<{
-    logLevel: string;
-    logHttpRequests: boolean;
-    logDatabaseQueries: boolean;
-    logParserOperations: boolean;
-    maxLogFileSize: number;
-    logRetentionDays: number;
-  }> => {
-    const { data } = await api.get<{
-      logLevel: string;
-      logHttpRequests: boolean;
-      logDatabaseQueries: boolean;
-      logParserOperations: boolean;
-      maxLogFileSize: number;
-      logRetentionDays: number;
-    }>("/admin/logging/config");
+  // Logging API — every shape here is `shared/logContract.ts`, the file the
+  // backend answers with. The two used to be described separately and drifted
+  // (the cleanup toast read fields the server never sent).
+  getLoggingConfig: async (): Promise<LoggingConfigResponse> => {
+    const { data } = await api.get<LoggingConfigResponse>("/admin/logging/config");
     return data;
   },
 
-  updateLoggingConfig: async (config: {
-    logLevel?: string;
-    logHttpRequests?: boolean;
-    logDatabaseQueries?: boolean;
-    logParserOperations?: boolean;
-    maxLogFileSize?: number;
-    logRetentionDays?: number;
-  }): Promise<MessageResponse> => {
-    const { data } = await api.put<MessageResponse>("/admin/logging/config", config);
+  updateLoggingConfig: async (
+    config: Partial<Omit<LoggingConfigResponse, "effectiveLogLevel" | "logLevelSource">>
+  ): Promise<{ message: string; config: LoggingConfigResponse }> => {
+    const { data } = await api.put<{ message: string; config: LoggingConfigResponse }>(
+      "/admin/logging/config",
+      config
+    );
     return data;
   },
 
   toggleDebugLogging: async (
     enabled: boolean
-  ): Promise<{
-    enabled: boolean;
-    message: string;
-  }> => {
-    const { data } = await api.post<{
-      enabled: boolean;
-      message: string;
-    }>("/admin/logging/toggle-debug", { enabled });
+  ): Promise<{ message: string; config: LoggingConfigResponse }> => {
+    const { data } = await api.post<{ message: string; config: LoggingConfigResponse }>(
+      "/admin/logging/toggle-debug",
+      { enabled }
+    );
     return data;
   },
 
-  getLogFiles: async (): Promise<{
-    files: Array<{
-      filename: string;
-      size: number;
-      category: string;
-      created: string;
-      modified: string;
-    }>;
-  }> => {
-    const { data } = await api.get<{
-      files: Array<{
-        filename: string;
-        size: number;
-        category: string;
-        created: string;
-        modified: string;
-      }>;
-    }>("/admin/logging/files");
+  getLogFiles: async (): Promise<LogFilesResponse> => {
+    const { data } = await api.get<LogFilesResponse>("/admin/logging/files");
     return data;
   },
 
-  getLogFileContent: async (
+  /** One page of a file, newest first. */
+  readLogFile: async (
     filename: string,
-    params?: {
-      level?: string;
-      category?: string;
-      search?: string;
-      offset?: number;
-      limit?: number;
-    }
-  ): Promise<{
-    logs: LogEntry[];
-    total: number;
-    offset: number;
-    limit: number;
-  }> => {
-    const { data } = await api.get<{
-      logs: LogEntry[];
-      total: number;
-      offset: number;
-      limit: number;
-    }>(`/admin/logging/files/${filename}`, { params });
+    params: { level?: string; category?: string; search?: string; offset?: number; limit?: number }
+  ): Promise<LogReadResponse> => {
+    const { data } = await api.get<LogReadResponse>(
+      `/admin/logging/files/${encodeURIComponent(filename)}`,
+      { params }
+    );
     return data;
   },
 
   downloadLogFile: async (filename: string): Promise<Blob> => {
-    const response = await api.get<Blob>(`/admin/logging/files/${filename}/download`, {
-      responseType: "blob",
-    });
+    const response = await api.get<Blob>(
+      `/admin/logging/files/${encodeURIComponent(filename)}/download`,
+      { responseType: "blob" }
+    );
     return response.data;
   },
 
   deleteLogFile: async (filename: string): Promise<MessageResponse> => {
-    const { data } = await api.delete<MessageResponse>(`/admin/logging/files/${filename}`);
+    const { data } = await api.delete<MessageResponse>(
+      `/admin/logging/files/${encodeURIComponent(filename)}`
+    );
     return data;
   },
 
-  getLogStats: async (): Promise<{
-    totalSize: number;
-    fileCount: number;
-    categories: Record<string, { fileCount: number; totalSize: number }>;
-    oldestLog: string;
-    newestLog: string;
-  }> => {
-    const { data } = await api.get<{
-      totalSize: number;
-      fileCount: number;
-      categories: Record<string, { fileCount: number; totalSize: number }>;
-      oldestLog: string;
-      newestLog: string;
-    }>("/admin/logging/stats");
+  getLogStats: async (): Promise<LogStatsResponse> => {
+    const { data } = await api.get<LogStatsResponse>("/admin/logging/stats");
     return data;
   },
 
-  cleanupLogs: async (): Promise<{
-    message: string;
-    filesDeleted: number;
-    spaceFreed: number;
-  }> => {
-    const { data } = await api.post<{
-      message: string;
-      filesDeleted: number;
-      spaceFreed: number;
-    }>("/admin/logging/cleanup");
-    return data;
-  },
-
-  searchLogs: async (params: {
-    query: string;
-    level?: string;
-    category?: string;
-    fromDate?: string;
-    toDate?: string;
-    limit?: number;
-  }): Promise<{
-    results: LogSearchResult[];
-    total: number;
-  }> => {
-    const { data } = await api.get<{
-      results: LogSearchResult[];
-      total: number;
-    }>("/admin/logging/search", { params });
+  cleanupLogs: async (): Promise<LogCleanupResult> => {
+    const { data } = await api.post<LogCleanupResult>("/admin/logging/cleanup");
     return data;
   },
 
@@ -650,6 +678,15 @@ export const adminApi = {
     patch: InstanceSettingsPatch
   ): Promise<InstanceSettingsResponse> => {
     const { data } = await api.put<InstanceSettingsResponse>("/admin/instance-settings", patch);
+    return data;
+  },
+
+  /** Tests `url` (typed, not yet saved) or, without it, the saved URL. */
+  testRailRouting: async (url?: string): Promise<RailRoutingTestResult> => {
+    const { data } = await api.post<RailRoutingTestResult>(
+      "/admin/instance-settings/rail-routing/test",
+      url ? { url } : {}
+    );
     return data;
   },
 

@@ -183,6 +183,43 @@ describe("open data endpoints", () => {
     expect(res.status).toBe(200);
     expect(res.body.profile.ascentM).toBe(330);
     expect(res.body.profile.profile[0]).toEqual([0, 270]);
+    expect(res.body.unavailable).toBe(false);
+  });
+
+  // Open-Meteo down used to be `profile: null` - the card vanished silently.
+  it("says the elevation service is unavailable instead of answering no profile", async () => {
+    const tour = await request(app)
+      .post("/api/v1/tours")
+      .set("Cookie", cookie)
+      .send({ name: "Trolltunga", mode: "foot", activity: "hike" });
+    const routeId = tour.body.route.id as string;
+    await request(app)
+      .put(`/api/v1/tours/${routeId}/points`)
+      .set("Cookie", cookie)
+      .send({
+        points: [
+          { title: "Skjeggedal", lat: 60.1291, lon: 6.7526 },
+          { title: "Trolltunga", lat: 60.1241, lon: 6.74 },
+        ],
+      });
+    fetches = mockFetch([[/v1\/elevation/, { error: "down" }, 503]]);
+    const res = await request(app)
+      .get(`/api/v1/tours/${routeId}/planned-profile`)
+      .set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ profile: null, unavailable: true });
+  });
+
+  it("says Wikipedia is unavailable for a lodging instead of answering no summary", async () => {
+    const lodging = await prisma.lodging.create({
+      data: { userId, name: "Hotel Adlon", wikidataId: "Q698095" },
+    });
+    fetches = mockFetch([[/wikidata\.org/, { error: "busy" }, 503]]);
+    const res = await request(app)
+      .get(`/api/v1/lodging/${lodging.id}/wikipedia?lang=de`)
+      .set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body).toEqual({ summary: null, unavailable: true });
   });
 
   it("finds a place's article through the wikidata tag of its OSM element, and remembers the item", async () => {
@@ -309,11 +346,27 @@ describe("open data endpoints", () => {
       expect(off.status).toBe(409);
       await setSwitch(true);
       fetches.restore();
+      // Which failure it was travels as a code (2026-09-26): an overloaded
+      // Overpass is a timeout, not "no answer", and neither is "none nearby".
       fetches = mockFetch([[/overpass-api\.de/, { error: "busy" }, 504]]);
       const down = await request(app)
         .get("/api/v1/nearby/lodging?lat=62&lon=6")
         .set("Cookie", cookie);
-      expect(down.status).toBe(502);
+      expect(down.status).toBe(504);
+      expect(down.body.code).toBe("UPSTREAM_TIMEOUT");
+    });
+
+    it.each([
+      [429, 503, "UPSTREAM_RATE_LIMITED"],
+      [500, 502, "UPSTREAM_UNAVAILABLE"],
+    ])("an Overpass %s answers %s with %s, never an empty list", async (upstream, status, code) => {
+      fetches = mockFetch([[/overpass-api\.de/, { error: "busy" }, upstream]]);
+      const res = await request(app)
+        .get("/api/v1/nearby/lodging?lat=62&lon=6")
+        .set("Cookie", cookie);
+      expect(res.status).toBe(status);
+      expect(res.body).toMatchObject({ code });
+      expect(res.body.places).toBeUndefined();
     });
   });
 
@@ -382,6 +435,24 @@ describe("open data endpoints", () => {
         .post(`/api/v1/lodging/${lodging.id}/enrich`)
         .set("Cookie", cookie);
       expect(res.body).toMatchObject({ found: false, reason: "notFound", filled: [] });
+    });
+
+    // Silent-failure fixes, 2026-09-26: an overloaded Overpass used to read
+    // "OpenStreetMap does not know this house".
+    it.each([
+      [504, "timeout"],
+      [429, "rateLimited"],
+      [503, "unavailable"],
+    ])("an Overpass %s is reported as %s, not as notFound", async (status, reason) => {
+      const lodging = await prisma.lodging.create({
+        data: { userId, type: "hotel", name: "Adlon", lat: 52.5162, lon: 13.38 },
+      });
+      fetches = mockFetch([[/overpass-api\.de/, { error: "busy" }, status]]);
+      const res = await request(app)
+        .post(`/api/v1/lodging/${lodging.id}/enrich`)
+        .set("Cookie", cookie);
+      expect(res.status).toBe(200);
+      expect(res.body).toMatchObject({ found: false, reason, filled: [] });
     });
 
     it("refuses another user's lodging", async () => {

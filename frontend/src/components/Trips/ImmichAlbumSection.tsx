@@ -4,7 +4,7 @@ import { failureKey, immichApi, immichFailureKind } from "../../lib/api/immich";
 import { useToastStore } from "../../store/toastStore";
 import { groupByDay } from "../../lib/galleryGrouping";
 import { useLocale } from "../../hooks/useLocale";
-import type { ImmichGalleryAsset, LinkedAlbum } from "../../types/immich";
+import type { ImmichGalleryAsset, ImportJob, LinkedAlbum } from "../../types/immich";
 import PhotoLightbox, { type LightboxItem } from "./PhotoLightbox";
 
 const JOB_POLL_MS = 1500;
@@ -19,6 +19,27 @@ function readGroupPref(): boolean {
     // Private mode / blocked storage must not take the gallery down.
     return true;
   }
+}
+
+/**
+ * The sentence a finished import run deserves, or null for a clean run. The
+ * job's `error` is a failure kind from the fixed Immich vocabulary; anything
+ * else (a disk/database failure, or a row written before kinds were stored)
+ * gets a neutral "unknown" reason rather than a guessed one.
+ */
+function describeImportOutcome(
+  job: ImportJob,
+  t: (key: string, options?: Record<string, unknown>) => string
+): string | null {
+  if (job.status === "failed") {
+    const key = failureKey(job.error);
+    const reason = t(key === "errors.unknown" ? "albums.importFailedUnknown" : key);
+    return t("albums.importFailed", { reason });
+  }
+  if (job.failedAssets > 0) {
+    return t("albums.importPartial", { failed: job.failedAssets, total: job.totalAssets });
+  }
+  return null;
 }
 
 interface Props {
@@ -48,6 +69,10 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
   const [confirmingUnlink, setConfirmingUnlink] = useState(false);
   const [syncing, setSyncing] = useState(false);
   const [progress, setProgress] = useState<{ done: number; total: number } | null>(null);
+  // How the last import run ended, when that is worth saying: it failed, or
+  // some photos did not come across. It used to end silently — the button
+  // simply became clickable again, whatever had happened.
+  const [importOutcome, setImportOutcome] = useState<string | null>(null);
   const pollRef = useRef<ReturnType<typeof setInterval> | null>(null);
   // Guards every async continuation below: a poll tick or a load() that was
   // already in flight when the section unmounts (album swapped, tab closed)
@@ -96,10 +121,11 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
       stopPolling();
       setSyncing(false);
       setProgress(null);
+      setImportOutcome(describeImportOutcome(job, t));
       await load();
       if (mountedRef.current) onChanged();
     }
-  }, [tripId, album.id, stopPolling, load, onChanged]);
+  }, [tripId, album.id, stopPolling, load, onChanged, t]);
 
   const startPolling = useCallback((): void => {
     setSyncing(true);
@@ -148,10 +174,10 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
     // callbacks, and re-running this probe on its identity change would
     // needlessly re-fire getImportJob. The probe is a mount-time concern keyed
     // only on which album this section renders.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [tripId, album.id, album.mode]);
 
   const handleResync = async (): Promise<void> => {
+    setImportOutcome(null);
     try {
       await immichApi.resyncAlbum(tripId, album.id);
       if (!mountedRef.current) return;
@@ -191,7 +217,9 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
   const showGroups = groupByDayEnabled && hasDates;
 
   const dayLabel = (day: string): string =>
-    new Date(`${day}T00:00:00`).toLocaleDateString(locale, {
+    // `day` is a `YYYY-MM-DD` key; read in UTC so the reader's zone cannot move it.
+    new Date(`${day}T00:00:00.000Z`).toLocaleDateString(locale, {
+      timeZone: "UTC",
       weekday: "long",
       day: "numeric",
       month: "long",
@@ -270,6 +298,12 @@ export default function ImmichAlbumSection({ tripId, album, onChanged }: Props):
           </button>
         </div>
       </header>
+
+      {importOutcome !== null && (
+        <p role="alert" className="mb-2 rounded-sm border border-amber-500/40 p-2 text-sm">
+          {importOutcome}
+        </p>
+      )}
 
       {confirmingUnlink && (
         <div className="mb-2 flex gap-2 rounded-sm border border-slate-600 p-2 text-sm">

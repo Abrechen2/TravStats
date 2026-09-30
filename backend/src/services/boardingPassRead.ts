@@ -62,7 +62,8 @@ export async function readBoardingPass(input: BoardingPassInput): Promise<Boardi
     barcode ?? (imageBase64 ? await decodeBarcodeFromImageBase64(imageBase64) : undefined);
   const decoded = looksLikeBcbp(barcodeStr) ? decodeBcbp(barcodeStr) : null;
   if (decoded && barcode === undefined) {
-    logger.info(
+    logger.info("[BoardingPassRead] barcode read from image");
+    logger.debug(
       { flightNumber: decoded.flightNumber, route: `${decoded.fromCode} → ${decoded.toCode}` },
       "[BoardingPassRead] barcode read from image"
     );
@@ -124,6 +125,12 @@ export async function readBoardingPass(input: BoardingPassInput): Promise<Boardi
       provider,
       fallbackUsed,
       barcode: Boolean(decoded),
+      missingFields: merged.missing.length,
+    },
+    "[BoardingPassRead] reading complete"
+  );
+  logger.debug(
+    {
       flightNumber: merged.flightNumber,
       route: `${merged.departureCode} → ${merged.arrivalCode}`,
     },

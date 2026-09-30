@@ -3,8 +3,11 @@ import { isCurrencyCode } from "../shared/currencies";
 import { receiptUrlValidator } from "./receiptUrl";
 import { LODGING_DATE_PRECISIONS } from "../shared/lodgingTiming";
 import { partialForUpdate } from "./partialUpdate";
+import { legacyDayFieldSchema } from "../shared/time/timeInput";
 
 export const LODGING_TYPES = ["hotel", "campsite", "guesthouse", "apartment", "hostel"] as const;
+/** An OpenStreetMap element reference, as the nearby search and the place picker write it. */
+export const OSM_REF_PATTERN = /^osm:(node|way|relation)\/\d+$/;
 export const BOARD_TYPES = ["none", "breakfast", "half", "full", "all_inclusive"] as const;
 // `in_progress` joined the vocabulary when lodging status became derived from
 // the dates (Alex, 2026-07-12) — a stay whose check-in has passed but whose
@@ -37,12 +40,13 @@ export const currencyField = z
  */
 export const MAX_STAY_SPAN_NIGHTS = 3650;
 
-// Accept partial datetimes and coerce them to full ISO 8601, mirroring schemas/cruise.ts.
-const isoDateTimeRequired = z.preprocess((v) => {
-  if (typeof v !== "string" || v === "") return v;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? v : d.toISOString();
-}, z.string().datetime());
+// A stay's check-in and check-out are CALENDAR DAYS at the hotel (ADR 0002
+// D1): `YYYY-MM-DD`, or an offset-bearing ISO string read as the day it
+// writes. An offset-less datetime used to be parsed with `new Date(v)` — the
+// server's own zone decided which day was stored — and is now refused with
+// TIME_SHAPE_REQUIRED. Handed on as the UTC-midnight anchor the legacy
+// columns hold; `stayColumns.ts` derives the new DATE columns from it.
+const stayDay = legacyDayFieldSchema();
 
 // `.nullable()` on every field a user can explicitly CLEAR in the editors
 // (finding 4) — an emitted `null` must round-trip as "delete this value",
@@ -81,6 +85,10 @@ const baseLodgingSchema = z.object({
       .optional()
   ),
   amenities: z.array(z.string().max(60)).max(50).optional(),
+  /** The OpenStreetMap element the form's "lodgings nearby" pick named
+   *  ("osm:node/240109189"). Stored as `externalRef` only while the row has
+   *  none — see `services/lodging/osmRef.ts`. */
+  osmRef: z.string().regex(OSM_REF_PATTERN, "osmRef must look like osm:node/123").optional(),
   notes: z
     .string()
     .transform((v) => v.replace(/<[^>]*>/g, ""))
@@ -110,8 +118,8 @@ const baseStaySchema = z.object({
   // you slept, and rating/price/board/room/membership all live on the STAY, so
   // without a dateless stay those had nowhere to go. `datePrecision` says what
   // the dates that ARE here actually mean — see shared/lodgingTiming.ts.
-  checkIn: isoDateTimeRequired.nullable().optional(),
-  checkOut: isoDateTimeRequired.nullable().optional(),
+  checkIn: stayDay.nullable().optional(),
+  checkOut: stayDay.nullable().optional(),
   // Optional wall-clock times ("HH:mm", hotel-local like the dates) for the
   // day anchors above. Kept separate from checkIn/checkOut on purpose: the
   // FX snapshot, night counting and status derivation all key on the
@@ -319,6 +327,13 @@ export const lodgingQuerySchema = z.object({
   search: z.string().trim().min(1).max(200).optional(),
   /** The lifecycle pill's value, per shared/lodgingLifecycle.ts. */
   status: z.enum(STAY_STATUSES).optional(),
+  /**
+   * Only hotels with a stay this hotel card counts (in `year`, when given) —
+   * the link behind a card's figures. Resolved to ids before paging
+   * (`services/loyalty/listFilters.ts`); not this account's card: 404
+   * `LOYALTY_MEMBERSHIP_NOT_FOUND`.
+   */
+  membershipId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
   sort: z.enum(LODGING_SORT_KEYS).optional(),
@@ -355,4 +370,19 @@ export const updateMembershipSchema = baseMembershipSchema
 export type LodgingInput = z.infer<typeof baseLodgingSchema>;
 export type StayInput = z.infer<typeof baseStaySchema>;
 export type LodgingQueryInput = z.infer<typeof lodgingQuerySchema>;
+/**
+ * The list query as the SQL builders take it: the request, plus the hotel ids
+ * a derived filter (a loyalty card's coverage) resolved to. Absent: no such
+ * restriction; empty: nothing matches.
+ */
+export type LodgingListQuery = LodgingQueryInput & {
+  coveredLodgingIds?: string[];
+  /**
+   * The stays a loyalty card counts (in the linked year, when there is one).
+   * Present: only these stays feed the row figures, the sort aggregates and
+   * the summary, so the list opened from "2021: 3 Aufenthalte · 9 Nächte"
+   * reads 3 and 9 — not every stay the covered hotels ever had.
+   */
+  countedStayIds?: string[];
+};
 export type MembershipInput = z.infer<typeof baseMembershipSchema>;

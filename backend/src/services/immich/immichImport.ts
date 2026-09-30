@@ -22,7 +22,7 @@ import logger from "../../utils/logger";
 import { createImmichClient } from "./immichClient";
 import { getImmichConnection } from "./immichResolver";
 import { invalidateAlbumAssets } from "./immichAssetCache";
-import { ImmichAsset } from "./types";
+import { ImmichAsset, ImmichError } from "./types";
 
 /** Marks a stream aborted for exceeding the per-asset byte cap (M2), distinct
  *  from a genuine upstream/write failure. */
@@ -391,11 +391,15 @@ export async function startAlbumImport(userId: string, linkId: string): Promise<
           context: { linkId, processed, failed },
         });
       } catch (error) {
-        const message = error instanceof Error ? error.message : "Import failed";
+        // The job row's `error` is read by the gallery and shown to the user,
+        // so it carries the fixed Immich kind vocabulary (the frontend maps it
+        // to DE/EN copy), never the exception's English prose — that stays in
+        // the log. "importFailed" = not an Immich failure (disk, database …).
+        const kind = error instanceof ImmichError ? error.kind : "importFailed";
         logger.error({ message: "immich_import_failed", error, context: { linkId } });
         await prisma.immichImportJob.update({
           where: { albumLinkId: linkId },
-          data: { status: "failed", error: message, completedAt: new Date() },
+          data: { status: "failed", error: kind, completedAt: new Date() },
         });
       }
     } catch (error) {

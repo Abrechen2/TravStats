@@ -69,8 +69,10 @@ export async function loadLodgingStatsData(
     // Which card covered which stay is DERIVED, not stored: a membership
     // attached to a chain covers every stay at that chain without the user
     // restating it per stay.
-    prisma.lodgingMembership.findMany({
-      where: { userId },
+    prisma.loyaltyMembership.findMany({
+      // Hotel cards only: a frequent-flyer card covers no stay, and a stay's
+      // override can only name a lodging card (`assertMembershipOwned`).
+      where: { userId, domain: "lodging" },
       include: { chains: true, lodgings: true },
     }),
   ]);
@@ -121,6 +123,7 @@ export async function loadLodgingStatsData(
         ratingBreakfast: s.ratingBreakfast,
         ratingService: s.ratingService,
         programName: programme.programName,
+        programMembershipId: programme.membershipId,
         membershipTier: programme.tier,
       },
     };

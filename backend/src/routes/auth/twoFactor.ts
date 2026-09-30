@@ -221,6 +221,8 @@ router.post("/verify", authLimiter, async (req: AuthRequest, res: Response, next
         username: user.username,
         isAdmin: user.isAdmin,
         isSharedDemo: isSharedDemoAccount(user),
+        // What rejectDemoQuota refuses — see routes/auth.ts login.
+        providerQuotaRefused: user.isDemo === true,
         firstName: user.firstName,
         lastName: user.lastName,
       },

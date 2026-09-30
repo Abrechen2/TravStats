@@ -14,6 +14,8 @@ import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 import { resolveTrip } from "./resolveTrip";
 import { refreshJournalWeather } from "../../services/openData/journalWeather";
 import { assertTripPhotos, setJournalPhotos } from "../../services/trips/journalPhotos";
+import { tripStopTimes } from "./stopTime";
+import { dbDayOf } from "../../services/timeModel/dayColumns";
 
 /**
  * Trip stops and journal entries — a same-prefix satellite of routes/trips.ts, split out when that
@@ -26,6 +28,7 @@ import { assertTripPhotos, setJournalPhotos } from "../../services/trips/journal
  * `resolveTrip`.
  */
 
+import { withJournalEntryTimes, withTripStopTimes } from "../../services/trips/timesDto";
 const router = Router();
 
 /* ─────────── Stops ─────────── */
@@ -40,6 +43,17 @@ router.post(
       const userId = req.userId!;
       const trip = await resolveTrip(userId, req.params.id);
       const body = createStopSchema.parse(req.body);
+      const times = await tripStopTimes(
+        { startDate: body.startDate, endDate: body.endDate },
+        {
+          lat: body.lat ?? null,
+          lon: body.lon ?? null,
+          domain: body.domain ?? null,
+          sourceId: body.sourceId ?? null,
+        },
+        null,
+        req
+      );
       const stop = await prisma.tripStop.create({
         data: {
           tripId: trip.id,
@@ -47,15 +61,16 @@ router.post(
           domain: body.domain,
           sourceId: body.sourceId,
           description: body.description,
-          startDate: body.startDate,
-          endDate: body.endDate,
+          startDate: times.startDate,
+          endDate: times.endDate,
+          ...times.timeColumns,
           lat: body.lat,
           lon: body.lon,
           notes: body.notes,
           orderIdx: body.orderIdx ?? 0,
         },
       });
-      res.status(201).json({ stop });
+      res.status(201).json({ stop: withTripStopTimes(stop) });
     } catch (error) {
       next(error);
     }
@@ -88,8 +103,28 @@ router.patch(
           400
         );
       }
-      const stop = await updateStopAndLegs(prisma, req.params.stopId, body, existing);
-      res.json({ stop });
+      // Re-read on the MERGED stop: a move changes the zone of stored times too.
+      const merged = <K extends "lat" | "lon" | "domain" | "sourceId">(key: K) =>
+        body[key] !== undefined ? body[key] : existing[key];
+      const times = await tripStopTimes(
+        { startDate: body.startDate, endDate: body.endDate },
+        {
+          lat: merged("lat") ?? null,
+          lon: merged("lon") ?? null,
+          domain: merged("domain") ?? null,
+          sourceId: merged("sourceId") ?? null,
+        },
+        existing,
+        req
+      );
+      const { startDate: _start, endDate: _end, ...rest } = body;
+      const stop = await updateStopAndLegs(
+        prisma,
+        req.params.stopId,
+        { ...rest, ...times },
+        existing
+      );
+      res.json({ stop: withTripStopTimes(stop) });
     } catch (error) {
       next(error);
     }
@@ -178,6 +213,7 @@ router.post(
         data: {
           tripId: trip.id,
           date: body.date,
+          day: dbDayOf(body.date),
           title: body.title,
           body: body.body,
           mood: body.mood,
@@ -188,7 +224,10 @@ router.post(
       // The day's measured weather, where the instance allows open data and a
       // stop of the trip says where the day was spent. Best effort: the entry
       // is saved either way.
-      res.status(201).json({ entry: await refreshJournalWeather(entry.id) });
+      const weather = await refreshJournalWeather(entry.id);
+      res
+        .status(201)
+        .json({ entry: withJournalEntryTimes(weather.entry), weatherOutcome: weather.outcome });
     } catch (error) {
       next(error);
     }
@@ -216,7 +255,7 @@ router.patch(
       const entry = await prisma.tripJournalEntry.update({
         where: { id: req.params.entryId },
         data: {
-          ...(body.date !== undefined && { date: body.date }),
+          ...(body.date !== undefined && { date: body.date, day: dbDayOf(body.date) }),
           ...(body.title !== undefined && { title: body.title }),
           ...(body.body !== undefined && { body: body.body }),
           ...(body.mood !== undefined && { mood: body.mood }),
@@ -227,7 +266,14 @@ router.patch(
       // A new date is a new day: its weather replaces the old one's.
       const dayMoved = entry.date.getTime() !== existing.date.getTime();
       const needsWeather = dayMoved || entry.observedWeather === null;
-      res.json({ entry: needsWeather ? await refreshJournalWeather(entry.id) : entry });
+      if (!needsWeather) {
+        res.json({ entry: withJournalEntryTimes(entry) });
+        return;
+      }
+      // The stored value belongs to the OLD day once the date moved, so a
+      // failed lookup for the new one must not leave it standing.
+      const weather = await refreshJournalWeather(entry.id, { storedIsForAnotherDay: dayMoved });
+      res.json({ entry: withJournalEntryTimes(weather.entry), weatherOutcome: weather.outcome });
     } catch (error) {
       next(error);
     }

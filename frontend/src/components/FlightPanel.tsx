@@ -15,6 +15,8 @@ import { TripDetailsSidebar } from "./FlightPanel/TripDetailsSidebar";
 import TripModal from "./Trips/TripModal";
 import { useFlightSelectionStore } from "../store/flightSelectionStore";
 import { useToastStore } from "../store/toastStore";
+import { flightDeparture } from "../lib/entityTimes";
+import { dayOf } from "../shared/time";
 
 type PanelTab = "flights" | "trips";
 type SortMode = "date-desc" | "date-asc" | "route" | "airline" | "status";
@@ -169,7 +171,9 @@ export function FlightPanel({
   const tripStats = useMemo(() => {
     const map = new Map<
       string,
-      { count: number; minDate: number; maxDate: number; totalKm: number }
+      // `firstDay`: the earliest departure's day AT ITS AIRPORT (ADR 0002) —
+      // the trip's year is read from it, never from the reader's calendar.
+      { count: number; minDate: number; maxDate: number; totalKm: number; firstDay: string | null }
     >();
     for (const f of allFlights) {
       if (!f.tripId) continue;
@@ -178,8 +182,10 @@ export function FlightPanel({
         minDate: Infinity,
         maxDate: -Infinity,
         totalKm: 0,
+        firstDay: null,
       };
-      const t = f.departureTime ? new Date(f.departureTime).getTime() : NaN;
+      const departure = flightDeparture(f);
+      const t = departure ? Date.parse(departure.utc) : NaN;
       let km = 0;
       if (f.depLat != null && f.depLon != null && f.arrLat != null && f.arrLon != null)
         km = calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon);
@@ -188,6 +194,7 @@ export function FlightPanel({
         minDate: isNaN(t) ? prev.minDate : Math.min(prev.minDate, t),
         maxDate: isNaN(t) ? prev.maxDate : Math.max(prev.maxDate, t),
         totalKm: prev.totalKm + km,
+        firstDay: departure && !(t >= prev.minDate) ? dayOf(departure) : prev.firstDay,
       });
     }
     return map;
@@ -348,8 +355,7 @@ export function FlightPanel({
               ) : (
                 trips.map((trip) => {
                   const stats = tripStats.get(trip.id);
-                  const year =
-                    stats && isFinite(stats.minDate) ? new Date(stats.minDate).getFullYear() : null;
+                  const year = stats?.firstDay ? Number(stats.firstDay.slice(0, 4)) : null;
                   const km =
                     stats && stats.totalKm > 0
                       ? `${Math.round(stats.totalKm).toLocaleString(locale)} km`

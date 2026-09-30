@@ -133,7 +133,10 @@ export function estimateRoute(
   }
 
   // Check if this route might have changed due to Russia airspace closure (after 2022)
-  if (date.getFullYear() >= 2022 && mightNeedRussiaCircumvention(depLat, depLon, arrLat, arrLon)) {
+  if (
+    date.getUTCFullYear() >= 2022 &&
+    mightNeedRussiaCircumvention(depLat, depLon, arrLat, arrLon)
+  ) {
     return estimateSouthernRoute(depLat, depLon, arrLat, arrLon);
   }
 

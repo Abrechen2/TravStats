@@ -42,14 +42,21 @@ for `/deploy`. Dev branches never deploy.
 
 ### Who writes to `main` (since 2026-09-25)
 
-"No PRs" above describes the Claude sessions, not everyone. `main` now has
+> **Paperclip is out of service since 2026-09-27** (owner). Nothing arrives
+> through Forgejo pull requests any more, so `main` has two writers again: the
+> owner and the Claude sessions. The Paperclip rows and rules below are kept
+> as the record of how it worked and what to restore if it comes back — they
+> bind nobody while it is off. Rules 1 and 2 stay in force regardless: two
+> remotes can still disagree.
+
+"No PRs" above describes the Claude sessions, not everyone. `main` had
 three writers, and a plan computed against it minutes ago can be stale:
 
 | Writer | Route into `main` |
 |---|---|
 | The owner | Direct merge or push |
 | Claude sessions (PC, CT142) | Local merge on the owner's release decision, no PR |
-| **Paperclip agents** (CT 145, commits as `paperclip-bot`) | **Forgejo pull requests**; merged only by the owner |
+| ~~Paperclip agents~~ (CT 145, commits as `paperclip-bot`) — out of service since 2026-09-27 | Forgejo pull requests; merged only by the owner |
 
 On 2026-09-25 two Paperclip PRs were merged into `main` on Forgejo while a
 Claude session was integrating branches against the same `main`, and five
@@ -65,8 +72,9 @@ Hence:
    merge commit. Forgejo's default "Merge pull request #128" becomes, once
    the commit reaches GitHub, a link to GitHub #128 — a different thing (see
    the reference rules under *Three trackers* below).
-4. **`.forgejo/workflows/` is Paperclip's CI work**; change it through a PR or
-   with the owner, not in passing.
+4. **`.forgejo/workflows/`** was Paperclip's CI work (change it through a PR
+   or with the owner). While Paperclip is off it is ordinary repo config —
+   still change it deliberately, since the homelab runner executes it.
 5. **Paperclip work that matters for a release gets a Leitstand item.** The
    board reads issues, not PRs, so an unrecorded PR is invisible there.
 
@@ -359,7 +367,30 @@ enforced, and merely practised** below.
   token). Set `withCredentials: true` on every Axios instance.
 - **Prisma migrations** — schema changes always via
   `npx prisma migrate dev` (never manually), and `npm run check:drift` must
-  stay green.
+  stay green. **One documented exception kind: a rename Prisma cannot see.**
+  `20260925230000_loyalty_memberships` (lodging_memberships →
+  loyalty_memberships) is hand-written, because `migrate dev` reads a renamed
+  model as "drop the old table, create a new one" — every card, and with it
+  every stay's link to its card, would be gone. The rule for any such
+  migration: it ships with a test that replays the file against rows in the
+  OLD shape and asserts they survive
+  (`backend/src/__tests__/migration.loyaltyMemberships.test.ts` is the
+  template), and `check:drift` stays green afterwards, so the hand-written SQL
+  and `schema.prisma` provably describe the same database. The time model's
+  `20260927014000_time_model_backfill_marker` is the second one: its
+  migration, `rollback.sql` and `undo-backfill.sql` are replayed by
+  `backend/src/__tests__/migration.timeModelBackfillMarker.test.ts`.
+- **`partialIndexes` preview feature (since 2.7)** — `schema.prisma` enables
+  it so a partial unique index can be declared: the lodging-chain catalogue is
+  unique by name among its owner-less rows only
+  (`@@unique([name], where: raw("user_id IS NULL"))`), which a plain
+  `(user_id, name)` unique cannot hold because Postgres treats NULLs as
+  distinct. It also makes Prisma see the hand-written partial index on
+  `flights` (2026-05-03), which is now declared in the schema — without that
+  line the next migration would drop it. If `check:drift` ever reports a
+  partial index as a difference, treat it the way a postgis diff was treated
+  under `postgresqlExtensions`: a real signal (the feature or a declaration
+  went missing), not noise to be migrated away.
 - **React hooks** — `useTranslation` is imported from
   `'../hooks/useTranslation'` (a project wrapper), not directly from
   `react-i18next`.
@@ -578,14 +609,18 @@ checked by nothing until now — is broken by 21 files, the largest at 2161.
 | 2FA is asked before a forced password change | `backend/src/routes/__tests__/twoFactor.login.test.ts` — "asks for the second factor even when a password change is also due" |
 | No private key, no conflict marker, no >15 MB blob in a commit | `.pre-commit-config.yaml` |
 | A router answers in ONE response shape — bare or `{success, data}` — per `docs/adr/0001-api-response-shape.md` | `backend/src/__tests__/apiResponseShape.ratchet.test.ts` vs `apiResponseShape.baseline.json` — a new router file must be assigned a family; a bare-family router gains no envelope; the twelve frozen leaks only shrink |
+| Nothing outside `shared/time/` reads the host's zone — host-local `Date` getters/setters, `new Date(y, m, …)`, `toLocale*String`/`Intl.DateTimeFormat` without `timeZone`, date-fns `format` / date-fns-tz, and the clock in status files (ADR 0002, D6) | `scripts/eslint/timeRules.mjs` — `time/no-host-local-date`, `time/no-zoneless-format`, `time/no-zone-library`, `time/no-ambient-now` — as errors in both eslint configs. Both trees reached zero offenders in phase 4 and their `eslint-suppressions.json` files are gone, so a new offender fails outright; a tree that ever needs to freeze offenders again uses ESLint bulk suppressions in its own `eslint-suppressions.json` (a fixed one leaves a stale entry that fails until `--prune-suppressions`). Rules and ratchet tested in `frontend/src/__tests__/lint/timeRules.test.ts` |
+| A test's verdict does not depend on the host's zone | `frontend-tests-tz` / `backend-tests-tz` in `.github/workflows/ci.yml` re-run (the Forgejo workflow, written by Paperclip, does not carry them — owner, 2026-09-27) the suites under `TZ=Pacific/Kiritimati` and `TZ=America/St_Johns`; `scripts/check-tz-ratchet.mjs` vs `scripts/tz-failures-baseline.json` fails on a new failure and on a listed test that now passes |
+| Server and web answer every time question the same way | `shared/time/vectors.json`, run by `backend/src/shared/time/__tests__/vectors*.test.ts` and `frontend/src/shared/time/__tests__/vectors.test.ts`, each also under the two odd zones |
 
-Four of these are **ratchets** carrying a list of today's offenders — file
-size, OpenAPI coverage, OpenAPI response schemas, response-shape leaks. Each
+Six of these are **ratchets** carrying a list of today's offenders — file
+size, OpenAPI coverage, OpenAPI response schemas, response-shape leaks, the
+time lint suppressions and the odd-zone failures. Each
 fails on a *stale* entry as well as a new one, so the list can only ever
-shrink. The act ratchet is a fifth and the one exception: it fails on a new
+shrink. The act ratchet is a seventh and the one exception: it fails on a new
 offender but only PRINTS on a stale entry, because the thing it measures is
 timing-dependent and a flaky guard is worse than a weak one. The coverage
-ratchet is a sixth and holds a number rather than a list: a fall of more than
+ratchet is an eighth and holds a number rather than a list: a fall of more than
 0.25 pp fails, a rise only prints a request to `--update`, and `--update`
 refuses to lower. The frontend figure counts EVERY source file
 (`coverage.include`); without that, v8 left the 93 untested modules out of the
@@ -723,6 +758,31 @@ check.
   shipped an invisible logo in 2.5.0-beta.1 "and every unit test passed while
   it was invisible", so changes there get a browser look, not just green
   tests.
+- **A failure must reach the user as itself — four defect classes.** On
+  2026-09-26 a tester found three roadtrip defects, a review of rail (built the
+  same week) found five more, and a sweep of every other domain found about
+  thirty, all of the same four kinds and all with green suites, because each
+  test mocked the happy path:
+  1. *A picker offers a subset* — built from a derived collection (stays)
+     instead of the entity (lodgings), so anything without the derived row
+     cannot be found, and nothing lets the user create the missing link.
+  2. *A choice does not carry its data* — picking an entity must bring
+     coordinates, name, country, time zone and ids into the form; a form that
+     waits on "location missing" after a pick is this bug.
+  3. *A provider failure becomes silent success* — an adapter returning
+     `null`/`[]`, a route answering 200 with a fallback, a dialog calling
+     `onSaved()` without reading the result, or a 10 s client timeout in front
+     of a server that may take longer. Every failure (network, 4xx/5xx, 429,
+     auth, quota, timeout, disabled, no result) gets its own reason, and the UI
+     says it. Work that can outlast the client runs as a job
+     (`services/jobs/jobRegistry.ts`) the client polls.
+  4. *A re-derivation destroys good data* — an edit re-fetches geometry, an FX
+     snapshot or weather only when its inputs changed, and a failed re-fetch
+     keeps the stored value instead of downgrading it.
+  Two smaller relatives travel with them: a server's English error string
+  shown raw in the German UI (send a stable code, map it to DE/EN copy), and
+  local-calendar logic done in UTC. **The test for a picker, a form or an
+  external call drives the failure path and asserts what the user sees.**
 - **Zod at every boundary; no `console.log`; `async/await`, never `.then()`;
   spread instead of mutation; `strict: true`.** Real, and none of them
   checked — `no-console` is explicitly `'off'` in the backend eslint config,
@@ -760,20 +820,45 @@ from it, so the divergence is recorded here.
 
 - **Which CI gates a merge.** Since 2026-09-25 there are two: GitHub Actions
   (`.github/workflows/ci.yml`, described above) and the homelab Forgejo runner
-  (`.forgejo/workflows/ci.yml`, Paperclip). Until the owner decides, a merge
+  (`.forgejo/workflows/ci.yml`, written by Paperclip, which is out of service
+  since 2026-09-27; the runner itself still runs). Until the owner decides, a merge
   needs both green — a second red job that everyone learns to ignore is how
   the database jobs stayed broken unnoticed in September.
 
 The 800-line number was ratified on 2026-09-05. Thirteen design-system decisions from the same day
 are recorded, with the owner's answer to each, in
 `ClaudeDesign/handoff/2026-09-05-web-redesign-rueckmeldung.md` §9 — read
-that table before re-opening any of them (dashboard tabs stay; tours are ONE
-domain colour; the parser goes into the beta registry; settings become one
-route per group; companions and tags extend to all four domains). One of the
-thirteen has since been reversed by the owner and the table says so: no. 4,
-`domainColors`, was ruled to stay behind the beta badge on 2026-09-05 and
-ruled out from behind it on 2026-09-09, because the goal for 2.7 is that
-nothing is left in the beta registry at all.
+that table before re-opening any of them (tours are ONE domain colour; the
+parser goes into the beta registry; settings become one route per group;
+companions and tags extend to all four domains). TWO of the thirteen have
+since been reversed by the owner:
+
+- No. 4, `domainColors`, was ruled to stay behind the beta badge on
+  2026-09-05 and ruled out from behind it on 2026-09-09, because the goal for
+  2.7 is that nothing is left in the beta registry at all. The table says so.
+- **"Dashboard tabs stay" was reversed on 2026-09-28**: the domain strip is
+  hidden, and the six-row domain filter answers "what is on the map" in its
+  place. The tab ROUTES are untouched — `/dashboard/:tab` still resolves, so
+  every bookmark keeps working — but the strip was the only way to reach them
+  from the page, so "Nur" in the filter navigates there instead. That is not
+  cosmetic: eight map modes exist on a single-domain view and nowhere else
+  (stats-map, trips, itinerary, port-frequency, nights, chains, markers,
+  sea-routes), because `TAB_MODE_REGISTRY` keys modes by tab. A filter that
+  only hid layers would have made those unreachable.
+  `DomainTabStrip.tsx` and `NextUpEntry.tsx` are still in the tree, unused by
+  the app, as the way back.
+
+Two standing rules came out of the same day, and they are about the browser
+build's target rather than any one screen:
+
+- **The web build is drawn for iPads.** The phone is the Companion's job
+  (owner, 2026-09-28), so a phone-width regression is not a release blocker
+  while a tablet one is.
+- **Touch sizing follows the POINTER, not the width** (`useCoarsePointer`).
+  A tablet is wide and finger-operated at once, so a width test alone served
+  every iPad 40 px rows and a 36×21 px button — measured on four iPad
+  viewports. The sheet/dropdown choice still follows the width
+  (`useIsPhoneViewport`); only the target sizes follow the input.
 
 ## Version
 

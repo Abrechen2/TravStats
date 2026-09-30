@@ -472,7 +472,7 @@
     "mostCountriesInDay": "Meiste Länder an einem Tag",
     "mostCountriesInDayDesc": "{{count}} Länder am {{date}}",
     "hemisphereHops": "Hemisphären-Wechsler",
-    "hemisphereHopsDesc": "{{count}}× zwischen Nord- und Südhalbkugel gewechselt",
+    "hemisphereHopsDesc": "{{count}}× zwischen Ost- und Westhalbkugel gewechselt (Nullmeridian oder Datumsgrenze)",
     "dateLineCrossings": "Datumsgrenzen-Überquerungen",
     "dateLineCrossingsDesc": "{{count}}× die Internationale Datumsgrenze überquert",
     "continentalExplorer": "Kontinental-Entdecker",
@@ -590,6 +590,9 @@
     "flights": "Flüge",
     "noData": "Noch keine Flüge vorhanden",
     "loading": "Lädt..."
+  },
+  "reportActions": {
+    "label": "Berichte"
   },
   "yearReport": {
     "btn": "PDF Jahresbericht",
@@ -724,7 +727,10 @@
     "topRouteDesc_one": "{{count}} Flug, beide Richtungen zusammen",
     "topRouteDesc_other": "{{count}} Flüge, beide Richtungen zusammen",
     "noRoute": "Keine Strecke ableitbar.",
-    "none": "—"
+    "none": "—",
+    "rail": "Bahnfahrten",
+    "railDesc": "{{km}} km mit der Bahn",
+    "railDescStraight": "{{km}} km mit der Bahn, davon {{straight}} km Luftlinie"
   },
   "period": {
     "emptyYear": "Für {{year}} ist hier nichts erfasst."

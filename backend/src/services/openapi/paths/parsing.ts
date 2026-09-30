@@ -8,6 +8,7 @@ import { registry } from "../registry";
 import { parseEmailBodySchema } from "../../../schemas/parseEmail";
 import { parseRetentionFields } from "../../../schemas/document";
 import { errorContent, flightCreateInput, flightResponse } from "./shared";
+import { PARSER_SUPPORTED_DOMAINS } from "../../../shared/domains";
 
 const parsedFlightSchema = registry.register(
   "ParsedFlight",
@@ -34,11 +35,11 @@ const domainDetectionSchema = registry.register(
   "DomainDetection",
   z
     .object({
-      domain: z.enum(["flight", "cruise", "lodging"]),
+      domain: z.enum(PARSER_SUPPORTED_DOMAINS),
       confidence: z.number().min(0).max(1),
       candidates: z.array(
         z.object({
-          domain: z.enum(["flight", "cruise", "lodging"]),
+          domain: z.enum(PARSER_SUPPORTED_DOMAINS),
           score: z.number(),
           confidence: z.number(),
           matched: z.array(z.string()).describe('Signal ids that fired, e.g. "checkin-checkout"'),
@@ -49,7 +50,7 @@ const domainDetectionSchema = registry.register(
 );
 
 const requestableDomain = z
-  .enum(["flight", "cruise", "lodging", "auto"])
+  .enum([...PARSER_SUPPORTED_DOMAINS, "auto"])
   .describe(
     "'auto' lets the server decide what the document is and report the evidence. " +
       "Text routes default to 'flight' for backwards compatibility; /parse-image " +
@@ -103,6 +104,42 @@ registry.registerPath({
                   "it meant three different things per domain; one definition " +
                   "now lives in services/parsers/llmAvailability.ts and " +
                   "flights, cruises and lodging all answer from it."
+              ),
+            llmUnreachable: z
+              .literal(true)
+              .optional()
+              .describe(
+                "Present only when `flights` is empty AND a configured LLM could " +
+                  "not be asked (unreachable or failed mid-parse): the empty list " +
+                  "is then the templates' answer alone, not a finding that the " +
+                  "mail holds no flight."
+              ),
+            llmDisabledByAdmin: z
+              .boolean()
+              .optional()
+              .describe(
+                "An admin has switched the language model off, so only the " +
+                  "built-in templates read this document. Tells a " +
+                  "templates-only answer that was decided apart from one " +
+                  "whose model is unreachable, which `ollamaAvailable: false` " +
+                  "alone cannot."
+              ),
+            llmProvider: z
+              .object({
+                kind: z.enum(["ollama", "openai", "anthropic", "google", "custom"]),
+                model: z.string(),
+                isCloud: z.boolean(),
+                host: z
+                  .string()
+                  .nullable()
+                  .describe("Named only for a provider outside the local network"),
+              })
+              .nullable()
+              .optional()
+              .describe(
+                "The language-model provider that read this document, when the " +
+                  'model did (`parserUsed: "ollama"` is the historical name for ' +
+                  "that, whichever provider it was); null otherwise."
               ),
             subject: z.string().optional(),
             documentId: z
@@ -160,7 +197,7 @@ registry.registerPath({
       content: {
         "application/json": {
           schema: z.object({
-            domain: z.enum(["flight", "cruise", "lodging"]),
+            domain: z.enum(PARSER_SUPPORTED_DOMAINS),
             ocrConfidence: z.number(),
             ocrTextLength: z.number(),
             documentId: z

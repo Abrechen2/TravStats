@@ -12,9 +12,10 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent } from "./shared";
+import { errorContent, timeRefused } from "./shared";
 import { PARSER_SUPPORTED_DOMAINS } from "../../../shared/domains";
 import { parseRetentionFields } from "../../../schemas/document";
+import { diagnosticBundleSchema } from "../../diagnostics/bundleSchema";
 
 const badInput = { description: "Invalid input", content: errorContent };
 const notFound = { description: "Not found", content: errorContent };
@@ -62,6 +63,13 @@ const parseBody = {
 
 // ------------------------------------------------------------- parsing
 
+const MISMATCH_NOTE =
+  " Detection runs whatever the domain asked for: a rail, cruise or lodging request " +
+  "for a document that clearly is another kind of booking answers with an empty result " +
+  "and `domainMismatch: { detected, confidence }` (rail adds `fallbackCode: otherDomain`), " +
+  "so the client can send the user to the right import instead of showing a misreading. " +
+  "A flight request is never overruled.";
+
 const parseTag = ["Parsing"];
 
 registry.registerPath({
@@ -70,11 +78,12 @@ registry.registerPath({
   summary: "Read a booking out of an email",
   description:
     "multipart/form-data with the .eml, plus a `domain` saying what to read it " +
-    "as — flight, cruise or lodging. All three are supported; omitting the field " +
+    "as — flight, cruise, lodging or rail. All four are supported; omitting the field " +
     "means flight. Returns candidates for review; nothing is stored. A document " +
     "it cannot read comes back as an empty result with a reason, not as an error " +
     "— 'no booking here' is an answer, not a failure. With `retain=true` the file is " +
-    "kept as a document and the answer carries its `documentId`.",
+    "kept as a document and the answer carries its `documentId`." +
+    MISMATCH_NOTE,
   tags: parseTag,
   request: { body: parseBody },
   responses: { 200: { description: "Parse result" }, 400: badInput },
@@ -85,12 +94,13 @@ registry.registerPath({
   path: "/parse-pdf",
   summary: "Read a booking out of a PDF",
   description:
-    "Same three domains as the email route — flight, cruise or lodging — and the " +
+    "Same four domains as the email route — flight, cruise, lodging or rail — and the " +
     "same contract: a proposal, never a write. JSON body with the PDF as base64. " +
     "Send `retain: true` to keep the input as a document (the answer then carries `documentId`), " +
     "or `documentId` instead of the content to read a document already kept — the path for an " +
     "original too large to send as base64 in a JSON body (forgejo#116). " +
-    "A PDF with no text layer answers 422 and belongs on /parse-image.",
+    "A PDF with no text layer answers 422 and belongs on /parse-image." +
+    MISMATCH_NOTE,
   tags: parseTag,
   request: {
     body: {
@@ -162,9 +172,17 @@ registry.registerPath({
   description:
     "The number is sent unpadded whatever the user typed: providers key on 'EK51' " +
     "and answer a padded 'EK051' with nothing at all. The stored spelling is kept " +
-    "and the answer mapped back onto it.",
+    "and the answer mapped back onto it. Each airport of a hit carries `timezone` and " +
+    "`scheduledLocal` (its own wall clock) beside the UTC `scheduledTime`. When no " +
+    "flight came back because a provider failed, the answer is " +
+    "`error: LOOKUP_PROVIDER_FAILED` with `providerFailures` " +
+    "(auth | quota | timeout | plan_restricted | provider_error per provider) — never " +
+    "a plain 'not found'. `tz` is the asker's IANA zone and decides what 'today' is.",
   tags: parseTag,
-  request: { params: z.object({ flightNumber: z.string() }) },
+  request: {
+    params: z.object({ flightNumber: z.string() }),
+    query: z.object({ date: z.string().optional(), tz: z.string().optional() }),
+  },
   responses: {
     200: { description: "Lookup result" },
     404: notFound,
@@ -380,7 +398,7 @@ const lodgingTag = ["Lodging"];
 registry.registerPath({
   method: "get",
   path: "/lodging-chains",
-  summary: "Hotel chains in the catalogue",
+  summary: "Hotel chains the caller can see: the catalogue plus their own",
   tags: lodgingTag,
   responses: { 200: { description: "Chains" } },
 });
@@ -397,7 +415,7 @@ registry.registerPath({
 registry.registerPath({
   method: "post",
   path: "/lodging-chains",
-  summary: "Add a chain the catalogue does not have",
+  summary: "Add a chain as the caller's own (200 with the existing row when the name is known)",
   tags: lodgingTag,
   responses: { 201: { description: "Created" }, 400: badInput },
 });
@@ -493,9 +511,27 @@ registry.registerPath({
   method: "get",
   path: "/diagnostic-export",
   summary: "A support bundle about this instance",
-  description: "Redacted: no keys, no passwords, no user content.",
+  description:
+    "An allowlist of structured fields for a public bug report: versions, " +
+    "platform, per-domain account counts, non-secret settings (booleans, " +
+    "numbers, closed enums), row counts, migration status, and recent log " +
+    "events reduced to time, level, category, event key, error code/class and " +
+    "`file:line` frames. No log text, names, URLs, query strings or values. A " +
+    'section that could not be collected is `{status: "failed", errorCode}`. ' +
+    "Admins only — the log spans every account on the instance.",
   tags: miscTag,
-  responses: { 200: { description: "Diagnostics" } },
+  responses: {
+    200: {
+      description: "Diagnostic bundle",
+      content: { "application/json": { schema: diagnosticBundleSchema } },
+    },
+    403: { description: "Not an admin", content: errorContent },
+    429: { description: "Rate-limited", content: errorContent },
+    500: {
+      description: "The bundle failed its own allowlist (`DIAGNOSTIC_EXPORT_REJECTED`)",
+      content: errorContent,
+    },
+  },
 });
 
 registry.registerPath({
@@ -540,7 +576,7 @@ registry.registerPath({
   summary: "Tick a checklist item",
   tags: ["Places"],
   request: { params: z.object({ itemId: z.string() }) },
-  responses: { 200: { description: "Ticked" }, 404: notFound },
+  responses: { 422: timeRefused, 200: { description: "Ticked" }, 404: notFound },
 });
 
 registry.registerPath({

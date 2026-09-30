@@ -25,6 +25,11 @@ import { loadAirportCountries, loadHomeIatas, passportAirportCodes } from "./pas
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { classifyVisit } from "../../shared/placeCounting";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
+import { loadRailEnds } from "./railEvidenceLoader";
+
+/** Every argument `buildCountryDetail` takes after the country code, in its order. */
+export type CountryDetailInputs =
+  Parameters<typeof buildCountryDetail> extends [string, ...infer Rest] ? Rest : never;
 
 /**
  * @param code the requested country, an ISO alpha-2 code or an English name
@@ -34,6 +39,21 @@ export async function loadCountryDetail(
   userId: string,
   code: string
 ): Promise<CountryDetail | null> {
+  return buildCountryDetail(code, ...(await loadCountryDetailInputs(userId)));
+}
+
+/**
+ * The rows every country's drill-down is built from, read ONCE for the whole
+ * account. Split out of `loadCountryDetail` so the passport's evidence
+ * (`services/evidence/metricEvidencePassport.ts`, forgejo#132 items 5 and 6)
+ * can ask the drill-down's own question for every country without reading the
+ * database once per country — and without a second copy of these queries,
+ * which is how a row and its evidence would start to disagree.
+ *
+ * The timeline limit is left at its default; a caller that needs every row
+ * replaces that one argument.
+ */
+export async function loadCountryDetailInputs(userId: string): Promise<CountryDetailInputs> {
   // One clock for the whole load, so two evidence sources cannot disagree
   // about whether a visit has happened yet.
   const now = new Date();
@@ -56,7 +76,7 @@ export async function loadCountryDetail(
 
   // The same sources the passport counts, so the row and the page can only ever
   // agree.
-  const [airportCountries, portCalls, places, lodgings, countryDays, homeIatas, stations] =
+  const [airportCountries, portCalls, places, lodgings, countryDays, homeIatas, stations, rail] =
     await Promise.all([
       loadAirportCountries(passportAirportCodes(flights)),
       prisma.cruiseStop.findMany({
@@ -77,7 +97,7 @@ export async function loadCountryDetail(
           id: true,
           name: true,
           isoCountryCode: true,
-          visits: { select: { visitedAt: true } },
+          visits: { select: { visitedAt: true, visitedAtUtc: true, visitedZone: true } },
         },
       }),
       // The fourth source, and the one the owner's instruction is about: a house
@@ -118,10 +138,11 @@ export async function loadCountryDetail(
       loadHomeIatas(userId),
       // The sixth: roadtrip stations, from the loader the passport reads too.
       loadRoadtripStations(userId, now),
+      // The seventh: train station ends, from the loader the passport reads too.
+      loadRailEnds(userId),
     ]);
 
-  return buildCountryDetail(
-    code,
+  return [
     flights,
     airportCountries,
     homeIatas,
@@ -166,6 +187,7 @@ export async function loadCountryDetail(
       pointCount: row.pointCount,
     })),
     undefined,
-    stations
-  );
+    stations,
+    rail,
+  ];
 }

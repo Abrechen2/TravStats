@@ -58,7 +58,7 @@ connection is several legs.
 | `departureTime` | timestamptz | Required. A real UTC instant. |
 | `arrivalTime` | timestamptz? | A real UTC instant; may be unknown. Must not precede the departure. |
 | `distanceKm` | float? | See "Geometry". |
-| `distanceSource` | text? | `great_circle` \| `user` \| null. |
+| `distanceSource` | text? | `great_circle` \| `user` \| `route` (along a Transitous trace) \| `roadtrip` (along a converted roadtrip leg's line) \| null. |
 | `geometry` | jsonb? | `[[lon, lat], …]`, fetched ONCE when the journey is logged and frozen with it. Null = the chord between the stations. |
 | `geometrySource` | text | `none` \| `straight` \| `transitous` \| `openrailrouting` \| `manual`; default `straight`. Phase 1 writes only `straight`. |
 | `actualDepartureTime`, `actualArrivalTime` | timestamptz? | What happened, when known (captured on the day or typed). Null for a past journey nobody recorded. |
@@ -211,11 +211,24 @@ rate limits and how far back it keeps timetables, SNCF and opendata.ch quotas.
 
 ## Imports (phase 3)
 
-- DB booking confirmations (PDF "Ihre Fahrkarte", e-mail "Buchungsbestätigung"):
-  a template parser first — the PDF has a stable layout with Auftragsnummer,
-  Hin-/Rückfahrt, Halt/Datum/Zeit/Gleis tables per leg — then the generic LLM
-  path. Rail joins `PARSER_SUPPORTED_DOMAINS` only when that exists.
-- Trainline / SNCF Connect / ÖBB / SBB confirmations, Apple Wallet passes.
+- **Built 2026-09-26** (`backend/src/services/rail/parser/`): rail is a
+  `PARSER_SUPPORTED_DOMAINS` entry and reads through the existing email, mail
+  file, PDF and `auto` routes. Templates for five DB layouts — the 2020s
+  "Buchungsbestätigung" (von/nach lines), the Online-Ticket PDF (Halt/Datum/
+  Zeit/Gleis table, per train, with coach and seat), the postal orders of
+  2010–2015, the 2008 "Verbindungsauskunft", and the attached calendar file —
+  measured against a private corpus of about 150 DB bookings from 2006–2019 and
+  47 non-booking rail mails (delay alerts, offers, loyalty mail), none of which
+  is read as a booking. A mail carries its attachments (.ics, PDF ticket) to
+  the parser; a legless order mail is answered with its order number and the
+  advice to upload the ticket. Unknown layouts go to the LLM with a prompt that
+  names only fields the text shows, and every copied value is checked against
+  the text (a train number the ticket does not print is dropped). The review
+  (`RailImportPreviewModal`) confirms each leg, asks for any station the
+  catalogue cannot tie down unambiguously, and marks rides already logged.
+- Trainline / SNCF Connect / ÖBB / SBB confirmations, Apple Wallet passes:
+  detected (operator signals), read only by the LLM path — no template, since
+  no real sample was available.
 - The DB Navigator "Reisen" export and bahn.de "Meine Buchungen" have no
   documented export; not planned.
 - Documents (`Document.railJourneyId` + extending the one-owner CHECK) in phase 2,
@@ -433,3 +446,29 @@ the merge settled and what it made possible:
 - **Shared surfaces.** `GET /tags` counts rail tags, the rail form uses
   `TagInput` and `useTripPreselection`, and the rail detail page shows the
   trip's photos taken on board (`GET /rail/:id/trip-photos`).
+
+## Review fixes (2026-09-26)
+
+Eight findings of a review of the merged domain, fixed on
+`fix/rail-review-2026-09-26`, each with a test that fails without it:
+
+- **Edits keep the frozen line.** The form sends both stations and the match
+  on every save; the line is fetched again only when a station's coordinates
+  or the match's identity differ from the stored row. A re-fetch that comes
+  back straight keeps the stored traced or roadtrip line wherever it still
+  runs between the stations (re-cut when a station moved along it).
+- **A save says what happened to the line.** POST/PATCH answer
+  `meta.geometry {outcome, geometrySource, fallback}`; the form shows a notice
+  when a Transitous match was saved straight, naming why.
+- **The lookup has a 20 s budget** over all providers (`timedOut`,
+  `skippedForTime` outcomes); the client waits 25 s for it. "No such train"
+  is said only when every provider answered; otherwise the silent one is
+  named and each provider's outcome is listed.
+- **Refusals are codes.** `RAIL_INVALID_INPUT`, `RAIL_ARRIVAL_BEFORE_DEPARTURE`,
+  `RAIL_LOCAL_TIME_NONEXISTENT`, each with the `field`; the form words them in
+  DE/EN beside the field. A wall clock in a spring-forward gap is refused
+  (`shared/wallClockExistence.ts`, as for flights).
+- **Converted roadtrip legs** carry `distanceSource = roadtrip` and no prose
+  note; `externalRef = roadtrip:…` is the marker the detail page words.
+- **The list's year filter** uses the departure station's calendar, like the
+  statistics.

@@ -3,10 +3,16 @@ import { render, screen, waitFor, fireEvent } from "@testing-library/react";
 import { readFileSync } from "fs";
 import { resolve } from "path";
 
+// The URL the page was opened at — a loyalty link sets `membership` and `year`.
+const urlParams = vi.hoisted(() => ({ current: "" }));
 vi.mock("react-router-dom", () => ({
   Link: ({ children }: { children: React.ReactNode }) => <span>{children}</span>,
   useNavigate: () => vi.fn(),
-  useSearchParams: () => [new URLSearchParams(), vi.fn()],
+  useSearchParams: () => [new URLSearchParams(urlParams.current), vi.fn()],
+}));
+const getLoyaltyMembership = vi.fn();
+vi.mock("../../lib/api/loyalty", () => ({
+  getLoyaltyMembership: (...a: unknown[]) => getLoyaltyMembership(...a),
 }));
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({
@@ -124,6 +130,19 @@ describe("FlightsTablePage — server-side paging", () => {
     );
     getFacets.mockReset().mockResolvedValue(FACETS);
     tripsGetAll.mockReset().mockResolvedValue([]);
+  });
+
+  it("asks the server for one frequent-flyer card's flights when a loyalty link names it", async () => {
+    urlParams.current = "membership=card-7&year=2023";
+    getLoyaltyMembership.mockResolvedValue({ id: "card-7", programName: "Miles & More" });
+    try {
+      render(<FlightsTablePage />);
+      await waitFor(() => expect(getAll).toHaveBeenCalled());
+      expect(lastQuery()).toMatchObject({ membershipId: "card-7", year: 2023 });
+      expect(await screen.findByTestId("loyalty-list-filter")).toBeTruthy();
+    } finally {
+      urlParams.current = "";
+    }
   });
 
   it("asks for ONE page, not for every flight the account owns", async () => {

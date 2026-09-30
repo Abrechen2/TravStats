@@ -1,5 +1,8 @@
+import { birthdayOf } from "../services/timeModel/readDay";
+import { departureClockOf } from "./timezone";
 import { prisma } from "../db";
 import { calculateRoadtripAchievementStats } from "./roadtripAchievements";
+import { calculateRailAchievementStats } from "./railAchievements";
 import logger from "./logger";
 import {
   applyAchievementWrites,
@@ -26,7 +29,7 @@ import { buildMembershipContext, resolveStayProgramme } from "../services/lodgin
 import { classifyStay } from "../shared/lodgingCounting";
 import { countableFlightWhere } from "../shared/flightCounting";
 import { calculatePlaceStats } from "./placeStats";
-import { loadPassport } from "../services/stats/passportLoader";
+import { achievementCountries } from "./achievementCountries";
 
 /** Shared "did this actually happen" check for flights and cruises alike —
  * both domains use the same status vocabulary (`flown` / `historical` are
@@ -73,6 +76,19 @@ export { checkAchievement } from "./achievementChecks";
  */
 const runningPerUser = new Map<string, Promise<UserAchievementWithRelation[]>>();
 
+export interface AchievementCheckOptions {
+  /**
+   * The date a badge first unlocked by THIS run is stamped with. Every live
+   * caller leaves it out: a badge earned by a save is earned now. Only the
+   * demo seed passes it, replaying its trips in order and stamping each badge
+   * with the day of the trip that earned it (`seedDemoAccount.ts`) — a seed
+   * writes ten years in half a minute, and "unlocked on the seed day" for
+   * every badge was the tell (board item realistic-demo-account (c)). It
+   * never moves a date a row already carries.
+   */
+  unlockedAt?: Date;
+}
+
 /**
  * Check and update achievements for a user
  * Returns newly unlocked achievements
@@ -81,16 +97,17 @@ const runningPerUser = new Map<string, Promise<UserAchievementWithRelation[]>>()
  * Serialised per user — see `runningPerUser`. A caller still gets its own result
  * and its own rejection; it may simply wait for a run already under way.
  */
-export function checkAndUpdateAchievements(userId: string): Promise<UserAchievementWithRelation[]> {
+export function checkAndUpdateAchievements(
+  userId: string,
+  options: AchievementCheckOptions = {}
+): Promise<UserAchievementWithRelation[]> {
   const previous = runningPerUser.get(userId);
+  const run = () => runAchievementCheck(userId, options.unlockedAt ?? new Date());
 
   // Both branches run the check: a failed run must not stop the queue behind it.
   const started: Promise<UserAchievementWithRelation[]> = previous
-    ? previous.then(
-        () => runAchievementCheck(userId),
-        () => runAchievementCheck(userId)
-      )
-    : runAchievementCheck(userId);
+    ? previous.then(run, run)
+    : run();
 
   // Only clear the slot if nothing newer has taken it, or a later caller's run
   // would drop out of the chain and could overlap after all.
@@ -131,7 +148,10 @@ export async function recheckAchievements(userId: string, after: string): Promis
   }
 }
 
-async function runAchievementCheck(userId: string): Promise<UserAchievementWithRelation[]> {
+async function runAchievementCheck(
+  userId: string,
+  unlockedAt: Date
+): Promise<UserAchievementWithRelation[]> {
   try {
     // Get all achievements
     const allAchievements = await prisma.achievement.findMany();
@@ -140,7 +160,7 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     // (Birthday Flight needs month+day of birthdate).
     const user = await prisma.user.findUnique({
       where: { id: userId },
-      select: { birthdate: true },
+      select: { birthdate: true, birthDay: true },
     });
 
     // Get user's existing achievements
@@ -203,8 +223,8 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       prisma.lodging.findMany({ where: { userId } }),
       // Same derivation the stats endpoint uses, so a loyalty achievement and
       // the loyalty figures can never disagree about which card covered a stay.
-      prisma.lodgingMembership.findMany({
-        where: { userId },
+      prisma.loyaltyMembership.findMany({
+        where: { userId, domain: "lodging" },
         include: { chains: true, lodgings: true },
       }),
       // Domain rows come back as bare status/date columns, not `_count`s — a
@@ -237,7 +257,15 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
           lat: true,
           lon: true,
           curatedItemId: true,
-          visits: { select: { visitedAt: true, rating: true, tripId: true } },
+          visits: {
+            select: {
+              visitedAt: true,
+              visitedAtUtc: true,
+              visitedZone: true,
+              rating: true,
+              tripId: true,
+            },
+          },
         },
       }),
     ]);
@@ -286,19 +314,16 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       if (arrContinent) scheduledContinents.add(arrContinent);
     }
 
-    // Birthday Flight — count flown flights whose departureTime month+day
-    // matches the user's stored birthdate (year irrelevant).
+    // Birthday Flight — count flown flights that departed on the birthday
+    // (year irrelevant), on the departure airport's calendar (ADR 0002 D4).
     let birthdayFlights = stats.birthdayFlights;
-    if (user?.birthdate) {
-      const bMonth = user.birthdate.getMonth();
-      const bDay = user.birthdate.getDate();
-      birthdayFlights = flights.filter(
-        (f) =>
-          f.status === "flown" &&
-          f.departureTime &&
-          f.departureTime.getMonth() === bMonth &&
-          f.departureTime.getDate() === bDay
-      ).length;
+    const birthday = birthdayOf(user);
+    if (birthday) {
+      birthdayFlights = flights.filter((f) => {
+        if (f.status !== "flown" || !f.departureTime) return false;
+        const clock = departureClockOf(f.departureTime, f);
+        return clock.month + 1 === birthday.month && clock.day === birthday.day;
+      }).length;
     }
 
     // Schedule Keeper — max scheduled-flights count inside any rolling 30-day window.
@@ -324,9 +349,7 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     }
 
     // Cruise stats (multi-domain V1) — computed separately from flight stats.
-    const userBirthday = user?.birthdate
-      ? { month: user.birthdate.getMonth() + 1, day: user.birthdate.getDate() }
-      : undefined;
+    const userBirthday = birthdayOf(user);
 
     const cruiseStatsInput: CruiseStatsInput[] = cruises.map((c) => ({
       id: c.id,
@@ -508,48 +531,9 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
     }
     const unionedCountries = unionCountries(combinedCountries, lodgingStats.countries);
 
-    /**
-     * The counting THRESHOLD, applied to the badge figure as well — spec §3.2.
-     *
-     * A passport counting from one tier while the badges count from another is
-     * the drift forgejo#42 was filed about, arriving from a new angle: the user
-     * would read "32 Länder" on the passport and be handed a COUNTRIES_50 badge
-     * off a set of 40. So the tier comes from the same resolver
-     * (`services/countryThresholdResolver.ts`), and the evidence it is applied
-     * to is the passport's own fold — the module is the one home for "which
-     * tier did this country earn", and re-deriving it here is exactly the
-     * second copy §4 is trying to delete.
-     *
-     * TWO things are deliberately NOT taken from the passport:
-     *
-     * 1. **Places stay out.** The comment above says why — the cross-domain
-     *    country badges mean "I travelled there", and a place is a pin, so a
-     *    McDonald's around the corner must not move a travel badge. The passport
-     *    counts places; a row proved ONLY by a place is dropped here.
-     * 2. **The union is still the floor.** A country the passport cannot place
-     *    but this union can (an unresolvable port name, a lodging row the
-     *    passport's `visited: true` filter excludes) keeps counting. Narrowing
-     *    the badge set is a threshold decision, not a licence to silently drop
-     *    countries a user already earned a badge with — `intersection`, not
-     *    `replacement`, is what keeps this a change of RULE rather than a change
-     *    of data.
-     */
-    const passport = await loadPassport(userId);
-    const countedByPassport = new Set(
-      passport.countries
-        .filter((c) => c.counted && c.kinds.some((kind) => kind !== "place"))
-        .map((c) => c.code)
-    );
-    const finalCountries = new Set(
-      [...unionedCountries].filter(
-        (code) =>
-          countedByPassport.has(code) ||
-          // Not in the passport's list at all — a country only this union can
-          // see. It is not below the threshold; it was never measured against
-          // one, and abstention is not exclusion.
-          !passport.countries.some((c) => c.code === code)
-      )
-    );
+    // The badge set counts like the passport — `achievementCountries` holds
+    // the rule and says why; the union above is its floor.
+    const finalCountries = await achievementCountries(userId, unionedCountries);
 
     const augmentedStats = {
       ...stats,
@@ -679,12 +663,13 @@ async function runAchievementCheck(userId: string): Promise<UserAchievementWithR
       existingAchievementMap,
       augmentedStats,
       flights as FlightData[],
-      await calculateRoadtripAchievementStats(userId)
+      await calculateRoadtripAchievementStats(userId),
+      await calculateRailAchievementStats(userId)
     );
 
     // `return await`, not `return`: a bare return would hand the promise out
     // past the catch below, and a failed write would stop being logged here.
-    return await applyAchievementWrites(userId, plan, allAchievements.length);
+    return await applyAchievementWrites(userId, plan, allAchievements.length, unlockedAt);
   } catch (error) {
     logger.error({
       operation: "check_and_update_achievements",

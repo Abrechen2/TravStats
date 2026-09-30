@@ -1,6 +1,8 @@
 import { prisma } from "../../db";
+import { findVisibleChainByName, visibleChainsWhere } from "../lodging/chainScope";
 import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
+import type { OpenDataFailure } from "./http";
 import { findOsmLodging, type NearbyLodging } from "./openStreetMap";
 import { starsFromOsm, websiteFromOsm } from "./osmValues";
 import { isWikidataId } from "./wikipedia";
@@ -14,8 +16,9 @@ export type EnrichedField = "stars" | "website" | "wikidataId" | "chain";
 export interface LodgingEnrichment {
   /** Whether OpenStreetMap has this house at all. */
   found: boolean;
-  /** Why nothing was looked up, when nothing was. */
-  reason: "noCoordinates" | "notFound" | null;
+  /** Why nothing was found. `notFound` is OpenStreetMap's answer; a failure
+   *  (`timeout`, `rateLimited`, `unavailable`) means it could not be asked. */
+  reason: "noCoordinates" | "notFound" | OpenDataFailure | null;
   osmRef: string | null;
   osmName: string | null;
   filled: EnrichedField[];
@@ -40,6 +43,9 @@ export async function enrichLodgingFromOsm(
 
   const hit = await findOsmLodging(lodging.lat, lodging.lon, lodging.name);
   if (!hit) return { found: false, reason: "notFound", osmRef: null, osmName: null, filled: [] };
+  if ("failure" in hit) {
+    return { found: false, reason: hit.failure, osmRef: null, osmName: null, filled: [] };
+  }
 
   const { tags } = hit;
   const stars = lodging.stars === null ? starsFromOsm(tags.stars) : null;
@@ -49,12 +55,7 @@ export async function enrichLodgingFromOsm(
     lodging.wikidataId === null && isWikidataId(tags.wikidata) ? tags.wikidata : null;
   const brand = tags.brand?.trim();
   const chain =
-    lodging.chainId === null && brand
-      ? await prisma.lodgingChain.findFirst({
-          where: { name: { equals: brand, mode: "insensitive" } },
-          select: { id: true },
-        })
-      : null;
+    lodging.chainId === null && brand ? await findVisibleChainByName(userId, brand) : null;
 
   const filled: EnrichedField[] = [
     ...(stars !== null ? (["stars"] as const) : []),
@@ -73,7 +74,8 @@ export async function enrichLodgingFromOsm(
       },
     });
   }
-  logger.info({ operation: "lodging_osm_enrichment", lodgingId, osmRef: hit.osmRef, filled });
+  logger.info({ operation: "lodging_osm_enrichment", lodgingId, filled });
+  logger.debug({ operation: "lodging_osm_enrichment", lodgingId, osmRef: hit.osmRef });
   return { found: true, reason: null, osmRef: hit.osmRef, osmName: hit.name, filled };
 }
 
@@ -104,6 +106,7 @@ export type NearbyLodgingWithChain = NearbyLodging & {
  * one is left for the user rather than created. One query for the whole list.
  */
 export async function withCatalogueChains(
+  userId: string,
   places: NearbyLodging[]
 ): Promise<NearbyLodgingWithChain[]> {
   const brands = [...new Set(places.flatMap((p) => (p.brand ? [p.brand] : [])))];
@@ -111,7 +114,16 @@ export async function withCatalogueChains(
     brands.length === 0
       ? []
       : await prisma.lodgingChain.findMany({
-          where: { OR: brands.map((b) => ({ name: { equals: b, mode: "insensitive" as const } })) },
+          where: {
+            AND: [
+              visibleChainsWhere(userId),
+              { OR: brands.map((b) => ({ name: { equals: b, mode: "insensitive" as const } })) },
+            ],
+          },
+          // Own rows first, catalogue rows LAST: the map below keeps the last
+          // entry per name, so the catalogue chain wins a name clash — the
+          // same precedence as `findVisibleChainByName`.
+          orderBy: [{ userId: { sort: "desc", nulls: "last" } }, { id: "asc" }],
           select: CHAIN_SELECT,
           take: brands.length * 2,
         });

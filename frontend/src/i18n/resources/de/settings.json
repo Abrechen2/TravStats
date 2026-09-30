@@ -112,31 +112,59 @@
     "changePicture": "Bild ändern"
   },
   "homeAirport": {
-    "title": "Heimatflughafen",
-    "description": "Dein Ausgangsflughafen. Wird in Statistiken verwendet, z. B. um die Entfernung von zu Hause zu berechnen oder Heimkehr-Landungen bei Layover-Statistiken auszunehmen.",
-    "currentLabel": "Aktueller Heimatflughafen",
-    "notSet": "Noch kein Heimatflughafen hinterlegt.",
-    "setNow": "Jetzt festlegen",
+    "title": "Zuhause",
+    "description": "Wo du wohnst und von welchen Flughäfen du fliegst – mit Datum, denn ein Umzug ändert keine alten Reisen. Abstände wie „weg von zu Hause“ oder „am weitesten von zu Hause“ werden vom Wohnort gemessen, Heimkehr, Rundreisen und Umstiege über die Heimatflughäfen erkannt.",
+    "currentLabel": "Aktuelles Zuhause",
+    "notSet": "Noch kein Zuhause hinterlegt.",
+    "setNow": "Zuhause festlegen",
     "iMoved": "Ich bin umgezogen",
     "since": "Seit {{date}}",
-    "historyLabel": "Vorherige Heimatflughäfen",
+    "range": "{{from}} → {{to}}",
     "stillActive": "heute",
-    "newHomeHeading": "Neuer Heimatflughafen",
-    "initialHomeHeading": "Heimatflughafen festlegen",
-    "airportField": "Flughafen",
-    "airportPlaceholder": "IATA oder Name eingeben (z. B. MUC)",
+    "historyLabel": "Frühere Wohnorte",
+    "residenceUnknown": "Wohnort unbekannt",
+    "primaryBadge": "Standard",
+    "unconfirmedBadge": "Nicht bestätigt",
+    "unconfirmedTitle": "Bitte bestätige deinen Wohnort",
+    "unconfirmedBody": "Bisher kennt TravStats nur deinen Heimatflughafen und rechnet Abstände von dort aus. Bestätige deinen Wohnort und wähle weitere Heimatflughäfen – bis dahin bleiben alle Statistiken genau wie bisher.",
+    "confirm": "Bestätigen",
+    "edit": "Bearbeiten",
+    "newHomeHeading": "Neues Zuhause",
+    "initialHomeHeading": "Zuhause festlegen",
+    "editHeading": "Zuhause bearbeiten",
+    "confirmHeading": "Wohnort bestätigen",
+    "residenceField": "Wohnort",
+    "residenceHint": "Suche deinen Ort oder setze einen Punkt auf der Karte. Die Adresse muss nicht genau sein – die Stadt genügt.",
+    "residenceNameField": "Name des Wohnorts",
+    "airportsField": "Heimatflughäfen",
+    "airportsHint": "Wähle ein bis drei Flughäfen, von denen du fliegst. Der Standard-Flughafen wird bei neuen Reisen vorgeschlagen.",
+    "nearbyLabel": "In der Nähe deines Wohnorts",
+    "nearbyDistance": "{{km}} km",
+    "nearbyLoading": "Suche Flughäfen in der Nähe …",
+    "nearbyNone": "Im Umkreis von 150 km gibt es keinen Flughafen im Katalog. Suche deinen Flughafen unten.",
+    "nearbyError": "Flughäfen in der Nähe konnten nicht geladen werden. Du kannst deinen Flughafen unten suchen.",
+    "addAirport": "Weiteren Flughafen suchen",
+    "airportPlaceholder": "IATA oder Name eingeben (z. B. DUS)",
+    "maxAirports": "Höchstens drei Heimatflughäfen.",
+    "makePrimary": "Als Standard",
+    "removeAirport": "Entfernen",
     "fromDateField": "Ab wann gilt das?",
-    "fromDateHint": "Alte Flüge vor diesem Datum zählen weiterhin den vorherigen Heimatflughafen — ein Umzug verändert keine historischen Daten.",
-    "pickAirportFirst": "Bitte zuerst einen Flughafen auswählen.",
-    "savedToast": "Heimatflughafen gespeichert.",
-    "saveError": "Speichern fehlgeschlagen.",
-    "loadError": "Konnte Heimatflughafen-Historie nicht laden.",
-    "deleteError": "Eintrag konnte nicht gelöscht werden.",
-    "confirmDelete": "Diesen Eintrag wirklich löschen?",
-    "bannerTitle": "Kein Heimatflughafen hinterlegt",
-    "bannerDescription": "Setze deinen Heimatflughafen, damit Statistiken wie \"Längster Layover\" oder \"Am weitesten von zu Hause\" korrekt funktionieren.",
+    "toDateField": "Bis wann galt das?",
+    "fromDateHint": "Reisen vor diesem Datum zählen weiter zum vorherigen Zuhause – ein Umzug verändert keine alten Daten.",
+    "savedToast": "Zuhause gespeichert.",
+    "loadError": "Dein Zuhause konnte nicht geladen werden.",
+    "confirmDelete": "Diesen Zeitraum wirklich löschen?",
+    "errors": {
+      "residenceMissing": "Bitte wähle deinen Wohnort.",
+      "airportMissing": "Bitte wähle mindestens einen Heimatflughafen.",
+      "moveBeforeCurrent": "Der Umzug muss nach dem Beginn deines aktuellen Zuhauses liegen ({{date}}).",
+      "invalid": "Die Angaben passen nicht zusammen – prüfe die Daten und die Flughäfen.",
+      "unknownAirport": "Diesen Flughafen kennt der Katalog nicht: {{codes}}.",
+      "saveFailed": "Speichern fehlgeschlagen. Bitte versuche es erneut.",
+      "deleteFailed": "Der Zeitraum konnte nicht gelöscht werden."
+    },
     "help": {
-      "historyExplained": "Wenn du umziehst, wird der bisherige Flughafen nicht überschrieben, sondern als vergangener Eintrag gespeichert. Alte Flüge behalten den damaligen Heimatflughafen."
+      "historyExplained": "Wenn du umziehst, wird dein bisheriges Zuhause nicht überschrieben, sondern als früherer Zeitraum gespeichert. Alte Reisen behalten das damalige Zuhause."
     }
   },
   "display": {
@@ -238,8 +266,8 @@
       "48h": "48h vorher"
     },
     "email": "Benachrichtigungs-E-Mail",
-    "before24h": "24h vor Abflug",
-    "before2h": "2h vor Abflug",
+    "before24h": "24h vorher",
+    "before2h": "2h vorher",
     "save": "Speichern",
     "saved": "Gespeichert!",
     "smtpTitle": "SMTP-Konfiguration",
@@ -269,8 +297,8 @@
       "sender": "Die Absender-E-Mail sollte zur Domain des SMTP-Servers passen — sonst werden Mails häufig als Spam markiert. SPF/DKIM-Einträge im DNS erhöhen die Zustellbarkeit."
     },
     "emailSub": "Wohin Erinnerungen gehen; leer = keine",
-    "before24hSub": "Erinnerung einen Tag vor dem Abflug",
-    "before2hSub": "Erinnerung kurz vor dem Abflug",
+    "before24hSub": "Einen Tag vorher — für Flüge, Kreuzfahrten und Zugfahrten; am Morgen des Check-ins für Unterkünfte",
+    "before2hSub": "Kurz vorher — für Flüge, Kreuzfahrten und Zugfahrten",
     "saveFailed": "Benachrichtigungen konnten nicht gespeichert werden"
   },
   "privacy": {
@@ -453,7 +481,9 @@
     "protocol": "Unerwartete Antwort des Anbieters",
     "openskyMissingCredentials": "Client-ID und Client-Secret sind erforderlich",
     "openskyInvalid": "Ungültige OAuth2-Zugangsdaten — bitte Client-ID und Client-Secret prüfen",
-    "requestFailed": "Test fehlgeschlagen"
+    "requestFailed": "Test fehlgeschlagen",
+    "unreachable": "Anbieter nicht erreichbar – bitte Netzwerk bzw. DNS prüfen.",
+    "providerError": "Der Anbieter hat den Test abgelehnt."
   },
   "apiKeys": {
     "title": "API-Schlüssel",
@@ -569,11 +599,30 @@
     "saveError": "Routing-Einstellungen konnten nicht gespeichert werden",
     "openrouteservice": {
       "label": "OpenRouteService API-Schlüssel",
-      "description": "Kostenlos: 2000 Routing-Anfragen/Tag. Wird als globaler Schlüssel für alle genutzt, solange niemand einen eigenen hinterlegt."
+      "description": "Kostenlos: 2000 Routing-Anfragen/Tag. Schlüssel der Instanz: gilt für jedes Konto, das unter Einstellungen → Dienste keinen eigenen hinterlegt hat."
     },
     "graphhopper": {
       "label": "GraphHopper API-Schlüssel",
-      "description": "Kostenlos: 500 Routing-Anfragen/Tag. Wird als globaler Schlüssel für alle genutzt, solange niemand einen eigenen hinterlegt."
+      "description": "Kostenlos: 500 Routing-Anfragen/Tag. Schlüssel der Instanz: gilt für jedes Konto, das unter Einstellungen → Dienste keinen eigenen hinterlegt hat."
+    }
+  },
+  "routingPersonal": {
+    "title": "Routing für Touren",
+    "description": "Welcher Anbieter die Etappen deiner Touren berechnet, legt die Administration dieser Instanz fest. Hat sie für OpenRouteService oder GraphHopper einen Schlüssel der Instanz hinterlegt, nutzt dein Konto ihn mit, und hier ist nichts einzutragen. Sonst kannst du einen eigenen Schlüssel hinterlegen – er gilt nur für dein Konto.",
+    "loadError": "Deine Routing-Schlüssel konnten nicht geladen werden.",
+    "saved": "Routing-Schlüssel gespeichert.",
+    "saveError": "Deine Routing-Schlüssel konnten nicht gespeichert werden.",
+    "openrouteservice": {
+      "label": "Eigener OpenRouteService-Schlüssel",
+      "description": "Nur für dein Konto. Kostenlos: 2000 Routing-Anfragen/Tag.",
+      "remove": "Eigenen OpenRouteService-Schlüssel entfernen",
+      "removePending": "Dein OpenRouteService-Schlüssel wird beim Speichern entfernt."
+    },
+    "graphhopper": {
+      "label": "Eigener GraphHopper-Schlüssel",
+      "description": "Nur für dein Konto. Kostenlos: 500 Routing-Anfragen/Tag.",
+      "remove": "Eigenen GraphHopper-Schlüssel entfernen",
+      "removePending": "Dein GraphHopper-Schlüssel wird beim Speichern entfernt."
     }
   },
   "import": {
@@ -699,7 +748,11 @@
     "toast": {
       "movedFromDashboard": "Der Flug-Import ist jetzt hier — unter Einstellungen → Import."
     },
-    "noRoutes": "Für diesen Bereich gibt es noch kein Listenformat. Einzelne Einträge legst du direkt dort an.",
+    "noRoutes": "Für diesen Bereich gibt es noch kein Listenformat. Einzelne Einträge legst du direkt dort an."
+  },
+  "trips": {
+    "title": "Reisen",
+    "description": "Wie TravStats Reisen aus deinen Einträgen bildet.",
     "autoCreateTrips": {
       "label": "Reisen automatisch anlegen",
       "description": "Flüge mit derselben Buchungsnummer werden beim Import automatisch zu einer Reise mit Buchung gruppiert. Ausgeschaltet bleibt die Buchungsnummer erhalten – über „Reisen erkennen“ lässt sich die Gruppierung später jederzeit nachholen."
@@ -832,6 +885,8 @@
   "groups": {
     "account": "Konto",
     "display": "Darstellung",
+    "trips": "Reisen",
+    "loyalty": "Bonusprogramme",
     "data": "Daten",
     "services": "Dienste"
   },
@@ -853,19 +908,20 @@
       "domainColors": "Farbe, Farben, Kartenfarbe, Linienfarbe",
       "modules": "Bereiche, Module, Flüge, Kreuzfahrten, Unterkünfte, Orte, Roadtrips, ein- und ausschalten",
       "countryCounting": "Länder, Land zählen, Umstieg, Transit, Länderzählung",
+      "trips": "Reise, Reisen, automatisch, Buchungsnummer, Gruppieren, Reise anlegen, Reisen erkennen",
+      "loyalty": "Bonusprogramm, Mitgliedschaft, Mitgliedsnummer, Status, Hotelprogramm, Vielflieger, Meilen, Miles & More, Reederei, Punkte, Treueprogramm",
       "backup": "Backup, Sicherung, Export, Exportieren, Wiederherstellen, Download, Excel, Tabelle, JSON, Daten",
       "import": "Import, Importieren, CSV, Flightradar24, Logbuch, Hochladen",
       "notifications": "Benachrichtigung, E-Mail, SMTP, Mailserver, Erinnerung",
       "about": "Version, Lizenz, Datenquellen, Attribution, Über, Impressum",
       "externalServices": "API-Schlüssel, AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, KI, Immich, Fotos, Dawarich, Standortverlauf, Routing, Navi, Straßenroute, OpenRouteService, GraphHopper, OSRM, Strava",
-      "homeAirport": "Heimatflughafen, Flughafen, Startflughafen, Wohnort",
+      "homeAirport": "Zuhause, Wohnort, Heimatflughafen, Flughafen, Umzug",
       "defaults": "Standard, Vorgabe, Buchungsklasse, Sitzplatz, Fluggesellschaft, Airline",
       "features": "Funktionen, Parser, Bordkarte, E-Mail-Parser, Bordkarten-Scan",
       "enrichment": "Anreicherung, Flugdaten nachtragen, Verspätung, historische Daten, Flugzeug",
       "autoupdate": "Automatische Updates, Flugstatus, Aktualisierung, Gate, Abflugzeit",
       "cruisePreferences": "Kreuzfahrt, Reederei, Schiff, Kabine",
-      "lodgingPreferences": "Geocoder, Adresse, Koordinaten, Nominatim, Hotelketten, Unterkunft",
-      "lodgingMemberships": "Bonusprogramm, Mitgliedschaft, Status, Hotelprogramm, Punkte, Treueprogramm"
+      "lodgingPreferences": "Geocoder, Adresse, Koordinaten, Nominatim, Hotelketten, Unterkunft"
     }
   },
   "railProviders": {
@@ -877,5 +933,34 @@
     "dbRestHint": "Nur Deutschland, inoffiziell, etwa 100 Anfragen pro Minute für alle Nutzer zusammen.",
     "loadError": "Die Einstellung konnte nicht geladen werden.",
     "saveError": "Die Einstellung konnte nicht gespeichert werden."
+  },
+  "railRouting": {
+    "label": "Streckenrouter (OpenRailRouting)",
+    "hint": "Adresse einer selbst betriebenen OpenRailRouting-Instanz. Leer = aus. Eine Fahrt ohne Streckenverlauf von Transitous bekommt damit beim Speichern eine Linie über das Gleisnetz.",
+    "save": "Adresse speichern",
+    "saved": "Gespeichert. Neue und geänderte Fahrten ohne Transitous-Verlauf werden über das Gleisnetz geführt.",
+    "switchedOff": "Gespeichert. Der Streckenrouter ist aus.",
+    "saveError": "Die Adresse konnte nicht gespeichert werden.",
+    "invalidUrl": "Das ist keine gültige Adresse: http(s), ohne Zugangsdaten, ohne ?-Teil.",
+    "testButton": "Verbindung testen",
+    "test": {
+      "ok": "Verbunden. Profil {{profile}}, Kartenstand {{date}}.",
+      "notConfigured": "Es ist keine Adresse eingetragen.",
+      "unreachable": "Unter dieser Adresse antwortet kein Dienst.",
+      "notOpenRailRouting": "Der Dienst antwortet, ist aber kein OpenRailRouting.",
+      "profileMissing": "Dieses OpenRailRouting hat kein Profil „all_tracks“ – ohne das kann TravStats keine Strecken berechnen.",
+      "requestFailed": "Der Test konnte nicht ausgeführt werden."
+    }
+  },
+  "profileZone": {
+    "title": "Deine Zeitzone",
+    "body": "TravStats rechnet mit deiner Zeitzone aus, welcher Tag heute ist, ob eine Reise geplant oder schon vorbei ist und wie lange es noch bis zur Abreise dauert. Für dein Konto ist noch keine hinterlegt – bis du eine bestätigst, gilt dafür UTC. Die Zeiten deiner Reisen ändert das nicht: Die stehen immer in der Ortszeit des Flughafens, Bahnhofs oder Hafens.",
+    "proposal": "Vorschlag von deinem Gerät",
+    "confirm": "Übernehmen",
+    "later": "Später",
+    "setNow": "Zeitzone jetzt festlegen",
+    "utcHint": "Solange du keine Zeitzone bestätigt hast, rechnet TravStats „heute“ in UTC.",
+    "saveError": "Die Zeitzone konnte nicht gespeichert werden. Bitte versuche es noch einmal.",
+    "followsDevice": "Auf meinem Handy (Companion-App) soll sich die Zeitzone automatisch dem Aufenthaltsort anpassen."
   }
 }

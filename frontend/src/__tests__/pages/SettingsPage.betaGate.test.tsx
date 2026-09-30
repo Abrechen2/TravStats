@@ -67,6 +67,11 @@ vi.mock("../../components/Settings/AboutSection", () => ({
 vi.unmock("../../store/settingsStore");
 
 // Heavy siblings with their own data fetching; irrelevant to the gate.
+// Einstellungen → Bonusprogramme loads every loyalty card on mount; these
+// cases are about the page's navigation, not about the cards.
+vi.mock("../../components/Settings/LoyaltySection", () => ({
+  default: () => <div data-testid="loyalty-section-stub" />,
+}));
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-bar-stub" />,
 }));
@@ -87,6 +92,9 @@ vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
 }));
 vi.mock("../../components/Settings/RoutingProviderSection", () => ({
   default: () => <div data-testid="routing-provider-section" />,
+}));
+vi.mock("../../components/Settings/PersonalRoutingKeysSection", () => ({
+  default: () => <div data-testid="personal-routing-keys" />,
 }));
 
 // The page's data hook fires API requests on mount. Everything it returns is
@@ -274,8 +282,13 @@ describe("SettingsPage — beta gate: the Dawarich connection card", () => {
  * hidden everywhere else. Gating it needed no test to change, which is how it
  * survived a whole phase — hence this one.
  * `ImmichConnectionCard` is again the control: no gate, always rendered.
+ *
+ * Since 2026-09-26 the personal page carries the ACCOUNT's own routing keys
+ * (`PersonalRoutingKeysSection`), and the instance card is in Administration
+ * → Externe Dienste (Alex: the personal page said the key applied "to
+ * everyone"). The gate is the same; the instance card is never here.
  */
-describe("SettingsPage — the routing provider card", () => {
+describe("SettingsPage — the routing keys card", () => {
   beforeEach(() => {
     useSettingsStore.setState({ betaFeaturesEnabled: null, enabledDomains: ["flight"] });
   });
@@ -291,14 +304,16 @@ describe("SettingsPage — the routing provider card", () => {
     renderSettings("/settings?section=externalServices");
     await screen.findByTestId("immich-connection-card");
 
+    expect(screen.queryByTestId("personal-routing-keys")).toBeNull();
     expect(screen.queryByTestId("routing-provider-section")).toBeNull();
   });
 
-  it("renders when the flag is ON", async () => {
+  it("renders the personal keys, never the instance card, when the flag is ON", async () => {
     useSettingsStore.setState({ betaFeaturesEnabled: true });
     renderSettings("/settings?section=externalServices");
     await screen.findByTestId("immich-connection-card");
 
-    expect(screen.getByTestId("routing-provider-section")).toBeTruthy();
+    expect(screen.getByTestId("personal-routing-keys")).toBeTruthy();
+    expect(screen.queryByTestId("routing-provider-section")).toBeNull();
   });
 });

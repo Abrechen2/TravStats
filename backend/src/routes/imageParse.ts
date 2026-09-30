@@ -198,6 +198,7 @@ router.post(
       res.status(described.status).json({
         error: "Image parsing failed",
         message: described.message,
+        code: described.code,
       });
     }
   }

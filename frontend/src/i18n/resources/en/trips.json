@@ -15,7 +15,8 @@
   "editTrip": "Edit Journey",
   "deleteTrip": "Delete Journey",
   "removeFromTrip": "Remove from journey",
-  "deleteTripConfirm": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours with their recorded tracks, and the documents filed here. Flights, cruises, stays and roadtrips are kept.",
+  "deleteTripConfirm": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the documents filed here. Flights, cruises, stays and roadtrips are kept, and so are day tours with points of their own — they become standalone tours.",
+  "deleteTripConfirmWithRail": "“{{name}}” will be permanently deleted, along with its photos, stops, companions, journal entries, tours built from its stops with their recorded tracks, and the documents filed here. Flights, cruises, rail journeys, stays and roadtrips are kept, and so are day tours with points of their own — they become standalone tours.",
   "showOnMap": "Show on Map",
   "flightCount_one": "{{count}} Flight",
   "flightCount_other": "{{count}} Flights",
@@ -55,6 +56,7 @@
     "endDateLabel": "End Date",
     "useEntrySpan": "Use the span of the entries: {{start}} – {{end}}",
     "endBeforeStart": "The end date cannot be before the start date.",
+    "nameRequired": "Give the trip a name.",
     "originLabel": "Origin",
     "destinationLabel": "Destination",
     "tagsLabel": "Tags",
@@ -155,7 +157,9 @@
     "map": {
       "empty": "This journey has no geo data yet — add stops with coordinates or flights / cruises with route data.",
       "clickHint": "Tip: click a route or point to zoom in.",
-      "toggleProjectionHint": "Toggle between globe and flat projection"
+      "toggleProjectionHint": "Toggle between globe and flat projection",
+      "projectionGlobe": "🌐 Globe",
+      "projectionFlat": "🗺 Flat"
     },
     "logistics": {
       "flights": "Flights",
@@ -189,7 +193,9 @@
       "itinerary": "Itinerary",
       "atSea": "Day at sea",
       "openJournal": "Open in full"
-    }
+    },
+    "stopNotFound": "This stop no longer exists on this trip.",
+    "journalEntryNotFound": "This journal entry no longer exists on this trip."
   },
   "journalModal": {
     "createTitle": "Journal Entry",
@@ -278,6 +284,8 @@
     "summary": "{{trips}} selected · {{flights}} flights to be linked",
     "commit": "Create {{count}} journeys",
     "discard": "Discard",
+    "flightCount_one": "{{count}} flight",
+    "flightCount_other": "{{count}} flights",
     "expandLegs": "Show flights",
     "collapseLegs": "Hide flights",
     "legStatus": {
@@ -294,7 +302,9 @@
     "generating": "Writing… this can take a few minutes",
     "generated": "Summary created",
     "error": "Summary failed",
-    "unavailable": "AI service unreachable. The admin sets up Ollama under Admin → Parser."
+    "unavailable": "AI service unreachable. The admin sets up Ollama under Admin → Parser.",
+    "disabled": "AI summaries are switched off – the admin has turned the AI model off under Admin → Parser.",
+    "cloudNotConsented": "The AI provider is outside the network, and the administrator has not agreed to sending trip data there."
   },
   "gallery": {
     "title": "Gallery",
@@ -321,6 +331,7 @@
     "title": "Tours",
     "newSection": "Add tour",
     "namePlaceholder": "Tour name",
+    "nameRequired": "Give the tour a name.",
     "save": "Save",
     "empty": "No tour in this trip yet",
     "loadError": "Tours could not be loaded",
@@ -360,7 +371,18 @@
       "error": "The leg could not be routed",
       "allError": "The tour could not be routed",
       "fallback": "No route could be found — kept the straight line",
-      "result": "{{routed}} legs processed, {{skipped}} skipped"
+      "result": "{{routed}} legs routed, {{skipped}} skipped",
+      "resultFallback": "{{routed}} legs routed, {{fallback}} left as straight lines, {{skipped}} skipped. {{reason}}",
+      "reason": {
+        "no_provider": "No routing provider is configured for this instance.",
+        "unroutable_mode": "Ferry and rail legs are not routed along roads.",
+        "provider_error": "The routing provider did not answer or reported an error.",
+        "no_route": "The routing provider knows no way between these two places.",
+        "point_not_near_road": "A place lies more than a kilometre from the nearest road — check the station's location.",
+        "rate_limited": "The routing provider's request limit is reached. Try again later.",
+        "auth": "The routing provider refused the API key — check the key in the settings.",
+        "untrustworthy": "The routing provider's answer did not fit the two places and was discarded."
+      }
     },
     "tracks": {
       "heading": "Recorded tracks",
@@ -378,6 +400,16 @@
         "confirm": "Delete track"
       },
       "deleteError": "The track could not be deleted",
+      "errors": {
+        "fileTooLarge": "The file is too large for a track.",
+        "fileUnreadable": "The file cannot be read as GPX, TCX or FIT.",
+        "noTimestamps": "The recording has no timestamps, so it cannot be placed in time.",
+        "alreadyImported": "This recording is already on the tour.",
+        "noDatedStops": "This section's stops have no dates, so no time window for Dawarich can be derived.",
+        "windowInvalid": "The time window ends before it starts.",
+        "windowEmpty": "Dawarich has no location data for this time window.",
+        "tooFewPoints": "Dawarich has only one location point for this time window – too few for a track."
+      },
       "pointCount_one": "{{count}} point",
       "pointCount_other": "{{count}} points",
       "truncated": "Incomplete",
@@ -452,7 +484,23 @@
       "save": "Save points",
       "incomplete": "Every point needs a name and both coordinates.",
       "saveError": "The points could not be saved.",
-      "heading": "Points"
+      "heading": "Points",
+      "saveErrorFromTrip": "This tour is built from its trip's stops. Assign the stops in the trip.",
+      "saveErrorOffline": "No connection to the server — the points were not saved.",
+      "saveErrorInvalid": "The points were refused: every point needs a name and valid coordinates.",
+      "saveErrorGone": "This tour no longer exists.",
+      "via": "Route correction",
+      "viaHint": "Only shapes the route — needs no name and does not count as a point.",
+      "saveErrorViaNight": "A point with a night cannot be a route correction — change it on the roadtrip page."
+    },
+    "day": {
+      "date": "Date of the tour",
+      "startTime": "Start time",
+      "saveError": "The date could not be saved."
+    },
+    "map": {
+      "empty": "This tour has no points with coordinates yet — add points or upload a recording.",
+      "loadError": "This trip's tours could not be loaded — so the map does not show them."
     }
   },
   "head": {

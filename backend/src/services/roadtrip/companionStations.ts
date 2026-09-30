@@ -1,9 +1,12 @@
 import { prisma } from "../../db";
+import { AppError } from "../../middleware/errorHandler";
 import { haversineKm } from "../../shared/geo/haversine";
 import { reverseGeocode } from "../geo/nominatim";
 import { recomputeLegs, type StopCoords } from "../tour/legRecompute";
 import { autoRouteNewLegs } from "../tour/routing/autoRouteLegs";
-import { STATION_SELECT, spanOf, type StationRow } from "./roadtripSummary";
+import { STATION_SELECT, STATIONS_ONLY, spanOf, type StationRow } from "./roadtripSummary";
+import { isStation } from "../../shared/tour/roadtrip";
+import { stationTimeColumns } from "../timeModel/tripColumns";
 
 /**
  * The phone's side of a roadtrip (companion#12, #13; owner 2026-09-24): which
@@ -51,8 +54,9 @@ export async function findActiveRoadtrip(
 
   let best: { routeId: string; start: string; stations: StationRow[] } | null = null;
   for (const { id } of routes) {
+    // Stations only: the phone lists them, and a route correction is not one.
     const stations = await prisma.tripStop.findMany({
-      where: { routeId: id },
+      where: { routeId: id, ...STATIONS_ONLY },
       orderBy: { routeOrderIdx: "asc" },
       select: STATION_SELECT,
     });
@@ -77,8 +81,43 @@ export interface AppendStationInput {
   lon: number;
   /** The phone's LOCAL date, YYYY-MM-DD. */
   date: string;
-  night: "pass" | "free";
+  night: "pass" | "free" | "stay";
+  /** The caller's own stay; given exactly when `night` is "stay". */
+  lodgingStayId?: string;
   title?: string;
+}
+
+interface LinkedStay {
+  id: string;
+  checkOut: Date | null;
+  lodgingName: string;
+}
+
+/**
+ * The stay a phone links, when it is the caller's. A foreign key proves the
+ * stay exists, not whose it is — the same rule `assertStaysOwned` holds for
+ * the web's whole-list write, and the same 404.
+ */
+async function ownStay(userId: string, stayId: string): Promise<LinkedStay> {
+  const stay = await prisma.lodgingStay.findFirst({
+    where: { id: stayId, userId },
+    select: { id: true, checkOut: true, lodging: { select: { name: true } } },
+  });
+  if (!stay) throw new AppError("Stay not found", 404);
+  return { id: stay.id, checkOut: stay.checkOut, lodgingName: stay.lodging.name };
+}
+
+/**
+ * Where a night appended on `date` ends: the next morning for a free night;
+ * for a stay its check-out, when that lies after `date` — a stay booked for
+ * another week would otherwise give the station a span that ends before it
+ * begins. A pass-through covers no night.
+ */
+function nightEnd(date: string, night: AppendStationInput["night"], stay: LinkedStay | null) {
+  const nextMorning = new Date(dayStart(date).getTime() + DAY_MS);
+  if (night === "pass") return null;
+  if (stay?.checkOut && dayOf(stay.checkOut) > date) return dayStart(dayOf(stay.checkOut));
+  return nextMorning;
 }
 
 /** "Hellesylt, Stranda" from the reverse geocoder; the station number when it has no answer. */
@@ -92,22 +131,31 @@ async function placeName(lat: number, lon: number, fallback: string): Promise<st
  * Append one station to the END of a roadtrip, where the phone stands.
  *
  * Idempotent: a station of this roadtrip on the same day within
- * `SAME_STATION_M` is the one a resend or a second tap means — it is returned,
- * nothing is added (`created: false`). A free night covers `date` to the next
- * day, the way a station with a night reads everywhere else.
+ * `SAME_STATION_M` is the one a resend or a second tap means — it is returned
+ * as it stands, nothing is added or changed (`created: false`). A free night
+ * covers `date` to the next day, the way a station with a night reads
+ * everywhere else; a stay night runs to the stay's check-out and takes the
+ * lodging's name when the phone sends none (forgejo#132 item 2).
  */
 export async function appendStation(
   userId: string,
   routeId: string,
   input: AppendStationInput
 ): Promise<{ stationId: string; created: boolean }> {
+  // Before the resend check: a foreign stay id is refused, never answered 200.
+  const stay =
+    input.night === "stay" && input.lodgingStayId
+      ? await ownStay(userId, input.lodgingStayId)
+      : null;
   const stations = await prisma.tripStop.findMany({
     where: { routeId },
     orderBy: { routeOrderIdx: "asc" },
     select: { ...STATION_SELECT, lat: true, lon: true, routeOrderIdx: true },
   });
 
-  const same = stations.find((s) => {
+  // Every point stays in `stations` — the new leg must run from the last
+  // one, correction or not — but only a station can be the one a resend means.
+  const same = stations.filter(isStation).find((s) => {
     const { from } = stationSpan(s);
     return (
       from === input.date &&
@@ -121,7 +169,8 @@ export async function appendStation(
 
   const title =
     input.title?.trim() ||
-    (await placeName(input.lat, input.lon, `Station ${stations.length + 1}`));
+    stay?.lodgingName.trim().slice(0, 200) ||
+    (await placeName(input.lat, input.lon, `Station ${stations.filter(isStation).length + 1}`));
   const { mode } = await prisma.tripRoute.findUniqueOrThrow({
     where: { id: routeId },
     select: { mode: true },
@@ -137,10 +186,15 @@ export async function appendStation(
           lat: input.lat,
           lon: input.lon,
           startDate: dayStart(input.date),
-          endDate:
-            input.night === "free" ? new Date(dayStart(input.date).getTime() + DAY_MS) : null,
-          overnight: input.night === "free",
-          lodgingStayId: null,
+          endDate: nightEnd(input.date, input.night, stay),
+          ...stationTimeColumns({
+            startDate: dayStart(input.date),
+            endDate: nightEnd(input.date, input.night, stay),
+            lat: input.lat,
+            lon: input.lon,
+          }),
+          overnight: input.night !== "pass",
+          lodgingStayId: stay?.id ?? null,
           routeId,
           // After the highest position, not at the count: a gap in the
           // numbering would otherwise collide with @@unique([routeId, routeOrderIdx]).
@@ -158,6 +212,66 @@ export async function appendStation(
   );
   await autoRouteNewLegs(userId, routeId, newLegs);
   return { stationId, created: true };
+}
+
+/**
+ * Take ONE station off a roadtrip — the phone's "Rückgängig" after "Heute
+ * Nacht hier" (forgejo#132 item 1), without the whole-list PUT a stale phone
+ * copy would undo web edits with.
+ *
+ * Any station of the caller's roadtrip, not only one the phone appended: no
+ * column records who made a station, and `createdAt` cannot tell a phone's
+ * append from a web save, so "phone-appended only" cannot be held from the
+ * data. Nor would a time window protect anything — the same token may PUT the
+ * whole list. What IS held is ownership: `routeId` is the caller's roadtrip
+ * (resolved by the route), and the station must belong to it, else 404.
+ *
+ * The same rule the whole-list write applies to a dropped station: a trip's
+ * timeline stop goes back to its trip (`released: true`), a roadtrip-owned
+ * station is deleted. The remaining stations are renumbered contiguously and
+ * the legs recomputed, so the two neighbours are joined by one new leg.
+ */
+export async function removeStation(
+  userId: string,
+  routeId: string,
+  stationId: string
+): Promise<{ released: boolean }> {
+  const stations = await prisma.tripStop.findMany({
+    where: { routeId },
+    orderBy: { routeOrderIdx: "asc" },
+    select: { id: true, lat: true, lon: true, tripId: true },
+  });
+  const target = stations.find((s) => s.id === stationId);
+  if (!target) throw new AppError("Station not found", 404);
+  const rest = stations.filter((s) => s.id !== stationId);
+  const released = target.tripId !== null;
+  const { mode } = await prisma.tripRoute.findUniqueOrThrow({
+    where: { id: routeId },
+    select: { mode: true },
+  });
+
+  const newLegs = await prisma.$transaction(
+    async (tx) => {
+      if (released) {
+        await tx.tripStop.update({
+          where: { id: stationId },
+          data: { routeId: null, routeOrderIdx: null, lodgingStayId: null, overnight: false },
+        });
+      } else {
+        await tx.tripStop.delete({ where: { id: stationId } });
+      }
+      // Free every position first: `@@unique([routeId, routeOrderIdx])`
+      // would otherwise collide mid-renumber.
+      await tx.tripStop.updateMany({ where: { routeId }, data: { routeOrderIdx: null } });
+      for (const [index, s] of rest.entries()) {
+        await tx.tripStop.update({ where: { id: s.id }, data: { routeOrderIdx: index } });
+      }
+      return recomputeLegs(tx, routeId, mode, rest);
+    },
+    { timeout: 20_000 }
+  );
+  await autoRouteNewLegs(userId, routeId, newLegs);
+  return { released };
 }
 
 /**
@@ -181,7 +295,7 @@ export async function dayContext(
   });
 
   const candidates = await prisma.tripStop.findMany({
-    where: { route: { userId, kind: "roadtrip" } },
+    where: { route: { userId, kind: "roadtrip" }, ...STATIONS_ONLY },
     select: {
       ...STATION_SELECT,
       route: { select: { id: true, name: true } },

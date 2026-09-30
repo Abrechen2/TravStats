@@ -1,6 +1,7 @@
 import type { ParserConfig } from "./types";
 import { getParserConfig } from "./config";
-import { getOllamaTextParser } from "./text/ollamaTextParser";
+import { llmTargetOf } from "./llmTarget";
+import { llmProbe, ollamaTarget, type LlmTarget } from "../llm/llmProvider";
 
 /**
  * ONE answer to "could the LLM have read this document?", for every domain.
@@ -102,17 +103,17 @@ export async function settleLlmProbes(): Promise<void> {
  * a boolean that is only ever advisory. So nothing ever awaits a probe to
  * produce a response; the answer improves by one call instead.
  */
-function refreshProbeIfStale(url: string): void {
+function refreshProbeIfStale(target: LlmTarget): void {
+  const url = target.url;
   const cached = probeCache.get(url);
   if (cached && Date.now() - cached.probedAt < PROBE_TTL_MS) return;
   if (inFlightProbes.has(url)) return;
 
-  // The model name is irrelevant to `/api/tags` — it asks whether the server
-  // answers at all — so the parser is built with the URL alone.
-  const probe = getOllamaTextParser(url)
-    .checkAvailability()
-    .then((availability) => recordLlmProbe(url, availability.available))
-    // `checkAvailability` already swallows its own errors, but an unhandled
+  // The probe asks whether the endpoint answers at all (`/api/tags` or
+  // `/models`), whichever provider it is.
+  const probe = llmProbe(target)
+    .then((result) => recordLlmProbe(url, result.reachable))
+    // `llmProbe` already swallows its own errors, but an unhandled
     // rejection from a background task would take the process down. A probe
     // that failed to answer is a probe that answered "not reachable".
     .catch(() => recordLlmProbe(url, false))
@@ -133,9 +134,10 @@ function refreshProbeIfStale(url: string): void {
  */
 export function isLlmAvailableForConfig(config: ParserConfig): boolean {
   if (!config.textFallbacks.includes("ollama")) return false;
-  if (!config.ollamaUrl || !config.ollamaModel) return false;
-  refreshProbeIfStale(config.ollamaUrl);
-  return probeCache.get(config.ollamaUrl)?.reachable ?? false;
+  const target = llmTargetOf(config);
+  if (!target || !target.model) return false;
+  refreshProbeIfStale(target);
+  return probeCache.get(target.url)?.reachable ?? false;
 }
 
 export interface LlmAvailabilityQuery {
@@ -157,9 +159,11 @@ export interface LlmAvailabilityQuery {
  */
 export async function isLlmAvailable(query: LlmAvailabilityQuery = {}): Promise<boolean> {
   const config = await getParserConfig(undefined, undefined, query.userId);
-  return isLlmAvailableForConfig({
-    ...config,
-    ...(query.url !== undefined ? { ollamaUrl: query.url } : {}),
-    ...(query.model !== undefined ? { ollamaModel: query.model } : {}),
-  });
+  if (query.url === undefined && query.model === undefined) return isLlmAvailableForConfig(config);
+  // An explicit endpoint is an Ollama one (the parsers' test/legacy options).
+  const configured = llmTargetOf(config);
+  const url = query.url ?? configured?.url;
+  const model = query.model ?? configured?.model;
+  if (!url || !model) return false;
+  return isLlmAvailableForConfig({ ...config, llmTarget: ollamaTarget(url, model) });
 }

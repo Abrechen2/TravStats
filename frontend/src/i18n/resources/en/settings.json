@@ -112,31 +112,59 @@
     "changePicture": "Change picture"
   },
   "homeAirport": {
-    "title": "Home airport",
-    "description": "Your base airport. Used in statistics — for example to compute distance from home, or to exclude returns home from layover stats.",
-    "currentLabel": "Current home airport",
-    "notSet": "No home airport set yet.",
-    "setNow": "Set now",
+    "title": "Home",
+    "description": "Where you live and which airports you fly from – with dates, because a move does not change old trips. Distances such as “away from home” or “farthest from home” are measured from your residence; returns home, round trips and connections are recognised by your home airports.",
+    "currentLabel": "Current home",
+    "notSet": "No home set yet.",
+    "setNow": "Set your home",
     "iMoved": "I moved",
     "since": "Since {{date}}",
-    "historyLabel": "Previous home airports",
+    "range": "{{from}} → {{to}}",
     "stillActive": "today",
-    "newHomeHeading": "New home airport",
-    "initialHomeHeading": "Set home airport",
-    "airportField": "Airport",
-    "airportPlaceholder": "Type IATA or name (e.g. MUC)",
-    "fromDateField": "Effective from",
-    "fromDateHint": "Flights before this date keep counting the previous home airport — a move never rewrites history.",
-    "pickAirportFirst": "Pick an airport first.",
-    "savedToast": "Home airport saved.",
-    "saveError": "Save failed.",
-    "loadError": "Failed to load home airport history.",
-    "deleteError": "Could not delete entry.",
-    "confirmDelete": "Really delete this entry?",
-    "bannerTitle": "No home airport set",
-    "bannerDescription": "Set your home airport so stats like \"longest layover\" or \"farthest from home\" work correctly.",
+    "historyLabel": "Previous homes",
+    "residenceUnknown": "Residence unknown",
+    "primaryBadge": "Default",
+    "unconfirmedBadge": "Not confirmed",
+    "unconfirmedTitle": "Please confirm where you live",
+    "unconfirmedBody": "So far TravStats only knows your home airport and measures distances from there. Confirm where you live and pick further home airports – until then every statistic stays exactly as it was.",
+    "confirm": "Confirm",
+    "edit": "Edit",
+    "newHomeHeading": "New home",
+    "initialHomeHeading": "Set your home",
+    "editHeading": "Edit home",
+    "confirmHeading": "Confirm where you live",
+    "residenceField": "Residence",
+    "residenceHint": "Search for your town or drop a pin on the map. It need not be your address – the city is enough.",
+    "residenceNameField": "Name of your residence",
+    "airportsField": "Home airports",
+    "airportsHint": "Pick one to three airports you fly from. The default airport is suggested for new trips.",
+    "nearbyLabel": "Near your residence",
+    "nearbyDistance": "{{km}} km",
+    "nearbyLoading": "Looking for airports nearby …",
+    "nearbyNone": "The catalogue has no airport within 150 km. Search for your airport below.",
+    "nearbyError": "Nearby airports could not be loaded. You can search for your airport below.",
+    "addAirport": "Search another airport",
+    "airportPlaceholder": "Type an IATA code or name (e.g. DUS)",
+    "maxAirports": "At most three home airports.",
+    "makePrimary": "Make default",
+    "removeAirport": "Remove",
+    "fromDateField": "From when does this apply?",
+    "toDateField": "Until when did this apply?",
+    "fromDateHint": "Trips before this date still count towards your previous home – a move does not change old data.",
+    "savedToast": "Home saved.",
+    "loadError": "Your home could not be loaded.",
+    "confirmDelete": "Really delete this period?",
+    "errors": {
+      "residenceMissing": "Please pick where you live.",
+      "airportMissing": "Please pick at least one home airport.",
+      "moveBeforeCurrent": "The move must come after your current home began ({{date}}).",
+      "invalid": "The details do not fit together – check the dates and the airports.",
+      "unknownAirport": "The catalogue does not know this airport: {{codes}}.",
+      "saveFailed": "Saving failed. Please try again.",
+      "deleteFailed": "The period could not be deleted."
+    },
     "help": {
-      "historyExplained": "When you move, the previous airport is preserved as a past entry — old flights still use the old home airport."
+      "historyExplained": "When you move, your previous home is not overwritten but kept as an earlier period. Old trips keep the home they had then."
     }
   },
   "display": {
@@ -238,8 +266,8 @@
       "48h": "48h before"
     },
     "email": "Notification email",
-    "before24h": "24h before departure",
-    "before2h": "2h before departure",
+    "before24h": "24h before",
+    "before2h": "2h before",
     "save": "Save",
     "saved": "Saved!",
     "smtpTitle": "SMTP Configuration",
@@ -269,8 +297,8 @@
       "sender": "The From email should match the SMTP server's domain — otherwise mails are frequently flagged as spam. SPF/DKIM DNS records improve deliverability."
     },
     "emailSub": "Where reminders go; empty = none",
-    "before24hSub": "A reminder one day before departure",
-    "before2hSub": "A reminder shortly before departure",
+    "before24hSub": "One day before — for flights, cruises and train journeys; the morning of check-in for lodging",
+    "before2hSub": "Shortly before — for flights, cruises and train journeys",
     "saveFailed": "Notification preferences could not be saved"
   },
   "privacy": {
@@ -453,7 +481,9 @@
     "protocol": "Unexpected response from the provider",
     "openskyMissingCredentials": "Client ID and Client Secret are required",
     "openskyInvalid": "Invalid OAuth2 credentials — please check Client ID and Client Secret",
-    "requestFailed": "Test failed"
+    "requestFailed": "Test failed",
+    "unreachable": "Provider unreachable – please check the network or DNS.",
+    "providerError": "The provider rejected the test."
   },
   "apiKeys": {
     "title": "API Keys",
@@ -569,11 +599,30 @@
     "saveError": "Routing settings could not be saved",
     "openrouteservice": {
       "label": "OpenRouteService API key",
-      "description": "Free: 2000 routing requests/day. Used as the shared key for everyone until someone sets their own."
+      "description": "Free: 2000 routing requests/day. The instance's key: used by every account that has not stored its own under Settings → Services."
     },
     "graphhopper": {
       "label": "GraphHopper API key",
-      "description": "Free: 500 routing requests/day. Used as the shared key for everyone until someone sets their own."
+      "description": "Free: 500 routing requests/day. The instance's key: used by every account that has not stored its own under Settings → Services."
+    }
+  },
+  "routingPersonal": {
+    "title": "Routing for tours",
+    "description": "Which provider computes the legs of your tours is set by this instance's administration. If it stored an instance key for OpenRouteService or GraphHopper, your account uses that one and there is nothing to enter here. Otherwise you can store a key of your own – it applies to your account only.",
+    "loadError": "Your routing keys could not be loaded.",
+    "saved": "Routing keys saved.",
+    "saveError": "Your routing keys could not be saved.",
+    "openrouteservice": {
+      "label": "Your own OpenRouteService key",
+      "description": "Your account only. Free: 2000 routing requests/day.",
+      "remove": "Remove your own OpenRouteService key",
+      "removePending": "Your OpenRouteService key is removed when you save."
+    },
+    "graphhopper": {
+      "label": "Your own GraphHopper key",
+      "description": "Your account only. Free: 500 routing requests/day.",
+      "remove": "Remove your own GraphHopper key",
+      "removePending": "Your GraphHopper key is removed when you save."
     }
   },
   "import": {
@@ -699,7 +748,11 @@
     "toast": {
       "movedFromDashboard": "The flight import has moved here — under Settings → Import."
     },
-    "noRoutes": "No list format for this area yet. Add single entries in the area itself.",
+    "noRoutes": "No list format for this area yet. Add single entries in the area itself."
+  },
+  "trips": {
+    "title": "Trips",
+    "description": "How TravStats forms trips from your entries.",
     "autoCreateTrips": {
       "label": "Create trips automatically",
       "description": "Flights sharing a booking reference are grouped into a trip with a booking during import. When off, the booking reference is kept – you can still group them later via “Detect trips”."
@@ -832,6 +885,8 @@
   "groups": {
     "account": "Account",
     "display": "Appearance",
+    "trips": "Trips",
+    "loyalty": "Loyalty programmes",
     "data": "Data",
     "services": "Services"
   },
@@ -853,19 +908,20 @@
       "domainColors": "Colour, color, colours, map colour, line colour",
       "modules": "Areas, modules, flights, cruises, lodging, places, roadtrips, switch on and off",
       "countryCounting": "Countries, count a country, layover, transit, country counting",
+      "trips": "trip, trips, automatic, booking reference, group, create trip, detect trips",
+      "loyalty": "Loyalty programme, membership, membership number, status, tier, hotel programme, frequent flyer, miles, cruise line, points, rewards",
       "backup": "Backup, export, restore, download, Excel, spreadsheet, JSON, data",
       "import": "Import, CSV, Flightradar24, logbook, upload",
       "notifications": "Notification, email, SMTP, mail server, reminder",
       "about": "Version, licence, license, data sources, attribution, about, imprint",
       "externalServices": "API key, AirLabs, Aviationstack, AeroDataBox, OpenSky, OpenAI, Claude, AI, Immich, photos, Dawarich, location history, routing, satnav, road route, OpenRouteService, GraphHopper, OSRM, Strava",
-      "homeAirport": "Home airport, airport, departure airport, home",
+      "homeAirport": "home, residence, home airport, airport, move",
       "defaults": "Default, preset, booking class, seat, airline, carrier",
       "features": "Features, parser, boarding pass, email parser, boarding pass scan",
       "enrichment": "Enrichment, fill in flight data, delay, historical data, aircraft",
       "autoupdate": "Automatic updates, flight status, refresh, gate, departure time",
       "cruisePreferences": "Cruise, cruise line, ship, cabin",
-      "lodgingPreferences": "Geocoder, address, coordinates, Nominatim, hotel chains, lodging",
-      "lodgingMemberships": "Loyalty programme, membership, status, hotel programme, points, rewards"
+      "lodgingPreferences": "Geocoder, address, coordinates, Nominatim, hotel chains, lodging"
     }
   },
   "railProviders": {
@@ -877,5 +933,34 @@
     "dbRestHint": "Germany only, unofficial, about 100 requests a minute for all its users together.",
     "loadError": "The setting could not be loaded.",
     "saveError": "The setting could not be saved."
+  },
+  "railRouting": {
+    "label": "Rail router (OpenRailRouting)",
+    "hint": "Address of a self-hosted OpenRailRouting instance. Empty = off. A ride without a Transitous route then gets a line over the rail network when it is saved.",
+    "save": "Save address",
+    "saved": "Saved. New and edited rides without a Transitous route are routed over the rail network.",
+    "switchedOff": "Saved. The rail router is off.",
+    "saveError": "The address could not be saved.",
+    "invalidUrl": "That is not a valid address: http(s), no credentials, no ? part.",
+    "testButton": "Test connection",
+    "test": {
+      "ok": "Connected. Profile {{profile}}, map data of {{date}}.",
+      "notConfigured": "No address has been entered.",
+      "unreachable": "No service answers at this address.",
+      "notOpenRailRouting": "The service answers, but it is not an OpenRailRouting.",
+      "profileMissing": "This OpenRailRouting has no \"all_tracks\" profile – TravStats cannot route without it.",
+      "requestFailed": "The test could not be run."
+    }
+  },
+  "profileZone": {
+    "title": "Your time zone",
+    "body": "TravStats uses your time zone to work out which day today is, whether a trip is planned or already over, and how long until you leave. Your account has none yet — until you confirm one, UTC is used for this. It does not change the times of your trips: those always show the local time of the airport, station or port.",
+    "proposal": "Suggested by your device",
+    "confirm": "Use this zone",
+    "later": "Later",
+    "setNow": "Set time zone now",
+    "utcHint": "Until you confirm a time zone, TravStats counts “today” in UTC.",
+    "saveError": "The time zone could not be saved. Please try again.",
+    "followsDevice": "On my phone (Companion app), keep the time zone in step with where I am."
   }
 }

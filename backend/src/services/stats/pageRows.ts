@@ -35,7 +35,7 @@ import { Prisma } from "../../prisma";
 
 import { prisma } from "../../db";
 import { countableFlightWhere } from "../../shared/flightCounting";
-import { withDepartureClock } from "./departureClock";
+import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "./departureClock";
 import type { FlightTimeSemantics } from "../../utils/timezone";
 
 /**
@@ -50,10 +50,7 @@ const pageRowSelect = {
   depLon: true,
   arrLat: true,
   arrLon: true,
-  depIata: true,
-  depIcao: true,
-  arrIata: true,
-  arrIcao: true,
+  ...FLIGHT_CLOCK_SELECT,
   airline: true,
   // `/stats/airlines` groups on the CODE, not the spelling (forgejo#81), so
   // both code columns travel even though no other section reads them.
@@ -63,7 +60,6 @@ const pageRowSelect = {
   aircraftRegistration: true,
   departureTime: true,
   arrivalTime: true,
-  depTimeSemantics: true,
   status: true,
   price: true,
   taxes: true,

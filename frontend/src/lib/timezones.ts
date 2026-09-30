@@ -1,40 +1,12 @@
 /**
- * The IANA time zones the display settings offer.
- *
- * Until #318 this was a literal list of six zones, so a user outside Berlin,
- * Paris, New York, Los Angeles or Singapore had no way to say where they are.
- * `Intl.supportedValuesOf("timeZone")` is the browser's own copy of the IANA
- * database — the same source the formatting code already trusts — so the list
- * is complete and ages with the browser rather than with this file.
- *
- * `supportedValuesOf` is ES2022 and missing in older engines; the six literals
- * survive as the fallback, which is exactly what the settings offered before.
+ * The IANA time zones the settings offer (profile zone, backup zone), grouped
+ * for `<optgroup>`s. The list itself is shared/time's `supportedZones()` —
+ * this file only shapes it for a picker and holds no zone logic of its own.
  */
-
-const FALLBACK_ZONES = [
-  "UTC",
-  "Europe/Berlin",
-  "Europe/Paris",
-  "America/New_York",
-  "America/Los_Angeles",
-  "Asia/Singapore",
-] as const;
+import { supportedZones } from "../shared/time";
 
 /** "UTC" has no "/" and belongs in no continent — this is the group it gets. */
 export const UNGROUPED_REGION = "UTC";
-
-function supportedZones(): string[] {
-  const intl = Intl as typeof Intl & {
-    supportedValuesOf?: (key: string) => string[];
-  };
-  try {
-    const zones = intl.supportedValuesOf?.("timeZone");
-    if (zones && zones.length > 0) return zones;
-  } catch {
-    // A runtime that throws on the call is a runtime without the list.
-  }
-  return [...FALLBACK_ZONES];
-}
 
 /**
  * Every offerable zone, with `selected` folded in.

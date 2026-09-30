@@ -17,10 +17,19 @@ import { buildEffectivePortSequence } from "../../shared/cruise/portSequence";
 import { buildLegRouteOverrideMap, portLegRouteKey } from "../../shared/cruise/legRouteKey";
 import { computeLegDistance } from "./index";
 import { polylineDistanceKm } from "./polylineDistance";
+import { CRUISE_TRACK_COVERAGE_SELECT, resolveRecordedLegs } from "./recordedLegs";
 import type { PortPoint } from "./types";
 
-/** Bumps when the orchestrator's calculator chain or chaining logic changes. */
-export const ORCHESTRATOR_VERSION = "1.0.0";
+/**
+ * Bumps when the orchestrator's calculator chain or chaining logic changes.
+ * Every row carries it as `routerVersion`, which is what the boot backfill
+ * (`scripts/backfillCruiseLegs.ts`) compares: a bump recomputes every cruise.
+ * 1.1.0 (2026-09-27): sea legs are measured along the drawn route.
+ */
+export const ORCHESTRATOR_VERSION = "1.1.0";
+
+/** `cruise_legs.method` of a leg measured along a recording (2.7). */
+export const RECORDED_TRACK_METHOD = "recorded_track";
 
 export async function recomputeLegsForCruise(
   cruiseId: string,
@@ -28,7 +37,7 @@ export async function recomputeLegsForCruise(
 ): Promise<number> {
   const client = tx ?? prisma;
 
-  const [cruise, stops, overrides] = await Promise.all([
+  const [cruise, stops, overrides, tracks] = await Promise.all([
     client.cruise.findUnique({
       where: { id: cruiseId },
       include: { departurePort: true, arrivalPort: true },
@@ -42,6 +51,7 @@ export async function recomputeLegsForCruise(
       where: { cruiseId },
       select: { fromKind: true, fromRef: true, toKind: true, toRef: true, waypoints: true },
     }),
+    client.cruiseTrack.findMany({ where: { cruiseId }, select: CRUISE_TRACK_COVERAGE_SELECT }),
   ]);
 
   const toPortPoint = (p: {
@@ -50,12 +60,18 @@ export async function recomputeLegsForCruise(
     lon: number;
     unlocode: string | null;
     region: string | null;
+    name: string;
+    city: string | null;
+    country: string | null;
   }): PortPoint => ({
     id: p.id,
     lat: p.lat,
     lon: p.lon,
     unlocode: p.unlocode,
     region: p.region,
+    name: p.name,
+    city: p.city,
+    country: p.country,
   });
 
   const portCallPorts = stops
@@ -80,11 +96,35 @@ export async function recomputeLegsForCruise(
   // is why a routerVersion bump cannot silently reset the user's kilometres
   // while the map still shows their line (spec §6, "The trap").
   const overrideByLeg = buildLegRouteOverrideMap(overrides);
+  // A recording wins over both: it is what the ship actually sailed, where a
+  // drawn line is the user's best guess and the router's is a model. Resolved
+  // by the same function the map reads (`recordedLegs.ts`), so the kilometres
+  // here are the kilometres of the line drawn there.
+  const { recorded } = resolveRecordedLegs(sequence, tracks);
 
   const rows: Prisma.CruiseLegCreateManyInput[] = [];
   for (let i = 1; i < sequence.length; i++) {
     const from = sequence[i - 1];
     const to = sequence[i];
+
+    const measured = recorded[i - 1];
+    if (measured !== null) {
+      rows.push({
+        cruiseId,
+        ordinal: i - 1,
+        fromPortId: from.id,
+        toPortId: to.id,
+        // Along the recording; a bridged hole counts as its chord.
+        distanceKm: measured.slice.distanceKm,
+        method: RECORDED_TRACK_METHOD,
+        routerVersion: ORCHESTRATOR_VERSION,
+        dataVersion: null,
+        // Bridged holes are partly a chord, so not the full "high".
+        confidence: measured.status === "covered" ? "high" : "medium",
+        notes: null,
+      });
+      continue;
+    }
 
     const manual = overrideByLeg.get(portLegRouteKey(from.id, to.id));
     if (manual && manual.length >= 2) {
@@ -113,7 +153,9 @@ export async function recomputeLegsForCruise(
       toPortId: to.id,
       distanceKm: computed.distanceKm,
       method: computed.method,
-      routerVersion: computed.routerVersion,
+      // The orchestrator's version, not the calculator's: it is what the
+      // backfill compares, and the chain is what decides a leg's number.
+      routerVersion: ORCHESTRATOR_VERSION,
       dataVersion: computed.dataVersion,
       confidence: computed.confidence,
       notes: computed.notes,

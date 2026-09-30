@@ -1,8 +1,19 @@
-import { fromZonedTime, formatInTimeZone } from "date-fns-tz";
+import { toInstant } from "../shared/time/instant";
+import { formatWallClockIn } from "../shared/zonedWallClock";
 import { prisma } from "../db";
 import { getCachedAirport } from "./airportCache";
 import { normalizeFlightNumber } from "../schemas/flight";
 import logger from "../utils/logger";
+
+/**
+ * A provider row's wall clock at an airport, as an instant — through
+ * `shared/time` (ADR 0002). A machine source: an hour the zone skipped is not
+ * refused, it lands where an unadjusted clock would put it. Throws on a
+ * malformed reading, which the caller's try/catch turns into a flag.
+ */
+function machineInstant(local: string, zone: string): Date {
+  return toInstant(local, zone, { origin: "machine" }).utc;
+}
 
 export type PreviewSource = "fr24" | "generic_csv";
 
@@ -112,7 +123,7 @@ export async function buildPreviewRows(
 
     if (!flags.includes("malformed_datetime") && !flags.includes("unresolvable_airport")) {
       try {
-        depUtc = fromZonedTime(`${row.date}T${row.depTimeLocal ?? "00:00:00"}`, depTz);
+        depUtc = machineInstant(`${row.date}T${row.depTimeLocal ?? "00:00:00"}`, depTz);
         if (!isValidDate(depUtc)) throw new Error("invalid dep");
 
         // Authoritative arrival signal is `arr_local + arr_tz`, NOT
@@ -125,7 +136,7 @@ export async function buildPreviewRows(
         const hasDuration = typeof row.durationSeconds === "number" && row.durationSeconds > 0;
         if (hasDuration && row.arrTimeLocal) {
           const target = depUtc.getTime() + row.durationSeconds! * 1000;
-          const naiveMs = fromZonedTime(`${row.date}T${row.arrTimeLocal}`, arrTz).getTime();
+          const naiveMs = machineInstant(`${row.date}T${row.arrTimeLocal}`, arrTz).getTime();
           let bestMs = naiveMs;
           let bestDiff = Math.abs(naiveMs - target);
           const dayMs = 24 * 3600 * 1000;
@@ -144,7 +155,7 @@ export async function buildPreviewRows(
         } else if (hasDuration) {
           arrUtc = new Date(depUtc.getTime() + row.durationSeconds! * 1000);
         } else if (row.arrTimeLocal) {
-          arrUtc = fromZonedTime(`${row.date}T${row.arrTimeLocal}`, arrTz);
+          arrUtc = machineInstant(`${row.date}T${row.arrTimeLocal}`, arrTz);
           let safety = 0;
           while (arrUtc.getTime() < depUtc.getTime() && safety < 2) {
             arrUtc = new Date(arrUtc.getTime() + 24 * 3600 * 1000);
@@ -153,7 +164,9 @@ export async function buildPreviewRows(
         }
 
         if (isValidDate(arrUtc)) {
-          arrivalLocalCorrected = formatInTimeZone(arrUtc, arrTz, "yyyy-MM-dd'T'HH:mm:ss");
+          const wall = formatWallClockIn(arrUtc, arrTz);
+          if (wall === null) throw new Error(`unusable arrival zone ${arrTz}`);
+          arrivalLocalCorrected = wall;
         }
       } catch (err) {
         logger.warn({

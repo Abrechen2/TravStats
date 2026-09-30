@@ -4,7 +4,6 @@ import {
   currentStationIndex,
   groupRoadtrips,
   isSavable,
-  localToday,
   nextMorning,
   nextStation,
   roadtripPhase,
@@ -61,11 +60,6 @@ describe("days", () => {
   it("counts both ends", () => {
     expect(spanDays(at("2026-09-18"), at("2026-09-28"))).toBe(11);
     expect(spanDays(at("2026-09-18"), null)).toBeNull();
-  });
-
-  it("reads the local calendar day, not the UTC one", () => {
-    // 23:30 local on the 24th stays the 24th whatever the offset.
-    expect(localToday(new Date(2026, 8, 24, 23, 30))).toBe("2026-09-24");
   });
 
   it("gives the morning after", () => {

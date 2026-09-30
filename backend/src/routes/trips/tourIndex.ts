@@ -6,6 +6,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { createTourSchema, tourGeometryBatchSchema } from "../../schemas/tour";
 import { listToursQuerySchema } from "../../schemas/roadtrip";
 import { travelledKm } from "../../services/tour/tourDistance";
+import { tourDayColumns, tourDayDto } from "../../services/tour/tourDay";
 import logger from "../../utils/logger";
 import { buildRouteGeometry, RouteGeometryFeatureCollection } from "./tourLegs";
 import { toDto, ROUTE_SELECT } from "./tourRoutes";
@@ -48,6 +49,8 @@ interface TourSummaryRow {
   vehicle: string | null;
   kindAssignedAutomatically: boolean;
   notes: string | null;
+  tourDate: Date | null;
+  tourStartMinute: number | null;
   anchorStopId: string | null;
   anchorStop: { title: string } | null;
   tracks: Array<{
@@ -79,6 +82,8 @@ const TOUR_SUMMARY_SELECT = {
   vehicle: true,
   kindAssignedAutomatically: true,
   notes: true,
+  tourDate: true,
+  tourStartMinute: true,
   anchorStopId: true,
   anchorStop: { select: { title: true } },
   tracks: {
@@ -87,7 +92,8 @@ const TOUR_SUMMARY_SELECT = {
   },
   trip: { select: { name: true } },
   legs: { select: { distanceKm: true } },
-  _count: { select: { stops: true } },
+  // Stations, not route corrections (via points): the count is what a list shows.
+  _count: { select: { stops: { where: { viaPoint: false } } } },
   stops: { select: { startDate: true, endDate: true } },
 } as const;
 
@@ -161,8 +167,14 @@ function toTourSummary(route: TourSummaryRow): Record<string, unknown> {
     movingSeconds: sumOrNull(route.tracks.map((t) => t.movingSeconds)),
     trackCount: route.tracks.length,
     stopCount: route._count.stops,
-    // A standalone tour has no dated stops; its recording says when it was.
-    startDate: span.startDate ?? firstTrack?.toISOString() ?? null,
+    ...tourDayDto(route),
+    // The tour's own day first (D2); a standalone tour has no dated stops,
+    // and without a day its recording says when it was.
+    startDate:
+      (route.tourDate ? route.tourDate.toISOString() : null) ??
+      span.startDate ??
+      firstTrack?.toISOString() ??
+      null,
     endDate: span.endDate,
   };
 }
@@ -222,7 +234,8 @@ router.post(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       const userId = req.userId!;
-      const { tripId, anchorStopId, ...body } = createTourSchema.parse(req.body);
+      const { tripId, anchorStopId, date, startTime, ...body } = createTourSchema.parse(req.body);
+      const day = tourDayColumns({ date, startTime }, "tour", null);
       if (tripId != null) await resolveTrip(userId, tripId);
       // The anchor must be a station of one of the caller's roadtrips: a foreign
       // key proves it exists, not whose it is.
@@ -253,6 +266,7 @@ router.post(
           startOdometerKm: body.startOdometerKm,
           endOdometerKm: body.endOdometerKm,
           orderIdx: last ? last.orderIdx + 1 : 0,
+          ...day,
         },
         include: ROUTE_SELECT,
       });

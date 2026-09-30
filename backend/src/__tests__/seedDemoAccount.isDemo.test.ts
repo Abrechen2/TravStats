@@ -351,7 +351,7 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
     });
     await prisma.dawarichSweepState.create({ data: { userId: id } });
     await prisma.importBatch.create({ data: { userId: id, domain: "flight", source: "csv" } });
-    await prisma.lodgingMembership.create({ data: { userId: id, programName: "Demo Rewards" } });
+    await prisma.loyaltyMembership.create({ data: { userId: id, programName: "Demo Rewards" } });
     await prisma.pairingCode.create({
       data: {
         userId: id,
@@ -436,7 +436,7 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
       dawarichSweepState: await prisma.dawarichSweepState.count({ where: { userId: id } }),
       document: await prisma.document.count({ where: { userId: id } }),
       importBatch: await prisma.importBatch.count({ where: { userId: id } }),
-      lodgingMembership: await prisma.lodgingMembership.count({ where: { userId: id } }),
+      loyaltyMembership: await prisma.loyaltyMembership.count({ where: { userId: id } }),
       pairingCode: await prisma.pairingCode.count({ where: { userId: id } }),
       parseTrainingLog: await prisma.parseTrainingLog.count({ where: { userId: id } }),
       parserTemplate: await prisma.parserTemplate.count({ where: { userId: id } }),
@@ -456,7 +456,7 @@ describe("seedDemoAccount.ensureUser flags the demo account", () => {
       dawarichSweepState: 0,
       document: 0,
       importBatch: 0,
-      lodgingMembership: 0,
+      loyaltyMembership: 0,
       pairingCode: 0,
       parseTrainingLog: 0,
       parserTemplate: 0,

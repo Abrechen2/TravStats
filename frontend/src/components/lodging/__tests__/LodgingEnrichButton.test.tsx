@@ -68,3 +68,43 @@ describe("LodgingEnrichButton", () => {
     expect(onDone).not.toHaveBeenCalled();
   });
 });
+
+// Silent-failure fixes, 2026-09-26: an overloaded Overpass read "OpenStreetMap
+// does not know this house", and the browser gave up at ten seconds while the
+// server still had fifteen to go.
+describe("LodgingEnrichButton — when OpenStreetMap cannot be asked", () => {
+  const addToast = vi.fn();
+  beforeEach(() => {
+    addToast.mockReset();
+    useToastStore.setState({ addToast });
+    useSettingsStore.setState({ betaFeaturesEnabled: true, openDataEnabled: true });
+  });
+
+  it("says Overpass timed out instead of 'not found'", async () => {
+    vi.mocked(openDataApi.enrichLodging).mockResolvedValue({
+      found: false,
+      reason: "timeout",
+      osmRef: null,
+      osmName: null,
+      filled: [],
+    });
+    render(<LodgingEnrichButton lodgingId="l1" onDone={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "openData:lodging.enrich" }));
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith("error", "openData:lodging.upstream.timeout")
+    );
+    expect(addToast).not.toHaveBeenCalledWith("info", "openData:lodging.notFound");
+  });
+
+  it("says a client-side timeout is a timeout, not a generic failure", async () => {
+    vi.mocked(openDataApi.enrichLodging).mockRejectedValue({
+      isAxiosError: true,
+      code: "ECONNABORTED",
+    });
+    render(<LodgingEnrichButton lodgingId="l1" onDone={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "openData:lodging.enrich" }));
+    await waitFor(() =>
+      expect(addToast).toHaveBeenCalledWith("error", "openData:lodging.upstream.timeout")
+    );
+  });
+});

@@ -54,11 +54,7 @@ router.post("/register", authLimiter, async (req: Request, res: Response, next: 
     // union exists to end (forgejo#88 finding 3). The predicate itself stays
     // in `schemas/auth.ts`, so both entry points ask the same question.
     if (isReservedUsername(username)) {
-      throw new AppError(
-        `The username "${username}" is reserved by this instance`,
-        400,
-        "USERNAME_RESERVED"
-      );
+      throw new AppError("This username is reserved by this instance", 400, "USERNAME_RESERVED");
     }
 
     // Check if user exists
@@ -315,7 +311,7 @@ router.post("/login", authLimiter, async (req: Request, res: Response, next: Nex
             logger.info({
               operation: "login_start_airport_seeding",
               message: "Airport seeding started after first login",
-              context: { userId: user.id, username: user.username },
+              context: { userId: user.id },
             });
           } catch (error: unknown) {
             // If another process already started seeding, ignore the error
@@ -355,6 +351,10 @@ router.post("/login", authLimiter, async (req: Request, res: Response, next: Nex
         // refuses; sending the raw flag hid them from the preview's own
         // admin, alex and claude too (finding C1).
         isSharedDemo: isSharedDemoAccount(user),
+        // What `rejectDemoQuota` refuses: EVERY isDemo account, not only the
+        // shared one. Named for the one thing it decides, so the client skips
+        // a request it knows will be a 403 (acceptance 2026-09-26).
+        providerQuotaRefused: user.isDemo === true,
         // The header greets by first name and falls back to the username
         // (#241). Sending it with the login response means the greeting is
         // right on the first paint instead of flashing the username.
@@ -395,7 +395,11 @@ router.get("/me", authenticate, async (req: AuthRequest, res: Response, next: Ne
 
     const { isDemo, ...rest } = user;
     res.json({
-      user: { ...rest, isSharedDemo: isSharedDemoAccount({ isDemo, username: user.username }) },
+      user: {
+        ...rest,
+        isSharedDemo: isSharedDemoAccount({ isDemo, username: user.username }),
+        providerQuotaRefused: isDemo === true,
+      },
     });
   } catch (error) {
     next(error);

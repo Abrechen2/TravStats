@@ -35,7 +35,7 @@ interface Props {
   /**
    * legId -> id of the recorded track that covers it (phase 3b, task 8).
    * Absent for a leg no uploaded track comes within anchor tolerance of —
-   * see `lib/trackCoverage.ts`. Gates the "track" option the same way
+   * decided on the server (`GET …/legs/track-coverage`). Gates the "track" option the same way
    * `routingAvailable` gates "routed": never offered as usable unless a
    * concrete track id is already known to cover this exact leg, because
    * selecting it with no covering track can only 409.

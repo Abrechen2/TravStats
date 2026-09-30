@@ -2,6 +2,11 @@ import { z } from "./zod";
 import { currencyField } from "./lodging";
 import { partialForUpdate } from "./partialUpdate";
 import { CRUISE_SORT_FIELDS } from "../shared/cruiseListOrder";
+import {
+  instantFieldSchema,
+  legacyDayFieldSchema,
+  timeFieldSchema,
+} from "../shared/time/timeInput";
 
 export const CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
 const STATUSES = ["scheduled", "flown", "cancelled", "historical"] as const;
@@ -29,23 +34,30 @@ const emptyToNull = z
   .optional()
   .transform((v) => (v === "" ? null : v));
 
-// Accept partial datetimes and coerce them to full ISO 8601. The cruise
-// booking parser emits times like "2026-06-17T08:00" (no seconds/offset),
-// which a strict `z.string().datetime()` rejects — and unedited stops in the
-// import preview keep that raw value. Coerce any parseable string to a full
-// ISO string; genuinely invalid strings fall through to the strict check.
-const isoDateTime = z.preprocess((v) => {
-  // An OMITTED field and an explicit "clear this" are different requests, and
-  // collapsing both to `undefined` made the second impossible: a PATCH with
-  // `startDate: null` answered 200 and changed nothing, for ever (AUD-089).
-  // `null` and the empty string both mean the user removed the value — an
-  // emptied input arrives as "" — so both become an explicit null, and only a
-  // genuinely absent key stays `undefined`.
-  if (v === null || v === "") return null;
-  if (typeof v !== "string") return undefined;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? v : d.toISOString();
-}, z.string().datetime().nullable().optional());
+// An OMITTED field and an explicit "clear this" are different requests, and
+// collapsing both to `undefined` made the second impossible: a PATCH with
+// `startDate: null` answered 200 and changed nothing, for ever (AUD-089).
+// `null` and the empty string both mean the user removed the value — an
+// emptied input arrives as "" — so both become an explicit null, and only a
+// genuinely absent key stays `undefined`.
+const emptyAsNull = (v: unknown): unknown => (v === "" ? null : v);
+
+// Cruise days (start, end, a stop's date) are CALENDAR DAYS at the port (ADR
+// 0002 D1): `YYYY-MM-DD`, or an offset-bearing string read as the day it
+// writes. They used to be parsed with `new Date(v)`, so an offset-less
+// "2026-06-17T08:00" was read in the server's own zone; it is now refused
+// with TIME_SHAPE_REQUIRED. Handed on as the UTC-midnight legacy anchor.
+const cruiseDay = z.preprocess(emptyAsNull, legacyDayFieldSchema().nullable().optional());
+
+// A port call's arrival/departure: the PORT's wall clock — `{local}` (zone
+// from the stop's port), `{local, zone}`, or an offset-bearing instant from a
+// token client. The Companion still relays the cruise parser's offset-less
+// strings, which are the port's wall clock too; a browser sending one is
+// refused (companion#24 moves the app to `{local}`).
+const stopTime = z.preprocess(
+  emptyAsNull,
+  timeFieldSchema({ impliedPlace: true, tokenWallClockString: true }).nullable().optional()
+);
 
 export const cruiseStopSchema = z
   .object({
@@ -53,12 +65,11 @@ export const cruiseStopSchema = z
     dayNumber: z.number().int().min(1).max(365),
     // Calendar date of the stop. Booking confirmations list a date per stop
     // (often without clock times), so this captures it even when arrival/
-    // departure times are absent. Coerced to a full ISO instant via isoDateTime
-    // ("2027-10-08" -> "2027-10-08T00:00:00.000Z").
-    date: isoDateTime,
+    // departure times are absent ("2027-10-08" -> "2027-10-08T00:00:00.000Z").
+    date: cruiseDay,
     isAtSea: z.boolean().default(false),
-    arrivalTime: isoDateTime,
-    departureTime: isoDateTime,
+    arrivalTime: stopTime,
+    departureTime: stopTime,
     excursionNote: z.string().max(500).optional(),
     // Third stop state: an imported port whose name could not be matched to the
     // catalog. Carried as a name-only stop (no portId, not a sea day) so it is
@@ -107,8 +118,8 @@ const baseCruiseSchema = z.object({
     .transform((v) => (v ? v : v === undefined ? undefined : null)),
   departurePortId: z.number().int().positive().nullable().optional(),
   arrivalPortId: z.number().int().positive().nullable().optional(),
-  startDate: isoDateTime,
-  endDate: isoDateTime,
+  startDate: cruiseDay,
+  endDate: cruiseDay,
   status: z.enum(STATUSES).default("scheduled"),
   cabinNumber: z.string().max(20).nullable().optional(),
   cabinType: z.enum(CABIN_TYPES).nullable().optional(),
@@ -145,13 +156,48 @@ const baseCruiseSchema = z.object({
   stops: z.array(cruiseStopSchema).max(60).optional(),
 });
 
-export const createCruiseSchema = baseCruiseSchema.refine(
-  (data) => {
-    if (!data.startDate || !data.endDate) return true;
-    return new Date(data.endDate).getTime() >= new Date(data.startDate).getTime();
-  },
-  { message: "endDate must not precede startDate", path: ["endDate"] }
-);
+/**
+ * What a new cruise must carry to exist at all: WHAT sailed — a catalogue
+ * ship, a free-text ship name, the itinerary's name, the line or the port it
+ * left from — and WHEN it set out. Without it `POST /cruises {}` answered 201 and the list grew a row
+ * reading "— | — – — | 0" (acceptance run, 2026-09-26): a cruise nobody could
+ * recognise, that counted in no year, and that an import could never match
+ * again (`matchCruise` in xlsxImport keys on the start date, so an undated
+ * row was re-created on every re-import). The end date stays optional — a
+ * booking often knows only the embarkation day.
+ */
+export function cruiseHasIdentity(data: {
+  shipId?: number | null;
+  shipNameOverride?: string | null;
+  routeName?: string | null;
+  cruiseLine?: string | null;
+  departurePortId?: number | null;
+}): boolean {
+  return (
+    (data.departurePortId !== null && data.departurePortId !== undefined) ||
+    (data.shipId !== null && data.shipId !== undefined) ||
+    Boolean(data.shipNameOverride?.trim()) ||
+    Boolean(data.routeName?.trim()) ||
+    Boolean(data.cruiseLine?.trim())
+  );
+}
+
+export const createCruiseSchema = baseCruiseSchema
+  .refine(
+    (data) => {
+      if (!data.startDate || !data.endDate) return true;
+      return new Date(data.endDate).getTime() >= new Date(data.startDate).getTime();
+    },
+    { message: "endDate must not precede startDate", path: ["endDate"] }
+  )
+  .refine(cruiseHasIdentity, {
+    message: "A cruise needs a ship, a route name, a cruise line or a departure port",
+    path: ["shipId"],
+  })
+  .refine((data) => Boolean(data.startDate), {
+    message: "A cruise needs a start date",
+    path: ["startDate"],
+  });
 
 export const updateCruiseSchema = partialForUpdate(baseCruiseSchema).refine(
   (data) => Object.keys(data).length > 0,
@@ -204,7 +250,12 @@ export const cruiseQuerySchema = z.object({
   order: z.enum(["asc", "desc"]).default("desc"),
 });
 
-export type CruiseInput = z.infer<typeof baseCruiseSchema>;
+/**
+ * A cruise as a client SENDS it (the wire input), which is what the parser
+ * hands back for the import preview — not the parsed output, whose times are
+ * resolved `TimeFieldInput`s (ADR 0002 phase 2).
+ */
+export type CruiseInput = z.input<typeof baseCruiseSchema>;
 export type CruiseQueryInput = z.infer<typeof cruiseQuerySchema>;
 
 /** One `[lon, lat]` pair, in GeoJSON order. */
@@ -232,3 +283,42 @@ export type RouteOverrideInput = z.infer<typeof routeOverrideSchema>;
 
 /** Query form of the endpoint key, for DELETE. */
 export const routeOverrideKeySchema = routeOverrideSchema.omit({ waypoints: true });
+
+/**
+ * How a cruise recording was captured (2.7). The tour list minus `strava`: a
+ * Strava activity is a workout, and its API agreement binds what may be done
+ * with it — nothing here imports from it.
+ */
+export const CRUISE_TRACK_SOURCES = [
+  "gpx",
+  "tcx",
+  "fit",
+  "dawarich",
+  "healthkit",
+  "healthconnect",
+] as const;
+export type CruiseTrackSource = (typeof CRUISE_TRACK_SOURCES)[number];
+
+/** Form fields beside an uploaded cruise recording — the tour upload's fields. */
+export const cruiseTrackUploadFieldsSchema = z.object({
+  externalRef: z.string().trim().min(1).max(200).optional(),
+  origin: z.enum(["healthkit", "healthconnect"]).optional(),
+});
+
+/**
+ * Body for `POST /cruises/:id/tracks/dawarich`. `legOrdinal` pulls the window
+ * of that one leg; without it the whole cruise is pulled. An explicit side
+ * wins over the derived one.
+ */
+export const pullCruiseDawarichSchema = z
+  .object({
+    legOrdinal: z.number().int().min(0).max(500).optional(),
+    startedAt: instantFieldSchema().optional(),
+    endedAt: instantFieldSchema().optional(),
+  })
+  .strict()
+  .refine((v) => !v.startedAt || !v.endedAt || v.endedAt.getTime() >= v.startedAt.getTime(), {
+    message: "endedAt must not be before startedAt",
+    path: ["endedAt"],
+  });
+export type PullCruiseDawarichInput = z.infer<typeof pullCruiseDawarichSchema>;

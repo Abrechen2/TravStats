@@ -10,6 +10,8 @@ import {
 import { logger } from "../../lib/logger";
 import type { LodgingChainRef, LodgingMembership, MembershipInput } from "../../types/lodging";
 import SuggestionChips from "../common/SuggestionChips";
+import MaskedNumber from "../Loyalty/MaskedNumber";
+import TierBadge from "../Loyalty/TierBadge";
 import {
   chainIdsOfProgram,
   programSuggestions,
@@ -142,7 +144,6 @@ export function MembershipManager({
     void load();
     // Intentionally load-once on mount — `onChanged` is a callback prop, not
     // reactive state this effect should re-run on.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, []);
 
   useEffect(() => {
@@ -150,7 +151,6 @@ export function MembershipManager({
     // mount-time load above; it only reloads on a genuine external bump.
     if (reloadSignal === undefined) return;
     void load();
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [reloadSignal]);
 
   // The list this component actually renders — every membership when unscoped,
@@ -372,16 +372,12 @@ export function MembershipManager({
           {visibleMemberships.map((m) => (
             <li key={m.id} data-testid={`membership-row-${m.id}`} className="text-sm">
               <div className="flex flex-wrap items-center justify-between gap-2">
-                <div>
+                <div className="flex flex-wrap items-center gap-2">
                   <span style={{ fontWeight: 600, color: "var(--ts-text-bright)" }}>
                     {m.programName}
                   </span>
-                  {m.tier && <span className="t-caption ml-2">{m.tier}</span>}
-                  {m.membershipNumber && (
-                    <span className="t-caption ml-2" style={{ fontFamily: "var(--ts-font-mono)" }}>
-                      #{m.membershipNumber}
-                    </span>
-                  )}
+                  <TierBadge tier={m.tier} />
+                  {m.membershipNumber && <MaskedNumber value={m.membershipNumber} />}
                 </div>
                 <div className="flex gap-3">
                   <button

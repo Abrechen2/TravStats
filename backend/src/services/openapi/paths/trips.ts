@@ -15,7 +15,14 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { documentIdsBodySchema } from "../../../schemas/document";
-import { errorContent, tripResponse } from "./shared";
+import {
+  errorContent,
+  tripJournalEntryResponse,
+  tripResponse,
+  tripStopResponse,
+  timeRefused,
+} from "./shared";
+import { weatherOutcome } from "./openData";
 import {
   createTripSchema,
   updateTripSchema,
@@ -114,6 +121,14 @@ const tripListItem = tripResponse.extend({
         "Trip photos — the rows served by GET /trips/{id}/photos, linked and imported alike"
       ),
   }),
+});
+
+const stopBody = z.object({ stop: tripStopResponse });
+const entryBody = z.object({
+  entry: tripJournalEntryResponse,
+  weatherOutcome: weatherOutcome
+    .optional()
+    .describe("Absent when an edit needed no weather lookup (same day, weather stored)"),
 });
 
 registry.registerPath({
@@ -237,6 +252,7 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     201: { description: "Created", content: { "application/json": { schema: tripResponse } } },
     400: badInput,
   },
@@ -252,6 +268,7 @@ registry.registerPath({
     body: { content: { "application/json": { schema: tripUpdateInput } }, required: true },
   },
   responses: {
+    422: timeRefused,
     200: { description: "Updated", content: { "application/json": { schema: tripResponse } } },
     400: badInput,
     404: notFound,
@@ -299,7 +316,12 @@ registry.registerPath({
     params: tripId,
     body: { content: { "application/json": { schema: stopCreateInput } }, required: true },
   },
-  responses: { 201: { description: "Created" }, 400: badInput, 404: notFound },
+  responses: {
+    422: timeRefused,
+    201: { description: "Created", content: { "application/json": { schema: stopBody } } },
+    400: badInput,
+    404: notFound,
+  },
 });
 
 registry.registerPath({
@@ -311,7 +333,12 @@ registry.registerPath({
     params: z.object({ id: z.string().uuid(), stopId: z.string().uuid() }),
     body: { content: { "application/json": { schema: stopUpdateInput } }, required: true },
   },
-  responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },
+  responses: {
+    422: timeRefused,
+    200: { description: "Updated", content: { "application/json": { schema: stopBody } } },
+    400: badInput,
+    404: notFound,
+  },
 });
 
 registry.registerPath({
@@ -332,7 +359,12 @@ registry.registerPath({
     params: tripId,
     body: { content: { "application/json": { schema: journalCreateInput } }, required: true },
   },
-  responses: { 201: { description: "Created" }, 400: badInput, 404: notFound },
+  responses: {
+    422: timeRefused,
+    201: { description: "Created", content: { "application/json": { schema: entryBody } } },
+    400: badInput,
+    404: notFound,
+  },
 });
 
 registry.registerPath({
@@ -344,7 +376,12 @@ registry.registerPath({
     params: z.object({ id: z.string().uuid(), entryId: z.string().uuid() }),
     body: { content: { "application/json": { schema: journalUpdateInput } }, required: true },
   },
-  responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },
+  responses: {
+    422: timeRefused,
+    200: { description: "Updated", content: { "application/json": { schema: entryBody } } },
+    400: badInput,
+    404: notFound,
+  },
 });
 
 registry.registerPath({
@@ -377,6 +414,11 @@ registry.registerPath({
                 url: z.string(),
                 caption: z.string().nullable(),
                 takenAt: z.string().nullable(),
+                lat: z
+                  .number()
+                  .nullable()
+                  .describe("Where it was taken (import or upload); null when not stored"),
+                lon: z.number().nullable(),
                 sortIdx: z.number().int(),
                 mimetype: z.string(),
                 sizeBytes: z.number().int(),
@@ -456,7 +498,10 @@ registry.registerPath({
     "Asks the instance's Ollama (Admin → Parser, or OLLAMA_URL) for a three-paragraph " +
     "summary built from the trip's flights, cruises, stays, place visits, stops and " +
     "journal, in the requested language, and STORES it on the trip — the next read of " +
-    "the trip carries it. Rate-limited like the parsers; a run can take minutes.",
+    'the trip carries it, with `summarySource` "llm", `summaryGeneratedAt` and ' +
+    "`summaryEntryCount`. A person's edit through PATCH (a CHANGED text) turns the source " +
+    'to "user" and clears the other two; null in all three is unknown — every summary ' +
+    "written before 2.7. Rate-limited like the parsers; a run can take minutes.",
   tags: ["Trips"],
   request: {
     params: tripId,
@@ -483,6 +528,17 @@ registry.registerPath({
             model: z.string(),
             language: z.enum(["de", "en"]),
             durationMs: z.number().int(),
+            summarySource: z
+              .literal("llm")
+              .describe("Stored on the trip with the text, as are the two fields below"),
+            summaryGeneratedAt: z.string().datetime(),
+            summaryEntryCount: z
+              .number()
+              .int()
+              .describe(
+                "Entries the model was given: flights, cruises, stays, place visits, stops and " +
+                  "journal entries"
+              ),
           }),
         },
       },

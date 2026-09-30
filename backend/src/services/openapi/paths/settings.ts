@@ -19,7 +19,14 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent } from "./shared";
+import { errorContent, timeRefused } from "./shared";
+import { profileZoneBodySchema, profileZoneViewSchema } from "../../settings/profileZoneSettings";
+import {
+  homeAirportsResponseSchema,
+  homePeriodsBodySchema,
+  nearbyHomeAirportsQuerySchema,
+  nearbyHomeAirportsResponseSchema,
+} from "../../../schemas/home";
 
 const settingsTag = ["Settings"];
 const badInput = { description: "Invalid input", content: errorContent };
@@ -42,20 +49,6 @@ const providerStatus = registry.register(
     .openapi("ApiKeyStatus")
 );
 
-const homeAirport = registry.register(
-  "HomeAirport",
-  z
-    .object({
-      iata: z.string().length(3),
-      label: z.string().nullable(),
-    })
-    .describe(
-      "An airport the user departs from often. Several are allowed and the order " +
-        "is the user's: the first is the default a new flight is offered."
-    )
-    .openapi("HomeAirport")
-);
-
 registry.registerPath({
   method: "get",
   path: "/settings",
@@ -73,7 +66,31 @@ registry.registerPath({
     "everywhere and deletes nothing — the data is waiting if it is switched " +
     "back on.",
   tags: settingsTag,
-  responses: { 200: { description: "Saved" }, 400: badInput },
+  responses: { 422: timeRefused, 200: { description: "Saved" }, 400: badInput },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/settings/profile-zone",
+  summary: "Set the zone that answers 'today' for this account",
+  description:
+    "The profile zone (ADR 0002 D4/Q1): the zone every status, countdown and " +
+    "'past or planned' of this account is answered in. Written into the same " +
+    "`display.timezone` that `PUT /settings` writes, without replacing the rest of " +
+    "`display`. `GET /settings` reports it as `profileZone`; `hasProfileZone: false` " +
+    "is the account the web asks at its next login. `followsDevice` is the " +
+    "Companion's opt-in to keep the zone in step with the phone.",
+  tags: settingsTag,
+  request: { body: { content: { "application/json": { schema: profileZoneBodySchema } } } },
+  responses: {
+    200: {
+      description: "Saved",
+      content: {
+        "application/json": { schema: z.object({ profileZone: profileZoneViewSchema }) },
+      },
+    },
+    422: timeRefused,
+  },
 });
 
 registry.registerPath({
@@ -89,7 +106,7 @@ registry.registerPath({
   path: "/settings/profile",
   summary: "Update the user's profile",
   tags: settingsTag,
-  responses: { 200: { description: "Saved" }, 400: badInput },
+  responses: { 422: timeRefused, 200: { description: "Saved" }, 400: badInput },
 });
 
 registry.registerPath({
@@ -124,50 +141,119 @@ registry.registerPath({
   },
 });
 
+const homeAirportsOk = {
+  description:
+    "Home by date, in both shapes: `periods` (residence + one to three home airports, one " +
+    "primary) and `history`, the old one-airport list derived from the periods' primaries.",
+  content: { "application/json": { schema: homeAirportsResponseSchema } },
+};
+const homeRefused = {
+  description:
+    "Refused with a stable code: `HOME_PERIODS_INVALID` (shape, more than three airports, " +
+    "not exactly one primary, overlapping periods) or `HOME_AIRPORT_UNKNOWN` with `codes`.",
+  content: errorContent,
+};
+const legacyHomeNote =
+  "The old one-airport write, kept for clients that predate residence + home airports. " +
+  "Converted onto the periods: the index is the period's position.";
+
 registry.registerPath({
   method: "get",
   path: "/settings/home-airports",
-  summary: "List the user's home airports",
+  summary: "Get the user's home — residence and home airports by date",
+  description:
+    "Airport questions (home loops, layovers, the passport) use membership in a period's " +
+    "airport set; distance questions measure from its residence; prefills use its primary. " +
+    "An account holding only the old shape is migrated on read: one period per entry, the " +
+    "residence at the airport, `residenceConfirmed: false`.",
   tags: settingsTag,
+  responses: { 200: homeAirportsOk },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/settings/home-airports/periods",
+  summary: "Replace the user's home periods",
+  tags: settingsTag,
+  request: {
+    body: { content: { "application/json": { schema: homePeriodsBodySchema } }, required: true },
+  },
+  responses: { 200: homeAirportsOk, 400: homeRefused },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/settings/home-airports/nearby",
+  summary: "Airports near a residence, nearest first",
+  description:
+    "An offer for the settings page, not the list of allowed airports: open airports with an " +
+    "IATA code within 150 km, at most six. Airports without scheduled service (air bases, " +
+    "business fields) are left out unless the user has a non-cancelled flight from or to " +
+    "them. Any airport can be added through the airport search.",
+  tags: settingsTag,
+  request: { query: nearbyHomeAirportsQuerySchema },
   responses: {
     200: {
-      description: "Home airports, in the user's order",
-      content: { "application/json": { schema: z.array(homeAirport) } },
+      description: "Nearby airports",
+      content: { "application/json": { schema: nearbyHomeAirportsResponseSchema } },
     },
+    400: badInput,
   },
 });
 
 registry.registerPath({
   method: "post",
   path: "/settings/home-airports",
-  summary: "Add a home airport",
+  summary: "Record a move (old one-airport shape)",
+  description:
+    legacyHomeNote +
+    " Closes the running period and opens one with this airport; its residence is the " +
+    "airport, unconfirmed, until the user confirms it.",
   tags: settingsTag,
   request: {
-    body: { content: { "application/json": { schema: homeAirport } }, required: true },
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({ iata: z.string(), fromDate: z.string().optional() }),
+        },
+      },
+      required: true,
+    },
   },
-  responses: { 201: { description: "Added" }, 400: badInput },
+  responses: { 200: homeAirportsOk, 400: badInput },
 });
 
 registry.registerPath({
   method: "patch",
   path: "/settings/home-airports/{index}",
-  summary: "Change one home airport",
-  description: "Addressed by POSITION in the list, not by code — the order is meaningful.",
+  summary: "Correct one home period (old one-airport shape)",
+  description: legacyHomeNote + " A new `iata` becomes the primary; a confirmed residence is kept.",
   tags: settingsTag,
   request: {
     params: z.object({ index: z.coerce.number().int().min(0) }),
-    body: { content: { "application/json": { schema: homeAirport } }, required: true },
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            iata: z.string().optional(),
+            fromDate: z.string().optional(),
+            toDate: z.string().nullable().optional(),
+          }),
+        },
+      },
+      required: true,
+    },
   },
-  responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },
+  responses: { 200: homeAirportsOk, 400: badInput, 404: notFound },
 });
 
 registry.registerPath({
   method: "delete",
   path: "/settings/home-airports/{index}",
-  summary: "Remove one home airport",
+  summary: "Remove one home period",
   tags: settingsTag,
   request: { params: z.object({ index: z.coerce.number().int().min(0) }) },
-  responses: { 204: { description: "Removed" }, 404: notFound },
+  responses: { 200: homeAirportsOk, 404: notFound },
 });
 
 registry.registerPath({

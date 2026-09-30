@@ -1,5 +1,5 @@
 import { describe, it, expect, vi } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 import type { RailStats } from "../../../../types/rail";
@@ -10,6 +10,7 @@ const STATS: RailStats = {
     totalKm: 1000,
     straightLineKm: 400,
     tracedKm: 550,
+    roadtripKm: 120,
     ticketKm: 50,
     unmeasuredJourneys: 1,
   },
@@ -27,6 +28,7 @@ const STATS: RailStats = {
   },
   delays: {
     recordedJourneys: 1,
+    averageMinutes: 4,
     buckets: [
       { upToMinutes: 0, count: 0 },
       { upToMinutes: 5, count: 1 },
@@ -37,6 +39,7 @@ const STATS: RailStats = {
     ],
   },
   byYear: [{ year: 2025, journeys: 3, km: 1000 }],
+  rideKinds: { nightTrains: 1, highSpeed: 2, crossBorder: 1, operators: 2 },
 };
 
 vi.mock("../../../../lib/api/rail", () => ({
@@ -44,10 +47,83 @@ vi.mock("../../../../lib/api/rail", () => ({
 }));
 
 import RailStatsSection from "../RailStatsSection";
+import { railApi } from "../../../../lib/api/rail";
 
 const visibility = { isVisible: () => true, toggle: vi.fn(), reset: vi.fn(), hiddenCount: 0 };
 
 describe("RailStatsSection", () => {
+  // Acceptance D11 (2026-09-26): the rail tab set a running year against the
+  // whole previous one while the overview compared the same span.
+  it("compares a running year with the same span of the other, as the overview does", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // Noon UTC: "today" is the profile zone's day (UTC until confirmed), not the host's.
+    vi.setSystemTime(new Date(Date.UTC(2026, 8, 26, 12)));
+    try {
+      render(
+        <MemoryRouter>
+          <RailStatsSection
+            scope={{ year: 2026, compareYear: 2025 } as never}
+            visibility={visibility}
+          />
+        </MemoryRouter>
+      );
+      await waitFor(() => expect(railApi.stats).toHaveBeenCalledWith(2025, "09-26"));
+      expect(railApi.stats).toHaveBeenCalledWith(2026, "09-26");
+      await screen.findAllByText("rail:stats.journeys");
+      // Acceptance 2026-09-26: the strip compared the same span and SAID
+      // "ggü. ganzem Jahr 2025". The label now names what the numbers are.
+      expect(screen.getByText("stats:yearFilter.vsSamePeriod")).toBeInTheDocument();
+      expect(screen.queryByText("stats:yearFilter.vsFullYear")).not.toBeInTheDocument();
+      expect(screen.queryByText("stats:yearFilter.partialYearNote")).not.toBeInTheDocument();
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  // With 2025 selected against a running 2026, the pair is cut to the same
+  // span but the section's own figures stay the whole of 2025.
+  it("keeps the selected year whole when only the compare year is running", async () => {
+    vi.useFakeTimers({ toFake: ["Date"] });
+    // Noon UTC: "today" is the profile zone's day (UTC until confirmed), not the host's.
+    vi.setSystemTime(new Date(Date.UTC(2026, 8, 26, 12)));
+    vi.mocked(railApi.stats).mockClear();
+    try {
+      render(
+        <MemoryRouter>
+          <RailStatsSection
+            scope={{ year: 2025, compareYear: 2026 } as never}
+            visibility={visibility}
+          />
+        </MemoryRouter>
+      );
+      await screen.findAllByText("rail:stats.journeys");
+      expect(vi.mocked(railApi.stats).mock.calls).toEqual(
+        expect.arrayContaining([
+          [2025, null],
+          [2025, "09-26"],
+          [2026, "09-26"],
+        ])
+      );
+    } finally {
+      vi.useRealTimers();
+    }
+  });
+
+  it("compares two finished years in full", async () => {
+    vi.mocked(railApi.stats).mockClear();
+    render(
+      <MemoryRouter>
+        <RailStatsSection
+          scope={{ year: 2023, compareYear: 2022 } as never}
+          visibility={visibility}
+        />
+      </MemoryRouter>
+    );
+    await waitFor(() => expect(railApi.stats).toHaveBeenCalledWith(2022, null));
+    await screen.findAllByText("rail:stats.journeys");
+    expect(screen.getByText("stats:yearFilter.vs")).toBeInTheDocument();
+  });
+
   it("labels every kilometre with what it measures", async () => {
     render(
       <MemoryRouter>
@@ -60,6 +136,8 @@ describe("RailStatsSection", () => {
     const split = await screen.findByTestId("rail-km-split");
     // Test i18n renders keys: each source appears under its own label.
     expect(split.textContent).toContain("rail:stats.kmTraced");
+    // Review 2026-09-26, finding 7: roadtrip lines are their own source.
+    expect(split.textContent).toContain("rail:stats.kmRoadtrip");
     expect(split.textContent).toContain("rail:stats.kmTicket");
     expect(split.textContent).toContain("rail:stats.kmStraight");
     expect(split.textContent).toContain("rail:stats.kmUnmeasured");
@@ -76,5 +154,23 @@ describe("RailStatsSection", () => {
     );
     const link = await screen.findByRole("link", { name: /Wien Hbf/ });
     expect(link.getAttribute("href")).toBe(`/rail/${STATS.longest!.id}`);
+  });
+
+  it("shows the kinds of ride the rail badges count, each opening the rides behind it", async () => {
+    render(
+      <MemoryRouter>
+        <RailStatsSection
+          scope={{ year: null, compareYear: null } as never}
+          visibility={visibility}
+        />
+      </MemoryRouter>
+    );
+    const kinds = await screen.findByTestId("rail-ride-kinds");
+    for (const label of ["nightTrains", "highSpeed", "crossBorder", "operatorsCount"]) {
+      expect(kinds.textContent).toContain(`rail:stats.${label}`);
+    }
+    // Every figure there — and the three headline ones — is an evidence trigger.
+    const triggers = screen.getAllByRole("button").filter((b) => b.getAttribute("aria-haspopup"));
+    expect(triggers.length).toBe(7);
   });
 });

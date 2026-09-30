@@ -6,12 +6,12 @@ import { MAP_LAYER_COLORS } from "../../../../types/mapTheme";
 import { PORT_RGB } from "../../../layers/cruisePortsLayer";
 import { DOMAINS } from "../../../../shared/domains";
 import { useDashboardFilterStore } from "../../../../store/dashboardFilterStore";
+import { useDashboardDomainFilterStore } from "../../../../store/dashboardDomainFilterStore";
 
 // Captures every prop set MapContainer3D is rendered with, so we can assert
-// what AllTab tells the map — the domain chip in MapChromeSections toggles
-// `dashboardFilterStore.domains`, and until this task the lodging entry in
-// that pill row did nothing: AllTab never fetched lodgings or passed them
-// down, so toggling the chip had no visible effect.
+// what AllTab tells the map. Lodging visibility once hung off a map-options
+// pill that did nothing (AllTab never fetched lodgings); since 2026-09-28 the
+// domain filter is its only control, and these tests drive that store.
 const { mapProps } = vi.hoisted(() => ({ mapProps: [] as Record<string, unknown>[] }));
 
 vi.mock("../../../../hooks/useDashboardTours", () => ({
@@ -120,15 +120,16 @@ const swatchOf = (label: string): HTMLElement | undefined => {
 /** The `background` style of the legend swatch next to `label`. */
 const swatchBackground = (label: string): string | undefined => swatchOf(label)?.style.background;
 
-describe("AllTab: the lodging domain chip actually does something", () => {
+describe("AllTab: the lodging domain filter row actually does something", () => {
   beforeEach(() => {
     mapProps.length = 0;
     listLodgingsMock.mockReset();
     listLodgingsMock.mockResolvedValue([makeLodging()]);
     useDashboardFilterStore.getState().reset();
+    useDashboardDomainFilterStore.setState({ hidden: new Set(), linkHidden: null });
   });
 
-  it("fetches lodgings and passes them to MapContainer3D as lodgingsOverride when the chip is on", async () => {
+  it("fetches lodgings and passes them to MapContainer3D as lodgingsOverride when the filter row is on", async () => {
     render(
       <MemoryRouter>
         <AllTab />
@@ -209,8 +210,8 @@ describe("AllTab: the lodging domain chip actually does something", () => {
     expect(swatchOf("dashboard:legend.port")?.style.borderRadius).toBe("50%");
   });
 
-  it("drops the port row when the cruise chip is off — a key for marks that are not drawn is noise", async () => {
-    useDashboardFilterStore.setState({ domains: ["flight", "lodging"] });
+  it("drops the port row when the cruise row is off — a key for marks that are not drawn is noise", async () => {
+    useDashboardDomainFilterStore.setState({ hidden: new Set(["cruise"]) });
 
     render(
       <MemoryRouter>
@@ -224,10 +225,11 @@ describe("AllTab: the lodging domain chip actually does something", () => {
     expect(screen.queryByText("dashboard:legend.port")).not.toBeInTheDocument();
   });
 
-  it("toggling the chip off hides the pins AND the legend row — the previously-dead chip is now functional", async () => {
-    // Mirrors what MapChromeSections' toggleDomain does when the user
-    // clicks the "Unterkünfte" pill: it removes "lodging" from the array.
-    useDashboardFilterStore.setState({ domains: ["flight", "cruise"] });
+  it("unticking the lodging filter row hides the pins AND the legend row", async () => {
+    // What the domain filter's toggle does when the user unticks
+    // "Unterkünfte". The map-options pills that used to do this went on
+    // 2026-09-28; the filter is the one control left.
+    useDashboardDomainFilterStore.setState({ hidden: new Set(["lodging"]) });
 
     render(
       <MemoryRouter>
@@ -236,7 +238,7 @@ describe("AllTab: the lodging domain chip actually does something", () => {
     );
 
     // Lodgings are still fetched (domain-gating is about isEnabled, not the
-    // chip) but the map/legend must not surface them while the chip is off.
+    // filter) but the map/legend must not surface them while the row is off.
     await waitFor(() => {
       expect(listLodgingsMock).toHaveBeenCalled();
     });

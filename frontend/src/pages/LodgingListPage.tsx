@@ -42,6 +42,7 @@ import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import TablePagination from "../components/table/TablePagination";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
+import { LoyaltyFilterNotice, useLoyaltyListFilter } from "../components/Loyalty/LoyaltyListFilter";
 
 type TypeFilter = LodgingType | "all";
 type YearFilter = number | "all";
@@ -115,7 +116,10 @@ export default function LodgingListPage(): JSX.Element {
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebouncedValue(search);
   const [typeFilter, setTypeFilter] = useState<TypeFilter>("all");
-  const [yearFilter, setYearFilter] = useState<YearFilter>("all");
+  // A loyalty link (`?membership=…&year=…`) opens the list on one card's
+  // stays; its year seeds the ordinary year filter.
+  const loyaltyFilter = useLoyaltyListFilter();
+  const [yearFilter, setYearFilter] = useState<YearFilter>(() => loyaltyFilter.linkedYear ?? "all");
   const [countryFilter, setCountryFilter] = useState<CountryFilter>("all");
   const [statusFilter, setStatusFilter] = useState<StatusFilter>("all");
   // Newest first everywhere, and the choice survives a reload — the
@@ -193,8 +197,16 @@ export default function LodgingListPage(): JSX.Element {
       year: yearFilter,
       country: countryFilter,
       type: typeFilter,
+      membershipId: loyaltyFilter.membershipId,
     }),
-    [debouncedSearch, statusFilter, yearFilter, countryFilter, typeFilter]
+    [
+      debouncedSearch,
+      statusFilter,
+      yearFilter,
+      countryFilter,
+      typeFilter,
+      loyaltyFilter.membershipId,
+    ]
   );
   const filterSignature = useMemo(() => lodgingFilterSignature(filterState), [filterState]);
 
@@ -383,6 +395,7 @@ export default function LodgingListPage(): JSX.Element {
     setYearFilter("all");
     setCountryFilter("all");
     setStatusFilter("all");
+    loyaltyFilter.clear();
   };
 
   // Type and country are the two only lodging has; they sit behind the button.
@@ -397,6 +410,7 @@ export default function LodgingListPage(): JSX.Element {
     debouncedSearch.trim().length > 0 ||
     statusFilter !== "all" ||
     yearFilter !== "all" ||
+    loyaltyFilter.membershipId !== null ||
     extraActiveCount > 0;
 
   const importAdapter = useLodgingImportAdapter();
@@ -437,16 +451,6 @@ export default function LodgingListPage(): JSX.Element {
           </div>
         </div>
 
-        <p className="mb-4 text-xs text-(--text-muted)">
-          {t("lodging:list.wholeListHint")}{" "}
-          <Link
-            to="/settings/data?section=import"
-            className="underline underline-offset-4 hover:text-(--text-primary)"
-          >
-            {t("settings:import.openHub")}
-          </Link>
-        </p>
-
         {/* Was `LodgingStatStrip`, which renders the backend rollup over the
             WHOLE library — correct on the dashboard, contradictory here: it
             showed the spend of 60 hotels above a table filtered down to seven,
@@ -458,6 +462,25 @@ export default function LodgingListPage(): JSX.Element {
           filteredLabel={t("common:filters.filtered")}
           unknown={loading || loadError}
         />
+
+        <p className="mb-4 text-xs text-(--text-muted)">
+          {t("lodging:list.wholeListHint")}{" "}
+          <Link
+            to="/settings/data?section=import"
+            className="underline underline-offset-4 hover:text-(--text-primary)"
+          >
+            {t("settings:import.openHub")}
+          </Link>
+        </p>
+
+        {loyaltyFilter.membershipId !== null && (
+          <div className="mb-3">
+            <LoyaltyFilterNotice
+              membershipId={loyaltyFilter.membershipId}
+              onClear={loyaltyFilter.clear}
+            />
+          </div>
+        )}
 
         <ListFilterBar
           search={{

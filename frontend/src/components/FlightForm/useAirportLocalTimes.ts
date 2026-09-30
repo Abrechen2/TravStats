@@ -9,6 +9,14 @@ interface UseAirportLocalTimesArgs {
    *  hydration never completes) — callers pass their own browser-local
    *  fallback here, computed however they see fit (e.g. Intl). */
   browserTimezone: string;
+  /**
+   * The zone the flight was WRITTEN with at this end, when the end still
+   * names that airport (ADR 0002 D2: the stored zone wins over today's
+   * catalogue, which may since have been corrected). Used instead of the
+   * lookup; null for a new or changed airport.
+   */
+  depKnownZone?: string | null;
+  arrKnownZone?: string | null;
 }
 
 interface UseAirportLocalTimesResult {
@@ -44,6 +52,8 @@ export function useAirportLocalTimes({
   depCode,
   arrCode,
   browserTimezone,
+  depKnownZone = null,
+  arrKnownZone = null,
 }: UseAirportLocalTimesArgs): UseAirportLocalTimesResult {
   const [depTimezone, setDepTimezone] = useState(browserTimezone);
   const [arrTimezone, setArrTimezone] = useState(browserTimezone);
@@ -54,9 +64,15 @@ export function useAirportLocalTimes({
     let cancelled = false;
 
     void (async () => {
+      const zoneOf = (known: string | null, code: string | null) =>
+        known
+          ? Promise.resolve({ timezone: known })
+          : code
+            ? airportsApi.getByCode(code).catch(() => null)
+            : Promise.resolve(null);
       const [depAirport, arrAirport] = await Promise.all([
-        depCode ? airportsApi.getByCode(depCode).catch(() => null) : Promise.resolve(null),
-        arrCode ? airportsApi.getByCode(arrCode).catch(() => null) : Promise.resolve(null),
+        zoneOf(depKnownZone, depCode),
+        zoneOf(arrKnownZone, arrCode),
       ]);
       // Guards against a stale response from an earlier, superseded lookup
       // landing after a newer one: React runs this effect's cleanup (which
@@ -87,7 +103,7 @@ export function useAirportLocalTimes({
     return () => {
       cancelled = true;
     };
-  }, [isOpen, depCode, arrCode, browserTimezone]);
+  }, [isOpen, depCode, arrCode, browserTimezone, depKnownZone, arrKnownZone]);
 
   return { depTimezone, arrTimezone, hydrated };
 }

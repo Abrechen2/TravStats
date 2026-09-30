@@ -7,12 +7,13 @@
  * that assumes one shape for the whole API breaks on the other.
  */
 
+import { cruiseStopTimesSchema, cruiseTimesSchema } from "../../../schemas/times";
 import { z } from "zod";
 
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
-import { errorContent } from "./shared";
+import { errorContent, timeRefused } from "./shared";
 import { CRUISE_QUERY_STATUSES } from "../../../schemas/cruise";
 import { CRUISE_SORT_FIELDS } from "../../../shared/cruiseListOrder";
 import {
@@ -40,6 +41,7 @@ const cruiseStop = registry.register(
       departureTime: z.string().datetime().nullable(),
       excursionNote: z.string().nullable(),
       port: includedRow("port").nullable().optional(),
+      times: cruiseStopTimesSchema,
     })
     .describe(
       "A stop is exactly one of three states: a matched port (portId set, " +
@@ -93,6 +95,7 @@ const cruise = registry.register(
       trip: includedRow("trip (id, name, color)").nullable().optional(),
       legs: z.array(includedRow("leg")).optional(),
       createdAt: z.string().datetime(),
+      times: cruiseTimesSchema,
     })
     .openapi("Cruise")
 );
@@ -254,6 +257,7 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     201: { description: "Created", content: { "application/json": { schema: envelope(cruise) } } },
     400: { description: "Validation failed", content: errorContent },
     409: { description: "A cruise from the same import already exists", content: errorContent },
@@ -275,6 +279,7 @@ registry.registerPath({
     },
   },
   responses: {
+    422: timeRefused,
     200: { description: "Updated", content: { "application/json": { schema: envelope(cruise) } } },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Not found", content: errorContent },
@@ -311,8 +316,11 @@ const geometry = z
   })
   .describe(
     "GeoJSON, coordinates in [lon, lat] order. One feature per leg between " +
-      "consecutive coordinate-bearing stops. Legs the shipping-lane router " +
-      "cannot solve fall back to a straight chord between the two ports."
+      "consecutive coordinate-bearing stops. Per leg, in precedence order: a " +
+      "covering recording (properties.geometrySource 'track', method " +
+      "'recorded_track', trackId; every vertex protected — draw it as given), a " +
+      "hand-drawn line ('drawn'), the shipping-lane router ('sea_route'), or a " +
+      "straight chord between the two ports ('chord')."
   );
 
 registry.registerPath({

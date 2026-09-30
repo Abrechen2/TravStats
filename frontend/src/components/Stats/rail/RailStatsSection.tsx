@@ -11,7 +11,9 @@ import type { SectionVisibility } from "../../../hooks/useSectionVisibility";
 import StatCard from "../StatCard";
 import RankedBarList, { type RankedRow } from "../lodging/RankedBarList";
 import PeriodComparisonStrip from "../PeriodComparisonStrip";
+import { comparisonWindow, sameSpanUntil } from "../../../lib/stats/comparisonWindow";
 import type { PeriodScope } from "../useStatsPeriod";
+import type { EvidenceScopeParams } from "../../evidence/useEvidence";
 
 /**
  * The rail numbers on the statistics page (spec 2026-09-25-rail-domain, 2b).
@@ -38,22 +40,42 @@ export default function RailStatsSection({
   const accent = colorOf("rail");
   const { year, compareYear } = scope;
   const [stats, setStats] = useState<RailStats | null>(null);
-  const [previous, setPrevious] = useState<RailStats | null>(null);
+  // The comparison pair, each cut to the same span when a year is running.
+  // Separate from `stats`: the section's headline is always the WHOLE selected
+  // year — cutting it too would show 2025 up to today's date when 2025 is set
+  // against a running 2026 (the defect 4c0ee381 fixed on the overview).
+  const [pair, setPair] = useState<{
+    current: RailStats;
+    previous: RailStats;
+    samePeriod: boolean;
+  } | null>(null);
   const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     let cancelled = false;
     setStats(null);
+    setPair(null);
     setFailed(false);
     void (async () => {
       try {
-        const [current, prior] = await Promise.all([
-          railApi.stats(year),
-          compareYear === null ? Promise.resolve(null) : railApi.stats(compareYear),
+        // Compared as the overview compares: a running year against the SAME
+        // span of the other one, never eight months against twelve (D11).
+        const until =
+          year !== null && compareYear !== null
+            ? sameSpanUntil(comparisonWindow(year, compareYear), year)
+            : null;
+        const [whole, cut, prior] = await Promise.all([
+          railApi.stats(year, null),
+          until === null ? Promise.resolve(null) : railApi.stats(year, until),
+          compareYear === null ? Promise.resolve(null) : railApi.stats(compareYear, until),
         ]);
         if (cancelled) return;
-        setStats(current);
-        setPrevious(prior);
+        setStats(whole);
+        setPair(
+          prior === null
+            ? null
+            : { current: cut ?? whole, previous: prior, samePeriod: cut !== null }
+        );
       } catch (err) {
         logger.error("RailStatsSection: fetch failed", err);
         // A failed load says so; zeros would claim "you never took a train".
@@ -72,33 +94,49 @@ export default function RailStatsSection({
   const num = (n: number, digits = 0): string =>
     n.toLocaleString(locale, { maximumFractionDigits: digits });
   const show = visibility.isVisible;
+  // The population these figures show — lifetime by default, else the year
+  // pill. The seven rail measures accept exactly those two.
+  const evidenceScope: EvidenceScopeParams =
+    year === null ? { period: "allTime" } : { period: "year", year };
+  const railEvidence = (key: string, renderedValue: number) => ({
+    kind: "metric" as const,
+    key,
+    scope: evidenceScope,
+    renderedValue,
+  });
 
   const comparison =
-    previous && year !== null && compareYear !== null ? (
+    pair && year !== null && compareYear !== null ? (
       <div className="mb-8">
         <PeriodComparisonStrip
           year={year}
           compareYear={compareYear}
+          samePeriod={pair.samePeriod}
           rows={[
             {
               key: "journeys",
               label: t("rail:stats.journeys"),
-              current: stats.journeys,
-              previous: previous.journeys,
+              current: pair.current.journeys,
+              previous: pair.previous.journeys,
+              evidenceKey: "railRideCount",
             },
             {
               key: "km",
               label: t("rail:stats.kmAll"),
-              current: Math.round(stats.distance.totalKm),
-              previous: Math.round(previous.distance.totalKm),
+              current: Math.round(pair.current.distance.totalKm),
+              previous: Math.round(pair.previous.distance.totalKm),
+              evidenceKey: "railDistanceKmTotal",
             },
             {
               key: "countries",
               label: t("rail:stats.countries"),
-              current: stats.countries.length,
-              previous: previous.countries.length,
+              current: pair.current.countries.length,
+              previous: pair.previous.countries.length,
+              evidenceKey: "railCountriesCount",
             },
           ]}
+          // Drawn only with a year chosen, so the scope is never `allTime`.
+          evidence={{ scope: { period: "year", year } }}
         />
       </div>
     ) : null;
@@ -155,16 +193,20 @@ export default function RailStatsSection({
             title={t("rail:stats.journeys")}
             value={num(stats.journeys)}
             description={t("rail:stats.journeysDesc")}
+            evidence={railEvidence("railRideCount", stats.journeys)}
           />
           <StatCard
             accent={accent}
             valueSize="md"
             title={t("rail:stats.kmAll")}
             value={`${num(distance.totalKm)} km`}
+            evidence={railEvidence("railDistanceKmTotal", distance.totalKm)}
             description={
               <span data-testid="rail-km-split">
                 {[
                   distance.tracedKm > 0 && t("rail:stats.kmTraced", { km: num(distance.tracedKm) }),
+                  distance.roadtripKm > 0 &&
+                    t("rail:stats.kmRoadtrip", { km: num(distance.roadtripKm) }),
                   distance.ticketKm > 0 && t("rail:stats.kmTicket", { km: num(distance.ticketKm) }),
                   distance.straightLineKm > 0 &&
                     t("rail:stats.kmStraight", { km: num(distance.straightLineKm) }),
@@ -192,7 +234,33 @@ export default function RailStatsSection({
             title={t("rail:stats.countries")}
             value={num(stats.countries.length)}
             description={stats.countries.map((c) => regionNames?.of(c) ?? c).join(", ")}
+            evidence={railEvidence("railCountriesCount", stats.countries.length)}
           />
+        </div>
+      )}
+      {show("kpis") && (
+        <div
+          className="mt-6 grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4"
+          data-testid="rail-ride-kinds"
+        >
+          {(
+            [
+              ["nightTrains", "railNightTrainCount", stats.rideKinds.nightTrains],
+              ["highSpeed", "railHighSpeedRideCount", stats.rideKinds.highSpeed],
+              ["crossBorder", "railCrossBorderRideCount", stats.rideKinds.crossBorder],
+              ["operatorsCount", "railOperatorsCount", stats.rideKinds.operators],
+            ] as const
+          ).map(([label, key, value]) => (
+            <StatCard
+              key={key}
+              accent={accent}
+              valueSize="md"
+              title={t(`rail:stats.${label}`)}
+              value={num(value)}
+              description={t(`rail:stats.${label}Desc`)}
+              evidence={railEvidence(key, value)}
+            />
+          ))}
         </div>
       )}
       {show("rankings") && (
@@ -271,6 +339,7 @@ function delayBucketLabel(t: Translate, upTo: number | null, lower: number | nul
 /** What a distance measures — the label the owner asked for (decision 7). */
 function distanceSourceLabel(t: Translate, source: string | null): string {
   if (source === "route") return t("rail:stats.sourceTraced");
+  if (source === "roadtrip") return t("rail:stats.sourceRoadtrip");
   if (source === "user") return t("rail:stats.sourceTicket");
   return t("rail:stats.sourceStraight");
 }

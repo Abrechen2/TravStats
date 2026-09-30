@@ -2,6 +2,7 @@ import { useState } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import ConfirmModal from "../Training/ConfirmModal";
 import { DELETE_BUTTON_CLASS } from "../../lib/deleteConfirm";
+import { formatInProfileZone } from "../../lib/profileInstant";
 import type { TourTrackMeta } from "../../types/tour";
 
 interface Props {
@@ -41,8 +42,9 @@ function formatWindow(startedAt: string, endedAt: string): string {
     hour: "2-digit",
     minute: "2-digit",
   };
-  const start = new Date(startedAt).toLocaleString("de-DE", opts);
-  const end = new Date(endedAt).toLocaleString("de-DE", opts);
+  // A recorded window carries no zone of its own: the profile clock (ADR 0002 Q1).
+  const start = formatInProfileZone(startedAt, "de-DE", opts);
+  const end = formatInProfileZone(endedAt, "de-DE", opts);
   return `${start} – ${end}`;
 }
 

@@ -9,6 +9,7 @@ import type { RoadtripSummary } from "../../types/roadtrip";
 import StatCard from "./StatCard";
 import RankedBarList, { type RankedRow } from "./lodging/RankedBarList";
 import type { PeriodScope } from "./useStatsPeriod";
+import PeriodComparisonStrip from "./PeriodComparisonStrip";
 import type { SectionVisibility } from "../../hooks/useSectionVisibility";
 
 /**
@@ -46,15 +47,11 @@ export default function RoadtripStatsSection({
     };
   }, []);
 
-  const scoped = useMemo(() => {
-    if (!rows) return null;
-    const now = Date.now();
-    return rows.filter((r) => {
-      if (r.startDate && new Date(r.startDate).getTime() > now) return false;
-      if (scope.year === null) return true;
-      return r.startDate !== null && new Date(r.startDate).getUTCFullYear() === scope.year;
-    });
-  }, [rows, scope.year]);
+  const scoped = useMemo(() => (rows ? roadtripsIn(rows, scope.year) : null), [rows, scope.year]);
+  const compared = useMemo(
+    () => (rows && scope.compareYear !== null ? roadtripsIn(rows, scope.compareYear) : null),
+    [rows, scope.compareYear]
+  );
 
   const nf = useMemo(() => new Intl.NumberFormat(i18n.language), [i18n.language]);
 
@@ -64,8 +61,49 @@ export default function RoadtripStatsSection({
   if (!scoped) {
     return <p className="text-sm text-(--text-muted)">{t("common:loading.default")}</p>;
   }
+  // The year set against the compare year, as the cruise, lodging, places and
+  // rail tabs do — counts only, from the same rows the tiles below fold.
+  const comparison =
+    scope.year !== null && scope.compareYear !== null && compared ? (
+      <PeriodComparisonStrip
+        year={scope.year}
+        compareYear={scope.compareYear}
+        rows={[
+          {
+            key: "count",
+            label: t("roadtrips:stats.count"),
+            current: scoped.length,
+            previous: compared.length,
+          },
+          {
+            key: "km",
+            label: t("roadtrips:stats.distance"),
+            current: Math.round(scoped.reduce((s, r) => s + r.distanceKm, 0)),
+            previous: Math.round(compared.reduce((s, r) => s + r.distanceKm, 0)),
+            // A distance says its unit, as the tile below does ("2.620 km").
+            format: (n: number): string => `${nf.format(n)} km`,
+          },
+          {
+            key: "countries",
+            label: t("roadtrips:stats.countries"),
+            current: new Set(scoped.flatMap((r) => r.countries)).size,
+            previous: new Set(compared.flatMap((r) => r.countries)).size,
+          },
+        ]}
+      />
+    ) : null;
+
   if (scoped.length === 0) {
-    return <p className="text-sm text-(--text-muted)">{t("roadtrips:stats.empty")}</p>;
+    return (
+      <section className="space-y-8">
+        {comparison}
+        <p className="text-sm text-(--text-muted)">
+          {scope.year === null
+            ? t("roadtrips:stats.empty")
+            : t("stats:period.emptyYear", { year: scope.year })}
+        </p>
+      </section>
+    );
   }
 
   const km = scoped.reduce((s, r) => s + r.distanceKm, 0);
@@ -101,6 +139,7 @@ export default function RoadtripStatsSection({
   const show = visibility.isVisible;
   return (
     <section className="space-y-8">
+      {comparison}
       {show("kpis") && (
         <div className="grid grid-cols-1 gap-6 md:grid-cols-2 lg:grid-cols-4">
           <StatCard
@@ -167,4 +206,17 @@ export default function RoadtripStatsSection({
       )}
     </section>
   );
+}
+
+/**
+ * The roadtrips that count in a year: started (a planned one counts nowhere)
+ * and started IN that year, the rule cruises follow. `null` is lifetime.
+ */
+function roadtripsIn(rows: readonly RoadtripSummary[], year: number | null): RoadtripSummary[] {
+  const now = Date.now();
+  return rows.filter((r) => {
+    if (r.startDate && new Date(r.startDate).getTime() > now) return false;
+    if (year === null) return true;
+    return r.startDate !== null && new Date(r.startDate).getUTCFullYear() === year;
+  });
 }

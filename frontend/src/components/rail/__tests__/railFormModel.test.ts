@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import {
+  saveErrorFrom,
   applyLookup,
   canSubmit,
   connectionDraftFrom,
@@ -231,5 +232,44 @@ describe("connectionDraftFrom", () => {
   it("falls back to the departure clock when the arrival is unknown", () => {
     const draft = connectionDraftFrom({ ...previous, arrivalTime: null });
     expect(draft.departureLocal).toBe("2026-09-26T06:15");
+  });
+});
+
+describe("saveErrorFrom", () => {
+  const refusal = (data: Record<string, unknown>) => ({ response: { data } });
+
+  it("maps each rail refusal code to the form's own sentence and field", () => {
+    expect(
+      saveErrorFrom(refusal({ code: "RAIL_ARRIVAL_BEFORE_DEPARTURE", field: "arrivalLocal" }))
+    ).toEqual({ key: "rail:form.errors.arrivalBeforeDeparture", field: "arrivalLocal" });
+    expect(
+      saveErrorFrom(refusal({ code: "RAIL_LOCAL_TIME_NONEXISTENT", field: "departureLocal" }))
+    ).toEqual({ key: "rail:form.errors.nonexistentTime", field: "departureLocal" });
+    expect(
+      saveErrorFrom(refusal({ code: "RAIL_INVALID_INPUT", field: "departureStation" }))
+    ).toEqual({
+      key: "rail:form.errors.invalidField",
+      field: null,
+      fieldLabelKey: "rail:form.departureStation",
+    });
+  });
+
+  it("falls back to the generic sentence, never to the server's prose", () => {
+    expect(saveErrorFrom(refusal({ error: "arrival must not precede departure" }))).toEqual({
+      key: "rail:form.saveError",
+      field: null,
+    });
+    expect(saveErrorFrom(refusal({ code: "RAIL_INVALID_INPUT", field: "nonsense" }))).toEqual({
+      key: "rail:form.errors.invalid",
+      field: null,
+    });
+    expect(saveErrorFrom(new Error("Network Error")).key).toBe("rail:form.saveError");
+  });
+  it("reads a refusal that is not a rail field code through the shared save rule", () => {
+    expect(saveErrorFrom(refusal({ code: "DUPLICATE" }))).toEqual({
+      key: "common:saveErrors.duplicate",
+      field: null,
+    });
+    expect(saveErrorFrom({ isAxiosError: true }).key).toBe("common:saveErrors.network");
   });
 });

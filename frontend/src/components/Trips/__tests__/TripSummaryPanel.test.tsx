@@ -12,7 +12,7 @@ vi.mock("../../../hooks/useBetaFeatures", () => ({
 
 // Whether the instance has a text model. A box rather than a boolean: the
 // factory closes over it once, and these cases need to flip it.
-const llmState = vi.hoisted(() => ({ current: true as boolean | null }));
+const llmState = vi.hoisted(() => ({ current: true as boolean | "disabled" | null }));
 vi.mock("../../../hooks/useHasLlm", () => ({ useHasLlm: () => llmState.current }));
 
 const demoState = vi.hoisted(() => ({ shared: false }));
@@ -156,5 +156,41 @@ describe("TripSummaryPanel — an instance with no model", () => {
     );
 
     expect(container).toBeEmptyDOMElement();
+  });
+});
+
+/**
+ * The admin switch (2026-09-25). A model that is switched off is not a model
+ * that is missing: "the admin sets up Ollama" would send the reader to ask for
+ * something that was deliberately turned off.
+ */
+describe("TripSummaryPanel — the model is switched off by the admin", () => {
+  beforeEach(() => {
+    summarize.mockReset();
+    addToast.mockReset();
+    demoState.shared = false;
+  });
+
+  afterEach(() => {
+    llmState.current = true;
+  });
+
+  it("says it is switched off, not unreachable, and offers no button", () => {
+    llmState.current = "disabled";
+    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
+
+    expect(screen.getByTestId("trip-summary-unavailable").textContent).toBe(
+      "✨trips:summary.titletrips:summary.disabled"
+    );
+    expect(screen.queryByText("trips:summary.generateButton")).not.toBeInTheDocument();
+  });
+
+  it("names the switch when the server refuses with LLM_DISABLED after the page loaded", async () => {
+    llmState.current = true;
+    summarize.mockRejectedValue({ response: { status: 503, data: { code: "LLM_DISABLED" } } });
+    render(<TripSummaryPanel trip={trip} t={t} language="de" onChanged={vi.fn()} />);
+    fireEvent.click(screen.getByText("trips:summary.generateButton"));
+
+    await waitFor(() => expect(addToast).toHaveBeenCalledWith("error", "trips:summary.disabled"));
   });
 });

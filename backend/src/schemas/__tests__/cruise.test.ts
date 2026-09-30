@@ -2,10 +2,53 @@ import { describe, it, expect } from "@jest/globals";
 import { createCruiseSchema, updateCruiseSchema, cruiseQuerySchema } from "../cruise";
 
 describe("cruise schemas", () => {
-  const minimalValid = { status: "scheduled" as const };
+  const minimalValid = {
+    status: "scheduled" as const,
+    routeName: "Nordland",
+    startDate: "2026-06-01T12:00:00Z",
+  };
 
   it("accepts a minimal cruise", () => {
     expect(createCruiseSchema.safeParse(minimalValid).success).toBe(true);
+  });
+
+  it("refuses a cruise that names nothing that sailed", () => {
+    for (const body of [
+      {},
+      { status: "scheduled", startDate: "2026-06-01T12:00:00Z" },
+      {
+        shipId: null,
+        shipNameOverride: "  ",
+        routeName: "",
+        cruiseLine: " ",
+        startDate: "2026-06-01T12:00:00Z",
+      },
+      { startDate: "2026-06-01T12:00:00Z", cabinNumber: "7218" },
+    ]) {
+      const r = createCruiseSchema.safeParse(body);
+      expect(r.success).toBe(false);
+      if (!r.success) expect(r.error.issues.map((i) => i.path.join("."))).toContain("shipId");
+    }
+  });
+
+  it("refuses a cruise without a start date", () => {
+    for (const body of [{ routeName: "Ostsee" }, { routeName: "Ostsee", startDate: "" }]) {
+      const r = createCruiseSchema.safeParse(body);
+      expect(r.success).toBe(false);
+      if (!r.success) expect(r.error.issues.map((i) => i.path.join("."))).toContain("startDate");
+    }
+  });
+
+  it("accepts a ship, a free-text ship, a route name or a line as what sailed", () => {
+    const startDate = "2026-06-01T12:00:00Z";
+    for (const body of [
+      { shipId: 7 },
+      { shipNameOverride: "Mein Schiff 1" },
+      { routeName: "Ostsee" },
+      { cruiseLine: "AIDA" },
+    ]) {
+      expect(createCruiseSchema.safeParse({ ...body, startDate }).success).toBe(true);
+    }
   });
 
   it("accepts a full cruise with stops", () => {
@@ -92,28 +135,39 @@ describe("cruise schemas", () => {
     expect(r.success).toBe(false);
   });
 
-  it("coerces partial datetimes (no seconds/offset) on stops to full ISO", () => {
-    // The LLM cruise parser emits times like "2026-06-15T00:00"; strict
-    // datetime() would reject them and the import save would 400.
+  it("keeps a parser's offset-less stop time as the port's wall clock, never the host's (ADR 0002)", () => {
+    // The LLM cruise parser emits "2026-06-17T08:00". It used to be parsed with
+    // `new Date(v)`, so the SERVER's zone decided the instant. It is now kept
+    // as a wall clock for the route to read on the port's clock — and the
+    // route accepts that bare string from a token client (the Companion relays
+    // it) only; a browser sends `{local}`.
     const r = createCruiseSchema.safeParse({
       ...minimalValid,
       startDate: "2026-06-15",
-      endDate: "2026-06-29T00:00",
+      endDate: "2026-06-29",
       stops: [
         { portId: 1, dayNumber: 1, isAtSea: false, departureTime: "2026-06-15T00:00" },
         { portId: null, dayNumber: 2, isAtSea: true },
-        { portId: 2, dayNumber: 3, isAtSea: false, arrivalTime: "2026-06-17T08:00" },
+        { portId: 2, dayNumber: 3, isAtSea: false, arrivalTime: { local: "2026-06-17T08:00" } },
       ],
     });
     expect(r.success).toBe(true);
     if (r.success) {
-      // Coerced to a full ISO datetime (exact instant depends on the host TZ
-      // for offset-less inputs; prod runs UTC). Just assert the shape is valid.
-      const ISO = /^\d{4}-\d{2}-\d{2}T\d{2}:\d{2}:\d{2}\.\d{3}Z$/;
-      expect(r.data.stops?.[0].departureTime).toMatch(ISO);
-      expect(r.data.stops?.[2].arrivalTime).toMatch(ISO);
-      // A date-only input parses as UTC midnight regardless of host TZ.
+      expect(r.data.stops?.[0].departureTime).toEqual({
+        kind: "wallClockString",
+        local: "2026-06-15T00:00",
+      });
+      expect(r.data.stops?.[2].arrivalTime).toEqual({ kind: "local", local: "2026-06-17T08:00" });
+      // A day is a day: UTC midnight of the date written, whatever the host.
       expect(r.data.startDate).toBe("2026-06-15T00:00:00.000Z");
+    }
+  });
+
+  it("refuses an offset-less datetime for a cruise DAY with TIME_SHAPE_REQUIRED", () => {
+    const r = createCruiseSchema.safeParse({ ...minimalValid, endDate: "2026-06-29T00:00" });
+    expect(r.success).toBe(false);
+    if (!r.success) {
+      expect(r.error.issues.map((i) => i.message)).toContain("TIME_SHAPE_REQUIRED");
     }
   });
 
@@ -143,11 +197,15 @@ describe("cruise schemas", () => {
     expect(withName.success).toBe(true);
     if (withName.success) expect(withName.data.routeName).toBe("Kanaren mit Marokko");
 
-    const empty = createCruiseSchema.safeParse({ ...minimalValid, routeName: "" });
+    const empty = createCruiseSchema.safeParse({ ...minimalValid, shipId: 7, routeName: "" });
     expect(empty.success).toBe(true);
     if (empty.success) expect(empty.data.routeName).toBeNull();
 
-    const absent = createCruiseSchema.safeParse({ ...minimalValid });
+    const absent = createCruiseSchema.safeParse({
+      ...minimalValid,
+      routeName: undefined,
+      shipId: 7,
+    });
     expect(absent.success).toBe(true);
     if (absent.success) expect(absent.data.routeName).toBeUndefined();
   });
@@ -193,7 +251,11 @@ describe("cruise schemas", () => {
 
 describe("stop 3-state invariant", () => {
   const withStop = (stop: Record<string, unknown>) =>
-    createCruiseSchema.safeParse({ stops: [{ dayNumber: 1, ...stop }] });
+    createCruiseSchema.safeParse({
+      routeName: "Adria",
+      startDate: "2026-06-01T12:00:00Z",
+      stops: [{ dayNumber: 1, ...stop }],
+    });
 
   it("accepts a matched port", () => {
     expect(withStop({ portId: 5, isAtSea: false }).success).toBe(true);

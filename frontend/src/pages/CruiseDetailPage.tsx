@@ -1,4 +1,4 @@
-import { useEffect, useState } from "react";
+import { useCallback, useEffect, useState } from "react";
 import { useParams, useNavigate, Link } from "react-router-dom";
 import { cruiseApi } from "../lib/api";
 import type { Cruise } from "../types";
@@ -22,7 +22,9 @@ import { Icon } from "../components/ui/Icon";
 import Button from "../components/ui/Button";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
-import { formatDateInTimezone } from "../lib/dateUtils";
+import { formatLocalDate } from "../lib/displayFormat";
+import { cruiseEnd, cruiseStart } from "../lib/entityTimes";
+import type { LocalDateValue } from "../shared/time";
 import { formatAmount } from "../lib/units";
 import { useToastStore } from "../store/toastStore";
 import { cruiseExtractTarget } from "../lib/extractTargets";
@@ -31,12 +33,13 @@ import DocumentsSection from "../components/documents/DocumentsSection";
 import { countedDeleteMessage, DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { logger } from "../lib/logger";
+import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
+import CruiseTracksPanel from "../components/Cruise/CruiseTracksPanel";
+import { useBetaFeatures } from "../hooks/useBetaFeatures";
 
-const fmtDate = (iso: string | null): string => {
-  if (!iso) return "—";
-  return formatDateInTimezone(iso, "UTC");
-};
+/** A cruise day at its port, in the user's format — never moved by the reader's zone. */
+const fmtDate = (day: LocalDateValue | null): string => (day ? formatLocalDate(day.date) : "—");
 
 export default function CruiseDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
@@ -61,6 +64,24 @@ export default function CruiseDetailPage(): JSX.Element {
   );
   const [deleting, setDeleting] = useState<boolean>(false);
   const addToast = useToastStore((s) => s.addToast);
+  const { isFeatureVisible } = useBetaFeatures();
+  /** Bumped when a recording changes the legs: the map reads its lines again. */
+  const [geometryVersion, setGeometryVersion] = useState<number>(0);
+
+  // A recording changes the legs' lines and kilometres. Re-read the cruise
+  // quietly — the retry key would blank the whole page into its loading state
+  // for what is one section's change.
+  const onTracksChanged = useCallback((): void => {
+    setGeometryVersion((v) => v + 1);
+    if (!id) return;
+    void (async () => {
+      try {
+        setCruise(await cruiseApi.get(id));
+      } catch (err: unknown) {
+        logger.warn("CruiseDetailPage: refresh after a track change failed", err);
+      }
+    })();
+  }, [id]);
 
   const handleDelete = async (): Promise<void> => {
     if (!id) return;
@@ -97,6 +118,10 @@ export default function CruiseDetailPage(): JSX.Element {
       cancelled = true;
     };
   }, [id, reloadKey]);
+
+  // `?edit=1` — the inbox sending the user to a stop whose port or time the
+  // time-model migration could not resolve; the stops live in this editor.
+  useEditDeepLink(EDIT_PARAM.edit, cruise !== null, () => setEditing(true));
 
   if (loading) {
     return (
@@ -138,13 +163,10 @@ export default function CruiseDetailPage(): JSX.Element {
   const seaDays = cruise.stops.filter((s) => s.isAtSea).length;
 
   const shipName = cruise.ship?.name ?? cruise.shipNameOverride ?? "—";
+  const start = cruiseStart(cruise);
+  const end = cruiseEnd(cruise);
   const nights =
-    cruise.startDate && cruise.endDate
-      ? Math.round(
-          (Date.parse(cruise.endDate.slice(0, 10)) - Date.parse(cruise.startDate.slice(0, 10))) /
-            86_400_000
-        )
-      : null;
+    start && end ? Math.round((Date.parse(end.date) - Date.parse(start.date)) / 86_400_000) : null;
   const countries = new Set(
     buildEffectiveTimeline(cruise)
       .map((entry) => entry.port?.country)
@@ -194,9 +216,7 @@ export default function CruiseDetailPage(): JSX.Element {
         title={[shipName, cruise.routeName].filter(Boolean).join(" · ")}
         meta={[
           cruise.cruiseLine ?? cruise.ship?.cruiseLine,
-          cruise.startDate && cruise.endDate
-            ? `${fmtDate(cruise.startDate)} – ${fmtDate(cruise.endDate)}`
-            : null,
+          start && end ? `${fmtDate(start)} – ${fmtDate(end)}` : null,
           cruise.departurePort && cruise.arrivalPort
             ? `${cruise.departurePort.name} → ${cruise.arrivalPort.name}`
             : null,
@@ -229,6 +249,10 @@ export default function CruiseDetailPage(): JSX.Element {
               <p className="t-caption">{t("detail.stopsEmpty")}</p>
             )}
           </DetailSection>
+
+          {isFeatureVisible("cruiseTracks") && (
+            <CruiseTracksPanel cruiseId={cruise.id} onChanged={onTracksChanged} />
+          )}
 
           <DetailSection
             title={t("detail.cabin")}
@@ -273,7 +297,7 @@ export default function CruiseDetailPage(): JSX.Element {
           {cruise.tripId && <TripPhotoWindowStrip entry="cruises" id={cruise.id} />}
 
           <DetailSection title={t("detail.route")}>
-            <CruiseRouteMap cruise={cruise} />
+            <CruiseRouteMap key={geometryVersion} cruise={cruise} />
           </DetailSection>
 
           {cruise.companions.length > 0 && (

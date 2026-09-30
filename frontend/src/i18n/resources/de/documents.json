@@ -47,7 +47,9 @@
       "currency": "Währung",
       "bookingReference": "Buchungsnummer",
       "seatNumber": "Sitzplatz",
-      "seatClass": "Sitzklasse"
+      "seatClass": "Sitzklasse",
+      "travelClass": "Klasse",
+      "coach": "Wagen"
     },
     "applied": "Die Werte aus dem Beleg wurden übernommen."
   }

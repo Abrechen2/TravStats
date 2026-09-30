@@ -2,6 +2,7 @@ import type { Lodging, LodgingStay } from "./lodging";
 import type { TripRailJourney } from "./rail";
 import type { LinkedAlbum } from "./immich";
 import type { CabinType, CruiseStop, Port, Ship } from "./cruise";
+import type { CruiseTimes, FlightTimes, TripStopTimes, TripTimes } from "./times";
 
 export type { ObservedWeather } from "./openData";
 export interface User {
@@ -10,6 +11,8 @@ export interface User {
   isAdmin: boolean;
   /** The SHARED demo account of a public instance — settings the server refuses are explained, not offered. NOT the raw `isDemo` column, which `seedDemoUser` sets on ordinary accounts too (backend utils/sharedDemo.ts). */
   isSharedDemo?: boolean;
+  /** The server refuses this account the instance's provider quota (every `isDemo` row — backend middleware/demoGuard.ts `rejectDemoQuota`). */
+  providerQuotaRefused?: boolean;
 }
 
 export interface Airport {
@@ -65,7 +68,7 @@ export interface Flight {
   status: "scheduled" | "flown" | "cancelled" | "historical" | "duplicated";
   notes?: string;
   createdAt: string;
-  // Costs & categorization
+  // Costs, categorization
   price?: number;
   /** ISO 4217 alpha-3 code (EUR, USD, GBP, CHF, INR, JPY, …). */
   currency?: string;
@@ -118,7 +121,6 @@ export interface Flight {
   co2Kg?: number;
   // Computed by backend (timezone-aware)
   durationMinutes?: number;
-  // Trips
   tripId?: string | null;
   bookingId?: string | null;
   trip?: { id: string; name: string; color: string } | null;
@@ -145,6 +147,7 @@ export interface Flight {
   arrCountry?: string | null;
   depTimezone?: string | null;
   arrTimezone?: string | null;
+  times?: FlightTimes; // ADR 0002 phase 4 — read through lib/entityTimes.ts
 }
 
 export interface Booking {
@@ -181,6 +184,7 @@ export interface TripStop {
   notes: string | null;
   createdAt: string;
   updatedAt: string;
+  times?: TripStopTimes;
 }
 
 import type { TripJournalEntry } from "./journal";
@@ -210,6 +214,7 @@ export interface Trip {
   coverImageUrl: string | null;
   icon: string | null;
   countries: string[];
+  times?: TripTimes;
 
   _count?: {
     flights: number;
@@ -251,8 +256,10 @@ export interface Trip {
     | "seatNumber"
     | "seatClass"
     | "status"
+    | "times"
   >[];
   cruises?: Array<{
+    times?: CruiseTimes;
     id: string;
     cruiseLine: string | null;
     startDate: string | null;
@@ -480,6 +487,8 @@ export interface FlightFilters {
   q?: string;
   /** The whole carrier name, where `airline` above is a substring match. */
   airlineExact?: string;
+  /** Only the flights this frequent-flyer card counts (resolved on the server). */
+  membershipId?: string;
   /** A trip id, or `with` / `without`. */
   tripId?: string;
   /** One of the eight special-flight types, or `standard` / `special`. */

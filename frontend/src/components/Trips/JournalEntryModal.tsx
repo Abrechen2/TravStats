@@ -1,3 +1,7 @@
+import { dayInput } from "../../lib/api/timeInput";
+import { useTodayZone } from "../../hooks/useTodayZone";
+import { todayIn } from "../../shared/time";
+import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import Modal from "../Modal";
 import { useEffect, useState } from "react";
 import type { TripJournalEntry } from "../../types";
@@ -8,11 +12,14 @@ import JournalWeatherFetch from "./JournalWeatherFetch";
 import SuggestionChips from "../common/SuggestionChips";
 import { useJournalMoods } from "../../hooks/useJournalMoods";
 import JournalPhotoPicker from "./JournalPhotoPicker";
+import { defaultJournalDate, type JournalDaySource } from "../../lib/journalDefaultDate";
 
 interface JournalEntryModalProps {
   tripId: string;
   entry: TripJournalEntry | null; // null = create
   defaultDate?: string; // pre-fill date when creating
+  /** The trip, so a new entry starts on a day inside it (lib/journalDefaultDate). */
+  trip?: JournalDaySource;
   onClose: () => void;
   onSaved: () => void;
 }
@@ -25,23 +32,28 @@ function toDateInput(iso: string | null | undefined): string {
 }
 
 function fromDateInput(value: string): string {
-  // Trip-day journals are calendar dates — pin to UTC midnight so the
-  // backend stores a stable instant regardless of the browser's TZ.
-  return new Date(value + "T00:00:00.000Z").toISOString();
+  // A journal day is a calendar date and travels as one, `YYYY-MM-DD`
+  // (ADR 0002): no instant, so no zone can move it.
+  return dayInput(value) ?? value;
 }
 
 export default function JournalEntryModal({
   tripId,
   entry,
   defaultDate,
+  trip,
   onClose,
   onSaved,
 }: JournalEntryModalProps): JSX.Element {
   const { t } = useTranslation(["trips", "common"]);
   const addToast = useToastStore((s) => s.addToast);
 
+  // "Today" in the profile zone (Q1), never the browser's.
+  const today = todayIn(useTodayZone());
   const [date, setDate] = useState(
-    toDateInput(entry?.date ?? defaultDate ?? new Date().toISOString())
+    entry
+      ? toDateInput(entry.date)
+      : (defaultDate ?? (trip ? defaultJournalDate(trip, today) : today))
   );
   const [title, setTitle] = useState(entry?.title ?? "");
   const [body, setBody] = useState(entry?.body ?? "");
@@ -85,8 +97,9 @@ export default function JournalEntryModal({
         });
       }
       onSaved();
-    } catch {
-      addToast("error", entry ? t("trips:toasts.updateError") : t("trips:toasts.createError"));
+    } catch (err: unknown) {
+      const fallback = entry ? "trips:toasts.updateError" : "trips:toasts.createError";
+      addToast("error", saveErrorMessage(err, t, fallback));
     } finally {
       setSaving(false);
     }

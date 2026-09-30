@@ -1,4 +1,13 @@
 import { z } from "./zod";
+import {
+  TIME_FLAG_ENTITY_TYPES,
+  TIME_FLAG_KINDS,
+  timeFlagEntityTypeSchema,
+  timeMigrationReasonSchema,
+  timeMigrationTableSchema,
+  timeParentTypeSchema,
+  type TimeFlagEntityType,
+} from "./timeMigration";
 
 /**
  * The vocabulary of the data-quality inbox.
@@ -28,7 +37,22 @@ import { z } from "./zod";
  * the finding. The records that proved it travel in `details.records`, so §3.4's
  * "one click away and editable" still holds.
  */
-export const DATA_QUALITY_ENTITY_TYPES = ["lodging", "place", "country"] as const;
+export { TIME_FLAG_ENTITY_TYPES, timeFlagEntityTypeSchema, type TimeFlagEntityType };
+
+export const DATA_QUALITY_ENTITY_TYPES = [
+  "lodging",
+  "place",
+  "country",
+  /**
+   * The account's home (residence + home airports). Not a row either: one
+   * question per account, `entityId` the constant `HOME_FLAG_ENTITY_ID`.
+   */
+  "home",
+  ...TIME_FLAG_ENTITY_TYPES,
+] as const;
+
+/** The one `entityId` a `home` flag carries — one question per account, not per period. */
+export const HOME_FLAG_ENTITY_ID = "residence";
 export const dataQualityEntityTypeSchema = z.enum(DATA_QUALITY_ENTITY_TYPES);
 export type DataQualityEntityType = (typeof DATA_QUALITY_ENTITY_TYPES)[number];
 
@@ -53,6 +77,18 @@ export const DATA_QUALITY_FLAG_KINDS = [
   "stay_dates_reversed",
   /** The stored coordinates fall inside a different country than the one claimed. */
   "coordinates_outside_country",
+  /** Time model: a stored time has no zone to be read in (no position, unresolved port). */
+  "time_zone_unresolved",
+  /** Time model: the day is kept, the time of day could not be established. */
+  "time_precision_unknown",
+  /** Time model: which calendar day a stored value names is not certain. */
+  "time_day_ambiguous",
+  /**
+   * Home: a period migrated from the old one-airport shape — its residence is
+   * the airport, unconfirmed ("Wohnort bestätigen und weitere Heimatflughäfen
+   * wählen?"). Statistics measure from that airport until the user answers.
+   */
+  "home_residence_unconfirmed",
 ] as const;
 export const dataQualityFlagKindSchema = z.enum(DATA_QUALITY_FLAG_KINDS);
 export type DataQualityFlagKind = (typeof DATA_QUALITY_FLAG_KINDS)[number];
@@ -119,6 +155,28 @@ export const dataQualityFlagSubjectSchema = z.discriminatedUnion("entityType", [
     /** ISO 3166-1 alpha-2. The identity AND the whole payload — a country has no name here. */
     countryCode: z.string(),
   }),
+  /** The account's home. No label: the web names it ("Dein Zuhause") in the reader's language. */
+  z.object({
+    entityType: z.literal("home"),
+    entityId: z.string(),
+  }),
+  /**
+   * A row a time-model question is about. `label` is the row's own text (a
+   * place's name, a stop's title, "FRA → JFK"); `parentId` is the record the
+   * row is edited on — the place of a visit, the cruise of a port call, the
+   * trip (or tour) of a stop or journal entry, the lodging of a stay — and
+   * null where the row is its own page (a flight, a cruise, a trip, a profile).
+   */
+  z.object({
+    entityType: timeFlagEntityTypeSchema,
+    entityId: z.string(),
+    label: z.string(),
+    parentId: z.string().nullable(),
+    /** What `parentId` names (`place`, `cruise`, `trip`, `tour`, `lodging`). */
+    parentType: timeParentTypeSchema.nullable(),
+    /** The trip the row belongs to; for a tour's stop, the tour's trip. */
+    tripId: z.string().nullable(),
+  }),
 ]);
 export type DataQualityFlagSubject = z.infer<typeof dataQualityFlagSubjectSchema>;
 
@@ -172,6 +230,34 @@ export const stayDatesReversedDetailsSchema = z.object({
 });
 
 /**
+ * A time-model question: which table, and every value of the row the
+ * backfill left open, with the value it kept. The legacy value travels too,
+ * so the user sees what was stored rather than a verdict about it.
+ */
+export const timeQuestionDetailsSchema = z.object({
+  table: timeMigrationTableSchema,
+  fields: z.array(
+    z.object({
+      column: z.string(),
+      reason: timeMigrationReasonSchema,
+      legacyValue: z.string().nullable(),
+      keptValue: z.string().nullable(),
+      zone: z.string().nullable(),
+    })
+  ),
+});
+export type TimeQuestionDetails = z.infer<typeof timeQuestionDetailsSchema>;
+
+/**
+ * The home airports of the unconfirmed periods, oldest period first, each
+ * once — what the question names ("bisher nur MUC, CGN").
+ */
+export const homeResidenceUnconfirmedDetailsSchema = z.object({
+  airports: z.array(z.string()),
+  periods: z.number().int().min(1),
+});
+
+/**
  * The `kind` → `details` pairing, stated once and enforced everywhere.
  *
  * This used to be a bare `z.union` of the three detail shapes, which validated
@@ -207,6 +293,22 @@ const coordinatesOutsideCountryPayload = z.object({
   kind: z.literal("coordinates_outside_country"),
   details: coordinatesOutsideCountryDetailsSchema,
 });
+const timeZoneUnresolvedPayload = z.object({
+  kind: z.literal("time_zone_unresolved"),
+  details: timeQuestionDetailsSchema,
+});
+const timePrecisionUnknownPayload = z.object({
+  kind: z.literal("time_precision_unknown"),
+  details: timeQuestionDetailsSchema,
+});
+const timeDayAmbiguousPayload = z.object({
+  kind: z.literal("time_day_ambiguous"),
+  details: timeQuestionDetailsSchema,
+});
+const homeResidenceUnconfirmedPayload = z.object({
+  kind: z.literal("home_residence_unconfirmed"),
+  details: homeResidenceUnconfirmedDetailsSchema,
+});
 
 /**
  * A `kind` with the `details` that kind implies, and nothing else.
@@ -220,6 +322,10 @@ export const dataQualityFlagPayloadSchema = z.discriminatedUnion("kind", [
   undatedCountryEvidencePayload,
   stayDatesReversedPayload,
   coordinatesOutsideCountryPayload,
+  timeZoneUnresolvedPayload,
+  timePrecisionUnknownPayload,
+  timeDayAmbiguousPayload,
+  homeResidenceUnconfirmedPayload,
 ]);
 export type DataQualityFlagPayload = z.infer<typeof dataQualityFlagPayloadSchema>;
 
@@ -242,6 +348,13 @@ const _kindsCoverEveryVariant: MutuallyAssignable<
   DataQualityFlagPayload["kind"]
 > = true;
 void _kindsCoverEveryVariant;
+
+/** The time kinds are the same list in both vocabularies. */
+const _timeKindsAgree: MutuallyAssignable<
+  (typeof TIME_FLAG_KINDS)[number],
+  Extract<DataQualityFlagKind, `time_${string}`>
+> = true;
+void _timeKindsAgree;
 
 /**
  * Everything a flag carries that does not depend on its `kind`.
@@ -267,6 +380,10 @@ export const dataQualityFlagSchema = z.discriminatedUnion("kind", [
   undatedCountryEvidencePayload.merge(dataQualityFlagBase),
   stayDatesReversedPayload.merge(dataQualityFlagBase),
   coordinatesOutsideCountryPayload.merge(dataQualityFlagBase),
+  timeZoneUnresolvedPayload.merge(dataQualityFlagBase),
+  timePrecisionUnknownPayload.merge(dataQualityFlagBase),
+  timeDayAmbiguousPayload.merge(dataQualityFlagBase),
+  homeResidenceUnconfirmedPayload.merge(dataQualityFlagBase),
 ]);
 export type DataQualityFlagView = z.infer<typeof dataQualityFlagSchema>;
 

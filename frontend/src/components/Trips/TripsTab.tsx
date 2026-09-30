@@ -119,9 +119,10 @@ export default function TripsTab({
       .sort((a, b) => {
         // Newest first; the grid groups by start year, so status no longer
         // decides the order — a planned trip sits in its own year.
-        const at = tripSpan(a).start?.getTime() ?? Number.NEGATIVE_INFINITY;
-        const bt = tripSpan(b).start?.getTime() ?? Number.NEGATIVE_INFINITY;
-        return bt - at;
+        // Days at the places (`YYYY-MM-DD`) sort as strings; undated last.
+        const at = tripSpan(a).start ?? "";
+        const bt = tripSpan(b).start ?? "";
+        return at === bt ? 0 : at < bt ? 1 : -1;
       });
   }, [trips, statusFilter, categoryFilter, search]);
 
@@ -141,7 +142,7 @@ export default function TripsTab({
     const byYear = new Map<string, Trip[]>();
     for (const trip of filtered) {
       const start = tripSpan(trip).start;
-      const key = start ? String(start.getUTCFullYear()) : "";
+      const key = start ? start.slice(0, 4) : "";
       byYear.set(key, [...(byYear.get(key) ?? []), trip]);
     }
     return [...byYear.entries()];

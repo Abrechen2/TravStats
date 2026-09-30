@@ -3,8 +3,10 @@ import {
   countableRailWhere,
   railCountries,
   railYear,
+  stationDayKey,
   type DatedRail,
 } from "../../shared/railCounting";
+import { railRideFacts } from "../../utils/railAchievements";
 
 /**
  * The rail statistics (spec 2026-09-25-rail-domain, phase 2b), computed from
@@ -41,6 +43,8 @@ export interface RailStatsRow extends DatedRail {
   distanceKm: number | null;
   distanceSource: string | null;
   delayMinutes: number | null;
+  /** Optional only so hand-built rows in tests need not name it; the query selects it. */
+  travelClass?: string | null;
 }
 
 export interface Ranked {
@@ -56,6 +60,8 @@ export interface RailStats {
     straightLineKm: number;
     /** route — along the traced Transitous line */
     tracedKm: number;
+    /** roadtrip — along the line a converted roadtrip leg brought */
+    roadtripKm: number;
     /** user — typed from the ticket */
     ticketKm: number;
     /** Rides with no distance at all — out of every km figure. */
@@ -77,8 +83,23 @@ export interface RailStats {
     recordedJourneys: number;
     /** One count per bucket: <= 0 (on time), <= 5, <= 15, <= 30, <= 60, > 60. */
     buckets: Array<{ upToMinutes: number | null; count: number }>;
+    /**
+     * Mean delay over `recordedJourneys`, one decimal, early arrivals counted
+     * as the negative figures they are — the rule flight punctuality uses
+     * (`services/punctualityStats.ts`). NULL when no ride carries a delay: a
+     * 0 there would say "always on time" about rides nobody timed, which is
+     * the confusion the bucket split already refuses.
+     */
+    averageMinutes: number | null;
   };
   byYear: Array<{ year: number; journeys: number; km: number }>;
+  /**
+   * Rides of a kind, by the rule the rail badges count them with
+   * (`shared/railRideKinds.ts` via `railRideFacts`), and the number of
+   * distinct operators (spelling folded) — so this tab and the badges never
+   * disagree about how many night trains there were.
+   */
+  rideKinds: { nightTrains: number; highSpeed: number; crossBorder: number; operators: number };
 }
 
 function rank(values: Array<string | null>): Ranked[] {
@@ -121,7 +142,23 @@ function delayBuckets(rows: readonly RailStatsRow[]): RailStats["delays"] {
     }).length;
     return { upToMinutes: upTo, count };
   });
-  return { recordedJourneys: recorded.length, buckets };
+  const averageMinutes =
+    recorded.length === 0
+      ? null
+      : Math.round(
+          (recorded.reduce((sum, r) => sum + (r.delayMinutes as number), 0) / recorded.length) * 10
+        ) / 10;
+  return { recordedJourneys: recorded.length, buckets, averageMinutes };
+}
+
+function rideKinds(rows: readonly RailStatsRow[]): RailStats["rideKinds"] {
+  const facts = rows.map((r) => railRideFacts({ ...r, travelClass: r.travelClass ?? null }));
+  return {
+    nightTrains: facts.filter((f) => f.isNightTrain).length,
+    highSpeed: facts.filter((f) => f.isHighSpeed).length,
+    crossBorder: facts.filter((f) => f.isCrossBorder).length,
+    operators: new Set(facts.flatMap((f) => (f.operator ? [f.operator] : []))).size,
+  };
 }
 
 export function computeRailStats(rows: readonly RailStatsRow[]): RailStats {
@@ -151,6 +188,7 @@ export function computeRailStats(rows: readonly RailStatsRow[]): RailStats {
       totalKm: measured.reduce((sum, r) => sum + (r.distanceKm as number), 0),
       straightLineKm: sumKm("great_circle"),
       tracedKm: sumKm("route"),
+      roadtripKm: sumKm("roadtrip"),
       ticketKm: sumKm("user"),
       unmeasuredJourneys: rows.length - measured.length,
     },
@@ -179,6 +217,7 @@ export function computeRailStats(rows: readonly RailStatsRow[]): RailStats {
     byYear: [...years.entries()]
       .map(([year, v]) => ({ year, ...v }))
       .sort((a, b) => a.year - b.year),
+    rideKinds: rideKinds(rows),
   };
 }
 
@@ -200,6 +239,7 @@ const STATS_SELECT = {
   distanceKm: true,
   distanceSource: true,
   delayMinutes: true,
+  travelClass: true,
 } as const;
 
 /**
@@ -208,11 +248,24 @@ const STATS_SELECT = {
  * derived per row and cannot be pushed into the query; the set is one user's
  * train rides, and the select leaves out the frozen line.
  */
-export async function loadRailStats(userId: string, year: number | null): Promise<RailStats> {
+export async function loadRailStats(
+  userId: string,
+  year: number | null,
+  /** "MM-DD": count that year only up to this day, on the departure station's calendar. */
+  until: string | null = null
+): Promise<RailStats> {
   const rows = await prisma.railJourney.findMany({
     where: { userId, ...countableRailWhere() },
     select: STATS_SELECT,
     orderBy: [{ departureTime: "asc" }, { id: "asc" }],
   });
-  return computeRailStats(year === null ? rows : rows.filter((r) => railYear(r) === year));
+  if (year === null) return computeRailStats(rows);
+  const lastDay = until === null ? null : `${year}-${until}`;
+  return computeRailStats(
+    rows.filter(
+      (r) =>
+        railYear(r) === year &&
+        (lastDay === null || stationDayKey(r.departureTime, r.depTimezone) <= lastDay)
+    )
+  );
 }

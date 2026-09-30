@@ -127,7 +127,7 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
     // Only a guess, and only when the user has not chosen: the picker shows
     // it and they can change it. A wrong guess is cheap because nothing but
     // an icon depends on the category.
-    setCategory((prev) => (prev === "other" ? categoryFromOsmValue(sel.name) : prev));
+    setCategory((prev) => (prev === "other" ? categoryFromOsmValue(sel.osmValue) : prev));
   }, []);
 
   const canSave = name.trim() !== "" && position !== null && !saving;

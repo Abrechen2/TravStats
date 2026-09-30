@@ -173,7 +173,7 @@ export default function LodgingStatsSection({
       {show("kpis") && (
         <LodgingStatStrip
           stats={stats}
-          variant="inline"
+          variant="cards"
           omit={comparison ? ["stays", "nights", "hotels"] : []}
           evidenceScope={evidenceScope}
         />

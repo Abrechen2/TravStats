@@ -1,5 +1,4 @@
-import { formatInTimeZone } from "date-fns-tz";
-
+import { formatWallClockIn } from "../../../shared/zonedWallClock";
 import { calculateDistance } from "../../../utils/geo";
 
 /**
@@ -51,8 +50,10 @@ export function labelMatches(
  * for 2024-06-01 at Frankfurt Hbf came back with trains of 2026-08-25). An
  * answer for another day is no answer.
  */
-export function isOnDay(instant: Date, date: string, timezone: string | null): boolean {
-  return formatInTimeZone(instant, timezone ?? "UTC", "yyyy-MM-dd") === date;
+export function isOnDay(instant: Date, date: string, timezone: string): boolean {
+  const wall = formatWallClockIn(instant, timezone);
+  if (wall === null) throw new RangeError(`Invalid time zone: ${timezone}`);
+  return wall.slice(0, 10) === date;
 }
 
 /** Index of the stop nearest a point, and how far it is. */

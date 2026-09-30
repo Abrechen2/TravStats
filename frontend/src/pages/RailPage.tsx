@@ -2,9 +2,14 @@ import { useCallback, useEffect, useState } from "react";
 import type { JSX } from "react";
 import AppShell from "../components/ui/AppShell";
 import LogbookTabs from "../components/table/LogbookTabs";
+import ListSummaryStrip from "../components/table/ListSummaryStrip";
+import { railSummaryFigures } from "../lib/rail/railSummaryFigures";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { RailFormModal } from "../components/rail/RailFormModal";
+import DomainImportPanel from "../components/import/DomainImportPanel";
+import { useRailImportAdapter } from "../components/import/adapters/railAdapter";
 import { RailJourneyRow } from "../components/rail/RailJourneyRow";
+import { LoyaltyFilterNotice, useLoyaltyListFilter } from "../components/Loyalty/LoyaltyListFilter";
 import { useTranslation } from "../hooks/useTranslation";
 import { railApi } from "../lib/api/rail";
 import { logger } from "../lib/logger";
@@ -33,6 +38,13 @@ export default function RailPage(): JSX.Element {
   const [editing, setEditing] = useState<Editing>(null);
   const [toDelete, setToDelete] = useState<RailJourney | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const railAdapter = useRailImportAdapter();
+  // A rail card's figure opens this list on the rides it counted
+  // (`?membership=…&year=…`); there is no year filter here to seed, so the
+  // notice names the year.
+  const loyaltyFilter = useLoyaltyListFilter();
+  const { membershipId, linkedYear } = loyaltyFilter;
 
   useEffect(() => {
     const handle = setTimeout(() => setQuery(search.trim()), SEARCH_DEBOUNCE_MS);
@@ -43,7 +55,13 @@ export default function RailPage(): JSX.Element {
     async (offset: number): Promise<void> => {
       setLoading(true);
       try {
-        const page = await railApi.list({ q: query || undefined, limit: PAGE_SIZE, offset });
+        const page = await railApi.list({
+          q: query || undefined,
+          membershipId: membershipId ?? undefined,
+          year: membershipId !== null && linkedYear !== null ? linkedYear : undefined,
+          limit: PAGE_SIZE,
+          offset,
+        });
         setJourneys((prev) => (offset === 0 ? page.journeys : [...prev, ...page.journeys]));
         setTotal(page.total);
         setLoadFailed(false);
@@ -55,7 +73,7 @@ export default function RailPage(): JSX.Element {
         setLoading(false);
       }
     },
-    [query]
+    [query, membershipId, linkedYear]
   );
 
   useEffect(() => {
@@ -92,7 +110,7 @@ export default function RailPage(): JSX.Element {
           <h1 className="t-screen-title">{t("rail:title")}</h1>
           <button
             type="button"
-            onClick={(): void => setEditing({ journey: null })}
+            onClick={(): void => setAdding(true)}
             className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base)"
           >
             {t("rail:add")}
@@ -101,6 +119,15 @@ export default function RailPage(): JSX.Element {
         <p className="t-caption mb-4">
           {t("rail:subtitle")} {t("rail:betaNote")}
         </p>
+        {membershipId !== null && (
+          <div className="mb-3">
+            <LoyaltyFilterNotice
+              membershipId={membershipId}
+              year={linkedYear}
+              onClear={loyaltyFilter.clear}
+            />
+          </div>
+        )}
         <input
           type="search"
           aria-label={t("rail:search")}
@@ -118,7 +145,21 @@ export default function RailPage(): JSX.Element {
           <p className="py-6 text-(--text-muted)">{t("rail:empty")}</p>
         ) : (
           <>
-            <p className="t-caption">{t("rail:count", { count: total })}</p>
+            {/* The same strip the flight and cruise lists carry, so the
+                logbook reads alike across areas (owner, 2026-09-28). It
+                replaces the bare "N journeys" line, whose number it already
+                carries as its first figure. */}
+            <ListSummaryStrip
+              figures={railSummaryFigures(journeys, {
+                journeys: t("rail:summary.journeys"),
+                operators: t("rail:summary.operators"),
+                stations: t("rail:summary.stations"),
+                withoutOperator: (count: number) => t("rail:summary.withoutOperator", { count }),
+              })}
+              filtered={search.trim().length > 0}
+              filteredLabel={t("common:filters.filtered")}
+              unknown={loading}
+            />
             <ul>
               {journeys.map((journey) => (
                 <RailJourneyRow
@@ -143,6 +184,13 @@ export default function RailPage(): JSX.Element {
         )}
       </div>
 
+      {/* New rides start at the chooser: a ticket to read, or typing it in. */}
+      <DomainImportPanel
+        open={adding}
+        onClose={(): void => setAdding(false)}
+        onItemsCreated={(): Promise<void> => load(0)}
+        adapter={railAdapter}
+      />
       {editing && (
         <RailFormModal
           journey={editing.journey}

@@ -1,16 +1,19 @@
 /**
  * Posteingang — the one place the user answers questions about their data.
  *
- * Three sections, three backends, on purpose (design §3.5, owner 2026-09-02):
+ * Four sections, four backends, on purpose (design §3.5, owner 2026-09-02):
  *
  * - **Zu prüfen** — `DataQualityFlag` rows: a record whose own two sources
  *   disagree, raised as a QUESTION. Nothing has been changed and nothing is
  *   marked correct.
  * - **Flug-Updates** — `PendingFlightUpdate` rows: a provider's proposed field
  *   values for one flight, with a diff and an apply/reject decision.
+ * - **Reise-Vorschläge** — the cross-domain trip engine's proposals (owner,
+ *   2026-09-26): derived on the server from every entry, never stored; only
+ *   the user's answer is. Lives in `components/inbox/TripSuggestionsTab`.
  * - **Foto-Reisen** — `PhotoJourney` rows: a burst of photographs nothing
- *   recorded explains. The third tab, and the only one that can be absent
- *   (forgejo#94, point 1); it lives in `components/inbox/`.
+ *   recorded explains. The only tab that can be absent (forgejo#94, point 1);
+ *   it lives in `components/inbox/`.
  *
  * `PendingFlightUpdate` carries a required `flightId`, `apiSource` and
  * `expiresAt` — it is flight-shaped by construction, and 858 lines of service
@@ -37,6 +40,7 @@ import PendingUpdateCard from "../components/PendingUpdateCard";
 import StatisticsImpactPreview from "../components/StatisticsImpactPreview";
 import DataQualityFlagsSection from "../components/DataQuality/DataQualityFlagsSection";
 import PhotoJourneysTab from "../components/inbox/PhotoJourneysTab";
+import TripSuggestionsTab from "../components/inbox/TripSuggestionsTab";
 import PasswordResetRequestsSection from "../components/inbox/PasswordResetRequestsSection";
 import UnfiledDocumentsSection from "../components/inbox/UnfiledDocumentsSection";
 import { usePhotoJourneysVisible } from "../components/inbox/usePhotoJourneysVisible";
@@ -91,12 +95,12 @@ interface PendingUpdate {
 }
 
 /**
- * Three tabs since forgejo#94: the third is the photo scan's findings, and it
- * is the only one that can be absent — see `usePhotoJourneysVisible`. A `?tab=`
+ * Four tabs since the trip engine (2026-09-26). The photo scan's findings are
+ * the only one that can be absent — see `usePhotoJourneysVisible`. A `?tab=`
  * naming it while it is hidden falls back to `review` rather than opening a tab
  * that is not in the list.
  */
-type InboxTab = "review" | "updates" | "photos";
+type InboxTab = "review" | "trips" | "updates" | "photos";
 
 interface Statistics {
   totalUpdates: number;
@@ -127,13 +131,17 @@ export default function PendingUpdatesPage(): JSX.Element {
   const tab: InboxTab =
     requestedTab === "updates"
       ? "updates"
-      : requestedTab === "photos" && photoJourneysVisible
-        ? "photos"
-        : "review";
+      : requestedTab === "trips"
+        ? "trips"
+        : requestedTab === "photos" && photoJourneysVisible
+          ? "photos"
+          : "review";
   const [openQuestions, setOpenQuestions] = useState<number | null>(null);
   const reportOpen = useCallback((n: number) => setOpenQuestions(n), []);
   const [pendingJourneys, setPendingJourneys] = useState<number | null>(null);
   const reportJourneys = useCallback((n: number) => setPendingJourneys(n), []);
+  const [tripSuggestions, setTripSuggestions] = useState<number | null>(null);
+  const reportTripSuggestions = useCallback((n: number) => setTripSuggestions(n), []);
 
   useEffect(() => {
     loadUpdates();
@@ -225,6 +233,13 @@ export default function PendingUpdatesPage(): JSX.Element {
 
   const tabs: { key: InboxTab; label: string; count: number | null }[] = [
     { key: "review", label: t("dataQuality:inbox.review.title"), count: openQuestions },
+    // The trip engine's proposals (owner, 2026-09-26). Second: answering them
+    // shapes the logbook itself, and nothing else will.
+    {
+      key: "trips",
+      label: t("dataQuality:inbox.tripSuggestions.title"),
+      count: tripSuggestions,
+    },
     {
       key: "updates",
       label: t("dataQuality:inbox.flightUpdates.title"),
@@ -306,6 +321,11 @@ export default function PendingUpdatesPage(): JSX.Element {
               less urgent than somebody unable to log in. */}
           <UnfiledDocumentsSection />
           <DataQualityFlagsSection onOpenCount={reportOpen} />
+        </div>
+
+        {/* Mounted like the review section, so the label carries its count. */}
+        <div hidden={tab !== "trips"}>
+          <TripSuggestionsTab onCount={reportTripSuggestions} />
         </div>
 
         <div hidden={tab !== "updates"}>

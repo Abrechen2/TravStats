@@ -1,14 +1,7 @@
 import { z } from "./zod";
 import { PLACE_CATEGORIES } from "../shared/placeCategories";
 import { partialForUpdate } from "./partialUpdate";
-
-// Accept partial datetimes and coerce to full ISO 8601, mirroring
-// schemas/cruise.ts and schemas/lodging.ts.
-const isoDateTime = z.preprocess((v) => {
-  if (typeof v !== "string" || v === "") return v;
-  const d = new Date(v);
-  return Number.isNaN(d.getTime()) ? v : d.toISOString();
-}, z.string().datetime());
+import { timeFieldSchema } from "../shared/time/timeInput";
 
 /**
  * `.nullable()` on every field the editors can explicitly CLEAR — an emitted
@@ -71,8 +64,13 @@ const ratingField = z.number().int().min(1).max(5).nullable().optional();
 
 export const createVisitSchema = z.object({
   tripId: z.string().uuid().nullable().optional(),
-  /** Nullable on purpose: a visit you cannot date is still a visit. */
-  visitedAt: isoDateTime.nullable().optional(),
+  /**
+   * Nullable on purpose: a visit you cannot date is still a visit.
+   * `{local}` (the place's wall clock; zone from the place), `{local, zone}`,
+   * `YYYY-MM-DD` for a visit known only to the day, or — from a token — an
+   * offset-bearing instant (ADR 0002 D3). An offset-less string is refused.
+   */
+  visitedAt: timeFieldSchema({ allowDate: true, impliedPlace: true }).nullable().optional(),
   orderIdx: z.number().int().min(0).max(10000).optional(),
   notes: notesField,
   rating: ratingField,

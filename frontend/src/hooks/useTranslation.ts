@@ -43,7 +43,7 @@ export function useTranslation(namespace?: string | string[]): {
     (key: string, options?: Record<string, unknown>) => {
       return translationRef.current.t(key, options);
     },
-    // eslint-disable-next-line react-hooks/exhaustive-deps -- `language` is intentional (see above)
+    // `language` is intentional (see above)
     [language]
   );
 

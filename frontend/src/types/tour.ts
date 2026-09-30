@@ -81,6 +81,10 @@ export interface TourRoute {
   anchorStopId: string | null;
   /** Set on rows the 2.7 migration classified by rule, until confirmed or switched. */
   kindAssignedAutomatically: boolean;
+  /** Tour only: the local day it happened, "YYYY-MM-DD" (D2). */
+  date?: string | null;
+  /** Tour only: when on that day it started, local "HH:MM". */
+  startTime?: string | null;
 }
 
 export interface TourStop {
@@ -92,6 +96,10 @@ export interface TourStop {
   /** Returned by every read and write of a section's stops; optional so a
    *  stop built locally need not invent one. */
   notes?: string | null;
+  /** Null for a point the tour owns; set for a trip timeline stop it draws on. */
+  tripId?: string | null;
+  /** A route correction: the route bends through it; not a stop (tester 2026-09-26). */
+  viaPoint?: boolean;
 }
 
 export interface TourLeg {
@@ -106,6 +114,38 @@ export interface TourLeg {
   drivingMinutes: number | null;
   tollCost: number | null;
   currency: string | null;
+}
+
+/**
+ * Why a routing attempt left a leg a straight line — the server's
+ * `ROUTE_FALLBACK_REASONS` (`backend/src/services/tour/routing/types.ts`).
+ */
+export const ROUTE_FALLBACK_REASONS = [
+  "no_provider",
+  "unroutable_mode",
+  "provider_error",
+  "no_route",
+  "point_not_near_road",
+  "rate_limited",
+  "auth",
+  "untrustworthy",
+] as const;
+export type RouteFallbackReason = (typeof ROUTE_FALLBACK_REASONS)[number];
+
+/** A single-leg routing answer: the leg as stored, and why it was not routed (null: it was). */
+export interface RouteLegResult {
+  leg: TourLeg;
+  fallbackReason: RouteFallbackReason | null;
+}
+
+/** A whole-section routing answer, fallbacks counted apart from real routes. */
+export interface RouteAllResult {
+  route: TourRoute;
+  legs: TourLeg[];
+  routedCount: number;
+  fallbackCount: number;
+  fallbackReason: RouteFallbackReason | null;
+  skippedCount: number;
 }
 
 /**

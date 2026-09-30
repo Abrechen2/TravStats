@@ -35,7 +35,7 @@ router.get(
   async (req: AuthRequest, res: Response, next: NextFunction) => {
     try {
       const { flightNumber } = req.params;
-      const { date } = req.query;
+      const { date, tz } = req.query;
 
       if (!flightNumber) {
         return res.status(400).json({
@@ -62,11 +62,29 @@ router.get(
       // wrapper also runs a date-mismatch safety net for both past and future
       // requests so providers returning "today" for non-today queries don't
       // mislead the user.
-      const { flights, unavailableReason } = await lookupFlightWithHistorical(
+      // `tz` is the asker's zone: it decides what "today" is while the
+      // departure airport is still unknown. An unusable value is ignored.
+      const { flights, unavailableReason, providerFailures } = await lookupFlightWithHistorical(
         flightNumber,
         searchDate,
-        req.userId
+        req.userId,
+        undefined,
+        { clientTimezone: typeof tz === "string" ? tz : undefined }
       );
+
+      // A provider that failed (refused key, spent quota, timeout) did not say
+      // "no such flight". Reported as "No flights found" it sent the user to
+      // re-check a number that was right while the key was the problem.
+      if (unavailableReason === "provider_failed") {
+        return res.status(200).json({
+          success: false,
+          count: 0,
+          error: "LOOKUP_PROVIDER_FAILED",
+          providerFailures: providerFailures ?? [],
+          message:
+            "A flight-data provider could not answer (see providerFailures), so the absence of a result is not a finding.",
+        });
+      }
 
       // Distinct from 'no_provider' below: there is no provider AT ALL, so the
       // action is "add a key", not "this date needs a paid tier". Reporting

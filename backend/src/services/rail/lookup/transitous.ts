@@ -1,11 +1,11 @@
-import { fromZonedTime } from "date-fns-tz";
+import { startOfDayAt } from "../../../shared/time/legacyValues";
 import { z } from "zod";
 
 import logger from "../../../utils/logger";
 import { decodePolyline, type LonLat } from "../railGeometryMath";
 import { fetchRailJson } from "./railHttp";
 import { isOnDay, labelMatches, nearestStop } from "./trainNumber";
-import type { ProviderResult, ProviderStop, RailLookupQuery } from "./types";
+import type { ProviderResult, ProviderStop, RailDeadline, RailLookupQuery } from "./types";
 
 /**
  * Transitous (MOTIS, https://transitous.org) — the first provider of the
@@ -89,25 +89,33 @@ function stopOf(p: Place): ProviderStop {
   };
 }
 
-async function fetchTrip(tripId: string): Promise<TripResponse | "unavailable"> {
+type Miss = "unavailable" | "timedOut";
+const missOf = (reason: "failed" | "outOfTime"): Miss =>
+  reason === "outOfTime" ? "timedOut" : "unavailable";
+
+async function fetchTrip(
+  tripId: string,
+  deadline: RailDeadline | null
+): Promise<TripResponse | Miss> {
   const url = `${TRANSITOUS_BASE_URL}/api/v6/trip?tripId=${encodeURIComponent(tripId)}`;
-  const res = await fetchRailJson("transitous", url, tripResponse);
-  return res.ok && res.data.legs.length > 0 ? res.data : "unavailable";
+  const res = await fetchRailJson("transitous", url, tripResponse, deadline);
+  if (!res.ok) return missOf(res.reason);
+  return res.data.legs.length > 0 ? res.data : "unavailable";
 }
 
 /** The departure of the asked-for train at the boarding station, if the day has one. */
 async function findDeparture(
   query: RailLookupQuery
-): Promise<{ tripId: string } | "noMatch" | "unavailable"> {
-  const dayStart = fromZonedTime(`${query.date}T00:00:00`, query.timezone ?? "UTC");
+): Promise<{ tripId: string } | "noMatch" | Miss> {
+  const dayStart = startOfDayAt(query.date, query.timezone);
   for (let w = 0; w < WINDOWS_PER_DAY; w++) {
     const time = new Date(dayStart.getTime() + w * WINDOW_S * 1000).toISOString();
     const url =
       `${TRANSITOUS_BASE_URL}/api/v6/stoptimes?center=${query.from.lat},${query.from.lon}` +
       `&radius=${STATION_RADIUS_M}&time=${encodeURIComponent(time)}&window=${WINDOW_S}&n=1` +
       `&mode=${RAIL_MODES}&realtimeMode=OFF&withAlerts=false`;
-    const res = await fetchRailJson("transitous", url, stopTimesResponse);
-    if (!res.ok) return "unavailable";
+    const res = await fetchRailJson("transitous", url, stopTimesResponse, query.deadline);
+    if (!res.ok) return missOf(res.reason);
     const hit = res.data.stopTimes.find((st) => {
       const departs = toDate(st.place.scheduledDeparture);
       return (
@@ -127,9 +135,9 @@ async function findDeparture(
 
 export async function lookupTransitous(query: RailLookupQuery): Promise<ProviderResult> {
   const departure = await findDeparture(query);
-  if (departure === "noMatch" || departure === "unavailable") return { outcome: departure };
-  const trip = await fetchTrip(departure.tripId);
-  if (trip === "unavailable") return { outcome: "unavailable" };
+  if (typeof departure === "string") return { outcome: departure };
+  const trip = await fetchTrip(departure.tripId, query.deadline);
+  if (typeof trip === "string") return { outcome: trip };
 
   const stops: ProviderStop[] = [];
   for (const leg of trip.legs) {
@@ -160,19 +168,20 @@ export async function lookupTransitous(query: RailLookupQuery): Promise<Provider
  * right after looking it up costs no second request.
  */
 export async function fetchTransitousLine(tripId: string): Promise<LonLat[] | null> {
-  const trip = await fetchTrip(tripId);
-  if (trip === "unavailable") return null;
+  const trip = await fetchTrip(tripId, null);
+  if (typeof trip === "string") return null;
   const line: LonLat[] = [];
   for (const leg of trip.legs) {
     if (!leg.legGeometry?.points) return null;
     try {
       line.push(...decodePolyline(leg.legGeometry.points, leg.legGeometry.precision));
     } catch (error) {
+      // A Transitous trip id names one train on one day — an itinerary.
       logger.warn({
         operation: "rail_transitous_polyline",
-        tripId,
         error: error instanceof Error ? error.message : String(error),
       });
+      logger.debug({ operation: "rail_transitous_polyline", tripId });
       return null;
     }
   }

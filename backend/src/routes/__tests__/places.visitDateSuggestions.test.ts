@@ -186,6 +186,29 @@ describe("GET /api/v1/places/:id/visit-date-suggestions", () => {
     expect(dates).not.toContain("2023-07-02");
   });
 
+  it("reads a recorded visit's day at the place from its instant and zone (ADR 0002)", async () => {
+    // A Companion visit: the legacy column holds the real instant, whose UTC
+    // day is 3 July — but it was 00:30 on 4 July in Rome.
+    const visit = await prisma.placeVisit.create({
+      data: {
+        placeId,
+        userId: user.id,
+        visitedAt: at("2023-07-03T22:30:00.000Z"),
+        visitedAtUtc: at("2023-07-03T22:30:00.000Z"),
+        visitedZone: "Europe/Rome",
+        visitedPrecision: "minute",
+        writtenVia: "companion",
+      },
+    });
+    try {
+      const res = await suggest(placeId);
+      const dates = res.body.data.suggestions.map((s: { date: string }) => s.date);
+      expect(dates).not.toContain("2023-07-04");
+    } finally {
+      await prisma.placeVisit.delete({ where: { id: visit.id } });
+    }
+  });
+
   it("never offers another account's stays, flights or photographs", async () => {
     const res = await suggest(placeId);
     const dates = res.body.data.suggestions.map((s: { date: string }) => s.date);

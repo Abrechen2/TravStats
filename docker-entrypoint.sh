@@ -560,10 +560,19 @@ elif [ "$CLOSED_AIRPORT_BACKFILL" = "false" ]; then
     echo "[entrypoint] Closed-airport backfill disabled (CLOSED_AIRPORT_BACKFILL=false)"
 fi
 
-# Create demo user if requested (useful for testing)
-# Only run if migrations were successful
-if [ "$MIGRATION_SUCCESS" = "true" ] && [ "$CREATE_DEMO_USER" = "true" ]; then
-    echo "[entrypoint] Creating demo user with sample data..."
+# The demo account exists by default (owner, 2026-09-26: "Standard aktiv"):
+# it is seeded on a FIRST install — no account in the database yet, the same
+# rule `init.ts` applies in development — and on every boot with
+# CREATE_DEMO_USER=true. Seeding it also switches the instance's beta features
+# on (see `seedDemo/instance.ts`), so on a first install the administrator who
+# signs up next finds them on as well.
+# Only run if migrations were successful.
+FIRST_INSTALL="false"
+if [ "$MIGRATION_SUCCESS" = "true" ] && node dist/scripts/dbProbe.js no-users 2>/dev/null | grep -q "ok"; then
+    FIRST_INSTALL="true"
+fi
+if [ "$MIGRATION_SUCCESS" = "true" ] && { [ "$CREATE_DEMO_USER" = "true" ] || [ "$FIRST_INSTALL" = "true" ]; }; then
+    echo "[entrypoint] Creating demo user with sample data (first install: $FIRST_INSTALL)..."
     # A non-zero exit here does NOT stop the boot: `set -e` is suspended for
     # the condition of an `if`, and nothing below re-reads the status. That is
     # deliberate and is what makes the seeder's refusal safe — since the

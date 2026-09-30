@@ -7,6 +7,7 @@ jest.mock("../../instanceSettingsService", () => ({
 import http from "http";
 import { AddressInfo } from "net";
 import { searchPlaces } from "../photon";
+import { categoryFromOsmValue } from "../../../shared/placeCategories";
 import { resolveGeocoderUrls } from "../../instanceSettingsService";
 
 const mockResolveGeocoderUrls = resolveGeocoderUrls as jest.Mock;
@@ -73,6 +74,86 @@ describe("Photon place search", () => {
         type: "city",
       },
     ]);
+  });
+
+  // Acceptance 2026-09-26: two "Kolosseum, Rom" hits looked identical in the
+  // picker. The part of town travels with the hit so the row can show it.
+  it("carries the district (else the locality) and the OSM value of a hit", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse(
+        featureCollection([
+          {
+            properties: {
+              name: "Kolosseum",
+              city: "Rom",
+              district: "Monti",
+              osm_value: "archaeological_site",
+            },
+            geometry: { coordinates: [12.4922, 41.8902] },
+          },
+          {
+            properties: {
+              name: "Kolosseum",
+              city: "Rom",
+              locality: "Celio",
+              osm_value: "bus_stop",
+            },
+            geometry: { coordinates: [12.4935, 41.8895] },
+          },
+        ])
+      )
+    );
+    const results = await searchPlaces("Kolosseum");
+    expect(results.map((r) => [r.district, r.type])).toEqual([
+      ["Monti", "archaeological_site"],
+      ["Celio", "bus_stop"],
+    ]);
+  });
+
+  // Acceptance D6 (2026-09-26): the top hit for "Kolosseum" was labelled
+  // "Sonstiges" — its value named no category although its class did — and
+  // "Sagrada Familia" came back twice, identical.
+  it("categorises a hit by its OSM class when its value names no category", async () => {
+    global.fetch = jest.fn().mockResolvedValue(
+      jsonResponse(
+        featureCollection([
+          {
+            properties: { name: "Kolosseum", city: "Rom", osm_key: "historic", osm_value: "yes" },
+            geometry: { coordinates: [12.4922, 41.8902] },
+          },
+          {
+            properties: { name: "Colosseo", city: "Rom", osm_key: "railway", osm_value: "station" },
+            geometry: { coordinates: [12.4906, 41.8909] },
+          },
+        ])
+      )
+    );
+    const results = await searchPlaces("Kolosseum");
+    expect(results.map((r) => r.type)).toEqual(["historic", "station"]);
+    expect(categoryFromOsmValue(results[0].type)).toBe("landmark");
+  });
+
+  it("lists a place once when the geocoder returns it twice", async () => {
+    const sagrada = (lon: number) => ({
+      properties: {
+        name: "Sagrada Família",
+        city: "Barcelona",
+        osm_key: "amenity",
+        osm_value: "place_of_worship",
+      },
+      geometry: { coordinates: [lon, 41.4036] },
+    });
+    const elsewhere = {
+      properties: { name: "Sagrada Família", city: "Girona", osm_value: "place_of_worship" },
+      geometry: { coordinates: [2.8214, 41.9794] },
+    };
+    global.fetch = jest
+      .fn()
+      .mockResolvedValue(
+        jsonResponse(featureCollection([sagrada(2.1744), sagrada(2.1746), elsewhere]))
+      );
+    const results = await searchPlaces("Sagrada Familia");
+    expect(results.map((r) => r.city)).toEqual(["Barcelona", "Girona"]);
   });
 
   it("skips features without a name or without coordinates", async () => {

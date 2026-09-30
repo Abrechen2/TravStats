@@ -1,4 +1,4 @@
-import { render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 import { vi, describe, it, expect, beforeEach } from "vitest";
 import MyTemplates from "../../../components/Parser/MyTemplates";
 import * as api from "../../../lib/api";
@@ -108,19 +108,24 @@ describe("MyTemplates", () => {
     );
   });
 
+  // The question is the page's own dialog since 2026-09-26, not window.confirm.
   it("löscht ein Template nach Bestätigung", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(true);
     render(<MyTemplates />);
     await waitFor(() => screen.getByText("Lufthansa DE"));
     fireEvent.click(screen.getByTestId("delete-t1"));
+    expect(api.parserTemplatesApi.delete).not.toHaveBeenCalled();
+    const dialog = await screen.findByTestId("confirm-modal");
+    fireEvent.click(within(dialog).getByRole("button", { name: "common:buttons.delete" }));
     await waitFor(() => expect(api.parserTemplatesApi.delete).toHaveBeenCalledWith("t1"));
   });
 
-  it("bricht Löschen ab wenn confirm verneint", async () => {
-    vi.spyOn(window, "confirm").mockReturnValue(false);
+  it("bricht Löschen ab wenn die Frage verneint wird", async () => {
     render(<MyTemplates />);
     await waitFor(() => screen.getByText("Lufthansa DE"));
     fireEvent.click(screen.getByTestId("delete-t1"));
+    const dialog = await screen.findByTestId("confirm-modal");
+    fireEvent.click(within(dialog).getByRole("button", { name: "common:buttons.cancel" }));
+    await waitFor(() => expect(screen.queryByTestId("confirm-modal")).toBeNull());
     expect(api.parserTemplatesApi.delete).not.toHaveBeenCalled();
   });
 });

@@ -124,7 +124,7 @@ describe("GET /api/v1/evidence/metric/... — the flight-tab unique family", () 
           flightNumber: "UQ500",
         },
         // SIN → SYD, HISTORICAL: countable, so it carries the equator
-        // crossing, the hemisphere hop, the tropics and a second ocean
+        // crossing, the tropics and a second ocean
         // crossing — and it must stay out of every clock-reading count.
         {
           userId: userAId,
@@ -245,17 +245,20 @@ describe("GET /api/v1/evidence/metric/... — the flight-tab unique family", () 
     }
   });
 
-  it("equatorCrossingCount and hemisphereHopCount are one rule under two names", () => {
+  it("equatorCrossingCount counts north↔south crossings only", () => {
     const equator = answer("equatorCrossingCount");
-    const hemisphere = answer("hemisphereHopCount");
-    // Singapore is north of the equator and Sydney south of it. The two
-    // tiles have shown the same number since they were written — see
-    // `flightPredicates.ts` on why one predicate now serves both.
+    // Singapore is north of the equator and Sydney south of it.
     expect(equator.measure.value).toBe(1);
     expect(titles(equator)).toEqual(["UQ600"]);
-    expect(hemisphere.measure.value).toBe(equator.measure.value);
-    expect(titles(hemisphere)).toEqual(titles(equator));
     assertSumInvariant(equator, Math.round);
+  });
+
+  it("hemisphereHopCount counts east↔west changes, not the equator again", () => {
+    // Owner 2026-09-25. FRA ↔ JFK cross the prime meridian, LAX → NRT the
+    // antimeridian; SIN → SYD crosses the equator but stays east of 0°.
+    const hemisphere = answer("hemisphereHopCount");
+    expect(hemisphere.measure.value).toBe(3);
+    expect(titles(hemisphere)).toEqual(["UQ100", "UQ200", "UQ400"]);
     assertSumInvariant(hemisphere, Math.round);
   });
 

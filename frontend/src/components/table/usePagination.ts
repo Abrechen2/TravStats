@@ -51,7 +51,6 @@ export function usePagination<T>(rows: readonly T[], tableKey: string): Paginati
   // array of the same length and must not bounce the reader back to page 1.
   useEffect(() => {
     setPage(1);
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [rows.length, pageSize]);
 
   const pageCount = pageSize === "all" ? 1 : Math.max(1, Math.ceil(rows.length / pageSize));

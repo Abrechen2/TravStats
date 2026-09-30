@@ -4,10 +4,15 @@
  * (`RailJourney`) and the write body (`schemas/rail.ts`).
  */
 
+import type { RailTimes } from "./times";
+
 export type RailStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
 export type RailTravelClass = "first" | "second" | "sleeper" | "couchette";
-/** great_circle = straight line; user = typed; route = along the traced Transitous line. */
-export type RailDistanceSource = "great_circle" | "user" | "route";
+/**
+ * great_circle = straight line; user = typed; route = along the traced
+ * Transitous line; roadtrip = along the line a converted roadtrip leg brought.
+ */
+export type RailDistanceSource = "great_circle" | "user" | "route" | "roadtrip";
 export type RailLookupProvider = "transitous" | "db-rest";
 
 export const RAIL_TRAVEL_CLASSES: readonly RailTravelClass[] = [
@@ -35,6 +40,13 @@ export interface RailJourney {
   arrStationName: string;
   arrStationCode: string | null;
   arrStationId: number | null;
+  /**
+   * DB station code (Ril 100, "KK") of the catalogue row each station was
+   * picked from; null when unknown or picked from the geocoder — never derived.
+   * Absent on rows that do not carry it (a trip's journey list).
+   */
+  depStationShortCode?: string | null;
+  arrStationShortCode?: string | null;
   arrLat: number;
   arrLon: number;
   arrCountry: string | null;
@@ -46,7 +58,7 @@ export interface RailJourney {
   distanceSource: RailDistanceSource | null;
   /** `[lon, lat]` points frozen at logging time; null = straight line. */
   geometry: [number, number][] | null;
-  geometrySource: "none" | "straight" | "transitous" | "openrailrouting" | "manual";
+  geometrySource: "none" | "straight" | "transitous" | "openrailrouting" | "brouter" | "manual";
   actualDepartureTime: string | null;
   actualArrivalTime: string | null;
   lookupProvider: RailLookupProvider | null;
@@ -64,7 +76,11 @@ export interface RailJourney {
   companions: string[];
   tripId: string | null;
   bookingId: string | null;
+  /** Import key; `roadtrip:<section>:<leg>` marks a ride converted from a roadtrip. */
+  externalRef?: string | null;
   trip?: { id: string; name: string; color: string } | null;
+  /** ADR 0002 phase 4 — read through lib/entityTimes.ts. */
+  times?: RailTimes;
   createdAt: string;
   updatedAt: string;
 }
@@ -86,6 +102,7 @@ export type TripRailJourney = Pick<
   | "arrTimezone"
   | "departureTime"
   | "arrivalTime"
+  | "times"
   | "distanceKm"
   | "distanceSource"
   | "status"
@@ -107,6 +124,7 @@ export interface RailBookingLeg {
   trainCategory: string | null;
   trainNumber: string | null;
   status: RailStatus;
+  times?: RailTimes;
 }
 
 /** A single journey read: the row plus the booking that binds its connection. */
@@ -160,6 +178,8 @@ export interface RailStationHit {
   name: string;
   uic: string | null;
   dbId: string | null;
+  /** DB station code (Ril 100); null when no source names one. */
+  shortCode: string | null;
   lat: number;
   lon: number;
   country: string | null;
@@ -178,8 +198,18 @@ export interface RailLookupStop {
   departureLocal: string | null;
 }
 
+/**
+ * One provider's answer. `timedOut` = asked, but the lookup's 20 s budget ran
+ * out first; `skippedForTime` = not asked, the budget was spent before its turn.
+ */
 export type RailLookupOutcome =
-  "matched" | "noMatch" | "unavailable" | "disabled" | "notApplicable";
+  | "matched"
+  | "noMatch"
+  | "unavailable"
+  | "disabled"
+  | "notApplicable"
+  | "timedOut"
+  | "skippedForTime";
 
 export interface RailLookupAnswer {
   match: {
@@ -193,6 +223,33 @@ export interface RailLookupAnswer {
     hasGeometry: boolean;
   } | null;
   attempts: Array<{ provider: RailLookupProvider; outcome: RailLookupOutcome }>;
+}
+
+/** Why a Transitous match was saved without its (new) traced line. */
+export type RailGeometryFallback =
+  | "providerDisabled"
+  | "providerUnavailable"
+  | "stationOffLine"
+  | "untracedShape"
+  | "railRoutingUnavailable"
+  | "railRoutingNoRoute";
+
+/**
+ * `meta.geometry` of a save: what it did to the frozen line. `kept` = a
+ * re-fetch did not deliver and the stored line stayed; `unchanged` = an edit
+ * that touched neither station nor match.
+ */
+export interface RailGeometryReport {
+  /** `routed` = a line over the tracks from the instance's OpenRailRouting. */
+  outcome: "unchanged" | "traced" | "routed" | "straight" | "kept";
+  geometrySource: RailJourney["geometrySource"];
+  fallback: RailGeometryFallback | null;
+}
+
+/** A saved journey and what the save did to its line. */
+export interface RailSaveResult {
+  journey: RailJourney;
+  geometry: RailGeometryReport | null;
 }
 
 export interface RailLookupProviders {
@@ -218,6 +275,7 @@ export interface RailStats {
     totalKm: number;
     straightLineKm: number;
     tracedKm: number;
+    roadtripKm: number;
     ticketKm: number;
     unmeasuredJourneys: number;
   };
@@ -236,6 +294,89 @@ export interface RailStats {
   delays: {
     recordedJourneys: number;
     buckets: Array<{ upToMinutes: number | null; count: number }>;
+    /** Mean over the recorded rides; null when none carries a delay — never 0. */
+    averageMinutes: number | null;
   };
   byYear: Array<{ year: number; journeys: number; km: number }>;
+  /** Rides of a kind, counted by the rule the rail badges use. */
+  rideKinds: { nightTrains: number; highSpeed: number; crossBorder: number; operators: number };
 }
+
+/** A train the user has ridden, as a ticket prints it ("ICE 578"). */
+export interface RailTrainSuggestion {
+  category: string | null;
+  number: string;
+}
+
+/** `GET /rail/entry-suggestions` — chips for the rail form from the user's own rides. */
+export interface RailEntrySuggestions {
+  trains: RailTrainSuggestion[];
+  operators: string[];
+  travelClass: RailTravelClass | null;
+  coaches: string[];
+  seats: string[];
+}
+
+/** A station as a parsed ticket names it — tied to the catalogue, or not. */
+export interface RailImportStation {
+  /** The catalogue's name when resolved, else the printed one. */
+  name: string;
+  /** The name exactly as the ticket prints it. */
+  printedName: string;
+  stationId: number | null;
+  code: string | null;
+  lat: number | null;
+  lon: number | null;
+  country: string | null;
+  timezone: string | null;
+  /** False: no unambiguous catalogue match — the review asks the user to pick one. */
+  resolved: boolean;
+}
+
+/** One ride out of a parsed ticket, as the review shows it. */
+export interface RailImportLeg {
+  depStationName: string;
+  arrStationName: string;
+  /** `YYYY-MM-DDTHH:mm` on the station's clock, as printed. */
+  departureLocal: string;
+  arrivalLocal: string | null;
+  trainCategory: string | null;
+  trainNumber: string | null;
+  coach: string | null;
+  seat: string | null;
+  direction: "outbound" | "return" | null;
+  departureStation: RailImportStation;
+  arrivalStation: RailImportStation;
+  /** A journey the user already logged with this reference and departure. */
+  duplicateOf: string | null;
+}
+
+export interface RailImportBooking {
+  bookingReference: string | null;
+  travelClass: RailTravelClass | null;
+  tariff: string | null;
+  /** The total the document labels as such. */
+  price: number | null;
+  currency: string | null;
+  operator: string | null;
+  source: string;
+  legs: RailImportLeg[];
+}
+
+/** Why a rail parse found nothing — a stable code, worded by the client. */
+export type RailParseFallbackCode =
+  | "noItinerary"
+  | "llmUnreachable"
+  | "llmFailed"
+  | "llmFoundNothing"
+  | "demoNoLlm"
+  /** An admin has switched the language model off. */
+  | "llmDisabled"
+  /** A provider outside the network, without the admin's consent. */
+  | "llmCloudNotConsented"
+  /** The OpenAI-compatible provider is missing its base URL or model. */
+  | "llmProviderIncomplete"
+  /** The document is clearly another kind of booking (D1) — see `domainMismatch`. */
+  | "otherDomain"
+  /** The model answered with airport codes for stations. */
+  | "looksLikeFlight";

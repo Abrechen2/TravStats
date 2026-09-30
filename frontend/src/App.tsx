@@ -1,4 +1,4 @@
-import { BrowserRouter, Routes, Route, Navigate, useNavigate, useLocation } from "react-router-dom";
+import { BrowserRouter, Routes, Route, Navigate, useLocation } from "react-router-dom";
 import { AnimatePresence, MotionConfig } from "framer-motion";
 import { useEffect, useState, Suspense, lazy } from "react";
 import { useAuthStore } from "./store/authStore";
@@ -11,12 +11,17 @@ import AirportSeedingModal from "./components/AirportSeedingModal";
 import { setupApi } from "./lib/api";
 import i18n from "./i18n/config";
 import { useTranslation } from "./hooks/useTranslation";
+import LoadingFallback from "./components/LoadingFallback";
 import { DomainRouteGuard } from "./components/DomainRouteGuard";
 import { BetaFeatureRouteGuard } from "./components/BetaFeatureRouteGuard";
 import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useTelemetryConsentStep } from "./hooks/useTelemetryConsentStep";
 import { useSessionValidation } from "./hooks/useSessionValidation";
+import { useSetupRedirect } from "./hooks/useSetupRedirect";
 import WhatsNewModal from "./components/WhatsNewModal";
+import ProfileZonePrompt from "./components/ProfileZonePrompt";
+import DemoBetaNotice from "./components/DemoBetaNotice";
+import SetupIncompleteBanner from "./components/SetupIncompleteBanner";
 import UsageStatsConsentDialog from "./components/UsageStatsConsentDialog";
 
 // Lazy load pages for code splitting
@@ -38,6 +43,7 @@ const CuratedChecklistPage = lazy(() => import("./pages/CuratedChecklistPage"));
 import { PlacesRouteGuard } from "./components/places/PlacesRouteGuard";
 import NavigationBar from "./components/NavigationBar";
 import { AdminOnlyNotice } from "./components/AdminOnlyNotice";
+import { LOYALTY_SETTINGS_PATH } from "./pages/Settings/settingsModel";
 const LodgingDetailPage = lazy(() => import("./pages/LodgingDetailPage"));
 const LodgingChainDetailPage = lazy(() => import("./pages/LodgingChainDetailPage"));
 const TripsPage = lazy(() => import("./pages/TripsPage"));
@@ -66,31 +72,11 @@ const ForceChangePasswordPage = lazy(() => import("./pages/ForceChangePasswordPa
 const TwoFactorChallengePage = lazy(() => import("./pages/TwoFactorChallengePage"));
 const NotFoundPage = lazy(() => import("./pages/NotFoundPage"));
 
-function LoadingFallback(): JSX.Element {
-  return (
-    <div
-      className="min-h-screen flex items-center justify-center"
-      style={{ background: "var(--bg-base)" }}
-    >
-      <div className="text-center">
-        <div
-          className="text-2xl font-display font-bold mb-2"
-          style={{ color: "var(--text-primary)" }}
-        >
-          Loading...
-        </div>
-        <div style={{ color: "var(--text-muted)" }}>Please wait...</div>
-      </div>
-    </div>
-  );
-}
-
 function AppContent() {
   const { user, _hasHydrated } = useAuthStore();
   const isAuthenticated = !!user;
   const loadRemoteSettings = useSettingsStore((s) => s.loadRemoteSettings);
   const language = useSettingsStore((s) => s.display.language);
-  const navigate = useNavigate();
   const location = useLocation();
   const { t } = useTranslation("common");
   // A persisted user is only a CLAIM until the server confirms the cookie.
@@ -100,7 +86,7 @@ function AppContent() {
   const { sessionChecked } = useSessionValidation();
   const sessionConfirmed = isAuthenticated && sessionChecked;
   const { entry, shouldShow, checked: whatsNewChecked, dismiss } = useWhatsNew(sessionConfirmed);
-  const [setupChecked, setSetupChecked] = useState(false);
+  const { setupChecked, requiresSetup } = useSetupRedirect({ sessionChecked, isAuthenticated });
   const [showSeedingModal, setShowSeedingModal] = useState(false);
 
   // Usage-stats consent is instance-wide, so only an admin may answer it, and
@@ -124,25 +110,6 @@ function AppContent() {
       }
     }
   }, [language]);
-
-  // Check setup status on app load
-  useEffect(() => {
-    const checkSetup = async () => {
-      try {
-        const { requiresSetup } = await setupApi.getStatus();
-        if (requiresSetup) {
-          navigate("/setup");
-        }
-      } catch (error) {
-        logger.error("Setup status check failed:", error);
-      } finally {
-        setSetupChecked(true);
-      }
-    };
-
-    // Always check setup status first
-    checkSetup();
-  }, [navigate]);
 
   // Load remote settings only after setup check is complete and user is logged in
   useEffect(() => {
@@ -234,9 +201,19 @@ function AppContent() {
       >
         <Toast />
         <AirportSeedingBanner />
+        <SetupIncompleteBanner sessionConfirmed={sessionConfirmed} requiresSetup={requiresSetup} />
         <AirportSeedingModal isOpen={showSeedingModal} onClose={handleCloseSeedingModal} />
         <WhatsNewModal isOpen={shouldShow} entry={entry} onClose={() => void dismiss()} />
         <UsageStatsConsentDialog isOpen={consentStep.shouldShow} onClose={consentStep.close} />
+        <DemoBetaNotice
+          sessionConfirmed={sessionConfirmed}
+          whatsNewChecked={whatsNewChecked}
+          whatsNewOpen={shouldShow}
+        />
+        <ProfileZonePrompt
+          sessionConfirmed={sessionConfirmed}
+          otherDialogOpen={!whatsNewChecked || shouldShow || consentStep.shouldShow}
+        />
         <Suspense fallback={<LoadingFallback />}>
           <AnimatePresence mode="wait">
             <Routes location={location} key={location.pathname}>
@@ -555,6 +532,19 @@ function AppContent() {
               <Route
                 path="/achievements"
                 element={isAuthenticated ? <AchievementsPage /> : <Navigate to="/login" />}
+              />
+              {/* The loyalty page of the 2.7 betas. Its programmes are managed
+                  in Einstellungen → Bonusprogramme since 2026-09-26; links to
+                  the old page land there. */}
+              <Route
+                path="/loyalty"
+                element={
+                  isAuthenticated ? (
+                    <Navigate to={LOYALTY_SETTINGS_PATH} replace />
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
               />
               <Route
                 path="/stats"

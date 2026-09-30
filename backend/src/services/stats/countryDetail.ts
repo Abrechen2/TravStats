@@ -70,6 +70,7 @@ import { lodgingEvidence, type CountableStay } from "../../shared/countryEvidenc
 import { lodgingCountry, placeVisitCountry, portCallCountry } from "./evidenceCountry";
 import type { PassportEvidence } from "./passport";
 import type { LoadedRoadtripStation } from "./roadtripEvidenceLoader";
+import type { RailEnd } from "./railEvidence";
 
 /**
  * A roadtrip station, as the loader shared with the passport hands it over —
@@ -183,8 +184,9 @@ const KIND_RANK: Record<CountryTimelineEntry["kind"], number> = {
   port: 1,
   place: 2,
   lodging: 3,
-  roadtrip: 4,
-  track: 5,
+  rail: 4,
+  roadtrip: 5,
+  track: 6,
 };
 
 const isoDay = (at: Date | null): string | null => (at ? at.toISOString().slice(0, 10) : null);
@@ -213,7 +215,8 @@ export function buildCountryDetail(
   lodgings: readonly CountryDetailLodging[] = [],
   trackDays: readonly CountryDetailTrackDay[] = [],
   timelineLimit: number = COUNTRY_TIMELINE_LIMIT,
-  roadtripStations: readonly CountryDetailRoadtripStation[] = []
+  roadtripStations: readonly CountryDetailRoadtripStation[] = [],
+  railEnds: readonly RailEnd[] = []
 ): CountryDetail | null {
   const wanted = isoCountryCode(code);
   if (!wanted) return null;
@@ -370,6 +373,26 @@ export function buildCountryDetail(
   }
 
   /**
+   * A train ride with a station here — one entry per ride, linked to the ride.
+   * The ends arrive graded by the loader the passport uses too; a domestic
+   * ride, both of whose stations stand here, is still one entry.
+   */
+  const railRideIds = new Set<string>();
+  for (const e of railEnds) {
+    if (e.country !== wanted || railRideIds.has(e.rideId)) continue;
+    railRideIds.add(e.rideId);
+    stretchYears(e.at);
+    timeline.push({
+      kind: "rail",
+      date: e.days[0] ?? null,
+      rideId: e.rideId,
+      rideLabel: e.rideLabel,
+      stationName: e.stationName,
+    });
+  }
+  const railRideCount = railRideIds.size;
+
+  /**
    * Measured presence, folded into ONE entry rather than one per day.
    *
    * A country driven through for a fortnight would otherwise contribute
@@ -401,6 +424,7 @@ export function buildCountryDetail(
     placeCount === 0 &&
     lodgingCount === 0 &&
     roadtripStationCount === 0 &&
+    railRideCount === 0 &&
     trackDayCount === 0
   ) {
     return null;
@@ -435,9 +459,11 @@ export function buildCountryDetail(
           ? "place"
           : lodgingCount > 0
             ? "lodging"
-            : roadtripStationCount > 0
-              ? "roadtrip"
-              : "track";
+            : railRideCount > 0
+              ? "rail"
+              : roadtripStationCount > 0
+                ? "roadtrip"
+                : "track";
 
   return {
     code: wanted,
@@ -456,6 +482,7 @@ export function buildCountryDetail(
     places: placeCount,
     lodgings: lodgingCount,
     roadtripStations: roadtripStationCount,
+    railRides: railRideCount,
     trackDays: trackDayCount,
     anchor: anchored ? { iata: anchored[0], lat: anchored[1].lat, lon: anchored[1].lon } : null,
     timeline: ordered.slice(0, timelineLimit),

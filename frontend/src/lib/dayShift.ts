@@ -1,18 +1,14 @@
+import { dayOf, type TimeValue } from "../shared/time";
+
 /**
- * Calendar-day difference between arrival and departure, each expressed in
- * its own airport-local timezone. 0 = same local day, 1 = "+1" overnight,
- * negative when crossing the date line westbound. Missing timezones fall
- * back to UTC so the marker degrades gracefully instead of lying.
+ * Calendar-day difference between arrival and departure, each on its own
+ * airport's calendar — the days in the two values' `local` (ADR 0002). 0 =
+ * same local day, 1 = "+1" overnight, negative when crossing the date line
+ * westbound. No zone is looked up here: the server already read each end on
+ * its airport's clock.
  */
-export function dayShift(
-  depIso: string,
-  arrIso: string,
-  depTz: string | null | undefined,
-  arrTz: string | null | undefined
-): number {
-  const localDate = (iso: string, tz: string | null | undefined): string =>
-    new Intl.DateTimeFormat("en-CA", { timeZone: tz || "UTC" }).format(new Date(iso)); // YYYY-MM-DD
-  const dep = localDate(depIso, depTz);
-  const arr = localDate(arrIso, arrTz);
-  return Math.round((Date.parse(arr) - Date.parse(dep)) / 86_400_000);
+export function dayShift(departure: TimeValue, arrival: TimeValue): number {
+  const dep = Date.parse(`${dayOf(departure)}T00:00:00Z`);
+  const arr = Date.parse(`${dayOf(arrival)}T00:00:00Z`);
+  return Math.round((arr - dep) / 86_400_000);
 }

@@ -15,6 +15,13 @@ import { DOMAIN_KEYS, type DomainKey } from "../../shared/domains";
 import { ECB_CURRENCIES } from "../../shared/currencies";
 import { COUNTRY_TIERS, parseCountryTier, type CountryTier } from "../../shared/countryEvidence";
 import { getInstanceSettings } from "../../services/instanceSettingsService";
+import {
+  profileZoneBodySchema,
+  profileZoneView,
+  saveProfileZone,
+} from "../../services/settings/profileZoneSettings";
+import { isValidZone } from "../../shared/time/zonedParts";
+import { homeSettingsView } from "../../services/home/homeStore";
 
 const router = Router();
 
@@ -69,7 +76,13 @@ const settingsSchema = z
       .object({
         theme: z.enum(["light", "dark"]).optional(),
         language: z.enum(["de", "en"]).optional(),
-        timezone: z.string().optional(),
+        // A name this runtime's tzdata does not know used to be stored and
+        // then read as "no zone" by every status — refused instead (ADR 0002).
+        timezone: z
+          .string()
+          .refine((zone) => isValidZone(zone), "ZONE_UNKNOWN")
+          .optional(),
+        timezoneFollowsDevice: z.boolean().optional(),
         dateFormat: z.enum(["DD.MM.YYYY", "MM/DD/YYYY", "YYYY-MM-DD"]).optional(),
         timeFormat: z.enum(["24h", "12h"]).optional(),
       })
@@ -219,6 +232,8 @@ function buildSettingsResponse(
     firstName: string | null;
     lastName: string | null;
   },
+  /** Home, read through the one home module (`services/home/homeStore.ts`). */
+  home: Awaited<ReturnType<typeof homeSettingsView>>,
   record: {
     data: Prisma.JsonValue;
     autoUpdateEnabled: boolean;
@@ -242,6 +257,9 @@ function buildSettingsResponse(
 
   return {
     ...baseData,
+    // After the spread: an old blob holds only the legacy key, and both keys
+    // are answered from the periods it migrates to.
+    ...home,
     // The name is not in the blob — it is read from the user row and merged in
     // here, so the settings page and the header cannot drift apart (#241).
     profile: {
@@ -275,6 +293,7 @@ function buildSettingsResponse(
     openDataEnabled: extra.openDataEnabled,
     instanceCountryThreshold: extra.countryThreshold,
     hasCountryTracks: extra.hasCountryTracks,
+    profileZone: profileZoneView(baseData),
   };
 }
 
@@ -340,12 +359,22 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
           historicalEnrichmentMaxPerDay: 50,
         },
       });
-      const response = buildSettingsResponse(extra, name, created);
+      const response = buildSettingsResponse(
+        extra,
+        name,
+        await homeSettingsView(created.data),
+        created
+      );
       res.json(response);
       return;
     }
 
-    const response = buildSettingsResponse(extra, name, existing);
+    const response = buildSettingsResponse(
+      extra,
+      name,
+      await homeSettingsView(existing.data),
+      existing
+    );
 
     logger.info({
       operation: "get_settings_response",
@@ -358,6 +387,19 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     next(error);
   }
 });
+
+// PUT /profile-zone — the zone alone, merged into `display` (ADR 0002 Q1).
+router.put(
+  "/profile-zone",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const body = profileZoneBodySchema.parse(req.body);
+      res.json({ profileZone: await saveProfileZone(req.userId!, body) });
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 // PUT /
 router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
@@ -576,6 +618,7 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     const response = buildSettingsResponse(
       extra,
       { firstName: savedName?.firstName ?? null, lastName: savedName?.lastName ?? null },
+      await homeSettingsView(saved.data),
       saved
     );
     res.json(response);

@@ -224,6 +224,14 @@ export const lodgingLoyaltyStatsSchema = z.object({
     .array(
       z.object({
         programme: z.string(),
+        membershipId: z
+          .string()
+          .nullable()
+          .openapi({
+            description:
+              "The card these nights ran under — what `GET /lodging?membershipId=` filters by. " +
+              "Null only for rows built before the id travelled with the stay.",
+          }),
         tier: z.string().nullable().openapi({
           description: "The card's CURRENT tier, not the tier held during that year.",
         }),

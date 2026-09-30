@@ -70,7 +70,8 @@
   "night": {
     "stay": "Accommodation",
     "free": "Night without accommodation",
-    "pass": "Pass-through"
+    "pass": "Pass-through",
+    "via": "Route correction"
   },
   "stations": {
     "title": "Stations",
@@ -100,7 +101,18 @@
     "linked": "linked accommodation",
     "change": "change",
     "cancelled": "cancelled — counts no night",
-    "fitsDate": "matches the dates"
+    "fitsDate": "matches the dates",
+    "nearbyTitle": "Stays on these dates",
+    "lodgingsTitle": "Your accommodation",
+    "lodgingNoStay": "no stay yet",
+    "back": "← Other accommodation",
+    "noStays": "This accommodation has no stay yet.",
+    "noFit": "No stay matches the station's dates.",
+    "createStay": "Create and link a stay {{from}} – {{to}}",
+    "createStayUndated": "Create and link an undated stay",
+    "createStayFailed": "The stay could not be created.",
+    "noCoords": "This accommodation has no location saved — set the station's location yourself.",
+    "adoptPlace": "Use the accommodation's location"
   },
   "review": {
     "title_one": "One entry was classified automatically by the 2.7 update",
@@ -130,7 +142,8 @@
     "listEmpty": "No roadtrips yet.",
     "emptyTitle": "No roadtrip on the map yet",
     "emptyBody": "Create a roadtrip with its stations — its route then appears here.",
-    "emptyCta": "Create roadtrip"
+    "emptyCta": "Create roadtrip",
+    "stationsLoadError": "The stations could not be loaded — the map shows the routes only."
   },
   "stats": {
     "count": "Roadtrips",
@@ -307,6 +320,10 @@
       "pass": {
         "label": "Pass-through",
         "hint": "Just passed by, no night"
+      },
+      "via": {
+        "label": "Route correction",
+        "hint": "No stop: the route runs through here, no name and not counted"
       }
     },
     "place": "Place",
@@ -331,7 +348,8 @@
       "noDeparture": "{{name}}: departure missing",
       "noStay": "{{name}}: stay not linked yet"
     },
-    "warningsNote": "Hints only — everything is saved anyway. Only a station without a place or without its linked stay waits."
+    "warningsNote": "Hints only — everything is saved anyway. Only a station without a place or without its linked stay waits.",
+    "viaNote": "Only shapes the route: not shown as a station on maps or in lists, and counted nowhere."
   },
   "legDialog": {
     "title": "Leg",
@@ -347,7 +365,9 @@
     "drawnHint": "Point by point in the leg editor",
     "distance": "Distance now: {{km}} km",
     "apply": "Apply",
-    "error": "The leg could not be saved."
+    "error": "The leg could not be saved.",
+    "fallback": "No route calculated. {{reason}}",
+    "fallbackKept": "The leg stays as it was. Choose “Straight line” to save it as a straight line."
   },
   "trackArchive": {
     "downloadOne": "As GPX",
@@ -379,5 +399,20 @@
     "apply": "Apply {{count}}",
     "failed": "The files could not be read.",
     "tooLarge": "The ZIP is too large (at most 500 files, 200 MB unpacked, 15 MB per recording)."
+  },
+  "map": {
+    "empty": "This roadtrip has no stations with coordinates yet — add the first station."
+  },
+  "place": {
+    "heading": "Which place?",
+    "hint": "Optional: one of your places you passed.",
+    "search": "Search places",
+    "loading": "Loading places …",
+    "loadError": "Your places could not be loaded — linking one is not possible right now.",
+    "none": "You have not added any places yet.",
+    "noMatch": "No place matches the search.",
+    "change": "Choose another place",
+    "remove": "Unlink",
+    "linked": "Linked place"
   }
 }

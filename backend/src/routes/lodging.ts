@@ -36,7 +36,9 @@ export {
   type LodgingListItem,
 } from "../services/lodging/listView";
 import staysRouter from "./lodging/stays";
+import { withLodgingStayTimes } from "../services/lodging/timesDto";
 import { createLodgingRecord } from "../services/lodging/createLodging";
+import { osmRefToStore } from "../services/lodging/osmRef";
 import {
   createLodgingSchema,
   updateLodgingSchema,
@@ -49,6 +51,9 @@ import {
   removeLodgingPhotoFiles,
 } from "../services/lodging/deleteLodgingPhotoFiles";
 import { getBaseCurrency } from "../services/fx/snapshot";
+import { assertChainsVisible } from "../services/lodging/chainScope";
+import { lodgingStaysCoveredBy } from "../services/loyalty/listFilters";
+import type { LodgingListQuery, LodgingQueryInput } from "../schemas/lodging";
 
 // Re-exported: every existing import site names this module.
 export { getBaseCurrency };
@@ -77,6 +82,13 @@ const fxPreviewQuerySchema = z.object({
   date: z.string().regex(/^\d{4}-\d{2}-\d{2}$/, "date must be YYYY-MM-DD"),
 });
 
+/** The request, with a loyalty card's coverage resolved to hotel ids. */
+async function listQuery(q: LodgingQueryInput, userId: string): Promise<LodgingListQuery> {
+  if (q.membershipId === undefined) return q;
+  const covered = await lodgingStaysCoveredBy(userId, q.membershipId, q.year);
+  return { ...q, coveredLodgingIds: covered.lodgingIds, countedStayIds: covered.stayIds };
+}
+
 // ---- Lodging CRUD ----
 
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -100,11 +112,11 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     // are read here and their figures still derived by `computeAggregates`
     // from the shared rules, so the SQL never becomes a second source for a
     // number the user reads; `listSql.parity.test.ts` holds the two together.
-    const { ids, total } = await queryLodgingPage({
-      userId,
-      query: parsed.data,
-      baseCurrency,
-    });
+    const query = await listQuery(parsed.data, userId);
+    const { ids, total } = await queryLodgingPage({ userId, query, baseCurrency });
+    // A loyalty link counts only the card's stays (`countedStayIds`); the row
+    // keeps every stay it has, but its figures read the counted ones.
+    const counted = query.countedStayIds ? new Set(query.countedStayIds) : null;
     const lodgings = await prisma.lodging.findMany({
       // `userId` as well as the ids, although the query that produced them was
       // already scoped to this account. Ownership belongs in the query that
@@ -122,7 +134,15 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       const lodging = byId.get(id);
       return lodging === undefined
         ? []
-        : [{ ...lodging, ...computeAggregates(lodging.stays, baseCurrency) }];
+        : [
+            {
+              ...withLodgingStayTimes(lodging),
+              ...computeAggregates(
+                counted ? lodging.stays.filter((s) => counted.has(s.id)) : lodging.stays,
+                baseCurrency
+              ),
+            },
+          ];
     });
 
     // `meta.total` is the count of the FULL filtered set, before the page
@@ -152,7 +172,8 @@ router.get("/facets", async (req: AuthRequest, res: Response, next: NextFunction
     const userId = requireUser(req);
     const parsed = lodgingQuerySchema.safeParse(req.query);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
-    res.json({ success: true, data: await queryLodgingFacets({ userId, query: parsed.data }) });
+    const query = await listQuery(parsed.data, userId);
+    res.json({ success: true, data: await queryLodgingFacets({ userId, query }) });
   } catch (err) {
     next(err);
   }
@@ -211,7 +232,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     const baseCurrency = await getBaseCurrency(userId);
     res.json({
       success: true,
-      data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) },
+      data: { ...withLodgingStayTimes(lodging), ...computeAggregates(lodging.stays, baseCurrency) },
     });
   } catch (err) {
     next(err);
@@ -243,7 +264,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     const baseCurrency = await getBaseCurrency(userId);
     res.status(201).json({
       success: true,
-      data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) },
+      data: { ...withLodgingStayTimes(lodging), ...computeAggregates(lodging.stays, baseCurrency) },
     });
   } catch (err) {
     next(err);
@@ -258,7 +279,9 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
 
     const parsed = updateLodgingSchema.safeParse(req.body);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
-    const input = parsed.data;
+    const { osmRef, ...input } = parsed.data;
+    if (input.chainId != null) await assertChainsVisible(userId, [input.chainId]);
+    const externalRef = await osmRefToStore(userId, osmRef, existing);
 
     // See resolveLocation in lodgingGeocode.ts: geocodes when the address
     // changed OR the row still has no pin, and reverse-fills any address
@@ -276,13 +299,14 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         ...(patched.country !== undefined
           ? { isoCountryCode: resolveCountryCode(patched.country) }
           : {}),
+        ...(externalRef !== undefined && { externalRef }),
       },
       include: LODGING_INCLUDE,
     });
     const baseCurrency = await getBaseCurrency(userId);
     res.json({
       success: true,
-      data: { ...lodging, ...computeAggregates(lodging.stays, baseCurrency) },
+      data: { ...withLodgingStayTimes(lodging), ...computeAggregates(lodging.stays, baseCurrency) },
     });
   } catch (err) {
     next(err);

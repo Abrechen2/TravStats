@@ -9,6 +9,7 @@ import { useRailVisible } from "../../../hooks/useRailVisible";
 import { useTranslation } from "../../../hooks/useTranslation";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
 import { formatStationTime } from "../../../lib/railTime";
+import { railDeparture } from "../../../lib/entityTimes";
 import MapContainer3D from "../../MapContainer3D";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
 import { SidebarToggle } from "../SidebarToggle";
@@ -110,7 +111,7 @@ export function RailTab(): JSX.Element {
                     {j.depStationName} → {j.arrStationName}
                   </Link>
                   <div className="text-[11px]" style={{ color: "var(--text-muted)" }}>
-                    {formatStationTime(j.departureTime, j.depTimezone, locale)}
+                    {formatStationTime(railDeparture(j)!, locale)}
                     {j.distanceKm !== null &&
                       ` · ${Math.round(j.distanceKm).toLocaleString(locale)} km`}
                   </div>

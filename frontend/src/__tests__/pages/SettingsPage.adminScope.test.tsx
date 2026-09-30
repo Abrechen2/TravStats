@@ -108,6 +108,9 @@ vi.mock("../../components/Settings/ImmichConnectionCard", () => ({
 vi.mock("../../components/Settings/RoutingProviderSection", () => ({
   default: () => <div data-testid="routing-provider-section" />,
 }));
+vi.mock("../../components/Settings/PersonalRoutingKeysSection", () => ({
+  default: () => <div data-testid="personal-routing-keys" />,
+}));
 vi.mock("../../components/NavigationBar", () => ({
   default: () => <div data-testid="nav-bar-stub" />,
 }));
@@ -117,8 +120,8 @@ vi.mock("../../components/Settings/GeocoderSettingsCard", () => ({
   default: ({ isAdmin: cardIsAdmin }: { isAdmin: boolean }) =>
     cardIsAdmin ? <div data-testid="geocoder-card" /> : null,
 }));
-vi.mock("../../components/Settings/MembershipsSection", () => ({
-  default: () => <div data-testid="memberships-section" />,
+vi.mock("../../components/Settings/LoyaltySection", () => ({
+  default: () => <div data-testid="loyalty-section-stub" />,
 }));
 
 // Flipped per test — the admin surface is what these cases are about.
@@ -254,8 +257,20 @@ describe("SettingsPage — the settings/admin boundary", () => {
     expect(
       screen.queryByRole("region", { name: "settings:lodgingPreferences.geocoder.title" })
     ).toBeNull();
-    // And the rest of the group is still drawn.
-    expect(screen.getByRole("region", { name: "settings:memberships.title" })).toBeTruthy();
+    // The group holds nothing else for this account since its loyalty
+    // section moved to Einstellungen → Bonusprogramme; the hint is the page.
+    expect(screen.queryByRole("region", { name: "settings:memberships.title" })).toBeNull();
+  });
+
+  it("offers no lodging tab to an account the lodging group has nothing for", async () => {
+    useSettingsStore.setState({
+      betaFeaturesEnabled: false,
+      enabledDomains: ["flight", "lodging"],
+    });
+    renderAt("/settings/lodging");
+    // The empty group sends the reader to the general page.
+    expect(await screen.findByRole("region", { name: "settings:profile.title" })).toBeTruthy();
+    expect(screen.queryByRole("link", { name: "settings:tabs.lodging" })).toBeNull();
   });
 
   it("says nothing of the sort to an admin, who can see the section", async () => {

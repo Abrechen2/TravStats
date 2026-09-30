@@ -13,7 +13,8 @@
     "training": "Training Config",
     "logging": "Logging",
     "backups": "Instanz-Backups",
-    "smtp": "E-Mail / SMTP"
+    "smtp": "E-Mail / SMTP",
+    "timeModel": "Zeitmodell"
   },
   "tabs2": {
     "general": "Allgemein",
@@ -34,6 +35,7 @@
       "empty": "Keine Treffer.",
       "created": "Schiff angelegt.",
       "createFailed": "Schiff konnte nicht angelegt werden.",
+      "alreadyExists": "„{{name}}“ steht bereits im Katalog – es wurde nichts angelegt.",
       "missingFields": "Name und Reederei sind erforderlich.",
       "menuLabel": "Schiffe"
     },
@@ -159,6 +161,10 @@
           "railDomain": {
             "name": "Bahn",
             "what": "Der Bereich „Bahn“: ein Fahrtenbuch für Zugfahrten mit Bahnhofskatalog, Zugsuche, Karte, Statistik und Excel-Import und -Export. Ein Roadtrip mit „Bahn“ als Fahrzeug lässt sich als Zugfahrten übernehmen."
+          },
+          "cruiseTracks": {
+            "name": "Aufgezeichnete Spuren bei Kreuzfahrten",
+            "what": "Der Abschnitt „Aufgezeichnete Spuren“ auf der Seite einer Kreuzfahrt: Eine GPS-Aufzeichnung (Datei oder Dawarich) ersetzt die berechnete Seeroute der Etappen, die sie abdeckt – auf der Karte und in den Statistiken."
           }
         }
       },
@@ -427,14 +433,15 @@
     "logFileDownloadFailed": "Fehler beim Herunterladen der Log-Datei",
     "logFileDeleted": "Log-Datei erfolgreich gelöscht!",
     "logFileDeletFailed": "Fehler beim Löschen der Log-Datei",
-    "cleanupComplete": "Aufräumen abgeschlossen! {{filesDeleted}} Dateien gelöscht, {{spaceFreed}} MB freigegeben",
+    "cleanupComplete": "Aufräumen abgeschlossen: {{deletedCount}} Dateien gelöscht, {{freed}} freigegeben",
     "cleanupFailed": "Fehler beim Aufräumen der Logs",
     "ollamaTestSuccess": "Ollama erreichbar – {{count}} Modell(e) gefunden",
     "ollamaTestFailed": "Verbindung zu Ollama fehlgeschlagen",
     "enabled": "aktiviert",
     "disabled": "deaktiviert",
     "twoFactorReset": "Zwei-Faktor wurde zurückgesetzt",
-    "twoFactorResetFailed": "Zwei-Faktor konnte nicht zurückgesetzt werden"
+    "twoFactorResetFailed": "Zwei-Faktor konnte nicht zurückgesetzt werden",
+    "cleanupPartial": "{{failedCount}} Dateien konnten nicht gelöscht werden."
   },
   "prompts": {
     "enterEmail": "E-Mail eingeben (optional):",
@@ -470,16 +477,18 @@
       "warn": "Warning",
       "info": "Info (Standard)",
       "debug": "Debug (Ausführlich)",
-      "trace": "Trace (Sehr ausführlich)"
+      "trace": "Trace (Sehr ausführlich)",
+      "pinned": "Durch die Umgebungsvariable LOG_LEVEL auf „{{level}}“ festgelegt. Die Einstellung hier wird gespeichert, wirkt aber erst, wenn LOG_LEVEL entfernt wird.",
+      "effective": "Aktiv: {{level}}"
     },
     "retention": {
       "label": "Log-Aufbewahrung (Tage)",
-      "hint": "Log-Dateien die älter als dieser Wert sind werden automatisch gelöscht"
+      "hint": "Log-Dateien, die älter sind, werden täglich und beim Start automatisch gelöscht."
     },
     "categories": {
       "http": {
         "label": "HTTP-Anfragen protokollieren",
-        "hint": "Alle HTTP-Anfragen mit Timing, IP, Benutzer und Status protokollieren (Kategorie: http)"
+        "hint": "Jede HTTP-Anfrage mit Pfad (ohne Query-String), Status, Dauer und IP protokollieren (Kategorie: http)"
       },
       "database": {
         "label": "Datenbankabfragen protokollieren",
@@ -488,7 +497,8 @@
       "parser": {
         "label": "Parser-Operationen protokollieren",
         "hint": "LLM-Operationen mit Provider-Details protokollieren (Kategorie: parser)"
-      }
+      },
+      "verboseOnly": "Diese Protokolle werden nur geschrieben, solange das Log-Level Debug oder Trace ist."
     },
     "files": {
       "title": "Log-Dateien",
@@ -500,10 +510,44 @@
       "colModified": "Geändert",
       "colActions": "Aktionen",
       "download": "Herunterladen",
-      "delete": "Löschen"
+      "delete": "Löschen",
+      "view": "Anzeigen"
+    },
+    "viewer": {
+      "title": "Log-Einträge ansehen",
+      "file": "Datei",
+      "chooseFile": "Datei wählen",
+      "level": "Level",
+      "levelAll": "Alle Level",
+      "category": "Kategorie",
+      "categoryPlaceholder": "z. B. security",
+      "search": "Text",
+      "searchPlaceholder": "Suchbegriff",
+      "apply": "Filtern",
+      "newer": "Neuere",
+      "older": "Ältere",
+      "range": "{{from}}–{{to}} von {{total}} (neueste zuerst)",
+      "empty": "Keine passenden Einträge.",
+      "loading": "Lade Einträge …",
+      "colTime": "Zeit",
+      "colLevel": "Level",
+      "colCategory": "Kategorie",
+      "colEvent": "Ereignis / Meldung",
+      "details": "Details"
+    },
+    "errors": {
+      "LOG_FILE_INVALID_NAME": "Ungültiger Dateiname.",
+      "LOG_FILE_NOT_FOUND": "Die Log-Datei existiert nicht mehr – vermutlich wurde sie rotiert oder gelöscht.",
+      "LOG_FILE_UNREADABLE": "Die Log-Datei konnte nicht gelesen werden.",
+      "loadFailed": "Log-Einträge konnten nicht geladen werden."
     }
   },
   "parserSettings": {
+    "builtin": {
+      "ocrHint": "Liest Bordkarten aus Bildern",
+      "templatesName": "Vorlagen (Regex)",
+      "templatesHint": "Liest Buchungs-E-Mails bekannter Anbieter"
+    },
     "title": "Globale Parser-Konfiguration",
     "description": "Standard-Parser für alle Benutzer. Lokale Verfahren sind kostenlos, Cloud-KI kostet je Anfrage und braucht einen Schlüssel.",
     "defaultSettings": "Standard-Einstellungen",
@@ -511,11 +555,19 @@
     "visionParser": "Standard Vision-Parser (Bordkarte)",
     "textParser": "Standard Text-Parser (E-Mail)",
     "autoHelp": "Auto-Modus wählt automatisch den besten verfügbaren Parser",
+    "llmSwitch": {
+      "title": "KI-Modell",
+      "label": "KI-Modell verwenden (Buchungen lesen und Reise-Zusammenfassungen)",
+      "hint": "Aus: TravStats fragt kein Sprachmodell mehr – auch nicht, wenn oben eine Ollama-URL eingetragen oder OLLAMA_URL gesetzt ist. Buchungen werden dann nur mit den eingebauten Vorlagen gelesen."
+    },
     "ollama": {
       "title": "Ollama LLM Parser",
-      "description": "Ollama läuft lokal oder im Netzwerk und analysiert Buchungsbestätigungen mit einem LLM. Ideal für Multi-Stopp und komplexe E-Mails.",
+      "description": "Ollama läuft lokal oder im Netzwerk und analysiert Buchungsbestätigungen mit einem LLM. Ideal für Multi-Stopp und komplexe E-Mails. Wird immer zuerst versucht, wenn eine URL eingetragen ist — innerhalb deines Netzwerks ohne Zustimmung.",
       "urlLabel": "Ollama URL",
       "urlPlaceholder": "http://localhost:11434",
+      "remoteOptIn": {
+        "label": "Ich stimme zu, dass Buchungsdaten an diese Adresse gesendet werden, falls sie außerhalb meines Netzwerks liegt."
+      },
       "modelLabel": "Modell",
       "modelPlaceholder": "gemma3:12b",
       "testButton": "Verbindung testen",
@@ -532,6 +584,90 @@
       "templateFirst": "Vorlagen zuerst, KI als Rückfall (empfohlen)",
       "llmFirst": "KI zuerst, Vorlagen als Rückfall",
       "hint": "Gilt für Flüge, Unterkünfte, Kreuzfahrten und Orte gleichermaßen. Gemessen am 17.09.2026 an 31 Flug-Mails: die Vorlagen lasen alle in unter einer Sekunde, das Sprachmodell brauchte 19 Minuten und übersah drei. „KI zuerst\" lohnt sich, wenn deine Absender von keiner Vorlage abgedeckt sind."
+    },
+    "userPermissions": {
+      "title": "Benutzerrechte",
+      "allowUserApiKeys": "Benutzer dürfen eigene API-Schlüssel für Flugdaten hinterlegen (Airlabs, Aviationstack, OpenSky)"
+    },
+    "provider": {
+      "title": "KI-Anbieter",
+      "description": "Wer liest die Buchungen, die keine Vorlage kennt? Ollama läuft immer zuerst, wenn es konfiguriert ist — lokal oder im Netzwerk, ohne eigene Zustimmung (außer bei einer Adresse außerhalb deines Netzwerks). Antwortet Ollama nicht, fragt TravStats der Reihe nach die freigegebenen Cloud-Anbieter unten. Jeder Cloud-Anbieter braucht seinen EIGENEN Schlüssel und seine EIGENE Zustimmung — eine Freigabe für OpenAI gilt nicht für Anthropic oder Google.",
+      "chain": {
+        "title": "Rangfolge der Cloud-Anbieter",
+        "hint": "Antwortet Ollama nicht (nicht konfiguriert oder nicht erreichbar), versucht TravStats diese Anbieter der Reihe nach — aber nur, wenn Schlüssel UND Zustimmung vorliegen. Ein Anbieter ohne beides wird übersprungen, nie versucht. Ein Anbieter, der antwortet, beendet die Kette — auch bei einer mageren Antwort.",
+        "moveUp": "Nach oben",
+        "moveDown": "Nach unten"
+      },
+      "baseUrlLabel": "Basis-URL (mit Versionspfad)",
+      "baseUrlPlaceholder": "https://api.openai.com/v1",
+      "baseUrlHint": "Außerhalb deines Netzwerks nur mit https://. Beispiele: https://openrouter.ai/api/v1, https://ollama.com/v1",
+      "modelLabel": "Modell",
+      "keyLabel": "API-Schlüssel",
+      "keyPlaceholder": "sk-…",
+      "keyHint": "Wird verschlüsselt gespeichert und nie wieder angezeigt — nur die ersten und letzten vier Zeichen.",
+      "testButton": "Verbindung testen",
+      "testing": "Wird getestet …",
+      "test": {
+        "ok": "Verbindung steht — der Anbieter bietet {{count}} Modelle an.",
+        "okModelMissing": "Verbindung steht, aber das Modell „{{model}}“ bietet dieser Anbieter nicht an.",
+        "okNoList": "Verbindung steht. Der Anbieter nennt keine Modellliste — prüf den Modellnamen selbst.",
+        "cloud": "Dieser Anbieter liegt außerhalb deines Netzwerks.",
+        "errors": {
+          "invalid_url": "Das ist keine gültige URL.",
+          "unsupported_protocol": "Nur http:// oder https:// ist möglich.",
+          "credentials_in_url": "Zugangsdaten gehören nicht in die URL — trag den Schlüssel im Feld „API-Schlüssel“ ein.",
+          "https_required": "Ein Anbieter außerhalb deines Netzwerks braucht https://.",
+          "auth": "Der Anbieter hat den API-Schlüssel abgelehnt.",
+          "unreachable": "Der Anbieter ist nicht erreichbar. Prüf URL und Netzwerk.",
+          "failed": "Der Verbindungstest ist fehlgeschlagen."
+        }
+      },
+      "saveErrors": {
+        "LLM_BASE_URL_HTTPS_REQUIRED": "Ein KI-Anbieter außerhalb deines Netzwerks braucht https://. Nichts wurde gespeichert.",
+        "LLM_BASE_URL_INVALID": "Die Basis-URL des KI-Anbieters ist ungültig. Nichts wurde gespeichert."
+      },
+      "slots": {
+        "openai": {
+          "name": "OpenAI",
+          "modelPlaceholder": "gpt-4o-mini",
+          "consent": {
+            "title": "Buchungen an OpenAI senden",
+            "warning": "Deine Buchungsmails werden an OpenAI-Server (USA) gesendet — für jede Buchung, die keine Vorlage kennt, bis zu 12.000 Zeichen der E-Mail oder des PDFs, mit Namen, Buchungsnummern, Reisedaten und Preisen. Was OpenAI damit tut, regeln seine eigenen Bedingungen, nicht TravStats.",
+            "label": "Ich stimme zu, dass diese Daten an OpenAI gesendet werden.",
+            "inactive": "OpenAI ist eingerichtet, aber noch nicht freigegeben — ohne Zustimmung wird OpenAI nie gefragt."
+          }
+        },
+        "anthropic": {
+          "name": "Anthropic",
+          "modelPlaceholder": "claude-3-5-haiku-latest",
+          "consent": {
+            "title": "Buchungen an Anthropic senden",
+            "warning": "Deine Buchungsmails werden an Anthropic-Server (USA) gesendet — für jede Buchung, die keine Vorlage kennt, bis zu 12.000 Zeichen der E-Mail oder des PDFs, mit Namen, Buchungsnummern, Reisedaten und Preisen. Was Anthropic damit tut, regeln seine eigenen Bedingungen, nicht TravStats.",
+            "label": "Ich stimme zu, dass diese Daten an Anthropic gesendet werden.",
+            "inactive": "Anthropic ist eingerichtet, aber noch nicht freigegeben — ohne Zustimmung wird Anthropic nie gefragt."
+          }
+        },
+        "google": {
+          "name": "Google",
+          "modelPlaceholder": "gemini-2.0-flash",
+          "consent": {
+            "title": "Buchungen an Google senden",
+            "warning": "Deine Buchungsmails werden an Google-Server (USA) gesendet — für jede Buchung, die keine Vorlage kennt, bis zu 12.000 Zeichen der E-Mail oder des PDFs, mit Namen, Buchungsnummern, Reisedaten und Preisen. Was Google damit tut, regeln seine eigenen Bedingungen, nicht TravStats.",
+            "label": "Ich stimme zu, dass diese Daten an Google gesendet werden.",
+            "inactive": "Google ist eingerichtet, aber noch nicht freigegeben — ohne Zustimmung wird Google nie gefragt."
+          }
+        },
+        "custom": {
+          "name": "Eigener Anbieter (OpenAI-kompatibel)",
+          "hint": "Ein eigener Server oder ein Cloud-Dienst mit OpenAI-kompatibler Schnittstelle — OpenRouter, Ollama Cloud, ein LAN-vLLM/LM Studio.",
+          "consent": {
+            "title": "Buchungen an diesen Anbieter senden",
+            "warning": "Liegt dieser Anbieter außerhalb deines Netzwerks, schickt TravStats ihm für jede Buchung, die keine Vorlage kennt, den Text der E-Mail oder des PDFs (bis zu 12.000 Zeichen) — mit Namen, Buchungsnummern, Reisedaten und Preisen. Was der Anbieter damit tut, regeln seine Bedingungen, nicht TravStats.",
+            "label": "Ich stimme zu, dass diese Daten an diesen Anbieter gesendet werden.",
+            "inactive": "Der gespeicherte Anbieter liegt außerhalb deines Netzwerks. Solange du nicht zustimmst, bleibt dieser Anbieter außen vor."
+          }
+        }
+      }
     }
   },
   "backup": {
@@ -587,16 +723,20 @@
       "keyMismatchBody": "Die gespeicherten API-Schlüssel, das SMTP-Passwort und die Immich-/Dawarich-Zugänge lassen sich auf dieser Instanz nicht entschlüsseln. Lege den ursprünglichen Schlüssel zurück (ENCRYPTION_KEY bzw. encryption.key im Secrets-Verzeichnis) und versuche es erneut — oder bestätige hier und trage die Zugänge danach neu ein.",
       "keyMismatchAcknowledge": "Verstanden: Zugangsdaten danach neu eintragen",
       "archiveIncomplete": "Dem Archiv fehlt der angeforderte Teil. Es wurde nichts wiederhergestellt.",
-      "archiveUnreadable": "Der Dateiteil des Archivs lässt sich nicht lesen. Es wurde nichts wiederhergestellt."
+      "archiveUnreadable": "Der Dateiteil des Archivs lässt sich nicht lesen. Es wurde nichts wiederhergestellt.",
+      "inProgress": "Wird wiederhergestellt …"
     },
     "settingsSaved": "Backup-Einstellungen gespeichert",
     "settingsFailed": "Fehler beim Speichern der Einstellungen",
     "schedule": {
       "title": "Automatisches Backup",
-      "description": "Geplante Backups laufen um 2:00 UTC – je nach Intervall täglich, sonntags oder am 1. des Monats.",
+      "description": "Geplante Backups laufen um 2:00 Uhr in der unten gewählten Zeitzone – je nach Intervall täglich, sonntags oder am 1. des Monats.",
       "enableAutoBackup": "Automatisches Backup aktivieren",
       "interval": "Intervall",
-      "retentionDays": "Aufbewahrung (Tage)"
+      "retentionDays": "Aufbewahrung (Tage)",
+      "zone": "Zeitzone der Backup-Uhrzeit",
+      "zoneHost": "Zeitzone des Servers ({{zone}})",
+      "zoneEffective": "Backups laufen um 2:00 Uhr in {{zone}}."
     },
     "toasts": {
       "loadFailed": "Fehler beim Laden der Backups",
@@ -609,7 +749,20 @@
       "deleted": "Backup gelöscht",
       "deleteFailed": "Fehler beim Löschen des Backups",
       "synced": "Backup hochgeladen",
-      "syncFailed": "Hochladen des Backups fehlgeschlagen"
+      "syncFailed": "Hochladen des Backups fehlgeschlagen",
+      "created": "Backup erstellt",
+      "restored": "Backup wiederhergestellt",
+      "outcomeUnknown": "Der Server meldet den Ausgang nicht mehr — bitte die Backup-Liste prüfen, bevor du es erneut versuchst."
+    },
+    "failure": {
+      "BACKUP_TOOL_MISSING": "Das Backup-Werkzeug (pg_dump, psql oder tar) ist auf dem Server nicht installiert. Im offiziellen Docker-Image ist es enthalten – bei einer eigenen Installation bitte die PostgreSQL-Client-Werkzeuge installieren.",
+      "BACKUP_DISK_FULL": "Auf dem Backup-Laufwerk ist kein Platz mehr. Alte Backups löschen oder das Volume vergrößern.",
+      "BACKUP_PERMISSION_DENIED": "Der Server darf das Backup-Verzeichnis nicht lesen oder beschreiben. Bitte die Rechte des Daten-Volumes prüfen.",
+      "BACKUP_DB_UNREACHABLE": "Das Backup-Werkzeug erreicht die Datenbank nicht. Bitte prüfen, ob die Datenbank läuft und die Verbindungsdaten stimmen.",
+      "BACKUP_TOOL_VERSION_MISMATCH": "pg_dump ist älter als der Datenbankserver. Bitte die PostgreSQL-Client-Werkzeuge auf die Version des Servers aktualisieren.",
+      "BACKUP_FAILED": "Das Backup ist fehlgeschlagen. Die Ursache steht im Server-Log.",
+      "RESTORE_FAILED": "Die Wiederherstellung ist fehlgeschlagen. Die Ursache steht im Server-Log.",
+      "BACKUP_INTERRUPTED": "Das Backup wurde abgebrochen, weil der Server neu gestartet oder eine Wiederherstellung eingespielt wurde. Einfach neu starten."
     }
   },
   "feedback": {
@@ -725,5 +878,173 @@
     "removeFailed": "Entfernen fehlgeschlagen.",
     "replacesShipped": "Deine Bilder ersetzen die mitgelieferten vollständig. Lösche alle, um wieder zu den mitgelieferten zurückzukehren.",
     "hint": "Am besten wirken dunkle Hochformat-Fotos mit ruhiger linker Hälfte — dort steht der Text. Auf hellen Fotos wird die Schrift schwer lesbar."
+  },
+  "timeModel": {
+    "unknownCode": "unbekannt ({{code}})",
+    "tables": {
+      "flights": "Flüge",
+      "rail_journeys": "Bahnfahrten",
+      "place_visits": "Ortsbesuche",
+      "cruise_stops": "Kreuzfahrt-Halte",
+      "cruises": "Kreuzfahrten",
+      "trip_stops": "Reise-Halte",
+      "trips": "Reisen",
+      "trip_journal_entries": "Reisetagebuch",
+      "lodging_stays": "Aufenthalte",
+      "users": "Profile"
+    },
+    "reasons": {
+      "no_position": "Keine Position (fehlt oder 0, 0)",
+      "zone_unresolved": "An dieser Position ist keine Zeitzone bekannt",
+      "port_unresolved": "Hafen nicht zugeordnet",
+      "sea_day_time": "Seetag mit Uhrzeit – auf See gibt es keine Zeitzone",
+      "semantics_unknown": "Unklar, ob die Zeit Orts- oder UTC-Zeit ist",
+      "local_time_nonexistent": "Diese Uhrzeit gab es dort nicht (Zeitumstellung)",
+      "writer_unknown": "Nicht feststellbar, ob Web oder App die Zeit geschrieben hat",
+      "date_only_day_differs": "Nur Datum – der Ortstag weicht vom UTC-Tag ab",
+      "day_anchor_ambiguous": "Nicht eindeutig, welcher Kalendertag gemeint ist",
+      "instant_without_zone": "Ohne Zeitzone des Bahnhofs gespeichert",
+      "other": "ein Grund, den diese Version noch nicht kennt"
+    },
+    "columns": {
+      "departure": "Abfahrt/Abflug",
+      "arrival": "Ankunft",
+      "visited_at": "Besuchszeit",
+      "arrival_time": "Ankunft",
+      "departure_time": "Abfahrt",
+      "date": "Datum",
+      "day": "Tag",
+      "start_date": "Beginn",
+      "end_date": "Ende",
+      "check_in": "Check-in",
+      "check_out": "Check-out",
+      "birthdate": "Geburtstag",
+      "check_in_time": "Check-in-Uhrzeit",
+      "check_out_time": "Check-out-Uhrzeit",
+      "dep_timezone": "Zeitzone Abflug",
+      "arr_timezone": "Zeitzone Ankunft",
+      "visited_zone": "Zeitzone des Besuchs",
+      "stop_zone": "Zeitzone des Halts",
+      "start_zone": "Zeitzone Beginn",
+      "end_zone": "Zeitzone Ende",
+      "stay_zone": "Zeitzone des Aufenthalts",
+      "other": "Zeitangabe"
+    },
+    "backfillErrors": {
+      "TIMEZONE_LOOKUP_UNAVAILABLE": "Die Zeitzonen-Suche war nicht verfügbar",
+      "JOB_FAILED": "Der Lauf ist mit einem Fehler abgebrochen"
+    },
+    "errors": {
+      "unreadable": "Die Antwort des Servers hat eine Form, die diese Version der Oberfläche nicht lesen kann. Angezeigt wird deshalb nichts – statt Zahlen, die nicht stimmen.",
+      "outcomeUnknown": "Der Server meldet das Ergebnis nicht mehr (vermutlich ein Neustart). Ob etwas geschrieben wurde, ist unbekannt – ein neuer Probelauf zeigt, was noch offen ist.",
+      "forbidden": "Dafür brauchst du Admin-Rechte.",
+      "notAvailable": "Dieser Server kennt die Umstellung auf das neue Zeitmodell noch nicht.",
+      "DRY_RUN_NOT_FOUND": "Diesen Probelauf kennt der Server nicht mehr (abgelaufen oder nach einem Neustart). Es wurde nichts geschrieben – starte einen neuen.",
+      "RE_RESOLVE_RUNNING": "Es läuft bereits eine Neuzuordnung. Warte, bis sie fertig ist."
+    },
+    "report": {
+      "title": "Zeitumstellung – Bericht",
+      "description": "Was die Umstellung auf das neue Zeitmodell auf dieser Instanz umgerechnet hat – und was nicht.",
+      "reload": "Neu laden",
+      "loading": "Bericht wird geladen …",
+      "errors": {
+        "loadFailed": "Der Bericht konnte nicht geladen werden.",
+        "notAVerdict": "Das heißt nicht, dass nichts umgestellt wurde – nur, dass der Bericht gerade nicht abrufbar ist."
+      },
+      "status": {
+        "pending": "Die Umstellung ist auf dieser Instanz noch nicht gelaufen. Das geschieht einmal beim nächsten Serverstart.",
+        "running": "Die Umstellung läuft gerade. Lade den Bericht neu, wenn sie fertig ist.",
+        "failed": "Die Umstellung ist abgebrochen: {{error}}. Was bis dahin umgerechnet wurde, steht unten; die ursprünglichen Werte sind unverändert.",
+        "noErrorCode": "ohne Angabe eines Grundes",
+        "completed": "Die Umstellung lief am {{when}} (Zeitzonendaten {{tzdata}})."
+      },
+      "outcomes": {
+        "converted": "Umgerechnet",
+        "alreadyFilled": "Schon im neuen Format",
+        "answered": "Seither beantwortet",
+        "open": "Offen"
+      },
+      "statement": {
+        "converted_one": "{{count}} Eintrag wurde umgerechnet; die neuen Werte stehen in eigenen Spalten.",
+        "converted_other": "{{count}} Einträge wurden umgerechnet; die neuen Werte stehen in eigenen Spalten.",
+        "alreadyFilled_one": "{{count}} Eintrag hatte die neuen Werte schon (neu angelegt oder aus der Demo) und blieb unverändert.",
+        "alreadyFilled_other": "{{count}} Einträge hatten die neuen Werte schon (neu angelegt oder aus der Demo) und blieben unverändert.",
+        "answered_one": "{{count}} Eintrag, den die Umstellung offen ließ, ist seither beantwortet – Zeitzone oder Uhrzeit ergänzt, die Frage bestätigt oder der Eintrag gelöscht.",
+        "answered_other": "{{count}} Einträge, die die Umstellung offen ließ, sind seither beantwortet – Zeitzone oder Uhrzeit ergänzt, die Frage bestätigt oder der Eintrag gelöscht.",
+        "open_one": "{{count}} Eintrag wurde nicht vollständig umgestellt – nichts wurde geraten. Jede offene Angabe steht als Frage im Posteingang ihres Besitzers.",
+        "open_other": "{{count}} Einträge wurden nicht vollständig umgestellt – nichts wurde geraten. Jede offene Angabe steht als Frage im Posteingang ihres Besitzers.",
+        "flags": "Fragen im Posteingang: {{open}} offen · {{resolved}} als korrigiert gemeldet · {{dismissed}} als richtig bestätigt",
+        "legacyUntouched": "Die ursprünglichen Spalten wurden nicht verändert. Jede Umrechnung ist protokolliert und lässt sich zurücknehmen."
+      },
+      "unchanged": {
+        "title": "Bewusst nicht angefasst:",
+        "item": "{{domain}} ({{why}})",
+        "domains": {
+          "tours": "Touren",
+          "track_windows": "Track-Zeitfenster",
+          "loyalty": "Treueprogramme",
+          "country_days": "Ländertage",
+          "photos": "Fotos"
+        },
+        "why": {
+          "already_dates": "schon reine Tagesdaten",
+          "already_instants": "schon echte Zeitpunkte",
+          "no_time_columns": "ohne Zeitangaben",
+          "utc_by_decision": "bewusst UTC-Tage"
+        }
+      },
+      "tables": {
+        "caption": "Nach Tabelle",
+        "table": "Tabelle",
+        "reasonsCaption": "Offen nach Grund",
+        "rulesCaption": "Regeln im Einzelnen"
+      },
+      "ruleStatus": {
+        "open": "offen",
+        "resolved": "umgerechnet"
+      },
+      "noReason": "ohne Grund",
+      "openRows": {
+        "title_one": "{{count}} offene Angabe",
+        "title_other": "{{count}} offene Angaben",
+        "answer": "Im Posteingang beantworten",
+        "openEditor": "Im Editor öffnen",
+        "otherInbox": "im Posteingang von {{user}}",
+        "unknownOwner": "Konto nicht zuzuordnen",
+        "truncated": "Nicht alle offenen Angaben sind aufgelistet – die Zahlen oben zählen alle."
+      }
+    },
+    "reResolve": {
+      "title": "Zeitzonen neu zuordnen",
+      "description": "Jede Zeit trägt die Zone, mit der sie gespeichert wurde. Wurde ein Ort korrigiert oder hat ein Land seine Zeitzone geändert, zeigt ein Probelauf, welche Einträge eine andere Zone bekämen und um wie viel sich ihre Ortszeit verschiebt. Geschrieben wird erst, wenn du anwendest.",
+      "dryRun": "Probelauf starten",
+      "dryRunning": "Probelauf läuft …",
+      "progress": "{{done}} von {{total}} geprüft",
+      "progressUnknown": "Läuft – bei vielen Einträgen kann das ein bis zwei Minuten dauern.",
+      "summary": "Geprüft: {{checked}} · Zone würde sich ändern: {{changes}} · Zeitzonendaten {{tzdata}}",
+      "unresolvable_one": "{{count}} Eintrag lässt sich jetzt keiner Zone zuordnen – er bleibt, wie er gespeichert ist.",
+      "unresolvable_other": "{{count}} Einträge lassen sich jetzt keiner Zone zuordnen – sie bleiben, wie sie gespeichert sind.",
+      "noChanges": "Keine Zeitzone würde sich ändern. Es gibt nichts anzuwenden.",
+      "table": {
+        "entry": "Eintrag",
+        "from": "Bisher",
+        "to": "Neu",
+        "delta": "Ortszeit"
+      },
+      "truncated": "{{shown}} von {{total}} Änderungen angezeigt. Angewendet werden alle {{total}}.",
+      "noInstant": "ohne Uhrzeit",
+      "apply": "Anwenden",
+      "applying": "Wird angewendet …",
+      "confirm": {
+        "title": "Zeitzonen neu zuordnen?",
+        "message_one": "{{count}} Eintrag bekommt die neue Zone aus dem Probelauf. Seine Ortszeit verschiebt sich um die gezeigte Differenz; der gespeicherte Zeitpunkt bleibt.",
+        "message_other": "{{count}} Einträge bekommen die neue Zone aus dem Probelauf. Die Ortszeit verschiebt sich jeweils um die gezeigte Differenz; die gespeicherten Zeitpunkte bleiben."
+      },
+      "applied": "Angewendet: {{applied}} · Übersprungen, weil seit dem Probelauf geändert: {{skipped}}",
+      "errors": {
+        "dryRunFailed": "Der Probelauf ist fehlgeschlagen. Es wurde nichts geändert.",
+        "applyFailed": "Die Neuzuordnung ist fehlgeschlagen. Ein neuer Probelauf zeigt, was noch offen ist."
+      }
+    }
   }
 }

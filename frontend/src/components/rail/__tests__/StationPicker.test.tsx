@@ -32,6 +32,7 @@ const ZURICH = {
   name: "Zürich HB",
   uic: "8503000",
   dbId: "8503000",
+  shortCode: null as string | null,
   lat: 47.378177,
   lon: 8.540192,
   country: "CH",
@@ -61,7 +62,28 @@ function Harness({
   );
 }
 
+const MUECKA = { ...ZURICH, id: 9, name: "Mücka", uic: "8012345", country: "DE" };
+
 describe("StationPicker", () => {
+  // Acceptance D1: opened on the printed "MUC", the review listed "Mücka".
+  it("offers no nonsense for a printed name, and says so instead of guessing", async () => {
+    searchStations.mockResolvedValue([MUECKA]);
+    const changes: RailStationDraft[] = [];
+    render(
+      <StationPicker
+        label="Ab"
+        idPrefix="dep"
+        value={{ ...EMPTY_STATION, name: "MUC" }}
+        printedName="MUC"
+        inputClassName=""
+        onChange={(next) => changes.push(next)}
+      />
+    );
+    expect(await screen.findByText("rail:station.noPlausibleHit")).toBeInTheDocument();
+    expect(screen.queryByRole("button", { name: /Mücka/ })).not.toBeInTheDocument();
+    expect(changes).toEqual([]);
+  });
+
   beforeEach(() => {
     searchStations.mockReset();
   });
@@ -144,5 +166,30 @@ describe("StationPicker", () => {
     expect(
       screen.getByRole("button", { name: "rail:station.backToCatalogue" })
     ).toBeInTheDocument();
+  });
+
+  // forgejo#132 item 16: the list names the DB code where one is known.
+  it("shows a hit's short code beside its name, and none where it is unknown", async () => {
+    searchStations.mockResolvedValue([
+      { ...ZURICH, id: 2, name: "Köln Hbf", uic: "8015458", dbId: "8000207", shortCode: "KK" },
+      { ...ZURICH, id: 3, name: "Köln Süd", shortCode: null },
+    ]);
+    render(<Harness changes={[]} />);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "koeln" } });
+    await screen.findByRole("button", { name: /Köln Süd/ });
+    expect(screen.getAllByTestId("station-short-code").map((el) => el.textContent)).toEqual(["KK"]);
+    expect(screen.getByRole("button", { name: /Köln Hbf/ }).textContent).toContain("KK");
+  });
+
+  // The catalogue's `country` is an ISO 3166-1 alpha-2 code, never a name —
+  // the caption printed it raw ("CH · 8503000") (silent-fix sweep 2026-09-27).
+  it("names the hit's country instead of printing its ISO code", async () => {
+    searchStations.mockResolvedValue([ZURICH]);
+    render(<Harness changes={[]} />);
+    fireEvent.change(screen.getByRole("combobox"), { target: { value: "zurich hb" } });
+
+    const hit = await screen.findByRole("button", { name: /Zürich HB/ });
+    expect(hit.textContent).toContain("Schweiz");
+    expect(hit.textContent).not.toContain("CH ·");
   });
 });

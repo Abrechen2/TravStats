@@ -1,5 +1,8 @@
 import type { Flight, FlightInput } from "../types";
-import type { Cruise, CruiseInput } from "../types/cruise";
+import { flightDeparture, railDeparture } from "./entityTimes";
+import { dayOf } from "../shared/time";
+import type { Cruise, CruiseWriteBody } from "../types/cruise";
+import type { RailJourney, RailJourneyInput } from "../types/rail";
 import type { CurrencyCode } from "../shared/currencies";
 import type {
   CurrentValues,
@@ -14,19 +17,10 @@ import type {
  * entry is already stored — a form builds its own target from its state.
  */
 
-/** The calendar day a flight departs, in the departure airport's zone. */
-export function departureDay(
-  flight: Pick<Flight, "departureTime" | "depTimezone">
-): string | undefined {
-  if (!flight.departureTime) return undefined;
-  const date = new Date(flight.departureTime);
-  if (Number.isNaN(date.getTime())) return undefined;
-  try {
-    // en-CA formats as YYYY-MM-DD.
-    return new Intl.DateTimeFormat("en-CA", { timeZone: flight.depTimezone || "UTC" }).format(date);
-  } catch {
-    return flight.departureTime.slice(0, 10);
-  }
+/** The calendar day a flight departs, at the departure airport (its `times.departure.local`). */
+export function departureDay(flight: Parameters<typeof flightDeparture>[0]): string | undefined {
+  const departure = flightDeparture(flight);
+  return departure ? dayOf(departure) : undefined;
 }
 
 /** Only the ticked values; a null never leaves as "clear this field". */
@@ -65,7 +59,7 @@ export function flightExtractTarget(
 
 export function cruiseExtractTarget(
   cruise: Cruise,
-  save: (updates: CruiseInput) => Promise<void>
+  save: (updates: CruiseWriteBody) => Promise<void>
 ): ExtractTarget {
   return {
     domain: "cruise",
@@ -81,7 +75,45 @@ export function cruiseExtractTarget(
           bookingReference: values.bookingReference,
           // The server only proposes ISO 4217 codes (`isCurrencyCode`).
           currency: (values.currency ?? undefined) as CurrencyCode | undefined,
-        }) as CruiseInput
+        }) as CruiseWriteBody
+      ),
+  };
+}
+
+/**
+ * A saved train ride. The seat and coach are the leg's; the train and the day
+ * pick that leg out of a connection's ticket (the server abstains on them when
+ * it cannot tell). The day is read on the departure station's clock.
+ */
+export function railExtractTarget(
+  journey: RailJourney,
+  save: (updates: Partial<RailJourneyInput>) => Promise<void>
+): ExtractTarget {
+  const train = [journey.trainCategory, journey.trainNumber].filter(Boolean).join(" ");
+  const departure = railDeparture(journey);
+  const day = departure ? dayOf(departure) : undefined;
+  return {
+    domain: "rail",
+    ...(train ? { trainNumber: train } : {}),
+    ...(day ? { departureDate: day } : {}),
+    current: {
+      price: journey.price,
+      currency: journey.currency,
+      bookingReference: journey.bookingReference,
+      travelClass: journey.travelClass,
+      coach: journey.coach,
+      seatNumber: journey.seat,
+    },
+    onApply: (values: Partial<ExtractedValues>) =>
+      save(
+        defined({
+          price: values.price,
+          currency: values.currency,
+          bookingReference: values.bookingReference,
+          travelClass: values.travelClass,
+          coach: values.coach,
+          seat: values.seatNumber,
+        }) as Partial<RailJourneyInput>
       ),
   };
 }
@@ -97,7 +129,8 @@ export interface AppliedValues {
 
 /** The two hints that pick a stored flight's leg out of a multi-flight booking. */
 export function flightHints(
-  flight: Pick<Flight, "flightNumber" | "departureTime" | "depTimezone">
+  flight: Pick<Flight, "flightNumber" | "departureTime" | "depTimezone"> &
+    Partial<Pick<Flight, "times">>
 ): { flightNumber?: string; departureDate?: string } {
   return { flightNumber: flight.flightNumber || undefined, departureDate: departureDay(flight) };
 }

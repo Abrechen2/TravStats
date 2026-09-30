@@ -10,6 +10,8 @@ import SuggestionChips from "../common/SuggestionChips";
 import { useTripEntrySuggestions } from "../../hooks/useTripEntrySuggestions";
 import { tripEntrySpan } from "../../lib/tripEntrySpan";
 import { formatDate } from "../../lib/displayFormat";
+import { dayInput } from "../../lib/api/timeInput";
+import { saveErrorMessage } from "../../lib/saveErrorMessage";
 
 interface TripModalProps {
   trip: Trip | null; // null = create mode
@@ -45,9 +47,10 @@ function toDateInput(iso: string | null): string {
   return d.toISOString().slice(0, 10);
 }
 
+// Sent as the bare day, `YYYY-MM-DD` (ADR 0002) — a trip's first and last
+// day are dates, not instants.
 function fromDateInput(value: string): string | null {
-  if (!value) return null;
-  return new Date(value + "T00:00:00.000Z").toISOString();
+  return dayInput(value);
 }
 
 export default function TripModal({ trip, onClose, onSaved }: TripModalProps): JSX.Element {
@@ -75,6 +78,12 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const [coverPreview, setCoverPreview] = useState<string | null>(null);
   const [removeCover, setRemoveCover] = useState(false);
   const [saving, setSaving] = useState(false);
+  // The server refuses a name of only whitespace (schemas/trip.ts). Said at
+  // the field once a save was tried, instead of a save button greyed out
+  // with no word of why.
+  const [saveTried, setSaveTried] = useState(false);
+  const nameMissing = !name.trim();
+  const showNameMissing = saveTried && nameMissing;
   const [uploadingCover, setUploadingCover] = useState(false);
   const coverInputRef = useRef<HTMLInputElement>(null);
   // Offered under the two place labels, never written into them: the labels
@@ -135,7 +144,14 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
   const datesOutOfOrder = Boolean(startDate && endDate && endDate < startDate);
 
   const handleSave = async (): Promise<void> => {
-    if (!name.trim() || datesOutOfOrder) return;
+    setSaveTried(true);
+    if (nameMissing) {
+      // The name lives on the first tab; a save tried from another one must
+      // still show the reader the field that stopped it.
+      setTab("general");
+      return;
+    }
+    if (datesOutOfOrder) return;
     setSaving(true);
     try {
       // The cover image is never sent as a field here — it's uploaded
@@ -189,8 +205,9 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
 
       addToast("success", trip ? t("trips:toasts.updated") : t("trips:toasts.created"));
       onSaved();
-    } catch {
-      addToast("error", trip ? t("trips:toasts.updateError") : t("trips:toasts.createError"));
+    } catch (err: unknown) {
+      const fallback = trip ? "trips:toasts.updateError" : "trips:toasts.createError";
+      addToast("error", saveErrorMessage(err, t, fallback));
     } finally {
       setSaving(false);
     }
@@ -261,7 +278,14 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
                   placeholder={t("trips:modal.namePlaceholder")}
                   className="w-full rounded-lg px-3 py-2 text-sm"
                   style={inputStyle}
+                  aria-invalid={showNameMissing || undefined}
+                  aria-describedby={showNameMissing ? "trip-name-error" : undefined}
                 />
+                {showNameMissing && (
+                  <p id="trip-name-error" role="alert" className="mt-1 text-[11px] text-(--danger)">
+                    {t("trips:modal.nameRequired")}
+                  </p>
+                )}
               </Field>
 
               {/* #status-from-dates: trip status now derives from linked
@@ -490,7 +514,7 @@ export default function TripModal({ trip, onClose, onSaved }: TripModalProps): J
           </button>
           <button
             onClick={() => void handleSave()}
-            disabled={!name.trim() || saving || datesOutOfOrder}
+            disabled={saving || datesOutOfOrder}
             type="button"
             className="px-4 py-2 rounded-lg text-sm font-medium bg-(--accent) text-(--bg-base) disabled:opacity-50"
           >

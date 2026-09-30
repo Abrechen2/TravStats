@@ -20,13 +20,15 @@
 
 import type { RailJourney } from "../../types/rail";
 import { toStationWallClock } from "../railTime";
+import { railArrival, railDeparture } from "../entityTimes";
+import type { TimeValue } from "../../shared/time";
 import { refCell, type SheetSpec } from "./sheetSpec";
 
 type T = (key: string) => string;
 
 /** A station wall clock as a Date whose UTC fields ARE that clock — see above. */
-function stationClockCell(iso: string | null, timeZone: string | null): Date | null {
-  const wall = toStationWallClock(iso, timeZone);
+function stationClockCell(value: TimeValue | null): Date | null {
+  const wall = toStationWallClock(value);
   return wall ? new Date(`${wall}:00.000Z`) : null;
 }
 
@@ -73,14 +75,14 @@ export function railSheet(t: T): SheetSpec<RailJourney> {
         header: t("xlsx:columns.departureLocal"),
         kind: "datetime",
         width: 18,
-        value: (r) => stationClockCell(r.departureTime, r.depTimezone),
+        value: (r) => stationClockCell(railDeparture(r)),
       },
       {
         key: "arrivalTime",
         header: t("xlsx:columns.arrivalLocal"),
         kind: "datetime",
         width: 18,
-        value: (r) => stationClockCell(r.arrivalTime, r.arrTimezone),
+        value: (r) => stationClockCell(railArrival(r)),
       },
       text("status", "status", 12, (r) => r.status),
       {

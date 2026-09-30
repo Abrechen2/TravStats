@@ -173,7 +173,8 @@
       "aircraft": "Flugzeug, Terminal & Gate",
       "booking": "Buchung, Reise & Notizen",
       "filledIn": "ausgefüllt"
-    }
+    },
+    "llmUnreachable": "In der E-Mail wurde kein Flug erkannt – der KI-Parser war dabei nicht erreichbar. Bitte später erneut versuchen oder den Flug manuell eintragen."
   },
   "list": {
     "title": "Flüge",
@@ -185,7 +186,7 @@
     "to": "Nach",
     "aircraft": "Flugzeug",
     "deleteConfirm": "Möchtest du diesen Flug wirklich löschen?",
-    "wholeListHint": "Ein ganzes Logbuch auf einmal?"
+    "wholeListHint": "Eine ganze Liste auf einmal?"
   },
   "table": {
     "title": "Flugliste",
@@ -353,7 +354,8 @@
       "step2": "Ollama Vision extrahiert automatisch alle Flugdaten",
       "step3": "Optional: API-Abgleich für Zeiten & Terminal/Gate",
       "step4": "Funktioniert mit allen gängigen Boarding Pass Formaten"
-    }
+    },
+    "noFlightData": "Auf der Bordkarte wurden keine Flugdaten erkannt. Bitte ein schärferes Foto versuchen oder den Flug manuell eintragen."
   },
   "receipt": {
     "label": "Beleg",

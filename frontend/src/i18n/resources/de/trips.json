@@ -15,7 +15,8 @@
   "editTrip": "Reise bearbeiten",
   "deleteTrip": "Reise löschen",
   "removeFromTrip": "Aus Reise entfernen",
-  "deleteTripConfirm": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, Touren mit ihren aufgezeichneten Tracks und den hier abgelegten Dokumenten. Flüge, Kreuzfahrten, Unterkünfte und Roadtrips bleiben erhalten.",
+  "deleteTripConfirm": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, aus ihren Stationen gebauten Touren mit ihren aufgezeichneten Tracks und den hier abgelegten Dokumenten. Flüge, Kreuzfahrten, Unterkünfte und Roadtrips bleiben erhalten, ebenso Tagestouren mit eigenen Punkten — sie werden zu eigenständigen Touren.",
+  "deleteTripConfirmWithRail": "„{{name}}“ wird dauerhaft gelöscht, samt Fotos, Stationen, Mitreisenden, Reisetagebuch-Einträgen, aus ihren Stationen gebauten Touren mit ihren aufgezeichneten Tracks und den hier abgelegten Dokumenten. Flüge, Kreuzfahrten, Bahnfahrten, Unterkünfte und Roadtrips bleiben erhalten, ebenso Tagestouren mit eigenen Punkten — sie werden zu eigenständigen Touren.",
   "showOnMap": "Auf Karte",
   "flightCount_one": "{{count}} Flug",
   "flightCount_other": "{{count}} Flüge",
@@ -55,6 +56,7 @@
     "endDateLabel": "Enddatum",
     "useEntrySpan": "Zeitraum der Einträge übernehmen: {{start}} – {{end}}",
     "endBeforeStart": "Das Ende darf nicht vor dem Beginn liegen.",
+    "nameRequired": "Gib der Reise einen Namen.",
     "originLabel": "Herkunft",
     "destinationLabel": "Ziel",
     "tagsLabel": "Tags",
@@ -155,7 +157,9 @@
     "map": {
       "empty": "Diese Reise hat noch keine Geo-Daten — füge Stopps mit Koordinaten oder Flüge / Kreuzfahrten mit Routendaten hinzu.",
       "clickHint": "Tipp: Auf eine Route oder einen Punkt klicken, um zu zoomen.",
-      "toggleProjectionHint": "Zwischen Globus und flacher Karte umschalten"
+      "toggleProjectionHint": "Zwischen Globus und flacher Karte umschalten",
+      "projectionGlobe": "🌐 Globus",
+      "projectionFlat": "🗺 Flach"
     },
     "logistics": {
       "flights": "Flüge",
@@ -189,7 +193,9 @@
       "itinerary": "Etappen",
       "atSea": "Seetag",
       "openJournal": "Ganz öffnen"
-    }
+    },
+    "stopNotFound": "Diesen Halt gibt es in dieser Reise nicht mehr.",
+    "journalEntryNotFound": "Diesen Tagebucheintrag gibt es in dieser Reise nicht mehr."
   },
   "journalModal": {
     "createTitle": "Tagebuch-Eintrag",
@@ -278,6 +284,8 @@
     "summary": "{{trips}} ausgewählt · {{flights}} Flüge werden zugeordnet",
     "commit": "{{count}} Reisen erstellen",
     "discard": "Verwerfen",
+    "flightCount_one": "{{count}} Flug",
+    "flightCount_other": "{{count}} Flüge",
     "expandLegs": "Flüge anzeigen",
     "collapseLegs": "Flüge ausblenden",
     "legStatus": {
@@ -294,7 +302,9 @@
     "generating": "Schreibt … das kann ein paar Minuten dauern",
     "generated": "Zusammenfassung erstellt",
     "error": "Zusammenfassung fehlgeschlagen",
-    "unavailable": "KI-Dienst nicht erreichbar. Ollama richtet der Admin unter Admin → Parser ein."
+    "unavailable": "KI-Dienst nicht erreichbar. Ollama richtet der Admin unter Admin → Parser ein.",
+    "disabled": "Die KI-Zusammenfassung ist abgeschaltet – der Admin hat das KI-Modell unter Admin → Parser deaktiviert.",
+    "cloudNotConsented": "Der KI-Anbieter liegt außerhalb des Netzwerks, und der Administrator hat dem Senden von Reisedaten dorthin nicht zugestimmt."
   },
   "gallery": {
     "title": "Galerie",
@@ -321,6 +331,7 @@
     "title": "Touren",
     "newSection": "Tour hinzufügen",
     "namePlaceholder": "Name der Tour",
+    "nameRequired": "Gib der Tour einen Namen.",
     "save": "Speichern",
     "empty": "Noch keine Tour in dieser Reise",
     "loadError": "Touren konnten nicht geladen werden",
@@ -360,7 +371,18 @@
       "error": "Die Etappe konnte nicht berechnet werden",
       "allError": "Die Tour konnte nicht berechnet werden",
       "fallback": "Es wurde keine Route gefunden — die Luftlinie bleibt bestehen",
-      "result": "{{routed}} Etappen verarbeitet, {{skipped}} übersprungen"
+      "result": "{{routed}} Etappen berechnet, {{skipped}} übersprungen",
+      "resultFallback": "{{routed}} Etappen berechnet, {{fallback}} als Luftlinie belassen, {{skipped}} übersprungen. {{reason}}",
+      "reason": {
+        "no_provider": "Auf dieser Instanz ist kein Routing-Anbieter eingerichtet.",
+        "unroutable_mode": "Fähren und Bahnstrecken werden nicht entlang der Straße berechnet.",
+        "provider_error": "Der Routing-Anbieter hat nicht geantwortet oder einen Fehler gemeldet.",
+        "no_route": "Der Routing-Anbieter kennt keinen Weg zwischen diesen beiden Orten.",
+        "point_not_near_road": "Ein Ort liegt mehr als einen Kilometer von der nächsten Straße entfernt — Ort der Station prüfen.",
+        "rate_limited": "Das Anfragelimit des Routing-Anbieters ist erreicht. Später noch einmal versuchen.",
+        "auth": "Der Routing-Anbieter hat den API-Schlüssel abgelehnt — Schlüssel in den Einstellungen prüfen.",
+        "untrustworthy": "Die Antwort des Routing-Anbieters passte nicht zu den beiden Orten und wurde verworfen."
+      }
     },
     "tracks": {
       "heading": "Aufgezeichnete Tracks",
@@ -378,6 +400,16 @@
         "confirm": "Track löschen"
       },
       "deleteError": "Der Track konnte nicht gelöscht werden",
+      "errors": {
+        "fileTooLarge": "Die Datei ist zu groß für einen Track.",
+        "fileUnreadable": "Die Datei lässt sich nicht als GPX, TCX oder FIT lesen.",
+        "noTimestamps": "Die Aufzeichnung hat keine Zeitstempel und lässt sich darum zeitlich nicht einordnen.",
+        "alreadyImported": "Diese Aufzeichnung ist bereits in der Tour.",
+        "noDatedStops": "Die Stationen dieses Abschnitts haben kein Datum – daraus lässt sich kein Zeitraum für Dawarich ableiten.",
+        "windowInvalid": "Der Zeitraum endet vor seinem Beginn.",
+        "windowEmpty": "Dawarich hat für diesen Zeitraum keine Standortdaten.",
+        "tooFewPoints": "Dawarich hat für diesen Zeitraum nur einen Standortpunkt – zu wenig für einen Track."
+      },
       "pointCount_one": "{{count}} Punkt",
       "pointCount_other": "{{count}} Punkte",
       "truncated": "Unvollständig",
@@ -452,7 +484,23 @@
       "save": "Punkte speichern",
       "incomplete": "Jeder Punkt braucht einen Namen und beide Koordinaten.",
       "saveError": "Die Punkte konnten nicht gespeichert werden.",
-      "heading": "Punkte"
+      "heading": "Punkte",
+      "saveErrorFromTrip": "Diese Tour besteht aus Stationen ihrer Reise. Ordne die Stationen in der Reise zu.",
+      "saveErrorOffline": "Keine Verbindung zum Server — die Punkte wurden nicht gespeichert.",
+      "saveErrorInvalid": "Die Punkte wurden abgelehnt: Jeder Punkt braucht einen Namen und gültige Koordinaten.",
+      "saveErrorGone": "Diese Tour gibt es nicht mehr.",
+      "via": "Streckenkorrektur",
+      "viaHint": "Nur für die Linienführung — braucht keinen Namen und zählt nicht als Punkt.",
+      "saveErrorViaNight": "Ein Punkt mit Übernachtung kann keine Streckenkorrektur sein — ändere ihn auf der Roadtrip-Seite."
+    },
+    "day": {
+      "date": "Datum der Tour",
+      "startTime": "Startzeit",
+      "saveError": "Das Datum konnte nicht gespeichert werden."
+    },
+    "map": {
+      "empty": "Diese Tour hat noch keine Punkte mit Koordinaten — füge Punkte hinzu oder lade eine Aufzeichnung hoch.",
+      "loadError": "Die Touren dieser Reise konnten nicht geladen werden — die Karte zeigt sie deshalb nicht."
     }
   },
   "head": {

@@ -79,15 +79,31 @@ describe("lookupQueryFrom", () => {
 
 describe("noMatchReason", () => {
   it("keeps 'the service did not answer' apart from 'no such train'", () => {
-    expect(noMatchReason({ match: null, attempts: attempts("unavailable", "unavailable") })).toBe(
-      "unavailable"
-    );
-    expect(noMatchReason({ match: null, attempts: attempts("noMatch", "unavailable") })).toBe(
-      "noMatch"
-    );
-    expect(noMatchReason({ match: null, attempts: attempts("disabled", "notApplicable") })).toBe(
-      "disabled"
-    );
+    expect(
+      noMatchReason({ match: null, attempts: attempts("unavailable", "unavailable") })
+    ).toEqual({
+      kind: "unavailable",
+      silent: ["transitous", "db-rest"],
+    });
+    expect(noMatchReason({ match: null, attempts: attempts("noMatch", "noMatch") })).toEqual({
+      kind: "noMatch",
+      silent: [],
+    });
+    expect(
+      noMatchReason({ match: null, attempts: attempts("disabled", "notApplicable") }).kind
+    ).toBe("disabled");
+  });
+
+  // Review 2026-09-26, finding 3: Transitous "noMatch" plus a db-rest 503 was
+  // reported as "no such train", and the 503 vanished.
+  it("never claims 'no such train' while a provider did not answer, and names it", () => {
+    expect(noMatchReason({ match: null, attempts: attempts("noMatch", "unavailable") })).toEqual({
+      kind: "unavailable",
+      silent: ["db-rest"],
+    });
+    expect(
+      noMatchReason({ match: null, attempts: attempts("timedOut", "skippedForTime") })
+    ).toEqual({ kind: "unavailable", silent: ["transitous", "db-rest"] });
   });
 });
 
@@ -113,6 +129,16 @@ describe("RailLookupPanel", () => {
     renderPanel(draft({ departureLocal: "2026-09-26T08:00" }));
     fireEvent.click(await screen.findByRole("button", { name: "rail:lookup.run" }));
     expect(await screen.findByRole("status")).toHaveTextContent("rail:lookup.none.unavailable");
+  });
+
+  it("lists what each provider said under a miss", async () => {
+    lookup.mockResolvedValue({ match: null, attempts: attempts("noMatch", "unavailable") });
+    renderPanel(draft({ departureLocal: "2026-09-26T08:00" }));
+    fireEvent.click(await screen.findByRole("button", { name: "rail:lookup.run" }));
+    expect(await screen.findByRole("status")).toHaveTextContent("rail:lookup.none.unavailable");
+    const list = screen.getByTestId("rail-lookup-attempts");
+    expect(list).toHaveTextContent("rail:lookup.provider.transitous: rail:lookup.outcome.noMatch");
+    expect(list).toHaveTextContent("rail:lookup.provider.db-rest: rail:lookup.outcome.unavailable");
   });
 
   it("credits Transitous with a link to its sources", async () => {

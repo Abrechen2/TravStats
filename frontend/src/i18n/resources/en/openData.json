@@ -14,7 +14,8 @@
     "distance": "Distance",
     "ascent": "Ascent",
     "descent": "Descent",
-    "note": "Ground heights from Open-Meteo along the planned line — calculated, not measured."
+    "note": "Ground heights from Open-Meteo along the planned line — calculated, not measured.",
+    "unavailable": "The elevation profile could not be computed right now – the elevation service (Open-Meteo) is not answering. Open this again later."
   },
   "weather": {
     "measuredAt": "Weather in {{place}}",
@@ -40,13 +41,31 @@
       "snow": "snow",
       "showers": "showers",
       "thunder": "thunderstorm"
-    }
+    },
+    "outcome": {
+      "futureOrToday": "There is no measured weather for today or later days yet – it can be added once the day is over.",
+      "noData": "The weather service has no complete measurement for this day.",
+      "timeout": "The weather service did not answer in time. Please try again later.",
+      "timeoutKept": "The weather service did not answer in time – the stored weather stays.",
+      "rateLimited": "The weather service is not taking more requests right now. Please try again later.",
+      "rateLimitedKept": "The weather service is not taking more requests right now – the stored weather stays.",
+      "unavailable": "The weather service cannot be reached right now. Please try again later.",
+      "unavailableKept": "The weather service cannot be reached right now – the stored weather stays."
+    },
+    "fillFailed_one": "The weather service did not answer for {{count}} entry – please try again later.",
+    "fillFailed_other": "The weather service did not answer for {{count}} entries – please try again later.",
+    "fillNoPlace_one": "{{count}} entry has no place with coordinates.",
+    "fillNoPlace_other": "{{count}} entries have no place with coordinates.",
+    "fillNotYet_one": "There is no measurement yet for {{count}} entry.",
+    "fillNotYet_other": "There is no measurement yet for {{count}} entries.",
+    "outcomeUnknown": "The server no longer reports how filling in the weather ended. Please reload the trip."
   },
   "wikipedia": {
     "title": "From Wikipedia",
     "readMore": "Read more on Wikipedia",
     "englishArticle": "English article",
-    "license": "Text: Wikipedia, CC BY-SA 4.0"
+    "license": "Text: Wikipedia, CC BY-SA 4.0",
+    "unavailable": "Wikipedia cannot be reached right now. Open this again later."
   },
   "lodging": {
     "enrich": "Complete from OpenStreetMap",
@@ -62,7 +81,8 @@
       "wikidataId": "Wikipedia link",
       "chain": "chain",
       "name": "name",
-      "type": "type"
+      "type": "type",
+      "position": "position (moved onto the chosen house)"
     },
     "nearby": {
       "search": "Find lodgings nearby (OpenStreetMap)",
@@ -72,7 +92,13 @@
       "failed": "OpenStreetMap did not answer.",
       "distance": "{{m}} m",
       "filled": "Taken from OpenStreetMap: {{fields}}",
-      "nothingNew": "Picked “{{name}}” — nothing new, the fields were already filled."
+      "nothingNew": "Picked “{{name}}” — nothing new, the fields were already filled.",
+      "restorePin": "Move the pin back to where it was"
+    },
+    "upstream": {
+      "timeout": "OpenStreetMap did not answer in time – whether it knows the house is still open. Please try again later.",
+      "rateLimited": "OpenStreetMap is not taking more requests right now. Please try again later.",
+      "unavailable": "OpenStreetMap cannot be reached right now – whether it knows the house is still open."
     }
   }
 }

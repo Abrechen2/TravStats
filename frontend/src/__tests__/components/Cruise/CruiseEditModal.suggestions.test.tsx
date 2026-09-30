@@ -46,6 +46,11 @@ const stopDates = (): string[] =>
   screen.getAllByLabelText("stops.date").map((el) => (el as HTMLInputElement).value);
 
 async function savedPayload(): Promise<Parameters<typeof cruiseApi.create>[0]> {
+  // A new cruise needs something that sailed and a start date before it is sent.
+  const routeName = screen.getByLabelText("field.routeName") as HTMLInputElement;
+  if (!routeName.value) fireEvent.change(routeName, { target: { value: "Nordland" } });
+  const depart = screen.getAllByLabelText("field.depart")[0] as HTMLInputElement;
+  if (!depart.value) fireEvent.change(depart, { target: { value: "2026-07-01" } });
   await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
   await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
   const calls = vi.mocked(cruiseApi.create).mock.calls;
@@ -74,10 +79,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       await waitFor(() => expect(stopDates()).toEqual(["2026-07-01", "2026-07-02"]));
 
       const payload = await savedPayload();
-      expect(payload.stops?.map((s) => s.date)).toEqual([
-        "2026-07-01T00:00:00.000Z",
-        "2026-07-02T00:00:00.000Z",
-      ]);
+      expect(payload.stops?.map((s) => s.date)).toEqual(["2026-07-01", "2026-07-02"]);
       // UI-only bookkeeping never reaches the server.
       expect(payload.stops?.every((s) => !("dateSource" in s))).toBe(true);
     });
@@ -156,7 +158,7 @@ describe("CruiseEditModal — entry suggestions", () => {
       await userEvent.click(add);
 
       expect(endInput().value).toBe("2026-07-10");
-      expect((await savedPayload()).endDate).toBe("2026-07-10T00:00:00.000Z");
+      expect((await savedPayload()).endDate).toBe("2026-07-10");
     });
 
     it("never replaces the end date an existing cruise was loaded with", async () => {
@@ -262,5 +264,43 @@ describe("CruiseEditModal — entry suggestions", () => {
 
       expect((await savedPayload()).tags).toEqual(["Fjords", "Sea days"]);
     });
+  });
+  // Acceptance 2026-09-26: the edit dialog, opened on a cruise with a line,
+  // offered no other line — the combobox only searched for what the field
+  // already said, so it read as a plain text field. Create and edit now list
+  // the lines on focus alike.
+  describe("cruise line", () => {
+    const LINES = ["AIDA Cruises", "Hurtigruten", "TUI Cruises"];
+    beforeEach(() => {
+      vi.mocked(shipsApi.cruiseLines).mockImplementation(async (q?: string) =>
+        LINES.filter((l) => l.toLowerCase().includes((q ?? "").toLowerCase()))
+      );
+    });
+
+    it.each(["create", "edit"] as const)(
+      "offers the other lines on focus in %s mode",
+      async (mode) => {
+        const cruise =
+          mode === "edit"
+            ? ({
+                id: "c1",
+                cruiseLine: "AIDA Cruises",
+                startDate: "2026-01-01T00:00:00.000Z",
+                endDate: "2026-01-08T00:00:00.000Z",
+                status: "scheduled",
+                currency: "EUR",
+                tags: [],
+                companions: [],
+                stops: [],
+              } as unknown as Cruise)
+            : undefined;
+        render(<CruiseEditModal mode={mode} cruise={cruise} onClose={vi.fn()} onSaved={vi.fn()} />);
+        await act(async () => {
+          fireEvent.focus(screen.getByLabelText("field.line"));
+        });
+        expect(await screen.findByRole("button", { name: "TUI Cruises" })).toBeInTheDocument();
+        expect(screen.getByRole("button", { name: "Hurtigruten" })).toBeInTheDocument();
+      }
+    );
   });
 });

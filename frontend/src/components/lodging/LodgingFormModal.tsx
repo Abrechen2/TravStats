@@ -48,6 +48,12 @@ export function LodgingFormModal({
   const [country, setCountry] = useState<string>(lodging?.country ?? "");
   const [lat, setLat] = useState<number | null>(lodging?.lat ?? null);
   const [lon, setLon] = useState<number | null>(lodging?.lon ?? null);
+  /** The OSM house the user picked from "nearby" — sent so the server can
+   *  remember WHICH house this is (stored only while the row has none). */
+  const [osmRef, setOsmRef] = useState<string | null>(null);
+  /** Where the pin stood before a nearby pick moved it onto the house, so
+   *  the move can be taken back. */
+  const [pinBeforePick, setPinBeforePick] = useState<LocationCoordinates | null>(null);
   const [stars, setStars] = useState<string>(lodging?.stars?.toString() ?? "");
   const [amenities, setAmenities] = useState<string[]>(lodging?.amenities ?? []);
   const entrySuggestions = useLodgingEntrySuggestions();
@@ -71,6 +77,10 @@ export function LodgingFormModal({
   const handleLocationChange = (selection: LocationSelection): void => {
     setLat(selection.lat);
     setLon(selection.lon);
+    // A new position is a new answer to "where": the earlier pick no longer
+    // names this place, and there is no pick to undo.
+    setOsmRef(null);
+    setPinBeforePick(null);
     if (selection.address) setAddress(selection.address);
     if (selection.city) setCity(selection.city);
     if (selection.country) setCountry(selection.country);
@@ -85,7 +95,22 @@ export function LodgingFormModal({
     if (patch.chain !== undefined) setChain(patch.chain);
     const osmType = typeChosen ? null : lodgingTypeForKind(place.kind);
     if (osmType !== null && osmType !== type) setType(osmType);
-    const fields = [...filled, ...(osmType !== null && osmType !== type ? ["type"] : [])];
+    // The pick carries its data (2026-09-26): the house's own position — the
+    // search point is only where the search stood — and its OSM identity.
+    // The pin moves because the user chose this house; where it stood before
+    // stays one click away.
+    const pinMoves = position === null || position.lat !== place.lat || position.lon !== place.lon;
+    if (pinMoves) {
+      setPinBeforePick(position);
+      setLat(place.lat);
+      setLon(place.lon);
+    }
+    setOsmRef(place.osmRef);
+    const fields = [
+      ...filled,
+      ...(osmType !== null && osmType !== type ? ["type"] : []),
+      ...(pinMoves ? ["position"] : []),
+    ];
     setOsmFilled(
       fields.length === 0
         ? t("openData:lodging.nearby.nothingNew", { name: place.name })
@@ -98,6 +123,14 @@ export function LodgingFormModal({
   const handleClearPosition = (): void => {
     setLat(null);
     setLon(null);
+    setPinBeforePick(null);
+  };
+
+  const handleRestorePin = (): void => {
+    if (pinBeforePick === null) return;
+    setLat(pinBeforePick.lat);
+    setLon(pinBeforePick.lon);
+    setPinBeforePick(null);
   };
 
   const handleSave = async (): Promise<void> => {
@@ -129,6 +162,7 @@ export function LodgingFormModal({
         notes: notes.trim() || null,
         // Empty clears it — same explicit `null` rule as the fields above.
         website: website.trim() || null,
+        ...(osmRef !== null && { osmRef }),
       };
       let saved: Lodging;
       if (mode === "create") {
@@ -214,6 +248,15 @@ export function LodgingFormModal({
               <p role="status" className="text-xs text-[var(--text-muted)]">
                 {osmFilled}
               </p>
+            )}
+            {pinBeforePick !== null && (
+              <button
+                type="button"
+                onClick={handleRestorePin}
+                className="self-start text-xs text-[var(--text-muted)] hover:underline"
+              >
+                {t("openData:lodging.nearby.restorePin")}
+              </button>
             )}
           </div>
           <label className="flex flex-col gap-1 text-xs text-[var(--text-muted)] sm:col-span-2">

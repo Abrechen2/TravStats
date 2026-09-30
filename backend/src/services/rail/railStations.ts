@@ -14,6 +14,8 @@ export interface RailStationHit {
   name: string;
   uic: string | null;
   dbId: string | null;
+  /** DB station code (Ril 100, "KK"); null when no source names one — never derived. */
+  shortCode: string | null;
   lat: number;
   lon: number;
   country: string | null;
@@ -47,6 +49,7 @@ const HIT_SELECT = {
   name: true,
   uic: true,
   dbId: true,
+  shortCode: true,
   lat: true,
   lon: true,
   country: true,
@@ -87,7 +90,7 @@ export async function searchStations(query: string, limit: number): Promise<Rail
     (t) => Prisma.sql`(search_name LIKE ${`%${t}%`} AND (' ' || search_name) LIKE ${`% ${t}%`})`
   );
   return prisma.$queryRaw<RailStationHit[]>(Prisma.sql`
-    SELECT id, name, uic, db_id AS "dbId", lat, lon, country, timezone
+    SELECT id, name, uic, db_id AS "dbId", short_code AS "shortCode", lat, lon, country, timezone
     FROM rail_stations
     WHERE ${Prisma.join(conditions, " AND ")}
     ORDER BY (search_name LIKE ${`${folded}%`}) DESC,
@@ -135,7 +138,9 @@ export async function catalogueStationAt(lat: number, lon: number): Promise<Rail
  * exists to prevent. The name stays the client's, which is the catalogue's
  * name unless the user reworded it. An unknown id is refused, not ignored.
  */
-export async function resolveStationInput(station: RailStationInput): Promise<RailStationInput> {
+export async function resolveStationInput(
+  station: RailStationInput
+): Promise<RailStationInput & { catalogueZone?: string | null }> {
   if (station.stationId === undefined || station.stationId === null) {
     return { ...station, stationId: null };
   }
@@ -147,5 +152,33 @@ export async function resolveStationInput(station: RailStationInput): Promise<Ra
     lat: row.lat,
     lon: row.lon,
     country: row.country ?? station.country ?? null,
+    // The catalogue's zone is read first, the coordinates second (ADR 0002 D2).
+    catalogueZone: row.timezone ?? null,
+  };
+}
+
+interface StationCodeRefs {
+  depStation: { shortCode: string | null } | null;
+  arrStation: { shortCode: string | null } | null;
+}
+
+/**
+ * A journey row with its stations' short codes flattened beside the other
+ * station columns (`depStationShortCode`), the catalogue relation dropped.
+ * Null for a station picked from the geocoder and for one the code table does
+ * not name — read live from the catalogue, so a journey logged before the
+ * table existed shows the code as soon as the table is applied.
+ */
+export function withStationShortCodes<T extends StationCodeRefs>(
+  j: T
+): Omit<T, "depStation" | "arrStation"> & {
+  depStationShortCode: string | null;
+  arrStationShortCode: string | null;
+} {
+  const { depStation, arrStation, ...rest } = j;
+  return {
+    ...rest,
+    depStationShortCode: depStation?.shortCode ?? null,
+    arrStationShortCode: arrStation?.shortCode ?? null,
   };
 }

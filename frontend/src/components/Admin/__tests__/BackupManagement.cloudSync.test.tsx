@@ -150,3 +150,33 @@ describe("uploading a backup by hand", () => {
     expect(cell.textContent).toContain("Fehlgeschlagen");
   });
 });
+
+// Acceptance D12 (2026-09-26): a failed backup's row said "Fehlgeschlagen"
+// and nothing else once the transient toast had gone.
+describe("a failed backup in the history", () => {
+  afterEach(() => {
+    vi.restoreAllMocks();
+  });
+
+  const FAILED = {
+    ...UNSYNCED_BACKUP,
+    id: "backup-2",
+    status: "failed",
+    size: "0",
+    errorMessage: "Failed to start pg_dump: spawn pg_dump ENOENT",
+  };
+
+  it("says why it failed, from the code the row stores", async () => {
+    mockGets([{ ...FAILED, errorCode: "BACKUP_TOOL_MISSING" }], false);
+    render(<BackupManagement />);
+    expect(await screen.findByText(adminDe.backup.failure.BACKUP_TOOL_MISSING)).toBeInTheDocument();
+    // The server's English sentence never reaches the page.
+    expect(screen.queryByText(/spawn pg_dump/)).toBeNull();
+  });
+
+  it("falls back to the generic sentence for a row with no known code", async () => {
+    mockGets([{ ...FAILED, errorCode: null }], false);
+    render(<BackupManagement />);
+    expect(await screen.findByText(adminDe.backup.failure.BACKUP_FAILED)).toBeInTheDocument();
+  });
+});

@@ -73,7 +73,13 @@ describe("testLogostreamKey", () => {
 
     const result = await testLogostreamKey("some-key");
 
-    expect(result).toEqual({ success: false, message: "timeout of 10000ms exceeded" });
+    // The raw text stays as the detail; the key is what the card shows
+    // (silent-failure review 2026-09-26).
+    expect(result).toEqual({
+      success: false,
+      message: "timeout of 10000ms exceeded",
+      messageKey: "unreachable",
+    });
   });
 });
 
@@ -121,6 +127,7 @@ describe("testGooglePlacesKey", () => {
     expect(result).toEqual({
       success: false,
       message: "API key not valid. Please pass a valid API key.",
+      messageKey: "providerError",
     });
   });
 

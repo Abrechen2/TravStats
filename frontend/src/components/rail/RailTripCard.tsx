@@ -3,7 +3,8 @@ import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { ExpandableEventCard } from "../Trip/ExpandableEventCard";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatStationClock, formatStationTime } from "../../lib/railTime";
+import { formatRailSpan, formatStationTime } from "../../lib/railTime";
+import { railDeparture } from "../../lib/entityTimes";
 import { formatAmount } from "../../lib/units";
 import type { TripRailJourney } from "../../types/rail";
 
@@ -22,18 +23,17 @@ function trainOf(journey: TripRailJourney): string | null {
 export function RailTripCard({
   journey,
   date,
+  dateLabel,
 }: {
   journey: TripRailJourney;
   date: string;
+  /** The timeline's own label: the station's day, not the reader's. */
+  dateLabel: string;
 }): JSX.Element {
   const { t, i18n } = useTranslation(["rail", "trips"]);
   const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
   const [open, setOpen] = useState(false);
-  const when = `${formatStationTime(journey.departureTime, journey.depTimezone, locale)}${
-    journey.arrivalTime
-      ? ` → ${formatStationClock(journey.arrivalTime, journey.arrTimezone, locale)}`
-      : ""
-  }`;
+  const when = formatRailSpan(journey, locale, " → ");
   const delay =
     journey.delayMinutes === null
       ? t("rail:detail.delayUnknown")
@@ -58,6 +58,7 @@ export function RailTripCard({
       title={`${journey.depStationName} → ${journey.arrStationName}`}
       subtitle={when}
       date={date}
+      dateLabel={dateLabel}
       expanded={open}
       onToggle={() => setOpen((v) => !v)}
       detailsLabel={t("trips:detail.timeline.showDetails")}
@@ -106,7 +107,7 @@ export function TripRailList({ journeys }: { journeys: readonly TripRailJourney[
             style={{ borderTop: "1px solid var(--color-border)" }}
           >
             <span style={{ color: "var(--text-muted)" }}>
-              {formatStationTime(j.departureTime, j.depTimezone, locale)}
+              {formatStationTime(railDeparture(j)!, locale)}
             </span>
             <span className="flex-1">
               {j.depStationName} → {j.arrStationName}

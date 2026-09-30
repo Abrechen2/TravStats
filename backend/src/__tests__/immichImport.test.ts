@@ -70,6 +70,7 @@ import {
   IMPORT_STALE_AFTER_MS,
   clearImportGuards,
 } from "../services/immich/immichImport";
+import { ImmichError } from "../services/immich/types";
 
 const unlinkSyncMock = jest.requireMock("fs").unlinkSync as jest.Mock;
 
@@ -210,14 +211,28 @@ describe("startAlbumImport", () => {
     expect(unlinkSyncMock).toHaveBeenCalled();
   });
 
-  it("marks the job failed when the album listing itself fails", async () => {
-    listAlbumAssets.mockRejectedValue(new Error("immich down"));
+  // The row's `error` reaches the gallery, which maps it to DE/EN copy — so
+  // it carries a failure kind, never the exception's English prose.
+  it("marks the job failed with the Immich failure kind when the album listing fails", async () => {
+    listAlbumAssets.mockRejectedValue(new ImmichError("unreachable", "connect ECONNREFUSED"));
 
     await expect(startAlbumImport("u1", "link-1")).resolves.toBeUndefined();
 
     expect(jobUpdate).toHaveBeenCalledWith(
       expect.objectContaining({
-        data: expect.objectContaining({ status: "failed", error: "immich down" }),
+        data: expect.objectContaining({ status: "failed", error: "unreachable" }),
+      })
+    );
+  });
+
+  it("records a non-Immich failure as importFailed, not as its message", async () => {
+    listAlbumAssets.mockRejectedValue(new Error("immich down"));
+
+    await startAlbumImport("u1", "link-1");
+
+    expect(jobUpdate).toHaveBeenCalledWith(
+      expect.objectContaining({
+        data: expect.objectContaining({ status: "failed", error: "importFailed" }),
       })
     );
   });

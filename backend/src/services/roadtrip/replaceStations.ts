@@ -5,19 +5,59 @@ import { recomputeLegs, type StopCoords } from "../tour/legRecompute";
 import { autoRouteNewLegs } from "../tour/routing/autoRouteLegs";
 import { STATION_SELECT } from "./roadtripSummary";
 import { readRouteAndLegs, ROUTE_SELECT } from "../../routes/trips/tourRoutes";
+import { stationTimeColumns } from "../timeModel/tripColumns";
 
 export type Station = StationsInput["stations"][number];
 
-/** The two columns a station's night is stored in — see `TripStop.overnight`. */
-function nightColumns(station: Station): { lodgingStayId: string | null; overnight: boolean } {
+/**
+ * The columns a station's night is stored in — see `TripStop.overnight` and
+ * `TripStop.viaPoint`.
+ */
+function nightColumns(station: Station): {
+  lodgingStayId: string | null;
+  overnight: boolean;
+  viaPoint: boolean;
+  placeId: string | null;
+} {
   switch (station.night.kind) {
     case "stay":
-      return { lodgingStayId: station.night.lodgingStayId, overnight: true };
+      return {
+        lodgingStayId: station.night.lodgingStayId,
+        overnight: true,
+        viaPoint: false,
+        placeId: null,
+      };
     case "free":
-      return { lodgingStayId: null, overnight: true };
+      return { lodgingStayId: null, overnight: true, viaPoint: false, placeId: null };
     case "pass":
-      return { lodgingStayId: null, overnight: false };
+      return {
+        lodgingStayId: null,
+        overnight: false,
+        viaPoint: false,
+        placeId: station.night.placeId ?? null,
+      };
+    case "via":
+      return { lodgingStayId: null, overnight: false, viaPoint: true, placeId: null };
   }
+}
+
+/**
+ * Every linked place must be the caller's — the same rule, and the same 404,
+ * as the stays: a foreign key proves the place exists, not whose it is, and
+ * the station would read its name back.
+ */
+export async function assertPlacesOwned(
+  userId: string,
+  stations: readonly Station[]
+): Promise<void> {
+  const ids = [
+    ...new Set(
+      stations.flatMap((s) => (s.night.kind === "pass" && s.night.placeId ? [s.night.placeId] : []))
+    ),
+  ];
+  if (ids.length === 0) return;
+  const owned = await prisma.place.count({ where: { id: { in: ids }, userId } });
+  if (owned !== ids.length) throw new AppError("Place not found", 404);
 }
 
 /**
@@ -66,6 +106,7 @@ export async function replaceStations(
     throw new AppError("A station may appear once — a return visit is its own station", 400);
   }
   await assertStaysOwned(userId, stations);
+  await assertPlacesOwned(userId, stations);
 
   const mode = (
     await prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, select: { mode: true } })
@@ -73,11 +114,27 @@ export async function replaceStations(
 
   const result = await prisma.$transaction(
     async (tx) => {
-      const existing = await tx.tripStop.findMany({ where: { routeId }, select: { id: true } });
+      const existing = await tx.tripStop.findMany({
+        where: { routeId },
+        select: { id: true, tripId: true },
+      });
       const known = new Set(existing.map((s) => s.id));
       const unknown = givenIds.find((id) => !known.has(id));
       if (unknown !== undefined) {
         throw new AppError("A station id does not belong to this roadtrip", 400);
+      }
+      // A trip's timeline stop is a place the traveller was; turning it into
+      // a nameless bend in the line would take it off the trip's timeline
+      // without saying so. A route correction is always a point of its own.
+      const onTimeline = new Set(existing.flatMap((s) => (s.tripId !== null ? [s.id] : [])));
+      if (
+        stations.some((s) => s.night.kind === "via" && s.id !== undefined && onTimeline.has(s.id))
+      ) {
+        throw new AppError(
+          "A stop of the trip's timeline cannot become a route correction",
+          400,
+          "VIA_POINT_ON_TIMELINE"
+        );
       }
 
       // Free every position first: `@@unique([routeId, routeOrderIdx])`
@@ -92,6 +149,12 @@ export async function replaceStations(
           lon: station.lon,
           startDate: station.startDate ?? null,
           endDate: station.endDate ?? null,
+          ...stationTimeColumns({
+            startDate: station.startDate ?? null,
+            endDate: station.endDate ?? null,
+            lat: station.lat,
+            lon: station.lon,
+          }),
           notes: station.notes ?? null,
           ...nightColumns(station),
           routeId,
@@ -115,7 +178,13 @@ export async function replaceStations(
       // roadtrip-owned one is deleted with its legs.
       await tx.tripStop.updateMany({
         where: { routeId, routeOrderIdx: null, tripId: { not: null } },
-        data: { routeId: null, lodgingStayId: null, overnight: false },
+        data: {
+          routeId: null,
+          lodgingStayId: null,
+          overnight: false,
+          viaPoint: false,
+          placeId: null,
+        },
       });
       await tx.tripStop.deleteMany({ where: { routeId, routeOrderIdx: null } });
 

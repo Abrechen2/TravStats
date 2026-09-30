@@ -34,11 +34,12 @@ import { estimateRoute } from "../services/routeEstimationService";
 import { calculateCo2Kg, haversineKm, toSeatClass } from "../services/co2Calculator";
 import { getCachedAirports, compareAirportAuthority } from "../services/airportCache";
 import {
-  enrichFlightsWithAirportFacts,
+  enrichFlightsForClients,
   type AirportFacts,
-  type EnrichableFlight,
+  type ClientFlight,
 } from "../services/flightAirportFacts";
 import { withAirportTimezones } from "../services/flightTimezoneDefaults";
+import { airportChanged, flightZoneColumns, withStoredZones } from "./flights/timeInput";
 import {
   buildAirportCoordinateIndex,
   resolveAirportCoordinate,
@@ -48,6 +49,7 @@ import { sharedFlightCreateFields } from "../services/flights/flightCreateFields
 import { warnIfScheduledInPast } from "../services/flights/scheduledInPastWarning";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 import { resolveAirlineCodes } from "../utils/airlineNormalize";
+import { airlineCodeUpdate } from "../utils/airlineCodeUpdate";
 import { normalizeAircraft } from "../utils/aircraftNormalize";
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
 import { resolveDuplicateFlight } from "../services/flights/duplicateResolution";
@@ -56,6 +58,7 @@ import { flightExternalRef, isDocumentImport } from "../services/importProvenanc
 import { deriveFlightStatus, FLIGHT_PASSTHROUGH } from "../shared/statusDerivation";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
 import { fxColumnsFor, flightOwnAmount, getBaseCurrency } from "../services/fx/snapshot";
+import { refreshFxOnEdit } from "../services/fx/refreshOnEdit";
 
 const router = Router();
 
@@ -192,8 +195,8 @@ router.post(
 
       warnIfScheduledInPast(userId, data);
 
-      const departureUtc = toUtcDate(data.departureLocal, data.depTimezone);
-      const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
+      const departureUtc = toUtcDate(data.departureLocal, data.depTimezone, data.departureFold);
+      const arrivalUtc = toUtcDate(data.arrivalLocal, data.arrTimezone, data.arrivalFold);
       const actualDepartureUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
       const actualArrivalUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
 
@@ -290,12 +293,14 @@ router.post(
         },
         await getBaseCurrency(userId)
       );
+      const zoneColumns = await flightZoneColumns(data, enriched);
 
       const flight = await prisma.$transaction(async (tx) => {
         const created = await tx.flight.create({
           data: {
             userId,
             externalRef,
+            ...zoneColumns,
             importBatchId,
             airline: data.airline,
             airlineIata,
@@ -520,8 +525,8 @@ router.get("/next", async (req: AuthRequest, res: Response, next: NextFunction) 
  * `/stats/records`, which passes a deliberately narrow projection. The column
  * keeps earning its place where the catalogue is NOT already loaded.
  */
-async function withAirportFacts<T extends EnrichableFlight>(flight: T): Promise<T & AirportFacts> {
-  const [enriched] = await enrichFlightsWithAirportFacts([flight]);
+async function withAirportFacts<T extends ClientFlight>(flight: T): Promise<T & AirportFacts> {
+  const [enriched] = await enrichFlightsForClients([flight]);
   return enriched;
 }
 
@@ -839,8 +844,6 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
   try {
     const userId = req.userId!;
     const { id } = req.params;
-    const data = updateFlightSchema.parse(await withAirportTimezones(req.body));
-
     // Check if flight exists and belongs to user
     const existingFlight = await prisma.flight.findFirst({
       where: { id, userId },
@@ -849,6 +852,10 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     if (!existingFlight) {
       throw new AppError("Flight not found", 404);
     }
+    // A wall clock at an unchanged airport is read in the zone the flight was
+    // WRITTEN with, not today's catalogue zone (ADR 0002, class 4).
+    const body = withStoredZones(req.body, existingFlight);
+    const data = updateFlightSchema.parse(await withAirportTimezones(body));
 
     // The schema can only see the BODY. A PUT that moves only the departure
     // has to be checked against the arrival that stays behind — sending a
@@ -906,49 +913,26 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
 
     const updateData: FlightUpdateData = {};
     // `!== undefined`, not truthy: an explicit null CLEARS the airline. The
-    // resolved IATA/ICAO codes must go with it — leaving them standing would
-    // keep logos and stats pointing at an airline the row no longer names.
-    if (data.airline !== undefined) {
-      updateData.airline = data.airline;
-      if (
-        data.airline === null &&
-        data.airlineIata === undefined &&
-        data.airlineIcao === undefined
-      ) {
-        updateData.airlineIata = null;
-        updateData.airlineIcao = null;
-      }
-    }
-
-    // Resolve airline codes if name provided but IATA/ICAO missing
-    let airlineIata = data.airlineIata;
-    let airlineIcao = data.airlineIcao;
-    if (data.airline && airlineIata === undefined && airlineIcao === undefined) {
-      const resolved = resolveAirlineCodes(data.airline);
-      if (resolved) {
-        airlineIata = resolved.iata ?? null;
-        airlineIcao = resolved.icao ?? null;
-      }
-    }
-    if (airlineIata !== undefined) updateData.airlineIata = airlineIata;
-    if (airlineIcao !== undefined) updateData.airlineIcao = airlineIcao;
-    if (data.operatingAirline !== undefined) {
-      updateData.operatingAirline = data.operatingAirline;
-      // Same cascade as airline above: a cleared operating airline must not
-      // leave its resolved codes behind.
-      if (
-        data.operatingAirline === null &&
-        data.operatingAirlineIata === undefined &&
-        data.operatingAirlineIcao === undefined
-      ) {
-        updateData.operatingAirlineIata = null;
-        updateData.operatingAirlineIcao = null;
-      }
-    }
-    if (data.operatingAirlineIata !== undefined)
-      updateData.operatingAirlineIata = data.operatingAirlineIata;
-    if (data.operatingAirlineIcao !== undefined)
-      updateData.operatingAirlineIcao = data.operatingAirlineIcao;
+    // codes follow the name — see airlineCodeUpdate for why a renamed
+    // operating airline no longer keeps the previous carrier's logo.
+    if (data.airline !== undefined) updateData.airline = data.airline;
+    const marketing = airlineCodeUpdate(
+      data.airline,
+      data.airlineIata,
+      data.airlineIcao,
+      existingFlight.airline
+    );
+    if (marketing.iata !== undefined) updateData.airlineIata = marketing.iata;
+    if (marketing.icao !== undefined) updateData.airlineIcao = marketing.icao;
+    if (data.operatingAirline !== undefined) updateData.operatingAirline = data.operatingAirline;
+    const operating = airlineCodeUpdate(
+      data.operatingAirline,
+      data.operatingAirlineIata,
+      data.operatingAirlineIcao,
+      existingFlight.operatingAirline
+    );
+    if (operating.iata !== undefined) updateData.operatingAirlineIata = operating.iata;
+    if (operating.icao !== undefined) updateData.operatingAirlineIcao = operating.icao;
     if (data.isCodeshare !== undefined) updateData.isCodeshare = data.isCodeshare;
     if (data.flightNumber !== undefined) updateData.flightNumber = data.flightNumber;
     if (data.callsign !== undefined) updateData.callsign = data.callsign;
@@ -1039,8 +1023,20 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     // Resolve any incoming local+tz pairs to canonical real UTC. A null pair
     // means the field was not in this update; an empty string is treated the
     // same — clients should clear actualDeparture by passing null explicitly.
-    const incomingDepUtc = toUtcDate(data.departureLocal, data.depTimezone);
-    const incomingArrUtc = toUtcDate(data.arrivalLocal, data.arrTimezone);
+    const incomingDepUtc = toUtcDate(data.departureLocal, data.depTimezone, data.departureFold);
+    const incomingArrUtc = toUtcDate(data.arrivalLocal, data.arrTimezone, data.arrivalFold);
+    const changed = (end: "departure" | "arrival") => airportChanged(body, end, existingFlight);
+    Object.assign(
+      updateData,
+      await flightZoneColumns(
+        data,
+        {
+          departure: changed("departure") ? enrichedDeparture : null,
+          arrival: changed("arrival") ? enrichedArrival : null,
+        },
+        existingFlight
+      )
+    );
     const incomingActualDepUtc = toUtcDate(data.actualDepartureLocal, data.actualDepartureTz);
     const incomingActualArrUtc = toUtcDate(data.actualArrivalLocal, data.actualArrivalTz);
 
@@ -1152,32 +1148,26 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       );
     }
 
-    // FX snapshot (#267). Recomputed only when an input to it actually moved —
-    // price, taxes, fees, currency or the departure day. Rewriting it on every
-    // PATCH would re-date a snapshot that has not changed, and a snapshot's
-    // whole value is that its rate belongs to a specific day.
-    const fxInputsChanged =
-      data.price !== undefined ||
-      data.taxes !== undefined ||
-      data.fees !== undefined ||
-      data.currency !== undefined ||
-      updateData.departureTime !== undefined;
-    if (fxInputsChanged) {
-      const merged = {
-        price: data.price !== undefined ? data.price : existingFlight.price,
-        taxes: data.taxes !== undefined ? data.taxes : existingFlight.taxes,
-        fees: data.fees !== undefined ? data.fees : existingFlight.fees,
-      };
-      const fxColumns = await fxColumnsFor(
-        {
-          amount: flightOwnAmount(merged),
-          currency: data.currency !== undefined ? data.currency : existingFlight.currency,
-          date: updateData.departureTime ?? existingFlight.departureTime,
-        },
-        await getBaseCurrency(userId)
-      );
-      Object.assign(updateData, fxColumns);
-    }
+    // FX snapshot (#267), compared with the STORED row — the edit dialog sends
+    // price, currency and date on every save, so "was it sent" re-snapshotted
+    // a seat change and a failed lookup wiped a good rate. See refreshOnEdit.
+    const pick = <K extends "price" | "taxes" | "fees" | "currency">(k: K) =>
+      data[k] !== undefined ? data[k] : existingFlight[k];
+    const fx = await refreshFxOnEdit(
+      {
+        ...existingFlight,
+        amount: flightOwnAmount(existingFlight),
+        date: existingFlight.departureTime,
+      },
+      {
+        amount: flightOwnAmount({ price: pick("price"), taxes: pick("taxes"), fees: pick("fees") }),
+        currency: pick("currency") ?? null,
+        date: (updateData.departureTime as Date | undefined) ?? existingFlight.departureTime,
+      },
+      await getBaseCurrency(userId),
+      { flightId: existingFlight.id, userId }
+    );
+    Object.assign(updateData, fx.columns);
 
     const flight = await prisma.$transaction(async (tx) => {
       if (resolvedCompanionsForUpdate !== undefined) {
@@ -1219,6 +1209,8 @@ router.put("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
     res.json({
       flight: await withAirportFacts(flight),
       newAchievements: newAchievements.length > 0 ? newAchievements : undefined,
+      // "keptStoredRate" / "lookupFailed" tell the client the rate could not be refreshed.
+      fxSnapshot: fx.outcome,
     });
   } catch (error) {
     next(error);

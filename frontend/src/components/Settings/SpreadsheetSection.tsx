@@ -95,6 +95,7 @@ type ImportStatus =
   | "applied"
   | "failed"
   | "backupFailed"
+  | "outcomeUnknown"
   | "nothing";
 
 /** Sheets held for the confirm step, so applying re-sends exactly what was
@@ -209,9 +210,7 @@ export default function SpreadsheetSection(): JSX.Element {
     } catch (err) {
       // A refused safety backup is not a broken file — saying so would send
       // the user to inspect a spreadsheet that is perfectly fine.
-      setImportStatus(
-        err instanceof ImportRefused && err.kind === "backupFailed" ? "backupFailed" : "failed"
-      );
+      setImportStatus(err instanceof ImportRefused && err.kind !== "unknown" ? err.kind : "failed");
     }
   }, [pending, mode]);
 
@@ -425,6 +424,11 @@ export default function SpreadsheetSection(): JSX.Element {
         {importStatus === "backupFailed" && (
           <p className="mt-2 text-xs" style={{ color: "var(--danger, #f87171)" }}>
             {t("xlsx:import.backupFailed")}
+          </p>
+        )}
+        {importStatus === "outcomeUnknown" && (
+          <p className="mt-2 text-xs" style={{ color: "var(--danger, #f87171)" }}>
+            {t("xlsx:import.outcomeUnknown")}
           </p>
         )}
       </div>

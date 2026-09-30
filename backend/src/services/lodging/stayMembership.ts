@@ -25,11 +25,13 @@ export interface MembershipWithLinks {
 }
 
 export interface ResolvedProgramme {
+  /** The covering card's id — what a link to "the stays of this card" names. */
+  membershipId: string | null;
   programName: string | null;
   tier: string | null;
 }
 
-const NO_PROGRAMME: ResolvedProgramme = { programName: null, tier: null };
+const NO_PROGRAMME: ResolvedProgramme = { membershipId: null, programName: null, tier: null };
 
 export interface StayMembershipContext {
   coverage: MembershipCoverage[];
@@ -78,5 +80,9 @@ export function resolveStayProgramme(
   // deriveStayMembership only ever returns an id it was given, so a miss here
   // would mean the two structures were built from different lists.
   if (!membership) return NO_PROGRAMME;
-  return { programName: membership.programName, tier: membership.tier };
+  return {
+    membershipId: membership.id,
+    programName: membership.programName,
+    tier: membership.tier,
+  };
 }

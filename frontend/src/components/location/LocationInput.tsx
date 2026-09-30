@@ -52,6 +52,12 @@ export interface LocationSelection {
   city?: string;
   country?: string;
   countryCode?: string;
+  /**
+   * The geocoder's OSM value (`attraction`, `museum`, …) for a search hit —
+   * what a category guess reads. Never the display name: "Kolosseum" names a
+   * place, it does not classify one.
+   */
+  osmValue?: string;
 }
 
 export interface LocationInputProps {
@@ -87,7 +93,7 @@ function inputToNum(raw: string): number | null {
   const parsed = Number(trimmed);
   return Number.isFinite(parsed) ? parsed : null;
 }
-function placeToSelection(hit: PlaceSearchResult): LocationSelection {
+export function placeToSelection(hit: PlaceSearchResult): LocationSelection {
   return {
     lat: hit.lat,
     lon: hit.lon,
@@ -97,6 +103,7 @@ function placeToSelection(hit: PlaceSearchResult): LocationSelection {
     city: hit.city,
     country: hit.country,
     countryCode: hit.countryCode,
+    osmValue: hit.type,
   };
 }
 

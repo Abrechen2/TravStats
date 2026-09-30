@@ -175,6 +175,36 @@ describe("PhotoJourneysTab", () => {
     await waitFor(() => expect(screen.queryAllByRole("img")).toHaveLength(0));
   });
 
+  // ADR 0002 D4: a trip's days are the days where the photos were taken.
+  // The server answers them; the first photo's instant, read as a day, is its
+  // UTC date — a Tokyo trip that began at 01:00 on 2 May started on 1 May.
+  it("creates an accepted trip on the days where the photos were taken, and shows those days", async () => {
+    vi.mocked(tripsApi.create).mockResolvedValue({ id: "trip-9" } as never);
+    await renderTab([
+      makeJourney({
+        city: "Tokio",
+        countryName: "Japan",
+        startDate: "2027-05-01T16:00:00.000Z",
+        endDate: "2027-05-04T16:30:00.000Z",
+        startDay: "2027-05-02",
+        endDay: "2027-05-05",
+      }),
+    ]);
+    expect(screen.getByText(/02\.05\.2027.*05\.05\.2027/)).toBeInTheDocument();
+
+    vi.mocked(photoJourneysApi.list).mockResolvedValue([]);
+    await userEvent.click(
+      screen.getByRole("button", { name: "dataQuality:inbox.photoJourneys.actions.accept" })
+    );
+    await waitFor(() =>
+      expect(tripsApi.create).toHaveBeenCalledWith({
+        name: "Tokio, Japan",
+        startDate: "2027-05-02",
+        endDate: "2027-05-05",
+      })
+    );
+  });
+
   it("accepting a place finding records a visit at that place, not a trip", async () => {
     vi.mocked(createVisit).mockResolvedValue({ id: "visit-3" } as never);
     await renderTab([makeJourney({ kind: "place", placeId: "place-7", airportIata: null })]);

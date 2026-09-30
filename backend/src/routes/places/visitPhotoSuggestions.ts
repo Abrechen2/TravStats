@@ -15,6 +15,10 @@ import {
   linkPickedPhotos,
   visitPhotoSuggestionsFor,
 } from "../../services/places/visitPhotoSuggestions";
+import {
+  clearPhotoRefusals,
+  refusePhotoSuggestions,
+} from "../../services/places/visitPhotoRefusals";
 import logger from "../../utils/logger";
 
 /**
@@ -71,6 +75,49 @@ router.post(
         assetIds: [...new Set(body.data.assetIds)],
       };
       const result = await linkPickedPhotos(req.userId!, params.data.visitId, picks);
+      if (result === null) throw new AppError("Visit not found", 404);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/**
+ * POST /visits/:visitId/photo-suggestions/refusals — "Nicht diese", kept per
+ * visit so the suggestion does not come back (forgejo#132 item 13). Same body
+ * as a link; a trip photo that is not the caller's is skipped and counted.
+ */
+router.post(
+  "/visits/:visitId/photo-suggestions/refusals",
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const params = visitParamsSchema.safeParse(req.params);
+      if (!params.success) throw new AppError("Invalid visit id", 400);
+      const body = linkPicksSchema.safeParse(req.body ?? {});
+      if (!body.success) throw new AppError(body.error.message, 400);
+      const result = await refusePhotoSuggestions(req.userId!, params.data.visitId, {
+        tripPhotoIds: [...new Set(body.data.tripPhotoIds)],
+        assetIds: [...new Set(body.data.assetIds)],
+      });
+      if (result === null) throw new AppError("Visit not found", 404);
+      res.json({ success: true, data: result });
+    } catch (err) {
+      next(err);
+    }
+  }
+);
+
+/** DELETE /visits/:visitId/photo-suggestions/refusals — offer the refused ones again. */
+router.delete(
+  "/visits/:visitId/photo-suggestions/refusals",
+  statsLimiter,
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const params = visitParamsSchema.safeParse(req.params);
+      if (!params.success) throw new AppError("Invalid visit id", 400);
+      const result = await clearPhotoRefusals(req.userId!, params.data.visitId);
       if (result === null) throw new AppError("Visit not found", 404);
       res.json({ success: true, data: result });
     } catch (err) {

@@ -1,4 +1,6 @@
+import type { LocalTimeInput } from "../shared/time";
 import type { CurrencyCode } from "../shared/currencies";
+import type { CruiseStopTimes, CruiseTimes } from "./times";
 export interface Ship {
   id: number;
   name: string;
@@ -38,6 +40,12 @@ export interface CruiseStop {
   excursionNote: string | null;
   /** Set on an unresolved port: name-only stop, portId=null, isAtSea=false. */
   unresolvedPortName: string | null;
+  /** The real instants and the port's zone (ADR 0002 phase 2); absent on older rows. */
+  arrivalUtc?: string | null;
+  departureUtc?: string | null;
+  stopZone?: string | null;
+  /** ADR 0002 phase 4 — read through lib/entityTimes.ts. */
+  times?: CruiseStopTimes;
 }
 
 export type CruiseStatus = "scheduled" | "in_progress" | "flown" | "cancelled" | "historical";
@@ -79,6 +87,7 @@ export interface Cruise {
   trip?: { id: string; name: string; color: string } | null;
   bookingId: string | null;
   stops: CruiseStop[];
+  times?: CruiseTimes;
   createdAt: string;
   updatedAt: string;
 }
@@ -107,6 +116,10 @@ export interface CruiseStopInput {
    *  start date and the day number (keeps following both), `"user"` = typed
    *  (never touched again), `undefined` = as loaded. Stripped on submit. */
   dateSource?: "derived" | "user";
+  /** UI-only: the later occurrence of a repeated hour was meant (ADR 0002
+   *  Q5). Sent as the time's `fold`, stripped from the stop itself. */
+  arrivalFold?: "later";
+  departureFold?: "later";
 }
 
 export interface CruiseInput {
@@ -124,6 +137,7 @@ export interface CruiseInput {
   routeName?: string | null;
   departurePortId?: number | null;
   arrivalPortId?: number | null;
+  /** The first/last day, `YYYY-MM-DD` (ADR 0002: a day is never an instant). */
   startDate?: string | null;
   endDate?: string | null;
   status?: CruiseStatus;
@@ -142,3 +156,27 @@ export interface CruiseInput {
   bookingId?: string | null;
   stops?: CruiseStopInput[];
 }
+
+/** The body `POST/PUT /cruises` takes: stops in the time model's write shape. */
+export type CruiseWriteBody = Omit<CruiseInput, "stops"> & { stops?: CruiseStopWire[] };
+
+/**
+ * A stop as the write body carries it (ADR 0002, D3): the call's day as
+ * `YYYY-MM-DD`, each time as `{local, zone | placeRef}`. Built from the
+ * editor's `CruiseStopInput` by `components/Cruise/cruiseStopWire.ts`.
+ */
+export type CruiseStopWire = Omit<
+  CruiseStopInput,
+  | "port"
+  | "originalDay"
+  | "dateSource"
+  | "date"
+  | "arrivalTime"
+  | "departureTime"
+  | "arrivalFold"
+  | "departureFold"
+> & {
+  date?: string | null;
+  arrivalTime?: LocalTimeInput | null;
+  departureTime?: LocalTimeInput | null;
+};

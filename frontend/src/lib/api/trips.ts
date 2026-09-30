@@ -1,3 +1,4 @@
+import type { LocalTimeInput } from "../../shared/time";
 import { api } from "./client";
 import { API_TIMEOUTS } from "../../config/constants";
 import type {
@@ -310,13 +311,22 @@ export const tripsApi = {
   },
 };
 
+/**
+ * A stop's start or end (ADR 0002, D3): a bare `YYYY-MM-DD` when only the day
+ * is known, or `{ local }` — the wall clock as typed at the stop — which the
+ * server places in the zone of the stop's own coordinates, sent in the same
+ * body. Built by `lib/tripStopTime.ts`.
+ */
+export type StopTimeInput = string | LocalTimeInput;
+
 export interface CreateStopInput {
   title: string;
   domain?: string;
   sourceId?: string;
   description?: string;
-  startDate?: string;
-  endDate?: string;
+  /** See `StopTimeInput`. */
+  startDate?: StopTimeInput;
+  endDate?: StopTimeInput;
   lat?: number;
   lon?: number;
   notes?: string;
@@ -328,8 +338,8 @@ export interface UpdateStopInput {
   domain?: string | null;
   sourceId?: string | null;
   description?: string | null;
-  startDate?: string | null;
-  endDate?: string | null;
+  startDate?: StopTimeInput | null;
+  endDate?: StopTimeInput | null;
   lat?: number | null;
   lon?: number | null;
   notes?: string | null;

@@ -1,10 +1,20 @@
 import { useState, useEffect, useMemo, useRef } from "react";
-import { Airport, airportsApi } from "../../lib/api";
+import type { Airport } from "../../lib/api";
 import { flightsApi } from "../../lib/api/flights";
 import { tripsApi } from "../../lib/api/trips";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import { useSettingsStore } from "../../store/settingsStore";
+import { flightLookupApi } from "../../lib/api/flightLookup";
+import { todayIn } from "../../shared/time";
+import { todayZoneNow } from "../../hooks/useTodayZone";
+import { airportResolutionMessage, resolveAirportByCode } from "../../lib/airportResolve";
+import {
+  lookupEmptyMessage,
+  lookupFormTimes,
+  lookupRequestErrorMessage,
+  lookupWallClock,
+} from "./flightLookupActions";
 import { useToastStore } from "../../store/toastStore";
 import { storeHistoricalFlightTime, estimateFlightTimes } from "../../lib/timeEstimation";
 import type { Flight, FlightInput, ParsedBooking, UserAchievement } from "../../types";
@@ -13,14 +23,17 @@ import type { TimeEstimationWarning } from "./FlightCompleteStep";
 export type { FlightLookupResult, DuplicateFlight, FlightSubmitOptions } from "./flightFormModel";
 export { buildLocalString } from "./flightFormModel";
 import { isAlreadyImported } from "./flightFormModel";
-import { buildFlightPayload as buildFlightPayloadFrom } from "./flightPayload";
+import { airportZone, buildFlightPayload as buildFlightPayloadFrom } from "./flightPayload";
+import { flightSaveFailure } from "./flightSaveFailure";
+import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { reportBatchOutcome } from "./flightReviewBatch";
 import type { FlightLookupResult, DuplicateFlight, FlightSubmitOptions } from "./flightFormModel";
+import type { FlightFolds } from "../../lib/flightFolds";
+import { shiftWallClock } from "../../lib/wallClockMath";
 
 export function useFlightForm(
-  // Returning the created Flight is what makes the post-create trip
-  // assignment possible; `void` keeps older callers valid (they simply get
-  // no assignment).
+  // Returning the created Flight makes the post-create trip assignment
+  // possible; `void` keeps older callers valid (they get no assignment).
   onSubmit: (flight: FlightInput, opts?: FlightSubmitOptions) => Promise<Flight | void>,
   onCancel: () => void,
   onBatchComplete?: (newAchievements?: UserAchievement[]) => void
@@ -70,11 +83,10 @@ export function useFlightForm(
   const [departureTime, setDepartureTime] = useState("12:00");
   const [arrivalDate, setArrivalDate] = useState("");
   const [arrivalTime, setArrivalTime] = useState("14:00");
-  // Actual departure/arrival (#200) — empty by default: a freshly created
-  // flight has no recorded actual time until the user (or live tracking,
-  // out of scope here) fills it in. Kept empty rather than defaulted like
-  // departureTime/arrivalTime above, since "no value yet" must stay
-  // distinguishable from "midday" — see buildFlightPayload below.
+  // The later occurrence of a repeated hour, per end (Q5) — see lib/flightFolds.ts.
+  const [folds, setFolds] = useState<FlightFolds>({});
+  // Actual departure/arrival (#200) — empty by default, not "midday": a new
+  // flight has no recorded actual time until the user fills it in.
   const [actualDepartureDate, setActualDepartureDate] = useState("");
   const [actualDepartureTime, setActualDepartureTime] = useState("");
   const [actualArrivalDate, setActualArrivalDate] = useState("");
@@ -82,10 +94,8 @@ export function useFlightForm(
   const [airline, setAirline] = useState("");
   const [operatingAirline, setOperatingAirline] = useState("");
   const [aircraft, setAircraft] = useState("");
-  // Lookup-derived metadata that is persisted on submit but not directly
-  // surfaced in the form UI: callsign + tail number / Mode-S identifiers
-  // come from AeroDataBox automatically and only appear in the flight
-  // detail view post-save. The user can still edit them later.
+  // Lookup-derived metadata persisted on submit but not shown in the form
+  // (callsign, tail number, Mode-S from AeroDataBox); editable on the detail view.
   const [lookupCallsign, setLookupCallsign] = useState("");
   const [lookupAircraftRegistration, setLookupAircraftRegistration] = useState("");
   const [lookupAircraftModeS, setLookupAircraftModeS] = useState("");
@@ -122,7 +132,8 @@ export function useFlightForm(
 
   // Initialize defaults from settings
   useEffect(() => {
-    const today = new Date().toISOString().split("T")[0];
+    // Today in the profile zone (Q1) — neither UTC nor the browser's.
+    const today = todayIn(todayZoneNow());
     setSearchDate(today);
     setDepartureDate(today);
     setArrivalDate(today);
@@ -137,20 +148,19 @@ export function useFlightForm(
   // Auto-set status based on date (skip when historical is active)
   useEffect(() => {
     if (status === "historical") return;
-    if (departureDate) {
-      const depDate = new Date(departureDate);
-      const today = new Date();
-      today.setHours(0, 0, 0, 0);
-      setStatus(depDate < today ? "flown" : "scheduled");
-    }
+    // Both `YYYY-MM-DD`: before today in the profile zone (Q1) is flown.
+    if (departureDate) setStatus(departureDate < todayIn(todayZoneNow()) ? "flown" : "scheduled");
   }, [departureDate]);
 
-  // Clear error when step changes
+  // Clear error when step changes — unless the transition itself carries a
+  // notice (an airport the lookup could not resolve), which must survive it.
+  const stepNoticeRef = useRef<string | null>(null);
   useEffect(() => {
-    setError("");
+    setError(stepNoticeRef.current ?? "");
+    stepNoticeRef.current = null;
   }, [step]);
 
-  // Track if arrival date has been set manually
+  // Track if arrival date has been set manually (or by a picked lookup hit)
   const arrivalDateSetRef = useRef(false);
 
   // Accumulates confirmed flight inputs during multi-flight email import
@@ -176,9 +186,9 @@ export function useFlightForm(
         // "Departure = Boarding + 30min", telling the user their times came
         // from an input they never gave and sending them looking for a field
         // that does not exist on this form (#235).
-        const depDateTime = new Date(`${departureDate}T${departureTime}`);
-        depDateTime.setMinutes(depDateTime.getMinutes() - 30);
-        const boardingTime = `${String(depDateTime.getHours()).padStart(2, "0")}:${String(depDateTime.getMinutes()).padStart(2, "0")}`;
+        // Wall-clock arithmetic, not the browser's clock (lib/wallClockMath.ts).
+        const boardingTime =
+          shiftWallClock(departureDate, departureTime, -30)?.time ?? departureTime;
 
         const estimation = estimateFlightTimes(
           boardingTime,
@@ -202,10 +212,11 @@ export function useFlightForm(
           sampleCount: estimation.sampleCount,
         });
       } catch {
-        const depDateTime = new Date(`${departureDate}T${departureTime}`);
-        const arrDateTime = new Date(depDateTime.getTime() + 2 * 60 * 60 * 1000);
-        setArrivalDate(arrDateTime.toISOString().split("T")[0]);
-        setArrivalTime(arrDateTime.toTimeString().slice(0, 5));
+        // Two hours on the ticket's clock — the old code took the UTC date
+        // and the browser's time, a different day east of UTC.
+        const arr = shiftWallClock(departureDate, departureTime, 120);
+        setArrivalDate(arr?.date ?? departureDate);
+        setArrivalTime(arr?.time ?? departureTime);
         arrivalDateSetRef.current = true;
         setTimeEstimationWarning({ show: true, source: "heuristic", confidence: "low" });
       }
@@ -221,34 +232,20 @@ export function useFlightForm(
     setLoading(true);
     setError("");
     try {
-      const response = await fetch(`/api/v1/flight-lookup/${flightNumber}?date=${searchDate}`);
-      const data = await response.json();
+      const data = await flightLookupApi.lookup<FlightLookupResult>(flightNumber, searchDate);
       if (!data.success || !data.flights || data.flights.length === 0) {
         // Stay on the input step so the error stays visible — the `step`
-        // useEffect clears errors on every transition, so jumping to
-        // "complete" here would drop the user into manual entry with no
-        // indication of what went wrong (issue #82 follow-up).
-        if (data?.error === "LOOKUP_NOT_CONFIGURED") {
-          // Nothing was searched — no provider is set up. Saying "not found"
-          // here sends the user looking for a better date instead of a key
-          // (#232).
-          setError(t("errors:lookupNotConfigured"));
-        } else if (data?.error === "LOOKUP_UNAVAILABLE") {
-          setError(t("errors:lookupOutsideLiveWindow"));
-        } else if (data?.error === "NO_FLIGHT_DATA_API_GAP") {
-          setError(t("errors:noFlightDataApiGap"));
-        } else if (data?.error === "NO_FLIGHT_DATA_FOR_DATE") {
-          setError(t("errors:noFlightDataForDate"));
-        } else {
-          setError(t("errors:noFlightsFound"));
-        }
+        // useEffect clears errors on every transition (issue #82 follow-up).
+        // "Not configured", "provider failed" and "not found" each call for
+        // a different action (#232), so each keeps its own sentence.
+        setError(lookupEmptyMessage(data, t));
         return;
       }
       setLookupResults(data.flights);
       setStep("select");
     } catch (err) {
       logger.error("Flight lookup error:", err);
-      setError(`${t("errors:lookupUnavailable")} ${t("errors:apiKeyInfo")}`);
+      setError(lookupRequestErrorMessage(err, t));
     } finally {
       setLoading(false);
     }
@@ -259,24 +256,23 @@ export function useFlightForm(
     setSelectedFlight(flight);
     setLoading(true);
     try {
-      const results = await Promise.allSettled([
-        flight.departure.iata
-          ? airportsApi.getByCode(flight.departure.iata)
-          : Promise.resolve(null),
-        flight.arrival.iata ? airportsApi.getByCode(flight.arrival.iata) : Promise.resolve(null),
-      ]);
-
-      const depAirport = results[0].status === "fulfilled" ? results[0].value : null;
-      const arrAirport = results[1].status === "fulfilled" ? results[1].value : null;
-
+      const codes = [flight.departure.iata, flight.arrival.iata];
+      const [depResolved, arrResolved] = await Promise.all(
+        codes.map((code) => (code ? resolveAirportByCode(code) : Promise.resolve(null)))
+      );
+      const depAirport = depResolved?.kind === "found" ? depResolved.airport : null;
+      const arrAirport = arrResolved?.kind === "found" ? arrResolved.airport : null;
       if (depAirport) setDeparture(depAirport);
       if (arrAirport) setArrival(arrAirport);
+      // A code the catalogue cannot give back used to leave the field empty
+      // without a word; now the form says which one and why.
+      const unresolved = [depResolved, arrResolved].flatMap((r) =>
+        r && r.kind !== "found" ? [airportResolutionMessage(r)] : []
+      );
 
       setAirline(flight.airline);
-      // Codeshare path: API marks the searched flight number as marketed
-      // by airline X but operated by airline Y. Surface Y as the operating
-      // carrier so stats can group on the real metal. For non-codeshare
-      // entries (most lookups), leave operatingAirline empty.
+      // Codeshare path: surface the operating carrier so stats can group on
+      // the real metal; non-codeshare entries leave operatingAirline empty.
       setOperatingAirline(flight.isCodeshare ? flight.operatingAirline || "" : "");
       setAircraft(flight.aircraft || "");
       setLookupCallsign(flight.callsign || "");
@@ -288,62 +284,28 @@ export function useFlightForm(
       setTerminal(flight.departure.terminal || "");
       setGate(flight.departure.gate || "");
 
-      // Auto-flag cancelled flights from the API. "diverted" gets folded
-      // into "cancelled" because the flight-status enum doesn't have a
-      // dedicated diverted bucket — user can edit later. Anything else
-      // is left to the local date heuristic.
+      // "diverted" folds into "cancelled" — the status enum has no bucket for it.
       if (flight.status === "cancelled" || flight.status === "diverted") {
         setStatus("cancelled");
       }
 
-      const applyDateTime = (
-        value?: string,
-        setters?: { setDate: (v: string) => void; setTime: (v: string) => void },
-        useSearchDate?: boolean
-      ) => {
-        if (!value || !setters) return;
-        const match = value.match(/^(\d{4}-\d{2}-\d{2})[T ]?(\d{2}:\d{2})?/);
-        if (match) {
-          if (match[1] && !useSearchDate) setters.setDate(match[1]);
-          if (match[2]) setters.setTime(match[2]);
-          return;
-        }
-        const parsed = new Date(value);
-        if (!Number.isNaN(parsed.getTime())) {
-          if (!useSearchDate) setters.setDate(parsed.toISOString().split("T")[0]);
-          setters.setTime(parsed.toTimeString().slice(0, 5));
-        }
-      };
+      // Each side on its OWN airport's clock — see lookupWallClock.
+      const times = lookupFormTimes(
+        lookupWallClock(flight.departure, depAirport?.timezone),
+        lookupWallClock(flight.arrival, arrAirport?.timezone),
+        searchDate
+      );
+      if (times.departureDate) setDepartureDate(times.departureDate);
+      if (times.departureTime) setDepartureTime(times.departureTime);
+      if (times.arrivalDate) setArrivalDate(times.arrivalDate);
+      if (times.arrivalTime) setArrivalTime(times.arrivalTime);
+      // The provider's arrival is data, not a guess: keep the duration
+      // estimator below from overwriting it once the airports land.
+      if (times.arrivalDate && times.arrivalTime) arrivalDateSetRef.current = true;
 
-      if (searchDate) {
-        setDepartureDate(searchDate);
-        applyDateTime(
-          flight.departure.scheduledTime,
-          { setDate: () => {}, setTime: setDepartureTime },
-          true
-        );
-      } else {
-        applyDateTime(flight.departure.scheduledTime, {
-          setDate: setDepartureDate,
-          setTime: setDepartureTime,
-        });
+      if (unresolved.length > 0) {
+        stepNoticeRef.current = unresolved.map((u) => t(u.key, u.params)).join(" ");
       }
-
-      applyDateTime(flight.arrival.scheduledTime, {
-        setDate: setArrivalDate,
-        setTime: setArrivalTime,
-      });
-
-      if (searchDate && flight.departure.scheduledTime && flight.arrival.scheduledTime) {
-        const depTime = new Date(flight.departure.scheduledTime);
-        const arrTime = new Date(flight.arrival.scheduledTime);
-        const duration = arrTime.getTime() - depTime.getTime();
-        const newDepTime = new Date(`${searchDate}T${departureTime || "00:00"}`);
-        const newArrTime = new Date(newDepTime.getTime() + duration);
-        setArrivalDate(newArrTime.toISOString().split("T")[0]);
-        setArrivalTime(newArrTime.toTimeString().slice(0, 5));
-      }
-
       setStep("complete");
     } catch {
       setError(t("errors:failedToLoadAirport"));
@@ -395,13 +357,9 @@ export function useFlightForm(
     ]
   );
 
-  // Pick the IANA timezone for a side. Airports cached in the DB carry an
-  // IANA timezone; fall back to the user's display timezone if the airport
-  // record happens to be incomplete. Settings always has a string default
-  // ("Europe/Berlin"), so the result is non-null in practice.
-  const userTz = settings?.display?.timezone || "UTC";
-  const depTz = departure?.timezone || userTz;
-  const arrTz = arrival?.timezone || userTz;
+  // A side's zone is its airport's, never a fallback (ADR 0002 D2; see airportZone).
+  const depTz = airportZone(departure);
+  const arrTz = airportZone(arrival);
 
   // Honour the user's "track aircraft registrations" opt-out: when off,
   // the lookup-derived tail number / Mode-S are dropped before submit so
@@ -454,13 +412,13 @@ export function useFlightForm(
       frequentFlyerNumber,
       bookingClassLetter,
       coPassengers,
+      folds,
     });
 
   const storeHistoricalData = () => {
     if (flightNumber && departureTime && arrivalTime && departure?.iata && arrival?.iata) {
-      const depDate = new Date(`${departureDate}T${departureTime}`);
-      depDate.setMinutes(depDate.getMinutes() - 30);
-      const estimatedBoardingTime = `${String(depDate.getHours()).padStart(2, "0")}:${String(depDate.getMinutes()).padStart(2, "0")}`;
+      const estimatedBoardingTime =
+        shiftWallClock(departureDate, departureTime, -30)?.time ?? departureTime;
       storeHistoricalFlightTime(
         flightNumber,
         departure.iata,
@@ -557,26 +515,13 @@ export function useFlightForm(
       setTimeEstimationWarning(null);
       await maybeAssignTrip(await onSubmit(buildFlightPayload()));
     } catch (err: unknown) {
-      const errorObj = err as {
-        response?: {
-          status?: number;
-          data?: {
-            error?: string;
-            details?: { field: string; message: string }[];
-            existingFlight?: DuplicateFlight;
-          };
-        };
-      };
-      if (errorObj.response?.status === 409 && errorObj.response.data?.existingFlight) {
-        setDuplicateFlight(errorObj.response.data.existingFlight);
+      const failure = flightSaveFailure(err, t);
+      if (failure.kind === "duplicate") {
+        setDuplicateFlight(failure.existing);
         setLoading(false);
         return;
       }
-      const details = errorObj.response?.data?.details;
-      const msg = details?.length
-        ? details.map((d) => d.message).join("; ")
-        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
-      setError(msg);
+      setError(failure.message);
     } finally {
       setLoading(false);
     }
@@ -608,25 +553,12 @@ export function useFlightForm(
       prepareReturnFlightForm();
       useToastStore.getState().addToast("info", t("flights:form.returnFlightHint"));
     } catch (err: unknown) {
-      const errorObj = err as {
-        response?: {
-          status?: number;
-          data?: {
-            error?: string;
-            details?: { field: string; message: string }[];
-            existingFlight?: DuplicateFlight;
-          };
-        };
-      };
-      if (errorObj.response?.status === 409 && errorObj.response.data?.existingFlight) {
-        setDuplicateFlight(errorObj.response.data.existingFlight);
+      const failure = flightSaveFailure(err, t);
+      if (failure.kind === "duplicate") {
+        setDuplicateFlight(failure.existing);
         return;
       }
-      const details = errorObj.response?.data?.details;
-      const msg = details?.length
-        ? details.map((d) => d.message).join("; ")
-        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
-      setError(msg);
+      setError(failure.message);
     } finally {
       setLoading(false);
     }
@@ -645,14 +577,7 @@ export function useFlightForm(
       setTimeEstimationWarning(null);
       await maybeAssignTrip(await onSubmit(buildFlightPayload(), { force: true }));
     } catch (err: unknown) {
-      const errorObj = err as {
-        response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
-      };
-      const details = errorObj.response?.data?.details;
-      const msg = details?.length
-        ? details.map((d) => d.message).join("; ")
-        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
-      setError(msg);
+      setError(saveErrorMessage(err, t, "errors:saveFailed"));
     } finally {
       setLoading(false);
     }
@@ -678,14 +603,7 @@ export function useFlightForm(
       setTimeEstimationWarning(null);
       await maybeAssignTrip(await onSubmit(buildFlightPayload(), { merge: true }));
     } catch (err: unknown) {
-      const errorObj = err as {
-        response?: { data?: { error?: string; details?: { field: string; message: string }[] } };
-      };
-      const details = errorObj.response?.data?.details;
-      const msg = details?.length
-        ? details.map((d) => d.message).join("; ")
-        : (errorObj.response?.data?.error ?? t("errors:saveFailed"));
-      setError(msg);
+      setError(saveErrorMessage(err, t, "errors:saveFailed"));
     } finally {
       setLoading(false);
     }
@@ -832,6 +750,7 @@ export function useFlightForm(
     companions,
     coPassengers,
     canSubmit,
+    folds,
     // Setters
     setLoading,
     setError,
@@ -853,6 +772,7 @@ export function useFlightForm(
     setDepartureTime,
     setArrivalDate,
     setArrivalTime,
+    setFolds,
     setActualDepartureDate,
     setActualDepartureTime,
     setActualArrivalDate,

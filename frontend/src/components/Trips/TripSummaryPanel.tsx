@@ -69,7 +69,7 @@ export function TripSummaryPanel({
    * is noise. A summary that already exists is still shown below — it is
    * content, not a control.
    */
-  const canGenerate = !isSharedDemo && hasLlm !== false;
+  const canGenerate = !isSharedDemo && hasLlm !== false && hasLlm !== "disabled";
 
   const generate = async (): Promise<void> => {
     setGenerating(true);
@@ -78,11 +78,22 @@ export function TripSummaryPanel({
       addToast("success", t("trips:summary.generated"));
       onChanged();
     } catch (err: unknown) {
-      const status =
+      const response =
         typeof err === "object" && err !== null && "response" in err
-          ? ((err as { response?: { status?: number } }).response?.status ?? 0)
-          : 0;
-      addToast("error", status === 503 ? t("trips:summary.unavailable") : t("trips:summary.error"));
+          ? (err as { response?: { status?: number; data?: { code?: string } } }).response
+          : undefined;
+      const status = response?.status ?? 0;
+      // A switch flipped after this tab learned the capabilities: the server
+      // says LLM_DISABLED, and "unreachable" would be the wrong sentence.
+      const message =
+        response?.data?.code === "LLM_DISABLED"
+          ? t("trips:summary.disabled")
+          : response?.data?.code === "LLM_CLOUD_NOT_CONSENTED"
+            ? t("trips:summary.cloudNotConsented")
+            : status === 503
+              ? t("trips:summary.unavailable")
+              : t("trips:summary.error");
+      addToast("error", message);
     } finally {
       setGenerating(false);
     }
@@ -96,7 +107,7 @@ export function TripSummaryPanel({
      * shared demo still gets nothing at all -- that refusal is about the
      * account, it repeats on all fourteen demo trips, and it is noise.
      */
-    if (hasLlm === false && !isSharedDemo) {
+    if ((hasLlm === false || hasLlm === "disabled") && !isSharedDemo) {
       return (
         <div
           className="rounded-xl p-4"
@@ -111,7 +122,7 @@ export function TripSummaryPanel({
             {t("trips:summary.title")}
           </div>
           <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-            {t("trips:summary.unavailable")}
+            {hasLlm === "disabled" ? t("trips:summary.disabled") : t("trips:summary.unavailable")}
           </div>
         </div>
       );

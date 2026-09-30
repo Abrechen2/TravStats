@@ -2,6 +2,7 @@ import { PortPicker } from "./PortPicker";
 import type { CruiseStopInput, Port } from "../../types";
 import { useTranslation } from "../../hooks/useTranslation";
 import { withCruiseDayNumbers } from "./cruiseDayNumbers";
+import { ClockChangeNotice } from "../common/ClockChangeNotice";
 
 // Stop arrival/departure are PORT-LOCAL wall-clock times — a ship arrives at
 // "08:00" in the port's own time, independent of the viewer's timezone. Treat
@@ -149,28 +150,46 @@ export function CruiseStopsEditor({ stops, onChange }: Props): JSX.Element {
                 onChange={(p): void => handlePortChange(i, p)}
               />
               <div className="mt-2 grid grid-cols-2 gap-2">
-                <input
-                  type="datetime-local"
-                  value={stop.arrivalTime?.slice(0, 16) ?? ""}
-                  onChange={(e): void =>
-                    update(i, {
-                      arrivalTime: fromStopInput(e.target.value),
-                    })
-                  }
-                  className="rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-xs text-(--text-primary)"
-                  aria-label={t("field.arrive")}
-                />
-                <input
-                  type="datetime-local"
-                  value={stop.departureTime?.slice(0, 16) ?? ""}
-                  onChange={(e): void =>
-                    update(i, {
-                      departureTime: fromStopInput(e.target.value),
-                    })
-                  }
-                  className="rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-xs text-(--text-primary)"
-                  aria-label={t("field.depart")}
-                />
+                <div>
+                  <input
+                    type="datetime-local"
+                    value={stop.arrivalTime?.slice(0, 16) ?? ""}
+                    onChange={(e): void =>
+                      update(i, {
+                        arrivalTime: fromStopInput(e.target.value),
+                        arrivalFold: undefined,
+                      })
+                    }
+                    className="w-full rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-xs text-(--text-primary)"
+                    aria-label={t("field.arrive")}
+                  />
+                  <ClockChangeNotice
+                    local={stop.arrivalTime?.slice(0, 16) ?? ""}
+                    zone={stop.port?.timezone}
+                    fold={stop.arrivalFold}
+                    onFoldChange={(fold): void => update(i, { arrivalFold: fold })}
+                  />
+                </div>
+                <div>
+                  <input
+                    type="datetime-local"
+                    value={stop.departureTime?.slice(0, 16) ?? ""}
+                    onChange={(e): void =>
+                      update(i, {
+                        departureTime: fromStopInput(e.target.value),
+                        departureFold: undefined,
+                      })
+                    }
+                    className="w-full rounded-md border border-border bg-(--bg-elevated) px-2 py-1 text-xs text-(--text-primary)"
+                    aria-label={t("field.depart")}
+                  />
+                  <ClockChangeNotice
+                    local={stop.departureTime?.slice(0, 16) ?? ""}
+                    zone={stop.port?.timezone}
+                    fold={stop.departureFold}
+                    onFoldChange={(fold): void => update(i, { departureFold: fold })}
+                  />
+                </div>
               </div>
               <textarea
                 value={stop.excursionNote ?? ""}

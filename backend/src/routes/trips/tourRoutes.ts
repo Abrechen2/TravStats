@@ -6,6 +6,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/a
 import { AppError } from "../../middleware/errorHandler";
 import { assignStopsSchema, createRouteSchema, updateRouteSchema } from "../../schemas/tour";
 import { kindFieldsSchema } from "../../schemas/roadtrip";
+import { tourDayColumns, tourDayDto } from "../../services/tour/tourDay";
 import { drivenKm, travelledKm } from "../../services/tour/tourDistance";
 import { recomputeLegs } from "../../services/tour/legRecompute";
 import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
@@ -99,6 +100,8 @@ export function toDto(route: {
   vehicleName: string | null;
   anchorStopId: string | null;
   kindAssignedAutomatically: boolean;
+  tourDate: Date | null;
+  tourStartMinute: number | null;
   legs: LegRow[];
   _count: { stops: number };
 }): Record<string, unknown> {
@@ -118,6 +121,7 @@ export function toDto(route: {
     vehicleName: route.vehicleName,
     anchorStopId: route.anchorStopId,
     kindAssignedAutomatically: route.kindAssignedAutomatically,
+    ...tourDayDto(route),
     stopCount: route._count.stops,
     legCount: route.legs.length,
     distanceKm: travelledKm(route.legs),
@@ -156,7 +160,8 @@ export function toLegDto(leg: {
 /** Exported for `routes/trips/tourRouting.ts` — see `toDto` above. */
 export const ROUTE_SELECT = {
   legs: { select: { mode: true, distanceKm: true } },
-  _count: { select: { stops: true } },
+  // Stations, not route corrections (via points): the count is what a list shows.
+  _count: { select: { stops: { where: { viaPoint: false } } } },
 } as const;
 
 /**
@@ -289,12 +294,19 @@ router.patch(
     try {
       const userId = req.userId!;
       const routeId = await resolveRoute(userId, req.params.id, req.params.routeId);
-      const body = updateRouteSchema.merge(kindFieldsSchema).parse(req.body);
+      const { date, startTime, ...body } = updateRouteSchema
+        .merge(kindFieldsSchema)
+        .parse(req.body);
       await assertKindFields(userId, routeId, body);
+      const current = await prisma.tripRoute.findUniqueOrThrow({
+        where: { id: routeId },
+        select: { kind: true, tourDate: true },
+      });
+      const day = tourDayColumns({ date, startTime }, current.kind, current);
 
       const route = await prisma.tripRoute.update({
         where: { id: routeId },
-        data: body,
+        data: { ...body, ...day },
         include: ROUTE_SELECT,
       });
       res.json({ route: toDto(route) });
@@ -394,7 +406,16 @@ router.get(
         prisma.tripStop.findMany({
           where: { routeId },
           orderBy: { routeOrderIdx: "asc" },
-          select: { id: true, title: true, lat: true, lon: true, notes: true, routeOrderIdx: true },
+          select: {
+            id: true,
+            title: true,
+            lat: true,
+            lon: true,
+            notes: true,
+            routeOrderIdx: true,
+            tripId: true,
+            viaPoint: true,
+          },
         }),
         prisma.tripRouteLeg.findMany({
           where: { routeId },

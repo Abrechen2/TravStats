@@ -53,7 +53,6 @@ export function useColumnPrefs(
       });
     },
     // `alwaysVisible` is expected to be a module-level constant per table.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
     [tableKey]
   );
 

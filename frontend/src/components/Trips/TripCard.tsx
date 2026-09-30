@@ -1,10 +1,11 @@
 import { formatCurrency } from "../../lib/units";
-import { differenceInCalendarDays } from "date-fns";
 import type { Trip } from "../../types";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { useTranslation } from "../../hooks/useTranslation";
 import { sumByCurrency, tripCostSources } from "../../lib/bookingCost";
-import { formatDateInTimezone } from "../../lib/dateUtils";
+import { formatLocalDate } from "../../lib/displayFormat";
+import { flightArrival, flightDeparture, tripEnd, tripStart } from "../../lib/entityTimes";
+import { dayOf } from "../../shared/time";
 import { statusPillStyle } from "../table/statusPillStyle";
 import { Icon, type IconName } from "../ui/Icon";
 
@@ -21,20 +22,27 @@ const STATUS_TONE: Record<Trip["status"], string> = {
 };
 
 /**
- * When a trip starts and ends: its own dates, else its first departure and
- * last arrival. The list groups by the start year, so this is shared.
+ * When a trip starts and ends, as `YYYY-MM-DD` days at the places (ADR 0002):
+ * its own days, else its first departure's and last arrival's day at their
+ * airports. The list groups by the start year, so this is shared.
  */
-export function tripSpan(trip: Trip): { start: Date | null; end: Date | null } {
+export function tripSpan(trip: Trip): { start: string | null; end: string | null } {
   return {
-    start: trip.startDate ? new Date(trip.startDate) : firstFlightDate(trip),
-    end: trip.endDate ? new Date(trip.endDate) : lastFlightDate(trip),
+    start: tripStart(trip)?.date ?? firstFlightDay(trip),
+    end: tripEnd(trip)?.date ?? lastFlightDay(trip),
   };
 }
+
+const DAY_MS = 86_400_000;
 
 /** Calendar days including both ends, or null when a date is missing. */
 export function tripDays(trip: Trip): number | null {
   const { start, end } = tripSpan(trip);
-  return start && end ? Math.max(0, differenceInCalendarDays(end, start)) + 1 : null;
+  if (!start || !end) return null;
+  const span = Math.round(
+    (Date.parse(`${end}T00:00:00Z`) - Date.parse(`${start}T00:00:00Z`)) / DAY_MS
+  );
+  return Math.max(0, span) + 1;
 }
 
 /**
@@ -55,8 +63,8 @@ export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
   const { start, end } = tripSpan(trip);
   const days = tripDays(trip);
   const dateRange = [start, end]
-    .filter((d): d is Date => d !== null)
-    .map((d) => formatDateInTimezone(d, "UTC"))
+    .filter((d): d is string => d !== null)
+    .map((d) => formatLocalDate(d))
     .filter((d, i, all) => all.indexOf(d) === i)
     .join(" – ");
 
@@ -202,24 +210,22 @@ export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
   );
 }
 
-function firstFlightDate(trip: Trip): Date | null {
-  const sorted = [...(trip.flights ?? [])].sort(
-    (a, b) =>
-      (a.departureTime ? new Date(a.departureTime).getTime() : 0) -
-      (b.departureTime ? new Date(b.departureTime).getTime() : 0)
-  );
-  const first = sorted.find((f) => f.departureTime);
-  return first?.departureTime ? new Date(first.departureTime) : null;
+/** The earliest departure (by instant) and its day at the airport. */
+function firstFlightDay(trip: Trip): string | null {
+  const departures = (trip.flights ?? [])
+    .map((f) => flightDeparture(f))
+    .filter((v): v is NonNullable<typeof v> => v !== null)
+    .sort((a, b) => Date.parse(a.utc) - Date.parse(b.utc));
+  return departures[0] ? dayOf(departures[0]) : null;
 }
 
-function lastFlightDate(trip: Trip): Date | null {
-  const sorted = [...(trip.flights ?? [])].sort(
-    (a, b) =>
-      (a.arrivalTime ? new Date(a.arrivalTime).getTime() : 0) -
-      (b.arrivalTime ? new Date(b.arrivalTime).getTime() : 0)
-  );
-  const last = [...sorted].reverse().find((f) => f.arrivalTime);
-  return last?.arrivalTime ? new Date(last.arrivalTime) : null;
+/** The latest arrival (by instant) and its day at the airport. */
+function lastFlightDay(trip: Trip): string | null {
+  const arrivals = (trip.flights ?? [])
+    .map((f) => flightArrival(f))
+    .filter((v): v is NonNullable<typeof v> => v !== null)
+    .sort((a, b) => Date.parse(b.utc) - Date.parse(a.utc));
+  return arrivals[0] ? dayOf(arrivals[0]) : null;
 }
 
 /**

@@ -88,7 +88,6 @@ router.post(
           operation: "receipt_upload_validation_failed",
           message: "Receipt file validation failed",
           context: {
-            filename: req.file.originalname,
             mimetype: req.file.mimetype,
             reason: validation.reason,
           },

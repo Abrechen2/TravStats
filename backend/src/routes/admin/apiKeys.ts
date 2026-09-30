@@ -2,8 +2,9 @@ import { Router, Response, NextFunction } from "express";
 import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../db";
-import { decryptApiKey, encryptApiKey } from "../../utils/encryption";
+import { decryptApiKey } from "../../utils/encryption";
 import logger from "../../utils/logger";
+import { encryptUnlessMasked, looksMasked, maskKey } from "../../utils/maskedKey";
 import {
   testAirlabsKey,
   testAviationstackKey,
@@ -87,24 +88,6 @@ const testOpenSkySchema = z.object({
   password: z.string().optional(),
 });
 
-/**
- * Frontend ships the masked GET-response value (e.g. "ac97****2a86") back
- * into the Test request when the admin hasn't typed anything new. Treat
- * empty + masked as "test the persisted key".
- */
-const looksMasked = (s: string | undefined | null): boolean => !s || s.includes("****");
-
-/**
- * Encrypt an incoming key value for storage, honouring the masked-echo
- * protocol: the GET response masks stored keys as "abcd****wxyz" and the
- * admin UI PUTs its whole form state back, so a value still containing
- * "****" means "unchanged — keep the stored key" (return undefined = no
- * update). Empty string / null clears the key (encryptApiKey maps them
- * to null).
- */
-const encryptUnlessMasked = (incoming: string | null): string | null | undefined =>
-  incoming && incoming.includes("****") ? undefined : encryptApiKey(incoming);
-
 async function resolveAdminGlobalKey(
   column:
     | "globalAirlabsApiKey"
@@ -122,14 +105,6 @@ async function resolveAdminGlobalKey(
 }
 
 const router = Router();
-
-/** Mask a decrypted key for safe display: "abcd****wxyz" */
-const maskKey = (encrypted: string | null | undefined): string | undefined => {
-  const decrypted = decryptApiKey(encrypted);
-  if (!decrypted) return undefined;
-  if (decrypted.length <= 8) return "****";
-  return decrypted.slice(0, 4) + "****" + decrypted.slice(-4);
-};
 
 // Get global API keys
 router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFunction) => {

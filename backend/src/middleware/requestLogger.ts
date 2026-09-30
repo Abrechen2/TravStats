@@ -1,11 +1,7 @@
 import { Request, Response, NextFunction } from "express";
 import { httpLogger, generateRequestId } from "../utils/logger";
-import { shouldLogHttpRequests } from "../services/loggingConfig";
-
-// Cache for shouldLogHttpRequests result (5 min TTL)
-let cachedShouldLog: boolean | null = null;
-let cacheTimestamp: number = 0;
-const CACHE_TTL_MS = 5 * 60 * 1000; // 5 minutes
+import { getLoggingRuntimeFlags } from "../utils/logging/runtimeFlags";
+import { requestPathForLog } from "../utils/logging/requestPath";
 
 /**
  * Request Logger Middleware
@@ -30,67 +26,43 @@ export interface AuthRequest extends Request {
  * Request logger middleware
  * Attaches correlation ID and logs HTTP traffic when enabled
  */
-export async function requestLoggerMiddleware(
-  req: AuthRequest,
-  res: Response,
-  next: NextFunction
-): Promise<void> {
+export function requestLoggerMiddleware(req: AuthRequest, res: Response, next: NextFunction): void {
   // Assign unique request ID for correlation
   req.requestId = generateRequestId();
 
   const startTime = Date.now();
   const startMemory = process.memoryUsage().heapUsed;
 
-  // Capture response finish event
-  res.on("finish", async () => {
+  // Whether to log is read when the response finishes, from the flag
+  // `applyLoggingConfig()` sets — so switching HTTP logging on or off in the
+  // admin UI takes effect on the next request. It used to sit behind a
+  // five-minute cache of its own that no save invalidated.
+  res.on("finish", () => {
+    if (!getLoggingRuntimeFlags().httpRequests) return;
+
     const duration = Date.now() - startTime;
-    const endMemory = process.memoryUsage().heapUsed;
-    const memoryDelta = endMemory - startMemory;
+    const memoryDelta = process.memoryUsage().heapUsed - startMemory;
+    // The full path (a router only sees its own tail) and never the query
+    // string, which carries search terms, names and booking references.
+    const path = requestPathForLog(req);
 
-    // Only log if HTTP request logging is enabled (with caching)
-    const now = Date.now();
-    if (cachedShouldLog === null || now - cacheTimestamp > CACHE_TTL_MS) {
-      cachedShouldLog = await shouldLogHttpRequests();
-      cacheTimestamp = now;
-    }
-    const shouldLog = cachedShouldLog;
-
-    if (shouldLog) {
-      const context = {
+    httpLogger[getLogLevel(res.statusCode)]({
+      operation: "http_request",
+      message: `${req.method} ${path} ${res.statusCode}`,
+      context: {
         method: req.method,
-        url: req.url,
-        path: req.path,
-        query: req.query,
+        path,
         status: res.statusCode,
         statusClass: getStatusClass(res.statusCode),
         ip: req.ip,
         userAgent: req.get("user-agent"),
         userId: req.user?.id,
-        username: req.user?.username,
         isAdmin: req.user?.isAdmin,
         requestId: req.requestId,
-        // Optionally log request body for non-GET requests (excluding sensitive fields)
-        ...(req.method !== "GET" &&
-          req.body && {
-            bodyKeys: Object.keys(req.body),
-          }),
-      };
-
-      const performance = {
-        duration,
-        memoryDelta: formatBytes(memoryDelta),
-      };
-
-      // Log at appropriate level based on status code
-      const logLevel = getLogLevel(res.statusCode);
-
-      httpLogger[logLevel]({
-        operation: "http_request",
-        message: `${req.method} ${req.url} ${res.statusCode}`,
-        context,
-        performance,
-      });
-    }
+        ...(req.method !== "GET" && req.body && { bodyKeys: Object.keys(req.body) }),
+      },
+      performance: { duration, memoryDelta: formatBytes(memoryDelta) },
+    });
   });
 
   next();

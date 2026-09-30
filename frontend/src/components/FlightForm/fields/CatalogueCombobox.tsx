@@ -21,6 +21,15 @@ interface CatalogueComboboxProps {
   inputClassName?: string;
   /** Accessible name, for a form that labels its inputs without a <label>. */
   ariaLabel?: string;
+  /**
+   * On focus, while the value is not the user's own typing (empty, seeded by
+   * an edit dialog, or a previous pick), list the whole catalogue (`search("")`)
+   * instead of only entries containing the current value. Without it an edit
+   * dialog opened on "AIDA Cruises" offered nothing but "AIDA Cruises" and
+   * read as a plain text field (acceptance 2026-09-26). Typing narrows as usual.
+   * Only for a catalogue whose search answers an empty query with a short list.
+   */
+  browseOnFocus?: boolean;
 }
 
 /** Stable adapter references (module-level on purpose): the debounce effect
@@ -72,11 +81,13 @@ export default function CatalogueCombobox({
   placeholder,
   inputClassName = "",
   ariaLabel,
+  browseOnFocus = false,
 }: CatalogueComboboxProps): JSX.Element {
   const [results, setResults] = useState<CatalogueOption[]>([]);
   const [isOpen, setIsOpen] = useState(false);
   const wrapperRef = useRef<HTMLDivElement>(null);
   const pickedRef = useRef<string | null>(null);
+  const typedRef = useRef(false);
 
   useEffect(() => {
     function handleClickOutside(event: MouseEvent): void {
@@ -118,6 +129,7 @@ export default function CatalogueCombobox({
 
   const handleSelect = (option: CatalogueOption): void => {
     pickedRef.current = option.name;
+    typedRef.current = false;
     onChange(option.name);
     setResults([]);
     setIsOpen(false);
@@ -125,7 +137,22 @@ export default function CatalogueCombobox({
 
   const handleInputChange = (e: React.ChangeEvent<HTMLInputElement>): void => {
     pickedRef.current = null;
+    typedRef.current = true;
     onChange(e.target.value);
+  };
+
+  const handleFocus = async (): Promise<void> => {
+    if (!browseOnFocus || typedRef.current) {
+      if (results.length > 0) setIsOpen(true);
+      return;
+    }
+    try {
+      const options = await search("");
+      setResults(options);
+      if (options.length > 0) setIsOpen(true);
+    } catch (error) {
+      logger.warn("Catalogue browse failed", { error });
+    }
   };
 
   return (
@@ -134,7 +161,7 @@ export default function CatalogueCombobox({
         type="text"
         value={value}
         onChange={handleInputChange}
-        onFocus={() => results.length > 0 && setIsOpen(true)}
+        onFocus={() => void handleFocus()}
         placeholder={placeholder}
         aria-label={ariaLabel}
         className={`input ${inputClassName}`.trim()}

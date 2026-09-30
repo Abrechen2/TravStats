@@ -9,6 +9,8 @@ interface TourPointEditorProps {
   points: TourPointInput[];
   saving: boolean;
   onSave: (points: TourPointInput[]) => void;
+  /** Why the last save was refused, already worded — shown beside the button. */
+  error?: string | null;
 }
 
 /**
@@ -31,6 +33,7 @@ export default function TourPointEditor({
   points,
   saving,
   onSave,
+  error = null,
 }: TourPointEditorProps): JSX.Element {
   const { t } = useTranslation(["trips", "common"]);
   const [draft, setDraft] = useState<TourPointInput[]>(points);
@@ -52,8 +55,9 @@ export default function TourPointEditor({
   // A point with no coordinate produces no leg and no kilometre, and the
   // server refuses it — so the form refuses it first, rather than letting
   // the reader type a whole list and meet one error for all of it.
+  // A route correction needs its point but no name (tester 2026-09-26).
   const incomplete = draft.some(
-    (p) => p.title.trim() === "" || !isFinite(p.lat) || !isFinite(p.lon)
+    (p) => (p.via !== true && p.title.trim() === "") || !isFinite(p.lat) || !isFinite(p.lon)
   );
 
   return (
@@ -102,6 +106,21 @@ export default function TourPointEditor({
             >
               {t("trips:tours.points.remove")}
             </button>
+            <label
+              className="flex basis-full items-center gap-2 text-xs text-(--text-muted)"
+              title={t("trips:tours.points.viaHint")}
+            >
+              <input
+                type="checkbox"
+                role="switch"
+                aria-checked={point.via === true}
+                aria-label={t("trips:tours.points.via")}
+                checked={point.via === true}
+                onChange={(e) => update(index, { via: e.target.checked })}
+              />
+              <span>{t("trips:tours.points.via")}</span>
+              {point.via === true && <span>— {t("trips:tours.points.viaHint")}</span>}
+            </label>
             <div className="basis-full">
               <LocationInput
                 compact
@@ -115,7 +134,11 @@ export default function TourPointEditor({
                   update(index, {
                     lat: sel.lat,
                     lon: sel.lon,
-                    title: point.title.trim() === "" && sel.name ? sel.name : point.title,
+                    // A correction stays nameless unless the reader types one.
+                    title:
+                      point.title.trim() === "" && sel.name && point.via !== true
+                        ? sel.name
+                        : point.title,
                   })
                 }
               />
@@ -143,6 +166,11 @@ export default function TourPointEditor({
         {incomplete && (
           <span className="text-xs" style={{ color: "var(--warning)" }}>
             {t("trips:tours.points.incomplete")}
+          </span>
+        )}
+        {error && (
+          <span role="alert" className="text-xs" style={{ color: "var(--danger)" }}>
+            {error}
           </span>
         )}
       </div>

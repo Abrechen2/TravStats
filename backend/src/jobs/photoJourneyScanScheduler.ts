@@ -33,6 +33,7 @@ import cron from "node-cron";
 import { prisma } from "../db";
 import { scanPhotoJourneys } from "../services/photoJourneys/scan";
 import logger from "../utils/logger";
+import { schedulerZone } from "../shared/time/schedulerZone";
 
 const CRON_EXPRESSION = "55 4 * * *";
 export const NIGHTLY_WINDOW_DAYS = 400;
@@ -101,9 +102,13 @@ export async function runPhotoJourneyNightlyScan(
 
 export function startPhotoJourneyScanScheduler(): void {
   if (schedulerTask) return;
-  schedulerTask = cron.schedule(CRON_EXPRESSION, () => {
-    void runPhotoJourneyNightlyScan();
-  });
+  schedulerTask = cron.schedule(
+    CRON_EXPRESSION,
+    () => {
+      void runPhotoJourneyNightlyScan();
+    },
+    { timezone: schedulerZone("photoJourneyScan") }
+  );
 }
 
 export function stopPhotoJourneyScanScheduler(): void {

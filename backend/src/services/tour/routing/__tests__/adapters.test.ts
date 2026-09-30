@@ -2,6 +2,7 @@ import { createOpenRouteService } from "../openRouteService";
 import { createGraphHopper } from "../graphHopper";
 import { createCustomOsrm } from "../customOsrm";
 import { RouteRequest } from "../types";
+import logger from "../../../../utils/logger";
 
 /**
  * Fixture bodies are shaped against each provider's current documentation
@@ -69,15 +70,37 @@ describe("createOpenRouteService", () => {
     await provider.route(roadRequest());
 
     const [url, init] = fetchImpl.mock.calls[0];
-    // Literal, spelled out — ORS's own documented heavy-vehicle profile is
-    // "driving-hgv", not a value imported back from the adapter under test.
-    expect(String(url)).toContain("/directions/driving-hgv/geojson");
+    // Literal, spelled out — a road leg is a CAR, not the truck profile
+    // ("driving-hgv") every road leg used to be sent with.
+    expect(String(url)).toContain("/directions/driving-car/geojson");
     const body = JSON.parse((init as RequestInit).body as string);
     expect(body.coordinates).toEqual([
       [FROM.lon, FROM.lat],
       [TO.lon, TO.lat],
     ]);
+    // A campsite a few hundred metres off the road still snaps: ORS's own
+    // default radius is 350 m.
+    expect(body.radiuses).toEqual([1000, 1000]);
   });
+
+  it.each([
+    ["road", null, "driving-car"],
+    ["road", "motorhome", "driving-car"],
+    ["road", "motorcycle", "driving-car"],
+    ["road", "bicycle", "cycling-regular"],
+    ["bike", null, "cycling-regular"],
+    ["foot", null, "foot-hiking"],
+  ] as const)(
+    "routes a %s leg of a %s roadtrip with the %s profile",
+    async (mode, vehicle, profile) => {
+      const fetchImpl = jest.fn(async () => jsonResponse(200, orsFixture));
+      const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
+
+      await provider.route({ from: FROM, to: TO, mode, vehicle });
+
+      expect(String(fetchImpl.mock.calls[0][0])).toContain(`/directions/${profile}/geojson`);
+    }
+  );
 
   it("never puts the API key in the URL or body", async () => {
     const fetchImpl = jest.fn(async () => jsonResponse(200, orsFixture));
@@ -96,34 +119,92 @@ describe("createOpenRouteService", () => {
     );
   });
 
-  it("returns null on a non-200 response", async () => {
+  it("reports a provider error on a 500", async () => {
     const fetchImpl = jest.fn(async () => jsonResponse(500, { error: "boom" }));
     const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
 
     const result = await provider.route(roadRequest());
 
-    expect(result).toBeNull();
+    expect(result).toEqual({ failure: "provider_error" });
   });
 
-  it("returns null on a 200 with a malformed body", async () => {
+  // ORS's own error body: { error: { code, message }, info: {...} }.
+  it.each([
+    [404, 2010, "point_not_near_road"],
+    [404, 2009, "no_route"],
+    [400, 2004, "no_route"],
+    [400, 2003, "provider_error"],
+    [401, null, "auth"],
+    [403, null, "auth"],
+    [429, null, "rate_limited"],
+  ] as const)("reads HTTP %s with ORS code %s as %s", async (status, code, reason) => {
+    const body =
+      code === null
+        ? { error: "Access to this API has been disallowed" }
+        : { error: { code, message: "Could not find routable point" } };
+    const fetchImpl = jest.fn(async () => jsonResponse(status, body));
+    const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
+
+    const result = await provider.route(roadRequest());
+
+    expect(result).toEqual({ failure: reason });
+  });
+
+  it("logs the status and ORS's own code at warn, the stop-quoting message only at debug, never the key", async () => {
+    const warn = jest.spyOn(logger, "warn").mockImplementation(() => logger);
+    const debug = jest.spyOn(logger, "debug").mockImplementation(() => logger);
+    // ORS quotes the user's stop coordinates in its error text.
+    const orsText =
+      "Could not find routable point within a radius of 350.0 meters of specified coordinate 1: 13.4050 52.5200.";
+    const fetchImpl = jest.fn(async () =>
+      jsonResponse(404, { error: { code: 2010, message: orsText } })
+    );
+    const provider = createOpenRouteService(
+      "super-secret-key",
+      fetchImpl as unknown as typeof fetch
+    );
+
+    await provider.route(roadRequest());
+
+    expect(warn).toHaveBeenCalledWith(
+      expect.objectContaining({ status: 404, orsCode: 2010 }),
+      expect.any(String)
+    );
+    expect(JSON.stringify(warn.mock.calls)).not.toContain("52.5200");
+    expect(debug).toHaveBeenCalledWith(expect.objectContaining({ orsMessage: orsText }));
+    expect(JSON.stringify([...warn.mock.calls, ...debug.mock.calls])).not.toContain(
+      "super-secret-key"
+    );
+    warn.mockRestore();
+    debug.mockRestore();
+  });
+
+  it("reports a provider error when the error body is not JSON", async () => {
+    const fetchImpl = jest.fn(async () => malformedResponse(502));
+    const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
+
+    expect(await provider.route(roadRequest())).toEqual({ failure: "provider_error" });
+  });
+
+  it("reports a provider error on a 200 with a malformed body", async () => {
     const fetchImpl = jest.fn(async () => malformedResponse(200));
     const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
 
     const result = await provider.route(roadRequest());
 
-    expect(result).toBeNull();
+    expect(result).toEqual({ failure: "provider_error" });
   });
 
-  it("returns null on a 200 with a well-formed but wrong-shaped body", async () => {
+  it("reports a provider error on a 200 with a well-formed but wrong-shaped body", async () => {
     const fetchImpl = jest.fn(async () => jsonResponse(200, { features: [] }));
     const provider = createOpenRouteService("test-key", fetchImpl as unknown as typeof fetch);
 
     const result = await provider.route(roadRequest());
 
-    expect(result).toBeNull();
+    expect(result).toEqual({ failure: "provider_error" });
   });
 
-  it("returns null when fetch itself rejects", async () => {
+  it("reports a provider error when fetch itself rejects", async () => {
     const fetchImpl = jest.fn(async () => {
       throw new Error("network down");
     });
@@ -131,7 +212,7 @@ describe("createOpenRouteService", () => {
 
     const result = await provider.route(roadRequest());
 
-    expect(result).toBeNull();
+    expect(result).toEqual({ failure: "provider_error" });
   });
 
   it("returns null for a non-routable mode without calling fetch", async () => {

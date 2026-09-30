@@ -11,6 +11,14 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { createFlightSchema, updateFlightSchema, airportSchema } from "../../../schemas/flight";
+import { localDateInputSchema, localTimeInputSchema } from "../../../shared/time/wire";
+import {
+  TIMES_SCHEMAS,
+  flightTimesSchema,
+  journalEntryTimesSchema,
+  tripStopTimesSchema,
+  tripTimesSchema,
+} from "../../../schemas/times";
 import {
   apiTokenScopeSchema,
   createApiTokenSchema,
@@ -24,6 +32,14 @@ export const errorResponse = registry.register(
     .object({
       error: z.string().openapi({ example: "Invalid input" }),
       details: z.array(z.string()).optional(),
+      code: z
+        .string()
+        .optional()
+        .describe("Stable machine-readable cause, where the route names one (ApiErrorCode)"),
+      field: z
+        .string()
+        .optional()
+        .describe("The request field the cause belongs to, where the route names one"),
     })
     .openapi("Error")
 );
@@ -78,18 +94,16 @@ export const flightResponse = registry.register(
       notes: z.string().nullable(),
       createdAt: z.string().datetime(),
 
-      // Derived from the airport catalogue at read time, not stored on the row.
       // Every endpoint that returns a flight fills these in; a client may rely
       // on them being present wherever a Flight appears.
       depTimezone: z
         .string()
         .nullable()
         .describe(
-          "IANA zone of the departure airport. A flight stores UTC and carries no " +
-            "zone of its own, so this is what lets a client show the time on the " +
-            "clock the traveller actually read. Null means the airport is not in " +
-            "the catalogue — then the time is UTC and should be labelled as such, " +
-            "never shown bare as if it were local."
+          "Legacy: the zone the departure was stored with, or — for a flight written " +
+            "before zones were stored — today's catalogue zone of the airport. Read " +
+            "`times.departure` instead: it says which of the two it is (`zoneSource`). " +
+            "Null means no zone is known; the time is then UTC and must be labelled so."
         ),
       arrTimezone: z.string().nullable().describe("IANA zone of the arrival airport."),
       depCountry: z.string().nullable().describe("ISO country of the departure airport."),
@@ -121,6 +135,7 @@ export const flightResponse = registry.register(
             "the flight is unassigned; absent on the write routes, which return the " +
             "bare row."
         ),
+      times: flightTimesSchema,
       durationMinutes: z
         .number()
         .int()
@@ -152,6 +167,38 @@ export const airportResponse = registry.register(
     .openapi("Airport")
 );
 
+/** A timeline stop, as the stop routes and GET /trips/{id} return it. */
+export const tripStopResponse = registry.register(
+  "TripStop",
+  z
+    .object({
+      ...prismaColumns("TripStop"),
+      startDate: z
+        .string()
+        .datetime()
+        .nullable()
+        .describe("Legacy: the stop's wall clock stored as if it were UTC. Read `times.start`."),
+      endDate: z.string().datetime().nullable(),
+      times: tripStopTimesSchema,
+    })
+    .openapi("TripStop")
+);
+
+/** A diary entry, as the journal routes and GET /trips/{id} return it. */
+export const tripJournalEntryResponse = registry.register(
+  "TripJournalEntry",
+  z
+    .object({
+      ...prismaColumns("TripJournalEntry"),
+      times: journalEntryTimesSchema,
+      photos: z
+        .array(z.record(z.string(), z.unknown()))
+        .optional()
+        .describe("GET /trips/{id}: the photos the entry shows, in the gallery's shape"),
+    })
+    .openapi("TripJournalEntry")
+);
+
 export const tripResponse = registry.register(
   "Trip",
   z
@@ -181,6 +228,11 @@ export const tripResponse = registry.register(
       cruises: z.array(includedRow("cruise")).optional(),
       lodgingStays: z.array(includedRow("stay")).optional(),
       bookings: z.array(includedRow("booking")).optional(),
+      stops: z.array(tripStopResponse).optional().describe("GET /trips/{id}"),
+      journalEntries: z.array(tripJournalEntryResponse).optional().describe("GET /trips/{id}"),
+      times: tripTimesSchema
+        .optional()
+        .describe("The trip's first and last day; on the list, detail, create and update"),
     })
     .openapi("Trip")
 );
@@ -194,4 +246,55 @@ registry.register("CreatedApiToken", createdApiTokenSchema.openapi("CreatedApiTo
 
 export const errorContent = {
   "application/json": { schema: errorResponse },
+};
+
+/*
+ * The time model's wire shapes (ADR 0002 D3, phase 2). Registered once here so
+ * every request body that takes a time points at the same definition, and the
+ * web, the Companion and scripts build against one contract.
+ */
+registry.register("LocalTimeInput", localTimeInputSchema);
+registry.register("LocalDateInput", localDateInputSchema);
+
+/*
+ * And the read side (phase 4): every entity's `times` object is built from
+ * these two, so one component describes every time value a response carries.
+ * `__tests__/openapi.timeShape.ratchet.test.ts` holds responses to it.
+ */
+// TimeValue and LocalDateValue themselves are registered in `registry.ts`,
+// before anything that nests them — see the note there.
+for (const [name, schema] of Object.entries(TIMES_SCHEMAS)) registry.register(name, schema);
+
+/** A time-model refusal: always 422, always a code, the offending field named. */
+export const timeErrorResponse = registry.register(
+  "TimeError",
+  z
+    .object({
+      error: z.string().describe("English prose for a log — not for a reader"),
+      code: z
+        .enum(["TIME_SHAPE_REQUIRED", "LOCAL_TIME_NONEXISTENT", "TZ_UNRESOLVED", "ZONE_UNKNOWN"])
+        .describe(
+          "TIME_SHAPE_REQUIRED: send {local, zone} / {local, placeRef} or a day as YYYY-MM-DD — " +
+            "an offset-less datetime, or a browser's bare ISO-Z on a field that used to hold " +
+            "fake UTC (a stale page: reload). LOCAL_TIME_NONEXISTENT: a typed wall clock the " +
+            "zone skips (spring-forward gap). TZ_UNRESOLVED: the place has no zone. " +
+            "ZONE_UNKNOWN: a zone name the server's tzdata does not know. The lookup being " +
+            "down is a different answer: 503 TIMEZONE_LOOKUP_UNAVAILABLE."
+        ),
+      field: z
+        .string()
+        .optional()
+        .describe("The request field, e.g. `visitedAt`, `stops.0.arrivalTime`"),
+    })
+    .openapi("TimeError")
+);
+
+export const timeErrorContent = {
+  "application/json": { schema: timeErrorResponse },
+};
+
+/** The 422 a write path that takes a time answers with. */
+export const timeRefused = {
+  description: "A time refused by the time model (ADR 0002)",
+  content: timeErrorContent,
 };

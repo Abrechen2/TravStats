@@ -4,6 +4,9 @@ import { continentI18nKey } from "../../lib/continentLabel";
 import StatCard from "./StatCard";
 import EvidenceTrigger from "./EvidenceTrigger";
 import { rankingKey } from "../../shared/evidence";
+import { todayZoneNow } from "../../hooks/useTodayZone";
+import { todayIn } from "../../shared/time";
+import { countryName } from "../../shared/geo/countryCode";
 
 /** Every ranking dimension this section resolves is `allTime`-only — see `rankingEvidence.ts` on the backend. */
 const ALL_TIME = { period: "allTime" as const };
@@ -25,7 +28,7 @@ function continentKey(continent: string): string {
 export default function StatsAirportsSection({
   airportStats,
 }: StatsAirportsSectionProps): JSX.Element {
-  const { t } = useTranslation(["stats", "common"]);
+  const { t, i18n } = useTranslation(["stats", "common"]);
 
   if (!airportStats) {
     return (
@@ -179,34 +182,39 @@ export default function StatsAirportsSection({
             </p>
           ) : (
             <ol className="space-y-2">
-              {topCountries.map((c, i) => (
-                <li key={c.country}>
-                  <EvidenceTrigger
-                    kind="ranking"
-                    evidenceKey={rankingKey("country", c.country)}
-                    scope={ALL_TIME}
-                    renderedValue={c.count}
-                    label={c.country}
-                    className="flex items-center gap-3"
-                  >
-                    <span
-                      className="text-sm font-bold w-6 text-right"
-                      style={{ color: "var(--text-muted)" }}
+              {topCountries.map((c, i) => {
+                // The server sends an ISO 3166-1 alpha-2 code, never a name —
+                // a country name belongs to the reader's language.
+                const name = countryName(c.country, i18n.language) || c.country;
+                return (
+                  <li key={c.country}>
+                    <EvidenceTrigger
+                      kind="ranking"
+                      evidenceKey={rankingKey("country", c.country)}
+                      scope={ALL_TIME}
+                      renderedValue={c.count}
+                      label={name}
+                      className="flex items-center gap-3"
                     >
-                      {i + 1}.
-                    </span>
-                    <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
-                      {c.country}
-                    </span>
-                    <span
-                      className="text-sm ml-auto font-medium"
-                      style={{ color: "var(--text-primary)" }}
-                    >
-                      {t("stats:airportStats.flightsCount", { count: c.count })}
-                    </span>
-                  </EvidenceTrigger>
-                </li>
-              ))}
+                      <span
+                        className="text-sm font-bold w-6 text-right"
+                        style={{ color: "var(--text-muted)" }}
+                      >
+                        {i + 1}.
+                      </span>
+                      <span className="font-semibold" style={{ color: "var(--text-primary)" }}>
+                        {name}
+                      </span>
+                      <span
+                        className="text-sm ml-auto font-medium"
+                        style={{ color: "var(--text-primary)" }}
+                      >
+                        {t("stats:airportStats.flightsCount", { count: c.count })}
+                      </span>
+                    </EvidenceTrigger>
+                  </li>
+                );
+              })}
             </ol>
           )}
         </div>
@@ -248,7 +256,9 @@ export default function StatsAirportsSection({
             className="text-sm font-semibold mb-3 uppercase tracking-wide"
             style={{ color: "var(--text-muted)" }}
           >
-            {t("stats:airportStats.newThisYear", { year: new Date().getFullYear() })}
+            {t("stats:airportStats.newThisYear", {
+              year: Number(todayIn(todayZoneNow()).slice(0, 4)),
+            })}
           </h3>
           {newThisYear.length === 0 ? (
             <p className="text-sm" style={{ color: "var(--text-muted)" }}>
@@ -264,7 +274,7 @@ export default function StatsAirportsSection({
                 >
                   <span className="font-semibold">{a.code}</span>
                   <span className="truncate" style={{ color: "var(--text-muted)" }}>
-                    {a.name || a.country || "—"}
+                    {a.name || countryName(a.country, i18n.language) || a.country || "—"}
                   </span>
                   <span className="ml-auto text-xs" style={{ color: "var(--text-muted)" }}>
                     {a.firstVisitDate}
@@ -300,7 +310,7 @@ export default function StatsAirportsSection({
                 >
                   <span className="font-semibold">{a.code}</span>
                   <span className="truncate" style={{ color: "var(--text-muted)" }}>
-                    {a.name || a.country || "—"}
+                    {a.name || countryName(a.country, i18n.language) || a.country || "—"}
                   </span>
                 </li>
               ))}

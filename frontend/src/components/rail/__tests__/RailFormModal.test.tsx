@@ -42,8 +42,13 @@ const update = vi.fn();
 const searchStations = vi.fn();
 const lookup = vi.fn();
 const lookupProviders = vi.fn();
+// No chips in these tests; the chips have their own file.
+const entrySuggestions = vi.fn(() =>
+  Promise.resolve({ trains: [], operators: [], travelClass: null, coaches: [], seats: [] })
+);
 vi.mock("../../../lib/api/rail", () => ({
   railApi: {
+    entrySuggestions: (...a: unknown[]) => entrySuggestions(...(a as [])),
     create: (...a: unknown[]) => create(...a),
     update: (...a: unknown[]) => update(...a),
     searchStations: (...a: unknown[]) => searchStations(...a),
@@ -53,6 +58,7 @@ vi.mock("../../../lib/api/rail", () => ({
 }));
 
 import { RailFormModal } from "../RailFormModal";
+import { useToastStore } from "../../../store/toastStore";
 import { makeRailJourney } from "./railJourneyFixture";
 
 function saveButton(): HTMLElement {
@@ -102,7 +108,7 @@ describe("RailFormModal", () => {
 
   it("sends the station's wall clock, the picked stations and the trip", async () => {
     const saved = { id: "new" };
-    create.mockResolvedValue(saved);
+    create.mockResolvedValue({ journey: saved, geometry: null });
     const onSaved = vi.fn();
     render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);
     await screen.findByRole("option", { name: "Paris weekend" });
@@ -168,9 +174,17 @@ describe("RailFormModal", () => {
     expect(trip.value).toBe("");
   });
 
-  it("shows the server's refusal instead of closing", async () => {
+  // Review 2026-09-26, finding 5: the English prose of the server ended up
+  // in the German form. The form reads the code and puts it by the field.
+  it("puts a refused arrival beside the arrival field, in the reader's words", async () => {
     create.mockRejectedValue({
-      response: { data: { error: "arrival must not precede departure" } },
+      response: {
+        data: {
+          error: "arrival must not precede departure",
+          code: "RAIL_ARRIVAL_BEFORE_DEPARTURE",
+          field: "arrivalLocal",
+        },
+      },
     });
     const onSaved = vi.fn();
     render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);
@@ -179,10 +193,23 @@ describe("RailFormModal", () => {
       target: { value: "2026-07-01T08:15" },
     });
     fireEvent.click(saveButton());
-    expect(await screen.findByRole("alert")).toHaveTextContent(
-      "arrival must not precede departure"
-    );
+    const alert = await screen.findByRole("alert");
+    expect(alert).toHaveTextContent("rail:form.errors.arrivalBeforeDeparture");
+    expect(alert).not.toHaveTextContent("arrival must not precede departure");
+    expect(alert.id).toBe("rail-arrivalLocal-error");
+    expect(screen.getByLabelText("rail:form.arrivalTime")).toHaveAttribute("aria-invalid", "true");
     expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it("never shows a refusal's raw prose, even without a code", async () => {
+    create.mockRejectedValue({ response: { data: { error: '[{"code":"invalid_type"}]' } } });
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText("rail:form.departureTime"), {
+      target: { value: "2026-07-01T08:15" },
+    });
+    fireEvent.click(saveButton());
+    expect(await screen.findByRole("alert")).toHaveTextContent("rail:form.saveError");
   });
 
   it("sends a catalogue pick with its id and code, and a looked-up train with its match", async () => {
@@ -232,7 +259,7 @@ describe("RailFormModal", () => {
       },
       attempts: [{ provider: "transitous", outcome: "matched" }],
     });
-    create.mockResolvedValue({ id: "new" });
+    create.mockResolvedValue({ journey: { id: "new" }, geometry: null });
     render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={vi.fn()} />);
 
     const [depSearch] = screen.getAllByRole("combobox");
@@ -268,10 +295,73 @@ describe("RailFormModal", () => {
     });
   });
 
+  // Acceptance 2026-09-26: "Übernehmen" replaced a typed "ÖBB" with the
+  // timetable's "Deutsche Bahn AG". A typed value stays; the panel says so.
+  it("keeps a typed operator when a looked-up train is taken over, and says it did", async () => {
+    lookup.mockResolvedValue({
+      match: {
+        provider: "transitous",
+        ref: "trip-62",
+        operator: "Deutsche Bahn AG",
+        trainCategory: "RJX",
+        trainNumber: "62",
+        boardingIndex: 0,
+        hasGeometry: false,
+        stops: [
+          {
+            name: "Frankfurt (Main) Hbf",
+            lat: 50.1071,
+            lon: 8.6632,
+            stationId: null,
+            code: null,
+            country: "DE",
+            arrivalLocal: null,
+            departureLocal: "2026-09-26T09:13",
+          },
+          {
+            // The arrival the form already holds: a train that ends elsewhere
+            // is a change of trains, and the panel offers "apply with change"
+            // instead — a different path, tested on its own.
+            name: "Paris Est",
+            lat: 48.8768,
+            lon: 2.3591,
+            stationId: null,
+            code: null,
+            country: "FR",
+            arrivalLocal: "2026-09-26T12:58",
+            departureLocal: null,
+          },
+        ],
+      },
+      attempts: [{ provider: "transitous", outcome: "matched" }],
+    });
+    create.mockResolvedValue({ journey: { id: "new" }, geometry: null });
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    const dateField = await screen.findByLabelText("rail:lookup.date");
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText("rail:form.operator"), { target: { value: "ÖBB" } });
+    fireEvent.change(screen.getByLabelText("rail:form.number"), { target: { value: "62" } });
+    fireEvent.change(dateField, {
+      target: { value: "2026-09-26" },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "rail:lookup.run" }));
+    fireEvent.click(await screen.findByRole("button", { name: "rail:lookup.apply" }));
+
+    expect(screen.getByLabelText("rail:form.operator")).toHaveValue("ÖBB");
+    expect(screen.getByLabelText("rail:form.category")).toHaveValue("RJX");
+    expect(screen.getByTestId("rail-lookup-kept")).toHaveTextContent("rail:lookup.kept");
+
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(create).toHaveBeenCalled());
+    expect(create.mock.calls[0][0]).toMatchObject({ operator: "ÖBB", trainCategory: "RJX" });
+  });
+
   it("saves a leg and moves on to its connection, bound to it on the next save", async () => {
     const first = makeRailJourney({ id: "leg-1", tripId: "t1" });
     const second = makeRailJourney({ id: "leg-2" });
-    create.mockResolvedValueOnce(first).mockResolvedValueOnce(second);
+    create
+      .mockResolvedValueOnce({ journey: first, geometry: null })
+      .mockResolvedValueOnce({ journey: second, geometry: null });
     const onProgress = vi.fn();
     const onSaved = vi.fn();
     render(
@@ -298,5 +388,93 @@ describe("RailFormModal", () => {
     fireEvent.click(saveButton());
     await waitFor(() => expect(onSaved).toHaveBeenCalledWith(second));
     expect(create.mock.calls[1][0]).toMatchObject({ connectsFrom: "leg-1", tripId: "t1" });
+  });
+
+  // Review 2026-09-26, finding 4: a Transitous match saved as a straight line
+  // used to toast "saved" and nothing else.
+  it("says when the saved ride lost its traced line, and why", async () => {
+    useToastStore.getState().clearToasts();
+    create.mockResolvedValue({
+      journey: { id: "new" },
+      geometry: {
+        outcome: "straight",
+        geometrySource: "straight",
+        fallback: "providerUnavailable",
+      },
+    });
+    const onSaved = vi.fn();
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText("rail:form.departureTime"), {
+      target: { value: "2026-07-01T08:15" },
+    });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith({ id: "new" }));
+    expect(useToastStore.getState().toasts).toEqual([
+      expect.objectContaining({ type: "warning", message: "rail:geometryNotice.straight" }),
+    ]);
+  });
+
+  it("says when the line was routed over the tracks because the trace failed", async () => {
+    useToastStore.getState().clearToasts();
+    create.mockResolvedValue({
+      journey: { id: "new" },
+      geometry: {
+        outcome: "routed",
+        geometrySource: "openrailrouting",
+        fallback: "providerUnavailable",
+      },
+    });
+    const onSaved = vi.fn();
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText("rail:form.departureTime"), {
+      target: { value: "2026-07-01T08:15" },
+    });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSaved).toHaveBeenCalledWith({ id: "new" }));
+    expect(useToastStore.getState().toasts).toEqual([
+      expect.objectContaining({ type: "info", message: "rail:geometryNotice.routed" }),
+    ]);
+  });
+
+  it("warns when the instance's rail router failed and the chord was kept", async () => {
+    useToastStore.getState().clearToasts();
+    create.mockResolvedValue({
+      journey: { id: "new" },
+      geometry: {
+        outcome: "straight",
+        geometrySource: "straight",
+        fallback: "railRoutingUnavailable",
+      },
+    });
+    const onSaved = vi.fn();
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText("rail:form.departureTime"), {
+      target: { value: "2026-07-01T08:15" },
+    });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(useToastStore.getState().toasts).toEqual([
+      expect.objectContaining({ type: "warning", message: "rail:geometryNotice.straight" }),
+    ]);
+  });
+
+  it("says nothing extra when no traced line was asked for", async () => {
+    useToastStore.getState().clearToasts();
+    create.mockResolvedValue({
+      journey: { id: "new" },
+      geometry: { outcome: "straight", geometrySource: "straight", fallback: null },
+    });
+    const onSaved = vi.fn();
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={onSaved} />);
+    pickBothViaGeocoder();
+    fireEvent.change(screen.getByLabelText("rail:form.departureTime"), {
+      target: { value: "2026-07-01T08:15" },
+    });
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(useToastStore.getState().toasts).toEqual([]);
   });
 });

@@ -4,7 +4,7 @@ import logger from "../logger";
 import type { AirportData } from "../../services/airportLookup";
 import type { FlightData } from "./types";
 import { departureClockOf } from "./departureClock";
-import { HomeAirportEntry, getHomeAirportAt } from "../homeAirport";
+import { type HomePeriod, isHomeAirportAt, primaryAirportAt, residenceAt } from "../homeAirport";
 import { isCountableFlight } from "../../shared/flightCounting";
 import { CONTINENTS, getContinent } from "../continents";
 
@@ -53,7 +53,7 @@ function emptyAirportStats(): AirportStats {
  */
 export async function calculateAirportStats(
   flights: FlightData[],
-  homeAirportHistory: HomeAirportEntry[] = []
+  homePeriods: readonly HomePeriod[] = []
 ): Promise<AirportStats> {
   const flownFlights = flights.filter(isCountableFlight);
   if (flownFlights.length === 0) return emptyAirportStats();
@@ -153,21 +153,21 @@ export async function calculateAirportStats(
       firstVisitDate: date,
     }));
 
-  // Farthest from home — consider every arrival that isn't home itself and
-  // measure great-circle distance to whatever home was active at that time.
+  // Farthest from home — consider every arrival that isn't a home airport and
+  // measure great-circle distance from where the user LIVED at that time (the
+  // residence; for an unconfirmed migrated period that is the old airport, so
+  // the number is the one it always was).
   let farthestFromHome: AirportStats["farthestFromHome"] = null;
   for (const f of flownFlights) {
     const arrCode = f.arrIata || f.arrIcao;
     if (!arrCode) continue;
     const flightDay = departureClockOf(f)?.date ?? new Date().toISOString().slice(0, 10);
-    const homeCode = getHomeAirportAt(homeAirportHistory, flightDay);
-    if (!homeCode) continue;
-    if (homeCode === arrCode) continue;
+    const homeCode = primaryAirportAt(homePeriods, flightDay);
+    const residence = residenceAt(homePeriods, flightDay);
+    if (!homeCode || !residence) continue;
+    if (isHomeAirportAt(homePeriods, flightDay, arrCode)) continue;
 
-    const homeAirport = airportInfo.get(homeCode);
-    if (!homeAirport) continue;
-
-    const distance = calculateDistance(homeAirport.lat, homeAirport.lon, f.arrLat, f.arrLon);
+    const distance = calculateDistance(residence.lat, residence.lon, f.arrLat, f.arrLon);
     if (!farthestFromHome || distance > farthestFromHome.distanceKm) {
       farthestFromHome = {
         code: arrCode,

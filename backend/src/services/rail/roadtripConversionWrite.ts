@@ -168,7 +168,7 @@ async function journeyData(
     departureLocal: `${draft.departureDay}T${CONVERTED_DEPARTURE_CLOCK}`,
   });
   return {
-    ...withTracedDistance(merged, draft.tracedKm),
+    ...withTracedDistance(merged, draft.tracedKm, "roadtrip"),
     userId,
     tripId: draft.tripId,
     operator: draft.operator,

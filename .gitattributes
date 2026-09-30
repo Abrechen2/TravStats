@@ -59,3 +59,14 @@ frontend/src/lib/generated/*.ts text eol=lf
 # checkout with no changes in it.
 frontend/src/theme/tokens.css text eol=lf
 frontend/src/theme/tokens.ts text eol=lf
+
+# Node scripts under scripts/, because tests import them. A CRLF checkout
+# turns `#!/usr/bin/env node` into a line Vitest's module runner refuses
+# ("SyntaxError: Invalid or unexpected token"), so
+# frontend/src/__tests__/lint/tzRatchet.test.ts failed on every Windows
+# checkout of dev/time-model and passed on Linux (measured 2026-09-26).
+scripts/**/*.mjs text eol=lf
+
+# The station-code table (build-rail-station-codes.mjs writes LF); pinned so a
+# Windows checkout ships the same bytes into the image as the generator wrote.
+backend/data/rail/station_codes.csv text eol=lf

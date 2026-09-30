@@ -3,6 +3,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import Pill from "../ui/Pill";
 import { token } from "../ui/tokens";
+import { profileWallClock } from "../../lib/profileInstant";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
 
 interface LastBackup {
@@ -19,11 +20,13 @@ interface BackupSectionProps {
   children?: ReactNode;
 }
 
-/** ISO date and minute, as round 4 (E7) sets dates in a data line. */
+/**
+ * ISO date and minute, as round 4 (E7) sets dates in a data line — on the
+ * user's profile clock (ADR 0002 Q1): a backup belongs to no place.
+ */
 function isoMinute(iso: string): string {
-  const d = new Date(iso);
-  const pad = (n: number): string => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())} ${pad(d.getHours())}:${pad(d.getMinutes())}`;
+  const local = profileWallClock(iso);
+  return local ? `${local.slice(0, 10)} ${local.slice(11, 16)}` : iso;
 }
 
 export default function BackupSection({

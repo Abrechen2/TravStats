@@ -35,6 +35,9 @@ export interface TourSummary {
   movingSeconds: number | null;
   trackCount: number;
   stopCount: number;
+  /** A day tour's own day and start time (D2). */
+  date?: string | null;
+  startTime?: string | null;
   startDate: string | null;
   endDate: string | null;
 }
@@ -49,6 +52,8 @@ export interface TourGeometryEntry {
   geometry: TourGeometry;
   /** A roadtrip's line takes the roadtrip hue (2.7); absent = the tour hue. */
   rgb?: [number, number, number];
+  /** A roadtrip draws a heavier line than a day tour (see `buildTourDeckLayers`). */
+  isRoadtrip?: boolean;
 }
 
 /**

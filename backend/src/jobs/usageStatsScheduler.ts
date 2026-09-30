@@ -1,6 +1,7 @@
 import cron from "node-cron";
 import logger from "../utils/logger";
 import { usageStatsTick } from "../services/usageStats";
+import { schedulerZone } from "../shared/time/schedulerZone";
 
 let scheduledJob: cron.ScheduledTask | null = null;
 
@@ -16,9 +17,13 @@ export function startUsageStatsScheduler(): void {
     return;
   }
   const pattern = jitteredDailyPattern();
-  scheduledJob = cron.schedule(pattern, async () => {
-    await usageStatsTick();
-  });
+  scheduledJob = cron.schedule(
+    pattern,
+    async () => {
+      await usageStatsTick();
+    },
+    { timezone: schedulerZone("usageStats") }
+  );
   scheduledJob.start();
   logger.info({ pattern }, "usage-stats scheduler started");
 }

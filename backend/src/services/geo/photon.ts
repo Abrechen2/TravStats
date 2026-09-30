@@ -10,6 +10,8 @@
  * `services/lodging/mappingSuggestion.ts`.
  */
 import { isPlausibleCoordinate } from "../../shared/geo/coordinates";
+import { haversineKm } from "../../shared/geo/haversine";
+import { categorisingOsmValue } from "../../shared/placeCategories";
 import { z } from "zod";
 import { formatStreetAddress } from "./streetAddress";
 import { resolveGeocoderUrls, DEFAULT_PHOTON_URL } from "../instanceSettingsService";
@@ -66,6 +68,9 @@ export interface PlaceResult {
    */
   externalRef?: string;
   address?: string;
+  /** The part of town (Photon `district`, else `locality`) — what tells two
+   *  same-named hits in one city apart in the picker. */
+  district?: string;
   city?: string;
   country?: string;
   countryCode?: string;
@@ -101,10 +106,13 @@ const photonFeatureSchema = z
         name: z.string().optional(),
         street: z.string().optional(),
         housenumber: z.string().optional(),
+        district: z.string().optional(),
+        locality: z.string().optional(),
         city: z.string().optional(),
         country: z.string().optional(),
         countrycode: z.string().optional(),
         osm_value: z.string().optional(),
+        osm_key: z.string().optional(),
         type: z.string().optional(),
         // The OSM identity of the hit. Photon has always returned these; we
         // simply never read them, which is why a place added through the
@@ -180,13 +188,43 @@ function normalizeFeature(feature: PhotonFeature): PlaceResult | null {
     name: props.name,
     externalRef: osmRef(props),
     address: buildAddress(props),
+    district: props.district ?? props.locality,
     city: props.city,
     country: props.country,
     countryCode: props.countrycode,
     lat,
     lon,
-    type: props.osm_value ?? props.type,
+    type: categorisingOsmValue(props.osm_value ?? props.type, props.osm_key),
   };
+}
+
+/** Two hits this close under one name are one place listed twice (a node and its building). */
+const SAME_PLACE_M = 300;
+
+const foldName = (name: string): string =>
+  name
+    .toLowerCase()
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .replace(/[^\p{L}\p{N}]+/gu, " ")
+    .trim();
+
+/**
+ * Photon lists a sight once per OSM object — the Sagrada Família came back
+ * twice, identical on screen (acceptance D6). A hit identical to an earlier
+ * one — same name, same kind, same town, a few hundred metres apart — is that
+ * one again. A same-named bus stop beside the sight, or the same name in
+ * another town, is a different place and stays.
+ */
+function isRepeat(result: PlaceResult, kept: readonly PlaceResult[]): boolean {
+  const name = foldName(result.name);
+  return kept.some(
+    (k) =>
+      foldName(k.name) === name &&
+      k.type === result.type &&
+      k.city === result.city &&
+      haversineKm(k, result) * 1000 <= SAME_PLACE_M
+  );
 }
 
 /**
@@ -279,7 +317,7 @@ async function fetchPhoton(url: string, limit: number): Promise<FetchOutcome> {
     const results: PlaceResult[] = [];
     for (const feature of features) {
       const normalized = normalizeFeature(feature);
-      if (normalized) results.push(normalized);
+      if (normalized && !isRepeat(normalized, results)) results.push(normalized);
       if (results.length >= limit) break;
     }
     return { ok: true, results };

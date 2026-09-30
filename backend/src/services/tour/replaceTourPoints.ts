@@ -21,6 +21,10 @@ export const TOUR_POINT_SELECT = {
   lon: true,
   notes: true,
   routeOrderIdx: true,
+  /** Null for a point the tour owns; set for a trip's timeline stop it draws on. */
+  tripId: true,
+  /** A route correction: drawn through, never counted (tester 2026-09-26). */
+  viaPoint: true,
 } as const;
 
 /**
@@ -33,13 +37,29 @@ export const TOUR_POINT_SELECT = {
  * endpoint, and for the same reason: a half-applied list leaves legs pointing
  * at points that are no longer in the tour.
  *
- * It refuses a tour that HAS a trip, rather than quietly doing something
- * reasonable. Those points are the trip's timeline stops, edited at the trip;
+ * It refuses a tour whose points are a trip's TIMELINE stops, rather than
+ * quietly doing something reasonable: those are edited at the trip, and
  * silently writing a second, trip-less copy of one is exactly the duplicate
- * this split avoids.
+ * this split avoids. A day tour that JOINED a trip keeps points of its own
+ * (owner decision 2026-09-26 — it moves through its own trip link, its
+ * points stay trip-less), and those remain editable here: refusing them was
+ * acceptance finding D5, a 409 on every save of a linked tour.
  *
  * `routeId` must already be resolved as the caller's tour.
  */
+/**
+ * Whether a tour on a trip carries points of its own — at least one, and none
+ * that is a trip timeline stop. An empty section on a trip is not a tour that
+ * joined it: it is a section waiting for the trip's stops.
+ */
+async function hasOwnPoints(routeId: string): Promise<boolean> {
+  const [own, fromTrip] = await Promise.all([
+    prisma.tripStop.count({ where: { routeId, tripId: null } }),
+    prisma.tripStop.count({ where: { routeId, tripId: { not: null } } }),
+  ]);
+  return own > 0 && fromTrip === 0;
+}
+
 export async function replaceTourPoints(
   userId: string,
   routeId: string,
@@ -49,10 +69,11 @@ export async function replaceTourPoints(
     where: { id: routeId },
     select: { tripId: true, mode: true },
   });
-  if (section.tripId !== null) {
+  if (section.tripId !== null && !(await hasOwnPoints(routeId))) {
     throw new AppError(
-      "This tour belongs to a trip — assign its stops through the trip instead",
-      409
+      "This tour is built from its trip's stops — assign them through the trip instead",
+      409,
+      "TOUR_POINTS_FROM_TRIP"
     );
   }
 
@@ -66,11 +87,27 @@ export async function replaceTourPoints(
       // Every id the body names must already be a point of THIS tour.
       // Without this an id from a stranger's tour would be adopted by the
       // update below, which filters on the id alone.
-      const existing = await tx.tripStop.findMany({ where: { routeId }, select: { id: true } });
+      const existing = await tx.tripStop.findMany({
+        where: { routeId },
+        select: { id: true, overnight: true, lodgingStayId: true },
+      });
       const known = new Set(existing.map((s) => s.id));
       const unknown = givenIds.find((id) => !known.has(id));
       if (unknown !== undefined) {
         throw new AppError("A point id does not belong to this tour", 400);
+      }
+      // A roadtrip station with a night keeps it: this editor knows no
+      // nights, so turning such a station into a correction here would
+      // delete the night without anyone having seen it.
+      const withNight = new Set(
+        existing.flatMap((s) => (s.overnight || s.lodgingStayId !== null ? [s.id] : []))
+      );
+      if (points.some((p) => p.via === true && p.id !== undefined && withNight.has(p.id))) {
+        throw new AppError(
+          "A station with a night cannot become a route correction",
+          400,
+          "VIA_POINT_HAS_NIGHT"
+        );
       }
 
       // Clear the NUMBERING before writing the new one, or
@@ -88,6 +125,7 @@ export async function replaceTourPoints(
           lat: point.lat,
           lon: point.lon,
           ...(point.notes !== undefined ? { notes: point.notes } : {}),
+          ...(point.via !== undefined ? { viaPoint: point.via } : {}),
           routeId,
           routeOrderIdx: index,
         };

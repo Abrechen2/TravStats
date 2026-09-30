@@ -55,6 +55,7 @@ import { buildUserDawarichConnection } from "../services/dawarich/dawarichResolv
 import { sweepUserCountryDays } from "../services/dawarich/countryDaySweep";
 import type { DawarichConnection } from "../services/dawarich/errors";
 import logger from "../utils/logger";
+import { schedulerZone } from "../shared/time/schedulerZone";
 
 /** 04:40 UTC — see the table above. */
 const CRON_EXPRESSION = "40 4 * * *";
@@ -215,19 +216,23 @@ export async function runDawarichCountryDaySweep(
 
 export function startDawarichCountryDaySweepScheduler(): void {
   if (schedulerTask) return;
-  schedulerTask = cron.schedule(CRON_EXPRESSION, async () => {
-    try {
-      await runDawarichCountryDaySweep();
-    } catch (error) {
-      // `runDawarichCountryDaySweep` already survives a single account; reaching
-      // here means the eligibility query or the boundary load failed, neither of
-      // which tonight's run can do anything about.
-      logger.warn(
-        { operation: "dawarich_country_day_sweep_error", error },
-        "Nightly Dawarich country-day sweep failed"
-      );
-    }
-  });
+  schedulerTask = cron.schedule(
+    CRON_EXPRESSION,
+    async () => {
+      try {
+        await runDawarichCountryDaySweep();
+      } catch (error) {
+        // `runDawarichCountryDaySweep` already survives a single account; reaching
+        // here means the eligibility query or the boundary load failed, neither of
+        // which tonight's run can do anything about.
+        logger.warn(
+          { operation: "dawarich_country_day_sweep_error", error },
+          "Nightly Dawarich country-day sweep failed"
+        );
+      }
+    },
+    { timezone: schedulerZone("dawarichCountryDaySweep") }
+  );
   logger.info(
     { operation: "dawarich_country_day_sweep_scheduler_started", cron: CRON_EXPRESSION },
     "dawarich country-day sweep scheduler started"

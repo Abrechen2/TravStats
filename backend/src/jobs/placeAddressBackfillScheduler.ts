@@ -22,6 +22,7 @@ import cron from "node-cron";
 import logger from "../utils/logger";
 import { prisma } from "../db";
 import { completeMissingPlaceAddresses } from "../services/places/addressBackfill";
+import { schedulerZone } from "../shared/time/schedulerZone";
 
 /** 03:20 UTC — after the airline-logo sweep at 03:00, so the two do not
  *  contend for the same outbound budget. */
@@ -81,16 +82,20 @@ export function startPlaceAddressBackfillScheduler(): void {
   // just drop the run; the daily one will pick it up.
   bootTimer.unref?.();
 
-  schedulerTask = cron.schedule(CRON_EXPRESSION, async () => {
-    try {
-      await runPlaceAddressBackfill();
-    } catch (error) {
-      logger.warn(
-        { operation: "place_address_backfill_error", error },
-        "Daily place address backfill failed"
-      );
-    }
-  });
+  schedulerTask = cron.schedule(
+    CRON_EXPRESSION,
+    async () => {
+      try {
+        await runPlaceAddressBackfill();
+      } catch (error) {
+        logger.warn(
+          { operation: "place_address_backfill_error", error },
+          "Daily place address backfill failed"
+        );
+      }
+    },
+    { timezone: schedulerZone("placeAddressBackfill") }
+  );
 
   logger.info(
     { operation: "place_address_backfill_scheduler_started", cron: CRON_EXPRESSION },

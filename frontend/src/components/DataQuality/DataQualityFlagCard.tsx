@@ -6,6 +6,8 @@ import type { DataQualityFlag } from "../../types/dataQuality";
 
 import FlagContradiction from "./FlagContradiction";
 import { flaggedRecordPath } from "./flagLinks";
+import { HOME_SETTINGS_PATH } from "./HomeResidenceFlag";
+import { isTimeFlagEntityType, isTimeFlagKind, timeFlagEditorPath } from "./timeFlagLinks";
 
 /**
  * One open question about one record.
@@ -47,6 +49,17 @@ import { flaggedRecordPath } from "./flagLinks";
  */
 
 /**
+ * Where the subject's name links to: the record's page, or — for a time value
+ * the migration left open — the editor that can fill it. A country has no page.
+ */
+function subjectPathOf(flag: DataQualityFlag): string | null {
+  if (flag.entityType === "country") return null;
+  if (flag.entityType === "home") return HOME_SETTINGS_PATH;
+  if (isTimeFlagEntityType(flag.entityType)) return timeFlagEditorPath(flag);
+  return flaggedRecordPath({ entityType: flag.entityType, entityId: flag.entityId, label: "" });
+}
+
+/**
  * What to call the subject on screen.
  *
  * Two branches because the wire carries two shapes, not one field meaning two
@@ -57,11 +70,14 @@ import { flaggedRecordPath } from "./flagLinks";
 function subjectLabelOf(
   flag: DataQualityFlag,
   countryLabel: (code: string) => string,
-  unnamed: string
+  unnamed: string,
+  home: string
 ): string {
   const subject = flag.subject;
   if (subject?.entityType === "country") return countryLabel(subject.countryCode);
   if (flag.entityType === "country") return countryLabel(flag.entityId);
+  // The account's home has no name on the wire; the reader's language names it.
+  if (subject?.entityType === "home" || flag.entityType === "home") return home;
   return subject?.label || unnamed;
 }
 
@@ -91,16 +107,14 @@ export default function DataQualityFlagCard({
   // still reaches its record (design §3.4) and only loses its name. The server
   // drops such a flag rather than shipping it, so this is a guard against a
   // page that throws, not an expected state. A country has no page at all.
-  const subjectPath =
-    flag.entityType === "country"
-      ? null
-      : flaggedRecordPath({
-          entityType: flag.entityType,
-          entityId: flag.entityId,
-          label: "",
-        });
+  const subjectPath = subjectPathOf(flag);
 
-  const subjectLabel = subjectLabelOf(flag, countryLabel, t("dataQuality:flag.unnamedRecord"));
+  const subjectLabel = subjectLabelOf(
+    flag,
+    countryLabel,
+    t("dataQuality:flag.unnamedRecord"),
+    t("dataQuality:flag.homeSubject")
+  );
 
   return (
     <div
@@ -138,7 +152,11 @@ export default function DataQualityFlagCard({
       <FlagContradiction flag={flag} />
 
       <p className="text-xs mt-3" style={{ color: "var(--text-muted)" }}>
-        {t("dataQuality:flag.neitherIsCorrect")}
+        {isTimeFlagKind(flag.kind)
+          ? t("dataQuality:flag.timeUnchanged")
+          : flag.kind === "home_residence_unconfirmed"
+            ? t("dataQuality:kinds.home_residence_unconfirmed.unchanged")
+            : t("dataQuality:flag.neitherIsCorrect")}
       </p>
 
       {flag.status === "open" && (

@@ -8,6 +8,7 @@ import PhotoLightbox, { type LightboxItem } from "./PhotoLightbox";
 import ImmichAlbumPicker from "./ImmichAlbumPicker";
 import ImmichAlbumSection from "./ImmichAlbumSection";
 import JourneyPhotosSection from "./JourneyPhotosSection";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 
 interface TripGalleryProps {
   tripId: string;
@@ -30,6 +31,7 @@ export default function TripGallery({
   onChange,
 }: TripGalleryProps): JSX.Element {
   const { t } = useTranslation(["trips", "common", "immich"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const addToast = useToastStore((s) => s.addToast);
   const fileInputRef = useRef<HTMLInputElement>(null);
   const [uploading, setUploading] = useState(false);
@@ -66,7 +68,8 @@ export default function TripGallery({
   };
 
   const handleDelete = async (photo: TripPhoto): Promise<void> => {
-    if (!window.confirm(t("trips:gallery.deleteConfirm"))) return;
+    const message = t("trips:gallery.deleteConfirm");
+    if (!(await askConfirm({ message, destructive: true }))) return;
     try {
       await tripsApi.deletePhoto(tripId, photo.id);
       onChange();
@@ -170,6 +173,7 @@ export default function TripGallery({
           onLinked={() => onChange()}
         />
       )}
+      {confirmDialog}
     </div>
   );
 }

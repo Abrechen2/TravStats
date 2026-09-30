@@ -151,8 +151,10 @@ registry.registerPath({
   summary: "The next item across every enabled domain",
   description:
     "One entry per domain the user has enabled — next flight, cruise, stay, train — " +
-    "plus the next trip, sorted by start. Domains the user has switched off are " +
-    "absent rather than empty. An account with no settings row is treated as " +
+    "plus the next trip, sorted by start. Domains the user cannot see are absent " +
+    "rather than empty: switched off by the user, OR hidden by the instance's beta " +
+    "switch (rail while `betaFeaturesEnabled` is false) — a client need not apply " +
+    "that check itself. An account with no settings row is treated as " +
     "flights-only, matching the column default.",
   tags: ["Dashboard"],
   responses: {
@@ -241,7 +243,17 @@ registry.registerPath({
   request: {
     params: z.object({
       kind: z.enum(["metric", "ranking", "record", "achievement"]),
-      key: z.string().min(1),
+      key: z
+        .string()
+        .min(1)
+        .describe(
+          "metric: a key of shared/evidenceMeasures.ts — e.g. the passport headline " +
+            "`passportCountryCount`, `passportAirportCount`, `passportEntryCount`, " +
+            "`passportContinentCount` (all-time only). ranking: `<dimension>:<value>` — " +
+            "`airline:iata:LH`, `airport:FRA`, `aircraftType:A320`, `country:<catalogue " +
+            "country name>` (the flight distribution tile), `passportCountry:<ISO alpha-2>` " +
+            "(one passport country's entries, counted as /stats/countries/{code} counts them)."
+        ),
     }),
     query: z.object({
       period: z.enum(["allTime", "year", "rolling12m"]).optional(),
@@ -270,6 +282,47 @@ registry.registerPath({
     501: {
       description: "`record` / `achievement` — served in release 2, not this one",
       content: errorContent,
+    },
+  },
+});
+
+const versionInfo = registry.register(
+  "VersionInfo",
+  z
+    .object({
+      version: z.string().describe("Runtime version shown to users; pre-release suffix stripped"),
+      buildVersion: z.string().describe("Raw version baked into the image, for diagnostics"),
+      latestAvailable: z
+        .string()
+        .nullable()
+        .describe("Latest stable GitHub release, or null when it could not be fetched"),
+      updateAvailable: z.boolean(),
+      releaseUrl: z.string().nullable(),
+      releaseNotes: z.string().nullable(),
+      publishedAt: z.string().nullable(),
+      tzdata: z
+        .string()
+        .nullable()
+        .describe(
+          "IANA tzdata release the server converts times with (e.g. `2025b`). A client whose " +
+            "own zone data differs still displays the server's `local`/`offset` as sent " +
+            "(ADR 0002 D3). Null only on a runtime built without ICU."
+        ),
+    })
+    .openapi("VersionInfo")
+);
+
+registry.registerPath({
+  method: "get",
+  path: "/version",
+  summary: "Server version, update availability and tzdata release",
+  description: "Public — no token needed, so a client can read it before login.",
+  tags: ["System"],
+  security: [],
+  responses: {
+    200: {
+      description: "Version information",
+      content: { "application/json": { schema: versionInfo } },
     },
   },
 });

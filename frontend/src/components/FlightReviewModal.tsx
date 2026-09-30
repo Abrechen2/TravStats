@@ -2,8 +2,12 @@
 import { createPortal } from "react-dom";
 import { useDialogChrome } from "./ui/useDialogChrome";
 import type { FlightInput, ParsedBooking } from "../types";
-import { type Airport, airportsApi } from "../lib/api";
+import type { Airport } from "../lib/api";
+import { airportResolutionMessage, resolveAirportByCode } from "../lib/airportResolve";
 import { useSettingsStore } from "../store/settingsStore";
+import { airportZone } from "./FlightForm/flightPayload";
+import { MissingZoneError } from "../lib/api/timeInput";
+import { saveErrorMessage } from "../lib/saveErrorMessage";
 import { useTranslation } from "../hooks/useTranslation";
 import { RequiredMark } from "./FlightForm/requiredFields";
 import { filterEmailText } from "../lib/filterEmailText";
@@ -195,46 +199,38 @@ export default function FlightReviewModal({
     return null;
   };
 
-  // Lookup airports by IATA code
+  // Resolve airport codes (IATA or ICAO) the way the autocomplete does:
+  // `getByCode`. The text search used here before accepted only an exact IATA
+  // hit on its first page, so it answered "not found" for codes the
+  // autocomplete resolves at once (silent-failure review 2026-09-26, 16).
   const lookupAirports = async (depCode?: string, arrCode?: string): Promise<void> => {
     if (!depCode && !arrCode) return;
 
     setAirportLoading(true);
     setAirportError("");
 
-    try {
-      const errorMessages: string[] = [];
+    const [dep, arr] = await Promise.all([
+      depCode ? resolveAirportByCode(depCode) : Promise.resolve(null),
+      arrCode ? resolveAirportByCode(arrCode) : Promise.resolve(null),
+    ]);
+    if (dep?.kind === "found") setDepartureAirport(dep.airport);
+    if (arr?.kind === "found") setArrivalAirport(arr.airport);
 
-      if (depCode) {
-        const depLabel = depCode.toUpperCase();
-        const depResults = await airportsApi.search(depLabel);
-        const depMatch = depResults.find((a: Airport) => a.iata?.toUpperCase() === depLabel);
-        if (depMatch) {
-          setDepartureAirport(depMatch);
-        } else {
-          errorMessages.push(t("flights:review.departureNotFound", { code: depLabel }));
-        }
-      }
-
-      if (arrCode) {
-        const arrLabel = arrCode.toUpperCase();
-        const arrResults = await airportsApi.search(arrLabel);
-        const arrMatch = arrResults.find((a: Airport) => a.iata?.toUpperCase() === arrLabel);
-        if (arrMatch) {
-          setArrivalAirport(arrMatch);
-        } else {
-          errorMessages.push(t("flights:review.arrivalNotFound", { code: arrLabel }));
-        }
-      }
-
-      if (errorMessages.length > 0) {
-        setAirportError(errorMessages.join(", "));
-      }
-    } catch {
-      setAirportError(t("errors:failedToLoadAirport"));
-    } finally {
-      setAirportLoading(false);
+    const messages: string[] = [];
+    if (dep?.kind === "missing") {
+      messages.push(t("flights:review.departureNotFound", { code: dep.code }));
     }
+    if (arr?.kind === "missing") {
+      messages.push(t("flights:review.arrivalNotFound", { code: arr.code }));
+    }
+    for (const failed of [dep, arr]) {
+      if (failed?.kind === "failed") {
+        const { key, params } = airportResolutionMessage(failed);
+        messages.push(t(key, params));
+      }
+    }
+    setAirportError(messages.join(", "));
+    setAirportLoading(false);
   };
 
   // Retry airport lookup when codes change
@@ -276,11 +272,11 @@ export default function FlightReviewModal({
     setLoading(true);
 
     try {
-      // Pick IANA tz from the airport record; fall back to user display tz if
-      // the airport entry is incomplete. Server converts local + tz → real UTC.
-      const userTz = useSettingsStore.getState().display?.timezone || "UTC";
-      const depTz = departureAirport.timezone || userTz;
-      const arrTz = arrivalAirport.timezone || userTz;
+      // The airports' own zones, or a refusal (ADR 0002 D2) — no profile/UTC fallback.
+      const depTz = airportZone(departureAirport);
+      const arrTz = airportZone(arrivalAirport);
+      if (!depTz) throw new MissingZoneError("departureLocal");
+      if (!arrTz) throw new MissingZoneError("arrivalLocal");
 
       const flightInput: FlightInput = {
         airline,
@@ -309,8 +305,8 @@ export default function FlightReviewModal({
       await onConfirm(flightInput);
       // onConfirm handles closing the modal or moving to next flight
     } catch (err: unknown) {
-      const error = err as { response?: { data?: { error?: string } }; message?: string };
-      setError(error.response?.data?.error || error.message || t("errors:saveFailed"));
+      // A code becomes a sentence; never the server's English text or axios's.
+      setError(saveErrorMessage(err, t, "errors:saveFailed"));
     } finally {
       setLoading(false);
     }

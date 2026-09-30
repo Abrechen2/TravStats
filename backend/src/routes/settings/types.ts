@@ -1,6 +1,7 @@
 import { Prisma } from "../../prisma";
 
 import type { CountryTier } from "../../shared/countryEvidence";
+import type { HomePeriod } from "../../utils/homeAirport";
 
 // ---- Interfaces for settings data stored as JSON ----
 
@@ -18,6 +19,8 @@ export interface SettingsDataJson {
     theme?: string;
     language?: string;
     timezone?: string;
+    /** The Companion keeps the profile zone in step with the device (ADR 0002 Q1, opt-in). */
+    timezoneFollowsDevice?: boolean;
     dateFormat?: string;
     timeFormat?: string;
   };
@@ -43,7 +46,9 @@ export interface SettingsDataJson {
     checkInReminder?: boolean;
     featureUpdates?: boolean;
   };
-  /** Chronological list of home airports. See backend/src/utils/homeAirport.ts. */
+  /** Home periods — residence + home airports by date. See backend/src/utils/homeAirport.ts. */
+  homePeriods?: HomePeriod[];
+  /** The old one-airport list, written as a mirror of `homePeriods`' primaries. */
   homeAirportHistory?: Array<{
     iata: string;
     fromDate: string; // YYYY-MM-DD
@@ -68,6 +73,19 @@ export interface HistoricalEnrichmentResponseSettings {
 }
 
 export interface SettingsResponse extends SettingsDataJson {
+  /**
+   * The zone that answers "today" for this account (ADR 0002 D4/Q1), read by
+   * the server the same way every status and statistic reads it.
+   * `hasProfileZone: false` means the account never confirmed one and "today"
+   * is answered in UTC — the web asks at the next login (owner decision
+   * 2026-09-26) instead of guessing from the browser.
+   */
+  profileZone: {
+    zone: string;
+    source: "profile" | "default-utc";
+    hasProfileZone: boolean;
+    followsDevice: boolean;
+  };
   autoUpdate: AutoUpdateResponseSettings;
   boardingPassParserStrategy: string | null;
   historicalEnrichment: HistoricalEnrichmentResponseSettings;

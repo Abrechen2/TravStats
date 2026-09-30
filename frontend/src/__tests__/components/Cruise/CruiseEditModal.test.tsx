@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen, waitFor } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CruiseEditModal } from "../../../components/Cruise/CruiseEditModal";
 import { cruiseApi, companionsApi, tripsApi } from "../../../lib/api";
@@ -34,6 +34,14 @@ vi.mock("@/hooks/useRecentCurrencies", async (importOriginal) => {
   return { ...actual, useRecentCurrencies: () => [] };
 });
 
+/** A new cruise needs something that sailed and a start date; fills what is empty. */
+function fillRequired(): void {
+  const routeName = screen.getByLabelText("field.routeName") as HTMLInputElement;
+  if (!routeName.value) fireEvent.change(routeName, { target: { value: "Nordland" } });
+  const depart = screen.getAllByLabelText("field.depart")[0] as HTMLInputElement;
+  if (!depart.value) fireEvent.change(depart, { target: { value: "2026-07-01" } });
+}
+
 describe("CruiseEditModal", () => {
   beforeEach(() => {
     vi.mocked(companionsApi.list).mockReset().mockResolvedValue([]);
@@ -56,6 +64,7 @@ describe("CruiseEditModal", () => {
 
     const lineInput = screen.getByLabelText("field.line");
     await userEvent.type(lineInput, "AIDA");
+    fillRequired();
 
     await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
 
@@ -65,15 +74,63 @@ describe("CruiseEditModal", () => {
     expect(onSaved).toHaveBeenCalled();
   });
 
-  it("shows validation errors from server", async () => {
-    vi.mocked(cruiseApi.create).mockRejectedValue({
-      response: { data: { error: "Invalid payload" } },
-    });
-
+  // Acceptance 2026-09-26: "Speichern" with nothing entered saved a row that
+  // read "— | — – — | 0". The form now names what is missing, at the field,
+  // and sends nothing.
+  it("refuses to save an empty cruise and names both missing fields", async () => {
+    vi.mocked(cruiseApi.create).mockReset();
     render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
     await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
 
-    expect(await screen.findByText(/invalid payload/i)).toBeInTheDocument();
+    const alerts = await screen.findAllByRole("alert");
+    expect(alerts.map((a) => a.textContent)).toEqual([
+      "form.identityRequired",
+      "form.startDateRequired",
+    ]);
+    expect(screen.getByLabelText("field.routeName")).toHaveAttribute("aria-invalid", "true");
+    expect(screen.getByLabelText("field.depart")).toHaveAttribute("aria-invalid", "true");
+    expect(cruiseApi.create).not.toHaveBeenCalled();
+
+    // A cruise line alone says what sailed; the start date is still missing.
+    await userEvent.type(screen.getByLabelText("field.line"), "AIDA");
+    expect(screen.queryByText("form.identityRequired")).not.toBeInTheDocument();
+    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+    expect(screen.getByText("form.startDateRequired")).toBeInTheDocument();
+    expect(cruiseApi.create).not.toHaveBeenCalled();
+  });
+
+  // The server's `error` is English prose or zod's JSON issue dump; the form
+  // printed it verbatim into a German page. It shows the code's sentence now.
+  it("shows a refused save in the reader's language, never the server's text", async () => {
+    vi.mocked(cruiseApi.create).mockRejectedValue({
+      response: {
+        status: 400,
+        data: {
+          error: '[{"code":"invalid_type","path":["cabinNumber"]}]',
+          code: "VALIDATION_FAILED",
+        },
+      },
+    });
+
+    render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+    fillRequired();
+    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+
+    expect(await screen.findByText("common:saveErrors.validation")).toBeInTheDocument();
+    expect(screen.queryByText(/invalid_type/)).not.toBeInTheDocument();
+  });
+
+  it("falls back to the form's own message for an error without a code", async () => {
+    vi.mocked(cruiseApi.create).mockRejectedValue({
+      response: { status: 404, data: { error: "Trip not found" } },
+    });
+
+    render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+    fillRequired();
+    await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
+
+    expect(await screen.findByText("cruise:form.saveError")).toBeInTheDocument();
+    expect(screen.queryByText(/trip not found/i)).not.toBeInTheDocument();
   });
 
   const baseCruise: Cruise = {
@@ -184,6 +241,7 @@ describe("CruiseEditModal", () => {
     render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
 
     await userEvent.type(screen.getByRole("combobox", { name: "picker.label" }), "Marie{Enter}");
+    fillRequired();
     await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
 
     await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
@@ -368,6 +426,8 @@ describe("CruiseEditModal", () => {
       await userEvent.type(screen.getByLabelText("field.depart"), "2026-05-20");
       await waitFor(() => expect(select.value).toBe("trip-1"));
 
+      fillRequired();
+
       await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
       await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
       const calls = vi.mocked(cruiseApi.create).mock.calls;
@@ -426,6 +486,7 @@ describe("CruiseEditModal", () => {
       try {
         vi.mocked(cruiseApi.create).mockResolvedValue({ id: "c1" } as unknown as Cruise);
         render(<CruiseEditModal mode="create" onClose={vi.fn()} onSaved={vi.fn()} />);
+        fillRequired();
         await userEvent.click(screen.getByRole("button", { name: /form\.save/i }));
         await waitFor(() => expect(cruiseApi.create).toHaveBeenCalled());
         const calls = vi.mocked(cruiseApi.create).mock.calls;

@@ -346,9 +346,10 @@ async function lookupPlace(position: { lat: number; lon: number }): Promise<{
       city: parts.city ?? null,
     };
   } catch (error) {
-    logger.warn({
+    logger.warn({ message: "photo_journey_reverse_geocode_failed", context: { error } });
+    logger.debug({
       message: "photo_journey_reverse_geocode_failed",
-      context: { lat: position.lat, lon: position.lon, error },
+      context: { lat: position.lat, lon: position.lon },
     });
     return null;
   }

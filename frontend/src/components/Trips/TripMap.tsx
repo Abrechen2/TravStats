@@ -128,7 +128,7 @@ interface TripMapProps {
 
 // Stable module-level default. `tourGeometries = []` inline in the props
 // destructuring would allocate a NEW array reference on every render where
-// the caller omits the prop (TripDetailPage.tsx renders `<TripMap trip={...} />`
+// the caller omits the prop (any caller rendering `<TripMap trip={...} />`
 // with no `tourGeometries` at all) — a fresh reference invalidates the
 // `layers` useMemo below every single render, defeating the dependency array
 // entirely even though it lists `tourGeometries` correctly.
@@ -649,7 +649,6 @@ export default function TripMap({
     didFit.current = true;
     // `projection` is read, not depended on: this runs once, on load, when it
     // is still "mercator". The switch does its own fit.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [mapLoaded, bboxPoints, fitTrip]);
 
   /* ---- Globe / Mercator toggle ---- */
@@ -754,7 +753,7 @@ export default function TripMap({
           className="absolute inset-0 flex items-center justify-center text-sm pointer-events-none px-6 text-center"
           style={{ color: "var(--text-muted)", background: "rgba(13,17,23,0.5)" }}
         >
-          {t("trips:detail.map.empty")}
+          {t(trip.emptyKey ?? "trips:detail.map.empty")}
         </div>
       )}
       <button
@@ -770,7 +769,7 @@ export default function TripMap({
         aria-pressed={projection === "globe"}
         title={t("trips:detail.map.toggleProjectionHint")}
       >
-        {projection === "globe" ? "🌐 Globe" : "🗺 Flat"}
+        {t(`trips:detail.map.${projection === "globe" ? "projectionGlobe" : "projectionFlat"}`)}
       </button>
       <div
         className="absolute bottom-3 right-3 px-2.5 py-1 rounded-full text-[10px] font-mono"

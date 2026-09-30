@@ -36,9 +36,14 @@ import type { Passport, PassportContinentGroup } from "../types/passport";
  * flights yet" over it would delete exactly the rows a reader needs to correct.
  */
 
+/** The stamp's month from the visit's own `YYYY-MM-DD`, read in UTC so no reader's zone moves it. */
 const monthStamp = (iso: string | null, locale: string): string => {
   if (!iso) return "—";
-  return new Date(iso).toLocaleDateString(locale, { month: "short", year: "2-digit" });
+  return new Date(`${iso.slice(0, 10)}T00:00:00.000Z`).toLocaleDateString(locale, {
+    month: "short",
+    year: "2-digit",
+    timeZone: "UTC",
+  });
 };
 
 export default function PassportPage(): JSX.Element {

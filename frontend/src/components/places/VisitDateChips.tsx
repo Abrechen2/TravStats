@@ -3,6 +3,7 @@ import type { JSX } from "react";
 
 import { useTranslation } from "../../hooks/useTranslation";
 import { getVisitDateSuggestions } from "../../lib/api/places";
+import { useDisplayFormat } from "../../lib/displayFormat";
 import { logger } from "../../lib/logger";
 import type { VisitDateSuggestion } from "../../types/place";
 
@@ -30,6 +31,7 @@ export function VisitDateChips({
   onPick,
 }: VisitDateChipsProps): JSX.Element | null {
   const { t } = useTranslation(["places", "common"]);
+  const display = useDisplayFormat();
   const [suggestions, setSuggestions] = useState<VisitDateSuggestion[]>([]);
 
   useEffect(() => {
@@ -65,6 +67,9 @@ export function VisitDateChips({
       <div className="mt-1 flex flex-wrap gap-1">
         {suggestions.map((s) => {
           const detail = describe(s);
+          // `s.date` is a calendar day ("YYYY-MM-DD"); shown in the user's
+          // date format and read in UTC so it cannot shift a day.
+          const shown = display.date(`${s.date}T00:00:00Z`, { timeZone: "UTC" });
           return (
             <button
               key={s.date}
@@ -72,11 +77,11 @@ export function VisitDateChips({
               onClick={() => onPick(s.date)}
               aria-label={t("common:suggestionChip", {
                 field: t("places:detail.date"),
-                value: s.date,
+                value: shown,
               })}
               className="rounded-full border border-dashed border-border px-2 py-0.5 text-xs text-(--text-muted) hover:border-(--accent) hover:text-(--accent)"
             >
-              {s.date}
+              {shown}
               {detail ? ` · ${detail}` : ""}
             </button>
           );

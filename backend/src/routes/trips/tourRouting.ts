@@ -7,7 +7,11 @@ import { LEG_MODES, LegMode } from "../../services/tour/tourDistance";
 import { resolveRouteProvider } from "../../services/tour/routing/resolveProvider";
 import { routeLegGeometry } from "../../services/tour/routing/routeLeg";
 import { applyRoutedLeg } from "../../services/tour/routing/autoRouteLegs";
-import { isRoutableMode, RouteProvider } from "../../services/tour/routing/types";
+import {
+  isRoutableMode,
+  RouteFallbackReason,
+  RouteProvider,
+} from "../../services/tour/routing/types";
 import { findLegOrThrow, requireCoords } from "./tourLegs";
 import { resolveRouteFromRequest, toDto, toLegDto, ROUTE_SELECT } from "./tourRoutes";
 import logger from "../../utils/logger";
@@ -53,6 +57,15 @@ function requireLegMode(mode: string): LegMode {
   throw new AppError(`Leg has an unrecognised mode "${mode}"`, 409);
 }
 
+/** The section's vehicle, which lets a provider pick its profile (a bicycle rides). */
+async function routeVehicle(routeId: string): Promise<string | null> {
+  const route = await prisma.tripRoute.findUnique({
+    where: { id: routeId },
+    select: { vehicle: true },
+  });
+  return route?.vehicle ?? null;
+}
+
 /**
  * POST /trips/:id/routes/:routeId/legs/:fromStopId/:toStopId/route
  *
@@ -66,7 +79,12 @@ function requireLegMode(mode: string): LegMode {
  * `routeLegGeometry`'s own straight-chord fallback, and it is not an error —
  * the leg is still updated (to `source: "straight"`, `confidence: "low"`)
  * and this endpoint answers 200 with that honest result, same as `route-all`
- * does for a per-leg provider failure inside a batch.
+ * does for a per-leg provider failure inside a batch. `fallbackReason` says
+ * why (null when the provider's line was kept): the leg alone reads the same
+ * for "no road near the campsite" and "the key was refused", and a client
+ * that cannot tell them apart can only say "nothing happened". A fallback
+ * never replaces a leg that is not straight already: a hand-drawn line stays
+ * as it was, and the answer carries it unchanged together with the reason.
  */
 router.post(
   [
@@ -93,8 +111,19 @@ router.post(
       const toCoord = requireCoords(leg.toStop, "to");
       const mode = requireLegMode(leg.mode);
 
-      const routed = await routeLegGeometry(provider, { from: fromCoord, to: toCoord, mode });
-      await applyRoutedLeg(leg.id, routed);
+      const vehicle = await routeVehicle(routeId);
+      const routed = await routeLegGeometry(provider, {
+        from: fromCoord,
+        to: toCoord,
+        mode,
+        vehicle,
+      });
+      // A fallback replaces only a straight line. A drawn, adopted or earlier
+      // routed line is closer to the road than the chord a failed attempt
+      // would write over it, and nobody asked for it to go.
+      if (routed.fallbackReason === null || leg.source === "straight") {
+        await applyRoutedLeg(leg.id, routed);
+      }
 
       const updated = await prisma.tripRouteLeg.findUniqueOrThrow({ where: { id: leg.id } });
 
@@ -104,8 +133,9 @@ router.post(
         providerId: provider.id,
         source: updated.source,
         confidence: updated.confidence,
+        fallbackReason: routed.fallbackReason,
       });
-      res.json({ leg: toLegDto(updated) });
+      res.json({ leg: toLegDto(updated), fallbackReason: routed.fallbackReason });
     } catch (error) {
       next(error);
     }
@@ -129,12 +159,12 @@ router.post(
  *   completely untouched and counted in `skippedCount` — it is never even
  *   handed to `routeLegGeometry`, so a stray provider quirk can never turn a
  *   ferry crossing into a road detour.
- * - Every other leg is counted in `routedCount`, whether the provider
- *   actually answered (`source: "routed"`) or the call fell back to a
- *   straight chord (`source: "straight"`, `confidence: "low"`) — "routed"
- *   here means "was run through the routing pipeline", not "provider
- *   succeeded"; that distinction is what `confidence` on each returned leg
- *   is for.
+ * - Every other leg is counted in `routedCount` when the provider's line
+ *   was kept (`source: "routed"`), and in `fallbackCount` when it fell back
+ *   to a straight chord (`source: "straight"`, `confidence: "low"`).
+ *   `routedCount` used to count both, so a tour whose every leg failed
+ *   reported "5 legs processed" and looked routed (2026-09-26).
+ *   `fallbackReason` is the first fallback's cause, null when none fell back.
  *
  * Each leg is routed and persisted sequentially rather than in one
  * transaction: a provider call is a network round trip, and holding a
@@ -163,8 +193,11 @@ router.post(
         },
       });
 
+      const vehicle = await routeVehicle(routeId);
       let routedCount = 0;
       let skippedCount = 0;
+      let fallbackCount = 0;
+      let fallbackReason: RouteFallbackReason | null = null;
 
       for (const leg of legs) {
         const mode = requireLegMode(leg.mode);
@@ -175,9 +208,19 @@ router.post(
 
         const fromCoord = requireCoords(leg.fromStop, "from");
         const toCoord = requireCoords(leg.toStop, "to");
-        const routed = await routeLegGeometry(provider, { from: fromCoord, to: toCoord, mode });
+        const routed = await routeLegGeometry(provider, {
+          from: fromCoord,
+          to: toCoord,
+          mode,
+          vehicle,
+        });
         await applyRoutedLeg(leg.id, routed);
-        routedCount++;
+        if (routed.fallbackReason === null) {
+          routedCount++;
+        } else {
+          fallbackCount++;
+          fallbackReason ??= routed.fallbackReason;
+        }
       }
 
       const [route, savedLegs] = await Promise.all([
@@ -194,12 +237,16 @@ router.post(
         providerId: provider?.id ?? null,
         routedCount,
         skippedCount,
+        fallbackCount,
+        fallbackReason,
       });
       res.json({
         route: toDto(route),
         legs: savedLegs.map(toLegDto),
         routedCount,
         skippedCount,
+        fallbackCount,
+        fallbackReason,
       });
     } catch (error) {
       next(error);

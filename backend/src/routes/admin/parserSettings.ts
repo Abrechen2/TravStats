@@ -5,13 +5,143 @@ import { z } from "zod";
 import { AuthRequest } from "../../middleware/auth";
 import { prisma } from "../../db";
 import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
+import { AppError } from "../../middleware/errorHandler";
+import { encryptUnlessMasked, looksMasked, maskKey } from "../../utils/maskedKey";
+import { decryptApiKey } from "../../utils/encryption";
+import {
+  checkLlmBaseUrl,
+  CLOUD_PROVIDER_KINDS,
+  type CloudProviderKind,
+} from "../../services/llm/llmEndpoint";
+import {
+  llmProbe,
+  parseProviderOrder,
+  serializeProviderOrder,
+  OPENAI_BASE_URL,
+  ANTHROPIC_BASE_URL,
+  GOOGLE_BASE_URL,
+} from "../../services/llm/llmProvider";
+import { clearAvailabilityCache } from "../../services/parsers/config";
+import { clearLlmAvailabilityCache } from "../../services/parsers/llmAvailability";
+import type { AdminSettings } from "../../prisma";
 
 interface ParserSettingsUpdateData {
   allowUserApiKeys?: boolean;
   fxCdnFallbackEnabled?: boolean;
   parserOrder?: string;
+  llmEnabled?: boolean;
   ollamaUrl?: string | null;
   ollamaModel?: string | null;
+  llmOllamaOptIn?: boolean;
+  llmProviderOrder?: string;
+  openaiCompatBaseUrl?: string | null;
+  openaiCompatModel?: string | null;
+  openaiCompatApiKey?: string | null;
+  llmCustomOptIn?: boolean;
+  llmOpenaiApiKey?: string | null;
+  llmOpenaiModel?: string | null;
+  llmOpenaiOptIn?: boolean;
+  llmAnthropicApiKey?: string | null;
+  llmAnthropicModel?: string | null;
+  llmAnthropicOptIn?: boolean;
+  llmGoogleApiKey?: string | null;
+  llmGoogleModel?: string | null;
+  llmGoogleOptIn?: boolean;
+}
+
+/** The fixed base URL for a NAMED cloud slot — `custom` has none, it is admin-supplied. */
+const FIXED_SLOT_URL: Record<Exclude<CloudProviderKind, "custom">, string> = {
+  openai: OPENAI_BASE_URL,
+  anthropic: ANTHROPIC_BASE_URL,
+  google: GOOGLE_BASE_URL,
+};
+
+/** Which stored (encrypted) column a masked-echo test-connection reads back, per slot. */
+async function storedKeyFor(kind: CloudProviderKind, settingsId: number): Promise<string | null> {
+  if (kind === "custom") {
+    const row = await prisma.adminSettings.findUnique({
+      where: { id: settingsId },
+      select: { openaiCompatApiKey: true },
+    });
+    return row?.openaiCompatApiKey ?? null;
+  }
+  if (kind === "openai") {
+    const row = await prisma.adminSettings.findUnique({
+      where: { id: settingsId },
+      select: { llmOpenaiApiKey: true },
+    });
+    return row?.llmOpenaiApiKey ?? null;
+  }
+  if (kind === "anthropic") {
+    const row = await prisma.adminSettings.findUnique({
+      where: { id: settingsId },
+      select: { llmAnthropicApiKey: true },
+    });
+    return row?.llmAnthropicApiKey ?? null;
+  }
+  const row = await prisma.adminSettings.findUnique({
+    where: { id: settingsId },
+    select: { llmGoogleApiKey: true },
+  });
+  return row?.llmGoogleApiKey ?? null;
+}
+
+/**
+ * A base URL as the admin typed it, validated by the one endpoint rule
+ * (`llm/llmEndpoint.ts`): https, except on a local/LAN host. The problem is a
+ * stable code the admin UI words; an empty string clears the field.
+ */
+function normalizeProviderBaseUrl(raw: string | null | undefined): string | null | undefined {
+  if (raw === undefined) return undefined;
+  if (raw === null || raw.trim() === "") return null;
+  const check = checkLlmBaseUrl(raw);
+  if (check.ok) return check.url;
+  throw new AppError(
+    `Invalid AI provider base URL: ${check.problem}`,
+    400,
+    check.problem === "https_required" ? "LLM_BASE_URL_HTTPS_REQUIRED" : "LLM_BASE_URL_INVALID",
+    "openaiCompatBaseUrl"
+  );
+}
+
+/** Whether the saved OpenAI-compatible endpoint is outside the local network. */
+function providerIsCloud(settings: AdminSettings): boolean {
+  if (!settings.openaiCompatBaseUrl) return false;
+  const check = checkLlmBaseUrl(settings.openaiCompatBaseUrl);
+  return check.ok && !check.isLocal;
+}
+
+/** The settings as the admin page reads them — every key only ever masked. */
+function serializeParserSettings(settings: AdminSettings) {
+  return {
+    allowUserApiKeys: settings.allowUserApiKeys,
+    fxCdnFallbackEnabled: settings.fxCdnFallbackEnabled,
+    allowUserFlightApiKeys: settings.allowUserFlightApiKeys,
+    parserOrder: settings.parserOrder ?? "template_first",
+    llmEnabled: settings.llmEnabled,
+    ollamaUrl: settings.ollamaUrl ?? null,
+    ollamaModel: settings.ollamaModel ?? null,
+    llmOllamaOptIn: settings.llmOllamaOptIn,
+    // Always the four kinds, in the admin's priority, completed with any
+    // missing kind at the end — the same normalisation `parseProviderOrder`
+    // (`llmProvider.ts`) applies at dispatch time, so what the page shows is
+    // what will actually be tried.
+    llmProviderOrder: parseProviderOrder(settings.llmProviderOrder),
+    openaiCompatBaseUrl: settings.openaiCompatBaseUrl ?? null,
+    openaiCompatModel: settings.openaiCompatModel ?? null,
+    openaiCompatApiKey: maskKey(settings.openaiCompatApiKey) ?? null,
+    openaiCompatIsCloud: providerIsCloud(settings),
+    llmCustomOptIn: settings.llmCustomOptIn,
+    llmOpenaiModel: settings.llmOpenaiModel ?? null,
+    llmOpenaiApiKey: maskKey(settings.llmOpenaiApiKey) ?? null,
+    llmOpenaiOptIn: settings.llmOpenaiOptIn,
+    llmAnthropicModel: settings.llmAnthropicModel ?? null,
+    llmAnthropicApiKey: maskKey(settings.llmAnthropicApiKey) ?? null,
+    llmAnthropicOptIn: settings.llmAnthropicOptIn,
+    llmGoogleModel: settings.llmGoogleModel ?? null,
+    llmGoogleApiKey: maskKey(settings.llmGoogleApiKey) ?? null,
+    llmGoogleOptIn: settings.llmGoogleOptIn,
+  };
 }
 
 const parserSettingsSchema = z.object({
@@ -25,8 +155,42 @@ const parserSettingsSchema = z.object({
   // the two values the parsers understand, so an admin cannot save a word
   // that silently means "template_first" (`getParserOrder`).
   parserOrder: z.enum(["template_first", "llm_first"]).optional(),
+  // The "KI-Parser aus" switch (owner decision 2026-09-25): off means no model
+  // call anywhere, even with an Ollama URL or OLLAMA_URL set — see llmGate.ts.
+  llmEnabled: z.boolean().optional(),
   ollamaUrl: z.string().url("Must be a valid URL").optional().nullable(),
   ollamaModel: z.string().min(1).max(100).optional().nullable(),
+  // Consent for a REMOTE Ollama only — the local/LAN case never asks for this.
+  llmOllamaOptIn: z.boolean().optional(),
+  // The admin's priority among the four cloud slots (owner decision
+  // 2026-09-26: a fallback CHAIN, not one picked "active" provider). Every
+  // kind exactly once, in any order — `serializeProviderOrder` stores it.
+  llmProviderOrder: z
+    .array(z.enum(CLOUD_PROVIDER_KINDS))
+    .refine(
+      (arr) => arr.length === CLOUD_PROVIDER_KINDS.length && new Set(arr).size === arr.length,
+      "llmProviderOrder must name each cloud slot exactly once"
+    )
+    .optional(),
+  // The `custom` slot (beta.17's `openai_compatible`) — a free-form base URL.
+  openaiCompatBaseUrl: z.string().max(500).optional().nullable(),
+  openaiCompatModel: z.string().max(200).optional().nullable(),
+  // Masked echo ("abcd****wxyz") = unchanged; "" / null = clear.
+  openaiCompatApiKey: z.string().max(1000).optional().nullable(),
+  // The custom slot's OWN consent.
+  llmCustomOptIn: z.boolean().optional(),
+  // OpenAI — fixed endpoint, key + model only, its OWN consent.
+  llmOpenaiApiKey: z.string().max(1000).optional().nullable(),
+  llmOpenaiModel: z.string().max(200).optional().nullable(),
+  llmOpenaiOptIn: z.boolean().optional(),
+  // Anthropic — fixed endpoint, key + model only, its OWN consent.
+  llmAnthropicApiKey: z.string().max(1000).optional().nullable(),
+  llmAnthropicModel: z.string().max(200).optional().nullable(),
+  llmAnthropicOptIn: z.boolean().optional(),
+  // Google — fixed endpoint, key + model only, its OWN consent.
+  llmGoogleApiKey: z.string().max(1000).optional().nullable(),
+  llmGoogleModel: z.string().max(200).optional().nullable(),
+  llmGoogleOptIn: z.boolean().optional(),
 });
 
 const router = Router();
@@ -41,14 +205,7 @@ router.get("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
       where: { id: await ensureAdminSettingsRow() },
     });
 
-    res.json({
-      allowUserApiKeys: adminSettings.allowUserApiKeys,
-      fxCdnFallbackEnabled: adminSettings.fxCdnFallbackEnabled,
-      allowUserFlightApiKeys: adminSettings.allowUserFlightApiKeys,
-      parserOrder: adminSettings.parserOrder ?? "template_first",
-      ollamaUrl: adminSettings.ollamaUrl ?? null,
-      ollamaModel: adminSettings.ollamaModel ?? null,
-    });
+    res.json(serializeParserSettings(adminSettings));
   } catch (error) {
     next(error);
   }
@@ -57,8 +214,29 @@ router.get("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
 // Update admin parser settings
 router.put("/parser-settings", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
-    const { allowUserApiKeys, fxCdnFallbackEnabled, parserOrder, ollamaUrl, ollamaModel } =
-      parserSettingsSchema.parse(req.body);
+    const {
+      allowUserApiKeys,
+      fxCdnFallbackEnabled,
+      parserOrder,
+      llmEnabled,
+      ollamaUrl,
+      ollamaModel,
+      llmOllamaOptIn,
+      llmProviderOrder,
+      openaiCompatBaseUrl,
+      openaiCompatModel,
+      openaiCompatApiKey,
+      llmCustomOptIn,
+      llmOpenaiApiKey,
+      llmOpenaiModel,
+      llmOpenaiOptIn,
+      llmAnthropicApiKey,
+      llmAnthropicModel,
+      llmAnthropicOptIn,
+      llmGoogleApiKey,
+      llmGoogleModel,
+      llmGoogleOptIn,
+    } = parserSettingsSchema.parse(req.body);
 
     let adminSettings;
 
@@ -73,12 +251,52 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
     if (parserOrder !== undefined) {
       updateData.parserOrder = parserOrder;
     }
+    if (llmEnabled !== undefined) {
+      updateData.llmEnabled = llmEnabled;
+    }
     if (ollamaUrl !== undefined) {
       updateData.ollamaUrl = ollamaUrl;
     }
     if (ollamaModel !== undefined) {
       updateData.ollamaModel = ollamaModel;
     }
+    if (llmOllamaOptIn !== undefined) updateData.llmOllamaOptIn = llmOllamaOptIn;
+    if (llmProviderOrder !== undefined) {
+      updateData.llmProviderOrder = serializeProviderOrder(llmProviderOrder);
+    }
+    const baseUrl = normalizeProviderBaseUrl(openaiCompatBaseUrl);
+    if (baseUrl !== undefined) updateData.openaiCompatBaseUrl = baseUrl;
+    if (openaiCompatModel !== undefined) {
+      updateData.openaiCompatModel = openaiCompatModel?.trim() || null;
+    }
+    if (openaiCompatApiKey !== undefined) {
+      const encrypted = encryptUnlessMasked(openaiCompatApiKey);
+      if (encrypted !== undefined) updateData.openaiCompatApiKey = encrypted;
+    }
+    if (llmCustomOptIn !== undefined) updateData.llmCustomOptIn = llmCustomOptIn;
+
+    if (llmOpenaiApiKey !== undefined) {
+      const encrypted = encryptUnlessMasked(llmOpenaiApiKey);
+      if (encrypted !== undefined) updateData.llmOpenaiApiKey = encrypted;
+    }
+    if (llmOpenaiModel !== undefined) updateData.llmOpenaiModel = llmOpenaiModel?.trim() || null;
+    if (llmOpenaiOptIn !== undefined) updateData.llmOpenaiOptIn = llmOpenaiOptIn;
+
+    if (llmAnthropicApiKey !== undefined) {
+      const encrypted = encryptUnlessMasked(llmAnthropicApiKey);
+      if (encrypted !== undefined) updateData.llmAnthropicApiKey = encrypted;
+    }
+    if (llmAnthropicModel !== undefined) {
+      updateData.llmAnthropicModel = llmAnthropicModel?.trim() || null;
+    }
+    if (llmAnthropicOptIn !== undefined) updateData.llmAnthropicOptIn = llmAnthropicOptIn;
+
+    if (llmGoogleApiKey !== undefined) {
+      const encrypted = encryptUnlessMasked(llmGoogleApiKey);
+      if (encrypted !== undefined) updateData.llmGoogleApiKey = encrypted;
+    }
+    if (llmGoogleModel !== undefined) updateData.llmGoogleModel = llmGoogleModel?.trim() || null;
+    if (llmGoogleOptIn !== undefined) updateData.llmGoogleOptIn = llmGoogleOptIn;
 
     // Always an update against the one row. The create branch this replaces
     // dropped `updateData` on the floor, so a PUT that happened to be the
@@ -88,15 +306,91 @@ router.put("/parser-settings", async (req: AuthRequest, res: Response, next: Nex
       data: updateData,
     });
 
+    // A provider switch must be felt by the very next parse, not after the
+    // five-minute availability cache has run out on the old endpoint.
+    clearAvailabilityCache();
+    clearLlmAvailabilityCache();
+
     res.json({
       message: "Parser settings updated successfully",
-      settings: {
-        allowUserApiKeys: adminSettings.allowUserApiKeys,
-        fxCdnFallbackEnabled: adminSettings.fxCdnFallbackEnabled,
-        parserOrder: adminSettings.parserOrder ?? "template_first",
-        ollamaUrl: adminSettings.ollamaUrl ?? null,
-        ollamaModel: adminSettings.ollamaModel ?? null,
-      },
+      settings: serializeParserSettings(adminSettings),
+    });
+  } catch (error) {
+    next(error);
+  }
+});
+
+/**
+ * "Verbindung testen" for a cloud slot: `GET {baseUrl}/models` with the key
+ * (Anthropic's own header pair for `kind: "anthropic"`). It carries no
+ * document — only the key — so it runs before that slot's own consent, which
+ * is exactly when an admin needs it. `openai`/`anthropic`/`google` use their
+ * FIXED base URL (`baseUrl` is ignored/not required); `custom` needs one. The
+ * answer is a stable `errorCode` the UI words; `detail` is the protocol/
+ * status line (never a response body, never the key). `ok`, not `success`:
+ * this router is in the bare family (ADR 0001), and its frozen envelope
+ * leaks only shrink.
+ */
+router.post("/test-llm-provider", async (req: AuthRequest, res: Response, next: NextFunction) => {
+  try {
+    const { kind, baseUrl, model, apiKey } = z
+      .object({
+        kind: z.enum(CLOUD_PROVIDER_KINDS),
+        baseUrl: z.string().max(500).optional().nullable(),
+        model: z.string().max(200).optional().nullable(),
+        apiKey: z.string().max(1000).optional().nullable(),
+      })
+      .parse(req.body);
+
+    let url: string;
+    let isLocal: boolean;
+    if (kind === "custom") {
+      if (!baseUrl) {
+        res.json({ ok: false, errorCode: "invalid_url" });
+        return;
+      }
+      const check = checkLlmBaseUrl(baseUrl);
+      if (!check.ok) {
+        res.json({ ok: false, errorCode: check.problem });
+        return;
+      }
+      url = check.url;
+      isLocal = check.isLocal;
+    } else {
+      url = FIXED_SLOT_URL[kind];
+      isLocal = false;
+    }
+
+    let key = apiKey ?? null;
+    if (looksMasked(key)) {
+      key = decryptApiKey(await storedKeyFor(kind, await ensureAdminSettingsRow()));
+    }
+
+    const probe = await llmProbe({
+      kind,
+      url,
+      model: model ?? "",
+      ...(key ? { apiKey: key } : {}),
+      isCloud: !isLocal,
+    });
+    if (!probe.reachable) {
+      const auth = /HTTP 40[13]\b/.test(probe.error ?? "");
+      res.json({
+        ok: false,
+        errorCode: auth ? "auth" : "unreachable",
+        detail: probe.error ?? null,
+        isCloud: !isLocal,
+      });
+      return;
+    }
+    const wanted = model?.trim();
+    res.json({
+      ok: true,
+      isCloud: !isLocal,
+      modelCount: probe.models.length,
+      // null = the endpoint lists no models (some proxies do not), which is
+      // not the same as "your model is missing".
+      modelFound: wanted && probe.models.length > 0 ? probe.models.includes(wanted) : null,
     });
   } catch (error) {
     next(error);

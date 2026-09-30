@@ -20,6 +20,13 @@ const railStation = registry.register(
       name: z.string(),
       uic: z.string().nullable().describe("UIC station code"),
       dbId: z.string().nullable().describe("Deutsche Bahn EVA number, not the UIC code"),
+      shortCode: z
+        .string()
+        .nullable()
+        .describe(
+          "DB station code (Ril 100 / DS100, e.g. 'KK' for Köln Hbf), from OpenStation and " +
+            "Wikidata (CC0); null when neither names one — never derived"
+        ),
       lat: z.number(),
       lon: z.number(),
       country: z.string().nullable().describe("ISO 3166-1 alpha-2"),

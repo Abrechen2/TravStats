@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, fireEvent, screen, waitFor } from "@testing-library/react";
+import { render, fireEvent, screen, waitFor, act } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import FlightEditModal from "../../components/FlightEditModal";
 import type { Flight } from "../../types";
@@ -65,11 +65,26 @@ vi.mock("@/lib/api/trips", async (importOriginal) => {
   return { ...actual, tripsApi: { ...actual.tripsApi, getAll: vi.fn().mockResolvedValue([]) } };
 });
 
+// The modal submits a time only in the AIRPORTS' zones (ADR 0002 D2), so a
+// test that edits a time waits until both resolved. UTC keeps the wall clocks
+// these tests type identical to the instants they assert.
+const airportMocks = vi.hoisted(() => ({
+  getByCode: vi.fn(async () => ({ timezone: "UTC" })),
+}));
+vi.mock("../../lib/api/airports", () => ({ airportsApi: airportMocks }));
+
+async function airportsHydrated(): Promise<void> {
+  await waitFor(() => expect(airportMocks.getByCode).toHaveBeenCalledTimes(2));
+  await act(async () => {});
+}
+
 const mockFlight: Flight = {
   id: "1",
   userId: "u1",
   airline: "LH",
   flightNumber: "LH123",
+  depIata: "FRA",
+  arrIata: "MUC",
   depLat: 50.033,
   depLon: 8.571,
   arrLat: 48.354,
@@ -83,6 +98,7 @@ const mockFlight: Flight = {
 describe("FlightEditModal", () => {
   beforeEach(() => {
     mocks.companionsList.mockReset().mockResolvedValue([]);
+    airportMocks.getByCode.mockClear();
   });
 
   it("renders separate date and time inputs for both departure and arrival when modal is open", () => {
@@ -146,6 +162,7 @@ describe("FlightEditModal", () => {
     const { getByText } = render(
       <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
     );
+    await airportsHydrated();
 
     const yearInput = document.querySelector("#editHistoricalYear") as HTMLInputElement;
     expect(yearInput.value).toBe("2020");
@@ -176,6 +193,7 @@ describe("FlightEditModal", () => {
     const { getByText } = render(
       <FlightEditModal flight={historicalFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
     );
+    await airportsHydrated();
 
     const yearInput = document.querySelector("#editHistoricalYear") as HTMLInputElement;
     expect(yearInput.value).toBe("");
@@ -723,6 +741,7 @@ describe("FlightEditModal", () => {
       const { getByText } = render(
         <FlightEditModal flight={dateOnlyFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
       );
+      await airportsHydrated();
 
       const year = document.querySelector("#editHistoricalYear") as HTMLInputElement;
       fireEvent.change(year, { target: { value: "1999" } });
@@ -742,6 +761,7 @@ describe("FlightEditModal", () => {
       const { getByText } = render(
         <FlightEditModal flight={yearMonthFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
       );
+      await airportsHydrated();
 
       const day = document.querySelector("#editHistoricalDay") as HTMLSelectElement;
       // UNKNOWN semantics: the stored -01 is precision padding, not a day.
@@ -801,6 +821,7 @@ describe("FlightEditModal", () => {
       const { getByText } = render(
         <FlightEditModal flight={dateOnlyFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
       );
+      await airportsHydrated();
       fireEvent.click(screen.getByLabelText("flights:historicalCheckbox"));
       fireEvent.change(document.querySelector("#editDepartureTime") as HTMLInputElement, {
         target: { value: "10:00" },
@@ -853,6 +874,7 @@ describe("FlightEditModal", () => {
       const { getByText } = render(
         <FlightEditModal flight={mockFlight} isOpen={true} onClose={vi.fn()} onSave={onSave} />
       );
+      await airportsHydrated();
       const toggle = screen.getByLabelText("flights:historicalCheckbox") as HTMLInputElement;
       expect(toggle.checked).toBe(false);
       fireEvent.click(toggle);

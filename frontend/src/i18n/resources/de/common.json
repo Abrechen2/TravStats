@@ -1,4 +1,7 @@
 {
+  "confirmDialog": {
+    "title": "Bitte bestätigen"
+  },
   "buttons": {
     "save": "Speichern",
     "cancel": "Abbrechen",
@@ -46,19 +49,31 @@
     "reportBugOpened": "Bundle heruntergeladen – die .json-Datei im neuen Tab in den Report ziehen",
     "reportBugHint": "Öffnet GitHub mit vorausgefülltem Fehler-Template und lädt das Diagnose-Bundle zum Anhängen herunter (zum Einfügen meist zu groß)",
     "title": "Diagnose-Export für GitHub-Issue",
-    "description": "Lade ein bereinigtes Diagnose-Paket herunter, das du einem GitHub-Issue anhängen kannst. Das Paket enthält die letzten Log-Einträge sowie System- und Versionsinfos. Alle persönlichen Daten wurden entfernt:",
-    "scrubList": {
-      "ip": "IP-Adressen → <redacted:ip>",
-      "email": "E-Mail-Adressen → <redacted:email>",
-      "tokens": "JWT-Tokens → <redacted:jwt>",
-      "uuids": "UUIDs (User-IDs, Flug-IDs) → <redacted:uuid>"
-    },
+    "description": "Erzeugt ein Diagnose-Paket, das du einem GitHub-Issue anhängen kannst. Es wird nur aus festen, strukturierten Feldern gebaut:",
     "generating": "Erzeuge Diagnose-Paket...",
     "copy": "In Zwischenablage kopieren",
     "copied": "Diagnose-Paket kopiert – bitte ins GitHub-Issue einfügen",
     "copyFailed": "Kopieren fehlgeschlagen",
     "download": "Als Datei speichern",
-    "error": "Diagnose-Export fehlgeschlagen"
+    "error": "Diagnose-Export fehlgeschlagen",
+    "includes": {
+      "versions": "App- und Build-Version, Node-Version, Betriebssystem und Architektur",
+      "settings": "Instanz-Einstellungen als Schalter, Zahlen und feste Auswahlwerte – und nur, ob eine Integration eingerichtet ist, nie ihre Adresse oder ihr Schlüssel",
+      "counts": "Anzahlen: Konten je aktiviertem Bereich, Einträge je Tabelle, Stand der Datenbank-Migrationen",
+      "events": "Log-Ereignisse der letzten 24 Stunden (Fehler: 7 Tage) als Zeitpunkt, Level, Kategorie, Ereignisschlüssel, Fehlercode und -klasse und Code-Stelle (Dateiname:Zeile)"
+    },
+    "excludes": "Nicht enthalten: Log-Texte, Namen, Benutzernamen, E-Mail-Adressen, Buchungscodes, Flüge und Orte, URLs mit Query-Strings, IP-Adressen, Rechnername, Verzeichnispfade und alle Werte aus Anfragen.",
+    "previewLabel": "Vorschau – genau diese Datei wird heruntergeladen:",
+    "failedSection": "Abschnitt „{{section}}“ konnte nicht erfasst werden (Code {{code}}) und ist im Paket als fehlgeschlagen markiert.",
+    "exportFailed": "Das Diagnose-Paket konnte nicht erzeugt werden: {{reason}}. „Fehler melden“ öffnet das GitHub-Issue trotzdem – dann ohne Anhang.",
+    "exportFailedToast": "Issue ohne Diagnose-Paket geöffnet – der Export ist fehlgeschlagen.",
+    "reasons": {
+      "rateLimited": "zu viele Exporte in kurzer Zeit, bitte später erneut versuchen",
+      "forbidden": "nur Administratoren dürfen ein Diagnose-Paket erzeugen",
+      "rejected": "das Paket hat die eigene Prüfliste nicht bestanden und wurde zurückgehalten",
+      "network": "der Server ist nicht erreichbar",
+      "server": "Serverfehler (HTTP {{status}})"
+    }
   },
   "accessibility": {
     "close": "Schließen",
@@ -121,6 +136,19 @@
     "unknown": "Unbekannt",
     "notAvailable": "k.A."
   },
+  "saveErrors": {
+    "validation": "Einige Angaben sind ungültig. Bitte prüfe die markierten Felder und versuche es erneut.",
+    "duplicate": "Ein Eintrag mit diesen Angaben existiert bereits.",
+    "dbUnavailable": "Die Datenbank ist gerade nicht erreichbar. Bitte versuche es gleich noch einmal.",
+    "rateLimited": "Zu viele Anfragen in kurzer Zeit. Bitte warte einen Moment.",
+    "demo": "Im Demo-Konto lässt sich das nicht speichern.",
+    "network": "Der Server ist nicht erreichbar. Bitte prüfe die Verbindung.",
+    "timezoneUnavailable": "Die Zeitzone des Ortes lässt sich auf dem Server gerade nicht bestimmen. Die Zeit wurde nicht gespeichert, damit sie nicht falsch als UTC abgelegt wird — bitte den Administrator informieren.",
+    "timezoneUnresolved": "Für diesen Ort ist keine Zeitzone bekannt, weil ihm Koordinaten oder ein Katalogeintrag fehlen. Die Zeit wurde nicht gespeichert, damit sie nicht falsch als UTC abgelegt wird — bitte den Ort vervollständigen oder einen anderen wählen.",
+    "localTimeNonexistent": "Diese Uhrzeit gibt es an dem Tag dort nicht (Zeitumstellung). Bitte wähle eine Uhrzeit davor oder danach.",
+    "zoneUnknown": "Diese Zeitzone kennt der Server nicht. Bitte wähle den Ort noch einmal aus oder informiere den Administrator.",
+    "staleBundle": "Die Seite ist älter als der Server und hat die Zeit im alten Format geschickt. Nichts wurde gespeichert — bitte lade die Seite neu und speichere noch einmal."
+  },
   "messages": {
     "success": "Erfolg",
     "error": "Fehler",
@@ -142,7 +170,11 @@
     "tomorrow": "Morgen",
     "thisWeek": "Diese Woche",
     "thisMonth": "Dieser Monat",
-    "thisYear": "Dieses Jahr"
+    "thisYear": "Dieses Jahr",
+    "yourTime": "deine Zeit: {{time}}",
+    "yourTimeTitle": "Dieselbe Zeit in deiner Zeitzone ({{zone}}). Angezeigt wird immer die Ortszeit.",
+    "utcFallback": "UTC",
+    "utcFallbackTitle": "Für diesen Ort ist keine Zeitzone bekannt — die Uhrzeit ist UTC, nicht Ortszeit."
   },
   "sort": {
     "ascending": "aufsteigend",
@@ -159,6 +191,7 @@
     "poi_desc": "Sehenswürdigkeiten, Restaurants, Konzerte, beliebige Orte.",
     "roadtrip": "Roadtrips",
     "roadtrip_desc": "Mehrtägige Touren mit dem Wohnmobil, Auto oder Rad: Stationen, Übernachtungen, Strecke.",
+    "tour": "Touren",
     "rail": "Bahn",
     "rail_desc": "Zugfahrten wie Flüge: Bahnhöfe, Zugnummer, Klasse, Sitzplatz, Kilometer. (Beta)"
   },
@@ -287,5 +320,20 @@
     "usage_one": "1-mal verwendet",
     "usage_other": "{{count}}-mal verwendet"
   },
-  "suggestionChip": "{{field}} {{value}} übernehmen"
+  "suggestionChip": "{{field}} {{value}} übernehmen",
+  "demoBetaNotice": {
+    "title": "Beta-Funktionen sind eingeschaltet",
+    "body": "In dieser Demo sind die Beta-Funktionen eingeschaltet. Was du hier siehst, kann sich noch ändern – dein Feedback ist willkommen.",
+    "listTitle": "Dazu gehören:",
+    "dismiss": "Verstanden"
+  },
+  "setupIncompleteBanner": {
+    "message": "Diese Instanz ist noch nicht eingerichtet.",
+    "link": "Zur Einrichtung"
+  },
+  "clockChange": {
+    "gap": "Diese Uhrzeit gibt es an dem Tag dort nicht (Zeitumstellung). Bitte wähle eine Uhrzeit davor oder danach.",
+    "repeated": "Diese Uhrzeit gibt es an dem Tag dort zweimal (Zeitumstellung). Gespeichert wird die frühere.",
+    "later": "Die spätere meinen"
+  }
 }

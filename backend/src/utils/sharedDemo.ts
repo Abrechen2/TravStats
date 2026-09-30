@@ -1,12 +1,13 @@
 /**
  * Which account is THE shared demo account.
  *
- * `isDemo` alone does not answer that. `seedDemoUser` sets the flag on every
- * account it creates — on the public preview that is `admin`, `alex` and
- * `claude`, locally it is the dev `admin:admin123` — and those are ordinary
- * accounts whose owner is the only one holding the password. Locking the
- * credential, token and connection routes on the flag alone locked all four
- * out of their own settings (final review finding C1).
+ * `isDemo` alone does not answer that. Until 2.7.0-beta.17 `seedDemoUser` set
+ * the flag on every account it created — on the public preview `admin`,
+ * `alex` and `claude`, locally the dev `admin:admin123` — and those are
+ * ordinary accounts whose owner is the only one holding the password. Locking
+ * the credential, token and connection routes on the flag alone locked all
+ * four out of their own settings (final review finding C1). The seeder now
+ * flags only `demo`, but rows written before that still carry the flag.
  *
  * The shared account is the one whose password is PUBLISHED on the login page
  * of a public instance: `demo`, seeded by `seedDemoAccount.ts`. The flag stays

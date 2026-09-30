@@ -1,0 +1,95 @@
+{
+  "title": "Loyalty programmes",
+  "noDomains": "None of your active travel types has loyalty programmes. Flights, cruises and lodging can be switched on above under Modules.",
+  "sections": {
+    "flight": {
+      "title": "Frequent flyer programmes",
+      "description": "Your airlines' mileage programmes — with the airlines they cover."
+    },
+    "cruise": {
+      "title": "Cruise line programmes",
+      "description": "Your cruise lines' clubs and loyalty programmes."
+    },
+    "lodging": {
+      "title": "Hotel programmes",
+      "description": "With the chains and single hotels they cover."
+    },
+    "rail": {
+      "title": "Rail programmes",
+      "description": "Your rail operators' loyalty programmes, e.g. BahnBonus — with the operators they cover."
+    }
+  },
+  "empty": "No programmes added yet.",
+  "add": "Add programme",
+  "loadError": "Loyalty programmes could not be loaded.",
+  "saveError": "The programme could not be saved.",
+  "duplicateError": "A programme with this name already exists in this section.",
+  "deleteError": "The programme could not be deleted.",
+  "confirmDelete": "Delete “{{name}}”?",
+  "field": {
+    "programName": "Programme name",
+    "membershipNumber": "Membership number",
+    "tier": "Current status",
+    "notes": "Notes",
+    "airlineCodes": "Covers airlines",
+    "airlineCodesHint": "Two-character IATA code, e.g. LH — Enter adds it.",
+    "cruiseLines": "Covers cruise lines",
+    "cruiseLinesHint": "Spelled as in your cruises — Enter adds it.",
+    "railOperators": "Covers rail operators",
+    "railOperatorsHint": "Spelled as in your train rides, e.g. DB Fernverkehr — Enter adds it.",
+    "removeValue": "Remove {{value}}",
+    "invalidCode": "An IATA airline code has exactly two letters or digits."
+  },
+  "coversNone": {
+    "flight": "not assigned to any airline yet",
+    "cruise": "not assigned to any cruise line yet",
+    "rail": "not assigned to any rail operator yet"
+  },
+  "number": {
+    "show": "Show number",
+    "hide": "Hide number"
+  },
+  "activity": {
+    "flight_one": "{{count}} flight",
+    "flight_other": "{{count}} flights",
+    "cruise_one": "{{count}} cruise",
+    "cruise_other": "{{count}} cruises",
+    "rail_one": "{{count}} train ride",
+    "rail_other": "{{count}} train rides",
+    "lodging_one": "{{count}} stay",
+    "lodging_other": "{{count}} stays",
+    "nights_one": "{{count}} night",
+    "nights_other": "{{count}} nights",
+    "last": "last {{date}}",
+    "none": "Nothing in your logbook that this card covers yet.",
+    "showList": {
+      "lodging": "Show hotels",
+      "flight": "Show flights",
+      "rail": "Show train rides"
+    },
+    "byYear": "By year"
+  },
+  "suggestions": {
+    "open": "Take over from your flights",
+    "title": "Found in your flights",
+    "hint": "Numbers that sit on flights but belong to no programme yet. Taking one over opens the form prefilled — nothing is saved until you confirm.",
+    "empty": "No further frequent flyer numbers found in your flights.",
+    "loadError": "The suggestions could not be loaded.",
+    "adopt": "Take over"
+  },
+  "listFilter": {
+    "named": "Only entries of “{{name}}”",
+    "gone": "This loyalty programme does not exist (any more), so nothing is shown here.",
+    "unnamed": "Only entries of one loyalty programme",
+    "clear": "Remove filter",
+    "inYear": "in {{year}}"
+  },
+  "alliances": {
+    "label": "Add a whole alliance:",
+    "star": "Star Alliance",
+    "skyteam": "SkyTeam",
+    "oneworld": "oneworld",
+    "loadError": "The alliances could not be loaded — airline codes can still be added one by one.",
+    "tooMany": "That would be more than {{max}} airlines — a programme can cover at most {{max}}."
+  }
+}

@@ -1,5 +1,4 @@
 import { Router, Response, NextFunction } from "express";
-import { Prisma } from "../prisma";
 import { z } from "zod";
 import { prisma } from "../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth";
@@ -13,136 +12,24 @@ import { createCruiseRecord } from "../services/cruise/createCruise";
 import { cruiseListHandler } from "./cruises/list";
 import { cruiseFacetsHandler } from "./cruises/facets";
 import { checkAndUpdateAchievements } from "../utils/achievements";
-import { buildEffectivePortSequence } from "../shared/cruise/portSequence";
-import { buildLegRouteOverrideMap, portLegRouteKey } from "../shared/cruise/legRouteKey";
-import { computeSchematicRoute } from "../services/schematicRouter";
+import {
+  buildCruiseGeometry,
+  CRUISE_GEOMETRY_INCLUDE,
+  type GeometryFeatureCollection,
+} from "../services/cruise/cruiseGeometry";
 import { recomputeLegsForCruise } from "../services/cruiseDistance/cruiseLegService";
 import { cruiseExternalRef } from "../services/importProvenance";
 import { deriveCruiseStatus, CRUISE_PASSTHROUGH } from "../shared/statusDerivation";
 import { recomputeTripStatus } from "../services/tripStatusService";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
-import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
+import { getBaseCurrency } from "../services/fx/snapshot";
+import { refreshFxOnEdit } from "../services/fx/refreshOnEdit";
 import logger from "../utils/logger";
-
-interface GeometryFeature {
-  type: "Feature";
-  geometry: { type: "LineString"; coordinates: [number, number][] };
-  properties: {
-    fromPortId: number;
-    toPortId: number;
-    routed: boolean;
-    protectedPrefixCount: number;
-    protectedSuffixCount: number;
-    method: "short_hop" | "maritime_graph" | "coarse_a_star" | "direct" | "manual_polyline";
-  };
-}
-
-interface GeometryFeatureCollection {
-  type: "FeatureCollection";
-  features: GeometryFeature[];
-}
-
-type CruiseStopWithPort = Prisma.CruiseStopGetPayload<{ include: { port: true } }>;
-type PortRow = Prisma.PortGetPayload<Record<string, never>>;
-
-interface CruiseGeometryInput {
-  stops: CruiseStopWithPort[];
-  departurePort: PortRow | null;
-  arrivalPort: PortRow | null;
-  legRoutes?: Array<{
-    fromKind: string;
-    fromRef: string;
-    toKind: string;
-    toRef: string;
-    waypoints: unknown;
-  }>;
-}
-
-/**
- * Compute the GeoJSON FeatureCollection for one cruise's itinerary.
- * The route covers departure port → port-call stops → arrival port;
- * each consecutive port-pair becomes one LineString. Sea-day and
- * unmatched stops are skipped — they don't contribute legs. The
- * underlying `computeSchematicRoute` is cached, so calling this in a
- * batch over the same set of port-pairs is essentially free after the
- * first miss.
- */
-async function buildCruiseGeometry(
-  cruise: CruiseGeometryInput
-): Promise<{ collection: GeometryFeatureCollection; routedLegs: number; directLegs: number }> {
-  const portCalls = cruise.stops
-    .filter((s) => !s.isAtSea && s.port !== null)
-    .map((s) => s.port as PortRow);
-  const ordered = buildEffectivePortSequence(cruise.departurePort, portCalls, cruise.arrivalPort);
-  const features: GeometryFeature[] = [];
-  let routedLegs = 0;
-  let directLegs = 0;
-
-  // The stored line wins. It has to be the same source the distance came from
-  // (services/cruiseDistance/cruiseLegService.ts), or the map and the
-  // statistics would quietly disagree.
-  const overrideByLeg = buildLegRouteOverrideMap(cruise.legRoutes ?? []);
-
-  for (let i = 0; i < ordered.length - 1; i++) {
-    const a = ordered[i];
-    const b = ordered[i + 1];
-
-    const manual = overrideByLeg.get(portLegRouteKey(a.id, b.id));
-    if (manual && manual.length >= 2) {
-      features.push({
-        type: "Feature",
-        geometry: { type: "LineString", coordinates: manual },
-        properties: {
-          fromPortId: a.id,
-          toPortId: b.id,
-          routed: false,
-          protectedPrefixCount: 0,
-          protectedSuffixCount: 0,
-          method: "manual_polyline",
-        },
-      });
-      directLegs++;
-      continue;
-    }
-
-    const route = await computeSchematicRoute(
-      {
-        id: a.id,
-        name: a.name,
-        city: a.city,
-        country: a.country,
-        unlocode: a.unlocode,
-        lat: a.lat,
-        lon: a.lon,
-      },
-      {
-        id: b.id,
-        name: b.name,
-        city: b.city,
-        country: b.country,
-        unlocode: b.unlocode,
-        lat: b.lat,
-        lon: b.lon,
-      }
-    );
-    features.push({
-      type: "Feature",
-      geometry: { type: "LineString", coordinates: route.waypoints },
-      properties: {
-        fromPortId: a.id,
-        toPortId: b.id,
-        routed: route.routed,
-        protectedPrefixCount: route.protectedPrefixCount,
-        protectedSuffixCount: route.protectedSuffixCount,
-        method: route.method,
-      },
-    });
-    if (route.routed) routedLegs++;
-    else directLegs++;
-  }
-
-  return { collection: { type: "FeatureCollection", features }, routedLegs, directLegs };
-}
+import { cruiseDayColumns, stopColumnsFromRequest } from "../services/timeModel/cruiseColumns";
+import { keepStoredDay } from "../services/timeModel/dayColumns";
+import { dayAnchorNow } from "../shared/time/clock";
+import { profileZoneOf } from "../shared/time/profileZone";
+import { withCruiseTimes } from "../services/cruise/timesDto";
 
 const router = Router();
 router.use(authenticate);
@@ -171,7 +58,7 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       include: CRUISE_INCLUDE,
     });
     if (!cruise) throw new AppError("Cruise not found", 404);
-    res.json({ success: true, data: cruise });
+    res.json({ success: true, data: withCruiseTimes(cruise) });
   } catch (err) {
     next(err);
   }
@@ -235,12 +122,7 @@ router.post(
 
       const cruises = await prisma.cruise.findMany({
         where: { id: { in: parsed.data.ids }, userId },
-        include: {
-          stops: { include: { port: true }, orderBy: { dayNumber: "asc" as const } },
-          departurePort: true,
-          arrivalPort: true,
-          legRoutes: true,
-        },
+        include: CRUISE_GEOMETRY_INCLUDE,
       });
 
       const computedAt = Date.now();
@@ -286,12 +168,7 @@ router.get(
       const userId = requireUser(req);
       const cruise = await prisma.cruise.findFirst({
         where: { id: req.params.id, userId },
-        include: {
-          stops: { include: { port: true }, orderBy: { dayNumber: "asc" as const } },
-          departurePort: true,
-          arrivalPort: true,
-          legRoutes: true,
-        },
+        include: CRUISE_GEOMETRY_INCLUDE,
       });
       if (!cruise) throw new AppError("Cruise not found", 404);
 
@@ -319,7 +196,10 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
   try {
     const userId = requireUser(req);
     const parsed = createCruiseSchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    // The ZodError itself, not its `.message`: that is a JSON dump of the
+    // issues, which the edit form used to print verbatim into a German page.
+    // The error handler answers it with `code: VALIDATION_FAILED` + details.
+    if (!parsed.success) throw parsed.error;
 
     const {
       stops,
@@ -388,7 +268,11 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     const cruise = await createCruiseRecord(
       userId,
       { ...rest, stops, startDate, endDate, tripId, bookingId, status, companions },
-      { importBatchId: batchId, externalRef }
+      {
+        importBatchId: batchId,
+        externalRef,
+        request: { userId, viaToken: Boolean(req.apiToken) },
+      }
     );
     await linkDocuments(userId, documentIds, { type: "cruise", id: cruise.id });
 
@@ -408,7 +292,7 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
     }
 
     logger.info({ operation: "cruise_create", cruiseId: cruise.id, userId });
-    res.status(201).json({ success: true, data: cruise });
+    res.status(201).json({ success: true, data: withCruiseTimes(cruise) });
   } catch (err) {
     next(err);
   }
@@ -421,15 +305,21 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     if (!existing) throw new AppError("Cruise not found", 404);
 
     const parsed = updateCruiseSchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    if (!parsed.success) throw parsed.error;
     // Re-linking is a write too — see the create path (AUD-038).
     await assertReferencesOwned(userId, parsed.data);
 
     const { stops, startDate, endDate, status: requestedStatus, companions, ...rest } = parsed.data;
 
-    const nextStartDate =
-      startDate === undefined ? undefined : startDate ? new Date(startDate) : null;
-    const nextEndDate = endDate === undefined ? undefined : endDate ? new Date(endDate) : null;
+    // A resent day keeps the stored anchor (see `keepStoredDay`).
+    const nextStartDate = keepStoredDay(
+      startDate === undefined ? undefined : startDate ? new Date(startDate) : null,
+      existing.startDate
+    );
+    const nextEndDate = keepStoredDay(
+      endDate === undefined ? undefined : endDate ? new Date(endDate) : null,
+      existing.endDate
+    );
 
     // The MERGED state, not the payload. `createCruiseSchema` refuses an end
     // before a start; the update schema saw only the fields that arrived, so
@@ -444,7 +334,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       finalEndDate !== null &&
       finalEndDate.getTime() < finalStartDate.getTime()
     ) {
-      throw new AppError("endDate must not precede startDate", 400);
+      throw new AppError("endDate must not precede startDate", 400, "VALIDATION_FAILED");
     }
 
     // A batch id is client-supplied and is a handle into an import's undo
@@ -487,8 +377,22 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         startDate: finalStartDate,
         endDate: finalEndDate,
         current: requestedStatus ?? existing.status,
+        now: dayAnchorNow((await profileZoneOf(userId)).zone),
       });
     }
+
+    // ADR 0002 phase 2 dual-write from the MERGED cruise, resolved before the
+    // transaction so a refused stop time changes nothing.
+    const dayColumns = await cruiseDayColumns({
+      startDate: finalStartDate,
+      endDate: finalEndDate,
+      departurePortId:
+        rest.departurePortId !== undefined ? rest.departurePortId : existing.departurePortId,
+      arrivalPortId: rest.arrivalPortId !== undefined ? rest.arrivalPortId : existing.arrivalPortId,
+    });
+    const stopTimes = stops
+      ? await stopColumnsFromRequest(stops, { userId, viaToken: Boolean(req.apiToken) })
+      : [];
 
     // Replace rather than append — an update always carries the FULL
     // companion list for the cruise, so stale links must go. Resolution
@@ -504,24 +408,21 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       resolvedCompanionsForUpdate = await resolveCompanions(userId, companions);
     }
 
-    // FX snapshot (#267) — recompute only when an input it depends on
-    // actually moved (price, currency or the start day), mirroring the same
-    // guard in `routes/flights.ts`. A stale snapshot from before this edit
-    // would misrepresent the NEW price/currency/date, so it is recomputed
-    // from the MERGED (existing + incoming) state rather than the payload
-    // alone — a currency-only PATCH must still convert the unchanged price.
-    const fxInputsChanged =
-      rest.price !== undefined || rest.currency !== undefined || nextStartDate !== undefined;
-    const fxColumns = fxInputsChanged
-      ? await fxColumnsFor(
-          {
-            amount: rest.price !== undefined ? rest.price : existing.price,
-            currency: rest.currency !== undefined ? rest.currency : existing.currency,
-            date: nextStartDate !== undefined ? nextStartDate : existing.startDate,
-          },
-          await getBaseCurrency(userId)
-        )
-      : undefined;
+    // FX snapshot (#267), from the MERGED (existing + incoming) state and
+    // compared with the STORED one — the edit dialog sends price, currency and
+    // date on every save, so "was it sent" re-snapshotted a cabin change and a
+    // failed lookup wiped a good rate (2026-09-26). See `fx/refreshOnEdit.ts`.
+    const fx = await refreshFxOnEdit(
+      { ...existing, amount: existing.price, date: existing.startDate },
+      {
+        amount: rest.price !== undefined ? rest.price : existing.price,
+        currency: rest.currency !== undefined ? rest.currency : existing.currency,
+        date: finalStartDate,
+      },
+      await getBaseCurrency(userId),
+      { cruiseId: existing.id, userId }
+    );
+    const fxColumns = fx.columns;
 
     const updated = await prisma.$transaction(async (tx) => {
       if (resolvedCompanionsForUpdate !== undefined) {
@@ -545,6 +446,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
           status: effectiveStatus,
           startDate: nextStartDate,
           endDate: nextEndDate,
+          ...dayColumns,
           ...(resolvedCompanionsForUpdate !== undefined && {
             companions: resolvedCompanionsForUpdate.map((c) => c.displayName),
           }),
@@ -555,14 +457,12 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
         await tx.cruiseStop.deleteMany({ where: { cruiseId: existing.id } });
         if (stops.length > 0) {
           await tx.cruiseStop.createMany({
-            data: stops.map((s) => ({
+            data: stops.map((s, index) => ({
               cruiseId: existing.id,
               portId: s.portId ?? null,
               dayNumber: s.dayNumber,
-              date: s.date ? new Date(s.date) : null,
               isAtSea: s.isAtSea,
-              arrivalTime: s.arrivalTime ? new Date(s.arrivalTime) : null,
-              departureTime: s.departureTime ? new Date(s.departureTime) : null,
+              ...stopTimes[index],
               excursionNote: s.excursionNote ?? null,
               unresolvedPortName: s.unresolvedPortName ?? null,
             })),
@@ -609,7 +509,8 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
       });
     }
 
-    res.json({ success: true, data: updated });
+    // "keptStoredRate" / "lookupFailed": the rate could not be refreshed.
+    res.json({ success: true, data: withCruiseTimes(updated), fxSnapshot: fx.outcome });
   } catch (err) {
     next(err);
   }

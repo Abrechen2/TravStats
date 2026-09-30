@@ -14,6 +14,12 @@ jest.mock("../middleware/auth", () => ({
   requireWriteScope: (_req: unknown, _res: unknown, next: () => void) => next(),
   AuthRequest: {},
 }));
+// Every domain visible: these rows carry none, and visibility has its own
+// test (routes/__tests__/achievements.hiddenDomains.test.ts).
+jest.mock("../services/achievementVisibility", () => ({
+  loadAchievementVisibility: async () => () => true,
+  achievementVisibility: () => () => true,
+}));
 jest.mock("../utils/achievements", () => ({
   checkAndUpdateAchievements: jest.fn(),
 }));

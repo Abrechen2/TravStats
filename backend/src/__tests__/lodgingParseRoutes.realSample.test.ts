@@ -9,6 +9,16 @@ import { generateToken } from "../utils/jwt";
 // No mocking of the lodging parser here — this file drives the real
 // template parser end-to-end through the actual route, proving the wiring
 // works with a REAL Booking.com confirmation, not just a synthetic mock.
+//
+// Only the model's availability answer is stubbed. A template hit still asks
+// `isLlmAvailable`, which fires a background `/api/tags` probe at whatever
+// OLLAMA_URL + OLLAMA_MODEL the developer's environment carries — measured on
+// 2026-09-25 against a local sink: one GET per run. No test may reach the
+// network, and this one only asserts what the template extracted.
+jest.mock("../services/parsers/llmAvailability", () => ({
+  ...jest.requireActual("../services/parsers/llmAvailability"),
+  isLlmAvailable: jest.fn(async () => false),
+}));
 
 // The owner's REAL booking confirmations. Gitignored, present only on his
 // machine — the suite skips itself everywhere else so CI stays green. We

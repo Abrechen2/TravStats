@@ -7,6 +7,7 @@ import { extractTextFromPdf, isBcbpText } from "../services/pdfParser";
 import { parseDocument, REQUESTABLE_DOMAINS } from "../services/parsing/parseDocument";
 import { FILE_LIMITS } from "../config/constants";
 import { describeParserError } from "../utils/parserErrors";
+import type { ApiErrorCode } from "../middleware/errorHandler";
 import { hasUsableText } from "../services/parsing/usableText";
 import {
   assertMayRecord,
@@ -42,7 +43,7 @@ const parsePdfSchema = parsePdfBodySchema.refine((b) => !b.pdfBase64 !== !b.docu
  *
  * Body:
  * - pdfBase64: string (required) — Base64-encoded PDF file content
- * - domain: 'flight' | 'cruise' | 'lodging' | 'auto' (default 'flight')
+ * - domain: 'flight' | 'cruise' | 'lodging' | 'rail' | 'auto' (default 'flight')
  * - retain: boolean (optional) — keep the PDF as a document; answers `documentId`
  * - documentId: string (optional) — parse a PDF already kept, instead of pdfBase64
  *
@@ -72,9 +73,11 @@ router.post(
         pdfText = await extractTextFromPdf(buffer);
       } catch (err) {
         logger.warn({ userId, err }, "[PDF Parse] Invalid PDF or extraction failed");
+        // The extractor's own words ("bad XRef entry") stay in the log above.
         return res.status(400).json({
           error: "Invalid PDF",
-          message: err instanceof Error ? err.message : "Could not extract text from PDF",
+          message: "Could not extract text from this file as a PDF.",
+          code: "INVALID_PDF" satisfies ApiErrorCode,
         });
       }
 
@@ -83,6 +86,7 @@ router.post(
       if (!hasUsableText(pdfText)) {
         return res.status(422).json({
           error: "Empty PDF",
+          code: "PDF_NO_TEXT" satisfies ApiErrorCode,
           message:
             "No text could be extracted from this PDF. It may be a scanned image — send the page to /parse-image, which reads any travel document, or use the Boarding Pass Scanner.",
         });
@@ -138,6 +142,7 @@ router.post(
       res.status(described.status).json({
         error: "PDF parsing failed",
         message: described.message,
+        code: described.code,
       });
     }
   }

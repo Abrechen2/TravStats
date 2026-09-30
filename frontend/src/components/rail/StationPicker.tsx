@@ -4,7 +4,10 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { railApi } from "../../lib/api/rail";
 import { logger } from "../../lib/logger";
 import type { RailStationHit } from "../../types/rail";
+import { countryName } from "../../shared/geo/countryCode";
 import { EMPTY_STATION, RailStationField, type RailStationDraft } from "./RailStationField";
+import { isPlausibleStation } from "./railImportModel";
+import { StationShortCode } from "./StationShortCode";
 
 interface Props {
   label: string;
@@ -13,6 +16,12 @@ interface Props {
   onChange: (next: RailStationDraft) => void;
   onValidityChange?: (valid: boolean) => void;
   inputClassName: string;
+  /**
+   * The name a ticket printed, when the picker opens on it (the import
+   * review). While the query is still that name, only plausible stations are
+   * offered — see `isPlausibleStation`; once the user types, the plain search.
+   */
+  printedName?: string;
 }
 
 const MIN_QUERY = 2;
@@ -52,8 +61,9 @@ export function StationPicker({
   onChange,
   onValidityChange,
   inputClassName,
+  printedName,
 }: Props): JSX.Element {
-  const { t } = useTranslation(["rail"]);
+  const { t, i18n } = useTranslation(["rail"]);
   // A station already chosen through the geocoder opens in that mode, so an
   // edit shows what was picked instead of an empty search.
   const [mode, setMode] = useState<"catalogue" | "geocoder">(
@@ -132,6 +142,13 @@ export function StationPicker({
   }
 
   const listId = `${idPrefix}-stations`;
+  const suggestingForPrinted = printedName !== undefined && query === printedName;
+  const offered =
+    search.kind === "done"
+      ? suggestingForPrinted
+        ? search.hits.filter((hit) => isPlausibleStation(printedName, hit.name))
+        : search.hits
+      : [];
   return (
     <div className="space-y-1">
       <label className="text-sm" htmlFor={`${idPrefix}-search`}>
@@ -141,7 +158,7 @@ export function StationPicker({
         id={`${idPrefix}-search`}
         className={inputClassName}
         role="combobox"
-        aria-expanded={search.kind === "done" && search.hits.length > 0}
+        aria-expanded={offered.length > 0}
         aria-controls={listId}
         aria-autocomplete="list"
         autoComplete="off"
@@ -163,25 +180,34 @@ export function StationPicker({
           {t("rail:station.searchError")}
         </p>
       ) : null}
-      {search.kind === "done" && search.hits.length === 0 ? (
-        <p className="t-caption">{t("rail:station.noHits")}</p>
+      {search.kind === "done" && offered.length === 0 ? (
+        <p className="t-caption">
+          {suggestingForPrinted
+            ? t("rail:station.noPlausibleHit", { name: printedName })
+            : t("rail:station.noHits")}
+        </p>
       ) : null}
-      {search.kind === "done" && search.hits.length > 0 ? (
+      {offered.length > 0 ? (
         <ul
           id={listId}
           role="listbox"
           className="max-h-56 overflow-y-auto rounded-md border border-border bg-(--bg-surface)"
         >
-          {search.hits.map((hit) => (
+          {offered.map((hit) => (
             <li key={hit.id} role="option" aria-selected={false}>
               <button
                 type="button"
                 className="flex w-full justify-between gap-2 px-3 py-2 text-left text-sm hover:bg-(--bg-base)"
                 onClick={(): void => pick(hit)}
               >
-                <span>{hit.name}</span>
+                <span>
+                  {hit.name}
+                  <StationShortCode code={hit.shortCode} />
+                </span>
                 <span className="t-caption">
-                  {[hit.country, hit.uic].filter(Boolean).join(" · ")}
+                  {[countryName(hit.country, i18n.language) || hit.country, hit.uic]
+                    .filter(Boolean)
+                    .join(" · ")}
                 </span>
               </button>
             </li>

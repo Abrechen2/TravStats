@@ -1,14 +1,19 @@
+import BackupZoneField from "./BackupZoneField";
+import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { useState, useEffect } from "react";
 import { backupApi, adminApi } from "../../lib/api";
 import type { BackupScheduleSettings } from "../../lib/api/backup";
 import { useToastStore } from "../../store/toastStore";
-import { format } from "date-fns";
+import { profileDateTime } from "../../lib/profileInstant";
 import { logger } from "../../lib/logger";
 import { apiErrorMachineCode, extractApiErrorMessage } from "../../lib/apiError";
+import { JobLostError, jobErrorCode, waitForJob } from "../../lib/api/jobs";
+import { backupFailureKey, backupRowFailureKey } from "../../lib/backupFailure";
 import { useTranslation } from "../../hooks/useTranslation";
 // The shared frame: role=dialog, aria-modal, Escape, focus in and back out,
 // and a panel that scrolls instead of running off a 320px screen (AUD-037).
 import Modal from "../Modal";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 
 interface Backup {
   id: string;
@@ -20,6 +25,8 @@ interface Backup {
   startedAt: string | null;
   completedAt: string | null;
   errorMessage: string | null;
+  /** Why a failed backup failed — a code, worded by `backupRowFailureKey`. */
+  errorCode?: string | null;
   metadata: Record<string, unknown> | null;
   syncedToCloud: boolean;
   cloudSyncAt: string | null;
@@ -44,6 +51,8 @@ interface RestoreModalProps {
    * decision, not an error message.
    */
   encryptionKeyMismatch?: boolean;
+  /** The restore job is running: the dialog says so and cannot be sent twice. */
+  restoring?: boolean;
 }
 
 /** Exported for its own test — the dialog contract is worth holding on its
@@ -53,6 +62,7 @@ export function RestoreModal({
   onClose,
   onConfirm,
   encryptionKeyMismatch = false,
+  restoring = false,
 }: RestoreModalProps): JSX.Element {
   const { t } = useTranslation(["admin", "common"]);
   const [scope, setScope] = useState<"full" | "database" | "files">("full");
@@ -68,7 +78,8 @@ export function RestoreModal({
       if (isNaN(date.getTime())) {
         return t("common:labels.unknown");
       }
-      return format(date, "dd.MM.yyyy HH:mm");
+      // A backup belongs to no place: the user's profile clock (ADR 0002 Q1).
+      return profileDateTime(date) ?? t("common:labels.unknown");
     } catch {
       return t("common:labels.unknown");
     }
@@ -89,20 +100,23 @@ export function RestoreModal({
     <Modal
       open
       onClose={onClose}
+      busy={restoring}
       title={<span style={{ color: "var(--danger)" }}>⚠️ {t("admin:backup.restore.title")}</span>}
       maxWidth={672}
       closeLabel={t("common:buttons.cancel")}
       footer={
         <>
-          <button onClick={onClose} className="btn-secondary">
+          <button onClick={onClose} disabled={restoring} className="btn-secondary">
             {t("common:buttons.cancel")}
           </button>
           <button
             onClick={handleConfirm}
-            disabled={!mayConfirm}
+            disabled={!mayConfirm || restoring}
             className="btn-danger disabled:opacity-50 disabled:cursor-not-allowed"
           >
-            {t("admin:backup.restore.confirmButton")}
+            {restoring
+              ? t("admin:backup.restore.inProgress")
+              : t("admin:backup.restore.confirmButton")}
           </button>
         </>
       }
@@ -189,10 +203,12 @@ export function RestoreModal({
 
 export default function BackupManagement(): JSX.Element {
   const { t } = useTranslation(["admin", "common", "settings"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const addToast = useToastStore((state) => state.addToast);
   const [backups, setBackups] = useState<Backup[]>([]);
   const [loading, setLoading] = useState(true);
   const [creating, setCreating] = useState(false);
+  const [restoring, setRestoring] = useState(false);
   const [restoreModal, setRestoreModal] = useState<Backup | null>(null);
   /** Set when the server refused the last restore over the encryption key.
    *  Cleared whenever the dialog opens or closes, so an acknowledgement can
@@ -266,30 +282,46 @@ export default function BackupManagement(): JSX.Element {
   }, []);
 
   const handleCreateBackup = async () => {
+    // A job, not a request held open: the dump takes minutes, and a ten-second
+    // timeout used to announce "failed" over a backup that went on to finish.
     try {
       setCreating(true);
-      await backupApi.create({ type: "full" });
-      addToast("success", t("admin:backup.toasts.started"));
-      setTimeout(() => {
-        loadBackups();
-        loadStatus();
-      }, 1000);
+      const { jobId } = await backupApi.create({ type: "full" });
+      addToast("info", t("admin:backup.toasts.started"));
+      void loadBackups();
+      await waitForJob(jobId);
+      addToast("success", t("admin:backup.toasts.created"));
     } catch (error) {
       logger.error("Failed to create backup:", error);
-      addToast("error", t("admin:backup.toasts.createFailed"));
+      addToast(
+        "error",
+        t(
+          error instanceof JobLostError
+            ? "admin:backup.toasts.outcomeUnknown"
+            : backupFailureKey(error, "admin:backup.toasts.createFailed")
+        )
+      );
     } finally {
       setCreating(false);
+      void loadBackups();
+      void loadStatus();
     }
   };
 
   const handleSaveBackupSettings = async (): Promise<void> => {
     setSavingSettings(true);
     try {
-      const updated = await backupApi.updateBackupSettings(backupSettings);
+      const { backupEnabled, backupInterval, backupRetentionDays, backupZone } = backupSettings;
+      const updated = await backupApi.updateBackupSettings({
+        backupEnabled,
+        backupInterval,
+        backupRetentionDays,
+        backupZone: backupZone ?? null,
+      });
       setBackupSettings(updated);
       addToast("success", t("admin:backup.settingsSaved"));
     } catch (err: unknown) {
-      addToast("error", t("admin:backup.settingsFailed"));
+      addToast("error", saveErrorMessage(err, t, "admin:backup.settingsFailed"));
       logger.error("Failed to save backup settings", err);
     } finally {
       setSavingSettings(false);
@@ -321,26 +353,31 @@ export default function BackupManagement(): JSX.Element {
   ) => {
     if (!restoreModal) return;
 
+    // The dialog stays open, busy, until the job has an outcome: the admin
+    // reads the REAL result — the restore used to report "failed" after ten
+    // seconds while it completed, and the retry met a 409.
+    setRestoring(true);
     try {
-      await backupApi.restore(restoreModal.id, {
+      const { jobId } = await backupApi.restore(restoreModal.id, {
         scope,
         createBackupBefore,
         acceptEncryptionKeyChange,
       });
-      addToast("success", t("admin:backup.toasts.restoring"));
+      await waitForJob(jobId);
+      addToast("success", t("admin:backup.toasts.restored"));
       setRestoreModal(null);
       setKeyMismatch(false);
-      setTimeout(() => {
-        loadBackups();
-        loadStatus();
-      }, 2000);
     } catch (error) {
       logger.error("Failed to restore backup:", error);
       // The preflight refusals each say something the generic toast cannot,
       // and two of them are the whole point of refusing: nothing was written.
       // A single "restore failed" over an archive whose credentials merely
       // cannot be decrypted would send the admin looking for a broken file.
-      switch (apiErrorMachineCode(error)) {
+      if (error instanceof JobLostError) {
+        addToast("error", t("admin:backup.toasts.outcomeUnknown"));
+        return;
+      }
+      switch (jobErrorCode(error) ?? apiErrorMachineCode(error)) {
         case "RESTORE_ENCRYPTION_KEY_MISMATCH":
           // Modal stays open — it now asks for the acknowledgement.
           setKeyMismatch(true);
@@ -352,8 +389,12 @@ export default function BackupManagement(): JSX.Element {
           addToast("error", t("admin:backup.restore.archiveUnreadable"));
           break;
         default:
-          addToast("error", t("admin:backup.toasts.restoreFailed"));
+          addToast("error", t(backupFailureKey(error, "admin:backup.toasts.restoreFailed")));
       }
+    } finally {
+      setRestoring(false);
+      void loadBackups();
+      void loadStatus();
     }
   };
 
@@ -383,9 +424,8 @@ export default function BackupManagement(): JSX.Element {
   };
 
   const handleDelete = async (backup: Backup) => {
-    if (!confirm(t("admin:backup.deleteConfirm", { date: formatDate(backup.completedAt) }))) {
-      return;
-    }
+    const message = t("admin:backup.deleteConfirm", { date: formatDate(backup.completedAt) });
+    if (!(await askConfirm({ message, destructive: true }))) return;
 
     try {
       await backupApi.delete(backup.id);
@@ -412,7 +452,8 @@ export default function BackupManagement(): JSX.Element {
       if (isNaN(date.getTime())) {
         return t("common:labels.unknown");
       }
-      return format(date, "dd.MM.yyyy HH:mm");
+      // A backup belongs to no place: the user's profile clock (ADR 0002 Q1).
+      return profileDateTime(date) ?? t("common:labels.unknown");
     } catch (error) {
       logger.warn("Failed to format date:", dateString, error);
       return t("common:labels.unknown");
@@ -426,7 +467,7 @@ export default function BackupManagement(): JSX.Element {
       if (isNaN(date.getTime())) {
         return t("common:labels.unknown");
       }
-      return format(date, "dd.MM.yyyy HH:mm:ss");
+      return profileDateTime(date, { seconds: true }) ?? t("common:labels.unknown");
     } catch (error) {
       logger.warn("Failed to format date:", dateString, error);
       return t("common:labels.unknown");
@@ -561,6 +602,12 @@ export default function BackupManagement(): JSX.Element {
               />
             </div>
           </div>
+          <BackupZoneField
+            value={backupSettings.backupZone ?? null}
+            effective={backupSettings.backupZoneEffective ?? null}
+            hostZone={backupSettings.hostZone ?? null}
+            onChange={(zone) => setBackupSettings({ ...backupSettings, backupZone: zone })}
+          />
         </div>
       </div>
 
@@ -620,6 +667,11 @@ export default function BackupManagement(): JSX.Element {
                     <span className="text-sm font-medium" style={getStatusStyle(backup.status)}>
                       {getStatusText(backup.status)}
                     </span>
+                    {backup.status === "failed" && (
+                      <p className="mt-1 max-w-xs whitespace-normal text-xs text-(--text-muted)">
+                        {t(backupRowFailureKey(backup.errorCode))}
+                      </p>
+                    )}
                   </td>
                   <td className="px-6 py-4 whitespace-nowrap text-sm text-(--text-muted)">
                     {backup.status === "completed" ? formatSize(backup.size) : "-"}
@@ -711,8 +763,10 @@ export default function BackupManagement(): JSX.Element {
           }}
           onConfirm={handleRestore}
           encryptionKeyMismatch={keyMismatch}
+          restoring={restoring}
         />
       )}
+      {confirmDialog}
     </div>
   );
 }

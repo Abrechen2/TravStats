@@ -27,6 +27,7 @@
  */
 
 import type { Cruise } from "../../types/cruise";
+import { isAmountRecorded } from "../../shared/flightPricing";
 
 export interface CurrencySpend {
   currency: string;
@@ -71,17 +72,17 @@ const MONTHS = 12;
 const DAY_MS = 86_400_000;
 
 /**
- * Whether a cruise has a price worth counting.
+ * Whether a price was recorded for the cruise.
  *
  * Exported because the money block needs the SAME answer outside the fold, to
- * say how many BOOKED cruises its rows leave out; the backend spells the same
- * rule in `services/stats/cruiseSpendBase.ts`. A null or zero price is "no
- * price", never a free voyage.
+ * say how many BOOKED cruises its rows leave out; the backend asks the same in
+ * `services/stats/cruiseSpendBase.ts`. `null` is "no price"; 0 is a price —
+ * the cruise form writes null for an empty field, so a 0 was typed on purpose.
  */
 export function isPricedCruise<T extends { price: number | null }>(
   cruise: T
 ): cruise is T & { price: number } {
-  return typeof cruise.price === "number" && cruise.price > 0;
+  return isAmountRecorded(cruise.price);
 }
 
 /** Nights between two dates, or null when either is missing or unreadable. */

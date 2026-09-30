@@ -87,7 +87,7 @@ describe("spreadsheet import", () => {
 
   it("never updates another account's cruise, whatever its id row says", async () => {
     const [result] = await run(
-      [{ id: victimCruiseId, cruiseLine: "Übernommen" }],
+      [{ id: victimCruiseId, cruiseLine: "Übernommen", startDate: "2026-06-01" }],
       false,
       "cruises"
     );
@@ -203,10 +203,23 @@ describe("spreadsheet import", () => {
   });
 
   it("creates a cruise for a row with no id (tester report, 2026-09-20)", async () => {
-    const [result] = await run([{ id: "", cruiseLine: "AIDA" }], false, "cruises");
+    const [result] = await run(
+      [{ id: "", cruiseLine: "AIDA", startDate: "2026-06-01" }],
+      false,
+      "cruises"
+    );
     expect(result.errors).toBe(0);
     expect(result.created).toBe(1);
     expect(await prisma.cruise.count({ where: { userId, cruiseLine: "AIDA" } })).toBe(1);
+  });
+
+  // A new cruise needs a start date (`createCruiseSchema`): an undated row was
+  // created on every re-import, because matching keys on that date.
+  it("refuses a new cruise row without a start date instead of creating an undated one", async () => {
+    const [result] = await run([{ id: "", cruiseLine: "Undatiert" }], false, "cruises");
+    expect(result.errors).toBe(1);
+    expect(result.created).toBe(0);
+    expect(await prisma.cruise.count({ where: { userId, cruiseLine: "Undatiert" } })).toBe(0);
   });
 
   it("ignores a sheet key it does not know", async () => {
@@ -502,6 +515,10 @@ describe("place visits", () => {
     const visit = await prisma.placeVisit.findFirst({ where: { userId: ownerId } });
     expect(visit?.placeId).toBe(ownPlaceId);
     expect(visit?.notes).toBe("Bestellung");
+    // ADR 0002: the imported wall clock, read on the place's clock, and who wrote it.
+    expect(visit?.writtenVia).toBe("import");
+    expect(visit?.visitedZone).not.toBeNull();
+    expect(visit?.visitedAtUtc).not.toBeNull();
   });
 
   it("refuses to hang a visit on someone else's place", async () => {

@@ -219,7 +219,15 @@ const continentSchema = z.enum([
   "Oceania",
   "South America",
 ]);
-const evidenceKindSchema = z.enum(["flight", "lodging", "port", "place", "roadtrip", "track"]);
+const evidenceKindSchema = z.enum([
+  "flight",
+  "lodging",
+  "port",
+  "place",
+  "rail",
+  "roadtrip",
+  "track",
+]);
 const countryTierSchema = z.enum(["slept", "visited", "transited", "connection"]);
 
 const passportCountrySchema = z.object({

@@ -10,7 +10,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { resolveRouteProvider } from "../../services/tour/routing/resolveProvider";
-import type { RouteProvider, RouteResult } from "../../services/tour/routing/types";
+import type { RouteFailure, RouteProvider, RouteResult } from "../../services/tour/routing/types";
 
 const mockResolveProvider = resolveRouteProvider as jest.Mock<Promise<RouteProvider | null>>;
 
@@ -41,7 +41,9 @@ describe("Tour route sections — provider routing", () => {
   const KRISTIANSAND = { lat: 58.15, lon: 8.0 };
   const BERGEN = { lat: 60.39, lon: 5.32 };
 
-  function fakeProvider(routeImpl: jest.Mock<Promise<RouteResult | null>>): RouteProvider {
+  function fakeProvider(
+    routeImpl: jest.Mock<Promise<RouteResult | RouteFailure | null>>
+  ): RouteProvider {
     return { id: "graphhopper", route: routeImpl };
   }
 
@@ -56,6 +58,9 @@ describe("Tour route sections — provider routing", () => {
 
   beforeEach(async () => {
     jest.clearAllMocks();
+    // Assigning the stops below routes their new legs automatically; with the
+    // previous test's provider still mocked, every leg would start "routed".
+    mockResolveProvider.mockResolvedValue(null);
     await prisma.trip.deleteMany({ where: { userId } });
     const trip = await prisma.trip.create({ data: { userId, name: "T" } });
     tripId = trip.id;
@@ -118,7 +123,57 @@ describe("Tour route sections — provider routing", () => {
     expect(res.body.leg.distanceKm).toBe(350);
     expect(res.body.leg.drivingMinutes).toBe(240);
     expect(res.body.leg.waypoints).toEqual(line);
+    expect(res.body.fallbackReason).toBeNull();
     expect(routeImpl).toHaveBeenCalledTimes(1);
+  });
+
+  it("names why a single leg stayed straight, so the client can say more than 'nothing happened'", async () => {
+    const routeImpl = jest.fn().mockResolvedValue({ failure: "point_not_near_road" });
+    mockResolveProvider.mockResolvedValue(fakeProvider(routeImpl));
+
+    const res = await request(app)
+      .post(routeLegUrl(osloId, kristiansandId))
+      .set("Cookie", cookie)
+      .send();
+
+    expect(res.status).toBe(200);
+    expect(res.body.leg.source).toBe("straight");
+    expect(res.body.fallbackReason).toBe("point_not_near_road");
+  });
+
+  it("a failed routing attempt leaves a hand-drawn leg as it was drawn", async () => {
+    const drawn: Array<[number, number]> = [
+      [OSLO.lon, OSLO.lat],
+      [9.5, 59.2],
+      [KRISTIANSAND.lon, KRISTIANSAND.lat],
+    ];
+    const put = await request(app)
+      .put(legUrl(osloId, kristiansandId))
+      .set("Cookie", cookie)
+      .send({ source: "drawn", waypoints: drawn });
+    expect(put.status).toBe(200);
+    const routeImpl = jest.fn().mockResolvedValue({ failure: "no_route" });
+    mockResolveProvider.mockResolvedValue(fakeProvider(routeImpl));
+
+    const res = await request(app)
+      .post(routeLegUrl(osloId, kristiansandId))
+      .set("Cookie", cookie)
+      .send();
+
+    expect(res.status).toBe(200);
+    expect(res.body.fallbackReason).toBe("no_route");
+    expect(res.body.leg.source).toBe("drawn");
+    expect(res.body.leg.waypoints).toEqual(drawn);
+  });
+
+  it("hands the section's vehicle to the provider", async () => {
+    await prisma.tripRoute.update({ where: { id: routeId }, data: { vehicle: "bicycle" } });
+    const routeImpl = jest.fn().mockResolvedValue(null);
+    mockResolveProvider.mockResolvedValue(fakeProvider(routeImpl));
+
+    await request(app).post(routeLegUrl(osloId, kristiansandId)).set("Cookie", cookie).send();
+
+    expect(routeImpl).toHaveBeenCalledWith(expect.objectContaining({ vehicle: "bicycle" }));
   });
 
   it("refuses to route a leg when no provider is configured (409, not 400)", async () => {
@@ -147,6 +202,7 @@ describe("Tour route sections — provider routing", () => {
     expect(res.status).toBe(200);
     expect(res.body.leg.source).toBe("straight");
     expect(res.body.leg.confidence).toBe("low");
+    expect(res.body.fallbackReason).toBe("provider_error");
   });
 
   it("route-all routes every routable leg of a section and reports how many it skipped", async () => {
@@ -172,6 +228,8 @@ describe("Tour route sections — provider routing", () => {
 
     expect(res.status).toBe(200);
     expect(res.body.routedCount).toBe(1);
+    expect(res.body.fallbackCount).toBe(0);
+    expect(res.body.fallbackReason).toBeNull();
     expect(res.body.skippedCount).toBe(1);
     // Only the road leg was ever handed to the provider.
     expect(routeImpl).toHaveBeenCalledTimes(1);
@@ -193,17 +251,18 @@ describe("Tour route sections — provider routing", () => {
     expect(ferryLeg.mode).toBe("ferry");
   });
 
-  it("a provider failure during route-all leaves that leg a straight chord, and still answers 200 with an honest count", async () => {
-    const routeImpl = jest.fn().mockResolvedValue(null);
+  it("a provider failure during route-all leaves that leg a straight chord, and counts it as a fallback, not a route", async () => {
+    const routeImpl = jest.fn().mockResolvedValue({ failure: "rate_limited" });
     mockResolveProvider.mockResolvedValue(fakeProvider(routeImpl));
 
     const res = await request(app).post(routeAllUrl()).set("Cookie", cookie).send();
 
     expect(res.status).toBe(200);
-    // Both legs are road-mode by default, so both are attempted — the count
-    // is honest about attempts, not about how many the provider actually
-    // answered.
-    expect(res.body.routedCount).toBe(2);
+    // Both legs are road-mode and both were sent; neither was routed. The
+    // old count said "2 routed" here, which read as success.
+    expect(res.body.routedCount).toBe(0);
+    expect(res.body.fallbackCount).toBe(2);
+    expect(res.body.fallbackReason).toBe("rate_limited");
     expect(res.body.skippedCount).toBe(0);
 
     const legs = res.body.legs as Array<{ source: string; confidence: string }>;

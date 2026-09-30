@@ -43,6 +43,5 @@ export function useRevealActive(
     observer.observe(current);
     return (): void => observer.disconnect();
     // The caller names what should re-run it; `rowRef` and `selector` are stable.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, deps);
 }

@@ -11,17 +11,27 @@ import { minorUnits } from "../../shared/currencies";
 import { railApi } from "../../lib/api/rail";
 import { tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
+import { useToastStore } from "../../store/toastStore";
 import type { Trip } from "../../types";
 import { RAIL_TRAVEL_CLASSES, type RailJourney, type RailTravelClass } from "../../types/rail";
+import SuggestionChips from "../common/SuggestionChips";
+import { ClockChangeNotice } from "../common/ClockChangeNotice";
+import { trainLabel, useRailEntrySuggestions } from "../../hooks/useRailEntrySuggestions";
 import { StationPicker } from "./StationPicker";
 import { RailLookupPanel } from "./RailLookupPanel";
+import type { RailStationDraft } from "./RailStationField";
 import {
   canSubmit,
   connectionDraftFrom,
   draftFrom,
+  geometryNotice,
   isStationComplete,
+  knownStationZone,
+  onwardDraftFrom,
+  saveErrorFrom,
   toRailInput,
   type RailFormDraft,
+  type RailSaveError,
 } from "./railFormModel";
 
 interface Props {
@@ -41,6 +51,9 @@ interface Props {
 
 const INPUT_CLASS =
   "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
+
+/** A notice about the line is read, not glanced at — longer than a "saved". */
+const NOTICE_MS = 12_000;
 
 // Native date/time pickers render their mask unreadably dark on our surface
 // without it — the same note the cruise form carries.
@@ -64,6 +77,7 @@ export function RailFormModal({
 }: Props): JSX.Element {
   const { t } = useTranslation(["rail", "common"]);
   const recentCurrencies = useRecentCurrencies();
+  const addToast = useToastStore((s) => s.addToast);
   // The dialog can move on to the next leg without closing, so what it edits
   // and what it continues are state, seeded from the props.
   const [journey, setJourney] = useState<RailJourney | null>(initialJourney);
@@ -78,7 +92,9 @@ export function RailFormModal({
   const [depValid, setDepValid] = useState(true);
   const [arrValid, setArrValid] = useState(true);
   const [saving, setSaving] = useState(false);
-  const [error, setError] = useState<string | null>(null);
+  const [error, setError] = useState<RailSaveError | null>(null);
+  /** Where the ride continues after a change the lookup revealed. */
+  const [onward, setOnward] = useState<RailStationDraft | null>(null);
 
   const set = <K extends keyof RailFormDraft>(key: K, value: RailFormDraft[K]): void =>
     setDraft((prev) => ({ ...prev, [key]: value }));
@@ -108,7 +124,45 @@ export function RailFormModal({
     onChange: (tripId) => set("tripId", tripId),
   });
 
+  const { suggestions, failed: suggestionsFailed } = useRailEntrySuggestions({
+    departure: draft.departure,
+    arrival: draft.arrival,
+    operator: draft.operator,
+  });
+  const typedTrain = trainLabel({
+    category: draft.trainCategory.trim() || null,
+    number: draft.trainNumber.trim(),
+  });
+  const trainChips = suggestions.trains.map(trainLabel);
+  const pickTrain = (label: string): void => {
+    const train = suggestions.trains.find((candidate) => trainLabel(candidate) === label);
+    if (!train) return;
+    setDraft((prev) => ({
+      ...prev,
+      trainCategory: train.category ?? "",
+      trainNumber: train.number,
+    }));
+  };
+
   const ready = canSubmit(draft) && depValid && arrValid;
+  const errorText =
+    error === null
+      ? null
+      : t(error.key, error.fieldLabelKey ? { field: t(error.fieldLabelKey) } : undefined);
+  /** The refusal shown under a time field, with the input marked invalid. */
+  const fieldError = (field: "departureLocal" | "arrivalLocal") =>
+    error?.field === field
+      ? {
+          input: { "aria-invalid": true, "aria-describedby": `rail-${field}-error` } as const,
+          message: (
+            <p id={`rail-${field}-error`} role="alert" className="mt-1 text-sm text-(--danger)">
+              {errorText}
+            </p>
+          ),
+        }
+      : { input: {}, message: null };
+  const depError = fieldError("departureLocal");
+  const arrError = fieldError("arrivalLocal");
 
   const previousId = typeof connectsFrom === "string" ? connectsFrom : connectsFrom?.id;
   const previousStation =
@@ -120,9 +174,14 @@ export function RailFormModal({
     setError(null);
     try {
       const input = toRailInput(draft);
-      const saved = journey
+      const result = journey
         ? await railApi.update(journey.id, input)
         : await railApi.create(previousId ? { ...input, connectsFrom: previousId } : input);
+      const saved = result.journey;
+      const notice = geometryNotice(result.geometry);
+      if (notice) {
+        addToast(notice.level, t(notice.key, { reason: t(notice.reasonKey) }), NOTICE_MS);
+      }
       if (!thenConnect) {
         await onSaved(saved);
         return;
@@ -132,12 +191,12 @@ export function RailFormModal({
       await onProgress?.(saved);
       setJourney(null);
       setConnectsFrom(saved);
-      setDraft(connectionDraftFrom(saved));
+      setDraft(onward ? onwardDraftFrom(saved, onward) : connectionDraftFrom(saved));
+      setOnward(null);
       setFormKey((k) => k + 1);
     } catch (err: unknown) {
       logger.error("RailFormModal: save failed", err);
-      const message = (err as { response?: { data?: { error?: string } } })?.response?.data?.error;
-      setError(message ?? t("rail:form.saveError"));
+      setError(saveErrorFrom(err));
     } finally {
       setSaving(false);
     }
@@ -192,13 +251,21 @@ export function RailFormModal({
         )}
         <Section title={t("rail:form.train")}>
           <div className="grid grid-cols-1 gap-3 sm:grid-cols-3">
-            <input
-              className={INPUT_CLASS}
-              aria-label={t("rail:form.operator")}
-              placeholder={t("rail:form.operatorPlaceholder")}
-              value={draft.operator}
-              onChange={(e): void => set("operator", e.target.value)}
-            />
+            <div>
+              <input
+                className={INPUT_CLASS}
+                aria-label={t("rail:form.operator")}
+                placeholder={t("rail:form.operatorPlaceholder")}
+                value={draft.operator}
+                onChange={(e): void => set("operator", e.target.value)}
+              />
+              <SuggestionChips
+                value={draft.operator}
+                suggestions={suggestions.operators}
+                onPick={(value): void => set("operator", value)}
+                fieldLabel={t("rail:form.operator")}
+              />
+            </div>
             <input
               className={INPUT_CLASS}
               aria-label={t("rail:form.category")}
@@ -214,14 +281,54 @@ export function RailFormModal({
               onChange={(e): void => set("trainNumber", e.target.value)}
             />
           </div>
+          <SuggestionChips
+            value={typedTrain}
+            suggestions={trainChips}
+            onPick={pickTrain}
+            fieldLabel={t("rail:form.train")}
+          />
+          {suggestionsFailed && (
+            <p className="t-caption mt-1" data-testid="rail-suggestions-failed">
+              {t("rail:form.suggestionsFailed")}
+            </p>
+          )}
         </Section>
 
         <RailLookupPanel
           draft={draft}
-          onApply={setDraft}
+          onApply={(next, destination): void => {
+            setDraft(next);
+            setOnward(destination);
+          }}
           onClearLookup={(): void => set("lookup", null)}
           inputClassName={INPUT_CLASS}
         />
+
+        {onward && (
+          <div
+            className="mb-3 rounded-md border border-border px-3 py-2 text-sm"
+            data-testid="rail-onward-banner"
+          >
+            <p>{t("rail:connection.onward", { station: onward.name })}</p>
+            <div className="mt-2 flex gap-2">
+              <button
+                type="button"
+                className="rounded-md bg-(--accent) px-3 py-1.5 text-sm font-medium text-(--bg-base) disabled:opacity-50"
+                disabled={saving || !ready}
+                onClick={(): void => void submit(true)}
+              >
+                {t("rail:connection.saveAndContinue", { station: onward.name })}
+              </button>
+              <button
+                type="button"
+                className="rounded-md border border-border px-3 py-1.5 text-sm"
+                onClick={(): void => setOnward(null)}
+              >
+                {t("rail:connection.dismissOnward")}
+              </button>
+            </div>
+          </div>
+        )}
 
         <Section title={t("rail:form.route")}>
           <div className="grid grid-cols-1 gap-4 sm:grid-cols-2">
@@ -243,26 +350,44 @@ export function RailFormModal({
             />
           </div>
           <div className="mt-3 grid grid-cols-1 gap-3 sm:grid-cols-2">
-            <label className="text-sm">
-              {t("rail:form.departureTime")}
-              <input
-                type="datetime-local"
-                className={`mt-1 ${INPUT_CLASS}`}
-                style={DARK_PICKER_STYLE}
-                value={draft.departureLocal}
-                onChange={(e): void => set("departureLocal", e.target.value)}
+            <div>
+              <label className="block text-sm">
+                {t("rail:form.departureTime")}
+                <input
+                  type="datetime-local"
+                  className={`mt-1 ${INPUT_CLASS}`}
+                  style={DARK_PICKER_STYLE}
+                  value={draft.departureLocal}
+                  onChange={(e): void => set("departureLocal", e.target.value)}
+                  {...depError.input}
+                />
+              </label>
+              {depError.message}
+              {/* Notice only: the rail write path cannot take `fold` yet, so no
+                  "later" choice is offered that the save would drop. */}
+              <ClockChangeNotice
+                local={draft.departureLocal}
+                zone={knownStationZone(journey, "dep", draft.departure)}
               />
-            </label>
-            <label className="text-sm">
-              {t("rail:form.arrivalTime")}
-              <input
-                type="datetime-local"
-                className={`mt-1 ${INPUT_CLASS}`}
-                style={DARK_PICKER_STYLE}
-                value={draft.arrivalLocal}
-                onChange={(e): void => set("arrivalLocal", e.target.value)}
+            </div>
+            <div>
+              <label className="block text-sm">
+                {t("rail:form.arrivalTime")}
+                <input
+                  type="datetime-local"
+                  className={`mt-1 ${INPUT_CLASS}`}
+                  style={DARK_PICKER_STYLE}
+                  value={draft.arrivalLocal}
+                  onChange={(e): void => set("arrivalLocal", e.target.value)}
+                  {...arrError.input}
+                />
+              </label>
+              {arrError.message}
+              <ClockChangeNotice
+                local={draft.arrivalLocal}
+                zone={knownStationZone(journey, "arr", draft.arrival)}
               />
-            </label>
+            </div>
           </div>
           <p className="mt-2 text-xs text-(--text-muted)">{t("rail:form.timeHint")}</p>
           <label className="mt-3 block text-sm">
@@ -289,33 +414,61 @@ export function RailFormModal({
 
         <Section title={t("rail:form.seat")}>
           <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
-            <select
-              aria-label={t("rail:form.class")}
-              className={INPUT_CLASS}
-              value={draft.travelClass}
-              onChange={(e): void => set("travelClass", e.target.value as RailTravelClass | "")}
-            >
-              <option value="">{t("rail:form.class")}</option>
-              {RAIL_TRAVEL_CLASSES.map((c) => (
-                <option key={c} value={c}>
-                  {t(`rail:class.${c}`)}
-                </option>
-              ))}
-            </select>
-            <input
-              className={INPUT_CLASS}
-              aria-label={t("rail:form.coach")}
-              placeholder={t("rail:form.coach")}
-              value={draft.coach}
-              onChange={(e): void => set("coach", e.target.value)}
-            />
-            <input
-              className={INPUT_CLASS}
-              aria-label={t("rail:form.seatNumber")}
-              placeholder={t("rail:form.seatNumber")}
-              value={draft.seat}
-              onChange={(e): void => set("seat", e.target.value)}
-            />
+            <div>
+              <select
+                aria-label={t("rail:form.class")}
+                className={INPUT_CLASS}
+                value={draft.travelClass}
+                onChange={(e): void => set("travelClass", e.target.value as RailTravelClass | "")}
+              >
+                <option value="">{t("rail:form.class")}</option>
+                {RAIL_TRAVEL_CLASSES.map((c) => (
+                  <option key={c} value={c}>
+                    {t(`rail:class.${c}`)}
+                  </option>
+                ))}
+              </select>
+              {/* Offered only while no class is chosen — a chip never
+                  overrides a value the user set. */}
+              {draft.travelClass === "" && suggestions.travelClass !== null && (
+                <SuggestionChips
+                  value=""
+                  suggestions={[t(`rail:class.${suggestions.travelClass}`)]}
+                  onPick={(): void => set("travelClass", suggestions.travelClass ?? "")}
+                  fieldLabel={t("rail:form.class")}
+                />
+              )}
+            </div>
+            <div>
+              <input
+                className={INPUT_CLASS}
+                aria-label={t("rail:form.coach")}
+                placeholder={t("rail:form.coach")}
+                value={draft.coach}
+                onChange={(e): void => set("coach", e.target.value)}
+              />
+              <SuggestionChips
+                value={draft.coach}
+                suggestions={suggestions.coaches}
+                onPick={(value): void => set("coach", value)}
+                fieldLabel={t("rail:form.coach")}
+              />
+            </div>
+            <div>
+              <input
+                className={INPUT_CLASS}
+                aria-label={t("rail:form.seatNumber")}
+                placeholder={t("rail:form.seatNumber")}
+                value={draft.seat}
+                onChange={(e): void => set("seat", e.target.value)}
+              />
+              <SuggestionChips
+                value={draft.seat}
+                suggestions={suggestions.seats}
+                onPick={(value): void => set("seat", value)}
+                fieldLabel={t("rail:form.seatNumber")}
+              />
+            </div>
             <input
               type="number"
               className={INPUT_CLASS}
@@ -398,12 +551,12 @@ export function RailFormModal({
         {!(isStationComplete(draft.departure) && isStationComplete(draft.arrival)) && (
           <p className="mb-3 text-sm text-(--text-muted)">{t("rail:form.stationMissing")}</p>
         )}
-        {error !== null && (
+        {error !== null && error.field === null && (
           <div
             role="alert"
             className="mb-3 rounded-md border border-(--danger)/50 bg-(--danger)/10 px-3 py-2 text-sm text-(--danger)"
           >
-            {error}
+            {errorText}
           </div>
         )}
       </div>

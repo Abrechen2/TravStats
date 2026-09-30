@@ -39,6 +39,14 @@ interface Props {
    * never showed.
    */
   evidence?: StripEvidence;
+  /**
+   * The rows were already cut to the same span of both years (a section whose
+   * endpoint takes an end date, like rail's `until`). The label then says
+   * "ggü. gleichem Zeitraum" — the strip may only claim what its numbers are:
+   * a same-span pair under "ggü. ganzem Jahr" was the acceptance finding of
+   * 2026-09-26 ("Fahrten 2 (2025)" while 2025 had 4).
+   */
+  samePeriod?: boolean;
 }
 
 /**
@@ -65,12 +73,20 @@ export default function PeriodComparisonStrip({
   compareYear,
   rows,
   evidence,
+  samePeriod = false,
 }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["stats"]);
   const grouped = new Intl.NumberFormat(i18n.language.startsWith("de") ? "de-DE" : "en-GB");
   // Both years, because the compare year can be the LATER one: 2025 against
   // 2026 is a full year set against eight months, sides swapped.
   const running = comparisonWindow(year, compareYear).runningYear;
+  // Full-year totals beside a running year need the caveat; windowed ones do not.
+  const vsKey =
+    running === null
+      ? "stats:yearFilter.vs"
+      : samePeriod
+        ? "stats:yearFilter.vsSamePeriod"
+        : "stats:yearFilter.vsFullYear";
   return (
     <section aria-label={t("stats:yearFilter.scopeLabel", { year })}>
       <div
@@ -84,12 +100,10 @@ export default function PeriodComparisonStrip({
           {t("stats:yearFilter.scopeLabel", { year })}
         </span>
         <span className="text-xs" style={{ color: "var(--text-muted)" }}>
-          {t(running !== null ? "stats:yearFilter.vsFullYear" : "stats:yearFilter.vs", {
-            year: compareYear,
-          })}
+          {t(vsKey, { year: compareYear })}
         </span>
       </div>
-      {running !== null && (
+      {running !== null && !samePeriod && (
         <p className="text-xs mb-3" style={{ color: "var(--text-muted)" }}>
           {t("stats:yearFilter.partialYearNote", { year: running })}
         </p>

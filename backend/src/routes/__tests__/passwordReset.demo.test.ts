@@ -8,7 +8,8 @@ jest.mock("../../services/emailService", () => ({
 
 import app from "../../index";
 import { prisma } from "../../db";
-import { hashPassword } from "../../utils/password";
+import crypto from "crypto";
+import { comparePassword, hashPassword } from "../../utils/password";
 import { SMTP_CONFIG_ID } from "../admin/smtp";
 import { sendPasswordResetEmail } from "../../services/emailService";
 
@@ -98,5 +99,78 @@ describe("forgot-password and the shared demo account", () => {
     });
     expect(after?.resetToken).not.toBeNull();
     expect(sendPasswordResetEmail).toHaveBeenCalled();
+  });
+});
+
+/**
+ * The guard above only stops the LINK being sent. These two cover the routes
+ * that actually set a password, for a token that exists anyway — issued before
+ * that guard, or leaked.
+ *
+ * Measured on the public preview on 2026-09-28: the demo account's
+ * `sessionEpoch` stood at 22. Its password had been changed twenty-two times,
+ * and each change signs every other visitor out of the account the front page
+ * advertises.
+ */
+describe("the shared demo account's password cannot be SET either", () => {
+  const sha = (t: string): string => crypto.createHash("sha256").update(t).digest("hex");
+  const future = (): Date => new Date(Date.now() + 60 * 60 * 1000);
+
+  beforeAll(async () => {
+    await prisma.user.deleteMany({ where: { username: { in: ["demo", "ordinaryUser"] } } });
+    await prisma.user.create({
+      data: {
+        username: "demo",
+        passwordHash: await hashPassword("demo123"),
+        isDemo: true,
+        resetToken: sha("reset-token-demo"),
+        resetTokenExpiry: future(),
+        changeToken: sha("change-token-demo"),
+        changeTokenExpiry: future(),
+      },
+    });
+    await prisma.user.create({
+      data: {
+        username: "ordinaryUser",
+        passwordHash: await hashPassword("password123"),
+        resetToken: sha("reset-token-ordinary"),
+        resetTokenExpiry: future(),
+      },
+    });
+  });
+
+  afterAll(async () => {
+    await prisma.user.deleteMany({ where: { username: { in: ["demo", "ordinaryUser"] } } });
+  });
+
+  it("refuses a VALID reset token for the shared demo", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/reset-password")
+      .send({ token: "reset-token-demo", newPassword: "TakenOver123!" });
+
+    expect(res.status).toBe(403);
+    const after = await prisma.user.findUnique({ where: { username: "demo" } });
+    expect(await comparePassword("demo123", after!.passwordHash)).toBe(true);
+  });
+
+  it("refuses a VALID change token for the shared demo", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/force-change-password")
+      .set("Cookie", ["change_token=change-token-demo"])
+      .send({ newPassword: "TakenOver123!" });
+
+    expect(res.status).toBe(403);
+    const after = await prisma.user.findUnique({ where: { username: "demo" } });
+    expect(await comparePassword("demo123", after!.passwordHash)).toBe(true);
+  });
+
+  it("still lets an ordinary account reset — the two above are not vacuous", async () => {
+    const res = await request(app)
+      .post("/api/v1/auth/reset-password")
+      .send({ token: "reset-token-ordinary", newPassword: "BrandNew123!" });
+
+    expect(res.status).toBe(200);
+    const after = await prisma.user.findUnique({ where: { username: "ordinaryUser" } });
+    expect(await comparePassword("BrandNew123!", after!.passwordHash)).toBe(true);
   });
 });

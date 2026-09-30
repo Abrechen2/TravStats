@@ -6,6 +6,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { loadCrossDomainPopulation } from "../../services/evidence/crossDomainPopulations";
+import { computeRailStats } from "../../services/rail/railStats";
 
 /**
  * GET /rail/stats (spec 2026-09-25-rail-domain, phase 2b): figures over the
@@ -125,6 +126,7 @@ describe("rail statistics", () => {
       totalKm: 877,
       straightLineKm: 330,
       tracedKm: 547,
+      roadtripKm: 0,
       ticketKm: 0,
       unmeasuredJourneys: 1,
     });
@@ -138,6 +140,9 @@ describe("rail statistics", () => {
     // 0 is on time; 12 falls in the (5, 15] bucket.
     expect(s.delays.buckets[0]).toEqual({ upToMinutes: 0, count: 1 });
     expect(s.delays.buckets[2]).toEqual({ upToMinutes: 15, count: 1 });
+    // forgejo#132 item 15 — "Ø Verspätung" over the RECORDED rides only:
+    // (0 + 12) / 2. The ride with no delay on file is not an on-time ride.
+    expect(s.delays.averageMinutes).toBe(6);
   });
 
   it("ranks operators, categories and stations, and lists both stations' countries", async () => {
@@ -146,6 +151,13 @@ describe("rail statistics", () => {
     expect(s.trainCategories.map((r: { label: string }) => r.label)).toEqual(["ICE", "NJ"]);
     expect(s.stations[0]).toEqual({ label: "Frankfurt (Main) Hbf", count: 2 });
     expect(s.countries).toEqual(["AT", "CH", "DE"]);
+  });
+
+  it("counts the kinds of ride by the rule the rail badges use", async () => {
+    const s = (await get()).body.data;
+    // NJ Wien → Zürich is the night train; both ICEs are high-speed;
+    // Frankfurt → Basel and Wien → Zürich cross a border; two operators.
+    expect(s.rideKinds).toEqual({ nightTrains: 1, highSpeed: 2, crossBorder: 2, operators: 2 });
   });
 
   it("files a night train under the year it left, on its station's calendar", async () => {
@@ -166,7 +178,52 @@ describe("rail statistics", () => {
     );
   });
 
+  // Acceptance D11 (2026-09-26): the rail tab compared a running year with
+  // the whole previous one; the overview compares the same span.
+  it("counts a year only up to the day a same-span comparison ends", async () => {
+    // The 2025 rides left on 1 March and 1 June; a window ending 31 May
+    // holds the first alone.
+    expect((await get("?year=2025&until=05-31")).body.data.journeys).toBe(1);
+    expect((await get("?year=2025&until=06-01")).body.data.journeys).toBe(2);
+    expect((await get("?until=05-31")).status).toBe(400);
+    expect((await get("?year=2025&until=13-01")).status).toBe(400);
+  });
+
   it("refuses a nonsense year", async () => {
     expect((await get("?year=abc")).status).toBe(400);
+  });
+
+  // Review 2026-09-26, finding 7: a converted roadtrip leg's length was
+  // summed as nothing in particular — it is its own figure, not "traced".
+  it("keeps kilometres along a roadtrip line apart from the traced ones", () => {
+    const ride = (distanceSource: string, distanceKm: number) => ({
+      ...base,
+      id: distanceSource,
+      status: "completed",
+      operator: null,
+      trainCategory: null,
+      trainNumber: null,
+      depStationName: "A",
+      arrStationName: "B",
+      depStationCode: null,
+      arrStationCode: null,
+      depCountry: null,
+      arrCountry: null,
+      departureTime: new Date("2025-07-05T10:00:00Z"),
+      arrivalTime: null,
+      distanceKm,
+      distanceSource,
+      delayMinutes: null,
+    });
+    const s = computeRailStats([ride("route", 100), ride("roadtrip", 243.5)]);
+    expect(s.distance).toMatchObject({ tracedKm: 100, roadtripKm: 243.5, totalKm: 343.5 });
+
+    // Neither ride carries a delay: the average abstains. A 0 here would read
+    // as "always on time" for a question nobody answered.
+    expect(s.delays).toMatchObject({ recordedJourneys: 0, averageMinutes: null });
+
+    // A recorded 0 IS on time, and averages to 0 — kept apart from the above.
+    const onTime = computeRailStats([{ ...ride("route", 100), delayMinutes: 0 }]);
+    expect(onTime.delays).toMatchObject({ recordedJourneys: 1, averageMinutes: 0 });
   });
 });

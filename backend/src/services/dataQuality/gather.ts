@@ -7,6 +7,9 @@ import type { AddressBearingRecord } from "./checks/addressCountryMismatch";
 import type { CoordinateCountryLookup, LocatedRecord } from "./checks/coordinatesOutsideCountry";
 import type { CountryTouch } from "./checks/undatedCountryEvidence";
 import type { LodgingWithStays } from "./checks/stayDatesReversed";
+import { loadOpenTimeQuestions, type TimeQuestion } from "../timeMigration/openQuestions";
+import { loadHomePeriods } from "../home/homeStore";
+import type { HomePeriod } from "../../utils/homeAirport";
 
 /**
  * Everything the checks need from one account, read once.
@@ -46,6 +49,10 @@ export interface AccountSnapshot {
    * not a state to degrade into.
    */
   countryLookup: CoordinateCountryLookup;
+  /** The time-model backfill's questions that still stand (ADR 0002 phase 3b). */
+  timeQuestions: TimeQuestion[];
+  /** Home by date, migrated from the old shape where needed — for the residence question. */
+  homePeriods: HomePeriod[];
 }
 
 /**
@@ -248,5 +255,7 @@ export async function loadAccountSnapshot(
     countryTouches,
     locatedRecords,
     countryLookup,
+    timeQuestions: await loadOpenTimeQuestions(userId),
+    homePeriods: await loadHomePeriods(userId),
   };
 }

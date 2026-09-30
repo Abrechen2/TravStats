@@ -26,10 +26,10 @@
 
 import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
-import type { LodgingQueryInput } from "../../schemas/lodging";
+import type { LodgingListQuery as LodgingQueryInput } from "../../schemas/lodging";
 import { LIFECYCLE_SORT_RANK, LODGING_LIFECYCLE_STATUSES } from "../../shared/lodgingLifecycle";
-import { lodgingFilterSql } from "./listQuery";
-import { lifecycleRankSql, stayCountsSql, stayNightsSql } from "./listSql";
+import { countedStaysSql, lodgingFilterSql } from "./listQuery";
+import { lifecycleRankSql, stayNightsSql } from "./listSql";
 
 /**
  * NO `chains` here, deliberately. It was in the first cut of this endpoint and
@@ -197,7 +197,7 @@ async function summarise(
   userId: string,
   now: Date
 ): Promise<LodgingSummary> {
-  const counts = stayCountsSql(now);
+  const counts = countedStaysSql(query, now);
   const [row] = await prisma.$queryRaw<
     Array<{ lodgings: bigint; stays: bigint; nights: number; chains: bigint }>
   >(Prisma.sql`

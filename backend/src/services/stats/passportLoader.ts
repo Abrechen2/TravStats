@@ -18,19 +18,25 @@ import type { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { getCachedAirports } from "../airportCache";
 import { countableFlightWhere } from "../../shared/flightCounting";
-import { normalizeHistory } from "../../utils/homeAirport";
+import { allHomeAirports } from "../../utils/homeAirport";
+import { loadHomePeriods } from "../home/homeStore";
 import {
   localWallClockOf,
   normalizeFlightTimeUtc,
   type FlightTimeSemantics,
 } from "../../utils/timezone";
-import type { SettingsDataJson } from "../../routes/settings/types";
 import { countryThresholdFor } from "../countryThresholdResolver";
-import { buildTzMap, withDepartureClock } from "./departureClock";
+import {
+  FLIGHT_CLOCK_SELECT,
+  buildTzMap,
+  flightEndZone,
+  withDepartureClock,
+} from "./departureClock";
 import { buildPassport } from "./passport";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 import { classifyVisit } from "../../shared/placeCounting";
 import { loadRoadtripStations } from "./roadtripEvidenceLoader";
+import { loadRailEnds } from "./railEvidenceLoader";
 
 /**
  * The airport codes a passport-shaped flight row touches, deduplicated.
@@ -77,17 +83,9 @@ export async function loadAirportCountries(codes: string[]): Promise<Map<string,
   );
 }
 
-/** The user's home airport codes, newest history first. */
+/** Every home airport the user ever had, newest period first — membership, not just the primary. */
 export async function loadHomeIatas(userId: string): Promise<string[]> {
-  const homeSettings = await prisma.userSettings.findUnique({
-    where: { userId },
-    select: { data: true },
-  });
-  const historyData =
-    homeSettings?.data && typeof homeSettings.data === "object"
-      ? (homeSettings.data as SettingsDataJson).homeAirportHistory
-      : undefined;
-  return normalizeHistory(historyData).map((entry) => entry.iata);
+  return allHomeAirports(await loadHomePeriods(userId));
 }
 
 /**
@@ -107,17 +105,13 @@ export async function loadHomeIatas(userId: string): Promise<string[]> {
  * (forgejo#49).
  */
 export const PASSPORT_FLIGHT_SELECT = {
-  depIata: true,
-  depIcao: true,
+  ...FLIGHT_CLOCK_SELECT,
   depLat: true,
   depLon: true,
-  arrIata: true,
-  arrIcao: true,
   arrLat: true,
   arrLon: true,
   departureTime: true,
   arrivalTime: true,
-  depTimeSemantics: true,
   arrTimeSemantics: true,
   status: true,
 } as const;
@@ -138,10 +132,31 @@ export type PassportLoaderFlight = Prisma.FlightGetPayload<{
  *   would silently shrink the passport, so the contract is the full countable
  *   list or nothing.
  */
+/**
+ * Which evidence sources a caller reads. Default: all of them, which is what
+ * the passport page asks for. The country badges ask for less
+ * (`utils/achievementCountries.ts`): rail and roadtrip only while that domain
+ * is visible to the user, and never a place or a track, because a badge is
+ * earned from curated travel records only. A source that is not read proves
+ * nothing AND lifts no tier — the fold never sees it — which is the point of
+ * leaving it out here rather than filtering rows afterwards.
+ */
+export interface PassportSources {
+  rail?: boolean;
+  roadtrip?: boolean;
+  place?: boolean;
+  track?: boolean;
+}
+
 export async function loadPassport(
   userId: string,
-  prefetchedFlights?: PassportLoaderFlight[]
+  prefetchedFlights?: PassportLoaderFlight[],
+  sources: PassportSources = {}
 ): Promise<ReturnType<typeof buildPassport>> {
+  const readRail = sources.rail ?? true;
+  const readRoadtrip = sources.roadtrip ?? true;
+  const readPlace = sources.place ?? true;
+  const readTrack = sources.track ?? true;
   // One clock for the whole load, so two evidence sources cannot disagree
   // about whether a visit has happened yet.
   const now = new Date();
@@ -175,8 +190,6 @@ export async function loadPassport(
    * touch every "when did I fly" figure on the server for one new column here.
    */
   const [dated, tzMap] = await Promise.all([withDepartureClock(flights), buildTzMap(flights)]);
-  const zoneOf = (iata: string | null, icao: string | null): string | null =>
-    (iata ? tzMap.get(iata) : undefined) ?? (icao ? tzMap.get(icao) : undefined) ?? null;
 
   const passportFlights = dated.map((f) => ({
     ...f,
@@ -187,7 +200,7 @@ export async function loadPassport(
     arrivalInstant: realInstant(
       f.arrivalTime,
       f.arrTimeSemantics as FlightTimeSemantics,
-      zoneOf(f.arrIata, f.arrIcao)
+      flightEndZone(f.arrTimezone, tzMap, f.arrIata, f.arrIcao)
     ),
   }));
 
@@ -200,7 +213,7 @@ export async function loadPassport(
    * "Deutschland" and "Germany" are one country and only the code knows that.
    */
   // prettier-ignore
-  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations] = await Promise.all([
+  const [airportCountries, portCalls, placeVisits, lodgings, homeIatas, countryDays, threshold, roadtripStations, railEnds] = await Promise.all([
     loadAirportCountries(passportAirportCodes(flights)),
     prisma.cruiseStop.findMany({
       where: {
@@ -214,10 +227,12 @@ export async function loadPassport(
         port: { select: { country: true } },
       },
     }),
-    prisma.place.findMany({
-      where: { userId, visited: true, isoCountryCode: { not: null } },
-      select: { isoCountryCode: true, visits: { select: { visitedAt: true } } },
-    }),
+    readPlace
+      ? prisma.place.findMany({
+          where: { userId, visited: true, isoCountryCode: { not: null } },
+          select: { isoCountryCode: true, visits: { select: { visitedAt: true, visitedAtUtc: true, visitedZone: true } } },
+        })
+      : [],
     /**
      * Lodging as evidence — spec §1.2, the clearest of the four bugs. A country
      * reached by car and slept in for a week did not appear in this passport at
@@ -263,16 +278,18 @@ export async function loadPassport(
      * evidence for a reader, not an input to the rule (see
      * `./trackEvidence.ts`).
      */
-    prisma.countryDay.findMany({
-      where: { userId },
-      select: {
-        date: true,
-        countryCode: true,
-        pointCount: true,
-        airportPointCount: true,
-        partialWindow: true,
-      },
-    }),
+    readTrack
+      ? prisma.countryDay.findMany({
+          where: { userId },
+          select: {
+            date: true,
+            countryCode: true,
+            pointCount: true,
+            airportPointCount: true,
+            partialWindow: true,
+          },
+        })
+      : [],
     /**
      * Which tier the headline counts from — the user's own choice, else the
      * instance default (spec §3.2). Read HERE rather than inside
@@ -286,7 +303,10 @@ export async function loadPassport(
     // Stations of started roadtrips — the evidence the Stats overview already
     // counted and this passport did not. Same loader as the drill-down, so a
     // row and its page agree about which station proved a country.
-    loadRoadtripStations(userId, now),
+    readRoadtrip ? loadRoadtripStations(userId, now) : [],
+    // Station ends of completed train rides — counted by the overview, and
+    // until 2.7 by nothing here.
+    readRail ? loadRailEnds(userId) : [],
   ]);
 
   return buildPassport(
@@ -330,6 +350,7 @@ export async function loadPassport(
       airportPointCount: row.airportPointCount,
       partialWindow: row.partialWindow,
     })),
-    roadtripStations
+    roadtripStations,
+    railEnds
   );
 }

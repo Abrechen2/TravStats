@@ -33,6 +33,6 @@ describe("isOnDay", () => {
     // 23:30 UTC on the 25th is 01:30 on the 26th in Berlin.
     const instant = new Date("2026-09-25T23:30:00Z");
     expect(isOnDay(instant, "2026-09-26", "Europe/Berlin")).toBe(true);
-    expect(isOnDay(instant, "2026-09-26", null)).toBe(false);
+    expect(isOnDay(instant, "2026-09-26", "UTC")).toBe(false);
   });
 });

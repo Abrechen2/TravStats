@@ -5,6 +5,8 @@ import logger from "../../utils/logger";
 import { findAddressCountryMismatches } from "./checks/addressCountryMismatch";
 import { findCoordinatesOutsideCountry } from "./checks/coordinatesOutsideCountry";
 import { findReversedStayDates } from "./checks/stayDatesReversed";
+import { findOpenTimeQuestions } from "./checks/timeQuestions";
+import { findUnconfirmedResidence } from "./checks/homeResidence";
 import { findUndatedCountryEvidence } from "./checks/undatedCountryEvidence";
 import { loadAccountSnapshot } from "./gather";
 import { findingKey, type DataQualityFinding } from "./types";
@@ -95,6 +97,8 @@ export function collectFindings(
     ...findUndatedCountryEvidence(snapshot.countryTouches),
     ...findReversedStayDates(snapshot.lodgingStays),
     ...findCoordinatesOutsideCountry(snapshot.locatedRecords, snapshot.countryLookup),
+    ...findOpenTimeQuestions(snapshot.timeQuestions),
+    ...findUnconfirmedResidence(snapshot.homePeriods),
   ];
 }
 

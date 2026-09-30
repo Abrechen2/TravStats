@@ -21,7 +21,18 @@
       },
       "empty": {
         "title": "Nothing to review",
-        "description": "None of your records currently has two pieces of information that disagree."
+        "description": "Nothing is open right now: no contradictions and no questions about time."
+      },
+      "contradictions": {
+        "title": "Contradictions"
+      },
+      "time": {
+        "title": "Questions about time",
+        "description": "Something is missing here to show a time correctly: the place's time zone, the time of day or the exact day. We don't guess — add it if you know it, or leave it as it is."
+      },
+      "home": {
+        "title": "Home",
+        "description": "Your home is not fully set up yet. Nothing changes until you confirm it."
       }
     },
     "photoJourneys": {
@@ -71,11 +82,12 @@
         },
         "dismissed": "Dismissed. This burst will not be suggested again.",
         "photosLinked": "{{count}} photos linked to the visit.",
-        "photosNotLinked": "The photos could not be linked – the photo library could not be reached."
+        "photosNotLinked": "The photos could not be linked – the photo library could not be reached.",
+        "scanOutcomeUnknown": "The server no longer reports how the photo search ended. Shown is what has been found so far."
       },
       "errors": {
         "loadFailed": "The photo suggestions could not be loaded.",
-        "scanFailed": "The photo search could not be started.",
+        "scanFailed": "The photo search failed.",
         "acceptFailed": "The suggestion could not be accepted.",
         "acceptLinkFailed": {
           "trip": "The trip was created, but the suggestion could not be marked as accepted — trying again only links it.",
@@ -94,6 +106,88 @@
       "resolveFailed": "Your answer could not be saved.",
       "dismissFailed": "Your answer could not be saved.",
       "runFailed": "The check could not be started."
+    },
+    "tripSuggestions": {
+      "title": "Trip suggestions",
+      "description": "Derived from your entries: when you were away and what belongs together. Suggestions only — nothing is created or linked until you accept.",
+      "nameFallback": "Trip",
+      "planned": "planned",
+      "capped": "Showing {{shown}} of {{total}} suggestions — answer some and the next ones move up.",
+      "truncated": "Your logbook is larger than one analysis reads. Some suggestions may be missing.",
+      "zoneUnknown_one": "{{count}} entry has no known time zone for its place — its day may be off by one.",
+      "zoneUnknown_other": "{{count}} entries have no known time zone for their place — their day may be off by one.",
+      "tourNote": "Day tours without a trip are linked too; tours that already belong to a trip stay where they are.",
+      "kind": {
+        "new_trip": "New trip?",
+        "assign": "Part of a trip?",
+        "extend": "Extend a trip?",
+        "place_visit": "Were you here?"
+      },
+      "reason": {
+        "newTrip": "{{entries}}, {{nights}} away from home",
+        "entries_one": "{{count}} entry",
+        "entries_other": "{{count}} entries",
+        "nights_one": "{{count}} night",
+        "nights_other": "{{count}} nights",
+        "assign_one": "{{count}} entry fits “{{trip}}”",
+        "assign_other": "{{count}} entries fit “{{trip}}”",
+        "extend_one": "{{count}} entry would extend “{{trip}}” to {{span}}",
+        "extend_other": "{{count}} entries would extend “{{trip}}” to {{span}}",
+        "placeVisit": "You were here that day: “{{anchor}}” was {{distance}} m away."
+      },
+      "signals": {
+        "pnr": "same booking reference",
+        "home_loop": "out and back from your home airport",
+        "continuity": "connecting flights without a gap"
+      },
+      "creates": {
+        "new_trip": "Accepting creates the trip and links every entry listed.",
+        "assign": "Accepting links the listed entries to this trip.",
+        "extend": "Accepting links the entries and sets the trip's dates to the new span.",
+        "place_visit": "Accepting records a visit on that day."
+      },
+      "edit": {
+        "name": "Name",
+        "start": "Start",
+        "end": "End",
+        "members": "Include these entries",
+        "visitDay": "Day of the visit"
+      },
+      "actions": {
+        "accept": "Accept",
+        "acceptEdited": "Accept as edited",
+        "edit": "Edit",
+        "dismiss": "Dismiss",
+        "retry": "Reload"
+      },
+      "home": {
+        "missing": "No home airport set — without a home there is no telling when you were away. Only trips your flights themselves form are suggested.",
+        "link": "Set your home airport",
+        "estimated": "No home airport set: your most-flown airport counts as home."
+      },
+      "empty": {
+        "title": "No trip suggestions",
+        "description": "Everything that belongs together is already in a trip. New entries are checked here."
+      },
+      "messages": {
+        "accepted": {
+          "new_trip": "Trip created and entries linked.",
+          "assign": "Entries linked to the trip.",
+          "extend": "Trip extended and entries linked.",
+          "place_visit": "Visit recorded."
+        },
+        "dismissed": "Dismissed. This suggestion only returns if its entries change substantially."
+      },
+      "errors": {
+        "loadFailed": "The trip suggestions could not be loaded.",
+        "loadFailedHint": "That does not mean there are none. Try again in a moment.",
+        "acceptFailed": "The suggestion could not be accepted. Nothing was changed.",
+        "dismissFailed": "The suggestion could not be dismissed.",
+        "stale": "The suggestion has changed in the meantime — an entry was moved or deleted. Nothing was changed; the list has been reloaded.",
+        "selection": "The selection does not match the suggestion. Nothing was changed.",
+        "endBeforeStart": "The end is before the start.",
+        "noMembers": "Choose at least one entry."
+      }
     }
   },
   "flag": {
@@ -104,7 +198,18 @@
     "entityType": {
       "lodging": "Lodging",
       "place": "Place",
-      "country": "Country"
+      "country": "Country",
+      "flight": "Flight",
+      "cruise_stop": "Cruise stop",
+      "trip_stop": "Trip stop",
+      "place_visit": "Place visit",
+      "rail_journey": "Rail journey",
+      "cruise": "Cruise",
+      "trip": "Trip",
+      "trip_journal_entry": "Journal entry",
+      "lodging_stay": "Stay",
+      "profile": "Profile",
+      "home": "Home"
     },
     "status": {
       "open": "Open",
@@ -120,7 +225,9 @@
         "label": "This is correct as it is",
         "hint": "There is nothing to change on the record. This question will never be asked again."
       }
-    }
+    },
+    "timeUnchanged": "Nothing was changed on the entry. The time stays as it was stored until you fill it in.",
+    "homeSubject": "Your home"
   },
   "kinds": {
     "address_country_mismatch": {
@@ -149,6 +256,25 @@
       "question": "The stored coordinates fall inside a different country than the one on the record. Which is right – the point or the country?",
       "stored": "Stored country",
       "fromCoordinates": "Country at the coordinates"
+    },
+    "time_zone_unresolved": {
+      "title": "Time zone unknown",
+      "question": "No time zone could be found for this time, so the migration did not convert it. Where was this? Fill in the place – then the time of day is right too."
+    },
+    "time_precision_unknown": {
+      "title": "Time of day unknown",
+      "question": "The date is kept, but it could not be established at what time of day this was. If you know it, enter it."
+    },
+    "time_day_ambiguous": {
+      "title": "Day uncertain",
+      "question": "It is not certain which calendar day is meant. The stored day was kept – check it and correct it if needed."
+    },
+    "home_residence_unconfirmed": {
+      "title": "Confirm residence",
+      "question": "Confirm where you live and pick further home airports?",
+      "body": "So far TravStats only knows your home airport ({{airports}}) and measures distances from there. Confirm where you live and pick up to three airports you fly from.",
+      "unchanged": "Until you confirm, every statistic stays exactly as it was.",
+      "action": "Set up your home"
     }
   },
   "passwordResets": {
@@ -166,5 +292,27 @@
     "uploaded": "Uploaded on",
     "deletesOn": "Will be deleted on",
     "open": "Open"
+  },
+  "time": {
+    "field": "Value",
+    "reason": "Reason",
+    "stored": "Stored (without time zone)",
+    "kept": "Kept",
+    "noEditor": "The entry this could be edited through can no longer be found.",
+    "domainOff": "The “{{domain}}” area is switched off. Switch it on in the settings to answer this question.",
+    "domainOffAction": "Area settings",
+    "action": {
+      "flight": "Edit flight",
+      "rail_journey": "Edit rail journey",
+      "place_visit": "Edit visit",
+      "place_visit_zone": "Edit place",
+      "cruise": "Edit cruise",
+      "cruise_stop": "Edit cruise",
+      "trip": "Edit trip",
+      "trip_stop": "Edit stop",
+      "trip_journal_entry": "Edit entry",
+      "lodging_stay": "Edit stay",
+      "profile": "Edit profile"
+    }
   }
 }

@@ -21,8 +21,18 @@
 import "./setup";
 import { OpenAPIRegistry, OpenApiGeneratorV3 } from "@asteasolutions/zod-to-openapi";
 import { appVersion } from "../../utils/version";
+import { localDateValueSchema, timeValueSchema } from "../../shared/time/wire";
 
 const registry = new OpenAPIRegistry();
+
+// The time model's value shapes (ADR 0002 D3) are registered FIRST. The
+// generator names a component after the first schema it meets carrying that
+// component's id; when a nullable wrapper (`TimeValue | null` inside an
+// entity's `times`) was met before the plain registration, the TimeValue
+// component itself came out `nullable: true` and every member pointing at it
+// lost its own nullability (measured 2026-09-27).
+registry.register("TimeValue", timeValueSchema);
+registry.register("LocalDateValue", localDateValueSchema);
 
 const bearerAuth = registry.registerComponent("securitySchemes", "BearerAuth", {
   type: "http",

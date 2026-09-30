@@ -1,5 +1,5 @@
 import type { Flight, Prisma } from "../prisma";
-import { fromZonedTime } from "date-fns-tz";
+import { machineInstant } from "../shared/time/instant";
 
 import type { CreateFlightInput } from "../schemas/flight";
 
@@ -38,7 +38,7 @@ const NUMBER_FIELDS = ["price", "taxes", "fees"] as const;
 
 // On the existing Prisma row the column names are *Time / actual*; on the
 // validated incoming payload they come as (local + timezone) pairs and we
-// resolve them to a Date via fromZonedTime before comparing.
+// resolve them to a Date through shared/time (`machineInstant`) before comparing.
 //
 // `scheduled` marks the two the airline owns and may therefore move on a
 // rebooking; the `actual*` pair records what happened and is never moved by
@@ -165,7 +165,10 @@ export function buildFlightMergePatch(
     const localValue = (incoming as Record<string, unknown>)[localField];
     const tzValue = (incoming as Record<string, unknown>)[tzField];
     if (typeof localValue !== "string" || typeof tzValue !== "string") continue;
-    const next = fromZonedTime(localValue, tzValue);
+    const next = machineInstant(localValue, tzValue);
+    // Not a wall clock, or a zone this runtime does not know: nothing to merge
+    // — an Invalid Date written into the row would be worse than the gap.
+    if (next === null) continue;
     // A resent confirmation that says the same thing is not a change, and
     // reporting it as one would make every re-read look like a rebooking.
     if (currentValue instanceof Date && currentValue.getTime() === next.getTime()) continue;

@@ -63,11 +63,15 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
     const start = new Date(c.startDate);
     if (Number.isNaN(start.getTime())) continue;
 
-    const startYear = start.getFullYear();
+    // Cruise dates are calendar days ("YYYY-MM-DD", parsed as UTC midnight),
+    // read in UTC exactly as the backend reads them. The browser's own zone
+    // put every cruise one day early west of UTC, so a New Year's departure
+    // landed in the previous year here and in the right one on the server.
+    const startYear = start.getUTCFullYear();
     yearlyEvents[startYear] = (yearlyEvents[startYear] ?? 0) + 1;
     // Keyed on the START day, exactly as the year tally is: a cruise is one
     // event in the year it began, so it is one event on the day it began.
-    const startKey = crossDomainDayKey(startYear, start.getMonth() + 1, start.getDate());
+    const startKey = crossDomainDayKey(startYear, start.getUTCMonth() + 1, start.getUTCDate());
     dailyEvents[startKey] = (dailyEvents[startKey] ?? 0) + 1;
     const y = bucket(perYear, startYear, () => ({
       nights: 0,
@@ -81,7 +85,7 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
       else if (stop.unresolvedPortName) y.ports.add(`name:${stop.unresolvedPortName}`);
     }
     if (c.cruiseLine) y.lines.set(c.cruiseLine, (y.lines.get(c.cruiseLine) ?? 0) + 1);
-    weekdayEvents[start.getDay()] = (weekdayEvents[start.getDay()] ?? 0) + 1;
+    weekdayEvents[start.getUTCDay()] = (weekdayEvents[start.getUTCDay()] ?? 0) + 1;
 
     // Active-day expansion: inclusive day-span between start and end. When
     // endDate is missing, treat the cruise as a single-day event (still
@@ -89,20 +93,24 @@ export function adaptCruise(input: CruiseAdapterInput): DomainStats {
     // boundary, each day lands in the bucket of its actual calendar date.
     const end = c.endDate ? new Date(c.endDate) : start;
     const endValid = !Number.isNaN(end.getTime()) ? end : start;
-    const dayCursor = new Date(start.getFullYear(), start.getMonth(), start.getDate());
-    const lastDay = new Date(endValid.getFullYear(), endValid.getMonth(), endValid.getDate());
+    const dayCursor = new Date(
+      Date.UTC(start.getUTCFullYear(), start.getUTCMonth(), start.getUTCDate())
+    );
+    const lastDay = new Date(
+      Date.UTC(endValid.getUTCFullYear(), endValid.getUTCMonth(), endValid.getUTCDate())
+    );
     y.nights += Math.max(0, Math.round((lastDay.getTime() - dayCursor.getTime()) / 86_400_000));
     while (dayCursor.getTime() <= lastDay.getTime()) {
-      const y = dayCursor.getFullYear();
-      const m = String(dayCursor.getMonth() + 1).padStart(2, "0");
-      const d = String(dayCursor.getDate()).padStart(2, "0");
+      const y = dayCursor.getUTCFullYear();
+      const m = String(dayCursor.getUTCMonth() + 1).padStart(2, "0");
+      const d = String(dayCursor.getUTCDate()).padStart(2, "0");
       const ymdKey = `${y}-${m}-${d}`;
       if (!dailyActiveDays[ymdKey]) {
         dailyActiveDays[ymdKey] = 1;
         yearlyActiveDays[y] = (yearlyActiveDays[y] ?? 0) + 1;
         monthlyActiveDays[`${y}-${m}`] = (monthlyActiveDays[`${y}-${m}`] ?? 0) + 1;
       }
-      dayCursor.setDate(dayCursor.getDate() + 1);
+      dayCursor.setUTCDate(dayCursor.getUTCDate() + 1);
     }
   }
 

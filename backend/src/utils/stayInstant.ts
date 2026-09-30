@@ -1,8 +1,4 @@
-// The FULL dataset. geo-tz's default is "now", which folds every zone that
-// keeps today's clock into one name: Bangkok came back as Asia/Jakarta
-// (CAMP-03). `moduleResolution: node` cannot see this exports subpath, so
-// tsconfig `paths` maps its types; Node resolves it at runtime as it is.
-import { find as findTimezone } from "geo-tz/all";
+import { zoneOf } from "../shared/time/zoneOf";
 import { legacyFakeUtcToRealUtc } from "./timezone";
 
 /**
@@ -33,6 +29,10 @@ import { legacyFakeUtcToRealUtc } from "./timezone";
  * screen in the one place a reader trusts to be exact. So the wall clock is
  * returned unconverted, exactly as before, and the caller cannot tell the two
  * cases apart — which is correct, because for a same-zone stay they agree.
+ *
+ * @deprecated → `shared/time` (ADR 0002): phase 2 stores the stay's zone and
+ * check-in instant (`toInstant`), and phase 6 deletes this file. The zone and
+ * the conversion already go through `zoneOf` / `legacyFakeUtcToRealUtc`.
  */
 
 export interface StayInstantSource {
@@ -45,22 +45,13 @@ export interface StayInstantSource {
   lon?: number | null;
 }
 
-/** The IANA zone a coordinate pair sits in, or null when it has none. */
+/**
+ * The IANA zone a coordinate pair sits in, or null when it has none.
+ * Throws `ZoneLookupUnavailableError` (TIMEZONE_LOOKUP_UNAVAILABLE) when the lookup itself is broken — that used
+ * to be swallowed here, and every stay and rail station silently got UTC.
+ */
 export function timezoneOfLodging(lat?: number | null, lon?: number | null): string | null {
-  if (typeof lat !== "number" || typeof lon !== "number") return null;
-  if (!Number.isFinite(lat) || !Number.isFinite(lon)) return null;
-  try {
-    // geo-tz returns the zones covering the point, most specific first. An
-    // empty array is a real answer for open ocean, so it abstains rather than
-    // falling back to UTC.
-    const [zone] = findTimezone(lat, lon);
-    return zone ?? null;
-  } catch {
-    // A coordinate outside the dataset's range throws rather than returning
-    // nothing. Treated as "no zone known", not as an error worth failing a
-    // whole banner over.
-    return null;
-  }
+  return zoneOf({ lat, lon });
 }
 
 /**

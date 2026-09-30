@@ -36,6 +36,13 @@ export interface PhotoJourney {
   /** The cluster's span, first photo to last. */
   startDate: string;
   endDate: string;
+  /**
+   * The first and last photo's calendar day where they were taken (ADR 0002
+   * D4), from the server; null when the position has no zone, absent from an
+   * older server. The trip an accepted finding creates spans these days.
+   */
+  startDay?: string | null;
+  endDay?: string | null;
   photoCount: number;
   /**
    * How many of those carried a coordinate. A cluster located by two photos

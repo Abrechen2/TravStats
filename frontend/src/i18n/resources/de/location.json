@@ -23,6 +23,7 @@
     "cancel": "Abbrechen",
     "resolving": "Adresse wird ermittelt…",
     "noAddress": "Keine Adresse zu diesem Punkt gefunden",
+    "addressLookupFailed": "Die Adresse konnte gerade nicht ermittelt werden – der Adressdienst antwortet nicht. Der Punkt selbst wird trotzdem übernommen.",
     "nearby": "In der Nähe"
   },
   "outOfRange": "Breite muss zwischen −90 und 90 liegen, Länge zwischen −180 und 180.",

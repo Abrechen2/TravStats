@@ -37,7 +37,18 @@ function isValidIanaTimezone(tz: string): boolean {
     return false;
   }
 }
-const ianaTimezone = z.string().refine(isValidIanaTimezone, { message: "Invalid IANA timezone" });
+// The message IS the code: the error handler answers it with 422 ZONE_UNKNOWN
+// and the field, like every other time-model refusal (ADR 0002).
+const ianaTimezone = z.string().refine(isValidIanaTimezone, { message: "ZONE_UNKNOWN" });
+
+const foldField = z
+  .enum(["earlier", "later"])
+  .optional()
+  .nullable()
+  .describe(
+    "Which occurrence of a wall clock the zone shows twice (the autumn hour): " +
+      "`earlier` by default, `later` for the second (ADR 0002, owner decision Q5)."
+  );
 
 /**
  * Canonical flight-number normalisation: strip every whitespace character
@@ -169,6 +180,8 @@ const baseFlightSchema = z.object({
         "given here always wins over the catalogue, so a caller who knows better (a " +
         "historical flight from an airport that has since changed zone) can say so."
     ),
+  departureFold: foldField,
+  arrivalFold: foldField,
   depTimeSemantics: z.enum(["UTC", "DATE_ONLY", "UNKNOWN"]).optional(),
   arrTimeSemantics: z.enum(["UTC", "DATE_ONLY", "UNKNOWN"]).optional(),
   actualDepartureLocal: localDateTime.optional().nullable(),
@@ -502,6 +515,14 @@ export const flightQuerySchema = z.object({
    * counted.
    */
   airlineExact: z.string().max(200).optional(),
+  /**
+   * Only the flights a frequent-flyer card counts — the link behind a card's
+   * figures in Einstellungen → Bonusprogramme. Coverage is derived (airline
+   * identity, countable status), so it is resolved to ids before paging; see
+   * `services/loyalty/listFilters.ts`. Not this account's, or not a flight
+   * card: 404 `LOYALTY_MEMBERSHIP_NOT_FOUND`.
+   */
+  membershipId: z.string().uuid().optional(),
   /**
    * Free text over the columns the logbook row actually shows: flight number,
    * carrier name and codes, both airport codes and both airport names. OR'ed,

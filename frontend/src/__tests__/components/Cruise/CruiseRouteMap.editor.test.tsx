@@ -26,7 +26,7 @@ vi.mock("react-map-gl/maplibre", async () => {
     // this test that a NEW map was built.
     useEffect(() => {
       if (onLoad) pendingLoads.push(onLoad);
-      // eslint-disable-next-line react-hooks/exhaustive-deps -- mount only
+      // mount only
     }, []);
     return <div data-testid="map-instance">{children}</div>;
   };

@@ -1,4 +1,4 @@
-import express, { Request, Response } from "express";
+import express from "express";
 import cors from "cors";
 import helmet from "helmet";
 import dotenv from "dotenv";
@@ -11,12 +11,15 @@ import { requestLoggerMiddleware } from "./middleware/requestLogger";
 import { prisma } from "./db";
 import logger from "./utils/logger";
 import { DATABASE_URL } from "./utils/database";
-import { appVersion, buildVersion } from "./utils/version";
 import { resolveTrustProxy } from "./utils/trustProxy";
+import { runZoneSelfCheck } from "./shared/time/zoneOf";
+import { backupZone } from "./shared/time/schedulerZone";
+import { healthHandler } from "./routes/health";
 import { templateRegistry } from "./services/parsers/templates/registry";
 import { seedPortsFromCSV } from "./seedPortsFromCSV";
 import { seedShipsFromCSV } from "./seedShipsFromCSV";
 import { seedRailStations } from "./seedRailStations";
+import { seedRailStationCodes } from "./seedRailStationCodes";
 import { seedLodgingChainsFromCSV } from "./seedLodgingChainsFromCSV";
 import { seedCuratedPlacesFromCSV } from "./seedCuratedPlacesFromCSV";
 import { seedAirlinesFromData } from "./seedAirlinesFromData";
@@ -146,8 +149,8 @@ app.use(cookieParser());
 // Request logging middleware (with correlation IDs)
 app.use(requestLoggerMiddleware);
 
-// Version detection: single source of truth is /app/backend/VERSION,
-// loaded by ./utils/version. The Dockerfile writes that file from the
+// Version detection (routes/version.ts): single source of truth is
+// /app/backend/VERSION, loaded by ./utils/version. The Dockerfile writes that file from the
 // build-arg (carries any `-rc.N` / `-security-rc.N` suffix). `appVersion`
 // is the cleaned display string with pre-release suffix stripped, so a
 // byte-identical RC promoted to `:latest` shows the clean release version
@@ -170,58 +173,19 @@ app.use("/api", (_req, res, next) => {
   next();
 });
 
-// Health check — mounted at both `/health` (legacy, used by the Dockerfile
-// HEALTHCHECK and the nginx upstream probe) and `/api/v1/health` (versioned,
-// matches the public-API URL convention documented for external callers).
-const healthHandler = (_req: Request, res: Response) => {
-  res.json({ status: "ok", timestamp: new Date().toISOString(), version: appVersion });
-};
+// Health check — see routes/health.ts (reports a broken time zone lookup).
 app.get("/health", healthHandler);
 app.get("/api/v1/health", healthHandler);
 
-// Public version endpoint — unauthenticated so the About section can
-// show the right version even before login. Returns both the runtime
-// version (what the user sees) and the build version baked into the
-// image (kept for diagnostics, only shown when it differs). Also
-// surfaces the latest stable GitHub release so the UI can show an
-// update banner. Network failures degrade to latestAvailable=null so
-// air-gapped installs simply hide the banner.
-app.get("/api/v1/version", async (_req, res) => {
-  const { getCachedLatestRelease, isUpdateAvailable } = await import("./services/updateChecker");
-  const latest = await getCachedLatestRelease();
+// The public version endpoint lives in routes/version.ts (mount table).
 
-  res.json({
-    version: appVersion,
-    buildVersion,
-    latestAvailable: latest?.latestAvailable ?? null,
-    updateAvailable: latest ? isUpdateAvailable(appVersion, latest.latestAvailable) : false,
-    releaseUrl: latest?.releaseUrl ?? null,
-    releaseNotes: latest?.releaseNotes ?? null,
-    publishedAt: latest?.publishedAt ?? null,
-  });
-});
-
-// Public parser-capabilities endpoint. Lets the email import UI show
-// an accuracy warning when no LLM is wired up. Non-sensitive — just
-// a boolean reflecting the instance-wide admin setting.
+// Public parser-capabilities endpoint. Lets the email import UI say why a
+// parse may be templates-only — no model configured, or one switched off.
+// Non-sensitive: two booleans about instance configuration.
 app.get("/api/v1/parser-capabilities", async (_req, res, next) => {
   try {
-    /**
-     * Answered from the SAME resolution the parser uses.
-     *
-     * Forgejo #12: this read `admin_settings` alone, while `getParserConfig`
-     * also falls back to OLLAMA_URL / OLLAMA_MODEL from the environment. On any
-     * instance configured through env — which is how the test VM installer sets
-     * it up — the import screen said "Kein LLM-Parser verfuegbar" while the
-     * very next request came back labelled `ollama` with 85% confidence, and
-     * the server log agreed with the parser.
-     *
-     * Two sources of truth for one question is how they disagreed. There is now
-     * one, and the user cannot be told the opposite of what happens.
-     */
-    const { getParserConfig } = await import("./services/parsers/config");
-    const config = await getParserConfig();
-    res.json({ hasLlm: Boolean(config.ollamaUrl && config.ollamaModel) });
+    const { getParserCapabilities } = await import("./services/llm/parserCapabilities");
+    res.json(await getParserCapabilities());
   } catch (error) {
     next(error);
   }
@@ -231,7 +195,7 @@ app.get("/api/v1/parser-capabilities", async (_req, res, next) => {
 // OpenAPI coverage guard can walk exactly what the app serves. Order is
 // significant; the reasons are documented next to each entry there.
 app.use(
-  ["/api/v1/roadtrips", "/api/v1/tours", "/api/v1/trips/:id/routes"],
+  ["/api/v1/roadtrips", "/api/v1/tours", "/api/v1/trips/:id/routes", "/api/v1/rail"],
   recheckAchievementsAfterWrite
 );
 for (const { base, router } of apiMounts) {
@@ -279,10 +243,12 @@ const shutdown = (signal: string) => async (): Promise<void> => {
   (await import("./jobs/airlineLogoRefreshScheduler")).stopAirlineLogoRefreshScheduler();
   (await import("./jobs/statusSweepScheduler")).stopStatusSweepScheduler();
   (await import("./jobs/placeAddressBackfillScheduler")).stopPlaceAddressBackfillScheduler();
+  (await import("./jobs/stayFxBackfillScheduler")).stopStayFxBackfillScheduler();
   (await import("./jobs/dataQualitySweepScheduler")).stopDataQualitySweepScheduler();
   (await import("./jobs/dawarichCountryDaySweepScheduler")).stopDawarichCountryDaySweepScheduler();
   (await import("./jobs/documentSweepScheduler")).stopDocumentSweepScheduler();
   (await import("./jobs/photoJourneyScanScheduler")).stopPhotoJourneyScanScheduler();
+  (await import("./jobs/logRetentionScheduler")).stopLogRetentionScheduler();
   await prisma.$disconnect();
   process.exit(0);
 };
@@ -300,6 +266,16 @@ if (process.env.NODE_ENV !== "test") {
       environment: process.env.NODE_ENV,
       nodeVersion: process.version,
     });
+
+    // The admin's logging settings — level, category files, HTTP/query logs —
+    // are applied to the running loggers before anything else logs. They used
+    // to be stored and never applied (audit 2026-09-26).
+    try {
+      const { applyLoggingConfig } = await import("./services/loggingConfig");
+      await applyLoggingConfig();
+    } catch (error) {
+      logger.warn({ operation: "server_start_logging_config_error", error });
+    }
 
     // Ensure achievement definitions are present (idempotent upsert)
     try {
@@ -322,6 +298,8 @@ if (process.env.NODE_ENV !== "test") {
       ["ports", seedPortsFromCSV],
       ["ships", seedShipsFromCSV],
       ["rail_stations", seedRailStations],
+      // After the catalogue: it writes onto the rows the line above inserted.
+      ["rail_station_codes", seedRailStationCodes],
       ["lodging_chains", seedLodgingChainsFromCSV],
     ];
     for (const [name, seed] of catalogueSeeds) {
@@ -587,10 +565,30 @@ if (process.env.NODE_ENV !== "test") {
       });
     }
 
+    // The zone lookup every local time depends on. A failure is logged at
+    // error level and turns /health "degraded"; it does not stop the boot.
+    runZoneSelfCheck();
+    // Pin the backup job's zone to the host's at boot, logged once.
+    backupZone();
+
     // Airport zones: fill the missing ones, and once per instance re-derive
     // the ones geo-tz's old default folded together (CAMP-03).
     const { refreshAirportTimezonesOnStartup } = await import("./services/airportTimezoneRepair");
     await refreshAirportTimezonesOnStartup();
+
+    // ADR 0002 phase 3b: convert pre-time-model rows once, after the airport
+    // zones above (a flight's zone is read from that catalogue). A job, so
+    // the boot is not held up; the admin report says how it went.
+    try {
+      const { startTimeModelBackfillAtBoot } = await import("./services/timeMigration/runner");
+      await startTimeModelBackfillAtBoot();
+    } catch (error) {
+      logger.error({
+        operation: "time_model_backfill_start_error",
+        message: "Could not start the time-model backfill",
+        error,
+      });
+    }
 
     // Converge stored temporal statuses with the dates on boot (idempotent —
     // same logic as the hourly sweep, see services/statusSweep.ts).
@@ -694,6 +692,10 @@ if (process.env.NODE_ENV !== "test") {
           ).startPlaceAddressBackfillScheduler(),
       ],
       [
+        "stay_fx_backfill",
+        async () => (await import("./jobs/stayFxBackfillScheduler")).startStayFxBackfillScheduler(),
+      ],
+      [
         "data_quality_sweep",
         async () =>
           (await import("./jobs/dataQualitySweepScheduler")).startDataQualitySweepScheduler(),
@@ -715,6 +717,11 @@ if (process.env.NODE_ENV !== "test") {
         "photo_journey_scan",
         async () =>
           (await import("./jobs/photoJourneyScanScheduler")).startPhotoJourneyScanScheduler(),
+      ],
+      // Log retention, daily 03:45 and once now.
+      [
+        "log_retention",
+        async () => (await import("./jobs/logRetentionScheduler")).startLogRetentionScheduler(),
       ],
       [
         "reminder",

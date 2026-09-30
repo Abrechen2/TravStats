@@ -105,6 +105,14 @@ describe("AdminPage — one page, anchor jumps", () => {
     expect(screen.getByRole("region", { name: "admin:tabs.parsers" })).toBeInTheDocument();
   });
 
+  // Acceptance 2026-09-26: the page nested its own <main> inside AppShell's —
+  // two main landmarks, which a screen reader announces as two pages.
+  it("has exactly one main landmark", async () => {
+    const { container } = renderAdmin();
+    await screen.findByRole("region", { name: "admin:tabs.system" });
+    expect(container.querySelectorAll("main")).toHaveLength(1);
+  });
+
   it("gives every section landmark its admin-<id> anchor id, lazy sections included", async () => {
     renderAdmin();
     await screen.findByRole("region", { name: "admin:tabs.system" });
@@ -118,6 +126,7 @@ describe("AdminPage — one page, anchor jumps", () => {
       "parsers",
       "logging",
       "backups",
+      "timeModel",
       "smtp",
     ]) {
       expect(document.getElementById(`admin-${id}`)).not.toBeNull();

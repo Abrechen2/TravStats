@@ -4,7 +4,8 @@ import logger from "../utils/logger";
 import type { CruiseInput } from "../schemas/cruise";
 import type { ParsedCruise, ParsedCruiseStop, ParsedFlight } from "./cruiseBookingParser";
 import { findNearestAirport, type AirportData } from "./airportLookup";
-import { getCurrentHomeAirport, normalizeHistory } from "../utils/homeAirport";
+import { currentPrimaryAirport } from "../utils/homeAirport";
+import { loadHomePeriods } from "./home/homeStore";
 import { expandPortSearchTerms } from "./portExonyms";
 
 // In-memory cache for ship + port candidate lists. Both tables are populated
@@ -167,9 +168,10 @@ async function resolveShip(
     return { id: best.ship.id, line: best.ship.cruiseLine };
   }
   logger.info(
-    { shipName, cruiseLine, bestScore: best.score },
+    { bestScore: best.score },
     "[Cruise Resolver] No matching ship in DB — preserving free-text via shipNameOverride"
   );
+  logger.debug({ shipName, cruiseLine }, "[Cruise Resolver] No matching ship in DB");
   return { id: null, line: cruiseLine };
 }
 
@@ -255,7 +257,8 @@ export async function resolveCruiseEntities(parsed: ParsedCruise): Promise<Resol
     ? findBestPort({ name: parsed.arrivalPortName }, ports)
     : null;
 
-  const stops = parsed.stops.map((stop, index) => mapStop(stop, index, ports, unmatched));
+  const withEndpoints = keepUnmatchedEndpoints(parsed, departurePort, arrivalPort);
+  const stops = withEndpoints.map((stop, index) => mapStop(stop, index, ports, unmatched));
 
   const input: CruiseInput = {
     shipId: ship.id ?? undefined,
@@ -282,6 +285,42 @@ export async function resolveCruiseEntities(parsed: ParsedCruise): Promise<Resol
     unmatchedPorts: unmatched,
     flights: parsed.flights ?? [],
   };
+}
+
+/**
+ * An explicit "Abfahrt: X" / "Ankunft: Y" the catalogue cannot match used to
+ * vanish: no port id, no stop, no warning — the only record of where the
+ * cruise started was gone after import. Such a name is now kept as an
+ * unresolved stop (first / last, on the start / end date), unless one of the
+ * parsed stops already names it; the stop mapping then reports it as
+ * unmatched like any other, so the preview warns and the user can resolve it.
+ */
+function keepUnmatchedEndpoints(
+  parsed: ParsedCruise,
+  departurePort: PortCandidate | null,
+  arrivalPort: PortCandidate | null
+): ParsedCruiseStop[] {
+  const namedInStops = (name: string): boolean =>
+    parsed.stops.some(
+      (s) => !s.isAtSea && Boolean(s.portName) && nameScore(name, s.portName as string) >= 60
+    );
+  const endpoint = (name: string, date: string | undefined): ParsedCruiseStop => ({
+    dayNumber: 0, // re-sequenced by position in mapStop
+    isAtSea: false,
+    portName: name,
+    date,
+  });
+
+  const out = [...parsed.stops];
+  const dep = parsed.departurePortName?.trim();
+  if (dep && !departurePort && !namedInStops(dep)) {
+    out.unshift(endpoint(dep, parsed.startDate));
+  }
+  const arr = parsed.arrivalPortName?.trim();
+  if (arr && !arrivalPort && !namedInStops(arr)) {
+    out.push(endpoint(arr, parsed.endDate));
+  }
+  return out;
 }
 
 function mapStop(
@@ -362,11 +401,8 @@ const PORT_AIRPORT_RADIUS_KM = 250;
 
 async function getHomeAirport(userId: string | undefined): Promise<AirportData | null> {
   if (!userId) return null;
-  const settings = await prisma.userSettings.findUnique({ where: { userId } });
-  const history = normalizeHistory(
-    (settings?.data as { homeAirportHistory?: unknown } | null)?.homeAirportHistory
-  );
-  const iata = getCurrentHomeAirport(history);
+  // The home leg of a fly & cruise starts at the PRIMARY home airport.
+  const iata = currentPrimaryAirport(await loadHomePeriods(userId));
   if (!iata) return null;
   return prisma.airport.findFirst({ where: { iata, isClosed: false } });
 }

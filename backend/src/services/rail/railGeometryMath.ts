@@ -91,3 +91,26 @@ export function sliceBetween(line: readonly LonLat[], dep: LonLat, arr: LonLat):
   if (end.index <= start.index || end.km > MAX_STATION_OFFSET_KM) return null;
   return [dep, ...line.slice(start.index + 1, end.index), arr];
 }
+
+/**
+ * The same line with points inserted so no segment is longer than `maxKm`.
+ * A simplified route keeps a long straight stretch as ONE segment, which would
+ * read as a feed's chord (`isTracedShape`) and leave no vertex near a station
+ * on it (`sliceBetween`); the inserted points lie on the segment, so the
+ * drawn line does not change.
+ */
+export function densifyLine(line: readonly LonLat[], maxKm: number): LonLat[] {
+  if (line.length === 0) return [];
+  const out: LonLat[] = [line[0]];
+  for (let i = 1; i < line.length; i++) {
+    const [lon0, lat0] = line[i - 1];
+    const [lon1, lat1] = line[i];
+    const steps = Math.ceil(km(line[i - 1], line[i]) / maxKm);
+    for (let s = 1; s < steps; s++) {
+      const f = s / steps;
+      out.push([lon0 + (lon1 - lon0) * f, lat0 + (lat1 - lat0) * f]);
+    }
+    out.push(line[i]);
+  }
+  return out;
+}

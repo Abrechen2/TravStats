@@ -34,7 +34,7 @@ import {
 } from "./types";
 import { enumCell } from "./values";
 
-const NIGHTS = ["stay", "free", "pass"] as const;
+const NIGHTS = ["stay", "free", "pass", "via"] as const;
 
 type Stored = Awaited<ReturnType<typeof storedStations>>[number];
 
@@ -52,13 +52,20 @@ function storedStations(roadtripId: string) {
       notes: true,
       lodgingStayId: true,
       overnight: true,
+      viaPoint: true,
+      placeId: true,
     },
   });
 }
 
 function storedNight(s: Stored): Station["night"] {
+  // Read back as what it is: re-deriving a correction from its night columns
+  // would turn it into a pass-through station on every import.
+  if (s.viaPoint) return { kind: "via" };
   if (s.lodgingStayId) return { kind: "stay", lodgingStayId: s.lodgingStayId };
-  return { kind: s.overnight ? "free" : "pass" };
+  if (s.overnight) return { kind: "free" };
+  // The sheet has no place column: a pass-through keeps the place it names.
+  return s.placeId ? { kind: "pass", placeId: s.placeId } : { kind: "pass" };
 }
 
 function toStation(s: Stored): Station {
@@ -110,20 +117,24 @@ function parseStationRow(
   ) {
     return { error: errorRow(rowNo, label, "station_needs_point") };
   }
-  if (!title) return { error: errorRow(rowNo, label, "station_needs_title") };
-
   const dropped: DroppedValue[] = [];
   const kind = enumCell(raw.night, NIGHTS, "night", dropped);
+  const isVia = kind === "via" || (kind === undefined && known?.viaPoint === true);
+  if (!title && !isVia) return { error: errorRow(rowNo, label, "station_needs_title") };
   const stayId = cell.ref(raw.lodgingStayId);
   if (kind === "stay" && !stayId) return { error: errorRow(rowNo, label, "station_needs_stay") };
+  // A cell that repeats the stored kind keeps what the kind carries and the
+  // sheet cannot (a pass-through's place): re-deriving it from the word alone
+  // would drop the link on every round trip.
+  const storedKind = known ? storedNight(known) : null;
   const night: Station["night"] =
     kind === "stay"
       ? { kind: "stay", lodgingStayId: stayId as string }
       : kind
-        ? { kind }
-        : known
-          ? storedNight(known)
-          : { kind: "pass" };
+        ? storedKind?.kind === kind
+          ? storedKind
+          : { kind }
+        : (storedKind ?? { kind: "pass" });
 
   const startDate = cell.isoDate(raw.startDate);
   const endDate = cell.isoDate(raw.endDate);
@@ -137,11 +148,12 @@ function parseStationRow(
       stayName: refName(raw.lodgingStayId),
       item: {
         ...(known ? { id: known.id } : {}),
-        title,
+        title: title ?? "",
         lat,
         lon,
-        startDate: startDate ? new Date(startDate) : null,
-        endDate: endDate ? new Date(endDate) : null,
+        // A correction carries no date (the station schema refuses one).
+        startDate: startDate && !isVia ? new Date(startDate) : null,
+        endDate: endDate && !isVia ? new Date(endDate) : null,
         notes: cell.text(raw.notes) ?? null,
         night,
       },

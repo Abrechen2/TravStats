@@ -1,5 +1,7 @@
+import type { LocalTimeInput } from "../shared/time";
 import type { PlaceCategory } from "../shared/placeCategories";
 import type { PlaceVisitPhoto } from "./placeList";
+import type { VisitTimes } from "./times";
 
 // Frontend view of the `poi` domain (Places). Mirrors
 // backend/prisma/schema.prisma (`Place`, `PlaceVisit`) and
@@ -27,6 +29,8 @@ export interface PlaceVisit {
    * list payload stay the same shape everywhere else.
    */
   photos?: PlaceVisitPhoto[];
+  /** ADR 0002 phase 4 — read through lib/entityTimes.ts. */
+  times?: VisitTimes;
 }
 
 export interface Place {
@@ -85,7 +89,12 @@ export interface PlaceInput {
 
 export interface VisitInput {
   tripId?: string | null;
-  visitedAt?: string | null;
+  /**
+   * ADR 0002 D3: `{local, placeRef}` for a typed wall clock, a bare
+   * `YYYY-MM-DD` when only the day is known, null for "no idea when". A
+   * string with a time is only ever a machine instant WITH its offset.
+   */
+  visitedAt?: LocalTimeInput | string | null;
   orderIdx?: number;
   notes?: string | null;
   rating?: number | null;

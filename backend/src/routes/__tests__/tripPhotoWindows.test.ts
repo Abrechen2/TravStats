@@ -88,6 +88,20 @@ describe("trip photos by when and where", () => {
     expect(res.status).toBe(200);
     expect(photoIds(res)).toEqual([ids.atHotel, ids.checkoutNight]);
     expect(res.body.data.photos[0].url).toBe(`/api/v1/trips/${tripId}/photos/${ids.atHotel}/file`);
+    // forgejo#132 items 10 and 11: the rule that found them, and where each was taken.
+    expect(res.body.data.photos[0]).toMatchObject({ lat: 41.9, lon: 12.49 });
+    expect(res.body.data).toMatchObject({
+      total: 2,
+      limit: 48,
+      reason: null,
+      window: {
+        basis: "localDay",
+        ranges: [{ from: "2024-05-01", to: "2024-05-03" }],
+        timeZone: "Europe/Rome",
+        radiusKm: 0.5,
+        center: { lat: 41.9, lon: 12.49 },
+      },
+    });
 
     const stranger = await request(app)
       .get(`/api/v1/lodging/${lodging.id}/trip-photos`)
@@ -115,6 +129,17 @@ describe("trip photos by when and where", () => {
       .get(`/api/v1/flights/${flight.id}/trip-photos`)
       .set("Cookie", cookie);
     expect(photoIds(res)).toEqual([ids.inFlight]);
+    expect(res.body.data).toMatchObject({
+      total: 1,
+      reason: null,
+      window: {
+        basis: "instant",
+        ranges: [{ from: "2024-05-01T08:00:00.000Z", to: "2024-05-01T10:00:00.000Z" }],
+        timeZone: null,
+        radiusKm: null,
+        center: null,
+      },
+    });
 
     // A wall clock stored as UTC is hours off; no window rather than a wrong one.
     await prisma.flight.update({
@@ -125,6 +150,7 @@ describe("trip photos by when and where", () => {
       .get(`/api/v1/flights/${flight.id}/trip-photos`)
       .set("Cookie", cookie);
     expect(photoIds(legacy)).toEqual([]);
+    expect(legacy.body.data).toMatchObject({ total: 0, window: null, reason: "notRealInstants" });
 
     const stranger = await request(app)
       .get(`/api/v1/flights/${flight.id}/trip-photos`)
@@ -176,11 +202,71 @@ describe("trip photos by when and where", () => {
       .get(`/api/v1/cruises/${cruise.id}/trip-photos`)
       .set("Cookie", cookie);
     expect(photoIds(res)).toEqual([ids.atHotel, ids.acrossTown, ids.checkoutNight]);
+    expect(res.body.data.window).toEqual({
+      basis: "utcDay",
+      ranges: [{ from: "2024-05-02", to: "2024-05-02" }],
+      timeZone: null,
+      radiusKm: null,
+      center: null,
+    });
 
     const stranger = await request(app)
       .get(`/api/v1/cruises/${cruise.id}/trip-photos`)
       .set("Cookie", strangerCookie);
     expect(stranger.status).toBe(404);
+  });
+
+  it("says how many there are when the strip is capped, and why an entry has no window", async () => {
+    const bigTrip = (await prisma.trip.create({ data: { userId, name: "Viele Fotos" } })).id;
+    await prisma.tripPhoto.createMany({
+      data: Array.from({ length: 50 }, (_, i) => ({
+        tripId: bigTrip,
+        filename: `win-${stamp}-many-${i}.jpg`,
+        mimetype: "image/jpeg",
+        sizeBytes: 1,
+        takenAt: new Date(Date.UTC(2030, 5, 1, 8, i)),
+      })),
+    });
+    const cruise = await prisma.cruise.create({
+      data: {
+        userId,
+        tripId: bigTrip,
+        cruiseLine: "Test Line",
+        startDate: new Date("2030-06-01T00:00:00Z"),
+        endDate: new Date("2030-06-01T00:00:00Z"),
+        status: "planned",
+      },
+    });
+    const res = await request(app)
+      .get(`/api/v1/cruises/${cruise.id}/trip-photos`)
+      .set("Cookie", cookie);
+    expect(res.body.data.photos).toHaveLength(48);
+    expect(res.body.data).toMatchObject({ total: 50, limit: 48 });
+
+    const offTrip = await prisma.cruise.create({
+      data: {
+        userId,
+        cruiseLine: "Test Line",
+        startDate: new Date("2030-06-01"),
+        status: "planned",
+      },
+    });
+    const none = await request(app)
+      .get(`/api/v1/cruises/${offTrip.id}/trip-photos`)
+      .set("Cookie", cookie);
+    expect(none.body.data).toEqual({
+      photos: [],
+      total: 0,
+      limit: 48,
+      window: null,
+      reason: "notOnTrip",
+    });
+
+    const unplaced = await prisma.lodging.create({ data: { userId, name: "Ohne Ort" } });
+    const noPlace = await request(app)
+      .get(`/api/v1/lodging/${unplaced.id}/trip-photos`)
+      .set("Cookie", cookie);
+    expect(noPlace.body.data).toMatchObject({ window: null, reason: "noCoordinates" });
   });
 
   it("never shows another user's photos, even where a record points at their trip", async () => {

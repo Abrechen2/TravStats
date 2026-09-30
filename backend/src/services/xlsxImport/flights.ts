@@ -17,7 +17,7 @@
 
 import { prisma } from "../../db";
 import { findOrCreateAirport } from "../airportLookup";
-import { flightFxColumnsIfChanged, flightFxColumnsForCreate } from "./fxSnapshot";
+import { flightFxColumnsIfChanged, flightFxColumnsForCreate, fxRefreshNote } from "./fxSnapshot";
 import * as cell from "./cells";
 import { MATCHED, type Ctx, dayRange, definedOnly, errorRow, keepDespiteError } from "./context";
 import { pruneMissing } from "./prune";
@@ -31,6 +31,9 @@ import {
   type SheetOutcome,
 } from "./types";
 import { changedOnly, droppedOrNone, enumCell } from "./values";
+import { companionsDiffer, resolveCompanionCell, updateWithCompanions } from "./companionLinks";
+import { linkRowsFor } from "../companionService";
+import { zoneOf } from "../../shared/time/zoneOf";
 
 /** Statuses a spreadsheet may set. Anything else is refused rather than
  *  coerced — silently turning a typo into "flown" changes what is counted, and
@@ -52,6 +55,8 @@ function airportColumns(end: "dep" | "arr", a: Airport): Record<string, unknown>
     [`${end}Name`]: a.name,
     [`${end}Lat`]: a.lat,
     [`${end}Lon`]: a.lon,
+    // The zone the end is read in, frozen with the airport (ADR 0002).
+    [`${end}Timezone`]: zoneOf({ catalogueZone: a.timezone, lat: a.lat, lon: a.lon }),
   };
 }
 
@@ -128,6 +133,8 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
     const seatClass = enumCell(raw.seatClass, SEAT_CLASSES, "seatClass", dropped);
     const category = enumCell(raw.category, CATEGORIES, "category", dropped);
     const extra = { notes, dropped: droppedOrNone(dropped) };
+    // Companions are written as the form writes them — names AND link rows.
+    const companionNames = cell.list(raw.companions);
 
     const fields: Record<string, unknown> = {
       airline,
@@ -144,6 +151,7 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
       currency,
       category,
       notes: cell.text(raw.notes),
+      tags: cell.list(raw.tags),
       tripId: trip.tripId,
       // The code is what the sheet says; the airport columns follow it only
       // when it changed (below), so an untouched code never moves a flight.
@@ -169,27 +177,46 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
       }
       const stored = owned ?? (await prisma.flight.findUniqueOrThrow({ where: { id: targetId } }));
       const data: Record<string, unknown> = changedOnly(definedOnly(fields), stored);
-      if (Object.keys(data).length === 0) {
+      const companionsChanged = companionsDiffer(companionNames, stored);
+      if (Object.keys(data).length === 0 && !companionsChanged) {
         out.push({ row: rowNo, action: "skip", id: targetId, label, message, ...extra });
         continue;
       }
       if (dep && "depIata" in data) Object.assign(data, airportColumns("dep", dep));
       if (arr && "arrIata" in data) Object.assign(data, airportColumns("arr", arr));
+      // The sheet's times are real instants (flights are UTC since the repair).
+      if ("departureTime" in data) data.depPrecision = departureTimeValue ? "minute" : null;
+      if ("arrivalTime" in data) data.arrPrecision = arrivalTime ? "minute" : null;
       // FX snapshot (fix round 1, finding 3) — see `xlsxImport/fxSnapshot.ts`.
-      // Only when a column it reads actually changed.
+      // Only when a column it reads actually changed; a failed lookup keeps
+      // the stored rate and says so on the row.
+      let fxNote: string | null = null;
       if ("price" in data || "currency" in data || "departureTime" in data) {
-        Object.assign(
-          data,
-          await flightFxColumnsIfChanged(
-            ctx.userId,
-            { price, currency, departureTime: departureTimeValue },
-            stored
-          )
+        const fx = await flightFxColumnsIfChanged(
+          ctx.userId,
+          { price, currency, departureTime: departureTimeValue },
+          stored
         );
+        Object.assign(data, fx.columns);
+        fxNote = fxRefreshNote(fx);
       }
-      if (!ctx.dryRun) await prisma.flight.update({ where: { id: targetId }, data });
+      if (!ctx.dryRun) {
+        const companions = companionsChanged
+          ? await resolveCompanionCell(ctx.userId, companionNames)
+          : undefined;
+        await updateWithCompanions("flight", targetId, data, companions);
+      }
       ctx.wrote = ctx.wrote || !ctx.dryRun;
-      out.push({ row: rowNo, action: "update", id: targetId, label, message, ...extra });
+      const rowNotes = fxNote ? [...(extra.notes ?? []), fxNote] : extra.notes;
+      out.push({
+        row: rowNo,
+        action: "update",
+        id: targetId,
+        label,
+        message,
+        ...extra,
+        notes: rowNotes,
+      });
       continue;
     }
 
@@ -209,38 +236,54 @@ export async function importFlights(sheet: IncomingSheet, ctx: Ctx): Promise<She
 
     let newId: string | null = null;
     if (!ctx.dryRun) {
-      const created = await prisma.flight.create({
-        data: {
-          userId: ctx.userId,
-          airline,
-          flightNumber,
-          depIata: dep.iata,
-          depIcao: dep.icao,
-          depName: dep.name,
-          depLat: dep.lat,
-          depLon: dep.lon,
-          arrIata: arr.iata,
-          arrIcao: arr.icao,
-          arrName: arr.name,
-          arrLat: arr.lat,
-          arrLon: arr.lon,
-          departureTime: departureTimeValue ?? null,
-          arrivalTime: arrivalTime ? new Date(arrivalTime) : null,
-          status: status ?? "flown",
-          aircraft: cell.text(raw.aircraft) ?? null,
-          aircraftRegistration: cell.text(raw.aircraftRegistration) ?? null,
-          seatNumber: cell.text(raw.seatNumber) ?? null,
-          seatClass: seatClass ?? null,
-          bookingReference: cell.text(raw.bookingReference) ?? null,
-          category: category ?? null,
-          price: price ?? null,
-          currency: currency ?? null,
-          notes: cell.text(raw.notes) ?? null,
-          dataSource: "xlsx",
-          ...newFxColumns,
-          ...(trip.tripId ? { tripId: trip.tripId } : {}),
-        },
-        select: { id: true },
+      const companions = await resolveCompanionCell(ctx.userId, companionNames);
+      const created = await prisma.$transaction(async (tx) => {
+        const row = await tx.flight.create({
+          data: {
+            userId: ctx.userId,
+            airline,
+            flightNumber,
+            depIata: dep.iata,
+            depIcao: dep.icao,
+            depName: dep.name,
+            depLat: dep.lat,
+            depLon: dep.lon,
+            arrIata: arr.iata,
+            arrIcao: arr.icao,
+            arrName: arr.name,
+            arrLat: arr.lat,
+            arrLon: arr.lon,
+            departureTime: departureTimeValue ?? null,
+            arrivalTime: arrivalTime ? new Date(arrivalTime) : null,
+            depTimezone: airportColumns("dep", dep).depTimezone as string | null,
+            arrTimezone: airportColumns("arr", arr).arrTimezone as string | null,
+            depPrecision: departureTimeValue ? "minute" : null,
+            arrPrecision: arrivalTime ? "minute" : null,
+            status: status ?? "flown",
+            aircraft: cell.text(raw.aircraft) ?? null,
+            aircraftRegistration: cell.text(raw.aircraftRegistration) ?? null,
+            seatNumber: cell.text(raw.seatNumber) ?? null,
+            seatClass: seatClass ?? null,
+            bookingReference: cell.text(raw.bookingReference) ?? null,
+            category: category ?? null,
+            price: price ?? null,
+            currency: currency ?? null,
+            notes: cell.text(raw.notes) ?? null,
+            dataSource: "xlsx",
+            tags: cell.list(raw.tags) ?? [],
+            companions: companions?.names ?? [],
+            ...newFxColumns,
+            ...(trip.tripId ? { tripId: trip.tripId } : {}),
+          },
+          select: { id: true },
+        });
+        if (companions && companions.ids.length > 0) {
+          await tx.flightCompanion.createMany({
+            data: linkRowsFor(companions.ids).map((link) => ({ ...link, flightId: row.id })),
+            skipDuplicates: true,
+          });
+        }
+        return row;
       });
       newId = created.id;
       seen.add(created.id);

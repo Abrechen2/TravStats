@@ -21,6 +21,11 @@ import {
   EMPTY_ROADTRIP_STATS,
   type RoadtripAchievementStats,
 } from "./roadtripAchievements";
+import {
+  checkRailAchievement,
+  EMPTY_RAIL_STATS,
+  type RailAchievementStats,
+} from "./railAchievements";
 import type { Achievement, UserAchievement } from "../prisma";
 import logger from "./logger";
 import { checkAchievement } from "./achievementChecks";
@@ -93,7 +98,9 @@ export function planAchievementWrites(
   stats: UserStats,
   flights: FlightData[],
   /** Roadtrip measures (2.7) — their badges are checked by their own module. */
-  roadtripStats: RoadtripAchievementStats = EMPTY_ROADTRIP_STATS
+  roadtripStats: RoadtripAchievementStats = EMPTY_ROADTRIP_STATS,
+  /** Rail measures (2.7) — likewise checked by their own module. */
+  railStats: RailAchievementStats = EMPTY_RAIL_STATS
 ): AchievementWritePlan {
   const writes: PlannedWrite[] = [];
   const belowRequirement: string[] = [];
@@ -123,6 +130,7 @@ export function planAchievementWrites(
     // instead of letting a total fall in silence.
     const { isUnlocked, progress } =
       checkRoadtripAchievement(achievement, roadtripStats) ??
+      checkRailAchievement(achievement, railStats) ??
       checkAchievement(achievement, stats, flights);
 
     if (isUnlocked) {
@@ -195,7 +203,9 @@ export function planAchievementWrites(
 export async function applyAchievementWrites(
   userId: string,
   plan: AchievementWritePlan,
-  achievementCount: number
+  achievementCount: number,
+  /** Stamped on a badge this plan unlocks for the first time — see `AchievementCheckOptions`. */
+  unlockedAt: Date = new Date()
 ): Promise<UserAchievementWithRelation[]> {
   const newlyUnlocked: UserAchievementWithRelation[] = [];
 
@@ -228,13 +238,13 @@ export async function applyAchievementWrites(
                 // came back, which is a return and not a first time. No other
                 // write touches the column, and nothing clears it (owner's
                 // ruling, 2026-09-20).
-                ...(write.hadUnlockDate ? {} : { unlockedAt: new Date() }),
+                ...(write.hadUnlockDate ? {} : { unlockedAt }),
               },
               create: {
                 userId,
                 achievementId: write.achievementId,
                 progress: write.requirement,
-                unlockedAt: new Date(),
+                unlockedAt,
               },
               include: { achievement: true },
             });

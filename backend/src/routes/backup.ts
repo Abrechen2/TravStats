@@ -1,5 +1,6 @@
 import { Router, Response, NextFunction } from "express";
 import { authenticate, requireAdmin, AuthRequest } from "../middleware/auth";
+import { asBackupJobError } from "../services/backup/backupFailure";
 import { AppError } from "../middleware/errorHandler";
 import logger from "../utils/logger";
 import { prisma } from "../db";
@@ -23,6 +24,10 @@ import {
 import { serializeBigInt } from "../utils/serializeBigInt";
 import { backupRestoreLimiter } from "../middleware/rateLimit";
 import { BACKUP_BASE_DIR } from "../services/backup/backupConfig";
+import { findRunningJob, startJob, type JobKind } from "../services/jobs/jobRegistry";
+
+/** A backup and a restore must never overlap, whichever of the two started first. */
+const BACKUP_JOB_KINDS: readonly JobKind[] = ["backup.create", "backup.restore"];
 
 const router = Router();
 
@@ -88,6 +93,10 @@ router.get("/status", async (req: AuthRequest, res: Response, next: NextFunction
 router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const body = createBackupSchema.parse(req.body);
+    // A restore is not a `backup` row, so the row check below cannot see one.
+    if (findRunningJob(BACKUP_JOB_KINDS)) {
+      throw new AppError("A backup operation is already running", 409);
+    }
 
     // Pre-compute paths so we can store them in the DB record created inside
     // the transaction. BACKUP_BASE_DIR is the service's own constant, so the
@@ -128,21 +137,31 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       { isolationLevel: "Serializable" }
     );
 
-    const backupId = await createBackup({
-      type: body.type,
-      retentionDays: body.retentionDays,
-      existingRecord: {
-        id: precomputedId,
-        backupPath: finalArchivePath,
-        dbBackupPath,
-        filesBackupPath,
-      },
-    });
+    // The dump, the file archive and the off-site copy take minutes on a real
+    // instance, and the browser gives up after ten seconds — it used to report
+    // "failed" over a backup that went on to complete. The row is written, so
+    // the work runs as a job and the answer is its handle (202).
+    const job = startJob("backup.create", req.userId!, () =>
+      createBackup({
+        type: body.type,
+        retentionDays: body.retentionDays,
+        existingRecord: {
+          id: precomputedId,
+          backupPath: finalArchivePath,
+          dbBackupPath,
+          filesBackupPath,
+        },
+      }).then(
+        (backupId) => ({ backupId }),
+        (err: unknown) => {
+          throw asBackupJobError(err, "BACKUP_FAILED");
+        }
+      )
+    );
 
-    res.status(201).json({
+    res.status(202).json({
       success: true,
-      backupId,
-      message: "Backup started",
+      data: { jobId: job.id, backupId: precomputedId },
     });
   } catch (error) {
     logger.error({
@@ -316,8 +335,19 @@ router.post(
       const allBackups = await listBackups();
       const running = allBackups.find((b) => b.status === "running");
 
-      if (running) {
+      if (running || findRunningJob(BACKUP_JOB_KINDS)) {
         throw new AppError("A backup operation is already running", 409);
+      }
+
+      // The cheap preconditions answer synchronously, with their own status;
+      // everything that reads the archive (extraction, the preflight in
+      // `inspectRestoreArchive`) runs inside the job and reports its code there.
+      const backup = await getBackup(id);
+      if (backup.status !== "completed") {
+        throw new AppError("Backup is not completed", 400);
+      }
+      if (!backup.fileExists) {
+        throw new AppError("Backup file not found", 404);
       }
 
       logger.info({
@@ -328,16 +358,27 @@ router.post(
         createBackupBefore: body.createBackupBefore,
       });
 
-      await restoreBackup(id, {
-        scope: body.scope,
-        createBackupBefore: body.createBackupBefore,
-        acceptEncryptionKeyChange: body.acceptEncryptionKeyChange,
+      // A restore reads the whole archive twice, may take a safety backup
+      // first and then replays the dump — minutes, not seconds. Run
+      // synchronously, the browser announced "failed" while it completed, and
+      // the admin's second click met this route's own 409. The preflight
+      // refusals (RESTORE_ARCHIVE_*, RESTORE_ENCRYPTION_KEY_MISMATCH) arrive
+      // as the job's error code, before anything was written, exactly as they
+      // did as a response.
+      const job = startJob("backup.restore", req.userId!, async () => {
+        try {
+          await restoreBackup(id, {
+            scope: body.scope,
+            createBackupBefore: body.createBackupBefore,
+            acceptEncryptionKeyChange: body.acceptEncryptionKeyChange,
+          });
+        } catch (err) {
+          throw asBackupJobError(err, "RESTORE_FAILED");
+        }
+        return { backupId: id, scope: body.scope };
       });
 
-      res.json({
-        success: true,
-        message: "Backup restored successfully",
-      });
+      res.status(202).json({ success: true, data: { jobId: job.id } });
     } catch (error) {
       next(error);
     }

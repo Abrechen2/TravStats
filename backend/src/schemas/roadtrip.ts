@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { legacyDayFieldSchema } from "../shared/time/timeInput";
 
 import { LEG_MODES } from "../services/tour/tourDistance";
 import { ROADTRIP_VEHICLES, ROUTE_KINDS, TOUR_ACTIVITIES } from "../shared/tour/roadtrip";
@@ -36,24 +37,45 @@ const stationNight = z.discriminatedUnion("kind", [
   // `.strict()`: a free or pass night that names a stay is a contradiction,
   // refused rather than silently stripped into something the caller did not say.
   z.object({ kind: z.literal("free") }).strict(),
-  z.object({ kind: z.literal("pass") }).strict(),
+  // A pass-through may name the user's own place it passed (tester
+  // 2026-09-26), as a stay night names its stay.
+  z.object({ kind: z.literal("pass"), placeId: z.string().uuid().nullish() }).strict(),
+  // A route correction (tester 2026-09-26): no night, no stay, no name
+  // needed — the route bends through it and nothing counts it.
+  z.object({ kind: z.literal("via") }).strict(),
 ]);
+
+const stationDay = legacyDayFieldSchema().transform((iso) => new Date(iso));
 
 const station = z
   .object({
     /** Omitted for a new station; kept so its legs survive a reorder. */
     id: z.string().uuid().optional(),
-    title: z.string().trim().min(1).max(200),
+    // Required for a station; a via point may leave it empty.
+    title: z.string().trim().max(200),
     lat: z.number().min(-90).max(90),
     lon: z.number().min(-180).max(180),
-    startDate: z.coerce.date().nullish(),
-    endDate: z.coerce.date().nullish(),
+    // A station is dated by DAYS (ADR 0002 D1): `YYYY-MM-DD`, or an
+    // offset-bearing string read as the day it writes. `z.coerce.date()` read
+    // an offset-less string in the server's zone; it is refused now.
+    startDate: stationDay.nullish(),
+    endDate: stationDay.nullish(),
     notes: z.string().max(5000).nullish(),
     night: stationNight,
   })
   .refine((s) => !s.startDate || !s.endDate || s.endDate.getTime() >= s.startDate.getTime(), {
     message: "A station cannot end before it starts",
     path: ["endDate"],
+  })
+  .refine((s) => s.night.kind === "via" || s.title.length > 0, {
+    message: "A station needs a name",
+    path: ["title"],
+  })
+  // A via point is a bend in the line, not a place the traveller was at a
+  // time: a date on it would put it into days-away and the timeline.
+  .refine((s) => s.night.kind !== "via" || (!s.startDate && !s.endDate), {
+    message: "A route correction carries no date",
+    path: ["startDate"],
   });
 
 /** The complete, ordered station list; replaces whatever was there. */
@@ -69,7 +91,28 @@ export const kindSwitchSchema = z.object({
 });
 
 /** The kind-specific fields PATCH `/tours/:routeId` accepts beside the general ones. */
+/** A calendar day as "YYYY-MM-DD" that exists (no 2026-02-30). */
+const calendarDay = z
+  .string()
+  .regex(/^\d{4}-\d{2}-\d{2}$/)
+  .refine((d) => new Date(`${d}T00:00:00Z`).toISOString().startsWith(d), "Not a calendar day");
+
+/**
+ * A day tour's day and start time (acceptance D2, 2026-09-26) — the place's
+ * local day and the time of that day, as the user entered them. See
+ * `services/tour/tourDay.ts`.
+ */
+export const tourDayFields = {
+  date: calendarDay.nullable().optional(),
+  startTime: z
+    .string()
+    .regex(/^([01]\d|2[0-3]):[0-5]\d$/)
+    .nullable()
+    .optional(),
+};
+
 export const kindFieldsSchema = z.object({
+  ...tourDayFields,
   activity: z.enum(TOUR_ACTIVITIES).nullable().optional(),
   vehicle: z.enum(ROADTRIP_VEHICLES).nullable().optional(),
   vehicleName: z.string().trim().min(1).max(120).nullable().optional(),

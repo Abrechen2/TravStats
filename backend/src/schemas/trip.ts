@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { legacyDayFieldSchema, timeFieldSchema } from "../shared/time/timeInput";
 
 export const TRIP_COLORS = [
   "#818cf8",
@@ -17,12 +18,42 @@ export const TRIP_STATUSES = ["planned", "in_progress", "completed"] as const;
 export const TRIP_CATEGORIES = ["vacation", "business", "weekend", "family", "other"] as const;
 
 const HEX_COLOR = z.string().regex(/^#[0-9a-fA-F]{6}$/);
-const ISO_DATE = z
-  .string()
-  .datetime()
-  .or(z.coerce.date())
-  .transform((d) => new Date(d));
-const STRING_LIST = z.array(z.string().min(1).max(80)).max(40);
+/**
+ * A trip's start/end and a journal entry's date are CALENDAR DAYS (ADR 0002
+ * D1): `YYYY-MM-DD`, or an offset-bearing string read as the day it writes.
+ * `z.coerce.date()` used to take any string, so "2027-05-02T00:30" was read in
+ * the server's zone and could land on the neighbouring day; an offset-less
+ * datetime is now refused with TIME_SHAPE_REQUIRED. Handed on as the
+ * UTC-midnight `Date` the legacy columns hold.
+ */
+const ISO_DATE = legacyDayFieldSchema().transform((iso) => new Date(iso));
+
+/**
+ * A trip stop's start/end: the stop's wall clock — `{local}` (zone from the
+ * stop's coordinates or the entry it wraps), `{local, zone}`, `YYYY-MM-DD`
+ * for a day, or an instant from a token. Formerly fake UTC, so a browser's
+ * bare ISO-Z is refused by the route (`routes/trips/stopTime.ts`).
+ */
+const STOP_TIME = timeFieldSchema({ allowDate: true, impliedPlace: true });
+
+/**
+ * Start before end, where the two can be compared without a zone: two wall
+ * clocks (or days) at the same stop as written, or two instants. A mix waits
+ * for the route, which has the zone.
+ */
+function stopTimesInOrder(start: unknown, end: unknown): boolean {
+  type Parsed = { kind?: string; local?: string; date?: string; utc?: Date } | null | undefined;
+  const a = start as Parsed;
+  const b = end as Parsed;
+  if (!a || !b) return true;
+  if (a.kind === "instant" || b.kind === "instant") {
+    return a.kind !== b.kind || (b.utc as Date).getTime() >= (a.utc as Date).getTime();
+  }
+  const wall = (t: NonNullable<Parsed>): string =>
+    (t.kind === "date" ? `${t.date}T00:00` : (t.local ?? "")).slice(0, 16);
+  return wall(b) >= wall(a);
+}
+const STRING_LIST = z.array(z.string().trim().min(1).max(80)).max(40);
 const COUNTRY_LIST = z.array(z.string().regex(/^[A-Z]{2}$/, "ISO 3166-1 alpha-2")).max(60);
 
 export const TRIP_DATE_ORDER_MESSAGE = "endDate must not precede startDate";
@@ -55,7 +86,7 @@ const DATE_ORDER_ISSUE = { message: TRIP_DATE_ORDER_MESSAGE, path: ["endDate"] }
 
 export const createTripSchema = z
   .object({
-    name: z.string().min(1).max(200),
+    name: z.string().trim().min(1).max(200),
     description: z.string().max(1000).optional(),
     color: HEX_COLOR.optional(),
     // Phase-1 metadata redesign — every field optional on create.
@@ -80,7 +111,7 @@ export const createTripSchema = z
 // patch — keeps the contract small).
 export const updateTripSchema = z
   .object({
-    name: z.string().min(1).max(200).optional(),
+    name: z.string().trim().min(1).max(200).optional(),
     description: z.string().max(1000).nullable().optional(),
     color: HEX_COLOR.optional(),
     startDate: ISO_DATE.nullable().optional(),
@@ -141,33 +172,33 @@ export type TripCategory = (typeof TRIP_CATEGORIES)[number];
 
 export const createStopSchema = z
   .object({
-    title: z.string().min(1).max(200),
+    title: z.string().trim().min(1).max(200),
     domain: z.string().max(40).optional(),
     sourceId: z.string().max(120).optional(),
     description: z.string().max(2000).optional(),
-    startDate: ISO_DATE.optional(),
-    endDate: ISO_DATE.optional(),
+    startDate: STOP_TIME.optional(),
+    endDate: STOP_TIME.optional(),
     lat: z.number().min(-90).max(90).optional(),
     lon: z.number().min(-180).max(180).optional(),
     notes: z.string().max(20000).optional(),
     orderIdx: z.number().int().min(0).optional(),
   })
-  .refine((d) => tripDatesInOrder(d.startDate, d.endDate), DATE_ORDER_ISSUE);
+  .refine((d) => stopTimesInOrder(d.startDate, d.endDate), DATE_ORDER_ISSUE);
 
 export const updateStopSchema = z
   .object({
-    title: z.string().min(1).max(200).optional(),
+    title: z.string().trim().min(1).max(200).optional(),
     domain: z.string().max(40).nullable().optional(),
     sourceId: z.string().max(120).nullable().optional(),
     description: z.string().max(2000).nullable().optional(),
-    startDate: ISO_DATE.nullable().optional(),
-    endDate: ISO_DATE.nullable().optional(),
+    startDate: STOP_TIME.nullable().optional(),
+    endDate: STOP_TIME.nullable().optional(),
     lat: z.number().min(-90).max(90).nullable().optional(),
     lon: z.number().min(-180).max(180).nullable().optional(),
     notes: z.string().max(20000).nullable().optional(),
     orderIdx: z.number().int().min(0).optional(),
   })
-  .refine((d) => tripDatesInOrder(d.startDate, d.endDate), DATE_ORDER_ISSUE);
+  .refine((d) => stopTimesInOrder(d.startDate, d.endDate), DATE_ORDER_ISSUE);
 
 export type CreateStopInput = z.infer<typeof createStopSchema>;
 export type UpdateStopInput = z.infer<typeof updateStopSchema>;

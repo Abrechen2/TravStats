@@ -36,7 +36,8 @@
     "port": "Hafen",
     "place": "Ort",
     "roadtrip": "Roadtrip",
-    "track": "Standortverlauf"
+    "track": "Standortverlauf",
+    "rail": "Bahn"
   },
   "value": {
     "dash": "—",

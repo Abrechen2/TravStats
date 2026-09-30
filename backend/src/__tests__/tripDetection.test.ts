@@ -1,6 +1,10 @@
 import { describe, it, expect } from "@jest/globals";
 import { _internals } from "../services/tripDetectionService";
-import type { HomeAirportEntry } from "../utils/homeAirport";
+import { periodsFromLegacy } from "../utils/homeAirport";
+
+/** Home periods from the old one-airport shape; membership needs no coordinates. */
+const homeOf = (iata: string, fromDate: string) =>
+  periodsFromLegacy([{ iata, fromDate, toDate: null }], () => null);
 
 const {
   groupByPnr,
@@ -203,7 +207,7 @@ describe("tripDetectionService heuristics", () => {
   });
 
   describe("Home-loop detection", () => {
-    const history: HomeAirportEntry[] = [{ iata: "MUC", fromDate: "2010-01-01", toDate: null }];
+    const history = homeOf("MUC", "2010-01-01");
 
     it("groups a MUC → … → MUC sequence into one loop", () => {
       const flights = [
@@ -252,7 +256,7 @@ describe("tripDetectionService heuristics", () => {
           departureTime: new Date("2024-04-01T00:00:00Z"),
         }),
       ];
-      expect(findHomeLoops(flights, null).length).toBe(0);
+      expect(findHomeLoops(flights, []).length).toBe(0);
     });
   });
 
@@ -438,7 +442,7 @@ describe("tripDetectionService heuristics", () => {
     });
 
     it("findHomeLoops captures all 4 legs of MUC↺RAK after chain-coherent sort (issue #104)", () => {
-      const history: HomeAirportEntry[] = [{ iata: "MUC", fromDate: "2009-01-01", toDate: null }];
+      const history = homeOf("MUC", "2009-01-01");
       // Order as findMany returns it (departureTime asc):
       const fromDb = [
         f({

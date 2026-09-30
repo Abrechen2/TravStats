@@ -15,6 +15,7 @@
  *
  *   node dist/scripts/dbProbe.js                    → can we reach the database
  *   node dist/scripts/dbProbe.js migrations-table   → did migrations ever run
+ *   node dist/scripts/dbProbe.js no-users           → is this a first install (no accounts)
  */
 import { createPrismaClient } from "../prismaClient";
 
@@ -22,7 +23,13 @@ async function main(): Promise<void> {
   const probe = process.argv[2] ?? "connect";
   const prisma = createPrismaClient();
   try {
-    if (probe === "migrations-table") {
+    if (probe === "no-users") {
+      // A first install: nobody has an account yet, so the demo account is
+      // seeded — the owner's "Standard aktiv" (2026-09-26). `fail` on any
+      // error, so a database the probe cannot read is never taken for empty.
+      const users = await prisma.user.count();
+      process.stdout.write(users === 0 ? "ok\n" : "fail\n");
+    } else if (probe === "migrations-table") {
       const rows = await prisma.$queryRaw<Array<{ table_name: string }>>`
         SELECT table_name FROM information_schema.tables
          WHERE table_schema = 'public' AND table_name = '_prisma_migrations'`;

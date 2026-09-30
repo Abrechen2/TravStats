@@ -21,6 +21,13 @@ import type { ParsedBooking } from "../../types";
 // Same shape as FlightReviewModal.fieldSources.test.tsx — the modal reaches
 // into the API, both stores and i18n on mount, none of which this test is
 // about. `t` returns the KEY, so the assertions below read as keys.
+// Airport codes resolve through `getByCode` (lib/airportResolve); an unknown
+// code is its 404 — the same "not found" the old empty search result gave.
+vi.mock("../../lib/api/airports", () => ({
+  airportsApi: {
+    getByCode: vi.fn().mockRejectedValue({ response: { status: 404 } }),
+  },
+}));
 vi.mock("../../lib/api", () => ({
   airportsApi: { search: vi.fn().mockResolvedValue([]) },
   parseApi: { submitParserCorrection: vi.fn() },

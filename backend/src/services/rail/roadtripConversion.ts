@@ -17,8 +17,11 @@
  *    whose stops lack either is reported as skipped, with the reason — never
  *    given an invented day or a (0, 0) station.
  *  - A stop's dates are DAYS (the roadtrip stores dates, not clock times), so
- *    a converted ride leaves at noon on its boarding station's clock and its
- *    notes say so; the user corrects the time from the ticket. The arrival is
+ *    a converted ride leaves at noon on its boarding station's clock; the user
+ *    corrects the time from the ticket. No prose is written into the ride's
+ *    notes to say so — that sentence would be in one language forever, in the
+ *    user's own data. `externalRef` (`roadtrip:…`) is the structured marker and
+ *    the UI words it in the reader's language. The arrival is
  *    left unknown: a day-only arrival would put the length of the ride at
  *    zero or at whole days, and either would feed the hours-on-board figure
  *    with a number nobody measured.
@@ -76,11 +79,12 @@ export interface RailJourneyDraft {
   arrivalStation: RailStationDraft;
   /** `YYYY-MM-DD`; the ride leaves at noon of it on the boarding station's clock. */
   departureDay: string;
-  /** The leg's own length, carried only for a routed or drawn leg. */
+  /** The leg's own length, carried only for a routed or drawn leg (distance source `roadtrip`). */
   tracedKm: number | null;
   geometry: [number, number][] | null;
   geometrySource: "straight" | "manual";
-  notes: string;
+  /** The section's own notes, the user's text — nothing added. */
+  notes: string | null;
 }
 
 export type SkipReason = "notRail" | "stopMissing" | "noPosition" | "noDate";
@@ -160,12 +164,7 @@ export function planRoadtripRailConversion(section: RoadtripSectionInput): Roadt
       tracedKm: traced ? leg.distanceKm : null,
       geometry: traced ? leg.waypoints : null,
       geometrySource: traced ? "manual" : "straight",
-      notes: [
-        `Converted from the roadtrip section "${section.name}". The departure is a placeholder at noon on the station's clock and the arrival is not known — correct both from the ticket.`,
-        section.notes,
-      ]
-        .filter(Boolean)
-        .join("\n\n"),
+      notes: section.notes?.trim() || null,
     });
   }
   return plan;

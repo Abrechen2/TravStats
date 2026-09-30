@@ -42,10 +42,12 @@ export async function createFromPhotoJourney(
   const plan = photoJourneyPlan(journey);
 
   if (plan === "trip") {
+    // The days where the photos were taken (server-derived, ADR 0002 D4);
+    // the first photo's instant would land on its UTC date instead.
     const trip = await tripsApi.create({
       name: tripName,
-      startDate: journey.startDate,
-      endDate: journey.endDate,
+      startDate: journey.startDay ?? journey.startDate,
+      endDate: journey.endDay ?? journey.endDate,
     });
     return { kind: "trip", id: trip.id };
   }

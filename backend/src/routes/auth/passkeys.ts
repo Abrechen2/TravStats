@@ -278,6 +278,8 @@ router.post("/login/verify", authLimiter, async (req: AuthRequest, res, next) =>
         // Same shape as the password and two-factor login responses: the
         // client decides from this which controls it may offer.
         isSharedDemo: isSharedDemoAccount(stored.user),
+        // What rejectDemoQuota refuses — see routes/auth.ts login.
+        providerQuotaRefused: stored.user.isDemo === true,
         firstName: stored.user.firstName,
         lastName: stored.user.lastName,
       },

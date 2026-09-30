@@ -25,5 +25,18 @@
     "nonHistoricalNeedsTimes": "Für Flüge mit Status \"Geflogen\", \"Geplant\" oder \"Storniert\" müssen Abflug- und Ankunftszeit gesetzt sein und die Differenz darf zwischen -12h und +24h liegen. Falls dein Datum versehentlich einen Tag zu weit ist, korrigiere es; oder markiere den Flug als \"Historisch\", wenn die Zeiten unbekannt sind.",
     "noFieldToUpdate": "Mindestens ein Feld muss zum Aktualisieren angegeben sein.",
     "fallbackPrefix": "Server-Antwort: "
-  }
+  },
+  "lookupProviderFailed": "Die Flugsuche blieb ohne Ergebnis, weil ein Datenanbieter nicht antworten konnte – das heißt nicht, dass es den Flug nicht gibt.",
+  "providerFailure": {
+    "auth": "{{provider}}: API-Schlüssel abgelehnt – bitte in den Einstellungen prüfen.",
+    "quota": "{{provider}}: Kontingent oder Anfragelimit erreicht – bitte später erneut versuchen.",
+    "timeout": "{{provider}}: keine Antwort (Zeitüberschreitung).",
+    "plan_restricted": "{{provider}}: Dein Tarif erlaubt diese Abfrage nicht.",
+    "provider_error": "{{provider}}: Fehler beim Anbieter."
+  },
+  "lookupRateLimited": "Zu viele Flugsuchen in kurzer Zeit. Bitte warte einen Moment und versuche es dann erneut.",
+  "lookupDemoForbidden": "Im Demo-Konto ist die Flugsuche abgeschaltet, um das API-Kontingent zu schonen. Bitte trage den Flug manuell ein.",
+  "lookupFailed": "Die Flugsuche ist fehlgeschlagen. Bitte versuche es später erneut oder trage den Flug manuell ein.",
+  "airportNotInCatalogue": "Flughafen {{code}} ist nicht im Katalog – bitte manuell auswählen.",
+  "airportLoadFailedCode": "Flughafen {{code}} konnte nicht geladen werden – bitte erneut versuchen oder manuell auswählen."
 }

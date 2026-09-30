@@ -119,14 +119,15 @@ export async function runFinalArrivalSweep(
       const match = matches[0];
       if (!match) {
         logger.info(
-          {
-            flightId: flight.id,
-            flightNumber: flight.flightNumber,
-            date,
-            operation: "final_arrival_no_data",
-          },
-          `No provider data for ${flight.flightNumber} on its last attempt`
+          { flightId: flight.id, operation: "final_arrival_no_data" },
+          "No provider data on the last attempt"
         );
+        logger.debug({
+          flightId: flight.id,
+          flightNumber: flight.flightNumber,
+          date,
+          operation: "final_arrival_no_data",
+        });
         continue;
       }
 
@@ -152,21 +153,19 @@ export async function runFinalArrivalSweep(
       logger.info(
         {
           flightId: flight.id,
-          flightNumber: flight.flightNumber,
           fields: Object.keys(patch),
           operation: "final_arrival_filled",
         },
-        `Last attempt filled ${Object.keys(patch).join(", ")} for ${flight.flightNumber}`
+        `Last attempt filled ${Object.keys(patch).join(", ")}`
       );
     } catch (error) {
       logger.warn(
         {
           flightId: flight.id,
-          flightNumber: flight.flightNumber,
           err: error instanceof Error ? error.message : String(error),
           operation: "final_arrival_failed",
         },
-        `Last attempt failed for ${flight.flightNumber}`
+        "Last attempt failed"
       );
     }
   }

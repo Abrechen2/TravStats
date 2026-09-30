@@ -1,5 +1,6 @@
 import { describe, it, expect } from "vitest";
 import { render, screen, within } from "@testing-library/react";
+import { MemoryRouter } from "react-router-dom";
 
 import type { LodgingStats } from "../../../../types/lodging";
 import { EMPTY_LODGING_STATS_BLOCKS } from "../../../../types/lodgingStatsFixture";
@@ -14,10 +15,8 @@ import LodgingLoyaltySection from "../LodgingLoyaltySection";
  * tier, not the tier held during that year" — and the screen said the opposite
  * (Alex, 2026-08-29).
  *
- * There is no dated status history to draw on, and inventing one would be a
- * feature rather than a correction. So the tier is stated ONCE, as a fact about
- * now, and the year rows carry only what is genuinely per-year: nights and
- * stays.
+ * So today's tier is stated ONCE, as a fact about now. The dated history
+ * that named a year's tier in the 2.7 betas is gone (owner, 2026-09-26).
  */
 const stats = (): LodgingStats =>
   ({
@@ -62,5 +61,31 @@ describe("LodgingLoyaltySection — the tier is about today, not about 2019", ()
     const row2019 = screen.getByText("2019").closest("tr") as HTMLElement;
     expect(within(row2019).getByText("8")).toBeInTheDocument();
     expect(within(row2019).getByText("3")).toBeInTheDocument();
+  });
+});
+
+describe("LodgingLoyaltySection — a programme year leads to its hotels", () => {
+  it("links the programme to the lodging list filtered to that card and year", () => {
+    const base = stats();
+    const linked = {
+      ...base,
+      loyalty: {
+        ...base.loyalty,
+        programmeYears: base.loyalty.programmeYears.map((row) => ({
+          ...row,
+          membershipId: "card-1",
+        })),
+      },
+    } as LodgingStats;
+    render(
+      <MemoryRouter>
+        <LodgingLoyaltySection stats={linked} />
+      </MemoryRouter>
+    );
+    const row2019 = screen.getByText("2019").closest("tr") as HTMLElement;
+    expect(within(row2019).getByRole("link", { name: "Marriott Bonvoy" })).toHaveAttribute(
+      "href",
+      "/lodging?membership=card-1&year=2019"
+    );
   });
 });

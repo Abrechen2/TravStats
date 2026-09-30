@@ -1,11 +1,19 @@
 /**
  * Timezone Utilities
  *
- * Functions for converting flight times between local airport time and UTC
+ * Functions for converting flight times between local airport time and UTC.
+ *
+ * @deprecated for new code → `shared/time` (ADR 0002). The conversions here
+ * are routed through it (`toInstant`, `localDay`, `wallClockParts`) and are
+ * deleted in phase 6 once the fake-UTC columns are gone. The provider
+ * converters below are library boundaries: they convert through
+ * `shared/time` and refuse (`TZ_UNRESOLVED`) instead of guessing UTC.
  */
 
-import { toZonedTime, fromZonedTime, formatInTimeZone } from "date-fns-tz";
 import { getCachedAirport } from "../services/airportCache";
+import { TzUnresolvedError } from "../shared/time/errors";
+import { localDay, toInstant, toLocal } from "../shared/time/instant";
+import { isValidZone, wallClockParts } from "../shared/time/zonedParts";
 import logger from "./logger";
 
 export type FlightTimeSemantics = "UTC" | "DATE_ONLY" | "LEGACY_FAKE_UTC" | "UNKNOWN";
@@ -17,20 +25,7 @@ export type FlightTimeSemantics = "UTC" | "DATE_ONLY" | "LEGACY_FAKE_UTC" | "UNK
  * day for same-timezone flights.
  */
 export function toLocalDateString(date: Date, timezone: string | null): string {
-  if (!timezone) {
-    return date.toISOString().split("T")[0];
-  }
-  try {
-    // en-CA formats as YYYY-MM-DD.
-    return new Intl.DateTimeFormat("en-CA", {
-      timeZone: timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-    }).format(date);
-  } catch {
-    return date.toISOString().split("T")[0];
-  }
+  return isValidZone(timezone) ? localDay(date, timezone) : date.toISOString().split("T")[0];
 }
 
 /** The clock as it read at the airport when the flight left. */
@@ -41,6 +36,8 @@ export interface LocalWallClock {
   year: number;
   /** 0-11, matching Date#getMonth. */
   month: number;
+  /** Day of the month, 1-31. */
+  day: number;
   /** 0 = Sunday … 6 = Saturday, matching Date#getDay. */
   weekday: number;
   /** 0-23, or null when the stored time is a DATE_ONLY placeholder. */
@@ -65,54 +62,10 @@ function storedComponents(stored: Date): Components {
   };
 }
 
-/**
- * Formatters are cached per timezone: building one costs far more than using
- * it, and a stats request reads the clock several times for each of a
- * traveller's flights. `null` marks a timezone the runtime rejected, so an
- * unusable string is not re-tried thousands of times.
- */
-const wallClockFormatters = new Map<string, Intl.DateTimeFormat | null>();
-
-function wallClockFormatter(timezone: string): Intl.DateTimeFormat | null {
-  const cached = wallClockFormatters.get(timezone);
-  if (cached !== undefined) return cached;
-  let formatter: Intl.DateTimeFormat | null;
-  try {
-    // en-CA formats as YYYY-MM-DD; h23 keeps midnight at 0 rather than 24.
-    formatter = new Intl.DateTimeFormat("en-CA", {
-      timeZone: timezone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      hourCycle: "h23",
-    });
-  } catch {
-    formatter = null;
-  }
-  wallClockFormatters.set(timezone, formatter);
-  return formatter;
-}
-
 /** The components on the clock in `timezone`, or null if it is unusable. */
 function zonedComponents(stored: Date, timezone: string): Components | null {
-  const formatter = wallClockFormatter(timezone);
-  if (!formatter) return null;
-  try {
-    const parts = formatter.formatToParts(stored);
-    const partValue = (type: Intl.DateTimeFormatPartTypes): number =>
-      Number.parseInt(parts.find((p) => p.type === type)?.value ?? "x", 10);
-    const components = {
-      year: partValue("year"),
-      month: partValue("month"),
-      day: partValue("day"),
-      hour: partValue("hour"),
-    };
-    const complete = Object.values(components).every((v) => Number.isFinite(v));
-    return complete ? components : null;
-  } catch {
-    return null;
-  }
+  const parts = wallClockParts(stored.getTime(), timezone);
+  return parts ? { year: parts.year, month: parts.month, day: parts.day, hour: parts.hour } : null;
 }
 
 /**
@@ -138,6 +91,9 @@ function zonedComponents(stored: Date, timezone: string): Components | null {
  * The same reading answers "which countries did I visit in 2025": a 22:30
  * departure from New York on 31 December is already 1 January in UTC, and
  * filing it under the following year would be wrong for the traveller.
+ *
+ * @deprecated → `toLocal` / `localDay` in `shared/time` once flights store
+ * their zone and fake UTC is gone (phases 3 and 6).
  */
 export function localWallClockOf(
   stored: Date,
@@ -153,11 +109,28 @@ export function localWallClockOf(
     date: `${year}-${pad(month)}-${pad(day)}`,
     year,
     month: month - 1,
+    day,
     // Derived from the local calendar date rather than parsed from a locale
     // weekday name, which would depend on the formatter's language.
     weekday: new Date(Date.UTC(year, month - 1, day)).getUTCDay(),
     hour: semantics === "DATE_ONLY" ? null : hour,
   };
+}
+
+/**
+ * A flight's departure on its airport's clock, in the zone the flight was
+ * STORED with (ADR 0002 phase 4) — never the host's, and never today's
+ * catalogue for a flight that has its own.
+ */
+export function departureClockOf(
+  departureTime: Date,
+  flight: { depTimezone?: string | null; depTimeSemantics?: string | null }
+): LocalWallClock {
+  return localWallClockOf(
+    departureTime,
+    flight.depTimezone,
+    (flight.depTimeSemantics as FlightTimeSemantics | null | undefined) || "UNKNOWN"
+  );
 }
 
 /**
@@ -169,8 +142,13 @@ export function localWallClockOf(
  *          → returns 2026-05-01T08:30:00Z (the real UTC instant of "10:30 Berlin").
  */
 export function legacyFakeUtcToRealUtc(stored: Date, tz: string): Date {
-  const wall = formatInTimeZone(stored, "UTC", "yyyy-MM-dd'T'HH:mm:ss");
-  return fromZonedTime(wall, tz);
+  // The stored components ARE the wall clock; reading them off the ISO string
+  // avoids any host-local reading. A stored value is a MACHINE wall clock: a
+  // reading in a spring-forward gap is placed, not refused, and a repeated
+  // hour takes the earlier occurrence (Q5) — date-fns-tz took the later one.
+  // An unknown zone throws ZONE_UNKNOWN; it used to return an Invalid Date.
+  const wall = stored.toISOString().slice(0, 19);
+  return toInstant(wall, tz, { origin: "machine" }).utc;
 }
 
 /**
@@ -197,7 +175,8 @@ export function normalizeFlightTimeUtc(
     case "DATE_ONLY":
       return stored;
     case "LEGACY_FAKE_UTC":
-      return airportTz ? legacyFakeUtcToRealUtc(stored, airportTz) : null;
+      // An unusable zone is the same abstention as a missing one.
+      return isValidZone(airportTz) ? legacyFakeUtcToRealUtc(stored, airportTz) : null;
     case "UNKNOWN":
       return stored;
   }
@@ -211,8 +190,9 @@ export function normalizeFlightTimeUtc(
  *   - 'UTC' (canonical): both endpoints are real UTC instants — naïve diff
  *     is exact, no re-interpretation needed.
  *   - 'LEGACY_FAKE_UTC' / 'UNKNOWN': stored components are wall-clock; we
- *     re-interpret each side through its airport's IANA timezone via
- *     fromZonedTime to recover the real elapsed time across DST/zone hops.
+ *     re-interpret each side through its airport's IANA timezone
+ *     (`legacyFakeUtcToRealUtc`) to recover the real elapsed time across
+ *     DST/zone hops.
  */
 export function tzAwareDurationMinutes(
   departureTime: Date,
@@ -237,13 +217,12 @@ export function tzAwareDurationMinutes(
     return (arrivalTime.getTime() - departureTime.getTime()) / 60_000;
   }
 
-  try {
-    const depUtc = fromZonedTime(departureTime, depTz);
-    const arrUtc = fromZonedTime(arrivalTime, arrTz);
-    return (arrUtc.getTime() - depUtc.getTime()) / 60_000;
-  } catch {
+  if (!isValidZone(depTz) || !isValidZone(arrTz)) {
     return (arrivalTime.getTime() - departureTime.getTime()) / 60_000;
   }
+  const depUtc = legacyFakeUtcToRealUtc(departureTime, depTz);
+  const arrUtc = legacyFakeUtcToRealUtc(arrivalTime, arrTz);
+  return (arrUtc.getTime() - depUtc.getTime()) / 60_000;
 }
 
 /**
@@ -274,6 +253,12 @@ export async function getAirportTimezone(
   }
 }
 
+/** `YYYY-MM-DD[T ]HH:mm[:ss][.sss]` → `YYYY-MM-DDTHH:mm:ss`, or null when it is not one. */
+function parseProviderWallClock(value: string): string | null {
+  const match = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})(?::(\d{2}))?(?:\.\d+)?$/.exec(value.trim());
+  return match ? `${match[1]}T${match[2]}:${match[3] ?? "00"}` : null;
+}
+
 /**
  * Convert a local time string to UTC based on airport timezone
  * @param timeString Time string (ISO format or any format that Date can parse)
@@ -290,15 +275,10 @@ export async function convertLocalTimeToUtc(
 
   try {
     const timezone = await getAirportTimezone(airportCode);
-    if (!timezone) {
-      // If no timezone found, try to parse as UTC
-      logger.debug({
-        operation: "convert_local_time_no_timezone",
-        message: "No timezone found for airport, treating as UTC",
-        context: { airportCode, timeString },
-      });
-      const date = new Date(timeString);
-      return isNaN(date.getTime()) ? null : date.toISOString();
+    if (!isValidZone(timezone)) {
+      // Refused, not read as UTC: an airport's local time read as UTC is off
+      // by its whole offset, and nothing downstream could tell.
+      throw new TzUnresolvedError(`airport ${airportCode} has no time zone`);
     }
 
     // Parse the time string as a local time in the airport's timezone
@@ -315,13 +295,10 @@ export async function convertLocalTimeToUtc(
       // Already has timezone info, parse directly
       localDate = new Date(timeString);
     } else {
-      // No timezone info - treat as local time in airport's timezone
-      // Create a date string with timezone info
-      const dateStr = timeString.replace("T", " ").replace(/\.\d{3}/, "");
-      // Use zonedTimeToUtc to convert from airport timezone to UTC
-      // We need to create a date object first, then convert
-      const tempDate = new Date(dateStr);
-      if (isNaN(tempDate.getTime())) {
+      // No offset: the reading is the airport's wall clock. Converted through
+      // shared/time — `new Date(dateStr)` read it in the HOST's zone first.
+      const wall = parseProviderWallClock(timeString);
+      if (!wall) {
         logger.warn({
           operation: "convert_local_time_parse_error",
           message: "Failed to parse time string",
@@ -329,12 +306,12 @@ export async function convertLocalTimeToUtc(
         });
         return null;
       }
-      // Convert from airport timezone to UTC
-      localDate = fromZonedTime(tempDate, timezone);
+      localDate = toInstant(wall, timezone, { origin: "machine" }).utc;
     }
 
     return localDate.toISOString();
   } catch (error) {
+    if (error instanceof TzUnresolvedError) throw error;
     logger.error({
       operation: "convert_local_time_to_utc_error",
       message: "Failed to convert local time to UTC",
@@ -373,9 +350,11 @@ export async function convertUtcToLocalTime(
       return null;
     }
 
-    // Convert UTC to airport's local timezone
-    const localDate = toZonedTime(utcDate, timezone);
-    return localDate.toISOString();
+    // The airport's wall clock, written in the fake-UTC form this function
+    // always returned on a UTC host. `toZonedTime(...).toISOString()` shifted
+    // it by the HOST's offset on any other host.
+    if (!isValidZone(timezone)) return utcTimeString;
+    return `${toLocal(utcDate, timezone).local}.000Z`;
   } catch (error) {
     logger.error({
       operation: "convert_utc_to_local_time_error",
@@ -408,15 +387,15 @@ export async function convertAviationstackTimeToUtc(
   // We need to interpret this as local time in the airport's timezone
   try {
     const timezone = await getAirportTimezone(airportCode);
-    if (!timezone) {
+    if (!isValidZone(timezone)) {
       logger.warn({
         operation: "convert_aviationstack_time_no_timezone",
         message: "No timezone found for airport, cannot convert Aviationstack time",
-        context: { airportCode, timeString },
+        context: { airportCode },
       });
-      // Try to parse as UTC as fallback
-      const date = new Date(timeString);
-      return isNaN(date.getTime()) ? null : date.toISOString();
+      // Refused rather than parsed as UTC: the value is the airport's wall
+      // clock, and reading it as UTC is off by the airport's whole offset.
+      throw new TzUnresolvedError(`airport ${airportCode} has no time zone`);
     }
 
     // Parse the time string (assume it's in local airport time)
@@ -438,11 +417,13 @@ export async function convertAviationstackTimeToUtc(
       /(\d{4})-(\d{2})-(\d{2})[T\s](\d{2}):(\d{2})(?::(\d{2}))?/
     );
     if (!dateMatch) {
+      const operation = "convert_aviationstack_time_parse_error";
       logger.warn({
-        operation: "convert_aviationstack_time_parse_error",
+        operation,
         message: "Failed to parse Aviationstack time string format",
-        context: { timeString, airportCode, timezone },
+        context: { timezone },
       });
+      logger.debug({ operation, context: { timeString, airportCode } });
       return null;
     }
 
@@ -467,23 +448,25 @@ export async function convertAviationstackTimeToUtc(
     const localDate = new Date(Date.UTC(yearNum, monthNum, dayNum, hourNum, minuteNum, secondNum));
 
     if (isNaN(localDate.getTime())) {
+      const operation = "convert_aviationstack_time_parse_error";
       logger.warn({
-        operation: "convert_aviationstack_time_parse_error",
+        operation,
         message: "Failed to create date from parsed components",
-        context: { timeString, airportCode, timezone, year, month, day, hour, minute, second },
+        context: { timezone },
+      });
+      logger.debug({
+        operation,
+        context: { timeString, airportCode, year, month, day, hour, minute, second },
       });
       return null;
     }
 
-    // Convert from airport timezone to UTC
-    // fromZonedTime takes a date and interprets its UTC time as if it's in the given timezone,
-    // then returns the equivalent UTC date
-    // Example: If localDate is 2025-12-28T14:30:00Z (14:30 UTC) and timezone is Europe/Berlin (UTC+1),
-    // fromZonedTime will interpret 14:30 UTC as 14:30 Berlin time, which is 13:30 UTC
-    // So it returns 2025-12-28T13:30:00Z
-    const utcDate = fromZonedTime(localDate, timezone);
-    return utcDate.toISOString();
+    // The UTC components of localDate ARE the airport's wall clock; read in
+    // the airport's zone: 14:30 in Berlin in December is 13:30Z.
+    const wall = localDate.toISOString().slice(0, 19);
+    return toInstant(wall, timezone, { origin: "machine" }).utc.toISOString();
   } catch (error) {
+    if (error instanceof TzUnresolvedError) throw error;
     logger.error({
       operation: "convert_aviationstack_time_to_utc_error",
       message: "Failed to convert Aviationstack time to UTC",
@@ -526,10 +509,11 @@ export async function convertAirlabsTimeToUtc(
       return await convertAviationstackTimeToUtc(timeString, airportCode);
     }
 
-    // Last resort: try to parse as UTC
-    const date = new Date(timeString);
-    return isNaN(date.getTime()) ? null : date.toISOString();
+    // No offset and no airport: a wall clock with no place. `new Date()`
+    // would have read it in the HOST's zone; refused instead.
+    throw new TzUnresolvedError("an offset-less provider time with no airport");
   } catch (error) {
+    if (error instanceof TzUnresolvedError) throw error;
     logger.error({
       operation: "convert_airlabs_time_to_utc_error",
       message: "Failed to convert AirLabs time to UTC",

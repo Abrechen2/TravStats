@@ -22,6 +22,8 @@ import CrossDomainHeatmap from "./CrossDomainHeatmap";
 import DomainToggleChips from "./DomainToggleChips";
 import DomainSummaryCard from "./DomainSummaryCard";
 import TravelAccountSection from "./TravelAccountSection";
+import { todayZoneNow } from "../../../hooks/useTodayZone";
+import { todayIn } from "../../../shared/time";
 
 interface Props {
   /** From the page's `useDomainStats` — already limited to enabled domains. */
@@ -88,7 +90,9 @@ export default function OverviewTab({
   const comparing = compareEnabled && selectedYear !== null && compareYear !== null;
   const currentAgg = comparing ? aggregate(stats, visible, selectedYear, comparison) : null;
   const prevAgg = comparing ? aggregate(stats, visible, compareYear, comparison) : null;
-  const heatmapYear = selectedYear ?? years[years.length - 1] ?? new Date().getFullYear();
+  // Falls back to the year it is in the profile zone (Q1), not the reader's.
+  const heatmapYear =
+    selectedYear ?? years[years.length - 1] ?? Number(todayIn(todayZoneNow()).slice(0, 4));
 
   if (loading) {
     return (

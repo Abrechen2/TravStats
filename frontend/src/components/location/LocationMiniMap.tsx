@@ -69,7 +69,6 @@ export function LocationMiniMap({
       ?.getMap()
       .easeTo({ center: [value.lon, value.lat], zoom: initialViewState.zoom, duration: 600 });
     // `value` is deliberately absent: a drag changes it and must NOT move the map.
-    // eslint-disable-next-line react-hooks/exhaustive-deps
   }, [focusNonce]);
 
   return (

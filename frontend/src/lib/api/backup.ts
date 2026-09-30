@@ -5,6 +5,12 @@ export interface BackupScheduleSettings {
   backupEnabled: boolean;
   backupInterval: "daily" | "weekly" | "monthly";
   backupRetentionDays: number;
+  /** The zone the backup hour is read in; null = the server's own zone (ADR 0002). */
+  backupZone?: string | null;
+  /** Server-reported: the zone the scheduler actually runs in. */
+  backupZoneEffective?: string;
+  /** Server-reported: the server's own zone, the default. */
+  hostZone?: string;
 }
 
 export const backupApi = {
@@ -40,20 +46,19 @@ export const backupApi = {
     return data;
   },
 
+  /**
+   * Start a backup. Answers at once with a job (the dump and the archive take
+   * minutes); `waitForJob` reads the outcome.
+   */
   create: async (options?: {
     type?: "full" | "partial";
     retentionDays?: number;
-  }): Promise<{
-    success: boolean;
-    backupId: string;
-    message: string;
-  }> => {
+  }): Promise<{ jobId: string; backupId: string }> => {
     const { data } = await api.post<{
       success: boolean;
-      backupId: string;
-      message: string;
+      data: { jobId: string; backupId: string };
     }>("/backup", options || {});
-    return data;
+    return data.data;
   },
 
   download: async (id: string): Promise<Blob> => {
@@ -75,15 +80,14 @@ export const backupApi = {
        */
       acceptEncryptionKeyChange?: boolean;
     }
-  ): Promise<{
-    success: boolean;
-    message: string;
-  }> => {
-    const { data } = await api.post<{
-      success: boolean;
-      message: string;
-    }>(`/backup/${id}/restore`, options);
-    return data;
+  ): Promise<{ jobId: string }> => {
+    // A job, like `create`: the preflight refusals (RESTORE_*) arrive as the
+    // job's error code rather than as this response.
+    const { data } = await api.post<{ success: boolean; data: { jobId: string } }>(
+      `/backup/${id}/restore`,
+      options
+    );
+    return data.data;
   },
 
   delete: async (

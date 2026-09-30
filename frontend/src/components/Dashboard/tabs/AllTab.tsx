@@ -70,6 +70,9 @@ import { initialLegendOpen, isPhoneViewport } from "./legendInitialState";
 import { SidebarToggle } from "../SidebarToggle";
 import { Icon } from "../../ui/Icon";
 import { useDomainColors } from "../../../hooks/useDomainColors";
+import { DomainFilterButton } from "./DomainFilterButton";
+import { DomainFilterEmptyOverlay } from "./DomainFilterEmptyOverlay";
+import { useAllTabDomainVisibility } from "./useAllTabDomainVisibility";
 
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
@@ -149,36 +152,31 @@ export function AllTab(): JSX.Element {
   // Global dashboard filter — year populates `time.from/to`, domain
   // pill row toggles flight/cruise visibility on the Alle tab. The pill
   // filter is intersected with the user's enabledDomains: a disabled
-  // domain must never surface here, regardless of the pill state (the
-  // pill store defaults to AVAILABLE_DOMAINS, not the user's setting).
+  // domain must never surface here. The map-options pills that used to be a
+  // second gate went on 2026-09-28; the domain filter is the only one now.
   const { isEnabled } = useEnabledDomains();
   const filterTime = useDashboardFilterStore((s) => s.time);
-  const filterDomains = useDashboardFilterStore((s) => s.domains);
-  const flightsVisible = filterDomains.includes("flight") && isEnabled("flight");
-  const cruisesVisible = filterDomains.includes("cruise") && isEnabled("cruise");
-  const lodgingsVisible = filterDomains.includes("lodging") && isEnabled("lodging");
   const placeColorConfig = usePlaceColorStore((st) => st.config);
   // POI asks `usePlacesVisible`, the one home of the places rule — the user's
   // domain choice alone since 2026-09-05 (the instance beta flag used to be a
   // second condition here).
   const placesAllowed = usePlacesVisible();
-  const placesVisible = filterDomains.includes("poi") && placesAllowed;
 
   // Tours have no domain pill and no gate since 2026-09-18 — the hook still
   // takes the flag so a future domain switch has somewhere to say no.
   // Tours are beta again (2026-09-24): nothing is fetched while the key is closed.
   const toursVisible = useToursVisible();
   const dashboardTours = useDashboardTours(toursVisible);
-  // A roadtrip IS a domain: it answers to the user's own switch and the
-  // filter pill like a cruise does, and to the time range like everything
-  // else. A day tour is not a domain and answers to the range alone.
-  const roadtripsVisible = filterDomains.includes("roadtrip") && isEnabled("roadtrip");
+  // The "Alle" tab's domain-filter (decision 2026-09-27; `rail` joined 2026-09-28).
+  const { domainFilter, dayTourCount, visible } = useAllTabDomainVisibility(dashboardTours.tours);
+  const [domainFilterOpen, setDomainFilterOpen] = useState(false);
   // Keyed on the hook's stable arrays, not its result object, which is new
   // on every render and would rebuild the tour paths each time.
   const filteredTours = useMemo(() => {
     const tours = dashboardTours.tours.filter(
       (tour) =>
-        (tour.kind !== "roadtrip" || roadtripsVisible) &&
+        (tour.kind !== "roadtrip" || visible.roadtrip) &&
+        (tour.kind !== "tour" || visible.tour) &&
         (!tour.startDate ||
           intervalOverlapsRange(tour.startDate, tour.endDate, filterTime.from, filterTime.to))
     );
@@ -187,7 +185,8 @@ export function AllTab(): JSX.Element {
   }, [
     dashboardTours.tours,
     dashboardTours.geometries,
-    roadtripsVisible,
+    visible.roadtrip,
+    visible.tour,
     filterTime.from,
     filterTime.to,
   ]);
@@ -197,7 +196,7 @@ export function AllTab(): JSX.Element {
   // Flights without a departureTime stay visible (treat NaN as
   // unbounded, mirroring intervalOverlapsRange's permissive policy).
   const visibleFlights = useMemo<GeoJSONFeature[]>(() => {
-    if (!flightsVisible) return [];
+    if (!visible.flight) return [];
     const from = filterTime.from;
     const to = filterTime.to;
     if (!from && !to) return flights;
@@ -210,25 +209,25 @@ export function AllTab(): JSX.Element {
       if (Number.isNaN(t)) return true;
       return t >= fromMs && t <= toMs;
     });
-  }, [flights, flightsVisible, filterTime.from, filterTime.to]);
+  }, [flights, visible.flight, filterTime.from, filterTime.to]);
 
   // Cruises filtered by interval overlap (cruise has start + optional end);
   // hidden entirely when domain is off.
   const visibleCruises = useMemo<Cruise[]>(() => {
-    if (!cruisesVisible) return [];
+    if (!visible.cruise) return [];
     if (!filterTime.from && !filterTime.to) return cruises;
     return cruises.filter((c) =>
       // Cruises with a null startDate stay visible — same permissive
       // policy intervalOverlapsRange uses for unparseable dates.
       intervalOverlapsRange(c.startDate ?? "", c.endDate, filterTime.from, filterTime.to)
     );
-  }, [cruises, cruisesVisible, filterTime.from, filterTime.to]);
+  }, [cruises, visible.cruise, filterTime.from, filterTime.to]);
 
   // Lodgings filtered by stay overlap (mirrors LodgingTab's visibleLodgings):
   // a lodging stays visible if ANY of its stays overlaps the selected range.
   // Hidden entirely when the domain chip is off or the domain is disabled.
   const visibleLodgings = useMemo<Lodging[]>(() => {
-    if (!lodgingsVisible) return [];
+    if (!visible.lodging) return [];
     if (!filterTime.from && !filterTime.to) return lodgings;
     return lodgings.filter((lodging) =>
       lodging.stays.some(
@@ -241,14 +240,14 @@ export function AllTab(): JSX.Element {
           intervalOverlapsRange(stay.checkIn, stay.checkOut, filterTime.from, filterTime.to)
       )
     );
-  }, [lodgings, lodgingsVisible, filterTime.from, filterTime.to]);
+  }, [lodgings, visible.lodging, filterTime.from, filterTime.to]);
 
   // Places filtered by VISIT date. Same policy as an undated lodging stay: a
   // place whose visits carry no date occupies no known day, so it steps aside
   // while a range is set and returns the moment it is cleared — rather than
   // being shown under a year it may not belong to.
   const visiblePlaces = useMemo<Place[]>(() => {
-    if (!placesVisible) return [];
+    if (!visible.poi) return [];
     if (!filterTime.from && !filterTime.to) return places;
     return places.filter((place) =>
       place.visits.some(
@@ -258,7 +257,7 @@ export function AllTab(): JSX.Element {
           intervalOverlapsRange(visit.visitedAt, visit.visitedAt, filterTime.from, filterTime.to)
       )
     );
-  }, [places, placesVisible, filterTime.from, filterTime.to]);
+  }, [places, visible.poi, filterTime.from, filterTime.to]);
 
   // Map click → selection store. DeckGLMap handles dim/highlight + tooltip.
   const handleFlightClick = useCallback(
@@ -498,8 +497,11 @@ export function AllTab(): JSX.Element {
   // sphere mesh and draws zero pixels there (fix round 2, found in a real
   // browser). `visMode` already resolves "globe" vs "routes"/"heatmap"/
   // "journey" a few lines up.
-  // Rail rides beside the tours, behind every rail gate plus the domain chip.
-  const railOn = useRailVisible() && showTours && filterDomains.includes("rail");
+  // Rail rides beside the tours, behind every rail gate plus its own filter
+  // row. It used to read the map-options domain chip; that control was
+  // removed on 2026-09-28 and rail became the filter's seventh row in the
+  // same change, so the switch moved rather than disappearing.
+  const railOn = useRailVisible() && showTours && domainFilter.isVisible("rail");
   const rail = useRailOverlay(railOn, visMode === "globe", t);
   const tourLayers = useMemo<Layer[]>(
     () => [
@@ -537,8 +539,8 @@ export function AllTab(): JSX.Element {
   // only row is the negative one and every coloured pin stays unexplained.
   const poiLegendRows = buildPoiLegendRows(placeColorConfig, t, legendRow, placeListContext.used);
   const placeLegendRows = buildAirportPortLegendRows(
-    flightsVisible,
-    cruisesVisible,
+    visible.flight,
+    visible.cruise,
     themeColors,
     t,
     legendRow
@@ -564,10 +566,10 @@ export function AllTab(): JSX.Element {
   // not a cosmetic one. The other three map overlays in this app sit
   // bottom-LEFT and are unaffected.
   const legendRows = [
-    ...(flightsVisible ? flightLegendRows : []),
-    ...(cruisesVisible ? cruiseLegendRows : []),
-    ...(lodgingsVisible ? lodgingLegendRows : []),
-    ...(placesVisible ? poiLegendRows : []),
+    ...(visible.flight ? flightLegendRows : []),
+    ...(visible.cruise ? cruiseLegendRows : []),
+    ...(visible.lodging ? lodgingLegendRows : []),
+    ...(visible.poi ? poiLegendRows : []),
     ...placeLegendRows,
     // The tour rows join the same array rather than hanging outside it,
     // or they would sit below the collapsed panel and stay visible when
@@ -774,12 +776,24 @@ export function AllTab(): JSX.Element {
         lodgingsOverride={visibleLodgings}
         onLodgingClick={handleLodgingClick}
         hideInfoPill
+        filterSlot={
+          <DomainFilterButton
+            tourCount={dayTourCount}
+            open={domainFilterOpen}
+            onOpenChange={setDomainFilterOpen}
+          />
+        }
       />
       {activityToggle}
       {legendTable}
       {tourStatusOverlay}
       {activityPanel}
       {editModal}
+      <DomainFilterEmptyOverlay
+        isEmpty={domainFilter.isEmpty}
+        onShowAll={domainFilter.showAll}
+        onOpenFilter={() => setDomainFilterOpen(true)}
+      />
     </div>
   );
 }

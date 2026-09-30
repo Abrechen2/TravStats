@@ -32,7 +32,7 @@ const router = Router();
  * Body:
  * - emailContent: string (required) - Email body text or HTML
  * - subject: string (optional) - Email subject line
- * - domain: 'flight' | 'cruise' | 'lodging' | 'auto' (default 'flight')
+ * - domain: 'flight' | 'cruise' | 'lodging' | 'rail' | 'auto' (default 'flight')
  * - referenceDate: string (optional) - when the mail was SENT, so a year-less
  *   date in the body is read against that rather than against today (#285)
  * - retain: boolean (optional) - keep the pasted mail as a document (forgejo#116)
@@ -87,6 +87,7 @@ router.post(
         // used to do here.
         subject: subject || undefined,
         ...(extracted?.html ? { html: extracted.html } : {}),
+        ...(extracted?.attachments ? { attachments: extracted.attachments } : {}),
         domain: parsed.domain,
         // Never 'document' on this route: the email entry point reads the subject
         // and the HTML part, and a header is what dates a mail whose body carries
@@ -143,6 +144,7 @@ router.post(
       res.status(described.status).json({
         error: "Email parsing failed",
         message: described.message,
+        code: described.code,
       });
     }
   }
@@ -154,7 +156,7 @@ router.post(
  *
  * Body: multipart/form-data
  * - email: File (required) - Email file (.msg, .eml, or .txt)
- * - domain: 'flight' | 'cruise' | 'lodging' | 'auto' (default 'flight')
+ * - domain: 'flight' | 'cruise' | 'lodging' | 'rail' | 'auto' (default 'flight')
  * - retain: 'true' (optional) - keep the file as a document (forgejo#116); .eml
  *   and .txt only, a .msg is refused before parsing
  *
@@ -235,7 +237,6 @@ router.post(
           operation: "email_upload_validation_failed",
           message: "Email file validation failed",
           context: {
-            filename: file.originalname,
             mimetype: file.mimetype,
             extension: ext,
             reason: validation.reason,
@@ -249,9 +250,9 @@ router.post(
 
       logger.info(
         {
-          filename: file.originalname,
           size: file.size,
           mimetype: file.mimetype,
+          extension: ext,
         },
         `[Email Parse File] Parsing email file for user ${userId}`
       );
@@ -289,6 +290,7 @@ router.post(
         text: extracted.text,
         subject: extracted.subject,
         html: extracted.html,
+        ...(extracted.attachments ? { attachments: extracted.attachments } : {}),
         domain: domainValue,
         // See /parse-email above: the flight path must take the email entry
         // point so subject and HTML are read (#285).
@@ -351,6 +353,7 @@ router.post(
       res.status(described.status).json({
         error: "Email file parsing failed",
         message: described.message,
+        code: described.code,
       });
     }
   }

@@ -1,5 +1,6 @@
 import { Prisma } from "../../prisma";
 import { flightIdsInLocalPeriod } from "./departureLocalDay";
+import { flightIdsCoveredBy } from "../../services/loyalty/listFilters";
 import {
   SPECIAL_TYPE_FILTER_ANY,
   SPECIAL_TYPE_FILTER_NONE,
@@ -192,12 +193,29 @@ export const resolveFlightWhere = async (
 ): Promise<{ where: Prisma.FlightWhereInput; noResults: boolean }> => {
   const base = buildFlightWhere(query, userId);
   if (base.noResults) return base;
-  if (query.year === undefined && query.month === undefined) return base;
+  const periodWhere = await restrictToLocalPeriod(base.where, query);
+  if (periodWhere === null) return { where: base.where, noResults: true };
+  if (query.membershipId === undefined) return { where: periodWhere, noResults: false };
 
-  const ids = await flightIdsInLocalPeriod(base.where, { year: query.year, month: query.month });
-  // An empty id list is not `{ id: { in: [] } }` — that is a valid query, but
-  // saying so outright spares the caller a round trip and matches the
-  // `noResults` contract the status filter already uses.
-  if (ids.length === 0) return { where: base.where, noResults: true };
-  return { where: { AND: [base.where, { id: { in: ids } }] }, noResults: false };
+  // Asked even when the period is already empty of this card's flights: an
+  // unknown card must answer 404, not an empty page that looks like "none".
+  const covered = await flightIdsCoveredBy(userId, query.membershipId, periodWhere);
+  if (covered.length === 0) return { where: base.where, noResults: true };
+  return { where: { AND: [periodWhere, { id: { in: covered } }] }, noResults: false };
 };
+
+/**
+ * The year/month restriction as an id list, or null when it leaves nothing.
+ * An empty id list is not `{ id: { in: [] } }` — that is a valid query, but
+ * saying so outright spares the caller a round trip and matches the
+ * `noResults` contract the status filter already uses.
+ */
+async function restrictToLocalPeriod(
+  where: Prisma.FlightWhereInput,
+  query: FlightQueryInput
+): Promise<Prisma.FlightWhereInput | null> {
+  if (query.year === undefined && query.month === undefined) return where;
+  const ids = await flightIdsInLocalPeriod(where, { year: query.year, month: query.month });
+  if (ids.length === 0) return null;
+  return { AND: [where, { id: { in: ids } }] };
+}

@@ -41,10 +41,11 @@ const envSchema = z.object({
     .length(64)
     .regex(/^[0-9a-fA-F]+$/)
     .optional(),
-  COOKIE_SECURE: z
-    .string()
-    .transform((val) => val === "true")
-    .prefault("true"),
+  // Interpreted ONLY by utils/session.ts `getCookieSecure` (empty = unset =
+  // auto-detect, "false" = never, anything else = always). This schema used to
+  // turn it into a boolean with a default of `true` — a second, contradicting
+  // rule that nothing read.
+  COOKIE_SECURE: z.string().optional(),
   // Parsed and validated by utils/trustProxy.ts at app construction.
   TRUST_PROXY: z.string().optional(),
 

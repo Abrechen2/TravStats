@@ -1,4 +1,5 @@
-﻿import { format } from "date-fns";
+﻿import { flightArrival, flightDeparture } from "../lib/entityTimes";
+import type { TimeValue } from "../shared/time";
 import type { Flight } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
 import { useSettingsStore } from "../store/settingsStore";
@@ -8,6 +9,7 @@ import AirlineLogo from "./AirlineLogo";
 import DataSourceBadges from "./DataSourceBadges";
 import SpecialTypeBadge from "./specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "./specialFlights/specialTypeMeta";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
 
 interface FlightListProps {
   flights: Flight[];
@@ -15,6 +17,23 @@ interface FlightListProps {
   onFlightClick: (flightId: string) => void;
   onEditFlight: (flight: Flight) => void;
   onDeleteFlight: (flightId: string) => void;
+}
+
+/**
+ * "Sep 27, 2026 14:05" on the AIRPORT's clock — the server's `local` (ADR
+ * 0002), in the en-US shape date-fns printed before. The components are
+ * placed on a UTC instant and read back in UTC, so no reader's zone moves them.
+ */
+function airportClock(value: TimeValue | null): string {
+  if (!value) return "—";
+  const [date, time = "00:00"] = value.local.split("T");
+  const day = new Intl.DateTimeFormat("en-US", {
+    month: "short",
+    day: "2-digit",
+    year: "numeric",
+    timeZone: "UTC",
+  }).format(new Date(`${date}T00:00:00.000Z`));
+  return `${day} ${time.slice(0, 5)}`;
 }
 
 export default function FlightList({
@@ -25,6 +44,7 @@ export default function FlightList({
   onDeleteFlight,
 }: FlightListProps): JSX.Element {
   const { t } = useTranslation(["flights", "common"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
 
   const getStatusBadge = (status: string): JSX.Element => {
     const colors = {
@@ -164,9 +184,7 @@ export default function FlightList({
                       )}
                     </p>
                     <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      {flight.departureTime
-                        ? format(new Date(flight.departureTime), "MMM dd, yyyy HH:mm")
-                        : "—"}
+                      {airportClock(flightDeparture(flight))}
                     </p>
                   </div>
 
@@ -183,9 +201,7 @@ export default function FlightList({
                       )}
                     </p>
                     <p className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      {flight.arrivalTime
-                        ? format(new Date(flight.arrivalTime), "MMM dd, yyyy HH:mm")
-                        : "—"}
+                      {airportClock(flightArrival(flight))}
                     </p>
                   </div>
                 </div>
@@ -277,9 +293,10 @@ export default function FlightList({
                 </button>
 
                 <button
-                  onClick={(e) => {
+                  onClick={async (e) => {
                     e.stopPropagation();
-                    if (confirm(t("flights:list.deleteConfirm"))) {
+                    const message = t("flights:list.deleteConfirm");
+                    if (await askConfirm({ message, destructive: true })) {
                       onDeleteFlight(flight.id);
                     }
                   }}
@@ -301,6 +318,7 @@ export default function FlightList({
           </div>
         );
       })}
+      {confirmDialog}
     </div>
   );
 }

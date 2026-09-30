@@ -16,6 +16,10 @@ export const RAIL_LOOKUP_OUTCOMES = [
   "unavailable",
   "disabled",
   "notApplicable",
+  /** Asked, but the lookup's overall time ran out before it answered. */
+  "timedOut",
+  /** Not asked: the time was spent before its turn came. */
+  "skippedForTime",
 ] as const;
 export type RailLookupOutcome = (typeof RAIL_LOOKUP_OUTCOMES)[number];
 
@@ -28,8 +32,19 @@ export interface RailLookupQuery {
   date: string;
   /** The boarding station. */
   from: { lat: number; lon: number; dbId: string | null };
-  /** The boarding station's IANA zone; null means "read the day in UTC". */
-  timezone: string | null;
+  /**
+   * The boarding station's IANA zone — the catalogue's, else its coordinates'
+   * (`resolveZone`). Never a UTC stand-in: a lookup that cannot say which day
+   * "the 26th" is at the station refuses with TZ_UNRESOLVED instead.
+   */
+  timezone: string;
+  /** When the whole lookup must have answered by — see `railHttp.ts`. */
+  deadline: RailDeadline;
+}
+
+/** The end of one lookup's time budget (epoch ms), shared by all its requests. */
+export interface RailDeadline {
+  readonly at: number;
 }
 
 export interface ProviderStop {
@@ -56,4 +71,5 @@ export interface ProviderTrip {
 }
 
 export type ProviderResult =
-  { outcome: "matched"; trip: ProviderTrip } | { outcome: Exclude<RailLookupOutcome, "matched"> };
+  | { outcome: "matched"; trip: ProviderTrip }
+  | { outcome: Exclude<RailLookupOutcome, "matched" | "skippedForTime"> };

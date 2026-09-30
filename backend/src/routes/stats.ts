@@ -27,7 +27,7 @@ import { calculateCruiseStats, type CruiseData as CruiseStatsInput } from "../ut
 import { calculateLodgingStats } from "../utils/lodgingStats";
 import logger from "../utils/logger";
 import { localWallClockOf } from "../utils/timezone";
-import { withDepartureClock } from "../services/stats/departureClock";
+import { FLIGHT_CLOCK_SELECT, withDepartureClock } from "../services/stats/departureClock";
 import { loadPassport } from "../services/stats/passportLoader";
 import { buildWhere, computeSummary } from "../services/stats/summary";
 import { loadDaysAway } from "../services/stats/daysAwayLoader";
@@ -37,6 +37,7 @@ import { fetchFlightDatedRows, fetchCruiseDatedRows } from "../services/stats/ti
 import { buildTravelRecords } from "../services/stats/records";
 import { enrichFlightsWithAirportFacts } from "../services/flightAirportFacts";
 import { countableFlightWhere } from "../shared/flightCounting";
+import { loadWrappedDomains } from "../services/stats/wrappedDomains";
 import {
   resolveWindow,
   bucketSeries,
@@ -59,7 +60,7 @@ import { statsEtag } from "../middleware/statsEtag";
 import { computeSeatStats } from "../services/stats/seatStats";
 import { computeCountryStats } from "../services/stats/countryStats";
 import { computeAirlineRanking } from "../services/stats/airlineRanking";
-import { loadHomeAirportHistory } from "../services/stats/homeAirportHistory";
+import { loadHomePeriods } from "../services/home/homeStore";
 
 const router = Router();
 
@@ -149,15 +150,11 @@ router.get("/hero", async (req: AuthRequest, res: Response, next: NextFunction):
           depLon: true,
           arrLat: true,
           arrLon: true,
-          depIata: true,
-          depIcao: true,
-          arrIata: true,
-          arrIcao: true,
+          ...FLIGHT_CLOCK_SELECT,
           airline: true,
           aircraft: true,
           departureTime: true,
           arrivalTime: true,
-          depTimeSemantics: true,
           arrTimeSemantics: true,
           status: true,
           price: true,
@@ -172,8 +169,8 @@ router.get("/hero", async (req: AuthRequest, res: Response, next: NextFunction):
     const passport = await loadPassport(userId, flights);
     const datedFlights = await withDepartureClock(flights);
 
-    // homeAirportHistory=[] is deliberate: this endpoint only reads
-    // airportCount, which doesn't depend on home-airport history — only the
+    // No home periods, deliberately: this endpoint only reads
+    // airportCount, which doesn't depend on home — only the
     // unused farthestFromHome field does. Skips /airports's extra
     // userSettings.findUnique lookup.
     const [airportStats, funStats] = await Promise.all([
@@ -476,15 +473,11 @@ router.get("/fun", async (req: AuthRequest, res: Response, next: NextFunction): 
         depLon: true,
         arrLat: true,
         arrLon: true,
-        depIata: true,
-        depIcao: true,
-        arrIata: true,
-        arrIcao: true,
+        ...FLIGHT_CLOCK_SELECT,
         airline: true,
         aircraft: true,
         departureTime: true,
         arrivalTime: true,
-        depTimeSemantics: true,
         status: true,
         price: true,
         taxes: true,
@@ -573,15 +566,11 @@ router.get(
           depLon: true,
           arrLat: true,
           arrLon: true,
-          depIata: true,
-          depIcao: true,
-          arrIata: true,
-          arrIcao: true,
+          ...FLIGHT_CLOCK_SELECT,
           airline: true,
           aircraft: true,
           departureTime: true,
           arrivalTime: true,
-          depTimeSemantics: true,
           status: true,
           price: true,
           taxes: true,
@@ -679,15 +668,11 @@ router.get(
           depLon: true,
           arrLat: true,
           arrLon: true,
-          depIata: true,
-          depIcao: true,
-          arrIata: true,
-          arrIcao: true,
+          ...FLIGHT_CLOCK_SELECT,
           airline: true,
           aircraft: true,
           departureTime: true,
           arrivalTime: true,
-          depTimeSemantics: true,
           status: true,
           price: true,
           taxes: true,
@@ -698,13 +683,13 @@ router.get(
         },
       });
 
-      // Load home airport history so layovers exclude returns to home-at-that-date.
-      const homeHistory = await loadHomeAirportHistory(userId);
+      // Home by date, so layovers exclude returns to any home airport of that date.
+      const homePeriods = await loadHomePeriods(userId);
 
       // Calculate unique stats with error handling - continue even if airport data fails
       let uniqueStats;
       try {
-        uniqueStats = await calculateUniqueStats(await withDepartureClock(flights), homeHistory);
+        uniqueStats = await calculateUniqueStats(await withDepartureClock(flights), homePeriods);
       } catch (statsError) {
         // If stats calculation fails (e.g., database issues), return partial stats
         logger.error({
@@ -780,15 +765,11 @@ router.get(
           depLon: true,
           arrLat: true,
           arrLon: true,
-          depIata: true,
-          depIcao: true,
-          arrIata: true,
-          arrIcao: true,
+          ...FLIGHT_CLOCK_SELECT,
           airline: true,
           aircraft: true,
           departureTime: true,
           arrivalTime: true,
-          depTimeSemantics: true,
           status: true,
           price: true,
           taxes: true,
@@ -799,9 +780,9 @@ router.get(
         },
       });
 
-      const homeHistory = await loadHomeAirportHistory(userId);
+      const homePeriods = await loadHomePeriods(userId);
 
-      const stats = await calculateAirportStats(await withDepartureClock(flights), homeHistory);
+      const stats = await calculateAirportStats(await withDepartureClock(flights), homePeriods);
       res.json(stats);
     } catch (error) {
       next(error);
@@ -843,17 +824,13 @@ router.get(
         select: {
           id: true,
           flightNumber: true,
-          depIata: true,
-          depIcao: true,
-          arrIata: true,
-          arrIcao: true,
+          ...FLIGHT_CLOCK_SELECT,
           depLat: true,
           depLon: true,
           arrLat: true,
           arrLon: true,
           departureTime: true,
           arrivalTime: true,
-          depTimeSemantics: true,
           arrTimeSemantics: true,
           delayMinutes: true,
           routeDistance: true,
@@ -950,31 +927,24 @@ router.get(
       // One scan, not two: `loadPassport` reads the same countable flights of
       // the same user and is handed these rows (forgejo#49). `arrivalTime` and
       // `arrTimeSemantics` are here only because it needs them.
-      const [flights, cruises] = await Promise.all([
+      const [flights, domains] = await Promise.all([
         prisma.flight.findMany({
           where: { userId, ...countableFlightWhere() },
           select: {
-            depIata: true,
-            depIcao: true,
+            ...FLIGHT_CLOCK_SELECT,
             depLat: true,
             depLon: true,
-            arrIata: true,
-            arrIcao: true,
             arrLat: true,
             arrLon: true,
             departureTime: true,
             arrivalTime: true,
-            depTimeSemantics: true,
             arrTimeSemantics: true,
             airline: true,
             flightNumber: true,
             status: true,
           },
         }),
-        prisma.cruise.findMany({
-          where: { userId, ...countableFlightWhere() },
-          select: { startDate: true, status: true },
-        }),
+        loadWrappedDomains(userId),
       ]);
 
       // For `newCountries` only — the passport already decides what counts as
@@ -1000,9 +970,10 @@ router.get(
               : localWallClockOf(f.departureTime, f.depTimezone, f.depTimeSemantics).year,
           distanceKm: calculateDistance(f.depLat, f.depLon, f.arrLat, f.arrLon),
         })),
-        cruises,
+        domains.cruises,
         passport.countries,
-        parsed.data.year ?? null
+        parsed.data.year ?? null,
+        domains.rail
       );
 
       if (!wrapped) {
@@ -1115,12 +1086,8 @@ router.get(
       const flights = await prisma.flight.findMany({
         where: { userId, ...countableFlightWhere() },
         select: {
-          depIata: true,
-          depIcao: true,
-          arrIata: true,
-          arrIcao: true,
+          ...FLIGHT_CLOCK_SELECT,
           departureTime: true,
-          depTimeSemantics: true,
         },
       });
 

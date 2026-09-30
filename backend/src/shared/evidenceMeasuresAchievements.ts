@@ -33,11 +33,11 @@ export const ACHIEVEMENT_MEASURES: Record<string, MeasureSpec> = {
   achievementTotalPoints: {
     aggregation: "sum",
     unit: "points",
-    // Unlike the four `domainFiltered` measures below, this reads
-    // `summary?.totalPoints` from the server's `AchievementSummary`
-    // directly — never filtered by `visibleAchievements` — so it stays
-    // allTime.
-    scopes: ["allTime"],
+    // Read from the server's `AchievementSummary`, which since acceptance
+    // D4 (2026-09-26) scores only badges of visible domains
+    // (services/achievementVisibility.ts) — the same population the count
+    // beside it is folded over.
+    scopes: ["domainFiltered"],
     surface: "AchievementsPage (header meta)",
     calculator: ACHIEVEMENTS_CALCULATOR,
     servedIn: 2,

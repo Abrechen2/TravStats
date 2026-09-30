@@ -17,7 +17,7 @@ import {
 import { assertMergedTripDates } from "../services/trip/tripDateOrder";
 import logger from "../utils/logger";
 import { resolveCompanions, linkRowsFor } from "../services/companionService";
-import { deriveTripStatus } from "../shared/statusDerivation";
+import { statusFromOwnDates } from "../services/trips/ownDatesStatus";
 
 import { detectTrips } from "../services/tripDetectionService";
 import { recomputeTripStatus } from "../services/tripStatusService";
@@ -33,6 +33,7 @@ import {
   resolveOllamaTarget,
 } from "../services/tripSummaryService";
 import { emailParseLimiter } from "../middleware/rateLimit";
+import { assertLlmCloudConsent, assertLlmEnabled } from "../services/llm/llmGate";
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { mostExpensiveTrip } from "../services/trip/tripCostSuperlative";
 import { TRIPS_LIST_INCLUDE, TRIP_RAIL_SELECT } from "../services/trip/tripsListInclude";
@@ -46,6 +47,11 @@ import {
 import { resolveTrip } from "./trips/resolveTrip";
 import { refusesCoverImage } from "./trips/refusesCoverImage";
 import { toPhotoDto } from "./trips/photoDto";
+import { provenanceForWrite } from "../services/tripSummaryProvenance";
+import { editedTripDays, typedTripDays } from "../services/timeModel/tripColumns";
+import { enrichFlightsForClients } from "../services/flightAirportFacts";
+import { withTripTimes } from "../services/trips/timesDto";
+import { withTripDetailTimes } from "../services/trips/tripDetailTimes";
 
 // Re-exported for the Immich trip routers, which import it from here.
 export { resolveTrip };
@@ -65,9 +71,9 @@ const tripsListQuerySchema = z.object({
     .transform((v) => v === "true"),
 });
 
-const reviewProposalSchema = z.object({
+export const reviewProposalSchema = z.object({
   flightIds: z.array(z.string().uuid()).min(2),
-  name: z.string().min(1).max(200),
+  name: z.string().trim().min(1).max(200),
   pnr: z.string().max(20).nullable().optional(),
   source: z.enum(["pnr", "home_loop", "continuity"]).optional(),
 });
@@ -162,7 +168,7 @@ router.get(
       const mostExpensive = includeInsights ? await mostExpensiveTrip(userId) : undefined;
       res.json({
         trips: trips.map((t) => ({
-          ...t,
+          ...withTripTimes(t),
           cruises: t.cruises.map((c) => ({
             ...c,
             distanceKm: Math.round(distanceByCruise.get(c.id) ?? 0),
@@ -293,9 +299,9 @@ const dissolveTripsSchema = z.object({
   tripIds: z.array(z.string().uuid()).min(1).max(500),
 });
 
-const mergeTripsSchema = z.object({
+export const mergeTripsSchema = z.object({
   tripIds: z.array(z.string().uuid()).min(2).max(100),
-  name: z.string().min(1).max(200).optional(),
+  name: z.string().trim().min(1).max(200).optional(),
   targetId: z.string().uuid().optional(),
 });
 
@@ -411,11 +417,8 @@ router.get(
         lodgingCountriesByTrip([trip.id]),
         roadtripCountriesByTrip([trip.id]),
       ]);
-      const flights = trip.flights.map((f) => ({
-        ...f,
-        depTimezone: (f.depIata && facts.get(f.depIata)?.timezone) || null,
-        arrTimezone: (f.arrIata && facts.get(f.arrIata)?.timezone) || null,
-      }));
+      // The stored zone first, then the catalogue — with `times` (ADR 0002).
+      const flights = await enrichFlightsForClients(trip.flights);
       const countries = tripCountries(
         trip.countries,
         trip.flights,
@@ -429,7 +432,9 @@ router.get(
         ...entry,
         photos: links.map((link) => toPhotoDto(link.tripPhoto)),
       }));
-      res.json({ trip: { ...trip, photos, flights, countries, journalEntries } });
+      res.json({
+        trip: withTripDetailTimes({ ...trip, photos, flights, countries, journalEntries }),
+      });
     } catch (error) {
       next(error);
     }
@@ -471,6 +476,7 @@ router.post(
             color,
             startDate: body.startDate,
             endDate: body.endDate,
+            ...typedTripDays(body),
             // Status derivation (spec 2026-07-17-status-from-dates) normally
             // reads linked flights/cruises, which cannot exist yet — a trip must
             // exist before anything can reference its id. Falling through to the
@@ -482,10 +488,7 @@ router.post(
             // auto-trip creation, trip detection).
             status:
               body.status ??
-              deriveTripStatus({
-                earliestStart: body.startDate ?? null,
-                latestEnd: body.endDate ?? null,
-              }) ??
+              (await statusFromOwnDates(userId, body.startDate, body.endDate)) ??
               undefined,
             category: body.category,
             tags: body.tags,
@@ -495,6 +498,7 @@ router.post(
             companions: resolvedCompanions.map((c) => c.displayName),
             notes: body.notes,
             summary: body.summary,
+            ...provenanceForWrite(body.summary, null),
             originLabel: body.originLabel,
             destinationLabel: body.destinationLabel,
             coverImageUrl: body.coverImageUrl,
@@ -518,7 +522,7 @@ router.post(
       await linkDocuments(userId, documentIds, { type: "trip", id: trip.id });
 
       logger.info({ tripId: trip.id, userId }, "[Trips] Created trip");
-      res.status(201).json({ trip });
+      res.status(201).json({ trip: withTripTimes(trip) });
     } catch (error) {
       next(error);
     }
@@ -545,6 +549,7 @@ router.patch(
       // before the stored start would otherwise answer 200 and store a trip
       // that ends before it begins (SRV-TRIP-DATE-001).
       assertMergedTripDates(body, existing);
+      const days = editedTripDays(body, existing);
 
       // Status derivation (spec 2026-07-17-status-from-dates): the schema
       // still ACCEPTS `status` for API compat (never a 400), but the route
@@ -589,8 +594,7 @@ router.patch(
               description: body.description,
             }),
             ...(body.color !== undefined && { color: body.color }),
-            ...(body.startDate !== undefined && { startDate: body.startDate }),
-            ...(body.endDate !== undefined && { endDate: body.endDate }),
+            ...days,
             ...(body.category !== undefined && { category: body.category }),
             ...(body.tags !== undefined && { tags: body.tags }),
             ...(resolvedCompanionsForUpdate !== undefined && {
@@ -598,6 +602,7 @@ router.patch(
             }),
             ...(body.notes !== undefined && { notes: body.notes }),
             ...(body.summary !== undefined && { summary: body.summary }),
+            ...provenanceForWrite(body.summary, existing.summary),
             ...(body.originLabel !== undefined && {
               originLabel: body.originLabel,
             }),
@@ -616,7 +621,7 @@ router.patch(
       // Moving a trip's own dates moves its status, and this handler never
       // recomputed at all (AUD-024). After the transaction, like every other
       // caller: the derivation reads the row it is about to judge.
-      res.json({ trip: await restatusIfDatesMoved(trip, body) });
+      res.json({ trip: withTripTimes(await restatusIfDatesMoved(trip, days)) });
     } catch (error) {
       next(error);
     }
@@ -640,6 +645,14 @@ router.delete(
       // or a cruise does; the schema's cascade is right for a day tour drawn
       // over the trip's timeline and wrong for it. Its stations borrowed from
       // the timeline become its own first — they would go with the trip.
+      //
+      // A day tour whose points are all its own outlives the trip too: since
+      // 2026-09-26 an accepted trip suggestion files standalone tours on the
+      // trip it creates, and deleting that trip must not take the tour and
+      // its recorded tracks with it. Only a tour built from the trip's
+      // timeline stops still cascades — those stops go with the trip, and a
+      // tour left without them would be a route pointing at nothing. The
+      // same rule decides whether a route may change trip (tourRoutes.ts).
       await prisma.$transaction(async (tx) => {
         const roadtrips = await tx.tripRoute.findMany({
           where: { tripId: existing.id, kind: "roadtrip" },
@@ -653,6 +666,14 @@ router.delete(
           });
           await tx.tripRoute.updateMany({ where: { id: { in: ids } }, data: { tripId: null } });
         }
+        await tx.tripRoute.updateMany({
+          where: {
+            tripId: existing.id,
+            kind: "tour",
+            stops: { none: { tripId: { not: null } } },
+          },
+          data: { tripId: null },
+        });
         await tx.trip.delete({ where: { id: existing.id } });
       });
       logger.info({ tripId: req.params.id, userId }, "[Trips] Deleted trip");
@@ -747,13 +768,19 @@ router.post(
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
       const language = parsed.data.language ?? "de";
 
-      // The admin's Ollama (parser settings), then the environment — the same
-      // resolution the parsers use, so one configured Ollama serves both.
+      // Switched off by the admin: refused as LLM_DISABLED before any probe,
+      // so the client can tell "turned off" from "unreachable" below.
+      await assertLlmEnabled();
+      // The admin's provider (parser settings), then the environment — the
+      // same resolution the parsers use, so one configured model serves both.
       const target = await resolveOllamaTarget();
+      // A cloud provider without the admin's consent is refused before the
+      // probe, with its own code — the brief is personal travel data.
+      await assertLlmCloudConsent(target);
       const ollamaUp = await checkOllamaAvailable(target);
       if (!ollamaUp) {
         throw new AppError(
-          "LLM service unavailable. Configure Ollama under Admin → Parser and ensure the model is pulled.",
+          "LLM service unavailable. Configure the AI provider under Admin → Parser and ensure the model is available.",
           503
         );
       }

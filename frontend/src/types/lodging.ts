@@ -1,5 +1,6 @@
 import type { CurrencyCode } from "../shared/currencies";
 import type { LodgingDatePrecision } from "../shared/lodgingTiming";
+import type { StayTimes } from "./times";
 // Frontend view of the `lodging` domain (hotels + campsites). Mirrors
 // backend/prisma/schema.prisma (`Lodging`, `LodgingStay`, `LodgingChain`,
 // `LodgingMembership`) and backend/src/schemas/lodging.ts (enums + input
@@ -84,6 +85,8 @@ export interface LodgingStay {
   checkInTime: string | null;
   checkOutTime: string | null;
   datePrecision: LodgingDatePrecision;
+  /** ADR 0002 phase 4 — read through lib/entityTimes.ts. */
+  times?: StayTimes;
   /** Explicit night count, for when the dates cannot supply one. */
   nights: number | null;
   status: StayStatus;
@@ -208,6 +211,9 @@ export interface LodgingInput {
   website?: string | null;
   amenities?: string[];
   notes?: string | null;
+  /** The OSM house a "nearby" pick named ("osm:node/1"); the server stores it
+   *  only while the lodging has no reference yet. */
+  osmRef?: string;
 }
 
 export interface StayInput {
@@ -351,6 +357,8 @@ export interface LodgingListQuery {
   search?: string;
   /** The lifecycle pill's value — see `shared/lodgingLifecycle.ts`. */
   status?: StayStatus;
+  /** Only hotels with a stay this hotel card counts (resolved on the server). */
+  membershipId?: string;
   limit?: number;
   offset?: number;
   sort?: LodgingSortKey | "checkIn";
@@ -479,6 +487,11 @@ export interface LodgingStats {
 /** Nights under one programme in one calendar year — the unit hotel status is counted in. */
 export interface LodgingProgrammeYear {
   programme: string;
+  /**
+   * The card these nights ran under; the lodging list filters by it. Optional
+   * only for fixtures written before the field existed.
+   */
+  membershipId?: string | null;
   /** The card's current tier, not the tier held during that year. */
   tier: string | null;
   year: string;

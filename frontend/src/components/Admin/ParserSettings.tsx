@@ -1,7 +1,8 @@
 import { useState, useEffect, useCallback } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { adminApi } from "../../lib/api";
-import type { ParserOrder } from "../../lib/api/admin";
+import type { CloudProviderKind, ParserOrder } from "../../lib/api/admin";
+import LlmProviderSettings from "./LlmProviderSettings";
 
 export interface ParserSettingsData {
   allowUserApiKeys: boolean;
@@ -10,8 +11,35 @@ export interface ParserSettingsData {
   /** Who reads a booking document first, in every domain. Absent on a backend
    *  older than 2.7, which always read templates last for flights. */
   parserOrder?: ParserOrder;
+  /** Whether any language model may be asked (Admin → "KI-Modell"). Absent on
+   *  a backend older than 2.7, which had no switch — read as on. */
+  llmEnabled?: boolean;
   ollamaUrl: string | null;
   ollamaModel: string | null;
+  /** Consent for a REMOTE Ollama only. */
+  llmOllamaOptIn?: boolean;
+  /** The admin's priority among the four cloud slots (beta.18: a fallback
+   *  CHAIN, not one picked "active" provider — absent before beta.18). */
+  llmProviderOrder?: CloudProviderKind[];
+
+  /** The `custom` slot (beta.17's `openai_compatible`) — a free-form base URL. */
+  openaiCompatBaseUrl?: string | null;
+  openaiCompatModel?: string | null;
+  /** The masked echo of the stored key, or what the admin typed. */
+  openaiCompatApiKey?: string | null;
+  /** Read-only: the SAVED endpoint is outside the local network. */
+  openaiCompatIsCloud?: boolean;
+  llmCustomOptIn?: boolean;
+
+  llmOpenaiModel?: string | null;
+  llmOpenaiApiKey?: string | null;
+  llmOpenaiOptIn?: boolean;
+  llmAnthropicModel?: string | null;
+  llmAnthropicApiKey?: string | null;
+  llmAnthropicOptIn?: boolean;
+  llmGoogleModel?: string | null;
+  llmGoogleApiKey?: string | null;
+  llmGoogleOptIn?: boolean;
 }
 
 interface OllamaModel {
@@ -165,7 +193,9 @@ export default function ParserSettings({
             </svg>
             <div>
               <p className="text-sm font-medium text-(--text-primary)">Tesseract OCR</p>
-              <p className="text-xs text-(--text-muted)">Boarding pass image parsing</p>
+              <p className="text-xs text-(--text-muted)">
+                {t("admin:parserSettings.builtin.ocrHint")}
+              </p>
             </div>
           </div>
           <div className="flex items-center gap-2 p-3 bg-(--bg-base) rounded-lg">
@@ -177,14 +207,52 @@ export default function ParserSettings({
               />
             </svg>
             <div>
-              <p className="text-sm font-medium text-(--text-primary)">Regex Templates</p>
-              <p className="text-xs text-(--text-muted)">Email booking parsing</p>
+              <p className="text-sm font-medium text-(--text-primary)">
+                {t("admin:parserSettings.builtin.templatesName")}
+              </p>
+              <p className="text-xs text-(--text-muted)">
+                {t("admin:parserSettings.builtin.templatesHint")}
+              </p>
             </div>
           </div>
         </div>
       </div>
 
-      {/* Ollama LLM Parser */}
+      {/* The switch sits ABOVE the Ollama card on purpose: it overrides
+          everything in it, including an OLLAMA_URL set in the environment,
+          which the card below cannot show. Owner decision 2026-09-25. */}
+      <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
+        <h3 className="text-lg font-semibold text-(--text-primary) mb-2">
+          {t("admin:parserSettings.llmSwitch.title")}
+        </h3>
+        <div className="flex items-center gap-3">
+          <input
+            type="checkbox"
+            id="llmEnabled"
+            data-testid="llm-enabled-toggle"
+            checked={parserSettings.llmEnabled ?? true}
+            onChange={(e): void =>
+              onParserSettingsChange({ ...parserSettings, llmEnabled: e.target.checked })
+            }
+            className="w-4 h-4 rounded-sm border-border"
+          />
+          <label htmlFor="llmEnabled" className="text-sm text-(--text-primary)">
+            {t("admin:parserSettings.llmSwitch.label")}
+          </label>
+        </div>
+        <p className="mt-2 text-xs text-(--text-muted)">
+          {t("admin:parserSettings.llmSwitch.hint")}
+        </p>
+      </div>
+
+      <LlmProviderSettings
+        parserSettings={parserSettings}
+        onParserSettingsChange={onParserSettingsChange}
+      />
+
+      {/* Ollama LLM Parser — always shown: Ollama is implicitly the first
+          slot in the fallback chain whenever it is configured, never one of
+          several "chosen" providers. */}
       <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
         <div className="flex items-center justify-between mb-2">
           <h3 className="text-lg font-semibold text-(--text-primary)">
@@ -240,6 +308,21 @@ export default function ParserSettings({
             />
           </div>
 
+          {/* Only matters for an Ollama OUTSIDE the local network — the
+                normal local/LAN case never asks for this. */}
+          <label className="flex items-start gap-2 text-xs text-(--text-muted)">
+            <input
+              type="checkbox"
+              data-testid="llm-ollama-remote-opt-in"
+              checked={parserSettings.llmOllamaOptIn === true}
+              onChange={(e) =>
+                onParserSettingsChange({ ...parserSettings, llmOllamaOptIn: e.target.checked })
+              }
+              className="mt-0.5 w-4 h-4 rounded-sm border-border"
+            />
+            {t("admin:parserSettings.ollama.remoteOptIn.label")}
+          </label>
+
           {/* Model selector — dropdown of available models */}
           <div>
             <label className="block text-xs font-medium text-(--text-muted) mb-1">
@@ -249,7 +332,10 @@ export default function ParserSettings({
               <select
                 value={parserSettings.ollamaModel ?? ""}
                 onChange={(e) =>
-                  onParserSettingsChange({ ...parserSettings, ollamaModel: e.target.value || null })
+                  onParserSettingsChange({
+                    ...parserSettings,
+                    ollamaModel: e.target.value || null,
+                  })
                 }
                 className="w-full px-3 py-2 text-sm border border-border rounded-lg bg-(--bg-base) text-(--text-primary) focus:outline-hidden focus:ring-1 focus:ring-blue-500"
               >
@@ -265,7 +351,10 @@ export default function ParserSettings({
                 type="text"
                 value={parserSettings.ollamaModel ?? ""}
                 onChange={(e) =>
-                  onParserSettingsChange({ ...parserSettings, ollamaModel: e.target.value || null })
+                  onParserSettingsChange({
+                    ...parserSettings,
+                    ollamaModel: e.target.value || null,
+                  })
                 }
                 placeholder={
                   modelsLoading
@@ -334,7 +423,9 @@ export default function ParserSettings({
 
       {/* User API Key Permissions */}
       <div className="bg-(--bg-surface) rounded-lg shadow-sm p-6">
-        <h3 className="text-lg font-semibold text-(--text-primary) mb-2">User Permissions</h3>
+        <h3 className="text-lg font-semibold text-(--text-primary) mb-2">
+          {t("admin:parserSettings.userPermissions.title")}
+        </h3>
         <div className="flex items-center gap-3">
           <input
             type="checkbox"
@@ -346,7 +437,7 @@ export default function ParserSettings({
             className="w-4 h-4 rounded-sm border-border"
           />
           <label htmlFor="allowUserApiKeys" className="text-sm text-(--text-primary)">
-            Allow users to add their own flight data API keys (Airlabs, Aviationstack, OpenSky)
+            {t("admin:parserSettings.userPermissions.allowUserApiKeys")}
           </label>
         </div>
       </div>

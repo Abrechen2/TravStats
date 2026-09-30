@@ -12,6 +12,8 @@ export interface PlaceSearchResult {
   /** `osm:<type>/<id>` when the geocoder named one — the mirror of `PlaceResult.externalRef`. */
   externalRef?: string;
   address?: string;
+  /** Part of town — tells two same-named hits in one city apart. */
+  district?: string;
   city?: string;
   country?: string;
   countryCode?: string;
@@ -68,6 +70,18 @@ export const reversePlaces = async (
   return { results: data.data, degraded: data.degraded === true };
 };
 
+/**
+ * The address lookup did not happen (geocoder 429/outage, `degraded: true`).
+ * Thrown rather than returned as null: null means "this point has no
+ * address", and the map modal must not tell a city pin it is in open water.
+ */
+export class ReverseGeocodeUnavailableError extends Error {
+  constructor() {
+    super("reverse geocoding unavailable");
+    this.name = "ReverseGeocodeUnavailableError";
+  }
+}
+
 /** Coordinates → address parts, proxied through our backend (same CSP
  * rationale as `searchPlaces` — the browser may not talk to Nominatim). */
 export const reverseGeocode = async (
@@ -77,5 +91,6 @@ export const reverseGeocode = async (
   const { data } = await api.get<Envelope<ReverseGeocodeResult | null>>("/geo/reverse", {
     params: { lat: String(lat), lon: String(lon) },
   });
+  if (data.degraded === true) throw new ReverseGeocodeUnavailableError();
   return data.data;
 };

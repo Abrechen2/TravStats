@@ -12,7 +12,13 @@ import {
   isCruisePdfResult,
   isLodgingEmailResult,
   isLodgingPdfResult,
+  isRailEmailResult,
+  isRailPdfResult,
 } from "../../lib/api/parse";
+
+import type { ImportDocument } from "../import/documentHandoff";
+import { useToastStore } from "../../store/toastStore";
+import { llmProviderOfResult, readByMessage } from "../../lib/llmProviderCopy";
 
 const BoardingPassScanner = lazy(() => import("../BoardingPassScanner"));
 const EmailImportTab = lazy(() => import("../import/EmailImportTab"));
@@ -45,6 +51,8 @@ export interface FlightLookupStepProps {
   // card appears below the Boarding Pass card. The parent is responsible
   // for closing this form and opening the special-flight modal.
   onPickSpecialFlight?: () => void;
+  /** A document handed over from another import dialog — read on mount (D1). */
+  initialDocument?: ImportDocument | null;
 }
 
 export default function FlightLookupStep({
@@ -67,8 +75,15 @@ export default function FlightLookupStep({
   setOriginalEmailData,
   setShowFlightReview,
   onPickSpecialFlight,
+  initialDocument = null,
 }: FlightLookupStepProps): JSX.Element {
-  const { t } = useTranslation(["flights", "common", "specialFlights"]);
+  const { t } = useTranslation(["flights", "common", "specialFlights", "import"]);
+  const addToast = useToastStore((s) => s.addToast);
+  /** Which model read the mail, when one did (beta.17) — a cloud one by host. */
+  const announceProvider = (result: unknown): void => {
+    const provider = llmProviderOfResult(result);
+    if (provider) addToast("info", readByMessage(provider, t));
+  };
   // No route and no airline exist yet at this step, so these are the flight
   // numbers the user flies most overall — the commute, the route home.
   const { flightNumbers: flightNumberSuggestions } = useFlightEntrySuggestions({});
@@ -96,15 +111,19 @@ export default function FlightLookupStep({
   };
 
   const handleEmailResult = (result: ParseEmailResult, fileName?: string | null): void => {
-    if (isCruiseEmailResult(result) || isLodgingEmailResult(result)) {
+    if (isCruiseEmailResult(result) || isLodgingEmailResult(result) || isRailEmailResult(result)) {
       setError(t("flights:form.noFlightsInEmail"));
       return;
     }
     const flights: ParsedBooking[] = result.flights ?? [];
     if (flights.length === 0) {
-      setError(t("flights:form.noFlightsInEmail"));
+      // "No flight" is only a finding when every reader was asked.
+      setError(
+        t(result.llmUnreachable ? "flights:form.llmUnreachable" : "flights:form.noFlightsInEmail")
+      );
       return;
     }
+    announceProvider(result);
     void openImportBatch("email", fileName ?? null);
     setParsedFlights(flights);
     setCurrentFlightIndex(0);
@@ -114,14 +133,17 @@ export default function FlightLookupStep({
   };
 
   const handlePdfResult = (result: ParsePdfResult, fileName?: string | null): void => {
-    if (isCruisePdfResult(result) || isLodgingPdfResult(result)) {
+    if (isCruisePdfResult(result) || isLodgingPdfResult(result) || isRailPdfResult(result)) {
       setError(t("flights:form.noFlightsInEmail"));
       return;
     }
     if (result.flights.length === 0) {
-      setError(t("flights:form.noFlightsInEmail"));
+      setError(
+        t(result.llmUnreachable ? "flights:form.llmUnreachable" : "flights:form.noFlightsInEmail")
+      );
       return;
     }
+    announceProvider(result);
     void openImportBatch("pdf", fileName ?? null);
     setParsedFlights(result.flights);
     setCurrentFlightIndex(0);
@@ -161,6 +183,7 @@ export default function FlightLookupStep({
               onEmailResult={handleEmailResult}
               onPdfResult={handlePdfResult}
               onError={(message) => setError(message)}
+              initialDocument={initialDocument}
             />
           </Suspense>
         </div>

@@ -33,11 +33,15 @@
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { lookupFlightWithHistorical } from "./flightLookup";
+import type { ProviderFailure } from "./flightLookup/providerOutcome";
 import { getApiKey } from "./apiKeyResolver";
 
 /** Max flights touched per single endpoint call. Keeps the request under the
  *  default Express 60 s timeout (≈13 s at 500 ms pacing) and gives the user
  *  visible progress without an SSE channel. */
+
+/** A window of whole 24-hour days, measured on the instant — never the host's calendar. */
+const DAY_MS = 24 * 60 * 60 * 1000;
 export const MAX_PER_CALL = 25;
 
 /** Pacing between provider calls — half a second is generous enough that
@@ -90,6 +94,12 @@ export interface BulkRefreshSummary {
      * indistinguishable — to the user and to whoever reads the logs later.
      */
     reason?: string;
+    /**
+     * With reason `provider_failed`: which provider could not answer and why.
+     * Such a leg counts as `failed`, never as `noData` — a refused key or a
+     * spent quota says nothing about whether the provider knows the flight.
+     */
+    providerFailures?: ProviderFailure[];
     error?: string;
   }>;
 }
@@ -117,8 +127,7 @@ export async function findBulkRefreshCandidates(
   limit: number = MAX_PER_CALL
 ): Promise<BulkRefreshCandidate[]> {
   const now = new Date();
-  const earliest = new Date(now);
-  earliest.setDate(earliest.getDate() - HISTORICAL_WINDOW_DAYS);
+  const earliest = new Date(now.getTime() - HISTORICAL_WINDOW_DAYS * DAY_MS);
 
   const flights = await prisma.flight.findMany({
     where: {
@@ -191,8 +200,7 @@ export async function hasHistoricalProvider(userId: string): Promise<boolean> {
  */
 export async function countBulkRefreshCandidates(userId: string): Promise<number> {
   const now = new Date();
-  const earliest = new Date(now);
-  earliest.setDate(earliest.getDate() - HISTORICAL_WINDOW_DAYS);
+  const earliest = new Date(now.getTime() - HISTORICAL_WINDOW_DAYS * DAY_MS);
 
   return prisma.flight.count({
     where: {
@@ -227,14 +235,23 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
     const candidate = candidates[i];
 
     try {
-      const { flights, unavailableReason } = await lookupFlightWithHistorical(
+      const { flights, unavailableReason, providerFailures } = await lookupFlightWithHistorical(
         candidate.flightNumber,
         candidate.departureTime,
         userId,
         candidate.depIata ?? candidate.depIcao ?? undefined
       );
 
-      if (unavailableReason || flights.length === 0) {
+      if (unavailableReason === "provider_failed") {
+        summary.failed++;
+        summary.results.push({
+          flightId: candidate.id,
+          flightNumber: candidate.flightNumber,
+          outcome: "failed",
+          reason: "provider_failed",
+          providerFailures: providerFailures ?? [],
+        });
+      } else if (unavailableReason || flights.length === 0) {
         summary.noData++;
         summary.results.push({
           flightId: candidate.id,
@@ -391,7 +408,6 @@ export async function runBulkRefresh(userId: string): Promise<BulkRefreshSummary
         {
           operation: "bulk_flight_refresh_item_failed",
           flightId: candidate.id,
-          flightNumber: candidate.flightNumber,
           error: error instanceof Error ? error.message : "Unknown error",
         },
         "Bulk refresh failed for one flight"

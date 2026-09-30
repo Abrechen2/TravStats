@@ -3,7 +3,12 @@ import type { JSX } from "react";
 
 import SuggestionChips from "../common/SuggestionChips";
 import { useTranslation } from "../../hooks/useTranslation";
-import { isOpenDataDisabled, openDataApi } from "../../lib/api/openData";
+import {
+  isOpenDataDisabled,
+  openDataApi,
+  WEATHER_SERVICE_FAILURES,
+  type WeatherOutcome,
+} from "../../lib/api/openData";
 import { logger } from "../../lib/logger";
 import { formatObservedWeather } from "../../lib/observedWeather";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -26,6 +31,18 @@ const BUTTON =
  * a new entry, or a changed date, gets its weather on save anyway, so the
  * reason is said instead of a button that would fetch the wrong day.
  */
+/** The sentence for a lookup that brought no new weather. */
+function weatherOutcomeKey(outcome: WeatherOutcome, keptStored: boolean): string {
+  if (WEATHER_SERVICE_FAILURES.has(outcome)) {
+    return keptStored
+      ? `openData:weather.outcome.${outcome}Kept`
+      : `openData:weather.outcome.${outcome}`;
+  }
+  if (outcome === "noLocation") return "openData:weather.noPlace";
+  if (outcome === "disabled") return "openData:weather.disabled";
+  return `openData:weather.outcome.${outcome}`;
+}
+
 export default function JournalWeatherFetch({
   tripId,
   entry,
@@ -45,7 +62,8 @@ export default function JournalWeatherFetch({
   const addToast = useToastStore((s) => s.addToast);
   const openData = useSettingsStore((s) => s.openDataEnabled) === true;
   const [observed, setObserved] = useState<ObservedWeather | null>(entry?.observedWeather ?? null);
-  const [noPlace, setNoPlace] = useState(false);
+  /** What the last lookup came to, when it brought no weather. */
+  const [missing, setMissing] = useState<WeatherOutcome | null>(null);
   const [fetching, setFetching] = useState(false);
 
   if (!openData) return null;
@@ -61,9 +79,15 @@ export default function JournalWeatherFetch({
   const fetchWeather = async (): Promise<void> => {
     setFetching(true);
     try {
-      const stored = await openDataApi.refreshEntryWeather(tripId, entry.id);
+      // A failed lookup comes back with the STORED weather (the server keeps
+      // it), so what is shown stays what is known, and the reason is said
+      // beside it — a busy weather service used to read "no place".
+      const { entry: stored, weatherOutcome } = await openDataApi.refreshEntryWeather(
+        tripId,
+        entry.id
+      );
       setObserved(stored.observedWeather ?? null);
-      setNoPlace(stored.observedWeather == null);
+      setMissing(weatherOutcome === "observed" ? null : weatherOutcome);
     } catch (err) {
       logger.warn("Fetching one journal entry's weather failed", err);
       addToast(
@@ -87,7 +111,7 @@ export default function JournalWeatherFetch({
       >
         {fetching ? t("openData:weather.filling") : t("openData:weather.fetchOne")}
       </button>
-      {noPlace && hint(t("openData:weather.noPlace"))}
+      {missing !== null && hint(t(weatherOutcomeKey(missing, observed !== null)))}
       {observed && measured && (
         <>
           {hint(`${t("openData:weather.measuredAt", { place: observed.place })}: ${measured}`)}

@@ -20,7 +20,7 @@ let index: CountryBoundaryIndex;
 /**
  * The same question asked WITHOUT the grid and without the latitude bands —
  * only the per-part bounding box survives. Both the correctness check and the
- * speed check below compare against this: it is the "obvious first cut" the two
+ * work check below compare against this: it is the "obvious first cut" the two
  * real accelerations have to beat, and having it here means neither claim rests
  * on a remembered number.
  */
@@ -86,15 +86,41 @@ function balticDrive(count: number): Array<[number, number]> {
   return points;
 }
 
-/** Points per second, after a warm-up pass that is not included in the timing. */
-function throughput(
-  lookup: (lat: number, lon: number) => string | null,
+/**
+ * An index whose two hot arrays count their element reads.
+ *
+ * `coords` is read once per vertex a ray cast touches and `partBox` once per
+ * bounding-box test, so the two counters are the work the lookup does — the
+ * edges it walks and the parts it considers — as a number that no other
+ * process on the machine can change.
+ */
+function countingIndex(ix: CountryBoundaryIndex): {
+  index: CountryBoundaryIndex;
+  reads: { coords: number; partBox: number };
+} {
+  const reads = { coords: 0, partBox: 0 };
+  const counted = (array: Float64Array, key: keyof typeof reads): Float64Array =>
+    new Proxy(array, {
+      get(target, property) {
+        if (typeof property === "string" && /^\d+$/.test(property)) reads[key]++;
+        return Reflect.get(target, property, target);
+      },
+    });
+  return {
+    index: { ...ix, coords: counted(ix.coords, "coords"), partBox: counted(ix.partBox, "partBox") },
+    reads,
+  };
+}
+
+/** The work one lookup function does over a set of points. */
+function workFor(
+  ix: CountryBoundaryIndex,
+  lookup: (ix: CountryBoundaryIndex, lat: number, lon: number) => string | null,
   points: ReadonlyArray<readonly [number, number]>
-): number {
-  for (let i = 0; i < Math.min(points.length, 1000); i++) lookup(points[i][0], points[i][1]);
-  const startedAt = process.hrtime.bigint();
-  for (const [lat, lon] of points) lookup(lat, lon);
-  return points.length / (Number(process.hrtime.bigint() - startedAt) / 1e9);
+): { coords: number; partBox: number } {
+  const { index: counting, reads } = countingIndex(ix);
+  for (const [lat, lon] of points) lookup(counting, lat, lon);
+  return { ...reads };
 }
 
 beforeAll(async () => {
@@ -291,47 +317,45 @@ describe("the index", () => {
     expect(land).toBeGreaterThan(500); // the sample actually touched land
   }, 120_000);
 
-  it("classifies a sweep far faster than a bounding-box prefilter alone", () => {
+  it("classifies a sweep with far less work than a bounding-box prefilter alone", () => {
     // The sweep of design §8.4 walks a whole location history month by month,
-    // so throughput decides whether it is a background job or a weekend.
-    // Measured 2026-09-02 on a dev container under plain Node: 1.94 M points/s
-    // over uniform-random coordinates, 1.60 M/s along the Baltic drive below.
+    // so the cost per point decides whether it is a background job or a
+    // weekend. Two accelerations carry it: the 1° grid, which hands a query
+    // only the parts whose box touches its cell, and the per-ring latitude
+    // bands, which let a ray cast visit only the edges at the query latitude.
     //
-    // The ASSERTION is a ratio, not one of those numbers. An absolute floor was
-    // tried first and flaked immediately: the same 50 000 points measured
-    // 370 k/s on an idle box and 179 k/s while another agent was building, so a
-    // threshold either passed everything or failed at random. A ratio measures
-    // the index rather than the machine, since load slows both loops alike.
+    // This used to be a wall-clock ratio (indexed points/s over reference
+    // points/s, floor 3x). A ratio of two timings is not a property of the
+    // code: under a loaded box it measured 2.9 three times in one night and
+    // passed alone every time. What the ratio stood for is WORK, and work can
+    // be counted exactly — every vertex read and every bounding-box read goes
+    // through the counters above, so the same points give the same numbers on
+    // any machine at any load.
     //
     // The comparison is deliberately the FAVOURABLE case for the reference —
-    // three small Baltic polygons, where it measured 92 k/s against the index's
-    // 370 k. On uniform-random points, where Canada's 30 000-edge outline is in
-    // play, the same gap was 52 k against 1.94 M. So 3x is the floor of the
-    // narrowest measured margin, and losing either acceleration fails it.
-    const points = balticDrive(20_000);
+    // three small Baltic polygons, not Canada's 30 000-edge outline.
+    const points = balticDrive(2_000);
 
-    // Interleaved, best of five. A ratio only cancels the machine out if both
-    // loops see the same load, and two sequential measurements do not: on
-    // 2026-09-16, with two other suites running on the box, one pass measured
-    // 2.94 and failed while the next three passed. Alternating the two loops
-    // puts them under the same conditions, and the best round of each is the
-    // one least disturbed by whatever else ran.
-    let indexed = 0;
-    let reference = 0;
-    for (let round = 0; round < 5; round++) {
-      indexed = Math.max(
-        indexed,
-        throughput((lat, lon) => countryCodeAt(index, lat, lon), points)
-      );
-      reference = Math.max(
-        reference,
-        throughput((lat, lon) => referenceCountryAt(index, lat, lon), points.slice(0, 4_000))
-      );
+    // Every point of the simulated drive is on land in EE, LV or LT, and the
+    // counted index answers exactly what the plain one does.
+    const { index: counting } = countingIndex(index);
+    for (const [lat, lon] of points) {
+      const answer = countryCodeAt(index, lat, lon);
+      expect(answer).not.toBeNull();
+      expect(countryCodeAt(counting, lat, lon)).toBe(answer);
     }
 
-    // Every point of the simulated drive is on land in EE, LV or LT.
-    expect(points.every(([lat, lon]) => countryCodeAt(index, lat, lon) !== null)).toBe(true);
-    expect(indexed / reference).toBeGreaterThan(3);
+    const indexed = workFor(index, countryCodeAt, points);
+    const reference = workFor(index, referenceCountryAt, points);
+
+    // The bands: the indexed cast reads a small fraction of the vertices the
+    // reference reads along the same drive. Measured 2026-09-27 over these
+    // 2 000 points: 173 544 reads against 5 898 656, a factor of 34.
+    expect(indexed.coords * 10).toBeLessThan(reference.coords);
+    // The grid: the reference box-tests every one of the ~4 000 parts per
+    // point; the grid offers only the handful whose box touches the cell.
+    // Measured the same run: 9 970 reads against 4 824 364, a factor of 484.
+    expect(indexed.partBox * 100).toBeLessThan(reference.partBox);
   }, 120_000);
 
   it("answers the same question the same way twice", () => {

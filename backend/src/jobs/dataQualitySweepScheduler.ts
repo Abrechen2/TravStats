@@ -22,6 +22,8 @@
  * | 03:00 | airline logo refresh sweep |
  * | 03:00–03:59 | usage-stats ping (jittered across the hour) |
  * | 03:20 | place address backfill |
+ * | 03:30 | lodging FX backfill (stayFxBackfillScheduler.ts) |
+ * | 03:45 | log retention (logRetentionScheduler.ts) |
  * | every :00 | hourly status sweep |
  * | **04:10** | **this** |
  * | 04:40 | Dawarich country-day sweep |
@@ -49,6 +51,7 @@ import cron from "node-cron";
 import { prisma } from "../db";
 import { runDataQualityChecks } from "../services/dataQuality";
 import logger from "../utils/logger";
+import { schedulerZone } from "../shared/time/schedulerZone";
 
 const CRON_EXPRESSION = "10 4 * * *";
 
@@ -143,19 +146,23 @@ export async function runDataQualitySweep(): Promise<DataQualitySweepResult> {
 
 export function startDataQualitySweepScheduler(): void {
   if (schedulerTask) return;
-  schedulerTask = cron.schedule(CRON_EXPRESSION, async () => {
-    try {
-      await runDataQualitySweep();
-    } catch (error) {
-      // `runDataQualitySweep` already survives a single account; reaching here
-      // means the eligibility query itself failed, which is a database problem
-      // and not something tonight's sweep can do anything about.
-      logger.warn(
-        { operation: "data_quality_sweep_error", error },
-        "Nightly data-quality sweep failed"
-      );
-    }
-  });
+  schedulerTask = cron.schedule(
+    CRON_EXPRESSION,
+    async () => {
+      try {
+        await runDataQualitySweep();
+      } catch (error) {
+        // `runDataQualitySweep` already survives a single account; reaching here
+        // means the eligibility query itself failed, which is a database problem
+        // and not something tonight's sweep can do anything about.
+        logger.warn(
+          { operation: "data_quality_sweep_error", error },
+          "Nightly data-quality sweep failed"
+        );
+      }
+    },
+    { timezone: schedulerZone("dataQualitySweep") }
+  );
   logger.info(
     { operation: "data_quality_sweep_scheduler_started", cron: CRON_EXPRESSION },
     "data quality sweep scheduler started"

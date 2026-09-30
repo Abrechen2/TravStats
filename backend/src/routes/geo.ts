@@ -4,7 +4,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { photonSearchLimiter } from "../middleware/rateLimit";
 import { AppError } from "../middleware/errorHandler";
 import { reversePlacesDetailed, searchPlacesDetailed } from "../services/geo/photon";
-import { reverseGeocode } from "../services/geo/nominatim";
+import { reverseGeocodeDetailed } from "../services/geo/nominatim";
 
 /**
  * Same-origin geocoder proxy — mounted at /api/v1/geo. The browser's CSP
@@ -55,8 +55,9 @@ const reverseQuerySchema = z.object({
 // Coordinates → address parts, for the map-pick modal: a picked pin can
 // COMPLETE an address on every surface, not only via the lodging save path.
 // Backed by Nominatim (one-shot lookups, not per-keystroke), which brings its
-// own process-wide 1 req/s throttle + cache and never throws — a failed
-// lookup answers `data: null`, exactly like a pin in open water.
+// own process-wide 1 req/s throttle + cache and never throws. A pin in open
+// water answers `data: null`; a FAILED lookup answers `data: null` with
+// `degraded: true`, so the modal can tell the two apart.
 router.get(
   "/reverse",
   photonSearchLimiter,
@@ -66,8 +67,8 @@ router.get(
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
       const { lat, lon } = parsed.data;
 
-      const parts = await reverseGeocode(lat, lon);
-      res.json({ success: true, data: parts });
+      const outcome = await reverseGeocodeDetailed(lat, lon);
+      res.json({ success: true, data: outcome.parts, degraded: outcome.degraded });
     } catch (err) {
       next(err);
     }

@@ -28,8 +28,8 @@ const listQuerySchema = z.object({
   limit: z.coerce.number().int().min(1).max(500).default(100),
 });
 
-const createPortSchema = z.object({
-  name: z.string().min(1).max(120),
+export const createPortSchema = z.object({
+  name: z.string().trim().min(1).max(120),
   city: z.string().max(120).optional(),
   country: z.string().max(120).optional(),
   unlocode: z.string().max(10).optional(),
@@ -105,6 +105,8 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
 // which isn't in the vendored CSV) to coordinates so the user can add it as a
 // port without typing lat/lon by hand. Results carry source:"geocoder" and no
 // id — the client POSTs the chosen one back to /ports to persist it.
+// `degraded: true` + `reason` = the geocoder itself failed (still HTTP 200,
+// like /geo/search): the empty list is then NOT "no such place".
 router.get(
   "/geocode",
   portGeocodeLimiter,
@@ -114,11 +116,16 @@ router.get(
       if (!parsed.success) throw new AppError(parsed.error.message, 400);
       const { q } = parsed.data;
       if (!q || q.trim().length < 2) {
-        res.json({ success: true, data: [] });
+        res.json({ success: true, data: [], degraded: false });
         return;
       }
-      const ports = await geocodePort(q);
-      res.json({ success: true, data: ports });
+      const outcome = await geocodePort(q);
+      res.json({
+        success: true,
+        data: outcome.ports,
+        degraded: outcome.failure !== null,
+        ...(outcome.failure !== null ? { reason: outcome.failure } : {}),
+      });
     } catch (err) {
       next(err);
     }

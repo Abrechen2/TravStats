@@ -184,7 +184,7 @@ function deriveFlightPatterns(sample: SampleAnnotations): TemplatePatterns {
 }
 
 function derivedName(issuer: string): string {
-  return `${issuer} (abgeleitet am ${new Date().toLocaleDateString("de-DE")})`;
+  return `${issuer} (abgeleitet am ${new Date().toLocaleDateString("de-DE", { timeZone: "UTC" })})`;
 }
 
 /**
@@ -301,7 +301,7 @@ export async function deriveTemplateFromAnnotation(
       },
     });
 
-    logger.info({ templateId: created.id, domain, name }, "TemplateDeriver: derived new template");
+    logger.info({ templateId: created.id, domain }, "TemplateDeriver: derived new template");
     return { status: "derived", templateId: created.id, domain };
   } catch (err: unknown) {
     logger.error({ err, trainingDataId }, "TemplateDeriver: unexpected error");

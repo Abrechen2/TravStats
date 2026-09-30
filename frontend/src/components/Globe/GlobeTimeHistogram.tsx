@@ -60,8 +60,13 @@ export function computeYearTicks(minYear: number, maxYear: number, maxTicks = 6)
   return ticks;
 }
 
+/**
+ * A slider position as month and year. The range spans the whole account, so
+ * a label is a month of UTC time — named with `timeZone`, not left to the
+ * reader's zone, which moved the edge of a month by up to a day (ADR 0002).
+ */
 const fmt = (d: Date | null, locale: string): string =>
-  d ? d.toLocaleDateString(locale, { year: "numeric", month: "short" }) : "—";
+  d ? d.toLocaleDateString(locale, { year: "numeric", month: "short", timeZone: "UTC" }) : "—";
 
 export const GlobeTimeHistogram = ({
   buckets,

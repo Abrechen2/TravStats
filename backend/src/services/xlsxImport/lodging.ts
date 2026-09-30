@@ -49,6 +49,7 @@ import {
   type SheetOutcome,
 } from "./types";
 import { changedOnly, droppedOrNone, enumCell } from "./values";
+import { AppError } from "../../middleware/errorHandler";
 import logger from "../../utils/logger";
 
 async function matchLodging(
@@ -141,7 +142,7 @@ export async function importLodging(sheet: IncomingSheet, ctx: Ctx): Promise<She
     }
 
     const chainName = cell.text(raw.chain);
-    const chainId = await findChainId(chainName);
+    const chainId = await findChainId(ctx.userId, chainName);
     const notes = chainName && !chainId ? ["chain_not_found"] : undefined;
     const dropped: DroppedValue[] = [];
     const type = enumCell(raw.type, LODGING_TYPES, "type", dropped);
@@ -222,15 +223,25 @@ function stayFields(raw: Record<string, string>, dropped: DroppedValue[]) {
 
 /** A write the shared stay writer refused (e.g. a time on an undated stay). */
 function refusedWrite(err: unknown, rowNo: number, label: string, ctx: Ctx): RowOutcome {
+  const operation = "xlsx_import_stay_refused";
+  // The stay writer's own refusals are fixed sentences; anything else (a
+  // Prisma error) quotes the row's values, so its text stays at debug.
   logger.warn(
     {
-      operation: "xlsx_import_stay_refused",
+      operation,
       userId: ctx.userId,
       row: rowNo,
-      message: err instanceof Error ? err.message : String(err),
+      message: err instanceof AppError ? err.message : err instanceof Error ? err.name : "unknown",
     },
     "Spreadsheet import: stay write refused"
   );
+  if (!(err instanceof AppError)) {
+    logger.debug({
+      operation,
+      row: rowNo,
+      message: err instanceof Error ? err.message : String(err),
+    });
+  }
   return errorRow(rowNo, label, "invalid_row");
 }
 
@@ -306,7 +317,7 @@ export async function importLodgingStays(sheet: IncomingSheet, ctx: Ctx): Promis
       }
       if (!ctx.dryRun) {
         try {
-          await updateStayRecord(ctx.userId, target, parsed.data);
+          await updateStayRecord(ctx.userId, target, parsed.data, "machine");
         } catch (err) {
           out.push(refusedWrite(err, rowNo, label, ctx));
           continue;
@@ -327,6 +338,7 @@ export async function importLodgingStays(sheet: IncomingSheet, ctx: Ctx): Promis
       try {
         const created = await createStayRecord(ctx.userId, lodgingId, parsed.data, {
           dataSource: "xlsx",
+          origin: "machine",
         });
         newId = created.id;
       } catch (err) {

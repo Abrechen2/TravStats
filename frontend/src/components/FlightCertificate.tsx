@@ -1,7 +1,10 @@
 import { useEffect, useRef, useState } from "react";
 import html2canvas from "html2canvas";
 import { PAPER } from "../lib/paperPalette";
+import { formatInProfileZone } from "../lib/profileInstant";
 import { useTranslation } from "../hooks/useTranslation";
+
+const LONG_DATE = { year: "numeric", month: "long", day: "numeric" } as const;
 
 export interface FlightCertificateStats {
   totalFlights: number;
@@ -71,11 +74,8 @@ export function FlightCertificate({
     };
   }, []);
 
-  const generatedDate = new Date().toLocaleDateString(i18n.language, {
-    year: "numeric",
-    month: "long",
-    day: "numeric",
-  });
+  // Today on the profile clock (ADR 0002 Q1), never the browser's.
+  const generatedDate = formatInProfileZone(new Date(), i18n.language, LONG_DATE);
 
   const handleDownload = async (): Promise<void> => {
     if (!cardRef.current || downloading) return;

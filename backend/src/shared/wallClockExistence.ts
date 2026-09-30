@@ -1,4 +1,5 @@
-import { fromZonedTime } from "date-fns-tz";
+import { LocalTimeNonexistentError } from "./time/errors";
+import { toInstant } from "./time/instant";
 
 /**
  * Does this wall-clock reading exist in this timezone at all?
@@ -21,8 +22,8 @@ import { fromZonedTime } from "date-fns-tz";
  * returns 02:30 either way. An ambiguous time is a real time — the user gets
  * the earlier reading rather than a refusal, which is the smaller surprise.
  *
- * **The read-back is `Intl`, NOT `formatInTimeZone`, and that is the whole
- * reason this file does its own formatting.** Measured on date-fns-tz 3.2.0 /
+ * **The read-back is `Intl` (`shared/zonedWallClock.ts`), NOT
+ * `formatInTimeZone`.** Measured on date-fns-tz 3.2.0 /
  * date-fns 4.4.0: `formatInTimeZone(new Date("2025-03-29T17:30Z"),
  * "Asia/Tokyo", …)` returns 03:30 where the correct answer is 02:30 — and it
  * is wrong for `UTC` too. It builds the target wall clock as a HOST-local
@@ -33,59 +34,20 @@ import { fromZonedTime } from "date-fns-tz";
  *
  * Backend-only, like `shared/flightChronology.ts` beside it: the frontend does
  * not validate times, so a mirror would be a copy with no second reader.
+ *
+ * @deprecated → `shared/time/instant.ts` (`toInstant` with origin "typed",
+ * ADR 0002). The rule now lives there and this is a boolean name for it,
+ * deleted in phase 6.
  */
 
-/** Length of `YYYY-MM-DDTHH:mm`; anything longer carries seconds. */
-const MINUTE_PRECISION = 16;
-
-/** One formatter per zone — building one costs far more than using it. */
-const readBackFormatters = new Map<string, Intl.DateTimeFormat | null>();
-
-function readBackFormatter(timeZone: string): Intl.DateTimeFormat | null {
-  const cached = readBackFormatters.get(timeZone);
-  if (cached !== undefined) return cached;
-  let formatter: Intl.DateTimeFormat | null;
-  try {
-    formatter = new Intl.DateTimeFormat("en-CA", {
-      timeZone,
-      year: "numeric",
-      month: "2-digit",
-      day: "2-digit",
-      hour: "2-digit",
-      minute: "2-digit",
-      second: "2-digit",
-      // h23 so midnight reads 00 rather than 24 — a 24 would look like a gap.
-      hourCycle: "h23",
-    });
-  } catch {
-    formatter = null;
-  }
-  readBackFormatters.set(timeZone, formatter);
-  return formatter;
-}
-
 export function wallClockExists(local: string, timeZone: string): boolean {
-  const formatter = readBackFormatter(timeZone);
-  // An unusable zone is not this rule's complaint — `ianaTimezone` already
-  // rejects it, and answering "does not exist" here would blame the clock.
-  if (!formatter) return true;
-
-  let instant: Date;
   try {
-    instant = fromZonedTime(local, timeZone);
-  } catch {
+    toInstant(local, timeZone, { origin: "typed" });
     return true;
+  } catch (error) {
+    // Only the gap is this rule's complaint. An unusable zone or a malformed
+    // reading is rejected elsewhere (`ianaTimezone`, the field's own schema),
+    // and answering "does not exist" here would blame the clock.
+    return !(error instanceof LocalTimeNonexistentError);
   }
-  if (Number.isNaN(instant.getTime())) return true;
-
-  const parts = formatter.formatToParts(instant);
-  const value = (type: Intl.DateTimeFormatPartTypes): string =>
-    parts.find((p) => p.type === type)?.value ?? "";
-  const readBack =
-    `${value("year")}-${value("month")}-${value("day")}` +
-    `T${value("hour")}:${value("minute")}:${value("second")}`;
-
-  return local.length > MINUTE_PRECISION
-    ? readBack === local
-    : readBack.slice(0, MINUTE_PRECISION) === local;
 }

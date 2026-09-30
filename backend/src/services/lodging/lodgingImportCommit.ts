@@ -17,6 +17,8 @@ import type {
 import { normalizeLodgingName, stayChanges } from "./lodgingImportPreview";
 import { deriveStayOverallRating } from "../../shared/ratingDerivation";
 import { minorUnits } from "../../shared/currencies";
+import { findOrCreateOwnChain, findVisibleChainByName } from "./chainScope";
+import { stayTimeColumns, zoneOfLodging } from "../timeModel/stayColumns";
 
 /**
  * A small, STABLE set of client-safe failure codes (finding: raw exception
@@ -109,44 +111,28 @@ function toDate(day: string): Date {
 }
 
 /**
- * Find-or-create a chain by name, case-insensitively. Mirrors the pattern
- * `routes/lodgingChains.ts` POST already ships: `LodgingChain.name` carries a
- * case-SENSITIVE Postgres unique index, so a plain `findUnique` would let
- * "hilton" and "Hilton" both exist as separate rows. A case-insensitive
- * pre-check closes that for the common case; the P2002 catch is the
- * race-safe backstop for two concurrent creates of the exact same name (the
- * residual case-variant race is the same accepted gap documented there).
+ * The chain a row names, for THIS user: catalogue or own, matched
+ * case-insensitively (`services/lodging/chainScope.ts`). An unknown name is
+ * created only when the user said so, and then as the user's OWN chain —
+ * an import never changes what another account sees.
  */
 async function resolveChainId(
+  userId: string,
   chainName: string | null | undefined,
   allowCreate: boolean
 ): Promise<number | null> {
   const name = chainName?.trim();
   if (!name) return null;
 
-  const existing = await prisma.lodgingChain.findFirst({
-    where: { name: { equals: name, mode: "insensitive" } },
-  });
+  const existing = await findVisibleChainByName(userId, name);
   if (existing) return existing.id;
 
   // Unknown, and nobody said to create it. The house imports without a chain
-  // rather than growing the catalogue behind the user's back — the preview
-  // flags it as `unknown_chain` and offers the choice.
+  // rather than growing the list behind the user's back — the preview flags
+  // it as `unknown_chain` and offers the choice.
   if (!allowCreate) return null;
 
-  try {
-    const created = await prisma.lodgingChain.create({
-      data: { name, isUserAdded: true },
-    });
-    return created.id;
-  } catch (err) {
-    if (!isUniqueViolation(err)) throw err;
-    const raced = await prisma.lodgingChain.findFirst({
-      where: { name: { equals: name, mode: "insensitive" } },
-    });
-    if (!raced) throw err; // shouldn't happen — never swallow silently
-    return raced.id;
-  }
+  return (await findOrCreateOwnChain(userId, name)).chain.id;
 }
 
 async function createLodging(
@@ -154,7 +140,7 @@ async function createLodging(
   batchId: string,
   fields: LodgingCandidateFields
 ): Promise<string> {
-  const chainId = await resolveChainId(fields.chainName, fields.createChain === true);
+  const chainId = await resolveChainId(userId, fields.chainName, fields.createChain === true);
   const lodging = await prisma.lodging.create({
     data: {
       userId,
@@ -241,11 +227,11 @@ async function resolveFxOutcomes(
         {
           operation: "lodging_import_fx_lookup_failed",
           currency,
-          checkInDay: row.stay.checkIn,
           message: err instanceof Error ? err.message : String(err),
         },
         "FX pre-resolve lookup threw unexpectedly — degrading this pair to lookupFailed"
       );
+      logger.debug({ operation: "lodging_import_fx_lookup_failed", checkInDay: row.stay.checkIn });
       outcomes.set(key, { status: "lookupFailed" });
     }
   }
@@ -315,7 +301,6 @@ async function createStay(
       {
         operation: "lodging_import_price_without_currency",
         sourceRowIndex,
-        checkInDay: fields.checkIn,
       },
       "[Lodging Import] Price without a currency — importing the stay without it"
     );
@@ -327,13 +312,21 @@ async function createStay(
   // is correct data this way, not an error.
   const fx = resolveFxFields(fxOutcome);
 
+  const checkOut = toDate(fields.checkOut);
   await prisma.lodgingStay.create({
     data: {
       userId,
       batchId,
       lodgingId,
       checkIn,
-      checkOut: toDate(fields.checkOut),
+      checkOut,
+      // ADR 0002 phase 2 dual-write. A mail names days, never a check-in
+      // clock, so the instants stay null; an import is a machine reading.
+      ...stayTimeColumns(
+        { checkIn, checkOut, checkInTime: null, checkOutTime: null },
+        await zoneOfLodging(lodgingId),
+        "machine"
+      ),
       status: "completed",
       roomCategory: fields.roomCategory ?? null,
       board: fields.board ?? null,
@@ -431,6 +424,8 @@ async function updateStay(
       externalRef: true,
       checkIn: true,
       checkOut: true,
+      checkInTime: true,
+      checkOutTime: true,
       roomCategory: true,
       board: true,
       guests: true,
@@ -503,6 +498,26 @@ async function updateStay(
   const rateDayMoved = changes.some((c) => c.field === "checkIn");
   if (canSnapshot && (moneyMoved || rateDayMoved)) {
     Object.assign(data, resolveFxFields(fxOutcome));
+  }
+
+  // The new time columns follow the merged days (ADR 0002 phase 2); the
+  // stored check-in/-out clocks stay the user's.
+  if (changes.some((c) => c.field === "checkIn" || c.field === "checkOut")) {
+    const dayMoved = (field: "checkIn" | "checkOut"): boolean =>
+      changes.some((c) => c.field === field);
+    Object.assign(
+      data,
+      stayTimeColumns(
+        {
+          checkIn: dayMoved("checkIn") ? toDate(fields.checkIn) : stored.checkIn,
+          checkOut: dayMoved("checkOut") ? toDate(fields.checkOut) : stored.checkOut,
+          checkInTime: stored.checkInTime,
+          checkOutTime: stored.checkOutTime,
+        },
+        await zoneOfLodging(stored.lodgingId),
+        "machine"
+      )
+    );
   }
 
   await prisma.lodgingStay.update({ where: { id: stored.id }, data });

@@ -9,13 +9,16 @@ import PageHeader from "../components/ui/PageHeader";
 import { Input, Select } from "../components/ui/Field";
 import { Icon } from "../components/ui/Icon";
 import { SectionLabel } from "../components/ui/StatTile";
+import LogbookTabs from "../components/table/LogbookTabs";
 import KindReviewNotice from "../components/Roadtrips/KindReviewNotice";
 import NewRoadtripDialog from "../components/Roadtrips/NewRoadtripDialog";
 import RoadtripCard from "../components/Roadtrips/RoadtripCard";
 import UnderwayCard from "../components/Roadtrips/UnderwayCard";
 import { useTranslation } from "../hooks/useTranslation";
 import { roadtripsApi } from "../lib/api/roadtrips";
-import { groupRoadtrips, localToday, roadtripPhase } from "../lib/roadtrip/roadtripView";
+import { groupRoadtrips, roadtripPhase } from "../lib/roadtrip/roadtripView";
+import { useTodayZone } from "../hooks/useTodayZone";
+import { todayIn } from "../shared/time";
 import type { StoredRoadtripVehicle } from "../shared/tour/roadtrip";
 import type { RoadtripSummary } from "../types/roadtrip";
 
@@ -50,7 +53,8 @@ function matches(r: RoadtripSummary, query: string): boolean {
 export default function RoadtripsPage(): JSX.Element {
   const { t } = useTranslation(["roadtrips", "common"]);
   const navigate = useNavigate();
-  const today = useMemo(() => localToday(), []);
+  const todayZone = useTodayZone();
+  const today = useMemo(() => todayIn(todayZone), [todayZone]);
 
   const [rows, setRows] = useState<RoadtripSummary[] | null>(null);
   const [loadError, setLoadError] = useState(false);
@@ -109,6 +113,10 @@ export default function RoadtripsPage(): JSX.Element {
 
   return (
     <AppShell width="table">
+      {/* Every other logbook page has carried these since round 4; this one
+          was missed, so a reader who reached roadtrips had no way back to
+          another area except the header menu (owner, 2026-09-28). */}
+      <LogbookTabs />
       <PageHeader title={t("roadtrips:pageTitle")} actions={newButton} />
 
       <KindReviewNotice onChanged={() => void load()} />

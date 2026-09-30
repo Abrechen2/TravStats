@@ -10,7 +10,23 @@
       "title": "Kein LLM-Parser verfügbar",
       "body": "Es ist kein LLM (Ollama, OpenAI, Claude) konfiguriert. Der Regex-Fallback erkennt nur die häufigsten Buchungsformate; manuelle Korrekturen sind häufiger nötig."
     },
-    "pasteFirst": "Füge zuerst den Text der E-Mail ein."
+    "llmDisabled": {
+      "title": "KI-Parser abgeschaltet",
+      "body": "Der Administrator hat das KI-Modell abgeschaltet. Buchungen werden nur mit den eingebauten Vorlagen gelesen; was keine Vorlage kennt, ergänzt du von Hand."
+    },
+    "pasteFirst": "Füge zuerst den Text der E-Mail ein.",
+    "provider": {
+      "local": "Was keine Vorlage kennt, liest das KI-Modell {{model}} in deinem Netzwerk.",
+      "cloud": "Was keine Vorlage kennt, schickt TravStats zum Lesen an {{host}} ({{model}}) — einen Cloud-Anbieter außerhalb dieser Instanz."
+    },
+    "cloudNotConsented": {
+      "title": "KI-Parser wartet auf Zustimmung",
+      "body": "Der eingestellte KI-Anbieter liegt außerhalb des Netzwerks, und der Administrator hat dem Senden von Buchungen dorthin nicht zugestimmt. Buchungen werden nur mit den eingebauten Vorlagen gelesen."
+    },
+    "providerIncomplete": {
+      "title": "KI-Anbieter unvollständig eingerichtet",
+      "body": "Für den OpenAI-kompatiblen Anbieter fehlen Basis-URL oder Modell. Bis der Administrator das ergänzt, werden Buchungen nur mit den eingebauten Vorlagen gelesen."
+    }
   },
   "pdf": {
     "dropZone": "PDF hier ablegen oder klicken",
@@ -65,5 +81,33 @@
       "description": "Für alles ohne Namen — Aussichtspunkt, Stellplatz, Bucht.",
       "action": "Karte"
     }
+  },
+  "errors": {
+    "llmUnreachable": "Der KI-Parser ist gerade nicht erreichbar. Bitte die Parser-Einstellungen prüfen oder später erneut versuchen.",
+    "llmDisabled": "Der Administrator hat den KI-Parser abgeschaltet. Was keine eingebaute Vorlage kennt, ergänzt du von Hand.",
+    "invalidPdf": "Diese Datei ließ sich nicht als PDF lesen.",
+    "pdfNoText": "Aus diesem PDF konnte kein Text gelesen werden – vermutlich ein Scan. Bitte als Bild über den Bordkarten-Scanner einlesen.",
+    "rateLimited": "Zu viele Importe in kurzer Zeit. Bitte warte einen Moment und versuche es erneut.",
+    "timeout": "Das Einlesen hat zu lange gedauert. Bitte später erneut versuchen.",
+    "llmCloudNotConsented": "Der KI-Anbieter liegt außerhalb des Netzwerks, und der Administrator hat dem Senden dorthin nicht zugestimmt."
+  },
+  "wrongDialog": {
+    "title": "Falscher Import",
+    "flight": "Das ist eine Flugbuchung.",
+    "cruise": "Das ist eine Kreuzfahrtbuchung.",
+    "lodging": "Das ist eine Unterkunftsbuchung.",
+    "rail": "Das ist eine Bahnbuchung.",
+    "body": "Hier wurde deshalb nichts ausgelesen. Importiere das Dokument dort, wo es hingehört.",
+    "open": {
+      "flight": "Als Flug importieren",
+      "cruise": "Als Kreuzfahrt importieren",
+      "lodging": "Als Unterkunft importieren",
+      "rail": "Als Bahnfahrt importieren"
+    },
+    "dismiss": "Schließen"
+  },
+  "readBy": {
+    "local": "Gelesen vom KI-Modell {{model}} in deinem Netzwerk.",
+    "cloud": "Gelesen vom KI-Modell {{model}} bei {{host}} (Cloud-Anbieter)."
   }
 }

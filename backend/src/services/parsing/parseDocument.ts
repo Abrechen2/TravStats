@@ -34,8 +34,14 @@ import { parseCruiseBookingText } from "../cruiseBookingParser";
 import { resolveCruiseEntities, hydrateResolvedCruises } from "../cruiseEntityResolver";
 import { parseLodgingBookingText } from "../lodging/lodgingBookingParser";
 import { bookingsToCandidates } from "../lodging/lodgingCandidates";
+import { parseRailBookingText, type RailFallbackCode } from "../rail/parser/railBookingParser";
+import { toRailCandidate, type RailImportCandidate } from "../rail/parser/railCandidates";
+import type { RailAttachment } from "../rail/parser/types";
 import { PARSER_SUPPORTED_DOMAINS, type ParserSupportedDomain } from "../../shared/domains";
-import { scoreDocument, type DomainDetection } from "./documentDomain";
+import { isLlmAvailable } from "../parsers/llmAvailability";
+import { conclusiveOtherDomain, scoreDocument, type DomainDetection } from "./documentDomain";
+import { isLlmEnabledByAdmin } from "../llm/llmGate";
+import { describeLlmTarget, resolveLlmTarget, type LlmProviderInfo } from "../llm/llmProvider";
 
 /** What a caller may ask for. `auto` is the addition — see the header. */
 export const REQUESTABLE_DOMAINS = [...PARSER_SUPPORTED_DOMAINS, "auto"] as const;
@@ -64,6 +70,23 @@ export interface ParseDocumentInput {
    * dropping it would silently reinstate the bug that put 2005 flights in 2026.
    */
   referenceDate?: Date;
+  /**
+   * Files that came with a mail — a calendar file, a PDF ticket. Only the rail
+   * reader looks at them: a DB booking mail prints its itinerary nowhere else.
+   */
+  attachments?: RailAttachment[];
+}
+
+/**
+ * The document clearly is something other than what the dialog asked for
+ * (acceptance D1, 2026-09-26). Additive: the body keeps the requested shape
+ * with an empty result, so a client that does not read this field still sees
+ * "nothing read" rather than a misreading, and one that does can send the
+ * user to the right import.
+ */
+export interface DomainMismatch {
+  detected: ParserSupportedDomain;
+  confidence: number;
 }
 
 type CruiseBody = {
@@ -73,6 +96,7 @@ type CruiseBody = {
   ollamaAvailable: boolean;
   /** Present when nothing was read — the same field lodging answers with. */
   fallbackReason?: string;
+  domainMismatch?: DomainMismatch;
 };
 
 type LodgingBody = {
@@ -81,12 +105,49 @@ type LodgingBody = {
   parserUsed: string;
   ollamaAvailable: boolean;
   fallbackReason?: string;
+  domainMismatch?: DomainMismatch;
 };
 
 type FlightBody = { domain: "flight" } & ParseResult;
 
-/** The domain-shaped payload, byte-identical to what each route returned before. */
-export type ParsedDocumentBody = FlightBody | CruiseBody | LodgingBody;
+type RailBody = {
+  domain: "rail";
+  /** One booking per document; empty when nothing was read — see `fallbackCode`. */
+  bookings: RailImportCandidate[];
+  parserUsed: string;
+  ollamaAvailable: boolean;
+  /** Why nothing was read, as a stable code the client words in its own language. */
+  fallbackCode?: RailFallbackCode;
+  fallbackReason?: string;
+  /** A DB order mail's reference when it printed no ride — the ride is in its ticket. */
+  orderReference?: string | null;
+  domainMismatch?: DomainMismatch;
+};
+
+type DomainBody = FlightBody | CruiseBody | LodgingBody | RailBody;
+
+/**
+ * The domain-shaped payload, plus one field every domain shares:
+ * `llmDisabledByAdmin`, so a templates-only answer can say it was a decision
+ * (`services/llm/llmGate.ts`) rather than an unreachable model — which is what
+ * `ollamaAvailable: false` alone cannot tell apart.
+ */
+export type ParsedDocumentBody = DomainBody & {
+  llmDisabledByAdmin: boolean;
+  /**
+   * The provider that read the document, when the language model did
+   * (`parserUsed === "ollama"` — the historical name for "the model read it",
+   * whichever provider that is). Null otherwise. A cloud provider is named by
+   * host, so the user sees where their booking went.
+   */
+  llmProvider: LlmProviderInfo | null;
+};
+
+async function llmProviderFor(parserUsed: string): Promise<LlmProviderInfo | null> {
+  if (parserUsed !== "ollama") return null;
+  const target = await resolveLlmTarget({ withDefaults: true });
+  return target ? describeLlmTarget(target) : null;
+}
 
 export interface ParseDocumentOutcome {
   /** The domain actually parsed with. */
@@ -126,11 +187,61 @@ function resolveDomain(
   return { domain: detection.domain, detection };
 }
 
+/**
+ * The dialogs whose choice detection may overrule. `flight` is not among them:
+ * it is what a caller that names no domain gets (the Companion and every older
+ * client), and those clients read `flights` — answering them in another shape
+ * would break them. A flight request keeps its historical behaviour.
+ */
+const OVERRULABLE_DOMAINS: readonly ParserSupportedDomain[] = ["rail", "cruise", "lodging"];
+
+/**
+ * Detection runs first and independently of the dialog: a document that is
+ * clearly another domain is not forced through the requested parser — least
+ * of all through a model fallback that will find "train rides" in anything.
+ */
+function mismatchFor(
+  requested: RequestedDomain,
+  domain: ParserSupportedDomain,
+  combined: string
+): DomainMismatch | null {
+  if (requested === "auto" || !OVERRULABLE_DOMAINS.includes(domain)) return null;
+  const detection = scoreDocument(combined);
+  const other = conclusiveOtherDomain(detection, domain);
+  return other ? { detected: other, confidence: detection.confidence } : null;
+}
+
+async function mismatchBody(
+  domain: ParserSupportedDomain,
+  mismatch: DomainMismatch,
+  userId: string | undefined
+): Promise<DomainBody> {
+  const ollamaAvailable = await isLlmAvailable(userId !== undefined ? { userId } : {});
+  const common = {
+    parserUsed: "none",
+    ollamaAvailable,
+    // English, for the log; the client words it from `domainMismatch`.
+    fallbackReason: `The document reads as a ${mismatch.detected} booking, not ${domain}`,
+    domainMismatch: mismatch,
+  };
+  if (domain === "rail") return { domain, bookings: [], fallbackCode: "otherDomain", ...common };
+  if (domain === "cruise") return { domain, cruises: [], ...common };
+  return { domain: "lodging", candidates: [], ...common };
+}
+
 export async function parseDocument(input: ParseDocumentInput): Promise<ParseDocumentOutcome> {
   const combined = combineSubjectAndText(input.subject, input.text);
   const { domain, detection } = resolveDomain(input.domain, combined);
 
-  const body = await parseAs(domain, input, combined);
+  const mismatch = mismatchFor(input.domain, domain, combined);
+  const domainBody = mismatch
+    ? await mismatchBody(domain, mismatch, input.userId)
+    : await parseAs(domain, input, combined);
+  const body = {
+    ...domainBody,
+    llmDisabledByAdmin: !(await isLlmEnabledByAdmin()),
+    llmProvider: await llmProviderFor(domainBody.parserUsed),
+  };
 
   return {
     domain,
@@ -144,7 +255,7 @@ async function parseAs(
   domain: ParserSupportedDomain,
   input: ParseDocumentInput,
   combined: string
-): Promise<ParsedDocumentBody> {
+): Promise<DomainBody> {
   if (domain === "cruise") {
     // The userId is what lets the parser refuse the ADMIN's Ollama to the
     // shared demo account (security audit of 2026-09-19, finding 3). The flight
@@ -169,6 +280,19 @@ async function parseAs(
       parserUsed: result.parserUsed,
       ollamaAvailable: result.ollamaAvailable,
       ...(result.fallbackReason !== undefined ? { fallbackReason: result.fallbackReason } : {}),
+    };
+  }
+
+  if (domain === "rail") {
+    const result = await parseRailBookingText(combined, input.attachments ?? [], input.userId);
+    return {
+      domain: "rail",
+      bookings: result.booking ? [await toRailCandidate(result.booking, input.userId)] : [],
+      parserUsed: result.parserUsed,
+      ollamaAvailable: result.ollamaAvailable,
+      ...(result.fallbackCode !== undefined ? { fallbackCode: result.fallbackCode } : {}),
+      ...(result.fallbackReason !== undefined ? { fallbackReason: result.fallbackReason } : {}),
+      ...(result.orderReference ? { orderReference: result.orderReference } : {}),
     };
   }
 

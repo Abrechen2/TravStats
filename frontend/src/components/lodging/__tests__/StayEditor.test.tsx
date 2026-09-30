@@ -202,12 +202,11 @@ describe("StayEditor", () => {
     const [calledLodgingId, payload] = vi.mocked(createStay).mock.calls[0];
     expect(calledLodgingId).toBe("lodging-1");
     expect(payload.isAwardStay).toBe(true);
-    // Dates must carry an explicit UTC offset ("Z") — never a bare
-    // "YYYY-MM-DDTHH:mm:ss" — so the backend's `new Date(v).toISOString()`
-    // normalization in schemas/lodging.ts cannot reinterpret the picked
-    // check-in as server-local time and shift it to a different calendar day.
-    expect(payload.checkIn).toBe("2026-07-11T00:00:00.000Z");
-    expect(payload.checkOut).toBe("2026-07-12T00:00:00.000Z");
+    // A stay's days travel as bare calendar dates (ADR 0002) — never an
+    // offset-less datetime the server could read in its own zone, and no
+    // midnight-UTC anchor either: the server stores a DATE.
+    expect(payload.checkIn).toBe("2026-07-11");
+    expect(payload.checkOut).toBe("2026-07-12");
     expect(onSaved).toHaveBeenCalledWith(expect.objectContaining({ id: "new-stay" }));
   });
 

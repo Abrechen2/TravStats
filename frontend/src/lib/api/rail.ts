@@ -1,10 +1,14 @@
 import { api } from "./client";
+import { API_TIMEOUTS } from "../../config/constants";
 import type {
   RailJourney,
+  RailEntrySuggestions,
   RailJourneyDetail,
   RailJourneyInput,
   RailLookupAnswer,
   RailLookupProviders,
+  RailSaveResult,
+  RailGeometryReport,
   RailStationHit,
   RailStats,
 } from "../../types/rail";
@@ -19,6 +23,8 @@ interface Envelope<T> {
   data: T;
 }
 
+type SaveEnvelope = Envelope<RailJourney> & { meta?: { geometry?: RailGeometryReport } };
+
 export interface RailPage {
   journeys: RailJourney[];
   total: number;
@@ -27,6 +33,8 @@ export interface RailPage {
 export interface RailListQuery {
   q?: string;
   year?: number;
+  /** A rail loyalty card: only the rides it counts. */
+  membershipId?: string;
   status?: string;
   sort?: "departure" | "distance" | "created";
   order?: "asc" | "desc";
@@ -62,24 +70,28 @@ export const railApi = {
     return res.data.data;
   },
 
-  async create(input: RailJourneyInput): Promise<RailJourney> {
-    const res = await api.post<Envelope<RailJourney>>("/rail", input);
-    return res.data.data;
+  /** The saved row, and what the save did to its line (`meta.geometry`). */
+  async create(input: RailJourneyInput): Promise<RailSaveResult> {
+    const res = await api.post<SaveEnvelope>("/rail", input);
+    return { journey: res.data.data, geometry: res.data.meta?.geometry ?? null };
   },
 
-  async update(id: string, input: Partial<RailJourneyInput>): Promise<RailJourney> {
-    const res = await api.patch<Envelope<RailJourney>>(`/rail/${id}`, input);
-    return res.data.data;
+  async update(id: string, input: Partial<RailJourneyInput>): Promise<RailSaveResult> {
+    const res = await api.patch<SaveEnvelope>(`/rail/${id}`, input);
+    return { journey: res.data.data, geometry: res.data.meta?.geometry ?? null };
   },
 
   async remove(id: string): Promise<void> {
     await api.delete(`/rail/${id}`);
   },
 
-  /** The statistics over completed rides; `year` is the year a ride left in. */
-  async stats(year: number | null = null): Promise<RailStats> {
+  /**
+   * The statistics over completed rides; `year` is the year a ride left in.
+   * `until` ("MM-DD") cuts that year at the day a same-span comparison ends.
+   */
+  async stats(year: number | null = null, until: string | null = null): Promise<RailStats> {
     const res = await api.get<Envelope<RailStats>>("/rail/stats", {
-      params: year === null ? {} : { year },
+      params: year === null ? {} : until === null ? { year } : { year, until },
     });
     return res.data.data;
   },
@@ -92,6 +104,14 @@ export const railApi = {
     return res.data.data;
   },
 
+  /** Chips for the rail form from the user's own rides; nothing is written. */
+  async entrySuggestions(query: RailEntrySuggestionsQuery): Promise<RailEntrySuggestions> {
+    const res = await api.get<Envelope<RailEntrySuggestions>>("/rail/entry-suggestions", {
+      params: query,
+    });
+    return res.data.data;
+  },
+
   /** Which lookup providers the admin allows on this instance. */
   async lookupProviders(): Promise<RailLookupProviders> {
     const res = await api.get<Envelope<RailLookupProviders>>("/rail/lookup/providers");
@@ -100,7 +120,10 @@ export const railApi = {
 
   /** A train by number and day, boarded at a catalogue station or a position. */
   async lookup(query: RailLookupQuery): Promise<RailLookupAnswer> {
-    const res = await api.get<Envelope<RailLookupAnswer>>("/rail/lookup", { params: query });
+    const res = await api.get<Envelope<RailLookupAnswer>>("/rail/lookup", {
+      params: query,
+      timeout: API_TIMEOUTS.RAIL_LOOKUP,
+    });
     return res.data.data;
   },
 
@@ -158,6 +181,14 @@ export interface RoadtripConversionResult {
   journeyIds: string[];
   skipped: RoadtripConversionPreview["skipped"];
   sectionRemoved: boolean;
+}
+
+export interface RailEntrySuggestionsQuery {
+  depStationId?: number;
+  arrStationId?: number;
+  depName?: string;
+  arrName?: string;
+  operator?: string;
 }
 
 export interface RailLookupQuery {

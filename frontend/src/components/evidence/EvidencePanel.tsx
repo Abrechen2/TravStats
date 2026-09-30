@@ -233,7 +233,12 @@ export default function EvidencePanel({
       {entries.length > 0 && measure && (
         <ul>
           {entries.map((entry) => (
-            <EvidenceEntryRow key={entry.id} entry={entry} aggregation={measure.aggregation} />
+            <EvidenceEntryRow
+              key={entry.id}
+              entry={entry}
+              aggregation={measure.aggregation}
+              unit={measure.unit}
+            />
           ))}
         </ul>
       )}

@@ -3,12 +3,32 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { railApi, type RailLookupQuery } from "../../lib/api/rail";
 import { logger } from "../../lib/logger";
-import type { RailLookupAnswer, RailLookupProviders } from "../../types/rail";
-import { applyLookup, isStationComplete, type RailFormDraft } from "./railFormModel";
+import { todayZoneNow } from "../../hooks/useTodayZone";
+import { todayIn } from "../../shared/time";
+import type {
+  RailLookupAnswer,
+  RailLookupOutcome,
+  RailLookupProvider,
+  RailLookupProviders,
+} from "../../types/rail";
+import {
+  applyLookup,
+  isStationComplete,
+  lookupKeptFields,
+  onwardDestination,
+  type RailFormDraft,
+  type RailLookupKeptField,
+} from "./railFormModel";
+import type { RailStationDraft } from "./RailStationField";
 
 interface Props {
   draft: RailFormDraft;
-  onApply: (next: RailFormDraft) => void;
+  /**
+   * The form after the lookup, and — when the train does not reach the
+   * arrival the user had chosen — that arrival, to continue to on a
+   * connecting train.
+   */
+  onApply: (next: RailFormDraft, onward: RailStationDraft | null) => void;
   onClearLookup: () => void;
   inputClassName: string;
 }
@@ -21,11 +41,8 @@ type LookupState =
   | { kind: "answered"; answer: RailLookupAnswer }
   | { kind: "error" };
 
-const todayIso = (): string => {
-  const d = new Date();
-  const pad = (n: number): string => String(n).padStart(2, "0");
-  return `${d.getFullYear()}-${pad(d.getMonth() + 1)}-${pad(d.getDate())}`;
-};
+/** Today in the profile zone (ADR 0002 Q1), not the browser's. */
+const todayIso = (): string => todayIn(todayZoneNow());
 
 /** The lookup's query from the form, or null while something it needs is missing. */
 export function lookupQueryFrom(draft: RailFormDraft, date: string): RailLookupQuery | null {
@@ -44,12 +61,28 @@ export function lookupQueryFrom(draft: RailFormDraft, date: string): RailLookupQ
   };
 }
 
-/** Why nothing came back, in the words the user needs. */
-export function noMatchReason(answer: RailLookupAnswer): "disabled" | "unavailable" | "noMatch" {
+/** Outcomes that say nothing about the train — the provider gave no answer. */
+const UNANSWERED: readonly RailLookupOutcome[] = ["unavailable", "timedOut", "skippedForTime"];
+
+/**
+ * Why nothing came back, in the words the user needs. "No such train" is
+ * claimed only when every provider that could answer did answer: one that did
+ * not (down, too slow, or not asked for lack of time) leaves the question open,
+ * and the message names it — a db-rest 503 behind a Transitous miss used to
+ * disappear into "no such train" (review 2026-09-26, finding 3).
+ */
+export function noMatchReason(answer: RailLookupAnswer): {
+  kind: "disabled" | "unavailable" | "noMatch";
+  silent: RailLookupProvider[];
+} {
+  const silent = answer.attempts
+    .filter((a) => UNANSWERED.includes(a.outcome))
+    .map((a) => a.provider);
   const outcomes = answer.attempts.map((a) => a.outcome);
-  if (outcomes.every((o) => o === "disabled" || o === "notApplicable")) return "disabled";
-  if (outcomes.includes("unavailable") && !outcomes.includes("noMatch")) return "unavailable";
-  return "noMatch";
+  if (outcomes.every((o) => o === "disabled" || o === "notApplicable")) {
+    return { kind: "disabled", silent };
+  }
+  return { kind: silent.length > 0 ? "unavailable" : "noMatch", silent };
 }
 
 /** The stop to preselect: the one the user already chose, else the train's last. */
@@ -88,6 +121,7 @@ export function RailLookupPanel({
   const [date, setDate] = useState(() => draft.departureLocal.slice(0, 10) || todayIso());
   const [state, setState] = useState<LookupState>({ kind: "idle" });
   const [arrivalIndex, setArrivalIndex] = useState<number | null>(null);
+  const [kept, setKept] = useState<RailLookupKeptField[]>([]);
 
   useEffect(() => {
     let cancelled = false;
@@ -113,6 +147,7 @@ export function RailLookupPanel({
   const run = async (): Promise<void> => {
     if (!query) return;
     setState({ kind: "loading" });
+    setKept([]);
     try {
       const answer = await railApi.lookup(query);
       setState({ kind: "answered", answer });
@@ -124,6 +159,8 @@ export function RailLookupPanel({
   };
 
   const match = state.kind === "answered" ? state.answer.match : null;
+  const onward =
+    match && arrivalIndex !== null ? onwardDestination(draft, match, arrivalIndex) : null;
 
   return (
     <div className="mb-4 rounded-md border border-border p-3" data-testid="rail-lookup">
@@ -157,11 +194,7 @@ export function RailLookupPanel({
           {t("rail:lookup.error")}
         </p>
       ) : null}
-      {state.kind === "answered" && !match ? (
-        <p role="status" className="mt-2 text-sm">
-          {t(`rail:lookup.none.${noMatchReason(state.answer)}`)}
-        </p>
-      ) : null}
+      {state.kind === "answered" && !match ? <NoMatch answer={state.answer} t={t} /> : null}
 
       {match && arrivalIndex !== null ? (
         <div className="mt-2 space-y-2" role="status">
@@ -192,19 +225,37 @@ export function RailLookupPanel({
           <p className="t-caption">
             {match.hasGeometry ? t("rail:lookup.withLine") : t("rail:lookup.withoutLine")}
           </p>
+          {onward ? (
+            <p className="text-sm" data-testid="rail-lookup-change">
+              {t("rail:lookup.changeNeeded", {
+                station: onward.name,
+                stop: match.stops[arrivalIndex]?.name ?? "",
+              })}
+            </p>
+          ) : null}
           <button
             type="button"
             className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base)"
             onClick={(): void => {
-              onApply(applyLookup(draft, match, arrivalIndex));
+              onApply(applyLookup(draft, match, arrivalIndex), onward);
+              setKept(lookupKeptFields(draft, match));
               setState({ kind: "idle" });
             }}
           >
-            {t("rail:lookup.apply")}
+            {onward ? t("rail:lookup.applyWithChange") : t("rail:lookup.apply")}
           </button>
         </div>
       ) : null}
 
+      {kept.map((k) => (
+        <p key={k.field} className="t-caption mt-2" data-testid="rail-lookup-kept">
+          {t("rail:lookup.kept", {
+            field: t(k.field === "operator" ? "rail:form.operator" : "rail:form.category"),
+            yours: k.yours,
+            timetable: k.timetable,
+          })}
+        </p>
+      ))}
       {draft.lookup ? (
         <p className="t-caption mt-2">
           {t("rail:lookup.linked", {
@@ -228,6 +279,26 @@ export function RailLookupPanel({
           </a>
         </p>
       ) : null}
+    </div>
+  );
+}
+
+type Translate = (key: string, options?: Record<string, unknown>) => string;
+
+/** The miss, and underneath it what each provider said — never a bare "failed". */
+function NoMatch({ answer, t }: { answer: RailLookupAnswer; t: Translate }): JSX.Element {
+  const reason = noMatchReason(answer);
+  const providers = reason.silent.map((p) => t(`rail:lookup.provider.${p}`)).join(", ");
+  return (
+    <div role="status" className="mt-2 text-sm">
+      <p>{t(`rail:lookup.none.${reason.kind}`, { providers })}</p>
+      <ul className="t-caption mt-1" data-testid="rail-lookup-attempts">
+        {answer.attempts.map((a) => (
+          <li key={a.provider}>
+            {t(`rail:lookup.provider.${a.provider}`)}: {t(`rail:lookup.outcome.${a.outcome}`)}
+          </li>
+        ))}
+      </ul>
     </div>
   );
 }

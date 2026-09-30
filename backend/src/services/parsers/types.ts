@@ -1,3 +1,5 @@
+import type { LlmRefusal } from "../llm/llmGate";
+import type { LlmTarget } from "../llm/llmProvider";
 import { ParsedBooking } from "../bookingParser";
 
 /**
@@ -127,6 +129,13 @@ export interface ParserConfig {
   referenceDate?: Date;
 
   /**
+   * The resolved model endpoint (`services/llm/llmProvider.ts`) — Ollama or an
+   * OpenAI-compatible provider. Read it through `llmTargetOf`, which also
+   * accepts a config that names only `ollamaUrl`/`ollamaModel`.
+   */
+  llmTarget?: LlmTarget;
+
+  /**
    * Ollama server URL — overrides OLLAMA_URL env var
    */
   ollamaUrl?: string;
@@ -135,6 +144,13 @@ export interface ParserConfig {
    * Ollama model name — overrides OLLAMA_MODEL env var
    */
   ollamaModel?: string;
+
+  /**
+   * Why this caller's config carries no model, when it was taken away rather
+   * than never configured — the admin switch or the shared-demo denial
+   * (`services/llm/llmGate.ts`). Absent when the model is allowed.
+   */
+  llmRefusal?: LlmRefusal;
 
   /**
    * Optional user ID for template lookup
@@ -165,4 +181,10 @@ export interface ParserResult {
    * Was data enriched with additional sources?
    */
   enriched?: boolean;
+
+  /**
+   * Set when nothing was found AND a configured LLM could not be asked, so
+   * the empty answer is the templates' alone, not the model's.
+   */
+  llmUnreachable?: boolean;
 }

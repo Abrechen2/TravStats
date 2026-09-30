@@ -49,6 +49,8 @@ export interface LodgingStayData {
    * query layer. Null when no card covered the stay.
    */
   programName: string | null;
+  /** The covering card's id, beside its name — what a link to its stays names. */
+  programMembershipId?: string | null;
   /** The card's CURRENT tier, travelling with the name — a status figure without it says half. */
   membershipTier: string | null;
 }
@@ -319,6 +321,8 @@ export interface LodgingStats {
 /** Nights under one programme in one calendar year — the unit hotel status is counted in. */
 export interface LodgingProgrammeYear {
   programme: string;
+  /** The card, so the row can link to the stays it counts. */
+  membershipId: string | null;
   /** The card's current tier, not the tier held during that year. */
   tier: string | null;
   year: string;

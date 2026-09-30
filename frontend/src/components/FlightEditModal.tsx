@@ -1,12 +1,14 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import type { Flight } from "../types";
 import TimesFields from "./FlightForm/fields/TimesFields";
 import HistoricalToggleField from "./FlightForm/fields/HistoricalToggleField";
 import { applyHistoricalToggle } from "./FlightForm/historicalToggle";
 import {
-  splitLocalDatetime,
-  splitZonedDatetime,
+  seedTimes,
   historicalShapeFor,
+  editSubmitZones,
+  airportLocalInputs,
+  storedZoneAt,
 } from "./FlightForm/editModalDatetime";
 import Modal from "./Modal";
 import RouteFields from "./FlightForm/fields/RouteFields";
@@ -39,6 +41,9 @@ import { logger } from "../lib/logger";
 
 import type { FlightInput } from "../types";
 import type { Airport } from "../lib/api";
+import { saveErrorMessage } from "../lib/saveErrorMessage";
+import { flightArrival, flightDeparture } from "../lib/entityTimes";
+import { foldFields, storedFlightFolds, wallOf, type FlightFolds } from "../lib/flightFolds";
 
 interface FlightEditModalProps {
   flight: Flight;
@@ -71,17 +76,12 @@ export default function FlightEditModal({
   onSave,
 }: FlightEditModalProps): JSX.Element | null {
   const { t } = useTranslation(["flights", "common", "errors"]);
-  const { features, display } = useSettingsStore();
+  const { features } = useSettingsStore();
 
   const buildFormData = (f: Flight) => {
     const isHistorical = f.status === "historical";
-    const dep = splitLocalDatetime(f.departureTime);
-    const arr = splitLocalDatetime(f.arrivalTime);
-    // Actual departure/arrival (#200) — same browser-local seed as
-    // dep/arr above, re-derived as airport-local by the hydration effect
-    // below. Empty when the flight has no recorded actual time yet.
-    const actualDep = splitLocalDatetime(f.actualDeparture ?? null);
-    const actualArr = splitLocalDatetime(f.actualArrival ?? null);
+    // The airports' own clocks from `times`; actual times (#200) empty when none.
+    const { dep, arr, actualDep, actualArr } = seedTimes(f);
     return {
       airline: f.airline || "",
       operatingAirline: f.operatingAirline || "",
@@ -128,6 +128,10 @@ export default function FlightEditModal({
   };
 
   const [formData, setFormData] = useState(buildFormData(flight));
+  // Q5: the occurrence of a repeated hour the flight was stored with, re-sent unless changed.
+  const [folds, setFolds] = useState<FlightFolds>(() =>
+    storedFlightFolds(flightDeparture(flight), flightArrival(flight))
+  );
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
   const addToast = useToastStore((s) => s.addToast);
@@ -141,15 +145,14 @@ export default function FlightEditModal({
     () => buildFlightAirports(flight).arrival
   );
 
-  // Airport timezones for the departure/arrival fields. The datetime-local
-  // inputs are seeded browser-local by buildFormData, then re-rendered as
-  // airport-local once useAirportLocalTimes resolves both zones (see the
-  // sync effect below). `hydrated` tracks whether the inputs currently hold
-  // airport-local values, so submit pairs them with the matching timezone
-  // basis (no-op edits round-trip losslessly instead of drifting when
-  // browser tz != airport tz).
-  const userTz = display?.timezone || "UTC";
-  const browserTz = Intl.DateTimeFormat().resolvedOptions().timeZone || userTz;
+  // Airport timezones for the departure/arrival fields. The inputs are seeded
+  // from `times` (the airports' clocks) by buildFormData and re-derived once
+  // useAirportLocalTimes resolves both zones (the sync effect below);
+  // `hydrated` says whether that happened, so submit pairs them with the
+  // matching zones. Before it, the hook reports a placeholder zone that is
+  // never submitted (editSubmitZones) nor used for a notice — not the
+  // browser's, which is no airport's.
+  const browserTz = "UTC";
   const {
     depTimezone: depTz,
     arrTimezone: arrTz,
@@ -159,7 +162,17 @@ export default function FlightEditModal({
     depCode: departureAirport?.iata || departureAirport?.icao || null,
     arrCode: arrivalAirport?.iata || arrivalAirport?.icao || null,
     browserTimezone: browserTz,
+    depKnownZone: storedZoneAt(
+      departureAirport,
+      flight.depIata,
+      flight.depIcao,
+      flight.depTimezone
+    ),
+    arrKnownZone: storedZoneAt(arrivalAirport, flight.arrIata, flight.arrIcao, flight.arrTimezone),
   });
+
+  // The airport zones the inputs were last rendered in (hydration effect).
+  const lastZones = useRef<{ dep: string; arr: string } | null>(null);
 
   const suggestions = useFlightEntrySuggestions({
     enabled: isOpen,
@@ -239,31 +252,8 @@ export default function FlightEditModal({
   // another on the next submit. See FlightEditModal.timezone.test.tsx.
   useEffect(() => {
     if (!hydrated) return;
-    const isHistorical = flight.status === "historical";
-    const dep = splitZonedDatetime(flight.departureTime, depTz);
-    const arr = splitZonedDatetime(flight.arrivalTime, arrTz);
-    // Actual departure/arrival (#200) join the SAME update for the same
-    // reason as dep/arr above — actual departure is airport-local at the
-    // departure airport (depTz), actual arrival at the arrival airport
-    // (arrTz), mirroring the scheduled pair exactly.
-    const actualDep = splitZonedDatetime(flight.actualDeparture ?? null, depTz);
-    const actualArr = splitZonedDatetime(flight.actualArrival ?? null, arrTz);
-    setFormData((prev) => ({
-      ...prev,
-      // Historical flights re-derive the SHAPE string (see buildFormData) —
-      // now against the airport-local calendar date, which fixes the
-      // month-boundary shift the browser-local seed can have.
-      departureDate: isHistorical
-        ? historicalShapeFor(dep.date, flight.depTimeSemantics)
-        : dep.date,
-      departureTime: isHistorical ? "" : dep.time,
-      arrivalDate: isHistorical ? historicalShapeFor(dep.date, flight.depTimeSemantics) : arr.date,
-      arrivalTime: isHistorical ? "" : arr.time,
-      actualDepartureDate: actualDep.date,
-      actualDepartureTime: actualDep.time,
-      actualArrivalDate: actualArr.date,
-      actualArrivalTime: actualArr.time,
-    }));
+    lastZones.current = { dep: depTz, arr: arrTz };
+    setFormData((prev) => ({ ...prev, ...airportLocalInputs(flight, depTz, arrTz) }));
   }, [hydrated, depTz, arrTz, flight]);
 
   const handleSubmit = async (e: React.FormEvent) => {
@@ -301,21 +291,18 @@ export default function FlightEditModal({
     setLoading(true);
 
     try {
-      // Pair each wall-clock with the timezone its input was rendered against,
-      // for the canonical-UTC submit contract. Once hydrated the inputs are
-      // airport-local (depTz/arrTz); before that they still hold the
-      // browser-local seed, so fall back to the actual browser timezone — that
-      // way a no-op save reproduces the exact same UTC instant either way.
-      const submitDepTz = hydrated ? depTz : browserTz;
-      const submitArrTz = hydrated ? arrTz : browserTz;
+      // The airports' zones once both resolved; null = send no time at all.
+      const last = lastZones.current;
+      const zones = editSubmitZones({ hydrated, depTz, arrTz }, formData, [
+        buildFormData(flight),
+        ...(last ? [airportLocalInputs(flight, last.dep, last.arr)] : []),
+      ]);
 
-      // Historical flights carry their precision in the date SHAPE (see the
-      // HistoricalDateFields block) — mirror the create form's semantics
-      // derivation. ALWAYS sent alongside departureLocal for historical
-      // flights, never conditionally: the server treats a departureLocal
-      // without explicit semantics as a real time edit and flips the column
-      // to UTC (the implicit branch flights.test.ts pins) — which the
-      // browser UAT caught silently downgrading DATE_ONLY on a year change.
+      // Historical flights carry their precision in the date SHAPE — the
+      // create form's derivation. ALWAYS sent with departureLocal: without
+      // explicit semantics the server reads a real time edit and flips the
+      // column to UTC (flights.test.ts pins it) — which the browser UAT caught
+      // silently downgrading DATE_ONLY on a year change.
       const histShape =
         formData.status === "historical" ? historicalDateShape(formData.departureDate) : "unknown";
       const sendSemantics: FlightInput["depTimeSemantics"] =
@@ -338,9 +325,7 @@ export default function FlightEditModal({
         flightNumber: formData.flightNumber || null,
         aircraft: formData.aircraft || null,
         status: formData.status as FlightInput["status"],
-        // "" (the "(optional)" choice) maps to null — an explicit CLEAR on the
-        // wire. `undefined` would omit the field and the server would keep the
-        // old value while the UI showed it removed.
+        // "" (the "(optional)" choice) is null too — the same explicit CLEAR.
         category: (formData.category || null) as FlightInput["category"],
         seatClass: (formData.seatClass || null) as FlightInput["seatClass"],
         seatNumber: formData.seatNumber || null,
@@ -362,45 +347,52 @@ export default function FlightEditModal({
         notes: formData.notes || null,
         tags: splitTagText(formData.tags),
         receiptUrl: formData.receiptUrl || null,
-        // Recombine with the SAME buildLocalString the create form uses —
-        // no second implementation of date+time recombination.
-        // Only a historical row may anchor a bare day to noon — see
-        // buildLocalString. On the ordinary path a blank time is incomplete
-        // input, and the submit guard above refuses it rather than letting a
-        // fabricated midday depart.
-        departureLocal: formData.departureDate
-          ? (buildLocalString(formData.departureDate, formData.departureTime, {
-              anchorDateOnly: formData.status === "historical",
-            }) ?? undefined)
-          : undefined,
-        depTimezone: formData.departureDate ? submitDepTz : undefined,
-        arrivalLocal: formData.arrivalDate
-          ? (buildLocalString(formData.arrivalDate, formData.arrivalTime, {
-              anchorDateOnly: formData.status === "historical",
-            }) ?? undefined)
-          : undefined,
-        arrTimezone: formData.arrivalDate ? submitArrTz : undefined,
-        depTimeSemantics: sendSemantics,
-        arrTimeSemantics: sendSemantics,
-        // Actual departure/arrival (#200) — three-way contract: a filled
-        // field submits its value; an empty field on a flight that HAS a
-        // stored actual time submits null (the user cleared it — delay
-        // resets with it server-side); an empty field on a flight that
-        // never had one omits the key entirely, so the no-op save stays a
-        // no-op. Blank-means-omit alone made clearing a recorded actual
-        // time impossible — the same silent-keep family as the text fields.
-        actualDepartureLocal: formData.actualDepartureDate
-          ? buildLocalString(formData.actualDepartureDate, formData.actualDepartureTime)
-          : flight.actualDeparture
-            ? null
+        ...(zones && {
+          // Recombine with the SAME buildLocalString the create form uses —
+          // no second implementation of date+time recombination.
+          // Only a historical row may anchor a bare day to noon — see
+          // buildLocalString. On the ordinary path a blank time is incomplete
+          // input, and the submit guard above refuses it rather than letting a
+          // fabricated midday depart.
+          departureLocal: formData.departureDate
+            ? (buildLocalString(formData.departureDate, formData.departureTime, {
+                anchorDateOnly: formData.status === "historical",
+              }) ?? undefined)
             : undefined,
-        actualDepartureTz: formData.actualDepartureDate ? submitDepTz : undefined,
-        actualArrivalLocal: formData.actualArrivalDate
-          ? buildLocalString(formData.actualArrivalDate, formData.actualArrivalTime)
-          : flight.actualArrival
-            ? null
+          depTimezone: formData.departureDate ? zones.dep : undefined,
+          arrivalLocal: formData.arrivalDate
+            ? (buildLocalString(formData.arrivalDate, formData.arrivalTime, {
+                anchorDateOnly: formData.status === "historical",
+              }) ?? undefined)
             : undefined,
-        actualArrivalTz: formData.actualArrivalDate ? submitArrTz : undefined,
+          arrTimezone: formData.arrivalDate ? zones.arr : undefined,
+          depTimeSemantics: sendSemantics,
+          arrTimeSemantics: sendSemantics,
+          // Actual departure/arrival (#200) — three-way contract: a filled
+          // field submits its value; an empty field on a flight that HAS a
+          // stored actual time submits null (the user cleared it — delay
+          // resets with it server-side); an empty field on a flight that
+          // never had one omits the key entirely, so the no-op save stays a
+          // no-op. Blank-means-omit alone made clearing a recorded actual
+          // time impossible — the same silent-keep family as the text fields.
+          actualDepartureLocal: formData.actualDepartureDate
+            ? buildLocalString(formData.actualDepartureDate, formData.actualDepartureTime)
+            : flight.actualDeparture
+              ? null
+              : undefined,
+          actualDepartureTz: formData.actualDepartureDate ? zones.dep : undefined,
+          actualArrivalLocal: formData.actualArrivalDate
+            ? buildLocalString(formData.actualArrivalDate, formData.actualArrivalTime)
+            : flight.actualArrival
+              ? null
+              : undefined,
+          actualArrivalTz: formData.actualArrivalDate ? zones.arr : undefined,
+          ...foldFields(
+            folds,
+            wallOf(formData.departureDate, formData.departureTime, zones.dep),
+            wallOf(formData.arrivalDate, formData.arrivalTime, zones.arr)
+          ),
+        }),
       };
 
       await onSave(flight.id, updates);
@@ -437,7 +429,9 @@ export default function FlightEditModal({
 
       onClose();
     } catch (err: unknown) {
-      setError(err instanceof Error ? err.message : t("errors:updateFailed"));
+      // Not `err.message`: for a refused save that is axios's own
+      // "Request failed with status code 400", in English.
+      setError(saveErrorMessage(err, t, "errors:updateFailed"));
     } finally {
       setLoading(false);
     }
@@ -540,6 +534,11 @@ export default function FlightEditModal({
               actualArrDate: formData.actualArrivalDate,
               actualArrTime: formData.actualArrivalTime,
             }}
+            clockChange={
+              hydrated
+                ? { depZone: depTz, arrZone: arrTz, folds, onFoldsChange: setFolds }
+                : undefined
+            }
             onActualChange={(next) =>
               setFormData((prev) => ({
                 ...prev,

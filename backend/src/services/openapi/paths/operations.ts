@@ -58,7 +58,19 @@ registry.registerPath({
     "backup that carried the rows but not the files looked complete and was not.",
   tags: backupTag,
   responses: {
-    202: { description: "Started" },
+    202: {
+      description:
+        "Started as a background job; poll GET /jobs/{id}. The job result carries the " +
+        "`backupId`, a failure its error code.",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({ jobId: z.string().uuid(), backupId: z.string() }),
+          }),
+        },
+      },
+    },
     409: { description: "Already running", content: errorContent },
   },
 });
@@ -86,22 +98,32 @@ registry.registerPath({
     "REPLACES everything. This is the one call in the API that can lose data the " +
     "backup does not contain, so a client should confirm in words rather than " +
     "with a button that looks like the others. " +
-    "The archive is checked before anything is written: a missing or unreadable " +
-    "part answers 400 with nothing restored, and an archive whose encrypted " +
-    "values were written with another instance's key answers 409 " +
-    "(RESTORE_ENCRYPTION_KEY_MISMATCH) until the caller repeats the request with " +
-    "acceptEncryptionKeyChange.",
+    "Runs as a background job (202, poll GET /jobs/{id}): reading, checking and " +
+    "replaying the archive take minutes. The archive is checked before anything is " +
+    "written: a missing or unreadable part fails the job with RESTORE_ARCHIVE_INCOMPLETE " +
+    "or RESTORE_ARCHIVE_UNREADABLE (status 400) and nothing restored, and an archive " +
+    "whose encrypted values were written with another instance's key fails it with " +
+    "RESTORE_ENCRYPTION_KEY_MISMATCH (409) until the caller repeats the request with " +
+    "acceptEncryptionKeyChange. An unknown id, an unfinished backup or a missing file " +
+    "still answer synchronously.",
   tags: backupTag,
   request: { params: z.object({ id: z.string() }) },
   responses: {
-    202: { description: "Restore started" },
+    202: {
+      description: "Restore started as a background job",
+      content: {
+        "application/json": {
+          schema: z.object({ success: z.boolean(), data: z.object({ jobId: z.string().uuid() }) }),
+        },
+      },
+    },
     400: {
-      description: "Backup is not completed, or the archive is incomplete or unreadable",
+      description: "Backup is not completed",
       content: errorContent,
     },
     404: notFound,
     409: {
-      description: "Another operation is running, or the archive's encryption key differs",
+      description: "Another backup or restore is running",
       content: errorContent,
     },
   },

@@ -2,76 +2,76 @@ import { useState } from "react";
 import type { Flight } from "../types";
 import { useTranslation } from "../hooks/useTranslation";
 import { resolveAirlineDisplay } from "../lib/airlineUtils";
-import { formatDate } from "../lib/displayFormat";
+import { formatLocalDate } from "../lib/displayFormat";
+import { flightDeparture } from "../lib/entityTimes";
+import { todayZoneNow } from "../hooks/useTodayZone";
+import {
+  addDays,
+  dayOf,
+  daysBetween,
+  dayString,
+  formatDayLong,
+  todayIn,
+  weekdayOf,
+} from "../shared/time";
 
 interface YearHeatmapProps {
   flights: Flight[];
 }
 
+/**
+ * One square of the year grid. `day` is a `YYYY-MM-DD` calendar day (ADR
+ * 0002): the grid steps with UTC arithmetic on day strings, and a flight
+ * counts on the day it departed AT ITS AIRPORT (`times.departure.local`) —
+ * never on the reader's own calendar.
+ */
 interface DayCell {
-  date: Date;
+  day: string;
   flightCount: number;
   flights: Flight[];
 }
 
+/** The departure airport's day of a flight, or null when it has none. */
+function departureDayOf(flight: Flight): string | null {
+  const departure = flightDeparture(flight);
+  return departure ? dayOf(departure) : null;
+}
+
 export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element {
   const { t, i18n } = useTranslation(["stats", "common"]);
-  const [selectedYear, setSelectedYear] = useState(new Date().getFullYear());
+  // The year "today" falls in, in the profile zone (Q1).
+  const [selectedYear, setSelectedYear] = useState(() =>
+    Number(todayIn(todayZoneNow()).slice(0, 4))
+  );
   const [hoveredCell, setHoveredCell] = useState<DayCell | null>(null);
 
+  const flightDays = flights
+    .map((flight) => ({ flight, day: departureDayOf(flight) }))
+    .filter((entry): entry is { flight: Flight; day: string } => entry.day !== null);
+  const yearOf = (day: string): number => Number(day.slice(0, 4));
+
   // Get all years from flights
-  const availableYears = Array.from(
-    new Set(
-      flights
-        .filter((f) => f.departureTime != null)
-        .map((f) => new Date(f.departureTime!).getFullYear())
-    )
-  ).sort((a, b) => b - a);
+  const availableYears = Array.from(new Set(flightDays.map(({ day }) => yearOf(day)))).sort(
+    (a, b) => b - a
+  );
 
-  // Generate all days for the year
+  // Whole weeks, Sunday first, from the Sunday on or before 1 January to the
+  // Saturday on or after 31 December.
   const generateYearData = (): DayCell[][] => {
+    const jan1 = dayString(selectedYear, 1, 1);
+    const dec31 = dayString(selectedYear, 12, 31);
+    const start = addDays(jan1, -weekdayOf(jan1));
+    const end = addDays(dec31, 6 - weekdayOf(dec31));
     const weeks: DayCell[][] = [];
-    const startDate = new Date(selectedYear, 0, 1);
-    const endDate = new Date(selectedYear, 11, 31);
-
-    // Start from the first Sunday before or on Jan 1
-    const firstDay = new Date(startDate);
-    firstDay.setDate(firstDay.getDate() - firstDay.getDay());
-
-    const currentDate = new Date(firstDay);
-    let week: DayCell[] = [];
-
-    while (currentDate <= endDate || week.length > 0) {
-      if (week.length === 7) {
-        weeks.push(week);
-        week = [];
-      }
-
-      const dayFlights = flights.filter((flight) => {
-        if (!flight.departureTime) return false;
-        const flightDate = new Date(flight.departureTime);
-        return (
-          flightDate.getFullYear() === currentDate.getFullYear() &&
-          flightDate.getMonth() === currentDate.getMonth() &&
-          flightDate.getDate() === currentDate.getDate()
-        );
-      });
-
-      week.push({
-        date: new Date(currentDate),
-        flightCount: dayFlights.length,
-        flights: dayFlights,
-      });
-
-      currentDate.setDate(currentDate.getDate() + 1);
-
-      // Stop after filling the last week if we've passed the end of the year
-      if (currentDate > endDate && week.length === 7) {
-        weeks.push(week);
-        break;
-      }
+    for (let offset = 0; offset <= daysBetween(start, end); offset += 7) {
+      weeks.push(
+        Array.from({ length: 7 }, (_, i) => {
+          const day = addDays(start, offset + i);
+          const dayFlights = flightDays.filter((entry) => entry.day === day).map((e) => e.flight);
+          return { day, flightCount: dayFlights.length, flights: dayFlights };
+        })
+      );
     }
-
     return weeks;
   };
 
@@ -141,13 +141,12 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
             <div className="w-8"></div>
             <div className="flex-1 flex justify-start gap-1">
               {monthLabels.map((month, i) => {
-                // Calculate approximate week position for each month
-                const monthStart = new Date(selectedYear, i, 1);
-                const dayOfYear = Math.floor(
-                  (monthStart.getTime() - new Date(selectedYear, 0, 1).getTime()) /
-                    (1000 * 60 * 60 * 24)
+                // Approximate week position for each month
+                const jan1 = dayString(selectedYear, 1, 1);
+                const weekOfYear = Math.floor(
+                  daysBetween(jan1, dayString(selectedYear, i + 1, 1)) / 7
                 );
-                const weekOfYear = Math.floor(dayOfYear / 7);
+                const prevWeek = i > 0 ? daysBetween(jan1, dayString(selectedYear, i, 1)) / 7 : 0;
 
                 return (
                   <div
@@ -155,10 +154,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
                     className="text-xs text-(--text-muted)"
                     style={{
                       width: "12px",
-                      marginLeft:
-                        i === 0
-                          ? "0"
-                          : `${(weekOfYear - (i > 0 ? Math.floor((new Date(selectedYear, i - 1, 1).getTime() - new Date(selectedYear, 0, 1).getTime()) / (1000 * 60 * 60 * 24)) / 7 : 0)) * 13}px`,
+                      marginLeft: i === 0 ? "0" : `${(weekOfYear - prevWeek) * 13}px`,
                     }}
                   >
                     {month}
@@ -187,7 +183,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
               {yearData.map((week, weekIndex) => (
                 <div key={weekIndex} className="flex flex-col gap-1">
                   {week.map((day, dayIndex) => {
-                    const isCurrentYear = day.date.getFullYear() === selectedYear;
+                    const isCurrentYear = yearOf(day.day) === selectedYear;
                     return (
                       <div
                         key={dayIndex}
@@ -199,7 +195,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
                         onMouseEnter={() => setHoveredCell(day)}
                         onMouseLeave={() => setHoveredCell(null)}
                         title={t("stats:heatmap.dayTooltip", {
-                          date: formatDate(day.date),
+                          date: formatLocalDate(day.day),
                           count: day.flightCount,
                         })}
                       />
@@ -216,12 +212,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
       {hoveredCell && hoveredCell.flightCount > 0 && (
         <div className="mt-4 p-3 bg-(--bg-base) rounded-lg border border-border">
           <p className="text-sm font-semibold text-(--text-primary) mb-2">
-            {hoveredCell.date.toLocaleDateString(i18n.language, {
-              weekday: "long",
-              year: "numeric",
-              month: "long",
-              day: "numeric",
-            })}
+            {formatDayLong(hoveredCell.day, i18n.language)}
           </p>
           <div className="space-y-1">
             {hoveredCell.flights.map((flight) => (
@@ -255,11 +246,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
       <div className="mt-4 grid grid-cols-3 gap-4">
         <div className="text-center">
           <p className="text-2xl font-bold text-(--text-primary)">
-            {
-              flights.filter(
-                (f) => f.departureTime && new Date(f.departureTime).getFullYear() === selectedYear
-              ).length
-            }
+            {flightDays.filter(({ day }) => yearOf(day) === selectedYear).length}
           </p>
           <p className="text-xs text-(--text-muted)">
             {t("stats:heatmap.flightsInYear", { year: selectedYear })}
@@ -269,12 +256,7 @@ export default function YearHeatmap({ flights }: YearHeatmapProps): JSX.Element 
           <p className="text-2xl font-bold text-(--text-primary)">
             {
               new Set(
-                flights
-                  .filter(
-                    (f) =>
-                      f.departureTime && new Date(f.departureTime).getFullYear() === selectedYear
-                  )
-                  .map((f) => f.departureTime!.split("T")[0])
+                flightDays.filter(({ day }) => yearOf(day) === selectedYear).map(({ day }) => day)
               ).size
             }
           </p>

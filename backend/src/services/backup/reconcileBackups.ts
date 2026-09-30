@@ -34,6 +34,7 @@ export async function reconcileInterruptedBackups(reason: string): Promise<numbe
     data: {
       status: "failed",
       errorMessage: `Interrupted: ${reason}`,
+      errorCode: "BACKUP_INTERRUPTED",
       completedAt: new Date(),
     },
   });

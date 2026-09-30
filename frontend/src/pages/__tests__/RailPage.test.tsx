@@ -29,6 +29,15 @@ vi.mock("../../components/rail/RailFormModal", () => ({
     <div data-testid="rail-form">{journey ? journey.id : "new"}</div>
   ),
 }));
+// A new ride starts at the import chooser (ticket or by hand); its own tests
+// live with the adapter. Here: that the page opens it, for rail.
+vi.mock("../../components/import/DomainImportPanel", () => ({
+  default: ({ open, adapter }: { open: boolean; adapter: { domain: string } }) =>
+    open ? <div data-testid="rail-import-panel">{adapter.domain}</div> : null,
+}));
+vi.mock("../../components/import/adapters/railAdapter", () => ({
+  useRailImportAdapter: () => ({ domain: "rail" }),
+}));
 vi.mock("../../components/Training/ConfirmModal", () => ({
   default: ({ isOpen, onConfirm }: { isOpen: boolean; onConfirm: () => void }) =>
     isOpen ? (
@@ -45,6 +54,10 @@ vi.mock("../../lib/api/rail", () => ({
     list: (...a: unknown[]) => list(...a),
     remove: (...a: unknown[]) => remove(...a),
   },
+}));
+
+vi.mock("../../lib/api/loyalty", () => ({
+  getLoyaltyMembership: vi.fn(async () => ({ programName: "BahnBonus" })),
 }));
 
 import { MemoryRouter } from "react-router-dom";
@@ -129,7 +142,9 @@ describe("RailPage", () => {
     expect(row.textContent).toContain("12:09");
     expect(row.textContent).toContain("ICE 9557 · DB Fernverkehr");
     expect(row.textContent).toContain("rail:straightLine");
-    expect(screen.getByText("rail:count/1")).toBeInTheDocument();
+    // The bare "N journeys" line became the shared summary strip on
+    // 2026-09-28, so the count is read off its first figure instead.
+    expect(screen.getByText("rail:summary.journeys")).toBeInTheDocument();
   });
 
   it("asks the server for one page, not the whole logbook", async () => {
@@ -162,12 +177,14 @@ describe("RailPage", () => {
     expect(screen.getByTestId("rail-row-b").textContent).toContain("rail:delay/12");
   });
 
-  it("opens the form for a new and for an existing journey", async () => {
+  it("opens the ticket-or-by-hand chooser for a new journey", async () => {
     list.mockResolvedValue({ journeys: [journey()], total: 1 });
     renderPage();
     await screen.findByTestId("rail-row-j1");
+    expect(screen.queryByTestId("rail-import-panel")).toBeNull();
     fireEvent.click(screen.getByText("rail:add"));
-    expect(screen.getByTestId("rail-form")).toHaveTextContent("new");
+    expect(screen.getByTestId("rail-import-panel")).toHaveTextContent("rail");
+    expect(screen.queryByTestId("rail-form")).toBeNull();
   });
 
   it("deletes after confirmation and reloads the list", async () => {
@@ -181,5 +198,26 @@ describe("RailPage", () => {
     await waitFor(() => expect(remove).toHaveBeenCalledWith("j1"));
     expect(await screen.findByText("rail:empty")).toBeInTheDocument();
     expect(addToast).toHaveBeenCalledWith("success", "rail:deleted");
+  });
+});
+
+// Acceptance 2026-09-26: a rail card's figure had nowhere to lead. The list
+// opens on the card's rides, in the linked year, and says so above them.
+describe("RailPage — opened from a rail card's figure", () => {
+  it("asks for the card's rides in that year and names both above the list", async () => {
+    list.mockReset().mockResolvedValue({ journeys: [journey()], total: 1 });
+    render(
+      <MemoryRouter initialEntries={["/rail?membership=card-9&year=2025"]}>
+        <RailPage />
+      </MemoryRouter>
+    );
+    await waitFor(() =>
+      expect(list).toHaveBeenCalledWith(
+        expect.objectContaining({ membershipId: "card-9", year: 2025 })
+      )
+    );
+    const notice = await screen.findByTestId("loyalty-list-filter");
+    await waitFor(() => expect(notice).toHaveTextContent("loyalty:listFilter.named"));
+    expect(notice).toHaveTextContent("loyalty:listFilter.inYear");
   });
 });

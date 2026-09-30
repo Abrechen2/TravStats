@@ -105,7 +105,7 @@ describe("Places API", () => {
     it("recording a visit promotes the place out of the wishlist", async () => {
       // Leaving `visited` untouched here is the silent-wrong-count bug: it is
       // invisible until a headline figure is wrong, so it is pinned.
-      const res = await addVisit({ visitedAt: "2025-05-03T14:30:00.000Z" });
+      const res = await addVisit({ visitedAt: { local: "2025-05-03T14:30" } });
       expect(res.status).toBe(201);
       const place = await request(app).get(`/api/v1/places/${placeId}`).set("Cookie", authCookie);
       expect(place.body.data.visited).toBe(true);
@@ -113,7 +113,7 @@ describe("Places API", () => {
     });
 
     it("keeps the time of day — that is #175", async () => {
-      const res = await addVisit({ visitedAt: "2025-05-03T14:30:00.000Z" });
+      const res = await addVisit({ visitedAt: { local: "2025-05-03T14:30" } });
       expect(new Date(res.body.data.visitedAt).toISOString()).toBe("2025-05-03T14:30:00.000Z");
     });
 
@@ -131,20 +131,20 @@ describe("Places API", () => {
       // marked the place "Besucht" on the spot, so a place nobody had been to
       // sat in the visited count. The rule is `classifyVisit`, the same one
       // that already keeps future visits out of every figure.
-      const future = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
-      await addVisit({ visitedAt: future });
+      const future = "2099-06-15T12:00";
+      await addVisit({ visitedAt: { local: future } });
       const place = await request(app).get(`/api/v1/places/${placeId}`).set("Cookie", authCookie);
       expect(place.body.data.visited).toBe(false);
       expect(place.body.data.plannedVisitCount).toBe(1);
     });
 
     it("moving a planned visit into the past promotes the place", async () => {
-      const future = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
-      const created = await addVisit({ visitedAt: future });
+      const future = "2099-06-15T12:00";
+      const created = await addVisit({ visitedAt: { local: future } });
       await request(app)
         .patch(`/api/v1/places/visits/${created.body.data.id}`)
         .set("Cookie", authCookie)
-        .send({ visitedAt: "2024-03-01T09:00:00.000Z" });
+        .send({ visitedAt: { local: "2024-03-01T09:00" } });
       const place = await request(app).get(`/api/v1/places/${placeId}`).set("Cookie", authCookie);
       expect(place.body.data.visited).toBe(true);
       expect(place.body.data.visitCount).toBe(1);
@@ -155,20 +155,20 @@ describe("Places API", () => {
       // that Maccis, no idea when"). Recomputing the flag from the visits
       // would erase exactly that, so moving the only visit into the FUTURE
       // must leave `visited` alone.
-      const created = await addVisit({ visitedAt: "2024-03-01T09:00:00.000Z" });
-      const future = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
+      const created = await addVisit({ visitedAt: { local: "2024-03-01T09:00" } });
+      const future = "2099-06-15T12:00";
       await request(app)
         .patch(`/api/v1/places/visits/${created.body.data.id}`)
         .set("Cookie", authCookie)
-        .send({ visitedAt: future });
+        .send({ visitedAt: { local: future } });
       const place = await request(app).get(`/api/v1/places/${placeId}`).set("Cookie", authCookie);
       expect(place.body.data.visited).toBe(true);
       expect(place.body.data.visitCount).toBe(0);
     });
 
     it("does NOT count a future-dated visit", async () => {
-      const future = new Date(Date.now() + 30 * 24 * 3600 * 1000).toISOString();
-      await addVisit({ visitedAt: future });
+      const future = "2099-06-15T12:00";
+      await addVisit({ visitedAt: { local: future } });
       const place = await request(app).get(`/api/v1/places/${placeId}`).set("Cookie", authCookie);
       expect(place.body.data.visitCount).toBe(0);
       expect(place.body.data.plannedVisitCount).toBe(1);
@@ -176,9 +176,9 @@ describe("Places API", () => {
     });
 
     it("keeps ONE place with several visits — the whole point of #177", async () => {
-      await addVisit({ visitedAt: "2024-06-12T10:00:00.000Z" });
-      await addVisit({ visitedAt: "2025-05-03T16:00:00.000Z" });
-      await addVisit({ visitedAt: "2023-01-01T09:00:00.000Z" });
+      await addVisit({ visitedAt: { local: "2024-06-12T10:00" } });
+      await addVisit({ visitedAt: { local: "2025-05-03T16:00" } });
+      await addVisit({ visitedAt: { local: "2023-01-01T09:00" } });
       expect(await prisma.place.count({ where: { userId } })).toBe(1);
       const place = await request(app).get(`/api/v1/places/${placeId}`).set("Cookie", authCookie);
       expect(place.body.data.visitCount).toBe(3);
@@ -188,7 +188,7 @@ describe("Places API", () => {
 
     it("deleting the last visit does not un-visit the place", async () => {
       // Removing a wrong date is not the statement 'I was never here'.
-      const visit = await addVisit({ visitedAt: "2025-05-03T14:30:00.000Z" });
+      const visit = await addVisit({ visitedAt: { local: "2025-05-03T14:30" } });
       await request(app)
         .delete(`/api/v1/places/visits/${visit.body.data.id}`)
         .set("Cookie", authCookie)
@@ -204,7 +204,7 @@ describe("Places API", () => {
     });
 
     it("accepts the owner's own trip", async () => {
-      const res = await addVisit({ tripId, visitedAt: "2025-05-03T14:30:00.000Z" });
+      const res = await addVisit({ tripId, visitedAt: { local: "2025-05-03T14:30" } });
       expect(res.status).toBe(201);
       expect(res.body.data.tripId).toBe(tripId);
     });

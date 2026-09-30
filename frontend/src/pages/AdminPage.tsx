@@ -2,8 +2,8 @@ import { useCallback, useEffect, useRef, useState } from "react";
 import { useSearchParams } from "react-router-dom";
 import { useToastStore } from "../store/toastStore";
 import { adminApi } from "../lib/api";
-import axios from "axios";
 import { logger } from "../lib/logger";
+import { apiErrorMachineCode } from "../lib/apiError";
 import AppShell from "../components/ui/AppShell";
 import PageHeader from "../components/ui/PageHeader";
 import AdminIndex from "../components/Admin/AdminIndex";
@@ -13,6 +13,8 @@ import { useSectionInView } from "../hooks/useSectionInView";
 import { DOMAINS } from "../shared/domains";
 import { useTranslation } from "../hooks/useTranslation";
 import { copyToClipboard } from "../lib/clipboard";
+import { useLoggingAdmin } from "./Admin/useLoggingAdmin";
+import { useConfirmDialog } from "../hooks/useConfirmDialog";
 import { normalizeSectionId } from "../lib/sectionAliases";
 import type { ActiveSection, TabId } from "./Admin/adminSections";
 import { TAB_FOR_SECTION, LAZY_ADMIN_SECTIONS } from "./Admin/adminSections";
@@ -27,41 +29,37 @@ import type { SystemInfoData, AdminUser } from "../components/Admin/SystemInfo";
 import type { Invitation } from "../components/Admin/InvitationManagement";
 import type { GlobalApiKeys, ParserApiKeySettings } from "../components/Admin/GlobalApiKeysManager";
 import type { ParserSettingsData } from "../components/Admin/ParserSettings";
-import type { LoggingConfig, LogFile, LogStats } from "../components/Admin/LoggingManager";
 
 // ==================== Helpers ====================
 
-interface ApiErrorResponse {
-  error?: string;
-  message?: string;
-}
-
-function getErrorMessage(error: unknown, fallback: string): string {
-  if (axios.isAxiosError<ApiErrorResponse>(error)) {
-    return error.response?.data?.error || error.response?.data?.message || fallback;
-  }
+/**
+ * The toast text for a failed admin call: the caller's own sentence in the
+ * reader's language. Never the server's `error` field — that is English
+ * prose written for a log, and printing it put English into the German page.
+ * Sections that can tell failures apart map the server's stable `code`
+ * themselves (the log section: `logErrorCopy`).
+ */
+function getErrorMessage(_error: unknown, fallback: string): string {
   return fallback;
 }
 
 // ==================== Admin Page Component ====================
 
 export default function AdminPage(): JSX.Element {
-  const { t } = useTranslation(["admin", "common"]);
+  const { t, i18n } = useTranslation(["admin", "common"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const addToast = useToastStore((state) => state.addToast);
   const [searchParams, setSearchParams] = useSearchParams();
   // The sections column the deep-link aligner's ResizeObserver watches (see
   // the effect below) — any lazy section growing past its placeholder height
   // changes this element's size.
-  const mainRef = useRef<HTMLElement>(null);
+  const mainRef = useRef<HTMLDivElement>(null);
 
   // State
   const [systemInfo, setSystemInfo] = useState<SystemInfoData | null>(null);
   const [users, setUsers] = useState<AdminUser[]>([]);
   const [invitations, setInvitations] = useState<Invitation[]>([]);
   const [parserSettings, setParserSettings] = useState<ParserSettingsData | null>(null);
-  const [loggingConfig, setLoggingConfig] = useState<LoggingConfig | null>(null);
-  const [logFiles, setLogFiles] = useState<LogFile[]>([]);
-  const [logStats, setLogStats] = useState<LogStats | null>(null);
   const [loading, setLoading] = useState(true);
   // Tab state + URL sync + drift guard live in the shared useDomainTabs
   // hook. Filtered by enabledDomains, URL param "tab", activeTab resets
@@ -119,7 +117,19 @@ export default function AdminPage(): JSX.Element {
     "all" | "active" | "used" | "expired"
   >("active");
   const [savingParsers, setSavingParsers] = useState(false);
-  const [savingLogging, setSavingLogging] = useState(false);
+  const {
+    loggingConfig,
+    setLoggingConfig,
+    logFiles,
+    logStats,
+    savingLogging,
+    loadLoggingData,
+    handleToggleDebugLogging,
+    handleSaveLoggingConfig,
+    handleDownloadLogFile,
+    handleDeleteLogFile,
+    handleCleanupLogs,
+  } = useLoggingAdmin(t, addToast, askConfirm, i18n.language);
   const [globalApiKeys, setGlobalApiKeys] = useState<GlobalApiKeys | null>(null);
   const [savingGlobalApiKeys, setSavingGlobalApiKeys] = useState(false);
   const [ollamaTestState, setOllamaTestState] = useState<{
@@ -159,21 +169,6 @@ export default function AdminPage(): JSX.Element {
       setGlobalApiKeys(data);
     } catch (error) {
       logger.error("Failed to load global API keys:", error);
-    }
-  };
-
-  const loadLoggingData = async (): Promise<void> => {
-    try {
-      const [configData, filesData, statsData] = await Promise.all([
-        adminApi.getLoggingConfig(),
-        adminApi.getLogFiles(),
-        adminApi.getLogStats(),
-      ]);
-      setLoggingConfig(configData);
-      setLogFiles(filesData.files);
-      setLogStats(statsData);
-    } catch (error) {
-      logger.error("Failed to load logging data:", error);
     }
   };
 
@@ -284,9 +279,7 @@ export default function AdminPage(): JSX.Element {
   };
 
   const handleExportData = async (): Promise<void> => {
-    if (!confirm(t("admin:prompts.confirmExport"))) {
-      return;
-    }
+    if (!(await askConfirm({ message: t("admin:prompts.confirmExport") }))) return;
     try {
       const data = await adminApi.exportAllData();
       const blob = new Blob([JSON.stringify(data, null, 2)], { type: "application/json" });
@@ -335,9 +328,18 @@ export default function AdminPage(): JSX.Element {
     try {
       await adminApi.updateAdminParserSettings(parserSettings);
       addToast("success", t("admin:toasts.parserSettingsSaved"));
+      // Re-read: the key comes back masked and "is this a cloud endpoint" is
+      // the server's answer for what was actually stored.
+      setParserSettings(await adminApi.getAdminParserSettings());
     } catch (error: unknown) {
       logger.error("Failed to save parser settings:", error);
-      addToast("error", getErrorMessage(error, t("admin:toasts.parserSettingsFailed")));
+      const code = apiErrorMachineCode(error);
+      addToast(
+        "error",
+        code === "LLM_BASE_URL_HTTPS_REQUIRED" || code === "LLM_BASE_URL_INVALID"
+          ? t(`admin:parserSettings.provider.saveErrors.${code}`)
+          : getErrorMessage(error, t("admin:toasts.parserSettingsFailed"))
+      );
     } finally {
       setSavingParsers(false);
     }
@@ -375,88 +377,6 @@ export default function AdminPage(): JSX.Element {
     }
   };
 
-  const handleToggleDebugLogging = async (): Promise<void> => {
-    if (!loggingConfig) return;
-    const newState = loggingConfig.logLevel !== "debug";
-    try {
-      await adminApi.toggleDebugLogging(newState);
-      await loadLoggingData();
-      addToast(
-        "success",
-        t("admin:toasts.debugLoggingToggled", {
-          state: newState ? t("admin:toasts.enabled") : t("admin:toasts.disabled"),
-        })
-      );
-    } catch (error: unknown) {
-      logger.error("Failed to toggle debug logging:", error);
-      addToast("error", getErrorMessage(error, t("admin:toasts.debugLoggingFailed")));
-    }
-  };
-
-  const handleSaveLoggingConfig = async (): Promise<void> => {
-    if (!loggingConfig) return;
-    setSavingLogging(true);
-    try {
-      await adminApi.updateLoggingConfig(loggingConfig);
-      addToast("success", t("admin:toasts.loggingConfigSaved"));
-      await loadLoggingData();
-    } catch (error: unknown) {
-      logger.error("Failed to save logging config:", error);
-      addToast("error", getErrorMessage(error, t("admin:toasts.loggingConfigFailed")));
-    } finally {
-      setSavingLogging(false);
-    }
-  };
-
-  const handleDownloadLogFile = async (filename: string): Promise<void> => {
-    try {
-      const blob = await adminApi.downloadLogFile(filename);
-      const url = URL.createObjectURL(blob);
-      const a = document.createElement("a");
-      a.href = url;
-      a.download = filename;
-      a.click();
-      URL.revokeObjectURL(url);
-    } catch (error: unknown) {
-      logger.error("Failed to download log file:", error);
-      addToast("error", getErrorMessage(error, t("admin:toasts.logFileDownloadFailed")));
-    }
-  };
-
-  const handleDeleteLogFile = async (filename: string): Promise<void> => {
-    if (!confirm(t("admin:prompts.confirmDeleteLog", { filename }))) {
-      return;
-    }
-    try {
-      await adminApi.deleteLogFile(filename);
-      addToast("success", t("admin:toasts.logFileDeleted"));
-      await loadLoggingData();
-    } catch (error: unknown) {
-      logger.error("Failed to delete log file:", error);
-      addToast("error", getErrorMessage(error, t("admin:toasts.logFileDeletFailed")));
-    }
-  };
-
-  const handleCleanupLogs = async (): Promise<void> => {
-    if (!confirm(t("admin:prompts.confirmCleanupLogs"))) {
-      return;
-    }
-    try {
-      const result = await adminApi.cleanupLogs();
-      addToast(
-        "success",
-        t("admin:toasts.cleanupComplete", {
-          filesDeleted: result.filesDeleted,
-          spaceFreed: (result.spaceFreed / 1024 / 1024).toFixed(2),
-        })
-      );
-      await loadLoggingData();
-    } catch (error: unknown) {
-      logger.error("Failed to cleanup logs:", error);
-      addToast("error", getErrorMessage(error, t("admin:toasts.cleanupFailed")));
-    }
-  };
-
   // ==================== Sections + Navigation ====================
 
   interface AdminSectionMeta {
@@ -474,6 +394,7 @@ export default function AdminPage(): JSX.Element {
     { id: "parsers", label: t("admin:tabs.parsers") },
     { id: "logging", label: t("admin:tabs.logging") },
     { id: "backups", label: t("admin:tabs.backups") },
+    { id: "timeModel", label: t("admin:tabs.timeModel") },
     { id: "smtp", label: t("admin:tabs.smtp") },
     {
       id: "shipsMasterData",
@@ -646,7 +567,7 @@ export default function AdminPage(): JSX.Element {
           />
         </div>
 
-        <main ref={mainRef} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
+        <div ref={mainRef} className="flex min-w-0 flex-col" style={{ gap: "var(--ts-space-xl)" }}>
           {/* The scope line is the counterpart of the one in user settings:
               everything here is instance-wide. */}
           <PageHeader title={`${t("admin:title")} · ${currentLabel}`} meta={t("admin:scopeHint")} />
@@ -712,8 +633,9 @@ export default function AdminPage(): JSX.Element {
               </AdminSection>
             )
           )}
-        </main>
+        </div>
       </div>
+      {confirmDialog}
     </AppShell>
   );
 }

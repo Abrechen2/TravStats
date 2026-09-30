@@ -1,6 +1,7 @@
 import { classifyPlace, visitCountsForYear } from "../../shared/placeCounting";
 import type { Cruise } from "../../types/cruise";
 import type { Place } from "../../types/place";
+import { now as clockNow } from "../../shared/time";
 
 /**
  * The rows a statistics tab counts for one calendar year, where the tab counts
@@ -44,7 +45,7 @@ export function cruisesStartedIn(cruises: readonly Cruise[], year: number): Crui
 export function placesVisitedIn(
   places: readonly Place[],
   year: number,
-  now: Date = new Date()
+  now: Date = clockNow()
 ): Place[] {
   return places
     .filter((place) => classifyPlace(place) === "visited")

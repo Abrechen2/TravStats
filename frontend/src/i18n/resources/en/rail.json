@@ -1,7 +1,7 @@
 {
   "title": "Rail",
   "subtitle": "Your train journeys — every ride an entry of its own, like a flight.",
-  "betaNote": "Beta: importing bookings comes next.",
+  "betaNote": "Beta. “Add journey” reads booking mails, ticket PDFs and calendar files.",
   "add": "Add journey",
   "empty": "No train journeys yet. Add your first ride.",
   "loadError": "The train journeys could not be loaded.",
@@ -69,9 +69,17 @@
     "cancel": "Cancel",
     "save": "Save",
     "saving": "Saving …",
-    "saveError": "The journey could not be saved."
+    "saveError": "The journey could not be saved.",
+    "errors": {
+      "arrivalBeforeDeparture": "The arrival is before the departure. If the train runs overnight, give the arrival the next day's date.",
+      "nonexistentTime": "This time does not exist on that day: the clocks jump an hour ahead for summer time. Check the time on the ticket.",
+      "invalidField": "“{{field}}” was not accepted. Please check it.",
+      "invalid": "An entry was not accepted. Please check the fields."
+    },
+    "suggestionsFailed": "Suggestions from your earlier rides could not be loaded — the form works all the same."
   },
   "tracedLine": "along the line, Transitous",
+  "roadtripLine": "along the roadtrip route",
   "station": {
     "searchPlaceholder": "Search a station, e.g. Frankfurt Hbf",
     "searching": "Searching …",
@@ -79,7 +87,9 @@
     "noHits": "No station found in the catalogue. Pick it through the place search.",
     "picked": "From the station catalogue · UIC {{code}}",
     "useGeocoder": "Not in the station catalogue? Pick it through the place search",
-    "backToCatalogue": "Back to the station catalogue"
+    "backToCatalogue": "Back to the station catalogue",
+    "noPlausibleHit": "No station in the catalogue matches “{{name}}”. Search for the station in the field.",
+    "shortCodeTitle": "DB station code {{code}}"
   },
   "lookup": {
     "title": "Look the train up",
@@ -92,8 +102,17 @@
     "error": "The lookup failed. You can enter the journey by hand.",
     "none": {
       "disabled": "No timetable service is switched on here for this station.",
-      "unavailable": "The timetable services are not answering right now. Try again later or enter the journey by hand.",
+      "unavailable": "No answer from {{providers}} — so whether this train runs from this station on that day is still open. Try again later or enter the ride by hand.",
       "noMatch": "The timetable has no such train from this station on that day. For a past day that is normal."
+    },
+    "outcome": {
+      "matched": "found",
+      "noMatch": "no matching train that day",
+      "unavailable": "did not answer",
+      "timedOut": "did not answer in time",
+      "skippedForTime": "not asked — the search ran out of time",
+      "disabled": "switched off on this instance",
+      "notApplicable": "does not cover this station"
     },
     "found": "Found: {{train}} · {{operator}} (source: {{provider}})",
     "provider": {
@@ -104,15 +123,20 @@
     "withLine": "When you save, the line from Transitous is taken over and kept with the journey.",
     "withoutLine": "This source traces no line — the map shows the straight line.",
     "apply": "Take over",
+    "kept": "{{field}}: your entry “{{yours}}” was kept (timetable: {{timetable}}).",
     "linked": "Linked to a journey from the timetable ({{provider}}).",
     "unlink": "Unlink",
     "credit": "Timetable data and lines:",
-    "switchedOff": "The train lookup is switched off on this instance. Enter the journey by hand."
+    "switchedOff": "The train lookup is switched off on this instance. Enter the journey by hand.",
+    "changeNeeded": "Your destination {{station}} is not on this train's route. You change at {{stop}} — add the rest as a connection after saving.",
+    "applyWithChange": "Take over up to the change"
   },
   "detail": {
     "loading": "Loading …",
     "loadError": "The journey could not be loaded.",
     "notFound": "This journey does not exist (any more).",
+    "convertedFromRoadtrip": "Converted from a roadtrip.",
+    "convertedPlaceholder": "The departure was a placeholder (12:00 on the station's clock) and the arrival is unknown — please correct both from the ticket.",
     "back": "Back to the rail logbook",
     "distance": "Distance",
     "typedDistance": "from the ticket",
@@ -129,14 +153,20 @@
     "ticket": "Ticket",
     "route": "Route",
     "lineTraced": "Line: this train's route, taken from Transitous.",
-    "lineStraight": "Line: straight line between the stations — not the train's path."
+    "lineRoadtrip": "Line: brought over from the roadtrip — as planned, not from a timetable.",
+    "lineStraight": "Line: straight line between the stations — not the train's path.",
+    "lineRouted": "Line: routed over the rail network (OpenRailRouting, OpenStreetMap) — the likely path, not from a timetable.",
+    "lineRoutedDemo": "Line: routed over the rail network (BRouter, OpenStreetMap) — the likely path, not from a timetable."
   },
   "connection": {
     "add": "Add connection",
     "saveAndAdd": "Save & add connection",
     "banner": "Connecting train from {{station}} — both rides are joined by one booking.",
     "title": "Connection",
-    "booking": "Booking {{pnr}}"
+    "booking": "Booking {{pnr}}",
+    "onward": "Onward to {{station}}: after saving, the connection opens with this destination.",
+    "saveAndContinue": "Save & continue to {{station}}",
+    "dismissOnward": "No onward ride"
   },
   "trip": {
     "open": "Open journey",
@@ -150,6 +180,7 @@
     "journeysDesc": "completed rides, one per train",
     "kmAll": "Rail kilometres",
     "kmTraced": "{{km}} km along the track",
+    "kmRoadtrip": "{{km}} km along roadtrip routes",
     "kmTicket": "{{km}} km from the ticket",
     "kmStraight": "{{km}} km straight line (the real track is longer)",
     "kmUnmeasured_one": "{{count}} ride without a distance",
@@ -171,6 +202,7 @@
     "delayOver": "more than {{minutes}} min",
     "longest": "Longest ride",
     "sourceTraced": "along the track",
+    "sourceRoadtrip": "along the roadtrip route",
     "sourceTicket": "from the ticket",
     "sourceStraight": "straight line",
     "byYear": "Rides per year",
@@ -180,7 +212,15 @@
       "delays": "Delays",
       "records": "Records",
       "years": "Rides per year"
-    }
+    },
+    "nightTrains": "Night trains",
+    "nightTrainsDesc": "sleeper or couchette, a night-train category, or overnight on board",
+    "highSpeed": "High-speed",
+    "highSpeedDesc": "ICE, TGV, Frecciarossa, AVE, Railjet …",
+    "crossBorder": "Across a border",
+    "crossBorderDesc": "departure and arrival in different countries",
+    "operatorsCount": "Operators",
+    "operatorsCountDesc": "distinct, spellings merged"
   },
   "roadtripConversion": {
     "title": "Take over as train rides",
@@ -207,5 +247,59 @@
     "nothingNew": "Every ride had already been taken over.",
     "removed": "The roadtrip was deleted.",
     "error": "Taking it over failed."
+  },
+  "geometryNotice": {
+    "straight": "Ride saved, but without its route – {{reason}}. The map shows the straight line.",
+    "kept": "Ride saved. The route was not loaded again – {{reason}}; the previous one is kept.",
+    "routed": "Ride saved. This train's own route was not available – {{reason}}; the line was routed over the rail network instead.",
+    "reason": {
+      "providerDisabled": "Transitous is switched off on this instance",
+      "providerUnavailable": "Transitous did not answer",
+      "stationOffLine": "a station is not on this train's route",
+      "untracedShape": "Transitous only has straight lines between this train's stops",
+      "railRoutingUnavailable": "this instance's rail router (OpenRailRouting) did not answer",
+      "railRoutingNoRoute": "the rail router (OpenRailRouting) knows no track connection between these stations"
+    }
+  },
+  "import": {
+    "panelTitle": "Add a train ride",
+    "panelHint": "Got a booking confirmation or a ticket? Drop the mail (.eml, .msg) or the PDF here — the rides are read and you confirm each one.",
+    "title": "Review the rides read",
+    "save_one": "Save {{count}} ride",
+    "save_other": "Save {{count}} rides",
+    "tariff": "Fare",
+    "total": "Total price",
+    "totalNotWritten": "A ride of this booking is already logged — the total is not saved a second time.",
+    "takeLeg": "Take ride {{from}} → {{to}}",
+    "direction": {
+      "outbound": "Outward",
+      "return": "Return"
+    },
+    "noTrain": "no train number on the ticket",
+    "duplicate": "Already in your logbook (same booking, same departure) — not ticked.",
+    "legSaved": "Saved.",
+    "unresolved": "“{{name}}” is not unambiguous in the station catalogue. Pick the station:",
+    "pickStations": "Pick both stations for every ticked ride — without a station the time cannot be placed in a time zone.",
+    "saved_one": "{{count}} train ride saved from the ticket.",
+    "saved_other": "{{count}} train rides saved from the ticket.",
+    "empty": {
+      "noItinerary": "This rail mail names booking {{reference}} but no itinerary. It is in the attached ticket PDF — upload the PDF, or the mail with its attachment (.eml/.msg).",
+      "llmUnreachable": "No train ride was recognised in this document: no template knows the layout, and the AI parser is not reachable. Enter the ride by hand.",
+      "llmFailed": "The AI parser gave no usable answer for this document. Enter the ride by hand.",
+      "demoNoLlm": "No template knows this ticket, and the AI parser is not available to the demo account.",
+      "llmDisabled": "No template knows this ticket, and the administrator has switched the AI parser off.",
+      "nothingFound": "No train ride was found in this document. Enter the ride by hand.",
+      "otherDomain": "This document is not a rail booking. Import it where it belongs.",
+      "looksLikeFlight": "The AI parser read airport codes instead of stations — the document is probably a flight booking. Nothing was taken over.",
+      "llmCloudNotConsented": "No template knows this ticket, and the AI provider is outside the network without the administrator's consent to send it there.",
+      "llmProviderIncomplete": "No template knows this ticket, and the AI provider is not fully set up."
+    }
+  },
+  "summary": {
+    "journeys": "Journeys",
+    "operators": "Operators",
+    "stations": "Stations",
+    "withoutOperator_one": "{{count}} without an operator",
+    "withoutOperator_other": "{{count}} without an operator"
   }
 }

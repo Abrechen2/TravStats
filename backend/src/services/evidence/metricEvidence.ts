@@ -103,6 +103,21 @@ import {
   resolveCrossDomainCountryCount,
   resolveCrossDomainActiveDayCount,
 } from "./metricEvidenceCrossDomain";
+import {
+  resolveRailRideCount,
+  resolveRailDistanceKmTotal,
+  resolveRailCountriesCount,
+  resolveRailOperatorsCount,
+  resolveRailNightTrainCount,
+  resolveRailHighSpeedRideCount,
+  resolveRailCrossBorderRideCount,
+} from "./metricEvidenceRail";
+import {
+  resolvePassportCountryCount,
+  resolvePassportContinentCount,
+  resolvePassportAirportCount,
+  resolvePassportEntryCount,
+} from "./metricEvidencePassport";
 
 /**
  * `EvidenceResolver` for `kind: "metric"` (Task 7,
@@ -118,8 +133,9 @@ import {
  * `evidenceMeasuresFlightFun.ts` (Task 7b-1) and all twelve `sum`/`distinct`
  * measures of `evidenceMeasuresCrossDomain.ts` (Task 7b-2), and the
  * twenty-six cruise, lodging and places measures of
- * `evidenceMeasuresDomains.ts` (Task 7b-3) — seventy-eight in all, which is
- * every `servedIn: 1` entry in the registry. See task-7-report.md,
+ * `evidenceMeasuresDomains.ts` (Task 7b-3) — seventy-eight — plus the seven
+ * rail measures of `evidenceMeasuresRail.ts` (2.7), which is every
+ * `servedIn: 1` entry in the registry. See task-7-report.md,
  * task-7b-1-report.md, task-7b-2-report.md and task-7b-3-report.md for what
  * each family mirrors and which served keys are deliberately unwired.
  */
@@ -182,6 +198,17 @@ const METRIC_RESOLVERS: Record<string, MetricResolver> = {
   crossDomainEventCount: resolveCrossDomainEventCount,
   crossDomainCountryCount: resolveCrossDomainCountryCount,
   crossDomainActiveDayCount: resolveCrossDomainActiveDayCount,
+  railRideCount: resolveRailRideCount,
+  railDistanceKmTotal: resolveRailDistanceKmTotal,
+  railCountriesCount: resolveRailCountriesCount,
+  railOperatorsCount: resolveRailOperatorsCount,
+  railNightTrainCount: resolveRailNightTrainCount,
+  railHighSpeedRideCount: resolveRailHighSpeedRideCount,
+  railCrossBorderRideCount: resolveRailCrossBorderRideCount,
+  passportCountryCount: resolvePassportCountryCount,
+  passportContinentCount: resolvePassportContinentCount,
+  passportAirportCount: resolvePassportAirportCount,
+  passportEntryCount: resolvePassportEntryCount,
   cruiseCount: resolveCruiseCount,
   cruiseDistanceKmTotal: resolveCruiseDistanceKmTotal,
   cruiseSeaDaysTotal: resolveCruiseSeaDaysTotal,

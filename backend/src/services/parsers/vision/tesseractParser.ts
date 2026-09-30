@@ -73,7 +73,7 @@ const DATE_WITHOUT_TIME =
 
 /** "26" → 2026, "2026" → 2026, nothing → this year (flagged as inferred). */
 function expandYear(captured: string | undefined): string {
-  if (!captured) return new Date().getFullYear().toString();
+  if (!captured) return new Date().getUTCFullYear().toString();
   return captured.length === 2 ? `20${captured}` : captured;
 }
 
@@ -352,11 +352,11 @@ export class TesseractVisionParser implements IVisionParser {
         result.inferredFields = Array.from(new Set([...existing, ...parsedData.inferredFields]));
       }
 
-      logger.info(
+      logger.info({ missingFields: result.missing.length }, "[Tesseract Parser] Parsing complete");
+      logger.debug(
         {
           flightNumber: result.flightNumber,
           route: `${result.departureCode} -> ${result.arrivalCode}`,
-          missingFields: result.missing.length,
         },
         "[Tesseract Parser] Parsing complete"
       );
@@ -521,7 +521,7 @@ export class TesseractVisionParser implements IVisionParser {
       // The regex's year group is optional — when absent we silently fall back
       // to the current year, so flag the field as inferred for the review UI.
       const yearCaptured = match[3];
-      const year = yearCaptured || new Date().getFullYear().toString();
+      const year = yearCaptured || new Date().getUTCFullYear().toString();
       const month = this.monthToNumber(match[2]);
       const day = match[1].padStart(2, "0");
       const hour = match[4].padStart(2, "0");

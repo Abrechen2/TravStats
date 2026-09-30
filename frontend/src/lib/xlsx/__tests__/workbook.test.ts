@@ -3,7 +3,8 @@ import { buildWorkbook, parseWorkbook, safeSheetName } from "../workbook";
 import { refCell, parseRefCell } from "../sheetSpec";
 import { buildSheets, exportFilename } from "../exportAll";
 import { readWorkbookForImport } from "../importClient";
-import { cruiseSheet, lodgingSheet, placeSheet, placeVisitSheet } from "../sheets";
+import { cruiseSheet, flightSheet, lodgingSheet, placeSheet, placeVisitSheet } from "../sheets";
+import type { Flight } from "../../../types";
 import type { Cruise } from "../../../types/cruise";
 import type { Lodging } from "../../../types/lodging";
 import type { Place } from "../../../types/place";
@@ -225,6 +226,27 @@ describe("workbook round trip", () => {
     expect(byKey.get("lodging")).toHaveLength(1);
     expect(byKey.get("places")).toHaveLength(1);
     expect(byKey.get("placeVisits")).toHaveLength(1);
+  });
+
+  // The flight sheet carried neither column, while the cruise and rail sheets
+  // did — a flight's travel group and tags were lost on the way out.
+  it("carries a flight's companions and tags both ways", async () => {
+    const flight = {
+      id: "flight-1",
+      airline: "Lufthansa",
+      flightNumber: "LH400",
+      depIata: "FRA",
+      arrIata: "JFK",
+      departureTime: "2025-05-01T10:00:00.000Z",
+      arrivalTime: "2025-05-01T18:00:00.000Z",
+      status: "flown",
+      companions: ["Anna", "Ben"],
+      tags: ["work"],
+    } as unknown as Flight;
+    const wb = await buildWorkbook(buildSheets(t, { flights: [flight] }));
+    const buffer = await wb.xlsx.writeBuffer();
+    const [flights] = await parseWorkbook(buffer as ArrayBuffer, [flightSheet(t)] as never[]);
+    expect(flights.rows[0]).toMatchObject({ companions: "Anna, Ben", tags: "work" });
   });
 
   it("keeps the id, so a re-imported row can find its record", async () => {

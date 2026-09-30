@@ -17,9 +17,10 @@
  *      original /flights/batch heuristic would falsely glue together.
  *      → AUTO-LINK (intent is unambiguous: shared PNR = shared booking).
  *
- *   2. Home loop — sequences that start and end at the user's home
- *      airport (using `getHomeAirportAt(date)` so historical home moves
- *      are respected). Catches the Hawaii 2013 case (HNL→LIH→KOA→OGG
+ *   2. Home loop — sequences that start and end at one of the user's home
+ *      airports (the set active at that date, so historical home moves
+ *      are respected, and CGN → … → DUS closes a loop for someone who
+ *      flies from both). Catches the Hawaii 2013 case (HNL→LIH→KOA→OGG
  *      over 3 weeks with separate carriers and PNRs but a clear MUC→…→MUC
  *      shape).
  *      → PROPOSE (caller decides whether to commit).
@@ -44,18 +45,26 @@ import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import { TRIP_COLORS } from "../schemas/trip";
 import { calculateDistance } from "../utils/geo";
-import { type HomeAirportEntry, getHomeAirportAt, normalizeHistory } from "../utils/homeAirport";
+import { type HomePeriod, homeAirportsAt } from "../utils/homeAirport";
+import { homePeriodsFromData } from "./home/homeStore";
 import logger from "../utils/logger";
 import { fillTripDatesFromSegments, recomputeTripStatus } from "./tripStatusService";
+import { buildTzMap } from "./stats/departureClock";
+import { localWallClockOf, type FlightTimeSemantics } from "../utils/timezone";
+import {
+  MIN_DETECTED_TRIP_FLIGHTS,
+  tripNameLanguageOf,
+  tripNameMonth,
+  type TripNameLanguage,
+} from "./trip/tripGrouping";
 
 const MS_PER_DAY = 24 * 60 * 60 * 1000;
 const PNR_MAX_SPAN_DAYS = 30;
 const CONTINUITY_GAP_DAYS = 7;
 const OPEN_JAW_KM = 200; // arr-IATA → next-dep-IATA same metro area
-// "Rule of Three": a simple out-and-back booking (2 legs) is a booking,
-// not a journey — never propose a trip for it. Only multi-leg clusters
-// (>= 3 flights) are journey-shaped enough to suggest a trip container.
-const MIN_TRIP_FLIGHTS = 3;
+// "Rule of Three" — see `trip/tripGrouping.ts` for why the batch import's
+// booking-based grouping deliberately starts at two.
+const MIN_TRIP_FLIGHTS = MIN_DETECTED_TRIP_FLIGHTS;
 
 interface FlightLite {
   id: string;
@@ -69,6 +78,8 @@ interface FlightLite {
   arrLon: number;
   flightNumber: string | null;
   status: string;
+  /** The departure's calendar day at its airport (YYYY-MM-DD), when known. */
+  localDay?: string;
 }
 
 /** One leg of a proposed trip, surfaced so the review UI can expand a
@@ -152,6 +163,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
       bookingReference: true,
       departureTime: true,
       depIata: true,
+      depIcao: true,
       arrIata: true,
       depLat: true,
       depLon: true,
@@ -159,6 +171,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
       arrLon: true,
       flightNumber: true,
       status: true,
+      depTimeSemantics: true,
     },
   });
 
@@ -167,7 +180,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
   // the user actually flew them, not in the order their default UTC
   // timestamps happen to fall. See `chainCoherentSort` for the full
   // rationale (issue #104).
-  const flights = chainCoherentSort(dbFlights);
+  const flights = chainCoherentSort(await withLocalDay(dbFlights));
 
   if (flights.length === 0) {
     return await finalizeWithCleanup(
@@ -177,7 +190,9 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
     );
   }
 
-  const homeHistory = await loadHomeHistory(userId);
+  const settingsData = await loadSettingsData(userId);
+  const homePeriods = await homePeriodsFromData(settingsData);
+  const language = tripNameLanguageOf(settingsData);
 
   const claimed = new Set<string>();
   const proposed: ProposedTrip[] = [];
@@ -192,12 +207,12 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
     if (span > PNR_MAX_SPAN_DAYS) {
       logger.info({
         operation: "trip_detect_pnr_skip",
-        message: `Dropped PNR ${pnr} — span ${span}d > ${PNR_MAX_SPAN_DAYS}d (likely frequent-flyer ID, not a booking)`,
-        context: { userId, pnr, flightCount: dedup.length, spanDays: span },
+        message: `Dropped PNR group — span ${span}d > ${PNR_MAX_SPAN_DAYS}d (likely frequent-flyer ID, not a booking)`,
+        context: { userId, flightCount: dedup.length, spanDays: span },
       });
       continue;
     }
-    proposed.push(makeProposal("pnr", dedup, pnr));
+    proposed.push(makeProposal("pnr", dedup, pnr, language));
     dedup.forEach((f) => claimed.add(f.id));
   }
 
@@ -205,9 +220,9 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
   // so their flights remain visible to stage 3 (where they still can't
   // form a >= MIN_TRIP_FLIGHTS cluster on their own, but may extend one).
   const remaining1 = flights.filter((f) => !claimed.has(f.id));
-  for (const cluster of findHomeLoops(remaining1, homeHistory)) {
+  for (const cluster of findHomeLoops(remaining1, homePeriods)) {
     if (cluster.length < MIN_TRIP_FLIGHTS) continue;
-    proposed.push(makeProposal("home_loop", cluster, null));
+    proposed.push(makeProposal("home_loop", cluster, null, language));
     cluster.forEach((f) => claimed.add(f.id));
   }
 
@@ -215,7 +230,7 @@ export async function detectTrips(opts: DetectOptions): Promise<DetectionResult>
   const remaining2 = flights.filter((f) => !claimed.has(f.id));
   for (const cluster of findContinuityClusters(remaining2)) {
     if (cluster.length < MIN_TRIP_FLIGHTS) continue;
-    proposed.push(makeProposal("continuity", cluster, null));
+    proposed.push(makeProposal("continuity", cluster, null, language));
     cluster.forEach((f) => claimed.add(f.id));
   }
 
@@ -313,35 +328,64 @@ function toYmd(d: Date): string {
 }
 
 /**
- * Find sequences of flights that start AND end at the user's home airport
- * (looked up at each flight's date — so historical home-moves are
- * respected). Returns each loop as a contiguous slice; flights between
+ * Attach each departure's calendar day at its own airport. A proposal's span
+ * and leg dates used the UTC day, so a 06:00 departure from Tokyo (21:00 UTC
+ * the evening before) started the trip a day early.
+ */
+async function withLocalDay<
+  T extends {
+    departureTime: Date | null;
+    depIata: string | null;
+    depIcao: string | null;
+    depTimeSemantics: string;
+  },
+>(rows: T[]): Promise<Array<T & { localDay?: string }>> {
+  const tzMap = await buildTzMap(rows.map((r) => ({ ...r, arrIata: null, arrIcao: null })));
+  return rows.map((r) => {
+    const zone = (r.depIata && tzMap.get(r.depIata)) || (r.depIcao && tzMap.get(r.depIcao)) || null;
+    if (!r.departureTime || !zone) return r;
+    const semantics = r.depTimeSemantics as FlightTimeSemantics;
+    return { ...r, localDay: localWallClockOf(r.departureTime, zone, semantics).date };
+  });
+}
+
+/** The day a leg departed, on its airport's calendar where that is known. */
+function legDay(f: FlightLite): string {
+  if (f.localDay) return f.localDay;
+  return f.departureTime ? toYmd(f.departureTime) : "";
+}
+
+/**
+ * Find sequences of flights that start AND end at one of the user's home
+ * airports (the set active at the first flight's date — so historical
+ * home-moves are respected, and a loop may close at a different home
+ * airport than it left from). Returns each loop as a contiguous slice; flights between
  * loops are left for stage 3.
  */
-function findHomeLoops(flights: FlightLite[], history: HomeAirportEntry[] | null): FlightLite[][] {
+function findHomeLoops(flights: FlightLite[], periods: readonly HomePeriod[]): FlightLite[][] {
   const loops: FlightLite[][] = [];
   let current: FlightLite[] = [];
-  let loopHome: string | null = null;
+  let loopHomes: ReadonlySet<string> = new Set();
 
   for (const f of flights) {
     if (!f.departureTime || !f.depIata || !f.arrIata) continue;
-    const home = getHomeAirportAt(history, toYmd(f.departureTime));
-    if (!home) continue;
+    const homes = homeAirportsAt(periods, toYmd(f.departureTime));
+    if (homes.size === 0) continue;
 
     if (current.length === 0) {
-      if (f.depIata === home) {
+      if (homes.has(f.depIata)) {
         current = [f];
-        loopHome = home;
+        loopHomes = homes;
       }
       continue;
     }
 
     current.push(f);
-    if (f.arrIata === loopHome) {
+    if (loopHomes.has(f.arrIata)) {
       // Loop closes
       loops.push(current);
       current = [];
-      loopHome = null;
+      loopHomes = new Set();
     }
   }
 
@@ -490,7 +534,8 @@ function sortDayByChain<T extends FlightLite>(day: T[]): T[] {
 function makeProposal(
   source: ProposedTrip["source"],
   flights: FlightLite[],
-  pnr: string | null
+  pnr: string | null,
+  language: TripNameLanguage
 ): ProposedTrip {
   const sorted = [...flights].sort(
     (a, b) => (a.departureTime?.getTime() ?? 0) - (b.departureTime?.getTime() ?? 0)
@@ -505,13 +550,9 @@ function makeProposal(
   // final arrival, which feels more natural than picking the middle leg.
   const isLoop = source === "home_loop" || origin === lastArrival;
   const destination = isLoop ? furthestFromOrigin(sorted, origin) : lastArrival;
-  const from = sorted[0]?.departureTime ? toYmd(sorted[0].departureTime) : "";
-  const to = sorted[sorted.length - 1]?.departureTime
-    ? toYmd(sorted[sorted.length - 1].departureTime as Date)
-    : "";
-  const month = sorted[0]?.departureTime
-    ? sorted[0].departureTime.toLocaleDateString("en", { month: "short", year: "numeric" })
-    : "";
+  const from = sorted[0] ? legDay(sorted[0]) : "";
+  const to = sorted[sorted.length - 1] ? legDay(sorted[sorted.length - 1]) : "";
+  const month = sorted[0]?.departureTime ? tripNameMonth(sorted[0].departureTime, language) : "";
   // Round-trip arrow for loops, en-dash for one-way. The arrow is a
   // light visual cue that the trip starts and ends at home.
   const separator = isLoop ? "↺" : "–";
@@ -524,7 +565,7 @@ function makeProposal(
     span: { from, to },
     suggestedName: `${origin} ${separator} ${destination} · ${month}`,
     legs: sorted.map((f) => ({
-      date: f.departureTime ? toYmd(f.departureTime) : "",
+      date: legDay(f),
       flightNumber: f.flightNumber,
       depIata: f.depIata,
       arrIata: f.arrIata,
@@ -661,13 +702,9 @@ async function finalizeWithCleanup(
   };
 }
 
-// ─── Home history loader ──────────────────────────────────────────────
+// ─── Settings: home history + name language ──────────────────────────────────────────────
 
-async function loadHomeHistory(userId: string): Promise<HomeAirportEntry[] | null> {
+async function loadSettingsData(userId: string): Promise<Prisma.JsonObject | null> {
   const settings = await prisma.userSettings.findUnique({ where: { userId } });
-  const data = settings?.data as Prisma.JsonObject | null | undefined;
-  if (!data) return null;
-  const raw = data["homeAirportHistory"];
-  // `normalizeHistory` validates + sorts; entries with bad shape are dropped.
-  return normalizeHistory(raw);
+  return (settings?.data as Prisma.JsonObject | null | undefined) ?? null;
 }

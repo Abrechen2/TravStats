@@ -1,62 +1,63 @@
 /**
  * Rail times are read on the STATION's clock (spec 2026-09-25-rail-domain):
- * the server stores the real instant and the zone it derived from the
- * station's coordinates, and everything the user sees is that zone's wall
- * clock — the time printed on the ticket — never the viewer's own.
+ * everything the user sees is the wall clock printed on the ticket, never the
+ * viewer's own.
  *
- * A null zone (the server could not place the station) means the instant was
- * stored as the wall clock read as UTC, so UTC is the honest way back.
+ * Since phase 4 of the time model (ADR 0002) the server sends that clock
+ * itself (`times.departure.local`), and these helpers only dress a
+ * `TimeValue` for the screen — they hold no zone logic. `lib/entityTimes.ts`
+ * turns a journey (or a lookup leg) into its `TimeValue`s; a station the
+ * server could not place reads on the UTC clock and is labelled "UTC" rather
+ * than passed off as station time.
  */
-
-function parts(iso: string, timeZone: string | null): Record<string, string> {
-  const formatter = new Intl.DateTimeFormat("en-CA", {
-    timeZone: timeZone ?? "UTC",
-    year: "numeric",
-    month: "2-digit",
-    day: "2-digit",
-    hour: "2-digit",
-    minute: "2-digit",
-    hourCycle: "h23",
-  });
-  return Object.fromEntries(
-    formatter.formatToParts(new Date(iso)).map((part) => [part.type, part.value])
-  );
-}
+import { clockOf, formatTimeValue, readsAsUtc, type TimeValue } from "../shared/time";
+import { railArrival, railDeparture, type RailLike } from "./entityTimes";
 
 /** `YYYY-MM-DDTHH:mm` on the station's clock — what a `datetime-local` input takes. */
-export function toStationWallClock(iso: string | null, timeZone: string | null): string {
-  if (!iso) return "";
-  const p = parts(iso, timeZone);
-  return `${p.year}-${p.month}-${p.day}T${p.hour}:${p.minute}`;
+export function toStationWallClock(value: TimeValue | null | undefined): string {
+  return value ? value.local.slice(0, 16) : "";
 }
 
+const utcMark = (value: TimeValue): string => (readsAsUtc(value) ? " UTC" : "");
+
 /** Date and time for display, on the station's clock, in the reader's locale. */
-export function formatStationTime(iso: string, timeZone: string | null, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    timeZone: timeZone ?? "UTC",
-    dateStyle: "medium",
-    timeStyle: "short",
-  }).format(new Date(iso));
+export function formatStationTime(value: TimeValue, locale: string): string {
+  return `${formatTimeValue(value, locale)}${utcMark(value)}`;
 }
 
 /** The clock alone, for the arrival beside a departure on the same row. */
-export function formatStationClock(iso: string, timeZone: string | null, locale: string): string {
-  return new Intl.DateTimeFormat(locale, {
-    timeZone: timeZone ?? "UTC",
-    timeStyle: "short",
-  }).format(new Date(iso));
+export function formatStationClock(value: TimeValue, locale: string): string {
+  const clock = clockOf(value);
+  if (!clock) return "";
+  const [h, m] = clock.split(":").map(Number);
+  const text = new Intl.DateTimeFormat(locale, { timeStyle: "short", timeZone: "UTC" }).format(
+    new Date(Date.UTC(2000, 0, 1, h, m))
+  );
+  return `${text}${utcMark(value)}`;
 }
 
 /**
- * Minutes on board, from the two instants — both are real UTC instants, so a
- * ride across a zone border is measured right. Null when the arrival is not
- * known or precedes the departure: an unknown duration is not zero.
+ * Minutes on board, from the two instants (`utc`) — so a ride across a zone
+ * border is measured right. Null when the arrival is not known or precedes
+ * the departure: an unknown duration is not zero.
  */
 export function railDurationMinutes(
-  departureIso: string,
-  arrivalIso: string | null
+  departure: TimeValue,
+  arrival: TimeValue | null | undefined
 ): number | null {
-  if (!arrivalIso) return null;
-  const minutes = Math.round((Date.parse(arrivalIso) - Date.parse(departureIso)) / 60_000);
+  if (!arrival) return null;
+  const minutes = Math.round((Date.parse(arrival.utc) - Date.parse(departure.utc)) / 60_000);
   return Number.isFinite(minutes) && minutes >= 0 ? minutes : null;
+}
+
+/**
+ * "15.01.2026, 08:00 – 12:10": the departure on its station's clock and the
+ * arrival's clock beside it, for a list row, a card or a booking leg.
+ */
+export function formatRailSpan(journey: RailLike, locale: string, separator = " – "): string {
+  const departure = railDeparture(journey);
+  const arrival = railArrival(journey);
+  if (!departure) return "";
+  const from = formatStationTime(departure, locale);
+  return arrival ? `${from}${separator}${formatStationClock(arrival, locale)}` : from;
 }

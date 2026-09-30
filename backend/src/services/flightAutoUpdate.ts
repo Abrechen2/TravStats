@@ -309,8 +309,10 @@ export async function createPendingUpdate(
     };
 
     // Calculate expiry (24 hours from now or after flight ends, whichever is later)
-    const flightEnd = flight.arrivalTime ? new Date(flight.arrivalTime) : new Date();
-    flightEnd.setHours(flightEnd.getHours() + FLIGHT_ACTIVE_BUFFER_HOURS);
+    const flightEnd = new Date(
+      (flight.arrivalTime ? flight.arrivalTime.getTime() : Date.now()) +
+        FLIGHT_ACTIVE_BUFFER_HOURS * 60 * 60 * 1000
+    );
     const expiresAt = new Date(Math.max(Date.now() + 24 * 60 * 60 * 1000, flightEnd.getTime()));
 
     // Calculate statistics impact
@@ -423,13 +425,7 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
         userId,
         operation: "check_flights_due",
         count: activeFlights.length,
-        flights: activeFlights.map((f) => ({
-          id: f.id,
-          fn: f.flightNumber,
-          dep: f.depIata,
-          arr: f.arrIata,
-          depTime: f.departureTime?.toISOString(),
-        })),
+        flightIds: activeFlights.map((f) => f.id),
       },
       `Found ${activeFlights.length} flight(s) due for API check`
     );
@@ -457,12 +453,8 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
         const dateStr = realDeparture ? toLocalDateString(realDeparture, depTz) : null;
         if (!dateStr) {
           logger.info(
-            {
-              flightId: flight.id,
-              flightNumber: flight.flightNumber,
-              operation: "skip_no_departure_time",
-            },
-            `Skipping ${flight.flightNumber} — no departure time`
+            { flightId: flight.id, operation: "skip_no_departure_time" },
+            "Skipping flight — no departure time"
           );
           await prismaClient.flight.update({
             where: { id: flight.id },
@@ -471,15 +463,7 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           continue;
         }
 
-        logger.info(
-          {
-            flightId: flight.id,
-            flightNumber: flight.flightNumber,
-            date: dateStr,
-            operation: "api_lookup_start",
-          },
-          `Looking up ${flight.flightNumber} on ${dateStr}`
-        );
+        logger.info({ flightId: flight.id, operation: "api_lookup_start" }, "Looking up flight");
         // Pass full departure/arrival times so lookupFlightDetails can gate
         // Aviationstack to the live window (±3h of departure / in-flight).
         const apiData = await lookupFlightDetails(
@@ -515,23 +499,14 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
         logger.info(
           {
             flightId: flight.id,
-            flightNumber: flight.flightNumber,
             nextCheck: nextCheck?.toISOString(),
             operation: "next_check_scheduled",
           },
-          `Next check for ${flight.flightNumber}: ${nextCheck?.toISOString() ?? "none"}`
+          "Next API check scheduled"
         );
 
         if (!apiData) {
-          logger.info(
-            {
-              flightId: flight.id,
-              flightNumber: flight.flightNumber,
-              date: dateStr,
-              operation: "api_no_data",
-            },
-            `No API data returned for ${flight.flightNumber} on ${dateStr}`
-          );
+          logger.info({ flightId: flight.id, operation: "api_no_data" }, "No API data returned");
           continue;
         }
 
@@ -546,17 +521,18 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
             Math.abs(new Date(apiData.departureTime).getTime() - realDeparture.getTime()) /
             3_600_000;
           if (diffHours > ROTATION_MISMATCH_MAX_HOURS) {
+            const operation = "rotation_mismatch_rejected";
+            const diff = Math.round(diffHours * 10) / 10;
             logger.warn(
-              {
-                flightId: flight.id,
-                flightNumber: flight.flightNumber,
-                storedDeparture: realDeparture.toISOString(),
-                apiDeparture: new Date(apiData.departureTime).toISOString(),
-                diffHours: Math.round(diffHours * 10) / 10,
-                operation: "rotation_mismatch_rejected",
-              },
-              `Rejected API data for ${flight.flightNumber}: scheduled departure ${Math.round(diffHours)}h away from ours — wrong rotation`
+              { flightId: flight.id, diffHours: diff, operation },
+              "Rejected API data: scheduled departure too far from ours — wrong rotation"
             );
+            logger.debug({
+              flightId: flight.id,
+              operation,
+              storedDeparture: realDeparture.toISOString(),
+              apiDeparture: new Date(apiData.departureTime).toISOString(),
+            });
             continue;
           }
         }
@@ -572,12 +548,8 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
             data: { hasLiveTracking: true },
           });
           logger.info(
-            {
-              flightId: flight.id,
-              flightNumber: flight.flightNumber,
-              operation: "has_live_tracking_set",
-            },
-            `Marked ${flight.flightNumber} as live-tracked (first successful API response)`
+            { flightId: flight.id, operation: "has_live_tracking_set" },
+            "Marked flight as live-tracked (first successful API response)"
           );
         }
 
@@ -606,12 +578,8 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
         // Only create update if there are significant changes
         if (!hasSignificantChanges(changes)) {
           logger.info(
-            {
-              flightId: flight.id,
-              flightNumber: flight.flightNumber,
-              operation: "no_significant_changes",
-            },
-            `No significant changes for ${flight.flightNumber}`
+            { flightId: flight.id, operation: "no_significant_changes" },
+            "No significant changes"
           );
           continue;
         }
@@ -620,12 +588,11 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
         logger.info(
           {
             flightId: flight.id,
-            flightNumber: flight.flightNumber,
             changeCount: changes.length,
             changedFields: changedFieldNames,
             operation: "significant_changes_found",
           },
-          `Found ${changes.length} change(s) for ${flight.flightNumber}: ${changedFieldNames.join(", ")}`
+          `Found ${changes.length} change(s): ${changedFieldNames.join(", ")}`
         );
 
         // Attribute the update to the provider that actually served the data.
@@ -646,23 +613,13 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
             const applied = await applyPendingUpdate(updateId, userId);
             if (applied) {
               logger.info(
-                {
-                  flightId: flight.id,
-                  flightNumber: flight.flightNumber,
-                  pendingUpdateId: updateId,
-                  operation: "auto_applied",
-                },
-                `Auto-applied update for ${flight.flightNumber} (requireApproval=false)`
+                { flightId: flight.id, pendingUpdateId: updateId, operation: "auto_applied" },
+                "Auto-applied update (requireApproval=false)"
               );
             } else {
               logger.warn(
-                {
-                  flightId: flight.id,
-                  flightNumber: flight.flightNumber,
-                  pendingUpdateId: updateId,
-                  operation: "auto_apply_failed",
-                },
-                `Auto-apply failed for ${flight.flightNumber} — pending update left in place`
+                { flightId: flight.id, pendingUpdateId: updateId, operation: "auto_apply_failed" },
+                "Auto-apply failed — pending update left in place"
               );
             }
           }

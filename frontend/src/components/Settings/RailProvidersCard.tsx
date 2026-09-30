@@ -1,6 +1,7 @@
 import { useEffect, useState } from "react";
 import type { JSX } from "react";
 
+import RailRoutingUrlSetting from "./RailRoutingUrlSetting";
 import { SectionCard, SectionTitle } from "./SettingsShared";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useRailOffered } from "../../hooks/useRailVisible";
@@ -24,6 +25,7 @@ export default function RailProvidersCard({ isAdmin }: { isAdmin: boolean }): JS
   const { t } = useTranslation(["settings"]);
   const offered = useRailOffered();
   const [switches, setSwitches] = useState<Switches | null>(null);
+  const [routingUrl, setRoutingUrl] = useState<string | null>(null);
   const [loadFailed, setLoadFailed] = useState(false);
   const [saving, setSaving] = useState(false);
   const [saveFailed, setSaveFailed] = useState(false);
@@ -39,6 +41,7 @@ export default function RailProvidersCard({ isAdmin }: { isAdmin: boolean }): JS
           railTransitousEnabled: settings.railTransitousEnabled,
           railDbRestEnabled: settings.railDbRestEnabled,
         });
+        setRoutingUrl(settings.railRoutingUrl ?? null);
       })
       .catch((err: unknown) => {
         logger.warn("Loading the rail lookup switches failed", err);
@@ -99,6 +102,7 @@ export default function RailProvidersCard({ isAdmin }: { isAdmin: boolean }): JS
               label={t("settings:railProviders.dbRest")}
               sub={t("settings:railProviders.dbRestHint")}
             />
+            <RailRoutingUrlSetting savedUrl={routingUrl} onSaved={setRoutingUrl} />
           </>
         )}
         {saveFailed && (

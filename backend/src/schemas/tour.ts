@@ -1,8 +1,10 @@
 import { z } from "./zod";
+import { instantFieldSchema } from "../shared/time/timeInput";
 
 import { LEG_MODES } from "../services/tour/tourDistance";
 import { ROUTING_PROVIDER_IDS } from "../services/tour/routing/types";
 import { TOUR_ACTIVITIES } from "../shared/tour/roadtrip";
+import { tourDayFields } from "./roadtrip";
 
 /**
  * Validation for the tour endpoints.
@@ -83,8 +85,8 @@ export type TrackSource = (typeof TRACK_SOURCES)[number];
  */
 export const pullDawarichTrackSchema = z
   .object({
-    startedAt: z.coerce.date().optional(),
-    endedAt: z.coerce.date().optional(),
+    startedAt: instantFieldSchema().optional(),
+    endedAt: instantFieldSchema().optional(),
   })
   .strict()
   .refine((v) => !v.startedAt || !v.endedAt || v.endedAt.getTime() >= v.startedAt.getTime(), {
@@ -133,7 +135,7 @@ const coordinate = z
   .describe("[lon, lat] in GeoJSON order");
 
 export const createRouteSchema = z.object({
-  name: z.string().min(1).max(200),
+  name: z.string().trim().min(1).max(200),
   mode: z.enum(LEG_MODES),
   color: z
     .string()
@@ -145,7 +147,7 @@ export const createRouteSchema = z.object({
 });
 
 export const updateRouteSchema = z.object({
-  name: z.string().min(1).max(200).optional(),
+  name: z.string().trim().min(1).max(200).optional(),
   mode: z.enum(LEG_MODES).optional(),
   color: z
     .string()
@@ -262,6 +264,7 @@ export const createTourSchema = createRouteSchema.extend({
    * workout import sends when the day belongs to a roadtrip (companion#13).
    */
   anchorStopId: z.string().uuid().nullish(),
+  ...tourDayFields,
 });
 
 /**
@@ -280,14 +283,26 @@ export const createTourSchema = createRouteSchema.extend({
 export const tourPointsSchema = z.object({
   points: z
     .array(
-      z.object({
-        /** Omitted for a new point; an existing point keeps its id so its
-         *  legs survive a reorder (legs are keyed by endpoint stop). */
-        id: z.string().uuid().optional(),
-        title: z.string().min(1).max(200),
-        lat: z.number().min(-90).max(90),
-        lon: z.number().min(-180).max(180),
-      })
+      z
+        .object({
+          /** Omitted for a new point; an existing point keeps its id so its
+           *  legs survive a reorder (legs are keyed by endpoint stop). */
+          id: z.string().uuid().optional(),
+          // Required for a point; a route correction may leave it empty.
+          title: z.string().trim().max(200),
+          lat: z.number().min(-90).max(90),
+          lon: z.number().min(-180).max(180),
+          /**
+           * A route correction ("Streckenkorrektur", tester 2026-09-26): the
+           * route bends through it, nothing counts it. Absent leaves a stored
+           * point's flag as it is — the spreadsheet does not carry it.
+           */
+          via: z.boolean().optional(),
+        })
+        .refine((p) => p.via === true || p.title.length > 0, {
+          message: "A point needs a name",
+          path: ["title"],
+        })
     )
     .max(500),
 });

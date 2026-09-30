@@ -306,3 +306,38 @@ describe("fetchAssetStream", () => {
     ).rejects.toBeInstanceOf(ImmichError);
   });
 });
+
+describe("listAlbumAssets — capture time at the boundary (ADR 0002 D6)", () => {
+  const withTime = (id: string, fileCreatedAt: string) => ({
+    id,
+    type: "IMAGE",
+    fileCreatedAt,
+    originalFileName: `${id}.jpg`,
+    originalMimeType: "image/jpeg",
+  });
+
+  it("normalises an offset-bearing time to one UTC instant, and never reads a bare wall clock on the server's clock", async () => {
+    mockedAxios.post.mockResolvedValueOnce({
+      data: {
+        assets: {
+          items: [
+            withTime("offset", "2026-05-01T12:00:00+02:00"),
+            withTime("zulu", "2026-05-01T10:30:00Z"),
+            withTime("bare", "2026-05-01T12:00:00"),
+          ],
+          nextPage: null,
+        },
+      },
+    });
+
+    const assets = await createImmichClient(CONN).listAlbumAssets("album-1");
+
+    expect(Object.fromEntries(assets.map((a) => [a.id, a.fileCreatedAt]))).toEqual({
+      offset: "2026-05-01T10:00:00.000Z",
+      zulu: "2026-05-01T10:30:00.000Z",
+      // No offset, no zone: the same "no capture time" as a missing one, not
+      // whatever the host's zone would have made of it.
+      bare: "1970-01-01T00:00:00.000Z",
+    });
+  });
+});

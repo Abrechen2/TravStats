@@ -1,7 +1,9 @@
 import { prisma } from "./db";
 import { hashPassword } from "./utils/password";
+import { DEMO_USERNAME } from "./utils/sharedDemo";
 import { deriveStayOverallRating } from "./shared/ratingDerivation";
 import { createDemoRail } from "./seedDemo/seedRail";
+import { fillSeededTimeColumns } from "./services/timeModel/seedTimeColumns";
 
 // Weltweite Flughäfen für realistische Routen
 const airports = [
@@ -502,9 +504,8 @@ async function createParserFeedbackEvents(userId: string) {
   // Generate 18 feedback events over the last 60 days
   for (let i = 0; i < 18; i++) {
     const daysAgo = Math.floor(Math.random() * 60);
-    const createdAt = new Date(now);
-    createdAt.setDate(createdAt.getDate() - daysAgo);
-    createdAt.setHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
+    const createdAt = new Date(now.getTime() - daysAgo * 24 * 60 * 60 * 1000);
+    createdAt.setUTCHours(Math.floor(Math.random() * 24), Math.floor(Math.random() * 60));
 
     const provider = providers[Math.floor(Math.random() * providers.length)];
     const sourceType = sourceTypes[Math.floor(Math.random() * sourceTypes.length)];
@@ -1062,8 +1063,10 @@ async function createDemoLodging(userId: string): Promise<void> {
 
   // Chain lookups — the catalog seed runs at boot; a missing chain just means
   // the hotel is created chainless rather than the seed failing.
-  const hilton = await prisma.lodgingChain.findFirst({ where: { name: "Hilton" } });
-  const marriott = await prisma.lodgingChain.findFirst({ where: { name: "Marriott" } });
+  const hilton = await prisma.lodgingChain.findFirst({ where: { name: "Hilton", userId: null } });
+  const marriott = await prisma.lodgingChain.findFirst({
+    where: { name: "Marriott", userId: null },
+  });
 
   /** The stay should sit INSIDE its trip's flight window, so the timeline
    *  reads as one journey rather than a hotel floating outside the flights. */
@@ -1152,8 +1155,10 @@ async function createDemoLodging(userId: string): Promise<void> {
     stays++;
 
     if (hilton) {
-      const membership = await prisma.lodgingMembership.upsert({
-        where: { userId_programName: { userId, programName: "Hilton Honors" } },
+      const membership = await prisma.loyaltyMembership.upsert({
+        where: {
+          userId_domain_programName: { userId, domain: "lodging", programName: "Hilton Honors" },
+        },
         update: {},
         create: {
           userId,
@@ -1287,6 +1292,14 @@ export interface SeedDemoOptions {
    * be recovered idempotently.
    */
   resetCredentials?: boolean;
+  /**
+   * Marks the row as sample data (`users.is_demo`). Defaults to true only for
+   * the shared demo username: the preview's `admin`, `alex` and `claude` and
+   * the local dev admin are seeded with sample flights too, but they are
+   * accounts their owners log into, not the shared demo. Flagging them made
+   * every one of them read as "the demo" to anything that asks the flag.
+   */
+  isDemo?: boolean;
 }
 
 export async function seedDemoUser(options: SeedDemoOptions = {}) {
@@ -1294,6 +1307,7 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
   const password = options.password ?? "demo123";
   const isAdmin = options.isAdmin ?? false;
   const resetCredentials = options.resetCredentials ?? false;
+  const isDemo = options.isDemo ?? username === DEMO_USERNAME;
 
   console.log(
     `🔐 Creating ${isAdmin ? "admin" : "demo"} user "${username}" with sample flights...`
@@ -1314,7 +1328,7 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
           passwordHash,
           isAdmin,
           mustChangePassword: false,
-          isDemo: true,
+          isDemo,
         },
       });
 
@@ -1335,7 +1349,7 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
             passwordHash,
             isAdmin,
             mustChangePassword: false,
-            isDemo: true,
+            isDemo,
           },
         });
         console.log(`🔄 Reset credentials → password: ${password}, isAdmin: ${isAdmin}`);
@@ -1517,16 +1531,16 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
           startDate.getTime() + Math.random() * (pastEnd.getTime() - startDate.getTime())
         );
       }
-      departureTime.setHours(
+      // UTC hours: the seed must write the same rows on every host.
+      departureTime.setUTCHours(
         Math.floor(Math.random() * 20) + 4,
         Math.floor(Math.random() * 60),
         0,
         0
       );
 
-      const arrivalTime = new Date(departureTime);
-      arrivalTime.setHours(arrivalTime.getHours() + Math.floor(item.duration));
-      arrivalTime.setMinutes(arrivalTime.getMinutes() + Math.floor((item.duration % 1) * 60));
+      const durationMin = Math.floor(item.duration) * 60 + Math.floor((item.duration % 1) * 60);
+      const arrivalTime = new Date(departureTime.getTime() + durationMin * 60 * 1000);
 
       const depAirport = airports.find((a) => a.iata === item.dep)!;
       const arrAirport = airports.find((a) => a.iata === item.arr)!;
@@ -1606,6 +1620,9 @@ export async function seedDemoUser(options: SeedDemoOptions = {}) {
     // Train rides (rail spec, phase 2b) — behind the railDomain beta gate.
     console.log("🚆 Creating demo train rides...");
     await createDemoRail(demoUser.id);
+
+    // The time-model columns, derived from what the seed just wrote (ADR 0002).
+    await fillSeededTimeColumns(demoUser.id);
 
     console.log("");
     console.log(`✅ User "${username}" setup complete!`);

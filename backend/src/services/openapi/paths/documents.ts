@@ -14,6 +14,8 @@ import {
   documentLimitsSchema,
   documentUploadFieldsObject,
   extractValuesBodySchema,
+  extractedValuesSchema,
+  storedValuesQuerySchema,
   unfiledDocumentDtoSchema,
   unfiledDocumentsResponseSchema,
   updateDocumentSchema,
@@ -188,13 +190,7 @@ registry.registerPath({
   responses: { 204: { description: "Deleted" }, 404: notFound },
 });
 
-const extractedValues = z.object({
-  price: z.number().nullable(),
-  currency: z.string().nullable().describe("ISO 4217"),
-  bookingReference: z.string().nullable(),
-  seatNumber: z.string().nullable().describe("Flights only"),
-  seatClass: z.enum(["economy", "premium_economy", "business", "first"]).nullable(),
-});
+const extractedValues = extractedValuesSchema;
 
 registry.registerPath({
   method: "post",
@@ -204,7 +200,8 @@ registry.registerPath({
     "Runs the parser pipeline — with the caller's parser settings — on a kept PDF, .eml or " +
     "mail text and answers the values an entry's cost block holds, as a proposal: nothing is " +
     "written to any entry. For a flight, `flightNumber` and `departureDate` pick the leg out " +
-    "of a multi-flight booking; with several legs and no match, seat and class abstain and the " +
+    "of a multi-flight booking (for rail, `trainNumber` and `departureDate`); with several legs " +
+    "and no match, seat and class abstain and the " +
     "booking-wide values are given only where every leg agrees. `values` is null when nothing " +
     "was found, with `reason` `noText` (no readable text, e.g. a scan) or `nothingFound`. The " +
     "reading is recorded on the document. Rate-limited by the PDF or the mail parse budget, " +
@@ -232,5 +229,37 @@ registry.registerPath({
     404: notFound,
     415: { description: "A format the text parsers cannot read", content: errorContent },
     429: { description: "Parse budget spent", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/documents/{id}/stored-values",
+  summary: "The values of the reading already stored on a document — no parser runs",
+  description:
+    "What POST /documents/{id}/extract-values would answer, read from the reading a parse " +
+    "stored on the document instead of parsing again: no parse budget is spent and a read " +
+    "token may ask (forgejo#132 item 3). The same leg hints pick the entry's leg. `values` is " +
+    "null with `reason` `notParsed` (no stored reading), `unreadable` (a stored body of an " +
+    "unknown shape — logged on the server) or `nothingFound`; `domain` is the one the stored " +
+    "reading was parsed as, null without a usable reading.",
+  tags,
+  request: { params: idParams, query: storedValuesQuerySchema },
+  responses: {
+    200: {
+      description: "The stored reading's values",
+      content: json(
+        envelope(
+          z.object({
+            domain: z.enum(["flight", "cruise", "lodging", "rail"]).nullable(),
+            parserUsed: z.string().nullable(),
+            values: extractedValues.nullable(),
+            reason: z.enum(["notParsed", "unreadable", "nothingFound"]).nullable(),
+          })
+        )
+      ),
+    },
+    400: badInput,
+    404: notFound,
   },
 });

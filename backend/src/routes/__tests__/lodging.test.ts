@@ -67,6 +67,19 @@ describe("Lodging API", () => {
     await prisma.$disconnect();
   });
 
+  describe("POST /api/v1/lodging/:id/stays — a refused body", () => {
+    // The stay editor used to show zod's JSON issue dump verbatim.
+    it("answers VALIDATION_FAILED instead of zod's JSON as the error", async () => {
+      const res = await request(app)
+        .post(`/api/v1/lodging/${lodgingId}/stays`)
+        .set("Cookie", authCookie)
+        .send({ checkIn: "not a date" });
+      expect(res.status).toBe(400);
+      expect(res.body.code).toBe("VALIDATION_FAILED");
+      expect(res.body.error).not.toMatch(/^\[/);
+    });
+  });
+
   describe("POST /api/v1/lodging/:id/stays — FX snapshot on write", () => {
     it("snapshots a CHF stay into EUR base on create", async () => {
       jest.spyOn(fx, "convertToBase").mockResolvedValue({

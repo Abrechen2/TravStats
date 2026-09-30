@@ -47,7 +47,10 @@ describe("AchievementCard", () => {
         }}
       />
     );
-    expect(screen.getByText("2026-08-12")).toBeInTheDocument();
+    // In the reader's date format (default DD.MM.YYYY), never ISO — the
+    // acceptance run of 2026-09-26 read "2026-09-26" on every card.
+    expect(screen.getByText("12.08.2026")).toBeInTheDocument();
+    expect(screen.queryByText("2026-08-12")).not.toBeInTheDocument();
     expect(screen.queryByRole("progressbar")).not.toBeInTheDocument();
     expect(screen.queryByTestId("achievement-last-held")).not.toBeInTheDocument();
   });

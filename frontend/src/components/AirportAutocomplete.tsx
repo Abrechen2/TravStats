@@ -3,6 +3,7 @@ import { airportsApi, Airport, setupApi } from "../lib/api";
 import { logger } from "../lib/logger";
 import { useTranslation } from "../hooks/useTranslation";
 import { RequiredMark } from "./FlightForm/requiredFields";
+import { countryName } from "../shared/geo/countryCode";
 
 interface AirportAutocompleteProps {
   value?: Airport | null;
@@ -22,6 +23,13 @@ interface AirportAutocompleteProps {
  * change handler compares the typed text against this to decide whether the
  * user has abandoned the selection, and a mismatch there silently clears the
  * field on the next keystroke.
+ *
+ * The name is the catalogue's, and the catalogue (OurAirports) names every
+ * airport in English — "MUC — Munich Airport" in a German UI (acceptance
+ * 2026-09-26). There is no localized name to prefer: `airportDisplayName`
+ * (backend utils/airportDisplay.ts) only shortens that English name or uses
+ * the served city from AeroDataBox, which is not localized either. A German
+ * name needs a localized source in the catalogue first.
  */
 export function airportInputLabel(airport: Pick<Airport, "iata" | "icao" | "name">): string {
   const code = airport.iata || airport.icao;
@@ -36,7 +44,7 @@ export default function AirportAutocomplete({
   placeholder,
   required = false,
 }: AirportAutocompleteProps): JSX.Element {
-  const { t } = useTranslation(["flights", "common"]);
+  const { t, i18n } = useTranslation(["flights", "common"]);
   const [query, setQuery] = useState("");
   const [results, setResults] = useState<Airport[]>([]);
   const [isOpen, setIsOpen] = useState(false);
@@ -286,9 +294,15 @@ export default function AirportAutocomplete({
                       )}
                     </div>
                     <div className="text-sm" style={{ color: "var(--text-muted)" }}>
-                      {airport.city && airport.country && `${airport.city}, ${airport.country}`}
-                      {airport.city && !airport.country && airport.city}
-                      {!airport.city && airport.country && airport.country}
+                      {(() => {
+                        // The server sends an ISO 3166-1 alpha-2 code, never a
+                        // name — a country name belongs to the reader's
+                        // language.
+                        const country =
+                          countryName(airport.country, i18n.language) || airport.country;
+                        if (airport.city && country) return `${airport.city}, ${country}`;
+                        return airport.city || country;
+                      })()}
                     </div>
                   </div>
                 </div>

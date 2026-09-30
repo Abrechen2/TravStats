@@ -123,6 +123,20 @@ export const BETA_FEATURES = Object.freeze({
       "The owner explicitly takes rail out of beta. Phase 2 being done is not that event (owner rule 2026-09-25).",
     reason: "beta",
   }),
+
+  /**
+   * Recorded tracks on a cruise (2.7, board item `cruise-tracks`): a GPS
+   * recording replaces a leg's computed sea route on the map and in the
+   * statistics. Gated at ONE place, the "Aufgezeichnete Spuren" section of
+   * `CruiseDetailPage`. The backend endpoints stay reachable, as for every
+   * entry here; a cruise without recordings behaves exactly as before.
+   */
+  cruiseTracks: Object.freeze({
+    why: "Built on 2026-09-25 without a browser acceptance (owner: none that night). Its three thresholds — a port counts as reached within 10 km, a step of more than 20 km between two points is a hole (raised to three times the recording's own median step for a sparse recording since 2026-09-26, after a 41-point GPX was read as all holes), and a leg whose holes exceed a quarter falls back to the sea route — were chosen from reasoning about tender ports and phones at sea, not measured on a real cruise recording. A wrong threshold would silently replace a sea route with a worse line and change the statistics.",
+    returnsWhen:
+      "The owner has added at least one real cruise recording (a Dawarich pull or a GPX export), checked the per-leg verdicts and the map against what was sailed, and accepts the feature for release.",
+    reason: "beta",
+  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;

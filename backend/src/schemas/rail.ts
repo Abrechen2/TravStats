@@ -15,16 +15,42 @@ export const RAIL_WRITE_STATUSES = ["scheduled", "cancelled"] as const;
 export const RAIL_TRAVEL_CLASSES = ["first", "second", "sleeper", "couchette"] as const;
 /**
  * great_circle = the straight line between the stations; user = typed from the
- * ticket; route = the length of the traced Transitous line the row carries.
+ * ticket; route = the length of the line the row carries — the traced
+ * Transitous line, or one routed over the tracks (OpenRailRouting, BRouter);
+ * roadtrip = the length of the line a converted roadtrip leg brought along
+ * (routed or drawn in the roadtrip, not a timetable's trace).
  */
-export const RAIL_DISTANCE_SOURCES = ["great_circle", "user", "route"] as const;
-/** Where the map line comes from. Phase 2 writes `straight` and `transitous`. */
+export const RAIL_DISTANCE_SOURCES = ["great_circle", "user", "route", "roadtrip"] as const;
+export type RailTracedDistanceSource = "route" | "roadtrip";
+/**
+ * Where the map line comes from: the chord, the train's Transitous trace, a
+ * line routed over the tracks by the instance's OpenRailRouting, a roadtrip's
+ * line (`manual`), or `brouter` — the demo account's lines, routed over the
+ * OSM rail network once, offline, by BRouter's rail profile.
+ */
 export const RAIL_GEOMETRY_SOURCES = [
   "none",
   "straight",
   "transitous",
   "openrailrouting",
+  "brouter",
   "manual",
+] as const;
+/**
+ * Why a journey was saved without the line it asked for (the save's
+ * `meta.geometry.fallback`). For a Transitous match: switched off by the
+ * admin, not answering (or no shape), a station off the traced line, or a
+ * "trace" of station-to-station chords. For the instance's OpenRailRouting:
+ * not answering (down, timed out, an answer that is no line) or no connection
+ * between the stations on its network.
+ */
+export const RAIL_GEOMETRY_FALLBACK_REASONS = [
+  "providerDisabled",
+  "providerUnavailable",
+  "stationOffLine",
+  "untracedShape",
+  "railRoutingUnavailable",
+  "railRoutingNoRoute",
 ] as const;
 export const RAIL_SORT_FIELDS = ["departure", "distance", "created"] as const;
 
@@ -76,6 +102,23 @@ export const railStationSchema = z.object({
     .optional(),
 });
 
+const foldField = z.enum(["earlier", "later"]).nullable().optional();
+
+/** The fold keys a rail write understands — see `strayFoldKey`. */
+export const RAIL_FOLD_KEYS = ["departureFold", "arrivalFold"] as const;
+
+/**
+ * A `…Fold` key the rail schema does not know (`arrivalFolds`, `depFold`).
+ * zod strips unknown keys, so a misspelt fold would be dropped without a word
+ * and the ride stored at the EARLIER hour the user just said was wrong; the
+ * route refuses it instead. Null when there is none.
+ */
+export function strayFoldKey(body: unknown): string | null {
+  if (typeof body !== "object" || body === null) return null;
+  const known: readonly string[] = RAIL_FOLD_KEYS;
+  return Object.keys(body).find((key) => /fold/i.test(key) && !known.includes(key)) ?? null;
+}
+
 const baseRailSchema = z.object({
   operator: optionalText(100),
   trainCategory: optionalText(20),
@@ -84,6 +127,13 @@ const baseRailSchema = z.object({
   arrivalStation: railStationSchema,
   departureLocal: wallClock,
   arrivalLocal: wallClock.nullable().optional(),
+  /**
+   * Which occurrence of a station clock the zone shows twice (the autumn
+   * hour): `earlier` by default, `later` for the second (ADR 0002, Q5) — the
+   * same choice the flight form offers.
+   */
+  departureFold: foldField,
+  arrivalFold: foldField,
   /**
    * Only for a distance the user read off the ticket. Absent or null means
    * "measure it": the server stores the great-circle distance and says so.
@@ -141,9 +191,11 @@ export const railQuerySchema = z.object({
   status: z.union([z.enum(RAIL_STATUSES), z.array(z.enum(RAIL_STATUSES))]).optional(),
   /** Free text over operator, train, stations and booking reference. */
   q: z.string().trim().min(1).max(100).optional(),
-  /** Calendar year of the departure, read in UTC. */
+  /** Calendar year of the departure, on the departure station's calendar. */
   year: z.coerce.number().int().min(1900).max(2200).optional(),
   tripId: z.string().uuid().optional(),
+  /** A rail loyalty card: only the rides it counts (the link behind its figures). */
+  membershipId: z.string().uuid().optional(),
   limit: z.coerce.number().int().min(1).max(500).optional(),
   offset: z.coerce.number().int().min(0).optional(),
   sort: z.enum(RAIL_SORT_FIELDS).default("departure"),
@@ -187,3 +239,43 @@ export type RailStationInput = z.infer<typeof railStationSchema>;
 export type CreateRailJourneyInput = z.infer<typeof createRailJourneySchema>;
 export type UpdateRailJourneyInput = z.infer<typeof updateRailJourneySchema>;
 export type RailQueryInput = z.infer<typeof railQuerySchema>;
+
+/**
+ * The admin's OpenRailRouting base URL: http(s) only, no credentials (the
+ * settings answer echoes the URL, so a password in it would be shown to every
+ * admin page load), no query or fragment, trailing slash trimmed. Like the
+ * custom OSRM URL (`normalizeRoutingCustomUrl`) it may name a LAN host on
+ * purpose — the service is self-hosted by design.
+ */
+export function normalizeRailRoutingUrl(raw: string): string {
+  let parsed: URL;
+  try {
+    parsed = new URL(raw.trim());
+  } catch {
+    throw new Error("is not a valid URL");
+  }
+  if (parsed.protocol !== "http:" && parsed.protocol !== "https:") {
+    throw new Error("must use http:// or https://");
+  }
+  if (parsed.username || parsed.password) throw new Error("must not carry credentials");
+  if (parsed.search || parsed.hash) throw new Error("must not carry a query or fragment");
+  return `${parsed.protocol}//${parsed.host}${parsed.pathname.replace(/\/+$/, "")}`;
+}
+
+/** "" clears the setting (null); anything else must normalise. */
+export const railRoutingUrlField = z
+  .string()
+  .trim()
+  .max(500)
+  .transform((raw, ctx) => {
+    if (raw === "") return null;
+    try {
+      return normalizeRailRoutingUrl(raw);
+    } catch (error) {
+      ctx.addIssue({
+        code: z.ZodIssueCode.custom,
+        message: `OpenRailRouting URL ${error instanceof Error ? error.message : "is not a valid URL"}`,
+      });
+      return z.NEVER;
+    }
+  });

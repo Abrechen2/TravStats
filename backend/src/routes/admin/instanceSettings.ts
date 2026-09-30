@@ -11,6 +11,8 @@ import {
 import { testConnection as testWebDAVConnection } from "../../services/cloudSyncService";
 import { isValidRpId, passkeyUnavailableReason } from "../../services/webauthn/rpConfig";
 import { COUNTRY_TIERS } from "../../shared/countryEvidence";
+import { railRoutingUrlField } from "../../schemas/rail";
+import { probeRailRouting } from "../../services/rail/openRailRouting";
 
 const router = Router();
 
@@ -90,6 +92,8 @@ const instancePatchSchema = z.object({
   /** May the rail lookup ask Transitous / db-rest (both on by default). */
   railTransitousEnabled: z.boolean().optional(),
   railDbRestEnabled: z.boolean().optional(),
+  /** A self-hosted OpenRailRouting for rail lines; "" switches it off. */
+  railRoutingUrl: railRoutingUrlField.optional(),
 });
 
 /**
@@ -164,12 +168,43 @@ router.put("/instance-settings", async (req: AuthRequest, res: Response, next: N
       ...(patch.railDbRestEnabled !== undefined && {
         railDbRestEnabled: patch.railDbRestEnabled,
       }),
+      ...(patch.railRoutingUrl !== undefined && { railRoutingUrl: patch.railRoutingUrl }),
     });
     res.json({ settings, passkeyStatus: passkeyStatusOf(settings) });
   } catch (error) {
     next(error);
   }
 });
+
+// ---------- OpenRailRouting test ----------
+
+const railRoutingTestSchema = z.object({
+  /** The URL typed in the form, tested before it is saved; absent = the saved one. */
+  url: railRoutingUrlField.optional(),
+});
+
+/**
+ * Asks `/info` of the typed (or saved) OpenRailRouting and answers
+ * `{ ok: true, profile, dataDate }` or `{ ok: false, code }` — a stable code
+ * the card maps to DE/EN copy (`notConfigured | unreachable |
+ * notOpenRailRouting | profileMissing`), never the server's own text.
+ */
+router.post(
+  "/instance-settings/rail-routing/test",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { url } = railRoutingTestSchema.parse(req.body ?? {});
+      const baseUrl = url ?? (await getInstanceSettings()).railRoutingUrl;
+      if (!baseUrl) {
+        res.json({ ok: false, code: "notConfigured" });
+        return;
+      }
+      res.json(await probeRailRouting(baseUrl));
+    } catch (error) {
+      next(error);
+    }
+  }
+);
 
 // ---------- WebDAV sync ----------
 

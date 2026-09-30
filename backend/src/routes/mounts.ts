@@ -23,8 +23,10 @@ import flightRoutes from "./flights";
 import flightEntrySuggestionRoutes from "./flights/entrySuggestions";
 import upcomingRoutes from "./upcoming";
 import photoJourneyRoutes from "./photoJourneys";
+import tripSuggestionRoutes from "./tripSuggestions";
 import flightLookupRoutes from "./flightLookup";
 import statsRoutes from "./stats";
+import statsNetworkRouteRoutes from "./stats/networkRoute";
 import airportRoutes from "./airports";
 import airlineLogoRoutes from "./airlineLogos";
 import countryFlagRoutes from "./countryFlags";
@@ -40,8 +42,8 @@ import boardingpassMatchRoutes from "./boardingpassMatch";
 import pdfParseRoutes from "./pdfParse";
 import imageParseRoutes from "./imageParse";
 import diagnosticExportRoutes from "./diagnosticExport";
-import diagnosticsRoutes from "./diagnostics";
 import setupRoutes from "./setup";
+import versionRoutes from "./version";
 import adminRoutes from "./admin";
 import backupRoutes from "./backup";
 import pendingUpdatesRoutes from "./pendingUpdates";
@@ -77,9 +79,11 @@ import cruisesRouter from "./cruises";
 import cruiseRouteOverrideRoutes from "./cruises/routeOverride";
 import railRouter from "./rail";
 import railStationsRouter from "./rail/stations";
+import railEntrySuggestionsRouter from "./rail/entrySuggestions";
 import railLookupRouter from "./rail/lookup";
 import railStatsRouter from "./rail/stats";
 import railRoadtripConversionRouter from "./rail/roadtripConversion";
+import cruiseTrackRoutes from "./cruises/tracks";
 import currenciesRouter from "./currencies";
 import lodgingRouter from "./lodging";
 import lodgingPhotoRouter from "./lodging/photos";
@@ -94,6 +98,7 @@ import placeListsRouter from "./placeLists";
 import curatedListsRouter from "./placeLists/curated";
 import lodgingChainsRouter from "./lodgingChains";
 import lodgingMembershipsRouter from "./lodgingMemberships";
+import loyaltyMembershipsRouter from "./loyaltyMemberships";
 import lodgingImportRoutes from "./lodgingImport";
 import placeImportRoutes from "./placeImport";
 import importBatchRoutes from "./importBatches";
@@ -103,6 +108,7 @@ import openapiRoutes from "./openapi";
 import importRoutes from "./import";
 import pairingRoutes from "./pairing";
 import appSettingsRoutes from "./appSettings";
+import jobRoutes from "./jobs";
 import geoRoutes from "./geo";
 import documentRoutes from "./documents";
 import tripPhotoWindowRoutes from "./tripPhotoWindows";
@@ -123,6 +129,8 @@ export const apiMounts: ApiMount[] = [
   // OpenAPI spec + Swagger UI mounted FIRST so /api/v1/docs and
   // /api/v1/openapi.json don't fall through into authenticated routers.
   { id: "openapi", base: "/api/v1", router: openapiRoutes },
+  // Public and unauthenticated, like the spec: the About section reads it before login.
+  { id: "version", base: "/api/v1", router: versionRoutes },
   { id: "setup", base: "/api/v1/setup", router: setupRoutes },
   { id: "admin", base: "/api/v1/admin", router: adminRoutes },
   // Mounted BEFORE the generic /api/v1/auth routers so a future catch-all there
@@ -155,7 +163,16 @@ export const apiMounts: ApiMount[] = [
   // so the strip never depends on which tab happens to have loaded.
   { id: "upcoming", base: "/api/v1/upcoming", router: upcomingRoutes },
   { id: "photoJourneys", base: "/api/v1/photo-journeys", router: photoJourneyRoutes },
+  // The cross-domain trip-suggestion engine's inbox tab (owner, 2026-09-26).
+  { id: "tripSuggestions", base: "/api/v1/trip-suggestions", router: tripSuggestionRoutes },
   { id: "flightLookup", base: "/api/v1/flight-lookup", router: flightLookupRoutes },
+  // One arc of the globe (forgejo#132 item 9). Its own base because
+  // `routes/stats.ts` may not grow; it brings that router's middlewares along.
+  {
+    id: "stats.networkRoute",
+    base: "/api/v1/stats/network/route",
+    router: statsNetworkRouteRoutes,
+  },
   { id: "stats", base: "/api/v1/stats", router: statsRoutes },
   { id: "airports", base: "/api/v1/airports", router: airportRoutes },
   { id: "airlineLogos", base: "/api/v1/airline-logos", router: airlineLogoRoutes },
@@ -176,7 +193,6 @@ export const apiMounts: ApiMount[] = [
   { id: "pdfParse", base: "/api/v1", router: pdfParseRoutes },
   { id: "imageParse", base: "/api/v1", router: imageParseRoutes },
   { id: "diagnosticExport", base: "/api/v1", router: diagnosticExportRoutes },
-  { id: "diagnostics", base: "/api/v1", router: diagnosticsRoutes },
   { id: "parserTemplates", base: "/api/v1/parser-templates", router: parserTemplatesRoutes },
   { id: "backup", base: "/api/v1/backup", router: backupRoutes },
   { id: "pendingUpdates", base: "/api/v1/pending-updates", router: pendingUpdatesRoutes },
@@ -263,11 +279,18 @@ export const apiMounts: ApiMount[] = [
   { id: "rail.lookup", base: "/api/v1/rail/lookup", router: railLookupRouter },
   { id: "rail.stats", base: "/api/v1/rail/stats", router: railStatsRouter },
   {
+    id: "rail.entrySuggestions",
+    base: "/api/v1/rail/entry-suggestions",
+    router: railEntrySuggestionsRouter,
+  },
+  {
     id: "rail.roadtripConversion",
     base: "/api/v1/rail/roadtrip-conversion",
     router: railRoadtripConversionRouter,
   },
   { id: "rail", base: "/api/v1/rail", router: railRouter },
+  // Recorded tracks of a cruise (2.7) — the same satellite pattern.
+  { id: "cruises.tracks", base: "/api/v1/cruises", router: cruiseTrackRoutes },
   { id: "currencies", base: "/api/v1/currencies", router: currenciesRouter },
   // Photographs of the house — same prefix, own file. Mounted FIRST for the
   // same reason the visit-photo router is: relying on segment counts to keep
@@ -304,6 +327,12 @@ export const apiMounts: ApiMount[] = [
     base: "/api/v1/lodging-memberships",
     router: lodgingMembershipsRouter,
   },
+  // Every domain's loyalty cards (2.7). Same rows as lodging-memberships.
+  {
+    id: "loyaltyMemberships",
+    base: "/api/v1/loyalty-memberships",
+    router: loyaltyMembershipsRouter,
+  },
   { id: "lodgingImport", base: "/api/v1/lodging-import", router: lodgingImportRoutes },
   { id: "placeImport", base: "/api/v1/place-import", router: placeImportRoutes },
   { id: "importBatches", base: "/api/v1/import-batches", router: importBatchRoutes },
@@ -313,4 +342,6 @@ export const apiMounts: ApiMount[] = [
   { id: "pairing", base: "/api/v1/pairing", router: pairingRoutes },
   { id: "appSettings", base: "/api/v1/app-settings", router: appSettingsRoutes },
   { id: "geo", base: "/api/v1/geo", router: geoRoutes },
+  // Background jobs a long-running request started (backup, restore, import, scans).
+  { id: "jobs", base: "/api/v1/jobs", router: jobRoutes },
 ];

@@ -5,6 +5,9 @@ import { logger } from "../lib/logger";
 import { DOMAIN_KEYS, type DomainKey } from "../shared/domains";
 import { COUNTRY_TIERS, type CountryTier } from "../types/passport";
 import { useAuthStore } from "./authStore";
+import { displayForSave, useProfileZoneStore } from "./profileZoneStore";
+import { deviceZone } from "../shared/time";
+import { persistSetting } from "./persistSetting";
 
 /**
  * A value off the wire read back as a tier, or null when it is not one.
@@ -280,13 +283,9 @@ const detectInitialLanguage = (): LanguagePreference => {
   const tag = navigator.language?.split("-")[0];
   return tag === "de" ? "de" : "en";
 };
-const detectInitialTimezone = (): string => {
-  try {
-    return Intl.DateTimeFormat().resolvedOptions().timeZone || "Europe/Berlin";
-  } catch {
-    return "Europe/Berlin";
-  }
-};
+// Only a PROPOSAL for the profile zone (ADR 0002 Q1) — shared/time's
+// `deviceZone()` reads the device's zone; the user confirms it.
+const detectInitialTimezone = (): string => deviceZone() ?? "Europe/Berlin";
 const detectInitialDateFormat = (): DateFormat => {
   if (typeof navigator === "undefined") return "DD.MM.YYYY";
   const region = navigator.language?.toLowerCase();
@@ -463,10 +462,11 @@ export const useSettingsStore = create<SettingsState>()(
         set((state) => ({
           profile: { ...state.profile, ...updates },
         })),
-      setDisplay: (updates) =>
-        set((state) => ({
-          display: { ...state.display, ...updates },
-        })),
+      setDisplay: (updates) => {
+        // A zone the user picks is a confirmation (profileZoneStore, ADR 0002 Q1).
+        if (updates.timezone !== undefined) useProfileZoneStore.getState().markConfirmed();
+        set((state) => ({ display: { ...state.display, ...updates } }));
+      },
       setUnits: (updates) =>
         set((state) => ({
           units: { ...state.units, ...updates },
@@ -488,26 +488,28 @@ export const useSettingsStore = create<SettingsState>()(
       syncBetaFeaturesEnabled: (enabled) => set({ betaFeaturesEnabled: enabled }),
       syncOpenDataEnabled: (enabled) => set({ openDataEnabled: enabled }),
       setEnabledDomains: (keys) => {
+        const prev = get().enabledDomains;
         set({ enabledDomains: keys });
-        void settingsApi.update({ enabledDomains: keys });
+        persistSetting({ enabledDomains: keys }, () => set({ enabledDomains: prev }), "domains");
       },
       setBaseCurrency: (currency) => {
+        const prev = get().baseCurrency;
         set({ baseCurrency: currency });
-        settingsApi.update({ baseCurrency: currency }).catch((error: unknown) => {
-          logger.warn("Failed to save base currency", error);
-        });
+        persistSetting({ baseCurrency: currency }, () => set({ baseCurrency: prev }), "currency");
       },
       setAutoCreateTrips: (enabled) => {
+        const prev = get().autoCreateTrips;
         set({ autoCreateTrips: enabled });
-        settingsApi.update({ autoCreateTrips: enabled }).catch((error: unknown) => {
-          logger.warn("Failed to save autoCreateTrips", error);
-        });
+        persistSetting({ autoCreateTrips: enabled }, () => set({ autoCreateTrips: prev }), "trips");
       },
       setCountryThreshold: (tier) => {
+        const prev = get().countryThreshold;
         set({ countryThreshold: tier });
-        settingsApi.update({ countryThreshold: tier }).catch((error: unknown) => {
-          logger.warn("Failed to save countryThreshold", error);
-        });
+        persistSetting(
+          { countryThreshold: tier },
+          () => set({ countryThreshold: prev }),
+          "threshold"
+        );
       },
       loadApiKeysStatus: async () => {
         try {
@@ -539,10 +541,10 @@ export const useSettingsStore = create<SettingsState>()(
         try {
           const remote = await settingsApi.get();
           if (remote) {
+            useProfileZoneStore.getState().noteRemote(remote);
             set((state) => {
               // Extract autoUpdate and historicalEnrichment to exclude them from store
               const remoteRecord = remote as Record<string, unknown>;
-              /* eslint-disable @typescript-eslint/no-unused-vars */
               const {
                 autoUpdate: _au,
                 historicalEnrichment: _he,
@@ -550,7 +552,6 @@ export const useSettingsStore = create<SettingsState>()(
                 backup: _backup,
                 ...remoteWithoutDirectFields
               } = remoteRecord;
-              /* eslint-enable @typescript-eslint/no-unused-vars */
               // Shallow-merge each settings group instead of replacing it
               // wholesale. The backend's seed defaults intentionally omit
               // browser-detectable fields (display.language / timezone /
@@ -699,7 +700,8 @@ export const useSettingsStore = create<SettingsState>()(
           const results = await Promise.allSettled([
             settingsApi.update({
               profile,
-              display,
+              // Never the browser's guess as if the user had confirmed it.
+              display: displayForSave(display),
               units,
               defaults,
               notifications,

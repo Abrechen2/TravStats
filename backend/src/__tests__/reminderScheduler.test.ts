@@ -3,15 +3,30 @@ import { describe, it, expect, jest, beforeEach } from "@jest/globals";
 // ─── Mocks ──────────────────────────────────────────────────────────────────
 
 const mockFindMany = jest.fn();
+// The scheduler now runs all four domains in parallel each tick (2026-09-27
+// redesign); the other three resolve empty here so this file can stay
+// flight-only — cruise/rail/lodging get their own test files.
+const mockCruiseStopFindMany = jest.fn();
+const mockRailJourneyFindMany = jest.fn();
+const mockLodgingStayFindMany = jest.fn();
 jest.mock("../db", () => ({
   prisma: {
     flight: { findMany: mockFindMany },
+    cruiseStop: { findMany: mockCruiseStopFindMany },
+    railJourney: { findMany: mockRailJourneyFindMany },
+    lodgingStay: { findMany: mockLodgingStayFindMany },
   },
 }));
 
 const mockSendFlightReminder = jest.fn();
+const mockSendCruiseReminder = jest.fn();
+const mockSendRailReminder = jest.fn();
+const mockSendLodgingCheckInReminder = jest.fn();
 jest.mock("../services/emailService", () => ({
   sendFlightReminder: mockSendFlightReminder,
+  sendCruiseReminder: mockSendCruiseReminder,
+  sendRailReminder: mockSendRailReminder,
+  sendLodgingCheckInReminder: mockSendLodgingCheckInReminder,
 }));
 
 // Scheduler short-circuits airportCache for canonical-UTC rows, but we still
@@ -34,6 +49,22 @@ jest.mock("../utils/logger", () => ({
 }));
 
 // ─── Helpers ────────────────────────────────────────────────────────────────
+
+/**
+ * Drains pending microtasks. The tick handler fires-and-forgets
+ * `checkAndSendReminders()` (so a slow tick never blocks node-cron), and each
+ * domain checker now chains several sequential awaits (catalogue zone lookups
+ * for BOTH ends, on top of the window-match lookup) — more hops than a single
+ * `await Promise.resolve()` drains. Looping it (NOT `setImmediate`, which
+ * `jest.useFakeTimers()` also fakes and which the LEGACY_FAKE_UTC test below
+ * needs real microtask draining under) waits out the chain under both real
+ * and fake timers.
+ */
+async function flushAsync(): Promise<void> {
+  for (let i = 0; i < 30; i++) {
+    await Promise.resolve();
+  }
+}
 
 interface FlightFixture {
   id: string;
@@ -85,6 +116,9 @@ describe("reminderScheduler", () => {
     jest.clearAllMocks();
     jest.resetModules();
     mockFindMany.mockResolvedValue([]);
+    mockCruiseStopFindMany.mockResolvedValue([]);
+    mockRailJourneyFindMany.mockResolvedValue([]);
+    mockLodgingStayFindMany.mockResolvedValue([]);
   });
 
   describe("startReminderScheduler", () => {
@@ -123,8 +157,13 @@ describe("reminderScheduler", () => {
 
       const handler = mockCronSchedule.mock.calls[0][1] as () => Promise<void>;
       await handler();
-      // Give async chain a chance to settle
-      await Promise.resolve();
+      // The tick handler fires-and-forgets `checkAndSendReminders()` rather
+      // than returning its promise (so a slow tick never blocks node-cron),
+      // and each domain checker now has several sequential awaits (catalogue
+      // zone lookups for BOTH ends, on top of the window-match lookup) — more
+      // hops than a single microtask flush drains. A macrotask flush via
+      // setImmediate waits out the whole chain reliably.
+      await flushAsync();
 
       stopReminderScheduler();
     }
@@ -192,7 +231,9 @@ describe("reminderScheduler", () => {
       const handler = mockCronSchedule.mock.calls[0][1] as () => Promise<void>;
 
       await handler();
+      await flushAsync();
       await handler();
+      await flushAsync();
 
       expect(mockSendFlightReminder).toHaveBeenCalledTimes(1);
       stopReminderScheduler();

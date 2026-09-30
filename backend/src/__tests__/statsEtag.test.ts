@@ -129,6 +129,42 @@ describe("statistics ETag", () => {
     await prisma.cruise.delete({ where: { id: cruise.id } });
   });
 
+  // Rail, roadtrips and tours were not in the fingerprint: a new or edited
+  // train ride answered 304 and the rail tab kept its old numbers.
+  it("sees a new and an EDITED rail ride", async () => {
+    const before = (await get()).headers.etag;
+    const ride = await prisma.railJourney.create({
+      data: {
+        userId,
+        depStationName: "Frankfurt (Main) Hbf",
+        depLat: 50.107,
+        depLon: 8.663,
+        arrStationName: "Basel SBB",
+        arrLat: 47.547,
+        arrLon: 7.589,
+        departureTime: new Date("2025-03-01T07:00:00Z"),
+        status: "completed",
+      },
+    });
+    const afterCreate = await get(before);
+    expect(afterCreate.status).toBe(200);
+    await prisma.railJourney.update({ where: { id: ride.id }, data: { distanceKm: 262 } });
+    const afterEdit = await get(afterCreate.headers.etag);
+    expect(afterEdit.status).toBe(200);
+  });
+
+  it("sees a roadtrip station moving", async () => {
+    const route = await prisma.tripRoute.create({
+      data: { userId, name: "Norwegen", mode: "road", kind: "roadtrip" },
+    });
+    const stop = await prisma.tripStop.create({
+      data: { title: "Oslo", lat: 59.91, lon: 10.75, routeId: route.id, routeOrderIdx: 0 },
+    });
+    const before = (await get()).headers.etag;
+    await prisma.tripStop.update({ where: { id: stop.id }, data: { lat: 60.39, lon: 5.32 } });
+    expect((await get(before)).status).toBe(200);
+  });
+
   it("does not move when ANOTHER user writes", async () => {
     const before = (await get()).headers.etag;
     await prisma.flight.create({

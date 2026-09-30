@@ -21,6 +21,7 @@ import { countValue, priceSummaryValue, summaryLine } from "./sections/sectionSu
 import SuggestionChips from "../common/SuggestionChips";
 import { useFlightEntrySuggestions } from "../../hooks/useFlightEntrySuggestions";
 import { useSuggestedPrefill } from "../../hooks/useSuggestedPrefill";
+import type { FlightFolds } from "../../lib/flightFolds";
 
 interface FlightLookupResult {
   flightNumber: string;
@@ -68,6 +69,9 @@ export interface FlightCompleteStepProps {
   setDepartureTime: (v: string) => void;
   setArrivalDate: (v: string) => void;
   setArrivalTime: (v: string) => void;
+  /** The later occurrence of a repeated hour (Q5); optional so older test props compile. */
+  folds?: FlightFolds;
+  setFolds?: (folds: FlightFolds) => void;
   // Actual departure/arrival (#200) — optional so existing callers/tests that
   // don't wire this in (e.g. FlightCompleteStep.timesFieldsWiring.test.tsx's
   // baseProps()) keep compiling; SimplifiedFlightFormV2 always supplies all
@@ -159,6 +163,8 @@ export default function FlightCompleteStep({
   setDepartureTime,
   setArrivalDate,
   setArrivalTime,
+  folds,
+  setFolds,
   actualDepartureDate,
   actualDepartureTime,
   actualArrivalDate,
@@ -522,6 +528,16 @@ export default function FlightCompleteStep({
               actualValue={actualTimesValue}
               onActualChange={handleActualTimesChange}
               markRequired
+              clockChange={
+                setFolds
+                  ? {
+                      depZone: departure?.timezone,
+                      arrZone: arrival?.timezone,
+                      folds: folds ?? {},
+                      onFoldsChange: setFolds,
+                    }
+                  : undefined
+              }
             />
           )}
 

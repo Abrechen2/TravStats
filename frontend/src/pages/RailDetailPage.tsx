@@ -11,12 +11,14 @@ import { Icon } from "../components/ui/Icon";
 import TripPill from "../components/Trips/TripPill";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
+import { railExtractTarget } from "../lib/extractTargets";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { RailFormModal } from "../components/rail/RailFormModal";
 import { RailRouteMap } from "../components/rail/RailRouteMap";
 import { RailConnectionLegs } from "../components/rail/RailConnectionLegs";
 import { trainLabel } from "../components/rail/RailJourneyRow";
 import { connectionDraftFrom } from "../components/rail/railFormModel";
+import { isConvertedFromRoadtrip, railDistanceNoteKey } from "../components/rail/railDistanceLabel";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { railApi } from "../lib/api/rail";
@@ -24,9 +26,20 @@ import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";
 import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { formatAmount } from "../lib/units";
 import { formatStationTime, railDurationMinutes } from "../lib/railTime";
+import {
+  railActualArrival,
+  railActualDeparture,
+  railArrival,
+  railDeparture,
+} from "../lib/entityTimes";
+import { yourTimeText } from "../lib/yourTime";
+import type { TimeValue } from "../shared/time";
+import { useSettingsStore } from "../store/settingsStore";
 import { logger } from "../lib/logger";
+import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { useToastStore } from "../store/toastStore";
 import type { RailJourney, RailJourneyDetail } from "../types/rail";
+import { StationShortCode } from "../components/rail/StationShortCode";
 
 type Editing = { mode: "edit" } | { mode: "connection" } | null;
 
@@ -49,7 +62,8 @@ function formatDuration(
 export default function RailDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const navigate = useNavigate();
-  const { t, i18n } = useTranslation(["rail", "common", "trips"]);
+  const { t, i18n } = useTranslation(["rail", "common", "trips", "documents"]);
+  const viewerZone = useSettingsStore((s) => s.display?.timezone);
   const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
   const addToast = useToastStore((s) => s.addToast);
   const [journey, setJourney] = useState<RailJourneyDetail | null>(null);
@@ -83,6 +97,9 @@ export default function RailDetailPage(): JSX.Element {
       cancelled = true;
     };
   }, [id, reloadKey]);
+
+  // `?edit=1` — the inbox asking for a journey's zone or time (timeFlagLinks.ts).
+  useEditDeepLink(EDIT_PARAM.edit, journey !== null, () => setEditing({ mode: "edit" }));
 
   const handleDelete = async (): Promise<void> => {
     if (!journey) return;
@@ -137,15 +154,10 @@ export default function RailDetailPage(): JSX.Element {
     );
   }
 
-  const distanceNote =
-    journey.distanceSource === "great_circle"
-      ? t("rail:straightLine")
-      : journey.distanceSource === "route"
-        ? t("rail:tracedLine")
-        : journey.distanceSource === "user"
-          ? t("rail:detail.typedDistance")
-          : null;
-  const duration = railDurationMinutes(journey.departureTime, journey.arrivalTime);
+  const distanceNoteKey = railDistanceNoteKey(journey.distanceSource, { includeTicket: true });
+  const distanceNote = distanceNoteKey ? t(distanceNoteKey) : null;
+  const departure = railDeparture(journey);
+  const duration = departure ? railDurationMinutes(departure, railArrival(journey)) : null;
   const price =
     journey.price !== null
       ? formatAmount(journey.price, journey.currency, { language: i18n.language })
@@ -175,8 +187,13 @@ export default function RailDetailPage(): JSX.Element {
       : []),
   ];
 
-  const stationTime = (iso: string | null, zone: string | null): string | null =>
-    iso ? `${formatStationTime(iso, zone, locale)}${zone ? ` (${zone})` : ""}` : null;
+  // The station's clock, its zone named, and the user's own clock as a hint (Q2).
+  const stationTime = (value: TimeValue | null): string | null => {
+    if (!value) return null;
+    const hint = yourTimeText(value, viewerZone, t);
+    const zone = value.zone ? ` (${value.zone})` : "";
+    return `${formatStationTime(value, locale)}${zone}${hint ? ` · ${hint}` : ""}`;
+  };
 
   return (
     <AppShell width="list">
@@ -186,10 +203,26 @@ export default function RailDetailPage(): JSX.Element {
         domain="rail"
         icon={<Icon name="train-front" size={24} />}
         title={`${journey.depStationName} → ${journey.arrStationName}`}
-        meta={[
-          trainLabel(journey),
-          formatStationTime(journey.departureTime, journey.depTimezone, locale),
-        ]
+        subtitle={
+          // The DB codes, in the title's order, where the catalogue knows them;
+          // a dash for an unknown one, and no line at all when neither is known.
+          journey.depStationShortCode || journey.arrStationShortCode ? (
+            <span data-testid="rail-detail-station-codes">
+              {journey.depStationShortCode ? (
+                <StationShortCode code={journey.depStationShortCode} />
+              ) : (
+                "–"
+              )}
+              {" → "}
+              {journey.arrStationShortCode ? (
+                <StationShortCode code={journey.arrStationShortCode} />
+              ) : (
+                "–"
+              )}
+            </span>
+          ) : undefined
+        }
+        meta={[trainLabel(journey), departure ? formatStationTime(departure, locale) : null]
           .filter(Boolean)
           .join(" · ")}
         hero={kpis.length > 0 ? <DetailKpis items={kpis} /> : undefined}
@@ -211,6 +244,13 @@ export default function RailDetailPage(): JSX.Element {
         }
       />
 
+      {isConvertedFromRoadtrip(journey) && (
+        <p className="t-caption mb-4" data-testid="rail-converted-note">
+          {t("rail:detail.convertedFromRoadtrip")}
+          {journey.arrivalTime === null && ` ${t("rail:detail.convertedPlaceholder")}`}
+        </p>
+      )}
+
       <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
         <div className="flex flex-col gap-6 md:col-span-3">
           <DetailSection
@@ -218,19 +258,19 @@ export default function RailDetailPage(): JSX.Element {
             facts={[
               {
                 label: t("rail:detail.plannedDeparture"),
-                value: stationTime(journey.departureTime, journey.depTimezone),
+                value: stationTime(departure),
               },
               {
                 label: t("rail:detail.plannedArrival"),
-                value: stationTime(journey.arrivalTime, journey.arrTimezone),
+                value: stationTime(railArrival(journey)),
               },
               {
                 label: t("rail:detail.actualDeparture"),
-                value: stationTime(journey.actualDepartureTime, journey.depTimezone),
+                value: stationTime(railActualDeparture(journey)),
               },
               {
                 label: t("rail:detail.actualArrival"),
-                value: stationTime(journey.actualArrivalTime, journey.arrTimezone),
+                value: stationTime(railActualArrival(journey)),
               },
               { label: t("rail:detail.delay"), value: delayText },
             ]}
@@ -264,7 +304,14 @@ export default function RailDetailPage(): JSX.Element {
             </DetailSection>
           )}
 
-          <DocumentsSection entry={{ type: "railJourney", id: journey.id }} />
+          <DocumentsSection
+            entry={{ type: "railJourney", id: journey.id }}
+            extract={railExtractTarget(journey, async (updates) => {
+              await railApi.update(journey.id, updates);
+              addToast("success", t("documents:extract.applied"));
+              setReloadKey((k) => k + 1);
+            })}
+          />
         </div>
 
         <aside className="flex flex-col gap-6 md:col-span-2">

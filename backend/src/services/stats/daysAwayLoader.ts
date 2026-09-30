@@ -156,6 +156,7 @@ export async function loadDaysAway(userId: string, scope: DaysAwayScope = {}): P
       where: { userId, kind: "roadtrip" },
       select: {
         stops: {
+          where: { viaPoint: false },
           select: {
             startDate: true,
             endDate: true,

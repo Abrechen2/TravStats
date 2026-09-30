@@ -22,7 +22,11 @@ vi.mock("../../components/documents/DocumentsSection", () => ({
 vi.mock("../../components/rail/RailRouteMap", () => ({
   RailRouteMap: () => <div data-testid="map-stub" />,
 }));
-vi.mock("../../components/rail/RailFormModal", () => ({ RailFormModal: () => null }));
+vi.mock("../../components/rail/RailFormModal", () => ({
+  RailFormModal: ({ journey }: { journey: { id: string } | null }) => (
+    <div data-testid="rail-editor">{journey?.id ?? "new"}</div>
+  ),
+}));
 vi.mock("../../components/common/TripPhotoWindowStrip", () => ({
   default: ({ entry, id }: { entry: string; id: string }) => (
     <div data-testid="photo-window-stub">{`${entry}:${id}`}</div>
@@ -101,6 +105,21 @@ describe("RailDetailPage", () => {
     expect(screen.getByText("rail:straightLine")).toBeInTheDocument();
   });
 
+  it("labels a converted ride's distance and says its time was a placeholder", async () => {
+    await renderPage(
+      detail({
+        distanceKm: 243.5,
+        distanceSource: "roadtrip",
+        externalRef: "roadtrip:s1:l1",
+        arrivalTime: null,
+      })
+    );
+    expect(screen.getByText("rail:roadtripLine")).toBeInTheDocument();
+    expect(screen.getByTestId("rail-converted-note")).toHaveTextContent(
+      "rail:detail.convertedFromRoadtrip rail:detail.convertedPlaceholder"
+    );
+  });
+
   it("lists the booking's legs, linking the others", async () => {
     const legs = [
       { id: "j1", depStationName: "Frankfurt", arrStationName: "Fulda" },
@@ -138,5 +157,45 @@ describe("RailDetailPage", () => {
       </MemoryRouter>
     );
     expect(await screen.findByRole("alert")).toHaveTextContent("rail:detail.loadError");
+  });
+});
+
+describe("RailDetailPage — ?edit=1 from the inbox", () => {
+  beforeEach(() => {
+    getMock.mockReset();
+  });
+
+  // The inbox's link for a journey whose zone or time the time-model
+  // migration left open (ADR 0002, plan Phase 3b; timeFlagLinks.ts).
+  it("opens the journey's own editor once it has loaded", async () => {
+    const journey = detail();
+    getMock.mockResolvedValue(journey);
+    render(
+      <MemoryRouter initialEntries={[`/rail/${journey.id}?edit=1`]}>
+        <Routes>
+          <Route path="/rail/:id" element={<RailDetailPage />} />
+        </Routes>
+      </MemoryRouter>
+    );
+    expect(await screen.findByTestId("rail-editor")).toHaveTextContent(journey.id);
+  });
+
+  it("opens no editor without the parameter", async () => {
+    await renderPage(detail());
+    expect(screen.queryByTestId("rail-editor")).not.toBeInTheDocument();
+  });
+
+  // forgejo#132 item 16.
+  it("names the stations' short codes under the title", async () => {
+    await renderPage(detail({ depStationShortCode: "FF", arrStationShortCode: "FFU" }));
+    expect(screen.getAllByTestId("station-short-code").map((el) => el.textContent)).toEqual([
+      "FF",
+      "FFU",
+    ]);
+  });
+
+  it("names no code for stations no source knows", async () => {
+    await renderPage(detail({ depStationShortCode: null, arrStationShortCode: null }));
+    expect(screen.queryByTestId("station-short-code")).toBeNull();
   });
 });

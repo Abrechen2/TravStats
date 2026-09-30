@@ -318,7 +318,10 @@
     "lodgingIndependent": "Unabhängig",
     "title": "Legende",
     "railTraced": "Bahn · Streckenverlauf (Transitous)",
-    "railStraight": "Bahn · Luftlinie"
+    "railRouted": "Bahn · Streckenverlauf (OpenRailRouting)",
+    "railBrouter": "Bahn · Streckenverlauf (BRouter)",
+    "railStraight": "Bahn · Luftlinie",
+    "tour": "Tour"
   },
   "userMenu": {
     "label": "Konto-Menü"
@@ -346,5 +349,39 @@
     "loading": "Zugfahrten werden geladen …",
     "loadError": "Die Zugfahrten konnten nicht geladen werden.",
     "empty": "Noch keine Zugfahrten erfasst."
+  },
+  "domainFilter": {
+    "button": {
+      "label": "Domänen · {{visible}}/{{total}}"
+    },
+    "panel": {
+      "title": "Auf der Karte",
+      "all": "Alle",
+      "none": "Keine",
+      "persist": "Wirkt sofort · auf diesem Gerät gemerkt"
+    },
+    "row": {
+      "only": "Nur",
+      "onlyTooltip": "Nur diese Domäne zeigen"
+    },
+    "betaBadge": {
+      "tooltip": "Beta-Funktion dieser Instanz"
+    },
+    "link": {
+      "badge": "Link",
+      "note": "Auswahl aus einem geteilten Link — nicht gespeichert. Deine eigene Auswahl bleibt unverändert.",
+      "adopt": "Als meine merken",
+      "mine": "Meine Auswahl"
+    },
+    "empty": {
+      "title": "Keine Domäne ausgewählt",
+      "body": "Die Karte ist leer, weil alle Domänen abgewählt sind.",
+      "showAll": "Alle einblenden",
+      "openFilter": "Auswahl öffnen"
+    },
+    "sheet": {
+      "title": "Domänen",
+      "done": "Fertig"
+    }
   }
 }

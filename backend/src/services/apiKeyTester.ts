@@ -23,7 +23,12 @@ export type ApiKeyTestMessageKey =
   | "unexpectedStatus"
   | "protocol"
   | "openskyMissingCredentials"
-  | "openskyInvalid";
+  | "openskyInvalid"
+  /** No answer at all — DNS, refused connection, timeout. */
+  | "unreachable"
+  /** The provider answered with an error this tester has no key for; the
+   *  provider's own words stay in `message` as the diagnostic detail. */
+  | "providerError";
 
 export interface ApiKeyTestResult {
   success: boolean;
@@ -39,9 +44,12 @@ function extractAxiosErrorInfo(error: unknown): {
   status?: number;
   message: string;
   data?: Record<string, unknown>;
+  /** The request never got an answer (DNS, refused, timeout). */
+  unreachable?: boolean;
 } {
   if (axios.isAxiosError(error)) {
     return {
+      unreachable: !error.response,
       status: error.response?.status,
       message:
         error.response?.data?.error?.message ??
@@ -55,6 +63,43 @@ function extractAxiosErrorInfo(error: unknown): {
     return { message: error.message };
   }
   return { message: "Unknown error" };
+}
+
+/**
+ * A failed test that no tester recognised, with a stable key either way.
+ *
+ * The raw text ("getaddrinfo ENOTFOUND airlabs.co") used to be the only thing
+ * the card could show; it stays in `message` as the detail, and the key says
+ * which of the two it was.
+ */
+function failure(
+  errInfo: ReturnType<typeof extractAxiosErrorInfo>,
+  message: string = errInfo.message
+): ApiKeyTestResult {
+  return {
+    success: false,
+    message,
+    messageKey: errInfo.unreachable ? "unreachable" : "providerError",
+  };
+}
+
+/**
+ * AirLabs answers a refused key or a spent quota with HTTP 200 and an `error`
+ * object. Read as a failure with a key, never as "valid".
+ */
+function airlabsBodyFailure(body: unknown): ApiKeyTestResult | null {
+  const error = (body as { error?: unknown } | null | undefined)?.error;
+  if (error === undefined || error === null) return null;
+  const text =
+    typeof error === "string"
+      ? error
+      : `${(error as { code?: unknown }).code ?? ""} ${(error as { message?: unknown }).message ?? ""}`.trim();
+  const messageKey: ApiKeyTestMessageKey = /key|auth|permission|access|forbidden/i.test(text)
+    ? "invalid"
+    : /limit|quota|rate/i.test(text)
+      ? "rateLimited"
+      : "providerError";
+  return { success: false, message: text || "API error", messageKey };
 }
 
 /**
@@ -121,10 +166,7 @@ export async function testOpenAIKey(apiKey: string, userId?: string): Promise<Ap
         messageKey: "rateLimited",
       };
     }
-    return {
-      success: false,
-      message: errInfo.message,
-    };
+    return failure(errInfo);
   }
 }
 
@@ -193,10 +235,7 @@ export async function testClaudeKey(apiKey: string, userId?: string): Promise<Ap
         messageKey: "rateLimited",
       };
     }
-    return {
-      success: false,
-      message: errInfo.message,
-    };
+    return failure(errInfo);
   }
 }
 
@@ -222,10 +261,14 @@ export async function testAirlabsKey(apiKey: string, userId?: string): Promise<A
       timeout: 10000,
     });
 
-    // AirLabs API returns different response formats
+    // AirLabs answers failures with HTTP 200 and an `error` body, so the
+    // body is read first. The old order counted any 200 without a clear
+    // error field as "valid" — and a 200 whose body said "unknown key" was
+    // reported without a key the UI could translate.
     if (response.status === 200) {
-      // Check for success status
-      if (response.data?.status === "success" || response.data?.response) {
+      const bodyFailure = airlabsBodyFailure(response.data);
+      if (bodyFailure) return bodyFailure;
+      if (response.data?.response !== undefined || response.data?.status === "success") {
         return {
           success: true,
           message: "API key is valid",
@@ -233,26 +276,7 @@ export async function testAirlabsKey(apiKey: string, userId?: string): Promise<A
           details: response.data,
         };
       }
-
-      // Check for error in response
-      if (response.data?.error) {
-        const errorMsg =
-          typeof response.data.error === "string"
-            ? response.data.error
-            : response.data.error.message || "API error";
-        return {
-          success: false,
-          message: errorMsg,
-        };
-      }
-
-      // If we get 200 but no clear success/error, assume it's valid
-      return {
-        success: true,
-        message: "API key is valid",
-        messageKey: "valid",
-        details: response.data,
-      };
+      return { success: false, message: "Unexpected response body", messageKey: "protocol" };
     }
 
     return {
@@ -271,23 +295,9 @@ export async function testAirlabsKey(apiKey: string, userId?: string): Promise<A
       };
     }
     // Check for AirLabs error format
-    if (errInfo.data && typeof errInfo.data === "object" && "error" in errInfo.data) {
-      const apiError = errInfo.data.error;
-      const errorMsg =
-        typeof apiError === "string"
-          ? apiError
-          : typeof apiError === "object" && apiError !== null && "message" in apiError
-            ? String((apiError as { message: unknown }).message)
-            : "API error";
-      return {
-        success: false,
-        message: errorMsg,
-      };
-    }
-    return {
-      success: false,
-      message: errInfo.message,
-    };
+    const bodyFailure = airlabsBodyFailure(errInfo.data);
+    if (bodyFailure) return bodyFailure;
+    return failure(errInfo);
   }
 }
 
@@ -322,6 +332,7 @@ export async function testAviationstackKey(
         return {
           success: false,
           message: response.data.error.info || "API error",
+          messageKey: "providerError",
         };
       }
       return {
@@ -349,10 +360,7 @@ export async function testAviationstackKey(
         messageKey: "invalid",
       };
     }
-    return {
-      success: false,
-      message: errInfo.message,
-    };
+    return failure(errInfo);
   }
 }
 
@@ -418,10 +426,7 @@ export async function testAerodataboxKey(
         messageKey: "rateLimited",
       };
     }
-    return {
-      success: false,
-      message: errInfo.message,
-    };
+    return failure(errInfo);
   }
 }
 
@@ -478,10 +483,7 @@ export async function testLogostreamKey(
         messageKey: "invalid",
       };
     }
-    return {
-      success: false,
-      message: errInfo.message,
-    };
+    return failure(errInfo);
   }
 }
 
@@ -546,15 +548,9 @@ export async function testGooglePlacesKey(
     // more actionable than a generic message ("... has not been used in
     // project ... or it is disabled" tells the admin exactly what to fix).
     if (errInfo.status === 400 || errInfo.status === 401 || errInfo.status === 403) {
-      return {
-        success: false,
-        message: errInfo.message || "Invalid API key",
-      };
+      return failure(errInfo, errInfo.message || "Invalid API key");
     }
-    return {
-      success: false,
-      message: errInfo.message,
-    };
+    return failure(errInfo);
   }
 }
 
@@ -630,10 +626,7 @@ export async function testOpenRouteServiceKey(
         messageKey: "rateLimited",
       };
     }
-    return {
-      success: false,
-      message: errInfo.message,
-    };
+    return failure(errInfo);
   }
 }
 
@@ -705,10 +698,7 @@ export async function testGraphHopperKey(
         messageKey: "rateLimited",
       };
     }
-    return {
-      success: false,
-      message: errInfo.message,
-    };
+    return failure(errInfo);
   }
 }
 
@@ -777,20 +767,11 @@ export async function testOpenSkyCredentials(
         };
       }
       if (errInfo.data && typeof errInfo.data === "object" && "error_description" in errInfo.data) {
-        return {
-          success: false,
-          message: String(errInfo.data.error_description),
-        };
+        return failure(errInfo, String(errInfo.data.error_description));
       }
-      return {
-        success: false,
-        message: errInfo.message || "Authentication failed",
-      };
+      return failure(errInfo, errInfo.message || "Authentication failed");
     }
   } catch (error: unknown) {
-    return {
-      success: false,
-      message: error instanceof Error ? error.message : "Unknown error",
-    };
+    return failure(extractAxiosErrorInfo(error));
   }
 }

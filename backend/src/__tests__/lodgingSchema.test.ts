@@ -27,13 +27,13 @@ describe("lodging schema constraints", () => {
   });
 
   afterAll(async () => {
-    await prisma.lodgingMembership.deleteMany({ where: { userId } });
+    await prisma.loyaltyMembership.deleteMany({ where: { userId } });
     await prisma.user.delete({ where: { id: userId } });
     await prisma.$disconnect();
   });
 
   afterEach(async () => {
-    await prisma.lodgingMembership.deleteMany({ where: { programName: { startsWith: "TEST_" } } });
+    await prisma.loyaltyMembership.deleteMany({ where: { programName: { startsWith: "TEST_" } } });
     await prisma.lodgingChain.deleteMany({ where: { name: { startsWith: "TEST_" } } });
   });
 
@@ -43,9 +43,9 @@ describe("lodging schema constraints", () => {
   });
 
   it("rejects a second membership for the same user + program", async () => {
-    await prisma.lodgingMembership.create({ data: { userId, programName: "TEST_Bonvoy" } });
+    await prisma.loyaltyMembership.create({ data: { userId, programName: "TEST_Bonvoy" } });
     await expect(
-      prisma.lodgingMembership.create({ data: { userId, programName: "TEST_Bonvoy" } })
+      prisma.loyaltyMembership.create({ data: { userId, programName: "TEST_Bonvoy" } })
     ).rejects.toThrow();
   });
 

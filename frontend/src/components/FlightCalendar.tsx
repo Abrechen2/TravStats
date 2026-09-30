@@ -5,81 +5,79 @@ import { resolveAirlineDisplay, resolveAirlineIata } from "../lib/airlineUtils";
 import AirlineLogo from "./AirlineLogo";
 import SpecialTypeBadge from "./specialFlights/SpecialTypeBadge";
 import type { SpecialType } from "./specialFlights/specialTypeMeta";
-import { formatTime } from "../lib/displayFormat";
+import { formatLocalClock } from "../lib/displayFormat";
+import { flightDeparture } from "../lib/entityTimes";
+import { todayZoneNow } from "../hooks/useTodayZone";
+import {
+  addDays,
+  clockOf,
+  dayOf,
+  dayParts,
+  dayString,
+  daysInMonth,
+  formatDayLong,
+  todayIn,
+  weekdayOf,
+} from "../shared/time";
 
 interface FlightCalendarProps {
   flights: Flight[];
 }
 
+/**
+ * One cell of the month view. `day` is a `YYYY-MM-DD` calendar day (ADR 0002):
+ * the grid is stepped with UTC arithmetic on day strings, and a flight sits on
+ * the day it departed AT ITS AIRPORT (`times.departure.local`) — never on the
+ * day the reader's own clock showed at that instant.
+ */
 interface DayData {
-  date: Date;
+  day: string;
   flights: Flight[];
   isCurrentMonth: boolean;
 }
 
+/** The departure airport's day of a flight, or null when it has none. */
+function departureDayOf(flight: Flight): string | null {
+  const departure = flightDeparture(flight);
+  return departure ? dayOf(departure) : null;
+}
+
+/** The departure on its airport's clock, or a dash for a day-only flight. */
+function departureClock(flight: Flight): string {
+  const departure = flightDeparture(flight);
+  const clock = departure ? clockOf(departure) : null;
+  return clock ? formatLocalClock(clock) : "—";
+}
+
 export default function FlightCalendar({ flights }: FlightCalendarProps) {
   const { t, i18n } = useTranslation(["stats", "common"]);
-  const [currentDate, setCurrentDate] = useState(new Date());
+  // "Today" in the profile zone (Q1); the month shown starts there.
+  const [today] = useState(() => todayIn(todayZoneNow()));
+  const [cursor, setCursor] = useState(() => {
+    const { year, month } = dayParts(today);
+    return { year, month };
+  });
   const [selectedDay, setSelectedDay] = useState<DayData | null>(null);
 
-  const year = currentDate.getFullYear();
-  const month = currentDate.getMonth();
+  const { year } = cursor;
+  /** 0-based, for the month-name list. */
+  const month = cursor.month - 1;
 
-  // Get calendar days for the month
+  const getFlightsForDay = (day: string): Flight[] =>
+    flights.filter((flight) => departureDayOf(flight) === day);
+
+  // Six weeks from the Sunday on or before the 1st — 42 cells.
   const getCalendarDays = (): DayData[] => {
-    const firstDay = new Date(year, month, 1);
-    const lastDay = new Date(year, month + 1, 0);
-    const prevLastDay = new Date(year, month, 0);
-
-    const firstDayOfWeek = firstDay.getDay();
-    const lastDate = lastDay.getDate();
-    const prevLastDate = prevLastDay.getDate();
-
-    const days: DayData[] = [];
-
-    // Previous month days
-    for (let i = firstDayOfWeek - 1; i >= 0; i--) {
-      const date = new Date(year, month - 1, prevLastDate - i);
-      days.push({
-        date,
-        flights: getFlightsForDate(date),
-        isCurrentMonth: false,
-      });
-    }
-
-    // Current month days
-    for (let i = 1; i <= lastDate; i++) {
-      const date = new Date(year, month, i);
-      days.push({
-        date,
-        flights: getFlightsForDate(date),
-        isCurrentMonth: true,
-      });
-    }
-
-    // Next month days
-    const remainingDays = 42 - days.length; // 6 rows * 7 days
-    for (let i = 1; i <= remainingDays; i++) {
-      const date = new Date(year, month + 1, i);
-      days.push({
-        date,
-        flights: getFlightsForDate(date),
-        isCurrentMonth: false,
-      });
-    }
-
-    return days;
-  };
-
-  const getFlightsForDate = (date: Date): Flight[] => {
-    return flights.filter((flight) => {
-      if (!flight.departureTime) return false;
-      const flightDate = new Date(flight.departureTime);
-      return (
-        flightDate.getDate() === date.getDate() &&
-        flightDate.getMonth() === date.getMonth() &&
-        flightDate.getFullYear() === date.getFullYear()
-      );
+    const first = dayString(year, cursor.month, 1);
+    const gridStart = addDays(first, -weekdayOf(first));
+    const lastOfMonth = dayString(year, cursor.month, daysInMonth(year, cursor.month));
+    return Array.from({ length: 42 }, (_, i) => {
+      const day = addDays(gridStart, i);
+      return {
+        day,
+        flights: getFlightsForDay(day),
+        isCurrentMonth: day >= first && day <= lastOfMonth,
+      };
     });
   };
 
@@ -93,15 +91,13 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
     return "bg-(--accent)";
   };
 
-  const goToPreviousMonth = () => {
-    setCurrentDate(new Date(year, month - 1, 1));
+  const moveMonth = (by: number): void => {
+    const { year: y, month: m } = dayParts(dayString(year, cursor.month + by, 1));
+    setCursor({ year: y, month: m });
     setSelectedDay(null);
   };
-
-  const goToNextMonth = () => {
-    setCurrentDate(new Date(year, month + 1, 1));
-    setSelectedDay(null);
-  };
+  const goToPreviousMonth = () => moveMonth(-1);
+  const goToNextMonth = () => moveMonth(1);
 
   const monthNames = [
     t("stats:calendar.months.january"),
@@ -164,7 +160,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
 
         {/* Calendar days */}
         {calendarDays.map((dayData, index) => {
-          const isToday = dayData.date.toDateString() === new Date().toDateString();
+          const isToday = dayData.day === today;
           const hasFlights = dayData.flights.length > 0;
 
           return (
@@ -184,7 +180,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                   dayData.flights.length > 0 ? "text-white" : "text-(--text-primary)"
                 }`}
               >
-                {dayData.date.getDate()}
+                {Number(dayData.day.slice(8, 10))}
               </span>
               {hasFlights && (
                 <div className="absolute bottom-1 left-1/2 transform -translate-x-1/2">
@@ -205,12 +201,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
         <div className="mt-6 p-4 bg-(--bg-base) rounded-lg border border-border">
           <div className="flex items-center justify-between mb-3">
             <h4 className="text-lg font-semibold text-(--text-primary)">
-              {selectedDay.date.toLocaleDateString(i18n.language, {
-                weekday: "long",
-                year: "numeric",
-                month: "long",
-                day: "numeric",
-              })}
+              {formatDayLong(selectedDay.day, i18n.language)}
             </h4>
             <button
               onClick={() => setSelectedDay(null)}
@@ -247,11 +238,7 @@ export default function FlightCalendar({ flights }: FlightCalendarProps) {
                     </div>
                   </div>
                   <div className="text-right">
-                    <p className="text-sm text-(--text-muted)">
-                      {flight.departureTime && flight.depTimeSemantics !== "DATE_ONLY"
-                        ? formatTime(flight.departureTime)
-                        : "—"}
-                    </p>
+                    <p className="text-sm text-(--text-muted)">{departureClock(flight)}</p>
                     {flight.seatClass && (
                       <p className="text-xs text-(--text-muted)">{flight.seatClass}</p>
                     )}

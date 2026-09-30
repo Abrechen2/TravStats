@@ -20,14 +20,8 @@ import { polylineDistanceKm } from "../../cruiseDistance/polylineDistance";
 
 /**
  * How far a track's nearest point may sit from a leg's stop and still
- * count as covering it, in kilometres. Re-exported from here (Task 5's
- * own module, unchanged) so existing importers
- * (`routes/trips/tourLegs.ts`, this module's own test) keep working —
- * the canonical value now lives in `shared/tour/anchorTolerance.ts`,
- * mirrored on the frontend at `frontend/src/shared/tour/anchorTolerance.ts`
- * (the constant `frontend/src/lib/trackCoverage.ts` consumes), with a
- * guard test that fails if the two diverge. See that shared module's own
- * doc comment for the full reasoning.
+ * count as covering it, in kilometres. Re-exported for existing importers;
+ * the value lives in `shared/tour/anchorTolerance.ts`.
  */
 export { ANCHOR_TOLERANCE_KM };
 

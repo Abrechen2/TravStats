@@ -1,5 +1,8 @@
 import { minorUnits } from "../../shared/currencies";
 import Modal from "../Modal";
+import { saveErrorMessage } from "../../lib/saveErrorMessage";
+import { cruiseStopToWire, storedStopFold } from "./cruiseStopWire";
+import { dayInput } from "../../lib/api/timeInput";
 import CurrencySelect from "../common/CurrencySelect";
 import { useRecentCurrencies } from "../../hooks/useRecentCurrencies";
 import { useSettingsStore } from "../../store/settingsStore";
@@ -7,6 +10,7 @@ import { useState, useEffect } from "react";
 import type {
   Cruise,
   CruiseInput,
+  CruiseWriteBody,
   Trip,
   CruiseStopInput,
   Ship,
@@ -14,7 +18,7 @@ import type {
   CabinType,
   CruiseStatus,
 } from "../../types";
-import { cruiseApi, shipsApi, tripsApi } from "../../lib/api";
+import { cruiseApi, tripsApi } from "../../lib/api";
 import { logger } from "../../lib/logger";
 import { useTranslation } from "../../hooks/useTranslation";
 import { ShipPicker } from "./ShipPicker";
@@ -23,7 +27,8 @@ import { CruiseStopsEditor } from "./CruiseStopsEditor";
 import { cruiseStatusPillStyle } from "./cruiseStatusStyle";
 import CompanionPicker from "../CompanionPicker";
 import TagInput from "../TagInput";
-import CatalogueCombobox, { type CatalogueOption } from "../FlightForm/fields/CatalogueCombobox";
+import CatalogueCombobox from "../FlightForm/fields/CatalogueCombobox";
+import { searchCruiseLineOptions } from "./cruiseLineOptions";
 import { useTripPreselection } from "../../hooks/useTripPreselection";
 import { useCruiseDateSuggestions } from "./useCruiseDateSuggestions";
 import { suggestCruiseRouteName } from "./cruiseRouteName";
@@ -68,14 +73,9 @@ const COLOR_PALETTE = [
 //      UTC instant keeps the round-trip stable and timezone-neutral.
 const toDateInput = (iso: string | null | undefined): string => (iso ? iso.slice(0, 10) : "");
 
-const fromDateInput = (date: string): string | null => (date ? `${date}T00:00:00.000Z` : null);
-
-/** Module-level so the combobox's debounce effect sees one stable function. The
- *  lines carry no catalogue id; the list position is only a React key. */
-async function searchCruiseLineOptions(q: string): Promise<CatalogueOption[]> {
-  const lines = await shipsApi.cruiseLines(q);
-  return lines.map((name, id) => ({ id, name, codes: [] }));
-}
+// Sent as the bare day (ADR 0002): a day is not an instant, and the server
+// stores it as a DATE — no midnight-UTC anchor to drift across zones.
+const fromDateInput = (date: string): string | null => dayInput(date);
 
 const INPUT_CLASS =
   "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
@@ -113,6 +113,8 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
       isAtSea: s.isAtSea,
       arrivalTime: s.arrivalTime,
       departureTime: s.departureTime,
+      arrivalFold: storedStopFold(s.arrivalTime, s.arrivalUtc, s.stopZone),
+      departureFold: storedStopFold(s.departureTime, s.departureUtc, s.stopZone),
       excursionNote: s.excursionNote ?? undefined,
       unresolvedPortName: s.unresolvedPortName,
     }))
@@ -180,6 +182,22 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
 
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
+  // What the server needs before it creates a cruise (`cruiseHasIdentity` and
+  // the start-date rule in backend schemas/cruise.ts): the form names the
+  // missing field instead of sending an empty row and showing a generic error.
+  // Create only, like the server: an existing row is edited as it is. Shown
+  // once a save was tried, and gone the moment the field is filled.
+  const [saveTried, setSaveTried] = useState(false);
+  const lacksIdentity =
+    mode === "create" &&
+    !ship &&
+    !routeName.trim() &&
+    !cruiseLine.trim() &&
+    !departurePort &&
+    !cruise?.shipNameOverride?.trim();
+  const lacksStart = mode === "create" && !startDate;
+  const identityMissing = saveTried && lacksIdentity;
+  const startMissing = saveTried && lacksStart;
 
   const onShipPicked = (s: Ship): void => {
     setShip(s);
@@ -187,10 +205,12 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
   };
 
   const submit = async (): Promise<void> => {
+    setSaveTried(true);
+    if (lacksIdentity || lacksStart) return;
     setSaving(true);
     setError(null);
     try {
-      const input: CruiseInput = {
+      const input: CruiseWriteBody = {
         shipId: ship?.id ?? null,
         // null = explicit clear; undefined would tell the server "keep the
         // old value" and make blanking any of these a silent no-op in edit
@@ -218,9 +238,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
         // including as []: omitting the field when the user removed every
         // stop would silently keep the old stops (the server reads absence
         // as "don't touch").
-        stops: stops.map(
-          ({ port: _port, originalDay: _originalDay, dateSource: _dateSource, ...rest }) => rest
-        ),
+        stops: stops.map(cruiseStopToWire),
       };
       const saved =
         mode === "create"
@@ -228,10 +246,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
           : await cruiseApi.update((cruise as Cruise).id, input);
       await onSaved(saved);
     } catch (err: unknown) {
-      const msg =
-        (err as { response?: { data?: { error?: string } } })?.response?.data?.error ??
-        t("form.saveError");
-      setError(msg);
+      setError(saveErrorMessage(err, t, "cruise:form.saveError"));
     } finally {
       setSaving(false);
     }
@@ -284,6 +299,7 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 search={searchCruiseLineOptions}
                 placeholder={t("field.line")}
                 inputClassName={INPUT_CLASS}
+                browseOnFocus
               />
             </div>
             <input
@@ -292,7 +308,14 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
               value={routeName}
               onChange={(e): void => setRouteName(e.target.value)}
               placeholder={t("field.routeName")}
+              aria-invalid={identityMissing || undefined}
+              aria-describedby={identityMissing ? "cruise-identity-error" : undefined}
             />
+            {identityMissing && (
+              <p id="cruise-identity-error" role="alert" className="mt-1 text-xs text-(--danger)">
+                {t("form.identityRequired")}
+              </p>
+            )}
             {/* Offered, never written on its own: a route name is the user's
                 wording, and the ports only say what it could be. */}
             {routeNameSuggestion && (
@@ -312,6 +335,8 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 style={DARK_PICKER_STYLE}
                 value={startDate}
                 onChange={(e): void => setStartDate(e.target.value)}
+                aria-invalid={startMissing || undefined}
+                aria-describedby={startMissing ? "cruise-start-error" : undefined}
               />
               <input
                 type="date"
@@ -322,6 +347,11 @@ export function CruiseEditModal({ mode, cruise, onClose, onSaved }: Props): JSX.
                 onChange={(e): void => onEndDateChange(e.target.value)}
               />
             </div>
+            {startMissing && (
+              <p id="cruise-start-error" role="alert" className="mt-1 text-xs text-(--danger)">
+                {t("form.startDateRequired")}
+              </p>
+            )}
             {/* #status-from-dates: cruise write paths derive scheduled/
                   in_progress/flown from the dates — a select just let the UI
                   set a value the backend would immediately overwrite. Only

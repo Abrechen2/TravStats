@@ -1,17 +1,18 @@
-import { fromZonedTime } from "date-fns-tz";
-
 import { prisma } from "../../db";
 import { Prisma } from "../../prisma";
 import { EARTH_RADIUS_KM, haversineKm } from "../../shared/geo/haversine";
 import { VISIT_PHOTO_SUGGESTION_CAP } from "../../schemas/place";
 import { localDay, withinKm } from "../../utils/sqlGeo";
-import { timezoneOfLodging } from "../../utils/stayInstant";
+import { localDay as localDayAt } from "../../shared/time/instant";
+import { startOfDayAt } from "../../shared/time/legacyValues";
+import { zoneOf } from "../../shared/time/zoneOf";
 import { createImmichClient } from "../immich/immichClient";
 import { getCachedAlbumAssets, peekCachedAlbumAssets } from "../immich/immichAssetCache";
 import { getImmichConnection } from "../immich/immichResolver";
 import { ImmichError, type ImmichAsset, type ImmichErrorKind } from "../immich/types";
 import { PHOTO_RADIUS_KM } from "./visitDateSuggestions";
 import { linkImmichAssetsToVisit } from "./visitPhotoLinks";
+import { refusedIds } from "./visitPhotoRefusals";
 
 /**
  * Photographs a place visit could show, found in the user's own records
@@ -60,18 +61,27 @@ interface VisitAnchor {
 async function anchorOf(userId: string, visitId: string): Promise<VisitAnchor | "undated" | null> {
   const visit = await prisma.placeVisit.findFirst({
     where: { id: visitId, userId },
-    select: { id: true, visitedAt: true, place: { select: { lat: true, lon: true } } },
+    select: {
+      id: true,
+      visitedAt: true,
+      visitedAtUtc: true,
+      visitedZone: true,
+      place: { select: { lat: true, lon: true } },
+    },
   });
   if (!visit) return null;
   if (!visit.visitedAt) return "undated";
   const { lat, lon } = visit.place;
-  return {
-    id: visit.id,
-    day: visit.visitedAt.toISOString().slice(0, 10),
-    tz: timezoneOfLodging(lat, lon),
-    lat,
-    lon,
-  };
+  // The zone stored with the visit, else the place's (ADR 0002 D2). The day
+  // is read from the visit's instant on that clock; `visited_at` is a mixed
+  // legacy column (web wall clock vs Companion instant) and only answers for a
+  // visit the backfill has not reached — its date, which is what Q4 keeps.
+  const tz = visit.visitedZone ?? zoneOf({ lat, lon });
+  const day =
+    visit.visitedAtUtc && tz
+      ? localDayAt(visit.visitedAtUtc, tz)
+      : visit.visitedAt.toISOString().slice(0, 10);
+  return { id: visit.id, day, tz, lat, lon };
 }
 
 interface TripPhotoRow {
@@ -105,12 +115,39 @@ async function tripPhotosNear(userId: string, a: VisitAnchor): Promise<TripPhoto
         WHERE v.place_visit_id = ${a.id}
           AND (v.trip_photo_id = ph.id OR v.immich_asset_id = ph.immich_asset_id)
       )
+      -- Refused for this visit ("Nicht diese"): left out in SQL, so a refusal
+      -- does not eat into the cap and hide a photo that was never refused.
+      AND NOT EXISTS (
+        SELECT 1 FROM visit_photo_refusals r
+        WHERE r.place_visit_id = ${a.id} AND r.kind = 'trip' AND r.suggestion_id = ph.id
+      )
     ORDER BY ph.taken_at ASC
     LIMIT ${SUGGESTION_CAP}
   `);
 }
 
 const dayCacheKey = (a: VisitAnchor): string => `visit-day:${a.id}:${a.day}`;
+
+const HOUR_MS = 3_600_000;
+
+/**
+ * The instants the visit's day covers: its start and end on the place's
+ * clock. A place with no zone (open water) has no single answer, so the
+ * search spans the day as ANY clock on Earth knew it (UTC−12 … UTC+14) —
+ * the radius filter then keeps only what was taken there. Never the UTC day
+ * alone, which silently drops a morning in Auckland or an evening in Hawaii.
+ */
+function dayWindow(a: VisitAnchor): { start: Date; end: Date } {
+  if (a.tz) {
+    const start = startOfDayAt(a.day, a.tz);
+    return { start, end: new Date(start.getTime() + 24 * HOUR_MS - 1) };
+  }
+  const utcMidnight = Date.parse(`${a.day}T00:00:00.000Z`);
+  return {
+    start: new Date(utcMidnight - 14 * HOUR_MS),
+    end: new Date(utcMidnight + 36 * HOUR_MS - 1),
+  };
+}
 
 function nearTheAnchor(a: VisitAnchor, day: ImmichAsset[]): ImmichAsset[] {
   return day.filter(
@@ -137,8 +174,7 @@ export async function libraryAssetsNear(
   const connection = await getImmichConnection(userId);
   if (connection === null) return { state: "notConfigured", assets: [] };
   const client = createImmichClient(connection);
-  const start = fromZonedTime(`${a.day}T00:00:00`, a.tz ?? "UTC");
-  const end = new Date(start.getTime() + 24 * 60 * 60 * 1000 - 1);
+  const { start, end } = dayWindow(a);
   try {
     const day = await getCachedAlbumAssets(userId, dayCacheKey(a), async () => {
       const page = await client.searchAssetsByDate({ takenAfter: start, takenBefore: end });
@@ -163,13 +199,14 @@ export async function visitPhotoSuggestionsFor(
   if (anchor === null) return null;
   if (anchor === "undated") return { day: null, suggestions: [], library: "ok" };
 
-  const [tripRows, library, linked] = await Promise.all([
+  const [tripRows, library, linked, refused] = await Promise.all([
     tripPhotosNear(userId, anchor),
     libraryAssetsNear(userId, anchor),
     prisma.placeVisitPhoto.findMany({
       where: { placeVisitId: visitId, immichAssetId: { not: null } },
       select: { immichAssetId: true },
     }),
+    refusedIds(visitId),
   ]);
 
   const fromTrips: VisitPhotoSuggestion[] = tripRows.map((row) => ({
@@ -180,8 +217,9 @@ export async function visitPhotoSuggestionsFor(
     distanceM: Math.round(row.distanceKm * 1000),
   }));
   // A library photo that is already a trip photo, or already on the visit, is
-  // the same picture twice.
+  // the same picture twice; one refused for this visit is not offered again.
   const seen = new Set<string>([
+    ...refused.library,
     ...tripRows.flatMap((row) => (row.immichAssetId ? [row.immichAssetId] : [])),
     ...linked.flatMap((row) => (row.immichAssetId ? [row.immichAssetId] : [])),
   ]);

@@ -26,7 +26,9 @@ import { useDisplayFormat } from "../lib/displayFormat";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
 import { hexToRgb } from "../lib/domainColor";
 import { logger } from "../lib/logger";
-import { dayNumber, localToday, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
+import { dayNumber, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
+import { useTodayZone } from "../hooks/useTodayZone";
+import { todayIn } from "../shared/time";
 import { useToastStore } from "../store/toastStore";
 import type { RoadtripDetail, RoadtripStation } from "../types/roadtrip";
 import type { TourGeometry, TourLeg } from "../types/tour";
@@ -63,7 +65,8 @@ export default function RoadtripDetailPage(): JSX.Element {
   const navigate = useNavigate();
   const addToast = useToastStore((s) => s.addToast);
   const roadtripColor = useDomainColors().colorOf("roadtrip");
-  const today = useMemo(() => localToday(), []);
+  const todayZone = useTodayZone();
+  const today = useMemo(() => todayIn(todayZone), [todayZone]);
 
   const arrival = params.get("station");
   const [editorStart] = useState<EditorStart>(
@@ -125,14 +128,18 @@ export default function RoadtripDetailPage(): JSX.Element {
 
   const mapContent = useMemo<TripMapContent>(
     () => ({
-      stops: (detail?.stations ?? []).map((s) => ({
-        title: s.title,
-        lat: s.lat,
-        lon: s.lon,
-        // A night at a stay is drawn in the stay's colour, everything else in
-        // the roadtrip's — the same split the markers make.
-        domain: s.state === "stay" ? "hotel" : "roadtrip",
-      })),
+      // Route corrections shape the line only; they are no station marker.
+      stops: (detail?.stations ?? [])
+        .filter((s) => s.state !== "via")
+        .map((s) => ({
+          title: s.title,
+          lat: s.lat,
+          lon: s.lon,
+          // A night at a stay is drawn in the stay's colour, everything else in
+          // the roadtrip's — the same split the markers make.
+          domain: s.state === "stay" ? "hotel" : "roadtrip",
+        })),
+      emptyKey: "roadtrips:map.empty",
     }),
     [detail]
   );
@@ -413,6 +420,7 @@ export default function RoadtripDetailPage(): JSX.Element {
           to={legEdit.to}
           routingAvailable={detail.routingAvailable}
           onClose={() => setLegEdit(null)}
+          onChanged={() => void load()}
           onSaved={() => {
             setLegEdit(null);
             void load();

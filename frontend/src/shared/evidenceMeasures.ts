@@ -44,6 +44,8 @@ import { FLIGHT_FUN_MEASURES } from "./evidenceMeasuresFlightFun";
 import { CROSS_DOMAIN_MEASURES } from "./evidenceMeasuresCrossDomain";
 import { DOMAIN_MEASURES } from "./evidenceMeasuresDomains";
 import { ACHIEVEMENT_MEASURES } from "./evidenceMeasuresAchievements";
+import { RAIL_MEASURES } from "./evidenceMeasuresRail";
+import { PASSPORT_MEASURES } from "./evidenceMeasuresPassport";
 /**
  * `Aggregation` is owned by `./evidence` — the contract the payload is
  * described in — not redeclared here. Two structurally identical unions of
@@ -85,5 +87,7 @@ export const EVIDENCE_MEASURES: Record<string, MeasureSpec> = {
   ...FLIGHT_FUN_MEASURES,
   ...CROSS_DOMAIN_MEASURES,
   ...DOMAIN_MEASURES,
+  ...RAIL_MEASURES,
+  ...PASSPORT_MEASURES,
   ...ACHIEVEMENT_MEASURES,
 };

@@ -84,6 +84,11 @@ async function routeLegs(
     },
   });
 
+  const route = await prisma.tripRoute.findUnique({
+    where: { id: routeId },
+    select: { vehicle: true },
+  });
+  const vehicle = route?.vehicle ?? null;
   const deadline = Date.now() + AUTO_ROUTE_BUDGET_MS;
   let routedCount = 0;
   for (const leg of legs.slice(0, AUTO_ROUTE_MAX_LEGS)) {
@@ -98,6 +103,7 @@ async function routeLegs(
         from: { lat: a.lat, lon: a.lon },
         to: { lat: b.lat, lon: b.lon },
         mode,
+        vehicle,
       }),
       AUTO_ROUTE_LEG_TIMEOUT_MS
     );

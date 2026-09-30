@@ -79,6 +79,23 @@ describe("a cruise PATCH is held to the same rules as a POST", () => {
       expect(after.endDate?.toISOString()).toBe("2025-06-08T00:00:00.000Z");
     });
 
+    // The edit form used to print the refusal verbatim: zod's JSON issue dump
+    // or English prose, into a German page. It branches on the code now.
+    it("names the refusal with a code, not with zod's JSON", async () => {
+      const id = await makeCruise();
+
+      const bad = await patch(id, { cabinNumber: 42 });
+      expect(bad.status).toBe(400);
+      expect(bad.body.code).toBe("VALIDATION_FAILED");
+      expect(bad.body.error).not.toMatch(/^\[/);
+
+      const swapped = await patch(id, {
+        startDate: "2025-06-10T00:00:00.000Z",
+        endDate: "2025-06-01T00:00:00.000Z",
+      });
+      expect(swapped.body.code).toBe("VALIDATION_FAILED");
+    });
+
     it("refuses a ONE-SIDED end moved behind the stored start", async () => {
       // The case the payload alone cannot see: nothing in this request is
       // wrong by itself.

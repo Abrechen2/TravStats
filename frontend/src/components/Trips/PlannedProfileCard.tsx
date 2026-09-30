@@ -29,20 +29,41 @@ export default function PlannedProfileCard({
   const { t, i18n } = useTranslation(["openData"]);
   const enabled = useSettingsStore((s) => s.openDataEnabled) === true;
   const [profile, setProfile] = useState<PlannedProfile | null>(null);
+  // Open-Meteo (or our request) failed: said on the card, which used to
+  // vanish without a word.
+  const [failed, setFailed] = useState(false);
 
   useEffect(() => {
     if (!enabled) return;
     let cancelled = false;
+    setFailed(false);
     openDataApi
       .plannedProfile(routeId)
       .then((p) => !cancelled && setProfile(p))
-      .catch((err: unknown) => logger.warn("Loading the planned elevation profile failed", err));
+      .catch((err: unknown) => {
+        logger.warn("Loading the planned elevation profile failed", err);
+        if (!cancelled) setFailed(true);
+      });
     return () => {
       cancelled = true;
     };
   }, [enabled, routeId, lineKey]);
 
-  if (!enabled || !profile) return null;
+  if (!enabled) return null;
+  if (failed) {
+    return (
+      <section
+        className="rounded-lg border border-dashed border-(--color-border) p-3"
+        aria-label={t("openData:planned.title")}
+      >
+        <p className="t-label-mono mb-2 text-(--text-muted)">{t("openData:planned.title")}</p>
+        <p role="status" className="text-sm text-(--text-muted)">
+          {t("openData:planned.unavailable")}
+        </p>
+      </section>
+    );
+  }
+  if (!profile) return null;
   const nf0 = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 0 });
   const nf = new Intl.NumberFormat(i18n.language, { maximumFractionDigits: 1 });
   const figures = [

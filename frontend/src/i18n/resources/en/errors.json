@@ -25,5 +25,18 @@
     "nonHistoricalNeedsTimes": "For flights with status \"Flown\", \"Scheduled\" or \"Cancelled\", departure and arrival times must be set and the difference must be between -12h and +24h. If your date is one day off by mistake, correct it; or mark the flight as \"Historical\" if the times are unknown.",
     "noFieldToUpdate": "At least one field must be provided to update.",
     "fallbackPrefix": "Server response: "
-  }
+  },
+  "lookupProviderFailed": "The flight search came back empty because a data provider could not answer – that does not mean the flight does not exist.",
+  "providerFailure": {
+    "auth": "{{provider}}: API key rejected – please check it in Settings.",
+    "quota": "{{provider}}: quota or rate limit reached – please try again later.",
+    "timeout": "{{provider}}: no answer (timed out).",
+    "plan_restricted": "{{provider}}: your plan does not allow this query.",
+    "provider_error": "{{provider}}: provider error."
+  },
+  "lookupRateLimited": "Too many flight searches in a short time. Please wait a moment and try again.",
+  "lookupDemoForbidden": "Flight search is switched off for the demo account to protect the API quota. Please enter the flight manually.",
+  "lookupFailed": "The flight search failed. Please try again later or enter the flight manually.",
+  "airportNotInCatalogue": "Airport {{code}} is not in the catalogue – please pick it manually.",
+  "airportLoadFailedCode": "Airport {{code}} could not be loaded – please try again or pick it manually."
 }

@@ -28,6 +28,7 @@ import { ingestedTrackColumns, isDuplicateExternalRef } from "../../services/tou
 import { resolveRoute } from "../trips/tourRoutes";
 import { resolveTrip } from "../trips/resolveTrip";
 import logger from "../../utils/logger";
+import { prefillTourDateFromTrack } from "../../services/tour/tourDay";
 
 /**
  * Strava (2.7, design 2026-09-24 §5).
@@ -228,6 +229,8 @@ async function importInto(routeId: string, activityId: string, fetched: FetchedA
       },
       select: { id: true, distanceKm: true, ascentM: true },
     });
+    // A day tour with no date takes the activity's day (D2).
+    await prefillTourDateFromTrack(routeId, ingestedTrackColumns(ingested));
     return track;
   } catch (error) {
     if (isDuplicateExternalRef(error)) {

@@ -25,6 +25,7 @@ export const passportEvidenceSchema = z.enum([
   "lodging",
   "port",
   "place",
+  "rail",
   "roadtrip",
   "track",
 ]);
@@ -85,6 +86,20 @@ const timelineRoadtripSchema = z
       "the roadtrip, which is where a station is edited.",
   });
 
+const timelineRailSchema = z
+  .object({
+    kind: z.literal("rail"),
+    date: z.string().nullable(),
+    rideId: z.string(),
+    rideLabel: z.string(),
+    stationName: z.string().openapi({ description: "The ride's station in this country." }),
+  })
+  .openapi({
+    description:
+      "A completed train ride with a station in this country — one entry per ride, " +
+      "linked to the ride.",
+  });
+
 const timelineTrackSchema = z
   .object({
     kind: z.literal("track"),
@@ -111,6 +126,7 @@ export const countryTimelineEntrySchema = z.discriminatedUnion("kind", [
   timelinePlaceSchema,
   timelineLodgingSchema,
   timelineRoadtripSchema,
+  timelineRailSchema,
   timelineTrackSchema,
 ]);
 
@@ -136,6 +152,9 @@ export const countryDetailSchema = z.object({
   }),
   roadtripStations: z.number().int().openapi({
     description: "Stations of started roadtrips standing in this country.",
+  }),
+  railRides: z.number().int().openapi({
+    description: "Completed train rides with a station in this country.",
   }),
   trackDays: z
     .number()

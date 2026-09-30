@@ -1,9 +1,11 @@
 import type { JSX } from "react";
 import { Link } from "react-router-dom";
 import { useTranslation } from "../../hooks/useTranslation";
-import { formatStationClock, formatStationTime } from "../../lib/railTime";
+import { formatRailSpan } from "../../lib/railTime";
 import type { RailJourney } from "../../types/rail";
 import { Icon } from "../ui/Icon";
+import { railDistanceNoteKey } from "./railDistanceLabel";
+import { StationShortCode } from "./StationShortCode";
 
 interface Props {
   journey: RailJourney;
@@ -31,12 +33,8 @@ export function RailJourneyRow({ journey, onEdit, onDelete }: Props): JSX.Elemen
   const label = trainLabel(journey);
   // Each figure says what it measures: a straight line understates the
   // track, and a traced line may still not be the one the train took.
-  const kmNote =
-    journey.distanceSource === "great_circle"
-      ? t("rail:straightLine")
-      : journey.distanceSource === "route"
-        ? t("rail:tracedLine")
-        : null;
+  const kmNoteKey = railDistanceNoteKey(journey.distanceSource);
+  const kmNote = kmNoteKey ? t(kmNoteKey) : null;
   const km =
     journey.distanceKm === null
       ? null
@@ -48,16 +46,9 @@ export function RailJourneyRow({ journey, onEdit, onDelete }: Props): JSX.Elemen
         ? t("rail:delay", { minutes: journey.delayMinutes })
         : t("rail:onTime");
 
-  const details = [
-    `${formatStationTime(journey.departureTime, journey.depTimezone, locale)}${
-      journey.arrivalTime
-        ? ` – ${formatStationClock(journey.arrivalTime, journey.arrTimezone, locale)}`
-        : ""
-    }`,
-    label,
-    km,
-    delay,
-  ].filter((part): part is string => Boolean(part));
+  const details = [formatRailSpan(journey, locale), label, km, delay].filter(
+    (part): part is string => Boolean(part)
+  );
 
   return (
     <li
@@ -71,7 +62,9 @@ export function RailJourneyRow({ journey, onEdit, onDelete }: Props): JSX.Elemen
         </span>
         <div className="min-w-0">
           <Link to={`/rail/${journey.id}`} className="font-semibold hover:underline">
-            {journey.depStationName} → {journey.arrStationName}
+            {journey.depStationName}
+            <StationShortCode code={journey.depStationShortCode} /> → {journey.arrStationName}
+            <StationShortCode code={journey.arrStationShortCode} />
           </Link>
           <div className="t-caption">{details.join(" · ")}</div>
           {journey.trip ? <div className="t-caption">{journey.trip.name}</div> : null}

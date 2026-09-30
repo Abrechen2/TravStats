@@ -17,6 +17,10 @@ export interface PortPoint {
   lon: number;
   unlocode: string | null;
   region: string | null;
+  /** Read by the sea router's harbour approaches (Hamburg's Elbe, ...). */
+  name?: string | null;
+  city?: string | null;
+  country?: string | null;
 }
 
 export interface ComputedLeg {

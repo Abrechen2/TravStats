@@ -4,7 +4,7 @@ import { CruiseBookingParser, parseCruiseBookingText } from "../cruiseBookingPar
 import { parseLodgingBookingText } from "../lodging/lodgingBookingParser";
 import { requestTextWithDeadline } from "../http/boundedHttp";
 import { parseBookingEmail } from "../bookingParser";
-import { getOllamaTextParser } from "../parsers/text/ollamaTextParser";
+import { getLlmTextParser, getOllamaTextParser } from "../parsers/text/ollamaTextParser";
 import { clearAvailabilityCache } from "../parsers/config";
 
 /**
@@ -39,15 +39,15 @@ jest.mock("../http/boundedHttp", () => ({
 
 jest.mock("../parsers/text/ollamaTextParser", () => {
   const actual = jest.requireActual("../parsers/text/ollamaTextParser");
-  return {
-    ...actual,
-    getOllamaTextParser: jest.fn(() => ({
-      provider: "ollama",
-      checkAvailability: async () => ({ available: false, reason: "mocked out" }),
-      parseEmail: async () => [],
-      parseText: async () => [],
-    })),
-  };
+  const stub = () => ({
+    provider: "ollama",
+    checkAvailability: async () => ({ available: false, reason: "mocked out" }),
+    parseEmail: async () => [],
+    parseText: async () => [],
+  });
+  // Both builders: the flight chain builds from the resolved provider target
+  // (`getLlmTextParser`) since beta.17; the URL builder is the legacy door.
+  return { ...actual, getOllamaTextParser: jest.fn(stub), getLlmTextParser: jest.fn(stub) };
 });
 
 /** A document no template in any domain recognises, so every parser reaches
@@ -171,12 +171,13 @@ describe("the shared demo account never reaches the operator's Ollama", () => {
   describe("flight", () => {
     it("does not build an Ollama parser for the shared demo account", async () => {
       await parseBookingEmail("Eine Buchung", UNKNOWN_DOCUMENT, undefined, { userId: demoId });
+      expect(getLlmTextParser).not.toHaveBeenCalled();
       expect(getOllamaTextParser).not.toHaveBeenCalled();
     });
 
     it("still builds one for a normal account", async () => {
       await parseBookingEmail("Eine Buchung", UNKNOWN_DOCUMENT, undefined, { userId });
-      expect(getOllamaTextParser).toHaveBeenCalled();
+      expect(getLlmTextParser).toHaveBeenCalled();
     });
   });
 });

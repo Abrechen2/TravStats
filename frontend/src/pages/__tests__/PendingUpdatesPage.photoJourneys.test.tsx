@@ -40,6 +40,10 @@ vi.mock("../../components/inbox/UnfiledDocumentsSection", () => ({
 }));
 // The flight-updates tab shows it while loading; in jsdom its canvas prints a
 // "getContext is not implemented" stack per render and says nothing about tabs.
+// The trip-suggestion tab loads its own list; it has its own tests.
+vi.mock("../../components/inbox/TripSuggestionsTab", () => ({
+  default: () => <div data-testid="trip-suggestions-stub" />,
+}));
 vi.mock("../../components/GlobeLoader", () => ({
   GlobeLoader: () => <div data-testid="globe-loader-stub" />,
 }));
@@ -109,11 +113,11 @@ describe("PendingUpdatesPage — the photo-journey tab", () => {
     vi.mocked(immichApi.getSettings).mockRejectedValue(new Error("not asked in these cases"));
   });
 
-  it("offers three tabs, with the third counting the pending rows", async () => {
+  it("offers four tabs, with the photo tab counting the pending rows", async () => {
     vi.mocked(photoJourneysApi.list).mockResolvedValue([makeJourney("a"), makeJourney("b")]);
     renderPage();
 
-    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(4));
     const tab = screen.getByRole("tab", { name: new RegExp(PHOTO_TAB) });
     await waitFor(() => expect(within(tab).getByText("2")).toBeInTheDocument());
   });
@@ -121,8 +125,22 @@ describe("PendingUpdatesPage — the photo-journey tab", () => {
   it("is there with no rows at all — the scan lives behind it", async () => {
     renderPage();
 
-    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(3));
+    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(4));
     expect(screen.getByRole("tab", { name: new RegExp(PHOTO_TAB) })).toBeInTheDocument();
+  });
+
+  it("opens the trip-suggestion tab from the URL", async () => {
+    renderPage("/pending-updates?tab=trips");
+    const tab = await screen.findByRole(
+      "tab",
+      { name: /inbox.tripSuggestions.title/ },
+      { timeout: 5000 }
+    );
+    expect(tab).toHaveAttribute("aria-selected", "true");
+    // Waited for: the page fades in, and under a loaded full run the first
+    // frames still carry an opacity near 0, which toBeVisible counts as
+    // hidden. A panel left `hidden` never becomes visible, so this still fails.
+    await waitFor(() => expect(screen.getByTestId("trip-suggestions-stub")).toBeVisible());
   });
 
   it("opens from the URL and selects itself when clicked", async () => {
@@ -146,7 +164,7 @@ describe("PendingUpdatesPage — the photo-journey tab", () => {
     visible.value = false;
     renderPage("/pending-updates?tab=photos");
 
-    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(2));
+    await waitFor(() => expect(screen.getAllByRole("tab")).toHaveLength(3));
     expect(screen.queryByRole("tab", { name: new RegExp(PHOTO_TAB) })).not.toBeInTheDocument();
     expect(screen.getByRole("tab", { name: /inbox.review.title/ })).toHaveAttribute(
       "aria-selected",

@@ -23,7 +23,13 @@ import { prisma } from "../../db";
 import { CABIN_TYPES, createCruiseSchema, cruiseStopSchema } from "../../schemas/cruise";
 import { toCabinType } from "../cruise/cabinType";
 import { createCruiseRecord } from "../cruise/createCruise";
-import { cruiseFxColumnsIfChanged, findCruiseForFxMerge } from "./fxSnapshot";
+import {
+  cruiseDayColumns,
+  legacyDateOf,
+  portZones,
+  stopColumnsFromLegacy,
+} from "../timeModel/cruiseColumns";
+import { cruiseFxColumnsIfChanged, findCruiseForFxMerge, fxRefreshNote } from "./fxSnapshot";
 import * as cell from "./cells";
 import {
   MATCHED,
@@ -49,6 +55,7 @@ import {
   type SheetOutcome,
 } from "./types";
 import { changedOnly, droppedOrNone, enumCell, keepStoredClock } from "./values";
+import { companionsDiffer, resolveCompanionCell, updateWithCompanions } from "./companionLinks";
 
 /** Statuses the write schema accepts. `in_progress` is derived and stored,
  *  never written — an exported one is dropped and re-derived from the dates. */
@@ -209,9 +216,10 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
         currency,
         notes: cell.text(raw.notes),
         tags: cell.list(raw.tags),
-        companions: cell.list(raw.companions),
         tripId: trip.tripId,
       };
+      // Names AND link rows, as the form writes them (see `./companionLinks`).
+      const companionNames = cell.list(raw.companions);
       const stored = await prisma.cruise.findUniqueOrThrow({ where: { id: targetId } });
       fields.startDate = keepStoredClock(startDateValue, raw.startDate, stored.startDate);
       fields.endDate = keepStoredClock(
@@ -220,25 +228,45 @@ export async function importCruises(sheet: IncomingSheet, ctx: Ctx): Promise<She
         stored.endDate
       );
       const data: Record<string, unknown> = changedOnly(definedOnly(fields), stored);
+      const companionsChanged = companionsDiffer(companionNames, stored);
       const rowNotes = notes.length > 0 ? notes : undefined;
       const extra = { notes: rowNotes, dropped: droppedOrNone(dropped) };
-      if (Object.keys(data).length === 0) {
+      if (Object.keys(data).length === 0 && !companionsChanged) {
         out.push({ row: rowNo, action: "skip", id: targetId, label, message, ...extra });
         continue;
       }
       // FX snapshot (fix round 1, finding 3) — see `xlsxImport/fxSnapshot.ts`.
-      // Only when a column it reads actually changed.
+      // Only when a column it reads actually changed. The start is the one
+      // the row WRITES (its clock kept from the stored row), not the bare day
+      // the cell holds — comparing the day re-snapshotted every exported row.
       if ("price" in data || "currency" in data || "startDate" in data) {
+        const fx = await cruiseFxColumnsIfChanged(
+          ctx.userId,
+          { price, currency, startDate: fields.startDate as Date | undefined },
+          stored
+        );
+        Object.assign(data, fx.columns);
+        const fxNote = fxRefreshNote(fx);
+        if (fxNote) extra.notes = [...(extra.notes ?? []), fxNote];
+      }
+      // The DATE columns follow the days the row writes (ADR 0002 dual-write).
+      if ("startDate" in data || "endDate" in data) {
         Object.assign(
           data,
-          await cruiseFxColumnsIfChanged(
-            ctx.userId,
-            { price, currency, startDate: startDateValue },
-            stored
-          )
+          await cruiseDayColumns({
+            startDate: (data.startDate as Date | undefined) ?? stored.startDate,
+            endDate: (data.endDate as Date | undefined) ?? stored.endDate,
+            departurePortId: stored.departurePortId,
+            arrivalPortId: stored.arrivalPortId,
+          })
         );
       }
-      if (!ctx.dryRun) await prisma.cruise.update({ where: { id: targetId }, data });
+      if (!ctx.dryRun) {
+        const companions = companionsChanged
+          ? await resolveCompanionCell(ctx.userId, companionNames)
+          : undefined;
+        await updateWithCompanions("cruise", targetId, data, companions);
+      }
       ctx.wrote = ctx.wrote || !ctx.dryRun;
       out.push({ row: rowNo, action: "update", id: targetId, label, message, ...extra });
       continue;
@@ -327,9 +355,28 @@ export async function importCruiseStops(sheet: IncomingSheet, ctx: Ctx): Promise
       isAtSea: parsed.data.isAtSea,
       portId: parsed.data.portId ?? null,
       unresolvedPortName: parsed.data.unresolvedPortName ?? null,
-      arrivalTime: parsed.data.arrivalTime ? new Date(parsed.data.arrivalTime) : null,
-      departureTime: parsed.data.departureTime ? new Date(parsed.data.departureTime) : null,
+      // The cells are the legacy fake-UTC values an export wrote (ADR 0002).
+      arrivalTime: legacyDateOf(parsed.data.arrivalTime),
+      departureTime: legacyDateOf(parsed.data.departureTime),
       excursionNote: parsed.data.excursionNote ?? null,
+    };
+    const stopZone = stop.portId
+      ? ((await portZones([stop.portId])).get(stop.portId) ?? null)
+      : null;
+    /** The new time columns for the stop's final legacy values (dual-write). */
+    const newTimeColumns = (legacy: {
+      date: Date | null;
+      arrivalTime: Date | null;
+      departureTime: Date | null;
+    }) => {
+      const {
+        arrivalUtc,
+        departureUtc,
+        stopZone: zone,
+        stopDate,
+        timePrecision,
+      } = stopColumnsFromLegacy(legacy, stopZone);
+      return { arrivalUtc, departureUtc, stopZone: zone, stopDate, timePrecision };
     };
 
     // A stop has no userId of its own; ownership is its cruise's.
@@ -393,9 +440,18 @@ export async function importCruiseStops(sheet: IncomingSheet, ctx: Ctx): Promise
         continue;
       }
       if (!ctx.dryRun) {
+        const merged = { ...stored, ...triple, ...optional };
         await prisma.cruiseStop.update({
           where: { id: target.id },
-          data: { ...triple, ...changedOnly(optional, stored) },
+          data: {
+            ...triple,
+            ...changedOnly(optional, stored),
+            ...newTimeColumns({
+              date: stored.date,
+              arrivalTime: merged.arrivalTime ?? null,
+              departureTime: merged.departureTime ?? null,
+            }),
+          },
         });
         ctx.touchedCruises.add(target.cruiseId);
         ctx.wrote = true;
@@ -407,7 +463,15 @@ export async function importCruiseStops(sheet: IncomingSheet, ctx: Ctx): Promise
     let newId: string | null = null;
     if (!ctx.dryRun && cruiseId) {
       const created = await prisma.cruiseStop.create({
-        data: { ...stop, cruiseId },
+        data: {
+          ...stop,
+          ...newTimeColumns({
+            date: null,
+            arrivalTime: stop.arrivalTime,
+            departureTime: stop.departureTime,
+          }),
+          cruiseId,
+        },
         select: { id: true },
       });
       newId = created.id;

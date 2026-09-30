@@ -14,7 +14,9 @@ import { recheckAchievements } from "../utils/achievements";
 import { classifyVisit } from "../shared/placeCounting";
 import { deletePlacePhotoFile } from "../middleware/upload";
 import logger from "../utils/logger";
-import { toPhotoDto } from "./places/visitPhotoDto";
+import { toPhotoDto, VISIT_PHOTO_INCLUDE } from "./places/visitPhotoDto";
+import { visitTimeColumns } from "./places/visitTime";
+import { timeErrorFromZod } from "../shared/time/errors";
 import {
   createPlaceSchema,
   updatePlaceSchema,
@@ -40,6 +42,11 @@ const requireUser = (req: AuthRequest): string => {
   return req.userId;
 };
 
+import { visitTime, withVisitTimes } from "../services/places/timesDto";
+import type { PlaceTimes, VisitTimes } from "../schemas/times";
+
+type PlaceVisit = PlaceRow["visits"][number];
+
 export const PLACE_INCLUDE = { visits: true } satisfies Prisma.PlaceInclude;
 export type PlaceRow = Prisma.PlaceGetPayload<{ include: typeof PLACE_INCLUDE }>;
 
@@ -49,7 +56,11 @@ export type PlaceRow = Prisma.PlaceGetPayload<{ include: typeof PLACE_INCLUDE }>
  * and a gallery per row is a page of joins nobody asked for.
  */
 const PLACE_DETAIL_INCLUDE = {
-  visits: { include: { photos: { orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }] } } },
+  visits: {
+    include: {
+      photos: { orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }], include: VISIT_PHOTO_INCLUDE },
+    },
+  },
 } satisfies Prisma.PlaceInclude;
 
 interface PlaceAggregates {
@@ -59,6 +70,8 @@ interface PlaceAggregates {
   plannedVisitCount: number;
   /** Most recent COMPLETED visit; null when undated or never visited. */
   lastVisitAt: Date | null;
+  /** The same visit's time as a TimeValue (ADR 0002 phase 4). */
+  times: PlaceTimes;
   /**
    * Derived, never stored. Resolved from the country code with the coordinates
    * as the fallback, through the same module the achievement engine uses — so
@@ -75,6 +88,7 @@ function computeAggregates(
   let visitCount = 0;
   let plannedVisitCount = 0;
   let lastVisitAt: Date | null = null;
+  let lastVisit: PlaceRow["visits"][number] | null = null;
 
   for (const v of visits) {
     if (classifyVisit(v, now) === "planned") {
@@ -84,12 +98,14 @@ function computeAggregates(
     visitCount += 1;
     if (v.visitedAt && (lastVisitAt === null || v.visitedAt > lastVisitAt)) {
       lastVisitAt = v.visitedAt;
+      lastVisit = v;
     }
   }
   return {
     visitCount,
     plannedVisitCount,
     lastVisitAt,
+    times: { lastVisit: lastVisit ? visitTime(lastVisit) : null },
     continent: getContinent(place.lat, place.lon, place.isoCountryCode),
   };
 }
@@ -108,8 +124,17 @@ function decorate<
     lon: number;
     isoCountryCode: string | null;
   },
->(place: T, now = new Date()): T & PlaceAggregates {
-  return { ...place, ...computeAggregates(place, place.visits, now) };
+>(
+  place: T,
+  now = new Date()
+): Omit<T, "visits"> & {
+  visits: Array<T["visits"][number] & { times: VisitTimes }>;
+} & PlaceAggregates {
+  return {
+    ...place,
+    visits: place.visits.map((v) => withVisitTimes(v as T["visits"][number])),
+    ...computeAggregates(place, place.visits, now),
+  };
 }
 
 /**
@@ -437,9 +462,16 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
     if (!place) throw new AppError("Place not found", 404);
 
     const parsed = createVisitSchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    if (!parsed.success) {
+      throw timeErrorFromZod(parsed.error) ?? new AppError(parsed.error.message, 400);
+    }
     const input = parsed.data;
     await assertTripOwned(input.tripId, userId);
+    const { columns: time, writtenVia } = await visitTimeColumns(
+      input.visitedAt ?? null,
+      place,
+      req
+    );
     const documentIds = await takeDocumentIds(userId, req.body);
 
     // Recording a visit that HAPPENED is the statement "I was here", so it
@@ -458,8 +490,7 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
     // false. A place may legitimately be visited with no visit rows at all
     // ("I have been to that Maccis, no idea when"), and recomputing the flag
     // from the visits would erase exactly that.
-    const visitedAt = input.visitedAt ? new Date(input.visitedAt) : null;
-    const happened = classifyVisit({ visitedAt }) === "visited";
+    const happened = classifyVisit({ visitedAt: time.visitedAt }) === "visited";
 
     const writes: Prisma.PrismaPromise<unknown>[] = [
       prisma.placeVisit.create({
@@ -467,7 +498,8 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
           placeId: place.id,
           userId,
           tripId: input.tripId ?? null,
-          visitedAt,
+          ...time,
+          writtenVia,
           orderIdx: input.orderIdx ?? 0,
           notes: input.notes ?? null,
           rating: input.rating ?? null,
@@ -485,7 +517,7 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
 
     await recheckAchievements(userId, "visit create");
 
-    res.status(201).json({ success: true, data: visit });
+    res.status(201).json({ success: true, data: withVisitTimes(visit as PlaceVisit) });
   } catch (error) {
     next(error);
   }
@@ -500,13 +532,20 @@ router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: N
     if (!existing) throw new AppError("Visit not found", 404);
 
     const parsed = updateVisitSchema.safeParse(req.body);
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
+    if (!parsed.success) {
+      throw timeErrorFromZod(parsed.error) ?? new AppError(parsed.error.message, 400);
+    }
     const input = parsed.data;
     if (input.tripId !== undefined) await assertTripOwned(input.tripId, userId);
 
     const data: Prisma.PlaceVisitUpdateInput = {};
     if (input.visitedAt !== undefined) {
-      data.visitedAt = input.visitedAt ? new Date(input.visitedAt) : null;
+      const place = await prisma.place.findUniqueOrThrow({
+        where: { id: existing.placeId },
+        select: { id: true, lat: true, lon: true },
+      });
+      const { columns, writtenVia } = await visitTimeColumns(input.visitedAt, place, req);
+      Object.assign(data, columns, { writtenVia });
     }
     if (input.orderIdx !== undefined) data.orderIdx = input.orderIdx;
     if (input.notes !== undefined) data.notes = input.notes;
@@ -529,7 +568,7 @@ router.patch("/visits/:visitId", async (req: AuthRequest, res: Response, next: N
 
     await recheckAchievements(userId, "visit update");
 
-    res.json({ success: true, data: visit });
+    res.json({ success: true, data: withVisitTimes(visit) });
   } catch (error) {
     next(error);
   }

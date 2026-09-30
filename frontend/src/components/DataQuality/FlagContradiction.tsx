@@ -5,6 +5,8 @@ import { countryName } from "../../shared/geo/countryCode";
 import type { DataQualityFlag, FlaggedRecord } from "../../types/dataQuality";
 
 import { flaggedRecordPath } from "./flagLinks";
+import TimeValueFlag from "./TimeValueFlag";
+import HomeResidenceFlag from "./HomeResidenceFlag";
 import { formatDate as formatUserDate } from "../../lib/displayFormat";
 
 /**
@@ -199,6 +201,18 @@ export default function FlagContradiction({ flag }: { flag: DataQualityFlag }): 
         </div>
       </div>
     );
+  }
+
+  if (
+    flag.kind === "time_zone_unresolved" ||
+    flag.kind === "time_precision_unknown" ||
+    flag.kind === "time_day_ambiguous"
+  ) {
+    return <TimeValueFlag flag={flag} />;
+  }
+
+  if (flag.kind === "home_residence_unconfirmed") {
+    return <HomeResidenceFlag details={flag.details} />;
   }
 
   // A `kind` this build has no rendering for — a server running a check newer

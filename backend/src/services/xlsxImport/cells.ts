@@ -73,6 +73,21 @@ export function bool(raw: string | undefined): boolean | undefined {
 const GERMAN_DATE = /^(\d{1,2})\.(\d{1,2})\.(\d{4})(?:[ T](\d{1,2}):(\d{2})(?::(\d{2}))?)?$/;
 
 /**
+ * A cell's instant, read the same on every server. `new Date(v)` reads an
+ * ISO date-time WITHOUT an offset ("2025-07-10T23:30", "2025-07-10 23:30") in
+ * the HOST's zone, so the same file imported on a server in UTC+14 landed a
+ * day earlier than on one in UTC (ADR 0002 D6, library boundary). Such a
+ * reading follows the import's documented convention — a typed wall clock is
+ * read as UTC — explicitly; anything with an offset or a Z keeps it.
+ */
+const OFFSETLESS_DATE_TIME = /^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2}(?::\d{2}(?:\.\d{1,3})?)?)$/;
+
+function parseCellInstant(v: string): Date {
+  const offsetless = OFFSETLESS_DATE_TIME.exec(v);
+  return new Date(offsetless ? `${offsetless[1]}T${offsetless[2]}Z` : v);
+}
+
+/**
  * A date as a plain `YYYY-MM-DD` string, or undefined.
  *
  * Cells written by our own exporter come back as ISO timestamps; a hand-typed
@@ -93,7 +108,7 @@ export function isoDate(raw: string | undefined): string | null | undefined {
     return `${y}-${m.padStart(2, "0")}-${d.padStart(2, "0")}`;
   }
 
-  const parsed = new Date(v);
+  const parsed = parseCellInstant(v);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed.toISOString().slice(0, 10);
 }
@@ -127,7 +142,7 @@ export function isoTimestamp(raw: string | undefined): string | null | undefined
     return `${date}T${time}.000Z`;
   }
 
-  const parsed = new Date(v);
+  const parsed = parseCellInstant(v);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed.toISOString();
 }
@@ -146,7 +161,7 @@ export function hasClock(raw: string | undefined): boolean {
 export function isoDateTime(raw: string | undefined): string | null | undefined {
   const v = raw?.trim();
   if (!v) return undefined;
-  const parsed = new Date(v);
+  const parsed = parseCellInstant(v);
   if (Number.isNaN(parsed.getTime())) return null;
   return parsed.toISOString();
 }

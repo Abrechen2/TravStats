@@ -11,6 +11,17 @@ import { getContinent } from "../../utils/continents";
 import { buildAnchors, suggestVisits } from "../../services/places/visitSuggestions";
 import { completePlaceAddress } from "../../services/places/addressBackfill";
 import logger from "../../utils/logger";
+import { timeFieldSchema } from "../../shared/time/timeInput";
+import { timeErrorFromZod } from "../../shared/time/errors";
+import { resolveTimeField } from "../../shared/time/resolveInput";
+import { zoneOf } from "../../shared/time/zoneOf";
+import {
+  NO_VISIT_TIME,
+  visitColumnsFromDay,
+  visitColumnsFromResolved,
+  visitColumnsFromSuggestedInstant,
+  type VisitTimeColumns,
+} from "../../services/timeModel/visitColumns";
 import { countableCruiseWhere } from "../../shared/cruiseCounting";
 
 /**
@@ -460,18 +471,40 @@ router.get(
  *  does, so the visit lands with the date the evidence gave it rather than as
  *  another undated one. */
 const tickSchema = z.object({
-  visitedAt: z.string().datetime().nullable().optional(),
+  /** A suggestion's ISO date (read as its day), `YYYY-MM-DD`, or a typed `{local}`. */
+  visitedAt: timeFieldSchema({ allowDate: true, impliedPlace: true }).nullable().optional(),
 });
+
+/** The visit columns a tick records at the checklist item's position (ADR 0002). */
+async function tickVisitColumns(
+  input: z.infer<typeof tickSchema>["visitedAt"],
+  item: { lat: number; lon: number },
+  req: AuthRequest
+): Promise<VisitTimeColumns> {
+  if (!input) return NO_VISIT_TIME;
+  if (input.kind === "date") return visitColumnsFromDay(input.date, item);
+  if (input.kind === "instant") return visitColumnsFromSuggestedInstant(input.utc, item);
+  const resolved = await resolveTimeField(input, {
+    field: "visitedAt",
+    placeZone: () => zoneOf(item),
+    userId: req.userId!,
+    viaToken: Boolean(req.apiToken),
+  });
+  return visitColumnsFromResolved(resolved);
+}
 
 router.post("/items/:itemId/tick", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
     const parsed = tickSchema.safeParse(req.body ?? {});
-    if (!parsed.success) throw new AppError(parsed.error.message, 400);
-    const visitedAt = parsed.data.visitedAt ? new Date(parsed.data.visitedAt) : null;
+    if (!parsed.success) {
+      throw timeErrorFromZod(parsed.error) ?? new AppError(parsed.error.message, 400);
+    }
 
     const item = await prisma.curatedPlace.findUnique({ where: { id: req.params.itemId } });
     if (!item) throw new AppError("Checklist item not found", 404);
+    const time = await tickVisitColumns(parsed.data.visitedAt, item, req);
+    const visitedAt = time.visitedAt;
 
     // Ticking implies subscribing. Someone who arrives from a search result and
     // ticks one wonder means to be following that list; making them subscribe
@@ -535,7 +568,9 @@ router.post("/items/:itemId/tick", async (req: AuthRequest, res: Response, next:
         select: { id: true },
       });
       if (!already) {
-        await prisma.placeVisit.create({ data: { placeId: place.id, userId, visitedAt } });
+        await prisma.placeVisit.create({
+          data: { placeId: place.id, userId, ...time, writtenVia: "suggestion" },
+        });
       }
     }
 

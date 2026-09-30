@@ -1,4 +1,6 @@
+import { saveErrorKey } from "../../lib/saveErrorMessage";
 import type {
+  RailGeometryReport,
   RailJourney,
   RailJourneyInput,
   RailLookupAnswer,
@@ -6,6 +8,7 @@ import type {
   RailTravelClass,
 } from "../../types/rail";
 import { toStationWallClock } from "../../lib/railTime";
+import { railArrival, railDeparture } from "../../lib/entityTimes";
 import { EMPTY_STATION, type RailStationDraft } from "./RailStationField";
 
 /**
@@ -86,8 +89,8 @@ export function draftFrom(journey: RailJourney | null): RailFormDraft {
       stationId: journey.arrStationId,
     },
     // Read back on each station's own clock — the time the ticket printed.
-    departureLocal: toStationWallClock(journey.departureTime, journey.depTimezone),
-    arrivalLocal: toStationWallClock(journey.arrivalTime, journey.arrTimezone),
+    departureLocal: toStationWallClock(railDeparture(journey)),
+    arrivalLocal: toStationWallClock(railArrival(journey)),
     distanceKm:
       journey.distanceSource === "user" && journey.distanceKm !== null
         ? String(journey.distanceKm)
@@ -211,6 +214,36 @@ function stationFromStop(stop: RailLookupStop): RailStationDraft {
   };
 }
 
+/** The user's value when they typed one, else the timetable's. */
+function fillOnly(typed: string, fromTimetable: string | null): string {
+  return typed.trim() !== "" ? typed : (fromTimetable ?? typed);
+}
+
+/** A typed value the lookup kept although the timetable says otherwise. */
+export interface RailLookupKeptField {
+  field: "operator" | "trainCategory";
+  yours: string;
+  timetable: string;
+}
+
+/** Where `applyLookup` kept the user's value over a different timetable one. */
+export function lookupKeptFields(
+  draft: RailFormDraft,
+  match: NonNullable<RailLookupAnswer["match"]>
+): RailLookupKeptField[] {
+  const fields = [
+    ["operator", draft.operator, match.operator],
+    ["trainCategory", draft.trainCategory, match.trainCategory],
+  ] as const;
+  return fields.flatMap(([field, typed, timetable]) => {
+    const yours = typed.trim();
+    if (yours === "" || !timetable || yours.toLowerCase() === timetable.trim().toLowerCase()) {
+      return [];
+    }
+    return [{ field, yours, timetable }];
+  });
+}
+
 /**
  * Take a lookup's answer over into the form: the train, the boarding stop
  * and the chosen alighting stop with their planned times, and the match
@@ -218,6 +251,14 @@ function stationFromStop(stop: RailLookupStop): RailStationDraft {
  * What the timetable cannot know — seat, price, delay, notes — is left as
  * the user had it. A planned time the provider did not give leaves the
  * user's own time standing rather than blanking it.
+ *
+ * The operator and the category are FILLED, never replaced: a user who typed
+ * "ÖBB" for a Railjet running on German track knows who they travelled with,
+ * and the timetable's "Deutsche Bahn AG" overwrote it (acceptance 2026-09-26).
+ * `lookupKeptFields` says where the two disagree, so the panel can show it.
+ * The number is the query itself, so the timetable's split of it ("ICE 696"
+ * into ICE + 696) is taken; the stations and times belong to the stop the
+ * user picked in the panel, which is the choice "Übernehmen" confirms.
  */
 export function applyLookup(
   draft: RailFormDraft,
@@ -231,8 +272,8 @@ export function applyLookup(
   }
   return {
     ...draft,
-    operator: match.operator ?? draft.operator,
-    trainCategory: match.trainCategory ?? draft.trainCategory,
+    operator: fillOnly(draft.operator, match.operator),
+    trainCategory: fillOnly(draft.trainCategory, match.trainCategory),
     trainNumber: match.trainNumber ?? draft.trainNumber,
     departure: stationFromStop(from),
     arrival: stationFromStop(to),
@@ -240,4 +281,146 @@ export function applyLookup(
     arrivalLocal: to.arrivalLocal ?? draft.arrivalLocal,
     lookup: { provider: match.provider, ref: match.ref },
   };
+}
+
+/** ~1 km in degrees: nearer than this, a picked station IS the stop. */
+const SAME_STOP_DEGREES = 0.01;
+
+/**
+ * Where the user still has to go after this train: the arrival they had
+ * already chosen, when the stop they alight at is somewhere else. That is a
+ * change of trains — the lookup found the first leg of a connection — and the
+ * form offers the rest as a second journey on the same booking. Null when the
+ * user had no arrival yet, or alights exactly there.
+ */
+export function onwardDestination(
+  draft: RailFormDraft,
+  match: NonNullable<RailLookupAnswer["match"]>,
+  arrivalIndex: number
+): RailStationDraft | null {
+  const chosen = draft.arrival;
+  const stop = match.stops[arrivalIndex];
+  if (!stop || !isStationComplete(chosen) || chosen.lat === null || chosen.lon === null) {
+    return null;
+  }
+  const apart = Math.hypot(stop.lat - chosen.lat, stop.lon - chosen.lon);
+  return apart < SAME_STOP_DEGREES ? null : chosen;
+}
+
+/**
+ * The next leg of a connection, continuing to a destination the user had
+ * already picked before the lookup split the ride (see `onwardDestination`).
+ */
+export function onwardDraftFrom(previous: RailJourney, destination: RailStationDraft | null) {
+  const next = connectionDraftFrom(previous);
+  return destination ? { ...next, arrival: destination } : next;
+}
+
+/**
+ * What the form says after a save that asked for a traced line and did not
+ * get one (review 2026-09-26, finding 4) — before, "saved" was all it said and
+ * the map quietly drew the chord. Null when there is nothing to say.
+ */
+export function geometryNotice(
+  report: RailGeometryReport | null
+): { level: "warning" | "info"; key: string; reasonKey: string } | null {
+  if (!report || report.fallback === null) return null;
+  const reasonKey = `rail:geometryNotice.reason.${report.fallback}`;
+  if (report.outcome === "straight") {
+    return { level: "warning", key: "rail:geometryNotice.straight", reasonKey };
+  }
+  if (report.outcome === "kept")
+    return { level: "info", key: "rail:geometryNotice.kept", reasonKey };
+  // A trace was asked for and the line was routed over the tracks instead.
+  if (report.outcome === "routed")
+    return { level: "info", key: "rail:geometryNotice.routed", reasonKey };
+  return null;
+}
+
+/** The form fields a refusal can be shown beside. */
+export type RailFormErrorField = "departureLocal" | "arrivalLocal";
+
+/** A refused save as the form shows it: a message key, maybe beside one field. */
+export interface RailSaveError {
+  key: string;
+  field: RailFormErrorField | null;
+  /** For `invalidField`: the label of the field the server named. */
+  fieldLabelKey?: string;
+}
+
+/** The server's field names, as the form labels them. */
+const FIELD_LABEL_KEYS: Record<string, string> = {
+  operator: "rail:form.operator",
+  trainCategory: "rail:form.category",
+  trainNumber: "rail:form.number",
+  departureStation: "rail:form.departureStation",
+  arrivalStation: "rail:form.arrivalStation",
+  departureLocal: "rail:form.departureTime",
+  arrivalLocal: "rail:form.arrivalTime",
+  distanceKm: "rail:form.distance",
+  travelClass: "rail:form.class",
+  coach: "rail:form.coach",
+  seat: "rail:form.seatNumber",
+  delayMinutes: "rail:form.delay",
+  bookingReference: "rail:form.bookingReference",
+  price: "rail:form.price",
+  currency: "rail:form.currency",
+  tags: "rail:form.tags",
+  companions: "rail:form.companions",
+  tripId: "rail:form.trip",
+  notes: "rail:form.notes",
+};
+
+const TIME_FIELDS: readonly string[] = ["departureLocal", "arrivalLocal"];
+
+/**
+ * A failed save, read by its stable `code` and `field` (review 2026-09-26,
+ * finding 5). The server's `error` prose is English and written for a log —
+ * it is never shown; an unknown refusal gets the generic sentence.
+ */
+export function saveErrorFrom(err: unknown): RailSaveError {
+  const data = (err as { response?: { data?: { code?: unknown; field?: unknown } } })?.response
+    ?.data;
+  const code = typeof data?.code === "string" ? data.code : null;
+  const field = typeof data?.field === "string" ? data.field : null;
+  const timeField = field && TIME_FIELDS.includes(field) ? (field as RailFormErrorField) : null;
+  switch (code) {
+    case "RAIL_ARRIVAL_BEFORE_DEPARTURE":
+      return { key: "rail:form.errors.arrivalBeforeDeparture", field: "arrivalLocal" };
+    // The rail code and the time model's general one (ADR 0002, D3).
+    case "RAIL_LOCAL_TIME_NONEXISTENT":
+    case "LOCAL_TIME_NONEXISTENT":
+      return { key: "rail:form.errors.nonexistentTime", field: timeField };
+    case "RAIL_INVALID_INPUT": {
+      const fieldLabelKey = field ? FIELD_LABEL_KEYS[field] : undefined;
+      return fieldLabelKey
+        ? { key: "rail:form.errors.invalidField", field: timeField, fieldLabelKey }
+        : { key: "rail:form.errors.invalid", field: null };
+    }
+    default:
+      // Everything that is not a rail field code reads through the shared
+      // save rule (validation, duplicate, database down, demo, rate limit,
+      // no network), so the rail dialog says what every other form says.
+      return { key: saveErrorKey(err, "rail:form.saveError"), field: null };
+  }
+}
+
+/**
+ * The zone a station's typed time is on, where the form can know it: the
+ * stored journey's zone (its `times`), while the station is still the one it
+ * was stored with. A new pick has no zone here — the server finds it from the
+ * coordinates — so the clock-change notice then stays silent and the server's
+ * verdict stands.
+ */
+export function knownStationZone(
+  journey: RailJourney | null,
+  end: "dep" | "arr",
+  station: RailStationDraft | null
+): string | null {
+  if (!journey || !station) return null;
+  const lat = end === "dep" ? journey.depLat : journey.arrLat;
+  const lon = end === "dep" ? journey.depLon : journey.arrLon;
+  if (station.lat !== lat || station.lon !== lon) return null;
+  const value = end === "dep" ? railDeparture(journey) : railArrival(journey);
+  return value?.zone ?? null;
 }

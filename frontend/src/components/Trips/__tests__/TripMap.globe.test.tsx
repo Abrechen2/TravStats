@@ -78,7 +78,6 @@ vi.mock("react-map-gl/maplibre", async () => {
     ReactMod.useImperativeHandle(ref, () => ({ getMap: () => fakeMap }), []);
     ReactMod.useEffect(() => {
       props.onLoad?.({ target: fakeMap });
-      // eslint-disable-next-line react-hooks/exhaustive-deps
     }, []);
     return ReactMod.createElement("div", { "data-testid": "fake-map" }, props.children);
   });
@@ -168,6 +167,29 @@ describe("TripMap: the globe toggle mounts the overlay the way the globe needs i
     await toggleToGlobe();
     await waitFor(() => expect(captured.length).toBeGreaterThan(1));
     expect(captured[captured.length - 1].props.interleaved).toBe(true);
+  });
+
+  // Acceptance D9 (2026-09-26): an empty tour or roadtrip map said "Diese
+  // Reise … Flüge / Kreuzfahrten".
+  it("says an empty map in the words of what it draws", async () => {
+    const { unmount } = render(<TripMap trip={{ stops: [], emptyKey: "trips:tours.map.empty" }} />);
+    expect(await screen.findByText("trips:tours.map.empty")).toBeInTheDocument();
+    expect(screen.queryByText("trips:detail.map.empty")).toBeNull();
+    unmount();
+    render(<TripMap trip={{ stops: [] }} />);
+    expect(await screen.findByText("trips:detail.map.empty")).toBeInTheDocument();
+  });
+
+  // Acceptance 2026-09-26: the toggle read "🗺 Flat" in the German UI.
+  it("labels the projection toggle through the translation, not in English", async () => {
+    render(<TripMap trip={trip} />);
+    const toggle = await screen.findByRole("button", { pressed: false });
+    expect(toggle).toHaveTextContent("trips:detail.map.projectionFlat");
+    expect(toggle).not.toHaveTextContent("🗺 Flat");
+    await toggleToGlobe();
+    expect(await screen.findByRole("button", { pressed: true })).toHaveTextContent(
+      "trips:detail.map.projectionGlobe"
+    );
   });
 
   it("rebuilds the overlay AFTER the projection changed, never before", async () => {

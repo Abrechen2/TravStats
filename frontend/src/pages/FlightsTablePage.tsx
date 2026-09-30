@@ -31,6 +31,7 @@ import { logger } from "../lib/logger";
 import { priceCellState } from "../lib/flightPriceCell";
 import { FlightRow, FLIGHT_COLUMN_LAYOUT } from "../components/flightsTable/FlightRow";
 import { FlightsFilterBar } from "../components/flightsTable/FlightsFilterBar";
+import { LoyaltyFilterNotice, useLoyaltyListFilter } from "../components/Loyalty/LoyaltyListFilter";
 import { Table, type TableColumn } from "../components/ui/Table";
 import { formatAmount } from "../lib/units";
 import { SkeletonTable } from "../components/SkeletonLoader";
@@ -81,7 +82,12 @@ export default function FlightsTablePage(): JSX.Element {
   const [search, setSearch] = useState<string>("");
   const debouncedSearch = useDebouncedValue(search);
   const [statusFilter, setStatusFilter] = useState<FlightStatusFilter>("all");
-  const [yearFilter, setYearFilter] = useState<string>("all");
+  // A loyalty link (`?membership=…&year=…`) opens the logbook on one card's
+  // flights; its year seeds the ordinary year filter.
+  const loyaltyFilter = useLoyaltyListFilter();
+  const [yearFilter, setYearFilter] = useState<string>(() =>
+    loyaltyFilter.linkedYear !== null ? String(loyaltyFilter.linkedYear) : "all"
+  );
   const [monthFilter, setMonthFilter] = useState<string>("all");
   const [airlineFilter, setAirlineFilter] = useState<string>("all");
   const [loading, setLoading] = useState(true);
@@ -310,8 +316,10 @@ export default function FlightsTablePage(): JSX.Element {
       airline: airlineFilter,
       trip: tripFilter,
       special: specialFilter,
+      membershipId: loyaltyFilter.membershipId,
     }),
     [
+      loyaltyFilter.membershipId,
       debouncedSearch,
       statusFilter,
       yearFilter,
@@ -407,6 +415,7 @@ export default function FlightsTablePage(): JSX.Element {
     setAirlineFilter("all");
     setTripFilter("all");
     setSpecialFilter("all");
+    loyaltyFilter.clear();
   };
 
   // Month, airline, trip and special type are the four this domain owns.
@@ -414,7 +423,8 @@ export default function FlightsTablePage(): JSX.Element {
     (monthFilter === "all" ? 0 : 1) +
     (airlineFilter === "all" ? 0 : 1) +
     (tripFilter === "all" ? 0 : 1) +
-    (specialFilter === "all" ? 0 : 1);
+    (specialFilter === "all" ? 0 : 1) +
+    (loyaltyFilter.membershipId === null ? 0 : 1);
   const hasActiveFilter =
     search.length > 0 || statusFilter !== "all" || yearFilter !== "all" || extraActiveCount > 0;
 
@@ -479,6 +489,15 @@ export default function FlightsTablePage(): JSX.Element {
             {t("settings:import.openHub")}
           </Link>
         </p>
+
+        {loyaltyFilter.membershipId !== null && (
+          <div className="mb-3">
+            <LoyaltyFilterNotice
+              membershipId={loyaltyFilter.membershipId}
+              onClear={loyaltyFilter.clear}
+            />
+          </div>
+        )}
 
         <FlightsFilterBar
           search={search}

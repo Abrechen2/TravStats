@@ -6,17 +6,19 @@
  * order — first to `accept()` wins. Haversine is always last and
  * always accepts.
  *
- * Phase progression:
- *   1 (current) — haversine only
- *   2 — + eurostat (ocean)
- *   3 — + river-osm  (inland)
- *   4 — + canal-heuristic (Panama, Suez, ...)
+ *   river-osm  — both ports on the same river
+ *   sea route  — the line the map draws (`seaRouteCalculator`)
+ *   haversine  — the chord, when the router could not route either
+ *
+ * `marnetCalculator` measured a second reading of the same network and
+ * handed near-chord legs to haversine while the map drew them routed; it is
+ * out of the chain (see seaRouteCalculator.ts) and kept for the smoke script.
  */
 
 import logger from "../../utils/logger";
 import { haversineCalculator } from "./haversineCalculator";
-import { marnetCalculator } from "./marnetCalculator";
 import { riverCalculator } from "./riverCalculator";
+import { seaRouteCalculator } from "./seaRouteCalculator";
 import type { ComputedLeg, DistanceCalculator, PortPoint } from "./types";
 
 const calculators: DistanceCalculator[] = [
@@ -24,7 +26,7 @@ const calculators: DistanceCalculator[] = [
   // until one accepts AND its compute() succeeds. Haversine is always
   // last and always accepts.
   riverCalculator,
-  marnetCalculator,
+  seaRouteCalculator,
   haversineCalculator,
 ];
 

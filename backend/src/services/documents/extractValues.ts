@@ -1,12 +1,11 @@
-import { isCurrencyCode } from "../../shared/currencies";
 import logger from "../../utils/logger";
 import type { ParserSupportedDomain } from "../../shared/domains";
 import { extractEmailFromFile } from "../emailExtractor";
-import { parseAmount } from "../lodging/documentTotal";
-import { parseDocument, type ParsedDocumentBody } from "../parsing/parseDocument";
+import { parseDocument } from "../parsing/parseDocument";
 import { hasUsableText } from "../parsing/usableText";
 import { extractTextFromPdf } from "../pdfParser";
 import { readDocumentForParse, recordParse } from "./parseRetention";
+import { valuesOf, type ExtractedValues, type LegHints } from "./documentValues";
 
 /**
  * "Take the values from this receipt" — the parser pipeline run on a document
@@ -26,18 +25,6 @@ import { readDocumentForParse, recordParse } from "./parseRetention";
 /** The formats the text parsers read. An image needs OCR, which is its own, slower route. */
 export const EXTRACTABLE_FORMATS = ["pdf", "eml", "emailText"] as const;
 
-export type SeatClass = "economy" | "premium_economy" | "business" | "first";
-
-export interface ExtractedValues {
-  price: number | null;
-  currency: string | null;
-  bookingReference: string | null;
-  /** Flights only. */
-  seatNumber: string | null;
-  /** Flights only, mapped onto the four classes a flight stores. */
-  seatClass: SeatClass | null;
-}
-
 export interface ExtractValuesResult {
   domain: ParserSupportedDomain;
   parserUsed: string | null;
@@ -47,113 +34,11 @@ export interface ExtractValuesResult {
   reason: "noText" | "nothingFound" | null;
 }
 
-export interface ExtractValuesInput {
+export interface ExtractValuesInput extends LegHints {
   domain: ParserSupportedDomain;
-  /** Picks the leg out of a multi-flight booking. */
-  flightNumber?: string;
-  /** `YYYY-MM-DD`, the same purpose, when the number alone is ambiguous. */
-  departureDate?: string;
 }
 
-const EMPTY: ExtractedValues = {
-  price: null,
-  currency: null,
-  bookingReference: null,
-  seatNumber: null,
-  seatClass: null,
-};
-
-/** The same mapping the flight review dialog applies to a parsed class. */
-export function toSeatClass(raw: string | undefined | null): SeatClass | null {
-  if (!raw) return null;
-  const lower = raw.toLowerCase();
-  if (lower.includes("first")) return "first";
-  if (lower.includes("business")) return "business";
-  if (lower.includes("premium")) return "premium_economy";
-  if (lower.includes("economy")) return "economy";
-  return null;
-}
-
-const text = (value: unknown): string | null =>
-  typeof value === "string" && value.trim() !== "" ? value.trim() : null;
-
-const currency = (value: unknown): string | null => {
-  const code = text(value)?.toUpperCase() ?? null;
-  return code !== null && isCurrencyCode(code) ? code : null;
-};
-
-const amount = (value: unknown): number | null => {
-  if (typeof value === "number") return Number.isFinite(value) && value > 0 ? value : null;
-  const parsed = typeof value === "string" ? parseAmount(value) : null;
-  return parsed !== null && parsed > 0 ? parsed : null;
-};
-
-const compact = (value: string | undefined): string =>
-  (value ?? "").replace(/\s+/g, "").toUpperCase();
-
-type FlightBody = Extract<ParsedDocumentBody, { domain: "flight" }>;
-type ParsedLeg = FlightBody["flights"][number];
-
-/**
- * The leg this entry is. By flight number, then by departure day; with one
- * leg, that leg. Several legs and no match is an abstention for the per-leg
- * fields — the seat of the outbound flight is not the seat of the return.
- */
-function pickLeg(legs: ParsedLeg[], input: ExtractValuesInput): ParsedLeg | null {
-  if (legs.length === 1) return legs[0];
-  const number = compact(input.flightNumber);
-  const byNumber = number ? legs.filter((l) => compact(l.flightNumber) === number) : [];
-  const byDay = input.departureDate
-    ? (byNumber.length > 0 ? byNumber : legs).filter((l) =>
-        (l.departureTime ?? "").startsWith(input.departureDate!)
-      )
-    : [];
-  if (byDay.length === 1) return byDay[0];
-  return byNumber.length === 1 ? byNumber[0] : null;
-}
-
-/** One value shared by every leg, or null when the legs disagree. */
-function shared<T>(legs: ParsedLeg[], read: (leg: ParsedLeg) => T | null): T | null {
-  const values = [...new Set(legs.map(read).filter((v): v is T => v !== null))];
-  return values.length === 1 ? values[0] : null;
-}
-
-function flightValues(body: FlightBody, input: ExtractValuesInput): ExtractedValues {
-  const leg = pickLeg(body.flights, input);
-  const booking = (l: ParsedLeg): string | null => text(l.bookingReference) ?? text(l.pnr);
-  return {
-    price: leg ? amount(leg.price) : shared(body.flights, (l) => amount(l.price)),
-    currency: leg ? currency(leg.currency) : shared(body.flights, (l) => currency(l.currency)),
-    bookingReference: leg ? booking(leg) : shared(body.flights, booking),
-    seatNumber: leg ? text(leg.seat) : null,
-    seatClass: leg ? toSeatClass(leg.seatClass) : null,
-  };
-}
-
-function valuesOf(body: ParsedDocumentBody, input: ExtractValuesInput): ExtractedValues {
-  if (body.domain === "flight") return flightValues(body, input);
-  // A confirmation for two cruises or two stays names two prices; which one
-  // this entry is cannot be told from the document alone.
-  if (body.domain === "cruise") {
-    if (body.cruises.length !== 1) return EMPTY;
-    const cruise = body.cruises[0].input;
-    return {
-      ...EMPTY,
-      price: amount(cruise.price),
-      currency: currency(cruise.currency),
-      bookingReference: text(cruise.bookingReference),
-    };
-  }
-  if (body.candidates.length !== 1) return EMPTY;
-  const stay = body.candidates[0].stay;
-  if (!stay) return EMPTY;
-  return {
-    ...EMPTY,
-    price: amount(stay.totalPrice),
-    currency: currency(stay.currency),
-    bookingReference: text(stay.bookingReference),
-  };
-}
+export type { ExtractedValues, SeatClass } from "./documentValues";
 
 interface DocumentText {
   text: string;
@@ -161,6 +46,7 @@ interface DocumentText {
   html?: string;
   referenceDate?: Date;
   source: "email" | "document";
+  attachments?: NonNullable<ReturnType<typeof extractEmailFromFile>["attachments"]>;
 }
 
 async function readText(userId: string, documentId: string): Promise<DocumentText> {
@@ -182,6 +68,7 @@ async function readText(userId: string, documentId: string): Promise<DocumentTex
       subject: mail.subject || undefined,
       ...(mail.html ? { html: mail.html } : {}),
       ...(mail.sentAt ? { referenceDate: mail.sentAt } : {}),
+      ...(mail.attachments ? { attachments: mail.attachments } : {}),
       source: "email",
     };
   }

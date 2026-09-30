@@ -8,9 +8,11 @@ import { useToastStore } from "../../store/toastStore";
 import { GlobeLoader } from "../GlobeLoader";
 import { useMinLoadingState } from "../../hooks/useMinLoadingState";
 import { formatDate } from "../../lib/displayFormat";
+import { useConfirmDialog } from "../../hooks/useConfirmDialog";
 
 export default function MyTemplates(): JSX.Element {
   const { t } = useTranslation(["parser", "common"]);
+  const { confirm: askConfirm, confirmDialog } = useConfirmDialog();
   const [templates, setTemplates] = useState<UserTemplateItem[]>([]);
   const [loading, setLoading] = useState(true);
   const showLoader = useMinLoadingState(loading, 2000);
@@ -74,7 +76,8 @@ export default function MyTemplates(): JSX.Element {
   };
 
   const handleDelete = async (id: string): Promise<void> => {
-    if (!window.confirm(t("parser:myTemplates.confirmDelete"))) return;
+    const message = t("parser:myTemplates.confirmDelete");
+    if (!(await askConfirm({ message, destructive: true }))) return;
     setActionLoading(id);
     try {
       await parserTemplatesApi.delete(id);
@@ -219,6 +222,7 @@ export default function MyTemplates(): JSX.Element {
           {previews[tmpl.id] && <TemplatePreviewPanel preview={previews[tmpl.id]} />}
         </div>
       ))}
+      {confirmDialog}
     </div>
   );
 }

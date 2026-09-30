@@ -7,8 +7,39 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useMinLoadingState } from "../../hooks/useMinLoadingState";
 import { GlobeLoader } from "../GlobeLoader";
 import { logger } from "../../lib/logger";
-import { extractApiErrorMessage } from "../../lib/apiError";
+import { parseFailureMessage } from "../../lib/parseErrorCopy";
 import type { ParseableImportDomain } from "./types";
+import type { ImportDocument } from "./documentHandoff";
+import {
+  parseLlmProviderInfo,
+  providerDisclosure,
+  type LlmProviderInfo,
+} from "../../lib/llmProviderCopy";
+
+/** What `/parser-capabilities` says about the model — absent fields are older backends. */
+interface Capabilities {
+  hasLlm: boolean;
+  llmDisabledByAdmin?: boolean;
+  llmRefusal?: string | null;
+  llmProvider?: unknown;
+}
+
+type LlmState =
+  | { kind: "unknown" }
+  | { kind: "disabled" }
+  | { kind: "cloudNotConsented" }
+  | { kind: "providerIncomplete" }
+  | { kind: "none" }
+  | { kind: "available"; provider: LlmProviderInfo | null };
+
+function llmStateOf(data: Capabilities | undefined): LlmState {
+  if (!data) return { kind: "unknown" };
+  if (data.llmDisabledByAdmin) return { kind: "disabled" };
+  if (data.llmRefusal === "cloud_not_consented") return { kind: "cloudNotConsented" };
+  if (data.llmRefusal === "provider_incomplete") return { kind: "providerIncomplete" };
+  if (!data.hasLlm) return { kind: "none" };
+  return { kind: "available", provider: parseLlmProviderInfo(data.llmProvider) };
+}
 
 interface EmailImportTabProps {
   /** Only a domain the backend can actually parse for — see `types.ts`. */
@@ -23,13 +54,26 @@ interface EmailImportTabProps {
    * the right one is guesswork. The name is null for pasted text, which has
    * no source file to name.
    */
-  onEmailResult: (result: ParseEmailResult, fileName?: string | null) => void;
+  onEmailResult: (
+    result: ParseEmailResult,
+    fileName?: string | null,
+    document?: ImportDocument
+  ) => void;
   /**
    * Called when a `.pdf` is dropped in the email tab — kept for back-compat
    * with the flight workflow that auto-detects PDFs in this tab.
    */
-  onPdfResult?: (result: ParsePdfResult, fileName?: string | null) => void;
+  onPdfResult?: (
+    result: ParsePdfResult,
+    fileName?: string | null,
+    document?: ImportDocument
+  ) => void;
   onError: (message: string) => void;
+  /**
+   * A document another dialog handed over (D1): read once on mount, exactly
+   * as if the user had dropped it here.
+   */
+  initialDocument?: ImportDocument | null;
 }
 
 type DropState = "idle" | "over" | "loading";
@@ -40,19 +84,24 @@ export default function EmailImportTab({
   onEmailResult,
   onPdfResult,
   onError,
+  initialDocument = null,
 }: EmailImportTabProps): JSX.Element {
   const { t } = useTranslation(["import", "common"]);
   const [dropState, setDropState] = useState<DropState>("idle");
   const [emailText, setEmailText] = useState("");
-  const [hasLlm, setHasLlm] = useState<boolean | null>(null);
+  // Each absence of the model is its own sentence to the person about to
+  // import: none configured, switched off on purpose, a cloud provider the
+  // admin has not agreed to, or an incomplete setup. And when a model IS
+  // there, where the text goes — before it is sent (beta.17).
+  const [llm, setLlm] = useState<LlmState>({ kind: "unknown" });
   const fileInputRef = useRef<HTMLInputElement>(null);
   const showLoader = useMinLoadingState(dropState === "loading", 2000);
 
   useEffect(() => {
     api
-      .get<{ hasLlm: boolean }>("/parser-capabilities")
-      .then(({ data }) => setHasLlm(Boolean(data?.hasLlm)))
-      .catch(() => setHasLlm(null));
+      .get<Capabilities>("/parser-capabilities")
+      .then(({ data }) => setLlm(llmStateOf(data)))
+      .catch(() => setLlm({ kind: "unknown" }));
   }, []);
 
   const handleFile = useCallback(
@@ -71,10 +120,10 @@ export default function EmailImportTab({
           }
           const pdfBase64 = btoa(binary);
           const result = await parseApi.parsePdf(pdfBase64, domain);
-          onPdfResult(result, file.name);
+          onPdfResult(result, file.name, { kind: "file", file });
         } catch (err) {
           logger.error("EmailImportTab: PDF parse failed", err);
-          onError(extractApiErrorMessage(err, t("import:pdf.parseError")));
+          onError(parseFailureMessage(err, t, "import:pdf.parseError"));
         } finally {
           setDropState("idle");
         }
@@ -89,10 +138,10 @@ export default function EmailImportTab({
       setDropState("loading");
       try {
         const result = await parseApi.parseEmailFile(file, domain);
-        onEmailResult(result, file.name);
+        onEmailResult(result, file.name, { kind: "file", file });
       } catch (err) {
         logger.error("EmailImportTab: email file parse failed", err);
-        onError(extractApiErrorMessage(err, t("import:email.parseError")));
+        onError(parseFailureMessage(err, t, "import:email.parseError"));
       } finally {
         setDropState("idle");
       }
@@ -100,21 +149,42 @@ export default function EmailImportTab({
     [domain, acceptedExtensions, onEmailResult, onPdfResult, onError, t]
   );
 
-  const handleTextParse = useCallback(async (): Promise<void> => {
-    if (!emailText.trim()) return;
-    setDropState("loading");
-    try {
-      const result = await parseApi.parseEmail(emailText, undefined, domain);
-      // Pasted text has no source file, so the log row stays unnamed rather
-      // than being given a made-up one.
-      onEmailResult(result, null);
-    } catch (err) {
-      logger.error("EmailImportTab: email text parse failed", err);
-      onError(extractApiErrorMessage(err, t("import:email.parseError")));
-    } finally {
-      setDropState("idle");
+  const parseText = useCallback(
+    async (text: string): Promise<void> => {
+      if (!text.trim()) return;
+      setDropState("loading");
+      try {
+        const result = await parseApi.parseEmail(text, undefined, domain);
+        // Pasted text has no source file, so the log row stays unnamed rather
+        // than being given a made-up one.
+        onEmailResult(result, null, { kind: "text", text });
+      } catch (err) {
+        logger.error("EmailImportTab: email text parse failed", err);
+        onError(parseFailureMessage(err, t, "import:email.parseError"));
+      } finally {
+        setDropState("idle");
+      }
+    },
+    [domain, onEmailResult, onError, t]
+  );
+
+  const handleTextParse = useCallback(
+    (): Promise<void> => parseText(emailText),
+    [emailText, parseText]
+  );
+
+  // A handed-over document is read once, on mount — a later re-render with
+  // new callbacks must not parse it a second time.
+  const handedOver = useRef(false);
+  useEffect(() => {
+    if (!initialDocument || handedOver.current) return;
+    handedOver.current = true;
+    if (initialDocument.kind === "file") void handleFile(initialDocument.file);
+    else {
+      setEmailText(initialDocument.text);
+      void parseText(initialDocument.text);
     }
-  }, [emailText, domain, onEmailResult, onError, t]);
+  }, [initialDocument, handleFile, parseText]);
 
   const onDrop = useCallback(
     (e: React.DragEvent<HTMLDivElement>): void => {
@@ -128,11 +198,34 @@ export default function EmailImportTab({
 
   return (
     <div className="flex flex-col gap-4">
-      {hasLlm === false && (
+      {llm.kind === "disabled" && (
+        <div
+          data-testid="llm-disabled-notice"
+          className="text-sm text-(--text-muted) bg-(--bg-surface) border border-(--color-border) rounded-lg px-4 py-3"
+        >
+          <p className="font-medium mb-1">{t("import:email.llmDisabled.title")}</p>
+          <p>{t("import:email.llmDisabled.body")}</p>
+        </div>
+      )}
+      {(llm.kind === "cloudNotConsented" || llm.kind === "providerIncomplete") && (
+        <div
+          data-testid="llm-provider-refusal"
+          className="text-sm text-amber-300 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3"
+        >
+          <p className="font-medium mb-1">{t(`import:email.${llm.kind}.title`)}</p>
+          <p>{t(`import:email.${llm.kind}.body`)}</p>
+        </div>
+      )}
+      {llm.kind === "none" && (
         <div className="text-sm text-amber-300 bg-amber-900/20 border border-amber-700 rounded-lg px-4 py-3">
           <p className="font-medium mb-1">{t("import:email.regexWarning.title")}</p>
           <p className="whitespace-pre-line">{t("import:email.regexWarning.body")}</p>
         </div>
+      )}
+      {llm.kind === "available" && llm.provider && (
+        <p data-testid="llm-provider-disclosure" className="text-xs text-(--text-muted)">
+          {providerDisclosure(llm.provider, t)}
+        </p>
       )}
 
       {showLoader ? (

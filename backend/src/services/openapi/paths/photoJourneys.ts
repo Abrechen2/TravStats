@@ -10,7 +10,9 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { prismaColumns } from "../prismaColumns";
 import { errorContent } from "./shared";
+import { jobStartedSchema } from "./jobs";
 
 const badInput = { description: "Invalid input", content: errorContent };
 const notFound = { description: "Not found", content: errorContent };
@@ -26,9 +28,52 @@ registry.registerPath({
     "`place` (photos within 2 km of an own place, no visit that day; `placeId`, `distanceKm`), " +
     "`trip` (an own, flown airport other than home within 300 km; `airportIata`, `distanceKm`, `spreadKm`) " +
     "or `stay` (nights away with no dated stay, named by an own place nearby; `placeId`, `nights`). " +
-    "Suggestions only: nothing is recorded until the client creates the entry and PATCHes the row.",
+    "Suggestions only: nothing is recorded until the client creates the entry and PATCHes the row. " +
+    "Each row is named from what is stored (no lookup per request): `placeName` is the own place " +
+    "a finding points at, `label` that name or else the city, then the country, the scan's reverse " +
+    "lookup stored — null when nothing is known.",
   tags: miscTag,
-  responses: { 200: { description: "Photo journeys" } },
+  request: {
+    query: z.object({ status: z.enum(["pending", "accepted", "dismissed"]).optional() }),
+  },
+  responses: {
+    200: {
+      description: "Photo journeys, newest first",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(
+              z.object({
+                ...prismaColumns("PhotoJourney"),
+                placeName: z
+                  .string()
+                  .nullable()
+                  .describe("The name of the own place a place/stay finding points at"),
+                label: z
+                  .string()
+                  .nullable()
+                  .describe("What to call the finding: placeName, else city, else countryName"),
+                startDay: z
+                  .string()
+                  .nullable()
+                  .describe(
+                    "The first photo's calendar day (YYYY-MM-DD) where it was taken; null when the position has no zone"
+                  ),
+                endDay: z
+                  .string()
+                  .nullable()
+                  .describe(
+                    "The last photo's calendar day where it was taken; null without a zone"
+                  ),
+              })
+            ),
+          }),
+        },
+      },
+    },
+    400: badInput,
+  },
 });
 
 const nightlyScanSettings = z.object({
@@ -77,8 +122,48 @@ registry.registerPath({
   method: "post",
   path: "/photo-journeys/scan",
   summary: "Scan photos for journeys",
+  description:
+    "Reads the library in the window (default: the last ten years) and reverse-geocodes what " +
+    "no record explains; forty seconds is the floor. With `background: true` it answers 202 " +
+    "with a job (poll GET /jobs/{id}) whose result is the 200 body's `data`.",
   tags: miscTag,
-  responses: { 202: { description: "Scan started" } },
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: z.object({
+            since: z.string().datetime().optional(),
+            until: z.string().datetime().optional(),
+            background: z.boolean().default(false),
+          }),
+        },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "Scanned, or `scanned: false` when the account has no Immich",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.boolean(),
+            data: z.object({
+              scanned: z.boolean(),
+              reason: z.literal("immich-not-configured").optional(),
+              photosSeen: z.number().int().optional(),
+              truncated: z.boolean().optional(),
+              created: z.number().int().optional(),
+              updated: z.number().int().optional(),
+            }),
+          }),
+        },
+      },
+    },
+    202: {
+      description: "Started as a background job (`background: true`)",
+      content: { "application/json": { schema: jobStartedSchema } },
+    },
+  },
 });
 
 registry.registerPath({

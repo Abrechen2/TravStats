@@ -13,7 +13,8 @@
     "training": "Training Config",
     "logging": "Logging",
     "backups": "Instance backups",
-    "smtp": "Email / SMTP"
+    "smtp": "Email / SMTP",
+    "timeModel": "Time model"
   },
   "tabs2": {
     "general": "General",
@@ -34,6 +35,7 @@
       "empty": "No results.",
       "created": "Ship added.",
       "createFailed": "Failed to add ship.",
+      "alreadyExists": "\"{{name}}\" is already in the catalogue – nothing was created.",
       "missingFields": "Name and cruise line are required.",
       "menuLabel": "Ships"
     },
@@ -159,6 +161,10 @@
           "railDomain": {
             "name": "Rail",
             "what": "The Rail area: a logbook for train journeys with a station catalogue, train lookup, map, statistics and Excel import and export. A roadtrip with “Rail” as its vehicle can be taken over as train rides."
+          },
+          "cruiseTracks": {
+            "name": "Recorded tracks on cruises",
+            "what": "The “Recorded tracks” section on a cruise’s page: a GPS recording (a file or Dawarich) replaces the computed sea route of the legs it covers – on the map and in the statistics."
           }
         }
       },
@@ -427,14 +433,15 @@
     "logFileDownloadFailed": "Failed to download log file",
     "logFileDeleted": "Log file deleted successfully!",
     "logFileDeletFailed": "Failed to delete log file",
-    "cleanupComplete": "Cleanup complete! Deleted {{filesDeleted}} files, freed {{spaceFreed}} MB",
+    "cleanupComplete": "Cleanup complete: deleted {{deletedCount}} files, freed {{freed}}",
     "cleanupFailed": "Failed to cleanup logs",
     "ollamaTestSuccess": "Ollama reachable – {{count}} model(s) found",
     "ollamaTestFailed": "Ollama connection failed",
     "enabled": "enabled",
     "disabled": "disabled",
     "twoFactorReset": "Two-factor has been reset",
-    "twoFactorResetFailed": "Two-factor could not be reset"
+    "twoFactorResetFailed": "Two-factor could not be reset",
+    "cleanupPartial": "{{failedCount}} files could not be deleted."
   },
   "prompts": {
     "enterEmail": "Enter email (optional):",
@@ -470,16 +477,18 @@
       "warn": "Warning",
       "info": "Info (Default)",
       "debug": "Debug (Verbose)",
-      "trace": "Trace (Very Verbose)"
+      "trace": "Trace (Very Verbose)",
+      "pinned": "Pinned to “{{level}}” by the LOG_LEVEL environment variable. The setting here is saved but takes effect only once LOG_LEVEL is removed.",
+      "effective": "In effect: {{level}}"
     },
     "retention": {
       "label": "Log Retention (Days)",
-      "hint": "Log files older than this will be automatically deleted"
+      "hint": "Log files older than this are deleted automatically every day and at startup."
     },
     "categories": {
       "http": {
         "label": "Log HTTP Requests",
-        "hint": "Log all HTTP requests with timing, IP, user, and status (category: http)"
+        "hint": "Log every HTTP request with its path (without query string), status, duration and IP (category: http)"
       },
       "database": {
         "label": "Log Database Queries",
@@ -488,7 +497,8 @@
       "parser": {
         "label": "Log Parser Operations",
         "hint": "Log LLM operations with provider details (category: parser)"
-      }
+      },
+      "verboseOnly": "These logs are written only while the log level is Debug or Trace."
     },
     "files": {
       "title": "Log Files",
@@ -500,10 +510,44 @@
       "colModified": "Modified",
       "colActions": "Actions",
       "download": "Download",
-      "delete": "Delete"
+      "delete": "Delete",
+      "view": "View"
+    },
+    "viewer": {
+      "title": "View log entries",
+      "file": "File",
+      "chooseFile": "Choose a file",
+      "level": "Level",
+      "levelAll": "All levels",
+      "category": "Category",
+      "categoryPlaceholder": "e.g. security",
+      "search": "Text",
+      "searchPlaceholder": "Search term",
+      "apply": "Apply filters",
+      "newer": "Newer",
+      "older": "Older",
+      "range": "{{from}}–{{to}} of {{total}} (newest first)",
+      "empty": "No matching entries.",
+      "loading": "Loading entries …",
+      "colTime": "Time",
+      "colLevel": "Level",
+      "colCategory": "Category",
+      "colEvent": "Event / message",
+      "details": "Details"
+    },
+    "errors": {
+      "LOG_FILE_INVALID_NAME": "Invalid file name.",
+      "LOG_FILE_NOT_FOUND": "The log file no longer exists – it was probably rotated or deleted.",
+      "LOG_FILE_UNREADABLE": "The log file could not be read.",
+      "loadFailed": "Could not load log entries."
     }
   },
   "parserSettings": {
+    "builtin": {
+      "ocrHint": "Reads boarding passes from images",
+      "templatesName": "Templates (regex)",
+      "templatesHint": "Reads booking emails from known senders"
+    },
     "title": "Global Parser Configuration",
     "description": "Default parsers for all users. Local ones are free; cloud AI costs per request and needs a key.",
     "defaultSettings": "Default Settings",
@@ -511,11 +555,19 @@
     "visionParser": "Default Vision Parser (Boarding Pass)",
     "textParser": "Default Text Parser (Email)",
     "autoHelp": "Auto mode automatically selects the best available parser",
+    "llmSwitch": {
+      "title": "AI model",
+      "label": "Use the AI model (reading bookings and trip summaries)",
+      "hint": "Off: TravStats asks no language model at all – not even when an Ollama URL is entered above or OLLAMA_URL is set. Bookings are then read with the built-in templates only."
+    },
     "ollama": {
       "title": "Ollama LLM Parser",
-      "description": "Ollama runs locally or on your network and analyzes booking confirmations with an LLM. Ideal for multi-stop and complex emails.",
+      "description": "Ollama runs locally or on your network and analyzes booking confirmations with an LLM. Ideal for multi-stop and complex emails. Always tried first when a URL is set — no consent needed within your network.",
       "urlLabel": "Ollama URL",
       "urlPlaceholder": "http://localhost:11434",
+      "remoteOptIn": {
+        "label": "I agree that booking data is sent to this address if it is outside my network."
+      },
       "modelLabel": "Model",
       "modelPlaceholder": "gemma3:12b",
       "testButton": "Test Connection",
@@ -532,6 +584,90 @@
       "templateFirst": "Templates first, AI as the fallback (recommended)",
       "llmFirst": "AI first, templates as the fallback",
       "hint": "Applies to flights, stays, cruises and places alike. Measured 2026-09-17 on 31 flight mails: the templates read every one in under a second, the language model took 19 minutes and missed three. \"AI first\" is worth it when no template covers your senders."
+    },
+    "userPermissions": {
+      "title": "User permissions",
+      "allowUserApiKeys": "Allow users to add their own flight data API keys (Airlabs, Aviationstack, OpenSky)"
+    },
+    "provider": {
+      "title": "AI provider",
+      "description": "Who reads the bookings no template knows? Ollama is always tried first when it is configured — local or on your network, no consent of its own needed (except for an address outside your network). If Ollama does not answer, TravStats asks the enabled cloud providers below, in order. Every cloud provider needs its OWN key and its OWN consent — allowing OpenAI does not allow Anthropic or Google.",
+      "chain": {
+        "title": "Cloud provider priority",
+        "hint": "If Ollama does not answer (not configured, or not reachable), TravStats tries these providers in order — but only the ones with BOTH a key AND consent. A provider missing either is skipped, never tried. A provider that answers ends the chain — even with a thin answer.",
+        "moveUp": "Move up",
+        "moveDown": "Move down"
+      },
+      "baseUrlLabel": "Base URL (with version path)",
+      "baseUrlPlaceholder": "https://api.openai.com/v1",
+      "baseUrlHint": "Outside your network only with https://. Examples: https://openrouter.ai/api/v1, https://ollama.com/v1",
+      "modelLabel": "Model",
+      "keyLabel": "API key",
+      "keyPlaceholder": "sk-…",
+      "keyHint": "Stored encrypted and never shown again — only the first and last four characters.",
+      "testButton": "Test connection",
+      "testing": "Testing …",
+      "test": {
+        "ok": "Connected — the provider offers {{count}} models.",
+        "okModelMissing": "Connected, but this provider does not offer the model “{{model}}”.",
+        "okNoList": "Connected. The provider lists no models — check the model name yourself.",
+        "cloud": "This provider is outside your network.",
+        "errors": {
+          "invalid_url": "That is not a valid URL.",
+          "unsupported_protocol": "Only http:// or https:// is possible.",
+          "credentials_in_url": "Credentials do not belong in the URL — enter the key in the “API key” field.",
+          "https_required": "A provider outside your network needs https://.",
+          "auth": "The provider rejected the API key.",
+          "unreachable": "The provider is not reachable. Check the URL and the network.",
+          "failed": "The connection test failed."
+        }
+      },
+      "saveErrors": {
+        "LLM_BASE_URL_HTTPS_REQUIRED": "An AI provider outside your network needs https://. Nothing was saved.",
+        "LLM_BASE_URL_INVALID": "The AI provider's base URL is invalid. Nothing was saved."
+      },
+      "slots": {
+        "openai": {
+          "name": "OpenAI",
+          "modelPlaceholder": "gpt-4o-mini",
+          "consent": {
+            "title": "Send bookings to OpenAI",
+            "warning": "Your booking mails are sent to OpenAI's servers (USA) — up to 12,000 characters of the email or PDF, for every booking no template knows, including names, booking numbers, travel dates and prices. What OpenAI does with it is governed by its own terms, not by TravStats.",
+            "label": "I agree that this data is sent to OpenAI.",
+            "inactive": "OpenAI is configured but not yet consented to — without consent, OpenAI is never asked."
+          }
+        },
+        "anthropic": {
+          "name": "Anthropic",
+          "modelPlaceholder": "claude-3-5-haiku-latest",
+          "consent": {
+            "title": "Send bookings to Anthropic",
+            "warning": "Your booking mails are sent to Anthropic's servers (USA) — up to 12,000 characters of the email or PDF, for every booking no template knows, including names, booking numbers, travel dates and prices. What Anthropic does with it is governed by its own terms, not by TravStats.",
+            "label": "I agree that this data is sent to Anthropic.",
+            "inactive": "Anthropic is configured but not yet consented to — without consent, Anthropic is never asked."
+          }
+        },
+        "google": {
+          "name": "Google",
+          "modelPlaceholder": "gemini-2.0-flash",
+          "consent": {
+            "title": "Send bookings to Google",
+            "warning": "Your booking mails are sent to Google's servers (USA) — up to 12,000 characters of the email or PDF, for every booking no template knows, including names, booking numbers, travel dates and prices. What Google does with it is governed by its own terms, not by TravStats.",
+            "label": "I agree that this data is sent to Google.",
+            "inactive": "Google is configured but not yet consented to — without consent, Google is never asked."
+          }
+        },
+        "custom": {
+          "name": "Custom provider (OpenAI-compatible)",
+          "hint": "Your own server or a cloud service with an OpenAI-compatible interface — OpenRouter, Ollama Cloud, a LAN vLLM/LM Studio.",
+          "consent": {
+            "title": "Send bookings to this provider",
+            "warning": "If this provider is outside your network, TravStats sends it the text of the email or PDF (up to 12,000 characters) for every booking no template knows — including names, booking numbers, travel dates and prices. What the provider does with it is governed by its terms, not by TravStats.",
+            "label": "I agree that this data is sent to this provider.",
+            "inactive": "The saved provider is outside your network. Until you agree, this provider stays out of the chain."
+          }
+        }
+      }
     }
   },
   "backup": {
@@ -587,16 +723,20 @@
       "keyMismatchBody": "The stored API keys, the SMTP password and the Immich/Dawarich credentials cannot be decrypted on this instance. Put the original key back (ENCRYPTION_KEY, or encryption.key in the secrets directory) and try again — or confirm here and enter those credentials again afterwards.",
       "keyMismatchAcknowledge": "Understood: I will re-enter the credentials afterwards",
       "archiveIncomplete": "The archive is missing the part you asked to restore. Nothing was restored.",
-      "archiveUnreadable": "The archive's file part cannot be read. Nothing was restored."
+      "archiveUnreadable": "The archive's file part cannot be read. Nothing was restored.",
+      "inProgress": "Restoring …"
     },
     "settingsSaved": "Backup settings saved",
     "settingsFailed": "Failed to save backup settings",
     "schedule": {
       "title": "Automatic Backup",
-      "description": "Scheduled backups run at 02:00 UTC – daily, on Sundays or on the 1st of the month, depending on the interval.",
+      "description": "Scheduled backups run at 02:00 in the zone chosen below – daily, on Sundays or on the 1st of the month, depending on the interval.",
       "enableAutoBackup": "Enable automatic backup",
       "interval": "Interval",
-      "retentionDays": "Retention (days)"
+      "retentionDays": "Retention (days)",
+      "zone": "Time zone of the backup hour",
+      "zoneHost": "The server's time zone ({{zone}})",
+      "zoneEffective": "Backups run at 02:00 in {{zone}}."
     },
     "toasts": {
       "loadFailed": "Failed to load backups",
@@ -609,7 +749,20 @@
       "deleted": "Backup deleted",
       "deleteFailed": "Failed to delete backup",
       "synced": "Backup uploaded",
-      "syncFailed": "Failed to upload backup"
+      "syncFailed": "Failed to upload backup",
+      "created": "Backup created",
+      "restored": "Backup restored",
+      "outcomeUnknown": "The server no longer reports the outcome — check the backup list before trying again."
+    },
+    "failure": {
+      "BACKUP_TOOL_MISSING": "The backup tool (pg_dump, psql or tar) is not installed on the server. The official Docker image ships it — on your own installation, please install the PostgreSQL client tools.",
+      "BACKUP_DISK_FULL": "The backup drive is full. Delete old backups or enlarge the volume.",
+      "BACKUP_PERMISSION_DENIED": "The server may not read or write the backup directory. Please check the permissions of the data volume.",
+      "BACKUP_DB_UNREACHABLE": "The backup tool cannot reach the database. Please check that the database is running and the connection settings are right.",
+      "BACKUP_TOOL_VERSION_MISMATCH": "pg_dump is older than the database server. Please update the PostgreSQL client tools to the server's version.",
+      "BACKUP_FAILED": "The backup failed. The cause is in the server log.",
+      "RESTORE_FAILED": "The restore failed. The cause is in the server log.",
+      "BACKUP_INTERRUPTED": "The backup was cut off because the server restarted or a restore was applied. Simply start it again."
     }
   },
   "feedback": {
@@ -725,5 +878,173 @@
     "removeFailed": "Could not remove the image.",
     "replacesShipped": "Your images replace the shipped ones entirely. Remove them all to go back to the shipped set.",
     "hint": "Dark portrait photographs with a quiet left half work best — that is where the text sits. On bright ones the text becomes hard to read."
+  },
+  "timeModel": {
+    "unknownCode": "unknown ({{code}})",
+    "tables": {
+      "flights": "Flights",
+      "rail_journeys": "Rail journeys",
+      "place_visits": "Place visits",
+      "cruise_stops": "Cruise stops",
+      "cruises": "Cruises",
+      "trip_stops": "Trip stops",
+      "trips": "Trips",
+      "trip_journal_entries": "Travel journal",
+      "lodging_stays": "Stays",
+      "users": "Profiles"
+    },
+    "reasons": {
+      "no_position": "No position (missing or 0, 0)",
+      "zone_unresolved": "No time zone is known at this position",
+      "port_unresolved": "Port not matched",
+      "sea_day_time": "Sea day with a time – at sea there is no time zone",
+      "semantics_unknown": "Unclear whether the time is local or UTC",
+      "local_time_nonexistent": "This time did not exist there (clock change)",
+      "writer_unknown": "Could not tell whether the web or the app wrote the time",
+      "date_only_day_differs": "Date only – the local day differs from the UTC day",
+      "day_anchor_ambiguous": "Not certain which calendar day is meant",
+      "instant_without_zone": "Stored without the station's time zone",
+      "other": "a reason this version does not know yet"
+    },
+    "columns": {
+      "departure": "Departure",
+      "arrival": "Arrival",
+      "visited_at": "Visit time",
+      "arrival_time": "Arrival",
+      "departure_time": "Departure",
+      "date": "Date",
+      "day": "Day",
+      "start_date": "Start",
+      "end_date": "End",
+      "check_in": "Check-in",
+      "check_out": "Check-out",
+      "birthdate": "Birthday",
+      "check_in_time": "Check-in time",
+      "check_out_time": "Check-out time",
+      "dep_timezone": "Departure time zone",
+      "arr_timezone": "Arrival time zone",
+      "visited_zone": "Visit time zone",
+      "stop_zone": "Stop time zone",
+      "start_zone": "Start time zone",
+      "end_zone": "End time zone",
+      "stay_zone": "Stay time zone",
+      "other": "Time value"
+    },
+    "backfillErrors": {
+      "TIMEZONE_LOOKUP_UNAVAILABLE": "the time zone lookup was unavailable",
+      "JOB_FAILED": "the run stopped with an error"
+    },
+    "errors": {
+      "unreadable": "The server answered in a shape this version of the interface cannot read. Nothing is shown rather than numbers that are wrong.",
+      "outcomeUnknown": "The server no longer reports the outcome (probably a restart). Whether anything was written is unknown – a new dry run shows what is still open.",
+      "forbidden": "You need admin rights for this.",
+      "notAvailable": "This server does not know the time model migration yet.",
+      "DRY_RUN_NOT_FOUND": "The server no longer knows this dry run (expired or after a restart). Nothing was written – start a new one.",
+      "RE_RESOLVE_RUNNING": "A re-resolution is already running. Wait until it has finished."
+    },
+    "report": {
+      "title": "Time migration – report",
+      "description": "What the migration to the new time model converted on this instance – and what it did not.",
+      "reload": "Reload",
+      "loading": "Loading report …",
+      "errors": {
+        "loadFailed": "The report could not be loaded.",
+        "notAVerdict": "That does not mean nothing was migrated – only that the report cannot be fetched right now."
+      },
+      "status": {
+        "pending": "The migration has not run on this instance yet. It runs once on the next server start.",
+        "running": "The migration is running. Reload the report once it has finished.",
+        "failed": "The migration stopped: {{error}}. What was converted until then is listed below; the original values are unchanged.",
+        "noErrorCode": "no reason given",
+        "completed": "The migration ran on {{when}} (time zone data {{tzdata}})."
+      },
+      "outcomes": {
+        "converted": "Converted",
+        "alreadyFilled": "Already in the new format",
+        "answered": "Answered since",
+        "open": "Open"
+      },
+      "statement": {
+        "converted_one": "{{count}} entry was converted; the new values are in columns of their own.",
+        "converted_other": "{{count}} entries were converted; the new values are in columns of their own.",
+        "alreadyFilled_one": "{{count}} entry already had the new values (newly created or from the demo) and was left unchanged.",
+        "alreadyFilled_other": "{{count}} entries already had the new values (newly created or from the demo) and were left unchanged.",
+        "answered_one": "{{count}} entry the migration left open has been answered since – a zone or time added, the question confirmed, or the entry deleted.",
+        "answered_other": "{{count}} entries the migration left open have been answered since – a zone or time added, the question confirmed, or the entry deleted.",
+        "open_one": "{{count}} entry was not fully migrated – nothing was guessed. Every open value is a question in its owner's inbox.",
+        "open_other": "{{count}} entries were not fully migrated – nothing was guessed. Every open value is a question in its owner's inbox.",
+        "flags": "Questions in the inbox: {{open}} open · {{resolved}} reported corrected · {{dismissed}} confirmed as correct",
+        "legacyUntouched": "The original columns were not changed. Every conversion is logged and can be undone."
+      },
+      "unchanged": {
+        "title": "Deliberately left alone:",
+        "item": "{{domain}} ({{why}})",
+        "domains": {
+          "tours": "Tours",
+          "track_windows": "Track time windows",
+          "loyalty": "Loyalty programmes",
+          "country_days": "Country days",
+          "photos": "Photos"
+        },
+        "why": {
+          "already_dates": "already plain days",
+          "already_instants": "already real instants",
+          "no_time_columns": "no time values",
+          "utc_by_decision": "UTC days by decision"
+        }
+      },
+      "tables": {
+        "caption": "By table",
+        "table": "Table",
+        "reasonsCaption": "Open by reason",
+        "rulesCaption": "Rules in detail"
+      },
+      "ruleStatus": {
+        "open": "open",
+        "resolved": "converted"
+      },
+      "noReason": "no reason",
+      "openRows": {
+        "title_one": "{{count}} open value",
+        "title_other": "{{count}} open values",
+        "answer": "Answer in the inbox",
+        "openEditor": "Open the editor",
+        "otherInbox": "in {{user}}'s inbox",
+        "unknownOwner": "account not identifiable",
+        "truncated": "Not every open value is listed – the numbers above count them all."
+      }
+    },
+    "reResolve": {
+      "title": "Re-resolve time zones",
+      "description": "Every time carries the zone it was stored with. If a place was corrected or a country changed its time zone, a dry run shows which entries would get a different zone and how far their local time would shift. Nothing is written until you apply.",
+      "dryRun": "Start dry run",
+      "dryRunning": "Dry run running …",
+      "progress": "{{done}} of {{total}} checked",
+      "progressUnknown": "Running – with many entries this can take a minute or two.",
+      "summary": "Checked: {{checked}} · Zone would change: {{changes}} · Time zone data {{tzdata}}",
+      "unresolvable_one": "{{count}} entry cannot be resolved to a zone now – it stays as stored.",
+      "unresolvable_other": "{{count}} entries cannot be resolved to a zone now – they stay as stored.",
+      "noChanges": "No time zone would change. There is nothing to apply.",
+      "table": {
+        "entry": "Entry",
+        "from": "Before",
+        "to": "New",
+        "delta": "Local time"
+      },
+      "truncated": "{{shown}} of {{total}} changes shown. All {{total}} are applied.",
+      "noInstant": "no time of day",
+      "apply": "Apply",
+      "applying": "Applying …",
+      "confirm": {
+        "title": "Re-resolve time zones?",
+        "message_one": "{{count}} entry gets the new zone from the dry run. Its local time shifts by the difference shown; the stored instant stays.",
+        "message_other": "{{count}} entries get the new zone from the dry run. Their local time shifts by the difference shown; the stored instants stay."
+      },
+      "applied": "Applied: {{applied}} · Skipped because changed since the dry run: {{skipped}}",
+      "errors": {
+        "dryRunFailed": "The dry run failed. Nothing was changed.",
+        "applyFailed": "The re-resolution failed. A new dry run shows what is still open."
+      }
+    }
   }
 }

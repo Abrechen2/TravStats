@@ -19,10 +19,12 @@ vi.mock("../../lib/api", async (importOriginal) => {
   };
 });
 
-// Mock the auth store so we have a predictable logged-in user.
+// Mock the auth store so we have a predictable logged-in user; `isAdmin` is
+// switched per test.
+const authState = vi.hoisted(() => ({ isAdmin: false }));
 vi.mock("../../store/authStore", () => ({
   useAuthStore: () => ({
-    user: { id: "u1", username: "tester", email: "t@t.de", isAdmin: false },
+    user: { id: "u1", username: "tester", email: "t@t.de", isAdmin: authState.isAdmin },
     logout: vi.fn().mockResolvedValue(undefined),
   }),
 }));
@@ -54,6 +56,13 @@ vi.mock("@/lib/api/dataQualityFlags", async (importOriginal) => {
   };
 });
 
+// The trip-suggestion count joins the badge (2026-09-26); unmocked it reaches
+// the network. Hoisted so a case can put suggestions in the inbox.
+const tripSuggestionCount = vi.hoisted(() => ({ value: 0 }));
+vi.mock("@/lib/api/tripSuggestions", () => ({
+  tripSuggestionsApi: { count: vi.fn(async () => tripSuggestionCount.value) },
+}));
+
 // Use the real settingsStore so useEnabledDomains reads actual state.
 vi.unmock("../../store/settingsStore");
 
@@ -70,7 +79,9 @@ import { useSettingsStore } from "../../store/settingsStore";
 // menu spoke English in the German UI), so they match raw keys now too.
 describe("NavigationBar — round-4 header", () => {
   beforeEach(() => {
+    authState.isAdmin = false;
     useSettingsStore.setState({ enabledDomains: ["flight", "cruise"] });
+    tripSuggestionCount.value = 0;
   });
 
   function renderNav(path = "/dashboard") {
@@ -120,6 +131,12 @@ describe("NavigationBar — round-4 header", () => {
     expect(screen.queryByTestId("inbox-dot")).toBeNull();
   });
 
+  it("counts open trip suggestions in the Posteingang badge", async () => {
+    tripSuggestionCount.value = 3;
+    renderNav();
+    expect(await screen.findByRole("link", { name: "dataQuality:inbox.nav (3)" })).toBeTruthy();
+  });
+
   it("no longer draws Bug, Support or System in the row", () => {
     renderNav();
     expect(screen.queryByRole("button", { name: /^Bug$/ })).toBeNull();
@@ -128,10 +145,20 @@ describe("NavigationBar — round-4 header", () => {
   });
 
   it("reaches settings, the bug report and support through the account menu", () => {
+    authState.isAdmin = true;
     renderNav();
     fireEvent.click(screen.getByRole("button", { name: /userMenu\.label/ }));
     expect(screen.getByRole("menuitem", { name: /dashboard:settings/ })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: /diagnostic\.reportBug/ })).toBeTruthy();
     expect(screen.getByRole("menuitem", { name: /support\.donate/ })).toBeTruthy();
+  });
+
+  // Owner 2026-09-25: the diagnostic bundle is admins-only on the server, so
+  // an ordinary account must not be offered an entry that can only fail.
+  it("offers no diagnostic bug report to an ordinary account", () => {
+    renderNav();
+    fireEvent.click(screen.getByRole("button", { name: /userMenu\.label/ }));
+    expect(screen.getByRole("menuitem", { name: /dashboard:settings/ })).toBeTruthy();
+    expect(screen.queryByRole("menuitem", { name: /diagnostic\.reportBug/ })).toBeNull();
   });
 });

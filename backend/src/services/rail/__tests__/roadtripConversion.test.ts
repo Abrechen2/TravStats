@@ -74,11 +74,19 @@ describe("planRoadtripRailConversion", () => {
     expect(routed.geometry).toHaveLength(2);
   });
 
-  it("keeps a day-only date a day, says the time is a placeholder, and invents no arrival", () => {
+  it("keeps a day-only date a day and invents no arrival", () => {
     const [first] = planRoadtripRailConversion(section()).journeys;
     expect(first.departureDay).toBe("2025-07-01");
-    expect(first.notes).toContain("placeholder at noon");
     expect(first).not.toHaveProperty("arrivalDay");
+  });
+
+  // Review 2026-09-26, finding 7: an English sentence was written into the
+  // user's own notes. The placeholder is said by the UI, from externalRef.
+  it("writes no prose into the ride's notes — only the section's own notes travel", () => {
+    const [bare] = planRoadtripRailConversion(section()).journeys;
+    expect(bare.notes).toBeNull();
+    const [noted] = planRoadtripRailConversion(section({ notes: " Sitzplatz 45 " })).journeys;
+    expect(noted.notes).toBe("Sitzplatz 45");
   });
 
   it("keys each ride by section and leg, so a second run can find it", () => {

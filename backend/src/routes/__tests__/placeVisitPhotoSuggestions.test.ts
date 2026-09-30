@@ -144,6 +144,29 @@ describe("place-visit photo suggestions", () => {
     expect(range.takenBefore.toISOString()).toBe("2024-05-01T21:59:59.999Z");
   });
 
+  it("reads a Companion visit's day on the place's clock, not the legacy column's UTC date", async () => {
+    // 00:30 on 2 May in Rome, written by the Companion as a real instant: the
+    // mixed legacy column's UTC date says 1 May (ADR 0002, Q4).
+    const visit = await prisma.placeVisit.findUniqueOrThrow({ where: { id: visitId } });
+    const companion = await prisma.placeVisit.create({
+      data: {
+        userId: visit.userId,
+        placeId: visit.placeId,
+        visitedAt: new Date("2024-05-01T22:30:00.000Z"),
+        visitedAtUtc: new Date("2024-05-01T22:30:00.000Z"),
+        visitedZone: "Europe/Rome",
+        visitedPrecision: "minute",
+        writtenVia: "companion",
+      },
+    });
+    const res = await request(app)
+      .get(`/api/v1/places/visits/${companion.id}/photo-suggestions`)
+      .set("Cookie", cookie);
+    expect(res.status).toBe(200);
+    expect(res.body.data.day).toBe("2024-05-02");
+    await prisma.placeVisit.delete({ where: { id: companion.id } });
+  });
+
   it("serves a suggested library thumbnail and refuses one that was not suggested", async () => {
     fetchAssetStream.mockResolvedValue({
       stream: Readable.from([Buffer.from("immich-bytes")]),

@@ -1,4 +1,6 @@
 import { Router, Response, NextFunction } from "express";
+import { localDay } from "../shared/time/instant";
+import { zoneOfCoordinates } from "../shared/time/resolveInput";
 import { z } from "zod";
 
 import { prisma } from "../db";
@@ -7,6 +9,7 @@ import { authenticate, requireWriteScope, AuthRequest } from "../middleware/auth
 import { immichImportLimiter } from "../middleware/rateLimit";
 import { scanPhotoJourneys } from "../services/photoJourneys/scan";
 import { attachJourneyPhotosToVisit } from "../services/places/visitPhotoLinks";
+import { startJob } from "../services/jobs/jobRegistry";
 
 const router = Router();
 router.use(authenticate);
@@ -40,6 +43,11 @@ const scanBodySchema = z.object({
   /** ISO dates. Both optional; the default window is the last ten years. */
   since: z.string().datetime().optional(),
   until: z.string().datetime().optional(),
+  /** Answer 202 with a job instead of holding the request open (2026-09-26).
+   *  Forty seconds is the scan's FLOOR (see below) against a browser that
+   *  gives up after ten, so the web client announced "scan failed" while the
+   *  server stored its findings. The Companion keeps the synchronous call. */
+  background: z.boolean().default(false),
 });
 
 const patchBodySchema = z.object({
@@ -120,17 +128,57 @@ router.put(
   }
 );
 
+/**
+ * What to call a finding (forgejo#132 item 20) — so a place find is not titled
+ * "Warst du hier?". Resolved from what is ALREADY stored, never by a lookup per
+ * request: the own place a `place`/`stay` finding points at, else the city and
+ * then the country the scan's reverse lookup stored. Null when none is known.
+ * The place must be the caller's; the scan only ever writes their own, but a
+ * name is read out of the database here, so the check costs nothing.
+ */
+function withNames<T extends { place: { name: string; userId: string } | null }>(
+  journey: T & { city: string | null; countryName: string | null },
+  userId: string
+) {
+  const { place, ...row } = journey;
+  const placeName = place && place.userId === userId ? place.name : null;
+  return { ...row, placeName, label: placeName ?? row.city ?? row.countryName ?? null };
+}
+
+/**
+ * The finding's first and last day on the clock where its photos were taken
+ * (ADR 0002 D4: a calendar day is the place's question). Accepting a trip
+ * finding creates the trip with these days; the first photo's instant, read
+ * as a day, is its UTC date — a Tokyo trip whose first photo was taken at
+ * 01:00 on 2 May started on 1 May. Null when the position has no zone.
+ */
+function withLocalDays<T extends { startDate: Date; endDate: Date; lat: number; lon: number }>(
+  journey: T
+): T & { startDay: string | null; endDay: string | null } {
+  const zone = zoneOfCoordinates(journey.lat, journey.lon);
+  return {
+    ...journey,
+    startDay: zone ? localDay(journey.startDate, zone) : null,
+    endDay: zone ? localDay(journey.endDate, zone) : null,
+  };
+}
+
 router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
   try {
     const parsed = listQuerySchema.safeParse(req.query);
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
 
+    const userId = req.userId!;
     const journeys = await prisma.photoJourney.findMany({
-      where: { userId: req.userId!, status: parsed.data.status },
+      where: { userId, status: parsed.data.status },
       orderBy: { startDate: "desc" },
+      include: { place: { select: { name: true, userId: true } } },
     });
 
-    res.json({ success: true, data: journeys });
+    res.json({
+      success: true,
+      data: journeys.map((j) => withLocalDays(withNames(j, userId))),
+    });
   } catch (err) {
     next(err);
   }
@@ -218,20 +266,23 @@ router.post(
         throw new AppError("since must be before until", 400);
       }
 
-      const outcome = await scanPhotoJourneys(req.userId!, { since, until });
+      const userId = req.userId!;
+      const run = async () => {
+        const outcome = await scanPhotoJourneys(userId, { since, until });
+        // Not an error: an account without Immich is a normal account, and
+        // a 4xx here would make the Companion show a failure for a feature
+        // the user simply has not connected.
+        return outcome.kind === "no-immich"
+          ? { scanned: false as const, reason: "immich-not-configured" as const }
+          : { scanned: true as const, ...outcome };
+      };
 
-      // Not an error: an account without Immich is a normal account, and
-      // a 4xx here would make the Companion show a failure for a feature
-      // the user simply has not connected.
-      if (outcome.kind === "no-immich") {
-        res.json({
-          success: true,
-          data: { scanned: false, reason: "immich-not-configured" },
-        });
+      if (parsed.data.background) {
+        const job = startJob("photoJourneys.scan", userId, run);
+        res.status(202).json({ success: true, data: { jobId: job.id } });
         return;
       }
-
-      res.json({ success: true, data: { scanned: true, ...outcome } });
+      res.json({ success: true, data: await run() });
     } catch (err) {
       next(err);
     }
