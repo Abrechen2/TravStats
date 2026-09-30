@@ -461,4 +461,84 @@ describe("nominatim geocoder", () => {
     global.fetch = jest.fn().mockResolvedValue(okResponse([row])) as unknown as typeof fetch;
     expect(await geocodeAddress({ address: `Parsefall ${label}`, city: "Zürich" })).toBeNull();
   });
+
+  /**
+   * Reported from prod on 2026-09-30: a stay at "Bristagatan 16, 190 60
+   * Arlanda, Schweden" never got a pin. Nominatim answers nothing for that
+   * line because OSM calls the place "Arlandastad" (postcode 195 60), while
+   * "Bristagatan 16, Schweden" finds the building. The locality in a booking
+   * is often a marketing name — the airport, not the settlement.
+   */
+  describe("a locality OSM spells differently", () => {
+    const hit = (lat: string, lon: string, display: string) => ({
+      lat,
+      lon,
+      display_name: display,
+    });
+
+    it("retries with street and country, and accepts a hit in the named locality", async () => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(okResponse([]))
+        .mockResolvedValueOnce(
+          okResponse([
+            hit(
+              "59.6183",
+              "17.8742",
+              "Love & Hope Second Hand, 16, Bristagatan, Arlandastad, Märsta, Sigtuna kommun, Sverige"
+            ),
+          ])
+        );
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      const out = await geocodeAddress({ address: "Bristagatan 16, 190 60 Arlanda, Schweden" });
+
+      expect(out).toEqual({ lat: 59.6183, lon: 17.8742 });
+      expect(fetchMock).toHaveBeenCalledTimes(2);
+      const retryUrl = new URL(String(fetchMock.mock.calls[1][0]));
+      expect(retryUrl.searchParams.get("q")).toBe("Bristagatan 16, Schweden");
+    });
+
+    it("refuses a retry hit outside the named locality — no pin beats a wrong one", async () => {
+      // Dropping the town turns "Hauptstraße 5" into ANY Hauptstraße in the
+      // country; a hit that does not name the town is some other street.
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(okResponse([]))
+        .mockResolvedValueOnce(
+          okResponse([hit("50.1", "8.6", "5, Hauptstraße, Irgendwo, Hessen, Deutschland")])
+        );
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      expect(
+        await geocodeAddress({ address: "Hauptstraße 5, 12345 Falschstadt, Deutschland" })
+      ).toBeNull();
+    });
+
+    it("takes the first retry hit that names the locality, not merely the first hit", async () => {
+      const fetchMock = jest
+        .fn()
+        .mockResolvedValueOnce(okResponse([]))
+        .mockResolvedValueOnce(
+          okResponse([
+            hit("57.7", "11.9", "Kungsgatan 3, Göteborg, Sverige"),
+            hit("59.86", "17.64", "Kungsgatan 3, Uppsala, Sverige"),
+          ])
+        );
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      expect(await geocodeAddress({ address: "Kungsgatan 3, Uppsala C, Schweden" })).toEqual({
+        lat: 59.86,
+        lon: 17.64,
+      });
+    });
+
+    it("does not retry a two-part query — there is no locality to drop", async () => {
+      const fetchMock = jest.fn().mockResolvedValue(okResponse([]));
+      global.fetch = fetchMock as unknown as typeof fetch;
+
+      expect(await geocodeAddress({ address: "Nirgendgasse 9, Schweden" })).toBeNull();
+      expect(fetchMock).toHaveBeenCalledTimes(1);
+    });
+  });
 });
