@@ -45,6 +45,10 @@ export function DomainFilterPanelBody({
   const { t } = useTranslation(["dashboard"]);
   const { colorOf } = useDomainColors();
   const rowRefs = useRef<Partial<Record<FilterDomainKey, HTMLDivElement | null>>>({});
+  // The row ref below is an inline callback, so React re-runs it on EVERY
+  // render. Focusing there unguarded pulled focus back to the first row after
+  // each Space toggle (found in a browser, 2026-09-30). Focus once per mount.
+  const autoFocusDone = useRef(false);
 
   const colorFor = (key: FilterDomainKey): string =>
     // Tours carry no `DomainKey` of their own (see shared/dashboardDomainFilter.ts) —
@@ -69,10 +73,16 @@ export function DomainFilterPanelBody({
     } else if (e.key === " " || e.key === "Spacebar" || e.key === "Enter") {
       e.preventDefault();
       if (currentKey) filter.toggle(currentKey);
-    } else if (e.key === "Escape") {
-      e.preventDefault();
-      onEscape();
     }
+  };
+
+  // Escape is caught on the panel root, not per row: after "Alle"/"Keine",
+  // "Nur" or a link action the focus sits on a button, and a row-only handler
+  // left Escape dead there (found in a browser, 2026-09-30).
+  const handlePanelKeyDown = (e: React.KeyboardEvent<HTMLDivElement>): void => {
+    if (e.key !== "Escape") return;
+    e.preventDefault();
+    onEscape();
   };
 
   const onlyLabel = t("dashboard:domainFilter.row.only");
@@ -96,7 +106,10 @@ export function DomainFilterPanelBody({
           onKeyDown={handleRowKeyDown}
           rowRef={(el) => {
             rowRefs.current[row.key] = el;
-            if (el && row.key === autoFocusKey) el.focus();
+            if (el && row.key === autoFocusKey && !autoFocusDone.current) {
+              autoFocusDone.current = true;
+              el.focus();
+            }
           }}
         />
       ))}
@@ -212,7 +225,7 @@ export function DomainFilterPanelBody({
 
   if (phone) {
     return (
-      <div className="flex flex-col" style={{ gap: 4 }}>
+      <div className="flex flex-col" style={{ gap: 4 }} onKeyDown={handlePanelKeyDown}>
         {linkBanner}
         <div style={{ padding: "0 10px" }}>{quickActions}</div>
         {rowsList}
@@ -222,7 +235,7 @@ export function DomainFilterPanelBody({
   }
 
   return (
-    <div className="flex flex-col" style={{ gap: 8 }}>
+    <div className="flex flex-col" style={{ gap: 8 }} onKeyDown={handlePanelKeyDown}>
       <div className="flex items-center justify-between">
         <span className="t-label-mono">{t("dashboard:domainFilter.panel.title")}</span>
         {quickActions}

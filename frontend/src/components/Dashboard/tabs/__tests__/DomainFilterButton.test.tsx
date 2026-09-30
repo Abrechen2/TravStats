@@ -152,6 +152,26 @@ describe("DomainFilterButton", () => {
     expect(flightRow).toHaveFocus();
   });
 
+  it("ticking a row with Space keeps focus on that row, not the first one", async () => {
+    // Found in a browser on 2026-09-30: every toggle re-rendered the panel,
+    // the inline row ref ran again and re-focused the first row, so ticking
+    // three rows by keyboard meant walking down from the top three times.
+    const user = userEvent.setup();
+    render(<Controlled />, { wrapper: Wrapper });
+    await user.click(screen.getByRole("button", { name: /Domänen/ }));
+
+    await user.keyboard("{ArrowDown}{ArrowDown}");
+    const lodgingRow = screen.getByRole("checkbox", { name: "Unterkünfte" });
+    expect(lodgingRow).toHaveFocus();
+
+    await user.keyboard(" ");
+    expect(lodgingRow).toHaveAttribute("aria-checked", "false");
+    expect(lodgingRow).toHaveFocus();
+
+    await user.keyboard("{ArrowDown}");
+    expect(screen.getByRole("checkbox", { name: "Orte" })).toHaveFocus();
+  });
+
   it("Escape closes the panel and returns focus to the button", async () => {
     const user = userEvent.setup();
     render(<Controlled />, { wrapper: Wrapper });
@@ -159,6 +179,21 @@ describe("DomainFilterButton", () => {
     await user.click(button);
 
     expect(screen.getByRole("checkbox", { name: "Flüge" })).toHaveFocus();
+    await user.keyboard("{Escape}");
+
+    expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
+    expect(button).toHaveFocus();
+  });
+
+  it("Escape closes the panel from a header button too, not only from a row", async () => {
+    // Found in a browser on 2026-09-30: after "Keine", focus sat on that
+    // button and Escape did nothing, because only the rows listened for it.
+    const user = userEvent.setup();
+    render(<Controlled />, { wrapper: Wrapper });
+    const button = screen.getByRole("button", { name: /Domänen/ });
+    await user.click(button);
+
+    await user.click(screen.getByRole("button", { name: "Keine" }));
     await user.keyboard("{Escape}");
 
     expect(screen.queryByRole("dialog")).not.toBeInTheDocument();
