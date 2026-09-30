@@ -15,24 +15,50 @@ import { extractAllTimePairs, extractLabeledDates } from "./regexDateExtractor";
 import { extractSharedPNR, findPNRInSource } from "./regexPnrExtractor";
 
 /**
- * The generic reader has no knowledge of any sender, so a leg is only real
- * when it carries everything a flight is: a flight number, two DIFFERENT
- * airports from the IATA list and a date. Measured 2026-09-30: every one of
- * the four corpus mails it read, it read wrong.
+ * The generic reader has no knowledge of any sender, so a leg only counts
+ * as a flight when it carries a flight number, a real date, and a route
+ * that is either fully present or fully absent.
+ *
+ * A route pins a leg down to one specific flight, so once a route is there
+ * it has to be right: exactly one end (a "half route") is incomplete, and
+ * the same airport at both ends is a wrong read, not a partial one — the
+ * Emirates/Egyptair corpus that motivated this task turned tour-operator
+ * invoices into "WHO→WHO" exactly this way. Either shape returns false
+ * regardless of the date. A route that IS fully present and valid still
+ * needs a real date beside it — a routed leg with no date, or one
+ * unparseable, is the other named wrong read ("date-less legs"): a date
+ * scraped from the wrong sentence (Forgejo #17's "ERSETZT RECHNUNG VOM")
+ * looks exactly like a good one, so the defence is requiring a route AND a
+ * date to agree, not trusting either alone.
+ *
+ * A route-less candidate — GitHub #291's shape, a bare flight number with
+ * nothing beside it — is NOT decided here. A flight number without a route
+ * is incomplete, not wrong: the flight lookup fills the route in later. Who
+ * actually decides whether to keep it is `withEvidence` below, which defers
+ * a LONE such candidate to `shared/evidence.ts`'s established, text-aware
+ * `hasFlightEvidence`/`hasSecondWitness` gate — already wired into
+ * `email.ts` for every provider, and pointedly NOT swayed by a bare date
+ * either ("#17, #35 and #291 are all marketing mail carrying a date"). This
+ * function always answers `false` for that shape on its own — asking it for
+ * a date here would just re-decide #291 worse, without the source text this
+ * function never receives.
+ *
+ * Measured 2026-09-30: every one of the four corpus mails the generic
+ * reader answered, it answered wrong (Emirates, Egyptair).
  */
 export function segmentHasEvidence(f: ParsedBooking): boolean {
+  if (!f.flightNumber) return false;
+
   const dep = f.departureCode;
   const arr = f.arrivalCode;
-  const date = f.departureTime ? Date.parse(f.departureTime) : Number.NaN;
-  return Boolean(
-    f.flightNumber &&
-    dep &&
-    arr &&
-    dep !== arr &&
-    isValidIATACode(dep) &&
-    isValidIATACode(arr) &&
-    Number.isFinite(date)
+  const routeAbsent = !dep && !arr;
+  const routeComplete = Boolean(
+    dep && arr && dep !== arr && isValidIATACode(dep) && isValidIATACode(arr)
   );
+  if (!routeAbsent && !routeComplete) return false; // exactly one end, or same airport twice
+
+  const date = f.departureTime ? Date.parse(f.departureTime) : Number.NaN;
+  return Number.isFinite(date);
 }
 
 /**
@@ -116,12 +142,33 @@ export class RegexTextParser implements ITextParser {
 
   /**
    * A generic-reader candidate is returned only when EVERY leg it found has
-   * full evidence. One incomplete leg among several is not a partial
-   * result worth keeping — it is a round trip or multi-leg booking
-   * presented as something it is not, so the whole document is declined.
+   * full evidence — with one deliberate exception: a SINGLE candidate that
+   * is a lone flight number, no route on either end. That shape is GitHub
+   * #291's territory, not this task's, and `segmentHasEvidence` above
+   * always answers `false` for it on its own. Re-deciding it here, more
+   * bluntly and without the mail's raw text, would cost the #291 control
+   * probes ("LH400 um 07:35", "EK051 am 05. Februar 2022" — a real flight
+   * number with no route recoverable at all) for no matching gain: the
+   * existing `hasFlightEvidence`/`hasSecondWitness` gate in
+   * `shared/evidence.ts`, already applied to every provider's output in
+   * `email.ts`, is what actually decides a lone number, against the source
+   * text this function never sees.
+   *
+   * Deliberately scoped to exactly ONE candidate: a multi-leg document —
+   * the round-trip and cross-invoice corpus defect this task targets — still
+   * needs every leg it returns to earn its own place, so a route-less,
+   * date-less leg AMONG SEVERAL still declines the whole document below.
    */
   private withEvidence(flights: ParsedBooking[]): ParsedBooking[] {
     if (flights.length === 0) return [];
+
+    const isLoneFlightNumber =
+      flights.length === 1 &&
+      Boolean(flights[0].flightNumber) &&
+      !flights[0].departureCode &&
+      !flights[0].arrivalCode;
+    if (isLoneFlightNumber) return flights;
+
     if (flights.every(segmentHasEvidence)) return flights;
     logger.debug({
       operation: "regex_parser_insufficient_evidence",
