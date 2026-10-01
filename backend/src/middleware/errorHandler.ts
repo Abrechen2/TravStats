@@ -135,7 +135,9 @@ export type ApiErrorCode =
   | "STOP_NOT_ON_TRIP"
   /** A roadtrip whose stations hold photos of its trip cannot move to another
    *  trip or off it: the photos stay with the trip, and their station links
-   *  would point across trips (forgejo#139). Move the photos off first. */
+   *  would point across trips (forgejo#139). The body carries `stationPhotos`
+   *  (how many) and `optIn: "detachStationPhotos"` — resend the PATCH with
+   *  that set to take them off their stations and move anyway. */
   | "ROADTRIP_HAS_TRIP_PHOTOS"
   /** A roadtrip station with a night was sent as a route correction. */
   | "VIA_POINT_HAS_NIGHT"
@@ -358,6 +360,8 @@ export const errorHandler = async (
   const message = err.message || "Internal server error";
 
   res.status(statusCode).json({
+    // First, so none of the fixed keys below can be overwritten by it.
+    ...(isAppError(err) && err.code && err.extra ? err.extra : {}),
     error: message,
     // A machine-readable cause, present only where the thrower named one.
     // `message` is English prose written for a log; a client that shows it to
@@ -433,11 +437,25 @@ export class AppError extends Error {
    */
   field?: string;
 
-  constructor(message: string, statusCode: number = 500, code?: ApiErrorCode, field?: string) {
+  /**
+   * Facts a client needs to ask the user how to proceed — "4 photos are
+   * filed at these stations; move them anyway?" (forgejo#139). Sent beside
+   * `error`/`code`, which it can never overwrite. Only with a `code`.
+   */
+  extra?: Readonly<Record<string, string | number | boolean>>;
+
+  constructor(
+    message: string,
+    statusCode: number = 500,
+    code?: ApiErrorCode,
+    field?: string,
+    extra?: Readonly<Record<string, string | number | boolean>>
+  ) {
     super(message);
     this.statusCode = statusCode;
     this.code = code;
     this.field = field;
+    this.extra = extra;
     this.name = "AppError";
   }
 }

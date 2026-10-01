@@ -24,7 +24,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent } from "./shared";
+import { errorContent, errorResponse } from "./shared";
 import {
   createRouteSchema,
   createTourSchema,
@@ -297,10 +297,12 @@ const routeUpdateInput = registry.register(
   "TourRouteUpdateInput",
   updateRouteSchema.merge(kindFieldsSchema).openapi("TourRouteUpdateInput", {
     description:
-      "`tripId` moves only a roadtrip between trips (400 for a tour), and not while its " +
-      "stations hold photos of the trip it leaves (409 `ROADTRIP_HAS_TRIP_PHOTOS`, " +
-      "forgejo#139); `anchorStopId` must be a station of one of the caller's roadtrips and " +
-      "is refused on a roadtrip.",
+      "`tripId` moves only a roadtrip between trips (400 for a tour). While its stations " +
+      "hold photos of the trip it leaves the move is 409 `ROADTRIP_HAS_TRIP_PHOTOS` unless " +
+      "`detachStationPhotos: true` is sent with it, which takes those photos off their " +
+      "stations (they stay on their trip) in the same transaction (forgejo#139). " +
+      "`anchorStopId` must be a station of one of the caller's roadtrips and is refused on " +
+      "a roadtrip.",
     example: { name: "Süd-Norwegen (Umweg)", endOdometerKm: 84920 },
   })
 );
@@ -417,15 +419,42 @@ registerSectionPath({
   responses: {
     200: {
       description: "Updated",
-      content: { "application/json": { schema: z.object({ route: tourRoute }) } },
+      content: {
+        "application/json": {
+          schema: z.object({
+            route: tourRoute,
+            detachedStationPhotos: z
+              .number()
+              .int()
+              .describe(
+                "Photos taken off this roadtrip's stations by `detachStationPhotos`; 0 otherwise"
+              ),
+          }),
+        },
+      },
     },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Not found", content: errorContent },
     409: {
       description:
         "The route cannot change trip: built from a trip's timeline stops, or (code " +
-        "ROADTRIP_HAS_TRIP_PHOTOS) its stations hold photos of the trip it would leave",
-      content: errorContent,
+        "ROADTRIP_HAS_TRIP_PHOTOS) its stations hold photos of the trip it would leave — " +
+        "resend with `detachStationPhotos: true` after asking the user",
+      content: {
+        "application/json": {
+          schema: errorResponse.extend({
+            stationPhotos: z
+              .number()
+              .int()
+              .optional()
+              .describe("ROADTRIP_HAS_TRIP_PHOTOS: how many photos are filed at its stations"),
+            optIn: z
+              .literal("detachStationPhotos")
+              .optional()
+              .describe("ROADTRIP_HAS_TRIP_PHOTOS: the field that moves it anyway"),
+          }),
+        },
+      },
     },
   },
 });

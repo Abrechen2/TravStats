@@ -308,37 +308,64 @@ describe("trip photos linked to a station (forgejo#139)", () => {
       expect(photo?.tripId).toBe(tripId);
     });
 
-    it("refuses to move a roadtrip whose stations hold this trip's photos to another trip", async () => {
-      const res = await request(app)
-        .patch(`/api/v1/tours/${roadtripId}`)
-        .set("Cookie", cookie)
-        .send({ tripId: otherTripId });
+    const filedAtStations = () =>
+      prisma.tripPhoto.count({ where: { stop: { routeId: roadtripId } } });
+    const move = (body: Record<string, unknown>) =>
+      request(app).patch(`/api/v1/tours/${roadtripId}`).set("Cookie", cookie).send(body);
+
+    it("refuses to move a roadtrip whose stations hold this trip's photos, saying how many and how to proceed", async () => {
+      const filed = await filedAtStations();
+      expect(filed).toBeGreaterThan(0);
+
+      const res = await move({ tripId: otherTripId });
       expect(res.status).toBe(409);
       expect(res.body.code).toBe("ROADTRIP_HAS_TRIP_PHOTOS");
+      // The app asks the user with these two: how many, and the opt-in to send.
+      expect(res.body.stationPhotos).toBe(filed);
+      expect(res.body.optIn).toBe("detachStationPhotos");
       expect((await prisma.tripRoute.findUniqueOrThrow({ where: { id: roadtripId } })).tripId).toBe(
         tripId
       );
+      expect(await filedAtStations()).toBe(filed);
     });
 
     it("refuses to detach it from its trip for the same reason", async () => {
-      const res = await request(app)
-        .patch(`/api/v1/tours/${roadtripId}`)
-        .set("Cookie", cookie)
-        .send({ tripId: null });
+      const res = await move({ tripId: null });
       expect(res.status).toBe(409);
       expect(res.body.code).toBe("ROADTRIP_HAS_TRIP_PHOTOS");
     });
 
-    it("lets it move once no station holds a photo", async () => {
-      await prisma.tripPhoto.updateMany({
+    it("refuses the opt-in without a move — it only ever accompanies one", async () => {
+      const filed = await filedAtStations();
+      const res = await move({ detachStationPhotos: true, name: "Norwegen" });
+      expect(res.status).toBe(400);
+      expect(await filedAtStations()).toBe(filed);
+    });
+
+    it("moves it with detachStationPhotos, taking the photos off their stations but not off the trip", async () => {
+      const filed = await prisma.tripPhoto.findMany({
         where: { stop: { routeId: roadtripId } },
-        data: { stopId: null },
+        select: { id: true },
       });
-      const res = await request(app)
-        .patch(`/api/v1/tours/${roadtripId}`)
-        .set("Cookie", cookie)
-        .send({ tripId: otherTripId });
+      const res = await move({ tripId: otherTripId, detachStationPhotos: true });
       expect(res.status).toBe(200);
+      expect(res.body.route.tripId).toBe(otherTripId);
+      expect(res.body.detachedStationPhotos).toBe(filed.length);
+
+      const after = await prisma.tripPhoto.findMany({
+        where: { id: { in: filed.map((p) => p.id) } },
+      });
+      expect(after).toHaveLength(filed.length);
+      for (const p of after) {
+        expect(p.stopId).toBeNull();
+        expect(p.tripId).toBe(tripId);
+      }
+    });
+
+    it("reports zero detached photos on a move that needed none", async () => {
+      const res = await move({ tripId });
+      expect(res.status).toBe(200);
+      expect(res.body.detachedStationPhotos).toBe(0);
     });
   });
 });

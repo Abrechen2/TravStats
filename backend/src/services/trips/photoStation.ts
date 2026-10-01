@@ -1,4 +1,4 @@
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import type { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 
@@ -42,30 +42,43 @@ export async function assertStopOnTrip(
   }
 }
 
+/** The PATCH field that lets a roadtrip move although its stations hold photos. */
+export const DETACH_STATION_PHOTOS = "detachStationPhotos";
+
 /**
- * Refuse to move a roadtrip to `nextTripId` (null = off every trip) while one
- * of its stations holds a photo of another trip.
+ * Prepare a roadtrip's move to `nextTripId` (null = off every trip) while its
+ * stations may hold photos of another trip.
  *
  * The photo stays with the trip it was uploaded to — its gallery, its journal
  * entries and its file URL all name that trip — so moving the roadtrip would
- * leave the link pointing across trips. Unlinking the photos quietly instead
- * would drop what the user filed; the refusal says why and changes nothing.
+ * leave the link pointing across trips. By default the move is refused with
+ * the count, so the client can ask the user. With the opt-in the photos are
+ * taken off their stations (they stay on their trip) in the same transaction
+ * as the move — the returned function does both and says how many it took.
  */
-export async function assertNoStationPhotosLeftBehind(
+export async function planStationPhotoMove(
   routeId: string,
-  nextTripId: string | null
-): Promise<void> {
-  const stranded = await prisma.tripPhoto.count({
-    where: {
-      stop: { routeId },
-      ...(nextTripId === null ? {} : { tripId: { not: nextTripId } }),
-    },
-  });
-  if (stranded > 0) {
+  nextTripId: string | null,
+  detach: boolean
+): Promise<(tx: DbTransaction) => Promise<number>> {
+  const where: Prisma.TripPhotoWhereInput = {
+    stop: { routeId },
+    ...(nextTripId === null ? {} : { tripId: { not: nextTripId } }),
+  };
+  const stranded = await prisma.tripPhoto.count({ where });
+  if (stranded > 0 && !detach) {
     throw new AppError(
-      `${stranded} photo(s) of the trip are filed at this roadtrip's stations; move them off the stations first`,
+      `${stranded} photo(s) of the trip are filed at this roadtrip's stations; ` +
+        `resend with ${DETACH_STATION_PHOTOS}: true to take them off their stations and move`,
       409,
-      "ROADTRIP_HAS_TRIP_PHOTOS"
+      "ROADTRIP_HAS_TRIP_PHOTOS",
+      undefined,
+      { stationPhotos: stranded, optIn: DETACH_STATION_PHOTOS }
     );
   }
+  return async (tx) => {
+    if (stranded === 0) return 0;
+    const { count } = await tx.tripPhoto.updateMany({ where, data: { stopId: null } });
+    return count;
+  };
 }
