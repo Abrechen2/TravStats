@@ -116,6 +116,11 @@ export type TransformName =
   /** "10. März 2026", with or without the ordinal dot — the Booking.com reader's own. */
   | "germanDate"
   | "numericDate"
+  /**
+   * "14/02/2017" — DAY first, as NH's German confirmations print it. Only for a
+   * sender measured to write day/month: the same shape is month/day in the US.
+   */
+  | "slashDayFirstDate"
   | "titleCase"
   /** "1.234,56" / "1,234.56" / "47.87" -> a number. */
   | "money"
