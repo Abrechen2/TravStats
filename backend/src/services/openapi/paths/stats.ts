@@ -512,7 +512,9 @@ registry.registerPath({
   description:
     "The cross-domain rollup the overview tab draws: flights, cruises, lodging " +
     "and places in one answer. Amounts are grouped by their original currency " +
-    "and never summed across them.",
+    "and never summed across them. `expenses` (forgejo#140) holds every ferry " +
+    "ticket, toll, pitch fee and fuel stop per year and in total; they also " +
+    "enter each trip's `spendByCurrency`.",
   tags: statsTag,
   responses: {
     200: {

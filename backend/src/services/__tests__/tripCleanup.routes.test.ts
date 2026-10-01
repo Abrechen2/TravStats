@@ -47,4 +47,19 @@ describe("mergeTrips carries route sections", () => {
     expect(movedStop?.tripId).toBe(target.id);
     expect(movedStop?.routeId).toBe(route.id);
   });
+
+  it("moves the source trip's trip-wide expenses to the target (forgejo#140)", async () => {
+    const target = await prisma.trip.create({ data: { userId, name: "Ziel" } });
+    const source = await prisma.trip.create({ data: { userId, name: "Quelle" } });
+    const vignette = await prisma.tripExpense.create({
+      data: { userId, tripId: source.id, kind: "toll", amount: 40, currency: "CHF" },
+    });
+
+    await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });
+
+    // The source trip is deleted by the merge, and a trip-wide expense
+    // CASCADES with its trip: left behind, the money would be gone.
+    const moved = await prisma.tripExpense.findUnique({ where: { id: vignette.id } });
+    expect(moved?.tripId).toBe(target.id);
+  });
 });

@@ -11,6 +11,7 @@
  * (owner, 2026-09-25), and rewriting a list rewrites every entry in it.
  */
 
+import { handExpensesToTrips } from "../expenses/sectionRemoval";
 import { prisma } from "../../db";
 import logger from "../../utils/logger";
 import type { Ctx } from "./context";
@@ -116,12 +117,21 @@ export async function pruneRoutes(
   ctx: Ctx
 ): Promise<number> {
   if (ctx.mode !== "replace") return 0;
-  const where = { userId: ctx.userId, kind, id: { notIn: [...seen] } };
+  // A section with no trip whose costs would go with it is KEPT (forgejo#140):
+  // the file never showed that money, so a replace must not delete it. One on
+  // a trip hands its costs to the trip, as its delete endpoint does.
+  const where = {
+    userId: ctx.userId,
+    kind,
+    id: { notIn: [...seen] },
+    NOT: { tripId: null, expenses: { some: {} } },
+  };
   const doomed = await prisma.tripRoute.findMany({ where, select: { id: true } });
   if (doomed.length === 0 || ctx.dryRun) return doomed.length;
 
   const ids = doomed.map((r) => r.id);
   await prisma.$transaction(async (tx) => {
+    await handExpensesToTrips(tx, ids);
     await tx.tripStop.updateMany({
       where: { routeId: { in: ids }, tripId: { not: null } },
       data: { routeId: null, routeOrderIdx: null, lodgingStayId: null, overnight: false },

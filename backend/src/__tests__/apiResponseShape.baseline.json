@@ -103,6 +103,7 @@
     "trips/tourTrackArchive.ts",
     "trips/tourTracks.ts",
     "trips/tripCountries.ts",
+    "trips/tripExpenses.ts",
     "trips/tripPhotos.ts",
     "trips/tripStops.ts",
     "version.ts"

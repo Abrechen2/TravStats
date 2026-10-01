@@ -112,8 +112,6 @@ export interface TourLeg {
   confidence: string;
   waypoints: Array<[number, number]> | null;
   drivingMinutes: number | null;
-  tollCost: number | null;
-  currency: string | null;
 }
 
 /**

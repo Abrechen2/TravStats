@@ -34,6 +34,7 @@ import { importLodging, importLodgingStays } from "./lodging";
 import { importPlaceVisits, importPlaces } from "./places";
 import { importRail } from "./rail";
 import { importRoadtripStations } from "./roadtripStations";
+import { importRoadtripExpenses } from "./roadtripExpenses";
 import { importRoadtrips } from "./roadtrips";
 import { importTourPoints } from "./tourPoints";
 import { importTours } from "./tours";
@@ -66,6 +67,9 @@ const HANDLERS: Record<string, Handler> = {
   lodgingStays: importLodgingStays,
   roadtrips: importRoadtrips,
   roadtripStations: importRoadtripStations,
+  // After the stations: a cost pinned to a station of a roadtrip this file
+  // moves finds that station where the station sheet placed it.
+  roadtripExpenses: importRoadtripExpenses,
   tours: importTours,
   tourPoints: importTourPoints,
   // Rail rides (rail spec) point at trips only, so their place in the order

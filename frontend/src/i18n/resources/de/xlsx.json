@@ -20,7 +20,8 @@
     "roadtripStations": "Roadtrip-Stationen",
     "tours": "Touren",
     "tourPoints": "Tourpunkte",
-    "rail": "Bahnfahrten"
+    "rail": "Bahnfahrten",
+    "roadtripExpenses": "Roadtrip-Kosten"
   },
   "hints": {
     "cruises": "Eine Zeile je Kreuzfahrt. Die ID in Spalte A nicht ändern – sie ordnet die Zeile beim Import wieder ihrem Eintrag zu. Zeilen ohne ID werden als neue Kreuzfahrt angelegt.",
@@ -34,7 +35,8 @@
     "roadtripStations": "Eine Station pro Zeile. Die Spalte „Roadtrip“ verweist über die ID in eckigen Klammern auf das Blatt „Roadtrips“ – fehlt die ID, zählt der Name davor. Die Spalte Reihenfolge bestimmt die Abfolge — 2,5 fügt eine Station zwischen 2 und 3 ein. Nacht: stay (mit Unterkunft in der Spalte Unterkunft), free (ohne Unterkunft), pass (Durchfahrt) oder via (Streckenkorrektur: ohne Namen und Datum, nur für die Linienführung). Eine Station, die hier fehlt, bleibt erhalten — außer beim Ersetzen. In ein anderes Konto übertragen, behält eine Station ihre Nacht, aber nicht die Verknüpfung zur Unterkunft.",
     "tours": "Eine Tour pro Zeile. Eine Zeile mit der ID einer deiner Touren ändert sie; ohne ID — oder mit einer ID aus einem anderen Konto — wird eine neue, eigenständige Tour angelegt, außer es gibt schon eine mit gleichem Namen und Beginn. Aktivität: hike, walk, run, bike, mtb, ski, paddle, climb oder other. Fortbewegung: foot, bike, road, rail oder ferry — leer lässt eine neue Rad-Tour (bike, mtb) mit bike, jede andere zu Fuß (foot) anlegen. Startstation verweist über die ID in eckigen Klammern auf eine Roadtrip-Station; fehlt die ID, zählt der Name, wenn nur eine Station so heißt. Grau geschriebene Spalten sind abgeleitet und werden nicht übernommen.",
     "tourPoints": "Ein Punkt pro Zeile. Die Spalte „Tour“ verweist über die ID in eckigen Klammern auf das Blatt „Touren“ – fehlt die ID, zählt der Name davor. Die Spalte Reihenfolge bestimmt die Abfolge — 2,5 fügt einen Punkt zwischen 2 und 3 ein. Ein Punkt, der hier fehlt, bleibt erhalten — außer beim Ersetzen. Gehört eine Tour zu einer Reise, sind ihre Punkte die Stopps der Reise — hier nur zum Lesen, bearbeitet werden sie bei der Reise.",
-    "rail": "Eine Zeile je Zugfahrt. Eine Zeile mit der ID einer deiner Fahrten ändert sie; ohne ID — oder mit einer ID aus einem anderen Konto — wird eine neue angelegt, außer es gibt schon eine mit gleicher Zugnummer, gleichen Bahnhöfen und gleichem Abfahrtstag. Zeiten stehen in Ortszeit des jeweiligen Bahnhofs. Ein Bahnhof wird über seinen UIC-Code gefunden, sonst über Breite und Länge, sonst über seinen Namen im Bahnhofskatalog. Klasse: first, second, sleeper oder couchette; Status: nur cancelled wird gesetzt, der Rest ergibt sich aus den Zeiten. Die Entfernung wird neu gemessen — außer in „Quelle“ steht user, die Angabe vom Ticket."
+    "rail": "Eine Zeile je Zugfahrt. Eine Zeile mit der ID einer deiner Fahrten ändert sie; ohne ID — oder mit einer ID aus einem anderen Konto — wird eine neue angelegt, außer es gibt schon eine mit gleicher Zugnummer, gleichen Bahnhöfen und gleichem Abfahrtstag. Zeiten stehen in Ortszeit des jeweiligen Bahnhofs. Ein Bahnhof wird über seinen UIC-Code gefunden, sonst über Breite und Länge, sonst über seinen Namen im Bahnhofskatalog. Klasse: first, second, sleeper oder couchette; Status: nur cancelled wird gesetzt, der Rest ergibt sich aus den Zeiten. Die Entfernung wird neu gemessen — außer in „Quelle“ steht user, die Angabe vom Ticket.",
+    "roadtripExpenses": "Eine Ausgabe pro Zeile. Die Spalte „Roadtrip“ verweist über die ID in eckigen Klammern auf das Blatt „Roadtrips“ – fehlt die ID, zählt der Name davor. Art: ferry (Fähre), toll (Maut), pitch (Stellplatz), fuel (Tanken), parking (Parken) oder other (Sonstiges). Betrag und Währung (ISO-Code wie EUR, NOK) sind Pflicht; Beträge in verschiedenen Währungen werden nie zusammengerechnet. Station ODER Strecke von/bis – nie beides; eine Station, die nicht gefunden wird, entfällt, die Ausgabe bleibt. Eine leere Zelle lässt den gespeicherten Wert stehen."
   },
   "columns": {
     "id": "ID",
@@ -131,7 +133,13 @@
     "fromLat": "Von (Breite)",
     "fromLon": "Von (Länge)",
     "toLat": "Nach (Breite)",
-    "toLon": "Nach (Länge)"
+    "toLon": "Nach (Länge)",
+    "expenseKind": "Art",
+    "amount": "Betrag",
+    "paidOn": "Bezahlt am",
+    "station": "Station",
+    "legFrom": "Strecke von",
+    "legTo": "Strecke bis"
   },
   "import": {
     "title": "Excel-Import",
@@ -183,7 +191,11 @@
       "unknown_lodging": "Die angegebene Unterkunft gibt es weder in deinem Konto noch im Blatt „Unterkünfte“.",
       "ambiguous_lodging": "Mehrere Unterkünfte heißen so — bitte die ID in eckigen Klammern angeben.",
       "unknown_station": "Ein Bahnhof ließ sich nicht finden — bitte Breite und Länge oder den UIC-Code angeben.",
-      "rail_needs_route": "Eine neue Zugfahrt braucht Von, Nach und die Abfahrt."
+      "rail_needs_route": "Eine neue Zugfahrt braucht Von, Nach und die Abfahrt.",
+      "expense_needs_amount": "Eine Ausgabe braucht einen Betrag von 0 oder mehr.",
+      "invalid_currency": "Die Währung ist kein ISO-Code wie EUR oder NOK.",
+      "expense_needs_roadtrip": "Die Ausgabe nennt keinen Roadtrip.",
+      "expense_station_or_leg": "Eine Ausgabe gehört zu einer Station ODER zu einer Strecke – nicht zu beidem."
     },
     "modeLabel": "Was soll mit vorhandenen Einträgen passieren?",
     "modes": {

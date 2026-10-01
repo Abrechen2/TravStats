@@ -414,5 +414,50 @@
     "change": "Anderen Ort wählen",
     "remove": "Verknüpfung lösen",
     "linked": "Verknüpfter Ort"
+  },
+  "costs": {
+    "title": "Kosten",
+    "add": "Kosten erfassen",
+    "empty": "Noch keine Kosten erfasst — Fähre, Maut, Stellplatz oder Tanken.",
+    "total": "Gesamt",
+    "perCurrencyHint": "Je Währung, nicht umgerechnet.",
+    "wholeTrip": "Ganzer Roadtrip",
+    "leg": "{{from}} → {{to}}",
+    "removedStation": "Gelöschte Station",
+    "kind": {
+      "ferry": "Fähre",
+      "toll": "Maut",
+      "pitch": "Stellplatz",
+      "fuel": "Tanken",
+      "parking": "Parken",
+      "other": "Sonstiges"
+    },
+    "dialog": {
+      "titleNew": "Kosten erfassen",
+      "titleEdit": "Kosten bearbeiten",
+      "kind": "Wofür",
+      "amount": "Betrag",
+      "amountInvalid": "Bitte einen Betrag von 0 oder mehr eingeben.",
+      "currency": "Währung",
+      "date": "Datum",
+      "dateHint": "Leer lassen, wenn der Tag nicht bekannt ist.",
+      "station": "Station",
+      "stationNone": "Keine — gilt für den ganzen Roadtrip",
+      "keepLeg": "Strecke {{from}} → {{to}} (beibehalten)",
+      "note": "Notiz",
+      "save": "Speichern",
+      "delete": "Diese Kosten löschen",
+      "error": {
+        "invalid": "Die Angaben wurden abgelehnt — bitte Betrag, Währung, Datum und Station prüfen.",
+        "gone": "Der Roadtrip, die Station oder der Eintrag existiert nicht mehr. Bitte die Seite neu laden.",
+        "unreachable": "Der Server ist gerade nicht erreichbar. Nichts wurde gespeichert — bitte erneut versuchen."
+      }
+    }
+  },
+  "deleteWithCosts": {
+    "title": "Mit den Kosten löschen?",
+    "message_one": "„{{name}}“ hat {{count}} erfasste Ausgabe und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen geht sie mit.",
+    "message_other": "„{{name}}“ hat {{count}} erfasste Ausgaben und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen gehen sie mit.",
+    "confirm": "Mit Kosten löschen"
   }
 }

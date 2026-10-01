@@ -10,7 +10,8 @@
  * "this trip cost X" figure would therefore have to invent a rate for two of
  * the three domains, at some date nobody recorded. Until flights and cruises
  * get the same snapshot treatment, "1.240 EUR + 320 CHF" is the honest answer
- * and one number would be a fabricated one.
+ * and one number would be a fabricated one. Expenses (forgejo#140) carry no
+ * snapshot either and join the per-currency spend the same way.
  */
 import { flightCostShare, type CostFlight } from "../../utils/stats/dedupedCost";
 import { resolveStayTiming } from "../../shared/lodgingTiming";
@@ -56,6 +57,12 @@ export interface TripAccountInput {
     departureTime: Date | null;
     arrivalTime: Date | null;
   })[];
+  /**
+   * Ferry, toll, pitch, fuel (forgejo#140): the trip's trip-wide expenses and
+   * those of its sections. Money only — an expense covers no night — and with
+   * no FX snapshot, so it reaches `spendByCurrency` alone.
+   */
+  expenses: { amount: number; currency: string }[];
 }
 
 // Published by /stats/travel-account (forgejo#52).
@@ -128,6 +135,10 @@ export function buildTripAccount(trips: TripAccountInput[]): TripAccount {
       const dep = dayKey(flight.departureTime);
       const arr = dayKey(flight.arrivalTime);
       for (let c = dep; c < arr; c += DAY_MS) covered.add(c);
+    }
+
+    for (const expense of trip.expenses) {
+      addAmount(spendByCurrency, expense.currency, expense.amount);
     }
 
     // A trip's last day is a departure day, not a night — a trip from the 1st

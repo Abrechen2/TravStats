@@ -59,6 +59,10 @@ export const USER_EXPORT_SELECT = {
       tracks: true,
     },
   },
+  // Ferry tickets, tolls, pitch fees, fuel (forgejo#140) from the user's side:
+  // a standalone roadtrip's are reachable from no trip. Since 2.7 a leg's toll
+  // is one of these (kind `toll`) and no longer a field of the leg above.
+  tripExpenses: true,
   bookings: true,
   lodgings: { include: { photos: true, membershipLinks: true } },
   lodgingStays: true,

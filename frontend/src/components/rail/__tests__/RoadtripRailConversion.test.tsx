@@ -123,4 +123,18 @@ describe("RoadtripRailConversion", () => {
     expect(box.disabled).toBe(true);
     expect(screen.getByText(/rail:roadtripConversion.reason.noDate/)).toBeTruthy();
   });
+
+  it("says it is the costs that keep a roadtrip with no trip (forgejo#140)", async () => {
+    previewRoadtripConversion.mockResolvedValue({
+      ...PREVIEW,
+      canRemoveSection: false,
+      removeBlockedBy: "costs",
+    });
+    renderOffer();
+    fireEvent.click(screen.getByText("rail:roadtripConversion.action"));
+    const box = (await screen.findByRole("checkbox")) as HTMLInputElement;
+    expect(box.disabled).toBe(true);
+    expect(screen.getByText("rail:roadtripConversion.removeSectionCostsHint")).toBeTruthy();
+    expect(screen.queryByText("rail:roadtripConversion.removeSectionHint")).toBeNull();
+  });
 });

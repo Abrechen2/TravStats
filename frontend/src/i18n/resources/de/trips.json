@@ -501,6 +501,12 @@
     "map": {
       "empty": "Diese Tour hat noch keine Punkte mit Koordinaten — füge Punkte hinzu oder lade eine Aufzeichnung hoch.",
       "loadError": "Die Touren dieser Reise konnten nicht geladen werden — die Karte zeigt sie deshalb nicht."
+    },
+    "deleteWithCosts": {
+      "title": "Mit den Kosten löschen?",
+      "message_one": "„{{name}}“ hat {{count}} erfasste Ausgabe und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen geht sie mit.",
+      "message_other": "„{{name}}“ hat {{count}} erfasste Ausgaben und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen gehen sie mit.",
+      "confirm": "Mit Kosten löschen"
     }
   },
   "head": {
