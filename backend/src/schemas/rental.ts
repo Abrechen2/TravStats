@@ -242,5 +242,7 @@ export const rentalStationSearchSchema = z.object({
 
 export type RentalStationInput = z.infer<typeof rentalStationSchema>;
 export type CreateRentalInput = z.infer<typeof createRentalSchema>;
+/** The write body as a client sends it (before defaults and transforms) — what a parse candidate carries. */
+export type CreateRentalBody = z.input<typeof createRentalSchema>;
 export type UpdateRentalInput = z.infer<typeof updateRentalSchema>;
 export type RentalQueryInput = z.infer<typeof rentalQuerySchema>;

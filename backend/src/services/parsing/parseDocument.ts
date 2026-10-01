@@ -37,6 +37,11 @@ import { bookingsToCandidates } from "../lodging/lodgingCandidates";
 import { parseRailBookingText, type RailFallbackCode } from "../rail/parser/railBookingParser";
 import { toRailCandidate, type RailImportCandidate } from "../rail/parser/railCandidates";
 import type { RailAttachment } from "../rail/parser/types";
+import {
+  parseRentalBookingText,
+  type RentalFallbackCode,
+} from "../rental/parser/rentalBookingParser";
+import { toRentalCandidate, type RentalImportCandidate } from "../rental/parser/rentalCandidates";
 import { PARSER_SUPPORTED_DOMAINS, type ParserSupportedDomain } from "../../shared/domains";
 import { isLlmAvailable } from "../parsers/llmAvailability";
 import { conclusiveOtherDomain, scoreDocument, type DomainDetection } from "./documentDomain";
@@ -75,6 +80,11 @@ export interface ParseDocumentInput {
    * reader looks at them: a DB booking mail prints its itinerary nowhere else.
    */
   attachments?: RailAttachment[];
+  /**
+   * The sender address, where the format carries it. Only the rental reader
+   * looks at it: a provider's template is chosen by who sent the mail.
+   */
+  from?: string;
 }
 
 /**
@@ -124,7 +134,18 @@ type RailBody = {
   domainMismatch?: DomainMismatch;
 };
 
-type DomainBody = FlightBody | CruiseBody | LodgingBody | RailBody;
+type RentalBody = {
+  domain: "rental";
+  /** One candidate per document; empty when nothing was read — see `fallbackCode`. */
+  candidates: RentalImportCandidate[];
+  parserUsed: string;
+  ollamaAvailable: boolean;
+  fallbackCode?: RentalFallbackCode;
+  fallbackReason?: string;
+  domainMismatch?: DomainMismatch;
+};
+
+type DomainBody = FlightBody | CruiseBody | LodgingBody | RailBody | RentalBody;
 
 /**
  * The domain-shaped payload, plus one field every domain shares:
@@ -193,7 +214,12 @@ function resolveDomain(
  * client), and those clients read `flights` — answering them in another shape
  * would break them. A flight request keeps its historical behaviour.
  */
-const OVERRULABLE_DOMAINS: readonly ParserSupportedDomain[] = ["rail", "cruise", "lodging"];
+const OVERRULABLE_DOMAINS: readonly ParserSupportedDomain[] = [
+  "rail",
+  "cruise",
+  "lodging",
+  "rental",
+];
 
 /**
  * Detection runs first and independently of the dialog: a document that is
@@ -225,6 +251,8 @@ async function mismatchBody(
     domainMismatch: mismatch,
   };
   if (domain === "rail") return { domain, bookings: [], fallbackCode: "otherDomain", ...common };
+  if (domain === "rental")
+    return { domain, candidates: [], fallbackCode: "otherDomain", ...common };
   if (domain === "cruise") return { domain, cruises: [], ...common };
   return { domain: "lodging", candidates: [], ...common };
 }
@@ -293,6 +321,30 @@ async function parseAs(
       ...(result.fallbackCode !== undefined ? { fallbackCode: result.fallbackCode } : {}),
       ...(result.fallbackReason !== undefined ? { fallbackReason: result.fallbackReason } : {}),
       ...(result.orderReference ? { orderReference: result.orderReference } : {}),
+    };
+  }
+
+  if (domain === "rental") {
+    // Template or decline (spec 2026-10-01-rental-domain-design §4) — the
+    // model path arrives with package R3. The candidate knows whether the
+    // booking already exists, so the review can say "update", never "new".
+    const result = await parseRentalBookingText(input.text, {
+      subject: input.subject,
+      from: input.from ?? null,
+      attachments: input.attachments ?? [],
+    });
+    const candidate = result.document
+      ? await toRentalCandidate(result.document, result.parserTemplate ?? "template", input.userId)
+      : null;
+    return {
+      domain: "rental",
+      candidates: candidate ? [candidate] : [],
+      parserUsed: result.parserUsed,
+      ollamaAvailable: await isLlmAvailable(
+        input.userId !== undefined ? { userId: input.userId } : {}
+      ),
+      ...(result.fallbackCode !== undefined ? { fallbackCode: result.fallbackCode } : {}),
+      ...(result.fallbackReason !== undefined ? { fallbackReason: result.fallbackReason } : {}),
     };
   }
 

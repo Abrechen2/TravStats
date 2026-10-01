@@ -1,4 +1,5 @@
 import type { ParsedBooking } from "../../types";
+import type { RentalImportCandidate, RentalParseFallbackCode } from "../../types/rental";
 import type { CruiseInput, Port, Ship } from "../../types/cruise";
 import type { LodgingImportCandidate } from "../../types/lodgingImport";
 import type { RailImportBooking, RailParseFallbackCode } from "../../types/rail";
@@ -85,6 +86,28 @@ interface RailParseFields {
   domainMismatch?: { detected: ParseDomain; confidence: number };
 }
 
+/** A rental document's reading: one candidate, or none and a code saying why (rental spec §4). */
+interface RentalParseFields {
+  domain: "rental";
+  candidates: RentalImportCandidate[];
+  parserUsed: "template" | "ollama" | "none";
+  ollamaAvailable: boolean;
+  fallbackCode?: RentalParseFallbackCode;
+  /** English, for the log — never shown. */
+  fallbackReason?: string;
+  domainMismatch?: { detected: ParseDomain; confidence: number };
+}
+
+export interface ParsePdfRentalResult extends RentalParseFields {
+  pdfTextLength: number;
+}
+
+export interface ParseEmailRentalResult extends RentalParseFields {
+  subject?: string;
+  text?: string;
+  html?: string;
+}
+
 export interface ParsePdfRailResult extends RailParseFields {
   pdfTextLength: number;
 }
@@ -96,7 +119,11 @@ export interface ParseEmailRailResult extends RailParseFields {
 }
 
 export type ParsePdfResult =
-  ParsePdfFlightResult | ParsePdfCruiseResult | ParsePdfLodgingResult | ParsePdfRailResult;
+  | ParsePdfFlightResult
+  | ParsePdfCruiseResult
+  | ParsePdfLodgingResult
+  | ParsePdfRailResult
+  | ParsePdfRentalResult;
 
 export function isCruisePdfResult(r: ParsePdfResult): r is ParsePdfCruiseResult {
   return r.domain === "cruise";
@@ -108,6 +135,10 @@ export function isLodgingPdfResult(r: ParsePdfResult): r is ParsePdfLodgingResul
 
 export function isRailPdfResult(r: ParsePdfResult): r is ParsePdfRailResult {
   return r.domain === "rail";
+}
+
+export function isRentalPdfResult(r: ParsePdfResult): r is ParsePdfRentalResult {
+  return r.domain === "rental";
 }
 
 interface ParserCheckResult {
@@ -143,10 +174,14 @@ export interface ParseEmailLodgingResult {
 }
 
 export type ParseEmailResult =
-  ParseEmailFlightResult | ParseEmailCruiseResult | ParseEmailLodgingResult | ParseEmailRailResult;
+  | ParseEmailFlightResult
+  | ParseEmailCruiseResult
+  | ParseEmailLodgingResult
+  | ParseEmailRailResult
+  | ParseEmailRentalResult;
 
 /** The domains a document can be parsed for — `components/import/types.ts` mirrors it. */
-export type ParseDomain = "flight" | "cruise" | "lodging" | "rail";
+export type ParseDomain = "flight" | "cruise" | "lodging" | "rail" | "rental";
 
 export function isCruiseEmailResult(r: ParseEmailResult): r is ParseEmailCruiseResult {
   return r.domain === "cruise";
@@ -158,6 +193,10 @@ export function isLodgingEmailResult(r: ParseEmailResult): r is ParseEmailLodgin
 
 export function isRailEmailResult(r: ParseEmailResult): r is ParseEmailRailResult {
   return r.domain === "rail";
+}
+
+export function isRentalEmailResult(r: ParseEmailResult): r is ParseEmailRentalResult {
+  return r.domain === "rental";
 }
 
 // Parse API (Email & Boarding Pass) - Uses parserApi with 180s timeout
@@ -194,6 +233,11 @@ export const parseApi = {
     (
       emailContent: string,
       subject: string | undefined,
+      domain: "rental"
+    ): Promise<ParseEmailRentalResult>;
+    (
+      emailContent: string,
+      subject: string | undefined,
       domain: ParseDomain
     ): Promise<ParseEmailResult>;
   },
@@ -215,6 +259,7 @@ export const parseApi = {
     (file: File, domain: "cruise"): Promise<ParseEmailCruiseResult>;
     (file: File, domain: "lodging"): Promise<ParseEmailLodgingResult>;
     (file: File, domain: "rail"): Promise<ParseEmailRailResult>;
+    (file: File, domain: "rental"): Promise<ParseEmailRentalResult>;
     (file: File, domain: ParseDomain): Promise<ParseEmailResult>;
   },
 
@@ -238,6 +283,7 @@ export const parseApi = {
     (pdfBase64: string, domain: "cruise"): Promise<ParsePdfCruiseResult>;
     (pdfBase64: string, domain: "lodging"): Promise<ParsePdfLodgingResult>;
     (pdfBase64: string, domain: "rail"): Promise<ParsePdfRailResult>;
+    (pdfBase64: string, domain: "rental"): Promise<ParsePdfRentalResult>;
     (pdfBase64: string, domain: ParseDomain): Promise<ParsePdfResult>;
   },
 

@@ -17,7 +17,8 @@ import { ACCENT, BORDER, PANEL_BG, TEXT } from "../map/controlPanelKit";
  * The caller decides what a pick does — this one opens a page rather than
  * a modal.
  */
-export type AddableDomain = "flight" | "cruise" | "lodging" | "poi" | "roadtrip" | "rail" | "tour";
+export type AddableDomain =
+  "flight" | "cruise" | "lodging" | "poi" | "roadtrip" | "rail" | "rental" | "tour";
 
 interface AddDomainPickerProps {
   enabled: Record<AddableDomain, boolean>;
@@ -48,6 +49,8 @@ export function AddDomainPicker({ enabled, onPick }: AddDomainPickerProps): JSX.
   // `enabled.rail` is the combined rule (beta switch AND domain) — see
   // DashboardLayout's `addableDomains`.
   if (enabled.rail) options.push({ key: "rail", label: t("dashboard:addPicker.rail") });
+  // The same combined rule for rentals (beta switch AND domain).
+  if (enabled.rental) options.push({ key: "rental", label: t("dashboard:addPicker.rental") });
 
   return (
     <div ref={containerRef} style={{ position: "relative" }}>

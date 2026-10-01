@@ -1,6 +1,6 @@
 import type { ReactNode } from "react";
 
-export type ImportDomain = "flight" | "cruise" | "lodging" | "trip" | "poi" | "rail";
+export type ImportDomain = "flight" | "cruise" | "lodging" | "trip" | "poi" | "rail" | "rental";
 
 /**
  * The domains a document can actually be parsed FOR. Deliberately narrower
@@ -9,7 +9,7 @@ export type ImportDomain = "flight" | "cruise" | "lodging" | "trip" | "poi" | "r
  * zone may appear at all, so a domain cannot offer a reading the backend has
  * no route for — a type error rather than a runtime 400.
  */
-export const PARSEABLE_IMPORT_DOMAINS = ["flight", "cruise", "lodging", "rail"] as const;
+export const PARSEABLE_IMPORT_DOMAINS = ["flight", "cruise", "lodging", "rail", "rental"] as const;
 export type ParseableImportDomain = (typeof PARSEABLE_IMPORT_DOMAINS)[number];
 
 export function isParseableDomain(domain: ImportDomain): domain is ParseableImportDomain {

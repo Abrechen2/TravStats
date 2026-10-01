@@ -236,6 +236,7 @@ const RENTAL_CODE_KEYS: Readonly<Record<string, string>> = {
   RENTAL_GEOCODER_UNAVAILABLE: "rental:form.errors.geocoderUnavailable",
   RENTAL_RETURN_BEFORE_PICKUP: "rental:form.errors.returnBeforePickup",
   RENTAL_ROADTRIP_NOT_FOUND: "rental:form.errors.roadtripNotFound",
+  RENTAL_UNKNOWN_BOOKING: "rental:form.errors.unknownBooking",
   RENTAL_INVALID_INPUT: "rental:form.errors.invalid",
   LOCAL_TIME_NONEXISTENT: "rental:form.errors.nonexistentTime",
 };

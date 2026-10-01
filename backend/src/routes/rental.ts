@@ -12,19 +12,15 @@ import {
   strayFoldKey,
   updateRentalSchema,
   type RentalQueryInput,
-  type UpdateRentalInput,
 } from "../schemas/rental";
-import {
-  distanceColumns,
-  mergeRental,
-  type ResolvedStations,
-} from "../services/rental/rentalWrite";
-import { resolveRentalStation } from "../services/rental/rentalStations";
 import { withRentalReadFields } from "../services/rental/rentalDto";
-import { recomputeTripStatus } from "../services/tripStatusService";
+import {
+  RENTAL_INCLUDE,
+  createRentalRow,
+  restatusTrips,
+  updateRentalRow,
+} from "../services/rental/rentalRowWrite";
 import { rentalYear } from "../shared/rentalCounting";
-import { resolveCompanions, linkRowsFor } from "../services/companionService";
-import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import logger from "../utils/logger";
@@ -37,12 +33,7 @@ import logger from "../utils/logger";
  * authorisation boundary (as rail).
  */
 
-export const RENTAL_INCLUDE = {
-  trip: { select: { id: true, name: true, color: true } },
-  route: { select: { id: true, name: true } },
-  pickupAirport: { select: { iata: true } },
-  returnAirport: { select: { iata: true } },
-} satisfies Prisma.RentalBookingInclude;
+export { RENTAL_INCLUDE };
 
 const DEFAULT_LIMIT = 100;
 
@@ -189,75 +180,6 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
   }
 });
 
-/** Everything but the derived columns, companions and FX, which the handlers own. */
-function plainColumns(input: UpdateRentalInput) {
-  const {
-    pickupStation: _p,
-    returnStation: _r,
-    pickupLocal: _pl,
-    returnLocal: _rl,
-    pickupFold: _pf,
-    returnFold: _rf,
-    actualPickupLocal: _ap,
-    actualReturnLocal: _ar,
-    distanceKm: _d,
-    status: _s,
-    companions: _c,
-    ...rest
-  } = input;
-  return rest;
-}
-
-async function resolveStations(input: UpdateRentalInput): Promise<ResolvedStations> {
-  return {
-    ...(input.pickupStation && {
-      pickup: await resolveRentalStation(input.pickupStation, "pickupStation"),
-    }),
-    ...(input.returnStation !== undefined && {
-      return:
-        input.returnStation === null
-          ? null
-          : await resolveRentalStation(input.returnStation, "returnStation"),
-    }),
-  };
-}
-
-/**
- * The fields a person set by hand. A later mail of the same booking never
- * replaces one of these (silent-failure class 4, §4.4); the parser path reads
- * this list and leaves them alone.
- */
-function editedFields(input: UpdateRentalInput, existing: string[] = []): string[] {
-  return [...new Set([...existing, ...Object.keys(input).filter((k) => !/Fold$/.test(k))])].sort();
-}
-
-/**
- * The invoice amount's own FX snapshot, dated by the return (the day it was
- * charged) — the price's columns stay the booking's. All null when there is
- * no amount or no honest conversion.
- */
-async function finalFxColumns(
-  userId: string,
-  amount: number | null,
-  currency: string | null,
-  date: Date
-): Promise<Prisma.RentalBookingUncheckedUpdateInput> {
-  const fx = await fxColumnsFor({ amount, currency, date }, await getBaseCurrency(userId));
-  return {
-    finalAmountBase: fx.priceBase,
-    finalFxRate: fx.fxRate,
-    finalFxRateDate: fx.fxRateDate,
-    finalFxBaseCurrency: fx.fxBaseCurrency,
-    finalFxSource: fx.fxSource,
-  };
-}
-
-async function restatusTrips(...tripIds: Array<string | null | undefined>): Promise<void> {
-  for (const id of new Set(tripIds.filter((t): t is string => Boolean(t)))) {
-    await recomputeTripStatus(id);
-  }
-}
-
 router.post(
   "/",
   rentalCreationLimiter,
@@ -273,53 +195,8 @@ router.post(
       await assertRoadtripOwned(userId, input.routeId);
       const documentIds = await takeDocumentIds(userId, req.body);
 
-      const state = mergeRental(null, input, await resolveStations(input));
-      const companions = await resolveCompanions(userId, input.companions ?? []);
-      const finalFx =
-        input.finalAmount != null
-          ? await finalFxColumns(
-              userId,
-              input.finalAmount,
-              input.finalCurrency ?? null,
-              state.returnTime
-            )
-          : {};
-      const fxColumns = await fxColumnsFor(
-        { amount: input.price ?? null, currency: input.currency ?? null, date: state.pickupTime },
-        await getBaseCurrency(userId)
-      );
-
-      const rental = await prisma.$transaction(async (tx) => {
-        const created = await tx.rentalBooking.create({
-          data: {
-            ...plainColumns(input),
-            ...state,
-            ...distanceColumns(input),
-            ...(input.finalAmount != null && { finalAmountSource: "user" }),
-            ...(finalFx as Prisma.RentalBookingUncheckedCreateInput),
-            ...fxColumns,
-            userId,
-            companions: companions.map((c) => c.displayName),
-            userEditedFields: editedFields(input),
-          },
-        });
-        if (companions.length > 0) {
-          await tx.rentalBookingCompanion.createMany({
-            data: linkRowsFor(companions.map((c) => c.id)).map((row) => ({
-              ...row,
-              rentalBookingId: created.id,
-            })),
-            skipDuplicates: true,
-          });
-        }
-        return tx.rentalBooking.findUniqueOrThrow({
-          where: { id: created.id },
-          include: RENTAL_INCLUDE,
-        });
-      });
-
+      const rental = await createRentalRow(userId, input, { manual: true });
       await linkDocuments(userId, documentIds, { type: "rentalBooking", id: rental.id });
-      await restatusTrips(rental.tripId);
       logger.info({ operation: "rental_create", rentalBookingId: rental.id, userId });
       res.status(201).json({ success: true, data: withRentalReadFields(rental) });
     } catch (err) {
@@ -340,77 +217,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     await assertReferencesOwned(userId, { tripId: input.tripId });
     await assertRoadtripOwned(userId, input.routeId);
 
-    // The MERGED state, so a one-field PATCH is checked against the stored rest
-    // (a return moved before an untouched pickup is refused here).
-    const state = mergeRental(existing, input, await resolveStations(input));
-    const resolved =
-      input.companions === undefined
-        ? undefined
-        : await resolveCompanions(userId, input.companions);
-    // Re-snapshotted only when an input it depends on moved (silent-failure
-    // class 4: a re-derivation never runs for nothing and never downgrades).
-    const fxInputsChanged =
-      input.price !== undefined ||
-      input.currency !== undefined ||
-      state.pickupTime.getTime() !== existing.pickupTime.getTime();
-    const fxColumns = fxInputsChanged
-      ? await fxColumnsFor(
-          {
-            amount: input.price !== undefined ? input.price : existing.price,
-            currency: input.currency !== undefined ? input.currency : existing.currency,
-            date: state.pickupTime,
-          },
-          await getBaseCurrency(userId)
-        )
-      : undefined;
-    const finalChanged =
-      input.finalAmount !== undefined ||
-      input.finalCurrency !== undefined ||
-      state.returnTime.getTime() !== existing.returnTime.getTime();
-    const finalFx = finalChanged
-      ? await finalFxColumns(
-          userId,
-          input.finalAmount !== undefined ? input.finalAmount : existing.finalAmount,
-          input.finalCurrency !== undefined ? input.finalCurrency : existing.finalCurrency,
-          state.returnTime
-        )
-      : {};
-
-    const rental = await prisma.$transaction(async (tx) => {
-      if (resolved !== undefined) {
-        await tx.rentalBookingCompanion.deleteMany({ where: { rentalBookingId: existing.id } });
-        if (resolved.length > 0) {
-          await tx.rentalBookingCompanion.createMany({
-            data: linkRowsFor(resolved.map((c) => c.id)).map((row) => ({
-              ...row,
-              rentalBookingId: existing.id,
-            })),
-            skipDuplicates: true,
-          });
-        }
-      }
-      await tx.rentalBooking.update({
-        where: { id: existing.id },
-        data: {
-          ...plainColumns(input),
-          ...state,
-          ...distanceColumns(input),
-          ...(input.finalAmount !== undefined && {
-            finalAmountSource: input.finalAmount === null ? null : "user",
-          }),
-          ...finalFx,
-          ...fxColumns,
-          ...(resolved !== undefined && { companions: resolved.map((c) => c.displayName) }),
-          userEditedFields: editedFields(input, existing.userEditedFields),
-        },
-      });
-      return tx.rentalBooking.findUniqueOrThrow({
-        where: { id: existing.id },
-        include: RENTAL_INCLUDE,
-      });
-    });
-
-    await restatusTrips(existing.tripId, rental.tripId);
+    const rental = await updateRentalRow(userId, existing, input, { manual: true });
     res.json({ success: true, data: withRentalReadFields(rental) });
   } catch (err) {
     next(err);

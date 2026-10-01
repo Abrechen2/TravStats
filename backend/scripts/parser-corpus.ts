@@ -19,6 +19,7 @@
  * Usage (from backend/):
  *   DATABASE_URL=… npx tsx scripts/parser-corpus.ts --dir ../test-samples/Flug-emails --domain flight --tag regex --regex-only
  *   DATABASE_URL=… OLLAMA_URL=http://host:11434 npx tsx scripts/parser-corpus.ts --dir "../test-samples/Hotel Buchungen" --domain lodging --tag ollama --limit 20
+ *   DATABASE_URL=… npx tsx scripts/parser-corpus.ts --dir ../test-samples/Mietwagen --domain rental --tag regex --regex-only
  *
  * If `<dir>/expectations.json` exists, each entry is checked and the process
  * exits 1 on any miss — that file is the ratchet, and it is gitignored with
@@ -30,7 +31,7 @@ import path from "path";
 
 interface Args {
   dir: string;
-  domain: "flight" | "lodging" | "cruise" | "auto";
+  domain: "flight" | "lodging" | "cruise" | "rental" | "auto";
   tag: string;
   limit: number;
   regexOnly: boolean;
@@ -42,8 +43,8 @@ function parseArgs(argv: string[]): Args {
     return i >= 0 ? argv[i + 1] : undefined;
   };
   const domain = (get("--domain") ?? "flight") as Args["domain"];
-  if (!["flight", "lodging", "cruise", "auto"].includes(domain)) {
-    throw new Error(`--domain must be flight|lodging|cruise|auto, got ${domain}`);
+  if (!["flight", "lodging", "cruise", "rental", "auto"].includes(domain)) {
+    throw new Error(`--domain must be flight|lodging|cruise|rental|auto, got ${domain}`);
   }
   return {
     dir: path.resolve(get("--dir") ?? "../test-samples/Flug-emails"),
@@ -81,6 +82,27 @@ interface LodgingRow {
   reference: string | null;
 }
 
+/**
+ * What a rental expectation can pin (spec 2026-10-01-rental-domain-design
+ * §10, R2): the kind of document, the booking it names, where each station
+ * was placed (IATA, or null when it was not), the local times, the money.
+ */
+interface RentalRow {
+  kind: string | null;
+  action: string | null;
+  provider: string | null;
+  confirmationNumber: string | null;
+  pickupIata: string | null;
+  returnIata: string | null;
+  pickupLocal: string | null;
+  returnLocal: string | null;
+  paymentTiming: string | null;
+  price: number | null;
+  currency: string | null;
+  distanceKm: number | null;
+  finalAmount: number | null;
+}
+
 interface FileResult {
   file: string;
   kind: "email" | "pdf";
@@ -104,6 +126,7 @@ interface FileResult {
   flights?: FlightRow[];
   lodgings?: LodgingRow[];
   cruises?: CruiseRow[];
+  rentals?: RentalRow[];
   /** What a reader should look at. Empty means nothing stood out. */
   flags: string[];
   ms: number;
@@ -115,6 +138,8 @@ type Expectation = {
   flights?: Array<{ flightNumber?: string; from?: string; to?: string; date?: string }>;
   lodgings?: Array<{ name?: string; checkIn?: string; checkOut?: string }>;
   cruises?: Array<{ ship?: string; start?: string; end?: string; stops?: number }>;
+  /** Every listed field must equal the reading — null included, so an abstention is pinned too. */
+  rentals?: Array<Partial<RentalRow>>;
 };
 
 /**
@@ -195,6 +220,40 @@ function cruiseRows(cruises: unknown[]): CruiseRow[] {
   });
 }
 
+function iataOf(resolution: unknown): string | null {
+  if (!isRecord(resolution) || resolution.status !== "resolved" || !isRecord(resolution.airport)) {
+    return null;
+  }
+  return str(resolution.airport.iata);
+}
+
+const num = (v: unknown): number | null => (typeof v === "number" && Number.isFinite(v) ? v : null);
+
+function rentalRows(candidates: unknown[]): RentalRow[] {
+  return candidates.filter(isRecord).map((c) => {
+    const input = isRecord(c.input) ? c.input : {};
+    const invoice = isRecord(c.invoice) ? c.invoice : {};
+    const stations = isRecord(c.stations) ? c.stations : {};
+    const pickupIata = iataOf(stations.pickup);
+    return {
+      kind: str(c.kind),
+      action: str(c.action),
+      provider: str(c.provider),
+      confirmationNumber: str(c.confirmationNumber),
+      pickupIata,
+      // "Returned where picked up" (no return station) is the pickup's airport.
+      returnIata: input.returnStation ? iataOf(stations.return) : pickupIata,
+      pickupLocal: str(input.pickupLocal),
+      returnLocal: str(input.returnLocal),
+      paymentTiming: str(input.paymentTiming),
+      price: num(input.price),
+      currency: str(input.currency),
+      distanceKm: num(invoice.distanceKm),
+      finalAmount: num(invoice.finalAmount),
+    };
+  });
+}
+
 function lodgingRows(candidates: unknown[]): LodgingRow[] {
   return candidates.filter(isRecord).map((c) => {
     const lodging = isRecord(c.lodging) ? c.lodging : {};
@@ -253,6 +312,16 @@ function checkExpectation(result: FileResult, expected: Expectation | undefined)
         (e.stops === undefined || c.stops === e.stops)
     );
     if (!hit) misses.push(`expected cruise ${JSON.stringify(e)} not found`);
+  }
+  for (const e of expected.rentals ?? []) {
+    const fields = Object.keys(e) as Array<keyof RentalRow>;
+    const hit = (result.rentals ?? []).some((r) => fields.every((f) => r[f] === e[f]));
+    if (!hit) {
+      const got = (result.rentals ?? []).map((r) => fields.filter((f) => r[f] !== e[f]).join(","));
+      misses.push(
+        `expected rental ${JSON.stringify(e)} not found (differs in: ${got.join(" | ") || "no reading"})`
+      );
+    }
   }
   for (const e of expected.lodgings ?? []) {
     const hit = (result.lodgings ?? []).some(
@@ -330,6 +399,8 @@ async function main(): Promise<void> {
       let subject: string | undefined;
       let html: string | undefined;
       let sentAt: Date | undefined;
+      let from: string | undefined;
+      let attachments: Array<{ filename?: string; mediaType: string; content: Buffer }> | undefined;
       if (isPdf) {
         text = await extractTextFromPdf(buffer);
       } else {
@@ -338,6 +409,8 @@ async function main(): Promise<void> {
         subject = extracted.subject;
         html = extracted.html;
         sentAt = extracted.sentAt ?? undefined;
+        from = extracted.from;
+        attachments = extracted.attachments;
       }
 
       const outcome = await parseDocument({
@@ -347,6 +420,8 @@ async function main(): Promise<void> {
         domain: args.domain,
         source: isPdf ? "document" : "email",
         ...(sentAt ? { referenceDate: sentAt } : {}),
+        ...(from ? { from } : {}),
+        ...(attachments ? { attachments } : {}),
       });
 
       const body = outcome.body as Record<string, unknown>;
@@ -376,6 +451,10 @@ async function main(): Promise<void> {
       } else if (outcome.domain === "cruise" && Array.isArray(body.cruises)) {
         result.cruises = cruiseRows(body.cruises);
         result.candidateCount = result.cruises.length;
+      } else if (outcome.domain === "rental" && Array.isArray(body.candidates)) {
+        result.rentals = rentalRows(body.candidates);
+        result.candidateCount = result.rentals.length;
+        result.parserTemplate = templateNameOf(body.candidates[0]);
       }
       const expectation = expectations[file.normalize("NFC")];
       if (expectation) matchedExpectations.add(file.normalize("NFC"));
@@ -394,6 +473,12 @@ async function main(): Promise<void> {
           .join(" | ") ??
         result.cruises
           ?.map((c) => `${c.ship ?? "?"} ${c.start ?? "?"}→${c.end ?? "?"} ${c.stops} stops`)
+          .join(" | ") ??
+        result.rentals
+          ?.map(
+            (r) =>
+              `${r.kind ?? "?"} ${r.pickupIata ?? "?"}→${r.returnIata ?? "?"} ${r.pickupLocal ?? ""} ${r.distanceKm ?? ""}`
+          )
           .join(" | ") ??
         "";
       const mark = misses.length > 0 ? "✗" : result.flags.length > 0 ? "!" : " ";

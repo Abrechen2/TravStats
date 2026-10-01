@@ -157,6 +157,16 @@ function railValues(body: RailBody, input: LegHints): ExtractedValues {
 export function valuesOf(body: ParsedDocumentBody, input: LegHints): ExtractedValues {
   if (body.domain === "flight") return flightValues(body, input);
   if (body.domain === "rail") return railValues(body, input);
+  if (body.domain === "rental") {
+    const read = body.candidates.length === 1 ? body.candidates[0].input : null;
+    if (!read) return EMPTY;
+    return {
+      ...EMPTY,
+      price: amount(read.price),
+      currency: currency(read.currency),
+      bookingReference: text(read.confirmationNumber),
+    };
+  }
   // A confirmation for two cruises or two stays names two prices; which one
   // this entry is cannot be told from the document alone.
   if (body.domain === "cruise") {

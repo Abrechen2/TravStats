@@ -9,6 +9,8 @@ import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { useRailVisible } from "../../hooks/useRailVisible";
 import { useRailImportAdapter } from "../import/adapters/railAdapter";
+import { useRentalImportAdapter } from "../import/adapters/rentalAdapter";
+import { useRentalVisible } from "../../hooks/useRentalVisible";
 import { flightsApi } from "../../lib/api/flights";
 import { getUpcoming, type UpcomingEntry } from "../../lib/api/upcoming";
 import { useToastStore } from "../../store/toastStore";
@@ -78,6 +80,8 @@ export function DashboardLayout({
   const lodgingAdapter = useLodgingImportAdapter();
   const cruiseAdapter = useCruiseImportAdapter();
   const railAdapter = useRailImportAdapter();
+  const rentalAdapter = useRentalImportAdapter();
+  const rentalVisible = useRentalVisible();
   const [showSpecialModal, setShowSpecialModal] = useState(false);
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
@@ -94,7 +98,13 @@ export function DashboardLayout({
       .then((entries) => {
         // The server answers by the user's domains alone; the rail beta
         // switch is the client's to apply (owner rule 2026-09-25).
-        if (!cancelled) setUpcoming(entries.filter((e) => e.domain !== "rail" || railVisible));
+        if (!cancelled)
+          setUpcoming(
+            entries.filter(
+              (e) =>
+                (e.domain !== "rail" || railVisible) && (e.domain !== "rental" || rentalVisible)
+            )
+          );
       })
       .catch((err: unknown) => logger.error("Failed to load the upcoming entries", err));
     return () => {
@@ -102,7 +112,7 @@ export function DashboardLayout({
     };
     // `counts` changes whenever the page refetches after a create — the cheapest
     // honest trigger for "something might now be sooner than what is shown".
-  }, [counts, railVisible]);
+  }, [counts, railVisible, rentalVisible]);
 
   // On a domain tab, that domain's next entry; on "Alle", the soonest of all —
   // including the trip, which belongs to no single tab. `upcoming` arrives
@@ -151,6 +161,7 @@ export function DashboardLayout({
     lodging: isEnabled("lodging"),
     roadtrip: isEnabled("roadtrip"),
     rail: isEnabled("rail"),
+    rental: isEnabled("rental"),
   };
 
   // What the "+" menu offers. One entry differs from `enabledDomains`, on
@@ -169,12 +180,13 @@ export function DashboardLayout({
     ...enabledDomains,
     poi: placesVisible,
     rail: railVisible,
+    rental: rentalVisible,
     tour: toursVisible,
   };
 
   // Where a document found in the wrong dialog may be sent (D1): only to an
   // import this menu itself would open.
-  const openableImports = (["flight", "cruise", "lodging", "rail"] as const).filter(
+  const openableImports = (["flight", "cruise", "lodging", "rail", "rental"] as const).filter(
     (d) => addableDomains[d]
   );
 
@@ -356,6 +368,15 @@ export function DashboardLayout({
         onItemsCreated={() => onDataChanged?.()}
         adapter={railAdapter}
         initialDocument={addingDomain === "rail" ? handedOver : null}
+        onOpenOtherImport={openOtherImport}
+        openableDomains={openableImports}
+      />
+      <DomainImportPanel
+        open={addingDomain === "rental"}
+        onClose={() => setAddingDomain(null)}
+        onItemsCreated={() => onDataChanged?.()}
+        adapter={rentalAdapter}
+        initialDocument={addingDomain === "rental" ? handedOver : null}
         onOpenOtherImport={openOtherImport}
         openableDomains={openableImports}
       />

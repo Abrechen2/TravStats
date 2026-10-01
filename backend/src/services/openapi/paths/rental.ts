@@ -25,6 +25,7 @@ import {
   RENTAL_STATUSES,
 } from "../../../schemas/rental";
 import { rentalTimesSchema } from "../../../schemas/times";
+import { rentalImportSchema } from "../../../schemas/rentalImport";
 
 const stationErrors = {
   422: {
@@ -136,6 +137,16 @@ export const rentalBookingSchema = registry.register(
 );
 
 const envelope = <T extends z.ZodTypeAny>(data: T) => z.object({ success: z.literal(true), data });
+
+const importEnvelope = z.object({
+  success: z.literal(true),
+  data: rentalBookingSchema,
+  meta: z.object({
+    outcome: z
+      .enum(["created", "updated", "unchanged", "cancelled", "invoiced"])
+      .describe("What the document did to the account's rentals"),
+  }),
+});
 
 const stationHit = z
   .object({
@@ -315,5 +326,52 @@ registry.registerPath({
   responses: {
     204: { description: "Deleted" },
     404: { description: "Not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "post",
+  path: "/rentals/import",
+  summary: "Apply one reviewed rental document",
+  description:
+    "What a parse (`domain: rental`) read, after the user answered what it could not. A " +
+    "confirmation creates a rental — or, when the account already holds its provider + " +
+    "booking number, updates it, never overwriting a field the user edited and never a richer " +
+    "value with a poorer one. A cancellation sets `cancelled` (never a delete); an invoice " +
+    "fills the driven km (`distanceSource: invoice`), the car driven, the actual times and the " +
+    "final amount. Neither of those two ever creates a rental: an unknown booking is " +
+    "`RENTAL_UNKNOWN_BOOKING` and nothing is written.",
+  tags: ["Rentals"],
+  request: {
+    body: {
+      content: {
+        "application/json": {
+          schema: rentalImportSchema.openapi("RentalImportInput").and(documentIdsBodySchema),
+        },
+      },
+    },
+  },
+  responses: {
+    ...stationErrors,
+    422: { ...stationErrors[422], content: timeRefused.content },
+    201: {
+      description: "A new rental from a confirmation",
+      content: { "application/json": { schema: importEnvelope } },
+    },
+    200: {
+      description: "An existing rental updated, cancelled or completed from its invoice",
+      content: { "application/json": { schema: importEnvelope } },
+    },
+    400: { description: "Validation failed", content: errorContent },
+    404: {
+      description: "No rental with this booking number (`RENTAL_UNKNOWN_BOOKING`)",
+      content: errorContent,
+    },
+    409: {
+      description:
+        "The invoice's km differ from a figure the user typed (`RENTAL_INVOICE_KM_CONFLICT`); " +
+        "send `replaceUserDistance: true` once the user chose the invoice's",
+      content: errorContent,
+    },
   },
 });

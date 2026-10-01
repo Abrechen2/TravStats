@@ -210,7 +210,8 @@
     "lodging": "Unterkunft",
     "tour": "Tour",
     "roadtrip": "Roadtrip",
-    "rail": "Zugfahrt"
+    "rail": "Zugfahrt",
+    "rental": "Mietwagen"
   },
   "controls": {
     "mode": "Modus",

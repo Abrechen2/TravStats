@@ -67,6 +67,10 @@ export type ApiErrorCode =
   | "RENTAL_RETURN_BEFORE_PICKUP"
   | "RENTAL_STATION_UNRESOLVED"
   | "RENTAL_GEOCODER_UNAVAILABLE"
+  /** A cancellation or invoice for a booking this account does not hold — nothing was written. */
+  | "RENTAL_UNKNOWN_BOOKING"
+  /** An invoice's km beside a figure the user typed; the review shows both and asks. */
+  | "RENTAL_INVOICE_KM_CONFLICT"
   /** A parse needed the configured LLM and could not reach it — "try later",
    *  not "broken". */
   | "LLM_UNREACHABLE"

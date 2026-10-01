@@ -117,7 +117,8 @@
       "returnBeforePickup": "The return is before the pickup.",
       "roadtripNotFound": "This roadtrip was not found.",
       "invalid": "A value was not accepted. Please check the form.",
-      "nonexistentTime": "This time does not exist at the station (clock change)."
+      "nonexistentTime": "This time does not exist at the station (clock change).",
+      "unknownBooking": "There is no rental with this booking number."
     }
   },
   "detail": {
@@ -165,5 +166,38 @@
     "sourceManual": "entered by hand",
     "invoice": "Invoice",
     "noInvoice": "none yet"
+  },
+  "import": {
+    "panelTitle": "Add a rental car",
+    "panelHint": "Do you have a booking confirmation or an invoice? Read it in.",
+    "saved": "Rental taken over.",
+    "title": {
+      "confirmation": "Take over the booking",
+      "cancellation": "Take over the cancellation",
+      "invoice": "Take over the invoice"
+    },
+    "action": {
+      "create": "Add as a new rental",
+      "update": "Update the existing rental",
+      "cancel": "Cancel the rental",
+      "invoice": "Add the invoice to the rental",
+      "declined": "Take over"
+    },
+    "updateNote": "This booking number exists already. The rental is completed; what you changed by hand stays.",
+    "unknownBooking": "There is no rental with booking number {{number}}. A cancellation or invoice creates none – read the booking confirmation first.",
+    "ambiguous": "“{{name}}” fits several airports. Pick the right one:",
+    "stationUnplaced": "Please pick the station – nothing is saved without a place.",
+    "period": "{{pickup}} – {{ret}} (station local time)",
+    "invoiceKm": "Kilometres driven per the invoice",
+    "kmConflict": "The invoice says {{km}} km; you entered another figure by hand. Should the invoice's figure count?",
+    "useInvoiceKm": "Use the invoice's figure",
+    "empty": {
+      "parking": "This is a parking booking, not a rental car.",
+      "noItinerary": "This mail from the provider holds no booking.",
+      "noTemplate": "TravStats cannot read this rental document yet. Enter the rental by hand.",
+      "notConfirmed": "The rental is on request only, not confirmed yet.",
+      "otherDomain": "This document is not a rental booking.",
+      "generic": "No rental was found in this document."
+    }
   }
 }

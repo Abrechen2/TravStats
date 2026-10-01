@@ -1,5 +1,10 @@
 import { api } from "./client";
-import type { RentalBooking, RentalInput, RentalStationHit } from "../../types/rental";
+import type {
+  RentalBooking,
+  RentalInput,
+  RentalInvoiceReading,
+  RentalStationHit,
+} from "../../types/rental";
 
 /**
  * `/api/v1/rentals` — the rental logbook (spec 2026-10-01-rental-domain-design).
@@ -67,6 +72,24 @@ export const rentalApi = {
 
   async remove(id: string): Promise<void> {
     await api.delete(`/rentals/${encodeURIComponent(id)}`);
+  },
+
+  /**
+   * One reviewed document applied (`POST /rentals/import`): the server decides
+   * create vs update by the booking number; a cancellation or invoice for an
+   * unknown booking is refused with `RENTAL_UNKNOWN_BOOKING`.
+   */
+  async importDocument(
+    body:
+      | { kind: "confirmation"; input: RentalInput }
+      | { kind: "cancellation"; provider: string; confirmationNumber: string }
+      | { kind: "invoice"; invoice: RentalInvoiceReading; replaceUserDistance?: boolean }
+  ): Promise<{ rental: RentalBooking; outcome: string }> {
+    const res = await api.post<Envelope<RentalBooking> & { meta: { outcome: string } }>(
+      "/rentals/import",
+      body
+    );
+    return { rental: res.data.data, outcome: res.data.meta.outcome };
   },
 
   /** Airports and the user's earlier stations matching `q`. */

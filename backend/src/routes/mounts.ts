@@ -85,6 +85,7 @@ import railStatsRouter from "./rail/stats";
 import railRoadtripConversionRouter from "./rail/roadtripConversion";
 import rentalRouter from "./rental";
 import rentalStationsRouter from "./rental/stations";
+import rentalImportRouter from "./rental/import";
 import cruiseTrackRoutes from "./cruises/tracks";
 import currenciesRouter from "./currencies";
 import lodgingRouter from "./lodging";
@@ -294,6 +295,7 @@ export const apiMounts: ApiMount[] = [
   // Car rentals (spec 2026-10-01-rental-domain-design). Behind the beta switch in
   // the UI only. Sub-routers mount FIRST: '/:id' would answer them as a 404.
   { id: "rental.stations", base: "/api/v1/rentals/stations", router: rentalStationsRouter },
+  { id: "rental.import", base: "/api/v1/rentals/import", router: rentalImportRouter },
   { id: "rental", base: "/api/v1/rentals", router: rentalRouter },
   // Recorded tracks of a cruise (2.7) — the same satellite pattern.
   { id: "cruises.tracks", base: "/api/v1/cruises", router: cruiseTrackRoutes },

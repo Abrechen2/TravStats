@@ -5,6 +5,8 @@ import LogbookTabs from "../components/table/LogbookTabs";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import { RentalFormModal } from "../components/rental/RentalFormModal";
 import { RentalRow } from "../components/rental/RentalRow";
+import DomainImportPanel from "../components/import/DomainImportPanel";
+import { useRentalImportAdapter } from "../components/import/adapters/rentalAdapter";
 import { useTranslation } from "../hooks/useTranslation";
 import { rentalApi } from "../lib/api/rental";
 import { logger } from "../lib/logger";
@@ -34,6 +36,8 @@ export default function RentalsPage(): JSX.Element {
   const [editing, setEditing] = useState<Editing>(null);
   const [toDelete, setToDelete] = useState<RentalBooking | null>(null);
   const [deleting, setDeleting] = useState(false);
+  const [adding, setAdding] = useState(false);
+  const rentalAdapter = useRentalImportAdapter();
 
   useEffect(() => {
     const handle = setTimeout(() => setQuery(search.trim()), SEARCH_DEBOUNCE_MS);
@@ -93,7 +97,7 @@ export default function RentalsPage(): JSX.Element {
           <h1 className="t-screen-title">{t("rental:title")}</h1>
           <button
             type="button"
-            onClick={(): void => setEditing({ rental: null })}
+            onClick={(): void => setAdding(true)}
             className="rounded-md bg-(--accent) px-4 py-2 text-sm font-medium text-(--bg-base)"
           >
             {t("rental:add")}
@@ -144,6 +148,13 @@ export default function RentalsPage(): JSX.Element {
         )}
       </div>
 
+      {/* New rentals start at the chooser: a booking mail to read, or typing it in. */}
+      <DomainImportPanel
+        open={adding}
+        onClose={(): void => setAdding(false)}
+        onItemsCreated={(): Promise<void> => load(0)}
+        adapter={rentalAdapter}
+      />
       {editing && (
         <RentalFormModal
           rental={editing.rental}

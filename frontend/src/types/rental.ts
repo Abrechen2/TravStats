@@ -152,3 +152,48 @@ export interface RentalStationHit {
   country: string | null;
   timezone: string | null;
 }
+
+/** Why a rental document was not read — a stable code the review words (backend `RentalFallbackCode`). */
+export type RentalParseFallbackCode =
+  "parking" | "noItinerary" | "noTemplate" | "notConfirmed" | "otherDomain" | "unknownBooking";
+
+export interface AirportHit {
+  airportId: number;
+  iata: string;
+  name: string;
+  country: string | null;
+}
+
+export type StationResolution =
+  | { status: "resolved"; airport: AirportHit }
+  | { status: "ambiguous"; candidates: AirportHit[] }
+  | { status: "unresolved" };
+
+export interface RentalInvoiceReading {
+  provider: string;
+  confirmationNumber: string | null;
+  agreementNumber: string | null;
+  invoiceNumber: string | null;
+  odometerOutKm: number | null;
+  odometerInKm: number | null;
+  distanceKm: number | null;
+  vehicleDriven: string | null;
+  actualPickupLocal: string | null;
+  actualReturnLocal: string | null;
+  finalAmount: number | null;
+  finalCurrency: string | null;
+}
+
+/** One reviewed document, as `POST /parse-*` with domain `rental` answers it. */
+export interface RentalImportCandidate {
+  kind: "confirmation" | "cancellation" | "invoice";
+  action: "create" | "update" | "cancel" | "invoice" | "declined";
+  declineCode: "unknownBooking" | null;
+  existingId: string | null;
+  parserTemplate: string;
+  input: (RentalInput & { mileagePolicy?: RentalMileagePolicy | null }) | null;
+  stations: { pickup: StationResolution; return: StationResolution } | null;
+  invoice: RentalInvoiceReading | null;
+  confirmationNumber: string | null;
+  provider: string;
+}

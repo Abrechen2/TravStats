@@ -13,7 +13,9 @@ import {
   isLodgingEmailResult,
   isLodgingPdfResult,
   isRailEmailResult,
+  isRentalEmailResult,
   isRailPdfResult,
+  isRentalPdfResult,
 } from "../../lib/api/parse";
 
 import type { ImportDocument } from "../import/documentHandoff";
@@ -111,7 +113,12 @@ export default function FlightLookupStep({
   };
 
   const handleEmailResult = (result: ParseEmailResult, fileName?: string | null): void => {
-    if (isCruiseEmailResult(result) || isLodgingEmailResult(result) || isRailEmailResult(result)) {
+    if (
+      isCruiseEmailResult(result) ||
+      isLodgingEmailResult(result) ||
+      isRailEmailResult(result) ||
+      isRentalEmailResult(result)
+    ) {
       setError(t("flights:form.noFlightsInEmail"));
       return;
     }
@@ -133,7 +140,12 @@ export default function FlightLookupStep({
   };
 
   const handlePdfResult = (result: ParsePdfResult, fileName?: string | null): void => {
-    if (isCruisePdfResult(result) || isLodgingPdfResult(result) || isRailPdfResult(result)) {
+    if (
+      isCruisePdfResult(result) ||
+      isLodgingPdfResult(result) ||
+      isRailPdfResult(result) ||
+      isRentalPdfResult(result)
+    ) {
       setError(t("flights:form.noFlightsInEmail"));
       return;
     }

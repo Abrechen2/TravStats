@@ -148,6 +148,7 @@
     "rail/stations.ts",
     "rail/stats.ts",
     "rental.ts",
+    "rental/import.ts",
     "rental/stations.ts",
     "settings/profilePicture.ts",
     "ships.ts",

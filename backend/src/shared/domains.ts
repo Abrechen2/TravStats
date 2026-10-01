@@ -139,6 +139,7 @@ export const PARSER_SUPPORTED_DOMAINS = [
   "cruise",
   "lodging",
   "rail",
+  "rental",
 ] as const satisfies readonly DomainKey[];
 export type ParserSupportedDomain = (typeof PARSER_SUPPORTED_DOMAINS)[number];
 

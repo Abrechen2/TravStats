@@ -117,7 +117,8 @@
       "returnBeforePickup": "Die Rückgabe liegt vor der Abholung.",
       "roadtripNotFound": "Dieser Roadtrip wurde nicht gefunden.",
       "invalid": "Eine Angabe wurde nicht angenommen. Bitte prüfe das Formular.",
-      "nonexistentTime": "Diese Uhrzeit gibt es an der Station nicht (Zeitumstellung)."
+      "nonexistentTime": "Diese Uhrzeit gibt es an der Station nicht (Zeitumstellung).",
+      "unknownBooking": "Zu dieser Buchungsnummer gibt es keine Miete."
     }
   },
   "detail": {
@@ -165,5 +166,38 @@
     "sourceManual": "von Hand eingetragen",
     "invoice": "Rechnung",
     "noInvoice": "noch keine"
+  },
+  "import": {
+    "panelTitle": "Mietwagen hinzufügen",
+    "panelHint": "Hast du eine Buchungsbestätigung oder eine Rechnung? Dann lies sie ein.",
+    "saved": "Mietwagen übernommen.",
+    "title": {
+      "confirmation": "Buchung übernehmen",
+      "cancellation": "Stornierung übernehmen",
+      "invoice": "Rechnung übernehmen"
+    },
+    "action": {
+      "create": "Als neue Miete anlegen",
+      "update": "Bestehende Miete aktualisieren",
+      "cancel": "Miete stornieren",
+      "invoice": "Rechnung zur Miete übernehmen",
+      "declined": "Übernehmen"
+    },
+    "updateNote": "Diese Buchungsnummer gibt es schon. Die Miete wird ergänzt; was du von Hand geändert hast, bleibt.",
+    "unknownBooking": "Zu Buchungsnummer {{number}} gibt es keine Miete. Eine Stornierung oder Rechnung legt keine an – lies zuerst die Buchungsbestätigung ein.",
+    "ambiguous": "„{{name}}“ passt zu mehreren Flughäfen. Wähle den richtigen:",
+    "stationUnplaced": "Bitte die Station wählen – ohne Ort wird nichts gespeichert.",
+    "period": "{{pickup}} – {{ret}} (Ortszeit der Stationen)",
+    "invoiceKm": "Gefahrene Kilometer laut Rechnung",
+    "kmConflict": "Die Rechnung nennt {{km}} km, du hast von Hand einen anderen Wert eingetragen. Soll der Wert der Rechnung gelten?",
+    "useInvoiceKm": "Rechnungswert übernehmen",
+    "empty": {
+      "parking": "Das ist eine Parkplatzbuchung, kein Mietwagen.",
+      "noItinerary": "Diese Mail des Vermieters enthält keine Buchung.",
+      "noTemplate": "Diesen Mietwagen-Beleg kann TravStats noch nicht lesen. Trage die Miete von Hand ein.",
+      "notConfirmed": "Die Miete ist nur angefragt, noch nicht bestätigt.",
+      "otherDomain": "Das Dokument ist keine Mietwagen-Buchung.",
+      "generic": "In diesem Dokument wurde keine Miete gefunden."
+    }
   }
 }
