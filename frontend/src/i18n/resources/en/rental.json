@@ -190,6 +190,8 @@
     "updateNote": "This booking number exists already. The rental is completed; what you changed by hand stays.",
     "unknownBooking": "There is no rental with booking number {{number}}. A cancellation or invoice creates none – read the booking confirmation first.",
     "ambiguous": "“{{name}}” fits several airports. Pick the right one:",
+    "geocoded": "\"{{name}}\" is not an airport in the catalogue. The address search suggests {{place}} – check the place before you save.",
+    "geocoderUnavailable": "The address search cannot be reached right now, so \"{{name}}\" could not be placed. Pick the station yourself.",
     "stationUnplaced": "Please pick the station – nothing is saved without a place.",
     "period": "{{pickup}} – {{ret}} (station local time)",
     "invoiceKm": "Kilometres driven per the invoice",

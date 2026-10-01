@@ -85,6 +85,42 @@ describe("RentalImportPreviewModal", () => {
     expect(importDocument.mock.calls[0][0].input.pickupStation).toMatchObject({ airportId: 2 });
   });
 
+  it("starts from the geocoder's proposal and saves it as a position", async () => {
+    importDocument.mockResolvedValue({});
+    const onSaved = vi.fn();
+    const candidate = confirmation({
+      stations: {
+        pickup: {
+          status: "geocoded",
+          place: { label: "Testplatz 1, Testhausen", lat: 48.1, lon: 11.5, country: "DE" },
+        },
+        return: { status: "unresolved" },
+      },
+    });
+    render(<RentalImportPreviewModal candidate={candidate} onCancel={vi.fn()} onSaved={onSaved} />);
+    expect(screen.getByTestId("rental-import-pickup-geocoded")).toHaveTextContent(
+      "rental:import.geocoded"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "rental:import.action.create" }));
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(importDocument.mock.calls[0][0].input.pickupStation).toMatchObject({
+      lat: 48.1,
+      lon: 11.5,
+      country: "DE",
+    });
+  });
+
+  it("says an unreachable geocoder instead of a bare unplaced station", () => {
+    const candidate = confirmation({
+      stations: {
+        pickup: { status: "unresolved", geocoderUnavailable: true },
+        return: { status: "unresolved" },
+      },
+    });
+    render(<RentalImportPreviewModal candidate={candidate} onCancel={vi.fn()} onSaved={vi.fn()} />);
+    expect(screen.getByText("rental:import.geocoderUnavailable")).toHaveAttribute("role", "alert");
+  });
+
   it("offers no save for an invoice of an unknown booking and says why", () => {
     const candidate = confirmation({
       kind: "invoice",

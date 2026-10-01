@@ -1,5 +1,12 @@
-import { describe, it, expect, beforeAll, afterAll } from "@jest/globals";
+import { describe, it, expect, beforeAll, afterAll, beforeEach, jest } from "@jest/globals";
 import request from "supertest";
+
+// The geocoder is the station fallback; no test reaches the network.
+const searchPlacesDetailed = jest.fn<(q: string) => Promise<unknown>>();
+jest.mock("../../services/geo/photon", () => {
+  const actual = jest.requireActual<Record<string, unknown>>("../../services/geo/photon");
+  return { ...actual, searchPlacesDetailed: (q: string) => searchPlacesDetailed(q) };
+});
 
 import app from "../../index";
 import { prisma } from "../../db";
@@ -47,6 +54,11 @@ describe("rentals through the parse routes", () => {
   let userId: string;
   let cookie: string;
 
+  beforeEach(() => {
+    searchPlacesDetailed.mockReset();
+    searchPlacesDetailed.mockResolvedValue({ results: [], degraded: false });
+  });
+
   beforeAll(async () => {
     userId = (
       await prisma.user.create({
@@ -92,9 +104,10 @@ describe("rentals through the parse routes", () => {
     expect(candidate.input).toMatchObject({ pickupLocal: "2026-07-06T09:15", returnStation: null });
   });
 
-  // Class 2: a station the catalogue cannot place stays unresolved — the
-  // review asks; it is never written at a guessed airport.
-  it("places a unique station and leaves an unplaceable one to the review", async () => {
+  // "München" is the German name; the catalogue spells the city "Munich".
+  // Before the alias table it found only the closed München-Riem field and
+  // stayed unresolved.
+  it("places a station named in German at the airport the catalogue spells in English", async () => {
     const res = await request(app)
       .post("/api/v1/parse-email")
       .set("Cookie", cookie)
@@ -104,9 +117,61 @@ describe("rentals through the parse routes", () => {
       status: "resolved",
       airport: { iata: "STR" },
     });
-    // "München" is the German name; the catalogue spells the city "Munich".
-    expect(candidate.stations.return).toEqual({ status: "unresolved" });
-    expect(candidate.input.returnStation).toEqual({ name: "München Flughafen" });
+    expect(candidate.stations.return).toMatchObject({
+      status: "resolved",
+      airport: { iata: "MUC" },
+    });
+    expect(searchPlacesDetailed).not.toHaveBeenCalled();
+  });
+
+  // Class 2: a station no airport answers is offered at the place the
+  // geocoder found — a proposal for the review, never a silent placement.
+  it("offers the geocoder's place for a station no airport answers", async () => {
+    searchPlacesDetailed.mockResolvedValueOnce({
+      results: [
+        { name: "Testplatz 1", city: "Testhausen", countryCode: "de", lat: 48.1, lon: 11.5 },
+      ],
+      degraded: false,
+    });
+    const res = await request(app)
+      .post("/api/v1/parse-email")
+      .set("Cookie", cookie)
+      .send({
+        emailContent: SIXT_LAYOUT_B.replace(/Frankfurt/g, "Stuttgart").replace(
+          /München Flughafen/g,
+          "Testhausen Bahnhof"
+        ),
+        domain: "rental",
+      });
+    const [candidate] = res.body.candidates;
+    expect(candidate.stations.return).toEqual({
+      status: "geocoded",
+      place: { label: "Testplatz 1, Testhausen", lat: 48.1, lon: 11.5, country: "DE" },
+    });
+    expect(candidate.input.returnStation).toEqual({
+      name: "Testhausen Bahnhof",
+      lat: 48.1,
+      lon: 11.5,
+      country: "DE",
+    });
+  });
+
+  // Class 3: a geocoder that could not be reached is said, not read as "nothing found".
+  it("names an unreachable geocoder and leaves the station to the review", async () => {
+    searchPlacesDetailed.mockResolvedValueOnce({ results: [], degraded: true });
+    const res = await request(app)
+      .post("/api/v1/parse-email")
+      .set("Cookie", cookie)
+      .send({
+        emailContent: SIXT_LAYOUT_B.replace(/Frankfurt/g, "Stuttgart").replace(
+          /München Flughafen/g,
+          "Testhausen Bahnhof"
+        ),
+        domain: "rental",
+      });
+    const [candidate] = res.body.candidates;
+    expect(candidate.stations.return).toEqual({ status: "unresolved", geocoderUnavailable: true });
+    expect(candidate.input.returnStation).toEqual({ name: "Testhausen Bahnhof" });
   });
 
   it("finds a rental by itself when asked for auto", async () => {

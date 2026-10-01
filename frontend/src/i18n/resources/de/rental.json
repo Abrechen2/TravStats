@@ -190,6 +190,8 @@
     "updateNote": "Diese Buchungsnummer gibt es schon. Die Miete wird ergänzt; was du von Hand geändert hast, bleibt.",
     "unknownBooking": "Zu Buchungsnummer {{number}} gibt es keine Miete. Eine Stornierung oder Rechnung legt keine an – lies zuerst die Buchungsbestätigung ein.",
     "ambiguous": "„{{name}}“ passt zu mehreren Flughäfen. Wähle den richtigen:",
+    "geocoded": "„{{name}}“ ist kein Flughafen im Katalog. Die Adresssuche schlägt {{place}} vor – prüfe den Ort, bevor du speicherst.",
+    "geocoderUnavailable": "Die Adresssuche ist gerade nicht erreichbar, deshalb konnte „{{name}}“ nicht platziert werden. Wähle die Station selbst.",
     "stationUnplaced": "Bitte die Station wählen – ohne Ort wird nichts gespeichert.",
     "period": "{{pickup}} – {{ret}} (Ortszeit der Stationen)",
     "invoiceKm": "Gefahrene Kilometer laut Rechnung",

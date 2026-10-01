@@ -169,7 +169,11 @@ export interface AirportHit {
 export type StationResolution =
   | { status: "resolved"; airport: AirportHit }
   | { status: "ambiguous"; candidates: AirportHit[] }
-  | { status: "unresolved" };
+  | {
+      status: "geocoded";
+      place: { label: string; lat: number; lon: number; country: string | null };
+    }
+  | { status: "unresolved"; geocoderUnavailable?: true };
 
 export interface RentalInvoiceReading {
   provider: string;

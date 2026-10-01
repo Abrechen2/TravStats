@@ -37,6 +37,10 @@ function draftOf(name: string, resolution: StationResolution | undefined): Renta
       lon: 0,
     };
   }
+  if (resolution?.status === "geocoded") {
+    const { lat, lon, country } = resolution.place;
+    return { ...EMPTY_RENTAL_STATION, name, lat, lon, country };
+  }
   return { ...EMPTY_RENTAL_STATION, name };
 }
 
@@ -121,6 +125,16 @@ export function RentalImportPreviewModal({ candidate, onCancel, onSaved }: Props
       <div className="space-y-2">
         {resolution?.status === "ambiguous" ? (
           <p className="t-caption">{t("rental:import.ambiguous", { name: value.name })}</p>
+        ) : null}
+        {resolution?.status === "geocoded" ? (
+          <p className="t-caption" data-testid={`rental-import-${which}-geocoded`}>
+            {t("rental:import.geocoded", { name: value.name, place: resolution.place.label })}
+          </p>
+        ) : null}
+        {resolution?.status === "unresolved" && resolution.geocoderUnavailable ? (
+          <p role="alert" className="t-caption">
+            {t("rental:import.geocoderUnavailable", { name: value.name })}
+          </p>
         ) : null}
         {resolution?.status === "ambiguous"
           ? resolution.candidates.map((c) => (

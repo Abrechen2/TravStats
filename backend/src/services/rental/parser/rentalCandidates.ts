@@ -53,9 +53,12 @@ async function bookingFor(
 }
 
 function stationInput(name: string, resolution: StationResolution) {
-  return resolution.status === "resolved"
-    ? { name, airportId: resolution.airport.airportId }
-    : { name };
+  if (resolution.status === "resolved") return { name, airportId: resolution.airport.airportId };
+  if (resolution.status === "geocoded") {
+    const { lat, lon, country } = resolution.place;
+    return { name, lat, lon, ...(country ? { country } : {}) };
+  }
+  return { name };
 }
 
 async function confirmationCandidate(
