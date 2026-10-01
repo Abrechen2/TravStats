@@ -284,7 +284,7 @@ Each has a recommendation; nothing in packages 1–2 waits on them.
 | # | question | recommendation |
 |---|---|---|
 | D1 | Rename the template repo to `travstats-templates` with one folder per domain? | Yes (option A of three; per-domain repos and templates-inside-the-app-repo were weighed and rejected) |
-| D2 | Flights: template before language model? Today the model is asked first, while templates carry 27 of 31 mails. | Yes, template first, as lodging already does |
+| D2 | Flights: template before language model? | **Decided 2026-10-01 (owner): yes, template first.** Already built on main since 2026-09-17 (`bb2a98b8c`): the admin setting `parserOrder` defaults to `template_first` in every domain; this row wrongly said the model was asked first. Prod (2.6.3) predates it and still asks the model first until 2.7 ships. Accor stays a template and is package 3's pilot for delivery through the repo. |
 | D3 | Cruise: decline instead of throwing when no reader matches? | Yes, like lodging |
 | D4 | Community templates: active as soon as their tests pass, or after an admin click? | After passing tests, with the admin able to disable any single template |
 | D5 | May an admin share another user's template instance-wide, or only their own? | Own and imported ones only |
