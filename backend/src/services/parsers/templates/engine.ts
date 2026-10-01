@@ -92,9 +92,13 @@ export function applyTemplate(
       value = applyTextPatterns(textPats, plainText);
     }
 
-    if (value) {
-      const transform = template.transforms[sKey];
-      const finalValue = transform ? applyTransform(transform, value) : value;
+    // A transform may answer "" for "I cannot place this" — `airportName` does
+    // for a city with several airports. That is a field not found, not a field
+    // found empty: written through, it would count towards the confidence and
+    // hide the gap from `missing`.
+    const transform = template.transforms[sKey];
+    const finalValue = value && transform ? applyTransform(transform, value) : value;
+    if (finalValue) {
       (result as unknown as Record<string, unknown>)[bookingKey] = finalValue;
       matchedFields++;
     } else if (CRITICAL_FIELDS.includes(sKey)) {

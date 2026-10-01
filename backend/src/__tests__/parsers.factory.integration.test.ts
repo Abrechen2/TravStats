@@ -64,6 +64,12 @@ jest.mock("../services/parsers/text/templateParser", () => ({
   TemplateParser: jest.fn().mockImplementation(() => ({
     checkAvailability: mockTemplateParserCheckAvailability,
     parseEmail: mockTemplateParserParseEmail,
+    // The chain reads templates through `read`; these tests state their
+    // answer as `parseEmail`'s flights, which is what `read` wraps.
+    read: async (...args: unknown[]) => ({
+      flights: (await mockTemplateParserParseEmail(...args)) as unknown[],
+      nonBooking: false,
+    }),
   })),
 }));
 

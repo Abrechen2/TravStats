@@ -259,12 +259,15 @@ export async function parseEmail(
   const templateParser = new TemplateParser();
   const templateAvail = await templateParser.checkAvailability();
   if (templateAvail.available) {
-    const templateResults = await templateParser.parseEmail(
-      subject,
-      cleanedText,
-      html,
-      config.userId
-    );
+    const reading = await templateParser.read(subject, cleanedText, html, config.userId);
+    // A template that recognises its own sender's cancellation or change
+    // notice ends the chain: the regex below would read the cancelled
+    // flight's lines and propose them as a booking.
+    if (reading.nonBooking) {
+      logger.info("[Parser Factory] Template recognised a non-booking — no flights");
+      return { flights: [], provider: "regex" as const, fallbackUsed: false };
+    }
+    const templateResults = reading.flights;
     if (templateResults.length > 0 && (templateResults[0].parserConfidence ?? 0) >= 30) {
       logger.info(
         {

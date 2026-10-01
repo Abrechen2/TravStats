@@ -68,6 +68,18 @@ const DETECTION_RULES: DetectionRule[] = [
     subjectPatterns: [/brussels airlines.*booking/i],
     htmlFingerprints: ["brusselsairlines", "brussels airlines"],
   },
+  // The three below were written against a private mailbox (2026-10-01) and
+  // sit LAST on purpose: a mail an earlier rule already reads keeps that
+  // reading, because `detectAirlines` offers them only after the earlier
+  // templates have declined. A Germanwings confirmation names "Lufthansa
+  // AirPlus" in its small print, so the Lufthansa rule claims it first — and
+  // declines it, which is what lets this one read it.
+  {
+    iata: "4U",
+    fromDomains: ["@germanwings.com"],
+    subjectPatterns: [/germanwings/i],
+    htmlFingerprints: ["germanwings"],
+  },
 ];
 
 /**
@@ -92,25 +104,39 @@ export function detectAirline(
   htmlContent: string,
   textContent = ""
 ): string | null {
+  return detectAirlines(fromAddress, subject, htmlContent, textContent)[0] ?? null;
+}
+
+/**
+ * Every template a mail could belong to, strongest rule first.
+ *
+ * `detectAirline` answers the first of these, and for a long time that was
+ * the only answer: the first rule that matched decided the template, and when
+ * that template declined the mail went straight to the generic regex. Measured
+ * 2026-10-01 on a private mailbox: twenty Germanwings confirmations mention
+ * "Lufthansa AirPlus" in their tax note, so the Lufthansa rule claimed every
+ * one, its template found no Lufthansa leg and declined, and the regex then
+ * read the airline's VAT number as a flight. The parser now walks this
+ * list until a template reads the mail, so a later rule gets its turn exactly
+ * when every earlier one has declined — and a mail an earlier template reads
+ * keeps that reading.
+ */
+export function detectAirlines(
+  fromAddress: string,
+  subject: string,
+  htmlContent: string,
+  textContent = ""
+): string[] {
   const haystack = `${htmlContent}\n${textContent}`.toLowerCase();
-  for (const rule of DETECTION_RULES) {
-    const senderDomain = fromAddress.toLowerCase().split("@")[1] ?? "";
-    if (
-      rule.fromDomains.some((d) => {
-        const ruleDomain = d.replace("@", "");
-        return senderDomain === ruleDomain || senderDomain.endsWith("." + ruleDomain);
-      })
-    ) {
-      return rule.iata;
-    }
-    const fingerprinted = rule.htmlFingerprints.some((fp) => haystack.includes(fp));
-    if (fingerprinted) {
-      return rule.iata;
-    }
+  const senderDomain = fromAddress.toLowerCase().split("@")[1] ?? "";
+  return DETECTION_RULES.filter((rule) => {
+    const fromSender = rule.fromDomains.some((d) => {
+      const ruleDomain = d.replace("@", "");
+      return senderDomain === ruleDomain || senderDomain.endsWith("." + ruleDomain);
+    });
+    if (fromSender) return true;
+    if (rule.htmlFingerprints.some((fp) => haystack.includes(fp))) return true;
     const subjectHit = rule.subjectPatterns.some((pattern) => pattern.test(subject));
-    if (subjectHit && rule.htmlFingerprints.length === 0) {
-      return rule.iata;
-    }
-  }
-  return null;
+    return subjectHit && rule.htmlFingerprints.length === 0;
+  }).map((rule) => rule.iata);
 }
