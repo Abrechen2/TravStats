@@ -18,6 +18,9 @@ const hrs = (): LodgingTemplate => {
  * one read as nothing on an instance without a model. Every value below is
  * invented; only the shape is the sender's.
  */
+/** The invisible U+200B HRS puts after the hyphen in "Zimmer-Gesamtpreis". */
+const ZWSP = String.fromCharCode(0x200b);
+
 const subject =
   "Bestätigung Ihrer Hotel-Buchung - Musterhof (Deutschland), 08.03.16 - 10.03.16 | HRS Vorgangs-Nr.: 11122233";
 
@@ -31,7 +34,7 @@ function confirmation(opts: { datesBelowLabel?: boolean; secondRoom?: boolean } 
     ...(opts.datesBelowLabel
       ? ["Anreise / Abreise: ", "", `\t${dates}`, ""]
       : [`Anreise / Abreise: \t\t${dates}\t `]),
-    `Zimmer-​Gesamtpreis (inkl. Steuern): \t\t${price} EUR\t `,
+    `Zimmer-${ZWSP}Gesamtpreis (inkl. Steuern): \t\t${price} EUR\t `,
   ];
   return [
     "Buchung\t \t",

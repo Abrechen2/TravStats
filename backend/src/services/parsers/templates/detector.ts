@@ -80,6 +80,21 @@ const DETECTION_RULES: DetectionRule[] = [
     subjectPatterns: [/germanwings/i],
     htmlFingerprints: ["germanwings"],
   },
+  // Two Emirates layouts, one rule each, the newer first: the 2018+ mails
+  // ("Ihre Buchung ist bestätigt") and the 2014/2015 German ones. Each
+  // template finds only its own layout and declines the other's.
+  {
+    iata: "EK",
+    fromDomains: ["@emirates.com", "@emirates.email"],
+    subjectPatterns: [/emirates/i],
+    htmlFingerprints: ["emirates"],
+  },
+  {
+    iata: "EK-old",
+    fromDomains: ["@emirates.com"],
+    subjectPatterns: [/emirates/i],
+    htmlFingerprints: ["emirates"],
+  },
 ];
 
 /**
