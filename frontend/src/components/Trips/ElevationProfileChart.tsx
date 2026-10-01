@@ -7,6 +7,14 @@ const PROFILE_W = 400;
 const PROFILE_H = 90;
 
 /**
+ * The area under a measured profile: the domain hue at `elevationProfile.fill`
+ * (`domain@0.14`, design/tokens.json, round 29). A planned profile is a claim,
+ * not a measurement, so it stays lighter — the token names no value for it.
+ */
+const MEASURED_FILL_OPACITY = 0.14;
+const PLANNED_FILL_OPACITY = 0.08;
+
+/**
  * An elevation profile from `[km, m]` pairs — the recorded one of a walked
  * tour, or the planned one read from the ground along the line. One drawing
  * for both, so the two can be compared at a glance. Nothing is drawn for
@@ -65,7 +73,7 @@ export default function ElevationProfileChart({
         <path
           d={`${profile.path} L${PROFILE_W} ${PROFILE_H} L0 ${PROFILE_H} Z`}
           fill={accent}
-          fillOpacity={dashed ? 0.08 : 0.15}
+          fillOpacity={dashed ? PLANNED_FILL_OPACITY : MEASURED_FILL_OPACITY}
         />
         <path
           d={profile.path}
