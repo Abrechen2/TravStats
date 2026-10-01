@@ -3503,3 +3503,57 @@ model TimeMigrationLedger {
   @@index([userId, status])
   @@map("time_migration_ledger")
 }
+
+/// The change feed behind `GET /sync/changes` (forgejo#141). One row per
+/// insert, update or delete of a synced record, written by the database
+/// trigger `sync_record_change` — never by application code, so a delete path
+/// the routes forget (a `deleteMany`, an `onDelete: Cascade`, raw SQL) cannot
+/// skip its tombstone. See `services/sync/` for the cursor and the reasoning.
+model SyncChange {
+  /// Insertion order inside one transaction; NOT a commit order across them.
+  seq            BigInt    @id @default(autoincrement())
+  /// `pg_current_xact_id()` of the writing transaction — the feed orders and
+  /// cuts on this, below the reading snapshot's xmin.
+  xid            BigInt
+  /// No foreign key on purpose: deleting an account cascades through every
+  /// synced table, and a key would make each of those tombstones fail.
+  userId         String    @map("user_id")
+  /// The sync entity name (`flight`, `lodging_stay`, …), not the table name.
+  entity         String
+  entityId       String    @map("entity_id")
+  /// upsert | delete
+  op             String
+  /// Database column names an UPDATE changed; empty for insert and delete.
+  changedColumns String[]  @default([]) @map("changed_columns")
+  /// The row's `updated_at` after the write — what a 409 compares a client's
+  /// base version against. Null for tables without one, and for deletes.
+  rowUpdatedAt   DateTime? @map("row_updated_at")
+  /// A tour section's `kind` (tour | roadtrip), so a tombstone can be gated
+  /// by domain after the row itself is gone. Null for every other entity.
+  kind           String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, xid, seq])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("sync_changes")
+}
+
+/// The feed's single bookkeeping row (id = 1).
+model SyncState {
+  id                 Int      @id @default(1)
+  /// Changes when the feed's history stops being continuous — a database
+  /// restore. A cursor from another epoch must resync in full.
+  epoch              String
+  /// The highest (xid, seq) the retention sweep has deleted. A cursor at or
+  /// above it sees a complete feed; one below it would miss tombstones.
+  prunedXid          BigInt   @default(0) @map("pruned_xid")
+  prunedSeq          BigInt   @default(0) @map("pruned_seq")
+  /// The newest row version whose change history may be incomplete — the
+  /// moment the feed began, then the newest pruned `row_updated_at`. A 409
+  /// against an older base cannot name its changed fields and says so.
+  historyFrom        DateTime @map("history_from")
+  updatedAt          DateTime @updatedAt @map("updated_at")
+
+  @@map("sync_state")
+}

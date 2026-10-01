@@ -249,6 +249,7 @@ const shutdown = (signal: string) => async (): Promise<void> => {
   (await import("./jobs/documentSweepScheduler")).stopDocumentSweepScheduler();
   (await import("./jobs/photoJourneyScanScheduler")).stopPhotoJourneyScanScheduler();
   (await import("./jobs/logRetentionScheduler")).stopLogRetentionScheduler();
+  (await import("./jobs/syncRetentionScheduler")).stopSyncRetentionScheduler();
   await prisma.$disconnect();
   process.exit(0);
 };
@@ -722,6 +723,11 @@ if (process.env.NODE_ENV !== "test") {
       [
         "log_retention",
         async () => (await import("./jobs/logRetentionScheduler")).startLogRetentionScheduler(),
+      ],
+      // Sync tombstone retention (forgejo#141), daily 03:50 and once now.
+      [
+        "sync_retention",
+        async () => (await import("./jobs/syncRetentionScheduler")).startSyncRetentionScheduler(),
       ],
       [
         "reminder",

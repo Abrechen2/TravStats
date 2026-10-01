@@ -56,3 +56,4 @@ import "./settingsRouting";
 import "./documents";
 import "./jobs";
 import "./timeMigration";
+import "./sync";
