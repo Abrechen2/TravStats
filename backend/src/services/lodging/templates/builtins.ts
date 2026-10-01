@@ -1,6 +1,13 @@
 import type { LodgingTemplate } from "./types";
 
 /**
+ * HRS's "Ihr ausgewähltes Hotel" heading and the blank lines under it — one,
+ * two, or a tab on its own, depending on the year. The hotel's name is the
+ * first line with content after it, and its address the line after that.
+ */
+const HRS_HOTEL = "Ihr ausgewähltes Hotel[ \\t\\r]*(?:\\n[ \\t\\r]*)+";
+
+/**
  * The built-in lodging readers beyond Booking.com.
  *
  * Each was written against the owner's own corpus and is measured by
@@ -288,6 +295,83 @@ export const LODGING_TEMPLATES: readonly LodgingTemplate[] = Object.freeze([
       country: {
         patterns: ["\\s-\\s\\d{4,5}\\s+[^\\n<]+?\\s+-\\s+([^\\n<]+?)\\s*<"],
         transform: "text",
+      },
+    },
+    required: ["hotelName", "checkIn", "checkOut"],
+  },
+  {
+    id: "lodging:hrs",
+    name: "hrs",
+    // The hotel portal. Its German confirmations from 2009 to 2016 share one
+    // layout; measured 2026-10-01 on a private mailbox, about two hundred of
+    // them read as nothing on an instance without a model. "Ihr ausgewähltes
+    // Hotel" is the heading only these mails carry — a newsletter that names
+    // HRS has neither it nor a stay.
+    match: {
+      markers: ["hrs", "ihr ausgewähltes hotel", "anreise / abreise"],
+      anchors: ["vorgangsnummer"],
+    },
+    classify: { type: "hotel" },
+    fields: {
+      // The hotel's name is the line under the heading, cut before the link
+      // HRS hangs on it.
+      hotelName: {
+        patterns: [HRS_HOTEL + "([^\\s<][^\\n<]*?)[ \\t\\r]*(?:<|\\n)"],
+        transform: "text",
+      },
+      // "HRS Vorgangsnummer: 12345678" — the booking as a whole. Each room
+      // also carries a "Buchungsnummer"; the process is what HRS asks for.
+      confirmationNumber: { patterns: ["Vorgangsnummer:\\s*(\\d{6,})"] },
+      // "Anreise / Abreise:  Mo. dd.mm.yyyy - Di. dd.mm.yyyy" — on the same
+      // line in most years, on the line below in 2009/2010; `\s*` crosses
+      // exactly that gap and nothing else, because a date must follow.
+      checkIn: {
+        patterns: ["Anreise / Abreise:\\s*(?:[A-Za-z]{2}\\.?\\s+)?(\\d{1,2}\\.\\d{1,2}\\.\\d{4})"],
+        transform: "numericDate",
+      },
+      checkOut: {
+        patterns: [
+          "Anreise / Abreise:\\s*(?:[A-Za-z]{2}\\.?\\s+)?\\d{1,2}\\.\\d{1,2}\\.\\d{4}\\s*-\\s*(?:[A-Za-z]{2}\\.?\\s+)?(\\d{1,2}\\.\\d{1,2}\\.\\d{4})",
+        ],
+        transform: "numericDate",
+      },
+      // "Beispielweg 7 | 12345 Musterstadt | Bezirk | Deutschland" — the line
+      // under the hotel's name. The district is optional; the country is the
+      // last field.
+      address: {
+        patterns: [
+          HRS_HOTEL + "[^\\n]*\\n[ \\t]*([^|\\n]+?)[ \\t]*\\|[ \\t]*[A-Z]?-?\\d{4,5}[ \\t]",
+        ],
+        transform: "text",
+      },
+      postcode: {
+        patterns: [HRS_HOTEL + "[^\\n]*\\n[^|\\n]+\\|[ \\t]*[A-Z]?-?(\\d{4,5})[ \\t]"],
+      },
+      city: {
+        patterns: [
+          HRS_HOTEL +
+            "[^\\n]*\\n[^|\\n]+\\|[ \\t]*[A-Z]?-?\\d{4,5}[ \\t]+([^|\\n]+?)[ \\t]*(?:\\||\\r?\\n)",
+        ],
+        transform: "text",
+      },
+      country: {
+        patterns: [HRS_HOTEL + "[^\\n]*\\n[^|\\n]+\\|[^\\n]*\\|[ \\t]*([^|\\n]+?)[ \\t]*\\r?\\n"],
+        transform: "text",
+      },
+      // "Zimmer-Gesamtpreis (inkl. Steuern): 189,00 EUR" is ONE room's total
+      // (the hyphen is followed by an invisible U+200B in the real mails). A
+      // booking of two rooms prints it twice and no sum, so the lookahead
+      // refuses any document with a second numbered room: no total is better
+      // than half of one.
+      totalPrice: {
+        patterns: [
+          "^(?![\\s\\S]*\\n[ \\t]*2\\.[ \\t]+\\S)[\\s\\S]*?Zimmer-\\u200b?Gesamtpreis[^:\\n]*:\\s*([\\d.,]+)\\s*[A-Z]{3}",
+        ],
+        transform: "money",
+      },
+      currency: {
+        patterns: ["Zimmer-\\u200b?Gesamtpreis[^:\\n]*:\\s*[\\d.,]+\\s*([A-Z]{3})"],
+        transform: "currency",
       },
     },
     required: ["hotelName", "checkIn", "checkOut"],
