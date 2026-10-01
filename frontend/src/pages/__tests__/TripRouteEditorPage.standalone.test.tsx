@@ -127,8 +127,6 @@ describe("TripRouteEditorPage — routing the whole tour", () => {
       confidence: "low",
       waypoints: null,
       drivingMinutes: null,
-      tollCost: null,
-      currency: null,
     };
     vi.mocked(toursApi.get).mockResolvedValue({
       route: ROUTE,

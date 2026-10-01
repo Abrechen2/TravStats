@@ -24,6 +24,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { expenseSchema } from "../../../schemas/expense";
 import { errorContent } from "./shared";
 import {
   createRouteSchema,
@@ -186,8 +187,6 @@ const tourLeg = registry.register(
         .nullable()
         .describe("[[lon, lat], …]. Null for a straight (chord) leg."),
       drivingMinutes: z.number().int().nullable(),
-      tollCost: z.number().nullable(),
-      currency: z.string().nullable(),
     })
     .openapi("TourRouteLeg", {
       example: {
@@ -200,8 +199,6 @@ const tourLeg = registry.register(
         confidence: "low",
         waypoints: null,
         drivingMinutes: null,
-        tollCost: null,
-        currency: null,
       },
     })
 );
@@ -540,7 +537,14 @@ registerSectionPath({
     "geometry comes from the routing provider, not a request body, so " +
     "this endpoint refuses it (400) and names the routing endpoint " +
     "(`POST .../route` / `.../route-all`) instead of silently accepting " +
-    "a caller-supplied line mislabelled as provider-routed.",
+    "a caller-supplied line mislabelled as provider-routed. " +
+    "`tollCost` / `currency` are kept for older clients only (forgejo#140): a leg " +
+    "has no toll of its own any more; they write the leg's toll EXPENSE — the one " +
+    "expense of kind `toll` on this section between these two stops. A number " +
+    "creates or updates it (currency: the body's, else its own, else the owner's " +
+    "base currency), `tollCost: null` deletes it, `currency` alone re-labels an " +
+    "existing one. The answer then carries it as `toll`. Several toll expenses on " +
+    "the leg answer 409 and change nothing. New clients use the `/expenses` endpoints.",
   tags: ["Tours"],
   request: {
     params: legParams,
@@ -549,7 +553,21 @@ registerSectionPath({
   responses: {
     200: {
       description: "Leg updated",
-      content: { "application/json": { schema: z.object({ leg: tourLeg }) } },
+      content: {
+        "application/json": {
+          schema: z.object({
+            leg: tourLeg,
+            toll: expenseSchema
+              .nullable()
+              .optional()
+              .openapi({
+                description:
+                  "Present only when the body carried `tollCost` or `currency`: the leg's " +
+                  "toll expense afterwards, or null when it has none.",
+              }),
+          }),
+        },
+      },
     },
     400: {
       description:
@@ -569,7 +587,8 @@ registerSectionPath({
     409: {
       description:
         'The leg\'s stop lost its coordinates, or (for source: "track") ' +
-        "the track doesn't come within the anchor tolerance of both stops",
+        "the track doesn't come within the anchor tolerance of both stops, " +
+        "or `tollCost` was sent for a leg carrying several toll expenses",
       content: errorContent,
     },
   },

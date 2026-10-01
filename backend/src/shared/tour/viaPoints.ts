@@ -23,8 +23,6 @@ export interface ViaFoldLeg {
   toStopId: string;
   distanceKm: number;
   drivingMinutes: number | null;
-  tollCost: number | null;
-  currency: string | null;
   waypoints: unknown;
 }
 
@@ -82,14 +80,13 @@ export function foldViaPoints<S extends ViaFoldStop, L extends ViaFoldLeg>(
       continue;
     }
     const first = chain[0];
-    const currencies = new Set(chain.map((l) => l.currency));
+    // No toll here since forgejo#140: a toll is an expense, and the roadtrip
+    // detail folds those onto station pairs itself (`roadtripCosts.ts`).
     merged.push({
       ...first,
       toStopId: next.id,
       distanceKm: chain.reduce((sum, l) => sum + l.distanceKm, 0),
       drivingMinutes: sumOrNull(chain.map((l) => l.drivingMinutes)),
-      tollCost: currencies.size === 1 ? sumOrNull(chain.map((l) => l.tollCost)) : null,
-      currency: currencies.size === 1 ? first.currency : null,
       waypoints: chain.flatMap((l, i) => {
         const line = lineOf(l, byId.get(l.fromStopId) as S, byId.get(l.toStopId) as S);
         return i === 0 ? line : line.slice(1);

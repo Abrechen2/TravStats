@@ -65,8 +65,6 @@ const FERRY: TourLeg = {
   confidence: "estimate",
   waypoints: null,
   drivingMinutes: 135,
-  tollCost: null,
-  currency: null,
 };
 
 function renderTimeline(onSelect = vi.fn(), onEditLeg?: () => void): void {

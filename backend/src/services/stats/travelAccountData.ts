@@ -25,6 +25,8 @@ import type {
 } from "./travelAccount";
 import { freeStationNights, roadtripHasStarted } from "./roadtripEvidence";
 import type { TripAccountInput } from "./tripAccount";
+import type { ExpenseAccountRow } from "./expenseAccount";
+import type { Prisma } from "../../prisma";
 
 /** A stay, plus what an evidence entry needs to name it and to link to it. */
 export interface TravelAccountStayRow extends AccountStay {
@@ -56,11 +58,19 @@ export interface TravelAccountData extends TravelAccountInput {
   flights: TravelAccountFlightRow[];
   freeNights: TravelAccountFreeNightRow[];
   trips: TripAccountInput[];
+  /** Every expense of the caller's, trip-wide or on a section (forgejo#140). */
+  expenses: ExpenseAccountRow[];
 }
+
+/** An expense amount as the account sums it; the column is an exact decimal. */
+const money = (e: { amount: Prisma.Decimal; currency: string }) => ({
+  amount: e.amount.toNumber(),
+  currency: e.currency,
+});
 
 export async function loadTravelAccountData(userId: string): Promise<TravelAccountData> {
   const now = new Date();
-  const [stays, cruises, flights, trips, roadtrips] = await Promise.all([
+  const [stays, cruises, flights, trips, roadtrips, expenses] = await Promise.all([
     prisma.lodgingStay.findMany({
       where: { userId },
       select: {
@@ -138,6 +148,10 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
             currency: true,
           },
         },
+        // Trip-wide expenses, and those of its sections — a section's is
+        // stored on the section, so it follows a roadtrip that changes trip.
+        expenses: { select: { amount: true, currency: true } },
+        routes: { select: { expenses: { select: { amount: true, currency: true } } } },
         flights: {
           select: {
             status: true,
@@ -194,6 +208,10 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
           },
         },
       },
+    }),
+    prisma.tripExpense.findMany({
+      where: { userId },
+      select: { amount: true, currency: true, date: true },
     }),
   ]);
 
@@ -278,7 +296,9 @@ export async function loadTravelAccountData(userId: string): Promise<TravelAccou
       stays: t.lodgingStays,
       cruises: t.cruises,
       flights: t.flights,
+      expenses: [...t.expenses, ...t.routes.flatMap((r) => r.expenses)].map(money),
     })),
+    expenses: expenses.map((e) => ({ ...money(e), date: e.date })),
     now,
   };
 }

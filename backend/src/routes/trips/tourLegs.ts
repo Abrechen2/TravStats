@@ -13,6 +13,8 @@ import { resolveRouteFromRequest, toLegDto } from "./tourRoutes";
 import { resolveTrack } from "./tourTracks";
 import { isCoordinatePolyline, readStoredTrack } from "../../services/trackCoverage/storedTrack";
 import { tourLegVerdict } from "../../services/trackCoverage/legCoverage";
+import { applyLegToll, touchesToll } from "../../services/expenses/legToll";
+import { toExpenseDto } from "../../services/expenses/expenseDto";
 
 /**
  * Tour route leg overrides — split out of `tourRoutes.ts`, which was
@@ -35,8 +37,6 @@ interface LegWithStops {
   mode: string;
   source: string;
   drivingMinutes: number | null;
-  tollCost: number | null;
-  currency: string | null;
   fromStop: { lat: number | null; lon: number | null };
   toStop: { lat: number | null; lon: number | null };
 }
@@ -186,37 +186,58 @@ router.put(
         }
       }
 
-      const updated = await prisma.tripRouteLeg.update({
-        where: { id: leg.id },
-        data: {
-          source: body.source,
-          mode: body.mode ?? leg.mode,
-          // A line the user drew is the best information available; a chord
-          // is a placeholder.
-          confidence: body.source === "drawn" ? "high" : "low",
-          waypoints:
-            waypoints === null ? Prisma.DbNull : (waypoints as unknown as Prisma.InputJsonValue),
-          // `drivingMinutes`/`tollCost`/`currency` are `.nullable().optional()`
-          // in `legOverrideSchema` — a client may send an explicit `null` to
-          // CLEAR one of them. `body.x ?? leg.x` cannot tell "absent" from
-          // "present and null" apart (both are nullish), so it would silently
-          // keep the old value on a clear request. Zod omits an absent
-          // optional key entirely, so `in` is the reliable discriminator.
-          drivingMinutes:
-            "drivingMinutes" in body ? (body.drivingMinutes ?? null) : leg.drivingMinutes,
-          tollCost: "tollCost" in body ? (body.tollCost ?? null) : leg.tollCost,
-          currency: "currency" in body ? (body.currency ?? null) : leg.currency,
-          distanceKm: legDistanceKm({
+      // The leg and its toll expense change together or not at all: a toll
+      // refused (409, several on the leg) must not leave the line changed.
+      const { updated, toll } = await prisma.$transaction(async (tx) => {
+        const updatedLeg = await tx.tripRouteLeg.update({
+          where: { id: leg.id },
+          data: {
             source: body.source,
-            from: fromCoord,
-            to: toCoord,
-            waypoints,
-          }),
-        },
+            mode: body.mode ?? leg.mode,
+            // A line the user drew is the best information available; a chord
+            // is a placeholder.
+            confidence: body.source === "drawn" ? "high" : "low",
+            waypoints:
+              waypoints === null ? Prisma.DbNull : (waypoints as unknown as Prisma.InputJsonValue),
+            // `drivingMinutes` is `.nullable().optional()` in `legOverrideSchema`
+            // — a client may send an explicit `null` to CLEAR it. `body.x ?? leg.x`
+            // cannot tell "absent" from "present and null" apart (both are
+            // nullish), so it would silently keep the old value on a clear
+            // request. Zod omits an absent optional key entirely, so `in` is the
+            // reliable discriminator.
+            drivingMinutes:
+              "drivingMinutes" in body ? (body.drivingMinutes ?? null) : leg.drivingMinutes,
+            distanceKm: legDistanceKm({
+              source: body.source,
+              from: fromCoord,
+              to: toCoord,
+              waypoints,
+            }),
+          },
+        });
+        // `tollCost` / `currency` live on the leg's toll EXPENSE since
+        // forgejo#140; see `applyLegToll` for the exact mapping.
+        const legToll = touchesToll(body)
+          ? await applyLegToll(
+              tx,
+              {
+                userId,
+                routeId,
+                fromStopId: req.params.fromStopId,
+                toStopId: req.params.toStopId,
+              },
+              body
+            )
+          : undefined;
+        return { updated: updatedLeg, toll: legToll };
       });
 
       logger.info({ operation: "tour.leg.override", legId: updated.id, source: updated.source });
-      res.json({ leg: toLegDto(updated) });
+      res.json({
+        leg: toLegDto(updated),
+        // Present only when the body carried `tollCost` or `currency`.
+        ...(toll !== undefined ? { toll: toll ? toExpenseDto(toll) : null } : {}),
+      });
     } catch (error) {
       next(error);
     }

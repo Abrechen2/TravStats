@@ -139,8 +139,6 @@ export function toLegDto(leg: {
   confidence: string;
   waypoints: Prisma.JsonValue | null;
   drivingMinutes: number | null;
-  tollCost: number | null;
-  currency: string | null;
 }): Record<string, unknown> {
   return {
     id: leg.id,
@@ -152,8 +150,8 @@ export function toLegDto(leg: {
     confidence: leg.confidence,
     waypoints: leg.waypoints ?? null,
     drivingMinutes: leg.drivingMinutes,
-    tollCost: leg.tollCost,
-    currency: leg.currency,
+    // No `tollCost` / `currency` since forgejo#140: a toll is a TripExpense
+    // (kind `toll`) between the leg's two stops, read with the expenses.
   };
 }
 

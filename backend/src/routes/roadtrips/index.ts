@@ -20,6 +20,8 @@ import { getCountryResolver } from "../../services/geo/countryFromCoordinates";
 import stationRoutes from "./stations";
 import companionRoutes from "./companion";
 import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
+import { EXPENSE_ORDER, EXPENSE_SELECT, toExpenseDto } from "../../services/expenses/expenseDto";
+import { roadtripCosts } from "../../services/expenses/roadtripCosts";
 
 /**
  * Roadtrips (design 2026-09-24). A roadtrip is a `TripRoute` with
@@ -155,7 +157,7 @@ router.post(
   }
 );
 
-/** GET /roadtrips/:id — the roadtrip, its stations with their stays, legs and day tours. */
+/** GET /roadtrips/:id — the roadtrip, its stations with their stays, legs, day tours and costs. */
 router.get(
   "/roadtrips/:id",
   authenticate,
@@ -165,7 +167,7 @@ router.get(
       const userId = req.userId!;
       const id = await resolveRoadtrip(userId, req.params.id);
 
-      const [route, stations, legs, tours, routing] = await Promise.all([
+      const [route, stations, legs, tours, routing, expenseRows] = await Promise.all([
         prisma.tripRoute.findUniqueOrThrow({
           where: { id },
           include: { ...ROUTE_SELECT, trip: { select: { id: true, name: true } } },
@@ -200,7 +202,13 @@ router.get(
           },
         }),
         describeRoutingAvailability(userId),
+        prisma.tripExpense.findMany({
+          where: { userId, routeId: id },
+          select: EXPENSE_SELECT,
+          orderBy: EXPENSE_ORDER,
+        }),
       ]);
+      const expenses = expenseRows.map(toExpenseDto);
 
       const nights = nightsOf(stations);
       const resolver = await getCountryResolver();
@@ -228,6 +236,10 @@ router.get(
           source: t.tracks[0]?.source ?? null,
         })),
         routingAvailable: routing.configured,
+        // Money spent on the way (forgejo#140): the list, and its sums per
+        // station, per station-to-station leg and in total — per currency.
+        expenses,
+        costs: roadtripCosts(stations, expenses),
       });
     } catch (error) {
       next(error);

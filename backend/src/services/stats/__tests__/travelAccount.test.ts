@@ -278,10 +278,29 @@ const trip = (o: Partial<TripAccountInput> = {}): TripAccountInput => ({
   stays: [],
   cruises: [],
   flights: [],
+  expenses: [],
   ...o,
 });
 
 describe("buildTripAccount", () => {
+  it("adds a roadtrip's ferry, tolls and pitch fees to the trip's spend, per currency", () => {
+    const account = buildTripAccount([
+      trip({
+        cruises: [
+          { status: "flown", startDate: null, endDate: null, price: 1000, currency: "EUR" },
+        ],
+        expenses: [
+          { amount: 1290, currency: "NOK" },
+          { amount: 12.5, currency: "EUR" },
+          { amount: 310, currency: "NOK" },
+        ],
+      }),
+    ]);
+    expect(account.trips[0].spendByCurrency).toEqual({ EUR: 1012.5, NOK: 1600 });
+    // No FX snapshot on an expense: nothing of it may appear in the base slice.
+    expect(account.trips[0].spendBaseByCurrency).toEqual({});
+  });
+
   it("counts the days of a trip with no night recorded anywhere", () => {
     const account = buildTripAccount([
       trip({

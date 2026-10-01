@@ -123,17 +123,15 @@ describe("Tour route sections — leg overrides", () => {
     await request(app)
       .put(url())
       .set("Cookie", cookie)
-      .send({ source: "straight", tollCost: 12.5, currency: "EUR" });
+      .send({ source: "straight", drivingMinutes: 90 });
 
     const res = await request(app)
       .put(url())
       .set("Cookie", cookie)
-      .send({ source: "straight", tollCost: null });
+      .send({ source: "straight", drivingMinutes: null });
 
     expect(res.status).toBe(200);
-    expect(res.body.leg.tollCost).toBeNull();
-    // currency was not mentioned this time, so it must survive untouched.
-    expect(res.body.leg.currency).toBe("EUR");
+    expect(res.body.leg.drivingMinutes).toBeNull();
   });
 
   it("leaves an optional field alone when the client omits it", async () => {
