@@ -244,11 +244,12 @@ const windowPhotos = {
               .nullable()
               .describe("The rule that found the photos; null when the entry has none"),
             reason: z
-              .enum(["notOnTrip", "noCoordinates", "noDates", "notRealInstants"])
+              .enum(["notOnTrip", "noCoordinates", "noDates", "notRealInstants", "noClock"])
               .nullable()
               .describe(
                 "Why `window` is null: the entry is on no trip, the lodging has no position, " +
-                  "the entry has no dates, or its times are wall clocks rather than instants"
+                  "the entry has no dates, its times are wall clocks rather than instants, " +
+                  "or (`noClock`) a train ride was logged with its day only"
               ),
           }),
         }),
