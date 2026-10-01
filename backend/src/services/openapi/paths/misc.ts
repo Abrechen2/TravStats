@@ -167,7 +167,15 @@ registry.registerPath({
             data: z.object({
               entries: z.array(
                 z.object({
-                  domain: z.enum(["flight", "cruise", "lodging", "place", "rail", "trip"]),
+                  domain: z.enum([
+                    "flight",
+                    "cruise",
+                    "lodging",
+                    "place",
+                    "rail",
+                    "rental",
+                    "trip",
+                  ]),
                   id: z.string(),
                   detailId: z
                     .string()

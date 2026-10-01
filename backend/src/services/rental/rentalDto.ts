@@ -21,6 +21,8 @@ export interface RentalReadColumns extends RentalTimeColumns {
   currency: string | null;
   finalAmount: number | null;
   finalCurrency: string | null;
+  status: string;
+  distanceKm: number | null;
   pickupAirport?: { iata: string | null } | null;
   returnAirport?: { iata: string | null } | null;
 }
@@ -35,6 +37,9 @@ export function withRentalReadFields<T extends RentalReadColumns>(row: T) {
     rentalDays: rentalDays(row),
     vehicleTraits: acrissTraits(row.acrissCode),
     cost: rentalCost(row),
+    // Returned, and no km from an invoice or a correction yet — the reminder
+    // the Companion shows after a return (D11 b).
+    invoiceMissing: row.status === "completed" && row.distanceKm === null,
     times: rentalTimes(row),
   };
 }

@@ -3,6 +3,7 @@ import { useSearchParams } from "react-router-dom";
 import { useEnabledDomains } from "./useEnabledDomains";
 import { useToursVisible } from "./useToursVisible";
 import { useRailVisible } from "./useRailVisible";
+import { useRentalVisible } from "./useRentalVisible";
 import { useDashboardCountsStore } from "../store/dashboardCountsStore";
 import { useDashboardDomainFilterStore } from "../store/dashboardDomainFilterStore";
 import { useDashboardRoute } from "./useDashboardRoute";
@@ -50,7 +51,7 @@ export interface DashboardDomainFilterResult {
  * is purely informational — "still labelled beta on this instance", not a
  * second gate.
  */
-const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip", "rail"]);
+const BETA_ROWS = new Set<FilterDomainKey>(["tour", "roadtrip", "rail", "rental"]);
 
 /**
  * Drives the "Alle" tab's domain-filter button/panel: which of the six rows
@@ -67,6 +68,7 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
   const { isEnabled } = useEnabledDomains();
   const toursVisible = useToursVisible();
   const railVisible = useRailVisible();
+  const rentalVisible = useRentalVisible();
   const counts = useDashboardCountsStore((s) => s.counts);
   const [search] = useSearchParams();
   const { tab, setTab } = useDashboardRoute();
@@ -125,6 +127,7 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       // Both halves of rail's own gate live in `useRailVisible`: the instance
       // beta switch AND the user's domain.
       rail: railVisible,
+      rental: rentalVisible,
     };
     const rowCount: Record<FilterDomainKey, number | null> = {
       flight: counts.flight,
@@ -134,6 +137,8 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       tour: tourCount,
       roadtrip: counts.roadtrip,
       rail: counts.rail,
+      // The dashboard counts carry no rentals; the row says "unknown", not 0.
+      rental: null,
     };
     return FILTER_DOMAIN_ORDER.filter((key) => available[key]).map((key) => ({
       key,
@@ -141,7 +146,7 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
       count: rowCount[key],
       beta: BETA_ROWS.has(key),
     }));
-  }, [isEnabled, toursVisible, railVisible, counts, tourCount, effectiveHidden]);
+  }, [isEnabled, toursVisible, railVisible, rentalVisible, counts, tourCount, effectiveHidden]);
 
   const visibleCount = rows.filter((r) => r.visible).length;
   const totalCount = rows.length;
@@ -156,7 +161,8 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
     // One domain: its own view. The stored set is deliberately NOT written —
     // it belongs to "Alle", and a reader who goes Back should find the
     // selection they left there, not one this navigation invented.
-    if (visible.length === 1) {
+    // Rental has no dashboard view of its own (yet): alone, it stays on "Alle".
+    if (visible.length === 1 && visible[0] !== "rental") {
       setTab(visible[0]);
       return;
     }
@@ -197,7 +203,7 @@ export function useDashboardDomainFilter(tourCount: number | null): DashboardDom
     // Decision 4's one click, now also the door to that domain's own modes.
     // Leaves the stored "Alle" selection alone, for the same reason
     // `applyVisible` does.
-    isolate: (key) => setTab(key),
+    isolate: (key) => (key === "rental" ? applyVisible(new Set([key])) : setTab(key)),
     adoptLink,
     viewOwnSelection: exitLink,
   };

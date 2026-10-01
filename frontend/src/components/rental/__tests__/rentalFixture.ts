@@ -60,6 +60,7 @@ export function makeRental(over: Partial<RentalBooking> = {}): RentalBooking {
     oneWay: false,
     rentalDays: 4,
     cost: null,
+    invoiceMissing: false,
     times: {
       pickup: {
         utc: "2026-07-01T08:00:00.000Z",

@@ -165,7 +165,11 @@
     "sourceImport": "eingelesene Buchung",
     "sourceManual": "von Hand eingetragen",
     "invoice": "Rechnung",
-    "noInvoice": "noch keine"
+    "noInvoice": "noch keine",
+    "map": "Karte",
+    "mapSame": "Rückgabe am selben Ort: ein Punkt.",
+    "mapOneWay": "Einwegmiete: Die gestrichelte Linie verbindet Abholung und Rückgabe – sie ist nicht die gefahrene Strecke.",
+    "mapRoadtrip": "Die gefahrene Strecke zeigt der verknüpfte Roadtrip."
   },
   "import": {
     "panelTitle": "Mietwagen hinzufügen",
@@ -199,5 +203,36 @@
       "otherDomain": "Das Dokument ist keine Mietwagen-Buchung.",
       "generic": "In diesem Dokument wurde keine Miete gefunden."
     }
-  }
+  },
+  "suggest": {
+    "trip": "Passt zur Reise „{{name}}“.",
+    "linkTrip": "Mit der Reise verknüpfen",
+    "roadtrip": "Passt zum Roadtrip „{{name}}“. Soll die Miete dessen Fahrzeug sein?",
+    "linkRoadtrip": "Als Fahrzeug übernehmen",
+    "notThis": "Nicht verknüpfen",
+    "stationOffer": "Verknüpft. Abholung „{{first}}“ und Rückgabe „{{last}}“ kannst du im Roadtrip als Start- und Endstation übernehmen.",
+    "failed": "Die Vorschläge konnten nicht geladen oder übernommen werden."
+  },
+  "stats": {
+    "days": "Miettage",
+    "rentals_one": "{{count}} Miete",
+    "rentals_other": "{{count}} Mieten",
+    "km": "Kilometer",
+    "kmCoverage": "{{covered}} von {{of}} Mieten mit Rechnung",
+    "perDay": "pro Tag ({{currency}})",
+    "otherCurrencies": "Andere Währungen getrennt: {{list}}",
+    "providers": "Anbieter nach Miettagen",
+    "brokerNote": "Vermittler zählen nicht als Anbieter; sie stehen an der Miete.",
+    "countries": "Länder der Stationen",
+    "countriesNote": "Nur Abhol- und Rückgabeort, keine durchfahrenen Länder.",
+    "byYear": "Miettage nach Jahr",
+    "loadError": "Die Mietwagen-Statistik konnte nicht geladen werden."
+  },
+  "timeline": {
+    "pickup": "Mietwagen-Abholung · {{provider}} · {{station}}",
+    "return": "Mietwagen-Rückgabe · {{provider}} · {{station}}",
+    "span_one": "{{count}} Miettag bis zur Rückgabe",
+    "span_other": "{{count}} Miettage bis zur Rückgabe"
+  },
+  "invoiceMissing": "Die Rechnung fehlt noch – erst mit ihr kennt TravStats die gefahrenen Kilometer. Lies sie ein, sobald du sie hast."
 }

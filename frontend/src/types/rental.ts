@@ -93,6 +93,8 @@ export interface RentalBooking {
   oneWay: boolean;
   rentalDays: number;
   cost: { amount: number; currency: string; source: "final" | "booked" } | null;
+  /** Returned, and no km from an invoice or a correction yet (D11 b). */
+  invoiceMissing: boolean;
   trip?: { id: string; name: string; color: string } | null;
   route?: { id: string; name: string | null } | null;
   times: RentalTimes;
@@ -196,4 +198,19 @@ export interface RentalImportCandidate {
   invoice: RentalInvoiceReading | null;
   confirmationNumber: string | null;
   provider: string;
+}
+
+/** A rental as `GET /trips/:id` carries it — the timeline's two ends. */
+export interface TripRental {
+  id: string;
+  provider: string;
+  pickupStationName: string;
+  returnStationName: string;
+  pickupTime: string;
+  returnTime: string;
+  pickupTimezone: string;
+  returnTimezone: string;
+  pickupPrecision: string;
+  returnPrecision: string;
+  status: RentalStatus;
 }

@@ -237,6 +237,8 @@ export function tripStatusBounds(input: {
   roadtrips?: Array<{ stops: Array<{ startDate: Date | null; endDate: Date | null }> }>;
   /** Train rides (spec 2026-09-25-rail-domain) — dated travel like a flight. */
   railJourneys?: Array<{ departureTime: Date; arrivalTime: Date | null }>;
+  /** Car rentals (spec 2026-10-01-rental-domain-design §7.1) — pickup to return, like a ride. */
+  rentals?: Array<{ pickupTime: Date; returnTime: Date }>;
   ownStartDate: Date | null;
   ownEndDate: Date | null;
   /** The user's profile zone — where a day anchor begins. */
@@ -254,7 +256,14 @@ export function tripStatusBounds(input: {
   const stations = (input.roadtrips ?? []).flatMap((r) => r.stops).map(days);
   const cruises = input.cruises.map(days);
   const held = tripDateBounds(
-    [...input.flights, ...(input.railJourneys ?? [])],
+    [
+      ...input.flights,
+      ...(input.railJourneys ?? []),
+      ...(input.rentals ?? []).map((r) => ({
+        departureTime: r.pickupTime,
+        arrivalTime: r.returnTime,
+      })),
+    ],
     [...cruises, ...stays, ...stations]
   );
   if (held.earliestStart != null || held.latestEnd != null) return held;

@@ -94,6 +94,10 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
         select: { stops: { select: { startDate: true, endDate: true } } },
       },
       railJourneys: { select: { departureTime: true, arrivalTime: true } },
+      rentalBookings: {
+        where: { status: { not: "cancelled" } },
+        select: { pickupTime: true, returnTime: true },
+      },
     },
   });
   if (!trip) return;
@@ -107,6 +111,7 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
     lodgingStays: trip.lodgingStays,
     roadtrips: trip.routes,
     railJourneys: trip.railJourneys,
+    rentals: trip.rentalBookings,
     ownStartDate: trip.startDate,
     ownEndDate: trip.endDate,
     zone: (await profileZoneOf(trip.userId)).zone,

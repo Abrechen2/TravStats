@@ -37,6 +37,7 @@ import { assertLlmCloudConsent, assertLlmEnabled } from "../services/llm/llmGate
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { mostExpensiveTrip } from "../services/trip/tripCostSuperlative";
 import { TRIPS_LIST_INCLUDE, TRIP_RAIL_SELECT } from "../services/trip/tripsListInclude";
+import { TRIP_DETAIL_RENTALS } from "../services/trip/tripsListInclude";
 import {
   airportFactsFor,
   tripCountries,
@@ -400,6 +401,7 @@ router.get(
           lodgingStays: { include: { lodging: true }, orderBy: { checkIn: "asc" } },
           // Train rides for the timeline and logistics — without the frozen line.
           railJourneys: { select: TRIP_RAIL_SELECT, orderBy: { departureTime: "asc" } },
+          rentalBookings: TRIP_DETAIL_RENTALS,
         },
       });
       if (!trip) throw new AppError("Trip not found", 404);

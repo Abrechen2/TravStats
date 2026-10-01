@@ -18,7 +18,8 @@ const stationLabel = (name: string, iata: string | null): string =>
  * One rental in the logbook — the row shape of flights and rail (concept
  * page 2026-10-01): the domain colour at the left, provider and stations,
  * the period on the stations' calendars, and the km figure — or "km offen"
- * while no invoice (or correction) has supplied it. A status pill appears
+ * once a returned rental still waits for its invoice (a booked or cancelled
+ * one has no km to wait for). A status pill appears
  * only when the rental is not simply done. Real buttons, not a clickable row.
  */
 export function RentalRow({ rental, onEdit, onDelete }: Props): JSX.Element {
@@ -75,7 +76,7 @@ export function RentalRow({ rental, onEdit, onDelete }: Props): JSX.Element {
         ) : null}
         {km ? (
           <span className="font-mono text-sm">{km}</span>
-        ) : (
+        ) : rental.status !== "completed" ? null : (
           <span
             className="rounded-full border border-dashed border-border px-2 text-xs"
             data-testid="rental-km-open"

@@ -86,6 +86,9 @@ import railRoadtripConversionRouter from "./rail/roadtripConversion";
 import rentalRouter from "./rental";
 import rentalStationsRouter from "./rental/stations";
 import rentalImportRouter from "./rental/import";
+import rentalStatsRouter from "./rental/stats";
+import rentalRemindersRouter from "./rental/reminders";
+import rentalLinksRouter from "./rental/links";
 import cruiseTrackRoutes from "./cruises/tracks";
 import currenciesRouter from "./currencies";
 import lodgingRouter from "./lodging";
@@ -296,6 +299,13 @@ export const apiMounts: ApiMount[] = [
   // the UI only. Sub-routers mount FIRST: '/:id' would answer them as a 404.
   { id: "rental.stations", base: "/api/v1/rentals/stations", router: rentalStationsRouter },
   { id: "rental.import", base: "/api/v1/rentals/import", router: rentalImportRouter },
+  { id: "rental.stats", base: "/api/v1/rentals/stats", router: rentalStatsRouter },
+  {
+    id: "rental.reminders",
+    base: "/api/v1/rentals/invoice-reminders",
+    router: rentalRemindersRouter,
+  },
+  { id: "rental.links", base: "/api/v1/rentals", router: rentalLinksRouter },
   { id: "rental", base: "/api/v1/rentals", router: rentalRouter },
   // Recorded tracks of a cruise (2.7) — the same satellite pattern.
   { id: "cruises.tracks", base: "/api/v1/cruises", router: cruiseTrackRoutes },

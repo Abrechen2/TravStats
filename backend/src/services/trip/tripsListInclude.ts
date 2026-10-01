@@ -42,6 +42,31 @@ export const TRIP_RAIL_SELECT = {
   bookingId: true,
 } satisfies Prisma.RailJourneySelect;
 
+/**
+ * A trip's rentals as `GET /trips/:id` sends them: what the timeline's two
+ * ends of a rental show (rental spec §6).
+ */
+export const TRIP_RENTAL_SELECT = {
+  id: true,
+  provider: true,
+  pickupStationName: true,
+  returnStationName: true,
+  pickupTime: true,
+  returnTime: true,
+  pickupTimezone: true,
+  returnTimezone: true,
+  pickupPrecision: true,
+  returnPrecision: true,
+  status: true,
+} satisfies Prisma.RentalBookingSelect;
+
+/** The trip page's rentals: pickup order, a cancelled one left out (it never happened). */
+export const TRIP_DETAIL_RENTALS = {
+  where: { status: { not: "cancelled" } },
+  select: TRIP_RENTAL_SELECT,
+  orderBy: { pickupTime: "asc" },
+} satisfies Prisma.Trip$rentalBookingsArgs;
+
 export const TRIPS_LIST_INCLUDE = {
   _count: {
     select: {

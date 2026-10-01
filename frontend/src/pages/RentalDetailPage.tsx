@@ -12,6 +12,8 @@ import TripPill from "../components/Trips/TripPill";
 import ConfirmModal from "../components/Training/ConfirmModal";
 import DocumentsSection from "../components/documents/DocumentsSection";
 import { RentalFormModal } from "../components/rental/RentalFormModal";
+import { RentalSuggestionBanner } from "../components/rental/RentalSuggestionBanner";
+import { RentalRouteMap } from "../components/rental/RentalRouteMap";
 import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
 import { rentalApi } from "../lib/api/rental";
@@ -47,6 +49,7 @@ export default function RentalDetailPage(): JSX.Element {
   const [editing, setEditing] = useState(false);
   const [confirmingDelete, setConfirmingDelete] = useState(false);
   const [deleting, setDeleting] = useState(false);
+  const [stationOffer, setStationOffer] = useState<string | null>(null);
   const documentCount = useDocumentCount(
     confirmingDelete && rental ? { type: "rentalBooking", id: rental.id } : null
   );
@@ -195,7 +198,23 @@ export default function RentalDetailPage(): JSX.Element {
         }
       />
 
-      <div className="grid grid-cols-1 gap-6 md:grid-cols-5">
+      {rental.invoiceMissing ? (
+        <p className="t-caption mb-3" data-testid="rental-invoice-missing">
+          {t("rental:invoiceMissing")}
+        </p>
+      ) : null}
+      {stationOffer ? (
+        <p className="t-caption mb-3" role="status" data-testid="rental-station-offer">
+          {stationOffer}
+        </p>
+      ) : null}
+      <RentalSuggestionBanner
+        rental={rental}
+        onChanged={() => setReloadKey((k) => k + 1)}
+        onStationOffer={setStationOffer}
+      />
+
+      <div className="mt-4 grid grid-cols-1 gap-6 md:grid-cols-5">
         <div className="flex flex-col gap-6 md:col-span-3">
           <DetailSection
             title={t("rental:detail.band")}
@@ -291,6 +310,9 @@ export default function RentalDetailPage(): JSX.Element {
         </div>
 
         <aside className="flex flex-col gap-6 md:col-span-2">
+          <DetailSection title={t("rental:detail.map")}>
+            <RentalRouteMap rental={rental} />
+          </DetailSection>
           {rental.trip && (
             <DetailSection title={t("trips:tab")}>
               <span data-testid="rental-detail-trip">

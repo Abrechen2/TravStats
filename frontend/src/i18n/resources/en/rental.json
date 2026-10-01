@@ -165,7 +165,11 @@
     "sourceImport": "imported booking",
     "sourceManual": "entered by hand",
     "invoice": "Invoice",
-    "noInvoice": "none yet"
+    "noInvoice": "none yet",
+    "map": "Map",
+    "mapSame": "Returned where picked up: one point.",
+    "mapOneWay": "One-way rental: the dashed line joins pickup and return – it is not the route driven.",
+    "mapRoadtrip": "The linked roadtrip shows the route driven."
   },
   "import": {
     "panelTitle": "Add a rental car",
@@ -199,5 +203,36 @@
       "otherDomain": "This document is not a rental booking.",
       "generic": "No rental was found in this document."
     }
-  }
+  },
+  "suggest": {
+    "trip": "Fits the trip “{{name}}”.",
+    "linkTrip": "Link to the trip",
+    "roadtrip": "Fits the roadtrip “{{name}}”. Was this rental its car?",
+    "linkRoadtrip": "Use as its car",
+    "notThis": "Do not link",
+    "stationOffer": "Linked. You can take pickup “{{first}}” and return “{{last}}” as the roadtrip's first and last station.",
+    "failed": "The suggestions could not be loaded or applied."
+  },
+  "stats": {
+    "days": "Rental days",
+    "rentals_one": "{{count}} rental",
+    "rentals_other": "{{count}} rentals",
+    "km": "Kilometres",
+    "kmCoverage": "{{covered}} of {{of}} rentals invoiced",
+    "perDay": "per day ({{currency}})",
+    "otherCurrencies": "Other currencies apart: {{list}}",
+    "providers": "Providers by rental days",
+    "brokerNote": "Brokers do not count as providers; they are shown on the rental.",
+    "countries": "Station countries",
+    "countriesNote": "Pickup and return only, no countries driven through.",
+    "byYear": "Rental days by year",
+    "loadError": "The rental statistics could not be loaded."
+  },
+  "timeline": {
+    "pickup": "Rental car pickup · {{provider}} · {{station}}",
+    "return": "Rental car return · {{provider}} · {{station}}",
+    "span_one": "{{count}} rental day to the return",
+    "span_other": "{{count}} rental days to the return"
+  },
+  "invoiceMissing": "The invoice is still missing: it supplies the kilometres driven. Read it in once you have it."
 }

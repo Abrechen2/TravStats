@@ -274,9 +274,8 @@ export interface Trip {
     bookingId?: string | null;
     distanceKm?: number;
     // Same story as the flight fields above: GET /trips/:id includes the ship,
-    // both ports and every stop (ordered by day), and this type declared less
-    // than arrived. The timeline entry expands to show the itinerary, so it
-    // needs no second request.
+    // both ports and every stop (ordered by day), so the timeline entry can
+    // show the itinerary without a second request.
     ship?: Ship | null;
     shipNameOverride?: string | null;
     routeName?: string | null;
@@ -291,8 +290,9 @@ export interface Trip {
   photos?: TripPhoto[];
   /** A stay linked to this trip via `LodgingStay.tripId` — always includes its `lodging` (GET /trips/:id). */
   lodgingStays?: (LodgingStay & { lodging: Lodging })[];
-  /** Train rides linked to this trip (GET /trips/:id), departure order. */
+  /** Train rides (departure order) and car rentals (pickup order) linked to this trip. */
   railJourneys?: TripRailJourney[];
+  rentalBookings?: import("./rental").TripRental[];
   immichAlbums?: LinkedAlbum[];
 }
 

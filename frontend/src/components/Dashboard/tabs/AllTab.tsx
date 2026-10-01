@@ -31,7 +31,9 @@ import {
   legendRow,
 } from "./allTabLegendRows";
 import { useRailOverlay } from "./railMapOverlay";
+import { useRentalOverlay } from "./rentalMapOverlay";
 import { useRailVisible } from "../../../hooks/useRailVisible";
+import { useRentalVisible } from "../../../hooks/useRentalVisible";
 import { MAP_LAYER_COLORS } from "../../../types/mapTheme";
 import { logger } from "../../../lib/logger";
 import { useCruiseColorStore } from "../../../store/cruiseColorStore";
@@ -497,18 +499,18 @@ export function AllTab(): JSX.Element {
   // sphere mesh and draws zero pixels there (fix round 2, found in a real
   // browser). `visMode` already resolves "globe" vs "routes"/"heatmap"/
   // "journey" a few lines up.
-  // Rail rides beside the tours, behind every rail gate plus its own filter
-  // row. It used to read the map-options domain chip; that control was
-  // removed on 2026-09-28 and rail became the filter's seventh row in the
-  // same change, so the switch moved rather than disappearing.
+  // Rail and rentals beside the tours, each behind its own gates and filter row.
   const railOn = useRailVisible() && showTours && domainFilter.isVisible("rail");
   const rail = useRailOverlay(railOn, visMode === "globe", t);
+  const rentalOn = useRentalVisible() && showTours && domainFilter.isVisible("rental");
+  const rental = useRentalOverlay(rentalOn, visMode === "globe", t);
   const tourLayers = useMemo<Layer[]>(
     () => [
       ...buildTourDeckLayers(tourPathData, visMode === "globe" ? TOUR_PATH_GLOBE_ALTITUDE_M : 0),
       ...rail.layers,
+      ...rental.layers,
     ],
-    [tourPathData, visMode, rail.layers]
+    [tourPathData, visMode, rail.layers, rental.layers]
   );
 
   // The activity toggle stays top-left (it opens the activity sidebar).
@@ -520,14 +522,10 @@ export function AllTab(): JSX.Element {
     />
   );
 
-  // `legendRow` (the swatch-JSX builder) now lives in `./allTabLegendRows.tsx`
-  // itself, alongside the five builders below that take it as a parameter —
-  // TourTab.tsx uses the exact same swatch shape and had its own inline
-  // copy until the fix-round review (2026-08-30) pointed out the
-  // duplication. Each builder is a pure function of its colour config, `t`,
-  // and `legendRow` — split into that file to keep this one under its
-  // 800-line ceiling (same reason as `tourMapOverlay.tsx`). Nothing about
-  // WHAT they compute changed: same config in, same JSX out.
+  // `legendRow` (the swatch-JSX builder) lives in `./allTabLegendRows.tsx` with
+  // the five builders below — TourTab.tsx draws the same swatch, and had its own
+  // copy until the fix-round review (2026-08-30). Each builder is a pure function
+  // of its colour config, `t` and `legendRow`, split out for the 800-line limit.
   // Colours and labels per place list. The POI legend names the lists the
   // map is actually painting, so both read the same resolution.
   const placeListContext = useMemo(() => resolvePlaceListColors(placeLists), [placeLists]);
@@ -576,6 +574,7 @@ export function AllTab(): JSX.Element {
     // the key is shut — and be missing from the count on the button.
     ...(tourHasData ? tourLegend.rows : []),
     ...rail.legendRows,
+    ...rental.legendRows,
   ];
 
   // Collapsible, like the map options beside it. The key grew a row per LIST

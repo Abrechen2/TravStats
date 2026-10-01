@@ -198,7 +198,8 @@
       "poi": "Orte",
       "tour": "Touren",
       "roadtrip": "Roadtrips",
-      "rail": "Bahn"
+      "rail": "Bahn",
+      "rental": "Mietwagen"
     },
     "disabledHint": "Bereich deaktiviert — Einstellungen → Bereiche"
   },
@@ -322,7 +323,10 @@
     "railRouted": "Bahn · Streckenverlauf (OpenRailRouting)",
     "railBrouter": "Bahn · Streckenverlauf (BRouter)",
     "railStraight": "Bahn · Luftlinie",
-    "tour": "Tour"
+    "tour": "Tour",
+    "rentalSame": "Mietwagen · Rückgabe am selben Ort (ein Punkt mit Ring)",
+    "rentalEnds": "Mietwagen · Abholung hohl, Rückgabe gefüllt",
+    "rentalOneWay": "Mietwagen · Einweg, keine Fahrstrecke"
   },
   "userMenu": {
     "label": "Konto-Menü"

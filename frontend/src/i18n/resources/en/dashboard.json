@@ -198,7 +198,8 @@
       "poi": "Places",
       "tour": "Tours",
       "roadtrip": "Roadtrips",
-      "rail": "Rail"
+      "rail": "Rail",
+      "rental": "Rental cars"
     },
     "disabledHint": "Area disabled — Settings → Areas"
   },
@@ -322,7 +323,10 @@
     "railRouted": "Rail · route (OpenRailRouting)",
     "railBrouter": "Rail · route (BRouter)",
     "railStraight": "Rail · straight line",
-    "tour": "Tour"
+    "tour": "Tour",
+    "rentalSame": "Rental car · returned where picked up (one ringed point)",
+    "rentalEnds": "Rental car · pickup hollow, return filled",
+    "rentalOneWay": "Rental car · one-way, not the route driven"
   },
   "userMenu": {
     "label": "Account menu"

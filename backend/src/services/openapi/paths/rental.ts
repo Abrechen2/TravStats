@@ -26,6 +26,7 @@ import {
 } from "../../../schemas/rental";
 import { rentalTimesSchema } from "../../../schemas/times";
 import { rentalImportSchema } from "../../../schemas/rentalImport";
+import { timeValueSchema } from "../../../shared/time/wire";
 
 const stationErrors = {
   422: {
@@ -122,6 +123,9 @@ export const rentalBookingSchema = registry.register(
         .describe(
           "What the rental cost: the invoice's final amount, else the booked price; null when neither"
         ),
+      invoiceMissing: z
+        .boolean()
+        .describe("Returned, and no km from an invoice or a correction yet — remind (D11 b)"),
       userEditedFields: z
         .array(z.string())
         .describe("Fields typed by hand — a later mail of the booking never replaces them"),
@@ -372,6 +376,161 @@ registry.registerPath({
         "The invoice's km differ from a figure the user typed (`RENTAL_INVOICE_KM_CONFLICT`); " +
         "send `replaceUserDistance: true` once the user chose the invoice's",
       content: errorContent,
+    },
+  },
+});
+
+const rentalStatsSchema = z
+  .object({
+    rentals: z.number().int().describe("Completed rentals in scope"),
+    days: z.number().int().describe("Rental days on the stations' local calendars"),
+    oneWay: z.number().int(),
+    byYear: z.array(
+      z.object({ year: z.number().int(), rentals: z.number().int(), days: z.number().int() })
+    ),
+    providers: z
+      .array(z.object({ provider: z.string(), rentals: z.number().int(), days: z.number().int() }))
+      .describe("Ranked by rental days; the counter's company, never the broker"),
+    brokers: z.array(z.object({ broker: z.string(), rentals: z.number().int() })),
+    countries: z.array(z.string()).describe("ISO codes of pickup and return stations only"),
+    costPerDay: z
+      .array(
+        z.object({
+          currency: z.string(),
+          perDay: z.number(),
+          rentals: z.number().int(),
+          days: z.number().int(),
+        })
+      )
+      .describe("Per currency; a rental without a known cost is out of the sample, never 0"),
+    km: z
+      .object({
+        total: z.number().int().nullable().describe("Null when no rental has km yet"),
+        covered: z.number().int().describe("Rentals the total is made of"),
+        of: z.number().int().describe("Rentals in scope"),
+      })
+      .describe("Km only from invoices or labelled corrections"),
+  })
+  .openapi("RentalStats");
+
+registry.registerPath({
+  method: "get",
+  path: "/rentals/stats",
+  summary: "Rental statistics",
+  description: "Completed rentals only, on the stations' calendars (rental spec §7.4).",
+  tags: ["Rentals"],
+  request: { query: z.object({ year: z.coerce.number().int().min(1900).max(2200).optional() }) },
+  responses: {
+    200: {
+      description: "The figures",
+      content: { "application/json": { schema: envelope(rentalStatsSchema) } },
+    },
+    400: { description: "Invalid query", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/rentals/{id}/suggestions",
+  summary: "Trips and roadtrips a rental could belong to",
+  description:
+    "Trips whose span overlaps the rental's local days, and roadtrips with a car-like vehicle " +
+    "in those days. Offered only — nothing is linked by this call.",
+  tags: ["Rentals"],
+  request: { params: z.object({ id: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "The suggestions",
+      content: {
+        "application/json": {
+          schema: envelope(
+            z.object({
+              trips: z.array(z.object({ id: z.string().uuid(), name: z.string() })),
+              roadtrips: z.array(
+                z.object({
+                  id: z.string().uuid(),
+                  name: z.string(),
+                  vehicle: z.string().nullable(),
+                  vehicleName: z.string().nullable(),
+                  hasRental: z.boolean(),
+                })
+              ),
+            })
+          ),
+        },
+      },
+    },
+    404: { description: "Not found", content: errorContent },
+  },
+});
+
+const stationOfferPoint = z.object({ name: z.string(), lat: z.number(), lon: z.number() });
+
+registry.registerPath({
+  method: "post",
+  path: "/rentals/{id}/roadtrip",
+  summary: "Confirm (or remove) the roadtrip this car was driven on",
+  description:
+    "Sets `routeId`; an empty roadtrip vehicle name takes the booked group. The pickup and " +
+    "return come back as `meta.stationOffer` — offered as the roadtrip's first and last " +
+    "station, never written into it. `routeId: null` removes the link.",
+  tags: ["Rentals"],
+  request: {
+    params: z.object({ id: z.string().uuid() }),
+    body: {
+      content: {
+        "application/json": { schema: z.object({ routeId: z.string().uuid().nullable() }) },
+      },
+    },
+  },
+  responses: {
+    200: {
+      description: "The rental",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: rentalBookingSchema,
+            meta: z.object({
+              stationOffer: z
+                .object({ first: stationOfferPoint, last: stationOfferPoint })
+                .nullable(),
+            }),
+          }),
+        },
+      },
+    },
+    404: { description: "Rental or roadtrip not found", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/rentals/invoice-reminders",
+  summary: "Returned rentals whose km wait for their invoice",
+  description:
+    "Completed within the last 60 days and no km yet (D11 b). One entry per rental, so a " +
+    "client can say which one; the rental beta switch is the client's to apply.",
+  tags: ["Rentals"],
+  responses: {
+    200: {
+      description: "The reminders, most recent return first",
+      content: {
+        "application/json": {
+          schema: envelope(
+            z.array(
+              z.object({
+                rentalId: z.string().uuid(),
+                provider: z.string(),
+                confirmationNumber: z.string().nullable(),
+                returnStationName: z.string(),
+                returnedAt: timeValueSchema,
+                reason: z.literal("invoiceMissing"),
+              })
+            )
+          ),
+        },
+      },
     },
   },
 });

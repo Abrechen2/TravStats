@@ -6,6 +6,7 @@ import { fxColumnsFor, getBaseCurrency } from "../fx/snapshot";
 import { recomputeTripStatus } from "../tripStatusService";
 import { resolveRentalStation } from "./rentalStations";
 import { distanceColumns, mergeRental, type ResolvedStations } from "./rentalWrite";
+import { rentalDayRange, soleOverlappingTrip } from "./rentalLinks";
 
 /**
  * The one write path of a rental row — the form (`routes/rental.ts`) and the
@@ -104,6 +105,12 @@ export async function createRentalRow(
   options: WriteOptions
 ): Promise<RentalRow> {
   const state = mergeRental(null, input, await resolveStations(input));
+  // Linked by itself only when EXACTLY one trip overlaps; a trip the client
+  // named (or an explicit null) is never second-guessed.
+  const tripId =
+    input.tripId !== undefined
+      ? input.tripId
+      : await soleOverlappingTrip(userId, rentalDayRange(state));
   const companions = await resolveCompanions(userId, input.companions ?? []);
   const finalFx =
     input.finalAmount != null
@@ -129,6 +136,7 @@ export async function createRentalRow(
         ...(finalFx as Prisma.RentalBookingUncheckedCreateInput),
         ...fxColumns,
         userId,
+        tripId,
         externalRef: options.externalRef ?? null,
         companions: companions.map((c) => c.displayName),
         userEditedFields: options.manual ? editedFields(input) : [],
