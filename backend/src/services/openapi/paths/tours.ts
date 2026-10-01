@@ -456,6 +456,12 @@ registerSectionPath({
   },
 });
 
+const sectionHasExpenses = z.object({
+  error: z.string(),
+  code: z.literal("SECTION_HAS_EXPENSES"),
+  expenseCount: z.number().int(),
+});
+
 registerSectionPath({
   method: "delete",
   path: "/trips/{id}/routes/{routeId}",
@@ -470,31 +476,15 @@ registerSectionPath({
   tags: ["Tours"],
   request: {
     params: routeIdParams,
-    query: z.object({
-      deleteExpenses: z
-        .enum(["true", "false"])
-        .optional()
-        .openapi({
-          description:
-            "Opt-in: delete the costs of a section that belongs to no trip along with it. " +
-            "Ignored for a section on a trip, whose costs always go to the trip.",
-        }),
-    }),
+    // Opt-in for a section with no trip; a section on a trip hands its costs over regardless.
+    query: z.object({ deleteExpenses: z.enum(["true", "false"]).optional() }),
   },
   responses: {
     204: { description: "Deleted" },
     404: { description: "Not found", content: errorContent },
     409: {
       description: "The section belongs to no trip and carries costs; nothing was deleted",
-      content: {
-        "application/json": {
-          schema: z.object({
-            error: z.string(),
-            code: z.literal("SECTION_HAS_EXPENSES"),
-            expenseCount: z.number().int(),
-          }),
-        },
-      },
+      content: { "application/json": { schema: sectionHasExpenses } },
     },
   },
 });
