@@ -95,6 +95,14 @@ const DETECTION_RULES: DetectionRule[] = [
     subjectPatterns: [/emirates/i],
     htmlFingerprints: ["emirates"],
   },
+  // Air Berlin's mails carry the itinerary only in their PDF invoice; the
+  // template reads that PDF's text (`pdfAttachmentFlights.ts`).
+  {
+    iata: "AB",
+    fromDomains: ["@airberlin.com"],
+    subjectPatterns: [/airberlin|air berlin/i],
+    htmlFingerprints: ["airberlin", "air berlin"],
+  },
 ];
 
 /**

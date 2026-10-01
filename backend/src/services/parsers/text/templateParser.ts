@@ -35,6 +35,16 @@ function declines(template: AirlineTemplate, subject: string, text: string): boo
   });
 }
 
+export interface ReadOptions {
+  /**
+   * Accept a template's answer only when every leg is whole — also from the
+   * first template. For a document no other reader will look at again, such
+   * as a mail's PDF attachment, a partial leg has no better reading to lose
+   * to, so it must not be proposed at all.
+   */
+  requireWholeLegs?: boolean;
+}
+
 /** A leg with its number, both airports and its departure. */
 function isWholeLeg(leg: ParsedBooking): boolean {
   return Boolean(leg.flightNumber && leg.departureCode && leg.arrivalCode && leg.departureTime);
@@ -79,7 +89,8 @@ export class TemplateParser {
     subject: string,
     rawText: string,
     html: string | undefined,
-    userId?: string
+    userId?: string,
+    options: ReadOptions = {}
   ): Promise<TemplateReading> {
     const text = withoutZeroWidth(rawText);
     const fromMatch = /^From:\s*(.+)$/im.exec(text);
@@ -127,7 +138,7 @@ export class TemplateParser {
       // Measured 2026-10-01: without this the general Lufthansa template,
       // second in line behind `LH-old`, answered a two-leg mail with one
       // routeless leg where the regex had at least read the route.
-      if (iata !== candidates[0] && !legs.every(isWholeLeg)) {
+      if ((options.requireWholeLegs || iata !== candidates[0]) && !legs.every(isWholeLeg)) {
         logger.debug({ template: template.iata }, "fallback template declined: incomplete leg");
         continue;
       }

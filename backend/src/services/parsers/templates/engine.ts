@@ -30,6 +30,24 @@ const SELECTOR_TO_BOOKING_KEY: Partial<Record<SelectorKey, keyof ParsedBooking>>
 };
 
 /**
+ * A date a pattern assembled from parts printed in different places.
+ *
+ * Air Berlin's 2010 invoices print each leg as "MUC - HAM 08.02 07:15" — no
+ * year — and the year only in a header line, "Hinflug 08.02.2010". A pattern
+ * names the parts `day`, `month`, `year` and `time` (the year typically from
+ * a lookbehind that finds the same day and month with a year) and gets
+ * "08.02.2010T07:15", which `parseIso` reads. Positional groups cannot do
+ * this: they are joined in the order they appear, two at most. A pattern
+ * without these names is untouched.
+ */
+function dateFromNamedGroups(groups: Record<string, string> | undefined): string | undefined {
+  if (!groups) return undefined;
+  const { day, month, year, time } = groups;
+  if (!day || !month || !year || !time) return undefined;
+  return `${day}.${month}.${year}T${time}`;
+}
+
+/**
  * Try regex patterns from textPatterns against plain text.
  * Returns all non-empty capture groups joined with "T" (for date+time combos), or undefined.
  */
@@ -38,6 +56,8 @@ function applyTextPatterns(patterns: string[], text: string): string | undefined
     try {
       const m = text.match(new RegExp(pattern, "im"));
       if (!m) continue;
+      const assembled = dateFromNamedGroups(m.groups);
+      if (assembled) return assembled;
       // Collect all non-empty capture groups (m[1], m[2], ...)
       const groups: string[] = [];
       for (let i = 1; i < m.length; i++) {

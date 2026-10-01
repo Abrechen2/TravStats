@@ -30,6 +30,7 @@
  */
 
 import { parseBookingEmail, parseBookingText, type ParseResult } from "../bookingParser";
+import { bodyNamesNoRoute, readFlightsFromPdfAttachments } from "../parsers/pdfAttachmentFlights";
 import { parseCruiseBookingText } from "../cruiseBookingParser";
 import { resolveCruiseEntities, hydrateResolvedCruises } from "../cruiseEntityResolver";
 import { parseLodgingBookingText } from "../lodging/lodgingBookingParser";
@@ -308,6 +309,23 @@ async function parseAs(
           ...(input.referenceDate ? { referenceDate: input.referenceDate } : {}),
         })
       : await parseBookingText(input.text, input.userId);
+
+  // A mail whose body named no route may carry its itinerary in a PDF — Air
+  // Berlin's invoices, for one (see `pdfAttachmentFlights.ts`).
+  // Only a template reading whole legs replaces the body's answer.
+  if (input.source === "email" && input.attachments?.length && bodyNamesNoRoute(result.flights)) {
+    const fromPdf = await readFlightsFromPdfAttachments(
+      input.subject ?? "",
+      input.attachments,
+      input.userId
+    );
+    if (fromPdf.length > 0) {
+      // The body's "the model could not be asked" no longer qualifies an
+      // empty answer — the answer is not empty.
+      const { llmUnreachable: _unused, ...rest } = result;
+      return { domain: "flight", ...rest, flights: fromPdf, parserUsed: "regex" };
+    }
+  }
 
   return { domain: "flight", ...result };
 }
