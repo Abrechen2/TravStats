@@ -13,7 +13,7 @@ router.get("/", authenticate, (_req: AuthRequest, res: Response): void => {
   res.json({
     templates: templateRegistry.getStatus(),
     total: templateRegistry.getAll().length,
-    githubRepo: "https://github.com/Abrechen2/travstats-airline-templates",
+    githubRepo: "https://github.com/Abrechen2/travstats-templates",
   });
 });
 
@@ -40,7 +40,7 @@ router.post(
         res.json({
           templates: templateRegistry.getStatus(),
           total: count,
-          githubRepo: "https://github.com/Abrechen2/travstats-airline-templates",
+          githubRepo: "https://github.com/Abrechen2/travstats-templates",
         });
       })
       .catch((err: unknown) => {
