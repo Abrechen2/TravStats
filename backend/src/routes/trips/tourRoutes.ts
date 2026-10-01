@@ -3,7 +3,11 @@ import { Prisma } from "../../prisma";
 
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
-import { AppError } from "../../middleware/errorHandler";
+import { AppError, type ApiErrorCode } from "../../middleware/errorHandler";
+import {
+  handExpensesToTrips,
+  standaloneExpenseCount,
+} from "../../services/expenses/sectionRemoval";
 import { assignStopsSchema, createRouteSchema, updateRouteSchema } from "../../schemas/tour";
 import { kindFieldsSchema } from "../../schemas/roadtrip";
 import { tourDayColumns, tourDayDto } from "../../services/tour/tourDay";
@@ -336,8 +340,20 @@ router.delete(
     try {
       const userId = req.userId!;
       const routeId = await resolveRouteFromRequest(userId, req);
+      // Costs (forgejo#140): on a trip they become the trip's; without one
+      // they would vanish, so the delete waits for an explicit opt-in.
+      const orphaned = await standaloneExpenseCount([routeId]);
+      if (orphaned > 0 && req.query.deleteExpenses !== "true") {
+        res.status(409).json({
+          error: `This section carries ${orphaned} cost(s) and belongs to no trip; send deleteExpenses=true to delete them with it`,
+          code: "SECTION_HAS_EXPENSES" satisfies ApiErrorCode,
+          expenseCount: orphaned,
+        });
+        return;
+      }
 
       await prisma.$transaction(async (tx) => {
+        await handExpensesToTrips(tx, [routeId]);
         // Release the TRIP's stops first; the section's own trip-less
         // points then go with it through the cascade. Reversing these two
         // deletes the timeline the tour was only drawn over. The night

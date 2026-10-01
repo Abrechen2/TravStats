@@ -1,9 +1,10 @@
 import { afterEach, beforeEach, describe, expect, it, vi } from "vitest";
-import { fireEvent, render, screen } from "@testing-library/react";
+import { fireEvent, render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 
 import RoadtripDetailPage from "../RoadtripDetailPage";
 import { roadtripsApi } from "../../lib/api/roadtrips";
+import { toursApi } from "../../lib/api/tours";
 import type { RoadtripDetail } from "../../types/roadtrip";
 
 vi.mock("../../components/NavigationBar", () => ({ default: () => <div /> }));
@@ -13,7 +14,10 @@ vi.mock("../../components/Roadtrips/StationEditor", () => ({
 }));
 vi.mock("../../lib/api/roadtrips", () => ({ roadtripsApi: { get: vi.fn() } }));
 vi.mock("../../lib/api/tours", () => ({
-  toursApi: { geometry: vi.fn(async () => ({ type: "FeatureCollection", features: [] })) },
+  toursApi: {
+    geometry: vi.fn(async () => ({ type: "FeatureCollection", features: [] })),
+    removeStandalone: vi.fn(),
+  },
 }));
 vi.mock("../../hooks/useTranslation", () => ({
   useTranslation: () => ({
@@ -83,6 +87,27 @@ describe("RoadtripDetailPage", () => {
     fireEvent.click(await screen.findByText("roadtrips:detail.edit"));
     expect(screen.getByTestId("editor")).toHaveTextContent("plain");
     expect(screen.getByTestId("map")).toBeInTheDocument();
+  });
+
+  it("asks once more before deleting a roadtrip's costs with it, then sends the opt-in", async () => {
+    // forgejo#140: a roadtrip with costs and no trip answers 409 with the count.
+    vi.mocked(toursApi.removeStandalone)
+      .mockRejectedValueOnce(
+        Object.assign(new Error("conflict"), {
+          isAxiosError: true,
+          response: { status: 409, data: { code: "SECTION_HAS_EXPENSES", expenseCount: 2 } },
+        })
+      )
+      .mockResolvedValueOnce(undefined);
+    renderAt("/roadtrips/rt");
+    fireEvent.click(await screen.findByText("roadtrips:delete"));
+    fireEvent.click(screen.getByText("roadtrips:deleteConfirm.confirm"));
+    fireEvent.click(await screen.findByText("roadtrips:deleteWithCosts.confirm"));
+    await waitFor(() => expect(toursApi.removeStandalone).toHaveBeenCalledTimes(2));
+    expect(vi.mocked(toursApi.removeStandalone).mock.calls).toEqual([
+      ["rt", { deleteExpenses: false }],
+      ["rt", { deleteExpenses: true }],
+    ]);
   });
 
   it("arrives from “Heutige Nacht eintragen” with the editor open on tonight", async () => {

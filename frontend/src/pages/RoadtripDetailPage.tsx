@@ -25,6 +25,7 @@ import { roadtripsApi } from "../lib/api/roadtrips";
 import { toursApi } from "../lib/api/tours";
 import { useDisplayFormat } from "../lib/displayFormat";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { sectionExpenseCount } from "../lib/sectionExpenses";
 import { hexToRgb } from "../lib/domainColor";
 import { logger } from "../lib/logger";
 import { dayNumber, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
@@ -84,6 +85,7 @@ export default function RoadtripDetailPage(): JSX.Element {
     flush: async () => {},
   });
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [costsBlock, setCostsBlock] = useState<number | null>(null);
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -176,12 +178,15 @@ export default function RoadtripDetailPage(): JSX.Element {
     }
   };
 
-  const remove = async (): Promise<void> => {
+  const remove = async (deleteExpenses = false): Promise<void> => {
     try {
-      await toursApi.removeStandalone(id);
+      await toursApi.removeStandalone(id, { deleteExpenses });
       navigate("/roadtrips");
-    } catch {
-      addToast("error", t("roadtrips:deleteError"));
+    } catch (err) {
+      // Costs with no trip to take them: asked once more, never deleted unasked.
+      const count = sectionExpenseCount(err);
+      if (count !== null) setCostsBlock(count);
+      else addToast("error", t("roadtrips:deleteError"));
     }
   };
 
@@ -434,6 +439,21 @@ export default function RoadtripDetailPage(): JSX.Element {
             setLegEdit(null);
             void load();
           }}
+        />
+      )}
+
+      {costsBlock !== null && (
+        <ConfirmModal
+          isOpen
+          onClose={() => setCostsBlock(null)}
+          onConfirm={() => {
+            setCostsBlock(null);
+            void remove(true);
+          }}
+          title={t("roadtrips:deleteWithCosts.title")}
+          message={t("roadtrips:deleteWithCosts.message", { name: r.name, count: costsBlock })}
+          confirmText={t("roadtrips:deleteWithCosts.confirm")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
         />
       )}
 

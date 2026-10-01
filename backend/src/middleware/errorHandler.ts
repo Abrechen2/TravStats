@@ -30,6 +30,10 @@ export type ApiErrorCode =
   | "RATE_LIMITED"
   | "DB_UNAVAILABLE"
   | "DUPLICATE"
+  /** Deleting a roadtrip or tour with no trip would delete its costs
+   *  (forgejo#140): refused until the caller sends `deleteExpenses=true`. The
+   *  body carries `expenseCount`. */
+  | "SECTION_HAS_EXPENSES"
   /** A list filter named a loyalty card that is not this account's, or not
    *  of the list's kind (a hotel card on the flight list). The list says the
    *  programme is gone instead of showing an unfiltered or empty page. */

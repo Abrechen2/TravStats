@@ -453,5 +453,11 @@
         "unreachable": "The server cannot be reached right now. Nothing was saved — please try again."
       }
     }
+  },
+  "deleteWithCosts": {
+    "title": "Delete with its costs?",
+    "message_one": "“{{name}}” has {{count}} recorded cost and belongs to no trip that could take it over. Deleting removes it too.",
+    "message_other": "“{{name}}” has {{count}} recorded costs and belongs to no trip that could take them over. Deleting removes them too.",
+    "confirm": "Delete with costs"
   }
 }

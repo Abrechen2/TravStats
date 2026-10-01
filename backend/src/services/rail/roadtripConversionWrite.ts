@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { handExpensesToTrips, standaloneExpenseCount } from "../expenses/sectionRemoval";
 import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import type { RailStationInput } from "../../schemas/rail";
@@ -111,9 +112,8 @@ export interface ConversionPreview {
 }
 
 /** Costs on a section with no trip have nowhere to go when it is removed (forgejo#140). */
-async function costsWithoutTrip(section: { id: string; tripId: string | null }): Promise<boolean> {
-  if (section.tripId !== null) return false;
-  return (await prisma.tripExpense.count({ where: { routeId: section.id } })) > 0;
+async function costsWithoutTrip(section: { id: string }): Promise<boolean> {
+  return (await standaloneExpenseCount([section.id])) > 0;
 }
 
 export async function previewRoadtripConversion(
@@ -238,12 +238,7 @@ export async function convertRoadtripToRail(
         where: { routeId: section.id, tripId: { not: null } },
         data: { routeId: null, routeOrderIdx: null, lodgingStayId: null, overnight: false },
       });
-      if (section.tripId !== null) {
-        await tx.tripExpense.updateMany({
-          where: { routeId: section.id },
-          data: { routeId: null, tripId: section.tripId },
-        });
-      }
+      await handExpensesToTrips(tx, [section.id]);
       await tx.tripRoute.delete({ where: { id: section.id } });
     }
     return count;

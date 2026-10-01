@@ -186,8 +186,15 @@ export const toursApi = {
 
   /** The same delete, reached without a trip in the path — the only way to
    *  reach a tour that has none. */
-  removeStandalone: async (routeId: string): Promise<void> => {
-    await api.delete(`/tours/${routeId}`);
+  removeStandalone: async (
+    routeId: string,
+    opts: { deleteExpenses?: boolean } = {}
+  ): Promise<void> => {
+    // Without the opt-in a section with costs and no trip answers 409
+    // `SECTION_HAS_EXPENSES` (forgejo#140) — see `lib/sectionExpenses.ts`.
+    await api.delete(`/tours/${routeId}`, {
+      params: opts.deleteExpenses ? { deleteExpenses: "true" } : undefined,
+    });
   },
 
   /**

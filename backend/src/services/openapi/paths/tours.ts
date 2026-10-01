@@ -463,12 +463,39 @@ registerSectionPath({
   description:
     "Deletes the section and its legs. Its stops are RELEASED, not deleted — " +
     "a tour is scaffolding over the timeline; removing the scaffolding must " +
-    "not remove the timeline entries themselves.",
+    "not remove the timeline entries themselves. Its costs (forgejo#140) become " +
+    "the trip's trip-wide costs, station and leg pins cleared. A section with " +
+    "no trip and with costs is refused (409 `SECTION_HAS_EXPENSES`, with " +
+    "`expenseCount`) unless `deleteExpenses=true` is sent.",
   tags: ["Tours"],
-  request: { params: routeIdParams },
+  request: {
+    params: routeIdParams,
+    query: z.object({
+      deleteExpenses: z
+        .enum(["true", "false"])
+        .optional()
+        .openapi({
+          description:
+            "Opt-in: delete the costs of a section that belongs to no trip along with it. " +
+            "Ignored for a section on a trip, whose costs always go to the trip.",
+        }),
+    }),
+  },
   responses: {
     204: { description: "Deleted" },
     404: { description: "Not found", content: errorContent },
+    409: {
+      description: "The section belongs to no trip and carries costs; nothing was deleted",
+      content: {
+        "application/json": {
+          schema: z.object({
+            error: z.string(),
+            code: z.literal("SECTION_HAS_EXPENSES"),
+            expenseCount: z.number().int(),
+          }),
+        },
+      },
+    },
   },
 });
 

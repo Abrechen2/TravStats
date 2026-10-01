@@ -453,5 +453,11 @@
         "unreachable": "Der Server ist gerade nicht erreichbar. Nichts wurde gespeichert — bitte erneut versuchen."
       }
     }
+  },
+  "deleteWithCosts": {
+    "title": "Mit den Kosten löschen?",
+    "message_one": "„{{name}}“ hat {{count}} erfasste Ausgabe und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen geht sie mit.",
+    "message_other": "„{{name}}“ hat {{count}} erfasste Ausgaben und gehört zu keiner Reise, die sie übernehmen könnte. Beim Löschen gehen sie mit.",
+    "confirm": "Mit Kosten löschen"
   }
 }
