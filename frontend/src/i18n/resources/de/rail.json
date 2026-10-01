@@ -241,6 +241,7 @@
     },
     "removeSection": "Roadtrip danach löschen",
     "removeSectionHint": "Nur möglich, wenn jeder Abschnitt übernommen werden kann.",
+    "removeSectionCostsHint": "Nicht möglich: Der Roadtrip hat erfasste Kosten und gehört zu keiner Reise, die sie übernehmen könnte.",
     "confirm": "Übernehmen",
     "done_one": "{{count}} Zugfahrt übernommen.",
     "done_other": "{{count}} Zugfahrten übernommen.",

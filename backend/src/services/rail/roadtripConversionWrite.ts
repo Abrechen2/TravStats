@@ -106,6 +106,14 @@ export interface ConversionPreview {
   }>;
   skipped: RoadtripConversionPlan["skipped"];
   canRemoveSection: boolean;
+  /** Why the section must stay: a leg that is no ride, or costs with no trip to take them. */
+  removeBlockedBy: "legs" | "costs" | null;
+}
+
+/** Costs on a section with no trip have nowhere to go when it is removed (forgejo#140). */
+async function costsWithoutTrip(section: { id: string; tripId: string | null }): Promise<boolean> {
+  if (section.tripId !== null) return false;
+  return (await prisma.tripExpense.count({ where: { routeId: section.id } })) > 0;
 }
 
 export async function previewRoadtripConversion(
@@ -134,7 +142,14 @@ export async function previewRoadtripConversion(
       journeyId: done.get(j.externalRef) ?? null,
     })),
     skipped: plan.skipped,
-    canRemoveSection: removable(plan),
+    ...(await (async () => {
+      const blockedBy = !removable(plan)
+        ? "legs"
+        : (await costsWithoutTrip(section))
+          ? "costs"
+          : null;
+      return { canRemoveSection: blockedBy === null, removeBlockedBy: blockedBy };
+    })()),
   };
 }
 
@@ -202,6 +217,11 @@ export async function convertRoadtripToRail(
   if (options.removeSection && !removable(plan)) {
     throw new AppError("Not every leg can be converted, so the roadtrip stays", 409);
   }
+  // Its costs (forgejo#140) cascade with the section. On a trip they become
+  // the trip's; a standalone section has nowhere to hand them, so it stays.
+  if (options.removeSection && (await costsWithoutTrip(section))) {
+    throw new AppError("This roadtrip carries costs and belongs to no trip, so it stays", 409);
+  }
   const done = await convertedRefs(userId, plan);
   const fresh = plan.journeys.filter((j) => !done.has(j.externalRef));
   const countryAt = await getCountryResolver();
@@ -218,6 +238,12 @@ export async function convertRoadtripToRail(
         where: { routeId: section.id, tripId: { not: null } },
         data: { routeId: null, routeOrderIdx: null, lodgingStayId: null, overnight: false },
       });
+      if (section.tripId !== null) {
+        await tx.tripExpense.updateMany({
+          where: { routeId: section.id },
+          data: { routeId: null, tripId: section.tripId },
+        });
+      }
       await tx.tripRoute.delete({ where: { id: section.id } });
     }
     return count;

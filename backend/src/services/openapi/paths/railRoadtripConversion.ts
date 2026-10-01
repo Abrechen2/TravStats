@@ -48,7 +48,14 @@ const preview = registry.register(
       skipped,
       canRemoveSection: z
         .boolean()
-        .describe("True only when every leg becomes a ride and there is at least one"),
+        .describe(
+          "True only when every leg becomes a ride, there is at least one, and no cost " +
+            "would be lost — a removed section's costs go to its trip; one with no trip keeps them"
+        ),
+      removeBlockedBy: z
+        .enum(["legs", "costs"])
+        .nullable()
+        .describe("Why the section must stay; null when it may go"),
     })
     .openapi("RailRoadtripConversionPreview")
 );

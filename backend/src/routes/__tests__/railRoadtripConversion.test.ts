@@ -203,6 +203,41 @@ describe("POST /rail/roadtrip-conversion/:routeId", () => {
     });
   });
 
+  it("hands a removed section's costs to its trip instead of deleting them (forgejo#140)", async () => {
+    const { routeId } = await railSection();
+    const fee = await prisma.tripExpense.create({
+      data: { userId, routeId, kind: "other", amount: 18, currency: "EUR", note: "Reservierung" },
+    });
+    const res = await request(app)
+      .post(url(routeId))
+      .set("Cookie", cookie)
+      .send({ removeSection: true });
+    expect(res.status).toBe(200);
+    expect(await prisma.tripExpense.findUnique({ where: { id: fee.id } })).toMatchObject({
+      tripId,
+      routeId: null,
+    });
+  });
+
+  it("keeps a standalone section that carries costs: there is no trip to hand them to", async () => {
+    const { routeId } = await railSection();
+    await prisma.tripRoute.update({ where: { id: routeId }, data: { tripId: null } });
+    await prisma.tripStop.updateMany({ where: { routeId }, data: { tripId: null } });
+    await prisma.tripExpense.create({
+      data: { userId, routeId, kind: "other", amount: 18, currency: "EUR" },
+    });
+    // The preview says so before the reader asks for it.
+    const preview = await request(app).get(url(routeId)).set("Cookie", cookie);
+    expect(preview.body.data).toMatchObject({ canRemoveSection: false, removeBlockedBy: "costs" });
+    const refused = await request(app)
+      .post(url(routeId))
+      .set("Cookie", cookie)
+      .send({ removeSection: true });
+    expect(refused.status).toBe(409);
+    expect(await prisma.railJourney.count({ where: { userId } })).toBe(0);
+    expect(await prisma.tripExpense.count({ where: { routeId } })).toBe(1);
+  });
+
   it("keeps the section when a leg cannot become a ride, and says which", async () => {
     const { routeId } = await railSection("rail", null);
     const preview = await request(app).get(url(routeId)).set("Cookie", cookie);
