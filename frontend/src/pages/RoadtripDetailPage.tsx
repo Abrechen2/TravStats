@@ -13,6 +13,7 @@ import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
 import LegDialog from "../components/Roadtrips/LegDialog";
 import RoadtripFigures from "../components/Roadtrips/RoadtripFigures";
 import RoadtripTourCards from "../components/Roadtrips/RoadtripTourCards";
+import RoadtripCostsSection from "../components/Roadtrips/RoadtripCostsSection";
 import { RoadtripRailConversion } from "../components/rail/RoadtripRailConversion";
 import StationEditor, { type EditorStart } from "../components/Roadtrips/StationEditor";
 import StationTimeline from "../components/Roadtrips/StationTimeline";
@@ -50,7 +51,7 @@ const STATUS_COLOR: Record<SaveStatus, string> = {
 /**
  * One roadtrip (design 2026-09-25, board 2): the head and its figures, the
  * stations by day beside a map that follows the selection, then the day
- * tours. Editing happens on the same page — the stations turn into the
+ * tours and the costs (forgejo#140). Editing happens on the same page — the stations turn into the
  * editor, the map stays — and saves as it goes.
  *
  * `?station=neu` opens the editor with a new station (from "Neuer
@@ -405,6 +406,14 @@ export default function RoadtripDetailPage(): JSX.Element {
         <h2 className="t-card-title">{t("roadtrips:detail.toursTitle")}</h2>
         <RoadtripTourCards tours={detail.tours} stations={detail.stations} />
       </section>
+
+      <RoadtripCostsSection
+        roadtripId={id}
+        stations={detail.stations}
+        expenses={detail.expenses}
+        costs={detail.costs}
+        onChanged={() => void load()}
+      />
 
       <footer className="mt-8 pt-4 text-sm" style={{ borderTop: "1px solid var(--ts-border)" }}>
         <button type="button" className="underline" onClick={() => setConfirmDelete(true)}>

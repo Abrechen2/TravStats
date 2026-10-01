@@ -15,7 +15,7 @@ router.use(authenticate);
  *
  * Derived, never stored: a picker offering 155 codes is unusable, and any
  * hand-kept "favourites" list would be a second thing to age. Four domains
- * are counted because a traveller's currencies are not per-domain — someone
+ * and the roadtrip expenses are counted because a traveller's currencies are not per-domain — someone
  * who flies to Oslo also sleeps there.
  */
 router.get("/recent", async (req: AuthRequest, res: Response, next: NextFunction) => {
@@ -23,15 +23,18 @@ router.get("/recent", async (req: AuthRequest, res: Response, next: NextFunction
     const userId = req.userId;
     if (!userId) throw new AppError("Not authenticated", 401);
 
-    const [stays, cruises, flights, bookings] = await Promise.all([
+    const [stays, cruises, flights, bookings, expenses] = await Promise.all([
       prisma.lodgingStay.groupBy({ by: ["currency"], where: { userId }, _count: true }),
       prisma.cruise.groupBy({ by: ["currency"], where: { userId }, _count: true }),
       prisma.flight.groupBy({ by: ["currency"], where: { userId }, _count: true }),
       prisma.booking.groupBy({ by: ["currency"], where: { userId }, _count: true }),
+      // A ferry ticket or fuel on a roadtrip (forgejo#140) is paid in the same
+      // currencies as the stays around it.
+      prisma.tripExpense.groupBy({ by: ["currency"], where: { userId }, _count: true }),
     ]);
 
     const tally = new Map<string, number>();
-    for (const row of [...stays, ...cruises, ...flights, ...bookings]) {
+    for (const row of [...stays, ...cruises, ...flights, ...bookings, ...expenses]) {
       const code = row.currency;
       // Rows predating ISO-4217 validation can hold anything, including a
       // blank; offering such a value back as a choice would re-enter it.

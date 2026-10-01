@@ -414,5 +414,44 @@
     "change": "Choose another place",
     "remove": "Unlink",
     "linked": "Linked place"
+  },
+  "costs": {
+    "title": "Costs",
+    "add": "Add a cost",
+    "empty": "No costs recorded yet — ferry, toll, pitch or fuel.",
+    "total": "Total",
+    "perCurrencyHint": "Per currency, not converted.",
+    "wholeTrip": "Whole roadtrip",
+    "leg": "{{from}} → {{to}}",
+    "removedStation": "Deleted station",
+    "kind": {
+      "ferry": "Ferry",
+      "toll": "Toll",
+      "pitch": "Pitch",
+      "fuel": "Fuel",
+      "parking": "Parking",
+      "other": "Other"
+    },
+    "dialog": {
+      "titleNew": "Add a cost",
+      "titleEdit": "Edit cost",
+      "kind": "What for",
+      "amount": "Amount",
+      "amountInvalid": "Please enter an amount of 0 or more.",
+      "currency": "Currency",
+      "date": "Date",
+      "dateHint": "Leave empty if the day is not known.",
+      "station": "Station",
+      "stationNone": "None — applies to the whole roadtrip",
+      "keepLeg": "Leg {{from}} → {{to}} (kept)",
+      "note": "Note",
+      "save": "Save",
+      "delete": "Delete this cost",
+      "error": {
+        "invalid": "The entry was refused — please check amount, currency, date and station.",
+        "gone": "The roadtrip, the station or the entry no longer exists. Please reload the page.",
+        "unreachable": "The server cannot be reached right now. Nothing was saved — please try again."
+      }
+    }
   }
 }

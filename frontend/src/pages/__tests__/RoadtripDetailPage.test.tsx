@@ -44,6 +44,8 @@ const DETAIL: RoadtripDetail = {
   legs: [],
   tours: [],
   routingAvailable: true,
+  expenses: [],
+  costs: { total: {}, byStation: [], byLeg: [], unpinned: {} },
 };
 
 function renderAt(path: string): void {

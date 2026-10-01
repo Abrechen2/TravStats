@@ -71,4 +71,15 @@ export interface TripAccount {
 export interface TravelAccountResponse {
   account: TravelAccount;
   trips: TripAccount;
+  /** Ferry, toll, pitch, fuel (forgejo#140): per year and in total, per currency. No
+   *  screen draws it yet; optional so the fixtures written before it stay valid. */
+  expenses?: ExpenseAccount;
+}
+
+export interface ExpenseAccount {
+  count: number;
+  totalByCurrency: Record<string, number>;
+  years: { year: string; count: number; byCurrency: Record<string, number> }[];
+  /** No day known: in the total, in no year. */
+  undatedByCurrency: Record<string, number>;
 }
