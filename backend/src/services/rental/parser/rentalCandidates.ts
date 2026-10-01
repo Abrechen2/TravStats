@@ -25,8 +25,16 @@ export interface RentalImportCandidate {
   /** How each station was placed; `unresolved`/`ambiguous` must be answered before saving. */
   stations: { pickup: StationResolution; return: StationResolution } | null;
   invoice: ParsedRentalInvoice | null;
+  /** The fee a cancellation bills (stored as the cancelled rental's cost, flagged as a fee). */
+  cancellationFee: { amount: number; currency: string } | null;
   confirmationNumber: string | null;
   provider: string;
+  /**
+   * When the mail was sent (its Date header), ISO; null for pasted text. Sent
+   * back with the import, so an older mail applied after a newer one never
+   * overwrites what the newer one set.
+   */
+  mailSentAt: string | null;
 }
 
 /** The import key the parser writes (§3.1): `rental:<provider>:<confirmationNumber>`. */
@@ -64,7 +72,8 @@ function stationInput(name: string, resolution: StationResolution) {
 async function confirmationCandidate(
   userId: string,
   doc: ParsedRentalConfirmation,
-  parserTemplate: string
+  parserTemplate: string,
+  mailSentAt: string | null
 ): Promise<RentalImportCandidate> {
   const pickup = await resolveStationFromText(doc.pickup.stationName, doc.placeHints);
   const sameName = doc.return.stationName === doc.pickup.stationName;
@@ -98,21 +107,25 @@ async function confirmationCandidate(
     input,
     stations: { pickup, return: ret },
     invoice: null,
+    cancellationFee: null,
     confirmationNumber: doc.confirmationNumber,
     provider: doc.provider,
+    mailSentAt,
   };
 }
 
 export async function toRentalCandidate(
   doc: ParsedRentalDocument,
   parserTemplate: string,
-  userId: string | undefined
+  userId: string | undefined,
+  sentAt?: Date
 ): Promise<RentalImportCandidate> {
+  const mailSentAt = sentAt && !Number.isNaN(sentAt.getTime()) ? sentAt.toISOString() : null;
   if (doc.kind === "confirmation" && userId)
-    return confirmationCandidate(userId, doc, parserTemplate);
+    return confirmationCandidate(userId, doc, parserTemplate, mailSentAt);
   if (doc.kind === "confirmation") {
     // Without an account (a corpus measurement) the stations are still placed.
-    const candidate = await confirmationCandidate("", doc, parserTemplate);
+    const candidate = await confirmationCandidate("", doc, parserTemplate, mailSentAt);
     return { ...candidate, action: "create", existingId: null };
   }
   const existing = userId
@@ -132,7 +145,9 @@ export async function toRentalCandidate(
     input: null,
     stations: null,
     invoice: doc.kind === "invoice" ? doc : null,
+    cancellationFee: doc.kind === "cancellation" ? doc.fee : null,
     confirmationNumber: doc.confirmationNumber,
     provider: doc.provider,
+    mailSentAt,
   };
 }

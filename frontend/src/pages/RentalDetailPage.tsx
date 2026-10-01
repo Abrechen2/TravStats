@@ -297,7 +297,10 @@ export default function RentalDetailPage(): JSX.Element {
             facts={[
               { label: t("rental:detail.priceBooked"), value: priceLine || null, mono: true },
               {
-                label: t("rental:detail.priceFinal"),
+                label:
+                  rental.finalAmountSource === "cancellationFee"
+                    ? t("rental:detail.cancellationFee")
+                    : t("rental:detail.priceFinal"),
                 value:
                   money(rental.finalAmount, rental.finalCurrency) ?? t("rental:detail.fromInvoice"),
                 mono: rental.finalAmount !== null,

@@ -116,6 +116,17 @@ export default function RentalStatsSection({ year }: Props): JSX.Element {
         </div>
       </div>
 
+      {stats.cancellationFees.length > 0 ? (
+        <p className="text-sm" data-testid="rental-stats-fees">
+          {t("rental:stats.cancellationFees", {
+            count: stats.cancellationFees.reduce((n, f) => n + f.rentals, 0),
+            list: stats.cancellationFees
+              .map((f) => formatAmount(f.amount, f.currency, { language: i18n.language }))
+              .join(", "),
+          })}
+        </p>
+      ) : null}
+
       {stats.byYear.length > 1 ? (
         <div>
           <h3 className="text-sm font-semibold">{t("rental:stats.byYear")}</h3>

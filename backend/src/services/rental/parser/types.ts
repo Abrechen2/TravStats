@@ -44,6 +44,12 @@ export interface ParsedRentalCancellation {
   source: RentalParseSource;
   provider: string;
   confirmationNumber: string;
+  /**
+   * The cancellation fee a provider bills for it, when the document prints
+   * one ("Stornogebühr"). Stored as the cancelled rental's cost, flagged as a
+   * fee — never a rental-day cost. Null when no fee is printed.
+   */
+  fee: { amount: number; currency: string } | null;
 }
 
 /**

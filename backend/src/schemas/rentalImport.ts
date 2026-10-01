@@ -30,16 +30,32 @@ export const rentalInvoiceSchema = z.object({
     .nullable(),
 });
 
+/**
+ * The mail's own send time, as the parse answered it. Absent or null for
+ * pasted text: such a document cannot be ordered against another and is
+ * applied as before.
+ */
+const mailSentAt = z.string().datetime({ offset: true }).nullable().optional();
+
+export const rentalCancellationFeeSchema = z.object({
+  amount: z.number().positive().max(10_000_000),
+  currency: z.string().regex(/^[A-Z]{3}$/),
+});
+
 export const rentalImportSchema = z.discriminatedUnion("kind", [
-  z.object({ kind: z.literal("confirmation"), input: createRentalSchema }),
+  z.object({ kind: z.literal("confirmation"), input: createRentalSchema, mailSentAt }),
   z.object({
     kind: z.literal("cancellation"),
     provider: z.string().trim().min(1).max(100),
     confirmationNumber: number,
+    /** The fee the cancellation bills; stored as the cancelled rental's cost, flagged as a fee. */
+    fee: rentalCancellationFeeSchema.nullable().optional(),
+    mailSentAt,
   }),
   z.object({
     kind: z.literal("invoice"),
     invoice: rentalInvoiceSchema,
+    mailSentAt,
     /**
      * The review showed the invoice's km beside a figure the user typed and
      * the user chose the invoice's (§4.5). Without it a typed figure stands
@@ -51,3 +67,4 @@ export const rentalImportSchema = z.discriminatedUnion("kind", [
 
 export type RentalImportInput = z.infer<typeof rentalImportSchema>;
 export type RentalInvoiceInput = z.infer<typeof rentalInvoiceSchema>;
+export type RentalCancellationFee = z.infer<typeof rentalCancellationFeeSchema>;

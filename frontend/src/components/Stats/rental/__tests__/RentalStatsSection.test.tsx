@@ -26,6 +26,7 @@ const STATS = {
   countries: ["DE"],
   costPerDay: [],
   km: { total: null, covered: 0, of: 2 },
+  cancellationFees: [],
 };
 
 describe("RentalStatsSection", () => {
@@ -45,5 +46,18 @@ describe("RentalStatsSection", () => {
     expect(km.textContent).toContain('"covered":0');
     expect(screen.getByTestId("rental-stat-cost").textContent).toContain("–");
     expect(screen.getByTestId("rental-stat-days").textContent).toContain("7");
+    expect(screen.queryByTestId("rental-stats-fees")).toBeNull();
+  });
+
+  it("shows cancellation fees apart from the cost per day", async () => {
+    stats.mockResolvedValueOnce({
+      ...STATS,
+      cancellationFees: [{ currency: "EUR", amount: 45.5, rentals: 1 }],
+    });
+    render(<RentalStatsSection year={null} />);
+    const fees = await screen.findByTestId("rental-stats-fees");
+    expect(fees.textContent).toContain("rental:stats.cancellationFees");
+    expect(fees.textContent).toContain('"count":1');
+    expect(screen.getByTestId("rental-stat-cost").textContent).toContain("–");
   });
 });

@@ -2,7 +2,7 @@ import { prisma } from "../../db";
 import { Prisma } from "../../prisma";
 import { AppError } from "../../middleware/errorHandler";
 import type { CreateRentalInput, UpdateRentalInput } from "../../schemas/rental";
-import type { RentalInvoiceInput } from "../../schemas/rentalImport";
+import type { RentalCancellationFee, RentalInvoiceInput } from "../../schemas/rentalImport";
 import { toLocal } from "../../shared/time/instant";
 import { rentalExternalRef } from "./parser/rentalCandidates";
 import {
@@ -24,11 +24,40 @@ import {
  * 3. A mail never overwrites what a person set (`userEditedFields`), never
  *    replaces a value with nothing, and never a richer value with a poorer
  *    one (a time with a bare day, an airport with a name alone).
+ * 4. Of two dated mails of one booking the NEWER one's data stands, whatever
+ *    order they are imported in (`lastMailSentAt`): an older mail only fills
+ *    what is still empty, and an older cancellation does not cancel. A mail
+ *    without a send time (pasted text) cannot be ordered and applies as before.
  */
 
 type Stored = Prisma.RentalBookingGetPayload<object>;
 
-export type ImportOutcome = "created" | "updated" | "unchanged" | "cancelled" | "invoiced";
+/** `stale`: an older mail than the newest one applied, with nothing left for it to fill. */
+export type ImportOutcome =
+  "created" | "updated" | "unchanged" | "stale" | "cancelled" | "invoiced";
+
+/** True when this mail was sent before the newest mail already applied to the row. */
+export function isOlderMail(
+  existing: { lastMailSentAt: Date | null },
+  sentAt: Date | null
+): boolean {
+  return (
+    sentAt !== null &&
+    existing.lastMailSentAt !== null &&
+    sentAt.getTime() < existing.lastMailSentAt.getTime()
+  );
+}
+
+/** The newest send time once this mail is applied — never moved backwards. */
+function newestMail(existing: { lastMailSentAt: Date | null }, sentAt: Date | null): Date | null {
+  if (sentAt === null) return existing.lastMailSentAt;
+  return existing.lastMailSentAt && existing.lastMailSentAt > sentAt
+    ? existing.lastMailSentAt
+    : sentAt;
+}
+
+/** Keys that always hold a value, so an older mail has nothing to fill there. */
+const ALWAYS_SET = new Set(["pickupLocal", "returnLocal", "pickupStation", "returnStation"]);
 
 export class RentalUnknownBookingError extends AppError {
   constructor() {
@@ -127,9 +156,18 @@ export function mailUpdate(existing: Stored, input: CreateRentalInput): UpdateRe
   return out as UpdateRentalInput;
 }
 
+/** What an OLDER mail may still write: only fields the row holds nothing for. */
+function onlyGaps(existing: Stored, update: UpdateRentalInput): UpdateRentalInput {
+  const stored = existing as unknown as Record<string, unknown>;
+  return Object.fromEntries(
+    Object.entries(update).filter(([key]) => !ALWAYS_SET.has(key) && isEmpty(stored[key]))
+  ) as UpdateRentalInput;
+}
+
 export async function applyConfirmation(
   userId: string,
-  input: CreateRentalInput
+  input: CreateRentalInput,
+  sentAt: Date | null = null
 ): Promise<{ outcome: ImportOutcome; row: RentalRow }> {
   const existing = input.confirmationNumber
     ? await findBooking(userId, input.provider, { confirmation: input.confirmationNumber })
@@ -140,32 +178,78 @@ export async function applyConfirmation(
       : null;
     return {
       outcome: "created",
-      row: await createRentalRow(userId, input, { manual: false, externalRef }),
+      row: await createRentalRow(userId, input, {
+        manual: false,
+        externalRef,
+        mailSentAt: sentAt,
+      }),
     };
   }
-  const update = mailUpdate(existing, input);
+  const older = isOlderMail(existing, sentAt);
+  const full = mailUpdate(existing, input);
+  const update = older ? onlyGaps(existing, full) : full;
+  const lastMailSentAt = newestMail(existing, sentAt);
   if (Object.keys(update).length === 0) {
-    const row = await prisma.rentalBooking.findUniqueOrThrow({
-      where: { id: existing.id },
-      include: RENTAL_INCLUDE,
-    });
-    return { outcome: "unchanged", row };
+    // Nothing to write but, perhaps, a newer mark — a repeat import rewrites nothing.
+    const markMoved = lastMailSentAt?.getTime() !== existing.lastMailSentAt?.getTime();
+    const row = markMoved
+      ? await prisma.rentalBooking.update({
+          where: { id: existing.id },
+          data: { lastMailSentAt },
+          include: RENTAL_INCLUDE,
+        })
+      : await prisma.rentalBooking.findUniqueOrThrow({
+          where: { id: existing.id },
+          include: RENTAL_INCLUDE,
+        });
+    return { outcome: older && Object.keys(full).length > 0 ? "stale" : "unchanged", row };
   }
   return {
     outcome: "updated",
-    row: await updateRentalRow(userId, existing, update, { manual: false }),
+    row: await updateRentalRow(userId, existing, update, {
+      manual: false,
+      extra: { lastMailSentAt },
+    }),
   };
 }
 
 export async function applyCancellation(
   userId: string,
   provider: string,
-  confirmationNumber: string
+  confirmationNumber: string,
+  fee: RentalCancellationFee | null = null,
+  sentAt: Date | null = null
 ): Promise<{ outcome: ImportOutcome; row: RentalRow }> {
   const existing = await findBooking(userId, provider, { confirmation: confirmationNumber });
   if (!existing) throw new RentalUnknownBookingError();
+  // A confirmation sent AFTER this cancellation is the newer word on the booking.
+  if (isOlderMail(existing, sentAt)) {
+    const row = await prisma.rentalBooking.findUniqueOrThrow({
+      where: { id: existing.id },
+      include: RENTAL_INCLUDE,
+    });
+    return { outcome: "stale", row };
+  }
+  // The fee is the cancelled rental's cost, flagged as a fee — but never
+  // over an amount an invoice or the user already set.
+  const keepsAmount =
+    existing.finalAmountSource === "invoice" || existing.finalAmountSource === "user";
+  const feeColumns: Prisma.RentalBookingUncheckedUpdateInput =
+    fee && !keepsAmount
+      ? {
+          finalAmount: fee.amount,
+          finalCurrency: fee.currency,
+          finalAmountSource: "cancellationFee",
+          ...(await finalFxColumns(userId, fee.amount, fee.currency, existing.pickupTime)),
+        }
+      : {};
   // A cancellation sets the status — never a delete (§4.4).
-  const row = await updateRentalRow(userId, existing, { status: "cancelled" }, { manual: false });
+  const row = await updateRentalRow(
+    userId,
+    existing,
+    { status: "cancelled" },
+    { manual: false, extra: { ...feeColumns, lastMailSentAt: newestMail(existing, sentAt) } }
+  );
   return { outcome: "cancelled", row };
 }
 
@@ -178,7 +262,8 @@ export async function applyCancellation(
 export async function applyInvoice(
   userId: string,
   invoice: RentalInvoiceInput,
-  replaceUserDistance = false
+  replaceUserDistance = false,
+  sentAt: Date | null = null
 ): Promise<{ outcome: ImportOutcome; row: RentalRow }> {
   const existing = await findBooking(userId, invoice.provider, {
     confirmation: invoice.confirmationNumber,
@@ -214,7 +299,10 @@ export async function applyInvoice(
           existing.returnTime
         )
       : {};
+  // The invoice is the final word on what it carries (§4.5) whenever it
+  // arrives; its send time only moves the newest-mail mark forward.
   const extra: Prisma.RentalBookingUncheckedUpdateInput = {
+    lastMailSentAt: newestMail(existing, sentAt),
     ...(invoice.distanceKm !== null && {
       distanceKm: invoice.distanceKm,
       distanceSource: "invoice",

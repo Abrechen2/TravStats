@@ -43,8 +43,10 @@ function confirmation(over: Partial<RentalImportCandidate> = {}): RentalImportCa
       return: { status: "unresolved" },
     },
     invoice: null,
+    cancellationFee: null,
     confirmationNumber: "1234567890",
     provider: "Testcar",
+    mailSentAt: null,
     ...over,
   };
 }
@@ -119,6 +121,32 @@ describe("RentalImportPreviewModal", () => {
     });
     render(<RentalImportPreviewModal candidate={candidate} onCancel={vi.fn()} onSaved={vi.fn()} />);
     expect(screen.getByText("rental:import.geocoderUnavailable")).toHaveAttribute("role", "alert");
+  });
+
+  it("sends the mail's send time and the fee, and says when the mail was older", async () => {
+    importDocument.mockResolvedValueOnce({ outcome: "stale" });
+    const onSaved = vi.fn();
+    const candidate = confirmation({
+      kind: "cancellation",
+      action: "cancel",
+      input: null,
+      stations: null,
+      cancellationFee: { amount: 45.5, currency: "EUR" },
+      mailSentAt: "2026-05-01T10:00:00.000Z",
+    });
+    render(<RentalImportPreviewModal candidate={candidate} onCancel={vi.fn()} onSaved={onSaved} />);
+    expect(screen.getByTestId("rental-import-fee")).toHaveTextContent(
+      "rental:import.cancellationFee"
+    );
+    fireEvent.click(screen.getByRole("button", { name: "rental:import.action.cancel" }));
+    expect(await screen.findByTestId("rental-import-stale")).toBeTruthy();
+    expect(onSaved).not.toHaveBeenCalled();
+    expect(importDocument.mock.calls[0][0]).toMatchObject({
+      kind: "cancellation",
+      fee: { amount: 45.5, currency: "EUR" },
+      mailSentAt: "2026-05-01T10:00:00.000Z",
+    });
+    expect(screen.queryByRole("button", { name: "rental:import.action.cancel" })).toBeNull();
   });
 
   it("offers no save for an invoice of an unknown booking and says why", () => {

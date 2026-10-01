@@ -15,6 +15,8 @@ import { isOneWay } from "./rentalWrite";
  * station countries only (D8 a), cost per rental day per currency, and km
  * that say how many rentals they cover. Only `completed` rentals count; a
  * missing price or km stays out of its figure, never a zero inside it.
+ * Cancellation fees are a cost of their own (owner, 2026-10-01): summed per
+ * currency apart from the rentals, never inside cost per rental day.
  */
 
 export interface RentalStats {
@@ -29,11 +31,14 @@ export interface RentalStats {
   costPerDay: Array<{ currency: string; perDay: number; rentals: number; days: number }>;
   /** Km only where an invoice (or a labelled correction) gave them. Null total when none did. */
   km: { total: number | null; covered: number; of: number };
+  /** Fees billed for cancelled rentals, per currency, filed under the pickup year. */
+  cancellationFees: Array<{ currency: string; amount: number; rentals: number }>;
 }
 
 const round2 = (n: number): number => Math.round(n * 100) / 100;
 
 type Row = {
+  status: string;
   pickupTime: Date;
   pickupTimezone: string;
   returnTime: Date;
@@ -55,8 +60,42 @@ type Row = {
   distanceKm: number | null;
 };
 
-/** Pure: the figures of a set of countable rentals. */
-export function computeRentalStats(rows: readonly Row[], year: number | null): RentalStats {
+type FeeRow = Pick<
+  Row,
+  | "status"
+  | "pickupTime"
+  | "pickupTimezone"
+  | "price"
+  | "currency"
+  | "finalAmount"
+  | "finalCurrency"
+>;
+
+/** Per currency, what the cancelled rentals in scope were billed. */
+function feesOf(
+  cancelled: readonly FeeRow[],
+  year: number | null
+): RentalStats["cancellationFees"] {
+  const fees = new Map<string, { amount: number; rentals: number }>();
+  cancelled
+    .filter((r) => year === null || rentalYear(r) === year)
+    .forEach((r) => {
+      const fee = rentalCost(r);
+      if (fee?.source !== "cancellationFee") return;
+      const cur = fees.get(fee.currency) ?? { amount: 0, rentals: 0 };
+      fees.set(fee.currency, { amount: cur.amount + fee.amount, rentals: cur.rentals + 1 });
+    });
+  return [...fees.entries()]
+    .map(([currency, v]) => ({ currency, amount: round2(v.amount), rentals: v.rentals }))
+    .sort((a, b) => b.rentals - a.rentals || a.currency.localeCompare(b.currency));
+}
+
+/** Pure: the figures of a set of countable rentals, plus the fees of cancelled ones. */
+export function computeRentalStats(
+  rows: readonly Row[],
+  year: number | null,
+  cancelled: readonly FeeRow[] = []
+): RentalStats {
   const inScope = year === null ? rows : rows.filter((r) => rentalYear(r) === year);
   const days = inScope.map((r) => rentalDays(r));
   const totalDays = days.reduce((a, b) => a + b, 0);
@@ -117,13 +156,27 @@ export function computeRentalStats(rows: readonly Row[], year: number | null): R
       }))
       .sort((a, b) => b.rentals - a.rentals || a.currency.localeCompare(b.currency)),
     km: { total: kmCovered > 0 ? kmTotal : null, covered: kmCovered, of: inScope.length },
+    cancellationFees: feesOf(cancelled, year),
   };
 }
 
 export async function rentalStatsFor(userId: string, year: number | null): Promise<RentalStats> {
+  const cancelled = await prisma.rentalBooking.findMany({
+    where: { userId, status: "cancelled", finalAmount: { not: null } },
+    select: {
+      status: true,
+      pickupTime: true,
+      pickupTimezone: true,
+      price: true,
+      currency: true,
+      finalAmount: true,
+      finalCurrency: true,
+    },
+  });
   const rows = await prisma.rentalBooking.findMany({
     where: { userId, ...countableRentalWhere() },
     select: {
+      status: true,
       pickupTime: true,
       pickupTimezone: true,
       returnTime: true,
@@ -145,5 +198,5 @@ export async function rentalStatsFor(userId: string, year: number | null): Promi
       distanceKm: true,
     },
   });
-  return computeRentalStats(rows, year);
+  return computeRentalStats(rows, year, cancelled);
 }

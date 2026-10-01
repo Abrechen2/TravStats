@@ -55,7 +55,13 @@ describe("rentalCounting", () => {
   });
 
   it("costs the invoice amount first, the booked price second, and nothing without either", () => {
-    const base = { price: 200, currency: "EUR", finalAmount: null, finalCurrency: null };
+    const base = {
+      status: "completed",
+      price: 200,
+      currency: "EUR",
+      finalAmount: null,
+      finalCurrency: null,
+    };
     expect(rentalCost(base)).toEqual({ amount: 200, currency: "EUR", source: "booked" });
     expect(rentalCost({ ...base, finalAmount: 260, finalCurrency: "EUR" })).toEqual({
       amount: 260,
@@ -63,5 +69,23 @@ describe("rentalCounting", () => {
       source: "final",
     });
     expect(rentalCost({ ...base, price: null })).toBeNull();
+  });
+
+  // Owner, 2026-10-01: a cancelled rental cost its fee, flagged as one — and
+  // its booked price, never paid, is no cost at all.
+  it("costs a cancelled rental its fee only, flagged as a fee", () => {
+    const cancelled = {
+      status: "cancelled",
+      price: 200,
+      currency: "EUR",
+      finalAmount: null,
+      finalCurrency: null,
+    };
+    expect(rentalCost(cancelled)).toBeNull();
+    expect(rentalCost({ ...cancelled, finalAmount: 45.5, finalCurrency: "EUR" })).toEqual({
+      amount: 45.5,
+      currency: "EUR",
+      source: "cancellationFee",
+    });
   });
 });

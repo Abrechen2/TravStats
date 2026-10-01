@@ -2,6 +2,7 @@ import logger from "../../../utils/logger";
 import { extractTextFromPdf } from "../../pdfParser";
 import { parseSixtConfirmation } from "./sixtConfirmation";
 import { parseSixtInvoice } from "./sixtInvoice";
+import { currencyOf, parseAmount } from "./textLines";
 import type { ParsedRentalCancellation, ParsedRentalDocument } from "./types";
 
 /**
@@ -98,6 +99,25 @@ const CANCELLED =
 const BOOKING_NUMBER =
   /\b(?:Buchung(?:snummer)?|Reservierung(?:snummer)?|Reservation(?: number)?|Booking(?: number)?|Confirmation(?: number)?)\s*(?:#|:|Nr\.?)?\s*([A-Z0-9-]{6,20})\b/i;
 
+const FEE_PHRASE = /\b(Stornogebühr|Stornierungsgebühr|Frais d'annulation|cancell?ation fee)/i;
+/** The billed total of a fee invoice: the labelled amount and its currency. */
+const FEE_TOTAL =
+  /(?:Zahlbarer Rechnungsbetrag|Rechnungsbetrag|Montant total brut|Total amount due|Amount due)\s*:?\s*(\d[\d.,]*)\s*(EUR|€|CHF|GBP|£|USD)/i;
+
+/**
+ * The fee a cancellation bills, or null. Read only where the document names
+ * a cancellation fee — a refund or a deposit release prints amounts too, and
+ * none of them is a cost.
+ */
+export function cancellationFee(text: string): ParsedRentalCancellation["fee"] {
+  if (!FEE_PHRASE.test(text)) return null;
+  const match = FEE_TOTAL.exec(text);
+  if (!match) return null;
+  const amount = parseAmount(match[1]);
+  const currency = currencyOf(match[2]);
+  return amount !== null && amount > 0 && currency ? { amount, currency } : null;
+}
+
 /**
  * A cancellation names a booking and cancels it — it never creates one (§4.4).
  * UNMEASURED: neither corpus holds a cancellation mail, so this reads the
@@ -106,7 +126,8 @@ const BOOKING_NUMBER =
  */
 export function parseCancellation(
   text: string,
-  from: string | null | undefined
+  from: string | null | undefined,
+  feeText: string = text
 ): ParsedRentalCancellation | null {
   const provider = providerOf(from);
   if (!provider || !CANCELLED.test(text)) return null;
@@ -117,6 +138,7 @@ export function parseCancellation(
     source: "sixt-confirmation",
     provider,
     confirmationNumber: number,
+    fee: cancellationFee(feeText),
   };
 }
 
@@ -146,7 +168,7 @@ export async function parseRentalBookingText(
     return { document: confirmation, parserUsed: "template", parserTemplate: "sixt-confirmation" };
   }
 
-  const cancellation = parseCancellation(combined, options.from);
+  const cancellation = parseCancellation(combined, options.from, withPdfs);
   if (cancellation) {
     return { document: cancellation, parserUsed: "template", parserTemplate: "cancellation" };
   }

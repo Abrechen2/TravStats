@@ -3563,8 +3563,13 @@ model RentalBooking {
   finalFxRateDate     DateTime? @map("final_fx_rate_date")
   finalFxBaseCurrency String?   @map("final_fx_base_currency")
   finalFxSource       String?   @map("final_fx_source")
-  /// invoice | user (a labelled correction) | null — the row says which it shows.
+  /// invoice | user (a labelled correction) | cancellationFee (a cancelled
+  /// rental's fee — never a rental-day cost) | null — the row says which it shows.
   finalAmountSource   String?   @map("final_amount_source")
+  /// The send time of the newest provider mail applied to this row. An older
+  /// mail arriving later only fills what is still empty — it never overwrites
+  /// what a newer one set. Null = no dated mail yet (pasted text carries none).
+  lastMailSentAt      DateTime? @map("last_mail_sent_at")
 
   /// unlimited | capped | null; the cap beside it.
   mileagePolicy String? @map("mileage_policy")

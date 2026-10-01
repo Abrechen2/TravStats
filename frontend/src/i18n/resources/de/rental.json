@@ -169,7 +169,8 @@
     "map": "Karte",
     "mapSame": "Rückgabe am selben Ort: ein Punkt.",
     "mapOneWay": "Einwegmiete: Die gestrichelte Linie verbindet Abholung und Rückgabe – sie ist nicht die gefahrene Strecke.",
-    "mapRoadtrip": "Die gefahrene Strecke zeigt der verknüpfte Roadtrip."
+    "mapRoadtrip": "Die gefahrene Strecke zeigt der verknüpfte Roadtrip.",
+    "cancellationFee": "Stornogebühr"
   },
   "import": {
     "panelTitle": "Mietwagen hinzufügen",
@@ -204,7 +205,9 @@
       "notConfirmed": "Die Miete ist nur angefragt, noch nicht bestätigt.",
       "otherDomain": "Das Dokument ist keine Mietwagen-Buchung.",
       "generic": "In diesem Dokument wurde keine Miete gefunden."
-    }
+    },
+    "stale": "Diese Mail ist älter als die zuletzt eingelesene zu dieser Buchung. Es wurde nichts überschrieben – die neuere Mail gilt.",
+    "cancellationFee": "Stornogebühr: {{amount}} – sie wird als Kosten dieser stornierten Miete gespeichert."
   },
   "suggest": {
     "trip": "Passt zur Reise „{{name}}“.",
@@ -228,7 +231,9 @@
     "countries": "Länder der Stationen",
     "countriesNote": "Nur Abhol- und Rückgabeort, keine durchfahrenen Länder.",
     "byYear": "Miettage nach Jahr",
-    "loadError": "Die Mietwagen-Statistik konnte nicht geladen werden."
+    "loadError": "Die Mietwagen-Statistik konnte nicht geladen werden.",
+    "cancellationFees_one": "Stornogebühren: {{list}} für {{count}} stornierte Miete – nicht in den Kosten pro Tag.",
+    "cancellationFees_other": "Stornogebühren: {{list}} für {{count}} stornierte Mieten – nicht in den Kosten pro Tag."
   },
   "timeline": {
     "pickup": "Mietwagen-Abholung · {{provider}} · {{station}}",

@@ -90,9 +90,18 @@ export const rentalBookingSchema = registry.register(
         ),
       distanceSource: z.enum(RENTAL_DISTANCE_SOURCES).nullable(),
       finalAmountSource: z
-        .enum(["invoice", "user"])
+        .enum(["invoice", "user", "cancellationFee"])
         .nullable()
-        .describe("Where `finalAmount` came from; null without one"),
+        .describe(
+          "Where `finalAmount` came from; `cancellationFee` on a cancelled rental; null without one"
+        ),
+      lastMailSentAt: z
+        .string()
+        .datetime()
+        .nullable()
+        .describe(
+          "Send time of the newest provider mail applied; an older mail only fills empty fields"
+        ),
       mileagePolicy: z.enum(RENTAL_MILEAGE_POLICIES).nullable(),
       fuelPolicy: z.enum(RENTAL_FUEL_POLICIES).nullable(),
       paymentTiming: z
@@ -117,11 +126,12 @@ export const rentalBookingSchema = registry.register(
         .object({
           amount: z.number(),
           currency: z.string(),
-          source: z.enum(["final", "booked"]),
+          source: z.enum(["final", "booked", "cancellationFee"]),
         })
         .nullable()
         .describe(
-          "What the rental cost: the invoice's final amount, else the booked price; null when neither"
+          "What the rental cost: the invoice's final amount, else the booked price; for a " +
+            "cancelled rental only its cancellation fee; null when none is known"
         ),
       invoiceMissing: z
         .boolean()
@@ -147,8 +157,10 @@ const importEnvelope = z.object({
   data: rentalBookingSchema,
   meta: z.object({
     outcome: z
-      .enum(["created", "updated", "unchanged", "cancelled", "invoiced"])
-      .describe("What the document did to the account's rentals"),
+      .enum(["created", "updated", "unchanged", "stale", "cancelled", "invoiced"])
+      .describe(
+        "What the document did; `stale`: an older mail than the newest applied, nothing overwritten"
+      ),
   }),
 });
 
@@ -344,7 +356,10 @@ registry.registerPath({
     "value with a poorer one. A cancellation sets `cancelled` (never a delete); an invoice " +
     "fills the driven km (`distanceSource: invoice`), the car driven, the actual times and the " +
     "final amount. Neither of those two ever creates a rental: an unknown booking is " +
-    "`RENTAL_UNKNOWN_BOOKING` and nothing is written.",
+    "`RENTAL_UNKNOWN_BOOKING` and nothing is written. A cancellation's `fee` becomes the " +
+    "cancelled rental's cost, flagged `cancellationFee`. With `mailSentAt` (the mail's own " +
+    "send time) the newest mail's data stands whatever the import order: an older one only " +
+    "fills empty fields and an older cancellation does not cancel (`stale`).",
   tags: ["Rentals"],
   request: {
     body: {
@@ -410,6 +425,9 @@ const rentalStatsSchema = z
         of: z.number().int().describe("Rentals in scope"),
       })
       .describe("Km only from invoices or labelled corrections"),
+    cancellationFees: z
+      .array(z.object({ currency: z.string(), amount: z.number(), rentals: z.number().int() }))
+      .describe("Fees billed for cancelled rentals, per currency — never a rental-day cost"),
   })
   .openapi("RentalStats");
 

@@ -23,6 +23,8 @@ export interface RentalStats {
   countries: string[];
   costPerDay: Array<{ currency: string; perDay: number; rentals: number; days: number }>;
   km: { total: number | null; covered: number; of: number };
+  /** Fees billed for cancelled rentals, per currency — never a rental-day cost. */
+  cancellationFees: Array<{ currency: string; amount: number; rentals: number }>;
 }
 
 export interface RentalSuggestions {

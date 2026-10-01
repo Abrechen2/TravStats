@@ -81,9 +81,20 @@ export const rentalApi = {
    */
   async importDocument(
     body:
-      | { kind: "confirmation"; input: RentalInput }
-      | { kind: "cancellation"; provider: string; confirmationNumber: string }
-      | { kind: "invoice"; invoice: RentalInvoiceReading; replaceUserDistance?: boolean }
+      | { kind: "confirmation"; input: RentalInput; mailSentAt?: string | null }
+      | {
+          kind: "cancellation";
+          provider: string;
+          confirmationNumber: string;
+          fee?: { amount: number; currency: string } | null;
+          mailSentAt?: string | null;
+        }
+      | {
+          kind: "invoice";
+          invoice: RentalInvoiceReading;
+          replaceUserDistance?: boolean;
+          mailSentAt?: string | null;
+        }
   ): Promise<{ rental: RentalBooking; outcome: string }> {
     const res = await api.post<Envelope<RentalBooking> & { meta: { outcome: string } }>(
       "/rentals/import",

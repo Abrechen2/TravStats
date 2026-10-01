@@ -85,6 +85,12 @@ export interface ParseDocumentInput {
    * looks at it: a provider's template is chosen by who sent the mail.
    */
   from?: string;
+  /**
+   * The mail's own send time (its Date header) — never a caller's anchor.
+   * Only the rental reader looks at it: of two mails of one booking, the
+   * newer one's data stands, whatever order they are imported in.
+   */
+  sentAt?: Date;
 }
 
 /**
@@ -334,7 +340,12 @@ async function parseAs(
       attachments: input.attachments ?? [],
     });
     const candidate = result.document
-      ? await toRentalCandidate(result.document, result.parserTemplate ?? "template", input.userId)
+      ? await toRentalCandidate(
+          result.document,
+          result.parserTemplate ?? "template",
+          input.userId,
+          input.sentAt
+        )
       : null;
     return {
       domain: "rental",

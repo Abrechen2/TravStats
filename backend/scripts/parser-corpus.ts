@@ -233,6 +233,7 @@ function rentalRows(candidates: unknown[]): RentalRow[] {
   return candidates.filter(isRecord).map((c) => {
     const input = isRecord(c.input) ? c.input : {};
     const invoice = isRecord(c.invoice) ? c.invoice : {};
+    const fee = isRecord(c.cancellationFee) ? c.cancellationFee : {};
     const stations = isRecord(c.stations) ? c.stations : {};
     const pickupIata = iataOf(stations.pickup);
     return {
@@ -249,7 +250,8 @@ function rentalRows(candidates: unknown[]): RentalRow[] {
       price: num(input.price),
       currency: str(input.currency),
       distanceKm: num(invoice.distanceKm),
-      finalAmount: num(invoice.finalAmount),
+      // A cancellation's fee is its final amount (owner, 2026-10-01).
+      finalAmount: num(invoice.finalAmount) ?? num(fee.amount),
     };
   });
 }
@@ -419,7 +421,7 @@ async function main(): Promise<void> {
         html,
         domain: args.domain,
         source: isPdf ? "document" : "email",
-        ...(sentAt ? { referenceDate: sentAt } : {}),
+        ...(sentAt ? { referenceDate: sentAt, sentAt } : {}),
         ...(from ? { from } : {}),
         ...(attachments ? { attachments } : {}),
       });

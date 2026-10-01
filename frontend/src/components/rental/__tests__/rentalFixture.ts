@@ -41,6 +41,7 @@ export function makeRental(over: Partial<RentalBooking> = {}): RentalBooking {
     finalAmount: null,
     finalCurrency: null,
     finalAmountSource: null,
+    lastMailSentAt: null,
     mileagePolicy: null,
     mileageCapKm: null,
     fuelPolicy: null,

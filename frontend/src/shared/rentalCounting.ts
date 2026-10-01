@@ -71,13 +71,24 @@ export function rentalCountries(rental: {
  * The amount a rental cost (D10 b): the invoice's final amount when there is
  * one, else the booked price; null when neither is known — out of every
  * average, never a zero. `source` says which one it is.
+ *
+ * A CANCELLED rental cost only its cancellation fee (owner, 2026-10-01): a
+ * final amount on it is that fee (`cancellationFee`), and its booked price
+ * was never paid, so without a fee it cost nothing known — null. A fee is
+ * never a rental-day cost: cost per day counts completed rentals only.
  */
 export function rentalCost(rental: {
+  status: string;
   price: number | null;
   currency: string | null;
   finalAmount: number | null;
   finalCurrency: string | null;
-}): { amount: number; currency: string; source: "final" | "booked" } | null {
+}): { amount: number; currency: string; source: "final" | "booked" | "cancellationFee" } | null {
+  if (rental.status === "cancelled") {
+    return rental.finalAmount !== null && rental.finalCurrency
+      ? { amount: rental.finalAmount, currency: rental.finalCurrency, source: "cancellationFee" }
+      : null;
+  }
   if (rental.finalAmount !== null && rental.finalCurrency) {
     return { amount: rental.finalAmount, currency: rental.finalCurrency, source: "final" };
   }

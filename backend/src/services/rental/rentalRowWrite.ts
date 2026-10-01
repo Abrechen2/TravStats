@@ -33,6 +33,8 @@ export interface WriteOptions {
   manual: boolean;
   /** The import key; only a create from a mail sets it. */
   externalRef?: string | null;
+  /** The send time of the mail a create came from (`lastMailSentAt`). */
+  mailSentAt?: Date | null;
 }
 
 /** Everything but the derived columns, companions and FX, which this file owns. */
@@ -138,6 +140,7 @@ export async function createRentalRow(
         userId,
         tripId,
         externalRef: options.externalRef ?? null,
+        lastMailSentAt: options.mailSentAt ?? null,
         companions: companions.map((c) => c.displayName),
         userEditedFields: options.manual ? editedFields(input) : [],
       },

@@ -65,6 +65,8 @@ export function RentalImportPreviewModal({ candidate, onCancel, onSaved }: Props
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<string | null>(null);
   const [kmConflict, setKmConflict] = useState(false);
+  // An older mail than the newest one applied: nothing overwritten, said so.
+  const [stale, setStale] = useState(false);
 
   const declined = candidate.action === "declined";
   const stationsReady = !input || (isPlaced(pickup) && (!oneWay || isPlaced(ret)));
@@ -80,27 +82,37 @@ export function RentalImportPreviewModal({ candidate, onCancel, onSaved }: Props
     setSaving(true);
     setError(null);
     try {
+      const mailSentAt = candidate.mailSentAt;
+      let outcome: string | null = null;
       if (candidate.kind === "confirmation" && input) {
-        await rentalApi.importDocument({
+        ({ outcome } = await rentalApi.importDocument({
           kind: "confirmation",
           input: {
             ...input,
             pickupStation: station(pickup),
             returnStation: oneWay ? station(ret) : null,
           },
-        });
+          mailSentAt,
+        }));
       } else if (candidate.kind === "cancellation" && candidate.confirmationNumber) {
-        await rentalApi.importDocument({
+        ({ outcome } = await rentalApi.importDocument({
           kind: "cancellation",
           provider: candidate.provider,
           confirmationNumber: candidate.confirmationNumber,
-        });
+          fee: candidate.cancellationFee,
+          mailSentAt,
+        }));
       } else if (candidate.kind === "invoice" && candidate.invoice) {
-        await rentalApi.importDocument({
+        ({ outcome } = await rentalApi.importDocument({
           kind: "invoice",
           invoice: candidate.invoice,
           replaceUserDistance,
-        });
+          mailSentAt,
+        }));
+      }
+      if (outcome === "stale") {
+        setStale(true);
+        return;
       }
       await onSaved();
     } catch (err: unknown) {
@@ -186,7 +198,7 @@ export function RentalImportPreviewModal({ candidate, onCancel, onSaved }: Props
           >
             {t("rental:form.cancel")}
           </button>
-          {!declined && !kmConflict ? (
+          {!declined && !kmConflict && !stale ? (
             <button
               type="button"
               disabled={saving || !stationsReady}
@@ -265,6 +277,18 @@ export function RentalImportPreviewModal({ candidate, onCancel, onSaved }: Props
               </li>
             ) : null}
           </ul>
+        ) : null}
+        {candidate.cancellationFee ? (
+          <p className="font-mono" data-testid="rental-import-fee">
+            {t("rental:import.cancellationFee", {
+              amount: `${candidate.cancellationFee.amount.toFixed(2)} ${candidate.cancellationFee.currency}`,
+            })}
+          </p>
+        ) : null}
+        {stale ? (
+          <p role="status" data-testid="rental-import-stale">
+            {t("rental:import.stale")}
+          </p>
         ) : null}
         {kmConflict ? (
           <p role="alert" className="text-(--danger)">

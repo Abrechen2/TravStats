@@ -73,7 +73,10 @@ export interface RentalBooking {
   distanceSource: RentalDistanceSource | null;
   finalAmount: number | null;
   finalCurrency: string | null;
-  finalAmountSource: "invoice" | "user" | null;
+  /** `cancellationFee`: the fee a cancelled rental was billed — never a rental-day cost. */
+  finalAmountSource: "invoice" | "user" | "cancellationFee" | null;
+  /** Send time of the newest provider mail applied; an older one only fills gaps. */
+  lastMailSentAt: string | null;
   mileagePolicy: RentalMileagePolicy | null;
   mileageCapKm: number | null;
   fuelPolicy: RentalFuelPolicy | null;
@@ -92,7 +95,11 @@ export interface RentalBooking {
   externalRef: string | null;
   oneWay: boolean;
   rentalDays: number;
-  cost: { amount: number; currency: string; source: "final" | "booked" } | null;
+  cost: {
+    amount: number;
+    currency: string;
+    source: "final" | "booked" | "cancellationFee";
+  } | null;
   /** Returned, and no km from an invoice or a correction yet (D11 b). */
   invoiceMissing: boolean;
   trip?: { id: string; name: string; color: string } | null;
@@ -200,8 +207,12 @@ export interface RentalImportCandidate {
   input: (RentalInput & { mileagePolicy?: RentalMileagePolicy | null }) | null;
   stations: { pickup: StationResolution; return: StationResolution } | null;
   invoice: RentalInvoiceReading | null;
+  /** The fee a cancellation bills; it becomes the cancelled rental's cost. */
+  cancellationFee: { amount: number; currency: string } | null;
   confirmationNumber: string | null;
   provider: string;
+  /** The mail's own send time (ISO), sent back so the newer mail's data stands. */
+  mailSentAt: string | null;
 }
 
 /** A rental as `GET /trips/:id` carries it — the timeline's two ends. */

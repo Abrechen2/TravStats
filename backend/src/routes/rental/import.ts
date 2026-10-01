@@ -41,13 +41,20 @@ router.post(
         throw new AppError(parsed.error.message, 400, "RENTAL_INVALID_INPUT", field || undefined);
       }
       const body = parsed.data;
+      const sentAt = body.mailSentAt ? new Date(body.mailSentAt) : null;
       const documentIds = await takeDocumentIds(userId, req.body);
       const result =
         body.kind === "confirmation"
-          ? await applyConfirmation(userId, body.input)
+          ? await applyConfirmation(userId, body.input, sentAt)
           : body.kind === "cancellation"
-            ? await applyCancellation(userId, body.provider, body.confirmationNumber)
-            : await applyInvoice(userId, body.invoice, body.replaceUserDistance ?? false);
+            ? await applyCancellation(
+                userId,
+                body.provider,
+                body.confirmationNumber,
+                body.fee ?? null,
+                sentAt
+              )
+            : await applyInvoice(userId, body.invoice, body.replaceUserDistance ?? false, sentAt);
       // The mail or invoice the row came from is kept with it (§4.5).
       await linkDocuments(userId, documentIds, { type: "rentalBooking", id: result.row.id });
       logger.info({

@@ -169,7 +169,8 @@
     "map": "Map",
     "mapSame": "Returned where picked up: one point.",
     "mapOneWay": "One-way rental: the dashed line joins pickup and return – it is not the route driven.",
-    "mapRoadtrip": "The linked roadtrip shows the route driven."
+    "mapRoadtrip": "The linked roadtrip shows the route driven.",
+    "cancellationFee": "Cancellation fee"
   },
   "import": {
     "panelTitle": "Add a rental car",
@@ -204,7 +205,9 @@
       "notConfirmed": "The rental is on request only, not confirmed yet.",
       "otherDomain": "This document is not a rental booking.",
       "generic": "No rental was found in this document."
-    }
+    },
+    "stale": "This mail is older than the last one read for this booking. Nothing was overwritten – the newer mail stands.",
+    "cancellationFee": "Cancellation fee: {{amount}} – it is stored as the cost of this cancelled rental."
   },
   "suggest": {
     "trip": "Fits the trip “{{name}}”.",
@@ -228,7 +231,9 @@
     "countries": "Station countries",
     "countriesNote": "Pickup and return only, no countries driven through.",
     "byYear": "Rental days by year",
-    "loadError": "The rental statistics could not be loaded."
+    "loadError": "The rental statistics could not be loaded.",
+    "cancellationFees_one": "Cancellation fees: {{list}} for {{count}} cancelled rental – not in the cost per day.",
+    "cancellationFees_other": "Cancellation fees: {{list}} for {{count}} cancelled rentals – not in the cost per day."
   },
   "timeline": {
     "pickup": "Rental car pickup · {{provider}} · {{station}}",
