@@ -114,3 +114,65 @@ describe("namesCouldBeOneHouse", () => {
     expect(namesCouldBeOneHouse("Hotel Post", "Hotel Post Garni", null)).toBe(false);
   });
 });
+
+describe("a place, a decoration or a brand is not identity", () => {
+  // Prod, 2026-09-30: an ALL Accor booking for Novotel Basel City became a
+  // stay at Hotel Krafft Basel. The one shared word was the city itself.
+  it("does not match two hotels whose only shared word is their city", () => {
+    expect(
+      namesCouldBeOneHouse("Novotel Basel City", "Hotel Krafft Basel", true, {
+        places: ["Basel", "Basel"],
+      })
+    ).toBe(false);
+  });
+
+  it("does not match two hotels of one brand in one city by name", () => {
+    expect(
+      namesCouldBeOneHouse("Novotel Basel City", "Novotel Basel SBB", true, {
+        places: ["Basel", "Basel"],
+      })
+    ).toBe(false);
+  });
+
+  it("does not match on location decoration alone", () => {
+    expect(
+      namesCouldBeOneHouse("Mercure Zentrum", "Hotel Zentrum", true, { places: ["Zürich"] })
+    ).toBe(false);
+  });
+
+  it("still matches a decorated name of one house (forgejo#84)", () => {
+    expect(
+      namesCouldBeOneHouse("Hotel Meteora", "Hotel Restaurant Meteora", true, {
+        places: ["Kalambaka", "Kalambaka"],
+      })
+    ).toBe(true);
+  });
+
+  it("still matches two identifying words with no city known", () => {
+    expect(namesCouldBeOneHouse("Emirates Palace", "Emirates Palace Mandarin Oriental", null)).toBe(
+      true
+    );
+  });
+
+  it("matches a name to itself even when every word is brand or place", () => {
+    expect(
+      namesCouldBeOneHouse("Novotel Basel City", "novotel basel city", true, {
+        places: ["Basel", "Basel"],
+      })
+    ).toBe(true);
+  });
+
+  it("does not match the same name in a different city", () => {
+    expect(namesCouldBeOneHouse("Novotel City", "Novotel City", false)).toBe(false);
+  });
+
+  it("lets pins decide: nearby, a brand and a place count as before", () => {
+    // The OSM enrichment searches around the hotel's own coordinates, so the
+    // place is already proven; its own OSM object must still be found.
+    expect(
+      namesCouldBeOneHouse("Novotel Basel City", "Novotel / ibis Budget Basel City", true, {
+        nearby: true,
+      })
+    ).toBe(true);
+  });
+});

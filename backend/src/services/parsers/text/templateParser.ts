@@ -47,9 +47,17 @@ export class TemplateParser {
     // One booking per leg where the template knows how a mail is segmented
     // (see `AirlineTemplate.segments`); one booking otherwise, as before.
     const notice = buildAirlineNotice(detectedIata);
-    return applyTemplateAll(template, text, html ?? "").map((parsed) => ({
-      ...parsed,
-      airlineNotice: notice,
-    }));
+    const legs = applyTemplateAll(template, text, html ?? "");
+    // A leg without a flight number is not a flight this template understood —
+    // the LH connection mails collapsed two legs into one numberless direct
+    // flight (corpus 2026-09-30). Declining lets the next reader try.
+    if (legs.length === 0 || legs.some((leg) => !leg.flightNumber)) {
+      logger.debug(
+        { template: template.iata, legs: legs.length },
+        "template declined: leg without flight number"
+      );
+      return [];
+    }
+    return legs.map((parsed) => ({ ...parsed, airlineNotice: notice }));
   }
 }

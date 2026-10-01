@@ -219,4 +219,77 @@ export const LODGING_TEMPLATES: readonly LodgingTemplate[] = Object.freeze([
     },
     required: ["hotelName", "checkIn", "checkOut"],
   },
+  {
+    id: "lodging:accor",
+    name: "accor",
+    // ALL Accor (all@confirmation.all.com) books every Accor brand — Novotel,
+    // Mercure, ibis, Pullman, Sofitel — so one reader covers all of them.
+    // Until this, the mail went to the LLM; on 2026-09-30 a Novotel Basel
+    // booking reached prod as a stay at a different Basel hotel. German
+    // layout only: the labels below are the German mail's.
+    match: {
+      markers: ["accor"],
+      anchors: ["reservierung nr.", "aufenthaltsdatum"],
+    },
+    classify: { type: "hotel", chainName: "Accor" },
+    fields: {
+      // Subject "Buchungsbestätigung: Novotel Basel City Nr. QRGPDWNL"; the
+      // body's "Reservierung im …" sentence is the fallback.
+      hotelName: {
+        patterns: [
+          "Buchungsbestätigung:\\s*(.+?)\\s+Nr\\.\\s*[A-Z0-9]+",
+          "Reservierung im ([^\\n.]+)\\.",
+        ],
+        transform: "text",
+      },
+      confirmationNumber: { patterns: ["Reservierung Nr\\.\\s*([A-Z0-9]{6,})"] },
+      // "Aufenthaltsdatum: vom 01.10.2026 bis zum 02.10.2026" — numeric, and
+      // with the year on both sides, so a stay over New Year needs no repair.
+      checkIn: {
+        patterns: ["Aufenthaltsdatum:\\s*vom\\s*(\\d{1,2}\\.\\d{1,2}\\.\\d{4})"],
+        transform: "numericDate",
+      },
+      checkOut: {
+        patterns: ["Aufenthaltsdatum:[^\\n]*?bis zum\\s*(\\d{1,2}\\.\\d{1,2}\\.\\d{4})"],
+        transform: "numericDate",
+      },
+      // " Gesamt \t132.99 CHF" — the total the guest pays, fees included.
+      // The room line above it ("1 x 128.79 CHF") is the rate without them.
+      totalPrice: {
+        patterns: ["\\n[ \\t]*Gesamt[ \\t]+([\\d.,]+)[ \\t]*[A-Z]{3}"],
+        transform: "money",
+      },
+      currency: {
+        patterns: ["\\n[ \\t]*Gesamt[ \\t]+[\\d.,]+[ \\t]*([A-Z]{3})"],
+        transform: "currency",
+      },
+      guests: {
+        patterns: ["Ihr Aufenthalt:[^\\n]*?(\\d+)\\s+Erwachsene"],
+        transform: "integer",
+      },
+      // The room sits two lines under the booking name: "…folgenden Namen :",
+      // the guest's name, a blank-ish line, then the room. Only the first room
+      // of a multi-room booking is read. The real .msg arrives with "\r\n",
+      // so every line end below allows the "\r".
+      roomCategory: {
+        patterns: ["folgenden Namen\\s*:[ \\t\\r]*\\n[^\\n]*\\n[ \\t\\r]*\\n[ \\t]*([^\\n\\r]+)"],
+        transform: "text",
+      },
+      // "Grosspeterstrasse 12 - 4052 BASEL - Schweiz <https://…>"
+      address: {
+        patterns: ["\\n[ \\t]*([^\\n<]+?)\\s+-\\s+\\d{4,5}\\s+[^\\n<]+?\\s+-\\s+[^\\n<]+?\\s*<"],
+        transform: "text",
+      },
+      postcode: { patterns: ["\\s-\\s(\\d{4,5})\\s+[^\\n<]+?\\s+-\\s+[^\\n<]+?\\s*<"] },
+      city: {
+        patterns: ["\\s-\\s\\d{4,5}\\s+([^\\n<]+?)\\s+-\\s+[^\\n<]+?\\s*<"],
+        transform: "titleCase",
+      },
+      country: {
+        patterns: ["\\s-\\s\\d{4,5}\\s+[^\\n<]+?\\s+-\\s+([^\\n<]+?)\\s*<"],
+        transform: "text",
+      },
+    },
+    required: ["hotelName", "checkIn", "checkOut"],
+  },
 ]);
