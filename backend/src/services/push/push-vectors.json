@@ -1,0 +1,33 @@
+{
+  "scheme": "travstats-push v1: X25519 + HKDF-SHA256(salt = ephPub || devPub, info = 'travstats-push v1') + ChaCha20-Poly1305(aad = info); wire = base64url(ephPub(32) || nonce(12) || ct || tag(16))",
+  "note": "Generated independently of seal.ts. Copied verbatim into the Companion app repo; every implementation must reproduce `wire` and refuse `tampered`.",
+  "valid": [
+    {
+      "name": "ascii",
+      "devicePrivateKey": "Mt98TPpOkz73HQVk20Pc-iw0TKx3djNjOG8wgd7lMNA",
+      "devicePublicKey": "302ARx_C7jnEDUl8g6zYVWsfFoEMZ0lFZ7PLcVSEXyI",
+      "ephemeralPrivateKey": "IYNLH2kumuTo-cRXJuRE6nFMdWBHeoDMX4sHdoDyg2A",
+      "nonce": "sAlGNqLcDz7vHsns",
+      "plaintext": "{\"v\":1,\"type\":\"flight.changed\",\"id\":\"d1\",\"title\":\"LH 712: new gate\",\"body\":\"B12 instead of A26\",\"flightId\":\"f1\",\"sentAt\":\"2026-10-01T12:00:00.000Z\"}",
+      "wire": "qiXkO4__QK1s1NWSQmJ40Xy_krngIgauJZu1cJ6LNGuwCUY2otwPPu8eyexh_KAeLUcTcb1etfp1TmL-h50vxr1lcYxxdvue3Q3T0RYAXTXatjn35XlQQhUEcA307qWun2h9uJ27CJH8yVk4BLgT8hK0xVerGKsbC_S1Dt1bkRGu9aCLgX_SC-9yfiaQbe46_2imFjj7vEA0Vc5VMmj8GR2hZhFCDJdmeUV9UmkE5pHNwYT812b6zM1-S-EXbSQfVvfc3m0BwiLG8xl6NPJTZQ"
+    },
+    {
+      "name": "umlaut",
+      "devicePrivateKey": "lscvAVnqONT59Zb_vNQ0lyAnVSbcyAiZR837edzgKSo",
+      "devicePublicKey": "txUPhDxGTNo_mN5w7DSc6OL3ag2e-Z1RRtmWt9Nv4GY",
+      "ephemeralPrivateKey": "bDhJBN6-E1_hOM3DE2es6TCpd_RjZmO2LnBfM2AXnGg",
+      "nonce": "4eboVqiY4cyhljAL",
+      "plaintext": "{\"v\":1,\"type\":\"flight.reminder\",\"id\":\"d2\",\"title\":\"LH 712: Abflug in 24 Stunden\",\"body\":\"FRA → HND · 13:25 Ortszeit · Gepäck prüfen ✈\",\"flightId\":\"f1\",\"sentAt\":\"2026-10-01T12:00:00.000Z\"}",
+      "wire": "Pk5oKlGXY2RFo551NDwWfAfmiXAp3ETyzvFJeaenQEDh5uhWqJjhzKGWMAupQMY_27rWNJ2BNfUlX3M6y-lVsve29P_9v4IH15oI5ahENuo7YdpQDEY3NqDJXtPZWBkBEj2JxxD5PufRymu_g4CcssTo6-vJ-mwYKTJX1TyIxlTpdSRJt_kjniereT4mwmcDwjeqCeTQcTHGSYcQ8K0uhEZccz7fi-bQq8k-yHodzQQAzqfQUOmUMhGO1pjD1J2zwAXB8bTyJkputyH2toC3JFDjrlDmDgkmfakhC2RaqKsrswjph82HYCZwEIIbTriyPS05x2peS9ONwiTI7Mnt"
+    }
+  ],
+  "tampered": {
+    "name": "tampered (last tag byte flipped)",
+    "devicePrivateKey": "Mt98TPpOkz73HQVk20Pc-iw0TKx3djNjOG8wgd7lMNA",
+    "devicePublicKey": "302ARx_C7jnEDUl8g6zYVWsfFoEMZ0lFZ7PLcVSEXyI",
+    "ephemeralPrivateKey": "IYNLH2kumuTo-cRXJuRE6nFMdWBHeoDMX4sHdoDyg2A",
+    "nonce": "sAlGNqLcDz7vHsns",
+    "plaintext": "{\"v\":1,\"type\":\"flight.changed\",\"id\":\"d1\",\"title\":\"LH 712: new gate\",\"body\":\"B12 instead of A26\",\"flightId\":\"f1\",\"sentAt\":\"2026-10-01T12:00:00.000Z\"}",
+    "wire": "qiXkO4__QK1s1NWSQmJ40Xy_krngIgauJZu1cJ6LNGuwCUY2otwPPu8eyexh_KAeLUcTcb1etfp1TmL-h50vxr1lcYxxdvue3Q3T0RYAXTXatjn35XlQQhUEcA307qWun2h9uJ27CJH8yVk4BLgT8hK0xVerGKsbC_S1Dt1bkRGu9aCLgX_SC-9yfiaQbe46_2imFjj7vEA0Vc5VMmj8GR2hZhFCDJdmeUV9UmkE5pHNwYT812b6zM1-S-EXbSQfVvfc3m0BwiLG8xl6NPJTZA"
+  }
+}
