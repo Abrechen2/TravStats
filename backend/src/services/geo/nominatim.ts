@@ -57,6 +57,7 @@ export interface ResolveCoordinatesInput extends GeocodeParts {
 interface NominatimRow {
   lat?: unknown;
   lon?: unknown;
+  display_name?: unknown;
 }
 
 /** The subset of Nominatim's reverse `address` object this app fills in from. */
@@ -149,6 +150,74 @@ function parseRow(row: NominatimRow): Coordinates | null {
   return toCoordinates(row.lat, row.lon);
 }
 
+/** How many rows the locality retry reads to find one that names the place. */
+const RETRY_LIMIT = 5;
+/** A locality word shorter than this ("C", "am") proves nothing about a hit. */
+const MIN_LOCALITY_WORD = 3;
+
+function normalizeForMatch(text: string): string {
+  return text
+    .normalize("NFD")
+    .replace(/\p{Diacritic}/gu, "")
+    .toLowerCase();
+}
+
+/**
+ * The retry for a locality OSM spells differently: street (first segment) +
+ * country (last segment), with the dropped middle kept as the words a hit must
+ * name. `null` when the query has no middle to drop or the middle carries no
+ * word to check a hit against (a bare postcode) — a retry that cannot be
+ * verified is not attempted.
+ *
+ * Why the check: bookings name places by their marketing name ("Arlanda" for
+ * the settlement OSM calls "Arlandastad"), which is what the retry rescues. But
+ * without the town, "Hauptstraße 5, Deutschland" matches any Hauptstraße in the
+ * country, and a pin in the wrong town is worse than no pin.
+ */
+function localityRetry(query: string): { query: string; localityWords: string[] } | null {
+  const segments = query
+    .split(",")
+    .map((s) => s.trim())
+    .filter(Boolean);
+  if (segments.length < 3) return null;
+  const localityWords = segments
+    .slice(1, -1)
+    .flatMap((segment) => normalizeForMatch(segment).split(/[^\p{L}]+/u))
+    .filter((word) => word.length >= MIN_LOCALITY_WORD);
+  if (localityWords.length === 0) return null;
+  return { query: `${segments[0]}, ${segments[segments.length - 1]}`, localityWords };
+}
+
+async function fetchVerifiedCoordinates(
+  retry: { query: string; localityWords: string[] },
+  baseUrl: string
+): Promise<Coordinates | null> {
+  const url = `${baseUrl}/search?q=${encodeURIComponent(retry.query)}&format=json&limit=${RETRY_LIMIT}`;
+  const res = await fetch(url, {
+    headers: { "User-Agent": USER_AGENT },
+    signal: AbortSignal.timeout(REQUEST_TIMEOUT_MS),
+  });
+  if (!res.ok) {
+    logger.warn({ status: res.status }, "geocoding locality retry non-OK");
+    if (isTransientStatus(res.status)) {
+      throw new Error(`geocoding provider returned ${res.status}`);
+    }
+    return null;
+  }
+  const rows = (await res.json()) as NominatimRow[];
+  if (!Array.isArray(rows)) return null;
+  const match = rows.find((row) => {
+    const name = typeof row.display_name === "string" ? normalizeForMatch(row.display_name) : "";
+    return retry.localityWords.some((word) => name.includes(word));
+  });
+  if (!match) {
+    logger.warn("geocoding locality retry found no hit in the named locality");
+    logger.debug({ retry }, "geocoding locality retry found no hit in the named locality");
+    return null;
+  }
+  return parseRow(match);
+}
+
 async function fetchCoordinates(query: string, baseUrl: string): Promise<Coordinates | null> {
   const url = `${baseUrl}/search?q=${encodeURIComponent(query)}&format=json&limit=1`;
   const res = await fetch(url, {
@@ -216,7 +285,12 @@ export async function geocodeAddress(parts: GeocodeParts): Promise<Coordinates |
   const task = queue.then(async () => {
     await throttle();
     try {
-      const coords = await fetchCoordinates(query, baseUrl);
+      let coords = await fetchCoordinates(query, baseUrl);
+      const retry = coords === null ? localityRetry(query) : null;
+      if (retry) {
+        await throttle();
+        coords = await fetchVerifiedCoordinates(retry, baseUrl);
+      }
       // Only cache a definitive answer (found or confirmed-empty/unparseable).
       // A thrown error is transient (network blip, timeout) and must not
       // poison the cache for the process lifetime.
