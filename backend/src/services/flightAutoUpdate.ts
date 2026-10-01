@@ -187,6 +187,14 @@ export function hasSignificantChanges(changes: FlightChange[]): boolean {
     "depIcao",
     "arrIata",
     "arrIcao",
+    // TravStats#156: a new gate or terminal is the one thing a passenger at
+    // the airport needs to hear, and it used to need a second change before
+    // it counted. Provider flapping is bounded by the push dedupe: each new
+    // value reaches a phone at most once.
+    "gate",
+    "terminal",
+    // Only a cancellation ever reaches here (convertApiDataToProposed).
+    "status",
   ];
   if (changes.some((c) => criticalFields.includes(c.field))) return true;
 
@@ -251,7 +259,11 @@ export function convertApiDataToProposed(
     actualArrival: apiData.actualArrival
       ? new Date(apiData.actualArrival).toISOString()
       : (originalFlight.actualArrival?.toISOString() ?? null),
-    status: originalFlight.status, // Don't change status automatically
+    // A provider's cancellation is proposed like any other change
+    // (TravStats#156). Nothing else may change the status from here: a
+    // diversion keeps "scheduled" (its new destination is the arrIata change),
+    // and "flown"/"historical" belong to the status sweep.
+    status: apiData.statusOverride === "cancelled" ? "cancelled" : originalFlight.status,
   };
 
   return proposed;

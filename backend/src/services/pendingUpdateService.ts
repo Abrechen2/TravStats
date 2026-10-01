@@ -405,7 +405,9 @@ export async function applyPendingUpdate(id: string, userId: string): Promise<Fl
         nextActualDeparture && nextDepartureTime
           ? Math.round((nextActualDeparture.getTime() - nextDepartureTime.getTime()) / 60000)
           : flight.delayMinutes,
-      // Don't change status automatically
+      // Don't change status automatically — with one exception: a
+      // cancellation the provider reported (TravStats#156).
+      ...(dataToApply.status === "cancelled" ? { status: "cancelled" } : {}),
     };
 
     // Update route data if present
