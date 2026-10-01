@@ -26,7 +26,7 @@ vi.mock("../../lib/api", () => ({
 const status = {
   templates: [{ iata: "LH", airline: "Lufthansa", version: "abcdef0123" }],
   total: 1,
-  githubRepo: "https://github.com/Abrechen2/travstats-airline-templates",
+  githubRepo: "https://github.com/Abrechen2/travstats-templates",
 };
 
 describe("TemplateStatusView — the refresh is an admin action (forgejo#67)", () => {
