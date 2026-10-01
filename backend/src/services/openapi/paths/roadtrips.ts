@@ -122,6 +122,14 @@ const station = registry.register(
         .nullable()
         .describe("A pass-through only: the caller's own place (POI) it passed"),
       place: z.object({ id: z.string().uuid(), name: z.string(), category: z.string() }).nullable(),
+      photoCount: z
+        .number()
+        .int()
+        .describe(
+          "Trip photos filed at this station (forgejo#139), the cover's internal row left " +
+            "out; GET /trips/{tripId}/photos?stopId= lists them. Always 0 on a roadtrip filed " +
+            "on no trip — a trip photo needs a trip to belong to."
+        ),
       stay: z
         .object({
           id: z.string().uuid(),

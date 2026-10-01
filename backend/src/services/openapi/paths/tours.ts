@@ -297,8 +297,10 @@ const routeUpdateInput = registry.register(
   "TourRouteUpdateInput",
   updateRouteSchema.merge(kindFieldsSchema).openapi("TourRouteUpdateInput", {
     description:
-      "`tripId` moves only a roadtrip between trips (400 for a tour); `anchorStopId` " +
-      "must be a station of one of the caller's roadtrips and is refused on a roadtrip.",
+      "`tripId` moves only a roadtrip between trips (400 for a tour), and not while its " +
+      "stations hold photos of the trip it leaves (409 `ROADTRIP_HAS_TRIP_PHOTOS`, " +
+      "forgejo#139); `anchorStopId` must be a station of one of the caller's roadtrips and " +
+      "is refused on a roadtrip.",
     example: { name: "Süd-Norwegen (Umweg)", endOdometerKm: 84920 },
   })
 );
@@ -419,6 +421,12 @@ registerSectionPath({
     },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Not found", content: errorContent },
+    409: {
+      description:
+        "The route cannot change trip: built from a trip's timeline stops, or (code " +
+        "ROADTRIP_HAS_TRIP_PHOTOS) its stations hold photos of the trip it would leave",
+      content: errorContent,
+    },
   },
 });
 
