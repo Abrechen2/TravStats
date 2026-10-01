@@ -107,9 +107,10 @@ export async function mergeTripPhotos(
 ): Promise<MergedPhotos> {
   const imported = await tx.tripPhoto.findMany({
     where: { tripId: { in: [targetId, ...sourceIds] }, immichAssetId: { not: null } },
-    select: { id: true, tripId: true, immichAssetId: true },
+    select: { id: true, tripId: true, immichAssetId: true, stopId: true },
     orderBy: [{ sortIdx: "asc" }, { id: "asc" }],
   });
+  const stopOf = new Map(imported.map((row) => [row.id, row.stopId]));
 
   const survivorByAsset = new Map<string, string>();
   for (const row of imported) {
@@ -130,6 +131,18 @@ export async function mergeTripPhotos(
   const dropIds = [...survivorFor.keys()];
   if (dropIds.length > 0) {
     await tx.tripPhoto.deleteMany({ where: { id: { in: dropIds } } });
+  }
+
+  // The dropped copy may be the one filed at a station (forgejo#139). The
+  // survivor inherits that station when it has none of its own; one already
+  // filed keeps its own. Stops move with the merge, so the station is on the
+  // merged trip either way.
+  for (const [dropped, survivor] of survivorFor) {
+    const stopId = stopOf.get(dropped);
+    if (stopId && !stopOf.get(survivor)) {
+      await tx.tripPhoto.update({ where: { id: survivor }, data: { stopId } });
+      stopOf.set(survivor, stopId);
+    }
   }
 
   await tx.tripPhoto.updateMany({

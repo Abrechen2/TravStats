@@ -177,6 +177,43 @@ describe("a trip keeps its contents", () => {
       expect(photos.map((p) => p.id)).toEqual([targetPhoto.id]);
     });
 
+    // forgejo#139: the dropped duplicate may be the copy that was filed at a
+    // station. Dropping the row must not drop the filing with it.
+    it("hands a dropped duplicate's station to the surviving copy that has none", async () => {
+      const target = await prisma.trip.create({ data: { userId, name: "Target" } });
+      const source = await prisma.trip.create({ data: { userId, name: "Source" } });
+      const stavanger = await prisma.tripStop.create({
+        data: { tripId: source.id, title: "Stavanger" },
+      });
+      const bergen = await prisma.tripStop.create({ data: { tripId: target.id, title: "Bergen" } });
+      const asset = (tripId: string, id: string, stopId: string | null) =>
+        prisma.tripPhoto.create({
+          data: {
+            tripId,
+            filename: `${id}.jpg`,
+            mimetype: "image/jpeg",
+            sizeBytes: 1,
+            immichAssetId: id,
+            stopId,
+          },
+        });
+      const unfiled = await asset(target.id, "asset-unfiled", null);
+      await asset(source.id, "asset-unfiled", stavanger.id);
+      const filed = await asset(target.id, "asset-filed", bergen.id);
+      await asset(source.id, "asset-filed", stavanger.id);
+
+      await mergeTrips(userId, { tripIds: [target.id, source.id], targetId: target.id });
+
+      const after = await prisma.tripPhoto.findMany({
+        where: { tripId: target.id },
+        select: { id: true, stopId: true },
+      });
+      expect(after).toHaveLength(2);
+      expect(after.find((p) => p.id === unfiled.id)?.stopId).toBe(stavanger.id);
+      // A survivor already filed keeps its own station.
+      expect(after.find((p) => p.id === filed.id)?.stopId).toBe(bergen.id);
+    });
+
     // AUD-029, the residual case: the dedupe only looked at the TARGET's
     // assets, so two sources holding the same one both moved and the unique
     // index threw — the merge rolled back.
