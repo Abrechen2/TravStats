@@ -152,11 +152,15 @@ describe("the generic flight reader earns its result", () => {
     // whose return leg took a date from elsewhere in the document, eight
     // months before the outbound. Legs are listed in travel order; a return
     // that departs before the outbound is a mis-paired date.
+    // Numbered, so this test keeps proving the order check: route-only legs
+    // in a multi-leg document are declined on their own (test below).
     const text = [
+      "Flug: QR 70",
       "Von: Frankfurt (FRA)",
       "Nach: Doha (DOH)",
       "Abflug: 15.11.2027 10:35",
       "Ankunft: 15.11.2027 17:05",
+      "Flug: QR 69",
       "Von: Doha (DOH)",
       "Nach: Frankfurt (FRA)",
       "Abflug: 28.03.2027 02:46",
@@ -190,5 +194,32 @@ describe("the generic flight reader earns its result", () => {
       "Ankunft: 20.11.2027 19:05",
     ].join("\n");
     expect(await getRegexParser().parseEmail("Ihre Reise", text)).toEqual([]);
+  });
+
+  it("declines several legs that carry routes but no flight number", async () => {
+    // Corpus 2026-09-30, six tour-operator invoices (1C788047, 1C868387,
+    // 1C920065, 1C937714): an itinerary that prints "(FRA)"/"(DOH)" codes with
+    // times read as an outbound and a return leg — every one wrong (Hurghada
+    // read as Cairo, the onward legs missing, a later leg's time taken).
+    // Without numbers nothing ties a route to a time, and the lookup cannot
+    // repair it, so the document is declined. A LONE route stays a candidate
+    // (`parsers.text.test.ts`, "FRA → JFK").
+    const text = [
+      "Von: Frankfurt (FRA)",
+      "Nach: Doha (DOH)",
+      "Abflug: 15.11.2027 10:35",
+      "Ankunft: 15.11.2027 17:05",
+      "Von: Doha (DOH)",
+      "Nach: Frankfurt (FRA)",
+      "Abflug: 28.11.2027 19:54",
+      "Ankunft: 29.11.2027 01:10",
+    ].join("\n");
+    expect(await getRegexParser().parseEmail("Rechnung", text)).toEqual([]);
+    expect(
+      documentDefect([
+        { departureCode: "FRA", arrivalCode: "DOH" },
+        { departureCode: "DOH", arrivalCode: "FRA" },
+      ] as never)
+    ).toBe("route_only_legs_in_multi_leg_document");
   });
 });

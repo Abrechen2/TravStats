@@ -68,7 +68,13 @@ export function segmentHasEvidence(f: ParsedBooking): boolean {
  * - one flight number on two different routes (Lufthansa connection: one
  *   number found for two routes, and the return leg's number handed to the
  *   outbound leg too) — a confidently wrong number, worse than none;
- * - departures that run backwards ({@link datesRunForward}).
+ * - departures that run backwards ({@link datesRunForward});
+ * - legs with a route but no flight number. Alone, "FRA → JFK" is a candidate;
+ *   several of them were, in all six tour-operator invoices of the 2026-09-30
+ *   corpus, an itinerary's coded stops paired with times by position — every
+ *   one wrong (Hurghada read as Cairo, onward legs missing, a later leg's
+ *   time). Without a number nothing ties a route to its time, and the lookup
+ *   has nothing to repair it from.
  *
  * Exported for its tests: the mixed shape can no longer be produced from text
  * by this reader (routes are only paired one per number), but the check stays
@@ -79,6 +85,9 @@ export function documentDefect(flights: ParsedBooking[]): string | null {
 
   const shapes = new Set(flights.map(routeShape));
   if (shapes.has("complete") && shapes.has("absent")) return "mixed_routed_and_routeless_legs";
+  if (flights.length > 1 && flights.some((f) => !f.flightNumber)) {
+    return "route_only_legs_in_multi_leg_document";
+  }
 
   const routesByNumber = new Map<string, Set<string>>();
   for (const f of flights) {
