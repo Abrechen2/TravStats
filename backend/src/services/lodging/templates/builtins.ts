@@ -1,5 +1,6 @@
 import { BOOKING_COM_LEGACY } from "./bookingComLegacy";
 import { NH_HOTELS } from "./nhHotels";
+import { ARMANI } from "./armani";
 import type { LodgingTemplate } from "./types";
 
 /**
@@ -379,6 +380,7 @@ export const LODGING_TEMPLATES: readonly LodgingTemplate[] = Object.freeze([
     required: ["hotelName", "checkIn", "checkOut"],
   },
   NH_HOTELS,
+  ARMANI,
   // Last: it reads only what the main Booking.com reader declined.
   BOOKING_COM_LEGACY,
 ]);
