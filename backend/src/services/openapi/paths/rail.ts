@@ -24,6 +24,31 @@ import {
 } from "../../../schemas/rail";
 import { railTimesSchema } from "../../../schemas/times";
 
+/** Where a ride came from, read from its filed originals (forgejo#132 item 17). */
+const railSource = z
+  .object({
+    kind: z.literal("document"),
+    documentId: z.string().uuid(),
+    documentKind: z
+      .string()
+      .nullable()
+      .describe("invoice | booking | boardingPass | ticket | other; null when unstated"),
+    format: z.string().describe("The file: image | pdf | eml | emailText | pkpass"),
+    name: z.string().nullable().describe("The file name the user handed over, sanitised"),
+    issuedOn: z.string().nullable().describe("The date printed on the document, YYYY-MM-DD"),
+    parsed: z
+      .boolean()
+      .describe("True when the ride was parsed from this document, not filed with it later"),
+    documentCount: z.number().int().min(1).describe("Originals filed with the ride"),
+  })
+  .nullable()
+  .openapi("RailSource", {
+    description:
+      "The original the ride came from — the parsed one first, else the oldest filed. " +
+      "Never set by a client: it is read from the documents linked to the ride " +
+      "(`documentIds` on create, or filing later). Null when no original was kept.",
+  });
+
 const railJourney = registry.register(
   "RailJourney",
   z
@@ -98,6 +123,7 @@ const railJourney = registry.register(
         .describe("Arrival delay; null = not recorded, 0 = on time"),
       trip: includedRow("trip (id, name, color)").nullable().optional(),
       times: railTimesSchema,
+      source: railSource,
     })
     .openapi("RailJourney")
 );
@@ -250,7 +276,10 @@ registry.registerPath({
   description:
     "`departureLocal`/`arrivalLocal` are the station's wall clock without an offset; " +
     "the server looks up each station's zone from its coordinates and stores the " +
-    "real instant. A station with `stationId` takes position, code and country from " +
+    "real instant. A ticket that prints no time is sent as the day alone " +
+    "(`YYYY-MM-DD`): stored as the start of that day at the station with precision " +
+    "`day`, it has no duration, no delay (`delayMinutes` is refused) and is no " +
+    "night train by the clock. A station with `stationId` takes position, code and country from " +
     "the catalogue. With `lookup` of provider `transitous` the server fetches that " +
     "trip's traced line once, cuts it to the two stations and freezes it " +
     "(`geometrySource: transitous`, distance along it); a missing, unreachable or " +

@@ -73,6 +73,27 @@ describe("railTime", () => {
     expect(railDurationMinutes(dep, null)).toBeNull();
   });
 
+  // forgejo#132 item 17: a ride logged date-only is stored at the starts of
+  // its days. Measured, "5th to 6th" would read as 24 h on board.
+  it("has no duration for a ride logged with its days only", () => {
+    const day = (utc: string, local: string): TimeValue => ({
+      ...station(utc, "Europe/Berlin", "+01:00", local),
+      precision: "day",
+    });
+    const dep = day("2026-03-04T23:00:00.000Z", "2026-03-05T00:00:00");
+    const arr = day("2026-03-05T23:00:00.000Z", "2026-03-06T00:00:00");
+    expect(railDurationMinutes(dep, arr)).toBeNull();
+    // One clocked end is not enough either.
+    const clocked = station(
+      "2026-03-05T07:00:00.000Z",
+      "Europe/Berlin",
+      "+01:00",
+      "2026-03-05T08:00:00"
+    );
+    expect(railDurationMinutes(clocked, arr)).toBeNull();
+    expect(railDurationMinutes(dep, clocked)).toBeNull();
+  });
+
   it("reads an older payload without `times` on each station's own clock", () => {
     const journey = {
       departureTime: "2026-07-01T09:01:00.000Z",

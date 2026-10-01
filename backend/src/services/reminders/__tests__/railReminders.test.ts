@@ -159,4 +159,21 @@ describe("checkRailReminders", () => {
     const [, , hoursAhead] = mockSendRailReminder.mock.calls[0];
     expect(hoursAhead).toBe(2);
   });
+
+  // forgejo#132 item 17: a ride logged date-only is stored at the start of
+  // its day. "Leaves in 2 hours" would announce a time nobody printed, so the
+  // reminder query only reads rides whose departure carries a clock — rows
+  // written before the precision column (NULL) included.
+  it("asks only for rides whose departure carries a clock", async () => {
+    const { checkRailReminders } = await import("../railReminders");
+    await checkRailReminders(new Date());
+
+    expect(mockFindMany).toHaveBeenCalled();
+    for (const [args] of mockFindMany.mock.calls as Array<[{ where: Record<string, unknown> }]>) {
+      expect(args.where.OR).toEqual([
+        { depPrecision: null },
+        { depPrecision: { notIn: ["day", "unknown"] } },
+      ]);
+    }
+  });
 });

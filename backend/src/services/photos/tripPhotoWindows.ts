@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { rideHasClocks } from "../../shared/railClock";
 import { Prisma } from "../../prisma";
 import { localDay, withinKm } from "../../utils/sqlGeo";
 import { timezoneOfLodging } from "../../utils/stayInstant";
@@ -47,8 +48,13 @@ export interface PhotoWindow {
   center: { lat: number; lon: number } | null;
 }
 
-/** Why an entry has no window — it shows nothing rather than guessing. */
-export type WindowAbstention = "notOnTrip" | "noCoordinates" | "noDates" | "notRealInstants";
+/**
+ * Why an entry has no window — it shows nothing rather than guessing.
+ * `noClock`: a train ride logged date-only (forgejo#132 item 17) — a whole
+ * day of photos is not "taken on the train".
+ */
+export type WindowAbstention =
+  "notOnTrip" | "noCoordinates" | "noDates" | "notRealInstants" | "noClock";
 
 export interface WindowResult {
   photos: WindowPhoto[];
@@ -259,11 +265,14 @@ export async function railTripPhotos(
       arrivalTime: true,
       depTimezone: true,
       arrTimezone: true,
+      depPrecision: true,
+      arrPrecision: true,
     },
   });
   if (!ride) return null;
   const { tripId, departureTime, arrivalTime } = ride;
   if (!tripId) return abstain("notOnTrip");
+  if (!rideHasClocks(ride)) return abstain("noClock");
   if (!arrivalTime) return abstain("noDates");
   if (!ride.depTimezone || !ride.arrTimezone) return abstain("notRealInstants");
   return photosWhere(

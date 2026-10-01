@@ -184,6 +184,41 @@ export const tripStopResponse = registry.register(
     .openapi("TripStop")
 );
 
+/**
+ * A trip photo as `toPhotoDto` (routes/trips/photoDto.ts) sends it — the
+ * gallery, the upload and update answers, and GET /trips/{id}.
+ */
+export const tripPhotoResponse = registry.register(
+  "TripPhoto",
+  z
+    .object({
+      id: z.string().uuid(),
+      url: z.string().describe("The ownership-checked file route, relative to the server"),
+      caption: z.string().nullable(),
+      // Published as it always was; the time model has not reached photos yet.
+      takenAt: z.string().nullable(),
+      lat: z
+        .number()
+        .nullable()
+        .describe("Where it was taken (import or upload); null when not stored"),
+      lon: z.number().nullable(),
+      stopId: z
+        .string()
+        .uuid()
+        .nullable()
+        .describe(
+          "The stop it is filed at — a station of a roadtrip filed on this trip, or a stop " +
+            "of the trip's timeline; null when none. Linked, never derived from `takenAt` " +
+            "(forgejo#139). Deleting the stop clears it; the photo stays on the trip."
+        ),
+      sortIdx: z.number().int(),
+      mimetype: z.string(),
+      sizeBytes: z.number().int(),
+      createdAt: z.string().datetime(),
+    })
+    .openapi("TripPhoto")
+);
+
 /** A diary entry, as the journal routes and GET /trips/{id} return it. */
 export const tripJournalEntryResponse = registry.register(
   "TripJournalEntry",
@@ -230,6 +265,10 @@ export const tripResponse = registry.register(
       bookings: z.array(includedRow("booking")).optional(),
       stops: z.array(tripStopResponse).optional().describe("GET /trips/{id}"),
       journalEntries: z.array(tripJournalEntryResponse).optional().describe("GET /trips/{id}"),
+      photos: z
+        .array(tripPhotoResponse)
+        .optional()
+        .describe("GET /trips/{id}: the gallery, the cover's internal row left out"),
       times: tripTimesSchema
         .optional()
         .describe("The trip's first and last day; on the list, detail, create and update"),

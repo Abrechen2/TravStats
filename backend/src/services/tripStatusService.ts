@@ -1,4 +1,5 @@
 import { profileZoneOf } from "../shared/time/profileZone";
+import { RAIL_CLOCK_SELECT, rideStatusSpan } from "../shared/railClock";
 import { prisma } from "../db";
 import { deriveTripStatus, tripDateBounds, tripStatusBounds } from "../shared/statusDerivation";
 import { flightEnds, segmentTripDays, typedTripDays } from "./timeModel/tripColumns";
@@ -93,7 +94,7 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
         where: { kind: "roadtrip" },
         select: { stops: { select: { startDate: true, endDate: true } } },
       },
-      railJourneys: { select: { departureTime: true, arrivalTime: true } },
+      railJourneys: { select: RAIL_CLOCK_SELECT },
     },
   });
   if (!trip) return;
@@ -106,7 +107,7 @@ export async function recomputeTripStatus(tripId: string): Promise<void> {
     cruises: trip.cruises,
     lodgingStays: trip.lodgingStays,
     roadtrips: trip.routes,
-    railJourneys: trip.railJourneys,
+    railJourneys: trip.railJourneys.map(rideStatusSpan),
     ownStartDate: trip.startDate,
     ownEndDate: trip.endDate,
     zone: (await profileZoneOf(trip.userId)).zone,

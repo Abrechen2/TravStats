@@ -18,11 +18,17 @@ import { documentIdsBodySchema } from "../../../schemas/document";
 import {
   errorContent,
   tripJournalEntryResponse,
+  tripPhotoResponse,
   tripResponse,
   tripStopResponse,
   timeRefused,
 } from "./shared";
 import { weatherOutcome } from "./openData";
+import {
+  listTripPhotosQuerySchema,
+  tripPhotoUploadFieldsSchema,
+  updateTripPhotoSchema,
+} from "../../../schemas/tripPhoto";
 import {
   createTripSchema,
   updateTripSchema,
@@ -393,42 +399,34 @@ registry.registerPath({
   responses: { 204: deleted, 404: notFound },
 });
 
+const stopNotOnTrip = {
+  description:
+    "Invalid input; `code` STOP_NOT_ON_TRIP (with `field` stopId) when the stop is not on " +
+    "this trip — neither on its timeline nor a station of a roadtrip filed on it. A stop " +
+    "that does not exist answers the same.",
+  content: errorContent,
+};
+const photoParams = z.object({ id: z.string().uuid(), photoId: z.string().uuid() });
+
 registry.registerPath({
   method: "get",
   path: "/trips/{id}/photos",
   summary: "List a trip's photos",
   description:
     "The gallery without the rest of the trip, in gallery order, at most 1000; the cover's " +
-    "internal row is left out. A journal entry picks its photos from this list (`photoIds`).",
+    "internal row is left out. A journal entry picks its photos from this list (`photoIds`). " +
+    "`stopId` narrows it to the photos filed at one stop — a roadtrip station's photos; a " +
+    "stop not on the trip is a 400, never an empty list.",
   tags: ["Trips"],
-  request: { params: tripId },
+  request: { params: tripId, query: listTripPhotosQuerySchema },
   responses: {
     200: {
       description: "Photos",
       content: {
-        "application/json": {
-          schema: z.object({
-            photos: z.array(
-              z.object({
-                id: z.string().uuid(),
-                url: z.string(),
-                caption: z.string().nullable(),
-                takenAt: z.string().nullable(),
-                lat: z
-                  .number()
-                  .nullable()
-                  .describe("Where it was taken (import or upload); null when not stored"),
-                lon: z.number().nullable(),
-                sortIdx: z.number().int(),
-                mimetype: z.string(),
-                sizeBytes: z.number().int(),
-                createdAt: z.string(),
-              })
-            ),
-          }),
-        },
+        "application/json": { schema: z.object({ photos: z.array(tripPhotoResponse) }) },
       },
     },
+    400: stopNotOnTrip,
     404: notFound,
   },
 });
@@ -437,12 +435,31 @@ registry.registerPath({
   method: "post",
   path: "/trips/{id}/photos",
   summary: "Upload trip photos",
-  description: "multipart/form-data; several files per request.",
+  description:
+    "multipart/form-data; up to 20 files in `photos`. An optional `stopId` field files every " +
+    "photo of the request at that stop of the trip (forgejo#139); it is checked before " +
+    "anything is stored, and a refused request keeps no row and no file.",
   tags: ["Trips"],
-  request: { params: tripId },
+  request: {
+    params: tripId,
+    body: {
+      content: {
+        "multipart/form-data": {
+          schema: tripPhotoUploadFieldsSchema.extend({
+            photos: z.array(z.string().openapi({ format: "binary" })),
+          }),
+        },
+      },
+    },
+  },
   responses: {
-    201: { description: "Uploaded" },
-    400: { description: "Invalid upload", content: errorContent },
+    201: {
+      description: "Uploaded",
+      content: {
+        "application/json": { schema: z.object({ photos: z.array(tripPhotoResponse) }) },
+      },
+    },
+    400: stopNotOnTrip,
     404: notFound,
   },
 });
@@ -450,10 +467,23 @@ registry.registerPath({
 registry.registerPath({
   method: "patch",
   path: "/trips/{id}/photos/{photoId}",
-  summary: "Update a photo's caption or order",
+  summary: "Update a photo's caption, order, date or stop",
+  description:
+    "`stopId` files the photo at a stop of this trip or takes it off one (null); absent " +
+    "leaves it where it is.",
   tags: ["Trips"],
-  request: { params: z.object({ id: z.string().uuid(), photoId: z.string().uuid() }) },
-  responses: { 200: { description: "Updated" }, 404: notFound },
+  request: {
+    params: photoParams,
+    body: { content: { "application/json": { schema: updateTripPhotoSchema } } },
+  },
+  responses: {
+    200: {
+      description: "Updated",
+      content: { "application/json": { schema: z.object({ photo: tripPhotoResponse }) } },
+    },
+    400: stopNotOnTrip,
+    404: notFound,
+  },
 });
 
 registry.registerPath({

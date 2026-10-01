@@ -7,6 +7,7 @@ import {
   type DatedRail,
 } from "../../shared/railCounting";
 import { railRideFacts } from "../../utils/railAchievements";
+import { rideHasClocks } from "../../shared/railClock";
 
 /**
  * The rail statistics (spec 2026-09-25-rail-domain, phase 2b), computed from
@@ -45,6 +46,12 @@ export interface RailStatsRow extends DatedRail {
   delayMinutes: number | null;
   /** Optional only so hand-built rows in tests need not name it; the query selects it. */
   travelClass?: string | null;
+  /**
+   * ADR 0002 precision of each end; `day` = logged date-only (forgejo#132
+   * item 17). Optional for hand-built test rows; absent reads as a clock.
+   */
+  depPrecision?: string | null;
+  arrPrecision?: string | null;
 }
 
 export interface Ranked {
@@ -132,8 +139,12 @@ function stationVisits(rows: readonly RailStatsRow[]): Ranked[] {
     .slice(0, TOP);
 }
 
+/** Both ends timed — a date-only ride has no hours on board and no delay. */
+const clocked = (r: RailStatsRow): boolean =>
+  rideHasClocks({ depPrecision: r.depPrecision ?? null, arrPrecision: r.arrPrecision ?? null });
+
 function delayBuckets(rows: readonly RailStatsRow[]): RailStats["delays"] {
-  const recorded = rows.filter((r) => r.delayMinutes !== null);
+  const recorded = rows.filter((r) => r.delayMinutes !== null && clocked(r));
   const buckets = [...DELAY_BUCKETS, null].map((upTo, i) => {
     const lower = i === 0 ? -Infinity : DELAY_BUCKETS[i - 1];
     const count = recorded.filter((r) => {
@@ -152,7 +163,14 @@ function delayBuckets(rows: readonly RailStatsRow[]): RailStats["delays"] {
 }
 
 function rideKinds(rows: readonly RailStatsRow[]): RailStats["rideKinds"] {
-  const facts = rows.map((r) => railRideFacts({ ...r, travelClass: r.travelClass ?? null }));
+  const facts = rows.map((r) =>
+    railRideFacts({
+      ...r,
+      travelClass: r.travelClass ?? null,
+      depPrecision: r.depPrecision ?? null,
+      arrPrecision: r.arrPrecision ?? null,
+    })
+  );
   return {
     nightTrains: facts.filter((f) => f.isNightTrain).length,
     highSpeed: facts.filter((f) => f.isHighSpeed).length,
@@ -168,7 +186,8 @@ export function computeRailStats(rows: readonly RailStatsRow[]): RailStats {
       .reduce((sum, r) => sum + (r.distanceKm as number), 0);
   const measured = rows.filter((r) => r.distanceKm !== null);
   const timed = rows.filter(
-    (r) => r.arrivalTime !== null && r.arrivalTime.getTime() >= r.departureTime.getTime()
+    (r) =>
+      r.arrivalTime !== null && clocked(r) && r.arrivalTime.getTime() >= r.departureTime.getTime()
   );
   const longest = measured.reduce<RailStatsRow | null>(
     (best, r) =>
@@ -240,6 +259,8 @@ const STATS_SELECT = {
   distanceSource: true,
   delayMinutes: true,
   travelClass: true,
+  depPrecision: true,
+  arrPrecision: true,
 } as const;
 
 /**

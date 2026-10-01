@@ -120,6 +120,18 @@ export const kindFieldsSchema = z.object({
   anchorStopId: z.string().uuid().nullable().optional(),
   /** Attach to a trip, move to another, or detach (null). */
   tripId: z.string().uuid().nullable().optional(),
+  /**
+   * With `tripId`: move a roadtrip although its stations hold photos of the
+   * trip it leaves, taking those photos off their stations (they stay on
+   * their trip). Without it such a move is a 409 (forgejo#139).
+   */
+  detachStationPhotos: z
+    .boolean()
+    .optional()
+    .describe(
+      "With `tripId` only: take this roadtrip's station photos off their stations (they stay " +
+        "on their trip) and move it. Without it such a move is 409 ROADTRIP_HAS_TRIP_PHOTOS."
+    ),
 });
 
 export const listToursQuerySchema = z.object({

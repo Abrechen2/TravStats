@@ -12,6 +12,8 @@
  * Backend only: no frontend surface classifies rides yet.
  */
 
+import { rideHasClocks } from "./railClock";
+
 /**
  * Categories whose trains run at 200 km/h or more on their main lines. Matched
  * against the FIRST word of `trainCategory`, upper-cased, so "TGV INOUI",
@@ -64,6 +66,9 @@ export interface RailRideKindInput {
   /** `YYYY-MM-DD` of departure and arrival on their stations' clocks. */
   depDayKey: string;
   arrDayKey: string | null;
+  /** ADR 0002 precision of each end; null = written before the column (minute). */
+  depPrecision: string | null;
+  arrPrecision: string | null;
 }
 
 /** The first word of the category, upper-cased — or null when none was recorded. */
@@ -82,6 +87,10 @@ export function isNightTrainRide(ride: RailRideKindInput): boolean {
   const key = categoryKey(ride.trainCategory);
   if (key !== null && NIGHT_TRAIN_CATEGORIES.has(key)) return true;
   if (!ride.arrivalTime || !ride.arrDayKey) return false;
+  // A date-only ride (forgejo#132 item 17) is stored at the starts of its days:
+  // "left on the 5th, arrived on the 6th" would read as 24 h overnight. Without
+  // both clocks there is no evidence it ran through the night.
+  if (!rideHasClocks(ride)) return false;
   const hours = (ride.arrivalTime.getTime() - ride.departureTime.getTime()) / 3_600_000;
   return ride.arrDayKey > ride.depDayKey && hours >= OVERNIGHT_MIN_HOURS;
 }

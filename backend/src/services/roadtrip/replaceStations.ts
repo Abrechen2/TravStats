@@ -3,7 +3,7 @@ import { AppError } from "../../middleware/errorHandler";
 import type { StationsInput } from "../../schemas/roadtrip";
 import { recomputeLegs, type StopCoords } from "../tour/legRecompute";
 import { autoRouteNewLegs } from "../tour/routing/autoRouteLegs";
-import { STATION_SELECT } from "./roadtripSummary";
+import { STATION_DTO_SELECT } from "./roadtripSummary";
 import { readRouteAndLegs, ROUTE_SELECT } from "../../routes/trips/tourRoutes";
 import { stationTimeColumns } from "../timeModel/tripColumns";
 
@@ -199,7 +199,7 @@ export async function replaceStations(
         stations: await tx.tripStop.findMany({
           where: { routeId },
           orderBy: { routeOrderIdx: "asc" },
-          select: STATION_SELECT,
+          select: STATION_DTO_SELECT,
         }),
         legs: await tx.tripRouteLeg.findMany({
           where: { routeId },

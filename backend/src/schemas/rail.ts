@@ -66,6 +66,31 @@ const wallClock = z
   .regex(WALL_CLOCK, "must be a local wall-clock time YYYY-MM-DDTHH:mm without an offset")
   .refine((v) => !Number.isNaN(new Date(`${v}Z`).getTime()), "is not a real date and time");
 
+/**
+ * A station's wall clock, or — for a ticket that prints none — its calendar
+ * day alone, `YYYY-MM-DD` (forgejo#132 item 17). The day is stored with
+ * precision `day`, and every reader that needs a clock abstains on it
+ * (`shared/railClock.ts`); it is never read as midnight.
+ */
+const LOCAL_DAY = /^\d{4}-\d{2}-\d{2}$/;
+const wallClockOrDay = z.union([
+  wallClock,
+  z
+    .string()
+    .regex(LOCAL_DAY, "must be a local wall-clock time YYYY-MM-DDTHH:mm or a day YYYY-MM-DD")
+    // Zod runs a refinement even after the regex failed, so this must not
+    // throw on a non-day string ("…T08:15+02:00" used to answer 500).
+    .refine((v) => {
+      const day = new Date(`${v}T00:00:00Z`);
+      return !Number.isNaN(day.getTime()) && day.toISOString().slice(0, 10) === v;
+    }, "is not a real date"),
+]);
+
+/** True for a day-only value of `departureLocal` / `arrivalLocal`. */
+export function isLocalDayInput(value: string | null | undefined): value is string {
+  return typeof value === "string" && LOCAL_DAY.test(value);
+}
+
 /** "" and null both clear a text field; undefined leaves it alone. */
 const optionalText = (max: number) =>
   z
@@ -125,8 +150,8 @@ const baseRailSchema = z.object({
   trainNumber: optionalText(20),
   departureStation: railStationSchema,
   arrivalStation: railStationSchema,
-  departureLocal: wallClock,
-  arrivalLocal: wallClock.nullable().optional(),
+  departureLocal: wallClockOrDay,
+  arrivalLocal: wallClockOrDay.nullable().optional(),
   /**
    * Which occurrence of a station clock the zone shows twice (the autumn
    * hour): `earlier` by default, `later` for the second (ADR 0002, Q5) — the

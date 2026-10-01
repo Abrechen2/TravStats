@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { departureClockedWhere } from "../../shared/railClock";
 import { sendRailReminder } from "../emailService";
 import { serializeTime, type TimePrecision } from "../../shared/time/wire";
 import logger from "../../utils/logger";
@@ -32,6 +33,9 @@ export async function checkRailReminders(now: Date): Promise<void> {
         where: {
           status: "scheduled",
           departureTime: { gte: preciseStart, lte: preciseEnd },
+          // A date-only ride is stored at the start of its day; "leaves in
+          // 2 hours" would be a time nobody printed (forgejo#132 item 17).
+          ...departureClockedWhere(),
         },
         select: {
           id: true,

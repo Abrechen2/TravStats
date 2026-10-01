@@ -3,6 +3,7 @@ import app from "../../index";
 import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
+import { nextFlightResponse } from "../../services/openapi/paths/operations";
 
 /**
  * GET /flights/next — the single soonest upcoming flight for the dashboard
@@ -86,6 +87,42 @@ describe("GET /flights/next", () => {
     const res = await request(app).get("/api/v1/flights/next").set("Cookie", cookie);
     expect(res.body.flight).toBeNull();
     await prisma.user.deleteMany({ where: { username: "nextFlightOther" } });
+  });
+
+  /*
+   * forgejo#132 (comment of 2026-09-27): the Companion schedules departure
+   * reminders from this projection. Without `times` and the zones it read a
+   * LEGACY_FAKE_UTC row's wall clock as an instant — a reminder off by the
+   * airport's offset — and no text could state the airport's clock.
+   */
+  it("carries times and both zones, a legacy fake-UTC clock read at its airport", async () => {
+    // 14:05 on the JFK clock, stored the legacy way: the wall clock as if UTC.
+    const wall = new Date(Date.now() + 10 * 24 * HOUR);
+    wall.setUTCHours(14, 5, 0, 0);
+    await prisma.flight.create({
+      data: mk(0, {
+        depIata: "JFK",
+        arrIata: "MUC",
+        departureTime: wall,
+        arrivalTime: null,
+        depTimeSemantics: "LEGACY_FAKE_UTC",
+      }),
+    });
+    const res = await request(app).get("/api/v1/flights/next").set("Cookie", cookie);
+
+    expect(res.status).toBe(200);
+    expect(res.body.flight.depTimezone).toBe("America/New_York");
+    expect(res.body.flight.arrTimezone).toBe("Europe/Berlin");
+    const departure = res.body.flight.times.departure;
+    expect(departure.zone).toBe("America/New_York");
+    expect(departure.local.slice(11, 16)).toBe("14:05");
+    expect(departure.precision).toBe("minute");
+    // The real instant is the wall clock plus New York's offset (4 or 5 h).
+    const shiftHours = (Date.parse(departure.utc) - wall.getTime()) / HOUR;
+    expect([4, 5]).toContain(shiftHours);
+    expect(res.body.flight.times.arrival).toBeNull();
+    // The documented schema describes what is on the wire, not a wish.
+    expect(nextFlightResponse.safeParse(res.body).success).toBe(true);
   });
 
   it("requires a session", async () => {

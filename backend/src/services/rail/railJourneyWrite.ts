@@ -1,12 +1,15 @@
 import { AppError } from "../../middleware/errorHandler";
-import type {
-  RailStationInput,
-  RailTracedDistanceSource,
-  UpdateRailJourneyInput,
+import {
+  isLocalDayInput,
+  type RailStationInput,
+  type RailTracedDistanceSource,
+  type UpdateRailJourneyInput,
 } from "../../schemas/rail";
 import { deriveRailStatus } from "../../shared/statusDerivation";
 import { LocalTimeNonexistentError, TzUnresolvedError } from "../../shared/time/errors";
-import { toInstant, type Fold } from "../../shared/time/instant";
+import { localDay, toInstant, type Fold } from "../../shared/time/instant";
+import { startOfDayAt } from "../../shared/time/legacyValues";
+import { endHasClock, rideEndsAt } from "../../shared/railClock";
 import { zoneOf } from "../../shared/time/zoneOf";
 import { formatWallClockIn } from "../../shared/zonedWallClock";
 import { calculateDistance } from "../../utils/geo";
@@ -44,6 +47,8 @@ export interface RailJourneyState {
   distanceKm: number | null;
   distanceSource: string | null;
   status: string;
+  /** Set only to clear a stored delay when the ride loses its clock. */
+  delayMinutes?: number | null;
 }
 
 type StationColumns<P extends "dep" | "arr"> = {
@@ -178,34 +183,140 @@ export function mergeRailJourney(
     : existing && pickStation(existing, "arr");
   if (!dep || !arr) throw new AppError("Both stations are required", 400);
 
-  const departureWall =
-    input.departureLocal ??
-    (existing ? instantToWallClock(existing.departureTime, existing.depTimezone) : undefined);
-  if (!departureWall) throw new AppError("departureLocal is required", 400);
-  const arrivalWall =
-    input.arrivalLocal !== undefined
-      ? input.arrivalLocal
-      : existing?.arrivalTime
-        ? instantToWallClock(existing.arrivalTime, existing.arrTimezone)
-        : null;
+  const departure = resolveEnd({
+    sent: input.departureLocal,
+    fold: input.departureFold,
+    zone: dep.depTimezone,
+    stationMoved: Boolean(input.departureStation),
+    stored: existing && {
+      time: existing.departureTime,
+      zone: existing.depTimezone,
+      precision: existing.depPrecision ?? null,
+    },
+    field: "departureLocal",
+  });
+  if (!departure) throw new AppError("departureLocal is required", 400);
+  const arrival = resolveEnd({
+    sent: input.arrivalLocal,
+    fold: input.arrivalFold,
+    zone: arr.arrTimezone,
+    stationMoved: Boolean(input.arrivalStation),
+    stored:
+      existing?.arrivalTime != null
+        ? {
+            time: existing.arrivalTime,
+            zone: existing.arrTimezone,
+            precision: existing.arrPrecision ?? null,
+          }
+        : null,
+    field: "arrivalLocal",
+  });
+  assertArrivalNotBefore(departure, dep.depTimezone, arrival, arr.arrTimezone);
+  const departureTime = departure.time;
+  const arrivalTime = arrival?.time ?? null;
+  const clockless = departure.precision === "day" || arrival?.precision === "day";
+  if (clockless && input.delayMinutes !== undefined && input.delayMinutes !== null) {
+    // A delay is a difference between two clocks; a ride with none has none.
+    throw new AppError("a delay needs the ride's times", 400, "RAIL_INVALID_INPUT", "delayMinutes");
+  }
 
-  // A clock read back from the stored instant exists by construction; only a
-  // clock the request sent can name a skipped hour. A side whose clock AND
-  // station were not sent keeps its stored instant: re-reading its wall clock
-  // would put a ride in the repeated autumn hour back at the earlier one.
-  const departureTime = input.departureLocal
-    ? sentWallClockToInstant(departureWall, dep.depTimezone, "departureLocal", input.departureFold)
-    : existing && !input.departureStation
-      ? existing.departureTime
-      : wallClockToInstant(departureWall, dep.depTimezone);
-  const arrivalTime = !arrivalWall
-    ? null
-    : input.arrivalLocal
-      ? sentWallClockToInstant(arrivalWall, arr.arrTimezone, "arrivalLocal", input.arrivalFold)
-      : existing?.arrivalTime && !input.arrivalStation
-        ? existing.arrivalTime
-        : wallClockToInstant(arrivalWall, arr.arrTimezone);
-  if (arrivalTime && arrivalTime.getTime() < departureTime.getTime()) {
+  const { distanceKm, distanceSource } = resolveDistance(existing, input, { ...dep, ...arr });
+
+  const requested = input.status ?? existing?.status ?? "scheduled";
+  const depPrecision = departure.precision;
+  const arrPrecision = arrival?.precision ?? null;
+  const status = deriveRailStatus({
+    departureTime,
+    arrivalTime,
+    current: requested,
+    now,
+    endsAt: rideEndsAt({
+      departureTime,
+      arrivalTime,
+      depTimezone: dep.depTimezone,
+      arrTimezone: arr.arrTimezone,
+      depPrecision,
+      arrPrecision,
+    }),
+  });
+
+  return {
+    ...dep,
+    ...arr,
+    departureTime,
+    arrivalTime,
+    depPrecision,
+    arrPrecision,
+    distanceKm,
+    distanceSource,
+    status,
+    // A clockless ride carries no delay; a stored one is cleared with the clock.
+    ...(clockless && { delayMinutes: null }),
+  };
+}
+
+interface EndReading {
+  time: Date;
+  precision: "minute" | "day";
+}
+
+/**
+ * One end's instant and precision. Sent: a wall clock is converted in the
+ * station's zone (a skipped hour refused), a bare day becomes the start of
+ * that day there with precision `day` (forgejo#132 item 17). Not sent: the
+ * stored end stays — a clock read back from its instant exists by
+ * construction, and a side whose clock AND station were not sent keeps its
+ * stored instant, since re-reading would put a ride in the repeated autumn
+ * hour back at the earlier one. A clockless end stays clockless when its
+ * station moves: the same day, at the new station.
+ */
+function resolveEnd(args: {
+  sent: string | null | undefined;
+  fold: Fold | null | undefined;
+  zone: string | null;
+  stationMoved: boolean;
+  stored: { time: Date; zone: string | null; precision: string | null } | null;
+  field: "departureLocal" | "arrivalLocal";
+}): EndReading | null {
+  const { sent, zone, stored, field } = args;
+  if (sent === null) return null;
+  if (sent !== undefined) {
+    if (isLocalDayInput(sent)) {
+      if (!zone) throw new TzUnresolvedError("the station has no zone", field);
+      return { time: startOfDayAt(sent, zone), precision: "day" };
+    }
+    return { time: sentWallClockToInstant(sent, zone, field, args.fold), precision: "minute" };
+  }
+  if (!stored) return null;
+  if (!endHasClock(stored.precision)) {
+    if (!args.stationMoved) return { time: stored.time, precision: "day" };
+    const day = localDay(stored.time, stored.zone ?? "UTC");
+    return { time: wallClockToInstant(`${day}T00:00`, zone), precision: "day" };
+  }
+  if (!args.stationMoved) return { time: stored.time, precision: "minute" };
+  return {
+    time: wallClockToInstant(instantToWallClock(stored.time, stored.zone), zone),
+    precision: "minute",
+  };
+}
+
+/**
+ * Arrival not before departure. Two clocks compare as instants; with a
+ * clockless end only the station days can be compared — a ride logged for the
+ * 5th that arrives at 08:00 on the 5th is fine, one arriving on the 4th is not.
+ */
+function assertArrivalNotBefore(
+  departure: EndReading,
+  depZone: string | null,
+  arrival: EndReading | null,
+  arrZone: string | null
+): void {
+  if (!arrival) return;
+  const bothClocked = departure.precision === "minute" && arrival.precision === "minute";
+  const before = bothClocked
+    ? arrival.time.getTime() < departure.time.getTime()
+    : localDay(arrival.time, arrZone ?? "UTC") < localDay(departure.time, depZone ?? "UTC");
+  if (before) {
     throw new AppError(
       "arrival must not precede departure",
       400,
@@ -213,23 +324,6 @@ export function mergeRailJourney(
       "arrivalLocal"
     );
   }
-
-  const { distanceKm, distanceSource } = resolveDistance(existing, input, { ...dep, ...arr });
-
-  const requested = input.status ?? existing?.status ?? "scheduled";
-  const status = deriveRailStatus({ departureTime, arrivalTime, current: requested, now });
-
-  return {
-    ...dep,
-    ...arr,
-    departureTime,
-    arrivalTime,
-    depPrecision: "minute",
-    arrPrecision: arrivalTime ? "minute" : null,
-    distanceKm,
-    distanceSource,
-    status,
-  };
 }
 
 function pickStation<P extends "dep" | "arr">(row: RailJourneyState, prefix: P): StationColumns<P> {
