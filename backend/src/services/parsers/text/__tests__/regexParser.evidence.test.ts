@@ -265,3 +265,34 @@ describe("times pair with flight numbers only one to one", () => {
     expect(timesOf(flights)).toEqual([["LH400", null, null]]);
   });
 });
+
+/**
+ * Review finding, 2026-10-01: a price matched as a flight number — "CHF 120
+ * inkl. Flughafensteuer" reads as CHF120, the lookahead finding "Flug" in
+ * "Flughafensteuer" — took a positional slot among the real numbers and was
+ * only dropped AFTER pairing, by the factory's evidence gate. By then it had
+ * taken the first route, and the real number the second.
+ */
+describe("a price never takes a flight number's place", () => {
+  it("drops a currency amount before numbers are paired with routes", async () => {
+    const text = [
+      "CHF 120 inkl. Flughafensteuer",
+      "Flug: LH 400",
+      "Von: Frankfurt (FRA)",
+      "Nach: New York (JFK)",
+      "Von: New York (JFK)",
+      "Nach: Frankfurt (FRA)",
+    ].join("\n");
+    const flights = await getRegexParser().parseEmail("", text);
+    // One real number on two routes is a guess, so the document is declined
+    // — never CHF120 FRA→JFK beside LH400 on the return route.
+    expect(flights.map((f) => f.flightNumber)).not.toContain("CHF120");
+    expect(flights).toEqual([]);
+  });
+
+  it("keeps the real numbers of a multi-leg mail that also prints a price", async () => {
+    const text = ["Flug: LH 400", "CHF 120 inkl. Flughafensteuer", "Flug: LH 401"].join("\n");
+    const flights = await getRegexParser().parseEmail("", text);
+    expect(flights.map((f) => f.flightNumber)).toEqual(["LH400", "LH401"]);
+  });
+});

@@ -211,3 +211,29 @@ export function keepOnlyFlightsWithEvidence(
   }
   return kept;
 }
+
+/**
+ * {@link keepOnlyFlightsWithEvidence} for a reader that pairs by POSITION: a
+ * multi-leg result stands whole or not at all.
+ *
+ * The generic regex reader hands routes and times to flight numbers by their
+ * order, counted over every leg it found. When this gate then drops one leg,
+ * the survivors' pairing was made with the dropped leg in the count — and a
+ * two-leg trip would come back as a confident one-way flight. Incomplete or
+ * declined is acceptable from that reader; confidently wrong is not (review
+ * finding, 2026-10-01).
+ */
+export function keepAllOrNoneWithEvidence(
+  flights: ParsedBooking[],
+  provider: string,
+  sourceText: string
+): ParsedBooking[] {
+  const kept = keepOnlyFlightsWithEvidence(flights, provider, sourceText);
+  if (flights.length < 2 || kept.length === flights.length) return kept;
+  logger.info({
+    operation: "parser_multi_leg_result_declined",
+    message: "A positionally paired multi-leg result lost a leg to the evidence gate",
+    context: { provider, legs: flights.length, kept: kept.length },
+  });
+  return [];
+}

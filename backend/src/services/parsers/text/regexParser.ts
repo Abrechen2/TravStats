@@ -13,6 +13,7 @@ import {
 } from "./regexAirportExtractor";
 import { extractAllTimePairs, extractLabeledDates } from "./regexDateExtractor";
 import { extractSharedPNR, findPNRInSource } from "./regexPnrExtractor";
+import { isCredibleFlightNumber } from "../shared/evidence";
 
 type RouteShape = "absent" | "complete" | "broken";
 
@@ -234,10 +235,19 @@ export class RegexTextParser implements ITextParser {
       const matches = Array.from(source.matchAll(pattern));
       for (const match of matches) {
         const potential = (match[1] + (match[2] || "")).replace(/\s+/g, "");
-        if (/^[A-Z]{2,3}\d{2,4}$/.test(potential)) {
-          if (!FLIGHT_NUMBER_FALSE_PREFIXES.includes(potential.slice(0, 2))) {
-            flightNumbers.push({ number: potential, index: match.index || 0 });
-          }
+        // Credibility is asked HERE, before pairing, and by the factory's own
+        // rule. Asked only afterwards (by the evidence gate in `email.ts`), a
+        // price such as "CHF 120 inkl. Flughafensteuer" — the lookahead finds
+        // "Flug" in "Flughafensteuer" — had already taken a positional slot:
+        // the first route went to CHF120, the real number got the next one.
+        // An airline the catalogue does not know is dropped too; a multi-leg
+        // document of such numbers is then read as route-only legs, or not.
+        if (
+          /^[A-Z]{2,3}\d{2,4}$/.test(potential) &&
+          !FLIGHT_NUMBER_FALSE_PREFIXES.includes(potential.slice(0, 2)) &&
+          isCredibleFlightNumber(potential)
+        ) {
+          flightNumbers.push({ number: potential, index: match.index || 0 });
         }
       }
     }
