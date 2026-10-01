@@ -248,3 +248,86 @@ registry.registerPath({
   tags: pairingTag,
   responses: { 200: { description: "Unpaired" }, 404: notFound },
 });
+
+// --------------------------------------------------------- device push
+
+const devicesTag = ["Devices"];
+
+const devicePushInput = registry.register(
+  "DevicePushInput",
+  z.object({
+    platform: z.enum(["ios", "android"]),
+    token: z.string().describe("The raw APNs or FCM device token"),
+    apnsEnvironment: z.enum(["production", "sandbox"]).optional(),
+    publicKey: z.string().describe("X25519 public key, base64url, 32 bytes (travstats-push v1)"),
+    flightChanges: z.boolean().optional(),
+    reminders: z.boolean().optional(),
+    locale: z.enum(["de", "en"]).optional(),
+  })
+);
+
+const devicePushState = registry.register(
+  "DevicePushState",
+  z.object({
+    platform: z.enum(["ios", "android"]),
+    flightChanges: z.boolean(),
+    reminders: z.boolean(),
+    locale: z.enum(["de", "en"]),
+    serverPushEnabled: z.boolean().describe("Whether this server's admin has switched push on"),
+  })
+);
+
+registry.registerPath({
+  method: "put",
+  path: "/devices/me/push",
+  summary: "Register this paired phone for push notifications",
+  description:
+    "API token only (a browser session gets 400). Stores the device token and the " +
+    "X25519 public key the server seals each notification with; neither is ever returned.",
+  tags: devicesTag,
+  security: [{ BearerAuth: [] }],
+  request: { body: { content: { "application/json": { schema: devicePushInput } } } },
+  responses: {
+    200: {
+      description: "Registered",
+      content: {
+        "application/json": {
+          schema: z.object({ registered: z.literal(true), serverPushEnabled: z.boolean() }),
+        },
+      },
+    },
+    400: badInput,
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/devices/me/push",
+  summary: "This phone's push switches",
+  tags: devicesTag,
+  security: [{ BearerAuth: [] }],
+  responses: {
+    200: {
+      description: "Registered",
+      content: { "application/json": { schema: devicePushState } },
+    },
+    400: badInput,
+    404: {
+      description: "Not registered",
+      content: {
+        "application/json": {
+          schema: z.object({ error: z.literal("not_registered"), serverPushEnabled: z.boolean() }),
+        },
+      },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "delete",
+  path: "/devices/me/push",
+  summary: "Stop push notifications to this phone",
+  tags: devicesTag,
+  security: [{ BearerAuth: [] }],
+  responses: { 204: deleted, 400: badInput },
+});
