@@ -3,7 +3,15 @@
  * Keep in sync manually — both source files are small and stable.
  */
 
-export const DOMAIN_KEYS = ["flight", "cruise", "lodging", "poi", "roadtrip", "rail"] as const;
+export const DOMAIN_KEYS = [
+  "flight",
+  "cruise",
+  "lodging",
+  "poi",
+  "roadtrip",
+  "rail",
+  "rental",
+] as const;
 export type DomainKey = (typeof DOMAIN_KEYS)[number];
 
 export interface DomainDescriptor {
@@ -82,6 +90,19 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     color: "#a597e8",
     routePrefix: "/rail",
   },
+  // Car rentals (spec 2026-10-01-rental-domain-design). Behind the
+  // `rentalDomain` beta gate in the UI. The colour is PROVISIONAL (owner,
+  // 2026-10-01): the domain colour table belongs to the Companion / Claude
+  // Design, who have not chosen yet — the spec's candidate dusty rose stands
+  // in until they do (`domainColor.rental` in design/tokens.json).
+  rental: {
+    key: "rental",
+    available: true,
+    i18nKey: "domain.rental",
+    icon: "🚗",
+    color: "#d98cb3",
+    routePrefix: "/rentals",
+  },
 };
 
 /**
@@ -139,5 +160,6 @@ export const LOYALTY_DOMAINS = [
   "cruise",
   "lodging",
   "rail",
+  "rental",
 ] as const satisfies readonly DomainKey[];
 export type LoyaltyDomain = (typeof LOYALTY_DOMAINS)[number];

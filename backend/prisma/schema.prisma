@@ -101,6 +101,7 @@ model User {
   bookings               Booking[]
   cruises                Cruise[]
   railJourneys           RailJourney[]
+  rentalBookings         RentalBooking[]
   apiTokens              ApiToken[]
   pairingCodes           PairingCode[]
   lodgings               Lodging[]
@@ -290,7 +291,9 @@ model Airport {
 
   /// Manually added via the admin master-data page (#191). Same invariant as
   /// Ship/Port/Airline/Aircraft: the CSV re-seed never overwrites these rows.
-  isUserAdded Boolean @default(false) @map("is_user_added")
+  isUserAdded   Boolean         @default(false) @map("is_user_added")
+  rentalPickups RentalBooking[] @relation("RentalPickupAirport")
+  rentalReturns RentalBooking[] @relation("RentalReturnAirport")
 
   // Composite uniqueness on (code, isClosed) lets the same IATA or ICAO
   // exist twice — once for the active airport and once for its closed
@@ -915,21 +918,21 @@ model AdminSettings {
 
   /// OpenAI — fixed endpoint (`services/llm/llmProvider.ts` `OPENAI_BASE_URL`),
   /// so only a key and a model are asked for; no base-URL field.
-  llmOpenaiApiKey String?  @map("llm_openai_api_key")
-  llmOpenaiModel  String?  @map("llm_openai_model")
-  llmOpenaiOptIn  Boolean  @default(false) @map("llm_openai_opt_in")
+  llmOpenaiApiKey String? @map("llm_openai_api_key")
+  llmOpenaiModel  String? @map("llm_openai_model")
+  llmOpenaiOptIn  Boolean @default(false) @map("llm_openai_opt_in")
 
   /// Anthropic — native Messages API (`services/llm/llmProvider.ts`
   /// `ANTHROPIC_BASE_URL`, `generateWithAnthropic`), fixed endpoint.
-  llmAnthropicApiKey String?  @map("llm_anthropic_api_key")
-  llmAnthropicModel  String?  @map("llm_anthropic_model")
-  llmAnthropicOptIn  Boolean  @default(false) @map("llm_anthropic_opt_in")
+  llmAnthropicApiKey String? @map("llm_anthropic_api_key")
+  llmAnthropicModel  String? @map("llm_anthropic_model")
+  llmAnthropicOptIn  Boolean @default(false) @map("llm_anthropic_opt_in")
 
   /// Google — Gemini's own OpenAI-compatible endpoint (`GOOGLE_BASE_URL`),
   /// fixed, reusing the same request path as OpenAI/custom.
-  llmGoogleApiKey String?  @map("llm_google_api_key")
-  llmGoogleModel  String?  @map("llm_google_model")
-  llmGoogleOptIn  Boolean  @default(false) @map("llm_google_opt_in")
+  llmGoogleApiKey String? @map("llm_google_api_key")
+  llmGoogleModel  String? @map("llm_google_model")
+  llmGoogleOptIn  Boolean @default(false) @map("llm_google_opt_in")
 
   // Backup schedule configuration (overrides AUTO_BACKUP_ENABLED / BACKUP_INTERVAL env vars)
   backupEnabled       Boolean   @default(false) @map("backup_enabled")
@@ -1534,6 +1537,7 @@ model Trip {
   bookings       Booking[]
   cruises        Cruise[]
   railJourneys   RailJourney[]
+  rentalBookings RentalBooking[]
   stops          TripStop[]
   routes         TripRoute[]
   journalEntries TripJournalEntry[]
@@ -1786,6 +1790,8 @@ model TripRoute {
   stops      TripStop[]
   legs       TripRouteLeg[]
   tracks     TripRouteTrack[]
+  /// Rental cars this roadtrip was driven in (rental spec §7.2).
+  rentals    RentalBooking[]
 
   @@index([userId])
   @@index([userId, kind])
@@ -2971,12 +2977,13 @@ model ImportBatch {
   fileName  String?  @map("file_name")
   createdAt DateTime @default(now()) @map("created_at")
 
-  user     User          @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user     User            @relation(fields: [userId], references: [id], onDelete: Cascade)
   lodgings Lodging[]
   stays    LodgingStay[]
   flights  Flight[]
   cruises  Cruise[]
   rail     RailJourney[]
+  rentals  RentalBooking[]
   places   Place[]
 
   @@index([userId])
@@ -3018,11 +3025,12 @@ model Companion {
   createdAt     DateTime @default(now()) @map("created_at")
   updatedAt     DateTime @updatedAt @map("updated_at")
 
-  user    User                   @relation(fields: [userId], references: [id], onDelete: Cascade)
+  user    User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
   flights FlightCompanion[]
   trips   TripCompanion[]
   cruises CruiseCompanion[]
   rail    RailJourneyCompanion[]
+  rentals RentalBookingCompanion[]
 
   @@unique([userId, canonicalName])
   @@index([userId, searchName])
@@ -3258,12 +3266,13 @@ model Document {
   parsedDomain  String?   @map("parsed_domain")
   parsedPayload Json?     @map("parsed_payload")
 
-  flightId      String? @map("flight_id")
-  cruiseId      String? @map("cruise_id")
-  lodgingStayId String? @map("lodging_stay_id")
-  tripId        String? @map("trip_id")
-  placeVisitId  String? @map("place_visit_id")
-  railJourneyId String? @map("rail_journey_id")
+  flightId        String? @map("flight_id")
+  cruiseId        String? @map("cruise_id")
+  lodgingStayId   String? @map("lodging_stay_id")
+  tripId          String? @map("trip_id")
+  placeVisitId    String? @map("place_visit_id")
+  railJourneyId   String? @map("rail_journey_id")
+  rentalBookingId String? @map("rental_booking_id")
 
   createdAt  DateTime  @default(now()) @map("created_at")
   /// When it was filed with an entry; null while unlinked.
@@ -3280,13 +3289,14 @@ model Document {
   /// owed it from the moment the document became unfiled.
   unlinkedAt DateTime? @map("unlinked_at")
 
-  user        User         @relation(fields: [userId], references: [id], onDelete: Cascade)
-  flight      Flight?      @relation(fields: [flightId], references: [id], onDelete: Cascade)
-  cruise      Cruise?      @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
-  lodgingStay LodgingStay? @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
-  trip        Trip?        @relation(fields: [tripId], references: [id], onDelete: Cascade)
-  placeVisit  PlaceVisit?  @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
-  railJourney RailJourney? @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
+  user          User           @relation(fields: [userId], references: [id], onDelete: Cascade)
+  flight        Flight?        @relation(fields: [flightId], references: [id], onDelete: Cascade)
+  cruise        Cruise?        @relation(fields: [cruiseId], references: [id], onDelete: Cascade)
+  lodgingStay   LodgingStay?   @relation(fields: [lodgingStayId], references: [id], onDelete: Cascade)
+  trip          Trip?          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  placeVisit    PlaceVisit?    @relation(fields: [placeVisitId], references: [id], onDelete: Cascade)
+  railJourney   RailJourney?   @relation(fields: [railJourneyId], references: [id], onDelete: Cascade)
+  rentalBooking RentalBooking? @relation(fields: [rentalBookingId], references: [id], onDelete: Cascade)
 
   @@index([userId, sha256])
   @@index([flightId])
@@ -3295,6 +3305,7 @@ model Document {
   @@index([tripId])
   @@index([placeVisitId])
   @@index([railJourneyId])
+  @@index([rentalBookingId])
   @@index([userId, linkedAt])
   /// The sweep asks exactly this: unfiled rows past their stamp.
   @@index([unlinkedAt])
@@ -3472,6 +3483,168 @@ model RailJourneyCompanion {
   @@id([railJourneyId, companionId])
   @@index([companionId])
   @@map("rail_journey_companions")
+}
+
+/// A car rental — one row per rental contract (spec
+/// docs/superpowers/specs/2026-10-01-rental-domain-design.md §3.1). A rental is
+/// a contract, not a route: it has no geometry of its own; a roadtrip may name
+/// it as the car it was driven in (`routeId`).
+model RentalBooking {
+  id     String @id @default(uuid())
+  userId String @map("user_id")
+
+  /// The company whose counter hands over the keys ("Sixt", "Alamo").
+  provider           String
+  /// Set only when the counter belongs to someone else than `provider`.
+  operatedBy         String? @map("operated_by")
+  /// OTA, broker or tour operator the booking went through.
+  broker             String?
+  /// The provider's number — the identity a later mail is matched by.
+  confirmationNumber String? @map("confirmation_number")
+  brokerReference    String? @map("broker_reference")
+  /// Known only from a rental agreement; a second match key, never a create key.
+  agreementNumber    String? @map("agreement_number")
+  /// Known only from the final invoice; a third match key, never a create key.
+  invoiceNumber      String? @map("invoice_number")
+
+  pickupStationName String  @map("pickup_station_name")
+  pickupAddress     String? @map("pickup_address")
+  /// The airport the station sits at, when it is one. The name/position
+  /// columns stay the record either way.
+  pickupAirportId   Int?    @map("pickup_airport_id")
+  /// Required: a station without a position has no zone, no country, no map point.
+  pickupLat         Float   @map("pickup_lat")
+  pickupLon         Float   @map("pickup_lon")
+  /// ISO 3166-1 alpha-2 from the airport or the geocoder; null when unknown, never guessed.
+  pickupCountry     String? @map("pickup_country")
+  /// IANA zone, derived by the server (airport catalogue first, coordinates second).
+  pickupTimezone    String  @map("pickup_timezone")
+  returnStationName String  @map("return_station_name")
+  returnAddress     String? @map("return_address")
+  returnAirportId   Int?    @map("return_airport_id")
+  returnLat         Float   @map("return_lat")
+  returnLon         Float   @map("return_lon")
+  returnCountry     String? @map("return_country")
+  returnTimezone    String  @map("return_timezone")
+
+  /// Real UTC instants; the client sends the station's wall clock (ADR 0002).
+  pickupTime      DateTime @map("pickup_time")
+  returnTime      DateTime @map("return_time")
+  /// minute | day | unknown (ADR 0002).
+  pickupPrecision String   @default("minute") @map("pickup_precision")
+  returnPrecision String   @default("minute") @map("return_precision")
+
+  /// What happened at the counter, from an agreement/invoice or typed; null = nobody recorded it.
+  actualPickupTime DateTime? @map("actual_pickup_time")
+  actualReturnTime DateTime? @map("actual_return_time")
+
+  /// The class as printed ("Compact", "Gruppe C").
+  vehicleClass   String? @map("vehicle_class")
+  /// Four-letter ACRISS code; transmission and A/C are derived on read, not stored.
+  acrissCode     String? @map("acriss_code")
+  /// "<model> or similar" — what was promised.
+  vehicleExample String? @map("vehicle_example")
+  /// The car actually driven — from the invoice, else an agreement, else typed.
+  vehicleDriven  String? @map("vehicle_driven")
+
+  /// From the final invoice (out also from an agreement). Null = unknown, never 0.
+  odometerOutKm  Int?    @map("odometer_out_km")
+  odometerInKm   Int?    @map("odometer_in_km")
+  /// Driven km: the invoice's figure, else in − out, else null — never estimated.
+  distanceKm     Int?    @map("distance_km")
+  /// invoice | agreement | user (a labelled correction) | null.
+  distanceSource String? @map("distance_source")
+
+  /// What the invoice says was charged. Null until an invoice arrives.
+  finalAmount         Float?    @map("final_amount")
+  finalCurrency       String?   @map("final_currency")
+  finalAmountBase     Float?    @map("final_amount_base")
+  finalFxRate         Float?    @map("final_fx_rate")
+  finalFxRateDate     DateTime? @map("final_fx_rate_date")
+  finalFxBaseCurrency String?   @map("final_fx_base_currency")
+  finalFxSource       String?   @map("final_fx_source")
+  /// invoice | user (a labelled correction) | null — the row says which it shows.
+  finalAmountSource   String?   @map("final_amount_source")
+
+  /// unlimited | capped | null; the cap beside it.
+  mileagePolicy String? @map("mileage_policy")
+  mileageCapKm  Int?    @map("mileage_cap_km")
+  /// full_to_full | prepaid_tank | full_to_empty | null.
+  fuelPolicy    String? @map("fuel_policy")
+  /// prepaid | pay_at_counter | package | null. A null price with `package` is normal.
+  paymentTiming String? @map("payment_timing")
+
+  /// The booked price. Null = unknown (a tour-operator package prints 0.00 for a price that exists).
+  price          Float?
+  currency       String?
+  /// FX snapshot (#267), same contract as `RailJourney`, dated by the pickup.
+  priceBase      Float?    @map("price_base")
+  fxRate         Float?    @map("fx_rate")
+  fxRateDate     DateTime? @map("fx_rate_date")
+  fxBaseCurrency String?   @map("fx_base_currency")
+  fxSource       String?   @map("fx_source")
+
+  /// Normalised codes of what was included or bought (cdw, tp, …) — not their prices.
+  inclusions          String[] @default([])
+  /// "Arriving Airline" as printed; drives a flight-link suggestion.
+  arrivalFlightNumber String?  @map("arrival_flight_number")
+
+  /// scheduled | in_progress | completed | cancelled — a cache of
+  /// `deriveRentalStatus`; only `cancelled` is set by a client.
+  status     String   @default("scheduled")
+  notes      String?
+  tags       String[] @default([])
+  companions String[] @default([])
+
+  /// Fields the user typed or edited by hand. A later mail of the same booking
+  /// never replaces one of these (silent-failure class 4).
+  userEditedFields String[] @default([]) @map("user_edited_fields")
+
+  tripId  String? @map("trip_id")
+  /// The roadtrip (`TripRoute`, kind roadtrip) this car was driven on.
+  routeId String? @map("route_id")
+
+  /// The parser writes `rental:<provider>:<confirmationNumber>`.
+  externalRef   String? @map("external_ref")
+  importBatchId String? @map("import_batch_id")
+
+  createdAt DateTime @default(now()) @map("created_at")
+  updatedAt DateTime @updatedAt @map("updated_at")
+
+  user           User                     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip           Trip?                    @relation(fields: [tripId], references: [id], onDelete: SetNull)
+  route          TripRoute?               @relation(fields: [routeId], references: [id], onDelete: SetNull)
+  importBatch    ImportBatch?             @relation(fields: [importBatchId], references: [id], onDelete: SetNull)
+  pickupAirport  Airport?                 @relation("RentalPickupAirport", fields: [pickupAirportId], references: [id], onDelete: SetNull)
+  returnAirport  Airport?                 @relation("RentalReturnAirport", fields: [returnAirportId], references: [id], onDelete: SetNull)
+  companionLinks RentalBookingCompanion[]
+  documents      Document[]
+
+  @@unique([userId, externalRef])
+  @@index([userId, pickupTime])
+  @@index([userId, confirmationNumber])
+  @@index([status])
+  @@index([tripId])
+  @@index([routeId])
+  @@index([importBatchId])
+  @@index([pickupAirportId])
+  @@index([returnAirportId])
+  @@map("rental_bookings")
+}
+
+/// Companions on a rental (additional drivers among them), dual-written with
+/// `RentalBooking.companions` like rail.
+model RentalBookingCompanion {
+  rentalBookingId String @map("rental_booking_id")
+  companionId     String @map("companion_id")
+  position        Int
+
+  rentalBooking RentalBooking @relation(fields: [rentalBookingId], references: [id], onDelete: Cascade)
+  companion     Companion     @relation(fields: [companionId], references: [id], onDelete: Cascade)
+
+  @@id([rentalBookingId, companionId])
+  @@index([companionId])
+  @@map("rental_booking_companions")
 }
 
 /// ADR 0002 phase 3: every legacy value the time-model backfill converted or

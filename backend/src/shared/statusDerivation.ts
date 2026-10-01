@@ -144,6 +144,30 @@ export function deriveRailStatus(input: {
   return "in_progress";
 }
 
+/** Rentals share rail's vocabulary; only a cancellation survives derivation. */
+export const RENTAL_PASSTHROUGH = ["cancelled"] as const;
+
+/**
+ * Car rentals (spec 2026-10-01-rental-domain-design): scheduled until the
+ * pickup, in_progress while the car is out, completed once it is returned —
+ * rail's rule over the two booked instants. The booked return, not an actual
+ * one: an actual return is known only from an invoice, and a rental with no
+ * invoice is still over once its booked return has passed.
+ */
+export function deriveRentalStatus(input: {
+  pickupTime: Date;
+  returnTime: Date;
+  current: string;
+  now?: Date;
+}): string {
+  return deriveRailStatus({
+    departureTime: input.pickupTime,
+    arrivalTime: input.returnTime,
+    current: input.current,
+    now: input.now,
+  });
+}
+
 /**
  * Extract a trip's date bounds from its linked flights + cruises — the
  * earliest segment start and the latest segment end. Shared by the sweep

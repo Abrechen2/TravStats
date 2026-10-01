@@ -523,6 +523,17 @@ async function loadRail(userId: string): Promise<CrossDomainPopulation> {
   return { events, countryRows };
 }
 
+/**
+ * Rentals add nothing to the cross-domain figures (rental spec §11 D3 a, owner
+ * 2026-10-01): days travelling come from the trip, countries from the trip's
+ * own entries, and rental days are a rental statistic only. An empty
+ * population, not an omitted key, so a domain filter that names rental is
+ * answered rather than refused.
+ */
+async function loadRental(_userId: string): Promise<CrossDomainPopulation> {
+  return { events: [], countryRows: [] };
+}
+
 const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulation>> = {
   flight: loadFlights,
   cruise: loadCruises,
@@ -530,6 +541,7 @@ const LOADERS: Record<DomainKey, (userId: string) => Promise<CrossDomainPopulati
   poi: loadPlaces,
   roadtrip: loadRoadtrips,
   rail: loadRail,
+  rental: loadRental,
 };
 
 /** Loads only the domains asked for — a chip that is off is never queried. */

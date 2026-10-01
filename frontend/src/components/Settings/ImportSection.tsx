@@ -64,8 +64,10 @@ export default function ImportSection(): JSX.Element {
 
   const [logOpen, setLogOpen] = useState(false);
 
+  // Rental has no import tile of its own: its mails go through the parse
+  // dialog like every booking mail (rental spec §4).
   const groups = AVAILABLE_DOMAINS.filter((key) =>
-    key === "poi" ? placesVisible : isEnabled(key)
+    key === "rental" ? false : key === "poi" ? placesVisible : isEnabled(key)
   );
 
   return (

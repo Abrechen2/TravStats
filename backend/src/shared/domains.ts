@@ -3,7 +3,15 @@
  * See: docs/superpowers/specs/2026-04-19-multi-domain-foundation-design.md
  */
 
-export const DOMAIN_KEYS = ["flight", "cruise", "lodging", "poi", "roadtrip", "rail"] as const;
+export const DOMAIN_KEYS = [
+  "flight",
+  "cruise",
+  "lodging",
+  "poi",
+  "roadtrip",
+  "rail",
+  "rental",
+] as const;
 export type DomainKey = (typeof DOMAIN_KEYS)[number];
 
 export interface DomainDescriptor {
@@ -85,6 +93,20 @@ export const DOMAINS: Record<DomainKey, DomainDescriptor> = {
     color: "#a597e8",
     routePrefix: "/rail",
   },
+  // Car rentals (spec 2026-10-01-rental-domain-design). Available, so shared
+  // code iterating AVAILABLE_DOMAINS sees it; the UI hides it behind the
+  // `rentalDomain` beta gate. The colour is PROVISIONAL (owner, 2026-10-01):
+  // the domain colour table belongs to the Companion / Claude Design, who have
+  // not chosen yet — the spec's candidate dusty rose stands in until they do
+  // (`domainColor.rental` in design/tokens.json says the same).
+  rental: {
+    key: "rental",
+    available: true,
+    i18nKey: "domain.rental",
+    icon: "🚗",
+    color: "#d98cb3",
+    routePrefix: "/rentals",
+  },
 };
 
 /**
@@ -137,7 +159,7 @@ export function getDomainDescriptor(key: DomainKey): DomainDescriptor {
  * programmes such as BahnBonus (forgejo#132 item 23). The vocabulary of
  * `LoyaltyMembership.domain`; the database holds it too, with a CHECK
  * constraint (migrations `20260925230000_loyalty_memberships` and
- * `20260926210438_loyalty_rail_domain`), so a domain added here needs that
+ * `20260926210438_loyalty_rail_domain`, `…_rental_bookings`), so a domain added here needs that
  * constraint widened in the same change.
  */
 export const LOYALTY_DOMAINS = [
@@ -145,5 +167,6 @@ export const LOYALTY_DOMAINS = [
   "cruise",
   "lodging",
   "rail",
+  "rental",
 ] as const satisfies readonly DomainKey[];
 export type LoyaltyDomain = (typeof LOYALTY_DOMAINS)[number];

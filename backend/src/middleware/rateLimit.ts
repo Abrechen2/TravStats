@@ -321,6 +321,26 @@ export const railCreationLimiter = rateLimit({
   keyGenerator: userOrIpKey,
 });
 
+/** Rental creation: rail's budget, its own bucket and message (rail's reasons). */
+export const rentalCreationLimiter = rateLimit({
+  windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
+  max: patAwareMax(RATE_LIMITS.FLIGHT_CREATION_MAX),
+  message: "Too many rentals saved, please try again later",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
+/** The rental station typeahead reads the airport catalogue and the user's own rows — rail's typeahead budget. */
+export const rentalStationSearchLimiter = rateLimit({
+  windowMs: 60 * 1000,
+  max: patAwareMax(120),
+  message: "Too many station searches in a short time — please slow down",
+  standardHeaders: true,
+  legacyHeaders: false,
+  keyGenerator: userOrIpKey,
+});
+
 /**
  * The rail station typeahead reads the local catalogue only, so it is looser
  * than the geocoder proxies (30/min): a debounced field still sends a request

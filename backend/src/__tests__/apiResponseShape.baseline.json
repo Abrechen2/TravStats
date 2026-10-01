@@ -147,6 +147,8 @@
     "rail/roadtripConversion.ts",
     "rail/stations.ts",
     "rail/stats.ts",
+    "rental.ts",
+    "rental/stations.ts",
     "settings/profilePicture.ts",
     "ships.ts",
     "tripPhotoWindows.ts",

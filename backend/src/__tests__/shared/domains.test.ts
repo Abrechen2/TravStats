@@ -13,7 +13,15 @@ import {
 
 describe("domain registry", () => {
   it("exposes all domain keys", () => {
-    expect(DOMAIN_KEYS).toEqual(["flight", "cruise", "lodging", "poi", "roadtrip", "rail"]);
+    expect(DOMAIN_KEYS).toEqual([
+      "flight",
+      "cruise",
+      "lodging",
+      "poi",
+      "roadtrip",
+      "rail",
+      "rental",
+    ]);
   });
 
   it("only lists available domains in AVAILABLE_DOMAINS", () => {
@@ -23,7 +31,15 @@ describe("domain registry", () => {
     // exists to catch a descriptor and the derived list disagreeing, not to
     // count domains. Mirrors frontend/src/__tests__/shared/domains.test.ts.
     expect(AVAILABLE_DOMAINS).toEqual(DOMAIN_KEYS.filter((k) => DOMAINS[k].available));
-    expect(AVAILABLE_DOMAINS).toEqual(["flight", "cruise", "lodging", "poi", "roadtrip", "rail"]);
+    expect(AVAILABLE_DOMAINS).toEqual([
+      "flight",
+      "cruise",
+      "lodging",
+      "poi",
+      "roadtrip",
+      "rail",
+      "rental",
+    ]);
   });
 
   it("every descriptor has required fields", () => {
@@ -67,6 +83,7 @@ describe("domain colours agree with design/tokens.json", () => {
     poi: "poi",
     roadtrip: "roadtrip",
     rail: "rail",
+    rental: "rental",
   };
 
   it.each(DOMAIN_KEYS)("%s", (key) => {

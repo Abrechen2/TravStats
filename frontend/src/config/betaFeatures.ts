@@ -117,6 +117,17 @@ export const BETA_FEATURES = Object.freeze({
    * switched on); nav, logbook tabs, colour settings and the route ask the
    * flag AND the user's own domain choice.
    */
+  /**
+   * Car rentals (spec 2026-10-01-rental-domain-design). Two conditions, as
+   * rail: this flag AND the user's own domain choice (`useRentalVisible`).
+   */
+  rentalDomain: Object.freeze({
+    why: "Car rentals are a new domain (spec 2026-10-01-rental-domain-design), built in packages; the Companion app does not handle rentals yet and no release candidate has carried them.",
+    returnsWhen:
+      "The owner explicitly takes rental out of beta. Packages being done is not that event.",
+    reason: "beta",
+  }),
+
   railDomain: Object.freeze({
     why: "The rail domain is complete as phase 2 of its spec describes it — logbook, station catalogue, train lookup with Transitous lines, detail page with documents and connections, trip bounds and timeline, dashboard tab and map layer, statistics, Excel and JSON export, demo seed; since it merged main the spreadsheet also reads rides back, and a roadtrip stored by rail can be taken over as rides. The owner ruled on 2026-09-25 that it stays in beta after phase 2: the Companion app does not handle it yet, and it has not been through a release candidate.",
     returnsWhen:

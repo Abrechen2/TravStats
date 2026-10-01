@@ -4,6 +4,7 @@ import { useAuthStore } from "../../store/authStore";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { useRailVisible } from "../../hooks/useRailVisible";
+import { useRentalVisible } from "../../hooks/useRentalVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import type { IconName } from "../ui/Icon";
 
@@ -87,13 +88,20 @@ export function useNavItems(): {
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
   const railVisible = useRailVisible();
+  const rentalVisible = useRentalVisible();
   const isAdmin = user?.isAdmin ?? false;
 
   return useMemo(() => {
     // `poi` asks through `usePlacesVisible`, the one home of the places rule.
-    // `rail` asks `useRailVisible`: the beta gate AND the domain choice.
+    // `rail` and `rental` ask their own hooks: the beta gate AND the domain choice.
     const domainChildren: NavLeaf[] = AVAILABLE_DOMAINS.filter((key) =>
-      key === "poi" ? placesVisible : key === "rail" ? railVisible : isEnabled(key)
+      key === "poi"
+        ? placesVisible
+        : key === "rail"
+          ? railVisible
+          : key === "rental"
+            ? rentalVisible
+            : isEnabled(key)
     ).map((key) => ({
       kind: "leaf",
       id: `domain-${key}`,
@@ -195,5 +203,5 @@ export function useNavItems(): {
     ];
 
     return { primary, more };
-  }, [t, isEnabled, placesVisible, railVisible, isAdmin]);
+  }, [t, isEnabled, placesVisible, railVisible, rentalVisible, isAdmin]);
 }

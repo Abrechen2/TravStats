@@ -43,6 +43,10 @@ const COVERAGE_FIELDS: Record<LoyaltyDomain, ReadonlyArray<keyof CardFields>> = 
   cruise: ["cruiseLines"],
   lodging: ["chainIds", "lodgingIds"],
   rail: ["railOperators"],
+  // A rental card (two senders print provider loyalty numbers) is stored and
+  // shown, but covers no rentals by itself yet: the spec names no coverage
+  // field for it, so it claims none rather than guessing one.
+  rental: [],
 };
 const ALL_COVERAGE: ReadonlyArray<keyof CardFields> = [
   "airlineCodes",

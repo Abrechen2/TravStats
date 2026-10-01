@@ -57,7 +57,10 @@ export function useDomainStats(input: {
   // is not fetched, so it can reach neither a card nor a sum on the overview.
   const railOffered = useRailOffered();
   const enabled = useMemo(
-    () => enabledDomains.filter((d) => d !== "rail" || railOffered),
+    () =>
+      enabledDomains.filter(
+        (d): d is StatsDomain => d !== "rental" && (d !== "rail" || railOffered)
+      ),
     [enabledDomains, railOffered]
   );
   const [stats, setStats] = useState<DomainStatsMap>({});

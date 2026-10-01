@@ -148,6 +148,7 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
   cruises: number;
   lodging: number;
   rail: number;
+  rentals: number;
   trips: number;
 }> {
   const arrivalCutoff = new Date(now.getTime() - FLIGHT_ARRIVAL_SLACK_HOURS * H);
@@ -227,6 +228,24 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
     data: { status: "scheduled" },
   });
 
+  // Rentals: rail's split over the booked pickup and return (`deriveRentalStatus`).
+  const rentalToInProgress = await prisma.rentalBooking.updateMany({
+    where: {
+      status: { in: ["scheduled", "completed"] },
+      pickupTime: { lte: now },
+      returnTime: { gt: now },
+    },
+    data: { status: "in_progress" },
+  });
+  const rentalToCompleted = await prisma.rentalBooking.updateMany({
+    where: { status: { in: ["scheduled", "in_progress"] }, returnTime: { lte: now } },
+    data: { status: "completed" },
+  });
+  const rentalToScheduled = await prisma.rentalBooking.updateMany({
+    where: { status: { in: ["in_progress", "completed"] }, pickupTime: { gt: now } },
+    data: { status: "scheduled" },
+  });
+
   // Trips: recompute from segment date bounds, update diffs only. A trip's
   // days begin in its owner's profile zone (ADR 0002 D4, `tripStatusBounds`).
   const zoneOfUser = await profileZonesByUser();
@@ -271,11 +290,12 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
 
   const flights = staleFlights.count + futureFlown.count;
   const rail = railToInProgress.count + railToCompleted.count + railToScheduled.count;
-  if (flights + cruises + lodging + rail + tripFlips > 0) {
+  const rentals = rentalToInProgress.count + rentalToCompleted.count + rentalToScheduled.count;
+  if (flights + cruises + lodging + rail + rentals + tripFlips > 0) {
     logger.info({
       operation: "status_sweep_done",
-      context: { flights, cruises, lodging, rail, trips: tripFlips },
+      context: { flights, cruises, lodging, rail, rentals, trips: tripFlips },
     });
   }
-  return { flights, cruises, lodging, rail, trips: tripFlips };
+  return { flights, cruises, lodging, rail, rentals, trips: tripFlips };
 }

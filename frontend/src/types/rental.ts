@@ -1,0 +1,154 @@
+import type { TimeValue } from "../shared/time";
+
+/**
+ * Car rentals — spec docs/superpowers/specs/2026-10-01-rental-domain-design.md.
+ * Mirrors the `RentalBooking` schema of `GET /api/v1/rentals` (OpenAPI).
+ */
+
+export type RentalStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
+export type RentalPaymentTiming = "prepaid" | "pay_at_counter" | "package";
+export type RentalMileagePolicy = "unlimited" | "capped";
+export type RentalFuelPolicy = "full_to_full" | "prepaid_tank" | "full_to_empty";
+export type RentalDistanceSource = "invoice" | "agreement" | "user";
+
+export const RENTAL_INCLUSIONS = [
+  "cdw",
+  "tp",
+  "scdw",
+  "pai",
+  "slp",
+  "ep",
+  "roadside",
+  "gps",
+  "child_seat",
+  "additional_driver",
+  "one_way_fee",
+] as const;
+export type RentalInclusion = (typeof RENTAL_INCLUSIONS)[number];
+
+/** Booked and actual times, each on its station's clock (ADR 0002 D3). */
+export interface RentalTimes {
+  pickup: TimeValue | null;
+  return: TimeValue | null;
+  actualPickup: TimeValue | null;
+  actualReturn: TimeValue | null;
+}
+
+export interface RentalBooking {
+  id: string;
+  provider: string;
+  operatedBy: string | null;
+  broker: string | null;
+  confirmationNumber: string | null;
+  brokerReference: string | null;
+  agreementNumber: string | null;
+  invoiceNumber: string | null;
+  pickupStationName: string;
+  pickupAddress: string | null;
+  pickupAirportId: number | null;
+  pickupIata: string | null;
+  pickupLat: number;
+  pickupLon: number;
+  pickupCountry: string | null;
+  pickupTimezone: string;
+  returnStationName: string;
+  returnAddress: string | null;
+  returnAirportId: number | null;
+  returnIata: string | null;
+  returnLat: number;
+  returnLon: number;
+  returnCountry: string | null;
+  returnTimezone: string;
+  pickupPrecision: string;
+  returnPrecision: string;
+  vehicleClass: string | null;
+  acrissCode: string | null;
+  vehicleTraits: { transmission: "manual" | "automatic"; airConditioning: boolean } | null;
+  vehicleExample: string | null;
+  vehicleDriven: string | null;
+  odometerOutKm: number | null;
+  odometerInKm: number | null;
+  /** Driven km — from the invoice or a labelled correction; null = unknown. */
+  distanceKm: number | null;
+  distanceSource: RentalDistanceSource | null;
+  finalAmount: number | null;
+  finalCurrency: string | null;
+  finalAmountSource: "invoice" | "user" | null;
+  mileagePolicy: RentalMileagePolicy | null;
+  mileageCapKm: number | null;
+  fuelPolicy: RentalFuelPolicy | null;
+  paymentTiming: RentalPaymentTiming | null;
+  price: number | null;
+  currency: string | null;
+  inclusions: RentalInclusion[];
+  arrivalFlightNumber: string | null;
+  status: RentalStatus;
+  notes: string | null;
+  tags: string[];
+  companions: string[];
+  userEditedFields: string[];
+  tripId: string | null;
+  routeId: string | null;
+  externalRef: string | null;
+  oneWay: boolean;
+  rentalDays: number;
+  cost: { amount: number; currency: string; source: "final" | "booked" } | null;
+  trip?: { id: string; name: string; color: string } | null;
+  route?: { id: string; name: string | null } | null;
+  times: RentalTimes;
+  createdAt: string;
+  updatedAt: string;
+}
+
+/** A station as the write body names it — the server places it (§3.2). */
+export interface RentalStationInput {
+  airportId?: number | null;
+  iata?: string | null;
+  name: string;
+  address?: string | null;
+  lat?: number | null;
+  lon?: number | null;
+  country?: string | null;
+}
+
+export interface RentalInput {
+  provider: string;
+  operatedBy?: string | null;
+  broker?: string | null;
+  confirmationNumber?: string | null;
+  brokerReference?: string | null;
+  pickupStation: RentalStationInput;
+  returnStation?: RentalStationInput | null;
+  pickupLocal: string;
+  returnLocal: string;
+  pickupFold?: "earlier" | "later" | null;
+  returnFold?: "earlier" | "later" | null;
+  vehicleClass?: string | null;
+  acrissCode?: string | null;
+  vehicleExample?: string | null;
+  vehicleDriven?: string | null;
+  distanceKm?: number | null;
+  paymentTiming?: RentalPaymentTiming | null;
+  price?: number | null;
+  currency?: string | null;
+  inclusions?: RentalInclusion[];
+  arrivalFlightNumber?: string | null;
+  status?: "scheduled" | "cancelled";
+  notes?: string | null;
+  tripId?: string | null;
+  routeId?: string | null;
+}
+
+/** One hit of `GET /rentals/stations`. */
+export interface RentalStationHit {
+  kind: "airport" | "earlier";
+  airportId: number | null;
+  iata: string | null;
+  name: string;
+  address: string | null;
+  city: string | null;
+  lat: number;
+  lon: number;
+  country: string | null;
+  timezone: string | null;
+}

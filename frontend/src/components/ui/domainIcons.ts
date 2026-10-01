@@ -13,4 +13,5 @@ export const DOMAIN_ICON: Record<DomainKey, IconName> = {
   poi: "map-pin",
   roadtrip: "caravan",
   rail: "train-front",
+  rental: "car",
 };

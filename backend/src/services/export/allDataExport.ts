@@ -74,6 +74,10 @@ export const USER_EXPORT_SELECT = {
   // Rail (spec 2026-09-25-rail-domain): the rides with their companion links,
   // frozen line included — it cannot be fetched again for a past day.
   railJourneys: { include: { companionLinks: true } },
+  // Car rentals (spec 2026-10-01-rental-domain-design): the contracts with
+  // their companion links — km and final amount included, which only an
+  // invoice could supply again.
+  rentalBookings: { include: { companionLinks: true } },
   companions: true,
   // Kept originals (forgejo#116): the rows — what each is, where it is filed,
   // what its parse read. The bytes stay out, as a photo's do.

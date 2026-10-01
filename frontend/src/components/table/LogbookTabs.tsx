@@ -4,6 +4,7 @@ import { useTranslation } from "../../hooks/useTranslation";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../hooks/usePlacesVisible";
 import { useRailVisible } from "../../hooks/useRailVisible";
+import { useRentalVisible } from "../../hooks/useRentalVisible";
 import { AVAILABLE_DOMAINS, DOMAINS } from "../../shared/domains";
 import { Icon } from "../ui/Icon";
 import { DOMAIN_ICON } from "../ui/domainIcons";
@@ -23,10 +24,17 @@ export default function LogbookTabs(): JSX.Element | null {
   const { isEnabled } = useEnabledDomains();
   const placesVisible = usePlacesVisible();
   const railVisible = useRailVisible();
+  const rentalVisible = useRentalVisible();
   const { pathname } = useLocation();
 
   const areas = AVAILABLE_DOMAINS.filter((key) =>
-    key === "poi" ? placesVisible : key === "rail" ? railVisible : isEnabled(key)
+    key === "poi"
+      ? placesVisible
+      : key === "rail"
+        ? railVisible
+        : key === "rental"
+          ? rentalVisible
+          : isEnabled(key)
   );
   if (areas.length < 2) return null;
 

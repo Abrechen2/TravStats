@@ -210,4 +210,39 @@ describe("sweepStatuses", () => {
     expect(await statusOf(cancelled.id)).toBe("cancelled");
     expect(counts.rail).toBeGreaterThanOrEqual(4);
   });
+  it("converges rentals over the booked pickup and return and leaves a cancellation alone", async () => {
+    const station = {
+      provider: "Testcar",
+      pickupStationName: "A",
+      pickupLat: 50,
+      pickupLon: 8,
+      pickupTimezone: "Europe/Berlin",
+      returnStationName: "A",
+      returnLat: 50,
+      returnLon: 8,
+      returnTimezone: "Europe/Berlin",
+    };
+    const rental = (over: Record<string, unknown>) =>
+      prisma.rentalBooking.create({
+        data: { userId, ...station, pickupTime: past(48), returnTime: past(1), ...over },
+      });
+    const returned = await rental({ status: "scheduled" });
+    const out = await rental({ status: "scheduled", returnTime: future(24) });
+    const later = await rental({
+      status: "completed",
+      pickupTime: future(24),
+      returnTime: future(48),
+    });
+    const cancelled = await rental({ status: "cancelled" });
+
+    const counts = await sweepStatuses();
+
+    const statusOf = async (id: string) =>
+      (await prisma.rentalBooking.findUnique({ where: { id } }))?.status;
+    expect(await statusOf(returned.id)).toBe("completed");
+    expect(await statusOf(out.id)).toBe("in_progress");
+    expect(await statusOf(later.id)).toBe("scheduled");
+    expect(await statusOf(cancelled.id)).toBe("cancelled");
+    expect(counts.rentals).toBeGreaterThanOrEqual(3);
+  });
 });

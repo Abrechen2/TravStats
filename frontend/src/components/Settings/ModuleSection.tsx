@@ -6,6 +6,7 @@ import { useSettingsStore } from "../../store/settingsStore";
 import { useTranslation } from "../../hooks/useTranslation";
 import { useDomainColors } from "../../hooks/useDomainColors";
 import { useRailOffered } from "../../hooks/useRailVisible";
+import { useRentalOffered } from "../../hooks/useRentalVisible";
 import { Switch } from "../ui/Field";
 import { SettingRows } from "../ui/SettingRow";
 
@@ -27,9 +28,13 @@ export default function ModuleSection(): JSX.Element {
   const { isFeatureVisible } = useBetaFeatures();
   const railOffered = useRailOffered();
   const enabledRail = enabledDomains.includes("rail");
+  // Rental: the same rule on its own gate (hooks/useRentalVisible.ts).
+  const rentalOffered = useRentalOffered();
+  const enabledRental = enabledDomains.includes("rental");
   const visibleKeys = DOMAIN_KEYS.filter((key) => {
     if (key === "roadtrip") return isFeatureVisible("roadtrips");
     if (key === "rail") return railOffered || enabledRail;
+    if (key === "rental") return rentalOffered || enabledRental;
     return true;
   });
 

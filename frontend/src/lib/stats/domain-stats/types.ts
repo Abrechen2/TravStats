@@ -7,7 +7,10 @@ import type { DomainKey } from "../../../shared/domains";
  * a future domain that arrives before its figures can be excluded here again,
  * which is how rail sat out its first phase.
  */
-export type StatsDomain = DomainKey;
+export type StatsDomain = Exclude<DomainKey, "rental">;
+// Rental sits out the cross-domain overview on purpose, not for want of
+// figures: rental days count in the rental statistics only (rental spec §11
+// D3 a, owner 2026-10-01) — days travelling come from the trip.
 
 /**
  * One headline figure on a per-domain card.

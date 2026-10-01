@@ -59,6 +59,14 @@ export type ApiErrorCode =
   /** A rail arrival instant before its departure — usually a night train
    *  whose arrival kept the departure's date. `field` is `arrivalLocal`. */
   | "RAIL_ARRIVAL_BEFORE_DEPARTURE"
+  // Car rentals (spec 2026-10-01-rental-domain-design).
+  | "RENTAL_INVALID_INPUT"
+  | "RENTAL_INVALID_QUERY"
+  | "RENTAL_NOT_FOUND"
+  | "RENTAL_ROADTRIP_NOT_FOUND"
+  | "RENTAL_RETURN_BEFORE_PICKUP"
+  | "RENTAL_STATION_UNRESOLVED"
+  | "RENTAL_GEOCODER_UNAVAILABLE"
   /** A parse needed the configured LLM and could not reach it — "try later",
    *  not "broken". */
   | "LLM_UNREACHABLE"
