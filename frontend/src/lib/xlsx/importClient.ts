@@ -23,6 +23,7 @@ import {
 import type { SheetSpec } from "./sheetSpec";
 import { roadtripSheet, roadtripStationSheet, tourPointSheet, tourSheet } from "./roadtripSheets";
 import { railSheet } from "./railSheet";
+import { roadtripExpenseSheet } from "./roadtripExpenseSheet";
 
 type T = (key: string) => string;
 
@@ -94,6 +95,7 @@ export function importableSpecs(t: T, options: { rail?: boolean } = {}): SheetSp
     // and the order the server applies them in.
     roadtripSheet(t),
     roadtripStationSheet(t),
+    roadtripExpenseSheet(t),
     tourSheet(t),
     tourPointSheet(t),
     ...(options.rail ? [railSheet(t)] : []),
