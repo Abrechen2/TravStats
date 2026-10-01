@@ -42,6 +42,7 @@
     "flights/facets.ts",
     "flights/list.ts",
     "flights/listOrder.ts",
+    "flights/next.ts",
     "flights/queryFilters.ts",
     "flights/timeInput.ts",
     "flightsBatch.ts",
