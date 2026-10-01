@@ -46,7 +46,7 @@ import { formatTimelineDate } from "../lib/tripTimeline";
 import { TripRailList } from "../components/rail/RailTripCard";
 import { useRailVisible } from "../hooks/useRailVisible";
 import { useRentalVisible } from "../hooks/useRentalVisible";
-import { TransitCard } from "../components/Trips/timelineTransit";
+import { RentalBand, TransitCard, useRentalBands } from "../components/Trips/timelineTransit";
 import { listPlaces } from "../lib/api/places";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
 import type { Place, PlaceVisit } from "../types/place";
@@ -408,10 +408,8 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
   // IDs once from this trip's flight arrivals and cruise ports; the timeline
   // entry shows a soft hint. Hotel-only trips have no legs and never warn.
   const implausibleStayIds = useMemo(() => {
-    // Flight arrivals are the signal here; the trip's cruise shape does not
-    // carry port coordinates, so a cruise-only trip has no legs and never
-    // warns — safe, and it still catches the common "hotel far from where you
-    // flew" case.
+    // Flight arrivals: the trip's cruise shape carries no port coordinates, so
+    // a cruise-only trip has no legs and never warns.
     const legs = (trip?.flights ?? []).map((f) => ({ lat: f.arrLat, lon: f.arrLon }));
     const flagged = new Set<string>();
     for (const s of trip?.lodgingStays ?? []) {
@@ -424,6 +422,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
     return flagged;
   }, [trip]);
 
+  const rentalBands = useRentalBands(events);
   // Past/upcoming is shown on the rail (line + dots), not by graying out
   // entries — see #184. Recomputed per render; a page-lifetime "now" is fine.
   const railStates = useMemo(() => {
@@ -537,6 +536,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
                 />
                 {ev.kind === "flight" && <FlightCard ev={ev} language={language} t={t} />}
                 {ev.kind === "cruise" && <CruiseCard ev={ev} language={language} t={t} />}
+                <RentalBand segments={rentalBands[i]} />
                 <TransitCard ev={ev} />
                 {(ev.kind === "lodging-checkin" || ev.kind === "lodging-checkout") && (
                   <LodgingCheckCard
@@ -989,7 +989,7 @@ function LogisticsTab({
 
   const railJourneys = trip.railJourneys ?? [];
   if (!flights.length && !cruises.length && !bookings.length && !railJourneys.length) {
-    return <Placeholder text={t("trips:detail.noLinks")} />;
+    return <Placeholder text={t("trips:detail.noLogistics")} />;
   }
 
   return (

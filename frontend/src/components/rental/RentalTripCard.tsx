@@ -14,30 +14,41 @@ interface Props {
 
 /**
  * A rental on a trip's timeline (spec 2026-10-01-rental-domain-design §6;
- * concept page: "a rental lasts like a stay"). Its two ends sit on their days
- * — pickup and return, each on its station's clock — and the card carries the
- * domain's band at its edge with the span between them, so the rental reads
- * as one stretch across those days rather than two loose moments.
+ * owner, 2026-10-01: one continuous band, not two entries). The pickup is the
+ * rental's one card — provider, station, how many rental days follow — and
+ * the band (`RentalBand` in `components/Trips/timelineTransit.tsx`) runs from
+ * it past everything in between. The return is where the band ends: a single
+ * line with its station and time on that station's clock, not a second card.
  */
 export function RentalTripCard({ rental, end, when }: Props): JSX.Element {
   const { t } = useTranslation(["rental"]);
-  const station = end === "pickup" ? rental.pickupStationName : rental.returnStationName;
+  if (end === "return") {
+    return (
+      <div className="t-caption py-1" data-testid="rental-trip-card-return">
+        {formatTimelineDate(when)} ·{" "}
+        <Link to={`/rentals/${rental.id}`} className="hover:underline">
+          {t("rental:timeline.return", {
+            provider: rental.provider,
+            station: rental.returnStationName,
+          })}
+        </Link>
+      </div>
+    );
+  }
   return (
     <div
       className="rounded-md border px-3 py-2"
       style={{ borderColor: "var(--ts-border)", borderLeft: "6px solid var(--ts-domain-rental)" }}
-      data-testid={`rental-trip-card-${end}`}
+      data-testid="rental-trip-card-pickup"
     >
       <div className="t-caption">{formatTimelineDate(when)}</div>
       <Link to={`/rentals/${rental.id}`} className="font-semibold hover:underline">
-        {t(end === "pickup" ? "rental:timeline.pickup" : "rental:timeline.return", {
+        {t("rental:timeline.pickup", {
           provider: rental.provider,
-          station,
+          station: rental.pickupStationName,
         })}
       </Link>
-      {end === "pickup" ? (
-        <div className="t-caption">{t("rental:timeline.span", { count: rentalDays(rental) })}</div>
-      ) : null}
+      <div className="t-caption">{t("rental:timeline.span", { count: rentalDays(rental) })}</div>
     </div>
   );
 }
