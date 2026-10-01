@@ -283,8 +283,12 @@ export class RegexTextParser implements ITextParser {
           flightData.arrivalCode = arrival && isValidIATACode(arrival) ? arrival : undefined;
         }
 
-        // Try to find time for this flight
-        if (timePairs.length > i) {
+        // Times follow the same one-to-one rule as routes. "At least as many
+        // pairs as numbers" let one extra pair above the itinerary — a
+        // document's creation stamp — shift every leg: the first flight took
+        // the stamp, the second the first flight's time. Undated legs are
+        // completed by the lookup; a wrong date is not.
+        if (timePairs.length === uniqueFlights.length) {
           flightData.departureTime = timePairs[i].departure;
           flightData.arrivalTime = timePairs[i].arrival;
         }
@@ -323,7 +327,8 @@ export class RegexTextParser implements ITextParser {
             flightData.airline = flightData.flightNumber.slice(0, 2);
           }
 
-          if (timePairs.length > i) {
+          // One time pair per route, or none at all — as for numbers above.
+          if (timePairs.length === airportPairs.length) {
             flightData.departureTime = timePairs[i].departure;
             flightData.arrivalTime = timePairs[i].arrival;
           }
@@ -473,31 +478,17 @@ export class RegexTextParser implements ITextParser {
     if (labeled.departureTime) data.departureTime = labeled.departureTime;
     if (labeled.arrivalTime) data.arrivalTime = labeled.arrivalTime;
 
+    // Positional fallback only when the document offers exactly ONE time
+    // pair. This used to take "the first two ISO timestamps" (then the first
+    // German pair, and the second pair's departure as an arrival), so a
+    // creation stamp printed above the itinerary became the departure. With
+    // several pairs and one flight, which pair is the flight's is a guess —
+    // the same one-to-one rule the multi-leg path applies.
     if (!data.departureTime || !data.arrivalTime) {
-      // ISO format — TZ offset/Z suffix consumed but not captured (local time kept)
-      const isoTimeMatches = Array.from(
-        source.matchAll(
-          /(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)(?:[+-]\d{2}:?\d{2}|Z)?(?=[^\d]|$)/g
-        )
-      );
-      if (!data.departureTime && isoTimeMatches.length >= 1)
-        data.departureTime = isoTimeMatches[0][1].replace(" ", "T");
-      if (!data.arrivalTime && isoTimeMatches.length >= 2)
-        data.arrivalTime = isoTimeMatches[1][1].replace(" ", "T");
-    }
-
-    // German/English date format — delegates to the shared extractor, which
-    // validates month names, applies the plausible-year window, supports
-    // two-digit years, and associates column-layout times (time line above
-    // the date line). The previous inline copy defaulted unknown months to
-    // '01' and required four-digit years — both bugs the extractor fixes.
-    if (!data.departureTime || !data.arrivalTime) {
-      const germanPairs = extractAllTimePairs(source);
-      if (germanPairs.length > 0) {
-        if (!data.departureTime) data.departureTime = germanPairs[0].departure;
-        if (!data.arrivalTime) {
-          data.arrivalTime = germanPairs[0].arrival ?? germanPairs[1]?.departure;
-        }
+      const pairs = extractAllTimePairs(source);
+      if (pairs.length === 1) {
+        data.departureTime ??= pairs[0].departure;
+        data.arrivalTime ??= pairs[0].arrival;
       }
     }
 

@@ -223,3 +223,45 @@ describe("the generic flight reader earns its result", () => {
     ).toBe("route_only_legs_in_multi_leg_document");
   });
 });
+
+/**
+ * Review finding, 2026-10-01: times were handed to flight numbers by position
+ * whenever there were at least as many time pairs as numbers. One extra pair
+ * above the itinerary — a document's own creation stamp — shifted every leg:
+ * the first flight took the stamp, the second took the first flight's time.
+ * A wrong date is worse than none (the lookup fills a missing one), so times
+ * follow the same one-to-one rule as routes.
+ */
+describe("times pair with flight numbers only one to one", () => {
+  const CREATED = "Erstellt 2026-09-01T10:00 2026-09-01T10:05";
+  const LEGS = [
+    "Flight LH400 2026-10-05T10:00 2026-10-05T13:00",
+    "Flight LH401 2026-10-12T18:00 2026-10-13T08:00",
+  ];
+  const timesOf = (flights: Awaited<ReturnType<ReturnType<typeof getRegexParser>["parseEmail"]>>) =>
+    flights.map((f) => [f.flightNumber, f.departureTime ?? null, f.arrivalTime ?? null]);
+
+  it("leaves every leg undated when there are more time pairs than flights", async () => {
+    const flights = await getRegexParser().parseEmail("", [CREATED, ...LEGS].join("\n"));
+    expect(timesOf(flights)).toEqual([
+      ["LH400", null, null],
+      ["LH401", null, null],
+    ]);
+  });
+
+  it("still dates each leg when there is exactly one time pair per flight", async () => {
+    const flights = await getRegexParser().parseEmail("", LEGS.join("\n"));
+    expect(timesOf(flights)).toEqual([
+      ["LH400", "2026-10-05T10:00", "2026-10-05T13:00"],
+      ["LH401", "2026-10-12T18:00", "2026-10-13T08:00"],
+    ]);
+  });
+
+  it("does not date a single flight from a stamp printed above it", async () => {
+    // The single-flight path read "the first two ISO timestamps" and so made
+    // the creation stamp the departure. With two candidate pairs and one
+    // flight, which pair is the flight's is a guess.
+    const flights = await getRegexParser().parseEmail("", [CREATED, LEGS[0]].join("\n"));
+    expect(timesOf(flights)).toEqual([["LH400", null, null]]);
+  });
+});
