@@ -295,4 +295,29 @@ describe("a price never takes a flight number's place", () => {
     const flights = await getRegexParser().parseEmail("", text);
     expect(flights.map((f) => f.flightNumber)).toEqual(["LH400", "LH401"]);
   });
+
+  it("keeps a real flight of an airline the catalogue does not know", async () => {
+    // Owner, 2026-10-01: a real flight must never be lost because the airline
+    // catalogue lacks a new or small carrier. "ZZ" is in no catalogue. Asking
+    // the catalogue before pairing dropped both numbers, which left two
+    // route-only legs — and those decline a multi-leg document. Only what is
+    // certainly no flight number (a currency) may be dropped before pairing.
+    const text = [
+      "Flug: ZZ 123",
+      "Von: Frankfurt (FRA)",
+      "Nach: New York (JFK)",
+      "Abflug: 05.10.2027 10:00",
+      "Ankunft: 05.10.2027 13:00",
+      "Flug: ZZ 124",
+      "Von: New York (JFK)",
+      "Nach: Frankfurt (FRA)",
+      "Abflug: 12.10.2027 18:00",
+      "Ankunft: 13.10.2027 08:00",
+    ].join("\n");
+    const flights = await getRegexParser().parseEmail("Ihre Buchung", text);
+    expect(flights.map((f) => [f.flightNumber, f.departureCode, f.arrivalCode])).toEqual([
+      ["ZZ123", "FRA", "JFK"],
+      ["ZZ124", "JFK", "FRA"],
+    ]);
+  });
 });

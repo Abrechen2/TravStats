@@ -69,10 +69,25 @@ function isSameAirportRoute(booking: Partial<ParsedBooking>): boolean {
  */
 export function isCredibleFlightNumber(flightNumber: string | undefined): boolean {
   if (!flightNumber) return false;
-  const prefix = /^[A-Z]+/.exec(flightNumber.toUpperCase())?.[0] ?? "";
+  const prefix = flightNumberPrefix(flightNumber);
   if (prefix.length < 2 || prefix.length > 3) return false;
   if (isCurrencyCode(prefix)) return false;
   return resolveAirlineCodes(prefix) !== null;
+}
+
+/**
+ * The half of {@link isCredibleFlightNumber} that is certain: a currency is
+ * never an airline, so "CHF120" is a price. Whether the catalogue KNOWS the
+ * airline is not certain — a new or small carrier is missing from it — and
+ * a reader that pairs numbers with routes must not drop a real number for
+ * that (owner, 2026-10-01): a route beside it is evidence on its own.
+ */
+export function isPriceNotFlightNumber(flightNumber: string): boolean {
+  return isCurrencyCode(flightNumberPrefix(flightNumber));
+}
+
+function flightNumberPrefix(flightNumber: string): string {
+  return /^[A-Z]+/.exec(flightNumber.toUpperCase())?.[0] ?? "";
 }
 
 /** A printed clock time: `07:35`, `7:35`, `23:59`. The colon is the point. */
