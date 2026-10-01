@@ -15,7 +15,6 @@
   "GET /flight-lookup/{flightNumber}",
   "GET /flights/enrichment-candidates",
   "GET /flights/geo",
-  "GET /flights/next",
   "GET /flights/refresh-historical-bulk/preview",
   "GET /flights/{id}/route-estimation",
   "GET /import-batches",
