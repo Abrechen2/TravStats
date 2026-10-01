@@ -30,6 +30,7 @@ export type SchedulerJob =
   | "photoJourneyScan"
   | "placeAddressBackfill"
   | "statusSweep"
+  | "syncRetention"
   | "stayFxBackfill"
   | "usageStats"
   | "reminders"

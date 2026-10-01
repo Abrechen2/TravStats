@@ -25,6 +25,12 @@ export interface ApiError extends Error {
  * `error` field rather than in `code`.
  */
 export type ApiErrorCode =
+  /** An edit or delete named a base version (If-Match / baseVersion) the
+   *  record has moved past — forgejo#141, `services/sync/versionPrecondition.ts`.
+   *  The 409 carries the current record and the changed fields. */
+  | "VERSION_CONFLICT"
+  /** `GET /sync/changes` cannot continue this cursor (410): start a full read. */
+  | "SYNC_RESYNC_REQUIRED"
   | "INVALID_CREDENTIALS"
   | "ACCOUNT_DEACTIVATED"
   | "RATE_LIMITED"

@@ -113,6 +113,8 @@ import jobRoutes from "./jobs";
 import geoRoutes from "./geo";
 import documentRoutes from "./documents";
 import tripPhotoWindowRoutes from "./tripPhotoWindows";
+import syncRoutes from "./sync";
+import syncPreconditionRoutes from "./syncPreconditions";
 
 export interface ApiMount {
   /** Mount path, always absolute and always under /api/v1. */
@@ -140,6 +142,13 @@ export const apiMounts: ApiMount[] = [
   { id: "auth.passkeys", base: "/api/v1/auth/passkeys", router: passkeyRoutes },
   { id: "auth", base: "/api/v1/auth", router: authRoutes },
   { id: "auth.passwordReset", base: "/api/v1/auth", router: passwordResetRoutes },
+  // Version preconditions (If-Match / baseVersion) on the Companion's edits
+  // and deletes, forgejo#141. BEFORE every router it guards — flights, rail,
+  // cruises, lodging, trips, tours, places; a request without a base version
+  // passes through it untouched.
+  { id: "syncPreconditions", base: "/api/v1", router: syncPreconditionRoutes },
+  // The incremental change feed, forgejo#141. Its only path is `/sync/...`.
+  { id: "sync", base: "/api/v1", router: syncRoutes },
   // Kept originals (forgejo#116). At /api/v1 because the per-entry lists span
   // five prefixes (`/flights/:id/documents`, `/lodging/stays/:id/documents`,
   // ...); mounted BEFORE those routers so none of their `router.use` guards

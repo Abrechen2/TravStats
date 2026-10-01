@@ -14,6 +14,7 @@ import { parseDatabaseUrl } from "./backupDatabase";
 import { AppError } from "../../middleware/errorHandler";
 import { encryptionKeyFingerprint } from "../../utils/encryption";
 import { reconcileInterruptedBackups } from "./reconcileBackups";
+import { resetSyncHistory } from "../sync/state";
 
 /**
  * The columns of `admin_settings` that describe THIS MACHINE rather than the
@@ -64,6 +65,21 @@ export async function readInstanceIdentity(): Promise<InstanceIdentity | null> {
     },
   });
   return row ?? null;
+}
+
+/**
+ * What the instance must put right once psql has replaced the database:
+ * its own identity (forgejo#115), and the sync feed's history — the phones'
+ * cursors describe the database that was just replaced, and continuing them
+ * would patch the archive with changes it never had (forgejo#141). A new
+ * epoch sends every client to a full read. Exported for its test.
+ */
+export async function afterDatabaseRestore(
+  identityBefore: InstanceIdentity | null,
+  backupId: string
+): Promise<void> {
+  await restoreInstanceIdentity(identityBefore);
+  await resetSyncHistory(`restore of backup ${backupId}`);
 }
 
 /**
@@ -529,7 +545,7 @@ export async function restoreBackup(
         );
       }
       logger.info({ operation: "restore_db_complete", message: "Database restored" });
-      await restoreInstanceIdentity(identityBefore);
+      await afterDatabaseRestore(identityBefore, id);
     }
 
     // Restore files if requested. The part is known to be present and
