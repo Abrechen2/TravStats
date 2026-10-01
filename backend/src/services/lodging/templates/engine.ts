@@ -74,6 +74,33 @@ export function parseEnglishDate(raw: string, fallbackYear?: number): string | n
   return null;
 }
 
+/**
+ * "01.10.2026" — day, month, four-digit year. ALL Accor dates this way, and
+ * `germanDate` only knows month NAMES. The round trip refuses a day the
+ * calendar does not have, for the reason `parseGermanDate` gives: "31.04"
+ * otherwise comes back as the first of May, a stay that looks read.
+ */
+export function parseNumericDate(text: string): string | null {
+  const m = /^(\d{1,2})\.(\d{1,2})\.(\d{4})$/.exec(text);
+  if (!m) return null;
+  const [day, month, year] = [Number(m[1]), Number(m[2]), Number(m[3])];
+  const date = new Date(Date.UTC(year, month - 1, day));
+  if (date.getUTCMonth() !== month - 1 || date.getUTCDate() !== day) return null;
+  return iso(year, month, day);
+}
+
+/**
+ * "MUSTERSTADT" → "Musterstadt". Only an all-capitals value is touched: the
+ * sender shouted it, and a city stored in capitals shows in capitals on every
+ * list. A value that already has lower case is the sender's own spelling.
+ */
+function toTitleCase(text: string): string {
+  if (text !== text.toUpperCase()) return text;
+  return text
+    .toLowerCase()
+    .replace(/(^|[\s-])(\p{L})/gu, (_, sep: string, ch: string) => sep + ch.toUpperCase());
+}
+
 function applyTransform(
   value: string,
   transform: TransformName | undefined,
@@ -89,6 +116,10 @@ function applyTransform(
     // helper's two copies drifted.
     case "germanDate":
       return parseGermanDate(text);
+    case "numericDate":
+      return parseNumericDate(text);
+    case "titleCase":
+      return toTitleCase(text.replace(/[,;]$/, "").trim());
     case "money":
       return parseAmount(text);
     case "digits": {

@@ -55,7 +55,6 @@
   "PATCH /places/visits/{visitId}/photos/{photoId}",
   "PATCH /places/{id}",
   "PATCH /trips/bookings/{id}",
-  "PATCH /trips/{id}/photos/{photoId}",
   "POST /airports/enrich",
   "POST /auth/2fa/activate",
   "POST /auth/2fa/disable",

@@ -9,6 +9,7 @@ import type { CountryResolver } from "../geo/countryFromCoordinates";
 import { toCountryCode } from "../../shared/countryEvidence";
 import { stayTimes } from "../lodging/timesDto";
 import { stationTimes } from "./timesDto";
+import { NOT_A_COVER } from "../trips/photoStation";
 
 /**
  * What a roadtrip page and list say about one roadtrip, derived from rows the
@@ -54,6 +55,21 @@ export const STATION_SELECT = {
   lodgingStay: { select: STATION_STAY_SELECT },
   placeId: true,
   place: { select: { id: true, name: true, category: true } },
+} as const;
+
+/**
+ * STATION_SELECT plus what only the station DTO needs: how many trip photos
+ * are filed at each station (forgejo#139), so the station chain can show them
+ * without a call per station. A separate select so the readers that only
+ * count nights or countries do not pay for the count; `toStationDto` takes
+ * `StationDtoRow`, so a DTO built from the narrower select fails `tsc` rather
+ * than shipping a missing count.
+ *
+ * The cover's pseudo-photo row is left out, as every gallery read does.
+ */
+export const STATION_DTO_SELECT = {
+  ...STATION_SELECT,
+  _count: { select: { photos: { where: NOT_A_COVER } } },
 } as const;
 
 /**
@@ -105,6 +121,10 @@ export interface StationRow {
   } | null;
 }
 
+export interface StationDtoRow extends StationRow {
+  _count: { photos: number };
+}
+
 export function nightsOf(stations: readonly StationRow[]): RoadtripNights {
   return countRoadtripNights(
     stations.map((s) => ({
@@ -145,7 +165,7 @@ export function spanOf(stations: readonly StationRow[]): {
   return { startDate: start?.toISOString() ?? null, endDate: end?.toISOString() ?? null };
 }
 
-export function toStationDto(s: StationRow): Record<string, unknown> {
+export function toStationDto(s: StationDtoRow): Record<string, unknown> {
   const stay = s.lodgingStay;
   return {
     id: s.id,
@@ -162,6 +182,10 @@ export function toStationDto(s: StationRow): Record<string, unknown> {
     // The place a pass-through passed (tester 2026-09-26); null elsewhere.
     placeId: s.placeId,
     place: s.place,
+    // Trip photos filed at this station; GET /trips/:tripId/photos?stopId=
+    // lists them. Always 0 on a roadtrip filed on no trip — a trip photo
+    // needs a trip to belong to.
+    photoCount: s._count.photos,
     stay: stay
       ? {
           id: stay.id,

@@ -13,7 +13,7 @@ import {
 } from "../../services/roadtrip/companionStations";
 import { AppError } from "../../middleware/errorHandler";
 import { resolveRoadtrip } from "../../services/roadtrip/resolveRoadtrip";
-import { STATION_SELECT, toStationDto } from "../../services/roadtrip/roadtripSummary";
+import { STATION_DTO_SELECT, toStationDto } from "../../services/roadtrip/roadtripSummary";
 import { foldViaPoints } from "../../shared/tour/viaPoints";
 import logger from "../../utils/logger";
 import { toDto, toLegDto, ROUTE_SELECT } from "../trips/tourRoutes";
@@ -54,7 +54,7 @@ async function stationsAndLegs(routeId: string) {
     prisma.tripStop.findMany({
       where: { routeId },
       orderBy: { routeOrderIdx: "asc" },
-      select: STATION_SELECT,
+      select: STATION_DTO_SELECT,
     }),
     prisma.tripRouteLeg.findMany({
       where: { routeId },

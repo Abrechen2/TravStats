@@ -1,5 +1,5 @@
 import { TextProvider, ParserConfig, ParserResult } from "./types";
-import { keepOnlyFlightsWithEvidence } from "./shared/evidence";
+import { keepAllOrNoneWithEvidence, keepOnlyFlightsWithEvidence } from "./shared/evidence";
 import { backfillRoutesFromText } from "./shared/routeFromText";
 import { preferNamedAirports } from "./shared/namedAirport";
 import { airportsInCityOf } from "../airportLookup";
@@ -366,8 +366,12 @@ export async function parseEmail(
         );
       }
 
+      // The generic regex reader pairs by position, so losing one of its legs
+      // makes the rest suspect; the other providers read each leg on its own.
+      const gate =
+        finalProvider === "regex" ? keepAllOrNoneWithEvidence : keepOnlyFlightsWithEvidence;
       return {
-        flights: keepOnlyFlightsWithEvidence(finalFlights, finalProvider, evidenceSource),
+        flights: gate(finalFlights, finalProvider, evidenceSource),
         provider: finalProvider,
         fallbackUsed: finalFallbackUsed,
       };

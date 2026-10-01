@@ -115,6 +115,8 @@ export type TransformName =
   | "englishDate"
   /** "10. März 2026", with or without the ordinal dot — the Booking.com reader's own. */
   | "germanDate"
+  | "numericDate"
+  | "titleCase"
   /** "1.234,56" / "1,234.56" / "47.87" -> a number. */
   | "money"
   /** A three-letter ISO code or one of the symbols the tables know. */

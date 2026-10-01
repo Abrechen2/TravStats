@@ -294,7 +294,9 @@ function classify(candidate: LodgingImportCandidate, idx: Indexes): RowVerdict {
     const similar = idx.allLodgings.filter((stored) => {
       const storedCity = normalizeCity(stored.city);
       const sameCity = cityKey && storedCity ? cityKey === storedCity : null;
-      return namesCouldBeOneHouse(lodging.name, stored.name, sameCity);
+      return namesCouldBeOneHouse(lodging.name, stored.name, sameCity, {
+        places: [lodging.city, stored.city],
+      });
     });
     if (similar.length === 1) {
       dedupeHint = "lodging_name_similar";

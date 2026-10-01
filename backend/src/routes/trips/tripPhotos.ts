@@ -1,5 +1,4 @@
 import { Router, Response, NextFunction } from "express";
-import { z } from "zod";
 import { prisma } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
@@ -17,6 +16,12 @@ import path from "path";
 import fs from "fs";
 import { resolveTrip } from "./resolveTrip";
 import { toPhotoDto } from "./photoDto";
+import {
+  listTripPhotosQuerySchema,
+  tripPhotoUploadFieldsSchema,
+  updateTripPhotoSchema,
+} from "../../schemas/tripPhoto";
+import { NOT_A_COVER, assertStopOnTrip } from "../../services/trips/photoStation";
 
 /**
  * Trip photos and the cover image — a same-prefix satellite of routes/trips.ts, split out when that
@@ -35,12 +40,6 @@ const router = Router();
 const TRIP_PHOTO_LIST_CAP = 1000;
 
 /* ─────────── Photos (iter 7) ─────────── */
-
-const updatePhotoSchema = z.object({
-  caption: z.string().max(500).nullable().optional(),
-  takenAt: z.string().datetime().nullable().optional(),
-  sortIdx: z.number().int().min(0).max(10000).optional(),
-});
 
 /**
  * POST /trips/:id/photos — upload one or more images.
@@ -66,6 +65,10 @@ router.post(
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
       if (uploaded.length === 0) throw new AppError("No photos uploaded", 400);
+      // Checked BEFORE any row is written; a refusal falls through to the
+      // cleanup below, so the files multer already stored go too.
+      const { stopId } = tripPhotoUploadFieldsSchema.parse(req.body ?? {});
+      if (stopId !== undefined) await assertStopOnTrip(userId, req.params.id, stopId);
 
       const last = await prisma.tripPhoto.findFirst({
         where: { tripId: req.params.id },
@@ -83,6 +86,7 @@ router.post(
               mimetype: f.mimetype,
               sizeBytes: f.size,
               sortIdx: nextIdx++,
+              stopId: stopId ?? null,
             },
           })
         )
@@ -113,6 +117,10 @@ router.post(
 /**
  * GET /trips/:id/photos — the gallery on its own, for a picker that needs the
  * photos and not the whole trip (the journal entry's photo choice).
+ *
+ * `?stopId=` narrows it to one station. A stop that is not on the trip is a
+ * 400, not an empty list: "no photos here" and "you asked about the wrong
+ * stop" must not look alike.
  */
 router.get(
   "/trips/:id/photos",
@@ -120,10 +128,13 @@ router.get(
   async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
     try {
       await resolveTrip(req.userId!, req.params.id);
+      const { stopId } = listTripPhotosQuerySchema.parse(req.query);
+      if (stopId !== undefined) await assertStopOnTrip(req.userId!, req.params.id, stopId);
       const rows = await prisma.tripPhoto.findMany({
         where: {
           tripId: req.params.id,
-          OR: [{ caption: null }, { caption: { not: "__cover__" } }],
+          ...NOT_A_COVER,
+          ...(stopId !== undefined && { stopId }),
         },
         orderBy: [{ sortIdx: "asc" }, { createdAt: "asc" }],
         take: TRIP_PHOTO_LIST_CAP,
@@ -157,7 +168,7 @@ router.get(
   }
 );
 
-/** PATCH /trips/:id/photos/:photoId — update caption / sortIdx / takenAt */
+/** PATCH /trips/:id/photos/:photoId — update caption / sortIdx / takenAt / stopId */
 router.patch(
   "/trips/:id/photos/:photoId",
   authenticate,
@@ -170,7 +181,8 @@ router.patch(
         where: { id: req.params.photoId, tripId: req.params.id },
       });
       if (!existing) throw new AppError("Photo not found", 404);
-      const body = updatePhotoSchema.parse(req.body);
+      const body = updateTripPhotoSchema.parse(req.body);
+      if (body.stopId) await assertStopOnTrip(userId, req.params.id, body.stopId);
       const photo = await prisma.tripPhoto.update({
         where: { id: req.params.photoId },
         data: {
@@ -179,6 +191,7 @@ router.patch(
             takenAt: body.takenAt ? new Date(body.takenAt) : null,
           }),
           ...(body.sortIdx !== undefined && { sortIdx: body.sortIdx }),
+          ...(body.stopId !== undefined && { stopId: body.stopId }),
         },
       });
       res.json({ photo: toPhotoDto(photo) });

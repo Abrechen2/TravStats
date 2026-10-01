@@ -7,6 +7,8 @@ export interface PhotoDto {
   /** Where it was taken, from the import or the upload; null when not stored (forgejo#132 item 11). */
   lat: number | null;
   lon: number | null;
+  /** The stop it is filed at — a roadtrip station or a timeline stop of this trip; null when none (forgejo#139). */
+  stopId: string | null;
   sortIdx: number;
   mimetype: string;
   sizeBytes: number;
@@ -20,6 +22,7 @@ export function toPhotoDto(p: {
   takenAt: Date | null;
   lat: number | null;
   lon: number | null;
+  stopId: string | null;
   sortIdx: number;
   mimetype: string;
   sizeBytes: number;
@@ -32,6 +35,7 @@ export function toPhotoDto(p: {
     takenAt: p.takenAt?.toISOString() ?? null,
     lat: p.lat,
     lon: p.lon,
+    stopId: p.stopId,
     sortIdx: p.sortIdx,
     mimetype: p.mimetype,
     sizeBytes: p.sizeBytes,
