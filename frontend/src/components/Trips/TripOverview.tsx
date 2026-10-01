@@ -4,9 +4,12 @@ import { differenceInCalendarDays } from "date-fns";
 import type { useTranslation } from "../../hooks/useTranslation";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { useRailVisible } from "../../hooks/useRailVisible";
+import { useRentalVisible } from "../../hooks/useRentalVisible";
 import type { Trip } from "../../types";
 import { sumByCurrency, tripCostSources } from "../../lib/bookingCost";
 import { formatDate } from "../../lib/displayFormat";
+import { railDeparture } from "../../lib/entityTimes";
 import { formatCurrency } from "../../lib/units";
 import { statusPillStyle } from "../table/statusPillStyle";
 import { Icon, type IconName } from "../ui/Icon";
@@ -137,6 +140,12 @@ function EntryList({
 const dateOf = (iso: string | null | undefined): string | null =>
   iso ? formatDate(iso, { timeZone: "UTC" }) || null : null;
 
+/** A train ride's day on its departure station's calendar; null when nothing places it. */
+const railDay = (j: Parameters<typeof railDeparture>[0]): string | null => {
+  const local = railDeparture(j)?.local;
+  return local ? formatDate(local.slice(0, 10)) || null : null;
+};
+
 /**
  * The overview tab of a trip, round 4 ("Reise Detail"): three figures, the
  * linked entries per area as rows that open the entry, notes, and beside
@@ -164,6 +173,8 @@ export default function TripOverview({
   const flights = trip.flights ?? [];
   const cruises = cruiseEnabled ? (trip.cruises ?? []) : [];
   const stays = lodgingEnabled ? (trip.lodgingStays ?? []) : [];
+  const railJourneys = useRailVisible() ? (trip.railJourneys ?? []) : [];
+  const rentals = useRentalVisible() ? (trip.rentalBookings ?? []) : [];
 
   const days =
     trip.startDate && trip.endDate
@@ -200,7 +211,16 @@ export default function TripOverview({
   ];
 
   const roadtrips = useTripRoadtrips(trip.id, isEnabled("roadtrip"));
-  const nothingLinked = flights.length + cruises.length + stays.length + roadtrips.length === 0;
+  // Every area the overview lists counts — a trip holding only a train ride
+  // or a rental car said "nothing linked" above an entry it was not showing.
+  const nothingLinked =
+    flights.length +
+      cruises.length +
+      stays.length +
+      roadtrips.length +
+      railJourneys.length +
+      rentals.length ===
+    0;
   // The side column only when it has something to hold: an empty 1fr beside
   // the entries pushed them into two thirds of the page for nothing.
   // Mirrors TripSummaryPanel's own condition: the beta gate went with the
@@ -317,6 +337,57 @@ export default function TripOverview({
                   ]
                     .filter(Boolean)
                     .join(" · ")}
+                />
+              ))}
+            </EntryList>
+          )}
+
+          {railJourneys.length > 0 && (
+            <EntryList
+              title={t("trips:detail.stats.rail")}
+              count={t("trips:detail.railCount", { count: railJourneys.length })}
+            >
+              {railJourneys.map((j) => (
+                <EntryRow
+                  key={j.id}
+                  to={`/rail/${j.id}`}
+                  icon="train-front"
+                  title={[
+                    [j.trainCategory, j.trainNumber].filter(Boolean).join(" "),
+                    `${j.depStationName} → ${j.arrStationName}`,
+                  ]
+                    .filter(Boolean)
+                    .join(" · ")}
+                  sub={railDay(j)}
+                />
+              ))}
+            </EntryList>
+          )}
+
+          {rentals.length > 0 && (
+            <EntryList
+              title={t("trips:detail.stats.rental")}
+              count={t("trips:detail.rentalCount", { count: rentals.length })}
+            >
+              {rentals.map((r) => (
+                <EntryRow
+                  key={r.id}
+                  to={`/rentals/${r.id}`}
+                  icon="car"
+                  title={[
+                    r.provider,
+                    r.returnStationName === r.pickupStationName
+                      ? r.pickupStationName
+                      : `${r.pickupStationName} → ${r.returnStationName}`,
+                  ].join(" · ")}
+                  sub={
+                    [
+                      formatDate(r.pickupTime, { timeZone: r.pickupTimezone }),
+                      formatDate(r.returnTime, { timeZone: r.returnTimezone }),
+                    ]
+                      .filter(Boolean)
+                      .join(" – ") || null
+                  }
                 />
               ))}
             </EntryList>

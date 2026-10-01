@@ -125,7 +125,7 @@
     "companions": "Companions",
     "tags": "Tags",
     "countries": "Countries",
-    "noLinks": "No flights or cruises linked yet.",
+    "noLinks": "Nothing is linked to this trip yet.",
     "hiddenCruises_one": "{{count}} cruise segment hidden — the cruise domain is disabled.",
     "hiddenCruises_other": "{{count}} cruise segments hidden — the cruise domain is disabled.",
     "hiddenLodging_one": "{{count}} hotel stay hidden — the lodging domain is disabled.",
@@ -140,7 +140,9 @@
       "lodging": "Stays",
       "countries": "Countries",
       "companions": "Companions",
-      "tags": "Tags"
+      "tags": "Tags",
+      "rail": "Rail",
+      "rental": "Rental cars"
     },
     "tabs": {
       "overview": "Overview",
@@ -195,7 +197,12 @@
       "openJournal": "Open in full"
     },
     "stopNotFound": "This stop no longer exists on this trip.",
-    "journalEntryNotFound": "This journal entry no longer exists on this trip."
+    "journalEntryNotFound": "This journal entry no longer exists on this trip.",
+    "noLogistics": "This trip's connections and bookings appear here – none is linked yet.",
+    "railCount_one": "{{count}} ride",
+    "railCount_other": "{{count}} rides",
+    "rentalCount_one": "{{count}} rental",
+    "rentalCount_other": "{{count}} rentals"
   },
   "journalModal": {
     "createTitle": "Journal Entry",
