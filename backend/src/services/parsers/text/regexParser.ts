@@ -117,6 +117,17 @@ function datesRunForward(flights: ParsedBooking[]): boolean {
 }
 
 /**
+ * Whether a candidate's digits are the DAY of a dotted date that continues
+ * right after it — "MR 24.11.2031", a passenger's title before the travel
+ * date in an agency's invoice subject. Measured 2026-10-01 on a private
+ * mailbox: six such subjects of one OTA read as flight "MR24" and the like. A
+ * printed flight number is never followed by ".month.year".
+ */
+function isDayOfDottedDate(source: string, matchEnd: number): boolean {
+  return /^\.\d{1,2}\.\d{2,4}\b/.test(source.slice(matchEnd, matchEnd + 12));
+}
+
+/**
  * Regex-based Text Parser
  *
  * Fast, free, local parser using pattern matching for email parsing.
@@ -244,6 +255,7 @@ export class RegexTextParser implements ITextParser {
         // the document was declined — a real flight lost (owner, 2026-10-01).
         if (
           /^[A-Z]{2,3}\d{2,4}$/.test(potential) &&
+          !isDayOfDottedDate(source, (match.index ?? 0) + match[0].length) &&
           !FLIGHT_NUMBER_FALSE_PREFIXES.includes(potential.slice(0, 2)) &&
           !isPriceNotFlightNumber(potential)
         ) {
@@ -431,6 +443,7 @@ export class RegexTextParser implements ITextParser {
         // had never once fired.
         const candidate = (match[1] + (match[2] || "")).replace(/\s+/g, "").toUpperCase();
         if (!/^[A-Z]{2,3}\d{1,4}$/.test(candidate)) continue;
+        if (isDayOfDottedDate(source, (match.index ?? 0) + match[0].length)) continue;
         // The WHOLE alphabetic prefix, not the first two characters: slicing at
         // two let "Nur 7 Tage gültig" through as NUR7 on a prefix of "NU".
         const prefix = /^[A-Z]+/.exec(candidate)?.[0] ?? "";
@@ -457,7 +470,10 @@ export class RegexTextParser implements ITextParser {
     // If no match found, try the original pattern but with stricter validation
     if (!data.flightNumber) {
       const basicMatch = sourceUpper.match(PATTERNS.FLIGHT_NUMBER);
-      if (basicMatch) {
+      if (
+        basicMatch &&
+        !isDayOfDottedDate(sourceUpper, (basicMatch.index ?? 0) + basicMatch[0].length)
+      ) {
         const potential = basicMatch[1].replace(/\s+/g, "");
         // Only accept if it looks like a real flight number (airline code + 2-4 digits)
         if (/^[A-Z]{2,3}\d{2,4}$/.test(potential)) {
