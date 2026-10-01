@@ -12,6 +12,7 @@ import { recomputeLegs } from "../../services/tour/legRecompute";
 import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 import { describeRoutingAvailability } from "../../services/tour/routing/resolveProvider";
 import { resolveTrip } from "../trips";
+import { assertNoStationPhotosLeftBehind } from "../../services/trips/photoStation";
 import logger from "../../utils/logger";
 
 /**
@@ -58,6 +59,8 @@ async function assertKindFields(
         409
       );
     }
+    // Its stations may hold photos of the trip it leaves (forgejo#139).
+    await assertNoStationPhotosLeftBehind(routeId, body.tripId);
   }
   if (!body.anchorStopId) return;
   const [route, anchor] = await Promise.all([

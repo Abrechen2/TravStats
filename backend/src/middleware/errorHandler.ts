@@ -128,6 +128,15 @@ export type ApiErrorCode =
   | "TOUR_POINTS_FROM_TRIP"
   /** A trip's timeline stop was sent as a route correction (via point). */
   | "VIA_POINT_ON_TIMELINE"
+  /** A trip photo was linked to a stop that is not on its trip — neither on
+   *  the trip's timeline nor a station of a roadtrip filed on it (forgejo#139).
+   *  Also answered for a stop that does not exist, so a probe learns nothing
+   *  about another account's stops. `field` is `stopId`. */
+  | "STOP_NOT_ON_TRIP"
+  /** A roadtrip whose stations hold photos of its trip cannot move to another
+   *  trip or off it: the photos stay with the trip, and their station links
+   *  would point across trips (forgejo#139). Move the photos off first. */
+  | "ROADTRIP_HAS_TRIP_PHOTOS"
   /** A roadtrip station with a night was sent as a route correction. */
   | "VIA_POINT_HAS_NIGHT"
   /** Backup / restore job failures — see `services/backup/backupFailure.ts`.
