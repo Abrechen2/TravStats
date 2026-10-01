@@ -29,6 +29,7 @@ datasource db {
 
 model User {
   id                     String                   @id @default(uuid())
+  devicePushes           DevicePush[]
   username               String                   @unique
   passwordHash           String                   @map("password_hash")
   // Real name, shown wherever the person is addressed rather than identified
@@ -196,9 +197,58 @@ model ApiToken {
   platform   String?
   appVersion String? @map("app_version")
 
+  // The paired phone's push registration (Companion, TravStats#156). Its own
+  // row so the token table stays an auth table; a revoked token's push row is
+  // deleted by the revoke paths (revocation is soft, so the cascade below only
+  // covers a hard delete).
+  devicePush DevicePush?
+
   @@index([userId])
   @@index([userId, deviceId])
   @@map("api_tokens")
+}
+
+/// A paired phone's push token and X25519 public key (spec §3.2). The key
+/// encrypts each notification for this phone alone (`travstats-push v1`);
+/// the token addresses it through push.travstats.de at Apple or Google.
+model DevicePush {
+  apiTokenId      String   @id @map("api_token_id")
+  apiToken        ApiToken @relation(fields: [apiTokenId], references: [id], onDelete: Cascade)
+  userId          String   @map("user_id")
+  user            User     @relation(fields: [userId], references: [id], onDelete: Cascade)
+  /// "ios" | "android"
+  platform        String
+  token           String
+  /// "production" | "sandbox" — iOS only, from the build's entitlement.
+  apnsEnvironment String?  @map("apns_environment")
+  /// base64url, 32 bytes
+  publicKey       String   @map("public_key")
+  flightChanges   Boolean  @default(true) @map("flight_changes")
+  reminders       Boolean  @default(true)
+  /// "de" | "en" — the language the server writes this phone's texts in.
+  locale          String   @default("de")
+  createdAt       DateTime @default(now()) @map("created_at")
+  updatedAt       DateTime @updatedAt @map("updated_at")
+
+  deliveries PushDelivery[]
+
+  @@index([userId])
+  @@map("device_push")
+}
+
+/// One notification already sent to one phone. The unique pair is the
+/// dedupe: the 5-minute status job must never send the same change twice.
+model PushDelivery {
+  id         String     @id @default(uuid())
+  apiTokenId String     @map("api_token_id")
+  device     DevicePush @relation(fields: [apiTokenId], references: [apiTokenId], onDelete: Cascade)
+  /// e.g. "flight:<id>:gate:B12" or "reminder:<flightId>:24h"
+  eventKey   String     @map("event_key")
+  sentAt     DateTime   @default(now()) @map("sent_at")
+
+  @@unique([apiTokenId, eventKey])
+  @@index([sentAt])
+  @@map("push_deliveries")
 }
 
 /// One-time pairing codes for the mobile device-pairing flow.
@@ -642,6 +692,7 @@ model UserSettings {
   airlabsApiKey       String? @map("airlabs_api_key")
   aviationstackApiKey String? @map("aviationstack_api_key")
   aerodataboxApiKey   String? @map("aerodatabox_api_key")
+  aeroapiApiKey       String? @map("aeroapi_api_key")
   openskyClientId     String? @map("opensky_client_id")
   openskyClientSecret String? @map("opensky_client_secret")
   openskyUsername     String? @map("opensky_username")
@@ -784,19 +835,32 @@ model AdminSettings {
   globalClaudeApiKey String? @map("global_claude_api_key")
 
   // Global flight lookup API keys (encrypted at application level)
-  globalAirlabsApiKey       String? @map("global_airlabs_api_key")
-  globalAviationstackApiKey String? @map("global_aviationstack_api_key")
-  globalAerodataboxApiKey   String? @map("global_aerodatabox_api_key")
-  globalLogostreamApiKey    String? @map("global_logostream_api_key")
+  globalAirlabsApiKey       String?   @map("global_airlabs_api_key")
+  globalAviationstackApiKey String?   @map("global_aviationstack_api_key")
+  globalAerodataboxApiKey   String?   @map("global_aerodatabox_api_key")
+  globalAeroapiApiKey       String?   @map("global_aeroapi_api_key")
+  /// Push to the Companion app (TravStats#156). OFF until this server's admin
+  /// agrees (owner decision 2026-10-01): with it off the server never
+  /// contacts the relay, not even to register.
+  pushEnabled               Boolean   @default(false) @map("push_enabled")
+  /// When the admin switched push on — the record of the consent.
+  pushConsentAt             DateTime? @map("push_consent_at")
+  pushRelayUrl              String    @default("https://push.travstats.de") @map("push_relay_url")
+  pushInstanceId            String?   @map("push_instance_id")
+  /// encrypted at application level, like the API keys
+  pushInstanceSecret        String?   @map("push_instance_secret")
+  /// Set from the relay's Retry-After on a 429; no push before then.
+  pushPausedUntil           DateTime? @map("push_paused_until")
+  globalLogostreamApiKey    String?   @map("global_logostream_api_key")
   /// Google Places, the ONLY tier that finds a hotel by its business name
   /// where OpenStreetMap has no entry (measured: 27/30 vs 14/30). Off by
   /// default — the keyless chain stays the normal case, exactly like the FX
   /// CDN switch and the airline-logo tiers.
-  globalGooglePlacesApiKey  String? @map("global_google_places_api_key")
-  globalOpenskyClientId     String? @map("global_opensky_client_id")
-  globalOpenskyClientSecret String? @map("global_opensky_client_secret")
-  globalOpenskyUsername     String? @map("global_opensky_username")
-  globalOpenskyPassword     String? @map("global_opensky_password")
+  globalGooglePlacesApiKey  String?   @map("global_google_places_api_key")
+  globalOpenskyClientId     String?   @map("global_opensky_client_id")
+  globalOpenskyClientSecret String?   @map("global_opensky_client_secret")
+  globalOpenskyUsername     String?   @map("global_opensky_username")
+  globalOpenskyPassword     String?   @map("global_opensky_password")
 
   // Global tour routing provider API keys (encrypted at application level,
   // Phase 3) — same per-user > global > ENV chain as the flight lookup keys.
@@ -915,21 +979,21 @@ model AdminSettings {
 
   /// OpenAI — fixed endpoint (`services/llm/llmProvider.ts` `OPENAI_BASE_URL`),
   /// so only a key and a model are asked for; no base-URL field.
-  llmOpenaiApiKey String?  @map("llm_openai_api_key")
-  llmOpenaiModel  String?  @map("llm_openai_model")
-  llmOpenaiOptIn  Boolean  @default(false) @map("llm_openai_opt_in")
+  llmOpenaiApiKey String? @map("llm_openai_api_key")
+  llmOpenaiModel  String? @map("llm_openai_model")
+  llmOpenaiOptIn  Boolean @default(false) @map("llm_openai_opt_in")
 
   /// Anthropic — native Messages API (`services/llm/llmProvider.ts`
   /// `ANTHROPIC_BASE_URL`, `generateWithAnthropic`), fixed endpoint.
-  llmAnthropicApiKey String?  @map("llm_anthropic_api_key")
-  llmAnthropicModel  String?  @map("llm_anthropic_model")
-  llmAnthropicOptIn  Boolean  @default(false) @map("llm_anthropic_opt_in")
+  llmAnthropicApiKey String? @map("llm_anthropic_api_key")
+  llmAnthropicModel  String? @map("llm_anthropic_model")
+  llmAnthropicOptIn  Boolean @default(false) @map("llm_anthropic_opt_in")
 
   /// Google — Gemini's own OpenAI-compatible endpoint (`GOOGLE_BASE_URL`),
   /// fixed, reusing the same request path as OpenAI/custom.
-  llmGoogleApiKey String?  @map("llm_google_api_key")
-  llmGoogleModel  String?  @map("llm_google_model")
-  llmGoogleOptIn  Boolean  @default(false) @map("llm_google_opt_in")
+  llmGoogleApiKey String? @map("llm_google_api_key")
+  llmGoogleModel  String? @map("llm_google_model")
+  llmGoogleOptIn  Boolean @default(false) @map("llm_google_opt_in")
 
   // Backup schedule configuration (overrides AUTO_BACKUP_ENABLED / BACKUP_INTERVAL env vars)
   backupEnabled       Boolean   @default(false) @map("backup_enabled")
