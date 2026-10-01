@@ -6,6 +6,7 @@ import { createRoadtripSchema } from "../../schemas/roadtrip";
 import { travelledKm } from "../../services/tour/tourDistance";
 import { describeRoutingAvailability } from "../../services/tour/routing/resolveProvider";
 import {
+  STATION_DTO_SELECT,
   STATION_SELECT,
   nightsOf,
   spanOf,
@@ -175,7 +176,7 @@ router.get(
         prisma.tripStop.findMany({
           where: { routeId: id },
           orderBy: { routeOrderIdx: "asc" },
-          select: STATION_SELECT,
+          select: STATION_DTO_SELECT,
         }),
         prisma.tripRouteLeg.findMany({
           where: { routeId: id },

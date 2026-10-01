@@ -55,6 +55,17 @@ describe("what counts as evidence of a flight", () => {
   it("rejects an empty candidate", () => {
     expect(hasFlightEvidence(booking({}), CONFIRMATION)).toBe(false);
   });
+
+  it("rejects a leg from an airport to itself, even with a corroborated number", () => {
+    // A wrong read, not a partial one — corpus 2026-09-30, "GF086 WHO→WHO".
+    // Keeping the number would return the invented route with it.
+    expect(
+      hasFlightEvidence(
+        booking({ flightNumber: "LH400", departureCode: "FRA", arrivalCode: "fra" }),
+        CONFIRMATION
+      )
+    ).toBe(false);
+  });
 });
 
 describe("filtering a provider's answer", () => {

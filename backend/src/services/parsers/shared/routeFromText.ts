@@ -67,6 +67,13 @@ export function backfillRoutesFromText<T extends { departureCode?: string; arriv
 
   const codes = parenthesisedCodes(text);
   if (codes.length !== flights.length * 2) return flights;
+  // Two codes that are one code are not a route. Corpus 2026-09-30: a
+  // tour-operator invoice printed "(WHO)" twice, and its one flight became
+  // "WHO→WHO". All-or-nothing like the count check: a pairing that produced
+  // one impossible leg is not trusted for the others either.
+  for (let i = 0; i < codes.length; i += 2) {
+    if (codes[i] === codes[i + 1]) return flights;
+  }
 
   return flights.map((flight, index) => {
     if (flight.departureCode || flight.arrivalCode) return flight;

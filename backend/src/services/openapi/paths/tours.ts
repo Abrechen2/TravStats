@@ -25,7 +25,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { expenseSchema } from "../../../schemas/expense";
-import { errorContent } from "./shared";
+import { errorContent, errorResponse } from "./shared";
 import {
   createRouteSchema,
   createTourSchema,
@@ -294,8 +294,12 @@ const routeUpdateInput = registry.register(
   "TourRouteUpdateInput",
   updateRouteSchema.merge(kindFieldsSchema).openapi("TourRouteUpdateInput", {
     description:
-      "`tripId` moves only a roadtrip between trips (400 for a tour); `anchorStopId` " +
-      "must be a station of one of the caller's roadtrips and is refused on a roadtrip.",
+      "`tripId` moves only a roadtrip between trips (400 for a tour). While its stations " +
+      "hold photos of the trip it leaves the move is 409 `ROADTRIP_HAS_TRIP_PHOTOS` unless " +
+      "`detachStationPhotos: true` is sent with it, which takes those photos off their " +
+      "stations (they stay on their trip) in the same transaction (forgejo#139). " +
+      "`anchorStopId` must be a station of one of the caller's roadtrips and is refused on " +
+      "a roadtrip.",
     example: { name: "Süd-Norwegen (Umweg)", endOdometerKm: 84920 },
   })
 );
@@ -412,10 +416,43 @@ registerSectionPath({
   responses: {
     200: {
       description: "Updated",
-      content: { "application/json": { schema: z.object({ route: tourRoute }) } },
+      content: {
+        "application/json": {
+          schema: z.object({
+            route: tourRoute,
+            detachedStationPhotos: z
+              .number()
+              .int()
+              .describe(
+                "Photos taken off this roadtrip's stations by `detachStationPhotos`; 0 otherwise"
+              ),
+          }),
+        },
+      },
     },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Not found", content: errorContent },
+    409: {
+      description:
+        "The route cannot change trip: built from a trip's timeline stops, or (code " +
+        "ROADTRIP_HAS_TRIP_PHOTOS) its stations hold photos of the trip it would leave — " +
+        "resend with `detachStationPhotos: true` after asking the user",
+      content: {
+        "application/json": {
+          schema: errorResponse.extend({
+            stationPhotos: z
+              .number()
+              .int()
+              .optional()
+              .describe("ROADTRIP_HAS_TRIP_PHOTOS: how many photos are filed at its stations"),
+            optIn: z
+              .literal("detachStationPhotos")
+              .optional()
+              .describe("ROADTRIP_HAS_TRIP_PHOTOS: the field that moves it anyway"),
+          }),
+        },
+      },
+    },
   },
 });
 
@@ -453,39 +490,6 @@ registerSectionPath({
       },
     },
     404: { description: "Trip or section not found", content: errorContent },
-  },
-});
-
-const sectionHasExpenses = z.object({
-  error: z.string(),
-  code: z.literal("SECTION_HAS_EXPENSES"),
-  expenseCount: z.number().int(),
-});
-
-registerSectionPath({
-  method: "delete",
-  path: "/trips/{id}/routes/{routeId}",
-  summary: "Delete a route section",
-  description:
-    "Deletes the section and its legs. Its stops are RELEASED, not deleted — " +
-    "a tour is scaffolding over the timeline; removing the scaffolding must " +
-    "not remove the timeline entries themselves. Its costs (forgejo#140) become " +
-    "the trip's trip-wide costs, station and leg pins cleared. A section with " +
-    "no trip and with costs is refused (409 `SECTION_HAS_EXPENSES`, with " +
-    "`expenseCount`) unless `deleteExpenses=true` is sent.",
-  tags: ["Tours"],
-  request: {
-    params: routeIdParams,
-    // Opt-in for a section with no trip; a section on a trip hands its costs over regardless.
-    query: z.object({ deleteExpenses: z.enum(["true", "false"]).optional() }),
-  },
-  responses: {
-    204: { description: "Deleted" },
-    404: { description: "Not found", content: errorContent },
-    409: {
-      description: "The section belongs to no trip and carries costs; nothing was deleted",
-      content: { "application/json": { schema: sectionHasExpenses } },
-    },
   },
 });
 

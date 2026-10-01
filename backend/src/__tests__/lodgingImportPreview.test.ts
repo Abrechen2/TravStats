@@ -134,6 +134,29 @@ describe("buildLodgingPreviewRows", () => {
     }
   });
 
+  // Found in prod 2026-09-30: an ALL Accor booking for "Novotel Basel City"
+  // was imported as a stay at "Hotel Krafft Basel" because the matcher took
+  // the shared word "basel" — the two houses' shared city, not a shared
+  // identity — as proof they were one house (nameTokens.ts).
+  it("does not propose 'Hotel Krafft Basel' for an incoming 'Novotel Basel City' that shares only the city's name", async () => {
+    const stored = await prisma.lodging.create({
+      data: { userId, name: "Hotel Krafft Basel", city: "Basel" },
+    });
+    try {
+      const { rows } = await buildLodgingPreviewRows(userId, [
+        {
+          sourceRowIndex: 0,
+          lodging: { name: "Novotel Basel City", city: "Basel", lat: null, lon: null },
+          stay: null,
+        },
+      ]);
+      expect(rows[0].matchedLodgingId).not.toBe(stored.id);
+      expect(rows[0].dedupeHint).not.toBe("lodging_name_similar");
+    } finally {
+      await prisma.lodging.delete({ where: { id: stored.id } });
+    }
+  });
+
   it("proposes 'Emirates Palace Mandarin Oriental' for a saved-places row that carries no city at all", async () => {
     const stored = await prisma.lodging.create({
       data: { userId, name: "Emirates Palace Mandarin Oriental", city: "Abu Dhabi" },

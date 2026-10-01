@@ -26,10 +26,25 @@ import type { ParsedBooking } from "../../bookingParser";
  * the provider managed to fill in.
  */
 export function hasFlightEvidence(booking: Partial<ParsedBooking>, sourceText: string): boolean {
+  if (isSameAirportRoute(booking)) return false;
   const hasRoute = Boolean(booking.departureCode && booking.arrivalCode);
   if (hasRoute) return true;
   if (!isCredibleFlightNumber(booking.flightNumber)) return false;
   return hasSecondWitness(booking.flightNumber ?? "", sourceText);
+}
+
+/**
+ * A leg from an airport to itself is a wrong read, not a partial one, and it
+ * is refused outright rather than falling back to the flight number: keeping
+ * the number would return the invented route with it. Corpus 2026-09-30 — two
+ * invoices as "GF086 WHO→WHO", an e-ticket as "MS787 EMD→EMD". Checked here
+ * because this gate sees every provider's answer AFTER the post-processing
+ * that can add a route, which is where the WHO→WHO one came from.
+ */
+function isSameAirportRoute(booking: Partial<ParsedBooking>): boolean {
+  const dep = booking.departureCode?.trim().toUpperCase();
+  const arr = booking.arrivalCode?.trim().toUpperCase();
+  return Boolean(dep && arr && dep === arr);
 }
 
 /**
@@ -54,10 +69,25 @@ export function hasFlightEvidence(booking: Partial<ParsedBooking>, sourceText: s
  */
 export function isCredibleFlightNumber(flightNumber: string | undefined): boolean {
   if (!flightNumber) return false;
-  const prefix = /^[A-Z]+/.exec(flightNumber.toUpperCase())?.[0] ?? "";
+  const prefix = flightNumberPrefix(flightNumber);
   if (prefix.length < 2 || prefix.length > 3) return false;
   if (isCurrencyCode(prefix)) return false;
   return resolveAirlineCodes(prefix) !== null;
+}
+
+/**
+ * The half of {@link isCredibleFlightNumber} that is certain: a currency is
+ * never an airline, so "CHF120" is a price. Whether the catalogue KNOWS the
+ * airline is not certain — a new or small carrier is missing from it — and
+ * a reader that pairs numbers with routes must not drop a real number for
+ * that (owner, 2026-10-01): a route beside it is evidence on its own.
+ */
+export function isPriceNotFlightNumber(flightNumber: string): boolean {
+  return isCurrencyCode(flightNumberPrefix(flightNumber));
+}
+
+function flightNumberPrefix(flightNumber: string): string {
+  return /^[A-Z]+/.exec(flightNumber.toUpperCase())?.[0] ?? "";
 }
 
 /** A printed clock time: `07:35`, `7:35`, `23:59`. The colon is the point. */
@@ -195,4 +225,30 @@ export function keepOnlyFlightsWithEvidence(
     });
   }
   return kept;
+}
+
+/**
+ * {@link keepOnlyFlightsWithEvidence} for a reader that pairs by POSITION: a
+ * multi-leg result stands whole or not at all.
+ *
+ * The generic regex reader hands routes and times to flight numbers by their
+ * order, counted over every leg it found. When this gate then drops one leg,
+ * the survivors' pairing was made with the dropped leg in the count — and a
+ * two-leg trip would come back as a confident one-way flight. Incomplete or
+ * declined is acceptable from that reader; confidently wrong is not (review
+ * finding, 2026-10-01).
+ */
+export function keepAllOrNoneWithEvidence(
+  flights: ParsedBooking[],
+  provider: string,
+  sourceText: string
+): ParsedBooking[] {
+  const kept = keepOnlyFlightsWithEvidence(flights, provider, sourceText);
+  if (flights.length < 2 || kept.length === flights.length) return kept;
+  logger.info({
+    operation: "parser_multi_leg_result_declined",
+    message: "A positionally paired multi-leg result lost a leg to the evidence gate",
+    context: { provider, legs: flights.length, kept: kept.length },
+  });
+  return [];
 }

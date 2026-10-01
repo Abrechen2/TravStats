@@ -84,6 +84,8 @@ async function roadtrip(
     vehicle: string;
     vehicleName: string;
     stations: StationSpec[];
+    /** The trip it is filed under; omitted = a roadtrip on no trip. */
+    tripId?: string;
     /** Station indexes whose leg to the NEXT station is a ferry. */
     ferryFrom?: number[];
   }
@@ -91,7 +93,7 @@ async function roadtrip(
   const route = await prisma.tripRoute.create({
     data: {
       userId,
-      tripId: null,
+      tripId: spec.tripId ?? null,
       kind: "roadtrip",
       name: `${DEMO_PREFIX}${spec.name}`,
       mode: "road",
@@ -263,7 +265,20 @@ export async function seedRoadtripDemo(userId: string): Promise<Record<string, n
     "2025-07-17",
     "2025-07-19"
   );
+  // The trip "Sommer in Norwegen" is created first so the Norway roadtrip can
+  // be filed under it: a trip photo needs a trip, and companion#14's
+  // done-criterion is a photo at that roadtrip's Stavanger station
+  // (forgejo#139). Re-running is safe — `removePrevious` clears both by prefix.
+  const trip = await prisma.trip.create({
+    data: {
+      userId,
+      name: `${DEMO_PREFIX}Sommer in Norwegen`,
+      startDate: day("2025-07-15"),
+      endDate: day("2025-07-19"),
+    },
+  });
   const norway = await roadtrip(userId, {
+    tripId: trip.id,
     name: "Norwegen mit dem Wohnmobil",
     vehicle: "motorhome",
     vehicleName: "Der Dicke",
@@ -399,16 +414,9 @@ export async function seedRoadtripDemo(userId: string): Promise<Record<string, n
     "isarradweg.gpx"
   );
 
-  // 4. A trip with stops and journal entries — the days open data can fill
-  //    with their weather, and a trip-bound walking tour for the trip's tab.
-  const trip = await prisma.trip.create({
-    data: {
-      userId,
-      name: `${DEMO_PREFIX}Sommer in Norwegen`,
-      startDate: day("2025-07-15"),
-      endDate: day("2025-07-19"),
-    },
-  });
+  // 4. The Norway trip's own stops and journal entries — the days open data
+  //    can fill with their weather, and a trip-bound walking tour for the
+  //    trip's tab. The trip itself is created above, with the roadtrip.
   for (const s of [
     { title: "Stavanger", lat: 58.97, lon: 5.7331, start: "2025-07-15", end: "2025-07-17" },
     { title: "Bergen", lat: 60.3913, lon: 5.3221, start: "2025-07-17", end: "2025-07-19" },

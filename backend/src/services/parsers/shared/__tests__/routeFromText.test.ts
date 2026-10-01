@@ -74,6 +74,13 @@ describe("backfillRoutesFromText", () => {
     expect(backfillRoutesFromText(routeless(3), FOUR_LEG_CONFIRMATION)).toEqual(routeless(3));
   });
 
+  it("pairs nothing when a pair would name the same airport twice", () => {
+    // Corpus 2026-09-30: an invoice printed "(WHO)" twice and one flight was
+    // paired into "WHO→WHO". Two codes are not a route when they are one code.
+    const text = "Hinweis (WHO) zu Impfungen.\nMerkblatt (WHO) liegt bei.";
+    expect(backfillRoutesFromText(routeless(1), text)).toEqual(routeless(1));
+  });
+
   it("never overwrites a route the provider already got right", () => {
     const parsed = [{ departureCode: "TXL", arrivalCode: "LHR" }, { flightNumber: "AF1" }];
     expect(backfillRoutesFromText(parsed, FOUR_LEG_CONFIRMATION)).toEqual(parsed);

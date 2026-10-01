@@ -241,6 +241,97 @@ describe("the declarative lodging readers", () => {
     });
   });
 
+  /**
+   * ALL Accor (all@confirmation.all.com) — every Accor brand books through
+   * it, so one reader covers Novotel, Mercure, ibis, Pullman and the rest.
+   * Before this the mail went to the LLM, and on 2026-09-30 a Novotel Basel
+   * booking landed in prod as a stay at a different Basel hotel. The layout
+   * below keeps the real mail's tabs and blank lines; the data is invented.
+   */
+  describe("ALL Accor", () => {
+    const subject = "Buchungsbestätigung: Novotel Musterstadt Zentrum Nr. QRTEST42";
+    const mail = [
+      subject,
+      "Diese Bestätigungs-E-Mail wurde automatisch erstellt. Bitte antworten Sie nicht auf diese E-Mail.\t ",
+      "Reservierung Nr. QRTEST42\t ",
+      "Ihre Buchung wurde bestätigt \t",
+      "Aufenthaltsdatum: vom 28.12.2026 bis zum 02.01.2027 \t",
+      "Sehr geehrte/r Erika Muster,\t ",
+      "gerne bestätigen wir Ihre Reservierung im Novotel Musterstadt Zentrum.",
+      "Novotel Musterstadt Zentrum\t ",
+      "Musterallee 7 - 1234 MUSTERSTADT - Schweiz <https://click.mail.all.com/u/?qs=x> \t ",
+      "h0000@accor.com <mailto:h0000@accor.com>  \t",
+      "Ihre Buchungsdetails\t ",
+      "Aufenthaltsdatum: vom 28.12.2026 bis zum 02.01.2027\t ",
+      "Ihr Aufenthalt: 1 Zimmer, 5 Nächte, 2 Erwachsene \t",
+      "Zimmer \t",
+      "\t ",
+      " \t",
+      "\t ",
+      "\t Die Reservierung läuft auf folgenden Namen : \t",
+      "Erika Muster \t",
+      "\t ",
+      "Superior Zimmer mit 1 Doppelbett \t",
+      "\t ",
+      "2 Erwachsene \t",
+      "\t ",
+      "1 x 612.40 CHF \t",
+      "612.40 CHF \t",
+      "Gesamtpreis für Ihren Aufenthalt \t",
+      " Gesamt \t630.90 CHF \t",
+      " (gebühren und Steuern inbegriffen) \t",
+      " Darunter Gebühren und Steuern: \t18.50 CHF \t",
+      "Kapital 7.000.000 CHF, Musterallee 7 in 1234 Musterstadt, Schweiz",
+      "Weitere Informationen unter https://all.accor.com/information/legal/",
+    ].join("\n");
+
+    it("reads the hotel, both numeric dates across New Year, the total and the room", () => {
+      const r = applyLodgingTemplate(byId("lodging:accor"), subject, mail);
+      expect(r).not.toBeNull();
+      expect(r?.parserTemplate).toBe("accor");
+      expect(r?.hotelName).toBe("Novotel Musterstadt Zentrum");
+      expect(r?.chainName).toBe("Accor");
+      expect(r?.type).toBe("hotel");
+      expect(r?.confirmationNumber).toBe("QRTEST42");
+      expect(r?.checkIn).toBe("2026-12-28");
+      expect(r?.checkOut).toBe("2027-01-02");
+      expect(r?.nights).toBe(5);
+      // The total the guest pays, fees included — not the room line above it.
+      expect(r?.totalPrice).toBeCloseTo(630.9, 2);
+      expect(r?.currency).toBe("CHF");
+      expect(r?.guests).toBe(2);
+      expect(r?.roomCategory).toBe("Superior Zimmer mit 1 Doppelbett");
+    });
+
+    it("reads the room from a mail with Windows line endings, as the real .msg has", () => {
+      // The first cut matched only "\n" and read the room as null on both
+      // real mails, while this synthetic case — written with "\n" — passed.
+      const crlf = mail.replace(/\n/g, "\r\n");
+      const r = applyLodgingTemplate(byId("lodging:accor"), subject, crlf);
+      expect(r?.roomCategory).toBe("Superior Zimmer mit 1 Doppelbett");
+      expect(r?.totalPrice).toBeCloseTo(630.9, 2);
+      expect(r?.city).toBe("Musterstadt");
+    });
+
+    it("reads the address line, and does not shout the city", () => {
+      const r = applyLodgingTemplate(byId("lodging:accor"), subject, mail);
+      expect(r?.address).toBe("Musterallee 7");
+      expect(r?.postcode).toBe("1234");
+      expect(r?.city).toBe("Musterstadt");
+      expect(r?.country).toBe("Schweiz");
+    });
+
+    it("declines an Accor mail that carries no stay dates", () => {
+      const newsletter = "Ihre Vorteile bei ALL Accor\nReservierung Nr. QRTEST42\nh0000@accor.com";
+      expect(applyLodgingTemplate(byId("lodging:accor"), "Ihre Vorteile", newsletter)).toBeNull();
+    });
+
+    it("refuses a date the calendar does not have", () => {
+      const broken = mail.replace(/vom 28\.12\.2026/g, "vom 31.04.2026");
+      expect(applyLodgingTemplate(byId("lodging:accor"), subject, broken)).toBeNull();
+    });
+  });
+
   // Cold review round two, 2026-09-17. A stacked read has to step over the
   // blank line CHECK24 puts between label and value — and must not keep
   // stepping into the NEXT label's value when its own is missing. Both halves

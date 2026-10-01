@@ -13,6 +13,108 @@ import {
 } from "./regexAirportExtractor";
 import { extractAllTimePairs, extractLabeledDates } from "./regexDateExtractor";
 import { extractSharedPNR, findPNRInSource } from "./regexPnrExtractor";
+import { isPriceNotFlightNumber } from "../shared/evidence";
+
+type RouteShape = "absent" | "complete" | "broken";
+
+/**
+ * A leg's route is absent (neither end), complete (two DIFFERENT known
+ * airports, compared case-insensitively), or broken — one end only, an end
+ * that is no known airport, or the same airport twice. A broken route is a
+ * wrong read, not a partial one: the corpus turned tour-operator invoices into
+ * "WHO→WHO" and an Egyptair e-ticket into "EMD→EMD" exactly this way.
+ */
+function routeShape(f: ParsedBooking): RouteShape {
+  const dep = f.departureCode;
+  const arr = f.arrivalCode;
+  if (!dep && !arr) return "absent";
+  if (!dep || !arr) return "broken";
+  if (!isValidIATACode(dep) || !isValidIATACode(arr)) return "broken";
+  return dep.toUpperCase() === arr.toUpperCase() ? "broken" : "complete";
+}
+
+/**
+ * The generic reader knows no sender, so a leg counts only when it can defend
+ * itself: it carries a flight number OR a complete route — and a route, once
+ * either end is there, must be complete (see {@link routeShape}).
+ *
+ * Why not more:
+ * - No date. `parsers.text.test.ts` pins that "FRA → JFK" alone, and a
+ *   flight number with its route but no date, are candidates — a confirmation
+ *   that names only the airports is common, and dropping it trades one silent
+ *   failure for another. Requiring a date here broke exactly those (Task 6
+ *   measurement, 2026-09-30).
+ * - No route for a flight number. A number without a route is INCOMPLETE, not
+ *   wrong: the flight lookup fills the route in later. Whether a LONE such
+ *   number is a flight at all is decided by the #291 second-witness gate in
+ *   `shared/evidence.ts`, which reads the mail's text this function never sees.
+ *
+ * What a single leg cannot show — a number paired with the wrong route — is
+ * decided per document in `withEvidence`.
+ */
+export function segmentHasEvidence(f: ParsedBooking): boolean {
+  const shape = routeShape(f);
+  if (shape === "broken") return false;
+  return shape === "complete" || Boolean(f.flightNumber);
+}
+
+/**
+ * Why a document is declined whole, or null when it stands. For one leg this
+ * is just {@link segmentHasEvidence}; the other checks need two legs.
+ *
+ * The multi-leg paths pair flight numbers with routes and dates by POSITION,
+ * so a document is only as good as that pairing. Two shapes show it failed:
+ * - routed and route-less legs mixed (Emirates: the outbound route printed,
+ *   the onward legs' not) — which number the one route belongs to is a guess;
+ * - one flight number on two different routes (Lufthansa connection: one
+ *   number found for two routes, and the return leg's number handed to the
+ *   outbound leg too) — a confidently wrong number, worse than none;
+ * - departures that run backwards ({@link datesRunForward});
+ * - legs with a route but no flight number. Alone, "FRA → JFK" is a candidate;
+ *   several of them were, in all six tour-operator invoices of the 2026-09-30
+ *   corpus, an itinerary's coded stops paired with times by position — every
+ *   one wrong (Hurghada read as Cairo, onward legs missing, a later leg's
+ *   time). Without a number nothing ties a route to its time, and the lookup
+ *   has nothing to repair it from.
+ *
+ * Exported for its tests: the mixed shape can no longer be produced from text
+ * by this reader (routes are only paired one per number), but the check stays
+ * as the guard should a pairing path reintroduce it.
+ */
+export function documentDefect(flights: ParsedBooking[]): string | null {
+  if (!flights.every(segmentHasEvidence)) return "leg_without_evidence";
+
+  const shapes = new Set(flights.map(routeShape));
+  if (shapes.has("complete") && shapes.has("absent")) return "mixed_routed_and_routeless_legs";
+  if (flights.length > 1 && flights.some((f) => !f.flightNumber)) {
+    return "route_only_legs_in_multi_leg_document";
+  }
+
+  const routesByNumber = new Map<string, Set<string>>();
+  for (const f of flights) {
+    if (!f.flightNumber) continue;
+    const route = `${f.departureCode ?? ""}>${f.arrivalCode ?? ""}`.toUpperCase();
+    const key = f.flightNumber.toUpperCase();
+    routesByNumber.set(key, new Set([...(routesByNumber.get(key) ?? []), route]));
+  }
+  const repeated = [...routesByNumber.values()].some((routes) => routes.size > 1);
+  if (repeated) return "flight_number_on_two_routes";
+
+  return datesRunForward(flights) ? null : "legs_out_of_date_order";
+}
+
+/**
+ * Legs are read in travel order, so their departures must not go backwards.
+ * An undated leg is skipped, not counted against the order. Invoice 1C895383
+ * (corpus 2026-09-30) dated its return leg eight months before the outbound —
+ * a date taken from elsewhere in the document and paired by position.
+ */
+function datesRunForward(flights: ParsedBooking[]): boolean {
+  const times = flights
+    .map((f) => (f.departureTime ? Date.parse(f.departureTime) : Number.NaN))
+    .filter((t) => Number.isFinite(t));
+  return times.every((t, i) => i === 0 || t >= times[i - 1]);
+}
 
 /**
  * Regex-based Text Parser
@@ -94,6 +196,29 @@ export class RegexTextParser implements ITextParser {
   }
 
   /**
+   * The one gate every result of this reader passes (`parseEmail` is its only
+   * entry point, and both return paths of `parseMultipleFlights` end here).
+   *
+   * One candidate stands when {@link segmentHasEvidence} says so — a
+   * same-airport or half route declines it; a route-less flight number is
+   * returned and left to the #291 second-witness gate in `shared/evidence.ts`.
+   * Several legs stand only together: see {@link documentDefect}.
+   */
+  private withEvidence(flights: ParsedBooking[]): ParsedBooking[] {
+    if (flights.length === 0) return [];
+
+    const reason = documentDefect(flights);
+    if (reason === null) return flights;
+
+    logger.debug({
+      operation: "regex_parser_insufficient_evidence",
+      reason,
+      legs: flights.length,
+    });
+    return [];
+  }
+
+  /**
    * Parse multiple flights from email (round-trip, multi-leg)
    */
   private parseMultipleFlights(source: string): ParsedBooking[] {
@@ -110,10 +235,19 @@ export class RegexTextParser implements ITextParser {
       const matches = Array.from(source.matchAll(pattern));
       for (const match of matches) {
         const potential = (match[1] + (match[2] || "")).replace(/\s+/g, "");
-        if (/^[A-Z]{2,3}\d{2,4}$/.test(potential)) {
-          if (!FLIGHT_NUMBER_FALSE_PREFIXES.includes(potential.slice(0, 2))) {
-            flightNumbers.push({ number: potential, index: match.index || 0 });
-          }
+        // A price is dropped HERE, before pairing. Dropped only afterwards (by
+        // the evidence gate in `email.ts`), "CHF 120 inkl. Flughafensteuer" —
+        // the lookahead finds "Flug" in "Flughafensteuer" — had already taken
+        // a positional slot: the first route went to CHF120, the real number
+        // got the next one. NOT the airline catalogue: asking it here dropped
+        // a real carrier the catalogue lacks, left its legs route-only, and
+        // the document was declined — a real flight lost (owner, 2026-10-01).
+        if (
+          /^[A-Z]{2,3}\d{2,4}$/.test(potential) &&
+          !FLIGHT_NUMBER_FALSE_PREFIXES.includes(potential.slice(0, 2)) &&
+          !isPriceNotFlightNumber(potential)
+        ) {
+          flightNumbers.push({ number: potential, index: match.index || 0 });
         }
       }
     }
@@ -146,8 +280,12 @@ export class RegexTextParser implements ITextParser {
           bookingReference: sharedPnr,
         };
 
-        // Try to find route for this flight (use airport pairs in order)
-        if (airportPairs.length > i) {
+        // Routes go to numbers by position ONLY when there is one route per
+        // number. With fewer (or more) routes the pairing is a guess: the
+        // Emirates layout yields one pair — its itinerary summary line,
+        // "MUC SYD" — for four numbers, and the first number took a route that
+        // is not its own. Every leg stays route-less then; the lookup fills it.
+        if (airportPairs.length === uniqueFlights.length) {
           const departure = airportPairs[i].departure;
           const arrival = airportPairs[i].arrival;
           flightData.departureCode =
@@ -155,8 +293,12 @@ export class RegexTextParser implements ITextParser {
           flightData.arrivalCode = arrival && isValidIATACode(arrival) ? arrival : undefined;
         }
 
-        // Try to find time for this flight
-        if (timePairs.length > i) {
+        // Times follow the same one-to-one rule as routes. "At least as many
+        // pairs as numbers" let one extra pair above the itinerary — a
+        // document's creation stamp — shift every leg: the first flight took
+        // the stamp, the second the first flight's time. Undated legs are
+        // completed by the lookup; a wrong date is not.
+        if (timePairs.length === uniqueFlights.length) {
           flightData.departureTime = timePairs[i].departure;
           flightData.arrivalTime = timePairs[i].arrival;
         }
@@ -195,7 +337,8 @@ export class RegexTextParser implements ITextParser {
             flightData.airline = flightData.flightNumber.slice(0, 2);
           }
 
-          if (timePairs.length > i) {
+          // One time pair per route, or none at all — as for numbers above.
+          if (timePairs.length === airportPairs.length) {
             flightData.departureTime = timePairs[i].departure;
             flightData.arrivalTime = timePairs[i].arrival;
           }
@@ -232,10 +375,10 @@ export class RegexTextParser implements ITextParser {
         return [];
       }
 
-      return [singleFlight];
+      return this.withEvidence([singleFlight]);
     }
 
-    return flights;
+    return this.withEvidence(flights);
   }
 
   /**
@@ -345,31 +488,17 @@ export class RegexTextParser implements ITextParser {
     if (labeled.departureTime) data.departureTime = labeled.departureTime;
     if (labeled.arrivalTime) data.arrivalTime = labeled.arrivalTime;
 
+    // Positional fallback only when the document offers exactly ONE time
+    // pair. This used to take "the first two ISO timestamps" (then the first
+    // German pair, and the second pair's departure as an arrival), so a
+    // creation stamp printed above the itinerary became the departure. With
+    // several pairs and one flight, which pair is the flight's is a guess —
+    // the same one-to-one rule the multi-leg path applies.
     if (!data.departureTime || !data.arrivalTime) {
-      // ISO format — TZ offset/Z suffix consumed but not captured (local time kept)
-      const isoTimeMatches = Array.from(
-        source.matchAll(
-          /(\d{4}-\d{2}-\d{2}[T ]\d{2}:\d{2}(?::\d{2})?)(?:[+-]\d{2}:?\d{2}|Z)?(?=[^\d]|$)/g
-        )
-      );
-      if (!data.departureTime && isoTimeMatches.length >= 1)
-        data.departureTime = isoTimeMatches[0][1].replace(" ", "T");
-      if (!data.arrivalTime && isoTimeMatches.length >= 2)
-        data.arrivalTime = isoTimeMatches[1][1].replace(" ", "T");
-    }
-
-    // German/English date format — delegates to the shared extractor, which
-    // validates month names, applies the plausible-year window, supports
-    // two-digit years, and associates column-layout times (time line above
-    // the date line). The previous inline copy defaulted unknown months to
-    // '01' and required four-digit years — both bugs the extractor fixes.
-    if (!data.departureTime || !data.arrivalTime) {
-      const germanPairs = extractAllTimePairs(source);
-      if (germanPairs.length > 0) {
-        if (!data.departureTime) data.departureTime = germanPairs[0].departure;
-        if (!data.arrivalTime) {
-          data.arrivalTime = germanPairs[0].arrival ?? germanPairs[1]?.departure;
-        }
+      const pairs = extractAllTimePairs(source);
+      if (pairs.length === 1) {
+        data.departureTime ??= pairs[0].departure;
+        data.arrivalTime ??= pairs[0].arrival;
       }
     }
 
