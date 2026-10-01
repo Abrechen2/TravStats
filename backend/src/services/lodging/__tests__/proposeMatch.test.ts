@@ -159,4 +159,17 @@ describe("proposeLodgingMatch", () => {
 
     expect(result.action).not.toBe("merge");
   });
+
+  // Final review 2026-10-01: stripping the brand, the city and "City" left
+  // "Novotel Basel City" with no identifying word at all, so the very house
+  // that was just created was proposed as a new one the next time.
+  it("still finds a house by its exact name when every word is brand or place", () => {
+    const result = proposeLodgingMatch(
+      [house({ id: "novotel", name: "Novotel Basel City", city: "Basel" })],
+      { name: "Novotel Basel City", city: "Basel" }
+    );
+
+    expect(result.action).toBe("merge");
+    expect(result.match?.id).toBe("novotel");
+  });
 });

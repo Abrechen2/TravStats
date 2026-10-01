@@ -154,6 +154,18 @@ describe("a place, a decoration or a brand is not identity", () => {
     );
   });
 
+  it("matches a name to itself even when every word is brand or place", () => {
+    expect(
+      namesCouldBeOneHouse("Novotel Basel City", "novotel basel city", true, {
+        places: ["Basel", "Basel"],
+      })
+    ).toBe(true);
+  });
+
+  it("does not match the same name in a different city", () => {
+    expect(namesCouldBeOneHouse("Novotel City", "Novotel City", false)).toBe(false);
+  });
+
   it("lets pins decide: nearby, a brand and a place count as before", () => {
     // The OSM enrichment searches around the hotel's own coordinates, so the
     // place is already proven; its own OSM object must still be found.

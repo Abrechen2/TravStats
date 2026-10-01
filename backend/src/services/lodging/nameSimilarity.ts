@@ -176,6 +176,13 @@ export function namesCouldBeOneHouse(
 ): boolean {
   if (sameCity === false) return false;
 
+  // The same name is the same house before anything is stripped: "Novotel
+  // Basel City" is brand, place and decoration only, and must still find
+  // itself (final review 2026-10-01). Every word counts here, generic ones
+  // too: "Hotel Meteora" is not "Hotel Restaurant Meteora" by this rule.
+  const wholeA = tokenize(nameA).join(" ");
+  if (wholeA !== "" && wholeA === tokenize(nameB).join(" ")) return true;
+
   const placeTokens = new Set(
     sameCity === true ? (context.places ?? []).flatMap((p) => (p ? strictTokens(p) : [])) : []
   );
