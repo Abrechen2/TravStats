@@ -30,9 +30,9 @@ export function getFieldBorderClass(
 ): string {
   if (!fieldSources) return "";
   const source = fieldSources[fieldName as keyof NonNullable<ParsedBooking["fieldSources"]>];
-  if (source === "template") return "border-l-4 border-green-500";
-  if (source === "llm") return "border-l-4 border-yellow-400";
-  if (source === "empty") return "border-l-4 border-red-500";
+  if (source === "template") return "border-l-4 border-(--success)";
+  if (source === "llm") return "border-l-4 border-(--warning)";
+  if (source === "empty") return "border-l-4 border-(--danger)";
   return "";
 }
 

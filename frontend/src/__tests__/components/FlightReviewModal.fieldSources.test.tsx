@@ -76,7 +76,8 @@ describe("FlightReviewModal fieldSources", () => {
       />
     );
     const input = screen.getByDisplayValue("LH2460");
-    expect(input.className).toMatch(/border-green/);
+    // The success token, not a raw palette class (design warden).
+    expect(input.className).toMatch(/border-\(--success\)/);
   });
 });
 

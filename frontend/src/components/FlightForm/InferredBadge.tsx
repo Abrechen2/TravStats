@@ -8,7 +8,7 @@ export default function InferredBadge({ show, hint }: InferredBadgeProps): JSX.E
   if (!show) return null;
   return (
     <span
-      className="ml-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full bg-yellow-400 text-yellow-900 cursor-help"
+      className="ml-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full bg-(--warning) text-(--bg-surface) cursor-help"
       title={hint}
       aria-label={hint}
     >

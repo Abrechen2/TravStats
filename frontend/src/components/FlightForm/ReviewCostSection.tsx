@@ -56,7 +56,7 @@ export default function ReviewCostSection({
             step="0.01"
             value={price || ""}
             onChange={(e) => onPrice(e.target.value ? parseFloat(e.target.value) : undefined)}
-            className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
+            className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-(--accent)"
             placeholder={t("flights:form.placeholders.price")}
           />
         </div>
@@ -91,7 +91,7 @@ export default function ReviewCostSection({
                 step="0.01"
                 value={taxes || ""}
                 onChange={(e) => onTaxes(e.target.value ? parseFloat(e.target.value) : undefined)}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-(--accent)"
                 placeholder={t("flights:form.placeholders.taxes")}
               />
             </div>
@@ -109,7 +109,7 @@ export default function ReviewCostSection({
                 step="0.01"
                 value={fees || ""}
                 onChange={(e) => onFees(e.target.value ? parseFloat(e.target.value) : undefined)}
-                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
+                className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-(--accent)"
                 placeholder={t("flights:form.placeholders.fees")}
               />
             </div>
