@@ -37,14 +37,17 @@ export default function ReviewDuplicateNotice({
   const noticeRef = useRef<HTMLDivElement>(null);
   const openRef = useRef<HTMLAnchorElement>(null);
   useEffect(() => {
-    noticeRef.current?.scrollIntoView?.({ block: "nearest" });
-    openRef.current?.focus();
+    // The whole notice, message first; focusing without scrolling keeps the
+    // browser from scrolling again to just the link and cutting the message.
+    noticeRef.current?.scrollIntoView?.({ block: "start" });
+    openRef.current?.focus({ preventScroll: true });
   }, [existing.id]);
   return (
     <div
       ref={noticeRef}
       role="alert"
-      className="space-y-3 rounded-lg border p-4"
+      // Clears the review's sticky header when scrolled to.
+      className="scroll-mt-24 space-y-3 rounded-lg border p-4"
       style={NOTICE_STYLE}
     >
       <p>{t("flights:review.duplicate.message", { flightNumber: existing.flightNumber, route })}</p>
