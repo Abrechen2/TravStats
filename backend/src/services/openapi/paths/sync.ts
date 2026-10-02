@@ -13,6 +13,16 @@ import { SYNC_PAGE_DEFAULT, SYNC_PAGE_MAX } from "../../../schemas/sync";
 import { SYNC_RETENTION_DAYS } from "../../sync/state";
 import { SYNC_ENTITIES } from "../../sync/entities";
 import { errorContent } from "./shared";
+import { guardedOperations } from "../syncConflicts";
+
+/** `PATCH|DELETE /rail/{id}, …` — read from the same list the routes mount. */
+function guardedOperationList(): string {
+  const byPath = new Map<string, string[]>();
+  for (const { method, path } of guardedOperations()) {
+    byPath.set(path, [...(byPath.get(path) ?? []), method.toUpperCase()]);
+  }
+  return [...byPath].map(([path, methods]) => `${methods.join("|")} ${path}`).join(", ");
+}
 
 const entityName = z.enum(SYNC_ENTITIES.map((entity) => entity.name) as [string, ...string[]]);
 
@@ -32,7 +42,8 @@ const syncChange = z.discriminatedUnion("op", [
       .describe(
         "The stored row, as the entity's own read endpoints carry it, minus bulky derived " +
           "columns (a flight's actualRoute and enrichmentHistory, a ride's geometry) and " +
-          "server internals (a document's storedName and parsedPayload). Times are stored " +
+          "server internals (a document's storedName and parsedPayload, a companion's " +
+          "searchName). Times are stored " +
           "values: instants in UTC plus the local fields of the time model."
       ),
   }),
@@ -68,18 +79,18 @@ registry.registerPath({
     "while `hasMore` is true. The cursor is opaque — a position in transaction order, never a " +
     "clock — and a change from a transaction still running is held back until it commits. " +
     "Covered: trips, journal entries, trip stops and stations, flights, rail journeys, cruises " +
-    "and their stops, lodgings and stays, places and visits, tour and roadtrip sections, and " +
-    "document metadata. Hidden domains are left out. A cursor the server cannot continue " +
+    "and their stops, lodgings and stays, places and visits, tour and roadtrip sections, " +
+    "rental bookings, trip and roadtrip expenses, the companion catalogue (entries carry " +
+    "their companions as the `companions` name array) and document metadata. Hidden domains " +
+    "are left out. A cursor the server cannot continue " +
     `answers 410 SYNC_RESYNC_REQUIRED: older than the ${SYNC_RETENTION_DAYS}-day tombstone ` +
     "horizon (cursorExpired), minted before the account's visible domains changed " +
     "(scopeChanged), or before a database restore (epochChanged, cursorFromFuture) — start " +
-    "again without `since`. Edits and deletes on PUT /flights/{id}, PATCH|DELETE /rail/{id}, " +
-    "/cruises/{id}, /lodging/{id}, /lodging/{id}/stays/{stayId}, /trips/{id}, " +
-    "/trips/{id}/stops/{stopId}, /trips/{id}/journal/{entryId}, /places/{id}, " +
-    "/places/visits/{visitId}, /tours/{routeId} and /trips/{id}/routes/{routeId} (plus " +
-    "DELETE /flights/{id}) accept the record's version as `If-Match` or a `baseVersion` body " +
-    "field and answer 409 VERSION_CONFLICT (schema VersionConflict) when the record moved " +
-    "on; without either they stay unconditional.",
+    "again without `since`. Edits and deletes on " +
+    guardedOperationList() +
+    " accept the record's version as `If-Match` or a `baseVersion` body field and answer " +
+    "409 VERSION_CONFLICT (schema VersionConflict) when the record moved on; without either " +
+    "they stay unconditional.",
   tags: ["Sync"],
   request: {
     query: z.object({

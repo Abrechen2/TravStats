@@ -1,6 +1,7 @@
 import { Router, type NextFunction, type Request, type Response } from "express";
 
 import { authenticate, requireWriteScope } from "../middleware/auth";
+import { SYNC_GUARDED_ROUTES } from "../services/sync/guardedRoutes";
 import { requireCurrentVersion } from "../services/sync/versionPrecondition";
 
 /**
@@ -33,51 +34,16 @@ const onlyWithBaseVersion = (req: Request, _res: Response, next: NextFunction): 
   next(namesBaseVersion(req) ? undefined : "route");
 };
 
-/** [entity, id parameter, paths] — every PATCH/PUT and DELETE below gets the check. */
-const GUARDED: ReadonlyArray<{
-  entity: string;
-  idParam: string;
-  paths: string[];
-  edit: "put" | "patch";
-}> = [
-  { entity: "flight", idParam: "id", paths: ["/flights/:id"], edit: "put" },
-  { entity: "rail_journey", idParam: "id", paths: ["/rail/:id"], edit: "patch" },
-  { entity: "cruise", idParam: "id", paths: ["/cruises/:id"], edit: "patch" },
-  { entity: "lodging", idParam: "id", paths: ["/lodging/:id"], edit: "patch" },
-  {
-    entity: "lodging_stay",
-    idParam: "stayId",
-    paths: ["/lodging/:id/stays/:stayId"],
-    edit: "patch",
-  },
-  { entity: "trip", idParam: "id", paths: ["/trips/:id"], edit: "patch" },
-  { entity: "trip_stop", idParam: "stopId", paths: ["/trips/:id/stops/:stopId"], edit: "patch" },
-  {
-    entity: "trip_journal_entry",
-    idParam: "entryId",
-    paths: ["/trips/:id/journal/:entryId"],
-    edit: "patch",
-  },
-  { entity: "place", idParam: "id", paths: ["/places/:id"], edit: "patch" },
-  { entity: "place_visit", idParam: "visitId", paths: ["/places/visits/:visitId"], edit: "patch" },
-  {
-    entity: "trip_route",
-    idParam: "routeId",
-    paths: ["/trips/:id/routes/:routeId", "/tours/:routeId"],
-    edit: "patch",
-  },
-];
-
-for (const { entity, idParam, paths, edit } of GUARDED) {
+for (const { entity, idParam, paths, edit } of SYNC_GUARDED_ROUTES) {
   const chain = [
     onlyWithBaseVersion,
     authenticate,
     requireWriteScope,
     requireCurrentVersion(entity, idParam),
   ];
-  router[edit](paths, ...chain);
-  router.delete(paths, ...chain);
+  // Express wants a mutable array; the shared list stays read-only.
+  router[edit]([...paths], ...chain);
+  router.delete([...paths], ...chain);
 }
 
-export const SYNC_GUARDED_ROUTES = GUARDED;
 export default router;

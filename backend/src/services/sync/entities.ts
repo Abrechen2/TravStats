@@ -4,16 +4,20 @@ import type { SyncScope } from "./scope";
 
 /**
  * The records the sync feed carries (forgejo#141), one entry per database
- * table that has a `sync_record_change` trigger in migration
- * `20261001193030_sync_change_feed`. The list is what the Companion reads and
+ * table that has a `sync_record_change` trigger — migration
+ * `20261001193030_sync_change_feed`, plus rental bookings, trip expenses and
+ * the companion catalogue from `20261002172714_sync_feed_rentals_expenses_companions`
+ * (domains that landed beside the first one). The list is what the Companion reads and
  * edits today; `syncTriggers.test.ts` holds it against the triggers that
  * actually exist, so a table cannot be added on one side only.
  *
  * Deliberately NOT carried (they have no trigger, and nothing here pretends
  * otherwise): photographs of any kind (their own upload flows, forgejo#145),
  * derived geometry (cruise legs and tracks, tour legs and tracks — recomputed
- * by the server from the records that ARE carried), companions and their join
- * rows, loyalty cards, place lists, bookings, settings (`/app-settings` has
+ * by the server from the records that ARE carried), the companion join rows
+ * (an entry carries its companions as its own `companions` name array, which
+ * every write path rewrites together with the join rows), loyalty cards,
+ * place lists, bookings, settings (`/app-settings` has
  * its own `updatedAt` protocol) and everything derived (country days,
  * achievements, suggestions).
  */
@@ -82,6 +86,20 @@ const DIRECT_OWNER = "t.user_id = $2";
 // callable type, and a cast through one generic delegate would hide a wrong
 // relation name from tsc.
 const ENTITIES: readonly SyncEntity[] = [
+  {
+    // The catalogue a companion picker offers. Entries name their companions
+    // themselves (`companions`); this row is what a renamed spelling reaches.
+    name: "companion",
+    table: "companions",
+    ownerSql: DIRECT_OWNER,
+    ownerWhere: (userId) => ({ userId }),
+    find: (args) => prisma.companion.findMany(args),
+    visible: always,
+    tombstoneVisible: always,
+    omit: ["searchName"],
+    versioned: true,
+    reachable: always,
+  },
   {
     name: "trip",
     table: "trips",
@@ -227,6 +245,39 @@ const ENTITIES: readonly SyncEntity[] = [
       prisma.tripStop.findMany({ ...args, include: { route: { select: { kind: true } } } }),
     visible: (row, scope) => {
       if (row.tripId) return true;
+      const route = row.route as { kind?: unknown } | null | undefined;
+      return routeKindVisible(route?.kind, scope);
+    },
+    tombstoneVisible: always,
+    omit: ["route"],
+    versioned: true,
+    reachable: always,
+  },
+  {
+    name: "rental_booking",
+    table: "rental_bookings",
+    ownerSql: DIRECT_OWNER,
+    ownerWhere: (userId) => ({ userId }),
+    find: (args) => prisma.rentalBooking.findMany(args),
+    visible: inDomain("rental"),
+    tombstoneVisible: inDomain("rental"),
+    omit: [],
+    versioned: true,
+    reachable: domainShown("rental"),
+  },
+  {
+    // An expense hangs off a trip, or off a tour section (a whole roadtrip, a
+    // station or a leg of it) and then follows that section's kind — the same
+    // rule as a station in `trip_stop`. `amount` is a Decimal and reaches the
+    // phone as its exact decimal string.
+    name: "trip_expense",
+    table: "trip_expenses",
+    ownerSql: DIRECT_OWNER,
+    ownerWhere: (userId) => ({ userId }),
+    find: (args) =>
+      prisma.tripExpense.findMany({ ...args, include: { route: { select: { kind: true } } } }),
+    visible: (row, scope) => {
+      if (!row.routeId) return true;
       const route = row.route as { kind?: unknown } | null | undefined;
       return routeKindVisible(route?.kind, scope);
     },
