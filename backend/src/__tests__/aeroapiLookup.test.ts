@@ -60,7 +60,7 @@ import { __resetAerodataboxCacheForTests } from "../services/aerodataboxLookup";
 import { lookupFlightDetails, __resetAviationstackBudgetForTests } from "../services/flightLookup";
 import { LookupOutcomeLog } from "../services/flightLookup/providerOutcome";
 import { findOrCreateAirport } from "../services/airportLookup";
-import { testAeroapiKey } from "../services/apiKeyTester";
+import { testAeroapiKey } from "../services/apiKeyTesterAeroapi";
 import { getAirlineName } from "../services/flightLookup/fieldReaders";
 import logger from "../utils/logger";
 

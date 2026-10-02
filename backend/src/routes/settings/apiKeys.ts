@@ -7,11 +7,11 @@ import {
   testAirlabsKey,
   testAviationstackKey,
   testAerodataboxKey,
-  testAeroapiKey,
   testOpenSkyCredentials,
   testOpenRouteServiceKey,
   testGraphHopperKey,
 } from "../../services/apiKeyTester";
+import { testAeroapiKey } from "../../services/apiKeyTesterAeroapi";
 import { getApiKey, getOpenSkyCredentials } from "../../services/apiKeyResolver";
 import { getAllProviderQuotas } from "../../services/apiQuota";
 import logger from "../../utils/logger";

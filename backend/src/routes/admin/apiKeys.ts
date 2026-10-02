@@ -9,13 +9,13 @@ import {
   testAirlabsKey,
   testAviationstackKey,
   testAerodataboxKey,
-  testAeroapiKey,
   testLogostreamKey,
   testGooglePlacesKey,
   testOpenSkyCredentials,
   testOpenRouteServiceKey,
   testGraphHopperKey,
 } from "../../services/apiKeyTester";
+import { testAeroapiKey } from "../../services/apiKeyTesterAeroapi";
 import { routingSettingsSchema } from "../../schemas/tour";
 import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 

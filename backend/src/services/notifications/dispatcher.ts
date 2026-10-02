@@ -1,4 +1,4 @@
-import { Prisma } from "../../generated/prisma/client";
+import { Prisma } from "../../prisma";
 import { prisma } from "../../db";
 import { systemLogger } from "../../utils/logger";
 import type { FlightChange } from "../flightAutoUpdate";

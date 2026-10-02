@@ -12,7 +12,7 @@ import logger from "../utils/logger";
 import { DEMO_USERNAME } from "../utils/sharedDemo";
 import { recalculateNextApiCheckAt } from "../utils/smartCheckSchedule";
 import { applyPendingUpdate } from "./pendingUpdateService";
-import { notifyFlightChanged } from "./notifications/dispatcher";
+import { announceChange } from "./notifications/announceFlightChange";
 import type { FlightDataSnapshot } from "./pendingUpdateService";
 import { sweepStatuses } from "./statusSweep";
 import { runFinalArrivalSweep } from "./finalArrivalLookup";
@@ -400,33 +400,6 @@ export async function createPendingUpdate(
       },
     });
     return null;
-  }
-}
-
-/**
- * Tell the paired phones about a provider-detected change. Fire-and-forget:
- * the status job must not wait for the relay (the dispatcher bounds its own
- * time) and a push problem must never fail the flight loop.
- */
-function announceChange(
-  userId: string,
-  flight: Flight,
-  changes: FlightChange[],
-  opts: { pending: boolean; diverted: boolean; cancelled: boolean }
-): void {
-  const log = (error: unknown) =>
-    logger.warn(
-      {
-        operation: "flight_change_push_failed",
-        flightId: flight.id,
-        error: error instanceof Error ? error.message : String(error),
-      },
-      "Push for a detected flight change failed"
-    );
-  try {
-    notifyFlightChanged(userId, flight, changes, opts).catch(log);
-  } catch (error) {
-    log(error);
   }
 }
 
