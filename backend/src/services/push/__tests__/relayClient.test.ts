@@ -97,6 +97,24 @@ describe("sendToRelay", () => {
     expect(r.calls.filter((c) => c.url.endsWith("/v1/instances"))).toHaveLength(1);
   });
 
+  it.each([
+    ["switched off", { pushEnabled: false }],
+    ["relay address changed", { pushRelayUrl: "https://other.example.test" }],
+  ])("drops a registration that finishes after the admin %s", async (_name, change) => {
+    const r = relay();
+    const inner = r.fetch;
+    const racing = (async (url: string | URL, init?: RequestInit) => {
+      const res = await inner(url, init);
+      if (String(url).endsWith("/v1/instances")) await settings(change);
+      return res;
+    }) as unknown as typeof fetch;
+    expect(await sendToRelay(push, { fetch: racing })).toBe("failed");
+    expect(r.calls.map((c) => c.url)).toEqual(["https://push.example.test/v1/instances"]);
+    const row = await prisma.adminSettings.findUnique({ where: { id: adminId } });
+    expect(row?.pushInstanceId).toBeNull();
+    expect(row?.pushInstanceSecret).toBeNull();
+  });
+
   it("names the instance 'self-hosted' when it has no public URL", async () => {
     await settings({ publicUrl: null });
     const r = relay();

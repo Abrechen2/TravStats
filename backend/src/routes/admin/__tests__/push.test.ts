@@ -183,6 +183,42 @@ describe("admin push relay settings (/api/v1/admin/push)", () => {
     expect(row.pushInstanceSecret).toBeNull();
   });
 
+  it("switching off also clears a pause", async () => {
+    await put({ pushEnabled: true });
+    await prisma.adminSettings.update({
+      where: { id: rowId },
+      data: { pushPausedUntil: new Date(Date.now() + 3600_000) },
+    });
+    expect((await put({ pushEnabled: false })).body.pausedUntil).toBeNull();
+  });
+
+  it("answers 403 to a logged-in non-admin on GET, PUT and reset", async () => {
+    const user = await prisma.user.create({
+      data: {
+        username: `plain-push-test-${Date.now()}`,
+        passwordHash: await hashPassword("user-password"),
+        isAdmin: false,
+        isActive: true,
+      },
+    });
+    try {
+      const c = `auth_token=${generateToken(user.id)}`;
+      const base = () => ({ get: request(app).get("/api/v1/admin/push") });
+      expect((await base().get.set("Cookie", c)).status).toBe(403);
+      expect(
+        (await request(app).put("/api/v1/admin/push").set("Cookie", c).send({ pushEnabled: true }))
+          .status
+      ).toBe(403);
+      expect((await request(app).post("/api/v1/admin/push/reset").set("Cookie", c)).status).toBe(
+        403
+      );
+      const row = await prisma.adminSettings.findUniqueOrThrow({ where: { id: rowId } });
+      expect(row.pushEnabled).toBe(false);
+    } finally {
+      await prisma.user.delete({ where: { id: user.id } }).catch(() => {});
+    }
+  });
+
   it("rejects a non-boolean pushEnabled", async () => {
     expect((await put({ pushEnabled: "yes" })).status).toBe(400);
   });

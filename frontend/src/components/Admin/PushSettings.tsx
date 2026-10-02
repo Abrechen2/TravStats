@@ -7,8 +7,6 @@ import { useToastStore } from "../../store/toastStore";
 import { todayZoneNow } from "../../hooks/useTodayZone";
 
 const PRIVACY_URL = "https://travstats.de/datenschutz";
-// No self-hosting page exists on travstats.de yet; the relay repo README is the guide.
-const SELF_HOST_URL = "https://github.com/Abrechen2/travstats-push#readme";
 
 function formatTime(iso: string): string {
   return new Date(iso).toLocaleString(undefined, { timeZone: todayZoneNow() });
@@ -87,12 +85,10 @@ export default function PushSettings(): JSX.Element {
         <p>{t("pushRelay:explanation.receives")}</p>
         <p>{t("pushRelay:explanation.stores")}</p>
         <p>{t("pushRelay:defaultOff")}</p>
+        <p>{t("pushRelay:ownRelay")}</p>
         <p className="flex flex-wrap gap-4">
           <a href={PRIVACY_URL} target="_blank" rel="noopener noreferrer" className="underline">
             {t("pushRelay:privacyLink")}
-          </a>
-          <a href={SELF_HOST_URL} target="_blank" rel="noopener noreferrer" className="underline">
-            {t("pushRelay:selfHostLink")}
           </a>
         </p>
         {state.pushEnabled && state.consentAt && (

@@ -65,7 +65,12 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       data.pushConsentAt = new Date();
     } else if (payload.pushEnabled === false) {
       // Withdrawal: no consent on record, nothing registered at the relay.
-      Object.assign(data, { pushEnabled: false, pushConsentAt: null, ...CLEARED_CREDENTIALS });
+      Object.assign(data, {
+        pushEnabled: false,
+        pushConsentAt: null,
+        pushPausedUntil: null,
+        ...CLEARED_CREDENTIALS,
+      });
     }
     if (payload.pushRelayUrl !== undefined && payload.pushRelayUrl !== current.pushRelayUrl) {
       // Credentials belong to the relay that issued them.

@@ -75,10 +75,22 @@ async function register(
   }
   const body = (await res.json()) as { instanceId?: string; secret?: string };
   if (!body.instanceId || !body.secret) return null;
-  await prisma.adminSettings.update({
-    where: { id: row.id },
+  // Conditional write: the admin may have switched push off, reset it or
+  // changed the relay address while the request was in flight. Credentials
+  // must not come back after that, and must not be used for this send.
+  const stored = await prisma.adminSettings.updateMany({
+    where: {
+      id: row.id,
+      pushEnabled: true,
+      pushRelayUrl: row.pushRelayUrl,
+      pushInstanceId: null,
+    },
     data: { pushInstanceId: body.instanceId, pushInstanceSecret: encryptApiKey(body.secret) },
   });
+  if (stored.count === 0) {
+    logOnce("register:superseded", "push settings changed during registration; result dropped");
+    return null;
+  }
   return { id: body.instanceId, secret: body.secret };
 }
 
