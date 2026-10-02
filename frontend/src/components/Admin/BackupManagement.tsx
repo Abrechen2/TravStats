@@ -388,6 +388,12 @@ export default function BackupManagement(): JSX.Element {
         case "RESTORE_ARCHIVE_UNREADABLE":
           addToast("error", t("admin:backup.restore.archiveUnreadable"));
           break;
+        case "RESTORE_MIGRATION_FAILED":
+          addToast("error", t("admin:backup.restore.migrationFailed"));
+          break;
+        case "RESTORE_SCHEMA_INCOMPLETE":
+          addToast("error", t("admin:backup.restore.schemaIncomplete"));
+          break;
         default:
           addToast("error", t(backupFailureKey(error, "admin:backup.toasts.restoreFailed")));
       }

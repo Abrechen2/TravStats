@@ -64,6 +64,12 @@ export type ApiErrorCode =
   /** The archive's encrypted values belong to another instance key. The
    *  restore dialog turns this into the acknowledgement it needs. */
   | "RESTORE_ENCRYPTION_KEY_MISMATCH"
+  /** The archive was restored but could not be migrated to this version
+   *  (forgejo#157). The database now holds the archive's older schema. */
+  | "RESTORE_MIGRATION_FAILED"
+  /** Restored and migrated, yet the sync feed's triggers are missing
+   *  (forgejo#157): the Companion would be told nothing changed. */
+  | "RESTORE_SCHEMA_INCOMPLETE"
   /** A rail write body failed validation; `field` names the first field. */
   | "RAIL_INVALID_INPUT"
   /** A rail arrival instant before its departure — usually a night train

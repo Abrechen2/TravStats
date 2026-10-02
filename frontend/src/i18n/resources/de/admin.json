@@ -728,6 +728,8 @@
       "keyMismatchAcknowledge": "Verstanden: Zugangsdaten danach neu eintragen",
       "archiveIncomplete": "Dem Archiv fehlt der angeforderte Teil. Es wurde nichts wiederhergestellt.",
       "archiveUnreadable": "Der Dateiteil des Archivs lässt sich nicht lesen. Es wurde nichts wiederhergestellt.",
+      "migrationFailed": "Das Archiv wurde eingespielt, ließ sich aber nicht auf den Datenbankstand dieser Version bringen. Starte die Instanz neu (sie migriert beim Start) oder spiele ein Backup dieser Version ein.",
+      "schemaIncomplete": "Das Archiv wurde eingespielt, aber die Synchronisations-Trigger fehlen – die App würde keine Änderungen mehr sehen. Details stehen im Server-Log.",
       "inProgress": "Wird wiederhergestellt …"
     },
     "settingsSaved": "Backup-Einstellungen gespeichert",
