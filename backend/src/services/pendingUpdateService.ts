@@ -21,7 +21,7 @@ const prismaClient = prisma as PrismaClient;
  * UTC and applying them counts as live tracking. Kept in sync with
  * `FlightLookupSource` in flightLookup.ts.
  */
-const LIVE_API_SOURCES = ["aviationstack", "airlabs", "aerodatabox", "opensky"];
+const LIVE_API_SOURCES = ["aeroapi", "aviationstack", "airlabs", "aerodatabox", "opensky"];
 
 /** Flight data fields used for original/proposed data snapshots */
 export interface FlightDataSnapshot {

@@ -17,6 +17,7 @@ import NodeCache from "node-cache";
 import { findOrCreateAirport } from "./airportLookup";
 import { getApiKey, getOpenSkyCredentials } from "./apiKeyResolver";
 import { lookupFlightAerodatabox } from "./aerodataboxLookup";
+import { lookupFlightAeroapi } from "./aeroapiLookup";
 import { flightLookupResultToFlightData } from "./flightLookup/toFlightData";
 import { getOpenSkyAuthHeaders, lookupOpenSkyFlight } from "./flightLookup/openSky";
 import {
@@ -327,7 +328,8 @@ export async function lookupFlightByNumber(
 }
 
 /** Provider that actually served a lookup result. */
-export type FlightLookupSource = "aviationstack" | "aerodatabox" | "airlabs" | "opensky";
+export type FlightLookupSource =
+  "aeroapi" | "aviationstack" | "aerodatabox" | "airlabs" | "opensky";
 
 /**
  * Aviationstack + enrichment (preferred when key is set), AirLabs fallback.
@@ -402,6 +404,24 @@ export async function lookupFlightDetails(
 ): Promise<FlightLookupResult | null> {
   const trimmedNumber = flightNumber.trim();
   if (!trimmedNumber) return null;
+
+  // FlightAware AeroAPI first, when the user or the admin configured a key:
+  // it is the one paid for as a status source (gate, cancellation,
+  // diversion). The adapter returns null without a request when there is no
+  // key, and a null answer falls through to the order below unchanged.
+  if (date) {
+    const aeroapiResult = await lookupFlightAeroapi(
+      trimmedNumber,
+      date,
+      userId,
+      depAirportCode,
+      outcomes
+    );
+    if (aeroapiResult) {
+      logger.info({ api: "aeroapi", operation: "lookup_aeroapi_hit" }, "AeroAPI served");
+      return { ...aeroapiResult, source: "aeroapi" };
+    }
+  }
 
   // Get OpenSky credentials with priority resolution
   const openSkyCredentials = await getOpenSkyCredentials(userId);
@@ -914,13 +934,14 @@ export async function lookupFlightWithHistorical(
   // provider whatsoever, "this date needs Aviationstack or AeroDataBox" is
   // the wrong answer, because it implies the free providers are set up and
   // merely limited.
-  const [anyAirlabs, anyAviationstack, anyAerodatabox, anyOpenSky] = await Promise.all([
+  const [anyAirlabs, anyAviationstack, anyAerodatabox, anyAeroapi, anyOpenSky] = await Promise.all([
     getApiKey("airlabs", userId),
     getApiKey("aviationstack", userId),
     getApiKey("aerodatabox", userId),
+    getApiKey("aeroapi", userId),
     getOpenSkyCredentials(userId),
   ]);
-  if (!anyAirlabs && !anyAviationstack && !anyAerodatabox && !anyOpenSky) {
+  if (!anyAirlabs && !anyAviationstack && !anyAerodatabox && !anyAeroapi && !anyOpenSky) {
     logger.info(
       { operation: "lookup_unavailable_not_configured" },
       "Lookup requested but no flight-data provider is configured"
@@ -934,11 +955,13 @@ export async function lookupFlightWithHistorical(
   // callsign-by-date endpoint. AeroDataBox covers historical (≤ 365 d)
   // and near-future schedules.
   if (isOutsideLiveWindow) {
-    const [aviationstackKey, aerodataboxKey] = await Promise.all([
+    // AeroAPI counts too: it serves ten days back and two ahead by date.
+    const [aviationstackKey, aerodataboxKey, aeroapiKey] = await Promise.all([
       getApiKey("aviationstack", userId),
       getApiKey("aerodatabox", userId),
+      getApiKey("aeroapi", userId),
     ]);
-    if (!aviationstackKey && !aerodataboxKey) {
+    if (!aviationstackKey && !aerodataboxKey && !aeroapiKey) {
       logger.info(
         {
           direction: dayDelta > 0 ? "future" : "past",

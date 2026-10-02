@@ -10,7 +10,7 @@
  * row untouched. Idempotent — safe to re-run.
  *
  *   AIRLABS_API_KEY=... AVIATIONSTACK_API_KEY=... \
- *   AERODATABOX_API_KEY=... OPENSKY_CLIENT_ID=... \
+ *   AERODATABOX_API_KEY=... AEROAPI_API_KEY=... OPENSKY_CLIENT_ID=... \
  *   OPENSKY_CLIENT_SECRET=... \
  *   DATABASE_URL="postgresql://..." \
  *   npm run seed:dev-admin-keys
@@ -27,6 +27,7 @@ interface KeyMapping {
     | "globalAirlabsApiKey"
     | "globalAviationstackApiKey"
     | "globalAerodataboxApiKey"
+    | "globalAeroapiApiKey"
     | "globalOpenskyClientId"
     | "globalOpenskyClientSecret";
   label: string;
@@ -36,6 +37,7 @@ const MAPPINGS: KeyMapping[] = [
   { envVar: "AIRLABS_API_KEY", column: "globalAirlabsApiKey", label: "AirLabs" },
   { envVar: "AVIATIONSTACK_API_KEY", column: "globalAviationstackApiKey", label: "Aviationstack" },
   { envVar: "AERODATABOX_API_KEY", column: "globalAerodataboxApiKey", label: "AeroDataBox" },
+  { envVar: "AEROAPI_API_KEY", column: "globalAeroapiApiKey", label: "FlightAware AeroAPI" },
   { envVar: "OPENSKY_CLIENT_ID", column: "globalOpenskyClientId", label: "OpenSky Client ID" },
   {
     envVar: "OPENSKY_CLIENT_SECRET",
