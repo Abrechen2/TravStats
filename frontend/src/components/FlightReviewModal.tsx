@@ -1,4 +1,4 @@
-﻿import { useState, useEffect, useRef } from "react";
+﻿import { useState, useEffect, useRef, useId } from "react";
 import { createPortal } from "react-dom";
 import { useDialogChrome } from "./ui/useDialogChrome";
 import type { FlightInput, ParsedBooking } from "../types";
@@ -16,39 +16,16 @@ import { filterEmailText } from "../lib/filterEmailText";
 import { getAirlineFromFlightNumber } from "../lib/airlineUtils";
 import AirportAutocomplete from "./AirportAutocomplete";
 import { useSuggestions } from "../hooks/useSuggestions";
-import CurrencySelect from "./common/CurrencySelect";
 import { useRecentCurrencies } from "../hooks/useRecentCurrencies";
-import { getConfidenceColor, isInferred } from "../lib/flightReviewFields";
-
-function getFieldBorderClass(
-  fieldName: string,
-  fieldSources?: ParsedBooking["fieldSources"]
-): string {
-  if (!fieldSources) return "";
-  const source = fieldSources[fieldName as keyof NonNullable<ParsedBooking["fieldSources"]>];
-  if (source === "template") return "border-l-4 border-green-500";
-  if (source === "llm") return "border-l-4 border-yellow-400";
-  if (source === "empty") return "border-l-4 border-red-500";
-  return "";
-}
-
-interface InferredBadgeProps {
-  show: boolean;
-  hint: string;
-}
-
-function InferredBadge({ show, hint }: InferredBadgeProps): JSX.Element | null {
-  if (!show) return null;
-  return (
-    <span
-      className="ml-1 inline-flex items-center justify-center w-4 h-4 text-[10px] font-bold rounded-full bg-yellow-400 text-yellow-900 cursor-help"
-      title={hint}
-      aria-label={hint}
-    >
-      !
-    </span>
-  );
-}
+import {
+  formatDateTimeLocal,
+  getConfidenceColor,
+  getFieldBorderClass,
+  isInferred,
+  mapSeatClass,
+} from "../lib/flightReviewFields";
+import InferredBadge from "./FlightForm/InferredBadge";
+import ReviewCostSection from "./FlightForm/ReviewCostSection";
 
 interface FlightReviewModalProps {
   isOpen: boolean;
@@ -75,6 +52,9 @@ export default function FlightReviewModal({
   originalData,
 }: FlightReviewModalProps): JSX.Element | null {
   const { t } = useTranslation(["flights", "common", "errors"]);
+  // Every label names its control (forgejo#159 browser check: none did).
+  const fieldId = useId();
+  const fid = (n: number): string => `${fieldId}-${n}`;
   const { features, baseCurrency } = useSettingsStore();
   const recentCurrencies = useRecentCurrencies();
   const { airlines: airlineSuggestions, aircraft: aircraftSuggestions } = useSuggestions();
@@ -177,31 +157,6 @@ export default function FlightReviewModal({
   }, [initialData, flightIndex]); // Also depend on flightIndex to ensure update when switching flights
 
   // Format datetime for datetime-local input
-  // Avoid UTC conversion for timezone-naive strings like "2023-10-17T00:00"
-  // which would shift the date by the local UTC offset
-  const formatDateTimeLocal = (isoString: string): string => {
-    const match = isoString.match(/^(\d{4}-\d{2}-\d{2})[T ](\d{2}:\d{2})/);
-    if (match) return `${match[1]}T${match[2]}`;
-    try {
-      return new Date(isoString).toISOString().slice(0, 16);
-    } catch {
-      return "";
-    }
-  };
-
-  // Map parsed seat class to FlightInput format
-  const mapSeatClass = (
-    seatClass?: string
-  ): "economy" | "premium_economy" | "business" | "first" | null => {
-    if (!seatClass) return null;
-    const lower = seatClass.toLowerCase();
-    if (lower.includes("first")) return "first";
-    if (lower.includes("business")) return "business";
-    if (lower.includes("premium")) return "premium_economy";
-    if (lower.includes("economy")) return "economy";
-    return null;
-  };
-
   // Resolve airport codes (IATA or ICAO) the way the autocomplete does:
   // `getByCode`. The text search used here before accepted only an exact IATA
   // hit on its first page, so it answered "not found" for codes the
@@ -439,7 +394,10 @@ export default function FlightReviewModal({
           {/* Flight Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-2">
+              <label
+                htmlFor={fid(1)}
+                className="block text-sm font-medium text-(--text-primary) mb-2"
+              >
                 {t("flights:form.flightNumber")} <RequiredMark />
                 <InferredBadge
                   show={isInferred("flightNumber", initialData.inferredFields)}
@@ -447,6 +405,7 @@ export default function FlightReviewModal({
                 />
               </label>
               <input
+                id={fid(1)}
                 type="text"
                 value={flightNumber}
                 onChange={(e) => setFlightNumber(e.target.value.toUpperCase())}
@@ -458,7 +417,10 @@ export default function FlightReviewModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-2">
+              <label
+                htmlFor={fid(2)}
+                className="block text-sm font-medium text-(--text-primary) mb-2"
+              >
                 {t("flights:form.airline")}
                 <InferredBadge
                   show={isInferred("airline", initialData.inferredFields)}
@@ -466,6 +428,7 @@ export default function FlightReviewModal({
                 />
               </label>
               <input
+                id={fid(2)}
                 type="text"
                 value={airline}
                 onChange={(e) => setAirline(e.target.value)}
@@ -513,7 +476,10 @@ export default function FlightReviewModal({
           {/* Times */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-2">
+              <label
+                htmlFor={fid(3)}
+                className="block text-sm font-medium text-(--text-primary) mb-2"
+              >
                 {t("flights:form.departureTime")} <RequiredMark />
                 <InferredBadge
                   show={isInferred("departureTime", initialData.inferredFields)}
@@ -521,6 +487,7 @@ export default function FlightReviewModal({
                 />
               </label>
               <input
+                id={fid(3)}
                 type="datetime-local"
                 value={departureTime}
                 onChange={(e) => setDepartureTime(e.target.value)}
@@ -530,7 +497,10 @@ export default function FlightReviewModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-2">
+              <label
+                htmlFor={fid(4)}
+                className="block text-sm font-medium text-(--text-primary) mb-2"
+              >
                 {t("flights:form.arrivalTime")} <RequiredMark />
                 <InferredBadge
                   show={isInferred("arrivalTime", initialData.inferredFields)}
@@ -538,6 +508,7 @@ export default function FlightReviewModal({
                 />
               </label>
               <input
+                id={fid(4)}
                 type="datetime-local"
                 value={arrivalTime}
                 onChange={(e) => setArrivalTime(e.target.value)}
@@ -550,7 +521,10 @@ export default function FlightReviewModal({
           {/* Aircraft and Class */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-2">
+              <label
+                htmlFor={fid(5)}
+                className="block text-sm font-medium text-(--text-primary) mb-2"
+              >
                 {t("flights:form.aircraft")}
                 <InferredBadge
                   show={isInferred("aircraft", initialData.inferredFields)}
@@ -558,6 +532,7 @@ export default function FlightReviewModal({
                 />
               </label>
               <input
+                id={fid(5)}
                 type="text"
                 value={aircraft}
                 onChange={(e) => setAircraft(e.target.value)}
@@ -573,7 +548,10 @@ export default function FlightReviewModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-2">
+              <label
+                htmlFor={fid(6)}
+                className="block text-sm font-medium text-(--text-primary) mb-2"
+              >
                 {t("flights:form.seatClass")}
                 <InferredBadge
                   show={isInferred("seatClass", initialData.inferredFields)}
@@ -581,6 +559,7 @@ export default function FlightReviewModal({
                 />
               </label>
               <select
+                id={fid(6)}
                 value={seatClass}
                 onChange={(e) =>
                   setSeatClass(
@@ -600,10 +579,14 @@ export default function FlightReviewModal({
           {/* Seat Details */}
           <div className="grid grid-cols-1 md:grid-cols-3 gap-4">
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-2">
+              <label
+                htmlFor={fid(7)}
+                className="block text-sm font-medium text-(--text-primary) mb-2"
+              >
                 {t("flights:form.seat")}
               </label>
               <input
+                id={fid(7)}
                 type="text"
                 value={seat}
                 onChange={(e) => setSeat(e.target.value.toUpperCase())}
@@ -614,10 +597,14 @@ export default function FlightReviewModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-2">
+              <label
+                htmlFor={fid(8)}
+                className="block text-sm font-medium text-(--text-primary) mb-2"
+              >
                 {t("flights:form.terminal")}
               </label>
               <input
+                id={fid(8)}
                 type="text"
                 value={terminal}
                 onChange={(e) => setTerminal(e.target.value)}
@@ -627,10 +614,14 @@ export default function FlightReviewModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-2">
+              <label
+                htmlFor={fid(9)}
+                className="block text-sm font-medium text-(--text-primary) mb-2"
+              >
                 {t("flights:form.gate")}
               </label>
               <input
+                id={fid(9)}
                 type="text"
                 value={gate}
                 onChange={(e) => setGate(e.target.value)}
@@ -643,7 +634,10 @@ export default function FlightReviewModal({
           {/* Booking Details */}
           <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-2">
+              <label
+                htmlFor={fid(10)}
+                className="block text-sm font-medium text-(--text-primary) mb-2"
+              >
                 {t("flights:form.bookingReference")}
                 <InferredBadge
                   show={isInferred("bookingReference", initialData.inferredFields, ["pnr"])}
@@ -651,6 +645,7 @@ export default function FlightReviewModal({
                 />
               </label>
               <input
+                id={fid(10)}
                 type="text"
                 value={bookingReference}
                 onChange={(e) => setBookingReference(e.target.value.toUpperCase())}
@@ -661,10 +656,14 @@ export default function FlightReviewModal({
             </div>
 
             <div>
-              <label className="block text-sm font-medium text-(--text-primary) mb-2">
+              <label
+                htmlFor={fid(11)}
+                className="block text-sm font-medium text-(--text-primary) mb-2"
+              >
                 {t("flights:form.boardingGroup")}
               </label>
               <input
+                id={fid(11)}
                 type="text"
                 value={boardingGroup}
                 onChange={(e) => setBoardingGroup(e.target.value)}
@@ -677,10 +676,14 @@ export default function FlightReviewModal({
 
           {/* Ticket Number */}
           <div>
-            <label className="block text-sm font-medium text-(--text-primary) mb-2">
+            <label
+              htmlFor={fid(12)}
+              className="block text-sm font-medium text-(--text-primary) mb-2"
+            >
               {t("flights:form.ticketNumber")}
             </label>
             <input
+              id={fid(12)}
               type="text"
               value={ticketNumber}
               onChange={(e) => setTicketNumber(e.target.value)}
@@ -690,73 +693,18 @@ export default function FlightReviewModal({
             />
           </div>
 
-          {/* Cost Breakdown — price + currency always available, matching the
-              cruise forms (#192); taxes/fees stay behind cost tracking. */}
-          <div className="border rounded-lg p-4">
-            <h3 className="text-sm font-semibold text-(--text-primary) mb-3">
-              {t("flights:review.costsTitle")}
-            </h3>
-            <div className="grid grid-cols-1 md:grid-cols-2 gap-4">
-              <div>
-                <label className="block text-sm font-medium text-(--text-primary) mb-2">
-                  {t("common:labels.price")}
-                </label>
-                <input
-                  type="number"
-                  step="0.01"
-                  value={price || ""}
-                  onChange={(e) =>
-                    setPrice(e.target.value ? parseFloat(e.target.value) : undefined)
-                  }
-                  className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
-                  placeholder={t("flights:form.placeholders.price")}
-                />
-              </div>
-
-              <div>
-                <label className="block text-sm font-medium text-(--text-primary) mb-2">
-                  {t("flights:form.currency")}
-                </label>
-                <CurrencySelect value={currency} onChange={setCurrency} recent={recentCurrencies} />
-              </div>
-
-              {features.enableCostTracking && (
-                <>
-                  <div>
-                    <label className="block text-sm font-medium text-(--text-primary) mb-2">
-                      {t("common:labels.taxes")}
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={taxes || ""}
-                      onChange={(e) =>
-                        setTaxes(e.target.value ? parseFloat(e.target.value) : undefined)
-                      }
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
-                      placeholder={t("flights:form.placeholders.taxes")}
-                    />
-                  </div>
-
-                  <div>
-                    <label className="block text-sm font-medium text-(--text-primary) mb-2">
-                      {t("common:labels.fees")}
-                    </label>
-                    <input
-                      type="number"
-                      step="0.01"
-                      value={fees || ""}
-                      onChange={(e) =>
-                        setFees(e.target.value ? parseFloat(e.target.value) : undefined)
-                      }
-                      className="w-full px-3 py-2 border border-border rounded-lg bg-(--bg-surface) text-(--text-primary) focus:ring-2 focus:ring-blue-500"
-                      placeholder={t("flights:form.placeholders.fees")}
-                    />
-                  </div>
-                </>
-              )}
-            </div>
-          </div>
+          <ReviewCostSection
+            price={price}
+            onPrice={setPrice}
+            currency={currency}
+            onCurrency={setCurrency}
+            recentCurrencies={recentCurrencies}
+            taxes={taxes}
+            onTaxes={setTaxes}
+            fees={fees}
+            onFees={setFees}
+            withTaxesAndFees={features.enableCostTracking}
+          />
 
           {/* Buttons */}
           <div className="flex gap-3 pt-4 border-t">
