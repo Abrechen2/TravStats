@@ -261,6 +261,16 @@ describe("GET /api/v1/admin/export/all-data", () => {
         ascentM: 120,
       },
     });
+    // forgejo#140: its ferry ticket, reachable from no trip either.
+    await prisma.tripExpense.create({
+      data: {
+        userId: createdUserIds[0],
+        routeId: route.id,
+        kind: "ferry",
+        amount: 1290,
+        currency: "NOK",
+      },
+    });
 
     const res = await request(app).get("/api/v1/admin/export/all-data").set("Cookie", adminCookie);
     expect(res.status).toBe(200);
@@ -276,6 +286,10 @@ describe("GET /api/v1/admin/export/all-data", () => {
         tracks: [expect.objectContaining({ source: "gpx", ascentM: 120 })],
       }),
     ]);
+    expect(me.tripExpenses).toEqual([
+      expect.objectContaining({ routeId: route.id, kind: "ferry", currency: "NOK" }),
+    ]);
+    expect(Number(me.tripExpenses[0].amount)).toBe(1290);
   });
 
   /**

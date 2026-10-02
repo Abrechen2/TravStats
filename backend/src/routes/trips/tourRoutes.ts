@@ -1,9 +1,13 @@
 import { Router, Response, NextFunction } from "express";
 import { Prisma } from "../../prisma";
 
-import { prisma } from "../../db";
+import { prisma, type DbTransaction } from "../../db";
 import { authenticate, requireWriteScope, AuthRequest } from "../../middleware/auth";
-import { AppError } from "../../middleware/errorHandler";
+import { AppError, type ApiErrorCode } from "../../middleware/errorHandler";
+import {
+  handExpensesToTrips,
+  standaloneExpenseCount,
+} from "../../services/expenses/sectionRemoval";
 import { assignStopsSchema, createRouteSchema, updateRouteSchema } from "../../schemas/tour";
 import { kindFieldsSchema } from "../../schemas/roadtrip";
 import { tourDayColumns, tourDayDto } from "../../services/tour/tourDay";
@@ -12,6 +16,7 @@ import { recomputeLegs } from "../../services/tour/legRecompute";
 import { autoRouteNewLegs } from "../../services/tour/routing/autoRouteLegs";
 import { describeRoutingAvailability } from "../../services/tour/routing/resolveProvider";
 import { resolveTrip } from "../trips";
+import { DETACH_STATION_PHOTOS, planStationPhotoMove } from "../../services/trips/photoStation";
 import logger from "../../utils/logger";
 
 /**
@@ -32,8 +37,17 @@ const router = Router();
 async function assertKindFields(
   userId: string,
   routeId: string,
-  body: { anchorStopId?: string | null; tripId?: string | null }
-): Promise<void> {
+  body: { anchorStopId?: string | null; tripId?: string | null; detachStationPhotos?: boolean }
+): Promise<((tx: DbTransaction) => Promise<number>) | null> {
+  if (body.detachStationPhotos && body.tripId === undefined) {
+    throw new AppError(
+      `${DETACH_STATION_PHOTOS} only accompanies a move (tripId)`,
+      400,
+      "VALIDATION_FAILED",
+      DETACH_STATION_PHOTOS
+    );
+  }
+  let detach: ((tx: DbTransaction) => Promise<number>) | null = null;
   if (body.tripId) await resolveTrip(userId, body.tripId);
   if (body.tripId !== undefined) {
     // Only a roadtrip moves between trips: its stations are its own. A tour
@@ -58,8 +72,10 @@ async function assertKindFields(
         409
       );
     }
+    // Its stations may hold photos of the trip it leaves (forgejo#139).
+    detach = await planStationPhotoMove(routeId, body.tripId, body.detachStationPhotos === true);
   }
-  if (!body.anchorStopId) return;
+  if (!body.anchorStopId) return detach;
   const [route, anchor] = await Promise.all([
     prisma.tripRoute.findUniqueOrThrow({ where: { id: routeId }, select: { kind: true } }),
     prisma.tripStop.findFirst({
@@ -71,6 +87,7 @@ async function assertKindFields(
     throw new AppError("Only a tour sets out from a roadtrip station", 400);
   }
   if (!anchor) throw new AppError("Station not found", 404);
+  return detach;
 }
 
 interface LegRow {
@@ -139,8 +156,6 @@ export function toLegDto(leg: {
   confidence: string;
   waypoints: Prisma.JsonValue | null;
   drivingMinutes: number | null;
-  tollCost: number | null;
-  currency: string | null;
 }): Record<string, unknown> {
   return {
     id: leg.id,
@@ -152,8 +167,8 @@ export function toLegDto(leg: {
     confidence: leg.confidence,
     waypoints: leg.waypoints ?? null,
     drivingMinutes: leg.drivingMinutes,
-    tollCost: leg.tollCost,
-    currency: leg.currency,
+    // No `tollCost` / `currency` since forgejo#140: a toll is a TripExpense
+    // (kind `toll`) between the leg's two stops, read with the expenses.
   };
 }
 
@@ -294,22 +309,28 @@ router.patch(
     try {
       const userId = req.userId!;
       const routeId = await resolveRoute(userId, req.params.id, req.params.routeId);
-      const { date, startTime, ...body } = updateRouteSchema
+      const { date, startTime, detachStationPhotos, ...body } = updateRouteSchema
         .merge(kindFieldsSchema)
         .parse(req.body);
-      await assertKindFields(userId, routeId, body);
+      const detach = await assertKindFields(userId, routeId, { ...body, detachStationPhotos });
       const current = await prisma.tripRoute.findUniqueOrThrow({
         where: { id: routeId },
         select: { kind: true, tourDate: true },
       });
       const day = tourDayColumns({ date, startTime }, current.kind, current);
 
-      const route = await prisma.tripRoute.update({
-        where: { id: routeId },
-        data: { ...body, ...day },
-        include: ROUTE_SELECT,
+      // The photos come off their stations in the same transaction as the
+      // move: a move that failed must not leave them unlinked.
+      const [route, detachedStationPhotos] = await prisma.$transaction(async (tx) => {
+        const detached = detach ? await detach(tx) : 0;
+        const updated = await tx.tripRoute.update({
+          where: { id: routeId },
+          data: { ...body, ...day },
+          include: ROUTE_SELECT,
+        });
+        return [updated, detached] as const;
       });
-      res.json({ route: toDto(route) });
+      res.json({ route: toDto(route), detachedStationPhotos });
     } catch (error) {
       next(error);
     }
@@ -338,8 +359,20 @@ router.delete(
     try {
       const userId = req.userId!;
       const routeId = await resolveRouteFromRequest(userId, req);
+      // Costs (forgejo#140): on a trip they become the trip's; without one
+      // they would vanish, so the delete waits for an explicit opt-in.
+      const orphaned = await standaloneExpenseCount([routeId]);
+      if (orphaned > 0 && req.query.deleteExpenses !== "true") {
+        res.status(409).json({
+          error: `This section carries ${orphaned} cost(s) and belongs to no trip; send deleteExpenses=true to delete them with it`,
+          code: "SECTION_HAS_EXPENSES" satisfies ApiErrorCode,
+          expenseCount: orphaned,
+        });
+        return;
+      }
 
       await prisma.$transaction(async (tx) => {
+        await handExpensesToTrips(tx, [routeId]);
         // Release the TRIP's stops first; the section's own trip-less
         // points then go with it through the cascade. Reversing these two
         // deletes the timeline the tour was only drawn over. The night

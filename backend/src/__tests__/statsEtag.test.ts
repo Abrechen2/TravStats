@@ -165,6 +165,20 @@ describe("statistics ETag", () => {
     expect((await get(before)).status).toBe(200);
   });
 
+  it("sees a new and an EDITED expense (forgejo#140) — the travel account counts them", async () => {
+    const route = await prisma.tripRoute.create({
+      data: { userId, name: "Fähren", mode: "road", kind: "roadtrip" },
+    });
+    const before = (await get()).headers.etag;
+    const expense = await prisma.tripExpense.create({
+      data: { userId, routeId: route.id, kind: "ferry", amount: 1290, currency: "NOK" },
+    });
+    const afterCreate = await get(before);
+    expect(afterCreate.status).toBe(200);
+    await prisma.tripExpense.update({ where: { id: expense.id }, data: { amount: 1390 } });
+    expect((await get(afterCreate.headers.etag)).status).toBe(200);
+  });
+
   it("does not move when ANOTHER user writes", async () => {
     const before = (await get()).headers.etag;
     await prisma.flight.create({

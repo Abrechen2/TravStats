@@ -10,6 +10,7 @@ import type {
   StoredRoadtripVehicle,
 } from "../shared/tour/roadtrip";
 import type { TourLeg, TourRoute, TrackSource } from "./tour";
+import type { RoadtripCosts, TripExpense } from "./expense";
 
 export interface RoadtripNights {
   /** Nights at linked stays — the SAME figure the lodging statistics hold. */
@@ -111,6 +112,10 @@ export interface RoadtripDetail {
   legs: TourLeg[];
   tours: RoadtripDayTour[];
   routingAvailable: boolean;
+  /** Ferry tickets, tolls, pitch fees, fuel (forgejo#140). */
+  expenses: TripExpense[];
+  /** Their sums per station, per leg and in total — per currency. */
+  costs: RoadtripCosts;
 }
 
 /** A station's night as the station list accepts it. */

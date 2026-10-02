@@ -98,6 +98,7 @@ model User {
   parseLogs              ParseTrainingLog[]
   trips                  Trip[]
   tourRoutes             TripRoute[]
+  tripExpenses           TripExpense[]
   bookings               Booking[]
   cruises                Cruise[]
   railJourneys           RailJourney[]
@@ -1540,6 +1541,7 @@ model Trip {
   rentalBookings RentalBooking[]
   stops          TripStop[]
   routes         TripRoute[]
+  expenses       TripExpense[]
   journalEntries TripJournalEntry[]
   photos         TripPhoto[]
   lodgingStays   LodgingStay[]
@@ -1574,8 +1576,18 @@ model TripPhoto {
   lat Float?
   lon Float?
 
+  /// The station (or timeline stop) this photo belongs to, linked for good
+  /// rather than derived from `takenAt` — two stations on one day cannot be
+  /// told apart by date (forgejo#139). Always a stop OF THIS TRIP: on its
+  /// timeline (`TripStop.tripId`) or of a roadtrip filed on it
+  /// (`TripStop.route.tripId`); `services/trips/photoStation.ts` holds that on
+  /// every write, since a foreign key proves existence, not membership.
+  /// SetNull — deleting a station keeps the photo on the trip.
+  stopId String? @map("stop_id")
+
   trip         Trip                @relation(fields: [tripId], references: [id], onDelete: Cascade)
   immichAlbum  TripImmichAlbum?    @relation(fields: [immichAlbumLinkId], references: [id], onDelete: Cascade)
+  stop         TripStop?           @relation(fields: [stopId], references: [id], onDelete: SetNull)
   visitLinks   PlaceVisitPhoto[]
   journalLinks JournalEntryPhoto[]
 
@@ -1583,6 +1595,7 @@ model TripPhoto {
   @@index([tripId])
   @@index([tripId, sortIdx])
   @@index([immichAlbumLinkId])
+  @@index([stopId])
   @@map("trip_photos")
 }
 
@@ -1688,7 +1701,7 @@ model TripStop {
   createdAt     DateTime  @default(now()) @map("created_at")
   updatedAt     DateTime  @updatedAt @map("updated_at")
 
-  trip          Trip?          @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  trip            Trip?          @relation(fields: [tripId], references: [id], onDelete: Cascade)
   /// Cascade, and the delete handler does the other half.
   ///
   /// The two cases want opposite things and the database can only be told
@@ -1705,13 +1718,18 @@ model TripStop {
   /// stops BEFORE deleting the section (`tourRoutes.ts`). Deleting a
   /// section any other way than through that handler takes its stops with
   /// it — which is what every other caller (seeds, account deletion) wants.
-  route         TripRoute?     @relation(fields: [routeId], references: [id], onDelete: Cascade)
-  legsFrom      TripRouteLeg[] @relation("LegFrom")
-  legsTo        TripRouteLeg[] @relation("LegTo")
-  lodgingStay   LodgingStay?   @relation(fields: [lodgingStayId], references: [id], onDelete: SetNull)
-  place         Place?         @relation(fields: [placeId], references: [id], onDelete: SetNull)
+  route           TripRoute?     @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  legsFrom        TripRouteLeg[] @relation("LegFrom")
+  legsTo          TripRouteLeg[] @relation("LegTo")
+  lodgingStay     LodgingStay?   @relation(fields: [lodgingStayId], references: [id], onDelete: SetNull)
+  place           Place?         @relation(fields: [placeId], references: [id], onDelete: SetNull)
   /// Tours that started from this station ("Preikestolen, from Mosvangen").
-  anchoredTours TripRoute[]    @relation("TourAnchor")
+  anchoredTours   TripRoute[]    @relation("TourAnchor")
+  /// Trip photos filed at this station (forgejo#139).
+  photos          TripPhoto[]
+  expenses        TripExpense[]  @relation("ExpenseStop")
+  expensesLegFrom TripExpense[]  @relation("ExpenseLegFrom")
+  expensesLegTo   TripExpense[]  @relation("ExpenseLegTo")
 
   @@unique([routeId, routeOrderIdx])
   @@index([tripId])
@@ -1790,6 +1808,7 @@ model TripRoute {
   stops      TripStop[]
   legs       TripRouteLeg[]
   tracks     TripRouteTrack[]
+  expenses   TripExpense[]
   /// Rental cars this roadtrip was driven in (rental spec §7.2).
   rentals    RentalBooking[]
 
@@ -1824,9 +1843,9 @@ model TripRouteLeg {
 
   /// `[[lon, lat], …]` in GeoJSON order. Null when source is `straight`.
   waypoints      Json?
-  drivingMinutes Int?    @map("driving_minutes")
-  tollCost       Float?  @map("toll_cost")
-  currency       String?
+  drivingMinutes Int?  @map("driving_minutes")
+  // The toll that used to live here (`toll_cost` + `currency`) is a
+  // `TripExpense` of kind `toll` since forgejo#140 — one source for totals.
 
   computedAt DateTime @default(now()) @map("computed_at")
   updatedAt  DateTime @updatedAt @map("updated_at")
@@ -1838,6 +1857,58 @@ model TripRouteLeg {
   @@unique([routeId, fromStopId, toStopId])
   @@index([routeId])
   @@map("trip_route_legs")
+}
+
+/// Money spent on the way (forgejo#140, owner 2026-10-01): a ferry ticket, a
+/// toll, a pitch fee, fuel. Belongs to EXACTLY one of a trip (trip-wide, "the
+/// vignette") or a route section (a roadtrip or tour) — `trip_expenses_one_scope`
+/// holds that in the database. A route-scoped expense deliberately does not
+/// copy the route's trip: a roadtrip can move between trips, and a copied id
+/// would keep billing the trip it left.
+///
+/// Optionally pinned to a station (`stopId`) or to the way between two
+/// (`legFromStopId` → `legToStopId`, a toll or a ferry). All three are SetNull:
+/// deleting a station keeps the money, which still was spent. That is also why
+/// no CHECK pairs the two leg ends — the cascade clears one at a time, the
+/// trap migration 20260921195505 met.
+///
+/// Totals are per currency and never summed across them: unlike a stay, an
+/// expense carries no FX snapshot.
+model TripExpense {
+  id            String    @id @default(uuid())
+  /// The owner, held directly (see `TripRoute.userId`): a FK proves existence, not ownership.
+  userId        String    @map("user_id")
+  tripId        String?   @map("trip_id")
+  routeId       String?   @map("route_id")
+  stopId        String?   @map("stop_id")
+  legFromStopId String?   @map("leg_from_stop_id")
+  legToStopId   String?   @map("leg_to_stop_id")
+  /// ferry | toll | pitch | fuel | parking | other — `EXPENSE_KINDS`, CHECKed.
+  kind          String
+  amount        Decimal   @db.Decimal(16, 4)
+  /// ISO 4217, upper-case.
+  currency      String
+  /// The local calendar day it was paid (ADR 0002: a DATE, "YYYY-MM-DD"), or
+  /// null when not known — then it counts in totals and in no year.
+  date          DateTime? @db.Date
+  note          String?
+  createdAt     DateTime  @default(now()) @map("created_at")
+  updatedAt     DateTime  @updatedAt @map("updated_at")
+
+  user        User       @relation(fields: [userId], references: [id], onDelete: Cascade)
+  trip        Trip?      @relation(fields: [tripId], references: [id], onDelete: Cascade)
+  route       TripRoute? @relation(fields: [routeId], references: [id], onDelete: Cascade)
+  stop        TripStop?  @relation("ExpenseStop", fields: [stopId], references: [id], onDelete: SetNull)
+  legFromStop TripStop?  @relation("ExpenseLegFrom", fields: [legFromStopId], references: [id], onDelete: SetNull)
+  legToStop   TripStop?  @relation("ExpenseLegTo", fields: [legToStopId], references: [id], onDelete: SetNull)
+
+  @@index([userId])
+  @@index([tripId])
+  @@index([routeId])
+  @@index([stopId])
+  @@index([legFromStopId])
+  @@index([legToStopId])
+  @@map("trip_expenses")
 }
 
 /// A recorded track. Hangs off the SECTION and a time window, never off a
@@ -3680,4 +3751,58 @@ model TimeMigrationLedger {
   @@index([status])
   @@index([userId, status])
   @@map("time_migration_ledger")
+}
+
+/// The change feed behind `GET /sync/changes` (forgejo#141). One row per
+/// insert, update or delete of a synced record, written by the database
+/// trigger `sync_record_change` — never by application code, so a delete path
+/// the routes forget (a `deleteMany`, an `onDelete: Cascade`, raw SQL) cannot
+/// skip its tombstone. See `services/sync/` for the cursor and the reasoning.
+model SyncChange {
+  /// Insertion order inside one transaction; NOT a commit order across them.
+  seq            BigInt    @id @default(autoincrement())
+  /// `pg_current_xact_id()` of the writing transaction — the feed orders and
+  /// cuts on this, below the reading snapshot's xmin.
+  xid            BigInt
+  /// No foreign key on purpose: deleting an account cascades through every
+  /// synced table, and a key would make each of those tombstones fail.
+  userId         String    @map("user_id")
+  /// The sync entity name (`flight`, `lodging_stay`, …), not the table name.
+  entity         String
+  entityId       String    @map("entity_id")
+  /// upsert | delete
+  op             String
+  /// Database column names an UPDATE changed; empty for insert and delete.
+  changedColumns String[]  @default([]) @map("changed_columns")
+  /// The row's `updated_at` after the write — what a 409 compares a client's
+  /// base version against. Null for tables without one, and for deletes.
+  rowUpdatedAt   DateTime? @map("row_updated_at")
+  /// A tour section's `kind` (tour | roadtrip), so a tombstone can be gated
+  /// by domain after the row itself is gone. Null for every other entity.
+  kind           String?
+  createdAt      DateTime  @default(now()) @map("created_at")
+
+  @@index([userId, xid, seq])
+  @@index([entity, entityId])
+  @@index([createdAt])
+  @@map("sync_changes")
+}
+
+/// The feed's single bookkeeping row (id = 1).
+model SyncState {
+  id          Int      @id @default(1)
+  /// Changes when the feed's history stops being continuous — a database
+  /// restore. A cursor from another epoch must resync in full.
+  epoch       String
+  /// The highest (xid, seq) the retention sweep has deleted. A cursor at or
+  /// above it sees a complete feed; one below it would miss tombstones.
+  prunedXid   BigInt   @default(0) @map("pruned_xid")
+  prunedSeq   BigInt   @default(0) @map("pruned_seq")
+  /// The newest row version whose change history may be incomplete — the
+  /// moment the feed began, then the newest pruned `row_updated_at`. A 409
+  /// against an older base cannot name its changed fields and says so.
+  historyFrom DateTime @map("history_from")
+  updatedAt   DateTime @updatedAt @map("updated_at")
+
+  @@map("sync_state")
 }

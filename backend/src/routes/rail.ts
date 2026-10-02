@@ -40,6 +40,7 @@ import { assertReferencesOwned } from "../utils/ownedReferences";
 import logger from "../utils/logger";
 import { railIdsCoveredBy } from "../services/loyalty/listFilters";
 import { withRailDetailTimes, withRailTimes } from "../services/rail/timesDto";
+import { RAIL_SOURCE_INCLUDE, withRailSource } from "../services/rail/railSource";
 
 /**
  * Rail journeys — one row per train ride (spec
@@ -56,6 +57,8 @@ export const RAIL_INCLUDE = {
   // Read for the short code only; the row goes out flat (withStationShortCodes).
   depStation: { select: { shortCode: true } },
   arrStation: { select: { shortCode: true } },
+  // The originals filed with the ride, read as its `source` (withRailSource).
+  ...RAIL_SOURCE_INCLUDE,
 } satisfies Prisma.RailJourneyInclude;
 
 /**
@@ -237,7 +240,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     ]);
     res.json({
       success: true,
-      data: data.map((j) => withStationShortCodes(withRailTimes(j))),
+      data: data.map((j) => withRailSource(withStationShortCodes(withRailTimes(j)))),
       meta: { total, limit, offset },
     });
   } catch (err) {
@@ -253,7 +256,10 @@ router.get("/:id", async (req: AuthRequest, res: Response, next: NextFunction) =
       include: RAIL_DETAIL_INCLUDE,
     });
     if (!journey) throw new AppError("Rail journey not found", 404);
-    res.json({ success: true, data: withStationShortCodes(withRailDetailTimes(journey)) });
+    res.json({
+      success: true,
+      data: withRailSource(withStationShortCodes(withRailDetailTimes(journey))),
+    });
   } catch (err) {
     next(err);
   }
@@ -420,11 +426,19 @@ router.post(
 
       await linkDocuments(userId, documentIds, { type: "railJourney", id: journey.id });
       await restatusTrips(journey.tripId);
+      // Read again once originals were filed, so the answer names its source.
+      const filed =
+        documentIds.length > 0
+          ? await prisma.railJourney.findUniqueOrThrow({
+              where: { id: journey.id },
+              include: RAIL_INCLUDE,
+            })
+          : journey;
 
       logger.info({ operation: "rail_journey_create", railJourneyId: journey.id, userId });
       res.status(201).json({
         success: true,
-        data: withStationShortCodes(withRailTimes(journey)),
+        data: withRailSource(withStationShortCodes(withRailTimes(filed))),
         meta: { geometry: reportOf(geo) },
       });
     } catch (err) {
@@ -535,7 +549,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     await restatusTrips(existing.tripId, journey.tripId);
     res.json({
       success: true,
-      data: withStationShortCodes(withRailTimes(journey)),
+      data: withRailSource(withStationShortCodes(withRailTimes(journey))),
       meta: { geometry: editReport(edit, existing.geometrySource) },
     });
   } catch (err) {

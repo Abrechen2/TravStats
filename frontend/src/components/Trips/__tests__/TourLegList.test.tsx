@@ -27,8 +27,6 @@ function makeLeg(overrides: Partial<TourLeg>): TourLeg {
     confidence: "low",
     waypoints: null,
     drivingMinutes: null,
-    tollCost: null,
-    currency: null,
     ...overrides,
   };
 }

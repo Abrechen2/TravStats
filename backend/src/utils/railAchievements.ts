@@ -62,6 +62,8 @@ export const RAIL_BADGE_SELECT = {
   arrTimezone: true,
   departureTime: true,
   arrivalTime: true,
+  depPrecision: true,
+  arrPrecision: true,
   distanceKm: true,
 } as const;
 
@@ -79,6 +81,9 @@ export interface RailBadgeRow {
   arrTimezone: string | null;
   departureTime: Date;
   arrivalTime: Date | null;
+  /** ADR 0002 precision of each end; `day` = logged date-only (forgejo#132 item 17). */
+  depPrecision: string | null;
+  arrPrecision: string | null;
   distanceKm: number | null;
 }
 
@@ -104,6 +109,8 @@ export type RailFactsInput = Pick<
   | "arrTimezone"
   | "departureTime"
   | "arrivalTime"
+  | "depPrecision"
+  | "arrPrecision"
   | "distanceKm"
 >;
 

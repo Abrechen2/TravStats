@@ -81,6 +81,18 @@ describe("recent currencies", () => {
     expect(res.body.data.codes).toContain("EGP");
   });
 
+  it("counts the currencies of roadtrip expenses too (forgejo#140)", async () => {
+    const route = await prisma.tripRoute.create({
+      data: { userId, name: "Island", mode: "road", kind: "roadtrip" },
+    });
+    await prisma.tripExpense.create({
+      data: { userId, routeId: route.id, kind: "fuel", amount: 9000, currency: "ISK" },
+    });
+    const res = await request(app).get("/api/v1/currencies/recent").set("Cookie", authCookie);
+    await prisma.tripRoute.delete({ where: { id: route.id } });
+    expect(res.body.data.codes).toContain("ISK");
+  });
+
   it("never offers back a stored value that is not a currency", async () => {
     const res = await request(app).get("/api/v1/currencies/recent").set("Cookie", authCookie);
     expect(res.body.data.codes).not.toContain("EURO");

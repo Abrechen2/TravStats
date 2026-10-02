@@ -4,11 +4,19 @@ import {
   FLIGHT_ARRIVAL_SLACK_HOURS,
   FLIGHT_DEPARTURE_SLACK_HOURS,
   CRUISE_SLACK_HOURS,
+  deriveRailStatus,
   deriveTripStatus,
   tripStatusBounds,
 } from "../shared/statusDerivation";
 import { dayAnchorNow, now as clockNow } from "../shared/time/clock";
 import { profileZoneFromSettings } from "../shared/time/profileZone";
+import {
+  CLOCKLESS_PRECISIONS,
+  RAIL_CLOCK_SELECT,
+  departureClockedWhere,
+  rideEndsAt,
+  rideStatusSpan,
+} from "../shared/railClock";
 
 const H = 60 * 60 * 1000;
 
@@ -208,8 +216,12 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
   // Rail journeys: the lodging split over two instants (`deriveRailStatus`).
   // No slack for the same reason as lodging — no legacy writer ever set this
   // column. An unknown arrival reads as the departure, as the deriver does.
+  // A date-only ride is swept apart (`sweepClocklessRail`): its stored instants
+  // are the starts of its days, and it is not over until the last day is.
+  const clocked = { AND: [departureClockedWhere(), arrivalClockedWhere()] };
   const railToInProgress = await prisma.railJourney.updateMany({
     where: {
+      ...clocked,
       status: { in: ["scheduled", "completed"] },
       departureTime: { lte: now },
       arrivalTime: { gt: now },
@@ -218,6 +230,7 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
   });
   const railToCompleted = await prisma.railJourney.updateMany({
     where: {
+      ...clocked,
       status: { in: ["scheduled", "in_progress"] },
       OR: [{ arrivalTime: { lte: now } }, { arrivalTime: null, departureTime: { lte: now } }],
     },
@@ -227,6 +240,7 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
     where: { status: { in: ["in_progress", "completed"] }, departureTime: { gt: now } },
     data: { status: "scheduled" },
   });
+  const railClockless = await sweepClocklessRail(now);
 
   // Rentals: rail's split over the booked pickup and return (`deriveRentalStatus`).
   const rentalToInProgress = await prisma.rentalBooking.updateMany({
@@ -263,7 +277,7 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
         where: { kind: "roadtrip" },
         select: { stops: { select: { startDate: true, endDate: true } } },
       },
-      railJourneys: { select: { departureTime: true, arrivalTime: true } },
+      railJourneys: { select: RAIL_CLOCK_SELECT },
       rentalBookings: {
         where: { status: { not: "cancelled" } },
         select: { pickupTime: true, returnTime: true },
@@ -280,7 +294,7 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
       cruises: trip.cruises,
       lodgingStays: trip.lodgingStays,
       roadtrips: trip.routes,
-      railJourneys: trip.railJourneys,
+      railJourneys: trip.railJourneys.map(rideStatusSpan),
       rentals: trip.rentalBookings,
       ownStartDate: trip.startDate,
       ownEndDate: trip.endDate,
@@ -294,7 +308,8 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
   }
 
   const flights = staleFlights.count + futureFlown.count;
-  const rail = railToInProgress.count + railToCompleted.count + railToScheduled.count;
+  const rail =
+    railToInProgress.count + railToCompleted.count + railToScheduled.count + railClockless;
   const rentals = rentalToInProgress.count + rentalToCompleted.count + rentalToScheduled.count;
   if (flights + cruises + lodging + rail + rentals + tripFlips > 0) {
     logger.info({
@@ -303,4 +318,53 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
     });
   }
   return { flights, cruises, lodging, rail, rentals, trips: tripFlips };
+}
+
+/** Rides whose arrival carries a clock, or that have none at all. */
+function arrivalClockedWhere() {
+  return {
+    OR: [{ arrPrecision: null }, { arrPrecision: { notIn: [...CLOCKLESS_PRECISIONS] } }],
+  };
+}
+
+/**
+ * The date-only rides (forgejo#132 item 17), re-derived one by one: "over" is
+ * the end of the ride's last day on its station's calendar, which no SQL range
+ * on the stored instant expresses. Only rides that may have changed are read —
+ * not cancelled, and begun by now — so the set stays small.
+ */
+async function sweepClocklessRail(now: Date): Promise<number> {
+  const rides = await prisma.railJourney.findMany({
+    where: {
+      status: { in: ["scheduled", "in_progress"] },
+      departureTime: { lte: now },
+      OR: [
+        { depPrecision: { in: [...CLOCKLESS_PRECISIONS] } },
+        { arrPrecision: { in: [...CLOCKLESS_PRECISIONS] } },
+      ],
+    },
+    select: {
+      id: true,
+      status: true,
+      departureTime: true,
+      arrivalTime: true,
+      depTimezone: true,
+      arrTimezone: true,
+      depPrecision: true,
+      arrPrecision: true,
+    },
+  });
+  let changed = 0;
+  for (const ride of rides) {
+    const status = deriveRailStatus({
+      ...ride,
+      current: ride.status,
+      now,
+      endsAt: rideEndsAt(ride),
+    });
+    if (status === ride.status) continue;
+    await prisma.railJourney.update({ where: { id: ride.id }, data: { status } });
+    changed += 1;
+  }
+  return changed;
 }

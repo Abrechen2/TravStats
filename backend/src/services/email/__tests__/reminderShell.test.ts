@@ -1,5 +1,6 @@
 import { describe, it, expect } from "@jest/globals";
 import { renderReminderShell, REMINDER_DOMAIN_COLORS } from "../reminderShell";
+import { DOMAINS } from "../../../shared/domains";
 
 const BASE_OPTS = {
   preheader: "Preheader text",
@@ -20,6 +21,19 @@ describe("renderReminderShell", () => {
       });
       expect(html).toContain(color);
     }
+  });
+
+  // The header bar is the domain colour, so it must BE the domain colour: a
+  // restated hex survives a palette change unseen. Round 29 (forgejo#131) moved
+  // rail from brick red to lavender; a mail that kept the old literal would
+  // have announced a train in the red that means "cancelled".
+  it("tints each reminder with its domain's registry colour, never a restated hex", () => {
+    expect(REMINDER_DOMAIN_COLORS).toEqual({
+      flight: DOMAINS.flight.color,
+      cruise: DOMAINS.cruise.color,
+      rail: DOMAINS.rail.color,
+      lodging: DOMAINS.lodging.color,
+    });
   });
 
   it("carries the TravStats wordmark, the heading and the body", () => {

@@ -118,6 +118,12 @@ function applyTransform(
       return parseGermanDate(text);
     case "numericDate":
       return parseNumericDate(text);
+    case "slashDayFirstDate":
+      // Same day-month-year order and the same calendar check, only the
+      // separator differs: "14/02/2017" is read as "14.02.2017".
+      return /^\d{1,2}\/\d{1,2}\/\d{4}$/.test(text)
+        ? parseNumericDate(text.replace(/\//g, "."))
+        : null;
     case "titleCase":
       return toTitleCase(text.replace(/[,;]$/, "").trim());
     case "money":

@@ -24,7 +24,8 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent } from "./shared";
+import { expenseSchema } from "../../../schemas/expense";
+import { errorContent, errorResponse } from "./shared";
 import {
   createRouteSchema,
   createTourSchema,
@@ -186,8 +187,6 @@ const tourLeg = registry.register(
         .nullable()
         .describe("[[lon, lat], …]. Null for a straight (chord) leg."),
       drivingMinutes: z.number().int().nullable(),
-      tollCost: z.number().nullable(),
-      currency: z.string().nullable(),
     })
     .openapi("TourRouteLeg", {
       example: {
@@ -200,8 +199,6 @@ const tourLeg = registry.register(
         confidence: "low",
         waypoints: null,
         drivingMinutes: null,
-        tollCost: null,
-        currency: null,
       },
     })
 );
@@ -297,8 +294,12 @@ const routeUpdateInput = registry.register(
   "TourRouteUpdateInput",
   updateRouteSchema.merge(kindFieldsSchema).openapi("TourRouteUpdateInput", {
     description:
-      "`tripId` moves only a roadtrip between trips (400 for a tour); `anchorStopId` " +
-      "must be a station of one of the caller's roadtrips and is refused on a roadtrip.",
+      "`tripId` moves only a roadtrip between trips (400 for a tour). While its stations " +
+      "hold photos of the trip it leaves the move is 409 `ROADTRIP_HAS_TRIP_PHOTOS` unless " +
+      "`detachStationPhotos: true` is sent with it, which takes those photos off their " +
+      "stations (they stay on their trip) in the same transaction (forgejo#139). " +
+      "`anchorStopId` must be a station of one of the caller's roadtrips and is refused on " +
+      "a roadtrip.",
     example: { name: "Süd-Norwegen (Umweg)", endOdometerKm: 84920 },
   })
 );
@@ -415,10 +416,43 @@ registerSectionPath({
   responses: {
     200: {
       description: "Updated",
-      content: { "application/json": { schema: z.object({ route: tourRoute }) } },
+      content: {
+        "application/json": {
+          schema: z.object({
+            route: tourRoute,
+            detachedStationPhotos: z
+              .number()
+              .int()
+              .describe(
+                "Photos taken off this roadtrip's stations by `detachStationPhotos`; 0 otherwise"
+              ),
+          }),
+        },
+      },
     },
     400: { description: "Validation failed", content: errorContent },
     404: { description: "Not found", content: errorContent },
+    409: {
+      description:
+        "The route cannot change trip: built from a trip's timeline stops, or (code " +
+        "ROADTRIP_HAS_TRIP_PHOTOS) its stations hold photos of the trip it would leave — " +
+        "resend with `detachStationPhotos: true` after asking the user",
+      content: {
+        "application/json": {
+          schema: errorResponse.extend({
+            stationPhotos: z
+              .number()
+              .int()
+              .optional()
+              .describe("ROADTRIP_HAS_TRIP_PHOTOS: how many photos are filed at its stations"),
+            optIn: z
+              .literal("detachStationPhotos")
+              .optional()
+              .describe("ROADTRIP_HAS_TRIP_PHOTOS: the field that moves it anyway"),
+          }),
+        },
+      },
+    },
   },
 });
 
@@ -456,22 +490,6 @@ registerSectionPath({
       },
     },
     404: { description: "Trip or section not found", content: errorContent },
-  },
-});
-
-registerSectionPath({
-  method: "delete",
-  path: "/trips/{id}/routes/{routeId}",
-  summary: "Delete a route section",
-  description:
-    "Deletes the section and its legs. Its stops are RELEASED, not deleted — " +
-    "a tour is scaffolding over the timeline; removing the scaffolding must " +
-    "not remove the timeline entries themselves.",
-  tags: ["Tours"],
-  request: { params: routeIdParams },
-  responses: {
-    204: { description: "Deleted" },
-    404: { description: "Not found", content: errorContent },
   },
 });
 
@@ -540,7 +558,14 @@ registerSectionPath({
     "geometry comes from the routing provider, not a request body, so " +
     "this endpoint refuses it (400) and names the routing endpoint " +
     "(`POST .../route` / `.../route-all`) instead of silently accepting " +
-    "a caller-supplied line mislabelled as provider-routed.",
+    "a caller-supplied line mislabelled as provider-routed. " +
+    "`tollCost` / `currency` are kept for older clients only (forgejo#140): a leg " +
+    "has no toll of its own any more; they write the leg's toll EXPENSE — the one " +
+    "expense of kind `toll` on this section between these two stops. A number " +
+    "creates or updates it (currency: the body's, else its own, else the owner's " +
+    "base currency), `tollCost: null` deletes it, `currency` alone re-labels an " +
+    "existing one. The answer then carries it as `toll`. Several toll expenses on " +
+    "the leg answer 409 and change nothing. New clients use the `/expenses` endpoints.",
   tags: ["Tours"],
   request: {
     params: legParams,
@@ -549,7 +574,21 @@ registerSectionPath({
   responses: {
     200: {
       description: "Leg updated",
-      content: { "application/json": { schema: z.object({ leg: tourLeg }) } },
+      content: {
+        "application/json": {
+          schema: z.object({
+            leg: tourLeg,
+            toll: expenseSchema
+              .nullable()
+              .optional()
+              .openapi({
+                description:
+                  "Present only when the body carried `tollCost` or `currency`: the leg's " +
+                  "toll expense afterwards, or null when it has none.",
+              }),
+          }),
+        },
+      },
     },
     400: {
       description:
@@ -569,7 +608,8 @@ registerSectionPath({
     409: {
       description:
         'The leg\'s stop lost its coordinates, or (for source: "track") ' +
-        "the track doesn't come within the anchor tolerance of both stops",
+        "the track doesn't come within the anchor tolerance of both stops, " +
+        "or `tollCost` was sent for a leg carrying several toll expenses",
       content: errorContent,
     },
   },

@@ -57,11 +57,13 @@ export interface UpdateTourRouteInput {
   startTime?: string | null;
 }
 
-// `drivingMinutes`/`tollCost`/`currency` are nullable AND optional: sending
-// `null` clears the field server-side, omitting the key leaves it
-// untouched. Collapsing the two into one `| null` type would make it
-// impossible to express "leave alone" — see `legOverrideSchema` in
-// `backend/src/schemas/tour.ts` and its `"drivingMinutes" in body` check.
+// `drivingMinutes` is nullable AND optional: sending `null` clears the field
+// server-side, omitting the key leaves it untouched. Collapsing the two into
+// one `| null` type would make it impossible to express "leave alone" — see
+// `legOverrideSchema` in `backend/src/schemas/tour.ts` and its
+// `"drivingMinutes" in body` check. The server still accepts `tollCost` /
+// `currency` there for older clients (forgejo#140); this client books a toll
+// as an expense instead, so the two are not offered here.
 /**
  * `trackId` is REQUIRED when `source` is `"track"` (mirrors
  * `legOverrideSchema`'s discriminated union on the backend — the
@@ -77,8 +79,6 @@ export interface SetTourLegInput {
   mode?: LegMode;
   waypoints?: Array<[number, number]>;
   drivingMinutes?: number | null;
-  tollCost?: number | null;
-  currency?: string | null;
   trackId?: string;
 }
 
@@ -186,8 +186,15 @@ export const toursApi = {
 
   /** The same delete, reached without a trip in the path — the only way to
    *  reach a tour that has none. */
-  removeStandalone: async (routeId: string): Promise<void> => {
-    await api.delete(`/tours/${routeId}`);
+  removeStandalone: async (
+    routeId: string,
+    opts: { deleteExpenses?: boolean } = {}
+  ): Promise<void> => {
+    // Without the opt-in a section with costs and no trip answers 409
+    // `SECTION_HAS_EXPENSES` (forgejo#140) — see `lib/sectionExpenses.ts`.
+    await api.delete(`/tours/${routeId}`, {
+      params: opts.deleteExpenses ? { deleteExpenses: "true" } : undefined,
+    });
   },
 
   /**

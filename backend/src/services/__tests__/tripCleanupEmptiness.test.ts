@@ -58,6 +58,14 @@ describe("micro-trip candidates", () => {
     ],
     ["a place visit", (tripId) => prisma.placeVisit.create({ data: { userId, placeId, tripId } })],
     [
+      // forgejo#140: a vignette booked on the trip is money a dissolve would delete.
+      "a trip-wide expense",
+      (tripId) =>
+        prisma.tripExpense.create({
+          data: { userId, tripId, kind: "toll", amount: 9.6, currency: "CHF" },
+        }),
+    ],
+    [
       "a linked album",
       (tripId) =>
         prisma.tripImmichAlbum.create({

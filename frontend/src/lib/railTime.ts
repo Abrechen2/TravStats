@@ -39,13 +39,16 @@ export function formatStationClock(value: TimeValue, locale: string): string {
 /**
  * Minutes on board, from the two instants (`utc`) — so a ride across a zone
  * border is measured right. Null when the arrival is not known or precedes
- * the departure: an unknown duration is not zero.
+ * the departure, and when either end has no clock: a ride logged date-only is
+ * stored at the starts of its days (forgejo#132 item 17), which measure
+ * nothing. An unknown duration is not zero.
  */
 export function railDurationMinutes(
   departure: TimeValue,
   arrival: TimeValue | null | undefined
 ): number | null {
   if (!arrival) return null;
+  if (departure.precision !== "minute" || arrival.precision !== "minute") return null;
   const minutes = Math.round((Date.parse(arrival.utc) - Date.parse(departure.utc)) / 60_000);
   return Number.isFinite(minutes) && minutes >= 0 ? minutes : null;
 }

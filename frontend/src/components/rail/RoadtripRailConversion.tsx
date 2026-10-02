@@ -127,7 +127,11 @@ export function RoadtripRailConversion({
               {t("rail:roadtripConversion.removeSection")}
               {!preview.canRemoveSection && (
                 <span className="t-caption" style={{ display: "block" }}>
-                  {t("rail:roadtripConversion.removeSectionHint")}
+                  {t(
+                    preview.removeBlockedBy === "costs"
+                      ? "rail:roadtripConversion.removeSectionCostsHint"
+                      : "rail:roadtripConversion.removeSectionHint"
+                  )}
                 </span>
               )}
             </span>

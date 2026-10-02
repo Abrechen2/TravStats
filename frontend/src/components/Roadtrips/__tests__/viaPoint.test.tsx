@@ -48,8 +48,6 @@ const leg = (from: string, to: string, km: number): TourLeg => ({
   confidence: "high",
   waypoints: null,
   drivingMinutes: null,
-  tollCost: null,
-  currency: null,
 });
 
 describe("a route correction", () => {

@@ -11,6 +11,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
+import { flightTimesSchema } from "../../../schemas/times";
 import { errorContent } from "./shared";
 
 const badInput = { description: "Invalid input", content: errorContent };
@@ -406,12 +407,55 @@ registry.registerPath({
 
 const flightsTag = ["Flights"];
 
+const airportEnd = z.object({ city: z.string().nullable(), country: z.string().nullable() });
+
+/** Exported so the route's test holds the payload to it (forgejo#132, 2026-09-27). */
+export const nextFlightResponse = z.object({
+  flight: z
+    .object({
+      id: uuid,
+      airline: z.string().nullable(),
+      airlineIata: z.string().nullable(),
+      flightNumber: z.string().nullable(),
+      depIata: z.string().nullable(),
+      arrIata: z.string().nullable(),
+      departureTime: z
+        .string()
+        .datetime()
+        .nullable()
+        .describe("Legacy mirror of `times.departure`; read `times` instead."),
+      arrivalTime: z.string().datetime().nullable(),
+      depTimeSemantics: z.string(),
+      arrTimeSemantics: z.string(),
+      depTimezone: z
+        .string()
+        .nullable()
+        .describe("The zone the departure was stored with, else today's catalogue zone."),
+      arrTimezone: z.string().nullable(),
+      times: flightTimesSchema,
+      tripId: uuid.nullable(),
+      departure: airportEnd,
+      arrival: airportEnd,
+    })
+    .nullable()
+    .describe("Null when nothing is ahead."),
+});
+
 registry.registerPath({
   method: "get",
   path: "/flights/next",
   summary: "The next flight that has not departed",
+  description:
+    "Carries `times` and both zones: a reminder scheduled from the bare " +
+    "`departureTime` of a flight written before zones were stored would be off " +
+    "by the airport's offset.",
   tags: flightsTag,
-  responses: { 200: { description: "Next flight, or nothing" } },
+  responses: {
+    200: {
+      description: "Next flight, or nothing",
+      content: { "application/json": { schema: nextFlightResponse } },
+    },
+  },
 });
 
 registry.registerPath({

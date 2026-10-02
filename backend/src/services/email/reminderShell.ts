@@ -1,4 +1,5 @@
 import type { ReminderLang } from "./reminderFormat";
+import { DOMAINS } from "../../shared/domains";
 
 /**
  * The one branded shell every reminder email (flight, cruise, rail, lodging)
@@ -11,18 +12,18 @@ import type { ReminderLang } from "./reminderFormat";
  * this is inline styles + a system font stack, the same constraint the
  * existing password-reset/invitation emails already work under.
  *
- * Colours are `design/tokens.json` `domainColor.*` (flight, cruise, rail) —
- * `lodging` reuses `domainColor.hotel`, the closest existing token; there is
- * no dedicated "hotel reminder" domain colour in the design system yet.
+ * Colours are the domain registry's (`shared/domains.ts`, which a test ties to
+ * `design/tokens.json` `domainColor.*`; lodging is the token file's `hotel`).
+ * Read, not restated: a copied hex outlives the next palette change unseen.
  */
 
 export type ReminderDomain = "flight" | "cruise" | "rail" | "lodging";
 
 export const REMINDER_DOMAIN_COLORS: Record<ReminderDomain, string> = {
-  flight: "#f0a947",
-  cruise: "#4aa6b0",
-  rail: "#a597e8",
-  lodging: "#5ec2b2",
+  flight: DOMAINS.flight.color,
+  cruise: DOMAINS.cruise.color,
+  rail: DOMAINS.rail.color,
+  lodging: DOMAINS.lodging.color,
 };
 
 export interface ReminderShellOptions {

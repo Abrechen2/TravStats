@@ -134,11 +134,17 @@ export function deriveRailStatus(input: {
   arrivalTime: Date | null;
   current: string;
   now?: Date;
+  /**
+   * When the ride is over, if not its last instant: a clockless (date-only)
+   * end is over when its DAY is (`rideEndsAt` in `shared/railClock.ts`,
+   * forgejo#132 item 17), not at the midnight that day is stored as.
+   */
+  endsAt?: Date;
 }): string {
   const { departureTime, arrivalTime, current } = input;
   if ((RAIL_PASSTHROUGH as readonly string[]).includes(current)) return current;
   const nowMs = (input.now ?? clockNow()).getTime();
-  const end = arrivalTime ?? departureTime;
+  const end = input.endsAt ?? arrivalTime ?? departureTime;
   if (nowMs < departureTime.getTime()) return "scheduled";
   if (nowMs >= end.getTime()) return "completed";
   return "in_progress";

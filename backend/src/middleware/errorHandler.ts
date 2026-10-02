@@ -25,11 +25,21 @@ export interface ApiError extends Error {
  * `error` field rather than in `code`.
  */
 export type ApiErrorCode =
+  /** An edit or delete named a base version (If-Match / baseVersion) the
+   *  record has moved past — forgejo#141, `services/sync/versionPrecondition.ts`.
+   *  The 409 carries the current record and the changed fields. */
+  | "VERSION_CONFLICT"
+  /** `GET /sync/changes` cannot continue this cursor (410): start a full read. */
+  | "SYNC_RESYNC_REQUIRED"
   | "INVALID_CREDENTIALS"
   | "ACCOUNT_DEACTIVATED"
   | "RATE_LIMITED"
   | "DB_UNAVAILABLE"
   | "DUPLICATE"
+  /** Deleting a roadtrip or tour with no trip would delete its costs
+   *  (forgejo#140): refused until the caller sends `deleteExpenses=true`. The
+   *  body carries `expenseCount`. */
+  | "SECTION_HAS_EXPENSES"
   /** A list filter named a loyalty card that is not this account's, or not
    *  of the list's kind (a hotel card on the flight list). The list says the
    *  programme is gone instead of showing an unfiltered or empty page. */
@@ -140,6 +150,17 @@ export type ApiErrorCode =
   | "TOUR_POINTS_FROM_TRIP"
   /** A trip's timeline stop was sent as a route correction (via point). */
   | "VIA_POINT_ON_TIMELINE"
+  /** A trip photo was linked to a stop that is not on its trip — neither on
+   *  the trip's timeline nor a station of a roadtrip filed on it (forgejo#139).
+   *  Also answered for a stop that does not exist, so a probe learns nothing
+   *  about another account's stops. `field` is `stopId`. */
+  | "STOP_NOT_ON_TRIP"
+  /** A roadtrip whose stations hold photos of its trip cannot move to another
+   *  trip or off it: the photos stay with the trip, and their station links
+   *  would point across trips (forgejo#139). The body carries `stationPhotos`
+   *  (how many) and `optIn: "detachStationPhotos"` — resend the PATCH with
+   *  that set to take them off their stations and move anyway. */
+  | "ROADTRIP_HAS_TRIP_PHOTOS"
   /** A roadtrip station with a night was sent as a route correction. */
   | "VIA_POINT_HAS_NIGHT"
   /** Backup / restore job failures — see `services/backup/backupFailure.ts`.
@@ -361,6 +382,8 @@ export const errorHandler = async (
   const message = err.message || "Internal server error";
 
   res.status(statusCode).json({
+    // First, so none of the fixed keys below can be overwritten by it.
+    ...(isAppError(err) && err.code && err.extra ? err.extra : {}),
     error: message,
     // A machine-readable cause, present only where the thrower named one.
     // `message` is English prose written for a log; a client that shows it to
@@ -436,11 +459,25 @@ export class AppError extends Error {
    */
   field?: string;
 
-  constructor(message: string, statusCode: number = 500, code?: ApiErrorCode, field?: string) {
+  /**
+   * Facts a client needs to ask the user how to proceed — "4 photos are
+   * filed at these stations; move them anyway?" (forgejo#139). Sent beside
+   * `error`/`code`, which it can never overwrite. Only with a `code`.
+   */
+  extra?: Readonly<Record<string, string | number | boolean>>;
+
+  constructor(
+    message: string,
+    statusCode: number = 500,
+    code?: ApiErrorCode,
+    field?: string,
+    extra?: Readonly<Record<string, string | number | boolean>>
+  ) {
     super(message);
     this.statusCode = statusCode;
     this.code = code;
     this.field = field;
+    this.extra = extra;
     this.name = "AppError";
   }
 }

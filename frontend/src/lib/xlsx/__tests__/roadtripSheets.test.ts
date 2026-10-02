@@ -73,6 +73,8 @@ function detail(over: Partial<RoadtripDetail["nights"]> = {}): RoadtripDetail {
     legs: [],
     tours: [],
     routingAvailable: true,
+    expenses: [],
+    costs: { total: {}, byStation: [], byLeg: [], unpinned: {} },
   };
 }
 

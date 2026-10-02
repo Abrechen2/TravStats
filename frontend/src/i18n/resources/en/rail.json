@@ -241,6 +241,7 @@
     },
     "removeSection": "Delete the roadtrip afterwards",
     "removeSectionHint": "Only possible when every section can be taken over.",
+    "removeSectionCostsHint": "Not possible: the roadtrip has recorded costs and belongs to no trip that could take them over.",
     "confirm": "Take over",
     "done_one": "{{count}} train ride taken over.",
     "done_other": "{{count}} train rides taken over.",

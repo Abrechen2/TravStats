@@ -55,7 +55,9 @@ describe("the admin setting decides who reads a flight mail first", () => {
       entered.push("template");
       return { available: true };
     });
-    jest.spyOn(TemplateParser.prototype, "parseEmail").mockImplementation(async () => []);
+    jest
+      .spyOn(TemplateParser.prototype, "read")
+      .mockImplementation(async () => ({ flights: [], nonBooking: false }));
 
     mockedGetTextParserInstance.mockImplementation(
       () =>

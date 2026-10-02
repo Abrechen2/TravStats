@@ -193,8 +193,34 @@ describe("the tours page", () => {
     fireEvent.click(screen.getByText("trips:tours.deleteLabel"));
     fireEvent.click(await screen.findByText("trips:tours.deleteConfirm.confirm"));
 
-    await waitFor(() => expect(toursApi.removeStandalone).toHaveBeenCalledWith("t-1"));
+    await waitFor(() =>
+      expect(toursApi.removeStandalone).toHaveBeenCalledWith("t-1", { deleteExpenses: false })
+    );
     expect(screen.getByText("Süd-Norwegen")).toBeInTheDocument();
+  });
+
+  it("asks once more before deleting a tour's costs with it (forgejo#140)", async () => {
+    vi.mocked(tourIndexApi.list).mockResolvedValue([tour({ tripId: null, tripName: null })]);
+    vi.mocked(toursApi.removeStandalone)
+      .mockRejectedValueOnce(
+        Object.assign(new Error("conflict"), {
+          isAxiosError: true,
+          response: { status: 409, data: { code: "SECTION_HAS_EXPENSES", expenseCount: 1 } },
+        })
+      )
+      .mockResolvedValueOnce(undefined);
+
+    renderPage();
+    await screen.findByText("Süd-Norwegen");
+    fireEvent.click(screen.getByText("trips:tours.deleteLabel"));
+    fireEvent.click(await screen.findByText("trips:tours.deleteConfirm.confirm"));
+    fireEvent.click(await screen.findByText("trips:tours.deleteWithCosts.confirm"));
+
+    await waitFor(() => expect(screen.queryByText("Süd-Norwegen")).toBeNull());
+    expect(vi.mocked(toursApi.removeStandalone).mock.calls[1]).toEqual([
+      "t-1",
+      { deleteExpenses: true },
+    ]);
   });
 });
 

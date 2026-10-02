@@ -252,3 +252,36 @@ second time. Achievements follow the monotonic engine: a first roadtrip, 1,000 /
 6. Classification — foot/bike rows and a road row within one day stay tours, a
    road/ferry/rail row spanning at least one night becomes a roadtrip, all
    flagged.
+
+## 9. Costs (added 2026-10-01, forgejo#140)
+
+Owner decisions of 2026-10-01 on the issue's three questions:
+
+1. An expense is pinned to a station, to the way between two stations (a toll,
+   a ferry), or to neither — trip-wide (a vignette).
+2. `TripRouteLeg.tollCost` + `currency` moved into the new model as
+   `kind = toll` expenses and the two columns were dropped: one source of truth
+   for every total. Migration `20261001120000_trip_expenses` is hand-written so
+   the copy runs before the drop; `migration.tripExpenses.test.ts` replays it
+   against rows in the old shape.
+3. Expenses count in the cost statistics, per currency, never summed across
+   currencies (they carry no FX snapshot).
+
+Model — `TripExpense`: `userId`; exactly one of `tripId` (trip-wide) or
+`routeId` (a roadtrip's or tour's — NOT a copy of the route's trip, because a
+roadtrip moves between trips); `stopId` OR `legFromStopId`+`legToStopId` (all
+SetNull — a deleted station keeps the money); `kind` ferry | toll | pitch |
+fuel | parking | other; `amount` Decimal(16,4) ≥ 0; `currency` ISO 4217;
+`date` a local DATE or null; `note`.
+
+API — `GET/POST /trips/:id/expenses` (the trip's own and its sections';
+`routeId` in a POST puts it on a section of the trip), `/roadtrips/:id/expenses`
+and `/tours/:routeId/expenses` (one section's), each with
+`PATCH/DELETE …/:expenseId`. `GET /roadtrips/:id` adds `expenses` and `costs`
+(total, per station, per station-to-station leg — a via point folds onto the
+station pair — and unpinned). The leg PUT still accepts `tollCost`/`currency`
+for older clients and writes the leg's toll expense with them.
+
+Statistics — each trip's `spendByCurrency` in `/stats/travel-account` includes
+its expenses and its sections'; the same answer carries `expenses` per year and
+in total, an undated expense in the total and in no year.

@@ -184,6 +184,14 @@ registry.registerPath({
                         "whose page is its lodging's."
                     ),
                   startsAt: z.string().datetime(),
+                  startsAtPrecision: z
+                    .enum(["minute", "day"])
+                    .optional()
+                    .describe(
+                      "Rail only. `day` for a ride logged without a clock: `startsAt` is " +
+                        "the start of that day at the station, not a departure time, and " +
+                        "the entry stays upcoming until the day is over."
+                    ),
                   tripId: z.string().uuid().nullable(),
                   tripName: z.string().nullable(),
                   primary: z

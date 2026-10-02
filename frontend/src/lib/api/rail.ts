@@ -173,6 +173,8 @@ export interface RoadtripConversionPreview {
     reason: RoadtripConversionSkipReason;
   }>;
   canRemoveSection: boolean;
+  /** Why the section must stay: a leg that is no ride, or costs with no trip to take them. */
+  removeBlockedBy?: "legs" | "costs" | null;
 }
 
 export interface RoadtripConversionResult {

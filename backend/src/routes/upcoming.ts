@@ -6,6 +6,7 @@ import { airportDisplayName } from "../utils/airportDisplay";
 import { stayStartsAt } from "../utils/stayInstant";
 import type { DomainKey } from "../shared/domains";
 import { loadVisibleDomains } from "../services/domainVisibility";
+import { endHasClock, rideEndsAt } from "../shared/railClock";
 
 // No rate limiter, and deliberately so — for the same reason `stats.ts` has
 // none, arrived at from the other side. This route exists BECAUSE the tab strip
@@ -40,6 +41,12 @@ export interface UpcomingEntry {
   id: string;
   /** ISO instant this starts — departure, embarkation, check-in, trip start. */
   startsAt: string;
+  /**
+   * Rail only: `day` when the ride was logged without a clock — `startsAt` is
+   * then the start of that day at the station, not a departure time
+   * (forgejo#132 item 17). Absent on the other domains.
+   */
+  startsAtPrecision?: "minute" | "day";
   /**
    * The row a click should OPEN, which is not always `id`: a stay has no page
    * of its own, so its target is the lodging whose page lists it. Always set,
@@ -218,16 +225,32 @@ async function nextStay(userId: string): Promise<UpcomingEntry | null> {
   };
 }
 
+/** The widest a station's day can start before the instant it is read at. */
+const DAY_WINDOW_MS = 38 * 60 * 60 * 1000;
+
 /**
  * The next train (spec 2026-09-25-rail-domain). The departure is a real
  * instant — the server read the ticket's clock in the station's zone — so the
  * date rule is the flight's, unchanged. Asked only while rail is VISIBLE — the
  * user's switch and the instance's beta switch together (see the route below).
+ *
+ * A ride logged date-only (forgejo#132 item 17) is stored at the START of its
+ * day, which is not when it leaves: it stays upcoming until that day is over
+ * at its station, and says `startsAtPrecision: "day"`, so a countdown counts
+ * days and never shows the midnight as a departure time.
  */
 async function nextRail(userId: string): Promise<UpcomingEntry | null> {
-  const ride = await prisma.railJourney.findFirst({
-    where: { userId, status: { not: "cancelled" }, departureTime: { gte: new Date() } },
+  const now = new Date();
+  const rides = await prisma.railJourney.findMany({
+    where: {
+      userId,
+      status: { not: "cancelled" },
+      departureTime: { gte: new Date(now.getTime() - DAY_WINDOW_MS) },
+    },
     orderBy: [{ departureTime: "asc" }, { id: "asc" }],
+    // Candidates: the day filter below discards started ones, so the bound is
+    // wider than the one row returned.
+    take: 20,
     select: {
       id: true,
       depStationName: true,
@@ -236,10 +259,22 @@ async function nextRail(userId: string): Promise<UpcomingEntry | null> {
       trainNumber: true,
       operator: true,
       departureTime: true,
+      depTimezone: true,
+      depPrecision: true,
       tripId: true,
       trip: { select: { name: true } },
     },
   });
+  const ride = rides.find((r) =>
+    endHasClock(r.depPrecision)
+      ? r.departureTime.getTime() >= now.getTime()
+      : rideEndsAt({
+          ...r,
+          arrivalTime: null,
+          arrTimezone: null,
+          arrPrecision: null,
+        }).getTime() > now.getTime()
+  );
   if (!ride) return null;
   const train = [ride.trainCategory, ride.trainNumber].filter(Boolean).join(" ");
   return {
@@ -247,6 +282,7 @@ async function nextRail(userId: string): Promise<UpcomingEntry | null> {
     id: ride.id,
     detailId: ride.id,
     startsAt: ride.departureTime.toISOString(),
+    startsAtPrecision: endHasClock(ride.depPrecision) ? "minute" : "day",
     tripId: ride.tripId,
     tripName: ride.trip?.name ?? null,
     primary: `${ride.depStationName} → ${ride.arrStationName}`,

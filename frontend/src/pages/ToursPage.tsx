@@ -8,6 +8,7 @@ import { useTranslation } from "../hooks/useTranslation";
 import { tourIndexApi, type TourSummary } from "../lib/api/tourIndex";
 import { toursApi } from "../lib/api/tours";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { sectionExpenseCount } from "../lib/sectionExpenses";
 import { useToastStore } from "../store/toastStore";
 import { SELECTABLE_LEG_MODES, type LegMode } from "../types/tour";
 import KindReviewNotice from "../components/Roadtrips/KindReviewNotice";
@@ -59,6 +60,7 @@ export default function ToursPage(): JSX.Element {
   const [saveTried, setSaveTried] = useState(false);
   const showNameMissing = saveTried && !newName.trim();
   const [pendingDelete, setPendingDelete] = useState<TourSummary | null>(null);
+  const [costsBlock, setCostsBlock] = useState<{ tour: TourSummary; count: number } | null>(null);
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -117,13 +119,17 @@ export default function ToursPage(): JSX.Element {
     }
   };
 
-  const handleDelete = async (tour: TourSummary): Promise<void> => {
+  const handleDelete = async (tour: TourSummary, deleteExpenses = false): Promise<void> => {
     try {
-      await toursApi.removeStandalone(tour.id);
+      await toursApi.removeStandalone(tour.id, { deleteExpenses });
       if (!mountedRef.current) return;
       setTours((prev) => (prev ?? []).filter((r) => r.id !== tour.id));
-    } catch {
-      if (mountedRef.current) addToast("error", t("trips:tours.deleteError"));
+    } catch (err) {
+      if (!mountedRef.current) return;
+      // Costs with no trip to take them: asked once more, never deleted unasked.
+      const count = sectionExpenseCount(err);
+      if (count !== null) setCostsBlock({ tour, count });
+      else addToast("error", t("trips:tours.deleteError"));
     }
   };
 
@@ -307,6 +313,25 @@ export default function ToursPage(): JSX.Element {
             </li>
           ))}
         </ul>
+      )}
+
+      {costsBlock && (
+        <ConfirmModal
+          isOpen
+          onClose={() => setCostsBlock(null)}
+          onConfirm={() => {
+            const { tour } = costsBlock;
+            setCostsBlock(null);
+            void handleDelete(tour, true);
+          }}
+          title={t("trips:tours.deleteWithCosts.title")}
+          message={t("trips:tours.deleteWithCosts.message", {
+            name: costsBlock.tour.name,
+            count: costsBlock.count,
+          })}
+          confirmText={t("trips:tours.deleteWithCosts.confirm")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
+        />
       )}
 
       {pendingDelete && (

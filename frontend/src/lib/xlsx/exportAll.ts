@@ -36,6 +36,7 @@ import {
   type TourWithPoints,
 } from "./roadtripSheets";
 import type { RoadtripDetail } from "../../types/roadtrip";
+import { roadtripExpenseRows, roadtripExpenseSheet } from "./roadtripExpenseSheet";
 
 type T = (key: string) => string;
 
@@ -142,6 +143,9 @@ export function buildSheets(t: T, input: ExportInput, locale = "de"): AnySheetDa
   if (roadtrips.length > 0) {
     sheets.push(sheet(roadtripSheet(t), roadtrips));
     if (stations.length > 0) sheets.push(sheet(roadtripStationSheet(t), stations));
+    // Costs after the stations they may point at — the order the import applies.
+    const expenses = roadtripExpenseRows(input.roadtrips ?? []);
+    if (expenses.length > 0) sheets.push(sheet(roadtripExpenseSheet(t), expenses));
   }
 
   const tours = input.tours ?? [];

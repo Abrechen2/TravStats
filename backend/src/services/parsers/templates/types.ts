@@ -1,3 +1,5 @@
+import { airportCodeFromName } from "./airportNames";
+
 export interface AirlineTemplateSelectors {
   flightNumber?: string;
   pnr?: string;
@@ -26,6 +28,10 @@ const MONTH_MAP: Record<string, string> = {
   Jan: "01",
   Feb: "02",
   Mar: "03",
+  // German March in its short forms. Emirates prints "dd-Mrz-yy"; before these
+  // the lookups below fell back to "01" and filed a March flight in January.
+  Mrz: "03",
+  Mär: "03",
   Apr: "04",
   Mai: "05",
   May: "05",
@@ -90,7 +96,30 @@ function parseToIso(v: string): string {
     const time = m4[4] ? m4[4].padStart(5, "0") : "00:00";
     return `${m4[3]}-${m4[2].padStart(2, "0")}-${m4[1].padStart(2, "0")}T${time}`;
   }
-  return v;
+  return parseTwoDigitYear(v) ?? v;
+}
+
+/**
+ * "17-Feb-14T09:10" (Emirates 2014) and "12. Aug. 23T21:05" (Emirates 2018+):
+ * a day, a month NAME and a two-digit year, joined to a time.
+ *
+ * Only a month the table knows is read — unlike the branches above, there is
+ * no "01" fallback, because a guessed month is a wrong flight. A day the
+ * calendar does not have is refused the same way. A two-digit year is read as
+ * 20yy: every airline confirmation that prints one was sent this century.
+ */
+function parseTwoDigitYear(v: string): string | null {
+  const m = v.match(
+    /^(\d{1,2})(?:\.\s*|-|\s+)([A-Za-zä]{3,9})\.?(?:-|\s+)(\d{2})T(\d{1,2}:\d{2})$/
+  );
+  if (!m) return null;
+  const month = MONTH_MAP[m[2]];
+  if (!month) return null;
+  const year = 2000 + Number(m[3]);
+  const day = Number(m[1]);
+  const date = new Date(Date.UTC(year, Number(month) - 1, day));
+  if (date.getUTCMonth() !== Number(month) - 1 || date.getUTCDate() !== day) return null;
+  return `${year}-${month}-${m[1].padStart(2, "0")}T${m[4].padStart(5, "0")}`;
 }
 
 export type TransformName =
@@ -101,7 +130,9 @@ export type TransformName =
   | "extractFlightNumber"
   | "removeSpaces"
   | "stripNonAlpha"
-  | "parseIso";
+  | "parseIso"
+  /** An airport name to its IATA code, or "" — see `airportNames.ts`. */
+  | "airportName";
 
 export const TRANSFORMS: Record<TransformName, (value: string) => string> = {
   trim: (v) => v.trim(),
@@ -112,6 +143,7 @@ export const TRANSFORMS: Record<TransformName, (value: string) => string> = {
   removeSpaces: (v) => v.replace(/\s+/g, ""),
   stripNonAlpha: (v) => v.replace(/[^A-Za-z0-9]/g, ""),
   parseIso: parseToIso,
+  airportName: airportCodeFromName,
 };
 
 export interface AirlineTemplateTestCase {
@@ -158,6 +190,15 @@ export interface AirlineTemplate {
     endBefore?: string;
   };
   transforms: Partial<Record<SelectorKey, TransformName>>;
+  /**
+   * Patterns (multiline, case-insensitive, matched against subject + body)
+   * that mark a mail from this sender as NOT a booking — a cancellation, a
+   * schedule change. A cancellation prints the same flight lines as the
+   * booking it cancels, so a template that reads lines would propose the
+   * cancelled flight as a new one. On a match the template answers "no
+   * booking" and the parser chain ends there.
+   */
+  declineIf?: string[];
   testCases: AirlineTemplateTestCase[];
 }
 

@@ -6,6 +6,7 @@ import { rejectDemoQuota } from "../middleware/demoGuard";
 import { normalizeQueryParams, resolveFlightWhere, splitMultiValue } from "./flights/queryFilters";
 import { flightListHandler } from "./flights/list";
 import { flightFacetsHandler } from "./flights/facets";
+import { nextFlightHandler } from "./flights/next";
 import { createFlightSchema, updateFlightSchema, flightQuerySchema } from "../schemas/flight";
 import logger from "../utils/logger";
 import { AppError } from "../middleware/errorHandler";
@@ -32,7 +33,7 @@ import {
 import { getProviderQuota } from "../services/apiQuota";
 import { estimateRoute } from "../services/routeEstimationService";
 import { calculateCo2Kg, haversineKm, toSeatClass } from "../services/co2Calculator";
-import { getCachedAirports, compareAirportAuthority } from "../services/airportCache";
+import { compareAirportAuthority } from "../services/airportCache";
 import {
   enrichFlightsForClients,
   type AirportFacts,
@@ -434,70 +435,7 @@ router.post(
   }
 );
 
-/**
- * The single soonest upcoming flight for the dashboard "next flight" block.
- *
- * "Upcoming" is departureTime in the future, ascending — the opposite order to
- * the list endpoint, which is why this is its own route rather than a query
- * flag. Status is not trusted here: the nightly sweep only reverts strictly
- * future rows to `scheduled`, so a future flight still stored as `flown`
- * (imported that way, or seeded) would be missed by a status filter. The time
- * is the source of truth, matching deriveFlightStatus.
- *
- * Returns { flight: null } when there is nothing ahead — the block hides.
- */
-router.get("/next", async (req: AuthRequest, res: Response, next: NextFunction) => {
-  try {
-    const userId = req.userId!;
-    const flight = await prisma.flight.findFirst({
-      where: {
-        userId,
-        status: { not: "cancelled" },
-        departureTime: { gte: new Date() },
-      },
-      orderBy: [{ departureTime: "asc" }, { id: "asc" }],
-      select: {
-        id: true,
-        airline: true,
-        airlineIata: true,
-        flightNumber: true,
-        depIata: true,
-        arrIata: true,
-        departureTime: true,
-        arrivalTime: true,
-        depTimeSemantics: true,
-        arrTimeSemantics: true,
-        tripId: true,
-      },
-    });
-
-    if (!flight) {
-      res.json({ flight: null });
-      return;
-    }
-
-    // Enrich both ends with city/country in one batched lookup, same source
-    // the map overlays use, so the block can read "München → New York".
-    const codes = [flight.depIata, flight.arrIata].filter((c): c is string => !!c);
-    const airports = codes.length ? await getCachedAirports(codes) : new Map();
-    const end = (iata: string | null): { city: string | null; country: string | null } => {
-      const a = iata ? airports.get(iata.toUpperCase()) : undefined;
-      return { city: a?.city ?? null, country: a?.country ?? null };
-    };
-
-    // No duration here on purpose: this block is a narrow projection for the
-    // "next flight" card, which shows a countdown, not a flight time.
-    res.json({
-      flight: {
-        ...flight,
-        departure: end(flight.depIata),
-        arrival: end(flight.arrIata),
-      },
-    });
-  } catch (error) {
-    next(error);
-  }
-});
+router.get("/next", nextFlightHandler);
 
 /**
  * Single-row shorthand for the ONE enrichment — see services/flightAirportFacts.ts.

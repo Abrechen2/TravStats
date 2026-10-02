@@ -1,4 +1,5 @@
 import { prisma } from "../../db";
+import { endHasClock } from "../../shared/railClock";
 import { cruisePresence, flightPresence, railPresence } from "../../shared/tripSuggestionRules";
 import { airportCityName, airportDisplayName } from "../../utils/airportDisplay";
 import type { FlightTimeSemantics } from "../../utils/timezone";
@@ -130,6 +131,16 @@ export function stationCity(name: string): string | null {
   return trimmed.length > 0 ? trimmed : null;
 }
 
+function railEndClock(
+  at: Date,
+  zone: string | null,
+  precision: string | null,
+  fallbackHour: number
+): { day: string; hour: number; zoneKnown: boolean } {
+  const clock = placeClock(at, zone, "UTC", fallbackHour);
+  return endHasClock(precision) ? clock : { ...clock, hour: fallbackHour };
+}
+
 export async function loadRail(userId: string): Promise<Loaded> {
   const rows = await prisma.railJourney.findMany({
     where: { userId },
@@ -153,6 +164,8 @@ export async function loadRail(userId: string): Promise<Loaded> {
       arrTimezone: true,
       departureTime: true,
       arrivalTime: true,
+      depPrecision: true,
+      arrPrecision: true,
       bookingReference: true,
     },
   });
@@ -161,9 +174,11 @@ export async function loadRail(userId: string): Promise<Loaded> {
     const state = railPresence(row);
     if (state === "excluded") continue;
     // A ride's instants are real ones (the server read the ticket in the station's zone).
-    const out = placeClock(row.departureTime, row.depTimezone, "UTC", 8);
+    // A date-only end keeps its day and takes the fallback hour, as a flight's
+    // DATE_ONLY end does — its stored midnight is not a time (forgejo#132 item 17).
+    const out = railEndClock(row.departureTime, row.depTimezone, row.depPrecision, 8);
     const inn = row.arrivalTime
-      ? placeClock(row.arrivalTime, row.arrTimezone, "UTC", 12)
+      ? railEndClock(row.arrivalTime, row.arrTimezone, row.arrPrecision, 12)
       : { day: out.day, hour: Math.min(23, out.hour + 1), zoneKnown: out.zoneKnown };
     const points: PresencePoint[] = [
       { lat: row.depLat, lon: row.depLon, day: out.day, hour: out.hour },

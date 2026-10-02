@@ -28,6 +28,8 @@ const base: RailBadgeRow = {
   // 22:00 in Vienna on 1 March → 09:00 in Hamburg on 2 March.
   departureTime: new Date("2025-03-01T21:00:00Z"),
   arrivalTime: new Date("2025-03-02T08:00:00Z"),
+  depPrecision: "minute",
+  arrPrecision: "minute",
   distanceKm: null,
 };
 // 22:30 in Vienna on New Year's Eve.

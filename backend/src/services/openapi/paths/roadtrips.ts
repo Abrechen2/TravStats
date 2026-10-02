@@ -21,6 +21,7 @@ import {
   TOUR_ACTIVITIES,
 } from "../../../shared/tour/roadtrip";
 import { TRACK_SOURCES } from "../../../schemas/tour";
+import { expenseSchema, roadtripCostsSchema } from "../../../schemas/expense";
 
 const idParams = z.object({ id: z.string().uuid() });
 const routeIdParams = z.object({ routeId: z.string().uuid() });
@@ -122,6 +123,14 @@ const station = registry.register(
         .nullable()
         .describe("A pass-through only: the caller's own place (POI) it passed"),
       place: z.object({ id: z.string().uuid(), name: z.string(), category: z.string() }).nullable(),
+      photoCount: z
+        .number()
+        .int()
+        .describe(
+          "Trip photos filed at this station (forgejo#139), the cover's internal row left " +
+            "out; GET /trips/{tripId}/photos?stopId= lists them. Always 0 on a roadtrip filed " +
+            "on no trip — a trip photo needs a trip to belong to."
+        ),
       stay: z
         .object({
           id: z.string().uuid(),
@@ -171,6 +180,11 @@ const roadtripDetail = z.object({
     })
   ),
   routingAvailable: z.boolean(),
+  expenses: z.array(expenseSchema).openapi({
+    description:
+      "This roadtrip's own expenses (forgejo#140); the trip's trip-wide ones are not here.",
+  }),
+  costs: roadtripCostsSchema,
 });
 
 registry.registerPath({
@@ -210,7 +224,7 @@ registry.registerPath({
 registry.registerPath({
   method: "get",
   path: "/roadtrips/{id}",
-  summary: "A roadtrip with its stations, their stays, its legs and its day tours",
+  summary: "A roadtrip with its stations, their stays, its legs, its day tours and its costs",
   tags: ["Roadtrips"],
   request: { params: idParams },
   responses: {

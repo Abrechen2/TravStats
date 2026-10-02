@@ -64,6 +64,7 @@ import tourIndexRoutes from "./trips/tourIndex";
 import tourPointRoutes from "./trips/tourPoints";
 import tourKindRoutes from "./trips/tourKind";
 import roadtripRoutes from "./roadtrips";
+import tripExpenseRoutes from "./trips/tripExpenses";
 import stravaRoutes from "./integrations/strava";
 import openDataRoutes from "./openData";
 import immichTripRoutes from "./immich/tripAlbums";
@@ -118,6 +119,8 @@ import jobRoutes from "./jobs";
 import geoRoutes from "./geo";
 import documentRoutes from "./documents";
 import tripPhotoWindowRoutes from "./tripPhotoWindows";
+import syncRoutes from "./sync";
+import syncPreconditionRoutes from "./syncPreconditions";
 
 export interface ApiMount {
   /** Mount path, always absolute and always under /api/v1. */
@@ -145,6 +148,13 @@ export const apiMounts: ApiMount[] = [
   { id: "auth.passkeys", base: "/api/v1/auth/passkeys", router: passkeyRoutes },
   { id: "auth", base: "/api/v1/auth", router: authRoutes },
   { id: "auth.passwordReset", base: "/api/v1/auth", router: passwordResetRoutes },
+  // Version preconditions (If-Match / baseVersion) on the Companion's edits
+  // and deletes, forgejo#141. BEFORE every router it guards — flights, rail,
+  // cruises, lodging, trips, tours, places; a request without a base version
+  // passes through it untouched.
+  { id: "syncPreconditions", base: "/api/v1", router: syncPreconditionRoutes },
+  // The incremental change feed, forgejo#141. Its only path is `/sync/...`.
+  { id: "sync", base: "/api/v1", router: syncRoutes },
   // Kept originals (forgejo#116). At /api/v1 because the per-entry lists span
   // five prefixes (`/flights/:id/documents`, `/lodging/stays/:id/documents`,
   // ...); mounted BEFORE those routers so none of their `router.use` guards
@@ -259,6 +269,9 @@ export const apiMounts: ApiMount[] = [
   // Roadtrips (2.7): list, detail, creation and the station list. The rest of
   // a roadtrip — legs, tracks, geometry — is the `/tours/:routeId` family.
   { id: "roadtrips", base: "/api/v1", router: roadtripRoutes },
+  // Expenses (forgejo#140) on a trip, a roadtrip or any section. Every path
+  // ends in `/expenses` or `/expenses/:expenseId`, so they shadow nothing above.
+  { id: "tripExpenses", base: "/api/v1", router: tripExpenseRoutes },
   // Strava (2.7): the OAuth round trip, the activity list and the imports.
   // Its `/tours/...` paths end in `/strava`, so they shadow nothing above.
   { id: "strava", base: "/api/v1", router: stravaRoutes },

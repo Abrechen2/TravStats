@@ -13,6 +13,7 @@ import TripMap, { type TripMapContent } from "../components/Trips/TripMap";
 import LegDialog from "../components/Roadtrips/LegDialog";
 import RoadtripFigures from "../components/Roadtrips/RoadtripFigures";
 import RoadtripTourCards from "../components/Roadtrips/RoadtripTourCards";
+import RoadtripCostsSection from "../components/Roadtrips/RoadtripCostsSection";
 import { RoadtripRailConversion } from "../components/rail/RoadtripRailConversion";
 import StationEditor, { type EditorStart } from "../components/Roadtrips/StationEditor";
 import StationTimeline from "../components/Roadtrips/StationTimeline";
@@ -24,6 +25,7 @@ import { roadtripsApi } from "../lib/api/roadtrips";
 import { toursApi } from "../lib/api/tours";
 import { useDisplayFormat } from "../lib/displayFormat";
 import { DELETE_BUTTON_CLASS } from "../lib/deleteConfirm";
+import { sectionExpenseCount } from "../lib/sectionExpenses";
 import { hexToRgb } from "../lib/domainColor";
 import { logger } from "../lib/logger";
 import { dayNumber, roadtripPhase, spanDays } from "../lib/roadtrip/roadtripView";
@@ -50,7 +52,7 @@ const STATUS_COLOR: Record<SaveStatus, string> = {
 /**
  * One roadtrip (design 2026-09-25, board 2): the head and its figures, the
  * stations by day beside a map that follows the selection, then the day
- * tours. Editing happens on the same page — the stations turn into the
+ * tours and the costs (forgejo#140). Editing happens on the same page — the stations turn into the
  * editor, the map stays — and saves as it goes.
  *
  * `?station=neu` opens the editor with a new station (from "Neuer
@@ -83,6 +85,7 @@ export default function RoadtripDetailPage(): JSX.Element {
     flush: async () => {},
   });
   const [confirmDelete, setConfirmDelete] = useState(false);
+  const [costsBlock, setCostsBlock] = useState<number | null>(null);
 
   const mountedRef = useRef(true);
   useEffect(() => {
@@ -175,12 +178,15 @@ export default function RoadtripDetailPage(): JSX.Element {
     }
   };
 
-  const remove = async (): Promise<void> => {
+  const remove = async (deleteExpenses = false): Promise<void> => {
     try {
-      await toursApi.removeStandalone(id);
+      await toursApi.removeStandalone(id, { deleteExpenses });
       navigate("/roadtrips");
-    } catch {
-      addToast("error", t("roadtrips:deleteError"));
+    } catch (err) {
+      // Costs with no trip to take them: asked once more, never deleted unasked.
+      const count = sectionExpenseCount(err);
+      if (count !== null) setCostsBlock(count);
+      else addToast("error", t("roadtrips:deleteError"));
     }
   };
 
@@ -406,6 +412,14 @@ export default function RoadtripDetailPage(): JSX.Element {
         <RoadtripTourCards tours={detail.tours} stations={detail.stations} />
       </section>
 
+      <RoadtripCostsSection
+        roadtripId={id}
+        stations={detail.stations}
+        expenses={detail.expenses}
+        costs={detail.costs}
+        onChanged={() => void load()}
+      />
+
       <footer className="mt-8 pt-4 text-sm" style={{ borderTop: "1px solid var(--ts-border)" }}>
         <button type="button" className="underline" onClick={() => setConfirmDelete(true)}>
           {t("roadtrips:delete")}
@@ -425,6 +439,21 @@ export default function RoadtripDetailPage(): JSX.Element {
             setLegEdit(null);
             void load();
           }}
+        />
+      )}
+
+      {costsBlock !== null && (
+        <ConfirmModal
+          isOpen
+          onClose={() => setCostsBlock(null)}
+          onConfirm={() => {
+            setCostsBlock(null);
+            void remove(true);
+          }}
+          title={t("roadtrips:deleteWithCosts.title")}
+          message={t("roadtrips:deleteWithCosts.message", { name: r.name, count: costsBlock })}
+          confirmText={t("roadtrips:deleteWithCosts.confirm")}
+          confirmButtonClass={DELETE_BUTTON_CLASS}
         />
       )}
 

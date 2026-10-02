@@ -143,9 +143,38 @@ export const tripAccountSchema = z.object({
   journalEntries: z.number().int(),
 });
 
+const amountsByCurrency = z.record(z.string(), z.number()).openapi({
+  description: "Amount per ISO 4217 code, NEVER summed across currencies. Empty when none.",
+});
+
+export const expenseAccountSchema = z
+  .object({
+    count: z.number().int(),
+    totalByCurrency: amountsByCurrency,
+    years: z.array(
+      z.object({
+        year: z.string(),
+        count: z.number().int(),
+        byCurrency: amountsByCurrency,
+      })
+    ),
+    undatedByCurrency: amountsByCurrency.openapi({
+      description:
+        "Expenses with no day: in the total, in no year — a guessed year would look " +
+        "exactly like a known one.",
+    }),
+  })
+  .openapi({
+    description:
+      "Ferry tickets, tolls, pitch fees, fuel (forgejo#140) — every expense of the " +
+      "caller's trips and sections, by the local day it was paid. No FX snapshot, so " +
+      "no base-currency figure.",
+  });
+
 export const travelAccountResponseSchema = z.object({
   account: travelAccountSchema,
   trips: tripAccountSchema,
+  expenses: expenseAccountSchema,
 });
 
 export type TravelRecord = z.infer<typeof travelRecordSchema>;
@@ -155,3 +184,4 @@ export type TravelAccountYear = z.infer<typeof travelAccountYearSchema>;
 export type TravelAccount = z.infer<typeof travelAccountSchema>;
 export type TripAccountRow = z.infer<typeof tripAccountRowSchema>;
 export type TripAccount = z.infer<typeof tripAccountSchema>;
+export type ExpenseAccount = z.infer<typeof expenseAccountSchema>;

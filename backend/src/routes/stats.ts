@@ -53,6 +53,7 @@ import { loadCruiseStatsData } from "../services/stats/cruiseStatsData";
 import { buildCruiseTabResponse } from "../services/stats/cruiseTabResponse";
 import { loadLodgingStatsData } from "../services/stats/lodgingStatsData";
 import { buildTripAccount } from "../services/stats/tripAccount";
+import { buildExpenseAccount } from "../services/stats/expenseAccount";
 import { getBaseCurrency } from "../services/fx/snapshot";
 import { statsEtag } from "../middleware/statsEtag";
 // Folds shared with the composing `GET /stats/page` (forgejo#49): one home per
@@ -1282,8 +1283,7 @@ router.get(
       const data = await loadTravelAccountData(userId);
       const account = buildTravelAccount(data);
       const tripAccount = buildTripAccount(data.trips);
-
-      res.json({ account, trips: tripAccount });
+      res.json({ account, trips: tripAccount, expenses: buildExpenseAccount(data.expenses) });
     } catch (error) {
       next(error);
     }

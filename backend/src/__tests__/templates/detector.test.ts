@@ -30,9 +30,11 @@ describe("detectAirline", () => {
   it("does not take a generic subject for Lufthansa when nothing else says so", () => {
     const forwardedEmirates =
       "Von: Emirates\nBetreff: Ihre Buchung ist bestätigt - JLNBLW\nEmirates zu Ihrer sicheren Senderliste hinzufügen";
-    expect(
-      detectAirline("", "Ihre Buchung ist bestätigt - JLNBLW", "", forwardedEmirates)
-    ).toBeNull();
+    // Since 2026-10-01 Emirates has a rule of its own, so the mail is now
+    // detected as what it is — the point stands: never as Lufthansa.
+    expect(detectAirline("", "Ihre Buchung ist bestätigt - JLNBLW", "", forwardedEmirates)).toBe(
+      "EK"
+    );
   });
 
   it("still accepts the subject alone for the old Buchungsdetails rule, which has no fingerprint", () => {

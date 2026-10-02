@@ -26,8 +26,6 @@ const LEG: TourLeg = {
   confidence: "estimate",
   waypoints: null,
   drivingMinutes: null,
-  tollCost: null,
-  currency: null,
 };
 
 function renderDialog(

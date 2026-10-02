@@ -4,7 +4,14 @@ import { haversineKm } from "../../shared/geo/haversine";
 import { reverseGeocode } from "../geo/nominatim";
 import { recomputeLegs, type StopCoords } from "../tour/legRecompute";
 import { autoRouteNewLegs } from "../tour/routing/autoRouteLegs";
-import { STATION_SELECT, STATIONS_ONLY, spanOf, type StationRow } from "./roadtripSummary";
+import {
+  STATION_DTO_SELECT,
+  STATION_SELECT,
+  STATIONS_ONLY,
+  spanOf,
+  type StationDtoRow,
+  type StationRow,
+} from "./roadtripSummary";
 import { isStation } from "../../shared/tour/roadtrip";
 import { stationTimeColumns } from "../timeModel/tripColumns";
 
@@ -44,7 +51,7 @@ function stationSpan(s: StationRow): { from: string | null; to: string | null } 
 export async function findActiveRoadtrip(
   userId: string,
   day: string
-): Promise<{ routeId: string; stations: StationRow[]; todayStationId: string | null } | null> {
+): Promise<{ routeId: string; stations: StationDtoRow[]; todayStationId: string | null } | null> {
   const routes = await prisma.tripRoute.findMany({
     where: { userId, kind: "roadtrip" },
     select: { id: true },
@@ -52,13 +59,13 @@ export async function findActiveRoadtrip(
   const graceEnd = (end: string): string =>
     dayOf(new Date(dayStart(end).getTime() + RUNNING_GRACE_DAYS * DAY_MS));
 
-  let best: { routeId: string; start: string; stations: StationRow[] } | null = null;
+  let best: { routeId: string; start: string; stations: StationDtoRow[] } | null = null;
   for (const { id } of routes) {
     // Stations only: the phone lists them, and a route correction is not one.
     const stations = await prisma.tripStop.findMany({
       where: { routeId: id, ...STATIONS_ONLY },
       orderBy: { routeOrderIdx: "asc" },
-      select: STATION_SELECT,
+      select: STATION_DTO_SELECT,
     });
     const span = spanOf(stations);
     if (!span.startDate || !span.endDate) continue;

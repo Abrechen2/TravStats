@@ -8,8 +8,6 @@ const leg = (from: string, to: string, km: number, minutes: number | null = 60) 
   toStopId: to,
   distanceKm: km,
   drivingMinutes: minutes,
-  tollCost: null,
-  currency: null,
   waypoints: null,
 });
 

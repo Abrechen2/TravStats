@@ -1,4 +1,5 @@
 import { z } from "./zod";
+import { isCurrencyCode } from "../shared/currencies";
 import { instantFieldSchema } from "../shared/time/timeInput";
 
 import { LEG_MODES } from "../services/tour/tourDistance";
@@ -198,8 +199,19 @@ const manualLegShape = z.object({
   mode: z.enum(LEG_MODES).optional(),
   waypoints: z.array(coordinate).min(2).max(256).optional(),
   drivingMinutes: z.number().int().min(0).max(100_000).nullable().optional(),
+  /**
+   * Kept for existing clients: since forgejo#140 a leg has no toll column.
+   * These two read and write the leg's toll EXPENSE instead — see
+   * `services/expenses/legToll.ts` for exactly how.
+   */
   tollCost: z.number().min(0).max(1_000_000).nullable().optional(),
-  currency: z.string().length(3).nullable().optional(),
+  currency: z
+    .string()
+    .length(3)
+    .transform((code) => code.toUpperCase())
+    .refine(isCurrencyCode, { message: "must be a valid ISO 4217 currency code" })
+    .nullable()
+    .optional(),
 });
 
 /**

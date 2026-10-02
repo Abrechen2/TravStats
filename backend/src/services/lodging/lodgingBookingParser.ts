@@ -380,7 +380,13 @@ export async function parseLodgingBookingText(
   const readTemplate = (): ParsedLodgingBooking | null => {
     const subject = firstLineAsSubject(text);
     if (isBookingComConfirmation(undefined, text)) {
-      return parseBookingComEmail(subject, text);
+      const booking = parseBookingComEmail(subject, text);
+      if (booking) return booking;
+      // Declined: an older one-line layout this reader does not know. The
+      // declarative readers below include one for exactly that layout, and a
+      // mail no reader understands still ends as null. Returning here used
+      // to end every Booking.com mail at this reader — about thirty
+      // confirmations of 2008–2018 on a private mailbox (2026-10-01).
     }
     // Booking.com keeps priority: it is the most-measured reader here (97 of
     // the owner's 108 mails) and the only one that reads an address. The
