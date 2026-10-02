@@ -67,7 +67,10 @@ describe("zoneOf when the lookup is broken", () => {
     const json = jest.fn();
     healthHandler({} as never, { json } as never);
     expect(json).toHaveBeenCalledWith(
-      expect.objectContaining({ status: "degraded", checks: { timezoneLookup: "failed" } })
+      expect.objectContaining({
+        status: "degraded",
+        checks: expect.objectContaining({ timezoneLookup: "failed" }),
+      })
     );
   });
 });

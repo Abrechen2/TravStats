@@ -2,6 +2,7 @@ import { spawn } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { prisma } from "../../db";
+import { Prisma } from "../../prisma";
 import logger from "../../utils/logger";
 import { DATABASE_URL } from "../../utils/database";
 import {
@@ -230,8 +231,20 @@ const PSQL_STRICT = ["-v", "ON_ERROR_STOP=1", "--single-transaction"] as const;
  * recreated by the dump itself. Under `--single-transaction` a failing dump
  * rolls the DROP back too, so a refused archive still changes nothing.
  */
-export const CLEAN_SCHEMA_PREAMBLE =
-  "DROP SCHEMA IF EXISTS public CASCADE;\nCREATE SCHEMA public;\n";
+export const CLEAN_SCHEMA_PREAMBLE = [
+  "DROP SCHEMA IF EXISTS public CASCADE;",
+  "CREATE SCHEMA public;",
+  // A schema created here belongs to whoever runs the restore, with no
+  // grants. Put back what PostgreSQL 15+ gives `public` by default, so a
+  // second role (a read-only monitoring login) keeps its access after a
+  // restore. Measured on 2026-10-02: the owner went from pg_database_owner to
+  // the app role, and USAGE for PUBLIC was gone. The role check keeps older
+  // servers, which have no pg_database_owner, restorable.
+  "DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pg_database_owner') " +
+    "THEN ALTER SCHEMA public OWNER TO pg_database_owner; END IF; END $$;",
+  "GRANT USAGE ON SCHEMA public TO PUBLIC;",
+  "",
+].join("\n");
 
 /** The last lines psql printed, for the error an admin reads mid-recovery. */
 function stderrTail(stderr: string): string {
@@ -490,6 +503,29 @@ function toRestoreError(problem: RestoreArchiveProblem): AppError {
   }
 }
 
+/**
+ * The archive just restored stays restorable (forgejo#157 follow-up).
+ *
+ * A dump carries the `backups` table as it stood while that very dump was
+ * being written, with its own row still `running`. The reconcile above then
+ * marks it failed ("Interrupted: restore of ..."), so the archive the admin
+ * had just used successfully was refused the next time with "Backup is not
+ * completed" (measured 2026-10-02, on the same version as well as across
+ * versions). This instance read the row before the restore and knows the
+ * archive is complete, having just restored from it, so that row is put back.
+ * Exported for its test.
+ */
+export async function keepRestoredBackupUsable(
+  before: NonNullable<Awaited<ReturnType<typeof prisma.backup.findUnique>>>
+): Promise<void> {
+  const { id, metadata, createdAt: _createdAt, updatedAt: _updatedAt, ...fields } = before;
+  const data = {
+    ...fields,
+    metadata: metadata === null ? Prisma.JsonNull : (metadata as Prisma.InputJsonValue),
+  };
+  await prisma.backup.upsert({ where: { id }, update: data, create: { id, ...data } });
+}
+
 export async function restoreBackup(
   id: string,
   options: RestoreOptions,
@@ -694,6 +730,7 @@ export async function restoreBackup(
     // anything in flight now came out of the archive (AUD-069).
     if (options.scope === "full" || options.scope === "database") {
       await reconcileInterruptedBackups(`restore of backup ${id}`);
+      await keepRestoredBackupUsable(backup);
     }
 
     // Cleanup

@@ -4,7 +4,8 @@ import * as path from "path";
 
 import { prisma } from "../../../db";
 import { healthHandler } from "../../../routes/health";
-import { CLEAN_SCHEMA_PREAMBLE, feedPsql } from "../backupRestore";
+import { CLEAN_SCHEMA_PREAMBLE, feedPsql, keepRestoredBackupUsable } from "../backupRestore";
+import { reconcileInterruptedBackups } from "../reconcileBackups";
 import { missingSyncTriggers, runSyncSchemaCheck } from "../../sync/schemaCheck";
 
 /**
@@ -58,6 +59,78 @@ describe("feedPsql", () => {
       received.startsWith("DROP SCHEMA IF EXISTS public CASCADE;\nCREATE SCHEMA public;\n")
     ).toBe(true);
     expect(received.endsWith("-- the dump\nSELECT 1;\n")).toBe(true);
+  });
+});
+
+describe("the clean-schema preamble", () => {
+  it("leaves public owned by pg_database_owner with USAGE for PUBLIC, as PostgreSQL creates it", async () => {
+    // Inside a transaction that is always rolled back: the preamble drops the
+    // whole schema, and only the shape it leaves behind is under test.
+    const ROLLBACK = new Error("rollback");
+    let shape: { owner: string; acl: string | null } | undefined;
+    await expect(
+      prisma.$transaction(async (tx) => {
+        for (const statement of CLEAN_SCHEMA_PREAMBLE.split("\n").filter(Boolean)) {
+          await tx.$executeRawUnsafe(statement);
+        }
+        const [row] = await tx.$queryRaw<Array<{ owner: string; acl: string | null }>>`
+          SELECT pg_get_userbyid(nspowner) AS owner, nspacl::text AS acl
+          FROM pg_namespace WHERE nspname = 'public'`;
+        shape = row;
+        throw ROLLBACK;
+      })
+    ).rejects.toBe(ROLLBACK);
+
+    expect(shape?.owner).toBe("pg_database_owner");
+    expect(shape?.acl).toContain("=U/");
+    expect(await missingSyncTriggers()).toEqual([]);
+  });
+});
+
+describe("keepRestoredBackupUsable", () => {
+  afterEach(async () => {
+    await prisma.backup.deleteMany({ where: { backupPath: { startsWith: "/tmp/restore-test-" } } });
+  });
+
+  it("puts the restored archive's own row back to completed after the reconcile failed it", async () => {
+    const before = await prisma.backup.create({
+      data: {
+        status: "completed",
+        backupPath: "/tmp/restore-test-a.tar.gz",
+        size: BigInt(1234),
+        completedAt: new Date("2026-10-02T17:00:00Z"),
+        metadata: { flights: 1 },
+      },
+    });
+    // What the archive brings: its own row as it was while being written.
+    await prisma.backup.update({ where: { id: before.id }, data: { status: "running" } });
+    await reconcileInterruptedBackups("restore of backup test");
+    expect((await prisma.backup.findUniqueOrThrow({ where: { id: before.id } })).status).toBe(
+      "failed"
+    );
+
+    await keepRestoredBackupUsable(before);
+
+    const after = await prisma.backup.findUniqueOrThrow({ where: { id: before.id } });
+    expect(after).toMatchObject({
+      status: "completed",
+      errorMessage: null,
+      size: BigInt(1234),
+      metadata: { flights: 1 },
+    });
+  });
+
+  it("recreates the row when the archive did not carry it at all", async () => {
+    const before = await prisma.backup.create({
+      data: { status: "completed", backupPath: "/tmp/restore-test-b.tar.gz" },
+    });
+    await prisma.backup.delete({ where: { id: before.id } });
+
+    await keepRestoredBackupUsable(before);
+
+    expect((await prisma.backup.findUniqueOrThrow({ where: { id: before.id } })).status).toBe(
+      "completed"
+    );
   });
 });
 
