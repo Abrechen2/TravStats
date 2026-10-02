@@ -3,9 +3,9 @@
   "enable": "Push-Benachrichtigungen an die Companion-App einschalten",
   "defaultOff": "Nach der Installation – und nach dem Update auf diese Version – ist der Schalter aus. Solange er aus ist, nimmt dieser Server keinerlei Kontakt zum Relay auf.",
   "explanation": {
-    "operator": "Das Relay push.travstats.de wird vom TravStats-Projekt betrieben. Es reicht Benachrichtigungen an Apple und Google weiter.",
+    "operator": "Das Relay reicht Benachrichtigungen an Apple und Google weiter. Betrieben wird es vom TravStats-Projekt (push.travstats.de, Standard) bzw. vom Betreiber der unten eingetragenen Relay-Adresse.",
     "receives": "Pro Nachricht erhält es das Push-Token des Telefons und den Ende-zu-Ende-verschlüsselten Inhalt. Den Inhalt können weder das Relay noch Cloudflare, Apple oder Google lesen. Während der Übertragung sieht es außerdem die IP-Adresse dieses Servers.",
-    "stores": "Gespeichert werden nur eine Instanz-ID, ein Hash ihres Geheimnisses und ein Tageszähler."
+    "stores": "Gespeichert werden eine Instanz-ID, ein Hash ihres Geheimnisses, der Zeitpunkt der Registrierung, ein Tageszähler und der Instanzname, den dieser Server bei der Registrierung mitschickt: „TravStats“ und, falls eine öffentliche Adresse eingetragen ist, deren Hostname."
   },
   "ownRelay": "Wenn du ein eigenes Relay betreibst, trägst du dessen Adresse unten unter „Relay-Adresse“ ein.",
   "privacyLink": "Datenschutzerklärung",
