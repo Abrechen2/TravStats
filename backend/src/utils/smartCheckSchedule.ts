@@ -19,6 +19,15 @@
 import { FLIGHT_ARRIVAL_SLACK_HOURS } from "../shared/statusDerivation";
 
 const PRE_DEPARTURE_LEAD_MS = 30 * 60 * 1000;
+/**
+ * Earlier checks so a change reaches the phone before the passenger is at
+ * the airport (TravStats#156, push): the day before, three hours before, and
+ * from then on every 15 minutes until departure. This costs API calls on
+ * purpose (about 18 per flight instead of 3) - owner decision 2026-10-01.
+ */
+const DAY_BEFORE_LEAD_MS = 24 * 60 * 60 * 1000;
+const NEAR_DEPARTURE_LEAD_MS = 3 * 60 * 60 * 1000;
+const NEAR_DEPARTURE_STEP_MS = 15 * 60 * 1000;
 const PRE_ARRIVAL_LEAD_MS = 60 * 60 * 1000;
 const POST_ARRIVAL_LAG_MS = 30 * 60 * 1000;
 const FALLBACK_FLIGHT_DURATION_MS = 12 * 60 * 60 * 1000;
@@ -80,7 +89,13 @@ export function calculateNextApiCheckAt(
   const depMs = dep.getTime();
   const arrMs = arr.getTime();
 
+  const nearDeparture: number[] = [];
+  for (let t = depMs - NEAR_DEPARTURE_LEAD_MS; t < depMs; t += NEAR_DEPARTURE_STEP_MS) {
+    nearDeparture.push(t);
+  }
   const checkpoints = [
+    depMs - DAY_BEFORE_LEAD_MS,
+    ...nearDeparture,
     depMs - PRE_DEPARTURE_LEAD_MS,
     arrMs - PRE_ARRIVAL_LEAD_MS,
     arrMs + POST_ARRIVAL_LAG_MS,

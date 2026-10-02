@@ -40,6 +40,7 @@ describe("the external-services section", () => {
           airlabsApiKey: "",
           aviationstackApiKey: "",
           aerodataboxApiKey: "",
+          aeroapiApiKey: "",
           openskyClientId: "",
           openskyClientSecret: "",
         }}

@@ -544,6 +544,10 @@
       "label": "AeroDataBox API-Schlüssel",
       "description": "Kostenlos via RapidAPI: 600 Einheiten/Monat. Schließt die Lücke für historische Flüge bis zu einem Jahr zurück."
     },
+    "aeroapi": {
+      "label": "FlightAware AeroAPI",
+      "description": "Kostenloser Privat-Tarif: 5 $ Guthaben pro Monat reichen für die Flugstatus-Abfragen eines Haushalts."
+    },
     "bulkRefresh": {
       "title": "Bestandsflüge auffrischen",
       "description": "Holt fehlende Felder (Kennzeichen, Flugzeugtyp, Mode-S, Codeshare, Airline-ICAO/IATA sowie tatsächliche Ab- und Ankunftszeiten) für deine bisherigen Flüge der letzten 365 Tage nach. Bestehende Werte werden nie überschrieben. Benötigt AeroDataBox — nur dieser Provider deckt das 365-Tage-Fenster ab.",

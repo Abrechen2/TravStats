@@ -7,6 +7,7 @@ import {
   testAirlabsKey,
   testAviationstackKey,
   testAerodataboxKey,
+  testAeroapiKey,
   testOpenSkyCredentials,
   testOpenRouteServiceKey,
   testGraphHopperKey,
@@ -28,6 +29,7 @@ const apiKeysSchema = z
     airlabsApiKey: z.string().optional().nullable(),
     aviationstackApiKey: z.string().optional().nullable(),
     aerodataboxApiKey: z.string().optional().nullable(),
+    aeroapiApiKey: z.string().optional().nullable(),
     openskyClientId: z.string().optional().nullable(),
     openskyClientSecret: z.string().optional().nullable(),
     openskyUsername: z.string().optional().nullable(),
@@ -67,6 +69,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       | "airlabsApiKey"
       | "aviationstackApiKey"
       | "aerodataboxApiKey"
+      | "aeroapiApiKey"
       | "openskyClientId"
       | "openskyClientSecret"
       | "openskyUsername"
@@ -81,6 +84,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
           airlabsApiKey: true,
           aviationstackApiKey: true,
           aerodataboxApiKey: true,
+          aeroapiApiKey: true,
           openskyClientId: true,
           openskyClientSecret: true,
           openskyUsername: true,
@@ -115,6 +119,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
     let airlabsAccess = { hasAccess: false, isShared: false };
     let aviationstackAccess = { hasAccess: false, isShared: false };
     let aerodataboxAccess = { hasAccess: false, isShared: false };
+    let aeroapiAccess = { hasAccess: false, isShared: false };
     let openrouteserviceAccess = { hasAccess: false, isShared: false };
     let graphhopperAccess = { hasAccess: false, isShared: false };
 
@@ -124,12 +129,14 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         airlabsAccess,
         aviationstackAccess,
         aerodataboxAccess,
+        aeroapiAccess,
         openrouteserviceAccess,
         graphhopperAccess,
       ] = await Promise.all([
         hasApiKeyAccess("airlabs", userId),
         hasApiKeyAccess("aviationstack", userId),
         hasApiKeyAccess("aerodatabox", userId),
+        hasApiKeyAccess("aeroapi", userId),
         hasApiKeyAccess("openrouteservice", userId),
         hasApiKeyAccess("graphhopper", userId),
       ]);
@@ -161,6 +168,11 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         hasKey: !!settings?.aerodataboxApiKey,
         isShared: aerodataboxAccess.isShared,
         hasAccess: aerodataboxAccess.hasAccess,
+      },
+      aeroapi: {
+        hasKey: !!settings?.aeroapiApiKey,
+        isShared: aeroapiAccess.isShared,
+        hasAccess: aeroapiAccess.hasAccess,
       },
       openrouteservice: {
         hasKey: !!settings?.openrouteserviceApiKey,
@@ -227,6 +239,13 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       }
       updateData.aerodataboxApiKey = encryptApiKey(payload.aerodataboxApiKey);
     }
+    if (payload.aeroapiApiKey !== undefined) {
+      if (!allowUserFlightApiKeys) {
+        res.status(403).json({ error: "User flight API keys are not allowed by administrator" });
+        return;
+      }
+      updateData.aeroapiApiKey = encryptApiKey(payload.aeroapiApiKey);
+    }
     if (payload.openskyClientId !== undefined) {
       if (!allowUserFlightApiKeys) {
         res.status(403).json({ error: "User flight API keys are not allowed by administrator" });
@@ -270,12 +289,14 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
       airlabsAccess,
       aviationstackAccess,
       aerodataboxAccess,
+      aeroapiAccess,
       openrouteserviceAccess,
       graphhopperAccess,
     ] = await Promise.all([
       hasApiKeyAccess("airlabs", userId),
       hasApiKeyAccess("aviationstack", userId),
       hasApiKeyAccess("aerodatabox", userId),
+      hasApiKeyAccess("aeroapi", userId),
       hasApiKeyAccess("openrouteservice", userId),
       hasApiKeyAccess("graphhopper", userId),
     ]);
@@ -305,6 +326,10 @@ router.put("/", async (req: AuthRequest, res: Response, next: NextFunction): Pro
         aerodatabox: {
           hasKey: !!updateData.aerodataboxApiKey || aerodataboxAccess.hasAccess,
           isShared: aerodataboxAccess.isShared,
+        },
+        aeroapi: {
+          hasKey: !!updateData.aeroapiApiKey || aeroapiAccess.hasAccess,
+          isShared: aeroapiAccess.isShared,
         },
         openrouteservice: {
           hasKey: !!updateData.openrouteserviceApiKey || openrouteserviceAccess.hasAccess,
@@ -389,6 +414,30 @@ router.post(
         return;
       }
       const result = await testAerodataboxKey(effective, req.userId!);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+// POST /test/aeroapi
+router.post(
+  "/test/aeroapi",
+  async (req: AuthRequest, res: Response, next: NextFunction): Promise<void> => {
+    try {
+      const { apiKey } = testApiKeySchema.parse(req.body);
+      const effective = looksMasked(apiKey)
+        ? ((await getApiKey("aeroapi", req.userId!)) ?? "")
+        : apiKey!;
+      if (!effective) {
+        res.status(400).json({
+          success: false,
+          message: "No AeroAPI key configured to test. Save one first.",
+        });
+        return;
+      }
+      const result = await testAeroapiKey(effective, req.userId!);
       res.json(result);
     } catch (error) {
       next(error);

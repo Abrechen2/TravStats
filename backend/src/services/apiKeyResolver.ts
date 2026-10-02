@@ -14,6 +14,7 @@ export type ApiProvider =
   | "airlabs"
   | "aviationstack"
   | "aerodatabox"
+  | "aeroapi"
   | "opensky"
   | "logostream"
   | "googlePlaces"
@@ -43,6 +44,7 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
           airlabsApiKey: true,
           aviationstackApiKey: true,
           aerodataboxApiKey: true,
+          aeroapiApiKey: true,
           openrouteserviceApiKey: true,
           graphhopperApiKey: true,
         },
@@ -66,6 +68,9 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
             break;
           case "aerodatabox":
             userKey = userSettings.aerodataboxApiKey;
+            break;
+          case "aeroapi":
+            userKey = userSettings.aeroapiApiKey;
             break;
           case "openrouteservice":
             userKey = userSettings.openrouteserviceApiKey;
@@ -105,6 +110,9 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
         case "aerodatabox":
           globalKey = adminSettings.globalAerodataboxApiKey;
           break;
+        case "aeroapi":
+          globalKey = adminSettings.globalAeroapiApiKey;
+          break;
         // No user-level key for logostream — logos are instance-wide assets,
         // so resolution is global → env only.
         case "logostream":
@@ -143,6 +151,8 @@ export async function getApiKey(provider: ApiProvider, userId?: string): Promise
         return process.env.AVIATIONSTACK_API_KEY || null;
       case "aerodatabox":
         return process.env.AERODATABOX_API_KEY || null;
+      case "aeroapi":
+        return process.env.AEROAPI_API_KEY || null;
       case "logostream":
         return process.env.LOGOSTREAM_API_KEY || null;
       case "googlePlaces":
@@ -295,6 +305,7 @@ export async function hasApiKeyAccess(
           airlabsApiKey: true,
           aviationstackApiKey: true,
           aerodataboxApiKey: true,
+          aeroapiApiKey: true,
           openrouteserviceApiKey: true,
           graphhopperApiKey: true,
         },
@@ -317,6 +328,9 @@ export async function hasApiKeyAccess(
             break;
           case "aerodatabox":
             hasUserKey = !!userSettings.aerodataboxApiKey;
+            break;
+          case "aeroapi":
+            hasUserKey = !!userSettings.aeroapiApiKey;
             break;
           case "openrouteservice":
             hasUserKey = !!userSettings.openrouteserviceApiKey;
@@ -352,6 +366,9 @@ export async function hasApiKeyAccess(
             break;
           case "aerodatabox":
             hasGlobalKey = !!adminSettings.globalAerodataboxApiKey;
+            break;
+          case "aeroapi":
+            hasGlobalKey = !!adminSettings.globalAeroapiApiKey;
             break;
           case "openrouteservice":
             hasGlobalKey = !!adminSettings.globalOpenrouteserviceApiKey;
@@ -392,6 +409,9 @@ export async function hasApiKeyAccess(
         break;
       case "aerodatabox":
         hasEnvKey = !!process.env.AERODATABOX_API_KEY;
+        break;
+      case "aeroapi":
+        hasEnvKey = !!process.env.AEROAPI_API_KEY;
         break;
       case "openrouteservice":
         hasEnvKey = !!process.env.OPENROUTESERVICE_API_KEY;
