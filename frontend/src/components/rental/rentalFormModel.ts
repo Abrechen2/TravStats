@@ -1,4 +1,5 @@
 import { saveErrorKey } from "../../lib/saveErrorMessage";
+import { parseDecimalInput } from "../../lib/decimalInput";
 import type {
   RentalBooking,
   RentalInclusion,
@@ -180,9 +181,11 @@ export function validateRentalDraft(d: RentalDraft): RentalDraftErrors {
     errors.returnStation = "rental:form.errors.stationUnplaced";
   if (!LOCAL.test(d.pickupLocal)) errors.pickupLocal = "rental:form.errors.timeRequired";
   if (!LOCAL.test(d.returnLocal)) errors.returnLocal = "rental:form.errors.timeRequired";
-  if (d.price.trim() !== "" && !(Number(d.price) >= 0)) errors.price = "rental:form.errors.number";
-  if (d.distanceKm.trim() !== "" && !Number.isInteger(Number(d.distanceKm)))
-    errors.distanceKm = "rental:form.errors.number";
+  // Both read through `parseDecimalInput`, so "150,00" is a price (forgejo#163).
+  const price = parseDecimalInput(d.price);
+  if (price !== null && !(price >= 0)) errors.price = "rental:form.errors.number";
+  const km = parseDecimalInput(d.distanceKm);
+  if (km !== null && !Number.isInteger(km)) errors.distanceKm = "rental:form.errors.number";
   if (d.acrissCode.trim() !== "" && !ACRISS.test(d.acrissCode.trim()))
     errors.acrissCode = "rental:form.errors.acriss";
   return errors;
@@ -205,8 +208,8 @@ function stationInput(s: RentalStationDraft): RentalStationInput {
  * figure goes out as the labelled correction it is.
  */
 export function rentalInputFromDraft(d: RentalDraft): RentalInput {
-  const price = text(d.price);
-  const km = text(d.distanceKm);
+  const price = parseDecimalInput(d.price);
+  const km = parseDecimalInput(d.distanceKm);
   return {
     provider: d.provider.trim(),
     broker: text(d.broker),
@@ -220,10 +223,10 @@ export function rentalInputFromDraft(d: RentalDraft): RentalInput {
     vehicleExample: text(d.vehicleExample),
     vehicleDriven: text(d.vehicleDriven),
     paymentTiming: d.paymentTiming === "" ? null : d.paymentTiming,
-    price: price === null ? null : Number(price),
+    price,
     currency: price === null ? null : d.currency,
     inclusions: d.inclusions,
-    distanceKm: km === null ? null : Number(km),
+    distanceKm: km,
     arrivalFlightNumber: text(d.arrivalFlightNumber),
     notes: text(d.notes),
     status: d.cancelled ? "cancelled" : "scheduled",

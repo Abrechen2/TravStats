@@ -83,3 +83,40 @@ describe("rentalFormModel", () => {
     });
   });
 });
+
+/**
+ * forgejo#163 — "150,00" EUR was refused as "Bitte eine Zahl eingeben."
+ * while "150.00" passed: the form read the field with `Number()`, which
+ * knows only the dot. A German price is written with a comma.
+ */
+describe("rental amounts in German notation (forgejo#163)", () => {
+  it.each([
+    ["150,00", 150],
+    ["150.00", 150],
+    ["25,5", 25.5],
+    ["1.500,00", 1500],
+    ["1,500.00", 1500],
+  ])("accepts the price %s and sends %s", (typed, sent) => {
+    const draft = { ...placed, price: typed, currency: "EUR" };
+    expect(validateRentalDraft(draft).price).toBeUndefined();
+    expect(rentalInputFromDraft(draft).price).toBe(sent);
+  });
+
+  it.each(["abc", "-5", "1,2,3", "12,5x"])("still refuses the price %s", (typed) => {
+    expect(validateRentalDraft({ ...placed, price: typed }).price).toBe(
+      "rental:form.errors.number"
+    );
+  });
+
+  it("reads a whole km figure written with a decimal comma", () => {
+    const draft = { ...placed, distanceKm: "420,0" };
+    expect(validateRentalDraft(draft).distanceKm).toBeUndefined();
+    expect(rentalInputFromDraft(draft).distanceKm).toBe(420);
+  });
+
+  it("still refuses a km figure with a fraction", () => {
+    expect(validateRentalDraft({ ...placed, distanceKm: "420,5" }).distanceKm).toBe(
+      "rental:form.errors.number"
+    );
+  });
+});
