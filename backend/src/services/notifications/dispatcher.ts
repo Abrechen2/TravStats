@@ -27,6 +27,10 @@ import {
  */
 type Deps = { send?: (push: RelayPush) => Promise<RelayOutcome>; now?: () => Date };
 type Kind = "flight.changed" | "flight.reminder";
+const COLLAPSE: Record<Kind, string> = {
+  "flight.changed": "change",
+  "flight.reminder": "reminder",
+};
 
 /** Fields that can reach the phone as words (see messages.ts); the rest never make an event. */
 const NOTIFIED_FIELDS = new Set([
@@ -69,8 +73,16 @@ async function deliver(
   if (!(await serverPushEnabled())) return;
   const send = deps.send ?? sendToRelay;
   const now = deps.now ?? (() => new Date());
+  const at = now();
+  // Only a pairing that could still sign in: not revoked, not expired, and
+  // its owner not deactivated (the auth middleware refuses all three).
   const devices = await prisma.devicePush.findMany({
-    where: { userId, [switchField]: true, apiToken: { revokedAt: null } },
+    where: {
+      userId,
+      [switchField]: true,
+      user: { isActive: true },
+      apiToken: { revokedAt: null, OR: [{ expiresAt: null }, { expiresAt: { gt: at } }] },
+    },
   });
 
   for (const device of devices) {
@@ -104,7 +116,10 @@ async function deliver(
         token: device.token,
         apnsEnvironment: device.apnsEnvironment,
         ciphertext: sealForDevice(device.publicKey, plaintext),
-        collapseId: flightId,
+        // Per kind: a reminder must not replace an unread change (or the
+        // other way round). A flight id is a UUID, so this stays well under
+        // the relay's and APNs' 64 characters.
+        collapseId: `${COLLAPSE[kind]}:${flightId}`,
         lang: locale,
       });
     } catch {

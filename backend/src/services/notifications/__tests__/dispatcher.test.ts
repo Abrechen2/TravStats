@@ -28,7 +28,13 @@ let userId: string;
 let adminId: number;
 
 async function phone(
-  opts: { flightChanges?: boolean; reminders?: boolean; locale?: string; revoked?: boolean } = {}
+  opts: {
+    flightChanges?: boolean;
+    reminders?: boolean;
+    locale?: string;
+    revoked?: boolean;
+    expiresAt?: Date | null;
+  } = {}
 ) {
   const gen = await generateApiToken();
   const token = await prisma.apiToken.create({
@@ -39,6 +45,7 @@ async function phone(
       lookupHash: gen.lookupHash,
       hash: gen.hash,
       revokedAt: opts.revoked ? new Date() : null,
+      expiresAt: opts.expiresAt ?? null,
     },
   });
   const keys = phoneKeys();
@@ -80,6 +87,7 @@ beforeEach(async () => {
   await prisma.devicePush.deleteMany({ where: { userId } });
   await prisma.apiToken.deleteMany({ where: { userId } });
   await prisma.adminSettings.update({ where: { id: adminId }, data: { pushEnabled: true } });
+  await prisma.user.update({ where: { id: userId }, data: { isActive: true } });
 });
 
 afterAll(async () => {
@@ -100,7 +108,7 @@ describe("notifyFlightChanged", () => {
     expect(push).toMatchObject({
       platform: "ios",
       apnsEnvironment: "production",
-      collapseId: "flight-1",
+      collapseId: "change:flight-1",
       lang: "en",
     });
     const plain = JSON.parse(openOnPhone(p.keys.priv, p.keys.pub, push.ciphertext));
@@ -129,6 +137,23 @@ describe("notifyFlightChanged", () => {
     const r = recorder();
     await notifyFlightChanged(userId, flight, gate, { pending: false }, { send: r.send });
     expect(r.pushes).toHaveLength(0);
+  });
+
+  it("never reaches an expired pairing", async () => {
+    await phone({ expiresAt: new Date(Date.now() - 60_000) });
+    const live = await phone({ expiresAt: new Date(Date.now() + 86_400_000) });
+    const r = recorder();
+    await notifyFlightChanged(userId, flight, gate, { pending: false }, { send: r.send });
+    expect(r.pushes).toHaveLength(1);
+    expect(r.pushes[0].token).toBe(`apns-${live.tokenId.replace(/-/g, "")}`);
+  });
+
+  it("never reaches a deactivated user", async () => {
+    await phone();
+    await prisma.user.update({ where: { id: userId }, data: { isActive: false } });
+    const r = recorder();
+    await notifyFlightChanged(userId, flight, gate, { pending: false }, { send: r.send });
+    expect(r.send).not.toHaveBeenCalled();
   });
 
   it("does nothing while the admin has not switched push on", async () => {
@@ -199,6 +224,8 @@ describe("notifyReminder", () => {
     await notifyReminder(userId, f, "24h", { send: r.send });
     await notifyReminder(userId, f, "24h", { send: r.send });
     expect(r.pushes).toHaveLength(1);
+    // Its own collapse id: a reminder must not replace an unread change on the phone.
+    expect(r.pushes[0].collapseId).toBe("reminder:flight-1");
     const plain = JSON.parse(openOnPhone(on.keys.priv, on.keys.pub, r.pushes[0].ciphertext));
     expect(plain).toMatchObject({
       type: "flight.reminder",
