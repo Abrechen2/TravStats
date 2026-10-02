@@ -61,6 +61,7 @@ import { lookupFlightDetails, __resetAviationstackBudgetForTests } from "../serv
 import { LookupOutcomeLog } from "../services/flightLookup/providerOutcome";
 import { findOrCreateAirport } from "../services/airportLookup";
 import { testAeroapiKey } from "../services/apiKeyTester";
+import { getAirlineName } from "../services/flightLookup/fieldReaders";
 import logger from "../utils/logger";
 
 type Flight = (typeof fixture.flights)[number];
@@ -79,8 +80,14 @@ const respondWith = (flights: Flight[]) =>
 const dayOf = (scheduledOut: string): Flight =>
   fixture.flights.find((f) => f.scheduled_out.startsWith(scheduledOut))!;
 
+/** Whatever the airline catalogue names "LH" — not this file's concern. */
+const fixtureOperatorName = (): string | undefined => getAirlineName("LH") ?? undefined;
+
 beforeEach(() => {
   jest.clearAllMocks();
+  // clearAllMocks leaves queued mockResolvedValueOnce answers in place; a test
+  // that fails early would otherwise hand its leftovers to the next one.
+  mockedAxios.get.mockReset();
   __resetAeroapiCacheForTests();
   __resetAerodataboxCacheForTests();
   __resetAviationstackBudgetForTests();
@@ -253,6 +260,182 @@ describe("lookupFlightAeroapi", () => {
       (logger.error as jest.Mock).mock.calls,
     ]);
     expect(logged).not.toContain("aeroapi-secret");
+  });
+});
+
+describe("lookupFlightAeroapi — which leg, on a day the number flies several", () => {
+  // One number, two legs on 2026-10-05, listed newest first as AeroAPI does:
+  // FRA→MUC in the morning, MUC→JFK in the afternoon.
+  const base = dayOf("2026-10-05");
+  const firstLeg: Flight = {
+    ...base,
+    fa_flight_id: "leg-1",
+    scheduled_out: "2026-10-05T06:00:00Z",
+    destination: { ...base.destination, code: "EDDM", code_iata: "MUC", code_icao: "EDDM" },
+    gate_origin: "A10",
+  };
+  const secondLeg: Flight = {
+    ...base,
+    fa_flight_id: "leg-2",
+    scheduled_out: "2026-10-05T14:00:00Z",
+    origin: { ...base.origin, code: "EDDM", code_iata: "MUC", code_icao: "EDDM" },
+    gate_origin: "H20",
+  };
+  const newestFirst = [secondLeg, firstLeg];
+
+  it("takes the day's FIRST leg when neither a time nor an airport is known", async () => {
+    onlyAeroapiKey();
+    respondWith(newestFirst);
+
+    const result = await lookupFlightAeroapi("LH400", "2026-10-05");
+
+    expect(result?.departure?.gate).toBe("A10");
+    expect(result?.departureTime).toBe("2026-10-05T06:00:00.000Z");
+  });
+
+  it("takes the leg closest to our planned departure", async () => {
+    onlyAeroapiKey();
+    // Oldest first, so the order alone cannot pick the later leg.
+    respondWith([firstLeg, secondLeg]);
+
+    const result = await lookupFlightAeroapi(
+      "LH400",
+      "2026-10-05",
+      undefined,
+      undefined,
+      undefined,
+      new Date("2026-10-05T13:30:00Z")
+    );
+
+    expect(result?.departure?.gate).toBe("H20");
+  });
+
+  it("takes the leg leaving from our airport", async () => {
+    onlyAeroapiKey();
+    respondWith([firstLeg, secondLeg]);
+
+    const result = await lookupFlightAeroapi("LH400", "2026-10-05", undefined, "MUC");
+
+    expect(result?.departure?.gate).toBe("H20");
+  });
+
+  it("puts an instance without a readable scheduled_out behind the dated ones", async () => {
+    onlyAeroapiKey();
+    const undated: Flight = { ...base, scheduled_out: "not-a-time", gate_origin: "X1" };
+    respondWith([undated, secondLeg]);
+
+    const result = await lookupFlightAeroapi("LH400", "2026-10-05");
+
+    expect(result?.departure?.gate).toBe("H20");
+  });
+
+  it("is passed our planned departure by lookupFlightDetails", async () => {
+    onlyAeroapiKey();
+    // Oldest first, so the order alone cannot pick the later leg.
+    respondWith([firstLeg, secondLeg]);
+
+    const result = await lookupFlightDetails(
+      "LH400",
+      "2026-10-05",
+      undefined,
+      "2026-10-05T14:05:00Z",
+      "2026-10-05T22:00:00Z"
+    );
+
+    expect(result?.source).toBe("aeroapi");
+    expect(result?.departure?.gate).toBe("H20");
+  });
+
+  it("does not serve one caller's leg to another from the cache", async () => {
+    onlyAeroapiKey();
+    respondWith(newestFirst);
+    respondWith(newestFirst);
+
+    const late = await lookupFlightAeroapi(
+      "LH400",
+      "2026-10-05",
+      undefined,
+      undefined,
+      undefined,
+      "2026-10-05T14:00:00Z"
+    );
+    const early = await lookupFlightAeroapi(
+      "LH400",
+      "2026-10-05",
+      undefined,
+      undefined,
+      undefined,
+      "2026-10-05T06:00:00Z"
+    );
+
+    expect(late?.departure?.gate).toBe("H20");
+    expect(early?.departure?.gate).toBe("A10");
+  });
+});
+
+describe("lookupFlightAeroapi — edges", () => {
+  it("maps a partner's number to the operating flight as a codeshare", async () => {
+    onlyAeroapiKey();
+    respondWith([dayOf("2026-10-05")]);
+
+    const result = await lookupFlightAeroapi("UA8840", "2026-10-05");
+
+    expect(result).toMatchObject({
+      flightNumber: "UA8840",
+      isCodeshare: true,
+      airline: undefined,
+      airlineIata: undefined,
+      airlineIcao: undefined,
+    });
+    expect(result?.operatingAirline).toBe(fixtureOperatorName());
+  });
+
+  it("is not a codeshare when the operating ident is the number asked for", async () => {
+    onlyAeroapiKey();
+    respondWith([dayOf("2026-10-05")]);
+
+    const result = await lookupFlightAeroapi("LH400", "2026-10-05");
+
+    expect(result).toMatchObject({ isCodeshare: false, airlineIata: "LH" });
+    expect(result?.operatingAirline).toBeUndefined();
+  });
+
+  it("asks for a departure 24 h ahead dated today+2 in a far-east zone", async () => {
+    onlyAeroapiKey();
+    // NOW is 2026-10-05 21:00 in Auckland (UTC+13), so "today+2" there is
+    // the 7th; 00:30 local on the 7th is 2026-10-06T11:30Z — inside T-24h…T-48h.
+    const auckland: Flight = {
+      ...dayOf("2026-10-05"),
+      origin: { ...dayOf("2026-10-05").origin, timezone: "Pacific/Auckland" },
+      scheduled_out: "2026-10-06T11:30:00Z",
+      gate_origin: "NZ7",
+    };
+    respondWith([auckland]);
+
+    const result = await lookupFlightAeroapi("LH400", "2026-10-07");
+
+    expect(mockedAxios.get).toHaveBeenCalledTimes(1);
+    const [, config] = mockedAxios.get.mock.calls[0] as [
+      string,
+      { params: Record<string, string> },
+    ];
+    expect(Date.parse(config.params.start)).toBeLessThanOrEqual(Date.parse(auckland.scheduled_out));
+    expect(Date.parse(config.params.end)).toBeGreaterThan(Date.parse(auckland.scheduled_out));
+    expect(result?.departure?.gate).toBe("NZ7");
+  });
+
+  it("says so when AeroAPI has more pages than the one read", async () => {
+    onlyAeroapiKey();
+    mockedAxios.get.mockResolvedValueOnce({
+      data: { flights: [dayOf("2026-10-05")], links: { next: "/flights/LH400?cursor=abc" } },
+    });
+
+    await lookupFlightAeroapi("LH400", "2026-10-05");
+
+    expect(logger.warn).toHaveBeenCalledWith(
+      expect.objectContaining({ operation: "aeroapi_truncated" }),
+      expect.any(String)
+    );
   });
 });
 

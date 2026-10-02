@@ -415,7 +415,8 @@ export async function lookupFlightDetails(
       date,
       userId,
       depAirportCode,
-      outcomes
+      outcomes,
+      departureTime
     );
     if (aeroapiResult) {
       logger.info({ api: "aeroapi", operation: "lookup_aeroapi_hit" }, "AeroAPI served");
@@ -967,7 +968,7 @@ export async function lookupFlightWithHistorical(
           direction: dayDelta > 0 ? "future" : "past",
           operation: "lookup_unavailable_no_provider",
         },
-        "Lookup outside live window requested but neither Aviationstack nor AeroDataBox is configured"
+        "Lookup outside live window requested but none of Aviationstack, AeroDataBox or AeroAPI is configured"
       );
       return { flights: [], unavailableReason: "no_provider" };
     }

@@ -19,6 +19,9 @@ describe("AeroAPI key settings", () => {
   let adminCookie: string;
   let regularUser: { id: string };
   let regularCookie: string;
+  /** The row's values before this suite, put back in afterAll. */
+  let previousAdmin: { allowUserFlightApiKeys: boolean; globalAeroapiApiKey: string | null };
+  const previousEnvKey = process.env.AEROAPI_API_KEY;
 
   beforeAll(async () => {
     const timestamp = Date.now();
@@ -48,8 +51,19 @@ describe("AeroAPI key settings", () => {
         data: { allowUserApiKeys: true, allowUserFlightApiKeys: true },
       });
     }
+    const row = await prisma.adminSettings.findFirst({ orderBy: { id: "asc" } });
+    previousAdmin = {
+      allowUserFlightApiKeys: row?.allowUserFlightApiKeys ?? true,
+      globalAeroapiApiKey: row?.globalAeroapiApiKey ?? null,
+    };
+    await prisma.adminSettings.updateMany({
+      data: { globalAeroapiApiKey: null, allowUserFlightApiKeys: true },
+    });
+    delete process.env.AEROAPI_API_KEY;
   });
 
+  // Each test starts from "user keys allowed, no AeroAPI key anywhere"; the
+  // suite's own starting values come back in afterAll.
   afterEach(async () => {
     await prisma.adminSettings.updateMany({
       data: { globalAeroapiApiKey: null, allowUserFlightApiKeys: true },
@@ -62,6 +76,9 @@ describe("AeroAPI key settings", () => {
   });
 
   afterAll(async () => {
+    await prisma.adminSettings.updateMany({ data: previousAdmin });
+    if (previousEnvKey === undefined) delete process.env.AEROAPI_API_KEY;
+    else process.env.AEROAPI_API_KEY = previousEnvKey;
     await prisma.userSettings.deleteMany({
       where: { userId: { in: [adminUser.id, regularUser.id] } },
     });

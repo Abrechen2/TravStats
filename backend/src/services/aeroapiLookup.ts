@@ -97,6 +97,8 @@ export interface AeroapiFlight {
 
 interface AeroapiFlightsResponse {
   flights?: AeroapiFlight[];
+  /** Set when more pages exist; `links.next` is the next page's path. */
+  links?: { next?: string | null } | null;
 }
 
 function parseUtc(value: string | null | undefined): string | undefined {
@@ -156,6 +158,36 @@ function preferOrigin(flights: AeroapiFlight[], depAirportCode?: string): Aeroap
   return matching.length > 0 ? matching : flights;
 }
 
+/**
+ * Choose ONE instance among those leaving on the requested date.
+ *
+ * A flight number can fly several legs a day, and AeroAPI lists them newest
+ * first — taking the first would hand the LAST leg's gate and airports to a
+ * caller asking about the first. With our planned departure the closest
+ * scheduled_out wins; without it the day's first leg does (the earliest is
+ * what a number "is" on a ticket far more often than a later rotation).
+ * Instances with no readable scheduled_out come only after every dated one.
+ */
+export function pickInstance(
+  candidates: AeroapiFlight[],
+  plannedDepartureMs?: number
+): AeroapiFlight | undefined {
+  const dated = candidates
+    .map((flight) => ({ flight, at: toDate(flight.scheduled_out)?.getTime() }))
+    .filter((c): c is { flight: AeroapiFlight; at: number } => c.at !== undefined);
+  const undated = candidates.filter((f) => !toDate(f.scheduled_out));
+  const distance = (at: number) =>
+    plannedDepartureMs === undefined ? at : Math.abs(at - plannedDepartureMs);
+  const sorted = [...dated].sort((a, b) => distance(a.at) - distance(b.at)).map((c) => c.flight);
+  return [...sorted, ...undated][0];
+}
+
+function toEpochMs(value: Date | string | null | undefined): number | undefined {
+  if (value === null || value === undefined) return undefined;
+  const ms = value instanceof Date ? value.getTime() : Date.parse(value);
+  return Number.isNaN(ms) ? undefined : ms;
+}
+
 function statusOverride(flight: AeroapiFlight): "cancelled" | "diverted" | undefined {
   if (flight.cancelled) return "cancelled";
   if (flight.diverted) return "diverted";
@@ -165,8 +197,10 @@ function statusOverride(flight: AeroapiFlight): "cancelled" | "diverted" | undef
 function isHistoricalDate(date: string, nowMs: number): boolean {
   const requested = Date.parse(`${date}T00:00:00Z`);
   if (Number.isNaN(requested)) return false;
-  // A whole day past the requested one: every zone's flight has landed.
-  return requested + 2 * DAY_MS < nowMs;
+  // Three days after the local date's UTC midnight: a late departure in a
+  // UTC-10/-11 zone leaves a day "after" its date in UTC and can then fly
+  // for most of another — only past that is every instance surely down.
+  return requested + 3 * DAY_MS < nowMs;
 }
 
 /**
@@ -182,7 +216,9 @@ export async function lookupFlightAeroapi(
   userId?: string,
   /** Our departure airport where known — a number can fly twice a day. */
   depAirportCode?: string,
-  outcomes?: LookupOutcomeLog
+  outcomes?: LookupOutcomeLog,
+  /** Our planned departure where known — picks the leg on a multi-leg day. */
+  plannedDeparture?: Date | string | null
 ): Promise<FlightLookupResult | null> {
   const trimmed = flightNumber.trim();
   if (!trimmed) return null;
@@ -199,7 +235,10 @@ export async function lookupFlightAeroapi(
 
   const normalized = normalizeFlightNumber(trimmed) ?? trimmed;
   const providerNumber = toProviderFlightNumber(trimmed) ?? normalized;
-  const cacheKey = `${normalized}_${date}_${depAirportCode ?? "*"}`;
+  const plannedMs = toEpochMs(plannedDeparture);
+  // The planned time is part of the key for the same reason the airport is:
+  // it decides WHICH leg answers.
+  const cacheKey = `${normalized}_${date}_${depAirportCode ?? "*"}_${plannedMs ?? "*"}`;
   const ttl = isHistoricalDate(date, nowMs)
     ? CACHE_TTL_HISTORICAL_SECONDS
     : CACHE_TTL_RECENT_SECONDS;
@@ -242,8 +281,18 @@ export async function lookupFlightAeroapi(
       return null;
     }
 
+    if (response.data?.links?.next) {
+      // Only the first page is read (AeroAPI pages ~15 instances). The window
+      // spans three days, so this means a number flown very often — say so
+      // rather than let a missing leg pass silently.
+      logger.warn(
+        { api: "aeroapi", returned: flights.length, operation: "aeroapi_truncated" },
+        "AeroAPI has more pages for this window; only the first was read"
+      );
+    }
+
     const onDate = flights.filter((f) => aeroapiDepartsOnLocalDate(f, date));
-    const picked = preferOrigin(onDate, depAirportCode)[0];
+    const picked = pickInstance(preferOrigin(onDate, depAirportCode), plannedMs);
     if (!picked) {
       logger.info(
         { api: "aeroapi", returned: flights.length, operation: "api_empty_response" },
