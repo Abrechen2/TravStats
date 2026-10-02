@@ -1,0 +1,29 @@
+{
+  "title": "Push notifications",
+  "enable": "Turn on push notifications to the Companion app",
+  "stateOn": "On",
+  "stateOff": "Off",
+  "defaultOff": "The switch is off on every fresh install and after every update. While it is off, this server makes no contact with the relay at all.",
+  "explanation": {
+    "operator": "The relay push.travstats.de is run by the TravStats project. It forwards notifications to Apple and Google.",
+    "receives": "Per message it receives the phone's push token and the end-to-end-encrypted content. Neither the relay nor Cloudflare, Apple or Google can read the content. In transit it also sees this server's IP address.",
+    "stores": "It stores only an instance ID, a hash of its secret and a daily counter."
+  },
+  "privacyLink": "Privacy policy",
+  "selfHostLink": "Run your own relay",
+  "relayUrl": "Relay address",
+  "relayUrlHint": "https:// only (or http://localhost for testing). With a different address this server registers anew.",
+  "saveUrl": "Save address",
+  "registration": "Registration",
+  "registered": "Registered",
+  "notRegistered": "Not registered yet",
+  "notRegisteredHint": "Registration happens automatically with the first notification once you have switched push on.",
+  "reset": "Reset registration",
+  "resetDone": "Registration reset. This server registers anew with the next push.",
+  "pausedUntil": "Paused until {{time}} (the relay's daily limit was reached)",
+  "consentAt": "Consent given on {{time}}",
+  "saved": "Saved.",
+  "loadFailed": "The push settings could not be loaded.",
+  "saveFailed": "The push settings could not be saved.",
+  "invalidUrl": "Invalid address. Only https:// (or http://localhost) is allowed."
+}

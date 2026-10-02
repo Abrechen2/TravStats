@@ -1,0 +1,29 @@
+{
+  "title": "Push-Benachrichtigungen",
+  "enable": "Push-Benachrichtigungen an die Companion-App einschalten",
+  "stateOn": "Eingeschaltet",
+  "stateOff": "Ausgeschaltet",
+  "defaultOff": "Der Schalter ist bei jeder frischen Installation und nach jedem Update aus. Solange er aus ist, nimmt dieser Server keinerlei Kontakt zum Relay auf.",
+  "explanation": {
+    "operator": "Das Relay push.travstats.de wird vom TravStats-Projekt betrieben. Es reicht Benachrichtigungen an Apple und Google weiter.",
+    "receives": "Pro Nachricht erhält es das Push-Token des Telefons und den Ende-zu-Ende-verschlüsselten Inhalt. Den Inhalt können weder das Relay noch Cloudflare, Apple oder Google lesen. Während der Übertragung sieht es außerdem die IP-Adresse dieses Servers.",
+    "stores": "Gespeichert werden nur eine Instanz-ID, ein Hash ihres Geheimnisses und ein Tageszähler."
+  },
+  "privacyLink": "Datenschutzerklärung",
+  "selfHostLink": "Eigenes Relay betreiben",
+  "relayUrl": "Relay-Adresse",
+  "relayUrlHint": "Nur https:// (oder http://localhost für Tests). Bei einer anderen Adresse registriert sich dieser Server neu.",
+  "saveUrl": "Adresse speichern",
+  "registration": "Registrierung",
+  "registered": "Registriert",
+  "notRegistered": "Noch nicht registriert",
+  "notRegisteredHint": "Die Registrierung erfolgt automatisch bei der ersten Benachrichtigung, nachdem du Push eingeschaltet hast.",
+  "reset": "Registrierung zurücksetzen",
+  "resetDone": "Registrierung zurückgesetzt. Beim nächsten Push meldet sich dieser Server neu an.",
+  "pausedUntil": "Pausiert bis {{time}} (Tageslimit des Relays erreicht)",
+  "consentAt": "Zugestimmt am {{time}}",
+  "saved": "Gespeichert.",
+  "loadFailed": "Die Push-Einstellungen konnten nicht geladen werden.",
+  "saveFailed": "Die Push-Einstellungen konnten nicht gespeichert werden.",
+  "invalidUrl": "Ungültige Adresse. Erlaubt ist nur https:// (oder http://localhost)."
+}
