@@ -225,6 +225,7 @@
     "km": "Kilometer",
     "kmCoverage": "{{covered}} von {{of}} Mieten mit Rechnung",
     "perDay": "pro Tag ({{currency}})",
+    "perDayNoCost": "Kosten pro Tag",
     "otherCurrencies": "Andere Währungen getrennt: {{list}}",
     "providers": "Anbieter nach Miettagen",
     "brokerNote": "Vermittler zählen nicht als Anbieter; sie stehen an der Miete.",
