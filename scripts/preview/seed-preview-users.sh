@@ -37,7 +37,7 @@ set -euo pipefail
 
 NODE1="${NODE1:?set NODE1 to the Proxmox node that carries the DMZ bridge -- the concrete addresses live in CLAUDE.local.md, deliberately not in this public repo}"
 slot="${1:-}"
-case "$slot" in beta|poi) ;; *) echo "usage: $0 <beta|poi>" >&2; exit 2 ;; esac
+case "$slot" in beta) ;; *) echo "usage: $0 beta" >&2; exit 2 ;; esac
 
 PREVIEW_DIR="${PREVIEW_DIR:-/opt/preview}"
 # Interpolated into a remote shell command below — plain path characters only.
