@@ -842,6 +842,10 @@
       "label": "AeroDataBox API-Schlüssel",
       "description": "Kostenlos via RapidAPI: 600 Einheiten/Monat. Schließt die Lücke für historische Flüge bis zu einem Jahr zurück. Wird mit allen Benutzern geteilt."
     },
+    "aeroapi": {
+      "label": "FlightAware AeroAPI",
+      "description": "Kostenloser Privat-Tarif: 5 $ Guthaben pro Monat reichen für die Flugstatus-Abfragen eines Haushalts."
+    },
     "opensky": {
       "label": "OpenSky Network",
       "description": "Kostenloser Service. Erfordert Registrierung. Wird mit allen Benutzern für Flugdaten-Abfrage geteilt.",

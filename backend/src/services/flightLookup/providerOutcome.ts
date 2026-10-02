@@ -13,7 +13,8 @@
  * the caller can tell "nobody knows this flight" from "somebody could not say".
  */
 
-export type FlightDataProvider = "aviationstack" | "aerodatabox" | "airlabs" | "opensky";
+export type FlightDataProvider =
+  "aeroapi" | "aviationstack" | "aerodatabox" | "airlabs" | "opensky";
 
 /** A provider that could not do its job. Stable codes — the UI maps them. */
 export type ProviderFailureKind =

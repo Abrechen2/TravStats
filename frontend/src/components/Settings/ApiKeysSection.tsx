@@ -14,6 +14,7 @@ interface ApiKeysStatus {
   airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+  aeroapi: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
 }
 
@@ -21,6 +22,7 @@ interface ApiKeysFormState {
   airlabsApiKey: string;
   aviationstackApiKey: string;
   aerodataboxApiKey: string;
+  aeroapiApiKey: string;
   openskyClientId: string;
   openskyClientSecret: string;
 }
@@ -117,6 +119,19 @@ export default function ApiKeysSection({
           capabilities={["historical365"]}
           onChange={(value) => onSetApiKeys({ ...apiKeys, aerodataboxApiKey: value })}
           onClear={() => onSetApiKeys({ ...apiKeys, aerodataboxApiKey: "" })}
+        />
+        <ApiKeyCard
+          layout="row"
+          provider="aeroapi"
+          label={t("settings:apiKeys.aeroapi.label")}
+          description={t("settings:apiKeys.aeroapi.description")}
+          getKeyUrl="https://www.flightaware.com/aeroapi/portal/"
+          isShared={apiKeysStatus?.aeroapi?.isShared || false}
+          hasAccess={apiKeysStatus?.aeroapi?.hasAccess || false}
+          hasOwnKey={apiKeysStatus?.aeroapi?.hasKey || false}
+          value={apiKeys.aeroapiApiKey}
+          onChange={(value) => onSetApiKeys({ ...apiKeys, aeroapiApiKey: value })}
+          onClear={() => onSetApiKeys({ ...apiKeys, aeroapiApiKey: "" })}
         />
         <BulkRefreshCard />
         <ApiKeyCard

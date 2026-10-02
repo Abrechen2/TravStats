@@ -24,6 +24,7 @@ export * from "./catalogue";
 export * from "./version";
 export * from "./immich";
 export * from "./usageStats";
+export * from "./pushRelay";
 export * from "./companions";
 export * from "./twoFactor";
 export * from "./passkeys";

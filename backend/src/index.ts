@@ -525,47 +525,17 @@ if (process.env.NODE_ENV !== "test") {
       });
     }
 
-    // Backfill nextApiCheckAt for scheduled flights that don't have it set yet
+    // nextApiCheckAt for scheduled flights: fill the missing ones, and pull
+    // a future flight's stored check forward to the current schedule (never
+    // later) — flights stored before the push checkpoints keep D-30min else.
     try {
-      const { calculateNextApiCheckAt } = await import("./utils/smartCheckSchedule");
-      const scheduledFlights = await prisma.flight.findMany({
-        where: {
-          status: "scheduled",
-          flightNumber: { not: null },
-          departureTime: { not: null },
-          nextApiCheckAt: null,
-        },
-        select: {
-          id: true,
-          departureTime: true,
-          arrivalTime: true,
-          status: true,
-          flightNumber: true,
-        },
-      });
-      if (scheduledFlights.length > 0) {
-        let updated = 0;
-        let skipped = 0;
-        for (const f of scheduledFlights) {
-          const checkAt = calculateNextApiCheckAt(
-            f.departureTime,
-            f.arrivalTime,
-            f.status,
-            f.flightNumber
-          );
-          if (checkAt) {
-            await prisma.flight.update({ where: { id: f.id }, data: { nextApiCheckAt: checkAt } });
-            updated++;
-          } else {
-            // Past arrival + buffer, or otherwise ineligible — count separately so
-            // the log doesn't claim we populated all candidates.
-            skipped++;
-          }
-        }
+      const { backfillNextApiCheckAt } = await import("./services/nextApiCheckBackfill");
+      const r = await backfillNextApiCheckAt();
+      if (r.filled + r.pulledEarlier + r.skipped > 0) {
         logger.info({
           operation: "server_start_backfill_api_check",
-          message: `Backfilled nextApiCheckAt for ${updated} of ${scheduledFlights.length} scheduled flights (${skipped} ineligible)`,
-          context: { candidates: scheduledFlights.length, updated, skipped },
+          message: `nextApiCheckAt: filled ${r.filled}, pulled earlier ${r.pulledEarlier} of ${r.candidates} scheduled flights (${r.skipped} ineligible)`,
+          context: r,
         });
       }
     } catch (error) {

@@ -296,7 +296,7 @@ registry.registerPath({
   responses: { 200: { description: "Quota per provider" } },
 });
 
-for (const provider of ["airlabs", "aviationstack", "aerodatabox", "opensky"] as const) {
+for (const provider of ["airlabs", "aviationstack", "aerodatabox", "aeroapi", "opensky"] as const) {
   registry.registerPath({
     method: "post",
     path: `/settings/api-keys/test/${provider}`,

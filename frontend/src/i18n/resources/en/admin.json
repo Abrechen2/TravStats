@@ -842,6 +842,10 @@
       "label": "AeroDataBox API Key",
       "description": "Free via RapidAPI: 600 units/month. Closes the gap for historical flights up to a year back. Shared with all users."
     },
+    "aeroapi": {
+      "label": "FlightAware AeroAPI",
+      "description": "Free personal tier: $5 of credit per month covers a household's flight-status lookups."
+    },
     "opensky": {
       "label": "OpenSky Network",
       "description": "Free service. Requires registration. Shared with all users for flight data lookup.",

@@ -14,6 +14,7 @@ import {
 } from "../services/pairing/pairingService";
 import { getPublicBaseUrl } from "../services/instanceSettingsService";
 import { generateApiToken } from "../utils/apiTokens";
+import { forgetPushForTokens } from "../services/push/devices";
 import { securityLogger } from "../utils/logger";
 import { requestPathForLog } from "../utils/logging/requestPath";
 
@@ -155,10 +156,16 @@ router.post(
       // Re-pairing the same physical device revokes its prior token so we don't
       // leave orphaned credentials behind.
       if (deviceId) {
-        await prisma.apiToken.updateMany({
+        const prior = await prisma.apiToken.findMany({
           where: { userId, deviceId, revokedAt: null },
+          select: { id: true },
+        });
+        await prisma.apiToken.updateMany({
+          where: { id: { in: prior.map((t) => t.id) } },
           data: { revokedAt: new Date() },
         });
+        // Revocation is soft, so the push row would outlive the token.
+        await forgetPushForTokens(prior.map((t) => t.id));
       }
 
       const generated = await generateApiToken();
@@ -218,6 +225,7 @@ router.post(
         where: { id: req.apiToken.id },
         data: { revokedAt: new Date() },
       });
+      await forgetPushForTokens([req.apiToken.id]);
       securityLogger.info({
         operation: "security_event",
         message: "Device unpaired",

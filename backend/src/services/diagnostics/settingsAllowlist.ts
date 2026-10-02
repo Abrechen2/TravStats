@@ -63,6 +63,7 @@ export const ADMIN_SETTINGS_ALLOWLIST: Readonly<Record<string, Rule>> = {
   airlabsKeyConfigured: present("globalAirlabsApiKey"),
   aviationstackKeyConfigured: present("globalAviationstackApiKey"),
   aerodataboxKeyConfigured: present("globalAerodataboxApiKey"),
+  aeroapiKeyConfigured: present("globalAeroapiApiKey"),
   openskyConfigured: present("globalOpenskyClientId"),
   googlePlacesKeyConfigured: present("globalGooglePlacesApiKey"),
   railRoutingConfigured: present("railRoutingUrl"),

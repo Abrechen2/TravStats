@@ -22,6 +22,7 @@ import "./setup";
 import { OpenAPIRegistry, OpenApiGeneratorV3 } from "@asteasolutions/zod-to-openapi";
 import { appVersion } from "../../utils/version";
 import { localDateValueSchema, timeValueSchema } from "../../shared/time/wire";
+import { withVersionPreconditions } from "./syncConflicts";
 
 const registry = new OpenAPIRegistry();
 
@@ -47,7 +48,7 @@ export { registry, bearerAuth };
 
 export function buildOpenApiDocument() {
   const generator = new OpenApiGeneratorV3(registry.definitions);
-  return generator.generateDocument({
+  const document = generator.generateDocument({
     openapi: "3.0.3",
     info: {
       title: "TravStats API",
@@ -74,4 +75,5 @@ export function buildOpenApiDocument() {
     servers: [{ url: "/api/v1", description: "Same-origin API root" }],
     security: [{ BearerAuth: [] }],
   });
+  return withVersionPreconditions(document);
 }
