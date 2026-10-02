@@ -28,6 +28,7 @@ import { saveErrorMessage } from "../../lib/saveErrorMessage";
 import { cruiseStopToWire } from "./cruiseStopWire";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
+import Modal from "../Modal";
 import { ShipPicker } from "./ShipPicker";
 import CatalogueCombobox from "../FlightForm/fields/CatalogueCombobox";
 import { searchCruiseLineOptions } from "./cruiseLineOptions";
@@ -203,47 +204,18 @@ export function CruiseImportPreviewModal({
     }
   };
 
+  // The shared frame, like the lodging preview (forgejo#166): in place, the
+  // preview sat before the add chooser's portal and never got the keyboard.
   return (
-    <div className="fixed inset-0 z-60 flex items-center justify-center bg-black/70 p-4">
-      <div className="max-h-[90vh] w-full max-w-2xl overflow-y-auto rounded-xl bg-(--bg-surface) p-6">
-        <h2 className="mb-1 text-xl font-semibold text-(--text-primary)">
-          {t("cruise:import.previewTitle", { count: entries.length })}
-        </h2>
-        <p className="mb-4 text-sm text-(--text-muted)">{t("cruise:import.editHint")}</p>
-
-        <div className="space-y-4">
-          {entries.map((entry, idx) => (
-            <CruiseImportEntryEditor
-              key={idx}
-              index={idx}
-              entry={entry}
-              onChange={handleEntryChange}
-            />
-          ))}
-        </div>
-
-        {showTripToggle && (
-          <div className="mt-4 rounded-lg border border-border bg-(--bg-base) p-3">
-            <label className="flex items-center gap-2 text-sm text-(--text-primary)">
-              <input
-                type="checkbox"
-                checked={groupAsTrip}
-                onChange={(e): void => setGroupAsTrip(e.target.checked)}
-              />
-              {t("cruise:import.groupAsTrip")}
-            </label>
-            {groupAsTrip && (
-              <input
-                value={tripName}
-                onChange={(e): void => setTripName(e.target.value)}
-                placeholder={defaultTripName}
-                className={`${INPUT} mt-2`}
-              />
-            )}
-          </div>
-        )}
-
-        <div className="mt-6 flex items-center justify-between gap-3">
+    <Modal
+      open
+      onClose={onCancel}
+      busy={saving}
+      maxWidth={672}
+      closeLabel={t("common:buttons.close")}
+      title={t("cruise:import.previewTitle", { count: entries.length })}
+      footer={
+        <div className="flex w-full items-center justify-between gap-3">
           <span className="text-xs text-(--text-muted)">
             {totalFlights > 0 && t("cruise:import.flightCount", { count: totalFlights })}
           </span>
@@ -266,8 +238,42 @@ export function CruiseImportPreviewModal({
             </button>
           </div>
         </div>
+      }
+    >
+      <p className="mb-4 text-sm text-(--text-muted)">{t("cruise:import.editHint")}</p>
+
+      <div className="space-y-4">
+        {entries.map((entry, idx) => (
+          <CruiseImportEntryEditor
+            key={idx}
+            index={idx}
+            entry={entry}
+            onChange={handleEntryChange}
+          />
+        ))}
       </div>
-    </div>
+
+      {showTripToggle && (
+        <div className="mt-4 rounded-lg border border-border bg-(--bg-base) p-3">
+          <label className="flex items-center gap-2 text-sm text-(--text-primary)">
+            <input
+              type="checkbox"
+              checked={groupAsTrip}
+              onChange={(e): void => setGroupAsTrip(e.target.checked)}
+            />
+            {t("cruise:import.groupAsTrip")}
+          </label>
+          {groupAsTrip && (
+            <input
+              value={tripName}
+              onChange={(e): void => setTripName(e.target.value)}
+              placeholder={defaultTripName}
+              className={`${INPUT} mt-2`}
+            />
+          )}
+        </div>
+      )}
+    </Modal>
   );
 }
 

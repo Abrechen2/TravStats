@@ -5,6 +5,7 @@ import { CruiseImportPreviewModal } from "../../../components/Cruise/CruiseImpor
 import { cruiseApi } from "../../../lib/api/cruise";
 import type { ParsedCruiseEntry } from "../../../lib/api/parse";
 import type { Cruise } from "../../../types";
+import { expectPreviewOwnsTheKeyboard } from "../../helpers/stackedDialog";
 
 // `t` echoes the key so pill/checkbox text assertions read the raw i18n key,
 // matching the convention used by CruiseEditModal's status test.
@@ -82,13 +83,24 @@ const baseEntry: ParsedCruiseEntry = {
   unmatchedPorts: [],
 };
 
+describe("CruiseImportPreviewModal — keyboard (forgejo#166)", () => {
+  it("is a modal dialog that takes focus over the add chooser", async () => {
+    const onCancel = vi.fn();
+    await expectPreviewOwnsTheKeyboard(
+      <CruiseImportPreviewModal entries={[baseEntry]} onCancel={onCancel} onSaved={vi.fn()} />,
+      "cruise:import.previewTitle",
+      onCancel
+    );
+  });
+});
+
 describe("CruiseImportPreviewModal — status (#status-from-dates)", () => {
   beforeEach(() => {
     vi.mocked(cruiseApi.create).mockClear();
   });
 
   it("has no status select — status is a read-only pill plus a Storniert checkbox", () => {
-    const { container } = render(
+    const { baseElement: container } = render(
       <CruiseImportPreviewModal entries={[baseEntry]} onCancel={vi.fn()} onSaved={vi.fn()} />
     );
 
