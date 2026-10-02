@@ -8,6 +8,7 @@ import { createApiTokenSchema, type SanitizedApiToken } from "../../schemas/apiT
 import { generateApiToken } from "../../utils/apiTokens";
 import logger, { securityLogger } from "../../utils/logger";
 import { requestPathForLog } from "../../utils/logging/requestPath";
+import { forgetPushForTokens } from "../../services/push/devices";
 
 /**
  * Personal Access Token (PAT) management routes.
@@ -133,6 +134,8 @@ router.delete("/:id", async (req: AuthRequest, res: Response, next: NextFunction
       where: { id },
       data: { revokedAt: new Date() },
     });
+    // A revoked phone must never be notified again (TravStats#156).
+    await forgetPushForTokens([revoked.id]);
     securityLogger.info({
       operation: "security_event",
       message: "API token revoked",

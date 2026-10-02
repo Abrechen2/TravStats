@@ -16,6 +16,7 @@ import stravaAdminRouter from "./strava";
 import usageStatsRouter from "./usageStats";
 import passwordResetRequestsRouter from "./passwordResetRequests";
 import timeMigrationRouter from "./timeMigration";
+import pushAdminRouter from "./push";
 
 const router = Router();
 
@@ -55,5 +56,6 @@ router.use("/strava", stravaAdminRouter);
 router.use("/", usageStatsRouter);
 router.use("/", passwordResetRequestsRouter);
 router.use("/", timeMigrationRouter);
+router.use("/push", pushAdminRouter);
 
 export default router;

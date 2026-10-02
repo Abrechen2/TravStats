@@ -15,6 +15,7 @@ import {
   testOpenRouteServiceKey,
   testGraphHopperKey,
 } from "../../services/apiKeyTester";
+import { testAeroapiKey } from "../../services/apiKeyTesterAeroapi";
 import { routingSettingsSchema } from "../../schemas/tour";
 import { ensureAdminSettingsRow } from "../../services/adminSettingsRow";
 
@@ -22,6 +23,7 @@ interface GlobalApiKeysUpdateData {
   globalAirlabsApiKey?: string | null;
   globalAviationstackApiKey?: string | null;
   globalAerodataboxApiKey?: string | null;
+  globalAeroapiApiKey?: string | null;
   globalLogostreamApiKey?: string | null;
   globalGooglePlacesApiKey?: string | null;
   globalOpenskyClientId?: string | null;
@@ -40,6 +42,7 @@ const globalApiKeysSchema = z
     globalAirlabsApiKey: z.string().optional().nullable(),
     globalAviationstackApiKey: z.string().optional().nullable(),
     globalAerodataboxApiKey: z.string().optional().nullable(),
+    globalAeroapiApiKey: z.string().optional().nullable(),
     // Encryption silently corrupts secrets shorter than 16 bytes (see
     // utils/encryption.ts). Allow the "no change" sentinels — empty string
     // (clear the key) and a masked echo of the GET response (unchanged) —
@@ -93,6 +96,7 @@ async function resolveAdminGlobalKey(
     | "globalAirlabsApiKey"
     | "globalAviationstackApiKey"
     | "globalAerodataboxApiKey"
+    | "globalAeroapiApiKey"
     | "globalLogostreamApiKey"
     | "globalGooglePlacesApiKey"
     | "globalOpenskyClientId"
@@ -116,6 +120,7 @@ router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
         globalAirlabsApiKey: undefined,
         globalAviationstackApiKey: undefined,
         globalAerodataboxApiKey: undefined,
+        globalAeroapiApiKey: undefined,
         globalLogostreamApiKey: undefined,
         globalGooglePlacesApiKey: undefined,
         globalOpenskyClientId: undefined,
@@ -134,6 +139,7 @@ router.get("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
       globalAirlabsApiKey: maskKey(adminSettings.globalAirlabsApiKey),
       globalAviationstackApiKey: maskKey(adminSettings.globalAviationstackApiKey),
       globalAerodataboxApiKey: maskKey(adminSettings.globalAerodataboxApiKey),
+      globalAeroapiApiKey: maskKey(adminSettings.globalAeroapiApiKey),
       globalLogostreamApiKey: maskKey(adminSettings.globalLogostreamApiKey),
       globalGooglePlacesApiKey: maskKey(adminSettings.globalGooglePlacesApiKey),
       globalOpenskyClientId: maskKey(adminSettings.globalOpenskyClientId),
@@ -188,6 +194,12 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
       const encrypted = encryptUnlessMasked(payload.globalAerodataboxApiKey);
       if (encrypted !== undefined) {
         updateData.globalAerodataboxApiKey = encrypted;
+      }
+    }
+    if (payload.globalAeroapiApiKey !== undefined) {
+      const encrypted = encryptUnlessMasked(payload.globalAeroapiApiKey);
+      if (encrypted !== undefined) {
+        updateData.globalAeroapiApiKey = encrypted;
       }
     }
     if (payload.globalLogostreamApiKey !== undefined) {
@@ -261,6 +273,7 @@ router.put("/api-keys", async (req: AuthRequest, res: Response, next: NextFuncti
         globalAirlabsApiKey: maskKey(adminSettings.globalAirlabsApiKey),
         globalAviationstackApiKey: maskKey(adminSettings.globalAviationstackApiKey),
         globalAerodataboxApiKey: maskKey(adminSettings.globalAerodataboxApiKey),
+        globalAeroapiApiKey: maskKey(adminSettings.globalAeroapiApiKey),
         globalLogostreamApiKey: maskKey(adminSettings.globalLogostreamApiKey),
         globalOpenskyClientId: maskKey(adminSettings.globalOpenskyClientId),
         globalOpenskyClientSecret: maskKey(adminSettings.globalOpenskyClientSecret),
@@ -341,6 +354,29 @@ router.post(
         });
       }
       const result = await testAerodataboxKey(effective);
+      res.json(result);
+    } catch (error) {
+      next(error);
+    }
+  }
+);
+
+router.post(
+  "/api-keys/test/aeroapi",
+  async (req: AuthRequest, res: Response, next: NextFunction) => {
+    try {
+      const { apiKey } = testApiKeySchema.parse(req.body);
+      const effective = looksMasked(apiKey)
+        ? ((await resolveAdminGlobalKey("globalAeroapiApiKey")) ?? "")
+        : apiKey!;
+      if (!effective) {
+        return res.status(400).json({
+          success: false,
+          message: "No AeroAPI key configured to test. Save one first.",
+          messageKey: "notConfigured",
+        });
+      }
+      const result = await testAeroapiKey(effective);
       res.json(result);
     } catch (error) {
       next(error);

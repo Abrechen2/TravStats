@@ -114,6 +114,7 @@ import tagRoutes from "./tags";
 import openapiRoutes from "./openapi";
 import importRoutes from "./import";
 import pairingRoutes from "./pairing";
+import devicePushRoutes from "./devicePush";
 import appSettingsRoutes from "./appSettings";
 import jobRoutes from "./jobs";
 import geoRoutes from "./geo";
@@ -371,6 +372,8 @@ export const apiMounts: ApiMount[] = [
   { id: "tags", base: "/api/v1/tags", router: tagRoutes },
   { id: "import", base: "/api/v1/import", router: importRoutes },
   { id: "pairing", base: "/api/v1/pairing", router: pairingRoutes },
+  // The paired phone's push registration (TravStats#156).
+  { id: "devicePush", base: "/api/v1/devices", router: devicePushRoutes },
   { id: "appSettings", base: "/api/v1/app-settings", router: appSettingsRoutes },
   { id: "geo", base: "/api/v1/geo", router: geoRoutes },
   // Background jobs a long-running request started (backup, restore, import, scans).

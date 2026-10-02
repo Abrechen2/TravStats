@@ -1,6 +1,9 @@
 /**
  * Unit tests for smart API check scheduling.
- * Covers the 3-checkpoint lifecycle: pre-departure, pre-arrival, post-arrival.
+ * Covers the lifecycle: the day before (T-24 h), the last three hours before
+ * departure on a 15-minute grid (TravStats#156 — a gate or time change has to
+ * reach the phone before the passenger is at the airport), pre-departure,
+ * pre-arrival, post-arrival.
  */
 
 import { calculateNextApiCheckAt } from "../utils/smartCheckSchedule";
@@ -43,11 +46,13 @@ describe("calculateNextApiCheckAt", () => {
   });
 
   describe("3-checkpoint schedule", () => {
-    it("returns the pre-departure checkpoint (dep - 30 min) when departure is far in the future", () => {
+    // Was "dep - 30 min" while only three checkpoints existed; since
+    // TravStats#156 the next check five hours out is T-3h.
+    it("returns T-3h when departure is five hours away", () => {
       const dep = future(5 * HOURS);
       const arr = future(12 * HOURS);
       const result = calculateNextApiCheckAt(dep, arr, "scheduled", "LH400", NOW);
-      expect(result?.getTime()).toBe(dep.getTime() - 30 * MINUTES);
+      expect(result?.getTime()).toBe(dep.getTime() - 3 * HOURS);
     });
 
     it("skips to pre-arrival once we are past the pre-departure checkpoint", () => {
@@ -79,8 +84,8 @@ describe("calculateNextApiCheckAt", () => {
     it("synthesizes arrival = departure + 12h when arrivalTime is missing", () => {
       const dep = future(5 * HOURS);
       const result = calculateNextApiCheckAt(dep, null, "scheduled", "LH400", NOW);
-      // First checkpoint is still pre-departure
-      expect(result?.getTime()).toBe(dep.getTime() - 30 * MINUTES);
+      // First checkpoint is still a pre-departure one (T-3h since TravStats#156)
+      expect(result?.getTime()).toBe(dep.getTime() - 3 * HOURS);
     });
 
     it("still terminates even without an explicit arrival", () => {
@@ -154,19 +159,64 @@ describe("calculateNextApiCheckAt", () => {
         hasActualDeparture: true,
         hasActualArrival: false,
       });
-      expect(result?.getTime()).toBe(dep.getTime() - 30 * MINUTES);
+      // The fixed chain still wins over follow-ups (T-3h since TravStats#156)
+      expect(result?.getTime()).toBe(dep.getTime() - 3 * HOURS);
     });
   });
 
   describe("short-haul edge cases", () => {
     it("deduplicates / orders checkpoints correctly on ultra-short flights", () => {
-      // 55 min MUC-VIE flight: dep in 2h, arr in 2h55min.
-      // Pre-dep (dep-30m) = +1h30, Pre-arr (arr-60m) = +1h55, Post-arr (arr+30m) = +3h25.
-      // The ordering must stay ascending.
+      // 55 min MUC-VIE flight: dep in 2h, arr in 2h55min. Inside the last
+      // three hours the 15-minute grid runs (+15m is the first future point);
+      // pre-arrival (arr-60m = +1h55) and post-arrival follow in order.
       const dep = future(2 * HOURS);
       const arr = future(2 * HOURS + 55 * MINUTES);
       const result = calculateNextApiCheckAt(dep, arr, "scheduled", "OS112", NOW);
+      expect(result?.getTime()).toBe(NOW.getTime() + 15 * MINUTES);
+      const all: number[] = [];
+      let at = NOW;
+      for (let i = 0; i < 40; i++) {
+        const next = calculateNextApiCheckAt(dep, arr, "scheduled", "OS112", at);
+        if (!next) break;
+        all.push(next.getTime());
+        at = next;
+      }
+      expect([...all].sort((a, b) => a - b)).toEqual(all);
+      expect(all).toContain(arr.getTime() - 60 * MINUTES);
+      expect(all[all.length - 1]).toBe(arr.getTime() + 30 * MINUTES);
+    });
+  });
+
+  describe("earlier checks for push (TravStats#156)", () => {
+    it("checks the day before: T-24h when departure is 30 hours away", () => {
+      const dep = future(30 * HOURS);
+      const result = calculateNextApiCheckAt(dep, future(40 * HOURS), "scheduled", "LH712", NOW);
+      expect(result?.getTime()).toBe(dep.getTime() - 24 * HOURS);
+    });
+
+    it("then T-3h", () => {
+      const dep = future(20 * HOURS);
+      const result = calculateNextApiCheckAt(dep, future(30 * HOURS), "scheduled", "LH712", NOW);
+      expect(result?.getTime()).toBe(dep.getTime() - 3 * HOURS);
+    });
+
+    it("then every 15 minutes until departure", () => {
+      const dep = future(3 * HOURS - 1 * MINUTES); // T-3h was a minute ago
+      const result = calculateNextApiCheckAt(dep, future(10 * HOURS), "scheduled", "LH712", NOW);
+      expect(result?.getTime()).toBe(dep.getTime() - 2 * HOURS - 45 * MINUTES);
+    });
+
+    it("keeps the existing dep-30m checkpoint inside the grid", () => {
+      const dep = future(40 * MINUTES);
+      const result = calculateNextApiCheckAt(dep, future(10 * HOURS), "scheduled", "LH712", NOW);
       expect(result?.getTime()).toBe(dep.getTime() - 30 * MINUTES);
+    });
+
+    it("never schedules a pre-departure check at or after departure", () => {
+      const dep = future(10 * MINUTES);
+      const arr = future(5 * HOURS);
+      const result = calculateNextApiCheckAt(dep, arr, "scheduled", "LH712", NOW);
+      expect(result?.getTime()).toBe(arr.getTime() - 60 * MINUTES);
     });
   });
 });

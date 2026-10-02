@@ -17,8 +17,10 @@ import NodeCache from "node-cache";
 import { findOrCreateAirport } from "./airportLookup";
 import { getApiKey, getOpenSkyCredentials } from "./apiKeyResolver";
 import { lookupFlightAerodatabox } from "./aerodataboxLookup";
+import { lookupFlightAeroapi } from "./aeroapiLookup";
 import { flightLookupResultToFlightData } from "./flightLookup/toFlightData";
 import { getOpenSkyAuthHeaders, lookupOpenSkyFlight } from "./flightLookup/openSky";
+import { flightProviderAvailability } from "./flightLookup/providerAvailability";
 import {
   classifyAirlabsBodyError,
   classifyProviderError,
@@ -327,7 +329,8 @@ export async function lookupFlightByNumber(
 }
 
 /** Provider that actually served a lookup result. */
-export type FlightLookupSource = "aviationstack" | "aerodatabox" | "airlabs" | "opensky";
+export type FlightLookupSource =
+  "aeroapi" | "aviationstack" | "aerodatabox" | "airlabs" | "opensky";
 
 /**
  * Aviationstack + enrichment (preferred when key is set), AirLabs fallback.
@@ -402,6 +405,24 @@ export async function lookupFlightDetails(
 ): Promise<FlightLookupResult | null> {
   const trimmedNumber = flightNumber.trim();
   if (!trimmedNumber) return null;
+
+  // FlightAware AeroAPI first where a key is configured: it is the one paid for
+  // as a status source. No key means null without a request, and null falls
+  // through to the order below unchanged.
+  const aeroapi = date
+    ? await lookupFlightAeroapi(
+        trimmedNumber,
+        date,
+        userId,
+        depAirportCode,
+        outcomes,
+        departureTime
+      )
+    : null;
+  if (aeroapi) {
+    logger.info({ api: "aeroapi", operation: "lookup_aeroapi_hit" }, "AeroAPI served");
+    return { ...aeroapi, source: "aeroapi" };
+  }
 
   // Get OpenSky credentials with priority resolution
   const openSkyCredentials = await getOpenSkyCredentials(userId);
@@ -908,46 +929,22 @@ export async function lookupFlightWithHistorical(
   // and returned an ordinary empty result — so a fresh install was told
   // "no flights found, try another date" when nothing had been searched
   // (#232). "Not configured" and "not found" call for opposite actions:
-  // add a key in Settings, versus check the number and date.
-  //
-  // Checked before the outside-live-window gate below on purpose: with no
-  // provider whatsoever, "this date needs Aviationstack or AeroDataBox" is
-  // the wrong answer, because it implies the free providers are set up and
-  // merely limited.
-  const [anyAirlabs, anyAviationstack, anyAerodatabox, anyOpenSky] = await Promise.all([
-    getApiKey("airlabs", userId),
-    getApiKey("aviationstack", userId),
-    getApiKey("aerodatabox", userId),
-    getOpenSkyCredentials(userId),
-  ]);
-  if (!anyAirlabs && !anyAviationstack && !anyAerodatabox && !anyOpenSky) {
+  // add a key in Settings, versus check the number and date. Asked before
+  // the date gate below; `providerAvailability.ts` says why.
+  const providers = await flightProviderAvailability(userId);
+  if (!providers.any) {
     logger.info(
       { operation: "lookup_unavailable_not_configured" },
       "Lookup requested but no flight-data provider is configured"
     );
     return { flights: [], unavailableReason: "not_configured" };
   }
-
-  // Capability gate: any non-today request needs Aviationstack OR
-  // AeroDataBox. Without one of them, the free providers can't deliver:
-  // AirLabs lies about non-today dates, OpenSky has no working
-  // callsign-by-date endpoint. AeroDataBox covers historical (≤ 365 d)
-  // and near-future schedules.
-  if (isOutsideLiveWindow) {
-    const [aviationstackKey, aerodataboxKey] = await Promise.all([
-      getApiKey("aviationstack", userId),
-      getApiKey("aerodatabox", userId),
-    ]);
-    if (!aviationstackKey && !aerodataboxKey) {
-      logger.info(
-        {
-          direction: dayDelta > 0 ? "future" : "past",
-          operation: "lookup_unavailable_no_provider",
-        },
-        "Lookup outside live window requested but neither Aviationstack nor AeroDataBox is configured"
-      );
-      return { flights: [], unavailableReason: "no_provider" };
-    }
+  if (isOutsideLiveWindow && !providers.byDate) {
+    logger.info(
+      { direction: dayDelta > 0 ? "future" : "past", operation: "lookup_unavailable_no_provider" },
+      "Lookup outside live window requested but no provider answers by date"
+    );
+    return { flights: [], unavailableReason: "no_provider" };
   }
 
   const dateStr = requestedStr;

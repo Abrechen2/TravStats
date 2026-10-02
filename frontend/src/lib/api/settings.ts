@@ -210,6 +210,7 @@ export const settingsApi = {
     airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    aeroapi: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     // Tour routing provider keys (Phase 3) — a user's own key takes
     // precedence over the admin's global one; see `apiKeyResolver.getApiKey`.
@@ -220,6 +221,7 @@ export const settingsApi = {
       airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+      aeroapi: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       openrouteservice: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
       graphhopper: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
@@ -234,6 +236,7 @@ export const settingsApi = {
     airlabsApiKey?: string | null;
     aviationstackApiKey?: string | null;
     aerodataboxApiKey?: string | null;
+    aeroapiApiKey?: string | null;
     openskyClientId?: string | null;
     openskyClientSecret?: string | null;
     openskyUsername?: string | null;
@@ -246,7 +249,13 @@ export const settingsApi = {
   },
   testApiKey: async (
     provider:
-      "airlabs" | "aviationstack" | "aerodatabox" | "opensky" | "openrouteservice" | "graphhopper",
+      | "airlabs"
+      | "aviationstack"
+      | "aerodatabox"
+      | "aeroapi"
+      | "opensky"
+      | "openrouteservice"
+      | "graphhopper",
     apiKey?: string,
     openskyCredentials?: {
       clientId?: string;

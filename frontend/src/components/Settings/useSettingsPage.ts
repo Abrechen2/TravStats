@@ -26,6 +26,7 @@ interface ApiKeysFormState {
   airlabsApiKey: string;
   aviationstackApiKey: string;
   aerodataboxApiKey: string;
+  aeroapiApiKey: string;
   openskyClientId: string;
   openskyClientSecret: string;
 }
@@ -112,12 +113,14 @@ export function useSettingsPage() {
     airlabs: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     aviationstack: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     aerodatabox: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
+    aeroapi: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
     opensky: { hasKey: boolean; isShared: boolean; hasAccess: boolean };
   } | null>(null);
   const [apiKeys, setApiKeys] = useState<ApiKeysFormState>({
     airlabsApiKey: "",
     aviationstackApiKey: "",
     aerodataboxApiKey: "",
+    aeroapiApiKey: "",
     openskyClientId: "",
     openskyClientSecret: "",
   });
@@ -383,6 +386,7 @@ export function useSettingsPage() {
         airlabsApiKey: "",
         aviationstackApiKey: "",
         aerodataboxApiKey: "",
+        aeroapiApiKey: "",
         openskyClientId: "",
         openskyClientSecret: "",
       });

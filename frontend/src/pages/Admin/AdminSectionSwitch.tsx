@@ -2,6 +2,7 @@ import type { JSX } from "react";
 import BackupManagement from "../../components/Admin/BackupManagement";
 import InstanceSettings from "../../components/Admin/InstanceSettings";
 import UsageStatsSettings from "../../components/Admin/UsageStatsSettings";
+import PushSettings from "../../components/Admin/PushSettings";
 import WebDAVSettings from "../../components/Admin/WebDAVSettings";
 import SystemInfoTab from "../../components/Admin/SystemInfo";
 import UserManagement from "../../components/Admin/UserManagement";
@@ -269,6 +270,15 @@ export default function AdminSectionSwitch(props: AdminSectionSwitchProps): JSX.
             }}
           >
             <UsageStatsSettings />
+          </div>
+          <div
+            style={{
+              background: "var(--ts-surface)",
+              border: "1px solid var(--ts-border)",
+              borderRadius: "var(--ts-radius-card)",
+            }}
+          >
+            <PushSettings />
           </div>
         </div>
       );
