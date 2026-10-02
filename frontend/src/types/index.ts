@@ -216,13 +216,7 @@ export interface Trip {
   countries: string[];
   times?: TripTimes;
 
-  _count?: {
-    flights: number;
-    cruises?: number;
-    lodgingStays?: number;
-    routes?: number;
-    photos?: number;
-  };
+  _count?: import("./tripCounts").TripCounts;
   bookings?: Booking[];
   flights?: Pick<
     Flight,
