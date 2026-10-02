@@ -12,6 +12,7 @@ import logger from "../utils/logger";
 import { DEMO_USERNAME } from "../utils/sharedDemo";
 import { recalculateNextApiCheckAt } from "../utils/smartCheckSchedule";
 import { applyPendingUpdate } from "./pendingUpdateService";
+import { notifyFlightChanged } from "./notifications/dispatcher";
 import type { FlightDataSnapshot } from "./pendingUpdateService";
 import { sweepStatuses } from "./statusSweep";
 import { runFinalArrivalSweep } from "./finalArrivalLookup";
@@ -403,6 +404,33 @@ export async function createPendingUpdate(
 }
 
 /**
+ * Tell the paired phones about a provider-detected change. Fire-and-forget:
+ * the status job must not wait for the relay (the dispatcher bounds its own
+ * time) and a push problem must never fail the flight loop.
+ */
+function announceChange(
+  userId: string,
+  flight: Flight,
+  changes: FlightChange[],
+  opts: { pending: boolean; diverted: boolean; cancelled: boolean }
+): void {
+  const log = (error: unknown) =>
+    logger.warn(
+      {
+        operation: "flight_change_push_failed",
+        flightId: flight.id,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      "Push for a detected flight change failed"
+    );
+  try {
+    notifyFlightChanged(userId, flight, changes, opts).catch(log);
+  } catch (error) {
+    log(error);
+  }
+}
+
+/**
  * Check and update flights for a specific user
  */
 export async function checkAndUpdateFlightsForUser(userId: string): Promise<number> {
@@ -617,6 +645,10 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
 
         if (updateId) {
           updatesCreated++;
+          const notifyOpts = {
+            diverted: apiData.statusOverride === "diverted",
+            cancelled: proposedData.status === "cancelled",
+          };
 
           // If user has disabled approval gating, apply the update immediately
           // instead of leaving it to rot in pending_flight_updates forever.
@@ -624,6 +656,7 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           if (userSettings.autoUpdateRequireApproval === false) {
             const applied = await applyPendingUpdate(updateId, userId);
             if (applied) {
+              announceChange(userId, flight, changes, { ...notifyOpts, pending: false });
               logger.info(
                 { flightId: flight.id, pendingUpdateId: updateId, operation: "auto_applied" },
                 "Auto-applied update (requireApproval=false)"
@@ -633,7 +666,10 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
                 { flightId: flight.id, pendingUpdateId: updateId, operation: "auto_apply_failed" },
                 "Auto-apply failed — pending update left in place"
               );
+              announceChange(userId, flight, changes, { ...notifyOpts, pending: true });
             }
+          } else {
+            announceChange(userId, flight, changes, { ...notifyOpts, pending: true });
           }
         }
 
