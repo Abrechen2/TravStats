@@ -12,7 +12,7 @@ import {
   isValidIATACode,
 } from "./regexAirportExtractor";
 import { extractAllTimePairs, extractLabeledDates } from "./regexDateExtractor";
-import { extractSharedPNR, findPNRInSource } from "./regexPnrExtractor";
+import { extractSharedPNR } from "./regexPnrExtractor";
 import { isPriceNotFlightNumber } from "../shared/evidence";
 
 type RouteShape = "absent" | "complete" | "broken";
@@ -486,8 +486,11 @@ export class RegexTextParser implements ITextParser {
       }
     }
 
-    // PNR - delegate to shared extraction logic
-    const pnr = findPNRInSource(sourceUpper);
+    // PNR - the labelled reference first ("Booking reference: QATEST1"), then
+    // an unlabelled six-character code - but never the flight's own number:
+    // "LH2230" is six characters with a digit, and the single-flight path
+    // used to take it as the PNR (browser check of forgejo#159, 2026-10-02).
+    const pnr = extractSharedPNR(source, data.flightNumber);
     if (pnr) {
       data.pnr = pnr;
       data.bookingReference = pnr;

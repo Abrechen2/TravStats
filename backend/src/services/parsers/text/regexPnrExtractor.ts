@@ -10,9 +10,10 @@ import { PNR_FALSE_POSITIVES } from "./regexMappings";
  * A PNR is a 6-char alphanumeric token that contains at least one digit
  * and is not a known German false-positive word.
  */
-export function findPNRInSource(sourceUpper: string): string | undefined {
+export function findPNRInSource(sourceUpper: string, exclude?: string): string | undefined {
   for (const match of sourceUpper.matchAll(/\b([A-Z0-9]{6})\b/g)) {
     const pnr = match[1];
+    if (pnr === exclude) continue;
     if (!PNR_FALSE_POSITIVES.has(pnr) && /[0-9]/.test(pnr)) {
       return pnr;
     }
@@ -21,7 +22,7 @@ export function findPNRInSource(sourceUpper: string): string | undefined {
 }
 
 /** Extract shared PNR (should be same for all flights in one booking) */
-export function extractSharedPNR(source: string): string | undefined {
+export function extractSharedPNR(source: string, exclude?: string): string | undefined {
   // Label-based extraction first (more reliable) — covers both old and new Lufthansa formats
   // `\b` after the label for the same reason as `PATTERNS.PNR_LABELLED` in
   // shared/utils.ts: without it the engine may back out of a long alternative
@@ -32,5 +33,5 @@ export function extractSharedPNR(source: string): string | undefined {
     /(?:Buchungsreferenz|Buchungscode|Booking\s*(?:Reference|Code)|PNR|Confirmation\s*(?:Number|Code))\b\s*:?\s*([A-Z0-9]{5,8})\b/i
   );
   if (labeledPnr) return labeledPnr[1].toUpperCase();
-  return findPNRInSource(source.toUpperCase());
+  return findPNRInSource(source.toUpperCase(), exclude?.toUpperCase());
 }

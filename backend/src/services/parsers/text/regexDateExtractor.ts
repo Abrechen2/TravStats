@@ -77,6 +77,21 @@ function timeOnPrecedingLine(
   return { h: m[1].padStart(2, "0"), min: m[2] };
 }
 
+/**
+ * The two times of the only line in the document that carries exactly two
+ * times ("10:00 -> 11:35"), as zero-padded "HH:MM", or null when no line or
+ * more than one line has that shape.
+ */
+function onlyTimePairLine(source: string): [string, string] | null {
+  const pairs = source
+    .split(/\r?\n/)
+    .map((line) => Array.from(line.matchAll(/(?<![\d:])(\d{1,2}):(\d{2})(?![\d:])/g)))
+    .filter((times) => times.length === 2);
+  if (pairs.length !== 1) return null;
+  const [a, b] = pairs[0].map((m) => `${m[1].padStart(2, "0")}:${m[2]}`);
+  return [a, b];
+}
+
 /** Extract all date/time pairs from text (positional, multi-flight) */
 export function extractAllTimePairs(
   source: string
@@ -168,6 +183,22 @@ export function extractAllTimePairs(
     if (nextDay) isoTime = addDays(isoTime, Number(nextDay[1]));
 
     dated.push({ iso: isoTime, hasTime });
+  }
+
+  // One date with no time, and the times on a line of their own: "10 July
+  // 2025" above "Munich (MUC) 10:00 -> Paris (CDG) 11:35". The date alone
+  // used to become a 00:00 departure with no arrival (browser check of
+  // forgejo#159, 2026-10-02). Only when the document has exactly that shape -
+  // one undated-time date and exactly one line with exactly two times;
+  // anything else stays as it was.
+  if (dated.length === 1 && !dated[0].hasTime) {
+    const timed = onlyTimePairLine(source);
+    if (timed) {
+      const date = dated[0].iso.slice(0, 10);
+      const departure = `${date}T${timed[0]}`;
+      const sameDay = `${date}T${timed[1]}`;
+      return [{ departure, arrival: timed[1] < timed[0] ? addDays(sameDay, 1) : sameDay }];
+    }
   }
 
   // Itinerary tables always carry times; headers ("Mittwoch 5. August 2026")
