@@ -29,7 +29,8 @@ export interface EditorStation extends StationDraft {
  * `waiting` — a station is not complete yet (no place, or a stay night
  * without its stay), and nothing is sent until it is.
  */
-export type SaveStatus = "saved" | "pending" | "saving" | "error" | "waiting";
+export const SAVE_STATUSES = ["saved", "pending", "saving", "error", "waiting"] as const;
+export type SaveStatus = (typeof SAVE_STATUSES)[number];
 
 export interface SavedStations {
   roadtrip: TourRoute;

@@ -301,6 +301,7 @@
   "editor": {
     "hint": "Station antippen, um sie zu bearbeiten. Etappe antippen für Fähre oder Linienführung. Jede Änderung wird sofort gespeichert und lässt sich rückgängig machen.",
     "status": {
+      "pending": "Änderungen werden gleich gespeichert",
       "saving": "Wird gespeichert …",
       "saved": "Alles gespeichert",
       "error": "Nicht gespeichert",
