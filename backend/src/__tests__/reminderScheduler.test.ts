@@ -19,6 +19,9 @@ jest.mock("../db", () => ({
 }));
 
 const mockSendFlightReminder = jest.fn();
+jest.mock("../services/notifications/dispatcher", () => ({
+  notifyReminder: jest.fn(async () => undefined),
+}));
 const mockSendCruiseReminder = jest.fn();
 const mockSendRailReminder = jest.fn();
 const mockSendLodgingCheckInReminder = jest.fn();

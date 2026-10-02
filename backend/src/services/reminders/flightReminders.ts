@@ -5,6 +5,7 @@ import { normalizeFlightTimeUtc, type FlightTimeSemantics } from "../../utils/ti
 import { flightTimes } from "../flights/timesDto";
 import { resolveFlightDuration } from "../../shared/flightDuration";
 import logger from "../../utils/logger";
+import { notifyReminder } from "../notifications/dispatcher";
 
 /**
  * The flight half of the departure-reminder scheduler (moved out of
@@ -48,6 +49,34 @@ async function catalogueZone(
   icao: string | null
 ): Promise<string | null> {
   return stored ?? resolveTz(iata, icao);
+}
+
+/**
+ * Push the reminder to the user's paired phone(s). Fire-and-forget: the e-mail
+ * path and the cron must never wait for the relay or fail because of it. The
+ * dispatcher applies the phone's own reminder switch and dedupes per flight
+ * and window, so calling it on every run inside the window is safe.
+ */
+function announceReminder(
+  userId: string,
+  flight: Parameters<typeof notifyReminder>[1],
+  key: "24h" | "2h"
+): void {
+  const log = (error: unknown) =>
+    logger.warn(
+      {
+        operation: "flight_reminder_push_failed",
+        flightId: flight.id,
+        key,
+        error: error instanceof Error ? error.message : String(error),
+      },
+      "Push for a departure reminder failed"
+    );
+  try {
+    notifyReminder(userId, flight, key).catch(log);
+  } catch (error) {
+    log(error);
+  }
 }
 
 export async function checkFlightReminders(now: Date): Promise<void> {
@@ -121,13 +150,12 @@ export async function checkFlightReminders(now: Date): Promise<void> {
 
     for (const flight of flights) {
       const reminderKey = `flight:${flight.id}-${key}`;
-      if (sentReminders.has(reminderKey)) continue;
 
       const { user } = flight;
-      const shouldSend =
+      const shouldEmail =
+        !sentReminders.has(reminderKey) &&
         user.notificationEmail !== null &&
         ((key === "24h" && user.notifyBefore24h) || (key === "2h" && user.notifyBefore2h));
-      if (!shouldSend) continue;
 
       // Normalise the stored departure to a real UTC instant before comparing
       // against the precise reminder window. Pure-UTC rows are returned as-is;
@@ -140,6 +168,15 @@ export async function checkFlightReminders(now: Date): Promise<void> {
 
       const realMs = realDeparture.getTime();
       if (realMs < preciseStart || realMs > preciseEnd) continue;
+
+      // The phone has its own reminder switch (checked by the dispatcher), so
+      // the push does not depend on the e-mail address or the e-mail switches.
+      // (A null departure never reaches here: normalising it above returned null.)
+      if (flight.departureTime) {
+        announceReminder(flight.userId, { ...flight, departureTime: flight.departureTime }, key);
+      }
+
+      if (!shouldEmail) continue;
 
       try {
         const depTz = await catalogueZone(flight.depTimezone, flight.depIata, flight.depIcao);
