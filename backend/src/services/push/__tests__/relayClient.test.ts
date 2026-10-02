@@ -1,6 +1,7 @@
 import { prisma } from "../../../db";
 import { ensureAdminSettingsRow } from "../../adminSettingsRow";
 import { decryptApiKey } from "../../../utils/encryption";
+import { systemLogger } from "../../../utils/logger";
 import { sendToRelay } from "../relayClient";
 
 /**
@@ -123,7 +124,78 @@ describe("sendToRelay", () => {
   });
 
   it.each([
-    [new Response(null, { status: 410 }), "token-invalid"],
+    ["https://trav.example.de:8443", "TravStats trav.example.de"],
+    ["http://[2001:db8::1]:3000", "TravStats 2001-db8--1"],
+    [`https://${"x".repeat(80)}.example.de`, `TravStats ${"x".repeat(54)}`],
+  ])("names the instance from %s with characters the relay accepts", async (publicUrl, name) => {
+    await settings({ publicUrl });
+    const r = relay();
+    expect(await sendToRelay(push, { fetch: r.fetch })).toBe("sent");
+    const sent = JSON.parse(String(r.calls[0].init.body)).name as string;
+    expect(sent).toBe(name);
+    // The relay's own rule (travstats-push src/schema.ts).
+    expect(sent.length).toBeLessThanOrEqual(64);
+    expect(sent).toMatch(/^[\p{L}\p{N} ._'()-]*$/u);
+  });
+
+  it("registers only once when two first pushes run at the same time", async () => {
+    let registrations = 0;
+    const fetchFn = (async (url: string | URL) => {
+      if (String(url).endsWith("/v1/instances")) {
+        registrations += 1;
+        await new Promise((resolve) => setTimeout(resolve, 50));
+        return json(201, { instanceId: "inst123456789012", secret: "s".repeat(43) });
+      }
+      return new Response(null, { status: 202 });
+    }) as unknown as typeof fetch;
+    const outcomes = await Promise.all([
+      sendToRelay(push, { fetch: fetchFn }),
+      sendToRelay(push, { fetch: fetchFn }),
+    ]);
+    expect(registrations).toBe(1);
+    expect(outcomes).toEqual(["sent", "sent"]);
+  });
+
+  it("pauses for Retry-After when the registration itself is rate-limited", async () => {
+    const now = new Date("2026-10-01T12:00:00Z");
+    const calls: string[] = [];
+    const fetchFn = (async (url: string | URL) => {
+      calls.push(String(url));
+      return json(429, { error: "rate_limited" }, { "retry-after": "3600" });
+    }) as unknown as typeof fetch;
+    expect(await sendToRelay(push, { fetch: fetchFn, now: () => now })).toBe("paused");
+    const row = await prisma.adminSettings.findUnique({ where: { id: adminId } });
+    expect(row?.pushPausedUntil?.toISOString()).toBe("2026-10-01T13:00:00.000Z");
+    expect(
+      await sendToRelay(push, { fetch: fetchFn, now: () => new Date("2026-10-01T12:30:00Z") })
+    ).toBe("paused");
+    expect(calls).toHaveLength(1);
+  });
+
+  it("logs an outage again after the relay worked in between", async () => {
+    const warn = jest.spyOn(systemLogger, "warn");
+    try {
+      const r = relay(
+        new Response(null, { status: 202 }),
+        new Error("ECONNREFUSED"),
+        new Error("ECONNREFUSED"),
+        new Response(null, { status: 202 }),
+        new Error("ECONNREFUSED")
+      );
+      for (let i = 0; i < 5; i++) await sendToRelay(push, { fetch: r.fetch });
+      const outages = warn.mock.calls.filter((c) =>
+        String((c[0] as { message?: string }).message).includes("unreachable")
+      );
+      expect(outages).toHaveLength(2);
+    } finally {
+      warn.mockRestore();
+    }
+  });
+
+  it.each([
+    [new Response(null, { status: 410 }), "failed"],
+    [json(410, { error: "gone" }), "failed"],
+    [json(410, { reason: "token-invalid" }), "token-invalid"],
     [json(403, { error: "forbidden" }), "failed"],
     [json(502, { error: "provider_failed" }), "failed"],
     [new Error("ECONNREFUSED"), "failed"],
