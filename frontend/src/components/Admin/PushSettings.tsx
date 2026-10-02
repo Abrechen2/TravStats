@@ -62,6 +62,12 @@ export default function PushSettings(): JSX.Element {
   }
 
   const muted = { color: "var(--text-muted)" };
+  // A pause that has run out is over: the next push goes out again, so it is
+  // neither shown nor a reason to offer the reset.
+  const pausedUntil =
+    state.pausedUntil && new Date(state.pausedUntil).getTime() > Date.now()
+      ? state.pausedUntil
+      : null;
 
   return (
     <section className="flex flex-col gap-4 p-6">
@@ -147,15 +153,13 @@ export default function PushSettings(): JSX.Element {
             {t("pushRelay:notRegisteredHint")}
           </span>
         )}
-        {state.pausedUntil && (
-          <span style={muted}>
-            {t("pushRelay:pausedUntil", { time: formatTime(state.pausedUntil) })}
-          </span>
+        {pausedUntil && (
+          <span style={muted}>{t("pushRelay:pausedUntil", { time: formatTime(pausedUntil) })}</span>
         )}
         <div>
           <button
             type="button"
-            disabled={busy || (!state.registered && !state.pausedUntil)}
+            disabled={busy || (!state.registered && !pausedUntil)}
             onClick={() => void run(() => pushRelayApi.reset(), "pushRelay:resetDone")}
             className="mt-1 rounded-sm border px-3 py-1 text-sm"
             style={{ borderColor: "var(--border)", color: "var(--text-primary)" }}

@@ -78,6 +78,19 @@ describe("PushSettings", () => {
     );
   });
 
+  it("shows a pause only while it lasts", async () => {
+    get.mockResolvedValue({ ...OFF, pushEnabled: true, pausedUntil: "2000-01-01T00:00:00Z" });
+    const { unmount } = render(<PushSettings />);
+    await screen.findByTestId("push-registration");
+    expect(screen.queryByText("pushRelay:pausedUntil")).toBeNull();
+    expect(screen.getByRole("button", { name: "pushRelay:reset" })).toBeDisabled();
+    unmount();
+
+    get.mockResolvedValue({ ...OFF, pushEnabled: true, pausedUntil: "2999-01-01T00:00:00Z" });
+    render(<PushSettings />);
+    expect(await screen.findByText("pushRelay:pausedUntil")).toBeInTheDocument();
+  });
+
   it("offers no reset while nothing is registered", async () => {
     render(<PushSettings />);
     expect(await screen.findByRole("button", { name: "pushRelay:reset" })).toBeDisabled();
