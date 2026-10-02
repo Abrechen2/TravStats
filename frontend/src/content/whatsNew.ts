@@ -67,14 +67,15 @@ export const WHATS_NEW_ENTRIES: WhatsNewEntry[] = [
         bodyKey: "entries.v270.placesPassport.body",
       },
       {
-        icon: "📥",
-        titleKey: "entries.v270.inbox.title",
-        bodyKey: "entries.v270.inbox.body",
-      },
-      {
         icon: "🌦️",
         titleKey: "entries.v270.summaryOpenData.title",
         bodyKey: "entries.v270.summaryOpenData.body",
+      },
+      {
+        icon: "📱",
+        titleKey: "entries.v270.app.title",
+        bodyKey: "entries.v270.app.body",
+        beta: true,
       },
       {
         icon: "🧪",

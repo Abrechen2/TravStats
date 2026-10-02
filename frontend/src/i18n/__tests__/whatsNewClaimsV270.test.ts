@@ -60,8 +60,11 @@ describe("the 2.7.0 announcement describes the app that shipped", () => {
     "the beta block names the registered beta feature %s",
     (key) => {
       const [de, en] = betaKeyword[key];
-      expect(deWhatsNew.entries.v270.beta.body).toMatch(de);
-      expect(enWhatsNew.entries.v270.beta.body).toMatch(en);
+      // Owner, 2026-10-03: everything about the app in one section of its
+      // own, marked beta like the beta block; the pairing gate is named there.
+      const block = key === "devicePairing" ? "app" : "beta";
+      expect(deWhatsNew.entries.v270[block].body).toMatch(de);
+      expect(enWhatsNew.entries.v270[block].body).toMatch(en);
     }
   );
 
@@ -155,8 +158,12 @@ describe("the 2.7.0 announcement describes the app that shipped", () => {
   it.each([
     ["de", deWhatsNew, /Demo-Konto[^]*neue Installation[^.]*Beta-Schalter ein/],
     ["en", enWhatsNew, /demo account[^]*new installation[^.]*beta switch on/],
-  ] as const)("the %s beta block says a new install turns beta on with the demo", (_l, s, re) => {
-    expect(s.entries.v270.beta.body).toMatch(re);
+  ] as const)("the %s announcement says a new install turns beta on with the demo", (_l, s, re) => {
+    // Owner, 2026-10-03: the demo account is not a beta feature, so it is
+    // announced among the released additions - still saying what it does to
+    // the beta switch, which is the part an administrator must not miss.
+    expect(s.entries.v270.entrySuggestions.body).toMatch(re);
+    expect(s.entries.v270.beta.body).not.toMatch(/Demo-Konto|demo account/i);
   });
 
   /**
