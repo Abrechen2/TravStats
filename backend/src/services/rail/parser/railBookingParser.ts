@@ -12,6 +12,7 @@ import {
 } from "./dbConfirmation";
 import { parseDbOnlineTicket } from "./dbOnlineTicket";
 import { decodeCalendar, isCalendarAttachment, parseCalendarLegs } from "./icsCalendar";
+import { withLabelledFacts } from "./labelledFacts";
 import { parseRailWithLlm, resolveRailLlmTarget } from "./railLlmParser";
 import { llmProbe, llmProviderLabel } from "../../llm/llmProvider";
 import { conclusiveOtherDomain, scoreDocument } from "../../parsing/documentDomain";
@@ -170,17 +171,21 @@ export async function readRailTemplates(
       : facts?.price !== null && facts?.price !== undefined
         ? facts.currency
         : (primary?.currency ?? null);
+  // What the mail labels plainly fills what no template read (forgejo#161).
   return {
-    booking: {
-      bookingReference: first("bookingReference") ?? facts?.bookingReference ?? null,
-      travelClass: first("travelClass"),
-      tariff: first("tariff"),
-      price,
-      currency: price !== null ? currency : null,
-      operator: first("operator"),
-      legs: fillTrains(legs, [...calendarLegs, ...ticketLegs]),
-      source,
-    },
+    booking: withLabelledFacts(
+      {
+        bookingReference: first("bookingReference") ?? facts?.bookingReference ?? null,
+        travelClass: first("travelClass"),
+        tariff: first("tariff"),
+        price,
+        currency: price !== null ? currency : null,
+        operator: first("operator"),
+        legs: fillTrains(legs, [...calendarLegs, ...ticketLegs]),
+        source,
+      },
+      text
+    ),
     orderReference: facts?.bookingReference ?? null,
   };
 }
@@ -295,7 +300,15 @@ export async function parseRailBookingText(
         }
       );
     }
-    if (booking) return { booking, parserUsed: "ollama", ollamaAvailable: true };
+    // The model never returns an operator and drops a labelled reference or
+    // total whenever its answer misses the check; the labels fill those gaps.
+    if (booking) {
+      return {
+        booking: withLabelledFacts(booking, text),
+        parserUsed: "ollama",
+        ollamaAvailable: true,
+      };
+    }
     return (
       fromTemplate(true) ?? {
         booking: null,

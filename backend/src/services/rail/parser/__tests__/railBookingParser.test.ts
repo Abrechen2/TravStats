@@ -178,6 +178,60 @@ describe("parseRailBookingText", () => {
     }
   });
 
+  // forgejo#161: the legs came through, the four booking facts printed under
+  // plain labels did not — the model never returns an operator, and here it
+  // answers without class, reference and total. The labels decide, not the model.
+  it("keeps the operator, reference, class and total a plain confirmation labels", async () => {
+    const ticket = [
+      "Synthetische QA-Buchungsbestätigung",
+      "Deutsche Bahn, ICE 578",
+      "Buchungsnummer: QARAIL20261002",
+      "Reisender: Alice Tester",
+      "Reisedatum: 15.10.2026",
+      "Abfahrt: München Hbf, 08:00 Uhr",
+      "Ankunft: Berlin Hbf, 12:30 Uhr",
+      "2. Klasse, Wagen 7, Sitz 42",
+      "Gesamtpreis: 59,90 EUR",
+    ].join("\n");
+    const ollama = await fakeOllama(() =>
+      JSON.stringify({
+        legs: [
+          {
+            from: "München Hbf",
+            to: "Berlin Hbf",
+            departure: "2026-10-15T08:00",
+            arrival: "2026-10-15T12:30",
+            category: "ICE",
+            number: "578",
+            coach: "7",
+            seat: "42",
+          },
+        ],
+        total: "59.9",
+      })
+    );
+    mockAdmin.mockResolvedValue({ ollamaUrl: ollama.url, ollamaModel: "test-model" });
+    try {
+      const result = await parseRailBookingText(ticket);
+      expect(result.parserUsed).toBe("ollama");
+      expect(result.booking).toMatchObject({
+        operator: "Deutsche Bahn",
+        bookingReference: "QARAIL20261002",
+        travelClass: "second",
+        price: 59.9,
+        currency: "EUR",
+      });
+      expect(result.booking!.legs[0]).toMatchObject({
+        trainCategory: "ICE",
+        trainNumber: "578",
+        coach: "7",
+        seat: "42",
+      });
+    } finally {
+      await ollama.close();
+    }
+  });
+
   it("drops a train the model answers that is not the one the ticket prints", async () => {
     const ticket = "Billet\nIC 2217 Kiel Hbf -> Bremen Hbf\nDépart 14/03/2026 08:05";
     const ollama = await fakeOllama(() =>

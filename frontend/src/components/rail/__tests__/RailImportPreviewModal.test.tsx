@@ -73,6 +73,25 @@ describe("RailImportPreviewModal", () => {
     });
   });
 
+  // forgejo#161: the operator the ticket names is shown before saving and
+  // travels with every leg it writes — it was neither.
+  it("shows the operator and writes it with the leg", async () => {
+    create.mockResolvedValue({ journey: { id: "new-1" }, geometry: null });
+    const onSaved = vi.fn();
+    render(
+      <RailImportPreviewModal
+        booking={{ ...booking(), operator: "Deutsche Bahn" }}
+        onCancel={vi.fn()}
+        onSaved={onSaved}
+      />
+    );
+
+    expect(screen.getByTestId("rail-import-booking")).toHaveTextContent("Deutsche Bahn");
+    fireEvent.click(saveButton());
+    await waitFor(() => expect(onSaved).toHaveBeenCalled());
+    expect(create.mock.calls[0][0]).toMatchObject({ operator: "Deutsche Bahn" });
+  });
+
   it("asks for an unresolved station and saves nothing until it is picked", async () => {
     create.mockResolvedValue({ journey: { id: "new-1" }, geometry: null });
     const onSaved = vi.fn();
