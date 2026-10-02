@@ -2,10 +2,12 @@ import { describe, it, expect } from "vitest";
 import { railSummaryFigures } from "../railSummaryFigures";
 import type { RailJourney } from "../../../types/rail";
 
+/** Count-aware, like `t()` with `{ count }` (forgejo#160). */
+const plural = (one: string, other: string) => (count: number) => (count === 1 ? one : other);
 const LABELS = {
-  journeys: "Journeys",
-  operators: "Operators",
-  stations: "Stations",
+  journeys: plural("Journey", "Journeys"),
+  operators: plural("Operator", "Operators"),
+  stations: plural("Station", "Stations"),
   withoutOperator: (count: number) => `${count} without an operator`,
 };
 
@@ -78,5 +80,16 @@ describe("railSummaryFigures", () => {
   it("counts nothing from an empty list without throwing", () => {
     const figures = railSummaryFigures([], LABELS);
     expect(figures.map((f) => f.value)).toEqual(["0", "0", "0"]);
+  });
+});
+
+describe("railSummaryFigures labels (forgejo#160)", () => {
+  it("names a single ride in the singular — '1 Fahrten' was the bug", () => {
+    const figures = railSummaryFigures([ride({})], LABELS);
+    expect(figures.map((f) => `${f.value} ${f.label}`)).toEqual([
+      "1 Journey",
+      "1 Operator",
+      "2 Stations",
+    ]);
   });
 });

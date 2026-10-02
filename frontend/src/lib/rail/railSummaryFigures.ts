@@ -23,9 +23,10 @@ import type { RailJourney } from "../../types/rail";
 export function railSummaryFigures(
   journeys: readonly RailJourney[],
   labels: {
-    journeys: string;
-    operators: string;
-    stations: string;
+    /** Each takes its count so `t()` can pick the singular ("1 Fahrt", forgejo#160). */
+    journeys: (count: number) => string;
+    operators: (count: number) => string;
+    stations: (count: number) => string;
     /**
      * A FUNCTION, not a formatted string: the count belongs to `t()` so
      * i18next can pick the plural form, and so the interpolation guard
@@ -50,13 +51,13 @@ export function railSummaryFigures(
   }
 
   return [
-    { key: "journeys", value: String(journeys.length), label: labels.journeys },
+    { key: "journeys", value: String(journeys.length), label: labels.journeys(journeys.length) },
     {
       key: "operators",
       value: String(operators.size),
-      label: labels.operators,
+      label: labels.operators(operators.size),
       ...(withoutOperator > 0 ? { note: labels.withoutOperator(withoutOperator) } : {}),
     },
-    { key: "stations", value: String(stations.size), label: labels.stations },
+    { key: "stations", value: String(stations.size), label: labels.stations(stations.size) },
   ];
 }

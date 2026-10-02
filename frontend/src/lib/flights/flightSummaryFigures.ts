@@ -39,10 +39,14 @@ export interface SummarisableFlight extends AirlineIdentity {
   arrIata?: string | null;
 }
 
+/**
+ * Each label takes the count it describes, so `t()` can pick the singular:
+ * plain strings read "1 Flüge · 1 Airlines" (forgejo#160).
+ */
 export interface SummaryLabels {
-  flights: string;
-  airlines: string;
-  airports: string;
+  flights: (count: number) => string;
+  airlines: (count: number) => string;
+  airports: (count: number) => string;
   /** Takes the count, e.g. "+2 ohne Angabe". */
   withoutAirline: (count: number) => string;
 }
@@ -65,14 +69,14 @@ export function flightSummaryFigures(
   }
 
   return [
-    { key: "flights", value: String(flights.length), label: labels.flights },
+    { key: "flights", value: String(flights.length), label: labels.flights(flights.length) },
     {
       key: "airlines",
       value: String(airlines.size),
-      label: labels.airlines,
+      label: labels.airlines(airlines.size),
       note: withoutAirline > 0 ? labels.withoutAirline(withoutAirline) : undefined,
     },
-    { key: "airports", value: String(airports.size), label: labels.airports },
+    { key: "airports", value: String(airports.size), label: labels.airports(airports.size) },
   ];
 }
 
@@ -101,13 +105,13 @@ export function flightSummaryFiguresFromCounts(
   labels: SummaryLabels
 ): SummaryFigure[] {
   return [
-    { key: "flights", value: String(counts.flights), label: labels.flights },
+    { key: "flights", value: String(counts.flights), label: labels.flights(counts.flights) },
     {
       key: "airlines",
       value: String(counts.airlines),
-      label: labels.airlines,
+      label: labels.airlines(counts.airlines),
       note: counts.withoutAirline > 0 ? labels.withoutAirline(counts.withoutAirline) : undefined,
     },
-    { key: "airports", value: String(counts.airports), label: labels.airports },
+    { key: "airports", value: String(counts.airports), label: labels.airports(counts.airports) },
   ];
 }

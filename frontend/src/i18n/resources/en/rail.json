@@ -297,9 +297,12 @@
     }
   },
   "summary": {
-    "journeys": "Journeys",
-    "operators": "Operators",
-    "stations": "Stations",
+    "journeys_one": "Journey",
+    "journeys_other": "Journeys",
+    "operators_one": "Operator",
+    "operators_other": "Operators",
+    "stations_one": "Station",
+    "stations_other": "Stations",
     "withoutOperator_one": "{{count}} without an operator",
     "withoutOperator_other": "{{count}} without an operator"
   }

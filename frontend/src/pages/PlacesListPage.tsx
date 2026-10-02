@@ -320,9 +320,17 @@ export default function PlacesListPage(): JSX.Element {
       if (p.visited) visited += 1;
     }
     return [
-      { key: "places", value: String(filtered.length), label: t("common:summary.places") },
+      {
+        key: "places",
+        value: String(filtered.length),
+        label: t("common:summary.places", { count: filtered.length }),
+      },
       { key: "visited", value: String(visited), label: t("common:summary.visited") },
-      { key: "countries", value: String(countries.size), label: t("common:summary.countries") },
+      {
+        key: "countries",
+        value: String(countries.size),
+        label: t("common:summary.countries", { count: countries.size }),
+      },
     ];
   }, [filtered, t]);
 

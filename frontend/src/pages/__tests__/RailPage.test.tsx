@@ -144,7 +144,8 @@ describe("RailPage", () => {
     expect(row.textContent).toContain("rail:straightLine");
     // The bare "N journeys" line became the shared summary strip on
     // 2026-09-28, so the count is read off its first figure instead.
-    expect(screen.getByText("rail:summary.journeys")).toBeInTheDocument();
+    // The label carries its count so one ride reads "1 Fahrt" (forgejo#160).
+    expect(screen.getByText("rail:summary.journeys/1")).toBeInTheDocument();
   });
 
   it("asks the server for one page, not the whole logbook", async () => {

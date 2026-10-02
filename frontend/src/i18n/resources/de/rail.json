@@ -297,9 +297,12 @@
     }
   },
   "summary": {
-    "journeys": "Fahrten",
-    "operators": "Betreiber",
-    "stations": "Bahnhöfe",
+    "journeys_one": "Fahrt",
+    "journeys_other": "Fahrten",
+    "operators_one": "Betreiber",
+    "operators_other": "Betreiber",
+    "stations_one": "Bahnhof",
+    "stations_other": "Bahnhöfe",
     "withoutOperator_one": "{{count}} ohne Betreiber",
     "withoutOperator_other": "{{count}} ohne Betreiber"
   }

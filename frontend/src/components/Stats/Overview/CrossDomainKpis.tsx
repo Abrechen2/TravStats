@@ -3,7 +3,7 @@
 import type { JSX } from "react";
 import type { YearScopedAgg } from "../../../lib/stats/domain-stats";
 import type { AchievementSummary } from "../../../types";
-import { DOMAINS, type DomainKey } from "../../../shared/domains";
+import type { DomainKey } from "../../../shared/domains";
 import type { EvidenceDomain } from "../../../shared/evidence";
 import type { StatsDomain } from "../../../lib/stats/domain-stats/types";
 import type { EvidenceScopeParams } from "../../evidence/useEvidence";
@@ -68,7 +68,9 @@ export default function CrossDomainKpis({
 
   const breakdown = (Object.entries(agg.perDomainEvents) as Array<[DomainKey, number]>)
     .filter(([, n]) => n > 0)
-    .map(([key, n]) => `${n} ${t(`common:${DOMAINS[key].i18nKey}`)}`)
+    // A counted phrase per domain, not "<n> <domain name>": the domain names
+    // are plural nouns, which read "1 Flüge" for one flight (forgejo#160).
+    .map(([key, n]) => t(`stats:overviewKpis.breakdown.${key}`, { count: n }))
     .join(" · ");
 
   // The population these three numbers were measured over: the period the bar

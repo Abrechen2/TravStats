@@ -399,9 +399,9 @@ export default function FlightsTablePage(): JSX.Element {
       facets === null
         ? []
         : flightSummaryFiguresFromCounts(facets.summary, {
-            flights: t("common:summary.flights"),
-            airlines: t("common:summary.airlines"),
-            airports: t("common:summary.airports"),
+            flights: (count) => t("common:summary.flights", { count }),
+            airlines: (count) => t("common:summary.airlines", { count }),
+            airports: (count) => t("common:summary.airports", { count }),
             withoutAirline: (count) => t("common:summary.withoutAirline", { count }),
           }),
     [facets, t]
