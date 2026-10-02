@@ -26,14 +26,15 @@ const body = {
 
 async function pairedToken(
   userId: string,
-  deviceId: string
+  deviceId: string,
+  scope = "write"
 ): Promise<{ plaintext: string; id: string }> {
   const gen = await generateApiToken();
   const row = await prisma.apiToken.create({
     data: {
       userId,
       label: deviceId,
-      scope: "write",
+      scope,
       lookupHash: gen.lookupHash,
       hash: gen.hash,
       deviceId,
@@ -125,6 +126,16 @@ describe("Device push registration", () => {
       .set({ Authorization: `Bearer ${pat.plaintext}` })
       .send({ ...body, ...patch });
     expect(res.status).toBe(400);
+  });
+
+  it("refuses a read-only token to register or forget a phone", async () => {
+    const pat = await pairedToken(userId, "dev-read-only", "read");
+    const auth = { Authorization: `Bearer ${pat.plaintext}` };
+    await request(app).put("/api/v1/devices/me/push").set(auth).send(body).expect(403);
+    await request(app).delete("/api/v1/devices/me/push").set(auth).expect(403);
+    expect(await prisma.devicePush.findUnique({ where: { apiTokenId: pat.id } })).toBeNull();
+    // Reading its own state stays allowed.
+    await request(app).get("/api/v1/devices/me/push").set(auth).expect(404);
   });
 
   it("ignores apnsEnvironment on Android", async () => {

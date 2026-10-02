@@ -2,7 +2,7 @@ import { NextFunction, Response, Router } from "express";
 import { z } from "zod";
 
 import { prisma } from "../db";
-import { authenticate, AuthRequest } from "../middleware/auth";
+import { authenticate, AuthRequest, requireWriteScope } from "../middleware/auth";
 import { AppError } from "../middleware/errorHandler";
 import { serverPushEnabled } from "../services/push/devices";
 
@@ -33,6 +33,8 @@ export const devicePushBody = z
 
 const router = Router();
 router.use(authenticate);
+// PUT/DELETE change the registration; a read-only token may only GET it.
+router.use(requireWriteScope);
 
 function deviceTokenId(req: AuthRequest): string {
   if (!req.apiToken)

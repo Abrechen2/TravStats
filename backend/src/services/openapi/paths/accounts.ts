@@ -297,6 +297,7 @@ registry.registerPath({
       },
     },
     400: badInput,
+    403: { description: "Read-scoped token", content: errorContent },
   },
 });
 
@@ -329,5 +330,9 @@ registry.registerPath({
   summary: "Stop push notifications to this phone",
   tags: devicesTag,
   security: [{ BearerAuth: [] }],
-  responses: { 204: deleted, 400: badInput },
+  responses: {
+    204: deleted,
+    400: badInput,
+    403: { description: "Read-scoped token", content: errorContent },
+  },
 });
