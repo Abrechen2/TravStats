@@ -1,4 +1,4 @@
-import { useEffect, type RefObject } from "react";
+import { useEffect, useRef, type RefObject } from "react";
 
 const FOCUSABLE =
   'a[href], button:not([disabled]), textarea:not([disabled]), input:not([disabled]), select:not([disabled]), [tabindex]:not([tabindex="-1"])';
@@ -54,8 +54,23 @@ interface Options {
  * It deliberately does NOT focus the first control: a dialog that opens with
  * the destructive button focused is a trap for a stray Enter. The panel takes
  * focus itself, and the caller gives it `tabIndex={-1}`.
+ *
+ * The effect runs on OPEN and CLOSE only. `busy` and `onClose` are read through
+ * refs: as dependencies they tore the effect down and rebuilt it on every save
+ * (busy true -> false) and on every parent render that passed a fresh
+ * `onClose` — each time "returning" focus to the opener and then pulling it
+ * back onto the panel. Measured in the browser on 2026-10-02: the flight
+ * review's duplicate notice focused its "open the existing flight" link, and
+ * the end of the save took the focus straight back to the dialog frame.
  */
 export function useDialogChrome({ open, onClose, panelRef, busy = false }: Options): void {
+  const onCloseRef = useRef(onClose);
+  const busyRef = useRef(busy);
+  useEffect(() => {
+    onCloseRef.current = onClose;
+    busyRef.current = busy;
+  });
+
   useEffect(() => {
     if (!open) return;
     openCount += 1;
@@ -85,7 +100,7 @@ export function useDialogChrome({ open, onClose, panelRef, busy = false }: Optio
         // Claimed, so a page-level Escape handler underneath (the cruise route
         // editor's "leave the editor") can tell the key was the dialog's.
         event.preventDefault();
-        if (!busy) onClose();
+        if (!busyRef.current) onCloseRef.current();
         return;
       }
       if (event.key !== "Tab" || !panelRef.current) return;
@@ -127,5 +142,5 @@ export function useDialogChrome({ open, onClose, panelRef, busy = false }: Optio
       }
       restoreTo?.focus?.();
     };
-  }, [open, onClose, busy, panelRef]);
+  }, [open, panelRef]);
 }
