@@ -120,6 +120,9 @@ describe("FlightReviewModal — a flight the user already has", () => {
 
     const open = await screen.findByRole("link", { name: "Vorhandenen Flug öffnen" });
     expect(open).toHaveAttribute("href", "/flights/flight-1");
+    // The notice sits above a long form; the answer must land where the user
+    // is, not out of sight at the top (browser check, 2026-10-02).
+    await waitFor(() => expect(open).toHaveFocus());
 
     fireEvent.click(screen.getByRole("button", { name: "Import abbrechen" }));
     expect(onClose).toHaveBeenCalled();

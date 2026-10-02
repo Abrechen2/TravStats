@@ -1,3 +1,5 @@
+import { useEffect, useRef } from "react";
+
 import type { DuplicateFlight } from "./flightFormModel";
 import { useTranslation } from "../../hooks/useTranslation";
 
@@ -20,6 +22,11 @@ interface ReviewDuplicateNoticeProps {
  * Not an error. The inputs were right — reading the same confirmation twice is
  * ordinary — so the review names the existing flight and offers the two ways
  * forward: look at it, or drop this import.
+ *
+ * It sits at the top of a long form while "Bestätigen" is at the bottom, so
+ * on its own it appeared out of sight and the click seemed to do nothing
+ * (browser check, 2026-10-02). It scrolls itself into view and takes focus on
+ * its first action, which also keeps keyboard users inside the answer.
  */
 export default function ReviewDuplicateNotice({
   existing,
@@ -27,11 +34,22 @@ export default function ReviewDuplicateNotice({
 }: ReviewDuplicateNoticeProps): JSX.Element {
   const { t } = useTranslation(["flights"]);
   const route = `${existing.depIata ?? "?"} → ${existing.arrIata ?? "?"}`;
+  const noticeRef = useRef<HTMLDivElement>(null);
+  const openRef = useRef<HTMLAnchorElement>(null);
+  useEffect(() => {
+    noticeRef.current?.scrollIntoView?.({ block: "nearest" });
+    openRef.current?.focus();
+  }, [existing.id]);
   return (
-    <div role="alert" className="space-y-3 rounded-lg border p-4" style={NOTICE_STYLE}>
+    <div
+      ref={noticeRef}
+      role="alert"
+      className="space-y-3 rounded-lg border p-4"
+      style={NOTICE_STYLE}
+    >
       <p>{t("flights:review.duplicate.message", { flightNumber: existing.flightNumber, route })}</p>
       <div className="flex flex-wrap gap-2">
-        <a href={`/flights/${existing.id}`} className="btn-primary">
+        <a ref={openRef} href={`/flights/${existing.id}`} className="btn-primary">
           {t("flights:review.duplicate.openExisting")}
         </a>
         <button type="button" onClick={onCancel} className="btn-secondary">
