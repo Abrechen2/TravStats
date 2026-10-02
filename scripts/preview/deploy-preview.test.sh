@@ -10,16 +10,18 @@ check() { # check <name> <expected> <actual>
   else echo "  FAIL $1: expected '$2', got '$3'"; fail=$((fail+1)); fi
 }
 
-# 1. unknown slot is rejected
-out=$(DRY_RUN=1 bash "$SCRIPT" bogus 1.2.3 2>&1; echo "rc=$?")
-check "unknown slot rejected" "yes" "$([[ "$out" == *"rc=2"* ]] && echo yes || echo no)"
+# 1. unknown slot is rejected — including the retired immich and poi slots
+for slot in bogus immich poi; do
+  out=$(DRY_RUN=1 bash "$SCRIPT" "$slot" 1.2.3 2>&1; echo "rc=$?")
+  check "slot $slot rejected" "yes" "$([[ "$out" == *"rc=2"* ]] && echo yes || echo no)"
+done
 
 # 2. missing tag is rejected
 out=$(DRY_RUN=1 bash "$SCRIPT" beta 2>&1; echo "rc=$?")
 check "missing tag rejected" "yes" "$([[ "$out" == *"rc=2"* ]] && echo yes || echo no)"
 
 # 3. each known slot maps to its hostname
-for pair in "beta:beta.travstats.de" "poi:poi-beta.travstats.de"; do
+for pair in "beta:beta.travstats.de"; do
   slot="${pair%%:*}"; host="${pair##*:}"
   out=$(DRY_RUN=1 bash "$SCRIPT" "$slot" 9.9.9 2>&1)
   check "slot $slot -> $host" "yes" "$([[ "$out" == *"$host"* ]] && echo yes || echo no)"

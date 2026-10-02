@@ -33,19 +33,19 @@ else
   echo "tunnel $NAME already exists ($id)"
 fi
 
-# Ingress: three hostnames -> localhost ports, plus the mandatory catch-all.
+# Ingress: the beta hostname -> its localhost port, plus the mandatory catch-all.
+# (immich-beta retired 2026-08-01, poi-beta 2026-10-02.)
 cf -X PUT "$API/accounts/$ACCT/cfd_tunnel/$id/configurations" --data '{
   "config": {
     "ingress": [
       {"hostname": "beta.travstats.de",        "service": "http://localhost:3010"},
-      {"hostname": "poi-beta.travstats.de",    "service": "http://localhost:3012"},
       {"service": "http_status:404"}
     ]
   }
 }' | python -c "import sys,json;d=json.load(sys.stdin);print('ingress ok' if d['success'] else sys.exit('ingress failed: '+json.dumps(d['errors'])))"
 
 # DNS: proxied CNAMEs at <name>.travstats.de -> <id>.cfargotunnel.com
-for h in beta poi-beta; do
+for h in beta; do
   target="$id.cfargotunnel.com"
   rid=$(cf "$API/zones/$ZONE/dns_records?type=CNAME&name=$h.travstats.de" \
     | python -c "import sys,json;r=json.load(sys.stdin)['result'];print(r[0]['id'] if r else '')")
