@@ -61,6 +61,9 @@ const files = sourceFiles(SRC_ROOT).map((file) => ({
 const NO_DOCUMENT_CALLERS = new Set([
   // Key check for the legacy per-user OpenAI key: sends the literal "test".
   "services/apiKeyTester.ts",
+  // False positive: `from "./messages"` (the push message texts module) matches the
+  // Anthropic `/messages` pattern. The dispatcher calls no model and sends no document.
+  "services/notifications/dispatcher.ts",
 ]);
 
 const callers = files
