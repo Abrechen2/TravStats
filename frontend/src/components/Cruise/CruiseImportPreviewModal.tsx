@@ -29,6 +29,7 @@ import { cruiseStopToWire } from "./cruiseStopWire";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
 import Modal from "../Modal";
+import { deriveCruiseStatus } from "../../shared/statusDerivation";
 import { ShipPicker } from "./ShipPicker";
 import CatalogueCombobox from "../FlightForm/fields/CatalogueCombobox";
 import { searchCruiseLineOptions } from "./cruiseLineOptions";
@@ -458,6 +459,14 @@ function CruiseImportEntryEditor({
   const portStops = stops.filter((s) => !s.isAtSea).length;
   const seaDays = stops.length - portStops;
 
+  // What the server will store (forgejo#168): it derives the status from the
+  // dates with this same rule, so the pill shows that, not the parser's hint.
+  const shownStatus = deriveCruiseStatus({
+    startDate: startDate ? new Date(startDate) : null,
+    endDate: endDate ? new Date(endDate) : null,
+    current: status,
+  }) as CruiseStatus;
+
   return (
     <div className="space-y-3 rounded-lg border border-border bg-(--bg-base) p-4">
       {/* Ship */}
@@ -527,9 +536,9 @@ function CruiseImportEntryEditor({
           <div>
             <span
               className="inline-block rounded-full px-2 py-1 text-xs font-semibold"
-              style={cruiseStatusPillStyle(status)}
+              style={cruiseStatusPillStyle(shownStatus)}
             >
-              {t(`status.${status}`, { defaultValue: status })}
+              {t(`status.${shownStatus}`, { defaultValue: shownStatus })}
             </span>
           </div>
           <label className="mt-2 flex items-center gap-2 text-sm">

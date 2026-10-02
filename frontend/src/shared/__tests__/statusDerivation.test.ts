@@ -1,5 +1,5 @@
 import { describe, it, expect } from "vitest";
-import { deriveFlightStatus, deriveLodgingStatus } from "../statusDerivation";
+import { deriveCruiseStatus, deriveFlightStatus, deriveLodgingStatus } from "../statusDerivation";
 
 /**
  * The SAME truth table as backend/src/shared/__tests__/statusDerivation.test.ts.
@@ -141,5 +141,37 @@ describe("deriveFlightStatus (mirror of the backend rules)", () => {
         passthrough: false,
       })
     ).toBe("scheduled");
+  });
+});
+
+describe("deriveCruiseStatus (frontend mirror)", () => {
+  const derive = (startDate: Date | null, endDate: Date | null, current = "scheduled") =>
+    deriveCruiseStatus({ startDate, endDate, current, now });
+
+  it("passes through cancelled/historical", () => {
+    for (const s of ["cancelled", "historical"]) expect(derive(past(100), past(50), s)).toBe(s);
+  });
+
+  it("future start -> scheduled; between start and end -> in_progress; past end+48h -> flown", () => {
+    expect(derive(future(24), future(120))).toBe("scheduled");
+    expect(derive(past(24), future(72))).toBe("in_progress");
+    expect(derive(past(200), past(49))).toBe("flown");
+  });
+
+  it("end within the 48h slack stays in_progress", () => {
+    expect(derive(past(200), past(47), "flown")).toBe("in_progress");
+  });
+
+  it("null start + future end is not in_progress", () => {
+    expect(derive(null, future(72))).toBe("scheduled");
+  });
+
+  it("missing end: scheduled until start+48h past, then flown", () => {
+    expect(derive(past(47), null)).toBe("scheduled");
+    expect(derive(past(49), null)).toBe("flown");
+  });
+
+  it("no dates keeps current", () => {
+    expect(derive(null, null, "flown")).toBe("flown");
   });
 });
