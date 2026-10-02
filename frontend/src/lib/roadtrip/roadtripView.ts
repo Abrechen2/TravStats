@@ -58,6 +58,27 @@ export function spanDays(startDate: string | null, endDate: string | null): numb
   return a && b ? daysBetween(a, b) + 1 : null;
 }
 
+/**
+ * How many days of a dated span are still ahead of `today`, or null when
+ * none are (or either end is missing).
+ *
+ * Before the start that is the WHOLE span; while underway it is the days
+ * after today, today itself being the one the reader is on. It used to be
+ * counted from today to the last day whatever the start, which added the
+ * wait before a planned trip to the trip: a 10.–11.10. roadtrip read on
+ * 02.10. said "2 days — 9 of them still ahead of you" (forgejo#165).
+ */
+export function daysAhead(
+  startDate: string | null,
+  endDate: string | null,
+  today: string
+): number | null {
+  const start = dayKey(startDate);
+  const end = dayKey(endDate);
+  if (!start || !end || end <= today) return null;
+  return start > today ? daysBetween(start, end) + 1 : daysBetween(today, end);
+}
+
 /** The day a station was reached: its own date, else its stay's check-in. */
 export function arrivalDay(s: RoadtripStation): string | null {
   return dayKey(s.startDate) ?? dayKey(s.stay?.checkIn);
