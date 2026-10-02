@@ -1,7 +1,7 @@
 {
   "title": "Rail",
   "subtitle": "Your train journeys — every ride an entry of its own, like a flight.",
-  "betaNote": "Beta. “Add journey” reads booking mails, ticket PDFs and calendar files.",
+  "betaNote": "Beta. “Add journey” reads booking mails (.eml, .msg) and ticket PDFs.",
   "add": "Add journey",
   "empty": "No train journeys yet. Add your first ride.",
   "loadError": "The train journeys could not be loaded.",

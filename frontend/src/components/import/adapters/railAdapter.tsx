@@ -11,6 +11,14 @@ import type { DomainImportAdapter, ReviewModalProps } from "../types";
 
 type RailParse = ParseEmailRailResult | ParsePdfRailResult;
 
+/**
+ * What the rail add dialog takes besides a PDF (the panel adds ".pdf" to every
+ * domain). Exported so the rail page's copy can be held to it: the page once
+ * promised calendar files the file picker did not even list (forgejo#162). A
+ * calendar file is read only as an attachment of a booking mail.
+ */
+export const RAIL_ACCEPTED_EMAIL_EXTENSIONS: readonly string[] = [".eml", ".msg", ".txt"];
+
 function extractRailParse(result: unknown): RailParse | null {
   if (typeof result !== "object" || result === null) return null;
   const r = result as Partial<RailParse>;
@@ -31,7 +39,7 @@ export function useRailImportAdapter(): DomainImportAdapter {
     domain: "rail",
     panelTitle: t("rail:import.panelTitle"),
     panelHint: t("rail:import.panelHint"),
-    acceptedEmailExtensions: [".eml", ".msg", ".txt"],
+    acceptedEmailExtensions: [...RAIL_ACCEPTED_EMAIL_EXTENSIONS],
     renderManual: ({ onClose, onSaved }) => (
       <RailFormModal
         journey={null}

@@ -156,6 +156,8 @@ function BookingSummary({
 }): JSX.Element {
   return (
     <dl className="mb-3 grid grid-cols-2 gap-x-4 gap-y-1 text-sm" data-testid="rail-import-booking">
+      <dt className="text-(--text-muted)">{t("rail:form.operator")}</dt>
+      <dd>{booking.operator ?? "—"}</dd>
       <dt className="text-(--text-muted)">{t("rail:form.bookingReference")}</dt>
       <dd>{booking.bookingReference ?? "—"}</dd>
       <dt className="text-(--text-muted)">{t("rail:form.class")}</dt>

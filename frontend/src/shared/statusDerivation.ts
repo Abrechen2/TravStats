@@ -14,6 +14,10 @@ import { now as clockNow } from "./time";
  * as a separate grey tag. Computing that here rather than in the cell keeps the
  * two sides of the mirror answerable by the same truth table.
  *
+ * The CRUISE deriver joined for the import preview (forgejo#168): it showed
+ * the parser's "scheduled" beside a cruise that ended last year, and the list
+ * said "Abgeschlossen" the moment it was saved.
+ *
  * The rules MUST stay identical to the backend. Both sides are covered by tests
  * asserting the same truth table; change one without the other and those
  * disagree, which is the point of having them.
@@ -28,6 +32,10 @@ export const FLIGHT_PASSTHROUGH = ["cancelled", "historical", "duplicated"] as c
 /** Slack bands, copied from the backend constants of the same name. */
 export const FLIGHT_ARRIVAL_SLACK_HOURS = 6;
 export const FLIGHT_DEPARTURE_SLACK_HOURS = 30;
+
+/** Statuses the backend cruise deriver never overwrites. Mirrors CRUISE_PASSTHROUGH. */
+export const CRUISE_PASSTHROUGH = ["cancelled", "historical"] as const;
+export const CRUISE_SLACK_HOURS = 48;
 
 const HOUR_MS = 60 * 60 * 1000;
 
@@ -84,4 +92,26 @@ export function deriveLodgingStatus(input: {
   if (nowMs < start.getTime()) return "scheduled";
   if (nowMs >= end.getTime()) return "completed";
   return "in_progress";
+}
+
+/** What the dates say a cruise is. Identical rules to the backend deriver. */
+export function deriveCruiseStatus(input: {
+  startDate: Date | null;
+  endDate: Date | null;
+  current: string;
+  now?: Date;
+}): string {
+  const { startDate, endDate, current } = input;
+  if ((CRUISE_PASSTHROUGH as readonly string[]).includes(current)) return current;
+  const nowMs = (input.now ?? clockNow()).getTime();
+  const slack = CRUISE_SLACK_HOURS * HOUR_MS;
+  if (startDate == null && endDate == null) return current;
+  if (startDate != null && nowMs < startDate.getTime()) return "scheduled";
+  if (endDate != null) {
+    if (nowMs - endDate.getTime() > slack) return "flown";
+    // A null start with a near end is a not-yet-started cruise, not an ongoing one.
+    return startDate != null ? "in_progress" : "scheduled";
+  }
+  // Start only: no in_progress without an end — flown once start+slack is past.
+  return startDate != null && nowMs - startDate.getTime() > slack ? "flown" : "scheduled";
 }
