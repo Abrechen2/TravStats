@@ -1,10 +1,12 @@
-import { describe, it, expect, vi, beforeEach } from "vitest";
+import { describe, it, expect, vi, beforeEach, afterEach } from "vitest";
 import { render, screen, waitFor } from "@testing-library/react";
 import userEvent from "@testing-library/user-event";
 import { CruiseImportPreviewModal } from "../../../components/Cruise/CruiseImportPreviewModal";
 import { cruiseApi } from "../../../lib/api/cruise";
 import type { ParsedCruiseEntry } from "../../../lib/api/parse";
 import type { Cruise } from "../../../types";
+import { expectPreviewOwnsTheKeyboard } from "../../helpers/stackedDialog";
+import { setClockForTests } from "../../../shared/time";
 
 // `t` echoes the key so pill/checkbox text assertions read the raw i18n key,
 // matching the convention used by CruiseEditModal's status test.
@@ -82,13 +84,48 @@ const baseEntry: ParsedCruiseEntry = {
   unmatchedPorts: [],
 };
 
+describe("CruiseImportPreviewModal — keyboard (forgejo#166)", () => {
+  it("is a modal dialog that takes focus over the add chooser", async () => {
+    const onCancel = vi.fn();
+    await expectPreviewOwnsTheKeyboard(
+      <CruiseImportPreviewModal entries={[baseEntry]} onCancel={onCancel} onSaved={vi.fn()} />,
+      "cruise:import.previewTitle",
+      onCancel
+    );
+  });
+});
+
 describe("CruiseImportPreviewModal — status (#status-from-dates)", () => {
   beforeEach(() => {
     vi.mocked(cruiseApi.create).mockClear();
+    // The pill shows what the dates say (forgejo#168), so "now" is pinned
+    // before baseEntry's June cruise.
+    setClockForTests("2026-06-01T12:00:00Z");
+  });
+  afterEach(() => setClockForTests(null));
+
+  // forgejo#168: the preview showed the parser's "scheduled" (Geplant) beside
+  // a cruise that ended months ago; the saved row said "flown" (Abgeschlossen)
+  // at once, because the server derives the status from the dates.
+  it("shows the status the saved cruise will have, derived from its dates", () => {
+    setClockForTests("2026-10-02T12:00:00Z");
+    const past: ParsedCruiseEntry = {
+      ...baseEntry,
+      input: {
+        ...baseEntry.input,
+        startDate: "2025-05-01T12:00:00.000Z",
+        endDate: "2025-05-08T12:00:00.000Z",
+      },
+    };
+    const { baseElement } = render(
+      <CruiseImportPreviewModal entries={[past]} onCancel={vi.fn()} onSaved={vi.fn()} />
+    );
+    expect(baseElement.textContent).toContain("status.flown");
+    expect(baseElement.textContent).not.toContain("status.scheduled");
   });
 
   it("has no status select — status is a read-only pill plus a Storniert checkbox", () => {
-    const { container } = render(
+    const { baseElement: container } = render(
       <CruiseImportPreviewModal entries={[baseEntry]} onCancel={vi.fn()} onSaved={vi.fn()} />
     );
 

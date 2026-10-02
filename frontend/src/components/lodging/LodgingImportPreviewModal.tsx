@@ -2,6 +2,7 @@ import { useCallback, useMemo, useState } from "react";
 import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { logger } from "../../lib/logger";
+import Modal from "../Modal";
 import type {
   LodgingImportCommitRow,
   LodgingImportPreviewRow,
@@ -212,110 +213,20 @@ export function LodgingImportPreviewModal({
     }
   }, [canCommit, edited, onCommit, t]);
 
+  // The shared frame (forgejo#166): rendered in place, the preview sat before
+  // the add chooser's portal, so the chooser kept focus, the Tab trap and
+  // Escape, and the preview was out of keyboard reach. As a `Modal` it is a
+  // named modal dialog, portalled after the chooser, and takes all three.
   return (
-    <div className="fixed inset-0 z-[60] flex items-center justify-center bg-black/70 p-4">
-      <div className="flex max-h-[90vh] w-full max-w-5xl flex-col overflow-hidden rounded-xl bg-[var(--bg-surface)] p-6">
-        <h2 className="mb-1 text-xl font-semibold text-[var(--text-primary)]">
-          {t("lodging:import.preview.title", { count: rows.length })}
-        </h2>
-        {/*
-          The three numbers are rendered as plain JSX values, NOT baked into
-          one interpolated t() string — a single interpolated key can't be
-          unit-tested here, since the project's global react-i18next test
-          mock (src/__tests__/setup.ts) returns the bare key and discards
-          every interpolation option. Each label still goes through t().
-        */}
-        <p data-testid="lodging-import-counts" className="mb-1 text-sm text-[var(--text-muted)]">
-          {counts.newRows} {t("lodging:import.preview.newLabel")}
-          {" · "}
-          {counts.alreadyPresent} {t("lodging:import.preview.presentLabel")}
-          {" · "}
-          {counts.needsInput} {t("lodging:import.preview.needsInputLabel")}
-          {counts.changed > 0 && (
-            <>
-              {" · "}
-              {counts.changed} {t("lodging:import.preview.changedLabel")}
-            </>
-          )}
-        </p>
-        {summary.needsInput > 0 && (
-          <p className="mb-3 text-xs text-amber-300/90">
-            {t("lodging:import.preview.needsInputHint")}
-          </p>
-        )}
-        {pricesWithoutCurrency > 0 && (
-          <p data-testid="lodging-import-currency-hint" className="mb-3 text-xs text-amber-300/90">
-            {t("lodging:import.preview.currencyMissingHint")}
-          </p>
-        )}
-
-        {(undecidedCount > 0 || uncheckedChains > 0) && (
-          <div className="mb-3 flex flex-wrap items-center gap-2">
-            {undecidedCount > 0 && (
-              <button
-                type="button"
-                data-testid="lodging-import-create-all-undecided"
-                onClick={createAllUndecided}
-                className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
-              >
-                {t("lodging:import.preview.createAllUndecided", { count: undecidedCount })}
-              </button>
-            )}
-            {uncheckedChains > 0 && (
-              <button
-                type="button"
-                data-testid="lodging-import-create-all-chains"
-                onClick={createAllChains}
-                className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
-              >
-                {t("lodging:import.preview.createAllChains", { count: uncheckedChains })}
-              </button>
-            )}
-          </div>
-        )}
-
-        {error !== null && (
-          <p
-            role="alert"
-            className="mb-3 rounded border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-300"
-          >
-            {error}
-          </p>
-        )}
-
-        <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-[var(--color-border)]">
-          <table className="w-full border-collapse text-sm">
-            <thead className="sticky top-0 bg-[var(--bg-base)] text-xs uppercase tracking-wide text-[var(--text-muted)]">
-              <tr>
-                <th className="p-2 text-left">{t("lodging:import.fields.name")}</th>
-                <th className="p-2 text-left">{t("lodging:import.fields.city")}</th>
-                <th className="p-2 text-left">{t("lodging:import.fields.checkIn")}</th>
-                <th className="p-2 text-left">{t("lodging:import.fields.checkOut")}</th>
-                <th className="p-2 text-left">{t("lodging:import.fields.totalPrice")}</th>
-                <th className="p-2 text-left">{t("lodging:import.fields.currency")}</th>
-                {/* No "Hinweise" column any more — see `PreviewRowLine`: the
-                    hints are a full-width line under the fields, because a
-                    180-px cell turned one sentence into three lines and
-                    squeezed the action control until its own value read
-                    "Übersp…" (owner, 2026-09-19). */}
-                <th className="p-2 text-left">{t("lodging:import.fields.action")}</th>
-              </tr>
-            </thead>
-            <tbody>
-              {edited.map((row) => (
-                <PreviewRowLine
-                  key={row.sourceRowIndex}
-                  row={row}
-                  onChange={updateRow}
-                  t={t}
-                  language={i18n.language}
-                />
-              ))}
-            </tbody>
-          </table>
-        </div>
-
-        <div className="mt-6 flex items-center justify-end gap-3">
+    <Modal
+      open
+      onClose={onCancel}
+      busy={saving}
+      maxWidth={1024}
+      closeLabel={t("common:buttons.close")}
+      title={t("lodging:import.preview.title", { count: rows.length })}
+      footer={
+        <>
           <button
             type="button"
             onClick={onCancel}
@@ -333,8 +244,105 @@ export function LodgingImportPreviewModal({
           >
             {saving ? t("common:loading.default") : t("lodging:import.preview.commit")}
           </button>
+        </>
+      }
+    >
+      {/*
+          The three numbers are rendered as plain JSX values, NOT baked into
+          one interpolated t() string — a single interpolated key can't be
+          unit-tested here, since the project's global react-i18next test
+          mock (src/__tests__/setup.ts) returns the bare key and discards
+          every interpolation option. Each label still goes through t().
+        */}
+      <p data-testid="lodging-import-counts" className="mb-1 text-sm text-[var(--text-muted)]">
+        {counts.newRows} {t("lodging:import.preview.newLabel")}
+        {" · "}
+        {counts.alreadyPresent} {t("lodging:import.preview.presentLabel")}
+        {" · "}
+        {counts.needsInput} {t("lodging:import.preview.needsInputLabel")}
+        {counts.changed > 0 && (
+          <>
+            {" · "}
+            {counts.changed} {t("lodging:import.preview.changedLabel")}
+          </>
+        )}
+      </p>
+      {summary.needsInput > 0 && (
+        <p className="mb-3 text-xs text-amber-300/90">
+          {t("lodging:import.preview.needsInputHint")}
+        </p>
+      )}
+      {pricesWithoutCurrency > 0 && (
+        <p data-testid="lodging-import-currency-hint" className="mb-3 text-xs text-amber-300/90">
+          {t("lodging:import.preview.currencyMissingHint")}
+        </p>
+      )}
+
+      {(undecidedCount > 0 || uncheckedChains > 0) && (
+        <div className="mb-3 flex flex-wrap items-center gap-2">
+          {undecidedCount > 0 && (
+            <button
+              type="button"
+              data-testid="lodging-import-create-all-undecided"
+              onClick={createAllUndecided}
+              className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            >
+              {t("lodging:import.preview.createAllUndecided", { count: undecidedCount })}
+            </button>
+          )}
+          {uncheckedChains > 0 && (
+            <button
+              type="button"
+              data-testid="lodging-import-create-all-chains"
+              onClick={createAllChains}
+              className="rounded-md border border-[var(--color-border)] px-3 py-1.5 text-xs text-[var(--text-primary)] hover:border-[var(--accent)] hover:text-[var(--accent)]"
+            >
+              {t("lodging:import.preview.createAllChains", { count: uncheckedChains })}
+            </button>
+          )}
         </div>
+      )}
+
+      {error !== null && (
+        <p
+          role="alert"
+          className="mb-3 rounded border border-red-500/30 bg-red-500/10 p-2 text-sm text-red-300"
+        >
+          {error}
+        </p>
+      )}
+
+      <div className="min-h-0 flex-1 overflow-auto rounded-lg border border-[var(--color-border)]">
+        <table className="w-full border-collapse text-sm">
+          <thead className="sticky top-0 bg-[var(--bg-base)] text-xs uppercase tracking-wide text-[var(--text-muted)]">
+            <tr>
+              <th className="p-2 text-left">{t("lodging:import.fields.name")}</th>
+              <th className="p-2 text-left">{t("lodging:import.fields.city")}</th>
+              <th className="p-2 text-left">{t("lodging:import.fields.checkIn")}</th>
+              <th className="p-2 text-left">{t("lodging:import.fields.checkOut")}</th>
+              <th className="p-2 text-left">{t("lodging:import.fields.totalPrice")}</th>
+              <th className="p-2 text-left">{t("lodging:import.fields.currency")}</th>
+              {/* No "Hinweise" column any more — see `PreviewRowLine`: the
+                    hints are a full-width line under the fields, because a
+                    180-px cell turned one sentence into three lines and
+                    squeezed the action control until its own value read
+                    "Übersp…" (owner, 2026-09-19). */}
+              <th className="p-2 text-left">{t("lodging:import.fields.action")}</th>
+            </tr>
+          </thead>
+          <tbody>
+            {edited.map((row) => (
+              <PreviewRowLine
+                key={row.sourceRowIndex}
+                row={row}
+                onChange={updateRow}
+                t={t}
+                language={i18n.language}
+              />
+            ))}
+          </tbody>
+        </table>
       </div>
-    </div>
+    </Modal>
   );
 }
