@@ -66,14 +66,37 @@ describe("flightChangedMessage", () => {
     expect(msg?.body).toBe("12:10 instead of 11:25 (UTC)");
   });
 
-  it("reads a legacy wall-clock time as the wall clock it is", () => {
+  it("reads the stored legacy wall clock as such, and the provider's value as a real instant", () => {
+    // The old value comes from the row (fake UTC: 13:25 is the wall clock at
+    // FRA); the new one comes from the provider, which always reports real
+    // UTC — 12:10Z is 14:10 in Frankfurt, whatever the row's semantics.
     const msg = flightChangedMessage(
       { ...flight, depTimeSemantics: "LEGACY_FAKE_UTC" },
-      [change("departureTime", "2026-10-14T13:25:00.000Z", "2026-10-14T14:10:00.000Z")],
+      [change("departureTime", "2026-10-14T13:25:00.000Z", "2026-10-14T12:10:00.000Z")],
       { pending: false },
       "de"
     );
-    expect(msg?.body).toBe("14:10 statt 13:25 (Ortszeit)");
+    expect(msg?.body).toBe("14:10 statt 13:25 (Ortszeit FRA)");
+  });
+
+  it("names each zone when the old and the new time are read differently", () => {
+    const msg = flightChangedMessage(
+      { ...flight, depTimeSemantics: "LEGACY_FAKE_UTC", depTimezone: null },
+      [change("departureTime", "2026-10-14T13:25:00.000Z", "2026-10-14T12:10:00.000Z")],
+      { pending: false },
+      "en"
+    );
+    expect(msg?.body).toBe("12:10 (UTC) instead of 13:25 (local time)");
+  });
+
+  it("never shows the stored time of a date-only flight, which has none", () => {
+    const msg = flightChangedMessage(
+      { ...flight, depTimeSemantics: "DATE_ONLY" },
+      [change("departureTime", "2026-10-14T00:00:00.000Z", "2026-10-14T12:10:00.000Z")],
+      { pending: false },
+      "de"
+    );
+    expect(msg?.body).toBe("14:10 (Ortszeit FRA)");
   });
 
   it("says a cancellation plainly", () => {
@@ -146,5 +169,16 @@ describe("reminderMessage", () => {
       title: "LH712: departs in 2 hours",
       body: "FRA → HND · 13:25 local time",
     });
+  });
+
+  it("leaves the time out for a date-only flight", () => {
+    const departure = new Date("2026-10-14T00:00:00.000Z");
+    expect(
+      reminderMessage(
+        { ...flight, depTimeSemantics: "DATE_ONLY", departureTime: departure },
+        24,
+        "de"
+      )
+    ).toEqual({ title: "LH712: Abflug in 24 Stunden", body: "FRA → HND" });
   });
 });

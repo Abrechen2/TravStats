@@ -7,8 +7,11 @@ import type { FlightChange } from "../flightAutoUpdate";
  *
  * Times follow the time model (ADR 0002): a real instant is shown in the
  * zone the flight was written with ("Ortszeit FRA"); with no zone it says
- * "UTC" instead of guessing one; a legacy wall clock stored as fake UTC is
- * shown as the wall clock it is ("Ortszeit").
+ * "UTC" instead of guessing one. That covers every value the provider
+ * reports — it is always a real UTC instant, whatever the stored row's
+ * semantics. The row's own time is read by its semantics: a legacy wall
+ * clock stored as fake UTC is shown as the wall clock it is, and a
+ * date-only time has no time of day, so none is shown.
  */
 export type Locale = "de" | "en";
 
@@ -72,20 +75,31 @@ function label(flight: FlightForMessage): string {
   return flight.flightNumber || `${flight.depIata ?? "?"} → ${flight.arrIata ?? "?"}`;
 }
 
-/** "13:25" plus how to read it, for one end of the flight. */
+/** Where a time came from: the provider (a real instant) or the stored row (its semantics). */
+type Source = "provider" | "stored";
+
+/** "13:25" plus how to read it, for one end of the flight; null when there is no time to show. */
 function clock(
   value: unknown,
   end: "dep" | "arr",
   flight: FlightForMessage,
-  locale: Locale
+  locale: Locale,
+  source: Source
 ): { time: string; zone: string } | null {
   if (value === null || value === undefined || value === "") return null;
   const date = new Date(value as string | number);
   if (Number.isNaN(date.getTime())) return null;
-  const semantics = end === "dep" ? flight.depTimeSemantics : flight.arrTimeSemantics;
+  const semantics =
+    source === "provider"
+      ? "UTC"
+      : end === "dep"
+        ? flight.depTimeSemantics
+        : flight.arrTimeSemantics;
+  if (semantics === "DATE_ONLY") return null;
   const tz = end === "dep" ? flight.depTimezone : flight.arrTimezone;
   const iata = end === "dep" ? flight.depIata : flight.arrIata;
   const c = COPY[locale];
+  // A fake-UTC value read as UTC shows exactly its wall clock at the airport.
   const wallClock = semantics === "LEGACY_FAKE_UTC";
   const timeZone = wallClock || !tz ? "UTC" : tz;
   let time: string;
@@ -99,7 +113,8 @@ function clock(
   } catch {
     return null;
   }
-  const zone = wallClock ? c.local : tz ? (iata ? c.localAt(iata) : c.local) : "UTC";
+  const local = iata ? c.localAt(iata) : c.local;
+  const zone = wallClock ? (tz ? local : c.local) : tz ? local : "UTC";
   return { time, zone };
 }
 
@@ -127,12 +142,14 @@ function partFor(change: FlightChange, flight: FlightForMessage, locale: Locale)
     case "departureTime":
     case "arrivalTime": {
       const end = change.field === "departureTime" ? "dep" : "arr";
-      const now = clock(change.newValue, end, flight, locale);
+      const now = clock(change.newValue, end, flight, locale, "provider");
       if (!now) return null;
-      const old = clock(change.oldValue, end, flight, locale);
-      const body = old
-        ? `${now.time} ${c.instead} ${old.time} (${now.zone})`
-        : `${now.time} (${now.zone})`;
+      const old = clock(change.oldValue, end, flight, locale, "stored");
+      const body = !old
+        ? `${now.time} (${now.zone})`
+        : old.zone === now.zone
+          ? `${now.time} ${c.instead} ${old.time} (${now.zone})`
+          : `${now.time} (${now.zone}) ${c.instead} ${old.time} (${old.zone})`;
       return { title: end === "dep" ? c.departure : c.arrival, body };
     }
     case "depIata": {
@@ -191,7 +208,7 @@ export function reminderMessage(
   locale: Locale
 ): Message {
   const c = COPY[locale];
-  const at = clock(flight.departureTime.toISOString(), "dep", flight, locale);
+  const at = clock(flight.departureTime.toISOString(), "dep", flight, locale, "stored");
   const route = `${flight.depIata ?? "?"} → ${flight.arrIata ?? "?"}`;
   const when = at ? ` · ${at.time} ${at.zone === "UTC" ? "UTC" : c.local}` : "";
   return { title: `${label(flight)}: ${c.reminder(hoursAhead)}`, body: route + when };
