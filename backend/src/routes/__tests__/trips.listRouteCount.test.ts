@@ -51,7 +51,18 @@ describe("the trip list counts tour sections in _count.routes", () => {
 
     const trip = res.body.trips.find((t: { id: string }) => t.id === tripWithRoutes);
     expect(trip).toBeDefined();
-    expect(trip._count).toEqual({ flights: 0, cruises: 0, lodgingStays: 0, routes: 2, photos: 0 });
+    expect(trip._count).toEqual({
+      flights: 0,
+      cruises: 0,
+      lodgingStays: 0,
+      routes: 2,
+      photos: 0,
+      // forgejo#169: the other areas the trip page lists. Neither section here
+      // is a roadtrip (`kind` defaults to "tour").
+      railJourneys: 0,
+      rentalBookings: 0,
+      roadtrips: 0,
+    });
   });
 
   it("reports zero, not an absent key, for a trip without sections", async () => {

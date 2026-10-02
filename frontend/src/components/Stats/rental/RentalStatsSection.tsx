@@ -82,7 +82,10 @@ export default function RentalStatsSection({ year }: Props): JSX.Element {
           firstCost
             ? formatAmount(firstCost.perDay, firstCost.currency, { language: i18n.language })
             : "–",
-          t("rental:stats.perDay", { currency: firstCost?.currency ?? "" }),
+          // No costed rental means no currency to name: "pro Tag ()" (forgejo#167).
+          firstCost
+            ? t("rental:stats.perDay", { currency: firstCost.currency })
+            : t("rental:stats.perDayNoCost"),
           otherCosts.length > 0
             ? t("rental:stats.otherCurrencies", {
                 list: otherCosts

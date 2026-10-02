@@ -37,6 +37,7 @@ import { assertLlmCloudConsent, assertLlmEnabled } from "../services/llm/llmGate
 import { fxColumnsFor, getBaseCurrency } from "../services/fx/snapshot";
 import { mostExpensiveTrip } from "../services/trip/tripCostSuperlative";
 import { TRIPS_LIST_INCLUDE, TRIP_RAIL_SELECT } from "../services/trip/tripsListInclude";
+import { withRoadtripCounts } from "../services/trip/tripRoadtripCounts";
 import { TRIP_DETAIL_RENTALS } from "../services/trip/tripsListInclude";
 import {
   airportFactsFor,
@@ -133,12 +134,13 @@ router.get(
       // popular endpoint (StayEditor, PlaceDetailPage, FlightsTablePage, …)
       // would tax pages that never show it. Only the trips page asks.
       const { includeInsights } = tripsListQuerySchema.parse(req.query);
-      const trips = await prisma.trip.findMany({
+      const listed = await prisma.trip.findMany({
         where: { userId },
         orderBy: { createdAt: "desc" },
         take: 500, // safety cap — users are unlikely to have more than 500 trips
         include: TRIPS_LIST_INCLUDE,
       });
+      const trips = await withRoadtripCounts(listed);
       // One batched airport lookup across EVERY trip's flights, not one per
       // trip: the cards need the same country derivation the detail page does,
       // and doing it per trip would turn one page load into N queries.

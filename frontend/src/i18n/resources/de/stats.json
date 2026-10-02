@@ -17,7 +17,23 @@
     "activeDaysHint": "Tage mit mind. einer Aktivität",
     "achievements": "Erfolge",
     "achievementsHint": "{{points}} Punkte",
-    "countriesNoComparison": "Länder: kein Vergleich für den laufenden Zeitraum"
+    "countriesNoComparison": "Länder: kein Vergleich für den laufenden Zeitraum",
+    "breakdown": {
+      "flight_one": "{{count}} Flug",
+      "flight_other": "{{count}} Flüge",
+      "cruise_one": "{{count}} Kreuzfahrt",
+      "cruise_other": "{{count}} Kreuzfahrten",
+      "lodging_one": "{{count}} Unterkunft",
+      "lodging_other": "{{count}} Unterkünfte",
+      "poi_one": "{{count}} Ort",
+      "poi_other": "{{count}} Orte",
+      "roadtrip_one": "{{count}} Roadtrip",
+      "roadtrip_other": "{{count}} Roadtrips",
+      "rail_one": "{{count}} Zugfahrt",
+      "rail_other": "{{count}} Zugfahrten",
+      "rental_one": "{{count}} Mietwagen",
+      "rental_other": "{{count}} Mietwagen"
+    }
   },
   "overviewToggle": {
     "noData": "keine Daten"
@@ -75,7 +91,8 @@
     "noDataYet": "Noch keine Daten",
     "comingSoon": "Kommt mit V2.X",
     "yearScopedCount": "{{count}} in {{year}} · {{lifetime}} insgesamt",
-    "lifetimeCount": "{{count}} Erlebnisse",
+    "lifetimeCount_one": "{{count}} Erlebnis",
+    "lifetimeCount_other": "{{count}} Erlebnisse",
     "detailLink": "Details →",
     "unit": {
       "km": "km",

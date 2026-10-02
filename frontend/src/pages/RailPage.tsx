@@ -151,9 +151,9 @@ export default function RailPage(): JSX.Element {
                 carries as its first figure. */}
             <ListSummaryStrip
               figures={railSummaryFigures(journeys, {
-                journeys: t("rail:summary.journeys"),
-                operators: t("rail:summary.operators"),
-                stations: t("rail:summary.stations"),
+                journeys: (count: number) => t("rail:summary.journeys", { count }),
+                operators: (count: number) => t("rail:summary.operators", { count }),
+                stations: (count: number) => t("rail:summary.stations", { count }),
                 withoutOperator: (count: number) => t("rail:summary.withoutOperator", { count }),
               })}
               filtered={search.trim().length > 0}

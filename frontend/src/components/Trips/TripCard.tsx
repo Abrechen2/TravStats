@@ -1,6 +1,9 @@
 import { formatCurrency } from "../../lib/units";
 import type { Trip } from "../../types";
 import { useEnabledDomains } from "../../hooks/useEnabledDomains";
+import { useRailVisible } from "../../hooks/useRailVisible";
+import { useRentalVisible } from "../../hooks/useRentalVisible";
+import { tripEntryCounts, tripEntryTotal } from "../../lib/tripEntryCount";
 import { useTranslation } from "../../hooks/useTranslation";
 import { sumByCurrency, tripCostSources } from "../../lib/bookingCost";
 import { formatLocalDate } from "../../lib/displayFormat";
@@ -73,11 +76,19 @@ export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
   const lodgingEnabled = isEnabled("lodging");
-  const flightCount = trip._count?.flights ?? trip.flights?.length ?? 0;
-  const cruiseCount = cruiseEnabled ? (trip._count?.cruises ?? trip.cruises?.length ?? 0) : 0;
-  const stayCount = lodgingEnabled
-    ? (trip._count?.lodgingStays ?? trip.lodgingStays?.length ?? 0)
-    : 0;
+  const railVisible = useRailVisible();
+  const rentalVisible = useRentalVisible();
+  // Every area the trip page lists counts (forgejo#169), each behind the same
+  // gate the page applies. Flights stay ungated, as they always were here.
+  const counts = tripEntryCounts(trip, (domain) => {
+    if (domain === "flight") return true;
+    if (domain === "rail") return railVisible;
+    if (domain === "rental") return rentalVisible;
+    return isEnabled(domain);
+  });
+  const flightCount = counts.flight;
+  const cruiseCount = counts.cruise;
+  const stayCount = counts.lodging;
   const cruises = cruiseEnabled ? (trip.cruises ?? []) : [];
   const stays = lodgingEnabled ? (trip.lodgingStays ?? []) : [];
 
@@ -91,7 +102,7 @@ export default function TripCard({ trip, onOpen }: TripCardProps): JSX.Element {
     tripCostSources(trip.bookings ?? [], trip.flights ?? [], cruises, stays)
   );
   const distanceKm = estimateTripDistanceKm(trip.flights ?? [], cruises);
-  const entries = flightCount + cruiseCount + stayCount;
+  const entries = tripEntryTotal(counts);
 
   const areas: IconName[] = [
     ...(flightCount > 0 ? (["plane"] as const) : []),

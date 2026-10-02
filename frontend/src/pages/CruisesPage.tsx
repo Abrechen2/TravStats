@@ -322,10 +322,26 @@ export default function CruisesPage(): JSX.Element {
     if (facets === null) return [];
     const { summary } = facets;
     return [
-      { key: "cruises", value: String(summary.cruises), label: t("common:summary.cruises") },
-      { key: "portCalls", value: String(summary.portCalls), label: t("common:summary.portCalls") },
-      { key: "seaDays", value: String(summary.seaDays), label: t("common:summary.seaDays") },
-      { key: "lines", value: String(summary.lines), label: t("common:summary.lines") },
+      {
+        key: "cruises",
+        value: String(summary.cruises),
+        label: t("common:summary.cruises", { count: summary.cruises }),
+      },
+      {
+        key: "portCalls",
+        value: String(summary.portCalls),
+        label: t("common:summary.portCalls", { count: summary.portCalls }),
+      },
+      {
+        key: "seaDays",
+        value: String(summary.seaDays),
+        label: t("common:summary.seaDays", { count: summary.seaDays }),
+      },
+      {
+        key: "lines",
+        value: String(summary.lines),
+        label: t("common:summary.lines", { count: summary.lines }),
+      },
     ];
   }, [facets, t]);
 

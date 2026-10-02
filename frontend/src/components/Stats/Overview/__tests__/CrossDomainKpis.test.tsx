@@ -67,8 +67,11 @@ describe("CrossDomainKpis", () => {
         />
       </MemoryRouter>
     );
-    expect(screen.getByText(/30/)).toBeInTheDocument();
-    expect(screen.getByText(/12/)).toBeInTheDocument();
+    // One counted phrase per domain; what it reads in German is pinned in
+    // CrossDomainKpis.german.test.tsx (the global mock returns the key).
+    expect(
+      screen.getByText("stats:overviewKpis.breakdown.flight · stats:overviewKpis.breakdown.cruise")
+    ).toBeInTheDocument();
   });
 
   it("does not render delta badges when compareEnabled is false", () => {

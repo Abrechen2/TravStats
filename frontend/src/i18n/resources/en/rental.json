@@ -225,6 +225,7 @@
     "km": "Kilometres",
     "kmCoverage": "{{covered}} of {{of}} rentals invoiced",
     "perDay": "per day ({{currency}})",
+    "perDayNoCost": "Cost per day",
     "otherCurrencies": "Other currencies apart: {{list}}",
     "providers": "Providers by rental days",
     "brokerNote": "Brokers do not count as providers; they are shown on the rental.",

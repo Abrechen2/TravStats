@@ -368,22 +368,22 @@ export default function LodgingListPage(): JSX.Element {
             {
               key: "lodgings",
               value: String(facets.summary.lodgings),
-              label: t("common:summary.lodgings"),
+              label: t("common:summary.lodgings", { count: facets.summary.lodgings }),
             },
             {
               key: "stays",
               value: String(facets.summary.stays),
-              label: t("common:summary.stays"),
+              label: t("common:summary.stays", { count: facets.summary.stays }),
             },
             {
               key: "nights",
               value: String(facets.summary.nights),
-              label: t("common:summary.nights"),
+              label: t("common:summary.nights", { count: facets.summary.nights }),
             },
             {
               key: "chains",
               value: String(facets.summary.chains),
-              label: t("common:summary.chains"),
+              label: t("common:summary.chains", { count: facets.summary.chains }),
             },
           ],
     [facets, t]

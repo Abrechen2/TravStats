@@ -301,6 +301,7 @@
   "editor": {
     "hint": "Tap a station to edit it. Tap a leg for ferry or line. Every change is saved at once and can be undone.",
     "status": {
+      "pending": "Changes will be saved shortly",
       "saving": "Saving …",
       "saved": "All saved",
       "error": "Not saved",

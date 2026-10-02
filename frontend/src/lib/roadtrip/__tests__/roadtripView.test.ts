@@ -9,6 +9,7 @@ import {
   roadtripPhase,
   sketchPath,
   spanDays,
+  daysAhead,
   stationAfter,
   stationRows,
   stationWarnings,
@@ -207,5 +208,37 @@ describe("groupRoadtrips", () => {
       [2023, ["Bretagne"]],
     ]);
     expect(g.undated.map((r) => r.name)).toEqual(["Irgendwann"]);
+  });
+});
+
+/**
+ * forgejo#165 — a planned 10.–11.10. roadtrip, read on 02.10., showed
+ * "Tage 2 — davon 9 noch vor dir": the figure counted from TODAY to the last
+ * day, so the wait before the start was added to the trip. The part of a
+ * span still ahead can never exceed the span.
+ */
+describe("daysAhead", () => {
+  it("counts every day of a roadtrip that has not begun, and no more", () => {
+    expect(daysAhead(at("2026-10-10"), at("2026-10-11"), "2026-10-02")).toBe(2);
+    expect(daysAhead(at("2026-10-10"), at("2026-10-11"), "2026-10-09")).toBe(2);
+  });
+
+  it("counts the days after today while underway", () => {
+    expect(daysAhead(at("2026-10-10"), at("2026-10-19"), "2026-10-10")).toBe(9);
+    expect(daysAhead(at("2026-10-10"), at("2026-10-19"), "2026-10-18")).toBe(1);
+  });
+
+  it("has nothing ahead on the last day, after it, or without both ends", () => {
+    expect(daysAhead(at("2026-10-10"), at("2026-10-11"), "2026-10-11")).toBeNull();
+    expect(daysAhead(at("2026-10-10"), at("2026-10-11"), "2026-10-20")).toBeNull();
+    expect(daysAhead(at("2026-10-10"), null, "2026-10-02")).toBeNull();
+    expect(daysAhead(null, at("2026-10-11"), "2026-10-02")).toBeNull();
+  });
+
+  it("never exceeds the span it is part of", () => {
+    for (const today of ["2026-01-01", "2026-10-09", "2026-10-10", "2026-10-12"]) {
+      const ahead = daysAhead(at("2026-10-10"), at("2026-10-12"), today);
+      expect(ahead === null || ahead <= 3).toBe(true);
+    }
   });
 });

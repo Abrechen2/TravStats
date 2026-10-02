@@ -2,7 +2,7 @@ import type { JSX } from "react";
 
 import { Icon } from "../ui/Icon";
 import { useTranslation } from "../../hooks/useTranslation";
-import { spanDays } from "../../lib/roadtrip/roadtripView";
+import { daysAhead, spanDays } from "../../lib/roadtrip/roadtripView";
 import type { RoadtripDetail } from "../../types/roadtrip";
 
 interface Figure {
@@ -32,11 +32,7 @@ export default function RoadtripFigures({
   const r = detail.roadtrip;
   const n = detail.nights;
   const days = spanDays(detail.startDate, detail.endDate);
-  const end = detail.endDate?.slice(0, 10) ?? null;
-  const ahead =
-    days !== null && end !== null && end > today
-      ? spanDays(`${today}T00:00:00Z`, detail.endDate)
-      : null;
+  const ahead = daysAhead(detail.startDate, detail.endDate, today);
   const approx = n.nightsKnown ? "" : "≈ ";
 
   const figures: Figure[] = [
@@ -55,10 +51,7 @@ export default function RoadtripFigures({
             key: "days",
             label: t("roadtrips:detail.figDays"),
             value: nf.format(days),
-            sub:
-              ahead !== null && ahead > 0
-                ? t("roadtrips:detail.figDaysAhead", { count: ahead - 1 })
-                : undefined,
+            sub: ahead !== null ? t("roadtrips:detail.figDaysAhead", { count: ahead }) : undefined,
           },
         ]
       : []),
