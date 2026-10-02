@@ -116,6 +116,7 @@ export default function PendingUpdateCard({
       airlabs: "AirLabs API",
       aviationstack: "Aviationstack API",
       aerodatabox: "AeroDataBox API",
+      aeroapi: "FlightAware AeroAPI",
       opensky: "OpenSky Network",
     };
     return labels[source] ?? source.charAt(0).toUpperCase() + source.slice(1);
