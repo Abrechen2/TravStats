@@ -280,9 +280,20 @@ else
     if echo "$MIGRATION_STATUS" | grep -qi "failed"; then
         echo "[entrypoint] ⚠️  Found failed migrations in status output, attempting to resolve automatically..."
 
-        # Extract failed migration names from status output
-        # Format: "The `20250120000000_add_training_config` migration started at ... failed"
-        FAILED_MIGRATIONS=$(echo "$MIGRATION_STATUS" | grep -i "failed" | sed -n "s/.*\`\([^']*\)\`.*/\1/p" || echo "")
+        # Extract failed migration names from status output, in either form:
+        #   The `20250120000000_add_training_config` migration started at ... failed
+        # (older Prisma), or Prisma 7's block
+        #   Following migration have failed:
+        #   20261001193030_sync_change_feed
+        # with one name per line up to a blank line. Only the second form was
+        # missed before — it found nothing and fell through to two hard-coded
+        # 2025 names (forgejo#157). The "not yet been applied" block is never
+        # read: pending migrations must not be marked rolled back.
+        FAILED_MIGRATIONS=$(echo "$MIGRATION_STATUS" | awk '
+            /have failed/ { in_failed = 1; next }
+            in_failed && /^[[:space:]]*$/ { in_failed = 0 }
+            (in_failed || /failed/) && match($0, /[0-9]+_[A-Za-z0-9_]+/) { print substr($0, RSTART, RLENGTH) }
+        ' | sort -u || echo "")
 
         if [ -n "$FAILED_MIGRATIONS" ]; then
             for MIGRATION in $FAILED_MIGRATIONS; do
@@ -389,6 +400,22 @@ else
     fi
     # Re-enable set -e
     set -e
+
+    # A migration that FAILED stops the boot (forgejo#157). It used to print a
+    # warning and start the app anyway, on a schema older than its code: on
+    # 2026-10-02 an instance restored from an older backup came up healthy
+    # with a failed migration recorded, and from the next boot on Prisma
+    # refused every later migration (P3009) while /health stayed green.
+    # Stopping loses nothing — the data is untouched and the log says why.
+    # A TIMEOUT (124) keeps the old behaviour: the migration may simply be
+    # slow on a small host, and the next start retries it.
+    if [ $MIGRATION_EXIT_CODE -ne 0 ] && [ $MIGRATION_EXIT_CODE -ne 124 ]; then
+        echo "[entrypoint] ❌ Refusing to start: a database migration failed (exit $MIGRATION_EXIT_CODE)."
+        echo "[entrypoint] The output above names the migration and the database error. If it ran"
+        echo "[entrypoint] into objects left behind by restoring an older backup, start the previous"
+        echo "[entrypoint] image and restore that backup again from the admin page."
+        exit $MIGRATION_EXIT_CODE
+    fi
 
     # Verify migrations were actually applied
     if [ $MIGRATION_EXIT_CODE -eq 0 ]; then

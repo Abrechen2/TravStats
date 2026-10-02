@@ -278,6 +278,16 @@ if (process.env.NODE_ENV !== "test") {
       logger.warn({ operation: "server_start_logging_config_error", error });
     }
 
+    // The sync feed's triggers (forgejo#157): a database restored from an
+    // older backup can lack them while every table is there, and the feed then
+    // reports "nothing changed" forever. The answer is on /health.
+    try {
+      const { runSyncSchemaCheck } = await import("./services/sync/schemaCheck");
+      await runSyncSchemaCheck();
+    } catch (error) {
+      logger.error({ operation: "server_start_sync_schema_check_error", error });
+    }
+
     // Ensure achievement definitions are present (idempotent upsert)
     try {
       const { ensureAchievements } = await import("./data/achievements");

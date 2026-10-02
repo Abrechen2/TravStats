@@ -1,6 +1,7 @@
 import type { Request, Response } from "express";
 import { backupZone } from "../shared/time/schedulerZone";
 import { zoneSelfCheckResult } from "../shared/time/zoneOf";
+import { syncSchemaCheckResult } from "../services/sync/schemaCheck";
 import { appVersion } from "../utils/version";
 
 /**
@@ -13,6 +14,10 @@ import { appVersion } from "../utils/version";
  * restart would not fix a broken dependency, but a probe that reads the body
  * sees it, instead of the server reading every local time as UTC in silence.
  *
+ * `degraded` as well when the sync feed's database triggers are missing
+ * (`services/sync/schemaCheck.ts`, forgejo#157): the Companion is then told
+ * "nothing changed" after every edit, and a probe should see that.
+ *
  * `scheduler.backupZone` is the zone the backup cron runs in — the admin's
  * setting, or the host's read once at boot when none is set
  * (shared/time/schedulerZone.ts). Every other job runs in
@@ -22,11 +27,13 @@ import { appVersion } from "../utils/version";
 export function healthHandler(_req: Request, res: Response): void {
   const timezone = zoneSelfCheckResult();
   const timezoneLookup = timezone === null ? "pending" : timezone.ok ? "ok" : "failed";
+  const sync = syncSchemaCheckResult();
+  const syncTriggers = sync === null ? "pending" : sync.ok ? "ok" : "failed";
   res.json({
-    status: timezoneLookup === "failed" ? "degraded" : "ok",
+    status: timezoneLookup === "failed" || syncTriggers === "failed" ? "degraded" : "ok",
     timestamp: new Date().toISOString(),
     version: appVersion,
-    checks: { timezoneLookup },
+    checks: { timezoneLookup, syncTriggers },
     scheduler: { backupZone: backupZone().zone },
   });
 }

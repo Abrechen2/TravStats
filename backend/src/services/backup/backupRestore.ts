@@ -2,6 +2,7 @@ import { spawn } from "child_process";
 import * as fs from "fs";
 import * as path from "path";
 import { prisma } from "../../db";
+import { Prisma } from "../../prisma";
 import logger from "../../utils/logger";
 import { DATABASE_URL } from "../../utils/database";
 import {
@@ -15,6 +16,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { encryptionKeyFingerprint } from "../../utils/encryption";
 import { reconcileInterruptedBackups } from "./reconcileBackups";
 import { resetSyncHistory } from "../sync/state";
+import { runSyncSchemaCheck } from "../sync/schemaCheck";
 
 /**
  * The columns of `admin_settings` that describe THIS MACHINE rather than the
@@ -210,6 +212,143 @@ export async function extractUploadsArchive(
 
 const PSQL_STRICT = ["-v", "ON_ERROR_STOP=1", "--single-transaction"] as const;
 
+/**
+ * Run before the dump, inside the same transaction (forgejo#157).
+ *
+ * A `pg_dump --clean` drops and recreates only what is IN the dump. Restored
+ * onto a newer version, everything the newer schema added stayed behind:
+ * measured on 2026-10-02, a 2.7.0-beta.17 archive restored onto beta.18 failed
+ * outright, because two newer tables hold foreign keys to `users` and the
+ * dump's `DROP CONSTRAINT users_pkey` cannot cascade; an archive without such
+ * a table "succeeded" with every sync trigger gone, the newer tables left
+ * standing and `_prisma_migrations` rolled back, so the next boot re-ran a
+ * migration into its own leftovers and the one after that stopped applying
+ * migrations at all.
+ *
+ * Emptying `public` first makes the dump land in exactly the schema it
+ * describes; `migrateRestoredDatabase` then brings that schema up to this
+ * version. The extensions' own schemas (tiger, topology) are dropped and
+ * recreated by the dump itself. Under `--single-transaction` a failing dump
+ * rolls the DROP back too, so a refused archive still changes nothing.
+ */
+export const CLEAN_SCHEMA_PREAMBLE = [
+  "DROP SCHEMA IF EXISTS public CASCADE;",
+  "CREATE SCHEMA public;",
+  // A schema created here belongs to whoever runs the restore, with no
+  // grants. Put back what PostgreSQL 15+ gives `public` by default, so a
+  // second role (a read-only monitoring login) keeps its access after a
+  // restore. Measured on 2026-10-02: the owner went from pg_database_owner to
+  // the app role, and USAGE for PUBLIC was gone. The role check keeps older
+  // servers, which have no pg_database_owner, restorable.
+  "DO $$ BEGIN IF EXISTS (SELECT 1 FROM pg_roles WHERE rolname = 'pg_database_owner') " +
+    "THEN ALTER SCHEMA public OWNER TO pg_database_owner; END IF; END $$;",
+  "GRANT USAGE ON SCHEMA public TO PUBLIC;",
+  "",
+].join("\n");
+
+/** The last lines psql printed, for the error an admin reads mid-recovery. */
+function stderrTail(stderr: string): string {
+  return stderr.trim().split("\n").slice(-3).join("; ");
+}
+
+/**
+ * Feed `preamble` and the dump at `dumpPath` to a psql process and settle
+ * with its verdict.
+ *
+ * psql stops reading at the first error (ON_ERROR_STOP) while the dump is
+ * still being piped in, and the next write then fails with EPIPE. That error
+ * had no handler: it killed the whole backend, the restore job vanished with
+ * the process, and the admin never learned that the restore had failed
+ * (forgejo#157). Every stream here now reports into this one promise.
+ *
+ * Exported for its test, which drives a real child process.
+ */
+export function feedPsql(
+  cmd: string,
+  args: string[],
+  env: NodeJS.ProcessEnv,
+  dumpPath: string,
+  preamble: string
+): Promise<void> {
+  return new Promise<void>((resolve, reject) => {
+    let settled = false;
+    const settle = (error?: Error): void => {
+      if (settled) return;
+      settled = true;
+      if (error) reject(error);
+      else resolve();
+    };
+
+    const proc = spawn(cmd, args, { env, stdio: ["pipe", "pipe", "pipe"] });
+    let stderr = "";
+    let inputError: Error | null = null;
+
+    // EPIPE / ECONNRESET: psql has stopped reading. Its exit code and stderr,
+    // handled in `close`, say why; this only keeps the error from escaping.
+    proc.stdin.on("error", (error) => {
+      inputError = error;
+    });
+    proc.stdout.on("data", (data: Buffer) => {
+      logger.debug({ operation: "restore_db_stdout", message: data.toString() });
+    });
+    proc.stderr.on("data", (data: Buffer) => {
+      stderr += data.toString();
+      logger.warn({ operation: "restore_db_stderr", message: data.toString() });
+    });
+    proc.on("error", (error) => settle(new Error(`Failed to start ${cmd}: ${error.message}`)));
+    proc.on("close", (code) => {
+      if (code === 0 && !inputError) {
+        settle();
+        return;
+      }
+      const detail = stderrTail(stderr) || inputError?.message || "";
+      settle(new Error(`${cmd} exited with code ${code}${detail ? `: ${detail}` : ""}`));
+    });
+
+    const input = fs.createReadStream(dumpPath);
+    input.on("error", (error) => {
+      proc.kill();
+      settle(new Error(`Could not read the archive's database.sql: ${error.message}`));
+    });
+    proc.stdin.write(preamble);
+    input.pipe(proc.stdin);
+  });
+}
+
+/**
+ * Bring a just-restored database up to this version's schema (forgejo#157).
+ *
+ * An archive from an older version carries the older `_prisma_migrations`;
+ * `prisma migrate deploy` applies exactly what it lacks, on a schema that —
+ * thanks to `CLEAN_SCHEMA_PREAMBLE` — holds nothing the archive did not bring.
+ * The same command the container runs at boot, run here so the instance never
+ * serves a database older than its code.
+ */
+export function migrateRestoredDatabase(databaseUrl: string): Promise<void> {
+  const backendRoot = path.join(__dirname, "../../..");
+  const cli = require.resolve("prisma/build/index.js", { paths: [backendRoot] });
+  return new Promise<void>((resolve, reject) => {
+    const proc = spawn(process.execPath, [cli, "migrate", "deploy"], {
+      cwd: backendRoot,
+      env: { ...process.env, DATABASE_URL: databaseUrl },
+      stdio: ["ignore", "pipe", "pipe"],
+    });
+    let output = "";
+    const collect = (data: Buffer): void => {
+      output += data.toString();
+    };
+    proc.stdout.on("data", collect);
+    proc.stderr.on("data", collect);
+    proc.on("error", (error) => reject(new Error(`Failed to start prisma: ${error.message}`)));
+    proc.on("close", (code) => {
+      logger.info({ operation: "restore_migrate", message: output.trim().slice(-2000), code });
+      if (code === 0) resolve();
+      else
+        reject(new Error(`prisma migrate deploy exited with code ${code}: ${stderrTail(output)}`));
+    });
+  });
+}
+
 /** Everything a restore can find wrong with an archive before it writes. */
 export type RestoreArchiveProblem =
   | { kind: "missingDatabasePart" }
@@ -364,6 +503,29 @@ function toRestoreError(problem: RestoreArchiveProblem): AppError {
   }
 }
 
+/**
+ * The archive just restored stays restorable (forgejo#157 follow-up).
+ *
+ * A dump carries the `backups` table as it stood while that very dump was
+ * being written, with its own row still `running`. The reconcile above then
+ * marks it failed ("Interrupted: restore of ..."), so the archive the admin
+ * had just used successfully was refused the next time with "Backup is not
+ * completed" (measured 2026-10-02, on the same version as well as across
+ * versions). This instance read the row before the restore and knows the
+ * archive is complete, having just restored from it, so that row is put back.
+ * Exported for its test.
+ */
+export async function keepRestoredBackupUsable(
+  before: NonNullable<Awaited<ReturnType<typeof prisma.backup.findUnique>>>
+): Promise<void> {
+  const { id, metadata, createdAt: _createdAt, updatedAt: _updatedAt, ...fields } = before;
+  const data = {
+    ...fields,
+    metadata: metadata === null ? Prisma.JsonNull : (metadata as Prisma.InputJsonValue),
+  };
+  await prisma.backup.upsert({ where: { id }, update: data, create: { id, ...data } });
+}
+
 export async function restoreBackup(
   id: string,
   options: RestoreOptions,
@@ -465,30 +627,9 @@ export async function restoreBackup(
       const isDocker = process.env.DOCKER === "true";
       const dbContainer = process.env.DOCKER_DB_CONTAINER || DOCKER_DB_CONTAINER;
 
-      // Use spawn with array args to prevent shell injection (never interpolate into shell strings)
+      // Spawn with array args, never a shell string (no interpolation).
       const spawnRestore = (cmd: string, args: string[], env: NodeJS.ProcessEnv): Promise<void> =>
-        new Promise<void>((resolve, reject) => {
-          const inputFile = fs.createReadStream(dbBackupPath);
-          const proc = spawn(cmd, args, {
-            env,
-            stdio: ["pipe", "pipe", "pipe"],
-          });
-
-          inputFile.pipe(proc.stdin);
-          proc.stdout.on("data", (data) => {
-            logger.debug({ operation: "restore_db_stdout", message: data.toString() });
-          });
-          proc.stderr.on("data", (data) => {
-            logger.warn({ operation: "restore_db_stderr", message: data.toString() });
-          });
-          proc.on("error", (error) =>
-            reject(new Error(`Failed to start ${cmd}: ${error.message}`))
-          );
-          proc.on("close", (code) => {
-            if (code === 0) resolve();
-            else reject(new Error(`${cmd} exited with code ${code}`));
-          });
-        });
+        feedPsql(cmd, args, env, dbBackupPath, CLEAN_SCHEMA_PREAMBLE);
 
       const restoreEnv = { ...process.env, PGPASSWORD: dbInfo.password };
 
@@ -545,6 +686,29 @@ export async function restoreBackup(
         );
       }
       logger.info({ operation: "restore_db_complete", message: "Database restored" });
+      // The archive may be older than this version. Without this the instance
+      // would serve an old schema until its next boot — and with the triggers
+      // of the newer one missing for good (forgejo#157).
+      try {
+        await migrateRestoredDatabase(dbUrl);
+      } catch (error) {
+        throw new AppError(
+          "The archive was restored, but bringing it up to this version's database schema failed: " +
+            `${error instanceof Error ? error.message : String(error)}. ` +
+            "Restart the instance (it migrates at boot) or restore a backup taken on this version.",
+          500,
+          "RESTORE_MIGRATION_FAILED"
+        );
+      }
+      const schema = await runSyncSchemaCheck();
+      if (!schema.ok) {
+        throw new AppError(
+          `The database was restored and migrated, but the sync feed's triggers are missing (${schema.missing.join(", ")}). ` +
+            "The Companion would not see changes. Check the server log for the migration output.",
+          500,
+          "RESTORE_SCHEMA_INCOMPLETE"
+        );
+      }
       await afterDatabaseRestore(identityBefore, id);
     }
 
@@ -566,6 +730,7 @@ export async function restoreBackup(
     // anything in flight now came out of the archive (AUD-069).
     if (options.scope === "full" || options.scope === "database") {
       await reconcileInterruptedBackups(`restore of backup ${id}`);
+      await keepRestoredBackupUsable(backup);
     }
 
     // Cleanup
