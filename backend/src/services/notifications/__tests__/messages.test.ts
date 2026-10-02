@@ -56,6 +56,33 @@ describe("flightChangedMessage", () => {
     });
   });
 
+  it("sends nothing for a time change that reads the same before and after", () => {
+    // A legacy row stored the wall clock as UTC; the provider's instant lands on the same clock.
+    const legacy = { ...flight, depTimeSemantics: "LEGACY_FAKE_UTC" };
+    expect(
+      flightChangedMessage(
+        legacy,
+        [change("departureTime", "2026-10-14T13:25:00.000Z", "2026-10-14T11:25:00.000Z")],
+        { pending: false },
+        "de"
+      )
+    ).toBeNull();
+  });
+
+  it("drops the no-op time change but keeps the other changes", () => {
+    const legacy = { ...flight, depTimeSemantics: "LEGACY_FAKE_UTC" };
+    const msg = flightChangedMessage(
+      legacy,
+      [
+        change("departureTime", "2026-10-14T13:25:00.000Z", "2026-10-14T11:25:00.000Z"),
+        change("gate", "A26", "B12"),
+      ],
+      { pending: false },
+      "de"
+    );
+    expect(msg).toEqual({ title: "LH712: neues Gate", body: "B12 statt A26" });
+  });
+
   it("says UTC when the flight has no zone, instead of guessing one", () => {
     const msg = flightChangedMessage(
       { ...flight, depTimezone: null },

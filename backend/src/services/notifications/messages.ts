@@ -145,6 +145,8 @@ function partFor(change: FlightChange, flight: FlightForMessage, locale: Locale)
       const now = clock(change.newValue, end, flight, locale, "provider");
       if (!now) return null;
       const old = clock(change.oldValue, end, flight, locale, "stored");
+      // A legacy row can read as the very clock the provider reports: not a change.
+      if (old && old.time === now.time && old.zone === now.zone) return null;
       const body = !old
         ? `${now.time} (${now.zone})`
         : old.zone === now.zone
