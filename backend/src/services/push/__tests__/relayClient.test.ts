@@ -1,3 +1,4 @@
+import { z } from "zod";
 import { prisma } from "../../../db";
 import { ensureAdminSettingsRow } from "../../adminSettingsRow";
 import { decryptApiKey } from "../../../utils/encryption";
@@ -68,7 +69,36 @@ afterAll(async () => {
   await prisma.$disconnect();
 });
 
+/** A copy of the relay's request rules (travstats-push `src/schema.ts` pushBody). */
+const relayPushBody = z
+  .object({
+    platform: z.enum(["ios", "android"]),
+    token: z.string().regex(/^[A-Za-z0-9:_\-.]{16,4096}$/),
+    apnsEnvironment: z.enum(["production", "sandbox"]).optional(),
+    ciphertext: z.string().regex(/^[A-Za-z0-9_-]{80,3000}$/),
+    collapseId: z.string().max(64).optional(),
+    lang: z.enum(["de", "en"]).optional(),
+  })
+  .strip();
+
 describe("sendToRelay", () => {
+  it("sends an Android push the relay's schema accepts: no null for an optional field", async () => {
+    const r = relay();
+    const android = { ...push, platform: "android" as const, apnsEnvironment: null };
+    expect(await sendToRelay(android, { fetch: r.fetch })).toBe("sent");
+    const body = JSON.parse(String(r.calls.find((c) => c.url.endsWith("/v1/push"))?.init.body));
+    expect("apnsEnvironment" in body).toBe(false);
+    expect(relayPushBody.safeParse(body).success).toBe(true);
+  });
+
+  it("keeps apnsEnvironment on an iOS push", async () => {
+    const r = relay();
+    await sendToRelay(push, { fetch: r.fetch });
+    const body = JSON.parse(String(r.calls.find((c) => c.url.endsWith("/v1/push"))?.init.body));
+    expect(body.apnsEnvironment).toBe("production");
+    expect(relayPushBody.safeParse(body).success).toBe(true);
+  });
+
   it("does nothing at all — not even register — while the admin has not switched push on", async () => {
     await settings({ pushEnabled: false });
     const r = relay();

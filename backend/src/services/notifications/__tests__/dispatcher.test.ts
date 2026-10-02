@@ -99,6 +99,19 @@ afterAll(async () => {
 });
 
 describe("notifyFlightChanged", () => {
+  it("leaves apnsEnvironment out for an Android phone", async () => {
+    await phone();
+    await prisma.devicePush.updateMany({
+      where: { userId },
+      data: { platform: "android", apnsEnvironment: null },
+    });
+    const r = recorder();
+    await notifyFlightChanged(userId, flight, gate, { pending: false }, { send: r.send });
+    expect(r.pushes).toHaveLength(1);
+    expect(r.pushes[0].platform).toBe("android");
+    expect("apnsEnvironment" in r.pushes[0]).toBe(false);
+  });
+
   it("sends each eligible phone a push only that phone can read", async () => {
     const p = await phone({ locale: "en" });
     const r = recorder();

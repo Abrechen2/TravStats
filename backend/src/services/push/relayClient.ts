@@ -163,6 +163,15 @@ async function saysTokenInvalid(res: Response): Promise<boolean> {
   }
 }
 
+/**
+ * The relay's schema declares every optional field as "absent or valid", so
+ * a null (an Android device has no APNs environment) is a 400. Leave out
+ * every field that has no value.
+ */
+function relayBody(push: RelayPush): Record<string, unknown> {
+  return Object.fromEntries(Object.entries(push).filter(([, v]) => v !== null && v !== undefined));
+}
+
 export async function sendToRelay(push: RelayPush, deps: Deps = {}): Promise<RelayOutcome> {
   const f = deps.fetch ?? fetch;
   const now = deps.now ?? (() => new Date());
@@ -190,7 +199,7 @@ export async function sendToRelay(push: RelayPush, deps: Deps = {}): Promise<Rel
         "content-type": "application/json",
         authorization: `Bearer ${credentials.id}.${credentials.secret}`,
       },
-      body: JSON.stringify(push),
+      body: JSON.stringify(relayBody(push)),
       signal: AbortSignal.timeout(TIMEOUT_MS),
     });
     switch (res.status) {

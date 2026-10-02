@@ -114,7 +114,7 @@ async function deliver(
       outcome = await send({
         platform: device.platform === "android" ? "android" : "ios",
         token: device.token,
-        apnsEnvironment: device.apnsEnvironment,
+        ...(device.apnsEnvironment ? { apnsEnvironment: device.apnsEnvironment } : {}),
         ciphertext: sealForDevice(device.publicKey, plaintext),
         // Per kind: a reminder must not replace an unread change (or the
         // other way round). A flight id is a UUID, so this stays well under
