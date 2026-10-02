@@ -125,8 +125,10 @@ describe("hasSignificantChanges", () => {
   });
 
   it("returns false for a single changed (modify) non-critical change", () => {
-    // A single gate A21→B07 is noise; wait for a second signal.
-    expect(hasSignificantChanges([change("gate", "changed", "A21", "B07")])).toBe(false);
+    // A lone aircraft swap is noise; wait for a second signal. (A gate change
+    // used to be the example here; since TravStats#156 it counts on its own —
+    // flightAutoUpdate.cancellation.test.ts.)
+    expect(hasSignificantChanges([change("aircraft", "changed", "A320", "A321")])).toBe(false);
   });
 
   it("returns true for two changed non-critical fields", () => {

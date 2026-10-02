@@ -22,6 +22,7 @@ export interface ApiKeyCardProps {
     | "airlabs"
     | "aviationstack"
     | "aerodatabox"
+    | "aeroapi"
     | "opensky"
     | "logostream"
     | "googlePlaces"

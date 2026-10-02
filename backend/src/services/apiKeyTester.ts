@@ -40,7 +40,7 @@ export interface ApiKeyTestResult {
 }
 
 /** Helper to extract error info from axios-like errors */
-function extractAxiosErrorInfo(error: unknown): {
+export function extractAxiosErrorInfo(error: unknown): {
   status?: number;
   message: string;
   data?: Record<string, unknown>;
@@ -72,7 +72,7 @@ function extractAxiosErrorInfo(error: unknown): {
  * the card could show; it stays in `message` as the detail, and the key says
  * which of the two it was.
  */
-function failure(
+export function failure(
   errInfo: ReturnType<typeof extractAxiosErrorInfo>,
   message: string = errInfo.message
 ): ApiKeyTestResult {

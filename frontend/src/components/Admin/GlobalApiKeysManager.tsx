@@ -5,6 +5,7 @@ export interface GlobalApiKeys {
   globalAirlabsApiKey?: string;
   globalAviationstackApiKey?: string;
   globalAerodataboxApiKey?: string;
+  globalAeroapiApiKey?: string;
   globalLogostreamApiKey?: string;
   globalGooglePlacesApiKey?: string;
   globalOpenskyClientId?: string;
@@ -122,6 +123,20 @@ export default function GlobalApiKeysManager({
                 onClear={() =>
                   onGlobalApiKeysChange({ ...globalApiKeys, globalAerodataboxApiKey: "" })
                 }
+                isAdmin={true}
+              />
+              <ApiKeyCard
+                provider="aeroapi"
+                label={t("admin:globalApiKeys.aeroapi.label")}
+                description={t("admin:globalApiKeys.aeroapi.description")}
+                getKeyUrl="https://www.flightaware.com/aeroapi/portal/"
+                isShared={false}
+                hasAccess={!!globalApiKeys.globalAeroapiApiKey}
+                value={globalApiKeys.globalAeroapiApiKey || ""}
+                onChange={(value) =>
+                  onGlobalApiKeysChange({ ...globalApiKeys, globalAeroapiApiKey: value })
+                }
+                onClear={() => onGlobalApiKeysChange({ ...globalApiKeys, globalAeroapiApiKey: "" })}
                 isAdmin={true}
               />
               <ApiKeyCard

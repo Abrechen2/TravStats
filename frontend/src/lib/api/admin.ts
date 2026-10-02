@@ -484,6 +484,7 @@ export const adminApi = {
     globalAirlabsApiKey?: string;
     globalAviationstackApiKey?: string;
     globalAerodataboxApiKey?: string;
+    globalAeroapiApiKey?: string;
     globalLogostreamApiKey?: string;
     globalOpenskyClientId?: string;
     globalOpenskyClientSecret?: string;
@@ -502,6 +503,7 @@ export const adminApi = {
       globalAirlabsApiKey?: string;
       globalAviationstackApiKey?: string;
       globalAerodataboxApiKey?: string;
+      globalAeroapiApiKey?: string;
       globalLogostreamApiKey?: string;
       globalOpenskyClientId?: string;
       globalOpenskyClientSecret?: string;
@@ -520,6 +522,7 @@ export const adminApi = {
     globalAirlabsApiKey?: string | null;
     globalAviationstackApiKey?: string | null;
     globalAerodataboxApiKey?: string | null;
+    globalAeroapiApiKey?: string | null;
     globalLogostreamApiKey?: string | null;
     globalOpenskyClientId?: string | null;
     globalOpenskyClientSecret?: string | null;
@@ -542,6 +545,7 @@ export const adminApi = {
       | "airlabs"
       | "aviationstack"
       | "aerodatabox"
+      | "aeroapi"
       | "opensky"
       | "openrouteservice"
       | "graphhopper"

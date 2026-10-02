@@ -21,7 +21,7 @@
  * indicator.
  */
 
-export type ApiProvider = "aerodatabox" | "airlabs" | "aviationstack" | "opensky";
+export type ApiProvider = "aerodatabox" | "aeroapi" | "airlabs" | "aviationstack" | "opensky";
 
 /**
  * RapidAPI / AeroDataBox return TWO independent counters:
@@ -78,6 +78,9 @@ const observed = new Map<string, Map<ApiProvider, ObservedQuota>>();
  */
 const STATIC_QUOTA_SHAPE: Record<ApiProvider, ProviderQuota> = {
   aerodatabox: { kind: "observed", limit: null, remaining: null, observedAt: "" },
+  // Billed per query, no monthly cap to count down; limits surface as 429s.
+  // Replaced by an observation should a response ever carry the headers.
+  aeroapi: { kind: "not_reported" },
   airlabs: { kind: "not_reported", knownLimitHint: 1000 },
   aviationstack: { kind: "not_reported", knownLimitHint: 100 },
   opensky: { kind: "rate_limit_only" },
@@ -148,7 +151,13 @@ export function getProviderQuota(provider: ApiProvider, userId?: string): Provid
 /** Returns the shape of every provider's quota for the user — single
  *  fetch from the API-keys page. */
 export function getAllProviderQuotas(userId?: string): Record<ApiProvider, ProviderQuota> {
-  const providers: ApiProvider[] = ["aerodatabox", "airlabs", "aviationstack", "opensky"];
+  const providers: ApiProvider[] = [
+    "aerodatabox",
+    "aeroapi",
+    "airlabs",
+    "aviationstack",
+    "opensky",
+  ];
   const out = {} as Record<ApiProvider, ProviderQuota>;
   for (const p of providers) {
     out[p] = getProviderQuota(p, userId);
