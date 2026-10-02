@@ -84,6 +84,12 @@ import railEntrySuggestionsRouter from "./rail/entrySuggestions";
 import railLookupRouter from "./rail/lookup";
 import railStatsRouter from "./rail/stats";
 import railRoadtripConversionRouter from "./rail/roadtripConversion";
+import rentalRouter from "./rental";
+import rentalStationsRouter from "./rental/stations";
+import rentalImportRouter from "./rental/import";
+import rentalStatsRouter from "./rental/stats";
+import rentalRemindersRouter from "./rental/reminders";
+import rentalLinksRouter from "./rental/links";
 import cruiseTrackRoutes from "./cruises/tracks";
 import currenciesRouter from "./currencies";
 import lodgingRouter from "./lodging";
@@ -302,6 +308,18 @@ export const apiMounts: ApiMount[] = [
     router: railRoadtripConversionRouter,
   },
   { id: "rail", base: "/api/v1/rail", router: railRouter },
+  // Car rentals (spec 2026-10-01-rental-domain-design). Behind the beta switch in
+  // the UI only. Sub-routers mount FIRST: '/:id' would answer them as a 404.
+  { id: "rental.stations", base: "/api/v1/rentals/stations", router: rentalStationsRouter },
+  { id: "rental.import", base: "/api/v1/rentals/import", router: rentalImportRouter },
+  { id: "rental.stats", base: "/api/v1/rentals/stats", router: rentalStatsRouter },
+  {
+    id: "rental.reminders",
+    base: "/api/v1/rentals/invoice-reminders",
+    router: rentalRemindersRouter,
+  },
+  { id: "rental.links", base: "/api/v1/rentals", router: rentalLinksRouter },
+  { id: "rental", base: "/api/v1/rentals", router: rentalRouter },
   // Recorded tracks of a cruise (2.7) — the same satellite pattern.
   { id: "cruises.tracks", base: "/api/v1/cruises", router: cruiseTrackRoutes },
   { id: "currencies", base: "/api/v1/currencies", router: currenciesRouter },

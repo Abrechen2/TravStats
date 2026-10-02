@@ -125,7 +125,7 @@
     "companions": "Reisende",
     "tags": "Tags",
     "countries": "Länder",
-    "noLinks": "Noch keine Flüge oder Kreuzfahrten verknüpft.",
+    "noLinks": "Mit dieser Reise ist noch nichts verknüpft.",
     "hiddenCruises_one": "{{count}} Kreuzfahrt-Segment ausgeblendet — der Bereich Kreuzfahrten ist deaktiviert.",
     "hiddenCruises_other": "{{count}} Kreuzfahrt-Segmente ausgeblendet — der Bereich Kreuzfahrten ist deaktiviert.",
     "hiddenLodging_one": "{{count}} Hotelaufenthalt ausgeblendet — der Bereich Unterkünfte ist deaktiviert.",
@@ -140,7 +140,9 @@
       "lodging": "Aufenthalte",
       "countries": "Länder",
       "companions": "Reisende",
-      "tags": "Tags"
+      "tags": "Tags",
+      "rail": "Bahn",
+      "rental": "Mietwagen"
     },
     "tabs": {
       "overview": "Übersicht",
@@ -195,7 +197,12 @@
       "openJournal": "Ganz öffnen"
     },
     "stopNotFound": "Diesen Halt gibt es in dieser Reise nicht mehr.",
-    "journalEntryNotFound": "Diesen Tagebucheintrag gibt es in dieser Reise nicht mehr."
+    "journalEntryNotFound": "Diesen Tagebucheintrag gibt es in dieser Reise nicht mehr.",
+    "noLogistics": "Hier erscheinen die Verbindungen und Buchungen dieser Reise – noch ist keine verknüpft.",
+    "railCount_one": "{{count}} Fahrt",
+    "railCount_other": "{{count}} Fahrten",
+    "rentalCount_one": "{{count}} Miete",
+    "rentalCount_other": "{{count}} Mieten"
   },
   "journalModal": {
     "createTitle": "Tagebuch-Eintrag",

@@ -20,6 +20,7 @@ import enParser from "./resources/en/parser.json";
 import enTrips from "./resources/en/trips.json";
 import enCruise from "./resources/en/cruise.json";
 import enRail from "./resources/en/rail.json";
+import enRental from "./resources/en/rental.json";
 import enImport from "./resources/en/import.json";
 import enAircraft from "./resources/en/aircraft.json";
 import enPassport from "./resources/en/passport.json";
@@ -56,6 +57,7 @@ import deParser from "./resources/de/parser.json";
 import deTrips from "./resources/de/trips.json";
 import deCruise from "./resources/de/cruise.json";
 import deRail from "./resources/de/rail.json";
+import deRental from "./resources/de/rental.json";
 import deImport from "./resources/de/import.json";
 import deAircraft from "./resources/de/aircraft.json";
 import dePassport from "./resources/de/passport.json";
@@ -115,6 +117,7 @@ const resources = {
     trips: enTrips,
     cruise: enCruise,
     rail: enRail,
+    rental: enRental,
     import: enImport,
     aircraft: enAircraft,
     passport: enPassport,
@@ -152,6 +155,7 @@ const resources = {
     trips: deTrips,
     cruise: deCruise,
     rail: deRail,
+    rental: deRental,
     import: deImport,
     aircraft: deAircraft,
     passport: dePassport,
@@ -199,6 +203,7 @@ i18n.use(initReactI18next).init({
     "trips",
     "cruise",
     "rail",
+    "rental",
     "import",
     "aircraft",
     "passport",

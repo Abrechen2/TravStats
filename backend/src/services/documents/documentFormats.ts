@@ -28,6 +28,7 @@ export const ENTRY_TYPES = [
   "trip",
   "placeVisit",
   "railJourney",
+  "rentalBooking",
 ] as const;
 export type EntryType = (typeof ENTRY_TYPES)[number];
 

@@ -24,6 +24,7 @@ export const FILTER_DOMAIN_ORDER = [
   "tour",
   "roadtrip",
   "rail",
+  "rental",
 ] as const;
 
 export type FilterDomainKey = (typeof FILTER_DOMAIN_ORDER)[number];

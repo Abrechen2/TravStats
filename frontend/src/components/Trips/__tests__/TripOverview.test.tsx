@@ -25,6 +25,11 @@ vi.mock("../../../hooks/useBetaFeatures", () => ({
 const mockRoadtrips = vi.hoisted(() => vi.fn((): unknown[] => []));
 vi.mock("../../Roadtrips/useTripRoadtrips", () => ({ useTripRoadtrips: () => mockRoadtrips() }));
 
+// Rail and rental are beta areas; each test says whether they are on.
+const visible = vi.hoisted(() => ({ rail: true, rental: true }));
+vi.mock("../../../hooks/useRailVisible", () => ({ useRailVisible: () => visible.rail }));
+vi.mock("../../../hooks/useRentalVisible", () => ({ useRentalVisible: () => visible.rental }));
+
 import TripOverview from "../TripOverview";
 
 const t = ((key: string, opts?: { count?: number }) =>
@@ -66,6 +71,83 @@ describe("TripOverview", () => {
     renderOverview(trip({}));
     expect(screen.getByText("Fjorde 2026").closest("a")).toHaveAttribute("href", "/roadtrips/rt1");
     expect(screen.queryByText("trips:detail.noLinks")).not.toBeInTheDocument();
+  });
+
+  // A trip holding only a train ride or a rental car said "nothing linked"
+  // above an entry it was not showing (owner, 2026-10-01).
+  it("lists a linked rental and a train ride, and then says nothing is missing", () => {
+    renderOverview(
+      trip({
+        rentalBookings: [
+          {
+            id: "r1",
+            provider: "Testcar",
+            pickupStationName: "Testport A",
+            returnStationName: "Testport B",
+            pickupTime: "2026-07-02T08:30:00.000Z",
+            returnTime: "2026-07-10T07:00:00.000Z",
+            pickupTimezone: "Europe/Berlin",
+            returnTimezone: "Europe/Berlin",
+            pickupPrecision: "minute",
+            returnPrecision: "minute",
+            status: "completed",
+          },
+        ],
+        railJourneys: [
+          {
+            id: "j1",
+            operator: null,
+            trainCategory: "ICE",
+            trainNumber: "123",
+            depStationName: "Teststadt Hbf",
+            arrStationName: "Probeburg Hbf",
+            depTimezone: "Europe/Berlin",
+            arrTimezone: "Europe/Berlin",
+            departureTime: "2026-07-01T08:00:00.000Z",
+            arrivalTime: "2026-07-01T11:00:00.000Z",
+            distanceKm: null,
+            distanceSource: null,
+            status: "completed",
+            delayMinutes: null,
+            price: null,
+            currency: null,
+            bookingId: null,
+          },
+        ],
+      } as Partial<Trip>)
+    );
+    expect(screen.getByText(/Testcar/).closest("a")).toHaveAttribute("href", "/rentals/r1");
+    expect(screen.getByText(/Teststadt Hbf/).closest("a")).toHaveAttribute("href", "/rail/j1");
+    expect(screen.queryByText("trips:detail.noLinks")).not.toBeInTheDocument();
+  });
+
+  it("keeps a rental of a hidden beta area out — and then says nothing is linked", () => {
+    visible.rental = false;
+    try {
+      renderOverview(
+        trip({
+          rentalBookings: [
+            {
+              id: "r1",
+              provider: "Testcar",
+              pickupStationName: "Testport A",
+              returnStationName: "Testport A",
+              pickupTime: "2026-07-02T08:30:00.000Z",
+              returnTime: "2026-07-10T07:00:00.000Z",
+              pickupTimezone: "Europe/Berlin",
+              returnTimezone: "Europe/Berlin",
+              pickupPrecision: "minute",
+              returnPrecision: "minute",
+              status: "completed",
+            },
+          ],
+        })
+      );
+      expect(screen.queryByText(/Testcar/)).toBeNull();
+      expect(screen.getByText("trips:detail.noLinks")).toBeInTheDocument();
+    } finally {
+      visible.rental = true;
+    }
   });
 
   it("draws no figure for what the trip does not have", () => {

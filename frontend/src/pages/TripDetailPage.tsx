@@ -43,8 +43,10 @@ import { useToursVisible } from "../hooks/useToursVisible";
 import { PanelHeader, Placeholder } from "../components/Trips/TripDetailPanels";
 import { RowActionButton } from "../components/table/RowActionButton";
 import { formatTimelineDate } from "../lib/tripTimeline";
-import { RailTripCard, TripRailList } from "../components/rail/RailTripCard";
+import { TripRailList } from "../components/rail/RailTripCard";
 import { useRailVisible } from "../hooks/useRailVisible";
+import { useRentalVisible } from "../hooks/useRentalVisible";
+import { RentalBand, TransitCard, useRentalBands } from "../components/Trips/timelineTransit";
 import { listPlaces } from "../lib/api/places";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
 import type { Place, PlaceVisit } from "../types/place";
@@ -98,22 +100,23 @@ export default function TripDetailPage(): JSX.Element {
   const [editing, setEditing] = useState(false);
   const [confirmDelete, setConfirmDelete] = useState(false);
 
-  // Domain-gating: when the cruise/lodging domain is disabled, every tab
-  // gets a trip copy with those segments stripped, so timeline, map, and
-  // logistics stay domain-free without per-tab checks. A counter banner
-  // below the tab bar tells the user the segments are hidden, not lost.
+  // Domain-gating: a disabled domain's segments are stripped from the trip copy
+  // every tab reads; a banner below the tab bar says they are hidden, not lost.
   const { isEnabled } = useEnabledDomains();
   const cruiseEnabled = isEnabled("cruise");
   const lodgingEnabled = isEnabled("lodging");
-  // Rail asks its own hook: the beta switch AND the domain (useRailVisible).
+  // Rail and rentals ask their own hooks: the beta switch AND the domain.
   const railVisible = useRailVisible();
+  const rentalVisible = useRentalVisible();
   const displayTrip = useMemo<Trip | null>(() => {
-    if (trip === null || (cruiseEnabled && lodgingEnabled && railVisible)) return trip;
+    const allShown = cruiseEnabled && lodgingEnabled && railVisible && rentalVisible;
+    if (trip === null || allShown) return trip;
     return {
       ...trip,
       cruises: cruiseEnabled ? trip.cruises : [],
       lodgingStays: lodgingEnabled ? trip.lodgingStays : [],
       railJourneys: railVisible ? trip.railJourneys : [],
+      rentalBookings: rentalVisible ? trip.rentalBookings : [],
       _count: trip._count
         ? {
             ...trip._count,
@@ -122,7 +125,7 @@ export default function TripDetailPage(): JSX.Element {
           }
         : trip._count,
     };
-  }, [trip, cruiseEnabled, lodgingEnabled, railVisible]);
+  }, [trip, cruiseEnabled, lodgingEnabled, railVisible, rentalVisible]);
   const hiddenCruiseCount = cruiseEnabled
     ? 0
     : (trip?._count?.cruises ?? trip?.cruises?.length ?? 0);
@@ -405,10 +408,8 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
   // IDs once from this trip's flight arrivals and cruise ports; the timeline
   // entry shows a soft hint. Hotel-only trips have no legs and never warn.
   const implausibleStayIds = useMemo(() => {
-    // Flight arrivals are the signal here; the trip's cruise shape does not
-    // carry port coordinates, so a cruise-only trip has no legs and never
-    // warns — safe, and it still catches the common "hotel far from where you
-    // flew" case.
+    // Flight arrivals: the trip's cruise shape carries no port coordinates, so
+    // a cruise-only trip has no legs and never warns.
     const legs = (trip?.flights ?? []).map((f) => ({ lat: f.arrLat, lon: f.arrLon }));
     const flagged = new Set<string>();
     for (const s of trip?.lodgingStays ?? []) {
@@ -421,6 +422,7 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
     return flagged;
   }, [trip]);
 
+  const rentalBands = useRentalBands(events);
   // Past/upcoming is shown on the rail (line + dots), not by graying out
   // entries — see #184. Recomputed per render; a page-lifetime "now" is fine.
   const railStates = useMemo(() => {
@@ -534,13 +536,8 @@ function TimelineTab({ trip, onChanged, t, language }: TimelineTabProps): JSX.El
                 />
                 {ev.kind === "flight" && <FlightCard ev={ev} language={language} t={t} />}
                 {ev.kind === "cruise" && <CruiseCard ev={ev} language={language} t={t} />}
-                {ev.kind === "rail" && (
-                  <RailTripCard
-                    journey={ev.journey}
-                    date={ev.date}
-                    dateLabel={formatTimelineDate(ev.when)}
-                  />
-                )}
+                <RentalBand segments={rentalBands[i]} />
+                <TransitCard ev={ev} />
                 {(ev.kind === "lodging-checkin" || ev.kind === "lodging-checkout") && (
                   <LodgingCheckCard
                     ev={ev}
@@ -626,6 +623,9 @@ function dotColor(ev: TimelineEvent): string {
       return "var(--domain-cruise, #6fa0d6)";
     case "rail":
       return "var(--domain-rail)";
+    case "rental-pickup":
+    case "rental-return":
+      return "var(--ts-domain-rental)";
     case "stop":
     case "place-visit":
       return "var(--domain-poi, #5ec2b2)";
@@ -989,7 +989,7 @@ function LogisticsTab({
 
   const railJourneys = trip.railJourneys ?? [];
   if (!flights.length && !cruises.length && !bookings.length && !railJourneys.length) {
-    return <Placeholder text={t("trips:detail.noLinks")} />;
+    return <Placeholder text={t("trips:detail.noLogistics")} />;
   }
 
   return (

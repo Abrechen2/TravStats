@@ -12,6 +12,7 @@ export const FILTER_ROW_ICON: Record<FilterDomainKey, IconName> = {
   tour: "route",
   roadtrip: "caravan",
   rail: "train-front",
+  rental: "car",
 };
 
 /**

@@ -54,10 +54,14 @@ export function parseStatsTab(tab: string | null): StatsTab {
 export function visibleStatsTabs(
   enabledDomains: readonly DomainKey[],
   placesAccess: PlacesAccess,
-  railOffered = false
+  railOffered = false,
+  rentalOffered = false
 ): DomainKey[] {
   return enabledDomains.filter(
-    (key) => (key !== "poi" || placesAccess !== "denied") && (key !== "rail" || railOffered)
+    (key) =>
+      (key !== "poi" || placesAccess !== "denied") &&
+      (key !== "rail" || railOffered) &&
+      (key !== "rental" || rentalOffered)
   );
 }
 
@@ -65,12 +69,14 @@ export function resolveStatsTab(
   requested: StatsTab,
   enabledDomains: readonly DomainKey[],
   placesAccess: PlacesAccess,
-  railOffered = false
+  railOffered = false,
+  rentalOffered = false
 ): StatsTab {
   if (requested === "all") return "all";
   if (requested === "poi") return placesAccess === "denied" ? "all" : "poi";
   // Rail behind a closed beta gate has no tab to land on, however it was asked.
   if (requested === "rail" && !railOffered) return "all";
+  if (requested === "rental" && !rentalOffered) return "all";
   // Falling back to the overview rather than showing nothing: the reader asked
   // for statistics, and a page they can use beats an empty panel.
   return enabledDomains.includes(requested) ? requested : "all";

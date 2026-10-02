@@ -53,6 +53,7 @@ describe("the 2.7.0 announcement describes the app that shipped", () => {
     roadtrips: [/Roadtrips.*Tagestouren/, /Roadtrips.*day tours/],
     lodgingEnrichment: [/Hotel-Anreicherung/, /hotel enrichment/],
     railDomain: [/Bahn/, /rail/],
+    rentalDomain: [/Mietwagen/, /rental cars/],
     cruiseTracks: [/Spuren bei Kreuzfahrten/, /tracks on cruises/],
   };
   it.each(Object.keys(BETA_FEATURES) as (keyof typeof BETA_FEATURES)[])(

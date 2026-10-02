@@ -33,6 +33,8 @@ const FlightDetailPage = lazy(() => import("./pages/FlightDetailPage"));
 const CruisesPage = lazy(() => import("./pages/CruisesPage"));
 const RailPage = lazy(() => import("./pages/RailPage"));
 const RailDetailPage = lazy(() => import("./pages/RailDetailPage"));
+const RentalsPage = lazy(() => import("./pages/RentalsPage"));
+const RentalDetailPage = lazy(() => import("./pages/RentalDetailPage"));
 const CruiseDetailPage = lazy(() => import("./pages/CruiseDetailPage"));
 const LodgingListPage = lazy(() => import("./pages/LodgingListPage"));
 const PlacesListPage = lazy(() => import("./pages/PlacesListPage"));
@@ -309,6 +311,38 @@ function AppContent() {
                     <BetaFeatureRouteGuard feature="railDomain" redirectTo="/dashboard">
                       <DomainRouteGuard domain="rail">
                         <RailDetailPage />
+                      </DomainRouteGuard>
+                    </BetaFeatureRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
+                path="/rentals"
+                element={
+                  isAuthenticated ? (
+                    // Rail's two gates, outer first: the instance beta switch
+                    // (rentalDomain), then the user's own domain choice.
+                    <BetaFeatureRouteGuard feature="rentalDomain" redirectTo="/dashboard">
+                      <DomainRouteGuard domain="rental">
+                        <RentalsPage />
+                      </DomainRouteGuard>
+                    </BetaFeatureRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
+                path="/rentals/:id"
+                element={
+                  isAuthenticated ? (
+                    // Rail's two gates, outer first: the instance beta switch
+                    // (rentalDomain), then the user's own domain choice.
+                    <BetaFeatureRouteGuard feature="rentalDomain" redirectTo="/dashboard">
+                      <DomainRouteGuard domain="rental">
+                        <RentalDetailPage />
                       </DomainRouteGuard>
                     </BetaFeatureRouteGuard>
                   ) : (

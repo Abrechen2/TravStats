@@ -290,6 +290,39 @@ async function nextRail(userId: string): Promise<UpcomingEntry | null> {
   };
 }
 
+/**
+ * The next rental pickup (spec 2026-10-01-rental-domain-design §8). The pickup
+ * is a real instant — the server read the booking's clock in the station's
+ * zone — so the countdown is the flight's rule, unchanged.
+ */
+async function nextRental(userId: string): Promise<UpcomingEntry | null> {
+  const rental = await prisma.rentalBooking.findFirst({
+    where: { userId, status: { not: "cancelled" }, pickupTime: { gte: new Date() } },
+    orderBy: [{ pickupTime: "asc" }, { id: "asc" }],
+    select: {
+      id: true,
+      provider: true,
+      pickupStationName: true,
+      vehicleClass: true,
+      vehicleExample: true,
+      pickupTime: true,
+      tripId: true,
+      trip: { select: { name: true } },
+    },
+  });
+  if (!rental) return null;
+  return {
+    domain: "rental",
+    id: rental.id,
+    detailId: rental.id,
+    startsAt: rental.pickupTime.toISOString(),
+    tripId: rental.tripId,
+    tripName: rental.trip?.name ?? null,
+    primary: `${rental.provider} · ${rental.pickupStationName}`,
+    secondary: rental.vehicleClass ?? rental.vehicleExample ?? null,
+  };
+}
+
 async function nextTrip(userId: string): Promise<UpcomingEntry | null> {
   const trip = await prisma.trip.findFirst({
     where: { userId, status: { not: "cancelled" }, startDate: { gte: new Date() } },
@@ -338,6 +371,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       enabled.has("cruise") ? nextCruise(userId) : null,
       enabled.has("lodging") ? nextStay(userId) : null,
       enabled.has("rail") ? nextRail(userId) : null,
+      enabled.has("rental") ? nextRental(userId) : null,
       nextTrip(userId),
     ]);
 

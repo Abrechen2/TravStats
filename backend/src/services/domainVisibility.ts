@@ -18,6 +18,7 @@ import { getInstanceSettings } from "./instanceSettingsService";
 export const BETA_GATED_DOMAINS: Partial<Record<DomainKey, string>> = {
   rail: "railDomain",
   roadtrip: "roadtrips",
+  rental: "rentalDomain",
 };
 
 /**

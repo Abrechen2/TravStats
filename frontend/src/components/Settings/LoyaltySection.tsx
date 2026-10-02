@@ -42,7 +42,14 @@ export default function LoyaltySection(): JSX.Element {
   // (forgejo#132 item 23). The others only need the user's switch.
   const railVisible = useRailVisible();
   const domains = useMemo(
-    () => LOYALTY_DOMAINS.filter((d) => (d === "rail" ? railVisible : isEnabled(d))),
+    () =>
+      LOYALTY_DOMAINS.filter(
+        // Rental cards are storable (the server knows the domain) but have no
+        // coverage rule yet — the rental spec names none — so no editor is
+        // offered rather than one whose figures would always read zero.
+        (d): d is Exclude<LoyaltyDomain, "rental"> =>
+          d !== "rental" && (d === "rail" ? railVisible : isEnabled(d))
+      ),
     [isEnabled, railVisible]
   );
 
@@ -75,7 +82,7 @@ export default function LoyaltySection(): JSX.Element {
   const ofDomain = (domain: LoyaltyDomain): LoyaltyMembership[] =>
     cards.filter((c) => c.domain === domain);
 
-  const block = (domain: LoyaltyDomain): JSX.Element => {
+  const block = (domain: Exclude<LoyaltyDomain, "rental">): JSX.Element => {
     if (domain === "lodging") {
       return (
         <MembershipsSection

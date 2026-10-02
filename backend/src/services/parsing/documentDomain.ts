@@ -206,6 +206,37 @@ const SIGNALS: Record<ParserSupportedDomain, readonly Signal[]> = {
     // directions decided mails that carried no other evidence at all —
     // measured on five non-rail mails, where a tie used to fall to flight.
   ],
+  rental: [
+    // A pickup and a return of the same thing, and a car "or similar": the two
+    // shapes a rental confirmation has and a flight or a stay does not (rental
+    // spec §4.3). An airline mail ADVERTISING a rental car carries neither.
+    {
+      id: "rental-pickup-return",
+      pattern: /\b(Abholung|Anmietung|pick-?up)\b[\s\S]{0,300}\b(Rückgabe|drop-?off|return)\b/i,
+      weight: 5,
+    },
+    // No closing \b: "ähnlich" ends in a letter JavaScript's \b does see, but
+    // the phrase is followed by punctuation as often as by a space.
+    { id: "rental-or-similar", pattern: /\b(oder ähnlich|or similar|ou similaire)/i, weight: 5 },
+    {
+      id: "rental-provider",
+      pattern:
+        /\b(sixt|europcar|avis|hertz|alamo|enterprise rent|holiday autos|sunny cars|cartrawler|rentalcars\.com)\b/i,
+      weight: 3,
+    },
+    {
+      id: "rental-noun",
+      pattern:
+        /\b(Mietvertrag|Mietvertragsnummer|Fahrzeuggruppe|Fahrzeugkategorie|car group|vehicle group|rental agreement)\b/i,
+      weight: 3,
+    },
+    {
+      id: "rental-mileage",
+      pattern: /\b(unbegrenzte kilometer|unlimited mileage|freikilometer)\b/i,
+      weight: 2,
+    },
+    // No bare "Mietwagen"/"rental car": every airline confirmation offers one.
+  ],
 };
 
 /**

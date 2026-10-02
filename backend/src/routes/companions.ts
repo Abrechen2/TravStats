@@ -21,7 +21,9 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response, next: Next
       // No orderBy here — final ordering (usageCount desc, then name) is
       // decided in JS below, so a DB-level sort would be redundant work.
       include: {
-        _count: { select: { flights: true, trips: true, cruises: true, rail: true } },
+        _count: {
+          select: { flights: true, trips: true, cruises: true, rail: true, rentals: true },
+        },
       },
     });
 
@@ -29,7 +31,12 @@ router.get("/", authenticate, async (req: AuthRequest, res: Response, next: Next
       .map((row) => ({
         id: row.id,
         name: row.displayName,
-        usageCount: row._count.flights + row._count.trips + row._count.cruises + row._count.rail,
+        usageCount:
+          row._count.flights +
+          row._count.trips +
+          row._count.cruises +
+          row._count.rail +
+          row._count.rentals,
       }))
       .sort((a, b) => b.usageCount - a.usageCount || a.name.localeCompare(b.name));
 

@@ -150,6 +150,30 @@ export function deriveRailStatus(input: {
   return "in_progress";
 }
 
+/** Rentals share rail's vocabulary; only a cancellation survives derivation. */
+export const RENTAL_PASSTHROUGH = ["cancelled"] as const;
+
+/**
+ * Car rentals (spec 2026-10-01-rental-domain-design): scheduled until the
+ * pickup, in_progress while the car is out, completed once it is returned —
+ * rail's rule over the two booked instants. The booked return, not an actual
+ * one: an actual return is known only from an invoice, and a rental with no
+ * invoice is still over once its booked return has passed.
+ */
+export function deriveRentalStatus(input: {
+  pickupTime: Date;
+  returnTime: Date;
+  current: string;
+  now?: Date;
+}): string {
+  return deriveRailStatus({
+    departureTime: input.pickupTime,
+    arrivalTime: input.returnTime,
+    current: input.current,
+    now: input.now,
+  });
+}
+
 /**
  * Extract a trip's date bounds from its linked flights + cruises — the
  * earliest segment start and the latest segment end. Shared by the sweep
@@ -219,6 +243,8 @@ export function tripStatusBounds(input: {
   roadtrips?: Array<{ stops: Array<{ startDate: Date | null; endDate: Date | null }> }>;
   /** Train rides (spec 2026-09-25-rail-domain) — dated travel like a flight. */
   railJourneys?: Array<{ departureTime: Date; arrivalTime: Date | null }>;
+  /** Car rentals (spec 2026-10-01-rental-domain-design §7.1) — pickup to return, like a ride. */
+  rentals?: Array<{ pickupTime: Date; returnTime: Date }>;
   ownStartDate: Date | null;
   ownEndDate: Date | null;
   /** The user's profile zone — where a day anchor begins. */
@@ -236,7 +262,14 @@ export function tripStatusBounds(input: {
   const stations = (input.roadtrips ?? []).flatMap((r) => r.stops).map(days);
   const cruises = input.cruises.map(days);
   const held = tripDateBounds(
-    [...input.flights, ...(input.railJourneys ?? [])],
+    [
+      ...input.flights,
+      ...(input.railJourneys ?? []),
+      ...(input.rentals ?? []).map((r) => ({
+        departureTime: r.pickupTime,
+        arrivalTime: r.returnTime,
+      })),
+    ],
     [...cruises, ...stays, ...stations]
   );
   if (held.earliestStart != null || held.latestEnd != null) return held;

@@ -1,0 +1,112 @@
+import { describe, expect, it, beforeEach, vi } from "vitest";
+import { render, screen, waitFor, fireEvent, within } from "@testing-library/react";
+
+vi.mock("../../../hooks/useTranslation", () => ({
+  useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" }, ready: true }),
+}));
+vi.mock("../../../lib/logger", () => ({
+  logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
+}));
+vi.mock("../../../hooks/useRecentCurrencies", () => ({ useRecentCurrencies: () => [] }));
+vi.mock("../../location/LocationInput", () => ({ LocationInput: () => null }));
+
+const create = vi.fn();
+const update = vi.fn();
+const searchStations = vi.fn();
+vi.mock("../../../lib/api/rental", () => ({
+  rentalApi: {
+    create: (...a: unknown[]) => create(...a),
+    update: (...a: unknown[]) => update(...a),
+    searchStations: (...a: unknown[]) => searchStations(...a),
+  },
+}));
+
+import { RentalFormModal } from "../RentalFormModal";
+import { makeRental } from "./rentalFixture";
+
+const HITS = [
+  {
+    kind: "earlier",
+    airportId: null,
+    iata: null,
+    name: "City office",
+    address: "Main St 1",
+    city: null,
+    lat: 50.1,
+    lon: 8.6,
+    country: "DE",
+    timezone: "Europe/Berlin",
+  },
+  {
+    kind: "airport",
+    airportId: 9,
+    iata: "FRA",
+    name: "Frankfurt Airport",
+    address: null,
+    city: "Frankfurt",
+    lat: 50.03,
+    lon: 8.57,
+    country: "DE",
+    timezone: "Europe/Berlin",
+  },
+];
+
+/**
+ * The silent-failure classes at the form: every hit is offered (1), a pick
+ * carries its airport into the body (2), a failed search and a refused save
+ * each say what happened — and a refused save never calls `onSaved` (3).
+ */
+describe("RentalFormModal", () => {
+  beforeEach(() => {
+    create.mockReset();
+    update.mockReset();
+    searchStations.mockReset();
+  });
+
+  it("says when the station search fails instead of showing an empty list", async () => {
+    searchStations.mockRejectedValue(new Error("network"));
+    render(<RentalFormModal rental={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByPlaceholderText("rental:station.searchPlaceholder"), {
+      target: { value: "Frank" },
+    });
+    expect(await screen.findByText("rental:station.searchError")).toBeTruthy();
+  });
+
+  it("offers every hit the server answers, and a pick carries its airport", async () => {
+    searchStations.mockResolvedValue(HITS);
+    update.mockResolvedValue(makeRental());
+    render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByDisplayValue("Frankfurt Flughafen"), {
+      target: { value: "Frank" },
+    });
+    const list = await screen.findByRole("listbox");
+    expect(within(list).getAllByRole("option")).toHaveLength(2);
+    fireEvent.click(screen.getByText("Frankfurt Airport"));
+    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    expect(update.mock.calls[0][1].pickupStation).toMatchObject({ airportId: 9, country: "DE" });
+  });
+
+  it("keeps the dialog open and names a geocoder outage when the save is refused", async () => {
+    update.mockRejectedValue({
+      response: {
+        status: 503,
+        data: { code: "RENTAL_GEOCODER_UNAVAILABLE", field: "pickupStation" },
+      },
+    });
+    const onSaved = vi.fn();
+    render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={onSaved} />);
+    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    expect(await screen.findByText("rental:form.errors.geocoderUnavailable")).toBeTruthy();
+    expect(onSaved).not.toHaveBeenCalled();
+  });
+
+  it("does not send a draft whose station nothing places", async () => {
+    render(<RentalFormModal rental={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    expect(
+      (await screen.findAllByText("rental:form.errors.stationUnplaced")).length
+    ).toBeGreaterThan(0);
+    expect(create).not.toHaveBeenCalled();
+  });
+});

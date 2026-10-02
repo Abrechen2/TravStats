@@ -31,6 +31,7 @@ export const DOCUMENT_ENTRY_TYPES = [
   "placeVisit",
   "trip",
   "railJourney",
+  "rentalBooking",
 ] as const;
 export type DocumentEntryType = (typeof DOCUMENT_ENTRY_TYPES)[number];
 
@@ -108,6 +109,7 @@ const ENTRY_LIST_PATH: Record<DocumentEntryType, (id: string) => string> = {
   placeVisit: (id) => `/places/visits/${id}/documents`,
   trip: (id) => `/trips/${id}/documents`,
   railJourney: (id) => `/rail/${id}/documents`,
+  rentalBooking: (id) => `/rentals/${id}/documents`,
 };
 
 export function documentListPath(entry: DocumentEntryRef): string {

@@ -21,6 +21,7 @@ import { readsAsUtc, timeValueAtZone, type TimeValue } from "../shared/time";
 import type { Trip, TripJournalEntry, TripStop } from "../types";
 import type { Place, PlaceVisit } from "../types/place";
 import type { TripRailJourney } from "../types/rail";
+import type { TripRental } from "../types/rental";
 
 /**
  * The trip timeline's entries — every dated thing a trip holds, in one
@@ -89,6 +90,14 @@ export type TimelineEvent =
     }
   | {
       id: string;
+      kind: "rental-pickup" | "rental-return";
+      /** `when.utc` — kept for callers that only need an instant to compare. */
+      date: string;
+      when: TimeValue;
+      rental: TripRental;
+    }
+  | {
+      id: string;
       kind: "place-visit";
       /** `when.utc` — kept for callers that only need an instant to compare. */
       date: string;
@@ -96,6 +105,23 @@ export type TimelineEvent =
       place: Place;
       visit: PlaceVisit;
     };
+
+/** Rentals as entries: the pickup and the return, each on its station's clock. */
+function rentalEvents(trip: Trip): TimelineEvent[] {
+  const out: TimelineEvent[] = [];
+  for (const rental of trip.rentalBookings ?? []) {
+    const ends = [
+      ["rental-pickup", rental.pickupTime, rental.pickupTimezone, rental.pickupPrecision],
+      ["rental-return", rental.returnTime, rental.returnTimezone, rental.returnPrecision],
+    ] as const;
+    for (const [kind, time, zone, precision] of ends) {
+      const when = timeValueAtZone(time, zone, precision === "day" ? "day" : "minute");
+      if (!when) continue;
+      out.push({ id: `${kind}-${rental.id}`, kind, date: when.utc, when, rental });
+    }
+  }
+  return out;
+}
 
 /** Rail journeys as entries: one per ride, at its departure. */
 function railEvents(trip: Trip): TimelineEvent[] {
@@ -204,6 +230,7 @@ export function buildTimelineEvents(
 ): TimelineEvent[] {
   const out: TimelineEvent[] = [
     ...railEvents(trip),
+    ...rentalEvents(trip),
     ...flightEvents(trip),
     ...cruiseEvents(trip),
     ...stopEvents(trip),

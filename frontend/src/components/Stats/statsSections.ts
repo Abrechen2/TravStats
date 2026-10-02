@@ -99,6 +99,8 @@ const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   poi: POI_SECTIONS,
   roadtrip: ROADTRIP_SECTIONS,
   rail: RAIL_SECTIONS,
+  // Rental figures are not on the statistics page yet (package R4).
+  rental: () => [],
 };
 
 /** The menu's options for a tab. */

@@ -42,7 +42,8 @@ export const tokens = {
     "poi": "#e7e3dc",
     "tour": "#a9c46a",
     "roadtrip": "#a9c46a",
-    "rail": "#a597e8"
+    "rail": "#a597e8",
+    "rental": "#d98cb3"
   },
   "statusColor": {
     "pending": "#6fa0d6",

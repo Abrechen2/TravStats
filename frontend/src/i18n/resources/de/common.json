@@ -193,7 +193,9 @@
     "roadtrip_desc": "Mehrtägige Touren mit dem Wohnmobil, Auto oder Rad: Stationen, Übernachtungen, Strecke.",
     "tour": "Touren",
     "rail": "Bahn",
-    "rail_desc": "Zugfahrten wie Flüge: Bahnhöfe, Zugnummer, Klasse, Sitzplatz, Kilometer. (Beta)"
+    "rail_desc": "Zugfahrten wie Flüge: Bahnhöfe, Zugnummer, Klasse, Sitzplatz, Kilometer. (Beta)",
+    "rental": "Mietwagen",
+    "rental_desc": "Mietwagen mit Station, Zeitraum, Fahrzeug und Kilometern aus der Rechnung. (Beta)"
   },
   "settings": {
     "modules": {
@@ -206,7 +208,8 @@
         "lodging": "Navigation, Statistik, Reisetage",
         "poi": "Orte, Besuche und Ortslisten",
         "roadtrip": "Stationen, Übernachtungen, Karte",
-        "rail": "Beta: Fahrtenbuch für Zugfahrten"
+        "rail": "Beta: Fahrtenbuch für Zugfahrten",
+        "rental": "Beta: Fahrtenbuch für Mietwagen"
       }
     }
   },

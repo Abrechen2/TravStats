@@ -88,6 +88,8 @@ router.post(
         subject: subject || undefined,
         ...(extracted?.html ? { html: extracted.html } : {}),
         ...(extracted?.attachments ? { attachments: extracted.attachments } : {}),
+        ...(extracted?.from ? { from: extracted.from } : {}),
+        ...(extracted?.sentAt ? { sentAt: extracted.sentAt } : {}),
         domain: parsed.domain,
         // Never 'document' on this route: the email entry point reads the subject
         // and the HTML part, and a header is what dates a mail whose body carries
@@ -291,6 +293,8 @@ router.post(
         subject: extracted.subject,
         html: extracted.html,
         ...(extracted.attachments ? { attachments: extracted.attachments } : {}),
+        ...(extracted.from ? { from: extracted.from } : {}),
+        ...(extracted.sentAt ? { sentAt: extracted.sentAt } : {}),
         domain: domainValue,
         // See /parse-email above: the flight path must take the email entry
         // point so subject and HTML are read (#285).
