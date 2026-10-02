@@ -130,6 +130,8 @@ export const EXPORT_EXCLUDED_USER_RELATIONS: Record<string, string> = {
   webauthnCredentials: "credential material",
   apiTokens: "credential material",
   pairingCodes: "credential material",
+  devicePushes:
+    "credential material: a phone's push token and sealing key, bound to an API token that is not exported either",
   createdInvitations: "instance administration, carries invitation tokens",
   usedInvitations: "instance administration, carries invitation tokens",
   analyticsEvents: "anonymous usage telemetry, not the user's travel data",
