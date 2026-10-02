@@ -346,7 +346,7 @@
       "lodging_name_similar": "Ähnlich benanntes Hotel gefunden — dasselbe Haus?",
       "lodging_nearby": "Hotel an derselben Stelle gefunden — dasselbe Haus?"
     },
-    "noBookings": "In dieser E-Mail bzw. diesem PDF wurden keine Buchungsdaten gefunden.",
+    "noBookings": "Es wurden keine Buchungsdaten erkannt. Ist es eine Buchungsbestätigung? Sonst trag die Unterkunft von Hand ein.",
     "csv": {
       "title": "CSV-Import",
       "description": "Unterkünfte und/oder Aufenthalte aus einer CSV-Datei importieren — z. B. ein Google-Maps-Export oder eine selbst gepflegte Tabelle. Einmaliges Migrationswerkzeug, kein laufender Import-Weg.",

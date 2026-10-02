@@ -346,7 +346,7 @@
       "lodging_name_similar": "Similarly named hotel found — the same house?",
       "lodging_nearby": "Hotel at the same spot found — the same house?"
     },
-    "noBookings": "No booking data was found in this email or PDF.",
+    "noBookings": "No booking data was recognised. Is it a booking confirmation? Otherwise, enter the stay by hand.",
     "csv": {
       "title": "CSV import",
       "description": "Import lodgings and/or stays from a CSV file — e.g. a Google Maps export or a hand-maintained spreadsheet. A one-time migration tool, not the ongoing import path.",
