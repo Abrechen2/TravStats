@@ -111,4 +111,14 @@ describe("backfillNextApiCheckAt", () => {
     expect(await Promise.all(rows.map((r) => nextCheck(r.id)))).toEqual(first);
     expect(second.pulledEarlier).toBe(0);
   });
+  it("does not skip a row when the last row of a full page stops matching after its update", async () => {
+    // Departed, no check yet: matches only through `nextApiCheckAt: null`, and
+    // stops matching once the pass fills it. Ids sort before every random one.
+    const ids = [1, 2, 3].map((n) => `00000000-0000-4000-8000-00000000000${n}`);
+    await prisma.flight.deleteMany({ where: { id: { in: ids } } });
+    await Promise.all(ids.map((id) => flight({ id, departureTime: at(-1), arrivalTime: at(7) })));
+    await backfillNextApiCheckAt(NOW, { batchSize: 2 });
+    const filled = await Promise.all(ids.map((id) => nextCheck(id)));
+    expect(filled).toEqual(ids.map(() => at(6).toISOString()));
+  });
 });

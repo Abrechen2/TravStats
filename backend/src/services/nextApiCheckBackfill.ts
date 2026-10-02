@@ -31,11 +31,14 @@ export async function backfillNextApiCheckAt(
 ): Promise<ApiCheckBackfillResult> {
   const batchSize = opts.batchSize ?? DEFAULT_BATCH_SIZE;
   const result: ApiCheckBackfillResult = { candidates: 0, filled: 0, pulledEarlier: 0, skipped: 0 };
-  let cursor: string | undefined;
+  // Keyset paging: `id > lastId`, never a cursor row, so rows that stop
+  // matching the filter after their update cannot shift the next page.
+  let lastId: string | undefined;
 
   for (;;) {
     const page = await prisma.flight.findMany({
       where: {
+        ...(lastId ? { id: { gt: lastId } } : {}),
         status: "scheduled",
         flightNumber: { not: null },
         departureTime: { not: null },
@@ -51,10 +54,9 @@ export async function backfillNextApiCheckAt(
       },
       orderBy: { id: "asc" },
       take: batchSize,
-      ...(cursor ? { cursor: { id: cursor }, skip: 1 } : {}),
     });
     if (page.length === 0) break;
-    cursor = page[page.length - 1].id;
+    lastId = page[page.length - 1].id;
     result.candidates += page.length;
 
     const updates: Array<{ id: string; nextApiCheckAt: Date }> = [];
