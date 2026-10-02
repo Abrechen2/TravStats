@@ -242,6 +242,11 @@
     "loadError": "Die Flüge konnten nicht geladen werden."
   },
   "review": {
+    "duplicate": {
+      "message": "Flug {{flightNumber}} ({{route}}) ist bereits in deinem Logbuch — es wurde nichts doppelt angelegt.",
+      "openExisting": "Vorhandenen Flug öffnen",
+      "cancelImport": "Import abbrechen"
+    },
     "title": "Flug überprüfen",
     "source": "Quelle",
     "flightIndex": "Flug {{index}} von {{total}}",

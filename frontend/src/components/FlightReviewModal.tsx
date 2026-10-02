@@ -7,7 +7,9 @@ import { airportResolutionMessage, resolveAirportByCode } from "../lib/airportRe
 import { useSettingsStore } from "../store/settingsStore";
 import { airportZone } from "./FlightForm/flightPayload";
 import { MissingZoneError } from "../lib/api/timeInput";
-import { saveErrorMessage } from "../lib/saveErrorMessage";
+import { flightSaveFailure } from "./FlightForm/flightSaveFailure";
+import type { DuplicateFlight } from "./FlightForm/flightFormModel";
+import ReviewDuplicateNotice from "./FlightForm/ReviewDuplicateNotice";
 import { useTranslation } from "../hooks/useTranslation";
 import { RequiredMark } from "./FlightForm/requiredFields";
 import { filterEmailText } from "../lib/filterEmailText";
@@ -107,6 +109,7 @@ export default function FlightReviewModal({
   // UI state
   const [loading, setLoading] = useState(false);
   const [error, setError] = useState("");
+  const [duplicate, setDuplicate] = useState<DuplicateFlight | null>(null);
   const [showSourceText, setShowSourceText] = useState(false);
 
   // Initialize form with parsed data
@@ -257,6 +260,7 @@ export default function FlightReviewModal({
   const handleSubmit = async (e: React.FormEvent<HTMLFormElement>): Promise<void> => {
     e.preventDefault();
     setError("");
+    setDuplicate(null);
 
     // Validation
     if (!departureAirport || !arrivalAirport) {
@@ -306,7 +310,10 @@ export default function FlightReviewModal({
       // onConfirm handles closing the modal or moving to next flight
     } catch (err: unknown) {
       // A code becomes a sentence; never the server's English text or axios's.
-      setError(saveErrorMessage(err, t, "errors:saveFailed"));
+      // A 409 with the existing flight is not a failure at all (forgejo#159).
+      const failure = flightSaveFailure(err, t);
+      if (failure.kind === "duplicate") setDuplicate(failure.existing);
+      else setError(failure.message);
     } finally {
       setLoading(false);
     }
@@ -410,6 +417,7 @@ export default function FlightReviewModal({
 
         {/* Form */}
         <form onSubmit={handleSubmit} className="p-6 space-y-4">
+          {duplicate && <ReviewDuplicateNotice existing={duplicate} onCancel={onClose} />}
           {error && (
             <div className="p-4 bg-red-50 border border-red-200 rounded-lg">
               <p className="text-red-800">{error}</p>

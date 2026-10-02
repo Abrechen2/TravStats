@@ -242,6 +242,11 @@
     "loadError": "The flights could not be loaded."
   },
   "review": {
+    "duplicate": {
+      "message": "Flight {{flightNumber}} ({{route}}) is already in your logbook — nothing was created twice.",
+      "openExisting": "Open existing flight",
+      "cancelImport": "Cancel import"
+    },
     "title": "Review Flight",
     "source": "Source",
     "flightIndex": "Flight {{index}} of {{total}}",
