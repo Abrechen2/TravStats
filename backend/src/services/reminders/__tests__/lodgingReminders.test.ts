@@ -5,6 +5,8 @@ jest.mock("../../../db", () => ({
   prisma: { lodgingStay: { findMany: mockFindMany } },
 }));
 
+const ENABLED = ["flight", "lodging"];
+
 const mockSendLodgingCheckInReminder = jest.fn();
 jest.mock("../../emailService", () => ({
   sendLodgingCheckInReminder: mockSendLodgingCheckInReminder,
@@ -16,6 +18,7 @@ jest.mock("../../../utils/logger", () => ({
 }));
 
 interface StayFixture {
+  lodgingId: string;
   id: string;
   tripId: string | null;
   checkIn: Date | null;
@@ -33,7 +36,7 @@ interface StayFixture {
     notificationEmail: string | null;
     notifyBefore24h: boolean;
     notifyBefore2h: boolean;
-    settings: { data: unknown } | null;
+    settings: { data: unknown; enabledDomains: string[] } | null;
   };
 }
 
@@ -50,6 +53,7 @@ function makeStay(
 ): StayFixture {
   return {
     id: "stay-a",
+    lodgingId: "lodging-a",
     tripId: null,
     checkIn: checkInDate,
     checkOut: null,
@@ -66,7 +70,7 @@ function makeStay(
       notificationEmail: "user@example.com",
       notifyBefore24h: true,
       notifyBefore2h: true,
-      settings: { data: { display: { language: "de" } } },
+      settings: { data: { display: { language: "de" } }, enabledDomains: ENABLED },
     },
     ...overrides,
   };
@@ -154,7 +158,7 @@ describe("checkLodgingCheckInReminders", () => {
             notificationEmail: "user@example.com",
             notifyBefore24h: false,
             notifyBefore2h: true,
-            settings: null,
+            settings: { data: {}, enabledDomains: ENABLED },
           },
         },
         checkInDate
@@ -165,5 +169,54 @@ describe("checkLodgingCheckInReminders", () => {
     await checkLodgingCheckInReminders(morningInstant(checkInDate));
 
     expect(mockSendLodgingCheckInReminder).not.toHaveBeenCalled();
+  });
+
+  it("sends nothing for a stay whose user has the lodging domain switched off", async () => {
+    const checkInDate = new Date("2026-09-27T00:00:00.000Z");
+    mockFindMany.mockResolvedValueOnce([
+      makeStay(
+        {
+          user: {
+            notificationEmail: "user@example.com",
+            notifyBefore24h: true,
+            notifyBefore2h: true,
+            settings: { data: {}, enabledDomains: ["flight"] },
+          },
+        },
+        checkInDate
+      ),
+    ]);
+
+    const { checkLodgingCheckInReminders } = await import("../lodgingReminders");
+    await checkLodgingCheckInReminders(morningInstant(checkInDate));
+
+    expect(mockSendLodgingCheckInReminder).not.toHaveBeenCalled();
+  });
+
+  it("counts the nights from the two days when both are known", async () => {
+    const checkInDate = new Date("2026-09-27T00:00:00.000Z");
+    const checkOutDate = new Date("2026-09-30T00:00:00.000Z");
+    mockFindMany.mockResolvedValueOnce([
+      makeStay({ checkOut: checkOutDate, checkOutDate }, checkInDate),
+    ]);
+
+    const { checkLodgingCheckInReminders } = await import("../lodgingReminders");
+    await checkLodgingCheckInReminders(morningInstant(checkInDate));
+
+    const [stay] = mockSendLodgingCheckInReminder.mock.calls[0] as [Record<string, unknown>];
+    expect(stay.nights).toBe(3);
+    expect(stay.checkOutDay).toEqual({ date: "2026-09-30", zone: "Asia/Tokyo", precision: "day" });
+  });
+
+  it("leaves the nights unknown — not zero — when the stay has no check-out day", async () => {
+    const checkInDate = new Date("2026-09-27T00:00:00.000Z");
+    mockFindMany.mockResolvedValueOnce([makeStay({}, checkInDate)]);
+
+    const { checkLodgingCheckInReminders } = await import("../lodgingReminders");
+    await checkLodgingCheckInReminders(morningInstant(checkInDate));
+
+    const [stay] = mockSendLodgingCheckInReminder.mock.calls[0] as [Record<string, unknown>];
+    expect(stay.nights ?? null).toBeNull();
+    expect(stay.checkOutDay).toBeNull();
   });
 });

@@ -2,7 +2,9 @@ import { prisma } from "../../db";
 import { sendLodgingCheckInReminder } from "../emailService";
 import { stayTimes } from "../lodging/timesDto";
 import { localDay, toLocal } from "../../shared/time/instant";
+import { daysBetween } from "../../shared/time/localDate";
 import logger from "../../utils/logger";
+import { reminderDomainEnabled } from "./domainEnabled";
 
 /**
  * The lodging half of the reminder scheduler — deliberately NOT an
@@ -52,13 +54,18 @@ export async function checkLodgingCheckInReminders(now: Date): Promise<void> {
         datePrecision: true,
         roomNumber: true,
         roomCategory: true,
-        lodging: { select: { name: true, city: true, country: true } },
+        board: true,
+        guests: true,
+        nights: true,
+        bookingReference: true,
+        lodgingId: true,
+        lodging: { select: { name: true, address: true, city: true, country: true } },
         user: {
           select: {
             notificationEmail: true,
             notifyBefore24h: true,
             notifyBefore2h: true,
-            settings: { select: { data: true } },
+            settings: { select: { data: true, enabledDomains: true } },
           },
         },
       },
@@ -79,7 +86,10 @@ export async function checkLodgingCheckInReminders(now: Date): Promise<void> {
     const { user } = stay;
     // No lodging-specific notify flag exists yet (report); reuses the
     // "24h before" toggle, the closer fit of the two existing ones.
-    const shouldSend = user.notificationEmail !== null && user.notifyBefore24h;
+    const shouldSend =
+      user.notificationEmail !== null &&
+      user.notifyBefore24h &&
+      reminderDomainEnabled(user.settings, "lodging");
     if (!shouldSend) continue;
 
     // Everything from here reads row data that should be well-formed but is
@@ -97,17 +107,29 @@ export async function checkLodgingCheckInReminders(now: Date): Promise<void> {
       const localHour = Number(toLocal(now, checkIn.zone).local.slice(11, 13));
       if (localHour !== MORNING_LOCAL_HOUR) continue;
 
+      // The dates win wherever they can answer; the stored figure covers a
+      // stay whose check-out day is not known. Null stays null — never 0.
+      const checkOut = times.checkOut?.precision === "day" ? times.checkOut : null;
+      const nights = checkOut ? daysBetween(checkIn.date, checkOut.date) : stay.nights;
+
       await sendLodgingCheckInReminder(
         {
           id: stay.id,
+          lodgingId: stay.lodgingId,
           tripId: stay.tripId,
           lodgingName: stay.lodging.name,
+          address: stay.lodging.address,
           city: stay.lodging.city,
           country: stay.lodging.country,
           roomNumber: stay.roomNumber,
           roomCategory: stay.roomCategory,
+          board: stay.board,
+          guests: stay.guests,
+          nights,
+          bookingReference: stay.bookingReference,
           checkInAt: times.checkInAt,
           checkInDay: checkIn,
+          checkOutDay: checkOut,
         },
         { notificationEmail: user.notificationEmail, settingsData: user.settings?.data ?? null }
       );

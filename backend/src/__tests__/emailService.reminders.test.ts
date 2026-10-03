@@ -112,7 +112,7 @@ describe("sendFlightReminder", () => {
     );
     const [{ subject, html }] = mockSendMail.mock.calls[0];
     expect(subject).toContain("Flug-Erinnerung");
-    expect(html).toContain("Von");
+    expect(html).toContain("Flugzeug");
     expect(html).toContain("Sitzplatz");
     expect(html).toContain("Uhr");
   });
@@ -126,7 +126,7 @@ describe("sendFlightReminder", () => {
     );
     const [{ subject, html }] = mockSendMail.mock.calls[0];
     expect(subject).toContain("Flight reminder");
-    expect(html).toContain("From");
+    expect(html).toContain("Aircraft");
     expect(html).toContain("Seat");
     expect(html).not.toContain("Uhr");
   });
@@ -207,6 +207,39 @@ describe("sendFlightReminder", () => {
     expect(html).not.toContain("<img src=x onerror=alert(1)>");
     expect(html).toContain("&lt;img");
   });
+
+  // Until forgejo#189 the mail was HTML only: a text-only client, and every
+  // spam filter that scores a missing text part, got nothing to read.
+  it("sends a plain-text alternative carrying the same facts as the HTML part", async () => {
+    const { sendFlightReminder } = await import("../services/emailService");
+    await sendFlightReminder(
+      { ...baseFlight, terminal: "1", gate: "B44", bookingReference: "X7YZ9Q" },
+      { notificationEmail: "user@example.com", settingsData: { display: { language: "de" } } },
+      24
+    );
+    const { text, html } = mockSendMail.mock.calls[0][0] as { text: string; html: string };
+    expect(text).not.toMatch(/<[a-z]/i);
+    for (const part of [text, html]) {
+      for (const fact of ["LH100", "Lufthansa", "09:15", "21:40", "14C", "B44", "X7YZ9Q"]) {
+        expect(part).toContain(fact);
+      }
+    }
+    expect(text).toContain("https://travstats.test/flights/flight-1");
+    expect(text).toContain("https://travstats.test/settings?section=notifications");
+  });
+
+  it("does not double the slash when the instance URL ends in one", async () => {
+    mockGetInstanceSettings.mockResolvedValue({ frontendUrl: "https://travstats.test/" });
+    const { sendFlightReminder } = await import("../services/emailService");
+    await sendFlightReminder(
+      baseFlight,
+      { notificationEmail: "user@example.com", settingsData: null },
+      24
+    );
+    const { text } = mockSendMail.mock.calls[0][0] as { text: string };
+    expect(text).toContain("https://travstats.test/flights/flight-1");
+    expect(text).not.toContain("test//");
+  });
 });
 
 describe("sendCruiseReminder", () => {
@@ -261,11 +294,12 @@ describe("sendRailReminder", () => {
     );
 
     expect(mockSendMail).toHaveBeenCalledTimes(1);
-    const html = mockSendMail.mock.calls[0][0].html as string;
+    const { html, text } = mockSendMail.mock.calls[0][0] as { html: string; text: string };
     expect(html).toContain("Berlin Hbf");
     expect(html).toContain("Munich Hbf");
     expect(html).toContain("DB");
-    expect(html).toContain("Coach 12");
+    expect(text).toContain("Coach: 12");
+    expect(text).toContain("Seat: 34");
   });
 });
 
@@ -275,6 +309,7 @@ describe("sendLodgingCheckInReminder", () => {
     await sendLodgingCheckInReminder(
       {
         id: "stay-1",
+        lodgingId: "lodging-7",
         tripId: null,
         lodgingName: "Hotel Example",
         city: "Tokyo",
@@ -292,6 +327,8 @@ describe("sendLodgingCheckInReminder", () => {
     expect(html).toContain("Hotel Example");
     expect(html).toContain("Tokyo");
     expect(html).toContain("204");
-    expect(html).toContain("2026-09-27");
+    // The day as a traveller reads it, not the raw `YYYY-MM-DD` it is stored as.
+    expect(html).toContain("So., 27.09.2026");
+    expect(html).not.toContain("2026-09-27");
   });
 });

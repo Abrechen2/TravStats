@@ -27,7 +27,7 @@ type UserFixture = {
   notificationEmail: string | null;
   notifyBefore24h: boolean;
   notifyBefore2h: boolean;
-  settings: { data: unknown } | null;
+  settings: { data: unknown; enabledDomains: string[] } | null;
 };
 
 function makeFlight(user: Partial<UserFixture> = {}, hoursAhead = 24, id = "flight-a") {
@@ -177,5 +177,34 @@ describe("checkFlightReminders - push", () => {
 
     expect(mockSendFlightReminder).toHaveBeenCalledTimes(1);
     expect(mockNotifyReminder).toHaveBeenCalledTimes(2);
+  });
+
+  it("sends no mail when the flight domain is switched off, and leaves the push to the phone's own switch", async () => {
+    stage([makeFlight({ settings: { data: {}, enabledDomains: ["cruise"] } })]);
+    await run();
+
+    expect(mockSendFlightReminder).not.toHaveBeenCalled();
+    expect(mockNotifyReminder).toHaveBeenCalledTimes(1);
+  });
+
+  it("hands the mail terminal, gate, class and booking reference", async () => {
+    stage([
+      {
+        ...makeFlight(),
+        terminal: "2",
+        gate: "K24",
+        seatClass: "business",
+        bookingReference: "X7YZ9Q",
+      },
+    ]);
+    await run();
+
+    const [flight] = mockSendFlightReminder.mock.calls[0] as [Record<string, unknown>];
+    expect(flight).toMatchObject({
+      terminal: "2",
+      gate: "K24",
+      seatClass: "business",
+      bookingReference: "X7YZ9Q",
+    });
   });
 });
