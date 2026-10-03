@@ -132,6 +132,22 @@ export interface RailJourneyDetail extends RailJourney {
   booking: { id: string; pnr: string | null; railJourneys: RailBookingLeg[] } | null;
 }
 
+/**
+ * A ride as the logbook lists it (forgejo#187): its trains in travel order —
+ * one for a direct ride, several for a ride with changes. The server decides
+ * which legs belong together (`shared/railJourneyGrouping.ts` there); `id` is
+ * the first leg's, and any leg's id finds the connection.
+ */
+export interface RailConnection {
+  id: string;
+  legs: RailJourney[];
+}
+
+/** `GET /rail/connections/:legId`: the connection and the booking binding it. */
+export interface RailConnectionDetail extends RailConnection {
+  booking: { id: string; pnr: string | null } | null;
+}
+
 export interface RailStationInput {
   /** Catalogue row; the server then takes position, code and country from it. */
   stationId?: number | null;

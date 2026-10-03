@@ -23,6 +23,7 @@ import {
   RAIL_TRAVEL_CLASSES,
 } from "../../../schemas/rail";
 import { railTimesSchema } from "../../../schemas/times";
+import { railConnectionQuerySchema } from "../../../routes/rail/connections";
 
 /** Where a ride came from, read from its filed originals (forgejo#132 item 17). */
 const railSource = z
@@ -355,5 +356,75 @@ registry.registerPath({
   responses: {
     204: { description: "Deleted" },
     404: { description: "Not found", content: errorContent },
+  },
+});
+
+/** A ride as one entry: its legs in travel order (forgejo#187). */
+const railConnection = z.object({
+  id: z.string().uuid().describe("The first leg's id — any leg's id finds the connection"),
+  legs: z.array(railJourney).min(1).describe("The trains of the ride, in travel order"),
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/rail/connections",
+  summary: "List rail journeys grouped into connections",
+  description:
+    "The logbook with a change of trains read as ONE entry. Presentation only: every " +
+    "statistic keeps counting legs. Legs belong together only when they share a booking, " +
+    "meet at a station and the wait is known and at most four hours; a leg that returns to " +
+    "a station already visited starts a new connection. A connection matches a filter when " +
+    "any of its legs does and is always sent whole, so a page never cuts one. Ordered by " +
+    "first departure; `meta.total` counts connections, `meta.legTotal` their legs.",
+  tags: ["Rail"],
+  request: { query: railConnectionQuerySchema },
+  responses: {
+    200: {
+      description: "One page of connections",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: z.array(railConnection),
+            meta: z.object({
+              total: z.number().int().describe("Connections in the FILTERED set"),
+              legTotal: z.number().int().describe("Legs those connections carry"),
+              limit: z.number().int(),
+              offset: z.number().int(),
+            }),
+          }),
+        },
+      },
+    },
+    400: { description: "Invalid query", content: errorContent },
+    401: { description: "Missing or invalid token", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/rail/connections/{legId}",
+  summary: "Get the connection a rail journey belongs to",
+  description:
+    "The whole ride the given leg is part of — itself alone when it has no change of " +
+    "trains — with the booking that binds it.",
+  tags: ["Rail"],
+  request: { params: z.object({ legId: z.string().uuid() }) },
+  responses: {
+    200: {
+      description: "The connection",
+      content: {
+        "application/json": {
+          schema: z.object({
+            success: z.literal(true),
+            data: railConnection.extend({
+              booking: z.object({ id: z.string().uuid(), pnr: z.string().nullable() }).nullable(),
+            }),
+          }),
+        },
+      },
+    },
+    401: { description: "Missing or invalid token", content: errorContent },
+    404: { description: "No such journey, or not the caller's", content: errorContent },
   },
 });

@@ -33,6 +33,7 @@ const FlightDetailPage = lazy(() => import("./pages/FlightDetailPage"));
 const CruisesPage = lazy(() => import("./pages/CruisesPage"));
 const RailPage = lazy(() => import("./pages/RailPage"));
 const RailDetailPage = lazy(() => import("./pages/RailDetailPage"));
+const RailConnectionPage = lazy(() => import("./pages/RailConnectionPage"));
 const RentalsPage = lazy(() => import("./pages/RentalsPage"));
 const RentalDetailPage = lazy(() => import("./pages/RentalDetailPage"));
 const CruiseDetailPage = lazy(() => import("./pages/CruiseDetailPage"));
@@ -296,6 +297,21 @@ function AppContent() {
                     <BetaFeatureRouteGuard feature="railDomain" redirectTo="/dashboard">
                       <DomainRouteGuard domain="rail">
                         <RailPage />
+                      </DomainRouteGuard>
+                    </BetaFeatureRouteGuard>
+                  ) : (
+                    <Navigate to="/login" />
+                  )
+                }
+              />
+              <Route
+                path="/rail/connection/:id"
+                element={
+                  isAuthenticated ? (
+                    // The same two gates as the logbook, in the same order.
+                    <BetaFeatureRouteGuard feature="railDomain" redirectTo="/dashboard">
+                      <DomainRouteGuard domain="rail">
+                        <RailConnectionPage />
                       </DomainRouteGuard>
                     </BetaFeatureRouteGuard>
                   ) : (

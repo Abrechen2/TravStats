@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { render, screen, waitFor } from "@testing-library/react";
 import { MemoryRouter, Route, Routes } from "react-router-dom";
 import { makeRailJourney } from "../../components/rail/__tests__/railJourneyFixture";
 import type { RailJourneyDetail } from "../../types/rail";
@@ -10,8 +10,13 @@ import type { RailJourneyDetail } from "../../types/rail";
  * delay kept apart from an on-time arrival, and the connection it belongs to.
  */
 const getMock = vi.fn();
+const getConnectionMock = vi.fn();
 vi.mock("../../lib/api/rail", () => ({
-  railApi: { get: (...a: unknown[]) => getMock(...a), remove: vi.fn() },
+  railApi: {
+    get: (...a: unknown[]) => getMock(...a),
+    getConnection: (...a: unknown[]) => getConnectionMock(...a),
+    remove: vi.fn(),
+  },
 }));
 // Its own suites cover these; here they would only reach for the network or WebGL.
 vi.mock("../../components/documents/DocumentsSection", () => ({
@@ -65,6 +70,7 @@ describe("RailDetailPage", () => {
   // Braces matter: a function returned from beforeEach is run as its cleanup.
   beforeEach(() => {
     getMock.mockReset();
+    getConnectionMock.mockReset().mockRejectedValue(new Error("not asked in this test"));
   });
 
   it("shows each time on its station's clock, with the zone it was read in", async () => {
@@ -140,6 +146,70 @@ describe("RailDetailPage", () => {
       "/rail/j2"
     );
     expect(screen.queryByRole("link", { name: /1\. Frankfurt/ })).toBeNull();
+    // The mock answers no connection here: the legs stay listed, no link drawn.
+    expect(screen.queryByTestId("rail-connection-link")).toBeNull();
+  });
+
+  it("links up to the whole ride when the server says this train has a change", async () => {
+    const legs = [
+      { id: "j1", depStationName: "Frankfurt", arrStationName: "Fulda" },
+      { id: "j2", depStationName: "Fulda", arrStationName: "Berlin" },
+    ].map((l) => ({
+      ...l,
+      departureTime: "2026-09-26T04:15:00.000Z",
+      arrivalTime: null,
+      depTimezone: "Europe/Berlin",
+      arrTimezone: "Europe/Berlin",
+      trainCategory: "ICE",
+      trainNumber: "1",
+      status: "completed" as const,
+    }));
+    getConnectionMock.mockResolvedValue({
+      id: "j1",
+      booking: { id: "b1", pnr: "AB12CD" },
+      legs: [
+        makeRailJourney(),
+        makeRailJourney({ id: "j2", depStationName: "Fulda", arrStationName: "Berlin" }),
+      ],
+    });
+    await renderPage(detail({ booking: { id: "b1", pnr: "AB12CD", railJourneys: legs } }));
+    const link = await screen.findByTestId("rail-connection-link");
+    expect(link).toHaveAttribute("href", "/rail/connection/j1");
+    expect(link.textContent).toContain("Frankfurt → Fulda → Berlin");
+    expect(getConnectionMock).toHaveBeenCalledWith("j1");
+  });
+
+  it("draws no link up for a train that is a ride of its own", async () => {
+    getConnectionMock.mockResolvedValue({ id: "j1", booking: null, legs: [makeRailJourney()] });
+    const legs = [
+      {
+        id: "j1",
+        depStationName: "Frankfurt",
+        arrStationName: "Fulda",
+        departureTime: "2026-09-26T04:15:00.000Z",
+        arrivalTime: null,
+        depTimezone: "Europe/Berlin",
+        arrTimezone: "Europe/Berlin",
+        trainCategory: "ICE",
+        trainNumber: "1",
+        status: "completed" as const,
+      },
+      {
+        id: "j9",
+        depStationName: "Fulda",
+        arrStationName: "Frankfurt",
+        departureTime: "2026-09-28T04:15:00.000Z",
+        arrivalTime: null,
+        depTimezone: "Europe/Berlin",
+        arrTimezone: "Europe/Berlin",
+        trainCategory: "ICE",
+        trainNumber: "2",
+        status: "completed" as const,
+      },
+    ];
+    await renderPage(detail({ booking: { id: "b1", pnr: null, railJourneys: legs } }));
+    await waitFor(() => expect(getConnectionMock).toHaveBeenCalled());
+    expect(screen.queryByTestId("rail-connection-link")).toBeNull();
   });
 
   it("files documents with the journey", async () => {

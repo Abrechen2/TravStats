@@ -166,7 +166,21 @@
     "booking": "Booking {{pnr}}",
     "onward": "Onward to {{station}}: after saving, the connection opens with this destination.",
     "saveAndContinue": "Save & continue to {{station}}",
-    "dismissOnward": "No onward ride"
+    "dismissOnward": "No onward ride",
+    "open": "Open journey",
+    "changes_one": "{{count}} change",
+    "changes_other": "{{count}} changes",
+    "changesLabel_one": "Change",
+    "changesLabel_other": "Changes",
+    "trainsLabel_one": "Train",
+    "trainsLabel_other": "Trains",
+    "totalDuration": "Total time",
+    "legs": "Trains of this journey",
+    "transfer": "Change at {{station}} · {{wait}} wait",
+    "transferUnknown": "Change at {{station}}",
+    "whole": "View the whole journey: {{route}}",
+    "loadError": "The journey could not be loaded.",
+    "notFound": "This journey does not exist (any more)."
   },
   "trip": {
     "open": "Open journey",

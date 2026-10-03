@@ -184,8 +184,12 @@ async function idsDepartingInYear(userId: string, year: number): Promise<string[
     .map((r) => r.id);
 }
 
-async function buildWhere(
-  query: RailQueryInput,
+/**
+ * The `where` behind the logbook's filters. Exported so the journey list
+ * (`rail/journeys.ts`, forgejo#187) asks the same question as this leg list.
+ */
+export async function buildRailWhere(
+  query: Pick<RailQueryInput, "status" | "q" | "year" | "tripId" | "membershipId">,
   userId: string
 ): Promise<Prisma.RailJourneyWhereInput> {
   const statuses = query.status === undefined ? undefined : [query.status].flat();
@@ -226,7 +230,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const query = parsed.data;
     const limit = query.limit ?? DEFAULT_LIMIT;
     const offset = query.offset ?? 0;
-    const where = await buildWhere(query, userId);
+    const where = await buildRailWhere(query, userId);
 
     const [total, data] = await Promise.all([
       prisma.railJourney.count({ where }),

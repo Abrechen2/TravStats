@@ -1,6 +1,8 @@
 import { api } from "./client";
 import { API_TIMEOUTS } from "../../config/constants";
 import type {
+  RailConnection,
+  RailConnectionDetail,
   RailJourney,
   RailEntrySuggestions,
   RailJourneyDetail,
@@ -42,6 +44,14 @@ export interface RailListQuery {
   offset?: number;
 }
 
+export interface RailConnectionPage {
+  connections: RailConnection[];
+  total: number;
+}
+
+/** The connection list orders by first departure only, and takes no card filter. */
+export type RailConnectionQuery = Omit<RailListQuery, "sort" | "membershipId">;
+
 export const railApi = {
   async list(query: RailListQuery = {}): Promise<RailPage> {
     const res = await api.get<Envelope<RailJourney[]> & { meta: { total: number } }>("/rail", {
@@ -62,6 +72,26 @@ export const railApi = {
       rides.push(...page.journeys);
       if (page.journeys.length < PAGE || rides.length >= page.total) return rides;
     }
+  },
+
+  /**
+   * One page of the logbook as connections (forgejo#187): a ride with changes
+   * is one entry. `total` counts connections — what a "load more" pages over.
+   */
+  async listConnections(query: RailConnectionQuery = {}): Promise<RailConnectionPage> {
+    const res = await api.get<Envelope<RailConnection[]> & { meta: { total: number } }>(
+      "/rail/connections",
+      { params: query }
+    );
+    return { connections: res.data.data, total: res.data.meta.total };
+  },
+
+  /** The whole ride a leg belongs to — itself alone when it has no change. */
+  async getConnection(legId: string): Promise<RailConnectionDetail> {
+    const res = await api.get<Envelope<RailConnectionDetail>>(
+      `/rail/connections/${encodeURIComponent(legId)}`
+    );
+    return res.data.data;
   },
 
   /** One journey with its booking's legs. */
