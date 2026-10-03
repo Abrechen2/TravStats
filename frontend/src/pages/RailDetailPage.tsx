@@ -16,6 +16,8 @@ import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { RailFormModal } from "../components/rail/RailFormModal";
 import { RailRouteMap } from "../components/rail/RailRouteMap";
 import { RailConnectionLegs } from "../components/rail/RailConnectionLegs";
+import { RailConnectionLink } from "../components/rail/RailConnectionLink";
+import { formatRailDuration } from "../lib/rail/railDuration";
 import { trainLabel } from "../components/rail/RailJourneyRow";
 import { connectionDraftFrom } from "../components/rail/railFormModel";
 import { isConvertedFromRoadtrip, railDistanceNoteKey } from "../components/rail/railDistanceLabel";
@@ -42,16 +44,6 @@ import type { RailJourney, RailJourneyDetail } from "../types/rail";
 import { StationShortCode } from "../components/rail/StationShortCode";
 
 type Editing = { mode: "edit" } | { mode: "connection" } | null;
-
-/** "3 h 42 min" from minutes; the unit words come from the locale. */
-function formatDuration(
-  minutes: number,
-  t: (key: string, o?: Record<string, unknown>) => string
-): string {
-  const h = Math.floor(minutes / 60);
-  const m = minutes % 60;
-  return h > 0 ? t("rail:detail.durationHm", { h, m }) : t("rail:detail.durationM", { m });
-}
 
 /**
  * One train ride (spec 2026-09-25-rail-domain, phase 2b). Every time is on its
@@ -180,7 +172,13 @@ export default function RailDetailPage(): JSX.Element {
         ]
       : []),
     ...(duration !== null
-      ? [{ key: "duration", value: formatDuration(duration, t), label: t("rail:detail.duration") }]
+      ? [
+          {
+            key: "duration",
+            value: formatRailDuration(duration, t),
+            label: t("rail:detail.duration"),
+          },
+        ]
       : []),
     ...(journey.delayMinutes !== null
       ? [{ key: "delay", value: delayText, label: t("rail:detail.delay") }]
@@ -301,6 +299,7 @@ export default function RailDetailPage(): JSX.Element {
                 legs={journey.booking.railJourneys}
                 pnr={journey.booking.pnr}
               />
+              <RailConnectionLink legId={journey.id} />
             </DetailSection>
           )}
 

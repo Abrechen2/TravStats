@@ -48,10 +48,12 @@ vi.mock("../../components/Training/ConfirmModal", () => ({
 }));
 
 const list = vi.fn();
+const listConnections = vi.fn();
 const remove = vi.fn();
 vi.mock("../../lib/api/rail", () => ({
   railApi: {
     list: (...a: unknown[]) => list(...a),
+    listConnections: (...a: unknown[]) => listConnections(...a),
     remove: (...a: unknown[]) => remove(...a),
   },
 }));
@@ -74,6 +76,14 @@ const renderPage = (): void => {
     </MemoryRouter>
   );
 };
+
+/** A page of the connection list: each inner array is one ride's trains. */
+const page = (
+  ...rides: RailJourney[][]
+): { connections: Array<{ id: string; legs: RailJourney[] }>; total: number } => ({
+  connections: rides.map((legs) => ({ id: legs[0].id, legs })),
+  total: rides.length,
+});
 
 function journey(over: Partial<RailJourney> = {}): RailJourney {
   return {
@@ -128,12 +138,13 @@ function journey(over: Partial<RailJourney> = {}): RailJourney {
 describe("RailPage", () => {
   beforeEach(() => {
     list.mockReset();
+    listConnections.mockReset();
     remove.mockReset();
     addToast.mockReset();
   });
 
   it("lists journeys with times on each station's own clock", async () => {
-    list.mockResolvedValue({ journeys: [journey()], total: 1 });
+    listConnections.mockResolvedValue(page([journey()]));
     renderPage();
     const row = await screen.findByTestId("rail-row-j1");
     expect(row.textContent).toContain("Frankfurt (Main) Hbf → Paris Est");
@@ -149,37 +160,38 @@ describe("RailPage", () => {
   });
 
   it("asks the server for one page, not the whole logbook", async () => {
-    list.mockResolvedValue({ journeys: [], total: 0 });
+    listConnections.mockResolvedValue(page());
     renderPage();
-    await waitFor(() => expect(list).toHaveBeenCalled());
-    expect(list.mock.calls[0][0]).toMatchObject({ limit: 50, offset: 0 });
+    await waitFor(() => expect(listConnections).toHaveBeenCalled());
+    expect(listConnections.mock.calls[0][0]).toMatchObject({ limit: 50, offset: 0 });
+    // The grouped list is the logbook's; the leg list is the card view's.
+    expect(list).not.toHaveBeenCalled();
   });
 
   it("says a failed load instead of drawing an empty logbook", async () => {
-    list.mockRejectedValue(new Error("down"));
+    listConnections.mockRejectedValue(new Error("down"));
     renderPage();
     expect(await screen.findByRole("alert")).toHaveTextContent("rail:loadError");
     expect(screen.queryByText("rail:empty")).toBeNull();
   });
 
   it("shows the empty state only for a logbook that loaded and is empty", async () => {
-    list.mockResolvedValue({ journeys: [], total: 0 });
+    listConnections.mockResolvedValue(page());
     renderPage();
     expect(await screen.findByText("rail:empty")).toBeInTheDocument();
   });
 
   it("keeps a recorded on-time arrival apart from an unrecorded delay", async () => {
-    list.mockResolvedValue({
-      journeys: [journey({ id: "a", delayMinutes: 0 }), journey({ id: "b", delayMinutes: 12 })],
-      total: 2,
-    });
+    listConnections.mockResolvedValue(
+      page([journey({ id: "a", delayMinutes: 0 })], [journey({ id: "b", delayMinutes: 12 })])
+    );
     renderPage();
     expect((await screen.findByTestId("rail-row-a")).textContent).toContain("rail:onTime");
     expect(screen.getByTestId("rail-row-b").textContent).toContain("rail:delay/12");
   });
 
   it("opens the ticket-or-by-hand chooser for a new journey", async () => {
-    list.mockResolvedValue({ journeys: [journey()], total: 1 });
+    listConnections.mockResolvedValue(page([journey()]));
     renderPage();
     await screen.findByTestId("rail-row-j1");
     expect(screen.queryByTestId("rail-import-panel")).toBeNull();
@@ -189,8 +201,8 @@ describe("RailPage", () => {
   });
 
   it("deletes after confirmation and reloads the list", async () => {
-    list.mockResolvedValueOnce({ journeys: [journey()], total: 1 });
-    list.mockResolvedValueOnce({ journeys: [], total: 0 });
+    listConnections.mockResolvedValueOnce(page([journey()]));
+    listConnections.mockResolvedValueOnce(page());
     remove.mockResolvedValue(undefined);
     renderPage();
     await screen.findByTestId("rail-row-j1");
@@ -202,11 +214,79 @@ describe("RailPage", () => {
   });
 });
 
+// forgejo#187: a ride with changes of trains is ONE entry of the logbook.
+describe("RailPage — a ride with changes", () => {
+  const first = journey({
+    id: "leg-1",
+    depStationName: "Köln Hbf",
+    arrStationName: "Frankfurt (Main) Hbf",
+    arrTimezone: "Europe/Berlin",
+    departureTime: "2026-07-01T05:00:00.000Z",
+    arrivalTime: "2026-07-01T06:05:00.000Z",
+    trainNumber: "101",
+  });
+  const second = journey({ id: "leg-2" });
+
+  beforeEach(() => {
+    list.mockReset();
+    listConnections.mockReset();
+  });
+
+  it("draws one row: every station, first departure to last arrival, the trains", async () => {
+    listConnections.mockResolvedValue(page([first, second]));
+    renderPage();
+    const row = await screen.findByTestId("rail-connection-row-leg-1");
+    expect(row.textContent).toContain("Köln Hbf → Frankfurt (Main) Hbf → Paris Est");
+    // 05:00 UTC read in Köln, 10:09 UTC read in Paris.
+    expect(row.textContent).toContain("07:00");
+    expect(row.textContent).toContain("12:09");
+    expect(row.textContent).not.toContain("08:05");
+    // 05:00 → 10:09 UTC, the wait included.
+    expect(row.textContent).toContain("rail:detail.durationHm");
+    expect(row.textContent).toContain("ICE 101 · ICE 9557");
+    expect(row.textContent).toContain("rail:connection.changes/1");
+    // The legs are not rows of their own …
+    expect(screen.queryByTestId("rail-row-leg-1")).toBeNull();
+    expect(screen.queryByTestId("rail-row-leg-2")).toBeNull();
+    // … and the row leads to the connection's page, not to a single train.
+    const links = row.querySelectorAll("a");
+    expect(links.length).toBeGreaterThan(0);
+    links.forEach((a) => expect(a.getAttribute("href")).toBe("/rail/connection/leg-1"));
+  });
+
+  it("keeps counting trains in the summary strip, not rows", async () => {
+    listConnections.mockResolvedValue(page([first, second], [journey({ id: "solo" })]));
+    renderPage();
+    await screen.findByTestId("rail-connection-row-leg-1");
+    expect(screen.getByTestId("rail-row-solo")).toBeInTheDocument();
+    expect(screen.getByText("rail:summary.journeys/3")).toBeInTheDocument();
+  });
+
+  it("states no status for a ride whose trains disagree", async () => {
+    listConnections.mockResolvedValue(page([{ ...first, status: "cancelled" }, second]));
+    renderPage();
+    const row = await screen.findByTestId("rail-connection-row-leg-1");
+    expect(row.querySelector('[data-testid="rail-status"]')).toBeNull();
+  });
+
+  it("pages over rides: 'more' asks from the number of entries, not of trains", async () => {
+    listConnections.mockResolvedValueOnce({ ...page([first, second]), total: 2 });
+    listConnections.mockResolvedValueOnce({ ...page([journey({ id: "solo" })]), total: 2 });
+    renderPage();
+    await screen.findByTestId("rail-connection-row-leg-1");
+    fireEvent.click(screen.getByText("rail:more"));
+    await screen.findByTestId("rail-row-solo");
+    expect(listConnections.mock.calls[1][0]).toMatchObject({ offset: 1 });
+    expect(screen.queryByText("rail:more")).toBeNull();
+  });
+});
+
 // Acceptance 2026-09-26: a rail card's figure had nowhere to lead. The list
 // opens on the card's rides, in the linked year, and says so above them.
 describe("RailPage — opened from a rail card's figure", () => {
   it("asks for the card's rides in that year and names both above the list", async () => {
     list.mockReset().mockResolvedValue({ journeys: [journey()], total: 1 });
+    listConnections.mockReset();
     render(
       <MemoryRouter initialEntries={["/rail?membership=card-9&year=2025"]}>
         <RailPage />
@@ -217,6 +297,8 @@ describe("RailPage — opened from a rail card's figure", () => {
         expect.objectContaining({ membershipId: "card-9", year: 2025 })
       )
     );
+    // The card counted trains, so this view lists trains — never grouped.
+    expect(listConnections).not.toHaveBeenCalled();
     const notice = await screen.findByTestId("loyalty-list-filter");
     await waitFor(() => expect(notice).toHaveTextContent("loyalty:listFilter.named"));
     expect(notice).toHaveTextContent("loyalty:listFilter.inYear");

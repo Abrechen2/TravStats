@@ -83,6 +83,7 @@ import railStationsRouter from "./rail/stations";
 import railEntrySuggestionsRouter from "./rail/entrySuggestions";
 import railLookupRouter from "./rail/lookup";
 import railStatsRouter from "./rail/stats";
+import railConnectionsRouter from "./rail/connections";
 import railRoadtripConversionRouter from "./rail/roadtripConversion";
 import rentalRouter from "./rental";
 import rentalStationsRouter from "./rental/stations";
@@ -298,6 +299,7 @@ export const apiMounts: ApiMount[] = [
   { id: "rail.stations", base: "/api/v1/rail/stations", router: railStationsRouter },
   { id: "rail.lookup", base: "/api/v1/rail/lookup", router: railLookupRouter },
   { id: "rail.stats", base: "/api/v1/rail/stats", router: railStatsRouter },
+  { id: "rail.connections", base: "/api/v1/rail/connections", router: railConnectionsRouter },
   {
     id: "rail.entrySuggestions",
     base: "/api/v1/rail/entry-suggestions",
