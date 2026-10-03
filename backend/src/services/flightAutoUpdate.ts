@@ -22,7 +22,7 @@ import {
   toLocalDateString,
   type FlightTimeSemantics,
 } from "../utils/timezone";
-import { deriveFlightStatus } from "../shared/statusDerivation";
+import { markFlownOnReportedLanding } from "./flightLandedStatus";
 
 const prismaClient = prisma as PrismaClient;
 
@@ -567,31 +567,8 @@ export async function checkAndUpdateFlightsForUser(userId: string): Promise<numb
           );
         }
 
-        // A touchdown the provider reports ends "scheduled" at once (2026-10-03:
-        // a tester saw a flight still "geplant" 2.5 h after landing). Only the
-        // status moves here: it is derived, not the user's data. The times
-        // themselves still go through the pending update below, under the
-        // user's review rule. Placed after the rotation guard, so another
-        // day's aircraft can never land this flight.
-        if (apiData.actualArrival && flight.status === "scheduled") {
-          const landed =
-            deriveFlightStatus({
-              departureTime: flight.departureTime,
-              arrivalTime: flight.arrivalTime,
-              actualArrival: new Date(apiData.actualArrival),
-              current: flight.status,
-            }) === "flown";
-          if (landed) {
-            await prismaClient.flight.update({
-              where: { id: flight.id },
-              data: { status: "flown", lastModifiedBy: "auto_update", nextApiCheckAt: null },
-            });
-            logger.info(
-              { flightId: flight.id, operation: "flight_landed_status_flown" },
-              "Provider reported the landing; flight marked flown"
-            );
-          }
-        }
+        // A reported touchdown ends "scheduled" now (flightLandedStatus.ts).
+        await markFlownOnReportedLanding(flight, apiData.actualArrival);
 
         // Convert API data to proposed format
         const proposedData = convertApiDataToProposed(apiData, flight);
