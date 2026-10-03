@@ -109,6 +109,15 @@ below), which can take a minute on a large logbook.
   read without an AI model.
 - The trip card counts rail and rental entries; the rental form accepts a
   German decimal comma.
+- **A first import of Deutsche Bahn tickets gets through.** The Online-Ticket
+  layout DB prints since spring 2024 is read without an AI model; before, only
+  tickets in the older layout were. Saving train journeys no longer stops after
+  twenty in an hour (now 300), and reading PDFs no longer after twenty in
+  fifteen minutes (now 60).
+- The rail import asks the next AI provider when the first one does not
+  answer. An Ollama address that was entered once and no longer runs used to
+  make every ticket "AI parser not reachable" while a configured OpenAI key
+  was never asked.
 
 ### Audit fixes first written for 2.6.3-rc.1
 
