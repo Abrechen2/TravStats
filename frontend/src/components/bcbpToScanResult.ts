@@ -13,8 +13,20 @@ import type { ScanResultData } from "./BoardingPassScanner.types";
  * Pure function — no React, no side effects — so it can be unit-tested in
  * isolation from the scanner component.
  */
+/** "012A" -> "12A": BCBP pads the seat row to three digits. Empty stays absent. */
+function reviewSeat(raw: string): string | undefined {
+  const seat = raw.trim().replace(/^0+(?=\d)/, "");
+  return seat === "" ? undefined : seat;
+}
+
 export function bcbpToScanResult(parsedData: BoardingPassData): ScanResultData {
+  const seat = reviewSeat(parsedData.seatNumber);
+  const pnr = parsedData.operatingCarrierPNR.trim();
   return {
+    // The review reads `seat` and `pnr` (forgejo#172: both were lost here,
+    // although the barcode carried them).
+    ...(seat !== undefined ? { seat } : {}),
+    ...(pnr !== "" ? { pnr } : {}),
     flightNumber: `${parsedData.operatingCarrierDesignator}${parsedData.flightNumber}`,
     departureCode: parsedData.departureAirport,
     arrivalCode: parsedData.arrivalAirport,

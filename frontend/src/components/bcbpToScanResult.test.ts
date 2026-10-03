@@ -79,3 +79,30 @@ describe("bcbpToScanResult", () => {
     expect(result.seatClass).toBe("business");
   });
 });
+
+// forgejo#172: a decoded barcode showed the flight and route in the review,
+// but seat and booking reference stayed empty - the review reads `seat` and
+// `pnr`, and the mapping produced only `seatNumber` and no reference at all.
+describe("bcbpToScanResult - seat and booking reference reach the review", () => {
+  it("fills the fields the flight review reads", () => {
+    const result = bcbpToScanResult(
+      makeBcbp({ seatNumber: "12A", operatingCarrierPNR: "QATEST1" })
+    );
+
+    expect(result.seat).toBe("12A");
+    expect(result.pnr).toBe("QATEST1");
+  });
+
+  it("drops the barcode's zero padding from the seat", () => {
+    // BCBP pads the row to three digits: "012A" is seat 12A.
+    expect(bcbpToScanResult(makeBcbp({ seatNumber: "012A" })).seat).toBe("12A");
+    expect(bcbpToScanResult(makeBcbp({ seatNumber: "001C" })).seat).toBe("1C");
+  });
+
+  it("leaves both empty rather than inventing a value when the barcode has none", () => {
+    const result = bcbpToScanResult(makeBcbp({ seatNumber: "", operatingCarrierPNR: "" }));
+
+    expect(result.seat).toBeUndefined();
+    expect(result.pnr).toBeUndefined();
+  });
+});
