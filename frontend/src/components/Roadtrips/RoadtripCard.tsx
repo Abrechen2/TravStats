@@ -118,13 +118,16 @@ export default function RoadtripCard({
           />
           <Figure
             value={`${r.nightsKnown ? "" : "≈ "}${nf.format(r.nights)}`}
-            label={t("roadtrips:list.figNights")}
+            label={t("roadtrips:list.figNights", { count: r.nights })}
             title={r.nightsKnown ? undefined : t("roadtrips:list.nightsApprox")}
           />
-          <Figure value={nf.format(r.stationCount)} label={t("roadtrips:list.figStations")} />
+          <Figure
+            value={nf.format(r.stationCount)}
+            label={t("roadtrips:list.figStations", { count: r.stationCount })}
+          />
           <Figure
             value={<span style={{ color: "var(--domain-tour)" }}>{nf.format(r.tourCount)}</span>}
-            label={t("roadtrips:list.figTours")}
+            label={t("roadtrips:list.figTours", { count: r.tourCount })}
           />
         </div>
       </div>

@@ -35,15 +35,24 @@ export default function RoadtripFigures({
   const ahead = daysAhead(detail.startDate, detail.endDate, today);
   const approx = n.nightsKnown ? "" : "≈ ";
 
+  // The km figure is the length of ALL legs, whatever their date. It may be
+  // called driven only once the roadtrip is over; before that it is the
+  // planned distance (forgejo#179: "Gefahren 254 km" on day 1 of 3, with the
+  // only leg still ahead).
+  const over = days !== null && ahead === null;
+  const ferryNote =
+    r.drivenKm !== r.distanceKm
+      ? t("roadtrips:detail.figDrivenSub", { km: nf.format(r.distanceKm) })
+      : undefined;
+
   const figures: Figure[] = [
     {
       key: "driven",
-      label: t("roadtrips:detail.figDriven"),
+      label: over ? t("roadtrips:detail.figDriven") : t("roadtrips:detail.figRoute"),
       value: `${nf.format(r.drivenKm)} km`,
-      sub:
-        r.drivenKm !== r.distanceKm
-          ? t("roadtrips:detail.figDrivenSub", { km: nf.format(r.distanceKm) })
-          : undefined,
+      sub: over
+        ? ferryNote
+        : [t("roadtrips:detail.figRoutePlanned"), ferryNote].filter(Boolean).join(" · "),
     },
     ...(days !== null
       ? [

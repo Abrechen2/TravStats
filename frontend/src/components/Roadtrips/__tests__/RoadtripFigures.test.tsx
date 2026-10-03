@@ -53,3 +53,37 @@ describe("RoadtripFigures days figure (forgejo#165)", () => {
     expect(screen.getByText("davon 2 noch vor dir")).toBeInTheDocument();
   });
 });
+
+/**
+ * forgejo#179: on day 1 of 3, with the only leg still ahead, the figure said
+ * "Gefahren 254 km". The number is the planned length of all legs; it may be
+ * called driven only once the roadtrip is over.
+ */
+describe("RoadtripFigures distance figure (forgejo#179)", () => {
+  function withKm(start: string, end: string): RoadtripDetail {
+    const d = detail(start, end);
+    return { ...d, roadtrip: { ...d.roadtrip, drivenKm: 254, distanceKm: 254 } } as RoadtripDetail;
+  }
+
+  it("calls the distance planned while the roadtrip is still underway", () => {
+    render(
+      <RoadtripFigures
+        detail={withKm("2026-10-03T00:00:00.000Z", "2026-10-05T00:00:00.000Z")}
+        today="2026-10-03"
+      />
+    );
+    expect(screen.queryByText("Gefahren")).not.toBeInTheDocument();
+    expect(screen.getByText("Strecke")).toBeInTheDocument();
+    expect(screen.getByText("geplant")).toBeInTheDocument();
+  });
+
+  it("calls it driven once the roadtrip is over", () => {
+    render(
+      <RoadtripFigures
+        detail={withKm("2026-09-03T00:00:00.000Z", "2026-09-05T00:00:00.000Z")}
+        today="2026-10-03"
+      />
+    );
+    expect(screen.getByText("Gefahren")).toBeInTheDocument();
+  });
+});
