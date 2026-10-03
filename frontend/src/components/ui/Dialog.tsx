@@ -2,6 +2,7 @@ import { useRef, type CSSProperties, type ReactNode } from "react";
 import { createPortal } from "react-dom";
 import IconButton from "./IconButton";
 import { useDialogChrome } from "./useDialogChrome";
+import { useScrimDismiss } from "./useScrimDismiss";
 
 interface DialogProps {
   open: boolean;
@@ -51,6 +52,7 @@ export default function Dialog({
 }: DialogProps): JSX.Element | null {
   const panelRef = useRef<HTMLDivElement>(null);
   useDialogChrome({ open, onClose, panelRef });
+  const scrim = useScrimDismiss(panelRef, onClose);
 
   if (!open) return null;
 
@@ -61,7 +63,7 @@ export default function Dialog({
     // media query, so the dialog stayed centred below 640px instead of docking
     // to the bottom edge as a sheet. Found in the browser, not by a test — the
     // tests were green while it was broken.
-    <div className="ts-dialog-scrim" onClick={onClose}>
+    <div className="ts-dialog-scrim" {...scrim}>
       <div
         ref={panelRef}
         role="dialog"

@@ -2,6 +2,7 @@ import { useRef } from "react";
 import { createPortal } from "react-dom";
 import type { CSSProperties, JSX, ReactNode } from "react";
 import { useDialogChrome } from "./ui/useDialogChrome";
+import { useScrimDismiss } from "./ui/useScrimDismiss";
 
 /**
  * The frame every blocking dialog sits in.
@@ -96,17 +97,14 @@ export default function Modal({
   }
 
   useDialogChrome({ open, onClose, panelRef, busy });
+  const scrim = useScrimDismiss(panelRef, () => {
+    if (!busy) onClose();
+  });
 
   if (!open) return null;
 
   return createPortal(
-    <div
-      className="ts-dialog-scrim"
-      data-testid={testId}
-      onClick={() => {
-        if (!busy) onClose();
-      }}
-    >
+    <div className="ts-dialog-scrim" data-testid={testId} {...scrim}>
       <div
         data-testid="modal-backdrop"
         aria-hidden="true"

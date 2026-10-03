@@ -1,4 +1,4 @@
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { Link, useNavigate, useLocation } from "react-router-dom";
 import { motion, AnimatePresence } from "framer-motion";
 import { startAuthentication } from "@simplewebauthn/browser";
@@ -6,6 +6,7 @@ import { authApi, passkeyApi, setupApi } from "../lib/api";
 import { useAuthStore } from "../store/authStore";
 import { useTranslation } from "../hooks/useTranslation";
 import { LogoLockup } from "../components/Brand/Logo";
+import { useScrimDismiss } from "../components/ui/useScrimDismiss";
 import { LoginBackdrop } from "../components/LoginBackdrop";
 
 /**
@@ -183,6 +184,8 @@ export default function LoginPage(): JSX.Element {
     setForgotSuccess(false);
     setForgotError("");
   };
+  const forgotPanelRef = useRef<HTMLDivElement>(null);
+  const forgotScrim = useScrimDismiss(forgotPanelRef, handleCloseForgotModal);
 
   // Round 4 ("Anmelden"): the brand and what TravStats is on the left, the
   // form on the right. The public counts the export draws there (entries,
@@ -391,12 +394,13 @@ export default function LoginPage(): JSX.Element {
             exit={{ opacity: 0 }}
             className="fixed inset-0 z-50 flex items-center justify-center p-4"
             style={{ background: "rgba(0,0,0,0.7)" }}
-            onClick={handleCloseForgotModal}
+            {...forgotScrim}
             role="dialog"
             aria-modal="true"
             aria-labelledby="forgot-modal-title"
           >
             <motion.div
+              ref={forgotPanelRef}
               initial={{ scale: 0.95, opacity: 0 }}
               animate={{ scale: 1, opacity: 1 }}
               exit={{ scale: 0.95, opacity: 0 }}
