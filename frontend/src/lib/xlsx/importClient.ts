@@ -102,15 +102,28 @@ export function importableSpecs(t: T, options: { rail?: boolean } = {}): SheetSp
   ] as unknown as SheetSpec<never>[];
 }
 
-/** Read the workbook into the payload shape the server expects. */
+/**
+ * Read the workbook into the payload shape the server expects.
+ *
+ * Sheet names and headers are written in the exporting user's language; the
+ * cell values are not. So the reader tries the interface language first and
+ * then each of `otherLanguages` (forgejo#175: an English export was refused as
+ * "no known sheets" under a German interface). A file is written in ONE
+ * language, so the first language that finds anything is the answer.
+ */
 export async function readWorkbookForImport(
   t: T,
   file: File,
-  options: { rail?: boolean } = {}
+  options: { rail?: boolean } = {},
+  otherLanguages: readonly T[] = []
 ): Promise<ParsedSheet[]> {
   const buffer = await file.arrayBuffer();
-  const parsed = await parseWorkbook(buffer, importableSpecs(t, options));
-  return parsed.filter((sheet) => sheet.rows.length > 0);
+  for (const lang of [t, ...otherLanguages]) {
+    const parsed = await parseWorkbook(buffer, importableSpecs(lang, options));
+    const sheets = parsed.filter((sheet) => sheet.rows.length > 0);
+    if (sheets.length > 0) return sheets;
+  }
+  return [];
 }
 
 /**

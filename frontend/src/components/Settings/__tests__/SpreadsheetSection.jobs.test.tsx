@@ -13,7 +13,10 @@ import { render, screen, fireEvent, waitFor } from "@testing-library/react";
  */
 
 vi.mock("../../../hooks/useTranslation", () => ({
-  useTranslation: () => ({ t: (k: string) => k, i18n: { language: "de" } }),
+  useTranslation: () => ({
+    t: (k: string) => k,
+    i18n: { language: "de", getFixedT: () => (k: string) => k },
+  }),
 }));
 vi.mock("../../../hooks/useEnabledDomains", () => ({
   useEnabledDomains: () => ({ isEnabled: () => true }),

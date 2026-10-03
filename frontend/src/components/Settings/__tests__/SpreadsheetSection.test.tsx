@@ -9,7 +9,7 @@ vi.mock("../../../hooks/useTranslation", () => ({
         : o && "value" in o
           ? `${k}|${String(o.field)}|${String(o.value)}`
           : k,
-    i18n: { language: "de" },
+    i18n: { language: "de", getFixedT: () => (k: string) => k },
   }),
 }));
 vi.mock("../../../hooks/useEnabledDomains", () => ({

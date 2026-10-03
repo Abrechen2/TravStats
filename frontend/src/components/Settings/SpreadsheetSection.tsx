@@ -37,6 +37,9 @@ import { useRailVisible } from "../../hooks/useRailVisible";
 import { Icon } from "../ui/Icon";
 import { SettingRow } from "../ui/SettingRow";
 
+/** The languages a TravStats export can be written in. */
+const WORKBOOK_LANGUAGES = ["de", "en"] as const;
+
 type Translate = (key: string, options?: Record<string, unknown>) => string;
 
 /**
@@ -184,7 +187,11 @@ export default function SpreadsheetSection(): JSX.Element {
       setImportStatus("checking");
       setOutcome(null);
       try {
-        const sheets = await readWorkbookForImport(t, file, { rail: railVisible });
+        // A file exported in the other language is read too (forgejo#175).
+        const otherLanguages = WORKBOOK_LANGUAGES.filter((lng) => lng !== i18n.language).map(
+          (lng) => i18n.getFixedT(lng, ["xlsx", "common"])
+        );
+        const sheets = await readWorkbookForImport(t, file, { rail: railVisible }, otherLanguages);
         if (sheets.length === 0) {
           setImportStatus("nothing");
           return;

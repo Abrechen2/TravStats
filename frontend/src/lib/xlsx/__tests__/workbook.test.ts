@@ -395,3 +395,42 @@ describe("exportFilename", () => {
     );
   });
 });
+
+// forgejo#175: a native export written in English ("Flights") was refused as
+// "no known sheets" by a German UI - the reader looked for sheet names and
+// headers in the current language only. Cell values are language-neutral.
+describe("readWorkbookForImport - a file in another supported language", () => {
+  const tEn = (key: string): string => `en:${key}`;
+  const tDe = (key: string): string => `de:${key}`;
+  const flight = {
+    id: "f-1",
+    airline: "Lufthansa",
+    flightNumber: "LH400",
+    depIata: "FRA",
+    arrIata: "JFK",
+    departureTime: "2025-05-01T10:00:00.000Z",
+    arrivalTime: "2025-05-01T18:00:00.000Z",
+    status: "flown",
+  } as unknown as Flight;
+  const asFile = (buffer: ArrayBuffer): File =>
+    ({ arrayBuffer: async () => buffer }) as unknown as File;
+
+  it("reads an English export under a German interface", async () => {
+    const wb = await buildWorkbook(buildSheets(tEn, { flights: [flight] }));
+    const buffer = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
+
+    const payload = await readWorkbookForImport(tDe, asFile(buffer), {}, [tEn]);
+
+    expect(payload.map((p) => p.key)).toEqual(["flights"]);
+    expect(payload[0].rows[0]).toMatchObject({ flightNumber: "LH400" });
+  });
+
+  it("prefers the interface language when the file is in it", async () => {
+    const wb = await buildWorkbook(buildSheets(tDe, { flights: [flight] }));
+    const buffer = (await wb.xlsx.writeBuffer()) as ArrayBuffer;
+
+    const payload = await readWorkbookForImport(tDe, asFile(buffer), {}, [tEn]);
+
+    expect(payload.map((p) => p.key)).toEqual(["flights"]);
+  });
+});
