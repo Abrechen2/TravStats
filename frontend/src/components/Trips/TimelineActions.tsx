@@ -1,6 +1,8 @@
 import { useState } from "react";
 import type { JSX } from "react";
 
+import AddExistingEntryModal from "./AddExistingEntryModal";
+import { useAttachableDomains } from "../../hooks/useAttachableDomains";
 import { useTranslation } from "../../hooks/useTranslation";
 import { JobLostError } from "../../lib/api/jobs";
 import {
@@ -21,7 +23,10 @@ const BUTTON =
  * The actions above a trip's timeline: a new journal entry, and — where the
  * instance allows open data and an entry still lacks it — the day's weather
  * for every entry at once (2026-09-24). A new entry gets its weather on save;
- * this is for the ones written before.
+ * this is for the ones written before. And "+ Eintrag hinzufügen"
+ * (forgejo#188): file an EXISTING flight, cruise, stay, visit, train, rental
+ * or roadtrip in this trip from here, instead of opening its logbook and
+ * editing it there.
  *
  * No "add stop" button since 2026-09-21. A stop and a place were the same
  * thing said twice — the places domain owns "somewhere I was", with a
@@ -71,6 +76,8 @@ export default function TimelineActions({
   const addToast = useToastStore((s) => s.addToast);
   const openData = useSettingsStore((s) => s.openDataEnabled) === true;
   const [filling, setFilling] = useState(false);
+  const attachableDomains = useAttachableDomains();
+  const [picking, setPicking] = useState(false);
   const missing = entries.some((e) => e.observedWeather == null);
 
   const fillWeather = async (): Promise<void> => {
@@ -105,6 +112,21 @@ export default function TimelineActions({
       <button type="button" onClick={onAddJournal} className={BUTTON} style={style}>
         {t("trips:detail.timeline.addJournal")}
       </button>
+      {attachableDomains.length > 0 && (
+        <button type="button" onClick={() => setPicking(true)} className={BUTTON} style={style}>
+          {t("trips:detail.timeline.addEntry")}
+        </button>
+      )}
+      {picking && (
+        <AddExistingEntryModal
+          tripId={tripId}
+          domains={attachableDomains}
+          onClose={(changed) => {
+            setPicking(false);
+            if (changed) onChanged();
+          }}
+        />
+      )}
       {openData && missing && (
         <button
           type="button"
