@@ -124,6 +124,7 @@ export interface UserSettings {
   };
   units?: {
     distanceUnit?: string;
+    weightUnit?: string;
     currency?: string;
   };
   defaults?: {

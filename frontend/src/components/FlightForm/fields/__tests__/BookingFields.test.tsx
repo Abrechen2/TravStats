@@ -1,7 +1,8 @@
-import { describe, it, expect, vi } from "vitest";
-import { render, fireEvent } from "@testing-library/react";
+import { describe, it, expect, vi, afterEach } from "vitest";
+import { render, fireEvent, screen } from "@testing-library/react";
 
 import BookingFields, { type BookingFieldsValue } from "../BookingFields";
+import { useSettingsStore } from "../../../../store/settingsStore";
 
 vi.mock("../../../../hooks/useTranslation", () => ({
   useTranslation: () => ({ t: (key: string) => key, i18n: { language: "en" } }),
@@ -61,5 +62,52 @@ describe("BookingFields", () => {
   it("bounds the class letter input to the backend's 5-character limit", () => {
     const { container } = render(<BookingFields value={VALUE} onChange={() => {}} />);
     expect(byPlaceholder(container, "bookingClassLetter").maxLength).toBe(5);
+  });
+});
+
+/** forgejo#186: "23" alone read "Freigepäck 23" on the flight page. */
+describe("the baggage allowance's unit hint", () => {
+  const withBaggage = (baggageAllowance: string): BookingFieldsValue => ({
+    ...VALUE,
+    baggageAllowance,
+  });
+  // The suite-wide setup replaces the store with a `vi.fn` over a fixed
+  // state, so a test that needs another unit swaps that function's
+  // implementation and puts the original back.
+  const storeMock = vi.mocked(useSettingsStore);
+  const originalStore = storeMock.getMockImplementation();
+  const useUnits = (units: Record<string, unknown>): void => {
+    storeMock.mockImplementation(((selector: (state: unknown) => unknown) =>
+      selector({ units })) as never);
+  };
+
+  afterEach(() => {
+    if (originalStore) storeMock.mockImplementation(originalStore);
+  });
+
+  it("shows kilograms behind a bare number", () => {
+    render(<BookingFields value={withBaggage("23")} onChange={() => {}} />);
+    expect(screen.getByTestId("baggage-allowance-unit")).toHaveTextContent("kg");
+  });
+
+  it("shows the unit the user chose in the settings", () => {
+    useUnits({ distanceUnit: "kilometers", weightUnit: "lb" });
+    render(<BookingFields value={withBaggage("50")} onChange={() => {}} />);
+    expect(screen.getByTestId("baggage-allowance-unit")).toHaveTextContent("lb");
+  });
+
+  it.each(["23 kg", "2x23kg", "1 PC", "50 lbs", ""])(
+    "shows no unit beside %j, which is displayed as stored",
+    (stored) => {
+      render(<BookingFields value={withBaggage(stored)} onChange={() => {}} />);
+      expect(screen.queryByTestId("baggage-allowance-unit")).not.toBeInTheDocument();
+    }
+  );
+
+  it("emits the text as typed — the unit is never written into the value", () => {
+    const onChange = vi.fn();
+    const { container } = render(<BookingFields value={withBaggage("")} onChange={onChange} />);
+    fireEvent.change(byPlaceholder(container, "baggageAllowance"), { target: { value: "23" } });
+    expect(onChange).toHaveBeenCalledWith(withBaggage("23"));
   });
 });

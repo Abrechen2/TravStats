@@ -1,5 +1,7 @@
 import { useTranslation } from "../../../hooks/useTranslation";
 import SuggestionChips from "../../common/SuggestionChips";
+import { isBareBaggageNumber, resolveWeightUnit } from "../../../lib/baggageAllowance";
+import { useSettingsStore } from "../../../store/settingsStore";
 
 /** The five booking-side fields, shared between the create and edit flight
  *  forms. The last three (booking class letter, baggage allowance, frequent
@@ -40,6 +42,10 @@ export default function BookingFields({
 
   const set = (field: keyof BookingFieldsValue, fieldValue: string): void =>
     onChange({ ...value, [field]: fieldValue });
+
+  // forgejo#186: a bare number is displayed with this unit, so say so here.
+  const weightUnit = resolveWeightUnit(useSettingsStore((state) => state.units?.weightUnit));
+  const showsWeightUnit = isBareBaggageNumber(value.baggageAllowance);
 
   const labelClass = `label ${labelClassName}`.trim();
   const inputClass = `input ${inputClassName}`.trim();
@@ -85,14 +91,31 @@ export default function BookingFields({
         </div>
         <div>
           <label className={labelClass}>{t("flights:form.baggageAllowance")}</label>
-          <input
-            type="text"
-            value={value.baggageAllowance}
-            onChange={(e) => set("baggageAllowance", e.target.value)}
-            className={inputClass}
-            placeholder={t("flights:form.placeholders.baggageAllowance")}
-            maxLength={50}
-          />
+          <div className="relative">
+            <input
+              type="text"
+              value={value.baggageAllowance}
+              onChange={(e) => set("baggageAllowance", e.target.value)}
+              className={`${inputClass}${showsWeightUnit ? " pr-10" : ""}`}
+              placeholder={t("flights:form.placeholders.baggageAllowance")}
+              maxLength={50}
+              aria-describedby={showsWeightUnit ? "baggage-allowance-unit" : undefined}
+            />
+            {/* Only behind a bare number: "1 PC" or "23 kg" already says what
+                it is, and a unit beside it would contradict the text. The
+                stored value stays as typed — this is how it will READ. */}
+            {showsWeightUnit && (
+              <span
+                id="baggage-allowance-unit"
+                data-testid="baggage-allowance-unit"
+                title={t("flights:form.baggageAllowanceUnitHint", { unit: weightUnit })}
+                aria-label={t("flights:form.baggageAllowanceUnitHint", { unit: weightUnit })}
+                className="pointer-events-none absolute inset-y-0 right-3 flex items-center text-sm text-(--text-muted)"
+              >
+                {weightUnit}
+              </span>
+            )}
+          </div>
         </div>
         <div>
           <label className={labelClass}>{t("flights:form.frequentFlyerNumber")}</label>

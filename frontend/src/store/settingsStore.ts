@@ -8,6 +8,7 @@ import { useAuthStore } from "./authStore";
 import { displayForSave, useProfileZoneStore } from "./profileZoneStore";
 import { deviceZone } from "../shared/time";
 import { persistSetting } from "./persistSetting";
+import type { WeightUnit } from "../lib/baggageAllowance";
 
 /**
  * A value off the wire read back as a tier, or null when it is not one.
@@ -70,6 +71,8 @@ export interface DisplaySettings {
 
 export interface UnitsSettings {
   distanceUnit: DistanceUnit;
+  /** Unit of a bare baggage number; absent = kg. Why: `lib/baggageAllowance.ts`. */
+  weightUnit?: WeightUnit;
   // `currency` is GONE from here on purpose (2026-08-23). The app had two
   // currency settings: this one, in the settings JSON, read only by flight
   // surfaces — and `baseCurrency`, a real column, read by lodging, stats and

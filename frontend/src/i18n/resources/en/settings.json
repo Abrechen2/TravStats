@@ -223,6 +223,12 @@
     "currencyHint": "Applies everywhere. Conversions already recorded are kept as they were.",
     "distanceSub": "For distances and statistics",
     "currencySub": "For spending totals; exchange rates from the ECB",
+    "weight": "Weight",
+    "weightSub": "For a baggage allowance entered without a unit; nothing is converted",
+    "weightOptions": {
+      "kg": "Kilograms",
+      "lb": "Pounds"
+    },
     "short": {
       "kilometers": "km",
       "miles": "mi",

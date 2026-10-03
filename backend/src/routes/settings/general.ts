@@ -91,6 +91,9 @@ const settingsSchema = z
     units: z
       .object({
         distanceUnit: z.enum(["kilometers", "miles", "nautical_miles"]).optional(),
+        // Names the unit of a bare baggage-allowance number ("23" reads
+        // "23 kg"); nothing is converted (forgejo#186).
+        weightUnit: z.enum(["kg", "lb"]).optional(),
         // Any ISO 4217 alpha-3 code — see schemas/flight.ts for rationale.
         currency: z
           .string()

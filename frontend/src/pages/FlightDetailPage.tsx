@@ -33,6 +33,7 @@ import { getFlightDuration } from "../lib/flightDuration";
 import { flightExtractTarget } from "../lib/extractTargets";
 import { convertDistance, formatAmount, getDistanceLabel } from "../lib/units";
 import { useSettingsStore } from "../store/settingsStore";
+import { formatBaggageAllowance } from "../lib/baggageAllowance";
 import { formatDurationWithEstimate } from "../lib/formatters";
 import { logger } from "../lib/logger";
 import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
@@ -65,6 +66,7 @@ export default function FlightDetailPage(): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   const distanceUnit = useSettingsStore((state) => state.units.distanceUnit);
   const viewerZone = useSettingsStore((state) => state.display?.timezone);
+  const weightUnit = useSettingsStore((state) => state.units?.weightUnit);
 
   const [flight, setFlight] = useState<Flight | null>(null);
   const [trip, setTrip] = useState<Trip | null>(null);
@@ -332,7 +334,10 @@ export default function FlightDetailPage(): JSX.Element {
               { label: t("flights:form.boardingGroup"), value: flight.boardingGroup },
               { label: t("flights:form.terminal"), value: flight.terminal },
               { label: t("flights:form.gate"), value: flight.gate, mono: true },
-              { label: t("flights:form.baggageAllowance"), value: flight.baggageAllowance },
+              {
+                label: t("flights:form.baggageAllowance"),
+                value: formatBaggageAllowance(flight.baggageAllowance, weightUnit),
+              },
               {
                 label: t("flights:form.frequentFlyerNumber"),
                 value: flight.frequentFlyerNumber,
