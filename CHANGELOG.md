@@ -67,6 +67,19 @@ below), which can take a minute on a large logbook.
 - **A new demo account** — an invented traveller from the Rhineland with ten
   years of travel. A new installation creates it and switches the beta features
   on as it does.
+- **Add existing entries to a trip from the trip itself.** "+ Eintrag
+  hinzufügen" on a trip's timeline opens a picker with one tab per enabled
+  domain; an entry that sits in another trip says so before it is moved.
+- **A train ride with changes is one logbook entry** (rail, behind the beta
+  switch): the list shows "Augsburg → Hannover → Bielefeld" as one row with the
+  total duration and the number of changes, a page for the whole ride lists its
+  trains, and each train keeps its own page. Statistics still count trains.
+- **A weight unit for the baggage allowance.** Settings → Units & formats has a
+  kg/lb choice; an allowance typed as a bare number ("23") is shown with it.
+- **Reminder and account mails in the app's look**, with a plain-text part,
+  light and dark, and more of the entry's facts (terminal, gate, seat, booking
+  reference; a stay's address, nights and board). Reminders go out only for
+  domains you have switched on; invitation and password mails are bilingual.
 
 ### Changed
 - **Cruise kilometres go up.** A cruise leg is now measured along the sea route
@@ -114,6 +127,14 @@ below), which can take a minute on a large logbook.
   tickets in the older layout were. Saving train journeys no longer stops after
   twenty in an hour (now 300), and reading PDFs no longer after twenty in
   fifteen minutes (now 60).
+- A Deutsche Bahn ticket in the new layout WITH a change of trains keeps every
+  train, each with its coach and seat (rc.5 read only the first).
+- **A dialog no longer closes when a text selection ends beside it.** Selecting
+  a field's text and letting go of the mouse outside the dialog closed it and
+  took the form with it.
+- The flight list keeps the planned and the actual time side by side again;
+  the actual time had wrapped onto a line of its own.
+- The stay reminder mail linked a page that does not exist.
 - The rail import asks the next AI provider when the first one does not
   answer. An Ollama address that was entered once and no longer runs used to
   make every ticket "AI parser not reachable" while a configured OpenAI key
