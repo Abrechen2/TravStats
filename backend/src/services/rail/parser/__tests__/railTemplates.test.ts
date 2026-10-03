@@ -18,6 +18,9 @@ import {
   DB_DELAY_ALERT,
   DB_NEWSLETTER,
   DB_ONLINE_TICKET,
+  DB_ONLINE_TICKET_2024,
+  DB_ONLINE_TICKET_2024_CHANGE,
+  DB_ONLINE_TICKET_2024_RAGGED,
   DB_ORDER_WITHOUT_ITINERARY,
   DB_POSTAL_ORDER,
   FLIGHT_MAIL,
@@ -258,5 +261,71 @@ describe("ticketText", () => {
 
   it("does not take the BahnCard's class for the ticket's", () => {
     expect(travelClassOf("1 Reisender mit BahnCard 50 (1. Klasse), 2. Kl.")).toBe("second");
+  });
+});
+
+describe("DB Online-Ticket, the layout since spring 2024", () => {
+  const rows = (text: string) =>
+    parseDbOnlineTicket(text)?.legs.map((l) => [
+      l.direction,
+      l.depStationName,
+      l.arrStationName,
+      l.departureLocal,
+      l.arrivalLocal,
+      l.trainCategory === null ? null : `${l.trainCategory} ${l.trainNumber}`,
+      l.coach,
+      l.seat,
+    ]);
+
+  it("reads a ticket whose table is extracted column by column", () => {
+    expect(parseDbOnlineTicket(DB_ONLINE_TICKET_2024)).toMatchObject({
+      bookingReference: "123456789012",
+      travelClass: "first",
+      tariff: "Flexpreis (Einfache Fahrt)",
+      price: 91.6,
+      currency: "EUR",
+      source: "db-online-ticket",
+    });
+    expect(rows(DB_ONLINE_TICKET_2024)).toEqual([
+      [
+        "outbound",
+        "Musterstadt Hbf",
+        "Beispielburg Hbf",
+        "2024-04-19T19:55",
+        "2024-04-19T23:58",
+        "ICE 615",
+        "12",
+        "133",
+      ],
+    ]);
+  });
+
+  it("pairs the columns of a change of trains, and each train with its leg", () => {
+    expect(rows(DB_ONLINE_TICKET_2024_CHANGE)).toEqual([
+      [
+        "outbound",
+        "Musterstadt Hbf",
+        "Mittelhausen",
+        "2024-12-30T08:00",
+        "2024-12-30T09:10",
+        "ICE 615",
+        "12",
+        "33",
+      ],
+      [
+        "outbound",
+        "Mittelhausen",
+        "Beispielburg Hbf",
+        "2024-12-30T09:25",
+        "2024-12-30T10:40",
+        "RE 4711",
+        null,
+        null,
+      ],
+    ]);
+  });
+
+  it("reads nothing from columns of unequal length rather than pairing them by guess", () => {
+    expect(parseDbOnlineTicket(DB_ONLINE_TICKET_2024_RAGGED)).toBeNull();
   });
 });

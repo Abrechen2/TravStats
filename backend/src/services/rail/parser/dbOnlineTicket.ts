@@ -23,14 +23,38 @@ import type { ParsedRailBooking, ParsedRailLeg } from "./types";
  * An "ab" row opens a leg, the next "an" row closes it, and the product line
  * that follows names the train and — when reserved — the coach and seat. It
  * arrives attached to the booking mail, or on its own through /parse-pdf.
+ *
+ * Since spring 2024 the same ticket extracts differently (measured on a
+ * tester's tickets of 15.01.2024, old, and 19.04.2024, new): the header reads
+ * "… Reservierung - Einfache Fahrt am 19.04.2024", and the table comes out of
+ * the PDF column by column —
+ *
+ *   Köln Hbf
+ *   Augsburg Hbf
+ *   19.04.
+ *   19.04.
+ *   ab 19:55
+ *   an 23:58
+ *   5
+ *   4
+ *   ICE 615 1 Sitzplatz, Wg. 12, Pl. 133, …
+ *
+ * so a section that yields no row-wise leg is read as columns
+ * (`legsOfColumns`). The columns are paired by position, which is only sound
+ * while they are equally long: anything else reads as nothing and goes to the
+ * model, rather than putting a time beside the wrong station.
  */
 
 const SECTION =
-  /Ihre Reiseverbindung und Reservierung\s+(Hinfahrt|R(?:ü|ue)ckfahrt)\s+am\s+(\d{1,2}\.\d{1,2}\.\d{4})/i;
+  /Ihre Reiseverbindung und Reservierung\s+(?:-\s+)?(Hinfahrt|R(?:ü|ue)ckfahrt|Einfache Fahrt)\s+am\s+(\d{1,2}\.\d{1,2}\.\d{4})/i;
 const STOP = /^(.+?)\s+(\d{1,2})\.(\d{1,2})\.\s+(ab|an)\s+(\d{1,2}:\d{2})(?:\s+.*)?$/;
 /** The product column: a category and a number ("ICE 1507", "S 8", "RE 8,"). */
 const PRODUCT = /^([A-Za-z]{1,5})\s?(\d{1,6})\b/;
 const RESERVATION = /Wg\.\s*([\w-]+),\s*Pl\.\s*([\d\s]+?)(?:,|$)/;
+/** The 2024 layout's cells, each on a line of its own. */
+const DATE_CELL = /^(\d{1,2})\.(\d{1,2})\.$/;
+const TIME_CELL = /^(ab|an)\s+(\d{1,2}:\d{2})$/;
+const TABLE_HEAD = /^Halt\s+Datum\s+Zeit/;
 const SECTION_END = /^(Hinweise|Wichtige Nutzungshinweise|Bitte informieren Sie sich)/;
 
 export function isDbOnlineTicket(text: string): boolean {
@@ -105,6 +129,49 @@ function legsOfSection(
   return legs;
 }
 
+/** The run of rows from `start` that match `cell`. */
+function cellRun(rows: string[], start: number, cell: RegExp): RegExpExecArray[] {
+  const run: RegExpExecArray[] = [];
+  for (let i = start; i < rows.length; i++) {
+    const match = cell.exec(rows[i]);
+    if (!match) break;
+    run.push(match);
+  }
+  return run;
+}
+
+/**
+ * The 2024 extraction: a column of stations, a column of dates, a column of
+ * times, then platforms and products. Stop i is station i on date i at time
+ * i. A train is given to a leg only when there are exactly as many product
+ * lines as legs — otherwise which train ran where is not printed in an order
+ * this can prove, and the legs keep their times without one.
+ */
+function legsOfColumns(
+  rows: string[],
+  sectionDay: string,
+  direction: ParsedRailLeg["direction"]
+): ParsedRailLeg[] {
+  const body = rows.filter((row) => !TABLE_HEAD.test(row));
+  const firstDate = body.findIndex((row) => DATE_CELL.test(row));
+  if (firstDate < 2) return [];
+  const names = body.slice(0, firstDate);
+  const dates = cellRun(body, firstDate, DATE_CELL);
+  const times = cellRun(body, firstDate + dates.length, TIME_CELL);
+  if (names.length !== dates.length || names.length !== times.length) return [];
+
+  const stops = names.map(
+    (name, i) => `${name} ${dates[i][1]}.${dates[i][2]}. ${times[i][1]} ${times[i][2]}`
+  );
+  const legs = legsOfSection(stops, sectionDay, direction);
+  const products = body
+    .slice(firstDate + dates.length + times.length)
+    .map(productOf)
+    .filter((p): p is NonNullable<ReturnType<typeof productOf>> => p !== null);
+  if (products.length !== legs.length) return legs;
+  return legs.map((leg, i) => ({ ...leg, ...products[i] }));
+}
+
 export function parseDbOnlineTicket(text: string): ParsedRailBooking | null {
   if (!isDbOnlineTicket(text)) return null;
   const all = text
@@ -123,21 +190,27 @@ export function parseDbOnlineTicket(text: string): ParsedRailBooking | null {
       if (SECTION.test(all[j]) || SECTION_END.test(all[j])) break;
       rows.push(all[j]);
     }
-    const direction = /^Hin/i.test(section[1]) ? "outbound" : "return";
-    legs.push(...legsOfSection(rows, sectionDay, direction));
+    const direction = /^R/i.test(section[1]) ? "return" : "outbound";
+    const rowWise = legsOfSection(rows, sectionDay, direction);
+    legs.push(...(rowWise.length > 0 ? rowWise : legsOfColumns(rows, sectionDay, direction)));
   }
   if (legs.length === 0) return null;
 
-  const sum = /^Summe\s+([\d.,]+)\s*€/m.exec(text);
+  // "Summe 122,50€ …" until 2024, "Gesamtpreis 91,60 €." since.
+  const sum =
+    /^Summe\s+([\d.,]+)\s*€/m.exec(text) ?? /^Gesamtpreis\s+(\d[\d.]*,\d{2})\s*€/m.exec(text);
   const price = sum ? amountOf(sum[1]) : null;
   const tariff = /^(.+?\((?:Einfache Fahrt|Hin- und Rückfahrt)\))\s*$/m.exec(text);
   return {
     bookingReference: dbBookingReference(text),
-    travelClass: travelClassOf(/^Klasse:.*$/m.exec(text)?.[0] ?? ""),
+    travelClass: travelClassOf(/^Klasse\b.*$/m.exec(text)?.[0] ?? ""),
     tariff: tariff ? tariff[1].trim() : null,
     price,
     currency: price !== null ? "EUR" : null,
-    operator: null,
+    // `isDbOnlineTicket` has already said whose ticket this is; the 2024
+    // layout no longer prints "DB Fernverkehr AG", the one line the labelled
+    // facts would have read the operator from.
+    operator: "Deutsche Bahn",
     legs,
     source: "db-online-ticket",
   };

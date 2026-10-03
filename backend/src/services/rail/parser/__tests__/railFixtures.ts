@@ -101,6 +101,93 @@ ICE 1507
 Wichtige Nutzungshinweise:
 - Die Fahrkarte gilt nur zusammen mit einem Lichtbildausweis.`;
 
+/**
+ * DB "Online-Ticket" PDF text in the layout DB prints since spring 2024, as a
+ * tester's ticket of 19.04.2024 extracts (values invented). Two things moved:
+ * the section header reads "… Reservierung - Einfache Fahrt am", and the
+ * itinerary table comes out of the PDF COLUMN by column — every station, then
+ * every date, then every time, then the platforms — instead of row by row.
+ */
+export const DB_ONLINE_TICKET_2024 = `CIV 1080
+Online-Ticket
+ICE Fahrkarte
+Fahrtantritt am 19.04.2024
+Sie können Ihren Zug frei wählen.
+Flexpreis (Einfache Fahrt)
+Klasse 1. Klasse
+Reisender 1 Person (ab 15 Jahre) mit 1 BCB50
+Einfache Fahrt Musterstadt+City Beispielburg+City
+Gesamtpreis 91,60 €. Gebucht am 15.04.2024 um 14:53 Uhr.
+Barcode bitte nicht knicken!
+Max Mustermann
+Auftragsnummer: 123456789012
+Ihre Reiseverbindung und Reservierung - Einfache Fahrt am 19.04.2024
+Halt Datum Zeit Gleis Produkte Reservierung / Hinweise
+Musterstadt Hbf
+Beispielburg Hbf
+19.04.
+19.04.
+ab 19:55
+an 23:58
+5
+4
+ICE 615 1 Sitzplatz, Wg. 12, Pl. 133, 1 Fenster, Abteil, Handy,
+Res.-Nr. 800000000000
+Wichtige Nutzungshinweise:
+- Es gelten die Beförderungsbedingungen der DB AG, siehe www.bahn.de/agb.
+Ticketcode: AAAA1111 Seite 1 / 1`;
+
+/**
+ * HYPOTHESIS: the same 2024 layout with a change of trains, assuming the
+ * extraction stays column by column (four stops, four dates, four times).
+ * No real ticket of this shape was available.
+ */
+export const DB_ONLINE_TICKET_2024_CHANGE = `Online-Ticket
+ICE Fahrkarte
+Flexpreis (Einfache Fahrt)
+Klasse 2. Klasse
+Gesamtpreis 54,00 €. Gebucht am 01.06.2024 um 09:00 Uhr.
+Auftragsnummer: 210987654321
+Ihre Reiseverbindung und Reservierung - Hinfahrt am 30.12.2024
+Halt Datum Zeit Gleis Produkte Reservierung / Hinweise
+Musterstadt Hbf
+Mittelhausen
+Mittelhausen
+Beispielburg Hbf
+30.12.
+30.12.
+30.12.
+30.12.
+ab 08:00
+an 09:10
+ab 09:25
+an 10:40
+5
+2
+3
+4
+ICE 615 1 Sitzplatz, Wg. 12, Pl. 33, 1 Fenster,
+Res.-Nr. 800000000001
+RE 4711
+Wichtige Nutzungshinweise:
+- Es gelten die Beförderungsbedingungen der DB AG, siehe www.bahn.de/agb.`;
+
+/** The 2024 layout with a column that lost a cell: three stops, two dates. Nothing may be guessed. */
+export const DB_ONLINE_TICKET_2024_RAGGED = `Online-Ticket
+Auftragsnummer: 210987654322
+Ihre Reiseverbindung und Reservierung - Einfache Fahrt am 19.04.2024
+Halt Datum Zeit Gleis Produkte Reservierung / Hinweise
+Musterstadt Hbf
+Mittelhausen
+Beispielburg Hbf
+19.04.
+19.04.
+ab 19:55
+an 23:58
+ICE 615
+Wichtige Nutzungshinweise:
+- Es gelten die Beförderungsbedingungen der DB AG, siehe www.bahn.de/agb.`;
+
 /** DB postal order (2010–2015): one line per direction, the whole journey. */
 export const DB_POSTAL_ORDER = `Sehr geehrter Herr Mustermann,
 vielen Dank für Ihre Fahrkartenbestellung. Wir bearbeiten Ihren Auftrag schnellstmöglich und stellen Ihnen die

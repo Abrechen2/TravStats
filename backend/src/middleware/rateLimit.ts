@@ -307,14 +307,16 @@ export const flightCreationLimiter = rateLimit({
 });
 
 /**
- * Rail journey creation. The same budget as flight creation — a train ride is
- * entered the way a flight is, one form at a time — but its own bucket and its
- * own message, so a busy flight import cannot lock the rail logbook and a 429
- * does not tell a rail user that they created too many flights.
+ * Rail journey creation. Its own bucket and its own message, so a busy flight
+ * import cannot lock the rail logbook and a 429 does not tell a rail user that
+ * they created too many flights — and its own, larger budget
+ * (`RAIL_CREATION_MAX`): it started with flight creation's 20 an hour on the
+ * reasoning that a ride is entered one form at a time, which the ticket import
+ * made untrue, since every leg of every ticket is one request here.
  */
 export const railCreationLimiter = rateLimit({
   windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
-  max: patAwareMax(RATE_LIMITS.FLIGHT_CREATION_MAX),
+  max: patAwareMax(RATE_LIMITS.RAIL_CREATION_MAX),
   message: "Too many train journeys saved, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
@@ -584,7 +586,7 @@ export const adminReseedLimiter = rateLimit({
 
 /**
  * Rate limiter for PDF parse endpoint
- * Allows 20 requests per 15 minutes per user. The comment always said "per
+ * Allows 60 requests per 15 minutes per user. The comment always said "per
  * user"; the key generator that makes it true arrived on 2026-09-04
  * (forgejo#68).
  */

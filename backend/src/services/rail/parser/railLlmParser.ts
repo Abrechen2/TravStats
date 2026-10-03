@@ -2,7 +2,7 @@ import { z } from "zod";
 
 import logger from "../../../utils/logger";
 import { llmParseTimeoutMs } from "../../http/llmTimeout";
-import { llmGenerate, ollamaTarget, resolveLlmTarget, type LlmTarget } from "../../llm/llmProvider";
+import { llmGenerate, ollamaTarget, resolveLlmChain, type LlmTarget } from "../../llm/llmProvider";
 import { foldStationName } from "../railStations";
 import {
   amountOf,
@@ -190,9 +190,18 @@ export function bookingFromAnswer(
   };
 }
 
-/** The admin's provider over env over the localhost default — shared resolution. */
-export async function resolveRailLlmTarget(): Promise<LlmTarget> {
-  return (await resolveLlmTarget({ withDefaults: true })) ?? ollamaTarget();
+/**
+ * Every provider the rail parser may ask, in the order it asks them — the
+ * admin's whole fallback chain, not only its first slot. Until 2.7.0-rc.5 this
+ * was `chain[0]`: an instance with an Ollama endpoint entered once and long
+ * since switched off, plus a consented OpenAI key, answered every ticket with
+ * "the AI parser is not reachable" and never sent OpenAI a single request
+ * (tester report, 2026-10-03). An instance with nothing configured still asks
+ * the localhost default, as before.
+ */
+export async function resolveRailLlmChain(): Promise<LlmTarget[]> {
+  const chain = await resolveLlmChain({ withDefaults: true });
+  return chain.length > 0 ? chain : [ollamaTarget()];
 }
 
 /**

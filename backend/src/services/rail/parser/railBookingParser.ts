@@ -13,8 +13,8 @@ import {
 import { parseDbOnlineTicket } from "./dbOnlineTicket";
 import { decodeCalendar, isCalendarAttachment, parseCalendarLegs } from "./icsCalendar";
 import { withLabelledFacts } from "./labelledFacts";
-import { parseRailWithLlm, resolveRailLlmTarget } from "./railLlmParser";
-import { llmProbe, llmProviderLabel } from "../../llm/llmProvider";
+import { parseRailWithLlm, resolveRailLlmChain } from "./railLlmParser";
+import { llmProbe, llmProviderLabel, type LlmTarget } from "../../llm/llmProvider";
 import { conclusiveOtherDomain, scoreDocument } from "../../parsing/documentDomain";
 import type { ParsedRailBooking, ParsedRailLeg, RailAttachment } from "./types";
 
@@ -262,79 +262,98 @@ export async function parseRailBookingText(
     );
   }
 
-  const target = await resolveRailLlmTarget();
-  const probe = await llmProbe(target);
-  const reachable = probe.reachable;
-  recordLlmProbe(target.url, reachable);
-  if (!reachable) {
-    return (
-      fromTemplate(false) ?? {
-        booking: null,
-        parserUsed: "none",
-        ollamaAvailable: false,
-        // A legless DB mail says so before blaming the model: its itinerary is
-        // in the ticket either way.
-        ...(templates.orderReference
-          ? noItinerary
-          : {
-              fallbackCode: "llmUnreachable" as const,
-              fallbackReason:
-                target.kind !== "ollama"
-                  ? `${llmProviderLabel(target)} is not reachable (${probe.error ?? "no answer"})`
-                  : `Ollama is not reachable at ${target.url}`,
-            }),
+  // The chain in the admin's order. A slot that does not answer its probe, or
+  // fails mid-request, hands over to the next one; a slot that ANSWERS — with
+  // a ride, with nothing, with a flight — is the answer, and no later slot is
+  // asked for a better-sounding one (`llmProvider.ts`, the chain's own rule).
+  let unreachable: { target: LlmTarget; error?: string } | null = null;
+  let failure: unknown = null;
+  for (const target of await resolveRailLlmChain()) {
+    const probe = await llmProbe(target);
+    recordLlmProbe(target.url, probe.reachable);
+    if (!probe.reachable) {
+      logger.warn(
+        { provider: llmProviderLabel(target), err: probe.error ?? "no answer" },
+        "[Rail Parser] A configured AI provider is not reachable"
+      );
+      unreachable ??= { target, ...(probe.error ? { error: probe.error } : {}) };
+      continue;
+    }
+    try {
+      const booking = await parseRailWithLlm(cleanEmailBody(text), target);
+      if (booking && legsLookLikeFlights(booking.legs)) {
+        return (
+          fromTemplate(true) ?? {
+            booking: null,
+            parserUsed: "none",
+            ollamaAvailable: true,
+            fallbackCode: "looksLikeFlight",
+            fallbackReason: "The AI parser answered with airport codes for station names",
+          }
+        );
       }
-    );
-  }
-
-  try {
-    const booking = await parseRailWithLlm(cleanEmailBody(text), target);
-    if (booking && legsLookLikeFlights(booking.legs)) {
+      // The model never returns an operator and drops a labelled reference or
+      // total whenever its answer misses the check; the labels fill those gaps.
+      if (booking) {
+        return {
+          booking: withLabelledFacts(booking, text),
+          parserUsed: "ollama",
+          ollamaAvailable: true,
+        };
+      }
       return (
         fromTemplate(true) ?? {
           booking: null,
           parserUsed: "none",
           ollamaAvailable: true,
-          fallbackCode: "looksLikeFlight",
-          fallbackReason: "The AI parser answered with airport codes for station names",
+          ...(templates.orderReference
+            ? noItinerary
+            : {
+                fallbackCode: "llmFoundNothing" as const,
+                fallbackReason: "The AI parser read this document and found no rail ride in it",
+              }),
         }
       );
+    } catch (err) {
+      logger.warn(
+        {
+          err: err instanceof Error ? err.message : String(err),
+          provider: llmProviderLabel(target),
+          model: target.model,
+        },
+        "[Rail Parser] AI parse failed"
+      );
+      failure ??= err;
     }
-    // The model never returns an operator and drops a labelled reference or
-    // total whenever its answer misses the check; the labels fill those gaps.
-    if (booking) {
-      return {
-        booking: withLabelledFacts(booking, text),
-        parserUsed: "ollama",
-        ollamaAvailable: true,
-      };
-    }
-    return (
-      fromTemplate(true) ?? {
-        booking: null,
-        parserUsed: "none",
-        ollamaAvailable: true,
-        ...(templates.orderReference
-          ? noItinerary
-          : {
-              fallbackCode: "llmFoundNothing" as const,
-              fallbackReason: "The AI parser read this document and found no rail ride in it",
-            }),
-      }
-    );
-  } catch (err) {
-    logger.warn(
-      { err: err instanceof Error ? err.message : String(err), model: target.model },
-      "[Rail Parser] Ollama parse failed"
-    );
+  }
+
+  if (failure !== null) {
     return (
       fromTemplate(true) ?? {
         booking: null,
         parserUsed: "none",
         ollamaAvailable: true,
         fallbackCode: "llmFailed",
-        fallbackReason: err instanceof Error ? err.message : String(err),
+        fallbackReason: failure instanceof Error ? failure.message : String(failure),
       }
     );
   }
+  return (
+    fromTemplate(false) ?? {
+      booking: null,
+      parserUsed: "none",
+      ollamaAvailable: false,
+      // A legless DB mail says so before blaming the model: its itinerary is
+      // in the ticket either way.
+      ...(templates.orderReference
+        ? noItinerary
+        : {
+            fallbackCode: "llmUnreachable" as const,
+            fallbackReason:
+              unreachable && (unreachable.target.kind ?? "ollama") !== "ollama"
+                ? `${llmProviderLabel(unreachable.target)} is not reachable (${unreachable.error ?? "no answer"})`
+                : `Ollama is not reachable at ${unreachable?.target.url ?? "its configured address"}`,
+          }),
+    }
+  );
 }

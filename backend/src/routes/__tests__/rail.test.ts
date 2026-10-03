@@ -4,6 +4,7 @@ import { prisma } from "../../db";
 import { hashPassword } from "../../utils/password";
 import { generateToken } from "../../utils/jwt";
 import { railCreationLimiter } from "../../middleware/rateLimit";
+import { RATE_LIMITS } from "../../config/constants";
 
 /**
  * Rail journeys (spec docs/superpowers/specs/2026-09-25-rail-domain.md).
@@ -57,14 +58,20 @@ describe("Rail journeys API", () => {
   });
 
   it("limits creation per user, on its own bucket", async () => {
-    const statuses: number[] = [];
-    for (let i = 0; i < 21; i++) {
-      statuses.push((await create({ ...base, departureLocal: "2020-01-01T08:00" })).status);
-    }
-    expect(statuses.slice(0, 20).every((s) => s === 201)).toBe(true);
-    expect(statuses[20]).toBe(429);
-    // The other account's bucket is untouched.
-    expect((await create(base, otherCookie)).status).toBe(201);
+    // Read off the limiter's own headers: spending the whole budget here
+    // would be 300 real journeys (it was 20 until a first import of tickets
+    // ran into it — `RAIL_CREATION_MAX`).
+    const first = await create({ ...base, departureLocal: "2020-01-01T08:00" });
+    const second = await create({ ...base, departureLocal: "2020-01-01T08:00" });
+    expect([first.status, second.status]).toEqual([201, 201]);
+    expect(Number(first.headers["ratelimit-limit"])).toBe(RATE_LIMITS.RAIL_CREATION_MAX);
+    expect(Number(second.headers["ratelimit-remaining"])).toBe(
+      Number(first.headers["ratelimit-remaining"]) - 1
+    );
+    // The other account's bucket is untouched by the two above.
+    const other = await create(base, otherCookie);
+    expect(other.status).toBe(201);
+    expect(Number(other.headers["ratelimit-remaining"])).toBe(RATE_LIMITS.RAIL_CREATION_MAX - 1);
   });
 
   afterAll(async () => {

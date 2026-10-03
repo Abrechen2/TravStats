@@ -82,6 +82,12 @@ export const RATE_LIMITS = {
   FLIGHT_CREATION_WINDOW_MS: 60 * 60 * 1000, // 1 hour
   FLIGHT_CREATION_MAX: 20, // flight creations per hour
 
+  // Rail journey creation. Not flight's 20: a ticket import saves one journey
+  // PER LEG, one request each, and a first import is years of tickets in one
+  // sitting. A tester hit 20 in a few minutes on 2026-10-03 and was locked
+  // out for the rest of the hour — twice, restarting the container each time.
+  RAIL_CREATION_MAX: 300, // journeys per hour
+
   // Flight lookup rate limits
   FLIGHT_LOOKUP_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
   FLIGHT_LOOKUP_MAX: 30, // lookups per window
@@ -112,7 +118,9 @@ export const RATE_LIMITS = {
 
   // PDF parse rate limits
   PDF_PARSE_WINDOW_MS: 15 * 60 * 1000, // 15 minutes
-  PDF_PARSE_MAX: 20, // 20 requests per window
+  // 60, the lodging import's figure: 20 stopped a first import of rail
+  // tickets — one PDF per parse — a third of the way through an hour's work.
+  PDF_PARSE_MAX: 60, // 60 requests per window
 
   // Receipt upload rate limits (prevent disk exhaustion)
   UPLOAD_RECEIPT_WINDOW_MS: 60 * 60 * 1000, // 1 hour

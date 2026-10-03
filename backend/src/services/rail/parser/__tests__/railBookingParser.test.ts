@@ -68,6 +68,40 @@ function fakeOllama(reply: (system: string) => string | null): Promise<FakeOllam
   });
 }
 
+interface FakeOpenAi {
+  baseUrl: string;
+  completions: number;
+  close: () => Promise<void>;
+}
+
+/** A stand-in for an OpenAI-compatible endpoint: `/models` answers, `/chat/completions` answers `reply`. */
+function fakeOpenAi(reply: string): Promise<FakeOpenAi> {
+  return new Promise((resolve) => {
+    const state = { completions: 0 };
+    const server = http.createServer((req, res) => {
+      if (req.url === "/v1/models") {
+        res.end(JSON.stringify({ data: [{ id: "cloud-model" }] }));
+        return;
+      }
+      req.resume();
+      req.on("end", () => {
+        state.completions += 1;
+        res.end(JSON.stringify({ choices: [{ message: { content: reply } }] }));
+      });
+    });
+    server.listen(0, "127.0.0.1", () => {
+      const { port } = server.address() as AddressInfo;
+      resolve({
+        baseUrl: `http://127.0.0.1:${port}/v1`,
+        get completions() {
+          return state.completions;
+        },
+        close: () => new Promise((r) => server.close(() => r())),
+      });
+    });
+  });
+}
+
 /** A port nothing listens on: the model is configured and unreachable. */
 const DEAD_URL = "http://127.0.0.1:9";
 
@@ -93,6 +127,39 @@ describe("parseRailBookingText", () => {
       ollamaAvailable: false,
       fallbackCode: "llmUnreachable",
     });
+  });
+
+  it("asks the next provider in the chain when the first one is not reachable", async () => {
+    // The tester's instance of 2026-10-03: an Ollama endpoint entered months
+    // ago and switched off since, and a second provider that works. Every
+    // ticket answered "llmUnreachable" and the second provider saw no request.
+    const second = await fakeOpenAi(
+      JSON.stringify({
+        legs: [
+          {
+            from: "Lyon Part-Dieu",
+            to: "Paris Gare de Lyon",
+            departure: "2026-07-03T08:04",
+            arrival: "2026-07-03T10:02",
+          },
+        ],
+      })
+    );
+    mockAdmin.mockResolvedValue({
+      ollamaUrl: DEAD_URL,
+      ollamaModel: "test-model",
+      openaiCompatBaseUrl: second.baseUrl,
+      openaiCompatModel: "cloud-model",
+    });
+    try {
+      const result = await parseRailBookingText(FOREIGN_TICKET_THIN, [], "user-1");
+      expect(result.fallbackCode).toBeUndefined();
+      expect(result.parserUsed).toBe("ollama");
+      expect(result.booking?.legs).toHaveLength(1);
+      expect(second.completions).toBe(1);
+    } finally {
+      await second.close();
+    }
   });
 
   it("names the order of a legless DB mail instead of blaming the model", async () => {
