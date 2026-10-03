@@ -39,7 +39,11 @@ export const FLIGHT_COLUMN_LAYOUT: Record<
   airline: { min: 64, onNarrow: "mark" },
   flightNumber: { min: 80, mono: true, priority: 2 },
   route: { min: 156, grow: 2, onNarrow: "title" },
-  time: { min: 170 },
+  // 236, measured in a browser on 2026-10-03 (forgejo#185): at 170 a flight
+  // with recorded times wrapped its red/green actual clock under the weekday —
+  // four lines per flight instead of two. "an Fr 02.10.26 14:40 15:04 +1" is
+  // the widest thing this cell says and needs 212px inside the cell's padding.
+  time: { min: 236 },
   status: { min: 100, onNarrow: "trailing" },
   duration: { min: 72, align: "end", mono: true, priority: 2 },
   aircraft: { min: 104, grow: 1, mono: true, priority: 2 },
