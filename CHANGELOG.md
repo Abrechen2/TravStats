@@ -6,10 +6,92 @@ Format: [Keep a Changelog](https://keepachangelog.com/en/1.0.0/)
 
 ## [Unreleased]
 
-> Written for 2.6.3-rc.1 (2026-09-10), which was never promoted. None of this
-> shipped in 2.6.3 — the 2.6.3 that shipped is the hotfix below. It ships with
-> the next release from `main`.
+## [2.7.0] - 2026-10-03
 
+TravStats 2.7.0 is the largest release since lodging became a domain. Web and
+app now share one look; every figure in the statistics can show the entries it
+is made of; documents and receipts live on the entry they belong to; forms
+suggest what you entered before; places, photos and the passport grew up; and a
+whole line of new domains — roadtrips and tours, rail, rental cars, recorded
+cruise tracks — is built and waiting behind the beta switch. The forty audit
+fixes first written for the never-promoted 2.6.3-rc.1 ship here too, further
+down this entry.
+
+**Before upgrading:** take a backup. The first start after the update runs the
+new migrations and recalculates stored cruise legs along the sea route (see
+below), which can take a minute on a large logbook.
+
+### Added
+- **One look for web and app.** The web app now uses the Companion app's
+  colours, spacing and type, one heading per page, and a dark mode built from
+  the colour tokens. Settings are split into groups — flights, cruises and
+  stays each have their own page — and the admin area is a page of its own.
+- **Every figure explains itself.** Clicking a statistic or a ranking row opens
+  the entries behind it with each one's contribution; what cannot be assigned
+  is named, not dropped, and the panel can be shared as a link. The running
+  year is compared with the same period last year instead of a whole year.
+- **Documents and receipts on their entry.** Boarding passes, hotel invoices and
+  confirmations are stored as documents on the flight, cruise or stay they
+  belong to; price, currency and booking code can be taken over from them, each
+  value shown first.
+- **Costs that belong to no booking** — tolls, ferries, parking, fuel — on a trip
+  or a roadtrip section, counted in the cost statistics. Deleting a section
+  hands its costs to the trip instead of dropping them.
+- **Help while you enter.** Forms suggest seats, flight numbers, terminals,
+  frequent-flyer numbers, rooms, board, tags and recent currencies from your own
+  history; a new entry lands in the trip whose dates it falls into. A suggestion
+  never overwrites what you typed.
+- **Loyalty programmes in one place** — airline, hotel and cruise programmes with
+  number and current status under Settings → Loyalty programmes, one button per
+  alliance, and stays, nights or flights per year that lead to the list behind.
+- **Trip suggestions in the inbox.** TravStats reads from your flights, cruises,
+  stays and place visits when you were away and proposes a trip, or the trip the
+  entries belong to; nothing is created until you accept.
+- **Places, passport and photos.** Places are a full domain with lists,
+  checklists and a CSV import that also takes a Google Takeout export; photos
+  hang on places, stays, flights and cruises and in the trip journal.
+- **The Excel export reads back** — edit the spreadsheet and import it again, or
+  carry it into another account. TravStats installs as a web app.
+- **AI and open data, under the admin's control.** The trip summary states only
+  what is in the data; an admin can switch the AI parser off entirely, use an
+  OpenAI-compatible provider (a provider outside your network only with explicit
+  consent), and switch on weather from Open-Meteo and descriptions from
+  Wikipedia. Dawarich location history counts as evidence for a country.
+- **The Companion app** (beta): pairing by QR code; push notifications for
+  flight changes and departure reminders, end-to-end encrypted through a relay
+  an admin switches on, with FlightAware AeroAPI as an optional status source;
+  and a sync change log that never silently overwrites a newer version.
+- **Behind the beta switch:** roadtrips and day tours with elevation profiles,
+  rail as a domain of its own, rental cars as a domain of their own, recorded
+  GPS tracks for cruises, and hotel enrichment from OpenStreetMap.
+- **A new demo account** — an invented traveller from the Rhineland with ten
+  years of travel. A new installation creates it and switches the beta features
+  on as it does.
+
+### Changed
+- **Cruise kilometres go up.** A cruise leg is now measured along the sea route
+  the map draws; some legs used to count only as a straight line. Stored legs
+  are recalculated once on the first start after the update.
+- **Restoring a backup from an older version works.** The restore empties the
+  schema inside its own transaction, loads the archive and brings it up to this
+  version's migrations before it reports success; a failed migration at startup
+  now stops the container instead of starting on an outdated schema.
+
+### Fixed
+- A flight imported twice says it is already in the logbook and offers to open
+  it, instead of asking you to check correct input.
+- German counts use the singular: "1 Flug", "1 Fahrt", "1 Miete".
+- Rail text import keeps operator, booking number, class and price.
+- The hotel and cruise import previews are reachable by keyboard; a dialog no
+  longer loses its focus while it saves; every field of the flight review is
+  named by its label.
+- A roadtrip that has not started no longer claims more days ahead than it has.
+- A plain flight confirmation keeps its booking reference and both times when
+  read without an AI model.
+- The trip card counts rail and rental entries; the rental form accepts a
+  German decimal comma.
+
+### Audit fixes first written for 2.6.3-rc.1
 
 A second instance audited the tree from the outside and reported forty-two
 findings; forty are fixed here, along with a crash found separately. Nothing
@@ -17,7 +99,7 @@ here adds a feature — it is the release where a number that was wrong becomes
 right, and where several doors that were open get shut. Three of the fixes
 change figures that are already on screen; they are named below.
 
-### Security
+#### Security
 - **A receipt file belongs to whoever uploaded it.** Knowing another account's
   receipt URL was enough to obtain the file: permission was derived from "does
   this caller own something that points at this file", and a caller writes their
@@ -49,7 +131,7 @@ change figures that are already on screen; they are named below.
   it looked like a flaky gateway. It answers with an error now.
 - **The map library's critical vulnerability is closed** (MapLibre 6).
 
-### Fixed
+#### Fixed
 - **Confirming flight detection no longer deletes your other trips.** It ended by
   removing every trip with no flight on it — which is every rail trip, every
   cruise, every hotel weekend — and their stops, routes, photographs and journal
@@ -134,7 +216,7 @@ change figures that are already on screen; they are named below.
 - **The last English word in the German settings navigation is translated**
   (#321).
 
-### Changed
+#### Changed
 - **An instance's own settings are one record, and are read as one.** Nothing in
   the database said the settings row was unique, and eleven places created one if
   they found none — so two requests arriving together on a fresh instance could
