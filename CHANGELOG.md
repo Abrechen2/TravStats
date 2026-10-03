@@ -86,6 +86,12 @@ below), which can take a minute on a large logbook.
 - **A trip lasts as long in the statistics as on its own page.** A trip from
   the 15th to the 18th showed four days on its page and three as the average
   trip length, because the statistics counted nights.
+- **A scanned boarding pass keeps its seat and booking reference.** A barcode
+  read in the browser filled flight and route, but left seat and booking
+  reference empty although the barcode carried both.
+- **An Excel export in the other language can be imported.** An English
+  export was refused as "no known sheets" under a German interface, and the
+  other way round.
 - A flight imported twice says it is already in the logbook and offers to open
   it, instead of asking you to check correct input.
 - German counts use the singular: "1 Flug", "1 Fahrt", "1 Miete".
