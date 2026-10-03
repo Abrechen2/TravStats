@@ -95,4 +95,19 @@ describe("TimelineActions", () => {
     await waitFor(() => expect(onChanged).toHaveBeenCalled());
     expect(openDataApi.fillJournalWeather).toHaveBeenCalledWith("t1");
   });
+
+  it("offers existing entries only while a domain is switched on (forgejo#188)", () => {
+    const actions = (
+      <TimelineActions tripId="t1" entries={[]} onAddJournal={vi.fn()} onChanged={vi.fn()} />
+    );
+    useSettingsStore.setState({ enabledDomains: [] });
+    const { rerender } = render(actions);
+    expect(screen.queryByRole("button", { name: "trips:detail.timeline.addEntry" })).toBeNull();
+
+    act(() => useSettingsStore.setState({ enabledDomains: ["flight"] }));
+    rerender(actions);
+    expect(
+      screen.getByRole("button", { name: "trips:detail.timeline.addEntry" })
+    ).toBeInTheDocument();
+  });
 });
