@@ -92,9 +92,14 @@ below), which can take a minute on a large logbook.
 - **An Excel export in the other language can be imported.** An English
   export was refused as "no known sheets" under a German interface, and the
   other way round.
+- A roadtrip still underway calls its distance "Strecke · geplant" instead of
+  "Gefahren", which counted legs that were still ahead.
+- A stay's page labels its per-night figure as the average of the total
+  ("Ø Gesamtkosten pro Nacht"), so it no longer reads like the room rate.
 - A flight imported twice says it is already in the logbook and offers to open
   it, instead of asking you to check correct input.
-- German counts use the singular: "1 Flug", "1 Fahrt", "1 Miete".
+- German counts use the singular: "1 Flug", "1 Fahrt", "1 Miete", and on the
+  roadtrip card "1 Nacht", "1 Station", "1 Tour".
 - Rail text import keeps operator, booking number, class and price.
 - The hotel and cruise import previews are reachable by keyboard; a dialog no
   longer loses its focus while it saves; every field of the flight review is
