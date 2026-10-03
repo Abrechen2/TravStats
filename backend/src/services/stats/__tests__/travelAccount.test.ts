@@ -316,7 +316,8 @@ describe("buildTripAccount", () => {
       }),
     ]);
     const row = account.trips[0];
-    expect(row.days).toBe(7);
+    // Eight calendar days (1st to 8th), seven nights; coverage counts nights.
+    expect(row.days).toBe(8);
     expect(row.coveredDays).toBe(3);
     expect(row.uncoveredDays).toBe(4);
     expect(account.totalUncoveredDays).toBe(4);
@@ -390,7 +391,20 @@ describe("buildTripAccount", () => {
 
   it("buckets a category-less trip as unassigned instead of dropping it", () => {
     const account = buildTripAccount([trip({ category: null })]);
-    expect(account.byCategory).toEqual([{ key: "unassigned", trips: 1, days: 7 }]);
+    expect(account.byCategory).toEqual([{ key: "unassigned", trips: 1, days: 8 }]);
+  });
+
+  // forgejo#170: the trip page said four days, the statistics three - they
+  // counted nights under the title "Reisedauer".
+  it("gives a trip from the 15th to the 18th four days, as the trip page does", () => {
+    const account = buildTripAccount([
+      trip({ startDate: d("2026-10-15"), endDate: d("2026-10-18") }),
+    ]);
+    expect(account.trips[0].days).toBe(4);
+    expect(account.avgTripDays).toBe(4);
+    expect(account.longestTripDays).toBe(4);
+    // Coverage still asks about the three NIGHTS, none of which is recorded.
+    expect(account.trips[0].uncoveredDays).toBe(3);
   });
 
   it("counts journal moods and weather across every trip", () => {

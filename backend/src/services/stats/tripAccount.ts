@@ -141,20 +141,25 @@ export function buildTripAccount(trips: TripAccountInput[]): TripAccount {
       addAmount(spendByCurrency, expense.currency, expense.amount);
     }
 
-    // A trip's last day is a departure day, not a night — a trip from the 1st
-    // to the 4th is three nights, the same count `walkNights` produces for a
-    // stay over those dates.
+    // Two counts over the same dates, kept apart on purpose (forgejo#170).
+    // DURATION is calendar days with both ends, the way the trip page and the
+    // trip cards count it: the 15th to the 18th is four days. COVERAGE asks
+    // where each NIGHT was spent, and a trip's last day is a departure day,
+    // not a night: the same dates are three nights, the count `walkNights`
+    // produces for a stay. The statistics once showed the night count under
+    // "Reisedauer", so one trip lasted four days on its page and three there.
     let days: number | null = null;
     let coveredDays: number | null = null;
     let uncoveredDays: number | null = null;
     if (trip.startDate !== null && trip.endDate !== null) {
       const start = dayKey(trip.startDate);
       const end = dayKey(trip.endDate);
-      days = Math.max(0, Math.round((end - start) / DAY_MS));
+      const nights = Math.max(0, Math.round((end - start) / DAY_MS));
+      days = nights + 1;
       let hit = 0;
       for (let c = start; c < end; c += DAY_MS) if (covered.has(c)) hit += 1;
       coveredDays = hit;
-      uncoveredDays = days - hit;
+      uncoveredDays = nights - hit;
     }
 
     rows.push({
