@@ -168,6 +168,65 @@ describe("sweepStatuses", () => {
     expect(typeof third.trips).toBe("number");
   });
 
+  // A tester, 2026-10-02: landed two and a half hours ago, still "geplant".
+  it("flips a flight nobody is tracking an hour after its scheduled arrival", async () => {
+    const untracked = await flight({ departureTime: past(5), arrivalTime: past(2.5) });
+    const overdueCheck = await flight({
+      departureTime: past(5),
+      arrivalTime: past(2.5),
+      // A check that fell due long ago and was never run is not tracking.
+      nextApiCheckAt: past(2),
+    });
+    await sweepStatuses();
+    expect((await prisma.flight.findUnique({ where: { id: untracked.id } }))?.status).toBe("flown");
+    expect((await prisma.flight.findUnique({ where: { id: overdueCheck.id } }))?.status).toBe(
+      "flown"
+    );
+  });
+
+  it("waits for a delayed flight the live checks are still following", async () => {
+    // Seen departing, not yet seen arriving: the follow-up polling holds the
+    // next check half an hour ahead. Flipping it now would end that polling
+    // before the arrival is recorded (the LO729 case, 2026-07-21).
+    const airborne = await flight({
+      departureTime: past(5),
+      arrivalTime: past(2.5),
+      nextApiCheckAt: future(0.5),
+    });
+    await sweepStatuses();
+    expect((await prisma.flight.findUnique({ where: { id: airborne.id } }))?.status).toBe(
+      "scheduled"
+    );
+  });
+
+  it("flips a flight whose actual arrival is known, even before the timetable says so", async () => {
+    const earlyLanding = await flight({
+      departureTime: past(2),
+      arrivalTime: future(0.3),
+      actualArrival: past(0.2),
+      nextApiCheckAt: future(0.5),
+    });
+    await sweepStatuses();
+    const row = await prisma.flight.findUnique({ where: { id: earlyLanding.id } });
+    expect(row?.status).toBe("flown");
+    expect(row?.nextApiCheckAt).toBeNull();
+  });
+
+  it("does not undo an early landing the live data reported", async () => {
+    // Departed two hours ago, landed early: the scheduled arrival is still
+    // ahead, but the flight is not a future flight. Only a departure in the
+    // future makes a "flown" contradictory.
+    const landedEarly = await flight({
+      status: "flown",
+      departureTime: past(2),
+      arrivalTime: future(0.3),
+    });
+    await sweepStatuses();
+    expect((await prisma.flight.findUnique({ where: { id: landedEarly.id } }))?.status).toBe(
+      "flown"
+    );
+  });
+
   it("does NOT revert flown→scheduled inside the slack band (hysteresis protects deliberate user/import data)", async () => {
     // A flight with arrival 2h in the past (inside the 6h slack band) has status
     // "flown" (e.g., from user/parser-set values at creation/import, direct seed

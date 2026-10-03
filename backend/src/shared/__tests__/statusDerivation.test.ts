@@ -21,19 +21,56 @@ describe("deriveFlightStatus", () => {
     }
   });
 
-  it("arrival more than 6h past -> flown; within slack -> scheduled", () => {
+  it("arrival more than 1h past -> flown; within the hour -> scheduled", () => {
     expect(
       deriveFlightStatus({
-        departureTime: past(9),
-        arrivalTime: past(7),
+        departureTime: past(4),
+        arrivalTime: past(1.5),
         current: "scheduled",
         now,
       })
     ).toBe("flown");
     expect(
       deriveFlightStatus({
-        departureTime: past(7),
-        arrivalTime: past(5),
+        departureTime: past(2),
+        arrivalTime: past(0.5),
+        current: "scheduled",
+        now,
+      })
+    ).toBe("scheduled");
+  });
+
+  // A tester, 2026-10-02: landed two and a half hours ago, still "geplant" -
+  // in the beta, the stable release and the app. The old slack was six hours.
+  it("a flight that landed two and a half hours ago is flown", () => {
+    expect(
+      deriveFlightStatus({
+        departureTime: past(5),
+        arrivalTime: past(2.5),
+        current: "scheduled",
+        now,
+      })
+    ).toBe("flown");
+  });
+
+  it("a known actual arrival decides on its own, without the slack", () => {
+    // Landed ten minutes ago and twenty minutes EARLY: the timetable still
+    // says the aircraft is in the air, the observation says it is not.
+    expect(
+      deriveFlightStatus({
+        departureTime: past(2),
+        arrivalTime: future(0.2),
+        actualArrival: past(1 / 6),
+        current: "scheduled",
+        now,
+      })
+    ).toBe("flown");
+    // An actual arrival that lies ahead is not an arrival yet.
+    expect(
+      deriveFlightStatus({
+        departureTime: past(2),
+        arrivalTime: past(0.2),
+        actualArrival: future(0.5),
         current: "scheduled",
         now,
       })

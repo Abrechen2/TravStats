@@ -16,7 +16,7 @@
  * well-placed checks capture everything the user cares about at ~90% less cost.
  */
 
-import { FLIGHT_ARRIVAL_SLACK_HOURS } from "../shared/statusDerivation";
+import { FLIGHT_TRACKED_ARRIVAL_WINDOW_HOURS } from "../shared/statusDerivation";
 
 const PRE_DEPARTURE_LEAD_MS = 30 * 60 * 1000;
 /**
@@ -42,12 +42,12 @@ const FALLBACK_FLIGHT_DURATION_MS = 12 * 60 * 60 * 1000;
  * WAW→EVN, 2026-07-21: departed 41 min late, last poll ran ~11 min before
  * touchdown, actual_arrival stayed NULL.)
  *
- * The window deliberately reuses the status-sweep slack: once the sweep flips
+ * The window deliberately equals the sweep's tracked-arrival window: once the sweep flips
  * the flight to "flown" it also clears nextApiCheckAt, so polling past that
  * point would be wasted API budget.
  */
 const ARRIVAL_FOLLOWUP_INTERVAL_MS = 30 * 60 * 1000;
-const ARRIVAL_FOLLOWUP_WINDOW_MS = FLIGHT_ARRIVAL_SLACK_HOURS * 60 * 60 * 1000;
+const ARRIVAL_FOLLOWUP_WINDOW_MS = FLIGHT_TRACKED_ARRIVAL_WINDOW_HOURS * 60 * 60 * 1000;
 
 /**
  * What the last API response (or the stored row) told us about the flight.

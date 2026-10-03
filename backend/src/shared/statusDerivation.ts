@@ -8,7 +8,7 @@ import { legacyDayOf, startOfDayAt } from "./time/legacyValues";
  * (zombie flip 6h/30h, past-cruise 48h).
  *
  * Hysteresis in the slack band: Derivers return the conservative default
- * ("scheduled") for the entire FLIGHT_ARRIVAL_SLACK_HOURS window (now-6h to now)
+ * ("scheduled") for the entire FLIGHT_ARRIVAL_SLACK_HOURS window (now-1h to now)
  * on WRITE paths — this is the safe value for incoming API data. However, the
  * sweep's flown→scheduled revert intentionally covers only STRICTLY FUTURE dates,
  * leaving the slack band untouched. This asymmetry is deliberate: inside the
@@ -21,7 +21,21 @@ import { legacyDayOf, startOfDayAt } from "./time/legacyValues";
  * a hysteresis zone, protecting intentional user/import data from repeated
  * reversions on the hourly tick.
  */
-export const FLIGHT_ARRIVAL_SLACK_HOURS = 6;
+/**
+ * How long after the SCHEDULED arrival a flight nobody is tracking stays
+ * "scheduled". It was six hours (the retired zombie flip) until a tester saw a
+ * flight still "geplant" two and a half hours after landing (2026-10-02). One
+ * hour absorbs an ordinary delay; a longer one is the live checks' job, and a
+ * flight they are following is held by FLIGHT_TRACKED_ARRIVAL_WINDOW_HOURS
+ * instead. A known actual arrival needs no slack at all.
+ */
+export const FLIGHT_ARRIVAL_SLACK_HOURS = 1;
+/**
+ * The outer bound while the live checks still follow a flight that departed
+ * but has not been seen arriving: polling continues until then, and the
+ * status sweep flips whatever is left once it has passed.
+ */
+export const FLIGHT_TRACKED_ARRIVAL_WINDOW_HOURS = 6;
 export const FLIGHT_DEPARTURE_SLACK_HOURS = 30;
 export const CRUISE_SLACK_HOURS = 48;
 export const FLIGHT_PASSTHROUGH = ["cancelled", "historical", "duplicated"] as const;
@@ -34,12 +48,17 @@ const H = 60 * 60 * 1000;
 export function deriveFlightStatus(input: {
   departureTime: Date | null;
   arrivalTime: Date | null;
+  /** An observed touchdown (live data or typed). Decides on its own. */
+  actualArrival?: Date | null;
   current: string;
   now?: Date;
 }): string {
   const { departureTime, arrivalTime, current } = input;
   if ((FLIGHT_PASSTHROUGH as readonly string[]).includes(current)) return current;
   const nowMs = (input.now ?? clockNow()).getTime();
+  if (input.actualArrival != null) {
+    return nowMs >= input.actualArrival.getTime() ? "flown" : "scheduled";
+  }
   if (arrivalTime != null) {
     return nowMs - arrivalTime.getTime() > FLIGHT_ARRIVAL_SLACK_HOURS * H ? "flown" : "scheduled";
   }
@@ -81,7 +100,7 @@ export function deriveCruiseStatus(input: {
  * "Check-In und Check-Out vergangen = abgeschlossen, Check-In vergangen aber
  * Check-Out Zukunft = laufend, Check-In und Check-Out Zukunft = geplant".
  *
- * Deliberately NO slack band, unlike flights (6h/30h) and cruises (48h). Those
+ * Deliberately NO slack band, unlike flights (1h/30h) and cruises (48h). Those
  * constants exist because an arrival/end time is an ESTIMATE that live data may
  * still revise, and because the retired one-way flips they replaced used those
  * cutoffs. A hotel check-out is a calendar fact the user typed; there is no

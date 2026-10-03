@@ -3,6 +3,7 @@ import logger from "../utils/logger";
 import {
   FLIGHT_ARRIVAL_SLACK_HOURS,
   FLIGHT_DEPARTURE_SLACK_HOURS,
+  FLIGHT_TRACKED_ARRIVAL_WINDOW_HOURS,
   CRUISE_SLACK_HOURS,
   deriveRailStatus,
   deriveTripStatus,
@@ -73,7 +74,7 @@ async function sweepDayStatuses(
    *
    * Hysteresis in the slack band: The flown→scheduled revert covers only
    * STRICTLY FUTURE dates (arrival/departure > now), intentionally leaving
-   * the FLIGHT_ARRIVAL_SLACK_HOURS band (now-6h to now) untouched. This band
+   * the FLIGHT_ARRIVAL_SLACK_HOURS band (now-1h to now) untouched. This band
    * is a hysteresis zone: a stored "flown" status is legitimate there
    * (from user/parser-set values at creation/import, direct script/seed writes,
    * or pre-existing data—the pending-update apply path never touches status,
@@ -160,6 +161,7 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
   trips: number;
 }> {
   const arrivalCutoff = new Date(now.getTime() - FLIGHT_ARRIVAL_SLACK_HOURS * H);
+  const trackedArrivalCutoff = new Date(now.getTime() - FLIGHT_TRACKED_ARRIVAL_WINDOW_HOURS * H);
   const departureCutoff = new Date(now.getTime() - FLIGHT_DEPARTURE_SLACK_HOURS * H);
 
   // Flights: scheduled -> flown (stale) and flown -> scheduled (future-dated)
@@ -178,10 +180,24 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
   // `finalArrivalLookup` clears the field whether that check succeeds or not.
   // "Exactly once" is therefore structural — the same field means "a last
   // attempt is outstanding" — rather than a new column nobody would maintain.
+  //
+  // Since 2026-10-03 a flight is stale on one of three grounds. Its actual
+  // arrival is known and past (no slack: the observation is the answer). Or
+  // nobody is following it and its scheduled arrival is an hour gone — a
+  // tester saw a flight still "geplant" 2.5 h after landing under the old
+  // six-hour rule. Or the live checks ARE following it (a check is due
+  // within the hour) and even their window has run out. The middle case
+  // leaves a followed flight alone on purpose: flipping it ends the polling
+  // that is about to record a delayed arrival (the LO729 case, 2026-07-21).
+  const notFollowed = {
+    OR: [{ nextApiCheckAt: null }, { nextApiCheckAt: { lt: arrivalCutoff } }],
+  };
   const staleWhere = {
     status: "scheduled",
     OR: [
-      { arrivalTime: { not: null, lt: arrivalCutoff } },
+      { actualArrival: { not: null, lte: now } },
+      { AND: [{ arrivalTime: { not: null, lt: arrivalCutoff } }, notFollowed] },
+      { arrivalTime: { not: null, lt: trackedArrivalCutoff } },
       { arrivalTime: null, departureTime: { not: null, lt: departureCutoff } },
     ],
   };
@@ -199,7 +215,11 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
   const futureFlown = await prisma.flight.updateMany({
     where: {
       status: "flown",
-      OR: [{ arrivalTime: { gt: now } }, { arrivalTime: null, departureTime: { gt: now } }],
+      // Only a flight that has not DEPARTED is contradictory. One that left
+      // and landed early (live data, 2026-10-03) has its scheduled arrival
+      // still ahead and is rightly flown.
+      actualArrival: null,
+      OR: [{ departureTime: { gt: now } }, { departureTime: null, arrivalTime: { gt: now } }],
     },
     data: { status: "scheduled", lastModifiedBy: "status_sweep" },
   });
