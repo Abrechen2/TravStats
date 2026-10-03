@@ -3,6 +3,7 @@ import { departureClockedWhere } from "../../shared/railClock";
 import { sendRailReminder } from "../emailService";
 import { serializeTime, type TimePrecision } from "../../shared/time/wire";
 import logger from "../../utils/logger";
+import { reminderDomainEnabled } from "./domainEnabled";
 
 /**
  * The rail half of the departure-reminder scheduler. `RailJourney` stores a
@@ -45,6 +46,8 @@ export async function checkRailReminders(now: Date): Promise<void> {
           trainNumber: true,
           coach: true,
           seat: true,
+          travelClass: true,
+          bookingReference: true,
           depStationName: true,
           depTimezone: true,
           depPrecision: true,
@@ -59,7 +62,7 @@ export async function checkRailReminders(now: Date): Promise<void> {
               notificationEmail: true,
               notifyBefore24h: true,
               notifyBefore2h: true,
-              settings: { select: { data: true } },
+              settings: { select: { data: true, enabledDomains: true } },
             },
           },
         },
@@ -81,6 +84,7 @@ export async function checkRailReminders(now: Date): Promise<void> {
       const { user } = journey;
       const shouldSend =
         user.notificationEmail !== null &&
+        reminderDomainEnabled(user.settings, "rail") &&
         ((key === "24h" && user.notifyBefore24h) || (key === "2h" && user.notifyBefore2h));
       if (!shouldSend) continue;
 
@@ -105,6 +109,8 @@ export async function checkRailReminders(now: Date): Promise<void> {
             trainNumber: journey.trainNumber,
             coach: journey.coach,
             seat: journey.seat,
+            travelClass: journey.travelClass,
+            bookingReference: journey.bookingReference,
             depStationName: journey.depStationName,
             arrStationName: journey.arrStationName,
             departure,

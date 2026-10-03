@@ -5,6 +5,8 @@ jest.mock("../../../db", () => ({
   prisma: { railJourney: { findMany: mockFindMany } },
 }));
 
+const ENABLED = ["flight", "rail"];
+
 const mockSendRailReminder = jest.fn();
 jest.mock("../../emailService", () => ({
   sendRailReminder: mockSendRailReminder,
@@ -36,7 +38,7 @@ interface JourneyFixture {
     notificationEmail: string | null;
     notifyBefore24h: boolean;
     notifyBefore2h: boolean;
-    settings: { data: unknown } | null;
+    settings: { data: unknown; enabledDomains: string[] } | null;
   };
 }
 
@@ -68,7 +70,7 @@ function makeJourney(overrides: Partial<JourneyFixture> = {}, hoursAhead = 24): 
       notificationEmail: "user@example.com",
       notifyBefore24h: true,
       notifyBefore2h: true,
-      settings: { data: { display: { language: "de" } } },
+      settings: { data: { display: { language: "de" } }, enabledDomains: ENABLED },
     },
     ...overrides,
   };
@@ -88,7 +90,7 @@ describe("checkRailReminders", () => {
           notificationEmail: null,
           notifyBefore24h: true,
           notifyBefore2h: true,
-          settings: null,
+          settings: { data: {}, enabledDomains: ENABLED },
         },
       }),
     ]);
@@ -107,7 +109,7 @@ describe("checkRailReminders", () => {
           notificationEmail: "user@example.com",
           notifyBefore24h: false,
           notifyBefore2h: true,
-          settings: null,
+          settings: { data: {}, enabledDomains: ENABLED },
         },
       }),
     ]);
@@ -175,5 +177,36 @@ describe("checkRailReminders", () => {
         { depPrecision: { notIn: ["day", "unknown"] } },
       ]);
     }
+  });
+
+  it("sends nothing for a journey whose user has the rail domain switched off", async () => {
+    mockFindMany.mockResolvedValueOnce([
+      makeJourney({
+        user: {
+          notificationEmail: "user@example.com",
+          notifyBefore24h: true,
+          notifyBefore2h: true,
+          settings: { data: {}, enabledDomains: ["flight"] },
+        },
+      }),
+    ]);
+
+    const { checkRailReminders } = await import("../railReminders");
+    await checkRailReminders(new Date());
+
+    expect(mockSendRailReminder).not.toHaveBeenCalled();
+  });
+
+  it("hands the mail the class and the booking reference the journey carries", async () => {
+    mockFindMany.mockResolvedValueOnce([
+      { ...makeJourney(), travelClass: "first", bookingReference: "ABC123" },
+    ]);
+
+    const { checkRailReminders } = await import("../railReminders");
+    await checkRailReminders(new Date());
+
+    const [journey] = mockSendRailReminder.mock.calls[0] as [Record<string, unknown>];
+    expect(journey.travelClass).toBe("first");
+    expect(journey.bookingReference).toBe("ABC123");
   });
 });

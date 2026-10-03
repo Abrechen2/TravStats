@@ -3,6 +3,8 @@ import { sendCruiseReminder } from "../emailService";
 import { zoneOf } from "../../shared/time/zoneOf";
 import { serializeTime, type TimePrecision } from "../../shared/time/wire";
 import logger from "../../utils/logger";
+import { cruiseTimes } from "../cruise/timesDto";
+import { reminderDomainEnabled } from "./domainEnabled";
 
 /**
  * The cruise half of the departure-reminder scheduler. Same 24h/2h-before
@@ -63,13 +65,21 @@ export async function checkCruiseReminders(now: Date): Promise<void> {
               cabinType: true,
               cabinNumber: true,
               deck: true,
+              routeName: true,
+              bookingReference: true,
+              startDate: true,
+              endDate: true,
+              startDay: true,
+              endDay: true,
+              startZone: true,
+              endZone: true,
               ship: { select: { name: true } },
               user: {
                 select: {
                   notificationEmail: true,
                   notifyBefore24h: true,
                   notifyBefore2h: true,
-                  settings: { select: { data: true } },
+                  settings: { select: { data: true, enabledDomains: true } },
                 },
               },
             },
@@ -94,6 +104,7 @@ export async function checkCruiseReminders(now: Date): Promise<void> {
       const { user } = stop.cruise;
       const shouldSend =
         user.notificationEmail !== null &&
+        reminderDomainEnabled(user.settings, "cruise") &&
         ((key === "24h" && user.notifyBefore24h) || (key === "2h" && user.notifyBefore2h));
       if (!shouldSend) continue;
 
@@ -120,7 +131,10 @@ export async function checkCruiseReminders(now: Date): Promise<void> {
             cabinType: stop.cruise.cabinType,
             cabinNumber: stop.cruise.cabinNumber,
             deck: stop.cruise.deck,
+            routeName: stop.cruise.routeName,
+            bookingReference: stop.cruise.bookingReference,
             departure,
+            endDay: cruiseTimes(stop.cruise).end,
           },
           { notificationEmail: user.notificationEmail, settingsData: user.settings?.data ?? null },
           hoursAhead

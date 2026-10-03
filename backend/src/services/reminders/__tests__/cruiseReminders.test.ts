@@ -5,6 +5,8 @@ jest.mock("../../../db", () => ({
   prisma: { cruiseStop: { findMany: mockFindMany } },
 }));
 
+const ENABLED = ["flight", "cruise"];
+
 const mockSendCruiseReminder = jest.fn();
 jest.mock("../../emailService", () => ({
   sendCruiseReminder: mockSendCruiseReminder,
@@ -41,7 +43,7 @@ interface StopFixture {
       notificationEmail: string | null;
       notifyBefore24h: boolean;
       notifyBefore2h: boolean;
-      settings: { data: unknown } | null;
+      settings: { data: unknown; enabledDomains: string[] } | null;
     };
   };
 }
@@ -76,12 +78,67 @@ function makeStop(overrides: Partial<StopFixture> = {}, hoursAhead = 24): StopFi
         notificationEmail: "user@example.com",
         notifyBefore24h: true,
         notifyBefore2h: true,
-        settings: { data: { display: { language: "de" } } },
+        settings: { data: { display: { language: "de" } }, enabledDomains: ENABLED },
       },
     },
     ...overrides,
   };
 }
+
+describe("checkCruiseReminders - domain switch and cruise facts", () => {
+  beforeEach(() => {
+    jest.clearAllMocks();
+    jest.resetModules();
+    mockFindMany.mockResolvedValue([]);
+  });
+
+  it("sends nothing for a cruise whose user has the cruise domain switched off", async () => {
+    mockFindMany.mockResolvedValueOnce([
+      makeStop({
+        cruise: {
+          ...makeStop().cruise,
+          user: {
+            notificationEmail: "user@example.com",
+            notifyBefore24h: true,
+            notifyBefore2h: true,
+            settings: { data: {}, enabledDomains: ["flight"] },
+          },
+        },
+      }),
+    ]);
+
+    const { checkCruiseReminders } = await import("../cruiseReminders");
+    await checkCruiseReminders(new Date());
+
+    expect(mockSendCruiseReminder).not.toHaveBeenCalled();
+  });
+
+  it("hands the mail the day the cruise ends, as a calendar day in the arrival port's zone", async () => {
+    const stop = makeStop();
+    mockFindMany.mockResolvedValueOnce([
+      {
+        ...stop,
+        cruise: {
+          ...stop.cruise,
+          bookingReference: "CR-77",
+          endDay: new Date("2026-10-10T00:00:00.000Z"),
+          endZone: "Pacific/Kiritimati",
+        },
+      },
+    ]);
+
+    const { checkCruiseReminders } = await import("../cruiseReminders");
+    await checkCruiseReminders(new Date());
+
+    const [cruise] = mockSendCruiseReminder.mock.calls[0] as [Record<string, unknown>];
+    expect(cruise.endDay).toEqual({
+      date: "2026-10-10",
+      zone: "Pacific/Kiritimati",
+      precision: "day",
+    });
+    expect(cruise.bookingReference).toBe("CR-77");
+  });
+});
 
 describe("checkCruiseReminders", () => {
   beforeEach(() => {
@@ -99,7 +156,7 @@ describe("checkCruiseReminders", () => {
             notificationEmail: null,
             notifyBefore24h: true,
             notifyBefore2h: true,
-            settings: null,
+            settings: { data: {}, enabledDomains: ENABLED },
           },
         },
       }),
@@ -121,7 +178,7 @@ describe("checkCruiseReminders", () => {
             notificationEmail: "user@example.com",
             notifyBefore24h: false,
             notifyBefore2h: true,
-            settings: null,
+            settings: { data: {}, enabledDomains: ENABLED },
           },
         },
       }),

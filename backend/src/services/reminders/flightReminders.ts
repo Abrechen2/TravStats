@@ -6,6 +6,7 @@ import { flightTimes } from "../flights/timesDto";
 import { resolveFlightDuration } from "../../shared/flightDuration";
 import logger from "../../utils/logger";
 import { notifyReminder } from "../notifications/dispatcher";
+import { reminderDomainEnabled } from "./domainEnabled";
 
 /**
  * The flight half of the departure-reminder scheduler (moved out of
@@ -104,6 +105,10 @@ export async function checkFlightReminders(now: Date): Promise<void> {
           airline: true,
           aircraft: true,
           seatNumber: true,
+          seatClass: true,
+          terminal: true,
+          gate: true,
+          bookingReference: true,
           depName: true,
           depIata: true,
           depIcao: true,
@@ -133,7 +138,7 @@ export async function checkFlightReminders(now: Date): Promise<void> {
               notificationEmail: true,
               notifyBefore24h: true,
               notifyBefore2h: true,
-              settings: { select: { data: true } },
+              settings: { select: { data: true, enabledDomains: true } },
             },
           },
         },
@@ -155,6 +160,8 @@ export async function checkFlightReminders(now: Date): Promise<void> {
       const shouldEmail =
         !sentReminders.has(reminderKey) &&
         user.notificationEmail !== null &&
+        // The mail only; the phone's push keeps its own switch (dispatcher).
+        reminderDomainEnabled(user.settings, "flight") &&
         ((key === "24h" && user.notifyBefore24h) || (key === "2h" && user.notifyBefore2h));
 
       // Normalise the stored departure to a real UTC instant before comparing
@@ -198,6 +205,10 @@ export async function checkFlightReminders(now: Date): Promise<void> {
             airline: flight.airline,
             aircraft: flight.aircraft,
             seatNumber: flight.seatNumber,
+            seatClass: flight.seatClass,
+            terminal: flight.terminal,
+            gate: flight.gate,
+            bookingReference: flight.bookingReference,
             depName: flight.depName,
             depIata: flight.depIata,
             arrName: flight.arrName,
