@@ -93,6 +93,19 @@ describe("FlightDetailPage", () => {
     expect(screen.getByText("1 x 23 kg")).toBeInTheDocument();
   });
 
+  it("gives a baggage allowance typed as a bare number its unit (forgejo#186)", async () => {
+    // "Freigepäck 23" — the tester typed only the number, and the page
+    // repeated it without saying 23 of what.
+    getByIdMock.mockResolvedValue(
+      makeFlight({ bookingReference: "XY7Z9Q", baggageAllowance: "23" })
+    );
+    renderPage();
+
+    await waitFor(() => expect(screen.getByText("XY7Z9Q")).toBeInTheDocument());
+    expect(screen.getByText("23 kg")).toBeInTheDocument();
+    expect(screen.queryByText("23")).not.toBeInTheDocument();
+  });
+
   it("leaves out a card that has nothing to say", async () => {
     // A flight with no booking details at all should not render an empty
     // "Buchung & Sitz" heading over a blank box.

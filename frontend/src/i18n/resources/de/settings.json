@@ -223,6 +223,12 @@
     "currencyHint": "Gilt für alle Bereiche. Bestehende Umrechnungen bleiben, wie sie erfasst wurden.",
     "distanceSub": "Für Strecken und Statistiken",
     "currencySub": "Für Ausgabensummen; Wechselkurse von der EZB",
+    "weight": "Gewicht",
+    "weightSub": "Für Freigepäck, das ohne Einheit eingetragen ist; umgerechnet wird nichts",
+    "weightOptions": {
+      "kg": "Kilogramm",
+      "lb": "Pfund"
+    },
     "short": {
       "kilometers": "km",
       "miles": "mi",

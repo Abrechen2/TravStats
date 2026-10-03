@@ -26,6 +26,8 @@ export interface SettingsDataJson {
   };
   units?: {
     distanceUnit?: string;
+    /** Unit of a bare baggage-allowance number (forgejo#186); absent = kg. */
+    weightUnit?: string;
     currency?: string;
   };
   defaults?: {

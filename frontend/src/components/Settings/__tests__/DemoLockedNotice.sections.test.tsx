@@ -1,5 +1,5 @@
 import { describe, it, expect, vi, beforeEach } from "vitest";
-import { render, screen } from "@testing-library/react";
+import { fireEvent, render, screen } from "@testing-library/react";
 import { MemoryRouter } from "react-router-dom";
 
 // Both sections fetch on mount through real API modules; the frontend test
@@ -203,7 +203,7 @@ describe("the display and units cards on the demo account", () => {
     timeFormat: "24h" as const,
     theme: "dark" as const,
   };
-  const units = { distanceUnit: "kilometers" as const, currency: "EUR" };
+  const units = { distanceUnit: "kilometers" as const, weightUnit: "kg" as const, currency: "EUR" };
 
   const renderDisplay = (): void => {
     render(<DisplaySection display={display} onSetDisplay={() => {}} />);
@@ -246,5 +246,38 @@ describe("the display and units cards on the demo account", () => {
     renderUnits();
     expect(screen.queryByText("settings:demoLocked")).not.toBeInTheDocument();
     expect(screen.getByLabelText("settings:display.timezone")).toBeEnabled();
+  });
+});
+
+/** forgejo#186: the unit a bare baggage-allowance number is read in. */
+describe("the weight unit on the units card", () => {
+  const renderWith = (units: Record<string, unknown>, onSetUnits = vi.fn()): typeof onSetUnits => {
+    isDemoMock.current = false;
+    render(
+      <UnitsSection
+        units={units as never}
+        onSetUnits={onSetUnits}
+        baseCurrency="EUR"
+        onSetBaseCurrency={() => {}}
+      />
+    );
+    return onSetUnits;
+  };
+
+  it("offers kilograms and pounds and saves the chosen one", () => {
+    const onSetUnits = renderWith({ distanceUnit: "kilometers", weightUnit: "kg" });
+    const group = screen.getByRole("radiogroup", { name: "settings:units.weight" });
+    const radios = Array.from(group.querySelectorAll('[role="radio"]'));
+    expect(radios.map((radio) => radio.textContent)).toEqual(["kg", "lb"]);
+    expect(radios[0]).toHaveAttribute("aria-checked", "true");
+
+    fireEvent.click(radios[1]);
+    expect(onSetUnits).toHaveBeenCalledWith({ weightUnit: "lb" });
+  });
+
+  it("shows kilograms for settings saved before the preference existed", () => {
+    renderWith({ distanceUnit: "kilometers" });
+    const group = screen.getByRole("radiogroup", { name: "settings:units.weight" });
+    expect(group.querySelector('[aria-checked="true"]')?.textContent).toBe("kg");
   });
 });

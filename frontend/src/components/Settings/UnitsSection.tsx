@@ -8,6 +8,7 @@ import { Segmented } from "../ui/Segmented";
 import { SettingRow, SettingRows } from "../ui/SettingRow";
 import DemoLockedNotice from "./DemoLockedNotice";
 import { useIsDemoAccount } from "../../hooks/useIsDemoAccount";
+import { WEIGHT_UNITS, resolveWeightUnit } from "../../lib/baggageAllowance";
 
 interface UnitsSectionProps {
   units: UnitsSettings;
@@ -63,6 +64,25 @@ export default function UnitsSection({
                 name: t(`settings:units.options.${value}`),
               }))}
               onChange={(distanceUnit) => onSetUnits({ distanceUnit })}
+              disabled={isDemo}
+            />
+          }
+        />
+        <SettingRow
+          title={t("settings:units.weight")}
+          sub={t("settings:units.weightSub")}
+          control={
+            <Segmented
+              label={t("settings:units.weight")}
+              // Persisted state from before the preference existed has none.
+              value={resolveWeightUnit(units.weightUnit)}
+              options={WEIGHT_UNITS.map((value) => ({
+                value,
+                // "kg" and "lb" are symbols, the same in both languages.
+                label: value,
+                name: t(`settings:units.weightOptions.${value}`),
+              }))}
+              onChange={(weightUnit) => onSetUnits({ weightUnit })}
               disabled={isDemo}
             />
           }

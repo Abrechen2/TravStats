@@ -35,6 +35,7 @@
     "ticketNumber": "Ticket Number",
     "bookingClassLetter": "Booking class (code)",
     "baggageAllowance": "Baggage allowance",
+    "baggageAllowanceUnitHint": "A number without a unit is shown as {{unit}}",
     "frequentFlyerNumber": "Frequent flyer number",
     "frequentFlyerSuggested": "Suggested from your last flight with this airline",
     "status": "Status",
