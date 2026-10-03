@@ -78,6 +78,14 @@ below), which can take a minute on a large logbook.
   now stops the container instead of starting on an outdated schema.
 
 ### Fixed
+- **A flight is "flown" once it has landed.** It stayed "scheduled" for six
+  hours after its scheduled arrival. A landing reported by the live flight
+  data now counts at once, and a flight without live data turns an hour after
+  its scheduled arrival; a delayed flight the live checks are still following
+  is left alone until its arrival is recorded.
+- **A trip lasts as long in the statistics as on its own page.** A trip from
+  the 15th to the 18th showed four days on its page and three as the average
+  trip length, because the statistics counted nights.
 - A flight imported twice says it is already in the logbook and offers to open
   it, instead of asking you to check correct input.
 - German counts use the singular: "1 Flug", "1 Fahrt", "1 Miete".
