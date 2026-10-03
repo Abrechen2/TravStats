@@ -20,6 +20,7 @@ import {
   DB_ONLINE_TICKET,
   DB_ONLINE_TICKET_2024,
   DB_ONLINE_TICKET_2024_CHANGE,
+  DB_ONLINE_TICKET_2024_ONE_BLOCK,
   DB_ONLINE_TICKET_2024_RAGGED,
   DB_ORDER_WITHOUT_ITINERARY,
   DB_POSTAL_ORDER,
@@ -300,7 +301,8 @@ describe("DB Online-Ticket, the layout since spring 2024", () => {
     ]);
   });
 
-  it("pairs the columns of a change of trains, and each train with its leg", () => {
+  it("reads a change of trains: one block of columns per train, each with its own train and seat", () => {
+    // rc.5 read only the first block, and that one without its train.
     expect(rows(DB_ONLINE_TICKET_2024_CHANGE)).toEqual([
       [
         "outbound",
@@ -318,10 +320,17 @@ describe("DB Online-Ticket, the layout since spring 2024", () => {
         "Beispielburg Hbf",
         "2024-12-30T09:25",
         "2024-12-30T10:40",
-        "RE 4711",
-        null,
-        null,
+        "IC 4711",
+        "4",
+        "87",
       ],
+    ]);
+  });
+
+  it("reads a journey printed as one block of four stops the same way", () => {
+    expect(rows(DB_ONLINE_TICKET_2024_ONE_BLOCK)?.map((r) => [r[1], r[2], r[5]])).toEqual([
+      ["Musterstadt Hbf", "Mittelhausen", "ICE 615"],
+      ["Mittelhausen", "Beispielburg Hbf", "RE 4711"],
     ]);
   });
 

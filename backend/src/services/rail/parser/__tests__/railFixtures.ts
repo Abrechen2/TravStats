@@ -138,16 +138,50 @@ Wichtige Nutzungshinweise:
 Ticketcode: AAAA1111 Seite 1 / 1`;
 
 /**
- * HYPOTHESIS: the same 2024 layout with a change of trains, assuming the
- * extraction stays column by column (four stops, four dates, four times).
- * No real ticket of this shape was available.
+ * The 2024 layout with a change of trains, as a tester's ticket of 14.02.2025
+ * extracts (values invented): one block of columns PER TRAIN, each followed by
+ * its product line, whose reservation may wrap onto a second line.
  */
 export const DB_ONLINE_TICKET_2024_CHANGE = `Online-Ticket
 ICE Fahrkarte
-Flexpreis (Einfache Fahrt)
+Super Sparpreis (Einfache Fahrt)
 Klasse 2. Klasse
+Zugbindung ICE 615, 08:00 Uhr am 30.12.2024
+IC 4711, 09:25 Uhr am 30.12.2024
 Gesamtpreis 54,00 €. Gebucht am 01.06.2024 um 09:00 Uhr.
 Auftragsnummer: 210987654321
+Ihre Reiseverbindung und Reservierung - Einfache Fahrt am 30.12.2024
+Halt Datum Zeit Gleis Produkte Reservierung / Hinweise
+Musterstadt Hbf
+Mittelhausen
+30.12.
+30.12.
+ab 08:00
+an 09:10
+5
+2
+ICE 615 1 Sitzplatz, Wg. 12, Pl. 33, 1 Gang, Großraum, Handy,
+Res.-Nr. 800000000001
+Mittelhausen
+Beispielburg Hbf
+30.12.
+30.12.
+ab 09:25
+an 10:40
+11
+4
+IC 4711 1 Sitzplatz, Wg. 4, Pl. 87, 1 Gang, Tisch, Großraum,
+unten, Res.-Nr. 800000000002
+Wichtige Nutzungshinweise:
+- Es gelten die Beförderungsbedingungen der DB AG, siehe www.bahn.de/agb.`;
+
+/**
+ * HYPOTHESIS: a 2024 ticket that prints a whole journey as ONE block (four
+ * stops, four dates, four times). No real ticket of this shape was seen; the
+ * reader takes it because the pairing is the same.
+ */
+export const DB_ONLINE_TICKET_2024_ONE_BLOCK = `Online-Ticket
+Auftragsnummer: 210987654323
 Ihre Reiseverbindung und Reservierung - Hinfahrt am 30.12.2024
 Halt Datum Zeit Gleis Produkte Reservierung / Hinweise
 Musterstadt Hbf

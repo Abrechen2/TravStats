@@ -40,9 +40,10 @@ import type { ParsedRailBooking, ParsedRailLeg } from "./types";
  *   ICE 615 1 Sitzplatz, Wg. 12, Pl. 133, …
  *
  * so a section that yields no row-wise leg is read as columns
- * (`legsOfColumns`). The columns are paired by position, which is only sound
- * while they are equally long: anything else reads as nothing and goes to the
- * model, rather than putting a time beside the wrong station.
+ * (`legsOfColumns`), one block of columns per train. The columns are paired
+ * by position, which is only sound while they are equally long: anything else
+ * reads as nothing and goes to the model, rather than putting a time beside
+ * the wrong station.
  */
 
 const SECTION =
@@ -140,12 +141,70 @@ function cellRun(rows: string[], start: number, cell: RegExp): RegExpExecArray[]
   return run;
 }
 
+interface ColumnBlock {
+  /** Index of the block's first station row. */
+  start: number;
+  names: string[];
+  dates: RegExpExecArray[];
+  times: RegExpExecArray[];
+  /** Index of the first row after the block's times. */
+  end: number;
+}
+
 /**
- * The 2024 extraction: a column of stations, a column of dates, a column of
- * times, then platforms and products. Stop i is station i on date i at time
- * i. A train is given to a leg only when there are exactly as many product
- * lines as legs — otherwise which train ran where is not printed in an order
- * this can prove, and the legs keep their times without one.
+ * The 2024 extraction: per train, a column of stations, a column of dates, a
+ * column of times, the platforms, then the product line —
+ *
+ *   Augsburg Hbf / Hannover Hbf / 14.02. / 14.02. / ab 08:47 / an 12:58 / 1 / 8
+ *   ICE 1586 1 Sitzplatz, Wg. 24, Pl. 47, …
+ *   Hannover Hbf / Bielefeld Hbf / 14.02. / 14.02. / ab 13:40 / an 14:39 / 11 / 4
+ *   IC 2048 1 Sitzplatz, …
+ *
+ * — one such block per train (measured on a tester's ticket of 14.02.2025
+ * with a change in Hannover; rc.5 assumed ONE block for the whole journey and
+ * read only its first train). A block is found from its dates: a run of k
+ * date cells has its k stations directly above and its k times directly
+ * below. Stop i is station i on date i at time i, which is only sound while
+ * the three are equally long and no block reaches into the one before it —
+ * anything else reads as nothing and goes to the model.
+ */
+/** A platform ("5", "11 A-C"), a product line, or a reservation's wrapped tail. */
+function isBlockTrailer(row: string): boolean {
+  return (
+    /^\d{1,3}(\s+[A-Z](-[A-Z])?)?$/.test(row) || PRODUCT.test(row) || /,|Res\.?\s?-?Nr/.test(row)
+  );
+}
+
+function columnBlocks(body: string[]): ColumnBlock[] | null {
+  const blocks: ColumnBlock[] = [];
+  let i = 0;
+  while (i < body.length) {
+    if (!DATE_CELL.test(body[i])) {
+      i++;
+      continue;
+    }
+    const dates = cellRun(body, i, DATE_CELL);
+    const times = cellRun(body, i + dates.length, TIME_CELL);
+    const start = i - dates.length;
+    const floor = blocks.length > 0 ? blocks[blocks.length - 1].end : 0;
+    if (times.length !== dates.length || start < floor) return null;
+    // What stands between the block before and this one's stations must be
+    // that block's platforms, product and reservation — a row that is none
+    // of these is a station that lost its date, and the pairing is off by one.
+    if (!body.slice(floor, start).every((row) => blocks.length > 0 && isBlockTrailer(row))) {
+      return null;
+    }
+    const end = i + dates.length + times.length;
+    blocks.push({ start, names: body.slice(start, i), dates, times, end });
+    i = end;
+  }
+  return blocks;
+}
+
+/**
+ * A train is given to a block's legs only when the block prints exactly as
+ * many product lines as it has legs — otherwise which train ran where is not
+ * printed in an order this can prove, and the legs keep their times without one.
  */
 function legsOfColumns(
   rows: string[],
@@ -153,23 +212,21 @@ function legsOfColumns(
   direction: ParsedRailLeg["direction"]
 ): ParsedRailLeg[] {
   const body = rows.filter((row) => !TABLE_HEAD.test(row));
-  const firstDate = body.findIndex((row) => DATE_CELL.test(row));
-  if (firstDate < 2) return [];
-  const names = body.slice(0, firstDate);
-  const dates = cellRun(body, firstDate, DATE_CELL);
-  const times = cellRun(body, firstDate + dates.length, TIME_CELL);
-  if (names.length !== dates.length || names.length !== times.length) return [];
-
-  const stops = names.map(
-    (name, i) => `${name} ${dates[i][1]}.${dates[i][2]}. ${times[i][1]} ${times[i][2]}`
-  );
-  const legs = legsOfSection(stops, sectionDay, direction);
-  const products = body
-    .slice(firstDate + dates.length + times.length)
-    .map(productOf)
-    .filter((p): p is NonNullable<ReturnType<typeof productOf>> => p !== null);
-  if (products.length !== legs.length) return legs;
-  return legs.map((leg, i) => ({ ...leg, ...products[i] }));
+  const blocks = columnBlocks(body);
+  if (!blocks) return [];
+  return blocks.flatMap((block, b) => {
+    const stops = block.names.map(
+      (name, i) =>
+        `${name} ${block.dates[i][1]}.${block.dates[i][2]}. ${block.times[i][1]} ${block.times[i][2]}`
+    );
+    const legs = legsOfSection(stops, sectionDay, direction);
+    const products = body
+      .slice(block.end, b + 1 < blocks.length ? blocks[b + 1].start : body.length)
+      .map(productOf)
+      .filter((p): p is NonNullable<ReturnType<typeof productOf>> => p !== null);
+    if (products.length !== legs.length) return legs;
+    return legs.map((leg, i) => ({ ...leg, ...products[i] }));
+  });
 }
 
 export function parseDbOnlineTicket(text: string): ParsedRailBooking | null {
