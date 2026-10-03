@@ -84,7 +84,7 @@
     "spend": "Spend",
     "spendOriginal": "Original",
     "spendBase": "In base currency",
-    "spendPerNight": "Per night",
+    "spendPerNight": "Avg. total per night",
     "noLocation": "No location on file",
     "setLocationNow": "Find location now",
     "deleteConfirmTitle": "Delete lodging?",
