@@ -15,8 +15,11 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { documentIdsBodySchema } from "../../../schemas/document";
+import { photoFileQuerySchema } from "../../../schemas/photoVariant";
 import {
   errorContent,
+  photoConversionUnavailable,
+  photoUnreadable,
   tripJournalEntryResponse,
   tripPhotoResponse,
   tripResponse,
@@ -441,7 +444,10 @@ registry.registerPath({
   description:
     "multipart/form-data; up to 20 files in `photos`. An optional `stopId` field files every " +
     "photo of the request at that stop of the trip (forgejo#139); it is checked before " +
-    "anything is stored, and a refused request keeps no row and no file.",
+    "anything is stored, and a refused request keeps no row and no file. JPEG, PNG, WebP, " +
+    "GIF, HEIC and HEIF are accepted; a HEIC/HEIF original is kept as uploaded and gets a " +
+    "JPEG copy for display. `takenAt`, `lat` and `lon` are read from each file's EXIF " +
+    "where it carries them (forgejo#192).",
   tags: ["Trips"],
   request: {
     params: tripId,
@@ -464,6 +470,8 @@ registry.registerPath({
     },
     400: stopNotOnTrip,
     404: notFound,
+    422: photoUnreadable,
+    503: photoConversionUnavailable,
   },
 });
 
@@ -505,12 +513,17 @@ registry.registerPath({
   description:
     "Ownership-checked and browser-cacheable. Sets its own `Cache-Control: private`, " +
     "overriding the API-wide `no-store` — private, never public, so a shared cache " +
-    "cannot hold one user's photo.",
+    "cannot hold one user's photo. A HEIC/HEIF original is answered as its JPEG copy " +
+    "unless `variant=original` asks for the uploaded bytes.",
   tags: ["Trips"],
-  request: { params: z.object({ id: z.string().uuid(), photoId: z.string().uuid() }) },
+  request: {
+    params: z.object({ id: z.string().uuid(), photoId: z.string().uuid() }),
+    query: photoFileQuerySchema,
+  },
   responses: {
     200: { description: "Image bytes", content: { "image/*": { schema: z.string() } } },
     404: notFound,
+    503: photoConversionUnavailable,
   },
 });
 
@@ -518,9 +531,17 @@ registry.registerPath({
   method: "post",
   path: "/trips/{id}/cover",
   summary: "Set the trip's cover image",
+  description:
+    "multipart/form-data, field `cover`. HEIC/HEIF is accepted like on the photo upload: " +
+    "kept as uploaded, served as its JPEG copy.",
   tags: ["Trips"],
   request: { params: tripId },
-  responses: { 200: { description: "Cover set" }, 404: notFound },
+  responses: {
+    200: { description: "Cover set" },
+    404: notFound,
+    422: photoUnreadable,
+    503: photoConversionUnavailable,
+  },
 });
 
 registry.registerPath({

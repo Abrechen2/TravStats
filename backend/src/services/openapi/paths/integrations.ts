@@ -12,7 +12,7 @@
 import { z } from "zod";
 
 import { registry } from "../registry";
-import { errorContent, timeRefused } from "./shared";
+import { errorContent, photoConversionUnavailable, photoUnreadable, timeRefused } from "./shared";
 import { PARSER_SUPPORTED_DOMAINS } from "../../../shared/domains";
 import { parseRetentionFields } from "../../../schemas/document";
 import { diagnosticBundleSchema } from "../../diagnostics/bundleSchema";
@@ -556,9 +556,19 @@ registry.registerPath({
   method: "post",
   path: "/places/visits/{visitId}/photos",
   summary: "Attach photos to a visit",
+  description:
+    "multipart/form-data, up to 20 files in `photos` — JPEG, PNG, WebP, GIF, HEIC or HEIF. " +
+    "A HEIC/HEIF original is kept as uploaded (its checksum is of those bytes) and gets a " +
+    "JPEG copy for display; `takenAt` is read from each file's EXIF (forgejo#192).",
   tags: ["Places"],
   request: { params: z.object({ visitId: uuid }) },
-  responses: { 201: { description: "Uploaded" }, 400: badInput, 404: notFound },
+  responses: {
+    201: { description: "Uploaded" },
+    400: badInput,
+    404: notFound,
+    422: photoUnreadable,
+    503: photoConversionUnavailable,
+  },
 });
 
 registry.registerPath({

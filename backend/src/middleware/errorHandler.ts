@@ -127,6 +127,12 @@ export type ApiErrorCode =
   | "DRY_RUN_NOT_FOUND"
   /** A re-resolution or the time-model backfill is already running. */
   | "RE_RESOLVE_RUNNING"
+  /** A HEIC/HEIF photo upload that could not be decoded (422, forgejo#192):
+   *  the file is damaged or not what its type says. Nothing was stored. */
+  | "PHOTO_UNREADABLE"
+  /** The HEIC/HEIF converter failed for a reason that is not the file's — a
+   *  timeout or a crashed worker (503). Nothing was stored; retry later. */
+  | "PHOTO_CONVERSION_UNAVAILABLE"
   /** Tour track upload: the file is over the size limit. */
   | "TRACK_FILE_TOO_LARGE"
   /** Tour track upload: not readable as GPX, TCX or FIT. */

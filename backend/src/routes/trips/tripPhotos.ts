@@ -22,6 +22,12 @@ import {
   updateTripPhotoSchema,
 } from "../../schemas/tripPhoto";
 import { NOT_A_COVER, assertStopOnTrip } from "../../services/trips/photoStation";
+import { ingestUploadedPhotos } from "../../services/photos/ingestPhotos";
+import {
+  parsePhotoVariant,
+  photoFileToServe,
+  removeDisplayRendition,
+} from "../../services/photos/displayRendition";
 
 /**
  * Trip photos and the cover image — a same-prefix satellite of routes/trips.ts, split out when that
@@ -69,6 +75,9 @@ router.post(
       // cleanup below, so the files multer already stored go too.
       const { stopId } = tripPhotoUploadFieldsSchema.parse(req.body ?? {});
       if (stopId !== undefined) await assertStopOnTrip(userId, req.params.id, stopId);
+      // Capture time and position from each file's own metadata, and a JPEG
+      // display copy for a HEIC/HEIF original — or a refusal, before any row.
+      const exif = await ingestUploadedPhotos(getTripPhotoDir(), uploaded);
 
       const last = await prisma.tripPhoto.findFirst({
         where: { tripId: req.params.id },
@@ -78,7 +87,7 @@ router.post(
       let nextIdx = (last?.sortIdx ?? -1) + 1;
 
       const created = await prisma.$transaction(
-        uploaded.map((f) =>
+        uploaded.map((f, i) =>
           prisma.tripPhoto.create({
             data: {
               tripId: req.params.id,
@@ -87,6 +96,9 @@ router.post(
               sizeBytes: f.size,
               sortIdx: nextIdx++,
               stopId: stopId ?? null,
+              takenAt: exif[i].takenAt,
+              lat: exif[i].lat,
+              lon: exif[i].lon,
             },
           })
         )
@@ -101,6 +113,7 @@ router.post(
           // CodeQL js/path-injection taint.
           const safePath = path.join(getTripPhotoDir(), path.basename(f.filename));
           fs.existsSync(safePath) && fs.unlinkSync(safePath);
+          removeDisplayRendition(getTripPhotoDir(), f.filename);
         } catch (_e) {
           logger.warn({
             operation: "trip_photo_upload_cleanup_error",
@@ -146,7 +159,13 @@ router.get(
   }
 );
 
-/** GET /trips/:id/photos/:photoId/file — serve image bytes */
+/**
+ * GET /trips/:id/photos/:photoId/file — serve image bytes.
+ *
+ * `?variant=display` (default) is what a browser can draw — for a HEIC/HEIF
+ * original its JPEG copy; `?variant=original` is the bytes as uploaded
+ * (forgejo#192).
+ */
 router.get(
   "/trips/:id/photos/:photoId/file",
   authenticate,
@@ -154,14 +173,20 @@ router.get(
     try {
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
+      const variant = parsePhotoVariant(req.query);
       const photo = await prisma.tripPhoto.findFirst({
         where: { id: req.params.photoId, tripId: req.params.id },
       });
       if (!photo) throw new AppError("Photo not found", 404);
-      const filePath = path.join(getTripPhotoDir(), path.basename(photo.filename));
-      if (!fs.existsSync(filePath)) throw new AppError("File missing", 404);
-      res.type(photo.mimetype);
-      res.sendFile(filePath);
+      const served = await photoFileToServe(
+        getTripPhotoDir(),
+        photo.filename,
+        photo.mimetype,
+        variant
+      );
+      if (!served) throw new AppError("File missing", 404);
+      res.type(served.type);
+      res.sendFile(served.filePath);
     } catch (error) {
       next(error);
     }
@@ -239,6 +264,8 @@ router.post(
       const userId = req.userId!;
       await resolveTrip(userId, req.params.id);
       if (!uploaded) throw new AppError("No cover uploaded", 400);
+      // A HEIC/HEIF cover gets its display copy too, or is refused here.
+      await ingestUploadedPhotos(getTripPhotoDir(), [uploaded]);
       // Reuse the trip-photos directory but scope the URL under the
       // trip's REST namespace via a pseudo-photo row, so cover deletion
       // is unified with photo deletion later.
@@ -266,6 +293,7 @@ router.post(
           // the CodeQL js/path-injection taint.
           const safePath = path.join(getTripPhotoDir(), path.basename(uploaded.filename));
           fs.existsSync(safePath) && fs.unlinkSync(safePath);
+          removeDisplayRendition(getTripPhotoDir(), uploaded.filename);
         } catch (_e) {
           logger.warn({
             operation: "trip_cover_upload_cleanup_error",

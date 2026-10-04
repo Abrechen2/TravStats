@@ -23,7 +23,8 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
-import { errorContent, timeRefused } from "./shared";
+import { errorContent, photoConversionUnavailable, photoUnreadable, timeRefused } from "./shared";
+import { photoFileQuerySchema } from "../../../schemas/photoVariant";
 import {
   createLodgingSchema,
   lodgingQuerySchema,
@@ -559,15 +560,18 @@ registry.registerPath({
   path: "/lodging/{lodgingId}/photos",
   summary: "Add photographs to a lodging",
   description:
-    "multipart/form-data, field `photos`, up to 20 files. A rejected upload " +
-    "removes the bytes it had already written — otherwise the directory grows " +
-    "by every failed attempt.",
+    "multipart/form-data, field `photos`, up to 20 files — JPEG, PNG, WebP, GIF, HEIC or " +
+    "HEIF. A HEIC/HEIF original is kept as uploaded and gets a JPEG copy for display. " +
+    "A rejected upload removes the bytes it had already written — otherwise the " +
+    "directory grows by every failed attempt.",
   tags: lodgingPhotoTag,
   request: { params: z.object({ lodgingId: uuid }) },
   responses: {
     201: { description: "Added" },
     400: { description: "No photos, or a file the filter refused", content: errorContent },
     404: notFound,
+    422: photoUnreadable,
+    503: photoConversionUnavailable,
   },
 });
 
@@ -577,9 +581,11 @@ registry.registerPath({
   summary: "Fetch a lodging photo's bytes",
   description:
     "Sets its own `Cache-Control: private`, overriding the API-wide `no-store`. " +
-    "Private and never public: a shared cache must not hold one user's photo.",
+    "Private and never public: a shared cache must not hold one user's photo. A " +
+    "HEIC/HEIF original is answered as its JPEG copy unless `variant=original` asks " +
+    "for the uploaded bytes.",
   tags: lodgingPhotoTag,
-  request: { params: z.object({ lodgingId: uuid, photoId: uuid }) },
+  request: { params: z.object({ lodgingId: uuid, photoId: uuid }), query: photoFileQuerySchema },
   responses: {
     200: { description: "Image bytes", content: { "image/*": { schema: z.string() } } },
     404: notFound,

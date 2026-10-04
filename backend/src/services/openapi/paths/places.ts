@@ -26,6 +26,7 @@ import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { createVisitSchema } from "../../../schemas/place";
 import { errorContent, timeRefused } from "./shared";
+import { photoFileQuerySchema } from "../../../schemas/photoVariant";
 import {
   createPlaceListSchema,
   updatePlaceListSchema,
@@ -366,11 +367,15 @@ registry.registerPath({
     "link (`immichAssetId` set, no copy on disk) is streamed from the owner's Immich; " +
     "the asset id comes from the row, never from the request. A link to one of the " +
     "caller's trip photos (`tripPhotoId`) streams that photo's file. `size` picks the " +
-    "rendition for a link: thumbnail, preview (default) or original.",
+    "rendition for a link: thumbnail, preview (default) or original. A HEIC/HEIF copy " +
+    "on disk is answered as its JPEG rendition unless `variant=original` asks for the " +
+    "uploaded bytes.",
   tags: placesTag,
   request: {
     params: z.object({ visitId: uuid, photoId: uuid }),
-    query: z.object({ size: z.enum(["thumbnail", "preview", "original"]).optional() }),
+    query: photoFileQuerySchema.extend({
+      size: z.enum(["thumbnail", "preview", "original"]).optional(),
+    }),
   },
   responses: {
     200: { description: "Image bytes", content: { "image/*": { schema: z.string() } } },

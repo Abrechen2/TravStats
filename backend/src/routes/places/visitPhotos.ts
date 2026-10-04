@@ -28,6 +28,12 @@ import { getImmichConnection } from "../../services/immich/immichResolver";
 import { ImmichError } from "../../services/immich/types";
 import { linkVisitPhotosToImmich } from "../../services/places/visitPhotoImmichLink";
 import { toPhotoDto, VISIT_PHOTO_INCLUDE } from "./visitPhotoDto";
+import { ingestUploadedPhotos } from "../../services/photos/ingestPhotos";
+import {
+  parsePhotoVariant,
+  photoFileToServe,
+  removeDisplayRendition,
+} from "../../services/photos/displayRendition";
 
 /**
  * Photo proof for a place visit.
@@ -115,6 +121,10 @@ router.post(
       const userId = req.userId!;
       await resolveVisit(req.params.visitId, userId);
       if (uploaded.length === 0) throw new AppError("No photos uploaded", 400);
+      // Capture time from each file's own metadata, and a JPEG display copy
+      // for a HEIC/HEIF original — or a refusal, before any row. A visit photo
+      // has no position column, so only the time is kept.
+      const exif = await ingestUploadedPhotos(getPlacePhotoDir(), uploaded);
 
       const last = await prisma.placeVisitPhoto.findFirst({
         where: { placeVisitId: req.params.visitId },
@@ -169,6 +179,7 @@ router.post(
               mimetype: file.mimetype,
               sizeBytes: file.size,
               checksum: checksums[i],
+              takenAt: exif[i].takenAt,
               sortIdx: nextIdx++,
             },
           })
@@ -196,6 +207,7 @@ router.post(
           // uses, and what clears the path-injection taint.
           const safePath = path.join(getPlacePhotoDir(), path.basename(file.filename));
           if (fs.existsSync(safePath)) fs.unlinkSync(safePath);
+          removeDisplayRendition(getPlacePhotoDir(), file.filename);
         } catch {
           logger.warn({
             operation: "place_photo_upload_cleanup_error",
@@ -226,6 +238,9 @@ router.get(
         where: { id: req.params.photoId, placeVisitId: req.params.visitId },
       });
       if (!photo) throw new AppError("Photo not found", 404);
+      // `display` (default): what a browser can draw — a HEIC/HEIF original's
+      // JPEG copy; `original`: the bytes as uploaded (forgejo#192).
+      const variant = parsePhotoVariant(req.query);
 
       // A link to one of the caller's trip photographs: the trip photo's own
       // file, looked up through the caller's trips — the FK proves the photo
@@ -236,11 +251,16 @@ router.get(
           select: { filename: true, mimetype: true },
         });
         if (!tripPhoto) throw new AppError("Photo not found", 404);
-        const tripFile = path.join(getTripPhotoDir(), path.basename(tripPhoto.filename));
-        if (!fs.existsSync(tripFile)) throw new AppError("File missing", 404);
+        const served = await photoFileToServe(
+          getTripPhotoDir(),
+          tripPhoto.filename,
+          tripPhoto.mimetype,
+          variant
+        );
+        if (!served) throw new AppError("File missing", 404);
         res.setHeader("Cache-Control", "private, max-age=3600");
-        res.type(tripPhoto.mimetype);
-        res.sendFile(tripFile);
+        res.type(served.type);
+        res.sendFile(served.filePath);
         return;
       }
 
@@ -262,15 +282,20 @@ router.get(
         return;
       }
 
-      const filePath = path.join(getPlacePhotoDir(), path.basename(photo.filename));
-      if (!fs.existsSync(filePath)) throw new AppError("File missing", 404);
+      const served = await photoFileToServe(
+        getPlacePhotoDir(),
+        photo.filename,
+        photo.mimetype,
+        variant
+      );
+      if (!served) throw new AppError("File missing", 404);
 
       // `private`, deliberately overriding the global `no-store` on /api: these
       // bytes are one user's photo, and a shared cache must never be allowed to
       // hold them. See the cache-control note in CLAUDE.md.
       res.setHeader("Cache-Control", "private, max-age=3600");
-      res.type(photo.mimetype);
-      res.sendFile(filePath);
+      res.type(served.type);
+      res.sendFile(served.filePath);
     } catch (error) {
       if (error instanceof ImmichError) {
         logger.warn({ message: "immich_proxy_upstream_failure", context: { kind: error.kind } });
