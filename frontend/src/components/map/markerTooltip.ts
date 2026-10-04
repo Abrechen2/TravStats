@@ -158,6 +158,52 @@ const SURFACE_STYLE: Record<string, string> = {
 type TFn = (key: string, options?: Record<string, unknown>) => string;
 
 /**
+ * Rail and rental layers are built with a prefix per surface — "dashboard-rail",
+ * "rail-detail", "dashboard-rental" … — so they are matched by their suffix
+ * rather than listed (forgejo#181: the flat dashboard listed none of them, and a
+ * hovered train or rental answered nothing while every other domain did).
+ */
+const RAIL_PATH_ID = /(^|-)rail(-[a-z]+)*-paths$/;
+const RAIL_STATION_ID = /(^|-)rail(-[a-z]+)*-stations$/;
+const RENTAL_POINT_ID = /(^|-)rental(-[a-z]+)*-points$/;
+const RENTAL_LINK_ID = /(^|-)rental(-[a-z]+)*-links$/;
+
+const RENTAL_ROLE_KEY: Record<string, string> = {
+  same: "map:tooltip.rentalSame",
+  pickup: "map:tooltip.rentalPickup",
+  return: "map:tooltip.rentalReturn",
+};
+
+/** A heading and the kind of thing it is — all four rail/rental data carry a ready label. */
+function labelledHtml(heading: string, kind: string): string {
+  return (
+    `<div style="font-weight:600;">${escapeHtml(heading)}</div>` +
+    `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(kind)}</div>`
+  );
+}
+
+function railOrRentalTooltip(layerId: string, object: unknown, t: TFn): string | null {
+  const datum = object as { label?: string; name?: string; role?: string } | null | undefined;
+  if (!datum) return null;
+  if (RAIL_PATH_ID.test(layerId) && datum.label) {
+    return labelledHtml(datum.label, t("map:tooltip.railLine"));
+  }
+  if (RAIL_STATION_ID.test(layerId) && datum.name) {
+    return labelledHtml(datum.name, t("map:tooltip.railStation"));
+  }
+  if (RENTAL_POINT_ID.test(layerId) && datum.label) {
+    return labelledHtml(
+      datum.label,
+      t(RENTAL_ROLE_KEY[datum.role ?? ""] ?? "map:tooltip.rentalSame")
+    );
+  }
+  if (RENTAL_LINK_ID.test(layerId) && datum.label) {
+    return labelledHtml(datum.label, t("map:tooltip.rentalLink"));
+  }
+  return null;
+}
+
+/**
  * Factory for the deck.gl `getTooltip` callback. Threads `t` and the
  * active locale into the closure so the rendered date + count labels
  * follow the user's language without restarting the overlay.
@@ -219,6 +265,9 @@ export function createMarkerTooltip(
       const html = renderPlaceHtml(datum, datum.name, t, locale);
       return { html, style: SURFACE_STYLE };
     }
+
+    const railOrRental = railOrRentalTooltip(layerId, info.object, t);
+    if (railOrRental) return { html: railOrRental, style: SURFACE_STYLE };
 
     return null;
   };

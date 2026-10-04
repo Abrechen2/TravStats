@@ -316,3 +316,49 @@ describe("createMarkerTooltip — places", () => {
     expect(getTooltip(makeInfo("place-pins", { category: "other" }))).toBeNull();
   });
 });
+
+// forgejo#181: a hovered train or rental answered nothing on the dashboard
+// while every other domain did — the allow-lists never named those layers.
+describe("createMarkerTooltip — rail and rental", () => {
+  const getTooltip = createMarkerTooltip(t, "de");
+
+  it.each(["dashboard-rail-paths", "rail-detail-paths", "rail-paths"])(
+    "names the journey on %s",
+    (layerId) => {
+      const result = getTooltip(makeInfo(layerId, { id: "j1", label: "Köln Hbf → Augsburg Hbf" }));
+      expect(result?.html).toContain("Köln Hbf → Augsburg Hbf");
+      expect(result?.html).toContain("map:tooltip.railLine");
+    }
+  );
+
+  it("names the station", () => {
+    const result = getTooltip(makeInfo("dashboard-rail-stations", { name: "Hannover Hbf" }));
+    expect(result?.html).toContain("Hannover Hbf");
+    expect(result?.html).toContain("map:tooltip.railStation");
+  });
+
+  it("says whether a rental point is the pick-up, the return or both", () => {
+    const at = (role: string) =>
+      getTooltip(makeInfo("dashboard-rental-points", { label: "Sixt · MUC", role }))?.html;
+    expect(at("pickup")).toContain("map:tooltip.rentalPickup");
+    expect(at("return")).toContain("map:tooltip.rentalReturn");
+    expect(at("same")).toContain("map:tooltip.rentalSame");
+  });
+
+  it("names a one-way rental's link", () => {
+    for (const layerId of ["dashboard-rental-links", "rental-detail-links"]) {
+      const result = getTooltip(makeInfo(layerId, { label: "MUC → BER" }));
+      expect(result?.html).toContain("map:tooltip.rentalLink");
+    }
+  });
+
+  it("escapes what the user typed", () => {
+    const result = getTooltip(makeInfo("dashboard-rail-stations", { name: "<b>x</b>" }));
+    expect(result?.html).toContain("&lt;b&gt;x&lt;/b&gt;");
+  });
+
+  it("does not answer for a layer that only looks similar", () => {
+    expect(getTooltip(makeInfo("trail-paths", { label: "nope" }))).toBeNull();
+    expect(getTooltip(makeInfo("dashboard-rail-paths-glow", { label: "nope" }))).toBeNull();
+  });
+});
