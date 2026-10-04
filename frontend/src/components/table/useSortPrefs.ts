@@ -1,5 +1,6 @@
-import { useCallback, useState } from "react";
+import { useCallback, useEffect, useRef, useState } from "react";
 import { logger } from "../../lib/logger";
+import { emitLocalPrefWrite, useWebPrefsEpoch } from "../../lib/webPrefs/prefEvents";
 
 /**
  * Per-table sort choice, persisted to localStorage.
@@ -14,9 +15,12 @@ import { logger } from "../../lib/logger";
  * The stored key is validated against the caller's own vocabulary on read, so
  * a sort column removed in a later release falls back to the default instead
  * of leaving the table sorted by something that no longer exists.
+ *
+ * Follows the user across browsers (forgejo#200, `lib/webPrefs/registry.ts`).
  */
 
-const STORAGE_PREFIX = "travstats:table-sort:";
+export const TABLE_SORT_PREFIX = "travstats:table-sort:";
+const STORAGE_PREFIX = TABLE_SORT_PREFIX;
 
 interface StoredSort {
   by: string;
@@ -53,11 +57,22 @@ export function useSortPrefs<K extends string>(
   /** The columns this table can sort by; anything else in storage is ignored. */
   known: readonly K[]
 ): SortPrefs<K> {
-  const [state, setState] = useState<StoredSort>(() => {
+  const resolve = (): StoredSort => {
     const stored = read(tableKey);
     if (stored && (known as readonly string[]).includes(stored.by)) return stored;
     return { by: defaultBy, order: defaultOrder };
-  });
+  };
+  const [state, setState] = useState<StoredSort>(resolve);
+
+  // The server's copy arrived after mount: sort by it (forgejo#200).
+  const syncEpoch = useWebPrefsEpoch("tablePrefs");
+  const seenEpoch = useRef(syncEpoch);
+  useEffect(() => {
+    if (seenEpoch.current === syncEpoch) return;
+    seenEpoch.current = syncEpoch;
+    setState(resolve());
+    // `resolve` reads tableKey (listed) and the caller's module-constant defaults.
+  }, [syncEpoch, tableKey]);
 
   const setSort = useCallback(
     (by: K, order: "asc" | "desc") => {
@@ -69,6 +84,7 @@ export function useSortPrefs<K extends string>(
         // Storage full or disabled: the table still sorts, it just forgets.
         logger.warn("useSortPrefs: could not persist the sort choice", err);
       }
+      emitLocalPrefWrite(STORAGE_PREFIX + tableKey);
     },
     [tableKey]
   );

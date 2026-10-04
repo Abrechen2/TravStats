@@ -18,6 +18,7 @@ import { useWhatsNew } from "./hooks/useWhatsNew";
 import { useTelemetryConsentStep } from "./hooks/useTelemetryConsentStep";
 import { useSessionValidation } from "./hooks/useSessionValidation";
 import { useSetupRedirect } from "./hooks/useSetupRedirect";
+import { useWebPrefsSync } from "./hooks/useWebPrefsSync";
 import WhatsNewModal from "./components/WhatsNewModal";
 import ProfileZonePrompt from "./components/ProfileZonePrompt";
 import DemoBetaNotice from "./components/DemoBetaNotice";
@@ -90,6 +91,10 @@ function AppContent() {
   const sessionConfirmed = isAuthenticated && sessionChecked;
   const { entry, shouldShow, checked: whatsNewChecked, dismiss } = useWhatsNew(sessionConfirmed);
   const { setupChecked, requiresSetup } = useSetupRedirect({ sessionChecked, isAuthenticated });
+  // Display preferences follow the account across browsers (forgejo#200) —
+  // only once the server has confirmed the session, and never for the shared
+  // demo account, whose preferences stay per browser.
+  useWebPrefsSync(sessionConfirmed && user && !user.isSharedDemo ? user.id : null);
   const [showSeedingModal, setShowSeedingModal] = useState(false);
 
   // Usage-stats consent is instance-wide, so only an admin may answer it, and

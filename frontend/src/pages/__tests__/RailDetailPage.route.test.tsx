@@ -36,6 +36,8 @@ vi.mock("../../lib/api", () => ({
 
 // The session is confirmed and the changelog has nothing to say: both would
 // otherwise hold the whole route tree behind a loading screen.
+// The display-preference sync (forgejo#200) talks to the server; not this test's subject.
+vi.mock("../../hooks/useWebPrefsSync", () => ({ useWebPrefsSync: () => undefined }));
 vi.mock("../../hooks/useSessionValidation", () => ({
   useSessionValidation: () => ({ sessionChecked: true }),
 }));

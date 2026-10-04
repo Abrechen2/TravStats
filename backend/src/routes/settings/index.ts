@@ -11,6 +11,7 @@ import profilePictureRouter from "./profilePicture";
 import tokensRouter from "./tokens";
 import immichRouter from "./immich";
 import dawarichRouter from "./dawarich";
+import webPrefsRouter from "./webPrefs";
 
 const router = Router();
 
@@ -47,6 +48,9 @@ router.use(
     "/profile-picture",
     "/notifications",
     "/profile",
+    // Every visitor of a public instance shares this account; one visitor's
+    // colours and filters would become everyone's (forgejo#200).
+    "/web-prefs",
   ],
   rejectDemoWrites
 );
@@ -62,5 +66,6 @@ router.use("/profile-picture", profilePictureRouter);
 router.use("/tokens", tokensRouter);
 router.use("/immich", immichRouter);
 router.use("/dawarich", dawarichRouter);
+router.use("/web-prefs", webPrefsRouter);
 
 export default router;

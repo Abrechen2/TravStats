@@ -27,6 +27,7 @@ import {
   nearbyHomeAirportsQuerySchema,
   nearbyHomeAirportsResponseSchema,
 } from "../../../schemas/home";
+import { putWebPrefsSchema, webPrefsResponseSchema } from "../../../schemas/webPrefs";
 
 const settingsTag = ["Settings"];
 const badInput = { description: "Invalid input", content: errorContent };
@@ -450,5 +451,48 @@ registry.registerPath({
     200: { description: "Saved" },
     400: badInput,
     403: { description: "Not permitted", content: errorContent },
+  },
+});
+
+registry.registerPath({
+  method: "get",
+  path: "/settings/web-prefs",
+  summary: "Get the web app's display preferences",
+  description:
+    "The browser app's per-user display choices — colours, map appearance, the " +
+    "dashboard domain filter, table and statistics view choices — so they follow " +
+    "the user to every browser (forgejo#200). Stored per section; a section never " +
+    "written is absent. Separate from `/app-settings`, which is the Companion's blob.",
+  tags: settingsTag,
+  responses: {
+    200: {
+      description: "Stored sections",
+      content: { "application/json": { schema: webPrefsResponseSchema } },
+    },
+  },
+});
+
+registry.registerPath({
+  method: "put",
+  path: "/settings/web-prefs",
+  summary: "Save some sections of the web app's display preferences",
+  description:
+    "Merges per section: sections not named in the body are kept. Within a section " +
+    "the newer `updatedAt` wins (capped at the server's now); an older write is not " +
+    "applied and is listed in `stale`. Unknown section names are ignored and listed " +
+    "in `dropped`. Read-scoped tokens and the shared demo account are refused.",
+  tags: settingsTag,
+  request: { body: { content: { "application/json": { schema: putWebPrefsSchema } } } },
+  responses: {
+    200: {
+      description: "Saved; the full stored state",
+      content: { "application/json": { schema: webPrefsResponseSchema } },
+    },
+    400: { description: "Invalid section value (WEB_PREFS_INVALID)", content: errorContent },
+    403: { description: "Read-scoped token or demo account", content: errorContent },
+    413: {
+      description: "A section or the account's total is over its byte cap (WEB_PREFS_TOO_LARGE)",
+      content: errorContent,
+    },
   },
 });

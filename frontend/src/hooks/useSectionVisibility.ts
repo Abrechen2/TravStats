@@ -1,4 +1,5 @@
 import { useCallback, useEffect, useState } from "react";
+import { emitLocalPrefWrite, useWebPrefsEpoch } from "../lib/webPrefs/prefEvents";
 
 /**
  * Which blocks of a statistics tab a reader wants to see.
@@ -13,11 +14,14 @@ import { useCallback, useEffect, useState } from "react";
  * stored allow-list would silently swallow every block added after the day it
  * was written, and nobody would ever find out why their page stopped growing.
  *
- * Per browser, like the map's appearance. It is a reading preference rather
- * than data, and one that should not follow someone onto a device where the
- * screen is a different size.
+ * Follows the user across browsers since forgejo#200 (`lib/webPrefs/registry.ts`).
+ * It used to be per browser on the argument that a reading preference should
+ * not follow someone onto a different screen size — but the reason it exists
+ * is the reader's DATA (no prices recorded, nothing to rate), which is the
+ * same on every device.
  */
-const KEY_PREFIX = "stats.hiddenSections.";
+export const STATS_HIDDEN_SECTIONS_PREFIX = "stats.hiddenSections.";
+const KEY_PREFIX = STATS_HIDDEN_SECTIONS_PREFIX;
 
 export interface SectionVisibility {
   /** False only for a section the reader has explicitly switched off. */
@@ -43,12 +47,15 @@ function load(tab: string): string[] {
 
 export function useSectionVisibility(tab: string): SectionVisibility {
   const [hidden, setHidden] = useState<string[]>(() => load(tab));
+  // Bumps when the synced value from the server has been written to storage.
+  const syncEpoch = useWebPrefsEpoch("statsHiddenSections");
 
   // Re-read when the tab changes: each tab keeps its own list, and a reader who
-  // hid costs on flights has said nothing about cruises.
+  // hid costs on flights has said nothing about cruises. And when the server's
+  // copy arrived — otherwise the write below would put the old list back.
   useEffect(() => {
     setHidden(load(tab));
-  }, [tab]);
+  }, [tab, syncEpoch]);
 
   useEffect(() => {
     try {
@@ -56,6 +63,7 @@ export function useSectionVisibility(tab: string): SectionVisibility {
     } catch {
       /* private mode or blocked site data — the choice does not survive a reload */
     }
+    emitLocalPrefWrite(`${KEY_PREFIX}${tab}`);
   }, [tab, hidden]);
 
   const isVisible = useCallback((section: string) => !hidden.includes(section), [hidden]);

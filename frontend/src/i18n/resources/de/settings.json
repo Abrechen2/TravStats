@@ -11,7 +11,10 @@
     "lodging": "Unterkünfte"
   },
   "errors": {
-    "saveFailed": "Einstellungen konnten nicht gespeichert werden"
+    "saveFailed": "Einstellungen konnten nicht gespeichert werden",
+    "webPrefsRetrying": "Deine Darstellungseinstellungen konnten gerade nicht mit deinem Konto abgeglichen werden. Auf diesem Gerät bleiben sie erhalten; ein neuer Versuch läuft automatisch.",
+    "webPrefsTooLarge": "Deine Darstellungseinstellungen sind zu umfangreich, um sie mit deinem Konto abzugleichen. Sie gelten weiter auf diesem Gerät, aber nicht auf deinen anderen.",
+    "webPrefsRejected": "Der Server hat deine Darstellungseinstellungen nicht angenommen. Sie gelten weiter auf diesem Gerät, aber nicht auf deinen anderen."
   },
   "cruisePreferences": {
     "title": "Kreuzfahrt-Präferenzen",

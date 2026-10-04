@@ -769,6 +769,14 @@ model UserSettings {
   appPrefs          Json?     @map("app_prefs")
   appPrefsUpdatedAt DateTime? @map("app_prefs_updated_at")
 
+  // The web app's display preferences (colours, map appearance, filters, …),
+  // kept per SECTION so two devices editing different sections cannot clobber
+  // each other: `{ [section]: { value, updatedAt } }` (forgejo#200). A column
+  // of its own on purpose — `app_prefs` is the Companion's whole blob and a
+  // PUT there replaces it. Section list: `services/webPrefs/sections.ts`.
+  webPrefs          Json?     @map("web_prefs")
+  webPrefsUpdatedAt DateTime? @map("web_prefs_updated_at")
+
   // Base currency for lodging FX snapshots (§7.1) and cross-domain totals.
   baseCurrency String @default("EUR") @map("base_currency")
 

@@ -8,6 +8,7 @@ import type { Place } from "../types/place";
 import type { Layer } from "@deck.gl/core";
 import type { AppearanceDomain } from "./map/controlPanelKit";
 import { loadMapAppearance, saveMapAppearance } from "./map/mapAppearance";
+import { useWebPrefsEpoch } from "../lib/webPrefs/prefEvents";
 
 /**
  * The narrow set of map-rendering modes that MapContainer3D actually implements.
@@ -225,6 +226,21 @@ export default function MapContainer3D({
     saveMapAppearance({ placeMarkerSize });
   }, [placeMarkerSize]);
 
+  // The account's map appearance arrived from the server after this map
+  // mounted (forgejo#200). Both maps copied the stored values into their own
+  // state at mount, and both write ALL of that state back on the next change
+  // — so without a remount the first slider moved would put this device's old
+  // look back over the synced one, and upload it. `syncKey` remounts them;
+  // the two sizes owned here are re-read. 0/0 until the server's copy lands.
+  const appearanceEpoch = useWebPrefsEpoch("mapAppearance");
+  const globeChromeEpoch = useWebPrefsEpoch("globeChrome");
+  const syncKey = `${appearanceEpoch}:${globeChromeEpoch}`;
+  useEffect(() => {
+    if (appearanceEpoch === 0) return;
+    setLodgingMarkerSize(loadMapAppearance().lodgingMarkerSize ?? 1);
+    setPlaceMarkerSize(loadMapAppearance().placeMarkerSize ?? 1);
+  }, [appearanceEpoch]);
+
   const routeCount = useMemo(() => {
     if (visMode !== "routes") return null;
     const seen = new Set<string>();
@@ -267,6 +283,7 @@ export default function MapContainer3D({
             }
           >
             <GlobeView
+              key={syncKey}
               flights={flights}
               // `showInternalCruises={false}` means the caller draws its own
               // cruise lines (the journey view draws exactly one trip's). The
@@ -298,6 +315,7 @@ export default function MapContainer3D({
           </Suspense>
         ) : (
           <DeckGLMap
+            key={syncKey}
             flights={flights}
             flightList={flightList}
             cruises={cruises}
