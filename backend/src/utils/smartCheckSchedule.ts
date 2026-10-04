@@ -4,8 +4,10 @@
  * Limits each flight to at most three API checks across its whole lifecycle:
  *
  *   1. Pre-departure (~30 min before departure): gate / terminal / aircraft
- *   2. Pre-arrival (~60 min before scheduled arrival): actual_departure, delays
- *   3. Post-arrival (~30 min after scheduled arrival): actual_arrival, flown status
+ *   2. Post-departure (30 min after scheduled departure): actual_departure
+ *      while the flight is airborne (forgejo#195, see POST_DEPARTURE_LAG_MS)
+ *   3. Pre-arrival (~60 min before scheduled arrival): delays, revised arrival
+ *   4. Post-arrival (~30 min after scheduled arrival): actual_arrival, flown status
  *
  * Flights without arrivalTime fall back to a synthetic +12h arrival so the
  * schedule still terminates. Flights that were created very close to (or after)
@@ -28,6 +30,16 @@ const PRE_DEPARTURE_LEAD_MS = 30 * 60 * 1000;
 const DAY_BEFORE_LEAD_MS = 24 * 60 * 60 * 1000;
 const NEAR_DEPARTURE_LEAD_MS = 3 * 60 * 60 * 1000;
 const NEAR_DEPARTURE_STEP_MS = 15 * 60 * 1000;
+/**
+ * One look shortly after the scheduled departure, so the takeoff is known
+ * while the flight is in the air rather than at the pre-arrival check. Measured
+ * on LH718 MUC→ICN (2026-10-03, prod): the last check ran 15 minutes before
+ * departure and the next one at arrival − 60 min, so the actual departure
+ * (21 minutes late) reached the flight ten hours after takeoff (forgejo#195).
+ * One call per flight; flights shorter than this lag simply merge it into the
+ * pre-arrival check through the de-duplication below.
+ */
+const POST_DEPARTURE_LAG_MS = 30 * 60 * 1000;
 const PRE_ARRIVAL_LEAD_MS = 60 * 60 * 1000;
 const POST_ARRIVAL_LAG_MS = 30 * 60 * 1000;
 const FALLBACK_FLIGHT_DURATION_MS = 12 * 60 * 60 * 1000;
@@ -97,6 +109,7 @@ export function calculateNextApiCheckAt(
     depMs - DAY_BEFORE_LEAD_MS,
     ...nearDeparture,
     depMs - PRE_DEPARTURE_LEAD_MS,
+    depMs + POST_DEPARTURE_LAG_MS,
     arrMs - PRE_ARRIVAL_LEAD_MS,
     arrMs + POST_ARRIVAL_LAG_MS,
   ];
