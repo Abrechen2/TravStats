@@ -84,6 +84,10 @@ describe("demo account guard", () => {
     // profile block are shown to every other visitor and survived every
     // reseed (I1).
     ["/api/v1/settings/profile", "put", { birthdate: "1990-01-01" }],
+    // Synced display preferences (forgejo#200): one visitor's colours and
+    // filters would reach every other visitor's browser. The web does not
+    // sync for the demo account, so trying colours out stays per browser.
+    ["/api/v1/settings/web-prefs", "put", { sections: {} }],
   ];
 
   it.each(locked)("refuses %s (%s) for the shared demo account", async (path, method, body) => {

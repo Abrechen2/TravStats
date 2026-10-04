@@ -83,6 +83,7 @@
     "settings/profile.ts",
     "settings/tokens.ts",
     "settings/types.ts",
+    "settings/webPrefs.ts",
     "setup.ts",
     "stats.ts",
     "stats/aircraft.ts",

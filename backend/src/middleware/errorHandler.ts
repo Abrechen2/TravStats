@@ -237,7 +237,13 @@ export type ApiErrorCode =
   | "LOG_FILE_UNREADABLE"
   /** The diagnostic export built a bundle that failed its own allowlist
    *  schema and refused to send it (`services/diagnosticExport.ts`). */
-  | "DIAGNOSTIC_EXPORT_REJECTED";
+  | "DIAGNOSTIC_EXPORT_REJECTED"
+  /** Web display preferences (forgejo#200, `routes/settings/webPrefs.ts`):
+   *  a section's value has the wrong kind or breaks a depth/width bound (400),
+   *  or a section or the account's total is over its byte cap (413). The web
+   *  keeps its local value either way. */
+  | "WEB_PREFS_INVALID"
+  | "WEB_PREFS_TOO_LARGE";
 
 interface AuthRequest extends Request {
   user?: {
