@@ -10,11 +10,11 @@ import {
   llmProbe,
   llmProviderLabel,
   ollamaTarget,
-  resolveLlmTarget,
   type LlmTarget,
 } from "./llm/llmProvider";
 import { parseTuiCruisesConfirmation } from "./cruise/tuiCruisesTemplate";
 import { isLlmAvailable, recordLlmProbe } from "./parsers/llmAvailability";
+import { resolveReachableLlmTarget } from "./llm/reachableTarget";
 
 const CRUISE_CABIN_TYPES = ["inside", "oceanview", "balcony", "suite"] as const;
 
@@ -620,10 +620,12 @@ async function resolveCruiseParserOptions(
   options?: CruiseBookingParserOptions
 ): Promise<CruiseBookingParserOptions> {
   if (options?.target) return options;
-  const target = await resolveLlmTarget({
+  // The first slot of the chain that answers (`llm/reachableTarget.ts`).
+  const target = await resolveReachableLlmTarget({
     ...(options?.url !== undefined ? { url: options.url } : {}),
     ...(options?.model !== undefined ? { model: options.model } : {}),
     withDefaults: true,
+    wait: true,
   });
   return target ? { target } : {};
 }

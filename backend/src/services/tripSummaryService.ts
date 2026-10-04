@@ -1,15 +1,10 @@
 import { Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
-import {
-  llmGenerate,
-  llmProbe,
-  ollamaTarget,
-  resolveLlmTarget,
-  type LlmTarget,
-} from "./llm/llmProvider";
+import { llmGenerate, llmProbe, ollamaTarget, type LlmTarget } from "./llm/llmProvider";
 import { assertLlmEnabled } from "./llm/llmGate";
 import { llmProvenance } from "./tripSummaryProvenance";
+import { resolveReachableLlmTarget } from "./llm/reachableTarget";
 
 /**
  * LLM-generated trip summaries.
@@ -43,7 +38,8 @@ export type OllamaTarget = LlmTarget;
  * setting.
  */
 export async function resolveOllamaTarget(): Promise<LlmTarget> {
-  return (await resolveLlmTarget({ withDefaults: true })) ?? ollamaTarget();
+  // The first slot of the chain that answers (`llm/reachableTarget.ts`).
+  return (await resolveReachableLlmTarget({ withDefaults: true, wait: true })) ?? ollamaTarget();
 }
 
 const DEFAULT_GENERATE_TIMEOUT_MS = 180_000;
