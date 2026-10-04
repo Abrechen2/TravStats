@@ -89,10 +89,17 @@ describe("place names for a traveller (forgejo#199)", () => {
     expect(merged[0]).toMatchObject({ name: english, localName: local });
   });
 
-  it.each(["Hà Nội", "Hà Nội".normalize("NFD"), "Đà Nẵng", "Łódź", "İstanbul", "Ærø", "Café № 5"])(
-    "treats %s as Latin — accents and letterlike signs are not another script",
-    (name) => {
-      expect(needsLatinNames([hit("osm:node/1", name)])).toBe(false);
-    }
-  );
+  it.each([
+    "Hà Nội",
+    "Hà Nội".normalize("NFD"),
+    "Đà Nẵng",
+    "Łódź",
+    "İstanbul",
+    "Ærø",
+    "Café № 5",
+    "Hawaiʻi-Volcanoes-Nationalpark",
+    "Oʻahu",
+  ])("treats %s as Latin — accents and letterlike signs are not another script", (name) => {
+    expect(needsLatinNames([hit("osm:node/1", name)])).toBe(false);
+  });
 });

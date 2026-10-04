@@ -24,11 +24,15 @@ import type { PlaceResult } from "./photon";
  * Devanagari, Georgian, Armenian, Hangul, Kana, Han (owner, 2026-10-04: "das
  * muss mit allen Länder Schriften gehen"). Two things that are not another
  * script are taken out first, because `latinScript.ts` alone reads them as
- * one: accents sent decomposed ("Hà Nội" in NFD carries U+0300–U+036F), and
- * letterlike signs such as "№" (U+2100–U+214F).
+ * one: accents sent decomposed ("Hà Nội" in NFD carries U+0300–U+036F),
+ * letterlike signs such as "№" (U+2100–U+214F), and the spacing modifier
+ * letters U+02B0–U+02FF — the Hawaiian ʻokina in "Hawaiʻi-Volcanoes-
+ * Nationalpark" made the backfill treat a German name as foreign script
+ * (measured on the RC and prod, 2026-10-04; it found no match, but a match
+ * would have swapped the German name for the English one).
  */
 export function isNonLatin(name: string): boolean {
-  return hasNonLatinScript(name.normalize("NFC").replace(/[\u0300-\u036F\u2100-\u214F]/gu, ""));
+  return hasNonLatinScript(name.normalize("NFC").replace(/[\u02B0-\u036F\u2100-\u214F]/gu, ""));
 }
 
 /**
