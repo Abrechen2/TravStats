@@ -35,9 +35,11 @@ export const RAIL_COLUMN_LAYOUT: Record<
   operator: { min: 64, onNarrow: "mark" },
   route: { min: 200, grow: 2, onNarrow: "title" },
   // "Mi., 01.07.26 08:15 – 12:09" plus a "+1" for an overnight ride.
-  time: { min: 196, mono: true, onNarrow: "subtitle" },
+  // 236 and 112: measured in a browser (2026-10-04) — at 196 / 84, "13.11.2026,
+  // 07:37 – 10:58" and "10 h 53 min" broke onto a second line.
+  time: { min: 236, mono: true, onNarrow: "subtitle" },
   train: { min: 120, grow: 1, priority: 2 },
-  duration: { min: 84, align: "end", mono: true, priority: 2 },
+  duration: { min: 112, align: "end", mono: true, priority: 2 },
   distance: { min: 112, align: "end", mono: true, priority: 3 },
   status: { min: 128, onNarrow: "trailing" },
   trip: { min: 110, grow: 1, priority: 3 },

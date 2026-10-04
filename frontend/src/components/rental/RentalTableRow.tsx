@@ -21,7 +21,9 @@ export const RENTAL_COLUMN_LAYOUT: Record<
 > = {
   provider: { min: 64, onNarrow: "mark" },
   route: { min: 200, grow: 2, onNarrow: "title" },
-  period: { min: 200, onNarrow: "subtitle" },
+  // 256: measured in a browser (2026-10-04) — at 200, "12.08.2026 - 19.08.2026 ·
+  // 7 Tage" broke onto a second line.
+  period: { min: 256, onNarrow: "subtitle" },
   vehicle: { min: 120, grow: 1, priority: 2 },
   km: { min: 96, align: "end", mono: true, priority: 3 },
   status: { min: 128, onNarrow: "trailing" },
