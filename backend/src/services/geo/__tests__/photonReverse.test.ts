@@ -108,4 +108,67 @@ describe("Photon reverse places", () => {
     const url = new URL(fetchMock.mock.calls[0][0] as string);
     expect(url.searchParams.get("lang")).toBe("de");
   });
+
+  it("names a Seoul hit in Latin script and keeps its Hangul name (forgejo#199)", async () => {
+    const palace = (name: string) => ({
+      properties: {
+        name,
+        osm_type: "W",
+        osm_id: 2,
+        city: "Seoul",
+        countrycode: "KR",
+        osm_value: "castle",
+      },
+      geometry: { coordinates: [126.977, 37.5796] },
+    });
+    const urls: string[] = [];
+    global.fetch = jest.fn(async (url: string) => {
+      urls.push(url);
+      const lang = new URL(url).searchParams.get("lang");
+      const name = lang === "en" ? "Gyeongbokgung Palace" : "경복궁";
+      return jsonResponse({ features: [palace(name)] });
+    }) as unknown as typeof fetch;
+
+    const outcome = await reversePlacesDetailed(37.5796, 126.977, { lang: "de", limit: 5 });
+
+    expect(outcome.degraded).toBe(false);
+    expect(outcome.results[0]).toMatchObject({ name: "Gyeongbokgung Palace", localName: "경복궁" });
+    expect(urls.map((u) => new URL(u).searchParams.get("lang")).sort()).toEqual([
+      "de",
+      "default",
+      "en",
+    ]);
+  });
+
+  it("asks only once when every hit is already readable", async () => {
+    global.fetch = jest.fn(async () =>
+      jsonResponse({ features: [hotelFeature] })
+    ) as unknown as typeof fetch;
+    await reversePlacesDetailed(52.5163, 13.3803, { lang: "de", limit: 5 });
+    expect(global.fetch).toHaveBeenCalledTimes(1);
+  });
+
+  it("asks in English only once when English was the requested language", async () => {
+    const urls: string[] = [];
+    global.fetch = jest.fn(async (url: string) => {
+      urls.push(url);
+      const lang = new URL(url).searchParams.get("lang");
+      return jsonResponse({
+        features: [
+          {
+            properties: {
+              name: lang === "en" ? "Red Square" : "Красная площадь",
+              osm_type: "W",
+              osm_id: 7,
+              countrycode: "RU",
+            },
+            geometry: { coordinates: [37.6208, 55.7539] },
+          },
+        ],
+      });
+    }) as unknown as typeof fetch;
+    const outcome = await reversePlacesDetailed(55.7539, 37.6208, { lang: "en", limit: 5 });
+    expect(outcome.results[0]).toMatchObject({ name: "Red Square", localName: "Красная площадь" });
+    expect(urls.map((u) => new URL(u).searchParams.get("lang")).sort()).toEqual(["default", "en"]);
+  });
 });
