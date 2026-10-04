@@ -468,5 +468,12 @@
   "price": {
     "package": "Pauschal",
     "packageHint": "Der Preis steht auf der Buchung, nicht auf diesem Flug."
+  },
+  "track": {
+    "title": "Aufzeichnung",
+    "caption": "Vom Telefon aufgezeichnet · {{distance}} · {{points}} Punkte",
+    "gaps_one": "Eine Lücke ohne GPS-Empfang ist nicht eingezeichnet.",
+    "gaps_other": "{{count}} Lücken ohne GPS-Empfang sind nicht eingezeichnet.",
+    "loadError": "Die Aufzeichnung dieses Flugs konnte nicht geladen werden."
   }
 }

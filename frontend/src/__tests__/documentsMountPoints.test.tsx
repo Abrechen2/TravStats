@@ -38,7 +38,12 @@ vi.mock("../components/documents/DocumentsSection", () => ({
 }));
 
 // ── the five surfaces' own dependencies ────────────────────────────────────
-const flightsApi = vi.hoisted(() => ({ getById: vi.fn(), update: vi.fn(), delete: vi.fn() }));
+const flightsApi = vi.hoisted(() => ({
+  getById: vi.fn(),
+  getTrack: vi.fn().mockResolvedValue(null),
+  update: vi.fn(),
+  delete: vi.fn(),
+}));
 const cruiseApi = vi.hoisted(() => ({ get: vi.fn(), remove: vi.fn() }));
 
 vi.mock("../lib/api", () => ({

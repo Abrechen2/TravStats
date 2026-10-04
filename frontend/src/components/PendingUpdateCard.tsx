@@ -113,6 +113,8 @@ export default function PendingUpdateCard({
   const getApiSourceLabel = (source: string): string => {
     const labels: Record<string, string> = {
       historical_aggregation: t("pendingUpdates:apiSource.historicalAggregation"),
+      // A paired phone's own observation (forgejo#194) — the evidence kind.
+      device_gps: t("pendingUpdates:apiSource.deviceGps"),
       airlabs: "AirLabs API",
       aviationstack: "Aviationstack API",
       aerodatabox: "AeroDataBox API",

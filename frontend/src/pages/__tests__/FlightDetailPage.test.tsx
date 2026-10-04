@@ -27,6 +27,7 @@ vi.mock("../../lib/api/documents", () => ({
 vi.mock("../../lib/api", () => ({
   flightsApi: {
     getById: (...args: unknown[]) => getByIdMock(...args),
+    getTrack: vi.fn().mockResolvedValue(null),
     update: vi.fn(),
     delete: vi.fn(),
   },

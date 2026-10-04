@@ -40,6 +40,7 @@ import { EDIT_PARAM, useEditDeepLink } from "../lib/editDeepLink";
 import { useToastStore } from "../store/toastStore";
 import type { Flight, FlightInput, Trip } from "../types";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
+import FlightTrackSection from "../components/flightTrack/FlightTrackSection";
 
 /**
  * Reading a flight without editing it.
@@ -384,6 +385,9 @@ export default function FlightDetailPage(): JSX.Element {
             </DetailSection>
           )}
           {flight.tripId && <TripPhotoWindowStrip entry="flights" id={flight.id} />}
+
+          {/* The phone's own recording (forgejo#193); renders nothing without one. */}
+          <FlightTrackSection flightId={flight.id} />
 
           <DetailSection
             title={t("flights:form.aircraft")}

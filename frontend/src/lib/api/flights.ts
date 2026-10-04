@@ -7,6 +7,7 @@ import type {
   GeoJSONFeatureCollection,
   UserAchievement,
 } from "../../types";
+import type { FlightTrack } from "../../types/flightTrack";
 
 import { API_TIMEOUTS } from "../../config/constants";
 import { api } from "./client";
@@ -170,6 +171,12 @@ export const flightsApi = {
   getById: async (id: string): Promise<Flight> => {
     const { data } = await api.get<Flight>(`/flights/${id}`);
     return data;
+  },
+
+  /** The phone's recording of the flight; null when none was sent (forgejo#193). */
+  getTrack: async (id: string): Promise<FlightTrack | null> => {
+    const { data } = await api.get<{ track: FlightTrack | null }>(`/flights/${id}/track`);
+    return data.track;
   },
 
   create: async (

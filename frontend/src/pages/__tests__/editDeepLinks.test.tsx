@@ -16,7 +16,12 @@ const getFlight = vi.fn();
 const getCruise = vi.fn();
 
 vi.mock("../../lib/api", () => ({
-  flightsApi: { getById: (...a: unknown[]) => getFlight(...a), update: vi.fn(), delete: vi.fn() },
+  flightsApi: {
+    getById: (...a: unknown[]) => getFlight(...a),
+    getTrack: vi.fn().mockResolvedValue(null),
+    update: vi.fn(),
+    delete: vi.fn(),
+  },
   tripsApi: { getAll: vi.fn().mockResolvedValue([]) },
   cruiseApi: { get: (...a: unknown[]) => getCruise(...a), remove: vi.fn() },
 }));

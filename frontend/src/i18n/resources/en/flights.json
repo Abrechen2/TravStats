@@ -468,5 +468,12 @@
   "price": {
     "package": "Package",
     "packageHint": "The price is held on the booking, not on this flight."
+  },
+  "track": {
+    "title": "Recording",
+    "caption": "Recorded by the phone · {{distance}} · {{points}} points",
+    "gaps_one": "One stretch without GPS reception is not drawn.",
+    "gaps_other": "{{count}} stretches without GPS reception are not drawn.",
+    "loadError": "The recording of this flight could not be loaded."
   }
 }
