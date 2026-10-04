@@ -80,6 +80,23 @@ below), which can take a minute on a large logbook.
   light and dark, and more of the entry's facts (terminal, gate, seat, booking
   reference; a stay's address, nights and board). Reminders go out only for
   domains you have switched on; invitation and password mails are bilingual.
+- **Display settings follow you to every browser.** Colours, map look, the
+  dashboard's domain filter, hidden statistics sections and table columns are
+  stored with your account instead of only in one browser. Page size and the
+  open map panel stay per device.
+- **Place names you can read, in every script.** A place found in Seoul, Moscow,
+  Tokyo or Cairo is named in Latin script where OpenStreetMap has one, with the
+  name on the sign beside it ("Gyeongbokgung Palace · 경복궁").
+- **iPhone photos (HEIC) can be attached** to trips, places and stays. The
+  original is kept; browsers get a JPEG copy. Capture time and position are now
+  read from every uploaded photo.
+- **Rental cars** (beta) record a licence plate and suggest the common
+  providers; rail and rental lists use the same table, header and filters as
+  the other logbooks, and the map settings cover tours, roadtrips, rail and
+  rentals — rentals optionally without the connecting line.
+- **The Companion can send a flight's recorded track and its observed takeoff
+  and landing**; a reported landing marks the flight as flown at once, and the
+  times arrive as suggestions to confirm.
 
 ### Changed
 - **Cruise kilometres go up.** A cruise leg is now measured along the sea route
@@ -139,6 +156,20 @@ below), which can take a minute on a large logbook.
   answer. An Ollama address that was entered once and no longer runs used to
   make every ticket "AI parser not reachable" while a configured OpenAI key
   was never asked.
+- Every parser — stays, cruises, flights and the trip summary, not only rail —
+  now asks the next AI provider when the first one does not answer.
+- **A flight's takeoff is known while it is in the air.** One live check now
+  runs 30 minutes after departure; before, a long-haul flight's actual
+  departure arrived only shortly before landing.
+- Hovering a train, a station or a rental on the map says what it is.
+- A rail or rental list that cannot load says so in amber with a retry, and the
+  figures above those lists count the whole filtered list, not just one page.
+- **Restoring a backup from an older version** runs the missing migrations in
+  the same transaction, so a failure leaves the database as it was; a backup
+  from a newer version is refused, and the server no longer starts on a
+  half-finished migration.
+- A request from a foreign web origin is refused with 403 instead of a server
+  error.
 
 ### Audit fixes first written for 2.6.3-rc.1
 
