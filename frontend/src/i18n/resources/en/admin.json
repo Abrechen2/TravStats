@@ -728,8 +728,10 @@
       "keyMismatchAcknowledge": "Understood: I will re-enter the credentials afterwards",
       "archiveIncomplete": "The archive is missing the part you asked to restore. Nothing was restored.",
       "archiveUnreadable": "The archive's file part cannot be read. Nothing was restored.",
-      "migrationFailed": "The archive was restored but could not be brought up to this version's database schema. Restart the instance (it migrates at boot) or restore a backup taken on this version.",
-      "schemaIncomplete": "The archive was restored, but the sync triggers are missing — the app would no longer see changes. The server log has the details.",
+      "migrationFailed": "The archive comes from an older version and could not be brought up to this version's database schema. Nothing was changed. The server log names the migration that failed.",
+      "schemaIncomplete": "The archive was restored, but the database lacks something this version expects (a migration or the sync triggers). The server log has the details.",
+      "archiveNewer": "This archive comes from a newer TravStats version and cannot be restored here. Update this instance to at least the archive's version. Nothing was changed.",
+      "archiveUnversioned": "This archive's database cannot be matched to any version (its migration history is missing, or a migration had failed). Nothing was changed.",
       "inProgress": "Restoring …"
     },
     "settingsSaved": "Backup settings saved",

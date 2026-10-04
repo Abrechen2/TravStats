@@ -280,6 +280,7 @@ else
     if echo "$MIGRATION_STATUS" | grep -qi "failed"; then
         echo "[entrypoint] ⚠️  Found failed migrations in status output, attempting to resolve automatically..."
 
+        # >>> failed-migration-names (run by backend/src/__tests__/entrypointMigrationGate.test.ts)
         # Extract failed migration names from status output, in either form:
         #   The `20250120000000_add_training_config` migration started at ... failed
         # (older Prisma), or Prisma 7's block
@@ -289,11 +290,15 @@ else
         # missed before — it found nothing and fell through to two hard-coded
         # 2025 names (forgejo#157). The "not yet been applied" block is never
         # read: pending migrations must not be marked rolled back.
-        FAILED_MIGRATIONS=$(echo "$MIGRATION_STATUS" | awk '
-            /have failed/ { in_failed = 1; next }
-            in_failed && /^[[:space:]]*$/ { in_failed = 0 }
-            (in_failed || /failed/) && match($0, /[0-9]+_[A-Za-z0-9_]+/) { print substr($0, RSTART, RLENGTH) }
-        ' | sort -u || echo "")
+        failed_migration_names() {
+            awk '
+                /have failed/ { in_failed = 1; next }
+                in_failed && /^[[:space:]]*$/ { in_failed = 0 }
+                (in_failed || /failed/) && match($0, /[0-9]+_[A-Za-z0-9_]+/) { print substr($0, RSTART, RLENGTH) }
+            ' | sort -u
+        }
+        # <<< failed-migration-names
+        FAILED_MIGRATIONS=$(echo "$MIGRATION_STATUS" | failed_migration_names || echo "")
 
         if [ -n "$FAILED_MIGRATIONS" ]; then
             for MIGRATION in $FAILED_MIGRATIONS; do
@@ -360,62 +365,55 @@ else
         echo "[entrypoint] ⚠️  $PRE_MIGRATION_BACKUP_SCRIPT not found — skipping upgrade-backup check"
     fi
 
-    # Run migrations with explicit output and timeout
-    # Temporarily disable set -e for migration (non-critical)
-    set +e
-    echo "[entrypoint] Executing: npx prisma migrate deploy"
-
-    # Try to run with timeout command if available
-    if command -v timeout >/dev/null 2>&1; then
-        echo "[entrypoint] Running with 30 second timeout..."
-        # Use timeout and explicitly flush output
-        timeout 30 sh -c 'npx prisma migrate deploy' 2>&1
-        MIGRATION_EXIT_CODE=$?
-        if [ $MIGRATION_EXIT_CODE -eq 0 ]; then
-            echo "[entrypoint] ✅ Migration completed"
-        elif [ $MIGRATION_EXIT_CODE -eq 124 ]; then
-            echo "[entrypoint] ⚠️  Migration timed out after 30 seconds"
-            echo "[entrypoint] Continuing startup - migrations may retry on next start"
-        else
-            echo "[entrypoint] ⚠️  Migration failed with exit code $MIGRATION_EXIT_CODE"
-        fi
-    else
-        # No timeout available - run directly with output flushing
-        echo "[entrypoint] Running migrations (no timeout available)..."
-        # Force unbuffered output by using stdbuf if available
-        if command -v stdbuf >/dev/null 2>&1; then
-            stdbuf -oL -eL npx prisma migrate deploy 2>&1
-            MIGRATION_EXIT_CODE=$?
-        else
-            # Last resort - run directly
-            npx prisma migrate deploy 2>&1
-            MIGRATION_EXIT_CODE=$?
-        fi
-
-        if [ $MIGRATION_EXIT_CODE -eq 0 ]; then
-            echo "[entrypoint] ✅ Migration completed"
-        else
-            echo "[entrypoint] ⚠️  Migration failed with exit code $MIGRATION_EXIT_CODE"
-        fi
-    fi
-    # Re-enable set -e
-    set -e
-
+    # >>> migration-gate (run by backend/src/__tests__/entrypointMigrationGate.test.ts)
+    # `prisma migrate deploy`, and the boot stops unless it succeeded.
+    #
     # A migration that FAILED stops the boot (forgejo#157). It used to print a
     # warning and start the app anyway, on a schema older than its code: on
     # 2026-10-02 an instance restored from an older backup came up healthy
-    # with a failed migration recorded, and from the next boot on Prisma
-    # refused every later migration (P3009) while /health stayed green.
+    # with a failed migration recorded (P3018), and from the next boot on
+    # Prisma refused every later migration (P3009) while /health stayed green.
     # Stopping loses nothing — the data is untouched and the log says why.
-    # A TIMEOUT (124) keeps the old behaviour: the migration may simply be
-    # slow on a small host, and the next start retries it.
-    if [ $MIGRATION_EXIT_CODE -ne 0 ] && [ $MIGRATION_EXIT_CODE -ne 124 ]; then
+    #
+    # A TIMEOUT stops it too. It used to "continue, migrations may retry on
+    # next start" after 30 seconds — but a migration that needs longer than
+    # that is killed at the same point on every start, so it never finished
+    # and the app ran on a half-migrated schema indefinitely. The limit is now
+    # MIGRATION_TIMEOUT_SECONDS (default 600), and reaching it is an error that
+    # names the variable.
+    MIGRATION_TIMEOUT_SECONDS="${MIGRATION_TIMEOUT_SECONDS:-600}"
+    set +e
+    echo "[entrypoint] Executing: npx prisma migrate deploy"
+    if command -v timeout >/dev/null 2>&1; then
+        echo "[entrypoint] Running with a ${MIGRATION_TIMEOUT_SECONDS}s timeout (MIGRATION_TIMEOUT_SECONDS)..."
+        timeout "$MIGRATION_TIMEOUT_SECONDS" sh -c 'npx prisma migrate deploy' 2>&1
+        MIGRATION_EXIT_CODE=$?
+    elif command -v stdbuf >/dev/null 2>&1; then
+        echo "[entrypoint] Running migrations (no timeout available)..."
+        stdbuf -oL -eL npx prisma migrate deploy 2>&1
+        MIGRATION_EXIT_CODE=$?
+    else
+        echo "[entrypoint] Running migrations (no timeout available)..."
+        npx prisma migrate deploy 2>&1
+        MIGRATION_EXIT_CODE=$?
+    fi
+    set -e
+
+    if [ $MIGRATION_EXIT_CODE -eq 0 ]; then
+        echo "[entrypoint] ✅ Migration completed"
+    elif [ $MIGRATION_EXIT_CODE -eq 124 ]; then
+        echo "[entrypoint] ❌ Refusing to start: migrations did not finish within ${MIGRATION_TIMEOUT_SECONDS}s."
+        echo "[entrypoint] Raise MIGRATION_TIMEOUT_SECONDS and start again. The app is not started on a"
+        echo "[entrypoint] schema older than its code."
+        exit 124
+    else
         echo "[entrypoint] ❌ Refusing to start: a database migration failed (exit $MIGRATION_EXIT_CODE)."
         echo "[entrypoint] The output above names the migration and the database error. If it ran"
         echo "[entrypoint] into objects left behind by restoring an older backup, start the previous"
         echo "[entrypoint] image and restore that backup again from the admin page."
         exit $MIGRATION_EXIT_CODE
     fi
+    # <<< migration-gate
 
     # Verify migrations were actually applied
     if [ $MIGRATION_EXIT_CODE -eq 0 ]; then
@@ -456,10 +454,6 @@ else
             echo "[entrypoint] This may indicate a database connection issue"
             MIGRATION_SUCCESS=false
         fi
-    else
-        echo "[entrypoint] ⚠️  Migration failed with exit code $MIGRATION_EXIT_CODE"
-        echo "[entrypoint] This may be normal on first run - migrations will retry on next start"
-        MIGRATION_SUCCESS=false
     fi
 fi
 

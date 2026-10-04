@@ -64,12 +64,21 @@ export type ApiErrorCode =
   /** The archive's encrypted values belong to another instance key. The
    *  restore dialog turns this into the acknowledgement it needs. */
   | "RESTORE_ENCRYPTION_KEY_MISMATCH"
-  /** The archive was restored but could not be migrated to this version
-   *  (forgejo#157). The database now holds the archive's older schema. */
+  /** An older archive's missing migration failed on its data (forgejo#157).
+   *  The restore is one transaction, so nothing was changed. */
   | "RESTORE_MIGRATION_FAILED"
-  /** Restored and migrated, yet the sync feed's triggers are missing
-   *  (forgejo#157): the Companion would be told nothing changed. */
+  /** Restored, yet the database lacks a migration record or a sync trigger
+   *  this version expects (forgejo#157). Checked after commit. */
   | "RESTORE_SCHEMA_INCOMPLETE"
+  /** The archive's database knows migrations this version does not: it was
+   *  written by a newer version and cannot be migrated down (forgejo#157). */
+  | "RESTORE_ARCHIVE_NEWER"
+  /** The archive's database carries no `_prisma_migrations` at all, so its
+   *  schema cannot be matched to any version (forgejo#157). */
+  | "RESTORE_ARCHIVE_UNVERSIONED"
+  /** The archive was taken while a migration had failed on its database
+   *  (Prisma's P3009 state); its schema is no version's (forgejo#157). */
+  | "RESTORE_ARCHIVE_FAILED_MIGRATION"
   /** A rail write body failed validation; `field` names the first field. */
   | "RAIL_INVALID_INPUT"
   /** A rail arrival instant before its departure — usually a night train

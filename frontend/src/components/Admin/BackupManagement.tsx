@@ -394,6 +394,13 @@ export default function BackupManagement(): JSX.Element {
         case "RESTORE_SCHEMA_INCOMPLETE":
           addToast("error", t("admin:backup.restore.schemaIncomplete"));
           break;
+        case "RESTORE_ARCHIVE_NEWER":
+          addToast("error", t("admin:backup.restore.archiveNewer"));
+          break;
+        case "RESTORE_ARCHIVE_UNVERSIONED":
+        case "RESTORE_ARCHIVE_FAILED_MIGRATION":
+          addToast("error", t("admin:backup.restore.archiveUnversioned"));
+          break;
         default:
           addToast("error", t(backupFailureKey(error, "admin:backup.toasts.restoreFailed")));
       }
