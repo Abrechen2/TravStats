@@ -121,6 +121,7 @@ export default function ListFilterBar({
             value={search.value}
             onChange={(e): void => search.onChange(e.target.value)}
             placeholder={search.placeholder}
+            aria-label={search.placeholder}
             className={`w-full ${CONTROL_CLASS} placeholder:text-[var(--text-muted)] focus:border-[var(--accent)] focus:outline-none md:max-w-xs`}
           />
           {/* On a phone the controls share ONE row that scrolls sideways; they

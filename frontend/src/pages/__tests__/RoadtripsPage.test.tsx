@@ -149,4 +149,23 @@ describe("RoadtripsPage", () => {
     expect(await screen.findByText("roadtrips:list.emptyTitle")).toBeInTheDocument();
     expect(screen.getByText("roadtrips:list.emptyCta")).toBeInTheDocument();
   });
+
+  // forgejo#197: the header and filter bar every logbook shares; the vehicle
+  // filter sits behind the bar's "Filter" button, like a domain's own filter.
+  it("filters by vehicle from the shared filter bar and says how many match", async () => {
+    vi.mocked(roadtripsApi.list).mockResolvedValue([
+      summary({ id: "a", name: "Bretagne", vehicle: "campervan", startDate: at("2023-06-02") }),
+      summary({ id: "b", name: "Toskana", vehicle: "car", startDate: at("2024-09-03") }),
+    ]);
+    renderPage();
+    await screen.findByText("Bretagne");
+    expect(screen.getByRole("heading", { level: 1 })).toHaveTextContent("roadtrips:pageTitle");
+    fireEvent.click(screen.getByTestId("list-filter-more"));
+    fireEvent.change(screen.getByRole("combobox", { name: "roadtrips:vehicleLabel" }), {
+      target: { value: "car" },
+    });
+    expect(screen.queryByText("Bretagne")).not.toBeInTheDocument();
+    expect(screen.getByText("Toskana")).toBeInTheDocument();
+    expect(screen.getByTestId("list-filter-badge")).toHaveTextContent("1");
+  });
 });

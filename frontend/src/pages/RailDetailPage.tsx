@@ -18,7 +18,7 @@ import { RailRouteMap } from "../components/rail/RailRouteMap";
 import { RailConnectionLegs } from "../components/rail/RailConnectionLegs";
 import { RailConnectionLink } from "../components/rail/RailConnectionLink";
 import { formatRailDuration } from "../lib/rail/railDuration";
-import { trainLabel } from "../components/rail/RailJourneyRow";
+import { trainLabel } from "../components/rail/trainLabel";
 import { connectionDraftFrom } from "../components/rail/railFormModel";
 import { isConvertedFromRoadtrip, railDistanceNoteKey } from "../components/rail/railDistanceLabel";
 import { useDocumentCount } from "../hooks/useDocumentCount";

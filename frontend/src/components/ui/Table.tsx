@@ -324,6 +324,8 @@ interface TableRowProps {
    * `display: none` below it, so a screen reader is never read both.
    */
   narrowSubtitle?: ReactNode;
+  /** For tests to find one row; no styling hangs on it. */
+  testId?: string;
 }
 
 /**
@@ -341,11 +343,13 @@ export function TableRow({
   onClick,
   dense = false,
   narrowSubtitle,
+  testId,
 }: TableRowProps): JSX.Element {
   const hiddenKeys = useContext(HiddenColumns);
   return (
     <div
       role="row"
+      data-testid={testId}
       tabIndex={onClick ? 0 : undefined}
       onClick={onClick}
       onKeyDown={
