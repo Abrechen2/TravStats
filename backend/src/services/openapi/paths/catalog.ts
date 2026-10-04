@@ -421,7 +421,13 @@ registry.registerPath({
 /* ────────────────────────────────── geo ─────────────────────────────── */
 
 const geoResult = z.object({
-  name: z.string(),
+  name: z
+    .string()
+    .describe("In Latin script wherever OSM has one: the requested language, else English"),
+  localName: z
+    .string()
+    .optional()
+    .describe("The name in the place's own script (what is on the sign); only when it differs"),
   address: z.string().optional(),
   district: z.string().optional().describe("Part of town, to tell same-named hits apart"),
   type: z.string().optional().describe("The OSM value (`archaeological_site`, `museum`, …)"),

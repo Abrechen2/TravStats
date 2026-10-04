@@ -16,6 +16,7 @@ import { z } from "zod";
 import { formatStreetAddress } from "./streetAddress";
 import { resolveGeocoderUrls, DEFAULT_PHOTON_URL } from "../instanceSettingsService";
 import logger from "../../utils/logger";
+import { mergePlaceNames, needsLatinNames } from "./placeNames";
 
 const DEFAULT_LIMIT = 6;
 
@@ -50,7 +51,10 @@ function getMaxResponseBytes(): number {
 }
 
 export interface PlaceResult {
+  /** In Latin script wherever OSM has one — see `placeNames.ts`. */
   name: string;
+  /** The name in the place's own script, only where it differs from `name`. */
+  localName?: string;
   /**
    * A stable identity for this hit, `osm:<type>/<id>`, or undefined when the
    * geocoder did not name one.
@@ -377,15 +381,52 @@ export async function searchPlacesDetailed(
   const url = `${baseUrl}/api/?${params.toString()}`;
 
   const first = await fetchPhoton(url, limit);
-  if (first.ok) return { results: first.results, degraded: false };
+  if (first.ok) {
+    return {
+      results: await withReadableNames(first.results, `${baseUrl}/api/`, params, limit),
+      degraded: false,
+    };
+  }
 
   if (options?.lang && first.stage === "http_status") {
     params.delete("lang");
     const retry = await fetchPhoton(`${baseUrl}/api/?${params.toString()}`, limit);
-    if (retry.ok) return { results: retry.results, degraded: false };
+    if (retry.ok) {
+      return {
+        results: await withReadableNames(retry.results, `${baseUrl}/api/`, params, limit),
+        degraded: false,
+      };
+    }
   }
 
   return { results: [], degraded: true };
+}
+
+/**
+ * Repeat a lookup in English and with Photon's default names when a hit came
+ * back in a non-Latin script, and merge (`placeNames.ts`, forgejo#199). The
+ * extra answers are a bonus: a failed one costs the hit nothing.
+ */
+async function withReadableNames(
+  results: PlaceResult[],
+  endpoint: string,
+  params: URLSearchParams,
+  limit: number
+): Promise<PlaceResult[]> {
+  if (!needsLatinNames(results)) return results;
+  const withLang = (lang: string): string => {
+    const next = new URLSearchParams(params);
+    next.set("lang", lang);
+    return `${endpoint}?${next.toString()}`;
+  };
+  // Asked in English already, the answer IS the English one.
+  const askedInEnglish = params.get("lang") === "en";
+  const [english, local] = await Promise.all([
+    askedInEnglish ? Promise.resolve(null) : fetchPhoton(withLang("en"), limit),
+    fetchPhoton(withLang("default"), limit),
+  ]);
+  const englishResults = askedInEnglish ? results : english?.ok ? english.results : null;
+  return mergePlaceNames(results, englishResults, local.ok ? local.results : null);
 }
 
 /**
@@ -428,12 +469,22 @@ export async function reversePlacesDetailed(
   const url = `${baseUrl}/reverse?${params.toString()}`;
 
   const first = await fetchPhoton(url, limit);
-  if (first.ok) return { results: first.results, degraded: false };
+  if (first.ok) {
+    return {
+      results: await withReadableNames(first.results, `${baseUrl}/reverse`, params, limit),
+      degraded: false,
+    };
+  }
 
   if (options?.lang && first.stage === "http_status") {
     params.delete("lang");
     const retry = await fetchPhoton(`${baseUrl}/reverse?${params.toString()}`, limit);
-    if (retry.ok) return { results: retry.results, degraded: false };
+    if (retry.ok) {
+      return {
+        results: await withReadableNames(retry.results, `${baseUrl}/reverse`, params, limit),
+        degraded: false,
+      };
+    }
   }
 
   return { results: [], degraded: true };
