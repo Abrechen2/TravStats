@@ -13,6 +13,12 @@ import {
 import { AppError } from "../../middleware/errorHandler";
 import { rejectDemo } from "../../middleware/demoGuard";
 import logger from "../../utils/logger";
+import { ingestUploadedPhotos } from "../../services/photos/ingestPhotos";
+import {
+  parsePhotoVariant,
+  photoFileToServe,
+  removeDisplayRendition,
+} from "../../services/photos/displayRendition";
 
 /**
  * Photographs of a HOUSE.
@@ -130,6 +136,10 @@ router.post(
       const userId = req.userId!;
       await resolveLodging(req.params.lodgingId, userId);
       if (uploaded.length === 0) throw new AppError("No photos uploaded", 400);
+      // A JPEG display copy for a HEIC/HEIF original — or a refusal, before
+      // any row. The EXIF it returns is not kept: a lodging photo has no
+      // column for when or where (see the DTO above).
+      await ingestUploadedPhotos(getLodgingPhotoDir(), uploaded);
 
       const last = await prisma.lodgingPhoto.findFirst({
         where: { lodgingId: req.params.lodgingId },
@@ -173,6 +183,7 @@ router.post(
           // routes use, and what clears the path-injection taint.
           const safePath = path.join(getLodgingPhotoDir(), path.basename(file.filename));
           if (fs.existsSync(safePath)) fs.unlinkSync(safePath);
+          removeDisplayRendition(getLodgingPhotoDir(), file.filename);
         } catch {
           logger.warn({
             operation: "lodging_photo_upload_cleanup_error",
@@ -197,14 +208,21 @@ router.get(
       });
       if (!photo) throw new AppError("Photo not found", 404);
 
-      const filePath = path.join(getLodgingPhotoDir(), path.basename(photo.filename));
-      if (!fs.existsSync(filePath)) throw new AppError("File missing", 404);
+      // `display` (default): what a browser can draw — a HEIC/HEIF original's
+      // JPEG copy; `original`: the bytes as uploaded (forgejo#192).
+      const served = await photoFileToServe(
+        getLodgingPhotoDir(),
+        photo.filename,
+        photo.mimetype,
+        parsePhotoVariant(req.query)
+      );
+      if (!served) throw new AppError("File missing", 404);
 
       // `private`, deliberately overriding the global `no-store` on /api: these
       // bytes are one user's photo, and a shared cache must never hold them.
       res.setHeader("Cache-Control", "private, max-age=3600");
-      res.type(photo.mimetype);
-      res.sendFile(filePath);
+      res.type(served.type);
+      res.sendFile(served.filePath);
     } catch (error) {
       next(error);
     }

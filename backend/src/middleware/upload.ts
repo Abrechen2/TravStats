@@ -6,6 +6,7 @@ import type { Db } from "../db";
 import logger from "../utils/logger";
 import { AppError } from "./errorHandler";
 import { FILE_LIMITS, CLEANUP } from "../config/constants";
+import { HEIF_MIME_TYPES, removeDisplayRendition } from "../services/photos/displayRendition";
 
 /**
  * A file this endpoint does not accept — the CLIENT's mistake, answered 400.
@@ -299,13 +300,29 @@ const tripPhotoStorage = multer.diskStorage({
   },
 });
 
+/**
+ * Trip, place-visit and lodging photos and the trip cover. HEIC/HEIF is
+ * accepted here (forgejo#192) — an iPhone camera photo is one, and the
+ * Companion uploads originals — and given a JPEG display copy on ingest
+ * (`services/photos/displayRendition.ts`). Profile pictures and login
+ * backgrounds keep their own, narrower filter.
+ */
+const PHOTO_MIME_TYPES = [
+  "image/jpeg",
+  "image/jpg",
+  "image/png",
+  "image/webp",
+  "image/gif",
+  ...HEIF_MIME_TYPES,
+];
+
 const tripPhotoFilter = (
   _req: Express.Request,
   file: Express.Multer.File,
   cb: multer.FileFilterCallback
 ): void => {
-  const allowed = ["image/jpeg", "image/jpg", "image/png", "image/webp", "image/gif"];
-  if (!allowed.includes(file.mimetype)) {
+  const allowed = PHOTO_MIME_TYPES;
+  if (!allowed.includes(file.mimetype.toLowerCase())) {
     return cb(new UnsupportedUploadTypeError(`Invalid image type. Allowed: ${allowed.join(", ")}`));
   }
   cb(null, true);
@@ -333,6 +350,8 @@ export function getTripPhotoDir(): string {
 }
 
 export function deleteTripPhotoFile(filename: string): void {
+  // A HEIC original's JPEG display copy goes with it (forgejo#192).
+  removeDisplayRendition(TRIP_PHOTO_DIR, filename);
   const filePath = path.join(TRIP_PHOTO_DIR, path.basename(filename));
   if (fs.existsSync(filePath)) {
     try {
@@ -397,6 +416,8 @@ export function getPlacePhotoDir(): string {
 }
 
 export function deletePlacePhotoFile(filename: string): void {
+  // A HEIC original's JPEG display copy goes with it (forgejo#192).
+  removeDisplayRendition(PLACE_PHOTO_DIR, filename);
   const filePath = path.join(PLACE_PHOTO_DIR, path.basename(filename));
   if (fs.existsSync(filePath)) {
     try {
@@ -464,6 +485,8 @@ export function getLodgingPhotoDir(): string {
 }
 
 export function deleteLodgingPhotoFile(filename: string): void {
+  // A HEIC original's JPEG display copy goes with it (forgejo#192).
+  removeDisplayRendition(LODGING_PHOTO_DIR, filename);
   const filePath = path.join(LODGING_PHOTO_DIR, path.basename(filename));
   if (fs.existsSync(filePath)) {
     try {

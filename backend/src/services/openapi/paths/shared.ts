@@ -287,6 +287,18 @@ export const errorContent = {
   "application/json": { schema: errorResponse },
 };
 
+/** A photo upload's HEIC/HEIF refusals (forgejo#192) — nothing is stored on either. */
+export const photoUnreadable = {
+  description: "`code` PHOTO_UNREADABLE: a HEIC/HEIF file that could not be decoded",
+  content: errorContent,
+};
+export const photoConversionUnavailable = {
+  description:
+    "`code` PHOTO_CONVERSION_UNAVAILABLE: the HEIC/HEIF converter failed (timeout, crash) — " +
+    "not the file's fault; retry later",
+  content: errorContent,
+};
+
 /*
  * The time model's wire shapes (ADR 0002 D3, phase 2). Registered once here so
  * every request body that takes a time points at the same definition, and the
