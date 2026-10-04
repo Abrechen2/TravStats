@@ -55,11 +55,18 @@ describe("calculateNextApiCheckAt", () => {
       expect(result?.getTime()).toBe(dep.getTime() - 3 * HOURS);
     });
 
-    it("skips to pre-arrival once we are past the pre-departure checkpoint", () => {
+    it("looks once 30 min after departure, so the takeoff is known in the air (forgejo#195)", () => {
       // Departure is in 10 minutes — pre-departure (dep - 30min) is already in the past
       const dep = future(10 * MINUTES);
       const arr = future(5 * HOURS);
       const result = calculateNextApiCheckAt(dep, arr, "scheduled", "LH400", NOW);
+      expect(result?.getTime()).toBe(dep.getTime() + 30 * MINUTES);
+    });
+
+    it("skips to pre-arrival once the post-departure check is past", () => {
+      const dep = future(-40 * MINUTES);
+      const arr = future(10 * HOURS);
+      const result = calculateNextApiCheckAt(dep, arr, "scheduled", "LH718", NOW);
       expect(result?.getTime()).toBe(arr.getTime() - 60 * MINUTES);
     });
 
@@ -213,10 +220,12 @@ describe("calculateNextApiCheckAt", () => {
     });
 
     it("never schedules a pre-departure check at or after departure", () => {
+      // The 15-minute grid stops before departure; the next look is the single
+      // post-departure check (forgejo#195), not another grid step.
       const dep = future(10 * MINUTES);
       const arr = future(5 * HOURS);
       const result = calculateNextApiCheckAt(dep, arr, "scheduled", "LH712", NOW);
-      expect(result?.getTime()).toBe(arr.getTime() - 60 * MINUTES);
+      expect(result?.getTime()).toBe(dep.getTime() + 30 * MINUTES);
     });
   });
 });
