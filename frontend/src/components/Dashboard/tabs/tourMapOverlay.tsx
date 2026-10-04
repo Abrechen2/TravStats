@@ -1,9 +1,11 @@
+import { useMemo } from "react";
 import type { JSX } from "react";
 import { PathLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import { rgbCss } from "../../../lib/flightColor";
 import { TOUR_RGB, type TourPathDatum } from "../../layers/tourPathsLayer";
 import { LEG_MODES, type LegMode } from "../../../types/tour";
+import { useOverlayAppearance } from "../../../store/overlayAppearanceStore";
 
 // Split out of AllTab.tsx purely to keep that file under its 800-line
 // ceiling — everything here is dashboard-wide-tour-specific (tour sections
@@ -107,9 +109,9 @@ export function buildTourLegendRows(
  * `TripMap.tsx`'s own tour-path layer exactly (see its doc comment
  * ~line 401): alpha 170/2px for a `straight` placeholder chord, 255/3.5px
  * for real geometry (2.5px for a day tour since round 29 — see
- * `tourPathWidth`), `widthMinPixels: 2` as the floor. Measured in a
- * browser against this dark basemap — alpha 70 at 1.5px drew ZERO pixels,
- * not merely "subtle". Do not lower these again.
+ * `tourPathWidth`) at the default scale. Measured in a browser against this
+ * dark basemap — alpha 70 at 1.5px drew ZERO pixels, not merely "subtle". Do
+ * not lower these DEFAULTS again; thinner is the user's own slider choice.
  */
 /**
  * Lifts tour paths a few km off the globe's sphere surface so they don't
@@ -142,13 +144,30 @@ export const TOUR_PATH_GLOBE_ALTITUDE_M = 5_000;
  * since round 29 (2026-09-26) both default to the one "road" moss, the
  * Companion's rule is that a tour line is the thinner one, and on the "Alle"
  * map the two lie side by side — without this they are indistinguishable.
- * Nothing drops below 2 px (see the alpha/width note on `buildTourDeckLayers`).
+ * At the default scale nothing drops below 2 px (see the alpha/width note on
+ * `buildTourDeckLayers`).
  */
 export const TOUR_LINE_WIDTH_PX = { placeholder: 2, tour: 2.5, roadtrip: 3.5 } as const;
 
-export function tourPathWidth(d: Pick<TourPathDatum, "isPlaceholder" | "isRoadtrip">): number {
-  if (d.isPlaceholder) return TOUR_LINE_WIDTH_PX.placeholder;
-  return d.isRoadtrip ? TOUR_LINE_WIDTH_PX.roadtrip : TOUR_LINE_WIDTH_PX.tour;
+/**
+ * The map panel's two width sliders (forgejo#198): one for day tours, one for
+ * roadtrips, so the user can keep — or undo — the "roadtrip is heavier" rule.
+ * A placeholder chord follows its own kind's slider.
+ */
+export interface TourWidthScales {
+  tour: number;
+  roadtrip: number;
+}
+
+const DEFAULT_TOUR_WIDTH_SCALES: TourWidthScales = { tour: 1, roadtrip: 1 };
+
+export function tourPathWidth(
+  d: Pick<TourPathDatum, "isPlaceholder" | "isRoadtrip">,
+  scales: TourWidthScales = DEFAULT_TOUR_WIDTH_SCALES
+): number {
+  const scale = d.isRoadtrip ? scales.roadtrip : scales.tour;
+  if (d.isPlaceholder) return TOUR_LINE_WIDTH_PX.placeholder * scale;
+  return (d.isRoadtrip ? TOUR_LINE_WIDTH_PX.roadtrip : TOUR_LINE_WIDTH_PX.tour) * scale;
 }
 
 /**
@@ -158,8 +177,15 @@ export function tourPathWidth(d: Pick<TourPathDatum, "isPlaceholder" | "isRoadtr
  * that constant's doc comment for why). Callers decide which based on
  * their own resolved `visMode` — this function has no opinion about
  * which map engine ends up drawing its output.
+ *
+ * `widthScales` are the user's panel sliders; the floor drops to 1 px so the
+ * lower half of those sliders is not a no-op (the defaults stay at 2 px or more).
  */
-export function buildTourDeckLayers(pathData: readonly TourPathDatum[], altitudeM = 0): Layer[] {
+export function buildTourDeckLayers(
+  pathData: readonly TourPathDatum[],
+  altitudeM = 0,
+  widthScales: TourWidthScales = DEFAULT_TOUR_WIDTH_SCALES
+): Layer[] {
   if (pathData.length === 0) return [];
   return [
     new PathLayer<TourPathDatum>({
@@ -171,14 +197,32 @@ export function buildTourDeckLayers(pathData: readonly TourPathDatum[], altitude
           : d.path.map(([lng, lat]) => [lng, lat, altitudeM] as [number, number, number]),
       getColor: (d) =>
         [...d.color, d.isPlaceholder ? 170 : 255] as [number, number, number, number],
-      getWidth: tourPathWidth,
+      getWidth: (d) => tourPathWidth(d, widthScales),
       widthUnits: "pixels",
-      widthMinPixels: 2,
+      widthMinPixels: 1,
+      updateTriggers: { getWidth: [widthScales.tour, widthScales.roadtrip] },
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 255, 80],
     }),
   ];
+}
+
+/**
+ * The tour layer with the user's width sliders applied — the hook both the
+ * "Alle" map and the tour/roadtrip tab call, so the two cannot read the store
+ * differently. Lifted on the globe (`TOUR_PATH_GLOBE_ALTITUDE_M`).
+ */
+export function useTourDeckLayers(pathData: readonly TourPathDatum[], onGlobe: boolean): Layer[] {
+  const { tourLineWidth, roadtripLineWidth } = useOverlayAppearance();
+  return useMemo(
+    () =>
+      buildTourDeckLayers(pathData, onGlobe ? TOUR_PATH_GLOBE_ALTITUDE_M : 0, {
+        tour: tourLineWidth,
+        roadtrip: roadtripLineWidth,
+      }),
+    [pathData, onGlobe, tourLineWidth, roadtripLineWidth]
+  );
 }
 
 export interface TourStatusOverlayProps {

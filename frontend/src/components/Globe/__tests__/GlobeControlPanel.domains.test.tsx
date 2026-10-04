@@ -5,6 +5,7 @@ import { DEFAULT_CRUISE_COLOR_CONFIG } from "../../../lib/cruiseColor";
 import { DEFAULT_LODGING_COLOR_CONFIG } from "../../../lib/lodgingColor";
 import { DEFAULT_PLACE_COLOR_CONFIG } from "../../../lib/placeColor";
 import { POI_MODES } from "../../../types/dashboard";
+import type { AppearanceDomain } from "../../map/controlPanelKit";
 
 /**
  * Measured on main (2026-09-20): the Alle tab passes
@@ -29,11 +30,16 @@ vi.mock("../../../hooks/useTranslation", () => ({
   }),
 }));
 
+// The rail section is beta-gated; this file is about the panel honouring
+// `appearanceDomains`, so the gate is open here (OverlayAppearanceSections.test
+// covers it closed).
+vi.mock("../../../hooks/useRailVisible", () => ({ useRailVisible: () => true }));
+
 import { GlobeControlPanel } from "../GlobeControlPanel";
 
 const noop = (): void => {};
 
-function renderPanel(domains: readonly ("flight" | "cruise" | "lodging" | "poi")[]): void {
+function renderPanel(domains: readonly AppearanceDomain[]): void {
   // The panel body only exists while expanded; usePanelExpanded defaults to
   // collapsed (#194), so open it before asserting on what it contains.
   window.localStorage.setItem("mapAppearance.v2", JSON.stringify({ panelExpanded: true }));
@@ -118,6 +124,13 @@ describe("GlobeControlPanel: every domain the caller names gets its section", ()
     // closed, so the section has to be opened to see inside it.
     fireEvent.click(screen.getByText("map:globe.panel.domainPlace"));
     expect(screen.getByText("map:globe.panel.placeLabelSource.label")).toBeTruthy();
+  });
+
+  // forgejo#198: the rail tab names "rail", and the globe offered it nothing.
+  it("renders the rail section on the globe when the rail tab names it", () => {
+    renderPanel(["rail"]);
+    expect(screen.getByText("map:globe.panel.domainRail")).toBeTruthy();
+    expect(screen.queryByText("map:globe.panel.domainFlight")).toBeNull();
   });
 
   it("still shows a single-domain tab only its own section", () => {

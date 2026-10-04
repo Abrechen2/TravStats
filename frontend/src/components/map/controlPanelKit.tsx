@@ -413,8 +413,22 @@ export function Slider({
 
 // ── Per-domain appearance section ────────────────────────────────────
 /** The map domains that get their own appearance section. Extend when a
- *  new domain (hotels, …) grows an on-map route/marker representation. */
-export type AppearanceDomain = "flight" | "cruise" | "lodging" | "poi";
+ *  new domain grows an on-map route/marker representation.
+ *
+ *  The last five are the overlay domains a tab draws through `extraLayers`
+ *  (forgejo#198; `OverlayAppearanceSections`). `roadtripStations` is not a
+ *  domain: it adds the station slider to the roadtrip section, and is named
+ *  only by a map that draws the stations — the Alle map does not. */
+export type AppearanceDomain =
+  | "flight"
+  | "cruise"
+  | "lodging"
+  | "poi"
+  | "tour"
+  | "roadtrip"
+  | "roadtripStations"
+  | "rail"
+  | "rental";
 
 // ── Colour-mode sections ─────────────────────────────────────────────
 // Both domains colour their routes by an explicit MODE — not by a single

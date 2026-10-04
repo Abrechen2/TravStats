@@ -11,10 +11,10 @@ import { useDomainColors } from "../../../hooks/useDomainColors";
 import { LEG_MODES, type LegMode } from "../../../types/tour";
 import { buildTourPaths, type TourPathDatum } from "../../layers/tourPathsLayer";
 import {
-  buildTourDeckLayers,
   buildTourLegendRows,
   TourStatusOverlay,
   TOUR_PATH_GLOBE_ALTITUDE_M,
+  useTourDeckLayers,
 } from "./tourMapOverlay";
 import { legendRow } from "./allTabLegendRows";
 import MapContainer3D from "../../MapContainer3D";
@@ -24,6 +24,11 @@ import { MapEmptyOverlay } from "./MapEmptyOverlay";
 import { useRoadtripStations } from "../../../hooks/useRoadtripStations";
 import { buildRoadtripStationLayers } from "../../layers/roadtripStationsLayer";
 import { hexToRgb } from "../../../lib/domainColor";
+import { useOverlayAppearance } from "../../../store/overlayAppearanceStore";
+import type { AppearanceDomain } from "../../map/controlPanelKit";
+
+const TOUR_PANEL: readonly AppearanceDomain[] = ["tour"];
+const ROADTRIP_PANEL: readonly AppearanceDomain[] = ["roadtrip", "roadtripStations"];
 
 /** A pass-through is no night: drawn in a neutral grey, as the timeline does. */
 const PASS_RGB: [number, number, number] = [139, 148, 158];
@@ -90,17 +95,21 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
   const roadtripStations = useRoadtripStations(isRoadtrip);
   const lodgingHex = colorOf("lodging");
   const roadtripHex = colorOf("roadtrip");
+  // Widths and the station size come from the map panel (forgejo#198).
+  const tourDeck = useTourDeckLayers(tourPathData, visMode === "globe");
+  const { roadtripStationSize } = useOverlayAppearance();
   const tourLayers = useMemo<Layer[]>(() => {
     const altitude = visMode === "globe" ? TOUR_PATH_GLOBE_ALTITUDE_M : 0;
     return [
-      ...buildTourDeckLayers(tourPathData, altitude),
+      ...tourDeck,
       ...buildRoadtripStationLayers(
         roadtripStations.stations,
         { stay: hexToRgb(lodgingHex), free: hexToRgb(roadtripHex), pass: PASS_RGB },
-        altitude
+        altitude,
+        roadtripStationSize
       ),
     ];
-  }, [tourPathData, visMode, roadtripStations.stations, lodgingHex, roadtripHex]);
+  }, [tourDeck, visMode, roadtripStations.stations, lodgingHex, roadtripHex, roadtripStationSize]);
   const shownStates = new Set(roadtripStations.stations.map((s) => s.state));
   const stationLegend = (["stay", "free", "pass"] as const)
     .filter((state) => shownStates.has(state))
@@ -146,10 +155,9 @@ export function TourTab({ kind = "tour" }: { kind?: RouteKind } = {}): JSX.Eleme
         flights={[]}
         visMode={visMode}
         extraLayers={tourLayers}
-        // No per-domain appearance section applies here — tour leg colour
-        // comes from the fixed LegMode palette (tourPathsLayer.ts), not a
-        // user-configurable colour mode like flight/cruise/lodging/poi.
-        appearanceDomains={[]}
+        // This tab's own section only: line width, and for roadtrips the
+        // station size (forgejo#198). Colour stays the domain colour.
+        appearanceDomains={isRoadtrip ? ROADTRIP_PANEL : TOUR_PANEL}
         // Without this the map fetches and draws every cruise route
         // underneath the tour lines (defaults to true).
         showInternalCruises={false}

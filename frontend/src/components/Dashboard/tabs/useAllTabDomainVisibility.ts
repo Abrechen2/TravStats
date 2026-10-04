@@ -6,6 +6,29 @@ import {
 import { useEnabledDomains } from "../../../hooks/useEnabledDomains";
 import { usePlacesVisible } from "../../../hooks/usePlacesVisible";
 import type { TourSummary } from "../../../lib/api/tourIndex";
+import type { AppearanceDomain } from "../../map/controlPanelKit";
+
+const MAP_DRAWN_DOMAINS: readonly AppearanceDomain[] = ["flight", "cruise", "lodging", "poi"];
+const OVERLAY_DOMAINS: readonly AppearanceDomain[] = [
+  ...MAP_DRAWN_DOMAINS,
+  "tour",
+  "roadtrip",
+  "rail",
+  "rental",
+];
+
+/**
+ * Which appearance sections the overview map's panel offers. Tours, roadtrips,
+ * rail and rentals are drawn there only while `showTours` holds (the roadtrip
+ * beta switch, and not the journey view), so their sections follow the same
+ * condition — a slider for a layer the map does not draw is the bug forgejo#198
+ * must not swap for another. Each section also checks its own domain gate
+ * (`OverlayAppearanceSections`). No roadtrip-station slider: this map does not
+ * draw the stations.
+ */
+export function allTabAppearanceDomains(showTours: boolean): readonly AppearanceDomain[] {
+  return showTours ? OVERLAY_DOMAINS : MAP_DRAWN_DOMAINS;
+}
 
 export interface AllTabDomainVisibility {
   domainFilter: DashboardDomainFilterResult;

@@ -100,7 +100,15 @@ export interface RentalLayerOptions {
   color: Rgb;
   altitudeM?: number;
   idPrefix?: string;
+  /** The user's link-width multiplier (map panel, forgejo#198). 1 = default. */
+  widthScale?: number;
+  /** The user's station-marker multiplier. 1 = default, 0 = no markers. */
+  markerSize?: number;
 }
+
+/** Default pixel sizes: the link's width and the two marker radii. */
+export const RENTAL_LINK_WIDTH_PX = 2;
+export const RENTAL_RADIUS_PX = { same: 7, end: 5 } as const;
 
 const lift =
   (altitudeM: number) =>
@@ -113,7 +121,7 @@ export const RENTAL_LINK_DASH: [number, number] = [6, 5];
 export function buildRentalDeckLayers(
   points: readonly RentalPointDatum[],
   links: readonly RentalLinkDatum[],
-  { color, altitudeM = 0, idPrefix = "rental" }: RentalLayerOptions
+  { color, altitudeM = 0, idPrefix = "rental", widthScale = 1, markerSize = 1 }: RentalLayerOptions
 ): Layer[] {
   const at = lift(altitudeM);
   const linkLayer = new PathLayer<RentalLinkDatum, PathStyleExtensionProps<RentalLinkDatum>>({
@@ -121,20 +129,23 @@ export function buildRentalDeckLayers(
     data: links as RentalLinkDatum[],
     getPath: (d) => d.path.map(at),
     getColor: [...color, 200],
-    getWidth: 2,
+    getWidth: RENTAL_LINK_WIDTH_PX * widthScale,
     widthUnits: "pixels",
     extensions: [new PathStyleExtension({ dash: true, highPrecisionDash: true })],
     getDashArray: RENTAL_LINK_DASH,
     dashJustified: true,
     pickable: true,
   });
+  // Size 0 is the slider's "Aus": no marker layer at all, not 0 px rings.
+  if (markerSize <= 0) return [linkLayer];
   // The ring: every point carries it. Pickup is hollow (ring only), return and
   // a same-station rental are filled — a same-station point is ring + dot.
   const pointLayer = new ScatterplotLayer<RentalPointDatum>({
     id: `${idPrefix}-points`,
     data: points as RentalPointDatum[],
     getPosition: (d) => at(d.position),
-    getRadius: (d) => (d.role === "same" ? 7 : 5),
+    getRadius: (d) =>
+      (d.role === "same" ? RENTAL_RADIUS_PX.same : RENTAL_RADIUS_PX.end) * markerSize,
     radiusUnits: "pixels",
     stroked: true,
     filled: true,
@@ -144,6 +155,7 @@ export function buildRentalDeckLayers(
     getFillColor: (d) =>
       d.role === "pickup" ? [0, 0, 0, 0] : [...color, d.role === "same" ? 110 : 255],
     pickable: true,
+    updateTriggers: { getRadius: markerSize },
   });
   return [linkLayer, pointLayer];
 }
