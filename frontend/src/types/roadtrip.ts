@@ -83,7 +83,7 @@ export interface RoadtripStation {
   lodgingStayId: string | null;
   /** A pass-through only: the user's own place it passed (tester 2026-09-26). */
   placeId?: string | null;
-  place?: { id: string; name: string; category: string } | null;
+  place?: { id: string; name: string; localName?: string | null; category: string } | null;
   stay: StationStay | null;
 }
 

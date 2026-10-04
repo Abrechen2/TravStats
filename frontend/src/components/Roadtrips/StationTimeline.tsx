@@ -14,6 +14,7 @@ import type { RoadtripDayTour, RoadtripStation } from "../../types/roadtrip";
 import type { TourLeg } from "../../types/tour";
 import { foldViaPoints } from "../../shared/tour/viaPoints";
 import StationMarker from "./StationMarker";
+import { LocalName } from "../places/LocalName";
 
 const CHIP: CSSProperties = {
   display: "inline-flex",
@@ -216,6 +217,7 @@ export default function StationTimeline({
                   {s.place && (
                     <Link to={`/places/${s.place.id}`} style={{ color: "var(--domain-poi)" }}>
                       {s.place.name}
+                      <LocalName value={s.place.localName} />
                     </Link>
                   )}
                   {night && (

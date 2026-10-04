@@ -5,6 +5,7 @@ import type { JSX } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import type { PlaceSearchResult } from "../../lib/api/geo";
 import { categoryFromOsmValue } from "../../shared/placeCategories";
+import { LocalName } from "../places/LocalName";
 
 export interface LocationSuggestionsProps {
   listboxId: string;
@@ -95,6 +96,7 @@ export function LocationSuggestions({
             }}
           >
             {formatHitLabel(hit)}
+            <LocalName value={hit.localName} testId={`${idPrefix}-option-${index}-local`} />
             {hitDetail(hit, categoryLabel) ? (
               <span
                 className="block text-xs"

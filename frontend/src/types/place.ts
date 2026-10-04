@@ -35,7 +35,13 @@ export interface PlaceVisit {
 
 export interface Place {
   id: string;
+  /** In Latin script wherever one is known. */
   name: string;
+  /**
+   * The name in the place's own script, beside `name` — null when there is
+   * none (forgejo#199). Optional: a payload from before the column omits it.
+   */
+  localName?: string | null;
   category: PlaceCategory;
   /** Always present — a place that cannot be drawn is not creatable. */
   lat: number;
@@ -76,6 +82,8 @@ export interface Place {
 
 export interface PlaceInput {
   name: string;
+  /** Null clears it; left out on create, a name glued from both scripts is split by the server. */
+  localName?: string | null;
   category: PlaceCategory;
   lat: number;
   lon: number;

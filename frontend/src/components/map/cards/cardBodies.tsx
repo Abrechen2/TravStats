@@ -33,6 +33,7 @@ import {
   type TFn,
 } from "./cardChrome";
 import { CardFlights } from "./CardFlights";
+import { LocalName } from "../../places/LocalName";
 
 export interface BodyCommonProps {
   locale: string;
@@ -229,6 +230,7 @@ export function PlaceBody({
 } & BodyCommonProps): JSX.Element {
   return (
     <>
+      <LocalName value={data.localName} block className="mb-1" testId="pinned-place-local-name" />
       {data.category && <SubHeading>{t(`places:categories.${data.category}`)}</SubHeading>}
       <Place city={data.city} country={resolveCountryCode(data.country)} locale={locale} />
       {/* A wishlist entry has no visit count to show — it is somewhere the

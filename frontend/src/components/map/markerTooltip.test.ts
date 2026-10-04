@@ -315,6 +315,21 @@ describe("createMarkerTooltip — places", () => {
   it("stays silent for a datum with no name", () => {
     expect(getTooltip(makeInfo("place-pins", { category: "other" }))).toBeNull();
   });
+
+  // forgejo#199: the name on the sign, under the readable one.
+  it("shows the place's second name under its name, escaped", () => {
+    const result = getTooltip(
+      makeInfo("place-pins", {
+        name: "Seoul Station",
+        localName: "서울역 <b>",
+        category: "transport",
+        visited: true,
+      })
+    );
+    const html = result!.html;
+    expect(html).toContain("서울역 &lt;b&gt;");
+    expect(html.indexOf("Seoul Station")).toBeLessThan(html.indexOf("서울역"));
+  });
 });
 
 // forgejo#181: a hovered train or rental answered nothing on the dashboard

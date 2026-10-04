@@ -29,6 +29,7 @@ import type { LocationCoordinates, LocationSelection } from "./LocationInput";
 import { useLocationSearch } from "./useLocationSearch";
 import { LocationSuggestions } from "./LocationSuggestions";
 import { LocationMiniMap } from "./LocationMiniMap";
+import { LocalName } from "../places/LocalName";
 
 const DEFAULT_VIEW = { longitude: 10, latitude: 50, zoom: 3 };
 const PICKED_ZOOM = 9;
@@ -184,6 +185,7 @@ export function LocationMapModal({
         lat: draft.lat,
         lon: draft.lon,
         name: hit.name,
+        ...(hit.localName ? { localName: hit.localName } : {}),
         address: hit.address,
         city: hit.city,
         country: hit.country,
@@ -353,6 +355,7 @@ export function LocationMapModal({
                     <span className="truncate text-[var(--text-primary)]">
                       {selected ? "✓ " : ""}
                       {poi.name}
+                      <LocalName value={poi.localName} testId={`map-modal-poi-${i}-local`} />
                     </span>
                     <span className="shrink-0 text-xs text-[var(--text-muted)]">
                       {[poi.city, poi.country].filter(Boolean).join(", ")}

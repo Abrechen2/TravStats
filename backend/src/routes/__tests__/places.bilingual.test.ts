@@ -70,6 +70,12 @@ describe("Places — two names and the trip a visit belongs to", () => {
 
       const list = await request(app).get("/api/v1/places").set("Cookie", cookie);
       expect(list.body.data[0]).toMatchObject({ name: "Seoul Station", localName: "서울역" });
+
+      // Typed in the script on the sign, the place is found too.
+      const found = await request(app)
+        .get(`/api/v1/places?q=${encodeURIComponent("서울")}`)
+        .set("Cookie", cookie);
+      expect(found.body.data.map((p: { name: string }) => p.name)).toEqual(["Seoul Station"]);
     });
 
     it("splits a name glued from both scripts when no local name is sent", async () => {

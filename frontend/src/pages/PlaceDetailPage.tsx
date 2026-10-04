@@ -36,6 +36,20 @@ import { splitTimeValue } from "../lib/tripTimeline";
 import { visitTime as visitTimeOf } from "../lib/entityTimes";
 import type { Place, PlaceVisit } from "../types/place";
 
+/** The trip picker's "on no trip" — distinct from "" (let the server file it by date). */
+const NO_TRIP = "none";
+
+/**
+ * The trip half of a visit payload. Three answers, not two (forgejo#199): ""
+ * leaves `tripId` out, so the server files a NEW visit under the one trip
+ * whose days hold its day; NO_TRIP says "no trip" and is kept; an id is that
+ * trip. "" is offered on create only — on an edit, left out means "unchanged".
+ */
+function tripIdField(value: string): { tripId?: string | null } {
+  if (value === "") return {};
+  return { tripId: value === NO_TRIP ? null : value };
+}
+
 export default function PlaceDetailPage(): JSX.Element {
   const { id } = useParams<{ id: string }>();
   const { t, i18n } = useTranslation(["places", "common"]);
@@ -132,7 +146,7 @@ export default function PlaceDetailPage(): JSX.Element {
       const visitedAt = wallClockInput("visitedAt", visitDate, visitTime, {
         placeRef: { kind: "place", id: place.id },
       });
-      const input = { visitedAt, notes: visitNotes.trim() || null, tripId: visitTripId || null };
+      const input = { visitedAt, notes: visitNotes.trim() || null, ...tripIdField(visitTripId) };
       if (editingVisitId) await updateVisit(editingVisitId, input);
       else await createVisit(place.id, input);
       addToast(
@@ -165,7 +179,7 @@ export default function PlaceDetailPage(): JSX.Element {
     setVisitDate(date);
     setVisitTime(time);
     setVisitNotes(visit.notes ?? "");
-    setVisitTripId(visit.tripId ?? "");
+    setVisitTripId(visit.tripId ?? NO_TRIP);
     setEditingVisitId(visit.id);
     setAddingVisit(true);
   }, []);
@@ -366,6 +380,12 @@ export default function PlaceDetailPage(): JSX.Element {
         domain="poi"
         icon={PLACE_CATEGORY_ICONS[place.category]}
         title={place.name}
+        // The name on the sign, under the readable one (forgejo#199).
+        subtitle={
+          place.localName ? (
+            <span data-testid="place-local-name">{place.localName}</span>
+          ) : undefined
+        }
         meta={
           <span className="inline-flex flex-wrap items-center gap-1.5">
             {[place.address ?? place.city, countryLabel].filter(Boolean).join(" · ") || "—"}
@@ -443,7 +463,7 @@ export default function PlaceDetailPage(): JSX.Element {
                 </div>
                 <VisitDateChips
                   placeId={place.id}
-                  tripId={visitTripId}
+                  tripId={visitTripId === NO_TRIP ? "" : visitTripId}
                   value={visitDate}
                   onPick={setVisitDate}
                 />
@@ -462,7 +482,10 @@ export default function PlaceDetailPage(): JSX.Element {
                     value={visitTripId}
                     onChange={(e) => setVisitTripId(e.target.value)}
                   >
-                    <option value="">{t("places:detail.visitNoTrip")}</option>
+                    {!editingVisitId && (
+                      <option value="">{t("places:detail.visitTripByDate")}</option>
+                    )}
+                    <option value={NO_TRIP}>{t("places:detail.visitNoTrip")}</option>
                     {trips.map((trip) => (
                       <option key={trip.id} value={trip.id}>
                         {trip.name}

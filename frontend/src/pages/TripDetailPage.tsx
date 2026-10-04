@@ -49,6 +49,7 @@ import { useRentalVisible } from "../hooks/useRentalVisible";
 import { RentalBand, TransitCard, useRentalBands } from "../components/Trips/timelineTransit";
 import { listPlaces } from "../lib/api/places";
 import { PLACE_CATEGORY_ICONS } from "../shared/placeCategories";
+import { placeSubtitle } from "../lib/placeNames";
 import type { Place, PlaceVisit } from "../types/place";
 
 type TabKey = "overview" | "timeline" | "map" | "gallery" | "logistics" | "tours";
@@ -952,14 +953,13 @@ function PlaceVisitCard({
   ev: Extract<TimelineEvent, { kind: "place-visit" }>;
 }): JSX.Element {
   const { place, visit } = ev;
-  const where = [place.city, place.country].filter(Boolean).join(", ");
   return (
     <EventCard
       icon={PLACE_CATEGORY_ICONS[place.category] ?? PLACE_CATEGORY_ICONS.other}
       bg="rgba(94,194,178,0.15)"
       iconColor="var(--domain-poi, #5ec2b2)"
       title={place.name}
-      subtitle={where || null}
+      subtitle={placeSubtitle(place) || null}
       meta={visit.notes ?? undefined}
       date={ev.date}
       dateLabel={formatTimelineDate(ev.when)}

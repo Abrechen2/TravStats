@@ -270,6 +270,28 @@ describe("LocationMapModal", () => {
       });
     });
 
+    // forgejo#199: the name on the sign is shown in the list and travels with the pick.
+    it("shows a nearby place's local name and carries it on confirm", async () => {
+      const stationPoi: PlaceSearchResult = {
+        name: "Seoul Station",
+        localName: "서울역",
+        lat: 37.5547,
+        lon: 126.9707,
+      };
+      vi.mocked(reversePlaces).mockResolvedValue({ results: [stationPoi], degraded: false });
+      const onConfirm = vi.fn();
+      render(<LocationMapModal open={true} value={null} onClose={vi.fn()} onConfirm={onConfirm} />);
+
+      await userEvent.click(screen.getByTestId("mock-map"));
+      expect(await screen.findByTestId("map-modal-poi-0-local")).toHaveTextContent("서울역");
+      await userEvent.click(screen.getByText("Seoul Station"));
+      await userEvent.click(screen.getByText("location:mapModal.confirm"));
+
+      expect(onConfirm).toHaveBeenCalledWith(
+        expect.objectContaining({ name: "Seoul Station", localName: "서울역" })
+      );
+    });
+
     it("a new map click clears the picked place again", async () => {
       vi.mocked(reversePlaces).mockResolvedValue({ results: [adlonPoi], degraded: false });
       const onConfirm = vi.fn();

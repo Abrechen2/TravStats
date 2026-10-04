@@ -81,16 +81,32 @@ describe("PlaceDetailPage — attaching a visit to a trip", () => {
 
   // "Not linked to a trip" must clear, not send an empty string the API would
   // reject as a malformed uuid.
-  it("sends null when no trip is chosen", async () => {
+  it("sends null when 'no trip' is chosen", async () => {
+    const user = userEvent.setup();
+    renderPage();
+
+    await user.click(await screen.findByRole("button", { name: /detail\.addVisit/ }));
+    const select = await screen.findByRole("combobox", { name: /detail\.visitTrip/ });
+    await user.selectOptions(select, "none");
+    await user.click(screen.getByRole("button", { name: /buttons\.save/ }));
+
+    await waitFor(() =>
+      expect(createVisit).toHaveBeenCalledWith("p1", expect.objectContaining({ tripId: null }))
+    );
+  });
+
+  // forgejo#199: untouched, the picker leaves `tripId` out, and the server
+  // files the visit under the one trip its date falls in. Sending null here
+  // would say "no trip" on the user's behalf.
+  it("leaves tripId out when the picker is left on 'by date'", async () => {
     const user = userEvent.setup();
     renderPage();
 
     await user.click(await screen.findByRole("button", { name: /detail\.addVisit/ }));
     await user.click(screen.getByRole("button", { name: /buttons\.save/ }));
 
-    await waitFor(() =>
-      expect(createVisit).toHaveBeenCalledWith("p1", expect.objectContaining({ tripId: null }))
-    );
+    await waitFor(() => expect(createVisit).toHaveBeenCalled());
+    expect(createVisit.mock.calls[0][1]).not.toHaveProperty("tripId");
   });
 
   // A date chip only fills the field; the visit is saved with it like a typed one.

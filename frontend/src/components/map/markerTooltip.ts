@@ -72,6 +72,8 @@ const PLACE_LAYER_IDS = new Set<string>([
 
 interface PlaceDatum {
   readonly name?: string;
+  /** The name on the sign, in the place's own script (forgejo#199). */
+  readonly localName?: string | null;
   readonly category?: string;
   readonly city?: string | null;
   /** Free text exactly as LodgingDatum.country is — resolved at render time. */
@@ -372,6 +374,9 @@ function renderPlaceHtml(d: PlaceDatum, heading: string, t: TFn, locale: string)
   lines.push(
     `<div style="display:flex;align-items:center;gap:8px;font-weight:600;">${flagImgHtml(countryCode, 16)}<span>${escapeHtml(heading)}</span></div>`
   );
+  if (d.localName) {
+    lines.push(`<div style="opacity:0.8;margin-top:1px;">${escapeHtml(d.localName)}</div>`);
+  }
   if (where) {
     lines.push(
       `<div style="opacity:0.62;font-size:10.5px;margin-top:2px;">${escapeHtml(where)}</div>`

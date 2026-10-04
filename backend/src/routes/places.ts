@@ -240,6 +240,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     if (q) {
       where.OR = [
         { name: { contains: q, mode: "insensitive" } },
+        { localName: { contains: q, mode: "insensitive" } },
         { city: { contains: q, mode: "insensitive" } },
         { address: { contains: q, mode: "insensitive" } },
       ];

@@ -40,4 +40,28 @@ describe("LocationSuggestions", () => {
     expect(screen.getByTestId("loc-option-1-detail")).toHaveTextContent("Via Labicana");
     expect(screen.getByTestId("loc-option-1-detail")).not.toHaveTextContent("bus_stop");
   });
+
+  // forgejo#199: a hit with a second name shows it beside the readable one.
+  it("shows a hit's local name beside its name, and nothing for a hit without one", () => {
+    render(
+      <LocationSuggestions
+        listboxId="lb"
+        idPrefix="loc"
+        isSearching={false}
+        searchError={false}
+        results={[
+          { name: "Seoul Station", localName: "서울역", city: "Seoul", lat: 37.55, lon: 126.97 },
+          { ...base, name: "Kolosseum" },
+        ]}
+        activeIndex={-1}
+        onSelect={vi.fn()}
+        searchingLabel="s"
+        errorLabel="e"
+        noResultsLabel="n"
+      />
+    );
+
+    expect(screen.getByTestId("loc-option-0-local")).toHaveTextContent("서울역");
+    expect(screen.queryByTestId("loc-option-1-local")).toBeNull();
+  });
 });

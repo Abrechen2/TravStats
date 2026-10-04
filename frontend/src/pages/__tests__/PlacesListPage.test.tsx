@@ -130,4 +130,16 @@ describe("PlacesListPage", () => {
     // The FULL filtered count (63), not the 50 rows the page renders.
     expect(screen.getByText("63")).toBeInTheDocument();
   });
+
+  // forgejo#199: a place with a second name shows it after the readable one.
+  it("shows a place's local name beside its name", async () => {
+    listPlacesMock.mockResolvedValue([
+      makePlace({ id: "p1", name: "Banpo Bridge", localName: "반포대교" }),
+    ]);
+
+    renderListPage();
+
+    expect(await screen.findByText("반포대교")).toBeInTheDocument();
+    expect(screen.getByText("Banpo Bridge")).toBeInTheDocument();
+  });
 });

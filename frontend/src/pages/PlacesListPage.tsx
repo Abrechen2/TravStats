@@ -41,6 +41,7 @@ import TablePagination from "../components/table/TablePagination";
 import { formatIsoDate } from "../lib/dateUtils";
 import { useTableHints } from "../components/ui/useTableHints";
 import LogbookTabs from "../components/table/LogbookTabs";
+import { LocalName } from "../components/places/LocalName";
 
 type CategoryFilter = PlaceCategory | "all";
 type CountryFilter = string | "all";
@@ -238,6 +239,7 @@ export default function PlacesListPage(): JSX.Element {
       if (!q) return true;
       return (
         p.name.toLowerCase().includes(q) ||
+        (p.localName ?? "").toLowerCase().includes(q) ||
         (p.city ?? "").toLowerCase().includes(q) ||
         (p.address ?? "").toLowerCase().includes(q)
       );
@@ -552,7 +554,10 @@ export default function PlacesListPage(): JSX.Element {
                       name: (
                         <span className="flex items-center gap-2 font-medium">
                           <span aria-hidden>{PLACE_CATEGORY_ICONS[p.category]}</span>
-                          {p.name}
+                          <span className="min-w-0">
+                            {p.name}
+                            <LocalName value={p.localName} />
+                          </span>
                         </span>
                       ),
                       category: t(`places:categories.${p.category}`),

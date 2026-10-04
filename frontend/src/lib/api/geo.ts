@@ -8,7 +8,10 @@ import { api } from "./client";
  * is a real error and surfaces as a thrown `AxiosError` here.
  */
 export interface PlaceSearchResult {
+  /** In Latin script wherever OSM has one. */
   name: string;
+  /** The name in the place's own script (on the sign) — only when it differs from `name`. */
+  localName?: string;
   /** `osm:<type>/<id>` when the geocoder named one — the mirror of `PlaceResult.externalRef`. */
   externalRef?: string;
   address?: string;

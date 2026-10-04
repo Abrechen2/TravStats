@@ -131,6 +131,8 @@ export interface LodgingCardStay {
 export interface PlaceCardDatum {
   id: string;
   name: string;
+  /** The name on the sign, in the place's own script (forgejo#199). */
+  localName?: string | null;
   category?: string;
   city?: string | null;
   country?: string | null;

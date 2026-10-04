@@ -48,6 +48,8 @@ export interface LocationSelection {
    */
   externalRef?: string;
   name?: string;
+  /** The hit's name in the place's own script, when it has a second one. */
+  localName?: string;
   address?: string;
   city?: string;
   country?: string;
@@ -98,6 +100,7 @@ export function placeToSelection(hit: PlaceSearchResult): LocationSelection {
     lat: hit.lat,
     lon: hit.lon,
     name: hit.name,
+    ...(hit.localName ? { localName: hit.localName } : {}),
     externalRef: hit.externalRef,
     address: hit.address,
     city: hit.city,

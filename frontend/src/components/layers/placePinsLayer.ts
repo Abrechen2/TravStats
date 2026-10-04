@@ -22,6 +22,8 @@ interface PlacePinDatum {
   position: [number, number];
   placeId: string;
   name: string;
+  /** The name on the sign — the tooltip shows it under `name` (forgejo#199). */
+  localName: string | null;
   /** Truncated display label rendered by the name TextLayer — see `toPlaceLabel`. */
   shortLabel: string;
   category: PlaceCategory;
@@ -163,6 +165,7 @@ export function buildPlacePins(
       position: [place.lon, place.lat],
       placeId: place.id,
       name: place.name,
+      localName: place.localName ?? null,
       shortLabel: toPlaceLabel(place.name),
       category: place.category,
       city: place.city,

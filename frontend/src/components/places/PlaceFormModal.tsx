@@ -43,6 +43,8 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
   const isEdit = place !== null;
 
   const [name, setName] = useState(place?.name ?? "");
+  /** The name on the sign, in the place's own script (forgejo#199). */
+  const [localName, setLocalName] = useState(place?.localName ?? "");
   const [category, setCategory] = useState<PlaceCategory>(place?.category ?? "other");
   const [lat, setLat] = useState<number | null>(place?.lat ?? null);
   const [lon, setLon] = useState<number | null>(place?.lon ?? null);
@@ -121,6 +123,7 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
     // than leaving the previous hit's ref attached to a point it never named.
     setExternalRef(sel.externalRef ?? "");
     setName((prev) => (prev.trim() === "" && sel.name ? sel.name : prev));
+    setLocalName((prev) => (prev.trim() === "" && sel.localName ? sel.localName : prev));
     setAddress((prev) => (prev.trim() === "" && sel.address ? sel.address : prev));
     setCity((prev) => (prev.trim() === "" && sel.city ? sel.city : prev));
     setCountry((prev) => (prev.trim() === "" && sel.country ? sel.country : prev));
@@ -138,6 +141,9 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
     try {
       const payload = {
         name: name.trim(),
+        // Null on an empty field: on edit that clears the second name, on
+        // create it lets the server split a name typed with both scripts.
+        localName: localName.trim() || null,
         category,
         lat: position.lat,
         lon: position.lon,
@@ -180,6 +186,7 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
     canSave,
     position,
     name,
+    localName,
     category,
     address,
     city,
@@ -256,6 +263,16 @@ export function PlaceFormModal({ place, onClose, onSaved }: Props): JSX.Element 
               value={name}
               onChange={(e) => setName(e.target.value)}
               placeholder={t("places:form.namePlaceholder")}
+            />
+          </Field>
+
+          <Field label={t("places:form.localName")}>
+            <input
+              className={INPUT_CLASS}
+              value={localName}
+              onChange={(e) => setLocalName(e.target.value)}
+              placeholder={t("places:form.localNamePlaceholder")}
+              maxLength={200}
             />
           </Field>
 
