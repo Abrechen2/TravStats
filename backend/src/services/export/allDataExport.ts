@@ -36,7 +36,8 @@ export const USER_EXPORT_SELECT = {
 
   // Travel data — the point of the export. Companion LINKS travel with their
   // record: the companions list alone says who, never on which journey.
-  flights: { include: { companionLinks: true } },
+  // A flight's phone recording travels with it: no provider can supply it again.
+  flights: { include: { companionLinks: true, track: true } },
   cruises: { include: { stops: true, legs: true, tracks: true, companionLinks: true } },
   trips: {
     include: {

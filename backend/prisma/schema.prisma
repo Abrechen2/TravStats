@@ -555,6 +555,8 @@ model Flight {
   booking        Booking?              @relation(fields: [bookingId], references: [id], onDelete: SetNull)
   pendingUpdates PendingFlightUpdate[]
   companionLinks FlightCompanion[]
+  /// The phone's own recording of this flight (forgejo#193) — see `FlightTrack`.
+  track          FlightTrack?
 
   documents Document[]
 
@@ -2325,6 +2327,47 @@ model CruiseTrack {
   @@unique([cruiseId, externalRef])
   @@index([cruiseId])
   @@map("cruise_tracks")
+}
+
+/// A flight as the passenger's phone recorded it (Companion background GPS,
+/// forgejo#193). A table of its own and never `Flight.actualRoute`: a provider
+/// lookup overwrites that column, and a recording is the one line no provider
+/// can supply again (owner decision D5, 2026-10-01).
+///
+/// ONE per flight — a second recording of the same flight replaces this one
+/// only when the client asks for it explicitly. The columns are `CruiseTrack`'s
+/// and are written through `ingestedTrackColumns`, so the pipeline stays one;
+/// the altitude profile is kept (a flight's climb is what it is), speed is not.
+model FlightTrack {
+  id            String   @id @default(uuid())
+  flightId      String   @unique @map("flight_id")
+  /// companion
+  source        String
+  /// The client's id for this upload. A retry from the phone's outbox sends
+  /// the same id and is answered with the stored row instead of a second one.
+  uploadId      String   @map("upload_id")
+  /// The paired device that sent it (`ApiToken.deviceId`); null from a browser.
+  deviceId      String?  @map("device_id")
+  startedAt     DateTime @map("started_at")
+  endedAt       DateTime @map("ended_at")
+  /// GeoJSON LineString coordinates, simplified on ingest.
+  geometry      Json
+  /// Index into `geometry` where each recording segment starts. A phone in a
+  /// cabin loses its fix for long stretches; a step longer than
+  /// `FLIGHT_TRACK_GAP_KM` is such a hole, not a recording.
+  segmentStarts Json     @map("segment_starts")
+  /// Running RAW distance in km at each vertex of `geometry`.
+  cumulativeKm  Json     @map("cumulative_km")
+  /// `[km, metres]` altitude profile from the raw points; null without altitudes.
+  elevations    Json?
+  pointCount    Int      @map("point_count")
+  distanceKm    Float    @map("distance_km")
+  createdAt     DateTime @default(now()) @map("created_at")
+  updatedAt     DateTime @updatedAt @map("updated_at")
+
+  flight Flight @relation(fields: [flightId], references: [id], onDelete: Cascade)
+
+  @@map("flight_tracks")
 }
 
 model CruiseStop {

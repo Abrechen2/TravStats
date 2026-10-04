@@ -9,6 +9,7 @@ import { PrismaClient, PendingFlightUpdate, Flight, Prisma } from "../prisma";
 import { prisma } from "../db";
 import logger from "../utils/logger";
 import { getCachedAirports } from "./airportCache";
+import { isDeviceSource } from "./flightDevice/deviceSource";
 import {
   calculateStatisticsImpact,
   type StatisticsImpact,
@@ -445,6 +446,10 @@ export async function applyPendingUpdate(id: string, userId: string): Promise<Fl
         updateData.dataSource = "historical_enrichment";
       }
       updateData.lastModifiedBy = "historical_enrichment";
+    } else if (isDeviceSource(pendingUpdate.apiSource)) {
+      // A phone's observation (forgejo#194) speaks for the times, not for
+      // where the row came from, so `dataSource` keeps saying that.
+      updateData.lastModifiedBy = pendingUpdate.apiSource;
     } else {
       // For live updates
       if (pendingUpdate.apiSource && pendingUpdate.apiSource !== "historical_aggregation") {

@@ -21,6 +21,8 @@ import twoFactorRoutes from "./auth/twoFactor";
 import passkeyRoutes from "./auth/passkeys";
 import flightRoutes from "./flights";
 import flightEntrySuggestionRoutes from "./flights/entrySuggestions";
+import flightTrackRoutes from "./flights/track";
+import flightObservedTimesRoutes from "./flights/observedTimes";
 import upcomingRoutes from "./upcoming";
 import photoJourneyRoutes from "./photoJourneys";
 import tripSuggestionRoutes from "./tripSuggestions";
@@ -177,6 +179,10 @@ export const apiMounts: ApiMount[] = [
     router: flightEntrySuggestionRoutes,
   },
   { id: "flights", base: "/api/v1/flights", router: flightRoutes },
+  // What a paired phone sends about a flight (forgejo#193/#194) — satellites
+  // at the same prefix, the `cruises.tracks` pattern: flights.ts is frozen.
+  { id: "flights.track", base: "/api/v1/flights", router: flightTrackRoutes },
+  { id: "flights.observedTimes", base: "/api/v1/flights", router: flightObservedTimesRoutes },
   // The dashboard tab strip's "next up" line — one route for every domain,
   // so the strip never depends on which tab happens to have loaded.
   { id: "upcoming", base: "/api/v1/upcoming", router: upcomingRoutes },
