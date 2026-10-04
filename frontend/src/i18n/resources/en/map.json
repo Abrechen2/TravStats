@@ -280,6 +280,12 @@
   },
   "tooltip": {
     "lastVisit": "Last visit",
-    "lastCall": "Last call"
+    "lastCall": "Last call",
+    "railLine": "Train journey",
+    "railStation": "Station",
+    "rentalSame": "Rental car · pick-up and return",
+    "rentalPickup": "Rental car · pick-up",
+    "rentalReturn": "Rental car · return",
+    "rentalLink": "Rental car · one-way"
   }
 }

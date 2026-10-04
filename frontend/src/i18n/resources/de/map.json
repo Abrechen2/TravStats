@@ -280,6 +280,12 @@
   },
   "tooltip": {
     "lastVisit": "Letzter Besuch",
-    "lastCall": "Letzter Anlauf"
+    "lastCall": "Letzter Anlauf",
+    "railLine": "Zugfahrt",
+    "railStation": "Bahnhof",
+    "rentalSame": "Mietwagen · Abholung und Rückgabe",
+    "rentalPickup": "Mietwagen · Abholung",
+    "rentalReturn": "Mietwagen · Rückgabe",
+    "rentalLink": "Mietwagen · Einwegmiete"
   }
 }
