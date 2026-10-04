@@ -27,9 +27,18 @@ interface Envelope<T> {
 
 type SaveEnvelope = Envelope<RailJourney> & { meta?: { geometry?: RailGeometryReport } };
 
+/** The summary strip's figures over the whole FILTERED list, counted by the server. */
+export interface RailListSummary {
+  journeys: number;
+  operators: number;
+  withoutOperator: number;
+  stations: number;
+}
+
 export interface RailPage {
   journeys: RailJourney[];
   total: number;
+  summary: RailListSummary;
 }
 
 export interface RailListQuery {
@@ -47,6 +56,7 @@ export interface RailListQuery {
 export interface RailConnectionPage {
   connections: RailConnection[];
   total: number;
+  summary: RailListSummary;
 }
 
 /** The connection list orders by first departure only, and takes no card filter. */
@@ -54,10 +64,12 @@ export type RailConnectionQuery = Omit<RailListQuery, "sort" | "membershipId">;
 
 export const railApi = {
   async list(query: RailListQuery = {}): Promise<RailPage> {
-    const res = await api.get<Envelope<RailJourney[]> & { meta: { total: number } }>("/rail", {
+    const res = await api.get<
+      Envelope<RailJourney[]> & { meta: { total: number; summary: RailListSummary } }
+    >("/rail", {
       params: query,
     });
-    return { journeys: res.data.data, total: res.data.meta.total };
+    return { journeys: res.data.data, total: res.data.meta.total, summary: res.data.meta.summary };
   },
 
   /**
@@ -79,11 +91,14 @@ export const railApi = {
    * is one entry. `total` counts connections — what a "load more" pages over.
    */
   async listConnections(query: RailConnectionQuery = {}): Promise<RailConnectionPage> {
-    const res = await api.get<Envelope<RailConnection[]> & { meta: { total: number } }>(
-      "/rail/connections",
-      { params: query }
-    );
-    return { connections: res.data.data, total: res.data.meta.total };
+    const res = await api.get<
+      Envelope<RailConnection[]> & { meta: { total: number; summary: RailListSummary } }
+    >("/rail/connections", { params: query });
+    return {
+      connections: res.data.data,
+      total: res.data.meta.total,
+      summary: res.data.meta.summary,
+    };
   },
 
   /** The whole ride a leg belongs to — itself alone when it has no change. */

@@ -50,12 +50,20 @@ vi.mock("../../components/Training/ConfirmModal", () => ({
 const list = vi.fn();
 const listConnections = vi.fn();
 const remove = vi.fn();
+const stats = vi.fn();
 vi.mock("../../lib/api/rail", () => ({
   railApi: {
     list: (...a: unknown[]) => list(...a),
     listConnections: (...a: unknown[]) => listConnections(...a),
     remove: (...a: unknown[]) => remove(...a),
+    stats: (...a: unknown[]) => stats(...a),
   },
+}));
+
+const navigate = vi.fn();
+vi.mock("react-router-dom", async (importOriginal) => ({
+  ...(await importOriginal<typeof import("react-router-dom")>()),
+  useNavigate: () => navigate,
 }));
 
 vi.mock("../../lib/api/loyalty", () => ({
@@ -67,8 +75,8 @@ import { MemoryRouter } from "react-router-dom";
 import RailPage from "../RailPage";
 import type { RailJourney } from "../../types/rail";
 
-// A row links to the journey's own page since the detail page (phase 2b), and
-// a <Link> needs a router around it.
+// A row opens the journey's own page since the detail page (phase 2b); the
+// loyalty notice reads the URL, so the page renders inside a router.
 const renderPage = (): void => {
   render(
     <MemoryRouter>
@@ -80,9 +88,15 @@ const renderPage = (): void => {
 /** A page of the connection list: each inner array is one ride's trains. */
 const page = (
   ...rides: RailJourney[][]
-): { connections: Array<{ id: string; legs: RailJourney[] }>; total: number } => ({
+): {
+  connections: Array<{ id: string; legs: RailJourney[] }>;
+  total: number;
+  summary: { journeys: number; operators: number; withoutOperator: number; stations: number };
+} => ({
   connections: rides.map((legs) => ({ id: legs[0].id, legs })),
   total: rides.length,
+  // The server counts the whole filtered list; here that is the rides given.
+  summary: { journeys: rides.flat().length, operators: 1, withoutOperator: 0, stations: 2 },
 });
 
 function journey(over: Partial<RailJourney> = {}): RailJourney {
@@ -141,6 +155,9 @@ describe("RailPage", () => {
     listConnections.mockReset();
     remove.mockReset();
     addToast.mockReset();
+    navigate.mockReset();
+    stats.mockReset().mockResolvedValue({ byYear: [{ year: 2025 }, { year: 2026 }] });
+    localStorage.clear();
   });
 
   it("lists journeys with times on each station's own clock", async () => {
@@ -175,6 +192,31 @@ describe("RailPage", () => {
     expect(screen.queryByText("rail:empty")).toBeNull();
   });
 
+  // forgejo#191: the failure was a red paragraph with no way forward.
+  it("offers a retry in the degraded state, and draws the rows once it succeeds", async () => {
+    listConnections.mockRejectedValueOnce(
+      Object.assign(new Error("down"), { response: { status: 503 } })
+    );
+    listConnections.mockResolvedValue(page([journey({ id: "back" })]));
+    renderPage();
+    const alert = await screen.findByRole("alert");
+    expect(alert.querySelector('[data-empty-kind="degraded"]')).not.toBeNull();
+    expect(alert).toHaveTextContent("HTTP 503");
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    expect(await screen.findByTestId("rail-row-back")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("counts the whole filtered list in the strip, not the page on screen", async () => {
+    listConnections.mockResolvedValue({
+      ...page([journey()]),
+      total: 300,
+      summary: { journeys: 312, operators: 4, withoutOperator: 0, stations: 57 },
+    });
+    renderPage();
+    expect(await screen.findByText("rail:summary.journeys/312")).toBeInTheDocument();
+  });
+
   it("shows the empty state only for a logbook that loaded and is empty", async () => {
     listConnections.mockResolvedValue(page());
     renderPage();
@@ -206,7 +248,7 @@ describe("RailPage", () => {
     remove.mockResolvedValue(undefined);
     renderPage();
     await screen.findByTestId("rail-row-j1");
-    fireEvent.click(screen.getByText("rail:delete"));
+    fireEvent.click(screen.getByRole("button", { name: "rail:delete" }));
     fireEvent.click(screen.getByText("confirm-delete"));
     await waitFor(() => expect(remove).toHaveBeenCalledWith("j1"));
     expect(await screen.findByText("rail:empty")).toBeInTheDocument();
@@ -230,6 +272,9 @@ describe("RailPage — a ride with changes", () => {
   beforeEach(() => {
     list.mockReset();
     listConnections.mockReset();
+    navigate.mockReset();
+    stats.mockReset().mockResolvedValue({ byYear: [] });
+    localStorage.clear();
   });
 
   it("draws one row: every station, first departure to last arrival, the trains", async () => {
@@ -248,10 +293,18 @@ describe("RailPage — a ride with changes", () => {
     // The legs are not rows of their own …
     expect(screen.queryByTestId("rail-row-leg-1")).toBeNull();
     expect(screen.queryByTestId("rail-row-leg-2")).toBeNull();
-    // … and the row leads to the connection's page, not to a single train.
-    const links = row.querySelectorAll("a");
-    expect(links.length).toBeGreaterThan(0);
-    links.forEach((a) => expect(a.getAttribute("href")).toBe("/rail/connection/leg-1"));
+    // … and the row leads to the connection's page, not to a single train —
+    // which is also why it offers no edit or delete of its own.
+    fireEvent.click(row);
+    expect(navigate).toHaveBeenCalledWith("/rail/connection/leg-1");
+    expect(row.querySelector("button")).toBeNull();
+  });
+
+  it("opens a direct ride's own page", async () => {
+    listConnections.mockResolvedValue(page([journey({ id: "solo" })]));
+    renderPage();
+    fireEvent.click(await screen.findByTestId("rail-row-solo"));
+    expect(navigate).toHaveBeenCalledWith("/rail/solo");
   });
 
   it("keeps counting trains in the summary strip, not rows", async () => {
@@ -269,15 +322,18 @@ describe("RailPage — a ride with changes", () => {
     expect(row.querySelector('[data-testid="rail-status"]')).toBeNull();
   });
 
-  it("pages over rides: 'more' asks from the number of entries, not of trains", async () => {
-    listConnections.mockResolvedValueOnce({ ...page([first, second]), total: 2 });
-    listConnections.mockResolvedValueOnce({ ...page([journey({ id: "solo" })]), total: 2 });
+  it("pages over rides: the next page starts after the rides shown, not the trains", async () => {
+    const first50 = Array.from({ length: 50 }, (_, i) => [journey({ id: `r${i}` })]);
+    listConnections.mockResolvedValueOnce({
+      ...page([first, second], ...first50.slice(1)),
+      total: 60,
+    });
+    listConnections.mockResolvedValueOnce({ ...page([journey({ id: "solo" })]), total: 60 });
     renderPage();
     await screen.findByTestId("rail-connection-row-leg-1");
-    fireEvent.click(screen.getByText("rail:more"));
+    fireEvent.click(screen.getAllByRole("button", { name: "common:table.pagination.next" })[0]);
     await screen.findByTestId("rail-row-solo");
-    expect(listConnections.mock.calls[1][0]).toMatchObject({ offset: 1 });
-    expect(screen.queryByText("rail:more")).toBeNull();
+    expect(listConnections.mock.calls[1][0]).toMatchObject({ limit: 50, offset: 50 });
   });
 });
 
@@ -285,8 +341,13 @@ describe("RailPage — a ride with changes", () => {
 // opens on the card's rides, in the linked year, and says so above them.
 describe("RailPage — opened from a rail card's figure", () => {
   it("asks for the card's rides in that year and names both above the list", async () => {
-    list.mockReset().mockResolvedValue({ journeys: [journey()], total: 1 });
+    list.mockReset().mockResolvedValue({
+      journeys: [journey()],
+      total: 1,
+      summary: { journeys: 1, operators: 1, withoutOperator: 0, stations: 2 },
+    });
     listConnections.mockReset();
+    stats.mockReset().mockResolvedValue({ byYear: [] });
     render(
       <MemoryRouter initialEntries={["/rail?membership=card-9&year=2025"]}>
         <RailPage />
@@ -302,5 +363,44 @@ describe("RailPage — opened from a rail card's figure", () => {
     const notice = await screen.findByTestId("loyalty-list-filter");
     await waitFor(() => expect(notice).toHaveTextContent("loyalty:listFilter.named"));
     expect(notice).toHaveTextContent("loyalty:listFilter.inYear");
+  });
+});
+
+// forgejo#197: the shared logbook layout — the filter bar's status and year
+// reach the server, and the year options are every year ridden.
+describe("RailPage — filters", () => {
+  beforeEach(() => {
+    listConnections.mockReset().mockResolvedValue(page([journey()]));
+    stats.mockReset().mockResolvedValue({ byYear: [{ year: 2024 }, { year: 2026 }] });
+    localStorage.clear();
+  });
+
+  it("sends the chosen status and year to the server and offers every year ridden", async () => {
+    renderPage();
+    await screen.findByTestId("rail-row-j1");
+    const year = screen.getByRole("combobox", { name: "rail:list.filterYear" });
+    await waitFor(() =>
+      expect(Array.from(year.querySelectorAll("option")).map((o) => o.value)).toEqual([
+        "all",
+        "2026",
+        "2024",
+      ])
+    );
+    fireEvent.change(year, { target: { value: "2024" } });
+    fireEvent.change(screen.getByRole("combobox", { name: "rail:list.filterStatus" }), {
+      target: { value: "cancelled" },
+    });
+    await waitFor(() =>
+      expect(listConnections).toHaveBeenLastCalledWith(
+        expect.objectContaining({ year: 2024, status: "cancelled", offset: 0 })
+      )
+    );
+  });
+
+  it("says a failed year lookup nowhere but the log — the list still loads", async () => {
+    stats.mockReset().mockRejectedValue(new Error("down"));
+    renderPage();
+    expect(await screen.findByTestId("rail-row-j1")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
   });
 });

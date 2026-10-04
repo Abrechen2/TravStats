@@ -10,6 +10,7 @@ import { withStationShortCodes } from "../../services/rail/railStations";
 import { withRailTimes } from "../../services/rail/timesDto";
 import { withRailSource } from "../../services/rail/railSource";
 import { buildRailWhere, RAIL_INCLUDE } from "../rail";
+import { railListSummary } from "../../shared/listSummary";
 
 /**
  * The rail logbook read as CONNECTIONS (forgejo#187): a ride with changes of
@@ -56,6 +57,8 @@ const GROUPING_SELECT = {
   arrivalTime: true,
   depPrecision: true,
   arrPrecision: true,
+  // For the summary strip, which counts every matching train, not this page.
+  operator: true,
 } satisfies Prisma.RailJourneySelect;
 
 /** The full rows of `ids`, as the leg list sends them, keyed by id. */
@@ -117,6 +120,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
       meta: {
         total: groups.length,
         legTotal: groups.reduce((sum, group) => sum + group.length, 0),
+        summary: railListSummary(groups.flat()),
         limit,
         offset,
       },

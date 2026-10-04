@@ -264,6 +264,8 @@ export default function RentalDetailPage(): JSX.Element {
                 label: t("rental:detail.vehicleDriven"),
                 value: rental.vehicleDriven ?? t("rental:detail.fromInvoice"),
               },
+              // Null hides the fact, like every other unknown here (forgejo#196).
+              { label: t("rental:detail.licensePlate"), value: rental.licensePlate },
             ]}
           />
 

@@ -351,5 +351,8 @@
     "gap": "Diese Uhrzeit gibt es an dem Tag dort nicht (Zeitumstellung). Bitte wähle eine Uhrzeit davor oder danach.",
     "repeated": "Diese Uhrzeit gibt es an dem Tag dort zweimal (Zeitumstellung). Gespeichert wird die frühere.",
     "later": "Die spätere meinen"
+  },
+  "list": {
+    "loadFailedHint": "Das liegt nicht an deinen Daten — sie sind noch da. Versuch es gleich noch einmal."
   }
 }

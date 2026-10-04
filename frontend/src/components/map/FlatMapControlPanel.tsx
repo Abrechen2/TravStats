@@ -29,6 +29,7 @@ import {
   type LodgingAppearanceState,
 } from "./controlPanelKit";
 import { PlaceAppearanceSection, type PlaceAppearanceState } from "./PlaceAppearanceSection";
+import { OverlayAppearanceSections } from "./OverlayAppearanceSections";
 import { MapChromeSections } from "./MapChromeSections";
 import type { LabelsMode } from "./labelPriority";
 
@@ -208,6 +209,8 @@ export function FlatMapControlPanel({
               sizeLabel={t("map:globe.panel.size")}
             />
           )}
+          {/* Tours / roadtrips / rail / rentals — layers the tab builds (forgejo#198) */}
+          <OverlayAppearanceSections appearanceDomains={appearanceDomains} />
         </div>
       )}
     </div>

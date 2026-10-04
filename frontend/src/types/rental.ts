@@ -66,6 +66,8 @@ export interface RentalBooking {
   vehicleTraits: { transmission: "manual" | "automatic"; airConditioning: boolean } | null;
   vehicleExample: string | null;
   vehicleDriven: string | null;
+  /** Free text as typed (forgejo#196); null = not recorded. */
+  licensePlate: string | null;
   odometerOutKm: number | null;
   odometerInKm: number | null;
   /** Driven km — from the invoice or a labelled correction; null = unknown. */
@@ -136,6 +138,7 @@ export interface RentalInput {
   acrissCode?: string | null;
   vehicleExample?: string | null;
   vehicleDriven?: string | null;
+  licensePlate?: string | null;
   distanceKm?: number | null;
   paymentTiming?: RentalPaymentTiming | null;
   price?: number | null;

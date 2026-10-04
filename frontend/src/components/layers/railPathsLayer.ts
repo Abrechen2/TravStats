@@ -142,7 +142,16 @@ export interface RailLayerOptions {
   /** Layer id prefix, so two maps on one page never share a layer id. */
   idPrefix?: string;
   pickable?: boolean;
+  /** The user's line-width multiplier (map panel, forgejo#198). 1 = default. */
+  widthScale?: number;
+  /** The user's station-marker multiplier. 1 = default, 0 = no stations. */
+  stationSize?: number;
 }
+
+/** Default widths in pixels: a firm line for real track, a thinner chord. */
+export const RAIL_LINE_WIDTH_PX = { traced: 3.5, chord: 2 } as const;
+/** Default station-dot radius in pixels. */
+export const RAIL_STATION_RADIUS_PX = 4;
 
 const lift = (altitudeM: number) => (point: [number, number]) =>
   altitudeM === 0 ? point : ([point[0], point[1], altitudeM] as [number, number, number]);
@@ -150,24 +159,36 @@ const lift = (altitudeM: number) => (point: [number, number]) =>
 export function buildRailDeckLayers(
   paths: readonly RailPathDatum[],
   stations: readonly RailStationDatum[],
-  { color, altitudeM = 0, idPrefix = "rail", pickable = true }: RailLayerOptions
+  {
+    color,
+    altitudeM = 0,
+    idPrefix = "rail",
+    pickable = true,
+    widthScale = 1,
+    stationSize = 1,
+  }: RailLayerOptions
 ): Layer[] {
   if (paths.length === 0) return [];
   const up = lift(altitudeM);
+  const pathLayer = new PathLayer<RailPathDatum>({
+    id: `${idPrefix}-paths`,
+    data: paths,
+    getPath: (d) => d.path.map(up),
+    getColor: (d) => [...color, d.traced ? 255 : 170] as [number, number, number, number],
+    getWidth: (d) => (d.traced ? RAIL_LINE_WIDTH_PX.traced : RAIL_LINE_WIDTH_PX.chord) * widthScale,
+    widthUnits: "pixels",
+    // 1, not 2: at the default scale every line is at least 2 px anyway, and
+    // a 2 px floor would turn the lower half of the width slider into a no-op.
+    widthMinPixels: 1,
+    pickable,
+    autoHighlight: pickable,
+    highlightColor: [255, 255, 255, 80],
+    updateTriggers: { getColor: color, getPath: altitudeM, getWidth: widthScale },
+  });
+  // Size 0 is the slider's "Aus": no station layer at all, not a 0 px dot.
+  if (stationSize <= 0) return [pathLayer];
   return [
-    new PathLayer<RailPathDatum>({
-      id: `${idPrefix}-paths`,
-      data: paths,
-      getPath: (d) => d.path.map(up),
-      getColor: (d) => [...color, d.traced ? 255 : 170] as [number, number, number, number],
-      getWidth: (d) => (d.traced ? 3.5 : 2),
-      widthUnits: "pixels",
-      widthMinPixels: 2,
-      pickable,
-      autoHighlight: pickable,
-      highlightColor: [255, 255, 255, 80],
-      updateTriggers: { getColor: color, getPath: altitudeM },
-    }),
+    pathLayer,
     new ScatterplotLayer<RailStationDatum>({
       id: `${idPrefix}-stations`,
       data: stations,
@@ -178,7 +199,7 @@ export function buildRailDeckLayers(
       getLineWidth: 1,
       stroked: true,
       radiusUnits: "pixels",
-      getRadius: 4,
+      getRadius: RAIL_STATION_RADIUS_PX * stationSize,
       pickable,
       updateTriggers: { getFillColor: color, getPosition: altitudeM },
     }),

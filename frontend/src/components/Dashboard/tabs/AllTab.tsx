@@ -16,12 +16,7 @@ import { resolvePlaceListColors } from "../../../lib/placeColor";
 import type { PlaceList } from "../../../types/placeList";
 import { tripsApi } from "../../../lib/api/trips";
 import { buildTourPaths, type TourPathDatum } from "../../layers/tourPathsLayer";
-import {
-  buildTourDeckLayers,
-  buildTourLegendRows,
-  TourStatusOverlay,
-  TOUR_PATH_GLOBE_ALTITUDE_M,
-} from "./tourMapOverlay";
+import { buildTourLegendRows, TourStatusOverlay, useTourDeckLayers } from "./tourMapOverlay";
 import {
   buildAirportPortLegendRows,
   buildCruiseLegendRows,
@@ -74,7 +69,7 @@ import { Icon } from "../../ui/Icon";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { DomainFilterButton } from "./DomainFilterButton";
 import { DomainFilterEmptyOverlay } from "./DomainFilterEmptyOverlay";
-import { useAllTabDomainVisibility } from "./useAllTabDomainVisibility";
+import { allTabAppearanceDomains, useAllTabDomainVisibility } from "./useAllTabDomainVisibility";
 
 // Maps the dashboard-level AllMode to what MapContainer3D's visMode prop expects.
 // "journey" uses extraLayers with showInternalCruises=false so it has full
@@ -488,14 +483,14 @@ export function AllTab(): JSX.Element {
   const showTours = toursVisible && allMode !== "journey";
 
   // `buildTourPaths` is the SAME builder `TripMap.tsx` uses; the deck.gl
-  // layer itself comes from `buildTourDeckLayers` (`./tourMapOverlay.tsx`,
+  // layer itself comes from `useTourDeckLayers` (`./tourMapOverlay.tsx`,
   // which also carries the width/alpha rationale).
   const tourPathData = useMemo<TourPathDatum[]>(
     () => (showTours ? buildTourPaths(shownTours.geometries) : []),
     [showTours, shownTours.geometries]
   );
-  // Altitude-lifted on the globe only — see `TOUR_PATH_GLOBE_ALTITUDE_M`'s
-  // doc comment (tourMapOverlay.tsx): an unlifted path z-fights with the
+  // Lifted on the globe only, inside `useTourDeckLayers` — see the
+  // `TOUR_PATH_GLOBE_ALTITUDE_M` doc (tourMapOverlay.tsx): an unlifted path z-fights with the
   // sphere mesh and draws zero pixels there (fix round 2, found in a real
   // browser). `visMode` already resolves "globe" vs "routes"/"heatmap"/
   // "journey" a few lines up.
@@ -504,13 +499,10 @@ export function AllTab(): JSX.Element {
   const rail = useRailOverlay(railOn, visMode === "globe", t);
   const rentalOn = useRentalVisible() && showTours && domainFilter.isVisible("rental");
   const rental = useRentalOverlay(rentalOn, visMode === "globe", t);
+  const tourDeck = useTourDeckLayers(tourPathData, visMode === "globe");
   const tourLayers = useMemo<Layer[]>(
-    () => [
-      ...buildTourDeckLayers(tourPathData, visMode === "globe" ? TOUR_PATH_GLOBE_ALTITUDE_M : 0),
-      ...rail.layers,
-      ...rental.layers,
-    ],
-    [tourPathData, visMode, rail.layers, rental.layers]
+    () => [...tourDeck, ...rail.layers, ...rental.layers],
+    [tourDeck, rail.layers, rental.layers]
   );
 
   // The activity toggle stays top-left (it opens the activity sidebar).
@@ -762,7 +754,7 @@ export function AllTab(): JSX.Element {
         flights={visibleFlights}
         visMode={visMode}
         extraLayers={tourLayers}
-        appearanceDomains={["flight", "cruise", "lodging", "poi"]}
+        appearanceDomains={allTabAppearanceDomains(showTours)}
         placesOverride={visiblePlaces}
         placeListColors={placeListContext.byPlaceId}
         placeListLabels={placeListContext.labelsByPlaceId}

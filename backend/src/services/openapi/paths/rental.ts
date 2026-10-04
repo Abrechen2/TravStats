@@ -74,6 +74,10 @@ export const rentalBookingSchema = registry.register(
       actualPickupTime: z.string().datetime().nullable(),
       actualReturnTime: z.string().datetime().nullable(),
       acrissCode: z.string().nullable().describe("Four-letter ACRISS code, when printed"),
+      licensePlate: z
+        .string()
+        .nullable()
+        .describe("The car's licence plate as typed — free text, no format check; null = unknown"),
       vehicleTraits: z
         .object({
           transmission: z.enum(["manual", "automatic"]),
@@ -219,6 +223,13 @@ registry.registerPath({
             data: z.array(rentalBookingSchema),
             meta: z.object({
               total: z.number().int().describe("Size of the FILTERED set"),
+              summary: z
+                .object({
+                  rentals: z.number().int(),
+                  days: z.number().int().describe("Days of every rental not cancelled"),
+                  providers: z.number().int(),
+                })
+                .describe("The summary strip's figures over the whole FILTERED set, not this page"),
               limit: z.number().int(),
               offset: z.number().int(),
             }),

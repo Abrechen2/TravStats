@@ -7,7 +7,7 @@ import DetailKpis, { type DetailKpi } from "../components/ui/DetailKpis";
 import DetailSection from "../components/ui/DetailSection";
 import Button from "../components/ui/Button";
 import { Icon } from "../components/ui/Icon";
-import { trainLabel } from "../components/rail/RailJourneyRow";
+import { trainLabel } from "../components/rail/trainLabel";
 import { useTranslation } from "../hooks/useTranslation";
 import { railApi } from "../lib/api/rail";
 import { classifyLoadFailure, type LoadFailure } from "../lib/api/loadFailure";

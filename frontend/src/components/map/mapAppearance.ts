@@ -36,6 +36,7 @@ import {
   type PlaceColors,
 } from "../../lib/placeColor";
 import { flightRouteShapeFromStored, type FlightRouteShape } from "../../lib/flightRouteShape";
+import { overlayAppearanceFromStored, type OverlayAppearance } from "../../lib/overlayAppearance";
 
 /** The 6 tokenless basemaps — same id set on the globe and the flat map. */
 export type BasemapId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
@@ -113,6 +114,20 @@ export interface MapAppearance {
    *  this one a size, and the dots could not be matched to the neighbours they
    *  share a map with. */
   placeMarkerSize?: number;
+  // Overlay domains — tours, roadtrips, rail, rentals (forgejo#198). Their
+  // layers are built by the dashboard tabs, not the maps, so their values live
+  // in `store/overlayAppearanceStore.ts`; validated and defaulted on read by
+  // `overlayAppearanceFromStored` (lib/overlayAppearance.ts), where each field
+  // is documented.
+  tourLineWidth?: number;
+  roadtripLineWidth?: number;
+  roadtripStationSize?: number;
+  railLineWidth?: number;
+  railStationSize?: number;
+  rentalLineWidth?: number;
+  rentalMarkerSize?: number;
+  /** Absent = the one-way link is drawn (the behaviour before the switch). */
+  rentalShowLine?: boolean;
   /** Whether the lodging LIST panel is open (its own state, not the map
    *  control panel's `panelExpanded`). It used to open on every mount, so
    *  switching domain and coming back always sprang it open again. */
@@ -272,6 +287,11 @@ export function loadCruiseColorConfig(): CruiseColorConfig {
 
 export function loadPlaceColorConfig(): PlaceColorConfig {
   return placeColorFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
+}
+
+/** Tours, roadtrips, rail and rentals — every field defaulted and range-checked. */
+export function loadOverlayAppearance(): OverlayAppearance {
+  return overlayAppearanceFromStored(loadMapAppearance() as unknown as Record<string, unknown>);
 }
 
 /**

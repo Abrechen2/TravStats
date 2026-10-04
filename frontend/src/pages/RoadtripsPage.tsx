@@ -5,11 +5,10 @@ import { useNavigate } from "react-router-dom";
 import AppShell from "../components/ui/AppShell";
 import Button from "../components/ui/Button";
 import EmptyState from "../components/ui/EmptyState";
-import PageHeader from "../components/ui/PageHeader";
-import { Input, Select } from "../components/ui/Field";
 import { Icon } from "../components/ui/Icon";
 import { SectionLabel } from "../components/ui/StatTile";
 import LogbookTabs from "../components/table/LogbookTabs";
+import ListFilterBar, { FilterField, PANEL_SELECT_CLASS } from "../components/table/ListFilterBar";
 import KindReviewNotice from "../components/Roadtrips/KindReviewNotice";
 import NewRoadtripDialog from "../components/Roadtrips/NewRoadtripDialog";
 import RoadtripCard from "../components/Roadtrips/RoadtripCard";
@@ -101,15 +100,10 @@ export default function RoadtripsPage(): JSX.Element {
     <RoadtripCard key={r.id} roadtrip={r} phase={roadtripPhase(r.startDate, r.endDate, today)} />
   );
 
-  const newButton = (
-    <Button
-      variant="primary"
-      icon={<Icon name="plus" size={16} />}
-      onClick={() => setCreating(true)}
-    >
-      {t("roadtrips:newRoadtrip")}
-    </Button>
-  );
+  const resetFilters = (): void => {
+    setQuery("");
+    setVehicle("");
+  };
 
   return (
     <AppShell width="table">
@@ -117,38 +111,49 @@ export default function RoadtripsPage(): JSX.Element {
           was missed, so a reader who reached roadtrips had no way back to
           another area except the header menu (owner, 2026-09-28). */}
       <LogbookTabs />
-      <PageHeader title={t("roadtrips:pageTitle")} actions={newButton} />
+      {/* The header every logbook carries (forgejo#197): title left, the
+          add button right, the filter bar under it. The tiles stay — a
+          roadtrip is read by its sketch, not by a row. */}
+      <div className="mb-4 flex flex-wrap items-center justify-between gap-3">
+        <h1 className="t-screen-title">{t("roadtrips:pageTitle")}</h1>
+        <button
+          type="button"
+          onClick={() => setCreating(true)}
+          className="btn-primary flex items-center gap-2 whitespace-nowrap"
+        >
+          <span>+</span>
+          <span>{t("roadtrips:newRoadtrip")}</span>
+        </button>
+      </div>
 
       <KindReviewNotice onChanged={() => void load()} />
 
       {rows !== null && rows.length > 0 && (
-        <div className="mb-5 flex flex-wrap items-center" style={{ gap: "var(--ts-space-sm)" }}>
-          <div className="min-w-60 flex-1 sm:max-w-80">
-            <Input
-              type="search"
-              value={query}
-              onChange={(e) => setQuery(e.target.value)}
-              placeholder={t("roadtrips:list.search")}
-              aria-label={t("roadtrips:list.search")}
-            />
-          </div>
-          {vehiclesInUse.length > 1 && (
-            <div className="w-48">
-              <Select
-                value={vehicle}
-                onChange={(e) => setVehicle(e.target.value as StoredRoadtripVehicle | "")}
-                aria-label={t("roadtrips:vehicleLabel")}
-              >
-                <option value="">{t("roadtrips:list.allVehicles")}</option>
-                {vehiclesInUse.map((v) => (
-                  <option key={v} value={v}>
-                    {t(`roadtrips:vehicle.${v}`)}
-                  </option>
-                ))}
-              </Select>
-            </div>
-          )}
-        </div>
+        <ListFilterBar
+          search={{ value: query, onChange: setQuery, placeholder: t("roadtrips:list.search") }}
+          extraActiveCount={vehicle === "" ? 0 : 1}
+          extra={
+            vehiclesInUse.length > 1 ? (
+              <FilterField label={t("roadtrips:vehicleLabel")}>
+                <select
+                  value={vehicle}
+                  onChange={(e) => setVehicle(e.target.value as StoredRoadtripVehicle | "")}
+                  className={PANEL_SELECT_CLASS}
+                >
+                  <option value="">{t("roadtrips:list.allVehicles")}</option>
+                  {vehiclesInUse.map((v) => (
+                    <option key={v} value={v}>
+                      {t(`roadtrips:vehicle.${v}`)}
+                    </option>
+                  ))}
+                </select>
+              </FilterField>
+            ) : undefined
+          }
+          hasActiveFilter={query.length > 0 || vehicle !== ""}
+          onReset={resetFilters}
+          resultLabel={t("common:filters.matching", { count: shown.length })}
+        />
       )}
 
       {rows === null && !loadError && (

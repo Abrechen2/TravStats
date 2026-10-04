@@ -12,27 +12,45 @@ import { hexToRgb } from "../../../lib/domainColor";
 import { legendRow, type LegendRowFn } from "./allTabLegendRows";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
+import { useOverlayAppearance } from "../../../store/overlayAppearanceStore";
 import { rentalApi } from "../../../lib/api/rental";
 import { logger } from "../../../lib/logger";
 
 type Translate = (key: string) => string;
+
+/** The map panel's section for this domain (forgejo#198). */
+export interface RentalMapStyle {
+  lineWidth: number;
+  markerSize: number;
+  showLine: boolean;
+}
+
+const DEFAULT_RENTAL_STYLE: RentalMapStyle = { lineWidth: 1, markerSize: 1, showLine: true };
 
 /**
  * The rental layer and its legend for the "Alle" map (spec
  * 2026-10-01-rental-domain-design §6, D1 a). Layer and legend take the SAME
  * colour from the domain colour store, so a repainted rental shows the new
  * colour on the map and in the key together (the map colour invariant).
+ *
+ * `style` is the map panel's rental section (forgejo#198): link width, marker
+ * size, and whether the dashed one-way link is drawn at all. Layer and legend
+ * take the SAME style, so a hidden link or hidden markers leave no key behind.
  */
 export function buildRentalMapLayers(
   rentals: readonly RentalMapSource[],
   colorHex: string,
   onGlobe: boolean,
-  idPrefix = "dashboard-rental"
+  idPrefix = "dashboard-rental",
+  style: RentalMapStyle = DEFAULT_RENTAL_STYLE
 ): Layer[] {
-  return buildRentalDeckLayers(buildRentalPoints(rentals), buildRentalLinks(rentals), {
+  const links = style.showLine ? buildRentalLinks(rentals) : [];
+  return buildRentalDeckLayers(buildRentalPoints(rentals), links, {
     color: hexToRgb(colorHex),
     altitudeM: onGlobe ? RENTAL_GLOBE_ALTITUDE_M : 0,
     idPrefix,
+    widthScale: style.lineWidth,
+    markerSize: style.markerSize,
   });
 }
 
@@ -41,10 +59,11 @@ export function buildRentalLegendRows(
   rentals: readonly RentalMapSource[],
   colorHex: string,
   t: Translate,
-  row: LegendRowFn
+  row: LegendRowFn,
+  style: RentalMapStyle = DEFAULT_RENTAL_STYLE
 ): JSX.Element[] {
   const [r, g, b] = hexToRgb(colorHex);
-  const points = buildRentalPoints(rentals);
+  const points = style.markerSize > 0 ? buildRentalPoints(rentals) : [];
   const rows: JSX.Element[] = [];
   if (points.some((p) => p.role === "same")) {
     rows.push(row(`rgb(${r},${g},${b})`, t("dashboard:legend.rentalSame"), "rental-same", "dot"));
@@ -52,7 +71,7 @@ export function buildRentalLegendRows(
   if (points.some((p) => p.role !== "same")) {
     rows.push(row(`rgb(${r},${g},${b})`, t("dashboard:legend.rentalEnds"), "rental-ends", "dot"));
   }
-  if (buildRentalLinks(rentals).length > 0) {
+  if (style.showLine && buildRentalLinks(rentals).length > 0) {
     const dash = `repeating-linear-gradient(90deg, rgb(${r},${g},${b}) 0 4px, transparent 4px 7px)`;
     rows.push(row(dash, t("dashboard:legend.rentalOneWay"), "rental-oneway", "line"));
   }
@@ -109,12 +128,17 @@ export function useRentalOverlay(show: boolean, onGlobe: boolean, t: Translate):
   const rentals = useDashboardRentals(show, year);
   const { colorOf } = useDomainColors();
   const color = colorOf("rental");
+  const { rentalLineWidth, rentalMarkerSize, rentalShowLine } = useOverlayAppearance();
+  const style = useMemo<RentalMapStyle>(
+    () => ({ lineWidth: rentalLineWidth, markerSize: rentalMarkerSize, showLine: rentalShowLine }),
+    [rentalLineWidth, rentalMarkerSize, rentalShowLine]
+  );
   const drawn = show ? rentals : EMPTY;
   const layers = useMemo(
-    () => buildRentalMapLayers(drawn, color, onGlobe, "all-rental"),
-    [drawn, color, onGlobe]
+    () => buildRentalMapLayers(drawn, color, onGlobe, "all-rental", style),
+    [drawn, color, onGlobe, style]
   );
-  return { layers, legendRows: buildRentalLegendRows(drawn, color, t, legendRow) };
+  return { layers, legendRows: buildRentalLegendRows(drawn, color, t, legendRow, style) };
 }
 
 const EMPTY: readonly RentalMapSource[] = [];

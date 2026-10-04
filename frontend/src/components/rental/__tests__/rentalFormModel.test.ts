@@ -89,6 +89,21 @@ describe("rentalFormModel", () => {
  * while "150.00" passed: the form read the field with `Number()`, which
  * knows only the dot. A German price is written with a comma.
  */
+// forgejo#196: the plate is free text — trimmed, never reformatted, empty is null.
+describe("rental licence plate", () => {
+  it("round-trips a stored plate and sends it trimmed", () => {
+    const draft = draftFromRental(makeRental({ licensePlate: "M-AB 1234" }));
+    expect(draft.licensePlate).toBe("M-AB 1234");
+    expect(rentalInputFromDraft({ ...placed, licensePlate: "  b-xy 99e " }).licensePlate).toBe(
+      "b-xy 99e"
+    );
+  });
+
+  it("sends an empty plate as null so an edit can clear it", () => {
+    expect(rentalInputFromDraft({ ...placed, licensePlate: "   " }).licensePlate).toBeNull();
+  });
+});
+
 describe("rental amounts in German notation (forgejo#163)", () => {
   it.each([
     ["150,00", 150],

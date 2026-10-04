@@ -14,8 +14,17 @@ import { legendRow, type LegendRowFn } from "./allTabLegendRows";
 import { useDashboardRail } from "../../../hooks/useDashboardRail";
 import { useDomainColors } from "../../../hooks/useDomainColors";
 import { useDashboardFilterStore } from "../../../store/dashboardFilterStore";
+import { useOverlayAppearance } from "../../../store/overlayAppearanceStore";
 
 type Translate = (key: string) => string;
+
+/** The map panel's section for this domain (forgejo#198). */
+export interface RailMapStyle {
+  lineWidth: number;
+  stationSize: number;
+}
+
+const DEFAULT_RAIL_STYLE: RailMapStyle = { lineWidth: 1, stationSize: 1 };
 
 /**
  * The rail layer and its legend for the dashboard maps — the rail tab and the
@@ -24,18 +33,33 @@ type Translate = (key: string) => string;
  * The colour comes in as the domain colour store's value, resolved by the
  * caller; the legend swatch is built from the SAME value, so a user who
  * repaints rail sees the new colour on the line and in the key together.
+ *
+ * `style` is the map panel's rail section (forgejo#198) — line width and
+ * station size, read from `useOverlayAppearance` by every caller.
  */
 export function buildRailMapLayers(
   journeys: readonly RailPathSource[],
   colorHex: string,
   onGlobe: boolean,
-  idPrefix = "dashboard-rail"
+  idPrefix = "dashboard-rail",
+  style: RailMapStyle = DEFAULT_RAIL_STYLE
 ): Layer[] {
   return buildRailDeckLayers(buildRailPaths(journeys), buildRailStations(journeys), {
     color: hexToRgb(colorHex),
     altitudeM: onGlobe ? RAIL_PATH_GLOBE_ALTITUDE_M : 0,
     idPrefix,
+    widthScale: style.lineWidth,
+    stationSize: style.stationSize,
   });
+}
+
+/** The rail style the user set in the map panel, memoised for a layer `useMemo`. */
+export function useRailMapStyle(): RailMapStyle {
+  const { railLineWidth, railStationSize } = useOverlayAppearance();
+  return useMemo(
+    () => ({ lineWidth: railLineWidth, stationSize: railStationSize }),
+    [railLineWidth, railStationSize]
+  );
 }
 
 /**
@@ -89,10 +113,11 @@ export function useRailOverlay(show: boolean, onGlobe: boolean, t: Translate): R
   const { journeys } = useDashboardRail(show, year);
   const { colorOf } = useDomainColors();
   const color = colorOf("rail");
+  const style = useRailMapStyle();
   const drawn = show ? journeys : EMPTY;
   const layers = useMemo(
-    () => buildRailMapLayers(drawn, color, onGlobe, "all-rail"),
-    [drawn, color, onGlobe]
+    () => buildRailMapLayers(drawn, color, onGlobe, "all-rail", style),
+    [drawn, color, onGlobe, style]
   );
   return { layers, legendRows: buildRailLegendRows(drawn, color, t, legendRow) };
 }

@@ -14,7 +14,7 @@ import MapContainer3D from "../../MapContainer3D";
 import { ATTRIBUTION_CLEARANCE } from "../../map/attributionClearance";
 import { SidebarToggle } from "../SidebarToggle";
 import { legendRow } from "./allTabLegendRows";
-import { buildRailLegendRows, buildRailMapLayers } from "./railMapOverlay";
+import { buildRailLegendRows, buildRailMapLayers, useRailMapStyle } from "./railMapOverlay";
 
 const PANEL_STYLE = {
   background: "rgba(22,27,34,0.85)",
@@ -46,10 +46,12 @@ export function RailTab(): JSX.Element {
   const color = colorOf("rail");
   const [sidebarOpen, setSidebarOpen] = useState(true);
   const visMode = mode === "globe" ? "globe" : "routes";
+  // Line width + station size from the map panel's rail section (forgejo#198).
+  const style = useRailMapStyle();
 
   const layers = useMemo<Layer[]>(
-    () => buildRailMapLayers(journeys, color, visMode === "globe"),
-    [journeys, color, visMode]
+    () => buildRailMapLayers(journeys, color, visMode === "globe", "dashboard-rail", style),
+    [journeys, color, visMode, style]
   );
   const legend = buildRailLegendRows(journeys, color, t, legendRow);
   const isEmpty = !loading && !loadError && journeys.length === 0;
@@ -60,7 +62,7 @@ export function RailTab(): JSX.Element {
         flights={[]}
         visMode={visMode}
         extraLayers={layers}
-        appearanceDomains={[]}
+        appearanceDomains={["rail"]}
         showInternalCruises={false}
         hideInfoPill
       />

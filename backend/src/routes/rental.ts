@@ -24,6 +24,7 @@ import { rentalYear } from "../shared/rentalCounting";
 import { linkDocuments, takeDocumentIds } from "../services/documents/documentService";
 import { assertReferencesOwned } from "../utils/ownedReferences";
 import logger from "../utils/logger";
+import { rentalListSummary } from "../shared/listSummary";
 
 /**
  * Car rentals — one row per rental contract (spec
@@ -113,6 +114,7 @@ const SEARCH_FIELDS = [
   "vehicleClass",
   "vehicleExample",
   "vehicleDriven",
+  "licensePlate",
 ] as const;
 
 async function buildWhere(
@@ -146,7 +148,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const offset = query.offset ?? 0;
     const where = await buildWhere(query, userId);
     const column = query.sort === "created" ? "createdAt" : "pickupTime";
-    const [total, data] = await Promise.all([
+    const [total, data, counted] = await Promise.all([
       prisma.rentalBooking.count({ where }),
       prisma.rentalBooking.findMany({
         where,
@@ -155,11 +157,23 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         take: limit,
         skip: offset,
       }),
+      // The summary strip counts the whole filtered list, not this page.
+      prisma.rentalBooking.findMany({
+        where,
+        select: {
+          provider: true,
+          status: true,
+          pickupTime: true,
+          returnTime: true,
+          pickupTimezone: true,
+          returnTimezone: true,
+        },
+      }),
     ]);
     res.json({
       success: true,
       data: data.map(withRentalReadFields),
-      meta: { total, limit, offset },
+      meta: { total, limit, offset, summary: rentalListSummary(counted) },
     });
   } catch (err) {
     next(err);

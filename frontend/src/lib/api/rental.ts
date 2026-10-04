@@ -16,9 +16,17 @@ interface Envelope<T> {
   data: T;
 }
 
+/** The summary strip's figures over the whole FILTERED list, counted by the server. */
+export interface RentalListSummary {
+  rentals: number;
+  days: number;
+  providers: number;
+}
+
 export interface RentalPage {
   rentals: RentalBooking[];
   total: number;
+  summary: RentalListSummary;
 }
 
 export interface RentalListQuery {
@@ -35,10 +43,12 @@ export interface RentalListQuery {
 
 export const rentalApi = {
   async list(query: RentalListQuery = {}): Promise<RentalPage> {
-    const res = await api.get<Envelope<RentalBooking[]> & { meta: { total: number } }>("/rentals", {
+    const res = await api.get<
+      Envelope<RentalBooking[]> & { meta: { total: number; summary: RentalListSummary } }
+    >("/rentals", {
       params: query,
     });
-    return { rentals: res.data.data, total: res.data.meta.total };
+    return { rentals: res.data.data, total: res.data.meta.total, summary: res.data.meta.summary };
   },
 
   /** Every rental matching `query`, a page of 500 (the endpoint's cap) at a time. */

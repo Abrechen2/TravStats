@@ -23,14 +23,16 @@ export type StationStateColors = Record<RoadtripStationPoint["state"], [number, 
  * server leaves them out of that list.
  *
  * `altitudeM` lifts the markers to the lines' height on the globe
- * (`TOUR_PATH_GLOBE_ALTITUDE_M`); 0 on the flat map.
+ * (`TOUR_PATH_GLOBE_ALTITUDE_M`); 0 on the flat map. `sizeScale` is the map
+ * panel's roadtrip station slider (forgejo#198) — 0 draws no stations at all.
  */
 export function buildRoadtripStationLayers(
   stations: readonly RoadtripStationPoint[],
   colors: StationStateColors,
-  altitudeM = 0
+  altitudeM = 0,
+  sizeScale = 1
 ): Layer[] {
-  if (stations.length === 0) return [];
+  if (stations.length === 0 || sizeScale <= 0) return [];
   return [
     new ScatterplotLayer<RoadtripStationPoint>({
       id: "dashboard-roadtrip-stations",
@@ -40,7 +42,7 @@ export function buildRoadtripStationLayers(
       getLineColor: [13, 17, 23, 255],
       stroked: true,
       lineWidthMinPixels: 1.5,
-      ...markerDotRadiusProps(1),
+      ...markerDotRadiusProps(sizeScale),
       pickable: true,
       autoHighlight: true,
       highlightColor: [255, 255, 255, 90],

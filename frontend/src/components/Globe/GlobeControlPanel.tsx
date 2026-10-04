@@ -36,6 +36,7 @@ import {
   type LodgingAppearanceState,
 } from "../map/controlPanelKit";
 import { PlaceAppearanceSection, type PlaceAppearanceState } from "../map/PlaceAppearanceSection";
+import { OverlayAppearanceSections } from "../map/OverlayAppearanceSections";
 import { MapChromeSections } from "../map/MapChromeSections";
 import type { LabelsMode } from "../map/labelPriority";
 import { DEFAULT_AIRPORT_COLOR, DEFAULT_PORT_COLOR } from "./buildGlobeLayers";
@@ -271,6 +272,8 @@ export function GlobeControlPanel({
               sizeLabel={t("map:globe.panel.size")}
             />
           )}
+          {/* Tours / roadtrips / rail / rentals — layers the tab builds (forgejo#198) */}
+          <OverlayAppearanceSections appearanceDomains={appearanceDomains} />
 
           {/* Frequency filter (only when arcs exist) */}
           {hasArcs && (

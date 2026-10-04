@@ -16,10 +16,11 @@ vi.mock("../../../../lib/api/rail", () => ({
 vi.mock("../../../../lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
-const extraLayers = vi.hoisted(() => ({ current: [] as unknown[] }));
+const extraLayers = vi.hoisted(() => ({ current: [] as unknown[], domains: [] as unknown[] }));
 vi.mock("../../../MapContainer3D", () => ({
-  default: (props: { extraLayers?: unknown[] }) => {
+  default: (props: { extraLayers?: unknown[]; appearanceDomains?: unknown[] }) => {
     extraLayers.current = props.extraLayers ?? [];
+    extraLayers.domains = props.appearanceDomains ?? [];
     return <div data-testid="map-stub" />;
   },
 }));
@@ -30,6 +31,8 @@ const railVisible = vi.hoisted(() => ({ value: true }));
 vi.mock("../../../../hooks/useRailVisible", () => ({ useRailVisible: () => railVisible.value }));
 
 import { RailTab } from "../RailTab";
+import { useOverlayAppearanceStore } from "../../../../store/overlayAppearanceStore";
+import { DEFAULT_OVERLAY_APPEARANCE } from "../../../../lib/overlayAppearance";
 
 function renderTab(): void {
   render(
@@ -43,6 +46,7 @@ describe("RailTab", () => {
   beforeEach(() => {
     list.mockReset();
     railVisible.value = true;
+    useOverlayAppearanceStore.setState({ appearance: DEFAULT_OVERLAY_APPEARANCE });
     useDomainColorStore.setState({
       colors: { ...useDomainColorStore.getState().colors, rail: "#112233" },
     });
@@ -86,6 +90,22 @@ describe("RailTab", () => {
     const legend = await screen.findByTestId("rail-legend");
     expect(legend).toHaveTextContent("dashboard:legend.railRouted");
     expect(legend).not.toHaveTextContent("dashboard:legend.railTraced");
+  });
+
+  // forgejo#198: the panel's rail section must exist here AND move the line.
+  it("offers the rail panel section and draws with its width and station size", async () => {
+    useOverlayAppearanceStore.setState({
+      appearance: { ...DEFAULT_OVERLAY_APPEARANCE, railLineWidth: 2, railStationSize: 0 },
+    });
+    list.mockResolvedValue({ journeys: [makeRailJourney()], total: 1 });
+    renderTab();
+    await screen.findByTestId("rail-legend");
+    expect(extraLayers.domains).toEqual(["rail"]);
+    // Station size 0 drops the station layer; the path layer remains.
+    const layers = extraLayers.current as Array<{ id: string; props: Record<string, unknown> }>;
+    expect(layers.map((l) => l.id)).toEqual(["dashboard-rail-paths"]);
+    const getWidth = layers[0].props.getWidth as (d: { traced: boolean }) => number;
+    expect(getWidth({ traced: true })).toBe(7);
   });
 
   it("says a failed load instead of drawing an empty map", async () => {

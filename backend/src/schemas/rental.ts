@@ -37,6 +37,8 @@ export const RENTAL_INCLUSIONS = [
   "one_way_fee",
 ] as const;
 export const RENTAL_SORT_FIELDS = ["pickup", "created"] as const;
+/** Longest licence plate accepted — generous for any country's format plus spaces. */
+export const RENTAL_LICENSE_PLATE_MAX = 20;
 
 /**
  * ACRISS / SIPP: four positions, each from its own alphabet — category, type,
@@ -180,6 +182,12 @@ const baseRentalSchema = z.object({
     .optional(),
   vehicleExample: optionalText(120),
   vehicleDriven: optionalText(120),
+  /**
+   * The licence plate as the reader typed it (forgejo#196). Free text: plates
+   * differ by country and a rental's may be foreign, so only the length is
+   * checked; trimmed, and "" clears it like every other text field.
+   */
+  licensePlate: optionalText(RENTAL_LICENSE_PLATE_MAX),
   /**
    * A person's km figure is a labelled correction (`distanceSource: user`);
    * the invoice's figure arrives through the document path. Null clears it.
