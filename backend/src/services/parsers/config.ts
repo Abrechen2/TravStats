@@ -8,7 +8,7 @@ import {
 } from "./types";
 import logger from "../../utils/logger";
 import { llmRefusalFor } from "../llm/llmGate";
-import { resolveLlmTarget } from "../llm/llmProvider";
+import { resolveReachableLlmTarget } from "../llm/reachableTarget";
 
 // Availability cache (5 minutes TTL)
 const availabilityCache = new Map<
@@ -82,7 +82,9 @@ export async function getParserConfig(
 ): Promise<ParserConfig> {
   // No localhost default here: an instance with nothing configured has no
   // model, and `hasLlm`/`llmConfigured` must say so.
-  const target = await resolveLlmTarget();
+  // The first slot known to answer; never waits on the network here, because
+  // this runs on every parse, template hits included (`llm/reachableTarget.ts`).
+  const target = await resolveReachableLlmTarget({ wait: false });
 
   /**
    * A refused caller gets a config with no model in it — the admin switch

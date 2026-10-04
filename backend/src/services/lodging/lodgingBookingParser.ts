@@ -21,7 +21,6 @@ import {
   llmProbe,
   llmProviderLabel,
   ollamaTarget,
-  resolveLlmTarget,
   type LlmTarget,
 } from "../llm/llmProvider";
 import { isLlmAvailable, recordLlmProbe } from "../parsers/llmAvailability";
@@ -31,6 +30,7 @@ import {
   type LodgingCurrency,
   type ParsedLodgingBooking,
 } from "./bookingComTemplate";
+import { resolveReachableLlmTarget } from "../llm/reachableTarget";
 
 export interface LodgingBookingParserOptions {
   url?: string;
@@ -112,10 +112,13 @@ EXAMPLE OUTPUT:
  * whatever is in the database.
  */
 async function resolveTarget(options?: LodgingBookingParserOptions): Promise<LlmTarget> {
-  const target = await resolveLlmTarget({
+  // The first slot of the chain that answers, not merely the first slot
+  // (`llm/reachableTarget.ts`).
+  const target = await resolveReachableLlmTarget({
     ...(options?.url !== undefined ? { url: options.url } : {}),
     ...(options?.model !== undefined ? { model: options.model } : {}),
     withDefaults: true,
+    wait: true,
   });
   return target ?? ollamaTarget(options?.url, options?.model);
 }

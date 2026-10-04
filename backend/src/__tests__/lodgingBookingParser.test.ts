@@ -7,6 +7,7 @@ import { parseLodgingBookingText } from "../services/lodging/lodgingBookingParse
 import { bookingsToCandidates } from "../services/lodging/lodgingCandidates";
 import { getAdminParserSettings } from "../services/parserSettings";
 import { clearLlmAvailabilityCache, settleLlmProbes } from "../services/parsers/llmAvailability";
+import { clearReachableTargetCache } from "../services/llm/reachableTarget";
 import type { ParsedLodgingBooking } from "../services/lodging/bookingComTemplate";
 
 jest.mock("../services/parserSettings", () => ({
@@ -145,6 +146,50 @@ describe("parseLodgingBookingText", () => {
     expect(result.bookings).toEqual([]);
     expect(result.ollamaAvailable).toBe(false);
     expect(typeof result.fallbackReason).toBe("string");
+  });
+
+  it("asks the next provider of the chain when the first one does not answer", async () => {
+    // 2026-10-03: an Ollama address entered once and no longer running, ahead
+    // of a working provider, answered every document "not reachable".
+    clearReachableTargetCache();
+    let completions = 0;
+    const second = http.createServer((req, res) => {
+      if (req.url === "/v1/models") {
+        res.end(JSON.stringify({ data: [{ id: "cloud-model" }] }));
+        return;
+      }
+      req.resume();
+      req.on("end", () => {
+        completions += 1;
+        res.end(JSON.stringify({ choices: [{ message: { content: '{"bookings":[]}' } }] }));
+      });
+    });
+    await new Promise<void>((r) => second.listen(0, "127.0.0.1", () => r()));
+    const { port } = second.address() as AddressInfo;
+    mockGetAdminParserSettings.mockResolvedValueOnce({
+      llmEnabled: true,
+      ollamaUrl: "http://127.0.0.1:9",
+      ollamaModel: "gemma3:12b",
+      openaiCompatBaseUrl: `http://127.0.0.1:${port}/v1`,
+      openaiCompatModel: "cloud-model",
+    } as never);
+    mockGetAdminParserSettings.mockResolvedValue({
+      llmEnabled: true,
+      ollamaUrl: "http://127.0.0.1:9",
+      ollamaModel: "gemma3:12b",
+      openaiCompatBaseUrl: `http://127.0.0.1:${port}/v1`,
+      openaiCompatModel: "cloud-model",
+    } as never);
+    try {
+      const result = await parseLodgingBookingText(
+        "Buchungsnummer: 260308233983\nAnreise\nAbreise"
+      );
+      expect(result.ollamaAvailable).toBe(true);
+      expect(completions).toBe(1);
+    } finally {
+      mockGetAdminParserSettings.mockResolvedValue({ ollamaUrl: null, ollamaModel: null } as never);
+      await new Promise((r) => second.close(() => r(undefined)));
+    }
   });
 
   // Cold review, 2026-09-17: under `llm_first` the template has not been tried

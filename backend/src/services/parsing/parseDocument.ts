@@ -47,7 +47,8 @@ import { PARSER_SUPPORTED_DOMAINS, type ParserSupportedDomain } from "../../shar
 import { isLlmAvailable } from "../parsers/llmAvailability";
 import { conclusiveOtherDomain, scoreDocument, type DomainDetection } from "./documentDomain";
 import { isLlmEnabledByAdmin } from "../llm/llmGate";
-import { describeLlmTarget, resolveLlmTarget, type LlmProviderInfo } from "../llm/llmProvider";
+import { describeLlmTarget, type LlmProviderInfo } from "../llm/llmProvider";
+import { resolveReachableLlmTarget } from "../llm/reachableTarget";
 
 /** What a caller may ask for. `auto` is the addition — see the header. */
 export const REQUESTABLE_DOMAINS = [...PARSER_SUPPORTED_DOMAINS, "auto"] as const;
@@ -173,7 +174,9 @@ export type ParsedDocumentBody = DomainBody & {
 
 async function llmProviderFor(parserUsed: string): Promise<LlmProviderInfo | null> {
   if (parserUsed !== "ollama") return null;
-  const target = await resolveLlmTarget({ withDefaults: true });
+  // The slot that answered, as far as the probes know — not chain[0], which
+  // may be the dead endpoint the parse walked past (`llm/reachableTarget.ts`).
+  const target = await resolveReachableLlmTarget({ withDefaults: true, wait: false });
   return target ? describeLlmTarget(target) : null;
 }
 

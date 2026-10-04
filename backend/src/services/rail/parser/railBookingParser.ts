@@ -17,6 +17,7 @@ import { parseRailWithLlm, resolveRailLlmChain } from "./railLlmParser";
 import { llmProbe, llmProviderLabel, type LlmTarget } from "../../llm/llmProvider";
 import { conclusiveOtherDomain, scoreDocument } from "../../parsing/documentDomain";
 import type { ParsedRailBooking, ParsedRailLeg, RailAttachment } from "./types";
+import { recordReachability } from "../../llm/reachableTarget";
 
 /**
  * Template first, the model only for what no template reads — the order and
@@ -271,6 +272,7 @@ export async function parseRailBookingText(
   for (const target of await resolveRailLlmChain()) {
     const probe = await llmProbe(target);
     recordLlmProbe(target.url, probe.reachable);
+    recordReachability(target, probe.reachable);
     if (!probe.reachable) {
       logger.warn(
         { provider: llmProviderLabel(target), err: probe.error ?? "no answer" },
