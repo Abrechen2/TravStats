@@ -4,7 +4,7 @@
   "betaNote": "Beta. “Add journey” reads booking mails (.eml, .msg) and ticket PDFs.",
   "add": "Add journey",
   "empty": "No train journeys yet. Add your first ride.",
-  "loadError": "The train journeys could not be loaded.",
+  "loadError": "I couldn’t load your train journeys just now.",
   "search": "Search (train, station, booking …)",
   "list": {
     "columns": {

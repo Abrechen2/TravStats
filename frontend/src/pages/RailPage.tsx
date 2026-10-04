@@ -29,10 +29,23 @@ import { useRailImportAdapter } from "../components/import/adapters/railAdapter"
 import { LoyaltyFilterNotice, useLoyaltyListFilter } from "../components/Loyalty/LoyaltyListFilter";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useTranslation } from "../hooks/useTranslation";
-import { railApi, type RailConnectionPage, type RailListQuery } from "../lib/api/rail";
+import {
+  railApi,
+  type RailConnectionPage,
+  type RailListQuery,
+  type RailListSummary,
+} from "../lib/api/rail";
+
+const EMPTY_RAIL_SUMMARY: RailListSummary = {
+  journeys: 0,
+  operators: 0,
+  withoutOperator: 0,
+  stations: 0,
+};
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { RailConnection, RailJourney, RailStatus } from "../types/rail";
+import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
 
 const RAIL_STATUSES: readonly RailStatus[] = ["scheduled", "in_progress", "completed", "cancelled"];
 const RAIL_COLUMN_IDS: readonly RailColumnId[] = [
@@ -78,6 +91,7 @@ async function loadPage(
   return {
     connections: result.journeys.map((journey) => ({ id: journey.id, legs: [journey] })),
     total: result.total,
+    summary: result.summary,
   };
 }
 
@@ -94,11 +108,12 @@ export default function RailPage(): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   // One entry per ride; `total` counts entries, which is what the pager pages over.
   const [entries, setEntries] = useState<RailConnection[]>([]);
-  // The trains on screen — what the summary strip counts, as it always did.
-  const journeys = useMemo(() => entries.flatMap((entry) => entry.legs), [entries]);
   const [total, setTotal] = useState(0);
+  // Null until the server has counted: the strip then says nothing, not "0".
+  const [summary, setSummary] = useState<RailListSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [years, setYears] = useState<number[]>([]);
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
@@ -148,12 +163,14 @@ export default function RailPage(): JSX.Element {
         if (cancelled) return;
         setEntries(page.connections);
         setTotal(page.total);
+        setSummary(page.summary ?? null);
         setLoadFailed(false);
       } catch (err: unknown) {
         if (cancelled) return;
         // A failed load is said, never drawn as an empty logbook.
         logger.error("RailPage: failed to load journeys", err);
         setLoadFailed(true);
+        setLoadFailure(loadFailureLog(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -254,9 +271,9 @@ export default function RailPage(): JSX.Element {
           </div>
         </div>
 
-        {/* The strip counts TRAINS on this page, not rides (forgejo#187). */}
+        {/* The strip counts TRAINS in the whole filtered list, not rides (forgejo#187). */}
         <ListSummaryStrip
-          figures={railSummaryFigures(journeys, {
+          figures={railSummaryFigures(summary ?? EMPTY_RAIL_SUMMARY, {
             journeys: (count: number) => t("rail:summary.journeys", { count }),
             operators: (count: number) => t("rail:summary.operators", { count }),
             stations: (count: number) => t("rail:summary.stations", { count }),
@@ -264,7 +281,7 @@ export default function RailPage(): JSX.Element {
           })}
           filtered={hasActiveFilter}
           filteredLabel={t("common:filters.filtered")}
-          unknown={loading || loadFailed}
+          unknown={loading || loadFailed || summary === null}
         />
         <p className="mb-4 text-xs text-(--text-muted)">
           {t("rail:subtitle")} {t("rail:betaNote")}
@@ -301,12 +318,11 @@ export default function RailPage(): JSX.Element {
         />
 
         {loadFailed ? (
-          <div
-            role="alert"
-            className="rounded-md border border-(--danger)/50 bg-(--danger)/10 px-4 py-4 text-sm text-(--danger)"
-          >
-            {t("rail:loadError")}
-          </div>
+          <ListLoadFailed
+            title={t("rail:loadError")}
+            onRetry={(): void => void reload()}
+            log={loadFailure}
+          />
         ) : loading && entries.length === 0 ? (
           <SkeletonTable rows={10} />
         ) : entries.length === 0 ? (

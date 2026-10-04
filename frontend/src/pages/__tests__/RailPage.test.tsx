@@ -88,9 +88,15 @@ const renderPage = (): void => {
 /** A page of the connection list: each inner array is one ride's trains. */
 const page = (
   ...rides: RailJourney[][]
-): { connections: Array<{ id: string; legs: RailJourney[] }>; total: number } => ({
+): {
+  connections: Array<{ id: string; legs: RailJourney[] }>;
+  total: number;
+  summary: { journeys: number; operators: number; withoutOperator: number; stations: number };
+} => ({
   connections: rides.map((legs) => ({ id: legs[0].id, legs })),
   total: rides.length,
+  // The server counts the whole filtered list; here that is the rides given.
+  summary: { journeys: rides.flat().length, operators: 1, withoutOperator: 0, stations: 2 },
 });
 
 function journey(over: Partial<RailJourney> = {}): RailJourney {
@@ -184,6 +190,31 @@ describe("RailPage", () => {
     renderPage();
     expect(await screen.findByRole("alert")).toHaveTextContent("rail:loadError");
     expect(screen.queryByText("rail:empty")).toBeNull();
+  });
+
+  // forgejo#191: the failure was a red paragraph with no way forward.
+  it("offers a retry in the degraded state, and draws the rows once it succeeds", async () => {
+    listConnections.mockRejectedValueOnce(
+      Object.assign(new Error("down"), { response: { status: 503 } })
+    );
+    listConnections.mockResolvedValue(page([journey({ id: "back" })]));
+    renderPage();
+    const alert = await screen.findByRole("alert");
+    expect(alert.querySelector('[data-empty-kind="degraded"]')).not.toBeNull();
+    expect(alert).toHaveTextContent("HTTP 503");
+    fireEvent.click(screen.getByRole("button", { name: "common:buttons.retry" }));
+    expect(await screen.findByTestId("rail-row-back")).toBeInTheDocument();
+    expect(screen.queryByRole("alert")).toBeNull();
+  });
+
+  it("counts the whole filtered list in the strip, not the page on screen", async () => {
+    listConnections.mockResolvedValue({
+      ...page([journey()]),
+      total: 300,
+      summary: { journeys: 312, operators: 4, withoutOperator: 0, stations: 57 },
+    });
+    renderPage();
+    expect(await screen.findByText("rail:summary.journeys/312")).toBeInTheDocument();
   });
 
   it("shows the empty state only for a logbook that loaded and is empty", async () => {
@@ -310,7 +341,11 @@ describe("RailPage — a ride with changes", () => {
 // opens on the card's rides, in the linked year, and says so above them.
 describe("RailPage — opened from a rail card's figure", () => {
   it("asks for the card's rides in that year and names both above the list", async () => {
-    list.mockReset().mockResolvedValue({ journeys: [journey()], total: 1 });
+    list.mockReset().mockResolvedValue({
+      journeys: [journey()],
+      total: 1,
+      summary: { journeys: 1, operators: 1, withoutOperator: 0, stations: 2 },
+    });
     listConnections.mockReset();
     stats.mockReset().mockResolvedValue({ byYear: [] });
     render(

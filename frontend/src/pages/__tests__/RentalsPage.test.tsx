@@ -72,7 +72,11 @@ const renderPage = (): void => {
 // forgejo#197: the rental logbook in the layout every logbook shares.
 describe("RentalsPage", () => {
   beforeEach(() => {
-    list.mockReset().mockResolvedValue({ rentals: [makeRental({ id: "r1" })], total: 1 });
+    list.mockReset().mockResolvedValue({
+      rentals: [makeRental({ id: "r1" })],
+      total: 1,
+      summary: { rentals: 1, days: 3, providers: 1 },
+    });
     remove.mockReset();
     navigate.mockReset();
     addToast.mockReset();
@@ -133,8 +137,16 @@ describe("RentalsPage", () => {
 
   it("deletes after confirmation and reloads", async () => {
     list.mockReset();
-    list.mockResolvedValueOnce({ rentals: [makeRental({ id: "r1" })], total: 1 });
-    list.mockResolvedValue({ rentals: [], total: 0 });
+    list.mockResolvedValueOnce({
+      rentals: [makeRental({ id: "r1" })],
+      total: 1,
+      summary: { rentals: 1, days: 3, providers: 1 },
+    });
+    list.mockResolvedValue({
+      rentals: [],
+      total: 0,
+      summary: { rentals: 0, days: 0, providers: 0 },
+    });
     remove.mockResolvedValue(undefined);
     renderPage();
     await screen.findByTestId("rental-row-r1");

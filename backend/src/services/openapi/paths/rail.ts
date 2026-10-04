@@ -193,6 +193,15 @@ const writeEnvelope = <T extends z.ZodTypeAny>(data: T) =>
     meta: z.object({ geometry: geometryReport }),
   });
 
+const railListSummarySchema = z
+  .object({
+    journeys: z.number().int(),
+    operators: z.number().int(),
+    withoutOperator: z.number().int(),
+    stations: z.number().int(),
+  })
+  .describe("The summary strip's figures over the whole FILTERED set, not this page");
+
 registry.registerPath({
   method: "get",
   path: "/rail",
@@ -243,6 +252,7 @@ registry.registerPath({
             data: z.array(railJourney),
             meta: z.object({
               total: z.number().int().describe("Size of the FILTERED set"),
+              summary: railListSummarySchema,
               limit: z.number().int(),
               offset: z.number().int(),
             }),
@@ -389,6 +399,7 @@ registry.registerPath({
             meta: z.object({
               total: z.number().int().describe("Connections in the FILTERED set"),
               legTotal: z.number().int().describe("Legs those connections carry"),
+              summary: railListSummarySchema,
               limit: z.number().int(),
               offset: z.number().int(),
             }),

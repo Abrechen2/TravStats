@@ -351,5 +351,8 @@
     "gap": "This time does not exist on that day at this place (clock change). Please choose a time before or after it.",
     "repeated": "This time occurs twice on that day at this place (clock change). The earlier one is saved.",
     "later": "I mean the later one"
+  },
+  "list": {
+    "loadFailedHint": "Your data is not affected — it is still there. Try again in a moment."
   }
 }

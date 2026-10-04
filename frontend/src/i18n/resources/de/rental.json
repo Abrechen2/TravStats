@@ -5,7 +5,7 @@
   "add": "Miete eintragen",
   "search": "Anbieter, Station, Buchungsnummer …",
   "empty": "Noch keine Mietwagen eingetragen.",
-  "loadError": "Die Mietwagen konnten nicht geladen werden.",
+  "loadError": "Ich konnte deine Mietwagen gerade nicht laden.",
   "saved": "Miete gespeichert.",
   "deleted": "Miete gelöscht.",
   "deleteError": "Die Miete konnte nicht gelöscht werden.",

@@ -41,6 +41,7 @@ import logger from "../utils/logger";
 import { railIdsCoveredBy } from "../services/loyalty/listFilters";
 import { withRailDetailTimes, withRailTimes } from "../services/rail/timesDto";
 import { RAIL_SOURCE_INCLUDE, withRailSource } from "../services/rail/railSource";
+import { railListSummary } from "../shared/listSummary";
 
 /**
  * Rail journeys — one row per train ride (spec
@@ -232,7 +233,7 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
     const offset = query.offset ?? 0;
     const where = await buildRailWhere(query, userId);
 
-    const [total, data] = await Promise.all([
+    const [total, data, counted] = await Promise.all([
       prisma.railJourney.count({ where }),
       prisma.railJourney.findMany({
         where,
@@ -241,11 +242,16 @@ router.get("/", async (req: AuthRequest, res: Response, next: NextFunction) => {
         take: limit,
         skip: offset,
       }),
+      // The summary strip counts the whole filtered list, not this page.
+      prisma.railJourney.findMany({
+        where,
+        select: { operator: true, depStationName: true, arrStationName: true },
+      }),
     ]);
     res.json({
       success: true,
       data: data.map((j) => withRailSource(withStationShortCodes(withRailTimes(j)))),
-      meta: { total, limit, offset },
+      meta: { total, limit, offset, summary: railListSummary(counted) },
     });
   } catch (err) {
     next(err);

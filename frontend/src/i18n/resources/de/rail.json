@@ -4,7 +4,7 @@
   "betaNote": "Beta. Buchungsmails (.eml, .msg) und Ticket-PDFs liest „Fahrt hinzufügen“ ein.",
   "add": "Fahrt hinzufügen",
   "empty": "Noch keine Zugfahrten. Trag deine erste Fahrt ein.",
-  "loadError": "Die Zugfahrten konnten nicht geladen werden.",
+  "loadError": "Ich konnte deine Zugfahrten gerade nicht laden.",
   "search": "Suchen (Zug, Bahnhof, Buchung …)",
   "list": {
     "columns": {

@@ -31,12 +31,13 @@ import DomainImportPanel from "../components/import/DomainImportPanel";
 import { useRentalImportAdapter } from "../components/import/adapters/rentalAdapter";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
 import { useTranslation } from "../hooks/useTranslation";
-import { rentalApi, type RentalListQuery } from "../lib/api/rental";
+import { rentalApi, type RentalListQuery, type RentalListSummary } from "../lib/api/rental";
 import { rentalLinksApi } from "../lib/api/rentalLinks";
 import { rentalSummaryFigures } from "../lib/rental/rentalSummaryFigures";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { RentalBooking, RentalStatus } from "../types/rental";
+import ListLoadFailed, { loadFailureLog } from "../components/table/ListLoadFailed";
 
 const RENTAL_STATUSES: readonly RentalStatus[] = [
   "scheduled",
@@ -82,8 +83,11 @@ export default function RentalsPage(): JSX.Element {
   const addToast = useToastStore((s) => s.addToast);
   const [rentals, setRentals] = useState<RentalBooking[]>([]);
   const [total, setTotal] = useState(0);
+  // Null until the server has counted: the strip then says nothing, not "0".
+  const [summary, setSummary] = useState<RentalListSummary | null>(null);
   const [loading, setLoading] = useState(true);
   const [loadFailed, setLoadFailed] = useState(false);
+  const [loadFailure, setLoadFailure] = useState<string | null>(null);
   const [options, setOptions] = useState<Options>({ years: [], providers: [] });
   const [search, setSearch] = useState("");
   const debouncedSearch = useDebouncedValue(search);
@@ -133,12 +137,14 @@ export default function RentalsPage(): JSX.Element {
         if (cancelled) return;
         setRentals(page.rentals);
         setTotal(page.total);
+        setSummary(page.summary ?? null);
         setLoadFailed(false);
       } catch (err: unknown) {
         if (cancelled) return;
         // A failed load is said, never drawn as an empty logbook.
         logger.error("RentalsPage: failed to load rentals", err);
         setLoadFailed(true);
+        setLoadFailure(loadFailureLog(err));
       } finally {
         if (!cancelled) setLoading(false);
       }
@@ -245,14 +251,14 @@ export default function RentalsPage(): JSX.Element {
         </div>
 
         <ListSummaryStrip
-          figures={rentalSummaryFigures(rentals, {
+          figures={rentalSummaryFigures(summary ?? { rentals: 0, days: 0, providers: 0 }, {
             rentals: (count: number) => t("rental:summary.rentals", { count }),
             days: (count: number) => t("rental:summary.days", { count }),
             providers: (count: number) => t("rental:summary.providers", { count }),
           })}
           filtered={hasActiveFilter}
           filteredLabel={t("common:filters.filtered")}
-          unknown={loading || loadFailed}
+          unknown={loading || loadFailed || summary === null}
         />
         <p className="mb-4 text-xs text-(--text-muted)">
           {t("rental:subtitle")} {t("rental:betaNote")}
@@ -297,12 +303,11 @@ export default function RentalsPage(): JSX.Element {
         />
 
         {loadFailed ? (
-          <div
-            role="alert"
-            className="rounded-md border border-(--danger)/50 bg-(--danger)/10 px-4 py-4 text-sm text-(--danger)"
-          >
-            {t("rental:loadError")}
-          </div>
+          <ListLoadFailed
+            title={t("rental:loadError")}
+            onRetry={(): void => void reload()}
+            log={loadFailure}
+          />
         ) : loading && rentals.length === 0 ? (
           <SkeletonTable rows={10} />
         ) : rentals.length === 0 ? (

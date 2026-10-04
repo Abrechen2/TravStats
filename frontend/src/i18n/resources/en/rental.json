@@ -5,7 +5,7 @@
   "add": "Add a rental",
   "search": "Provider, station, booking number …",
   "empty": "No rental cars yet.",
-  "loadError": "The rentals could not be loaded.",
+  "loadError": "I couldn’t load your rental cars just now.",
   "saved": "Rental saved.",
   "deleted": "Rental deleted.",
   "deleteError": "The rental could not be deleted.",

@@ -223,6 +223,13 @@ registry.registerPath({
             data: z.array(rentalBookingSchema),
             meta: z.object({
               total: z.number().int().describe("Size of the FILTERED set"),
+              summary: z
+                .object({
+                  rentals: z.number().int(),
+                  days: z.number().int().describe("Days of every rental not cancelled"),
+                  providers: z.number().int(),
+                })
+                .describe("The summary strip's figures over the whole FILTERED set, not this page"),
               limit: z.number().int(),
               offset: z.number().int(),
             }),
