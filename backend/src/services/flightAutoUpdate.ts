@@ -23,6 +23,7 @@ import {
   type FlightTimeSemantics,
 } from "../utils/timezone";
 import { markFlownOnReportedLanding } from "./flightLandedStatus";
+import { DEVICE_SOURCES, isDeviceSource } from "./flightDevice/deviceSource";
 
 const prismaClient = prisma as PrismaClient;
 
@@ -278,14 +279,19 @@ export async function createPendingUpdate(
   flight: Flight,
   proposedData: FlightDataSnapshot,
   changes: FlightChange[],
-  apiSource: string
+  apiSource: string,
+  metadata?: Prisma.InputJsonValue
 ): Promise<string | null> {
   try {
-    // Check if there's already a pending update for this flight
+    // One open suggestion per flight AND per kind of witness. A phone's own
+    // observation (forgejo#194) and a provider's report are kept apart: folded
+    // into one row, the later writer replaced the other's proposal and its
+    // attribution, so a provider poll would erase what the phone saw.
     const existing = await prismaClient.pendingFlightUpdate.findFirst({
       where: {
         flightId: flight.id,
         status: "pending",
+        apiSource: isDeviceSource(apiSource) ? apiSource : { notIn: [...DEVICE_SOURCES] },
       },
     });
 
@@ -297,6 +303,7 @@ export async function createPendingUpdate(
           proposedData: proposedData as unknown as Prisma.InputJsonValue,
           changes: changes as unknown as Prisma.InputJsonValue,
           apiSource,
+          ...(metadata === undefined ? {} : { metadata }),
           fetchedAt: new Date(),
           expiresAt: new Date(Date.now() + 24 * 60 * 60 * 1000), // 24 hours
           updatedAt: new Date(),
@@ -374,6 +381,7 @@ export async function createPendingUpdate(
         fetchedAt: new Date(),
         expiresAt,
         statisticsImpact: statisticsImpact as Prisma.InputJsonValue,
+        ...(metadata === undefined ? {} : { metadata }),
       },
     });
 

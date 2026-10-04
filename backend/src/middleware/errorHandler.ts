@@ -126,6 +126,22 @@ export type ApiErrorCode =
   | "TRACK_NO_TIMESTAMPS"
   /** Tour track upload: this recording is already on the tour. */
   | "TRACK_ALREADY_IMPORTED"
+  /** Flight recording (forgejo#193): the flight already has a recording under
+   *  another upload id; resend with `replace: true` to swap it. */
+  | "TRACK_ALREADY_RECORDED"
+  /** Flight recording: the body is over its size limit (413). */
+  | "TRACK_BODY_TOO_LARGE"
+  /** Flight recording: its time span is nowhere near the flight's schedule —
+   *  a recording filed under the wrong flight (422). */
+  | "TRACK_OUTSIDE_FLIGHT"
+  /** Observed takeoff/landing (forgejo#194): a time in the future (400). */
+  | "OBSERVED_TIME_IN_FUTURE"
+  /** Observed takeoff/landing: more than 12 h from the schedule (422). */
+  | "OBSERVED_TIME_OUTSIDE_FLIGHT"
+  /** Observed takeoff/landing at an airport that is not the flight's own —
+   *  a diversion is the app's to report, never an arrival at the destination
+   *  (422). `field` names the end. */
+  | "OBSERVED_AIRPORT_MISMATCH"
   /** Dawarich pull: the section has no dated stops to derive a window from. */
   | "DAWARICH_NO_DATED_STOPS"
   /** Dawarich pull: the resolved window ends before it starts. */

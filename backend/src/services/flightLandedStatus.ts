@@ -10,11 +10,15 @@ import { deriveFlightStatus } from "../shared/statusDerivation";
  * through the pending update under the user's review rule. Callers run this
  * AFTER the rotation guard, so another day's aircraft can never land a flight.
  *
+ * The same step serves a paired phone's observed landing (forgejo#194), which
+ * names itself in `modifiedBy` so the row says who ended "scheduled".
+ *
  * Returns whether the flight was marked flown.
  */
 export async function markFlownOnReportedLanding(
   flight: Pick<Flight, "id" | "status" | "departureTime" | "arrivalTime">,
-  reportedActualArrival: string | null | undefined
+  reportedActualArrival: string | null | undefined,
+  modifiedBy: string = "auto_update"
 ): Promise<boolean> {
   if (!reportedActualArrival || flight.status !== "scheduled") return false;
   const landed =
@@ -27,11 +31,11 @@ export async function markFlownOnReportedLanding(
   if (!landed) return false;
   await prisma.flight.update({
     where: { id: flight.id },
-    data: { status: "flown", lastModifiedBy: "auto_update", nextApiCheckAt: null },
+    data: { status: "flown", lastModifiedBy: modifiedBy, nextApiCheckAt: null },
   });
   logger.info(
-    { flightId: flight.id, operation: "flight_landed_status_flown" },
-    "Provider reported the landing; flight marked flown"
+    { flightId: flight.id, operation: "flight_landed_status_flown", modifiedBy },
+    "Landing reported; flight marked flown"
   );
   return true;
 }

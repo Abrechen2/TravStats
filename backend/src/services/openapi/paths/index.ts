@@ -39,6 +39,7 @@ import "./railEntrySuggestions";
 import "./railRoadtripConversion";
 import "./rental";
 import "./cruiseTracks";
+import "./flightDevice";
 import "./lodging";
 import "./loyalty";
 import "./settings";

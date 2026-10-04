@@ -128,7 +128,8 @@
     "aviationstack": "Aviationstack API",
     "aerodatabox": "AeroDataBox API",
     "opensky": "OpenSky Network",
-    "historicalAggregation": "Historical Enrichment"
+    "historicalAggregation": "Historical Enrichment",
+    "deviceGps": "Phone (GPS)"
   },
   "enrichment": {
     "fullBadge": "Full",

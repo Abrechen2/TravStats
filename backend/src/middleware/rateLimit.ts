@@ -154,15 +154,11 @@ export const portGeocodeLimiter = rateLimit({
 });
 
 /**
- * Per-user/IP limit for the Photon place-search proxy (`/geo/search`).
- *
- * Photon (komoot's public instance, or a self-hosted one) has no documented
- * hard rate limit the way Nominatim's usage policy does, but it is still a
- * shared public resource sitting behind search-as-you-type — a spammy client
- * could burn through it fast enough to get the instance's IP throttled or
- * banned upstream. Mirrors `portGeocodeLimiter`'s shape (same per-caller
- * keying + PAT-aware multiplier, same 30/min window) since the usage
- * pattern — debounced typeahead — is identical.
+ * Per-user/IP limit for the Photon place-search proxy (`/geo/search`). Photon
+ * has no documented hard limit, but it is a shared public resource behind
+ * search-as-you-type that a spammy client could burn fast enough to get the
+ * instance throttled or banned upstream. `portGeocodeLimiter`'s shape and
+ * 30/min window, since the usage pattern — debounced typeahead — is identical.
  */
 export const photonSearchLimiter = rateLimit({
   windowMs: 60 * 1000,
@@ -291,18 +287,24 @@ export const trackArchiveLimiter = rateLimit({
   keyGenerator: userOrIpKey,
 });
 
-/**
- * Rate limiter for flight creation
- * Allows 20 flight creations per hour per IP
- */
+/** Flight creation, per user (`FLIGHT_CREATION_MAX` an hour); every request counts. */
 export const flightCreationLimiter = rateLimit({
   windowMs: RATE_LIMITS.FLIGHT_CREATION_WINDOW_MS,
   max: patAwareMax(RATE_LIMITS.FLIGHT_CREATION_MAX),
   message: "Too many flights created, please try again later",
   standardHeaders: true,
   legacyHeaders: false,
-  // Skip rate limiting for successful requests (only count failed/repeated attempts)
-  skipSuccessfulRequests: false,
+  keyGenerator: userOrIpKey,
+});
+
+/** A phone's flight data (forgejo#193/#194): recordings of up to 50 000 points and observed
+ *  times. 30 per 15 min covers a draining outbox; the Companion's PAT gets ten times that. */
+export const flightDeviceDataLimiter = rateLimit({
+  windowMs: 15 * 60 * 1000,
+  max: patAwareMax(30),
+  standardHeaders: true,
+  legacyHeaders: false,
+  message: { error: "Too many recording uploads, please try again later" },
   keyGenerator: userOrIpKey,
 });
 
@@ -372,10 +374,7 @@ export const railLookupLimiter = rateLimit({
   keyGenerator: userOrIpKey,
 });
 
-/**
- * General API rate limiter
- * Allows 1000 requests per hour per IP
- */
+/** General API limiter, per user (`GENERAL_MAX_REQUESTS` per `GENERAL_WINDOW_MS`). */
 export const generalLimiter = rateLimit({
   windowMs: RATE_LIMITS.GENERAL_WINDOW_MS,
   max: RATE_LIMITS.GENERAL_MAX_REQUESTS,
