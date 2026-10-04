@@ -37,6 +37,7 @@ import {
 } from "../../lib/placeColor";
 import { flightRouteShapeFromStored, type FlightRouteShape } from "../../lib/flightRouteShape";
 import { overlayAppearanceFromStored, type OverlayAppearance } from "../../lib/overlayAppearance";
+import { emitLocalPrefWrite } from "../../lib/webPrefs/prefEvents";
 
 /** The 6 tokenless basemaps — same id set on the globe and the flat map. */
 export type BasemapId = "standard" | "light" | "dark" | "voyager" | "satellite" | "osm";
@@ -162,7 +163,9 @@ export interface MapAppearance {
   panelSections?: Record<string, boolean>;
 }
 
-const KEY = "mapAppearance.v2";
+/** Exported for the web-prefs sync (`lib/webPrefs/registry.ts`), which follows this blob. */
+export const MAP_APPEARANCE_KEY = "mapAppearance.v2";
+const KEY = MAP_APPEARANCE_KEY;
 // Pre-consolidation blobs — migrated once into the shared key so existing
 // users keep their customised look after the switch.
 const LEGACY_GLOBE = "globeAppearance.v1";
@@ -312,4 +315,5 @@ export function saveMapAppearance(patch: MapAppearance): void {
   } catch {
     // localStorage may be unavailable (private mode) — persistence is opt-in.
   }
+  emitLocalPrefWrite(KEY);
 }

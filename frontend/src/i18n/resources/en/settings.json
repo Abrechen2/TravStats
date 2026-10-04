@@ -11,7 +11,10 @@
     "lodging": "Lodging"
   },
   "errors": {
-    "saveFailed": "Failed to save settings"
+    "saveFailed": "Failed to save settings",
+    "webPrefsRetrying": "Your display settings could not be synced with your account just now. They are kept on this device, and a retry runs automatically.",
+    "webPrefsTooLarge": "Your display settings are too large to sync with your account. They still apply on this device, but not on your others.",
+    "webPrefsRejected": "The server did not accept your display settings. They still apply on this device, but not on your others."
   },
   "cruisePreferences": {
     "title": "Cruise preferences",

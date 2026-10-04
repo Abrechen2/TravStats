@@ -18,10 +18,9 @@ import type { DomainKey } from "../shared/domains";
  * them too, and filing them under "map appearance" is how they ended up
  * unreachable from everywhere else in the first place.
  *
- * Local storage rather than the server, matching the map colour stores. That
- * means the choice does not follow the user to another device; a server-side
- * setting would, and is the obvious later step. It is called out here rather
- * than left to be discovered.
+ * Persisted in local storage, like the map colour stores, and since
+ * forgejo#200 carried to the user's other devices by the web-prefs sync
+ * (`lib/webPrefs/registry.ts`), which subscribes to this store.
  *
  * v2 stores only the overrides. v1 stored the whole map, which froze every
  * untouched domain at the default of the day it was saved — so the round-29
@@ -29,7 +28,9 @@ import type { DomainKey } from "../shared/domains";
  * ever moved a picker. v1 is still read once, through the retired-defaults
  * table, and the next save writes v2.
  */
-const KEY = "domainColors.v2";
+/** Exported for the web-prefs sync (`lib/webPrefs/registry.ts`), which follows it. */
+export const DOMAIN_COLORS_KEY = "domainColors.v2";
+const KEY = DOMAIN_COLORS_KEY;
 const LEGACY_KEY = "domainColors.v1";
 
 interface DomainColorState {

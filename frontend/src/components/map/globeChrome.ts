@@ -4,7 +4,11 @@
 // they were plain useState — the only map settings that reset on reload
 // (found in the 2026-08-03 persistence audit).
 
-const KEY = "globeChrome.v1";
+import { emitLocalPrefWrite } from "../../lib/webPrefs/prefEvents";
+
+/** Exported for the web-prefs sync (`lib/webPrefs/registry.ts`), which follows this blob. */
+export const GLOBE_CHROME_KEY = "globeChrome.v1";
+const KEY = GLOBE_CHROME_KEY;
 
 export interface GlobeChrome {
   autoRotate?: boolean;
@@ -33,4 +37,5 @@ export function saveGlobeChrome(next: GlobeChrome): void {
   } catch {
     // localStorage full / disabled — the globe still works, just forgets.
   }
+  emitLocalPrefWrite(KEY);
 }
