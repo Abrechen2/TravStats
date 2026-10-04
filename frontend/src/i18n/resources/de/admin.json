@@ -728,8 +728,10 @@
       "keyMismatchAcknowledge": "Verstanden: Zugangsdaten danach neu eintragen",
       "archiveIncomplete": "Dem Archiv fehlt der angeforderte Teil. Es wurde nichts wiederhergestellt.",
       "archiveUnreadable": "Der Dateiteil des Archivs lässt sich nicht lesen. Es wurde nichts wiederhergestellt.",
-      "migrationFailed": "Das Archiv wurde eingespielt, ließ sich aber nicht auf den Datenbankstand dieser Version bringen. Starte die Instanz neu (sie migriert beim Start) oder spiele ein Backup dieser Version ein.",
-      "schemaIncomplete": "Das Archiv wurde eingespielt, aber die Synchronisations-Trigger fehlen – die App würde keine Änderungen mehr sehen. Details stehen im Server-Log.",
+      "migrationFailed": "Das Archiv stammt aus einer älteren Version und ließ sich nicht auf den Datenbankstand dieser Version bringen. Es wurde nichts verändert. Welche Migration gescheitert ist, steht im Server-Log.",
+      "schemaIncomplete": "Das Archiv wurde eingespielt, aber der Datenbank fehlt etwas, das diese Version erwartet (eine Migration oder die Synchronisations-Trigger). Details stehen im Server-Log.",
+      "archiveNewer": "Dieses Archiv stammt aus einer neueren TravStats-Version und lässt sich hier nicht einspielen. Aktualisiere diese Instanz mindestens auf die Version des Archivs. Es wurde nichts verändert.",
+      "archiveUnversioned": "Der Datenbankstand dieses Archivs lässt sich keiner Version zuordnen (Migrationsverlauf fehlt oder eine Migration war gescheitert). Es wurde nichts verändert.",
       "inProgress": "Wird wiederhergestellt …"
     },
     "settingsSaved": "Backup-Einstellungen gespeichert",

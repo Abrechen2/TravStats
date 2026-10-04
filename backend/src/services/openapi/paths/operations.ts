@@ -105,7 +105,12 @@ registry.registerPath({
     "or RESTORE_ARCHIVE_UNREADABLE (status 400) and nothing restored, and an archive " +
     "whose encrypted values were written with another instance's key fails it with " +
     "RESTORE_ENCRYPTION_KEY_MISMATCH (409) until the caller repeats the request with " +
-    "acceptEncryptionKeyChange. An unknown id, an unfinished backup or a missing file " +
+    "acceptEncryptionKeyChange. An archive written by a newer version fails it with " +
+    "RESTORE_ARCHIVE_NEWER (409), one without a usable migration history with " +
+    "RESTORE_ARCHIVE_UNVERSIONED or RESTORE_ARCHIVE_FAILED_MIGRATION (400). An archive " +
+    "from an older version is replayed and migrated to this version in one transaction; " +
+    "a migration that fails on its data fails the job with RESTORE_MIGRATION_FAILED (422) " +
+    "and changes nothing. An unknown id, an unfinished backup or a missing file " +
     "still answer synchronously.",
   tags: backupTag,
   request: { params: z.object({ id: z.string() }) },

@@ -4,7 +4,13 @@ import * as path from "path";
 
 import { prisma } from "../../../db";
 import { healthHandler } from "../../../routes/health";
-import { CLEAN_SCHEMA_PREAMBLE, feedPsql, keepRestoredBackupUsable } from "../backupRestore";
+import { keepRestoredBackupUsable } from "../backupRestore";
+import {
+  CLEAN_SCHEMA_PREAMBLE,
+  MIGRATION_MARKER,
+  PsqlRestoreError,
+  feedPsql,
+} from "../restorePsql";
 import { reconcileInterruptedBackups } from "../reconcileBackups";
 import { missingSyncTriggers, runSyncSchemaCheck } from "../../sync/schemaCheck";
 
@@ -52,13 +58,70 @@ describe("feedPsql", () => {
       `const fs = require("fs"); const chunks = []; process.stdin.on("data", (c) => chunks.push(c)); process.stdin.on("end", () => { fs.writeFileSync(${JSON.stringify(out)}, Buffer.concat(chunks)); });`,
     ];
 
-    await feedPsql(process.execPath, recorder, process.env, dump, CLEAN_SCHEMA_PREAMBLE);
+    await feedPsql(
+      process.execPath,
+      recorder,
+      process.env,
+      dump,
+      CLEAN_SCHEMA_PREAMBLE,
+      "-- the epilogue\n"
+    );
 
     const received = fs.readFileSync(out, "utf-8");
     expect(
-      received.startsWith("DROP SCHEMA IF EXISTS public CASCADE;\nCREATE SCHEMA public;\n")
+      received.startsWith(
+        "SET client_min_messages = warning;\nDROP SCHEMA IF EXISTS public CASCADE;\nCREATE SCHEMA public;\n"
+      )
     ).toBe(true);
-    expect(received.endsWith("-- the dump\nSELECT 1;\n")).toBe(true);
+    expect(received.endsWith("-- the dump\nSELECT 1;\n-- the epilogue\n")).toBe(true);
+  });
+
+  it("names the migration psql was applying when it stopped, and none when it stopped in the dump", async () => {
+    const dump = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "restore-")), "database.sql");
+    fs.writeFileSync(dump, "SELECT 1;\n");
+    // Stands in for psql: prints two markers the way `\echo` does, then fails.
+    const failsAfter = (stdout: string): string[] => [
+      "-e",
+      `process.stdin.resume(); process.stdin.on("end", () => { process.stdout.write(${JSON.stringify(stdout)}); process.stderr.write("ERROR:  boom\\n"); process.exit(3); });`,
+    ];
+    const run = (stdout: string) =>
+      feedPsql(process.execPath, failsAfter(stdout), process.env, dump, "", "").catch(
+        (error: unknown) => error
+      );
+
+    const inMigration = await run(
+      `SET\n${MIGRATION_MARKER}20261001120000_trip_expenses\nCREATE TABLE\n${MIGRATION_MARKER}20261001182613_rental_bookings\n`
+    );
+    expect(inMigration).toBeInstanceOf(PsqlRestoreError);
+    expect((inMigration as PsqlRestoreError).failedMigration).toBe(
+      "20261001182613_rental_bookings"
+    );
+
+    const inDump = await run("SET\nCOPY 3\n");
+    expect((inDump as PsqlRestoreError).failedMigration).toBeNull();
+  });
+
+  it("keeps the archive's row data out of the error it reports", async () => {
+    const dump = path.join(fs.mkdtempSync(path.join(os.tmpdir(), "restore-")), "database.sql");
+    fs.writeFileSync(dump, "SELECT 1;\n");
+    // What psql prints when a COPY row or a unique key is what failed.
+    const stderr = [
+      'ERROR:  duplicate key value violates unique constraint "users_username_key"',
+      "DETAIL:  Key (username)=(alice.private) already exists.",
+      'CONTEXT:  COPY users, line 3: "u3\talice.private\tsecret-hash"',
+    ].join("\n");
+    const quitter = [
+      "-e",
+      `process.stdin.resume(); process.stdin.on("end", () => { process.stderr.write(${JSON.stringify(stderr + "\n")}); process.exit(3); });`,
+    ];
+
+    const error = await feedPsql(process.execPath, quitter, process.env, dump, "", "").catch(
+      (e: Error) => e
+    );
+
+    expect(String(error)).not.toMatch(/alice|secret-hash/);
+    expect(String(error)).toContain("Key (username)=(…) already exists");
+    expect(String(error)).toContain("COPY users, line 3: [row data withheld]");
   });
 });
 
