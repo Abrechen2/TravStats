@@ -40,6 +40,7 @@ import {
 } from "./types";
 import { changedOnly, droppedOrNone, enumCell, keepStoredClock } from "./values";
 import { visitColumnsFromFakeUtc } from "../timeModel/visitColumns";
+import { tripForVisitDay } from "../places/visitTrip";
 
 const COORD_DECIMALS = 4;
 const sameCoord = (a: number | null, b: number | undefined): boolean =>
@@ -297,11 +298,14 @@ export async function importPlaceVisits(sheet: IncomingSheet, ctx: Ctx): Promise
 
     let newId: string | null = null;
     if (!ctx.dryRun && placeId) {
+      const columns = await importedVisitColumns(placeId, visitedAt ? new Date(visitedAt) : null);
       const created = await prisma.placeVisit.create({
         data: {
           userId: ctx.userId,
           placeId,
-          ...(await importedVisitColumns(placeId, visitedAt ? new Date(visitedAt) : null)),
+          ...columns,
+          // The sheet carries no trip column; the visit's day finds its trip.
+          tripId: await tripForVisitDay(prisma, ctx.userId, columns),
           rating: rating ?? null,
           notes: fields.notes ?? null,
         },

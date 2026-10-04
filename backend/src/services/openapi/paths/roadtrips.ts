@@ -122,7 +122,14 @@ const station = registry.register(
         .uuid()
         .nullable()
         .describe("A pass-through only: the caller's own place (POI) it passed"),
-      place: z.object({ id: z.string().uuid(), name: z.string(), category: z.string() }).nullable(),
+      place: z
+        .object({
+          id: z.string().uuid(),
+          name: z.string(),
+          localName: z.string().nullable().describe("The name in the place's own script"),
+          category: z.string(),
+        })
+        .nullable(),
       photoCount: z
         .number()
         .int()

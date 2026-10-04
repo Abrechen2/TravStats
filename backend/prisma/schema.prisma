@@ -2770,6 +2770,10 @@ model Place {
   userId String @map("user_id")
 
   name     String
+  /// The name in the place's own script, kept beside a Latin `name` — "반포대교"
+  /// beside "Banpo Bridge" (forgejo#199). Null when the two would be the same,
+  /// or when no second name is known; never transliterated or invented.
+  localName String? @map("local_name")
   /// Drives the pin ICON, deliberately not the pin hue: on a map any two
   /// categories can end up adjacent, and only ~3 categorical hues survive that
   /// all-pairs separation test. Mirrored in frontend/src/shared/placeCategories.ts.

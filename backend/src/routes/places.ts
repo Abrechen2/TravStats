@@ -17,6 +17,8 @@ import logger from "../utils/logger";
 import { toPhotoDto, VISIT_PHOTO_INCLUDE } from "./places/visitPhotoDto";
 import { visitTimeColumns } from "./places/visitTime";
 import { timeErrorFromZod } from "../shared/time/errors";
+import { normaliseNamePair } from "../services/geo/gluedPlaceName";
+import { tripForVisitDay } from "../services/places/visitTrip";
 import {
   createPlaceSchema,
   updatePlaceSchema,
@@ -355,11 +357,13 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
       country: input.country,
     });
     const country = input.country ?? completed?.country ?? null;
+    const names = normaliseNamePair(input.name, input.localName);
 
     const place = await prisma.place.create({
       data: {
         userId,
-        name: input.name,
+        name: names.name,
+        localName: names.localName,
         category: input.category,
         lat: input.lat,
         lon: input.lon,
@@ -385,6 +389,22 @@ router.post("/", async (req: AuthRequest, res: Response, next: NextFunction) => 
 
 // ---------------------------------------------------------------- update
 
+/**
+ * The name pair a PATCH writes. A `localName` sent (null included) is the
+ * writer's word; a `name` sent alone keeps a stored second name, and only a
+ * place that has none gets a glued name split (`geo/gluedPlaceName.ts`).
+ */
+function namesForUpdate(
+  input: { name?: string; localName?: string | null },
+  existing: { name: string; localName: string | null }
+): { name?: string; localName?: string | null } {
+  if (input.localName !== undefined) {
+    return normaliseNamePair(input.name ?? existing.name, input.localName);
+  }
+  if (input.name === undefined) return {};
+  return existing.localName ? { name: input.name } : normaliseNamePair(input.name, null);
+}
+
 router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {
   try {
     const userId = requireUser(req);
@@ -395,8 +415,7 @@ router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction)
     if (!parsed.success) throw new AppError(parsed.error.message, 400);
     const input = parsed.data;
 
-    const data: Prisma.PlaceUpdateInput = {};
-    if (input.name !== undefined) data.name = input.name;
+    const data: Prisma.PlaceUpdateInput = { ...namesForUpdate(input, existing) };
     if (input.category !== undefined) data.category = input.category;
     if (input.lat !== undefined) data.lat = input.lat;
     if (input.lon !== undefined) data.lon = input.lon;
@@ -472,6 +491,12 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
       place,
       req
     );
+    // Absent and null are two statements (Zod keeps the key out when it was
+    // not sent): no `tripId` at all means "file it where it belongs", which the
+    // visit's own day answers when exactly one trip spans it; `tripId: null`
+    // means "on no trip" and is kept (forgejo#199).
+    const tripId =
+      input.tripId !== undefined ? input.tripId : await tripForVisitDay(prisma, userId, time);
     const documentIds = await takeDocumentIds(userId, req.body);
 
     // Recording a visit that HAPPENED is the statement "I was here", so it
@@ -497,7 +522,7 @@ router.post("/:id/visits", async (req: AuthRequest, res: Response, next: NextFun
         data: {
           placeId: place.id,
           userId,
-          tripId: input.tripId ?? null,
+          tripId,
           ...time,
           writtenVia,
           orderIdx: input.orderIdx ?? 0,

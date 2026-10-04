@@ -10,6 +10,7 @@ import { proposalId } from "./proposals";
 import { dayColumn as dayDate } from "./time";
 import { typedTripDays } from "../timeModel/tripColumns";
 import { visitColumnsFromDay } from "../timeModel/visitColumns";
+import { tripForVisitDay } from "../places/visitTrip";
 import type { LinkableDomain, TripSuggestion } from "./types";
 
 /**
@@ -190,9 +191,12 @@ async function acceptVisit(
     select: { id: true, visited: true, lat: true, lon: true },
   });
   if (!place) throw staleError();
+  // A suggestion names a DAY: precision day, on the place's clock (ADR 0002).
+  const time = visitColumnsFromDay(edits.visitDay ?? proposal.startDay, place);
   // The anchor's trip, when it still is the user's: a visit made during a stay
-  // on a trip belongs to that trip.
-  const tripId = proposal.anchor?.tripId
+  // on a trip belongs to that trip. Without an anchor trip, the visit's day
+  // finds the one trip that spans it, as for every other trip-less visit.
+  const anchorTripId = proposal.anchor?.tripId
     ? ((
         await tx.trip.findFirst({
           where: { id: proposal.anchor.tripId, userId },
@@ -200,8 +204,7 @@ async function acceptVisit(
         })
       )?.id ?? null)
     : null;
-  // A suggestion names a DAY: precision day, on the place's clock (ADR 0002).
-  const time = visitColumnsFromDay(edits.visitDay ?? proposal.startDay, place);
+  const tripId = anchorTripId ?? (await tripForVisitDay(tx, userId, time));
   const visitedAt = time.visitedAt;
   const visit = await tx.placeVisit.create({
     data: { placeId: place.id, userId, tripId, ...time, writtenVia: "suggestion" },

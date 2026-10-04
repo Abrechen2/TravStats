@@ -24,7 +24,7 @@ import { placeImportCommitSchema, placeImportPreviewSchema } from "../../../sche
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
-import { createVisitSchema } from "../../../schemas/place";
+import { createPlaceSchema, createVisitSchema, updatePlaceSchema } from "../../../schemas/place";
 import { errorContent, timeRefused } from "./shared";
 import { photoFileQuerySchema } from "../../../schemas/photoVariant";
 import {
@@ -91,6 +91,13 @@ const place = registry.register(
       id: uuid,
       userId: uuid,
       name: z.string(),
+      localName: z
+        .string()
+        .nullable()
+        .describe(
+          'The name in the place\'s own script, beside a Latin `name` ("반포대교" beside ' +
+            '"Banpo Bridge"). Null when no second name is known or it equals `name`.'
+        ),
       category: z.string(),
       lat: z.number(),
       lon: z.number(),
@@ -211,8 +218,10 @@ registry.registerPath({
     "Address, city and country are filled in from the coordinates when they are " +
     "left out, and a nightly pass fills in older entries. Names come back in " +
     "Latin script: a logbook collected in the local script of every place is text " +
-    "its owner can neither read nor search.",
+    "its owner can neither read nor search. Send a picker hit's `localName` with it; " +
+    'without one, a name glued from both scripts ("Seoul Station 서울역") is stored split.',
   tags: placesTag,
+  request: { body: { content: { "application/json": { schema: createPlaceSchema } } } },
   responses: {
     201: { description: "Created", content: { "application/json": { schema: place } } },
     400: badInput,
@@ -223,8 +232,14 @@ registry.registerPath({
   method: "patch",
   path: "/places/{id}",
   summary: "Update a place",
+  description:
+    "Partial. `localName: null` clears the second name. A `name` sent without " +
+    "`localName` keeps a stored second name; a place without one gets a glued name split.",
   tags: placesTag,
-  request: { params: z.object({ id: uuid }) },
+  request: {
+    params: z.object({ id: uuid }),
+    body: { content: { "application/json": { schema: updatePlaceSchema } } },
+  },
   responses: { 200: { description: "Updated" }, 400: badInput, 404: notFound },
 });
 
@@ -243,7 +258,9 @@ registry.registerPath({
   summary: "Record a visit",
   description:
     "Several visits to the same place on the same day stay several visits — the " +
-    "day is not a key. `documentIds` files kept documents with the new visit.",
+    "day is not a key. `documentIds` files kept documents with the new visit. " +
+    "Leave `tripId` out and the visit joins the one trip of yours whose days hold the " +
+    "visit's local day — none or several, and it joins none. `tripId: null` means no trip.",
   tags: placesTag,
   request: {
     params: z.object({ id: uuid }),

@@ -32,6 +32,12 @@ const lonField = z.number().min(-180).max(180);
 
 const basePlaceSchema = z.object({
   name: z.string().trim().min(1).max(200),
+  /**
+   * The name in the place's own script, beside a Latin `name` (forgejo#199) —
+   * a picker hit's `localName`. Null clears it. Left out, a name glued from
+   * both ("Seoul Station 서울역") is split on write (`geo/gluedPlaceName.ts`).
+   */
+  localName: clearableText(200),
   category: z.enum(PLACE_CATEGORIES).default("other"),
   lat: latField,
   lon: lonField,

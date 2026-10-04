@@ -10,6 +10,7 @@ import { countableFlightWhere } from "../../shared/flightCounting";
 import { getContinent } from "../../utils/continents";
 import { buildAnchors, suggestVisits } from "../../services/places/visitSuggestions";
 import { completePlaceAddress } from "../../services/places/addressBackfill";
+import { tripForVisitDay } from "../../services/places/visitTrip";
 import logger from "../../utils/logger";
 import { timeFieldSchema } from "../../shared/time/timeInput";
 import { timeErrorFromZod } from "../../shared/time/errors";
@@ -568,8 +569,10 @@ router.post("/items/:itemId/tick", async (req: AuthRequest, res: Response, next:
         select: { id: true },
       });
       if (!already) {
+        // A tick names no trip; the visit's day finds the one it belongs to.
+        const tripId = await tripForVisitDay(prisma, userId, time);
         await prisma.placeVisit.create({
-          data: { placeId: place.id, userId, ...time, writtenVia: "suggestion" },
+          data: { placeId: place.id, userId, tripId, ...time, writtenVia: "suggestion" },
         });
       }
     }

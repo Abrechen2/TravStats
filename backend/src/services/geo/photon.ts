@@ -491,6 +491,30 @@ export async function reversePlacesDetailed(
 }
 
 /**
+ * ONE Photon request, exactly as asked — no name merge, no lang retry, no
+ * extra lookups. For a caller that pays its own way through Photon's fair use
+ * (the place-name backfill, `places/placeNameBackfill.ts`), where every
+ * request must be one it counted. Null when the request failed; never throws.
+ */
+export async function photonRequest(
+  endpoint: "search" | "reverse",
+  params: Record<string, string>,
+  limit: number
+): Promise<PlaceResult[] | null> {
+  let photonUrl = DEFAULT_PHOTON_URL;
+  try {
+    photonUrl = (await resolveGeocoderUrls()).photonUrl;
+  } catch {
+    photonUrl = process.env.PHOTON_URL ?? DEFAULT_PHOTON_URL;
+  }
+  const baseUrl = photonUrl.replace(/\/+$/, "").replace(/\/api$/i, "");
+  const query = new URLSearchParams({ ...params, limit: String(limit) });
+  const path = endpoint === "search" ? "/api/" : "/reverse";
+  const outcome = await fetchPhoton(`${baseUrl}${path}?${query.toString()}`, limit);
+  return outcome.ok ? outcome.results : null;
+}
+
+/**
  * Search Photon for places matching free text. **Never throws.** Every
  * failure path — unreachable, non-200, oversized response, invalid JSON, or
  * a response shape that fails schema validation — degrades to `[]` and logs

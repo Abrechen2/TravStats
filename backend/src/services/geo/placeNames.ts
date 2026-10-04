@@ -27,7 +27,7 @@ import type { PlaceResult } from "./photon";
  * one: accents sent decomposed ("Hà Nội" in NFD carries U+0300–U+036F), and
  * letterlike signs such as "№" (U+2100–U+214F).
  */
-function isNonLatin(name: string): boolean {
+export function isNonLatin(name: string): boolean {
   return hasNonLatinScript(name.normalize("NFC").replace(/[\u0300-\u036F\u2100-\u214F]/gu, ""));
 }
 

@@ -54,7 +54,7 @@ export const STATION_SELECT = {
   lodgingStayId: true,
   lodgingStay: { select: STATION_STAY_SELECT },
   placeId: true,
-  place: { select: { id: true, name: true, category: true } },
+  place: { select: { id: true, name: true, localName: true, category: true } },
 } as const;
 
 /**
