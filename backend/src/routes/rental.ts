@@ -113,6 +113,7 @@ const SEARCH_FIELDS = [
   "vehicleClass",
   "vehicleExample",
   "vehicleDriven",
+  "licensePlate",
 ] as const;
 
 async function buildWhere(

@@ -427,6 +427,36 @@ describe("Rentals API (R1)", () => {
     });
   });
 
+  // forgejo#196: the plate is free text — foreign plates differ — only trimmed
+  // and capped, and the list search finds a rental by it.
+  describe("licence plate", () => {
+    it("stores the plate trimmed, finds it in the search, and clears it with an empty string", async () => {
+      const created = await create({ ...base, licensePlate: "  F-TS 2026 " });
+      expect(created.status).toBe(201);
+      expect(created.body.data.licensePlate).toBe("F-TS 2026");
+
+      const found = await request(app).get("/api/v1/rentals?q=TS 20").set("Cookie", cookie);
+      expect(found.body.meta.total).toBe(1);
+
+      const cleared = await request(app)
+        .patch(`/api/v1/rentals/${created.body.data.id}`)
+        .set("Cookie", cookie)
+        .send({ licensePlate: "" });
+      expect(cleared.status).toBe(200);
+      expect(cleared.body.data.licensePlate).toBeNull();
+    });
+
+    it("accepts any format but refuses an over-long plate", async () => {
+      expect((await create({ ...base, licensePlate: "Б 123 ВГ 77" })).status).toBe(201);
+      expect((await create({ ...base, licensePlate: "X".repeat(21) })).status).toBe(400);
+    });
+
+    it("keeps a provider typed outside the suggestion list exactly as typed", async () => {
+      const res = await create({ ...base, provider: "Autovermietung Müller" });
+      expect(res.body.data.provider).toBe("Autovermietung Müller");
+    });
+  });
+
   it("lists a rental's documents under its own path", async () => {
     const row = (await create(base)).body.data;
     const res = await request(app).get(`/api/v1/rentals/${row.id}/documents`).set("Cookie", cookie);

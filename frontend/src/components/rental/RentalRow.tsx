@@ -33,6 +33,7 @@ export function RentalRow({ rental, onEdit, onDelete }: Props): JSX.Element {
     : stationLabel(rental.pickupStationName, rental.pickupIata);
   const details = [
     rental.vehicleClass,
+    rental.licensePlate,
     rental.oneWay ? t("rental:list.oneWay") : t("rental:list.sameStation"),
     rental.broker ? t("rental:list.viaBroker", { broker: rental.broker }) : null,
   ].filter((part): part is string => Boolean(part));

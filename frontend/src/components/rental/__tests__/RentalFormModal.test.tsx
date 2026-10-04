@@ -109,4 +109,33 @@ describe("RentalFormModal", () => {
     ).toBeGreaterThan(0);
     expect(create).not.toHaveBeenCalled();
   });
+
+  // forgejo#196: the common companies are suggestions; any other name is kept as typed.
+  it("suggests the common providers and saves a name outside the list as typed", async () => {
+    update.mockResolvedValue(makeRental());
+    render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={vi.fn()} />);
+    const provider = screen.getByDisplayValue("Testcar");
+    const listId = provider.getAttribute("list");
+    expect(listId).toBeTruthy();
+    const suggestions = document.getElementById(listId as string);
+    const offered = Array.from(suggestions?.querySelectorAll("option") ?? []).map((o) =>
+      o.getAttribute("value")
+    );
+    expect(offered).toEqual(expect.arrayContaining(["Sixt", "Europcar", "Share Now", "Starcar"]));
+    fireEvent.change(provider, { target: { value: "Autohaus Meier" } });
+    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    expect(update.mock.calls[0][1].provider).toBe("Autohaus Meier");
+  });
+
+  it("sends the typed licence plate with the rental", async () => {
+    update.mockResolvedValue(makeRental());
+    render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("rental:form.licensePlate"), {
+      target: { value: " F-TS 2026 " },
+    });
+    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    expect(update.mock.calls[0][1].licensePlate).toBe("F-TS 2026");
+  });
 });

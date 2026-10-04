@@ -12,8 +12,10 @@ import {
   type RentalPaymentTiming,
 } from "../../types/rental";
 import { RentalStationPicker } from "./RentalStationPicker";
+import { RENTAL_PROVIDER_SUGGESTIONS } from "./rentalProviders";
 import {
   EMPTY_RENTAL_DRAFT,
+  RENTAL_LICENSE_PLATE_MAX,
   draftFromRental,
   rentalInputFromDraft,
   rentalSaveError,
@@ -32,6 +34,7 @@ const INPUT_CLASS =
   "w-full rounded-md border border-border bg-(--bg-surface) px-3 py-3 text-base text-(--text-primary) placeholder:text-(--text-muted) focus:border-(--accent) focus:outline-hidden";
 const DARK_PICKER_STYLE = { colorScheme: "dark" } as const;
 const PAYMENT_TIMINGS: RentalPaymentTiming[] = ["prepaid", "pay_at_counter", "package"];
+const PROVIDER_LIST_ID = "rental-provider-suggestions";
 
 function Field({
   label,
@@ -148,11 +151,21 @@ export function RentalFormModal({ rental, onClose, onSaved }: Props): JSX.Elemen
         ) : null}
         <div className="grid gap-3 sm:grid-cols-2">
           <Field label={t("rental:form.provider")} error={fieldError("provider")}>
+            {/* Suggestions, not a choice (forgejo#196): the browser offers the
+                common companies as the reader types, and any other name
+                stays possible and is saved as typed. */}
             <input
               className={INPUT_CLASS}
               value={draft.provider}
+              list={PROVIDER_LIST_ID}
+              autoComplete="off"
               onChange={(e) => set("provider", e.target.value)}
             />
+            <datalist id={PROVIDER_LIST_ID} data-testid="rental-provider-suggestions">
+              {RENTAL_PROVIDER_SUGGESTIONS.map((name) => (
+                <option key={name} value={name} />
+              ))}
+            </datalist>
           </Field>
           <Field label={t("rental:form.broker")}>
             <input
@@ -247,6 +260,15 @@ export function RentalFormModal({ rental, onClose, onSaved }: Props): JSX.Elemen
               className={INPUT_CLASS}
               value={draft.vehicleDriven}
               onChange={(e) => set("vehicleDriven", e.target.value)}
+            />
+          </Field>
+          <Field label={t("rental:form.licensePlate")}>
+            <input
+              className={`${INPUT_CLASS} font-mono`}
+              maxLength={RENTAL_LICENSE_PLATE_MAX}
+              autoComplete="off"
+              value={draft.licensePlate}
+              onChange={(e) => set("licensePlate", e.target.value)}
             />
           </Field>
         </div>

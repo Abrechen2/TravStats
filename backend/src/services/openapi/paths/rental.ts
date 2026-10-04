@@ -74,6 +74,10 @@ export const rentalBookingSchema = registry.register(
       actualPickupTime: z.string().datetime().nullable(),
       actualReturnTime: z.string().datetime().nullable(),
       acrissCode: z.string().nullable().describe("Four-letter ACRISS code, when printed"),
+      licensePlate: z
+        .string()
+        .nullable()
+        .describe("The car's licence plate as typed — free text, no format check; null = unknown"),
       vehicleTraits: z
         .object({
           transmission: z.enum(["manual", "automatic"]),

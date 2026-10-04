@@ -15,6 +15,9 @@ import type {
  * the rules are tested without a browser.
  */
 
+/** Mirrors `RENTAL_LICENSE_PLATE_MAX` in backend/src/schemas/rental.ts — change both together. */
+export const RENTAL_LICENSE_PLATE_MAX = 20;
+
 /** A station as the form holds it. `lat`/`lon` null until something places it. */
 export interface RentalStationDraft {
   name: string;
@@ -51,6 +54,8 @@ export interface RentalDraft {
   acrissCode: string;
   vehicleExample: string;
   vehicleDriven: string;
+  /** Free text; trimmed on the way out, no format check (forgejo#196). */
+  licensePlate: string;
   paymentTiming: RentalPaymentTiming | "";
   price: string;
   currency: string;
@@ -75,6 +80,7 @@ export const EMPTY_RENTAL_DRAFT: RentalDraft = {
   acrissCode: "",
   vehicleExample: "",
   vehicleDriven: "",
+  licensePlate: "",
   paymentTiming: "",
   price: "",
   currency: "EUR",
@@ -146,6 +152,7 @@ export function draftFromRental(r: RentalBooking): RentalDraft {
     acrissCode: r.acrissCode ?? "",
     vehicleExample: r.vehicleExample ?? "",
     vehicleDriven: r.vehicleDriven ?? "",
+    licensePlate: r.licensePlate ?? "",
     paymentTiming: r.paymentTiming ?? "",
     price: r.price === null ? "" : String(r.price),
     currency: r.currency ?? "EUR",
@@ -222,6 +229,7 @@ export function rentalInputFromDraft(d: RentalDraft): RentalInput {
     acrissCode: text(d.acrissCode)?.toUpperCase() ?? null,
     vehicleExample: text(d.vehicleExample),
     vehicleDriven: text(d.vehicleDriven),
+    licensePlate: text(d.licensePlate),
     paymentTiming: d.paymentTiming === "" ? null : d.paymentTiming,
     price,
     currency: price === null ? null : d.currency,

@@ -3681,6 +3681,8 @@ model RentalBooking {
   vehicleExample String? @map("vehicle_example")
   /// The car actually driven — from the invoice, else an agreement, else typed.
   vehicleDriven  String? @map("vehicle_driven")
+  /// The car's licence plate as the reader typed it — free text, trimmed, no format check (forgejo#196).
+  licensePlate   String? @map("license_plate")
 
   /// From the final invoice (out also from an agreement). Null = unknown, never 0.
   odometerOutKm  Int?    @map("odometer_out_km")

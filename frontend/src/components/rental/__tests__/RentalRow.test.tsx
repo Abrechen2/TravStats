@@ -41,3 +41,11 @@ describe("RentalRow — the open-km pill", () => {
     expect(screen.getByText(/634 km/)).toBeInTheDocument();
   });
 });
+
+// forgejo#196: the plate is part of what the row says about the car.
+describe("RentalRow — licence plate", () => {
+  it("shows the plate when one is recorded", () => {
+    renderRow(makeRental({ licensePlate: "F-TS 2026" }));
+    expect(screen.getByText(/F-TS 2026/)).toBeInTheDocument();
+  });
+});
