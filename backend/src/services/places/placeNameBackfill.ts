@@ -64,7 +64,8 @@ const SELECT = {
 type Row = Prisma.PlaceGetPayload<{ select: typeof SELECT }>;
 
 export type NameChangeKind = "split" | "latin";
-export type AbstainReason = "lookup_failed" | "no_match" | "no_latin_name" | "cap_reached";
+export type AbstainReason =
+  "lookup_failed" | "no_match" | "no_latin_name" | "cap_reached" | "write_failed";
 
 export interface NameChange {
   placeId: string;
@@ -215,7 +216,7 @@ export async function backfillPlaceNames(opts: NameBackfillOptions): Promise<Nam
       // One row that cannot be written (a ref taken between check and write)
       // must not abandon the rest.
       report.changes.pop();
-      report.abstentions.push({ ...pick(row), reason: "lookup_failed" });
+      report.abstentions.push({ ...pick(row), reason: "write_failed" });
       logger.warn(
         { operation: "place_name_backfill_write_failed", placeId: row.id, err: String(err) },
         "Place name backfill could not write one place — continuing"
