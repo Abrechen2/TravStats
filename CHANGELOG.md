@@ -85,8 +85,13 @@ below), which can take a minute on a large logbook.
   stored with your account instead of only in one browser. Page size and the
   open map panel stay per device.
 - **Place names you can read, in every script.** A place found in Seoul, Moscow,
-  Tokyo or Cairo is named in Latin script where OpenStreetMap has one, with the
-  name on the sign beside it ("Gyeongbokgung Palace · 경복궁").
+  Tokyo or Cairo is named in Latin script where OpenStreetMap has one, and the
+  name on the sign is kept beside it ("Gyeongbokgung Palace · 경복궁") — stored
+  with the place and shown in the places list, on the place page, in the trip
+  and on the map. A name saved with both halves in one string is split.
+- **A visit finds its trip.** A place visit saved without a trip goes into the
+  trip whose days it falls on, when exactly one trip does; with none or several
+  it stays unassigned.
 - **iPhone photos (HEIC) can be attached** to trips, places and stays. The
   original is kept; browsers get a JPEG copy. Capture time and position are now
   read from every uploaded photo.
