@@ -437,6 +437,19 @@ const geoResult = z.object({
   lon: z.number(),
 });
 
+const rankedGeoResult = geoResult.extend({
+  rank: z
+    .number()
+    .int()
+    .min(0)
+    .max(3)
+    .describe(
+      "Importance from the OSM tag, higher first: 3 sights, stations, airports, parks, the town; " +
+        "2 hotels, restaurants, malls; 1 anything else; 0 bus stops, small shops, buildings, streets. " +
+        "The list is ordered by it, then by distance."
+    ),
+});
+
 const degradedEnvelope = <T extends z.ZodTypeAny>(data: T) =>
   z.object({
     success: z.literal(true),
@@ -455,12 +468,21 @@ registry.registerPath({
   description:
     "Backed by Photon, not Nominatim — Nominatim's usage policy forbids " +
     "per-keystroke queries. Never throws on an upstream failure; it answers " +
-    "200 with `degraded: true` so a form keeps working without a geocoder.",
+    "200 with `degraded: true` so a form keeps working without a geocoder. " +
+    "With `lat` and `lon` (both or neither — one alone is a 400 " +
+    "`VALIDATION_FAILED`), hits near that point come first.",
   tags: ["Geo"],
   request: {
     query: z.object({
       q: z.string().min(2).max(200),
       lang: z.string().length(2).optional(),
+      lat: z.coerce.number().min(-90).max(90).optional().describe("Location bias; requires `lon`"),
+      lon: z.coerce
+        .number()
+        .min(-180)
+        .max(180)
+        .optional()
+        .describe("Location bias; requires `lat`"),
     }),
   },
   responses: {
@@ -517,19 +539,36 @@ registry.registerPath({
   method: "get",
   path: "/geo/reverse-places",
   summary: "Nearby places for a picked pin",
-  description: "Returns up to five nearby points of interest, for the map-pick modal's POI list.",
+  description:
+    "Named places around a point, for the map-pick modal's POI list and the " +
+    "Companion's current-place list. Ordered by importance (`rank`), then by " +
+    "distance: a palace 400 m away comes before a bus stop 50 m away. The " +
+    "ranking is drawn from the nearest 50 hits Photon returns within the radius.",
   tags: ["Geo"],
   request: {
     query: z.object({
       lat: z.coerce.number().min(-90).max(90),
       lon: z.coerce.number().min(-180).max(180),
       lang: z.string().length(2).optional(),
+      limit: z.coerce
+        .number()
+        .int()
+        .min(1)
+        .max(20)
+        .optional()
+        .describe("How many places to return; default 5"),
+      radiusKm: z.coerce
+        .number()
+        .positive()
+        .max(5)
+        .optional()
+        .describe("Search radius in km; default 1 (the geocoder's own)"),
     }),
   },
   responses: {
     200: {
       description: "Nearby places",
-      content: { "application/json": { schema: degradedEnvelope(z.array(geoResult)) } },
+      content: { "application/json": { schema: degradedEnvelope(z.array(rankedGeoResult)) } },
     },
     400: { description: "Validation failed", content: errorContent },
     429: { description: "Rate limited", content: errorContent },
