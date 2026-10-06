@@ -65,7 +65,13 @@ type Row = Prisma.PlaceGetPayload<{ select: typeof SELECT }>;
 
 export type NameChangeKind = "split" | "latin";
 export type AbstainReason =
-  "lookup_failed" | "no_match" | "no_latin_name" | "cap_reached" | "write_failed";
+  | "lookup_failed"
+  | "no_match"
+  | "no_latin_name"
+  | "cap_reached"
+  | "write_failed"
+  /** Looks glued, but the map does not name anything here by the local half alone. */
+  | "unconfirmed_split";
 
 export interface NameChange {
   placeId: string;
@@ -251,19 +257,42 @@ async function changeFor(
   claimed: Set<string>
 ): Promise<NameChange | null> {
   const before = { name: row.name, externalRef: row.externalRef };
+  if (report.lookups >= cap) {
+    report.abstentions.push({ ...pick(row), reason: "cap_reached" });
+    return null;
+  }
   const split = splitGluedName(row.name);
   if (split) {
+    // The shape alone is not proof: "CU 삼청점" is one name (chain + branch).
+    // A split is proposed only when the map names something here by the
+    // local half alone — "반포대교 달빛무지개분수" is the fountain's own name.
+    report.lookups += 1;
+    let local: PlaceResult[] | null = null;
+    try {
+      local = await geo.reverseDefault(row.lat, row.lon);
+    } catch {
+      local = null;
+    }
+    if (!local) {
+      report.abstentions.push({ ...pick(row), reason: "lookup_failed" });
+      return null;
+    }
+    const match = local.find(
+      (h) => sameName(h.name, split.localName) && haversineKm(h, row) * 1000 <= NAME_MATCH_RADIUS_M
+    );
+    if (!match) {
+      report.abstentions.push({ ...pick(row), reason: "unconfirmed_split" });
+      return null;
+    }
+    const adopted = await refToAdopt(row, match.externalRef, claimed);
     return {
       placeId: row.id,
       userId: row.userId,
       kind: "split",
       before,
-      after: { ...split, externalRef: row.externalRef },
+      after: { ...split, externalRef: adopted.ref },
+      ...(adopted.collision ? { refCollision: true } : {}),
     };
-  }
-  if (report.lookups >= cap) {
-    report.abstentions.push({ ...pick(row), reason: "cap_reached" });
-    return null;
   }
   report.lookups += 1;
   let found: Lookup;

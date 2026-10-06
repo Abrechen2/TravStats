@@ -403,7 +403,7 @@ function namesForUpdate(
     return normaliseNamePair(input.name ?? existing.name, input.localName);
   }
   if (input.name === undefined) return {};
-  return existing.localName ? { name: input.name } : normaliseNamePair(input.name, null);
+  return { name: input.name };
 }
 
 router.patch("/:id", async (req: AuthRequest, res: Response, next: NextFunction) => {

@@ -78,16 +78,16 @@ describe("Places — two names and the trip a visit belongs to", () => {
       expect(found.body.data.map((p: { name: string }) => p.name)).toEqual(["Seoul Station"]);
     });
 
-    it("splits a name glued from both scripts when no local name is sent", async () => {
-      const res = await createPlace({
-        name: "Banpo Bridge Moonlight Rainbow Fountain 반포대교 달빛무지개분수",
-      });
-      expect(res.status).toBe(201);
-      expect(res.body.data).toMatchObject({
-        name: "Banpo Bridge Moonlight Rainbow Fountain",
-        localName: "반포대교 달빛무지개분수",
-      });
-    });
+    // rc.8 split on write and took "CU 삼청점" (chain + branch, one name) for
+    // two names. A write now stores what it was sent.
+    it.each(["CU 삼청점", "Banpo Bridge Moonlight Rainbow Fountain 반포대교 달빛무지개분수"])(
+      "stores %s exactly as sent, without guessing a second name",
+      async (name) => {
+        const res = await createPlace({ name });
+        expect(res.status).toBe(201);
+        expect(res.body.data).toMatchObject({ name, localName: null });
+      }
+    );
 
     it("leaves a name in one script alone", async () => {
       const res = await createPlace({ name: "교촌치킨 서울시청점" });
@@ -110,8 +110,10 @@ describe("Places — two names and the trip a visit belongs to", () => {
       const cleared = await patch({ localName: null });
       expect(cleared.body.data).toMatchObject({ name: "Seoul Stn", localName: null });
 
-      const glued = await patch({ name: "Seoul Station 서울역" });
-      expect(glued.body.data).toMatchObject({ name: "Seoul Station", localName: "서울역" });
+      // A name sent alone is stored as sent — the CU repair on prod failed
+      // here in rc.8, because the patch split it again.
+      const whole = await patch({ name: "CU 삼청점", localName: null });
+      expect(whole.body.data).toMatchObject({ name: "CU 삼청점", localName: null });
     });
   });
 

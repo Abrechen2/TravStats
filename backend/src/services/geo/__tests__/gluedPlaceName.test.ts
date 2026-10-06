@@ -42,15 +42,12 @@ describe("splitGluedName — two names stored as one (forgejo#199)", () => {
 });
 
 describe("normaliseNamePair", () => {
-  it("splits a glued name when no second name was given", () => {
-    expect(normaliseNamePair("Seoul Station 서울역", undefined)).toEqual({
-      name: "Seoul Station",
-      localName: "서울역",
-    });
-    expect(normaliseNamePair("Seoul Station 서울역", null)).toEqual({
-      name: "Seoul Station",
-      localName: "서울역",
-    });
+  // rc.8 split here and turned "CU 삼청점" (chain + branch) into two names.
+  it("never splits on write: a name without a second name is stored as sent", () => {
+    for (const name of ["Seoul Station 서울역", "CU 삼청점"]) {
+      expect(normaliseNamePair(name, undefined)).toEqual({ name, localName: null });
+      expect(normaliseNamePair(name, null)).toEqual({ name, localName: null });
+    }
   });
 
   it("keeps a given second name and does not re-read the first", () => {
