@@ -313,7 +313,6 @@ export function railReminderContent(
   const de = lang === "de";
   const train = joined([journey.trainCategory, journey.trainNumber], " ");
   const until = formatHoursUntil(hoursUntilDeparture, lang);
-  const trainPart = train ? ` ${train}` : "";
 
   const rows: MailFact[] = [];
   fact(rows, de ? "Zug" : "Train", train, true);
@@ -324,12 +323,15 @@ export function railReminderContent(
   fact(rows, de ? "Buchungscode" : "Booking reference", journey.bookingReference, true);
 
   return assemble("rail", lang, links, {
+    // Named by the destination, like a ride with changes (owner, 2026-10-06,
+    // taking up the tester's "Deine Fahrt nach Hamburg Hbf"); the train
+    // stays in the facts below.
     subject: de
-      ? `Zug-Erinnerung: ${train ?? journey.depStationName} in ${hoursUntilDeparture}h`
-      : `Rail reminder: ${train ?? journey.depStationName} in ${hoursUntilDeparture}h`,
+      ? `Zug-Erinnerung: Deine Fahrt nach ${journey.arrStationName} in ${hoursUntilDeparture}h`
+      : `Rail reminder: your journey to ${journey.arrStationName} in ${hoursUntilDeparture}h`,
     heading: de
-      ? `Deine Zugfahrt${trainPart} startet ${until}`
-      : `Your train${trainPart} leaves ${until}`,
+      ? `Deine Fahrt nach ${journey.arrStationName} startet ${until}`
+      : `Your journey to ${journey.arrStationName} leaves ${until}`,
     blocks: [
       {
         kind: "route",
@@ -340,6 +342,90 @@ export function railReminderContent(
     ],
     path: journey.tripId ? `trips/${journey.tripId}` : `rail/${journey.id}`,
     zoned: isZoned(journey.departure) || isZoned(journey.arrival),
+  });
+}
+
+/** "Augsburg Hbf · So., 11.10.2026, 09:12 Uhr" — the station alone when its time is unknown. */
+const stationAt = (station: string, time: TimeValue | null, lang: ReminderLang): string =>
+  joined([station, formatTimeValue(time, lang)], " · ") ?? station;
+
+/**
+ * The reminder for a RIDE (forgejo#210): the legs `groupRailLegs` reads as one
+ * journey, in travel order. A ride of one train is the train's own mail,
+ * unchanged. A ride with changes is ONE mail, named by where it ends — the
+ * reader wants to know when they leave and where they are going, and the
+ * first train's destination is only the station they change at. Every train
+ * is listed under it with its own stations, times and seat.
+ */
+export function railRideReminderContent(
+  legs: readonly RailReminderData[],
+  hoursUntilDeparture: number,
+  lang: ReminderLang,
+  links: ReminderLinks
+): MailContent {
+  if (legs.length === 0) throw new Error("A rail ride has at least one leg");
+  if (legs.length === 1) return railReminderContent(legs[0], hoursUntilDeparture, lang, links);
+
+  const de = lang === "de";
+  const first = legs[0];
+  const last = legs[legs.length - 1];
+  const destination = last.arrStationName;
+  const until = formatHoursUntil(hoursUntilDeparture, lang);
+
+  // One booking code for the whole ride is said once; differing codes stay
+  // with their trains, where they belong.
+  const references = new Set(legs.map((leg) => present(leg.bookingReference)));
+  const sharedReference = references.size === 1 ? [...references][0] : null;
+
+  const summary: MailFact[] = [];
+  fact(
+    summary,
+    de ? "Umstiege" : "Changes",
+    `${legs.length - 1} · ${legs
+      .slice(0, -1)
+      .map((leg) => leg.arrStationName)
+      .join(", ")}`
+  );
+  fact(summary, de ? "Buchungscode" : "Booking reference", sharedReference, true);
+
+  const trains: MailBlock[] = legs.flatMap((leg, index): MailBlock[] => {
+    const train = joined([leg.trainCategory, leg.trainNumber], " ");
+    const rows: MailFact[] = [];
+    fact(rows, de ? "Ab" : "Departs", stationAt(leg.depStationName, leg.departure, lang));
+    fact(rows, de ? "An" : "Arrives", stationAt(leg.arrStationName, leg.arrival, lang));
+    fact(rows, de ? "Betreiber" : "Operator", leg.operator);
+    fact(rows, de ? "Klasse" : "Class", worded(RAIL_CLASS[lang], leg.travelClass));
+    fact(rows, de ? "Wagen" : "Coach", leg.coach, true);
+    fact(rows, de ? "Platz" : "Seat", leg.seat, true);
+    if (!sharedReference) {
+      fact(rows, de ? "Buchungscode" : "Booking reference", leg.bookingReference, true);
+    }
+    return [
+      { kind: "divider" },
+      { kind: "subheading", text: `${index + 1}. ${train ?? (de ? "Zug" : "Train")}` },
+      { kind: "facts", rows },
+    ];
+  });
+
+  return assemble("rail", lang, links, {
+    subject: de
+      ? `Zug-Erinnerung: Deine Fahrt nach ${destination} in ${hoursUntilDeparture}h`
+      : `Train reminder: your journey to ${destination} in ${hoursUntilDeparture}h`,
+    heading: de
+      ? `Deine Fahrt nach ${destination} startet ${until}`
+      : `Your journey to ${destination} leaves ${until}`,
+    blocks: [
+      {
+        kind: "route",
+        from: { primary: first.depStationName, time: formatTimeValue(first.departure, lang) },
+        to: { primary: destination, time: formatTimeValue(last.arrival, lang) },
+      },
+      { kind: "facts", rows: summary },
+      ...trains,
+    ],
+    // The connection page answers from any of its legs; the first names it.
+    path: first.tripId ? `trips/${first.tripId}` : `rail/connection/${first.id}`,
+    zoned: legs.some((leg) => isZoned(leg.departure) || isZoned(leg.arrival)),
   });
 }
 

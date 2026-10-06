@@ -6,6 +6,7 @@ import { authenticate, AuthRequest } from "../../middleware/auth";
 import { AppError } from "../../middleware/errorHandler";
 import { railQuerySchema } from "../../schemas/rail";
 import { groupRailLegs } from "../../shared/railJourneyGrouping";
+import { RAIL_GROUPING_SELECT } from "../../services/rail/railGroupingSelect";
 import { withStationShortCodes } from "../../services/rail/railStations";
 import { withRailTimes } from "../../services/rail/timesDto";
 import { withRailSource } from "../../services/rail/railSource";
@@ -43,20 +44,7 @@ export const railConnectionQuerySchema = railQuerySchema
 
 /** The columns the grouping rule reads — nothing a list row would draw. */
 const GROUPING_SELECT = {
-  id: true,
-  bookingId: true,
-  depStationId: true,
-  arrStationId: true,
-  depStationName: true,
-  arrStationName: true,
-  depLat: true,
-  depLon: true,
-  arrLat: true,
-  arrLon: true,
-  departureTime: true,
-  arrivalTime: true,
-  depPrecision: true,
-  arrPrecision: true,
+  ...RAIL_GROUPING_SELECT,
   // For the summary strip, which counts every matching train, not this page.
   operator: true,
 } satisfies Prisma.RailJourneySelect;

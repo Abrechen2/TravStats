@@ -7,6 +7,8 @@ import { stayStartsAt } from "../utils/stayInstant";
 import type { DomainKey } from "../shared/domains";
 import { loadVisibleDomains } from "../services/domainVisibility";
 import { endHasClock, rideEndsAt } from "../shared/railClock";
+import { groupRailLegs } from "../shared/railJourneyGrouping";
+import { RAIL_GROUPING_SELECT } from "../services/rail/railGroupingSelect";
 
 // No rate limiter, and deliberately so — for the same reason `stats.ts` has
 // none, arrived at from the other side. This route exists BECAUSE the tab strip
@@ -253,6 +255,7 @@ async function nextRail(userId: string): Promise<UpcomingEntry | null> {
     take: 20,
     select: {
       id: true,
+      bookingId: true,
       depStationName: true,
       arrStationName: true,
       trainCategory: true,
@@ -276,7 +279,10 @@ async function nextRail(userId: string): Promise<UpcomingEntry | null> {
         }).getTime() > now.getTime()
   );
   if (!ride) return null;
-  const train = [ride.trainCategory, ride.trainNumber].filter(Boolean).join(" ");
+  const legs = await remainingRideLegs(userId, ride);
+  const trains = legs
+    .map((leg) => [leg.trainCategory, leg.trainNumber].filter(Boolean).join(" "))
+    .filter(Boolean);
   return {
     domain: "rail",
     id: ride.id,
@@ -285,9 +291,37 @@ async function nextRail(userId: string): Promise<UpcomingEntry | null> {
     startsAtPrecision: endHasClock(ride.depPrecision) ? "minute" : "day",
     tripId: ride.tripId,
     tripName: ride.trip?.name ?? null,
-    primary: `${ride.depStationName} → ${ride.arrStationName}`,
-    secondary: train || ride.operator || null,
+    primary: `${ride.depStationName} → ${legs[legs.length - 1].arrStationName}`,
+    secondary: trains.length > 0 ? trains.join(" · ") : ride.operator || null,
   };
+}
+
+interface NextRailLeg {
+  id: string;
+  bookingId: string | null;
+  arrStationName: string;
+  trainCategory: string | null;
+  trainNumber: string | null;
+}
+
+/**
+ * The train `next` and the trains after it on the same RIDE (forgejo#210):
+ * a ride with changes is named from where it starts to where it ENDS, not to
+ * the station it changes at. Which trains form a ride is `groupRailLegs`'
+ * answer — the rail list's rule, never a second one. Grouping never crosses a
+ * booking, so the booking is all that is read; a train without one is a ride
+ * of its own. When the ride is already under way, the rest of it is what is
+ * next — from the station the next train leaves.
+ */
+async function remainingRideLegs(userId: string, next: NextRailLeg): Promise<NextRailLeg[]> {
+  if (next.bookingId === null) return [next];
+  const siblings = await prisma.railJourney.findMany({
+    where: { userId, bookingId: next.bookingId, status: { not: "cancelled" } },
+    select: { ...RAIL_GROUPING_SELECT, trainCategory: true, trainNumber: true },
+  });
+  const ride = groupRailLegs(siblings).find((group) => group.some((leg) => leg.id === next.id));
+  if (!ride) return [next];
+  return ride.slice(ride.findIndex((leg) => leg.id === next.id));
 }
 
 /**

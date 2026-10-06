@@ -13,7 +13,7 @@ import {
   cruiseReminderContent,
   flightReminderContent,
   lodgingReminderContent,
-  railReminderContent,
+  railRideReminderContent,
   type CruiseReminderData,
   type FlightReminderData,
   type LodgingReminderData,
@@ -155,16 +155,21 @@ export async function sendCruiseReminder(
   );
 }
 
+/**
+ * One mail per RIDE, not per train (forgejo#210): `legs` are the trains
+ * `groupRailLegs` reads as one journey, in travel order; a ride of one train
+ * is a list of one. Logged under the first leg's id, which names the ride.
+ */
 export async function sendRailReminder(
-  journey: RailReminderData,
+  legs: readonly RailReminderData[],
   user: ReminderUser,
   hoursUntilDeparture: number
 ): Promise<void> {
   await sendReminder(
     "rail",
     user,
-    { railJourneyId: journey.id, hoursUntilDeparture },
-    (lang, links) => railReminderContent(journey, hoursUntilDeparture, lang, links)
+    { railJourneyId: legs[0]?.id, legCount: legs.length, hoursUntilDeparture },
+    (lang, links) => railRideReminderContent(legs, hoursUntilDeparture, lang, links)
   );
 }
 

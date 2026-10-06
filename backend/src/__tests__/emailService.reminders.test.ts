@@ -276,19 +276,21 @@ describe("sendRailReminder", () => {
   it("shows both stations' local times and the operator", async () => {
     const { sendRailReminder } = await import("../services/emailService");
     await sendRailReminder(
-      {
-        id: "journey-1",
-        tripId: null,
-        operator: "DB",
-        trainCategory: "ICE",
-        trainNumber: "123",
-        coach: "12",
-        seat: "34",
-        depStationName: "Berlin Hbf",
-        arrStationName: "Munich Hbf",
-        departure: tv("2026-09-27T08:00:00", "Europe/Berlin", "2026-09-27T06:00:00.000Z"),
-        arrival: tv("2026-09-27T12:30:00", "Europe/Berlin", "2026-09-27T10:30:00.000Z"),
-      },
+      [
+        {
+          id: "journey-1",
+          tripId: null,
+          operator: "DB",
+          trainCategory: "ICE",
+          trainNumber: "123",
+          coach: "12",
+          seat: "34",
+          depStationName: "Berlin Hbf",
+          arrStationName: "Munich Hbf",
+          departure: tv("2026-09-27T08:00:00", "Europe/Berlin", "2026-09-27T06:00:00.000Z"),
+          arrival: tv("2026-09-27T12:30:00", "Europe/Berlin", "2026-09-27T10:30:00.000Z"),
+        },
+      ],
       { notificationEmail: "user@example.com", settingsData: { display: { language: "en" } } },
       2
     );
@@ -300,6 +302,51 @@ describe("sendRailReminder", () => {
     expect(html).toContain("DB");
     expect(text).toContain("Coach: 12");
     expect(text).toContain("Seat: 34");
+  });
+
+  // forgejo#210: a ride with a change goes out as ONE mail, both trains in it.
+  it("sends a ride with a change as one mail naming its destination", async () => {
+    const { sendRailReminder } = await import("../services/emailService");
+    const base = {
+      tripId: null,
+      operator: "DB",
+      coach: null,
+      seat: null,
+    };
+    await sendRailReminder(
+      [
+        {
+          ...base,
+          id: "leg-1",
+          trainCategory: "ICE",
+          trainNumber: "911",
+          depStationName: "Augsburg Hbf",
+          arrStationName: "München Hbf",
+          departure: tv("2026-10-11T09:12:00", "Europe/Berlin", "2026-10-11T07:12:00.000Z"),
+          arrival: tv("2026-10-11T09:52:00", "Europe/Berlin", "2026-10-11T07:52:00.000Z"),
+        },
+        {
+          ...base,
+          id: "leg-2",
+          trainCategory: "EC",
+          trainNumber: "115",
+          depStationName: "München Hbf",
+          arrStationName: "Salzburg Hbf",
+          departure: tv("2026-10-11T10:17:00", "Europe/Berlin", "2026-10-11T08:17:00.000Z"),
+          arrival: tv("2026-10-11T11:57:00", "Europe/Vienna", "2026-10-11T09:57:00.000Z"),
+        },
+      ],
+      { notificationEmail: "user@example.com", settingsData: { display: { language: "de" } } },
+      24
+    );
+
+    expect(mockSendMail).toHaveBeenCalledTimes(1);
+    const mail = mockSendMail.mock.calls[0][0] as { subject: string; html: string; text: string };
+    expect(mail.subject).toBe("Zug-Erinnerung: Deine Fahrt nach Salzburg Hbf in 24h");
+    for (const part of [mail.html, mail.text]) {
+      expect(part).toContain("ICE 911");
+      expect(part).toContain("EC 115");
+    }
   });
 });
 

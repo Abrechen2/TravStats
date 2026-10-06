@@ -196,11 +196,18 @@ registry.registerPath({
                   tripName: z.string().nullable(),
                   primary: z
                     .string()
-                    .describe("Headline, e.g. 'MUC → VIE', a ship or a hotel name"),
+                    .describe(
+                      "Headline, e.g. 'MUC → VIE', a ship or a hotel name. A rail ride " +
+                        "with changes runs from the next train's departure station to the " +
+                        "ride's LAST arrival station (forgejo#210)"
+                    ),
                   secondary: z
                     .string()
                     .nullable()
-                    .describe("Qualifier: flight number, cruise line, city"),
+                    .describe(
+                      "Qualifier: flight number, cruise line, city; for rail the ride's " +
+                        "trains, joined by ' · '"
+                    ),
                 })
               ),
             }),
