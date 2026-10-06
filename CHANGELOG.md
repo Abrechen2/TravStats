@@ -88,7 +88,11 @@ below), which can take a minute on a large logbook.
   Tokyo or Cairo is named in Latin script where OpenStreetMap has one, and the
   name on the sign is kept beside it ("Gyeongbokgung Palace · 경복궁") — stored
   with the place and shown in the places list, on the place page, in the trip
-  and on the map. A name saved with both halves in one string is split.
+  and on the map. A name is stored exactly as you typed it; an older place
+  whose two halves sit in one string is split only where the map names the
+  local half on its own, so "CU 삼청점" stays one name. A place saved under its
+  Latin name in a country with another script gets the name on the sign added
+  where OpenStreetMap knows the same object.
 - **A visit finds its trip.** A place visit saved without a trip goes into the
   trip whose days it falls on, when exactly one trip does; with none or several
   it stays unassigned.
@@ -99,6 +103,13 @@ below), which can take a minute on a large logbook.
   providers; rail and rental lists use the same table, header and filters as
   the other logbooks, and the map settings cover tours, roadtrips, rail and
   rentals — rentals optionally without the connecting line.
+- **Rental cars** (beta) take the odometer reading at pick-up and return; the
+  kilometres driven follow from them unless the invoice states its own figure,
+  and a return reading below the pick-up one is refused.
+- **A seat reservation booked later finds its journeys** (beta). Importing a
+  Deutsche Bahn reservation offers to attach coach and seat to the train
+  journeys already logged, shows what would change, and asks when several
+  journeys fit.
 - **The Companion can send a flight's recorded track and its observed takeoff
   and landing**; a reported landing marks the flight as flown at once, and the
   times arrive as suggestions to confirm.
@@ -175,6 +186,12 @@ below), which can take a minute on a large logbook.
   half-finished migration.
 - A request from a foreign web origin is refused with 403 instead of a server
   error.
+- The rail form labels the arrival delay and keeps it beside the arrival time.
+- The rental list names the car actually driven before the booked class, shows
+  a status on every rental, and a rental returned where it was picked up is
+  drawn as one station dot.
+- A Hawaiian place name with an okina (ʻ) is no longer treated as a foreign
+  script.
 
 ### Audit fixes first written for 2.6.3-rc.1
 
