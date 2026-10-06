@@ -225,6 +225,7 @@ describe("POST /flights/:id/observed-times", () => {
   it("answers another user's flight like a missing one", async () => {
     const res = await post(otherFlightId, { arrival: { at: minutesAgo(3) } });
     expect(res.status).toBe(404);
+    expect(res.body.code).toBe("FLIGHT_NOT_FOUND");
     const other = await prisma.flight.findUniqueOrThrow({ where: { id: otherFlightId } });
     expect(other.status).toBe("scheduled");
     expect(await prisma.pendingFlightUpdate.count({ where: { flightId: otherFlightId } })).toBe(0);

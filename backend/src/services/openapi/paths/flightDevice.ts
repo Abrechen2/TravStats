@@ -69,7 +69,7 @@ registry.registerPath({
       description: "The recording, or null",
       content: { "application/json": { schema: z.object({ track: flightTrack.nullable() }) } },
     },
-    404: { description: "Flight not found", content: errorContent },
+    404: { description: "Flight not found — `code: FLIGHT_NOT_FOUND`", content: errorContent },
   },
 });
 
@@ -103,7 +103,7 @@ registry.registerPath({
     201: { description: "Stored", content: { "application/json": { schema: writeAnswer } } },
     400: { description: "Invalid body (VALIDATION_FAILED)", content: errorContent },
     403: { description: "Read-only token, or the shared demo account", content: errorContent },
-    404: { description: "Flight not found", content: errorContent },
+    404: { description: "Flight not found — `code: FLIGHT_NOT_FOUND`", content: errorContent },
     409: {
       description: "Another recording is stored (TRACK_ALREADY_RECORDED)",
       content: errorContent,
@@ -125,7 +125,7 @@ registry.registerPath({
       description: "1 when a recording was removed, 0 when there was none",
       content: { "application/json": { schema: z.object({ deleted: z.number().int() }) } },
     },
-    404: { description: "Flight not found", content: errorContent },
+    404: { description: "Flight not found — `code: FLIGHT_NOT_FOUND`", content: errorContent },
   },
 });
 
@@ -170,7 +170,7 @@ registry.registerPath({
     },
     400: { description: "Invalid body or a future time", content: errorContent },
     403: { description: "Read-only token", content: errorContent },
-    404: { description: "Flight not found", content: errorContent },
+    404: { description: "Flight not found — `code: FLIGHT_NOT_FOUND`", content: errorContent },
     422: { description: "Not this flight's airport or schedule", content: errorContent },
     429: { description: "Rate limited", content: errorContent },
   },

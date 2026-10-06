@@ -141,6 +141,12 @@ export type ApiErrorCode =
   | "TRACK_NO_TIMESTAMPS"
   /** Tour track upload: this recording is already on the tour. */
   | "TRACK_ALREADY_IMPORTED"
+  /** The device routes (flight track, observed times): no flight of this
+   *  user under that id. A server older than 2.7.0-rc.7 answers the same path
+   *  with a code-less 404, so the code is what tells the Companion "this
+   *  flight is gone — stop retrying" from "this server has no route yet"
+   *  (forgejo#201). */
+  | "FLIGHT_NOT_FOUND"
   /** Flight recording (forgejo#193): the flight already has a recording under
    *  another upload id; resend with `replace: true` to swap it. */
   | "TRACK_ALREADY_RECORDED"

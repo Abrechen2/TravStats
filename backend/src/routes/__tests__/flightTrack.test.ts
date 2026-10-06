@@ -232,6 +232,8 @@ describe("Flight recordings — /flights/:id/track", () => {
       .set("Cookie", cookie)
       .send({ uploadId: "steal", points: points(5) });
     expect(post.status).toBe(404);
+    // forgejo#201: the code tells "flight gone" from "route missing on an old server".
+    expect(post.body.code).toBe("FLIGHT_NOT_FOUND");
     expect((await request(app).get(url).set("Cookie", cookie)).status).toBe(404);
     expect((await request(app).delete(url).set("Cookie", cookie)).status).toBe(404);
     expect(await prisma.flightTrack.count({ where: { flightId: otherFlightId } })).toBe(0);
