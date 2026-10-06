@@ -29,7 +29,7 @@ router.post("/:id/observed-times", async (req: AuthRequest, res: Response, next:
     const userId = req.userId!;
     // Owner check first: another user's flight answers 404 whatever the body.
     const flight = await prisma.flight.findFirst({ where: { id: req.params.id, userId } });
-    if (!flight) throw new AppError("Flight not found", 404);
+    if (!flight) throw new AppError("Flight not found", 404, "FLIGHT_NOT_FOUND");
 
     const observed = observedTimesSchema.parse(req.body);
     const refusal = await refuseObservation(flight, observed, clockNow());

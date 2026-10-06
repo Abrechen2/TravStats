@@ -65,7 +65,7 @@ async function loadOwnedFlight(flightId: string, userId: string) {
       arrIcao: true,
     },
   });
-  if (!flight) throw new AppError("Flight not found", 404);
+  if (!flight) throw new AppError("Flight not found", 404, "FLIGHT_NOT_FOUND");
   return flight;
 }
 
