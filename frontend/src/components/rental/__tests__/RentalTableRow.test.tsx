@@ -63,6 +63,37 @@ describe("RentalTableRow — licence plate", () => {
   });
 });
 
+// forgejo#205: the list named the booked class even when the car driven was known.
+describe("RentalTableRow — the car driven", () => {
+  it("names the car actually driven first, the plate below it", () => {
+    const row = renderRow(
+      makeRental({
+        vehicleClass: "Compact",
+        vehicleDriven: "VW Golf",
+        licensePlate: "F-TS 2026",
+      })
+    );
+    const cell = cellOf(row, "vehicle");
+    expect(within(cell).getByTestId("rental-vehicle").textContent).toBe("VW Golf");
+    expect(cell.textContent).toBe("VW GolfF-TS 2026");
+    expect(cell.textContent).not.toContain("Compact");
+  });
+
+  it("falls back to the booked class when no driven car is recorded", () => {
+    const row = renderRow(
+      makeRental({ vehicleClass: "Compact", vehicleDriven: null, licensePlate: "F-TS 2026" })
+    );
+    const cell = cellOf(row, "vehicle");
+    expect(within(cell).getByTestId("rental-vehicle").textContent).toBe("Compact");
+    expect(cell.textContent).toBe("CompactF-TS 2026");
+  });
+
+  it("abstains with a dash when neither car nor plate is known", () => {
+    const row = renderRow(makeRental({ vehicleClass: null, vehicleDriven: null }));
+    expect(cellOf(row, "vehicle").textContent).toBe("—");
+  });
+});
+
 // forgejo#197: the provider tile is a monogram on the domain colour; a status
 // pill only when the rental is not simply done.
 describe("RentalTableRow — tile and status", () => {

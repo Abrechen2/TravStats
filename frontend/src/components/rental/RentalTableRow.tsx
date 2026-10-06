@@ -43,7 +43,8 @@ interface Props {
 
 /**
  * One rental as a table row: provider and stations, the period on the
- * stations' calendars, the car and its plate, and the km figure — or
+ * stations' calendars, the car (the one driven, else the booked class) and its
+ * plate, and the km figure — or
  * "km offen" once a returned rental still waits for its invoice (a booked or
  * cancelled one has no km to wait for). A status pill appears only when the
  * rental is not simply done.
@@ -80,6 +81,10 @@ export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX
       "—"
     );
 
+  // The car actually driven, when known; the booked class only stands in for
+  // it (forgejo#205) — "Compact" says what was promised, not what was driven.
+  const vehicle = rental.vehicleDriven || rental.vehicleClass;
+
   const cell: Record<RentalColumnId, ReactNode> = {
     provider: <OperatorTile name={rental.provider} domain="rental" />,
     route: (
@@ -92,9 +97,13 @@ export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX
       count: rental.rentalDays,
     })}`,
     vehicle:
-      rental.vehicleClass || rental.licensePlate ? (
+      vehicle || rental.licensePlate ? (
         <span className="flex min-w-0 flex-col">
-          {rental.vehicleClass ? <span className="truncate">{rental.vehicleClass}</span> : null}
+          {vehicle ? (
+            <span className="truncate" data-testid="rental-vehicle">
+              {vehicle}
+            </span>
+          ) : null}
           {rental.licensePlate ? (
             <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
               {rental.licensePlate}
