@@ -88,11 +88,64 @@ const near = (hit: PlaceResult, row: Row): boolean =>
 const fold = (s: string): string => s.normalize("NFC").toLowerCase().replace(/\s+/gu, " ").trim();
 
 /**
+ * Words that only say what KIND of place a name is. A longer map name may add
+ * these and still be the same place; any other word makes it a different
+ * object that merely mentions the place — on prod, 2026-10-06, "Fuji" matched
+ * "Mount Fuji Weather Station" (the summit's weather station) and "Wat Pho"
+ * matched "Wat Pho directoty" (a signboard), and both would have been named
+ * after that object.
+ */
+const TYPE_WORDS = new Set([
+  "the",
+  "of",
+  "national",
+  "old",
+  "great",
+  "shrine",
+  "temple",
+  "palace",
+  "castle",
+  "fort",
+  "fortress",
+  "tower",
+  "bridge",
+  "gate",
+  "station",
+  "museum",
+  "park",
+  "garden",
+  "gardens",
+  "market",
+  "square",
+  "mosque",
+  "church",
+  "cathedral",
+  "chapel",
+  "monastery",
+  "pagoda",
+  "hall",
+  "mount",
+  "mountain",
+  "lake",
+  "island",
+  "beach",
+  "falls",
+  "waterfall",
+  "bay",
+  "valley",
+  "observatory",
+  "village",
+]);
+
+const extraWordsAreTypes = (hitName: string, needle: string): boolean =>
+  (hitName.replace(needle, " ").match(/[\p{L}\p{N}]+/gu) ?? []).every((w) => TYPE_WORDS.has(w));
+
+/**
  * Second tier, for a stored name the map writes longer — "Jongmyo" vs OSM's
  * "Jongmyo Shrine", "Changdeokgung" vs "Changdeokgung Palace" (prod,
  * 2026-10-06): a nearby object whose English name contains the stored name as
- * whole words. Taken only when exactly ONE object qualifies; two candidates is
- * a guess, and a guess is not made.
+ * whole words, and adds nothing but TYPE_WORDS. Taken only when exactly ONE
+ * object qualifies; two candidates is a guess, and a guess is not made.
  */
 function onlyContaining(english: readonly PlaceResult[], row: Row): PlaceResult | undefined {
   const needle = fold(row.name);
@@ -102,7 +155,11 @@ function onlyContaining(english: readonly PlaceResult[], row: Row): PlaceResult 
     "u"
   );
   const found = english.filter(
-    (h) => h.externalRef !== undefined && near(h, row) && words.test(fold(h.name))
+    (h) =>
+      h.externalRef !== undefined &&
+      near(h, row) &&
+      words.test(fold(h.name)) &&
+      extraWordsAreTypes(fold(h.name), needle)
   );
   const refs = new Set(found.map((h) => h.externalRef));
   return refs.size === 1 ? found[0] : undefined;
