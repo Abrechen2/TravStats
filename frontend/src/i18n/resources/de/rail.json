@@ -326,6 +326,32 @@
       "looksLikeFlight": "Der KI-Parser hat statt Bahnhöfen Flughafen-Kürzel gelesen — das Dokument ist vermutlich eine Flugbuchung. Nichts wurde übernommen.",
       "llmCloudNotConsented": "Keine Vorlage kennt dieses Ticket, und der KI-Anbieter liegt außerhalb des Netzwerks, ohne dass der Administrator dem Senden zugestimmt hat.",
       "llmProviderIncomplete": "Keine Vorlage kennt dieses Ticket, und der KI-Anbieter ist nicht vollständig eingerichtet."
+    },
+    "reservation": {
+      "title": "Sitzplatzreservierung übernehmen",
+      "intro": "Das ist eine Reservierung, keine Fahrkarte. Es wird keine neue Fahrt angelegt — Wagen und Platz kommen zu den Fahrten, die schon im Fahrtenbuch stehen.",
+      "forJourney": "Reservierung für bestehende Fahrt",
+      "subSection": "Teilstrecke der Fahrt: {{from}} → {{to}}",
+      "seat": "Wagen {{coach}}, Platz {{seat}}",
+      "take": "Platz für {{from}} → {{to}} übernehmen",
+      "apply_one": "{{count}} Platz übernehmen",
+      "apply_other": "{{count}} Plätze übernehmen",
+      "applied": "Eingetragen.",
+      "done_one": "{{count}} Sitzplatz in eine bestehende Fahrt übernommen.",
+      "done_other": "{{count}} Sitzplätze in bestehende Fahrten übernommen.",
+      "status": {
+        "attach": "Wagen und Platz werden bei dieser Fahrt eingetragen.",
+        "change": "Diese Fahrt hat schon Wagen {{coach}}, Platz {{seat}}. Nur wenn du anhakst, wird er durch den reservierten ersetzt.",
+        "alreadySet": "Dieser Platz steht bei der Fahrt schon — nichts zu tun.",
+        "several_one": "{{count}} Fahrt passt — es wird keine ausgewählt. Trag den Platz in der richtigen Fahrt von Hand ein:",
+        "several_other": "{{count}} Fahrten passen (gleicher Zug, gleicher Tag) — es wird keine ausgewählt. Trag den Platz in der richtigen Fahrt von Hand ein:",
+        "sameJourneyTwice": "Ein weiterer Abschnitt dieser Reservierung gehört zur selben Fahrt — welcher Platz gilt, ist nicht eindeutig. Trag ihn von Hand ein.",
+        "none": {
+          "noJourney": "Keine passende Fahrt im Fahrtenbuch (gleicher Zug, gleicher Tag, passende Bahnhöfe) — nichts wird eingetragen.",
+          "noTrain": "Die Reservierung nennt keinen Zug — sie lässt sich keiner Fahrt zuordnen.",
+          "noSeat": "Die Reservierung nennt weder Wagen noch Platz — nichts einzutragen."
+        }
+      }
     }
   },
   "summary": {
