@@ -1,6 +1,7 @@
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatRentalPeriod } from "../../lib/rentalTime";
+import { rentalDrivenKm } from "../../shared/rentalCounting";
 import type { RentalBooking } from "../../types/rental";
 import { OperatorTile } from "../table/OperatorTile";
 import { statusPillProps } from "../table/statusPillStyle";
@@ -43,10 +44,10 @@ interface Props {
 
 /**
  * One rental as a table row: provider and stations, the period on the
- * stations' calendars, the car and its plate, and the km figure — or
+ * stations' calendars, the car (the one driven, else the booked class) and its
+ * plate, and the km figure — or
  * "km offen" once a returned rental still waits for its invoice (a booked or
- * cancelled one has no km to wait for). A status pill appears only when the
- * rental is not simply done.
+ * cancelled one has no km to wait for). Every row carries its status pill.
  */
 export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["rental"]);
@@ -64,10 +65,14 @@ export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX
     .filter(Boolean)
     .join(" · ");
 
+  // The invoice's figure, a correction, or in − out of the two odometer
+  // readings — the one rule (`rentalDrivenKm`, forgejo#206). Only a hand
+  // correction is labelled as such.
+  const driven = rentalDrivenKm(rental);
   const km =
-    rental.distanceKm !== null ? (
-      `${rental.distanceKm.toLocaleString(locale)} km${
-        rental.distanceSource === "user" ? ` (${t("rental:distance.user")})` : ""
+    driven !== null ? (
+      `${driven.km.toLocaleString(locale)} km${
+        driven.source === "user" ? ` (${t("rental:distance.user")})` : ""
       }`
     ) : rental.status === "completed" ? (
       <span
@@ -79,6 +84,10 @@ export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX
     ) : (
       "—"
     );
+
+  // The car actually driven, when known; the booked class only stands in for
+  // it (forgejo#205) — "Compact" says what was promised, not what was driven.
+  const vehicle = rental.vehicleDriven || rental.vehicleClass;
 
   const cell: Record<RentalColumnId, ReactNode> = {
     provider: <OperatorTile name={rental.provider} domain="rental" />,
@@ -92,9 +101,13 @@ export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX
       count: rental.rentalDays,
     })}`,
     vehicle:
-      rental.vehicleClass || rental.licensePlate ? (
+      vehicle || rental.licensePlate ? (
         <span className="flex min-w-0 flex-col">
-          {rental.vehicleClass ? <span className="truncate">{rental.vehicleClass}</span> : null}
+          {vehicle ? (
+            <span className="truncate" data-testid="rental-vehicle">
+              {vehicle}
+            </span>
+          ) : null}
           {rental.licensePlate ? (
             <span className="t-caption" style={{ fontFamily: "var(--ts-font-mono)" }}>
               {rental.licensePlate}
@@ -105,12 +118,14 @@ export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX
         "—"
       ),
     km,
-    status:
-      rental.status !== "completed" ? (
-        <span {...statusPillProps(rental.status)} data-testid="rental-status">
-          {t(`rental:status.${rental.status}`)}
-        </span>
-      ) : null,
+    // Always a pill, like the rail list (forgejo#207): the stored status is the
+    // cache of `deriveRentalStatus` the status sweep keeps current, and an
+    // empty cell read as "unknown" rather than "done".
+    status: (
+      <span {...statusPillProps(rental.status)} data-testid="rental-status">
+        {t(`rental:status.${rental.status}`)}
+      </span>
+    ),
     trip: <TripPill trip={rental.trip ?? null} />,
     // The row opens the rental; a click on an action must not also reach it.
     actions: <span onClick={(e) => e.stopPropagation()}>{actions}</span>,

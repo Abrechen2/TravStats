@@ -324,7 +324,7 @@
     "railBrouter": "Rail · route (BRouter)",
     "railStraight": "Rail · straight line",
     "tour": "Tour",
-    "rentalSame": "Rental car · returned where picked up (one ringed point)",
+    "rentalSame": "Rental car · returned where picked up (one point)",
     "rentalEnds": "Rental car · pickup hollow, return filled",
     "rentalOneWay": "Rental car · one-way, not the route driven"
   },

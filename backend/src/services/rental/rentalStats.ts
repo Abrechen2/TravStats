@@ -4,6 +4,7 @@ import {
   rentalCost,
   rentalCountries,
   rentalDays,
+  rentalDrivenKm,
   rentalYear,
 } from "../../shared/rentalCounting";
 import { isOneWay } from "./rentalWrite";
@@ -58,6 +59,9 @@ type Row = {
   finalAmount: number | null;
   finalCurrency: string | null;
   distanceKm: number | null;
+  distanceSource: string | null;
+  odometerOutKm: number | null;
+  odometerInKm: number | null;
 };
 
 type FeeRow = Pick<
@@ -127,8 +131,11 @@ export function computeRentalStats(
         days: c.days + days[i],
       });
     }
-    if (r.distanceKm !== null) {
-      kmTotal += r.distanceKm;
+    // The invoice's figure, a correction, or in − out — the one rule
+    // (`rentalDrivenKm`); a rental with none stays out of the sum.
+    const driven = rentalDrivenKm(r);
+    if (driven !== null) {
+      kmTotal += driven.km;
       kmCovered += 1;
     }
   });
@@ -196,6 +203,9 @@ export async function rentalStatsFor(userId: string, year: number | null): Promi
       finalAmount: true,
       finalCurrency: true,
       distanceKm: true,
+      distanceSource: true,
+      odometerOutKm: true,
+      odometerInKm: true,
     },
   });
   return computeRentalStats(rows, year, cancelled);

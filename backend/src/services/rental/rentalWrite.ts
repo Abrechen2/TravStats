@@ -215,6 +215,31 @@ function haversineKm(lat1: number, lon1: number, lat2: number, lon2: number): nu
 }
 
 /**
+ * Refuse a write that leaves the return odometer BELOW the pick-up one
+ * (forgejo#206) — 400 `RENTAL_ODOMETER_REVERSED` on `odometerInKm`. Checked on
+ * the merged row, so a PATCH of one reading is held against the stored other;
+ * a write that touches neither reading never trips over a stored pair.
+ */
+export function assertOdometerOrder(
+  existing: { odometerOutKm: number | null; odometerInKm: number | null } | null,
+  input: Pick<UpdateRentalInput, "odometerOutKm" | "odometerInKm">
+): void {
+  if (input.odometerOutKm === undefined && input.odometerInKm === undefined) return;
+  const out =
+    input.odometerOutKm !== undefined ? input.odometerOutKm : (existing?.odometerOutKm ?? null);
+  const back =
+    input.odometerInKm !== undefined ? input.odometerInKm : (existing?.odometerInKm ?? null);
+  if (out !== null && back !== null && back < out) {
+    throw new AppError(
+      "the odometer at return must not be below the one at pick-up",
+      400,
+      "RENTAL_ODOMETER_REVERSED",
+      "odometerInKm"
+    );
+  }
+}
+
+/**
  * The km a write leaves on the row. A person's figure is a labelled
  * correction (`user`); null clears the figure and its source; absent leaves
  * whatever the invoice (or an earlier correction) put there.

@@ -16,6 +16,7 @@ import { RENTAL_PROVIDER_SUGGESTIONS } from "./rentalProviders";
 import {
   EMPTY_RENTAL_DRAFT,
   RENTAL_LICENSE_PLATE_MAX,
+  draftDrivenKm,
   draftFromRental,
   rentalInputFromDraft,
   rentalSaveError,
@@ -61,13 +62,15 @@ function Field({
 /**
  * Manual entry of a rental (spec 2026-10-01-rental-domain-design §6, R1).
  * Times are typed on each STATION's clock; the server places the station and
- * reads the clock in its zone (ADR 0002). Kilometres and the final amount
- * belong to the invoice — the km field here is a labelled correction, said so
- * beside it. A failed save shows the refusal's own sentence and leaves the
+ * reads the clock in its zone (ADR 0002). Kilometres come from the invoice,
+ * else from the two odometer readings (forgejo#206); the km field here is a
+ * labelled correction that overrides both, and the line below the fields says
+ * which figure will count. A failed save shows the refusal's own sentence and leaves the
  * dialog open (silent-failure class 3).
  */
 export function RentalFormModal({ rental, onClose, onSaved }: Props): JSX.Element {
-  const { t } = useTranslation(["rental", "common"]);
+  const { t, i18n } = useTranslation(["rental", "common"]);
+  const locale = i18n.language.startsWith("en") ? "en-GB" : "de-DE";
   const recentCurrencies = useRecentCurrencies();
   const [draft, setDraft] = useState<RentalDraft>(
     rental ? draftFromRental(rental) : EMPTY_RENTAL_DRAFT
@@ -77,6 +80,8 @@ export function RentalFormModal({ rental, onClose, onSaved }: Props): JSX.Elemen
   const [error, setError] = useState<RentalSaveError | null>(null);
   const errors = validateRentalDraft(draft);
   const ready = Object.keys(errors).length === 0;
+  // Which figure will count once saved — the rule the list and stats read.
+  const driven = draftDrivenKm(draft);
   const set = <K extends keyof RentalDraft>(key: K, value: RentalDraft[K]): void =>
     setDraft((d) => ({ ...d, [key]: value }));
   const fieldError = (field: keyof typeof errors): string | null => {
@@ -328,14 +333,40 @@ export function RentalFormModal({ rental, onClose, onSaved }: Props): JSX.Elemen
           </div>
         </fieldset>
 
-        <Field label={t("rental:form.distanceKm")} error={fieldError("distanceKm")}>
-          <input
-            inputMode="numeric"
-            className={INPUT_CLASS}
-            value={draft.distanceKm}
-            onChange={(e) => set("distanceKm", e.target.value)}
-          />
-        </Field>
+        <div className="grid gap-3 sm:grid-cols-3">
+          <Field label={t("rental:form.odometerOutKm")} error={fieldError("odometerOutKm")}>
+            <input
+              inputMode="numeric"
+              className={INPUT_CLASS}
+              value={draft.odometerOutKm}
+              onChange={(e) => set("odometerOutKm", e.target.value)}
+            />
+          </Field>
+          <Field label={t("rental:form.odometerInKm")} error={fieldError("odometerInKm")}>
+            <input
+              inputMode="numeric"
+              className={INPUT_CLASS}
+              value={draft.odometerInKm}
+              onChange={(e) => set("odometerInKm", e.target.value)}
+            />
+          </Field>
+          <Field label={t("rental:form.distanceKm")} error={fieldError("distanceKm")}>
+            <input
+              inputMode="numeric"
+              className={INPUT_CLASS}
+              value={draft.distanceKm}
+              onChange={(e) => set("distanceKm", e.target.value)}
+            />
+          </Field>
+        </div>
+        <p className="t-caption" data-testid="rental-form-driven" aria-live="polite">
+          {driven === null
+            ? t("rental:form.drivenUnknown")
+            : t("rental:form.driven", {
+                km: driven.km.toLocaleString(locale),
+                source: t(`rental:distance.${driven.source ?? "unknown"}`),
+              })}
+        </p>
         <p className="t-caption">{t("rental:form.distanceHint")}</p>
 
         <Field label={t("rental:form.notes")}>

@@ -387,6 +387,19 @@ export function RailFormModal({
                 local={draft.arrivalLocal}
                 zone={knownStationZone(journey, "arr", draft.arrival)}
               />
+              {/* Beside the arrival it qualifies, with a label that stays
+                  visible once typed into (forgejo#202) — it used to sit in
+                  the seat section with only a placeholder. */}
+              <label className="mt-3 block text-sm">
+                {t("rail:form.delay")}
+                <input
+                  type="number"
+                  className={`mt-1 ${INPUT_CLASS}`}
+                  aria-label={t("rail:form.delay")}
+                  value={draft.delayMinutes}
+                  onChange={(e): void => set("delayMinutes", e.target.value)}
+                />
+              </label>
             </div>
           </div>
           <p className="mt-2 text-xs text-(--text-muted)">{t("rail:form.timeHint")}</p>
@@ -413,7 +426,7 @@ export function RailFormModal({
         </Section>
 
         <Section title={t("rail:form.seat")}>
-          <div className="grid grid-cols-2 gap-3 sm:grid-cols-4">
+          <div className="grid grid-cols-2 gap-3 sm:grid-cols-3">
             <div>
               <select
                 aria-label={t("rail:form.class")}
@@ -469,14 +482,6 @@ export function RailFormModal({
                 fieldLabel={t("rail:form.seatNumber")}
               />
             </div>
-            <input
-              type="number"
-              className={INPUT_CLASS}
-              aria-label={t("rail:form.delay")}
-              placeholder={t("rail:form.delay")}
-              value={draft.delayMinutes}
-              onChange={(e): void => set("delayMinutes", e.target.value)}
-            />
           </div>
         </Section>
 

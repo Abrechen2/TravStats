@@ -477,4 +477,27 @@ describe("RailFormModal", () => {
     await waitFor(() => expect(onSaved).toHaveBeenCalled());
     expect(useToastStore.getState().toasts).toEqual([]);
   });
+
+  // forgejo#202: the delay sat among class/coach/seat with only a placeholder,
+  // which vanished — and was cut off — once the field had a value.
+  it("labels the arrival delay visibly and keeps it with the times, not the seat", async () => {
+    render(<RailFormModal journey={null} onClose={vi.fn()} onSaved={vi.fn()} />);
+    await waitFor(() => expect(getAllTrips).toHaveBeenCalled());
+
+    const delay = screen.getByLabelText("rail:form.delay");
+    expect(delay).toHaveAttribute("type", "number");
+    expect(delay).not.toHaveAttribute("placeholder");
+    // A visible label, not just an accessible name: the text is rendered.
+    const label = delay.closest("label");
+    expect(label).not.toBeNull();
+    expect(label).toHaveTextContent("rail:form.delay");
+
+    const seatSection = screen.getByText("rail:form.seat").closest("details");
+    const routeSection = screen.getByText("rail:form.route").closest("details");
+    expect(seatSection).not.toContainElement(delay);
+    expect(routeSection).toContainElement(delay);
+    // Next to the arrival it qualifies: both in the same column.
+    const arrival = screen.getByLabelText("rail:form.arrivalTime");
+    expect(arrival.closest("label")?.parentElement).toBe(label?.parentElement);
+  });
 });

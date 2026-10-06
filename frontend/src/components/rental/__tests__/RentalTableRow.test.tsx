@@ -55,6 +55,36 @@ describe("RentalTableRow — the open-km pill", () => {
   });
 });
 
+// forgejo#206: in − out of the two odometer readings counts like an invoice's
+// figure; only a hand correction is labelled, and one reading gives nothing.
+describe("RentalTableRow — km from the odometer", () => {
+  it("shows in − out when both readings are known, unlabelled", () => {
+    const row = renderRow(
+      makeRental({ status: "completed", odometerOutKm: 12_000, odometerInKm: 12_634 })
+    );
+    expect(cellOf(row, "km").textContent).toBe("634 km");
+    expect(screen.queryByTestId("rental-km-open")).toBeNull();
+  });
+
+  it("labels a correction that overrides the readings", () => {
+    const row = renderRow(
+      makeRental({
+        status: "completed",
+        odometerOutKm: 12_000,
+        odometerInKm: 12_634,
+        distanceKm: 640,
+        distanceSource: "user",
+      })
+    );
+    expect(cellOf(row, "km").textContent).toBe("640 km (rental:distance.user)");
+  });
+
+  it("still waits for the km with only one reading", () => {
+    renderRow(makeRental({ status: "completed", odometerOutKm: 12_000 }));
+    expect(screen.getByTestId("rental-km-open")).toBeInTheDocument();
+  });
+});
+
 // forgejo#196: the plate is part of what the row says about the car.
 describe("RentalTableRow — licence plate", () => {
   it("shows the plate in the vehicle column when one is recorded", () => {
@@ -63,8 +93,40 @@ describe("RentalTableRow — licence plate", () => {
   });
 });
 
-// forgejo#197: the provider tile is a monogram on the domain colour; a status
-// pill only when the rental is not simply done.
+// forgejo#205: the list named the booked class even when the car driven was known.
+describe("RentalTableRow — the car driven", () => {
+  it("names the car actually driven first, the plate below it", () => {
+    const row = renderRow(
+      makeRental({
+        vehicleClass: "Compact",
+        vehicleDriven: "VW Golf",
+        licensePlate: "F-TS 2026",
+      })
+    );
+    const cell = cellOf(row, "vehicle");
+    expect(within(cell).getByTestId("rental-vehicle").textContent).toBe("VW Golf");
+    expect(cell.textContent).toBe("VW GolfF-TS 2026");
+    expect(cell.textContent).not.toContain("Compact");
+  });
+
+  it("falls back to the booked class when no driven car is recorded", () => {
+    const row = renderRow(
+      makeRental({ vehicleClass: "Compact", vehicleDriven: null, licensePlate: "F-TS 2026" })
+    );
+    const cell = cellOf(row, "vehicle");
+    expect(within(cell).getByTestId("rental-vehicle").textContent).toBe("Compact");
+    expect(cell.textContent).toBe("CompactF-TS 2026");
+  });
+
+  it("abstains with a dash when neither car nor plate is known", () => {
+    const row = renderRow(makeRental({ vehicleClass: null, vehicleDriven: null }));
+    expect(cellOf(row, "vehicle").textContent).toBe("—");
+  });
+});
+
+// forgejo#197: the provider tile is a monogram on the domain colour.
+// forgejo#207: a status pill on every row — a completed rental used to leave
+// the column empty, which read as "unknown".
 describe("RentalTableRow — tile and status", () => {
   it("draws the provider's monogram", () => {
     const row = renderRow(makeRental({ provider: "Share Now" }));
@@ -73,15 +135,13 @@ describe("RentalTableRow — tile and status", () => {
     expect(tile.textContent).toContain("SN");
   });
 
-  it("states no status for a completed rental", () => {
-    const row = renderRow(makeRental({ status: "completed" }));
-    expect(within(cellOf(row, "status")).queryByTestId("rental-status")).toBeNull();
-  });
-
-  it("states the status of a rental that is not simply done", () => {
-    const row = renderRow(makeRental({ status: "cancelled" }));
-    expect(within(cellOf(row, "status")).getByTestId("rental-status").textContent).toBe(
-      "rental:status.cancelled"
-    );
-  });
+  it.each(["scheduled", "in_progress", "completed", "cancelled"] as const)(
+    "states the status of a %s rental as a pill",
+    (status) => {
+      const row = renderRow(makeRental({ status }));
+      const pill = within(cellOf(row, "status")).getByTestId("rental-status");
+      expect(pill.textContent).toBe(`rental:status.${status}`);
+      expect(pill).toHaveClass("ts-status-pill");
+    }
+  );
 });

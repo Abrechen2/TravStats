@@ -97,3 +97,54 @@ export function rentalCost(rental: {
   }
   return null;
 }
+
+/** Where a rental's driven km come from: a stored figure's source, or the two odometer readings. */
+export type RentalDrivenKmSource = "invoice" | "agreement" | "user" | "odometer";
+
+export interface RentalDrivenKm {
+  km: number;
+  /** `user` is a hand correction and is shown as one; null = a stored figure of unrecorded origin. */
+  source: RentalDrivenKmSource | null;
+}
+
+/**
+ * The km between two odometer readings: in − out when BOTH are known and the
+ * car did not run backwards; null otherwise. One reading is never enough — a
+ * figure from half a pair would be an estimate (forgejo#206).
+ */
+export function odometerDistanceKm(
+  odometerOutKm: number | null,
+  odometerInKm: number | null
+): number | null {
+  if (odometerOutKm === null || odometerInKm === null) return null;
+  return odometerInKm >= odometerOutKm ? odometerInKm - odometerOutKm : null;
+}
+
+const STORED_SOURCES: readonly string[] = ["invoice", "agreement", "user"];
+
+/**
+ * The km a rental was driven (spec §3.1 `distanceKm`, forgejo#206) — the one
+ * rule the list, the detail page, the invoice reminder and the statistics
+ * read. A stored figure wins: the invoice's own, or a hand correction
+ * (`user`), which also overrides the readings. Without one, in − out of the
+ * two odometer readings. Else null — unknown, never 0.
+ */
+export function rentalDrivenKm(rental: {
+  distanceKm: number | null;
+  distanceSource: string | null;
+  odometerOutKm: number | null;
+  odometerInKm: number | null;
+}): RentalDrivenKm | null {
+  if (rental.distanceKm !== null) {
+    const source = rental.distanceSource;
+    return {
+      km: rental.distanceKm,
+      source:
+        source !== null && STORED_SOURCES.includes(source)
+          ? (source as RentalDrivenKmSource)
+          : null,
+    };
+  }
+  const km = odometerDistanceKm(rental.odometerOutKm, rental.odometerInKm);
+  return km === null ? null : { km, source: "odometer" };
+}

@@ -93,6 +93,20 @@ export const rentalBookingSchema = registry.register(
           "Driven km — from the final invoice or a labelled correction; null = unknown, never 0"
         ),
       distanceSource: z.enum(RENTAL_DISTANCE_SOURCES).nullable(),
+      odometerOutKm: z
+        .number()
+        .int()
+        .nullable()
+        .describe(
+          "Odometer at pick-up, km — from the invoice, an agreement or typed; null = not read. " +
+            "With `odometerInKm` and no `distanceKm`, the driven km are in − out; one reading " +
+            "alone gives none"
+        ),
+      odometerInKm: z
+        .number()
+        .int()
+        .nullable()
+        .describe("Odometer at return, km; null = not read. Never below `odometerOutKm`"),
       finalAmountSource: z
         .enum(["invoice", "user", "cancellationFee"])
         .nullable()
@@ -139,7 +153,10 @@ export const rentalBookingSchema = registry.register(
         ),
       invoiceMissing: z
         .boolean()
-        .describe("Returned, and no km from an invoice or a correction yet — remind (D11 b)"),
+        .describe(
+          "Returned, and no driven km yet — not from an invoice, a correction or both odometer " +
+            "readings — remind (D11 b)"
+        ),
       userEditedFields: z
         .array(z.string())
         .describe("Fields typed by hand — a later mail of the booking never replaces them"),
@@ -309,7 +326,9 @@ registry.registerPath({
       content: { "application/json": { schema: envelope(rentalBookingSchema) } },
     },
     400: {
-      description: "Validation failed (`RENTAL_INVALID_INPUT`, `RENTAL_RETURN_BEFORE_PICKUP`)",
+      description:
+        "Validation failed (`RENTAL_INVALID_INPUT`, `RENTAL_RETURN_BEFORE_PICKUP`, " +
+        "`RENTAL_ODOMETER_REVERSED` — the return odometer below the pick-up one)",
       content: errorContent,
     },
     404: { description: "Trip or roadtrip not found", content: errorContent },
@@ -339,7 +358,12 @@ registry.registerPath({
       description: "Updated",
       content: { "application/json": { schema: envelope(rentalBookingSchema) } },
     },
-    400: { description: "Validation failed", content: errorContent },
+    400: {
+      description:
+        "Validation failed; `RENTAL_ODOMETER_REVERSED` when the merged row's return odometer " +
+        "is below the pick-up one",
+      content: errorContent,
+    },
     404: { description: "Not found", content: errorContent },
   },
 });
