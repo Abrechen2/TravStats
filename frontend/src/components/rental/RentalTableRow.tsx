@@ -46,8 +46,7 @@ interface Props {
  * stations' calendars, the car (the one driven, else the booked class) and its
  * plate, and the km figure — or
  * "km offen" once a returned rental still waits for its invoice (a booked or
- * cancelled one has no km to wait for). A status pill appears only when the
- * rental is not simply done.
+ * cancelled one has no km to wait for). Every row carries its status pill.
  */
 export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX.Element {
   const { t, i18n } = useTranslation(["rental"]);
@@ -114,12 +113,14 @@ export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX
         "—"
       ),
     km,
-    status:
-      rental.status !== "completed" ? (
-        <span {...statusPillProps(rental.status)} data-testid="rental-status">
-          {t(`rental:status.${rental.status}`)}
-        </span>
-      ) : null,
+    // Always a pill, like the rail list (forgejo#207): the stored status is the
+    // cache of `deriveRentalStatus` the status sweep keeps current, and an
+    // empty cell read as "unknown" rather than "done".
+    status: (
+      <span {...statusPillProps(rental.status)} data-testid="rental-status">
+        {t(`rental:status.${rental.status}`)}
+      </span>
+    ),
     trip: <TripPill trip={rental.trip ?? null} />,
     // The row opens the rental; a click on an action must not also reach it.
     actions: <span onClick={(e) => e.stopPropagation()}>{actions}</span>,

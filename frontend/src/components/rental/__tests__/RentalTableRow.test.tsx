@@ -94,8 +94,9 @@ describe("RentalTableRow — the car driven", () => {
   });
 });
 
-// forgejo#197: the provider tile is a monogram on the domain colour; a status
-// pill only when the rental is not simply done.
+// forgejo#197: the provider tile is a monogram on the domain colour.
+// forgejo#207: a status pill on every row — a completed rental used to leave
+// the column empty, which read as "unknown".
 describe("RentalTableRow — tile and status", () => {
   it("draws the provider's monogram", () => {
     const row = renderRow(makeRental({ provider: "Share Now" }));
@@ -104,15 +105,13 @@ describe("RentalTableRow — tile and status", () => {
     expect(tile.textContent).toContain("SN");
   });
 
-  it("states no status for a completed rental", () => {
-    const row = renderRow(makeRental({ status: "completed" }));
-    expect(within(cellOf(row, "status")).queryByTestId("rental-status")).toBeNull();
-  });
-
-  it("states the status of a rental that is not simply done", () => {
-    const row = renderRow(makeRental({ status: "cancelled" }));
-    expect(within(cellOf(row, "status")).getByTestId("rental-status").textContent).toBe(
-      "rental:status.cancelled"
-    );
-  });
+  it.each(["scheduled", "in_progress", "completed", "cancelled"] as const)(
+    "states the status of a %s rental as a pill",
+    (status) => {
+      const row = renderRow(makeRental({ status }));
+      const pill = within(cellOf(row, "status")).getByTestId("rental-status");
+      expect(pill.textContent).toBe(`rental:status.${status}`);
+      expect(pill).toHaveClass("ts-status-pill");
+    }
+  );
 });
