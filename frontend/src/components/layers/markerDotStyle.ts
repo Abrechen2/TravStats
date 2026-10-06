@@ -59,6 +59,17 @@ export const MARKER_DOT_MIN_PX = 4;
 /** Maximum on-screen dot radius in pixels, before the user's size-slider multiplier. */
 export const MARKER_DOT_MAX_PX = 8;
 
+/**
+ * The pixel-sized station dot of the line domains — a rail station, and a
+ * rental picked up and returned at one place (forgejo#208): opaque in the
+ * domain colour, a thin dark outline that keeps it readable on a light basemap,
+ * scaled by the domain's station-size slider. One definition, so the rental
+ * dot cannot drift from the rail one it is meant to look like.
+ */
+export const STATION_DOT_RADIUS_PX = 4;
+export const STATION_DOT_OUTLINE_RGBA: [number, number, number, number] = [15, 18, 24, 255];
+export const STATION_DOT_OUTLINE_PX = 1;
+
 export interface MarkerDotRadiusProps {
   getRadius: number;
   radiusMinPixels: number;

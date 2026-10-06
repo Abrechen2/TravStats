@@ -1,6 +1,11 @@
 import { PathLayer, ScatterplotLayer } from "@deck.gl/layers";
 import type { Layer } from "@deck.gl/core";
 import { greatCirclePath } from "./greatCircle";
+import {
+  STATION_DOT_OUTLINE_PX,
+  STATION_DOT_OUTLINE_RGBA,
+  STATION_DOT_RADIUS_PX,
+} from "./markerDotStyle";
 import type { Rgb } from "../../lib/domainColor";
 import type { RailJourney } from "../../types/rail";
 
@@ -150,8 +155,8 @@ export interface RailLayerOptions {
 
 /** Default widths in pixels: a firm line for real track, a thinner chord. */
 export const RAIL_LINE_WIDTH_PX = { traced: 3.5, chord: 2 } as const;
-/** Default station-dot radius in pixels. */
-export const RAIL_STATION_RADIUS_PX = 4;
+/** Default station-dot radius in pixels — the shared station dot's. */
+export const RAIL_STATION_RADIUS_PX = STATION_DOT_RADIUS_PX;
 
 const lift = (altitudeM: number) => (point: [number, number]) =>
   altitudeM === 0 ? point : ([point[0], point[1], altitudeM] as [number, number, number]);
@@ -194,9 +199,9 @@ export function buildRailDeckLayers(
       data: stations,
       getPosition: (d) => up(d.position),
       getFillColor: [...color, 255] as [number, number, number, number],
-      getLineColor: [15, 18, 24, 255],
+      getLineColor: STATION_DOT_OUTLINE_RGBA,
       lineWidthUnits: "pixels",
-      getLineWidth: 1,
+      getLineWidth: STATION_DOT_OUTLINE_PX,
       stroked: true,
       radiusUnits: "pixels",
       getRadius: RAIL_STATION_RADIUS_PX * stationSize,
