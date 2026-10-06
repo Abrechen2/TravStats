@@ -145,13 +145,43 @@ describe("local-name fill", () => {
     expect(report.fills).toMatchObject([{ placeId: p.id, localName: "종묘" }]);
   });
 
+  // Prod dry run, 2026-10-06: both would have taken another object's name.
+  it.each([
+    ["Fuji", "JP", "Mount Fuji Weather Station", "富士山測候所"],
+    ["Wat Pho", "TH", "Wat Pho directoty", "แผนผังวัดโพธิ์"],
+  ])(
+    "does not take the name of an object that merely mentions %s",
+    async (name, isoCountryCode, longer, local) => {
+      const p = await place(name, { isoCountryCode });
+      const report = await run(
+        fake(
+          [hit({ name: longer, externalRef: "osm:way/8" })],
+          [hit({ name: local, externalRef: "osm:way/8" })]
+        )
+      );
+      expect(report.abstentions).toMatchObject([{ placeId: p.id, reason: "no_match" }]);
+      expect((await reload(p.id)).localName).toBeNull();
+    }
+  );
+
+  it("accepts a longer map name that adds only what kind of place it is", async () => {
+    const p = await place("Fuji", { isoCountryCode: "JP" });
+    const report = await run(
+      fake(
+        [hit({ name: "Mount Fuji", externalRef: "osm:node/9" })],
+        [hit({ name: "富士山", externalRef: "osm:node/9" })]
+      )
+    );
+    expect(report.fills).toMatchObject([{ placeId: p.id, localName: "富士山" }]);
+  });
+
   it("does not guess between two nearby objects that both contain the name", async () => {
     const p = await place("Peace Park");
     const report = await run(
       fake(
         [
-          hit({ name: "Imjingak Peace Park", externalRef: "osm:way/6" }),
-          hit({ name: "Peace Park Parking", externalRef: "osm:way/7" }),
+          hit({ name: "Peace Park Square", externalRef: "osm:way/6" }),
+          hit({ name: "Peace Park Station", externalRef: "osm:way/7" }),
         ],
         [hit({ name: "평화누리공원", externalRef: "osm:way/6" })]
       )
