@@ -3,6 +3,13 @@ import { foldStationName } from "../railStations";
 import { instantToWallClock } from "../railJourneyWrite";
 import { calculateDistance } from "../../../utils/geo";
 import { zoneOf } from "../../../shared/time/zoneOf";
+import {
+  loadReservationCandidates,
+  matchReservation,
+  withoutSharedTargets,
+  type ReservationMatch,
+  type ReservationStation,
+} from "../reservationMatch";
 import type { ParsedRailBooking, ParsedRailLeg } from "./types";
 
 /**
@@ -39,6 +46,11 @@ export interface RailLegCandidate extends ParsedRailLeg {
   arrivalStation: RailStationCandidate;
   /** The id of a journey already logged with this reference and departure. */
   duplicateOf: string | null;
+  /**
+   * Present only on a reservation document's legs (forgejo#203): the logged
+   * journey this seat belongs to, or why there is none to attach it to.
+   */
+  reservation?: ReservationMatch;
 }
 
 export interface RailImportCandidate extends Omit<ParsedRailBooking, "legs"> {
@@ -237,6 +249,9 @@ export async function toRailCandidate(
       .get(key)!
       .then((s) => ({ ...s, printedName: name, name: s.resolved ? s.name : name }));
   };
+  if (booking.documentKind === "reservation") {
+    return reservationCandidate(booking, userId, station);
+  }
   const legs: RailLegCandidate[] = [];
   for (const leg of booking.legs) {
     legs.push({
@@ -247,4 +262,45 @@ export async function toRailCandidate(
     });
   }
   return { ...booking, legs };
+}
+
+const asReservationStation = (s: RailStationCandidate): ReservationStation => ({
+  stationId: s.stationId,
+  names: [s.name, s.printedName],
+});
+
+/**
+ * A reservation's legs never become journeys: each is matched to the user's
+ * logged rides (`reservationMatch.ts`), and the review offers the seat for the
+ * one it found. Without a user there is nothing to match against.
+ */
+async function reservationCandidate(
+  booking: ParsedRailBooking,
+  userId: string | undefined,
+  station: (name: string) => Promise<RailStationCandidate>
+): Promise<RailImportCandidate> {
+  const legs: RailLegCandidate[] = [];
+  const matches: ReservationMatch[] = [];
+  for (const leg of booking.legs) {
+    const departureStation = await station(leg.depStationName);
+    const arrivalStation = await station(leg.arrStationName);
+    const journeys = userId ? await loadReservationCandidates(userId, leg) : [];
+    matches.push(
+      matchReservation(
+        {
+          ...leg,
+          departure: asReservationStation(departureStation),
+          arrival: asReservationStation(arrivalStation),
+        },
+        journeys
+      )
+    );
+    legs.push({ ...leg, departureStation, arrivalStation, duplicateOf: null });
+  }
+  const settled = withoutSharedTargets(matches);
+  return {
+    ...booking,
+    documentKind: "reservation",
+    legs: legs.map((leg, i) => ({ ...leg, reservation: settled[i] })),
+  };
 }

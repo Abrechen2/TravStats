@@ -365,7 +365,32 @@ export interface RailImportLeg {
   arrivalStation: RailImportStation;
   /** A journey the user already logged with this reference and departure. */
   duplicateOf: string | null;
+  /** Only on a reservation document's legs: the logged journey the seat belongs to. */
+  reservation?: RailReservationMatch;
 }
+
+/** A logged journey a later seat reservation may attach to (forgejo#203). */
+export interface RailReservationTarget {
+  id: string;
+  trainCategory: string | null;
+  trainNumber: string | null;
+  depStationName: string;
+  arrStationName: string;
+  /** `YYYY-MM-DDTHH:mm` on the departure station's clock. */
+  departureLocal: string;
+  arrivalLocal: string | null;
+  coach: string | null;
+  seat: string | null;
+}
+
+/** What the server found for one reservation leg — nothing is guessed. */
+export type RailReservationMatch =
+  | { kind: "attach"; target: RailReservationTarget; subSection: boolean }
+  | { kind: "change"; target: RailReservationTarget; subSection: boolean }
+  | { kind: "alreadySet"; target: RailReservationTarget; subSection: boolean }
+  | { kind: "several"; targets: RailReservationTarget[] }
+  | { kind: "sameJourneyTwice"; target: RailReservationTarget }
+  | { kind: "none"; reason: "noTrain" | "noSeat" | "noJourney" };
 
 export interface RailImportBooking {
   bookingReference: string | null;
@@ -376,6 +401,8 @@ export interface RailImportBooking {
   currency: string | null;
   operator: string | null;
   source: string;
+  /** `reservation`: seats for journeys already logged, never new rides. Absent: a booking. */
+  documentKind?: "booking" | "reservation";
   legs: RailImportLeg[];
 }
 

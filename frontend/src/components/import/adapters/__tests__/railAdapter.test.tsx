@@ -21,10 +21,16 @@ vi.mock("../../../rail/RailImportPreviewModal", () => ({
     <div data-testid="rail-review">{booking.legs.length}</div>
   ),
 }));
+vi.mock("../../../rail/RailReservationReviewModal", () => ({
+  RailReservationReviewModal: ({ booking }: { booking: { legs: unknown[] } }) => (
+    <div data-testid="rail-reservation-review">{booking.legs.length}</div>
+  ),
+}));
 vi.mock("../../../rail/RailFormModal", () => ({ RailFormModal: () => null }));
 
 import { useRailImportAdapter } from "../railAdapter";
 import { booking } from "../../../rail/__tests__/railImportFixture";
+import { reservationBooking, reservationLeg } from "../../../rail/__tests__/railReservationFixture";
 
 function renderReview(parseResult: unknown, onCancel = vi.fn()) {
   const { result } = renderHook(() => useRailImportAdapter());
@@ -48,6 +54,17 @@ describe("rail import adapter", () => {
     expect(adapter.domain).toBe("rail");
     expect(screen.getByTestId("rail-review")).toHaveTextContent("2");
     expect(addToast).not.toHaveBeenCalled();
+  });
+
+  // forgejo#203: a later seat reservation opens the reservation review, which
+  // writes seats onto existing journeys — never the review that creates rides.
+  it("opens the reservation review for a reservation document", () => {
+    renderReview({
+      domain: "rail",
+      bookings: [reservationBooking([reservationLeg({ kind: "none", reason: "noJourney" })])],
+    });
+    expect(screen.getByTestId("rail-reservation-review")).toHaveTextContent("1");
+    expect(screen.queryByTestId("rail-review")).toBeNull();
   });
 
   it("says in the reader's words why nothing was read, naming the order, and closes the slot", () => {

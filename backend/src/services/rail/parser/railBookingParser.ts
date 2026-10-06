@@ -11,6 +11,7 @@ import {
   parseDbPostalOrder,
 } from "./dbConfirmation";
 import { parseDbOnlineTicket } from "./dbOnlineTicket";
+import { isDbReservationDocument, parseDbReservation } from "./dbReservation";
 import { decodeCalendar, isCalendarAttachment, parseCalendarLegs } from "./icsCalendar";
 import { withLabelledFacts } from "./labelledFacts";
 import { parseRailWithLlm, resolveRailLlmChain } from "./railLlmParser";
@@ -127,8 +128,26 @@ function dedupeLegs(legs: ParsedRailLeg[]): ParsedRailLeg[] {
   });
 }
 
-/** The first reader that recognises the text itself as a booking. */
+/**
+ * The same for a coach and seat: a reservation document sent with the ticket
+ * names the seat the ticket may not print. Never overwrites one already read.
+ */
+function fillSeats(legs: ParsedRailLeg[], others: ParsedRailLeg[]): ParsedRailLeg[] {
+  const byKey = new Map(others.filter((o) => o.coach || o.seat).map((o) => [legKey(o), o]));
+  return legs.map((leg) => {
+    if (leg.coach || leg.seat) return leg;
+    const other = byKey.get(legKey(leg));
+    return other ? { ...leg, coach: other.coach, seat: other.seat } : leg;
+  });
+}
+
+/**
+ * The first reader that recognises the text itself as a booking. A
+ * reservation reads as a booking to every one of them — it prints the same
+ * table, the same "von … nach" — so it is excluded here and read on its own.
+ */
 function readBody(text: string): ParsedRailBooking | null {
+  if (isDbReservationDocument(text)) return null;
   return (
     parseDbConfirmation(text) ??
     parseDbOnlineTicket(text) ??
@@ -149,15 +168,36 @@ export async function readRailTemplates(
 ): Promise<{ booking: ParsedRailBooking | null; orderReference: string | null }> {
   const body = readBody(text);
   const { pdfs, calendars } = await attachmentTexts(attachments);
+  const reservations = [text, ...pdfs]
+    .map(parseDbReservation)
+    .filter((r): r is ParsedRailBooking => r !== null);
   const tickets = pdfs
+    .filter((pdf) => !isDbReservationDocument(pdf))
     .map((pdf) => parseDbOnlineTicket(pdf) ?? parseDbConfirmation(pdf))
     .filter((t): t is ParsedRailBooking => t !== null);
   const calendarLegs = calendars.flatMap(parseCalendarLegs);
   const facts = dbOrderFacts(text);
+  const reservationLegs = dedupeLegs(reservations.flatMap((r) => r.legs));
 
   const ticketLegs = dedupeLegs(tickets.flatMap((t) => t.legs));
-  const legs =
-    ticketLegs.length > 0 ? ticketLegs : body && body.legs.length > 0 ? body.legs : calendarLegs;
+  const bodyLegs = body?.legs ?? [];
+  // A reservation and nothing that sells a ride: its seats go onto journeys
+  // the user already has (forgejo#203), never into new ones.
+  if (ticketLegs.length === 0 && bodyLegs.length === 0 && reservationLegs.length > 0) {
+    return {
+      booking: {
+        ...reservations[0],
+        bookingReference:
+          reservations.map((r) => r.bookingReference).find((ref) => ref !== null) ?? null,
+        legs: reservationLegs,
+      },
+      orderReference: null,
+    };
+  }
+  const legs = fillSeats(
+    ticketLegs.length > 0 ? ticketLegs : bodyLegs.length > 0 ? bodyLegs : calendarLegs,
+    reservationLegs
+  );
   if (legs.length === 0) {
     return { booking: null, orderReference: facts?.bookingReference ?? null };
   }
@@ -218,6 +258,16 @@ export async function parseRailBookingText(
     fallbackReason: "The order mail names no ride; its itinerary is in the attached ticket",
     orderReference: templates.orderReference,
   };
+
+  // A reservation is the template's answer whatever the parser order: the model
+  // cannot tell a reservation from a ticket and would read it as new rides.
+  if (templates.booking?.documentKind === "reservation") {
+    return {
+      booking: templates.booking,
+      parserUsed: "template",
+      ollamaAvailable: await isLlmAvailable(llmQuery),
+    };
+  }
 
   if (order === "template_first" && templates.booking) {
     return {

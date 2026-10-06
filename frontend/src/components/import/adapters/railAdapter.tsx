@@ -6,6 +6,7 @@ import { logger } from "../../../lib/logger";
 import type { ParseEmailRailResult, ParsePdfRailResult } from "../../../lib/api/parse";
 import { RailFormModal } from "../../rail/RailFormModal";
 import { RailImportPreviewModal } from "../../rail/RailImportPreviewModal";
+import { RailReservationReviewModal } from "../../rail/RailReservationReviewModal";
 import { emptyParseMessageKey } from "../../rail/railImportModel";
 import type { DomainImportAdapter, ReviewModalProps } from "../types";
 
@@ -54,6 +55,9 @@ export function useRailImportAdapter(): DomainImportAdapter {
         {...props}
         onEmpty={(message) => addToast("error", message)}
         onDone={(count) => addToast("success", t("rail:import.saved", { count }))}
+        onReservationDone={(count) =>
+          addToast("success", t("rail:import.reservation.done", { count }))
+        }
       />
     ),
   };
@@ -62,6 +66,7 @@ export function useRailImportAdapter(): DomainImportAdapter {
 interface RailReviewSlotProps extends ReviewModalProps {
   onEmpty: (message: string) => void;
   onDone: (count: number) => void;
+  onReservationDone: (count: number) => void;
 }
 
 function RailReviewSlot({
@@ -70,6 +75,7 @@ function RailReviewSlot({
   onCancel,
   onEmpty,
   onDone,
+  onReservationDone,
 }: RailReviewSlotProps): JSX.Element | null {
   const { t } = useTranslation(["rail"]);
   const parsed = extractRailParse(parseResult);
@@ -88,6 +94,20 @@ function RailReviewSlot({
   }, [parseResult]);
 
   if (!booking || booking.legs.length === 0) return null;
+  // A reservation booked after the ticket writes no journey: its seats go onto
+  // the journeys already logged (forgejo#203).
+  if (booking.documentKind === "reservation") {
+    return (
+      <RailReservationReviewModal
+        booking={booking}
+        onCancel={onCancel}
+        onSaved={async (count) => {
+          onReservationDone(count);
+          await onCommit();
+        }}
+      />
+    );
+  }
   return (
     <RailImportPreviewModal
       booking={booking}

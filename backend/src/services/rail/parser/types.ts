@@ -16,6 +16,7 @@ export type RailParseSource =
   | "db-online-ticket"
   | "db-postal-order"
   | "db-connection-info"
+  | "db-reservation"
   | "ics"
   | "ollama";
 
@@ -46,7 +47,15 @@ export interface ParsedRailBooking {
   operator: string | null;
   legs: ParsedRailLeg[];
   source: RailParseSource;
+  /**
+   * `reservation`: the document sells no ride, it reserves seats on rides the
+   * user booked before (forgejo#203) — its legs attach a coach and seat to
+   * existing journeys and never become journeys of their own. Absent: a booking.
+   */
+  documentKind?: RailDocumentKind;
 }
+
+export type RailDocumentKind = "booking" | "reservation";
 
 /** A file that came with a mail: its name, its type, and its bytes. */
 export interface RailAttachment {

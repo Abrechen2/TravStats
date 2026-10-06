@@ -326,6 +326,32 @@
       "looksLikeFlight": "The AI parser read airport codes instead of stations — the document is probably a flight booking. Nothing was taken over.",
       "llmCloudNotConsented": "No template knows this ticket, and the AI provider is outside the network without the administrator's consent to send it there.",
       "llmProviderIncomplete": "No template knows this ticket, and the AI provider is not fully set up."
+    },
+    "reservation": {
+      "title": "Apply a seat reservation",
+      "intro": "This is a reservation, not a ticket. No new journey is created — the coach and seat go onto journeys already in your logbook.",
+      "forJourney": "Reservation for an existing journey",
+      "subSection": "Part of the journey: {{from}} → {{to}}",
+      "seat": "Coach {{coach}}, seat {{seat}}",
+      "take": "Apply the seat for {{from}} → {{to}}",
+      "apply_one": "Apply {{count}} seat",
+      "apply_other": "Apply {{count}} seats",
+      "applied": "Recorded.",
+      "done_one": "{{count}} seat added to an existing journey.",
+      "done_other": "{{count}} seats added to existing journeys.",
+      "status": {
+        "attach": "The coach and seat will be recorded on this journey.",
+        "change": "This journey already has coach {{coach}}, seat {{seat}}. Only if you tick it is that replaced by the reserved one.",
+        "alreadySet": "This seat is already recorded on the journey — nothing to do.",
+        "several_one": "{{count}} journey fits — none is chosen. Enter the seat on the right journey by hand:",
+        "several_other": "{{count}} journeys fit (same train, same day) — none is chosen. Enter the seat on the right journey by hand:",
+        "sameJourneyTwice": "Another section of this reservation belongs to the same journey — which seat applies is unclear. Enter it by hand.",
+        "none": {
+          "noJourney": "No matching journey in your logbook (same train, same day, matching stations) — nothing is recorded.",
+          "noTrain": "The reservation names no train — it cannot be matched to a journey.",
+          "noSeat": "The reservation names neither coach nor seat — nothing to record."
+        }
+      }
     }
   },
   "summary": {
