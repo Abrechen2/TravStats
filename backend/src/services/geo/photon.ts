@@ -17,8 +17,17 @@ import { formatStreetAddress } from "./streetAddress";
 import { resolveGeocoderUrls, DEFAULT_PHOTON_URL } from "../instanceSettingsService";
 import logger from "../../utils/logger";
 import { mergePlaceNames, needsLatinNames } from "./placeNames";
+import { placeImportance } from "./placeImportance";
 
 const DEFAULT_LIMIT = 6;
+
+/**
+ * How many hits `/reverse` is asked for before ranking (forgejo#209). 50 is
+ * Photon's default `-max-reverse-results` (`ApiServerConfig.java`); an instance
+ * configured lower clamps the request rather than refusing it
+ * (`RequestBase.setLimit`).
+ */
+export const REVERSE_CANDIDATE_POOL = 50;
 
 // Identify ourselves like `portGeocoder.ts` does. The previous fetch sent NO
 // headers at all — an anonymous, UA-less request from every self-hosted
@@ -81,11 +90,30 @@ export interface PlaceResult {
   lat: number;
   lon: number;
   type?: string;
+  /**
+   * How important the place is, `placeImportance.ts` (higher first). Only
+   * `reversePlacesDetailed` sets it — its list is ordered by it, a search's is
+   * not, and a number beside an order it did not decide would mislead.
+   */
+  rank?: number;
 }
 
 export interface SearchPlacesOptions {
   limit?: number;
   lang?: string;
+}
+
+export interface SearchPlacesBiasedOptions extends SearchPlacesOptions {
+  /** Prefer hits near this point (Photon's location bias, forgejo#209). */
+  near?: { lat: number; lon: number };
+}
+
+export interface ReversePlacesOptions extends SearchPlacesOptions {
+  /**
+   * Search radius in km, sent as Photon's `radius`. Omitted = Photon's own
+   * default, which is 1 km (`ReverseRequest.java`, `radius = 1.0`).
+   */
+  radiusKm?: number;
 }
 
 /**
@@ -232,6 +260,22 @@ function isRepeat(result: PlaceResult, kept: readonly PlaceResult[]): boolean {
 }
 
 /**
+ * Rank from the RAW tag, not from `type`: `normalizeFeature` folds the OSM
+ * value into a picker category (`categorisingOsmValue`), which keeps no key and
+ * cannot tell `tourism=attraction` from `historic=castle` or `shop=mall`.
+ */
+function withRank(place: PlaceResult, props: PhotonProperties | undefined): PlaceResult {
+  return {
+    ...place,
+    rank: placeImportance({
+      osmKey: props?.osm_key,
+      osmValue: props?.osm_value,
+      type: props?.type,
+    }),
+  };
+}
+
+/**
  * Parse a JSON string without ever surfacing the source text: a raw
  * `SyntaxError.message` can embed a snippet of the offending input, which
  * would leak third-party response content into the logs. Mirrors
@@ -261,7 +305,11 @@ type FetchOutcome =
   | { ok: true; results: PlaceResult[] }
   | { ok: false; stage: "http_status" | "size_cap" | "invalid_json" | "schema" | "network" };
 
-async function fetchPhoton(url: string, limit: number): Promise<FetchOutcome> {
+async function fetchPhoton(
+  url: string,
+  limit: number,
+  options?: { rank?: boolean }
+): Promise<FetchOutcome> {
   const maxBytes = getMaxResponseBytes();
   try {
     const res = await fetch(url, {
@@ -321,7 +369,9 @@ async function fetchPhoton(url: string, limit: number): Promise<FetchOutcome> {
     const results: PlaceResult[] = [];
     for (const feature of features) {
       const normalized = normalizeFeature(feature);
-      if (normalized && !isRepeat(normalized, results)) results.push(normalized);
+      if (normalized && !isRepeat(normalized, results)) {
+        results.push(options?.rank ? withRank(normalized, feature.properties) : normalized);
+      }
       if (results.length >= limit) break;
     }
     return { ok: true, results };
@@ -351,7 +401,7 @@ async function fetchPhoton(url: string, limit: number): Promise<FetchOutcome> {
  */
 export async function searchPlacesDetailed(
   query: string,
-  options?: SearchPlacesOptions
+  options?: SearchPlacesBiasedOptions
 ): Promise<PlaceSearchOutcome> {
   const trimmed = query.trim();
   if (trimmed.length < 2) return { results: [], degraded: false };
@@ -378,6 +428,14 @@ export async function searchPlacesDetailed(
   const baseUrl = photonUrl.replace(/\/+$/, "").replace(/\/api$/i, "");
   const params = new URLSearchParams({ q: trimmed, limit: String(limit) });
   if (options?.lang) params.set("lang", options.lang);
+  // Photon's location bias (its docs/api-v1.md, "Location Bias"): `lat`/`lon`
+  // set the focus; `zoom` and `location_bias_scale` stay at Photon's defaults
+  // (12 and 0.4). The retry without `lang` and the name-merge lookups copy
+  // `params`, so they keep the bias and answer about the same hits.
+  if (options?.near) {
+    params.set("lat", String(options.near.lat));
+    params.set("lon", String(options.near.lon));
+  }
   const url = `${baseUrl}/api/?${params.toString()}`;
 
   const first = await fetchPhoton(url, limit);
@@ -436,16 +494,26 @@ async function withReadableNames(
  * a pin, sees the hotels/restaurants/stations around it, and picks the one
  * they meant. Same never-throws / `degraded` contract and the same URL and
  * lang-retry robustness moves as `searchPlacesDetailed`.
+ *
+ * Ordered by importance, then distance (forgejo#209, `placeImportance.ts`).
+ * Photon answers nearest-first, so ranking only its first `limit` hits would
+ * rank the wrong set: at Gyeongbokgung the nearest five were the palace's halls
+ * and a shop. It is therefore asked for a fixed pool of
+ * `REVERSE_CANDIDATE_POOL` hits, which is ranked and cut to `limit`. The pool
+ * does not depend on `limit`, so a shorter list is always the head of a longer
+ * one. The name merge runs on the cut list only — a non-Latin hit that is cut
+ * must not cost two extra lookups.
  */
 export async function reversePlacesDetailed(
   lat: number,
   lon: number,
-  options?: SearchPlacesOptions
+  options?: ReversePlacesOptions
 ): Promise<PlaceSearchOutcome> {
   if (!Number.isFinite(lat) || !Number.isFinite(lon)) return { results: [], degraded: false };
   if (lat < -90 || lat > 90 || lon < -180 || lon > 180) return { results: [], degraded: false };
 
-  const limit = options?.limit ?? DEFAULT_LIMIT;
+  const limit = Math.min(options?.limit ?? DEFAULT_LIMIT, REVERSE_CANDIDATE_POOL);
+  const pool = REVERSE_CANDIDATE_POOL;
 
   let photonUrl = DEFAULT_PHOTON_URL;
   try {
@@ -463,31 +531,37 @@ export async function reversePlacesDetailed(
   const params = new URLSearchParams({
     lat: String(lat),
     lon: String(lon),
-    limit: String(limit),
+    limit: String(pool),
   });
+  // Photon's `/reverse` takes `radius` in km (docs/api-v1.md "Reverse",
+  // `ReverseRequestFactory.java`); without it Photon searches 1 km.
+  if (options?.radiusKm !== undefined) params.set("radius", String(options.radiusKm));
   if (options?.lang) params.set("lang", options.lang);
-  const url = `${baseUrl}/reverse?${params.toString()}`;
+  const endpoint = `${baseUrl}/reverse`;
+  const ranked = async (results: PlaceResult[]): Promise<PlaceResult[]> =>
+    withReadableNames(byImportance(results, { lat, lon }).slice(0, limit), endpoint, params, pool);
 
-  const first = await fetchPhoton(url, limit);
-  if (first.ok) {
-    return {
-      results: await withReadableNames(first.results, `${baseUrl}/reverse`, params, limit),
-      degraded: false,
-    };
-  }
+  const first = await fetchPhoton(`${endpoint}?${params.toString()}`, pool, { rank: true });
+  if (first.ok) return { results: await ranked(first.results), degraded: false };
 
   if (options?.lang && first.stage === "http_status") {
     params.delete("lang");
-    const retry = await fetchPhoton(`${baseUrl}/reverse?${params.toString()}`, limit);
-    if (retry.ok) {
-      return {
-        results: await withReadableNames(retry.results, `${baseUrl}/reverse`, params, limit),
-        degraded: false,
-      };
-    }
+    const retry = await fetchPhoton(`${endpoint}?${params.toString()}`, pool, { rank: true });
+    if (retry.ok) return { results: await ranked(retry.results), degraded: false };
   }
 
   return { results: [], degraded: true };
+}
+
+/** Rank descending, then distance from `origin` ascending; stable otherwise. */
+function byImportance(
+  results: readonly PlaceResult[],
+  origin: { lat: number; lon: number }
+): PlaceResult[] {
+  return results
+    .map((place, index) => ({ place, index, km: haversineKm(origin, place) }))
+    .sort((a, b) => (b.place.rank ?? 0) - (a.place.rank ?? 0) || a.km - b.km || a.index - b.index)
+    .map(({ place }) => place);
 }
 
 /**
