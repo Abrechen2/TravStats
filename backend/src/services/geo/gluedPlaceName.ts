@@ -72,16 +72,19 @@ export function splitGluedName(raw: string): SplitName | null {
 }
 
 /**
- * What a write stores for a name: split when it is glued AND no second name
- * was given. A given `localName` wins — the writer said what the second name
- * is, and re-reading the first one would second-guess it.
+ * What a write stores for a name: what the writer sent, nothing guessed. A
+ * write never splits a name. In 2.7.0-rc.8 it did, and it took "CU 삼청점" —
+ * the chain CU, branch Samcheong, one name — for "CU" plus a second name
+ * "삼청점" (prod, 2026-10-05). Brand plus a branch in local script is how
+ * chains are named across East Asia, so the shape alone cannot tell a glued
+ * pair from one name. Splitting is left to the backfill, which confirms a
+ * split against the map before it proposes it (`placeNameBackfill.ts`), and
+ * to writers that send `localName` themselves.
  */
 export function normaliseNamePair(
   name: string,
   localName: string | null | undefined
 ): { name: string; localName: string | null } {
   const given = localName?.trim() || null;
-  if (given) return { name, localName: given === name ? null : given };
-  const split = splitGluedName(name);
-  return split ?? { name, localName: null };
+  return { name, localName: given && given !== name ? given : null };
 }

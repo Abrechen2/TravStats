@@ -90,18 +90,34 @@ describe("place name backfill", () => {
   const run = (geocoder: PlaceNameGeocoder, apply = true) =>
     backfillPlaceNames({ geocoder, apply, userId });
 
-  it("splits a glued name without asking the network", async () => {
+  it("splits a glued name when the map names the local half on its own", async () => {
     const p = await place("Banpo Bridge Moonlight Rainbow Fountain 반포대교 달빛무지개분수");
-    const photon = fakePhoton({});
+    const photon = fakePhoton({
+      reverseDefault: [hit({ name: "반포대교 달빛무지개분수", externalRef: "osm:way/9" })],
+    });
 
     const report = await run(photon);
 
-    expect(photon.calls).toEqual([]);
+    expect(photon.calls).toEqual(["reverse:default"]);
     expect(report.changes).toMatchObject([{ placeId: p.id, kind: "split" }]);
     expect(await reload(p.id)).toMatchObject({
       name: "Banpo Bridge Moonlight Rainbow Fountain",
       localName: "반포대교 달빛무지개분수",
     });
+  });
+
+  // rc.8 split this on write: CU is the chain, 삼청점 its branch — one name.
+  it("keeps a chain-and-branch name whole when the map does not confirm a split", async () => {
+    const p = await place("CU 삼청점");
+    const photon = fakePhoton({
+      reverseDefault: [hit({ name: "CU 삼청점", externalRef: "osm:node/5" })],
+    });
+
+    const report = await run(photon);
+
+    expect(report.changes).toEqual([]);
+    expect(report.abstentions).toMatchObject([{ placeId: p.id, reason: "unconfirmed_split" }]);
+    expect(await reload(p.id)).toMatchObject({ name: "CU 삼청점", localName: null });
   });
 
   it("finds the Latin name by coordinates and adopts the OSM ref for a placeholder", async () => {
@@ -235,7 +251,10 @@ describe("place name backfill", () => {
     const glued = await place("Seoul Station 서울역");
     const p = await place(CHICKEN);
     const photon = fakePhoton({
-      reverseDefault: [hit({ name: CHICKEN, externalRef: "osm:node/42" })],
+      reverseDefault: [
+        hit({ name: CHICKEN, externalRef: "osm:node/42" }),
+        hit({ name: "서울역", externalRef: "osm:node/7" }),
+      ],
       reverseEnglish: [hit({ name: "Kyochon Chicken", externalRef: "osm:node/42" })],
     });
 
@@ -250,7 +269,10 @@ describe("place name backfill", () => {
     await place("Seoul Station 서울역");
     await place(CHICKEN);
     const photon = fakePhoton({
-      reverseDefault: [hit({ name: CHICKEN, externalRef: "osm:node/42" })],
+      reverseDefault: [
+        hit({ name: CHICKEN, externalRef: "osm:node/42" }),
+        hit({ name: "서울역", externalRef: "osm:node/7" }),
+      ],
       reverseEnglish: [hit({ name: "Kyochon Chicken", externalRef: "osm:node/42" })],
     });
     await run(photon);
