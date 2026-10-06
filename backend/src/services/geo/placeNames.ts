@@ -112,6 +112,11 @@ const NON_LATIN_SCRIPT_COUNTRIES = new Set([
   "er",
 ]);
 
+/** Does this country (ISO 3166-1 alpha-2, any case) write its signs in a non-Latin script? */
+export function writesNonLatinScript(countryCode: string | null | undefined): boolean {
+  return countryCode ? NON_LATIN_SCRIPT_COUNTRIES.has(countryCode.toLowerCase()) : false;
+}
+
 /** Only when this is true are the extra lookups worth their round trips. */
 export function needsLatinNames(results: readonly PlaceResult[]): boolean {
   return results.some(

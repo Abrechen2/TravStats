@@ -105,7 +105,12 @@ export interface NameBackfillOptions {
   lookupCap?: number;
 }
 
-const COMPANION_PLACEHOLDER = /^companion:@/;
+/**
+ * A reference the Companion minted because it had no OSM identity:
+ * `companion:@lat,lon` or `companion:<slug>@lat,lon` (both seen on prod,
+ * 2026-10-06). Only these may be replaced by a matched OSM ref.
+ */
+export const COMPANION_PLACEHOLDER = /^companion:[^@]*@/;
 const PAGE = 500;
 
 /** NFC, case-folded, whitespace collapsed — how two spellings of one name compare. */
@@ -169,8 +174,8 @@ async function lookupByCoordinates(row: Row, geo: PlaceNameGeocoder): Promise<Lo
 }
 
 /** May this place take `ref`? Only from a placeholder, and only when no other place of the user holds it. */
-async function refToAdopt(
-  row: Row,
+export async function refToAdopt(
+  row: Pick<Row, "id" | "userId" | "externalRef">,
   ref: string | undefined,
   claimed: Set<string>
 ): Promise<{ ref: string | null; collision: boolean }> {

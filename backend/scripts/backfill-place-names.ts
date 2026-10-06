@@ -10,6 +10,8 @@
  *   cd backend
  *   DATABASE_URL=… npx tsx scripts/backfill-place-names.ts            # names, dry run
  *   DATABASE_URL=… npx tsx scripts/backfill-place-names.ts --apply    # names, write
+ *   DATABASE_URL=… npx tsx scripts/backfill-place-names.ts --fill-local            # second names, dry run
+ *   DATABASE_URL=… npx tsx scripts/backfill-place-names.ts --fill-local --apply    # second names, write
  *   DATABASE_URL=… npx tsx scripts/backfill-place-names.ts --assign-trips          # trips, dry run
  *   DATABASE_URL=… npx tsx scripts/backfill-place-names.ts --assign-trips --apply  # trips, write
  *
@@ -34,10 +36,12 @@ import {
 } from "../src/services/places/placeNameBackfill";
 import { throttledPhotonGeocoder } from "../src/services/places/photonNameGeocoder";
 import { assignVisitTrips, type VisitTripReport } from "../src/services/places/visitTripBackfill";
+import { fillLocalNames, type LocalNameFillReport } from "../src/services/places/localNameFill";
 
 interface Args {
   apply: boolean;
   assignTrips: boolean;
+  fillLocal: boolean;
   userId?: string;
   limit: number;
 }
@@ -48,6 +52,7 @@ function parseArgs(argv: string[]): Args {
   return {
     apply: argv.includes("--apply"),
     assignTrips: argv.includes("--assign-trips"),
+    fillLocal: argv.includes("--fill-local"),
     userId: value("user"),
     limit: Number.isInteger(limit) && limit >= 0 ? limit : DEFAULT_LOOKUP_CAP,
   };
@@ -97,8 +102,32 @@ function printTrips(r: VisitTripReport): void {
   );
 }
 
+function printFill(r: LocalNameFillReport): void {
+  console.log(`Local names — ${r.apply ? "APPLY" : "DRY RUN (nothing written)"}`);
+  console.log(`  candidates: ${r.scanned}, network lookups: ${r.lookups}`);
+  for (const f of r.fills) {
+    const ref = f.after.externalRef !== f.before.externalRef ? ` | ref ${f.after.externalRef}` : "";
+    console.log(
+      `  ${r.apply ? "FILLED" : "WOULD FILL"} ${JSON.stringify(f.name)} + ${JSON.stringify(f.localName)}${ref}`
+    );
+  }
+  for (const a of r.abstentions)
+    console.log(`  LEFT AS IS [${a.reason}] ${JSON.stringify(a.name)}`);
+}
+
 async function main(): Promise<void> {
   const args = parseArgs(process.argv.slice(2));
+  if (args.fillLocal) {
+    printFill(
+      await fillLocalNames({
+        geocoder: throttledPhotonGeocoder(),
+        apply: args.apply,
+        userId: args.userId,
+        lookupCap: args.limit,
+      })
+    );
+    return;
+  }
   if (args.assignTrips) {
     printTrips(await assignVisitTrips({ apply: args.apply, userId: args.userId }));
     return;
