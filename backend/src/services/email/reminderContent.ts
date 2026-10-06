@@ -313,7 +313,6 @@ export function railReminderContent(
   const de = lang === "de";
   const train = joined([journey.trainCategory, journey.trainNumber], " ");
   const until = formatHoursUntil(hoursUntilDeparture, lang);
-  const trainPart = train ? ` ${train}` : "";
 
   const rows: MailFact[] = [];
   fact(rows, de ? "Zug" : "Train", train, true);
@@ -324,12 +323,15 @@ export function railReminderContent(
   fact(rows, de ? "Buchungscode" : "Booking reference", journey.bookingReference, true);
 
   return assemble("rail", lang, links, {
+    // Named by the destination, like a ride with changes (owner, 2026-10-06,
+    // taking up the tester's "Deine Fahrt nach Hamburg Hbf"); the train
+    // stays in the facts below.
     subject: de
-      ? `Zug-Erinnerung: ${train ?? journey.depStationName} in ${hoursUntilDeparture}h`
-      : `Rail reminder: ${train ?? journey.depStationName} in ${hoursUntilDeparture}h`,
+      ? `Zug-Erinnerung: Deine Fahrt nach ${journey.arrStationName} in ${hoursUntilDeparture}h`
+      : `Rail reminder: your journey to ${journey.arrStationName} in ${hoursUntilDeparture}h`,
     heading: de
-      ? `Deine Zugfahrt${trainPart} startet ${until}`
-      : `Your train${trainPart} leaves ${until}`,
+      ? `Deine Fahrt nach ${journey.arrStationName} startet ${until}`
+      : `Your journey to ${journey.arrStationName} leaves ${until}`,
     blocks: [
       {
         kind: "route",

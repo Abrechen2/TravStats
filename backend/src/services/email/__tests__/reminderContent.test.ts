@@ -387,9 +387,10 @@ describe("railReminderContent", () => {
   it("shows both stations with their local times, train, class, coach, seat and booking reference", () => {
     const content = railReminderContent(journey, 2, "de", LINKS);
     const { html, text } = render(content);
-    expect(content.subject).toBe("Zug-Erinnerung: ICE 1001 in 2h");
+    expect(content.subject).toBe("Zug-Erinnerung: Deine Fahrt nach München Hbf in 2h");
     for (const part of [html, text]) {
-      expect(part).toContain("Deine Zugfahrt ICE 1001 startet in 2 Stunden");
+      expect(part).toContain("Deine Fahrt nach München Hbf startet in 2 Stunden");
+      expect(part).toContain("ICE 1001");
       expect(part).toContain("Berlin Hbf");
       expect(part).toContain("München Hbf");
       expect(part).toContain("08:00 Uhr");
@@ -401,7 +402,7 @@ describe("railReminderContent", () => {
     expect(text).toContain("Wagen: 12\nPlatz: 45");
   });
 
-  it("falls back to the departure station in the subject and omits what is missing", () => {
+  it("names the destination even without a train, and omits what is missing", () => {
     const content = railReminderContent(
       {
         ...journey,
@@ -419,8 +420,8 @@ describe("railReminderContent", () => {
       LINKS
     );
     const { text } = render(content);
-    expect(content.subject).toBe("Rail reminder: Berlin Hbf in 24h");
-    expect(text).toContain("Your train leaves in 24 hours");
+    expect(content.subject).toBe("Rail reminder: your journey to München Hbf in 24h");
+    expect(text).toContain("Your journey to München Hbf leaves in 24 hours");
     expect(text).toContain("→ München Hbf\n");
     expect(text).not.toMatch(/Train:|Operator|Class|Coach|Seat|Booking reference|null/);
   });
