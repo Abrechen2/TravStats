@@ -1,5 +1,6 @@
 import { saveErrorKey } from "../../lib/saveErrorMessage";
 import { parseDecimalInput } from "../../lib/decimalInput";
+import { rentalDrivenKm, type RentalDrivenKm } from "../../shared/rentalCounting";
 import type {
   RentalBooking,
   RentalInclusion,
@@ -60,8 +61,18 @@ export interface RentalDraft {
   price: string;
   currency: string;
   inclusions: RentalInclusion[];
-  /** A typed km figure is a labelled correction; empty = leave it to the invoice. */
+  /**
+   * A typed km figure is a labelled correction; empty = leave it to the
+   * invoice or the odometer. Filled from a stored figure only when that figure
+   * IS a correction — an invoice's km loaded here would come back as "user".
+   */
   distanceKm: string;
+  /** Odometer readings as typed (forgejo#206); empty = not read. */
+  odometerOutKm: string;
+  odometerInKm: string;
+  /** The km figure stored on the rental and its source, as loaded — never edited. */
+  storedDistanceKm: number | null;
+  storedDistanceSource: string | null;
   arrivalFlightNumber: string;
   notes: string;
   cancelled: boolean;
@@ -86,6 +97,10 @@ export const EMPTY_RENTAL_DRAFT: RentalDraft = {
   currency: "EUR",
   inclusions: [],
   distanceKm: "",
+  odometerOutKm: "",
+  odometerInKm: "",
+  storedDistanceKm: null,
+  storedDistanceSource: null,
   arrivalFlightNumber: "",
   notes: "",
   cancelled: false,
@@ -157,7 +172,11 @@ export function draftFromRental(r: RentalBooking): RentalDraft {
     price: r.price === null ? "" : String(r.price),
     currency: r.currency ?? "EUR",
     inclusions: r.inclusions,
-    distanceKm: r.distanceKm === null ? "" : String(r.distanceKm),
+    distanceKm: r.distanceKm !== null && r.distanceSource === "user" ? String(r.distanceKm) : "",
+    odometerOutKm: r.odometerOutKm === null ? "" : String(r.odometerOutKm),
+    odometerInKm: r.odometerInKm === null ? "" : String(r.odometerInKm),
+    storedDistanceKm: r.distanceKm,
+    storedDistanceSource: r.distanceSource,
     arrivalFlightNumber: r.arrivalFlightNumber ?? "",
     notes: r.notes ?? "",
     cancelled: r.status === "cancelled",
@@ -172,11 +191,26 @@ export type RentalFormField =
   | "returnLocal"
   | "price"
   | "distanceKm"
+  | "odometerOutKm"
+  | "odometerInKm"
   | "acrissCode";
 
 export type RentalDraftErrors = Partial<Record<RentalFormField, string>>;
 
 const ACRISS = /^[A-Za-z]{4}$/;
+/** Whole km, bare or grouped in threes by dot, comma or space ("12.634" is twelve thousand). */
+const KM_READING = /^(\d+|\d{1,3}([.,\s\u202f]\d{3})+)$/;
+
+/**
+ * An odometer reading as typed: null when empty, NaN when it is not a whole
+ * number of km. Not `parseDecimalInput` — a dashboard shows "12.634", and a
+ * German reader means twelve thousand, not twelve and a bit.
+ */
+export function parseKmReading(raw: string): number | null {
+  const value = raw.trim();
+  if (value === "") return null;
+  return KM_READING.test(value) ? Number(value.replace(/[.,\s\u202f]/g, "")) : Number.NaN;
+}
 const LOCAL = /^\d{4}-\d{2}-\d{2}(T\d{2}:\d{2})?$/;
 
 /** Translation keys of what keeps the draft from being saved; empty when it can be. */
@@ -193,6 +227,14 @@ export function validateRentalDraft(d: RentalDraft): RentalDraftErrors {
   if (price !== null && !(price >= 0)) errors.price = "rental:form.errors.number";
   const km = parseDecimalInput(d.distanceKm);
   if (km !== null && !Number.isInteger(km)) errors.distanceKm = "rental:form.errors.number";
+  const out = parseKmReading(d.odometerOutKm);
+  const back = parseKmReading(d.odometerInKm);
+  if (Number.isNaN(out)) errors.odometerOutKm = "rental:form.errors.number";
+  if (Number.isNaN(back)) errors.odometerInKm = "rental:form.errors.number";
+  // The server's own check (RENTAL_ODOMETER_REVERSED), said before the save.
+  else if (out !== null && back !== null && !Number.isNaN(out) && back < out) {
+    errors.odometerInKm = "rental:form.errors.odometerReversed";
+  }
   if (d.acrissCode.trim() !== "" && !ACRISS.test(d.acrissCode.trim()))
     errors.acrissCode = "rental:form.errors.acriss";
   return errors;
@@ -211,12 +253,47 @@ function stationInput(s: RentalStationDraft): RentalStationInput {
 }
 
 /**
+ * The km the draft would leave the rental with — the same rule every reader
+ * uses (`rentalDrivenKm`): a typed correction, else a stored invoice figure,
+ * else in − out of the two readings, else null. What the form shows beside the
+ * fields, so the reader sees which figure will count before saving.
+ */
+export function draftDrivenKm(d: RentalDraft): RentalDrivenKm | null {
+  const typed = parseDecimalInput(d.distanceKm);
+  const correction = typed !== null && Number.isInteger(typed) && typed >= 0 ? typed : null;
+  const keepsStored = d.storedDistanceKm !== null && d.storedDistanceSource !== "user";
+  const reading = (raw: string): number | null => {
+    const v = parseKmReading(raw);
+    return v === null || Number.isNaN(v) ? null : v;
+  };
+  return rentalDrivenKm({
+    distanceKm: correction ?? (keepsStored ? d.storedDistanceKm : null),
+    distanceSource: correction !== null ? "user" : keepsStored ? d.storedDistanceSource : null,
+    odometerOutKm: reading(d.odometerOutKm),
+    odometerInKm: reading(d.odometerInKm),
+  });
+}
+
+/**
+ * The correction as the write body carries it: a typed figure; null when a
+ * stored correction was emptied (it is cleared); ABSENT otherwise, so an empty
+ * field never wipes the invoice's figure (silent-failure class 4).
+ */
+function correctionInput(d: RentalDraft): Pick<RentalInput, "distanceKm"> {
+  const km = parseDecimalInput(d.distanceKm);
+  if (km !== null) return { distanceKm: km };
+  return d.storedDistanceSource === "user" && d.storedDistanceKm !== null
+    ? { distanceKm: null }
+    : {};
+}
+
+/**
  * The write body. An empty price is null — unknown, never 0 (§2). A typed km
- * figure goes out as the labelled correction it is.
+ * figure goes out as the labelled correction it is; the two odometer readings
+ * as whole km, an empty one as null.
  */
 export function rentalInputFromDraft(d: RentalDraft): RentalInput {
   const price = parseDecimalInput(d.price);
-  const km = parseDecimalInput(d.distanceKm);
   return {
     provider: d.provider.trim(),
     broker: text(d.broker),
@@ -234,7 +311,9 @@ export function rentalInputFromDraft(d: RentalDraft): RentalInput {
     price,
     currency: price === null ? null : d.currency,
     inclusions: d.inclusions,
-    distanceKm: km,
+    ...correctionInput(d),
+    odometerOutKm: parseKmReading(d.odometerOutKm),
+    odometerInKm: parseKmReading(d.odometerInKm),
     arrivalFlightNumber: text(d.arrivalFlightNumber),
     notes: text(d.notes),
     status: d.cancelled ? "cancelled" : "scheduled",
@@ -246,6 +325,7 @@ const RENTAL_CODE_KEYS: Readonly<Record<string, string>> = {
   RENTAL_STATION_UNRESOLVED: "rental:form.errors.stationUnresolved",
   RENTAL_GEOCODER_UNAVAILABLE: "rental:form.errors.geocoderUnavailable",
   RENTAL_RETURN_BEFORE_PICKUP: "rental:form.errors.returnBeforePickup",
+  RENTAL_ODOMETER_REVERSED: "rental:form.errors.odometerReversed",
   RENTAL_ROADTRIP_NOT_FOUND: "rental:form.errors.roadtripNotFound",
   RENTAL_UNKNOWN_BOOKING: "rental:form.errors.unknownBooking",
   RENTAL_INVALID_INPUT: "rental:form.errors.invalid",
@@ -260,6 +340,8 @@ const FIELDS: readonly RentalFormField[] = [
   "returnLocal",
   "price",
   "distanceKm",
+  "odometerOutKm",
+  "odometerInKm",
   "acrissCode",
 ];
 

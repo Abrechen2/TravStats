@@ -140,6 +140,9 @@ export interface RentalInput {
   vehicleDriven?: string | null;
   licensePlate?: string | null;
   distanceKm?: number | null;
+  /** Odometer readings, km (forgejo#206); null clears one. Return ≥ pick-up. */
+  odometerOutKm?: number | null;
+  odometerInKm?: number | null;
   paymentTiming?: RentalPaymentTiming | null;
   price?: number | null;
   currency?: string | null;

@@ -1,5 +1,5 @@
 import { acrissTraits } from "../../schemas/rental";
-import { rentalCost, rentalDays } from "../../shared/rentalCounting";
+import { rentalCost, rentalDays, rentalDrivenKm } from "../../shared/rentalCounting";
 import { isOneWay } from "./rentalWrite";
 import { rentalTimes, type RentalTimeColumns } from "./timesDto";
 
@@ -23,6 +23,9 @@ export interface RentalReadColumns extends RentalTimeColumns {
   finalCurrency: string | null;
   status: string;
   distanceKm: number | null;
+  distanceSource: string | null;
+  odometerOutKm: number | null;
+  odometerInKm: number | null;
   pickupAirport?: { iata: string | null } | null;
   returnAirport?: { iata: string | null } | null;
 }
@@ -37,9 +40,10 @@ export function withRentalReadFields<T extends RentalReadColumns>(row: T) {
     rentalDays: rentalDays(row),
     vehicleTraits: acrissTraits(row.acrissCode),
     cost: rentalCost(row),
-    // Returned, and no km from an invoice or a correction yet — the reminder
-    // the Companion shows after a return (D11 b).
-    invoiceMissing: row.status === "completed" && row.distanceKm === null,
+    // Returned, and no driven km yet — not from an invoice, a correction or
+    // both odometer readings (`rentalDrivenKm`, forgejo#206). The reminder the
+    // Companion shows after a return (D11 b).
+    invoiceMissing: row.status === "completed" && rentalDrivenKm(row) === null,
     times: rentalTimes(row),
   };
 }

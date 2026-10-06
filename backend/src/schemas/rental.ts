@@ -39,6 +39,8 @@ export const RENTAL_INCLUSIONS = [
 export const RENTAL_SORT_FIELDS = ["pickup", "created"] as const;
 /** Longest licence plate accepted — generous for any country's format plus spaces. */
 export const RENTAL_LICENSE_PLATE_MAX = 20;
+/** Highest odometer reading accepted — far above any car's life, inside the int column. */
+export const RENTAL_ODOMETER_MAX_KM = 9_999_999;
 
 /**
  * ACRISS / SIPP: four positions, each from its own alphabet — category, type,
@@ -193,6 +195,14 @@ const baseRentalSchema = z.object({
    * the invoice's figure arrives through the document path. Null clears it.
    */
   distanceKm: z.number().int().min(0).max(100_000).nullable().optional(),
+  /**
+   * The odometer at pick-up and at return, as read off the dashboard
+   * (forgejo#206); null clears one. Both known give the driven km (in − out,
+   * `rentalDrivenKm`). That out ≤ in is checked against the MERGED row in
+   * `assertOdometerOrder`, so a one-field PATCH cannot slip past it.
+   */
+  odometerOutKm: z.number().int().min(0).max(RENTAL_ODOMETER_MAX_KM).nullable().optional(),
+  odometerInKm: z.number().int().min(0).max(RENTAL_ODOMETER_MAX_KM).nullable().optional(),
   mileagePolicy: z.enum(RENTAL_MILEAGE_POLICIES).nullable().optional(),
   mileageCapKm: z.number().int().positive().max(100_000).nullable().optional(),
   fuelPolicy: z.enum(RENTAL_FUEL_POLICIES).nullable().optional(),

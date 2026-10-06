@@ -1,8 +1,10 @@
 import {
   isCountableRental,
+  odometerDistanceKm,
   rentalCost,
   rentalCountries,
   rentalDays,
+  rentalDrivenKm,
   rentalYear,
 } from "../rentalCounting";
 import { describe, expect, it } from "vitest";
@@ -88,5 +90,44 @@ describe("rentalCounting", () => {
       currency: "EUR",
       source: "cancellationFee",
     });
+  });
+});
+
+/**
+ * forgejo#206: the km a rental was driven, as every reader takes them. A
+ * stored figure (invoice, or a hand correction) wins; else in − out of both
+ * odometer readings; else null. One reading never yields a figure.
+ */
+describe("rentalDrivenKm", () => {
+  const km = (
+    distanceKm: number | null,
+    distanceSource: string | null,
+    odometerOutKm: number | null,
+    odometerInKm: number | null
+  ) => rentalDrivenKm({ distanceKm, distanceSource, odometerOutKm, odometerInKm });
+
+  it.each([
+    // stored, source, out, in → expected
+    [null, null, 10_000, 10_634, { km: 634, source: "odometer" }],
+    [null, null, 10_000, 10_000, { km: 0, source: "odometer" }],
+    [null, null, 10_000, null, null],
+    [null, null, null, 10_634, null],
+    [null, null, null, null, null],
+    [null, null, 10_634, 10_000, null],
+    [700, "user", 10_000, 10_634, { km: 700, source: "user" }],
+    [700, "user", null, null, { km: 700, source: "user" }],
+    [634, "invoice", 10_000, 10_634, { km: 634, source: "invoice" }],
+    [634, "invoice", null, null, { km: 634, source: "invoice" }],
+    [634, "agreement", null, null, { km: 634, source: "agreement" }],
+    [634, null, 10_000, 10_100, { km: 634, source: null }],
+  ] as const)("stored %s (%s), odometer %s → %s gives %j", (d, s, o, i, expected) => {
+    expect(km(d, s, o, i)).toEqual(expected);
+  });
+
+  it("names the odometer difference only when both readings are known", () => {
+    expect(odometerDistanceKm(5, 12)).toBe(7);
+    expect(odometerDistanceKm(5, null)).toBeNull();
+    expect(odometerDistanceKm(null, 12)).toBeNull();
+    expect(odometerDistanceKm(12, 5)).toBeNull();
   });
 });

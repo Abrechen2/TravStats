@@ -40,7 +40,9 @@
   "distance": {
     "invoice": "laut Rechnung",
     "agreement": "laut Mietvertrag",
-    "user": "von Hand korrigiert"
+    "user": "von Hand korrigiert",
+    "odometer": "aus den Kilometerständen",
+    "unknown": "Herkunft nicht vermerkt"
   },
   "inclusion": {
     "cdw": "Vollkasko (CDW)",
@@ -129,7 +131,11 @@
     "currency": "Währung",
     "inclusions": "Schutz und Extras",
     "distanceKm": "Gefahrene Kilometer (Korrektur)",
-    "distanceHint": "Die Kilometer kommen aus der Schlussrechnung. Ein Wert hier gilt als Korrektur von Hand und wird so angezeigt.",
+    "odometerOutKm": "Kilometerstand bei Abholung",
+    "odometerInKm": "Kilometerstand bei Rückgabe",
+    "distanceHint": "Die gefahrenen Kilometer kommen aus der Schlussrechnung, sonst aus den beiden Kilometerständen (Rückgabe minus Abholung). Ein Wert unter „Korrektur“ geht beidem vor und wird als Korrektur von Hand angezeigt.",
+    "driven": "Gefahren: {{km}} km ({{source}})",
+    "drivenUnknown": "Gefahrene Kilometer: noch nicht bekannt",
     "notes": "Notizen",
     "cancelled": "Storniert",
     "saveError": "Die Miete konnte nicht gespeichert werden.",
@@ -142,6 +148,7 @@
       "stationUnresolved": "Diese Station lässt sich nicht verorten. Wähle einen Flughafen oder gib eine Adresse ein.",
       "geocoderUnavailable": "Die Adresssuche antwortet gerade nicht. Die Miete wurde nicht gespeichert – versuche es gleich noch einmal.",
       "returnBeforePickup": "Die Rückgabe liegt vor der Abholung.",
+      "odometerReversed": "Der Kilometerstand bei Rückgabe darf nicht unter dem bei Abholung liegen.",
       "roadtripNotFound": "Dieser Roadtrip wurde nicht gefunden.",
       "invalid": "Eine Angabe wurde nicht angenommen. Bitte prüfe das Formular.",
       "nonexistentTime": "Diese Uhrzeit gibt es an der Station nicht (Zeitumstellung).",
@@ -251,7 +258,7 @@
     "rentals_one": "{{count}} Miete",
     "rentals_other": "{{count}} Mieten",
     "km": "Kilometer",
-    "kmCoverage": "{{covered}} von {{of}} Mieten mit Rechnung",
+    "kmCoverage": "{{covered}} von {{of}} Mieten mit bekannten Kilometern",
     "perDay": "pro Tag ({{currency}})",
     "perDayNoCost": "Kosten pro Tag",
     "otherCurrencies": "Andere Währungen getrennt: {{list}}",

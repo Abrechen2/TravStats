@@ -22,6 +22,7 @@ import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { formatAmount } from "../lib/units";
 import { formatStationMoment } from "../lib/rentalTime";
 import type { TimeValue } from "../shared/time";
+import { rentalDrivenKm } from "../shared/rentalCounting";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { RentalBooking } from "../types/rental";
@@ -132,15 +133,20 @@ export default function RentalDetailPage(): JSX.Element {
         )
       : null;
 
+  const driven = rentalDrivenKm(rental);
+  const reading = (km: number | null): string | null =>
+    km === null ? null : `${km.toLocaleString(locale)} km`;
   const kpis: DetailKpi[] = [
     { key: "days", value: String(rental.rentalDays), label: t("rental:detail.kpiDays") },
+    // The one rule the list and the statistics read (`rentalDrivenKm`,
+    // forgejo#206): invoice or correction, else in − out of both readings.
     {
       key: "km",
-      value: rental.distanceKm === null ? "–" : `${rental.distanceKm.toLocaleString(locale)} km`,
+      value: driven === null ? "–" : `${driven.km.toLocaleString(locale)} km`,
       label:
-        rental.distanceKm === null
+        driven === null
           ? t("rental:detail.kpiKmPending")
-          : t(`rental:distance.${rental.distanceSource ?? "user"}`),
+          : t(`rental:distance.${driven.source ?? "unknown"}`),
     },
     {
       key: "perDay",
@@ -266,6 +272,8 @@ export default function RentalDetailPage(): JSX.Element {
               },
               // Null hides the fact, like every other unknown here (forgejo#196).
               { label: t("rental:detail.licensePlate"), value: rental.licensePlate },
+              { label: t("rental:form.odometerOutKm"), value: reading(rental.odometerOutKm) },
+              { label: t("rental:form.odometerInKm"), value: reading(rental.odometerInKm) },
             ]}
           />
 

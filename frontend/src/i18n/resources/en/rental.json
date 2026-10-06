@@ -40,7 +40,9 @@
   "distance": {
     "invoice": "from the invoice",
     "agreement": "from the rental agreement",
-    "user": "corrected by hand"
+    "user": "corrected by hand",
+    "odometer": "from the odometer readings",
+    "unknown": "origin not recorded"
   },
   "inclusion": {
     "cdw": "Collision damage waiver (CDW)",
@@ -129,7 +131,11 @@
     "currency": "Currency",
     "inclusions": "Protection and extras",
     "distanceKm": "Kilometres driven (correction)",
-    "distanceHint": "Kilometres come from the final invoice. A value here counts as a correction by hand and is shown as one.",
+    "odometerOutKm": "Odometer at pick-up",
+    "odometerInKm": "Odometer at return",
+    "distanceHint": "Kilometres driven come from the final invoice, else from the two odometer readings (return minus pick-up). A value under \"correction\" overrides both and is shown as a correction by hand.",
+    "driven": "Driven: {{km}} km ({{source}})",
+    "drivenUnknown": "Kilometres driven: not known yet",
     "notes": "Notes",
     "cancelled": "Cancelled",
     "saveError": "The rental could not be saved.",
@@ -142,6 +148,7 @@
       "stationUnresolved": "This station cannot be placed. Pick an airport or enter an address.",
       "geocoderUnavailable": "The address search is not answering. The rental was not saved – try again in a moment.",
       "returnBeforePickup": "The return is before the pickup.",
+      "odometerReversed": "The odometer at return cannot be below the one at pick-up.",
       "roadtripNotFound": "This roadtrip was not found.",
       "invalid": "A value was not accepted. Please check the form.",
       "nonexistentTime": "This time does not exist at the station (clock change).",
@@ -251,7 +258,7 @@
     "rentals_one": "{{count}} rental",
     "rentals_other": "{{count}} rentals",
     "km": "Kilometres",
-    "kmCoverage": "{{covered}} of {{of}} rentals invoiced",
+    "kmCoverage": "{{covered}} of {{of}} rentals with known kilometres",
     "perDay": "per day ({{currency}})",
     "perDayNoCost": "Cost per day",
     "otherCurrencies": "Other currencies apart: {{list}}",

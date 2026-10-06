@@ -5,7 +5,12 @@ import { resolveCompanions, linkRowsFor } from "../companionService";
 import { fxColumnsFor, getBaseCurrency } from "../fx/snapshot";
 import { recomputeTripStatus } from "../tripStatusService";
 import { resolveRentalStation } from "./rentalStations";
-import { distanceColumns, mergeRental, type ResolvedStations } from "./rentalWrite";
+import {
+  assertOdometerOrder,
+  distanceColumns,
+  mergeRental,
+  type ResolvedStations,
+} from "./rentalWrite";
 import { rentalDayRange, soleOverlappingTrip } from "./rentalLinks";
 
 /**
@@ -107,6 +112,7 @@ export async function createRentalRow(
   options: WriteOptions
 ): Promise<RentalRow> {
   const state = mergeRental(null, input, await resolveStations(input));
+  assertOdometerOrder(null, input);
   // Linked by itself only when EXACTLY one trip overlaps; a trip the client
   // named (or an explicit null) is never second-guessed.
   const tripId =
@@ -172,6 +178,7 @@ export async function updateRentalRow(
   // The MERGED state, so a one-field PATCH is checked against the stored rest
   // (a return moved before an untouched pickup is refused here).
   const state = mergeRental(existing, input, await resolveStations(input));
+  assertOdometerOrder(existing, input);
   const resolved =
     input.companions === undefined ? undefined : await resolveCompanions(userId, input.companions);
   // Re-snapshotted only when an input it depends on moved (silent-failure

@@ -1,6 +1,7 @@
 import type { JSX, ReactNode } from "react";
 import { useTranslation } from "../../hooks/useTranslation";
 import { formatRentalPeriod } from "../../lib/rentalTime";
+import { rentalDrivenKm } from "../../shared/rentalCounting";
 import type { RentalBooking } from "../../types/rental";
 import { OperatorTile } from "../table/OperatorTile";
 import { statusPillProps } from "../table/statusPillStyle";
@@ -64,10 +65,14 @@ export function RentalTableRow({ rental, columns, onOpen, actions }: Props): JSX
     .filter(Boolean)
     .join(" · ");
 
+  // The invoice's figure, a correction, or in − out of the two odometer
+  // readings — the one rule (`rentalDrivenKm`, forgejo#206). Only a hand
+  // correction is labelled as such.
+  const driven = rentalDrivenKm(rental);
   const km =
-    rental.distanceKm !== null ? (
-      `${rental.distanceKm.toLocaleString(locale)} km${
-        rental.distanceSource === "user" ? ` (${t("rental:distance.user")})` : ""
+    driven !== null ? (
+      `${driven.km.toLocaleString(locale)} km${
+        driven.source === "user" ? ` (${t("rental:distance.user")})` : ""
       }`
     ) : rental.status === "completed" ? (
       <span

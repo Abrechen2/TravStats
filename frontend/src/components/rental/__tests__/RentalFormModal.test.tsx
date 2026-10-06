@@ -138,4 +138,38 @@ describe("RentalFormModal", () => {
     await waitFor(() => expect(update).toHaveBeenCalled());
     expect(update.mock.calls[0][1].licensePlate).toBe("F-TS 2026");
   });
+
+  // forgejo#206: both readings in the form, the km they give said before saving.
+  it("takes both odometer readings, says the km they give, and sends them", async () => {
+    update.mockResolvedValue(makeRental());
+    render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={vi.fn()} />);
+    expect(screen.getByTestId("rental-form-driven").textContent).toBe("rental:form.drivenUnknown");
+    fireEvent.change(screen.getByLabelText("rental:form.odometerOutKm"), {
+      target: { value: "12.000" },
+    });
+    fireEvent.change(screen.getByLabelText("rental:form.odometerInKm"), {
+      target: { value: "12.634" },
+    });
+    expect(screen.getByTestId("rental-form-driven").textContent).toBe("rental:form.driven");
+    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    await waitFor(() => expect(update).toHaveBeenCalled());
+    expect(update.mock.calls[0][1]).toMatchObject({ odometerOutKm: 12_000, odometerInKm: 12_634 });
+    // No correction was typed: none is sent, so nothing is labelled "by hand".
+    expect("distanceKm" in update.mock.calls[0][1]).toBe(false);
+  });
+
+  it("refuses a return reading below the pick-up one beside that field, and does not save", async () => {
+    render(<RentalFormModal rental={makeRental()} onClose={vi.fn()} onSaved={vi.fn()} />);
+    fireEvent.change(screen.getByLabelText("rental:form.odometerOutKm"), {
+      target: { value: "12634" },
+    });
+    const returnReading = screen.getByLabelText("rental:form.odometerInKm");
+    fireEvent.change(returnReading, { target: { value: "12000" } });
+    fireEvent.click(screen.getByRole("button", { name: "rental:form.save" }));
+    const field = returnReading.closest("label") as HTMLElement;
+    expect(within(field).getByRole("alert").textContent).toBe(
+      "rental:form.errors.odometerReversed"
+    );
+    expect(update).not.toHaveBeenCalled();
+  });
 });

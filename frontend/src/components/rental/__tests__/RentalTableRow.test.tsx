@@ -55,6 +55,36 @@ describe("RentalTableRow — the open-km pill", () => {
   });
 });
 
+// forgejo#206: in − out of the two odometer readings counts like an invoice's
+// figure; only a hand correction is labelled, and one reading gives nothing.
+describe("RentalTableRow — km from the odometer", () => {
+  it("shows in − out when both readings are known, unlabelled", () => {
+    const row = renderRow(
+      makeRental({ status: "completed", odometerOutKm: 12_000, odometerInKm: 12_634 })
+    );
+    expect(cellOf(row, "km").textContent).toBe("634 km");
+    expect(screen.queryByTestId("rental-km-open")).toBeNull();
+  });
+
+  it("labels a correction that overrides the readings", () => {
+    const row = renderRow(
+      makeRental({
+        status: "completed",
+        odometerOutKm: 12_000,
+        odometerInKm: 12_634,
+        distanceKm: 640,
+        distanceSource: "user",
+      })
+    );
+    expect(cellOf(row, "km").textContent).toBe("640 km (rental:distance.user)");
+  });
+
+  it("still waits for the km with only one reading", () => {
+    renderRow(makeRental({ status: "completed", odometerOutKm: 12_000 }));
+    expect(screen.getByTestId("rental-km-open")).toBeInTheDocument();
+  });
+});
+
 // forgejo#196: the plate is part of what the row says about the car.
 describe("RentalTableRow — licence plate", () => {
   it("shows the plate in the vehicle column when one is recorded", () => {
