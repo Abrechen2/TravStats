@@ -6,8 +6,10 @@ import {
   flightReminderContent,
   lodgingReminderContent,
   railReminderContent,
+  railRideReminderContent,
   type FlightReminderData,
   type LodgingReminderData,
+  type RailReminderData,
 } from "../reminderContent";
 import { DOMAINS } from "../../../shared/domains";
 import { serializeDay, serializeTime } from "../../../shared/time/wire";
@@ -421,6 +423,129 @@ describe("railReminderContent", () => {
     expect(text).toContain("Your train leaves in 24 hours");
     expect(text).toContain("→ München Hbf\n");
     expect(text).not.toMatch(/Train:|Operator|Class|Coach|Seat|Booking reference|null/);
+  });
+});
+
+/**
+ * forgejo#210: a ride with changes is one mail. The subject and the heading
+ * name where the ride ENDS; every train is listed under it, one after the
+ * other, with its own stations, local times, coach and seat.
+ */
+describe("railRideReminderContent", () => {
+  const ice: RailReminderData = {
+    id: "leg-ice",
+    tripId: null,
+    operator: "DB Fernverkehr",
+    trainCategory: "ICE",
+    trainNumber: "911",
+    travelClass: "second",
+    coach: "7",
+    seat: "61",
+    bookingReference: "Q3F8KD",
+    depStationName: "Augsburg Hbf",
+    arrStationName: "München Hbf",
+    // 07:12 UTC is 09:12 in Augsburg (CEST); 07:52 UTC is 09:52.
+    departure: serializeTime(new Date("2026-10-11T07:12:00.000Z"), "Europe/Berlin"),
+    arrival: serializeTime(new Date("2026-10-11T07:52:00.000Z"), "Europe/Berlin"),
+  };
+  const ec: RailReminderData = {
+    ...ice,
+    id: "leg-ec",
+    operator: "ÖBB",
+    trainCategory: "EC",
+    trainNumber: "115",
+    coach: "254",
+    seat: "45",
+    depStationName: "München Hbf",
+    arrStationName: "Salzburg Hbf",
+    departure: serializeTime(new Date("2026-10-11T08:17:00.000Z"), "Europe/Berlin"),
+    arrival: serializeTime(new Date("2026-10-11T09:57:00.000Z"), "Europe/Vienna"),
+  };
+
+  it("is the single-train mail, unchanged, for a ride of one train", () => {
+    expect(railRideReminderContent([ice], 2, "de", LINKS)).toEqual(
+      railReminderContent(ice, 2, "de", LINKS)
+    );
+  });
+
+  it("names the ride by its destination and lists every train in HTML and text (DE)", () => {
+    const content = railRideReminderContent([ice, ec], 24, "de", LINKS);
+    const { html, text } = render(content);
+    expect(content.subject).toBe("Zug-Erinnerung: Deine Fahrt nach Salzburg Hbf in 24h");
+    expect(content.heading).toBe("Deine Fahrt nach Salzburg Hbf startet in 24 Stunden");
+    for (const part of [html, text]) {
+      expect(part).toContain("Deine Fahrt nach Salzburg Hbf startet in 24 Stunden");
+      expect(part).toContain("1. ICE 911");
+      expect(part).toContain("2. EC 115");
+      expect(part).toContain("Augsburg Hbf · So., 11.10.2026, 09:12 Uhr");
+      expect(part).toContain("München Hbf · So., 11.10.2026, 09:52 Uhr");
+      expect(part).toContain("München Hbf · So., 11.10.2026, 10:17 Uhr");
+      expect(part).toContain("Salzburg Hbf · So., 11.10.2026, 11:57 Uhr");
+      expect(part).toContain("DB Fernverkehr");
+      expect(part).toContain("ÖBB");
+    }
+    // The trains in travel order, each with its own coach and seat.
+    expect(text.indexOf("1. ICE 911")).toBeLessThan(text.indexOf("2. EC 115"));
+    expect(text).toContain("Wagen: 7\nPlatz: 61");
+    expect(text).toContain("Wagen: 254\nPlatz: 45");
+    expect(text).toContain("Umstiege: 1 · München Hbf");
+    // One booking code for the whole ride is said once.
+    expect(text.match(/Q3F8KD/g)).toHaveLength(1);
+    // The overview runs from the first departure to the last arrival.
+    expect(text).toContain(
+      "Augsburg Hbf — So., 11.10.2026, 09:12 Uhr\n→ Salzburg Hbf — So., 11.10.2026, 11:57 Uhr"
+    );
+    expect(content.blocks).toContainEqual({
+      kind: "button",
+      label: "In TravStats öffnen",
+      url: "https://travstats.test/rail/connection/leg-ice",
+    });
+  });
+
+  it("speaks English with the destination subject, and keeps differing booking codes per train", () => {
+    const content = railRideReminderContent(
+      [ice, { ...ec, bookingReference: "ZZ9" }],
+      2,
+      "en",
+      LINKS
+    );
+    const { text } = render(content);
+    expect(content.subject).toBe("Train reminder: your journey to Salzburg Hbf in 2h");
+    expect(text).toContain("Your journey to Salzburg Hbf leaves in 2 hours");
+    expect(text).toContain("Changes: 1 · München Hbf");
+    expect(text).toContain("Booking reference: Q3F8KD");
+    expect(text).toContain("Booking reference: ZZ9");
+    expect(text).toContain("Coach: 254\nSeat: 45");
+  });
+
+  it("escapes station names in the HTML part and leaves out what a train does not carry", () => {
+    const content = railRideReminderContent(
+      [
+        { ...ice, arrStationName: "<b>Hub</b> & Co" },
+        {
+          ...ec,
+          depStationName: "<b>Hub</b> & Co",
+          arrStationName: "<script>x</script> Hbf",
+          trainCategory: null,
+          trainNumber: null,
+          coach: null,
+          seat: null,
+          operator: null,
+          arrival: null,
+        },
+      ],
+      24,
+      "de",
+      LINKS
+    );
+    const { html, text } = render(content);
+    expect(html).not.toContain("<script>x</script>");
+    expect(html).not.toContain("<b>Hub</b>");
+    expect(html).toContain("&lt;script&gt;x&lt;/script&gt; Hbf");
+    expect(html).toContain("&lt;b&gt;Hub&lt;/b&gt; &amp; Co");
+    expect(text).toContain("2. Zug");
+    expect(text).toContain("An: <script>x</script> Hbf\n");
+    expect(text).not.toMatch(/null|undefined/);
   });
 });
 

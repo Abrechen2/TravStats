@@ -36,6 +36,7 @@ describe("GET /api/v1/upcoming", () => {
   afterEach(async () => {
     await prisma.flight.deleteMany({ where: { userId } });
     await prisma.railJourney.deleteMany({ where: { userId } });
+    await prisma.booking.deleteMany({ where: { userId } });
     await prisma.trip.deleteMany({ where: { userId } });
     await prisma.userSettings.deleteMany({ where: { userId } });
   });
@@ -516,6 +517,113 @@ describe("GET /api/v1/upcoming", () => {
       });
       expect(new Date(entry.startsAt).getTime()).toBeGreaterThan(inDays(2).getTime());
       expect(entry.detailId).toBe(entry.id);
+    });
+
+    /**
+     * forgejo#210: a ride with a change is named from where it starts to where
+     * it ENDS — "Als nächstes" used to name the first train's destination, the
+     * station the reader only changes at. Which trains form the ride is the
+     * rail list's grouping rule (one booking, a change at the same station).
+     */
+    describe("a ride with a change", () => {
+      const MIN = 60_000;
+      const STATION = {
+        augsburg: { name: "Augsburg Hbf", lat: 48.3655, lon: 10.8856 },
+        muenchen: { name: "München Hbf", lat: 48.1402, lon: 11.56 },
+        salzburg: { name: "Salzburg Hbf", lat: 47.8128, lon: 13.0456 },
+      };
+      const leg = (
+        bookingId: string,
+        from: keyof typeof STATION,
+        to: keyof typeof STATION,
+        dep: Date,
+        minutes: number,
+        train: [string, string]
+      ) => ({
+        userId,
+        bookingId,
+        depStationName: STATION[from].name,
+        depLat: STATION[from].lat,
+        depLon: STATION[from].lon,
+        arrStationName: STATION[to].name,
+        arrLat: STATION[to].lat,
+        arrLon: STATION[to].lon,
+        trainCategory: train[0],
+        trainNumber: train[1],
+        departureTime: dep,
+        arrivalTime: new Date(dep.getTime() + minutes * MIN),
+      });
+
+      it("runs from the first departure to the last arrival, at the first departure time", async () => {
+        await enableDomains(["flight", "rail"]);
+        const booking = await prisma.booking.create({ data: { userId, pnr: "R210" } });
+        const first = inDays(1);
+        await prisma.railJourney.createMany({
+          data: [
+            leg(booking.id, "augsburg", "muenchen", first, 40, ["ICE", "911"]),
+            leg(booking.id, "muenchen", "salzburg", new Date(first.getTime() + 65 * MIN), 100, [
+              "EC",
+              "115",
+            ]),
+          ],
+        });
+
+        const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+        const entry = res.body.data.entries.find((e: { domain: string }) => e.domain === "rail");
+        expect(entry).toMatchObject({
+          primary: "Augsburg Hbf → Salzburg Hbf",
+          secondary: "ICE 911 · EC 115",
+          startsAt: first.toISOString(),
+        });
+        const opener = await prisma.railJourney.findFirst({
+          where: { userId, trainNumber: "911" },
+        });
+        expect(entry.detailId).toBe(opener?.id);
+      });
+
+      it("names the rest of a ride already under way from the station the next train leaves", async () => {
+        await enableDomains(["flight", "rail"]);
+        const booking = await prisma.booking.create({ data: { userId, pnr: "R210B" } });
+        const first = new Date(Date.now() - 20 * MIN);
+        await prisma.railJourney.createMany({
+          data: [
+            leg(booking.id, "augsburg", "muenchen", first, 40, ["ICE", "911"]),
+            leg(booking.id, "muenchen", "salzburg", new Date(first.getTime() + 65 * MIN), 100, [
+              "EC",
+              "115",
+            ]),
+          ],
+        });
+
+        const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+        const entry = res.body.data.entries.find((e: { domain: string }) => e.domain === "rail");
+        expect(entry).toMatchObject({
+          primary: "München Hbf → Salzburg Hbf",
+          secondary: "EC 115",
+        });
+      });
+
+      it("keeps two rides of one booking apart: the way back is not a change", async () => {
+        await enableDomains(["flight", "rail"]);
+        const booking = await prisma.booking.create({ data: { userId, pnr: "R210C" } });
+        const out = inDays(1);
+        await prisma.railJourney.createMany({
+          data: [
+            leg(booking.id, "augsburg", "muenchen", out, 40, ["ICE", "911"]),
+            leg(booking.id, "muenchen", "augsburg", new Date(out.getTime() + 90 * MIN), 40, [
+              "ICE",
+              "912",
+            ]),
+          ],
+        });
+
+        const res = await request(app).get("/api/v1/upcoming").set("Cookie", authCookie);
+        const entry = res.body.data.entries.find((e: { domain: string }) => e.domain === "rail");
+        expect(entry).toMatchObject({
+          primary: "Augsburg Hbf → München Hbf",
+          secondary: "ICE 911",
+        });
+      });
     });
 
     it("says nothing about rail to a user who has not switched it on", async () => {
