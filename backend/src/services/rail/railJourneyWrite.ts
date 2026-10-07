@@ -117,9 +117,10 @@ export function wallClockToInstant(wall: string, timezone: string | null): Date 
  * instant an hour off, which read back as 01:30 and could even turn a valid
  * ride into "arrival before departure". Same rule and same check
  * (`shared/wallClockExistence.ts`) the flight schema applies; the repeated
- * autumn hour is a real time and passes.
+ * autumn hour is a real time and passes. Exported for the bus write path,
+ * whose terminals follow the same rule.
  */
-function sentWallClockToInstant(
+export function sentWallClockToInstant(
   wall: string,
   timezone: string | null,
   field: "departureLocal" | "arrivalLocal",

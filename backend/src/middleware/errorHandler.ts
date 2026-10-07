@@ -84,6 +84,11 @@ export type ApiErrorCode =
   /** A rail arrival instant before its departure — usually a night train
    *  whose arrival kept the departure's date. `field` is `arrivalLocal`. */
   | "RAIL_ARRIVAL_BEFORE_DEPARTURE"
+  /** A bus write body failed validation; `field` names the first field. */
+  | "BUS_INVALID_INPUT"
+  /** A bus arrival instant before its departure (spec 2026-10-07-bus-domain-design §3.2).
+   *  `field` is `arrivalLocal`. */
+  | "BUS_ARRIVAL_BEFORE_DEPARTURE"
   // Car rentals (spec 2026-10-01-rental-domain-design).
   | "RENTAL_INVALID_INPUT"
   | "RENTAL_INVALID_QUERY"
