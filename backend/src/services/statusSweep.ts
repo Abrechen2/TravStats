@@ -325,6 +325,7 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
         select: { stops: { select: { startDate: true, endDate: true } } },
       },
       railJourneys: { select: RAIL_CLOCK_SELECT },
+      busJourneys: { select: RAIL_CLOCK_SELECT },
       rentalBookings: {
         where: { status: { not: "cancelled" } },
         select: { pickupTime: true, returnTime: true },
@@ -341,7 +342,8 @@ export async function sweepStatuses(now: Date = clockNow()): Promise<{
       cruises: trip.cruises,
       lodgingStays: trip.lodgingStays,
       roadtrips: trip.routes,
-      railJourneys: trip.railJourneys.map(rideStatusSpan),
+      // Bus rides carry rail's clock columns and join its bounds (spec 2026-10-07 §8).
+      railJourneys: [...trip.railJourneys, ...trip.busJourneys].map(rideStatusSpan),
       rentals: trip.rentalBookings,
       ownStartDate: trip.startDate,
       ownEndDate: trip.endDate,

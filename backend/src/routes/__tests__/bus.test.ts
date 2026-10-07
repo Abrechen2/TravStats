@@ -174,14 +174,14 @@ describe("Bus rides API", () => {
     expect(y2027.body.meta.total).toBe(1);
   });
 
-  // un-skipped in Task 7: tripStatusService does not read bus rides yet
-  it.skip("updates a field, keeps the ticket's clock when a terminal moves, and re-derives the trip", async () => {
+  it("updates a field, keeps the ticket's clock when a terminal moves, and re-derives the trip", async () => {
     const trip = await prisma.trip.create({
       data: {
         userId,
         name: "Korea",
-        startDate: new Date("2026-09-25"),
-        endDate: new Date("2026-09-30"),
+        status: "planned",
+        startDate: new Date("2030-01-01"),
+        endDate: new Date("2030-01-05"),
       },
     });
     const created = await create({ ...base, tripId: trip.id });
@@ -195,8 +195,8 @@ describe("Bus rides API", () => {
     expect(patched.body.data.depStationName).toBe(JEONJU.name);
     expect(patched.body.data.times.departure.local).toBe("2026-09-20T09:00:00");
     const after = await prisma.trip.findUniqueOrThrow({ where: { id: trip.id } });
-    // A ride on the 20th widens a trip that began on the 25th.
-    expect(after.startDate.toISOString().slice(0, 10)).toBe("2026-09-20");
+    // The past ride, not the trip's own 2030 plan, now decides its status.
+    expect(after.status).toBe("completed");
   });
 
   it("dual-writes companions and counts them on the companion", async () => {
