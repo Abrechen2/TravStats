@@ -162,6 +162,10 @@
             "name": "Mietwagen",
             "what": "Der Bereich „Mietwagen“: ein Fahrtenbuch für Mietwagen mit Abholung und Rückgabe in Ortszeit der Station, Fahrzeuggruppe, Preis und den Kilometern aus der Schlussrechnung."
           },
+          "busDomain": {
+            "name": "Bus",
+            "what": "Der Bereich „Bus“: ein Fahrtenbuch für Fernbus-, Intercity- und Shuttlefahrten mit Abfahrt und Ankunft in Ortszeit des Terminals, Linie, Platz und Preis. Kein Stadtverkehr."
+          },
           "railDomain": {
             "name": "Bahn",
             "what": "Der Bereich „Bahn“: ein Fahrtenbuch für Zugfahrten mit Bahnhofskatalog, Zugsuche, Karte, Statistik und Excel-Import und -Export. Ein Roadtrip mit „Bahn“ als Fahrzeug lässt sich als Zugfahrten übernehmen."
