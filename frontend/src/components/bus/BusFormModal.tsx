@@ -66,9 +66,15 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
   const [arrValid, setArrValid] = useState(true);
   const [saving, setSaving] = useState(false);
   const [error, setError] = useState<BusSaveError | null>(null);
+  /** The ride the API accepted. From then on the save button is off: a second click would create it again. */
+  const [saved, setSaved] = useState<BusJourney | null>(null);
 
-  const set = <K extends keyof BusFormDraft>(key: K, value: BusFormDraft[K]): void =>
+  // An edit ends a shown refusal: it described the input as it WAS, and
+  // leaving it up beside a field the user has since changed reads as still true.
+  const set = <K extends keyof BusFormDraft>(key: K, value: BusFormDraft[K]): void => {
+    setError(null);
     setDraft((prev) => ({ ...prev, [key]: value }));
+  };
 
   // Non-fatal on purpose: without the list the field offers "no trip", which
   // beats taking the dialog down over a side lookup.
@@ -103,15 +109,17 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
 
   const setTerminal = (end: "departure" | "arrival", next: BusStationDraft): void => set(end, next);
 
-  const toggleDayOnly = (dayOnly: boolean): void =>
+  const toggleDayOnly = (dayOnly: boolean): void => {
+    setError(null);
     setDraft((prev) => ({
       ...prev,
       dayOnly,
       departureLocal: dayOnly ? dayOf(prev.departureLocal) : withClock(prev.departureLocal),
       arrivalLocal: dayOnly ? dayOf(prev.arrivalLocal) : withClock(prev.arrivalLocal),
     }));
+  };
 
-  const ready = canSubmit(draft) && depValid && arrValid;
+  const ready = canSubmit(draft) && depValid && arrValid && saved === null;
   const errorText =
     error === null
       ? null
@@ -135,13 +143,24 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
     if (!ready) return;
     setSaving(true);
     setError(null);
+    let accepted: BusJourney;
     try {
       const input = toBusInput(draft);
-      const saved = journey ? await busApi.update(journey.id, input) : await busApi.create(input);
-      await onSaved(saved);
+      accepted = journey ? await busApi.update(journey.id, input) : await busApi.create(input);
     } catch (err: unknown) {
       logger.error("BusFormModal: save failed", err);
       setError(saveErrorFrom(err));
+      setSaving(false);
+      return;
+    }
+    // The ride is stored. What the parent does next (refetch, navigate) is its
+    // own business: its failure is not a refusal of this form, and a retry
+    // here would file the ride a second time.
+    setSaved(accepted);
+    try {
+      await onSaved(accepted);
+    } catch (err: unknown) {
+      logger.error("BusFormModal: onSaved failed after the ride was saved", err);
     } finally {
       setSaving(false);
     }
@@ -240,6 +259,7 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
               value={draft.departure}
               fieldLabel={t("bus:form.departureStation")}
               onPick={(next): void => setTerminal("departure", next)}
+              testId="bus-terminal-chips-dep"
             />
           </div>
           <div>
@@ -256,6 +276,7 @@ export function BusFormModal({ journey, onClose, onSaved }: Props): JSX.Element 
               value={draft.arrival}
               fieldLabel={t("bus:form.arrivalStation")}
               onPick={(next): void => setTerminal("arrival", next)}
+              testId="bus-terminal-chips-arr"
             />
           </div>
         </div>

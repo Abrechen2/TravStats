@@ -9,6 +9,8 @@ interface Props {
   /** Names the field in each chip's accessible label. */
   fieldLabel: string;
   onPick: (next: BusStationDraft) => void;
+  /** Lets a test (or a screen reader landmark) tell the two rows apart. */
+  testId: string;
 }
 
 /** Terminals the typed name could continue; a name already filled in is not offered again. */
@@ -35,7 +37,13 @@ function offered(
  * carries the whole terminal — name, address, position AND country — so a
  * chip alone makes the field submittable without a geocoder search.
  */
-export function BusTerminalChips({ terminals, value, fieldLabel, onPick }: Props): JSX.Element {
+export function BusTerminalChips({
+  terminals,
+  value,
+  fieldLabel,
+  onPick,
+  testId,
+}: Props): JSX.Element {
   const candidates = offered(terminals, value);
   const pick = (name: string): void => {
     const terminal = candidates.find((candidate) => candidate.name === name);
@@ -51,11 +59,13 @@ export function BusTerminalChips({ terminals, value, fieldLabel, onPick }: Props
   // `value=""` on purpose: the narrowing is done above, and SuggestionChips
   // would hide the very chip that equals the typed name.
   return (
-    <SuggestionChips
-      value=""
-      suggestions={candidates.map((terminal) => terminal.name)}
-      onPick={pick}
-      fieldLabel={fieldLabel}
-    />
+    <div data-testid={testId}>
+      <SuggestionChips
+        value=""
+        suggestions={candidates.map((terminal) => terminal.name)}
+        onPick={pick}
+        fieldLabel={fieldLabel}
+      />
+    </div>
   );
 }

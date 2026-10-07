@@ -1,5 +1,5 @@
 import { describe, expect, it, beforeEach, vi } from "vitest";
-import { act, render, screen, waitFor, fireEvent } from "@testing-library/react";
+import { act, render, screen, waitFor, fireEvent, within } from "@testing-library/react";
 
 vi.mock("../../../hooks/useTranslation", () => ({
   useTranslation: () => ({
@@ -211,6 +211,41 @@ describe("BusFormModal", () => {
     );
   });
 
+  it("does not call a parent's failure after a stored ride a refusal, and does not file the ride twice", async () => {
+    create.mockResolvedValue({ id: "new" });
+    const onSaved = vi.fn().mockRejectedValue(new Error("refetch failed"));
+    await renderModal(null, onSaved);
+    pickBothTerminals();
+    typeDeparture("2026-09-20T09:00");
+    fireEvent.click(saveButton());
+
+    await waitFor(() => expect(onSaved).toHaveBeenCalledTimes(1));
+    await waitFor(() => expect(saveButton()).toBeDisabled());
+    expect(screen.queryByRole("alert")).toBeNull();
+    // Stored once; a second click has nothing to send.
+    fireEvent.click(saveButton());
+    expect(create).toHaveBeenCalledTimes(1);
+    await settle();
+  });
+
+  it("takes a shown refusal down when the user edits the form", async () => {
+    create.mockRejectedValue({
+      response: { data: { code: "BUS_ARRIVAL_BEFORE_DEPARTURE", field: "arrivalLocal" } },
+    });
+    await renderModal(null);
+    pickBothTerminals();
+    typeDeparture("2026-09-20T09:00");
+    fireEvent.click(saveButton());
+    await screen.findByRole("alert");
+
+    fireEvent.change(screen.getByLabelText("bus:form.arrivalTime"), {
+      target: { value: "2026-09-20T11:20" },
+    });
+    expect(screen.queryByRole("alert")).toBeNull();
+    expect(screen.getByLabelText("bus:form.arrivalTime")).not.toHaveAttribute("aria-invalid");
+    await settle();
+  });
+
   describe("entry suggestions", () => {
     it("a terminal chip fills name, address, position and country, so the save needs no geocoder pick", async () => {
       entrySuggestions.mockResolvedValue({
@@ -256,7 +291,7 @@ describe("BusFormModal", () => {
       );
     });
 
-    it("offers a terminal whose name was typed in full but never placed", async () => {
+    it("offers a terminal whose name was typed in full but never placed, until it is placed", async () => {
       entrySuggestions.mockResolvedValue({
         ...NO_CHIPS,
         terminals: [
@@ -264,13 +299,24 @@ describe("BusFormModal", () => {
         ],
       });
       await renderModal(null);
-      await screen.findAllByRole("button", { name: "common:suggestionChip:Dong Seoul" });
+      const chip = { name: "common:suggestionChip:Dong Seoul" };
+      await screen.findAllByRole("button", chip);
       fireEvent.change(screen.getByLabelText("bus:form.departureStation: bus:form.stationName"), {
         target: { value: "Dong Seoul" },
       });
-      expect(
-        screen.getAllByRole("button", { name: "common:suggestionChip:Dong Seoul" }).length
-      ).toBeGreaterThan(0);
+      await settle();
+
+      // The merged list sits under both fields, so only the DEPARTURE row can
+      // show that the typed name did not hide the chip it still needs.
+      const depRow = within(screen.getByTestId("bus-terminal-chips-dep"));
+      const arrRow = within(screen.getByTestId("bus-terminal-chips-arr"));
+      expect(depRow.getByRole("button", chip)).toBeInTheDocument();
+
+      fireEvent.click(depRow.getByRole("button", chip));
+      // Name and position now match: this chip would change nothing, so it
+      // goes — from the departure row only.
+      expect(depRow.queryByRole("button", chip)).toBeNull();
+      expect(arrRow.getByRole("button", chip)).toBeInTheDocument();
       await settle();
     });
 
