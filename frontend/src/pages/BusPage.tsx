@@ -24,7 +24,9 @@ import { railSummaryFigures } from "../lib/rail/railSummaryFigures";
 import { busApi, type BusListQuery, type BusListSummary } from "../lib/api/bus";
 import { busYear } from "../shared/busCounting";
 import { useDebouncedValue } from "../hooks/useDebouncedValue";
+import { useDocumentCount } from "../hooks/useDocumentCount";
 import { useTranslation } from "../hooks/useTranslation";
+import { DELETE_BUTTON_CLASS, withDocumentNote } from "../lib/deleteConfirm";
 import { logger } from "../lib/logger";
 import { useToastStore } from "../store/toastStore";
 import type { BusJourney, BusStatus } from "../types/bus";
@@ -84,6 +86,8 @@ export default function BusPage(): JSX.Element {
   const [editing, setEditing] = useState<Editing>(null);
   const [toDelete, setToDelete] = useState<BusJourney | null>(null);
   const [deleting, setDeleting] = useState(false);
+  // Asked only while the confirmation is open: deleting a ride takes its filed documents along.
+  const documentCount = useDocumentCount(toDelete ? { type: "busJourney", id: toDelete.id } : null);
   const [reloadToken, setReloadToken] = useState(0);
   const reload = useCallback((): void => setReloadToken((n) => n + 1), []);
   const columnPrefs = useColumnPrefs("bus-list", BUS_ALWAYS_VISIBLE);
@@ -336,8 +340,9 @@ export default function BusPage(): JSX.Element {
         onConfirm={(): void => void confirmDelete()}
         isLoading={deleting}
         title={t("bus:delete")}
-        message={t("bus:deleteConfirm")}
+        message={withDocumentNote(t("bus:deleteConfirm"), t, documentCount)}
         confirmText={t("common:buttons.delete")}
+        confirmButtonClass={DELETE_BUTTON_CLASS}
       />
     </AppShell>
   );

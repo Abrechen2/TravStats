@@ -27,13 +27,26 @@ vi.mock("../../components/bus/BusFormModal", () => ({
   ),
 }));
 vi.mock("../../components/Training/ConfirmModal", () => ({
-  default: ({ isOpen, onConfirm }: { isOpen: boolean; onConfirm: () => void }) =>
+  default: ({
+    isOpen,
+    message,
+    onConfirm,
+  }: {
+    isOpen: boolean;
+    message: string;
+    onConfirm: () => void;
+  }) =>
     isOpen ? (
-      <button type="button" onClick={onConfirm}>
-        confirm-delete
-      </button>
+      <div>
+        <p data-testid="confirm-message">{message}</p>
+        <button type="button" onClick={onConfirm}>
+          confirm-delete
+        </button>
+      </div>
     ) : null,
 }));
+const documentCount = vi.hoisted(() => ({ value: null as number | null }));
+vi.mock("../../hooks/useDocumentCount", () => ({ useDocumentCount: () => documentCount.value }));
 
 const list = vi.fn();
 const remove = vi.fn();
@@ -89,6 +102,7 @@ describe("BusPage", () => {
     remove.mockReset();
     addToast.mockReset();
     navigate.mockReset();
+    documentCount.value = null;
     localStorage.clear();
   });
 
@@ -115,8 +129,13 @@ describe("BusPage", () => {
     list.mockResolvedValue(page(rideFixture(), second));
     renderPage();
     await screen.findByTestId("bus-row-r1");
-    expect(screen.getByText("Fahrten")).toBeInTheDocument();
-    expect(screen.getByText("Terminals")).toBeInTheDocument();
+    // The values, not just the labels: a page that fell back to the empty
+    // summary would print "0 Fahrten" with the same labels.
+    expect(screen.getByText("Fahrten")).toHaveTextContent("2 Fahrten");
+    expect(screen.getByText("Betreiber", { selector: "span.whitespace-nowrap" })).toHaveTextContent(
+      "2 Betreiber"
+    );
+    expect(screen.getByText("Terminals")).toHaveTextContent("4 Terminals");
   });
 
   it("asks the server for one page, newest departure first", async () => {
@@ -185,6 +204,26 @@ describe("BusPage", () => {
     await waitFor(() => expect(remove).toHaveBeenCalledWith("r1"));
     await waitFor(() => expect(addToast).toHaveBeenCalledWith("success", "Busfahrt gelöscht"));
     await waitFor(() => expect(list.mock.calls.length).toBeGreaterThan(2));
+  });
+
+  it("names the filed documents in the delete confirmation, and only when there are some", async () => {
+    list.mockResolvedValue(page(rideFixture()));
+    documentCount.value = 2;
+    renderPage();
+    const row = await screen.findByTestId("bus-row-r1");
+    fireEvent.click(within(row).getByRole("button", { name: "Löschen" }));
+    expect(screen.getByTestId("confirm-message")).toHaveTextContent(
+      "Dazu 2 Dokumente, die mit gelöscht werden."
+    );
+  });
+
+  it("asks nothing extra of the reader when no document is filed", async () => {
+    list.mockResolvedValue(page(rideFixture()));
+    documentCount.value = 0;
+    renderPage();
+    const row = await screen.findByTestId("bus-row-r1");
+    fireEvent.click(within(row).getByRole("button", { name: "Löschen" }));
+    expect(screen.getByTestId("confirm-message")).not.toHaveTextContent("Dokument");
   });
 
   it("keeps the ride and says so when the delete fails", async () => {
