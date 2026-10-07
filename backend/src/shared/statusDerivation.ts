@@ -194,6 +194,14 @@ export function deriveRentalStatus(input: {
 }
 
 /**
+ * Bus rides (spec 2026-10-07-bus-domain-design §4) share rail's vocabulary and
+ * rail's rule to the letter — the two ends carry the same column names, so this
+ * is the same function under the domain's own name, kept so a caller says
+ * which domain it is deriving and a later divergence has a place to go.
+ */
+export const deriveBusStatus = deriveRailStatus;
+
+/**
  * Extract a trip's date bounds from its linked flights + cruises — the
  * earliest segment start and the latest segment end. Shared by the sweep
  * (statusSweep.ts) and the per-trip recompute service (tripStatusService.ts)
