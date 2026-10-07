@@ -108,6 +108,7 @@ describe("GET /api/v1/admin/export/all-data", () => {
       "companions",
       "documents",
       "railJourneys",
+      "busJourneys",
       "tourRoutes",
       "userAchievements",
     ]) {
@@ -185,6 +186,48 @@ describe("GET /api/v1/admin/export/all-data", () => {
     } finally {
       await prisma.railJourney.deleteMany({ where: { userId: createdUserIds[0] } });
       await prisma.railStation.delete({ where: { id: station.id } });
+    }
+  });
+
+  // Bus rides (spec 2026-10-07-bus-domain-design): the rides with their
+  // companion links. Without the relation in the include, the schema-coverage
+  // test below fails — this one pins that the rows actually come through.
+  it("carries the bus rides with their companion links", async () => {
+    const companion = await prisma.companion.create({
+      data: {
+        userId: createdUserIds[0],
+        canonicalName: "export bus companion",
+        displayName: "Export Bus Companion",
+        searchName: "export bus companion",
+      },
+    });
+    const ride = await prisma.busJourney.create({
+      data: {
+        userId: createdUserIds[0],
+        operator: "Kobus",
+        depStationName: "Seoul Express Bus Terminal",
+        arrStationName: "Sokcho Express Bus Terminal",
+        depLat: 37.5,
+        depLon: 127.0,
+        arrLat: 38.2,
+        arrLon: 128.6,
+        departureTime: new Date("2026-09-20T00:00:00Z"),
+        status: "completed",
+        companionLinks: { create: [{ companionId: companion.id, position: 0 }] },
+      },
+    });
+    try {
+      const res = await request(app)
+        .get("/api/v1/admin/export/all-data")
+        .set("Cookie", adminCookie)
+        .expect(200);
+      const user = res.body.users.find((u: { id: string }) => u.id === createdUserIds[0]);
+      expect(user.busJourneys).toHaveLength(1);
+      expect(user.busJourneys[0].operator).toBe("Kobus");
+      expect(user.busJourneys[0].companionLinks).toHaveLength(1);
+    } finally {
+      await prisma.busJourney.deleteMany({ where: { id: ride.id } });
+      await prisma.companion.deleteMany({ where: { id: companion.id } });
     }
   });
 

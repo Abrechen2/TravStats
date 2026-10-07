@@ -83,6 +83,9 @@ export const USER_EXPORT_SELECT = {
   // their companion links — km and final amount included, which only an
   // invoice could supply again.
   rentalBookings: { include: { companionLinks: true } },
+  // Bus rides (spec 2026-10-07-bus-domain-design): the rides with their
+  // companion links — the terminals' frozen names and zones included.
+  busJourneys: { include: { companionLinks: true } },
   companions: true,
   // Kept originals (forgejo#116): the rows — what each is, where it is filed,
   // what its parse read. The bytes stay out, as a photo's do.
