@@ -1,0 +1,378 @@
+# Bus — an eighth domain for long-distance coach rides
+
+Date: 2026-10-07 · Branch: `docs/bus-domain-spec` · Status: **draft — design only, no code; awaiting the owner's review of §13**
+
+## Why
+
+Owner wish of 2026-10-03, after the Korea trip (board item `fj-180`, Forgejo
+`dennis/TravStats` forgejo#180): bus becomes its **own domain**. Three rides
+(Seoul–Sokcho, Sokcho–Seoul, Jeonju–Busan) exist today only as journal
+entries of that trip — prose, not rows: no kilometres, no hours on board, no
+terminal on the map, nothing the statistics or the passport can count.
+
+The owner's two rulings, taken verbatim:
+
+1. **Not inside the rail domain.** "Bewusst NICHT in die Bahn-Domäne
+   gequetscht (Statistik, Haltestellen, Linie)" — a bus ride has its own
+   statistics, its own stops and its own kind of line on the map. The
+   alternative the board had floated (bus as a `vehicle` of the rail domain)
+   is closed by this ruling.
+2. **Not for city buses** (owner, 2026-10-07): the domain logs the
+   long-distance coach, the intercity express, the airport or hotel shuttle —
+   a ticketed ride between two named terminals. A tram, a metro and the 14
+   bus to the office are not what this is for, and the form says so.
+
+A coach ride has the shape of a train ride, not of a tour section: a dated,
+point-to-point movement with an operator, a line, a seat and a price, boarded
+at one terminal and left at another. That is why rail's spec is the template
+here, concern by concern — and why, unlike rail and rental, this domain
+copies as little code as it can get away with (§2).
+
+### What the owner said, and what this spec assumes
+
+| Said | Assumed (correct me in §12) |
+|---|---|
+| Own domain, beside rail | Own table, own router, own page, own colour, own beta key, own stats — the full domain contract of `shared/domains.ts` |
+| Not city buses | One row = one ticketed ride between two terminals. No line network, no stop sequence, no timetable of a city. A ride may still be short (an airport shuttle) |
+| Korea rides are the first use | Worldwide from day one: terminals come from the geocoder, not from a European catalogue; no provider lookup is required to log a ride |
+| — | Web first, the Companion follows (rail owner decision 5, rental §8) |
+| — | Behind the beta switch until the owner takes it out, like rail and rental |
+| — | No parser in the first packages: the repository holds **zero** bus booking mails (`test-samples/emails` has none), and the Korean tickets were app purchases with no mail at all |
+
+## 1. Measured: what exists to build on
+
+Rail (2026-09-25) and rental (2026-10-01) are the two domains built since the
+registry settled, and their footprints are the size of this job:
+
+| | Rail (phases 1–2b + merge) | Rental (R1–R5) |
+|---|---|---|
+| Source files named after the domain | ~190 (incl. tests) | ~65 |
+| First package | 20 files, 1 640 lines (backend only) | 86 files, 5 437 lines (full stack) |
+| Shared surfaces touched outside the domain's own files | ~80 | ~40 |
+
+Of rail's ~190 files, most belong to things a coach ride does not have: a UIC
+station catalogue with DB codes, a train-number lookup chain, Transitous trip
+tracing, OpenRailRouting, reservations, connecting-train bookings, five DB
+parser templates, a roadtrip conversion. Strip those and rail's **core** — the
+row, its clock rules, the write path, the list page, the form — is what a bus
+needs, nearly unchanged.
+
+**The one new idea of this spec:** rail's clock and status helpers are
+structurally typed. `shared/railClock.ts` reads `departureTime`,
+`arrivalTime`, `depTimezone`, `arrTimezone`, `depPrecision`, `arrPrecision`
+and nothing rail-specific; `tripDateBounds`, `flightEnds`, `rideStatusSpan`,
+`withRailTimes` (`services/rail/timesDto.ts`), `railListSummary`,
+`stationColumns`, `wallClockToInstant`, `instantToWallClock` and
+`greatCircleKm` (`services/rail/railJourneyWrite.ts`) all read the same
+column names. **A bus row that keeps those column names uses every one of
+them as-is** — no copy, no rename, no third `timesDto.ts`. Rental could not do
+this because a rental has a pick-up and a return, not a departure and an
+arrival; a bus has exactly rail's two ends. The plan therefore spends its
+lines on what is genuinely new (the statistics, the pages, the copy) and
+imports the rest.
+
+Three things were measured and found NOT usable without further work:
+
+- **Transitous** (`services/rail/lookup/transitous.ts`) asks for
+  `HIGHSPEED_RAIL, …, RAIL` only. MOTIS also knows `BUS` and `COACH`, and
+  FlixBus publishes GTFS for Europe (`gtfs.gis.flix.tech`, 1 663 stops in the
+  EU feed; licence differs per regional feed — ODbL for France, Trafiklab
+  terms for Sweden, unstated for the generic EU file). Whether Transitous
+  carries the FlixBus feed is **unverified**. Korea has no open intercity
+  feed at all (Kobus, BusTago and T-money are apps, not data). So a lookup is
+  package B3 at best and Europe-only, and nothing in B1–B2 depends on it.
+- **Road routing** (`services/tour/routing/`) exists with three providers
+  (OpenRouteService, GraphHopper, a self-hosted OSRM) behind
+  `resolveRouteProvider()`, and `routeLegGeometry()` answers a `road` leg
+  with a line, a distance and a named failure (`ROUTE_FALLBACK_REASONS`). A
+  coach drives roads, so this is the bus line on the map — package B3,
+  frozen once like rail's Transitous trace, and labelled `road`: a line routed
+  over the road network may not be the road the bus took.
+- **No tour leg mode `bus`** (`LEG_MODES` = road, ferry, rail, foot, bike) and
+  no roadtrip vehicle `bus`. Nothing has to be taken out of another domain,
+  and no legacy rows need a conversion offer — the one piece of rail's story
+  this domain is spared.
+
+## 2. Principles
+
+1. **Copy the contract, import the mechanism.** The API shape, the beta
+   gate, the counting rule and the page follow rail; the clock, status and
+   trip-bound rules are the SAME functions, reached by the same column names.
+   A helper that would have to be copied because its name says "rail" gets a
+   one-line generic alias in the same file, not a second implementation.
+2. **Abstention is a result** (CLAUDE.md). No arrival → no duration. No
+   recorded delay → null, never 0. A terminal the geocoder cannot place →
+   refused, not stored at 0/0 and not read as UTC.
+3. **A failure reaches the user as itself.** The geocoder down, a stop off
+   the road network, a routing provider's 429 — each has a reason code the UI
+   words in DE and EN (`services/tour/routing/types.ts` already names them).
+4. **One counting rule, one home**: `shared/busCounting.ts`, mirrored, the
+   sibling of `railCounting.ts`. Statistics, cross-domain overview and the
+   evidence panel all ask it.
+5. **Every behaviour change ships with a test that fails without it**; every
+   silent-failure class (picker subset, choice without its data, provider
+   failure as success, re-derivation destroying data) gets a failure-path test.
+6. **The web build is drawn for iPads**; touch sizes follow the pointer.
+
+## 3. Data model
+
+### 3.1 `BusJourney` (`bus_journeys`) — one row per coach ride
+
+One row is one vehicle boarded at one terminal and left at another. A
+connection with a change of coach is two rows bound by the existing `Booking`
+(as rail's connections are); the UI for that is B3, the column is B1.
+
+| Column | Type | Notes |
+|---|---|---|
+| `operator` | text? | "FlixBus", "Kobus", "Kumho Express", "Lux Express". Free text with entry suggestions from the user's own earlier rows; no catalogue. |
+| `lineName` | text? | What the ticket calls the service: "N17", "Linie 004", "Premium". Kept apart from the operator because the statistics rank operators, not lines. |
+| `rideKind` | text? | `intercity` \| `shuttle` \| `charter` \| `other`. The split a reader cares about (a 2 h 20 coach vs a 15 min airport shuttle); null when unstated. The form copy names what the domain is NOT for (city transit). §13 D1. |
+| `depStationName`, `arrStationName` | text | Required. **Rail's column names on purpose** (§1): a bus terminal is a station in the generic sense, and this is what lets the shared clock helpers read a bus row. |
+| `depAddress`, `arrAddress` | text? | As printed — coach stops are often an address ("ZOB Berlin, Masurenallee 4–6"), not a named building. |
+| `depLat/depLon`, `arrLat/arrLon` | float | **Required**, as on `RailJourney`: a terminal without a position has no zone, no country and no map point. |
+| `depCountry`, `arrCountry` | text? | ISO 3166-1 alpha-2 from the geocoder; null when unknown, never guessed. |
+| `depTimezone`, `arrTimezone` | text? | IANA zone, derived on the server from the coordinates (`zoneOf`, coordinates only — there is no catalogue zone). Never user input. |
+| `departureTime` | timestamptz | A real UTC instant. The client sends the terminal's wall clock (`departureLocal`, `YYYY-MM-DDTHH:mm` or a day) and the server converts it in the terminal's zone — rail's rule, rail's code. |
+| `arrivalTime` | timestamptz? | May be unknown. Must not precede the departure, checked on the INSTANTS after both zones are known. |
+| `depPrecision`, `arrPrecision` | text | `minute` \| `day` \| `unknown` (ADR 0002). A day-only ride is stored at the start of its day with precision `day`, and every clock reader abstains on it (`shared/railClock.ts`). |
+| `actualDepartureTime`, `actualArrivalTime` | timestamptz? | What happened, when known. Null for a past ride nobody recorded. |
+| `delayMinutes` | int? | Arrival delay as experienced. Null = not recorded, 0 = on time. Never collapsed. |
+| `distanceKm` | float? | See §5. |
+| `distanceSource` | text? | `great_circle` \| `user` \| `route` (along the routed road line) \| null. |
+| `geometry` | jsonb? | `[[lon, lat], …]`, fetched once (B3) and frozen. Null = the chord. |
+| `geometrySource` | text | `straight` \| `road` \| `manual`; default `straight`. B1 writes only `straight`. |
+| `fareClass` | text? | Free text, max 40: Korean express buses sell 일반 / 우등 / 프리미엄, Lux Express sells "Lounge"; FlixBus sells none. Not an enum — the vocabulary is the operator's. |
+| `seat` | text? | "12A". |
+| `bookingReference` | text? | Order or ticket number. |
+| `price`, `currency` + the five FX columns | | As `RailJourney`; the snapshot dated by the departure. |
+| `status` | text | `scheduled` \| `in_progress` \| `completed` \| `cancelled` — rail's vocabulary, a cache of `deriveRailStatus` (aliased `deriveBusStatus`), only `cancelled` client-settable; converged by the hourly sweep. |
+| `notes`, `tags`, `companions` | | As rail; `BusJourneyCompanion` join, dual write. |
+| `tripId`, `bookingId` | uuid? | SetNull, ownership-checked (`assertReferencesOwned`). |
+| `externalRef`, `importBatchId` | | `@@unique([userId, externalRef])`; reserved for the spreadsheet import (B2) and a parser (B4). |
+
+Indexes as rail: `(userId, departureTime)`, `status`, `tripId`, `bookingId`,
+`importBatchId`. `Document.busJourneyId` joins the one-owner CHECK
+(`num_nonnulls(...) <= 1`, now eight owners), so a ticket PDF can be filed
+with its ride before any parser exists. `Companion` gains `bus BusJourney[]`
+and the usage count in `routes/companions.ts` adds it.
+
+**Not stored, on purpose:** a stop sequence (the ride is terminal to
+terminal; intermediate stops are a timetable's business), a vehicle plate, the
+driver, a platform/bay (notes, if anyone cares), a loyalty programme
+(`LOYALTY_DOMAINS` unchanged — no coach operator the owner uses runs one;
+§13 D6 if that changes).
+
+### 3.2 Terminal resolution — no catalogue
+
+There is no worldwide open catalogue of coach terminals, and the first use is
+Korea. Resolution, each step falling through on a miss:
+
+1. **The user's own earlier terminals** — entry suggestions from past rows
+   (rail's `entrySuggestions` idiom, rental's `rentalStations.ts`): the second
+   Seoul ride offers "Seoul Express Bus Terminal" with its position.
+2. **The geocoder** the lodging and rail forms use (`LocationInput`, Photon):
+   a search hit brings name, position and country; the name stays editable
+   afterwards ("Dong Seoul Bus Terminal" rather than what OSM calls it).
+3. **Nothing resolves** → the form will not submit (`isStationComplete`
+   false), and the API refuses a station without `lat`/`lon` with
+   `BUS_INVALID_INPUT` naming the field. Never the user's home, never the
+   trip's first airport.
+
+Later, if useful (B3, §13 D3): airports (airport shuttles) and the rail
+catalogue (a coach station at a railway station) as further picker sources.
+Rail's catalogue already carries 21 000 Swiss bus stops it cannot tell apart
+from stations — a bus picker that read it would surface them; this spec does
+not, for now.
+
+## 4. Times, status, counting
+
+**Times** are rail's rule and rail's code: the form asks for the wall clock at
+the terminal as the ticket prints it; the server converts with the terminal's
+zone, refuses a wall clock in a spring-forward gap (`LOCAL_TIME_NONEXISTENT`,
+`shared/wallClockExistence.ts`), accepts a fold choice for the repeated autumn
+hour, and stores a real instant plus the zone. A day-only ride is allowed
+("Fahrkarte ohne Uhrzeit", forgejo#132 item 17 applied to coaches, where an
+open ticket is common). The DTO adds `times` through `withRailTimes`,
+registered a second time under the OpenAPI name `BusTimes` (same shape).
+
+**Status** is derived: `scheduled` until departure, `in_progress` on board,
+`completed` once the ride is over (`rideEndsAt` — a clockless end is over
+when its DAY is), `cancelled` only by the client. The hourly sweep gets a bus
+block identical to rail's.
+
+**Counting** (`shared/busCounting.ts`, mirrored): completed rides only; a
+ride is filed under the year it LEFT on the departure terminal's calendar;
+it is active on the arrival terminal's day too; it proves both terminals'
+countries when known. The same truth table as rail's, tested on both mirrors.
+
+## 5. Geometry and distance
+
+Three sources, and the map always says which it shows:
+
+1. **Straight line** — the whole of B1 and B2. `geometry = null`,
+   `geometrySource = straight`, `distanceKm` = great circle,
+   `distanceSource = great_circle`, recomputed when a terminal moves. The
+   statistics label it "Luftlinie" / "straight line" (rail owner decision 7).
+2. **Road** (B3) — `routeLegGeometry()` with mode `road` through the
+   instance's routing provider, fetched **once** when the ride is saved and
+   frozen; its length becomes `distanceKm` with `distanceSource = route`. A
+   failure stores `straight` and the save answers `meta.geometry {outcome,
+   geometrySource, fallback}` with the provider's reason
+   (`no_provider | provider_error | no_route | point_not_near_road |
+   rate_limited | auth | untrustworthy`), which the form words. An instance
+   without a routing provider keeps the chord and says so once in the form.
+   An edit re-fetches only when a terminal's coordinates changed, and a
+   re-fetch that fails keeps the stored line (rail review finding 1).
+3. **Manual** — reserved for a line a later editor draws; no UI planned.
+
+A user-typed distance from the ticket (`user`) is kept until cleared,
+whichever line exists. Great-circle understates a road by 10–40 % (a coach
+follows valleys and motorways); the statistics show kilometres **per
+source**, never one undifferentiated number.
+
+## 6. Statistics (B2)
+
+`GET /bus/stats`, a bus tab on the statistics page, built on
+`busCounting`: rides, kilometres per source, hours on board (rides with both
+clocks only, sample size shown), countries touched, operators ranked, ride
+kinds, top terminals, the longest ride, rides per year, delay distribution
+over rides with a recorded delay. The cross-domain overview and the evidence
+population (`crossDomainPopulations.loadBus`) count rides and countries like
+rail's loader does — a coach across a border is evidence of the country as a
+train is (§13 D4). Passport provenance (`metricEvidencePassport`) lists it.
+
+Rail's `railStats.ts` / `RailStatsSection.tsx` / `railStatsAdapter.ts` are
+the templates, minus train categories and plus ride kinds.
+
+## 7. Map and colour
+
+- **Colour:** a new token `domainColor.bus` in `design/tokens.json`,
+  generated into `--ts-domain-bus` and mirrored in both `DOMAINS.bus.color`.
+  **Provisional**, as rental's: the domain colour table belongs to the
+  Companion / Claude Design. Candidate: sandstone `#c49a6c` — an earth tone
+  beside the road moss, which reads as "road" without being it. It clears the
+  status-colour test (`domainColorsNotStatus.test.ts`: ≥ 40 RGB from `info`,
+  `warn`, `bad`): 64 from `warn`, 78 from `bad`, 136 from `info`, and 59 from
+  the flight amber, 50 from the road moss. §13 D7.
+- **Icon:** 🚌. **Route prefix:** `/bus`. **API:** `/api/v1/bus`, enveloped
+  family (ADR 0001), a new line in `apiResponseShape.baseline.json`.
+- **Layer (B2):** one module (`busPathsLayer.ts`, from `railPathsLayer.ts`)
+  for the bus dashboard tab and the "Alle" chip: the frozen road line where
+  there is one, else the chord drawn lighter; colour from the domain colour
+  store; legend rows name only the kinds of line drawn. A single-domain
+  `/dashboard/bus` tab (globe and flat), a row in the six-row domain filter.
+
+## 8. Trip, timeline, Companion, export (B2)
+
+- **Trip bounds and status** land in **B1** already (the write path calls
+  `recomputeTripStatus`; `tripStatusService.ts` gets `busJourneys` in its select
+  and spreads `rideStatusSpan` over them — the rail line, one more array).
+- **Timeline and logistics tab:** `lib/timelineRail.ts` → a bus twin; trip
+  detail select (`TRIP_BUS_SELECT`), `TripCard` counts, attachable entries,
+  trip suggestions' `loadTransport`, trip photo windows, the trip delete
+  confirm's "what goes with it" list.
+- **Upcoming / next-up:** `routes/upcoming.ts` gains `nextBus`; e-mail
+  reminders (`railReminders.ts` twin) are B3.
+- **Companion:** sync entity `bus_journey` (`services/sync/entities.ts`,
+  `guardedRoutes.ts`, omit `geometry`, visible `inDomain("bus")`), so the
+  phone reads rides as soon as it wants to. Web first; the owner opens the
+  Companion issue.
+- **Export/backup:** a "Bus rides" sheet in the Excel export with each
+  terminal's position and the distance with its source; the spreadsheet
+  importer's bus spec on the importer's rules (own id updates, natural key
+  operator + departure day on the boarding clock + both terminals); the JSON
+  all-data export (`busJourneys` with companion links); `diagnosticExport`.
+- **Demo seed:** three rides modelled on the Korea trip's shape (synthetic
+  values, not the owner's), through the router's wall-clock conversion.
+
+## 9. Lookup and line tracing (B3)
+
+A chain like rail's, **optional** in every sense — a ride is logged in full
+without it:
+
+1. **Transitous** `stoptimes` at the boarding terminal with modes `BUS,
+   COACH`, matched by operator + line label; a match brings the trip's
+   polyline (cut to the two terminals, frozen) as rail does. **Precondition:
+   measure first** that Transitous serves FlixBus departures at e.g. Berlin
+   ZOB for a day inside its feed window; if it does not, this step is dropped
+   from the plan rather than built on hope. Honours the same terms
+   (User-Agent with contact, caching, non-commercial).
+2. **Road routing** (§5) — the fallback line for every ride, the only line
+   outside Europe.
+3. **Manual entry** — always.
+
+No provider answers a past day's timetable or any past actuals; a delay is
+typed or null (rail's "honest limits" hold verbatim).
+
+## 10. Parser (B4 — only with a corpus)
+
+Not before a real corpus exists. `test-samples/emails` holds no coach
+booking; the Korean rides had none. When the owner adds FlixBus (or other)
+confirmations to a gitignored `test-samples/Bus/` with an `expectations.json`
+(rental R2's shape), B4 adds `bus` to `PARSER_SUPPORTED_DOMAINS`, to the
+template envelope's `TemplateDomain` (parser design §5.1, in
+`Abrechen2/travstats-templates` — new layouts go through the template repo,
+owner 2026-10-03), a FlixBus template, the LLM fallback with the value check,
+and a review modal (`RailImportPreviewModal` twin). Until then the import hub
+shows no bus adapter, and a bus document uploaded to the hub is filed, not
+parsed.
+
+## 11. Gating
+
+```ts
+busDomain: Object.freeze({
+  why: "Long-distance coach rides are a new domain (spec 2026-10-07-bus-domain-design), built in packages; the Companion app does not handle them yet and no release candidate has carried them.",
+  returnsWhen: "The owner explicitly takes bus out of beta. Packages being done is not that event.",
+  reason: "beta",
+}),
+```
+
+Two conditions, as rail and rental: the instance flag (`busDomain`) and the
+user's `enabledDomains`. `useBusVisible` / `useBusOffered` are the rule's one
+home (nav, logbook tabs, colour settings, route guard, trip card, attachable
+domains, dashboard filter); the setup picker and the module toggle offer bus
+on the flag alone. The backend endpoints stay reachable — a visibility gate,
+not a boundary. `DOMAINS.bus.available = true`, so shared code iterating
+`AVAILABLE_DOMAINS` sees it; where a `Record<DomainKey, …>` would draw
+something B1 cannot yet fill (the cross-domain loader, the dashboard tab
+registry, the stats adapter), bus is wired to an explicit empty answer with a
+pointer to the package that fills it — the compiler lists every such site.
+
+### Relations deliberately NOT built
+
+- **Tours and roadtrips:** no `bus` leg mode, no `bus` roadtrip vehicle. A
+  coach ride is a ticket, not a route; a roadtrip is driven. Nothing to
+  convert.
+- **Journal entries → rides:** the three Korea entries are retyped by hand
+  (three rides). A "make a ride from this entry" offer would parse prose;
+  not worth a feature for three rows.
+- **Flights operated by bus** (board item `surface-segments-as-flights`:
+  Lufthansa Express Bus, equipment code BUS): once this domain exists, the
+  proposal "offer such a segment as a bus ride" becomes buildable. Out of
+  scope here; the board item stays open and gains a pointer to this spec.
+
+## 12. Packages, order, and how each is measured
+
+| # | Package | Measured by |
+|---|---|---|
+| **B1** | Model + migration (`BusJourney`, companion join, `Document.busJourneyId` + CHECK), Zod, CRUD router with list paging, OpenAPI with response schemas, ratchet family, registries (both mirrors), beta key, colour token, status derivation alias + sweep, counting rule (both mirrors), FX snapshot, companions, trip link **and trip bounds** (the write path already re-derives the trip; one more array in `tripStatusService`), list page + create/edit/delete form + simple detail page with documents, DE/EN — **manual entry only**, straight line only, every other shared surface wired to an explicit empty answer | route tests incl. a time-model suite (DST gap refused, far-off zones, arrival before departure refused, day-only ride stored at precision `day`), ownership tests (another user's trip/booking refused), counting truth table on both mirrors, OpenAPI coverage + response-schema + time-shape guards, response-shape ratchet, locale parity, `check:drift`, odd-zone CI runs, the colour test, the beta-registry test, a browser look at the form on an iPad viewport |
+| **B2** | Trip timeline/logistics/card/attachable/suggestions/photo windows; dashboard tab + map layer + "Alle" chip + filter row; `/bus/stats` + stats tab + cross-domain + evidence + passport provenance; upcoming; sync entity; Excel sheet + importer spec + JSON export + diagnostic export; demo seed | trip-status tests (a ride extends a trip), timeline tests, stats tests with the sample-size rule, cross-domain population test, sync feed test (visible/omit), export round trip, a production-build browser look at both maps with the colour store changed |
+| **B3** | Road line via the routing provider, frozen, labelled, with reasons; connecting-coach UI through `Booking`; e-mail reminders; optional Transitous bus lookup **after a measurement**; optional airport/rail-station picker sources | geometry tests per fallback reason (each named, none silent), edit-keeps-line test, reminder tests; the Transitous measurement recorded in this spec before any code |
+| **B4** | Parser (template + LLM fallback + review modal) **once `test-samples/Bus/` exists**; achievements and Wrapped (2.8, as rail) | the corpus harness with `expectations.json`; 0 candidates from non-bus mails |
+
+B1 is one branch (`dev/bus-domain`), merged on the owner's release decision;
+B2 the next. Each package's plan is written when the one before it has landed.
+
+## 13. Open decisions for the owner
+
+| # | Question | Options | Recommendation |
+|---|---|---|---|
+| D1 | Ride kind | (a) none — operator only; (b) `intercity \| shuttle \| charter \| other`, optional; (c) a longer list (night coach, sightseeing, …) | **(b)** — one optional column, the one split a statistic reader asks for; (c) is a list nobody will fill |
+| D2 | Day-only rides allowed? | (a) yes, as rail (precision `day`, clock readers abstain); (b) a clock is required | **(a)** — open tickets are common on coaches; the abstention rules already exist |
+| D3 | Terminal picker sources beyond the geocoder | (a) own past terminals + geocoder only; (b) also airports (shuttles); (c) also the rail catalogue | **(a)** in B1, **(b)** in B3 if a shuttle ride turns up; (c) not until the catalogue can tell a bus stop from a station |
+| D4 | Do a ride's countries count in the cross-domain overview and the passport? | (a) yes, both terminals' countries, as rail; (b) only in bus stats | **(a)** — a coach across a border is the same evidence a train is |
+| D5 | Map line before routing exists | (a) chord drawn lighter, labelled straight; (b) two points only | **(a)** — two pins read as two rides (rental D1 reasoning) |
+| D6 | Loyalty | (a) no bus loyalty domain; (b) add `bus` to `LOYALTY_DOMAINS` (a DB CHECK migration) | **(a)** — none of the operators in sight runs a programme; one migration when one does |
+| D7 | Colour | sandstone `#c49a6c`, provisional | decide with Design / the Companion; must keep clearing the status-colour test |
+| D8 | Routing profile for the road line (B3) | (a) the car profile; (b) the heavy-vehicle profile where a provider has one (ORS `driving-hgv`, GraphHopper `truck`) | **(a)** — a coach is not a lorry on most roads a provider restricts for HGVs, and (b) would route around low bridges the coach took; the label `road` says it is a routed line either way |
+| D9 | Shall B1 already carry the sync entity so the Companion can read rides early? | (a) B2, with the rest of the shared surfaces; (b) B1 | **(a)** — the Companion has no bus screen; an entity nobody reads is a contract to keep for nothing |
