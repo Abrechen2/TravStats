@@ -59,6 +59,8 @@
     "arrivalStation": "Arrival terminal",
     "stationName": "Name as printed on the ticket",
     "stationAddress": "Address (optional)",
+    "stationMissing": "Both terminals need a position — pick one through the search or a suggestion.",
+    "suggestionsFailed": "Suggestions from your rides could not be loaded.",
     "departureTime": "Departure (local time at the terminal)",
     "arrivalTime": "Arrival (local time at the terminal)",
     "dayOnly": "Only the date is known",

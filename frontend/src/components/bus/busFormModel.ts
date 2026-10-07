@@ -1,0 +1,250 @@
+import { saveErrorKey } from "../../lib/saveErrorMessage";
+import type { BusJourney, BusJourneyInput, BusRideKind } from "../../types/bus";
+import { toStationWallClock } from "../../lib/railTime";
+import { railArrival, railDeparture } from "../../lib/entityTimes";
+import { EMPTY_TERMINAL, type BusStationDraft } from "./BusStationField";
+
+/**
+ * The bus form's state and its translation to the write body — pure, so the
+ * rules (what clears a field, when a distance counts as typed) are testable
+ * without rendering a modal.
+ */
+export interface BusFormDraft {
+  operator: string;
+  lineName: string;
+  rideKind: BusRideKind | "";
+  departure: BusStationDraft;
+  arrival: BusStationDraft;
+  /** `YYYY-MM-DDTHH:mm` on the terminal's own clock; the clock part is ignored while `dayOnly`. */
+  departureLocal: string;
+  arrivalLocal: string;
+  /** "Only the date is known": both times are sent as a day, not a wall clock. */
+  dayOnly: boolean;
+  /** Only what the user typed. A measured distance is not shown here. */
+  distanceKm: string;
+  fareClass: string;
+  seat: string;
+  delayMinutes: string;
+  bookingReference: string;
+  price: string;
+  currency: string;
+  cancelled: boolean;
+  tags: string[];
+  companions: string[];
+  tripId: string;
+  notes: string;
+}
+
+export function draftFrom(ride: BusJourney | null): BusFormDraft {
+  if (!ride) {
+    return {
+      operator: "",
+      lineName: "",
+      rideKind: "",
+      departure: EMPTY_TERMINAL,
+      arrival: EMPTY_TERMINAL,
+      departureLocal: "",
+      arrivalLocal: "",
+      dayOnly: false,
+      distanceKm: "",
+      fareClass: "",
+      seat: "",
+      delayMinutes: "",
+      bookingReference: "",
+      price: "",
+      currency: "EUR",
+      cancelled: false,
+      tags: [],
+      companions: [],
+      tripId: "",
+      notes: "",
+    };
+  }
+  return {
+    operator: ride.operator ?? "",
+    lineName: ride.lineName ?? "",
+    rideKind: ride.rideKind ?? "",
+    departure: {
+      name: ride.depStationName,
+      address: ride.depAddress ?? "",
+      lat: ride.depLat,
+      lon: ride.depLon,
+      country: ride.depCountry,
+    },
+    arrival: {
+      name: ride.arrStationName,
+      address: ride.arrAddress ?? "",
+      lat: ride.arrLat,
+      lon: ride.arrLon,
+      country: ride.arrCountry,
+    },
+    // Read back on each terminal's own clock — the time the ticket printed. A
+    // bus row has rail's columns, so rail's readers accept it.
+    departureLocal: toStationWallClock(railDeparture(ride)),
+    arrivalLocal: toStationWallClock(railArrival(ride)),
+    // A ride stored by its day alone must be edited as one: shown as 00:00 it
+    // would be saved back as a midnight departure nobody stated.
+    dayOnly: railDeparture(ride)?.precision === "day",
+    distanceKm:
+      ride.distanceSource === "user" && ride.distanceKm !== null ? String(ride.distanceKm) : "",
+    fareClass: ride.fareClass ?? "",
+    seat: ride.seat ?? "",
+    delayMinutes: ride.delayMinutes === null ? "" : String(ride.delayMinutes),
+    bookingReference: ride.bookingReference ?? "",
+    price: ride.price === null ? "" : String(ride.price),
+    currency: ride.currency ?? "EUR",
+    cancelled: ride.status === "cancelled",
+    tags: [...ride.tags],
+    companions: ride.companions,
+    tripId: ride.tripId ?? "",
+    notes: ride.notes ?? "",
+  };
+}
+
+export function isTerminalComplete(station: BusStationDraft): boolean {
+  return station.name.trim() !== "" && station.lat !== null && station.lon !== null;
+}
+
+export function canSubmit(draft: BusFormDraft): boolean {
+  return (
+    isTerminalComplete(draft.departure) &&
+    isTerminalComplete(draft.arrival) &&
+    draft.departureLocal !== ""
+  );
+}
+
+const orNull = (value: string): string | null => (value.trim() === "" ? null : value.trim());
+const numberOrNull = (value: string): number | null => {
+  if (value.trim() === "") return null;
+  const n = Number(value.replace(",", "."));
+  return Number.isFinite(n) ? n : null;
+};
+
+function terminalInput(station: BusStationDraft): BusJourneyInput["departureStation"] {
+  if (station.lat === null || station.lon === null) throw new Error("terminal without a position");
+  return {
+    name: station.name.trim(),
+    address: orNull(station.address),
+    lat: station.lat,
+    lon: station.lon,
+    country: station.country,
+  };
+}
+
+/** `YYYY-MM-DD` of a typed time, the part a "date only" ride keeps. */
+const dayOf = (local: string): string => local.slice(0, 10);
+
+/** The write body. Every optional field is SENT, null when empty — omitting it would keep the old value. */
+export function toBusInput(draft: BusFormDraft): BusJourneyInput {
+  const delay = numberOrNull(draft.delayMinutes);
+  const time = (local: string): string => (draft.dayOnly ? dayOf(local) : local);
+  return {
+    operator: orNull(draft.operator),
+    lineName: orNull(draft.lineName),
+    rideKind: draft.rideKind === "" ? null : draft.rideKind,
+    departureStation: terminalInput(draft.departure),
+    arrivalStation: terminalInput(draft.arrival),
+    departureLocal: time(draft.departureLocal),
+    arrivalLocal: draft.arrivalLocal === "" ? null : time(draft.arrivalLocal),
+    distanceKm: numberOrNull(draft.distanceKm),
+    fareClass: orNull(draft.fareClass),
+    seat: orNull(draft.seat),
+    delayMinutes: delay === null ? null : Math.round(delay),
+    bookingReference: orNull(draft.bookingReference),
+    price: numberOrNull(draft.price),
+    currency: draft.currency || "EUR",
+    status: draft.cancelled ? "cancelled" : "scheduled",
+    tags: draft.tags.map((tag) => tag.trim()).filter((tag) => tag.length > 0),
+    companions: draft.companions,
+    tripId: draft.tripId === "" ? null : draft.tripId,
+    notes: orNull(draft.notes),
+  };
+}
+
+/** The form fields a refusal can be shown beside. */
+export type BusFormErrorField = "departureLocal" | "arrivalLocal";
+
+/** A refused save as the form shows it: a message key, maybe beside one field. */
+export interface BusSaveError {
+  key: string;
+  field: BusFormErrorField | null;
+  /** For `invalidField`: the label of the field the server named. */
+  fieldLabelKey?: string;
+}
+
+/** The server's field names, as the form labels them. */
+const FIELD_LABEL_KEYS: Record<string, string> = {
+  operator: "bus:form.operator",
+  lineName: "bus:form.line",
+  rideKind: "bus:form.kind",
+  departureStation: "bus:form.departureStation",
+  arrivalStation: "bus:form.arrivalStation",
+  departureLocal: "bus:form.departureTime",
+  arrivalLocal: "bus:form.arrivalTime",
+  distanceKm: "bus:form.distance",
+  fareClass: "bus:form.class",
+  seat: "bus:form.seatNumber",
+  delayMinutes: "bus:form.delay",
+  bookingReference: "bus:form.bookingReference",
+  price: "bus:form.price",
+  currency: "bus:form.currency",
+  tags: "bus:form.tags",
+  companions: "bus:form.companions",
+  tripId: "bus:form.trip",
+  notes: "bus:form.notes",
+};
+
+const TIME_FIELDS: readonly string[] = ["departureLocal", "arrivalLocal"];
+
+/**
+ * A failed save, read by its stable `code` and `field`. The server's `error`
+ * prose is English and written for a log — it is never shown; an unknown
+ * refusal gets the generic sentence.
+ */
+export function saveErrorFrom(err: unknown): BusSaveError {
+  const data = (err as { response?: { data?: { code?: unknown; field?: unknown } } })?.response
+    ?.data;
+  const code = typeof data?.code === "string" ? data.code : null;
+  const field = typeof data?.field === "string" ? data.field : null;
+  const timeField = field && TIME_FIELDS.includes(field) ? (field as BusFormErrorField) : null;
+  switch (code) {
+    case "BUS_ARRIVAL_BEFORE_DEPARTURE":
+      return { key: "bus:form.errors.arrivalBeforeDeparture", field: "arrivalLocal" };
+    // The time model's general codes (ADR 0002, D3).
+    case "LOCAL_TIME_NONEXISTENT":
+      return { key: "bus:form.errors.nonexistentTime", field: timeField };
+    case "TZ_UNRESOLVED":
+      return { key: "bus:form.errors.noZone", field: timeField };
+    case "BUS_INVALID_INPUT": {
+      const fieldLabelKey = field ? FIELD_LABEL_KEYS[field] : undefined;
+      return fieldLabelKey
+        ? { key: "bus:form.errors.invalidField", field: timeField, fieldLabelKey }
+        : { key: "bus:form.errors.invalid", field: null };
+    }
+    default:
+      // Everything that is not a bus field code reads through the shared save
+      // rule (validation, duplicate, database down, demo, rate limit, no
+      // network), so this dialog says what every other form says.
+      return { key: saveErrorKey(err, "bus:form.saveError"), field: null };
+  }
+}
+
+/**
+ * The zone a terminal's typed time is on, where the form can know it: the
+ * stored ride's zone (its `times`), while the terminal is still the one it
+ * was stored with. A new pick has no zone here — the server finds it from the
+ * coordinates — so the clock-change notice then stays silent and the server's
+ * verdict stands.
+ */
+export function knownTerminalZone(
+  ride: BusJourney | null,
+  end: "dep" | "arr",
+  station: BusStationDraft | null
+): string | null {
+  if (!ride || !station) return null;
+  const lat = end === "dep" ? ride.depLat : ride.arrLat;
+  const lon = end === "dep" ? ride.depLon : ride.arrLon;
+  if (station.lat !== lat || station.lon !== lon) return null;
+  const value = end === "dep" ? railDeparture(ride) : railArrival(ride);
+  return value?.zone ?? null;
+}
