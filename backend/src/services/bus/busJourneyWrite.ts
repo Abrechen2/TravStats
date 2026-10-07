@@ -1,25 +1,16 @@
 import { AppError } from "../../middleware/errorHandler";
 import type { BusStationInput, UpdateBusJourneyInput } from "../../schemas/bus";
-import { isLocalDayInput } from "../../schemas/wallClockInput";
 import { deriveBusStatus } from "../../shared/statusDerivation";
-import { TzUnresolvedError } from "../../shared/time/errors";
-import { localDay, type Fold } from "../../shared/time/instant";
-import { startOfDayAt } from "../../shared/time/legacyValues";
-import { endHasClock, rideEndsAt } from "../../shared/railClock";
+import { rideEndsAt } from "../../shared/railClock";
 import { zoneOf } from "../../shared/time/zoneOf";
-import {
-  greatCircleKm,
-  instantToWallClock,
-  sentWallClockToInstant,
-  wallClockToInstant,
-} from "../rail/railJourneyWrite";
+import { assertArrivalNotBefore, resolveDistance, resolveEnd } from "../rides/rideEnds";
 
 /**
  * The write rules of a bus ride (spec 2026-10-07-bus-domain-design §3, §4).
  *
- * Rail's rules, reached through rail's own functions: the two ends carry rail's
- * column names, so the clock helpers in `shared/railClock.ts` and the wall-clock
- * conversion in `services/rail/railJourneyWrite.ts` read a bus row as-is. What
+ * Rail's rules, reached through the shared ride-end module
+ * (`services/rides/rideEnds.ts`): the two ends carry rail's column names, so the
+ * clock helpers in `shared/railClock.ts` read a bus row as-is. What
  * is bus's own here is the terminal (no catalogue id, an address) and the
  * refusal codes, which name the domain so the form can word them.
  */
@@ -90,88 +81,6 @@ function pickTerminal<P extends "dep" | "arr">(
   } as TerminalColumns<P>;
 }
 
-interface EndReading {
-  time: Date;
-  precision: "minute" | "day";
-}
-
-/**
- * One end's instant and precision — rail's `resolveEnd` rule: a sent wall
- * clock is converted in the terminal's zone (a skipped hour refused), a bare
- * day becomes the start of that day there with precision `day`; a side not
- * sent keeps its stored instant unless its terminal moved, in which case the
- * ticket's wall clock is re-read in the new zone.
- */
-function resolveEnd(args: {
-  sent: string | null | undefined;
-  fold: Fold | null | undefined;
-  zone: string | null;
-  terminalMoved: boolean;
-  stored: { time: Date; zone: string | null; precision: string | null } | null;
-  field: "departureLocal" | "arrivalLocal";
-}): EndReading | null {
-  const { sent, zone, stored, field } = args;
-  if (sent === null) return null;
-  if (sent !== undefined) {
-    if (isLocalDayInput(sent)) {
-      if (!zone) throw new TzUnresolvedError("the terminal has no zone", field);
-      return { time: startOfDayAt(sent, zone), precision: "day" };
-    }
-    return { time: sentWallClockToInstant(sent, zone, field, args.fold), precision: "minute" };
-  }
-  if (!stored) return null;
-  if (!endHasClock(stored.precision)) {
-    if (!args.terminalMoved) return { time: stored.time, precision: "day" };
-    const day = localDay(stored.time, stored.zone ?? "UTC");
-    return { time: wallClockToInstant(`${day}T00:00`, zone), precision: "day" };
-  }
-  if (!args.terminalMoved) return { time: stored.time, precision: "minute" };
-  return {
-    time: wallClockToInstant(instantToWallClock(stored.time, stored.zone), zone),
-    precision: "minute",
-  };
-}
-
-function assertArrivalNotBefore(
-  departure: EndReading,
-  depZone: string | null,
-  arrival: EndReading | null,
-  arrZone: string | null
-): void {
-  if (!arrival) return;
-  const bothClocked = departure.precision === "minute" && arrival.precision === "minute";
-  const before = bothClocked
-    ? arrival.time.getTime() < departure.time.getTime()
-    : localDay(arrival.time, arrZone ?? "UTC") < localDay(departure.time, depZone ?? "UTC");
-  if (before) {
-    throw new AppError(
-      "arrival must not precede departure",
-      400,
-      "BUS_ARRIVAL_BEFORE_DEPARTURE",
-      "arrivalLocal"
-    );
-  }
-}
-
-/** A typed distance is kept until the user clears it; a measured one follows the terminals. */
-function resolveDistance(
-  existing: BusJourneyState | null,
-  input: UpdateBusJourneyInput,
-  coords: { depLat: number; depLon: number; arrLat: number; arrLon: number }
-): { distanceKm: number; distanceSource: string } {
-  if (typeof input.distanceKm === "number") {
-    return { distanceKm: input.distanceKm, distanceSource: "user" };
-  }
-  if (
-    input.distanceKm === undefined &&
-    existing?.distanceSource === "user" &&
-    existing.distanceKm
-  ) {
-    return { distanceKm: existing.distanceKm, distanceSource: "user" };
-  }
-  return { distanceKm: greatCircleKm(coords), distanceSource: "great_circle" };
-}
-
 /**
  * Merge an update (or a create, with `existing = null`) into the final row
  * state. The wall clock NOT in the payload is read back from the stored
@@ -195,7 +104,7 @@ export function mergeBusJourney(
     sent: input.departureLocal,
     fold: input.departureFold,
     zone: dep.depTimezone,
-    terminalMoved: Boolean(input.departureStation),
+    stopMoved: Boolean(input.departureStation),
     stored: existing && {
       time: existing.departureTime,
       zone: existing.depTimezone,
@@ -209,7 +118,7 @@ export function mergeBusJourney(
     sent: input.arrivalLocal,
     fold: input.arrivalFold,
     zone: arr.arrTimezone,
-    terminalMoved: Boolean(input.arrivalStation),
+    stopMoved: Boolean(input.arrivalStation),
     stored:
       existing?.arrivalTime != null
         ? {
@@ -220,7 +129,13 @@ export function mergeBusJourney(
         : null,
     field: "arrivalLocal",
   });
-  assertArrivalNotBefore(departure, dep.depTimezone, arrival, arr.arrTimezone);
+  assertArrivalNotBefore(
+    departure,
+    dep.depTimezone,
+    arrival,
+    arr.arrTimezone,
+    "BUS_ARRIVAL_BEFORE_DEPARTURE"
+  );
 
   const departureTime = departure.time;
   const arrivalTime = arrival?.time ?? null;

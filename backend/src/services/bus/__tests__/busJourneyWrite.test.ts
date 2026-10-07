@@ -1,4 +1,3 @@
-import { AppError } from "../../../middleware/errorHandler";
 import { LocalTimeNonexistentError, TzUnresolvedError } from "../../../shared/time/errors";
 import { mergeBusJourney, terminalColumns } from "../busJourneyWrite";
 
@@ -23,8 +22,9 @@ const BERLIN_ZOB = {
   lon: 13.2778,
   country: "DE",
 };
-// geo-tz answers every point ON the globe (open water gets an Etc/GMT±N zone), so the only
-// coordinate with no zone is one off the globe — what a stored row from before validation could hold.
+// Unreachable through the schema (lat <= 90), so this guards the write path itself. geo-tz
+// answers every on-globe point with a zone (open water -> an Etc/GMT±n zone); only an
+// off-globe coordinate has none.
 const NO_ZONE = { name: "Nowhere", address: null, lat: 91, lon: 0, country: null };
 
 describe("terminalColumns", () => {
@@ -161,7 +161,7 @@ describe("mergeBusJourney", () => {
         },
         now
       )
-    ).toThrow(AppError);
+    ).toThrow(expect.objectContaining({ code: "BUS_INVALID_INPUT", field: "delayMinutes" }));
   });
 
   it("a moved terminal keeps the ticket's clock and moves the instant with the zone", () => {
