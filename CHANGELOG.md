@@ -110,6 +110,9 @@ below), which can take a minute on a large logbook.
   Deutsche Bahn reservation offers to attach coach and seat to the train
   journeys already logged, shows what would change, and asks when several
   journeys fit.
+- **Places nearby list the important ones first.** Picking a place near you
+  shows a longer list with sights, stations and landmarks ahead of shops and
+  benches, and a place search prefers results near where you are.
 - **The Companion can send a flight's recorded track and its observed takeoff
   and landing**; a reported landing marks the flight as flown at once, and the
   times arrive as suggestions to confirm.
@@ -192,6 +195,14 @@ below), which can take a minute on a large logbook.
   drawn as one station dot.
 - A Hawaiian place name with an okina (ʻ) is no longer treated as a foreign
   script.
+- **A train ride with changes is one ride.** It gets one reminder and one "next
+  up" entry, named by where it ends ("Deine Fahrt nach Wien"), instead of one
+  per train; a single train is named by its destination too.
+- The name on the sign is added only from the place itself: a longer map name
+  counts only when it adds what kind of place it is ("Jongmyo Shrine"), not
+  when it names another object ("Mount Fuji Weather Station").
+- The Companion can tell an unknown flight from a server that does not offer
+  the route: the flight routes answer `FLIGHT_NOT_FOUND`.
 
 ### Audit fixes first written for 2.6.3-rc.1
 
