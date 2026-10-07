@@ -26,8 +26,14 @@ export type PhotoJourneyStatus = "pending" | "accepted" | "dismissed";
  *   `airportIata`, `distanceKm` and `spreadKm`.
  * - `stay` — nights away with no dated stay, named by an own place nearby.
  *   Carries `placeId` and `nights`.
+ * - `visit` — a stop INSIDE a recorded trip (forgejo#211): three or more
+ *   located photos over five minutes that no visit, slept-in lodging or
+ *   flown airport explains. Carries `tripId`/`tripName`, what the reverse
+ *   lookup called the spot (`suggestedName`, `suggestedLocalName`,
+ *   `suggestedRef`) and, when an own place within reach has no visit that
+ *   day, its `placeId`. The SERVER creates the place and the visit on accept.
  */
-export type PhotoJourneyKind = "place" | "trip" | "stay";
+export type PhotoJourneyKind = "place" | "trip" | "stay" | "visit";
 
 export interface PhotoJourney {
   id: string;
@@ -43,6 +49,20 @@ export interface PhotoJourney {
    */
   startDay?: string | null;
   endDay?: string | null;
+  /**
+   * The same two instants as wall clocks where the photos were taken
+   * (`YYYY-MM-DDTHH:mm:ss`): a `visit` finding is an afternoon, and the card
+   * says when on the place's clock, never the reader's.
+   */
+  startLocal?: string | null;
+  endLocal?: string | null;
+  /** `visit`: the trip the stop falls in. */
+  tripId?: string | null;
+  tripName?: string | null;
+  /** `visit`: what the lookup found at the stop; all null when nothing there had a name. */
+  suggestedName?: string | null;
+  suggestedLocalName?: string | null;
+  suggestedRef?: string | null;
   photoCount: number;
   /**
    * How many of those carried a coordinate. A cluster located by two photos

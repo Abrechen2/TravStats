@@ -1,5 +1,5 @@
 import type { PhotoCluster } from "./cluster";
-import { journeyFingerprint } from "./fingerprint";
+import { journeyFingerprint, visitFingerprint } from "./fingerprint";
 
 const DAY = 86_400_000;
 
@@ -11,6 +11,42 @@ const cluster = (over: Partial<PhotoCluster> = {}): PhotoCluster => ({
   position: { lat: 38.72, lon: -9.14 },
   locatedCount: 4,
   ...over,
+});
+
+describe("naming a visit stop so a re-scan recognises it (forgejo#211)", () => {
+  // Gyeongbokgung and Bukchon: a kilometre apart, photographed the same
+  // afternoon. Under the journey key (a day, 11 km) they are ONE key, and the
+  // second stop would overwrite the first every night.
+  const palace = cluster({
+    startMs: Date.UTC(2026, 4, 1, 5, 10),
+    endMs: Date.UTC(2026, 4, 1, 6, 0),
+    position: { lat: 37.5796, lon: 126.977 },
+  });
+  const hanok = cluster({
+    startMs: Date.UTC(2026, 4, 1, 7, 30),
+    endMs: Date.UTC(2026, 4, 1, 8, 0),
+    position: { lat: 37.5826, lon: 126.9833 },
+  });
+
+  it("tells two stops of one afternoon apart, which the journey key cannot", () => {
+    expect(journeyFingerprint(palace)).toBe(journeyFingerprint(hanok));
+    expect(visitFingerprint(palace)).not.toBe(visitFingerprint(hanok));
+  });
+
+  it("survives the rest of the stop's photos arriving", () => {
+    const after = cluster({
+      ...palace,
+      endMs: Date.UTC(2026, 4, 1, 6, 40),
+      photoCount: 30,
+      position: { lat: 37.5799, lon: 126.9772 },
+    });
+    expect(visitFingerprint(after)).toBe(visitFingerprint(palace));
+  });
+
+  it("never collides with a journey key", () => {
+    expect(visitFingerprint(palace)).toMatch(/^visit\|/);
+    expect(journeyFingerprint(palace)).not.toMatch(/^visit\|/);
+  });
 });
 
 describe("naming a journey so a re-scan recognises it", () => {

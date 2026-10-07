@@ -44,19 +44,28 @@
       "kind": {
         "place": "Visited a place?",
         "trip": "A trip?",
-        "stay": "Nights away?"
+        "stay": "Nights away?",
+        "visit": "A stop on the trip?"
       },
       "facts": {
         "photos": "{{photos}} photos",
         "located": "{{located}} with a position",
         "nights": "{{nights}} nights",
-        "airport": "nearest own airport: {{iata}}"
+        "airport": "nearest own airport: {{iata}}",
+        "trip": "Trip: {{name}}"
       },
       "creates": {
         "trip": "Accepting creates a trip covering these dates.",
         "placeVisit": "Accepting records a visit to this place on the first day.",
         "stayAnswerOnly": "Accepting only marks the question answered. A stay needs a lodging this finding does not name — you create that yourself.",
-        "placeMissingAnswerOnly": "Accepting only marks the question answered. The place this finding named no longer exists — nothing is created."
+        "placeMissingAnswerOnly": "Accepting only marks the question answered. The place this finding named no longer exists — nothing is created.",
+        "visitInTrip": "Accepting creates the place and records a visit in the trip at the time of the first photo.",
+        "visitInTripOwnPlace": "Accepting records a visit to this place in the trip at the time of the first photo — the place already exists."
+      },
+      "nameField": {
+        "label": "Name of the place",
+        "hint": "The lookup found nothing named here — give the place a name so it can be created.",
+        "placeholder": "e.g. Gyeongbokgung"
       },
       "actions": {
         "accept": "Accept",
@@ -78,7 +87,8 @@
         "accepted": {
           "trip": "Trip created.",
           "placeVisit": "Visit recorded at the place.",
-          "none": "Marked as answered. Nothing was created."
+          "none": "Marked as answered. Nothing was created.",
+          "serverVisit": "Visit recorded in the trip."
         },
         "dismissed": "Dismissed. This burst will not be suggested again.",
         "photosLinked": "{{count}} photos linked to the visit.",

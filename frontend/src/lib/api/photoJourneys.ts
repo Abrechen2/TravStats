@@ -48,6 +48,13 @@ export interface PhotoJourneyAcceptLinks {
   createdTripId?: string;
   createdPlaceVisitId?: string;
   createdLodgingStayId?: string;
+  /**
+   * `visit` findings only (forgejo#211): the server creates the place and the
+   * visit itself, and these override what the scan called the spot. `name` is
+   * required by the server when the scan named nothing (`VISIT_NAME_REQUIRED`).
+   */
+  name?: string;
+  localName?: string;
 }
 
 /**

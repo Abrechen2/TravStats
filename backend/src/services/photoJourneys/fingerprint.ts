@@ -27,3 +27,23 @@ export function journeyFingerprint(cluster: PhotoCluster): string {
   const lon = cluster.position.lon.toFixed(1);
   return `${day}|${lat},${lon}`;
 }
+
+/**
+ * The key of a `visit` finding (forgejo#211): the journey key, one decimal
+ * finer and prefixed.
+ *
+ * The journey key is a day and an 11 km cell, and inside a city a day holds
+ * several stops in one cell — Gyeongbokgung and Bukchon are a kilometre apart
+ * and were photographed the same afternoon. Under the journey key the second
+ * would overwrite the first every night. A hundredth of a degree (~1 km) and
+ * the hour the stop began tell them apart, and are still coarse enough that
+ * importing the rest of the afternoon's photos moves neither.
+ */
+export function visitFingerprint(cluster: PhotoCluster): string {
+  const start = new Date(cluster.startMs).toISOString();
+  const key =
+    cluster.position === null
+      ? "nowhere"
+      : `${cluster.position.lat.toFixed(2)},${cluster.position.lon.toFixed(2)}`;
+  return `visit|${start.slice(0, 13)}|${key}`;
+}

@@ -32,14 +32,32 @@ export type PhotoJourneyCreated =
   | { kind: "trip"; id: string }
   | { kind: "placeVisit"; id: string }
   /** The plan created nothing; step two only records the answer. */
-  | { kind: "none" };
+  | { kind: "none" }
+  /**
+   * A `visit` finding (forgejo#211): step one creates nothing, because the
+   * SERVER makes the place and the visit inside the PATCH, in one
+   * transaction. Step two carries the name the user typed where the lookup
+   * named nothing. A failed step two therefore leaves nothing behind.
+   */
+  | { kind: "serverVisit"; name?: string };
+
+/** What the card lets the user add before accepting. */
+export interface AcceptInput {
+  /** The place's name for a `visit` finding the scan could not name. */
+  name?: string;
+}
 
 export async function createFromPhotoJourney(
   journey: PhotoJourney,
   /** The name for a trip, already localized by the caller. */
-  tripName: string
+  tripName: string,
+  input: AcceptInput = {}
 ): Promise<PhotoJourneyCreated> {
   const plan = photoJourneyPlan(journey);
+
+  if (plan === "visitInTrip" || plan === "visitInTripOwnPlace") {
+    return { kind: "serverVisit", ...(input.name ? { name: input.name } : {}) };
+  }
 
   if (plan === "trip") {
     // The days where the photos were taken (server-derived, ADR 0002 D4);
@@ -76,6 +94,9 @@ export async function linkPhotoJourney(
   }
   if (created.kind === "placeVisit") {
     return photoJourneysApi.accept(journeyId, { createdPlaceVisitId: created.id });
+  }
+  if (created.kind === "serverVisit") {
+    return photoJourneysApi.accept(journeyId, created.name ? { name: created.name } : {});
   }
   return photoJourneysApi.accept(journeyId);
 }
