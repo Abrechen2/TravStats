@@ -118,6 +118,7 @@
     "aircraft.ts",
     "airlines.ts",
     "backup.ts",
+    "bus.ts",
     "cruises.ts",
     "cruises/facets.ts",
     "cruises/list.ts",
