@@ -1,5 +1,6 @@
 import axios from "axios";
 
+import { busApi } from "../api/bus";
 import { cruiseApi } from "../api/cruise";
 import { flightsApi } from "../api/flights";
 import { listLodgings, updateStay } from "../api/lodging";
@@ -42,9 +43,7 @@ import { dayOf } from "../../shared/time";
  */
 
 /** The order the picker offers the domains in — `DOMAIN_KEYS`, all of them. */
-// Bus joins when its API client exists (Task 8 of the bus B1 plan): until then
-// the picker would offer a tab whose list is empty.
-export const ATTACHABLE_DOMAINS: readonly DomainKey[] = DOMAIN_KEYS.filter((key) => key !== "bus");
+export const ATTACHABLE_DOMAINS: readonly DomainKey[] = DOMAIN_KEYS;
 
 export interface AttachableEntry {
   domain: DomainKey;
@@ -214,8 +213,22 @@ async function loadRoadtrips(): Promise<AttachableLoad> {
 }
 
 async function loadBus(): Promise<AttachableLoad> {
-  // Task 8 replaces this with busApi.listAll().
-  return { unlinkable: 0, entries: [] };
+  const rides = await busApi.listAll();
+  return {
+    unlinkable: 0,
+    entries: rides.map((r) => {
+      const departure = railDeparture(r);
+      return {
+        domain: "bus" as const,
+        id: r.id,
+        title: `${r.depStationName} → ${r.arrStationName}`,
+        subtitle: joined([r.operator, r.lineName], " · "),
+        day: departure ? dayOf(departure) : null,
+        endDay: null,
+        tripId: r.tripId,
+      };
+    }),
+  };
 }
 
 const LOADERS: Record<DomainKey, () => Promise<AttachableLoad>> = {
@@ -273,10 +286,8 @@ export async function attachEntry(tripId: string, entry: AttachableEntry): Promi
       await toursApi.update(undefined, entry.id, { tripId });
       return;
     case "bus":
-      // Task 8 replaces this with busApi.update(entry.id, { tripId }). The
-      // picker does not offer bus until then (`ATTACHABLE_DOMAINS`), so this is
-      // unreachable; it fails loudly rather than reporting a silent success.
-      throw new Error("Attaching a bus ride needs the bus API client (Task 8)");
+      await busApi.update(entry.id, { tripId });
+      return;
   }
 }
 
