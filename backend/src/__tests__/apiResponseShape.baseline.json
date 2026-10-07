@@ -119,6 +119,7 @@
     "airlines.ts",
     "backup.ts",
     "bus.ts",
+    "bus/entrySuggestions.ts",
     "cruises.ts",
     "cruises/facets.ts",
     "cruises/list.ts",

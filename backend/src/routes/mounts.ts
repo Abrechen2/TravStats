@@ -88,6 +88,7 @@ import railStatsRouter from "./rail/stats";
 import railConnectionsRouter from "./rail/connections";
 import railRoadtripConversionRouter from "./rail/roadtripConversion";
 import busRouter from "./bus";
+import busEntrySuggestionsRouter from "./bus/entrySuggestions";
 import rentalRouter from "./rental";
 import rentalStationsRouter from "./rental/stations";
 import rentalImportRouter from "./rental/import";
@@ -319,6 +320,12 @@ export const apiMounts: ApiMount[] = [
   },
   { id: "rail", base: "/api/v1/rail", router: railRouter },
   // Bus rides (spec 2026-10-07-bus-domain-design). Behind the beta switch in the UI only.
+  // Mounts FIRST on its prefix: the bus router's '/:id' would answer it as a 404.
+  {
+    id: "bus.entrySuggestions",
+    base: "/api/v1/bus/entry-suggestions",
+    router: busEntrySuggestionsRouter,
+  },
   { id: "bus", base: "/api/v1/bus", router: busRouter },
   // Car rentals (spec 2026-10-01-rental-domain-design). Behind the beta switch in
   // the UI only. Sub-routers mount FIRST: '/:id' would answer them as a 404.
