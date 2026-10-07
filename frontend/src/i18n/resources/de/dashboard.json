@@ -199,7 +199,8 @@
       "tour": "Touren",
       "roadtrip": "Roadtrips",
       "rail": "Bahn",
-      "rental": "Mietwagen"
+      "rental": "Mietwagen",
+      "bus": "Bus"
     },
     "disabledHint": "Bereich deaktiviert — Einstellungen → Bereiche"
   },
@@ -212,7 +213,8 @@
     "tour": "Tour",
     "roadtrip": "Roadtrip",
     "rail": "Zugfahrt",
-    "rental": "Mietwagen"
+    "rental": "Mietwagen",
+    "bus": "Busfahrt"
   },
   "controls": {
     "mode": "Modus",

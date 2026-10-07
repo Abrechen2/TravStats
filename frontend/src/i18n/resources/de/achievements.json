@@ -42,6 +42,7 @@
     "domainPoi": "Orte",
     "domainRail": "Bahn",
     "domainRental": "Mietwagen",
+    "domainBus": "Bus",
     "domainShared": "Übergreifend",
     "showUnlockedOnly": "Nur freigeschaltete anzeigen",
     "state": "Status",

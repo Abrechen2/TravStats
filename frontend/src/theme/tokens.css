@@ -52,6 +52,7 @@
   --ts-domain-roadtrip: #a9c46a;
   --ts-domain-rail: #a597e8;
   --ts-domain-rental: #d98cb3;
+  --ts-domain-bus: #c49a6c;
 
   /* Status — always a pill, never plain text (DESIGN_SYSTEM.md §2.6) */
   --ts-status-pending: #6fa0d6;
@@ -191,6 +192,7 @@
   --color-ts-domain-roadtrip: var(--ts-domain-roadtrip);
   --color-ts-domain-rail: var(--ts-domain-rail);
   --color-ts-domain-rental: var(--ts-domain-rental);
+  --color-ts-domain-bus: var(--ts-domain-bus);
   --color-ts-status-pending: var(--ts-status-pending);
   --color-ts-status-scheduled: var(--ts-status-scheduled);
   --color-ts-status-flown: var(--ts-status-flown);

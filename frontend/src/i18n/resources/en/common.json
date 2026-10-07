@@ -195,7 +195,9 @@
     "rail": "Rail",
     "rail_desc": "Train journeys like flights: stations, train number, class, seat, kilometres. (Beta)",
     "rental": "Rental cars",
-    "rental_desc": "Rental cars with station, period, car and the kilometres from the invoice. (Beta)"
+    "rental_desc": "Rental cars with station, period, car and the kilometres from the invoice. (Beta)",
+    "bus": "Bus",
+    "bus_desc": "Coach, intercity and shuttle rides: terminals, line, seat, kilometres. Not city transit. (Beta)"
   },
   "settings": {
     "modules": {
@@ -209,7 +211,8 @@
         "poi": "Places, visits and place lists",
         "roadtrip": "Stations, nights, map",
         "rail": "Beta: a logbook for train journeys",
-        "rental": "Beta: a logbook for rental cars"
+        "rental": "Beta: a logbook for rental cars",
+        "bus": "Beta: logbook for bus rides"
       }
     }
   },
