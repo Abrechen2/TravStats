@@ -101,6 +101,8 @@ const BY_TAB: Record<DomainKey | "all", (t: Translate) => SectionOption[]> = {
   rail: RAIL_SECTIONS,
   // Rental figures are not on the statistics page yet (package R4).
   rental: () => [],
+  // B2 (spec 2026-10-07 §6): the bus statistics tab arrives with its endpoint.
+  bus: () => [],
 };
 
 /** The menu's options for a tab. */

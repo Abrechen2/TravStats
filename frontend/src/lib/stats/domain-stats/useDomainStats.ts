@@ -59,7 +59,7 @@ export function useDomainStats(input: {
   const enabled = useMemo(
     () =>
       enabledDomains.filter(
-        (d): d is StatsDomain => d !== "rental" && (d !== "rail" || railOffered)
+        (d): d is StatsDomain => d !== "rental" && d !== "bus" && (d !== "rail" || railOffered)
       ),
     [enabledDomains, railOffered]
   );

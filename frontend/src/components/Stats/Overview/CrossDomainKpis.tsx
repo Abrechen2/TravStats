@@ -87,7 +87,7 @@ export default function CrossDomainKpis({
     period: selectedYear === null ? "allTime" : "year",
     ...(selectedYear === null ? {} : { year: selectedYear }),
     domains: foldedDomains
-      .filter((domain): domain is StatsDomain => domain !== "rental")
+      .filter((domain): domain is StatsDomain => domain !== "rental" && domain !== "bus")
       .map((domain) => EVIDENCE_DOMAIN_OF[domain]),
   };
 
