@@ -13,6 +13,7 @@ import { z } from "zod";
 
 import { registry } from "../registry";
 import { errorContent, photoConversionUnavailable, photoUnreadable, timeRefused } from "./shared";
+import { captureFieldsSchema } from "../../photos/captureFields";
 import { PARSER_SUPPORTED_DOMAINS } from "../../../shared/domains";
 import { parseRetentionFields } from "../../../schemas/document";
 import { diagnosticBundleSchema } from "../../diagnostics/bundleSchema";
@@ -559,9 +560,24 @@ registry.registerPath({
   description:
     "multipart/form-data, up to 20 files in `photos` — JPEG, PNG, WebP, GIF, HEIC or HEIF. " +
     "A HEIC/HEIF original is kept as uploaded (its checksum is of those bytes) and gets a " +
-    "JPEG copy for display; `takenAt` is read from each file's EXIF (forgejo#192).",
+    "JPEG copy for display; `takenAt` is read from each file's EXIF (forgejo#192). The " +
+    "optional text field `takenAt` (companion#59) fills it only where the file's EXIF has " +
+    "none — EXIF wins — and is accepted with exactly ONE file; `lat`/`lon` are validated " +
+    "but a visit photo stores no position. Several files beside any of the three fields, " +
+    "or an offset-less `takenAt`, is a 400 and nothing is stored.",
   tags: ["Places"],
-  request: { params: z.object({ visitId: uuid }) },
+  request: {
+    params: z.object({ visitId: uuid }),
+    body: {
+      content: {
+        "multipart/form-data": {
+          schema: captureFieldsSchema.extend({
+            photos: z.array(z.string().openapi({ format: "binary" })),
+          }),
+        },
+      },
+    },
+  },
   responses: {
     201: { description: "Uploaded" },
     400: badInput,

@@ -23,6 +23,7 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { includedRow, prismaColumns } from "../prismaColumns";
 import { documentIdsBodySchema } from "../../../schemas/document";
+import { captureFieldsSchema } from "../../photos/captureFields";
 import { errorContent, photoConversionUnavailable, photoUnreadable, timeRefused } from "./shared";
 import { photoFileQuerySchema } from "../../../schemas/photoVariant";
 import {
@@ -563,9 +564,23 @@ registry.registerPath({
     "multipart/form-data, field `photos`, up to 20 files — JPEG, PNG, WebP, GIF, HEIC or " +
     "HEIF. A HEIC/HEIF original is kept as uploaded and gets a JPEG copy for display. " +
     "A rejected upload removes the bytes it had already written — otherwise the " +
-    "directory grows by every failed attempt.",
+    "directory grows by every failed attempt. The optional text fields `takenAt`, `lat` " +
+    "and `lon` (companion#59) are validated on the same terms as on the trip and visit " +
+    "photo routes — one file only, `takenAt` with an offset — but NOT stored: a lodging " +
+    "photo has no column for when or where it was taken.",
   tags: lodgingPhotoTag,
-  request: { params: z.object({ lodgingId: uuid }) },
+  request: {
+    params: z.object({ lodgingId: uuid }),
+    body: {
+      content: {
+        "multipart/form-data": {
+          schema: captureFieldsSchema.extend({
+            photos: z.array(z.string().openapi({ format: "binary" })),
+          }),
+        },
+      },
+    },
+  },
   responses: {
     201: { description: "Added" },
     400: { description: "No photos, or a file the filter refused", content: errorContent },

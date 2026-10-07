@@ -29,6 +29,7 @@ import { ImmichError } from "../../services/immich/types";
 import { linkVisitPhotosToImmich } from "../../services/places/visitPhotoImmichLink";
 import { toPhotoDto, VISIT_PHOTO_INCLUDE } from "./visitPhotoDto";
 import { ingestUploadedPhotos } from "../../services/photos/ingestPhotos";
+import { parseCaptureFields, withCaptureFields } from "../../services/photos/captureFields";
 import {
   parsePhotoVariant,
   photoFileToServe,
@@ -121,10 +122,17 @@ router.post(
       const userId = req.userId!;
       await resolveVisit(req.params.visitId, userId);
       if (uploaded.length === 0) throw new AppError("No photos uploaded", 400);
+      // What the client says about the one photo it sent (companion#59),
+      // refused here when malformed or beside several files.
+      const fields = parseCaptureFields(req.body, uploaded.length);
       // Capture time from each file's own metadata, and a JPEG display copy
       // for a HEIC/HEIF original — or a refusal, before any row. A visit photo
-      // has no position column, so only the time is kept.
-      const exif = await ingestUploadedPhotos(getPlacePhotoDir(), uploaded);
+      // has no position column, so only the time is kept — EXIF first, the
+      // `takenAt` field where the file carries none; `lat`/`lon` are
+      // validated and have nowhere to go.
+      const exif = (await ingestUploadedPhotos(getPlacePhotoDir(), uploaded)).map((read) =>
+        withCaptureFields(read, fields)
+      );
 
       const last = await prisma.placeVisitPhoto.findFirst({
         where: { placeVisitId: req.params.visitId },

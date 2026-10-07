@@ -16,6 +16,7 @@ import { z } from "zod";
 import { registry } from "../registry";
 import { documentIdsBodySchema } from "../../../schemas/document";
 import { photoFileQuerySchema } from "../../../schemas/photoVariant";
+import { captureFieldsSchema } from "../../photos/captureFields";
 import {
   errorContent,
   photoConversionUnavailable,
@@ -447,14 +448,17 @@ registry.registerPath({
     "anything is stored, and a refused request keeps no row and no file. JPEG, PNG, WebP, " +
     "GIF, HEIC and HEIF are accepted; a HEIC/HEIF original is kept as uploaded and gets a " +
     "JPEG copy for display. `takenAt`, `lat` and `lon` are read from each file's EXIF " +
-    "where it carries them (forgejo#192).",
+    "where it carries them (forgejo#192). The optional text fields of the same names " +
+    "(companion#59) fill only what the file's EXIF did not say — EXIF wins — and are " +
+    "accepted with exactly ONE file; beside several files, or with an offset-less " +
+    "`takenAt`, the request is a 400 and nothing is stored.",
   tags: ["Trips"],
   request: {
     params: tripId,
     body: {
       content: {
         "multipart/form-data": {
-          schema: tripPhotoUploadFieldsSchema.extend({
+          schema: tripPhotoUploadFieldsSchema.merge(captureFieldsSchema).extend({
             photos: z.array(z.string().openapi({ format: "binary" })),
           }),
         },

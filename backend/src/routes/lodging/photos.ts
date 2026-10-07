@@ -14,6 +14,7 @@ import { AppError } from "../../middleware/errorHandler";
 import { rejectDemo } from "../../middleware/demoGuard";
 import logger from "../../utils/logger";
 import { ingestUploadedPhotos } from "../../services/photos/ingestPhotos";
+import { parseCaptureFields } from "../../services/photos/captureFields";
 import {
   parsePhotoVariant,
   photoFileToServe,
@@ -136,9 +137,14 @@ router.post(
       const userId = req.userId!;
       await resolveLodging(req.params.lodgingId, userId);
       if (uploaded.length === 0) throw new AppError("No photos uploaded", 400);
+      // The capture fields (companion#59) are refused here on the same terms
+      // as on the other two photo routes — a malformed value, or fields beside
+      // several files — so a client learns the contract once. They are then
+      // NOT stored: a lodging photo has no column for when or where (see the
+      // DTO above), and the same goes for the EXIF the ingest reads.
+      parseCaptureFields(req.body, uploaded.length);
       // A JPEG display copy for a HEIC/HEIF original — or a refusal, before
-      // any row. The EXIF it returns is not kept: a lodging photo has no
-      // column for when or where (see the DTO above).
+      // any row.
       await ingestUploadedPhotos(getLodgingPhotoDir(), uploaded);
 
       const last = await prisma.lodgingPhoto.findFirst({
