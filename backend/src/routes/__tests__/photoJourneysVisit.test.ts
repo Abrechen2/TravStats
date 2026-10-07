@@ -1,3 +1,7 @@
+import {
+  getInstanceSettings,
+  updateInstanceSettings,
+} from "../../services/instanceSettingsService";
 import { describe, it, expect, jest, beforeAll, beforeEach, afterAll } from "@jest/globals";
 
 const searchAssetsByDate = jest.fn<(range: unknown) => Promise<unknown>>();
@@ -78,7 +82,13 @@ describe("visit findings (forgejo#211)", () => {
   let cookie: string;
   let tripId: string;
 
+  // The kind lives behind the beta switch; the suite turns it on and puts it
+  // back, so a test database that boots with the default (off) still sees it.
+  let betaBefore: boolean;
+
   beforeAll(async () => {
+    betaBefore = (await getInstanceSettings()).betaFeaturesEnabled;
+    await updateInstanceSettings({ betaFeaturesEnabled: true });
     const passwordHash = await hashPassword("test-password");
     userId = (await prisma.user.create({ data: { username: `pj-visit-${stamp}`, passwordHash } }))
       .id;
@@ -96,6 +106,7 @@ describe("visit findings (forgejo#211)", () => {
   });
 
   afterAll(async () => {
+    await updateInstanceSettings({ betaFeaturesEnabled: betaBefore });
     await prisma.user.deleteMany({ where: { id: userId } });
   });
 
@@ -113,6 +124,17 @@ describe("visit findings (forgejo#211)", () => {
   const pending = () => prisma.photoJourney.findMany({ where: { userId, status: "pending" } });
 
   describe("the scan", () => {
+    it("writes no visit finding while the beta switch is off", async () => {
+      await updateInstanceSettings({ betaFeaturesEnabled: false });
+      try {
+        const outcome = await scan();
+        expect(outcome).toMatchObject({ kind: "scanned", created: 0 });
+        expect(await pending()).toHaveLength(0);
+      } finally {
+        await updateInstanceSettings({ betaFeaturesEnabled: true });
+      }
+    });
+
     it("writes a stop inside the trip as a visit finding, named by the lookup", async () => {
       const outcome = await scan();
       expect(outcome).toMatchObject({ kind: "scanned", created: 1, updated: 0 });

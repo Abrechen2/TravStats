@@ -55,6 +55,10 @@ describe("the 2.7.0 announcement describes the app that shipped", () => {
     railDomain: [/Bahn/, /rail/],
     rentalDomain: [/Mietwagen/, /rental cars/],
     cruiseTracks: [/Spuren bei Kreuzfahrten/, /tracks on cruises/],
+    photoVisitSuggestions: [
+      /Besuchsvorschläge aus deiner Fotomediathek/,
+      /visit suggestions from your photo library/,
+    ],
   };
   it.each(Object.keys(BETA_FEATURES) as (keyof typeof BETA_FEATURES)[])(
     "the beta block names the registered beta feature %s",

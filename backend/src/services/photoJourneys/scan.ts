@@ -26,7 +26,8 @@ import {
 } from "./cluster";
 import { journeyFingerprint } from "./fingerprint";
 import { travelWindows } from "./windows";
-import { scanVisitFindings } from "./visitScan";
+import { scanVisitFindings, type VisitScanOutcome } from "./visitScan";
+import { getInstanceSettings } from "../instanceSettingsService";
 import type { PlaceNameGeocoder } from "../places/placeNameBackfill";
 
 /**
@@ -235,17 +236,24 @@ export async function scanPhotoJourneys(
   // The other question the library can answer (forgejo#211): the stops INSIDE
   // those trips that no visit explains. Read from the same photos and the
   // same rows, written with the same fingerprint rule.
-  const visits = await scanVisitFindings(
-    userId,
-    photos,
-    {
-      trips,
-      places,
-      lodgings: stays.map((stay) => stay.lodging),
-      flights,
-    },
-    geocoder
-  );
+  // Behind the beta switch (owner, 2026-10-07): the stop rule has been read
+  // against one trip so far, and a wrong stop would propose a place nobody
+  // visited. Off, the scan writes no visit rows at all — a client that cannot
+  // gate the kind (an older app) then has nothing to show either.
+  const { betaFeaturesEnabled } = await getInstanceSettings();
+  const visits: VisitScanOutcome = betaFeaturesEnabled
+    ? await scanVisitFindings(
+        userId,
+        photos,
+        {
+          trips,
+          places,
+          lodgings: stays.map((stay) => stay.lodging),
+          flights,
+        },
+        geocoder
+      )
+    : { stops: 0, lookups: 0, created: 0, updated: 0 };
 
   logger.info({
     message: "photo_journey_scan_complete",
