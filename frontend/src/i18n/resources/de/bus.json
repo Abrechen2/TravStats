@@ -38,12 +38,25 @@
     "actions": "Aktionen",
     "filterStatus": "Status",
     "filterYear": "Jahr",
-    "all": "Alle"
+    "all": "Alle",
+    "sortBy": "Nach {{col}} sortieren",
+    "sortedBy": "sortiert nach {{col}}, {{dir}}",
+    "ascending": "aufsteigend",
+    "descending": "absteigend",
+    "allStatuses": "Alle Status",
+    "allYears": "Alle Jahre",
+    "emptyHint": "Trage deine erste Busfahrt ein.",
+    "created": "Angelegt"
   },
   "summary": {
-    "journeys": "Fahrten",
-    "operators": "Betreiber",
-    "stations": "Terminals"
+    "journeys_one": "Fahrt",
+    "journeys_other": "Fahrten",
+    "operators_one": "Betreiber",
+    "operators_other": "Betreiber",
+    "stations_one": "Terminal",
+    "stations_other": "Terminals",
+    "withoutOperator_one": "{{count}} ohne Betreiber",
+    "withoutOperator_other": "{{count}} ohne Betreiber"
   },
   "form": {
     "titleNew": "Busfahrt hinzufügen",
@@ -107,6 +120,11 @@
     "companions": "Mitreisende",
     "notes": "Notizen",
     "documents": "Dokumente",
-    "notFound": "Diese Busfahrt gibt es nicht (mehr)."
+    "notFound": "Diese Busfahrt gibt es nicht (mehr).",
+    "loading": "Wird geladen …",
+    "loadError": "Die Busfahrt konnte nicht geladen werden.",
+    "delay": "Verspätung",
+    "delayUnknown": "nicht erfasst",
+    "facts": "Fahrt"
   }
 }

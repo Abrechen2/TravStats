@@ -72,14 +72,36 @@ vi.mock("../../places/PlaceFormModal", () => ({
   PlaceFormModal: () => <div data-testid="place-form-modal" />,
 }));
 
+// The bus gate (beta switch AND domain) has its own tests; here it is open.
+vi.mock("../../../hooks/useBusVisible", () => ({
+  useBusVisible: () => true,
+  useBusOffered: () => true,
+}));
+
+// The real form pulls in the geocoder; a stub that can report a save is enough.
+vi.mock("../../bus/BusFormModal", () => ({
+  BusFormModal: ({ onSaved }: { onSaved: () => void }) => (
+    <button type="button" data-testid="bus-form-modal" onClick={onSaved}>
+      save-bus
+    </button>
+  ),
+}));
+
 // Imported after the mocks above so the module graph picks them up.
 import { DashboardLayout } from "../DashboardLayout";
 
-function renderAt(tab: string, setTab = vi.fn()): ReturnType<typeof render> {
+function renderAt(
+  tab: string,
+  setTab = vi.fn(),
+  onDataChanged?: () => void
+): ReturnType<typeof render> {
   mockUseDashboardRoute.mockReturnValue({ tab, setTab });
   return render(
     <MemoryRouter>
-      <DashboardLayout counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0, roadtrip: 0, rail: 0 }}>
+      <DashboardLayout
+        onDataChanged={onDataChanged}
+        counts={{ flight: 1, cruise: 0, poi: 0, lodging: 0, roadtrip: 0, rail: 0 }}
+      >
         <div />
       </DashboardLayout>
     </MemoryRouter>
@@ -136,5 +158,26 @@ describe("DashboardLayout: adding a POI from the map", () => {
     fireEvent.click(screen.getByRole("button", { name: /addPerTab\.poi/i }));
 
     expect(screen.getByTestId("place-form-modal")).toBeInTheDocument();
+  });
+});
+
+/**
+ * Bus has no import, so its "+" entry opens the ride form itself, as places
+ * do. The form's button stays disabled after a save, so the layout must close
+ * it and refresh the page's counts.
+ */
+describe("DashboardLayout: adding a bus ride from the map", () => {
+  it("opens the ride form from the add menu, and closes and refreshes on save", () => {
+    const onDataChanged = vi.fn();
+    renderAt("all", vi.fn(), onDataChanged);
+    expect(screen.queryByTestId("bus-form-modal")).not.toBeInTheDocument();
+
+    fireEvent.click(screen.getByRole("button", { name: /addPicker\.button/i }));
+    fireEvent.click(screen.getByRole("menuitem", { name: /addPicker\.bus/i }));
+    expect(screen.getByTestId("bus-form-modal")).toBeInTheDocument();
+
+    fireEvent.click(screen.getByTestId("bus-form-modal"));
+    expect(screen.queryByTestId("bus-form-modal")).not.toBeInTheDocument();
+    expect(onDataChanged).toHaveBeenCalledTimes(1);
   });
 });

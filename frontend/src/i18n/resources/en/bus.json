@@ -38,12 +38,25 @@
     "actions": "Actions",
     "filterStatus": "Status",
     "filterYear": "Year",
-    "all": "All"
+    "all": "All",
+    "sortBy": "Sort by {{col}}",
+    "sortedBy": "sorted by {{col}}, {{dir}}",
+    "ascending": "ascending",
+    "descending": "descending",
+    "allStatuses": "All statuses",
+    "allYears": "All years",
+    "emptyHint": "Add your first bus ride.",
+    "created": "Added"
   },
   "summary": {
-    "journeys": "Rides",
-    "operators": "Operators",
-    "stations": "Terminals"
+    "journeys_one": "Ride",
+    "journeys_other": "Rides",
+    "operators_one": "Operator",
+    "operators_other": "Operators",
+    "stations_one": "Terminal",
+    "stations_other": "Terminals",
+    "withoutOperator_one": "{{count}} without an operator",
+    "withoutOperator_other": "{{count}} without an operator"
   },
   "form": {
     "titleNew": "Add bus ride",
@@ -107,6 +120,11 @@
     "companions": "Companions",
     "notes": "Notes",
     "documents": "Documents",
-    "notFound": "This bus ride does not exist (any more)."
+    "notFound": "This bus ride does not exist (any more).",
+    "loading": "Loading …",
+    "loadError": "The bus ride could not be loaded.",
+    "delay": "Delay",
+    "delayUnknown": "not recorded",
+    "facts": "Ride"
   }
 }
