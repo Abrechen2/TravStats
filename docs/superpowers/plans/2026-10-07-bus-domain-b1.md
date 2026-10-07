@@ -1959,6 +1959,38 @@ git commit -m "feat(bus): enveloped CRUD router with paging, OpenAPI and route t
 
 ---
 
+### Task 6b: Entry suggestions — the user's own operators and terminals, offered as chips
+
+**Files:**
+- Create: `backend/src/routes/bus/entrySuggestions.ts`, `backend/src/routes/__tests__/busEntrySuggestions.test.ts`, `backend/src/services/openapi/paths/busEntrySuggestions.ts`
+- Modify: `backend/src/routes/mounts.ts` (mount `/api/v1/bus/entry-suggestions` BEFORE `/api/v1/bus`, exactly as `rail.entrySuggestions` sits before `rail`), `backend/src/services/openapi/paths/index.ts`, `backend/src/__tests__/apiResponseShape.baseline.json` (`"bus/entrySuggestions.ts"` under `enveloped`)
+
+**Interfaces:**
+- Produces: `GET /api/v1/bus/entry-suggestions?depName=&arrName=&operator=` → `{ success, data: { operators: string[]; fareClasses: string[]; terminals: { name: string; address: string | null; lat: number; lon: number; country: string | null }[] } }` — `terminals` are the user's distinct terminals whose name starts with the typed `depName`/`arrName` (case-insensitive, five each, newest first); `operators` are the user's distinct operators (five, by count); `fareClasses` the classes used with that operator (four).
+- Spec: §3.2 step 1; Alex forgejo#196 (provider list) and forgejo#188.
+
+- [ ] **Step 1: Write the failing route test**
+
+`backend/src/routes/__tests__/busEntrySuggestions.test.ts` — harness as `railEntrySuggestions.test.ts`: create three rides for the user (two with operator "Kobus", one "Kumho"; terminals Seoul, Sokcho, Jeonju; one with `fareClass: "Udeung"`), one ride for another user with operator "Stranger". Assert: `GET /api/v1/bus/entry-suggestions` answers `operators: ["Kobus", "Kumho"]` (by count, then name) and never "Stranger"; `?depName=seo` answers one terminal `{ name: "Seoul Express Bus Terminal", lat: 37.5048, lon: 127.0046, country: "KR", address: null }`; `?operator=Kobus` answers `fareClasses: ["Udeung"]`; an empty logbook answers empty arrays (200, not 404).
+
+Run: `cd backend && npx jest src/routes/__tests__/busEntrySuggestions.test.ts --forceExit`
+Expected: FAIL — 404.
+
+- [ ] **Step 2: Write the route**
+
+`backend/src/routes/bus/entrySuggestions.ts` — `rail/entrySuggestions.ts` reduced to three aggregations on `prisma.busJourney` (no trains, coaches, seats, catalogue ids): `operators` via `groupBy({ by: ["operator"], where: { userId, operator: { not: null } }, _count: true, orderBy: { _count: { operator: "desc" } }, take: OPERATOR_CAP * OVERFETCH })` then rail's case-insensitive merge; `fareClasses` the same over `fareClass` filtered by the typed operator; `terminals` as `findMany({ where: { userId, OR: [{ depStationName: { startsWith: q, mode: "insensitive" } }] }, select: { depStationName, depAddress, depLat, depLon, depCountry, departureTime }, orderBy: { departureTime: "desc" }, take: 25 })` over BOTH ends (two queries, union, distinct by lower-cased name, five kept). Query schema: `depName`, `arrName`, `operator`, each `z.preprocess(blankToUndefined, z.string().trim().max(200).optional())`. `statsLimiter`, `authenticate`, enveloped answer. Mount and document (`paths/busEntrySuggestions.ts` from `paths/railEntrySuggestions.ts`, tag `Bus`).
+
+Run the test again. Expected: PASS. Then `npx jest src/__tests__/openapi.coverage.test.ts src/__tests__/apiResponseShape.ratchet.test.ts --forceExit` — PASS.
+
+- [ ] **Step 3: Commit**
+
+```bash
+git add backend/src/routes/bus backend/src/routes/__tests__/busEntrySuggestions.test.ts backend/src/services/openapi/paths/busEntrySuggestions.ts backend/src/services/openapi/paths/index.ts backend/src/routes/mounts.ts backend/src/__tests__/apiResponseShape.baseline.json
+git commit -m "feat(bus): entry suggestions from the user's own operators and terminals"
+```
+
+---
+
 ### Task 7: Every shared surface compiles — trip bounds, explicit empty answers, the compiler's list
 
 **Files:**
@@ -2239,7 +2271,29 @@ export const busApi = {
   async remove(id: string): Promise<void> {
     await api.delete(`/bus/${encodeURIComponent(id)}`);
   },
+
+  /** What the form may offer from the user's own rides (Task 6b); chips only fill a field on a click. */
+  async entrySuggestions(query: { depName?: string; arrName?: string; operator?: string }): Promise<BusEntrySuggestions> {
+    const res = await api.get<Envelope<BusEntrySuggestions>>("/bus/entry-suggestions", { params: query });
+    return res.data.data;
+  },
 };
+```
+and in `types/bus.ts`:
+```ts
+export interface BusTerminalSuggestion {
+  name: string;
+  address: string | null;
+  lat: number;
+  lon: number;
+  country: string | null;
+}
+export interface BusEntrySuggestions {
+  operators: string[];
+  fareClasses: string[];
+  terminals: BusTerminalSuggestion[];
+}
+export const NO_BUS_SUGGESTIONS: BusEntrySuggestions = { operators: [], fareClasses: [], terminals: [] };
 ```
 
 Run the client test. Expected: PASS.
@@ -2716,6 +2770,8 @@ interface Props {
   onSaved: (ride: BusJourney) => void;
 }
 ```
+Add `frontend/src/hooks/useBusEntrySuggestions.ts` — `useRailEntrySuggestions.ts` with `busApi.entrySuggestions`, inputs `{ departureName, arrivalName, operator, enabled? }` debounced, state `{ suggestions: BusEntrySuggestions; failed: boolean }` (the `failed` flag is shown as a one-line notice, never as an empty chip row — the four defect classes). In the modal: `SuggestionChips` under the operator field (`suggestions.operators`), under the class field (`suggestions.fareClasses`), and a terminal chip row under each `BusStationField` whose click fills name, address, position AND country at once (defect class 2: a choice carries its data). Test in `BusFormModal.test.tsx`: a terminal chip click leaves the save button enabled without a geocoder pick.
+
 Keep: `useTripPreselection`, `CurrencySelect` + `useRecentCurrencies` + `minorUnits`, `TagInput`, `CompanionPicker`, `ClockChangeNotice` (with a `knownTerminalZone` copied from `knownStationZone` at `railFormModel.ts:415`, reading `railDeparture`/`railArrival`), the "only the date is known" checkbox that switches the two inputs from `datetime-local` to `date` (as rail's day-only mode does — find it by `dayOnly` in `RailFormModal.tsx`), the error rendering beside the field via `saveErrorFrom`. Keep every touch target at the size rail uses (`useCoarsePointer` is inside the shared inputs).
 
 - [ ] **Step 5: Modal test**
@@ -2766,7 +2822,7 @@ Run the gating test. Expected: PASS for module switch, setup picker and logbook 
 
 - [ ] **Step 3: Table row**
 
-`frontend/src/components/bus/BusTableRow.tsx` — `RailTableRow.tsx` for ONE ride (no connections): props `{ journey: BusJourney; columns: readonly TableColumn[]; onOpen: () => void; actions?: ReactNode }`; `BusColumnId = "operator" | "route" | "time" | "line" | "duration" | "distance" | "status" | "trip" | "actions"`; `BUS_COLUMN_LAYOUT` with rail's measured widths (`time: { min: 236, mono: true, onNarrow: "subtitle" }`, `duration: { min: 112, … }`, `distance: { min: 112, … }`) and `line: { min: 120, grow: 1, priority: 2 }`; cells: `operator: <OperatorTile name={journey.operator} domain="bus" />`, `route: `${journey.depStationName} → ${journey.arrStationName}``, `time: formatRailSpan(journey, locale)` (a bus row is `RailLike`), `line: journey.lineName ?? "—"`, `duration`: `railDurationMinutes(journey)` → `formatRailDuration(minutes, t)` or "—", `distance`: `Math.round(km)` + the caption `t("bus:straightLine")` when `distanceSource === "great_circle"`, `status`: `statusPillProps(journey.status)` with `t(`bus:status.${status}`)` and the delay caption (`bus:delay` / `bus:onTime`), `trip: <TripPill trip={journey.trip ?? null} />`, `actions` wrapped in a `stopPropagation` span; `testId={`bus-row-${journey.id}`}`.
+`frontend/src/components/bus/BusTableRow.tsx` — `RailTableRow.tsx` for ONE ride (no connections): props `{ journey: BusJourney; columns: readonly TableColumn[]; onOpen: () => void; actions?: ReactNode }`; `BusColumnId = "operator" | "route" | "time" | "line" | "duration" | "distance" | "status" | "trip" | "actions"`; `BUS_COLUMN_LAYOUT` with rail's measured widths (`time: { min: 236, mono: true, onNarrow: "subtitle" }`, `duration: { min: 112, … }`, `distance: { min: 112, … }`) and `line: { min: 120, grow: 1, priority: 2 }`; cells: `operator: <OperatorTile name={journey.operator} domain="bus" />` (a monogram on the domain colour — no logo source is chosen for any operator, see the tile's comment and spec §11a), `route: `${journey.depStationName} → ${journey.arrStationName}``, `time: formatRailSpan(journey, locale)` (a bus row is `RailLike`), `line: journey.lineName ?? "—"`, `duration`: `railDurationMinutes(journey)` → `formatRailDuration(minutes, t)` or "—", `distance`: `Math.round(km)` + the caption `t("bus:straightLine")` when `distanceSource === "great_circle"`, `status`: `statusPillProps(journey.status)` with `t(`bus:status.${status}`)` and the delay caption (`bus:delay` / `bus:onTime`), `trip: <TripPill trip={journey.trip ?? null} />`, `actions` wrapped in a `stopPropagation` span; `testId={`bus-row-${journey.id}`}`.
 
 - [ ] **Step 4: The logbook page**
 
@@ -2875,6 +2931,6 @@ Then report the branch to the owner and ask — as a single, isolated question �
 
 ## Self-review (done while writing)
 
-- **Spec coverage:** §3.1 columns → Task 2; §3.2 resolution → Tasks 5 and 9; §4 → Tasks 3 and 5; §5 straight line → Task 5; §7 colour/icon/prefix → Task 1; §11 gating → Tasks 1, 10; §12 B1 measures → Tasks 6, 7, 11; §13 D1 (`rideKind`), D2 (day-only), D5 (chord — drawn in B2, stored in B1), D6 (no loyalty), D7 (colour), D9 (sync in B2) all honoured. §8 "trip bounds" moved from B2 into B1 (Task 7) because the write path already calls `recomputeTripStatus` — the spec's §12 row for B1 is amended to say so.
+- **Spec coverage:** §3.1 columns → Task 2; §3.2 resolution → Tasks 5 and 9; §4 → Tasks 3 and 5; §5 straight line → Task 5; §7 colour/icon/prefix → Task 1; §11 gating → Tasks 1, 10; §11a (Alex) → shared layout and widths in Task 10, suggestions in Tasks 6b/9, attachable entries in Task 7, monogram tile in Task 10; §12 B1 measures → Tasks 6, 7, 11; §13 D1 (`rideKind`), D2 (day-only), D5 (chord — drawn in B2, stored in B1), D6 (no loyalty), D7 (colour), D9 (sync in B2) all honoured. §8 "trip bounds" moved from B2 into B1 (Task 7) because the write path already calls `recomputeTripStatus` — the spec's §12 row for B1 is amended to say so.
 - **Type consistency:** `BusStationInput` has `address: string | null` on both sides; `terminalColumns` writes `depAddress`; the OpenAPI row takes `depAddress` from `prismaColumns`; `BusJourneyInput.departureFold` is optional on the web and `foldField` on the server; `withBusTimes` returns `times: BusTimes` = `RailTimes` shape; the route's `BUS_INVALID_INPUT`/`BUS_ARRIVAL_BEFORE_DEPARTURE` codes match `saveErrorFrom`.
 - **Review Focus → tests:** 1 → Task 5 "refuses a terminal without a zone"; 2 → Task 5 "compares instants"; 3 → Task 5 "day-only" + Task 3 sweep; 4 → Task 5 "moved terminal"; 5 → Task 10 gating + Task 6 "stranger".

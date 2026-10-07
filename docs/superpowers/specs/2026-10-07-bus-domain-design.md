@@ -75,12 +75,25 @@ Three things were measured and found NOT usable without further work:
 
 - **Transitous** (`services/rail/lookup/transitous.ts`) asks for
   `HIGHSPEED_RAIL, …, RAIL` only. MOTIS also knows `BUS` and `COACH`, and
-  FlixBus publishes GTFS for Europe (`gtfs.gis.flix.tech`, 1 663 stops in the
-  EU feed; licence differs per regional feed — ODbL for France, Trafiklab
-  terms for Sweden, unstated for the generic EU file). Whether Transitous
-  carries the FlixBus feed is **unverified**. Korea has no open intercity
-  feed at all (Kobus, BusTago and T-money are apps, not data). So a lookup is
-  package B3 at best and Europe-only, and nothing in B1–B2 depends on it.
+  **it carries FlixBus — measured live on 2026-10-07**: `stoptimes` at
+  "Berlin ZOB" (stop `al-ShowMeBus_station-191`, modes `COACH, SUBURBAN, BUS`)
+  with `mode=COACH` answered 31 departures for the morning of 2026-10-08, all
+  agency `FlixBus-eu` (260 → Budapest Népliget, N1329 → Oldenburg, 057 →
+  Szczecin, 060 → Vienna Erdberg, 1381 → Gdynia, 032 → Malmö, …), and
+  `trip` for the Budapest coach came back as ONE `COACH` leg with six
+  intermediate stops and a 64 kB polyline — a real road shape, not chords.
+  BlaBlaCar Bus stops are in the index too (`eu-blablacar-bus_BZO`). Without
+  the mode filter the same stop lists BVG city buses (`BUS`, lines 143, M49,
+  349) — the `COACH` filter is what keeps city transit out, which is the
+  owner's rule in data form. FlixBus's own GTFS (`gtfs.gis.flix.tech/
+  gtfs_generic_eu.zip`, 30 MB, publisher FlixMobility Tech GmbH, valid
+  2026-10-04 → 2027-04-04, agencies `FLIXBUS-eu` and `FLIXTRAIN-eu`) has
+  2 126 stop rows (some are "Pre Waypoint" routing helpers, not terminals),
+  a `stop_timezone` per stop and a 147 MB `shapes.txt`; its `feed_info` names
+  no licence. Korea has no open intercity feed (Kobus, BusTago and T-money are
+  apps; data.go.kr's terminal APIs need a Korean key and are not planned). So
+  the lookup and the traced line are **feasible for Europe through the client
+  rail already has**, and are package B3; nothing in B1–B2 depends on them.
 - **Road routing** (`services/tour/routing/`) exists with three providers
   (OpenRouteService, GraphHopper, a self-hosted OSRM) behind
   `resolveRouteProvider()`, and `routeLegGeometry()` answers a `road` leg
@@ -167,9 +180,12 @@ driver, a platform/bay (notes, if anyone cares), a loyalty programme
 There is no worldwide open catalogue of coach terminals, and the first use is
 Korea. Resolution, each step falling through on a miss:
 
-1. **The user's own earlier terminals** — entry suggestions from past rows
-   (rail's `entrySuggestions` idiom, rental's `rentalStations.ts`): the second
-   Seoul ride offers "Seoul Express Bus Terminal" with its position.
+1. **The user's own earlier terminals and operators** — entry suggestions
+   from past rows (rail's `GET /rail/entry-suggestions` idiom, offered as
+   chips, never written): the second Seoul ride offers "Seoul Express Bus
+   Terminal" with its position and address, and "Kobus" as the operator.
+   Alex asked for exactly this list on rentals (forgejo#196); here it is in
+   B1, because without it every terminal is typed twice.
 2. **The geocoder** the lodging and rail forms use (`LocationInput`, Photon):
    a search hit brings name, position and country; the name stays editable
    afterwards ("Dong Seoul Bus Terminal" rather than what OSM calls it).
@@ -290,13 +306,16 @@ the templates, minus train categories and plus ride kinds.
 A chain like rail's, **optional** in every sense — a ride is logged in full
 without it:
 
-1. **Transitous** `stoptimes` at the boarding terminal with modes `BUS,
-   COACH`, matched by operator + line label; a match brings the trip's
-   polyline (cut to the two terminals, frozen) as rail does. **Precondition:
-   measure first** that Transitous serves FlixBus departures at e.g. Berlin
-   ZOB for a day inside its feed window; if it does not, this step is dropped
-   from the plan rather than built on hope. Honours the same terms
-   (User-Agent with contact, caching, non-commercial).
+1. **Transitous** `stoptimes` at the boarding terminal with mode `COACH`
+   (not `BUS` — that is the city network, §1), matched by operator + line
+   label; a match brings the trip's polyline (cut to the two terminals,
+   frozen) as rail does. **Measured 2026-10-07 (§1): works for FlixBus at
+   Berlin ZOB, with a real road shape.** Same terms as rail (User-Agent with
+   contact, caching, non-commercial), same provider switch in the admin
+   settings, same six-hour cache, same "a past day rarely finds anything"
+   notice — the feed window is about six months. Unmeasured: coverage outside
+   the FlixBus/BlaBlaCar networks, and whether a coach's `stoptimes` row names
+   the line the ticket prints (the Budapest coach is "FlixBus 260").
 2. **Road routing** (§5) — the fallback line for every ride, the only line
    outside Europe.
 3. **Manual entry** — always.
@@ -351,13 +370,39 @@ pointer to the package that fills it — the compiler lists every such site.
   proposal "offer such a segment as a bus ride" becomes buildable. Out of
   scope here; the board item stays open and gains a pointer to this spec.
 
+## 11a. Alex's feedback on rail and rental, applied here
+
+Alex tested rail and rental on the RC between 2026-09-20 and 2026-10-05; the
+board carries his points as forgejo#184–#209, companion#56 and the Beta-13
+list. Every one that is about a domain's SHAPE rather than a single defect is
+a rule this domain starts with, instead of learning it again:
+
+| Alex said (where) | Bus does |
+|---|---|
+| Rail and rental lists in the shared logbook layout, same header (forgejo#197) | The bus page is the shared layout from day one: title + add button, summary strip, filter bar, server-paged table, measured column widths (236 px time, 112 px duration/distance — the fix for the wrapping he found on flights, forgejo#185), rows-per-page above AND below (Beta-13) |
+| Operator logos for rail (forgejo#197) | The leading mark is `OperatorTile`'s monogram on the domain colour. No logo source is chosen — that is the open owner question the tile's comment records; when it is decided, bus gets it with rail |
+| A ride with changes is ONE list entry, three levels (forgejo#187) | A coach connection (B3) is one entry through `Booking`, rail's `/connections` idiom; B1 already stores `bookingId` so no row moves later. The Companion keeps flat rides (companion#56) — the sync entity (B2) is per ride |
+| Rental: plate, provider list, logos (forgejo#196) | Operator and terminal suggestions from the user's own rows in B1 (§3.2). No plate: a coach's registration is nobody's record of a ride |
+| Dashboard map settings per domain; rental shows stations only (forgejo#198) | B2 adds a `bus` section to the map's appearance panel with a line toggle (rental's `RentalLineToggle` shape). Unlike a rental, a ride IS a route, so the default is the line (D5) |
+| Web settings (colours, map, domain filter) lived only in the browser (forgejo#200) | Bus's colour and its filter row ride on `app_prefs` (merged `feat/web-prefs-sync`); B2's filter row must be added to that synced shape, not to `localStorage` |
+| Assign existing entries from the trip editor (forgejo#188) | Bus rides are attachable from B1 (`attachableEntries` loader) |
+| Switching the map mode on "Alle" did not carry to the other tabs (Beta-13) | Inherited: the bus tab (B2) is registered in `TAB_MODE_REGISTRY` like rail's, so the fix applies |
+| His new DB ticket layout needed a release (parser templates item) | B4 ships a FlixBus template through `travstats-templates`, never as TypeScript in a release |
+| Dialogs closed when a text selection ended outside (forgejo#184) | Inherited: the bus form uses the shared `Modal`/`Dialog` |
+| bahn.de share links blocked server-side (forgejo#204) | Not attempted for FlixBus; there is no share-link API to try |
+
+Two rental points do not transfer: the invoice-kilometre rule (forgejo#206)
+has no counterpart (a coach ride's distance is the route's, §5), and the
+"single point or a dashed line" question he was asked about rentals is
+answered for buses by D5 — a ride has two ends and a road between them.
+
 ## 12. Packages, order, and how each is measured
 
 | # | Package | Measured by |
 |---|---|---|
-| **B1** | Model + migration (`BusJourney`, companion join, `Document.busJourneyId` + CHECK), Zod, CRUD router with list paging, OpenAPI with response schemas, ratchet family, registries (both mirrors), beta key, colour token, status derivation alias + sweep, counting rule (both mirrors), FX snapshot, companions, trip link **and trip bounds** (the write path already re-derives the trip; one more array in `tripStatusService`), list page + create/edit/delete form + simple detail page with documents, DE/EN — **manual entry only**, straight line only, every other shared surface wired to an explicit empty answer | route tests incl. a time-model suite (DST gap refused, far-off zones, arrival before departure refused, day-only ride stored at precision `day`), ownership tests (another user's trip/booking refused), counting truth table on both mirrors, OpenAPI coverage + response-schema + time-shape guards, response-shape ratchet, locale parity, `check:drift`, odd-zone CI runs, the colour test, the beta-registry test, a browser look at the form on an iPad viewport |
+| **B1** | Model + migration (`BusJourney`, companion join, `Document.busJourneyId` + CHECK), Zod, CRUD router with list paging, OpenAPI with response schemas, ratchet family, registries (both mirrors), beta key, colour token, status derivation alias + sweep, counting rule (both mirrors), FX snapshot, companions, trip link **and trip bounds** (the write path already re-derives the trip; one more array in `tripStatusService`), entry suggestions (own operators and terminals, as chips), list page in the shared logbook layout + create/edit/delete form + simple detail page with documents, DE/EN — **manual entry only**, straight line only, every other shared surface wired to an explicit empty answer | route tests incl. a time-model suite (DST gap refused, far-off zones, arrival before departure refused, day-only ride stored at precision `day`), ownership tests (another user's trip/booking refused), counting truth table on both mirrors, OpenAPI coverage + response-schema + time-shape guards, response-shape ratchet, locale parity, `check:drift`, odd-zone CI runs, the colour test, the beta-registry test, a browser look at the form on an iPad viewport |
 | **B2** | Trip timeline/logistics/card/attachable/suggestions/photo windows; dashboard tab + map layer + "Alle" chip + filter row; `/bus/stats` + stats tab + cross-domain + evidence + passport provenance; upcoming; sync entity; Excel sheet + importer spec + JSON export + diagnostic export; demo seed | trip-status tests (a ride extends a trip), timeline tests, stats tests with the sample-size rule, cross-domain population test, sync feed test (visible/omit), export round trip, a production-build browser look at both maps with the colour store changed |
-| **B3** | Road line via the routing provider, frozen, labelled, with reasons; connecting-coach UI through `Booking`; e-mail reminders; optional Transitous bus lookup **after a measurement**; optional airport/rail-station picker sources | geometry tests per fallback reason (each named, none silent), edit-keeps-line test, reminder tests; the Transitous measurement recorded in this spec before any code |
+| **B3** | Transitous `COACH` lookup + traced line (measured, §1) through rail's client with a mode parameter; road line via the routing provider as the fallback, frozen, labelled, with reasons; connecting-coach UI through `Booking` as ONE list entry (Alex, forgejo#187); e-mail reminders; optional airport picker source | lookup tests against recorded Transitous answers (a `COACH` match, a `BUS`-only stop answering "no coach here", a past day), geometry tests per fallback reason (each named, none silent), edit-keeps-line test, reminder tests |
 | **B4** | Parser (template + LLM fallback + review modal) **once `test-samples/Bus/` exists**; achievements and Wrapped (2.8, as rail) | the corpus harness with `expectations.json`; 0 candidates from non-bus mails |
 
 B1 is one branch (`dev/bus-domain`), merged on the owner's release decision;
