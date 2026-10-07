@@ -166,10 +166,6 @@
             "name": "Rail",
             "what": "The Rail area: a logbook for train journeys with a station catalogue, train lookup, map, statistics and Excel import and export. A roadtrip with “Rail” as its vehicle can be taken over as train rides."
           },
-          "photoVisitSuggestions": {
-            "name": "Visit suggestions from photos",
-            "what": "In the inbox under “Photo journeys”: stops during a recorded trip that photos in your Immich library prove and no visit explains are proposed as visits. Accepting creates the place and the visit in the trip."
-          },
           "cruiseTracks": {
             "name": "Recorded tracks on cruises",
             "what": "The “Recorded tracks” section on a cruise’s page: a GPS recording (a file or Dawarich) replaces the computed sea route of the legs it covers – on the map and in the statistics."

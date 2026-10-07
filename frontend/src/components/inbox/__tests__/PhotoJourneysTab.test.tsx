@@ -94,20 +94,6 @@ function makeJourney(over: Partial<PhotoJourney> = {}): PhotoJourney {
   };
 }
 
-// Visit findings live behind the beta switch; the tab's other kinds do not.
-// The global settings-store mock has no `setState`, so the gate hook itself
-// is the seam: open unless a test closes it.
-let betaOn = true;
-vi.mock("../../../hooks/useBetaFeatures", () => ({
-  useBetaFeatures: () => ({
-    betaFeaturesEnabled: betaOn,
-    isFeatureVisible: () => betaOn,
-  }),
-}));
-beforeEach(() => {
-  betaOn = true;
-});
-
 async function renderTab(rows: PhotoJourney[], hasAccess = true, active = true): Promise<void> {
   vi.mocked(photoJourneysApi.list).mockResolvedValue(rows);
   vi.mocked(immichApi.getSettings).mockResolvedValue({
@@ -303,36 +289,6 @@ describe("PhotoJourneysTab", () => {
         "dataQuality:inbox.photoJourneys.messages.accepted.serverVisit"
       )
     );
-  });
-
-  // Owner ruling 2026-10-07: the suggestions stay behind the switch until a
-  // second real trip has been read. A row the server wrote while the switch
-  // was on must not surface after it was turned off.
-  it("hides a visit finding while the beta switch is off, and counts none", async () => {
-    betaOn = false;
-    const onPendingCount = vi.fn();
-    vi.mocked(photoJourneysApi.list).mockResolvedValue([
-      makeJourney({
-        kind: "visit",
-        airportIata: null,
-        nights: null,
-        suggestedName: "Gyeongbokgung",
-        suggestedLocalName: "경복궁",
-      }),
-    ]);
-    vi.mocked(immichApi.getSettings).mockResolvedValue({
-      baseUrl: "https://immich.example",
-      hasKey: true,
-      defaultMode: "link",
-      source: "user",
-      isShared: false,
-      hasAccess: true,
-    });
-    render(<PhotoJourneysTab active onPendingCount={onPendingCount} />);
-
-    await waitFor(() => expect(photoJourneysApi.list).toHaveBeenCalled());
-    await waitFor(() => expect(onPendingCount).toHaveBeenCalledWith(0));
-    expect(screen.queryByText("Gyeongbokgung · 경복궁")).toBeNull();
   });
 
   it("accepting a nameless visit finding carries the typed name to the server", async () => {

@@ -148,12 +148,6 @@ export const BETA_FEATURES = Object.freeze({
       "The owner has added at least one real cruise recording (a Dawarich pull or a GPX export), checked the per-leg verdicts and the map against what was sailed, and accepts the feature for release.",
     reason: "beta",
   }),
-  photoVisitSuggestions: Object.freeze({
-    why: "Owner ruling 2026-10-07: the visit suggestions read from the photo library (forgejo#211) go in behind the switch. The stop rule — 45 minutes, 300 m, three photos, five minutes of dwell, nothing logged within 200 m — was measured against one trip (Korea, four stops it found correctly), and a wrong stop proposes a place nobody visited. The server writes no such finding while the switch is off, so the gate here hides what an older row may still carry.",
-    returnsWhen:
-      "The suggestions have run over a second real trip with Immich, their false stops counted and found acceptable, and the owner accepts them for release.",
-    reason: "beta",
-  }),
 } as const satisfies Readonly<Record<string, BetaFeatureMeta>>);
 
 export type BetaFeatureKey = keyof typeof BETA_FEATURES;

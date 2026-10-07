@@ -1,7 +1,6 @@
 import { useCallback, useEffect, useState } from "react";
 import { Link } from "react-router-dom";
 
-import { useBetaFeatures } from "../../hooks/useBetaFeatures";
 import { useTranslation } from "../../hooks/useTranslation";
 import { immichApi } from "../../lib/api/immich";
 import { JobLostError } from "../../lib/api/jobs";
@@ -94,18 +93,10 @@ export default function PhotoJourneysTab({
     });
   }, []);
 
-  // Visit findings (forgejo#211) are behind the beta switch (owner,
-  // 2026-10-07). The server writes none while it is off; the filter here
-  // covers rows written while it was on.
-  const { isFeatureVisible } = useBetaFeatures();
-  const visitSuggestionsOn = isFeatureVisible("photoVisitSuggestions");
-
   const load = useCallback(async () => {
     try {
       setLoading(true);
-      const rows = (await photoJourneysApi.list("pending")).filter(
-        (row) => row.kind !== "visit" || visitSuggestionsOn
-      );
+      const rows = await photoJourneysApi.list("pending");
       setJourneys(rows);
       onPendingCount?.(rows.length);
     } catch (error) {
@@ -114,7 +105,7 @@ export default function PhotoJourneysTab({
     } finally {
       setLoading(false);
     }
-  }, [addToast, t, onPendingCount, visitSuggestionsOn]);
+  }, [addToast, t, onPendingCount]);
 
   useEffect(() => {
     void load();
