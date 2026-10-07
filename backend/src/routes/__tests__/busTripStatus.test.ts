@@ -73,7 +73,14 @@ describe("bus rides and their trip", () => {
 
   it("re-derives the trip it left and the trip it joined when a ride moves", async () => {
     const from = await prisma.trip.create({
-      data: { userId, name: `from-${stamp}`, status: "planned" },
+      // Own 2030 dates: once the ride leaves, derivation falls back to them.
+      data: {
+        userId,
+        name: `from-${stamp}`,
+        status: "planned",
+        startDate: new Date("2030-01-01"),
+        endDate: new Date("2030-01-05"),
+      },
     });
     const to = await prisma.trip.create({
       data: { userId, name: `to-${stamp}`, status: "planned" },
@@ -86,6 +93,8 @@ describe("bus rides and their trip", () => {
       .set("Cookie", cookie)
       .send({ tripId: to.id });
     expect((await reload(to.id)).status).toBe("completed");
+    // The trip it left lost its only segment and is back to its own plan.
+    expect((await reload(from.id)).status).toBe("planned");
 
     await request(app).delete(`/api/v1/bus/${created.body.data.id}`).set("Cookie", cookie);
     // Nothing dated is left in `to`: derivation abstains and the status stays.

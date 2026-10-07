@@ -184,12 +184,16 @@ describe("Bus rides API", () => {
         endDate: new Date("2030-01-05"),
       },
     });
-    const created = await create({ ...base, tripId: trip.id });
+    // The ride starts outside the trip, so the trip's status can only change
+    // through the PATCH that moves it in.
+    const created = await create(base);
     const id = created.body.data.id;
+    const before = await prisma.trip.findUniqueOrThrow({ where: { id: trip.id } });
+    expect(before.status).toBe("planned");
     const patched = await request(app)
       .patch(`/api/v1/bus/${id}`)
       .set("Cookie", cookie)
-      .send({ seat: "12A", departureStation: JEONJU });
+      .send({ seat: "12A", departureStation: JEONJU, tripId: trip.id });
     expect(patched.status).toBe(200);
     expect(patched.body.data.seat).toBe("12A");
     expect(patched.body.data.depStationName).toBe(JEONJU.name);
