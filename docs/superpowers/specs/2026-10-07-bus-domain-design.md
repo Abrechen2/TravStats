@@ -33,7 +33,7 @@ copies as little code as it can get away with (§2).
 | Said | Assumed (correct me in §12) |
 |---|---|
 | Own domain, beside rail | Own table, own router, own page, own colour, own beta key, own stats — the full domain contract of `shared/domains.ts` |
-| Not city buses | One row = one ticketed ride between two terminals. No line network, no stop sequence, no timetable of a city. A ride may still be short (an airport shuttle) |
+| Not city buses | One row = one ticketed ride between two terminals. No line network, no stop sequence, no timetable of a city. A ride may still be short (an airport shuttle). A guided coach tour is a tour, not a ride (§11b) |
 | Korea rides are the first use | Worldwide from day one: terminals come from the geocoder, not from a European catalogue; no provider lookup is required to log a ride |
 | — | Web first, the Companion follows (rail owner decision 5, rental §8) |
 | — | Behind the beta switch until the owner takes it out, like rail and rental |
@@ -139,7 +139,7 @@ connection with a change of coach is two rows bound by the existing `Booking`
 |---|---|---|
 | `operator` | text? | "FlixBus", "Kobus", "Kumho Express", "Lux Express". Free text with entry suggestions from the user's own earlier rows; no catalogue. |
 | `lineName` | text? | What the ticket calls the service: "N17", "Linie 004", "Premium". Kept apart from the operator because the statistics rank operators, not lines. |
-| `rideKind` | text? | `intercity` \| `shuttle` \| `charter` \| `other`. The split a reader cares about (a 2 h 20 coach vs a 15 min airport shuttle); null when unstated. The form copy names what the domain is NOT for (city transit). §13 D1. |
+| `rideKind` | text? | `intercity` \| `shuttle` \| `other`. The split a reader cares about (a 2 h 20 coach vs a 15 min airport shuttle); null when unstated. No `charter`: a chartered coach is the vehicle of a guided tour, not a ride (§11b). The form copy names what the domain is NOT for (city transit, excursions). §13 D1. |
 | `depStationName`, `arrStationName` | text | Required. **Rail's column names on purpose** (§1): a bus terminal is a station in the generic sense, and this is what lets the shared clock helpers read a bus row. |
 | `depAddress`, `arrAddress` | text? | As printed — coach stops are often an address ("ZOB Berlin, Masurenallee 4–6"), not a named building. |
 | `depLat/depLon`, `arrLat/arrLon` | float | **Required**, as on `RailJourney`: a terminal without a position has no zone, no country and no map point. |
@@ -391,6 +391,48 @@ a rule this domain starts with, instead of learning it again:
 | Dialogs closed when a text selection ended outside (forgejo#184) | Inherited: the bus form uses the shared `Modal`/`Dialog` |
 | bahn.de share links blocked server-side (forgejo#204) | Not attempted for FlixBus; there is no share-link API to try |
 
+## 11b. Not a bus ride: the guided coach tour
+
+The owner's Korea itinerary (day 3, 06.10.2026) reads: pick-up at the hotel
+lobby by a shared transfer, a join-in DMZ tour with a guide in a coach of
+30–40 people (Freedom Bridge, 3rd Infiltration Tunnel, Imjingak Park, Dora
+Observatory), back to Seoul by bus, out at City Hall Station. A GetYourGuide
+day, in other words — and the thing to settle before B1 is that **it is not a
+bus ride**. It has no ticket between two terminals, no line, no operator the
+rider chose; the coach is how the tour moves, the way a ferry is how a hiking
+tour reaches the island. What the owner would want to count from that day is
+the tour (the places, the hours, the route on the map, the guide's company),
+not a kilometre figure under "Bus".
+
+What the repository has for it today, measured:
+
+- **Day tours** (`TripRoute`, `kind = tour`, spec 2026-09-24) are one domain
+  with one colour; the activity picks the icon. `TOUR_ACTIVITIES` is `hike,
+  walk, run, bike, mtb, ski, paddle, climb, other` — nothing for a guided
+  excursion, so today this day is `other`. Leg modes are `road, ferry, rail,
+  foot, bike`; `road` routes a coach's way over the road network exactly as
+  it routes a car's.
+- **Cruise excursions** (`CruiseExcursion`, spec 2026-08-16 §4.5) are the same
+  idea bound to a port call: title, notes, a place, deliberately no price,
+  provider or duration. There is no trip-level twin.
+- **Trip import** (spec 2026-08-21) lists "day programs" as a non-goal: an
+  itinerary line like this one lands in `rejectedRows`, shown and not
+  imported.
+
+**Decision for the owner (D10):** where a guided coach tour is recorded.
+Recommendation: as a **day tour with a new activity `excursion`** ("Geführter
+Ausflug" / "Guided tour", icon 🚌 when the vehicle is a coach), legs by `road`
+from the pick-up to the sites to the drop-off, the operator/guide in the
+tour's `vehicleName`-style free text. That is one activity value, one icon
+and two i18n strings — no table, no domain, and the tour statistics, map and
+trip timeline already know what to do with it. The alternatives cost more and
+say less: a bus ride with a `charter` kind would count the DMZ coach beside a
+FlixBus to Prague, and a trip-level excursion entity would be `CruiseExcursion`
+a second time. Reading such itineraries into tour proposals is a trip-import
+follow-up (the one its spec declined), not a bus package. The bus form's copy
+says this in one line: "Kein Stadtverkehr, kein Ausflug — eine Fahrt ist ein
+Ticket zwischen zwei Terminals."
+
 Two rental points do not transfer: the invoice-kilometre rule (forgejo#206)
 has no counterpart (a coach ride's distance is the route's, §5), and the
 "single point or a dashed line" question he was asked about rentals is
@@ -412,7 +454,7 @@ B2 the next. Each package's plan is written when the one before it has landed.
 
 | # | Question | Options | Recommendation |
 |---|---|---|---|
-| D1 | Ride kind | (a) none — operator only; (b) `intercity \| shuttle \| charter \| other`, optional; (c) a longer list (night coach, sightseeing, …) | **(b)** — one optional column, the one split a statistic reader asks for; (c) is a list nobody will fill |
+| D1 | Ride kind | (a) none — operator only; (b) `intercity \| shuttle \| other`, optional; (c) a longer list (night coach, sightseeing, …) | **(b)** — one optional column, the one split a statistic reader asks for; (c) is a list nobody will fill, and "sightseeing" is a tour (D10) |
 | D2 | Day-only rides allowed? | (a) yes, as rail (precision `day`, clock readers abstain); (b) a clock is required | **(a)** — open tickets are common on coaches; the abstention rules already exist |
 | D3 | Terminal picker sources beyond the geocoder | (a) own past terminals + geocoder only; (b) also airports (shuttles); (c) also the rail catalogue | **(a)** in B1, **(b)** in B3 if a shuttle ride turns up; (c) not until the catalogue can tell a bus stop from a station |
 | D4 | Do a ride's countries count in the cross-domain overview and the passport? | (a) yes, both terminals' countries, as rail; (b) only in bus stats | **(a)** — a coach across a border is the same evidence a train is |
@@ -421,3 +463,4 @@ B2 the next. Each package's plan is written when the one before it has landed.
 | D7 | Colour | sandstone `#c49a6c`, provisional | decide with Design / the Companion; must keep clearing the status-colour test |
 | D8 | Routing profile for the road line (B3) | (a) the car profile; (b) the heavy-vehicle profile where a provider has one (ORS `driving-hgv`, GraphHopper `truck`) | **(a)** — a coach is not a lorry on most roads a provider restricts for HGVs, and (b) would route around low bridges the coach took; the label `road` says it is a routed line either way |
 | D9 | Shall B1 already carry the sync entity so the Companion can read rides early? | (a) B2, with the rest of the shared surfaces; (b) B1 | **(a)** — the Companion has no bus screen; an entity nobody reads is a contract to keep for nothing |
+| D10 | Where does a guided coach tour (DMZ day, GetYourGuide) live? (§11b) | (a) a day tour with a new activity `excursion`; (b) a bus ride with a `charter` kind; (c) a trip-level excursion entity like `CruiseExcursion` | **(a)** — one activity value and an icon; the bus logbook stays tickets between terminals. If (a), it is a small tour-domain change outside the bus packages, done before B1 so the two forms' copy can point at each other |

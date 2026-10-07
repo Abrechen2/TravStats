@@ -235,7 +235,7 @@ model BusJourney {
   /// What the ticket calls the service ("N17", "Premium"); apart from the
   /// operator because statistics rank operators, not lines.
   lineName String? @map("line_name")
-  /// intercity | shuttle | charter | other; null when unstated (spec D1).
+  /// intercity | shuttle | other; null when unstated (spec D1). No `charter`: a chartered coach is a tour's vehicle (spec §11b).
   rideKind String? @map("ride_kind")
 
   depStationName String  @map("dep_station_name")
@@ -809,7 +809,7 @@ import { foldField, optionalText, wallClockOrDay } from "./wallClockInput";
 export const BUS_STATUSES = ["scheduled", "in_progress", "completed", "cancelled"] as const;
 export const BUS_WRITE_STATUSES = ["scheduled", "cancelled"] as const;
 /** The split a statistic reader asks for (spec D1); null when unstated. */
-export const BUS_RIDE_KINDS = ["intercity", "shuttle", "charter", "other"] as const;
+export const BUS_RIDE_KINDS = ["intercity", "shuttle", "other"] as const;
 export type BusRideKind = (typeof BUS_RIDE_KINDS)[number];
 /**
  * great_circle = the straight line between the terminals (understates a road
@@ -1920,7 +1920,7 @@ const busJourney = registry.register(
     ...prismaColumns("BusJourney"),
     id: z.string().uuid(),
     userId: z.string().uuid(),
-    rideKind: z.enum(BUS_RIDE_KINDS).nullable().describe("intercity | shuttle | charter | other; null when unstated"),
+    rideKind: z.enum(BUS_RIDE_KINDS).nullable().describe("intercity | shuttle | other; null when unstated"),
     depCountry: z.string().nullable().describe("ISO 3166-1 alpha-2; null when unknown"),
     depTimezone: z.string().nullable().describe("IANA zone, derived by the server from the terminal's coordinates"),
     arrTimezone: z.string().nullable(),
@@ -2105,11 +2105,11 @@ Expected: FAIL — module not found.
 import type { RailTimes } from "./times";
 
 export type BusStatus = "scheduled" | "in_progress" | "completed" | "cancelled";
-export type BusRideKind = "intercity" | "shuttle" | "charter" | "other";
+export type BusRideKind = "intercity" | "shuttle" | "other";
 export type BusDistanceSource = "great_circle" | "user" | "route";
 export type BusGeometrySource = "straight" | "road" | "manual";
 
-export const BUS_RIDE_KINDS: readonly BusRideKind[] = ["intercity", "shuttle", "charter", "other"];
+export const BUS_RIDE_KINDS: readonly BusRideKind[] = ["intercity", "shuttle", "other"];
 
 /** The same four members as a rail ride's times; the OpenAPI name is `BusTimes`. */
 export type BusTimes = RailTimes;
@@ -2329,7 +2329,6 @@ Run the client test. Expected: PASS.
   "kind": {
     "intercity": "Fernbus",
     "shuttle": "Shuttle",
-    "charter": "Charter",
     "other": "Sonstige"
   },
   "list": {
@@ -2360,7 +2359,7 @@ Run the client test. Expected: PASS.
     "linePlaceholder": "N17, Premium …",
     "kind": "Art der Fahrt",
     "kindNone": "— keine Angabe —",
-    "kindHint": "Kein Stadtverkehr: eine Fahrt ist ein Ticket zwischen zwei Terminals.",
+    "kindHint": "Kein Stadtverkehr, kein Ausflug: eine Fahrt ist ein Ticket zwischen zwei Terminals. Eine geführte Bustour ist eine Tour.",
     "departureStation": "Abfahrtsterminal",
     "arrivalStation": "Ankunftsterminal",
     "stationName": "Name wie auf dem Ticket",
@@ -2416,7 +2415,7 @@ Run the client test. Expected: PASS.
 }
 ```
 
-`en/bus.json` — the same keys: "Bus", "Coach, intercity and shuttle rides — terminal to terminal", betaNote "Beta: bus rides are entered by hand (“{{add}}”). Not city transit — a ride is a ticket between two terminals.", "Add ride", "No bus rides yet. The first one starts with “{{add}}”.", "The bus rides could not be loaded.", "Operator, line, terminal, booking …", "Bus ride saved", "Bus ride deleted", "The bus ride could not be deleted.", "Delete this bus ride? This cannot be undone.", "Edit", "Delete", "straight line", "+{{minutes}} min", "on time"; status Scheduled / On the road / Completed / Cancelled; kind Coach / Shuttle / Charter / Other; list Operator / Route / Time / Line / Duration / Distance / Status / Trip / Actions / Status / Year / All; summary Rides / Operators / Terminals; form "Add bus ride" / "Edit bus ride" / Operator / "FlixBus, Kobus, Lux Express …" / Line / "N17, Premium …" / "Kind of ride" / "— not stated —" / "Not city transit: a ride is a ticket between two terminals." / "Departure terminal" / "Arrival terminal" / "Name as printed on the ticket" / "Address (optional)" / "Departure (local time at the terminal)" / "Arrival (local time at the terminal)" / "Only the date is known" / "Distance (km, from the ticket)" / "Leave empty: the straight line is measured and labelled as such." / Class / "Udeung, Lounge …" / Seat / "Delay (min)" / "Empty = not recorded, 0 = on time." / "Booking reference" / Price / Currency / Cancelled / Tags / Companions / Trip / "No trip" / Notes / Save / Cancel / "Saving …" / "The bus ride could not be saved."; errors "The arrival is before the departure." / "This time did not exist on that day (clock change)." / "No time zone could be found for this terminal. Please pick another point." / "The field “{{field}}” is invalid." / "The input is invalid."; detail "Back to the logbook" / Departure / Arrival / Duration / Distance / Line / Kind / Class / Seat / Booking / Price / Companions / Notes / Documents / "This bus ride does not exist (any more)."
+`en/bus.json` — the same keys: "Bus", "Coach, intercity and shuttle rides — terminal to terminal", betaNote "Beta: bus rides are entered by hand (“{{add}}”). Not city transit — a ride is a ticket between two terminals.", "Add ride", "No bus rides yet. The first one starts with “{{add}}”.", "The bus rides could not be loaded.", "Operator, line, terminal, booking …", "Bus ride saved", "Bus ride deleted", "The bus ride could not be deleted.", "Delete this bus ride? This cannot be undone.", "Edit", "Delete", "straight line", "+{{minutes}} min", "on time"; status Scheduled / On the road / Completed / Cancelled; kind Coach / Shuttle / Charter / Other; list Operator / Route / Time / Line / Duration / Distance / Status / Trip / Actions / Status / Year / All; summary Rides / Operators / Terminals; form "Add bus ride" / "Edit bus ride" / Operator / "FlixBus, Kobus, Lux Express …" / Line / "N17, Premium …" / "Kind of ride" / "— not stated —" / "Not city transit, not an excursion: a ride is a ticket between two terminals. A guided coach tour is a tour." / "Departure terminal" / "Arrival terminal" / "Name as printed on the ticket" / "Address (optional)" / "Departure (local time at the terminal)" / "Arrival (local time at the terminal)" / "Only the date is known" / "Distance (km, from the ticket)" / "Leave empty: the straight line is measured and labelled as such." / Class / "Udeung, Lounge …" / Seat / "Delay (min)" / "Empty = not recorded, 0 = on time." / "Booking reference" / Price / Currency / Cancelled / Tags / Companions / Trip / "No trip" / Notes / Save / Cancel / "Saving …" / "The bus ride could not be saved."; errors "The arrival is before the departure." / "This time did not exist on that day (clock change)." / "No time zone could be found for this terminal. Please pick another point." / "The field “{{field}}” is invalid." / "The input is invalid."; detail "Back to the logbook" / Departure / Arrival / Duration / Distance / Line / Kind / Class / Seat / Booking / Price / Companions / Notes / Documents / "This bus ride does not exist (any more)."
 
 Run: `cd frontend && npx vitest --run src/i18n`
 Expected: `localeKeyParity` PASS with the new namespace (it reads the namespace list from the filesystem).
