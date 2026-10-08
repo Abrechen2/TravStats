@@ -27,6 +27,7 @@ vi.mock("../../../lib/logger", () => ({ logger: { error: vi.fn(), warn: vi.fn() 
 // The editor has its own suites; here it only has to receive the right stay and house.
 vi.mock("../StayEditor", () => ({
   StayEditor: (props: {
+    onSaved: (saved: unknown) => void;
     stay?: { id: string } | null;
     lodgingId: string;
     lodgingName?: string;
@@ -37,6 +38,9 @@ vi.mock("../StayEditor", () => ({
       {props.stay?.id}|{props.lodgingId}|{props.lodgingName}|{String(props.lodgingChainId)}
       <button type="button" onClick={props.onClose}>
         stub-close
+      </button>
+      <button type="button" onClick={() => props.onSaved({ id: props.stay?.id })}>
+        stub-save
       </button>
     </div>
   ),
@@ -121,10 +125,10 @@ const ibis = makeStay({
   },
 });
 
-const renderView = (onAddHouse = vi.fn()): ReturnType<typeof render> =>
+const renderView = (onAddHouse = vi.fn(), onChanged = vi.fn()): ReturnType<typeof render> =>
   render(
     <MemoryRouter>
-      <LodgingStaysView onAddHouse={onAddHouse} />
+      <LodgingStaysView onAddHouse={onAddHouse} onChanged={onChanged} />
     </MemoryRouter>
   );
 
@@ -255,5 +259,22 @@ describe("LodgingStaysView", () => {
 
     await waitFor(() => expect(deleteStayMock).toHaveBeenCalledWith("house-adlon", "s-june"));
     await waitFor(() => expect(listStayPageMock.mock.calls.length).toBeGreaterThan(callsBefore));
+  });
+
+  // The house list shows stay counts, nights and spend: it is stale as soon as
+  // a stay changes here, so the page is told.
+  it("tells the page after a stay was saved, and after one was deleted", async () => {
+    deleteStayMock.mockResolvedValue(undefined);
+    const onChanged = vi.fn();
+    renderView(vi.fn(), onChanged);
+
+    await userEvent.click(await screen.findByTestId("stay-view-row-s-june"));
+    await userEvent.click(screen.getByRole("button", { name: "stub-save" }));
+    expect(onChanged).toHaveBeenCalledTimes(1);
+
+    await userEvent.click(await screen.findByTestId("stay-view-delete-s-march"));
+    const dialog = await screen.findByRole("dialog");
+    await userEvent.click(within(dialog).getByRole("button", { name: "common:buttons.delete" }));
+    await waitFor(() => expect(onChanged).toHaveBeenCalledTimes(2));
   });
 });

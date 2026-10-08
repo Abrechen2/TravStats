@@ -42,6 +42,12 @@ type ColumnKey = (typeof COLUMNS)[number]["key"];
 interface LodgingStaysViewProps {
   /** Opens the page's own "add a house" dialog - a stay needs a house first. */
   onAddHouse: () => void;
+  /**
+   * Called after a stay was saved or deleted here. The house list's rows carry
+   * the stay counts, nights, last stay and spend, so it is stale the moment a
+   * stay changes - the page reloads it (forgejo#226).
+   */
+  onChanged?: () => void;
 }
 
 /**
@@ -54,7 +60,7 @@ interface LodgingStaysViewProps {
  * Found by period and by trip: both are query parameters, so a page is a page
  * and the total is the size of the filtered set.
  */
-export function LodgingStaysView({ onAddHouse }: LodgingStaysViewProps): JSX.Element {
+export function LodgingStaysView({ onAddHouse, onChanged }: LodgingStaysViewProps): JSX.Element {
   const { t, i18n } = useTranslation(["lodging", "common"]);
   const tableHints = useTableHints();
   const addToast = useToastStore((s) => s.addToast);
@@ -154,6 +160,7 @@ export function LodgingStaysView({ onAddHouse }: LodgingStaysViewProps): JSX.Ele
     setEditing(null);
     addToast("success", t("lodging:stay.deleted"));
     reload();
+    onChanged?.();
   };
 
   const columns = useMemo<TableColumn[]>(
@@ -342,6 +349,7 @@ export function LodgingStaysView({ onAddHouse }: LodgingStaysViewProps): JSX.Ele
           onSaved={async () => {
             setEditing(null);
             reload();
+            onChanged?.();
           }}
         />
       )}

@@ -490,7 +490,10 @@ export default function LodgingListPage(): JSX.Element {
         </div>
 
         {view === "stays" ? (
-          <LodgingStaysView onAddHouse={() => setShowAdd(true)} />
+          <LodgingStaysView
+            onAddHouse={() => setShowAdd(true)}
+            onChanged={() => void reloadAll()}
+          />
         ) : (
           <>
             {/* Was `LodgingStatStrip`, which renders the backend rollup over the

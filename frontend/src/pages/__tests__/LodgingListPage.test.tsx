@@ -96,9 +96,17 @@ vi.mock("../../components/lodging/LodgingLocationRepair", () => ({
 
 // The stay editor has its own suites; here it only has to arrive for the right house.
 vi.mock("../../components/lodging/StayEditor", () => ({
-  StayEditor: (props: { mode: string; lodgingId: string; lodgingName?: string }) => (
+  StayEditor: (props: {
+    mode: string;
+    lodgingId: string;
+    lodgingName?: string;
+    onSaved: (saved: unknown) => void;
+  }) => (
     <div data-testid="stay-editor-stub">
       {props.mode}|{props.lodgingId}|{props.lodgingName}
+      <button type="button" onClick={() => props.onSaved({})}>
+        stub-save-stay
+      </button>
     </div>
   ),
 }));
@@ -1017,6 +1025,36 @@ describe("LodgingListPage", () => {
 
       await userEvent.click(screen.getByTestId("lodging-view-houses"));
       expect(await screen.findByText("Hotel Adlon")).toBeInTheDocument();
+    });
+
+    // The house rows carry stay counts, nights and spend: editing a stay in the
+    // stay list must refresh them, or switching back shows yesterday's numbers.
+    it("reloads the houses after a stay was saved in the stay list", async () => {
+      const stay = {
+        id: "s1",
+        lodgingId: "l1",
+        lodging: { id: "l1", name: "Hotel Adlon", chainId: null, isoCountryCode: null },
+        trip: null,
+        checkIn: "2024-01-01T00:00:00.000Z",
+        checkOut: "2024-01-02T00:00:00.000Z",
+        datePrecision: "DAY",
+        nights: null,
+        status: "completed",
+        roomNumber: null,
+        bookingReference: null,
+      };
+      listStayPageMock.mockResolvedValue({ rows: [stay], total: 1 });
+      render(
+        <MemoryRouter initialEntries={["/lodging?view=stays"]}>
+          <LodgingListPage />
+        </MemoryRouter>
+      );
+      await userEvent.click(await screen.findByTestId("stay-view-row-s1"));
+      await waitFor(() => expect(listLodgingPageMock).toHaveBeenCalled());
+      const before = listLodgingPageMock.mock.calls.length;
+
+      await userEvent.click(await screen.findByRole("button", { name: "stub-save-stay" }));
+      await waitFor(() => expect(listLodgingPageMock.mock.calls.length).toBeGreaterThan(before));
     });
 
     it("opens on the stay list when the link says so", async () => {
