@@ -1,6 +1,7 @@
 import type { Flight } from "../types";
 import { calculateDistance } from "./geo";
 import { formatDate } from "./displayFormat";
+import { favoriteConnection } from "./stats/favoriteConnection";
 
 interface YearReportOptions {
   year: number;
@@ -42,7 +43,6 @@ export async function generateYearReportPdf(opts: YearReportOptions): Promise<vo
   let totalFlightTimeMin = 0;
   let totalCo2 = 0;
   const airlineCounts = new Map<string, number>();
-  const routeCounts = new Map<string, number>();
 
   for (const f of flights) {
     const dist = calculateDistance(f.depLat ?? 0, f.depLon ?? 0, f.arrLat ?? 0, f.arrLon ?? 0);
@@ -54,12 +54,10 @@ export async function generateYearReportPdf(opts: YearReportOptions): Promise<vo
     if (f.co2Kg) totalCo2 += f.co2Kg;
     const airline = f.airline ?? "Unknown";
     airlineCounts.set(airline, (airlineCounts.get(airline) ?? 0) + 1);
-    const routeKey = `${f.depIata ?? f.depIcao ?? "?"} → ${f.arrIata ?? f.arrIcao ?? "?"}`;
-    routeCounts.set(routeKey, (routeCounts.get(routeKey) ?? 0) + 1);
   }
 
   const topAirline = [...airlineCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
-  const topRoute = [...routeCounts.entries()].sort((a, b) => b[1] - a[1])[0]?.[0] ?? "—";
+  const topRoute = favoriteConnection(flights) ?? "—";
   const totalHours = Math.round(totalFlightTimeMin / 60);
   const distDisplay =
     units === "mi" ? Math.round(totalDistance * 0.621371) : Math.round(totalDistance);
