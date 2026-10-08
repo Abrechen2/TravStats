@@ -40,6 +40,12 @@ vi.mock("../../components/common/TripPhotoWindowStrip", () => ({
     <div data-testid="photo-window-stub">{`${entry}:${id}`}</div>
   ),
 }));
+// The connection view lists each leg's originals through the documents router.
+const listForEntry = vi.fn();
+vi.mock("../../lib/api/documents", () => ({
+  documentsApi: { listForEntry: (...a: unknown[]) => listForEntry(...a) },
+  documentFileUrl: (doc: { url: string }) => doc.url,
+}));
 vi.mock("../../lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
@@ -74,6 +80,7 @@ describe("RailDetailPage", () => {
   beforeEach(() => {
     getMock.mockReset();
     getConnectionMock.mockReset().mockRejectedValue(new Error("not asked in this test"));
+    listForEntry.mockReset().mockResolvedValue([]);
   });
 
   it("shows each time on its station's clock, with the zone it was read in", async () => {
@@ -163,6 +170,45 @@ describe("RailDetailPage", () => {
     expect(screen.getByTestId("rail-transfer-1-station-change")).toHaveTextContent(
       'rail:transfer.stationChange {"from":"Fulda","to":"Fulda Süd"}'
     );
+  });
+
+  // forgejo#235: the whole connection is readable here — seats and originals
+  // of the other train too, without opening it.
+  it("bundles every leg's seat and its originals in the connection section", async () => {
+    listForEntry.mockImplementation(({ id }: { id: string }) =>
+      Promise.resolve(
+        id === "j2"
+          ? [
+              {
+                id: "d9",
+                displayName: "Reservierung.pdf",
+                kind: null,
+                url: "/api/v1/documents/d9/file",
+              },
+            ]
+          : []
+      )
+    );
+    const legs = [
+      makeRailBookingLeg({ id: "j1" }),
+      makeRailBookingLeg({
+        id: "j2",
+        depStationName: "Fulda",
+        arrStationName: "Berlin",
+        coach: "12",
+        seat: "61",
+      }),
+    ];
+    await renderPage(detail({ booking: { id: "b1", pnr: "AB12CD", railJourneys: legs } }));
+    expect(screen.getByTestId("rail-connection-leg-j1-seat")).toHaveTextContent(
+      "rail:connectionView.noReservation"
+    );
+    expect(screen.getByTestId("rail-connection-leg-j2-seat")).toHaveTextContent(
+      'rail:connectionView.seat {"seat":"61"}'
+    );
+    expect(
+      await screen.findByRole("link", { name: 'documents:openLabel {"name":"Reservierung.pdf"}' })
+    ).toHaveAttribute("href", "/api/v1/documents/d9/file");
   });
 
   it("links up to the whole ride when the server says this train has a change", async () => {

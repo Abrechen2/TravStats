@@ -374,5 +374,15 @@
     "separate": "Eigene Fahrt – kein Umstieg",
     "markTight": "Als knapp markiert",
     "markFailed": "Die Markierung konnte nicht gespeichert werden. Bitte versuch es erneut."
+  },
+  "connectionView": {
+    "coach": "Wagen {{coach}}",
+    "seat": "Platz {{seat}}",
+    "noReservation": "keine Reservierung erfasst",
+    "reference": "Auftragsnummer {{reference}}",
+    "documents": "Dokumente:",
+    "noDocuments": "Keine Dokumente abgelegt",
+    "documentsLoading": "Dokumente werden geladen …",
+    "documentsFailed": "Die Dokumente dieser Fahrt konnten nicht geladen werden."
   }
 }

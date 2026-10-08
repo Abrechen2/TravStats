@@ -16,6 +16,12 @@ vi.mock("../../lib/api/rail", () => ({
     update: (...a: unknown[]) => update(...a),
   },
 }));
+// The connection view lists each leg's originals through the documents router.
+const listForEntry = vi.fn();
+vi.mock("../../lib/api/documents", () => ({
+  documentsApi: { listForEntry: (...a: unknown[]) => listForEntry(...a) },
+  documentFileUrl: (doc: { url: string }) => doc.url,
+}));
 vi.mock("../../lib/logger", () => ({
   logger: { error: vi.fn(), warn: vi.fn(), info: vi.fn() },
 }));
@@ -61,6 +67,7 @@ describe("RailConnectionPage", () => {
   beforeEach(() => {
     getConnection.mockReset();
     update.mockReset();
+    listForEntry.mockReset().mockResolvedValue([]);
   });
 
   it("asks by the leg in the address and titles the ride by all its stations", async () => {
@@ -74,7 +81,7 @@ describe("RailConnectionPage", () => {
   it("lists every train in travel order, each linking to its own page", async () => {
     getConnection.mockResolvedValue(connection());
     renderAt();
-    const list = await screen.findByTestId("rail-connection-page-legs");
+    const list = await screen.findByTestId("rail-connection-legs");
     const links = [...list.querySelectorAll("a")];
     expect(links.map((a) => a.getAttribute("href"))).toEqual(["/rail/j1", "/rail/j2"]);
     expect(links[0].textContent).toBe("1. Frankfurt → Fulda");
@@ -108,7 +115,7 @@ describe("RailConnectionPage", () => {
   it("states the whole time on the way, waits included, and the number of changes", async () => {
     getConnection.mockResolvedValue(connection());
     renderAt();
-    await screen.findByTestId("rail-connection-page-legs");
+    await screen.findByTestId("rail-connection-legs");
     // 04:15 → 08:05 UTC.
     expect(screen.getByText('rail:detail.durationHm {"h":3,"m":50}')).toBeInTheDocument();
     expect(screen.getByText('rail:connection.changesLabel {"count":1}')).toBeInTheDocument();

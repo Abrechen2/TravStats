@@ -15,7 +15,7 @@ import { railExtractTarget } from "../lib/extractTargets";
 import TripPhotoWindowStrip from "../components/common/TripPhotoWindowStrip";
 import { RailFormModal } from "../components/rail/RailFormModal";
 import { RailRouteMap } from "../components/rail/RailRouteMap";
-import { RailConnectionLegs } from "../components/rail/RailConnectionLegs";
+import { RailConnectionView } from "../components/rail/RailConnectionView";
 import { RailConnectionLink } from "../components/rail/RailConnectionLink";
 import { formatRailDuration } from "../lib/rail/railDuration";
 import { trainLabel } from "../components/rail/trainLabel";
@@ -294,7 +294,7 @@ export default function RailDetailPage(): JSX.Element {
 
           {journey.booking && journey.booking.railJourneys.length > 1 && (
             <DetailSection title={t("rail:connection.title")}>
-              <RailConnectionLegs
+              <RailConnectionView
                 currentId={journey.id}
                 legs={journey.booking.railJourneys}
                 pnr={journey.booking.pnr}

@@ -374,5 +374,15 @@
     "separate": "A separate ride – not a change",
     "markTight": "Marked as tight",
     "markFailed": "The mark could not be saved. Please try again."
+  },
+  "connectionView": {
+    "coach": "Coach {{coach}}",
+    "seat": "Seat {{seat}}",
+    "noReservation": "no reservation recorded",
+    "reference": "Booking reference {{reference}}",
+    "documents": "Documents:",
+    "noDocuments": "No documents filed",
+    "documentsLoading": "Loading documents …",
+    "documentsFailed": "The documents of this ride could not be loaded."
   }
 }
